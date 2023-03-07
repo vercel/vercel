@@ -4,6 +4,7 @@ const path = require('path');
 const NUMBER_OF_CHUNKS = 5;
 const MINIMUM_PER_CHUNK = 1;
 const runnersMap = new Map([
+  ['test-unit', ['ubuntu-latest', 'macos-latest', 'windows-latest']],
   ['test-e2e', ['ubuntu-latest']],
   ['test-next-local', ['ubuntu-latest']],
   ['test-dev', ['ubuntu-latest', 'macos-latest']],
