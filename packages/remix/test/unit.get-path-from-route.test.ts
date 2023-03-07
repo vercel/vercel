@@ -104,6 +104,14 @@ describe('getPathFromRoute()', () => {
       parentId: 'root',
       file: 'routes/($lang)/$pid.tsx',
     },
+    'routes/admin.(lol)': {
+      path: 'admin/lol?',
+      index: undefined,
+      caseSensitive: undefined,
+      id: 'routes/admin.(lol)',
+      parentId: 'root',
+      file: 'routes/admin.(lol).tsx',
+    },
   };
 
   it.each([
@@ -155,6 +163,10 @@ describe('getPathFromRoute()', () => {
     {
       id: 'routes/($lang)/$pid',
       expected: { path: '(:lang)/:pid', rePath: '/:lang?/:pid' },
+    },
+    {
+      id: 'routes/admin.(lol)',
+      expected: { path: 'admin/(lol)', rePath: '/admin/(lol)?' },
     },
   ])('should return `$expected` for "$id" route', ({ id, expected }) => {
     const route = routes[id];
