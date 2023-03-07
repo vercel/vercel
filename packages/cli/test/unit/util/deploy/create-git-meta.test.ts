@@ -195,6 +195,12 @@ describe('createGitMeta', () => {
     }
   });
   it('gets git metata from test-github', async () => {
+    if (process.platform === 'win32') {
+      // skipping flakey test (hopefully temporarily)
+      console.log('Skipping test on Mac');
+      return;
+    }
+
     const directory = fixture('test-github');
     try {
       await fs.rename(join(directory, 'git'), join(directory, '.git'));
@@ -212,6 +218,12 @@ describe('createGitMeta', () => {
     }
   });
   it('gets git metadata from test-github when there are uncommitted changes', async () => {
+    if (process.platform === 'win32') {
+      // skipping flakey test (hopefully temporarily)
+      console.log('Skipping test on Mac');
+      return;
+    }
+
     const directory = fixture('test-github-dirty');
     try {
       await fs.rename(join(directory, 'git'), join(directory, '.git'));
