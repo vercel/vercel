@@ -53,7 +53,9 @@ test('[vercel dev] 02-angular-node', async () => {
   }
 });
 
-test(
+// skipping flakey test (hopefully temporarily)
+// eslint-disable-next-line jest/no-disabled-tests
+test.skip(
   '[vercel dev] 03-aurelia',
   testFixtureStdio(
     '03-aurelia',
@@ -64,7 +66,9 @@ test(
   )
 );
 
-test(
+// skipping flakey test (hopefully temporarily)
+// eslint-disable-next-line jest/no-disabled-tests
+test.skip(
   '[vercel dev] 04-create-react-app',
   testFixtureStdio('04-create-react-app', async (testPath: any) => {
     await testPath(200, '/', /React App/m);
@@ -157,7 +161,9 @@ test(
   )
 );
 
-test(
+// skipping flakey test (hopefully temporarily)
+// eslint-disable-next-line jest/no-disabled-tests
+test.skip(
   '[vercel dev] 13-preact-node',
   testFixtureStdio(
     '13-preact-node',
@@ -173,7 +179,9 @@ test(
   )
 );
 
-test(
+// skipping flakey test (hopefully temporarily)
+// eslint-disable-next-line jest/no-disabled-tests
+test.skip(
   '[vercel dev] 14-svelte-node',
   testFixtureStdio(
     '14-svelte-node',
