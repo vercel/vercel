@@ -3,7 +3,7 @@ import * as ansiEscapes from 'ansi-escapes';
 import { supportsHyperlink as detectSupportsHyperlink } from 'supports-hyperlinks';
 import renderLink from './link';
 import wait, { StopSpinner } from './wait';
-import type { WritableTTY } from '../../types';
+import type { WritableTTY } from '@vercel-internals/types';
 import { errorToString } from '@vercel/error-utils';
 import { removeEmoji } from '../emoji';
 

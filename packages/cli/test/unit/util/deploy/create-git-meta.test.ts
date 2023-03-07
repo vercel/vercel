@@ -13,7 +13,7 @@ import { client } from '../../../mocks/client';
 import { parseRepoUrl } from '../../../../src/util/git/connect-git-provider';
 import { useUser } from '../../../mocks/user';
 import { defaultProject, useProject } from '../../../mocks/project';
-import { Project } from '../../../../src/types';
+import { Project } from '@vercel-internals/types';
 
 const fixture = (name: string) =>
   join(__dirname, '../../../fixtures/unit/create-git-meta', name);

@@ -4,7 +4,7 @@ import {
   ProjectEnvTarget,
   ProjectEnvType,
   ProjectEnvVariable,
-} from '../../src/types';
+} from '@vercel-internals/types';
 import { formatProvider } from '../../src/util/git/connect-git-provider';
 import { parseEnvironment } from '../../src/commands/pull';
 import type { Env } from '@vercel/build-utils';

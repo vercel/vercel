@@ -7,7 +7,7 @@ import { emoji } from '../../util/emoji';
 import getUser from '../../util/get-user';
 import getTeams from '../../util/teams/get-teams';
 import listInput from '../../util/input/list';
-import { Team, GlobalConfig } from '../../types';
+import { Team, GlobalConfig } from '@vercel-internals/types';
 import { writeToConfigFile } from '../../util/config/files';
 
 const updateCurrentTeam = (config: GlobalConfig, team?: Team) => {
