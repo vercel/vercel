@@ -167,6 +167,27 @@ describe('getRegExpFromPath()', () => {
         },
       ],
     },
+    {
+      path: '/admin/(lol)?',
+      urls: [
+        {
+          url: '/admin',
+          expected: true,
+        },
+        {
+          url: '/admin/lol',
+          expected: true,
+        },
+        {
+          url: '/other',
+          expected: false,
+        },
+        {
+          url: '/admin/other',
+          expected: false,
+        },
+      ],
+    },
   ])('with path "$path"', ({ path, urls }) => {
     const re = getRegExpFromPath(path) as RegExp;
 

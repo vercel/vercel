@@ -12,6 +12,7 @@
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
-    "@remix-run/dev": "^1.14.0"
+    "@remix-run/dev": "^1.14.0",
+    "@remix-run/serve": "^1.14.0"
   }
 }
