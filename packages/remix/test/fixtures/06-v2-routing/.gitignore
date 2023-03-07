@@ -1,1 +1,4 @@
-.vercel
+/.vercel
+/.cache
+/build
+/public/build
