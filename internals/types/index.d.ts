@@ -1,8 +1,8 @@
-import type { Readable, Writable } from 'node:stream';
-import type { BuilderFunctions, ProjectSettings } from '@vercel/build-utils';
+import type { BuilderFunctions } from '@vercel/build-utils';
+import type { Readable, Writable } from 'stream';
 import type { Route } from '@vercel/routing-utils';
 
-export type { ProjectSettings } from '@vercel/build-utils';
+export type ProjectSettings = import('@vercel/build-utils').ProjectSettings;
 
 export type Primitive =
   | bigint
@@ -17,8 +17,6 @@ export type JSONArray = JSONValue[];
 
 export type JSONValue = Primitive | JSONObject | JSONArray;
 
-// defining this as a `type` instead of an `interface` causes a circular reference bug
-// eslint-disable-next-line @typescript-eslint/consistent-indexed-object-style
 export interface JSONObject {
   [key: string]: JSONValue;
 }
@@ -40,20 +38,20 @@ export interface GlobalConfig {
   // TODO: legacy - remove
   updateChannel?: string;
   desktop?: {
-    teamOrder: unknown;
+    teamOrder: any;
   };
 }
 
-interface Billing {
+type Billing = {
   addons: string[];
   cancelation?: number;
   period: { start: number; end: number };
   plan: string;
   platform: string;
   trial: { start: number; end: number };
-}
+};
 
-export interface User {
+export type User = {
   id: string;
   avatar: string;
   createdAt: number;
@@ -62,7 +60,7 @@ export interface User {
   billing: Billing;
   name?: string;
   limited?: boolean;
-}
+};
 
 export interface Team {
   id: string;
@@ -82,7 +80,7 @@ export interface Team {
   };
 }
 
-export interface Domain {
+export type Domain = {
   id: string;
   name: string;
   boughtAt: number;
@@ -99,9 +97,9 @@ export interface Domain {
     username: string;
     email: string;
   };
-}
+};
 
-export interface DomainConfig {
+export type DomainConfig = {
   configuredBy: null | 'CNAME' | 'A' | 'http';
   misconfigured: boolean;
   serviceType: 'zeit.world' | 'external' | 'na';
@@ -109,16 +107,16 @@ export interface DomainConfig {
   cnames: string[] & { traceString?: string };
   aValues: string[] & { traceString?: string };
   dnssecEnabled?: boolean;
-}
+};
 
-export interface Cert {
+export type Cert = {
   uid: string;
   autoRenew: boolean;
   cns: string[];
   created: string;
   creator: string;
   expiration: string;
-}
+};
 
 type RouteOrMiddleware =
   | Route
@@ -128,7 +126,7 @@ type RouteOrMiddleware =
       middleware: 0;
     };
 
-export interface Deployment {
+export type Deployment = {
   alias?: string[];
   aliasAssigned?: boolean | null | number;
   aliasError?: null | { code: string; message: string };
@@ -141,7 +139,7 @@ export interface Deployment {
   };
   bootedAt?: number;
   build?: { env: string[] };
-  builds?: { use: string; src?: string; config?: Record<string, unknown> };
+  builds?: { use: string; src?: string; config?: { [key: string]: any } };
   buildErrorAt?: number;
   buildingAt: number;
   canceledAt?: number;
@@ -173,7 +171,9 @@ export interface Deployment {
   initReadyAt?: number;
   inspectorUrl?: string | null;
   lambdas?: Build[];
-  meta?: Record<string, string | undefined>;
+  meta?: {
+    [key: string]: string | undefined;
+  };
   monorepoManager?: string | null;
   name: string;
   ownerId?: string;
@@ -217,9 +217,9 @@ export interface Deployment {
   url: string;
   userAliases?: string[];
   version: 2;
-}
+};
 
-export interface Alias {
+export type Alias = {
   uid: string;
   alias: string;
   createdAt: number;
@@ -233,9 +233,9 @@ export interface Alias {
     email: string;
   };
   deploymentId?: string;
-}
+};
 
-export interface DNSRecord {
+export type DNSRecord = {
   id: string;
   creator: string;
   mxPriority?: number;
@@ -249,9 +249,9 @@ export interface DNSRecord {
   createdAt: number;
   updatedAt: number;
   domain: string;
-}
+};
 
-interface SRVRecordData {
+type SRVRecordData = {
   name: string;
   type: 'SRV';
   srv: {
@@ -260,14 +260,14 @@ interface SRVRecordData {
     target: string;
     weight: number;
   };
-}
+};
 
-interface MXRecordData {
+type MXRecordData = {
   name: string;
   type: 'MX';
   value: string;
   mxPriority: number;
-}
+};
 
 export type DNSRecordData =
   | {
@@ -500,13 +500,13 @@ export interface Build {
 
   /**
    * The Runtime the Build used to generate the output
-   * @example "\@vercel/node"
+   * @example "@vercel/node"
    */
   use?: string;
 
   /**
    * An object that contains the Build's configuration
-   * @example \{"zeroConfig": true\}
+   * @example {"zeroConfig": true}
    */
   config?: {
     distDir?: string | undefined;
