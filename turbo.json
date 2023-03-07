@@ -3,6 +3,7 @@
   "globalDependencies": ["turbo-cache-key.json", "test/lib/**"],
   "pipeline": {
     "pnpm-cache-hack": {
+      "inputs": ["package.json", "pnpm-lock.yaml"],
       "outputMode": "new-only",
       "outputs": ["node_modules/**"]
     },

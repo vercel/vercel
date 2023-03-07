@@ -6,12 +6,10 @@
  */
 const { writeFileSync } = require('fs');
 const { join } = require('path');
-const { execFileSync } = require('child_process');
 
 const { versions, platform, arch } = process;
 const file = join(__dirname, '..', 'turbo-cache-key.json');
 const node = versions.node.split('.')[0];
-const pnpm = execFileSync('pnpm', ['--version']).toString().trim();
-const str = JSON.stringify({ node, platform, arch, pnpm });
+const str = JSON.stringify({ node, platform, arch });
 console.log(`Generating cache key: ${str}`);
 writeFileSync(file, str);
