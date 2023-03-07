@@ -7,7 +7,7 @@ const runnersMap = new Map([
     'test-unit',
     {
       min: 1,
-      max: 2,
+      max: 1,
       runners: ['ubuntu-latest', 'macos-latest', 'windows-latest'],
     },
   ],
