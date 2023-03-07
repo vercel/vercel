@@ -9,6 +9,8 @@ const fetch = require('./fetch-retry.js');
 const { nowDeploy, fileModeSymbol, fetchWithAuth } = require('./now-deploy.js');
 const { logWithinTest } = require('./log');
 
+// NOTE: Forcing test runs
+
 async function packAndDeploy(builderPath, shouldUnlink = true) {
   await spawnAsync('npm', ['--loglevel', 'warn', 'pack'], {
     stdio: 'inherit',
