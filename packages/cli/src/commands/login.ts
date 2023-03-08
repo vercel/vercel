@@ -9,7 +9,7 @@ import doEmailLogin from '../util/login/email';
 import doGithubLogin from '../util/login/github';
 import doGitlabLogin from '../util/login/gitlab';
 import doBitbucketLogin from '../util/login/bitbucket';
-import { prependEmoji, emoji } from '../util/emoji';
+import { prependEmoji, emoji } from '@vercel-internals/utils';
 import { getCommandName, getPkgName } from '../util/pkg-name';
 import getGlobalPathConfig from '../util/config/global-path';
 import { writeToAuthConfigFile, writeToConfigFile } from '../util/config/files';

@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import { join } from 'path';
 import Client from '../util/client';
 import type { Project, ProjectEnvTarget } from '@vercel-internals/types';
-import { emoji, prependEmoji } from '../util/emoji';
+import { emoji, prependEmoji } from '@vercel-internals/utils';
 import { getArgs } from '@vercel-internals/utils';
 import logo from '../util/output/logo';
 import stamp from '../util/output/stamp';

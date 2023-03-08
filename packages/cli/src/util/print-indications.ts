@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import { Response } from 'node-fetch';
 import Client from './client';
 import linkStyle from './output/link';
-import { emoji, EmojiLabel, prependEmoji } from './emoji';
+import { emoji, EmojiLabel, prependEmoji } from '@vercel-internals/utils';
 
 export default function printIndications(client: Client, res: Response) {
   const indications = new Set(['warning', 'notice', 'tip']);

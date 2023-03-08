@@ -12,7 +12,7 @@ import {
 import Client from '../../util/client';
 import stamp from '../../util/output/stamp';
 import param from '../../util/output/param';
-import { emoji, prependEmoji } from '../../util/emoji';
+import { emoji, prependEmoji } from '@vercel-internals/utils';
 import { isKnownError } from '../../util/env/known-error';
 import { getCommandName } from '../../util/pkg-name';
 import { isAPIError } from '../../util/errors-ts';

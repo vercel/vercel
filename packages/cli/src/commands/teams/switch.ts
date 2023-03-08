@@ -3,7 +3,7 @@ import chalk from 'chalk';
 
 // Utilities
 import Client from '../../util/client';
-import { emoji } from '../../util/emoji';
+import { emoji } from '@vercel-internals/utils';
 import getUser from '../../util/get-user';
 import getTeams from '../../util/teams/get-teams';
 import listInput from '../../util/input/list';

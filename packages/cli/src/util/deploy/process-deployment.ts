@@ -12,7 +12,7 @@ import Now from '../../util';
 import { Org } from '@vercel-internals/types';
 import ua from '../ua';
 import { linkFolderToProject } from '../projects/link';
-import { prependEmoji, emoji } from '../emoji';
+import { prependEmoji, emoji } from '@vercel-internals/utils';
 
 function printInspectUrl(
   output: Output,

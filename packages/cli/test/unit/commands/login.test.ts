@@ -1,5 +1,5 @@
 import login from '../../../src/commands/login';
-import { emoji } from '../../../src/util/emoji';
+import { emoji } from '@vercel-internals/utils';
 import { client } from '../../mocks/client';
 import { useUser } from '../../mocks/user';
 

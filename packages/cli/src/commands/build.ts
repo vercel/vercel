@@ -50,7 +50,7 @@ import {
 } from '../util/projects/project-settings';
 import { VERCEL_DIR } from '../util/projects/link';
 import confirm from '../util/input/confirm';
-import { emoji, prependEmoji } from '../util/emoji';
+import { emoji, prependEmoji } from '@vercel-internals/utils';
 import stamp from '../util/output/stamp';
 import {
   OUTPUT_DIR,

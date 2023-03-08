@@ -5,7 +5,7 @@ import renderLink from './link';
 import wait, { StopSpinner } from './wait';
 import type { WritableTTY } from '@vercel-internals/types';
 import { errorToString } from '@vercel/error-utils';
-import { removeEmoji } from '../emoji';
+import { removeEmoji } from '@vercel-internals/utils';
 
 const IS_TEST = process.env.NODE_ENV === 'test';
 

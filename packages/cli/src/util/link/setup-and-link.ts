@@ -24,7 +24,7 @@ import editProjectSettings, {
   PartialProjectSettings,
 } from '../input/edit-project-settings';
 import stamp from '../output/stamp';
-import { EmojiLabel } from '../emoji';
+import { EmojiLabel } from '@vercel-internals/utils';
 import createDeploy from '../deploy/create-deploy';
 import Now, { CreateOptions } from '../index';
 import { isAPIError } from '../errors-ts';

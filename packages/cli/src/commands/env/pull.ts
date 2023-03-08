@@ -4,7 +4,7 @@ import { closeSync, openSync, readSync } from 'fs';
 import { resolve } from 'path';
 import { Project, ProjectEnvTarget } from '@vercel-internals/types';
 import Client from '../../util/client';
-import { emoji, prependEmoji } from '../../util/emoji';
+import { emoji, prependEmoji } from '@vercel-internals/utils';
 import confirm from '../../util/input/confirm';
 import { Output } from '../../util/output';
 import param from '../../util/output/param';

@@ -18,7 +18,7 @@ import {
   Org,
   ProjectLink,
 } from '@vercel-internals/types';
-import { prependEmoji, emoji, EmojiLabel } from '../emoji';
+import { prependEmoji, emoji, EmojiLabel } from '@vercel-internals/utils';
 import { isDirectory } from '../config/global-path';
 import { NowBuildError, getPlatformEnv } from '@vercel/build-utils';
 import outputCode from '../output/code';
