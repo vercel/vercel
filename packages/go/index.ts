@@ -18,7 +18,6 @@ import {
 import {
   BuildOptions,
   Files,
-  PrepareCacheOptions,
   StartDevServerOptions,
   StartDevServerResult,
   glob,
@@ -806,10 +805,8 @@ async function waitForPortFile_(opts: {
   }
 }
 
-export async function prepareCache({
-  workPath,
-}: PrepareCacheOptions): Promise<Files> {
-  const cache = await glob(`${goGlobalCachePath}/**`, workPath);
+export async function prepareCache(): Promise<Files> {
+  const cache = await glob('**', goGlobalCachePath);
   console.log('!! Prepare cache', Object.keys(cache));
   return cache;
 }
