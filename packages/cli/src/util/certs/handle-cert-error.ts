@@ -3,7 +3,7 @@ import { parse } from 'psl';
 import chalk from 'chalk';
 import * as ERRORS from '../errors-ts';
 import { Output } from '../output';
-import dnsTable from '../format-dns-table';
+import { dnsTable } from '@vercel-internals/utils';
 import { getCommandName } from '../pkg-name';
 
 export default function handleCertError<T>(

@@ -9,7 +9,7 @@ import {
 } from '../../util/get-pagination-opts';
 import stamp from '../../util/output/stamp';
 import getCerts from '../../util/certs/get-certs';
-import strlen from '../../util/strlen';
+import { strlen } from '@vercel-internals/utils';
 import { Cert } from '@vercel-internals/types';
 import getCommandFlags from '../../util/get-command-flags';
 import { getCommandName } from '../../util/pkg-name';

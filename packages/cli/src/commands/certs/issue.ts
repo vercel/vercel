@@ -6,7 +6,7 @@ import * as ERRORS from '../../util/errors-ts';
 import Client from '../../util/client';
 import createCertForCns from '../../util/certs/create-cert-for-cns';
 import createCertFromFile from '../../util/certs/create-cert-from-file';
-import dnsTable from '../../util/format-dns-table';
+import { dnsTable } from '@vercel-internals/utils';
 import finishCertOrder from '../../util/certs/finish-cert-order';
 import getCnsFromArgs from '../../util/certs/get-cns-from-args';
 import getScope from '../../util/get-scope';

@@ -116,6 +116,7 @@ importers:
   internals/utils:
     specifiers:
       '@types/ms': 0.7.31
+      '@types/text-table': 0.2.2
       '@vercel-internals/tsconfig': '*'
       '@vercel-internals/types': '*'
       '@vercel/build-utils': 6.3.4
@@ -124,6 +125,8 @@ importers:
       chalk: 4.1.0
       date-fns: 1.29.0
       ms: 2.1.2
+      strip-ansi: 6.0.1
+      text-table: 0.2.0
       typescript: 4.9.4
     dependencies:
       '@vercel-internals/types': link:../types
@@ -132,8 +135,11 @@ importers:
       chalk: 4.1.0
       date-fns: 1.29.0
       ms: 2.1.2
+      strip-ansi: 6.0.1
+      text-table: 0.2.0
     devDependencies:
       '@types/ms': 0.7.31
+      '@types/text-table': 0.2.2
       '@vercel-internals/tsconfig': link:../tsconfig
       '@vercel/style-guide': 4.0.2_typescript@4.9.4
       typescript: 4.9.4
@@ -5688,6 +5694,10 @@ packages:
 
   /@types/text-table/0.2.1:
     resolution: {integrity: sha512-dchbFCWfVgUSWEvhOkXGS7zjm+K7jCUvGrQkAHPk2Fmslfofp4HQTH2pqnQ3Pw5GPYv0zWa2AQjKtsfZThuemQ==}
+    dev: true
+
+  /@types/text-table/0.2.2:
+    resolution: {integrity: sha512-dGoI5Af7To0R2XE8wJuc6vwlavWARsCh3UKJPjWs1YEqGUqfgBI/j/4GX0yf19/DsDPPf0YAXWAp8psNeIehLg==}
     dev: true
 
   /@types/through/0.0.30:
@@ -18117,7 +18127,6 @@ packages:
 
   /text-table/0.2.0:
     resolution: {integrity: sha512-N+8UisAXDGk8PFXP4HAzVR9nbfmVJ3zYLAWiTIoqC5v5isinhr+r5uaO8+7r3BMfuNIufIsA7RdpVgacC2cSpw==}
-    dev: true
 
   /thenify-all/1.6.0:
     resolution: {integrity: sha512-RNxQH/qI8/t3thXJDwcstUO4zeqo64+Uy/+sNVRBx4Xn2OX+OZ9oP+iJnNFqplFra2ZUVeKCSa2oVWi3T4uVmA==}

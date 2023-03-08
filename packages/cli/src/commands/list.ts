@@ -7,7 +7,7 @@ import { getArgs } from '@vercel-internals/utils';
 import { handleError } from '../util/error';
 import logo from '../util/output/logo';
 import elapsed from '../util/output/elapsed';
-import strlen from '../util/strlen';
+import { strlen } from '@vercel-internals/utils';
 import toHost from '../util/to-host';
 import parseMeta from '../util/parse-meta';
 import { isValidName } from '../util/is-valid-name';

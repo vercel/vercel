@@ -12,3 +12,5 @@ export * from './now-error';
 export {default as exit} from './exit';
 export * from './format-date';
 export {default as formatDate} from './format-date';
+export {default as dnsTable} from './format-dns-table';
+export {default as strlen} from './strlen';
