@@ -111,6 +111,13 @@ export const build: BuildV2 = async ({
     await runNpmInstall(entrypointFsDirname, [], spawnOpts, meta, nodeVersion);
   }
 
+  const remixConfig = await chdirAndReadConfig(
+    entrypointFsDirname,
+    cliType,
+    spawnOpts.env
+  );
+  const remixRoutes = Object.values(remixConfig.routes);
+
   // Make our version of `remix` CLI available to the project's build
   // command by creating a symlink to the copy in our node modules,
   // so that `serverBundles` works: https://github.com/remix-run/remix/pull/5479
@@ -136,18 +143,10 @@ export const build: BuildV2 = async ({
 
   // These get populated inside the try/catch below
   let serverBundles: AppConfig['serverBundles'];
-  let remixConfig: RemixConfig;
-  let remixRoutes: ConfigRoute[];
   const serverBundlesMap = new Map<string, ConfigRoute[]>();
   const resolvedConfigsMap = new Map<ConfigRoute, ResolvedRouteConfig>();
 
   try {
-    // Make `remix build` output production mode
-    spawnOpts.env.NODE_ENV = 'production';
-
-    remixConfig = await chdirAndReadConfig(entrypointFsDirname);
-    remixRoutes = Object.values(remixConfig.routes);
-
     // Read the `export const config` (if any) for each route
     const project = new Project();
     const staticConfigsMap = new Map<ConfigRoute, BaseFunctionConfig | null>();
@@ -234,6 +233,9 @@ module.exports = config;`;
       await fs.writeFile(remixConfigPath, patchedConfig);
       remixConfigWrapped = true;
     }
+
+    // Make `remix build` output production mode
+    spawnOpts.env.NODE_ENV = 'production';
 
     // Run "Build Command"
     if (buildCommand) {
@@ -682,16 +684,42 @@ async function ensureSymlink(
   );
 }
 
-async function chdirAndReadConfig(dir: string) {
+async function chdirAndReadConfig(
+  dir: string,
+  cliType: string,
+  env: NodeJS.ProcessEnv
+) {
   const originalCwd = process.cwd();
+
+  // As of Remix v1.14.0, reading the config may trigger adding `isbot`
+  // as a dependency, and `npm`/`pnpm`/`yarn` may be invoked.
+  // So we have to make sure we have all the env vars in place so that
+  // the proper installer is invoked.
+  Object.assign(process.env, env);
+
+  // Remix uses this env var to determine which package manager to invoke
+  process.env.npm_config_user_agent = cliType;
+
+  // Prevent frozen lockfile rejections
+  const removedEnvs = ['CI', 'VERCEL', 'NOW_BUILDER'].map(removeEnv);
+
   let remixConfig: RemixConfig;
   try {
     process.chdir(dir);
     remixConfig = await readConfig(dir);
   } finally {
     process.chdir(originalCwd);
+    removedEnvs.forEach(restore => restore());
   }
   return remixConfig;
+}
+
+function removeEnv(name: string) {
+  const original = process.env[name];
+  delete process.env[name];
+  return () => {
+    process.env[name] = original;
+  };
 }
 
 async function writeEntrypointFile(
