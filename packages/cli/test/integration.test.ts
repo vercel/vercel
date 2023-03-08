@@ -26,7 +26,7 @@ import pkg from '../package.json';
 import prepareFixtures from './helpers/prepare';
 import { fetchTokenWithRetry } from '../../../test/lib/deployment/now-deploy';
 
-jest.setTimeout(60 * 1000);
+jest.setTimeout(3 * 60 * 1000);
 
 // log command when running `execa`
 function execa(file, args, options) {
