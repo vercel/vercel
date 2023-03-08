@@ -5,7 +5,7 @@ import {
   isValidEnvTarget,
 } from '../../util/env/env-target';
 import { getArgs } from '@vercel-internals/utils';
-import getInvalidSubcommand from '../../util/get-invalid-subcommand';
+import { getInvalidSubcommand } from '@vercel-internals/utils';
 import getSubcommand from '../../util/get-subcommand';
 import handleError from '../../util/handle-error';
 import logo from '../../util/output/logo';
