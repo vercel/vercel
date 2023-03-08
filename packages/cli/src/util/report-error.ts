@@ -1,6 +1,6 @@
 import Client from './client';
 import getScope from './get-scope';
-import getArgs from './get-args';
+import { getArgs } from '@vercel-internals/utils';
 import { isError } from '@vercel/error-utils';
 import type { Team, User } from '@vercel-internals/types';
 
