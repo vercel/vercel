@@ -1,8 +1,7 @@
 {
-  "extends": "@vercel/style-guide/typescript",
+  "extends": "@vercel-internals/tsconfig",
   "compilerOptions": {
-    "outDir": "dist",
-    "declaration": true
+    "outDir": "./dist"
   },
   "include": ["index.ts"]
 }
