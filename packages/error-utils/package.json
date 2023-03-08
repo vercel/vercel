@@ -11,7 +11,7 @@
   },
   "scripts": {
     "build": "tsc",
-    "test": "jest --coverage --env node --verbos --testTimeout=10000",
+    "test": "jest --coverage --env node --verbose --testTimeout=10000",
     "test-unit": "pnpm test"
   },
   "license": "MIT",
