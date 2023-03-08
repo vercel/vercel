@@ -4,7 +4,7 @@ import getUser from '../../util/get-user';
 import getTeams from '../../util/teams/get-teams';
 import getPrefixedFlags from '../../util/get-prefixed-flags';
 import { getPkgName } from '../../util/pkg-name';
-import getCommandFlags from '../../util/get-command-flags';
+import { getCommandFlags } from '@vercel-internals/utils';
 import cmd from '../../util/output/cmd';
 import Client from '../../util/client';
 import { getArgs } from '@vercel-internals/utils';

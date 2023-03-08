@@ -10,7 +10,7 @@ import {
 } from '../../util/get-pagination-opts';
 import stamp from '../../util/output/stamp';
 import { strlen } from '@vercel-internals/utils';
-import getCommandFlags from '../../util/get-command-flags';
+import { getCommandFlags } from '@vercel-internals/utils';
 import { getCommandName } from '../../util/pkg-name';
 import { Alias } from '@vercel-internals/types';
 

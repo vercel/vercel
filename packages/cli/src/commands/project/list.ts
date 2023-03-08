@@ -3,7 +3,7 @@ import ms from 'ms';
 import table from 'text-table';
 import { Project } from '@vercel-internals/types';
 import Client from '../../util/client';
-import getCommandFlags from '../../util/get-command-flags';
+import { getCommandFlags } from '@vercel-internals/utils';
 import { getCommandName } from '../../util/pkg-name';
 import { strlen } from '@vercel-internals/utils';
 

@@ -11,7 +11,7 @@ import { strlen } from '@vercel-internals/utils';
 import toHost from '../util/to-host';
 import parseMeta from '../util/parse-meta';
 import { isValidName } from '../util/is-valid-name';
-import getCommandFlags from '../util/get-command-flags';
+import { getCommandFlags } from '@vercel-internals/utils';
 import { getPkgName, getCommandName } from '../util/pkg-name';
 import Client from '../util/client';
 import { Deployment } from '@vercel/client';
