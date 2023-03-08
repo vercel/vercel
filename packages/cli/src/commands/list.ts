@@ -10,7 +10,7 @@ import elapsed from '../util/output/elapsed';
 import { strlen } from '@vercel-internals/utils';
 import toHost from '../util/to-host';
 import parseMeta from '../util/parse-meta';
-import { isValidName } from '../util/is-valid-name';
+import { isValidName } from '@vercel-internals/utils';
 import { getCommandFlags } from '@vercel-internals/utils';
 import { getPkgName, getCommandName } from '../util/pkg-name';
 import Client from '../util/client';

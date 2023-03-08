@@ -8,7 +8,7 @@ import logo from '../util/output/logo';
 import elapsed from '../util/output/elapsed';
 import { normalizeURL } from '../util/url';
 import getScope from '../util/get-scope';
-import { isValidName } from '../util/is-valid-name';
+import { isValidName } from '@vercel-internals/utils';
 import removeProject from '../util/projects/remove-project';
 import getProjectByIdOrName from '../util/projects/get-project-by-id-or-name';
 import getDeployment from '../util/get-deployment';

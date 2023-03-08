@@ -5,7 +5,7 @@ import { getCommandName } from '../pkg-name';
 import getDeployment from '../get-deployment';
 import getScope from '../get-scope';
 import getTeamById from '../teams/get-team-by-id';
-import { isValidName } from '../is-valid-name';
+import { isValidName } from '@vercel-internals/utils';
 import ms from 'ms';
 import rollbackStatus from './status';
 
