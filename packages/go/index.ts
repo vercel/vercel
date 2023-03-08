@@ -105,6 +105,13 @@ export async function build({
   workPath,
   meta = {},
 }: BuildOptions) {
+  if (await pathExists(goGlobalCachePath)) {
+    console.log(`!!! goGlobalCachePath exists: ${goGlobalCachePath}`);
+    console.log(await readdir(goGlobalCachePath));
+  } else {
+    console.log(`!!! goGlobalCachePath does NOT exist: ${goGlobalCachePath}`);
+  }
+
   const goPath = await getWriteableDirectory();
   const srcPath = join(goPath, 'src', 'lambda');
   const downloadPath = meta.skipDownload ? workPath : srcPath;
@@ -651,13 +658,6 @@ async function writeDefaultGoMod(
 export async function startDevServer(
   opts: StartDevServerOptions
 ): Promise<StartDevServerResult> {
-  if (await pathExists(goGlobalCachePath)) {
-    console.log(`!!! goGlobalCachePath exists: ${goGlobalCachePath}`);
-    console.log(await readdir(goGlobalCachePath));
-  } else {
-    console.log(`!!! goGlobalCachePath does NOT exist: ${goGlobalCachePath}`);
-  }
-
   const { entrypoint, workPath, meta = {} } = opts;
   const { devCacheDir = join(workPath, '.vercel', 'cache') } = meta;
   const entrypointDir = dirname(entrypoint);
