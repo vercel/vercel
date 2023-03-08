@@ -9,10 +9,7 @@ import getDNSRecords, {
 } from '../../util/dns/get-dns-records';
 import getDomainDNSRecords from '../../util/dns/get-domain-dns-records';
 import getScope from '../../util/get-scope';
-import {
-  PaginationOptions,
-  getPaginationOpts,
-} from '../../util/get-pagination-opts';
+import { PaginationOptions, getPaginationOpts } from '@vercel-internals/utils';
 import stamp from '../../util/output/stamp';
 import { getCommandFlags } from '@vercel-internals/utils';
 import { getCommandName } from '../../util/pkg-name';

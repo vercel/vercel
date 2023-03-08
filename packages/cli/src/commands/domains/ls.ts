@@ -10,10 +10,7 @@ import { formatTable } from '@vercel-internals/utils';
 import { formatDateWithoutTime } from '@vercel-internals/utils';
 import { Domain } from '@vercel-internals/types';
 import { getCommandFlags } from '@vercel-internals/utils';
-import {
-  PaginationOptions,
-  getPaginationOpts,
-} from '../../util/get-pagination-opts';
+import { PaginationOptions, getPaginationOpts } from '@vercel-internals/utils';
 import { getCommandName } from '../../util/pkg-name';
 import isDomainExternal from '../../util/domains/is-domain-external';
 import { getDomainRegistrar } from '../../util/domains/get-domain-registrar';

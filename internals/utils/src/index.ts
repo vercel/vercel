@@ -18,3 +18,4 @@ export {default as formatTable} from './format-table';
 export {default as getCommandFlags} from './get-command-flags';
 export * from './get-dist-tag';
 export {default as getInvalidSubcommand} from './get-invalid-subcommand';
+export * from './get-pagination-opts';

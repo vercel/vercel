@@ -3,10 +3,7 @@ import ms from 'ms';
 import table from 'text-table';
 import Client from '../../util/client';
 import getScope from '../../util/get-scope';
-import {
-  PaginationOptions,
-  getPaginationOpts,
-} from '../../util/get-pagination-opts';
+import { PaginationOptions, getPaginationOpts } from '@vercel-internals/utils';
 import stamp from '../../util/output/stamp';
 import getCerts from '../../util/certs/get-certs';
 import { strlen } from '@vercel-internals/utils';

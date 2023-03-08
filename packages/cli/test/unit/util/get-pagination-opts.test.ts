@@ -1,4 +1,4 @@
-import { getPaginationOpts } from '../../../src/util/get-pagination-opts';
+import { getPaginationOpts } from '@vercel-internals/utils';
 import { getArgs } from '@vercel-internals/utils';
 
 describe('getOpts', () => {
