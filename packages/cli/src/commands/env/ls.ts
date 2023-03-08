@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import ms from 'ms';
 import { Output } from '../../util/output';
-import { Project, ProjectEnvVariable, ProjectEnvType } from '../../types';
+import { Project, ProjectEnvVariable, ProjectEnvType } from '@vercel-internals/types';
 import Client from '../../util/client';
 import formatTable from '../../util/format-table';
 import getEnvRecords from '../../util/env/get-env-records';

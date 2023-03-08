@@ -14,7 +14,7 @@ import { responseError } from './error';
 import stamp from './output/stamp';
 import { APIError, BuildError } from './errors-ts';
 import printIndications from './print-indications';
-import { GitMetadata, Org } from '../types';
+import { GitMetadata, Org } from '@vercel-internals/types';
 import { VercelConfig } from './dev/types';
 import Client, { FetchOptions, isJSONObject } from './client';
 import { ArchiveFormat, Dictionary } from '@vercel/client';
