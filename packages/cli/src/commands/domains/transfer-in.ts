@@ -10,7 +10,7 @@ import getAuthCode from '../../util/domains/get-auth-code';
 import getDomainPrice from '../../util/domains/get-domain-price';
 import checkTransfer from '../../util/domains/check-transfer';
 import promptBool from '../../util/input/prompt-bool';
-import isRootDomain from '../../util/is-root-domain';
+import { isRootDomain } from '@vercel-internals/utils';
 import { getCommandName } from '../../util/pkg-name';
 
 type Options = {

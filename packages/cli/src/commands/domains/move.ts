@@ -6,7 +6,7 @@ import * as ERRORS from '../../util/errors-ts';
 import Client from '../../util/client';
 import getScope from '../../util/get-scope';
 import moveOutDomain from '../../util/domains/move-out-domain';
-import isRootDomain from '../../util/is-root-domain';
+import { isRootDomain } from '@vercel-internals/utils';
 import textInput from '../../util/input/text';
 import param from '../../util/output/param';
 import getDomainAliases from '../../util/alias/get-domain-aliases';

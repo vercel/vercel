@@ -11,6 +11,7 @@
   },
   "devDependencies": {
     "@types/ms": "0.7.30",
+    "@types/psl": "1.1.0",
     "@types/semver": "7.3.13",
     "@types/text-table": "0.2.0",
     "@vercel-internals/tsconfig": "*",
@@ -25,6 +26,7 @@
     "chalk": "4.1.0",
     "date-fns": "1.29.0",
     "ms": "2.1.2",
+    "psl": "1.1.31",
     "semver": "7.3.8",
     "strip-ansi": "6.0.1",
     "text-table": "0.2.0"
