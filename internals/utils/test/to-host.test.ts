@@ -1,4 +1,4 @@
-import { toHost } from '@vercel-internals/utils';
+import { toHost } from '../src';
 
 describe('toHost', () => {
   it('should parse simple to host', () => {

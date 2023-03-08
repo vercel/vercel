@@ -1,5 +1,4 @@
-import { getPaginationOpts } from '@vercel-internals/utils';
-import { getArgs } from '@vercel-internals/utils';
+import { getPaginationOpts, getArgs } from '../src';
 
 describe('getOpts', () => {
   it('should throw an error if next not a number', async () => {

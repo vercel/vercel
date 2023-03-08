@@ -1,4 +1,4 @@
-import { isValidName } from '@vercel-internals/utils';
+import { isValidName } from '../src';
 
 const tests = {
   'hello world': true,
