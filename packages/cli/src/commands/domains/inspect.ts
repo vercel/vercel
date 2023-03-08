@@ -7,7 +7,7 @@ import { formatDate } from '@vercel-internals/utils';
 import formatNSTable from '../../util/format-ns-table';
 import getDomainByName from '../../util/domains/get-domain-by-name';
 import getScope from '../../util/get-scope';
-import formatTable from '../../util/format-table';
+import { formatTable } from '@vercel-internals/utils';
 import { findProjectsForDomain } from '../../util/projects/find-projects-for-domain';
 import getDomainPrice from '../../util/domains/get-domain-price';
 import { getCommandName } from '../../util/pkg-name';

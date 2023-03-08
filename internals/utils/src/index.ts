@@ -14,3 +14,4 @@ export * from './format-date';
 export {default as formatDate} from './format-date';
 export {default as dnsTable} from './format-dns-table';
 export {default as strlen} from './strlen';
+export {default as formatTable} from './format-table';

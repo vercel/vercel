@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import table from 'text-table';
-import { strlen } from '@vercel-internals/utils';
+import strlen from './strlen';
 
 // header:
 // [ 'a', 'b', 'c', ... ]

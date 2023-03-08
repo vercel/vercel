@@ -10,8 +10,8 @@
     "build": "tsc -p tsconfig.json"
   },
   "devDependencies": {
-    "@types/ms": "0.7.31",
-    "@types/text-table": "0.2.2",
+    "@types/ms": "0.7.30",
+    "@types/text-table": "0.2.0",
     "@vercel-internals/tsconfig": "*",
     "@vercel/style-guide": "4.0.2",
     "typescript": "4.9.4"

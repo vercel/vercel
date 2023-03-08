@@ -6,7 +6,7 @@ import Client from '../../util/client';
 import getDomains from '../../util/domains/get-domains';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
-import formatTable from '../../util/format-table';
+import { formatTable } from '@vercel-internals/utils';
 import { formatDateWithoutTime } from '@vercel-internals/utils';
 import { Domain } from '@vercel-internals/types';
 import getCommandFlags from '../../util/get-command-flags';
