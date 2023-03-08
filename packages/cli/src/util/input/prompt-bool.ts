@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import type { ReadableTTY, WritableTTY } from '../../types';
+import type { ReadableTTY, WritableTTY } from '@vercel-internals/types';
 
 type Options = {
   abortSequences?: Set<string>;

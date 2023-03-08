@@ -1,6 +1,6 @@
 {
   "name": "@vercel/node",
-  "version": "2.9.7",
+  "version": "2.9.12",
   "license": "MIT",
   "main": "./dist/index",
   "homepage": "https://vercel.com/docs/runtimes#official-runtimes/node-js",
@@ -31,8 +31,8 @@
   "dependencies": {
     "@edge-runtime/vm": "2.0.0",
     "@types/node": "14.18.33",
-    "@vercel/build-utils": "6.3.1",
-    "@vercel/node-bridge": "3.1.11",
+    "@vercel/build-utils": "6.3.4",
+    "@vercel/node-bridge": "3.1.14",
     "@vercel/static-config": "2.0.13",
     "edge-runtime": "2.0.0",
     "esbuild": "0.14.47",

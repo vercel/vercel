@@ -1,7 +1,7 @@
 import { URL } from 'url';
 import chance from 'chance';
 import { client } from './client';
-import { Build, Deployment, User } from '../../src/types';
+import { Build, Deployment, User } from '@vercel-internals/types';
 import type { Request, Response } from 'express';
 
 let deployments = new Map<string, Deployment>();

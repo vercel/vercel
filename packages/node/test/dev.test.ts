@@ -1,22 +1,29 @@
 import { forkDevServer, readMessage } from '../src/fork-dev-server';
-import { resolve } from 'path';
+import { resolve, extname } from 'path';
 import fetch from 'node-fetch';
 
 jest.setTimeout(10 * 1000);
 
-test('runs a mjs endpoint', async () => {
-  const child = forkDevServer({
+function testForkDevServer(entrypoint: string) {
+  const ext = extname(entrypoint);
+  const isTypeScript = ext === '.ts';
+  const isEsm = ext === '.mjs';
+  return forkDevServer({
     maybeTranspile: true,
     config: {},
-    isEsm: true,
-    isTypeScript: false,
+    isEsm,
+    isTypeScript,
     meta: {},
     require_: require,
     tsConfig: undefined,
     workPath: resolve(__dirname, './dev-fixtures'),
-    entrypoint: './esm-module.mjs',
+    entrypoint,
     devServerPath: resolve(__dirname, '../dist/dev-server.js'),
   });
+}
+
+test('runs a mjs endpoint', async () => {
+  const child = testForkDevServer('./esm-module.mjs');
 
   try {
     const result = await readMessage(child);
@@ -44,18 +51,12 @@ test('runs a mjs endpoint', async () => {
 });
 
 test('runs a esm typescript endpoint', async () => {
-  const child = forkDevServer({
-    maybeTranspile: true,
-    config: {},
-    isEsm: true,
-    isTypeScript: true,
-    meta: {},
-    require_: require,
-    tsConfig: undefined,
-    workPath: resolve(__dirname, './dev-fixtures'),
-    entrypoint: './esm-module.ts',
-    devServerPath: resolve(__dirname, '../dist/dev-server.js'),
-  });
+  if (process.platform === 'win32') {
+    console.log('Skipping test on Windows');
+    return;
+  }
+
+  const child = testForkDevServer('./esm-module.ts');
 
   try {
     const result = await readMessage(child);

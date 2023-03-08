@@ -1,4 +1,4 @@
-import { DNSRecordData } from '../../types';
+import { DNSRecordData } from '@vercel-internals/types';
 
 export default function parseAddArgs(
   args: string[]

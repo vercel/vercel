@@ -4,7 +4,7 @@ import {
   ProjectEnvTarget,
   ProjectEnvVariable,
   ProjectEnvType,
-} from '../../types';
+} from '@vercel-internals/types';
 
 export default async function addEnvRecord(
   output: Output,

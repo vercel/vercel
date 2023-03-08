@@ -811,6 +811,7 @@ export async function createLambdaFromPseudoLayers({
 
 export type NextRequiredServerFilesManifest = {
   appDir?: string;
+  relativeAppDir?: string;
   files: string[];
   ignore: string[];
   config: Record<string, any>;
@@ -954,6 +955,7 @@ export async function getRequiredServerFilesManifest(
     ignore: [],
     config: {},
     appDir: manifestData.appDir,
+    relativeAppDir: manifestData.relativeAppDir,
   };
 
   switch (manifestData.version) {
@@ -2360,6 +2362,7 @@ interface EdgeFunctionMatcher {
   regexp: string;
   has?: HasField;
   missing?: HasField;
+  originalSource?: string;
 }
 
 export async function getMiddlewareBundle({
@@ -2577,6 +2580,9 @@ export async function getMiddlewareBundle({
         };
 
         route.middlewarePath = shortPath;
+        route.middlewareRawSrc = matcher.originalSource
+          ? [matcher.originalSource]
+          : [];
         if (isCorrectMiddlewareOrder) {
           route.override = true;
         }
@@ -2699,6 +2705,7 @@ function getRouteMatchers(
   return info.matchers.map(matcher => {
     const m: EdgeFunctionMatcher = {
       regexp: getRegexp(matcher.regexp),
+      originalSource: matcher.originalSource,
     };
     if (matcher.has) {
       m.has = normalizeHas(matcher.has);
