@@ -3,7 +3,7 @@ import confirm from './confirm';
 import chalk from 'chalk';
 import frameworkList, { Framework } from '@vercel/frameworks';
 import Client from '../client';
-import { isSettingValue } from '../is-setting-value';
+import { isSettingValue } from '@vercel-internals/utils';
 import { ProjectSettings } from '@vercel-internals/types';
 
 const settingMap = {
