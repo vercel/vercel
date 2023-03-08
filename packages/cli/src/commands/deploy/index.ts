@@ -67,7 +67,7 @@ import parseTarget from '../../util/deploy/parse-target';
 import getPrebuiltJson from '../../util/deploy/get-prebuilt-json';
 import { createGitMeta } from '../../util/create-git-meta';
 import { isValidArchive } from '../../util/deploy/validate-archive-format';
-import { parseEnv } from '../../util/parse-env';
+import { parseEnv } from '@vercel-internals/utils';
 import { errorToString, isErrnoException, isError } from '@vercel/error-utils';
 import { pickOverrides } from '../../util/projects/project-settings';
 

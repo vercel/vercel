@@ -26,3 +26,4 @@ export {default as humanizePath} from './humanize-path';
 export {default as isRootDomain} from './is-root-domain';
 export * from './is-setting-value';
 export * from './is-valid-name';
+export * from './parse-env';
