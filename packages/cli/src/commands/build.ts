@@ -328,6 +328,10 @@ async function doBuild(
     ...pickOverrides(localConfig),
   };
 
+  console.log(
+    `VERCEL_BUILD_MONOREPO_SUPPORT: ${process.env.VERCEL_BUILD_MONOREPO_SUPPORT}`
+  );
+  console.log(projectSettings);
   if (
     process.env.VERCEL_BUILD_MONOREPO_SUPPORT === '1' &&
     pkg?.scripts?.['vercel-build'] === undefined &&
