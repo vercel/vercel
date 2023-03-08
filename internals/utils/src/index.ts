@@ -9,3 +9,4 @@ export {default as CreditCards} from './credit-cards';
 export * from './emoji';
 export * from './errors';
 export * from './now-error';
+export {default as exit} from './exit';

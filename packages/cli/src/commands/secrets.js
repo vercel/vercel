@@ -5,7 +5,7 @@ import ms from 'ms';
 import strlen from '../util/strlen.ts';
 import { handleError, error } from '../util/error';
 import NowSecrets from '../util/secrets';
-import exit from '../util/exit';
+import { exit } from '@vercel-internals/utils';
 import logo from '../util/output/logo';
 import getScope from '../util/get-scope.ts';
 import confirm from '../util/input/confirm';
