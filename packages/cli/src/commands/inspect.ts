@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import getArgs from '../util/get-args';
+import { getArgs } from '@vercel-internals/utils';
 import buildsList from '../util/output/builds';
 import routesList from '../util/output/routes';
 import indent from '../util/output/indent';

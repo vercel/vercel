@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import logo from '../util/output/logo';
 import getScope from '../util/get-scope';
 import { getPkgName } from '../util/pkg-name';
-import getArgs from '../util/get-args';
+import { getArgs } from '@vercel-internals/utils';
 import Client from '../util/client';
 
 const help = () => {

@@ -5,7 +5,7 @@ import { maybeURL, normalizeURL } from '../util/url';
 import printEvents, { DeploymentEvent } from '../util/events';
 import getScope from '../util/get-scope';
 import { getPkgName } from '../util/pkg-name';
-import getArgs from '../util/get-args';
+import { getArgs } from '@vercel-internals/utils';
 import Client from '../util/client';
 import getDeployment from '../util/get-deployment';
 

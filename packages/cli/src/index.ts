@@ -30,7 +30,7 @@ import info from './util/output/info';
 import error from './util/output/error';
 import param from './util/output/param';
 import highlight from './util/output/highlight';
-import getArgs from './util/get-args';
+import { getArgs } from '@vercel-internals/utils';
 import getUser from './util/get-user';
 import getTeams from './util/teams/get-teams';
 import Client from './util/client';

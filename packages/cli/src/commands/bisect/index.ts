@@ -10,7 +10,7 @@ import sleep from '../../util/sleep';
 import formatDate from '../../util/format-date';
 import link from '../../util/output/link';
 import logo from '../../util/output/logo';
-import getArgs from '../../util/get-args';
+import { getArgs } from '@vercel-internals/utils';
 import Client from '../../util/client';
 import { getPkgName } from '../../util/pkg-name';
 import { Deployment, PaginationOptions } from '@vercel-internals/types';

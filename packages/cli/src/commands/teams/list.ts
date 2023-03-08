@@ -7,7 +7,7 @@ import { getPkgName } from '../../util/pkg-name';
 import getCommandFlags from '../../util/get-command-flags';
 import cmd from '../../util/output/cmd';
 import Client from '../../util/client';
-import getArgs from '../../util/get-args';
+import { getArgs } from '@vercel-internals/utils';
 
 export default async function list(client: Client): Promise<number> {
   const { config, output } = client;

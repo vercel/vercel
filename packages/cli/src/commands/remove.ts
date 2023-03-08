@@ -14,7 +14,7 @@ import getProjectByIdOrName from '../util/projects/get-project-by-id-or-name';
 import getDeployment from '../util/get-deployment';
 import getDeploymentsByProjectId from '../util/deploy/get-deployments-by-project-id';
 import { getPkgName, getCommandName } from '../util/pkg-name';
-import getArgs from '../util/get-args';
+import { getArgs } from '@vercel-internals/utils';
 import handleError from '../util/handle-error';
 import type Client from '../util/client';
 import { Output } from '../util/output';

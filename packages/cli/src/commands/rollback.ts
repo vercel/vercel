@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import type Client from '../util/client';
 import { ensureLink } from '../util/link/ensure-link';
-import getArgs from '../util/get-args';
+import { getArgs } from '@vercel-internals/utils';
 import { getPkgName } from '../util/pkg-name';
 import handleError from '../util/handle-error';
 import logo from '../util/output/logo';

@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 
-import getArgs from '../../util/get-args';
+import { getArgs } from '@vercel-internals/utils';
 import getSubcommand from '../../util/get-subcommand';
 import Client from '../../util/client';
 import handleError from '../../util/handle-error';

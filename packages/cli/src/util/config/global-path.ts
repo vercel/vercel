@@ -2,7 +2,7 @@ import { homedir } from 'os';
 import fs from 'fs';
 import path from 'path';
 import XDGAppPaths from 'xdg-app-paths';
-import getArgs from '../../util/get-args';
+import { getArgs } from '@vercel-internals/utils';
 
 // Returns whether a directory exists
 export const isDirectory = (path: string): boolean => {

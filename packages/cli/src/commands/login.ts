@@ -1,7 +1,7 @@
 import { validate as validateEmail } from 'email-validator';
 import chalk from 'chalk';
 import hp from '../util/humanize-path';
-import getArgs from '../util/get-args';
+import { getArgs } from '@vercel-internals/utils';
 import logo from '../util/output/logo';
 import prompt from '../util/login/prompt';
 import doSamlLogin from '../util/login/saml';

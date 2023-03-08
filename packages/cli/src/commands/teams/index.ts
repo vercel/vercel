@@ -6,7 +6,7 @@ import add from './add';
 import change from './switch';
 import invite from './invite';
 import { getPkgName } from '../../util/pkg-name';
-import getArgs from '../../util/get-args';
+import { getArgs } from '@vercel-internals/utils';
 import Client from '../../util/client';
 
 const help = () => {

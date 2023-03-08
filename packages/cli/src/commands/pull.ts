@@ -3,7 +3,7 @@ import { join } from 'path';
 import Client from '../util/client';
 import type { Project, ProjectEnvTarget } from '@vercel-internals/types';
 import { emoji, prependEmoji } from '../util/emoji';
-import getArgs from '../util/get-args';
+import { getArgs } from '@vercel-internals/utils';
 import logo from '../util/output/logo';
 import stamp from '../util/output/stamp';
 import { getPkgName } from '../util/pkg-name';

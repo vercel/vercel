@@ -11,7 +11,7 @@ import {
 import code from '../../util/output/code';
 import highlight from '../../util/output/highlight';
 import { readLocalConfig } from '../../util/config/files';
-import getArgs from '../../util/get-args';
+import { getArgs } from '@vercel-internals/utils';
 import { handleError } from '../../util/error';
 import Client from '../../util/client';
 import { getPrettyError } from '@vercel/build-utils';

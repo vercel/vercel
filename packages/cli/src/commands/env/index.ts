@@ -4,7 +4,7 @@ import {
   getEnvTargetPlaceholder,
   isValidEnvTarget,
 } from '../../util/env/env-target';
-import getArgs from '../../util/get-args';
+import { getArgs } from '@vercel-internals/utils';
 import getInvalidSubcommand from '../../util/get-invalid-subcommand';
 import getSubcommand from '../../util/get-subcommand';
 import handleError from '../../util/handle-error';

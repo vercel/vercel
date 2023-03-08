@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import Client from '../../util/client';
-import getArgs from '../../util/get-args';
+import { getArgs } from '@vercel-internals/utils';
 import logo from '../../util/output/logo';
 import { getPkgName } from '../../util/pkg-name';
 import { ensureLink } from '../../util/link/ensure-link';

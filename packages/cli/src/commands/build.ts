@@ -37,7 +37,7 @@ import type { VercelConfig } from '@vercel/client';
 import pull from './pull';
 import { staticFiles as getFiles } from '../util/get-files';
 import Client from '../util/client';
-import getArgs from '../util/get-args';
+import { getArgs } from '@vercel-internals/utils';
 import cmd from '../util/output/cmd';
 import * as cli from '../util/pkg-name';
 import cliPkg from '../util/pkg';
