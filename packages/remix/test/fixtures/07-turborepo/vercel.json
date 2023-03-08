@@ -1,6 +1,7 @@
 {
   "projectSettings": {
     "framework": "remix",
-    "rootDirectory": "apps/remix-app"
+    "rootDirectory": "apps/remix-app",
+    "sourceFilesOutsideRootDirectory": true
   }
 }
