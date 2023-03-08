@@ -1,4 +1,5 @@
-import { sleep } from '@vercel-internals/utils';
+// TODO (Ethan-Arrowood) - Potential dead code
+import sleep from './sleep';
 
 export default function createPollingFn<R>(
   future: (...args: any[]) => Promise<R>,
