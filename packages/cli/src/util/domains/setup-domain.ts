@@ -1,5 +1,5 @@
 import psl from 'psl';
-import { NowError } from '../now-error';
+import { NowError } from '@vercel-internals/utils';
 import { Domain } from '@vercel-internals/types';
 import { Output } from '../output';
 import * as ERRORS from '../errors-ts';

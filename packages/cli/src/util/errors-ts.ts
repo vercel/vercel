@@ -1,7 +1,7 @@
 import bytes from 'bytes';
 import { Response } from 'node-fetch';
 import { NowBuildError } from '@vercel/build-utils';
-import { NowError } from './now-error';
+import { NowError } from '@vercel-internals/utils';
 import code from './output/code';
 import { getCommandName } from './pkg-name';
 import chalk from 'chalk';

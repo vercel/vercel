@@ -5,7 +5,7 @@ import { existsSync } from 'fs';
 import { fileNameSymbol } from '@vercel/client';
 import getGlobalPathConfig from './global-path';
 import getLocalPathConfig from './local-path';
-import { NowError } from '../now-error';
+import { NowError } from '@vercel-internals/utils';
 import error from '../output/error';
 import highlight from '../output/highlight';
 import { VercelConfig } from '../dev/types';

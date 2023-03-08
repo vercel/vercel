@@ -7,3 +7,5 @@ export {default as sleep} from './sleep';
 export {default as createPollingFn} from './create-polling-fn';
 export {default as CreditCards} from './credit-cards';
 export * from './emoji';
+export * from './errors';
+export * from './now-error';

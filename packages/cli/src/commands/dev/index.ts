@@ -5,7 +5,7 @@ import { PackageJson } from '@vercel/build-utils';
 import { getArgs } from '@vercel-internals/utils';
 import getSubcommand from '../../util/get-subcommand';
 import Client from '../../util/client';
-import { NowError } from '../../util/now-error';
+import { NowError } from '@vercel-internals/utils';
 import handleError from '../../util/handle-error';
 import logo from '../../util/output/logo';
 import cmd from '../../util/output/cmd';

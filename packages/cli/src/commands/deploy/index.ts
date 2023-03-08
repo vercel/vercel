@@ -42,7 +42,7 @@ import {
   NotDomainOwner,
   isAPIError,
 } from '../../util/errors-ts';
-import { SchemaValidationFailed } from '../../util/errors';
+import { SchemaValidationFailed } from '@vercel-internals/utils';
 import purchaseDomainIfAvailable from '../../util/domains/purchase-domain-if-available';
 import confirm from '../../util/input/confirm';
 import editProjectSettings from '../../util/input/edit-project-settings';

@@ -19,7 +19,7 @@ import handleError from '../util/handle-error';
 import type Client from '../util/client';
 import { Output } from '../util/output';
 import { Alias, Deployment, Project } from '@vercel-internals/types';
-import { NowError } from '../util/now-error';
+import { NowError } from '@vercel-internals/utils';
 
 type DeploymentWithAliases = Deployment & {
   aliases: Alias[];

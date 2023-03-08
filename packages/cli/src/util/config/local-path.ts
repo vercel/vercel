@@ -1,6 +1,6 @@
 import path from 'path';
 import { existsSync } from 'fs';
-import { InvalidLocalConfig } from '../errors';
+import { InvalidLocalConfig } from '@vercel-internals/utils';
 import { ConflictingConfigFiles } from '../errors-ts';
 import { getArgs } from '@vercel-internals/utils';
 

@@ -1,5 +1,5 @@
 import psl from 'psl';
-import { NowError } from '../now-error';
+import { NowError } from '@vercel-internals/utils';
 import Client from '../client';
 import createCertForCns from '../certs/create-cert-for-cns';
 import setupDomain from '../domains/setup-domain';

@@ -1,4 +1,4 @@
-import { NowError } from '../now-error';
+import { NowError } from '@vercel-internals/utils';
 import { Output } from '../output';
 import Client from '../client';
 import createCertForCns from './create-cert-for-cns';
