@@ -20,7 +20,7 @@ import Now from '../../util';
 import stamp from '../../util/output/stamp';
 import createDeploy from '../../util/deploy/create-deploy';
 import getDeployment from '../../util/get-deployment';
-import parseMeta from '../../util/parse-meta';
+import { parseMeta } from '@vercel-internals/utils';
 import linkStyle from '../../util/output/link';
 import param from '../../util/output/param';
 import {

@@ -27,3 +27,4 @@ export {default as isRootDomain} from './is-root-domain';
 export * from './is-setting-value';
 export * from './is-valid-name';
 export * from './parse-env';
+export {default as parseMeta} from './parse-meta';
