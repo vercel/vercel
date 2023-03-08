@@ -651,6 +651,13 @@ async function writeDefaultGoMod(
 export async function startDevServer(
   opts: StartDevServerOptions
 ): Promise<StartDevServerResult> {
+  if (await pathExists(goGlobalCachePath)) {
+    console.log(`!!! goGlobalCachePath exists: ${goGlobalCachePath}`);
+    console.log(await readdir(goGlobalCachePath));
+  } else {
+    console.log(`!!! goGlobalCachePath does NOT exist: ${goGlobalCachePath}`);
+  }
+
   const { entrypoint, workPath, meta = {} } = opts;
   const { devCacheDir = join(workPath, '.vercel', 'cache') } = meta;
   const entrypointDir = dirname(entrypoint);
