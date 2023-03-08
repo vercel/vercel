@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import bytes from 'bytes';
 import { isReady, isFailed } from '../build-state';
-import { Build, BuildOutput } from '../../types';
+import { Build, BuildOutput } from '@vercel-internals/types';
 
 export interface Times {
   [id: string]: string | null;

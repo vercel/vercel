@@ -3,7 +3,7 @@ import { client } from '../../mocks/client';
 import { defaultProject, useProject } from '../../mocks/project';
 import { Request, Response } from 'express';
 import rollback from '../../../src/commands/rollback';
-import { RollbackJobStatus, RollbackTarget } from '../../../src/types';
+import { RollbackJobStatus, RollbackTarget } from '@vercel-internals/types';
 import { setupFixture } from '../../helpers/setup-fixture';
 import { useDeployment } from '../../mocks/deployment';
 import { useTeams } from '../../mocks/team';

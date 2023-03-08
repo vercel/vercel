@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import type Client from '../client';
-import type { Deployment, Project, Team } from '../../types';
+import type { Deployment, Project, Team } from '@vercel-internals/types';
 import { getCommandName } from '../pkg-name';
 import getDeployment from '../get-deployment';
 import getScope from '../get-scope';
