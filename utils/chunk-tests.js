@@ -16,23 +16,6 @@ const runnersMap = new Map([
   ['test-dev', { min: 1, max: 5, runners: ['ubuntu-latest', 'macos-latest'] }],
 ]);
 
-/*
-Looks like:
-
-  {
-    "runner": "ubuntu-latest",
-    "packagePath": "packages/next",
-    "packageName": "@vercel/next",
-    "scriptName": "test-next-local",
-    "testPaths": [
-      "test/integration/index.test.js"
-    ],
-    "chunkNumber": 1,
-    "allChunksLength": 2
-  },
-
-*/
-
 async function getChunkedTests() {
   const scripts = [...runnersMap.keys()];
   const rootPath = path.resolve(__dirname, '..');
