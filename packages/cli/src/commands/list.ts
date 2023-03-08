@@ -8,7 +8,7 @@ import { handleError } from '../util/error';
 import logo from '../util/output/logo';
 import elapsed from '../util/output/elapsed';
 import { strlen } from '@vercel-internals/utils';
-import toHost from '../util/to-host';
+import { toHost } from '@vercel-internals/utils';
 import { parseMeta } from '@vercel-internals/utils';
 import { isValidName } from '@vercel-internals/utils';
 import { getCommandFlags } from '@vercel-internals/utils';

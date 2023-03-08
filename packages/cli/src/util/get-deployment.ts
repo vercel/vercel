@@ -7,7 +7,7 @@ import {
 } from './errors-ts';
 import type { Deployment } from '@vercel-internals/types';
 import mapCertError from './certs/map-cert-error';
-import toHost from './to-host';
+import { toHost } from '@vercel-internals/utils';
 
 /**
  * Retrieves a v13 deployment.

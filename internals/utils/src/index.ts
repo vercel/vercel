@@ -30,3 +30,5 @@ export * from './parse-env';
 export {default as parseMeta} from './parse-meta';
 export * from './path-helpers';
 export * from './promise';
+export {default as raceAsyncGenerators} from './race-async-generators';
+export {default as toHost} from './to-host';

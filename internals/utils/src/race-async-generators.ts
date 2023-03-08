@@ -1,3 +1,4 @@
+// TODO (Ethan-Arrowood) - Potential dead code
 // Combines two o more async generators into one that stops when the first
 // generator finishes.
 export default async function* raceAsyncGenerators(...args: any[]) {
