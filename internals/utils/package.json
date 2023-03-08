@@ -10,6 +10,7 @@
     "build": "tsc -p tsconfig.json"
   },
   "devDependencies": {
+    "@types/ms": "0.7.31",
     "@vercel-internals/tsconfig": "*",
     "@vercel/style-guide": "4.0.2",
     "typescript": "4.9.4"
@@ -17,6 +18,9 @@
   "dependencies": {
     "@vercel-internals/types": "*",
     "@vercel/build-utils": "6.3.4",
-    "arg": "5.0.0"
+    "arg": "5.0.0",
+    "chalk": "4.1.0",
+    "date-fns": "1.29.0",
+    "ms": "2.1.2"
   }
 }

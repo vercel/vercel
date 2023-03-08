@@ -10,3 +10,5 @@ export * from './emoji';
 export * from './errors';
 export * from './now-error';
 export {default as exit} from './exit';
+export * from './format-date';
+export {default as formatDate} from './format-date';

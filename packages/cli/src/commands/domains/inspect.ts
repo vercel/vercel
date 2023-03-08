@@ -3,7 +3,7 @@ import { DomainNotFound, DomainPermissionDenied } from '../../util/errors-ts';
 import { Output } from '../../util/output';
 import Client from '../../util/client';
 import stamp from '../../util/output/stamp';
-import formatDate from '../../util/format-date';
+import { formatDate } from '@vercel-internals/utils';
 import formatNSTable from '../../util/format-ns-table';
 import getDomainByName from '../../util/domains/get-domain-by-name';
 import getScope from '../../util/get-scope';
