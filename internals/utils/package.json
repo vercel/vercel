@@ -15,6 +15,7 @@
     "typescript": "4.9.4"
   },
   "dependencies": {
+    "@vercel-internals/types": "*",
     "@vercel/build-utils": "6.3.4",
     "arg": "5.0.0"
   }

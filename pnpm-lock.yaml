@@ -116,11 +116,13 @@ importers:
   internals/utils:
     specifiers:
       '@vercel-internals/tsconfig': '*'
+      '@vercel-internals/types': workspace:*
       '@vercel/build-utils': 6.3.4
       '@vercel/style-guide': 4.0.2
       arg: 5.0.0
       typescript: 4.9.4
     dependencies:
+      '@vercel-internals/types': link:../types
       '@vercel/build-utils': link:../../packages/build-utils
       arg: 5.0.0
     devDependencies:
@@ -1757,7 +1759,7 @@ packages:
     peerDependencies:
       '@babel/core': ^7.0.0-0
     dependencies:
-      '@babel/core': 7.20.12_supports-color@7.2.0
+      '@babel/core': 7.20.12
       '@babel/helper-plugin-utils': 7.20.2
 
   /@babel/plugin-syntax-bigint/7.8.3_@babel+core@7.20.12:
@@ -1870,7 +1872,7 @@ packages:
     peerDependencies:
       '@babel/core': ^7.0.0-0
     dependencies:
-      '@babel/core': 7.20.12_supports-color@7.2.0
+      '@babel/core': 7.20.12
       '@babel/helper-plugin-utils': 7.20.2
 
   /@babel/plugin-syntax-optional-catch-binding/7.8.3_@babel+core@7.20.12:
@@ -1878,7 +1880,7 @@ packages:
     peerDependencies:
       '@babel/core': ^7.0.0-0
     dependencies:
-      '@babel/core': 7.20.12_supports-color@7.2.0
+      '@babel/core': 7.20.12
       '@babel/helper-plugin-utils': 7.20.2
 
   /@babel/plugin-syntax-optional-chaining/7.8.3_@babel+core@7.20.12:
@@ -9862,7 +9864,7 @@ packages:
       eslint-import-resolver-webpack:
         optional: true
     dependencies:
-      '@typescript-eslint/parser': 5.54.1
+      '@typescript-eslint/parser': 5.54.1_typescript@4.9.4
       debug: 3.2.7
       eslint-import-resolver-node: 0.3.7
       eslint-import-resolver-typescript: 3.5.3_5rfvta7qn57kxm7ir36ta6fixq
@@ -9890,7 +9892,7 @@ packages:
       '@typescript-eslint/parser':
         optional: true
     dependencies:
-      '@typescript-eslint/parser': 5.54.1
+      '@typescript-eslint/parser': 5.54.1_typescript@4.9.4
       array-includes: 3.1.6
       array.prototype.flat: 1.3.1
       array.prototype.flatmap: 1.3.1
@@ -10007,7 +10009,7 @@ packages:
       eslint-plugin-jest:
         optional: true
     dependencies:
-      eslint-plugin-jest: 27.2.1_j7aytffwn6h2xuxtcd36dokff4
+      eslint-plugin-jest: 27.2.1_6xo4tvwzjwdi6xwjpxfe6jodqe
     dev: true
 
   /eslint-plugin-react-hooks/4.6.0:
