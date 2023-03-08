@@ -8,7 +8,7 @@ import { setupFixture } from '../../helpers/setup-fixture';
 import { useDeployment } from '../../mocks/deployment';
 import { useTeams } from '../../mocks/team';
 import { useUser } from '../../mocks/user';
-import sleep from '../../../src/util/sleep';
+import { sleep } from '@vercel-internals/utils';
 
 jest.setTimeout(60000);
 

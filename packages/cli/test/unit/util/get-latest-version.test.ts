@@ -1,5 +1,5 @@
 import fs from 'fs-extra';
-import sleep from '../../../src/util/sleep';
+import { sleep } from '@vercel-internals/utils';
 import tmp from 'tmp-promise';
 import getLatestVersion from '../../../src/util/get-latest-version';
 import { join } from 'path';

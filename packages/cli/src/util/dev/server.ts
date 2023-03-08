@@ -48,7 +48,7 @@ import frameworkList from '@vercel/frameworks';
 
 import cmd from '../output/cmd';
 import link from '../output/link';
-import sleep from '../sleep';
+import { sleep } from '@vercel-internals/utils';
 import { Output } from '../output';
 import { relative } from '../path-helpers';
 import { getDistTag } from '../get-dist-tag';

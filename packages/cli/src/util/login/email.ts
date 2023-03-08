@@ -1,5 +1,5 @@
 import ms from 'ms';
-import sleep from '../sleep';
+import { sleep } from '@vercel-internals/utils';
 import highlight from '../output/highlight';
 import eraseLines from '../output/erase-lines';
 import verify from './verify';

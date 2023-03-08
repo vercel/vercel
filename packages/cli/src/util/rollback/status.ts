@@ -12,7 +12,7 @@ import getDeployment from '../get-deployment';
 import getScope from '../get-scope';
 import ms from 'ms';
 import renderAliasStatus from './render-alias-status';
-import sleep from '../sleep';
+import { sleep } from '@vercel-internals/utils';
 
 interface RollbackAlias {
   alias: {

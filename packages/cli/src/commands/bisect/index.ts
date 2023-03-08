@@ -6,7 +6,7 @@ import chalk, { Chalk } from 'chalk';
 import { URLSearchParams, parse } from 'url';
 
 import box from '../../util/output/box';
-import sleep from '../../util/sleep';
+import { sleep } from '@vercel-internals/utils';
 import formatDate from '../../util/format-date';
 import link from '../../util/output/link';
 import logo from '../../util/output/logo';

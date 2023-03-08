@@ -20,7 +20,7 @@ import fs, {
   mkdir,
 } from 'fs-extra';
 import logo from '../src/util/output/logo';
-import sleep from '../src/util/sleep';
+import { sleep } from '@vercel-internals/utils';
 import pkg from '../package';
 import prepareFixtures from './helpers/prepare';
 import { fetchTokenWithRetry } from '../../../test/lib/deployment/now-deploy';
