@@ -1,3 +1,5 @@
+// TODO (Ethan-Arrowood) - Refactor this file to TypeScript
+// TODO (Ethan-Arrowood) - Potential dead code
 import stripeFactory from 'stripe';
 import Now from '.';
 
