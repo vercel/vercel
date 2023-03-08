@@ -171,7 +171,7 @@ test(
 
 test(
   '[vercel dev] Should support `*.go` API serverless functions',
-  testFixtureStdio('go', async (testPath: any) => {
+  testFixtureStdio('golang-dev', async (testPath: any) => {
     await testPath(200, `/api`, 'This is the index page');
     await testPath(200, `/api/index`, 'This is the index page');
     await testPath(200, `/api/index.go`, 'This is the index page');

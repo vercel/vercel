@@ -34,11 +34,6 @@ jobs:
           else
             echo "IS_RELEASE=true" >> $GITHUB_OUTPUT
         fi
-    - name: Setup Go
-      if: ${{ steps.check-release.outputs.IS_RELEASE == 'true' }}
-      uses: actions/setup-go@v3
-      with:
-        go-version: '1.13.15'
     - name: Setup Node
       if: ${{ steps.check-release.outputs.IS_RELEASE == 'true' }}
       uses: actions/setup-node@v3
