@@ -50,7 +50,7 @@ import cmd from '../output/cmd';
 import link from '../output/link';
 import { sleep } from '@vercel-internals/utils';
 import { Output } from '../output';
-import { relative } from '../path-helpers';
+import { relative } from '@vercel-internals/utils';
 import { getDistTag } from '@vercel-internals/utils';
 import getVercelConfigPath from '../config/local-path';
 import { MissingDotenvVarsError } from '../errors-ts';

@@ -28,3 +28,4 @@ export * from './is-setting-value';
 export * from './is-valid-name';
 export * from './parse-env';
 export {default as parseMeta} from './parse-meta';
+export * from './path-helpers';
