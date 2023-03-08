@@ -14,7 +14,7 @@ import updateProject from '../projects/update-project';
 import Client from '../client';
 import handleError from '../handle-error';
 import confirm from '../input/confirm';
-import { humanizePath } from '@vercel-internals/utils';
+import { humanizePath, EmojiLabel } from '@vercel-internals/utils';
 import { isDirectory } from '../config/global-path';
 import selectOrg from '../input/select-org';
 import inputProject from '../input/input-project';
@@ -24,7 +24,6 @@ import editProjectSettings, {
   PartialProjectSettings,
 } from '../input/edit-project-settings';
 import stamp from '../output/stamp';
-import { EmojiLabel } from '@vercel-internals/utils';
 import createDeploy from '../deploy/create-deploy';
 import Now, { CreateOptions } from '../index';
 import { isAPIError } from '../errors-ts';

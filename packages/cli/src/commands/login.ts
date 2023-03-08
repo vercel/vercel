@@ -1,7 +1,11 @@
 import { validate as validateEmail } from 'email-validator';
 import chalk from 'chalk';
-import { humanizePath } from '@vercel-internals/utils';
-import { getArgs } from '@vercel-internals/utils';
+import {
+  humanizePath,
+  getArgs,
+  prependEmoji,
+  emoji,
+} from '@vercel-internals/utils';
 import logo from '../util/output/logo';
 import prompt from '../util/login/prompt';
 import doSamlLogin from '../util/login/saml';
@@ -9,7 +13,6 @@ import doEmailLogin from '../util/login/email';
 import doGithubLogin from '../util/login/github';
 import doGitlabLogin from '../util/login/gitlab';
 import doBitbucketLogin from '../util/login/bitbucket';
-import { prependEmoji, emoji } from '@vercel-internals/utils';
 import { getCommandName, getPkgName } from '../util/pkg-name';
 import getGlobalPathConfig from '../util/config/global-path';
 import { writeToAuthConfigFile, writeToConfigFile } from '../util/config/files';

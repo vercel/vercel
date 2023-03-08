@@ -3,8 +3,7 @@ import chalk from 'chalk';
 // @ts-ignore
 import { handleError } from '../../util/error';
 
-import { getArgs } from '@vercel-internals/utils';
-import { getSubcommand } from '@vercel-internals/utils';
+import { getArgs, getSubcommand } from '@vercel-internals/utils';
 import logo from '../../util/output/logo';
 
 import add from './add';

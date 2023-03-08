@@ -3,9 +3,8 @@ import ms from 'ms';
 import table from 'text-table';
 import { Project } from '@vercel-internals/types';
 import Client from '../../util/client';
-import { getCommandFlags } from '@vercel-internals/utils';
+import { getCommandFlags, strlen } from '@vercel-internals/utils';
 import { getCommandName } from '../../util/pkg-name';
-import { strlen } from '@vercel-internals/utils';
 
 export default async function list(
   client: Client,

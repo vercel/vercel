@@ -3,12 +3,15 @@ import ms from 'ms';
 import table from 'text-table';
 import Client from '../../util/client';
 import getScope from '../../util/get-scope';
-import { PaginationOptions, getPaginationOpts } from '@vercel-internals/utils';
+import {
+  PaginationOptions,
+  getPaginationOpts,
+  strlen,
+  getCommandFlags,
+} from '@vercel-internals/utils';
 import stamp from '../../util/output/stamp';
 import getCerts from '../../util/certs/get-certs';
-import { strlen } from '@vercel-internals/utils';
 import { Cert } from '@vercel-internals/types';
-import { getCommandFlags } from '@vercel-internals/utils';
 import { getCommandName } from '../../util/pkg-name';
 
 async function ls(

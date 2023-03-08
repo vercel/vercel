@@ -1,11 +1,10 @@
 import chalk from 'chalk';
 import logo from '../util/output/logo';
 import elapsed from '../util/output/elapsed';
-import { maybeURL, normalizeURL } from '@vercel-internals/utils';
+import { maybeURL, normalizeURL, getArgs } from '@vercel-internals/utils';
 import printEvents, { DeploymentEvent } from '../util/events';
 import getScope from '../util/get-scope';
 import { getPkgName } from '../util/pkg-name';
-import { getArgs } from '@vercel-internals/utils';
 import Client from '../util/client';
 import getDeployment from '../util/get-deployment';
 

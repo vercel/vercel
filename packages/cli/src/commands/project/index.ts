@@ -1,7 +1,6 @@
 import chalk from 'chalk';
 import Client from '../../util/client';
-import { getArgs } from '@vercel-internals/utils';
-import { getInvalidSubcommand } from '@vercel-internals/utils';
+import { getArgs, getInvalidSubcommand } from '@vercel-internals/utils';
 import getScope from '../../util/get-scope';
 import handleError from '../../util/handle-error';
 import logo from '../../util/output/logo';

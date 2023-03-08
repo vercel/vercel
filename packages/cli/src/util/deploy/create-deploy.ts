@@ -1,7 +1,6 @@
 import generateCertForDeploy from './generate-cert-for-deploy';
 import * as ERRORS_TS from '../errors-ts';
-import { SchemaValidationFailed } from '@vercel-internals/utils';
-import { NowError } from '@vercel-internals/utils';
+import { SchemaValidationFailed, NowError } from '@vercel-internals/utils';
 import mapCertError from '../certs/map-cert-error';
 import { Org } from '@vercel-internals/types';
 import Now, { CreateOptions } from '..';

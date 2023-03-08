@@ -48,10 +48,8 @@ import frameworkList from '@vercel/frameworks';
 
 import cmd from '../output/cmd';
 import link from '../output/link';
-import { sleep } from '@vercel-internals/utils';
+import { sleep, treeKill, relative, getDistTag } from '@vercel-internals/utils';
 import { Output } from '../output';
-import { relative } from '@vercel-internals/utils';
-import { getDistTag } from '@vercel-internals/utils';
 import getVercelConfigPath from '../config/local-path';
 import { MissingDotenvVarsError } from '../errors-ts';
 import cliPkg from '../pkg';
@@ -86,7 +84,6 @@ import {
   EnvConfigs,
 } from './types';
 import { ProjectSettings } from '@vercel-internals/types';
-import { treeKill } from '@vercel-internals/utils';
 import { applyOverriddenHeaders, nodeHeadersToFetchHeaders } from './headers';
 import { formatQueryString, parseQueryString } from './parse-query-string';
 import {

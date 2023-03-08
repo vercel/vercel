@@ -3,15 +3,17 @@ import ms from 'ms';
 import table from 'text-table';
 import title from 'title';
 import Now from '../util';
-import { getArgs } from '@vercel-internals/utils';
+import {
+  getArgs,
+  strlen,
+  toHost,
+  parseMeta,
+  isValidName,
+  getCommandFlags,
+} from '@vercel-internals/utils';
 import { handleError } from '../util/error';
 import logo from '../util/output/logo';
 import elapsed from '../util/output/elapsed';
-import { strlen } from '@vercel-internals/utils';
-import { toHost } from '@vercel-internals/utils';
-import { parseMeta } from '@vercel-internals/utils';
-import { isValidName } from '@vercel-internals/utils';
-import { getCommandFlags } from '@vercel-internals/utils';
 import { getPkgName, getCommandName } from '../util/pkg-name';
 import Client from '../util/client';
 import { Deployment } from '@vercel/client';

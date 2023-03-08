@@ -3,15 +3,18 @@ import ms from 'ms';
 import { DomainNotFound } from '../../util/errors-ts';
 import { DNSRecord } from '@vercel-internals/types';
 import Client from '../../util/client';
-import { formatTable } from '@vercel-internals/utils';
+import {
+  formatTable,
+  getCommandFlags,
+  PaginationOptions,
+  getPaginationOpts,
+} from '@vercel-internals/utils';
 import getDNSRecords, {
   DomainRecordsItem,
 } from '../../util/dns/get-dns-records';
 import getDomainDNSRecords from '../../util/dns/get-domain-dns-records';
 import getScope from '../../util/get-scope';
-import { PaginationOptions, getPaginationOpts } from '@vercel-internals/utils';
 import stamp from '../../util/output/stamp';
-import { getCommandFlags } from '@vercel-internals/utils';
 import { getCommandName } from '../../util/pkg-name';
 
 export default async function ls(

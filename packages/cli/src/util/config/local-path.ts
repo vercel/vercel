@@ -1,8 +1,7 @@
 import path from 'path';
 import { existsSync } from 'fs';
-import { InvalidLocalConfig } from '@vercel-internals/utils';
+import { InvalidLocalConfig, getArgs } from '@vercel-internals/utils';
 import { ConflictingConfigFiles } from '../errors-ts';
-import { getArgs } from '@vercel-internals/utils';
 
 export default function getLocalPathConfig(prefix: string) {
   let customPath: string | undefined;

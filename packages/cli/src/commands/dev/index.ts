@@ -2,10 +2,8 @@ import path from 'path';
 import chalk from 'chalk';
 import { PackageJson } from '@vercel/build-utils';
 
-import { getArgs } from '@vercel-internals/utils';
-import { getSubcommand } from '@vercel-internals/utils';
+import { getArgs, getSubcommand, NowError } from '@vercel-internals/utils';
 import Client from '../../util/client';
-import { NowError } from '@vercel-internals/utils';
 import handleError from '../../util/handle-error';
 import logo from '../../util/output/logo';
 import cmd from '../../util/output/cmd';

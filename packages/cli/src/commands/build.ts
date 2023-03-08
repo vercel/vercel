@@ -37,7 +37,7 @@ import type { VercelConfig } from '@vercel/client';
 import pull from './pull';
 import { staticFiles as getFiles } from '../util/get-files';
 import Client from '../util/client';
-import { getArgs } from '@vercel-internals/utils';
+import { getArgs, emoji, prependEmoji } from '@vercel-internals/utils';
 import cmd from '../util/output/cmd';
 import * as cli from '../util/pkg-name';
 import cliPkg from '../util/pkg';
@@ -50,7 +50,6 @@ import {
 } from '../util/projects/project-settings';
 import { VERCEL_DIR } from '../util/projects/link';
 import confirm from '../util/input/confirm';
-import { emoji, prependEmoji } from '@vercel-internals/utils';
 import stamp from '../util/output/stamp';
 import {
   OUTPUT_DIR,

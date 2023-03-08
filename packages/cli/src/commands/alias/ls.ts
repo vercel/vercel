@@ -4,10 +4,13 @@ import table from 'text-table';
 import Client from '../../util/client';
 import getAliases from '../../util/alias/get-aliases';
 import getScope from '../../util/get-scope';
-import { PaginationOptions, getPaginationOpts } from '@vercel-internals/utils';
+import {
+  PaginationOptions,
+  getPaginationOpts,
+  strlen,
+  getCommandFlags,
+} from '@vercel-internals/utils';
 import stamp from '../../util/output/stamp';
-import { strlen } from '@vercel-internals/utils';
-import { getCommandFlags } from '@vercel-internals/utils';
 import { getCommandName } from '../../util/pkg-name';
 import { Alias } from '@vercel-internals/types';
 

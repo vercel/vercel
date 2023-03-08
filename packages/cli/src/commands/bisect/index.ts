@@ -6,11 +6,9 @@ import chalk, { Chalk } from 'chalk';
 import { URLSearchParams, parse } from 'url';
 
 import box from '../../util/output/box';
-import { sleep } from '@vercel-internals/utils';
-import { formatDate } from '@vercel-internals/utils';
+import { sleep, formatDate, getArgs } from '@vercel-internals/utils';
 import link from '../../util/output/link';
 import logo from '../../util/output/logo';
-import { getArgs } from '@vercel-internals/utils';
 import Client from '../../util/client';
 import { getPkgName } from '../../util/pkg-name';
 import { Deployment, PaginationOptions } from '@vercel-internals/types';

@@ -21,8 +21,7 @@ import minimatch from 'minimatch';
 
 import { Output } from '../output';
 import highlight from '../output/highlight';
-import { treeKill } from '@vercel-internals/utils';
-import { relative } from '@vercel-internals/utils';
+import { treeKill, relative } from '@vercel-internals/utils';
 import { LambdaSizeExceededError } from '../errors-ts';
 
 import DevServer from './server';

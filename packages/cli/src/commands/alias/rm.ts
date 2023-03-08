@@ -5,12 +5,11 @@ import Client from '../../util/client';
 import getScope from '../../util/get-scope';
 import removeAliasById from '../../util/alias/remove-alias-by-id';
 import stamp from '../../util/output/stamp';
-import { strlen } from '@vercel-internals/utils';
+import { strlen, isValidName } from '@vercel-internals/utils';
 import confirm from '../../util/input/confirm';
 import findAliasByAliasOrId from '../../util/alias/find-alias-by-alias-or-id';
 
 import { Alias } from '@vercel-internals/types';
-import { isValidName } from '@vercel-internals/utils';
 import { getCommandName } from '../../util/pkg-name';
 
 type Options = {

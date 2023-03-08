@@ -2,12 +2,14 @@ import chars from '../../util/output/chars';
 import table from '../../util/output/table';
 import getUser from '../../util/get-user';
 import getTeams from '../../util/teams/get-teams';
-import { getPrefixedFlags } from '@vercel-internals/utils';
+import {
+  getPrefixedFlags,
+  getCommandFlags,
+  getArgs,
+} from '@vercel-internals/utils';
 import { getPkgName } from '../../util/pkg-name';
-import { getCommandFlags } from '@vercel-internals/utils';
 import cmd from '../../util/output/cmd';
 import Client from '../../util/client';
-import { getArgs } from '@vercel-internals/utils';
 
 export default async function list(client: Client): Promise<number> {
   const { config, output } = client;

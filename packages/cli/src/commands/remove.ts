@@ -6,20 +6,22 @@ import Now from '../util';
 import getAliases from '../util/alias/get-aliases';
 import logo from '../util/output/logo';
 import elapsed from '../util/output/elapsed';
-import { normalizeURL } from '@vercel-internals/utils';
+import {
+  normalizeURL,
+  isValidName,
+  getArgs,
+  NowError,
+} from '@vercel-internals/utils';
 import getScope from '../util/get-scope';
-import { isValidName } from '@vercel-internals/utils';
 import removeProject from '../util/projects/remove-project';
 import getProjectByIdOrName from '../util/projects/get-project-by-id-or-name';
 import getDeployment from '../util/get-deployment';
 import getDeploymentsByProjectId from '../util/deploy/get-deployments-by-project-id';
 import { getPkgName, getCommandName } from '../util/pkg-name';
-import { getArgs } from '@vercel-internals/utils';
 import handleError from '../util/handle-error';
 import type Client from '../util/client';
 import { Output } from '../util/output';
 import { Alias, Deployment, Project } from '@vercel-internals/types';
-import { NowError } from '@vercel-internals/utils';
 
 type DeploymentWithAliases = Deployment & {
   aliases: Alias[];

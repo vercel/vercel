@@ -11,16 +11,23 @@ import {
 import code from '../../util/output/code';
 import highlight from '../../util/output/highlight';
 import { readLocalConfig } from '../../util/config/files';
-import { getArgs } from '@vercel-internals/utils';
+import {
+  getArgs,
+  humanizePath,
+  parseMeta,
+  SchemaValidationFailed,
+  getProjectName,
+  prependEmoji,
+  emoji,
+  parseEnv,
+} from '@vercel-internals/utils';
 import { handleError } from '../../util/error';
 import Client from '../../util/client';
 import { getPrettyError } from '@vercel/build-utils';
-import { humanizePath } from '@vercel-internals/utils';
 import Now from '../../util';
 import stamp from '../../util/output/stamp';
 import createDeploy from '../../util/deploy/create-deploy';
 import getDeployment from '../../util/get-deployment';
-import { parseMeta } from '@vercel-internals/utils';
 import linkStyle from '../../util/output/link';
 import param from '../../util/output/param';
 import {
@@ -42,7 +49,6 @@ import {
   NotDomainOwner,
   isAPIError,
 } from '../../util/errors-ts';
-import { SchemaValidationFailed } from '@vercel-internals/utils';
 import purchaseDomainIfAvailable from '../../util/domains/purchase-domain-if-available';
 import confirm from '../../util/input/confirm';
 import editProjectSettings from '../../util/input/edit-project-settings';
@@ -50,10 +56,9 @@ import {
   getLinkedProject,
   linkFolderToProject,
 } from '../../util/projects/link';
-import { getProjectName } from '@vercel-internals/utils';
+
 import selectOrg from '../../util/input/select-org';
 import inputProject from '../../util/input/input-project';
-import { prependEmoji, emoji } from '@vercel-internals/utils';
 import { inputRootDirectory } from '../../util/input/input-root-directory';
 import validatePaths, {
   validateRootDirectory,
@@ -67,7 +72,6 @@ import parseTarget from '../../util/deploy/parse-target';
 import getPrebuiltJson from '../../util/deploy/get-prebuilt-json';
 import { createGitMeta } from '../../util/create-git-meta';
 import { isValidArchive } from '../../util/deploy/validate-archive-format';
-import { parseEnv } from '@vercel-internals/utils';
 import { errorToString, isErrnoException, isError } from '@vercel/error-utils';
 import { pickOverrides } from '../../util/projects/project-settings';
 

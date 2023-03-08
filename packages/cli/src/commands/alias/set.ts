@@ -11,12 +11,11 @@ import { getDeploymentForAlias } from '../../util/alias/get-deployment-by-alias'
 import getScope from '../../util/get-scope';
 import setupDomain from '../../util/domains/setup-domain';
 import stamp from '../../util/output/stamp';
-import { isValidName } from '@vercel-internals/utils';
+import { isValidName, toHost } from '@vercel-internals/utils';
 import handleCertError from '../../util/certs/handle-cert-error';
 import isWildcardAlias from '../../util/alias/is-wildcard-alias';
 import link from '../../util/output/link';
 import { getCommandName } from '../../util/pkg-name';
-import { toHost } from '@vercel-internals/utils';
 import type { VercelConfig } from '@vercel/client';
 
 type Options = {
