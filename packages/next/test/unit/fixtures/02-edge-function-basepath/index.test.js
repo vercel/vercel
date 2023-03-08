@@ -8,12 +8,6 @@ jest.setTimeout(ms('6m'));
 
 describe(`${__dirname.split(path.sep).pop()}`, () => {
   it('should normalize routes in build results output', async () => {
-    if (process.platform === 'darwin') {
-      // skipping flakey test (hopefully temporarily)
-      console.log('Skipping test on Mac');
-      return;
-    }
-
     // TODO: remove after bug with edge functions on Windows
     // is resolved upstream in Next.js
     if (process.platform === 'win32') {
