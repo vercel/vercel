@@ -5,7 +5,7 @@ const fetch = require('node-fetch');
 const retry = require('async-retry');
 const { satisfies } = require('semver');
 const stripAnsi = require('strip-ansi');
-const { getDistTag } = require('../../src/util/get-dist-tag');
+const { getDistTag } = require('@vercel-internals/utils');
 const { version: cliVersion } = require('../../package.json');
 const {
   fetchCachedToken,
