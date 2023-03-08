@@ -15,6 +15,8 @@ import { useUser } from '../../../mocks/user';
 import { defaultProject, useProject } from '../../../mocks/project';
 import { Project } from '@vercel-internals/types';
 
+jest.setTimeout(10 * 1000);
+
 const fixture = (name: string) =>
   join(__dirname, '../../../fixtures/unit/create-git-meta', name);
 

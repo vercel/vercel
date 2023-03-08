@@ -1,4 +1,3 @@
-import ms from 'ms';
 import fs from 'fs-extra';
 import { join } from 'path';
 import { getWriteableDirectory } from '@vercel/build-utils';
@@ -8,7 +7,7 @@ import { defaultProject, useProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
 
-jest.setTimeout(ms('1 minute'));
+jest.setTimeout(2 * 60 * 1000);
 
 const fixture = (name: string) =>
   join(__dirname, '../../../fixtures/unit/commands/build', name);

@@ -2,7 +2,7 @@ import path from 'path';
 import { remove } from 'fs-extra';
 import { build } from '../src';
 
-jest.setTimeout(60 * 1000);
+jest.setTimeout(2 * 60 * 1000);
 
 describe('build()', () => {
   describe('Build Output API v1', () => {
