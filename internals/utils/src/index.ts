@@ -29,3 +29,4 @@ export * from './is-valid-name';
 export * from './parse-env';
 export {default as parseMeta} from './parse-meta';
 export * from './path-helpers';
+export * from './promise';

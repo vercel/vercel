@@ -20,7 +20,7 @@ import type {
   ReadableTTY,
   WritableTTY,
 } from '@vercel-internals/types';
-import { sharedPromise } from './promise';
+import { sharedPromise } from '@vercel-internals/utils';
 import { APIError } from './errors-ts';
 import { normalizeError } from '@vercel/error-utils';
 
