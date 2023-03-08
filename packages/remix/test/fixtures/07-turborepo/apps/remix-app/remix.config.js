@@ -8,10 +8,10 @@ const packages = glob
     ignore: ["**/node_modules/**"],
     absolute: true,
   })
-  .map(pkg => path.dirname(pkg));
+  .map((pkg) => path.dirname(pkg));
 
 /**
- * @type {import("@remix-run/dev").AppConfig}
+ * @type {import('@remix-run/dev').AppConfig}
  */
 module.exports = {
   serverBuildTarget: "vercel",
