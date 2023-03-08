@@ -35,3 +35,4 @@ export {default as toHost} from './to-host';
 export * from './tree-kill';
 export {default as uaBrowser} from './ua-browser';
 export {default as uniqueStrings} from './unique-strings';
+export * from './url';

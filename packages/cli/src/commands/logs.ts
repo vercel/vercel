@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import logo from '../util/output/logo';
 import elapsed from '../util/output/elapsed';
-import { maybeURL, normalizeURL } from '../util/url';
+import { maybeURL, normalizeURL } from '@vercel-internals/utils';
 import printEvents, { DeploymentEvent } from '../util/events';
 import getScope from '../util/get-scope';
 import { getPkgName } from '../util/pkg-name';

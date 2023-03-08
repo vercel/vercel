@@ -6,7 +6,7 @@ import Now from '../util';
 import getAliases from '../util/alias/get-aliases';
 import logo from '../util/output/logo';
 import elapsed from '../util/output/elapsed';
-import { normalizeURL } from '../util/url';
+import { normalizeURL } from '@vercel-internals/utils';
 import getScope from '../util/get-scope';
 import { isValidName } from '@vercel-internals/utils';
 import removeProject from '../util/projects/remove-project';
