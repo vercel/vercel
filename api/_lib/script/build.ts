@@ -33,7 +33,7 @@ async function main() {
   });
 
   const existingExamples = exampleDirs
-    .filter(dir => dir.isDirectory())
+    .filter(dir => dir.isDirectory() && dir.name !== 'node_modules')
     .map(dir => ({
       name: dir.name,
       visible: true,
