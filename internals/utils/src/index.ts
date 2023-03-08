@@ -32,3 +32,6 @@ export * from './path-helpers';
 export * from './promise';
 export {default as raceAsyncGenerators} from './race-async-generators';
 export {default as toHost} from './to-host';
+export * from './tree-kill';
+export {default as uaBrowser} from './ua-browser';
+export {default as uniqueStrings} from './unique-strings';

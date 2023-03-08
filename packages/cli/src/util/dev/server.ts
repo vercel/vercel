@@ -86,7 +86,7 @@ import {
   EnvConfigs,
 } from './types';
 import { ProjectSettings } from '@vercel-internals/types';
-import { treeKill } from '../tree-kill';
+import { treeKill } from '@vercel-internals/utils';
 import { applyOverriddenHeaders, nodeHeadersToFetchHeaders } from './headers';
 import { formatQueryString, parseQueryString } from './parse-query-string';
 import {

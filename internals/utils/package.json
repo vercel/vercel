@@ -30,6 +30,7 @@
     "psl": "1.1.31",
     "semver": "7.3.8",
     "strip-ansi": "6.0.1",
-    "text-table": "0.2.0"
+    "text-table": "0.2.0",
+    "tree-kill": "1.2.2"
   }
 }
