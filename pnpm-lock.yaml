@@ -121,6 +121,7 @@ importers:
       '@vercel-internals/tsconfig': '*'
       '@vercel-internals/types': '*'
       '@vercel/build-utils': 6.3.4
+      '@vercel/client': workspace:12.4.4
       '@vercel/style-guide': 4.0.2
       arg: 5.0.0
       chalk: 4.1.0
@@ -133,6 +134,7 @@ importers:
     dependencies:
       '@vercel-internals/types': link:../types
       '@vercel/build-utils': link:../../packages/build-utils
+      '@vercel/client': link:../../packages/client
       arg: 5.0.0
       chalk: 4.1.0
       date-fns: 1.29.0

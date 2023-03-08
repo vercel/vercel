@@ -50,7 +50,7 @@ import {
   getLinkedProject,
   linkFolderToProject,
 } from '../../util/projects/link';
-import getProjectName from '../../util/get-project-name';
+import { getProjectName } from '@vercel-internals/utils';
 import selectOrg from '../../util/input/select-org';
 import inputProject from '../../util/input/input-project';
 import { prependEmoji, emoji } from '@vercel-internals/utils';

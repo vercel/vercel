@@ -20,6 +20,7 @@
   "dependencies": {
     "@vercel-internals/types": "*",
     "@vercel/build-utils": "6.3.4",
+    "@vercel/client": "workspace:12.4.4",
     "arg": "5.0.0",
     "chalk": "4.1.0",
     "date-fns": "1.29.0",

@@ -10,7 +10,7 @@ import logo from '../util/output/logo';
 import getScope from '../util/get-scope.ts';
 import confirm from '../util/input/confirm';
 import { getCommandFlags } from '@vercel-internals/utils';
-import getPrefixedFlags from '../util/get-prefixed-flags';
+import { getPrefixedFlags } from '@vercel-internals/utils';
 import { getPkgName, getCommandName } from '../util/pkg-name.ts';
 
 const help = () => {

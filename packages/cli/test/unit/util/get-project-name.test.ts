@@ -1,4 +1,4 @@
-import getProjectName from '../../../src/util/get-project-name';
+import { getProjectName } from '@vercel-internals/utils';
 
 describe('getProjectName', () => {
   it('should work with argv', () => {
