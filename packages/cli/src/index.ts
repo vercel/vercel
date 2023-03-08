@@ -21,7 +21,7 @@ import epipebomb from 'epipebomb';
 import getLatestVersion from './util/get-latest-version';
 import { URL } from 'url';
 import * as Sentry from '@sentry/node';
-import hp from './util/humanize-path';
+import { humanizePath } from '@vercel-internals/utils';
 import commands from './commands';
 import pkg from './util/pkg';
 import { Output } from './util/output';
@@ -185,7 +185,7 @@ const main = async () => {
     await mkdirp(VERCEL_DIR);
   } catch (err: unknown) {
     output.error(
-      `An unexpected error occurred while trying to create the global directory "${hp(
+      `An unexpected error occurred while trying to create the global directory "${humanizePath(
         VERCEL_DIR
       )}" ${errorToString(err)}`
     );
@@ -202,7 +202,7 @@ const main = async () => {
         configFiles.writeToConfigFile(config);
       } catch (err: unknown) {
         output.error(
-          `An unexpected error occurred while trying to save the config to "${hp(
+          `An unexpected error occurred while trying to save the config to "${humanizePath(
             VERCEL_CONFIG_PATH
           )}" ${errorToString(err)}`
         );
@@ -210,7 +210,7 @@ const main = async () => {
       }
     } else {
       output.error(
-        `An unexpected error occurred while trying to read the config in "${hp(
+        `An unexpected error occurred while trying to read the config in "${humanizePath(
           VERCEL_CONFIG_PATH
         )}" ${errorToString(err)}`
       );
@@ -228,7 +228,7 @@ const main = async () => {
         configFiles.writeToAuthConfigFile(authConfig);
       } catch (err: unknown) {
         output.error(
-          `An unexpected error occurred while trying to write the auth config to "${hp(
+          `An unexpected error occurred while trying to write the auth config to "${humanizePath(
             VERCEL_AUTH_CONFIG_PATH
           )}" ${errorToString(err)}`
         );
@@ -236,7 +236,7 @@ const main = async () => {
       }
     } else {
       output.error(
-        `An unexpected error occurred while trying to read the auth config in "${hp(
+        `An unexpected error occurred while trying to read the auth config in "${humanizePath(
           VERCEL_AUTH_CONFIG_PATH
         )}" ${errorToString(err)}`
       );
@@ -337,7 +337,7 @@ const main = async () => {
       configFiles.writeToAuthConfigFile(client.authConfig);
       configFiles.writeToConfigFile(client.config);
 
-      output.debug(`Saved credentials in "${hp(VERCEL_DIR)}"`);
+      output.debug(`Saved credentials in "${humanizePath(VERCEL_DIR)}"`);
     } else {
       output.prettyError({
         message:

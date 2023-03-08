@@ -1,6 +1,6 @@
 import { validate as validateEmail } from 'email-validator';
 import chalk from 'chalk';
-import hp from '../util/humanize-path';
+import { humanizePath } from '@vercel-internals/utils';
 import { getArgs } from '@vercel-internals/utils';
 import logo from '../util/output/logo';
 import prompt from '../util/login/prompt';
@@ -115,7 +115,7 @@ export default async function login(client: Client): Promise<number> {
   writeToAuthConfigFile(client.authConfig);
   writeToConfigFile(client.config);
 
-  output.debug(`Saved credentials in "${hp(getGlobalPathConfig())}"`);
+  output.debug(`Saved credentials in "${humanizePath(getGlobalPathConfig())}"`);
 
   output.print(
     `${chalk.cyan('Congratulations!')} ` +

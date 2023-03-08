@@ -4,7 +4,7 @@ import { Output } from './output';
 import chalk from 'chalk';
 import { homedir } from 'os';
 import confirm from './input/confirm';
-import toHumanPath from './humanize-path';
+import { humanizePath } from '@vercel-internals/utils';
 import Client from './client';
 
 const stat = promisify(lstatRaw);
@@ -24,7 +24,7 @@ export async function validateRootDirectory(
   if (!pathStat) {
     output.error(
       `The provided path ${chalk.cyan(
-        `“${toHumanPath(path)}”`
+        `“${humanizePath(path)}”`
       )} does not exist.${suffix}`
     );
     return false;
@@ -33,7 +33,7 @@ export async function validateRootDirectory(
   if (!pathStat.isDirectory()) {
     output.error(
       `The provided path ${chalk.cyan(
-        `“${toHumanPath(path)}”`
+        `“${humanizePath(path)}”`
       )} is a file, but expected a directory.${suffix}`
     );
     return false;
@@ -42,7 +42,7 @@ export async function validateRootDirectory(
   if (!path.startsWith(cwd)) {
     output.error(
       `The provided path ${chalk.cyan(
-        `“${toHumanPath(path)}”`
+        `“${humanizePath(path)}”`
       )} is outside of the project.${suffix}`
     );
     return false;
@@ -69,7 +69,7 @@ export default async function validatePaths(
   const pathStat = await stat(path).catch(() => null);
 
   if (!pathStat) {
-    output.error(`Could not find ${chalk.cyan(`“${toHumanPath(path)}”`)}`);
+    output.error(`Could not find ${chalk.cyan(`“${humanizePath(path)}”`)}`);
     return { valid: false, exitCode: 1 };
   }
 

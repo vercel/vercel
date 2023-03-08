@@ -6,7 +6,7 @@ import {
   ConflictingConfigFiles,
   WorkingDirectoryDoesNotExist,
 } from './errors-ts';
-import humanizePath from './humanize-path';
+import { humanizePath } from '@vercel-internals/utils';
 import readJSONFile from './read-json-file';
 import { VercelConfig } from './dev/types';
 import { Output } from './output';

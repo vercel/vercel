@@ -14,7 +14,7 @@ import updateProject from '../projects/update-project';
 import Client from '../client';
 import handleError from '../handle-error';
 import confirm from '../input/confirm';
-import toHumanPath from '../humanize-path';
+import { humanizePath } from '@vercel-internals/utils';
 import { isDirectory } from '../config/global-path';
 import selectOrg from '../input/select-org';
 import inputProject from '../input/input-project';
@@ -86,7 +86,7 @@ export default async function setupAndLink(
     autoConfirm ||
     (await confirm(
       client,
-      `${setupMsg} ${chalk.cyan(`“${toHumanPath(path)}”`)}?`,
+      `${setupMsg} ${chalk.cyan(`“${humanizePath(path)}”`)}?`,
       true
     ));
 

@@ -7,7 +7,7 @@ import chalk from 'chalk';
 import listInput from '../../util/input/list';
 import listItem from '../../util/output/list-item';
 import promptBool from '../../util/input/prompt-bool';
-import toHumanPath from '../../util/humanize-path';
+import { humanizePath } from '@vercel-internals/utils';
 import Client from '../../util/client';
 import info from '../../util/output/info';
 import cmd from '../../util/output/cmd';
@@ -146,7 +146,7 @@ async function extractExample(
 
       const successLog = `Initialized "${chalk.bold(
         name
-      )}" example in ${chalk.bold(toHumanPath(folder))}.`;
+      )}" example in ${chalk.bold(humanizePath(folder))}.`;
       const folderRel = path.relative(process.cwd(), folder);
       const deployHint =
         folderRel === ''

@@ -15,7 +15,7 @@ import { getArgs } from '@vercel-internals/utils';
 import { handleError } from '../../util/error';
 import Client from '../../util/client';
 import { getPrettyError } from '@vercel/build-utils';
-import toHumanPath from '../../util/humanize-path';
+import { humanizePath } from '@vercel-internals/utils';
 import Now from '../../util';
 import stamp from '../../util/output/stamp';
 import createDeploy from '../../util/deploy/create-deploy';
@@ -288,7 +288,7 @@ export default async (client: Client): Promise<number> => {
       autoConfirm ||
       (await confirm(
         client,
-        `Set up and deploy ${chalk.cyan(`“${toHumanPath(path)}”`)}?`,
+        `Set up and deploy ${chalk.cyan(`“${humanizePath(path)}”`)}?`,
         true
       ));
 
