@@ -1,4 +1,6 @@
+import os from 'os';
 import pkg from './pkg';
-import { getUserAgent } from '@vercel-internals/utils';
 
-export default getUserAgent(pkg);
+export default `${pkg.name} ${pkg.version} node-${
+  process.version
+} ${os.platform()} (${os.arch()})`;
