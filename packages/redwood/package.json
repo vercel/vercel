@@ -14,7 +14,7 @@
   },
   "scripts": {
     "build": "node build.js",
-    "test-e2e": "pnpm test test/test.js",
+    "test-e2e": "pnpm test --testTimeout=300000 test/test.js",
     "test": "jest --env node --verbose --bail --runInBand --testTimeout=10000",
     "test-unit": "pnpm test test/prepare-cache.test.js"
   },

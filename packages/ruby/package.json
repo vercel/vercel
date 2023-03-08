@@ -17,7 +17,7 @@
   "scripts": {
     "build": "node build",
     "test": "jest --env node --verbose --runInBand --bail --testTimeout=10000",
-    "test-e2e": "pnpm test"
+    "test-e2e": "pnpm test --testTimeout=300000"
   },
   "devDependencies": {
     "@types/fs-extra": "8.0.0",
