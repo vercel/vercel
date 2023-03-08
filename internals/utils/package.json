@@ -13,5 +13,8 @@
     "@vercel-internals/tsconfig": "*",
     "@vercel/style-guide": "4.0.2",
     "typescript": "4.9.4"
+  },
+  "dependencies": {
+    "@vercel/build-utils": "6.3.4"
   }
 }
