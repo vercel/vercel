@@ -3,7 +3,7 @@ import chalk from 'chalk';
 import { PackageJson } from '@vercel/build-utils';
 
 import { getArgs } from '@vercel-internals/utils';
-import getSubcommand from '../../util/get-subcommand';
+import { getSubcommand } from '@vercel-internals/utils';
 import Client from '../../util/client';
 import { NowError } from '@vercel-internals/utils';
 import handleError from '../../util/handle-error';

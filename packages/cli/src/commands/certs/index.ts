@@ -4,7 +4,7 @@ import chalk from 'chalk';
 import { handleError } from '../../util/error';
 
 import { getArgs } from '@vercel-internals/utils';
-import getSubcommand from '../../util/get-subcommand';
+import { getSubcommand } from '@vercel-internals/utils';
 import logo from '../../util/output/logo';
 
 import add from './add';

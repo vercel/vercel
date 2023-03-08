@@ -6,7 +6,7 @@ import {
 } from '../../util/env/env-target';
 import { getArgs } from '@vercel-internals/utils';
 import { getInvalidSubcommand } from '@vercel-internals/utils';
-import getSubcommand from '../../util/get-subcommand';
+import { getSubcommand } from '@vercel-internals/utils';
 import handleError from '../../util/handle-error';
 import logo from '../../util/output/logo';
 import { getCommandName, getPkgName } from '../../util/pkg-name';

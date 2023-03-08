@@ -21,3 +21,4 @@ export {default as getInvalidSubcommand} from './get-invalid-subcommand';
 export * from './get-pagination-opts';
 export {default as getPrefixedFlags} from './get-prefixed-flags';
 export {default as getProjectName} from './get-project-name';
+export {default as getSubcommand} from './get-subcommand';
