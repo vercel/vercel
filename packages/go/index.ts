@@ -810,11 +810,12 @@ async function waitForPortFile_(opts: {
   }
 }
 
-export async function prepareCache(): Promise<Files> {
+export async function prepareCache({ workPath }): Promise<Files> {
   console.log('!!! Prepare cache');
-  console.log(`symlinking ${goGlobalCachePath} -> ${cacheDir}`);
-  await symlink(goGlobalCachePath, cacheDir);
-  const cache = await glob('**', cacheDir);
+  const goDir = join(workPath, cacheDir);
+  console.log(`symlinking ${goGlobalCachePath} -> ${goDir}`);
+  await symlink(goGlobalCachePath, goDir);
+  const cache = await glob('**', goDir);
   console.log(`Caching ${Object.keys(cache).length} files`);
   console.log(cache['1.18.10_linux_x64/LICENSE']);
   return cache;
