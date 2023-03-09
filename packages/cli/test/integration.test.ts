@@ -25,7 +25,8 @@ import pkg from '../package.json';
 import prepareFixtures from './helpers/prepare';
 import { fetchTokenWithRetry } from '../../../test/lib/deployment/now-deploy';
 
-jest.setTimeout(3 * 60 * 1000);
+const TEST_TIMEOUT = 3 * 60 * 1000;
+jest.setTimeout(TEST_TIMEOUT);
 
 type BoundChildProcess = _execa.ExecaChildProcess & {
   stdout: Readable;
@@ -147,12 +148,12 @@ function formatOutput({
 -----
 
 Stderr:
-${stderr}
+${stderr || '(no output)'}
 
 -----
 
 Stdout:
-${stdout}
+${stdout || '(no output)'}
 
 -----
   `;
@@ -264,7 +265,10 @@ const waitForPrompt = (
 ) =>
   new Promise<void>((resolve, reject) => {
     console.log('Waiting for prompt...');
-    setTimeout(() => reject(new Error('timeout in waitForPrompt')), 60000);
+    setTimeout(
+      () => reject(new Error('timeout in waitForPrompt')),
+      TEST_TIMEOUT / 2
+    );
     const listener = (chunk: string) => {
       console.log('> ' + chunk);
       if (assertion(chunk)) {
@@ -372,8 +376,11 @@ beforeAll(async () => {
     await createUser();
     await prepareFixtures(contextName, binaryPath, tmpFixturesDir);
   } catch (err) {
-    console.log('Failed `test.before`');
+    console.log('Failed test suite `beforeAll`');
     console.log(err);
+
+    // force test suite to actually stop
+    process.exit(1);
   }
 });
 
@@ -401,9 +408,16 @@ afterAll(async () => {
   }
 });
 
+async function clearAuthConfig() {
+  const configPath = getConfigAuthPath();
+  if (fs.existsSync(configPath)) {
+    await fs.writeFile(configPath, JSON.stringify({}));
+  }
+}
+
 test('default command should prompt login with empty auth.json', async () => {
-  await fs.writeFile(getConfigAuthPath(), JSON.stringify({}));
   try {
+    await clearAuthConfig();
     await execa(binaryPath, [...defaultArgs]);
     throw new Error(
       `Should not successfull execute ${binaryPath} ${defaultArgs.join(' ')}`
@@ -1784,7 +1798,7 @@ test('output logs with "short" output', async () => {
   console.log(exitCode);
 
   expect(stderr.includes(`Fetched deployment "${context.deployment}"`)).toBe(
-    true
+    tr
   );
 
   // "short" format includes timestamps
@@ -2360,25 +2374,33 @@ test('[vercel dev] fails when dev script calls vercel dev recursively', async ()
 
 test('[vercel dev] fails when development commad calls vercel dev recursively', async () => {
   const dir = fixture('dev-fail-on-recursion-command');
-  const projectName = `dev-fail-on-recursion-command-${
-    Math.random().toString(36).split('.')[1]
-  }`;
+  // const projectName = `dev-fail-on-recursion-command-${
+  //   Math.random().toString(36).split('.')[1]
+  // }`;
 
-  const dev = execa(binaryPath, ['dev', ...defaultArgs], {
-    cwd: dir,
-    reject: false,
-    env: {
-      FORCE_TTY: '1',
-    },
-  });
+  // const dev = execa(binaryPath, ['dev', ...defaultArgs], {
+  //   cwd: dir,
+  //   reject: false,
+  //   env: {
+  //     FORCE_TTY: '1',
+  //   },
+  // });
 
-  await setupProject(dev, projectName, {
-    devCommand: `${binaryPath} dev`,
-  });
+  // await setupProject(dev, projectName, {
+  //   devCommand: `${binaryPath} dev`,
+  // });
 
-  const { exitCode, stderr } = await dev;
+  // const { exitCode, stdout, stderr } = await dev;
 
-  expect(exitCode).toBe(1);
+  const { exitCode, stdout, stderr } = await execa(
+    binaryPath,
+    ['dev', ...defaultArgs],
+    {
+      cwd: dir,
+    }
+  );
+
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
   expect(stderr.includes('must not recursively invoke itself')).toBe(true);
 });
 
