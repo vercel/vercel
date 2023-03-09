@@ -809,7 +809,7 @@ export async function prepareCache({
   const stat = await lstat(goCacheDir);
   if (stat.isSymbolicLink()) {
     const goGlobalCacheDir = await readlink(goCacheDir);
-    debug(`Preparing cache by moving ${goGlobalCacheDir} -> ${goCachDir}`);
+    debug(`Preparing cache by moving ${goGlobalCacheDir} -> ${goCacheDir}`);
     await unlink(goCacheDir);
     await move(goGlobalCacheDir, goCacheDir);
   }
