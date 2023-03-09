@@ -79,7 +79,7 @@ project. An example use-case is that `@vercel/node` uses this function to cache
 the `node_modules` directory, making it faster to install npm dependencies for
 future builds.
 
-> Note: Only files within the work (project root) directory can be cached.
+> Note: Only files within the repo root directory can be cached.
 
 **Example:**
 
