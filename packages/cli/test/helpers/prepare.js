@@ -96,15 +96,7 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
       ),
     },
     'dev-fail-on-recursion-command': {
-      'package.json': JSON.stringify(
-        {
-          scripts: {
-            dev: `${binaryPath} dev`,
-          },
-        },
-        null,
-        2
-      ),
+      'package.json': '{}',
     },
     'build-fail-on-recursion-command': {
       'package.json': '{}',
