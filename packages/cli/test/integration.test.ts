@@ -361,11 +361,9 @@ test('default command should prompt login with empty auth.json', async done => {
     await execa(binaryPath, [...defaultArgs]);
     done.fail();
   } catch (err) {
-    expect(
-      err.stderr.includes(
-        'Error: No existing credentials found. Please run `vercel login` or pass "--token"'
-      )
-    ).toBe(true);
+    expect(err.stderr).toContain(
+      'Error: No existing credentials found. Please run `vercel login` or pass "--token"'
+    );
   }
 });
 
