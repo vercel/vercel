@@ -506,9 +506,6 @@ export async function build({
     throw error;
   } finally {
     try {
-      const cache = await glob('**', goGlobalCachePath);
-      console.log('CACHING:', Object.keys(cache));
-
       await cleanupFileSystem(
         undoFileActions,
         undoDirectoryCreation,
@@ -811,6 +808,7 @@ async function waitForPortFile_(opts: {
 export async function prepareCache(): Promise<Files> {
   console.log('!!! Prepare cache', goGlobalCachePath);
   const cache = await glob('**', goGlobalCachePath);
-  console.log('CACHE:', Object.keys(cache));
+  console.log(`Caching ${Object.keys(cache).length} files`);
+  console.log(cache['1.18.10_linux_x64/LICENSE']);
   return cache;
 }
