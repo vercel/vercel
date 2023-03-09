@@ -2348,12 +2348,14 @@ test('[vercel dev] fails when dev script calls vercel dev recursively', async ()
 test('[vercel dev] fails when development commad calls vercel dev recursively', async () => {
   const dir = fixture('dev-fail-on-recursion-command');
 
-  const dev = execa(binaryPath, ['dev', ...defaultArgs], {
-    cwd: dir,
-    reject: false,
-  });
-
-  const { exitCode, stdout, stderr } = await dev;
+  const { exitCode, stdout, stderr } = await execa(
+    binaryPath,
+    ['dev', '--yes', ...defaultArgs],
+    {
+      cwd: dir,
+      reject: false,
+    }
+  );
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
   expect(stderr).toContain('must not recursively invoke itself');
