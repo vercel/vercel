@@ -1,10 +1,12 @@
-import { join } from 'path';
-import { existsSync } from 'fs';
+import { existsSync, promises as fs } from 'fs';
+import { join, relative, resolve } from 'path';
 import { pathToRegexp, Key } from 'path-to-regexp';
+import { readConfig } from '@remix-run/dev/dist/config';
 import type {
   ConfigRoute,
   RouteManifest,
 } from '@remix-run/dev/dist/config/routes';
+import type { RemixConfig } from '@remix-run/dev/dist/config';
 import type { BaseFunctionConfig } from '@vercel/static-config';
 
 export interface ResolvedNodeRouteConfig {
@@ -36,6 +38,17 @@ export interface ResolvedRoutePaths {
 }
 
 const SPLAT_PATH = '/:params+';
+
+const entryExts = ['.js', '.jsx', '.ts', '.tsx'];
+
+export function findEntry(dir: string, basename: string): string | undefined {
+  for (const ext of entryExts) {
+    const file = resolve(dir, basename + ext);
+    if (existsSync(file)) return relative(dir, file);
+  }
+
+  return undefined;
+}
 
 const configExts = ['.js', '.cjs', '.mjs'];
 
@@ -189,4 +202,34 @@ export function syncEnv(source: NodeJS.ProcessEnv, dest: NodeJS.ProcessEnv) {
   }
 
   return () => syncEnv(originalDest, dest);
+}
+
+export async function chdirAndReadConfig(dir: string, packageJsonPath: string) {
+  const originalCwd = process.cwd();
+
+  // As of Remix v1.14.0, reading the config may trigger adding
+  // "isbot" as a dependency, and `npm`/`pnpm`/`yarn` may be invoked.
+  // We want to prevent that behavior, so trick `readConfig()`
+  // into thinking that "isbot" is already installed.
+  let modifiedPackageJson = false;
+  const pkgRaw = await fs.readFile(packageJsonPath, 'utf8');
+  const pkg = JSON.parse(pkgRaw);
+  if (!pkg.dependencies?.['isbot']) {
+    pkg.dependencies.isbot = 'latest';
+    await fs.writeFile(packageJsonPath, JSON.stringify(pkg));
+    modifiedPackageJson = true;
+  }
+
+  let remixConfig: RemixConfig;
+  try {
+    process.chdir(dir);
+    remixConfig = await readConfig(dir);
+  } finally {
+    process.chdir(originalCwd);
+    if (modifiedPackageJson) {
+      await fs.writeFile(packageJsonPath, pkgRaw);
+    }
+  }
+
+  return remixConfig;
 }

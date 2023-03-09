@@ -13,7 +13,6 @@ import {
   glob,
   EdgeFunction,
   NodejsLambda,
-  readConfigFile,
   runNpmInstall,
   runPackageJsonScript,
   scanParentDirs,
@@ -21,7 +20,6 @@ import {
 } from '@vercel/build-utils';
 import { getConfig } from '@vercel/static-config';
 import { nodeFileTrace } from '@vercel/nft';
-import { readConfig } from '@remix-run/dev/dist/config';
 import type {
   BuildV2,
   Files,
@@ -29,9 +27,9 @@ import type {
   PackageJson,
   BuildResultV2Typical,
 } from '@vercel/build-utils';
-import type { BaseFunctionConfig } from '@vercel/static-config';
-import type { AppConfig, RemixConfig } from '@remix-run/dev/dist/config';
+import type { AppConfig } from '@remix-run/dev/dist/config';
 import type { ConfigRoute } from '@remix-run/dev/dist/config/routes';
+import type { BaseFunctionConfig } from '@vercel/static-config';
 import {
   calculateRouteConfigHash,
   findConfig,
@@ -42,7 +40,8 @@ import {
   ResolvedRouteConfig,
   ResolvedNodeRouteConfig,
   ResolvedEdgeRouteConfig,
-  syncEnv,
+  findEntry,
+  chdirAndReadConfig,
 } from './utils';
 
 const _require: typeof require = eval('require');
@@ -51,12 +50,14 @@ const REMIX_RUN_DEV_PATH = dirname(
   _require.resolve('@remix-run/dev/package.json')
 );
 
+const DEFAULTS_PATH = join(__dirname, '../defaults');
+
 const edgeServerSrcPromise = fs.readFile(
-  join(__dirname, '../server-edge.mjs'),
+  join(DEFAULTS_PATH, 'server-edge.mjs'),
   'utf-8'
 );
 const nodeServerSrcPromise = fs.readFile(
-  join(__dirname, '../server-node.mjs'),
+  join(DEFAULTS_PATH, 'server-node.mjs'),
   'utf-8'
 );
 
@@ -90,6 +91,9 @@ export const build: BuildV2 = async ({
   if (!packageJsonPath) {
     throw new Error('Failed to locate `package.json` file in your project');
   }
+
+  const pkgRaw = await fs.readFile(packageJsonPath, 'utf8');
+  const pkg = JSON.parse(pkgRaw);
 
   const spawnOpts = getSpawnOptions(meta, nodeVersion);
   if (!spawnOpts.env) {
@@ -130,19 +134,42 @@ export const build: BuildV2 = async ({
   ).version;
 
   // Prevent frozen lockfile rejections
-  const envForReadConfig = { ...spawnOpts.env };
-  delete envForReadConfig.CI;
-  delete envForReadConfig.VERCEL;
-  delete envForReadConfig.NOW_BUILDER;
+  //const envForReadConfig = { ...spawnOpts.env };
+  //delete envForReadConfig.CI;
+  //delete envForReadConfig.VERCEL;
+  //delete envForReadConfig.NOW_BUILDER;
 
-  // Remix uses this env var to determine which package manager to invoke
-  envForReadConfig.npm_config_user_agent = cliType;
+  //// Remix uses this env var to determine which package manager to invoke
+  //envForReadConfig.npm_config_user_agent = cliType;
 
   const remixConfig = await chdirAndReadConfig(
     entrypointFsDirname,
-    envForReadConfig
+    packageJsonPath
   );
+  const { serverEntryPoint, appDirectory } = remixConfig;
   const remixRoutes = Object.values(remixConfig.routes);
+
+  // `app/entry.server.tsx` and `app/entry.client.tsx` are optional in Remix,
+  // so if either of those files are missing then add our own versions.
+  const userEntryServerFile = findEntry(appDirectory, 'entry.server');
+  if (!userEntryServerFile) {
+    await fs.copyFile(
+      join(DEFAULTS_PATH, 'entry.server.tsx'),
+      join(appDirectory, 'entry.server.tsx')
+    );
+    // TODO: add `@vercel/remix-entry-server` dep
+  }
+
+  const userEntryClientFile = findEntry(
+    remixConfig.appDirectory,
+    'entry.client'
+  );
+  if (!userEntryClientFile) {
+    await fs.copyFile(
+      join(DEFAULTS_PATH, 'entry.client.react.tsx'),
+      join(appDirectory, 'entry.client.tsx')
+    );
+  }
 
   let remixConfigWrapped = false;
   const remixConfigPath = findConfig(entrypointFsDirname, 'remix.config');
@@ -258,7 +285,6 @@ module.exports = config;`;
         cwd: entrypointFsDirname,
       });
     } else {
-      const pkg = await readConfigFile<PackageJson>(packageJsonPath);
       if (hasScript('vercel-build', pkg)) {
         debug(`Executing "yarn vercel-build"`);
         await runPackageJsonScript(
@@ -310,7 +336,7 @@ module.exports = config;`;
           entrypointFsDirname,
           repoRootPath,
           join(entrypointFsDirname, bundle.serverBuildPath),
-          remixConfig.serverEntryPoint,
+          serverEntryPoint,
           remixVersion,
           config
         );
@@ -321,7 +347,7 @@ module.exports = config;`;
         entrypointFsDirname,
         repoRootPath,
         join(entrypointFsDirname, bundle.serverBuildPath),
-        remixConfig.serverEntryPoint,
+        serverEntryPoint,
         remixVersion,
         config
       );
@@ -540,8 +566,8 @@ async function createRenderEdgeFunction(
 
             // Copy in the edge entrypoint so that NFT can properly resolve it
             const vercelEdgeEntrypointPath = join(
-              __dirname,
-              '../vercel-edge-entrypoint.js'
+              DEFAULTS_PATH,
+              'vercel-edge-entrypoint.js'
             );
             const vercelEdgeEntrypointDest = join(
               dirname(fsPath),
@@ -693,27 +719,6 @@ async function ensureSymlink(
   console.warn(
     `WARN: Created symlink for "${pkgName}". To silence this warning, add "${pkgName}" to "dependencies" in your \`package.json\` file.`
   );
-}
-
-async function chdirAndReadConfig(dir: string, env: NodeJS.ProcessEnv) {
-  const originalCwd = process.cwd();
-
-  // As of Remix v1.14.0, reading the config may trigger adding `isbot`
-  // as a dependency, and `npm`/`pnpm`/`yarn` may be invoked.
-  // So we have to make sure we have all the env vars in place so that
-  // the proper installer is invoked.
-  const restoreEnv = syncEnv(env, process.env);
-
-  let remixConfig: RemixConfig;
-  try {
-    process.chdir(dir);
-    remixConfig = await readConfig(dir);
-  } finally {
-    process.chdir(originalCwd);
-    restoreEnv();
-  }
-
-  return remixConfig;
 }
 
 async function writeEntrypointFile(
