@@ -803,5 +803,7 @@ export async function prepareCache({
   workPath,
 }: PrepareCacheOptions): Promise<Files> {
   const cache = await glob(`${cacheDir}/**`, workPath);
+  console.log(`!! CACHING ${Object.keys(cache).length} FILES`);
+  console.log(Object.keys(cache));
   return cache;
 }

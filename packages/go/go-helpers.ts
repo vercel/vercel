@@ -192,7 +192,7 @@ export async function createGo({
     try {
       const goBinDir = goDir && join(goDir, 'bin');
       if (goBinDir && !(await pathExists(goBinDir))) {
-        debug(`Go directory not found in ${label}`);
+        debug(`Go not found in ${label}`);
         continue;
       }
 
