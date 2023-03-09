@@ -805,12 +805,13 @@ async function waitForPortFile_(opts: {
 export async function prepareCache({
   workPath,
 }: PrepareCacheOptions): Promise<Files> {
-  let goDir = join(workPath, cacheDir);
-  const stat = await lstat(goDir);
+  const goCacheDir = join(workPath, cacheDir);
+  const stat = await lstat(goCacheDir);
   if (stat.isSymbolicLink()) {
-    goDir = await readlink(goDir);
-    await unlink(cacheDir);
-    await move(goDir, cacheDir);
+    debug(`Preparing cache by moving ${goGlobalCacheDir} -> ${goCachDir}`);
+    const goGlobalCacheDir = await readlink(goCacheDir);
+    await unlink(goCacheDir);
+    await move(goGlobalCacheDir, goCacheDir);
   }
 
   const cache = await glob(`${cacheDir}/**`, workPath);
