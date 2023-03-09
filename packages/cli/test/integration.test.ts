@@ -26,7 +26,7 @@ import pkg from '../package.json';
 import prepareFixtures from './helpers/prepare';
 import { fetchTokenWithRetry } from '../../../test/lib/deployment/now-deploy';
 
-const TEST_TIMEOUT = 4 * 60 * 1000;
+const TEST_TIMEOUT = 3 * 60 * 1000;
 jest.setTimeout(TEST_TIMEOUT);
 
 // log command when running `execa`
@@ -3252,42 +3252,46 @@ test('`vc --debug project ls` should output the projects listing', async () => {
   expect(stderr.includes('> Projects found under')).toBe(true);
 });
 
-test('deploy gatsby twice and print cached directories', async () => {
-  const directory = example('gatsby');
-  const packageJsonPath = path.join(directory, 'package.json');
-  const packageJsonOriginal = await readFile(packageJsonPath, 'utf8');
-  const pkg = JSON.parse(packageJsonOriginal);
+test(
+  'deploy gatsby twice and print cached directories',
+  async () => {
+    const directory = example('gatsby');
+    const packageJsonPath = path.join(directory, 'package.json');
+    const packageJsonOriginal = await readFile(packageJsonPath, 'utf8');
+    const pkg = JSON.parse(packageJsonOriginal);
 
-  async function tryDeploy(cwd) {
-    const { exitCode, stdout, stderr } = await execa(
-      binaryPath,
-      [...defaultArgs, '--public', '--yes'],
-      {
-        cwd,
-        stdio: 'inherit',
-        reject: false,
-      }
-    );
+    async function tryDeploy(cwd) {
+      const { exitCode, stdout, stderr } = await execa(
+        binaryPath,
+        [...defaultArgs, '--public', '--yes'],
+        {
+          cwd,
+          stdio: 'inherit',
+          reject: false,
+        }
+      );
 
-    expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
-  }
+      expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
+    }
 
-  // Deploy once to populate the cache
-  await tryDeploy(directory);
-
-  // Wait because the cache is not available right away
-  // See https://codeburst.io/quick-explanation-of-the-s3-consistency-model-6c9f325e3f82
-  await sleep(5000);
-
-  // Update build script to ensure cached files were restored in the next deploy
-  pkg.scripts.build = `ls -lA && ls .cache && ls public && ${pkg.scripts.build}`;
-  await writeFile(packageJsonPath, JSON.stringify(pkg));
-  try {
+    // Deploy once to populate the cache
     await tryDeploy(directory);
-  } finally {
-    await writeFile(packageJsonPath, packageJsonOriginal);
-  }
-});
+
+    // Wait because the cache is not available right away
+    // See https://codeburst.io/quick-explanation-of-the-s3-consistency-model-6c9f325e3f82
+    await sleep(60000);
+
+    // Update build script to ensure cached files were restored in the next deploy
+    pkg.scripts.build = `ls -lA && ls .cache && ls public && ${pkg.scripts.build}`;
+    await writeFile(packageJsonPath, JSON.stringify(pkg));
+    try {
+      await tryDeploy(directory);
+    } finally {
+      await writeFile(packageJsonPath, packageJsonOriginal);
+    }
+  },
+  6 * 60 * 1000
+);
 
 test('deploy pnpm twice using pnp and symlink=false', async () => {
   const directory = path.join(__dirname, 'fixtures/unit/pnpm-pnp-symlink');
