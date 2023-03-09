@@ -2347,7 +2347,7 @@ test('[vercel dev] fails when dev script calls vercel dev recursively', async ()
 
 test('[vercel dev] fails when development commad calls vercel dev recursively', async () => {
   const dir = fixture('dev-fail-on-recursion-command');
-  const { exitCode, stdout, stderr } = execa(
+  const { exitCode, stdout, stderr } = await execa(
     binaryPath,
     ['dev', '--yes', ...defaultArgs],
     {
