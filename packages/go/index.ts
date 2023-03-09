@@ -506,6 +506,9 @@ export async function build({
     throw error;
   } finally {
     try {
+      const cache = await glob('**', goGlobalCachePath);
+      console.log('CACHING:', Object.keys(cache));
+
       await cleanupFileSystem(
         undoFileActions,
         undoDirectoryCreation,
