@@ -26,7 +26,8 @@ import pkg from '../package.json';
 import prepareFixtures from './helpers/prepare';
 import { fetchTokenWithRetry } from '../../../test/lib/deployment/now-deploy';
 
-const TEST_TIMEOUT = 3 * 60 * 1000;
+// const TEST_TIMEOUT = 3 * 60 * 1000;
+const TEST_TIMEOUT = 30 * 1000;
 jest.setTimeout(TEST_TIMEOUT);
 
 // log command when running `execa`
@@ -383,7 +384,7 @@ test('default command should prompt login with empty auth.json', async () => {
 
 // NOTE: Test order is important here.
 // This test MUST run before the tests below for them to work.
-test('login', async () => {
+test.only('login', async () => {
   // NOTE: Needs timeout of 1m
 
   await fs.remove(getConfigAuthPath());
@@ -2345,15 +2346,16 @@ test('[vercel dev] fails when dev script calls vercel dev recursively', async ()
   expect(stderr.includes('must not recursively invoke itself')).toBe(true);
 });
 
-test('[vercel dev] fails when development commad calls vercel dev recursively', async () => {
+test.only('[vercel dev] fails when development commad calls vercel dev recursively', async () => {
   const dir = fixture('dev-fail-on-recursion-command');
-  const { exitCode, stdout, stderr } = await execa(
-    binaryPath,
-    ['dev', '--yes', ...defaultArgs],
-    {
-      cwd: dir,
-    }
-  );
+  const dev = execa(binaryPath, ['dev', '--yes', ...defaultArgs], {
+    cwd: dir,
+  });
+
+  dev.stdout?.pipe(process.stdout);
+  dev.stderr?.pipe(process.stderr);
+
+  const { exitCode, stdout, stderr } = await dev;
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
   expect(stderr).toContain('must not recursively invoke itself');
