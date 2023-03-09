@@ -9,7 +9,7 @@ import {
   remove,
   symlink,
 } from 'fs-extra';
-import { join, delimiter, dirname } from 'path';
+import { join, dirname } from 'path';
 import stringArgv from 'string-argv';
 import { cloneEnv, debug } from '@vercel/build-utils';
 import { pipeline } from 'stream';
@@ -157,71 +157,64 @@ export async function createGo({
 
   const env = cloneEnv(process.env, opts.env);
   const { PATH } = env;
+  const { platform } = process;
   const goGlobalCacheDir = join(
     goGlobalCachePath,
-    `${goSelectedVersion}_${process.platform}_${process.arch}`
+    `${goSelectedVersion}_${platform}_${process.arch}`
   );
   const goCacheDir = join(workPath, cacheDir);
-  let goRootDir;
 
   if (goPreferredVersion) {
     debug(`Preferred go version ${goPreferredVersion} (from go.mod)`);
     env.GO111MODULE = 'on';
   }
 
-  const setGoEnv = async () => {
-    if (process.platform === 'win32') {
-      goRootDir = goGlobalCacheDir;
-    } else {
-      debug(`Symlinking ${goGlobalCacheDir} -> ${goCacheDir}`);
+  const setGoEnv = async (goDir: string | null) => {
+    if (platform !== 'win32' && goDir === goGlobalCacheDir) {
+      debug(`Symlinking ${goDir} -> ${goCacheDir}`);
       await mkdirp(dirname(goCacheDir));
       await remove(goCacheDir);
-      await symlink(goGlobalCacheDir, goCacheDir);
-      goRootDir = goCacheDir;
+      await symlink(goDir, goCacheDir);
+      goDir = goCacheDir;
     }
-    env.GOROOT = goRootDir;
-    env.PATH = `${join(goRootDir, 'bin')}${delimiter}${PATH}`;
+    env.GOROOT = goDir || undefined;
+    env.PATH = goDir ? join(goDir, 'bin') : PATH;
   };
 
-  // check we have the desired `go` version cached
-  if (await pathExists(join(goGlobalCacheDir, 'bin'))) {
-    // check if `go` has already been downloaded and that the version is correct
-    await setGoEnv();
-    const { failed, stdout } = await execa('go', ['version'], {
-      env,
-      reject: false,
-    });
-    if (!failed) {
-      const { version, short } = parseGoVersionString(stdout);
-      if (version === goSelectedVersion || short === goSelectedVersion) {
-        debug(`Selected go ${version} (from cache)`);
+  // try each of these Go directories looking for the version we need
+  const goDirs = {
+    'local cache': goCacheDir,
+    'global cache': goGlobalCacheDir,
+    'system PATH': null,
+  };
 
-        return new GoWrapper(env, opts);
-      } else {
-        debug(`Found cached go ${version}, but need ${goSelectedVersion}`);
+  for (const [label, goDir] of Object.entries(goDirs)) {
+    try {
+      const goBinDir = goDir && join(goDir, 'bin');
+      if (goBinDir && !(await pathExists(goBinDir))) {
+        debug(`Go directory not found in ${label}`);
+        continue;
       }
-    }
-  }
 
-  if (!goPreferredVersion) {
-    // check if `go` is installed in the system PATH and if it's the version we want
-    env.PATH = PATH;
-    const { failed, stdout } = await execa('go', ['version'], {
-      env,
-      reject: false,
-    });
-    if (!failed) {
-      const { version, minor } = parseGoVersionString(stdout);
+      env.GOROOT = goDir || undefined;
+      env.PATH = goBinDir || PATH;
+
+      const { stdout } = await execa('go', ['version'], { env });
+      const { minor, short, version } = parseGoVersionString(stdout);
+
       if (minor < GO_MIN_VERSION) {
-        debug(`Found go ${version} in system PATH, but version is unsupported`);
-      } else if (!goPreferredVersion || goPreferredVersion === version) {
-        debug(`Selected go ${version} (from system PATH)`);
+        debug(`Found go ${version} in ${label}, but version is unsupported`);
+      }
+      if (version === goSelectedVersion || short === goSelectedVersion) {
+        debug(`Selected go ${version} (from ${label})`);
+
+        await setGoEnv(goDir);
         return new GoWrapper(env, opts);
       } else {
-        debug(
-          `Found go ${version} in system PATH, but preferred version is ${goPreferredVersion}`
-        );
+        debug(`Found go ${version} in ${label}, but need ${goSelectedVersion}`);
       }
+    } catch {
+      debug(`Go not found in ${label}`);
     }
   }
 
@@ -231,7 +224,7 @@ export async function createGo({
     version: goSelectedVersion,
   });
 
-  await setGoEnv();
+  await setGoEnv(goGlobalCacheDir);
   return new GoWrapper(env, opts);
 }
 
