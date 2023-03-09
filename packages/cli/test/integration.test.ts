@@ -26,8 +26,7 @@ import pkg from '../package.json';
 import prepareFixtures from './helpers/prepare';
 import { fetchTokenWithRetry } from '../../../test/lib/deployment/now-deploy';
 
-// const TEST_TIMEOUT = 3 * 60 * 1000;
-const TEST_TIMEOUT = 30 * 1000;
+const TEST_TIMEOUT = 3 * 60 * 1000;
 jest.setTimeout(TEST_TIMEOUT);
 
 // log command when running `execa`
