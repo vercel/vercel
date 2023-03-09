@@ -6,6 +6,11 @@ import type {
   RouteManifest,
 } from '@remix-run/dev/dist/config/routes';
 import type { BaseFunctionConfig } from '@vercel/static-config';
+import {
+  CliType,
+  spawnAsync,
+  SpawnOptionsExtended,
+} from '@vercel/build-utils/dist/fs/run-user-scripts';
 
 export interface ResolvedNodeRouteConfig {
   runtime: 'nodejs';
@@ -172,4 +177,49 @@ export function getRegExpFromPath(rePath: string): RegExp | false {
   const keys: Key[] = [];
   const re = pathToRegexp(rePath, keys);
   return keys.length > 0 ? re : false;
+}
+
+/**
+ * Updates the `dest` process.env object to match the `source` one.
+ * A function is returned to restore the the `dest` env back to how
+ * it was originally.
+ */
+export function syncEnv(source: NodeJS.ProcessEnv, dest: NodeJS.ProcessEnv) {
+  const originalDest = { ...dest };
+  Object.assign(dest, source);
+  for (const key of Object.keys(dest)) {
+    if (!(key in source)) {
+      delete dest[key];
+    }
+  }
+
+  return () => syncEnv(originalDest, dest);
+}
+
+export interface AddDependencyOptions extends SpawnOptionsExtended {
+  saveDev?: boolean;
+}
+
+/**
+ * Runs `npm i ${name}` / `pnpm i ${name}` / `yarn add ${name}`.
+ */
+export function addDependency(
+  cliType: CliType,
+  names: string[],
+  opts: AddDependencyOptions = {}
+) {
+  const args: string[] = [];
+  if (cliType === 'npm' || cliType === 'pnpm') {
+    args.push('install');
+    if (opts.saveDev) {
+      args.push('--save-dev');
+    }
+  } else {
+    // 'yarn'
+    args.push('add');
+    if (opts.saveDev) {
+      args.push('--dev');
+    }
+  }
+  return spawnAsync(cliType, args.concat(names), opts);
 }

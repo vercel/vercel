@@ -21,7 +21,6 @@ import {
 } from '@vercel/build-utils';
 import { getConfig } from '@vercel/static-config';
 import { nodeFileTrace } from '@vercel/nft';
-import { readConfig } from '@remix-run/dev/dist/config';
 import type {
   BuildV2,
   Files,
@@ -42,13 +41,11 @@ import {
   ResolvedRouteConfig,
   ResolvedNodeRouteConfig,
   ResolvedEdgeRouteConfig,
+  syncEnv,
+  addDependency,
 } from './utils';
 
 const _require: typeof require = eval('require');
-
-const REMIX_RUN_DEV_PATH = dirname(
-  _require.resolve('@remix-run/dev/package.json')
-);
 
 const edgeServerSrcPromise = fs.readFile(
   join(__dirname, '../server-edge.mjs'),
@@ -82,19 +79,24 @@ export const build: BuildV2 = async ({
     meta
   );
 
+  const { cliType, packageJsonPath, lockfileVersion } = await scanParentDirs(
+    entrypointFsDirname
+  );
+
+  if (!packageJsonPath) {
+    throw new Error('Failed to locate `package.json` file in your project');
+  }
+
   const spawnOpts = getSpawnOptions(meta, nodeVersion);
   if (!spawnOpts.env) {
     spawnOpts.env = {};
   }
-  const { cliType, lockfileVersion } = await scanParentDirs(
-    entrypointFsDirname
-  );
 
   spawnOpts.env = getEnvForPackageManager({
     cliType,
     lockfileVersion,
     nodeVersion,
-    env: spawnOpts.env || {},
+    env: spawnOpts.env,
   });
 
   if (typeof installCommand === 'string') {
@@ -111,16 +113,8 @@ export const build: BuildV2 = async ({
     await runNpmInstall(entrypointFsDirname, [], spawnOpts, meta, nodeVersion);
   }
 
-  const remixConfig = await chdirAndReadConfig(
-    entrypointFsDirname,
-    cliType,
-    spawnOpts.env
-  );
-  const remixRoutes = Object.values(remixConfig.routes);
-
-  // Make our version of `remix` CLI available to the project's build
-  // command by creating a symlink to the copy in our node modules,
-  // so that `serverBundles` works: https://github.com/remix-run/remix/pull/5479
+  // Determine the version of Remix based on the `@remix-run/dev`
+  // package version.
   const remixRunDevPath = await ensureResolvable(
     entrypointFsDirname,
     repoRootPath,
@@ -131,15 +125,45 @@ export const build: BuildV2 = async ({
     await fs.readFile(join(remixRunDevPath, 'package.json'), 'utf8')
   ).version;
 
+  const spawnOptsEnvForAdd = { ...spawnOpts.env };
+
+  // Prevent frozen lockfile rejections
+  delete spawnOptsEnvForAdd.CI;
+  delete spawnOptsEnvForAdd.VERCEL;
+  delete spawnOptsEnvForAdd.NOW_BUILDER;
+
+  // Currently we have to use a fork of the Remix compiler
+  // which supports `serverBundles` config.
+  // Once this PR is merge upstream the we will no longer need to do this:
+  // https://github.com/remix-run/remix/pull/5479
+  await addDependency(
+    cliType,
+    ['@remix-run/dev@npm:@vercel/remix-run-dev@1.14.0'],
+    {
+      ...spawnOpts,
+      env: spawnOptsEnvForAdd,
+      cwd: entrypointFsDirname,
+      saveDev: true,
+    }
+  );
+
+  const remixConfig = await chdirAndReadConfig(
+    entrypointFsDirname,
+    remixRunDevPath,
+    {
+      ...spawnOptsEnvForAdd,
+
+      // Remix uses this env var to determine which package manager to invoke
+      npm_config_user_agent: cliType,
+    }
+  );
+  const remixRoutes = Object.values(remixConfig.routes);
+
   let remixConfigWrapped = false;
   const remixConfigPath = findConfig(entrypointFsDirname, 'remix.config');
   const renamedRemixConfigPath = remixConfigPath
     ? `${remixConfigPath}.original${extname(remixConfigPath)}`
     : undefined;
-
-  const backupRemixRunDevPath = `${remixRunDevPath}.__vercel_backup`;
-  await fs.rename(remixRunDevPath, backupRemixRunDevPath);
-  await fs.symlink(REMIX_RUN_DEV_PATH, remixRunDevPath);
 
   // These get populated inside the try/catch below
   let serverBundles: AppConfig['serverBundles'];
@@ -236,6 +260,7 @@ module.exports = config;`;
 
     // Make `remix build` output production mode
     spawnOpts.env.NODE_ENV = 'production';
+    //spawnOpts.env.NODE_ENV = 'development';
 
     // Run "Build Command"
     if (buildCommand) {
@@ -245,9 +270,7 @@ module.exports = config;`;
         cwd: entrypointFsDirname,
       });
     } else {
-      const pkg = await readConfigFile<PackageJson>(
-        join(entrypointFsDirname, 'package.json')
-      );
+      const pkg = await readConfigFile<PackageJson>(packageJsonPath);
       if (hasScript('vercel-build', pkg)) {
         debug(`Executing "yarn vercel-build"`);
         await runPackageJsonScript(
@@ -270,10 +293,6 @@ module.exports = config;`;
     if (remixConfigWrapped && remixConfigPath && renamedRemixConfigPath) {
       await fs.rename(renamedRemixConfigPath, remixConfigPath);
     }
-
-    // Remove `@remix-run/dev` symlink
-    await fs.unlink(remixRunDevPath);
-    await fs.rename(backupRemixRunDevPath, remixRunDevPath);
   }
 
   // This needs to happen before we run NFT to create the Node/Edge functions
@@ -686,7 +705,7 @@ async function ensureSymlink(
 
 async function chdirAndReadConfig(
   dir: string,
-  cliType: string,
+  remixRunDevPath: string,
   env: NodeJS.ProcessEnv
 ) {
   const originalCwd = process.cwd();
@@ -695,31 +714,19 @@ async function chdirAndReadConfig(
   // as a dependency, and `npm`/`pnpm`/`yarn` may be invoked.
   // So we have to make sure we have all the env vars in place so that
   // the proper installer is invoked.
-  Object.assign(process.env, env);
-
-  // Remix uses this env var to determine which package manager to invoke
-  process.env.npm_config_user_agent = cliType;
-
-  // Prevent frozen lockfile rejections
-  const removedEnvs = ['CI', 'VERCEL', 'NOW_BUILDER'].map(removeEnv);
+  const restoreEnv = syncEnv(env, process.env);
 
   let remixConfig: RemixConfig;
   try {
     process.chdir(dir);
+    const { readConfig } = require(join(remixRunDevPath, 'dist/config'));
     remixConfig = await readConfig(dir);
   } finally {
     process.chdir(originalCwd);
-    removedEnvs.forEach(restore => restore());
+    restoreEnv();
   }
-  return remixConfig;
-}
 
-function removeEnv(name: string) {
-  const original = process.env[name];
-  delete process.env[name];
-  return () => {
-    process.env[name] = original;
-  };
+  return remixConfig;
 }
 
 async function writeEntrypointFile(
