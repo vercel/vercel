@@ -19,6 +19,7 @@ import {
 import {
   BuildOptions,
   Files,
+  PrepareCacheOptions,
   StartDevServerOptions,
   StartDevServerResult,
   glob,
@@ -810,7 +811,9 @@ async function waitForPortFile_(opts: {
   }
 }
 
-export async function prepareCache({ workPath }): Promise<Files> {
+export async function prepareCache({
+  workPath,
+}: PrepareCacheOptions): Promise<Files> {
   console.log('!!! Prepare cache');
   const goDir = join(workPath, cacheDir);
   console.log(`symlinking ${goGlobalCachePath} -> ${goDir}`);
