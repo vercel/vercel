@@ -14,6 +14,7 @@ import {
   remove,
   rmdir,
   readdir,
+  symlink,
 } from 'fs-extra';
 import {
   BuildOptions,
@@ -32,11 +33,13 @@ import {
 const TMP = tmpdir();
 
 import {
+  cacheDir,
   createGo,
   getAnalyzedEntrypoint,
   goGlobalCachePath,
   OUT_EXTENSION,
 } from './go-helpers';
+
 const handlerFileName = `handler${OUT_EXTENSION}`;
 
 export { shouldServe };
@@ -808,8 +811,10 @@ async function waitForPortFile_(opts: {
 }
 
 export async function prepareCache(): Promise<Files> {
-  console.log('!!! Prepare cache', goGlobalCachePath);
-  const cache = await glob('**', goGlobalCachePath);
+  console.log('!!! Prepare cache');
+  console.log(`symlinking ${goGlobalCachePath} -> ${cacheDir}`);
+  await symlink(goGlobalCachePath, cacheDir);
+  const cache = await glob('**', cacheDir);
   console.log(`Caching ${Object.keys(cache).length} files`);
   console.log(cache['1.18.10_linux_x64/LICENSE']);
   return cache;
