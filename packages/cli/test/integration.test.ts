@@ -2366,7 +2366,7 @@ test('[vercel dev] fails when development commad calls vercel dev recursively', 
   const { exitCode, stdout, stderr } = await dev;
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
-  expect(stderr.includes('must not recursively invoke itself')).toBe(true);
+  expect(stderr).toContain('must not recursively invoke itself'));
 });
 
 test('`vercel rm` removes a deployment', async () => {
