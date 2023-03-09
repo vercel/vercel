@@ -1,12 +1,12 @@
 import { join } from 'path';
 import { existsSync } from 'fs';
+import { spawnAsync } from '@vercel/build-utils';
 import { pathToRegexp, Key } from 'path-to-regexp';
 import type {
   ConfigRoute,
   RouteManifest,
 } from '@remix-run/dev/dist/config/routes';
 import type { BaseFunctionConfig } from '@vercel/static-config';
-import { spawnAsync } from '@vercel/build-utils';
 import type {
   CliType,
   SpawnOptionsExtended,
