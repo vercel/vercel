@@ -79,6 +79,8 @@ project. An example use-case is that `@vercel/node` uses this function to cache
 the `node_modules` directory, making it faster to install npm dependencies for
 future builds.
 
+> Note: Only files within the work (project root) directory can be cached.
+
 **Example:**
 
 ```typescript
@@ -90,6 +92,19 @@ export async function prepareCache(options: PrepareCacheOptions) {
   return {
     'path-to-file': File,
   };
+}
+```
+
+**Example:**
+
+```typescript
+import { glob, PrepareCacheOptions } from '@vercel/build-utils';
+
+export async function prepareCache({ workPath }: PrepareCacheOptions) {
+  // Create a mapping of file names and `File` object instances to cache here…
+
+  const cache = await glob(`${workPath}/some/dir/**`, workPath);
+  return cache;
 }
 ```
 
