@@ -1,14 +1,14 @@
-// @ts-nocheck
-// Note: this file is incrementally migrating to typescript
 import ms from 'ms';
 import path from 'path';
 import { URL, parse as parseUrl } from 'url';
 import semVer from 'semver';
 import { Readable } from 'stream';
 import { homedir, tmpdir } from 'os';
+import http from 'http';
 import _execa from 'execa';
 import XDGAppPaths from 'xdg-app-paths';
-import fetch from 'node-fetch';
+import fetch, { RequestInfo, Request, Response } from 'node-fetch';
+// @ts-ignore
 import tmp from 'tmp-promise';
 import retry from 'async-retry';
 import fs, {
@@ -29,12 +29,12 @@ import { fetchTokenWithRetry } from '../../../test/lib/deployment/now-deploy';
 jest.setTimeout(3 * 60 * 1000);
 
 // log command when running `execa`
-function execa(file, args, options) {
-  console.log(`$ vercel ${args.join(' ')}`);
+function execa(file: string, args?: any[], options?: _execa.Options<string>) {
+  console.log(`$ vercel ${args?.join(' ')}`);
   return _execa(file, args, options);
 }
 
-function fixture(name) {
+function fixture(name: string) {
   const directory = path.join(tmpFixturesDir, name);
   const config = path.join(directory, 'project.json');
 
@@ -47,21 +47,21 @@ function fixture(name) {
 }
 
 const binaryPath = path.resolve(__dirname, `../scripts/start.js`);
-const example = name =>
+const example = (name: string) =>
   path.join(__dirname, '..', '..', '..', 'examples', name);
 const deployHelpMessage = `${logo} vercel [options] <command | path>`;
 let session = 'temp-session';
 
 const isCanary = pkg.version.includes('canary');
 
-const pickUrl = stdout => {
+const pickUrl = (stdout: string) => {
   const lines = stdout.split('\n');
   return lines[lines.length - 1];
 };
 
-const createFile = dest => fs.closeSync(fs.openSync(dest, 'w'));
+const createFile = (dest: fs.PathLike) => fs.closeSync(fs.openSync(dest, 'w'));
 
-const waitForDeployment = async href => {
+const waitForDeployment = async (href: RequestInfo) => {
   console.log(`waiting for ${href} to become ready...`);
   const start = Date.now();
   const max = ms('4m');
@@ -88,7 +88,7 @@ const waitForDeployment = async href => {
   }
 };
 
-function fetchTokenInformation(token, retries = 3) {
+function fetchTokenInformation(token: string, retries = 3) {
   const url = `https://api.vercel.com/v2/user`;
   const headers = { Authorization: `Bearer ${token}` };
 
@@ -110,7 +110,13 @@ function fetchTokenInformation(token, retries = 3) {
   );
 }
 
-function formatOutput({ stderr, stdout }) {
+function formatOutput({
+  stderr,
+  stdout,
+}: {
+  stderr: Readable | string;
+  stdout: Readable | string;
+}) {
   return `
 -----
 
@@ -126,30 +132,19 @@ ${stdout}
   `;
 }
 
-async function vcLink(projectPath) {
-  const { exitCode } = await execa(
-    binaryPath,
-    ['link', '--yes', ...defaultArgs],
-    {
-      reject: false,
-      cwd: projectPath,
-    }
-  );
-
-  expect(exitCode).toBe(0);
+interface TmpDir {
+  name: string;
 }
 
-// AVA's `t.context` can only be set before the tests,
-// but we want to set it within as well
 const context = {};
 
 const defaultOptions = { reject: false };
-const defaultArgs = [];
-let token;
-let email;
-let contextName;
+const defaultArgs: string[] = [];
+let token: string;
+let email: string;
+let contextName: string;
 
-let tmpDir;
+let tmpDir: TmpDir;
 let tmpFixturesDir = path.join(tmpdir(), 'tmp-fixtures');
 
 let globalDir = XDGAppPaths('com.vercel.cli').dataDirs()[0];
@@ -170,7 +165,20 @@ if (!process.env.CI) {
   );
 }
 
-function mockLoginApi(req, res) {
+async function vcLink(projectPath: string) {
+  const { exitCode } = await execa(
+    binaryPath,
+    ['link', '--yes', ...defaultArgs],
+    {
+      reject: false,
+      cwd: projectPath,
+    }
+  );
+
+  expect(exitCode).toBe(0);
+}
+
+function mockLoginApi(req: Request, res: http.ServerResponse) {
   const { url = '/', method } = req;
   let { pathname = '/', query = {} } = parseUrl(url, true);
   console.log(`[mock-login-server] ${method} ${pathname}`);
@@ -203,13 +211,13 @@ const loginApiServer = require('http')
     console.log(`[mock-login-server] Listening on ${loginApiUrl}`);
   });
 
-const execute = (args, options) =>
+const execute = (args: string[], options?: _execa.Options<string>) =>
   execa(binaryPath, [...defaultArgs, ...args], {
     ...defaultOptions,
     ...options,
   });
 
-const apiFetch = (url, { headers, ...options } = {}) => {
+const apiFetch = (url: string, { headers, ...options }: any = {}) => {
   return fetch(`https://api.vercel.com${url}`, {
     headers: {
       Authorization: `Bearer ${token}`,
@@ -219,11 +227,16 @@ const apiFetch = (url, { headers, ...options } = {}) => {
   });
 };
 
-const waitForPrompt = (cp, assertion) =>
+type BoundChildProcess = {};
+
+const waitForPrompt = (
+  cp: BoundChildProcess,
+  assertion: (chunk: string) => boolean
+) =>
   new Promise((resolve, reject) => {
     console.log('Waiting for prompt...');
     setTimeout(() => reject(new Error('timeout in waitForPrompt')), 60000);
-    const listener = chunk => {
+    const listener = (chunk: string) => {
       console.log('> ' + chunk);
       if (assertion(chunk)) {
         cp.stdout.off && cp.stdout.off('data', listener);
