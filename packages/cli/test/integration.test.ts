@@ -7,7 +7,7 @@ import { homedir, tmpdir } from 'os';
 import http from 'http';
 import _execa from 'execa';
 import XDGAppPaths from 'xdg-app-paths';
-import fetch, { RequestInfo, Request, Response } from 'node-fetch';
+import fetch, { RequestInfo } from 'node-fetch';
 // @ts-ignore
 import tmp from 'tmp-promise';
 import retry from 'async-retry';
@@ -17,7 +17,6 @@ import fs, {
   remove,
   copy,
   ensureDir,
-  exists,
   mkdir,
 } from 'fs-extra';
 import logo from '../src/util/output/logo';
@@ -28,10 +27,37 @@ import { fetchTokenWithRetry } from '../../../test/lib/deployment/now-deploy';
 
 jest.setTimeout(3 * 60 * 1000);
 
+type BoundChildProcess = _execa.ExecaChildProcess & {
+  stdout: Readable;
+  stdin: Readable;
+  stderr: Readable;
+};
+
+interface AddressInfo {
+  address: string;
+  family: string;
+  port: number;
+}
+
 // log command when running `execa`
-function execa(file: string, args?: any[], options?: _execa.Options<string>) {
-  console.log(`$ vercel ${args?.join(' ')}`);
-  return _execa(file, args, options);
+function execa(
+  file: string,
+  args: any[],
+  options?: _execa.Options<string>
+): BoundChildProcess {
+  console.log(`$ vercel ${args.join(' ')}`);
+  const proc = _execa(file, args, options);
+  if (proc.stdin === null) {
+    throw new Error(`vercel ${args.join(' ')} - failed to bind to stdin`);
+  }
+  if (proc.stdout === null) {
+    throw new Error(`vercel ${args.join(' ')} - failed to bind to stdout`);
+  }
+  if (proc.stderr === null) {
+    throw new Error(`vercel ${args.join(' ')} - failed to bind to stderr`);
+  }
+  // Typescript should know this can match because of the guards above
+  return proc as BoundChildProcess;
 }
 
 function fixture(name: string) {
@@ -134,9 +160,16 @@ ${stdout}
 
 interface TmpDir {
   name: string;
+  removeCallback: () => void;
 }
 
-const context = {};
+const context: {
+  deployment: string | undefined;
+  secretName: string | undefined;
+} = {
+  deployment: undefined,
+  secretName: undefined,
+};
 
 const defaultOptions = { reject: false };
 const defaultArgs: string[] = [];
@@ -178,7 +211,7 @@ async function vcLink(projectPath: string) {
   expect(exitCode).toBe(0);
 }
 
-function mockLoginApi(req: Request, res: http.ServerResponse) {
+function mockLoginApi(req: http.IncomingMessage, res: http.ServerResponse) {
   const { url = '/', method } = req;
   let { pathname = '/', query = {} } = parseUrl(url, true);
   console.log(`[mock-login-server] ${method} ${pathname}`);
@@ -203,13 +236,11 @@ function mockLoginApi(req: Request, res: http.ServerResponse) {
 }
 
 let loginApiUrl = '';
-const loginApiServer = require('http')
-  .createServer(mockLoginApi)
-  .listen(0, () => {
-    const { port } = loginApiServer.address();
-    loginApiUrl = `http://localhost:${port}`;
-    console.log(`[mock-login-server] Listening on ${loginApiUrl}`);
-  });
+const loginApiServer = http.createServer(mockLoginApi).listen(0, () => {
+  const { port } = loginApiServer.address() as AddressInfo;
+  loginApiUrl = `http://localhost:${port}`;
+  console.log(`[mock-login-server] Listening on ${loginApiUrl}`);
+});
 
 const execute = (args: string[], options?: _execa.Options<string>) =>
   execa(binaryPath, [...defaultArgs, ...args], {
@@ -227,13 +258,11 @@ const apiFetch = (url: string, { headers, ...options }: any = {}) => {
   });
 };
 
-type BoundChildProcess = {};
-
 const waitForPrompt = (
   cp: BoundChildProcess,
   assertion: (chunk: string) => boolean
 ) =>
-  new Promise((resolve, reject) => {
+  new Promise<void>((resolve, reject) => {
     console.log('Waiting for prompt...');
     setTimeout(() => reject(new Error('timeout in waitForPrompt')), 60000);
     const listener = (chunk: string) => {
@@ -275,7 +304,11 @@ const createUser = async () => {
 
 const getConfigAuthPath = () => path.join(globalDir, 'auth.json');
 
-async function setupProject(process, projectName, overrides) {
+async function setupProject(
+  process: BoundChildProcess,
+  projectName: string,
+  overrides: { devCommand?: any; buildCommand?: any; outputDirectory?: any }
+) {
   await waitForPrompt(process, chunk => /Set up [^?]+\?/.test(chunk));
   process.stdin.write('yes\n');
 
@@ -368,11 +401,13 @@ afterAll(async () => {
   }
 });
 
-test('default command should prompt login with empty auth.json', async done => {
+test('default command should prompt login with empty auth.json', async () => {
   await fs.writeFile(getConfigAuthPath(), JSON.stringify({}));
   try {
     await execa(binaryPath, [...defaultArgs]);
-    done.fail();
+    throw new Error(
+      `Should not successfull execute ${binaryPath} ${defaultArgs.join(' ')}`
+    );
   } catch (err) {
     expect(err.stderr).toContain(
       'Error: No existing credentials found. Please run `vercel login` or pass "--token"'
@@ -1046,14 +1081,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
       cwd: target,
     });
 
-    let localhost = undefined;
-    await waitForPrompt(vc, chunk => {
-      if (chunk.includes('Ready! Available at')) {
-        localhost = /(https?:[^\s]+)/g.exec(chunk);
-        return true;
-      }
-      return false;
-    });
+    let localhost = await getLocalhost(vc);
 
     const apiUrl = `${localhost[0]}/api/get-env`;
     const apiRes = await fetch(apiUrl);
@@ -1084,14 +1112,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
       cwd: target,
     });
 
-    let localhost = undefined;
-    await waitForPrompt(vc, chunk => {
-      if (chunk.includes('Ready! Available at')) {
-        localhost = /(https?:[^\s]+)/g.exec(chunk);
-        return true;
-      }
-      return false;
-    });
+    let localhost = await getLocalhost(vc);
 
     const apiUrl = `${localhost[0]}/api/get-env`;
     const apiRes = await fetch(apiUrl);
@@ -1164,14 +1185,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
       cwd: target,
     });
 
-    let localhost = undefined;
-    await waitForPrompt(vc, chunk => {
-      if (chunk.includes('Ready! Available at')) {
-        localhost = /(https?:[^\s]+)/g.exec(chunk);
-        return true;
-      }
-      return false;
-    });
+    let localhost = await getLocalhost(vc);
 
     const apiUrl = `${localhost[0]}/api/get-env`;
     const apiRes = await fetch(apiUrl);
@@ -1259,7 +1273,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
     expect(exitCode).toBe(0);
   }
 
-  function vcEnvRemoveByName(name) {
+  function vcEnvRemoveByName(name: string) {
     return execa(binaryPath, ['env', 'rm', name, '-y', ...defaultArgs], {
       reject: false,
       cwd: target,
@@ -2165,7 +2179,7 @@ test('try to deploy with non-existing team', async () => {
   expect(stderr.includes(goal)).toBe(true);
 });
 
-const verifyExampleAngular = (cwd, dir) =>
+const verifyExampleAngular = (cwd: string, dir: string) =>
   fs.existsSync(path.join(cwd, dir, 'package.json')) &&
   fs.existsSync(path.join(cwd, dir, 'tsconfig.json')) &&
   fs.existsSync(path.join(cwd, dir, 'angular.json'));
@@ -2266,7 +2280,7 @@ test('try to revert a deployment and assign the automatic aliases', async () => 
   const secondDeployment = fixture('now-revert-alias-2');
 
   const { name } = JSON.parse(
-    fs.readFileSync(path.join(firstDeployment, 'now.json'))
+    fs.readFileSync(path.join(firstDeployment, 'now.json')).toString()
   );
   expect(!!name).toBe(true);
 
@@ -2447,7 +2461,7 @@ test('render build errors', async () => {
 });
 
 test('invalid deployment, projects and alias names', async () => {
-  const check = async (...args) => {
+  const check = async (...args: string[]) => {
     const output = await execute(args);
     expect(output.exitCode, formatOutput(output)).toBe(1);
     expect(output.stderr).toMatch(/The provided argument/gm);
@@ -2517,7 +2531,7 @@ test('create zero-config deployment', async () => {
 
   expect(data.error).toBe(undefined);
 
-  const validBuilders = data.builds.every(build =>
+  const validBuilders = data.builds.every((build: { use: string }) =>
     isCanary ? build.use.endsWith('@canary') : !build.use.endsWith('@canary')
   );
 
@@ -2559,7 +2573,6 @@ test('vercel secret ls', async () => {
 
   expect(output.exitCode).toBe(0);
   expect(output.stdout).toMatch(/Secrets found under/gm);
-  expect(output.stdout).toMatch(new RegExp());
 });
 
 test('vercel secret ls --test-warning', async () => {
@@ -2572,6 +2585,10 @@ test('vercel secret ls --test-warning', async () => {
 });
 
 test('vercel secret rename', async () => {
+  if (!context.secretName) {
+    throw new Error('Expected `context.secretName` to exist, but it does not.');
+  }
+
   const nextName = `renamed-secret-${Date.now().toString(36)}`;
   const output = await execute([
     'secret',
@@ -2590,6 +2607,10 @@ test('vercel secret rename', async () => {
 });
 
 test('vercel secret rm', async () => {
+  if (!context.secretName) {
+    throw new Error('Expected `context.secretName` to exist, but it does not.');
+  }
+
   const output = await execute(['secret', 'rm', context.secretName, '-y']);
 
   console.log(output.stderr);
@@ -2778,8 +2799,12 @@ test('should show prompts to set up project during first deploy', async () => {
   expect(gitignore).toBe('.vercel\n');
 
   // Ensure .vercel/project.json and .vercel/README.txt are created
-  expect(await exists(path.join(dir, '.vercel', 'project.json'))).toBe(true);
-  expect(await exists(path.join(dir, '.vercel', 'README.txt'))).toBe(true);
+  const projectJsonStat = fs.statSync(
+    path.join(dir, '.vercel', 'project.json')
+  );
+  expect(projectJsonStat.isFile()).toBe(true);
+  const readmeStat = fs.statSync(path.join(dir, '.vercel', 'README.txt'));
+  expect(readmeStat.isFile()).toBe(true);
 
   // Send a test request to the deployment
   const response = await fetch(new URL(output.stdout));
@@ -2796,7 +2821,7 @@ test('should show prompts to set up project during first deploy', async () => {
   try {
     dev.stdout.pipe(process.stdout);
     dev.stderr.pipe(process.stderr);
-    await new Promise((resolve, reject) => {
+    await new Promise<void>((resolve, reject) => {
       dev.once('close', (code, signal) => {
         reject(`"vc dev" failed with ${signal || code}`);
       });
@@ -3266,7 +3291,7 @@ test('deploy gatsby twice and print cached directories', async () => {
   const packageJsonOriginal = await readFile(packageJsonPath, 'utf8');
   const pkg = JSON.parse(packageJsonOriginal);
 
-  async function tryDeploy(cwd) {
+  async function tryDeploy(cwd: string) {
     await execa(binaryPath, [...defaultArgs, '--public', '--yes'], {
       cwd,
       stdio: 'inherit',
@@ -3393,8 +3418,12 @@ test('[vc link] should show prompts to set up project', async () => {
   expect(gitignore).toBe('.vercel\n');
 
   // Ensure .vercel/project.json and .vercel/README.txt are created
-  expect(await exists(path.join(dir, '.vercel', 'project.json'))).toBe(true);
-  expect(await exists(path.join(dir, '.vercel', 'README.txt'))).toBe(true);
+  const projectJsonStat = fs.statSync(
+    path.join(dir, '.vercel', 'project.json')
+  );
+  expect(projectJsonStat.isFile()).toBe(true);
+  const readmeStat = fs.statSync(path.join(dir, '.vercel', 'README.txt'));
+  expect(readmeStat.isFile()).toBe(true);
 });
 
 test('[vc link --yes] should not show prompts and autolink', async () => {
@@ -3420,8 +3449,12 @@ test('[vc link --yes] should not show prompts and autolink', async () => {
   expect(gitignore).toBe('.vercel\n');
 
   // Ensure .vercel/project.json and .vercel/README.txt are created
-  expect(await exists(path.join(dir, '.vercel', 'project.json'))).toBe(true);
-  expect(await exists(path.join(dir, '.vercel', 'README.txt'))).toBe(true);
+  const projectJsonStat = fs.statSync(
+    path.join(dir, '.vercel', 'project.json')
+  );
+  expect(projectJsonStat.isFile()).toBe(true);
+  const readmeStat = fs.statSync(path.join(dir, '.vercel', 'README.txt'));
+  expect(readmeStat.isFile()).toBe(true);
 });
 
 test('[vc link] should not duplicate paths in .gitignore', async () => {
@@ -3480,8 +3513,12 @@ test('[vc dev] should show prompts to set up project', async () => {
   expect(gitignore).toBe('.vercel\n');
 
   // Ensure .vercel/project.json and .vercel/README.txt are created
-  expect(await exists(path.join(dir, '.vercel', 'project.json'))).toBe(true);
-  expect(await exists(path.join(dir, '.vercel', 'README.txt'))).toBe(true);
+  const projectJsonStat = fs.statSync(
+    path.join(dir, '.vercel', 'project.json')
+  );
+  expect(projectJsonStat.isFile()).toBe(true);
+  const readmeStat = fs.statSync(path.join(dir, '.vercel', 'README.txt'));
+  expect(readmeStat.isFile()).toBe(true);
 
   await waitForPrompt(dev, chunk => chunk.includes('Ready! Available at'));
 
@@ -3544,8 +3581,12 @@ test('[vc link] should show project prompts but not framework when `builds` defi
   expect(gitignore).toBe('.vercel\n');
 
   // Ensure .vercel/project.json and .vercel/README.txt are created
-  expect(await exists(path.join(dir, '.vercel', 'project.json'))).toBe(true);
-  expect(await exists(path.join(dir, '.vercel', 'README.txt'))).toBe(true);
+  const projectJsonStat = fs.statSync(
+    path.join(dir, '.vercel', 'project.json')
+  );
+  expect(projectJsonStat.isFile()).toBe(true);
+  const readmeStat = fs.statSync(path.join(dir, '.vercel', 'README.txt'));
+  expect(readmeStat.isFile()).toBe(true);
 });
 
 test('[vc dev] should send the platform proxy request headers to frontend dev server ', async () => {
@@ -3788,3 +3829,23 @@ test('vercel.json configuration overrides in an existing project do not prompt u
   text = await page.text();
   expect(text).toMatch(/Next\.js Test/);
 });
+
+async function getLocalhost(vc: BoundChildProcess): Promise<RegExpExecArray> {
+  let localhost: RegExpExecArray | undefined;
+  await waitForPrompt(vc, chunk => {
+    if (chunk.includes('Ready! Available at')) {
+      localhost = /(https?:[^\s]+)/g.exec(chunk) || undefined;
+      return true;
+    }
+    return false;
+  });
+
+  // This should never happen because waitForPrompt will time out
+  // and never return here in this case, but extra checking is fine
+  // and it makes typescript happy
+  if (!localhost) {
+    throw new Error('Localhost not found!');
+  }
+
+  return localhost;
+}
