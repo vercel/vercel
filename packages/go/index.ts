@@ -1,7 +1,7 @@
 import execa from 'execa';
 import retry from 'async-retry';
 import { homedir, tmpdir } from 'os';
-import { spawn } from 'child_process';
+import { execSync, spawn } from 'child_process';
 import { Readable } from 'stream';
 import once from '@tootallnate/once';
 import { join, dirname, basename, normalize, posix, sep } from 'path';
@@ -110,6 +110,7 @@ export async function build({
   } else {
     console.log(`!!! goGlobalCachePath does NOT exist: ${goGlobalCachePath}`);
   }
+  execSync('find /vercel', { stdio: 'inherit' });
 
   const goPath = await getWriteableDirectory();
   const srcPath = join(goPath, 'src', 'lambda');
