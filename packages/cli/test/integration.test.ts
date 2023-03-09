@@ -395,7 +395,7 @@ test.only('login', async () => {
     ...defaultArgs,
   ]);
 
-  expect(loginOutput.exitCode).toBe(0);
+  expect(loginOutput.exitCode, formatOutput(loginOutput)).toBe(0);
   expect(loginOutput.stderr).toMatch(/You are now logged in\./gm);
 
   const auth = await fs.readJSON(getConfigAuthPath());
