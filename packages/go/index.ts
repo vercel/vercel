@@ -815,7 +815,5 @@ export async function prepareCache({
   }
 
   const cache = await glob(`${cacheDir}/**`, workPath);
-  console.log(`!! CACHING ${Object.keys(cache).length} FILES`);
-  console.log(Object.keys(cache));
   return cache;
 }
