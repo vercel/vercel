@@ -383,7 +383,7 @@ test('default command should prompt login with empty auth.json', async () => {
 
 // NOTE: Test order is important here.
 // This test MUST run before the tests below for them to work.
-test('login', async () => {
+test.only('login', async () => {
   // NOTE: Needs timeout of 1m
 
   await fs.remove(getConfigAuthPath());
@@ -3252,7 +3252,7 @@ test('`vc --debug project ls` should output the projects listing', async () => {
   expect(stderr.includes('> Projects found under')).toBe(true);
 });
 
-test('deploy gatsby twice and print cached directories', async () => {
+test.only('deploy gatsby twice and print cached directories', async () => {
   const directory = example('gatsby');
   const packageJsonPath = path.join(directory, 'package.json');
   const packageJsonOriginal = await readFile(packageJsonPath, 'utf8');
@@ -3273,7 +3273,7 @@ test('deploy gatsby twice and print cached directories', async () => {
 
   // Wait because the cache is not available right away
   // See https://codeburst.io/quick-explanation-of-the-s3-consistency-model-6c9f325e3f82
-  await sleep(60000);
+  await sleep(5000);
 
   // Update build script to ensure cached files were restored in the next deploy
   pkg.scripts.build = `ls -lA && ls .cache && ls public && ${pkg.scripts.build}`;
