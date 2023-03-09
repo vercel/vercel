@@ -809,7 +809,7 @@ async function waitForPortFile_(opts: {
 }
 
 export async function prepareCache(): Promise<Files> {
-  console.log('!! Prepare cache', goGlobalCachePath);
+  console.log('!!! Prepare cache', goGlobalCachePath);
   const cache = await glob('**', goGlobalCachePath);
   console.log('CACHE:', Object.keys(cache));
   return cache;
