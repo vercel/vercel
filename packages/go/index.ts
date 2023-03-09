@@ -1,7 +1,7 @@
 import execa from 'execa';
 import retry from 'async-retry';
 import { homedir, tmpdir } from 'os';
-import { execSync, spawn } from 'child_process';
+import { spawn } from 'child_process';
 import { Readable } from 'stream';
 import once from '@tootallnate/once';
 import { join, dirname, basename, normalize, posix, sep } from 'path';
@@ -14,7 +14,6 @@ import {
   remove,
   rmdir,
   readdir,
-  symlink,
 } from 'fs-extra';
 import {
   BuildOptions,
@@ -37,7 +36,6 @@ import {
   cacheDir,
   createGo,
   getAnalyzedEntrypoint,
-  goGlobalCachePath,
   OUT_EXTENSION,
 } from './go-helpers';
 
@@ -108,15 +106,6 @@ export async function build({
   workPath,
   meta = {},
 }: BuildOptions) {
-  if (await pathExists(goGlobalCachePath)) {
-    console.log(`!!! goGlobalCachePath exists: ${goGlobalCachePath}`);
-    console.log(await readdir(goGlobalCachePath));
-  } else {
-    console.log(`!!! goGlobalCachePath does NOT exist: ${goGlobalCachePath}`);
-  }
-  execSync('ls -la /vercel', { stdio: 'inherit' });
-  execSync('ls -la /vercel/.cache', { stdio: 'inherit' });
-
   const goPath = await getWriteableDirectory();
   const srcPath = join(goPath, 'src', 'lambda');
   const downloadPath = meta.skipDownload ? workPath : srcPath;
@@ -302,7 +291,6 @@ export async function build({
     const mainGoFileName = 'main__vc__go__.go';
 
     const go = await createGo({
-      goPath,
       modulePath: goModPath,
       opts: {
         cwd: entrypointDirname,
@@ -814,12 +802,6 @@ async function waitForPortFile_(opts: {
 export async function prepareCache({
   workPath,
 }: PrepareCacheOptions): Promise<Files> {
-  console.log('!!! Prepare cache');
-  const goDir = join(workPath, cacheDir);
-  console.log(`symlinking ${goGlobalCachePath} -> ${goDir}`);
-  await symlink(goGlobalCachePath, goDir);
-  const cache = await glob('**', goDir);
-  console.log(`Caching ${Object.keys(cache).length} files`);
-  console.log(cache['1.18.10_linux_x64/LICENSE']);
+  const cache = await glob(`${cacheDir}/**`, workPath);
   return cache;
 }

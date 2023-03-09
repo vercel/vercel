@@ -7,6 +7,7 @@ import {
   pathExists,
   readFile,
   remove,
+  symlink,
 } from 'fs-extra';
 import { join, delimiter, dirname } from 'path';
 import stringArgv from 'string-argv';
@@ -35,7 +36,6 @@ const archMap = new Map([
 ]);
 const platformMap = new Map([['win32', 'windows']]);
 export const cacheDir = join('.vercel', 'cache', 'golang');
-const getGoDir = (workPath: string) => join(workPath, cacheDir);
 const GO_FLAGS = process.platform === 'win32' ? [] : ['-ldflags', '-s -w'];
 const GO_MIN_VERSION = 13;
 const getPlatform = (p: string) => platformMap.get(p) || p;
@@ -72,6 +72,7 @@ export async function getAnalyzedEntrypoint(
     debug(`Building analyze bin: ${bin}`);
     const src = join(__dirname, 'util', 'analyze.go');
     const go = await createGo({
+      modulePath,
       workPath,
     });
     await go.build(src, bin);
@@ -134,22 +135,16 @@ class GoWrapper {
 }
 
 type CreateGoOptions = {
-  goPath?: string;
   modulePath?: string;
   opts?: execa.Options;
   workPath: string;
 };
 
 export async function createGo({
-  goPath,
   modulePath,
   opts = {},
   workPath,
 }: CreateGoOptions) {
-  if (goPath === undefined) {
-    goPath = getGoDir(workPath);
-  }
-
   // parse the `go.mod`, if exists
   let goPreferredVersion;
   if (modulePath) {
@@ -161,22 +156,37 @@ export async function createGo({
     goPreferredVersion || Array.from(versionMap.values())[0];
 
   const env = cloneEnv(process.env, opts.env);
-  const goGlobalDir = join(
+  const { PATH } = env;
+  const goGlobalCacheDir = join(
     goGlobalCachePath,
     `${goSelectedVersion}_${process.platform}_${process.arch}`
   );
-  const goGlobalBinDir = join(goGlobalDir, 'bin');
+  const goCacheDir = join(workPath, cacheDir);
+  let goRootDir;
 
   if (goPreferredVersion) {
     debug(`Preferred go version ${goPreferredVersion} (from go.mod)`);
     env.GO111MODULE = 'on';
   }
 
+  const setGoEnv = async () => {
+    if (process.platform === 'win32') {
+      goRootDir = goGlobalCacheDir;
+    } else {
+      debug(`Symlinking ${goGlobalCacheDir} -> ${goCacheDir}`);
+      await mkdirp(dirname(goCacheDir));
+      await remove(goCacheDir);
+      await symlink(goGlobalCacheDir, goCacheDir);
+      goRootDir = goCacheDir;
+    }
+    env.GOROOT = goRootDir;
+    env.PATH = `${join(goRootDir, 'bin')}${delimiter}${PATH}`;
+  };
+
   // check we have the desired `go` version cached
-  if (await pathExists(goGlobalBinDir)) {
+  if (await pathExists(join(goGlobalCacheDir, 'bin'))) {
     // check if `go` has already been downloaded and that the version is correct
-    env.GOROOT = goGlobalDir;
-    env.PATH = `${goGlobalBinDir}${delimiter}${env.PATH}`;
+    await setGoEnv();
     const { failed, stdout } = await execa('go', ['version'], {
       env,
       reject: false,
@@ -185,6 +195,7 @@ export async function createGo({
       const { version, short } = parseGoVersionString(stdout);
       if (version === goSelectedVersion || short === goSelectedVersion) {
         debug(`Selected go ${version} (from cache)`);
+
         return new GoWrapper(env, opts);
       } else {
         debug(`Found cached go ${version}, but need ${goSelectedVersion}`);
@@ -194,6 +205,7 @@ export async function createGo({
 
   if (!goPreferredVersion) {
     // check if `go` is installed in the system PATH and if it's the version we want
+    env.PATH = PATH;
     const { failed, stdout } = await execa('go', ['version'], {
       env,
       reject: false,
@@ -215,12 +227,11 @@ export async function createGo({
 
   // we need to download and cache the desired `go` version
   await download({
-    dest: goGlobalDir,
+    dest: goGlobalCacheDir,
     version: goSelectedVersion,
   });
 
-  env.GOROOT = goGlobalDir;
-  env.PATH = `${goGlobalBinDir}${delimiter}${env.PATH}`;
+  await setGoEnv();
   return new GoWrapper(env, opts);
 }
 
