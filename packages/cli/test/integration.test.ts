@@ -25,6 +25,7 @@ import sleep from '../src/util/sleep';
 import pkg from '../package.json';
 import prepareFixtures from './helpers/prepare';
 import { fetchTokenWithRetry } from '../../../test/lib/deployment/now-deploy';
+import { once } from 'node:events';
 
 const TEST_TIMEOUT = 3 * 60 * 1000;
 jest.setTimeout(TEST_TIMEOUT);
@@ -223,7 +224,7 @@ const apiFetch = (url, { headers, ...options } = {}) => {
 const waitForPrompt = (cp, assertion) =>
   new Promise((resolve, reject) => {
     console.log('Waiting for prompt...');
-    setTimeout(
+    const handleTimeout = setTimeout(
       () => reject(new Error('timeout in waitForPrompt')),
       TEST_TIMEOUT / 2
     );
@@ -232,6 +233,7 @@ const waitForPrompt = (cp, assertion) =>
       if (assertion(chunk)) {
         cp.stdout.off && cp.stdout.off('data', listener);
         cp.stderr.off && cp.stderr.off('data', listener);
+        clearTimeout(handleTimeout);
         resolve();
       }
     };
@@ -2346,18 +2348,23 @@ test('[vercel dev] fails when dev script calls vercel dev recursively', async ()
 });
 
 test('[vercel dev] fails when development command calls vercel dev recursively', async () => {
-  const dir = fixture('dev-fail-on-recursion-command');
-  const { exitCode, stdout, stderr } = await execa(
-    binaryPath,
-    ['dev', '--yes', ...defaultArgs],
-    {
-      cwd: dir,
-      reject: false,
-    }
-  );
+  expect.assertions(0);
 
-  expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
-  expect(stderr).toContain('must not recursively invoke itself');
+  const dir = fixture('dev-fail-on-recursion-command');
+  const dev = execa(binaryPath, ['dev', '--yes', ...defaultArgs], {
+    cwd: dir,
+    reject: false,
+  });
+
+  try {
+    await waitForPrompt(dev, chunk =>
+      chunk.includes('must not recursively invoke itself')
+    );
+  } finally {
+    const onClose = once(dev, 'close');
+    dev.kill();
+    await onClose;
+  }
 });
 
 test('`vercel rm` removes a deployment', async () => {

@@ -2284,7 +2284,6 @@ export default class DevServer {
     p.on('close', (code, signal) => {
       this.output.debug(`Dev command closed with "${signal || code}"`);
       this.devProcessOrigin = undefined;
-      this.exit(code || 0);
     });
 
     const devProcessHost = await checkForPort(port, 1000 * 60 * 5);
