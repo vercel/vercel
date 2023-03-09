@@ -940,6 +940,7 @@ importers:
       typescript: 4.9.4
     dependencies:
       '@remix-run/dev': /@vercel/remix-run-dev/1.14.0
+      '@vercel/build-utils': link:../build-utils
       '@vercel/nft': 0.22.5
       '@vercel/static-config': link:../static-config
       path-to-regexp: 6.2.1
@@ -947,7 +948,6 @@ importers:
     devDependencies:
       '@types/jest': 27.5.1
       '@types/node': 14.18.33
-      '@vercel/build-utils': link:../build-utils
       typescript: 4.9.4
 
   packages/remix-entry-server:
