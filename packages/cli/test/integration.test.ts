@@ -3259,13 +3259,17 @@ test('deploy gatsby twice and print cached directories', async () => {
   const pkg = JSON.parse(packageJsonOriginal);
 
   async function tryDeploy(cwd) {
-    await execa(binaryPath, [...defaultArgs, '--public', '--yes'], {
-      cwd,
-      stdio: 'inherit',
-      reject: true,
-    });
+    const { exitCode, stdout, stderr } = await execa(
+      binaryPath,
+      [...defaultArgs, '--public', '--yes'],
+      {
+        cwd,
+        stdio: 'inherit',
+        reject: false,
+      }
+    );
 
-    expect(true).toBe(true);
+    expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
   }
 
   // Deploy once to populate the cache
