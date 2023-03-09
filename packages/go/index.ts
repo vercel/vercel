@@ -110,7 +110,8 @@ export async function build({
   } else {
     console.log(`!!! goGlobalCachePath does NOT exist: ${goGlobalCachePath}`);
   }
-  execSync('find /vercel', { stdio: 'inherit' });
+  execSync('ls -la /vercel', { stdio: 'inherit' });
+  execSync('ls -la /vercel/.cache', { stdio: 'inherit' });
 
   const goPath = await getWriteableDirectory();
   const srcPath = join(goPath, 'src', 'lambda');
