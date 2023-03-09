@@ -8,12 +8,15 @@ import { join, dirname, basename, normalize, posix, sep } from 'path';
 import {
   readFile,
   writeFile,
+  lstat,
   pathExists,
   mkdirp,
   move,
+  readlink,
   remove,
   rmdir,
   readdir,
+  unlink,
 } from 'fs-extra';
 import {
   BuildOptions,
@@ -802,6 +805,13 @@ async function waitForPortFile_(opts: {
 export async function prepareCache({
   workPath,
 }: PrepareCacheOptions): Promise<Files> {
+  const stat = await lstat(cacheDir);
+  if (stat.isSymbolicLink()) {
+    const goDir = await readlink(cacheDir);
+    await unlink(cacheDir);
+    await move(goDir, cacheDir);
+  }
+
   const cache = await glob(`${cacheDir}/**`, workPath);
   console.log(`!! CACHING ${Object.keys(cache).length} FILES`);
   console.log(Object.keys(cache));
