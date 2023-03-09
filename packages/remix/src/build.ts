@@ -21,6 +21,7 @@ import {
 } from '@vercel/build-utils';
 import { getConfig } from '@vercel/static-config';
 import { nodeFileTrace } from '@vercel/nft';
+import { readConfig } from '@remix-run/dev/dist/config';
 import type {
   BuildV2,
   Files,
@@ -147,16 +148,12 @@ export const build: BuildV2 = async ({
     }
   );
 
-  const remixConfig = await chdirAndReadConfig(
-    entrypointFsDirname,
-    remixRunDevPath,
-    {
-      ...spawnOptsEnvForAdd,
+  const remixConfig = await chdirAndReadConfig(entrypointFsDirname, {
+    ...spawnOptsEnvForAdd,
 
-      // Remix uses this env var to determine which package manager to invoke
-      npm_config_user_agent: cliType,
-    }
-  );
+    // Remix uses this env var to determine which package manager to invoke
+    npm_config_user_agent: cliType,
+  });
   const remixRoutes = Object.values(remixConfig.routes);
 
   let remixConfigWrapped = false;
@@ -703,11 +700,7 @@ async function ensureSymlink(
   );
 }
 
-async function chdirAndReadConfig(
-  dir: string,
-  remixRunDevPath: string,
-  env: NodeJS.ProcessEnv
-) {
+async function chdirAndReadConfig(dir: string, env: NodeJS.ProcessEnv) {
   const originalCwd = process.cwd();
 
   // As of Remix v1.14.0, reading the config may trigger adding `isbot`
@@ -719,7 +712,6 @@ async function chdirAndReadConfig(
   let remixConfig: RemixConfig;
   try {
     process.chdir(dir);
-    const { readConfig } = require(join(remixRunDevPath, 'dist/config'));
     remixConfig = await readConfig(dir);
   } finally {
     process.chdir(originalCwd);
