@@ -26,7 +26,7 @@ import pkg from '../package.json';
 import prepareFixtures from './helpers/prepare';
 import { fetchTokenWithRetry } from '../../../test/lib/deployment/now-deploy';
 
-const TEST_TIMEOUT = 3 * 60 * 1000;
+const TEST_TIMEOUT = 4 * 60 * 1000;
 jest.setTimeout(TEST_TIMEOUT);
 
 // log command when running `execa`
@@ -383,7 +383,7 @@ test('default command should prompt login with empty auth.json', async () => {
 
 // NOTE: Test order is important here.
 // This test MUST run before the tests below for them to work.
-test.only('login', async () => {
+test('login', async () => {
   // NOTE: Needs timeout of 1m
 
   await fs.remove(getConfigAuthPath());
@@ -3252,7 +3252,7 @@ test('`vc --debug project ls` should output the projects listing', async () => {
   expect(stderr.includes('> Projects found under')).toBe(true);
 });
 
-test.only('deploy gatsby twice and print cached directories', async () => {
+test('deploy gatsby twice and print cached directories', async () => {
   const directory = example('gatsby');
   const packageJsonPath = path.join(directory, 'package.json');
   const packageJsonOriginal = await readFile(packageJsonPath, 'utf8');
