@@ -6,9 +6,9 @@ import type {
   RouteManifest,
 } from '@remix-run/dev/dist/config/routes';
 import type { BaseFunctionConfig } from '@vercel/static-config';
-import {
+import { spawnAsync } from '@vercel/build-utils';
+import type {
   CliType,
-  spawnAsync,
   SpawnOptionsExtended,
 } from '@vercel/build-utils/dist/fs/run-user-scripts';
 
