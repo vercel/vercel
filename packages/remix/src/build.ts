@@ -43,10 +43,13 @@ import {
   ResolvedNodeRouteConfig,
   ResolvedEdgeRouteConfig,
   syncEnv,
-  addDependency,
 } from './utils';
 
 const _require: typeof require = eval('require');
+
+const REMIX_RUN_DEV_PATH = dirname(
+  _require.resolve('@remix-run/dev/package.json')
+);
 
 const edgeServerSrcPromise = fs.readFile(
   join(__dirname, '../server-edge.mjs'),
@@ -126,34 +129,19 @@ export const build: BuildV2 = async ({
     await fs.readFile(join(remixRunDevPath, 'package.json'), 'utf8')
   ).version;
 
-  const spawnOptsEnvForAdd = { ...spawnOpts.env };
-
   // Prevent frozen lockfile rejections
-  delete spawnOptsEnvForAdd.CI;
-  delete spawnOptsEnvForAdd.VERCEL;
-  delete spawnOptsEnvForAdd.NOW_BUILDER;
+  const envForReadConfig = { ...spawnOpts.env };
+  delete envForReadConfig.CI;
+  delete envForReadConfig.VERCEL;
+  delete envForReadConfig.NOW_BUILDER;
 
-  // Currently we have to use a fork of the Remix compiler
-  // which supports `serverBundles` config.
-  // Once this PR is merge upstream the we will no longer need to do this:
-  // https://github.com/remix-run/remix/pull/5479
-  await addDependency(
-    cliType,
-    ['@remix-run/dev@npm:@vercel/remix-run-dev@1.14.0'],
-    {
-      ...spawnOpts,
-      env: spawnOptsEnvForAdd,
-      cwd: entrypointFsDirname,
-      saveDev: true,
-    }
+  // Remix uses this env var to determine which package manager to invoke
+  envForReadConfig.npm_config_user_agent = cliType;
+
+  const remixConfig = await chdirAndReadConfig(
+    entrypointFsDirname,
+    envForReadConfig
   );
-
-  const remixConfig = await chdirAndReadConfig(entrypointFsDirname, {
-    ...spawnOptsEnvForAdd,
-
-    // Remix uses this env var to determine which package manager to invoke
-    npm_config_user_agent: cliType,
-  });
   const remixRoutes = Object.values(remixConfig.routes);
 
   let remixConfigWrapped = false;
@@ -161,6 +149,10 @@ export const build: BuildV2 = async ({
   const renamedRemixConfigPath = remixConfigPath
     ? `${remixConfigPath}.original${extname(remixConfigPath)}`
     : undefined;
+
+  const backupRemixRunDevPath = `${remixRunDevPath}.__vercel_backup`;
+  await fs.rename(remixRunDevPath, backupRemixRunDevPath);
+  await fs.symlink(REMIX_RUN_DEV_PATH, remixRunDevPath);
 
   // These get populated inside the try/catch below
   let serverBundles: AppConfig['serverBundles'];
@@ -257,7 +249,6 @@ module.exports = config;`;
 
     // Make `remix build` output production mode
     spawnOpts.env.NODE_ENV = 'production';
-    //spawnOpts.env.NODE_ENV = 'development';
 
     // Run "Build Command"
     if (buildCommand) {
@@ -290,6 +281,10 @@ module.exports = config;`;
     if (remixConfigWrapped && remixConfigPath && renamedRemixConfigPath) {
       await fs.rename(renamedRemixConfigPath, remixConfigPath);
     }
+
+    // Remove `@remix-run/dev` symlink
+    await fs.unlink(remixRunDevPath);
+    await fs.rename(backupRemixRunDevPath, remixRunDevPath);
   }
 
   // This needs to happen before we run NFT to create the Node/Edge functions

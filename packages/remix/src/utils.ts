@@ -1,16 +1,11 @@
 import { join } from 'path';
 import { existsSync } from 'fs';
-import { spawnAsync } from '@vercel/build-utils';
 import { pathToRegexp, Key } from 'path-to-regexp';
 import type {
   ConfigRoute,
   RouteManifest,
 } from '@remix-run/dev/dist/config/routes';
 import type { BaseFunctionConfig } from '@vercel/static-config';
-import type {
-  CliType,
-  SpawnOptionsExtended,
-} from '@vercel/build-utils/dist/fs/run-user-scripts';
 
 export interface ResolvedNodeRouteConfig {
   runtime: 'nodejs';
@@ -194,32 +189,4 @@ export function syncEnv(source: NodeJS.ProcessEnv, dest: NodeJS.ProcessEnv) {
   }
 
   return () => syncEnv(originalDest, dest);
-}
-
-export interface AddDependencyOptions extends SpawnOptionsExtended {
-  saveDev?: boolean;
-}
-
-/**
- * Runs `npm i ${name}` / `pnpm i ${name}` / `yarn add ${name}`.
- */
-export function addDependency(
-  cliType: CliType,
-  names: string[],
-  opts: AddDependencyOptions = {}
-) {
-  const args: string[] = [];
-  if (cliType === 'npm' || cliType === 'pnpm') {
-    args.push('install');
-    if (opts.saveDev) {
-      args.push('--save-dev');
-    }
-  } else {
-    // 'yarn'
-    args.push('add');
-    if (opts.saveDev) {
-      args.push('--dev');
-    }
-  }
-  return spawnAsync(cliType, args.concat(names), opts);
 }
