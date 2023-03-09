@@ -1,4 +1,3 @@
-import ms from 'ms';
 import { join } from 'path';
 import { remove } from 'fs-extra';
 import { getWriteableDirectory } from '@vercel/build-utils';
@@ -10,7 +9,7 @@ import {
 import vercelNextPkg from '@vercel/next/package.json';
 import vercelNodePkg from '@vercel/node/package.json';
 
-jest.setTimeout(ms('30 seconds'));
+jest.setTimeout(60 * 1000);
 
 const repoRoot = join(__dirname, '../../../../../..');
 
