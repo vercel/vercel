@@ -24,7 +24,7 @@ export default function handleRequest(
 function serveTheBots(
   responseStatusCode: number,
   responseHeaders: Headers,
-  remixServer: any
+  remixServer: JSX.Element
 ) {
   return new Promise((resolve, reject) => {
     const { pipe, abort } = renderToPipeableStream(remixServer, {
@@ -51,7 +51,7 @@ function serveTheBots(
 function serveBrowsers(
   responseStatusCode: number,
   responseHeaders: Headers,
-  remixServer: any
+  remixServer: JSX.Element
 ) {
   return new Promise((resolve, reject) => {
     let didError = false;
