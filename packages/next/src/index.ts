@@ -209,7 +209,6 @@ export const build: BuildV2 = async ({
 
   let entryDirectory = path.dirname(entrypoint);
   let entryPath = path.join(workPath, entryDirectory);
-  const origRepoRootPath = repoRootPath;
 
   // allow testing root directory setting with vercel.json
   if (config.rootDirectory) {
@@ -225,8 +224,6 @@ export const build: BuildV2 = async ({
   debug(
     JSON.stringify(
       {
-        config,
-        origRepoRootPath,
         repoRootPath,
         baseDir,
         workPath,

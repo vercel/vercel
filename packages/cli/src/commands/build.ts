@@ -300,6 +300,13 @@ async function doBuild(
 
   const workPath = join(cwd, project.settings.rootDirectory || '.');
 
+  console.log('!! DO BUILD');
+  console.log({
+    cwd,
+    projectSettings: project.settings,
+    workPath,
+  });
+
   const [pkg, vercelConfig, nowConfig] = await Promise.all([
     readJSONFile<PackageJson>(join(workPath, 'package.json')),
     readJSONFile<VercelConfig>(join(workPath, 'vercel.json')),
