@@ -98,14 +98,15 @@ export async function prepareCache(options: PrepareCacheOptions) {
 **Example:**
 
 ```typescript
-import { glob, PrepareCacheOptions } from '@vercel/build-utils';
+import { relative } from 'path';
+import { glob, PrepareCache } from '@vercel/build-utils';
 
-export async function prepareCache({ workPath }: PrepareCacheOptions) {
+export const prepareCache: PrepareCache = async ({ workPath, repoRootPath }) => {
   // Create a mapping of file names and `File` object instances to cache here…
-
-  const cache = await glob(`${workPath}/some/dir/**`, workPath);
+  const rootDirectory = relative(repoRootPath, workPath);
+  const cache = await glob(`${rootDirectory}/some/dir/**`, repoRootPath);
   return cache;
-}
+};
 ```
 
 ### `shouldServe()`
