@@ -134,15 +134,6 @@ export const build: BuildV2 = async ({
     await fs.readFile(join(remixRunDevPath, 'package.json'), 'utf8')
   ).version;
 
-  // Prevent frozen lockfile rejections
-  //const envForReadConfig = { ...spawnOpts.env };
-  //delete envForReadConfig.CI;
-  //delete envForReadConfig.VERCEL;
-  //delete envForReadConfig.NOW_BUILDER;
-
-  //// Remix uses this env var to determine which package manager to invoke
-  //envForReadConfig.npm_config_user_agent = cliType;
-
   const remixConfig = await chdirAndReadConfig(
     entrypointFsDirname,
     packageJsonPath
@@ -159,7 +150,16 @@ export const build: BuildV2 = async ({
       join(appDirectory, 'entry.server.jsx')
     );
     if (!pkg.dependencies['@vercel/remix-entry-server']) {
-      await addDependency(cliType, ['@vercel/remix-entry-server']);
+      // Prevent frozen lockfile rejections
+      const envForAddDep = { ...spawnOpts.env };
+      delete envForAddDep.CI;
+      delete envForAddDep.VERCEL;
+      delete envForAddDep.NOW_BUILDER;
+      await addDependency(cliType, ['@vercel/remix-entry-server'], {
+        ...spawnOpts,
+        env: envForAddDep,
+        cwd: entrypointFsDirname,
+      });
     }
   }
 
