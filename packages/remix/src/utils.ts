@@ -1,6 +1,7 @@
 import { existsSync, promises as fs } from 'fs';
 import { join, relative, resolve } from 'path';
 import { pathToRegexp, Key } from 'path-to-regexp';
+import { spawnAsync } from '@vercel/build-utils';
 import { readConfig } from '@remix-run/dev/dist/config';
 import type {
   ConfigRoute,
@@ -8,6 +9,10 @@ import type {
 } from '@remix-run/dev/dist/config/routes';
 import type { RemixConfig } from '@remix-run/dev/dist/config';
 import type { BaseFunctionConfig } from '@vercel/static-config';
+import type {
+  CliType,
+  SpawnOptionsExtended,
+} from '@vercel/build-utils/dist/fs/run-user-scripts';
 
 export interface ResolvedNodeRouteConfig {
   runtime: 'nodejs';
@@ -232,4 +237,32 @@ export async function chdirAndReadConfig(dir: string, packageJsonPath: string) {
   }
 
   return remixConfig;
+}
+
+export interface AddDependencyOptions extends SpawnOptionsExtended {
+  saveDev?: boolean;
+}
+
+/**
+ * Runs `npm i ${name}` / `pnpm i ${name}` / `yarn add ${name}`.
+ */
+export function addDependency(
+  cliType: CliType,
+  names: string[],
+  opts: AddDependencyOptions = {}
+) {
+  const args: string[] = [];
+  if (cliType === 'npm' || cliType === 'pnpm') {
+    args.push('install');
+    if (opts.saveDev) {
+      args.push('--save-dev');
+    }
+  } else {
+    // 'yarn'
+    args.push('add');
+    if (opts.saveDev) {
+      args.push('--dev');
+    }
+  }
+  return spawnAsync(cliType, args.concat(names), opts);
 }

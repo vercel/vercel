@@ -42,6 +42,7 @@ import {
   ResolvedEdgeRouteConfig,
   findEntry,
   chdirAndReadConfig,
+  addDependency,
 } from './utils';
 
 const _require: typeof require = eval('require');
@@ -157,7 +158,9 @@ export const build: BuildV2 = async ({
       join(DEFAULTS_PATH, 'entry.server.jsx'),
       join(appDirectory, 'entry.server.jsx')
     );
-    // TODO: add `@vercel/remix-entry-server` dep
+    if (!pkg.dependencies['@vercel/remix-entry-server']) {
+      await addDependency(cliType, ['@vercel/remix-entry-server']);
+    }
   }
 
   const userEntryClientFile = findEntry(
