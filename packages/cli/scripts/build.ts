@@ -1,47 +1,17 @@
 import cpy from 'cpy';
 import execa from 'execa';
 import { join } from 'path';
-import { remove, readJSON, writeFile } from 'fs-extra';
+import { remove, readJSON } from 'fs-extra';
 
 const dirRoot = join(__dirname, '..');
 const distRoot = join(dirRoot, 'dist');
 
-async function createConstants() {
-  console.log('Creating constants.ts');
-  const filename = join(dirRoot, 'src/util/constants.ts');
-  const contents = `// This file is auto-generated
-export const GA_TRACKING_ID: string | undefined = ${envToString(
-    'GA_TRACKING_ID'
-  )};
-export const SENTRY_DSN: string | undefined = ${envToString('SENTRY_DSN')};
-`;
-  await writeFile(filename, contents, 'utf8');
-}
-
-function envToString(key: string) {
-  const value = process.env[key];
-  if (!value) {
-    console.log(`- Constant ${key} is not assigned`);
-  }
-  return JSON.stringify(value);
-}
-
 async function main() {
-  // Read the secrets from GitHub Actions and generate a file.
-  // During local development, these secrets will be empty.
-  await createConstants();
-
   // `vercel dev` uses chokidar to watch the filesystem, but opts-out of the
   // `fsevents` feature using `useFsEvents: false`, so delete the module here so
   // that it is not compiled by ncc, which makes the npm package size larger
   // than necessary.
   await remove(join(dirRoot, '../../node_modules/fsevents'));
-
-  // Compile the `doT.js` template files for `vercel dev`
-  console.log();
-  await execa(process.execPath, [join(__dirname, 'compile-templates.js')], {
-    stdio: 'inherit',
-  });
 
   const pkg = await readJSON(join(dirRoot, 'package.json'));
   const dependencies = Object.keys(pkg?.dependencies ?? {});

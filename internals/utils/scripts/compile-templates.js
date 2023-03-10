@@ -6,7 +6,7 @@ async function main() {
   const dirRoot = join(__dirname, '..');
 
   // Compile the `doT.js` template files for `vercel dev`
-  const templatesDir = join(dirRoot, 'src/util/dev/templates');
+  const templatesDir = join(dirRoot, 'src/dev/templates');
   const dotPacker = join(dirRoot, '../../node_modules/dot/bin/dot-packer');
   await execa(process.execPath, [dotPacker], {
     cwd: templatesDir,
