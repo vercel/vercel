@@ -1,0 +1,40 @@
+{
+  "probes": [
+    {
+      "fetchOptions": { "redirect": "manual" },
+      "path": "/",
+      "status": 200,
+      "mustContain": "My Index Page"
+    },
+    {
+      "fetchOptions": { "redirect": "manual" },
+      "path": "/en",
+      "status": 200,
+      "mustContain": "My Index Page"
+    },
+    {
+      "fetchOptions": { "redirect": "manual" },
+      "path": "/enter",
+      "status": 200,
+      "mustContain": "My Enter Page"
+    },
+    {
+      "fetchOptions": { "redirect": "manual" },
+      "path": "/other",
+      "status": 200,
+      "mustContain": "My Other Page"
+    },
+    {
+      "fetchOptions": { "redirect": "manual" },
+      "path": "/en/enter",
+      "status": 200,
+      "mustContain": "My Enter Page"
+    },
+    {
+      "fetchOptions": { "redirect": "manual" },
+      "path": "/en/other",
+      "status": 200,
+      "mustContain": "My Other Page"
+    }
+  ]
+}
