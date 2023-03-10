@@ -174,6 +174,7 @@ export default async function main(client: Client): Promise<number> {
 
   // Read project settings, and pull them from Vercel if necessary
   let project = await readProjectSettings(join(cwd, VERCEL_DIR));
+  console.log('!! project', project);
   const isTTY = process.stdin.isTTY;
   while (!project?.settings) {
     let confirmed = yes;
@@ -212,6 +213,7 @@ export default async function main(client: Client): Promise<number> {
     }
     client.argv = originalArgv;
     project = await readProjectSettings(join(cwd, VERCEL_DIR));
+    console.log('!! project', project);
   }
 
   // Delete output directory from potential previous build
@@ -299,13 +301,6 @@ async function doBuild(
   const { output } = client;
 
   const workPath = join(cwd, project.settings.rootDirectory || '.');
-
-  console.log('!! DO BUILD');
-  console.log({
-    cwd,
-    projectSettings: project.settings,
-    workPath,
-  });
 
   const [pkg, vercelConfig, nowConfig] = await Promise.all([
     readJSONFile<PackageJson>(join(workPath, 'package.json')),
