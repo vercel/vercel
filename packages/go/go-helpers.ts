@@ -9,7 +9,7 @@ import {
   remove,
   symlink,
 } from 'fs-extra';
-import { join, dirname } from 'path';
+import { join, delimiter, dirname } from 'path';
 import stringArgv from 'string-argv';
 import { cloneEnv, debug } from '@vercel/build-utils';
 import { pipeline } from 'stream';
@@ -205,7 +205,7 @@ export async function createGo({
       goDir = goCacheDir;
     }
     env.GOROOT = goDir || undefined;
-    env.PATH = goDir ? join(goDir, 'bin') : PATH;
+    env.PATH = goDir ? `${join(goDir, 'bin')}${delimiter}${PATH}` : PATH;
   };
 
   // try each of these Go directories looking for the version we need
