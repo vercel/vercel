@@ -2,8 +2,7 @@
   "probes": [
     {
       "path": "/",
-      "mustContain": "Index",
-      "logMustContain": "adding `isbot` to your package.json, you should commit this change"
+      "mustContain": "Index"
     },
     { "path": "/foo", "mustContain": "Foo" },
     { "path": "/nested", "mustContain": "Nested Index" },

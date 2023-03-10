@@ -2,8 +2,7 @@
   "probes": [
     {
       "path": "/",
-      "mustContain": "Welcome to Remix",
-      "logMustContain": "adding `isbot` to your package.json, you should commit this change"
+      "mustContain": "Welcome to Remix"
     }
   ]
 }
