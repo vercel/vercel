@@ -84,20 +84,6 @@ future builds.
 **Example:**
 
 ```typescript
-import { PrepareCacheOptions } from '@vercel/build-utils';
-
-export async function prepareCache(options: PrepareCacheOptions) {
-  // Create a mapping of file names and `File` object instances to cache here…
-
-  return {
-    'path-to-file': File,
-  };
-}
-```
-
-**Example:**
-
-```typescript
 import { relative } from 'path';
 import { glob, PrepareCache } from '@vercel/build-utils';
 
