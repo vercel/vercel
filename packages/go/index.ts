@@ -805,6 +805,16 @@ async function waitForPortFile_(opts: {
 export async function prepareCache({
   workPath,
 }: PrepareCacheOptions): Promise<Files> {
+  // When building the project for the first time, there won't be a cache and
+  // `createGo()` will have downloaded Go to the global cache directory, then
+  // symlinked it to the local `cacheDir`.
+  //
+  // If we detect the `cacheDir` is a symlink, unlink it, then move the global
+  // cache directory into the local cache directory so that it can be
+  // persisted.
+  //
+  // On the next build, the local cache will be restored and `createGo()` will
+  // use it unless the preferred Go version changed in the `go.mod`.
   const goCacheDir = join(workPath, cacheDir);
   const stat = await lstat(goCacheDir);
   if (stat.isSymbolicLink()) {

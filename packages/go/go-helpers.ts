@@ -140,11 +140,34 @@ type CreateGoOptions = {
   workPath: string;
 };
 
+/**
+ * Initializes a `GoWrapper` instance.
+ *
+ * This function determines the Go version to use by first looking in the
+ * `go.mod`, if exists, otherwise uses the latest version from the version
+ * map.
+ *
+ * Next it will attempt to find the desired Go version by checking the
+ * following locations:
+ *   1. The "local" project cache directory (e.g. `.vercel/cache/golang`)
+ *   2. The "global" cache directory (e.g. `~/.cache/com.vercel.com/golang`)
+ *   3. The system PATH
+ *
+ * If the Go version is not found, it's downloaded and installed in the
+ * global cache directory so it can be shared across projects. When using
+ * Linux or macOS, it creates a symlink from the global cache to the local
+ * cache directory so that `prepareCache` will persist it.
+ *
+ * @param modulePath The path possibly containing a `go.mod` file
+ * @param opts `execa` options (`cwd`, `env`, `stdio`, etc)
+ * @param workPath The path to the project to be built
+ * @returns An initialized `GoWrapper` instance
+ */
 export async function createGo({
   modulePath,
   opts = {},
   workPath,
-}: CreateGoOptions) {
+}: CreateGoOptions): Promise<GoWrapper> {
   // parse the `go.mod`, if exists
   let goPreferredVersion;
   if (modulePath) {
@@ -167,6 +190,10 @@ export async function createGo({
   if (goPreferredVersion) {
     debug(`Preferred go version ${goPreferredVersion} (from go.mod)`);
     env.GO111MODULE = 'on';
+  } else {
+    debug(
+      `Preferred go version ${goSelectedVersion} (latest from version map)`
+    );
   }
 
   const setGoEnv = async (goDir: string | null) => {
