@@ -1,16 +1,17 @@
 import { resolve, join } from 'path';
 import fs from 'fs-extra';
-
-import DevServer from '../../util/dev/server';
-import { parseListen } from '../../util/dev/parse-listen';
-import Client from '../../util/client';
-import { getLinkedProject } from '../../util/projects/link';
 import { ProjectSettings } from '@vercel-internals/types';
-import setupAndLink from '../../util/link/setup-and-link';
-import { getCommandName } from '../../util/pkg-name';
-import param from '../../util/output/param';
-import { OUTPUT_DIR } from '../../util/build/write-build-result';
-import { pullEnvRecords } from '../../util/env/get-env-records';
+import {
+  parseListen,
+  getLinkedProject,
+  getCommandName,
+  OUTPUT_DIR,
+  pullEnvRecords,
+  server as DevServer,
+  Client,
+  setupAndLink,
+  param,
+} from '@vercel-internals/utils';
 
 type Options = {
   '--listen': string;

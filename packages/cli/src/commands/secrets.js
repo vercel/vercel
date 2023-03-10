@@ -2,16 +2,20 @@ import chalk from 'chalk';
 import table from 'text-table';
 import mri from 'mri';
 import ms from 'ms';
-import strlen from '../util/strlen.ts';
-import { handleError, error } from '../util/error';
-import NowSecrets from '../util/secrets';
-import exit from '../util/exit';
-import logo from '../util/output/logo';
-import getScope from '../util/get-scope.ts';
-import confirm from '../util/input/confirm';
-import getCommandFlags from '../util/get-command-flags';
-import getPrefixedFlags from '../util/get-prefixed-flags';
-import { getPkgName, getCommandName } from '../util/pkg-name.ts';
+import {
+  handleError,
+  error,
+  getPkgName,
+  getCommandName,
+  strlen,
+  NowSecrets,
+  exit,
+  logo,
+  getScope,
+  confirm,
+  getCommandFlags,
+  getPrefixedFlags,
+} from '@vercel-internals/utils';
 
 const help = () => {
   console.log(`

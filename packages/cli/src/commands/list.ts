@@ -2,24 +2,27 @@ import chalk from 'chalk';
 import ms from 'ms';
 import table from 'text-table';
 import title from 'title';
-import Now from '../util';
-import getArgs from '../util/get-args';
-import { handleError } from '../util/error';
-import logo from '../util/output/logo';
-import elapsed from '../util/output/elapsed';
-import strlen from '../util/strlen';
-import toHost from '../util/to-host';
-import parseMeta from '../util/parse-meta';
-import { isValidName } from '../util/is-valid-name';
-import getCommandFlags from '../util/get-command-flags';
-import { getPkgName, getCommandName } from '../util/pkg-name';
-import Client from '../util/client';
+import {
+  handleError,
+  isValidName,
+  getPkgName,
+  getCommandName,
+  getLinkedProject,
+  ensureLink,
+  isAPIError,
+  Now,
+  getArgs,
+  logo,
+  elapsed,
+  strlen,
+  toHost,
+  parseMeta,
+  getCommandFlags,
+  Client,
+  validatePaths,
+  getScope,
+} from '@vercel-internals/utils';
 import { Deployment } from '@vercel/client';
-import validatePaths from '../util/validate-paths';
-import { getLinkedProject } from '../util/projects/link';
-import { ensureLink } from '../util/link/ensure-link';
-import getScope from '../util/get-scope';
-import { isAPIError } from '../util/errors-ts';
 import { isErrnoException } from '@vercel/error-utils';
 
 const help = () => {

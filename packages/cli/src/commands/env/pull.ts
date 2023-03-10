@@ -3,21 +3,20 @@ import { outputFile } from 'fs-extra';
 import { closeSync, openSync, readSync } from 'fs';
 import { resolve } from 'path';
 import { Project, ProjectEnvTarget } from '@vercel-internals/types';
-import Client from '../../util/client';
-import { emoji, prependEmoji } from '../../util/emoji';
-import confirm from '../../util/input/confirm';
-import { Output } from '../../util/output';
-import param from '../../util/output/param';
-import stamp from '../../util/output/stamp';
-import { getCommandName } from '../../util/pkg-name';
 import {
+  emoji,
+  prependEmoji,
+  Output,
+  getCommandName,
   EnvRecordsSource,
   pullEnvRecords,
-} from '../../util/env/get-env-records';
-import {
   buildDeltaString,
   createEnvObject,
-} from '../../util/env/diff-env-files';
+  Client,
+  confirm,
+  param,
+  stamp,
+} from '@vercel-internals/utils';
 import { isErrnoException } from '@vercel/error-utils';
 
 const CONTENTS_PREFIX = '# Created by Vercel CLI\n';

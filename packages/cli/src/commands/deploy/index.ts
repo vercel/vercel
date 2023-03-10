@@ -8,22 +8,10 @@ import {
   VALID_ARCHIVE_FORMATS,
   VercelConfig,
 } from '@vercel/client';
-import code from '../../util/output/code';
-import highlight from '../../util/output/highlight';
-import { readLocalConfig } from '../../util/config/files';
-import getArgs from '../../util/get-args';
-import { handleError } from '../../util/error';
-import Client from '../../util/client';
 import { getPrettyError } from '@vercel/build-utils';
-import toHumanPath from '../../util/humanize-path';
-import Now from '../../util';
-import stamp from '../../util/output/stamp';
-import createDeploy from '../../util/deploy/create-deploy';
-import getDeployment from '../../util/get-deployment';
-import parseMeta from '../../util/parse-meta';
-import linkStyle from '../../util/output/link';
-import param from '../../util/output/param';
 import {
+  readLocalConfig,
+  handleError,
   BuildsRateLimited,
   DeploymentNotFound,
   DomainNotFound,
@@ -41,35 +29,45 @@ import {
   BuildError,
   NotDomainOwner,
   isAPIError,
-} from '../../util/errors-ts';
-import { SchemaValidationFailed } from '../../util/errors';
-import purchaseDomainIfAvailable from '../../util/domains/purchase-domain-if-available';
-import confirm from '../../util/input/confirm';
-import editProjectSettings from '../../util/input/edit-project-settings';
-import {
+  SchemaValidationFailed,
   getLinkedProject,
   linkFolderToProject,
-} from '../../util/projects/link';
-import getProjectName from '../../util/get-project-name';
-import selectOrg from '../../util/input/select-org';
-import inputProject from '../../util/input/input-project';
-import { prependEmoji, emoji } from '../../util/emoji';
-import { inputRootDirectory } from '../../util/input/input-root-directory';
-import validatePaths, {
+  prependEmoji,
+  emoji,
+  inputRootDirectory,
+  getCommandName,
+  getPreferredPreviewURL,
+  Output,
+  getDeploymentChecks,
+  createGitMeta,
+  isValidArchive,
+  parseEnv,
+  pickOverrides,
+  code,
+  highlight,
+  getArgs,
+  Client,
+  humanizePath,
+  Now,
+  stamp,
+  createDeploy,
+  getDeployment,
+  parseMeta,
+  link as linkStyle,
+  param,
+  purchaseDomainIfAvailable,
+  confirm,
+  editProjectSettings,
+  getProjectName,
+  selectOrg,
+  inputProject,
+  parseTarget,
+  getPrebuiltJson,
+  validatePaths,
   validateRootDirectory,
-} from '../../util/validate-paths';
-import { getCommandName } from '../../util/pkg-name';
-import { getPreferredPreviewURL } from '../../util/deploy/get-preferred-preview-url';
-import { Output } from '../../util/output';
+} from '@vercel-internals/utils';
 import { help } from './args';
-import { getDeploymentChecks } from '../../util/deploy/get-deployment-checks';
-import parseTarget from '../../util/deploy/parse-target';
-import getPrebuiltJson from '../../util/deploy/get-prebuilt-json';
-import { createGitMeta } from '../../util/create-git-meta';
-import { isValidArchive } from '../../util/deploy/validate-archive-format';
-import { parseEnv } from '../../util/parse-env';
 import { errorToString, isErrnoException, isError } from '@vercel/error-utils';
-import { pickOverrides } from '../../util/projects/project-settings';
 
 export default async (client: Client): Promise<number> => {
   const { output } = client;
@@ -288,7 +286,7 @@ export default async (client: Client): Promise<number> => {
       autoConfirm ||
       (await confirm(
         client,
-        `Set up and deploy ${chalk.cyan(`“${toHumanPath(path)}”`)}?`,
+        `Set up and deploy ${chalk.cyan(`“${humanizePath(path)}”`)}?`,
         true
       ));
 

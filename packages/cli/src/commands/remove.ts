@@ -2,24 +2,27 @@ import chalk from 'chalk';
 import ms from 'ms';
 import plural from 'pluralize';
 import table from 'text-table';
-import Now from '../util';
-import getAliases from '../util/alias/get-aliases';
-import logo from '../util/output/logo';
-import elapsed from '../util/output/elapsed';
-import { normalizeURL } from '../util/url';
-import getScope from '../util/get-scope';
-import { isValidName } from '../util/is-valid-name';
-import removeProject from '../util/projects/remove-project';
-import getProjectByIdOrName from '../util/projects/get-project-by-id-or-name';
-import getDeployment from '../util/get-deployment';
-import getDeploymentsByProjectId from '../util/deploy/get-deployments-by-project-id';
-import { getPkgName, getCommandName } from '../util/pkg-name';
-import getArgs from '../util/get-args';
-import handleError from '../util/handle-error';
-import type Client from '../util/client';
-import { Output } from '../util/output';
+import {
+  normalizeURL,
+  isValidName,
+  getPkgName,
+  getCommandName,
+  Output,
+  NowError,
+  Now,
+  getAliases,
+  logo,
+  elapsed,
+  getScope,
+  removeProject,
+  getProjectByIdOrName,
+  getDeployment,
+  getDeploymentsByProjectId,
+  getArgs,
+  handleError,
+  type Client,
+} from '@vercel-internals/utils';
 import { Alias, Deployment, Project } from '@vercel-internals/types';
-import { NowError } from '../util/now-error';
 
 type DeploymentWithAliases = Deployment & {
   aliases: Alias[];

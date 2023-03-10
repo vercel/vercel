@@ -1,20 +1,25 @@
 import { validate as validateEmail } from 'email-validator';
 import chalk from 'chalk';
-import hp from '../util/humanize-path';
-import getArgs from '../util/get-args';
-import logo from '../util/output/logo';
-import prompt from '../util/login/prompt';
-import doSamlLogin from '../util/login/saml';
-import doEmailLogin from '../util/login/email';
-import doGithubLogin from '../util/login/github';
-import doGitlabLogin from '../util/login/gitlab';
-import doBitbucketLogin from '../util/login/bitbucket';
-import { prependEmoji, emoji } from '../util/emoji';
-import { getCommandName, getPkgName } from '../util/pkg-name';
-import getGlobalPathConfig from '../util/config/global-path';
-import { writeToAuthConfigFile, writeToConfigFile } from '../util/config/files';
-import Client from '../util/client';
-import { LoginResult } from '../util/login/types';
+import {
+  prependEmoji,
+  emoji,
+  getCommandName,
+  getPkgName,
+  writeToAuthConfigFile,
+  writeToConfigFile,
+  LoginResult,
+  humanizePath as hp,
+  getArgs,
+  logo,
+  prompt,
+  saml as doSamlLogin,
+  email as doEmailLogin,
+  github as doGithubLogin,
+  gitlab as doGitlabLogin,
+  bitbucket as doBitbucketLogin,
+  globalPath as getGlobalPathConfig,
+  Client,
+} from '@vercel-internals/utils';
 
 const help = () => {
   console.log(`

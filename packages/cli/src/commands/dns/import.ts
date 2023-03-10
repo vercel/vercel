@@ -1,10 +1,13 @@
 import chalk from 'chalk';
-import Client from '../../util/client';
-import getScope from '../../util/get-scope';
-import { DomainNotFound, InvalidDomain } from '../../util/errors-ts';
-import stamp from '../../util/output/stamp';
-import importZonefile from '../../util/dns/import-zonefile';
-import { getCommandName } from '../../util/pkg-name';
+import {
+  DomainNotFound,
+  InvalidDomain,
+  getCommandName,
+  Client,
+  getScope,
+  stamp,
+  importZonefile,
+} from '@vercel-internals/utils';
 
 type Options = {};
 

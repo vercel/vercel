@@ -4,7 +4,7 @@ import * as ERRORS from '../errors';
 import { NowError } from '../now-error';
 import mapCertError from '../certs/map-cert-error';
 import { Org } from '@vercel-internals/types';
-import Now, { CreateOptions } from '..';
+import Now, { CreateOptions } from '../now';
 import Client from '../client';
 import { ArchiveFormat, DeploymentError } from '@vercel/client';
 

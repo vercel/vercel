@@ -1,18 +1,20 @@
 import chalk from 'chalk';
 
-import * as ERRORS from '../../util/errors-ts';
-import Client from '../../util/client';
-import formatNSTable from '../../util/format-ns-table';
-import getScope from '../../util/get-scope';
-import stamp from '../../util/output/stamp';
-import { getCommandName } from '../../util/pkg-name';
-import { getDomain } from '../../util/domains/get-domain';
-import { getLinkedProject } from '../../util/projects/link';
-import { isPublicSuffix } from '../../util/domains/is-public-suffix';
-import { getDomainConfig } from '../../util/domains/get-domain-config';
-import { addDomainToProject } from '../../util/projects/add-domain-to-project';
-import { removeDomainFromProject } from '../../util/projects/remove-domain-from-project';
-import code from '../../util/output/code';
+import {
+  getCommandName,
+  getDomain,
+  getLinkedProject,
+  isPublicSuffix,
+  getDomainConfig,
+  addDomainToProject,
+  removeDomainFromProject,
+  ERRORS,
+  Client,
+  formatNsTable as formatNSTable,
+  getScope,
+  stamp,
+  code,
+} from '@vercel-internals/utils';
 
 type Options = {
   '--debug': boolean;

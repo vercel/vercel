@@ -1,13 +1,15 @@
-import chars from '../../util/output/chars';
-import table from '../../util/output/table';
-import getUser from '../../util/get-user';
-import getTeams from '../../util/teams/get-teams';
-import getPrefixedFlags from '../../util/get-prefixed-flags';
-import { getPkgName } from '../../util/pkg-name';
-import getCommandFlags from '../../util/get-command-flags';
-import cmd from '../../util/output/cmd';
-import Client from '../../util/client';
-import getArgs from '../../util/get-args';
+import {
+  getPkgName,
+  chars,
+  table,
+  getUser,
+  getTeams,
+  getPrefixedFlags,
+  getCommandFlags,
+  cmd,
+  Client,
+  getArgs,
+} from '@vercel-internals/utils';
 
 export default async function list(client: Client): Promise<number> {
   const { config, output } = client;

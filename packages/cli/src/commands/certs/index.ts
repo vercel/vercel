@@ -1,18 +1,17 @@
 import chalk from 'chalk';
 
-// @ts-ignore
-import { handleError } from '../../util/error';
-
-import getArgs from '../../util/get-args';
-import getSubcommand from '../../util/get-subcommand';
-import logo from '../../util/output/logo';
-
 import add from './add';
 import issue from './issue';
 import ls from './ls';
 import rm from './rm';
-import Client from '../../util/client';
-import { getPkgName } from '../../util/pkg-name';
+import {
+  getPkgName,
+  getArgs,
+  getSubcommand,
+  logo,
+  Client,
+  handleError,
+} from '@vercel-internals/utils';
 
 const help = () => {
   console.log(`

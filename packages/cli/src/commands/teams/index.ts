@@ -1,13 +1,15 @@
 import chalk from 'chalk';
-import error from '../../util/output/error';
-import logo from '../../util/output/logo';
 import list from './list';
 import add from './add';
 import change from './switch';
 import invite from './invite';
-import { getPkgName } from '../../util/pkg-name';
-import getArgs from '../../util/get-args';
-import Client from '../../util/client';
+import {
+  getPkgName,
+  error,
+  logo,
+  getArgs,
+  Client,
+} from '@vercel-internals/utils';
 
 const help = () => {
   console.log(`

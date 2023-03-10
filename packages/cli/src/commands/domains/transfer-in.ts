@@ -1,17 +1,19 @@
 import chalk from 'chalk';
 
-import * as ERRORS from '../../util/errors-ts';
-import Client from '../../util/client';
-import getScope from '../../util/get-scope';
-import param from '../../util/output/param';
-import transferInDomain from '../../util/domains/transfer-in-domain';
-import stamp from '../../util/output/stamp';
-import getAuthCode from '../../util/domains/get-auth-code';
-import getDomainPrice from '../../util/domains/get-domain-price';
-import checkTransfer from '../../util/domains/check-transfer';
-import promptBool from '../../util/input/prompt-bool';
-import isRootDomain from '../../util/is-root-domain';
-import { getCommandName } from '../../util/pkg-name';
+import {
+  getCommandName,
+  ERRORS,
+  Client,
+  getScope,
+  param,
+  transferInDomain,
+  stamp,
+  getAuthCode,
+  getDomainPrice,
+  checkTransfer,
+  promptBool,
+  isRootDomain,
+} from '@vercel-internals/utils';
 
 type Options = {
   '--code': string;

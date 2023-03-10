@@ -1,13 +1,17 @@
 import chalk from 'chalk';
-import logo from '../util/output/logo';
-import elapsed from '../util/output/elapsed';
-import { maybeURL, normalizeURL } from '../util/url';
-import printEvents, { DeploymentEvent } from '../util/events';
-import getScope from '../util/get-scope';
-import { getPkgName } from '../util/pkg-name';
-import getArgs from '../util/get-args';
-import Client from '../util/client';
-import getDeployment from '../util/get-deployment';
+import {
+  maybeURL,
+  normalizeURL,
+  getPkgName,
+  logo,
+  elapsed,
+  events as printEvents,
+  DeploymentEvent,
+  getScope,
+  getArgs,
+  Client,
+  getDeployment,
+} from '@vercel-internals/utils';
 
 const help = () => {
   console.log(`

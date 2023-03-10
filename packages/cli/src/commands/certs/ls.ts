@@ -1,18 +1,18 @@
 import chalk from 'chalk';
 import ms from 'ms';
 import table from 'text-table';
-import Client from '../../util/client';
-import getScope from '../../util/get-scope';
 import {
   PaginationOptions,
   getPaginationOpts,
-} from '../../util/get-pagination-opts';
-import stamp from '../../util/output/stamp';
-import getCerts from '../../util/certs/get-certs';
-import strlen from '../../util/strlen';
+  getCommandName,
+  Client,
+  getScope,
+  stamp,
+  getCerts,
+  strlen,
+  getCommandFlags,
+} from '@vercel-internals/utils';
 import { Cert } from '@vercel-internals/types';
-import getCommandFlags from '../../util/get-command-flags';
-import { getCommandName } from '../../util/pkg-name';
 
 async function ls(
   client: Client,

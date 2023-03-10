@@ -118,7 +118,8 @@
     "overrides": [
       {
         "files": [
-          "packages/cli/**/*"
+          "packages/cli/**/*",
+          "internals/utils/**/*"
         ],
         "rules": {
           "lines-between-class-members": 0,

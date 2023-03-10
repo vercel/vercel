@@ -1,21 +1,26 @@
 import chalk from 'chalk';
-import { ProjectEnvTarget, Project, ProjectEnvType } from '@vercel-internals/types';
-import { Output } from '../../util/output';
-import Client from '../../util/client';
-import stamp from '../../util/output/stamp';
-import addEnvRecord from '../../util/env/add-env-record';
-import getEnvRecords from '../../util/env/get-env-records';
 import {
+  ProjectEnvTarget,
+  Project,
+  ProjectEnvType,
+} from '@vercel-internals/types';
+import {
+  Output,
   isValidEnvTarget,
   getEnvTargetPlaceholder,
   getEnvTargetChoices,
-} from '../../util/env/env-target';
-import readStandardInput from '../../util/input/read-standard-input';
-import param from '../../util/output/param';
-import { emoji, prependEmoji } from '../../util/emoji';
-import { isKnownError } from '../../util/env/known-error';
-import { getCommandName } from '../../util/pkg-name';
-import { isAPIError } from '../../util/errors-ts';
+  emoji,
+  prependEmoji,
+  isKnownError,
+  getCommandName,
+  isAPIError,
+  Client,
+  stamp,
+  addEnvRecord,
+  getEnvRecords,
+  readStandardInput,
+  param,
+} from '@vercel-internals/utils';
 
 type Options = {
   '--debug': boolean;

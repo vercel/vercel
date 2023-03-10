@@ -1,20 +1,22 @@
 import chalk from 'chalk';
 import { join } from 'path';
-import Client from '../util/client';
-import type { Project, ProjectEnvTarget } from '@vercel-internals/types';
-import { emoji, prependEmoji } from '../util/emoji';
-import getArgs from '../util/get-args';
-import logo from '../util/output/logo';
-import stamp from '../util/output/stamp';
-import { getPkgName } from '../util/pkg-name';
-import { VERCEL_DIR, VERCEL_DIR_PROJECT } from '../util/projects/link';
-import { writeProjectSettings } from '../util/projects/project-settings';
 import envPull from './env/pull';
+import type { Project, ProjectEnvTarget } from '@vercel-internals/types';
 import {
+  emoji,
+  prependEmoji,
+  getPkgName,
+  VERCEL_DIR,
+  VERCEL_DIR_PROJECT,
+  writeProjectSettings,
   isValidEnvTarget,
   getEnvTargetPlaceholder,
-} from '../util/env/env-target';
-import { ensureLink } from '../util/link/ensure-link';
+  ensureLink,
+  Client,
+  getArgs,
+  logo,
+  stamp,
+} from '@vercel-internals/utils';
 
 const help = () => {
   return console.log(`

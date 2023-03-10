@@ -1,19 +1,21 @@
 import { parse } from 'psl';
 import chalk from 'chalk';
 
-import { Output } from '../../util/output';
-import * as ERRORS from '../../util/errors-ts';
-import Client from '../../util/client';
-import createCertForCns from '../../util/certs/create-cert-for-cns';
-import createCertFromFile from '../../util/certs/create-cert-from-file';
-import dnsTable from '../../util/format-dns-table';
-import finishCertOrder from '../../util/certs/finish-cert-order';
-import getCnsFromArgs from '../../util/certs/get-cns-from-args';
-import getScope from '../../util/get-scope';
-import stamp from '../../util/output/stamp';
-import startCertOrder from '../../util/certs/start-cert-order';
-import handleCertError from '../../util/certs/handle-cert-error';
-import { getCommandName } from '../../util/pkg-name';
+import {
+  Output,
+  getCommandName,
+  ERRORS,
+  Client,
+  createCertForCns,
+  createCertFromFile,
+  formatDnsTable,
+  finishCertOrder,
+  getCnsFromArgs,
+  getScope,
+  stamp,
+  startCertOrder,
+  handleCertError,
+} from '@vercel-internals/utils';
 
 type Options = {
   '--ca': string;
@@ -180,7 +182,7 @@ async function runStartOrder(
   output.print(
     `  Add the following TXT records with your registrar to be able to the solve the DNS challenge:\n\n`
   );
-  const [header, ...rows] = dnsTable(
+  const [header, ...rows] = formatDnsTable(
     pendingChallenges.map(challenge => {
       const parsedDomain = parse(challenge.domain);
       if (parsedDomain.error) {

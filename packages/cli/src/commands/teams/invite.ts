@@ -1,17 +1,19 @@
 import chalk from 'chalk';
-import Client from '../../util/client';
-import cmd from '../../util/output/cmd';
-import stamp from '../../util/output/stamp';
-import param from '../../util/output/param';
-import chars from '../../util/output/chars';
-import textInput from '../../util/input/text';
-import eraseLines from '../../util/output/erase-lines';
-import getUser from '../../util/get-user';
-import { getCommandName } from '../../util/pkg-name';
-import { email as regexEmail } from '../../util/input/regexes';
-import getTeams from '../../util/teams/get-teams';
-import inviteUserToTeam from '../../util/teams/invite-user-to-team';
-import { isAPIError } from '../../util/errors-ts';
+import {
+  getCommandName,
+  regexEmail,
+  isAPIError,
+  Client,
+  cmd,
+  stamp,
+  param,
+  chars,
+  text as textInput,
+  eraseLines,
+  getUser,
+  getTeams,
+  inviteUserToTeam,
+} from '@vercel-internals/utils';
 import { errorToString, isError } from '@vercel/error-utils';
 
 const validateEmail = (data: string) =>

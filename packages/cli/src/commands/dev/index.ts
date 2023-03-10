@@ -1,20 +1,22 @@
 import path from 'path';
 import chalk from 'chalk';
 import { PackageJson } from '@vercel/build-utils';
-
-import getArgs from '../../util/get-args';
-import getSubcommand from '../../util/get-subcommand';
-import Client from '../../util/client';
-import { NowError } from '../../util/now-error';
-import handleError from '../../util/handle-error';
-import logo from '../../util/output/logo';
-import cmd from '../../util/output/cmd';
-import highlight from '../../util/output/highlight';
+import {
+  NowError,
+  getPkgName,
+  getCommandName,
+  CantParseJSONFile,
+  getArgs,
+  getSubcommand,
+  Client,
+  handleError,
+  logo,
+  cmd,
+  highlight,
+  readConfig,
+  readJsonFile as readJSONFile,
+} from '@vercel-internals/utils';
 import dev from './dev';
-import readConfig from '../../util/config/read-config';
-import readJSONFile from '../../util/read-json-file';
-import { getPkgName, getCommandName } from '../../util/pkg-name';
-import { CantParseJSONFile } from '../../util/errors-ts';
 import { isErrnoException } from '@vercel/error-utils';
 
 const COMMAND_CONFIG = {

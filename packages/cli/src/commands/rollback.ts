@@ -1,14 +1,16 @@
 import chalk from 'chalk';
-import type Client from '../util/client';
-import { ensureLink } from '../util/link/ensure-link';
-import getArgs from '../util/get-args';
-import { getPkgName } from '../util/pkg-name';
-import handleError from '../util/handle-error';
-import logo from '../util/output/logo';
+import {
+  ensureLink,
+  getPkgName,
+  type Client,
+  getArgs,
+  handleError,
+  logo,
+  requestRollback,
+  status as rollbackStatus,
+  validatePaths,
+} from '@vercel-internals/utils';
 import ms from 'ms';
-import requestRollback from '../util/rollback/request-rollback';
-import rollbackStatus from '../util/rollback/status';
-import validatePaths from '../util/validate-paths';
 
 const help = () => {
   console.log(`

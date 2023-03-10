@@ -2,21 +2,21 @@ import ms from 'ms';
 import chalk from 'chalk';
 import plural from 'pluralize';
 
-import Client from '../../util/client';
-import getDomains from '../../util/domains/get-domains';
-import getScope from '../../util/get-scope';
-import stamp from '../../util/output/stamp';
-import formatTable from '../../util/format-table';
-import { formatDateWithoutTime } from '../../util/format-date';
 import { Domain } from '@vercel-internals/types';
-import getCommandFlags from '../../util/get-command-flags';
 import {
+  formatDateWithoutTime,
   PaginationOptions,
   getPaginationOpts,
-} from '../../util/get-pagination-opts';
-import { getCommandName } from '../../util/pkg-name';
-import isDomainExternal from '../../util/domains/is-domain-external';
-import { getDomainRegistrar } from '../../util/domains/get-domain-registrar';
+  getCommandName,
+  getDomainRegistrar,
+  Client,
+  getDomains,
+  getScope,
+  stamp,
+  formatTable,
+  getCommandFlags,
+  isDomainExternal,
+} from '@vercel-internals/utils';
 
 export default async function ls(
   client: Client,

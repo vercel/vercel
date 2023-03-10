@@ -1,11 +1,15 @@
 import chalk from 'chalk';
-import logo from '../util/output/logo';
-import { handleError } from '../util/error';
-import { writeToConfigFile, writeToAuthConfigFile } from '../util/config/files';
-import getArgs from '../util/get-args';
-import Client from '../util/client';
-import { getCommandName, getPkgName } from '../util/pkg-name';
-import { isAPIError } from '../util/errors-ts';
+import {
+  handleError,
+  writeToConfigFile,
+  writeToAuthConfigFile,
+  getCommandName,
+  getPkgName,
+  isAPIError,
+  logo,
+  getArgs,
+  Client,
+} from '@vercel-internals/utils';
 import { errorToString } from '@vercel/error-utils';
 
 const help = () => {

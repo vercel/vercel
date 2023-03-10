@@ -1,6 +1,6 @@
 import fs from 'fs-extra';
 import { join } from 'path';
-import { BuildsManifest } from '../../commands/build';
+import { BuildsManifest } from '@vercel-internals/types';
 
 export default async function getPrebuiltJson(
   directory: string

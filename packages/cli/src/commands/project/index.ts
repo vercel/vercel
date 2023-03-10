@@ -1,11 +1,13 @@
 import chalk from 'chalk';
-import Client from '../../util/client';
-import getArgs from '../../util/get-args';
-import getInvalidSubcommand from '../../util/get-invalid-subcommand';
-import getScope from '../../util/get-scope';
-import handleError from '../../util/handle-error';
-import logo from '../../util/output/logo';
-import { getPkgName } from '../../util/pkg-name';
+import {
+  getPkgName,
+  Client,
+  getArgs,
+  getInvalidSubcommand,
+  getScope,
+  handleError,
+  logo,
+} from '@vercel-internals/utils';
 import add from './add';
 import list from './list';
 import rm from './rm';

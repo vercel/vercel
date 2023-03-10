@@ -2,21 +2,23 @@ import { Dictionary } from '@vercel/client';
 import chalk from 'chalk';
 import { join } from 'path';
 import { Org, Project, ProjectLinkData } from '@vercel-internals/types';
-import Client from '../../util/client';
-import { parseGitConfig, pluckRemoteUrls } from '../../util/create-git-meta';
-import confirm from '../../util/input/confirm';
-import list, { ListChoice } from '../../util/input/list';
-import link from '../../util/output/link';
-import { getCommandName } from '../../util/pkg-name';
 import {
+  parseGitConfig,
+  pluckRemoteUrls,
+  getCommandName,
   connectGitProvider,
   disconnectGitProvider,
   formatProvider,
   RepoInfo,
   parseRepoUrl,
   printRemoteUrls,
-} from '../../util/git/connect-git-provider';
-import validatePaths from '../../util/validate-paths';
+  Client,
+  confirm,
+  list,
+  ListChoice,
+  link,
+  validatePaths,
+} from '@vercel-internals/utils';
 
 interface GitRepoCheckParams {
   client: Client;

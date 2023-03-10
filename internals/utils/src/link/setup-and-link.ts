@@ -26,7 +26,7 @@ import editProjectSettings, {
 import stamp from '../output/stamp';
 import { EmojiLabel } from '../emoji';
 import createDeploy from '../deploy/create-deploy';
-import Now, { CreateOptions } from '../index';
+import Now, { CreateOptions } from '../now';
 import { isAPIError } from '../errors-ts';
 
 export interface SetupAndLinkOptions {

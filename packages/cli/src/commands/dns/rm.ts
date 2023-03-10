@@ -2,13 +2,15 @@ import chalk from 'chalk';
 import ms from 'ms';
 import table from 'text-table';
 import { DNSRecord } from '@vercel-internals/types';
-import { Output } from '../../util/output';
-import Client from '../../util/client';
-import deleteDNSRecordById from '../../util/dns/delete-dns-record-by-id';
-import getDNSRecordById from '../../util/dns/get-dns-record-by-id';
-import getScope from '../../util/get-scope';
-import stamp from '../../util/output/stamp';
-import { getCommandName } from '../../util/pkg-name';
+import {
+  Output,
+  getCommandName,
+  Client,
+  deleteDnsRecordById as deleteDNSRecordById,
+  getDnsRecordById as getDNSRecordById,
+  getScope,
+  stamp,
+} from '@vercel-internals/utils';
 
 type Options = {};
 

@@ -1,16 +1,18 @@
 import chalk from 'chalk';
 import psl from 'psl';
 
-import * as ERRORS from '../../util/errors-ts';
-import Client from '../../util/client';
-import getDomainPrice from '../../util/domains/get-domain-price';
-import getDomainStatus from '../../util/domains/get-domain-status';
-import getScope from '../../util/get-scope';
-import param from '../../util/output/param';
-import promptBool from '../../util/input/prompt-bool';
-import purchaseDomain from '../../util/domains/purchase-domain';
-import stamp from '../../util/output/stamp';
-import { getCommandName } from '../../util/pkg-name';
+import {
+  getCommandName,
+  ERRORS,
+  Client,
+  getDomainPrice,
+  getDomainStatus,
+  getScope,
+  param,
+  promptBool,
+  purchaseDomain,
+  stamp,
+} from '@vercel-internals/utils';
 import { errorToString } from '@vercel/error-utils';
 
 type Options = {};

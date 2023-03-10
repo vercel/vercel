@@ -5,18 +5,20 @@ import { resolve } from 'path';
 import chalk, { Chalk } from 'chalk';
 import { URLSearchParams, parse } from 'url';
 
-import box from '../../util/output/box';
-import sleep from '../../util/sleep';
-import formatDate from '../../util/format-date';
-import link from '../../util/output/link';
-import logo from '../../util/output/logo';
-import getArgs from '../../util/get-args';
-import Client from '../../util/client';
-import { getPkgName } from '../../util/pkg-name';
+import {
+  getPkgName,
+  bisectNormalizeURL,
+  box,
+  sleep,
+  formatDate,
+  link,
+  logo,
+  getArgs,
+  Client,
+  getScope,
+  getDeployment,
+} from '@vercel-internals/utils';
 import { Deployment, PaginationOptions } from '@vercel-internals/types';
-import { normalizeURL } from '../../util/bisect/normalize-url';
-import getScope from '../../util/get-scope';
-import getDeployment from '../../util/get-deployment';
 
 interface Deployments {
   deployments: Deployment[];
@@ -93,7 +95,7 @@ export default async function main(client: Client): Promise<number> {
     run = resolve(run);
   }
 
-  bad = normalizeURL(bad);
+  bad = bisectNormalizeURL(bad);
   let parsed = parse(bad);
   if (!parsed.hostname) {
     output.error('Invalid input: no hostname provided');
@@ -112,7 +114,7 @@ export default async function main(client: Client): Promise<number> {
     }
   }
 
-  good = normalizeURL(good);
+  good = bisectNormalizeURL(good);
   parsed = parse(good);
   if (!parsed.hostname) {
     output.error('Invalid input: no hostname provided');
@@ -148,7 +150,7 @@ export default async function main(client: Client): Promise<number> {
 
   if (badDeployment) {
     if (badDeployment instanceof Error) {
-      badDeployment.message += ` when requesting bad deployment "${normalizeURL(
+      badDeployment.message += ` when requesting bad deployment "${bisectNormalizeURL(
         bad
       )}"`;
       output.prettyError(badDeployment);
@@ -167,7 +169,7 @@ export default async function main(client: Client): Promise<number> {
 
   if (goodDeployment) {
     if (goodDeployment instanceof Error) {
-      goodDeployment.message += ` when requesting good deployment "${normalizeURL(
+      goodDeployment.message += ` when requesting good deployment "${bisectNormalizeURL(
         good
       )}"`;
       output.prettyError(goodDeployment);

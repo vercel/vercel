@@ -1,16 +1,19 @@
 import chalk from 'chalk';
-import stamp from '../../util/output/stamp';
-import info from '../../util/output/info';
-import eraseLines from '../../util/output/erase-lines';
-import chars from '../../util/output/chars';
-import note from '../../util/output/note';
-import textInput from '../../util/input/text';
+import {
+  writeToConfigFile,
+  getPkgName,
+  getCommandName,
+  stamp,
+  info,
+  eraseLines,
+  chars,
+  note,
+  text as textInput,
+  Client,
+  createTeam,
+  patchTeam,
+} from '@vercel-internals/utils';
 import invite from './invite';
-import { writeToConfigFile } from '../../util/config/files';
-import { getPkgName, getCommandName } from '../../util/pkg-name';
-import Client from '../../util/client';
-import createTeam from '../../util/teams/create-team';
-import patchTeam from '../../util/teams/patch-team';
 import { errorToString, isError } from '@vercel/error-utils';
 
 const validateSlugKeypress = (data: string, value: string) =>

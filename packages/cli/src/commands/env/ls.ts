@@ -1,19 +1,23 @@
 import chalk from 'chalk';
 import ms from 'ms';
-import { Output } from '../../util/output';
-import { Project, ProjectEnvVariable, ProjectEnvType } from '@vercel-internals/types';
-import Client from '../../util/client';
-import formatTable from '../../util/format-table';
-import getEnvRecords from '../../util/env/get-env-records';
-import formatEnvTarget from '../../util/env/format-env-target';
 import {
+  Project,
+  ProjectEnvVariable,
+  ProjectEnvType,
+} from '@vercel-internals/types';
+import {
+  Output,
   isValidEnvTarget,
   getEnvTargetPlaceholder,
-} from '../../util/env/env-target';
-import stamp from '../../util/output/stamp';
-import param from '../../util/output/param';
-import { getCommandName } from '../../util/pkg-name';
-import ellipsis from '../../util/output/ellipsis';
+  getCommandName,
+  Client,
+  formatTable,
+  getEnvRecords,
+  formatEnvTarget,
+  stamp,
+  param,
+  ellipsis,
+} from '@vercel-internals/utils';
 
 type Options = {
   '--debug': boolean;

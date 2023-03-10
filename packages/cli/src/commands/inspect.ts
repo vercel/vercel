@@ -1,15 +1,18 @@
 import chalk from 'chalk';
-import getArgs from '../util/get-args';
-import buildsList from '../util/output/builds';
-import routesList from '../util/output/routes';
-import indent from '../util/output/indent';
-import logo from '../util/output/logo';
-import elapsed from '../util/output/elapsed';
-import { handleError } from '../util/error';
-import getScope from '../util/get-scope';
-import { getPkgName, getCommandName } from '../util/pkg-name';
-import Client from '../util/client';
-import getDeployment from '../util/get-deployment';
+import {
+  handleError,
+  getPkgName,
+  getCommandName,
+  getArgs,
+  builds as buildsList,
+  routes as routesList,
+  indent,
+  logo,
+  elapsed,
+  getScope,
+  Client,
+  getDeployment,
+} from '@vercel-internals/utils';
 import { Build, Deployment } from '@vercel-internals/types';
 import title from 'title';
 import { isErrnoException } from '@vercel/error-utils';

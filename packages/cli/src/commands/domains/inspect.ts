@@ -1,19 +1,22 @@
 import chalk from 'chalk';
-import { DomainNotFound, DomainPermissionDenied } from '../../util/errors-ts';
-import { Output } from '../../util/output';
-import Client from '../../util/client';
-import stamp from '../../util/output/stamp';
-import formatDate from '../../util/format-date';
-import formatNSTable from '../../util/format-ns-table';
-import getDomainByName from '../../util/domains/get-domain-by-name';
-import getScope from '../../util/get-scope';
-import formatTable from '../../util/format-table';
-import { findProjectsForDomain } from '../../util/projects/find-projects-for-domain';
-import getDomainPrice from '../../util/domains/get-domain-price';
-import { getCommandName } from '../../util/pkg-name';
-import { getDomainConfig } from '../../util/domains/get-domain-config';
-import code from '../../util/output/code';
-import { getDomainRegistrar } from '../../util/domains/get-domain-registrar';
+import {
+  DomainNotFound,
+  DomainPermissionDenied,
+  Output,
+  findProjectsForDomain,
+  getCommandName,
+  getDomainConfig,
+  getDomainRegistrar,
+  Client,
+  stamp,
+  formatDate,
+  formatNsTable as formatNSTable,
+  getDomainByName,
+  getScope,
+  formatTable,
+  getDomainPrice,
+  code,
+} from '@vercel-internals/utils';
 
 type Options = {};
 

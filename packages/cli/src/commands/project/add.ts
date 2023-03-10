@@ -1,8 +1,6 @@
 import chalk from 'chalk';
 import ms from 'ms';
-import Client from '../../util/client';
-import { isAPIError } from '../../util/errors-ts';
-import { getCommandName } from '../../util/pkg-name';
+import { isAPIError, getCommandName, Client } from '@vercel-internals/utils';
 
 export default async function add(
   client: Client,

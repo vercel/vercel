@@ -3,16 +3,17 @@ import path from 'path';
 import tar from 'tar-fs';
 import chalk from 'chalk';
 
-// @ts-ignore
-import listInput from '../../util/input/list';
-import listItem from '../../util/output/list-item';
-import promptBool from '../../util/input/prompt-bool';
-import toHumanPath from '../../util/humanize-path';
-import Client from '../../util/client';
-import info from '../../util/output/info';
-import cmd from '../../util/output/cmd';
-import didYouMean from '../../util/init/did-you-mean';
-import { getCommandName } from '../../util/pkg-name';
+import {
+  getCommandName,
+  list as listInput,
+  listItem,
+  promptBool,
+  humanizePath as toHumanPath,
+  Client,
+  info,
+  cmd,
+  didYouMean,
+} from '@vercel-internals/utils';
 
 type Options = {
   '--debug': boolean;

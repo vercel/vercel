@@ -18,41 +18,43 @@ import sourceMap from '@zeit/source-map-support';
 import { mkdirp } from 'fs-extra';
 import chalk from 'chalk';
 import epipebomb from 'epipebomb';
-import getLatestVersion from './util/get-latest-version';
 import { URL } from 'url';
 import * as Sentry from '@sentry/node';
-import hp from './util/humanize-path';
 import commands from './commands';
-import pkg from './util/pkg';
-import { Output } from './util/output';
-import cmd from './util/output/cmd';
-import info from './util/output/info';
-import error from './util/output/error';
-import param from './util/output/param';
-import highlight from './util/output/highlight';
-import getArgs from './util/get-args';
-import getUser from './util/get-user';
-import getTeams from './util/teams/get-teams';
-import Client from './util/client';
-import { handleError } from './util/error';
-import reportError from './util/report-error';
-import getConfig from './util/get-config';
-import * as configFiles from './util/config/files';
-import getGlobalPathConfig from './util/config/global-path';
 import {
+  Output,
+  handleError,
   defaultAuthConfig,
   defaultGlobalConfig,
-} from './util/config/get-default';
-import * as ERRORS from './util/errors-ts';
-import { APIError } from './util/errors-ts';
-import { SENTRY_DSN } from './util/constants';
-import getUpdateCommand from './util/get-update-command';
-import { metrics, shouldCollectMetrics } from './util/metrics';
-import { getCommandName, getTitleName } from './util/pkg-name';
-import doLoginPrompt from './util/login/prompt';
+  APIError,
+  SENTRY_DSN,
+  metrics,
+  shouldCollectMetrics,
+  getCommandName,
+  getTitleName,
+  getLatestVersion,
+  humanizePath as hp,
+  pkg,
+  cmd,
+  info,
+  error,
+  param,
+  highlight,
+  getArgs,
+  getUser,
+  getTeams,
+  Client,
+  reportError,
+  getConfig,
+  files as configFiles,
+  globalPath as getGlobalPathConfig,
+  ERRORS,
+  getUpdateCommand,
+  prompt as doLoginPrompt,
+  box,
+} from '@vercel-internals/utils';
 import { AuthConfig, GlobalConfig } from '@vercel-internals/types';
 import { VercelConfig } from '@vercel/client';
-import box from './util/output/box';
 
 const isCanary = pkg.version.includes('canary');
 

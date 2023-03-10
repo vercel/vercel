@@ -1,22 +1,25 @@
 import chalk from 'chalk';
 import plural from 'pluralize';
 
-import { DomainNotFound, DomainPermissionDenied } from '../../util/errors-ts';
 import { Domain } from '@vercel-internals/types';
-import { Output } from '../../util/output';
-import Client from '../../util/client';
-import deleteCertById from '../../util/certs/delete-cert-by-id';
-import getDomainByName from '../../util/domains/get-domain-by-name';
-import getScope from '../../util/get-scope';
-import removeAliasById from '../../util/alias/remove-alias-by-id';
-import removeDomainByName from '../../util/domains/remove-domain-by-name';
-import stamp from '../../util/output/stamp';
-import * as ERRORS from '../../util/errors-ts';
-import param from '../../util/output/param';
-import promptBool from '../../util/input/prompt-bool';
-import setCustomSuffix from '../../util/domains/set-custom-suffix';
-import { findProjectsForDomain } from '../../util/projects/find-projects-for-domain';
-import { getCommandName } from '../../util/pkg-name';
+import {
+  DomainNotFound,
+  DomainPermissionDenied,
+  Output,
+  findProjectsForDomain,
+  getCommandName,
+  Client,
+  deleteCertById,
+  getDomainByName,
+  getScope,
+  removeAliasById,
+  removeDomainByName,
+  stamp,
+  ERRORS,
+  param,
+  promptBool,
+  setCustomSuffix,
+} from '@vercel-internals/utils';
 
 type Options = {
   '--yes': boolean;

@@ -1,6 +1,5 @@
 import chalk from 'chalk';
-import logo from '../../util/output/logo';
-import { getPkgName } from '../../util/pkg-name';
+import { getPkgName, logo } from '@vercel-internals/utils';
 
 export const help = () => `
   ${chalk.bold(`${logo} ${getPkgName()}`)} [options] <command | path>

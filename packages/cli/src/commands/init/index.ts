@@ -1,12 +1,14 @@
 import chalk from 'chalk';
 
-import getArgs from '../../util/get-args';
-import getSubcommand from '../../util/get-subcommand';
-import Client from '../../util/client';
-import handleError from '../../util/handle-error';
-import logo from '../../util/output/logo';
+import {
+  getPkgName,
+  getArgs,
+  getSubcommand,
+  Client,
+  handleError,
+  logo,
+} from '@vercel-internals/utils';
 import init from './init';
-import { getPkgName } from '../../util/pkg-name';
 import { isError } from '@vercel/error-utils';
 
 const COMMAND_CONFIG = {

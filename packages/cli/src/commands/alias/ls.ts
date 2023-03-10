@@ -1,17 +1,17 @@
 import chalk from 'chalk';
 import ms from 'ms';
 import table from 'text-table';
-import Client from '../../util/client';
-import getAliases from '../../util/alias/get-aliases';
-import getScope from '../../util/get-scope';
 import {
   PaginationOptions,
   getPaginationOpts,
-} from '../../util/get-pagination-opts';
-import stamp from '../../util/output/stamp';
-import strlen from '../../util/strlen';
-import getCommandFlags from '../../util/get-command-flags';
-import { getCommandName } from '../../util/pkg-name';
+  getCommandName,
+  Client,
+  getAliases,
+  getScope,
+  stamp,
+  strlen,
+  getCommandFlags,
+} from '@vercel-internals/utils';
 import { Alias } from '@vercel-internals/types';
 
 export default async function ls(

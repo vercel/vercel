@@ -1,9 +1,11 @@
 import chalk from 'chalk';
-import Client from '../../util/client';
-import getArgs from '../../util/get-args';
-import logo from '../../util/output/logo';
-import { getPkgName } from '../../util/pkg-name';
-import { ensureLink } from '../../util/link/ensure-link';
+import {
+  getPkgName,
+  ensureLink,
+  Client,
+  getArgs,
+  logo,
+} from '@vercel-internals/utils';
 
 const help = () => {
   console.log(`

@@ -1,21 +1,20 @@
 import chalk from 'chalk';
 import ms from 'ms';
-import { DomainNotFound } from '../../util/errors-ts';
 import { DNSRecord } from '@vercel-internals/types';
-import Client from '../../util/client';
-import formatTable from '../../util/format-table';
-import getDNSRecords, {
-  DomainRecordsItem,
-} from '../../util/dns/get-dns-records';
-import getDomainDNSRecords from '../../util/dns/get-domain-dns-records';
-import getScope from '../../util/get-scope';
 import {
+  DomainNotFound,
   PaginationOptions,
   getPaginationOpts,
-} from '../../util/get-pagination-opts';
-import stamp from '../../util/output/stamp';
-import getCommandFlags from '../../util/get-command-flags';
-import { getCommandName } from '../../util/pkg-name';
+  getCommandName,
+  Client,
+  formatTable,
+  getDnsRecords as getDNSRecords,
+  DomainRecordsItem,
+  getDomainDnsRecords as getDomainDNSRecords,
+  getScope,
+  stamp,
+  getCommandFlags,
+} from '@vercel-internals/utils';
 
 export default async function ls(
   client: Client,

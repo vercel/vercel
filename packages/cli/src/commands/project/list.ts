@@ -2,10 +2,12 @@ import chalk from 'chalk';
 import ms from 'ms';
 import table from 'text-table';
 import { Project } from '@vercel-internals/types';
-import Client from '../../util/client';
-import getCommandFlags from '../../util/get-command-flags';
-import { getCommandName } from '../../util/pkg-name';
-import strlen from '../../util/strlen';
+import {
+  getCommandName,
+  Client,
+  getCommandFlags,
+  strlen,
+} from '@vercel-internals/utils';
 
 export default async function list(
   client: Client,

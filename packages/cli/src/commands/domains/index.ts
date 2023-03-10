@@ -1,10 +1,13 @@
 import chalk from 'chalk';
 
-import Client from '../../util/client';
-import getArgs from '../../util/get-args';
-import getSubcommand from '../../util/get-subcommand';
-import handleError from '../../util/handle-error';
-import logo from '../../util/output/logo';
+import {
+  getPkgName,
+  Client,
+  getArgs,
+  getSubcommand,
+  handleError,
+  logo,
+} from '@vercel-internals/utils';
 
 import add from './add';
 import buy from './buy';
@@ -13,7 +16,6 @@ import inspect from './inspect';
 import ls from './ls';
 import rm from './rm';
 import move from './move';
-import { getPkgName } from '../../util/pkg-name';
 
 const help = () => {
   console.log(`

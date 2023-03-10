@@ -4,14 +4,14 @@ import {
   DNSPermissionDenied,
   DNSInvalidPort,
   DNSInvalidType,
-} from '../../util/errors-ts';
-import addDNSRecord from '../../util/dns/add-dns-record';
-import Client from '../../util/client';
-import getScope from '../../util/get-scope';
-import parseAddDNSRecordArgs from '../../util/dns/parse-add-dns-record-args';
-import stamp from '../../util/output/stamp';
-import getDNSData from '../../util/dns/get-dns-data';
-import { getCommandName } from '../../util/pkg-name';
+  getCommandName,
+  addDnsRecord as addDNSRecord,
+  Client,
+  getScope,
+  parseAddDnsRecordArgs as parseAddDNSRecordArgs,
+  stamp,
+  getDnsData as getDNSData,
+} from '@vercel-internals/utils';
 
 type Options = {};
 

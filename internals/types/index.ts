@@ -1,4 +1,4 @@
-import type { BuilderFunctions } from '@vercel/build-utils';
+import type { BuilderFunctions, Builder } from '@vercel/build-utils';
 import type { Readable, Writable } from 'stream';
 import type { Route } from '@vercel/routing-utils';
 
@@ -583,4 +583,22 @@ export interface Stdio {
   stdin: ReadableTTY;
   stdout: WritableTTY;
   stderr: WritableTTY;
+}
+
+export interface SerializedBuilder extends Builder {
+  error?: any;
+  require?: string;
+  requirePath?: string;
+  apiVersion: number;
+}
+
+/**
+ * Contents of the `builds.json` file.
+ */
+export interface BuildsManifest {
+  '//': string;
+  target: string;
+  argv: string[];
+  error?: any;
+  builds?: SerializedBuilder[];
 }

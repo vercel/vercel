@@ -3,16 +3,18 @@ import ms from 'ms';
 import plural from 'pluralize';
 import table from 'text-table';
 import { Cert } from '@vercel-internals/types';
-import * as ERRORS from '../../util/errors-ts';
-import { Output } from '../../util/output';
-import deleteCertById from '../../util/certs/delete-cert-by-id';
-import getCertById from '../../util/certs/get-cert-by-id';
-import { getCustomCertsForDomain } from '../../util/certs/get-custom-certs-for-domain';
-import Client from '../../util/client';
-import getScope from '../../util/get-scope';
-import stamp from '../../util/output/stamp';
-import param from '../../util/output/param';
-import { getCommandName } from '../../util/pkg-name';
+import {
+  Output,
+  getCustomCertsForDomain,
+  getCommandName,
+  ERRORS,
+  deleteCertById,
+  getCertById,
+  Client,
+  getScope,
+  stamp,
+  param,
+} from '@vercel-internals/utils';
 
 type Options = {};
 

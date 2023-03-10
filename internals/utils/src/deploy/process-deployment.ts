@@ -8,7 +8,7 @@ import {
 } from '@vercel/client';
 import { Output } from '../output';
 import { progress } from '../output/progress';
-import Now from '../../util';
+import Now from '../now';
 import { Org } from '@vercel-internals/types';
 import ua from '../ua';
 import { linkFolderToProject } from '../projects/link';

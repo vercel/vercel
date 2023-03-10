@@ -2,7 +2,7 @@ import Client from '../client';
 import confirm from './confirm';
 import getProjectByIdOrName from '../projects/get-project-by-id-or-name';
 import chalk from 'chalk';
-import { ProjectNotFound } from '../../util/errors-ts';
+import { ProjectNotFound } from '../errors-ts';
 import { Project, Org } from '@vercel-internals/types';
 import slugify from '@sindresorhus/slugify';
 

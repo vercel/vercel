@@ -1,5 +1,5 @@
 import stripeFactory from 'stripe';
-import Now from '.';
+import Now from './now';
 
 const stripe = stripeFactory('pk_live_alyEi3lN0kSwbdevK0nrGwTw');
 

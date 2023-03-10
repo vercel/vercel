@@ -2,18 +2,20 @@ import chalk from 'chalk';
 import plural from 'pluralize';
 
 import { User, Team } from '@vercel-internals/types';
-import * as ERRORS from '../../util/errors-ts';
-import Client from '../../util/client';
-import getScope from '../../util/get-scope';
-import moveOutDomain from '../../util/domains/move-out-domain';
-import isRootDomain from '../../util/is-root-domain';
-import textInput from '../../util/input/text';
-import param from '../../util/output/param';
-import getDomainAliases from '../../util/alias/get-domain-aliases';
-import getDomainByName from '../../util/domains/get-domain-by-name';
-import promptBool from '../../util/input/prompt-bool';
-import getTeams from '../../util/teams/get-teams';
-import { getCommandName } from '../../util/pkg-name';
+import {
+  getCommandName,
+  ERRORS,
+  Client,
+  getScope,
+  moveOutDomain,
+  isRootDomain,
+  text as textInput,
+  param,
+  getDomainAliases,
+  getDomainByName,
+  promptBool,
+  getTeams,
+} from '@vercel-internals/utils';
 
 type Options = {
   '--yes': boolean;

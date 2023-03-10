@@ -1,16 +1,18 @@
 import chalk from 'chalk';
-import Client from '../../util/client';
 import {
   getEnvTargetPlaceholder,
   isValidEnvTarget,
-} from '../../util/env/env-target';
-import getArgs from '../../util/get-args';
-import getInvalidSubcommand from '../../util/get-invalid-subcommand';
-import getSubcommand from '../../util/get-subcommand';
-import handleError from '../../util/handle-error';
-import logo from '../../util/output/logo';
-import { getCommandName, getPkgName } from '../../util/pkg-name';
-import { getLinkedProject } from '../../util/projects/link';
+  getCommandName,
+  getPkgName,
+  getLinkedProject,
+  Client,
+  getArgs,
+  getInvalidSubcommand,
+  getSubcommand,
+  handleError,
+  logo,
+} from '@vercel-internals/utils';
+
 import add from './add';
 import ls from './ls';
 import pull from './pull';

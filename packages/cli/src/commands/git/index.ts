@@ -1,12 +1,14 @@
 import chalk from 'chalk';
-import Client from '../../util/client';
-import { ensureLink } from '../../util/link/ensure-link';
-import getArgs from '../../util/get-args';
-import getInvalidSubcommand from '../../util/get-invalid-subcommand';
-import handleError from '../../util/handle-error';
-import logo from '../../util/output/logo';
-import { getPkgName } from '../../util/pkg-name';
-import validatePaths from '../../util/validate-paths';
+import {
+  ensureLink,
+  getPkgName,
+  Client,
+  getArgs,
+  getInvalidSubcommand,
+  handleError,
+  logo,
+  validatePaths,
+} from '@vercel-internals/utils';
 import connect from './connect';
 import disconnect from './disconnect';
 
