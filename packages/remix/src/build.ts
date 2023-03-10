@@ -154,8 +154,8 @@ export const build: BuildV2 = async ({
   const userEntryServerFile = findEntry(appDirectory, 'entry.server');
   if (!userEntryServerFile) {
     await fs.copyFile(
-      join(DEFAULTS_PATH, 'entry.server.tsx'),
-      join(appDirectory, 'entry.server.tsx')
+      join(DEFAULTS_PATH, 'entry.server.jsx'),
+      join(appDirectory, 'entry.server.jsx')
     );
     // TODO: add `@vercel/remix-entry-server` dep
   }
@@ -166,8 +166,8 @@ export const build: BuildV2 = async ({
   );
   if (!userEntryClientFile) {
     await fs.copyFile(
-      join(DEFAULTS_PATH, 'entry.client.react.tsx'),
-      join(appDirectory, 'entry.client.tsx')
+      join(DEFAULTS_PATH, 'entry.client.react.jsx'),
+      join(appDirectory, 'entry.client.jsx')
     );
   }
 
