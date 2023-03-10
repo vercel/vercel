@@ -96,7 +96,15 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
       ),
     },
     'dev-fail-on-recursion-command': {
-      'package.json': '{}',
+      'package.json': JSON.stringify({
+        scripts: {
+          build: 'echo "build script"',
+        },
+      }),
+      'vercel.json': JSON.stringify({
+        version: 2,
+        devCommand: `${binaryPath} dev`,
+      }),
     },
     'build-fail-on-recursion-command': {
       'package.json': '{}',
