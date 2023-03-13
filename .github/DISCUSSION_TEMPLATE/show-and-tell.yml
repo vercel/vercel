@@ -2,7 +2,7 @@ body:
 - type: markdown
   attributes:
     value: |
-      > Note: For discussions not related to the CLI or Vercel REST API, please go to the [Vercel Community](https://github.com/vercel/community/discussions)
+      > Note: For discussions not related to the CLI or Vercel REST API, please go to the [Vercel Community](https://github.com/orgs/vercel/discussions)
 - type: textarea
   attributes:
     label: Description
