@@ -816,7 +816,6 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
         cwd: target,
       }
     );
-    console.log({ stdout });
     expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
   }
 
@@ -919,8 +918,6 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
 
     expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
     expect(stderr).toMatch(/Environment Variables found in Project/gm);
-
-    console.log(stdout);
 
     const lines = stdout.split('\n');
 
@@ -1038,16 +1035,14 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
     const { host } = new URL(stdout);
 
     const apiUrl = `https://${host}/api/get-env`;
-    console.log({ apiUrl });
     const apiRes = await fetch(apiUrl);
-    expect(apiRes.status).toBe(200);
+    expect(apiRes.status, apiUrl).toBe(200);
     const apiJson = await apiRes.json();
     expect(apiJson['MY_NEW_ENV_VAR']).toBe('my plaintext value');
 
     const homeUrl = `https://${host}`;
-    console.log({ homeUrl });
     const homeRes = await fetch(homeUrl);
-    expect(homeRes.status).toBe(200);
+    expect(homeRes.status, homeUrl).toBe(200);
     const homeJson = await homeRes.json();
     expect(homeJson['MY_NEW_ENV_VAR']).toBe('my plaintext value');
   }
@@ -1374,10 +1369,6 @@ test('print the deploy help message', async () => {
     }
   );
 
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(2);
   expect(stderr).toContain(deployHelpMessage);
   expect(stderr).toContain('ExperimentalWarning');
@@ -1391,10 +1382,6 @@ test('output the version', async () => {
       reject: false,
     }
   );
-
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
 
   const version = stdout.trim();
 
@@ -1440,10 +1427,6 @@ test('login with unregistered user', async () => {
     }
   );
 
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-
   const goal = `Error: Please sign up: https://vercel.com/signup`;
   const lines = stderr.trim().split('\n');
   const last = lines[lines.length - 1];
@@ -1467,10 +1450,6 @@ test('ignore files specified in .nowignore', async () => {
     cwd: directory,
     reject: false,
   });
-
-  console.log(targetCall.stderr);
-  console.log(targetCall.stdout);
-  console.log(targetCall.exitCode);
 
   const { host } = new URL(targetCall.stdout);
   const ignoredFile = await fetch(`https://${host}/ignored.txt`);
@@ -1496,10 +1475,6 @@ test('ignore files specified in .nowignore via allowlist', async () => {
     reject: false,
   });
 
-  console.log(targetCall.stderr);
-  console.log(targetCall.stdout);
-  console.log(targetCall.exitCode);
-
   const { host } = new URL(targetCall.stdout);
   const ignoredFile = await fetch(`https://${host}/ignored.txt`);
   expect(ignoredFile.status).toBe(404);
@@ -1516,10 +1491,6 @@ test('list the scopes', async () => {
       reject: false,
     }
   );
-
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
@@ -1610,10 +1581,6 @@ test('try to purchase a domain', async () => {
     }
   );
 
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
   expect(stderr).toMatch(
     /Error: Could not purchase domain\. Please add a payment method using/
@@ -1636,10 +1603,6 @@ test('try to transfer-in a domain with "--code" option', async () => {
     }
   );
 
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-
   expect(stderr).toContain(
     `Error: The domain "${session}-test.com" is not transferable.`
   );
@@ -1660,10 +1623,6 @@ test('try to move an invalid domain', async () => {
       reject: false,
     }
   );
-
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
 
   expect(stderr).toContain(`Error: Domain not found under `);
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
@@ -1742,10 +1701,6 @@ test('ensure we render a warning for deployments with no files', async () => {
     }
   );
 
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-
   // Ensure the warning is printed
   expect(stderr).toMatch(/There are no files inside your deployment/);
 
@@ -1774,10 +1729,6 @@ test('output logs with "short" output', async () => {
     }
   );
 
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-
   expect(stderr.includes(`Fetched deployment "${context.deployment}"`)).toBe(
     true
   );
@@ -1800,10 +1751,6 @@ test('output logs with "raw" output', async () => {
       reject: false,
     }
   );
-
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
 
   expect(stderr.includes(`Fetched deployment "${context.deployment}"`)).toBe(
     true
@@ -1830,10 +1777,6 @@ test('ensure we render a prompt when deploying home directory', async () => {
       input: 'N',
     }
   );
-
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
 
   // Ensure the exit code is right
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
@@ -1862,10 +1805,6 @@ test('ensure the `scope` property works with email', async () => {
       reject: false,
     }
   );
-
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
 
   // Ensure we're deploying under the right scope
   expect(stderr).toContain(session);
@@ -1903,10 +1842,6 @@ test('ensure the `scope` property works with username', async () => {
     }
   );
 
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-
   // Ensure we're deploying under the right scope
   expect(stderr).toContain(contextName);
 
@@ -1935,10 +1870,6 @@ test('try to create a builds deployments with wrong now.json', async () => {
     }
   );
 
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-
   // Ensure the exit code is right
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
   expect(stderr).toContain(
@@ -1959,10 +1890,6 @@ test('try to create a builds deployments with wrong vercel.json', async () => {
       reject: false,
     }
   );
-
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
   expect(stderr).toContain(
@@ -2013,10 +1940,6 @@ test('create a builds deployments with no actual builds', async () => {
     }
   );
 
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-
   // Ensure the exit code is right
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
@@ -2035,10 +1958,6 @@ test('create a staging deployment', async () => {
     ...args,
     '--yes',
   ]);
-
-  console.log(targetCall.stderr);
-  console.log(targetCall.stdout);
-  console.log(targetCall.exitCode);
 
   expect(targetCall.stderr).toMatch(/Setting target to staging/gm);
   expect(targetCall.stdout).toMatch(/https:\/\//gm);
@@ -2062,10 +1981,6 @@ test('create a production deployment', async () => {
     '--yes',
   ]);
 
-  console.log(targetCall.stderr);
-  console.log(targetCall.stdout);
-  console.log(targetCall.exitCode);
-
   expect(targetCall.exitCode).toBe(0);
   expect(targetCall.stderr).toMatch(/`--prod` option instead/gm);
   expect(targetCall.stderr).toMatch(/Setting target to production/gm);
@@ -2079,10 +1994,6 @@ test('create a production deployment', async () => {
   expect(targetDeployment.target).toBe('production');
 
   const call = await execa(binaryPath, [directory, '--prod', ...args]);
-
-  console.log(call.stderr);
-  console.log(call.stdout);
-  console.log(call.exitCode);
 
   expect(call.exitCode).toBe(0);
   expect(call.stderr).toMatch(/Setting target to production/gm);
@@ -2132,10 +2043,6 @@ test('try to deploy non-existing path', async () => {
     }
   );
 
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
   expect(stderr.trim().endsWith(goal), `should end with "${goal}"`).toBe(true);
 });
@@ -2151,10 +2058,6 @@ test('try to deploy with non-existing team', async () => {
       reject: false,
     }
   );
-
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
   expect(stderr).toContain(goal);
@@ -2234,10 +2137,6 @@ test('try to initialize misspelled example (noce) in non-tty', async () => {
     'Error: No example found for noce, run `vercel init` to see the list of available examples.';
 
   const { stdout, stderr, exitCode } = await execute(['init', 'noce'], { cwd });
-
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
   expect(stderr).toContain(goal);
@@ -2324,10 +2223,6 @@ test('try to revert a deployment and assign the automatic aliases', async () => 
 test('whoami', async () => {
   const { exitCode, stdout, stderr } = await execute(['whoami']);
 
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
   expect(stdout).toBe(contextName);
 });
@@ -2408,10 +2303,6 @@ test('`vercel rm` 404 exits quickly', async () => {
     'this.is.a.deployment.that.does.not.exist.example.com',
   ]);
 
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-
   const delta = Date.now() - start;
 
   // "does not exist" case is exit code 1, similar to Unix `rm`
@@ -2429,10 +2320,6 @@ test('`vercel rm` 404 exits quickly', async () => {
 test('render build errors', async () => {
   const deploymentPath = fixture('failing-build');
   const output = await execute([deploymentPath, '--yes']);
-
-  console.log(output.stderr);
-  console.log(output.stdout);
-  console.log(output.exitCode);
 
   expect(output.exitCode, formatOutput(output)).toBe(1);
   expect(output.stderr).toMatch(/Command "yarn run build" exited with 1/gm);
@@ -2456,10 +2343,6 @@ test('invalid deployment, projects and alias names', async () => {
 test('vercel certs ls', async () => {
   const output = await execute(['certs', 'ls']);
 
-  console.log(output.stderr);
-  console.log(output.stdout);
-  console.log(output.exitCode);
-
   expect(output.exitCode, formatOutput(output)).toBe(0);
   expect(output.stderr).toMatch(/certificates? found under/gm);
 });
@@ -2467,20 +2350,12 @@ test('vercel certs ls', async () => {
 test('vercel certs ls --next=123456', async () => {
   const output = await execute(['certs', 'ls', '--next=123456']);
 
-  console.log(output.stderr);
-  console.log(output.stdout);
-  console.log(output.exitCode);
-
   expect(output.exitCode, formatOutput(output)).toBe(0);
   expect(output.stderr).toMatch(/No certificates found under/gm);
 });
 
 test('vercel hasOwnProperty not a valid subcommand', async () => {
   const output = await execute(['hasOwnProperty']);
-
-  console.log(output.stderr);
-  console.log(output.stdout);
-  console.log(output.exitCode);
 
   expect(output.exitCode, formatOutput(output)).toBe(1);
   expect(output.stderr).toMatch(
@@ -2493,9 +2368,6 @@ test('create zero-config deployment', async () => {
   const output = await execute([fixturePath, '--force', '--public', '--yes']);
 
   console.log('isCanary', isCanary);
-  console.log(output.stderr);
-  console.log(output.stdout);
-  console.log(output.exitCode);
 
   expect(output.exitCode, formatOutput(output)).toBe(0);
 
@@ -2536,21 +2408,11 @@ test('vercel secret add', async () => {
   const value = 'https://my-secret-endpoint.com';
 
   const output = await execute(['secret', 'add', context.secretName, value]);
-
-  console.log(output.stderr);
-  console.log(output.stdout);
-  console.log(output.exitCode);
-
   expect(output.exitCode, formatOutput(output)).toBe(0);
 });
 
 test('vercel secret ls', async () => {
   const output = await execute(['secret', 'ls']);
-
-  console.log(output.stderr);
-  console.log(output.stdout);
-  console.log(output.exitCode);
-
   expect(output.exitCode, formatOutput(output)).toBe(0);
   expect(output.stdout).toMatch(/Secrets found under/gm);
   expect(output.stdout).toMatch(new RegExp());
@@ -2573,11 +2435,6 @@ test('vercel secret rename', async () => {
     context.secretName,
     nextName,
   ]);
-
-  console.log(output.stderr);
-  console.log(output.stdout);
-  console.log(output.exitCode);
-
   expect(output.exitCode, formatOutput(output)).toBe(0);
 
   context.secretName = nextName;
@@ -2585,11 +2442,6 @@ test('vercel secret rename', async () => {
 
 test('vercel secret rm', async () => {
   const output = await execute(['secret', 'rm', context.secretName, '-y']);
-
-  console.log(output.stderr);
-  console.log(output.stdout);
-  console.log(output.exitCode);
-
   expect(output.exitCode, formatOutput(output)).toBe(0);
 });
 
@@ -2707,11 +2559,8 @@ test(
 
     const { stdout: nextUser } = await execute(['whoami']);
 
-    console.log('prev user', prevUser);
-    console.log('next user', nextUser);
-
-    expect(typeof prevUser).toBe('string');
-    expect(typeof nextUser).toBe('string');
+    expect(typeof prevUser, prevUser).toBe('string');
+    expect(typeof nextUser, nextUser).toBe('string');
     expect(prevUser).not.toBe(nextUser);
   },
   { timeout: 60 * 1000 }
@@ -3106,8 +2955,8 @@ test('use `rootDirectory` from project when deploying', async () => {
       rootDirectory: 'src',
     }),
   });
-  console.log('response', await projectResponse.text());
-  expect(projectResponse.status).toBe(200);
+
+  expect(projectResponse.status, await projectResponse.text()).toBe(200);
 
   const secondResult = await execute([directory, '--public']);
   expect(secondResult.exitCode).toBe(0);
