@@ -385,24 +385,26 @@ test('default command should prompt login with empty auth.json', async () => {
 
 // NOTE: Test order is important here.
 // This test MUST run before the tests below for them to work.
-test('login', async () => {
-  // NOTE: Needs timeout of 1m
+test(
+  'login',
+  async () => {
+    await fs.remove(getConfigAuthPath());
+    const loginOutput = await execa(binaryPath, [
+      'login',
+      email,
+      '--api',
+      loginApiUrl,
+      ...defaultArgs,
+    ]);
 
-  await fs.remove(getConfigAuthPath());
-  const loginOutput = await execa(binaryPath, [
-    'login',
-    email,
-    '--api',
-    loginApiUrl,
-    ...defaultArgs,
-  ]);
+    expect(loginOutput.exitCode, formatOutput(loginOutput)).toBe(0);
+    expect(loginOutput.stderr).toMatch(/You are now logged in\./gm);
 
-  expect(loginOutput.exitCode, formatOutput(loginOutput)).toBe(0);
-  expect(loginOutput.stderr).toMatch(/You are now logged in\./gm);
-
-  const auth = await fs.readJSON(getConfigAuthPath());
-  expect(auth.token).toBe(token);
-});
+    const auth = await fs.readJSON(getConfigAuthPath());
+    expect(auth.token).toBe(token);
+  },
+  { timeout: 60 * 1000 }
+);
 
 test('[vc build] should build project with corepack and select npm@8.1.0', async () => {
   process.env.ENABLE_EXPERIMENTAL_COREPACK = '1';
@@ -2692,35 +2694,37 @@ test('fail to add a domain without a project', async () => {
   expect(output.stderr).toMatch(/expects two arguments/gm);
 });
 
-test('change user', async () => {
-  // NOTE: Needs timeout of 1m
+test(
+  'change user',
+  async () => {
+    const { stdout: prevUser } = await execute(['whoami']);
 
-  const { stdout: prevUser } = await execute(['whoami']);
+    // Delete the current token
+    await execute(['logout', '--debug'], { stdio: 'inherit' });
 
-  // Delete the current token
-  await execute(['logout', '--debug'], { stdio: 'inherit' });
+    await createUser();
 
-  await createUser();
+    await execute(['login', email, '--api', loginApiUrl, '--debug'], {
+      stdio: 'inherit',
+      env: {
+        FORCE_TTY: '1',
+      },
+    });
 
-  await execute(['login', email, '--api', loginApiUrl, '--debug'], {
-    stdio: 'inherit',
-    env: {
-      FORCE_TTY: '1',
-    },
-  });
+    const auth = await fs.readJSON(getConfigAuthPath());
+    expect(auth.token).toBe(token);
 
-  const auth = await fs.readJSON(getConfigAuthPath());
-  expect(auth.token).toBe(token);
+    const { stdout: nextUser } = await execute(['whoami']);
 
-  const { stdout: nextUser } = await execute(['whoami']);
+    console.log('prev user', prevUser);
+    console.log('next user', nextUser);
 
-  console.log('prev user', prevUser);
-  console.log('next user', nextUser);
-
-  expect(typeof prevUser).toBe('string');
-  expect(typeof nextUser).toBe('string');
-  expect(prevUser).not.toBe(nextUser);
-});
+    expect(typeof prevUser).toBe('string');
+    expect(typeof nextUser).toBe('string');
+    expect(prevUser).not.toBe(nextUser);
+  },
+  { timeout: 60 * 1000 }
+);
 
 test('assign a domain to a project', async () => {
   const domain = `project-domain.${contextName}.vercel.app`;
