@@ -2,4 +2,4 @@ body:
   - type: markdown
     attributes:
       value: |
-        > Note: This category should not be used. For discussions not related to the CLI or Vercel REST API, please go to the [Vercel Community](https://github.com/orgs/vercel/discussions)
+        > **Note**: This category should not be used for new discussions. Please visit the [Vercel Community](https://github.com/orgs/vercel/discussions)
