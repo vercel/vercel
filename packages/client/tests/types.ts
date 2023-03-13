@@ -30,19 +30,19 @@ export interface Deployment {
   public: boolean;
   ownerId: string;
   readyState:
-  | 'INITIALIZING'
-  | 'ANALYZING'
-  | 'BUILDING'
-  | 'DEPLOYING'
-  | 'READY'
-  | 'ERROR';
+    | 'INITIALIZING'
+    | 'ANALYZING'
+    | 'BUILDING'
+    | 'DEPLOYING'
+    | 'READY'
+    | 'ERROR';
   state?:
-  | 'INITIALIZING'
-  | 'ANALYZING'
-  | 'BUILDING'
-  | 'DEPLOYING'
-  | 'READY'
-  | 'ERROR';
+    | 'INITIALIZING'
+    | 'ANALYZING'
+    | 'BUILDING'
+    | 'DEPLOYING'
+    | 'READY'
+    | 'ERROR';
   createdAt: string;
   createdIn: string;
   env: {
