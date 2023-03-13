@@ -8,15 +8,12 @@ import { join, dirname, basename, normalize, posix, sep } from 'path';
 import {
   readFile,
   writeFile,
-  lstat,
   pathExists,
   mkdirp,
   move,
-  readlink,
   remove,
   rmdir,
   readdir,
-  unlink,
 } from 'fs-extra';
 import {
   BuildOptions,
@@ -807,23 +804,10 @@ export async function prepareCache({
 }: PrepareCacheOptions): Promise<Files> {
   // When building the project for the first time, there won't be a cache and
   // `createGo()` will have downloaded Go to the global cache directory, then
-  // symlinked it to the local `cacheDir`.
-  //
-  // If we detect the `cacheDir` is a symlink, unlink it, then move the global
-  // cache directory into the local cache directory so that it can be
-  // persisted.
+  // hard linked it to the local `cacheDir`.
   //
   // On the next build, the local cache will be restored and `createGo()` will
   // use it unless the preferred Go version changed in the `go.mod`.
-  const goCacheDir = join(workPath, cacheDir);
-  const stat = await lstat(goCacheDir);
-  if (stat.isSymbolicLink()) {
-    const goGlobalCacheDir = await readlink(goCacheDir);
-    debug(`Preparing cache by moving ${goGlobalCacheDir} -> ${goCacheDir}`);
-    await unlink(goCacheDir);
-    await move(goGlobalCacheDir, goCacheDir);
-  }
-
   const cache = await glob(`${cacheDir}/**`, workPath);
   return cache;
 }
