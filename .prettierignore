@@ -8,11 +8,12 @@ examples/sveltekit-1
 # gatsby-plugin-vercel-analytics
 packages/gatsby-plugin-vercel-analytics
 
+# ignore directories that are not source code
 packages/*/dist
 packages/*/node_modules
-packages/*/**/.next
-packages/*/**/.vercel
-packages/*/**/.turbo
-packages/*/**/test/fixtures
-packages/*/**/test/dev/fixtures
+packages/**/.next
+packages/**/.vercel
+packages/**/.turbo
+packages/**/test/fixtures
+packages/**/test/dev/fixtures
 
