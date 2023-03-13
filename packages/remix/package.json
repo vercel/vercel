@@ -1,5 +1,5 @@
 {
-  "name": "@vercel/remix",
+  "name": "@vercel/remix-builder",
   "version": "1.6.2",
   "license": "MIT",
   "main": "./dist/index.js",
