@@ -1,0 +1,10 @@
+body:
+- type: markdown
+  attributes:
+    value: |
+      > Note: For questions not related to the CLI or API, please go to the [Vercel Community](https://github.com/orgs/vercel/discussions/categories/help)
+- type: textarea
+  attributes:
+    label: Problem Description
+  validations:
+    required: true
