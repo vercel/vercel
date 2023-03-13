@@ -1,5 +1,9 @@
 import chalk from 'chalk';
-import { ProjectEnvTarget, Project, ProjectEnvType } from '@vercel-internals/types';
+import {
+  ProjectEnvTarget,
+  Project,
+  ProjectEnvType,
+} from '@vercel-internals/types';
 import { Output } from '../../util/output';
 import Client from '../../util/client';
 import stamp from '../../util/output/stamp';
