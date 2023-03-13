@@ -1,10 +1,10 @@
 body:
-- type: markdown
-  attributes:
-    value: |
-      > Note: For ideas not related to the CLI or API, please go to the [Vercel Community](https://github.com/orgs/vercel/discussions/categories/ideas)
-- type: textarea
-  attributes:
-    label: Idea
-  validations:
-    required: true
+  - type: markdown
+    attributes:
+      value: |
+        > Note: For ideas not related to the CLI or API, please go to the [Vercel Community](https://github.com/orgs/vercel/discussions/categories/ideas)
+  - type: textarea
+    attributes:
+      label: Idea
+    validations:
+      required: true
