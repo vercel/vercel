@@ -132,7 +132,7 @@ ${stdout || '(no output)'}
 }
 
 async function vcLink(projectPath) {
-  const { exitCode } = await execa(
+  const { exitCode, stdout, stderr } = await execa(
     binaryPath,
     ['link', '--yes', ...defaultArgs],
     {
@@ -141,7 +141,7 @@ async function vcLink(projectPath) {
     }
   );
 
-  expect(exitCode).toBe(0);
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 }
 
 // AVA's `t.context` can only be set before the tests,
@@ -417,7 +417,7 @@ test('[vc build] should build project with corepack and select npm@8.1.0', async
     reject: false,
   });
   const output = await execute(['build'], { cwd: directory });
-  expect(output.exitCode).toBe(0);
+  expect(output.exitCode, formatOutput(output)).toBe(0);
   expect(output.stderr).toMatch(/Build Completed/gm);
   const after = await _execa('npm', ['--version'], {
     cwd: directory,
@@ -447,7 +447,7 @@ test('[vc build] should build project with corepack and select pnpm@7.1.0', asyn
     reject: false,
   });
   const output = await execute(['build'], { cwd: directory });
-  expect(output.exitCode).toBe(0);
+  expect(output.exitCode, formatOutput(output)).toBe(0);
   expect(output.stderr).toMatch(/Build Completed/gm);
   const after = await _execa('pnpm', ['--version'], {
     cwd: directory,
@@ -477,7 +477,7 @@ test('[vc build] should build project with corepack and select yarn@2.4.3', asyn
     reject: false,
   });
   const output = await execute(['build'], { cwd: directory });
-  expect(output.exitCode).toBe(0);
+  expect(output.exitCode, formatOutput(output)).toBe(0);
   expect(output.stderr).toMatch(/Build Completed/gm);
   const after = await _execa('yarn', ['--version'], {
     cwd: directory,
@@ -501,7 +501,7 @@ test('[vc build] should build project with corepack and select yarn@2.4.3', asyn
 
 test('[vc dev] should print help from `vc develop --help`', async () => {
   const directory = fixture('static-deployment');
-  const { exitCode, stdout } = await execa(
+  const { exitCode, stdout, stderr } = await execa(
     binaryPath,
     ['develop', '--help', ...defaultArgs],
     {
@@ -510,7 +510,7 @@ test('[vc dev] should print help from `vc develop --help`', async () => {
     }
   );
 
-  expect(exitCode).toBe(2);
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(2);
   expect(stdout).toMatch(/▲ vercel dev/gm);
 });
 
@@ -520,7 +520,7 @@ test('default command should deploy directory', async () => {
 
   await vcLink(path.join(projectDir, target));
 
-  const { exitCode, stdout } = await execa(
+  const { exitCode, stdout, stderr } = await execa(
     binaryPath,
     [
       // omit the default "deploy" command
@@ -532,7 +532,7 @@ test('default command should deploy directory', async () => {
     }
   );
 
-  expect(exitCode).toBe(0);
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
   expect(stdout).toMatch(/https:\/\/output-.+\.vercel\.app/);
 });
 
@@ -542,7 +542,7 @@ test('default command should warn when deploying with conflicting subdirectory',
 
   await vcLink(projectDir);
 
-  const { exitCode, stderr } = await execa(
+  const { exitCode, stdout, stderr } = await execa(
     binaryPath,
     [
       // omit the default "deploy" command
@@ -554,7 +554,7 @@ test('default command should warn when deploying with conflicting subdirectory',
     }
   );
 
-  expect(exitCode).toBe(0);
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
   expect(stderr || '').toMatch(
     /Did you mean to deploy the subdirectory "list"\? Use `vc --cwd list` instead./
   );
@@ -569,7 +569,7 @@ test('deploy command should not warn when deploying with conflicting subdirector
 
   await vcLink(path.join(projectDir, target));
 
-  const { exitCode, stderr } = await execa(
+  const { exitCode, stdout, stderr } = await execa(
     binaryPath,
     ['list', '--cwd', target, ...defaultArgs],
     {
@@ -577,7 +577,7 @@ test('deploy command should not warn when deploying with conflicting subdirector
     }
   );
 
-  expect(exitCode).toBe(0);
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
   expect(stderr || '').not.toMatch(
     /Did you mean to deploy the subdirectory "list"\? Use `vc --cwd list` instead./
   );
@@ -592,7 +592,7 @@ test('default command should work with --cwd option', async () => {
 
   await vcLink(path.join(projectDir, 'list'));
 
-  const { exitCode, stdout } = await execa(
+  const { exitCode, stdout, stderr } = await execa(
     binaryPath,
     [
       // omit the default "deploy" command
@@ -605,7 +605,7 @@ test('default command should work with --cwd option', async () => {
     }
   );
 
-  expect(exitCode).toBe(0);
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   const url = stdout;
   const deploymentResult = await fetch(`${url}/README.md`);
@@ -620,7 +620,7 @@ test('should allow deploying a directory that was built with a target environmen
 
   await vcLink(projectDir);
 
-  const { exitCode, stdout } = await execa(
+  const { exitCode, stdout, stderr } = await execa(
     binaryPath,
     [
       // omit the default "deploy" command
@@ -632,7 +632,7 @@ test('should allow deploying a directory that was built with a target environmen
     }
   );
 
-  expect(exitCode).toBe(0);
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   const url = stdout;
   const deploymentResult = await fetch(`${url}/README.md`);
@@ -647,7 +647,7 @@ test('should allow deploying a directory that was prebuilt, but has no builds.js
 
   await vcLink(projectDir);
 
-  const { exitCode, stdout } = await execa(
+  const { exitCode, stdout, stderr } = await execa(
     binaryPath,
     [
       // omit the default "deploy" command
@@ -659,7 +659,7 @@ test('should allow deploying a directory that was prebuilt, but has no builds.js
     }
   );
 
-  expect(exitCode).toBe(0);
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   const url = stdout;
   const deploymentResult = await fetch(`${url}/README.md`);
@@ -670,7 +670,7 @@ test('should allow deploying a directory that was prebuilt, but has no builds.js
 test('[vc link] with vercel.json configuration overrides should create a valid deployment', async () => {
   const directory = fixture('vercel-json-configuration-overrides-link');
 
-  const { exitCode } = await execa(
+  const { exitCode, stdout, stderr } = await execa(
     binaryPath,
     ['link', '--yes', ...defaultArgs],
     {
@@ -679,7 +679,7 @@ test('[vc link] with vercel.json configuration overrides should create a valid d
     }
   );
 
-  expect(exitCode).toBe(0);
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   const link = require(path.join(directory, '.vercel/project.json'));
 
@@ -695,7 +695,7 @@ test('[vc link] with vercel.json configuration overrides should create a valid d
 test('deploy using only now.json with `redirects` defined', async () => {
   const target = fixture('redirects-v2');
 
-  const { exitCode, stdout } = await execa(
+  const { exitCode, stdout, stderr } = await execa(
     binaryPath,
     [target, ...defaultArgs, '--yes'],
     {
@@ -703,7 +703,7 @@ test('deploy using only now.json with `redirects` defined', async () => {
     }
   );
 
-  expect(exitCode).toBe(0);
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   const url = stdout;
   const res = await fetch(`${url}/foo/bar`, { redirect: 'manual' });
@@ -715,7 +715,7 @@ test('deploy using --local-config flag v2', async () => {
   const target = fixture('local-config-v2');
   const configPath = path.join(target, 'now-test.json');
 
-  const { exitCode, stdout } = await execa(
+  const { exitCode, stdout, stderr } = await execa(
     binaryPath,
     ['deploy', target, '--local-config', configPath, ...defaultArgs, '--yes'],
     {
@@ -723,7 +723,7 @@ test('deploy using --local-config flag v2', async () => {
     }
   );
 
-  expect(exitCode).toBe(0);
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   const { host } = new URL(stdout);
   expect(host).toMatch(/secondary/gm);
@@ -746,7 +746,7 @@ test('deploy using --local-config flag v2', async () => {
 test('deploy fails using --local-config flag with non-existent path', async () => {
   const target = fixture('local-config-v2');
 
-  const { exitCode, stderr } = await execa(
+  const { exitCode, stdout, stderr } = await execa(
     binaryPath,
     [
       'deploy',
@@ -761,7 +761,7 @@ test('deploy fails using --local-config flag with non-existent path', async () =
     }
   );
 
-  expect(exitCode).toBe(1);
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
 
   expect(stderr).toMatch(
     /Error: Couldn't find a project configuration file at/
@@ -773,7 +773,7 @@ test('deploy using --local-config flag above target', async () => {
   const root = fixture('local-config-above-target');
   const target = path.join(root, 'dir');
 
-  const { exitCode, stdout } = await execa(
+  const { exitCode, stdout, stderr } = await execa(
     binaryPath,
     [
       'deploy',
@@ -789,7 +789,7 @@ test('deploy using --local-config flag above target', async () => {
     }
   );
 
-  expect(exitCode).toBe(0);
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   const { host } = new URL(stdout);
 
@@ -808,7 +808,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
   const target = fixture('api-env');
 
   async function vcLink() {
-    const { exitCode, stdout } = await execa(
+    const { exitCode, stdout, stderr } = await execa(
       binaryPath,
       ['link', '--yes', ...defaultArgs],
       {
@@ -817,11 +817,11 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
       }
     );
     console.log({ stdout });
-    expect(exitCode).toBe(0);
+    expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
   }
 
   async function vcEnvLsIsEmpty() {
-    const { exitCode, stderr } = await execa(
+    const { exitCode, stdout, stderr } = await execa(
       binaryPath,
       ['env', 'ls', ...defaultArgs],
       {
@@ -830,7 +830,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
       }
     );
 
-    expect(exitCode).toBe(0);
+    expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
     expect(stderr).toMatch(/No Environment Variables found in Project/gm);
   }
 
@@ -861,7 +861,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
 
     const { exitCode } = await vc;
 
-    expect(exitCode).toBe(0);
+    expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
   }
 
   async function vcEnvAddFromStdin() {
@@ -875,7 +875,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
     );
     vc.stdin.end('{"expect":"quotes"}');
     const { exitCode } = await vc;
-    expect(exitCode).toBe(0);
+    expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
   }
 
   async function vcEnvAddFromStdinPreview() {
@@ -889,7 +889,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
     );
     vc.stdin.end('preview-no-branch');
     const { exitCode } = await vc;
-    expect(exitCode).toBe(0);
+    expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
   }
 
   async function vcEnvAddFromStdinPreviewWithBranch() {
@@ -903,7 +903,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
     );
     vc.stdin.end('preview-with-branch');
     const { exitCode, stderr } = await vc;
-    expect(exitCode).toBe(1);
+    expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
     expect(stderr).toMatch(/does not have a connected Git repository/gm);
   }
 
@@ -917,7 +917,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
       }
     );
 
-    expect(exitCode).toBe(0);
+    expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
     expect(stderr).toMatch(/Environment Variables found in Project/gm);
 
     console.log(stdout);
@@ -973,7 +973,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
   }
 
   async function vcEnvPull() {
-    const { exitCode, stderr } = await execa(
+    const { exitCode, stdout, stderr } = await execa(
       binaryPath,
       ['env', 'pull', '-y', ...defaultArgs],
       {
@@ -982,7 +982,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
       }
     );
 
-    expect(exitCode).toBe(0);
+    expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
     expect(stderr).toMatch(/Created .env file/gm);
 
     const contents = fs.readFileSync(path.join(target, '.env'), 'utf8');
@@ -994,7 +994,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
   }
 
   async function vcEnvPullOverwrite() {
-    const { exitCode, stderr } = await execa(
+    const { exitCode, stdout, stderr } = await execa(
       binaryPath,
       ['env', 'pull', ...defaultArgs],
       {
@@ -1003,7 +1003,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
       }
     );
 
-    expect(exitCode).toBe(0);
+    expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
     expect(stderr).toMatch(/Overwriting existing .env file/gm);
     expect(stderr).toMatch(/Updated .env file/gm);
   }
@@ -1022,15 +1022,19 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
     vc.stdin.end('y\n');
 
     const { exitCode } = await vc;
-    expect(exitCode).toBe(0);
+    expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
   }
 
   async function vcDeployWithVar() {
-    const { exitCode, stdout } = await execa(binaryPath, [...defaultArgs], {
-      reject: false,
-      cwd: target,
-    });
-    expect(exitCode).toBe(0);
+    const { exitCode, stdout, stderr } = await execa(
+      binaryPath,
+      [...defaultArgs],
+      {
+        reject: false,
+        cwd: target,
+      }
+    );
+    expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
     const { host } = new URL(stdout);
 
     const apiUrl = `https://${host}/api/get-env`;
@@ -1083,7 +1087,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
     vc.kill('SIGTERM', { forceKillAfterTimeout: 2000 });
 
     const { exitCode } = await vc;
-    expect(exitCode).toBe(0);
+    expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
   }
 
   async function vcDevAndFetchCloudVars() {
@@ -1124,7 +1128,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
     vc.kill('SIGTERM', { forceKillAfterTimeout: 2000 });
 
     const { exitCode } = await vc;
-    expect(exitCode).toBe(0);
+    expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
   }
 
   async function enableAutoExposeSystemEnvs() {
@@ -1144,7 +1148,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
   }
 
   async function vcEnvPullFetchSystemVars() {
-    const { exitCode } = await execa(
+    const { exitCode, stdout, stderr } = await execa(
       binaryPath,
       ['env', 'pull', '-y', ...defaultArgs],
       {
@@ -1153,7 +1157,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
       }
     );
 
-    expect(exitCode).toBe(0);
+    expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
     const contents = fs.readFileSync(path.join(target, '.env'), 'utf8');
 
@@ -1207,7 +1211,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
     vc.kill('SIGTERM', { forceKillAfterTimeout: 2000 });
 
     const { exitCode } = await vc;
-    expect(exitCode).toBe(0);
+    expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
   }
 
   async function vcEnvRemove() {
@@ -1220,11 +1224,11 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
     );
     vc.stdin.write('MY_PREVIEW\n');
     const { exitCode } = await vc;
-    expect(exitCode).toBe(0);
+    expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
   }
 
   async function vcEnvRemoveWithArgs() {
-    const { exitCode } = await execa(
+    const { exitCode, stdout, stderr } = await execa(
       binaryPath,
       ['env', 'rm', 'MY_STDIN_VAR', 'development', '-y', ...defaultArgs],
       {
@@ -1233,7 +1237,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
       }
     );
 
-    expect(exitCode).toBe(0);
+    expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
     const { exitCode: exitCode3 } = await execa(
       binaryPath,
@@ -1255,7 +1259,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
   }
 
   async function vcEnvRemoveWithNameOnly() {
-    const { exitCode } = await execa(
+    const { exitCode, stdout, stderr } = await execa(
       binaryPath,
       ['env', 'rm', 'MY_NEW_ENV_VAR', '-y', ...defaultArgs],
       {
@@ -1264,7 +1268,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
       }
     );
 
-    expect(exitCode).toBe(0);
+    expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
   }
 
   function vcEnvRemoveByName(name) {
@@ -1323,7 +1327,7 @@ test('[vc projects] should create a project successfully', async () => {
   );
 
   const { exitCode } = await vc;
-  expect(exitCode).toBe(0);
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   // creating the same project again should succeed
   const vc2 = execa(binaryPath, [
@@ -1344,13 +1348,13 @@ test('[vc projects] should create a project successfully', async () => {
 test('deploy with metadata containing "=" in the value', async () => {
   const target = fixture('static-v2-meta');
 
-  const { exitCode, stdout } = await execa(
+  const { exitCode, stdout, stderr } = await execa(
     binaryPath,
     [target, ...defaultArgs, '--yes', '--meta', 'someKey=='],
     { reject: false }
   );
 
-  expect(exitCode).toBe(0);
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   const { host } = new URL(stdout);
   const res = await fetch(
@@ -1374,7 +1378,7 @@ test('print the deploy help message', async () => {
   console.log(stdout);
   console.log(exitCode);
 
-  expect(exitCode).toBe(2);
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(2);
   expect(stderr).toContain(deployHelpMessage);
   expect(stderr).toContain('ExperimentalWarning');
 });
@@ -1394,7 +1398,7 @@ test('output the version', async () => {
 
   const version = stdout.trim();
 
-  expect(exitCode).toBe(0);
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
   expect(semVer.valid(version)).toBeTruthy();
   expect(version).toBe(pkg.version);
 });
@@ -1444,7 +1448,7 @@ test('login with unregistered user', async () => {
   const lines = stderr.trim().split('\n');
   const last = lines[lines.length - 1];
 
-  expect(exitCode).toBe(1);
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
   expect(last).toContain(goal);
 });
 
@@ -1517,7 +1521,7 @@ test('list the scopes', async () => {
   console.log(stdout);
   console.log(exitCode);
 
-  expect(exitCode).toBe(0);
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   const include = new RegExp(`✔ ${contextName}\\s+${email}`);
   expect(stdout).toMatch(include);
@@ -1539,7 +1543,7 @@ test('domains inspect', async () => {
     '--yes',
     '--public',
   ]);
-  expect(output.exitCode).toBe(0);
+  expect(output.exitCode, formatOutput(output)).toBe(0);
 
   {
     // Add a domain that can be inspected
@@ -1561,7 +1565,7 @@ test('domains inspect', async () => {
   );
 
   expect(stderr).toContain(`Renewal Price`);
-  expect(exitCode).toBe(0);
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   {
     // Remove the domain again
@@ -1610,7 +1614,7 @@ test('try to purchase a domain', async () => {
   console.log(stdout);
   console.log(exitCode);
 
-  expect(exitCode).toBe(1);
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
   expect(stderr).toMatch(
     /Error: Could not purchase domain\. Please add a payment method using/
   );
@@ -1639,7 +1643,7 @@ test('try to transfer-in a domain with "--code" option', async () => {
   expect(stderr).toContain(
     `Error: The domain "${session}-test.com" is not transferable.`
   );
-  expect(exitCode).toBe(1);
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
 });
 
 test('try to move an invalid domain', async () => {
@@ -1662,7 +1666,7 @@ test('try to move an invalid domain', async () => {
   console.log(exitCode);
 
   expect(stderr).toContain(`Error: Domain not found under `);
-  expect(exitCode).toBe(1);
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
 });
 
 /*
@@ -1754,7 +1758,7 @@ test('ensure we render a warning for deployments with no files', async () => {
   }
 
   // Ensure the exit code is right
-  expect(exitCode).toBe(0);
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   // Send a test request to the deployment
   const res = await fetch(href);
@@ -1785,7 +1789,7 @@ test('output logs with "short" output', async () => {
     )
   ).toBeTruthy();
 
-  expect(exitCode).toBe(0);
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 });
 
 test('output logs with "raw" output', async () => {
@@ -1812,7 +1816,7 @@ test('output logs with "raw" output', async () => {
     )
   );
 
-  expect(exitCode).toBe(0);
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 });
 
 test('ensure we render a prompt when deploying home directory', async () => {
@@ -1832,7 +1836,7 @@ test('ensure we render a prompt when deploying home directory', async () => {
   console.log(exitCode);
 
   // Ensure the exit code is right
-  expect(exitCode).toBe(0);
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   expect(stderr).toContain(
     'You are deploying your home directory. Do you want to continue? [y/N]'
@@ -1867,7 +1871,7 @@ test('ensure the `scope` property works with email', async () => {
   expect(stderr).toContain(session);
 
   // Ensure the exit code is right
-  expect(exitCode).toBe(0);
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   // Test if the output is really a URL
   const { href, host } = new URL(stdout);
@@ -1907,7 +1911,7 @@ test('ensure the `scope` property works with username', async () => {
   expect(stderr).toContain(contextName);
 
   // Ensure the exit code is right
-  expect(exitCode).toBe(0);
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   // Test if the output is really a URL
   const { href, host } = new URL(stdout);
@@ -1936,7 +1940,7 @@ test('try to create a builds deployments with wrong now.json', async () => {
   console.log(exitCode);
 
   // Ensure the exit code is right
-  expect(exitCode).toBe(1);
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
   expect(stderr).toContain(
     'Error: Invalid now.json - should NOT have additional property `builder`. Did you mean `builds`?'
   );
@@ -1960,7 +1964,7 @@ test('try to create a builds deployments with wrong vercel.json', async () => {
   console.log(stdout);
   console.log(exitCode);
 
-  expect(exitCode).toBe(1);
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
   expect(stderr).toContain(
     'Error: Invalid vercel.json - should NOT have additional property `fake`. Please remove it.'
   );
@@ -1981,7 +1985,7 @@ test('try to create a builds deployments with wrong `build.env` property', async
     }
   );
 
-  expect(exitCode).toBe(1);
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
   expect(stderr).toContain(
     'Error: Invalid vercel.json - should NOT have additional property `build.env`. Did you mean `{ "build": { "env": {"name": "value"} } }`?'
   );
@@ -2014,7 +2018,7 @@ test('create a builds deployments with no actual builds', async () => {
   console.log(exitCode);
 
   // Ensure the exit code is right
-  expect(exitCode).toBe(0);
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   // Test if the output is really a URL
   const { host } = new URL(stdout);
@@ -2103,7 +2107,7 @@ test('use build-env', async () => {
   );
 
   // Ensure the exit code is right
-  expect(exitCode).toBe(0);
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   // Test if the output is really a URL
   const deploymentUrl = pickUrl(stdout);
@@ -2132,7 +2136,7 @@ test('try to deploy non-existing path', async () => {
   console.log(stdout);
   console.log(exitCode);
 
-  expect(exitCode).toBe(1);
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
   expect(stderr.trim().endsWith(goal), `should end with "${goal}"`).toBe(true);
 });
 
@@ -2152,7 +2156,7 @@ test('try to deploy with non-existing team', async () => {
   console.log(stdout);
   console.log(exitCode);
 
-  expect(exitCode).toBe(1);
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
   expect(stderr).toContain(goal);
 });
 
@@ -2171,7 +2175,7 @@ test('initialize example "angular"', async () => {
     cwd,
   });
 
-  expect(exitCode).toBe(0);
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
   expect(stderr).toContain(goal);
   verifyExampleAngular(cwd, 'angular');
 });
@@ -2185,7 +2189,7 @@ test('initialize example ("angular") to specified directory', async () => {
     cwd,
   });
 
-  expect(exitCode).toBe(0);
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
   expect(stderr).toContain(goal);
   verifyExampleAngular(cwd, 'ang');
 });
@@ -2201,7 +2205,7 @@ test('initialize example to existing directory with "-f"', async () => {
     cwd,
   });
 
-  expect(exitCode).toBe(0);
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
   expect(stderr).toContain(goal);
   verifyExampleAngular(cwd, 'angular');
 });
@@ -2219,7 +2223,7 @@ test('try to initialize example to existing directory', async () => {
     input: '\n',
   });
 
-  expect(exitCode).toBe(1);
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
   expect(stderr).toContain(goal);
 });
 
@@ -2235,7 +2239,7 @@ test('try to initialize misspelled example (noce) in non-tty', async () => {
   console.log(stdout);
   console.log(exitCode);
 
-  expect(exitCode).toBe(1);
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
   expect(stderr).toContain(goal);
 });
 
@@ -2249,7 +2253,7 @@ test('try to initialize example "example-404"', async () => {
     cwd,
   });
 
-  expect(exitCode).toBe(1);
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
   expect(stderr).toContain(goal);
 });
 
@@ -2270,7 +2274,7 @@ test('try to revert a deployment and assign the automatic aliases', async () => 
       '--yes',
     ]);
 
-    expect(exitCode).toBe(0);
+    expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
     await waitForDeployment(deploymentUrl);
     await sleep(20000);
@@ -2286,7 +2290,7 @@ test('try to revert a deployment and assign the automatic aliases', async () => 
       '--yes',
     ]);
 
-    expect(exitCode).toBe(0);
+    expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
     await waitForDeployment(deploymentUrl);
     await sleep(20000);
@@ -2304,7 +2308,7 @@ test('try to revert a deployment and assign the automatic aliases', async () => 
       '--yes',
     ]);
 
-    expect(exitCode).toBe(0);
+    expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
     await waitForDeployment(deploymentUrl);
     await sleep(20000);
@@ -2324,7 +2328,7 @@ test('whoami', async () => {
   console.log(stdout);
   console.log(exitCode);
 
-  expect(exitCode).toBe(0);
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
   expect(stdout).toBe(contextName);
 });
 
@@ -2332,7 +2336,7 @@ test('[vercel dev] fails when dev script calls vercel dev recursively', async ()
   const deploymentPath = fixture('now-dev-fail-dev-script');
   const { exitCode, stderr } = await execute(['dev', deploymentPath]);
 
-  expect(exitCode).toBe(1);
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
   expect(stderr).toContain('must not recursively invoke itself');
 });
 
@@ -2385,13 +2389,13 @@ test('`vercel rm` removes a deployment', async () => {
   ]);
 
   expect(stdoutRemove.includes(host)).toBeTruthy();
-  expect(exitCode).toBe(0);
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 });
 
 test('`vercel rm` should fail with unexpected option', async () => {
   const output = await execute(['rm', 'example.example.com', '--fake']);
 
-  expect(output.exitCode).toBe(1);
+  expect(output.exitCode, formatOutput(output)).toBe(1);
   expect(output.stderr).toMatch(
     /Error: unknown or unexpected option: --fake/gm
   );
@@ -2411,7 +2415,7 @@ test('`vercel rm` 404 exits quickly', async () => {
   const delta = Date.now() - start;
 
   // "does not exist" case is exit code 1, similar to Unix `rm`
-  expect(exitCode).toBe(1);
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
   expect(
     stderr.includes(
       'Could not find any deployments or projects matching "this.is.a.deployment.that.does.not.exist.example.com"'
@@ -2430,7 +2434,7 @@ test('render build errors', async () => {
   console.log(output.stdout);
   console.log(output.exitCode);
 
-  expect(output.exitCode).toBe(1);
+  expect(output.exitCode, formatOutput(output)).toBe(1);
   expect(output.stderr).toMatch(/Command "yarn run build" exited with 1/gm);
 });
 
@@ -2456,7 +2460,7 @@ test('vercel certs ls', async () => {
   console.log(output.stdout);
   console.log(output.exitCode);
 
-  expect(output.exitCode).toBe(0);
+  expect(output.exitCode, formatOutput(output)).toBe(0);
   expect(output.stderr).toMatch(/certificates? found under/gm);
 });
 
@@ -2467,7 +2471,7 @@ test('vercel certs ls --next=123456', async () => {
   console.log(output.stdout);
   console.log(output.exitCode);
 
-  expect(output.exitCode).toBe(0);
+  expect(output.exitCode, formatOutput(output)).toBe(0);
   expect(output.stderr).toMatch(/No certificates found under/gm);
 });
 
@@ -2478,7 +2482,7 @@ test('vercel hasOwnProperty not a valid subcommand', async () => {
   console.log(output.stdout);
   console.log(output.exitCode);
 
-  expect(output.exitCode).toBe(1);
+  expect(output.exitCode, formatOutput(output)).toBe(1);
   expect(output.stderr).toMatch(
     /The specified file or directory "hasOwnProperty" does not exist/gm
   );
@@ -2493,7 +2497,7 @@ test('create zero-config deployment', async () => {
   console.log(output.stdout);
   console.log(output.exitCode);
 
-  expect(output.exitCode).toBe(0);
+  expect(output.exitCode, formatOutput(output)).toBe(0);
 
   const { host } = new URL(output.stdout);
   const response = await apiFetch(`/v10/now/deployments/unkown?url=${host}`);
@@ -2518,7 +2522,7 @@ test('next unsupported functions config shows warning link', async () => {
   const fixturePath = fixture('zero-config-next-js-functions-warning');
   const output = await execute([fixturePath, '--force', '--public', '--yes']);
 
-  expect(output.exitCode).toBe(0);
+  expect(output.exitCode, formatOutput(output)).toBe(0);
   expect(output.stderr).toMatch(
     /Ignoring function property `runtime`\. When using Next\.js, only `memory` and `maxDuration` can be used\./gm
   );
@@ -2537,7 +2541,7 @@ test('vercel secret add', async () => {
   console.log(output.stdout);
   console.log(output.exitCode);
 
-  expect(output.exitCode).toBe(0);
+  expect(output.exitCode, formatOutput(output)).toBe(0);
 });
 
 test('vercel secret ls', async () => {
@@ -2547,7 +2551,7 @@ test('vercel secret ls', async () => {
   console.log(output.stdout);
   console.log(output.exitCode);
 
-  expect(output.exitCode).toBe(0);
+  expect(output.exitCode, formatOutput(output)).toBe(0);
   expect(output.stdout).toMatch(/Secrets found under/gm);
   expect(output.stdout).toMatch(new RegExp());
 });
@@ -2555,7 +2559,7 @@ test('vercel secret ls', async () => {
 test('vercel secret ls --test-warning', async () => {
   const output = await execute(['secret', 'ls', '--test-warning']);
 
-  expect(output.exitCode).toBe(0);
+  expect(output.exitCode, formatOutput(output)).toBe(0);
   expect(output.stderr).toMatch(/Test warning message./gm);
   expect(output.stderr).toMatch(/Learn more: https:\/\/vercel.com/gm);
   expect(output.stdout).toMatch(/No secrets found under/gm);
@@ -2574,7 +2578,7 @@ test('vercel secret rename', async () => {
   console.log(output.stdout);
   console.log(output.exitCode);
 
-  expect(output.exitCode).toBe(0);
+  expect(output.exitCode, formatOutput(output)).toBe(0);
 
   context.secretName = nextName;
 });
@@ -2586,14 +2590,14 @@ test('vercel secret rm', async () => {
   console.log(output.stdout);
   console.log(output.exitCode);
 
-  expect(output.exitCode).toBe(0);
+  expect(output.exitCode, formatOutput(output)).toBe(0);
 });
 
 test('deploy a Lambda with 128MB of memory', async () => {
   const directory = fixture('lambda-with-128-memory');
   const output = await execute([directory, '--yes']);
 
-  expect(output.exitCode).toBe(0);
+  expect(output.exitCode, formatOutput(output)).toBe(0);
 
   const { host: url } = new URL(output.stdout);
   const response = await fetch('https://' + url + '/api/memory');
@@ -2610,7 +2614,7 @@ test('fail to deploy a Lambda with an incorrect value for of memory', async () =
   const directory = fixture('lambda-with-123-memory');
   const output = await execute([directory, '--yes']);
 
-  expect(output.exitCode).toBe(1);
+  expect(output.exitCode, formatOutput(output)).toBe(1);
   expect(output.stderr).toMatch(/Serverless Functions.+memory/gm);
   expect(output.stderr).toMatch(/Learn More/gm);
 });
@@ -2619,7 +2623,7 @@ test('deploy a Lambda with 3 seconds of maxDuration', async () => {
   const directory = fixture('lambda-with-3-second-timeout');
   const output = await execute([directory, '--yes']);
 
-  expect(output.exitCode).toBe(0);
+  expect(output.exitCode, formatOutput(output)).toBe(0);
 
   const url = new URL(output.stdout);
 
@@ -2638,7 +2642,7 @@ test('fail to deploy a Lambda with an incorrect value for maxDuration', async ()
   const directory = fixture('lambda-with-1000-second-timeout');
   const output = await execute([directory, '--yes']);
 
-  expect(output.exitCode).toBe(1);
+  expect(output.exitCode, formatOutput(output)).toBe(1);
   expect(output.stderr).toMatch(
     /maxDuration must be between 1 second and 10 seconds/gm
   );
@@ -2647,7 +2651,7 @@ test('fail to deploy a Lambda with an incorrect value for maxDuration', async ()
 test('invalid `--token`', async () => {
   const output = await execute(['--token', 'he\nl,o.']);
 
-  expect(output.exitCode).toBe(1);
+  expect(output.exitCode, formatOutput(output)).toBe(1);
   expect(output.stderr).toContain(
     'Error: You defined "--token", but its contents are invalid. Must not contain: "\\n", ",", "."'
   );
@@ -2657,7 +2661,7 @@ test('deploy a Lambda with a specific runtime', async () => {
   const directory = fixture('lambda-with-php-runtime');
   const output = await execute([directory, '--public', '--yes']);
 
-  expect(output.exitCode).toBe(0);
+  expect(output.exitCode, formatOutput(output)).toBe(0);
 
   const url = new URL(output.stdout);
   const res = await fetch(`${url}/api/test`);
@@ -2669,7 +2673,7 @@ test('fail to deploy a Lambda with a specific runtime but without a locked versi
   const directory = fixture('lambda-with-invalid-runtime');
   const output = await execute([directory, '--yes']);
 
-  expect(output.exitCode).toBe(1);
+  expect(output.exitCode, formatOutput(output)).toBe(1);
   expect(output.stderr).toMatch(
     /Function Runtimes must have a valid version/gim
   );
@@ -2677,7 +2681,7 @@ test('fail to deploy a Lambda with a specific runtime but without a locked versi
 
 test('fail to add a domain without a project', async () => {
   const output = await execute(['domains', 'add', 'my-domain.vercel.app']);
-  expect(output.exitCode).toBe(1);
+  expect(output.exitCode, formatOutput(output)).toBe(1);
   expect(output.stderr).toMatch(/expects two arguments/gm);
 });
 
@@ -2729,7 +2733,7 @@ test('assign a domain to a project', async () => {
   const project = deployment.name;
 
   const output = await execute(['domains', 'add', domain, project, '--force']);
-  expect(output.exitCode).toBe(0);
+  expect(output.exitCode, formatOutput(output)).toBe(0);
 
   const removeResponse = await execute(['rm', project, '-y']);
   expect(removeResponse.exitCode).toBe(0);
@@ -2739,7 +2743,7 @@ test('ensure `github` and `scope` are not sent to the API', async () => {
   const directory = fixture('github-and-scope-config');
   const output = await execute([directory, '--yes']);
 
-  expect(output.exitCode).toBe(0);
+  expect(output.exitCode, formatOutput(output)).toBe(0);
 });
 
 test('should show prompts to set up project during first deploy', async () => {
@@ -2761,7 +2765,7 @@ test('should show prompts to set up project during first deploy', async () => {
   const output = await now;
 
   // Ensure the exit code is right
-  expect(output.exitCode).toBe(0);
+  expect(output.exitCode, formatOutput(output)).toBe(0);
 
   // Ensure .gitignore is created
   const gitignore = await readFile(path.join(dir, '.gitignore'), 'utf8');
@@ -2854,7 +2858,7 @@ test('should prefill "project name" prompt with folder name', async () => {
   now.stdin.write('no\n');
 
   const output = await now;
-  expect(output.exitCode).toBe(0);
+  expect(output.exitCode, formatOutput(output)).toBe(0);
 });
 
 test('should prefill "project name" prompt with --name', async () => {
@@ -2915,7 +2919,7 @@ test('should prefill "project name" prompt with --name', async () => {
   now.stdin.write('no\n');
 
   const output = await now;
-  expect(output.exitCode).toBe(0);
+  expect(output.exitCode, formatOutput(output)).toBe(0);
 });
 
 test('should prefill "project name" prompt with now.json `name`', async () => {
@@ -2982,7 +2986,7 @@ test('should prefill "project name" prompt with now.json `name`', async () => {
   now.stdin.write('no\n');
 
   const output = await now;
-  expect(output.exitCode).toBe(0);
+  expect(output.exitCode, formatOutput(output)).toBe(0);
 
   expect(isDeprecated, 'isDeprecated').toBe(true);
 
@@ -3001,7 +3005,7 @@ test('deploy with unknown `VERCEL_PROJECT_ID` should fail', async () => {
     },
   });
 
-  expect(output.exitCode).toBe(1);
+  expect(output.exitCode, formatOutput(output)).toBe(1);
   expect(output.stderr).toContain('Project not found');
 });
 
@@ -3013,7 +3017,7 @@ test('deploy with `VERCEL_ORG_ID` but without `VERCEL_PROJECT_ID` should fail', 
     env: { VERCEL_ORG_ID: user.id },
   });
 
-  expect(output.exitCode).toBe(1);
+  expect(output.exitCode, formatOutput(output)).toBe(1);
   expect(output.stderr).toContain(
     'You specified `VERCEL_ORG_ID` but you forgot to specify `VERCEL_PROJECT_ID`. You need to specify both to deploy to a custom project.'
   );
@@ -3026,7 +3030,7 @@ test('deploy with `VERCEL_PROJECT_ID` but without `VERCEL_ORG_ID` should fail', 
     env: { VERCEL_PROJECT_ID: 'asdf' },
   });
 
-  expect(output.exitCode).toBe(1);
+  expect(output.exitCode, formatOutput(output)).toBe(1);
   expect(output.stderr).toContain(
     'You specified `VERCEL_PROJECT_ID` but you forgot to specify `VERCEL_ORG_ID`. You need to specify both to deploy to a custom project.'
   );
@@ -3048,7 +3052,7 @@ test('deploy with `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID`', async () => {
     },
   });
 
-  expect(output.exitCode).toBe(0);
+  expect(output.exitCode, formatOutput(output)).toBe(0);
   expect(output.stdout).not.toContain('Linked to');
 });
 
@@ -3127,7 +3131,7 @@ test('vercel deploy with unknown `VERCEL_ORG_ID` or `VERCEL_PROJECT_ID` should e
     env: { VERCEL_ORG_ID: 'asdf', VERCEL_PROJECT_ID: 'asdf' },
   });
 
-  expect(output.exitCode).toBe(1);
+  expect(output.exitCode, formatOutput(output)).toBe(1);
   expect(output.stderr).toContain('Project not found');
 });
 
@@ -3136,7 +3140,7 @@ test('vercel env with unknown `VERCEL_ORG_ID` or `VERCEL_PROJECT_ID` should erro
     env: { VERCEL_ORG_ID: 'asdf', VERCEL_PROJECT_ID: 'asdf' },
   });
 
-  expect(output.exitCode).toBe(1);
+  expect(output.exitCode, formatOutput(output)).toBe(1);
   expect(output.stderr).toContain('Project not found');
 });
 
@@ -3147,7 +3151,7 @@ test('whoami with `VERCEL_ORG_ID` should favor `--scope` and should error', asyn
     env: { VERCEL_ORG_ID: user.id },
   });
 
-  expect(output.exitCode).toBe(1);
+  expect(output.exitCode, formatOutput(output)).toBe(1);
   expect(output.stderr.includes('The specified scope does not exist')).toBe(
     true
   );
@@ -3168,7 +3172,7 @@ test('whoami with local .vercel scope', async () => {
     cwd: directory,
   });
 
-  expect(output.exitCode).toBe(0);
+  expect(output.exitCode, formatOutput(output)).toBe(0);
   expect(output.stdout).toContain(contextName);
 
   // clean up
@@ -3178,7 +3182,7 @@ test('whoami with local .vercel scope', async () => {
 test('deploys with only now.json and README.md', async () => {
   const directory = fixture('deploy-with-only-readme-now-json');
 
-  const { exitCode, stdout } = await execa(
+  const { exitCode, stdout, stderr } = await execa(
     binaryPath,
     [...defaultArgs, '--yes'],
     {
@@ -3187,7 +3191,7 @@ test('deploys with only now.json and README.md', async () => {
     }
   );
 
-  expect(exitCode).toBe(0);
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
   const { host } = new URL(stdout);
   const res = await fetch(`https://${host}/README.md`);
   const text = await res.text();
@@ -3197,7 +3201,7 @@ test('deploys with only now.json and README.md', async () => {
 test('deploys with only vercel.json and README.md', async () => {
   const directory = fixture('deploy-with-only-readme-vercel-json');
 
-  const { exitCode, stdout } = await execa(
+  const { exitCode, stdout, stderr } = await execa(
     binaryPath,
     [...defaultArgs, '--yes'],
     {
@@ -3206,7 +3210,7 @@ test('deploys with only vercel.json and README.md', async () => {
     }
   );
 
-  expect(exitCode).toBe(0);
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
   const { host } = new URL(stdout);
   const res = await fetch(`https://${host}/README.md`);
   const text = await res.text();
@@ -3216,7 +3220,7 @@ test('deploys with only vercel.json and README.md', async () => {
 test('reject conflicting `vercel.json` and `now.json` files', async () => {
   const directory = fixture('conflicting-now-json-vercel-json');
 
-  const { exitCode, stderr } = await execa(
+  const { exitCode, stdout, stderr } = await execa(
     binaryPath,
     [...defaultArgs, '--yes'],
     {
@@ -3225,14 +3229,14 @@ test('reject conflicting `vercel.json` and `now.json` files', async () => {
     }
   );
 
-  expect(exitCode).toBe(1);
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
   expect(stderr.includes).toContain(
     'Cannot use both a `vercel.json` and `now.json` file. Please delete the `now.json` file.'
   );
 });
 
 test('`vc --debug project ls` should output the projects listing', async () => {
-  const { exitCode, stderr } = await execa(
+  const { exitCode, stdout, stderr } = await execa(
     binaryPath,
     [...defaultArgs, '--debug', 'project', 'ls'],
     {
@@ -3240,7 +3244,7 @@ test('`vc --debug project ls` should output the projects listing', async () => {
     }
   );
 
-  expect(exitCode).toBe(0);
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
   expect(stderr).toContain('> Projects found under');
 });
 
@@ -3302,14 +3306,14 @@ test('deploy pnpm twice using pnp and symlink=false', async () => {
   }
 
   let { exitCode, stdout } = await deploy();
-  expect(exitCode).toBe(0);
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   let page = await fetch(stdout);
   let text = await page.text();
   expect(text).toBe('no cache\n');
 
   ({ exitCode, stdout } = await deploy());
-  expect(exitCode).toBe(0);
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   page = await fetch(stdout);
   text = await page.text();
@@ -3320,7 +3324,7 @@ test('deploy pnpm twice using pnp and symlink=false', async () => {
 test('reject deploying with wrong team .vercel config', async () => {
   const directory = fixture('unauthorized-vercel-config');
 
-  const { exitCode, stderr } = await execa(
+  const { exitCode, stdout, stderr } = await execa(
     binaryPath,
     [...defaultArgs, '--yes'],
     {
@@ -3329,7 +3333,7 @@ test('reject deploying with wrong team .vercel config', async () => {
     }
   );
 
-  expect(exitCode).toBe(1);
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
   expect(stderr.includes).toContain(
     'Could not retrieve Project Settings. To link your Project, remove the `.vercel` directory and deploy again.'
   );
@@ -3337,7 +3341,7 @@ test('reject deploying with wrong team .vercel config', async () => {
 
 test('reject deploying with invalid token', async () => {
   const directory = fixture('unauthorized-vercel-config');
-  const { exitCode, stderr } = await execa(
+  const { exitCode, stdout, stderr } = await execa(
     binaryPath,
     [...defaultArgs, '--yes'],
     {
@@ -3346,7 +3350,7 @@ test('reject deploying with invalid token', async () => {
     }
   );
 
-  expect(exitCode).toBe(1);
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
   expect(stderr).toMatch(
     /Error: Could not retrieve Project Settings\. To link your Project, remove the `\.vercel` directory and deploy again\./g
   );
@@ -3376,7 +3380,7 @@ test('[vc link] should show prompts to set up project', async () => {
   const output = await vc;
 
   // Ensure the exit code is right
-  expect(output.exitCode).toBe(0);
+  expect(output.exitCode, formatOutput(output)).toBe(0);
 
   // Ensure .gitignore is created
   const gitignore = await readFile(path.join(dir, '.gitignore'), 'utf8');
@@ -3393,14 +3397,14 @@ test('[vc link --yes] should not show prompts and autolink', async () => {
   // remove previously linked project if it exists
   await remove(path.join(dir, '.vercel'));
 
-  const { exitCode, stderr } = await execa(
+  const { exitCode, stdout, stderr } = await execa(
     binaryPath,
     ['link', '--yes', ...defaultArgs],
     { cwd: dir, reject: false }
   );
 
   // Ensure the exit code is right
-  expect(exitCode).toBe(0);
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   // Ensure the message is correct pattern
   expect(stderr).toMatch(/Linked to /m);
@@ -3420,7 +3424,7 @@ test('[vc link] should not duplicate paths in .gitignore', async () => {
   // remove previously linked project if it exists
   await remove(path.join(dir, '.vercel'));
 
-  const { exitCode, stderr } = await execa(
+  const { exitCode, stdout, stderr } = await execa(
     binaryPath,
     ['link', '--yes', ...defaultArgs],
     {
@@ -3433,7 +3437,7 @@ test('[vc link] should not duplicate paths in .gitignore', async () => {
   );
 
   // Ensure the exit code is right
-  expect(exitCode).toBe(0);
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   // Ensure the message is correct pattern
   expect(stderr).toMatch(/Linked to /m);
@@ -3527,7 +3531,7 @@ test('[vc link] should show project prompts but not framework when `builds` defi
   const output = await vc;
 
   // Ensure the exit code is right
-  expect(output.exitCode).toBe(0);
+  expect(output.exitCode, formatOutput(output)).toBe(0);
 
   // Ensure .gitignore is created
   const gitignore = await readFile(path.join(dir, '.gitignore'), 'utf8');
@@ -3583,14 +3587,14 @@ test('[vc link] should support the `--project` flag', async () => {
     execute(['link', '--yes', '--project', projectName, directory]),
   ]);
 
-  expect(output.exitCode).toBe(0);
+  expect(output.exitCode, formatOutput(output)).toBe(0);
   expect(output.stderr).toContain(`Linked to ${user.username}/${projectName}`);
 });
 
 test('[vc build] should build project with `@vercel/static-build`', async () => {
   const directory = fixture('vc-build-static-build');
   const output = await execute(['build'], { cwd: directory });
-  expect(output.exitCode).toBe(0);
+  expect(output.exitCode, formatOutput(output)).toBe(0);
   expect(output.stderr.includes('Build Completed in .vercel/output')).toBe(
     true
   );
@@ -3618,7 +3622,7 @@ test('[vc build] should build project with `@vercel/static-build`', async () => 
 test('[vc build] should not include .vercel when distDir is "."', async () => {
   const directory = fixture('static-build-dist-dir');
   const output = await execute(['build'], { cwd: directory });
-  expect(output.exitCode).toBe(0);
+  expect(output.exitCode, formatOutput(output)).toBe(0);
   expect(output.stderr.includes('Build Completed in .vercel/output')).toBe(
     true
   );
@@ -3630,7 +3634,7 @@ test('[vc build] should not include .vercel when distDir is "."', async () => {
 test('[vc build] should not include .vercel when zeroConfig is true and outputDirectory is "."', async () => {
   const directory = fixture('static-build-zero-config-output-directory');
   const output = await execute(['build'], { cwd: directory });
-  expect(output.exitCode).toBe(0);
+  expect(output.exitCode, formatOutput(output)).toBe(0);
   expect(output.stderr.includes('Build Completed in .vercel/output')).toBe(
     true
   );
