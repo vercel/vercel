@@ -169,7 +169,7 @@ export async function createGo({
   workPath,
 }: CreateGoOptions): Promise<GoWrapper> {
   // parse the `go.mod`, if exists
-  let goPreferredVersion;
+  let goPreferredVersion: string | undefined;
   if (modulePath) {
     goPreferredVersion = await parseGoModVersion(modulePath);
   }
