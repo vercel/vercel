@@ -1,6 +1,9 @@
 {
   "probes": [
-    { "path": "/", "mustContain": "Index" },
+    {
+      "path": "/",
+      "mustContain": "Index"
+    },
     { "path": "/foo", "mustContain": "Foo" },
     { "path": "/nested", "mustContain": "Nested Index" },
     { "path": "/fuzz/buzz", "mustContain": "Fuzz Buzz" },
