@@ -3,11 +3,11 @@ import execa from 'execa';
 import fetch from 'node-fetch';
 import {
   createWriteStream,
-  link,
   mkdirp,
   pathExists,
   readFile,
   remove,
+  symlink,
 } from 'fs-extra';
 import { join, delimiter, dirname } from 'path';
 import stringArgv from 'string-argv';
@@ -18,7 +18,6 @@ import { tmpdir } from 'os';
 import yauzl from 'yauzl-promise';
 import XDGAppPaths from 'xdg-app-paths';
 import type { Env } from '@vercel/build-utils';
-import { execSync } from 'child_process';
 
 const streamPipeline = promisify(pipeline);
 
@@ -156,7 +155,7 @@ type CreateGoOptions = {
  *
  * If the Go version is not found, it's downloaded and installed in the
  * global cache directory so it can be shared across projects. When using
- * Linux or macOS, it creates a hard link from the global cache to the local
+ * Linux or macOS, it creates a symlink from the global cache to the local
  * cache directory so that `prepareCache` will persist it.
  *
  * @param modulePath The path possibly containing a `go.mod` file
@@ -199,16 +198,10 @@ export async function createGo({
 
   const setGoEnv = async (goDir: string | null) => {
     if (platform !== 'win32' && goDir === goGlobalCacheDir) {
-      debug(`Hard linking ${goDir} -> ${goCacheDir}`);
-      execSync('ls -la', { cwd: dirname(goGlobalCacheDir), stdio: 'inherit' });
+      debug(`Symlinking ${goDir} -> ${goCacheDir}`);
       await remove(goCacheDir);
       await mkdirp(dirname(goCacheDir));
-      execSync('ls -la', {
-        cwd: dirname(dirname(goCacheDir)),
-        stdio: 'inherit',
-      });
-      execSync('ls -la', { cwd: dirname(goCacheDir), stdio: 'inherit' });
-      await link(goDir, goCacheDir);
+      await symlink(goDir, goCacheDir);
       goDir = goCacheDir;
     }
     env.GOROOT = goDir || undefined;
