@@ -1404,14 +1404,14 @@ test('should add secret with hyphen prefix', async () => {
     }
   );
 
-  expect(secretCall.exitCode).toBe(0);
+  expect(secretCall.exitCode, formatOutput(secretCall)).toBe(0);
 
   let targetCall = await execa(binaryPath, [...defaultArgs, '--yes'], {
     cwd: target,
     reject: false,
   });
 
-  expect(targetCall.exitCode).toBe(0);
+  expect(targetCall.exitCode, formatOutput(targetCall)).toBe(0);
   const { host } = new URL(targetCall.stdout);
   const response = await fetch(`https://${host}`);
   expect(response.status).toBe(200);
@@ -1524,7 +1524,7 @@ test('domains inspect', async () => {
       { reject: false }
     );
 
-    expect(result.exitCode).toBe(0);
+    expect(result.exitCode, formatOutput(result)).toBe(0);
   }
 
   const { stderr, exitCode } = await execa(
@@ -1546,7 +1546,7 @@ test('domains inspect', async () => {
       { reject: false, input: 'y' }
     );
 
-    expect(result.exitCode).toBe(0);
+    expect(result.exitCode, formatOutput(result)).toBe(0);
   }
 });
 
@@ -1961,7 +1961,7 @@ test('create a staging deployment', async () => {
 
   expect(targetCall.stderr).toMatch(/Setting target to staging/gm);
   expect(targetCall.stdout).toMatch(/https:\/\//gm);
-  expect(targetCall.exitCode).toBe(0);
+  expect(targetCall.exitCode, formatOutput(targetCall)).toBe(0);
 
   const { host } = new URL(targetCall.stdout);
   const deployment = await apiFetch(
@@ -1981,7 +1981,7 @@ test('create a production deployment', async () => {
     '--yes',
   ]);
 
-  expect(targetCall.exitCode).toBe(0);
+  expect(targetCall.exitCode, formatOutput(targetCall)).toBe(0);
   expect(targetCall.stderr).toMatch(/`--prod` option instead/gm);
   expect(targetCall.stderr).toMatch(/Setting target to production/gm);
   expect(targetCall.stderr).toMatch(/Inspect: https:\/\/vercel.com\//gm);
@@ -1995,7 +1995,7 @@ test('create a production deployment', async () => {
 
   const call = await execa(binaryPath, [directory, '--prod', ...args]);
 
-  expect(call.exitCode).toBe(0);
+  expect(call.exitCode, formatOutput(call)).toBe(0);
   expect(call.stderr).toMatch(/Setting target to production/gm);
   expect(call.stdout).toMatch(/https:\/\//gm);
 
@@ -2571,7 +2571,7 @@ test('assign a domain to a project', async () => {
   const directory = fixture('static-deployment');
 
   const deploymentOutput = await execute([directory, '--public', '--yes']);
-  expect(deploymentOutput.exitCode).toBe(0);
+  expect(deploymentOutput.exitCode, formatOutput(deploymentOutput)).toBe(0);
 
   const host = deploymentOutput.stdout.trim().replace('https://', '');
   const deployment = await apiFetch(
@@ -2585,7 +2585,7 @@ test('assign a domain to a project', async () => {
   expect(output.exitCode, formatOutput(output)).toBe(0);
 
   const removeResponse = await execute(['rm', project, '-y']);
-  expect(removeResponse.exitCode).toBe(0);
+  expect(removeResponse.exitCode, formatOutput(removeResponse)).toBe(0);
 });
 
 test('ensure `github` and `scope` are not sent to the API', async () => {
@@ -2941,7 +2941,7 @@ test('use `rootDirectory` from project when deploying', async () => {
   const directory = fixture('project-root-directory');
 
   const firstResult = await execute([directory, '--yes', '--public']);
-  expect(firstResult.exitCode).toBe(0);
+  expect(firstResult.exitCode, formatOutput(firstResult)).toBe(0);
 
   const { host: firstHost } = new URL(firstResult.stdout);
   const response = await apiFetch(`/v12/now/deployments/get?url=${firstHost}`);
@@ -2959,7 +2959,7 @@ test('use `rootDirectory` from project when deploying', async () => {
   expect(projectResponse.status, await projectResponse.text()).toBe(200);
 
   const secondResult = await execute([directory, '--public']);
-  expect(secondResult.exitCode).toBe(0);
+  expect(secondResult.exitCode, formatOutput(secondResult)).toBe(0);
 
   const pageResponse1 = await fetch(secondResult.stdout);
   expect(pageResponse1.status).toBe(200);
@@ -3540,7 +3540,7 @@ test('vercel.json configuration overrides in a new project prompt user and merge
   vc.stdin.write('output\n');
   await waitForPrompt(vc, chunk => chunk.includes('Linked to'));
   const deployment = await vc;
-  expect(deployment.exitCode).toBe(0);
+  expect(deployment.exitCode, formatOutput(deployment)).toBe(0);
   // assert the command were executed
   let page = await fetch(deployment.stdout);
   let text = await page.text();
@@ -3560,7 +3560,7 @@ test('vercel.json configuration overrides in an existing project do not prompt u
       ),
       { reject: false }
     );
-    expect(deployment.exitCode).toBe(0);
+    expect(deployment.exitCode, formatOutput(deployment)).toBe(0);
     return deployment;
   }
 
