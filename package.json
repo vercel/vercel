@@ -51,6 +51,7 @@
     "test-e2e": "node utils/gen.js && turbo run test-e2e",
     "test-dev": "node utils/gen.js && turbo run test-dev",
     "lint": "eslint . --cache --ext .ts,.js",
+    "prettier-check": "prettier --check .",
     "prepare": "husky install",
     "pack": "cd utils && node -r ts-eager/register ./pack.ts"
   },
