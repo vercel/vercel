@@ -3,11 +3,11 @@ import execa from 'execa';
 import fetch from 'node-fetch';
 import {
   createWriteStream,
+  link,
   mkdirp,
   pathExists,
   readFile,
   remove,
-  symlink,
 } from 'fs-extra';
 import { join, delimiter, dirname } from 'path';
 import stringArgv from 'string-argv';
@@ -155,7 +155,7 @@ type CreateGoOptions = {
  *
  * If the Go version is not found, it's downloaded and installed in the
  * global cache directory so it can be shared across projects. When using
- * Linux or macOS, it creates a symlink from the global cache to the local
+ * Linux or macOS, it creates a hard link from the global cache to the local
  * cache directory so that `prepareCache` will persist it.
  *
  * @param modulePath The path possibly containing a `go.mod` file
@@ -198,10 +198,10 @@ export async function createGo({
 
   const setGoEnv = async (goDir: string | null) => {
     if (platform !== 'win32' && goDir === goGlobalCacheDir) {
-      debug(`Symlinking ${goDir} -> ${goCacheDir}`);
+      debug(`Hard linking ${goDir} -> ${goCacheDir}`);
       await mkdirp(dirname(goCacheDir));
       await remove(goCacheDir);
-      await symlink(goDir, goCacheDir);
+      await link(goDir, goCacheDir);
       goDir = goCacheDir;
     }
     env.GOROOT = goDir || undefined;
@@ -233,7 +233,7 @@ export async function createGo({
         debug(`Found go ${version} in ${label}, but version is unsupported`);
       }
       if (version === goSelectedVersion || short === goSelectedVersion) {
-        debug(`Selected go ${version} (from ${label})`);
+        console.log(`Selected go ${version} (from ${label})`);
 
         await setGoEnv(goDir);
         return new GoWrapper(env, opts);
@@ -264,7 +264,7 @@ export async function createGo({
  */
 async function download({ dest, version }: { dest: string; version: string }) {
   const { filename, url } = getGoUrl(version);
-  debug(`Downloading go: ${url}`);
+  console.log(`Downloading go: ${url}`);
   const res = await fetch(url);
 
   if (!res.ok) {
