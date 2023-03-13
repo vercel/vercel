@@ -3,9 +3,9 @@ name: Lint
 on:
   push:
     branches:
-    - main
+      - main
     tags:
-    - '!*'
+      - '!*'
   pull_request:
 
 env:

@@ -87,7 +87,10 @@ future builds.
 import { relative } from 'path';
 import { glob, PrepareCache } from '@vercel/build-utils';
 
-export const prepareCache: PrepareCache = async ({ workPath, repoRootPath }) => {
+export const prepareCache: PrepareCache = async ({
+  workPath,
+  repoRootPath,
+}) => {
   // Create a mapping of file names and `File` object instances to cache here…
   const rootDirectory = relative(repoRootPath, workPath);
   const cache = await glob(`${rootDirectory}/some/dir/**`, repoRootPath);
