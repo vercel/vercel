@@ -17,7 +17,6 @@ import fs, {
   remove,
   copy,
   ensureDir,
-  exists,
   mkdir,
 } from 'fs-extra';
 import logo from '../src/util/output/logo';
@@ -34,6 +33,10 @@ jest.setTimeout(TEST_TIMEOUT);
 function execa(file, args, options) {
   console.log(`$ vercel ${args.join(' ')}`);
   return _execa(file, args, options);
+}
+
+function expectFile(path) {
+  expect(path, `file should exist at "${path}"`).toBe(true);
 }
 
 function fixture(name) {
@@ -1156,11 +1159,11 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
 
     const lines = new Set(contents.split('\n'));
 
-    expect(lines.has('VERCEL="1"')).toBe(true);
-    expect(lines.has('VERCEL_URL=""')).toBe(true);
-    expect(lines.has('VERCEL_ENV="development"')).toBe(true);
-    expect(lines.has('VERCEL_GIT_PROVIDER=""')).toBe(true);
-    expect(lines.has('VERCEL_GIT_REPO_SLUG=""')).toBe(true);
+    expect(lines).toContain('VERCEL="1"');
+    expect(lines).toContain('VERCEL_URL=""');
+    expect(lines).toContain('VERCEL_ENV="development"');
+    expect(lines).toContain('VERCEL_GIT_PROVIDER=""');
+    expect(lines).toContain('VERCEL_GIT_REPO_SLUG=""');
   }
 
   async function vcDevAndFetchSystemVars() {
@@ -1372,8 +1375,8 @@ test('print the deploy help message', async () => {
   console.log(exitCode);
 
   expect(exitCode).toBe(2);
-  expect(stderr.includes(deployHelpMessage)).toBe(true);
-  expect(stderr.includes('ExperimentalWarning')).toBe(false);
+  expect(stderr).toContain(deployHelpMessage);
+  expect(stderr).toContain('ExperimentalWarning');
 });
 
 test('output the version', async () => {
@@ -1442,7 +1445,7 @@ test('login with unregistered user', async () => {
   const last = lines[lines.length - 1];
 
   expect(exitCode).toBe(1);
-  expect(last.includes(goal)).toBe(true);
+  expect(last).toContain(goal);
 });
 
 test('ignore files specified in .nowignore', async () => {
@@ -1517,8 +1520,7 @@ test('list the scopes', async () => {
   expect(exitCode).toBe(0);
 
   const include = new RegExp(`✔ ${contextName}\\s+${email}`);
-
-  expect(include.test(stdout)).toBe(true);
+  expect(stdout).toMatch(include);
 });
 
 test('domains inspect', async () => {
@@ -1558,7 +1560,7 @@ test('domains inspect', async () => {
     }
   );
 
-  expect(stderr.includes(`Renewal Price`)).toBe(true);
+  expect(stderr).toContain(`Renewal Price`);
   expect(exitCode).toBe(0);
 
   {
@@ -1634,11 +1636,9 @@ test('try to transfer-in a domain with "--code" option', async () => {
   console.log(stdout);
   console.log(exitCode);
 
-  expect(
-    stderr.includes(
-      `Error: The domain "${session}-test.com" is not transferable.`
-    )
-  ).toBe(true);
+  expect(stderr).toContain(
+    `Error: The domain "${session}-test.com" is not transferable.`
+  );
   expect(exitCode).toBe(1);
 });
 
@@ -1661,7 +1661,7 @@ test('try to move an invalid domain', async () => {
   console.log(stdout);
   console.log(exitCode);
 
-  expect(stderr.includes(`Error: Domain not found under `)).toBe(true);
+  expect(stderr).toContain(`Error: Domain not found under `);
   expect(exitCode).toBe(1);
 });
 
@@ -1834,12 +1834,10 @@ test('ensure we render a prompt when deploying home directory', async () => {
   // Ensure the exit code is right
   expect(exitCode).toBe(0);
 
-  expect(
-    stderr.includes(
-      'You are deploying your home directory. Do you want to continue? [y/N]'
-    )
-  ).toBe(true);
-  expect(stderr.includes('Canceled')).toBe(true);
+  expect(stderr).toContain(
+    'You are deploying your home directory. Do you want to continue? [y/N]'
+  );
+  expect(stderr).toContain('Canceled');
 });
 
 test('ensure the `scope` property works with email', async () => {
@@ -1866,7 +1864,7 @@ test('ensure the `scope` property works with email', async () => {
   console.log(exitCode);
 
   // Ensure we're deploying under the right scope
-  expect(stderr.includes(session)).toBe(true);
+  expect(stderr).toContain(session);
 
   // Ensure the exit code is right
   expect(exitCode).toBe(0);
@@ -1906,7 +1904,7 @@ test('ensure the `scope` property works with username', async () => {
   console.log(exitCode);
 
   // Ensure we're deploying under the right scope
-  expect(stderr.includes(contextName)).toBe(true);
+  expect(stderr).toContain(contextName);
 
   // Ensure the exit code is right
   expect(exitCode).toBe(0);
@@ -1939,16 +1937,12 @@ test('try to create a builds deployments with wrong now.json', async () => {
 
   // Ensure the exit code is right
   expect(exitCode).toBe(1);
-  expect(
-    stderr.includes(
-      'Error: Invalid now.json - should NOT have additional property `builder`. Did you mean `builds`?'
-    )
-  ).toBe(true);
-  expect(
-    stderr.includes(
-      'https://vercel.com/docs/concepts/projects/project-configuration'
-    )
-  ).toBe(true);
+  expect(stderr).toContain(
+    'Error: Invalid now.json - should NOT have additional property `builder`. Did you mean `builds`?'
+  );
+  expect(stderr).toContain(
+    'https://vercel.com/docs/concepts/projects/project-configuration'
+  );
 });
 
 test('try to create a builds deployments with wrong vercel.json', async () => {
@@ -1967,16 +1961,12 @@ test('try to create a builds deployments with wrong vercel.json', async () => {
   console.log(exitCode);
 
   expect(exitCode).toBe(1);
-  expect(
-    stderr.includes(
-      'Error: Invalid vercel.json - should NOT have additional property `fake`. Please remove it.'
-    )
-  ).toBe(true);
-  expect(
-    stderr.includes(
-      'https://vercel.com/docs/concepts/projects/project-configuration'
-    )
-  ).toBe(true);
+  expect(stderr).toContain(
+    'Error: Invalid vercel.json - should NOT have additional property `fake`. Please remove it.'
+  );
+  expect(stderr).toContain(
+    'https://vercel.com/docs/concepts/projects/project-configuration'
+  );
 });
 
 test('try to create a builds deployments with wrong `build.env` property', async () => {
@@ -1992,16 +1982,12 @@ test('try to create a builds deployments with wrong `build.env` property', async
   );
 
   expect(exitCode).toBe(1);
-  expect(
-    stderr.includes(
-      'Error: Invalid vercel.json - should NOT have additional property `build.env`. Did you mean `{ "build": { "env": {"name": "value"} } }`?'
-    )
-  ).toBe(true);
-  expect(
-    stderr.includes(
-      'https://vercel.com/docs/concepts/projects/project-configuration'
-    )
-  ).toBe(true);
+  expect(stderr).toContain(
+    'Error: Invalid vercel.json - should NOT have additional property `build.env`. Did you mean `{ "build": { "env": {"name": "value"} } }`?'
+  );
+  expect(stderr).toContain(
+    'https://vercel.com/docs/concepts/projects/project-configuration'
+  );
 });
 
 test('create a builds deployments with no actual builds', async () => {
@@ -2147,7 +2133,7 @@ test('try to deploy non-existing path', async () => {
   console.log(exitCode);
 
   expect(exitCode).toBe(1);
-  expect(stderr.trim().endsWith(goal)).toBe(true);
+  expect(stderr.trim().endsWith(goal), `should end with "${goal}"`).toBe(true);
 });
 
 test('try to deploy with non-existing team', async () => {
@@ -2167,13 +2153,14 @@ test('try to deploy with non-existing team', async () => {
   console.log(exitCode);
 
   expect(exitCode).toBe(1);
-  expect(stderr.includes(goal)).toBe(true);
+  expect(stderr).toContain(goal);
 });
 
-const verifyExampleAngular = (cwd, dir) =>
-  fs.existsSync(path.join(cwd, dir, 'package.json')) &&
-  fs.existsSync(path.join(cwd, dir, 'tsconfig.json')) &&
-  fs.existsSync(path.join(cwd, dir, 'angular.json'));
+const verifyExampleAngular = (cwd, dir) => {
+  expectFile(fs.existsSync(path.join(cwd, dir, 'package.json')));
+  expectFile(fs.existsSync(path.join(cwd, dir, 'tsconfig.json')));
+  expectFile(fs.existsSync(path.join(cwd, dir, 'angular.json')));
+};
 
 test('initialize example "angular"', async () => {
   tmpDir = tmp.dirSync({ unsafeCleanup: true });
@@ -2185,8 +2172,8 @@ test('initialize example "angular"', async () => {
   });
 
   expect(exitCode).toBe(0);
-  expect(stderr.includes(goal)).toBe(true);
-  expect(verifyExampleAngular(cwd, 'angular')).toBe(true);
+  expect(stderr).toContain(goal);
+  verifyExampleAngular(cwd, 'angular');
 });
 
 test('initialize example ("angular") to specified directory', async () => {
@@ -2199,8 +2186,8 @@ test('initialize example ("angular") to specified directory', async () => {
   });
 
   expect(exitCode).toBe(0);
-  expect(stderr.includes(goal)).toBe(true);
-  expect(verifyExampleAngular(cwd, 'ang')).toBe(true);
+  expect(stderr).toContain(goal);
+  verifyExampleAngular(cwd, 'ang');
 });
 
 test('initialize example to existing directory with "-f"', async () => {
@@ -2215,8 +2202,8 @@ test('initialize example to existing directory with "-f"', async () => {
   });
 
   expect(exitCode).toBe(0);
-  expect(stderr.includes(goal)).toBe(true);
-  expect(verifyExampleAngular(cwd, 'angular')).toBe(true);
+  expect(stderr).toContain(goal);
+  verifyExampleAngular(cwd, 'angular');
 });
 
 test('try to initialize example to existing directory', async () => {
@@ -2233,7 +2220,7 @@ test('try to initialize example to existing directory', async () => {
   });
 
   expect(exitCode).toBe(1);
-  expect(stderr.includes(goal)).toBe(true);
+  expect(stderr).toContain(goal);
 });
 
 test('try to initialize misspelled example (noce) in non-tty', async () => {
@@ -2249,7 +2236,7 @@ test('try to initialize misspelled example (noce) in non-tty', async () => {
   console.log(exitCode);
 
   expect(exitCode).toBe(1);
-  expect(stderr.includes(goal)).toBe(true);
+  expect(stderr).toContain(goal);
 });
 
 test('try to initialize example "example-404"', async () => {
@@ -2263,7 +2250,7 @@ test('try to initialize example "example-404"', async () => {
   });
 
   expect(exitCode).toBe(1);
-  expect(stderr.includes(goal)).toBe(true);
+  expect(stderr).toContain(goal);
 });
 
 test('try to revert a deployment and assign the automatic aliases', async () => {
@@ -2273,7 +2260,7 @@ test('try to revert a deployment and assign the automatic aliases', async () => 
   const { name } = JSON.parse(
     fs.readFileSync(path.join(firstDeployment, 'now.json'))
   );
-  expect(!!name).toBe(true);
+  expect(name).toBeTruthy();
 
   const url = `https://${name}.user.vercel.app`;
 
@@ -2346,7 +2333,7 @@ test('[vercel dev] fails when dev script calls vercel dev recursively', async ()
   const { exitCode, stderr } = await execute(['dev', deploymentPath]);
 
   expect(exitCode).toBe(1);
-  expect(stderr.includes('must not recursively invoke itself')).toBe(true);
+  expect(stderr).toContain('must not recursively invoke itself');
 });
 
 test('[vercel dev] fails when development command calls vercel dev recursively', async () => {
@@ -2522,7 +2509,9 @@ test('create zero-config deployment', async () => {
     isCanary ? build.use.endsWith('@canary') : !build.use.endsWith('@canary')
   );
 
-  expect(validBuilders).toBe(true);
+  const buildList = JSON.stringify(data.builds.map(b => b.use));
+  const message = `builders match canary (${isCanary}): ${buildList}`;
+  expect(validBuilders, message).toBe(true);
 });
 
 test('next unsupported functions config shows warning link', async () => {
@@ -2659,11 +2648,9 @@ test('invalid `--token`', async () => {
   const output = await execute(['--token', 'he\nl,o.']);
 
   expect(output.exitCode).toBe(1);
-  expect(
-    output.stderr.includes(
-      'Error: You defined "--token", but its contents are invalid. Must not contain: "\\n", ",", "."'
-    )
-  ).toBe(true);
+  expect(output.stderr).toContain(
+    'Error: You defined "--token", but its contents are invalid. Must not contain: "\\n", ",", "."'
+  );
 });
 
 test('deploy a Lambda with a specific runtime', async () => {
@@ -2781,13 +2768,13 @@ test('should show prompts to set up project during first deploy', async () => {
   expect(gitignore).toBe('.vercel\n');
 
   // Ensure .vercel/project.json and .vercel/README.txt are created
-  expect(await exists(path.join(dir, '.vercel', 'project.json'))).toBe(true);
-  expect(await exists(path.join(dir, '.vercel', 'README.txt'))).toBe(true);
+  expectFile(path.join(dir, '.vercel', 'project.json'));
+  expectFile(path.join(dir, '.vercel', 'README.txt'));
 
   // Send a test request to the deployment
   const response = await fetch(new URL(output.stdout));
   const text = await response.text();
-  expect(text.includes('<h1>custom hello</h1>')).toBe(true);
+  expect(text).toContain('<h1>custom hello</h1>');
 
   // Ensure that `vc dev` also uses the configured build command
   // and output directory
@@ -2813,7 +2800,7 @@ test('should show prompts to set up project during first deploy', async () => {
 
     const res2 = await fetch(`http://localhost:${port}/`);
     const text2 = await res2.text();
-    expect(text2.includes('<h1>custom hello</h1>')).toBe(true);
+    expect(text2).toContain('<h1>custom hello</h1>');
   } finally {
     process.kill(dev.pid, 'SIGTERM');
   }
@@ -2900,7 +2887,7 @@ test('should prefill "project name" prompt with --name', async () => {
   });
   now.stdin.write('yes\n');
 
-  expect(isDeprecated).toBe(true);
+  expect(isDeprecated, 'isDeprecated').toBe(true);
 
   await waitForPrompt(now, chunk =>
     chunk.includes('Which scope do you want to deploy to?')
@@ -2997,7 +2984,7 @@ test('should prefill "project name" prompt with now.json `name`', async () => {
   const output = await now;
   expect(output.exitCode).toBe(0);
 
-  expect(isDeprecated).toBe(true);
+  expect(isDeprecated, 'isDeprecated').toBe(true);
 
   // clean up
   await remove(path.join(directory, 'vercel.json'));
@@ -3015,7 +3002,7 @@ test('deploy with unknown `VERCEL_PROJECT_ID` should fail', async () => {
   });
 
   expect(output.exitCode).toBe(1);
-  expect(output.stderr.includes('Project not found')).toBe(true);
+  expect(output.stderr).toContain('Project not found');
 });
 
 test('deploy with `VERCEL_ORG_ID` but without `VERCEL_PROJECT_ID` should fail', async () => {
@@ -3027,11 +3014,9 @@ test('deploy with `VERCEL_ORG_ID` but without `VERCEL_PROJECT_ID` should fail', 
   });
 
   expect(output.exitCode).toBe(1);
-  expect(
-    output.stderr.includes(
-      'You specified `VERCEL_ORG_ID` but you forgot to specify `VERCEL_PROJECT_ID`. You need to specify both to deploy to a custom project.'
-    )
-  ).toBe(true);
+  expect(output.stderr).toContain(
+    'You specified `VERCEL_ORG_ID` but you forgot to specify `VERCEL_PROJECT_ID`. You need to specify both to deploy to a custom project.'
+  );
 });
 
 test('deploy with `VERCEL_PROJECT_ID` but without `VERCEL_ORG_ID` should fail', async () => {
@@ -3042,11 +3027,9 @@ test('deploy with `VERCEL_PROJECT_ID` but without `VERCEL_ORG_ID` should fail', 
   });
 
   expect(output.exitCode).toBe(1);
-  expect(
-    output.stderr.includes(
-      'You specified `VERCEL_PROJECT_ID` but you forgot to specify `VERCEL_ORG_ID`. You need to specify both to deploy to a custom project.'
-    )
-  ).toBe(true);
+  expect(output.stderr).toContain(
+    'You specified `VERCEL_PROJECT_ID` but you forgot to specify `VERCEL_ORG_ID`. You need to specify both to deploy to a custom project.'
+  );
 });
 
 test('deploy with `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID`', async () => {
@@ -3066,7 +3049,7 @@ test('deploy with `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID`', async () => {
   });
 
   expect(output.exitCode).toBe(0);
-  expect(output.stdout.includes('Linked to')).toBe(false);
+  expect(output.stdout).not.toContain('Linked to');
 });
 
 test('deploy shows notice when project in `.vercel` does not exists', async () => {
@@ -3098,7 +3081,7 @@ test('deploy shows notice when project in `.vercel` does not exists', async () =
   });
   now.stdin.write('no\n');
 
-  expect(detectedNotice).toBe(true);
+  expect(detectedNotice, 'detectedNotice').toBe(true);
 });
 
 test('use `rootDirectory` from project when deploying', async () => {
@@ -3145,7 +3128,7 @@ test('vercel deploy with unknown `VERCEL_ORG_ID` or `VERCEL_PROJECT_ID` should e
   });
 
   expect(output.exitCode).toBe(1);
-  expect(output.stderr.includes('Project not found')).toBe(true);
+  expect(output.stderr).toContain('Project not found');
 });
 
 test('vercel env with unknown `VERCEL_ORG_ID` or `VERCEL_PROJECT_ID` should error', async () => {
@@ -3154,7 +3137,7 @@ test('vercel env with unknown `VERCEL_ORG_ID` or `VERCEL_PROJECT_ID` should erro
   });
 
   expect(output.exitCode).toBe(1);
-  expect(output.stderr.includes('Project not found')).toBe(true);
+  expect(output.stderr).toContain('Project not found');
 });
 
 test('whoami with `VERCEL_ORG_ID` should favor `--scope` and should error', async () => {
@@ -3186,7 +3169,7 @@ test('whoami with local .vercel scope', async () => {
   });
 
   expect(output.exitCode).toBe(0);
-  expect(output.stdout.includes(contextName)).toBe(true);
+  expect(output.stdout).toContain(contextName);
 
   // clean up
   await remove(path.join(directory, '.vercel'));
@@ -3243,11 +3226,9 @@ test('reject conflicting `vercel.json` and `now.json` files', async () => {
   );
 
   expect(exitCode).toBe(1);
-  expect(
-    stderr.includes(
-      'Cannot use both a `vercel.json` and `now.json` file. Please delete the `now.json` file.'
-    )
-  ).toBe(true);
+  expect(stderr.includes).toContain(
+    'Cannot use both a `vercel.json` and `now.json` file. Please delete the `now.json` file.'
+  );
 });
 
 test('`vc --debug project ls` should output the projects listing', async () => {
@@ -3260,7 +3241,7 @@ test('`vc --debug project ls` should output the projects listing', async () => {
   );
 
   expect(exitCode).toBe(0);
-  expect(stderr.includes('> Projects found under')).toBe(true);
+  expect(stderr).toContain('> Projects found under');
 });
 
 test(
@@ -3349,11 +3330,9 @@ test('reject deploying with wrong team .vercel config', async () => {
   );
 
   expect(exitCode).toBe(1);
-  expect(
-    stderr.includes(
-      'Could not retrieve Project Settings. To link your Project, remove the `.vercel` directory and deploy again.'
-    )
-  ).toBe(true);
+  expect(stderr.includes).toContain(
+    'Could not retrieve Project Settings. To link your Project, remove the `.vercel` directory and deploy again.'
+  );
 });
 
 test('reject deploying with invalid token', async () => {
@@ -3404,8 +3383,8 @@ test('[vc link] should show prompts to set up project', async () => {
   expect(gitignore).toBe('.vercel\n');
 
   // Ensure .vercel/project.json and .vercel/README.txt are created
-  expect(await exists(path.join(dir, '.vercel', 'project.json'))).toBe(true);
-  expect(await exists(path.join(dir, '.vercel', 'README.txt'))).toBe(true);
+  expectFile(path.join(dir, '.vercel', 'project.json'));
+  expectFile(path.join(dir, '.vercel', 'README.txt'));
 });
 
 test('[vc link --yes] should not show prompts and autolink', async () => {
@@ -3431,8 +3410,8 @@ test('[vc link --yes] should not show prompts and autolink', async () => {
   expect(gitignore).toBe('.vercel\n');
 
   // Ensure .vercel/project.json and .vercel/README.txt are created
-  expect(await exists(path.join(dir, '.vercel', 'project.json'))).toBe(true);
-  expect(await exists(path.join(dir, '.vercel', 'README.txt'))).toBe(true);
+  expectFile(path.join(dir, '.vercel', 'project.json'));
+  expectFile(path.join(dir, '.vercel', 'README.txt'));
 });
 
 test('[vc link] should not duplicate paths in .gitignore', async () => {
@@ -3491,8 +3470,8 @@ test('[vc dev] should show prompts to set up project', async () => {
   expect(gitignore).toBe('.vercel\n');
 
   // Ensure .vercel/project.json and .vercel/README.txt are created
-  expect(await exists(path.join(dir, '.vercel', 'project.json'))).toBe(true);
-  expect(await exists(path.join(dir, '.vercel', 'README.txt'))).toBe(true);
+  expectFile(path.join(dir, '.vercel', 'project.json'));
+  expectFile(path.join(dir, '.vercel', 'README.txt'));
 
   await waitForPrompt(dev, chunk => chunk.includes('Ready! Available at'));
 
@@ -3500,7 +3479,7 @@ test('[vc dev] should show prompts to set up project', async () => {
   try {
     const response = await fetch(`http://localhost:${port}/`);
     const text = await response.text();
-    expect(text.includes('<h1>custom hello</h1>')).toBe(true);
+    expect(text).toContain('<h1>custom hello</h1>');
   } finally {
     process.kill(dev.pid, 'SIGTERM');
   }
@@ -3555,8 +3534,8 @@ test('[vc link] should show project prompts but not framework when `builds` defi
   expect(gitignore).toBe('.vercel\n');
 
   // Ensure .vercel/project.json and .vercel/README.txt are created
-  expect(await exists(path.join(dir, '.vercel', 'project.json'))).toBe(true);
-  expect(await exists(path.join(dir, '.vercel', 'README.txt'))).toBe(true);
+  expectFile(path.join(dir, '.vercel', 'project.json'));
+  expectFile(path.join(dir, '.vercel', 'README.txt'));
 });
 
 test('[vc dev] should send the platform proxy request headers to frontend dev server ', async () => {
@@ -3605,9 +3584,7 @@ test('[vc link] should support the `--project` flag', async () => {
   ]);
 
   expect(output.exitCode).toBe(0);
-  expect(
-    output.stderr.includes(`Linked to ${user.username}/${projectName}`)
-  ).toBe(true);
+  expect(output.stderr).toContain(`Linked to ${user.username}/${projectName}`);
 });
 
 test('[vc build] should build project with `@vercel/static-build`', async () => {
@@ -3646,8 +3623,8 @@ test('[vc build] should not include .vercel when distDir is "."', async () => {
     true
   );
   const dir = await fs.readdir(path.join(directory, '.vercel/output/static'));
-  expect(dir.includes('.vercel')).toBe(false);
-  expect(dir.includes('index.txt')).toBe(true);
+  expect(dir).not.toContain('.vercel');
+  expect(dir).toContain('index.txt');
 });
 
 test('[vc build] should not include .vercel when zeroConfig is true and outputDirectory is "."', async () => {
@@ -3658,8 +3635,8 @@ test('[vc build] should not include .vercel when zeroConfig is true and outputDi
     true
   );
   const dir = await fs.readdir(path.join(directory, '.vercel/output/static'));
-  expect(dir.includes('.vercel')).toBe(false);
-  expect(dir.includes('index.txt')).toBe(true);
+  expect(dir).not.toContain('.vercel');
+  expect(dir).toContain('index.txt');
 });
 
 test('vercel.json configuration overrides in a new project prompt user and merges settings correctly', async () => {
