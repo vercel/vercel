@@ -897,7 +897,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
       }
     );
     vc.stdin.end('preview-with-branch');
-    const { exitCode, stderr } = await vc;
+    const { exitCode, stdout, stderr } = await vc;
     expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
     expect(stderr).toMatch(/does not have a connected Git repository/gm);
   }
@@ -1523,7 +1523,7 @@ test('domains inspect', async () => {
     expect(result.exitCode, formatOutput(result)).toBe(0);
   }
 
-  const { stderr, exitCode } = await execa(
+  const { exitCode, stdout, stderr } = await execa(
     binaryPath,
     ['domains', 'inspect', domainName, ...defaultArgs],
     {
@@ -1895,7 +1895,7 @@ test('try to create a builds deployments with wrong vercel.json', async () => {
 test('try to create a builds deployments with wrong `build.env` property', async () => {
   const directory = fixture('builds-wrong-build-env');
 
-  const { stderr, exitCode } = await execa(
+  const { exitCode, stdout, stderr } = await execa(
     binaryPath,
     ['--public', ...defaultArgs, '--yes'],
     {
@@ -1916,7 +1916,7 @@ test('try to create a builds deployments with wrong `build.env` property', async
 test('create a builds deployments with no actual builds', async () => {
   const directory = fixture('builds-no-list');
 
-  const { stdout, stderr, exitCode } = await execa(
+  const { exitCode, stdout, stderr } = await execa(
     binaryPath,
     [
       directory,
@@ -2001,7 +2001,7 @@ test('create a production deployment', async () => {
 test('use build-env', async () => {
   const directory = fixture('build-env');
 
-  const { stdout, exitCode } = await execa(
+  const { exitCode, stdout, stderr } = await execa(
     binaryPath,
     [directory, '--public', ...defaultArgs, '--yes'],
     {
@@ -2060,7 +2060,7 @@ test('initialize example "angular"', async () => {
   const cwd = tmpDir.name;
   const goal = '> Success! Initialized "angular" example in';
 
-  const { stderr, exitCode } = await execute(['init', 'angular'], {
+  const { exitCode, stdout, stderr } = await execute(['init', 'angular'], {
     cwd,
   });
 
@@ -2086,9 +2086,12 @@ test('initialize example ("angular") to specified directory', async () => {
   const cwd = tmpDir.name;
   const goal = '> Success! Initialized "angular" example in';
 
-  const { stderr, exitCode } = await execute(['init', 'angular', 'ang'], {
-    cwd,
-  });
+  const { exitCode, stdout, stderr } = await execute(
+    ['init', 'angular', 'ang'],
+    {
+      cwd,
+    }
+  );
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
   expect(stderr).toContain(goal);
@@ -2114,9 +2117,12 @@ test('initialize example to existing directory with "-f"', async () => {
 
   await ensureDir(path.join(cwd, 'angular'));
   createFile(path.join(cwd, 'angular', '.gitignore'));
-  const { stderr, exitCode } = await execute(['init', 'angular', '-f'], {
-    cwd,
-  });
+  const { exitCode, stdout, stderr } = await execute(
+    ['init', 'angular', '-f'],
+    {
+      cwd,
+    }
+  );
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
   expect(stderr).toContain(goal);
@@ -2143,7 +2149,7 @@ test('try to initialize example to existing directory', async () => {
 
   await ensureDir(path.join(cwd, 'angular'));
   createFile(path.join(cwd, 'angular', '.gitignore'));
-  const { stderr, exitCode } = await execute(['init', 'angular'], {
+  const { exitCode, stdout, stderr } = await execute(['init', 'angular'], {
     cwd,
     input: '\n',
   });
@@ -2170,7 +2176,7 @@ test('try to initialize example "example-404"', async () => {
   const goal =
     'Error: No example found for example-404, run `vercel init` to see the list of available examples.';
 
-  const { stderr, exitCode } = await execute(['init', 'example-404'], {
+  const { exitCode, stdout, stderr } = await execute(['init', 'example-404'], {
     cwd,
   });
 
@@ -2190,10 +2196,11 @@ test('try to revert a deployment and assign the automatic aliases', async () => 
   const url = `https://${name}.user.vercel.app`;
 
   {
-    const { stdout: deploymentUrl, exitCode } = await execute([
+    const { exitCode, stdout, stderr } = await execute([
       firstDeployment,
       '--yes',
     ]);
+    const deploymentUrl = stdout;
 
     expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
@@ -2206,10 +2213,11 @@ test('try to revert a deployment and assign the automatic aliases', async () => 
   }
 
   {
-    const { stdout: deploymentUrl, exitCode } = await execute([
+    const { exitCode, stdout, stderr } = await execute([
       secondDeployment,
       '--yes',
     ]);
+    const deploymentUrl = stdout;
 
     expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
@@ -2224,10 +2232,11 @@ test('try to revert a deployment and assign the automatic aliases', async () => 
   }
 
   {
-    const { stdout: deploymentUrl, exitCode } = await execute([
+    const { exitCode, stdout, stderr } = await execute([
       firstDeployment,
       '--yes',
     ]);
+    const deploymentUrl = stdout;
 
     expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
@@ -2251,7 +2260,7 @@ test('whoami', async () => {
 
 test('[vercel dev] fails when dev script calls vercel dev recursively', async () => {
   const deploymentPath = fixture('now-dev-fail-dev-script');
-  const { exitCode, stderr } = await execute(['dev', deploymentPath]);
+  const { exitCode, stdout, stderr } = await execute(['dev', deploymentPath]);
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
   expect(stderr).toContain('must not recursively invoke itself');
@@ -2280,33 +2289,36 @@ test('[vercel dev] fails when development command calls vercel dev recursively',
 test('`vercel rm` removes a deployment', async () => {
   const directory = fixture('static-deployment');
 
-  const { stdout } = await execa(
-    binaryPath,
-    [
-      directory,
-      '--public',
-      '--name',
-      session,
-      ...defaultArgs,
-      '-V',
-      2,
-      '--force',
-      '--yes',
-    ],
-    {
-      reject: false,
-    }
-  );
+  let host;
 
-  const { host } = new URL(stdout);
-  const { exitCode, stdout: stdoutRemove } = await execute([
-    'rm',
-    host,
-    '--yes',
-  ]);
+  {
+    const { exitCode, stdout, stderr } = await execa(
+      binaryPath,
+      [
+        directory,
+        '--public',
+        '--name',
+        session,
+        ...defaultArgs,
+        '-V',
+        2,
+        '--force',
+        '--yes',
+      ],
+      {
+        reject: false,
+      }
+    );
+    expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
+    host = new URL(stdout).host;
+  }
 
-  expect(stdoutRemove).toContain(host);
-  expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
+  {
+    const { exitCode, stdout, stderr } = await execute(['rm', host, '--yes']);
+
+    expect(stdout).toContain(host);
+    expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
+  }
 });
 
 test('`vercel rm` should fail with unexpected option', async () => {
@@ -3174,14 +3186,14 @@ test('deploy pnpm twice using pnp and symlink=false', async () => {
     ]);
   }
 
-  let { exitCode, stdout } = await deploy();
+  let { exitCode, stdout, stderr } = await deploy();
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   let page = await fetch(stdout);
   let text = await page.text();
   expect(text).toBe('no cache\n');
 
-  ({ exitCode, stdout } = await deploy());
+  ({ exitCode, stdout, stderr } = await deploy());
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   page = await fetch(stdout);
