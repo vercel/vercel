@@ -34,8 +34,6 @@ it('should match the probes against Python dev servers', async () => {
   ports.set('/api/wsgi.py', 8002);
   ports.set('/api/asgi.py', 8003);
 
-  // testing
-
   const { probes } = require(path.join(fixture, 'probes.json'));
 
   const pythonServer = spawn('python3', ['api/python.py'], {
