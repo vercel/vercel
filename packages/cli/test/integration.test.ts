@@ -854,7 +854,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
     );
     vc.stdin.write('a\n'); // select all
 
-    const { exitCode } = await vc;
+    const { exitCode, stdout, stderr } = await vc;
 
     expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
   }
@@ -869,7 +869,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
       }
     );
     vc.stdin.end('{"expect":"quotes"}');
-    const { exitCode } = await vc;
+    const { exitCode, stdout, stderr } = await vc;
     expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
   }
 
@@ -883,7 +883,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
       }
     );
     vc.stdin.end('preview-no-branch');
-    const { exitCode } = await vc;
+    const { exitCode, stdout, stderr } = await vc;
     expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
   }
 
@@ -1014,7 +1014,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
     );
     vc.stdin.end('y\n');
 
-    const { exitCode } = await vc;
+    const { exitCode, stdout, stderr } = await vc;
     expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
   }
 
@@ -1077,7 +1077,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
 
     vc.kill('SIGTERM', { forceKillAfterTimeout: 2000 });
 
-    const { exitCode } = await vc;
+    const { exitCode, stdout, stderr } = await vc;
     expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
   }
 
@@ -1118,7 +1118,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
 
     vc.kill('SIGTERM', { forceKillAfterTimeout: 2000 });
 
-    const { exitCode } = await vc;
+    const { exitCode, stdout, stderr } = await vc;
     expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
   }
 
@@ -1201,7 +1201,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
 
     vc.kill('SIGTERM', { forceKillAfterTimeout: 2000 });
 
-    const { exitCode } = await vc;
+    const { exitCode, stdout, stderr } = await vc;
     expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
   }
 
@@ -1214,7 +1214,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
       chunk.includes('What’s the name of the variable?')
     );
     vc.stdin.write('MY_PREVIEW\n');
-    const { exitCode } = await vc;
+    const { exitCode, stdout, stderr } = await vc;
     expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
   }
 
@@ -1317,7 +1317,7 @@ test('[vc projects] should create a project successfully', async () => {
     chunk.includes(`Success! Project ${projectName} added`)
   );
 
-  const { exitCode } = await vc;
+  const { exitCode, stdout, stderr } = await vc;
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   // creating the same project again should succeed
