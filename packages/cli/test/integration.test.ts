@@ -204,8 +204,6 @@ function getTmpDir(): TmpDir {
   }) as TmpDir;
 }
 
-// AVA's `t.context` can only be set before the tests,
-// but we want to set it within as well
 const context: {
   deployment: string | undefined;
   secretName: string | undefined;
