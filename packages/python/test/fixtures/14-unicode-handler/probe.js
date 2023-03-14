@@ -1,6 +1,6 @@
 module.exports = async function({ deploymentUrl, fetch }) {
-  const nowjson = require('./now.json');
-  const probe = nowjson.probes[0];
+  const probesFile = require('./probes.json');
+  const probe = probesFile.probes[0];
   const probeUrl = `https://${deploymentUrl}${probe.path}`;
   const resp = await fetch(probeUrl, {
     method: 'POST',

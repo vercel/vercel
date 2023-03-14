@@ -247,6 +247,9 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
       }
       for (const expected of expectedArr) {
         let isEqual = false;
+        if (!actualArr.length) {
+          throw new Error(`actualErr is not iterable: ${actualArr}`);
+        }
         for (const actual of actualArr) {
           isEqual =
             expected.startsWith('/') && expected.endsWith('/')
