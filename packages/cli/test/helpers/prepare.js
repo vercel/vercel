@@ -182,14 +182,21 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
         'readme contents for build-output-api-raw',
     },
     'local-config-v2': {
+      '.vercel/project.json': JSON.stringify({
+        orgId: '.',
+        projectId: '.',
+        settings: {
+          framework: null,
+        },
+      }),
       [`main-${session}.html`]: '<h1>hello main</h1>',
       [`test-${session}.html`]: '<h1>hello test</h1>',
-      'now.json': JSON.stringify({
+      'vercel.json': JSON.stringify({
         name: 'original',
         builds: [{ src: `main-${session}.html`, use: '@vercel/static' }],
         routes: [{ src: '/another-main', dest: `/main-${session}.html` }],
       }),
-      'now-test.json': JSON.stringify({
+      'vercel-test.json': JSON.stringify({
         name: 'secondary',
         builds: [{ src: `test-${session}.html`, use: '@vercel/static' }],
         routes: [{ src: '/another-test', dest: `/test-${session}.html` }],

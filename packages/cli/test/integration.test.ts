@@ -707,7 +707,7 @@ test('deploy using only now.json with `redirects` defined', async () => {
 
 test('deploy using --local-config flag v2', async () => {
   const target = fixture('local-config-v2');
-  const configPath = path.join(target, 'now-test.json');
+  const configPath = path.join(target, 'vercel-test.json');
 
   const { exitCode, stdout, stderr } = await execa(
     binaryPath,
@@ -3682,4 +3682,42 @@ test('vercel.json configuration overrides in an existing project do not prompt u
   page = await fetch(deployment.stdout);
   text = await page.text();
   expect(text).toMatch(/Next\.js Test/);
+});
+
+test('[vc build] should use --local-config over default vercel.json', async () => {
+  const directory = fixture('local-config-v2');
+
+  // test using the `vercel.json`
+  let output = await execute(['build'], { cwd: directory });
+  expect(output.exitCode, formatOutput(output)).toBe(0);
+  expect(output.stderr).toContain('Build Completed in .vercel/output');
+  let config = await fs.readJson(
+    path.join(directory, '.vercel/output/config.json')
+  );
+  expect(config.routes).toContainEqual({
+    src: '^/another-main$',
+    dest: '/main-chrisbarber.html',
+  });
+  expect(config.routes).not.toContainEqual({
+    src: '^/another-test$',
+    dest: '/test-chrisbarber.html',
+  });
+
+  // test using the local config `vercel-test.json`
+  output = await execute(['build', '--local-config', 'vercel-test.json'], {
+    cwd: directory,
+  });
+  expect(output.exitCode, formatOutput(output)).toBe(0);
+  expect(output.stderr).toContain('Build Completed in .vercel/output');
+  config = await fs.readJson(
+    path.join(directory, '.vercel/output/config.json')
+  );
+  expect(config.routes).not.toContainEqual({
+    src: '^/another-main$',
+    dest: '/main-chrisbarber.html',
+  });
+  expect(config.routes).toContainEqual({
+    src: '^/another-test$',
+    dest: '/test-chrisbarber.html',
+  });
 });
