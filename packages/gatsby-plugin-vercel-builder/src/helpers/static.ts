@@ -1,5 +1,5 @@
 import { join, dirname } from 'path';
-import { copy, move, ensureDir } from 'fs-extra';
+import { copy, ensureDir, link } from 'fs-extra';
 
 export async function createStaticDir(prefix?: string) {
   const publicDir = join(process.cwd(), 'public');
@@ -12,7 +12,7 @@ export async function createStaticDir(prefix?: string) {
   );
   await ensureDir(dirname(targetDir));
   try {
-    await move(publicDir, targetDir);
+    await link(publicDir, targetDir);
   } catch (err: any) {
     console.error(
       `Failed to move "public" dir from "${publicDir}" to "${targetDir}". Copying instead.`,
