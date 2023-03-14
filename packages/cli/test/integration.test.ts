@@ -1367,7 +1367,7 @@ test('print the deploy help message', async () => {
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(2);
   expect(stderr).toContain(deployHelpMessage);
-  expect(stderr).toContain('ExperimentalWarning');
+  expect(stderr).not.toContain('ExperimentalWarning');
 });
 
 test('output the version', async () => {
