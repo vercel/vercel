@@ -31,6 +31,7 @@ async function hardlinkFileTree(
 
       console.log(`link("${currentAbsoluteSubPath}", "${linkDestPath}");`);
 
+      await ensureDir(dirname(linkDestPath));
       await link(currentAbsoluteSubPath, linkDestPath);
     }
   }
@@ -45,7 +46,7 @@ export async function createStaticDir(prefix?: string) {
     'static',
     prefix ?? ''
   );
-  await ensureDir(dirname(targetDir));
+
   try {
     await hardlinkFileTree(publicDir, targetDir);
   } catch (err: any) {
