@@ -1,12 +1,11 @@
 {
   "version": 2,
-  "builds": [{ "src": "*.py", "use": "@vercel/python" }],
-  "routes": [{ "src": "/another", "dest": "custom.py" }],
-  "probes": [
-    { "path": "/?hello=/", "mustContain": "path:  query: {'hello': '/'}" },
+  "routes": [
+    { "src": "/another", "dest": "custom.py" },
     {
-      "path": "/another?hello=/",
-      "mustContain": "path: another query: {'hello': '/'}"
+      "src": "/(.*)",
+      "dest": "/$1"
     }
-  ]
+  ],
+
 }

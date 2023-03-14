@@ -1,0 +1,8 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "mustContain": "wsgi:RANDOMNESS_PLACEHOLDER"
+    }
+  ]
+}

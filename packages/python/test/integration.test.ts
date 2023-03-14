@@ -36,7 +36,7 @@ it('should match the probes against Python dev servers', async () => {
 
   // testing
 
-  const { probes } = require(path.join(fixture, 'vercel.json'));
+  const { probes } = require(path.join(fixture, 'probes.json'));
 
   const pythonServer = spawn('python3', ['api/python.py'], {
     cwd: fixture,

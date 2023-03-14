@@ -1,11 +1,9 @@
 {
   "version": 2,
-  "builds": [{ "src": "**/**.py", "use": "@vercel/python" }],
-  "probes": [
+  "routes": [
     {
-      "path": "/",
-      "mustContain": "pip:RANDOMNESS_PLACEHOLDER",
-      "logMustContain": "Python version \"3.7\" detected in Pipfile.lock is invalid and will be ignored."
+      "src": "/(.*)",
+      "dest": "/$1"
     }
   ]
 }

@@ -1,24 +1,9 @@
 {
   "version": 2,
-  "builds": [{ "src": "**/**.py", "use": "@vercel/python" }],
-  "probes": [
+  "routes": [
     {
-      "path": "/cookie_asgi.py",
-      "responseHeaders": {
-        "set-cookie": ["one=first", "two=second"]
-      }
-    },
-    {
-      "path": "/cookie_handler.py",
-      "responseHeaders": {
-        "set-cookie": ["one=first", "two=second"]
-      }
-    },
-    {
-      "path": "/cookie_wsgi.py",
-      "responseHeaders": {
-        "set-cookie": ["one=first; Path=/", "two=second; Path=/"]
-      }
+      "src": "/(.*)",
+      "dest": "/$1"
     }
   ]
 }

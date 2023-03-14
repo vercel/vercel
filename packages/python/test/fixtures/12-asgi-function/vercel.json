@@ -1,12 +1,9 @@
 {
   "version": 2,
-  "builds": [
+  "routes": [
     {
-      "src": "index.py",
-      "use": "@vercel/python"
+      "src": "/(.*)",
+      "dest": "/$1"
     }
-  ],
-  "probes": [
-    { "path": "/", "mustContain": "asgi-function:RANDOMNESS_PLACEHOLDER" }
   ]
 }

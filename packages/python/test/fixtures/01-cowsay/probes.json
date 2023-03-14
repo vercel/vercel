@@ -1,0 +1,6 @@
+{
+  "probes": [
+    { "path": "/", "mustContain": "pip:RANDOMNESS_PLACEHOLDER" },
+    { "path": "/another", "mustContain": "upper:RANDOMNESS_PLACEHOLDER" }
+  ]
+}
