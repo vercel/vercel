@@ -35,10 +35,6 @@ function execa(file, args, options) {
   return _execa(file, args, options);
 }
 
-function expectFile(path) {
-  expect(path, `file should exist at "${path}"`).toBe(true);
-}
-
 function fixture(name) {
   const directory = path.join(tmpFixturesDir, name);
   const config = path.join(directory, 'project.json');
@@ -2063,12 +2059,6 @@ test('try to deploy with non-existing team', async () => {
   expect(stderr).toContain(goal);
 });
 
-const verifyExampleAngular = (cwd, dir) => {
-  expectFile(fs.existsSync(path.join(cwd, dir, 'package.json')));
-  expectFile(fs.existsSync(path.join(cwd, dir, 'tsconfig.json')));
-  expectFile(fs.existsSync(path.join(cwd, dir, 'angular.json')));
-};
-
 test('initialize example "angular"', async () => {
   tmpDir = tmp.dirSync({ unsafeCleanup: true });
   const cwd = tmpDir.name;
@@ -2080,7 +2070,19 @@ test('initialize example "angular"', async () => {
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
   expect(stderr).toContain(goal);
-  verifyExampleAngular(cwd, 'angular');
+
+  expect(
+    fs.existsSync(path.join(cwd, 'angular', 'package.json')),
+    'package.json'
+  ).toBe(true);
+  expect(
+    fs.existsSync(path.join(cwd, 'angular', 'tsconfig.json')),
+    'tsconfig.json'
+  ).toBe(true);
+  expect(
+    fs.existsSync(path.join(cwd, 'angular', 'angular.json')),
+    'angular.json'
+  ).toBe(true);
 });
 
 test('initialize example ("angular") to specified directory', async () => {
@@ -2094,7 +2096,19 @@ test('initialize example ("angular") to specified directory', async () => {
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
   expect(stderr).toContain(goal);
-  verifyExampleAngular(cwd, 'ang');
+
+  expect(
+    fs.existsSync(path.join(cwd, 'ang', 'package.json')),
+    'package.json'
+  ).toBe(true);
+  expect(
+    fs.existsSync(path.join(cwd, 'ang', 'tsconfig.json')),
+    'tsconfig.json'
+  ).toBe(true);
+  expect(
+    fs.existsSync(path.join(cwd, 'ang', 'angular.json')),
+    'angular.json'
+  ).toBe(true);
 });
 
 test('initialize example to existing directory with "-f"', async () => {
@@ -2110,7 +2124,19 @@ test('initialize example to existing directory with "-f"', async () => {
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
   expect(stderr).toContain(goal);
-  verifyExampleAngular(cwd, 'angular');
+
+  expect(
+    fs.existsSync(path.join(cwd, 'angular', 'package.json')),
+    'package.json'
+  ).toBe(true);
+  expect(
+    fs.existsSync(path.join(cwd, 'angular', 'tsconfig.json')),
+    'tsconfig.json'
+  ).toBe(true);
+  expect(
+    fs.existsSync(path.join(cwd, 'angular', 'angular.json')),
+    'angular.json'
+  ).toBe(true);
 });
 
 test('try to initialize example to existing directory', async () => {
@@ -2621,8 +2647,8 @@ test('should show prompts to set up project during first deploy', async () => {
   expect(gitignore).toBe('.vercel\n');
 
   // Ensure .vercel/project.json and .vercel/README.txt are created
-  expectFile(path.join(dir, '.vercel', 'project.json'));
-  expectFile(path.join(dir, '.vercel', 'README.txt'));
+  expect(path.join(dir, '.vercel', 'project.json'));
+  expect(path.join(dir, '.vercel', 'README.txt'));
 
   // Send a test request to the deployment
   const response = await fetch(new URL(output.stdout));
@@ -3236,8 +3262,14 @@ test('[vc link] should show prompts to set up project', async () => {
   expect(gitignore).toBe('.vercel\n');
 
   // Ensure .vercel/project.json and .vercel/README.txt are created
-  expectFile(path.join(dir, '.vercel', 'project.json'));
-  expectFile(path.join(dir, '.vercel', 'README.txt'));
+  expect(
+    fs.existsSync(path.join(dir, '.vercel', 'project.json')),
+    'project.json'
+  ).toBe(true);
+  expect(
+    fs.existsSync(path.join(dir, '.vercel', 'README.txt')),
+    'README.txt'
+  ).toBe(true);
 });
 
 test('[vc link --yes] should not show prompts and autolink', async () => {
@@ -3263,8 +3295,14 @@ test('[vc link --yes] should not show prompts and autolink', async () => {
   expect(gitignore).toBe('.vercel\n');
 
   // Ensure .vercel/project.json and .vercel/README.txt are created
-  expectFile(path.join(dir, '.vercel', 'project.json'));
-  expectFile(path.join(dir, '.vercel', 'README.txt'));
+  expect(
+    fs.existsSync(path.join(dir, '.vercel', 'project.json')),
+    'project.json'
+  ).toBe(true);
+  expect(
+    fs.existsSync(path.join(dir, '.vercel', 'README.txt')),
+    'README.txt'
+  ).toBe(true);
 });
 
 test('[vc link] should not duplicate paths in .gitignore', async () => {
@@ -3323,8 +3361,14 @@ test('[vc dev] should show prompts to set up project', async () => {
   expect(gitignore).toBe('.vercel\n');
 
   // Ensure .vercel/project.json and .vercel/README.txt are created
-  expectFile(path.join(dir, '.vercel', 'project.json'));
-  expectFile(path.join(dir, '.vercel', 'README.txt'));
+  expect(
+    fs.existsSync(path.join(dir, '.vercel', 'project.json')),
+    'project.json'
+  ).toBe(true);
+  expect(
+    fs.existsSync(path.join(dir, '.vercel', 'README.txt')),
+    'README.txt'
+  ).toBe(true);
 
   await waitForPrompt(dev, chunk => chunk.includes('Ready! Available at'));
 
@@ -3387,8 +3431,14 @@ test('[vc link] should show project prompts but not framework when `builds` defi
   expect(gitignore).toBe('.vercel\n');
 
   // Ensure .vercel/project.json and .vercel/README.txt are created
-  expectFile(path.join(dir, '.vercel', 'project.json'));
-  expectFile(path.join(dir, '.vercel', 'README.txt'));
+  expect(
+    fs.existsSync(path.join(dir, '.vercel', 'project.json')),
+    'project.json'
+  ).toBe(true);
+  expect(
+    fs.existsSync(path.join(dir, '.vercel', 'README.txt')),
+    'README.txt'
+  ).toBe(true);
 });
 
 test('[vc dev] should send the platform proxy request headers to frontend dev server ', async () => {
