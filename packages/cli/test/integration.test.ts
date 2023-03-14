@@ -140,8 +140,6 @@ async function vcLink(projectPath) {
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 }
 
-// AVA's `t.context` can only be set before the tests,
-// but we want to set it within as well
 const context = {};
 
 const defaultOptions = { reject: false };
