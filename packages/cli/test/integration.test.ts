@@ -1725,9 +1725,7 @@ test('output logs with "short" output', async () => {
     }
   );
 
-  expect(stderr.includes(`Fetched deployment "${context.deployment}"`)).toBe(
-    true
-  );
+  expect(stderr).toContain(`Fetched deployment "${context.deployment}"`);
 
   // "short" format includes timestamps
   expect(
@@ -1748,9 +1746,7 @@ test('output logs with "raw" output', async () => {
     }
   );
 
-  expect(stderr.includes(`Fetched deployment "${context.deployment}"`)).toBe(
-    true
-  );
+  expect(stderr).toContain(`Fetched deployment "${context.deployment}"`);
 
   // "raw" format does not include timestamps
   expect(null).toBe(
@@ -2309,7 +2305,7 @@ test('`vercel rm` removes a deployment', async () => {
     '--yes',
   ]);
 
-  expect(stdoutRemove.includes(host)).toBeTruthy();
+  expect(stdoutRemove).toContain(host);
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 });
 
@@ -3027,9 +3023,7 @@ test('whoami with `VERCEL_ORG_ID` should favor `--scope` and should error', asyn
   });
 
   expect(output.exitCode, formatOutput(output)).toBe(1);
-  expect(output.stderr.includes('The specified scope does not exist')).toBe(
-    true
-  );
+  expect(output.stderr).toContain('The specified scope does not exist');
 });
 
 test('whoami with local .vercel scope', async () => {
@@ -3105,7 +3099,7 @@ test('reject conflicting `vercel.json` and `now.json` files', async () => {
   );
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
-  expect(stderr.includes).toContain(
+  expect(stderr).toContain(
     'Cannot use both a `vercel.json` and `now.json` file. Please delete the `now.json` file.'
   );
 });
@@ -3209,7 +3203,7 @@ test('reject deploying with wrong team .vercel config', async () => {
   );
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
-  expect(stderr.includes).toContain(
+  expect(stderr).toContain(
     'Could not retrieve Project Settings. To link your Project, remove the `.vercel` directory and deploy again.'
   );
 });
@@ -3494,9 +3488,7 @@ test('[vc build] should build project with `@vercel/static-build`', async () => 
   const directory = fixture('vc-build-static-build');
   const output = await execute(['build'], { cwd: directory });
   expect(output.exitCode, formatOutput(output)).toBe(0);
-  expect(output.stderr.includes('Build Completed in .vercel/output')).toBe(
-    true
-  );
+  expect(output.stderr).toContain('Build Completed in .vercel/output');
 
   expect(
     await fs.readFile(
@@ -3522,9 +3514,7 @@ test('[vc build] should not include .vercel when distDir is "."', async () => {
   const directory = fixture('static-build-dist-dir');
   const output = await execute(['build'], { cwd: directory });
   expect(output.exitCode, formatOutput(output)).toBe(0);
-  expect(output.stderr.includes('Build Completed in .vercel/output')).toBe(
-    true
-  );
+  expect(output.stderr).toContain('Build Completed in .vercel/output');
   const dir = await fs.readdir(path.join(directory, '.vercel/output/static'));
   expect(dir).not.toContain('.vercel');
   expect(dir).toContain('index.txt');
@@ -3534,9 +3524,7 @@ test('[vc build] should not include .vercel when zeroConfig is true and outputDi
   const directory = fixture('static-build-zero-config-output-directory');
   const output = await execute(['build'], { cwd: directory });
   expect(output.exitCode, formatOutput(output)).toBe(0);
-  expect(output.stderr.includes('Build Completed in .vercel/output')).toBe(
-    true
-  );
+  expect(output.stderr).toContain('Build Completed in .vercel/output');
   const dir = await fs.readdir(path.join(directory, '.vercel/output/static'));
   expect(dir).not.toContain('.vercel');
   expect(dir).toContain('index.txt');
