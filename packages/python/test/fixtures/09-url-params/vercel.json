@@ -1,10 +1,10 @@
 {
   "version": 2,
   "routes": [
-    { "src": "/another", "dest": "custom.py" },
+    { "src": "/another", "dest": "/api/custom" },
     {
-      "src": "/(.*)",
-      "dest": "/$1"
+      "src": "/",
+      "dest": "/api"
     }
   ],
 
