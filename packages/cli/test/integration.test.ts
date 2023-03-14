@@ -2655,8 +2655,8 @@ test('should show prompts to set up project during first deploy', async () => {
   expect(gitignore).toBe('.vercel\n');
 
   // Ensure .vercel/project.json and .vercel/README.txt are created
-  expect(path.join(dir, '.vercel', 'project.json'));
-  expect(path.join(dir, '.vercel', 'README.txt'));
+  expect(fs.existsSync(path.join(dir, '.vercel', 'project.json')), 'project.json').toBe(true);
+  expect(fs.existsSync(path.join(dir, '.vercel', 'README.txt')), 'README.txt').toBe(true);
 
   // Send a test request to the deployment
   const response = await fetch(new URL(output.stdout));
