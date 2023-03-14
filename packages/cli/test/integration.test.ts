@@ -24,7 +24,7 @@ import pkg from '../package.json';
 import prepareFixtures from './helpers/prepare';
 import { fetchTokenWithRetry } from '../../../test/lib/deployment/now-deploy';
 import { once } from 'node:events';
-import http from 'http';
+import type http from 'http';
 
 const TEST_TIMEOUT = 3 * 60 * 1000;
 jest.setTimeout(TEST_TIMEOUT);
