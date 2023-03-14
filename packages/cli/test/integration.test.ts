@@ -402,7 +402,7 @@ test(
     const auth = await fs.readJSON(getConfigAuthPath());
     expect(auth.token).toBe(token);
   },
-  { timeout: 60 * 1000 }
+  60 * 1000
 );
 
 test('[vc build] should build project with corepack and select npm@8.1.0', async () => {
@@ -2585,7 +2585,7 @@ test(
     expect(typeof nextUser, nextUser).toBe('string');
     expect(prevUser).not.toBe(nextUser);
   },
-  { timeout: 60 * 1000 }
+  60 * 1000
 );
 
 test('assign a domain to a project', async () => {
