@@ -6,10 +6,6 @@ async function hardlinkFileTree(
   targetAbsolutePath: string,
   currentRelativePath = '.'
 ) {
-  console.log(
-    `hardlinkFileTree("${rootAbsolutePath}", "${targetAbsolutePath}", "${currentRelativePath}");`
-  );
-
   const currentAbsolutePath = join(rootAbsolutePath, currentRelativePath);
   const realtiveFilePaths = await readdir(currentAbsolutePath);
 
@@ -28,8 +24,6 @@ async function hardlinkFileTree(
         currentRelativePath,
         relativePath
       );
-
-      console.log(`link("${currentAbsoluteSubPath}", "${linkDestPath}");`);
 
       await ensureDir(dirname(linkDestPath));
       await link(currentAbsoluteSubPath, linkDestPath);
