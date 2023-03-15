@@ -719,6 +719,7 @@ async function ensureSymlink(
   }
 
   await fs.symlink(relativeTarget, symlinkPath);
+  debug(`Created symlink for "${pkgName}"`);
 }
 
 async function writeEntrypointFile(
