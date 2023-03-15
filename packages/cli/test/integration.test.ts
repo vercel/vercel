@@ -61,7 +61,10 @@ function execa(
   if (proc.stderr === null) {
     console.warn(`vercel ${args.join(' ')} - not bound to stderr`);
   }
-  // Typescript should know this can match because of the guards above
+
+  // if a reference to `proc.stdout` (for example) fails later,
+  // the logs will say clearly where that came from
+  // so, it's not awful to use the type assertion here
   return proc as BoundChildProcess;
 }
 
