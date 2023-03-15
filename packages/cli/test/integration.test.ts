@@ -283,6 +283,9 @@ const apiFetch = (url: string, { headers, ...options }: any = {}) => {
   });
 };
 
+// the prompt timeout has to be less than the test timeout
+const PROMPT_TIMEOUT = TEST_TIMEOUT / 2;
+
 const waitForPrompt = (
   cp: BoundChildProcess,
   assertion: (chunk: string) => boolean
@@ -290,8 +293,11 @@ const waitForPrompt = (
   new Promise<void>((resolve, reject) => {
     console.log('Waiting for prompt...');
     const handleTimeout = setTimeout(
-      () => reject(new Error('timeout in waitForPrompt')),
-      TEST_TIMEOUT / 2
+      () =>
+        reject(
+          new Error(`timed out after ${PROMPT_TIMEOUT}ms in waitForPrompt`)
+        ),
+      PROMPT_TIMEOUT
     );
     const listener = (chunk: string) => {
       console.log('> ' + chunk);
