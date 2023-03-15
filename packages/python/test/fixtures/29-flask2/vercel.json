@@ -1,9 +1,0 @@
-{
-  "version": 2,
-  "probes": [
-    {
-      "path": "/api/werkzeug_version.py",
-      "mustContain": "2.0.1"
-    }
-  ]
-}

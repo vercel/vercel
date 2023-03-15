@@ -3,7 +3,10 @@
     {
       "path": "/",
       "mustContain": "pip:RANDOMNESS_PLACEHOLDER",
-      "logMustContain": "Python version \"3.7\" detected in Pipfile.lock is invalid and will be ignored."
+      "logMustContain": "Python version \"3.7\" detected in Pipfile.lock is invalid and will be ignored.",
+      "responseHeaders": {
+        "content-type": "text/html"
+      }
     }
   ]
 }

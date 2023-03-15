@@ -1,9 +1,18 @@
 {
   "probes": [
-    { "path": "/?hello=/", "mustContain": "path:  query: {'hello': '/'}" },
+    {
+      "path": "/?hello=/",
+      "mustContain": "path:  query: {'hello': '/'}",
+      "responseHeaders": {
+        "content-type": "text/html; charset=utf-8"
+      }
+    },
     {
       "path": "/another?hello=/",
-      "mustContain": "path: another query: {'hello': '/'}"
+      "mustContain": "path: another query: {'hello': '/'}",
+      "responseHeaders": {
+        "content-type": "text/html; charset=utf-8"
+      }
     }
   ]
 }

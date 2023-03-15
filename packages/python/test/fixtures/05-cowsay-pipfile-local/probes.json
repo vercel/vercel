@@ -1,3 +1,9 @@
 {
-  "probes": [{ "path": "/local", "mustContain": "pip:RANDOMNESS_PLACEHOLDER" }]
+  "probes": [{
+    "path": "/local",
+    "mustContain": "pip:RANDOMNESS_PLACEHOLDER",
+    "responseHeaders": {
+      "content-type": "text/plain"
+    }
+  }]
 }

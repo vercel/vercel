@@ -1,8 +1,8 @@
 {
   "probes": [
     {
-      "path": "/",
-      "mustContain": "wsgi:RANDOMNESS_PLACEHOLDER",
+      "path": "/api/werkzeug_version.py",
+      "mustContain": "2.0.1",
       "responseHeaders": {
         "content-type": "text/html; charset=utf-8"
       }

@@ -2,11 +2,17 @@
   "probes": [
     {
       "path": "/api/yes.py",
-      "mustContain": "True:True:RANDOMNESS_PLACEHOLDER"
+      "mustContain": "True:True:RANDOMNESS_PLACEHOLDER",
+      "responseHeaders": {
+        "content-type": "text/plain"
+      }
     },
     {
       "path": "/api/no.py",
-      "mustContain": "False:False:RANDOMNESS_PLACEHOLDER"
+      "mustContain": "False:False:RANDOMNESS_PLACEHOLDER",
+      "responseHeaders": {
+        "content-type": "text/plain"
+      }
     }
   ]
 }

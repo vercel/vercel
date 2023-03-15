@@ -1,6 +1,18 @@
 {
   "probes": [
-    { "path": "/", "mustContain": "pip:RANDOMNESS_PLACEHOLDER" },
-    { "path": "/another", "mustContain": "upper:RANDOMNESS_PLACEHOLDER" }
+    {
+      "path": "/",
+      "mustContain": "pip:RANDOMNESS_PLACEHOLDER",
+      "responseHeaders": {
+        "content-type": "text/plain"
+      }
+    },
+    {
+      "path": "/another",
+      "mustContain": "upper:RANDOMNESS_PLACEHOLDER",
+      "responseHeaders": {
+        "content-type": "text/plain"
+      }
+    }
   ]
 }

@@ -6,7 +6,10 @@
       "body": {
         "name": "RANDOMNESS_PLACEHOLDER"
       },
-      "mustContain": "{\"name\":\"RANDOMNESS_PLACEHOLDER\"}"
+      "mustContain": "{\"name\":\"RANDOMNESS_PLACEHOLDER\"}",
+      "responseHeaders": {
+        "content-type": "application/json"
+      }
     }
   ]
 }
