@@ -1,6 +1,6 @@
 import { join } from 'path';
 import { copy } from 'fs-extra';
-import { hardLinkDir } from './hard-link-dir';
+import { hardLinkDir } from '@vercel/build-utils';
 
 export async function createStaticDir(prefix?: string) {
   const publicDir = join(process.cwd(), 'public');
