@@ -719,9 +719,6 @@ async function ensureSymlink(
   }
 
   await fs.symlink(relativeTarget, symlinkPath);
-  console.warn(
-    `WARN: Created symlink for "${pkgName}". To silence this warning, add "${pkgName}" to "dependencies" in your \`package.json\` file.`
-  );
 }
 
 async function writeEntrypointFile(
