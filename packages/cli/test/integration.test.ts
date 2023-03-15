@@ -53,13 +53,13 @@ function execa(
   console.log(`$ vercel ${args.join(' ')}`);
   const proc = _execa(file, args, options);
   if (proc.stdin === null) {
-    throw new Error(`vercel ${args.join(' ')} - failed to bind to stdin`);
+    console.warn(`vercel ${args.join(' ')} - not bound to stdin`);
   }
   if (proc.stdout === null) {
-    throw new Error(`vercel ${args.join(' ')} - failed to bind to stdout`);
+    console.warn(`vercel ${args.join(' ')} - not bound to stdout`);
   }
   if (proc.stderr === null) {
-    throw new Error(`vercel ${args.join(' ')} - failed to bind to stderr`);
+    console.warn(`vercel ${args.join(' ')} - not bound to stderr`);
   }
   // Typescript should know this can match because of the guards above
   return proc as BoundChildProcess;
