@@ -1,5 +1,4 @@
 import { join } from 'path';
-import { copy } from 'fs-extra';
 import { hardLinkDir } from '@vercel/build-utils';
 
 export async function createStaticDir(prefix?: string) {
@@ -15,10 +14,9 @@ export async function createStaticDir(prefix?: string) {
   try {
     await hardLinkDir(publicDir, [targetDir]);
   } catch (err: any) {
-    console.error(
-      `Failed to hardlink "public" dir files from "${publicDir}" to "${targetDir}". Copying instead.`,
-      err
+    console.error(err);
+    throw new Error(
+      `Failed to hardlink "public" dir files from "${publicDir}" to "${targetDir}". Copying instead.`
     );
-    await copy(publicDir, targetDir);
   }
 }
