@@ -9,6 +9,6 @@ class RequestData(BaseModel):
 app = FastAPI()
 
 
-@app.post("/")
+@app.post("/api/hello")
 async def xinchao(data: RequestData):
     return {'name': data.name}
