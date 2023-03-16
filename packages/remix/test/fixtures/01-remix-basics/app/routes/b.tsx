@@ -1,6 +1,8 @@
 import { loader } from '~/b.server';
 import { useLoaderData } from '@remix-run/react';
 
+export const config = { regions: ['sfo1'] };
+
 export { loader };
 
 export default function B() {

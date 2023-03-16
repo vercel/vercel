@@ -1,7 +1,7 @@
 import fs from 'fs-extra';
 import chalk from 'chalk';
 import dotenv from 'dotenv';
-import { join, normalize, relative, resolve } from 'path';
+import { join, normalize, relative, resolve, sep } from 'path';
 import {
   getDiscontinuedNodeVersions,
   normalizePath,
@@ -296,13 +296,15 @@ async function doBuild(
   cwd: string,
   outputDir: string
 ): Promise<void> {
-  const { output } = client;
+  const { localConfigPath, output } = client;
 
   const workPath = join(cwd, project.settings.rootDirectory || '.');
 
   const [pkg, vercelConfig, nowConfig] = await Promise.all([
     readJSONFile<PackageJson>(join(workPath, 'package.json')),
-    readJSONFile<VercelConfig>(join(workPath, 'vercel.json')),
+    readJSONFile<VercelConfig>(
+      localConfigPath || join(workPath, 'vercel.json')
+    ),
     readJSONFile<VercelConfig>(join(workPath, 'now.json')),
   ]);
 
@@ -710,7 +712,9 @@ function expandBuild(files: string[], build: Builder): Builder[] {
     });
   }
 
-  let src = normalize(build.src || '**');
+  let src = normalize(build.src || '**')
+    .split(sep)
+    .join('/');
   if (src === '.' || src === './') {
     throw new NowBuildError({
       code: `invalid_build_specification`,

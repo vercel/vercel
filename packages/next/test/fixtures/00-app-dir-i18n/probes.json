@@ -26,6 +26,12 @@
     },
     {
       "fetchOptions": { "redirect": "manual" },
+      "path": "/en/enter",
+      "status": 200,
+      "mustContain": "My Enter Page"
+    },
+    {
+      "fetchOptions": { "redirect": "manual" },
       "path": "/en/other",
       "status": 200,
       "mustContain": "My Other Page"

@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import { join } from 'path';
 import Client from '../util/client';
-import { ProjectEnvTarget } from '../types';
+import type { Project, ProjectEnvTarget } from '@vercel-internals/types';
 import { emoji, prependEmoji } from '../util/emoji';
 import getArgs from '../util/get-args';
 import logo from '../util/output/logo';
@@ -10,7 +10,6 @@ import { getPkgName } from '../util/pkg-name';
 import { VERCEL_DIR, VERCEL_DIR_PROJECT } from '../util/projects/link';
 import { writeProjectSettings } from '../util/projects/project-settings';
 import envPull from './env/pull';
-import type { Project } from '../types';
 import {
   isValidEnvTarget,
   getEnvTargetPlaceholder,

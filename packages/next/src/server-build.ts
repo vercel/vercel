@@ -154,6 +154,15 @@ export async function serverBuild({
     ? path.join(baseDir, requiredServerFilesManifest.relativeAppDir)
     : requiredServerFilesManifest.appDir || entryPath;
 
+  // allow looking up original route from normalized route
+  const inversedAppPathManifest: Record<string, string> = {};
+
+  if (appPathRoutesManifest) {
+    for (const ogRoute of Object.keys(appPathRoutesManifest)) {
+      inversedAppPathManifest[appPathRoutesManifest[ogRoute]] = ogRoute;
+    }
+  }
+
   let appBuildTraces: UnwrapPromise<ReturnType<typeof glob>> = {};
   let appDir: string | null = null;
 
@@ -186,8 +195,9 @@ export async function serverBuild({
   }
 
   const pageMatchesApi = (page: string) => {
+    const normalizedPage = `/${page.replace(/\.js$/, '')}`;
     return (
-      !appPathRoutesManifest?.[page] &&
+      !inversedAppPathManifest[normalizedPage] &&
       (page.startsWith('api/') || page === 'api.js')
     );
   };
@@ -1167,15 +1177,9 @@ export async function serverBuild({
     // to match prerenders so we can route the same when the
     // __rsc__ header is present
     const edgeFunctions = middleware.edgeFunctions;
-    // allow looking up original route from normalized route
-    const inverseAppPathManifest: Record<string, string> = {};
-
-    for (const ogRoute of Object.keys(appPathRoutesManifest)) {
-      inverseAppPathManifest[appPathRoutesManifest[ogRoute]] = ogRoute;
-    }
 
     for (let route of Object.values(appPathRoutesManifest)) {
-      const ogRoute = inverseAppPathManifest[route];
+      const ogRoute = inversedAppPathManifest[route];
 
       if (ogRoute.endsWith('/route')) {
         continue;
@@ -1554,9 +1558,18 @@ export async function serverBuild({
       ...(i18n
         ? [
             {
+              src: path.posix.join(
+                '/',
+                entryDirectory,
+                escapeStringRegexp(i18n.defaultLocale)
+              ),
+              dest: '/',
+              check: true,
+            },
+            {
               src: `^${path.posix.join('/', entryDirectory)}/?(?:${i18n.locales
                 .map(locale => escapeStringRegexp(locale))
-                .join('|')})/?(.*)`,
+                .join('|')})/(.*)`,
               dest: `${path.posix.join('/', entryDirectory, '/')}$1`,
               check: true,
             },

@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import { Org, Project } from '../../types';
+import { Org, Project } from '@vercel-internals/types';
 import Client from '../../util/client';
 import confirm from '../../util/input/confirm';
 import { getCommandName } from '../../util/pkg-name';

@@ -50,7 +50,7 @@ import getUpdateCommand from './util/get-update-command';
 import { metrics, shouldCollectMetrics } from './util/metrics';
 import { getCommandName, getTitleName } from './util/pkg-name';
 import doLoginPrompt from './util/login/prompt';
-import { AuthConfig, GlobalConfig } from './types';
+import { AuthConfig, GlobalConfig } from '@vercel-internals/types';
 import { VercelConfig } from '@vercel/client';
 import box from './util/output/box';
 
@@ -267,6 +267,7 @@ const main = async () => {
     config,
     authConfig,
     localConfig,
+    localConfigPath,
     argv: process.argv,
   });
 
