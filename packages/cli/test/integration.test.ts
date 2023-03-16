@@ -122,7 +122,7 @@ const waitForDeployment = async (href: RequestInfo) => {
   }
 };
 
-function fetchTokenInformation(token: any, retries = 3) {
+function fetchTokenInformation(token: string, retries = 3) {
   const url = `https://api.vercel.com/v2/user`;
   const headers = { Authorization: `Bearer ${token}` };
 
