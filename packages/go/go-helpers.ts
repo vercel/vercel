@@ -22,6 +22,7 @@ import type { Env } from '@vercel/build-utils';
 const streamPipeline = promisify(pipeline);
 
 const versionMap = new Map([
+  ['1.20', '1.20.1'],
   ['1.19', '1.19.6'],
   ['1.18', '1.18.10'],
   ['1.17', '1.17.13'],
