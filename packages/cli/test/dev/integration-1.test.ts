@@ -302,12 +302,12 @@ test('[vercel dev] should handle missing handler errors thrown in edge functions
     );
     validateResponseHeaders(res);
 
-    const { stdout } = await dev.kill();
+    const { stderr } = await dev.kill();
 
     expect(await res.text()).toMatch(
       /<strong>500<\/strong>: INTERNAL_SERVER_ERROR/g
     );
-    expect(stdout).toMatch(
+    expect(stderr).toMatch(
       /No default export was found. Add a default export to handle requests./g
     );
   } finally {

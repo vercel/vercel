@@ -50,9 +50,7 @@ export async function setMonorepoDefaultSettings(
     const { monorepoManager, ...commands } = result;
 
     output.log(
-      `Automatically detected ${title(
-        monorepoManager
-      )} monorepo manager. Attempting to assign default settings.`
+      `Detected ${title(monorepoManager)}. Adjusting default settings...`
     );
 
     if (commands.buildCommand) {

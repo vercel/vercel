@@ -69,13 +69,28 @@ async function compileUserCode(
 
       // user code
       ${compiledFile.text};
+      const userEdgeHandler = module.exports.default;
+      if (!userEdgeHandler) {
+        throw new Error(
+          'No default export was found. Add a default export to handle requests. Learn more: https://vercel.link/creating-edge-middleware'
+        );
+      }
 
       // request metadata
-      const IS_MIDDLEWARE = ${isMiddleware};
-      const ENTRYPOINT_LABEL = '${entrypointRelativePath}';
+      const isMiddleware = ${isMiddleware};
+      const entrypointLabel = '${entrypointRelativePath}';
 
       // edge handler
-      ${edgeHandlerTemplate}
+      ${edgeHandlerTemplate};
+      const dependencies = {
+        Request,
+        Response
+      };
+      const options = {
+        isMiddleware,
+        entrypointLabel
+      };
+      registerFetchListener(userEdgeHandler, options, dependencies);
     `;
 
     return { userCode, wasmAssets };

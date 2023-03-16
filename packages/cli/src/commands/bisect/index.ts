@@ -13,7 +13,7 @@ import logo from '../../util/output/logo';
 import getArgs from '../../util/get-args';
 import Client from '../../util/client';
 import { getPkgName } from '../../util/pkg-name';
-import { Deployment, PaginationOptions } from '../../types';
+import { Deployment, PaginationOptions } from '@vercel-internals/types';
 import { normalizeURL } from '../../util/bisect/normalize-url';
 import getScope from '../../util/get-scope';
 import getDeployment from '../../util/get-deployment';

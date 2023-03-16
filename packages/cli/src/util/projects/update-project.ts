@@ -1,5 +1,5 @@
 import Client from '../client';
-import type { JSONObject, ProjectSettings } from '../../types';
+import type { JSONObject, ProjectSettings } from '@vercel-internals/types';
 
 interface ProjectSettingsResponse extends ProjectSettings {
   id: string;
