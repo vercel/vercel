@@ -16,7 +16,7 @@ export async function createStaticDir(prefix?: string) {
   } catch (err: any) {
     console.error(err);
     throw new Error(
-      `Failed to hardlink "public" dir files from "${publicDir}" to "${targetDir}". Copying instead.`
+      `Failed to hardlink (or copy) "public" dir files from "${publicDir}" to "${targetDir}".`
     );
   }
 }
