@@ -2,7 +2,7 @@ const { readFile } = require('fs/promises');
 const { join } = require('path');
 
 module.exports = async function ({ deploymentUrl, fetch }) {
-  const resp = await fetch(`https://${deploymentUrl}`);
+  const resp = await fetch(`https://${deploymentUrl}/api`);
 
   const bytes = await resp.arrayBuffer();
 

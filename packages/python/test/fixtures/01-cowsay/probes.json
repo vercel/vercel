@@ -1,14 +1,14 @@
 {
   "probes": [
     {
-      "path": "/",
+      "path": "/api",
       "mustContain": "pip:RANDOMNESS_PLACEHOLDER",
       "responseHeaders": {
         "content-type": "text/plain"
       }
     },
     {
-      "path": "/another",
+      "path": "/api/another",
       "mustContain": "upper:RANDOMNESS_PLACEHOLDER",
       "responseHeaders": {
         "content-type": "text/plain"

@@ -1,15 +1,15 @@
 {
   "probes": [
     {
-      "path": "/?hello=/",
+      "path": "/api?hello=/",
       "mustContain": "path:  query: {'hello': '/'}",
       "responseHeaders": {
         "content-type": "text/html; charset=utf-8"
       }
     },
     {
-      "path": "/another?hello=/",
-      "mustContain": "path: another query: {'hello': '/'}",
+      "path": "/api/custom?hello=/",
+      "mustContain": "path: custom query: {'hello': '/'}",
       "responseHeaders": {
         "content-type": "text/html; charset=utf-8"
       }

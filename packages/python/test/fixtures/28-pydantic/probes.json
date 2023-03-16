@@ -1,7 +1,7 @@
 {
   "probes": [
     {
-      "path": "/",
+      "path": "/api/hello",
       "method": "POST",
       "body": {
         "name": "RANDOMNESS_PLACEHOLDER"

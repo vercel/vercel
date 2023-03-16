@@ -1,11 +1,5 @@
 {
   "version": 2,
-  "routes": [
-    {
-      "src": "/",
-      "dest": "/api"
-    }
-  ],
   "env": {
     "RANDOMNESS": "RANDOMNESS_PLACEHOLDER"
   }

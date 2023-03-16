@@ -1,7 +1,7 @@
 {
   "probes": [
     {
-      "path": "/",
+      "path": "/api",
       "method": "POST",
       "body": {
         "name": "Χριστοφορε"
