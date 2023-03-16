@@ -296,13 +296,15 @@ async function doBuild(
   cwd: string,
   outputDir: string
 ): Promise<void> {
-  const { output } = client;
+  const { localConfigPath, output } = client;
 
   const workPath = join(cwd, project.settings.rootDirectory || '.');
 
   const [pkg, vercelConfig, nowConfig] = await Promise.all([
     readJSONFile<PackageJson>(join(workPath, 'package.json')),
-    readJSONFile<VercelConfig>(join(workPath, 'vercel.json')),
+    readJSONFile<VercelConfig>(
+      localConfigPath || join(workPath, 'vercel.json')
+    ),
     readJSONFile<VercelConfig>(join(workPath, 'now.json')),
   ]);
 
