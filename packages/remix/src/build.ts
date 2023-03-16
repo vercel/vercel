@@ -149,13 +149,13 @@ export const build: BuildV2 = async ({
       join(DEFAULTS_PATH, 'entry.server.jsx'),
       join(appDirectory, 'entry.server.jsx')
     );
-    if (!pkg.dependencies['@vercel/remix-entry-server']) {
+    if (!pkg.dependencies['@vercel/remix']) {
       // Prevent frozen lockfile rejections
       const envForAddDep = { ...spawnOpts.env };
       delete envForAddDep.CI;
       delete envForAddDep.VERCEL;
       delete envForAddDep.NOW_BUILDER;
-      await addDependency(cliType, ['@vercel/remix-entry-server'], {
+      await addDependency(cliType, ['@vercel/remix'], {
         ...spawnOpts,
         env: envForAddDep,
         cwd: entrypointFsDirname,
