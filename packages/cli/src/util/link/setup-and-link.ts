@@ -1,7 +1,7 @@
 import { join, basename } from 'path';
 import chalk from 'chalk';
 import { remove } from 'fs-extra';
-import { ProjectLinkResult, ProjectSettings } from '../../types';
+import { ProjectLinkResult, ProjectSettings } from '@vercel-internals/types';
 import {
   getLinkedProject,
   linkFolderToProject,
