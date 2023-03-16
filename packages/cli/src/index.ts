@@ -267,6 +267,7 @@ const main = async () => {
     config,
     authConfig,
     localConfig,
+    localConfigPath,
     argv: process.argv,
   });
 
