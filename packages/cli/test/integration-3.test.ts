@@ -1,19 +1,14 @@
-import ms from 'ms';
 import path from 'path';
 import { parse as parseUrl } from 'url';
-import semVer from 'semver';
 import { Readable } from 'stream';
 import { tmpdir } from 'os';
 import _execa from 'execa';
 import XDGAppPaths from 'xdg-app-paths';
-import fetch, { RequestInfo, RequestInit } from 'node-fetch';
+
 // @ts-ignore
 import tmp from 'tmp-promise';
 import retry from 'async-retry';
 import fs, { ensureDir } from 'fs-extra';
-import logo from '../src/util/output/logo';
-import sleep from '../src/util/sleep';
-import pkg from '../package.json';
 import prepareFixtures from './helpers/prepare';
 import { fetchTokenWithRetry } from '../../../test/lib/deployment/now-deploy';
 import type http from 'http';
@@ -57,7 +52,6 @@ function execa(
 }
 
 const binaryPath = path.resolve(__dirname, `../scripts/start.js`);
-let session = 'temp-session';
 
 function fetchTokenInformation(token: string, retries = 3) {
   const url = `https://api.vercel.com/v2/user`;
@@ -81,28 +75,6 @@ function fetchTokenInformation(token: string, retries = 3) {
   );
 }
 
-function formatOutput({
-  stderr,
-  stdout,
-}: {
-  stderr: string | Readable;
-  stdout: string | Readable;
-}) {
-  return `
------
-
-Stderr:
-${stderr || '(no output)'}
-
------
-
-Stdout:
-${stdout || '(no output)'}
-
------
-  `;
-}
-
 function getTmpDir(): TmpDir {
   return tmp.dirSync({
     // This ensures the directory gets
@@ -111,7 +83,6 @@ function getTmpDir(): TmpDir {
   }) as TmpDir;
 }
 
-const defaultOptions = { reject: false };
 const defaultArgs: string[] = [];
 let token: string | undefined;
 let email: string | undefined;
@@ -166,36 +137,6 @@ const loginApiServer = require('http')
     console.log(`[mock-login-server] Listening on ${loginApiUrl}`);
   });
 
-// the prompt timeout has to be less than the test timeout
-const PROMPT_TIMEOUT = TEST_TIMEOUT / 2;
-
-const waitForPrompt = (
-  cp: BoundChildProcess,
-  assertion: (chunk: string) => boolean
-) =>
-  new Promise<void>((resolve, reject) => {
-    console.log('Waiting for prompt...');
-    const handleTimeout = setTimeout(
-      () =>
-        reject(
-          new Error(`timed out after ${PROMPT_TIMEOUT}ms in waitForPrompt`)
-        ),
-      PROMPT_TIMEOUT
-    );
-    const listener = (chunk: string) => {
-      console.log('> ' + chunk);
-      if (assertion(chunk)) {
-        cp.stdout.off && cp.stdout.off('data', listener);
-        cp.stderr.off && cp.stderr.off('data', listener);
-        clearTimeout(handleTimeout);
-        resolve();
-      }
-    };
-
-    cp.stdout.on('data', listener);
-    cp.stderr.on('data', listener);
-  });
-
 const createUser = async () => {
   await retry(
     async () => {
@@ -214,7 +155,6 @@ const createUser = async () => {
 
       email = user.email;
       contextName = user.username;
-      session = Math.random().toString(36).split('.')[1];
     },
     { retries: 3, factor: 1 }
   );
