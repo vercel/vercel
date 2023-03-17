@@ -290,7 +290,8 @@ export default class Now extends EventEmitter {
 
     if (
       error.errorCode === 'BUILD_FAILED' ||
-      error.errorCode === 'UNEXPECTED_ERROR'
+      error.errorCode === 'UNEXPECTED_ERROR' ||
+      error.errorCode.includes('BUILD_UTILS_SPAWN_')
     ) {
       return new BuildError({
         message: error.errorMessage,
@@ -298,7 +299,7 @@ export default class Now extends EventEmitter {
       });
     }
 
-    return new Error(error.message);
+    return new Error(error.message || error.errorMessage);
   }
 
   async listSecrets(next?: number, testWarningFlag?: boolean) {
