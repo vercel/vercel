@@ -6,7 +6,7 @@ import { Readable } from 'stream';
 import { homedir, tmpdir } from 'os';
 import _execa from 'execa';
 import XDGAppPaths from 'xdg-app-paths';
-import fetch, { RequestInfo } from 'node-fetch';
+import fetch, { RequestInfo, RequestInit } from 'node-fetch';
 // @ts-ignore
 import tmp from 'tmp-promise';
 import retry from 'async-retry';
@@ -24,6 +24,7 @@ import pkg from '../package.json';
 import prepareFixtures from './helpers/prepare';
 import { fetchTokenWithRetry } from '../../../test/lib/deployment/now-deploy';
 import { once } from 'node:events';
+import { PackageJson } from '@vercel/build-utils';
 import type http from 'http';
 
 const TEST_TIMEOUT = 3 * 60 * 1000;
@@ -43,6 +44,15 @@ interface TmpDir {
 interface Build {
   use: string;
 }
+
+type NowJson = {
+  name: string;
+};
+
+type DeploymentLike = {
+  error?: Error;
+  builds: Build[];
+};
 
 // log command when running `execa`
 function execa(
@@ -276,7 +286,7 @@ const execute = (args: string[], options?: _execa.Options<string>) =>
     ...options,
   });
 
-const apiFetch = (url: string, { headers, ...options }: any = {}) => {
+const apiFetch = (url: string, { headers, ...options }: RequestInit = {}) => {
   return fetch(`https://api.vercel.com${url}`, {
     headers: {
       Authorization: `Bearer ${token}`,
@@ -345,7 +355,11 @@ const getConfigAuthPath = () => path.join(globalDir, 'auth.json');
 async function setupProject(
   process: BoundChildProcess,
   projectName: string,
-  overrides: { devCommand?: any; buildCommand?: any; outputDirectory?: any }
+  overrides: {
+    devCommand?: string;
+    buildCommand?: string;
+    outputDirectory?: string;
+  }
 ) {
   await waitForPrompt(process, chunk => /Set up [^?]+\?/.test(chunk));
   process.stdin.write('yes\n');
@@ -2257,7 +2271,7 @@ test('try to revert a deployment and assign the automatic aliases', async () => 
 
   const { name } = JSON.parse(
     fs.readFileSync(path.join(firstDeployment, 'now.json')).toString()
-  );
+  ) as NowJson;
   expect(name).toBeTruthy();
 
   const url = `https://${name}.user.vercel.app`;
@@ -2478,15 +2492,15 @@ test('create zero-config deployment', async () => {
   const text = await response.text();
 
   expect(response.status).toBe(200);
-  const data = JSON.parse(text);
+  const data = JSON.parse(text) as DeploymentLike;
 
   expect(data.error).toBe(undefined);
 
-  const validBuilders = data.builds.every((build: Build) =>
+  const validBuilders = data.builds.every(build =>
     isCanary ? build.use.endsWith('@canary') : !build.use.endsWith('@canary')
   );
 
-  const buildList = JSON.stringify(data.builds.map((b: Build) => b.use));
+  const buildList = JSON.stringify(data.builds.map(b => b.use));
   const message = `builders match canary (${isCanary}): ${buildList}`;
   expect(validBuilders, message).toBe(true);
 });
@@ -2968,6 +2982,10 @@ test('should prefill "project name" prompt with now.json `name`', async () => {
 });
 
 test('deploy with unknown `VERCEL_PROJECT_ID` should fail', async () => {
+  if (!token) {
+    throw new Error('Shared state "token" not set.');
+  }
+
   const directory = fixture('static-deployment');
   const user = await fetchTokenInformation(token);
 
@@ -2983,6 +3001,10 @@ test('deploy with unknown `VERCEL_PROJECT_ID` should fail', async () => {
 });
 
 test('deploy with `VERCEL_ORG_ID` but without `VERCEL_PROJECT_ID` should fail', async () => {
+  if (!token) {
+    throw new Error('Shared state "token" not set.');
+  }
+
   const directory = fixture('static-deployment');
   const user = await fetchTokenInformation(token);
 
@@ -3118,6 +3140,10 @@ test('vercel env with unknown `VERCEL_ORG_ID` or `VERCEL_PROJECT_ID` should erro
 });
 
 test('whoami with `VERCEL_ORG_ID` should favor `--scope` and should error', async () => {
+  if (!token) {
+    throw new Error('Shared state "token" not set.');
+  }
+
   const user = await fetchTokenInformation(token);
 
   const output = await execute(['whoami', '--scope', 'asdf'], {
@@ -3129,6 +3155,10 @@ test('whoami with `VERCEL_ORG_ID` should favor `--scope` and should error', asyn
 });
 
 test('whoami with local .vercel scope', async () => {
+  if (!token) {
+    throw new Error('Shared state "token" not set.');
+  }
+
   const directory = fixture('static-deployment');
   const user = await fetchTokenInformation(token);
 
@@ -3225,7 +3255,10 @@ test(
     const directory = example('gatsby');
     const packageJsonPath = path.join(directory, 'package.json');
     const packageJsonOriginal = await readFile(packageJsonPath, 'utf8');
-    const pkg = JSON.parse(packageJsonOriginal);
+    const pkg = JSON.parse(packageJsonOriginal) as PackageJson;
+    if (!pkg.scripts) {
+      throw new Error(`"scripts" not found in "${packageJsonPath}"`);
+    }
 
     async function tryDeploy(cwd: string) {
       const { exitCode, stdout, stderr } = await execa(
@@ -3582,6 +3615,10 @@ test('[vc dev] should send the platform proxy request headers to frontend dev se
 });
 
 test('[vc link] should support the `--project` flag', async () => {
+  if (!token) {
+    throw new Error('Shared state "token" not set.');
+  }
+
   const projectName = 'link-project-flag';
   const directory = fixture('static-deployment');
 
