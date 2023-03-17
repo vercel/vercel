@@ -4,7 +4,7 @@ import { Readable } from 'stream';
 import { tmpdir } from 'os';
 import _execa from 'execa';
 import XDGAppPaths from 'xdg-app-paths';
-
+import fetch from 'node-fetch';
 // @ts-ignore
 import tmp from 'tmp-promise';
 import retry from 'async-retry';
