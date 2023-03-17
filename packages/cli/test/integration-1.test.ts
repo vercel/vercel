@@ -17,10 +17,6 @@ import pkg from '../package.json';
 import prepareFixtures from './helpers/prepare';
 import { fetchTokenWithRetry } from '../../../test/lib/deployment/now-deploy';
 import { once } from 'node:events';
-<<<<<<< HEAD:packages/cli/test/integration.test.ts
-import type { PackageJson } from '@vercel/build-utils';
-=======
->>>>>>> 5d3e49182 (part 1):packages/cli/test/integration-1.test.ts
 import type http from 'http';
 
 const TEST_TIMEOUT = 3 * 60 * 1000;
