@@ -1,6 +1,6 @@
 {
   "name": "@vercel/remix-builder",
-  "version": "1.6.2",
+  "version": "1.7.0",
   "license": "MIT",
   "main": "./dist/index.js",
   "homepage": "https://vercel.com/docs",
@@ -21,9 +21,9 @@
   ],
   "dependencies": {
     "@remix-run/dev": "npm:@vercel/remix-run-dev@1.14.2",
-    "@vercel/build-utils": "6.3.4",
+    "@vercel/build-utils": "6.4.0",
     "@vercel/nft": "0.22.5",
-    "@vercel/static-config": "2.0.13",
+    "@vercel/static-config": "2.0.14",
     "path-to-regexp": "6.2.1",
     "ts-morph": "12.0.0"
   },

@@ -17,6 +17,17 @@ describe('edge-handler-template', () => {
       });
       expect(url).toBe('https://somewhere.com/api/add');
     });
+
+    test('works with multi proto', async () => {
+      const url = buildUrl({
+        url: '/api/add',
+        headers: {
+          'x-forwarded-proto': 'https,http',
+          'x-forwarded-host': 'somewhere.com',
+        },
+      });
+      expect(url).toBe('https://somewhere.com/api/add');
+    });
   });
 
   describe('respond()', () => {

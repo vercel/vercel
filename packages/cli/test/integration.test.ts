@@ -707,7 +707,7 @@ test('deploy using only now.json with `redirects` defined', async () => {
 
 test('deploy using --local-config flag v2', async () => {
   const target = fixture('local-config-v2');
-  const configPath = path.join(target, 'now-test.json');
+  const configPath = path.join(target, 'vercel-test.json');
 
   const { exitCode, stdout, stderr } = await execa(
     binaryPath,

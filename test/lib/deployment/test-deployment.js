@@ -116,7 +116,7 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
         deploymentId,
         deploymentUrl,
         deploymentLogs,
-        logLength: deploymentLogs.length,
+        logLength: deploymentLogs?.length,
       });
       throw new Error(
         `Expected deployment logs of ${deploymentId} to contain ${toCheck}, it was not found`
@@ -242,11 +242,20 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
         return;
       }
 
+      if (!actualArr?.length) {
+        throw new Error(
+          `Page ${probeUrl} does NOT contain response header "${header}", but probe says it should .\n\nActual: ${formatHeaders(
+            rawHeaders
+          )}`
+        );
+      }
+
       if (!Array.isArray(expectedArr)) {
         expectedArr = [expectedArr];
       }
       for (const expected of expectedArr) {
         let isEqual = false;
+
         for (const actual of actualArr) {
           isEqual =
             expected.startsWith('/') && expected.endsWith('/')
