@@ -486,7 +486,11 @@ export function fixConfig(
 
   // If not specified, the default Node.js module is CommonJS.
   if (config.compilerOptions.module === undefined) {
-    config.compilerOptions.module = 'CommonJS';
+    config.compilerOptions.module = 'nodenext';
+  }
+
+  if (config.compilerOptions.moduleResolution === undefined) {
+    config.compilerOptions.moduleResolution = 'nodenext';
   }
 
   return config;

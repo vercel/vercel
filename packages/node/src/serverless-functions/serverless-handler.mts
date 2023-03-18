@@ -1,8 +1,8 @@
 import { IncomingMessage } from 'http';
 import { Readable } from 'stream';
-import type { Bridge } from '@vercel/node-bridge/bridge';
+import type { Bridge } from '@vercel/node-bridge';
 import { getVercelLauncher } from '@vercel/node-bridge/launcher.js';
-import { VercelProxyResponse } from '@vercel/node-bridge/types';
+import { VercelProxyResponse } from '@vercel/node-bridge';
 
 function rawBody(readable: Readable): Promise<Buffer> {
   return new Promise((resolve, reject) => {

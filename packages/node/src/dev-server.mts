@@ -12,13 +12,15 @@ import { join } from 'path';
 const useRequire = process.env.VERCEL_DEV_IS_ESM !== '1';
 
 import { createServer, Server, IncomingMessage, ServerResponse } from 'http';
-import { VercelProxyResponse } from '@vercel/node-bridge/types';
+import { VercelProxyResponse } from '@vercel/node-bridge';
 import { Config } from '@vercel/build-utils';
 import { getConfig } from '@vercel/static-config';
 import { Project } from 'ts-morph';
-import { EdgeRuntimes, isEdgeRuntime, logError } from './utils';
-import { createEdgeEventHandler } from './edge-functions/edge-handler';
-import { createServerlessEventHandler } from './serverless-functions/serverless-handler';
+import utils from './utils.js';
+import { createEdgeEventHandler } from './edge-functions/edge-handler.mjs';
+import { createServerlessEventHandler } from './serverless-functions/serverless-handler.mjs';
+
+const { EdgeRuntimes, isEdgeRuntime, logError } = utils;
 
 function listen(server: Server, port: number, host: string): Promise<void> {
   return new Promise(resolve => {
@@ -93,7 +95,7 @@ async function main() {
     handleEvent = await createEventHandler(entrypoint!, config, {
       shouldAddHelpers,
     });
-  } catch (error) {
+  } catch (error: any) {
     logError(error);
     handlerEventError = error;
   }
@@ -106,7 +108,7 @@ async function main() {
   }
 }
 
-export async function onDevRequest(
+async function onDevRequest(
   req: IncomingMessage,
   res: ServerResponse
 ): Promise<void> {
@@ -132,7 +134,7 @@ export async function onDevRequest(
       }
     }
     res.end(Buffer.from(result.body, result.encoding));
-  } catch (error) {
+  } catch (error: any) {
     res.statusCode = 500;
     res.end(error.stack);
   }

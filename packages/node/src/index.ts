@@ -245,7 +245,7 @@ async function compile(
           fsCache.set(relPath, entry);
           sourceCache.set(relPath, source);
           return source;
-        } catch (e) {
+        } catch (e: any) {
           if (e.code === 'ENOENT' || e.code === 'EISDIR') {
             // `null` represents a not found
             sourceCache.set(relPath, null);
@@ -583,7 +583,7 @@ export const startDevServer: StartDevServer = async opts => {
     if (pathToTsConfig) {
       try {
         tsConfig = ts.readConfigFile(pathToTsConfig, ts.sys.readFile).config;
-      } catch (err) {
+      } catch (err: any) {
         if (err.code !== 'ENOENT') {
           console.error(`Error while parsing "${pathToTsConfig}"`);
           throw err;
@@ -669,7 +669,7 @@ async function doTypeCheck(
     const json = JSON.stringify(tsconfig, null, '\t');
     await fsp.mkdir(entrypointCacheDir, { recursive: true });
     await fsp.writeFile(tsconfigPath, json, { flag: 'wx' });
-  } catch (err) {
+  } catch (err: any) {
     // Don't throw if the file already exists
     if (err.code !== 'EEXIST') {
       throw err;

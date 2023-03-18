@@ -1,14 +1,17 @@
 import { IncomingMessage } from 'http';
-import { VercelProxyResponse } from '@vercel/node-bridge/types';
+import { VercelProxyResponse } from '@vercel/node-bridge';
 import { streamToBuffer } from '@vercel/build-utils';
 import exitHook from 'exit-hook';
 import { EdgeRuntime, runServer } from 'edge-runtime';
 import type { EdgeContext } from '@edge-runtime/vm';
 import esbuild from 'esbuild';
 import fetch from 'node-fetch';
-import { createEdgeWasmPlugin, WasmAssets } from './edge-wasm-plugin';
-import { entrypointToOutputPath, logError } from '../utils';
+import { createEdgeWasmPlugin, WasmAssets } from './edge-wasm-plugin.mjs';
+import utils from '../utils.js';
 import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+
+const { entrypointToOutputPath, logError } = utils;
 
 const NODE_VERSION_MAJOR = process.version.match(/^v(\d+)\.\d+/)?.[1];
 const NODE_VERSION_IDENTIFIER = `node${NODE_VERSION_MAJOR}`;
@@ -18,6 +21,7 @@ if (!NODE_VERSION_MAJOR) {
   );
 }
 
+const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const edgeHandlerTemplate = readFileSync(
   `${__dirname}/edge-handler-template.js`
 );
@@ -94,7 +98,7 @@ async function compileUserCode(
     `;
 
     return { userCode, wasmAssets };
-  } catch (error) {
+  } catch (error: any) {
     // We can't easily show a meaningful stack trace from ncc -> edge-runtime.
     // So, stick with just the message for now.
     console.error(`Failed to compile user code for edge runtime.`);
@@ -139,7 +143,7 @@ async function createEdgeRuntime(params?: {
     exitHook(server.close);
 
     return server;
-  } catch (error) {
+  } catch (error: any) {
     // We can't easily show a meaningful stack trace from ncc -> edge-runtime.
     // So, stick with just the message for now.
     console.error('Failed to instantiate edge runtime.');

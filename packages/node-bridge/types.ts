@@ -7,6 +7,10 @@ import type {
   ServerResponse,
   IncomingMessage,
 } from 'http';
+import type { Bridge } from './bridge.d';
+
+export { Bridge };
+
 export interface VercelProxyEvent {
   Action: string;
   body: string;

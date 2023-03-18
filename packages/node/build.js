@@ -46,10 +46,14 @@ async function main() {
   await Promise.all([
     fs.remove(mainDir),
     fs.remove(join(outDir, 'babel.d.ts')),
-    fs.remove(join(outDir, 'dev-server.d.ts')),
+    fs.remove(join(outDir, 'dev-server.d.mts')),
+    fs.remove(join(outDir, 'fork-dev-server.d.ts')),
     fs.remove(join(outDir, 'types.d.ts')),
     fs.remove(join(outDir, 'typescript.d.ts')),
     fs.remove(join(outDir, 'utils.d.ts')),
+    fs.remove(join(outDir, 'edge-functions/edge-handler.d.ts')),
+    fs.remove(join(outDir, 'edge-functions/edge-wasm-plugin.d.ts')),
+    fs.remove(join(outDir, 'serverless-functions/serverless-handler.d.ts')),
   ]);
 
   // Copy type file for ts test

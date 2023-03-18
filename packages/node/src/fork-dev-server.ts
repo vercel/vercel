@@ -25,7 +25,7 @@ export function forkDevServer(options: {
   const esmLoader = pathToFileURL(join(tsNodePath, '..', '..', 'esm.mjs'));
   const cjsLoader = join(tsNodePath, '..', '..', 'register', 'index.js');
   const devServerPath =
-    options.devServerPath || join(__dirname, 'dev-server.js');
+    options.devServerPath || join(__dirname, 'dev-server.mjs');
 
   if (options.maybeTranspile) {
     if (options.isTypeScript) {
