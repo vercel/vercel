@@ -25,58 +25,57 @@ function pick<T, K extends keyof T>(obj: T, keys: K[]): Pick<T, K> {
 }
 
 const NativeModuleMap = () => {
-  const mods: Record<`node:${typeof SUPPORTED_NODE_MODULES[number]}`, unknown> =
-    {
-      'node:buffer': pick(BufferImplementation, [
-        'constants',
-        'kMaxLength',
-        'kStringMaxLength',
-        'Buffer',
-        'SlowBuffer',
-      ]),
-      'node:events': pick(EventsImplementation, [
-        'EventEmitter',
-        'captureRejectionSymbol',
-        'defaultMaxListeners',
-        'errorMonitor',
-        'listenerCount',
-        'on',
-        'once',
-      ]),
-      'node:async_hooks': pick(AsyncHooksImplementation, [
-        'AsyncLocalStorage',
-        'AsyncResource',
-      ]),
-      'node:assert': pick(AssertImplementation, [
-        'AssertionError',
-        'deepEqual',
-        'deepStrictEqual',
-        'doesNotMatch',
-        'doesNotReject',
-        'doesNotThrow',
-        'equal',
-        'fail',
-        'ifError',
-        'match',
-        'notDeepEqual',
-        'notDeepStrictEqual',
-        'notEqual',
-        'notStrictEqual',
-        'ok',
-        'rejects',
-        'strict',
-        'strictEqual',
-        'throws',
-      ]),
-      'node:util': pick(UtilImplementation, [
-        '_extend' as any,
-        'callbackify',
-        'format',
-        'inherits',
-        'promisify',
-        'types',
-      ]),
-    };
+  const mods: Record<typeof SUPPORTED_NODE_MODULES[number], unknown> = {
+    buffer: pick(BufferImplementation, [
+      'constants',
+      'kMaxLength',
+      'kStringMaxLength',
+      'Buffer',
+      'SlowBuffer',
+    ]),
+    events: pick(EventsImplementation, [
+      'EventEmitter',
+      'captureRejectionSymbol',
+      'defaultMaxListeners',
+      'errorMonitor',
+      'listenerCount',
+      'on',
+      'once',
+    ]),
+    async_hooks: pick(AsyncHooksImplementation, [
+      'AsyncLocalStorage',
+      'AsyncResource',
+    ]),
+    assert: pick(AssertImplementation, [
+      'AssertionError',
+      'deepEqual',
+      'deepStrictEqual',
+      'doesNotMatch',
+      'doesNotReject',
+      'doesNotThrow',
+      'equal',
+      'fail',
+      'ifError',
+      'match',
+      'notDeepEqual',
+      'notDeepStrictEqual',
+      'notEqual',
+      'notStrictEqual',
+      'ok',
+      'rejects',
+      'strict',
+      'strictEqual',
+      'throws',
+    ]),
+    util: pick(UtilImplementation, [
+      '_extend' as any,
+      'callbackify',
+      'format',
+      'inherits',
+      'promisify',
+      'types',
+    ]),
+  };
   return new Map(Object.entries(mods));
 };
 
@@ -92,10 +91,11 @@ export class NodeCompatBindings {
     }
   >();
 
-  use(modulePath: string) {
-    const name = `__vc_node_${modulePath.replace(/^node:/, '')}__`;
+  use(modulePath: `node:${string}`) {
+    const stripped = modulePath.replace(/^node:/, '');
+    const name = `__vc_node_${stripped}__`;
     if (!this.bindings.has(modulePath)) {
-      const value = NativeModuleMap().get(modulePath);
+      const value = NativeModuleMap().get(stripped);
       if (value === undefined) {
         throw new Error(`Could not find module ${modulePath}`);
       }
@@ -142,7 +142,10 @@ export function createNodeCompatPlugin() {
       b.onLoad(
         { filter: /.+/, namespace: NODE_COMPAT_NAMESPACE },
         async args => {
-          const globalName = bindings.use(args.path);
+          const fullName = args.path.startsWith('node:')
+            ? (args.path as `node:${string}`)
+            : (`node:${args.path}` as const);
+          const globalName = bindings.use(fullName);
 
           return {
             contents: `module.exports = ${globalName};`,
