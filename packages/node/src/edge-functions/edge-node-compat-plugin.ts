@@ -82,16 +82,48 @@ const NativeModuleMap = () => {
 
 const NODE_COMPAT_NAMESPACE = 'vercel-node-compat';
 
+export class NodeCompatBindings {
+  private bindings = new Map<
+    string,
+    {
+      name: string;
+      modulePath: string;
+      value: unknown;
+    }
+  >();
+
+  use(modulePath: string) {
+    const name = `__vc_node_${modulePath.replace(/^node:/, '')}__`;
+    if (!this.bindings.has(modulePath)) {
+      const value = NativeModuleMap().get(modulePath);
+      if (value === undefined) {
+        throw new Error(`Could not find module ${modulePath}`);
+      }
+      this.bindings.set(modulePath, {
+        modulePath: modulePath,
+        name,
+        value,
+      });
+    }
+    return name;
+  }
+
+  getContext(): Record<string, unknown> {
+    const context: Record<string, unknown> = {};
+    for (const binding of this.bindings.values()) {
+      context[binding.name] = binding.value;
+    }
+    return context;
+  }
+}
+
 /**
  * Allows to enable Node.js compatibility by detecting namespaced `node:`
  * imports and producing metadata to bind global variables for each.
  * It requires from the consumer to add the imports.
  */
 export function createNodeCompatPlugin() {
-  const bindings = new Map<
-    string,
-    { name: string; modulePath: string; value: unknown }
-  >();
+  const bindings = new NodeCompatBindings();
   const plugin: Plugin = {
     name: 'vc-node-compat',
     setup(b) {
@@ -110,19 +142,7 @@ export function createNodeCompatPlugin() {
       b.onLoad(
         { filter: /.+/, namespace: NODE_COMPAT_NAMESPACE },
         async args => {
-          const globalName = `__vc_node_${args.path.replace('node:', '')}__`;
-          if (!bindings.has(args.path)) {
-            const value = NativeModuleMap().get(args.path);
-            if (value === undefined) {
-              throw new Error(`Could not find module ${args.path}`);
-            }
-
-            bindings.set(args.path, {
-              modulePath: args.path,
-              name: globalName,
-              value,
-            });
-          }
+          const globalName = bindings.use(args.path);
 
           return {
             contents: `module.exports = ${globalName};`,
@@ -134,8 +154,6 @@ export function createNodeCompatPlugin() {
   };
   return {
     plugin,
-    get bindings() {
-      return Array.from(bindings.values());
-    },
+    bindings,
   };
 }
