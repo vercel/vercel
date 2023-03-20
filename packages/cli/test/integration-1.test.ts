@@ -83,6 +83,7 @@ function fixture(name: string) {
 }
 
 const binaryPath = path.resolve(__dirname, `../scripts/start.js`);
+
 const deployHelpMessage = `${logo} vercel [options] <command | path>`;
 let session = 'temp-session';
 
@@ -303,6 +304,7 @@ const waitForPrompt = (
         ),
       PROMPT_TIMEOUT
     );
+
     const listener = (chunk: Buffer) => {
       console.log('> ' + chunk);
       if (assertion(chunk)) {
