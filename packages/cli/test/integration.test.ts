@@ -1,5 +1,3 @@
-// @ts-nocheck
-// Note: this file is incrementally migrating to typescript
 import ms from 'ms';
 import path from 'path';
 import { URL, parse as parseUrl } from 'url';
@@ -8,7 +6,8 @@ import { Readable } from 'stream';
 import { homedir, tmpdir } from 'os';
 import _execa from 'execa';
 import XDGAppPaths from 'xdg-app-paths';
-import fetch from 'node-fetch';
+import fetch, { RequestInfo, RequestInit } from 'node-fetch';
+// @ts-ignore
 import tmp from 'tmp-promise';
 import retry from 'async-retry';
 import fs, {
@@ -25,17 +24,61 @@ import pkg from '../package.json';
 import prepareFixtures from './helpers/prepare';
 import { fetchTokenWithRetry } from '../../../test/lib/deployment/now-deploy';
 import { once } from 'node:events';
+import type { PackageJson } from '@vercel/build-utils';
+import type http from 'http';
 
 const TEST_TIMEOUT = 3 * 60 * 1000;
 jest.setTimeout(TEST_TIMEOUT);
 
-// log command when running `execa`
-function execa(file, args, options) {
-  console.log(`$ vercel ${args.join(' ')}`);
-  return _execa(file, args, options);
+type BoundChildProcess = _execa.ExecaChildProcess & {
+  stdout: Readable;
+  stdin: Readable;
+  stderr: Readable;
+};
+
+interface TmpDir {
+  name: string;
+  removeCallback: () => void;
 }
 
-function fixture(name) {
+interface Build {
+  use: string;
+}
+
+type NowJson = {
+  name: string;
+};
+
+type DeploymentLike = {
+  error?: Error;
+  builds: Build[];
+};
+
+// log command when running `execa`
+function execa(
+  file: string,
+  args: string[],
+  options?: _execa.Options<string>
+): BoundChildProcess {
+  console.log(`$ vercel ${args.join(' ')}`);
+  const proc = _execa(file, args, options);
+  if (proc.stdin === null) {
+    console.warn(`vercel ${args.join(' ')} - not bound to stdin`);
+  }
+  if (proc.stdout === null) {
+    console.warn(`vercel ${args.join(' ')} - not bound to stdout`);
+  }
+  if (proc.stderr === null) {
+    console.warn(`vercel ${args.join(' ')} - not bound to stderr`);
+  }
+
+  // if a reference to `proc.stdout` (for example) fails later,
+  // the logs will say clearly where that came from
+  // so, it's not awful to use the type assertion here
+  return proc as BoundChildProcess;
+}
+
+function fixture(name: string) {
   const directory = path.join(tmpFixturesDir, name);
   const config = path.join(directory, 'project.json');
 
@@ -48,21 +91,21 @@ function fixture(name) {
 }
 
 const binaryPath = path.resolve(__dirname, `../scripts/start.js`);
-const example = name =>
+const example = (name: string) =>
   path.join(__dirname, '..', '..', '..', 'examples', name);
 const deployHelpMessage = `${logo} vercel [options] <command | path>`;
 let session = 'temp-session';
 
 const isCanary = pkg.version.includes('canary');
 
-const pickUrl = stdout => {
+const pickUrl = (stdout: string) => {
   const lines = stdout.split('\n');
   return lines[lines.length - 1];
 };
 
-const createFile = dest => fs.closeSync(fs.openSync(dest, 'w'));
+const createFile = (dest: fs.PathLike) => fs.closeSync(fs.openSync(dest, 'w'));
 
-const waitForDeployment = async href => {
+const waitForDeployment = async (href: RequestInfo) => {
   console.log(`waiting for ${href} to become ready...`);
   const start = Date.now();
   const max = ms('4m');
@@ -89,7 +132,7 @@ const waitForDeployment = async href => {
   }
 };
 
-function fetchTokenInformation(token, retries = 3) {
+function fetchTokenInformation(token: string, retries = 3) {
   const url = `https://api.vercel.com/v2/user`;
   const headers = { Authorization: `Bearer ${token}` };
 
@@ -111,7 +154,13 @@ function fetchTokenInformation(token, retries = 3) {
   );
 }
 
-function formatOutput({ stderr, stdout }) {
+function formatOutput({
+  stderr,
+  stdout,
+}: {
+  stderr: string | Readable;
+  stdout: string | Readable;
+}) {
   return `
 -----
 
@@ -127,7 +176,7 @@ ${stdout || '(no output)'}
   `;
 }
 
-async function vcLink(projectPath) {
+async function vcLink(projectPath: string) {
   const { exitCode, stdout, stderr } = await execa(
     binaryPath,
     ['link', '--yes', ...defaultArgs],
@@ -140,26 +189,55 @@ async function vcLink(projectPath) {
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 }
 
-const context = {};
+async function getLocalhost(vc: BoundChildProcess): Promise<RegExpExecArray> {
+  let localhost: RegExpExecArray | undefined;
+  await waitForPrompt(vc, chunk => {
+    if (chunk.includes('Ready! Available at')) {
+      localhost = /(https?:[^\s]+)/g.exec(chunk) || undefined;
+      return true;
+    }
+    return false;
+  });
+
+  // This should never happen because waitForPrompt will time out
+  // and never return here in this case, but extra checking is fine
+  // and it makes typescript happy
+  if (!localhost) {
+    throw new Error('Localhost not found!');
+  }
+
+  return localhost;
+}
+
+function getTmpDir(): TmpDir {
+  return tmp.dirSync({
+    // This ensures the directory gets
+    // deleted even if it has contents
+    unsafeCleanup: true,
+  }) as TmpDir;
+}
+
+const context: {
+  deployment: string | undefined;
+  secretName: string | undefined;
+} = {
+  deployment: undefined,
+  secretName: undefined,
+};
 
 const defaultOptions = { reject: false };
-const defaultArgs = [];
-let token;
-let email;
-let contextName;
+const defaultArgs: string[] = [];
+let token: string | undefined;
+let email: string | undefined;
+let contextName: string | undefined;
 
-let tmpDir;
+let tmpDir: TmpDir | undefined;
 let tmpFixturesDir = path.join(tmpdir(), 'tmp-fixtures');
 
 let globalDir = XDGAppPaths('com.vercel.cli').dataDirs()[0];
 
 if (!process.env.CI) {
-  tmpDir = tmp.dirSync({
-    // This ensures the directory gets
-    // deleted even if it has contents
-    unsafeCleanup: true,
-  });
-
+  tmpDir = getTmpDir();
   globalDir = path.join(tmpDir.name, 'com.vercel.tests');
 
   defaultArgs.push('-Q', globalDir);
@@ -169,7 +247,7 @@ if (!process.env.CI) {
   );
 }
 
-function mockLoginApi(req, res) {
+function mockLoginApi(req: http.IncomingMessage, res: http.ServerResponse) {
   const { url = '/', method } = req;
   let { pathname = '/', query = {} } = parseUrl(url, true);
   console.log(`[mock-login-server] ${method} ${pathname}`);
@@ -202,13 +280,13 @@ const loginApiServer = require('http')
     console.log(`[mock-login-server] Listening on ${loginApiUrl}`);
   });
 
-const execute = (args, options) =>
+const execute = (args: string[], options?: _execa.Options<string>) =>
   execa(binaryPath, [...defaultArgs, ...args], {
     ...defaultOptions,
     ...options,
   });
 
-const apiFetch = (url, { headers, ...options } = {}) => {
+const apiFetch = (url: string, { headers, ...options }: RequestInit = {}) => {
   return fetch(`https://api.vercel.com${url}`, {
     headers: {
       Authorization: `Bearer ${token}`,
@@ -218,14 +296,23 @@ const apiFetch = (url, { headers, ...options } = {}) => {
   });
 };
 
-const waitForPrompt = (cp, assertion) =>
-  new Promise((resolve, reject) => {
+// the prompt timeout has to be less than the test timeout
+const PROMPT_TIMEOUT = TEST_TIMEOUT / 2;
+
+const waitForPrompt = (
+  cp: BoundChildProcess,
+  assertion: (chunk: string) => boolean
+) =>
+  new Promise<void>((resolve, reject) => {
     console.log('Waiting for prompt...');
     const handleTimeout = setTimeout(
-      () => reject(new Error('timeout in waitForPrompt')),
-      TEST_TIMEOUT / 2
+      () =>
+        reject(
+          new Error(`timed out after ${PROMPT_TIMEOUT}ms in waitForPrompt`)
+        ),
+      PROMPT_TIMEOUT
     );
-    const listener = chunk => {
+    const listener = (chunk: string) => {
       console.log('> ' + chunk);
       if (assertion(chunk)) {
         cp.stdout.off && cp.stdout.off('data', listener);
@@ -265,7 +352,15 @@ const createUser = async () => {
 
 const getConfigAuthPath = () => path.join(globalDir, 'auth.json');
 
-async function setupProject(process, projectName, overrides) {
+async function setupProject(
+  process: BoundChildProcess,
+  projectName: string,
+  overrides: {
+    devCommand?: string;
+    buildCommand?: string;
+    outputDirectory?: string;
+  }
+) {
   await waitForPrompt(process, chunk => /Set up [^?]+\?/.test(chunk));
   process.stdin.write('yes\n');
 
@@ -385,6 +480,10 @@ test('default command should prompt login with empty auth.json', async () => {
 test(
   'login',
   async () => {
+    if (!email) {
+      throw new Error('Shared state "email" not set.');
+    }
+
     await fs.remove(getConfigAuthPath());
     const loginOutput = await execa(binaryPath, [
       'login',
@@ -1047,15 +1146,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
       cwd: target,
     });
 
-    let localhost = undefined;
-    await waitForPrompt(vc, chunk => {
-      if (chunk.includes('Ready! Available at')) {
-        localhost = /(https?:[^\s]+)/g.exec(chunk);
-        return true;
-      }
-      return false;
-    });
-
+    const localhost = await getLocalhost(vc);
     const apiUrl = `${localhost[0]}/api/get-env`;
     const apiRes = await fetch(apiUrl);
 
@@ -1085,15 +1176,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
       cwd: target,
     });
 
-    let localhost = undefined;
-    await waitForPrompt(vc, chunk => {
-      if (chunk.includes('Ready! Available at')) {
-        localhost = /(https?:[^\s]+)/g.exec(chunk);
-        return true;
-      }
-      return false;
-    });
-
+    const localhost = await getLocalhost(vc);
     const apiUrl = `${localhost[0]}/api/get-env`;
     const apiRes = await fetch(apiUrl);
     expect(apiRes.status).toBe(200);
@@ -1165,15 +1248,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
       cwd: target,
     });
 
-    let localhost = undefined;
-    await waitForPrompt(vc, chunk => {
-      if (chunk.includes('Ready! Available at')) {
-        localhost = /(https?:[^\s]+)/g.exec(chunk);
-        return true;
-      }
-      return false;
-    });
-
+    const localhost = await getLocalhost(vc);
     const apiUrl = `${localhost[0]}/api/get-env`;
     const apiRes = await fetch(apiUrl);
 
@@ -1260,7 +1335,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
     expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
   }
 
-  function vcEnvRemoveByName(name) {
+  function vcEnvRemoveByName(name: string) {
     return execa(binaryPath, ['env', 'rm', name, '-y', ...defaultArgs], {
       reject: false,
       cwd: target,
@@ -1715,6 +1790,10 @@ test('ensure we render a warning for deployments with no files', async () => {
 });
 
 test('output logs with "short" output', async () => {
+  if (!context.deployment) {
+    throw new Error('Shared state "context.deployment" not set.');
+  }
+
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
     ['logs', context.deployment, ...defaultArgs],
@@ -1736,6 +1815,10 @@ test('output logs with "short" output', async () => {
 });
 
 test('output logs with "raw" output', async () => {
+  if (!context.deployment) {
+    throw new Error('Shared state "context.deployment" not set.');
+  }
+
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
     ['logs', context.deployment, ...defaultArgs, '--output', 'raw'],
@@ -2054,7 +2137,7 @@ test('try to deploy with non-existing team', async () => {
 });
 
 test('initialize example "angular"', async () => {
-  tmpDir = tmp.dirSync({ unsafeCleanup: true });
+  tmpDir = getTmpDir();
   const cwd = tmpDir.name;
   const goal = '> Success! Initialized "angular" example in';
 
@@ -2080,7 +2163,7 @@ test('initialize example "angular"', async () => {
 });
 
 test('initialize example ("angular") to specified directory', async () => {
-  tmpDir = tmp.dirSync({ unsafeCleanup: true });
+  tmpDir = getTmpDir();
   const cwd = tmpDir.name;
   const goal = '> Success! Initialized "angular" example in';
 
@@ -2109,7 +2192,7 @@ test('initialize example ("angular") to specified directory', async () => {
 });
 
 test('initialize example to existing directory with "-f"', async () => {
-  tmpDir = tmp.dirSync({ unsafeCleanup: true });
+  tmpDir = getTmpDir();
   const cwd = tmpDir.name;
   const goal = '> Success! Initialized "angular" example in';
 
@@ -2140,7 +2223,7 @@ test('initialize example to existing directory with "-f"', async () => {
 });
 
 test('try to initialize example to existing directory', async () => {
-  tmpDir = tmp.dirSync({ unsafeCleanup: true });
+  tmpDir = getTmpDir();
   const cwd = tmpDir.name;
   const goal =
     'Error: Destination path "angular" already exists and is not an empty directory. You may use `--force` or `-f` to override it.';
@@ -2157,7 +2240,7 @@ test('try to initialize example to existing directory', async () => {
 });
 
 test('try to initialize misspelled example (noce) in non-tty', async () => {
-  tmpDir = tmp.dirSync({ unsafeCleanup: true });
+  tmpDir = getTmpDir();
   const cwd = tmpDir.name;
   const goal =
     'Error: No example found for noce, run `vercel init` to see the list of available examples.';
@@ -2169,7 +2252,7 @@ test('try to initialize misspelled example (noce) in non-tty', async () => {
 });
 
 test('try to initialize example "example-404"', async () => {
-  tmpDir = tmp.dirSync({ unsafeCleanup: true });
+  tmpDir = getTmpDir();
   const cwd = tmpDir.name;
   const goal =
     'Error: No example found for example-404, run `vercel init` to see the list of available examples.';
@@ -2187,8 +2270,8 @@ test('try to revert a deployment and assign the automatic aliases', async () => 
   const secondDeployment = fixture('now-revert-alias-2');
 
   const { name } = JSON.parse(
-    fs.readFileSync(path.join(firstDeployment, 'now.json'))
-  );
+    fs.readFileSync(path.join(firstDeployment, 'now.json')).toString()
+  ) as NowJson;
   expect(name).toBeTruthy();
 
   const url = `https://${name}.user.vercel.app`;
@@ -2299,7 +2382,7 @@ test('`vercel rm` removes a deployment', async () => {
         session,
         ...defaultArgs,
         '-V',
-        2,
+        '2',
         '--force',
         '--yes',
       ],
@@ -2358,7 +2441,7 @@ test('render build errors', async () => {
 });
 
 test('invalid deployment, projects and alias names', async () => {
-  const check = async (...args) => {
+  const check = async (...args: string[]) => {
     const output = await execute(args);
     expect(output.exitCode, formatOutput(output)).toBe(1);
     expect(output.stderr).toMatch(/The provided argument/gm);
@@ -2409,7 +2492,7 @@ test('create zero-config deployment', async () => {
   const text = await response.text();
 
   expect(response.status).toBe(200);
-  const data = JSON.parse(text);
+  const data = JSON.parse(text) as DeploymentLike;
 
   expect(data.error).toBe(undefined);
 
@@ -2447,7 +2530,6 @@ test('vercel secret ls', async () => {
   const output = await execute(['secret', 'ls']);
   expect(output.exitCode, formatOutput(output)).toBe(0);
   expect(output.stdout).toMatch(/Secrets found under/gm);
-  expect(output.stdout).toMatch(new RegExp());
 });
 
 test('vercel secret ls --test-warning', async () => {
@@ -2460,6 +2542,10 @@ test('vercel secret ls --test-warning', async () => {
 });
 
 test('vercel secret rename', async () => {
+  if (!context.secretName) {
+    throw new Error('Shared state "context.secretName" not set.');
+  }
+
   const nextName = `renamed-secret-${Date.now().toString(36)}`;
   const output = await execute([
     'secret',
@@ -2473,6 +2559,10 @@ test('vercel secret rename', async () => {
 });
 
 test('vercel secret rm', async () => {
+  if (!context.secretName) {
+    throw new Error('Shared state "context.secretName" not set.');
+  }
+
   const output = await execute(['secret', 'rm', context.secretName, '-y']);
   expect(output.exitCode, formatOutput(output)).toBe(0);
 });
@@ -2572,6 +2662,10 @@ test('fail to add a domain without a project', async () => {
 test(
   'change user',
   async () => {
+    if (!email) {
+      throw new Error('Shared state "email" not set.');
+    }
+
     const { stdout: prevUser } = await execute(['whoami']);
 
     // Delete the current token
@@ -2671,13 +2765,19 @@ test('should show prompts to set up project during first deploy', async () => {
   // and output directory
   let stderr = '';
   const port = 58351;
-  const dev = execa(binaryPath, ['dev', '--listen', port, dir, ...defaultArgs]);
+  const dev = execa(binaryPath, [
+    'dev',
+    '--listen',
+    port.toString(),
+    dir,
+    ...defaultArgs,
+  ]);
   dev.stderr.setEncoding('utf8');
 
   try {
     dev.stdout.pipe(process.stdout);
     dev.stderr.pipe(process.stderr);
-    await new Promise((resolve, reject) => {
+    await new Promise<void>((resolve, reject) => {
       dev.once('close', (code, signal) => {
         reject(`"vc dev" failed with ${signal || code}`);
       });
@@ -2882,6 +2982,10 @@ test('should prefill "project name" prompt with now.json `name`', async () => {
 });
 
 test('deploy with unknown `VERCEL_PROJECT_ID` should fail', async () => {
+  if (!token) {
+    throw new Error('Shared state "token" not set.');
+  }
+
   const directory = fixture('static-deployment');
   const user = await fetchTokenInformation(token);
 
@@ -2897,6 +3001,10 @@ test('deploy with unknown `VERCEL_PROJECT_ID` should fail', async () => {
 });
 
 test('deploy with `VERCEL_ORG_ID` but without `VERCEL_PROJECT_ID` should fail', async () => {
+  if (!token) {
+    throw new Error('Shared state "token" not set.');
+  }
+
   const directory = fixture('static-deployment');
   const user = await fetchTokenInformation(token);
 
@@ -3032,6 +3140,10 @@ test('vercel env with unknown `VERCEL_ORG_ID` or `VERCEL_PROJECT_ID` should erro
 });
 
 test('whoami with `VERCEL_ORG_ID` should favor `--scope` and should error', async () => {
+  if (!token) {
+    throw new Error('Shared state "token" not set.');
+  }
+
   const user = await fetchTokenInformation(token);
 
   const output = await execute(['whoami', '--scope', 'asdf'], {
@@ -3043,6 +3155,10 @@ test('whoami with `VERCEL_ORG_ID` should favor `--scope` and should error', asyn
 });
 
 test('whoami with local .vercel scope', async () => {
+  if (!token) {
+    throw new Error('Shared state "token" not set.');
+  }
+
   const directory = fixture('static-deployment');
   const user = await fetchTokenInformation(token);
 
@@ -3139,9 +3255,12 @@ test(
     const directory = example('gatsby');
     const packageJsonPath = path.join(directory, 'package.json');
     const packageJsonOriginal = await readFile(packageJsonPath, 'utf8');
-    const pkg = JSON.parse(packageJsonOriginal);
+    const pkg = JSON.parse(packageJsonOriginal) as PackageJson;
+    if (!pkg.scripts) {
+      throw new Error(`"scripts" not found in "${packageJsonPath}"`);
+    }
 
-    async function tryDeploy(cwd) {
+    async function tryDeploy(cwd: string) {
       const { exitCode, stdout, stderr } = await execa(
         binaryPath,
         [...defaultArgs, '--public', '--yes'],
@@ -3354,12 +3473,16 @@ test('[vc dev] should show prompts to set up project', async () => {
   // remove previously linked project if it exists
   await remove(path.join(dir, '.vercel'));
 
-  const dev = execa(binaryPath, ['dev', '--listen', port, ...defaultArgs], {
-    cwd: dir,
-    env: {
-      FORCE_TTY: '1',
-    },
-  });
+  const dev = execa(
+    binaryPath,
+    ['dev', '--listen', port.toString(), ...defaultArgs],
+    {
+      cwd: dir,
+      env: {
+        FORCE_TTY: '1',
+      },
+    }
+  );
 
   await setupProject(dev, projectName, {
     buildCommand: `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html`,
@@ -3461,12 +3584,16 @@ test('[vc dev] should send the platform proxy request headers to frontend dev se
   // remove previously linked project if it exists
   await remove(path.join(dir, '.vercel'));
 
-  const dev = execa(binaryPath, ['dev', '--listen', port, ...defaultArgs], {
-    cwd: dir,
-    env: {
-      FORCE_TTY: '1',
-    },
-  });
+  const dev = execa(
+    binaryPath,
+    ['dev', '--listen', port.toString(), ...defaultArgs],
+    {
+      cwd: dir,
+      env: {
+        FORCE_TTY: '1',
+      },
+    }
+  );
 
   await setupProject(dev, projectName, {
     buildCommand: `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html`,
@@ -3488,6 +3615,10 @@ test('[vc dev] should send the platform proxy request headers to frontend dev se
 });
 
 test('[vc link] should support the `--project` flag', async () => {
+  if (!token) {
+    throw new Error('Shared state "token" not set.');
+  }
+
   const projectName = 'link-project-flag';
   const directory = fixture('static-deployment');
 

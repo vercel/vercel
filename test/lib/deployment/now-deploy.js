@@ -199,6 +199,9 @@ async function fetchCachedToken() {
   return token;
 }
 
+/**
+ * @returns { Promise<String> }
+ */
 async function fetchTokenWithRetry(retries = 5) {
   const {
     NOW_TOKEN,
