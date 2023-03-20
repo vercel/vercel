@@ -2,9 +2,21 @@
 /* global addEventListener */
 
 function buildUrl(requestDetails) {
-  let proto = requestDetails.headers['x-forwarded-proto'].split(/\b/).shift(); // handling multi-protocol like https,http://...
-  let host = requestDetails.headers['x-forwarded-host'];
-  let path = requestDetails.url;
+  const allProtocols = requestDetails.headers['x-forwarded-proto'];
+  const host = requestDetails.headers['x-forwarded-host'];
+  const path = requestDetails.url;
+
+  if (!allProtocols) {
+    throw new Error('missing header "x-forwarded-proto"');
+  }
+  if (!host) {
+    throw new Error('missing header "x-forwarded-host"');
+  }
+  if (!path) {
+    throw new Error('missing url');
+  }
+
+  const proto = allProtocols.split(/\b/).shift(); // handling multi-protocol like https,http://...
   return `${proto}://${host}${path}`;
 }
 
@@ -16,7 +28,7 @@ async function respond(
   dependencies
 ) {
   const { Request, Response } = dependencies;
-  const { isMiddleware, entrypointLabel } = options;
+  const { isMiddleware } = options;
 
   let body;
 
@@ -26,7 +38,7 @@ async function respond(
     }
   }
 
-  let request = new Request(buildUrl(requestDetails), {
+  const request = new Request(buildUrl(requestDetails), {
     headers: requestDetails.headers,
     method: requestDetails.method,
     body: body,
@@ -45,21 +57,20 @@ async function respond(
         },
       });
     } else {
-      throw new Error(
-        `Edge Function "${entrypointLabel}" did not return a response.`
-      );
+      throw new Error(`Execution did not return a response.`);
     }
   }
   return response;
 }
 
-function toResponseError(error, Response) {
+function toResponseError(error, entrypointLabel, Response) {
   // we can't easily show a meaningful stack trace
   // so, stick to just the error message for now
   const msg = error.cause
     ? error.message + ': ' + (error.cause.message || error.cause)
     : error.message;
-  return new Response(msg, {
+  const fullMessage = `Edge Function "${entrypointLabel}" failed: ${msg}`;
+  return new Response(fullMessage, {
     status: 500,
     headers: {
       'x-vercel-failed': 'edge-wrapper',
@@ -68,8 +79,8 @@ function toResponseError(error, Response) {
 }
 
 async function parseRequestEvent(event) {
-  let serializedRequest = await event.request.text();
-  let requestDetails = JSON.parse(serializedRequest);
+  const serializedRequest = await event.request.text();
+  const requestDetails = JSON.parse(serializedRequest);
   return requestDetails;
 }
 
@@ -78,8 +89,8 @@ async function parseRequestEvent(event) {
 function registerFetchListener(userEdgeHandler, options, dependencies) {
   addEventListener('fetch', async event => {
     try {
-      let requestDetails = await parseRequestEvent(event);
-      let response = await respond(
+      const requestDetails = await parseRequestEvent(event);
+      const response = await respond(
         userEdgeHandler,
         requestDetails,
         event,
@@ -88,7 +99,10 @@ function registerFetchListener(userEdgeHandler, options, dependencies) {
       );
       return event.respondWith(response);
     } catch (error) {
-      event.respondWith(toResponseError(error, dependencies.Response));
+      const { entrypointLabel } = options;
+      event.respondWith(
+        toResponseError(error, entrypointLabel, dependencies.Response)
+      );
     }
   });
 }
