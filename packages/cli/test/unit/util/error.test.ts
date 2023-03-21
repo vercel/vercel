@@ -1,7 +1,7 @@
 import fetch from 'node-fetch';
 import listen from 'async-listen';
 import { createServer, IncomingMessage, Server, ServerResponse } from 'http';
-import { JSONValue } from '../../../src/types';
+import { JSONValue } from '@vercel-internals/types';
 import {
   responseError,
   responseErrorMessage,

@@ -7,4 +7,3 @@ export function getDistTag(version: string): string {
   }
   return 'latest';
 }
-

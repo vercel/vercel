@@ -1,73 +1,103 @@
 // provided by the edge runtime:
-/* global addEventListener Request Response */
-
-// provided by our edge handler logic:
-/* global IS_MIDDLEWARE ENTRYPOINT_LABEL */
+/* global addEventListener */
 
 function buildUrl(requestDetails) {
-  let proto = requestDetails.headers['x-forwarded-proto'];
+  let proto = requestDetails.headers['x-forwarded-proto'].split(/\b/).shift(); // handling multi-protocol like https,http://...
   let host = requestDetails.headers['x-forwarded-host'];
   let path = requestDetails.url;
   return `${proto}://${host}${path}`;
 }
 
-addEventListener('fetch', async event => {
-  try {
-    let serializedRequest = await event.request.text();
-    let requestDetails = JSON.parse(serializedRequest);
+async function respond(
+  userEdgeHandler,
+  requestDetails,
+  event,
+  options,
+  dependencies
+) {
+  const { Request, Response } = dependencies;
+  const { isMiddleware, entrypointLabel } = options;
 
-    let body;
+  let body;
 
-    if (requestDetails.method !== 'GET' && requestDetails.method !== 'HEAD') {
+  if (requestDetails.method !== 'GET' && requestDetails.method !== 'HEAD') {
+    if (requestDetails.body) {
       body = Uint8Array.from(atob(requestDetails.body), c => c.charCodeAt(0));
     }
+  }
 
-    let request = new Request(buildUrl(requestDetails), {
-      headers: requestDetails.headers,
-      method: requestDetails.method,
-      body: body,
-    });
+  let request = new Request(buildUrl(requestDetails), {
+    headers: requestDetails.headers,
+    method: requestDetails.method,
+    body: body,
+  });
 
-    event.request = request;
+  event.request = request;
 
-    let edgeHandler = module.exports.default;
-    if (!edgeHandler) {
+  let response = await userEdgeHandler(event.request, event);
+
+  if (!response) {
+    if (isMiddleware) {
+      // allow empty responses to pass through
+      response = new Response(null, {
+        headers: {
+          'x-middleware-next': '1',
+        },
+      });
+    } else {
       throw new Error(
-        'No default export was found. Add a default export to handle requests. Learn more: https://vercel.link/creating-edge-middleware'
+        `Edge Function "${entrypointLabel}" did not return a response.`
       );
     }
-
-    let response = await edgeHandler(event.request, event);
-
-    if (!response) {
-      if (IS_MIDDLEWARE) {
-        // allow empty responses to pass through
-        response = new Response(null, {
-          headers: {
-            'x-middleware-next': '1',
-          },
-        });
-      } else {
-        throw new Error(
-          `Edge Function "${ENTRYPOINT_LABEL}" did not return a response.`
-        );
-      }
-    }
-
-    return event.respondWith(response);
-  } catch (error) {
-    // we can't easily show a meaningful stack trace
-    // so, stick to just the error message for now
-    const msg = error.cause
-      ? error.message + ': ' + (error.cause.message || error.cause)
-      : error.message;
-    event.respondWith(
-      new Response(msg, {
-        status: 500,
-        headers: {
-          'x-vercel-failed': 'edge-wrapper',
-        },
-      })
-    );
   }
-});
+  return response;
+}
+
+function toResponseError(error, Response) {
+  // we can't easily show a meaningful stack trace
+  // so, stick to just the error message for now
+  const msg = error.cause
+    ? error.message + ': ' + (error.cause.message || error.cause)
+    : error.message;
+  return new Response(msg, {
+    status: 500,
+    headers: {
+      'x-vercel-failed': 'edge-wrapper',
+    },
+  });
+}
+
+async function parseRequestEvent(event) {
+  let serializedRequest = await event.request.text();
+  let requestDetails = JSON.parse(serializedRequest);
+  return requestDetails;
+}
+
+// This will be invoked by logic using this template
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function registerFetchListener(userEdgeHandler, options, dependencies) {
+  addEventListener('fetch', async event => {
+    try {
+      let requestDetails = await parseRequestEvent(event);
+      let response = await respond(
+        userEdgeHandler,
+        requestDetails,
+        event,
+        options,
+        dependencies
+      );
+      return event.respondWith(response);
+    } catch (error) {
+      event.respondWith(toResponseError(error, dependencies.Response));
+    }
+  });
+}
+
+// for testing:
+module.exports = {
+  buildUrl,
+  respond,
+  toResponseError,
+  parseRequestEvent,
+  registerFetchListener,
+};

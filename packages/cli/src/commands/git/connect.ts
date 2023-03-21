@@ -1,7 +1,7 @@
 import { Dictionary } from '@vercel/client';
 import chalk from 'chalk';
 import { join } from 'path';
-import { Org, Project, ProjectLinkData } from '../../types';
+import { Org, Project, ProjectLinkData } from '@vercel-internals/types';
 import Client from '../../util/client';
 import { parseGitConfig, pluckRemoteUrls } from '../../util/create-git-meta';
 import confirm from '../../util/input/confirm';

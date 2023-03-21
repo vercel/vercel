@@ -30,7 +30,7 @@ export async function generateVercelBuildOutputAPI3Output({
     config: gatsbyStoreState.config,
   };
 
-  if (validateGatsbyState(state)) {
+  if (validateGatsbyState.Check(state)) {
     console.log('▲ Creating Vercel build output');
 
     // `_pathPrefix` contains `assetPrefix` + `pathPrefix`,

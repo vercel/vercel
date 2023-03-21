@@ -3,7 +3,7 @@ import path from 'path';
 import env from '../../../src/commands/env';
 import { setupFixture } from '../../helpers/setup-fixture';
 import { client } from '../../mocks/client';
-import { ProjectEnvTarget, ProjectEnvType } from '../../../src/types';
+import { ProjectEnvTarget, ProjectEnvType } from '@vercel-internals/types';
 import { defaultProject, useProject } from '../../mocks/project';
 import { useTeams } from '../../mocks/team';
 import { useUser } from '../../mocks/user';

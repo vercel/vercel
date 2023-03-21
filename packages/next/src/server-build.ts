@@ -1558,9 +1558,18 @@ export async function serverBuild({
       ...(i18n
         ? [
             {
+              src: path.posix.join(
+                '/',
+                entryDirectory,
+                escapeStringRegexp(i18n.defaultLocale)
+              ),
+              dest: '/',
+              check: true,
+            },
+            {
               src: `^${path.posix.join('/', entryDirectory)}/?(?:${i18n.locales
                 .map(locale => escapeStringRegexp(locale))
-                .join('|')})/?(.*)`,
+                .join('|')})/(.*)`,
               dest: `${path.posix.join('/', entryDirectory, '/')}$1`,
               check: true,
             },
