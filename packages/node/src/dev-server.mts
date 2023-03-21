@@ -16,11 +16,9 @@ import type { VercelProxyResponse } from '@vercel/node-bridge';
 import type { Config } from '@vercel/build-utils';
 import { getConfig } from '@vercel/static-config';
 import { Project } from 'ts-morph';
-import utils from './utils.js';
+import { EdgeRuntimes, isEdgeRuntime, logError } from './utils.js';
 import { createEdgeEventHandler } from './edge-functions/edge-handler.mjs';
 import { createServerlessEventHandler } from './serverless-functions/serverless-handler.mjs';
-
-const { EdgeRuntimes, isEdgeRuntime, logError } = utils;
 
 function listen(server: Server, port: number, host: string): Promise<void> {
   return new Promise(resolve => {
