@@ -2455,7 +2455,7 @@ test.only('vercel secret ls --test-warning', async () => {
     match2: output.stderr.match(/No secrets found under/gm),
 
     match3: output.stderr.match(/Learn more: https:\/\/vercel.com/gm),
-    match4: !!output.stderr.indexOf('Learn more: https://vercel.com/'),
+    match4: output.stderr.indexOf('Learn more: https://vercel.com/'),
   });
 
   expect(output.exitCode, formatOutput(output)).toBe(0);
