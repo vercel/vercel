@@ -17,17 +17,21 @@ export default async function waitForPrompt(
   }
 
   new Promise<void>((resolve, reject) => {
+    let mostRecentChunk = 'NO CHUNKS SO FAR';
+
     console.log('Waiting for prompt...');
     const handleTimeout = setTimeout(
       () =>
         reject(
           new Error(
-            `timed out after ${PROMPT_TIMEOUT}ms in waitForPrompt, waiting for: ${rawAssertion.toString()}`
+            `Timed out after ${PROMPT_TIMEOUT}ms in waitForPrompt, waiting for:\n  "${rawAssertion.toString()}"\nmost recent chunk was:\n  "${mostRecentChunk}"`
           )
         ),
       PROMPT_TIMEOUT
     );
+
     const listener = (chunk: string) => {
+      mostRecentChunk = chunk;
       console.log('> ' + chunk);
       if (assertion(chunk)) {
         cp.stdout.off && cp.stdout.off('data', listener);
