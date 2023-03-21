@@ -12,7 +12,6 @@ const runnersMap = new Map([
     },
   ],
   ['test-e2e', { min: 1, max: 5, runners: ['ubuntu-latest'] }],
-  ['test-cli', { min: 1, max: 5, runners: ['ubuntu-latest'] }],
   ['test-next-local', { min: 1, max: 5, runners: ['ubuntu-latest'] }],
   ['test-dev', { min: 1, max: 5, runners: ['ubuntu-latest', 'macos-latest'] }],
 ]);
