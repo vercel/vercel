@@ -384,7 +384,7 @@ afterAll(async () => {
 
 // NOTE: Test order is important here.
 // This test MUST run before the tests below for them to work.
-test(
+test.only(
   'login',
   async () => {
     if (!email) {
@@ -2445,7 +2445,7 @@ test('vercel secret ls', async () => {
   expect(output.stdout).toMatch(/Secrets found under/gm);
 });
 
-test('vercel secret ls --test-warning', async () => {
+test.only('vercel secret ls --test-warning', async () => {
   const output = await execute(['secret', 'ls', '--test-warning']);
 
   expect(output.exitCode, formatOutput(output)).toBe(0);
