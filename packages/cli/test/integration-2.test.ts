@@ -25,6 +25,8 @@ import type http from 'http';
 const TEST_TIMEOUT = 3 * 60 * 1000;
 jest.setTimeout(TEST_TIMEOUT);
 
+const PROMPT_TIMEOUT = 3000;
+
 type BoundChildProcess = _execa.ExecaChildProcess & {
   stdout: Readable;
   stdin: Readable;
@@ -204,9 +206,6 @@ const apiFetch = (url: string, { headers, ...options }: RequestInit = {}) => {
     ...options,
   });
 };
-
-// the prompt timeout has to be less than the test timeout
-const PROMPT_TIMEOUT = TEST_TIMEOUT / 2;
 
 const waitForPrompt = (
   cp: BoundChildProcess,
