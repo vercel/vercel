@@ -267,6 +267,7 @@ const main = async () => {
     config,
     authConfig,
     localConfig,
+    localConfigPath,
     argv: process.argv,
   });
 
@@ -280,7 +281,12 @@ const main = async () => {
       GLOBAL_COMMANDS.has(targetOrSubcommand) ||
       commands.has(targetOrSubcommand);
 
-    if (targetPathExists && subcommandExists && !argv['--cwd']) {
+    if (
+      targetPathExists &&
+      subcommandExists &&
+      !argv['--cwd'] &&
+      !process.env.NOW_BUILDER
+    ) {
       output.warn(
         `Did you mean to deploy the subdirectory "${targetOrSubcommand}"? ` +
           `Use \`vc --cwd ${targetOrSubcommand}\` instead.`
