@@ -27,7 +27,7 @@ describe('getMonorepoDefaultSettings', () => {
 
   test.each([
     ['turbo', 'turbo', false, 'app-14', false, false],
-    ['turbo-new', 'turbo', false, 'app-14', false, true],
+    ['turbo-has-filter', 'turbo', false, 'app-14', false, true],
     ['turbo-package-config', 'turbo', false, 'app-13', false, false],
     ['turbo-npm', 'turbo', true, 'app-15', false, false],
     ['turbo-npm-root-proj', 'turbo', true, 'app-root-proj', true, false],
