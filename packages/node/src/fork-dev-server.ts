@@ -1,5 +1,6 @@
 import once from '@tootallnate/once';
-import { cloneEnv, Config, Meta } from '@vercel/build-utils';
+import { cloneEnv } from '@vercel/build-utils';
+import type { Config, Meta } from '@vercel/build-utils';
 import { ChildProcess, fork, ForkOptions } from 'child_process';
 import { pathToFileURL } from 'url';
 import { join } from 'path';

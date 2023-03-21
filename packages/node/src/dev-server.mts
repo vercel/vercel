@@ -12,8 +12,8 @@ import { join } from 'path';
 const useRequire = process.env.VERCEL_DEV_IS_ESM !== '1';
 
 import { createServer, Server, IncomingMessage, ServerResponse } from 'http';
-import { VercelProxyResponse } from '@vercel/node-bridge';
-import { Config } from '@vercel/build-utils';
+import type { VercelProxyResponse } from '@vercel/node-bridge';
+import type { Config } from '@vercel/build-utils';
 import { getConfig } from '@vercel/static-config';
 import { Project } from 'ts-morph';
 import utils from './utils.js';

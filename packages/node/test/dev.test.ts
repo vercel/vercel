@@ -1,6 +1,7 @@
+import http from 'http';
 import { forkDevServer, readMessage } from '../src/fork-dev-server';
 import { resolve, extname } from 'path';
-import fetch from 'node-fetch';
+import { jest, test, expect } from '@jest/globals';
 
 jest.setTimeout(10 * 1000);
 
@@ -18,7 +19,45 @@ function testForkDevServer(entrypoint: string) {
     tsConfig: undefined,
     workPath: resolve(__dirname, './dev-fixtures'),
     entrypoint,
-    devServerPath: resolve(__dirname, '../dist/dev-server.js'),
+    devServerPath: resolve(__dirname, '../dist/dev-server.mjs'),
+  });
+}
+
+interface FetchResponse {
+  headers: http.IncomingHttpHeaders;
+  status: number | undefined;
+  text: string;
+}
+
+async function fetch(url: string): Promise<FetchResponse> {
+  return new Promise((resolve, reject) => {
+    const req = http.get(url, res => {
+      let buf = '';
+      res.on('data', chunk => {
+        buf += chunk;
+      });
+      res.on('end', () => {
+        try {
+          if (res.statusCode && res.statusCode >= 400) {
+            return reject(
+              new Error(
+                `Fetch dist-tags failed ${res.statusCode} ${res.statusMessage}`
+              )
+            );
+          }
+
+          resolve({
+            headers: res.headers,
+            status: res.statusCode,
+            text: buf,
+          });
+        } catch (err) {
+          reject(err);
+        }
+      });
+    });
+    req.on('error', reject);
+    req.end();
   });
 }
 
@@ -34,14 +73,10 @@ test('runs a mjs endpoint', async () => {
     const response = await fetch(
       `http://localhost:${result.value.port}/api/hello`
     );
-    expect({
-      status: response.status,
-      headers: response.headers.raw(),
-      text: await response.text(),
-    }).toEqual({
+    expect(response).toEqual({
       status: 200,
       headers: expect.objectContaining({
-        'x-hello': ['world'],
+        'x-hello': 'world',
       }),
       text: 'Hello, world!',
     });
@@ -67,14 +102,10 @@ test('runs a esm typescript endpoint', async () => {
     const response = await fetch(
       `http://localhost:${result.value.port}/api/hello`
     );
-    expect({
-      status: response.status,
-      headers: response.headers.raw(),
-      text: await response.text(),
-    }).toEqual({
+    expect(response).toEqual({
       status: 200,
       headers: expect.objectContaining({
-        'x-hello': ['world'],
+        'x-hello': 'world',
       }),
       text: 'Hello, world!',
     });
