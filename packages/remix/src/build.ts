@@ -63,6 +63,9 @@ const nodeServerSrcPromise = fs.readFile(
   'utf-8'
 );
 
+// This value is the minimum supported version for our fork of Remix
+const minimumSupportRemixVersion = '1.10.0';
+
 export const build: BuildV2 = async ({
   entrypoint,
   files,
@@ -157,9 +160,12 @@ export const build: BuildV2 = async ({
       // 3. Users app is on something greater than our latest version of the fork -> we install the latest version of our fork
 
       // remixVersion is the version of the `@remix-run/dev` package in the *users' app*
-      const usersRemixVersion = semver.gt(remixVersion, '1.10.0')
+      const usersRemixVersion = semver.gt(
+        remixVersion,
+        minimumSupportRemixVersion
+      )
         ? remixVersion
-        : '1.10.0'; // our minimum supported version is 1.10.0
+        : minimumSupportRemixVersion;
 
       // Prevent frozen lockfile rejections
       const envForAddDep = { ...spawnOpts.env };
