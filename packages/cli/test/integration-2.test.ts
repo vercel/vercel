@@ -231,62 +231,47 @@ async function setupProject(
     outputDirectory?: string;
   }
 ) {
-  await waitForPrompt(process, chunk => /Set up [^?]+\?/.test(chunk));
+  await waitForPrompt(process, /Set up [^?]+\?/);
   process.stdin.write('yes\n');
 
-  await waitForPrompt(process, chunk => /Which scope [^?]+\?/.test(chunk));
+  await waitForPrompt(process, /Which scope [^?]+\?/);
   process.stdin.write('\n');
 
-  await waitForPrompt(process, chunk =>
-    chunk.includes('Link to existing project?')
-  );
+  await waitForPrompt(process, 'Link to existing project?');
   process.stdin.write('no\n');
 
-  await waitForPrompt(process, chunk =>
-    chunk.includes('What’s your project’s name?')
-  );
+  await waitForPrompt(process, 'What’s your project’s name?');
   process.stdin.write(`${projectName}\n`);
 
-  await waitForPrompt(process, chunk =>
-    chunk.includes('In which directory is your code located?')
-  );
+  await waitForPrompt(process, 'In which directory is your code located?');
   process.stdin.write('\n');
 
-  await waitForPrompt(process, chunk =>
-    chunk.includes('Want to modify these settings?')
-  );
+  await waitForPrompt(process, 'Want to modify these settings?');
 
   if (overrides) {
     process.stdin.write('yes\n');
 
     const { buildCommand, outputDirectory, devCommand } = overrides;
 
-    await waitForPrompt(process, chunk =>
-      chunk.includes(
-        'Which settings would you like to overwrite (select multiple)?'
-      )
+    await waitForPrompt(
+      process,
+      'Which settings would you like to overwrite (select multiple)?'
     );
     process.stdin.write('a\n'); // 'a' means select all
 
-    await waitForPrompt(process, chunk =>
-      chunk.includes(`What's your Build Command?`)
-    );
+    await waitForPrompt(process, `What's your Build Command?`);
     process.stdin.write(`${buildCommand || ''}\n`);
 
-    await waitForPrompt(process, chunk =>
-      chunk.includes(`What's your Development Command?`)
-    );
+    await waitForPrompt(process, `What's your Development Command?`);
     process.stdin.write(`${devCommand || ''}\n`);
 
-    await waitForPrompt(process, chunk =>
-      chunk.includes(`What's your Output Directory?`)
-    );
+    await waitForPrompt(process, `What's your Output Directory?`);
     process.stdin.write(`${outputDirectory || ''}\n`);
   } else {
     process.stdin.write('no\n');
   }
 
-  await waitForPrompt(process, chunk => chunk.includes('Linked to'));
+  await waitForPrompt(process, 'Linked to');
 }
 
 beforeAll(async () => {
@@ -510,32 +495,22 @@ test('should prefill "project name" prompt with folder name', async () => {
     },
   });
 
-  await waitForPrompt(now, chunk => /Set up and deploy [^?]+\?/.test(chunk));
+  await waitForPrompt(now, /Set up and deploy [^?]+\?/);
   now.stdin.write('yes\n');
 
-  await waitForPrompt(now, chunk =>
-    chunk.includes('Which scope do you want to deploy to?')
-  );
+  await waitForPrompt(now, 'Which scope do you want to deploy to?');
   now.stdin.write('\n');
 
-  await waitForPrompt(now, chunk =>
-    chunk.includes('Link to existing project?')
-  );
+  await waitForPrompt(now, 'Link to existing project?');
   now.stdin.write('no\n');
 
-  await waitForPrompt(now, chunk =>
-    chunk.includes(`What’s your project’s name? (${projectName})`)
-  );
+  await waitForPrompt(now, `What’s your project’s name? (${projectName})`);
   now.stdin.write(`\n`);
 
-  await waitForPrompt(now, chunk =>
-    chunk.includes('In which directory is your code located?')
-  );
+  await waitForPrompt(now, 'In which directory is your code located?');
   now.stdin.write('\n');
 
-  await waitForPrompt(now, chunk =>
-    chunk.includes('Want to modify these settings?')
-  );
+  await waitForPrompt(now, 'Want to modify these settings?');
   now.stdin.write('no\n');
 
   const output = await now;
@@ -574,29 +549,19 @@ test('should prefill "project name" prompt with --name', async () => {
 
   expect(isDeprecated, 'isDeprecated').toBe(true);
 
-  await waitForPrompt(now, chunk =>
-    chunk.includes('Which scope do you want to deploy to?')
-  );
+  await waitForPrompt(now, 'Which scope do you want to deploy to?');
   now.stdin.write('\n');
 
-  await waitForPrompt(now, chunk =>
-    chunk.includes('Link to existing project?')
-  );
+  await waitForPrompt(now, 'Link to existing project?');
   now.stdin.write('no\n');
 
-  await waitForPrompt(now, chunk =>
-    chunk.includes(`What’s your project’s name? (${projectName})`)
-  );
+  await waitForPrompt(now, `What’s your project’s name? (${projectName})`);
   now.stdin.write(`\n`);
 
-  await waitForPrompt(now, chunk =>
-    chunk.includes('In which directory is your code located?')
-  );
+  await waitForPrompt(now, 'In which directory is your code located?');
   now.stdin.write('\n');
 
-  await waitForPrompt(now, chunk =>
-    chunk.includes('Want to modify these settings?')
-  );
+  await waitForPrompt(now, 'Want to modify these settings?');
   now.stdin.write('no\n');
 
   const output = await now;
@@ -636,34 +601,22 @@ test('should prefill "project name" prompt with now.json `name`', async () => {
     }
   });
 
-  await waitForPrompt(now, chunk => {
-    return /Set up and deploy [^?]+\?/.test(chunk);
-  });
+  await waitForPrompt(now, /Set up and deploy [^?]+\?/);
   now.stdin.write('yes\n');
 
-  await waitForPrompt(now, chunk =>
-    chunk.includes('Which scope do you want to deploy to?')
-  );
+  await waitForPrompt(now, 'Which scope do you want to deploy to?');
   now.stdin.write('\n');
 
-  await waitForPrompt(now, chunk =>
-    chunk.includes('Link to existing project?')
-  );
+  await waitForPrompt(now, 'Link to existing project?');
   now.stdin.write('no\n');
 
-  await waitForPrompt(now, chunk =>
-    chunk.includes(`What’s your project’s name? (${projectName})`)
-  );
+  await waitForPrompt(now, `What’s your project’s name? (${projectName})`);
   now.stdin.write(`\n`);
 
-  await waitForPrompt(now, chunk =>
-    chunk.includes('In which directory is your code located?')
-  );
+  await waitForPrompt(now, 'In which directory is your code located?');
   now.stdin.write('\n');
 
-  await waitForPrompt(now, chunk =>
-    chunk.includes('Want to modify these settings?')
-  );
+  await waitForPrompt(now, 'Want to modify these settings?');
   now.stdin.write('no\n');
 
   const output = await now;
@@ -1197,7 +1150,7 @@ test('[vc dev] should show prompts to set up project', async () => {
     'README.txt'
   ).toBe(true);
 
-  await waitForPrompt(dev, chunk => chunk.includes('Ready! Available at'));
+  await waitForPrompt(dev, 'Ready! Available at');
 
   // Ensure that `vc dev` also works
   try {
@@ -1225,28 +1178,22 @@ test('[vc link] should show project prompts but not framework when `builds` defi
     },
   });
 
-  await waitForPrompt(vc, chunk => /Set up [^?]+\?/.test(chunk));
+  await waitForPrompt(vc, /Set up [^?]+\?/);
   vc.stdin.write('yes\n');
 
-  await waitForPrompt(vc, chunk =>
-    chunk.includes('Which scope should contain your project?')
-  );
+  await waitForPrompt(vc, 'Which scope should contain your project?');
   vc.stdin.write('\n');
 
-  await waitForPrompt(vc, chunk => chunk.includes('Link to existing project?'));
+  await waitForPrompt(vc, 'Link to existing project?');
   vc.stdin.write('no\n');
 
-  await waitForPrompt(vc, chunk =>
-    chunk.includes('What’s your project’s name?')
-  );
+  await waitForPrompt(vc, 'What’s your project’s name?');
   vc.stdin.write(`${projectName}\n`);
 
-  await waitForPrompt(vc, chunk =>
-    chunk.includes('In which directory is your code located?')
-  );
+  await waitForPrompt(vc, 'In which directory is your code located?');
   vc.stdin.write('\n');
 
-  await waitForPrompt(vc, chunk => chunk.includes('Linked to'));
+  await waitForPrompt(vc, 'Linked to');
 
   const output = await vc;
 
@@ -1295,7 +1242,7 @@ test('[vc dev] should send the platform proxy request headers to frontend dev se
     devCommand: 'node server.js',
   });
 
-  await waitForPrompt(dev, chunk => chunk.includes('Ready! Available at'));
+  await waitForPrompt(dev, 'Ready! Available at');
 
   // Ensure that `vc dev` also works
   try {
@@ -1381,43 +1328,30 @@ test('vercel.json configuration overrides in a new project prompt user and merge
 
   const vc = execa(binaryPath, [directory, ...defaultArgs], { reject: false });
 
-  await waitForPrompt(vc, chunk => chunk.includes('Set up and deploy'));
+  await waitForPrompt(vc, 'Set up and deploy');
   vc.stdin.write('y\n');
-  await waitForPrompt(vc, chunk =>
-    chunk.includes('Which scope do you want to deploy to?')
-  );
+  await waitForPrompt(vc, 'Which scope do you want to deploy to?');
   vc.stdin.write('\n');
-  await waitForPrompt(vc, chunk => chunk.includes('Link to existing project?'));
+  await waitForPrompt(vc, 'Link to existing project?');
   vc.stdin.write('n\n');
-  await waitForPrompt(vc, chunk =>
-    chunk.includes('What’s your project’s name?')
-  );
+  await waitForPrompt(vc, 'What’s your project’s name?');
   vc.stdin.write('\n');
-  await waitForPrompt(vc, chunk =>
-    chunk.includes('In which directory is your code located?')
-  );
+  await waitForPrompt(vc, 'In which directory is your code located?');
   vc.stdin.write('\n');
-  await waitForPrompt(vc, chunk =>
-    chunk.includes('Want to modify these settings?')
-  );
+  await waitForPrompt(vc, 'Want to modify these settings?');
   vc.stdin.write('y\n');
-  await waitForPrompt(vc, chunk =>
-    chunk.includes(
-      'Which settings would you like to overwrite (select multiple)?'
-    )
+  await waitForPrompt(
+    vc,
+    'Which settings would you like to overwrite (select multiple)?'
   );
   vc.stdin.write('a\n');
-  await waitForPrompt(vc, chunk =>
-    chunk.includes("What's your Development Command?")
-  );
+  await waitForPrompt(vc, "What's your Development Command?");
   vc.stdin.write('echo "DEV COMMAND"\n');
   // the crux of this test is to make sure that the outputDirectory is properly set by the prompts.
   // otherwise the output from the build command will not be the index route and the page text assertion below will fail.
-  await waitForPrompt(vc, chunk =>
-    chunk.includes("What's your Output Directory?")
-  );
+  await waitForPrompt(vc, "What's your Output Directory?");
   vc.stdin.write('output\n');
-  await waitForPrompt(vc, chunk => chunk.includes('Linked to'));
+  await waitForPrompt(vc, 'Linked to');
   const deployment = await vc;
   expect(deployment.exitCode, formatOutput(deployment)).toBe(0);
   // assert the command were executed

@@ -796,9 +796,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
       cwd: target,
     });
 
-    await waitForPrompt(vc, chunk =>
-      chunk.includes('What’s the name of the variable?')
-    );
+    await waitForPrompt(vc, 'What’s the name of the variable?');
     vc.stdin.write('MY_NEW_ENV_VAR\n');
     await waitForPrompt(
       vc,
@@ -970,8 +968,9 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
       cwd: target,
     });
 
-    await waitForPrompt(vc, chunk =>
-      chunk.includes('Found existing file ".env". Do you want to overwrite?')
+    await waitForPrompt(
+      vc,
+      'Found existing file ".env". Do you want to overwrite?'
     );
     vc.stdin.end('y\n');
 
@@ -1153,9 +1152,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
       reject: false,
       cwd: target,
     });
-    await waitForPrompt(vc, chunk =>
-      chunk.includes('What’s the name of the variable?')
-    );
+    await waitForPrompt(vc, 'What’s the name of the variable?');
     vc.stdin.write('MY_PREVIEW\n');
     const { exitCode, stdout, stderr } = await vc;
     expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
@@ -1256,9 +1253,7 @@ test('[vc projects] should create a project successfully', async () => {
 
   const vc = execa(binaryPath, ['project', 'add', projectName, ...defaultArgs]);
 
-  await waitForPrompt(vc, chunk =>
-    chunk.includes(`Success! Project ${projectName} added`)
-  );
+  await waitForPrompt(vc, `Success! Project ${projectName} added`);
 
   const { exitCode, stdout, stderr } = await vc;
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
@@ -1271,9 +1266,7 @@ test('[vc projects] should create a project successfully', async () => {
     ...defaultArgs,
   ]);
 
-  await waitForPrompt(vc2, chunk =>
-    chunk.includes(`Success! Project ${projectName} added`)
-  );
+  await waitForPrompt(vc2, `Success! Project ${projectName} added`);
 
   const { exitCode: exitCode2 } = await vc;
   expect(exitCode2).toBe(0);
@@ -2227,9 +2220,7 @@ test('[vercel dev] fails when development command calls vercel dev recursively',
   });
 
   try {
-    await waitForPrompt(dev, chunk =>
-      chunk.includes('must not recursively invoke itself')
-    );
+    await waitForPrompt(dev, 'must not recursively invoke itself');
   } finally {
     const onClose = once(dev, 'close');
     dev.kill();
