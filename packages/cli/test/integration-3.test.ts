@@ -34,7 +34,12 @@ function execa(
   options?: _execa.Options<string>
 ): BoundChildProcess {
   console.log(`$ vercel ${args.join(' ')}`);
-  const proc = _execa(file, args, options);
+  const proc = _execa(file, args, {
+    env: {
+      NO_COLOR: '1',
+    },
+    ...options,
+  });
   if (proc.stdin === null) {
     console.warn(`vercel ${args.join(' ')} - not bound to stdin`);
   }

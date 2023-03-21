@@ -55,9 +55,9 @@ function execa(
   console.log(`$ vercel ${args.join(' ')}`);
   const proc = _execa(file, args, {
     env: {
-      NO_COLOR: '1'
+      NO_COLOR: '1',
     },
-    ...options
+    ...options,
   });
   if (proc.stdin === null) {
     console.warn(`vercel ${args.join(' ')} - not bound to stdin`);
@@ -389,7 +389,7 @@ afterAll(async () => {
 
 // NOTE: Test order is important here.
 // This test MUST run before the tests below for them to work.
-test.only(
+test(
   'login',
   async () => {
     if (!email) {
@@ -2450,7 +2450,7 @@ test('vercel secret ls', async () => {
   expect(output.stdout).toMatch(/Secrets found under/gm);
 });
 
-test.only('vercel secret ls --test-warning', async () => {
+test('vercel secret ls --test-warning', async () => {
   const output = await execute(['secret', 'ls', '--test-warning']);
 
   console.log({
