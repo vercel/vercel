@@ -2448,6 +2448,16 @@ test('vercel secret ls', async () => {
 test.only('vercel secret ls --test-warning', async () => {
   const output = await execute(['secret', 'ls', '--test-warning']);
 
+  console.log({
+    stderr: output.stderr,
+
+    match1: output.stderr.match(/Test warning message./gm),
+    match2: output.stderr.match(/No secrets found under/gm),
+
+    match3: output.stderr.match(/Learn more: https:\/\/vercel.com/gm),
+    match4: !!output.stderr.indexOf('Learn more: https://vercel.com/'),
+  });
+
   expect(output.exitCode, formatOutput(output)).toBe(0);
   expect(output.stderr).toMatch(/Test warning message./gm);
   expect(output.stderr).toMatch(/Learn more: https:\/\/vercel.com/gm);
