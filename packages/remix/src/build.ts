@@ -153,7 +153,7 @@ export const build: BuildV2 = async ({
     if (!pkg.dependencies['@vercel/remix']) {
       // Dependency version resolution logic
       // 1. Users app is on 1.9.0 -> we install the 1.10.0 (minimum) version of our fork (`@vercel/remix`)
-      // 2. Users app is on 1.11.0 (a version greater than 1.10.0 and less than the latest version of the fork) -> we install the (matching) 1.11.0 version of our fork
+      // 2. Users app is on 1.11.0 (a version greater than 1.10.0 and less than the latest version of the fork) -> we install the (matching) 1.11.0 version of `@vercel/remix`
       // 3. Users app is on something greater than our latest version of the fork -> we install the latest version of our fork
 
       // remixVersion is the version of the `@remix-run/dev` package in the *users' app*
