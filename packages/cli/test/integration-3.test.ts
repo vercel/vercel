@@ -1,6 +1,5 @@
 import path from 'path';
 import { parse as parseUrl } from 'url';
-import { Readable } from 'stream';
 import { tmpdir } from 'os';
 import _execa from 'execa';
 import XDGAppPaths from 'xdg-app-paths';
@@ -12,20 +11,10 @@ import fs, { ensureDir } from 'fs-extra';
 import prepareFixtures from './helpers/prepare';
 import { fetchTokenWithRetry } from '../../../test/lib/deployment/now-deploy';
 import type http from 'http';
+import type { BoundChildProcess, TmpDir } from './helpers/types';
 
 const TEST_TIMEOUT = 3 * 60 * 1000;
 jest.setTimeout(TEST_TIMEOUT);
-
-type BoundChildProcess = _execa.ExecaChildProcess & {
-  stdout: Readable;
-  stdin: Readable;
-  stderr: Readable;
-};
-
-interface TmpDir {
-  name: string;
-  removeCallback: () => void;
-}
 
 // log command when running `execa`
 function execa(

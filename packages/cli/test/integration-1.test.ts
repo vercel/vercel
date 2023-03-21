@@ -17,36 +17,17 @@ import pkg from '../package.json';
 import prepareFixtures from './helpers/prepare';
 import { fetchTokenWithRetry } from '../../../test/lib/deployment/now-deploy';
 import { once } from 'node:events';
+import waitForPrompt from './helpers/wait-for-prompt';
 import type http from 'http';
+import type {
+  BoundChildProcess,
+  TmpDir,
+  NowJson,
+  DeploymentLike,
+} from './helpers/types';
 
 const TEST_TIMEOUT = 3 * 60 * 1000;
 jest.setTimeout(TEST_TIMEOUT);
-
-const PROMPT_TIMEOUT = 3000;
-
-type BoundChildProcess = _execa.ExecaChildProcess & {
-  stdout: Readable;
-  stdin: Readable;
-  stderr: Readable;
-};
-
-interface TmpDir {
-  name: string;
-  removeCallback: () => void;
-}
-
-interface Build {
-  use: string;
-}
-
-type NowJson = {
-  name: string;
-};
-
-type DeploymentLike = {
-  error?: Error;
-  builds: Build[];
-};
 
 // log command when running `execa`
 function execa(
@@ -294,34 +275,6 @@ const apiFetch = (url: string, { headers, ...options }: RequestInit = {}) => {
     ...options,
   });
 };
-
-const waitForPrompt = (
-  cp: BoundChildProcess,
-  assertion: (chunk: Buffer) => boolean
-) =>
-  new Promise<void>((resolve, reject) => {
-    console.log('Waiting for prompt...');
-    const handleTimeout = setTimeout(
-      () =>
-        reject(
-          new Error(`timed out after ${PROMPT_TIMEOUT}ms in waitForPrompt`)
-        ),
-      PROMPT_TIMEOUT
-    );
-
-    const listener = (chunk: Buffer) => {
-      console.log('> ' + chunk);
-      if (assertion(chunk)) {
-        cp.stdout.off && cp.stdout.off('data', listener);
-        cp.stderr.off && cp.stderr.off('data', listener);
-        clearTimeout(handleTimeout);
-        resolve();
-      }
-    };
-
-    cp.stdout.on('data', listener);
-    cp.stderr.on('data', listener);
-  });
 
 const createUser = async () => {
   await retry(

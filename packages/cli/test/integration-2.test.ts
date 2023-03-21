@@ -19,24 +19,13 @@ import fs, {
 import sleep from '../src/util/sleep';
 import prepareFixtures from './helpers/prepare';
 import { fetchTokenWithRetry } from '../../../test/lib/deployment/now-deploy';
+import waitForPrompt from './helpers/wait-for-prompt';
 import type { PackageJson } from '@vercel/build-utils';
 import type http from 'http';
+import type { BoundChildProcess, TmpDir } from './helpers/types';
 
 const TEST_TIMEOUT = 3 * 60 * 1000;
 jest.setTimeout(TEST_TIMEOUT);
-
-const PROMPT_TIMEOUT = 3000;
-
-type BoundChildProcess = _execa.ExecaChildProcess & {
-  stdout: Readable;
-  stdin: Readable;
-  stderr: Readable;
-};
-
-interface TmpDir {
-  name: string;
-  removeCallback: () => void;
-}
 
 // log command when running `execa`
 function execa(
@@ -207,33 +196,6 @@ const apiFetch = (url: string, { headers, ...options }: RequestInit = {}) => {
   });
 };
 
-const waitForPrompt = (
-  cp: BoundChildProcess,
-  assertion: (chunk: string) => boolean
-) =>
-  new Promise<void>((resolve, reject) => {
-    console.log('Waiting for prompt...');
-    const handleTimeout = setTimeout(
-      () =>
-        reject(
-          new Error(`timed out after ${PROMPT_TIMEOUT}ms in waitForPrompt`)
-        ),
-      PROMPT_TIMEOUT
-    );
-    const listener = (chunk: string) => {
-      console.log('> ' + chunk);
-      if (assertion(chunk)) {
-        cp.stdout.off && cp.stdout.off('data', listener);
-        cp.stderr.off && cp.stderr.off('data', listener);
-        clearTimeout(handleTimeout);
-        resolve();
-      }
-    };
-
-    cp.stdout.on('data', listener);
-    cp.stderr.on('data', listener);
-  });
-
 const createUser = async () => {
   await retry(
     async () => {
@@ -363,6 +325,33 @@ afterAll(async () => {
     fs.removeSync(tmpFixturesDir);
   }
 });
+
+// NOTE: Test order is important here.
+// This test MUST run before the tests below for them to work.
+// test(
+//   'login',
+//   async () => {
+//     if (!email) {
+//       throw new Error('Shared state "email" not set.');
+//     }
+
+//     await fs.remove(getConfigAuthPath());
+//     const loginOutput = await execa(binaryPath, [
+//       'login',
+//       email,
+//       '--api',
+//       loginApiUrl,
+//       ...defaultArgs,
+//     ]);
+
+//     expect(loginOutput.exitCode, formatOutput(loginOutput)).toBe(0);
+//     expect(loginOutput.stderr).toMatch(/You are now logged in\./gm);
+
+//     const auth = await fs.readJSON(getConfigAuthPath());
+//     expect(auth.token).toBe(token);
+//   },
+//   60 * 1000
+// );
 
 test(
   'change user',
