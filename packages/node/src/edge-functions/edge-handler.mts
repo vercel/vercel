@@ -7,11 +7,9 @@ import type { EdgeContext } from '@edge-runtime/vm';
 import esbuild from 'esbuild';
 import fetch from 'node-fetch';
 import { createEdgeWasmPlugin, WasmAssets } from './edge-wasm-plugin.mjs';
-import utils from '../utils.js';
+import { entrypointToOutputPath, logError } from '../utils.js';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
-
-const { entrypointToOutputPath, logError } = utils;
 
 const NODE_VERSION_MAJOR = process.version.match(/^v(\d+)\.\d+/)?.[1];
 const NODE_VERSION_IDENTIFIER = `node${NODE_VERSION_MAJOR}`;
