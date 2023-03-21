@@ -57,7 +57,7 @@ async function respond(
         },
       });
     } else {
-      throw new Error(`Execution did not return a response.`);
+      throw new Error(`Edge Function did not return a response.`);
     }
   }
   return response;
@@ -69,8 +69,7 @@ function toResponseError(error, entrypointLabel, Response) {
   const msg = error.cause
     ? error.message + ': ' + (error.cause.message || error.cause)
     : error.message;
-  const fullMessage = `Edge Function "${entrypointLabel}" failed: ${msg}`;
-  return new Response(fullMessage, {
+  return new Response(msg, {
     status: 500,
     headers: {
       'x-vercel-failed': 'edge-wrapper',
