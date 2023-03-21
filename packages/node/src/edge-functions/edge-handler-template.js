@@ -63,7 +63,7 @@ async function respond(
   return response;
 }
 
-function toResponseError(error, entrypointLabel, Response) {
+function toResponseError(error, Response) {
   // we can't easily show a meaningful stack trace
   // so, stick to just the error message for now
   const msg = error.cause
@@ -98,10 +98,7 @@ function registerFetchListener(userEdgeHandler, options, dependencies) {
       );
       return event.respondWith(response);
     } catch (error) {
-      const { entrypointLabel } = options;
-      event.respondWith(
-        toResponseError(error, entrypointLabel, dependencies.Response)
-      );
+      event.respondWith(toResponseError(error, dependencies.Response));
     }
   });
 }
