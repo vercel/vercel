@@ -176,7 +176,7 @@ async function compile(
   }
 
   const conditions = isEdgeFunction
-    ? ['edge-light', 'browser', 'import', 'require']
+    ? ['edge-light', 'browser', 'module', 'import', 'require']
     : undefined;
 
   const { fileList, esmFileList, warnings } = await nodeFileTrace(

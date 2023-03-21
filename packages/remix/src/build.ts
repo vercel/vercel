@@ -540,7 +540,7 @@ async function createRenderEdgeFunction(
   const trace = await nodeFileTrace([handlerPath], {
     base: rootDir,
     processCwd: entrypointDir,
-    conditions: ['edge-light', 'browser', 'import', 'require'],
+    conditions: ['edge-light', 'browser', 'module', 'import', 'require'],
     async readFile(fsPath) {
       let source: Buffer | string;
       try {
