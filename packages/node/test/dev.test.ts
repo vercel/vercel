@@ -1,7 +1,6 @@
 import http from 'http';
 import { forkDevServer, readMessage } from '../src/fork-dev-server';
 import { resolve, extname } from 'path';
-import { jest, test, expect } from '@jest/globals';
 
 jest.setTimeout(10 * 1000);
 

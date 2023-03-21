@@ -800,7 +800,6 @@ importers:
       '@babel/core': 7.5.0
       '@babel/plugin-transform-modules-commonjs': 7.5.0
       '@edge-runtime/vm': 2.0.0
-      '@jest/globals': 29.5.0
       '@tootallnate/once': 1.1.2
       '@types/aws-lambda': 8.10.19
       '@types/content-type': 1.1.3
@@ -847,7 +846,6 @@ importers:
     devDependencies:
       '@babel/core': 7.5.0
       '@babel/plugin-transform-modules-commonjs': 7.5.0_@babel+core@7.5.0
-      '@jest/globals': 29.5.0
       '@tootallnate/once': 1.1.2
       '@types/aws-lambda': 8.10.19
       '@types/content-type': 1.1.3
