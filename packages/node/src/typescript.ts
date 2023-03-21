@@ -449,7 +449,8 @@ type GetOutputFunction = (code: string, fileName: string) => SourceOutput;
  */
 export function fixConfig(
   config: { compilerOptions: any },
-  nodeVersionMajor = 12
+  nodeVersionMajor = 12,
+  isEsm = false
 ) {
   if (!config.compilerOptions) {
     config.compilerOptions = {};
@@ -486,10 +487,10 @@ export function fixConfig(
 
   // If not specified, the default Node.js module is CommonJS.
   if (config.compilerOptions.module === undefined) {
-    config.compilerOptions.module = 'nodenext';
+    config.compilerOptions.module = isEsm ? 'nodenext' : 'CommonJS';
   }
 
-  if (config.compilerOptions.moduleResolution === undefined) {
+  if (isEsm && config.compilerOptions.moduleResolution === undefined) {
     config.compilerOptions.moduleResolution = 'nodenext';
   }
 

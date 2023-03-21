@@ -592,7 +592,7 @@ export const startDevServer: StartDevServer = async opts => {
     }
 
     const nodeVersionMajor = Number(process.versions.node.split('.')[0]);
-    fixConfig(tsConfig, nodeVersionMajor);
+    fixConfig(tsConfig, nodeVersionMajor, isEsm);
 
     // In prod, `.ts` inputs use TypeScript and
     // `.js` inputs use Babel to convert ESM to CJS.
