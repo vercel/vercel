@@ -18,14 +18,13 @@ export default async function waitForPrompt(
   let assertion: (chunk: string) => boolean;
   if (typeof rawAssertion === 'string') {
     assertion = (chunk: string) => chunk.includes(rawAssertion);
-    console.log(assertion);
   } else if (rawAssertion instanceof RegExp) {
     assertion = (chunk: string) => rawAssertion.test(chunk);
   } else {
     assertion = rawAssertion;
   }
 
-  new Promise<void>((resolve, reject) => {
+  return new Promise<void>((resolve, reject) => {
     let mostRecentChunk = 'NO CHUNKS SO FAR';
 
     console.log('Waiting for prompt...');
