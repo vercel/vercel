@@ -160,6 +160,7 @@ it('should build using server build', async () => {
   expect(output['fallback/[slug]'].type).toBe('Prerender');
   expect(output['fallback/[slug]'].allowQuery).toEqual(['slug']);
   expect(output['fallback/[slug]'].lambda.operationType).toBe('ISR');
+  expect(output['fallback/[slug]'].sourcePath).toBe(undefined);
 
   expect(output['_next/data/testing-build-id/fallback/[slug].json'].type).toBe(
     'Prerender'
@@ -175,6 +176,7 @@ it('should build using server build', async () => {
   expect(output['fallback/first'].type).toBe('Prerender');
   expect(output['fallback/first'].allowQuery).toEqual([]);
   expect(output['fallback/first'].lambda.operationType).toBe('ISR');
+  expect(output['fallback/first'].sourcePath).toBe('/fallback/[slug]');
 
   expect(output['_next/data/testing-build-id/fallback/first.json'].type).toBe(
     'Prerender'
@@ -208,6 +210,7 @@ it('should build using server build', async () => {
   expect(output['ssg'].type).toBe('Prerender');
   expect(output['ssg'].allowQuery).toEqual([]);
   expect(output['ssg'].lambda.operationType).toBe('ISR');
+  expect(output['ssg'].sourcePath).toBe(undefined);
 
   expect(output['index'] === output['another']).toBe(true);
   expect(output['dynamic/[slug]'] !== output['fallback/[slug]'].lambda).toBe(
