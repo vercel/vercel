@@ -29,7 +29,7 @@
     },
     {
       "path": "/functions/es5.ts",
-      "mustContain": "+"
+      "mustContain": "concat"
     },
     {
       "path": "/pricing/",

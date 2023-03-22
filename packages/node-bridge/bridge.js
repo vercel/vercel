@@ -380,9 +380,15 @@ class Bridge {
         }, 2);
       });
 
-      for (const [name, value] of getHeadersIterator(headers)) {
+      for (const [name, value] of Object.entries(headers)) {
         try {
-          req.setHeader(name, value);
+          if (value === undefined) {
+            console.error(
+              `Skipping HTTP request header "${name}" because value is undefined`
+            );
+          } else {
+            req.setHeader(name, value);
+          }
         } catch (/** @type any */ err) {
           console.error(`Skipping HTTP request header: "${name}: ${value}"`);
           console.error(err.message);
