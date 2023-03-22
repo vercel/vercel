@@ -176,7 +176,7 @@ export const build: BuildV2 = async ({
         cliType,
         [
           `@vercel/remix@${
-            semver.gt(usersRemixVersion, require('@remix-run/dev').version)
+            semver.gt(usersRemixVersion, require('@remix-run/dev/package.json').version)
               ? 'latest'
               : usersRemixVersion
           }`,
