@@ -1,19 +1,22 @@
 import execa from 'execa';
 import retry from 'async-retry';
 import { homedir, tmpdir } from 'os';
-import { execFileSync, spawn } from 'child_process';
+import { spawn } from 'child_process';
 import { Readable } from 'stream';
 import once from '@tootallnate/once';
-import { join, dirname, basename, normalize, sep } from 'path';
+import { join, dirname, basename, normalize, posix, sep } from 'path';
 import {
   readFile,
   writeFile,
+  lstat,
   pathExists,
   mkdirp,
   move,
+  readlink,
   remove,
   rmdir,
   readdir,
+  unlink,
 } from 'fs-extra';
 import {
   BuildOptions,
@@ -33,19 +36,20 @@ import {
 const TMP = tmpdir();
 
 import {
+  cacheDir,
   createGo,
   getAnalyzedEntrypoint,
-  cacheDir,
   OUT_EXTENSION,
 } from './go-helpers';
+
 const handlerFileName = `handler${OUT_EXTENSION}`;
 
 export { shouldServe };
 
 interface Analyzed {
-  found?: boolean;
-  packageName: string;
   functionName: string;
+  packageName: string;
+  watch?: boolean;
 }
 
 interface PortInfo {
@@ -147,7 +151,7 @@ export async function build({
     }
 
     const entrypointAbsolute = join(workPath, entrypoint);
-    const entrypointArr = entrypoint.split(sep);
+    const entrypointArr = entrypoint.split(posix.sep);
 
     debug(`Parsing AST for "${entrypoint}"`);
     let analyzed: string;
@@ -163,7 +167,7 @@ export async function build({
         dirname(goModAbsPath)
       );
     } catch (err) {
-      console.log(`Failed to parse AST for "${entrypoint}"`);
+      console.error(`Failed to parse AST for "${entrypoint}"`);
       throw err;
     }
 
@@ -173,7 +177,7 @@ export async function build({
   Learn more: https://vercel.com/docs/runtimes#official-runtimes/go
         `
       );
-      console.log(err.message);
+      console.error(err.message);
       throw err;
     }
 
@@ -289,18 +293,19 @@ export async function build({
     // we need our `main.go` to be called something else
     const mainGoFileName = 'main__vc__go__.go';
 
-    if (packageName !== 'main') {
-      const go = await createGo(
-        workPath,
-        goPath,
-        process.platform,
-        process.arch,
-        {
-          cwd: entrypointDirname,
-          stdio: 'inherit',
+    const go = await createGo({
+      modulePath: goModPath,
+      opts: {
+        cwd: entrypointDirname,
+        env: {
+          GOARCH: 'amd64',
+          GOOS: 'linux',
         },
-        true
-      );
+      },
+      workPath,
+    });
+
+    if (packageName !== 'main') {
       if (!isGoModExist) {
         try {
           const defaultGoModContent = `module ${packageName}`;
@@ -321,7 +326,7 @@ export async function build({
             from: join(entrypointDirname, 'go.sum'),
           });
         } catch (err) {
-          console.log(`Failed to create default go.mod for ${packageName}`);
+          console.error(`Failed to create default go.mod for ${packageName}`);
           throw err;
         }
       }
@@ -353,6 +358,7 @@ export async function build({
       if (isGoModExist && isGoModInRootDir) {
         debug('[mod-root] Write main file to ' + downloadPath);
         await writeFile(join(downloadPath, mainGoFileName), mainModGoContents);
+
         undoFileActions.push({
           to: undefined, // delete
           from: join(downloadPath, mainGoFileName),
@@ -403,7 +409,7 @@ export async function build({
           undoDirectoryCreation.push(dirname(finalDestination));
         }
       } catch (err) {
-        console.log('Failed to move entry to package folder');
+        console.error('Failed to move entry to package folder');
         throw err;
       }
 
@@ -421,7 +427,7 @@ export async function build({
         // ensure go.mod up-to-date
         await go.mod();
       } catch (err) {
-        console.log('failed to `go mod tidy`');
+        console.error('failed to `go mod tidy`');
         throw err;
       }
 
@@ -433,23 +439,13 @@ export async function build({
 
         await go.build(src, destPath);
       } catch (err) {
-        console.log('failed to `go build`');
+        console.error('failed to `go build`');
         throw err;
       }
     } else {
       // legacy mode
       // we need `main.go` in the same dir as the entrypoint,
       // otherwise `go build` will refuse to build
-      const go = await createGo(
-        workPath,
-        goPath,
-        process.platform,
-        process.arch,
-        {
-          cwd: entrypointDirname,
-        },
-        false
-      );
       const originalMainGoContents = await readFile(
         join(__dirname, 'main.go'),
         'utf8'
@@ -472,7 +468,7 @@ export async function build({
       try {
         await go.get();
       } catch (err) {
-        console.log('Failed to `go get`');
+        console.error('Failed to `go get`');
         throw err;
       }
 
@@ -485,7 +481,7 @@ export async function build({
         ].map(file => normalize(file));
         await go.build(src, destPath);
       } catch (err) {
-        console.log('failed to `go build`');
+        console.error('failed to `go build`');
         throw err;
       }
     }
@@ -513,7 +509,9 @@ export async function build({
         undoFunctionRenames
       );
     } catch (error) {
-      console.log(`Build cleanup failed: ${error.message}`);
+      if (error instanceof Error) {
+        console.error(`Build cleanup failed: ${error.message}`);
+      }
       debug('Cleanup Error: ' + error);
     }
   }
@@ -640,6 +638,19 @@ async function copyDevServer(
   await writeFile(join(dest, 'vercel-dev-server-main.go'), patched);
 }
 
+async function writeDefaultGoMod(
+  entrypointDirname: string,
+  packageName: string
+) {
+  const defaultGoModContent = `module ${packageName}`;
+
+  await writeFile(
+    join(entrypointDirname, 'go.mod'),
+    defaultGoModContent,
+    'utf-8'
+  );
+}
+
 export async function startDevServer(
   opts: StartDevServerOptions
 ): Promise<StartDevServerResult> {
@@ -678,6 +689,7 @@ Learn more: https://vercel.com/docs/runtimes#official-runtimes/go`
   await Promise.all([
     copyEntrypoint(entrypointWithExt, tmpPackage),
     copyDevServer(analyzed.functionName, tmpPackage),
+    goModAbsPathDir ? null : writeDefaultGoMod(tmp, analyzed.packageName),
   ]);
 
   const portFile = join(
@@ -693,13 +705,22 @@ Learn more: https://vercel.com/docs/runtimes#official-runtimes/go`
     process.platform === 'win32' ? '.exe' : ''
   }`;
 
-  debug(`SPAWNING go build -o ${executable} ./... CWD=${tmp}`);
-  execFileSync('go', ['build', '-o', executable, './...'], {
-    cwd: tmp,
-    env,
-    stdio: 'inherit',
-  });
+  // Note: We must run `go build`, then manually spawn the dev server instead
+  // of spawning `go run`. See https://github.com/vercel/vercel/pull/8718 for
+  // more info.
 
+  // build the dev server
+  const go = await createGo({
+    modulePath: goModAbsPathDir,
+    opts: {
+      cwd: tmp,
+      env,
+    },
+    workPath,
+  });
+  await go.build('./...', executable);
+
+  // run the dev server
   debug(`SPAWNING ${executable} CWD=${tmp}`);
   const child = spawn(executable, [], {
     cwd: tmp,
@@ -770,10 +791,10 @@ async function waitForPortFile_(opts: {
     try {
       const port = Number(await readFile(opts.portFile, 'ascii'));
       retry(() => remove(opts.portFile)).catch((err: Error) => {
-        console.error('Could not delete port file: %j: %s', opts.portFile, err);
+        console.error(`Could not delete port file: ${opts.portFile}: ${err}`);
       });
       return { port };
-    } catch (err) {
+    } catch (err: any) {
       if (err.code !== 'ENOENT') {
         throw err;
       }
@@ -784,6 +805,25 @@ async function waitForPortFile_(opts: {
 export async function prepareCache({
   workPath,
 }: PrepareCacheOptions): Promise<Files> {
+  // When building the project for the first time, there won't be a cache and
+  // `createGo()` will have downloaded Go to the global cache directory, then
+  // symlinked it to the local `cacheDir`.
+  //
+  // If we detect the `cacheDir` is a symlink, unlink it, then move the global
+  // cache directory into the local cache directory so that it can be
+  // persisted.
+  //
+  // On the next build, the local cache will be restored and `createGo()` will
+  // use it unless the preferred Go version changed in the `go.mod`.
+  const goCacheDir = join(workPath, cacheDir);
+  const stat = await lstat(goCacheDir);
+  if (stat.isSymbolicLink()) {
+    const goGlobalCacheDir = await readlink(goCacheDir);
+    debug(`Preparing cache by moving ${goGlobalCacheDir} -> ${goCacheDir}`);
+    await unlink(goCacheDir);
+    await move(goGlobalCacheDir, goCacheDir);
+  }
+
   const cache = await glob(`${cacheDir}/**`, workPath);
   return cache;
 }
