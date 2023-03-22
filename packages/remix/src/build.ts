@@ -44,6 +44,7 @@ import {
   chdirAndReadConfig,
   addDependency,
 } from './utils';
+import semver from 'semver';
 
 const _require: typeof require = eval('require');
 
@@ -61,6 +62,9 @@ const nodeServerSrcPromise = fs.readFile(
   join(DEFAULTS_PATH, 'server-node.mjs'),
   'utf-8'
 );
+
+// This value is the minimum supported version for our fork of Remix
+const minimumSupportRemixVersion = '1.10.0';
 
 export const build: BuildV2 = async ({
   entrypoint,
@@ -149,17 +153,43 @@ export const build: BuildV2 = async ({
       join(DEFAULTS_PATH, 'entry.server.jsx'),
       join(appDirectory, 'entry.server.jsx')
     );
-    if (!pkg.dependencies['@vercel/remix-entry-server']) {
+    if (!pkg.dependencies['@vercel/remix']) {
+      // Dependency version resolution logic
+      // 1. Users app is on 1.9.0 -> we install the 1.10.0 (minimum) version of our fork (`@vercel/remix`)
+      // 2. Users app is on 1.11.0 (a version greater than 1.10.0 and less than the latest version of the fork) -> we install the (matching) 1.11.0 version of `@vercel/remix`
+      // 3. Users app is on something greater than our latest version of the fork -> we install the latest version of our fork
+
+      // remixVersion is the version of the `@remix-run/dev` package in the *users' app*
+      const usersRemixVersion = semver.gt(
+        remixVersion,
+        minimumSupportRemixVersion
+      )
+        ? remixVersion
+        : minimumSupportRemixVersion;
+
       // Prevent frozen lockfile rejections
       const envForAddDep = { ...spawnOpts.env };
       delete envForAddDep.CI;
       delete envForAddDep.VERCEL;
       delete envForAddDep.NOW_BUILDER;
-      await addDependency(cliType, ['@vercel/remix-entry-server'], {
-        ...spawnOpts,
-        env: envForAddDep,
-        cwd: entrypointFsDirname,
-      });
+      await addDependency(
+        cliType,
+        [
+          `@vercel/remix@${
+            semver.gt(
+              usersRemixVersion,
+              require('@remix-run/dev/package.json').version
+            )
+              ? 'latest'
+              : usersRemixVersion
+          }`,
+        ],
+        {
+          ...spawnOpts,
+          env: envForAddDep,
+          cwd: entrypointFsDirname,
+        }
+      );
     }
   }
 
