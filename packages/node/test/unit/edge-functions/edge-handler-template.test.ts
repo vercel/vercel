@@ -28,6 +28,39 @@ describe('edge-handler-template', () => {
       });
       expect(url).toBe('https://somewhere.com/api/add');
     });
+
+    test('url falls back to `/`', async () => {
+      const url = buildUrl({
+        // missing url
+        headers: {
+          'x-forwarded-proto': 'https',
+          'x-forwarded-host': 'somewhere.com',
+        },
+      });
+      expect(url).toBe('https://somewhere.com/');
+    });
+
+    test('host header falls back to `127.0.0.1`', async () => {
+      const url = buildUrl({
+        url: '/api/add',
+        headers: {
+          'x-forwarded-proto': 'https',
+          // missing 'x-forwarded-host'
+        },
+      });
+      expect(url).toBe('https://127.0.0.1/api/add');
+    });
+
+    test('proto header falls back to `http`', async () => {
+      const url = buildUrl({
+        url: '/api/add',
+        headers: {
+          // missing 'x-forwarded-proto'
+          'x-forwarded-host': 'somewhere.com',
+        },
+      });
+      expect(url).toBe('http://somewhere.com/api/add');
+    });
   });
 
   describe('respond()', () => {
