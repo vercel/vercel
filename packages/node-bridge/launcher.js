@@ -1,4 +1,4 @@
-const { parse, pathToFileURL } = require('url');
+const { pathToFileURL } = require('url');
 const { createServer, Server } = require('http');
 const { isAbsolute } = require('path');
 const { Bridge } = require('./bridge.js');
@@ -132,68 +132,7 @@ function getVercelLauncher({
   };
 }
 
-/**
- * @param {import('./types').LauncherConfiguration} config
- */
-function makeAwsLauncher(config) {
-  const { entrypointPath, awsLambdaHandler = '' } = config;
-  return `const { parse } = require("url");
-const funcName = ${JSON.stringify(awsLambdaHandler.split('.').pop())};
-const entrypointPath = ${JSON.stringify(entrypointPath)};
-exports.launcher = ${getAwsLauncher(config).toString()}`;
-}
-
-/**
- * @param {import('./types').LauncherConfiguration} config
- */
-function getAwsLauncher({ entrypointPath, awsLambdaHandler = '' }) {
-  const funcName = awsLambdaHandler.split('.').pop() || '';
-  if (typeof funcName !== 'string') {
-    throw new TypeError('Expected "string"');
-  }
-
-  /**
-   * @param {import('aws-lambda').APIGatewayProxyEvent} e
-   * @param {import('aws-lambda').Context} context
-   * @param {() => void} callback
-   */
-  function internal(e, context, callback) {
-    const {
-      path,
-      method: httpMethod,
-      body,
-      headers,
-    } = JSON.parse(e.body || '{}');
-    const { query } = parse(path, true);
-    /**
-     * @type {{[key: string]: string}}
-     */
-    const queryStringParameters = {};
-    for (const [key, value] of Object.entries(query)) {
-      if (typeof value === 'string') {
-        queryStringParameters[key] = value;
-      }
-    }
-    const awsGatewayEvent = {
-      resource: '/{proxy+}',
-      path: path,
-      httpMethod: httpMethod,
-      body: body,
-      isBase64Encoded: true,
-      queryStringParameters: queryStringParameters,
-      multiValueQueryStringParameters: query,
-      headers: headers,
-    };
-
-    const mod = require(entrypointPath);
-    return mod[funcName](awsGatewayEvent, context, callback);
-  }
-  return internal;
-}
-
 module.exports = {
   makeVercelLauncher,
   getVercelLauncher,
-  makeAwsLauncher,
-  getAwsLauncher,
 };
