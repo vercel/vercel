@@ -2,6 +2,15 @@ import type { BoundChildProcess } from './types';
 
 const PROMPT_TIMEOUT = 3000;
 
+function getPromptErrorDetails(
+  rawAssertion: string | Function | RegExp,
+  mostRecentChunk: string
+) {
+  const assertion = rawAssertion.toString().trim();
+  const mostRecent = (mostRecentChunk || '').trim();
+  return `Waiting for:\n  "${assertion}"\nmost recent chunk was:\n  "${mostRecent}"`;
+}
+
 export default async function waitForPrompt(
   cp: BoundChildProcess,
   rawAssertion: string | RegExp | ((chunk: string) => boolean)
@@ -20,28 +29,54 @@ export default async function waitForPrompt(
     let mostRecentChunk = 'NO CHUNKS SO FAR';
 
     console.log('Waiting for prompt...');
-    const handleTimeout = setTimeout(
-      () =>
-        reject(
-          new Error(
-            `Timed out after ${PROMPT_TIMEOUT}ms in waitForPrompt, waiting for:\n  "${rawAssertion.toString()}"\nmost recent chunk was:\n  "${mostRecentChunk}"`
-          )
-        ),
-      PROMPT_TIMEOUT
-    );
+    const handleTimeout = setTimeout(() => {
+      cleanup();
+      const promptErrorDetails = getPromptErrorDetails(
+        rawAssertion,
+        mostRecentChunk
+      );
+      reject(
+        new Error(
+          `Timed out after ${PROMPT_TIMEOUT}ms in waitForPrompt. ${promptErrorDetails}`
+        )
+      );
+    }, PROMPT_TIMEOUT);
 
-    const listener = (chunk: string) => {
+    const onComplete = () => {
+      cleanup();
+      const promptErrorDetails = getPromptErrorDetails(
+        rawAssertion,
+        mostRecentChunk
+      );
+      reject(
+        new Error(
+          `Process exited before prompt was found in waitForPrompt. ${promptErrorDetails}`
+        )
+      );
+    };
+
+    const onData = (rawChunk: Buffer) => {
+      const chunk = rawChunk.toString();
+
       mostRecentChunk = chunk;
       console.log('> ' + chunk);
       if (assertion(chunk)) {
-        cp.stdout.off && cp.stdout.off('data', listener);
-        cp.stderr.off && cp.stderr.off('data', listener);
-        clearTimeout(handleTimeout);
+        cleanup();
         resolve();
       }
     };
 
-    cp.stdout.on('data', listener);
-    cp.stderr.on('data', listener);
+    const cleanup = () => {
+      cp.stdout.off('data', onData);
+      cp.stderr.off('data', onData);
+      cp.off('close', onComplete);
+      cp.off('exit', onComplete);
+      clearTimeout(handleTimeout);
+    };
+
+    cp.stdout.on('data', onData);
+    cp.stderr.on('data', onData);
+    cp.on('close', onComplete);
+    cp.on('exit', onComplete);
   });
 }

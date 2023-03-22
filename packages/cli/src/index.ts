@@ -734,6 +734,37 @@ Run ${chalk.cyan(cmd(await getUpdateCommand()))} to update.${errorMsg}`
       }
     }
 
-    process.exitCode = exitCode;
+    possiblyExit(exitCode);
   })
   .catch(handleUnexpected);
+
+function possiblyExit(exitCode: number | undefined) {
+  process.exitCode = exitCode || 0;
+
+  let openHandles = [];
+  let openRequests = [];
+
+  // @ts-ignore
+  if (process._getActiveHandles) {
+    // @ts-ignore
+    openHandles = process._getActiveHandles();
+  }
+
+  // @ts-ignore
+  if (process._getActiveRequests) {
+    // @ts-ignore
+    openRequests = process._getActiveRequests();
+  }
+
+  if (openHandles.length || openRequests.length) {
+    output.debug(
+      `Force closing. Found ${openHandles.length} open handles and ${openRequests.length} open requests.`
+    );
+
+    // give them a chance to clean up
+    setImmediate(() => {
+      // ensure we exit
+      process.exit(process.exitCode);
+    });
+  }
+}
