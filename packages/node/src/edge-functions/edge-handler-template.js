@@ -2,21 +2,18 @@
 /* global addEventListener */
 
 function buildUrl(requestDetails) {
+  const host = requestDetails.headers['x-forwarded-host'] || '127.0.0.1';
+  const path = requestDetails.url || '/';
+
   const allProtocols = requestDetails.headers['x-forwarded-proto'];
-  const host = requestDetails.headers['x-forwarded-host'];
-  const path = requestDetails.url;
-
-  if (!allProtocols) {
-    throw new Error('missing header "x-forwarded-proto"');
-  }
-  if (!host) {
-    throw new Error('missing header "x-forwarded-host"');
-  }
-  if (!path) {
-    throw new Error('missing url');
+  let proto;
+  if (allProtocols) {
+    // handle multi-protocol like: https,http://...
+    proto = allProtocols.split(/\b/).shift();
+  } else {
+    proto = 'http';
   }
 
-  const proto = allProtocols.split(/\b/).shift(); // handling multi-protocol like https,http://...
   return `${proto}://${host}${path}`;
 }
 

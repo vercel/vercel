@@ -29,40 +29,37 @@ describe('edge-handler-template', () => {
       expect(url).toBe('https://somewhere.com/api/add');
     });
 
-    test('fails with missing proto header', async () => {
-      expect(() => {
-        buildUrl({
-          url: '/api/add',
-          headers: {
-            // missing 'x-forwarded-proto'
-            'x-forwarded-host': 'somewhere.com',
-          },
-        });
-      }).toThrowError('missing header "x-forwarded-proto"');
+    test('url falls back to `/`', async () => {
+      const url = buildUrl({
+        // missing url
+        headers: {
+          'x-forwarded-proto': 'https',
+          'x-forwarded-host': 'somewhere.com',
+        },
+      });
+      expect(url).toBe('https://somewhere.com/');
     });
 
-    test('fails with missing host header', async () => {
-      expect(() => {
-        buildUrl({
-          url: '/api/add',
-          headers: {
-            'x-forwarded-proto': 'https,http',
-            // missing 'x-forwarded-host'
-          },
-        });
-      }).toThrowError('missing header "x-forwarded-host"');
+    test('host header falls back to `127.0.0.1`', async () => {
+      const url = buildUrl({
+        url: '/api/add',
+        headers: {
+          'x-forwarded-proto': 'https',
+          // missing 'x-forwarded-host'
+        },
+      });
+      expect(url).toBe('https://127.0.0.1/api/add');
     });
 
-    test('fails with missing proto header', async () => {
-      expect(() => {
-        buildUrl({
-          // missing url
-          headers: {
-            'x-forwarded-proto': 'https,http',
-            'x-forwarded-host': 'somewhere.com',
-          },
-        });
-      }).toThrowError('missing url');
+    test('proto header falls back to `http`', async () => {
+      const url = buildUrl({
+        url: '/api/add',
+        headers: {
+          // missing 'x-forwarded-proto'
+          'x-forwarded-host': 'somewhere.com',
+        },
+      });
+      expect(url).toBe('http://somewhere.com/api/add');
     });
   });
 
