@@ -11,6 +11,7 @@ interface PrerenderOptions {
   initialHeaders?: Record<string, string>;
   initialStatus?: number;
   passQuery?: boolean;
+  sourcePath?: string;
 }
 
 export class Prerender {
@@ -24,6 +25,7 @@ export class Prerender {
   public initialHeaders?: Record<string, string>;
   public initialStatus?: number;
   public passQuery?: boolean;
+  public sourcePath?: string;
 
   constructor({
     expiration,
@@ -35,9 +37,11 @@ export class Prerender {
     initialHeaders,
     initialStatus,
     passQuery,
+    sourcePath,
   }: PrerenderOptions) {
     this.type = 'Prerender';
     this.expiration = expiration;
+    this.sourcePath = sourcePath;
 
     this.lambda = lambda;
     if (this.lambda) {
