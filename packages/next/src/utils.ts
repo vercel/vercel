@@ -2074,6 +2074,11 @@ export const onPrerenderRoute =
       const rscContentTypeHeader =
         routesManifest?.rsc?.contentTypeHeader || 'text/x-component';
 
+      let sourcePath: string | undefined;
+      if (`/${outputPathPage}` !== srcRoute && srcRoute) {
+        sourcePath = srcRoute;
+      }
+
       prerenders[outputPathPage] = new Prerender({
         expiration: initialRevalidate,
         lambda,
@@ -2083,6 +2088,7 @@ export const onPrerenderRoute =
         bypassToken: prerenderManifest.bypassToken,
         initialStatus,
         initialHeaders,
+        sourcePath,
 
         ...(isNotFound
           ? {

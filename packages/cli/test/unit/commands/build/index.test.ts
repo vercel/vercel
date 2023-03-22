@@ -1262,4 +1262,46 @@ describe('build', () => {
       expect(packageDistFiles).toContain('dist-module.js');
     });
   });
+
+  it('should use --local-config over default vercel.json', async () => {
+    const cwd = fixture('local-config');
+    const output = join(cwd, '.vercel/output');
+    try {
+      client.stdout.pipe(process.stdout);
+      client.stderr.pipe(process.stderr);
+
+      process.chdir(cwd);
+      let exitCode = await build(client);
+      delete process.env.__VERCEL_BUILD_RUNNING;
+      expect(exitCode).toEqual(0);
+
+      let config = await fs.readJSON(join(output, 'config.json'));
+      expect(config.routes).toContainEqual({
+        src: '^/another-main$',
+        dest: '/main.html',
+      });
+      expect(config.routes).not.toContainEqual({
+        src: '^/another-test$',
+        dest: '/test.html',
+      });
+
+      client.localConfigPath = 'vercel-test.json';
+      exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      config = await fs.readJSON(join(output, 'config.json'));
+      expect(config.routes).not.toContainEqual({
+        src: '^/another-main$',
+        dest: '/main.html',
+      });
+      expect(config.routes).toContainEqual({
+        src: '^/another-test$',
+        dest: '/test.html',
+      });
+    } finally {
+      process.chdir(originalCwd);
+      delete client.localConfigPath;
+      delete process.env.__VERCEL_BUILD_RUNNING;
+    }
+  });
 });
