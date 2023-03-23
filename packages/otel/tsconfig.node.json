@@ -1,0 +1,8 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // There is a bug in OTEL that requires us to add dom types: https://github.com/open-telemetry/opentelemetry-js/issues/3580
+    "lib": ["ES2020", "dom"]
+  },
+  "files": ["./src/index.node.ts"]
+}

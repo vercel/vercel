@@ -41,7 +41,10 @@
     "directory": "packages/otel"
   },
   "scripts": {
-    "build": "tsc"
+    "build": "pnpm build:node",
+    "build:node": "tsc --project tsconfig.node.json",
+    "build:edge": "tsc --project tsconfig.edge.json",
+    "build:browser": "tsc --project tsconfig.browser.json"
   },
   "license": "MIT",
   "devDependencies": {
