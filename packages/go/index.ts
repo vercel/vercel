@@ -4,7 +4,7 @@ import { homedir, tmpdir } from 'os';
 import { spawn } from 'child_process';
 import { Readable } from 'stream';
 import once from '@tootallnate/once';
-import { join, dirname, basename, normalize, posix, sep } from 'path';
+import { basename, dirname, join, normalize, posix, relative, sep } from 'path';
 import {
   readFile,
   writeFile,
@@ -595,13 +595,18 @@ async function cleanupFileSystem(
   await Promise.all(undoDirectoryPromises);
 }
 
+/**
+ * Searches the specified directory for either `./api/go.mod` or `./go.mod`.
+ * @param workPath The project work path.
+ * @returns the path to the `go.mod` or an empty string (which resolves to '.')
+ */
 async function findGoModPath(workPath: string): Promise<string> {
-  let checkPath = join(workPath, 'go.mod');
+  let checkPath = join(workPath, 'api/go.mod');
   if (await pathExists(checkPath)) {
     return checkPath;
   }
 
-  checkPath = join(workPath, 'api/go.mod');
+  checkPath = join(workPath, 'go.mod');
   if (await pathExists(checkPath)) {
     return checkPath;
   }
@@ -638,17 +643,58 @@ async function copyDevServer(
   await writeFile(join(dest, 'vercel-dev-server-main.go'), patched);
 }
 
-async function writeDefaultGoMod(
-  entrypointDirname: string,
+/**
+ * Writes a `go.mod` file in the specified directory. If a `go.mod` file
+ * exists, then update the module name and any relative `replace` statements,
+ * otherwise write the minimum module name.
+ * @param workPath The work path
+ * @param goModPath The path to the `go.mod`, or `undefined` if not found
+ * @param destDir The directory to write the `go.mod` to
+ * @param packageName The module name to inject into the `go.mod`
+ */
+async function writeGoMod(
+  workPath: string,
+  goModPath: string | undefined,
+  destDir: string,
   packageName: string
 ) {
-  const defaultGoModContent = `module ${packageName}`;
+  let contents = `module ${packageName}`;
 
-  await writeFile(
-    join(entrypointDirname, 'go.mod'),
-    defaultGoModContent,
-    'utf-8'
-  );
+  if (goModPath) {
+    let goWorkPath = dirname(goModPath);
+    while (!(await pathExists(join(goWorkPath, 'go.work')))) {
+      goWorkPath = dirname(goWorkPath);
+      if (goWorkPath === workPath) {
+        break;
+      }
+    }
+    const goWorkRelPath = relative(destDir, goWorkPath);
+    const goModContents = await readFile(goModPath, 'utf-8');
+    contents = goModContents
+      .replace(/^module .+$/m, contents)
+      .replace(
+        /^(replace .+=>\s*)(.+)$/gm,
+        (orig, replaceStmt, replacePath) => {
+          if (replacePath.startsWith('.')) {
+            return replaceStmt + join(goWorkRelPath, replacePath);
+          }
+          return orig;
+        }
+      );
+  }
+
+  await writeFile(join(destDir, 'go.mod'), contents, 'utf-8');
+}
+
+/**
+ * For simple cases, a `go.work` file is not required. However when a Go
+ * program requires source files outside the work path, we need a `go.work` so
+ * Go can find the root of the project being built.
+ * @param entrypointDirname The temp directory which will be used to build the
+ * `vercel-dev-server-go` executable.
+ */
+async function writeDefaultGoWork(entrypointDirname: string) {
+  await writeFile(join(entrypointDirname, 'go.work'), 'use .', 'utf-8');
 }
 
 export async function startDevServer(
@@ -669,14 +715,12 @@ export async function startDevServer(
   const tmpPackage = join(tmp, entrypointDir);
   await mkdirp(tmpPackage);
 
-  let goModAbsPathDir = '';
-  if (await pathExists(join(workPath, 'go.mod'))) {
-    goModAbsPathDir = workPath;
-  }
+  const goModAbsPath = await findGoModPath(workPath);
+  const modulePath = goModAbsPath ? dirname(goModAbsPath) : undefined;
   const analyzedRaw = await getAnalyzedEntrypoint(
     workPath,
     entrypointWithExt,
-    goModAbsPathDir
+    modulePath
   );
   if (!analyzedRaw) {
     throw new Error(
@@ -689,7 +733,8 @@ Learn more: https://vercel.com/docs/runtimes#official-runtimes/go`
   await Promise.all([
     copyEntrypoint(entrypointWithExt, tmpPackage),
     copyDevServer(analyzed.functionName, tmpPackage),
-    goModAbsPathDir ? null : writeDefaultGoMod(tmp, analyzed.packageName),
+    writeGoMod(workPath, goModAbsPath, tmp, analyzed.packageName),
+    writeDefaultGoWork(tmp),
   ]);
 
   const portFile = join(
@@ -711,7 +756,7 @@ Learn more: https://vercel.com/docs/runtimes#official-runtimes/go`
 
   // build the dev server
   const go = await createGo({
-    modulePath: goModAbsPathDir,
+    modulePath,
     opts: {
       cwd: tmp,
       env,

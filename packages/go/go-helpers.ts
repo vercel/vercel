@@ -64,7 +64,7 @@ export const OUT_EXTENSION = process.platform === 'win32' ? '.exe' : '';
 export async function getAnalyzedEntrypoint(
   workPath: string,
   filePath: string,
-  modulePath: string
+  modulePath?: string
 ) {
   const bin = join(__dirname, `analyze${OUT_EXTENSION}`);
 
