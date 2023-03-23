@@ -1,0 +1,17 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "mustContain": "`",
+      "logMustContain": "Using TypeScript 4.9.5 (local user-provided)"
+    },
+    {
+      "path": "/functions/es5.ts",
+      "mustContain": "concat"
+    },
+    {
+      "path": "/pricing/",
+      "mustContain": "trailing-redirect:RANDOMNESS_PLACEHOLDER"
+    }
+  ]
+}

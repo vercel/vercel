@@ -13,6 +13,6 @@
     "moduleResolution": "nodenext",
     "typeRoots": ["./@types", "./node_modules/@types"]
   },
-  "include": ["src/**/*.ts", "src/**/*.mts"],
+  "include": ["src/**/*"],
   "exclude": ["node_modules"]
 }
