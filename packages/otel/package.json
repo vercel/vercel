@@ -1,0 +1,61 @@
+{
+  "name": "@vercel/otel",
+  "version": "0.0.1",
+  "description": "Vercel wrapper around OpenTelemetry APIs",
+  "exports": {
+    ".": {
+      "edge": {
+        "types": "./dist/index.edge.d.ts",
+        "default": "./dist/index.edge.js"
+      },
+      "edge-light": {
+        "types": "./dist/index.edge.d.ts",
+        "default": "./dist/index.edge.js"
+      },
+      "browser": {
+        "types": "./dist/index.browser.d.ts",
+        "default": "./dist/index.browser.js"
+      },
+      "worker": {
+        "types": "./dist/index.edge.d.ts",
+        "default": "./dist/index.edge.js"
+      },
+      "workerd": {
+        "types": "./dist/index.edge.d.ts",
+        "default": "./dist/index.edge.js"
+      },
+      "import": {
+        "types": "./dist/index.node.d.ts",
+        "default": "./dist/index.node.js"
+      },
+      "node": {
+        "types": "./dist/index.node.d.ts",
+        "default": "./dist/index.node.js"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vercel/vercel.git",
+    "directory": "packages/otel"
+  },
+  "scripts": {
+    "build": "tsc"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@types/fs-extra": "^8.0.0",
+    "@types/node": "14.18.33",
+    "typescript": "^4.8.4"
+  },
+  "dependencies": {
+    "@opentelemetry/api": "^1.0.0",
+    "@opentelemetry/core": "^1.0.0",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.34.0",
+    "@opentelemetry/resources": "^1.0.0",
+    "@opentelemetry/sdk-trace-base": "^1.0.0",
+    "@opentelemetry/sdk-trace-node": "^1.0.0",
+    "@opentelemetry/semantic-conventions": "^1.0.0"
+  }
+}
