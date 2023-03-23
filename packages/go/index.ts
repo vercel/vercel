@@ -668,7 +668,7 @@ async function writeGoMod(
         break;
       }
     }
-    const goWorkRelPath = relative(destDir, goWorkPath);
+    const goWorkRelPath = relative(destDir, goModPath);
     const goModContents = await readFile(goModPath, 'utf-8');
     contents = goModContents
       .replace(/^module .+$/m, contents)
@@ -676,7 +676,7 @@ async function writeGoMod(
         /^(replace .+=>\s*)(.+)$/gm,
         (orig, replaceStmt, replacePath) => {
           if (replacePath.startsWith('.')) {
-            return replaceStmt + join(goWorkRelPath, replacePath);
+            return replaceStmt + join(dirname(goWorkRelPath), replacePath);
           }
           return orig;
         }
