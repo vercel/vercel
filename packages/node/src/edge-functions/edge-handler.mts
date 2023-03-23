@@ -10,6 +10,10 @@ import { createEdgeWasmPlugin, WasmAssets } from './edge-wasm-plugin.mjs';
 import { entrypointToOutputPath, logError } from '../utils.js';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
+import {
+  createNodeCompatPlugin,
+  NodeCompatBindings,
+} from './edge-node-compat-plugin.mjs';
 
 const NODE_VERSION_MAJOR = process.version.match(/^v(\d+)\.\d+/)?.[1];
 const NODE_VERSION_IDENTIFIER = `node${NODE_VERSION_MAJOR}`;
@@ -39,8 +43,17 @@ async function compileUserCode(
   entrypointFullPath: string,
   entrypointRelativePath: string,
   isMiddleware: boolean
-): Promise<undefined | { userCode: string; wasmAssets: WasmAssets }> {
+): Promise<
+  | undefined
+  | {
+      userCode: string;
+      wasmAssets: WasmAssets;
+      nodeCompatBindings: NodeCompatBindings;
+    }
+> {
   const { wasmAssets, plugin: edgeWasmPlugin } = createEdgeWasmPlugin();
+  const nodeCompatPlugin = createNodeCompatPlugin();
+
   try {
     const result = await esbuild.build({
       // bundling behavior: use globals (like "browser") instead
@@ -52,7 +65,7 @@ async function compileUserCode(
       sourcemap: 'inline',
       legalComments: 'none',
       bundle: true,
-      plugins: [edgeWasmPlugin],
+      plugins: [edgeWasmPlugin, nodeCompatPlugin.plugin],
       entryPoints: [entrypointFullPath],
       write: false, // operate in memory
       format: 'cjs',
@@ -95,7 +108,11 @@ async function compileUserCode(
       registerFetchListener(userEdgeHandler, options, dependencies);
     `;
 
-    return { userCode, wasmAssets };
+    return {
+      userCode,
+      wasmAssets,
+      nodeCompatBindings: nodeCompatPlugin.bindings,
+    };
   } catch (error: any) {
     // We can't easily show a meaningful stack trace from ncc -> edge-runtime.
     // So, stick with just the message for now.
@@ -108,6 +125,7 @@ async function compileUserCode(
 async function createEdgeRuntime(params?: {
   userCode: string;
   wasmAssets: WasmAssets;
+  nodeCompatBindings: NodeCompatBindings;
 }) {
   try {
     if (!params) {
@@ -115,6 +133,8 @@ async function createEdgeRuntime(params?: {
     }
 
     const wasmBindings = await params.wasmAssets.getContext();
+    const nodeCompatBindings = params.nodeCompatBindings.getContext();
+
     const edgeRuntime = new EdgeRuntime({
       initialCode: params.userCode,
       extend: (context: EdgeContext) => {
@@ -128,6 +148,9 @@ async function createEdgeRuntime(params?: {
           process: {
             env: process.env,
           },
+
+          // These are the global bindings for Node.js compatibility
+          ...nodeCompatBindings,
 
           // These are the global bindings for WebAssembly module
           ...wasmBindings,
