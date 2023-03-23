@@ -17,7 +17,9 @@ export const register = (serviceName: string) => {
     }),
   });
 
+  provider.register();
+
   provider.addSpanProcessor(new SimpleSpanProcessor(new OTLPTraceExporter({})));
 
-  provider.register();
+  return provider;
 };
