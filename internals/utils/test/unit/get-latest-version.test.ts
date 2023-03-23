@@ -1,7 +1,7 @@
 import fs from 'fs-extra';
-import sleep from '../../../src/util/sleep';
+import sleep from '../../src/sleep';
 import tmp from 'tmp-promise';
-import getLatestVersion from '../../../src/util/get-latest-version';
+import getLatestVersion from '../../src/get-latest-version';
 import { join } from 'path';
 
 tmp.setGracefulCleanup();

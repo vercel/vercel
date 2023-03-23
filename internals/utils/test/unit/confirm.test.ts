@@ -1,5 +1,5 @@
-import confirm from '../../../src/util/input/confirm';
-import { client } from '../../mocks/client';
+import confirm from '../../src/input/confirm';
+import { client } from '../mocks/client';
 
 describe('confirm()', () => {
   it('should work with multiple prompts', async () => {

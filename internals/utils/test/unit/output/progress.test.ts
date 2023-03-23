@@ -1,4 +1,4 @@
-import { progress } from '../../../../src/util/output/progress';
+import { progress } from '../../../src/output/progress';
 
 describe('progress()', () => {
   test.each([

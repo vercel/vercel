@@ -1,5 +1,5 @@
 import { Headers } from 'node-fetch';
-import { applyOverriddenHeaders } from '../../../../src/util/dev/headers';
+import { applyOverriddenHeaders } from '../../../src/dev/headers';
 
 describe('applyOverriddenHeaders', () => {
   it('do nothing if x-middleware-override-headers is not set', async () => {

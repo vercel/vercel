@@ -390,3 +390,4 @@ export * from './dev/router';
 export * from './dev/server';
 export {default as server} from './dev/server';
 export * from './dev/types';
+export * from './parse-environment';

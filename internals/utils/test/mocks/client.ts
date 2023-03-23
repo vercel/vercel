@@ -6,8 +6,8 @@ import { PassThrough } from 'stream';
 import { createServer, Server } from 'http';
 import express, { Express, Router } from 'express';
 import listen from 'async-listen';
-import Client from '../../src/util/client';
-import { Output } from '../../src/util/output';
+import Client from '../../src/client';
+import { Output } from '../../src/output';
 
 // Disable colors in `chalk` so that tests don't need
 // to worry about ANSI codes

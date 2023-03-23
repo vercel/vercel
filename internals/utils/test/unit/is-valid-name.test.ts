@@ -1,4 +1,4 @@
-import { isValidName } from '../../../src/util/is-valid-name';
+import { isValidName } from '../../src/is-valid-name';
 
 const tests = {
   'hello world': true,

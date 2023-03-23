@@ -6,7 +6,7 @@ import {
   responseError,
   responseErrorMessage,
   toEnumerableError,
-} from '../../../src/util/error';
+} from '../../src/error';
 
 const send = (res: ServerResponse, statusCode: number, body: JSONValue) => {
   res.statusCode = statusCode;

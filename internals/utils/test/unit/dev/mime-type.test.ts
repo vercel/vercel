@@ -1,4 +1,4 @@
-import getMimeType from '../../../../src/util/dev/mime-type';
+import getMimeType from '../../../src/dev/mime-type';
 
 describe('mime-type', () => {
   it('works with file', async () => {

@@ -9,13 +9,13 @@ import {
   VERCEL_DIR,
   VERCEL_DIR_PROJECT,
   writeProjectSettings,
-  isValidEnvTarget,
   getEnvTargetPlaceholder,
   ensureLink,
   Client,
   getArgs,
   logo,
   stamp,
+  parseEnvironment,
 } from '@vercel-internals/utils';
 
 const help = () => {
@@ -98,17 +98,6 @@ async function pullAllEnvFiles(
     cwd,
     'vercel-cli:pull'
   );
-}
-
-export function parseEnvironment(
-  environment = 'development'
-): ProjectEnvTarget {
-  if (!isValidEnvTarget(environment)) {
-    throw new Error(
-      `environment "${environment}" not supported; must be one of ${getEnvTargetPlaceholder()}`
-    );
-  }
-  return environment;
 }
 
 export default async function main(client: Client) {

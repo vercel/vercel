@@ -1,4 +1,4 @@
-import { sortBuilders } from '../../../../src/util/build/sort-builders';
+import { sortBuilders } from '../../../src/build/sort-builders';
 
 describe('sortBuilders()', () => {
   test.each([

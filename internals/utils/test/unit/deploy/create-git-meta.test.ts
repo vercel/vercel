@@ -8,11 +8,11 @@ import {
   getOriginUrl,
   getRemoteUrls,
   isDirty,
-} from '../../../../src/util/create-git-meta';
-import { client } from '../../../mocks/client';
-import { parseRepoUrl } from '../../../../src/util/git/connect-git-provider';
-import { useUser } from '../../../mocks/user';
-import { defaultProject, useProject } from '../../../mocks/project';
+} from '../../../src/create-git-meta';
+import { client } from '../../mocks/client';
+import { parseRepoUrl } from '../../../src/git/connect-git-provider';
+import { useUser } from '../../mocks/user';
+import { defaultProject, useProject } from '../../mocks/project';
 import { Project } from '@vercel-internals/types';
 
 jest.setTimeout(10 * 1000);

@@ -1,5 +1,5 @@
 import stripAnsi from 'strip-ansi';
-import { client } from '../../../mocks/client';
+import { client } from '../../mocks/client';
 
 describe('Output', () => {
   describe('link()', () => {

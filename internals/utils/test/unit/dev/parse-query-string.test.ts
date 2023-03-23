@@ -1,7 +1,7 @@
 import {
   parseQueryString,
   formatQueryString,
-} from '../../../../src/util/dev/parse-query-string';
+} from '../../../src/dev/parse-query-string';
 
 describe('parseQueryString', () => {
   it('should parse to Map and format back to original String', async () => {

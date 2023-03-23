@@ -1,11 +1,11 @@
 import { join } from 'path';
 import { remove } from 'fs-extra';
 import { getWriteableDirectory } from '@vercel/build-utils';
-import { client } from '../../../mocks/client';
+import { client } from '../../mocks/client';
 import {
   importBuilders,
   resolveBuilders,
-} from '../../../../src/util/build/import-builders';
+} from '../../../src/build/import-builders';
 import vercelNextPkg from '@vercel/next/package.json';
 import vercelNodePkg from '@vercel/node/package.json';
 

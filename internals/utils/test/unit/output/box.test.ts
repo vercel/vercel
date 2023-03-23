@@ -1,4 +1,4 @@
-import box from '../../../../src/util/output/box';
+import box from '../../../src/output/box';
 import chalk from 'chalk';
 import stripAnsi from 'strip-ansi';
 

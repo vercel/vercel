@@ -1,7 +1,7 @@
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { writeFile, readdir, mkdirp, stat, remove, readFile } from 'fs-extra';
-import { merge } from '../../../../src/util/build/merge';
+import { merge } from '../../../src/build/merge';
 import { isErrnoException } from '@vercel/error-utils';
 
 describe('merge()', () => {
