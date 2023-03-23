@@ -61,7 +61,7 @@ async function fetch(url: string): Promise<FetchResponse> {
 }
 
 test('runs an edge function that uses `buffer`', async () => {
-  const child = testForkDevServer('./edge-buffer.js');
+  const child = testForkDevServer('./edge-buffer.mjs');
 
   try {
     const result = await readMessage(child);
