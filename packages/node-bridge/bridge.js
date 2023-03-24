@@ -84,17 +84,12 @@ function normalizeProxyEvent(event) {
 }
 
 /**
- * @param {import('./types').VercelProxyEvent | import('aws-lambda').APIGatewayProxyEvent} event
- * @return {import('./types').VercelProxyRequest | undefined }
+ * @param {import('./types').VercelProxyEvent } event
+ * @return {import('./types').VercelProxyRequest }
  */
 function normalizeEvent(event) {
-  if ('Action' in event) {
-    if (event.Action === 'Invoke') {
-      return normalizeProxyEvent(event);
-    } else {
-      throw new Error(`Unexpected event.Action: ${event.Action}`);
-    }
-  }
+  if (event.Action === 'Invoke') return normalizeProxyEvent(event);
+  throw new Error(`Unexpected event.Action: ${event.Action}`);
 }
 
 class Bridge {
@@ -174,7 +169,7 @@ class Bridge {
 
   /**
    *
-   * @param {import('./types').VercelProxyEvent | import('aws-lambda').APIGatewayProxyEvent} event
+   * @param {import('./types').VercelProxyEvent} event
    * @param {import('aws-lambda').Context} context
    * @return {Promise<import('./types').VercelProxyResponse>}
    */
