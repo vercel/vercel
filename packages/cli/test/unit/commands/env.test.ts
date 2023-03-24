@@ -1,7 +1,7 @@
 import fs from 'fs-extra';
 import path from 'path';
 import env from '../../../src/commands/env';
-import { setupFixture } from '../../helpers/setup-unit-fixture';
+import { setupUnitFixture } from '../../helpers/setup-unit-fixture';
 import { client } from '../../mocks/client';
 import { ProjectEnvTarget, ProjectEnvType } from '@vercel-internals/types';
 import { defaultProject, useProject } from '../../mocks/project';
@@ -11,7 +11,7 @@ import { useUser } from '../../mocks/user';
 describe('env', () => {
   describe('pull', () => {
     it('should handle pulling', async () => {
-      const cwd = setupFixture('vercel-env-pull');
+      const cwd = setupUnitFixture('vercel-env-pull');
       useUser();
       useTeams('team_dummy');
       useProject({
@@ -35,7 +35,7 @@ describe('env', () => {
     });
 
     it('should handle pulling from Preview env vars', async () => {
-      const cwd = setupFixture('vercel-env-pull');
+      const cwd = setupUnitFixture('vercel-env-pull');
       useUser();
       useTeams('team_dummy');
       useProject({
@@ -70,7 +70,7 @@ describe('env', () => {
     });
 
     it('should handle pulling from specific Git branch', async () => {
-      const cwd = setupFixture('vercel-env-pull');
+      const cwd = setupUnitFixture('vercel-env-pull');
       useUser();
       useTeams('team_dummy');
       useProject({
@@ -107,7 +107,7 @@ describe('env', () => {
     });
 
     it('should handle alternate filename', async () => {
-      const cwd = setupFixture('vercel-env-pull');
+      const cwd = setupUnitFixture('vercel-env-pull');
       useUser();
       useTeams('team_dummy');
       useProject({
@@ -131,7 +131,7 @@ describe('env', () => {
     });
 
     it('should use given environment', async () => {
-      const cwd = setupFixture('vercel-env-pull');
+      const cwd = setupUnitFixture('vercel-env-pull');
       useUser();
       useTeams('team_dummy');
       useProject({
@@ -165,7 +165,7 @@ describe('env', () => {
     });
 
     it('should throw an error when it does not recognize given environment', async () => {
-      const cwd = setupFixture('vercel-env-pull');
+      const cwd = setupUnitFixture('vercel-env-pull');
       useUser();
       useTeams('team_dummy');
       useProject({
@@ -193,7 +193,7 @@ describe('env', () => {
     });
 
     it('should expose production system env variables', async () => {
-      const cwd = setupFixture('vercel-env-pull');
+      const cwd = setupUnitFixture('vercel-env-pull');
       useUser();
       useTeams('team_dummy');
       useProject({
@@ -220,7 +220,7 @@ describe('env', () => {
     });
 
     it('should show a delta string', async () => {
-      const cwd = setupFixture('vercel-env-pull-delta');
+      const cwd = setupUnitFixture('vercel-env-pull-delta');
       try {
         useUser();
         useTeams('team_dummy');
@@ -264,7 +264,7 @@ describe('env', () => {
     });
 
     it('should not show a delta string when it fails to read a file', async () => {
-      const cwd = setupFixture('vercel-env-pull-delta-corrupt');
+      const cwd = setupUnitFixture('vercel-env-pull-delta-corrupt');
       useUser();
       useTeams('team_dummy');
       useProject({
@@ -280,7 +280,7 @@ describe('env', () => {
     });
 
     it('should show that no changes were found', async () => {
-      const cwd = setupFixture('vercel-env-pull-delta-no-changes');
+      const cwd = setupUnitFixture('vercel-env-pull-delta-no-changes');
       useUser();
       useTeams('team_dummy');
       useProject({
@@ -297,7 +297,7 @@ describe('env', () => {
     });
 
     it('should correctly render delta string when env variable has quotes', async () => {
-      const cwd = setupFixture('vercel-env-pull-delta-quotes');
+      const cwd = setupUnitFixture('vercel-env-pull-delta-quotes');
       try {
         useUser();
         useTeams('team_dummy');
@@ -334,7 +334,7 @@ describe('env', () => {
     });
 
     it('should correctly render delta string when local env variable has quotes', async () => {
-      const cwd = setupFixture('vercel-env-pull-delta-quotes');
+      const cwd = setupUnitFixture('vercel-env-pull-delta-quotes');
       try {
         useUser();
         useTeams('team_dummy');

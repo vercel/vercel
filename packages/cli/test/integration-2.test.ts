@@ -212,32 +212,6 @@ afterAll(async () => {
   }
 });
 
-// NOTE: Test order is important here.
-// This test MUST run before the tests below for them to work.
-// test(
-//   'login',
-//   async () => {
-//     if (!email) {
-//       throw new Error('Shared state "email" not set.');
-//     }
-
-//     await fs.remove(getConfigAuthPath());
-//     const loginOutput = await execCli(binaryPath, [
-//       'login',
-//       email,
-//       '--api',
-//       loginApiUrl,
-//     ]);
-
-//     expect(loginOutput.exitCode, formatOutput(loginOutput)).toBe(0);
-//     expect(loginOutput.stderr).toMatch(/You are now logged in\./gm);
-
-//     const auth = await fs.readJSON(getConfigAuthPath());
-//     expect(auth.token).toBe(token);
-//   },
-//   60 * 1000
-// );
-
 test(
   'change user',
   async () => {
