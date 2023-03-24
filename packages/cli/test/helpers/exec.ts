@@ -32,15 +32,14 @@ export function execCli(
 
   const globalArgs = getGlobalArgs();
 
-  const proc = execa(file, [...args, ...globalArgs], {
-    env: {
-      NO_COLOR: '1',
-    },
+  const combinedOptions = {
     ...defaultOptions,
     ...options,
-  });
+  };
+  combinedOptions.env = combinedOptions.env ?? {};
+  combinedOptions.env['NO_COLOR'] = '1';
 
-  return proc;
+  return execa(file, [...args, ...globalArgs], combinedOptions);
 }
 
 /**
