@@ -1,7 +1,7 @@
 import fs from 'fs-extra';
 import path from 'path';
 import pull from '../../../src/commands/pull';
-import { setupFixture } from '../../helpers/setup-fixture';
+import { setupFixture } from '../../helpers/setup-unit-fixture';
 import { client } from '../../mocks/client';
 import { defaultProject, useProject } from '../../mocks/project';
 import { useTeams } from '../../mocks/team';

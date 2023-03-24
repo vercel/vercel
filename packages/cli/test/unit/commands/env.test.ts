@@ -1,7 +1,7 @@
 import fs from 'fs-extra';
 import path from 'path';
 import env from '../../../src/commands/env';
-import { setupFixture } from '../../helpers/setup-fixture';
+import { setupFixture } from '../../helpers/setup-unit-fixture';
 import { client } from '../../mocks/client';
 import { ProjectEnvTarget, ProjectEnvType } from '@vercel-internals/types';
 import { defaultProject, useProject } from '../../mocks/project';

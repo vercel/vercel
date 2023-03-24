@@ -1,12 +1,6 @@
 import path from 'path';
 import { URL, parse as parseUrl } from 'url';
-import { Readable } from 'stream';
-import { tmpdir } from 'os';
-import _execa from 'execa';
-import XDGAppPaths from 'xdg-app-paths';
 import fetch, { RequestInit } from 'node-fetch';
-// @ts-ignore
-import tmp from 'tmp-promise';
 import retry from 'async-retry';
 import fs, {
   writeFile,
@@ -17,56 +11,22 @@ import fs, {
   mkdir,
 } from 'fs-extra';
 import sleep from '../src/util/sleep';
-import prepareFixtures from './helpers/prepare';
 import { fetchTokenWithRetry } from '../../../test/lib/deployment/now-deploy';
 import waitForPrompt from './helpers/wait-for-prompt';
+import { execCli } from './helpers/exec';
+import getGlobalDir from './helpers/get-global-dir';
+import { listTmpDirs } from './helpers/get-tmp-dir';
+import {
+  setupE2EFixture,
+  prepareE2EFixtures,
+} from './helpers/setup-e2e-fixture';
+import formatOutput from './helpers/format-output';
 import type { PackageJson } from '@vercel/build-utils';
 import type http from 'http';
-import type { BoundChildProcess, TmpDir } from './helpers/types';
+import { CLIProcess } from './helpers/types';
 
 const TEST_TIMEOUT = 3 * 60 * 1000;
 jest.setTimeout(TEST_TIMEOUT);
-
-// log command when running `execa`
-function execa(
-  file: string,
-  args: string[],
-  options?: _execa.Options<string>
-): BoundChildProcess {
-  console.log(`$ vercel ${args.join(' ')}`);
-  const proc = _execa(file, args, {
-    env: {
-      NO_COLOR: '1',
-    },
-    ...options,
-  });
-  if (proc.stdin === null) {
-    console.warn(`vercel ${args.join(' ')} - not bound to stdin`);
-  }
-  if (proc.stdout === null) {
-    console.warn(`vercel ${args.join(' ')} - not bound to stdout`);
-  }
-  if (proc.stderr === null) {
-    console.warn(`vercel ${args.join(' ')} - not bound to stderr`);
-  }
-
-  // if a reference to `proc.stdout` (for example) fails later,
-  // the logs will say clearly where that came from
-  // so, it's not awful to use the type assertion here
-  return proc as BoundChildProcess;
-}
-
-function fixture(name: string) {
-  const directory = path.join(tmpFixturesDir, name);
-  const config = path.join(directory, 'project.json');
-
-  // We need to remove it, otherwise we can't re-use fixtures
-  if (fs.existsSync(config)) {
-    fs.unlinkSync(config);
-  }
-
-  return directory;
-}
 
 const binaryPath = path.resolve(__dirname, `../scripts/start.js`);
 const example = (name: string) =>
@@ -95,57 +55,9 @@ function fetchTokenInformation(token: string, retries = 3) {
   );
 }
 
-function formatOutput({
-  stderr,
-  stdout,
-}: {
-  stderr: string | Readable;
-  stdout: string | Readable;
-}) {
-  return `
------
-
-Stderr:
-${stderr || '(no output)'}
-
------
-
-Stdout:
-${stdout || '(no output)'}
-
------
-  `;
-}
-
-function getTmpDir(): TmpDir {
-  return tmp.dirSync({
-    // This ensures the directory gets
-    // deleted even if it has contents
-    unsafeCleanup: true,
-  }) as TmpDir;
-}
-
-const defaultOptions = { reject: false };
-const defaultArgs: string[] = [];
 let token: string | undefined;
 let email: string | undefined;
 let contextName: string | undefined;
-
-let tmpDir: TmpDir | undefined;
-let tmpFixturesDir = path.join(tmpdir(), 'tmp-fixtures');
-
-let globalDir = XDGAppPaths('com.vercel.cli').dataDirs()[0];
-
-if (!process.env.CI) {
-  tmpDir = getTmpDir();
-  globalDir = path.join(tmpDir.name, 'com.vercel.tests');
-
-  defaultArgs.push('-Q', globalDir);
-  console.log(
-    'No CI detected, adding defaultArgs to avoid polluting user settings',
-    defaultArgs
-  );
-}
 
 function mockLoginApi(req: http.IncomingMessage, res: http.ServerResponse) {
   const { url = '/', method } = req;
@@ -180,12 +92,6 @@ const loginApiServer = require('http')
     console.log(`[mock-login-server] Listening on ${loginApiUrl}`);
   });
 
-const execute = (args: string[], options?: _execa.Options<string>) =>
-  execa(binaryPath, [...defaultArgs, ...args], {
-    ...defaultOptions,
-    ...options,
-  });
-
 const apiFetch = (url: string, { headers, ...options }: RequestInit = {}) => {
   return fetch(`https://api.vercel.com${url}`, {
     headers: {
@@ -199,13 +105,6 @@ const apiFetch = (url: string, { headers, ...options }: RequestInit = {}) => {
 const createUser = async () => {
   await retry(
     async () => {
-      if (!fs.existsSync(globalDir)) {
-        console.log('Creating global config directory ', globalDir);
-        await ensureDir(globalDir);
-      } else {
-        console.log('Found global config directory ', globalDir);
-      }
-
       token = await fetchTokenWithRetry();
 
       await fs.writeJSON(getConfigAuthPath(), { token });
@@ -220,10 +119,12 @@ const createUser = async () => {
   );
 };
 
-const getConfigAuthPath = () => path.join(globalDir, 'auth.json');
+function getConfigAuthPath() {
+  return path.join(getGlobalDir(), 'auth.json');
+}
 
 async function setupProject(
-  process: BoundChildProcess,
+  process: CLIProcess,
   projectName: string,
   overrides: {
     devCommand?: string;
@@ -232,24 +133,24 @@ async function setupProject(
   }
 ) {
   await waitForPrompt(process, /Set up [^?]+\?/);
-  process.stdin.write('yes\n');
+  process.stdin?.write('yes\n');
 
   await waitForPrompt(process, /Which scope [^?]+\?/);
-  process.stdin.write('\n');
+  process.stdin?.write('\n');
 
   await waitForPrompt(process, 'Link to existing project?');
-  process.stdin.write('no\n');
+  process.stdin?.write('no\n');
 
   await waitForPrompt(process, 'What’s your project’s name?');
-  process.stdin.write(`${projectName}\n`);
+  process.stdin?.write(`${projectName}\n`);
 
   await waitForPrompt(process, 'In which directory is your code located?');
-  process.stdin.write('\n');
+  process.stdin?.write('\n');
 
   await waitForPrompt(process, 'Want to modify these settings?');
 
   if (overrides) {
-    process.stdin.write('yes\n');
+    process.stdin?.write('yes\n');
 
     const { buildCommand, outputDirectory, devCommand } = overrides;
 
@@ -257,18 +158,18 @@ async function setupProject(
       process,
       'Which settings would you like to overwrite (select multiple)?'
     );
-    process.stdin.write('a\n'); // 'a' means select all
+    process.stdin?.write('a\n'); // 'a' means select all
 
     await waitForPrompt(process, `What's your Build Command?`);
-    process.stdin.write(`${buildCommand || ''}\n`);
+    process.stdin?.write(`${buildCommand || ''}\n`);
 
     await waitForPrompt(process, `What's your Development Command?`);
-    process.stdin.write(`${devCommand || ''}\n`);
+    process.stdin?.write(`${devCommand || ''}\n`);
 
     await waitForPrompt(process, `What's your Output Directory?`);
-    process.stdin.write(`${outputDirectory || ''}\n`);
+    process.stdin?.write(`${outputDirectory || ''}\n`);
   } else {
-    process.stdin.write('no\n');
+    process.stdin?.write('no\n');
   }
 
   await waitForPrompt(process, 'Linked to');
@@ -277,7 +178,12 @@ async function setupProject(
 beforeAll(async () => {
   try {
     await createUser();
-    await prepareFixtures(contextName, binaryPath, tmpFixturesDir);
+
+    if (!contextName) {
+      throw new Error('Shared state "contextName" not set.');
+    }
+
+    await prepareE2EFixtures(contextName, binaryPath);
   } catch (err) {
     console.log('Failed test suite `beforeAll`');
     console.log(err);
@@ -297,17 +203,12 @@ afterAll(async () => {
 
   // Make sure the token gets revoked unless it's passed in via environment
   if (!process.env.VERCEL_TOKEN) {
-    await execa(binaryPath, ['logout', ...defaultArgs]);
+    await execCli(binaryPath, ['logout']);
   }
 
-  if (tmpDir) {
-    // Remove config directory entirely
+  const allTmpDirs = listTmpDirs();
+  for (const tmpDir of allTmpDirs) {
     tmpDir.removeCallback();
-  }
-
-  if (tmpFixturesDir) {
-    console.log('removing tmpFixturesDir', tmpFixturesDir);
-    fs.removeSync(tmpFixturesDir);
   }
 });
 
@@ -321,12 +222,11 @@ afterAll(async () => {
 //     }
 
 //     await fs.remove(getConfigAuthPath());
-//     const loginOutput = await execa(binaryPath, [
+//     const loginOutput = await execCli(binaryPath, [
 //       'login',
 //       email,
 //       '--api',
 //       loginApiUrl,
-//       ...defaultArgs,
 //     ]);
 
 //     expect(loginOutput.exitCode, formatOutput(loginOutput)).toBe(0);
@@ -345,24 +245,28 @@ test(
       throw new Error('Shared state "email" not set.');
     }
 
-    const { stdout: prevUser } = await execute(['whoami']);
+    const { stdout: prevUser } = await execCli(binaryPath, ['whoami']);
 
     // Delete the current token
-    await execute(['logout', '--debug'], { stdio: 'inherit' });
+    await execCli(binaryPath, ['logout', '--debug'], { stdio: 'inherit' });
 
     await createUser();
 
-    await execute(['login', email, '--api', loginApiUrl, '--debug'], {
-      stdio: 'inherit',
-      env: {
-        FORCE_TTY: '1',
-      },
-    });
+    await execCli(
+      binaryPath,
+      ['login', email, '--api', loginApiUrl, '--debug'],
+      {
+        stdio: 'inherit',
+        env: {
+          FORCE_TTY: '1',
+        },
+      }
+    );
 
     const auth = await fs.readJSON(getConfigAuthPath());
     expect(auth.token).toBe(token);
 
-    const { stdout: nextUser } = await execute(['whoami']);
+    const { stdout: nextUser } = await execCli(binaryPath, ['whoami']);
 
     expect(typeof prevUser, prevUser).toBe('string');
     expect(typeof nextUser, nextUser).toBe('string');
@@ -373,12 +277,16 @@ test(
 
 test('assign a domain to a project', async () => {
   const domain = `project-domain.${contextName}.vercel.app`;
-  const directory = fixture('static-deployment');
+  const directory = await setupE2EFixture('static-deployment');
 
-  const deploymentOutput = await execute([directory, '--public', '--yes']);
+  const deploymentOutput = await execCli(binaryPath, [
+    directory,
+    '--public',
+    '--yes',
+  ]);
   expect(deploymentOutput.exitCode, formatOutput(deploymentOutput)).toBe(0);
 
-  const host = deploymentOutput.stdout.trim().replace('https://', '');
+  const host = deploymentOutput.stdout?.trim().replace('https://', '');
   const deployment = await apiFetch(
     `/v10/now/deployments/unknown?url=${host}`
   ).then(resp => resp.json());
@@ -386,22 +294,28 @@ test('assign a domain to a project', async () => {
   expect(typeof deployment.name).toBe('string');
   const project = deployment.name;
 
-  const output = await execute(['domains', 'add', domain, project, '--force']);
+  const output = await execCli(binaryPath, [
+    'domains',
+    'add',
+    domain,
+    project,
+    '--force',
+  ]);
   expect(output.exitCode, formatOutput(output)).toBe(0);
 
-  const removeResponse = await execute(['rm', project, '-y']);
+  const removeResponse = await execCli(binaryPath, ['rm', project, '-y']);
   expect(removeResponse.exitCode, formatOutput(removeResponse)).toBe(0);
 });
 
 test('ensure `github` and `scope` are not sent to the API', async () => {
-  const directory = fixture('github-and-scope-config');
-  const output = await execute([directory, '--yes']);
+  const directory = await setupE2EFixture('github-and-scope-config');
+  const output = await execCli(binaryPath, [directory, '--yes']);
 
   expect(output.exitCode, formatOutput(output)).toBe(0);
 });
 
 test('should show prompts to set up project during first deploy', async () => {
-  const dir = fixture('project-link-deploy');
+  const dir = await setupE2EFixture('project-link-deploy');
   const projectName = `project-link-deploy-${
     Math.random().toString(36).split('.')[1]
   }`;
@@ -409,7 +323,7 @@ test('should show prompts to set up project during first deploy', async () => {
   // remove previously linked project if it exists
   await remove(path.join(dir, '.vercel'));
 
-  const now = execa(binaryPath, [dir, ...defaultArgs]);
+  const now = execCli(binaryPath, [dir]);
 
   await setupProject(now, projectName, {
     buildCommand: `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html`,
@@ -444,25 +358,19 @@ test('should show prompts to set up project during first deploy', async () => {
   // and output directory
   let stderr = '';
   const port = 58351;
-  const dev = execa(binaryPath, [
-    'dev',
-    '--listen',
-    port.toString(),
-    dir,
-    ...defaultArgs,
-  ]);
-  dev.stderr.setEncoding('utf8');
+  const dev = execCli(binaryPath, ['dev', '--listen', port.toString(), dir]);
+  dev.stderr?.setEncoding('utf8');
 
   try {
-    dev.stdout.pipe(process.stdout);
-    dev.stderr.pipe(process.stderr);
+    dev.stdin?.pipe(process.stdout);
+    dev.stderr?.pipe(process.stderr);
     await new Promise<void>((resolve, reject) => {
       dev.once('close', (code, signal) => {
         reject(`"vc dev" failed with ${signal || code}`);
       });
-      dev.stderr.on('data', data => {
+      dev.stderr?.on('data', data => {
         stderr += data;
-        if (stderr.includes('Ready! Available at')) {
+        if (stderr?.includes('Ready! Available at')) {
           resolve();
         }
       });
@@ -481,7 +389,7 @@ test('should prefill "project name" prompt with folder name', async () => {
     Math.random().toString(36).split('.')[1]
   }`;
 
-  const src = fixture('static-deployment');
+  const src = await setupE2EFixture('static-deployment');
 
   // remove previously linked project if it exists
   await remove(path.join(src, '.vercel'));
@@ -489,36 +397,36 @@ test('should prefill "project name" prompt with folder name', async () => {
   const directory = path.join(src, '../', projectName);
   await copy(src, directory);
 
-  const now = execa(binaryPath, [directory, ...defaultArgs], {
+  const now = execCli(binaryPath, [directory], {
     env: {
       FORCE_TTY: '1',
     },
   });
 
   await waitForPrompt(now, /Set up and deploy [^?]+\?/);
-  now.stdin.write('yes\n');
+  now.stdin?.write('yes\n');
 
   await waitForPrompt(now, 'Which scope do you want to deploy to?');
-  now.stdin.write('\n');
+  now.stdin?.write('\n');
 
   await waitForPrompt(now, 'Link to existing project?');
-  now.stdin.write('no\n');
+  now.stdin?.write('no\n');
 
   await waitForPrompt(now, `What’s your project’s name? (${projectName})`);
-  now.stdin.write(`\n`);
+  now.stdin?.write(`\n`);
 
   await waitForPrompt(now, 'In which directory is your code located?');
-  now.stdin.write('\n');
+  now.stdin?.write('\n');
 
   await waitForPrompt(now, 'Want to modify these settings?');
-  now.stdin.write('no\n');
+  now.stdin?.write('no\n');
 
   const output = await now;
   expect(output.exitCode, formatOutput(output)).toBe(0);
 });
 
 test('should prefill "project name" prompt with --name', async () => {
-  const directory = fixture('static-deployment');
+  const directory = await setupE2EFixture('static-deployment');
   const projectName = `static-deployment-${
     Math.random().toString(36).split('.')[1]
   }`;
@@ -526,15 +434,11 @@ test('should prefill "project name" prompt with --name', async () => {
   // remove previously linked project if it exists
   await remove(path.join(directory, '.vercel'));
 
-  const now = execa(
-    binaryPath,
-    [directory, '--name', projectName, ...defaultArgs],
-    {
-      env: {
-        FORCE_TTY: '1',
-      },
-    }
-  );
+  const now = execCli(binaryPath, [directory, '--name', projectName], {
+    env: {
+      FORCE_TTY: '1',
+    },
+  });
 
   let isDeprecated = false;
 
@@ -545,31 +449,31 @@ test('should prefill "project name" prompt with --name', async () => {
 
     return /Set up and deploy [^?]+\?/.test(chunk);
   });
-  now.stdin.write('yes\n');
+  now.stdin?.write('yes\n');
 
   expect(isDeprecated, 'isDeprecated').toBe(true);
 
   await waitForPrompt(now, 'Which scope do you want to deploy to?');
-  now.stdin.write('\n');
+  now.stdin?.write('\n');
 
   await waitForPrompt(now, 'Link to existing project?');
-  now.stdin.write('no\n');
+  now.stdin?.write('no\n');
 
   await waitForPrompt(now, `What’s your project’s name? (${projectName})`);
-  now.stdin.write(`\n`);
+  now.stdin?.write(`\n`);
 
   await waitForPrompt(now, 'In which directory is your code located?');
-  now.stdin.write('\n');
+  now.stdin?.write('\n');
 
   await waitForPrompt(now, 'Want to modify these settings?');
-  now.stdin.write('no\n');
+  now.stdin?.write('no\n');
 
   const output = await now;
   expect(output.exitCode, formatOutput(output)).toBe(0);
 });
 
 test('should prefill "project name" prompt with now.json `name`', async () => {
-  const directory = fixture('static-deployment');
+  const directory = await setupE2EFixture('static-deployment');
   const projectName = `static-deployment-${
     Math.random().toString(36).split('.')[1]
   }`;
@@ -583,7 +487,7 @@ test('should prefill "project name" prompt with now.json `name`', async () => {
     })
   );
 
-  const now = execa(binaryPath, [directory, ...defaultArgs], {
+  const now = execCli(binaryPath, [directory], {
     env: {
       FORCE_TTY: '1',
     },
@@ -591,7 +495,7 @@ test('should prefill "project name" prompt with now.json `name`', async () => {
 
   let isDeprecated = false;
 
-  now.stderr.on('data', data => {
+  now.stderr?.on('data', data => {
     if (
       data
         .toString()
@@ -602,22 +506,22 @@ test('should prefill "project name" prompt with now.json `name`', async () => {
   });
 
   await waitForPrompt(now, /Set up and deploy [^?]+\?/);
-  now.stdin.write('yes\n');
+  now.stdin?.write('yes\n');
 
   await waitForPrompt(now, 'Which scope do you want to deploy to?');
-  now.stdin.write('\n');
+  now.stdin?.write('\n');
 
   await waitForPrompt(now, 'Link to existing project?');
-  now.stdin.write('no\n');
+  now.stdin?.write('no\n');
 
   await waitForPrompt(now, `What’s your project’s name? (${projectName})`);
-  now.stdin.write(`\n`);
+  now.stdin?.write(`\n`);
 
   await waitForPrompt(now, 'In which directory is your code located?');
-  now.stdin.write('\n');
+  now.stdin?.write('\n');
 
   await waitForPrompt(now, 'Want to modify these settings?');
-  now.stdin.write('no\n');
+  now.stdin?.write('no\n');
 
   const output = await now;
   expect(output.exitCode, formatOutput(output)).toBe(0);
@@ -633,10 +537,10 @@ test('deploy with unknown `VERCEL_PROJECT_ID` should fail', async () => {
     throw new Error('Shared state "token" not set.');
   }
 
-  const directory = fixture('static-deployment');
+  const directory = await setupE2EFixture('static-deployment');
   const user = await fetchTokenInformation(token);
 
-  const output = await execute([directory], {
+  const output = await execCli(binaryPath, [directory], {
     env: {
       VERCEL_ORG_ID: user.id,
       VERCEL_PROJECT_ID: 'asdf',
@@ -652,10 +556,10 @@ test('deploy with `VERCEL_ORG_ID` but without `VERCEL_PROJECT_ID` should fail', 
     throw new Error('Shared state "token" not set.');
   }
 
-  const directory = fixture('static-deployment');
+  const directory = await setupE2EFixture('static-deployment');
   const user = await fetchTokenInformation(token);
 
-  const output = await execute([directory], {
+  const output = await execCli(binaryPath, [directory], {
     env: { VERCEL_ORG_ID: user.id },
   });
 
@@ -666,9 +570,9 @@ test('deploy with `VERCEL_ORG_ID` but without `VERCEL_PROJECT_ID` should fail', 
 });
 
 test('deploy with `VERCEL_PROJECT_ID` but without `VERCEL_ORG_ID` should fail', async () => {
-  const directory = fixture('static-deployment');
+  const directory = await setupE2EFixture('static-deployment');
 
-  const output = await execute([directory], {
+  const output = await execCli(binaryPath, [directory], {
     env: { VERCEL_PROJECT_ID: 'asdf' },
   });
 
@@ -679,15 +583,15 @@ test('deploy with `VERCEL_PROJECT_ID` but without `VERCEL_ORG_ID` should fail', 
 });
 
 test('deploy with `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID`', async () => {
-  const directory = fixture('static-deployment');
+  const directory = await setupE2EFixture('static-deployment');
 
   // generate `.vercel`
-  await execute([directory, '--yes']);
+  await execCli(binaryPath, [directory, '--yes']);
 
   const link = require(path.join(directory, '.vercel/project.json'));
   await remove(path.join(directory, '.vercel'));
 
-  const output = await execute([directory], {
+  const output = await execCli(binaryPath, [directory], {
     env: {
       VERCEL_ORG_ID: link.orgId,
       VERCEL_PROJECT_ID: link.projectId,
@@ -699,7 +603,7 @@ test('deploy with `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID`', async () => {
 });
 
 test('deploy shows notice when project in `.vercel` does not exists', async () => {
-  const directory = fixture('static-deployment');
+  const directory = await setupE2EFixture('static-deployment');
 
   // overwrite .vercel with unexisting project
   await ensureDir(path.join(directory, '.vercel'));
@@ -711,7 +615,7 @@ test('deploy shows notice when project in `.vercel` does not exists', async () =
     })
   );
 
-  const now = execute([directory]);
+  const now = execCli(binaryPath, [directory]);
 
   let detectedNotice = false;
 
@@ -725,15 +629,19 @@ test('deploy shows notice when project in `.vercel` does not exists', async () =
 
     return /Set up and deploy [^?]+\?/.test(chunk);
   });
-  now.stdin.write('no\n');
+  now.stdin?.write('no\n');
 
   expect(detectedNotice, 'detectedNotice').toBe(true);
 });
 
 test('use `rootDirectory` from project when deploying', async () => {
-  const directory = fixture('project-root-directory');
+  const directory = await setupE2EFixture('project-root-directory');
 
-  const firstResult = await execute([directory, '--yes', '--public']);
+  const firstResult = await execCli(binaryPath, [
+    directory,
+    '--yes',
+    '--public',
+  ]);
   expect(firstResult.exitCode, formatOutput(firstResult)).toBe(0);
 
   const { host: firstHost } = new URL(firstResult.stdout);
@@ -751,7 +659,7 @@ test('use `rootDirectory` from project when deploying', async () => {
 
   expect(projectResponse.status, await projectResponse.text()).toBe(200);
 
-  const secondResult = await execute([directory, '--public']);
+  const secondResult = await execCli(binaryPath, [directory, '--public']);
   expect(secondResult.exitCode, formatOutput(secondResult)).toBe(0);
 
   const pageResponse1 = await fetch(secondResult.stdout);
@@ -769,7 +677,7 @@ test('use `rootDirectory` from project when deploying', async () => {
 });
 
 test('vercel deploy with unknown `VERCEL_ORG_ID` or `VERCEL_PROJECT_ID` should error', async () => {
-  const output = await execute(['deploy'], {
+  const output = await execCli(binaryPath, ['deploy'], {
     env: { VERCEL_ORG_ID: 'asdf', VERCEL_PROJECT_ID: 'asdf' },
   });
 
@@ -778,7 +686,7 @@ test('vercel deploy with unknown `VERCEL_ORG_ID` or `VERCEL_PROJECT_ID` should e
 });
 
 test('vercel env with unknown `VERCEL_ORG_ID` or `VERCEL_PROJECT_ID` should error', async () => {
-  const output = await execute(['env'], {
+  const output = await execCli(binaryPath, ['env'], {
     env: { VERCEL_ORG_ID: 'asdf', VERCEL_PROJECT_ID: 'asdf' },
   });
 
@@ -793,7 +701,7 @@ test('whoami with `VERCEL_ORG_ID` should favor `--scope` and should error', asyn
 
   const user = await fetchTokenInformation(token);
 
-  const output = await execute(['whoami', '--scope', 'asdf'], {
+  const output = await execCli(binaryPath, ['whoami', '--scope', 'asdf'], {
     env: { VERCEL_ORG_ID: user.id },
   });
 
@@ -806,7 +714,7 @@ test('whoami with local .vercel scope', async () => {
     throw new Error('Shared state "token" not set.');
   }
 
-  const directory = fixture('static-deployment');
+  const directory = await setupE2EFixture('static-deployment');
   const user = await fetchTokenInformation(token);
 
   // create local .vercel
@@ -816,7 +724,7 @@ test('whoami with local .vercel scope', async () => {
     JSON.stringify({ orgId: user.id, projectId: 'xxx' })
   );
 
-  const output = await execute(['whoami'], {
+  const output = await execCli(binaryPath, ['whoami'], {
     cwd: directory,
   });
 
@@ -828,16 +736,11 @@ test('whoami with local .vercel scope', async () => {
 });
 
 test('deploys with only now.json and README.md', async () => {
-  const directory = fixture('deploy-with-only-readme-now-json');
+  const directory = await setupE2EFixture('deploy-with-only-readme-now-json');
 
-  const { exitCode, stdout, stderr } = await execa(
-    binaryPath,
-    [...defaultArgs, '--yes'],
-    {
-      cwd: directory,
-      reject: false,
-    }
-  );
+  const { exitCode, stdout, stderr } = await execCli(binaryPath, ['--yes'], {
+    cwd: directory,
+  });
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
   const { host } = new URL(stdout);
@@ -847,16 +750,13 @@ test('deploys with only now.json and README.md', async () => {
 });
 
 test('deploys with only vercel.json and README.md', async () => {
-  const directory = fixture('deploy-with-only-readme-vercel-json');
-
-  const { exitCode, stdout, stderr } = await execa(
-    binaryPath,
-    [...defaultArgs, '--yes'],
-    {
-      cwd: directory,
-      reject: false,
-    }
+  const directory = await setupE2EFixture(
+    'deploy-with-only-readme-vercel-json'
   );
+
+  const { exitCode, stdout, stderr } = await execCli(binaryPath, ['--yes'], {
+    cwd: directory,
+  });
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
   const { host } = new URL(stdout);
@@ -866,16 +766,11 @@ test('deploys with only vercel.json and README.md', async () => {
 });
 
 test('reject conflicting `vercel.json` and `now.json` files', async () => {
-  const directory = fixture('conflicting-now-json-vercel-json');
+  const directory = await setupE2EFixture('conflicting-now-json-vercel-json');
 
-  const { exitCode, stdout, stderr } = await execa(
-    binaryPath,
-    [...defaultArgs, '--yes'],
-    {
-      cwd: directory,
-      reject: false,
-    }
-  );
+  const { exitCode, stdout, stderr } = await execCli(binaryPath, ['--yes'], {
+    cwd: directory,
+  });
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
   expect(stderr).toContain(
@@ -884,13 +779,11 @@ test('reject conflicting `vercel.json` and `now.json` files', async () => {
 });
 
 test('`vc --debug project ls` should output the projects listing', async () => {
-  const { exitCode, stdout, stderr } = await execa(
-    binaryPath,
-    [...defaultArgs, '--debug', 'project', 'ls'],
-    {
-      reject: false,
-    }
-  );
+  const { exitCode, stdout, stderr } = await execCli(binaryPath, [
+    '--debug',
+    'project',
+    'ls',
+  ]);
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
   expect(stderr).toContain('> Projects found under');
@@ -908,13 +801,12 @@ test(
     }
 
     async function tryDeploy(cwd: string) {
-      const { exitCode, stdout, stderr } = await execa(
+      const { exitCode, stdout, stderr } = await execCli(
         binaryPath,
-        [...defaultArgs, '--public', '--yes'],
+        ['--public', '--yes'],
         {
           cwd,
           stdio: 'inherit',
-          reject: false,
         }
       );
 
@@ -946,11 +838,10 @@ test('deploy pnpm twice using pnp and symlink=false', async () => {
   await remove(path.join(directory, '.vercel'));
 
   function deploy() {
-    return execa(binaryPath, [
+    return execCli(binaryPath, [
       directory,
       '--name',
       session,
-      ...defaultArgs,
       '--public',
       '--yes',
     ]);
@@ -973,16 +864,11 @@ test('deploy pnpm twice using pnp and symlink=false', async () => {
 });
 
 test('reject deploying with wrong team .vercel config', async () => {
-  const directory = fixture('unauthorized-vercel-config');
+  const directory = await setupE2EFixture('unauthorized-vercel-config');
 
-  const { exitCode, stdout, stderr } = await execa(
-    binaryPath,
-    [...defaultArgs, '--yes'],
-    {
-      cwd: directory,
-      reject: false,
-    }
-  );
+  const { exitCode, stdout, stderr } = await execCli(binaryPath, ['--yes'], {
+    cwd: directory,
+  });
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
   expect(stderr).toContain(
@@ -991,15 +877,10 @@ test('reject deploying with wrong team .vercel config', async () => {
 });
 
 test('reject deploying with invalid token', async () => {
-  const directory = fixture('unauthorized-vercel-config');
-  const { exitCode, stdout, stderr } = await execa(
-    binaryPath,
-    [...defaultArgs, '--yes'],
-    {
-      cwd: directory,
-      reject: false,
-    }
-  );
+  const directory = await setupE2EFixture('unauthorized-vercel-config');
+  const { exitCode, stdout, stderr } = await execCli(binaryPath, ['--yes'], {
+    cwd: directory,
+  });
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
   expect(stderr).toMatch(
@@ -1008,7 +889,7 @@ test('reject deploying with invalid token', async () => {
 });
 
 test('[vc link] should show prompts to set up project', async () => {
-  const dir = fixture('project-link-zeroconf');
+  const dir = await setupE2EFixture('project-link-zeroconf');
   const projectName = `project-link-zeroconf-${
     Math.random().toString(36).split('.')[1]
   }`;
@@ -1016,7 +897,7 @@ test('[vc link] should show prompts to set up project', async () => {
   // remove previously linked project if it exists
   await remove(path.join(dir, '.vercel'));
 
-  const vc = execa(binaryPath, ['link', ...defaultArgs], {
+  const vc = execCli(binaryPath, ['link'], {
     cwd: dir,
     env: {
       FORCE_TTY: '1',
@@ -1049,15 +930,15 @@ test('[vc link] should show prompts to set up project', async () => {
 });
 
 test('[vc link --yes] should not show prompts and autolink', async () => {
-  const dir = fixture('project-link-confirm');
+  const dir = await setupE2EFixture('project-link-confirm');
 
   // remove previously linked project if it exists
   await remove(path.join(dir, '.vercel'));
 
-  const { exitCode, stdout, stderr } = await execa(
+  const { exitCode, stdout, stderr } = await execCli(
     binaryPath,
-    ['link', '--yes', ...defaultArgs],
-    { cwd: dir, reject: false }
+    ['link', '--yes'],
+    { cwd: dir }
   );
 
   // Ensure the exit code is right
@@ -1082,17 +963,16 @@ test('[vc link --yes] should not show prompts and autolink', async () => {
 });
 
 test('[vc link] should not duplicate paths in .gitignore', async () => {
-  const dir = fixture('project-link-gitignore');
+  const dir = await setupE2EFixture('project-link-gitignore');
 
   // remove previously linked project if it exists
   await remove(path.join(dir, '.vercel'));
 
-  const { exitCode, stdout, stderr } = await execa(
+  const { exitCode, stdout, stderr } = await execCli(
     binaryPath,
-    ['link', '--yes', ...defaultArgs],
+    ['link', '--yes'],
     {
       cwd: dir,
-      reject: false,
       env: {
         FORCE_TTY: '1',
       },
@@ -1111,7 +991,7 @@ test('[vc link] should not duplicate paths in .gitignore', async () => {
 });
 
 test('[vc dev] should show prompts to set up project', async () => {
-  const dir = fixture('project-link-dev');
+  const dir = await setupE2EFixture('project-link-dev');
   const port = 58352;
   const projectName = `project-link-dev-${
     Math.random().toString(36).split('.')[1]
@@ -1120,16 +1000,12 @@ test('[vc dev] should show prompts to set up project', async () => {
   // remove previously linked project if it exists
   await remove(path.join(dir, '.vercel'));
 
-  const dev = execa(
-    binaryPath,
-    ['dev', '--listen', port.toString(), ...defaultArgs],
-    {
-      cwd: dir,
-      env: {
-        FORCE_TTY: '1',
-      },
-    }
-  );
+  const dev = execCli(binaryPath, ['dev', '--listen', port.toString()], {
+    cwd: dir,
+    env: {
+      FORCE_TTY: '1',
+    },
+  });
 
   await setupProject(dev, projectName, {
     buildCommand: `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html`,
@@ -1163,7 +1039,7 @@ test('[vc dev] should show prompts to set up project', async () => {
 });
 
 test('[vc link] should show project prompts but not framework when `builds` defined', async () => {
-  const dir = fixture('project-link-legacy');
+  const dir = await setupE2EFixture('project-link-legacy');
   const projectName = `project-link-legacy-${
     Math.random().toString(36).split('.')[1]
   }`;
@@ -1171,7 +1047,7 @@ test('[vc link] should show project prompts but not framework when `builds` defi
   // remove previously linked project if it exists
   await remove(path.join(dir, '.vercel'));
 
-  const vc = execa(binaryPath, ['link', ...defaultArgs], {
+  const vc = execCli(binaryPath, ['link'], {
     cwd: dir,
     env: {
       FORCE_TTY: '1',
@@ -1179,19 +1055,19 @@ test('[vc link] should show project prompts but not framework when `builds` defi
   });
 
   await waitForPrompt(vc, /Set up [^?]+\?/);
-  vc.stdin.write('yes\n');
+  vc.stdin?.write('yes\n');
 
   await waitForPrompt(vc, 'Which scope should contain your project?');
-  vc.stdin.write('\n');
+  vc.stdin?.write('\n');
 
   await waitForPrompt(vc, 'Link to existing project?');
-  vc.stdin.write('no\n');
+  vc.stdin?.write('no\n');
 
   await waitForPrompt(vc, 'What’s your project’s name?');
-  vc.stdin.write(`${projectName}\n`);
+  vc.stdin?.write(`${projectName}\n`);
 
   await waitForPrompt(vc, 'In which directory is your code located?');
-  vc.stdin.write('\n');
+  vc.stdin?.write('\n');
 
   await waitForPrompt(vc, 'Linked to');
 
@@ -1216,7 +1092,7 @@ test('[vc link] should show project prompts but not framework when `builds` defi
 });
 
 test('[vc dev] should send the platform proxy request headers to frontend dev server ', async () => {
-  const dir = fixture('dev-proxy-headers-and-env');
+  const dir = await setupE2EFixture('dev-proxy-headers-and-env');
   const port = 58353;
   const projectName = `dev-proxy-headers-and-env-${
     Math.random().toString(36).split('.')[1]
@@ -1225,16 +1101,12 @@ test('[vc dev] should send the platform proxy request headers to frontend dev se
   // remove previously linked project if it exists
   await remove(path.join(dir, '.vercel'));
 
-  const dev = execa(
-    binaryPath,
-    ['dev', '--listen', port.toString(), ...defaultArgs],
-    {
-      cwd: dir,
-      env: {
-        FORCE_TTY: '1',
-      },
-    }
-  );
+  const dev = execCli(binaryPath, ['dev', '--listen', port.toString()], {
+    cwd: dir,
+    env: {
+      FORCE_TTY: '1',
+    },
+  });
 
   await setupProject(dev, projectName, {
     buildCommand: `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html`,
@@ -1261,11 +1133,11 @@ test('[vc link] should support the `--project` flag', async () => {
   }
 
   const projectName = 'link-project-flag';
-  const directory = fixture('static-deployment');
+  const directory = await setupE2EFixture('static-deployment');
 
   const [user, output] = await Promise.all([
     fetchTokenInformation(token),
-    execute(['link', '--yes', '--project', projectName, directory]),
+    execCli(binaryPath, ['link', '--yes', '--project', projectName, directory]),
   ]);
 
   expect(output.exitCode, formatOutput(output)).toBe(0);
@@ -1273,8 +1145,8 @@ test('[vc link] should support the `--project` flag', async () => {
 });
 
 test('[vc build] should build project with `@vercel/static-build`', async () => {
-  const directory = fixture('vc-build-static-build');
-  const output = await execute(['build'], { cwd: directory });
+  const directory = await setupE2EFixture('vc-build-static-build');
+  const output = await execCli(binaryPath, ['build'], { cwd: directory });
   expect(output.exitCode, formatOutput(output)).toBe(0);
   expect(output.stderr).toContain('Build Completed in .vercel/output');
 
@@ -1299,8 +1171,8 @@ test('[vc build] should build project with `@vercel/static-build`', async () => 
 });
 
 test('[vc build] should not include .vercel when distDir is "."', async () => {
-  const directory = fixture('static-build-dist-dir');
-  const output = await execute(['build'], { cwd: directory });
+  const directory = await setupE2EFixture('static-build-dist-dir');
+  const output = await execCli(binaryPath, ['build'], { cwd: directory });
   expect(output.exitCode, formatOutput(output)).toBe(0);
   expect(output.stderr).toContain('Build Completed in .vercel/output');
   const dir = await fs.readdir(path.join(directory, '.vercel/output/static'));
@@ -1309,8 +1181,10 @@ test('[vc build] should not include .vercel when distDir is "."', async () => {
 });
 
 test('[vc build] should not include .vercel when zeroConfig is true and outputDirectory is "."', async () => {
-  const directory = fixture('static-build-zero-config-output-directory');
-  const output = await execute(['build'], { cwd: directory });
+  const directory = await setupE2EFixture(
+    'static-build-zero-config-output-directory'
+  );
+  const output = await execCli(binaryPath, ['build'], { cwd: directory });
   expect(output.exitCode, formatOutput(output)).toBe(0);
   expect(output.stderr).toContain('Build Completed in .vercel/output');
   const dir = await fs.readdir(path.join(directory, '.vercel/output/static'));
@@ -1319,38 +1193,38 @@ test('[vc build] should not include .vercel when zeroConfig is true and outputDi
 });
 
 test('vercel.json configuration overrides in a new project prompt user and merges settings correctly', async () => {
-  const directory = fixture(
+  const directory = await setupE2EFixture(
     'vercel-json-configuration-overrides-merging-prompts'
   );
 
   // remove previously linked project if it exists
   await remove(path.join(directory, '.vercel'));
 
-  const vc = execa(binaryPath, [directory, ...defaultArgs], { reject: false });
+  const vc = execCli(binaryPath, [directory]);
 
   await waitForPrompt(vc, 'Set up and deploy');
-  vc.stdin.write('y\n');
+  vc.stdin?.write('y\n');
   await waitForPrompt(vc, 'Which scope do you want to deploy to?');
-  vc.stdin.write('\n');
+  vc.stdin?.write('\n');
   await waitForPrompt(vc, 'Link to existing project?');
-  vc.stdin.write('n\n');
+  vc.stdin?.write('n\n');
   await waitForPrompt(vc, 'What’s your project’s name?');
-  vc.stdin.write('\n');
+  vc.stdin?.write('\n');
   await waitForPrompt(vc, 'In which directory is your code located?');
-  vc.stdin.write('\n');
+  vc.stdin?.write('\n');
   await waitForPrompt(vc, 'Want to modify these settings?');
-  vc.stdin.write('y\n');
+  vc.stdin?.write('y\n');
   await waitForPrompt(
     vc,
     'Which settings would you like to overwrite (select multiple)?'
   );
-  vc.stdin.write('a\n');
+  vc.stdin?.write('a\n');
   await waitForPrompt(vc, "What's your Development Command?");
-  vc.stdin.write('echo "DEV COMMAND"\n');
+  vc.stdin?.write('echo "DEV COMMAND"\n');
   // the crux of this test is to make sure that the outputDirectory is properly set by the prompts.
   // otherwise the output from the build command will not be the index route and the page text assertion below will fail.
   await waitForPrompt(vc, "What's your Output Directory?");
-  vc.stdin.write('output\n');
+  vc.stdin?.write('output\n');
   await waitForPrompt(vc, 'Linked to');
   const deployment = await vc;
   expect(deployment.exitCode, formatOutput(deployment)).toBe(0);
@@ -1362,16 +1236,15 @@ test('vercel.json configuration overrides in a new project prompt user and merge
 
 test('vercel.json configuration overrides in an existing project do not prompt user and correctly apply overrides', async () => {
   // create project directory and get path to vercel.json
-  const directory = fixture('vercel-json-configuration-overrides');
+  const directory = await setupE2EFixture(
+    'vercel-json-configuration-overrides'
+  );
   const vercelJsonPath = path.join(directory, 'vercel.json');
 
   async function deploy(autoConfirm = false) {
-    const deployment = await execa(
+    const deployment = await execCli(
       binaryPath,
-      [directory, ...defaultArgs, '--public'].concat(
-        autoConfirm ? ['--yes'] : []
-      ),
-      { reject: false }
+      [directory, '--public'].concat(autoConfirm ? ['--yes'] : [])
     );
     expect(deployment.exitCode, formatOutput(deployment)).toBe(0);
     return deployment;

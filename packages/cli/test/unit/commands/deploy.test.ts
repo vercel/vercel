@@ -5,7 +5,7 @@ import { randomBytes } from 'crypto';
 import { fileNameSymbol } from '@vercel/client';
 import { client } from '../../mocks/client';
 import deploy from '../../../src/commands/deploy';
-import { setupFixture } from '../../helpers/setup-fixture';
+import { setupFixture } from '../../helpers/setup-unit-fixture';
 import { defaultProject, useProject } from '../../mocks/project';
 import { useTeams } from '../../mocks/team';
 import { useUser } from '../../mocks/user';

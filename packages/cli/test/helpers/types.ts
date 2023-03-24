@@ -1,11 +1,4 @@
-import type { Readable } from 'stream';
-import type _execa from 'execa';
-
-export type BoundChildProcess = _execa.ExecaChildProcess & {
-  stdout: Readable;
-  stdin: Readable;
-  stderr: Readable;
-};
+import type execa from 'execa';
 
 export interface TmpDir {
   name: string;
@@ -24,3 +17,5 @@ export type DeploymentLike = {
   error?: Error;
   builds: Build[];
 };
+
+export type CLIProcess = execa.ExecaChildProcess<string>;

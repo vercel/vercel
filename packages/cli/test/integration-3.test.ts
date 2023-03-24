@@ -11,7 +11,7 @@ import fs, { ensureDir } from 'fs-extra';
 import prepareFixtures from './helpers/prepare';
 import { fetchTokenWithRetry } from '../../../test/lib/deployment/now-deploy';
 import type http from 'http';
-import type { BoundChildProcess, TmpDir } from './helpers/types';
+import type { CLIProcess, TmpDir } from './helpers/types';
 
 const TEST_TIMEOUT = 3 * 60 * 1000;
 jest.setTimeout(TEST_TIMEOUT);
@@ -21,7 +21,7 @@ function execa(
   file: string,
   args: string[],
   options?: _execa.Options<string>
-): BoundChildProcess {
+): CLIProcess {
   console.log(`$ vercel ${args.join(' ')}`);
   const proc = _execa(file, args, {
     env: {
@@ -42,7 +42,7 @@ function execa(
   // if a reference to `proc.stdout` (for example) fails later,
   // the logs will say clearly where that came from
   // so, it's not awful to use the type assertion here
-  return proc as BoundChildProcess;
+  return proc as CLIProcess;
 }
 
 const binaryPath = path.resolve(__dirname, `../scripts/start.js`);
@@ -207,7 +207,7 @@ test('default command should prompt login with empty auth.json', async () => {
     await clearAuthConfig();
     await execa(binaryPath, [...defaultArgs]);
     throw new Error(`Expected deploy to fail, but it did not.`);
-  } catch (err) {
+  } catch (err: any) {
     expect(err.stderr).toContain(
       'Error: No existing credentials found. Please run `vercel login` or pass "--token"'
     );

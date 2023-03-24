@@ -3,72 +3,29 @@ import path from 'path';
 import { URL, parse as parseUrl } from 'url';
 import semVer from 'semver';
 import { Readable } from 'stream';
-import { homedir, tmpdir } from 'os';
-import _execa from 'execa';
-import XDGAppPaths from 'xdg-app-paths';
+import { homedir } from 'os';
+import { exec, execCli } from './helpers/exec';
 import fetch, { RequestInfo, RequestInit } from 'node-fetch';
-// @ts-ignore
-import tmp from 'tmp-promise';
 import retry from 'async-retry';
 import fs, { ensureDir } from 'fs-extra';
 import logo from '../src/util/output/logo';
 import sleep from '../src/util/sleep';
 import pkg from '../package.json';
-import prepareFixtures from './helpers/prepare';
 import { fetchTokenWithRetry } from '../../../test/lib/deployment/now-deploy';
 import { once } from 'node:events';
 import waitForPrompt from './helpers/wait-for-prompt';
+import { getNewTmpDir, listTmpDirs } from './helpers/get-tmp-dir';
+import getGlobalDir from './helpers/get-global-dir';
+import {
+  setupE2EFixture,
+  prepareE2EFixtures,
+} from './helpers/setup-e2e-fixture';
+import formatOutput from './helpers/format-output';
 import type http from 'http';
-import type {
-  BoundChildProcess,
-  TmpDir,
-  NowJson,
-  DeploymentLike,
-} from './helpers/types';
+import type { NowJson, DeploymentLike, CLIProcess } from './helpers/types';
 
 const TEST_TIMEOUT = 3 * 60 * 1000;
 jest.setTimeout(TEST_TIMEOUT);
-
-// log command when running `execa`
-function execa(
-  file: string,
-  args: string[],
-  options?: _execa.Options<string>
-): BoundChildProcess {
-  console.log(`$ vercel ${args.join(' ')}`);
-  const proc = _execa(file, args, {
-    env: {
-      NO_COLOR: '1',
-    },
-    ...options,
-  });
-  if (proc.stdin === null) {
-    console.warn(`vercel ${args.join(' ')} - not bound to stdin`);
-  }
-  if (proc.stdout === null) {
-    console.warn(`vercel ${args.join(' ')} - not bound to stdout`);
-  }
-  if (proc.stderr === null) {
-    console.warn(`vercel ${args.join(' ')} - not bound to stderr`);
-  }
-
-  // if a reference to `proc.stdout` (for example) fails later,
-  // the logs will say clearly where that came from
-  // so, it's not awful to use the type assertion here
-  return proc as BoundChildProcess;
-}
-
-function fixture(name: string) {
-  const directory = path.join(tmpFixturesDir, name);
-  const config = path.join(directory, 'project.json');
-
-  // We need to remove it, otherwise we can't re-use fixtures
-  if (fs.existsSync(config)) {
-    fs.unlinkSync(config);
-  }
-
-  return directory;
-}
 
 const binaryPath = path.resolve(__dirname, `../scripts/start.js`);
 
@@ -133,30 +90,8 @@ function fetchTokenInformation(token: string, retries = 3) {
   );
 }
 
-function formatOutput({
-  stderr,
-  stdout,
-}: {
-  stderr: string | Readable;
-  stdout: string | Readable;
-}) {
-  return `
------
-
-Stderr:
-${stderr || '(no output)'}
-
------
-
-Stdout:
-${stdout || '(no output)'}
-
------
-  `;
-}
-
 async function vcLink(projectPath: string) {
-  const { exitCode, stdout, stderr } = await execa(
+  const { exitCode, stdout, stderr } = await execCli(
     binaryPath,
     ['link', '--yes', ...defaultArgs],
     {
@@ -168,7 +103,7 @@ async function vcLink(projectPath: string) {
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 }
 
-async function getLocalhost(vc: BoundChildProcess): Promise<RegExpExecArray> {
+async function getLocalhost(vc: CLIProcess): Promise<RegExpExecArray> {
   let localhost: RegExpExecArray | undefined;
   await waitForPrompt(vc, chunk => {
     const line = chunk.toString();
@@ -189,14 +124,6 @@ async function getLocalhost(vc: BoundChildProcess): Promise<RegExpExecArray> {
   return localhost;
 }
 
-function getTmpDir(): TmpDir {
-  return tmp.dirSync({
-    // This ensures the directory gets
-    // deleted even if it has contents
-    unsafeCleanup: true,
-  }) as TmpDir;
-}
-
 const context: {
   deployment: string | undefined;
   secretName: string | undefined;
@@ -205,27 +132,10 @@ const context: {
   secretName: undefined,
 };
 
-const defaultOptions = { reject: false };
 const defaultArgs: string[] = [];
 let token: string | undefined;
 let email: string | undefined;
 let contextName: string | undefined;
-
-let tmpDir: TmpDir | undefined;
-let tmpFixturesDir = path.join(tmpdir(), 'tmp-fixtures');
-
-let globalDir = XDGAppPaths('com.vercel.cli').dataDirs()[0];
-
-if (!process.env.CI) {
-  tmpDir = getTmpDir();
-  globalDir = path.join(tmpDir.name, 'com.vercel.tests');
-
-  defaultArgs.push('-Q', globalDir);
-  console.log(
-    'No CI detected, adding defaultArgs to avoid polluting user settings',
-    defaultArgs
-  );
-}
 
 function mockLoginApi(req: http.IncomingMessage, res: http.ServerResponse) {
   const { url = '/', method } = req;
@@ -260,12 +170,6 @@ const loginApiServer = require('http')
     console.log(`[mock-login-server] Listening on ${loginApiUrl}`);
   });
 
-const execute = (args: string[], options?: _execa.Options<string>) =>
-  execa(binaryPath, [...defaultArgs, ...args], {
-    ...defaultOptions,
-    ...options,
-  });
-
 const apiFetch = (url: string, { headers, ...options }: RequestInit = {}) => {
   return fetch(`https://api.vercel.com${url}`, {
     headers: {
@@ -279,13 +183,6 @@ const apiFetch = (url: string, { headers, ...options }: RequestInit = {}) => {
 const createUser = async () => {
   await retry(
     async () => {
-      if (!fs.existsSync(globalDir)) {
-        console.log('Creating global config directory ', globalDir);
-        await ensureDir(globalDir);
-      } else {
-        console.log('Found global config directory ', globalDir);
-      }
-
       token = await fetchTokenWithRetry();
 
       await fs.writeJSON(getConfigAuthPath(), { token });
@@ -300,12 +197,19 @@ const createUser = async () => {
   );
 };
 
-const getConfigAuthPath = () => path.join(globalDir, 'auth.json');
+function getConfigAuthPath() {
+  return path.join(getGlobalDir(), 'auth.json');
+}
 
 beforeAll(async () => {
   try {
     await createUser();
-    await prepareFixtures(contextName, binaryPath, tmpFixturesDir);
+
+    if (!contextName) {
+      throw new Error('Shared state "contextName" not set.');
+    }
+
+    await prepareE2EFixtures(contextName, binaryPath);
   } catch (err) {
     console.log('Failed test suite `beforeAll`');
     console.log(err);
@@ -325,17 +229,13 @@ afterAll(async () => {
 
   // Make sure the token gets revoked unless it's passed in via environment
   if (!process.env.VERCEL_TOKEN) {
-    await execa(binaryPath, ['logout', ...defaultArgs]);
+    await execCli(binaryPath, ['logout', ...defaultArgs]);
   }
 
-  if (tmpDir) {
-    // Remove config directory entirely
+  const allTmpDirs = listTmpDirs();
+  for (const tmpDir of allTmpDirs) {
+    console.log('Removing temp dir: ', tmpDir.name);
     tmpDir.removeCallback();
-  }
-
-  if (tmpFixturesDir) {
-    console.log('removing tmpFixturesDir', tmpFixturesDir);
-    fs.removeSync(tmpFixturesDir);
   }
 });
 
@@ -349,7 +249,7 @@ test(
     }
 
     await fs.remove(getConfigAuthPath());
-    const loginOutput = await execa(binaryPath, [
+    const loginOutput = await execCli(binaryPath, [
       'login',
       email,
       '--api',
@@ -367,49 +267,42 @@ test(
 );
 
 test('[vc build] should build project with corepack and select npm@8.1.0', async () => {
-  process.env.ENABLE_EXPERIMENTAL_COREPACK = '1';
-  const directory = fixture('vc-build-corepack-npm');
-  const before = await _execa('npm', ['--version'], {
-    cwd: directory,
-    reject: false,
-  });
-  const output = await execute(['build'], { cwd: directory });
-  expect(output.exitCode, formatOutput(output)).toBe(0);
-  expect(output.stderr).toMatch(/Build Completed/gm);
-  const after = await _execa('npm', ['--version'], {
-    cwd: directory,
-    reject: false,
-  });
-  // Ensure global npm didn't change
-  expect(before.stdout).toBe(after.stdout);
-  // Ensure version is correct
-  expect(
-    await fs.readFile(
-      path.join(directory, '.vercel/output/static/index.txt'),
-      'utf8'
-    )
-  ).toBe('8.1.0\n');
-  // Ensure corepack will be cached
-  const contents = fs.readdirSync(
-    path.join(directory, '.vercel/cache/corepack')
-  );
-  expect(contents).toEqual(['home', 'shim']);
+  try {
+    process.env.ENABLE_EXPERIMENTAL_COREPACK = '1';
+    const directory = await setupE2EFixture('vc-build-corepack-npm');
+    const before = await exec(directory, 'npm', ['--version']);
+    const output = await execCli(binaryPath, ['build'], { cwd: directory });
+
+    expect(output.exitCode, formatOutput(output)).toBe(0);
+    expect(output.stderr).toMatch(/Build Completed/gm);
+    const after = await exec(directory, 'npm', ['--version']);
+    // Ensure global npm didn't change
+    expect(before.stdout).toBe(after.stdout);
+    // Ensure version is correct
+    expect(
+      await fs.readFile(
+        path.join(directory, '.vercel/output/static/index.txt'),
+        'utf8'
+      )
+    ).toBe('8.1.0\n');
+    // Ensure corepack will be cached
+    const contents = fs.readdirSync(
+      path.join(directory, '.vercel/cache/corepack')
+    );
+    expect(contents).toEqual(['home', 'shim']);
+  } finally {
+    delete process.env.ENABLE_EXPERIMENTAL_COREPACK;
+  }
 });
 
 test('[vc build] should build project with corepack and select pnpm@7.1.0', async () => {
   process.env.ENABLE_EXPERIMENTAL_COREPACK = '1';
-  const directory = fixture('vc-build-corepack-pnpm');
-  const before = await _execa('pnpm', ['--version'], {
-    cwd: directory,
-    reject: false,
-  });
-  const output = await execute(['build'], { cwd: directory });
+  const directory = await setupE2EFixture('vc-build-corepack-pnpm');
+  const before = await exec(directory, 'pnpm', ['--version']);
+  const output = await execCli(binaryPath, ['build'], { cwd: directory });
   expect(output.exitCode, formatOutput(output)).toBe(0);
   expect(output.stderr).toMatch(/Build Completed/gm);
-  const after = await _execa('pnpm', ['--version'], {
-    cwd: directory,
-    reject: false,
-  });
+  const after = await exec(directory, 'pnpm', ['--version']);
   // Ensure global pnpm didn't change
   expect(before.stdout).toBe(after.stdout);
   // Ensure version is correct
@@ -428,18 +321,12 @@ test('[vc build] should build project with corepack and select pnpm@7.1.0', asyn
 
 test('[vc build] should build project with corepack and select yarn@2.4.3', async () => {
   process.env.ENABLE_EXPERIMENTAL_COREPACK = '1';
-  const directory = fixture('vc-build-corepack-yarn');
-  const before = await _execa('yarn', ['--version'], {
-    cwd: directory,
-    reject: false,
-  });
-  const output = await execute(['build'], { cwd: directory });
+  const directory = await setupE2EFixture('vc-build-corepack-yarn');
+  const before = await exec(directory, 'yarn', ['--version']);
+  const output = await execCli(binaryPath, ['build'], { cwd: directory });
   expect(output.exitCode, formatOutput(output)).toBe(0);
   expect(output.stderr).toMatch(/Build Completed/gm);
-  const after = await _execa('yarn', ['--version'], {
-    cwd: directory,
-    reject: false,
-  });
+  const after = await exec(directory, 'yarn', ['--version']);
   // Ensure global yarn didn't change
   expect(before.stdout).toBe(after.stdout);
   // Ensure version is correct
@@ -457,8 +344,8 @@ test('[vc build] should build project with corepack and select yarn@2.4.3', asyn
 });
 
 test('[vc dev] should print help from `vc develop --help`', async () => {
-  const directory = fixture('static-deployment');
-  const { exitCode, stdout, stderr } = await execa(
+  const directory = await setupE2EFixture('static-deployment');
+  const { exitCode, stdout, stderr } = await execCli(
     binaryPath,
     ['develop', '--help', ...defaultArgs],
     {
@@ -472,12 +359,12 @@ test('[vc dev] should print help from `vc develop --help`', async () => {
 });
 
 test('default command should deploy directory', async () => {
-  const projectDir = fixture('deploy-default-with-sub-directory');
+  const projectDir = await setupE2EFixture('deploy-default-with-sub-directory');
   const target = 'output';
 
   await vcLink(path.join(projectDir, target));
 
-  const { exitCode, stdout, stderr } = await execa(
+  const { exitCode, stdout, stderr } = await execCli(
     binaryPath,
     [
       // omit the default "deploy" command
@@ -494,12 +381,14 @@ test('default command should deploy directory', async () => {
 });
 
 test('default command should warn when deploying with conflicting subdirectory', async () => {
-  const projectDir = fixture('deploy-default-with-conflicting-sub-directory');
+  const projectDir = await setupE2EFixture(
+    'deploy-default-with-conflicting-sub-directory'
+  );
   const target = 'list'; // command that conflicts with a sub directory
 
   await vcLink(projectDir);
 
-  const { exitCode, stdout, stderr } = await execa(
+  const { exitCode, stdout, stderr } = await execCli(
     binaryPath,
     [
       // omit the default "deploy" command
@@ -521,12 +410,14 @@ test('default command should warn when deploying with conflicting subdirectory',
 });
 
 test('deploy command should not warn when deploying with conflicting subdirectory and using --cwd', async () => {
-  const projectDir = fixture('deploy-default-with-conflicting-sub-directory');
+  const projectDir = await setupE2EFixture(
+    'deploy-default-with-conflicting-sub-directory'
+  );
   const target = 'list'; // command that conflicts with a sub directory
 
   await vcLink(path.join(projectDir, target));
 
-  const { exitCode, stdout, stderr } = await execa(
+  const { exitCode, stdout, stderr } = await execCli(
     binaryPath,
     ['list', '--cwd', target, ...defaultArgs],
     {
@@ -544,12 +435,14 @@ test('deploy command should not warn when deploying with conflicting subdirector
 });
 
 test('default command should work with --cwd option', async () => {
-  const projectDir = fixture('deploy-default-with-conflicting-sub-directory');
+  const projectDir = await setupE2EFixture(
+    'deploy-default-with-conflicting-sub-directory'
+  );
   const target = 'list'; // command that conflicts with a sub directory
 
   await vcLink(path.join(projectDir, 'list'));
 
-  const { exitCode, stdout, stderr } = await execa(
+  const { exitCode, stdout, stderr } = await execCli(
     binaryPath,
     [
       // omit the default "deploy" command
@@ -573,11 +466,13 @@ test('default command should work with --cwd option', async () => {
 });
 
 test('should allow deploying a directory that was built with a target environment of "preview" and `--prebuilt` is used without specifying a target', async () => {
-  const projectDir = fixture('deploy-default-with-prebuilt-preview');
+  const projectDir = await setupE2EFixture(
+    'deploy-default-with-prebuilt-preview'
+  );
 
   await vcLink(projectDir);
 
-  const { exitCode, stdout, stderr } = await execa(
+  const { exitCode, stdout, stderr } = await execCli(
     binaryPath,
     [
       // omit the default "deploy" command
@@ -600,11 +495,11 @@ test('should allow deploying a directory that was built with a target environmen
 });
 
 test('should allow deploying a directory that was prebuilt, but has no builds.json', async () => {
-  const projectDir = fixture('build-output-api-raw');
+  const projectDir = await setupE2EFixture('build-output-api-raw');
 
   await vcLink(projectDir);
 
-  const { exitCode, stdout, stderr } = await execa(
+  const { exitCode, stdout, stderr } = await execCli(
     binaryPath,
     [
       // omit the default "deploy" command
@@ -625,9 +520,11 @@ test('should allow deploying a directory that was prebuilt, but has no builds.js
 });
 
 test('[vc link] with vercel.json configuration overrides should create a valid deployment', async () => {
-  const directory = fixture('vercel-json-configuration-overrides-link');
+  const directory = await setupE2EFixture(
+    'vercel-json-configuration-overrides-link'
+  );
 
-  const { exitCode, stdout, stderr } = await execa(
+  const { exitCode, stdout, stderr } = await execCli(
     binaryPath,
     ['link', '--yes', ...defaultArgs],
     {
@@ -650,9 +547,9 @@ test('[vc link] with vercel.json configuration overrides should create a valid d
 });
 
 test('deploy using only now.json with `redirects` defined', async () => {
-  const target = fixture('redirects-v2');
+  const target = await setupE2EFixture('redirects-v2');
 
-  const { exitCode, stdout, stderr } = await execa(
+  const { exitCode, stdout, stderr } = await execCli(
     binaryPath,
     [target, ...defaultArgs, '--yes'],
     {
@@ -669,10 +566,10 @@ test('deploy using only now.json with `redirects` defined', async () => {
 });
 
 test('deploy using --local-config flag v2', async () => {
-  const target = fixture('local-config-v2');
+  const target = await setupE2EFixture('local-config-v2');
   const configPath = path.join(target, 'vercel-test.json');
 
-  const { exitCode, stdout, stderr } = await execa(
+  const { exitCode, stdout, stderr } = await execCli(
     binaryPath,
     ['deploy', target, '--local-config', configPath, ...defaultArgs, '--yes'],
     {
@@ -701,9 +598,9 @@ test('deploy using --local-config flag v2', async () => {
 });
 
 test('deploy fails using --local-config flag with non-existent path', async () => {
-  const target = fixture('local-config-v2');
+  const target = await setupE2EFixture('local-config-v2');
 
-  const { exitCode, stdout, stderr } = await execa(
+  const { exitCode, stdout, stderr } = await execCli(
     binaryPath,
     [
       'deploy',
@@ -727,10 +624,10 @@ test('deploy fails using --local-config flag with non-existent path', async () =
 });
 
 test('deploy using --local-config flag above target', async () => {
-  const root = fixture('local-config-above-target');
+  const root = await setupE2EFixture('local-config-above-target');
   const target = path.join(root, 'dir');
 
-  const { exitCode, stdout, stderr } = await execa(
+  const { exitCode, stdout, stderr } = await execCli(
     binaryPath,
     [
       'deploy',
@@ -762,10 +659,10 @@ test('deploy using --local-config flag above target', async () => {
 });
 
 test('Deploy `api-env` fixture and test `vercel env` command', async () => {
-  const target = fixture('api-env');
+  const target = await setupE2EFixture('api-env');
 
   async function vcLink() {
-    const { exitCode, stdout, stderr } = await execa(
+    const { exitCode, stdout, stderr } = await execCli(
       binaryPath,
       ['link', '--yes', ...defaultArgs],
       {
@@ -777,7 +674,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
   }
 
   async function vcEnvLsIsEmpty() {
-    const { exitCode, stdout, stderr } = await execa(
+    const { exitCode, stdout, stderr } = await execCli(
       binaryPath,
       ['env', 'ls', ...defaultArgs],
       {
@@ -791,27 +688,27 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
   }
 
   async function vcEnvAddWithPrompts() {
-    const vc = execa(binaryPath, ['env', 'add', ...defaultArgs], {
+    const vc = execCli(binaryPath, ['env', 'add', ...defaultArgs], {
       reject: false,
       cwd: target,
     });
 
     await waitForPrompt(vc, 'What’s the name of the variable?');
-    vc.stdin.write('MY_NEW_ENV_VAR\n');
+    vc.stdin?.write('MY_NEW_ENV_VAR\n');
     await waitForPrompt(
       vc,
       chunk =>
         chunk.includes('What’s the value of') &&
         chunk.includes('MY_NEW_ENV_VAR')
     );
-    vc.stdin.write('my plaintext value\n');
+    vc.stdin?.write('my plaintext value\n');
 
     await waitForPrompt(
       vc,
       chunk =>
         chunk.includes('which Environments') && chunk.includes('MY_NEW_ENV_VAR')
     );
-    vc.stdin.write('a\n'); // select all
+    vc.stdin?.write('a\n'); // select all
 
     const { exitCode, stdout, stderr } = await vc;
 
@@ -819,7 +716,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
   }
 
   async function vcEnvAddFromStdin() {
-    const vc = execa(
+    const vc = execCli(
       binaryPath,
       ['env', 'add', 'MY_STDIN_VAR', 'development', ...defaultArgs],
       {
@@ -827,13 +724,13 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
         cwd: target,
       }
     );
-    vc.stdin.end('{"expect":"quotes"}');
+    vc.stdin?.end('{"expect":"quotes"}');
     const { exitCode, stdout, stderr } = await vc;
     expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
   }
 
   async function vcEnvAddFromStdinPreview() {
-    const vc = execa(
+    const vc = execCli(
       binaryPath,
       ['env', 'add', 'MY_PREVIEW', 'preview', ...defaultArgs],
       {
@@ -841,13 +738,13 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
         cwd: target,
       }
     );
-    vc.stdin.end('preview-no-branch');
+    vc.stdin?.end('preview-no-branch');
     const { exitCode, stdout, stderr } = await vc;
     expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
   }
 
   async function vcEnvAddFromStdinPreviewWithBranch() {
-    const vc = execa(
+    const vc = execCli(
       binaryPath,
       ['env', 'add', 'MY_PREVIEW', 'preview', 'staging', ...defaultArgs],
       {
@@ -855,14 +752,14 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
         cwd: target,
       }
     );
-    vc.stdin.end('preview-with-branch');
+    vc.stdin?.end('preview-with-branch');
     const { exitCode, stdout, stderr } = await vc;
     expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
     expect(stderr).toMatch(/does not have a connected Git repository/gm);
   }
 
   async function vcEnvLsIncludesVar() {
-    const { exitCode, stderr, stdout } = await execa(
+    const { exitCode, stderr, stdout } = await execCli(
       binaryPath,
       ['env', 'ls', ...defaultArgs],
       {
@@ -925,7 +822,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
   }
 
   async function vcEnvPull() {
-    const { exitCode, stdout, stderr } = await execa(
+    const { exitCode, stdout, stderr } = await execCli(
       binaryPath,
       ['env', 'pull', '-y', ...defaultArgs],
       {
@@ -946,7 +843,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
   }
 
   async function vcEnvPullOverwrite() {
-    const { exitCode, stdout, stderr } = await execa(
+    const { exitCode, stdout, stderr } = await execCli(
       binaryPath,
       ['env', 'pull', ...defaultArgs],
       {
@@ -963,7 +860,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
   async function vcEnvPullConfirm() {
     fs.writeFileSync(path.join(target, '.env'), 'hahaha');
 
-    const vc = execa(binaryPath, ['env', 'pull', ...defaultArgs], {
+    const vc = execCli(binaryPath, ['env', 'pull', ...defaultArgs], {
       reject: false,
       cwd: target,
     });
@@ -972,14 +869,14 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
       vc,
       'Found existing file ".env". Do you want to overwrite?'
     );
-    vc.stdin.end('y\n');
+    vc.stdin?.end('y\n');
 
     const { exitCode, stdout, stderr } = await vc;
     expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
   }
 
   async function vcDeployWithVar() {
-    const { exitCode, stdout, stderr } = await execa(
+    const { exitCode, stdout, stderr } = await execCli(
       binaryPath,
       [...defaultArgs],
       {
@@ -1004,7 +901,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
   }
 
   async function vcDevWithEnv() {
-    const vc = execa(binaryPath, ['dev', '--debug', ...defaultArgs], {
+    const vc = execCli(binaryPath, ['dev', '--debug', ...defaultArgs], {
       reject: false,
       cwd: target,
     });
@@ -1036,7 +933,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
   }
 
   async function vcDevAndFetchCloudVars() {
-    const vc = execa(binaryPath, ['dev', ...defaultArgs], {
+    const vc = execCli(binaryPath, ['dev', ...defaultArgs], {
       reject: false,
       cwd: target,
     });
@@ -1087,7 +984,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
   }
 
   async function vcEnvPullFetchSystemVars() {
-    const { exitCode, stdout, stderr } = await execa(
+    const { exitCode, stdout, stderr } = await execCli(
       binaryPath,
       ['env', 'pull', '-y', ...defaultArgs],
       {
@@ -1110,7 +1007,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
   }
 
   async function vcDevAndFetchSystemVars() {
-    const vc = execa(binaryPath, ['dev', ...defaultArgs], {
+    const vc = execCli(binaryPath, ['dev', ...defaultArgs], {
       reject: false,
       cwd: target,
     });
@@ -1148,18 +1045,18 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
   }
 
   async function vcEnvRemove() {
-    const vc = execa(binaryPath, ['env', 'rm', '-y', ...defaultArgs], {
+    const vc = execCli(binaryPath, ['env', 'rm', '-y', ...defaultArgs], {
       reject: false,
       cwd: target,
     });
     await waitForPrompt(vc, 'What’s the name of the variable?');
-    vc.stdin.write('MY_PREVIEW\n');
+    vc.stdin?.write('MY_PREVIEW\n');
     const { exitCode, stdout, stderr } = await vc;
     expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
   }
 
   async function vcEnvRemoveWithArgs() {
-    const { exitCode, stdout, stderr } = await execa(
+    const { exitCode, stdout, stderr } = await execCli(
       binaryPath,
       ['env', 'rm', 'MY_STDIN_VAR', 'development', '-y', ...defaultArgs],
       {
@@ -1170,7 +1067,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
 
     expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
-    const { exitCode: exitCode3 } = await execa(
+    const { exitCode: exitCode3 } = await execCli(
       binaryPath,
       [
         'env',
@@ -1190,7 +1087,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
   }
 
   async function vcEnvRemoveWithNameOnly() {
-    const { exitCode, stdout, stderr } = await execa(
+    const { exitCode, stdout, stderr } = await execCli(
       binaryPath,
       ['env', 'rm', 'MY_NEW_ENV_VAR', '-y', ...defaultArgs],
       {
@@ -1203,7 +1100,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
   }
 
   function vcEnvRemoveByName(name: string) {
-    return execa(binaryPath, ['env', 'rm', name, '-y', ...defaultArgs], {
+    return execCli(binaryPath, ['env', 'rm', name, '-y', ...defaultArgs], {
       reject: false,
       cwd: target,
     });
@@ -1251,7 +1148,12 @@ test('[vc projects] should create a project successfully', async () => {
     Math.random().toString(36).split('.')[1]
   }`;
 
-  const vc = execa(binaryPath, ['project', 'add', projectName, ...defaultArgs]);
+  const vc = execCli(binaryPath, [
+    'project',
+    'add',
+    projectName,
+    ...defaultArgs,
+  ]);
 
   await waitForPrompt(vc, `Success! Project ${projectName} added`);
 
@@ -1259,7 +1161,7 @@ test('[vc projects] should create a project successfully', async () => {
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   // creating the same project again should succeed
-  const vc2 = execa(binaryPath, [
+  const vc2 = execCli(binaryPath, [
     'project',
     'add',
     projectName,
@@ -1273,9 +1175,9 @@ test('[vc projects] should create a project successfully', async () => {
 });
 
 test('deploy with metadata containing "=" in the value', async () => {
-  const target = fixture('static-v2-meta');
+  const target = await setupE2EFixture('static-v2-meta');
 
-  const { exitCode, stdout, stderr } = await execa(
+  const { exitCode, stdout, stderr } = await execCli(
     binaryPath,
     [target, ...defaultArgs, '--yes', '--meta', 'someKey=='],
     { reject: false }
@@ -1293,7 +1195,7 @@ test('deploy with metadata containing "=" in the value', async () => {
 });
 
 test('print the deploy help message', async () => {
-  const { stderr, stdout, exitCode } = await execa(
+  const { stderr, stdout, exitCode } = await execCli(
     binaryPath,
     ['help', ...defaultArgs],
     {
@@ -1307,7 +1209,7 @@ test('print the deploy help message', async () => {
 });
 
 test('output the version', async () => {
-  const { stdout, stderr, exitCode } = await execa(
+  const { stdout, stderr, exitCode } = await execCli(
     binaryPath,
     ['--version', ...defaultArgs],
     {
@@ -1323,11 +1225,11 @@ test('output the version', async () => {
 });
 
 test('should add secret with hyphen prefix', async () => {
-  const target = fixture('build-secret');
+  const target = await setupE2EFixture('build-secret');
   const key = 'mysecret';
   const value = '-foo_bar';
 
-  let secretCall = await execa(
+  let secretCall = await execCli(
     binaryPath,
     ['secrets', 'add', ...defaultArgs, key, value],
     {
@@ -1338,7 +1240,7 @@ test('should add secret with hyphen prefix', async () => {
 
   expect(secretCall.exitCode, formatOutput(secretCall)).toBe(0);
 
-  let targetCall = await execa(binaryPath, [...defaultArgs, '--yes'], {
+  let targetCall = await execCli(binaryPath, [...defaultArgs, '--yes'], {
     cwd: target,
     reject: false,
   });
@@ -1351,7 +1253,7 @@ test('should add secret with hyphen prefix', async () => {
 });
 
 test('login with unregistered user', async () => {
-  const { stdout, stderr, exitCode } = await execa(
+  const { stdout, stderr, exitCode } = await execCli(
     binaryPath,
     ['login', `${session}@${session}.com`, ...defaultArgs],
     {
@@ -1368,7 +1270,7 @@ test('login with unregistered user', async () => {
 });
 
 test('ignore files specified in .nowignore', async () => {
-  const directory = fixture('nowignore');
+  const directory = await setupE2EFixture('nowignore');
 
   const args = [
     '--debug',
@@ -1378,7 +1280,7 @@ test('ignore files specified in .nowignore', async () => {
     ...defaultArgs,
     '--yes',
   ];
-  const targetCall = await execa(binaryPath, args, {
+  const targetCall = await execCli(binaryPath, args, {
     cwd: directory,
     reject: false,
   });
@@ -1392,7 +1294,7 @@ test('ignore files specified in .nowignore', async () => {
 });
 
 test('ignore files specified in .nowignore via allowlist', async () => {
-  const directory = fixture('nowignore-allowlist');
+  const directory = await setupE2EFixture('nowignore-allowlist');
 
   const args = [
     '--debug',
@@ -1402,7 +1304,7 @@ test('ignore files specified in .nowignore via allowlist', async () => {
     ...defaultArgs,
     '--yes',
   ];
-  const targetCall = await execa(binaryPath, args, {
+  const targetCall = await execCli(binaryPath, args, {
     cwd: directory,
     reject: false,
   });
@@ -1416,7 +1318,7 @@ test('ignore files specified in .nowignore via allowlist', async () => {
 });
 
 test('list the scopes', async () => {
-  const { stdout, stderr, exitCode } = await execa(
+  const { stdout, stderr, exitCode } = await execCli(
     binaryPath,
     ['teams', 'ls', ...defaultArgs],
     {
@@ -1435,10 +1337,10 @@ test('domains inspect', async () => {
     .toString()
     .slice(2, 8)}.org`;
 
-  const directory = fixture('static-multiple-files');
+  const directory = await setupE2EFixture('static-multiple-files');
   const projectName = Math.random().toString().slice(2);
 
-  const output = await execute([
+  const output = await execCli(directory, [
     directory,
     `-V`,
     `2`,
@@ -1446,11 +1348,12 @@ test('domains inspect', async () => {
     '--yes',
     '--public',
   ]);
+
   expect(output.exitCode, formatOutput(output)).toBe(0);
 
   {
     // Add a domain that can be inspected
-    const result = await execa(
+    const result = await execCli(
       binaryPath,
       [`domains`, `add`, domainName, projectName, ...defaultArgs],
       { reject: false }
@@ -1459,7 +1362,7 @@ test('domains inspect', async () => {
     expect(result.exitCode, formatOutput(result)).toBe(0);
   }
 
-  const { exitCode, stdout, stderr } = await execa(
+  const { exitCode, stdout, stderr } = await execCli(
     binaryPath,
     ['domains', 'inspect', domainName, ...defaultArgs],
     {
@@ -1472,7 +1375,7 @@ test('domains inspect', async () => {
 
   {
     // Remove the domain again
-    const result = await execa(
+    const result = await execCli(
       binaryPath,
       [`domains`, `rm`, domainName, ...defaultArgs],
       { reject: false, input: 'y' }
@@ -1501,7 +1404,7 @@ test('try to purchase a domain', async () => {
     stream.push(null);
   }, ms('1s'));
 
-  const { stderr, stdout, exitCode } = await execa(
+  const { stderr, stdout, exitCode } = await execCli(
     binaryPath,
     ['domains', 'buy', `${session}-test.com`, ...defaultArgs],
     {
@@ -1520,7 +1423,7 @@ test('try to purchase a domain', async () => {
 });
 
 test('try to transfer-in a domain with "--code" option', async () => {
-  const { stderr, stdout, exitCode } = await execa(
+  const { stderr, stdout, exitCode } = await execCli(
     binaryPath,
     [
       'domains',
@@ -1542,7 +1445,7 @@ test('try to transfer-in a domain with "--code" option', async () => {
 });
 
 test('try to move an invalid domain', async () => {
-  const { stderr, stdout, exitCode } = await execa(
+  const { stderr, stdout, exitCode } = await execCli(
     binaryPath,
     [
       'domains',
@@ -1567,7 +1470,7 @@ test('create wildcard alias for deployment', async t => {
     deployment: context.deployment,
     alias: `*.${contextName}.now.sh`,
   };
-  const { stdout, stderr, exitCode } = await execa(
+  const { stdout, stderr, exitCode } = await execCli(
     binaryPath,
     ['alias', hosts.deployment, hosts.alias, ...defaultArgs],
     {
@@ -1599,7 +1502,7 @@ test('create wildcard alias for deployment', async t => {
 });
 test('remove the wildcard alias', async t => {
   const goal = `> Success! Alias ${context.wildcardAlias} removed`;
-  const { stdout, stderr, exitCode } = await execa(
+  const { stdout, stderr, exitCode } = await execCli(
     binaryPath,
     ['alias', 'rm', context.wildcardAlias, '--yes', ...defaultArgs],
     {
@@ -1615,9 +1518,9 @@ test('remove the wildcard alias', async t => {
 */
 
 test('ensure we render a warning for deployments with no files', async () => {
-  const directory = fixture('empty-directory');
+  const directory = await setupE2EFixture('empty-directory');
 
-  const { stderr, stdout, exitCode } = await execa(
+  const { stderr, stdout, exitCode } = await execCli(
     binaryPath,
     [
       directory,
@@ -1657,7 +1560,7 @@ test('output logs with "short" output', async () => {
     throw new Error('Shared state "context.deployment" not set.');
   }
 
-  const { stderr, stdout, exitCode } = await execa(
+  const { stderr, stdout, exitCode } = await execCli(
     binaryPath,
     ['logs', context.deployment, ...defaultArgs],
     {
@@ -1682,7 +1585,7 @@ test('output logs with "raw" output', async () => {
     throw new Error('Shared state "context.deployment" not set.');
   }
 
-  const { stderr, stdout, exitCode } = await execa(
+  const { stderr, stdout, exitCode } = await execCli(
     binaryPath,
     ['logs', context.deployment, ...defaultArgs, '--output', 'raw'],
     {
@@ -1705,7 +1608,7 @@ test('output logs with "raw" output', async () => {
 test('ensure we render a prompt when deploying home directory', async () => {
   const directory = homedir();
 
-  const { stderr, stdout, exitCode } = await execa(
+  const { stderr, stdout, exitCode } = await execCli(
     binaryPath,
     [directory, '--public', '--name', session, ...defaultArgs, '--force'],
     {
@@ -1724,9 +1627,9 @@ test('ensure we render a prompt when deploying home directory', async () => {
 });
 
 test('ensure the `scope` property works with email', async () => {
-  const directory = fixture('config-scope-property-email');
+  const directory = await setupE2EFixture('config-scope-property-email');
 
-  const { stderr, stdout, exitCode } = await execa(
+  const { stderr, stdout, exitCode } = await execCli(
     binaryPath,
     [
       directory,
@@ -1760,9 +1663,9 @@ test('ensure the `scope` property works with email', async () => {
 });
 
 test('ensure the `scope` property works with username', async () => {
-  const directory = fixture('config-scope-property-username');
+  const directory = await setupE2EFixture('config-scope-property-username');
 
-  const { stderr, stdout, exitCode } = await execa(
+  const { stderr, stdout, exitCode } = await execCli(
     binaryPath,
     [
       directory,
@@ -1796,9 +1699,9 @@ test('ensure the `scope` property works with username', async () => {
 });
 
 test('try to create a builds deployments with wrong now.json', async () => {
-  const directory = fixture('builds-wrong');
+  const directory = await setupE2EFixture('builds-wrong');
 
-  const { stderr, stdout, exitCode } = await execa(
+  const { stderr, stdout, exitCode } = await execCli(
     binaryPath,
     [directory, '--public', ...defaultArgs, '--yes'],
     {
@@ -1817,9 +1720,9 @@ test('try to create a builds deployments with wrong now.json', async () => {
 });
 
 test('try to create a builds deployments with wrong vercel.json', async () => {
-  const directory = fixture('builds-wrong-vercel');
+  const directory = await setupE2EFixture('builds-wrong-vercel');
 
-  const { stderr, stdout, exitCode } = await execa(
+  const { stderr, stdout, exitCode } = await execCli(
     binaryPath,
     [directory, '--public', ...defaultArgs, '--yes'],
     {
@@ -1837,9 +1740,9 @@ test('try to create a builds deployments with wrong vercel.json', async () => {
 });
 
 test('try to create a builds deployments with wrong `build.env` property', async () => {
-  const directory = fixture('builds-wrong-build-env');
+  const directory = await setupE2EFixture('builds-wrong-build-env');
 
-  const { exitCode, stdout, stderr } = await execa(
+  const { exitCode, stdout, stderr } = await execCli(
     binaryPath,
     ['--public', ...defaultArgs, '--yes'],
     {
@@ -1858,9 +1761,9 @@ test('try to create a builds deployments with wrong `build.env` property', async
 });
 
 test('create a builds deployments with no actual builds', async () => {
-  const directory = fixture('builds-no-list');
+  const directory = await setupE2EFixture('builds-no-list');
 
-  const { exitCode, stdout, stderr } = await execa(
+  const { exitCode, stdout, stderr } = await execCli(
     binaryPath,
     [
       directory,
@@ -1885,10 +1788,10 @@ test('create a builds deployments with no actual builds', async () => {
 });
 
 test('create a staging deployment', async () => {
-  const directory = fixture('static-deployment');
+  const directory = await setupE2EFixture('static-deployment');
 
   const args = ['--debug', '--public', '--name', session, ...defaultArgs];
-  const targetCall = await execa(binaryPath, [
+  const targetCall = await execCli(binaryPath, [
     directory,
     '--target=staging',
     ...args,
@@ -1907,10 +1810,10 @@ test('create a staging deployment', async () => {
 });
 
 test('create a production deployment', async () => {
-  const directory = fixture('static-deployment');
+  const directory = await setupE2EFixture('static-deployment');
 
   const args = ['--debug', '--public', '--name', session, ...defaultArgs];
-  const targetCall = await execa(binaryPath, [
+  const targetCall = await execCli(binaryPath, [
     directory,
     '--target=production',
     ...args,
@@ -1929,7 +1832,7 @@ test('create a production deployment', async () => {
   ).then(resp => resp.json());
   expect(targetDeployment.target).toBe('production');
 
-  const call = await execa(binaryPath, [directory, '--prod', ...args]);
+  const call = await execCli(binaryPath, [directory, '--prod', ...args]);
 
   expect(call.exitCode, formatOutput(call)).toBe(0);
   expect(call.stderr).toMatch(/Setting target to production/gm);
@@ -1943,9 +1846,9 @@ test('create a production deployment', async () => {
 });
 
 test('use build-env', async () => {
-  const directory = fixture('build-env');
+  const directory = await setupE2EFixture('build-env');
 
-  const { exitCode, stdout, stderr } = await execa(
+  const { exitCode, stdout, stderr } = await execCli(
     binaryPath,
     [directory, '--public', ...defaultArgs, '--yes'],
     {
@@ -1971,7 +1874,7 @@ test('use build-env', async () => {
 test('try to deploy non-existing path', async () => {
   const goal = `Error: The specified file or directory "${session}" does not exist.`;
 
-  const { stderr, stdout, exitCode } = await execa(
+  const { stderr, stdout, exitCode } = await execCli(
     binaryPath,
     [session, ...defaultArgs, '--yes'],
     {
@@ -1984,10 +1887,10 @@ test('try to deploy non-existing path', async () => {
 });
 
 test('try to deploy with non-existing team', async () => {
-  const target = fixture('static-deployment');
+  const target = await setupE2EFixture('static-deployment');
   const goal = `Error: The specified scope does not exist`;
 
-  const { stderr, stdout, exitCode } = await execa(
+  const { stderr, stdout, exitCode } = await execCli(
     binaryPath,
     [target, '--scope', session, ...defaultArgs, '--yes'],
     {
@@ -2000,13 +1903,10 @@ test('try to deploy with non-existing team', async () => {
 });
 
 test('initialize example "angular"', async () => {
-  tmpDir = getTmpDir();
-  const cwd = tmpDir.name;
+  const cwd = getNewTmpDir();
   const goal = '> Success! Initialized "angular" example in';
 
-  const { exitCode, stdout, stderr } = await execute(['init', 'angular'], {
-    cwd,
-  });
+  const { exitCode, stdout, stderr } = await execCli(cwd, ['init', 'angular']);
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
   expect(stderr).toContain(goal);
@@ -2026,11 +1926,11 @@ test('initialize example "angular"', async () => {
 });
 
 test('initialize example ("angular") to specified directory', async () => {
-  tmpDir = getTmpDir();
-  const cwd = tmpDir.name;
+  const cwd = getNewTmpDir();
   const goal = '> Success! Initialized "angular" example in';
 
-  const { exitCode, stdout, stderr } = await execute(
+  const { exitCode, stdout, stderr } = await execCli(
+    binaryPath,
     ['init', 'angular', 'ang'],
     {
       cwd,
@@ -2055,13 +1955,13 @@ test('initialize example ("angular") to specified directory', async () => {
 });
 
 test('initialize example to existing directory with "-f"', async () => {
-  tmpDir = getTmpDir();
-  const cwd = tmpDir.name;
+  const cwd = getNewTmpDir();
   const goal = '> Success! Initialized "angular" example in';
 
   await ensureDir(path.join(cwd, 'angular'));
   createFile(path.join(cwd, 'angular', '.gitignore'));
-  const { exitCode, stdout, stderr } = await execute(
+  const { exitCode, stdout, stderr } = await execCli(
+    binaryPath,
     ['init', 'angular', '-f'],
     {
       cwd,
@@ -2086,51 +1986,60 @@ test('initialize example to existing directory with "-f"', async () => {
 });
 
 test('try to initialize example to existing directory', async () => {
-  tmpDir = getTmpDir();
-  const cwd = tmpDir.name;
+  const cwd = getNewTmpDir();
   const goal =
     'Error: Destination path "angular" already exists and is not an empty directory. You may use `--force` or `-f` to override it.';
 
   await ensureDir(path.join(cwd, 'angular'));
   createFile(path.join(cwd, 'angular', '.gitignore'));
-  const { exitCode, stdout, stderr } = await execute(['init', 'angular'], {
-    cwd,
-    input: '\n',
-  });
+  const { exitCode, stdout, stderr } = await execCli(
+    binaryPath,
+    ['init', 'angular'],
+    {
+      cwd,
+      input: '\n',
+    }
+  );
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
   expect(stderr).toContain(goal);
 });
 
 test('try to initialize misspelled example (noce) in non-tty', async () => {
-  tmpDir = getTmpDir();
-  const cwd = tmpDir.name;
+  const cwd = getNewTmpDir();
   const goal =
     'Error: No example found for noce, run `vercel init` to see the list of available examples.';
 
-  const { stdout, stderr, exitCode } = await execute(['init', 'noce'], { cwd });
+  const { stdout, stderr, exitCode } = await execCli(
+    binaryPath,
+    ['init', 'noce'],
+    { cwd }
+  );
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
   expect(stderr).toContain(goal);
 });
 
 test('try to initialize example "example-404"', async () => {
-  tmpDir = getTmpDir();
-  const cwd = tmpDir.name;
+  const cwd = getNewTmpDir();
   const goal =
     'Error: No example found for example-404, run `vercel init` to see the list of available examples.';
 
-  const { exitCode, stdout, stderr } = await execute(['init', 'example-404'], {
-    cwd,
-  });
+  const { exitCode, stdout, stderr } = await execCli(
+    binaryPath,
+    ['init', 'example-404'],
+    {
+      cwd,
+    }
+  );
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
   expect(stderr).toContain(goal);
 });
 
 test('try to revert a deployment and assign the automatic aliases', async () => {
-  const firstDeployment = fixture('now-revert-alias-1');
-  const secondDeployment = fixture('now-revert-alias-2');
+  const firstDeployment = await setupE2EFixture('now-revert-alias-1');
+  const secondDeployment = await setupE2EFixture('now-revert-alias-2');
 
   const { name } = JSON.parse(
     fs.readFileSync(path.join(firstDeployment, 'now.json')).toString()
@@ -2140,7 +2049,7 @@ test('try to revert a deployment and assign the automatic aliases', async () => 
   const url = `https://${name}.user.vercel.app`;
 
   {
-    const { exitCode, stdout, stderr } = await execute([
+    const { exitCode, stdout, stderr } = await execCli(binaryPath, [
       firstDeployment,
       '--yes',
     ]);
@@ -2157,7 +2066,7 @@ test('try to revert a deployment and assign the automatic aliases', async () => 
   }
 
   {
-    const { exitCode, stdout, stderr } = await execute([
+    const { exitCode, stdout, stderr } = await execCli(binaryPath, [
       secondDeployment,
       '--yes',
     ]);
@@ -2176,7 +2085,7 @@ test('try to revert a deployment and assign the automatic aliases', async () => 
   }
 
   {
-    const { exitCode, stdout, stderr } = await execute([
+    const { exitCode, stdout, stderr } = await execCli(binaryPath, [
       firstDeployment,
       '--yes',
     ]);
@@ -2196,15 +2105,18 @@ test('try to revert a deployment and assign the automatic aliases', async () => 
 });
 
 test('whoami', async () => {
-  const { exitCode, stdout, stderr } = await execute(['whoami']);
+  const { exitCode, stdout, stderr } = await execCli(binaryPath, ['whoami']);
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
   expect(stdout).toBe(contextName);
 });
 
 test('[vercel dev] fails when dev script calls vercel dev recursively', async () => {
-  const deploymentPath = fixture('now-dev-fail-dev-script');
-  const { exitCode, stdout, stderr } = await execute(['dev', deploymentPath]);
+  const deploymentPath = await setupE2EFixture('now-dev-fail-dev-script');
+  const { exitCode, stdout, stderr } = await execCli(binaryPath, [
+    'dev',
+    deploymentPath,
+  ]);
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
   expect(stderr).toContain('must not recursively invoke itself');
@@ -2213,8 +2125,8 @@ test('[vercel dev] fails when dev script calls vercel dev recursively', async ()
 test('[vercel dev] fails when development command calls vercel dev recursively', async () => {
   expect.assertions(0);
 
-  const dir = fixture('dev-fail-on-recursion-command');
-  const dev = execa(binaryPath, ['dev', '--yes', ...defaultArgs], {
+  const dir = await setupE2EFixture('dev-fail-on-recursion-command');
+  const dev = execCli(binaryPath, ['dev', '--yes', ...defaultArgs], {
     cwd: dir,
     reject: false,
   });
@@ -2229,12 +2141,12 @@ test('[vercel dev] fails when development command calls vercel dev recursively',
 });
 
 test('`vercel rm` removes a deployment', async () => {
-  const directory = fixture('static-deployment');
+  const directory = await setupE2EFixture('static-deployment');
 
   let host;
 
   {
-    const { exitCode, stdout, stderr } = await execa(
+    const { exitCode, stdout, stderr } = await execCli(
       binaryPath,
       [
         directory,
@@ -2256,7 +2168,11 @@ test('`vercel rm` removes a deployment', async () => {
   }
 
   {
-    const { exitCode, stdout, stderr } = await execute(['rm', host, '--yes']);
+    const { exitCode, stdout, stderr } = await execCli(binaryPath, [
+      'rm',
+      host,
+      '--yes',
+    ]);
 
     expect(stdout).toContain(host);
     expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
@@ -2264,7 +2180,11 @@ test('`vercel rm` removes a deployment', async () => {
 });
 
 test('`vercel rm` should fail with unexpected option', async () => {
-  const output = await execute(['rm', 'example.example.com', '--fake']);
+  const output = await execCli(binaryPath, [
+    'rm',
+    'example.example.com',
+    '--fake',
+  ]);
 
   expect(output.exitCode, formatOutput(output)).toBe(1);
   expect(output.stderr).toMatch(
@@ -2274,7 +2194,7 @@ test('`vercel rm` should fail with unexpected option', async () => {
 
 test('`vercel rm` 404 exits quickly', async () => {
   const start = Date.now();
-  const { exitCode, stderr, stdout } = await execute([
+  const { exitCode, stderr, stdout } = await execCli(binaryPath, [
     'rm',
     'this.is.a.deployment.that.does.not.exist.example.com',
   ]);
@@ -2294,8 +2214,8 @@ test('`vercel rm` 404 exits quickly', async () => {
 });
 
 test('render build errors', async () => {
-  const deploymentPath = fixture('failing-build');
-  const output = await execute([deploymentPath, '--yes']);
+  const deploymentPath = await setupE2EFixture('failing-build');
+  const output = await execCli(binaryPath, [deploymentPath, '--yes']);
 
   expect(output.exitCode, formatOutput(output)).toBe(1);
   expect(output.stderr).toMatch(/Command "yarn run build" exited with 1/gm);
@@ -2303,7 +2223,7 @@ test('render build errors', async () => {
 
 test('invalid deployment, projects and alias names', async () => {
   const check = async (...args: string[]) => {
-    const output = await execute(args);
+    const output = await execCli(binaryPath, args);
     expect(output.exitCode, formatOutput(output)).toBe(1);
     expect(output.stderr).toMatch(/The provided argument/gm);
   };
@@ -2317,21 +2237,21 @@ test('invalid deployment, projects and alias names', async () => {
 });
 
 test('vercel certs ls', async () => {
-  const output = await execute(['certs', 'ls']);
+  const output = await execCli(binaryPath, ['certs', 'ls']);
 
   expect(output.exitCode, formatOutput(output)).toBe(0);
   expect(output.stderr).toMatch(/certificates? found under/gm);
 });
 
 test('vercel certs ls --next=123456', async () => {
-  const output = await execute(['certs', 'ls', '--next=123456']);
+  const output = await execCli(binaryPath, ['certs', 'ls', '--next=123456']);
 
   expect(output.exitCode, formatOutput(output)).toBe(0);
   expect(output.stderr).toMatch(/No certificates found under/gm);
 });
 
 test('vercel hasOwnProperty not a valid subcommand', async () => {
-  const output = await execute(['hasOwnProperty']);
+  const output = await execCli(binaryPath, ['hasOwnProperty']);
 
   expect(output.exitCode, formatOutput(output)).toBe(1);
   expect(output.stderr).toMatch(
@@ -2340,8 +2260,13 @@ test('vercel hasOwnProperty not a valid subcommand', async () => {
 });
 
 test('create zero-config deployment', async () => {
-  const fixturePath = fixture('zero-config-next-js');
-  const output = await execute([fixturePath, '--force', '--public', '--yes']);
+  const fixturePath = await setupE2EFixture('zero-config-next-js');
+  const output = await execCli(binaryPath, [
+    fixturePath,
+    '--force',
+    '--public',
+    '--yes',
+  ]);
 
   console.log('isCanary', isCanary);
 
@@ -2367,8 +2292,15 @@ test('create zero-config deployment', async () => {
 });
 
 test('next unsupported functions config shows warning link', async () => {
-  const fixturePath = fixture('zero-config-next-js-functions-warning');
-  const output = await execute([fixturePath, '--force', '--public', '--yes']);
+  const fixturePath = await setupE2EFixture(
+    'zero-config-next-js-functions-warning'
+  );
+  const output = await execCli(binaryPath, [
+    fixturePath,
+    '--force',
+    '--public',
+    '--yes',
+  ]);
 
   expect(output.exitCode, formatOutput(output)).toBe(0);
   expect(output.stderr).toMatch(
@@ -2383,18 +2315,23 @@ test('vercel secret add', async () => {
   context.secretName = `my-secret-${Date.now().toString(36)}`;
   const value = 'https://my-secret-endpoint.com';
 
-  const output = await execute(['secret', 'add', context.secretName, value]);
+  const output = await execCli(binaryPath, [
+    'secret',
+    'add',
+    context.secretName,
+    value,
+  ]);
   expect(output.exitCode, formatOutput(output)).toBe(0);
 });
 
 test('vercel secret ls', async () => {
-  const output = await execute(['secret', 'ls']);
+  const output = await execCli(binaryPath, ['secret', 'ls']);
   expect(output.exitCode, formatOutput(output)).toBe(0);
   expect(output.stdout).toMatch(/Secrets found under/gm);
 });
 
 test('vercel secret ls --test-warning', async () => {
-  const output = await execute(['secret', 'ls', '--test-warning']);
+  const output = await execCli(binaryPath, ['secret', 'ls', '--test-warning']);
   expect(output.exitCode, formatOutput(output)).toBe(0);
   expect(output.stderr).toMatch(/Test warning message./gm);
   expect(output.stderr).toMatch(/Learn more: https:\/\/vercel.com/gm);
@@ -2407,7 +2344,7 @@ test('vercel secret rename', async () => {
   }
 
   const nextName = `renamed-secret-${Date.now().toString(36)}`;
-  const output = await execute([
+  const output = await execCli(binaryPath, [
     'secret',
     'rename',
     context.secretName,
@@ -2423,13 +2360,18 @@ test('vercel secret rm', async () => {
     throw new Error('Shared state "context.secretName" not set.');
   }
 
-  const output = await execute(['secret', 'rm', context.secretName, '-y']);
+  const output = await execCli(binaryPath, [
+    'secret',
+    'rm',
+    context.secretName,
+    '-y',
+  ]);
   expect(output.exitCode, formatOutput(output)).toBe(0);
 });
 
 test('deploy a Lambda with 128MB of memory', async () => {
-  const directory = fixture('lambda-with-128-memory');
-  const output = await execute([directory, '--yes']);
+  const directory = await setupE2EFixture('lambda-with-128-memory');
+  const output = await execCli(binaryPath, [directory, '--yes']);
 
   expect(output.exitCode, formatOutput(output)).toBe(0);
 
@@ -2445,8 +2387,8 @@ test('deploy a Lambda with 128MB of memory', async () => {
 });
 
 test('fail to deploy a Lambda with an incorrect value for of memory', async () => {
-  const directory = fixture('lambda-with-123-memory');
-  const output = await execute([directory, '--yes']);
+  const directory = await setupE2EFixture('lambda-with-123-memory');
+  const output = await execCli(binaryPath, [directory, '--yes']);
 
   expect(output.exitCode, formatOutput(output)).toBe(1);
   expect(output.stderr).toMatch(/Serverless Functions.+memory/gm);
@@ -2454,8 +2396,8 @@ test('fail to deploy a Lambda with an incorrect value for of memory', async () =
 });
 
 test('deploy a Lambda with 3 seconds of maxDuration', async () => {
-  const directory = fixture('lambda-with-3-second-timeout');
-  const output = await execute([directory, '--yes']);
+  const directory = await setupE2EFixture('lambda-with-3-second-timeout');
+  const output = await execCli(binaryPath, [directory, '--yes']);
 
   expect(output.exitCode, formatOutput(output)).toBe(0);
 
@@ -2473,8 +2415,8 @@ test('deploy a Lambda with 3 seconds of maxDuration', async () => {
 });
 
 test('fail to deploy a Lambda with an incorrect value for maxDuration', async () => {
-  const directory = fixture('lambda-with-1000-second-timeout');
-  const output = await execute([directory, '--yes']);
+  const directory = await setupE2EFixture('lambda-with-1000-second-timeout');
+  const output = await execCli(binaryPath, [directory, '--yes']);
 
   expect(output.exitCode, formatOutput(output)).toBe(1);
   expect(output.stderr).toMatch(
@@ -2483,7 +2425,7 @@ test('fail to deploy a Lambda with an incorrect value for maxDuration', async ()
 });
 
 test('invalid `--token`', async () => {
-  const output = await execute(['--token', 'he\nl,o.']);
+  const output = await execCli(binaryPath, ['--token', 'he\nl,o.']);
 
   expect(output.exitCode, formatOutput(output)).toBe(1);
   expect(output.stderr).toContain(
@@ -2492,8 +2434,8 @@ test('invalid `--token`', async () => {
 });
 
 test('deploy a Lambda with a specific runtime', async () => {
-  const directory = fixture('lambda-with-php-runtime');
-  const output = await execute([directory, '--public', '--yes']);
+  const directory = await setupE2EFixture('lambda-with-php-runtime');
+  const output = await execCli(binaryPath, [directory, '--public', '--yes']);
 
   expect(output.exitCode, formatOutput(output)).toBe(0);
 
@@ -2504,8 +2446,8 @@ test('deploy a Lambda with a specific runtime', async () => {
 });
 
 test('fail to deploy a Lambda with a specific runtime but without a locked version', async () => {
-  const directory = fixture('lambda-with-invalid-runtime');
-  const output = await execute([directory, '--yes']);
+  const directory = await setupE2EFixture('lambda-with-invalid-runtime');
+  const output = await execCli(binaryPath, [directory, '--yes']);
 
   expect(output.exitCode, formatOutput(output)).toBe(1);
   expect(output.stderr).toMatch(
@@ -2514,7 +2456,11 @@ test('fail to deploy a Lambda with a specific runtime but without a locked versi
 });
 
 test('fail to add a domain without a project', async () => {
-  const output = await execute(['domains', 'add', 'my-domain.vercel.app']);
+  const output = await execCli(binaryPath, [
+    'domains',
+    'add',
+    'my-domain.vercel.app',
+  ]);
   expect(output.exitCode, formatOutput(output)).toBe(1);
   expect(output.stderr).toMatch(/expects two arguments/gm);
 });

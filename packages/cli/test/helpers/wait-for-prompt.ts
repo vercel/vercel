@@ -1,4 +1,4 @@
-import type { BoundChildProcess } from './types';
+import type { CLIProcess } from './types';
 
 const PROMPT_TIMEOUT = 3000;
 
@@ -12,7 +12,7 @@ function getPromptErrorDetails(
 }
 
 export default async function waitForPrompt(
-  cp: BoundChildProcess,
+  cp: CLIProcess,
   rawAssertion: string | RegExp | ((chunk: string) => boolean)
 ) {
   let assertion: (chunk: string) => boolean;
@@ -66,15 +66,15 @@ export default async function waitForPrompt(
     };
 
     const cleanup = () => {
-      cp.stdout.off('data', onData);
-      cp.stderr.off('data', onData);
+      cp.stdout?.off('data', onData);
+      cp.stderr?.off('data', onData);
       cp.off('close', onComplete);
       cp.off('exit', onComplete);
       clearTimeout(handleTimeout);
     };
 
-    cp.stdout.on('data', onData);
-    cp.stderr.on('data', onData);
+    cp.stdout?.on('data', onData);
+    cp.stderr?.on('data', onData);
     cp.on('close', onComplete);
     cp.on('exit', onComplete);
   });
