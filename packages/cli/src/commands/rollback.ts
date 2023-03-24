@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import {
   ensureLink,
   getPkgName,
-  type Client,
+  Client,
   getArgs,
   handleError,
   logo,

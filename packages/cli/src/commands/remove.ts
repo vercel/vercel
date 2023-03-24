@@ -20,7 +20,7 @@ import {
   getDeploymentsByProjectId,
   getArgs,
   handleError,
-  type Client,
+  Client,
 } from '@vercel-internals/utils';
 import { Alias, Deployment, Project } from '@vercel-internals/types';
 
