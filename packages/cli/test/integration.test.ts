@@ -18,8 +18,7 @@ import fs, {
   ensureDir,
   mkdir,
 } from 'fs-extra';
-import logo from '../src/util/output/logo';
-import sleep from '../src/util/sleep';
+import { logo, sleep } from '@vercel-internals/utils';
 import pkg from '../package.json';
 import prepareFixtures from './helpers/prepare';
 import { fetchTokenWithRetry } from '../../../test/lib/deployment/now-deploy';
