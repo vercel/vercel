@@ -56,7 +56,7 @@ test('`NowProxyEvent` normalizing', async () => {
     },
     context
   );
-  assert.strictEqual(features.enabled, true);
+  assert.deepStrictEqual(features, { enabled: true });
   assert.strictEqual(result.encoding, 'base64');
   assert.strictEqual(result.statusCode, 200);
   const body = JSON.parse(Buffer.from(result.body, 'base64').toString());
