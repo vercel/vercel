@@ -37,7 +37,7 @@ export function execCli(
     ...options,
   };
   combinedOptions.env = combinedOptions.env ?? {};
-  combinedOptions.env['NO_COLOR'] = '1';
+  combinedOptions.env['NO_COLOR'] = combinedOptions.env['NO_COLOR'] ?? '1';
 
   return execa(file, [...args, ...globalArgs], combinedOptions);
 }
