@@ -39,6 +39,7 @@ function normalizeProxyEvent(event) {
     responseCallbackCipherKey,
     responseCallbackStream,
     responseCallbackUrl,
+    features,
   } = payload;
 
   /**
@@ -63,6 +64,7 @@ function normalizeProxyEvent(event) {
 
   if (payloads) {
     for (const p of payloads) {
+      p.features = payload.features;
       p.body = normalizeBody(payload.body);
     }
   }
@@ -75,6 +77,7 @@ function normalizeProxyEvent(event) {
     headers,
     body: bodyBuffer,
     payloads,
+    features,
     responseCallbackCipher,
     responseCallbackCipherIV,
     responseCallbackCipherKey,
