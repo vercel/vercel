@@ -84,50 +84,12 @@ function normalizeProxyEvent(event) {
 }
 
 /**
- * @param {import('aws-lambda').APIGatewayProxyEvent} event
- */
-function normalizeAPIGatewayProxyEvent(event) {
-  let bodyBuffer;
-  const { httpMethod: method, path, headers, body } = event;
-
-  if (body) {
-    if (event.isBase64Encoded) {
-      bodyBuffer = Buffer.from(body, 'base64');
-    } else {
-      bodyBuffer = Buffer.from(body);
-    }
-  } else {
-    bodyBuffer = Buffer.alloc(0);
-  }
-
-  return {
-    body: bodyBuffer,
-    headers,
-    isApiGateway: true,
-    method,
-    path,
-    responseCallbackCipher: undefined,
-    responseCallbackCipherIV: undefined,
-    responseCallbackCipherKey: undefined,
-    responseCallbackStream: undefined,
-    responseCallbackUrl: undefined,
-  };
-}
-
-/**
- * @param {import('./types').VercelProxyEvent | import('aws-lambda').APIGatewayProxyEvent} event
- * @return {import('./types').VercelProxyRequest}
+ * @param {import('./types').VercelProxyEvent } event
+ * @return {import('./types').VercelProxyRequest }
  */
 function normalizeEvent(event) {
-  if ('Action' in event) {
-    if (event.Action === 'Invoke') {
-      return normalizeProxyEvent(event);
-    } else {
-      throw new Error(`Unexpected event.Action: ${event.Action}`);
-    }
-  } else {
-    return normalizeAPIGatewayProxyEvent(event);
-  }
+  if (event.Action === 'Invoke') return normalizeProxyEvent(event);
+  throw new Error(`Unexpected event.Action: ${event.Action}`);
 }
 
 class Bridge {
@@ -207,7 +169,7 @@ class Bridge {
 
   /**
    *
-   * @param {import('./types').VercelProxyEvent | import('aws-lambda').APIGatewayProxyEvent} event
+   * @param {import('./types').VercelProxyEvent} event
    * @param {import('aws-lambda').Context} context
    * @return {Promise<import('./types').VercelProxyResponse>}
    */
