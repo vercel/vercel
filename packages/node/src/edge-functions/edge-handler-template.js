@@ -2,9 +2,18 @@
 /* global addEventListener */
 
 function buildUrl(requestDetails) {
-  let proto = requestDetails.headers['x-forwarded-proto'];
-  let host = requestDetails.headers['x-forwarded-host'];
-  let path = requestDetails.url;
+  const host = requestDetails.headers['x-forwarded-host'] || '127.0.0.1';
+  const path = requestDetails.url || '/';
+
+  const allProtocols = requestDetails.headers['x-forwarded-proto'];
+  let proto;
+  if (allProtocols) {
+    // handle multi-protocol like: https,http://...
+    proto = allProtocols.split(/\b/).shift();
+  } else {
+    proto = 'http';
+  }
+
   return `${proto}://${host}${path}`;
 }
 
@@ -16,7 +25,7 @@ async function respond(
   dependencies
 ) {
   const { Request, Response } = dependencies;
-  const { isMiddleware, entrypointLabel } = options;
+  const { isMiddleware } = options;
 
   let body;
 
@@ -26,7 +35,7 @@ async function respond(
     }
   }
 
-  let request = new Request(buildUrl(requestDetails), {
+  const request = new Request(buildUrl(requestDetails), {
     headers: requestDetails.headers,
     method: requestDetails.method,
     body: body,
@@ -45,9 +54,7 @@ async function respond(
         },
       });
     } else {
-      throw new Error(
-        `Edge Function "${entrypointLabel}" did not return a response.`
-      );
+      throw new Error(`Edge Function did not return a response.`);
     }
   }
   return response;
@@ -68,8 +75,8 @@ function toResponseError(error, Response) {
 }
 
 async function parseRequestEvent(event) {
-  let serializedRequest = await event.request.text();
-  let requestDetails = JSON.parse(serializedRequest);
+  const serializedRequest = await event.request.text();
+  const requestDetails = JSON.parse(serializedRequest);
   return requestDetails;
 }
 
@@ -78,8 +85,8 @@ async function parseRequestEvent(event) {
 function registerFetchListener(userEdgeHandler, options, dependencies) {
   addEventListener('fetch', async event => {
     try {
-      let requestDetails = await parseRequestEvent(event);
-      let response = await respond(
+      const requestDetails = await parseRequestEvent(event);
+      const response = await respond(
         userEdgeHandler,
         requestDetails,
         event,

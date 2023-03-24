@@ -1,0 +1,11 @@
+{
+  "probes": [
+    {
+      "path": "/api/[hello].py",
+      "mustContain": "hello:RANDOMNESS_PLACEHOLDER",
+      "responseHeaders": {
+        "content-type": "text/plain"
+      }
+    }
+  ]
+}
