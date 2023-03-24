@@ -128,7 +128,7 @@
     "verbose": false,
     "testEnvironment": "node",
     "testMatch": [
-      "<rootDir>/test/**/*.test.ts"
+      "<rootDir>/tests/**/*.test.ts"
     ]
   }
 }
