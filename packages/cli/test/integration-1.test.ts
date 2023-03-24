@@ -1340,7 +1340,7 @@ test('domains inspect', async () => {
   const directory = await setupE2EFixture('static-multiple-files');
   const projectName = Math.random().toString().slice(2);
 
-  const output = await execCli(directory, [
+  const output = await execCli(binaryPath, [
     directory,
     `-V`,
     `2`,
@@ -1906,7 +1906,11 @@ test('initialize example "angular"', async () => {
   const cwd = getNewTmpDir();
   const goal = '> Success! Initialized "angular" example in';
 
-  const { exitCode, stdout, stderr } = await execCli(cwd, ['init', 'angular']);
+  const { exitCode, stdout, stderr } = await execCli(
+    binaryPath,
+    ['init', 'angular'],
+    { cwd }
+  );
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
   expect(stderr).toContain(goal);
