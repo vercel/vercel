@@ -1,8 +1,7 @@
 import { basename, join } from 'path';
 import { getVercelDirectory } from '../../../src/projects/link';
 
-const fixture = (name: string) =>
-  join(__dirname, '../../fixtures', name);
+const fixture = (name: string) => join(__dirname, '../../fixtures', name);
 
 describe('getVercelDirectory', () => {
   it('should return ".vercel"', () => {

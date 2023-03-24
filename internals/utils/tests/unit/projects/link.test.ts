@@ -8,8 +8,7 @@ import { useUser } from '../../mocks/user';
 
 type UnPromisify<T> = T extends Promise<infer U> ? U : T;
 
-const fixture = (name: string) =>
-  join(__dirname, '../../fixtures', name);
+const fixture = (name: string) => join(__dirname, '../../fixtures', name);
 
 describe('getLinkedProject', () => {
   it('should fail to return a link when token is missing', async () => {

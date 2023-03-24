@@ -1,5 +1,5 @@
-import type { ProjectEnvTarget } from "@vercel-internals/types";
-import { isValidEnvTarget, getEnvTargetPlaceholder } from "./env/env-target";
+import type { ProjectEnvTarget } from '@vercel-internals/types';
+import { isValidEnvTarget, getEnvTargetPlaceholder } from './env/env-target';
 
 export function parseEnvironment(
   environment = 'development'

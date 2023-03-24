@@ -1,7 +1,4 @@
-import {
-  parseListen,
-  replaceLocalhost,
-} from '../../../src/dev/parse-listen';
+import { parseListen, replaceLocalhost } from '../../../src/dev/parse-listen';
 
 const IS_WINDOWS = process.platform === 'win32';
 

@@ -108,7 +108,15 @@ function spawnWorker(
   // we need to find the update worker script since the location is
   // different based on production vs tests
   let dir = dirname(__filename);
-  let script = resolvePath(dir, 'dist', 'internals', 'utils', 'src', 'get-latest-version', 'get-latest-worker.js');
+  let script = resolvePath(
+    dir,
+    'dist',
+    'internals',
+    'utils',
+    'src',
+    'get-latest-version',
+    'get-latest-worker.js'
+  );
   const { root } = parsePath(dir);
   while (!existsSync(script)) {
     dir = dirname(dir);
@@ -117,7 +125,15 @@ function spawnWorker(
       output?.debug('Failed to find the get latest worker script!');
       return;
     }
-    script = resolvePath(dir, 'dist', 'internals', 'utils', 'src', 'get-latest-version', 'get-latest-worker.js');
+    script = resolvePath(
+      dir,
+      'dist',
+      'internals',
+      'utils',
+      'src',
+      'get-latest-version',
+      'get-latest-worker.js'
+    );
   }
 
   // spawn the worker with an IPC channel
