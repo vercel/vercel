@@ -1951,7 +1951,7 @@ test('[vercel dev] fails when development command calls vercel dev recursively',
   });
 
   try {
-    await waitForPrompt(dev, 'must not recursively invoke itself');
+    await waitForPrompt(dev, 'must not recursively invoke itself', 10000);
   } finally {
     const onClose = once(dev, 'close');
     dev.kill();

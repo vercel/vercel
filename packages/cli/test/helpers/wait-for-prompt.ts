@@ -1,7 +1,5 @@
 import type { CLIProcess } from './types';
 
-const PROMPT_TIMEOUT = 3000;
-
 function getPromptErrorDetails(
   rawAssertion: string | Function | RegExp,
   mostRecentChunk: string
@@ -13,7 +11,8 @@ function getPromptErrorDetails(
 
 export default async function waitForPrompt(
   cp: CLIProcess,
-  rawAssertion: string | RegExp | ((chunk: string) => boolean)
+  rawAssertion: string | RegExp | ((chunk: string) => boolean),
+  timeout = 3000
 ) {
   let assertion: (chunk: string) => boolean;
   if (typeof rawAssertion === 'string') {
@@ -36,10 +35,10 @@ export default async function waitForPrompt(
       );
       reject(
         new Error(
-          `Timed out after ${PROMPT_TIMEOUT}ms in waitForPrompt. ${promptErrorDetails}`
+          `Timed out after ${timeout}ms in waitForPrompt. ${promptErrorDetails}`
         )
       );
-    }, PROMPT_TIMEOUT);
+    }, timeout);
 
     const onComplete = () => {
       cleanup();
