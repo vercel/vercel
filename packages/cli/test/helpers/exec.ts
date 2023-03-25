@@ -28,7 +28,7 @@ function getGlobalArgs() {
  */
 export function execCli(
   file: string,
-  args: string[],
+  args: string[] = [],
   options?: execa.Options<string>
 ): execa.ExecaChildProcess<string> {
   console.log(`$ vercel ${args.join(' ')}`);
