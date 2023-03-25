@@ -5,17 +5,20 @@ const defaultOptions = {
   reject: false,
 };
 
+let globalArgs: string[] = [];
+
 function getGlobalArgs() {
   if (process.env.CI) {
     return [];
   }
 
-  const globalArgs = ['-Q', getGlobalDir()];
-
-  console.log(
-    'No CI detected, adding defaultArgs to avoid polluting user settings',
-    globalArgs
-  );
+  if (globalArgs.length === 0) {
+    globalArgs = ['-Q', getGlobalDir()];
+    console.log(
+      'No CI detected, adding defaultArgs to avoid polluting user settings',
+      globalArgs
+    );
+  }
 
   return globalArgs;
 }
@@ -32,10 +35,11 @@ export function execCli(
 
   const globalArgs = getGlobalArgs();
 
-  const combinedOptions = {
+  const combinedOptions: execa.Options<string> = {
     ...defaultOptions,
     ...options,
   };
+  // @ts-ignore - allow overwriting readonly property "env"
   combinedOptions.env = combinedOptions.env ?? {};
   combinedOptions.env['NO_COLOR'] = combinedOptions.env['NO_COLOR'] ?? '1';
 

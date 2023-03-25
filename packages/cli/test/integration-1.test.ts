@@ -93,9 +93,8 @@ function fetchTokenInformation(token: string, retries = 3) {
 async function vcLink(projectPath: string) {
   const { exitCode, stdout, stderr } = await execCli(
     binaryPath,
-    ['link', '--yes', ...defaultArgs],
+    ['link', '--yes'],
     {
-      reject: false,
       cwd: projectPath,
     }
   );
@@ -132,7 +131,6 @@ const context: {
   secretName: undefined,
 };
 
-const defaultArgs: string[] = [];
 let token: string | undefined;
 let email: string | undefined;
 let contextName: string | undefined;
@@ -208,8 +206,24 @@ beforeAll(async () => {
     if (!contextName) {
       throw new Error('Shared state "contextName" not set.');
     }
-
     await prepareE2EFixtures(contextName, binaryPath);
+
+    if (!email) {
+      throw new Error('Shared state "email" not set.');
+    }
+    await fs.remove(getConfigAuthPath());
+    const loginOutput = await execCli(binaryPath, [
+      'login',
+      email,
+      '--api',
+      loginApiUrl,
+    ]);
+
+    expect(loginOutput.exitCode, formatOutput(loginOutput)).toBe(0);
+    expect(loginOutput.stderr).toMatch(/You are now logged in\./gm);
+
+    const auth = await fs.readJSON(getConfigAuthPath());
+    expect(auth.token).toBe(token);
   } catch (err) {
     console.log('Failed test suite `beforeAll`');
     console.log(err);
@@ -229,7 +243,7 @@ afterAll(async () => {
 
   // Make sure the token gets revoked unless it's passed in via environment
   if (!process.env.VERCEL_TOKEN) {
-    await execCli(binaryPath, ['logout', ...defaultArgs]);
+    await execCli(binaryPath, ['logout']);
   }
 
   const allTmpDirs = listTmpDirs();
@@ -238,33 +252,6 @@ afterAll(async () => {
     tmpDir.removeCallback();
   }
 });
-
-// NOTE: Test order is important here.
-// This test MUST run before the tests below for them to work.
-test(
-  'login',
-  async () => {
-    if (!email) {
-      throw new Error('Shared state "email" not set.');
-    }
-
-    await fs.remove(getConfigAuthPath());
-    const loginOutput = await execCli(binaryPath, [
-      'login',
-      email,
-      '--api',
-      loginApiUrl,
-      ...defaultArgs,
-    ]);
-
-    expect(loginOutput.exitCode, formatOutput(loginOutput)).toBe(0);
-    expect(loginOutput.stderr).toMatch(/You are now logged in\./gm);
-
-    const auth = await fs.readJSON(getConfigAuthPath());
-    expect(auth.token).toBe(token);
-  },
-  60 * 1000
-);
 
 test('[vc build] should build project with corepack and select npm@8.1.0', async () => {
   try {
@@ -347,10 +334,9 @@ test('[vc dev] should print help from `vc develop --help`', async () => {
   const directory = await setupE2EFixture('static-deployment');
   const { exitCode, stdout, stderr } = await execCli(
     binaryPath,
-    ['develop', '--help', ...defaultArgs],
+    ['develop', '--help'],
     {
       cwd: directory,
-      reject: false,
     }
   );
 
@@ -369,7 +355,6 @@ test('default command should deploy directory', async () => {
     [
       // omit the default "deploy" command
       target,
-      ...defaultArgs,
     ],
     {
       cwd: projectDir,
@@ -393,7 +378,6 @@ test('default command should warn when deploying with conflicting subdirectory',
     [
       // omit the default "deploy" command
       target,
-      ...defaultArgs,
     ],
     {
       cwd: projectDir,
@@ -419,7 +403,7 @@ test('deploy command should not warn when deploying with conflicting subdirector
 
   const { exitCode, stdout, stderr } = await execCli(
     binaryPath,
-    ['list', '--cwd', target, ...defaultArgs],
+    ['list', '--cwd', target],
     {
       cwd: projectDir,
     }
@@ -448,7 +432,6 @@ test('default command should work with --cwd option', async () => {
       // omit the default "deploy" command
       '--cwd',
       target,
-      ...defaultArgs,
     ],
     {
       cwd: projectDir,
@@ -477,7 +460,6 @@ test('should allow deploying a directory that was built with a target environmen
     [
       // omit the default "deploy" command
       '--prebuilt',
-      ...defaultArgs,
     ],
     {
       cwd: projectDir,
@@ -504,7 +486,6 @@ test('should allow deploying a directory that was prebuilt, but has no builds.js
     [
       // omit the default "deploy" command
       '--prebuilt',
-      ...defaultArgs,
     ],
     {
       cwd: projectDir,
@@ -526,9 +507,8 @@ test('[vc link] with vercel.json configuration overrides should create a valid d
 
   const { exitCode, stdout, stderr } = await execCli(
     binaryPath,
-    ['link', '--yes', ...defaultArgs],
+    ['link', '--yes'],
     {
-      reject: false,
       cwd: directory,
     }
   );
@@ -549,13 +529,10 @@ test('[vc link] with vercel.json configuration overrides should create a valid d
 test('deploy using only now.json with `redirects` defined', async () => {
   const target = await setupE2EFixture('redirects-v2');
 
-  const { exitCode, stdout, stderr } = await execCli(
-    binaryPath,
-    [target, ...defaultArgs, '--yes'],
-    {
-      reject: false,
-    }
-  );
+  const { exitCode, stdout, stderr } = await execCli(binaryPath, [
+    target,
+    '--yes',
+  ]);
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
@@ -569,13 +546,13 @@ test('deploy using --local-config flag v2', async () => {
   const target = await setupE2EFixture('local-config-v2');
   const configPath = path.join(target, 'vercel-test.json');
 
-  const { exitCode, stdout, stderr } = await execCli(
-    binaryPath,
-    ['deploy', target, '--local-config', configPath, ...defaultArgs, '--yes'],
-    {
-      reject: false,
-    }
-  );
+  const { exitCode, stdout, stderr } = await execCli(binaryPath, [
+    'deploy',
+    target,
+    '--local-config',
+    configPath,
+    '--yes',
+  ]);
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
@@ -600,20 +577,13 @@ test('deploy using --local-config flag v2', async () => {
 test('deploy fails using --local-config flag with non-existent path', async () => {
   const target = await setupE2EFixture('local-config-v2');
 
-  const { exitCode, stdout, stderr } = await execCli(
-    binaryPath,
-    [
-      'deploy',
-      target,
-      '--local-config',
-      'does-not-exist.json',
-      ...defaultArgs,
-      '--yes',
-    ],
-    {
-      reject: false,
-    }
-  );
+  const { exitCode, stdout, stderr } = await execCli(binaryPath, [
+    'deploy',
+    target,
+    '--local-config',
+    'does-not-exist.json',
+    '--yes',
+  ]);
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
 
@@ -629,17 +599,9 @@ test('deploy using --local-config flag above target', async () => {
 
   const { exitCode, stdout, stderr } = await execCli(
     binaryPath,
-    [
-      'deploy',
-      target,
-      '--local-config',
-      './now-root.json',
-      ...defaultArgs,
-      '--yes',
-    ],
+    ['deploy', target, '--local-config', './now-root.json', '--yes'],
     {
       cwd: root,
-      reject: false,
     }
   );
 
@@ -664,9 +626,8 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
   async function vcLink() {
     const { exitCode, stdout, stderr } = await execCli(
       binaryPath,
-      ['link', '--yes', ...defaultArgs],
+      ['link', '--yes'],
       {
-        reject: false,
         cwd: target,
       }
     );
@@ -676,9 +637,8 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
   async function vcEnvLsIsEmpty() {
     const { exitCode, stdout, stderr } = await execCli(
       binaryPath,
-      ['env', 'ls', ...defaultArgs],
+      ['env', 'ls'],
       {
-        reject: false,
         cwd: target,
       }
     );
@@ -688,8 +648,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
   }
 
   async function vcEnvAddWithPrompts() {
-    const vc = execCli(binaryPath, ['env', 'add', ...defaultArgs], {
-      reject: false,
+    const vc = execCli(binaryPath, ['env', 'add'], {
       cwd: target,
     });
 
@@ -718,9 +677,8 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
   async function vcEnvAddFromStdin() {
     const vc = execCli(
       binaryPath,
-      ['env', 'add', 'MY_STDIN_VAR', 'development', ...defaultArgs],
+      ['env', 'add', 'MY_STDIN_VAR', 'development'],
       {
-        reject: false,
         cwd: target,
       }
     );
@@ -730,14 +688,9 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
   }
 
   async function vcEnvAddFromStdinPreview() {
-    const vc = execCli(
-      binaryPath,
-      ['env', 'add', 'MY_PREVIEW', 'preview', ...defaultArgs],
-      {
-        reject: false,
-        cwd: target,
-      }
-    );
+    const vc = execCli(binaryPath, ['env', 'add', 'MY_PREVIEW', 'preview'], {
+      cwd: target,
+    });
     vc.stdin?.end('preview-no-branch');
     const { exitCode, stdout, stderr } = await vc;
     expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
@@ -746,9 +699,8 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
   async function vcEnvAddFromStdinPreviewWithBranch() {
     const vc = execCli(
       binaryPath,
-      ['env', 'add', 'MY_PREVIEW', 'preview', 'staging', ...defaultArgs],
+      ['env', 'add', 'MY_PREVIEW', 'preview', 'staging'],
       {
-        reject: false,
         cwd: target,
       }
     );
@@ -761,9 +713,8 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
   async function vcEnvLsIncludesVar() {
     const { exitCode, stderr, stdout } = await execCli(
       binaryPath,
-      ['env', 'ls', ...defaultArgs],
+      ['env', 'ls'],
       {
-        reject: false,
         cwd: target,
       }
     );
@@ -824,9 +775,8 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
   async function vcEnvPull() {
     const { exitCode, stdout, stderr } = await execCli(
       binaryPath,
-      ['env', 'pull', '-y', ...defaultArgs],
+      ['env', 'pull', '-y'],
       {
-        reject: false,
         cwd: target,
       }
     );
@@ -845,9 +795,8 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
   async function vcEnvPullOverwrite() {
     const { exitCode, stdout, stderr } = await execCli(
       binaryPath,
-      ['env', 'pull', ...defaultArgs],
+      ['env', 'pull'],
       {
-        reject: false,
         cwd: target,
       }
     );
@@ -860,8 +809,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
   async function vcEnvPullConfirm() {
     fs.writeFileSync(path.join(target, '.env'), 'hahaha');
 
-    const vc = execCli(binaryPath, ['env', 'pull', ...defaultArgs], {
-      reject: false,
+    const vc = execCli(binaryPath, ['env', 'pull'], {
       cwd: target,
     });
 
@@ -876,14 +824,9 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
   }
 
   async function vcDeployWithVar() {
-    const { exitCode, stdout, stderr } = await execCli(
-      binaryPath,
-      [...defaultArgs],
-      {
-        reject: false,
-        cwd: target,
-      }
-    );
+    const { exitCode, stdout, stderr } = await execCli(binaryPath, [], {
+      cwd: target,
+    });
     expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
     const { host } = new URL(stdout);
 
@@ -901,8 +844,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
   }
 
   async function vcDevWithEnv() {
-    const vc = execCli(binaryPath, ['dev', '--debug', ...defaultArgs], {
-      reject: false,
+    const vc = execCli(binaryPath, ['dev', '--debug'], {
       cwd: target,
     });
 
@@ -933,8 +875,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
   }
 
   async function vcDevAndFetchCloudVars() {
-    const vc = execCli(binaryPath, ['dev', ...defaultArgs], {
-      reject: false,
+    const vc = execCli(binaryPath, ['dev'], {
       cwd: target,
     });
 
@@ -986,9 +927,8 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
   async function vcEnvPullFetchSystemVars() {
     const { exitCode, stdout, stderr } = await execCli(
       binaryPath,
-      ['env', 'pull', '-y', ...defaultArgs],
+      ['env', 'pull', '-y'],
       {
-        reject: false,
         cwd: target,
       }
     );
@@ -1007,8 +947,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
   }
 
   async function vcDevAndFetchSystemVars() {
-    const vc = execCli(binaryPath, ['dev', ...defaultArgs], {
-      reject: false,
+    const vc = execCli(binaryPath, ['dev'], {
       cwd: target,
     });
 
@@ -1045,8 +984,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
   }
 
   async function vcEnvRemove() {
-    const vc = execCli(binaryPath, ['env', 'rm', '-y', ...defaultArgs], {
-      reject: false,
+    const vc = execCli(binaryPath, ['env', 'rm', '-y'], {
       cwd: target,
     });
     await waitForPrompt(vc, 'What’s the name of the variable?');
@@ -1058,9 +996,8 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
   async function vcEnvRemoveWithArgs() {
     const { exitCode, stdout, stderr } = await execCli(
       binaryPath,
-      ['env', 'rm', 'MY_STDIN_VAR', 'development', '-y', ...defaultArgs],
+      ['env', 'rm', 'MY_STDIN_VAR', 'development', '-y'],
       {
-        reject: false,
         cwd: target,
       }
     );
@@ -1069,16 +1006,8 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
 
     const { exitCode: exitCode3 } = await execCli(
       binaryPath,
-      [
-        'env',
-        'rm',
-        'MY_DECRYPTABLE_SECRET_ENV',
-        'development',
-        '-y',
-        ...defaultArgs,
-      ],
+      ['env', 'rm', 'MY_DECRYPTABLE_SECRET_ENV', 'development', '-y'],
       {
-        reject: false,
         cwd: target,
       }
     );
@@ -1089,9 +1018,8 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
   async function vcEnvRemoveWithNameOnly() {
     const { exitCode, stdout, stderr } = await execCli(
       binaryPath,
-      ['env', 'rm', 'MY_NEW_ENV_VAR', '-y', ...defaultArgs],
+      ['env', 'rm', 'MY_NEW_ENV_VAR', '-y'],
       {
-        reject: false,
         cwd: target,
       }
     );
@@ -1100,8 +1028,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
   }
 
   function vcEnvRemoveByName(name: string) {
-    return execCli(binaryPath, ['env', 'rm', name, '-y', ...defaultArgs], {
-      reject: false,
+    return execCli(binaryPath, ['env', 'rm', name, '-y'], {
       cwd: target,
     });
   }
@@ -1148,12 +1075,7 @@ test('[vc projects] should create a project successfully', async () => {
     Math.random().toString(36).split('.')[1]
   }`;
 
-  const vc = execCli(binaryPath, [
-    'project',
-    'add',
-    projectName,
-    ...defaultArgs,
-  ]);
+  const vc = execCli(binaryPath, ['project', 'add', projectName]);
 
   await waitForPrompt(vc, `Success! Project ${projectName} added`);
 
@@ -1161,12 +1083,7 @@ test('[vc projects] should create a project successfully', async () => {
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   // creating the same project again should succeed
-  const vc2 = execCli(binaryPath, [
-    'project',
-    'add',
-    projectName,
-    ...defaultArgs,
-  ]);
+  const vc2 = execCli(binaryPath, ['project', 'add', projectName]);
 
   await waitForPrompt(vc2, `Success! Project ${projectName} added`);
 
@@ -1177,11 +1094,12 @@ test('[vc projects] should create a project successfully', async () => {
 test('deploy with metadata containing "=" in the value', async () => {
   const target = await setupE2EFixture('static-v2-meta');
 
-  const { exitCode, stdout, stderr } = await execCli(
-    binaryPath,
-    [target, ...defaultArgs, '--yes', '--meta', 'someKey=='],
-    { reject: false }
-  );
+  const { exitCode, stdout, stderr } = await execCli(binaryPath, [
+    target,
+    '--yes',
+    '--meta',
+    'someKey==',
+  ]);
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
@@ -1195,13 +1113,7 @@ test('deploy with metadata containing "=" in the value', async () => {
 });
 
 test('print the deploy help message', async () => {
-  const { stderr, stdout, exitCode } = await execCli(
-    binaryPath,
-    ['help', ...defaultArgs],
-    {
-      reject: false,
-    }
-  );
+  const { stderr, stdout, exitCode } = await execCli(binaryPath, ['help']);
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(2);
   expect(stderr).toContain(deployHelpMessage);
@@ -1209,13 +1121,7 @@ test('print the deploy help message', async () => {
 });
 
 test('output the version', async () => {
-  const { stdout, stderr, exitCode } = await execCli(
-    binaryPath,
-    ['--version', ...defaultArgs],
-    {
-      reject: false,
-    }
-  );
+  const { stdout, stderr, exitCode } = await execCli(binaryPath, ['--version']);
 
   const version = stdout.trim();
 
@@ -1231,18 +1137,18 @@ test('should add secret with hyphen prefix', async () => {
 
   let secretCall = await execCli(
     binaryPath,
-    ['secrets', 'add', ...defaultArgs, key, value],
+    ['secrets', 'add', '--', key, value],
     {
       cwd: target,
-      reject: false,
     }
   );
 
+  console.log('!!! secretCall: ', secretCall);
+
   expect(secretCall.exitCode, formatOutput(secretCall)).toBe(0);
 
-  let targetCall = await execCli(binaryPath, [...defaultArgs, '--yes'], {
+  let targetCall = await execCli(binaryPath, ['--yes'], {
     cwd: target,
-    reject: false,
   });
 
   expect(targetCall.exitCode, formatOutput(targetCall)).toBe(0);
@@ -1253,13 +1159,10 @@ test('should add secret with hyphen prefix', async () => {
 });
 
 test('login with unregistered user', async () => {
-  const { stdout, stderr, exitCode } = await execCli(
-    binaryPath,
-    ['login', `${session}@${session}.com`, ...defaultArgs],
-    {
-      reject: false,
-    }
-  );
+  const { stdout, stderr, exitCode } = await execCli(binaryPath, [
+    'login',
+    `${session}@${session}.com`,
+  ]);
 
   const goal = `Error: Please sign up: https://vercel.com/signup`;
   const lines = stderr.trim().split('\n');
@@ -1272,17 +1175,9 @@ test('login with unregistered user', async () => {
 test('ignore files specified in .nowignore', async () => {
   const directory = await setupE2EFixture('nowignore');
 
-  const args = [
-    '--debug',
-    '--public',
-    '--name',
-    session,
-    ...defaultArgs,
-    '--yes',
-  ];
+  const args = ['--debug', '--public', '--name', session, '--yes'];
   const targetCall = await execCli(binaryPath, args, {
     cwd: directory,
-    reject: false,
   });
 
   const { host } = new URL(targetCall.stdout);
@@ -1296,17 +1191,9 @@ test('ignore files specified in .nowignore', async () => {
 test('ignore files specified in .nowignore via allowlist', async () => {
   const directory = await setupE2EFixture('nowignore-allowlist');
 
-  const args = [
-    '--debug',
-    '--public',
-    '--name',
-    session,
-    ...defaultArgs,
-    '--yes',
-  ];
+  const args = ['--debug', '--public', '--name', session, '--yes'];
   const targetCall = await execCli(binaryPath, args, {
     cwd: directory,
-    reject: false,
   });
 
   const { host } = new URL(targetCall.stdout);
@@ -1318,13 +1205,10 @@ test('ignore files specified in .nowignore via allowlist', async () => {
 });
 
 test('list the scopes', async () => {
-  const { stdout, stderr, exitCode } = await execCli(
-    binaryPath,
-    ['teams', 'ls', ...defaultArgs],
-    {
-      reject: false,
-    }
-  );
+  const { stdout, stderr, exitCode } = await execCli(binaryPath, [
+    'teams',
+    'ls',
+  ]);
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
@@ -1353,33 +1237,30 @@ test('domains inspect', async () => {
 
   {
     // Add a domain that can be inspected
-    const result = await execCli(
-      binaryPath,
-      [`domains`, `add`, domainName, projectName, ...defaultArgs],
-      { reject: false }
-    );
+    const result = await execCli(binaryPath, [
+      `domains`,
+      `add`,
+      domainName,
+      projectName,
+    ]);
 
     expect(result.exitCode, formatOutput(result)).toBe(0);
   }
 
-  const { exitCode, stdout, stderr } = await execCli(
-    binaryPath,
-    ['domains', 'inspect', domainName, ...defaultArgs],
-    {
-      reject: false,
-    }
-  );
+  const { exitCode, stdout, stderr } = await execCli(binaryPath, [
+    'domains',
+    'inspect',
+    domainName,
+  ]);
 
   expect(stderr).toContain(`Renewal Price`);
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   {
     // Remove the domain again
-    const result = await execCli(
-      binaryPath,
-      [`domains`, `rm`, domainName, ...defaultArgs],
-      { reject: false, input: 'y' }
-    );
+    const result = await execCli(binaryPath, [`domains`, `rm`, domainName], {
+      input: 'y',
+    });
 
     expect(result.exitCode, formatOutput(result)).toBe(0);
   }
@@ -1406,9 +1287,8 @@ test('try to purchase a domain', async () => {
 
   const { stderr, stdout, exitCode } = await execCli(
     binaryPath,
-    ['domains', 'buy', `${session}-test.com`, ...defaultArgs],
+    ['domains', 'buy', `${session}-test.com`],
     {
-      reject: false,
       input: stream,
       env: {
         FORCE_TTY: '1',
@@ -1423,20 +1303,13 @@ test('try to purchase a domain', async () => {
 });
 
 test('try to transfer-in a domain with "--code" option', async () => {
-  const { stderr, stdout, exitCode } = await execCli(
-    binaryPath,
-    [
-      'domains',
-      'transfer-in',
-      '--code',
-      'xyz',
-      `${session}-test.com`,
-      ...defaultArgs,
-    ],
-    {
-      reject: false,
-    }
-  );
+  const { stderr, stdout, exitCode } = await execCli(binaryPath, [
+    'domains',
+    'transfer-in',
+    '--code',
+    'xyz',
+    `${session}-test.com`,
+  ]);
 
   expect(stderr).toContain(
     `Error: The domain "${session}-test.com" is not transferable.`
@@ -1445,19 +1318,12 @@ test('try to transfer-in a domain with "--code" option', async () => {
 });
 
 test('try to move an invalid domain', async () => {
-  const { stderr, stdout, exitCode } = await execCli(
-    binaryPath,
-    [
-      'domains',
-      'move',
-      `${session}-invalid-test.org`,
-      `${session}-invalid-user`,
-      ...defaultArgs,
-    ],
-    {
-      reject: false,
-    }
-  );
+  const { stderr, stdout, exitCode } = await execCli(binaryPath, [
+    'domains',
+    'move',
+    `${session}-invalid-test.org`,
+    `${session}-invalid-user`,
+  ]);
 
   expect(stderr).toContain(`Error: Domain not found under `);
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
@@ -1472,10 +1338,7 @@ test('create wildcard alias for deployment', async t => {
   };
   const { stdout, stderr, exitCode } = await execCli(
     binaryPath,
-    ['alias', hosts.deployment, hosts.alias, ...defaultArgs],
-    {
-      reject: false,
-    }
+    ['alias', hosts.deployment, hosts.alias],
   );
   console.log(stderr);
   console.log(stdout);
@@ -1504,10 +1367,7 @@ test('remove the wildcard alias', async t => {
   const goal = `> Success! Alias ${context.wildcardAlias} removed`;
   const { stdout, stderr, exitCode } = await execCli(
     binaryPath,
-    ['alias', 'rm', context.wildcardAlias, '--yes', ...defaultArgs],
-    {
-      reject: false,
-    }
+    ['alias', 'rm', context.wildcardAlias, '--yes'],
   );
   console.log(stderr);
   console.log(stdout);
@@ -1520,21 +1380,14 @@ test('remove the wildcard alias', async t => {
 test('ensure we render a warning for deployments with no files', async () => {
   const directory = await setupE2EFixture('empty-directory');
 
-  const { stderr, stdout, exitCode } = await execCli(
-    binaryPath,
-    [
-      directory,
-      '--public',
-      '--name',
-      session,
-      ...defaultArgs,
-      '--yes',
-      '--force',
-    ],
-    {
-      reject: false,
-    }
-  );
+  const { stderr, stdout, exitCode } = await execCli(binaryPath, [
+    directory,
+    '--public',
+    '--name',
+    session,
+    '--yes',
+    '--force',
+  ]);
 
   // Ensure the warning is printed
   expect(stderr).toMatch(/There are no files inside your deployment/);
@@ -1560,13 +1413,10 @@ test('output logs with "short" output', async () => {
     throw new Error('Shared state "context.deployment" not set.');
   }
 
-  const { stderr, stdout, exitCode } = await execCli(
-    binaryPath,
-    ['logs', context.deployment, ...defaultArgs],
-    {
-      reject: false,
-    }
-  );
+  const { stderr, stdout, exitCode } = await execCli(binaryPath, [
+    'logs',
+    context.deployment,
+  ]);
 
   expect(stderr).toContain(`Fetched deployment "${context.deployment}"`);
 
@@ -1585,13 +1435,12 @@ test('output logs with "raw" output', async () => {
     throw new Error('Shared state "context.deployment" not set.');
   }
 
-  const { stderr, stdout, exitCode } = await execCli(
-    binaryPath,
-    ['logs', context.deployment, ...defaultArgs, '--output', 'raw'],
-    {
-      reject: false,
-    }
-  );
+  const { stderr, stdout, exitCode } = await execCli(binaryPath, [
+    'logs',
+    context.deployment,
+    '--output',
+    'raw',
+  ]);
 
   expect(stderr).toContain(`Fetched deployment "${context.deployment}"`);
 
@@ -1610,9 +1459,8 @@ test('ensure we render a prompt when deploying home directory', async () => {
 
   const { stderr, stdout, exitCode } = await execCli(
     binaryPath,
-    [directory, '--public', '--name', session, ...defaultArgs, '--force'],
+    [directory, '--public', '--name', session, '--force'],
     {
-      reject: false,
       input: 'N',
     }
   );
@@ -1629,21 +1477,14 @@ test('ensure we render a prompt when deploying home directory', async () => {
 test('ensure the `scope` property works with email', async () => {
   const directory = await setupE2EFixture('config-scope-property-email');
 
-  const { stderr, stdout, exitCode } = await execCli(
-    binaryPath,
-    [
-      directory,
-      '--public',
-      '--name',
-      session,
-      ...defaultArgs,
-      '--force',
-      '--yes',
-    ],
-    {
-      reject: false,
-    }
-  );
+  const { stderr, stdout, exitCode } = await execCli(binaryPath, [
+    directory,
+    '--public',
+    '--name',
+    session,
+    '--force',
+    '--yes',
+  ]);
 
   // Ensure we're deploying under the right scope
   expect(stderr).toContain(session);
@@ -1665,21 +1506,14 @@ test('ensure the `scope` property works with email', async () => {
 test('ensure the `scope` property works with username', async () => {
   const directory = await setupE2EFixture('config-scope-property-username');
 
-  const { stderr, stdout, exitCode } = await execCli(
-    binaryPath,
-    [
-      directory,
-      '--public',
-      '--name',
-      session,
-      ...defaultArgs,
-      '--force',
-      '--yes',
-    ],
-    {
-      reject: false,
-    }
-  );
+  const { stderr, stdout, exitCode } = await execCli(binaryPath, [
+    directory,
+    '--public',
+    '--name',
+    session,
+    '--force',
+    '--yes',
+  ]);
 
   // Ensure we're deploying under the right scope
   expect(stderr).toContain(contextName);
@@ -1701,13 +1535,11 @@ test('ensure the `scope` property works with username', async () => {
 test('try to create a builds deployments with wrong now.json', async () => {
   const directory = await setupE2EFixture('builds-wrong');
 
-  const { stderr, stdout, exitCode } = await execCli(
-    binaryPath,
-    [directory, '--public', ...defaultArgs, '--yes'],
-    {
-      reject: false,
-    }
-  );
+  const { stderr, stdout, exitCode } = await execCli(binaryPath, [
+    directory,
+    '--public',
+    '--yes',
+  ]);
 
   // Ensure the exit code is right
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
@@ -1722,13 +1554,11 @@ test('try to create a builds deployments with wrong now.json', async () => {
 test('try to create a builds deployments with wrong vercel.json', async () => {
   const directory = await setupE2EFixture('builds-wrong-vercel');
 
-  const { stderr, stdout, exitCode } = await execCli(
-    binaryPath,
-    [directory, '--public', ...defaultArgs, '--yes'],
-    {
-      reject: false,
-    }
-  );
+  const { stderr, stdout, exitCode } = await execCli(binaryPath, [
+    directory,
+    '--public',
+    '--yes',
+  ]);
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
   expect(stderr).toContain(
@@ -1744,10 +1574,9 @@ test('try to create a builds deployments with wrong `build.env` property', async
 
   const { exitCode, stdout, stderr } = await execCli(
     binaryPath,
-    ['--public', ...defaultArgs, '--yes'],
+    ['--public', '--yes'],
     {
       cwd: directory,
-      reject: false,
     }
   );
 
@@ -1763,21 +1592,14 @@ test('try to create a builds deployments with wrong `build.env` property', async
 test('create a builds deployments with no actual builds', async () => {
   const directory = await setupE2EFixture('builds-no-list');
 
-  const { exitCode, stdout, stderr } = await execCli(
-    binaryPath,
-    [
-      directory,
-      '--public',
-      '--name',
-      session,
-      ...defaultArgs,
-      '--force',
-      '--yes',
-    ],
-    {
-      reject: false,
-    }
-  );
+  const { exitCode, stdout, stderr } = await execCli(binaryPath, [
+    directory,
+    '--public',
+    '--name',
+    session,
+    '--force',
+    '--yes',
+  ]);
 
   // Ensure the exit code is right
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
@@ -1790,7 +1612,7 @@ test('create a builds deployments with no actual builds', async () => {
 test('create a staging deployment', async () => {
   const directory = await setupE2EFixture('static-deployment');
 
-  const args = ['--debug', '--public', '--name', session, ...defaultArgs];
+  const args = ['--debug', '--public', '--name', session];
   const targetCall = await execCli(binaryPath, [
     directory,
     '--target=staging',
@@ -1812,7 +1634,7 @@ test('create a staging deployment', async () => {
 test('create a production deployment', async () => {
   const directory = await setupE2EFixture('static-deployment');
 
-  const args = ['--debug', '--public', '--name', session, ...defaultArgs];
+  const args = ['--debug', '--public', '--name', session];
   const targetCall = await execCli(binaryPath, [
     directory,
     '--target=production',
@@ -1848,13 +1670,11 @@ test('create a production deployment', async () => {
 test('use build-env', async () => {
   const directory = await setupE2EFixture('build-env');
 
-  const { exitCode, stdout, stderr } = await execCli(
-    binaryPath,
-    [directory, '--public', ...defaultArgs, '--yes'],
-    {
-      reject: false,
-    }
-  );
+  const { exitCode, stdout, stderr } = await execCli(binaryPath, [
+    directory,
+    '--public',
+    '--yes',
+  ]);
 
   // Ensure the exit code is right
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
@@ -1874,13 +1694,10 @@ test('use build-env', async () => {
 test('try to deploy non-existing path', async () => {
   const goal = `Error: The specified file or directory "${session}" does not exist.`;
 
-  const { stderr, stdout, exitCode } = await execCli(
-    binaryPath,
-    [session, ...defaultArgs, '--yes'],
-    {
-      reject: false,
-    }
-  );
+  const { stderr, stdout, exitCode } = await execCli(binaryPath, [
+    session,
+    '--yes',
+  ]);
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
   expect(stderr.trim().endsWith(goal), `should end with "${goal}"`).toBe(true);
@@ -1890,13 +1707,12 @@ test('try to deploy with non-existing team', async () => {
   const target = await setupE2EFixture('static-deployment');
   const goal = `Error: The specified scope does not exist`;
 
-  const { stderr, stdout, exitCode } = await execCli(
-    binaryPath,
-    [target, '--scope', session, ...defaultArgs, '--yes'],
-    {
-      reject: false,
-    }
-  );
+  const { stderr, stdout, exitCode } = await execCli(binaryPath, [
+    target,
+    '--scope',
+    session,
+    '--yes',
+  ]);
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
   expect(stderr).toContain(goal);
@@ -2130,9 +1946,8 @@ test('[vercel dev] fails when development command calls vercel dev recursively',
   expect.assertions(0);
 
   const dir = await setupE2EFixture('dev-fail-on-recursion-command');
-  const dev = execCli(binaryPath, ['dev', '--yes', ...defaultArgs], {
+  const dev = execCli(binaryPath, ['dev', '--yes'], {
     cwd: dir,
-    reject: false,
   });
 
   try {
@@ -2150,23 +1965,16 @@ test('`vercel rm` removes a deployment', async () => {
   let host;
 
   {
-    const { exitCode, stdout, stderr } = await execCli(
-      binaryPath,
-      [
-        directory,
-        '--public',
-        '--name',
-        session,
-        ...defaultArgs,
-        '-V',
-        '2',
-        '--force',
-        '--yes',
-      ],
-      {
-        reject: false,
-      }
-    );
+    const { exitCode, stdout, stderr } = await execCli(binaryPath, [
+      directory,
+      '--public',
+      '--name',
+      session,
+      '-V',
+      '2',
+      '--force',
+      '--yes',
+    ]);
     expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
     host = new URL(stdout).host;
   }
