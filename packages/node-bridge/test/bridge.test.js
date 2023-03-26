@@ -29,8 +29,19 @@ test('`NowProxyEvent` normalizing', async () => {
       })
     )
   );
-  const bridge = new Bridge(server);
+
+  let features;
+
+  class CustomBridge extends Bridge {
+    handleEvent(normalizedEvent) {
+      features = normalizedEvent.features;
+      return super.handleEvent(normalizedEvent);
+    }
+  }
+
+  const bridge = new CustomBridge(server);
   bridge.listen();
+
   const context = { callbackWaitsForEmptyEventLoop: true };
   const result = await bridge.launcher(
     {
@@ -38,12 +49,14 @@ test('`NowProxyEvent` normalizing', async () => {
       body: JSON.stringify({
         method: 'POST',
         headers: { foo: 'baz' },
+        features: { enabled: true },
         path: '/nowproxy',
         body: 'body=1',
       }),
     },
     context
   );
+  assert.deepStrictEqual(features, { enabled: true });
   assert.strictEqual(result.encoding, 'base64');
   assert.strictEqual(result.statusCode, 200);
   const body = JSON.parse(Buffer.from(result.body, 'base64').toString());
