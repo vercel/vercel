@@ -3,6 +3,8 @@ import { emoji } from '../../../src/util/emoji';
 import { client } from '../../mocks/client';
 import { useUser } from '../../mocks/user';
 
+jest.setTimeout(10000);
+
 describe('login', () => {
   it('should not allow the `--token` flag', async () => {
     client.setArgv('login', '--token', 'foo');

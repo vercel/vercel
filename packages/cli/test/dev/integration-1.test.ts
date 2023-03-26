@@ -105,7 +105,7 @@ test('[vercel dev] throws an error when an edge function has no response', async
     expect(await res.status).toBe(500);
     expect(await res.text()).toMatch('FUNCTION_INVOCATION_FAILED');
     expect(stdout).toMatch(
-      /Error from API Route \/api\/edge-no-response: Edge Function "api\/edge-no-response.js" did not return a response./g
+      /Error from API Route \/api\/edge-no-response: Edge Function did not return a response./g
     );
   } finally {
     await dev.kill();
@@ -304,12 +304,12 @@ test('[vercel dev] should handle missing handler errors thrown in edge functions
     );
     validateResponseHeaders(res);
 
-    const { stdout } = await dev.kill();
+    const { stderr } = await dev.kill();
 
     expect(await res.text()).toMatch(
       /<strong>500<\/strong>: INTERNAL_SERVER_ERROR/g
     );
-    expect(stdout).toMatch(
+    expect(stderr).toMatch(
       /No default export was found. Add a default export to handle requests./g
     );
   } finally {

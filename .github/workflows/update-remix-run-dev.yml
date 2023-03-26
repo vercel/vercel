@@ -5,7 +5,7 @@ on:
     inputs:
       new-version:
         type: string
-        description: "Optional version to update @remix-run/dev to inside of @vercel/remix"
+        description: 'Optional version to update @remix-run/dev to inside of @vercel/remix-builder'
 
 jobs:
   update-remix-run-dev:

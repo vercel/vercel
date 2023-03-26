@@ -1,11 +1,18 @@
-import { join } from 'path';
-import { existsSync } from 'fs';
+import { existsSync, promises as fs } from 'fs';
+import { join, relative, resolve } from 'path';
 import { pathToRegexp, Key } from 'path-to-regexp';
+import { spawnAsync } from '@vercel/build-utils';
+import { readConfig } from '@remix-run/dev/dist/config';
 import type {
   ConfigRoute,
   RouteManifest,
 } from '@remix-run/dev/dist/config/routes';
+import type { RemixConfig } from '@remix-run/dev/dist/config';
 import type { BaseFunctionConfig } from '@vercel/static-config';
+import type {
+  CliType,
+  SpawnOptionsExtended,
+} from '@vercel/build-utils/dist/fs/run-user-scripts';
 
 export interface ResolvedNodeRouteConfig {
   runtime: 'nodejs';
@@ -35,7 +42,18 @@ export interface ResolvedRoutePaths {
   rePath: string;
 }
 
-const SPLAT_PATH = '/:params+';
+const SPLAT_PATH = '/:params*';
+
+const entryExts = ['.js', '.jsx', '.ts', '.tsx'];
+
+export function findEntry(dir: string, basename: string): string | undefined {
+  for (const ext of entryExts) {
+    const file = resolve(dir, basename + ext);
+    if (existsSync(file)) return relative(dir, file);
+  }
+
+  return undefined;
+}
 
 const configExts = ['.js', '.cjs', '.mjs'];
 
@@ -138,12 +156,24 @@ export function getPathFromRoute(
 
   for (const currentRoute of getRouteIterator(route, routes)) {
     if (!currentRoute.path) continue;
-
-    pathParts.push(
-      currentRoute.path.replace(/:(.+)\?/g, (_, name) => `(:${name})`)
-    );
-
-    rePathParts.push(currentRoute.path);
+    const currentRouteParts = currentRoute.path.split('/').reverse();
+    for (const part of currentRouteParts) {
+      if (part.endsWith('?')) {
+        if (part.startsWith(':')) {
+          // Optional path parameter
+          pathParts.push(`(${part.substring(0, part.length - 1)})`);
+          rePathParts.push(part);
+        } else {
+          // Optional static segment
+          const p = `(${part.substring(0, part.length - 1)})`;
+          pathParts.push(p);
+          rePathParts.push(`${p}?`);
+        }
+      } else {
+        pathParts.push(part);
+        rePathParts.push(part);
+      }
+    }
   }
 
   const path = pathParts.reverse().join('/');
@@ -160,4 +190,79 @@ export function getRegExpFromPath(rePath: string): RegExp | false {
   const keys: Key[] = [];
   const re = pathToRegexp(rePath, keys);
   return keys.length > 0 ? re : false;
+}
+
+/**
+ * Updates the `dest` process.env object to match the `source` one.
+ * A function is returned to restore the the `dest` env back to how
+ * it was originally.
+ */
+export function syncEnv(source: NodeJS.ProcessEnv, dest: NodeJS.ProcessEnv) {
+  const originalDest = { ...dest };
+  Object.assign(dest, source);
+  for (const key of Object.keys(dest)) {
+    if (!(key in source)) {
+      delete dest[key];
+    }
+  }
+
+  return () => syncEnv(originalDest, dest);
+}
+
+export async function chdirAndReadConfig(dir: string, packageJsonPath: string) {
+  const originalCwd = process.cwd();
+
+  // As of Remix v1.14.0, reading the config may trigger adding
+  // "isbot" as a dependency, and `npm`/`pnpm`/`yarn` may be invoked.
+  // We want to prevent that behavior, so trick `readConfig()`
+  // into thinking that "isbot" is already installed.
+  let modifiedPackageJson = false;
+  const pkgRaw = await fs.readFile(packageJsonPath, 'utf8');
+  const pkg = JSON.parse(pkgRaw);
+  if (!pkg.dependencies?.['isbot']) {
+    pkg.dependencies.isbot = 'latest';
+    await fs.writeFile(packageJsonPath, JSON.stringify(pkg));
+    modifiedPackageJson = true;
+  }
+
+  let remixConfig: RemixConfig;
+  try {
+    process.chdir(dir);
+    remixConfig = await readConfig(dir);
+  } finally {
+    process.chdir(originalCwd);
+    if (modifiedPackageJson) {
+      await fs.writeFile(packageJsonPath, pkgRaw);
+    }
+  }
+
+  return remixConfig;
+}
+
+export interface AddDependencyOptions extends SpawnOptionsExtended {
+  saveDev?: boolean;
+}
+
+/**
+ * Runs `npm i ${name}` / `pnpm i ${name}` / `yarn add ${name}`.
+ */
+export function addDependency(
+  cliType: CliType,
+  names: string[],
+  opts: AddDependencyOptions = {}
+) {
+  const args: string[] = [];
+  if (cliType === 'npm' || cliType === 'pnpm') {
+    args.push('install');
+    if (opts.saveDev) {
+      args.push('--save-dev');
+    }
+  } else {
+    // 'yarn'
+    args.push('add');
+    if (opts.saveDev) {
+      args.push('--dev');
+    }
+  }
+  return spawnAsync(cliType, args.concat(names), opts);
 }

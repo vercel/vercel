@@ -1,5 +1,5 @@
 import Client from '../client';
-import { Org } from '../../types';
+import { Org } from '@vercel-internals/types';
 import chalk from 'chalk';
 import link from '../output/link';
 import { isAPIError } from '../errors-ts';

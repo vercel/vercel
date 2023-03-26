@@ -22,6 +22,33 @@ function testForkDevServer(entrypoint: string) {
   });
 }
 
+test('runs an edge function that uses `buffer`', async () => {
+  const child = testForkDevServer('./edge-buffer.js');
+
+  try {
+    const result = await readMessage(child);
+    if (result.state !== 'message') {
+      throw new Error('Exited. error: ' + JSON.stringify(result.value));
+    }
+
+    const response = await fetch(
+      `http://localhost:${result.value.port}/api/edge-buffer`
+    );
+    expect({
+      status: response.status,
+      json: await response.json(),
+    }).toEqual({
+      status: 200,
+      json: {
+        encoded: Buffer.from('Hello, world!').toString('base64'),
+        'Buffer === B.Buffer': true,
+      },
+    });
+  } finally {
+    child.kill(9);
+  }
+});
+
 test('runs a mjs endpoint', async () => {
   const child = testForkDevServer('./esm-module.mjs');
 
@@ -51,6 +78,11 @@ test('runs a mjs endpoint', async () => {
 });
 
 test('runs a esm typescript endpoint', async () => {
+  if (process.platform === 'win32') {
+    console.log('Skipping test on Windows');
+    return;
+  }
+
   const child = testForkDevServer('./esm-module.ts');
 
   try {

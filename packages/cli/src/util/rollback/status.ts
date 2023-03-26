@@ -5,7 +5,7 @@ import type {
   PaginationOptions,
   Project,
   RollbackTarget,
-} from '../../types';
+} from '@vercel-internals/types';
 import elapsed from '../output/elapsed';
 import formatDate from '../format-date';
 import getDeployment from '../get-deployment';

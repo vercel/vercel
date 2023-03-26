@@ -2074,6 +2074,11 @@ export const onPrerenderRoute =
       const rscContentTypeHeader =
         routesManifest?.rsc?.contentTypeHeader || 'text/x-component';
 
+      let sourcePath: string | undefined;
+      if (`/${outputPathPage}` !== srcRoute && srcRoute) {
+        sourcePath = srcRoute;
+      }
+
       prerenders[outputPathPage] = new Prerender({
         expiration: initialRevalidate,
         lambda,
@@ -2083,6 +2088,7 @@ export const onPrerenderRoute =
         bypassToken: prerenderManifest.bypassToken,
         initialStatus,
         initialHeaders,
+        sourcePath,
 
         ...(isNotFound
           ? {
@@ -2362,6 +2368,7 @@ interface EdgeFunctionMatcher {
   regexp: string;
   has?: HasField;
   missing?: HasField;
+  originalSource?: string;
 }
 
 export async function getMiddlewareBundle({
@@ -2579,6 +2586,9 @@ export async function getMiddlewareBundle({
         };
 
         route.middlewarePath = shortPath;
+        route.middlewareRawSrc = matcher.originalSource
+          ? [matcher.originalSource]
+          : [];
         if (isCorrectMiddlewareOrder) {
           route.override = true;
         }
@@ -2701,6 +2711,7 @@ function getRouteMatchers(
   return info.matchers.map(matcher => {
     const m: EdgeFunctionMatcher = {
       regexp: getRegexp(matcher.regexp),
+      originalSource: matcher.originalSource,
     };
     if (matcher.has) {
       m.has = normalizeHas(matcher.has);

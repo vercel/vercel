@@ -14,6 +14,7 @@ describe('Test `getPrefixedEnvVars()`', () => {
           VERCEL: '1',
           VERCEL_URL: 'example.vercel.sh',
           USER_ENV_VAR_NOT_VERCEL: 'example.com',
+          VERCEL_ARTIFACTS_TOKEN: 'abc123',
           FOO: 'bar',
         },
       },
@@ -28,6 +29,7 @@ describe('Test `getPrefixedEnvVars()`', () => {
         envPrefix: 'GATSBY_',
         envs: {
           USER_ENV_VAR_NOT_VERCEL: 'example.com',
+          VERCEL_ARTIFACTS_TOKEN: 'abc123',
           FOO: 'bar',
           VERCEL_URL: 'example.vercel.sh',
           VERCEL_ENV: 'production',
@@ -51,6 +53,7 @@ describe('Test `getPrefixedEnvVars()`', () => {
           USER_ENV_VAR_NOT_VERCEL: 'example.com',
           FOO: 'bar',
           BLARG_VERCEL_THING: 'fake',
+          VERCEL_ARTIFACTS_TOKEN: 'abc123',
         },
       },
       want: {},
