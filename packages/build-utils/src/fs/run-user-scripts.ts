@@ -273,10 +273,7 @@ export async function scanParentDirs(
   } else if (pnpmLockYaml) {
     cliType = 'pnpm';
     lockfilePath = pnpmLockPath;
-    lockfileVersion =
-      typeof pnpmLockYaml.lockfileVersion === 'number'
-        ? pnpmLockYaml.lockfileVersion
-        : parseFloat(pnpmLockYaml.lockfileVersion);
+    lockfileVersion = Number(pnpmLockYaml.lockfileVersion);
   } else if (packageLockJson) {
     cliType = 'npm';
     lockfilePath = npmLockPath;
