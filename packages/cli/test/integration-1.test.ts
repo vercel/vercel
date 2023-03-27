@@ -97,14 +97,18 @@ async function vcLink(projectPath: string) {
 
 async function getLocalhost(vc: CLIProcess): Promise<RegExpExecArray> {
   let localhost: RegExpExecArray | undefined;
-  await waitForPrompt(vc, chunk => {
-    const line = chunk.toString();
-    if (line.includes('Ready! Available at')) {
-      localhost = /(https?:[^\s]+)/g.exec(line) || undefined;
-      return true;
-    }
-    return false;
-  });
+  await waitForPrompt(
+    vc,
+    chunk => {
+      const line = chunk.toString();
+      if (line.includes('Ready! Available at')) {
+        localhost = /(https?:[^\s]+)/g.exec(line) || undefined;
+        return true;
+      }
+      return false;
+    },
+    5000
+  );
 
   // This should never happen because waitForPrompt will time out
   // and never return here in this case, but extra checking is fine
