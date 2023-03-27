@@ -227,18 +227,6 @@ async function clearAuthConfig() {
   }
 }
 
-test('default command should prompt login with empty auth.json', async () => {
-  try {
-    await clearAuthConfig();
-    await execCli(binaryPath);
-    throw new Error(`Expected deploy to fail, but it did not.`);
-  } catch (err: any) {
-    expect(err.stderr).toContain(
-      'Error: No existing credentials found. Please run `vercel login` or pass "--token"'
-    );
-  }
-});
-
 test('[vc projects] should create a project successfully', async () => {
   const projectName = `vc-projects-add-${
     Math.random().toString(36).split('.')[1]
@@ -1442,4 +1430,14 @@ test('fail to add a domain without a project', async () => {
   ]);
   expect(output.exitCode, formatOutput(output)).toBe(1);
   expect(output.stderr).toMatch(/expects two arguments/gm);
+});
+
+// NOTE: Order matters here. This must be the last test in the file.
+test('default command should prompt login with empty auth.json', async () => {
+  await clearAuthConfig();
+  const output = await execCli(binaryPath);
+  expect(output.stderr, formatOutput(output)).toBeTruthy();
+  expect(output.stderr).toContain(
+    'Error: No existing credentials found. Please run `vercel login` or pass "--token"'
+  );
 });
