@@ -19,6 +19,7 @@ export interface VercelProxyRequest {
   body: Buffer;
   encoding?: string;
   payloads?: Array<VercelProxyRequest>;
+  features?: Record<string, boolean>;
   responseCallbackCipher?: CipherCCMTypes;
   responseCallbackCipherIV?: string;
   responseCallbackCipherKey?: string;

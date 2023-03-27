@@ -39,19 +39,20 @@ function normalizeProxyEvent(event) {
     responseCallbackCipherKey,
     responseCallbackStream,
     responseCallbackUrl,
+    features,
   } = payload;
 
   /**
    *
-   * @param {string | Buffer} b
+   * @param {string | Buffer} body
    * @returns Buffer
    */
-  const normalizeBody = b => {
-    if (b) {
-      if (typeof b === 'string' && encoding === 'base64') {
-        bodyBuffer = Buffer.from(b, encoding);
+  const normalizeBody = body => {
+    if (body) {
+      if (typeof body === 'string' && encoding === 'base64') {
+        bodyBuffer = Buffer.from(body, encoding);
       } else if (encoding === undefined) {
-        bodyBuffer = Buffer.from(b);
+        bodyBuffer = Buffer.from(body);
       } else {
         throw new Error(`Unsupported encoding: ${encoding}`);
       }
@@ -62,8 +63,9 @@ function normalizeProxyEvent(event) {
   };
 
   if (payloads) {
-    for (const p of payloads) {
-      p.body = normalizeBody(payload.body);
+    for (const targetPayload of payloads) {
+      targetPayload.features = features;
+      targetPayload.body = normalizeBody(payload.body);
     }
   }
   bodyBuffer = normalizeBody(body);
@@ -75,6 +77,7 @@ function normalizeProxyEvent(event) {
     headers,
     body: bodyBuffer,
     payloads,
+    features,
     responseCallbackCipher,
     responseCallbackCipherIV,
     responseCallbackCipherKey,
