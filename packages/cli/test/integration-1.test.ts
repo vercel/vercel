@@ -1,7 +1,9 @@
 import path from 'path';
+import ms from 'ms';
 import { URL, parse as parseUrl } from 'url';
+import { once } from 'node:events';
 import { exec, execCli } from './helpers/exec';
-import fetch, { RequestInit } from 'node-fetch';
+import fetch, { RequestInit, RequestInfo } from 'node-fetch';
 import retry from 'async-retry';
 import fs from 'fs-extra';
 import sleep from '../src/util/sleep';
@@ -14,13 +16,18 @@ import {
   prepareE2EFixtures,
 } from './helpers/setup-e2e-fixture';
 import formatOutput from './helpers/format-output';
+import pkg from '../package.json';
 import type http from 'http';
-import type { CLIProcess } from './helpers/types';
-
+import type { CLIProcess, NowJson, DeploymentLike } from './helpers/types';
+import type {} from './helpers/types';
 const TEST_TIMEOUT = 3 * 60 * 1000;
 jest.setTimeout(TEST_TIMEOUT);
 
 const binaryPath = path.resolve(__dirname, `../scripts/start.js`);
+
+const isCanary = pkg.version.includes('canary');
+
+let session = 'temp-session';
 
 function fetchTokenInformation(token: string, retries = 3) {
   const url = `https://api.vercel.com/v2/user`;
@@ -43,6 +50,38 @@ function fetchTokenInformation(token: string, retries = 3) {
     { retries, factor: 1 }
   );
 }
+
+const pickUrl = (stdout: string) => {
+  const lines = stdout.split('\n');
+  return lines[lines.length - 1];
+};
+
+const waitForDeployment = async (href: RequestInfo) => {
+  console.log(`waiting for ${href} to become ready...`);
+  const start = Date.now();
+  const max = ms('4m');
+  const inspectorText = '<title>Deployment Overview';
+
+  // eslint-disable-next-line
+  while (true) {
+    const response = await fetch(href, { redirect: 'manual' });
+    const text = await response.text();
+    if (response.status === 200 && !text.includes(inspectorText)) {
+      break;
+    }
+
+    const current = Date.now();
+
+    if (current - start > max || response.status >= 500) {
+      throw new Error(
+        `Waiting for "${href}" failed since it took longer than 4 minutes.\n` +
+          `Received status ${response.status}:\n"${text}"`
+      );
+    }
+
+    await sleep(2000);
+  }
+};
 
 async function vcLink(projectPath: string) {
   const { exitCode, stdout, stderr } = await execCli(
@@ -80,6 +119,7 @@ async function getLocalhost(vc: CLIProcess): Promise<RegExpExecArray> {
 let token: string | undefined;
 let email: string | undefined;
 let contextName: string | undefined;
+let secretName: string | undefined;
 
 function mockLoginApi(req: http.IncomingMessage, res: http.ServerResponse) {
   const { url = '/', method } = req;
@@ -135,6 +175,7 @@ const createUser = async () => {
 
       email = user.email;
       contextName = user.username;
+      session = Math.random().toString(36).split('.')[1];
     },
     { retries: 3, factor: 1 }
   );
@@ -1013,4 +1054,433 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
   } finally {
     await vcEnvRemoveAll();
   }
+});
+
+test('try to revert a deployment and assign the automatic aliases', async () => {
+  const firstDeployment = await setupE2EFixture('now-revert-alias-1');
+  const secondDeployment = await setupE2EFixture('now-revert-alias-2');
+
+  const { name } = JSON.parse(
+    fs.readFileSync(path.join(firstDeployment, 'now.json')).toString()
+  ) as NowJson;
+  expect(name).toBeTruthy();
+
+  const url = `https://${name}.user.vercel.app`;
+
+  {
+    const { exitCode, stdout, stderr } = await execCli(binaryPath, [
+      firstDeployment,
+      '--yes',
+    ]);
+    const deploymentUrl = stdout;
+
+    expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
+
+    await waitForDeployment(deploymentUrl);
+    await sleep(20000);
+
+    const result = await fetch(url).then(r => r.json());
+
+    expect(result.name).toBe('now-revert-alias-1');
+  }
+
+  {
+    const { exitCode, stdout, stderr } = await execCli(binaryPath, [
+      secondDeployment,
+      '--yes',
+    ]);
+    const deploymentUrl = stdout;
+
+    expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
+
+    await waitForDeployment(deploymentUrl);
+    await sleep(20000);
+    await fetch(url);
+    await sleep(5000);
+
+    const result = await fetch(url).then(r => r.json());
+
+    expect(result.name).toBe('now-revert-alias-2');
+  }
+
+  {
+    const { exitCode, stdout, stderr } = await execCli(binaryPath, [
+      firstDeployment,
+      '--yes',
+    ]);
+    const deploymentUrl = stdout;
+
+    expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
+
+    await waitForDeployment(deploymentUrl);
+    await sleep(20000);
+    await fetch(url);
+    await sleep(5000);
+
+    const result = await fetch(url).then(r => r.json());
+
+    expect(result.name).toBe('now-revert-alias-1');
+  }
+});
+
+test('whoami', async () => {
+  const { exitCode, stdout, stderr } = await execCli(binaryPath, ['whoami']);
+
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
+  expect(stdout).toBe(contextName);
+});
+
+test('[vercel dev] fails when dev script calls vercel dev recursively', async () => {
+  const deploymentPath = await setupE2EFixture('now-dev-fail-dev-script');
+  const { exitCode, stdout, stderr } = await execCli(binaryPath, [
+    'dev',
+    deploymentPath,
+  ]);
+
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
+  expect(stderr).toContain('must not recursively invoke itself');
+});
+
+test('[vercel dev] fails when development command calls vercel dev recursively', async () => {
+  expect.assertions(0);
+
+  const dir = await setupE2EFixture('dev-fail-on-recursion-command');
+  const dev = execCli(binaryPath, ['dev', '--yes'], {
+    cwd: dir,
+  });
+
+  try {
+    await waitForPrompt(dev, 'must not recursively invoke itself', 10000);
+  } finally {
+    const onClose = once(dev, 'close');
+    dev.kill();
+    await onClose;
+  }
+});
+
+test('`vercel rm` removes a deployment', async () => {
+  const directory = await setupE2EFixture('static-deployment');
+
+  let host;
+
+  {
+    const { exitCode, stdout, stderr } = await execCli(binaryPath, [
+      directory,
+      '--public',
+      '--name',
+      session,
+      '-V',
+      '2',
+      '--force',
+      '--yes',
+    ]);
+    expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
+    host = new URL(stdout).host;
+  }
+
+  {
+    const { exitCode, stdout, stderr } = await execCli(binaryPath, [
+      'rm',
+      host,
+      '--yes',
+    ]);
+
+    expect(stdout).toContain(host);
+    expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
+  }
+});
+
+test('`vercel rm` should fail with unexpected option', async () => {
+  const output = await execCli(binaryPath, [
+    'rm',
+    'example.example.com',
+    '--fake',
+  ]);
+
+  expect(output.exitCode, formatOutput(output)).toBe(1);
+  expect(output.stderr).toMatch(
+    /Error: unknown or unexpected option: --fake/gm
+  );
+});
+
+test('`vercel rm` 404 exits quickly', async () => {
+  const start = Date.now();
+  const { exitCode, stderr, stdout } = await execCli(binaryPath, [
+    'rm',
+    'this.is.a.deployment.that.does.not.exist.example.com',
+  ]);
+
+  const delta = Date.now() - start;
+
+  // "does not exist" case is exit code 1, similar to Unix `rm`
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
+  expect(
+    stderr.includes(
+      'Could not find any deployments or projects matching "this.is.a.deployment.that.does.not.exist.example.com"'
+    )
+  ).toBeTruthy();
+
+  // "quickly" meaning < 5 seconds, because it used to hang from a previous bug
+  expect(delta < 5000).toBeTruthy();
+});
+
+test('render build errors', async () => {
+  const deploymentPath = await setupE2EFixture('failing-build');
+  const output = await execCli(binaryPath, [deploymentPath, '--yes']);
+
+  expect(output.exitCode, formatOutput(output)).toBe(1);
+  expect(output.stderr).toMatch(/Command "yarn run build" exited with 1/gm);
+});
+
+test('invalid deployment, projects and alias names', async () => {
+  const check = async (...args: string[]) => {
+    const output = await execCli(binaryPath, args);
+    expect(output.exitCode, formatOutput(output)).toBe(1);
+    expect(output.stderr).toMatch(/The provided argument/gm);
+  };
+
+  await Promise.all([
+    check('alias', '/', 'test'),
+    check('alias', 'test', '/'),
+    check('rm', '/'),
+    check('ls', '/'),
+  ]);
+});
+
+test('vercel certs ls', async () => {
+  const output = await execCli(binaryPath, ['certs', 'ls']);
+
+  expect(output.exitCode, formatOutput(output)).toBe(0);
+  expect(output.stderr).toMatch(/certificates? found under/gm);
+});
+
+test('vercel certs ls --next=123456', async () => {
+  const output = await execCli(binaryPath, ['certs', 'ls', '--next=123456']);
+
+  expect(output.exitCode, formatOutput(output)).toBe(0);
+  expect(output.stderr).toMatch(/No certificates found under/gm);
+});
+
+test('vercel hasOwnProperty not a valid subcommand', async () => {
+  const output = await execCli(binaryPath, ['hasOwnProperty']);
+
+  expect(output.exitCode, formatOutput(output)).toBe(1);
+  expect(output.stderr).toMatch(
+    /The specified file or directory "hasOwnProperty" does not exist/gm
+  );
+});
+
+test('create zero-config deployment', async () => {
+  const fixturePath = await setupE2EFixture('zero-config-next-js');
+  const output = await execCli(binaryPath, [
+    fixturePath,
+    '--force',
+    '--public',
+    '--yes',
+  ]);
+
+  console.log('isCanary', isCanary);
+
+  expect(output.exitCode, formatOutput(output)).toBe(0);
+
+  const { host } = new URL(output.stdout);
+  const response = await apiFetch(`/v10/now/deployments/unkown?url=${host}`);
+
+  const text = await response.text();
+
+  expect(response.status).toBe(200);
+  const data = JSON.parse(text) as DeploymentLike;
+
+  expect(data.error).toBe(undefined);
+
+  const validBuilders = data.builds.every(build =>
+    isCanary ? build.use.endsWith('@canary') : !build.use.endsWith('@canary')
+  );
+
+  const buildList = JSON.stringify(data.builds.map(b => b.use));
+  const message = `builders match canary (${isCanary}): ${buildList}`;
+  expect(validBuilders, message).toBe(true);
+});
+
+test('next unsupported functions config shows warning link', async () => {
+  const fixturePath = await setupE2EFixture(
+    'zero-config-next-js-functions-warning'
+  );
+  const output = await execCli(binaryPath, [
+    fixturePath,
+    '--force',
+    '--public',
+    '--yes',
+  ]);
+
+  expect(output.exitCode, formatOutput(output)).toBe(0);
+  expect(output.stderr).toMatch(
+    /Ignoring function property `runtime`\. When using Next\.js, only `memory` and `maxDuration` can be used\./gm
+  );
+  expect(output.stderr).toMatch(
+    /Learn More: https:\/\/vercel\.link\/functions-property-next/gm
+  );
+});
+
+test('vercel secret add', async () => {
+  secretName = `my-secret-${Date.now().toString(36)}`;
+  const value = 'https://my-secret-endpoint.com';
+
+  const output = await execCli(binaryPath, [
+    'secret',
+    'add',
+    secretName,
+    value,
+  ]);
+  expect(output.exitCode, formatOutput(output)).toBe(0);
+});
+
+test('vercel secret ls', async () => {
+  const output = await execCli(binaryPath, ['secret', 'ls']);
+  expect(output.exitCode, formatOutput(output)).toBe(0);
+  expect(output.stdout).toMatch(/Secrets found under/gm);
+});
+
+test('vercel secret ls --test-warning', async () => {
+  const output = await execCli(binaryPath, ['secret', 'ls', '--test-warning']);
+  expect(output.exitCode, formatOutput(output)).toBe(0);
+  expect(output.stderr).toMatch(/Test warning message./gm);
+  expect(output.stderr).toMatch(/Learn more: https:\/\/vercel.com/gm);
+  expect(output.stdout).toMatch(/No secrets found under/gm);
+});
+
+test('vercel secret rename', async () => {
+  if (!secretName) {
+    throw new Error('Shared state "secretName" not set.');
+  }
+
+  const nextName = `renamed-secret-${Date.now().toString(36)}`;
+  const output = await execCli(binaryPath, [
+    'secret',
+    'rename',
+    secretName,
+    nextName,
+  ]);
+  expect(output.exitCode, formatOutput(output)).toBe(0);
+
+  secretName = nextName;
+});
+
+test('vercel secret rm', async () => {
+  if (!secretName) {
+    throw new Error('Shared state "secretName" not set.');
+  }
+
+  const output = await execCli(binaryPath, ['secret', 'rm', secretName, '-y']);
+  expect(output.exitCode, formatOutput(output)).toBe(0);
+});
+
+test('deploy a Lambda with 128MB of memory', async () => {
+  const directory = await setupE2EFixture('lambda-with-128-memory');
+  const output = await execCli(binaryPath, [directory, '--yes']);
+
+  expect(output.exitCode, formatOutput(output)).toBe(0);
+
+  const { host: url } = new URL(output.stdout);
+  const response = await fetch('https://' + url + '/api/memory');
+
+  expect(response.status).toBe(200);
+
+  // It won't be exactly 128MB,
+  // so we just compare if it is lower than 450MB
+  const { memory } = await response.json();
+  expect(memory).toBe(128);
+});
+
+test('fail to deploy a Lambda with an incorrect value for of memory', async () => {
+  const directory = await setupE2EFixture('lambda-with-123-memory');
+  const output = await execCli(binaryPath, [directory, '--yes']);
+
+  expect(output.exitCode, formatOutput(output)).toBe(1);
+  expect(output.stderr).toMatch(/Serverless Functions.+memory/gm);
+  expect(output.stderr).toMatch(/Learn More/gm);
+});
+
+test('deploy a Lambda with 3 seconds of maxDuration', async () => {
+  const directory = await setupE2EFixture('lambda-with-3-second-timeout');
+  const output = await execCli(binaryPath, [directory, '--yes']);
+
+  expect(output.exitCode, formatOutput(output)).toBe(0);
+
+  const url = new URL(output.stdout);
+
+  // Should time out
+  url.pathname = '/api/wait-for/5';
+  const response1 = await fetch(url.href);
+  expect(response1.status).toBe(504);
+
+  // Should not time out
+  url.pathname = '/api/wait-for/1';
+  const response2 = await fetch(url.href);
+  expect(response2.status).toBe(200);
+});
+
+test('fail to deploy a Lambda with an incorrect value for maxDuration', async () => {
+  const directory = await setupE2EFixture('lambda-with-1000-second-timeout');
+  const output = await execCli(binaryPath, [directory, '--yes']);
+
+  expect(output.exitCode, formatOutput(output)).toBe(1);
+  expect(output.stderr).toMatch(
+    /maxDuration must be between 1 second and 10 seconds/gm
+  );
+});
+
+test('invalid `--token`', async () => {
+  const output = await execCli(binaryPath, ['--token', 'he\nl,o.']);
+
+  expect(output.exitCode, formatOutput(output)).toBe(1);
+  expect(output.stderr).toContain(
+    'Error: You defined "--token", but its contents are invalid. Must not contain: "\\n", ",", "."'
+  );
+});
+
+test('deploy a Lambda with a specific runtime', async () => {
+  const directory = await setupE2EFixture('lambda-with-php-runtime');
+  const output = await execCli(binaryPath, [directory, '--public', '--yes']);
+
+  expect(output.exitCode, formatOutput(output)).toBe(0);
+
+  const url = new URL(output.stdout);
+  const res = await fetch(`${url}/api/test`);
+  const text = await res.text();
+  expect(text).toBe('Hello from PHP');
+});
+
+test('fail to deploy a Lambda with a specific runtime but without a locked version', async () => {
+  const directory = await setupE2EFixture('lambda-with-invalid-runtime');
+  const output = await execCli(binaryPath, [directory, '--yes']);
+
+  expect(output.exitCode, formatOutput(output)).toBe(1);
+  expect(output.stderr).toMatch(
+    /Function Runtimes must have a valid version/gim
+  );
+});
+
+test('use build-env', async () => {
+  const directory = await setupE2EFixture('build-env');
+
+  const { exitCode, stdout, stderr } = await execCli(binaryPath, [
+    directory,
+    '--public',
+    '--yes',
+  ]);
+
+  // Ensure the exit code is right
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
+
+  // Test if the output is really a URL
+  const deploymentUrl = pickUrl(stdout);
+  const { href } = new URL(deploymentUrl);
+
+  await waitForDeployment(href);
+
+  // get the content
+  const response = await fetch(href);
+  const content = await response.text();
+  expect(content.trim()).toBe('bar');
 });
