@@ -153,17 +153,17 @@ function getAwsLauncher({ entrypointPath, awsLambdaHandler = '' }) {
   }
 
   /**
-   * @param {import('aws-lambda').APIGatewayProxyEvent} e
+   * @param {import('aws-lambda').APIGatewayProxyEvent} event
    * @param {import('aws-lambda').Context} context
    * @param {() => void} callback
    */
-  function internal(e, context, callback) {
+  function internal(event, context, callback) {
     const {
       path,
       method: httpMethod,
       body,
       headers,
-    } = JSON.parse(e.body || '{}');
+    } = JSON.parse(event.body || '{}');
     const { query } = parse(path, true);
     /**
      * @type {{[key: string]: string}}

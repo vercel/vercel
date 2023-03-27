@@ -157,6 +157,7 @@ export default async function main(client: Client): Promise<number> {
     '--output': String,
     '--prod': Boolean,
     '--yes': Boolean,
+    '-y': '--yes',
   });
 
   if (argv['--help']) {
