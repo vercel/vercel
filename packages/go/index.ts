@@ -36,7 +36,7 @@ import {
 const TMP = tmpdir();
 
 import {
-  cacheDir,
+  localCacheDir,
   createGo,
   getAnalyzedEntrypoint,
   OUT_EXTENSION,
@@ -860,7 +860,7 @@ export async function prepareCache({
   //
   // On the next build, the local cache will be restored and `createGo()` will
   // use it unless the preferred Go version changed in the `go.mod`.
-  const goCacheDir = join(workPath, cacheDir);
+  const goCacheDir = join(workPath, localCacheDir);
   const stat = await lstat(goCacheDir);
   if (stat.isSymbolicLink()) {
     const goGlobalCacheDir = await readlink(goCacheDir);
@@ -869,6 +869,6 @@ export async function prepareCache({
     await move(goGlobalCacheDir, goCacheDir);
   }
 
-  const cache = await glob(`${cacheDir}/**`, workPath);
+  const cache = await glob(`${localCacheDir}/**`, workPath);
   return cache;
 }

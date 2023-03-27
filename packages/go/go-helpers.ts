@@ -36,7 +36,7 @@ const archMap = new Map([
   ['x86', '386'],
 ]);
 const platformMap = new Map([['win32', 'windows']]);
-export const cacheDir = join('.vercel', 'cache', 'golang');
+export const localCacheDir = join('.vercel', 'cache', 'golang');
 const GO_FLAGS = process.platform === 'win32' ? [] : ['-ldflags', '-s -w'];
 const GO_MIN_VERSION = 13;
 const getPlatform = (p: string) => platformMap.get(p) || p;
@@ -101,10 +101,10 @@ class GoWrapper {
   private execute(...args: string[]) {
     const { opts, env } = this;
     debug(
-      `Exec: go ${args
-        .map(a => (a.includes(' ') ? `"${a}"` : a))
-        .join(' ')} CWD=${opts.cwd}`
+      `Exec: go ${args.map(a => (a.includes(' ') ? `"${a}"` : a)).join(' ')}`
     );
+    debug(`  CWD=${opts.cwd}`);
+    debug(`  GOROOT=${(env || opts.env || process.env).GOROOT}`);
     return execa('go', args, { stdio: 'inherit', ...opts, env });
   }
 
@@ -186,7 +186,7 @@ export async function createGo({
     goGlobalCachePath,
     `${goSelectedVersion}_${platform}_${process.arch}`
   );
-  const goCacheDir = join(workPath, cacheDir);
+  const goCacheDir = join(workPath, localCacheDir);
 
   if (goPreferredVersion) {
     debug(`Preferred go version ${goPreferredVersion} (from go.mod)`);
