@@ -117,7 +117,10 @@ importers:
     specifiers:
       '@vercel-internals/tsconfig': '*'
       '@vercel/style-guide': 4.0.2
+      caller-path: 3.0.1
       typescript: 4.9.4
+    dependencies:
+      caller-path: 3.0.1
     devDependencies:
       '@vercel-internals/tsconfig': link:../tsconfig
       '@vercel/style-guide': 4.0.2_typescript@4.9.4
@@ -236,6 +239,7 @@ importers:
       '@types/write-json-file': 2.2.1
       '@types/yauzl-promise': 2.1.0
       '@vercel-internals/types': '*'
+      '@vercel-internals/utils': '*'
       '@vercel/build-utils': 6.5.0
       '@vercel/client': 12.4.6
       '@vercel/error-utils': 1.0.8
@@ -381,6 +385,7 @@ importers:
       '@types/write-json-file': 2.2.1
       '@types/yauzl-promise': 2.1.0
       '@vercel-internals/types': link:../../internals/types
+      '@vercel-internals/utils': link:../../internals/utils
       '@vercel/client': link:../client
       '@vercel/error-utils': link:../error-utils
       '@vercel/frameworks': link:../frameworks
@@ -7419,12 +7424,26 @@ packages:
       callsites: 2.0.0
     dev: true
 
+  /caller-callsite/4.1.0:
+    resolution: {integrity: sha512-99nnnGlJexTc41xwQTr+mWl15OI5PPczUJzM4YRE7QjkefMKCXGa5gfQjCOuVrD+1TjI/fevIDHg2nz3iYN5Ig==}
+    engines: {node: '>=8'}
+    dependencies:
+      callsites: 3.1.0
+    dev: false
+
   /caller-path/2.0.0:
     resolution: {integrity: sha512-MCL3sf6nCSXOwCTzvPKhN18TU7AHTvdtam8DAogxcrJ8Rjfbbg7Lgng64H9Iy+vUV6VGFClN/TyxBkAebLRR4A==}
     engines: {node: '>=4'}
     dependencies:
       caller-callsite: 2.0.0
     dev: true
+
+  /caller-path/3.0.1:
+    resolution: {integrity: sha512-fhmztL4wURO/BzwJUJ4aVRdnKEFskPBbrJ8fNgl7XdUiD1ygzzlt+nhPgUBSRq2ciEVubo6x+W8vJQzm55QLLQ==}
+    engines: {node: '>=8'}
+    dependencies:
+      caller-callsite: 4.1.0
+    dev: false
 
   /callsites/2.0.0:
     resolution: {integrity: sha512-ksWePWBloaWPxJYQ8TL0JHvtci6G5QTKwQ95RcWAa/lzoAKuAOflGdAK92hpHXjkwb8zLxoLNUoNYZgVsaJzvQ==}
@@ -8021,7 +8040,7 @@ packages:
     dependencies:
       import-fresh: 2.0.0
       is-directory: 0.3.1
-      js-yaml: 3.14.1
+      js-yaml: 3.13.1
       parse-json: 4.0.0
     dev: true
 
@@ -8197,7 +8216,7 @@ packages:
       supports-color:
         optional: true
     dependencies:
-      ms: 2.1.3
+      ms: 2.1.2
     dev: true
 
   /debug/4.1.1:
@@ -11169,7 +11188,7 @@ packages:
   /humanize-ms/1.2.1:
     resolution: {integrity: sha512-Fl70vYtsAFb/C06PTS9dZBo7ihau+Tu/DNCk/OyHhea07S+aeMWpFFkUaXRa8fI+ScZbEI8dfSxwY7gxZ9SAVQ==}
     dependencies:
-      ms: 2.1.3
+      ms: 2.1.2
     dev: false
 
   /husky/7.0.4:
@@ -14232,6 +14251,7 @@ packages:
 
   /ms/2.1.3:
     resolution: {integrity: sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==}
+    dev: true
 
   /multimatch/5.0.0:
     resolution: {integrity: sha512-ypMKuglUrZUD99Tk2bUQ+xNQj43lPEfAeX2o9cTteAmShXy2VHDJpuwu1o0xqoKCt9jLVAvwyFKdLTPXKAfJyA==}
