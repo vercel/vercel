@@ -435,7 +435,9 @@ export const build: BuildV2 = async ({
       spawnOpts.env.CI = 'false';
     }
 
-    const { cliType, lockfileVersion } = await scanParentDirs(entrypointDir);
+    const { cliType, lockfileVersion } = await scanParentDirs(entrypointDir, {
+      spawnOpts,
+    });
 
     spawnOpts.env = getEnvForPackageManager({
       cliType,

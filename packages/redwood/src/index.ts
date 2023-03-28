@@ -79,7 +79,8 @@ export const build: BuildV2 = async ({
     spawnOpts.env = {};
   }
   const { cliType, lockfileVersion } = await scanParentDirs(
-    entrypointFsDirname
+    entrypointFsDirname,
+    { spawnOpts }
   );
 
   spawnOpts.env = getEnvForPackageManager({

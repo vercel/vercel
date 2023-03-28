@@ -89,8 +89,11 @@ export const build: BuildV2 = async ({
     meta
   );
 
+  const spawnOpts = getSpawnOptions(meta, nodeVersion);
+
   const { cliType, packageJsonPath, lockfileVersion } = await scanParentDirs(
-    entrypointFsDirname
+    entrypointFsDirname,
+    { spawnOpts }
   );
 
   if (!packageJsonPath) {
@@ -100,7 +103,6 @@ export const build: BuildV2 = async ({
   const pkgRaw = await fs.readFile(packageJsonPath, 'utf8');
   const pkg = JSON.parse(pkgRaw);
 
-  const spawnOpts = getSpawnOptions(meta, nodeVersion);
   if (!spawnOpts.env) {
     spawnOpts.env = {};
   }

@@ -208,7 +208,9 @@ export async function getNodeVersion(
     // Use the system-installed version of `node` in PATH for `vercel dev`
     return { ...latest, runtime: 'nodejs' };
   }
-  const { packageJson } = await scanParentDirs(destPath, true);
+  const { packageJson } = await scanParentDirs(destPath, {
+    readPackageJson: true,
+  });
   let nodeVersion = config.nodeVersion || nodeVersionFallback;
   let isAuto = true;
   if (packageJson?.engines?.node) {
@@ -234,8 +236,13 @@ export async function getNodeVersion(
 
 export async function scanParentDirs(
   destPath: string,
-  readPackageJson = false,
-  corepackEnabled = false
+  {
+    readPackageJson = false,
+    spawnOpts,
+  }: {
+    readPackageJson?: boolean;
+    spawnOpts?: SpawnOptions;
+  } = {}
 ): Promise<ScanParentDirsResult> {
   assert(path.isAbsolute(destPath));
 
@@ -253,7 +260,7 @@ export async function scanParentDirs(
   let lockfileVersion: number | undefined;
   let cliType: CliType | undefined;
 
-  if (corepackEnabled && readPackageJson) {
+  if (spawnOpts?.env?.ENABLE_EXPERIMENTAL_COREPACK === '1' && readPackageJson) {
     const packageManager = packageJson?.packageManager?.split('@')[0]; // { "packageManager": "pnpm@8.0.0" } -> "pnpm"
     if (
       packageManager !== 'yarn' &&
@@ -393,8 +400,10 @@ export async function runNpmInstall(
     await runNpmInstallSema.acquire();
     const { cliType, packageJsonPath, lockfileVersion } = await scanParentDirs(
       destPath,
-      true,
-      spawnOpts?.env?.ENABLE_EXPERIMENTAL_COREPACK === '1'
+      {
+        readPackageJson: true,
+        spawnOpts,
+      }
     );
 
     // Only allow `runNpmInstall()` to run once per `package.json`
@@ -570,11 +579,10 @@ export async function runCustomInstallCommand({
   spawnOpts?: SpawnOptions;
 }) {
   console.log(`Running "install" command: \`${installCommand}\`...`);
-  const { cliType, lockfileVersion } = await scanParentDirs(
-    destPath,
-    true,
-    spawnOpts?.env?.ENABLE_EXPERIMENTAL_COREPACK === '1'
-  );
+  const { cliType, lockfileVersion } = await scanParentDirs(destPath, {
+    readPackageJson: true,
+    spawnOpts,
+  });
   const env = getEnvForPackageManager({
     cliType,
     lockfileVersion,
@@ -598,8 +606,10 @@ export async function runPackageJsonScript(
 
   const { packageJson, cliType, lockfileVersion } = await scanParentDirs(
     destPath,
-    true,
-    spawnOpts?.env?.ENABLE_EXPERIMENTAL_COREPACK === '1'
+    {
+      readPackageJson: true,
+      spawnOpts,
+    }
   );
   const scriptName = getScriptName(
     packageJson,
