@@ -436,12 +436,14 @@ async function parseGoModVersion(
     const full = versionMap.get(`${major}.${minor}`);
     if (major === 1 && minor >= GO_MIN_VERSION && full) {
       version = full;
-    } else {
+    } else if (matches) {
       const err = new GoError(
         `Unsupported Go version ${major}.${minor} in ${file}`
       );
       err.code = 'ERR_UNSUPPORTED_GO_VERSION';
       throw err;
+    } else {
+      console.log(`Warning: Unknown Go version in ${file}`);
     }
   } catch (err: any) {
     if (err.code === 'ENOENT') {
