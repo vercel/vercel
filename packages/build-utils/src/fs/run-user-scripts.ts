@@ -259,7 +259,7 @@ export async function scanParentDirs(
     predicate: fullpath => {
       const data = fs.readFileSync(fullpath, 'utf-8');
       const json = JSON.parse(data);
-      return json.packageManager != undefined;
+      return type json.packageManager === 'string';
     },
   });
   const packageJson: PackageJson | undefined =
