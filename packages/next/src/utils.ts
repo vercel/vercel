@@ -2761,19 +2761,26 @@ export function getOperationType({
     return 'API';
   }
 
-  if (group?.isPrerenders) {
-    return 'ISR';
-  }
+  // if (group?.isPrerenders) {
+  //   return 'ISR';
+  // }
 
   if (pageFileName && prerenderManifest) {
-    const { blockingFallbackRoutes = {}, fallbackRoutes = {} } =
-      prerenderManifest;
-    if (
-      pageFileName in blockingFallbackRoutes ||
-      pageFileName in fallbackRoutes
-    ) {
+    // const { blockingFallbackRoutes = {}, fallbackRoutes = {} } = prerenderManifest;
+
+    const hasRevalidate = Boolean(
+      prerenderManifest.staticRoutes[pageFileName]?.initialRevalidate
+    );
+    if (hasRevalidate) {
       return 'ISR';
     }
+
+    // if (
+    //   pageFileName in blockingFallbackRoutes ||
+    //   pageFileName in fallbackRoutes
+    // ) {
+    //   return 'ISR';
+    // }
   }
 
   return 'SSR';
