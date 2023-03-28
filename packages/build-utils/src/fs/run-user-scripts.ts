@@ -333,7 +333,7 @@ export async function walkParentDirs({
   base,
   start,
   filename,
-  predicate = () => true,
+  predicate = (fullPath: string) => true,
 }: WalkParentDirsProps): Promise<string | null> {
   assert(path.isAbsolute(base), 'Expected "base" to be absolute path');
   assert(path.isAbsolute(start), 'Expected "start" to be absolute path');
