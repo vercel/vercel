@@ -2758,9 +2758,11 @@ export function getOperationType({
   pageFileName?: string;
 }) {
   console.log({
-    group,
-    prerenderManifest,
+    // group,
     pageFileName,
+    prerenderManifest_staticRoutes: JSON.stringify(
+      prerenderManifest?.staticRoutes
+    ),
   });
 
   if (group?.isApiLambda || isApiPage(pageFileName)) {
