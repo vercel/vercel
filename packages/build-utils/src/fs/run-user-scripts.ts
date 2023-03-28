@@ -59,6 +59,12 @@ export interface WalkParentDirsProps {
    * The name of the file to search for, typically `package.json` or `Gemfile`.
    */
   filename: string;
+  /**
+   * A conditional expression that is passed the currently walked file path
+   * @param fullPath {string} The full path of the file currently being walked
+   * @returns
+   */
+  predicate?: (fullPath: string) => boolean;
 }
 
 export interface SpawnOptionsExtended extends SpawnOptions {
@@ -250,6 +256,11 @@ export async function scanParentDirs(
     base: '/',
     start: destPath,
     filename: 'package.json',
+    predicate: fullpath => {
+      const data = fs.readFileSync(fullpath, 'utf-8');
+      const json = JSON.parse(data);
+      return json.packageManager != undefined;
+    },
   });
   const packageJson: PackageJson | undefined =
     readPackageJson && pkgJsonPath
@@ -322,6 +333,7 @@ export async function walkParentDirs({
   base,
   start,
   filename,
+  predicate = () => true,
 }: WalkParentDirsProps): Promise<string | null> {
   assert(path.isAbsolute(base), 'Expected "base" to be absolute path');
   assert(path.isAbsolute(start), 'Expected "start" to be absolute path');
@@ -331,7 +343,7 @@ export async function walkParentDirs({
     const fullPath = path.join(current, filename);
 
     // eslint-disable-next-line no-await-in-loop
-    if (await fs.pathExists(fullPath)) {
+    if ((await fs.pathExists(fullPath)) && predicate(fullPath)) {
       return fullPath;
     }
 

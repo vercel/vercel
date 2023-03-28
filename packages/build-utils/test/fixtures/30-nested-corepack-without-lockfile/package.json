@@ -1,0 +1,7 @@
+{
+  "private": true,
+  "scripts": {
+    "build": "mkdir -p public && (printf \"pnpm version: \" && pnpm -v) > public/index.txt"
+  },
+  "packageManager": "pnpm@8.0.0"
+}
