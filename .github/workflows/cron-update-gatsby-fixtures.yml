@@ -8,7 +8,7 @@ on:
     - cron: '0 0 * * 0'
 
 jobs:
-  create-pull-request:
+  update-gatsby:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
