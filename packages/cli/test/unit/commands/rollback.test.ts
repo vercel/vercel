@@ -303,7 +303,6 @@ function initRollbackTest({
   rollbackStatusCode,
 }: {
   rollbackAliases?: RollbackAlias[];
-  xw;
   rollbackJobStatus?: RollbackJobStatus;
   rollbackPollCount?: number;
   rollbackStatusCode?: number;
