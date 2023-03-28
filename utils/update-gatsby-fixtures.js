@@ -81,7 +81,7 @@ module.exports = async ({ github, context }) => {
       owner,
       repo,
       state: 'open',
-      head: branch,
+      base: branch,
     });
 
     console.log(pulls);
