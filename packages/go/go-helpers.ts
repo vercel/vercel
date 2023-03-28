@@ -436,7 +436,7 @@ async function parseGoModVersion(
     const full = versionMap.get(`${major}.${minor}`);
     if (major === 1 && minor >= GO_MIN_VERSION && full) {
       version = full;
-    } else if (isNaN(major) || isNaN(minor)) {
+    } else if (!isNaN(minor)) {
       const err = new GoError(
         `Unsupported Go version ${major}.${minor} in ${file}`
       );
