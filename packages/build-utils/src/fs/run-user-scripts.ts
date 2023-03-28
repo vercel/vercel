@@ -252,14 +252,20 @@ export async function scanParentDirs(
 ): Promise<ScanParentDirsResult> {
   assert(path.isAbsolute(destPath));
 
+  const corepackEnabled = spawnOpts?.env?.ENABLE_EXPERIMENTAL_COREPACK === '1';
+
   const pkgJsonPath = await walkParentDirs({
     base: '/',
     start: destPath,
     filename: 'package.json',
     predicate: fullpath => {
-      const data = fs.readFileSync(fullpath, 'utf-8');
-      const json = JSON.parse(data);
-      return type json.packageManager === 'string';
+      if (corepackEnabled) {
+        const data = fs.readFileSync(fullpath, 'utf-8');
+        const json = JSON.parse(data);
+        return typeof json.packageManager === 'string';
+      } else {
+        return false;
+      }
     },
   });
   const packageJson: PackageJson | undefined =
@@ -271,7 +277,7 @@ export async function scanParentDirs(
   let lockfileVersion: number | undefined;
   let cliType: CliType | undefined;
 
-  if (spawnOpts?.env?.ENABLE_EXPERIMENTAL_COREPACK === '1' && readPackageJson) {
+  if (corepackEnabled && readPackageJson) {
     const packageManager = packageJson?.packageManager?.split('@')[0]; // { "packageManager": "pnpm@8.0.0" } -> "pnpm"
     if (
       packageManager !== 'yarn' &&
@@ -333,7 +339,7 @@ export async function walkParentDirs({
   base,
   start,
   filename,
-  predicate = (fullPath: string) => true,
+  predicate = () => true,
 }: WalkParentDirsProps): Promise<string | null> {
   assert(path.isAbsolute(base), 'Expected "base" to be absolute path');
   assert(path.isAbsolute(start), 'Expected "start" to be absolute path');
