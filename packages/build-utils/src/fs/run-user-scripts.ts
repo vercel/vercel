@@ -234,7 +234,8 @@ export async function getNodeVersion(
 
 export async function scanParentDirs(
   destPath: string,
-  readPackageJson = false
+  readPackageJson = false,
+  corepackEnabled = false
 ): Promise<ScanParentDirsResult> {
   assert(path.isAbsolute(destPath));
 
@@ -247,42 +248,62 @@ export async function scanParentDirs(
     readPackageJson && pkgJsonPath
       ? JSON.parse(await fs.readFile(pkgJsonPath, 'utf8'))
       : undefined;
-  const [yarnLockPath, npmLockPath, pnpmLockPath] = await walkParentDirsMulti({
-    base: '/',
-    start: destPath,
-    filenames: ['yarn.lock', 'package-lock.json', 'pnpm-lock.yaml'],
-  });
+
   let lockfilePath: string | undefined;
   let lockfileVersion: number | undefined;
-  let cliType: CliType = 'yarn';
+  let cliType: CliType | undefined;
 
-  const [hasYarnLock, packageLockJson, pnpmLockYaml] = await Promise.all([
-    Boolean(yarnLockPath),
-    npmLockPath
-      ? readConfigFile<{ lockfileVersion: number }>(npmLockPath)
-      : null,
-    pnpmLockPath
-      ? readConfigFile<{ lockfileVersion: number }>(pnpmLockPath)
-      : null,
-  ]);
+  if (corepackEnabled && readPackageJson) {
+    const packageManager = packageJson?.packageManager?.split('@')[0]; // { "packageManager": "pnpm@8.0.0" } -> "pnpm"
+    if (
+      packageManager !== 'yarn' &&
+      packageManager !== 'pnpm' &&
+      packageManager !== 'npm'
+    ) {
+      throw new Error(
+        `Invalid package manager "${packageManager}" detected in ${pkgJsonPath}`
+      );
+    }
+    cliType = packageManager;
+  }
 
-  // Priority order is Yarn > pnpm > npm
-  if (hasYarnLock) {
-    cliType = 'yarn';
-    lockfilePath = yarnLockPath;
-  } else if (pnpmLockYaml) {
-    cliType = 'pnpm';
-    lockfilePath = pnpmLockPath;
-    lockfileVersion = Number(pnpmLockYaml.lockfileVersion);
-  } else if (packageLockJson) {
-    cliType = 'npm';
-    lockfilePath = npmLockPath;
-    lockfileVersion = packageLockJson.lockfileVersion;
+  if (cliType === undefined) {
+    const [yarnLockPath, npmLockPath, pnpmLockPath] = await walkParentDirsMulti(
+      {
+        base: '/',
+        start: destPath,
+        filenames: ['yarn.lock', 'package-lock.json', 'pnpm-lock.yaml'],
+      }
+    );
+
+    const [hasYarnLock, packageLockJson, pnpmLockYaml] = await Promise.all([
+      Boolean(yarnLockPath),
+      npmLockPath
+        ? readConfigFile<{ lockfileVersion: number }>(npmLockPath)
+        : null,
+      pnpmLockPath
+        ? readConfigFile<{ lockfileVersion: number }>(pnpmLockPath)
+        : null,
+    ]);
+
+    // Priority order is Yarn > pnpm > npm
+    if (hasYarnLock) {
+      cliType = 'yarn';
+      lockfilePath = yarnLockPath;
+    } else if (pnpmLockYaml) {
+      cliType = 'pnpm';
+      lockfilePath = pnpmLockPath;
+      lockfileVersion = Number(pnpmLockYaml.lockfileVersion);
+    } else if (packageLockJson) {
+      cliType = 'npm';
+      lockfilePath = npmLockPath;
+      lockfileVersion = packageLockJson.lockfileVersion;
+    }
   }
 
   const packageJsonPath = pkgJsonPath || undefined;
   return {
-    cliType,
+    cliType: cliType ?? 'yarn',
     packageJson,
     lockfilePath,
     lockfileVersion,
