@@ -2,7 +2,7 @@
   "probes": [
     {
       "path": "/api/index.go",
-      "mustContain": "hello:go1.20.1"
+      "mustContain": "hello:go1.20.2"
     }
   ]
 }
