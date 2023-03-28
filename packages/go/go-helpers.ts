@@ -39,14 +39,24 @@ const platformMap = new Map([['win32', 'windows']]);
 export const localCacheDir = join('.vercel', 'cache', 'golang');
 const GO_FLAGS = process.platform === 'win32' ? [] : ['-ldflags', '-s -w'];
 const GO_MIN_VERSION = 13;
-const getPlatform = (p: string) => platformMap.get(p) || p;
 const getArch = (a: string) => archMap.get(a) || a;
 
 function getGoUrl(version: string) {
   const { arch, platform } = process;
-  const goArch = getArch(arch);
-  const goPlatform = getPlatform(platform);
   const ext = platform === 'win32' ? 'zip' : 'tar.gz';
+  const goPlatform = platformMap.get(platform) || platform;
+  let goArch = getArch(arch);
+
+  // Go 1.16 was the first version to support arm64, so if the version is older
+  // we need to download the amd64 version
+  if (
+    platform === 'darwin' &&
+    goArch === 'arm64' &&
+    parseInt(version.split('.')[1], 10) < 16
+  ) {
+    goArch = 'amd64';
+  }
+
   const filename = `go${version}.${goPlatform}-${goArch}.${ext}`;
   return {
     filename,
