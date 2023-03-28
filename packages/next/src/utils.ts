@@ -2757,6 +2757,12 @@ export function getOperationType({
   prerenderManifest?: NextPrerenderedRoutes;
   pageFileName?: string;
 }) {
+  console.log({
+    group,
+    prerenderManifest,
+    pageFileName,
+  });
+
   if (group?.isApiLambda || isApiPage(pageFileName)) {
     return 'API';
   }
