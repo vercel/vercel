@@ -22,7 +22,7 @@ import type { Env } from '@vercel/build-utils';
 const streamPipeline = promisify(pipeline);
 
 const versionMap = new Map([
-  ['1.20', '1.20.1'],
+  ['1.20', '1.20.2'],
   ['1.19', '1.19.6'],
   ['1.18', '1.18.10'],
   ['1.17', '1.17.13'],
@@ -37,15 +37,39 @@ const archMap = new Map([
 ]);
 const platformMap = new Map([['win32', 'windows']]);
 export const localCacheDir = join('.vercel', 'cache', 'golang');
-const GO_FLAGS = process.platform === 'win32' ? [] : ['-ldflags', '-s -w'];
-const GO_MIN_VERSION = 13;
-const getArch = (a: string) => archMap.get(a) || a;
 
+const GO_FLAGS = process.platform === 'win32' ? [] : ['-ldflags', '-s -w'];
+
+/**
+ * Apple Silicon is arm64 and Go started building arm64 binaries in Go 1.16.
+ * For older Go versions, we use the amd64 version, but for some reason
+ * Go 1.13 produces corrupt binaries causing macOS to SIGKILL the compiled
+ * binary and delete it, so we force the minimum version to 1.14.
+ */
+const GO_MIN_VERSION = 13;
+const GO_MIN_ARM64_DARWIN_VERSION = 14;
+
+/**
+ * Determines the minimum supported Go version for the current machine.
+ * @returns The minimum version
+ */
+function getGoMinVersion(): number {
+  if (process.platform === 'darwin' && process.arch === 'arm64') {
+    return GO_MIN_ARM64_DARWIN_VERSION;
+  }
+  return GO_MIN_VERSION;
+}
+
+/**
+ * Determines the URL to download the Golang SDK.
+ * @param version The desireed Go version
+ * @returns The Go download URL
+ */
 function getGoUrl(version: string) {
   const { arch, platform } = process;
   const ext = platform === 'win32' ? 'zip' : 'tar.gz';
   const goPlatform = platformMap.get(platform) || platform;
-  let goArch = getArch(arch);
+  let goArch = archMap.get(arch) || arch;
 
   // Go 1.16 was the first version to support arm64, so if the version is older
   // we need to download the amd64 version
@@ -104,10 +128,25 @@ export async function getAnalyzedEntrypoint({
     if (!isAnalyzeExist) {
       debug(`Building analyze bin: ${bin}`);
       const src = join(__dirname, 'util', 'analyze.go');
-      const go = await createGo({
-        modulePath,
-        workPath,
-      });
+      let go;
+      try {
+        go = await createGo({
+          modulePath,
+          workPath,
+        });
+      } catch (err) {
+        // if the version in the `go.mod` is too old, then download the latest
+        if (
+          err instanceof GoError &&
+          err.code === 'ERR_UNSUPPORTED_GO_VERSION'
+        ) {
+          go = await createGo({
+            workPath,
+          });
+        } else {
+          throw err;
+        }
+      }
       await go.build(src, bin);
     }
   } catch (err) {
@@ -283,7 +322,7 @@ export async function createGo({
       const { stdout } = await execa('go', ['version'], { env });
       const { minor, short, version } = parseGoVersionString(stdout);
 
-      if (minor < GO_MIN_VERSION) {
+      if (minor < getGoMinVersion()) {
         debug(`Found go ${version} in ${label}, but version is unsupported`);
       }
       if (version === goSelectedVersion || short === goSelectedVersion) {
@@ -392,6 +431,10 @@ function parseGoVersionString(goVersionOutput: string) {
   };
 }
 
+class GoError extends Error {
+  code: string | undefined;
+}
+
 /**
  * Attempts to parse the preferred Go version from the `go.mod` file.
  *
@@ -410,10 +453,15 @@ async function parseGoModVersion(
     const major = parseInt(matches[1], 10);
     const minor = parseInt(matches[2], 10);
     const full = versionMap.get(`${major}.${minor}`);
-    if (major === 1 && minor >= GO_MIN_VERSION && full) {
+    const minVersion = getGoMinVersion();
+    if (major === 1 && minor >= minVersion && full) {
       version = full;
     } else {
-      console.log(`Warning: Unknown Go version in ${file}`);
+      const err = new GoError(
+        `Unsupported Go version ${major}.${minor} in ${file}`
+      );
+      err.code = 'ERR_UNSUPPORTED_GO_VERSION';
+      throw err;
     }
   } catch (err: any) {
     if (err.code === 'ENOENT') {
