@@ -392,7 +392,9 @@ export async function runNpmInstall(
   try {
     await runNpmInstallSema.acquire();
     const { cliType, packageJsonPath, lockfileVersion } = await scanParentDirs(
-      destPath
+      destPath,
+      true,
+      spawnOpts?.env?.ENABLE_EXPERIMENTAL_COREPACK === '1'
     );
 
     // Only allow `runNpmInstall()` to run once per `package.json`
@@ -568,7 +570,11 @@ export async function runCustomInstallCommand({
   spawnOpts?: SpawnOptions;
 }) {
   console.log(`Running "install" command: \`${installCommand}\`...`);
-  const { cliType, lockfileVersion } = await scanParentDirs(destPath);
+  const { cliType, lockfileVersion } = await scanParentDirs(
+    destPath,
+    true,
+    spawnOpts?.env?.ENABLE_EXPERIMENTAL_COREPACK === '1'
+  );
   const env = getEnvForPackageManager({
     cliType,
     lockfileVersion,
@@ -592,7 +598,8 @@ export async function runPackageJsonScript(
 
   const { packageJson, cliType, lockfileVersion } = await scanParentDirs(
     destPath,
-    true
+    true,
+    spawnOpts?.env?.ENABLE_EXPERIMENTAL_COREPACK === '1'
   );
   const scriptName = getScriptName(
     packageJson,
