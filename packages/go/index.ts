@@ -17,6 +17,7 @@ import {
   rmdir,
   readdir,
   unlink,
+  copy,
 } from 'fs-extra';
 import {
   BuildOptions,
@@ -171,7 +172,7 @@ export async function build({
 
     const analyzed = await getAnalyzedEntrypoint({
       entrypoint,
-      modulePath: dirname(goModPath),
+      modulePath: goModPath ? dirname(goModPath) : undefined,
       workPath,
     });
 
@@ -238,6 +239,7 @@ export async function build({
       outDir,
       packageName,
       undo,
+      workPath,
     };
 
     if (packageName === 'main') {
@@ -285,6 +287,7 @@ type BuildHandlerOptions = {
   outDir: string;
   packageName: string;
   undo: UndoActions;
+  workPath: string;
 };
 
 /**
@@ -303,6 +306,7 @@ async function buildHandlerWithGoMod({
   outDir,
   packageName,
   undo,
+  workPath,
 }: BuildHandlerOptions): Promise<void> {
   debug(
     `Building Go handler as package "${packageName}" (with${
@@ -310,38 +314,46 @@ async function buildHandlerWithGoMod({
     } go.mod)`
   );
 
-  if (!goModPath) {
-    await writeGoMod({
-      destDir: entrypointDirname,
-      packageName,
-    });
+  if (goModPath !== undefined) {
+    // first we backup the original
+    const backupFile = `${goModPath}.bak`;
+    await copy(goModPath, backupFile);
 
     undo.fileActions.push({
-      to: undefined, // delete
-      from: join(entrypointDirname, 'go.mod'),
+      to: goModPath,
+      from: backupFile,
     });
 
-    // remove the `go.sum` file that will be generated as well
-    undo.fileActions.push({
-      to: undefined, // delete
-      from: join(entrypointDirname, 'go.sum'),
-    });
+    const goSumPath = join(dirname(goModPath), 'go.sum');
+    const isGoSumExists = await pathExists(goSumPath);
+    if (!isGoSumExists) {
+      // remove the `go.sum` file that will be generated as well
+      undo.fileActions.push({
+        to: undefined, // delete
+        from: goSumPath,
+      });
+    }
   }
+
+  // write the `go.mod`
+  await writeGoMod({
+    destDir: goModPath ? dirname(goModPath) : entrypointDirname,
+    goModPath,
+    packageName,
+    workPath,
+  });
 
   const entrypointArr = entrypoint.split(posix.sep);
   let goPackageName = `${packageName}/${packageName}`;
   const goFuncName = `${packageName}.${handlerFunctionName}`;
 
-  if (goModPath) {
-    const goModContents = await readFile(goModPath, 'utf-8');
-    const usrModName = goModContents.split('\n')[0].split(' ')[1];
-    if (entrypointArr.length > 1 && isGoModInRootDir) {
-      const cleanPackagePath = [...entrypointArr];
-      cleanPackagePath.pop();
-      goPackageName = `${usrModName}/${cleanPackagePath.join('/')}`;
-    } else {
-      goPackageName = `${usrModName}/${packageName}`;
-    }
+  // if we have a go.mod, determine the relative path of the entrypoint to the
+  // go.mod directory and use that for the import package name in main.go
+  const relPackagePath = goModPath
+    ? posix.relative(dirname(goModPath), entrypointDirname)
+    : '';
+  if (relPackagePath) {
+    goPackageName = posix.join(packageName, relPackagePath);
   }
 
   const modMainGoContents = await readFile(join(__dirname, 'main.go'), 'utf8');
@@ -354,7 +366,7 @@ async function buildHandlerWithGoMod({
     debug(`[mod-root] Write main file to ${downloadPath}`);
     mainGoFile = join(downloadPath, MAIN_GO_FILENAME);
   } else if (goModPath && !isGoModInRootDir) {
-    debug(`[mod-other] Write main file to ${goModPath}`);
+    debug(`[mod-other] Write main file to ${dirname(goModPath)}`);
     mainGoFile = join(dirname(goModPath), MAIN_GO_FILENAME);
   } else {
     debug(`[entrypoint] Write main file to ${entrypointDirname}`);
@@ -541,7 +553,7 @@ async function cleanupFileSystem({
   // using files that start with brackets
   for (const action of fileActions.reverse()) {
     if (action.to) {
-      await move(action.from, action.to);
+      await move(action.from, action.to, { overwrite: true });
     } else {
       await remove(action.from);
     }
@@ -575,7 +587,7 @@ async function cleanupFileSystem({
  * the work path root
  */
 async function findGoModPath(entrypointDir: string, workPath: string) {
-  let goModPath = '';
+  let goModPath: string | undefined = undefined;
   let isGoModInRootDir = false;
   let dir = entrypointDir;
 
@@ -670,7 +682,9 @@ async function writeGoMod({
       );
   }
 
-  await writeFile(join(destDir, 'go.mod'), contents, 'utf-8');
+  const destGoModPath = join(destDir, 'go.mod');
+  debug(`Writing ${destGoModPath}`);
+  await writeFile(destGoModPath, contents, 'utf-8');
 }
 
 /**

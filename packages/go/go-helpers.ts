@@ -39,26 +39,7 @@ const platformMap = new Map([['win32', 'windows']]);
 export const localCacheDir = join('.vercel', 'cache', 'golang');
 
 const GO_FLAGS = process.platform === 'win32' ? [] : ['-ldflags', '-s -w'];
-
-/**
- * Apple Silicon is arm64 and Go started building arm64 binaries in Go 1.16.
- * For older Go versions, we use the amd64 version, but for some reason
- * Go 1.13 produces corrupt binaries causing macOS to SIGKILL the compiled
- * binary and delete it, so we force the minimum version to 1.14.
- */
 const GO_MIN_VERSION = 13;
-const GO_MIN_ARM64_DARWIN_VERSION = 14;
-
-/**
- * Determines the minimum supported Go version for the current machine.
- * @returns The minimum version
- */
-function getGoMinVersion(): number {
-  if (process.platform === 'darwin' && process.arch === 'arm64') {
-    return GO_MIN_ARM64_DARWIN_VERSION;
-  }
-  return GO_MIN_VERSION;
-}
 
 /**
  * Determines the URL to download the Golang SDK.
@@ -322,7 +303,7 @@ export async function createGo({
       const { stdout } = await execa('go', ['version'], { env });
       const { minor, short, version } = parseGoVersionString(stdout);
 
-      if (minor < getGoMinVersion()) {
+      if (minor < GO_MIN_VERSION) {
         debug(`Found go ${version} in ${label}, but version is unsupported`);
       }
       if (version === goSelectedVersion || short === goSelectedVersion) {
@@ -453,8 +434,7 @@ async function parseGoModVersion(
     const major = parseInt(matches[1], 10);
     const minor = parseInt(matches[2], 10);
     const full = versionMap.get(`${major}.${minor}`);
-    const minVersion = getGoMinVersion();
-    if (major === 1 && minor >= minVersion && full) {
+    if (major === 1 && minor >= GO_MIN_VERSION && full) {
       version = full;
     } else {
       const err = new GoError(
