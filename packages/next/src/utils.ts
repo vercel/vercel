@@ -2763,6 +2763,7 @@ export function getOperationType({
     prerenderManifest_staticRoutes: JSON.stringify(
       prerenderManifest?.staticRoutes
     ),
+    stack: new Error().stack,
   });
 
   if (group?.isApiLambda || isApiPage(pageFileName)) {
