@@ -110,20 +110,21 @@ export async function getAnalyzedEntrypoint({
       debug(`Building analyze bin: ${bin}`);
       const src = join(__dirname, 'util', 'analyze.go');
       let go;
+      const createOpts = {
+        modulePath,
+        opts: { cwd: __dirname },
+        workPath,
+      };
       try {
-        go = await createGo({
-          modulePath,
-          workPath,
-        });
+        go = await createGo(createOpts);
       } catch (err) {
         // if the version in the `go.mod` is too old, then download the latest
         if (
           err instanceof GoError &&
           err.code === 'ERR_UNSUPPORTED_GO_VERSION'
         ) {
-          go = await createGo({
-            workPath,
-          });
+          delete createOpts.modulePath;
+          go = await createGo(createOpts);
         } else {
           throw err;
         }
