@@ -4,7 +4,7 @@ import { defaultProject, useProject } from '../../mocks/project';
 import { Request, Response } from 'express';
 import rollback from '../../../src/commands/rollback';
 import { RollbackJobStatus, RollbackTarget } from '@vercel-internals/types';
-import { setupFixture } from '../../helpers/setup-fixture';
+import { setupUnitFixture } from '../../helpers/setup-unit-fixture';
 import { useDeployment } from '../../mocks/deployment';
 import { useTeams } from '../../mocks/team';
 import { useUser } from '../../mocks/user';
@@ -307,7 +307,7 @@ function initRollbackTest({
   rollbackPollCount?: number;
   rollbackStatusCode?: number;
 } = {}) {
-  const cwd = setupFixture('vercel-rollback');
+  const cwd = setupUnitFixture('vercel-rollback');
   const user = useUser();
   useTeams('team_dummy');
   const { project } = useProject({
