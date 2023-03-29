@@ -3,7 +3,7 @@
     {
       "path": "/",
       "mustContain": "`",
-      "logMustContain": "Using TypeScript 4.9.5 (local user-provided)"
+      "logMustContain": "Using TypeScript 4.9.4 (local user-provided)"
     },
     {
       "path": "/functions/es5.ts",
