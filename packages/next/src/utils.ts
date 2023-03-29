@@ -2770,6 +2770,10 @@ export function getOperationType({
     }
   }
 
+  if (group?.isPrerenders) {
+    return 'SSG';
+  }
+
   return 'SSR';
 }
 

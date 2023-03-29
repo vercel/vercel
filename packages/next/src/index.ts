@@ -1842,7 +1842,7 @@ export const build: BuildV2 = async ({
                 path.relative(baseDir, entryPath),
                 '___next_launcher.cjs'
               ),
-              operationType: getOperationType({ pageFileName }), // can only be API or SSR
+              operationType: getOperationType({ pageFileName }), // can only be API or SSG
               runtime: nodeVersion.runtime,
               nextVersion,
               ...lambdaOptions,
