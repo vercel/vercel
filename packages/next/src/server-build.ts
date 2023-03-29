@@ -939,11 +939,6 @@ export async function serverBuild({
           });
         }
 
-        const outputName = normalizeIndexOutput(
-          path.posix.join(entryDirectory, pageNoExt),
-          true
-        );
-
         // we add locale prefixed outputs for SSR pages,
         // this is handled in onPrerenderRoute for SSG pages
         if (
@@ -953,18 +948,31 @@ export async function serverBuild({
             !(pageNoExt === 'api' || pageNoExt.startsWith('api/')))
         ) {
           for (const locale of i18n.locales) {
-            lambdas[
-              normalizeIndexOutput(
-                path.posix.join(
-                  entryDirectory,
-                  locale,
-                  pageNoExt === 'index' ? '' : pageNoExt
-                ),
-                true
-              )
-            ] = lambda;
+            const outputName = normalizeIndexOutput(
+              path.posix.join(
+                entryDirectory,
+                locale,
+                pageNoExt === 'index' ? '' : pageNoExt
+              ),
+              true
+            );
+            console.log({
+              where: '1',
+              outputName,
+              operationType: lambda.operationType,
+            });
+            lambdas[outputName] = lambda;
           }
         } else {
+          const outputName = normalizeIndexOutput(
+            path.posix.join(entryDirectory, pageNoExt),
+            true
+          );
+          console.log({
+            where: '2',
+            outputName,
+            operationType: lambda.operationType,
+          });
           lambdas[outputName] = lambda;
         }
       }
