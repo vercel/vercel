@@ -24,6 +24,7 @@ function testForkDevServer(entrypoint: string) {
 
 interface FetchResponse {
   headers: http.IncomingHttpHeaders;
+  json: () => Promise<any>;
   status: number | undefined;
   text: string;
 }
@@ -49,6 +50,9 @@ async function fetch(url: string): Promise<FetchResponse> {
             headers: res.headers,
             status: res.statusCode,
             text: buf,
+            async json(): Promise<any> {
+              return JSON.parse(buf);
+            },
           });
         } catch (err) {
           reject(err);
@@ -61,7 +65,7 @@ async function fetch(url: string): Promise<FetchResponse> {
 }
 
 test('runs an edge function that uses `buffer`', async () => {
-  const child = testForkDevServer('./edge-buffer.mjs');
+  const child = testForkDevServer('./edge-buffer.js');
 
   try {
     const result = await readMessage(child);
