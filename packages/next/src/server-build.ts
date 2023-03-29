@@ -953,12 +953,19 @@ export async function serverBuild({
               ),
               true
             );
-            const operationType = getOperationType({
+            lambda.operationType = getOperationType({
               pageFileName: `/${outputName}`,
               group,
               prerenderManifest,
             });
-            lambda.operationType = operationType;
+
+            console.log({
+              where: '1',
+              outputName,
+              pageFileName: `/${outputName}`,
+              lambda_operationType: lambda.operationType,
+            });
+
             lambdas[outputName] = lambda;
           }
         } else {
@@ -966,12 +973,19 @@ export async function serverBuild({
             path.posix.join(entryDirectory, pageNoExt),
             true
           );
-          const operationType = getOperationType({
+          lambda.operationType = getOperationType({
             pageFileName: `/${outputName}`,
             group,
             prerenderManifest,
           });
-          lambda.operationType = operationType;
+
+          console.log({
+            where: '2',
+            outputName,
+            pageFileName: `/${outputName}`,
+            lambda_operationType: lambda.operationType,
+          });
+
           lambdas[outputName] = lambda;
         }
       }
