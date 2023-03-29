@@ -958,14 +958,6 @@ export async function serverBuild({
               group,
               prerenderManifest,
             });
-
-            console.log({
-              where: '1',
-              outputName,
-              pageFileName: `/${outputName}`,
-              lambda_operationType: lambda.operationType,
-            });
-
             lambdas[outputName] = lambda;
           }
         } else {
@@ -978,14 +970,6 @@ export async function serverBuild({
             group,
             prerenderManifest,
           });
-
-          console.log({
-            where: '2',
-            outputName,
-            pageFileName: `/${outputName}`,
-            lambda_operationType: lambda.operationType,
-          });
-
           lambdas[outputName] = lambda;
         }
       }
