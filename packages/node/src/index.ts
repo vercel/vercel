@@ -487,8 +487,11 @@ export const build: BuildV3 = async ({
       config.helpers === false || process.env.NODEJS_HELPERS === '0'
     );
 
-    const experimentalResponseStreaming =
-      staticConfig?.experimentalResponseStreaming === true ? true : undefined;
+    const supportsResponseStreaming =
+      (staticConfig?.supportsResponseStreaming ??
+        staticConfig?.experimentalResponseStreaming) === true
+        ? true
+        : undefined;
 
     output = new NodejsLambda({
       files: preparedFiles,
@@ -497,7 +500,7 @@ export const build: BuildV3 = async ({
       shouldAddHelpers,
       shouldAddSourcemapSupport,
       awsLambdaHandler,
-      experimentalResponseStreaming,
+      supportsResponseStreaming,
     });
   }
 
