@@ -2757,39 +2757,17 @@ export function getOperationType({
   prerenderManifest?: NextPrerenderedRoutes;
   pageFileName?: string;
 }) {
-  console.log({
-    // group,
-    pageFileName,
-    prerenderManifest_staticRoutes: JSON.stringify(
-      prerenderManifest?.staticRoutes
-    ),
-    stack: new Error().stack,
-  });
-
   if (group?.isApiLambda || isApiPage(pageFileName)) {
     return 'API';
   }
 
-  // if (group?.isPrerenders) {
-  //   return 'ISR';
-  // }
-
   if (pageFileName && prerenderManifest) {
-    // const { blockingFallbackRoutes = {}, fallbackRoutes = {} } = prerenderManifest;
-
     const hasRevalidate = Boolean(
       prerenderManifest.staticRoutes[pageFileName]?.initialRevalidate
     );
     if (hasRevalidate) {
       return 'ISR';
     }
-
-    // if (
-    //   pageFileName in blockingFallbackRoutes ||
-    //   pageFileName in fallbackRoutes
-    // ) {
-    //   return 'ISR';
-    // }
   }
 
   return 'SSR';

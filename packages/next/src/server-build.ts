@@ -905,8 +905,6 @@ export async function serverBuild({
         }
       }
 
-      const operationType = getOperationType({ group, prerenderManifest });
-
       const lambda = await createLambdaFromPseudoLayers({
         files: {
           ...launcherFiles,
@@ -917,7 +915,6 @@ export async function serverBuild({
           path.relative(baseDir, projectDir),
           '___next_launcher.cjs'
         ),
-        operationType,
         memory: group.memory,
         runtime: nodeVersion.runtime,
         maxDuration: group.maxDuration,
@@ -956,11 +953,12 @@ export async function serverBuild({
               ),
               true
             );
-            console.log({
-              where: '1',
-              outputName,
-              operationType: lambda.operationType,
+            const operationType = getOperationType({
+              pageFileName: `/${outputName}`,
+              group,
+              prerenderManifest,
             });
+            lambda.operationType = operationType;
             lambdas[outputName] = lambda;
           }
         } else {
@@ -968,11 +966,12 @@ export async function serverBuild({
             path.posix.join(entryDirectory, pageNoExt),
             true
           );
-          console.log({
-            where: '2',
-            outputName,
-            operationType: lambda.operationType,
+          const operationType = getOperationType({
+            pageFileName: `/${outputName}`,
+            group,
+            prerenderManifest,
           });
+          lambda.operationType = operationType;
           lambdas[outputName] = lambda;
         }
       }
