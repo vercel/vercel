@@ -46,14 +46,16 @@ async function fetch(url: string): Promise<FetchResponse> {
             );
           }
 
-          resolve({
+          const response = {
             headers: res.headers,
             status: res.statusCode,
             text: buf,
             async json(): Promise<any> {
               return JSON.parse(buf);
             },
-          });
+          };
+
+          resolve(response);
         } catch (err) {
           reject(err);
         }
@@ -103,13 +105,13 @@ test('runs a mjs endpoint', async () => {
     const response = await fetch(
       `http://localhost:${result.value.port}/api/hello`
     );
-    expect(response).toEqual({
-      status: 200,
-      headers: expect.objectContaining({
+    expect(response.status).toEqual(200);
+    expect(response.headers).toEqual(
+      expect.objectContaining({
         'x-hello': 'world',
-      }),
-      text: 'Hello, world!',
-    });
+      })
+    );
+    expect(response.text).toEqual('Hello, world!');
   } finally {
     child.kill(9);
   }
@@ -132,13 +134,13 @@ test('runs a esm typescript endpoint', async () => {
     const response = await fetch(
       `http://localhost:${result.value.port}/api/hello`
     );
-    expect(response).toEqual({
-      status: 200,
-      headers: expect.objectContaining({
+    expect(response.status).toEqual(200);
+    expect(response.headers).toEqual(
+      expect.objectContaining({
         'x-hello': 'world',
-      }),
-      text: 'Hello, world!',
-    });
+      })
+    );
+    expect(response.text).toEqual('Hello, world!');
   } finally {
     child.kill(9);
   }

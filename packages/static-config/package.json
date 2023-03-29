@@ -29,11 +29,14 @@
   },
   "jest": {
     "preset": "ts-jest",
-    "globals": {
-      "ts-jest": {
-        "diagnostics": false,
-        "isolatedModules": true
-      }
+    "transform": {
+      "^.+\\.[tj]s$": [
+        "ts-jest",
+        {
+          "diagnostics": true,
+          "isolatedModules": true
+        }
+      ]
     },
     "verbose": false,
     "testEnvironment": "node",
