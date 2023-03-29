@@ -200,9 +200,8 @@ export class GoWrapper {
     debug(`Building optimized 'go' binary ${src} -> ${dest}`);
     const sources = Array.isArray(src) ? src : [src];
 
-    const flags = process.env.GO_BUILD_FLAGS
-      ? stringArgv(process.env.GO_BUILD_FLAGS)
-      : GO_FLAGS;
+    const envGoBuildFlags = (this.env || this.opts.env).GO_BUILD_FLAGS;
+    const flags = envGoBuildFlags ? stringArgv(envGoBuildFlags) : GO_FLAGS;
 
     return this.execute('build', ...flags, '-o', dest, ...sources);
   }
