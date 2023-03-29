@@ -35,7 +35,7 @@ if (parseInt(process.versions.node.split('.')[0], 10) >= 16) {
     expect(buildResult.output['api/hello-again']).toBeDefined();
     expect(buildResult.output['api/hello-again'].type).toBe('Lambda');
     expect(
-      buildResult.output['api/hello-again'].experimentalResponseStreaming
+      buildResult.output['api/hello-again'].supportsResponseStreaming
     ).toBe(true);
 
     expect(buildResult.output['edge-route-handler']).toBeDefined();
