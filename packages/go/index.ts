@@ -129,13 +129,18 @@ export async function build({
     functionRenames: [],
   };
 
+  const env = cloneEnv(process.env, meta.env, {
+    GOARCH: 'amd64',
+    GOOS: 'linux',
+  });
+
   try {
-    if (process.env.GIT_CREDENTIALS) {
+    if (env.GIT_CREDENTIALS) {
       debug('Initialize Git credentials...');
-      await initPrivateGit(process.env.GIT_CREDENTIALS);
+      await initPrivateGit(env.GIT_CREDENTIALS);
     }
 
-    if (process.env.GO111MODULE) {
+    if (env.GO111MODULE) {
       console.log(`\nManually assigning 'GO111MODULE' is not recommended.
 
   By default:
@@ -218,10 +223,7 @@ export async function build({
       modulePath,
       opts: {
         cwd: entrypointDirname,
-        env: {
-          GOARCH: 'amd64',
-          GOOS: 'linux',
-        },
+        env,
       },
       workPath,
     });

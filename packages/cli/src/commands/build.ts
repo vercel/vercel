@@ -461,6 +461,7 @@ async function doBuild(
   const meta: Meta = {
     skipDownload: true,
     cliVersion: cliPkg.version,
+    env: localConfig.build?.env,
   };
 
   // Execute Builders for detected entrypoints

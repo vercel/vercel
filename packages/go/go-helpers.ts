@@ -306,7 +306,7 @@ export async function createGo({
         debug(`Found go ${version} in ${label}, but version is unsupported`);
       }
       if (version === goSelectedVersion || short === goSelectedVersion) {
-        console.log(`Selected go ${version} (from ${label})`);
+        debug(`Selected go ${version} (from ${label})`);
 
         await setGoEnv(goDir);
         return new GoWrapper(env, opts);
