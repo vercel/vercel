@@ -522,7 +522,7 @@ async function createRenderNodeFunction(
     shouldAddHelpers: false,
     shouldAddSourcemapSupport: false,
     operationType: 'SSR',
-    experimentalResponseStreaming: true,
+    supportsResponseStreaming: true,
     regions: config.regions,
     memory: config.memory,
     maxDuration: config.maxDuration,
