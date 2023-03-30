@@ -953,11 +953,12 @@ export async function serverBuild({
               ),
               true
             );
-            lambda.operationType = getOperationType({
+            const operationType = getOperationType({
               pageFileName: `/${outputName}`,
               group,
               prerenderManifest,
             });
+            lambda.setVirtualLambda(outputName, { operationType });
             lambdas[outputName] = lambda;
           }
         } else {
@@ -965,11 +966,12 @@ export async function serverBuild({
             path.posix.join(entryDirectory, pageNoExt),
             true
           );
-          lambda.operationType = getOperationType({
+          const operationType = getOperationType({
             pageFileName: `/${outputName}`,
             group,
             prerenderManifest,
           });
+          lambda.setVirtualLambda(outputName, { operationType });
           lambdas[outputName] = lambda;
         }
       }

@@ -77,9 +77,11 @@ export class Lambda {
   getVirtualLambda(path: string) {
     return this.virtualLambdas.get(path);
   }
-  setVirtualLambda(path: string, virtualLambda: VirtualLambda) {
-    virtualLambda.path = virtualLambda.path || path;
-    this.virtualLambdas.set(path, virtualLambda);
+  setVirtualLambda(path: string, virtualLambda: Partial<VirtualLambda>) {
+    this.virtualLambdas.set(path, {
+      path: virtualLambda.path || path,
+      operationType: virtualLambda.operationType,
+    });
   }
 
   files?: Files;
