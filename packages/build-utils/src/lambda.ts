@@ -62,16 +62,9 @@ export class Lambda {
    * @deprecated use `getOperationType` instead
    */
   operationType?: string;
-  virtualLambdas: Map<string, VirtualLambda>;
-  getVirtualLambda(path: string) {
-    return this.virtualLambdas.get(path);
-  }
-  setVirtualLambda(path: string, virtualLambda: Partial<VirtualLambda>) {
-    this.virtualLambdas.set(path, {
-      path: virtualLambda.path || path,
-      operationType: virtualLambda.operationType,
-    });
-  }
+  virtualLambdas: {
+    [path: string]: VirtualLambda;
+  };
 
   files?: Files;
   handler: string;

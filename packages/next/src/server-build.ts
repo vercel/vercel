@@ -12,6 +12,7 @@ import {
   debug,
   glob,
   Files,
+  VirtualLambda,
   BuildResultV2Typical as BuildResult,
 } from '@vercel/build-utils';
 import { Route, RouteWithHandle } from '@vercel/routing-utils';
@@ -922,6 +923,8 @@ export async function serverBuild({
         nextVersion,
       });
 
+      const virtualLambdas = new Map<string, VirtualLambda>();
+
       for (const page of group.pages) {
         const pageNoExt = page.replace(/\.js$/, '');
         let isPrerender = prerenderRoutes.has(
@@ -958,7 +961,7 @@ export async function serverBuild({
               group,
               prerenderManifest,
             });
-            lambda.setVirtualLambda(outputName, { operationType });
+            virtualLambdas.set(outputName, { path: outputName, operationType });
             lambdas[outputName] = lambda;
           }
         } else {
@@ -971,10 +974,14 @@ export async function serverBuild({
             group,
             prerenderManifest,
           });
-          lambda.setVirtualLambda(outputName, { operationType });
+          virtualLambdas.set(outputName, { path: outputName, operationType });
           lambdas[outputName] = lambda;
         }
       }
+
+      // wait until the end here to convert the map to an object
+      // so it can later be serialized easily
+      lambda.virtualLambdas = Object.fromEntries(virtualLambdas);
     }
     console.timeEnd(lambdaCreationLabel);
   }
