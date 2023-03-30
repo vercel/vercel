@@ -177,7 +177,7 @@ export class Lambda {
     this.supportsResponseStreaming =
       supportsResponseStreaming ?? experimentalResponseStreaming;
     this.framework = framework;
-    this.virtualLambdas = new Map<string, VirtualLambda>();
+    this.virtualLambdas = {};
   }
 
   async createZip(): Promise<Buffer> {
