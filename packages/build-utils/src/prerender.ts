@@ -45,14 +45,6 @@ export class Prerender {
 
     this.lambda = lambda;
     if (this.lambda) {
-      // TODO: remove
-      if (!this.lambda.operationType) {
-        console.log({
-          where: 'operation type not set on prerender',
-          lambda,
-        });
-      }
-
       // "SSG" is the platform default lambda label for prerender functions
       this.lambda.operationType = this.lambda.operationType || 'SSG';
     }

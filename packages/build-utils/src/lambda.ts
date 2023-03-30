@@ -51,14 +51,37 @@ interface GetLambdaOptionsFromFunctionOptions {
   config?: Pick<Config, 'functions'>;
 }
 
-export class Lambda {
-  type: 'Lambda';
+export type VirtualLambda = {
   /**
    * This is a label for the type of Lambda a framework is producing.
    * The value can be any string that makes sense for a given framework.
    * Examples: "API", "ISR", "SSR", "SSG", "Render", "Resource"
    */
   operationType?: string;
+
+  path: string;
+};
+
+export class Lambda {
+  type: 'Lambda';
+
+  /**
+   * This is a label for the type of Lambda a framework is producing.
+   * The value can be any string that makes sense for a given framework.
+   * Examples: "API", "ISR", "SSR", "SSG", "Render", "Resource"
+   *
+   * @deprecated use `getOperationType` instead
+   */
+  operationType?: string;
+  virtualLambdas: Map<string, VirtualLambda>;
+  getVirtualLambda(path: string) {
+    return this.virtualLambdas.get(path);
+  }
+  setVirtualLambda(path: string, virtualLambda: VirtualLambda) {
+    virtualLambda.path = virtualLambda.path || path;
+    this.virtualLambdas.set(path, virtualLambda);
+  }
+
   files?: Files;
   handler: string;
   runtime: string;
@@ -170,6 +193,7 @@ export class Lambda {
     this.supportsResponseStreaming =
       supportsResponseStreaming ?? experimentalResponseStreaming;
     this.framework = framework;
+    this.virtualLambdas = new Map<string, VirtualLambda>();
   }
 
   async createZip(): Promise<Buffer> {

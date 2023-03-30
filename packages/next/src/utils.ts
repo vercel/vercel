@@ -2758,13 +2758,6 @@ export function getOperationType({
   pageFileName?: string;
 }) {
   if (group?.isApiLambda || isApiPage(pageFileName)) {
-    console.log({
-      where: '1',
-      group_isPrerenders: group?.isPrerenders,
-      prerenderManifest_staticRoutes: prerenderManifest?.staticRoutes,
-      pageFileName,
-      operationType: 'API',
-    });
     return 'API';
   }
 
@@ -2773,35 +2766,14 @@ export function getOperationType({
       prerenderManifest.staticRoutes[pageFileName]?.initialRevalidate
     );
     if (hasRevalidate) {
-      console.log({
-        where: '2',
-        group_isPrerenders: group?.isPrerenders,
-        prerenderManifest_staticRoutes: prerenderManifest?.staticRoutes,
-        pageFileName,
-        operationType: 'ISR',
-      });
       return 'ISR';
     }
   }
 
   if (group?.isPrerenders) {
-    console.log({
-      where: '3',
-      group_isPrerenders: group?.isPrerenders,
-      prerenderManifest_staticRoutes: prerenderManifest?.staticRoutes,
-      pageFileName,
-      operationType: 'SSG',
-    });
     return 'SSG';
   }
 
-  console.log({
-    where: '4',
-    group_isPrerenders: group?.isPrerenders,
-    prerenderManifest_staticRoutes: prerenderManifest?.staticRoutes,
-    pageFileName,
-    operationType: 'SSR',
-  });
   return 'SSR';
 }
 
