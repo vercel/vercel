@@ -5,7 +5,7 @@ import minimatch from 'minimatch';
 import { readlink } from 'fs-extra';
 import { isSymbolicLink, isDirectory } from './fs/download';
 import streamToBuffer from './fs/stream-to-buffer';
-import type { Files, Config, FunctionFramework } from './types';
+import type { Files, Config, FunctionFramework, VirtualLambda } from './types';
 
 interface Environment {
   [key: string]: string;
@@ -50,17 +50,6 @@ interface GetLambdaOptionsFromFunctionOptions {
   sourceFile: string;
   config?: Pick<Config, 'functions'>;
 }
-
-export type VirtualLambda = {
-  /**
-   * This is a label for the type of Lambda a framework is producing.
-   * The value can be any string that makes sense for a given framework.
-   * Examples: "API", "ISR", "SSR", "SSG", "Render", "Resource"
-   */
-  operationType?: string;
-
-  path: string;
-};
 
 export class Lambda {
   type: 'Lambda';

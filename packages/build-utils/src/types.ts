@@ -424,6 +424,17 @@ export interface FunctionFramework {
   version?: string;
 }
 
+export type VirtualLambda = {
+  /**
+   * This is a label for the type of Lambda a framework is producing.
+   * The value can be any string that makes sense for a given framework.
+   * Examples: "API", "ISR", "SSR", "SSG", "Render", "Resource"
+   */
+  operationType?: string;
+
+  path: string;
+};
+
 /**
  * When a Builder implements `version: 2`, the `build()` function is expected
  * to return this type.
