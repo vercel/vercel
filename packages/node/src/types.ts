@@ -39,3 +39,10 @@ export type NowResponse = VercelResponse;
 
 /** @deprecated Use VercelApiHandler instead. */
 export type NowApiHandler = VercelApiHandler;
+
+export interface VercelProxyResponse {
+  status: number;
+  headers: Headers;
+  body: ReadableStream<Uint8Array>;
+  encoding: BufferEncoding;
+}
