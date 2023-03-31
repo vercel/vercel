@@ -986,6 +986,12 @@ export async function serverBuild({
     console.timeEnd(lambdaCreationLabel);
   }
 
+  console.log(
+    'BEFORE prerenders onPrerenderRoute: ',
+    JSON.stringify(prerenders)
+  );
+  console.log('BEFORE lambdas onPrerenderRoute: ', JSON.stringify(lambdas));
+
   const prerenderRoute = onPrerenderRoute({
     appDir,
     pagesDir,
@@ -1004,6 +1010,12 @@ export async function serverBuild({
     isCorrectNotFoundRoutes,
     isEmptyAllowQueryForPrendered,
   });
+
+  console.log(
+    'AFTER prerenders onPrerenderRoute: ',
+    JSON.stringify(prerenders)
+  );
+  console.log('AFTER lambdas onPrerenderRoute: ', JSON.stringify(lambdas));
 
   Object.keys(prerenderManifest.staticRoutes).forEach(route =>
     prerenderRoute(route, {})
