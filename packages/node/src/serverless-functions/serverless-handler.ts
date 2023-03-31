@@ -1,3 +1,5 @@
+import type { VercelProxyResponse } from '../types';
+import type { VercelRequest, VercelResponse } from './helpers';
 import { addHelpers } from './helpers';
 import { create as createTsCompiler } from 'ts-node';
 import { createServer, ServerResponse } from 'http';
@@ -5,14 +7,11 @@ import { createServer, ServerResponse } from 'http';
 import { dynamicImport } from './dynamic-import.js';
 import { IncomingMessage } from 'http';
 import { serializeRequest } from '../utils';
-import { VercelProxyResponse } from '@vercel/node-bridge/types';
 import exitHook from 'exit-hook';
 import fs from 'fs';
 import listen from 'async-listen';
 import path from 'path';
 import undici from 'undici';
-
-import type { VercelRequest, VercelResponse } from './helpers';
 
 type ServerlessServerOptions = {
   shouldAddHelpers: boolean;

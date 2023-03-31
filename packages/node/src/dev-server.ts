@@ -11,24 +11,17 @@ delete process.env.TS_NODE_COMPILER_OPTIONS;
 import { join } from 'path';
 const useRequire = process.env.VERCEL_DEV_IS_ESM !== '1';
 
-import { createServer, Server, IncomingMessage, ServerResponse } from 'http';
-import { VercelProxyResponse } from '@vercel/node-bridge/types';
+import type { Headers } from 'undici';
+import type { VercelProxyResponse } from './types';
 import { Config } from '@vercel/build-utils';
+import { createEdgeEventHandler } from './edge-functions/edge-handler';
+import { createServer, IncomingMessage, ServerResponse } from 'http';
+import { createServerlessEventHandler } from './serverless-functions/serverless-handler';
+import { EdgeRuntimes, isEdgeRuntime, logError } from './utils';
 import { getConfig } from '@vercel/static-config';
 import { Project } from 'ts-morph';
-import { EdgeRuntimes, isEdgeRuntime, logError } from './utils';
-import { createEdgeEventHandler } from './edge-functions/edge-handler';
-import { createServerlessEventHandler } from './serverless-functions/serverless-handler';
 import { toToReadable } from '@edge-runtime/node-utils';
-import type { Headers } from 'undici';
-
-function listen(server: Server, port: number, host: string): Promise<void> {
-  return new Promise(resolve => {
-    server.listen(port, host, () => {
-      resolve();
-    });
-  });
-}
+import listen from 'async-listen';
 
 function parseRuntime(
   entrypoint: string,
@@ -89,7 +82,7 @@ async function main() {
   );
 
   const proxyServer = createServer(onDevRequest);
-  await listen(proxyServer, 0, '127.0.0.1');
+  await listen(proxyServer, { host: '127.0.0.1', port: 0 });
 
   try {
     handleEvent = await createEventHandler(entrypoint!, config, {

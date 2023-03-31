@@ -22,8 +22,6 @@ async function main() {
       'build',
       join(srcDir, 'index.ts'),
       '-e',
-      '@vercel/node-bridge',
-      '-e',
       '@vercel/build-utils',
       '-e',
       'typescript',
