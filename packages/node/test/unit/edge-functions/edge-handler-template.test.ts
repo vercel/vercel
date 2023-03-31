@@ -1,4 +1,4 @@
-import { Response, Request } from 'node-fetch';
+import { Response, Request } from 'undici';
 import {
   buildUrl,
   respond,

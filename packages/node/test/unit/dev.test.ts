@@ -1,6 +1,6 @@
 import { forkDevServer, readMessage } from '../../src/fork-dev-server';
 import { resolve, extname } from 'path';
-import fetch from 'node-fetch';
+import { fetch } from 'undici';
 
 jest.setTimeout(10 * 1000);
 
@@ -24,7 +24,6 @@ function testForkDevServer(entrypoint: string) {
 
 test('runs an edge function that uses `buffer`', async () => {
   const child = testForkDevServer('./edge-buffer.js');
-
   try {
     const result = await readMessage(child);
     if (result.state !== 'message') {
@@ -63,12 +62,12 @@ test('runs a mjs endpoint', async () => {
     );
     expect({
       status: response.status,
-      headers: response.headers.raw(),
+      headers: Object.fromEntries(response.headers),
       text: await response.text(),
     }).toEqual({
       status: 200,
       headers: expect.objectContaining({
-        'x-hello': ['world'],
+        'x-hello': 'world',
       }),
       text: 'Hello, world!',
     });
@@ -96,12 +95,12 @@ test('runs a esm typescript endpoint', async () => {
     );
     expect({
       status: response.status,
-      headers: response.headers.raw(),
+      headers: Object.fromEntries(response.headers),
       text: await response.text(),
     }).toEqual({
       status: 200,
       headers: expect.objectContaining({
-        'x-hello': ['world'],
+        'x-hello': 'world',
       }),
       text: 'Hello, world!',
     });
