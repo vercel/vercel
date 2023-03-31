@@ -30,6 +30,9 @@ export interface LambdaOptionsBase {
   experimentalResponseStreaming?: boolean;
   operationType?: string;
   framework?: FunctionFramework;
+  virtualLambdas: {
+    [path: string]: VirtualLambda;
+  };
 }
 
 export interface LambdaOptionsWithFiles extends LambdaOptionsBase {
