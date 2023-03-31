@@ -389,8 +389,6 @@ async function writeLambda(
     })
   );
 
-  console.log(`WRITING ${configPath}: ${JSON.stringify(config, null, 2)}`);
-
   await Promise.all(ops);
 
   // XXX: remove any `.vercel/builders` directories that were

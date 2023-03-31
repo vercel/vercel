@@ -62,7 +62,7 @@ export class Lambda {
    * The value can be any string that makes sense for a given framework.
    * Examples: "API", "ISR", "SSR", "SSG", "Render", "Resource"
    *
-   * @deprecated use `getOperationType` instead
+   * @deprecated use `virtualLambdas` instead
    */
   operationType?: string;
   virtualLambdas: {
