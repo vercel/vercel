@@ -241,7 +241,6 @@ export async function build({
       outDir,
       packageName,
       undo,
-      workPath,
     };
 
     if (packageName === 'main') {
@@ -289,7 +288,6 @@ type BuildHandlerOptions = {
   outDir: string;
   packageName: string;
   undo: UndoActions;
-  workPath: string;
 };
 
 /**
@@ -308,7 +306,6 @@ async function buildHandlerWithGoMod({
   outDir,
   packageName,
   undo,
-  workPath,
 }: BuildHandlerOptions): Promise<void> {
   debug(
     `Building Go handler as package "${packageName}" (with${
@@ -372,7 +369,6 @@ async function buildHandlerWithGoMod({
       destDir: goModDirname ? goModDirname : entrypointDirname,
       goModPath,
       packageName,
-      workPath,
     }),
   ]);
 
@@ -658,24 +654,14 @@ async function writeGoMod({
   destDir,
   goModPath,
   packageName,
-  workPath,
 }: {
   destDir: string;
   goModPath?: string;
   packageName: string;
-  workPath?: string;
 }) {
   let contents = `module ${packageName}`;
 
   if (goModPath) {
-    let goWorkPath = dirname(goModPath);
-    while (!(await pathExists(join(goWorkPath, 'go.work')))) {
-      if (goWorkPath === workPath) {
-        break;
-      }
-      goWorkPath = dirname(goWorkPath);
-    }
-
     const goModRelPath = relative(destDir, dirname(goModPath));
     const goModContents = await readFile(goModPath, 'utf-8');
 
@@ -716,25 +702,72 @@ async function writeGoMod({
   await writeFile(destGoModPath, contents, 'utf-8');
 }
 
+async function findGoWorkFile(goWorkDir: string, workPath: string) {
+  while (!(await pathExists(join(goWorkDir, 'go.work')))) {
+    if (goWorkDir === workPath) {
+      return;
+    }
+    goWorkDir = dirname(goWorkDir);
+  }
+  return join(goWorkDir, 'go.work');
+}
+
 /**
  * For simple cases, a `go.work` file is not required. However when a Go
  * program requires source files outside the work path, we need a `go.work` so
  * Go can find the root of the project being built.
- * @param dest The destination `go.work` file path.
- * @param baseDir An optional top-level base directory to add to the list of
- * workspaces.
+ * @param destDir The destination directory to write the `go.work` file.
+ * @param workPath The path to the work directory.
+ * @param modulePath The path to the directory containing the `go.mod`.
  */
-async function writeDefaultGoWork(dest: string, baseDir?: string) {
-  const workspaces = ['.'];
-  if (baseDir) {
-    workspaces.push(relative(dirname(dest), baseDir));
+async function writeGoWork(
+  destDir: string,
+  workPath: string,
+  modulePath?: string
+) {
+  const workspaces = new Set(['.']);
+  const goWorkPath = await findGoWorkFile(modulePath || workPath, workPath);
+
+  if (goWorkPath) {
+    const addPath = (path: string) => {
+      if (path) {
+        if (path.startsWith('.')) {
+          workspaces.add(relative(destDir, join(workPath, path)));
+        } else {
+          workspaces.add(path);
+        }
+      }
+    };
+    const contents = await readFile(goWorkPath, 'utf-8');
+
+    // find grouped paths
+    const multiRE = /use\s*\(([^)]+)/g;
+    let match = multiRE.exec(contents);
+    while (match) {
+      if (match[1]) {
+        for (const line of match[1].split(/\r?\n/)) {
+          addPath(line.trim());
+        }
+      }
+      match = multiRE.exec(contents);
+    }
+
+    // find single paths
+    const singleRE = /use\s+(?!\()(.+)/g;
+    match = singleRE.exec(contents);
+    while (match) {
+      addPath(match[1].trim());
+      match = singleRE.exec(contents);
+    }
+  } else {
+    workspaces.add(relative(destDir, workPath));
   }
 
-  await writeFile(
-    dest,
-    `use (\n${workspaces.map(w => `  ${w}\n`).join('')})\n`,
-    'utf-8'
-  );
+  const contents = `use (\n${Array.from(workspaces)
+    .map(w => `  ${w}\n`)
+    .join('')})\n`;
+  // console.log(contents);
+  await writeFile(join(destDir, 'go.work'), contents, 'utf-8');
 }
 
 export async function startDevServer(
@@ -773,9 +806,8 @@ export async function startDevServer(
       destDir: tmp,
       goModPath,
       packageName: analyzed.packageName,
-      workPath,
     }),
-    writeDefaultGoWork(join(tmp, 'go.work'), modulePath || workPath),
+    writeGoWork(tmp, workPath, modulePath),
   ]);
 
   const portFile = join(
