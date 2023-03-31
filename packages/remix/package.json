@@ -20,7 +20,7 @@
     "defaults"
   ],
   "dependencies": {
-    "@remix-run/dev": "npm:@vercel/remix-run-dev@1.14.2",
+    "@remix-run/dev": "npm:@vercel/remix-run-dev@1.15.0",
     "@vercel/build-utils": "6.7.0",
     "@vercel/nft": "0.22.5",
     "@vercel/static-config": "2.0.14",
