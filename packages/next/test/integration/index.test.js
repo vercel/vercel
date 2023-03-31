@@ -11,6 +11,12 @@ const runBuildLambda = createRunBuildLambda(builder);
 
 jest.setTimeout(360000);
 
+function getOperationType(lambdas, path) {
+  // support a Prerender (that has a lamdba) or the Lambda itself
+  const lambda = lambdas[path].lambda || lambdas[path];
+  return lambda?.virtualLambdas?.[path]?.operationType;
+}
+
 // experimental appDir currently requires Node.js >= 16
 if (parseInt(process.versions.node.split('.')[0], 10) >= 16) {
   it('should build with app-dir correctly', async () => {
@@ -144,23 +150,23 @@ it('should build using server build', async () => {
   expect(output['index'].allowQuery).toBe(undefined);
   expect(output['index'].memory).toBe(512);
   expect(output['index'].maxDuration).toBe(5);
-  expect(output['index'].operationType).toBe('SSR');
+  expect(getOperationType(output, 'index')).toBe('SSR');
 
   expect(output['another'].type).toBe('Lambda');
   expect(output['another'].memory).toBe(512);
   expect(output['another'].maxDuration).toBe(5);
   expect(output['another'].allowQuery).toBe(undefined);
-  expect(output['another'].operationType).toBe('SSR');
+  expect(getOperationType(output, 'another')).toBe('SSR');
 
   expect(output['dynamic/[slug]'].type).toBe('Lambda');
   expect(output['dynamic/[slug]'].memory).toBe(undefined);
   expect(output['dynamic/[slug]'].maxDuration).toBe(5);
-  expect(output['dynamic/[slug]'].operationType).toBe('SSR');
+  expect(getOperationType(output, 'dynamic/[slug]')).toBe('SSR');
 
   expect(output['fallback/[slug]'].type).toBe('Prerender');
   expect(output['fallback/[slug]'].allowQuery).toEqual(['slug']);
-  expect(output['fallback/[slug]'].lambda.operationType).toBe('ISR');
   expect(output['fallback/[slug]'].sourcePath).toBe(undefined);
+  expect(getOperationType(output, 'fallback/[slug]')).toBe('SSG');
 
   expect(output['_next/data/testing-build-id/fallback/[slug].json'].type).toBe(
     'Prerender'
@@ -169,14 +175,13 @@ it('should build using server build', async () => {
     output['_next/data/testing-build-id/fallback/[slug].json'].allowQuery
   ).toEqual(['slug']);
   expect(
-    output['_next/data/testing-build-id/fallback/[slug].json'].lambda
-      .operationType
-  ).toBe('ISR');
+    getOperationType(output, '_next/data/testing-build-id/fallback/[slug].json')
+  ).toBe(undefined);
 
   expect(output['fallback/first'].type).toBe('Prerender');
   expect(output['fallback/first'].allowQuery).toEqual([]);
-  expect(output['fallback/first'].lambda.operationType).toBe('ISR');
   expect(output['fallback/first'].sourcePath).toBe('/fallback/[slug]');
+  expect(getOperationType(output, 'fallback/first')).toBe(undefined);
 
   expect(output['_next/data/testing-build-id/fallback/first.json'].type).toBe(
     'Prerender'
@@ -185,32 +190,31 @@ it('should build using server build', async () => {
     output['_next/data/testing-build-id/fallback/first.json'].allowQuery
   ).toEqual([]);
   expect(
-    output['_next/data/testing-build-id/fallback/first.json'].lambda
-      .operationType
-  ).toBe('ISR');
+    getOperationType(output, '_next/data/testing-build-id/fallback/first.json')
+  ).toBe(undefined);
 
   expect(output['api'].type).toBe('Lambda');
   expect(output['api'].allowQuery).toBe(undefined);
   expect(output['api'].memory).toBe(128);
   expect(output['api'].maxDuration).toBe(5);
-  expect(output['api'].operationType).toBe('API');
+  expect(getOperationType(output, 'api')).toBe('API');
 
   expect(output['api/another'].type).toBe('Lambda');
   expect(output['api/another'].allowQuery).toBe(undefined);
-  expect(output['api/another'].operationType).toBe('API');
+  expect(getOperationType(output, 'api/another')).toBe('API');
 
   expect(output['api/blog/[slug]'].type).toBe('Lambda');
   expect(output['api/blog/[slug]'].allowQuery).toBe(undefined);
-  expect(output['api/blog/[slug]'].operationType).toBe('API');
+  expect(getOperationType(output, 'api/blog/[slug]')).toBe('API');
 
   expect(output['static'].type).toBe('FileFsRef');
   expect(output['static'].allowQuery).toBe(undefined);
-  expect(output['static'].operationType).toBe(undefined);
+  expect(getOperationType(output, 'static')).toBe(undefined);
 
   expect(output['ssg'].type).toBe('Prerender');
   expect(output['ssg'].allowQuery).toEqual([]);
-  expect(output['ssg'].lambda.operationType).toBe('ISR');
   expect(output['ssg'].sourcePath).toBe(undefined);
+  expect(getOperationType(output, 'ssg')).toBe('SSG');
 
   expect(output['index'] === output['another']).toBe(true);
   expect(output['dynamic/[slug]'] !== output['fallback/[slug]'].lambda).toBe(
