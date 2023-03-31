@@ -42,7 +42,7 @@ export interface ResolvedRoutePaths {
   rePath: string;
 }
 
-const SPLAT_PATH = '/:params+';
+const SPLAT_PATH = '/:params*';
 
 const entryExts = ['.js', '.jsx', '.ts', '.tsx'];
 

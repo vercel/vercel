@@ -32,7 +32,7 @@
     "source-map-support": "0.5.12",
     "ts-eager": "2.0.2",
     "ts-jest": "28.0.5",
-    "turbo": "1.8.3"
+    "turbo": "1.8.5"
   },
   "scripts": {
     "lerna": "lerna",
@@ -42,14 +42,14 @@
     "publish-canary": "git checkout main && git pull && lerna version prerelease --preid canary --message \"Publish Canary\" --exact",
     "publish-from-github": "./utils/publish.sh",
     "changelog": "node utils/changelog.js",
-    "build": "node utils/gen.js && turbo run build",
+    "build": "node utils/gen.js && turbo --no-update-notifier run build",
     "vercel-build": "pnpm build && pnpm run pack && cd api && node -r ts-eager/register ./_lib/script/build.ts",
     "pre-commit": "lint-staged",
     "test": "jest --rootDir=\"test\" --testPathPattern=\"\\.test.js\"",
-    "test-unit": "pnpm test && node utils/gen.js && turbo run test-unit",
-    "test-cli": "node utils/gen.js && turbo run test-cli",
-    "test-e2e": "node utils/gen.js && turbo run test-e2e",
-    "test-dev": "node utils/gen.js && turbo run test-dev",
+    "test-unit": "pnpm test && node utils/gen.js && turbo --no-update-notifier run test-unit",
+    "test-cli": "node utils/gen.js && turbo --no-update-notifier run test-cli",
+    "test-e2e": "node utils/gen.js && turbo --no-update-notifier run test-e2e",
+    "test-dev": "node utils/gen.js && turbo --no-update-notifier run test-dev",
     "lint": "eslint . --cache --ext .ts,.js",
     "prettier-check": "prettier --check .",
     "prepare": "husky install",

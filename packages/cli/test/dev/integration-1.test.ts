@@ -105,7 +105,7 @@ test('[vercel dev] throws an error when an edge function has no response', async
     expect(await res.status).toBe(500);
     expect(await res.text()).toMatch('FUNCTION_INVOCATION_FAILED');
     expect(stdout).toMatch(
-      /Error from API Route \/api\/edge-no-response: Edge Function "api\/edge-no-response.js" did not return a response./g
+      /Error from API Route \/api\/edge-no-response: Edge Function did not return a response./g
     );
   } finally {
     await dev.kill();
