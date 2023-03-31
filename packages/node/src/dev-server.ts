@@ -19,6 +19,8 @@ import { Project } from 'ts-morph';
 import { EdgeRuntimes, isEdgeRuntime, logError } from './utils';
 import { createEdgeEventHandler } from './edge-functions/edge-handler';
 import { createServerlessEventHandler } from './serverless-functions/serverless-handler';
+import { toToReadable } from '@edge-runtime/node-utils';
+import type { Headers } from 'undici';
 
 function listen(server: Server, port: number, host: string): Promise<void> {
   return new Promise(resolve => {
@@ -124,14 +126,14 @@ export async function onDevRequest(
   }
 
   try {
-    const result = await handleEvent(req);
-    res.statusCode = result.statusCode;
-    for (const [key, value] of Object.entries(result.headers)) {
-      if (typeof value !== 'undefined') {
+    const { headers, body, status } = await handleEvent(req);
+    res.statusCode = status;
+    for (const [key, value] of headers as Headers) {
+      if (value !== undefined) {
         res.setHeader(key, value);
       }
     }
-    res.end(Buffer.from(result.body, result.encoding));
+    toToReadable(body).pipe(res);
   } catch (error: any) {
     res.statusCode = 500;
     res.end(error.stack);

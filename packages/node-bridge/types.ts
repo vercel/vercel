@@ -3,7 +3,6 @@ import type { CipherCCMTypes } from 'crypto';
 import type {
   Server,
   IncomingHttpHeaders,
-  OutgoingHttpHeaders,
   ServerResponse,
   IncomingMessage,
 } from 'http';
@@ -27,9 +26,9 @@ export interface VercelProxyRequest {
   responseCallbackUrl?: string;
 }
 export interface VercelProxyResponse {
-  statusCode: number;
-  headers: OutgoingHttpHeaders;
-  body: string;
+  status: number;
+  headers: Headers;
+  body: ReadableStream<Uint8Array>;
   encoding: BufferEncoding;
 }
 export type VercelStreamProxyResponse = Record<string, never>;

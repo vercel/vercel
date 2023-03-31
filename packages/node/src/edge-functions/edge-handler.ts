@@ -1,13 +1,12 @@
 import { IncomingMessage } from 'http';
 import { VercelProxyResponse } from '@vercel/node-bridge/types';
-import { streamToBuffer } from '@vercel/build-utils';
 import exitHook from 'exit-hook';
 import { EdgeRuntime, runServer } from 'edge-runtime';
 import type { EdgeContext } from '@edge-runtime/vm';
 import esbuild from 'esbuild';
-import fetch from 'node-fetch';
+import { fetch } from 'undici';
 import { createEdgeWasmPlugin, WasmAssets } from './edge-wasm-plugin';
-import { entrypointToOutputPath, logError } from '../utils';
+import { serializeRequest, entrypointToOutputPath, logError } from '../utils';
 import { readFileSync } from 'fs';
 import {
   createNodeCompatPlugin,
@@ -25,17 +24,6 @@ if (!NODE_VERSION_MAJOR) {
 const edgeHandlerTemplate = readFileSync(
   `${__dirname}/edge-handler-template.js`
 );
-
-async function serializeRequest(message: IncomingMessage) {
-  const bodyBuffer = await streamToBuffer(message);
-  const body = bodyBuffer.toString('base64');
-  return JSON.stringify({
-    url: message.url,
-    method: message.method,
-    headers: message.headers,
-    body,
-  });
-}
 
 async function compileUserCode(
   entrypointFullPath: string,
@@ -111,7 +99,7 @@ async function compileUserCode(
       wasmAssets,
       nodeCompatBindings: nodeCompatPlugin.bindings,
     };
-  } catch (error) {
+  } catch (error: any) {
     // We can't easily show a meaningful stack trace from ncc -> edge-runtime.
     // So, stick with just the message for now.
     console.error(`Failed to compile user code for edge runtime.`);
@@ -162,7 +150,7 @@ async function createEdgeRuntime(params?: {
     exitHook(server.close);
 
     return server;
-  } catch (error) {
+  } catch (error: any) {
     // We can't easily show a meaningful stack trace from ncc -> edge-runtime.
     // So, stick with just the message for now.
     console.error('Failed to instantiate edge runtime.');
@@ -196,13 +184,15 @@ export async function createEdgeEventHandler(
       redirect: 'manual',
       method: 'post',
       body: await serializeRequest(request),
+      //@ts-expect-error
+      headers: request.headers as HeadersInit,
     });
-
-    const body = await response.text();
 
     const isUserError =
       response.headers.get('x-vercel-failed') === 'edge-wrapper';
+
     if (isUserError && response.status >= 500) {
+      const body = await response.text();
       // We can't currently get a real stack trace from the Edge Function error,
       // but we can fake a basic one that is still usefult to the user.
       const fakeStackTrace = `    at (${entrypointRelativePath})`;
@@ -210,6 +200,7 @@ export async function createEdgeEventHandler(
         entrypointRelativePath,
         isZeroConfig
       );
+
       console.log(
         `Error from API Route ${requestPath}: ${body}\n${fakeStackTrace}`
       );
@@ -220,9 +211,9 @@ export async function createEdgeEventHandler(
     }
 
     return {
-      statusCode: response.status,
-      headers: response.headers.raw(),
-      body,
+      status: response.status,
+      headers: response.headers,
+      body: response.body,
       encoding: 'utf8',
     };
   };

@@ -588,10 +588,10 @@ export const startDevServer: StartDevServer = async opts => {
     if (pathToTsConfig) {
       try {
         tsConfig = ts.readConfigFile(pathToTsConfig, ts.sys.readFile).config;
-      } catch (err) {
-        if (err.code !== 'ENOENT') {
+      } catch (error: any) {
+        if (error.code !== 'ENOENT') {
           console.error(`Error while parsing "${pathToTsConfig}"`);
-          throw err;
+          throw error;
         }
       }
     }
@@ -674,10 +674,10 @@ async function doTypeCheck(
     const json = JSON.stringify(tsconfig, null, '\t');
     await fsp.mkdir(entrypointCacheDir, { recursive: true });
     await fsp.writeFile(tsconfigPath, json, { flag: 'wx' });
-  } catch (err) {
+  } catch (error: any) {
     // Don't throw if the file already exists
-    if (err.code !== 'EEXIST') {
-      throw err;
+    if (error.code !== 'EEXIST') {
+      throw error;
     }
   }
 
