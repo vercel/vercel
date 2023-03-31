@@ -388,7 +388,6 @@ async function writeLambda(
       spaces: 2,
     })
   );
-
   await Promise.all(ops);
 
   // XXX: remove any `.vercel/builders` directories that were
