@@ -98,6 +98,7 @@ export class Lambda {
       experimentalResponseStreaming,
       operationType,
       framework,
+      virtualLambdas,
     } = opts;
     if ('files' in opts) {
       assert(typeof opts.files === 'object', '"files" must be an object');
@@ -177,7 +178,7 @@ export class Lambda {
     this.supportsResponseStreaming =
       supportsResponseStreaming ?? experimentalResponseStreaming;
     this.framework = framework;
-    this.virtualLambdas = {};
+    this.virtualLambdas = virtualLambdas || {};
   }
 
   async createZip(): Promise<Buffer> {
