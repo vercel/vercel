@@ -316,9 +316,13 @@ async function buildHandlerWithGoMod({
     } go.mod)`
   );
 
+  let goModDirname: string | undefined;
+
   if (goModPath !== undefined) {
+    goModDirname = dirname(goModPath);
+
     // first we backup the original
-    const backupFile = `${goModPath}.bak`;
+    const backupFile = join(goModDirname, `__vc_go.mod.bak`);
     await copy(goModPath, backupFile);
 
     undo.fileActions.push({
@@ -326,7 +330,7 @@ async function buildHandlerWithGoMod({
       from: backupFile,
     });
 
-    const goSumPath = join(dirname(goModPath), 'go.sum');
+    const goSumPath = join(goModDirname, 'go.sum');
     const isGoSumExists = await pathExists(goSumPath);
     if (!isGoSumExists) {
       // remove the `go.sum` file that will be generated as well
@@ -337,45 +341,40 @@ async function buildHandlerWithGoMod({
     }
   }
 
-  // write the `go.mod`
-  await writeGoMod({
-    destDir: goModPath ? dirname(goModPath) : entrypointDirname,
-    goModPath,
-    packageName,
-    workPath,
-  });
-
   const entrypointArr = entrypoint.split(posix.sep);
   let goPackageName = `${packageName}/${packageName}`;
   const goFuncName = `${packageName}.${handlerFunctionName}`;
 
   // if we have a go.mod, determine the relative path of the entrypoint to the
   // go.mod directory and use that for the import package name in main.go
-  const relPackagePath = goModPath
-    ? posix.relative(dirname(goModPath), entrypointDirname)
+  const relPackagePath = goModDirname
+    ? posix.relative(goModDirname, entrypointDirname)
     : '';
   if (relPackagePath) {
     goPackageName = posix.join(packageName, relPackagePath);
   }
 
-  const modMainGoContents = await readFile(join(__dirname, 'main.go'), 'utf8');
-  const mainModGoContents = modMainGoContents
-    .replace('__VC_HANDLER_PACKAGE_NAME', goPackageName)
-    .replace('__VC_HANDLER_FUNC_NAME', goFuncName);
-
-  let mainGoFile;
+  let mainGoFile: string;
   if (goModPath && isGoModInRootDir) {
     debug(`[mod-root] Write main file to ${downloadPath}`);
     mainGoFile = join(downloadPath, MAIN_GO_FILENAME);
-  } else if (goModPath && !isGoModInRootDir) {
-    debug(`[mod-other] Write main file to ${dirname(goModPath)}`);
-    mainGoFile = join(dirname(goModPath), MAIN_GO_FILENAME);
+  } else if (goModDirname && !isGoModInRootDir) {
+    debug(`[mod-other] Write main file to ${goModDirname}`);
+    mainGoFile = join(goModDirname, MAIN_GO_FILENAME);
   } else {
     debug(`[entrypoint] Write main file to ${entrypointDirname}`);
     mainGoFile = join(entrypointDirname, MAIN_GO_FILENAME);
   }
 
-  await writeFile(mainGoFile, mainModGoContents, 'utf-8');
+  await Promise.all([
+    writeEntrypoint(mainGoFile, goPackageName, goFuncName),
+    writeGoMod({
+      destDir: goModDirname ? goModDirname : entrypointDirname,
+      goModPath,
+      packageName,
+      workPath,
+    }),
+  ]);
 
   undo.fileActions.push({
     to: undefined, // delete
@@ -459,17 +458,12 @@ async function buildHandlerAsPackageMain({
 }: BuildHandlerOptions): Promise<void> {
   debug('Building Go handler as package "main" (legacy)');
 
-  const originalMainGoContents = await readFile(
-    join(__dirname, 'main.go'),
-    'utf8'
+  await writeEntrypoint(
+    join(entrypointDirname, MAIN_GO_FILENAME),
+    '',
+    handlerFunctionName
   );
-  const mainGoContents = originalMainGoContents
-    .replace('"__VC_HANDLER_PACKAGE_NAME"', '')
-    .replace('__VC_HANDLER_FUNC_NAME', handlerFunctionName);
 
-  // Go doesn't like to build files in different directories,
-  // so now we place `main.go` together with the user code
-  await writeFile(join(entrypointDirname, MAIN_GO_FILENAME), mainGoContents);
   undo.fileActions.push({
     to: undefined, // delete
     from: join(entrypointDirname, MAIN_GO_FILENAME),
@@ -639,6 +633,18 @@ async function copyDevServer(
   await writeFile(join(dest, 'vercel-dev-server-main.go'), patched);
 }
 
+async function writeEntrypoint(
+  dest: string,
+  goPackageName: string,
+  goFuncName: string
+) {
+  const modMainGoContents = await readFile(join(__dirname, 'main.go'), 'utf8');
+  const mainModGoContents = modMainGoContents
+    .replace('__VC_HANDLER_PACKAGE_NAME', goPackageName)
+    .replace('__VC_HANDLER_FUNC_NAME', goFuncName);
+  await writeFile(dest, mainModGoContents, 'utf-8');
+}
+
 /**
  * Writes a `go.mod` file in the specified directory. If a `go.mod` file
  * exists, then update the module name and any relative `replace` statements,
@@ -669,23 +675,44 @@ async function writeGoMod({
       }
       goWorkPath = dirname(goWorkPath);
     }
-    const goWorkRelPath = relative(destDir, goModPath);
+
+    const goModRelPath = relative(destDir, dirname(goModPath));
     const goModContents = await readFile(goModPath, 'utf-8');
+
     contents = goModContents
-      .replace(/^module .+$/m, contents)
+      .replace(/^module\s+.+$/m, contents)
       .replace(
         /^(replace .+=>\s*)(.+)$/gm,
         (orig, replaceStmt, replacePath) => {
           if (replacePath.startsWith('.')) {
-            return replaceStmt + join(dirname(goWorkRelPath), replacePath);
+            return replaceStmt + join(goModRelPath, replacePath);
           }
           return orig;
         }
       );
+
+    // get the module name, then add the 'replace' mapping if it doesn't
+    // already exist
+    const matches = goModContents.match(/module\s+(.+)/);
+    const moduleName = matches ? matches[1] : null;
+    if (moduleName) {
+      let relPath = normalize(goModRelPath);
+      if (!relPath.endsWith('/')) {
+        relPath += '/';
+      }
+
+      const topLevelReplaceRE = new RegExp(`replace.+=>\\s+${relPath}`);
+      if (!topLevelReplaceRE.test(contents)) {
+        // TODO: only add the `require` directive if it doesn't exist, however
+        // parsing is not trivial
+        contents += `\nrequire ${moduleName} v0.0.0-unpublished\nreplace ${moduleName} => ${relPath}\n`;
+      }
+    }
   }
 
   const destGoModPath = join(destDir, 'go.mod');
   debug(`Writing ${destGoModPath}`);
+  // console.log(contents);
   await writeFile(destGoModPath, contents, 'utf-8');
 }
 
@@ -693,11 +720,21 @@ async function writeGoMod({
  * For simple cases, a `go.work` file is not required. However when a Go
  * program requires source files outside the work path, we need a `go.work` so
  * Go can find the root of the project being built.
- * @param entrypointDirname The temp directory which will be used to build the
- * `vercel-dev-server-go` executable.
+ * @param dest The destination `go.work` file path.
+ * @param baseDir An optional top-level base directory to add to the list of
+ * workspaces.
  */
-async function writeDefaultGoWork(entrypointDirname: string) {
-  await writeFile(join(entrypointDirname, 'go.work'), 'use .', 'utf-8');
+async function writeDefaultGoWork(dest: string, baseDir?: string) {
+  const workspaces = ['.'];
+  if (baseDir) {
+    workspaces.push(relative(dirname(dest), baseDir));
+  }
+
+  await writeFile(
+    dest,
+    `use (\n${workspaces.map(w => `  ${w}\n`).join('')})\n`,
+    'utf-8'
+  );
 }
 
 export async function startDevServer(
@@ -738,7 +775,7 @@ export async function startDevServer(
       packageName: analyzed.packageName,
       workPath,
     }),
-    writeDefaultGoWork(tmp),
+    writeDefaultGoWork(join(tmp, 'go.work'), modulePath || workPath),
   ]);
 
   const portFile = join(

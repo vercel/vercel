@@ -178,7 +178,8 @@ export class GoWrapper {
       `Exec: go ${args.map(a => (a.includes(' ') ? `"${a}"` : a)).join(' ')}`
     );
     debug(`  CWD=${opts.cwd}`);
-    debug(`  GOROOT=${(env || opts.env || process.env).GOROOT}`);
+    debug(`  GOROOT=${(env || opts.env).GOROOT}`);
+    debug(`  GO_BUILD_FLAGS=${(env || opts.env).GO_BUILD_FLAGS}`);
     return execa('go', args, { stdio: 'inherit', ...opts, env });
   }
 
