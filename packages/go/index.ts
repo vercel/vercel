@@ -687,11 +687,18 @@ async function writeGoMod({
         relPath += '/';
       }
 
-      const topLevelReplaceRE = new RegExp(`replace.+=>\\s+${relPath}`);
-      if (!topLevelReplaceRE.test(contents)) {
-        // TODO: only add the `require` directive if it doesn't exist, however
-        // parsing is not trivial
-        contents += `\nrequire ${moduleName} v0.0.0-unpublished\nreplace ${moduleName} => ${relPath}\n`;
+      const requireRE = new RegExp(`require\\s+${moduleName}\\s+`);
+      const requireGroupRE = new RegExp(
+        `require\\s*\\(.*${moduleName}\\s+.*\\)`,
+        's'
+      );
+      if (!requireRE.test(contents) && !requireGroupRE.test(contents)) {
+        contents += `require ${moduleName} v0.0.0-unpublished\n`;
+      }
+
+      const replaceRE = new RegExp(`replace.+=>\\s+${relPath}`);
+      if (!replaceRE.test(contents)) {
+        contents += `replace ${moduleName} => ${relPath}\n`;
       }
     }
   }
@@ -702,6 +709,13 @@ async function writeGoMod({
   await writeFile(destGoModPath, contents, 'utf-8');
 }
 
+/**
+ * Attempts to find the `go.work` file. It will stop once it hits the
+ * `workPath`.
+ * @param goWorkDir The directory under the `wordPath` to start searching.
+ * @param workPath The project root to stop looking for the file.
+ * @returns The path to the `go.work` file or `undefined`.
+ */
 async function findGoWorkFile(goWorkDir: string, workPath: string) {
   while (!(await pathExists(join(goWorkDir, 'go.work')))) {
     if (goWorkDir === workPath) {
@@ -729,6 +743,7 @@ async function writeGoWork(
   const goWorkPath = await findGoWorkFile(modulePath || workPath, workPath);
 
   if (goWorkPath) {
+    const contents = await readFile(goWorkPath, 'utf-8');
     const addPath = (path: string) => {
       if (path) {
         if (path.startsWith('.')) {
@@ -738,7 +753,6 @@ async function writeGoWork(
         }
       }
     };
-    const contents = await readFile(goWorkPath, 'utf-8');
 
     // find grouped paths
     const multiRE = /use\s*\(([^)]+)/g;
@@ -759,8 +773,8 @@ async function writeGoWork(
       addPath(match[1].trim());
       match = singleRE.exec(contents);
     }
-  } else {
-    workspaces.add(relative(destDir, workPath));
+  } else if (modulePath) {
+    workspaces.add(relative(destDir, modulePath));
   }
 
   const contents = `use (\n${Array.from(workspaces)
