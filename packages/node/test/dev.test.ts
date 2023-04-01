@@ -67,17 +67,22 @@ async function fetch(url: string): Promise<FetchResponse> {
 }
 
 test('runs an edge function that uses `buffer`', async () => {
+  console.log('>> forking edge-buffer');
   const child = testForkDevServer('./edge-buffer.js');
 
   try {
+    console.log('>> A');
     const result = await readMessage(child);
+    console.log('>> B');
     if (result.state !== 'message') {
       throw new Error('Exited. error: ' + JSON.stringify(result.value));
     }
 
+    console.log('>> C');
     const response = await fetch(
       `http://localhost:${result.value.port}/api/edge-buffer`
     );
+    console.log('>> D');
     expect({
       status: response.status,
       json: await response.json(),
@@ -88,8 +93,11 @@ test('runs an edge function that uses `buffer`', async () => {
         'Buffer === B.Buffer': true,
       },
     });
+    console.log('>> E');
   } finally {
+    console.log('>> F');
     child.kill(9);
+    console.log('>> G');
   }
 });
 
