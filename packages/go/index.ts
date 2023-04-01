@@ -687,16 +687,16 @@ async function writeGoMod({
         relPath += '/';
       }
 
-      const requireRE = new RegExp(`require\\s+${moduleName}\\s+`);
+      const requireRE = new RegExp(`require\\s+${moduleName}`);
       const requireGroupRE = new RegExp(
-        `require\\s*\\(.*${moduleName}\\s+.*\\)`,
+        `require\\s*\\(.*${moduleName}.*\\)`,
         's'
       );
       if (!requireRE.test(contents) && !requireGroupRE.test(contents)) {
         contents += `require ${moduleName} v0.0.0-unpublished\n`;
       }
 
-      const replaceRE = new RegExp(`replace.+=>\\s+${relPath}`);
+      const replaceRE = new RegExp(`replace.+=>\\s+${relPath}(\\s|$)`);
       if (!replaceRE.test(contents)) {
         contents += `replace ${moduleName} => ${relPath}\n`;
       }
