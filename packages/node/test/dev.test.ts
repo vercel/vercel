@@ -29,6 +29,11 @@ interface FetchResponse {
   text: string;
 }
 
+/**
+ * This is a minimal replacement for `node-fetch`. We cannot use the real
+ * `node-fetch` because it is a ESM package and Jest doesn't support
+ * statically or dynamically importing ESM packages.
+ */
 async function fetch(url: string): Promise<FetchResponse> {
   return new Promise((resolve, reject) => {
     const req = http.get(url, res => {

@@ -51,9 +51,11 @@ async function main() {
     fs.remove(join(outDir, 'types.d.ts')),
     fs.remove(join(outDir, 'typescript.d.ts')),
     fs.remove(join(outDir, 'utils.d.ts')),
-    fs.remove(join(outDir, 'edge-functions/edge-handler.d.ts')),
-    fs.remove(join(outDir, 'edge-functions/edge-wasm-plugin.d.ts')),
-    fs.remove(join(outDir, 'serverless-functions/serverless-handler.d.ts')),
+    fs.remove(join(outDir, 'edge-functions/edge-handler-template.d.ts')),
+    fs.remove(join(outDir, 'edge-functions/edge-handler.d.mts')),
+    fs.remove(join(outDir, 'edge-functions/edge-wasm-plugin.d.mts')),
+    fs.remove(join(outDir, 'edge-functions/edge-node-compat-plugin.d.mts')),
+    fs.remove(join(outDir, 'serverless-functions/serverless-handler.d.mts')),
   ]);
 
   // Copy type file for ts test
