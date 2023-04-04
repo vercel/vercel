@@ -35,14 +35,12 @@ async function createServerlessServer(
   return { url: await listen(server) };
 }
 
-export async function createServerlessEventHandler(
+async function compileUserCode(
   entrypointPath: string,
   options: ServerlessServerOptions
-): Promise<(request: IncomingMessage) => Promise<VercelProxyResponse>> {
-  const extension = path.extname(entrypointPath);
-
+) {
   let userCode;
-  if (extension.startsWith('.ts')) {
+  if (entrypointPath.endsWith('.ts')) {
     const { compile } = createTsCompiler();
     const content = fs.readFileSync(entrypointPath, 'utf8');
     const filename = path.basename(entrypointPath);
@@ -52,7 +50,14 @@ export async function createServerlessEventHandler(
       ? require(entrypointPath)
       : await dynamicImport(entrypointPath);
   }
+  return userCode;
+}
 
+export async function createServerlessEventHandler(
+  entrypointPath: string,
+  options: ServerlessServerOptions
+): Promise<(request: IncomingMessage) => Promise<VercelProxyResponse>> {
+  const userCode = await compileUserCode(entrypointPath, options);
   const server = await createServerlessServer(userCode, options);
 
   return async function (request: IncomingMessage) {
