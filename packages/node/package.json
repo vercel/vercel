@@ -25,6 +25,7 @@
     "@vercel/build-utils": "6.7.1",
     "@vercel/node-bridge": "4.0.1",
     "@vercel/static-config": "2.0.16",
+    "@vercel/error-utils": "1.0.8",
     "async-listen": "1.2.0",
     "edge-runtime": "2.0.0",
     "esbuild": "0.14.47",
