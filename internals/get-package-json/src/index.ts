@@ -23,7 +23,7 @@ export function getPackageJSON() {
   // it is guarranteed that the only way for `getFileName` to return `undefined` is if this function is called using `eval`
   // thus it is safe to assert `filePath` is defined at this point.
   const filePath =
-    callsite.getFileName() || (callsite.getEvalOrigin() as string); // get the file name of where this function was called
+    (callsite.getFileName() || callsite.getEvalOrigin()) as string; // get the file name of where this function was called
 
   let rootDir = path.dirname(filePath);
 
