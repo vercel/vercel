@@ -1,0 +1,19 @@
+{
+  "name": "file-trace",
+  "version": "1.0.0",
+  "description": "",
+  "main": "file-trace.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@swc/cli": "0.1.62",
+    "@swc/core": "1.3.44",
+    "@vercel/build-utils": "workspace:*",
+    "@vercel/nft": "0.22.5",
+    "typescript": "5.0.3"
+  }
+}
