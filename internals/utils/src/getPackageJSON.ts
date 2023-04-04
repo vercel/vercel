@@ -5,7 +5,7 @@ function getPackageJSONPath (dir: string) {
   return path.join(dir, 'package.json');
 }
 
-export function getPackageJSON<T>(): T {
+export function getPackageJSON() {
   const _prepareStackTrace = Error.prepareStackTrace;
 
   Error.prepareStackTrace = (_, stack) => stack;
