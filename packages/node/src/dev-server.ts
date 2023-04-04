@@ -5,9 +5,6 @@ if (!entrypoint) {
   throw new Error('`VERCEL_DEV_ENTRYPOINT` must be defined');
 }
 
-delete process.env.TS_NODE_TRANSPILE_ONLY;
-delete process.env.TS_NODE_COMPILER_OPTIONS;
-
 import { join } from 'path';
 const useRequire = process.env.VERCEL_DEV_IS_ESM !== '1';
 

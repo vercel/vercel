@@ -1,5 +1,5 @@
 // @ts-expect-error
-import { dynamicImport } from '../../src/serverless-functions/dynamic-import.js';
+import { dynamicImport } from '../../../src/serverless-functions/dynamic-import.js';
 import { resolve } from 'path';
 
 describe('dynamic-import', () => {

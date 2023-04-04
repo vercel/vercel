@@ -356,9 +356,8 @@ function getAWSLambdaHandler(entrypoint: string, config: Config) {
 
   if (process.env.NODEJS_AWS_HANDLER_NAME) {
     const { dir, name } = parsePath(entrypoint);
-    return `${dir}${dir ? sep : ''}${name}.${
-      process.env.NODEJS_AWS_HANDLER_NAME
-    }`;
+    return `${dir}${dir ? sep : ''}${name}.${process.env.NODEJS_AWS_HANDLER_NAME
+      }`;
   }
 
   return '';
@@ -616,10 +615,7 @@ export const startDevServer: StartDevServer = async opts => {
     entrypoint,
     require_,
     isEsm,
-    isTypeScript: isTypescript,
-    maybeTranspile,
     meta,
-    tsConfig,
   });
 
   const { pid } = child;
@@ -658,9 +654,9 @@ async function doTypeCheck(
   // A different filename needs to be used for different `extends` tsconfig.json
   const tsconfigName = projectTsConfig
     ? `tsconfig-with-${relative(workPath, projectTsConfig).replace(
-        /[\\/.]/g,
-        '-'
-      )}.json`
+      /[\\/.]/g,
+      '-'
+    )}.json`
     : 'tsconfig.json';
   const tsconfigPath = join(entrypointCacheDir, tsconfigName);
   const tsconfig = {
