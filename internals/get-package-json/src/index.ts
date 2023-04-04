@@ -15,6 +15,8 @@ export function getPackageJSON() {
     1
   ); // remove self from stack
 
+  Error.prepareStackTrace = _prepareStackTrace;
+
   // TypeScript rule noUncheckedIndexedAccess makes `stack[0]` potentially undefined;
   // however, we can safely assert it is not undefined as the callstack will always
   // have atleast 2 entries (we slice the first above), and then rely on the second here.
@@ -33,7 +35,6 @@ export function getPackageJSON() {
     packageJSONPath = getPackageJSONPath(rootDir);
   }
 
-  Error.prepareStackTrace = _prepareStackTrace;
   const packageJSON = JSON.parse(fs.readFileSync(packageJSONPath, 'utf-8'));
 
   return packageJSON;
