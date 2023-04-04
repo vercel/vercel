@@ -16,12 +16,13 @@ export function getPackageJSON<T>(): T {
   // TypeScript rule noUncheckedIndexedAccess makes `stack[0]` potentially undefined;
   // however, we can safely assert it is not undefined as the callstack will always
   // have atleast 2 entries (we slice the first above), and then rely on the second here.
-  const filePath = stack[0]!.getFileName(); // get the file name of where this function was called
+  const callsite = stack[0]!;
 
-  // Furthermore, V8 api `CallSite.getFileName` could return `null`, but as long as this function
-  // is always called from another script (which it has to be, since it is only defined here as
-  // a named export), it will return a `string`.
-  let rootDir = path.dirname(filePath!);
+  // it is guarranteed that the only way for `getFileName` to return `undefined` is if this function is called using `eval`
+  // thus it is safe to assert `filePath` is defined at this point.
+  const filePath = callsite.getFileName() || callsite.getEvalOrigin() as string; // get the file name of where this function was called
+
+  let rootDir = path.dirname(filePath);
 
   let packageJSONPath = getPackageJSONPath(rootDir);
   while (!fs.existsSync(packageJSONPath)) {

@@ -14,7 +14,8 @@
     }
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json"
+    "build": "tsc -p tsconfig.json",
+    "test-unit": "jest tests/unit"
   },
   "devDependencies": {
     "@types/jest": "29.5.0",
