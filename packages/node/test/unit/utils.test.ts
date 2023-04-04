@@ -1,4 +1,4 @@
-import { entrypointToOutputPath } from '../src/utils';
+import { entrypointToOutputPath } from '../../src/utils';
 
 describe('entrypointToOutputPath()', () => {
   test.each([

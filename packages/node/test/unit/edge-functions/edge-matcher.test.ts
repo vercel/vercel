@@ -1,5 +1,5 @@
-import { prepareFilesystem } from './test-utils';
-import { build } from '../src';
+import { prepareFilesystem } from '../test-utils';
+import { build } from '../../../src';
 
 describe('middleware matchers', () => {
   it.each([
@@ -63,6 +63,12 @@ describe('middleware matchers', () => {
     expect(buildResult.routes).toEqual([
       {
         src: regExps.join('|'),
+        middlewareRawSrc:
+          matcher === undefined
+            ? []
+            : Array.isArray(matcher)
+            ? matcher
+            : [matcher],
         middlewarePath: 'middleware.js',
         continue: true,
         override: true,
