@@ -3,6 +3,11 @@ import { pathToRegexp } from 'path-to-regexp';
 import { debug, streamToBuffer } from '@vercel/build-utils';
 import { IncomingMessage } from 'http';
 
+export function isTypeScriptExtension(filepath: string) {
+  const ext = extname(filepath);
+  return ['.ts', '.tsx', '.mts', '.cts'].includes(ext);
+}
+
 export function getRegExpFromMatchers(matcherOrMatchers: unknown): string {
   if (!matcherOrMatchers) {
     return '^/.*$';
