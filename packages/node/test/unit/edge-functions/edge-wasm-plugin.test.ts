@@ -1,5 +1,5 @@
-import { createEdgeWasmPlugin } from '../src/edge-wasm-plugin';
-import { prepareFilesystem } from './test-utils';
+import { createEdgeWasmPlugin } from '../../../src/edge-functions/edge-wasm-plugin';
+import { prepareFilesystem } from '../test-utils';
 import { build } from 'esbuild';
 import { join } from 'path';
 
