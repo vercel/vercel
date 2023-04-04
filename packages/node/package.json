@@ -11,7 +11,7 @@
   },
   "scripts": {
     "build": "node build",
-    "test": "jest --env node --verbose --bail --runInBand",
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest --env node --verbose --bail --runInBand",
     "test-unit": "pnpm test test/unit",
     "test-e2e": "pnpm test test/integration"
   },

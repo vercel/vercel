@@ -6,7 +6,7 @@ import { createServer, ServerResponse } from 'http';
 // @ts-expect-error
 import { dynamicImport } from './dynamic-import.js';
 import { IncomingMessage } from 'http';
-import { serializeRequest } from '../utils';
+import { isTypeScriptExtension, serializeRequest } from '../utils';
 import exitHook from 'exit-hook';
 import fs from 'fs';
 import listen from 'async-listen';
@@ -40,7 +40,7 @@ async function compileUserCode(
   options: ServerlessServerOptions
 ) {
   let userCode;
-  if (entrypointPath.endsWith('.ts')) {
+  if (isTypeScriptExtension(entrypointPath)) {
     const { compile } = createTsCompiler();
     const content = fs.readFileSync(entrypointPath, 'utf8');
     const filename = path.basename(entrypointPath);

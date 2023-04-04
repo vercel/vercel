@@ -58,6 +58,7 @@ import {
   entrypointToOutputPath,
   getRegExpFromMatchers,
   isEdgeRuntime,
+  isTypeScriptExtension,
 } from './utils';
 import {
   forkDevServer,
@@ -360,8 +361,9 @@ function getAWSLambdaHandler(entrypoint: string, config: Config) {
 
   if (process.env.NODEJS_AWS_HANDLER_NAME) {
     const { dir, name } = parsePath(entrypoint);
-    return `${dir}${dir ? sep : ''}${name}.${process.env.NODEJS_AWS_HANDLER_NAME
-      }`;
+    return `${dir}${dir ? sep : ''}${name}.${
+      process.env.NODEJS_AWS_HANDLER_NAME
+    }`;
   }
 
   return '';
@@ -552,7 +554,7 @@ export const startDevServer: StartDevServer = async opts => {
     filename: 'package.json',
   });
   const pkg = pathToPkg ? require_(pathToPkg) : {};
-  const isTypescript = ['.ts', '.tsx', '.mts', '.cts'].includes(ext);
+  const isTypescript = isTypeScriptExtension(entrypoint);
   const maybeTranspile = isTypescript || !['.cjs', '.mjs'].includes(ext);
   const isEsm =
     ext === '.mjs' ||
@@ -658,9 +660,9 @@ async function doTypeCheck(
   // A different filename needs to be used for different `extends` tsconfig.json
   const tsconfigName = projectTsConfig
     ? `tsconfig-with-${relative(workPath, projectTsConfig).replace(
-      /[\\/.]/g,
-      '-'
-    )}.json`
+        /[\\/.]/g,
+        '-'
+      )}.json`
     : 'tsconfig.json';
   const tsconfigPath = join(entrypointCacheDir, tsconfigName);
   const tsconfig = {
