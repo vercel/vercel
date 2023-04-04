@@ -1,0 +1,2172 @@
+{
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/index.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-latest-version/index.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/humanize-path.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/index.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/index.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/cmd.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/info.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/error.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/param.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/highlight.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-args.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-user.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/teams/get-teams.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/error.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/report-error.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-config.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/config/files.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/config/global-path.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/config/get-default.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/constants.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-update-command.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/metrics.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/login/prompt.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/box.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/alias/index.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/bisect/index.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/build.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/certs/index.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/deploy/index.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/dev/index.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/dns/index.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/domains/index.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/env/index.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/git/index.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/init/index.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/inspect.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/link/index.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/list.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/logs.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/login.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/logout.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/project/index.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/pull.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/remove.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/rollback.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/secrets.js",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/teams/index.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/whoami.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-latest-version/index.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/index.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/index.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/create-output.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/wait.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/create-output.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/link.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/wait.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/emoji.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/link.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/wait.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/erase-lines.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/erase-lines.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/emoji.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/humanize-path.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/index.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/cmd.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/info.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/error.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/metrics.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/link.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/metrics.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/ua-browser.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/constants.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/config/files.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/ua-browser.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/constants.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/config/files.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/config/global-path.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/config/local-path.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/now-error.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/error.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/highlight.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/dev/types.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/config/global-path.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-args.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-args.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/arg-common.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/arg-common.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/config/local-path.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-args.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/now-error.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/now-error.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/now-error.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/code.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/code.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/cmd.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/highlight.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/dev/types.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/index.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/build/import-builders.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/build/import-builders.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/build/static-builder.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/projects/link.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/index.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/read-json-file.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/cmd.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/code.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/build/static-builder.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/projects/link.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/projects/get-project-by-id-or-name.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-user.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/teams/get-team-by-id.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/index.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/emoji.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/config/global-path.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/code.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/projects/get-project-by-id-or-name.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/ua.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/create-output.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/response-error.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/print-indications.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/login/reauthenticate.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/login/types.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/config/files.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/promise.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/ua.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/response-error.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/print-indications.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/link.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/emoji.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/login/reauthenticate.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/login/saml.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/login/prompt.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/login/types.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/input/confirm.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/login/saml.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/login/oauth.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/login/oauth.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/login/prompt.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/login/verify.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/highlight.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/link.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/erase-lines.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/login/types.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/login/prompt.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/error.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/input/list.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/login/types.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/login/saml.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/login/email.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/login/github.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/login/gitlab.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/login/bitbucket.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/input/list.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/erase-lines.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/input/patch-inquirer.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/input/patch-inquirer.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/login/types.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/login/email.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/sleep.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/highlight.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/erase-lines.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/login/verify.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/login/login.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/login/types.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/sleep.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/login/verify.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/login/types.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/login/login.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/login/types.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/login/github.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/login/oauth.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/login/gitlab.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/login/oauth.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/login/bitbucket.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/login/oauth.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/input/confirm.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/input/patch-inquirer.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/promise.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-user.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/teams/get-team-by-id.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/read-json-file.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/param.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/teams/get-teams.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/error.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/error.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/handle-error.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/handle-error.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/info.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/error.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/report-error.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-scope.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-args.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-scope.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-user.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/teams/get-team-by-id.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-config.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/humanize-path.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/read-json-file.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/dev/types.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/index.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/config/get-default.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-update-command.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/is-canary.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/is-canary.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/package.json"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/box.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/alias/index.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/error.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-args.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-subcommand.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/logo.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/alias/ls.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/alias/rm.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/alias/set.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-subcommand.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/logo.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/alias/ls.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/alias/get-aliases.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-scope.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-pagination-opts.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/stamp.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/strlen.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-command-flags.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/alias/get-aliases.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-pagination-opts.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/stamp.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/elapsed.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/elapsed.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/strlen.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-command-flags.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/alias/rm.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-scope.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/alias/remove-alias-by-id.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/stamp.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/strlen.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/input/confirm.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/alias/find-alias-by-alias-or-id.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/is-valid-name.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/alias/remove-alias-by-id.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/alias/find-alias-by-alias-or-id.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/index.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/is-valid-name.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/alias/set.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/alias/create-alias.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/index.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/alias/assign-alias.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-deployment.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/alias/get-deployment-by-alias.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-scope.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/domains/setup-domain.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/stamp.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/is-valid-name.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/certs/handle-cert-error.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/alias/is-wildcard-alias.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/link.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/to-host.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/alias/create-alias.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/index.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/certs/create-cert-for-alias.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/certs/create-cert-for-alias.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/now-error.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/index.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/certs/create-cert-for-cns.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/certs/get-wildcard-cns-for-alias.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/join-words.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/stamp.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/certs/create-cert-for-cns.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/certs/issue-cert.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/certs/map-cert-error.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/certs/issue-cert.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/certs/map-cert-error.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/certs/get-wildcard-cns-for-alias.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/alias/is-wildcard-alias.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/alias/extract-domain.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/alias/is-wildcard-alias.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/alias/extract-domain.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/alias/is-wildcard-alias.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/join-words.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/alias/assign-alias.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/index.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/alias/create-alias.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/domains/is-domain-external.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/domains/setup-domain.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/domains/is-domain-external.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/domains/setup-domain.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/now-error.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/index.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/domains/add-domain.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/domains/maybe-get-domain-by-name.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/domains/purchase-domain-if-available.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/alias/extract-domain.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/domains/add-domain.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/domains/maybe-get-domain-by-name.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/domains/get-domain-by-name.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/domains/get-domain-by-name.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/domains/purchase-domain-if-available.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/index.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/erase-lines.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/domains/get-domain-price.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/domains/get-domain-status.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/input/prompt-bool.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/domains/purchase-domain.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/stamp.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/domains/get-domain-price.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/domains/get-domain-status.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/input/prompt-bool.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/domains/purchase-domain.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-deployment.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/certs/map-cert-error.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/to-host.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/to-host.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/alias/get-deployment-by-alias.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/index.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/dev/types.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/deploy/get-deployments-by-appname.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-deployment.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/deploy/get-deployments-by-appname.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/certs/handle-cert-error.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/index.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/format-dns-table.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/format-dns-table.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/strlen.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/bisect/index.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/box.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/sleep.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/format-date.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/link.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/logo.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-args.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/bisect/normalize-url.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-scope.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-deployment.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/format-date.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/bisect/normalize-url.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/build.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/pull.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-files.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-args.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/cmd.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/read-json-file.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/projects/project-settings.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/projects/link.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/input/confirm.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/emoji.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/stamp.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/build/write-build-result.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/build/import-builders.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/build/corepack.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/build/sort-builders.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/error.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/validate-config.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/build/monorepo.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/pull.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/emoji.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-args.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/logo.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/stamp.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/projects/link.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/projects/project-settings.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/env/pull.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/env/env-target.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/link/ensure-link.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/projects/project-settings.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/projects/link.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/input/edit-project-settings.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/input/edit-project-settings.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/input/confirm.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/is-setting-value.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/is-setting-value.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/env/pull.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/emoji.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/input/confirm.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/index.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/param.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/stamp.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/env/get-env-records.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/env/diff-env-files.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/env/get-env-records.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/index.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/env/diff-env-files.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/index.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/parse-env.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/parse-env.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/env/env-target.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/link/ensure-link.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/link/setup-and-link.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/param.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/projects/link.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/link/setup-and-link.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/projects/link.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/projects/create-project.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/projects/update-project.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/handle-error.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/input/confirm.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/humanize-path.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/config/global-path.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/input/select-org.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/input/input-project.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/validate-paths.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/input/input-root-directory.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/input/edit-project-settings.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/stamp.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/emoji.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/deploy/create-deploy.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/index.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/projects/create-project.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/projects/update-project.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/input/select-org.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-user.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/teams/get-teams.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/input/patch-inquirer.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/input/input-project.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/input/confirm.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/projects/get-project-by-id-or-name.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/validate-paths.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/index.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/input/confirm.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/humanize-path.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/input/input-root-directory.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/validate-paths.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/deploy/create-deploy.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/deploy/generate-cert-for-deploy.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/now-error.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/certs/map-cert-error.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/index.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/deploy/generate-cert-for-deploy.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/now-error.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/certs/create-cert-for-cns.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/domains/setup-domain.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/index.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/ua.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/deploy/process-deployment.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/highlight.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/error.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/stamp.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/print-indications.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/dev/types.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/deploy/process-deployment.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/index.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/progress.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/index.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/ua.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/projects/link.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/emoji.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/progress.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-files.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/unique-strings.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/create-output.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/unique-strings.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/build/write-build-result.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/build/merge.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/build/unzip.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/projects/link.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/build/merge.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/build/unzip.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/build/corepack.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/projects/link.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/read-json-file.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/build/sort-builders.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/validate-config.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/dev/types.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/build/monorepo.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/projects/project-settings.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/index.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/input/edit-project-settings.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/certs/index.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/error.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-args.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-subcommand.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/logo.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/certs/add.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/certs/issue.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/certs/ls.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/certs/rm.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/certs/add.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-scope.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/stamp.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/certs/create-cert-from-file.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/certs/create-cert-for-cns.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/certs/create-cert-from-file.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/certs/issue.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/index.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/certs/create-cert-for-cns.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/certs/create-cert-from-file.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/format-dns-table.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/certs/finish-cert-order.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/certs/get-cns-from-args.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-scope.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/stamp.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/certs/start-cert-order.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/certs/handle-cert-error.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/certs/finish-cert-order.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/certs/map-cert-error.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/certs/get-cns-from-args.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/certs/start-cert-order.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/certs/ls.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-scope.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-pagination-opts.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/stamp.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/certs/get-certs.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/strlen.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-command-flags.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/certs/get-certs.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/certs/rm.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/index.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/certs/delete-cert-by-id.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/certs/get-cert-by-id.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/certs/get-custom-certs-for-domain.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-scope.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/stamp.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/param.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/certs/delete-cert-by-id.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/index.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/certs/get-cert-by-id.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/certs/get-custom-certs-for-domain.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/deploy/index.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/code.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/highlight.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/config/files.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-args.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/error.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/humanize-path.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/index.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/stamp.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/deploy/create-deploy.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-deployment.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/parse-meta.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/link.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/param.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/domains/purchase-domain-if-available.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/input/confirm.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/input/edit-project-settings.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/projects/link.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-project-name.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/input/select-org.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/input/input-project.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/emoji.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/input/input-root-directory.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/validate-paths.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/deploy/get-preferred-preview-url.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/index.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/deploy/args.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/deploy/get-deployment-checks.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/deploy/parse-target.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/deploy/get-prebuilt-json.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/create-git-meta.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/deploy/validate-archive-format.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/parse-env.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/projects/project-settings.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/parse-meta.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-project-name.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/deploy/get-preferred-preview-url.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/alias/is-wildcard-alias.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/certs/get-certs-for-cn.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/certs/get-certs-for-cn.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/deploy/args.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/logo.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/deploy/get-deployment-checks.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/deploy/parse-target.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/index.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/param.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/code.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/deploy/get-prebuilt-json.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/build.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/create-git-meta.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/index.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/deploy/validate-archive-format.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/dev/index.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-args.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-subcommand.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/now-error.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/handle-error.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/logo.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/cmd.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/highlight.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/dev/dev.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/config/read-config.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/read-json-file.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/dev/dev.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/dev/server.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/dev/parse-listen.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/projects/link.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/link/setup-and-link.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/param.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/build/write-build-result.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/env/get-env-records.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/dev/server.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/cmd.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/link.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/sleep.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/index.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/path-helpers.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-dist-tag.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/config/local-path.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/projects/link.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-files.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/validate-config.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/dev/router.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/dev/mime-type.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/dev/builder.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/dev/errors.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/dev/templates/error.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/dev/templates/error_base.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/dev/templates/error_404.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/dev/templates/error_502.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/dev/templates/redirect.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/dev/types.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/tree-kill.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/dev/headers.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/dev/parse-query-string.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/dev/is-url.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/projects/project-settings.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/dev/parse-listen.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/path-helpers.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-dist-tag.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/dev/router.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/dev/is-url.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/dev/server.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/dev/types.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/dev/parse-query-string.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/dev/is-url.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/dev/parse-query-string.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/dev/mime-type.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/dev/builder.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/index.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/highlight.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/tree-kill.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/path-helpers.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/dev/server.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/dev/types.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-update-command.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/build/import-builders.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/tree-kill.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/dev/errors.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/dev/templates/error.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/dev/templates/error_base.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/dev/templates/error_404.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/dev/templates/error_502.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/dev/templates/redirect.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/dev/headers.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/dev/parse-listen.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/dev/types.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/config/read-config.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/read-json-file.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/dev/types.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/config/local-path.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/dns/index.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-args.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-subcommand.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/handle-error.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/logo.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/dns/add.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/dns/import.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/dns/ls.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/dns/rm.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/dns/add.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/dns/add-dns-record.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-scope.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/dns/parse-add-dns-record-args.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/stamp.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/dns/get-dns-data.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/dns/add-dns-record.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/dns/parse-add-dns-record-args.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/dns/get-dns-data.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/input/text.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/input/prompt-bool.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/input/text.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/erase-lines.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/dns/import.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-scope.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/stamp.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/dns/import-zonefile.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/dns/import-zonefile.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/dns/ls.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/format-table.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/dns/get-dns-records.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/dns/get-domain-dns-records.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-scope.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-pagination-opts.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/stamp.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-command-flags.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/format-table.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/strlen.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/dns/get-dns-records.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/index.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/dns/get-domain-dns-records.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/domains/get-domains.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/dns/get-domain-dns-records.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/index.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/domains/get-domains.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/dns/rm.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/index.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/dns/delete-dns-record-by-id.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/dns/get-dns-record-by-id.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-scope.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/stamp.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/dns/delete-dns-record-by-id.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/dns/get-dns-record-by-id.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/domains/index.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-args.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-subcommand.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/handle-error.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/logo.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/domains/add.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/domains/buy.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/domains/transfer-in.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/domains/inspect.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/domains/ls.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/domains/rm.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/domains/move.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/domains/add.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/format-ns-table.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-scope.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/stamp.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/domains/get-domain.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/projects/link.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/domains/is-public-suffix.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/domains/get-domain-config.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/projects/add-domain-to-project.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/projects/remove-domain-from-project.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/code.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/format-ns-table.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/strlen.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/chars.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/chars.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/domains/get-domain.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/domains/is-public-suffix.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/domains/get-domain-config.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/projects/add-domain-to-project.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/projects/remove-domain-from-project.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/domains/buy.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/domains/get-domain-price.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/domains/get-domain-status.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-scope.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/param.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/input/prompt-bool.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/domains/purchase-domain.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/stamp.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/domains/transfer-in.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-scope.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/param.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/domains/transfer-in-domain.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/stamp.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/domains/get-auth-code.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/domains/get-domain-price.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/domains/check-transfer.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/input/prompt-bool.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/is-root-domain.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/domains/transfer-in-domain.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/domains/get-auth-code.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/input/text.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/domains/check-transfer.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/is-root-domain.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/domains/inspect.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/index.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/stamp.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/format-date.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/format-ns-table.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/domains/get-domain-by-name.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-scope.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/format-table.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/projects/find-projects-for-domain.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/domains/get-domain-price.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/domains/get-domain-config.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/code.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/domains/get-domain-registrar.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/projects/find-projects-for-domain.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/domains/get-domain-registrar.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/domains/ls.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/domains/get-domains.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-scope.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/stamp.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/format-table.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/format-date.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-command-flags.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-pagination-opts.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/domains/is-domain-external.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/domains/get-domain-registrar.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/domains/rm.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/index.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/certs/delete-cert-by-id.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/domains/get-domain-by-name.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-scope.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/alias/remove-alias-by-id.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/domains/remove-domain-by-name.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/stamp.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/param.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/input/prompt-bool.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/domains/set-custom-suffix.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/projects/find-projects-for-domain.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/domains/remove-domain-by-name.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/domains/set-custom-suffix.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/domains/move.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-scope.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/domains/move-out-domain.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/is-root-domain.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/input/text.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/param.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/alias/get-domain-aliases.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/domains/get-domain-by-name.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/input/prompt-bool.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/teams/get-teams.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/domains/move-out-domain.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/alias/get-domain-aliases.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/alias/get-aliases.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/env/index.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/env/env-target.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-args.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-invalid-subcommand.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-subcommand.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/handle-error.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/logo.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/projects/link.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/env/add.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/env/ls.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/env/pull.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/env/rm.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-invalid-subcommand.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/env/add.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/index.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/stamp.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/env/add-env-record.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/env/get-env-records.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/env/env-target.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/input/read-standard-input.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/param.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/emoji.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/env/known-error.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/input/patch-inquirer.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/env/add-env-record.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/index.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/input/read-standard-input.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/env/known-error.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/env/ls.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/index.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/format-table.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/env/get-env-records.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/env/format-env-target.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/env/env-target.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/stamp.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/param.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/ellipsis.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/env/format-env-target.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/ellipsis.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/env/rm.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/index.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/input/confirm.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/env/remove-env-record.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/env/get-env-records.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/env/format-env-target.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/env/env-target.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/stamp.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/param.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/emoji.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/env/known-error.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/input/patch-inquirer.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/env/remove-env-record.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/index.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/git/index.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/link/ensure-link.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-args.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-invalid-subcommand.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/handle-error.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/logo.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/validate-paths.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/git/connect.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/git/disconnect.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/git/connect.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/create-git-meta.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/input/confirm.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/input/list.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/link.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/git/connect-git-provider.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/validate-paths.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/git/connect-git-provider.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/link.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/index.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/git/disconnect.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/input/confirm.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/git/connect-git-provider.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/init/index.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-args.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-subcommand.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/handle-error.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/logo.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/init/init.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/init/init.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/input/list.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/list-item.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/input/prompt-bool.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/humanize-path.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/info.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/cmd.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/init/did-you-mean.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/list-item.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/init/did-you-mean.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/inspect.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-args.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/builds.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/routes.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/indent.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/logo.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/elapsed.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/error.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-scope.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-deployment.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/builds.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/build-state.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/build-state.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/routes.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/indent.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/link/index.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-args.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/logo.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/link/ensure-link.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/list.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/index.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-args.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/error.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/logo.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/elapsed.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/strlen.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/to-host.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/parse-meta.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/is-valid-name.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-command-flags.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/validate-paths.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/projects/link.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/link/ensure-link.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-scope.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/logs.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/logo.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/elapsed.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/url.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/events.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-scope.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-args.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-deployment.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/url.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/events.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-deployment.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-scope.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/login.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/humanize-path.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-args.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/logo.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/login/prompt.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/login/saml.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/login/email.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/login/github.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/login/gitlab.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/login/bitbucket.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/emoji.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/config/global-path.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/config/files.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/login/types.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/logout.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/logo.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/error.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/config/files.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-args.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/project/index.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-args.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-invalid-subcommand.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-scope.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/handle-error.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/logo.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/project/add.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/project/list.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/project/rm.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/project/add.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/project/list.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-command-flags.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/strlen.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/project/rm.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/emoji.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/input/confirm.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/remove.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/index.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/alias/get-aliases.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/logo.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/elapsed.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/url.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-scope.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/is-valid-name.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/projects/remove-project.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/projects/get-project-by-id-or-name.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-deployment.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/deploy/get-deployments-by-project-id.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-args.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/handle-error.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/index.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/now-error.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/projects/remove-project.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/deploy/get-deployments-by-project-id.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/rollback.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/link/ensure-link.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-args.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/handle-error.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/logo.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/rollback/request-rollback.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/rollback/status.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/validate-paths.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/rollback/request-rollback.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-deployment.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-scope.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/teams/get-team-by-id.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/is-valid-name.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/rollback/status.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/rollback/status.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/elapsed.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/format-date.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-deployment.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-scope.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/rollback/render-alias-status.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/sleep.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/rollback/render-alias-status.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/secrets.js": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/strlen.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/error.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/secrets.js",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/exit.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/logo.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-scope.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/input/confirm.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-command-flags.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-prefixed-flags.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/secrets.js": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/index.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/exit.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-prefixed-flags.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/teams/index.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/error.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/logo.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/teams/list.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/teams/add.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/teams/switch.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/teams/invite.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-args.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/teams/list.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/chars.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/table.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-user.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/teams/get-teams.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-prefixed-flags.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-command-flags.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/cmd.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-args.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/table.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/teams/add.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/stamp.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/info.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/erase-lines.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/chars.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/note.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/input/text.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/teams/invite.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/config/files.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/teams/create-team.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/teams/patch-team.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/note.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/teams/invite.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/cmd.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/stamp.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/param.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/chars.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/input/text.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/erase-lines.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-user.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/input/regexes.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/teams/get-teams.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/teams/invite-user-to-team.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/errors-ts.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/input/regexes.ts": {
+    "dependsOn": []
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/teams/invite-user-to-team.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/teams/create-team.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/teams/patch-team.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/teams/switch.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/emoji.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-user.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/teams/get-teams.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/input/list.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/config/files.ts"
+    ]
+  },
+  "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/commands/whoami.ts": {
+    "dependsOn": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/output/logo.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-scope.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/pkg-name.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/get-args.ts",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/src/util/client.ts"
+    ]
+  }
+}
