@@ -1,3 +1,4 @@
+import { isErrnoException } from '@vercel/error-utils';
 import url from 'url';
 import { spawn } from 'child_process';
 import {
@@ -247,13 +248,16 @@ async function compile(
           fsCache.set(relPath, entry);
           sourceCache.set(relPath, source);
           return source;
-        } catch (e) {
-          if (e.code === 'ENOENT' || e.code === 'EISDIR') {
+        } catch (error: unknown) {
+          if (
+            isErrnoException(error) &&
+            (error.code === 'ENOENT' || error.code === 'EISDIR')
+          ) {
             // `null` represents a not found
             sourceCache.set(relPath, null);
             return null;
           }
-          throw e;
+          throw error;
         }
       },
     }
@@ -587,8 +591,8 @@ export const startDevServer: StartDevServer = async opts => {
     if (pathToTsConfig) {
       try {
         tsConfig = ts.readConfigFile(pathToTsConfig, ts.sys.readFile).config;
-      } catch (error: any) {
-        if (error.code !== 'ENOENT') {
+      } catch (error: unknown) {
+        if (isErrnoException(error) && error.code !== 'ENOENT') {
           console.error(`Error while parsing "${pathToTsConfig}"`);
           throw error;
         }
@@ -670,11 +674,8 @@ async function doTypeCheck(
     const json = JSON.stringify(tsconfig, null, '\t');
     await fsp.mkdir(entrypointCacheDir, { recursive: true });
     await fsp.writeFile(tsconfigPath, json, { flag: 'wx' });
-  } catch (error: any) {
-    // Don't throw if the file already exists
-    if (error.code !== 'EEXIST') {
-      throw error;
-    }
+  } catch (error: unknown) {
+    if (isErrnoException(error) && error.code !== 'EEXIST') throw error;
   }
 
   const child = spawn(

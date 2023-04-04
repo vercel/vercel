@@ -1,3 +1,4 @@
+import { isError } from '@vercel/error-utils';
 import type { EdgeContext } from '@edge-runtime/vm';
 import type { VercelProxyResponse } from '../types';
 import { createEdgeWasmPlugin, WasmAssets } from './edge-wasm-plugin';
@@ -99,11 +100,11 @@ async function compileUserCode(
       wasmAssets,
       nodeCompatBindings: nodeCompatPlugin.bindings,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     // We can't easily show a meaningful stack trace from ncc -> edge-runtime.
     // So, stick with just the message for now.
     console.error(`Failed to compile user code for edge runtime.`);
-    logError(error);
+    if (isError(error)) logError(error);
     return undefined;
   }
 }
