@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 
-function getPackageJSONPath (dir: string) {
+function getPackageJSONPath(dir: string) {
   return path.join(dir, 'package.json');
 }
 
@@ -11,7 +11,9 @@ export function getPackageJSON() {
   Error.prepareStackTrace = (_, stack) => stack;
 
   // The `stack` reference above is of type `Array<NodeJS.CallSite>`
-  const stack = (new Error().stack as unknown as Array<NodeJS.CallSite>).slice(1); // remove self from stack
+  const stack = (new Error().stack as unknown as Array<NodeJS.CallSite>).slice(
+    1
+  ); // remove self from stack
 
   // TypeScript rule noUncheckedIndexedAccess makes `stack[0]` potentially undefined;
   // however, we can safely assert it is not undefined as the callstack will always
@@ -20,7 +22,8 @@ export function getPackageJSON() {
 
   // it is guarranteed that the only way for `getFileName` to return `undefined` is if this function is called using `eval`
   // thus it is safe to assert `filePath` is defined at this point.
-  const filePath = callsite.getFileName() || callsite.getEvalOrigin() as string; // get the file name of where this function was called
+  const filePath =
+    callsite.getFileName() || (callsite.getEvalOrigin() as string); // get the file name of where this function was called
 
   let rootDir = path.dirname(filePath);
 
