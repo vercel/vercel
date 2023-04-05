@@ -1,17 +1,18 @@
-import type { VercelProxyResponse } from '../types';
-import type { VercelRequest, VercelResponse } from './helpers';
 import { addHelpers } from './helpers';
 import { create as createTsCompiler } from 'ts-node';
-import { createServer, ServerResponse } from 'http';
+import { createServer } from 'http';
 // @ts-expect-error
 import { dynamicImport } from './dynamic-import.js';
-import { IncomingMessage } from 'http';
+import { fetch } from 'undici';
 import { isTypeScriptExtension, serializeRequest } from '../utils';
 import exitHook from 'exit-hook';
 import fs from 'fs';
 import listen from 'async-listen';
 import path from 'path';
-import undici from 'undici';
+import type { HeadersInit } from 'undici';
+import type { ServerResponse, IncomingMessage } from 'http';
+import type { VercelProxyResponse } from '../types';
+import type { VercelRequest, VercelResponse } from './helpers';
 
 type ServerlessServerOptions = {
   shouldAddHelpers: boolean;
@@ -64,12 +65,11 @@ export async function createServerlessEventHandler(
     const query = request.url?.split('?')[1];
     const url = query === undefined ? server.url : `${server.url}?${query}`;
 
-    const response = await undici.fetch(url, {
+    const response = await fetch(url, {
       redirect: 'manual',
       method: 'post',
       body: await serializeRequest(request),
-      //@ts-expect-error
-      headers: request.headers,
+      headers: request.headers as HeadersInit,
     });
 
     return {
