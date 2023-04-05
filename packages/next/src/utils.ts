@@ -41,12 +41,22 @@ import { stringifySourceMap } from './sourcemapped';
 import type { RawSourceMap } from 'source-map';
 import bytes from 'bytes';
 
-type stringMap = { [key: string]: string };
-
 export const KIB = 1024;
 export const MIB = 1024 * KIB;
 
 export const prettyBytes = (n: number) => bytes(n, { unitSeparator: ' ' });
+
+type stringMap = { [key: string]: string };
+
+type Truthy<T> = T extends false | '' | 0 | null | undefined ? never : T; // from lodash
+/**
+ * Replacement for `Boolean` that uses stricter typing, allowing for
+ * `someArray.filter(isTruthy)` to return an array of truthy values
+ * where `someArray.filter(Boolean)` would not.
+ */
+function isTruthy<T>(value: T): value is Truthy<T> {
+  return Boolean(value);
+}
 
 // Identify /[param]/ in route string
 // eslint-disable-next-line no-useless-escape
@@ -2586,20 +2596,40 @@ export async function getMiddlewareBundle({
         };
 
         route.middlewarePath = shortPath;
-        route.middlewareRawSrc = matcher.originalSource
-          ? [matcher.originalSource]
-          : [];
+
+        if (route.middlewareRawSrc?.length || 0 > 0) {
+          console.log(`OVERWRITING VALUE: [${route.middlewareRawSrc}]`);
+        }
+
+        console.log({
+          matcher,
+          route,
+          worker,
+        });
+
+        // show all of them
+        route.middlewareRawSrc = worker.routeMatchers
+          .map(m => m.originalSource)
+          .filter(isTruthy);
+
         if (isCorrectMiddlewareOrder) {
           route.override = true;
         }
 
         if (routesManifest.version > 3 && isDynamicRoute(worker.page)) {
+          console.log(
+            `SETTING IN DYNAMIC MAP: ${worker.page}\n${route.middlewareRawSrc}`
+          );
           source.dynamicRouteMap.set(worker.page, route);
         } else {
+          console.log(
+            `SETTING IN STATIC ARRAY: ${worker.page}\n${route.middlewareRawSrc}`
+          );
           source.staticRoutes.push(route);
         }
       }
     }
+
     return source;
   }
 
