@@ -17,4 +17,4 @@ test('getPackageJSON caches read operations', () => {
   const cacheHit = getPackageJSON();
   expect(cacheHit).toStrictEqual(expected);
   expect(readFileSyncSpy).toBeCalledTimes(1);
-})
+});
