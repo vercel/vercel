@@ -44,7 +44,7 @@
     "ignore": "4.0.6",
     "into-stream": "5.0.0",
     "js-yaml": "3.13.1",
-    "minimatch": "3.0.4",
+    "minimatch": "3.1.2",
     "multistream": "2.1.1",
     "node-fetch": "2.6.7",
     "semver": "6.1.1",
