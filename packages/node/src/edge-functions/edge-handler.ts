@@ -8,6 +8,7 @@ import {
 } from './edge-node-compat-plugin';
 import { EdgeRuntime, runServer } from 'edge-runtime';
 import { fetch } from 'undici';
+import type { HeadersInit } from 'undici';
 import { IncomingMessage } from 'http';
 import { readFileSync } from 'fs';
 import { serializeRequest, entrypointToOutputPath, logError } from '../utils';
@@ -185,7 +186,6 @@ export async function createEdgeEventHandler(
       redirect: 'manual',
       method: 'post',
       body: await serializeRequest(request),
-      //@ts-expect-error
       headers: request.headers as HeadersInit,
     });
 
