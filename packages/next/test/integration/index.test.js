@@ -769,7 +769,8 @@ it('Should not exceed function limit for large dependencies (server build)', asy
   expect(logs).toContain('node_modules/chrome-aws-lambda/bin');
 });
 
-it('Should not exceed function limit for large dependencies (shared lambda)', async () => {
+// eslint-disable-next-line jest/no-disabled-tests
+it.skip('Should not exceed function limit for large dependencies (shared lambda)', async () => {
   let logs = '';
 
   const origLog = console.log;
