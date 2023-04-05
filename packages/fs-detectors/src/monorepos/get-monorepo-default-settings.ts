@@ -4,6 +4,7 @@ import { packageManagers } from '../package-managers/package-managers';
 import { DetectorFilesystem } from '../detectors/filesystem';
 import { detectFramework } from '../detect-framework';
 import JSON5 from 'json5';
+import semver from 'semver';
 
 export class MissingBuildPipeline extends Error {
   constructor() {
@@ -52,6 +53,7 @@ export async function getMonorepoDefaultSettings(
     ]);
 
     let hasBuildPipeline = false;
+    let turboSemVer = null;
 
     if (turboJSONBuf !== null) {
       const turboJSON = JSON5.parse(turboJSONBuf.toString('utf-8'));
@@ -59,12 +61,19 @@ export async function getMonorepoDefaultSettings(
       if (turboJSON?.pipeline?.build) {
         hasBuildPipeline = true;
       }
-    } else if (packageJSONBuf !== null) {
+    }
+
+    if (packageJSONBuf !== null) {
       const packageJSON = JSON.parse(packageJSONBuf.toString('utf-8'));
 
       if (packageJSON?.turbo?.pipeline?.build) {
         hasBuildPipeline = true;
       }
+
+      turboSemVer =
+        packageJSON?.dependencies?.turbo ||
+        packageJSON?.devDependencies?.turbo ||
+        null;
     }
 
     if (!hasBuildPipeline) {
@@ -74,17 +83,25 @@ export async function getMonorepoDefaultSettings(
     if (projectPath === '/') {
       return {
         monorepoManager: 'turbo',
-        buildCommand: 'npx turbo run build',
+        buildCommand: 'turbo run build',
         installCommand: packageManager ? `${packageManager} install` : null,
         commandForIgnoringBuildStep: 'npx turbo-ignore',
       };
     }
 
+    let buildCommand = null;
+    if (projectPath) {
+      if (turboSemVer && !semver.intersects(turboSemVer, '<1.8.0')) {
+        buildCommand = `turbo run build`;
+      } else {
+        // We don't know for sure if the local `turbo` supports inference.
+        buildCommand = `cd ${relativeToRoot} && turbo run build --filter={${projectPath}}...`;
+      }
+    }
+
     return {
       monorepoManager: 'turbo',
-      buildCommand: projectPath
-        ? `cd ${relativeToRoot} && npx turbo run build --filter={${projectPath}}...`
-        : null,
+      buildCommand,
       installCommand:
         packageManager === 'npm'
           ? `${packageManager} install --prefix=${relativeToRoot}`
