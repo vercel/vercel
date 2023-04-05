@@ -2,7 +2,7 @@
   "name": "@vercel/python",
   "version": "3.1.57",
   "main": "./dist/index.js",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "homepage": "https://vercel.com/docs/runtimes#official-runtimes/python",
   "files": [
     "dist",
