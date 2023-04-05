@@ -7,7 +7,7 @@
     "dist/*"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc",
     "test-unit": "jest tests/unit"
   },
   "devDependencies": {
