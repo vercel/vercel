@@ -1,6 +1,8 @@
 import fs from 'fs';
 import path from 'path';
 
+const cache = new Map();
+
 function getPackageJSONPath(dir: string) {
   return path.join(dir, 'package.json');
 }
@@ -45,7 +47,13 @@ export function getPackageJSON() {
     packageJSONPath = getPackageJSONPath(rootDir);
   }
 
+  if (cache.has(packageJSONPath)) {
+    return cache.get(packageJSONPath);
+  }
+
   const packageJSON = JSON.parse(fs.readFileSync(packageJSONPath, 'utf-8'));
+
+  cache.set(packageJSONPath, packageJSON);
 
   return packageJSON;
 }
