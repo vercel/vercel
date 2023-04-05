@@ -12,7 +12,7 @@
     "url": "https://github.com/vercel/vercel.git",
     "directory": "packages/fs-detectors"
   },
-  "license": "MIT",
+  "license": "Apache-2.0",
   "scripts": {
     "build": "tsc",
     "test": "jest --env node --verbose --runInBand --bail test/unit.*test.*",
