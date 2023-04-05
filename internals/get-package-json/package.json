@@ -8,8 +8,8 @@
   ],
   "scripts": {
     "build": "tsc",
-    "test": "pnpm test-unit",
-    "test-unit": "jest tests/unit"
+    "test": "jest --env node --verbose --runInBand --bail",
+    "test-unit": "pnpm test tests/unit"
   },
   "devDependencies": {
     "@types/jest": "29.5.0",
