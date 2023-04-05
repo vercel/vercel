@@ -61,7 +61,10 @@ export async function createServerlessEventHandler(
   const server = await createServerlessServer(userCode, options);
 
   return async function (request: IncomingMessage) {
-    const response = await undici.fetch(server.url, {
+    const query = request.url?.split('?')[1];
+    const url = query === undefined ? server.url : `${server.url}?${query}`;
+
+    const response = await undici.fetch(url, {
       redirect: 'manual',
       method: 'post',
       body: await serializeRequest(request),
