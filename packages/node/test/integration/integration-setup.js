@@ -1,15 +1,15 @@
 const fs = require('fs');
 const path = require('path');
-const { intoChunks } = require('../../../utils/chunk-tests');
+const { intoChunks } = require('../../../../utils/chunk-tests');
 
 const {
   testDeployment,
-} = require('../../../test/lib/deployment/test-deployment.js');
+} = require('../../../../test/lib/deployment/test-deployment.js');
 
 jest.setTimeout(12 * 60 * 1000);
 
 module.exports = function setupTests(groupIndex) {
-  const fixturesPath = path.resolve(__dirname, 'fixtures');
+  const fixturesPath = path.resolve(__dirname, '../fixtures');
   const testsThatFailToBuild = new Map([
     [
       '45-noEmitOnError-true',
