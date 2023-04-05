@@ -41,12 +41,12 @@ import { stringifySourceMap } from './sourcemapped';
 import type { RawSourceMap } from 'source-map';
 import bytes from 'bytes';
 
+type stringMap = { [key: string]: string };
+
 export const KIB = 1024;
 export const MIB = 1024 * KIB;
 
 export const prettyBytes = (n: number) => bytes(n, { unitSeparator: ' ' });
-
-type stringMap = { [key: string]: string };
 
 type Truthy<T> = T extends false | '' | 0 | null | undefined ? never : T; // from lodash
 /**
@@ -2597,17 +2597,8 @@ export async function getMiddlewareBundle({
 
         route.middlewarePath = shortPath;
 
-        if (route.middlewareRawSrc?.length || 0 > 0) {
-          console.log(`OVERWRITING VALUE: [${route.middlewareRawSrc}]`);
-        }
-
-        console.log({
-          matcher,
-          route,
-          worker,
-        });
-
-        // show all of them
+        // show all matchers on each individual route as a workaround
+        // for displaying this value
         route.middlewareRawSrc = worker.routeMatchers
           .map(m => m.originalSource)
           .filter(isTruthy);
@@ -2617,14 +2608,8 @@ export async function getMiddlewareBundle({
         }
 
         if (routesManifest.version > 3 && isDynamicRoute(worker.page)) {
-          console.log(
-            `SETTING IN DYNAMIC MAP: ${worker.page}\n${route.middlewareRawSrc}`
-          );
           source.dynamicRouteMap.set(worker.page, route);
         } else {
-          console.log(
-            `SETTING IN STATIC ARRAY: ${worker.page}\n${route.middlewareRawSrc}`
-          );
           source.staticRoutes.push(route);
         }
       }
