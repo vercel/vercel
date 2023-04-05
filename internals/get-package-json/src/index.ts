@@ -47,13 +47,12 @@ export function getPackageJSON() {
     packageJSONPath = getPackageJSONPath(rootDir);
   }
 
-  if (cache.has(packageJSONPath)) {
-    return cache.get(packageJSONPath);
+  let packageJSON = cache.get(packageJSONPath);
+
+  if (!packageJSON) {
+    packageJSON = JSON.parse(fs.readFileSync(packageJSONPath, 'utf-8'));
+    cache.set(packageJSONPath, packageJSON);
   }
-
-  const packageJSON = JSON.parse(fs.readFileSync(packageJSONPath, 'utf-8'));
-
-  cache.set(packageJSONPath, packageJSON);
 
   return packageJSON;
 }
