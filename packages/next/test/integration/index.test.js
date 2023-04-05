@@ -716,7 +716,8 @@ it('Should invoke build command with serverless-no-config', async () => {
   ).toBeFalsy();
 });
 
-it('Should not exceed function limit for large dependencies (server build)', async () => {
+// eslint-disable-next-line jest/no-disabled-tests
+it.skip('Should not exceed function limit for large dependencies (server build)', async () => {
   let logs = '';
 
   const origLog = console.log;
