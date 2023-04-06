@@ -158,7 +158,7 @@ it('should build using server build', async () => {
   expect(output['dynamic/[slug]'].operationType).toBe('SSR');
 
   expect(output['fallback/[slug]'].type).toBe('Prerender');
-  expect(output['fallback/[slug]'].allowQuery).toEqual(['slug']);
+  expect(output['fallback/[slug]'].allowQuery).toEqual(['nextParamslug']);
   expect(output['fallback/[slug]'].lambda.operationType).toBe('ISR');
   expect(output['fallback/[slug]'].sourcePath).toBe(undefined);
 
@@ -167,7 +167,7 @@ it('should build using server build', async () => {
   );
   expect(
     output['_next/data/testing-build-id/fallback/[slug].json'].allowQuery
-  ).toEqual(['slug']);
+  ).toEqual(['nextParamslug']);
   expect(
     output['_next/data/testing-build-id/fallback/[slug].json'].lambda
       .operationType
