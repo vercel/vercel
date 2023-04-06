@@ -1,7 +1,7 @@
 {
   "name": "@vercel/build-utils",
   "version": "6.7.0",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "main": "./dist/index.js",
   "types": "./dist/index.d.js",
   "homepage": "https://github.com/vercel/vercel/blob/main/DEVELOPING_A_RUNTIME.md",
