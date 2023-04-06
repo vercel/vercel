@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "license": "Apache-2.0",
-  "packageManager": "pnpm@7.24.2",
+  "packageManager": "pnpm@7.31.0",
   "dependencies": {
     "lerna": "5.6.2"
   },
@@ -13,7 +13,6 @@
     "@typescript-eslint/parser": "5.21.0",
     "@vercel/build-utils": "*",
     "@vercel/ncc": "0.24.0",
-    "@vercel/next": "*",
     "async-retry": "1.2.3",
     "buffer-replace": "1.0.0",
     "create-svelte": "2.0.1",
@@ -33,7 +32,7 @@
     "source-map-support": "0.5.12",
     "ts-eager": "2.0.2",
     "ts-jest": "28.0.5",
-    "turbo": "1.7.0-canary.9"
+    "turbo": "1.8.5"
   },
   "scripts": {
     "lerna": "lerna",
@@ -43,15 +42,16 @@
     "publish-canary": "git checkout main && git pull && lerna version prerelease --preid canary --message \"Publish Canary\" --exact",
     "publish-from-github": "./utils/publish.sh",
     "changelog": "node utils/changelog.js",
-    "build": "node utils/gen.js && turbo run build",
+    "build": "node utils/gen.js && turbo --no-update-notifier run build",
     "vercel-build": "pnpm build && pnpm run pack && cd api && node -r ts-eager/register ./_lib/script/build.ts",
     "pre-commit": "lint-staged",
     "test": "jest --rootDir=\"test\" --testPathPattern=\"\\.test.js\"",
-    "test-unit": "pnpm test && node utils/gen.js && turbo run test-unit",
-    "test-integration-cli": "node utils/gen.js && turbo run test-integration-cli",
-    "test-integration-once": "node utils/gen.js && turbo run test-integration-once",
-    "test-integration-dev": "node utils/gen.js && turbo run test-integration-dev",
+    "test-unit": "pnpm test && node utils/gen.js && turbo --no-update-notifier run test-unit",
+    "test-cli": "node utils/gen.js && turbo --no-update-notifier run test-cli",
+    "test-e2e": "node utils/gen.js && turbo --no-update-notifier run test-e2e",
+    "test-dev": "node utils/gen.js && turbo --no-update-notifier run test-dev",
     "lint": "eslint . --cache --ext .ts,.js",
+    "prettier-check": "prettier --check .",
     "prepare": "husky install",
     "pack": "cd utils && node -r ts-eager/register ./pack.ts"
   },

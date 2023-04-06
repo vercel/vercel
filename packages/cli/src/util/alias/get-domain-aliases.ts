@@ -1,6 +1,6 @@
 import Client from '../client';
 import getAliases from './get-aliases';
-import { Alias } from '../../types';
+import { Alias } from '@vercel-internals/types';
 
 export default async function getDomainAliases(client: Client, domain: string) {
   const { aliases } = await getAliases(client);

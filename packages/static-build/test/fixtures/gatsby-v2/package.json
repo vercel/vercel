@@ -1,0 +1,19 @@
+{
+  "private": true,
+  "dependencies": {
+    "gatsby": "2.32.13",
+    "prop-types": "15.8.1",
+    "react": "16.14.0",
+    "react-dom": "16.14.0"
+  },
+  "scripts": {
+    "build": "gatsby build",
+    "develop": "gatsby develop",
+    "start": "gatsby develop",
+    "serve": "gatsby serve",
+    "clean": "gatsby clean"
+  },
+  "engines": {
+    "node": "14.x"
+  }
+}

@@ -10,7 +10,7 @@ import {
 import stamp from '../../util/output/stamp';
 import getCerts from '../../util/certs/get-certs';
 import strlen from '../../util/strlen';
-import { Cert } from '../../types';
+import { Cert } from '@vercel-internals/types';
 import getCommandFlags from '../../util/get-command-flags';
 import { getCommandName } from '../../util/pkg-name';
 
@@ -55,7 +55,7 @@ async function ls(
   );
 
   if (certs.length > 0) {
-    output.log(formatCertsTable(certs));
+    client.stdout.write(formatCertsTable(certs));
   }
 
   if (pagination && pagination.count === 20) {

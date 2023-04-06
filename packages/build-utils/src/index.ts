@@ -14,7 +14,6 @@ import getWriteableDirectory from './fs/get-writable-directory';
 import glob, { GlobOptions } from './fs/glob';
 import rename from './fs/rename';
 import {
-  execAsync,
   spawnAsync,
   execCommand,
   spawnCommand,
@@ -43,6 +42,7 @@ import getIgnoreFilter from './get-ignore-filter';
 import { getPlatformEnv } from './get-platform-env';
 import { getPrefixedEnvVars } from './get-prefixed-env-vars';
 import { cloneEnv } from './clone-env';
+import { hardLinkDir } from './hard-link-dir';
 
 export {
   FileBlob,
@@ -59,7 +59,6 @@ export {
   glob,
   GlobOptions,
   rename,
-  execAsync,
   spawnAsync,
   getScriptName,
   installDependencies,
@@ -88,6 +87,7 @@ export {
   scanParentDirs,
   getIgnoreFilter,
   cloneEnv,
+  hardLinkDir,
 };
 
 export { EdgeFunction } from './edge-function';

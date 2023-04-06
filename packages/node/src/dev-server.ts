@@ -61,7 +61,8 @@ async function createEventHandler(
     return createEdgeEventHandler(
       entrypointPath,
       entrypoint,
-      config.middleware || false
+      config.middleware || false,
+      config.zeroConfig
     );
   }
 
@@ -92,7 +93,7 @@ async function main() {
     handleEvent = await createEventHandler(entrypoint!, config, {
       shouldAddHelpers,
     });
-  } catch (error) {
+  } catch (error: any) {
     logError(error);
     handlerEventError = error;
   }
@@ -131,7 +132,7 @@ export async function onDevRequest(
       }
     }
     res.end(Buffer.from(result.body, result.encoding));
-  } catch (error) {
+  } catch (error: any) {
     res.statusCode = 500;
     res.end(error.stack);
   }

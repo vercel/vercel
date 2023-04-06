@@ -7,8 +7,12 @@ import type { EdgeContext } from '@edge-runtime/vm';
 import esbuild from 'esbuild';
 import fetch from 'node-fetch';
 import { createEdgeWasmPlugin, WasmAssets } from './edge-wasm-plugin';
-import { logError } from '../utils';
+import { entrypointToOutputPath, logError } from '../utils';
 import { readFileSync } from 'fs';
+import {
+  createNodeCompatPlugin,
+  NodeCompatBindings,
+} from './edge-node-compat-plugin';
 
 const NODE_VERSION_MAJOR = process.version.match(/^v(\d+)\.\d+/)?.[1];
 const NODE_VERSION_IDENTIFIER = `node${NODE_VERSION_MAJOR}`;
@@ -34,11 +38,20 @@ async function serializeRequest(message: IncomingMessage) {
 }
 
 async function compileUserCode(
-  entrypointPath: string,
-  entrypointLabel: string,
+  entrypointFullPath: string,
+  entrypointRelativePath: string,
   isMiddleware: boolean
-): Promise<undefined | { userCode: string; wasmAssets: WasmAssets }> {
+): Promise<
+  | undefined
+  | {
+      userCode: string;
+      wasmAssets: WasmAssets;
+      nodeCompatBindings: NodeCompatBindings;
+    }
+> {
   const { wasmAssets, plugin: edgeWasmPlugin } = createEdgeWasmPlugin();
+  const nodeCompatPlugin = createNodeCompatPlugin();
+
   try {
     const result = await esbuild.build({
       // bundling behavior: use globals (like "browser") instead
@@ -50,8 +63,8 @@ async function compileUserCode(
       sourcemap: 'inline',
       legalComments: 'none',
       bundle: true,
-      plugins: [edgeWasmPlugin],
-      entryPoints: [entrypointPath],
+      plugins: [edgeWasmPlugin, nodeCompatPlugin.plugin],
+      entryPoints: [entrypointFullPath],
       write: false, // operate in memory
       format: 'cjs',
     });
@@ -59,7 +72,7 @@ async function compileUserCode(
     const compiledFile = result.outputFiles?.[0];
     if (!compiledFile) {
       throw new Error(
-        `Compilation of ${entrypointLabel} produced no output files.`
+        `Compilation of ${entrypointRelativePath} produced no output files.`
       );
     }
 
@@ -69,16 +82,35 @@ async function compileUserCode(
 
       // user code
       ${compiledFile.text};
+      const userEdgeHandler = module.exports.default;
+      if (!userEdgeHandler) {
+        throw new Error(
+          'No default export was found. Add a default export to handle requests. Learn more: https://vercel.link/creating-edge-middleware'
+        );
+      }
 
       // request metadata
-      const IS_MIDDLEWARE = ${isMiddleware};
-      const ENTRYPOINT_LABEL = '${entrypointLabel}';
+      const isMiddleware = ${isMiddleware};
+      const entrypointLabel = '${entrypointRelativePath}';
 
       // edge handler
-      ${edgeHandlerTemplate}
+      ${edgeHandlerTemplate};
+      const dependencies = {
+        Request,
+        Response
+      };
+      const options = {
+        isMiddleware,
+        entrypointLabel
+      };
+      registerFetchListener(userEdgeHandler, options, dependencies);
     `;
 
-    return { userCode, wasmAssets };
+    return {
+      userCode,
+      wasmAssets,
+      nodeCompatBindings: nodeCompatPlugin.bindings,
+    };
   } catch (error) {
     // We can't easily show a meaningful stack trace from ncc -> edge-runtime.
     // So, stick with just the message for now.
@@ -91,6 +123,7 @@ async function compileUserCode(
 async function createEdgeRuntime(params?: {
   userCode: string;
   wasmAssets: WasmAssets;
+  nodeCompatBindings: NodeCompatBindings;
 }) {
   try {
     if (!params) {
@@ -98,6 +131,8 @@ async function createEdgeRuntime(params?: {
     }
 
     const wasmBindings = await params.wasmAssets.getContext();
+    const nodeCompatBindings = params.nodeCompatBindings.getContext();
+
     const edgeRuntime = new EdgeRuntime({
       initialCode: params.userCode,
       extend: (context: EdgeContext) => {
@@ -111,6 +146,9 @@ async function createEdgeRuntime(params?: {
           process: {
             env: process.env,
           },
+
+          // These are the global bindings for Node.js compatibility
+          ...nodeCompatBindings,
 
           // These are the global bindings for WebAssembly module
           ...wasmBindings,
@@ -134,13 +172,14 @@ async function createEdgeRuntime(params?: {
 }
 
 export async function createEdgeEventHandler(
-  entrypointPath: string,
-  entrypointLabel: string,
-  isMiddleware: boolean
+  entrypointFullPath: string,
+  entrypointRelativePath: string,
+  isMiddleware: boolean,
+  isZeroConfig?: boolean
 ): Promise<(request: IncomingMessage) => Promise<VercelProxyResponse>> {
   const userCode = await compileUserCode(
-    entrypointPath,
-    entrypointLabel,
+    entrypointFullPath,
+    entrypointRelativePath,
     isMiddleware
   );
   const server = await createEdgeRuntime(userCode);
@@ -164,8 +203,16 @@ export async function createEdgeEventHandler(
     const isUserError =
       response.headers.get('x-vercel-failed') === 'edge-wrapper';
     if (isUserError && response.status >= 500) {
-      // this error was "unhandled" from the user code's perspective
-      console.log(`Unhandled rejection: ${body}`);
+      // We can't currently get a real stack trace from the Edge Function error,
+      // but we can fake a basic one that is still usefult to the user.
+      const fakeStackTrace = `    at (${entrypointRelativePath})`;
+      const requestPath = entrypointToRequestPath(
+        entrypointRelativePath,
+        isZeroConfig
+      );
+      console.log(
+        `Error from API Route ${requestPath}: ${body}\n${fakeStackTrace}`
+      );
 
       // this matches the serverless function bridge launcher's behavior when
       // an error is thrown in the function
@@ -179,4 +226,13 @@ export async function createEdgeEventHandler(
       encoding: 'utf8',
     };
   };
+}
+
+function entrypointToRequestPath(
+  entrypointRelativePath: string,
+  isZeroConfig?: boolean
+) {
+  // ensure the path starts with a slash to match conventions used elsewhere,
+  // notably when rendering serverless function paths in error messages
+  return '/' + entrypointToOutputPath(entrypointRelativePath, isZeroConfig);
 }

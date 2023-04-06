@@ -1,4 +1,4 @@
-import { AuthConfig, GlobalConfig } from '../../types';
+import { AuthConfig, GlobalConfig } from '@vercel-internals/types';
 
 export const defaultGlobalConfig: GlobalConfig = {
   '// Note':

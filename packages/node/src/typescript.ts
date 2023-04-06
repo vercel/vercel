@@ -1,6 +1,6 @@
-import _ts from 'typescript';
 import { NowBuildError } from '@vercel/build-utils';
-import { relative, basename, resolve, dirname } from 'path';
+import { relative, basename, dirname } from 'path';
+import type _ts from 'typescript';
 
 /*
  * Fork of TS-Node - https://github.com/TypeStrong/ts-node
@@ -133,21 +133,20 @@ export function register(opts: Options = {}): Register {
 
   // Require the TypeScript compiler and configuration.
   const cwd = options.basePath || process.cwd();
-  const nowNodeBase = resolve(__dirname, '..', '..', '..');
   let compiler: string;
   const require_ = eval('require');
   try {
     compiler = require_.resolve(options.compiler || 'typescript', {
-      paths: [options.project || cwd, nowNodeBase],
+      paths: [options.project || cwd],
     });
   } catch (e) {
     compiler = 'typescript';
   }
   //eslint-disable-next-line @typescript-eslint/no-var-requires
   const ts: typeof _ts = require_(compiler);
-  if (compiler.startsWith(nowNodeBase)) {
+  if (compiler === 'typescript') {
     console.log(
-      `Using built-in TypeScript ${ts.version} since "typescript" missing from "devDependencies"`
+      `Using built-in TypeScript ${ts.version} since "typescript" is missing from "devDependencies"`
     );
   } else {
     console.log(`Using TypeScript ${ts.version} (local user-provided)`);
@@ -167,11 +166,6 @@ export function register(opts: Options = {}): Register {
     getCanonicalFileName: path => path,
   };
 
-  function createTSError(diagnostics: ReadonlyArray<_ts.Diagnostic>) {
-    const message = formatDiagnostics(diagnostics, diagnosticHost);
-    return new NowBuildError({ code: 'NODE_TYPESCRIPT_ERROR', message });
-  }
-
   function reportTSError(
     diagnostics: _ts.Diagnostic[],
     shouldExit: boolean | undefined
@@ -179,13 +173,13 @@ export function register(opts: Options = {}): Register {
     if (!diagnostics || diagnostics.length === 0) {
       return;
     }
-    const error = createTSError(diagnostics);
+    const message = formatDiagnostics(diagnostics, diagnosticHost);
 
     if (shouldExit) {
-      throw error;
+      throw new NowBuildError({ code: 'NODE_TYPESCRIPT_ERROR', message });
     } else {
       // Print error in red color and continue execution.
-      console.error('\x1b[31m%s\x1b[0m', error);
+      console.error(message);
     }
   }
 

@@ -5,7 +5,7 @@ export class NowError<C, Meta> extends Error {
   constructor({
     code,
     message,
-    meta
+    meta,
   }: {
     code: C;
     message: string;

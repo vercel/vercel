@@ -1,9 +1,8 @@
-import { GatsbyPage } from './schemas';
-
+import type { Images } from '@vercel/build-utils';
 export type Config = {
   version: 3;
   routes?: Route[];
-  images?: ImagesConfig;
+  images?: Images;
   wildcard?: WildcardConfig;
   overrides?: OverrideConfig;
   cache?: string[];
@@ -71,17 +70,6 @@ type Handler = {
   status?: number;
 };
 
-type ImageFormat = 'image/avif' | 'image/webp';
-
-type ImagesConfig = {
-  sizes: number[];
-  domains: string[];
-  minimumCacheTTL?: number; // seconds
-  formats?: ImageFormat[];
-  dangerouslyAllowSVG?: boolean;
-  contentSecurityPolicy?: string;
-};
-
 type WildCard = {
   domain: string;
   value: string;
@@ -119,8 +107,3 @@ export type PrerenderFunctionConfig = {
   fallback?: string;
   allowQuery?: string[];
 };
-
-export interface Routes {
-  ssrRoutes: Array<GatsbyPage['path']>;
-  dsgRoutes: Array<GatsbyPage['path']>;
-}

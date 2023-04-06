@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import plural from 'pluralize';
 
-import { User, Team } from '../../types';
+import { User, Team } from '@vercel-internals/types';
 import * as ERRORS from '../../util/errors-ts';
 import Client from '../../util/client';
 import getScope from '../../util/get-scope';

@@ -19,7 +19,7 @@ import type {
   Stdio,
   ReadableTTY,
   WritableTTY,
-} from '../types';
+} from '@vercel-internals/types';
 import { sharedPromise } from './promise';
 import { APIError } from './errors-ts';
 import { normalizeError } from '@vercel/error-utils';
@@ -43,6 +43,7 @@ export interface ClientOptions extends Stdio {
   output: Output;
   config: GlobalConfig;
   localConfig?: VercelConfig;
+  localConfigPath?: string;
 }
 
 export const isJSONObject = (v: any): v is JSONObject => {
@@ -59,6 +60,7 @@ export default class Client extends EventEmitter implements Stdio {
   output: Output;
   config: GlobalConfig;
   localConfig?: VercelConfig;
+  localConfigPath?: string;
   prompt!: inquirer.PromptModule;
   private requestIdCounter: number;
 
@@ -73,6 +75,7 @@ export default class Client extends EventEmitter implements Stdio {
     this.output = opts.output;
     this.config = opts.config;
     this.localConfig = opts.localConfig;
+    this.localConfigPath = opts.localConfigPath;
     this.requestIdCounter = 1;
     this._createPromptModule();
   }

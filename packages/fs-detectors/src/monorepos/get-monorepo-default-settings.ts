@@ -4,6 +4,7 @@ import { packageManagers } from '../package-managers/package-managers';
 import { DetectorFilesystem } from '../detectors/filesystem';
 import { detectFramework } from '../detect-framework';
 import JSON5 from 'json5';
+import semver from 'semver';
 
 export class MissingBuildPipeline extends Error {
   constructor() {
@@ -21,12 +22,19 @@ export class MissingBuildTarget extends Error {
   }
 }
 
+type MonorepoDefaultSettings = {
+  buildCommand?: string | null;
+  installCommand?: string | null;
+  commandForIgnoringBuildStep?: string;
+  monorepoManager: string;
+} | null;
+
 export async function getMonorepoDefaultSettings(
   projectName: string,
   projectPath: string,
   relativeToRoot: string,
   detectorFilesystem: DetectorFilesystem
-) {
+): Promise<MonorepoDefaultSettings> {
   const [monorepoManager, packageManager] = await Promise.all([
     detectFramework({
       fs: detectorFilesystem,
@@ -45,6 +53,7 @@ export async function getMonorepoDefaultSettings(
     ]);
 
     let hasBuildPipeline = false;
+    let turboSemVer = null;
 
     if (turboJSONBuf !== null) {
       const turboJSON = JSON5.parse(turboJSONBuf.toString('utf-8'));
@@ -52,23 +61,54 @@ export async function getMonorepoDefaultSettings(
       if (turboJSON?.pipeline?.build) {
         hasBuildPipeline = true;
       }
-    } else if (packageJSONBuf !== null) {
+    }
+
+    if (packageJSONBuf !== null) {
       const packageJSON = JSON.parse(packageJSONBuf.toString('utf-8'));
 
       if (packageJSON?.turbo?.pipeline?.build) {
         hasBuildPipeline = true;
       }
+
+      turboSemVer =
+        packageJSON?.dependencies?.turbo ||
+        packageJSON?.devDependencies?.turbo ||
+        null;
     }
 
     if (!hasBuildPipeline) {
       throw new MissingBuildPipeline();
     }
 
+    if (projectPath === '/') {
+      return {
+        monorepoManager: 'turbo',
+        buildCommand: 'turbo run build',
+        installCommand: packageManager ? `${packageManager} install` : null,
+        commandForIgnoringBuildStep: 'npx turbo-ignore',
+      };
+    }
+
+    let buildCommand = null;
+    if (projectPath) {
+      if (turboSemVer && !semver.intersects(turboSemVer, '<1.8.0')) {
+        buildCommand = `turbo run build`;
+      } else {
+        // We don't know for sure if the local `turbo` supports inference.
+        buildCommand = `cd ${relativeToRoot} && turbo run build --filter={${projectPath}}...`;
+      }
+    }
+
     return {
       monorepoManager: 'turbo',
-      buildCommand: `cd ${relativeToRoot} && npx turbo run build --filter={${projectPath}}...`,
-      installCommand: `cd ${relativeToRoot} && ${packageManager} install`,
-      commandForIgnoringBuildStep: `cd ${relativeToRoot} && npx turbo-ignore`,
+      buildCommand,
+      installCommand:
+        packageManager === 'npm'
+          ? `${packageManager} install --prefix=${relativeToRoot}`
+          : packageManager
+          ? `${packageManager} install`
+          : null,
+      commandForIgnoringBuildStep: 'npx turbo-ignore',
     };
   } else if (monorepoManager === 'nx') {
     // No ENOENT handling required here since conditional wouldn't be `true` unless `nx.json` was found.
@@ -108,10 +148,24 @@ export async function getMonorepoDefaultSettings(
       }
     }
 
+    if (projectPath === '/') {
+      return {
+        monorepoManager: 'nx',
+        buildCommand: 'npx nx build',
+        installCommand: packageManager ? `${packageManager} install` : null,
+      };
+    }
     return {
       monorepoManager: 'nx',
-      buildCommand: `cd ${relativeToRoot} && npx nx build ${projectName}`,
-      installCommand: `cd ${relativeToRoot} && ${packageManager} install`,
+      buildCommand: projectName
+        ? `cd ${relativeToRoot} && npx nx build ${projectName}`
+        : null,
+      installCommand:
+        packageManager === 'npm'
+          ? `${packageManager} install --prefix=${relativeToRoot}`
+          : packageManager
+          ? `${packageManager} install`
+          : null,
     };
   }
   // TODO (@Ethan-Arrowood) - Revisit rush support when we can test it better

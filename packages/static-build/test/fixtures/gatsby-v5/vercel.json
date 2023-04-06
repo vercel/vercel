@@ -1,0 +1,7 @@
+{
+  "build": {
+    "env": {
+      "VERCEL_GATSBY_BUILDER_PLUGIN": "1"
+    }
+  }
+}

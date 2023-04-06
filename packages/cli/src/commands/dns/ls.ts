@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import ms from 'ms';
 import { DomainNotFound } from '../../util/errors-ts';
-import { DNSRecord } from '../../types';
+import { DNSRecord } from '@vercel-internals/types';
 import Client from '../../util/client';
 import formatTable from '../../util/format-table';
 import getDNSRecords, {
@@ -70,7 +70,7 @@ export default async function ls(
         records.length > 0 ? 'Records' : 'No records'
       } found under ${chalk.bold(contextName)} ${chalk.gray(lsStamp())}`
     );
-    output.log(getDNSRecordsTable([{ domainName, records }]));
+    client.stdout.write(getDNSRecordsTable([{ domainName, records }]));
 
     if (pagination && pagination.count === 20) {
       const flags = getCommandFlags(opts, ['_', '--next']);

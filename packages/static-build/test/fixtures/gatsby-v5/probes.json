@@ -1,0 +1,21 @@
+{
+  "probes": [
+    { "path": "/", "mustContain": "you just made a Gatsby site! 🎉🎉🎉" },
+    {
+      "path": "/ssr/",
+      "mustContain": "This page is <b>rendered server-side</b>"
+    },
+    {
+      "path": "/dsg/",
+      "mustContain": "This page is <b>DSG</b>"
+    },
+    {
+      "path": "/page-data/ssr/page-data.json",
+      "mustContain": "\"componentChunkName\":\"component---src-pages-ssr-js\",\"path\":\"/ssr/\""
+    },
+    {
+      "path": "/page-data/dsg/page-data.json",
+      "mustContain": "\"componentChunkName\":\"component---src-pages-dsg-js\",\"path\":\"/dsg/\""
+    }
+  ]
+}

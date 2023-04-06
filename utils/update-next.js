@@ -58,4 +58,11 @@ module.exports = async ({ github, context }) => {
     pull_number: pr.data.number,
     reviewers: ['ijjk', 'styfle'],
   });
+
+  await github.rest.issues.addLabels({
+    owner,
+    repo,
+    issue_number: pr.data.number,
+    labels: ['area: examples', 'semver: none', 'pr: automerge'],
+  });
 };

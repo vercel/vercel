@@ -12,7 +12,7 @@ import stamp from '../../util/output/stamp';
 import strlen from '../../util/strlen';
 import getCommandFlags from '../../util/get-command-flags';
 import { getCommandName } from '../../util/pkg-name';
-import { Alias } from '../../types';
+import { Alias } from '@vercel-internals/types';
 
 export default async function ls(
   client: Client,
@@ -51,7 +51,7 @@ export default async function ls(
     ...paginationOptions
   );
   output.log(`aliases found under ${chalk.bold(contextName)} ${lsStamp()}`);
-  output.log(printAliasTable(aliases));
+  client.stdout.write(printAliasTable(aliases));
 
   if (pagination && pagination.count === 20) {
     const flags = getCommandFlags(opts, ['_', '--next']);

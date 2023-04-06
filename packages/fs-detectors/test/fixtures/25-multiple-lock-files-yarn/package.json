@@ -1,6 +1,5 @@
 {
-  "private": "true",
-  "name": "25-multiple-lock-files-yarn",
+  "private": true,
   "workspaces": [
     "a",
     "b"
