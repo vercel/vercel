@@ -1,4 +1,4 @@
-import { forkDevServer, readMessage } from '../src/fork-dev-server';
+import { forkDevServer, readMessage } from '../../src/fork-dev-server';
 import { resolve, extname } from 'path';
 import fetch from 'node-fetch';
 
@@ -16,9 +16,9 @@ function testForkDevServer(entrypoint: string) {
     meta: {},
     require_: require,
     tsConfig: undefined,
-    workPath: resolve(__dirname, './dev-fixtures'),
+    workPath: resolve(__dirname, '../dev-fixtures'),
     entrypoint,
-    devServerPath: resolve(__dirname, '../dist/dev-server.js'),
+    devServerPath: resolve(__dirname, '../../dist/dev-server.js'),
   });
 }
 

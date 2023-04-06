@@ -1,6 +1,6 @@
 {
   "name": "@vercel/fs-detectors",
-  "version": "3.8.7",
+  "version": "3.8.8",
   "description": "Vercel filesystem detectors",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -12,7 +12,7 @@
     "url": "https://github.com/vercel/vercel.git",
     "directory": "packages/fs-detectors"
   },
-  "license": "MIT",
+  "license": "Apache-2.0",
   "scripts": {
     "build": "tsc",
     "test": "jest --env node --verbose --runInBand --bail test/unit.*test.*",
@@ -35,7 +35,7 @@
     "@types/minimatch": "3.0.5",
     "@types/node": "14.18.33",
     "@types/semver": "7.3.10",
-    "@vercel/build-utils": "6.6.0",
+    "@vercel/build-utils": "6.7.0",
     "typescript": "4.3.4"
   }
 }

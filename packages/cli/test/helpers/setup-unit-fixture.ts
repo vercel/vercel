@@ -1,6 +1,7 @@
 import findUp from 'find-up';
 import fs from 'fs-extra';
 import path from 'path';
+// @ts-ignore
 import tmp from 'tmp-promise';
 
 // tmp is supposed to be able to clean up automatically, but this doesn't always work within jest.
@@ -15,7 +16,7 @@ let tempNumber = 0;
  * Create a temp directory containing the given fixture name in a git repo.
  * Be sure to call `cleanupFixtures()` after all tests to clean up temp directories.
  */
-export function setupFixture(fixtureName: string) {
+export function setupUnitFixture(fixtureName: string) {
   if (!fixturesRoot) {
     fixturesRoot = findUp.sync('fixtures', {
       cwd: __dirname,
