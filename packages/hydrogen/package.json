@@ -1,7 +1,7 @@
 {
   "name": "@vercel/hydrogen",
   "version": "0.0.61",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "main": "./dist/index.js",
   "homepage": "https://vercel.com/docs",
   "repository": {

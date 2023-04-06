@@ -1,7 +1,7 @@
 {
   "name": "@vercel/static-build",
   "version": "1.3.21",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "main": "./dist/index",
   "homepage": "https://vercel.com/docs/build-step",
   "files": [
