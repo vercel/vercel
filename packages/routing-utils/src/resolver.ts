@@ -302,9 +302,14 @@ export function get_resolver({
   }
 
   function stringify_path(parsed_path: ReturnType<typeof parse_path>): string {
-    const query_string = `${
+    let query_string = `${
       parsed_path.query ? '?' + encode_query(parsed_path.query) : ''
     }`;
+
+    if (query_string === '?') {
+      query_string = '';
+    }
+
     const hash_string = `${parsed_path.hash ? '#' : ''}${
       parsed_path.hash || ''
     }`;
@@ -331,12 +336,10 @@ export function get_resolver({
 
     for (const key of group_keys) {
       // escape "$" in group value to prevent dropping during replace
-      let group_item = groups[key];
+      let group_item = groups[key] || '';
 
-      if (group_item) {
-        group_item = regex_replace('\\$', group_item, dollar_placeholder);
-        item = regex_replace(`\\$${key}`, item, group_item);
-      }
+      group_item = regex_replace('\\$', group_item, dollar_placeholder);
+      item = regex_replace(`\\$${key}`, item, group_item);
     }
     // un-escape "$" once done replacing groups
     return regex_replace(dollar_placeholder, item, '$$');
@@ -635,7 +638,10 @@ export function get_resolver({
       }
       await handle_routes(separated_routes.handle_rewrite, 'rewrite');
 
-      if (!routing_result.finished && phase !== 'miss') {
+      if (routing_result.finished) {
+        return true;
+      }
+      if (phase !== 'miss') {
         await handle_routes(separated_routes.handle_miss, 'miss');
       }
     }
@@ -871,7 +877,7 @@ export function get_resolver({
         if ('check' in route && route.check) {
           // if check: true matches we stop iterating
           if (phase === 'rewrite') {
-            // don't retrigger check: true if we're in handle: 'rewrite' section
+            // retrigger check: true if we're in handle: 'rewrite' section
             if (await check_file_system(routing_result.dest_path)) {
               break;
             }
@@ -880,7 +886,6 @@ export function get_resolver({
           }
         } else if (!('continue' in route && route.continue)) {
           // we only continue for check: true or continue: true
-
           if (routing_result.dest_path.startsWith('/')) {
             await check_file_system(routing_result.dest_path);
           }
