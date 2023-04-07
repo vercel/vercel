@@ -7,6 +7,11 @@
   ],
   "probes": [
     {
+      "path": "/dashboard/another-edge",
+      "status": 200,
+      "mustContain": "hello from newroot/dashboard/another"
+    },
+    {
       "path": "/dynamic/category-1/id-1",
       "status": 200,
       "headers": {
