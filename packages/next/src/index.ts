@@ -1089,7 +1089,7 @@ export const build: BuildV2 = async ({
           handler: '___next_launcher.cjs',
           runtime: nodeVersion.runtime,
           ...lambdaOptions,
-          operationType: 'SSR', // always SSR because we're in legacy mode
+          operationType: 'Page', // always Page because we're in legacy mode
           shouldAddHelpers: false,
           shouldAddSourcemapSupport: false,
           supportsMultiPayloads: !!process.env.NEXT_PRIVATE_MULTI_PAYLOAD,
@@ -1842,7 +1842,7 @@ export const build: BuildV2 = async ({
                 path.relative(baseDir, entryPath),
                 '___next_launcher.cjs'
               ),
-              operationType: getOperationType({ pageFileName }), // can only be API or SSR
+              operationType: getOperationType({ pageFileName }), // can only be API or Page
               runtime: nodeVersion.runtime,
               nextVersion,
               ...lambdaOptions,
