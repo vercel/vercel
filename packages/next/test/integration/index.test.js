@@ -144,18 +144,18 @@ it('should build using server build', async () => {
   expect(output['index'].allowQuery).toBe(undefined);
   expect(output['index'].memory).toBe(512);
   expect(output['index'].maxDuration).toBe(5);
-  expect(output['index'].operationType).toBe('SSR');
+  expect(output['index'].operationType).toBe('Page');
 
   expect(output['another'].type).toBe('Lambda');
   expect(output['another'].memory).toBe(512);
   expect(output['another'].maxDuration).toBe(5);
   expect(output['another'].allowQuery).toBe(undefined);
-  expect(output['another'].operationType).toBe('SSR');
+  expect(output['another'].operationType).toBe('Page');
 
   expect(output['dynamic/[slug]'].type).toBe('Lambda');
   expect(output['dynamic/[slug]'].memory).toBe(undefined);
   expect(output['dynamic/[slug]'].maxDuration).toBe(5);
-  expect(output['dynamic/[slug]'].operationType).toBe('SSR');
+  expect(output['dynamic/[slug]'].operationType).toBe('Page');
 
   expect(output['fallback/[slug]'].type).toBe('Prerender');
   expect(output['fallback/[slug]'].allowQuery).toEqual(['nxtPslug']);
