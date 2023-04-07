@@ -530,8 +530,9 @@ export function get_resolver({
       let matches: Record<string | number, string> | null = null;
 
       const caseSensitive =
-        ('caseSensitive' in route && route.caseSensitive) ||
-        default_case_sensitive;
+        'caseSensitive' in route && typeof route.caseSensitive === 'boolean'
+          ? route.caseSensitive
+          : default_case_sensitive;
 
       if (route.src) {
         matches = match_regex(
