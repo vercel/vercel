@@ -2784,7 +2784,7 @@ export function getOperationType({
     }
   }
 
-  return 'SSR';
+  return 'Page'; // aka SSR
 }
 
 export function isApiPage(page: string | undefined) {
