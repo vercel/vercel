@@ -20,13 +20,13 @@ const optionsOverrides = {
   examples: { min: 1, max: 1 },
 };
 
-function getRunnerOptions(scriptName) {
+function getRunnerOptions(scriptName, packageName) {
   let runnerOptions = runnersMap.get(scriptName);
-  if (optionsOverrides[scriptName]) {
+  if (optionsOverrides[packageName]) {
     runnerOptions = Object.assign(
       {},
       runnerOptions,
-      optionsOverrides[scriptName]
+      optionsOverrides[packageName]
     );
   }
   return (
@@ -89,7 +89,7 @@ async function getChunkedTests() {
     ([packagePathAndName, scriptNames]) => {
       const [packagePath, packageName] = packagePathAndName.split(',');
       return Object.entries(scriptNames).flatMap(([scriptName, testPaths]) => {
-        const runnerOptions = getRunnerOptions(scriptName);
+        const runnerOptions = getRunnerOptions(scriptName, packageName);
         const { runners, min, max } = runnerOptions;
 
         const sortedTestPaths = testPaths.sort((a, b) => a.localeCompare(b));
