@@ -91,9 +91,6 @@ async function getChunkedTests() {
       return Object.entries(scriptNames).flatMap(([scriptName, testPaths]) => {
         const runnerOptions = getRunnerOptions(scriptName);
         const { runners, min, max } = runnerOptions;
-        console.log(
-          `Running ${scriptName} with: ${JSON.stringify(runnerOptions)}`
-        );
 
         const sortedTestPaths = testPaths.sort((a, b) => a.localeCompare(b));
         return intoChunks(min, max, sortedTestPaths).flatMap(
