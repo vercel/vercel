@@ -88,6 +88,7 @@ export type ErrorResult = {
 
 export interface RoutingResult {
   dest_path: string;
+  matches?: ReturnType<MatchRegex>;
   headers: Record<string, string[] | string | undefined>;
   important_headers: Record<string, string[] | string | undefined>;
   status: number;
@@ -624,6 +625,7 @@ export function get_resolver({
           matches = null;
         }
       }
+      routing_result.matches = matches;
       return matches;
     }
 
