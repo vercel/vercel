@@ -9,8 +9,14 @@ export const encode_query = (query: Record<string, string | string[]>) => {
   return querystring.stringify(query);
 };
 
-export const match_regex: MatchRegex = (regexString, testString) => {
-  const matches = testString.match(new RegExp(regexString));
+export const match_regex: MatchRegex = (
+  regexString,
+  testString,
+  caseSensitive?: boolean
+) => {
+  const matches = testString.match(
+    new RegExp(regexString, caseSensitive ? 'i' : undefined)
+  );
 
   if (!matches) {
     return null;

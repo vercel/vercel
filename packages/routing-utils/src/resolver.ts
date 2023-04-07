@@ -13,7 +13,8 @@ export type HashFunc = (content: string) => string;
 // Get matches from a string with regex
 export type MatchRegex = (
   regexString: string,
-  testString: string
+  testString: string,
+  caseSensitive?: boolean
 ) => Record<string | number, string> | null;
 
 // Replace via regex
@@ -271,6 +272,7 @@ export function get_resolver({
   route_result_cache,
   file_system_check_limit = FILE_SYSTEM_CHECK_LIMIT,
   check_file_system: original_check_file_system,
+  default_case_sensitive,
   check_directory,
   invoke_middleware,
   match_regex,
@@ -278,6 +280,7 @@ export function get_resolver({
   parse_path,
   encode_query,
 }: {
+  default_case_sensitive?: boolean;
   route_key_meta_cache?: Cache;
   route_result_cache?: Cache;
   hash_func: HashFunc;
@@ -526,8 +529,16 @@ export function get_resolver({
     ): Record<string, string | undefined> | null {
       let matches: Record<string | number, string> | null = null;
 
+      const caseSensitive =
+        ('caseSensitive' in route && route.caseSensitive) ||
+        default_case_sensitive;
+
       if (route.src) {
-        matches = match_regex(route.src, routing_result.dest_path);
+        matches = match_regex(
+          route.src,
+          routing_result.dest_path,
+          caseSensitive
+        );
       }
 
       function has_match(hasItem: HasField[number]) {
@@ -731,7 +742,7 @@ export function get_resolver({
             used_cookies[route.locale.cookie] = 1;
             locales.push(cookies[`${route.locale.cookie}`]);
           } else if (cookies['vercel_locale']) {
-            used_cookies['vercel_locale'];
+            used_cookies['vercel_locale'] = 1;
             locales.push(cookies['vercel_locale']);
           }
 
