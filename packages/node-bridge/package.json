@@ -1,7 +1,7 @@
 {
   "name": "@vercel/node-bridge",
   "version": "4.0.0",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "main": "./index.js",
   "repository": {
     "type": "git",

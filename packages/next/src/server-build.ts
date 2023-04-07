@@ -1024,6 +1024,7 @@ export async function serverBuild({
     isCorrectMiddlewareOrder,
     prerenderBypassToken: prerenderManifest.bypassToken || '',
     nextVersion,
+    appPathRoutesManifest: appPathRoutesManifest || {},
   });
 
   const isNextDataServerResolving =
