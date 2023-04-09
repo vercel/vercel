@@ -1020,6 +1020,7 @@ export const frameworks = [
       'SvelteKit is a framework for building web applications of all sizes.',
     description: 'A SvelteKit app optimized Edge-first.',
     website: 'https://kit.svelte.dev',
+    envPrefix: 'PUBLIC_',
     detectors: {
       every: [
         {
