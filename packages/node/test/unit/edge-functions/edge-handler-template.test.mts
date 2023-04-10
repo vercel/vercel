@@ -1,9 +1,9 @@
-import { Response, Request } from 'node-fetch';
 import {
   buildUrl,
   respond,
   // @ts-ignore - this is a special patch file to allow importing from the template
 } from '../../../src/edge-functions/edge-handler-template.js';
+import { Response, Request } from 'node-fetch';
 
 describe('edge-handler-template', () => {
   describe('buildUrl()', () => {
