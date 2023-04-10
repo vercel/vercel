@@ -131,24 +131,7 @@ export const build: BuildV2 = async ({
     throw new Error('Could not locate `@remix-run/dev` dependency');
   }
 
-  let remixDevOverrideVersion = resolveSemverMinMax(
-    REMIX_RUN_DEV_MIN_VERSION,
-    REMIX_RUN_DEV_MAX_VERSION,
-    remixVersion
-  );
-  remixDevOverrideVersion =
-    REMIX_RUN_DEV_VERSION_OVERRIDES.get(remixDevOverrideVersion) ||
-    remixDevOverrideVersion;
-
-  const remixDevOverrideNpmString = `npm:@vercel/remix-run-dev@${remixDevOverrideVersion}`;
-  console.log({ remixDevOverrideVersion, remixDevOverrideNpmString });
-
-  if (pkg.dependencies && '@remix-run/dev' in pkg.dependencies) {
-    pkg.dependencies['@remix-run/dev'] = remixDevOverrideNpmString;
-  } else if (pkg.devDependencies && '@remix-run/dev' in pkg.devDependencies) {
-    pkg.devDependencies['@remix-run/dev'] = remixDevOverrideNpmString;
-  }
-  await fs.writeFile(packageJsonPath, JSON.stringify(pkg, null, 2) + '\n');
+  await overrideRemixDevVersion(remixVersion, packageJsonPath, pkg);
 
   const spawnOpts = getSpawnOptions(meta, nodeVersion);
   if (!spawnOpts.env) {
@@ -802,4 +785,33 @@ async function writeEntrypointFile(
     }
     throw err;
   }
+}
+
+async function overrideRemixDevVersion(
+  remixVersion: string,
+  packageJsonPath: string,
+  pkg: PackageJson
+) {
+  if (remixVersion.startsWith('npm:@vercel/remix-run-dev')) {
+    // `package.json` is already patched with our fork, so skip
+    return;
+  }
+
+  let remixDevOverrideVersion = resolveSemverMinMax(
+    REMIX_RUN_DEV_MIN_VERSION,
+    REMIX_RUN_DEV_MAX_VERSION,
+    remixVersion
+  );
+  remixDevOverrideVersion =
+    REMIX_RUN_DEV_VERSION_OVERRIDES.get(remixDevOverrideVersion) ||
+    remixDevOverrideVersion;
+
+  const remixDevOverrideNpmString = `npm:@vercel/remix-run-dev@${remixDevOverrideVersion}`;
+
+  if (pkg.dependencies && '@remix-run/dev' in pkg.dependencies) {
+    pkg.dependencies['@remix-run/dev'] = remixDevOverrideNpmString;
+  } else if (pkg.devDependencies && '@remix-run/dev' in pkg.devDependencies) {
+    pkg.devDependencies['@remix-run/dev'] = remixDevOverrideNpmString;
+  }
+  await fs.writeFile(packageJsonPath, JSON.stringify(pkg, null, 2) + '\n');
 }

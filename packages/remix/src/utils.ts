@@ -218,7 +218,6 @@ export async function chdirAndReadConfig(
   packageJsonPath: string
 ) {
   const { readConfig } = await import(join(remixRunDevPath, 'dist/config.js'));
-  console.log(readConfig);
 
   const originalCwd = process.cwd();
 
