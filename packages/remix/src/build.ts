@@ -1,5 +1,5 @@
 import { Project } from 'ts-morph';
-import { promises as fs } from 'fs';
+import { readFileSync, promises as fs } from 'fs';
 import { basename, dirname, extname, join, relative, sep } from 'path';
 import {
   debug,
@@ -27,10 +27,10 @@ import type {
   PackageJson,
   BuildResultV2Typical,
 } from '@vercel/build-utils';
-import type { AppConfig } from '@remix-run/dev/dist/config';
 import type { ConfigRoute } from '@remix-run/dev/dist/config/routes';
 import type { BaseFunctionConfig } from '@vercel/static-config';
 import {
+  _require,
   calculateRouteConfigHash,
   findConfig,
   getPathFromRoute,
@@ -43,14 +43,19 @@ import {
   findEntry,
   chdirAndReadConfig,
   addDependency,
+  resolveSemverMinMax,
 } from './utils';
-import semver from 'semver';
 
-const _require: typeof require = eval('require');
+interface ServerBundle {
+  serverBuildPath: string;
+  routes: string[];
+}
 
-const REMIX_RUN_DEV_PATH = dirname(
-  _require.resolve('@remix-run/dev/package.json')
+const remixBuilderPkg = JSON.parse(
+  readFileSync(join(__dirname, '../package.json'), 'utf8')
 );
+const remixRunDevForkVersion =
+  remixBuilderPkg.devDependencies['@remix-run/dev'];
 
 const DEFAULTS_PATH = join(__dirname, '../defaults');
 
@@ -63,8 +68,26 @@ const nodeServerSrcPromise = fs.readFile(
   'utf-8'
 );
 
-// This value is the minimum supported version for our fork of Remix
-const minimumSupportRemixVersion = '1.10.0';
+// Minimum supported version of the `@vercel/remix` package
+const VECEL_REMIX_MIN_VERSION = '1.10.0';
+
+// Mapping for special case versions of `@remix-run/dev` that
+// should install a specific version of `@vercel/remix-run-dev` fork
+const REMIX_RUN_DEV_VERSION_OVERRIDES = new Map<string, string>(
+  Object.entries({
+    '1.13.0': '1.13.0-patch.2',
+    '1.14.3': '1.14.3-patch.1',
+  })
+);
+
+// Minimum supported version of the `@vercel/remix` package
+const REMIX_RUN_DEV_MIN_VERSION = '1.13.0';
+
+// Maximum version of `@vercel/remix-run-dev` fork
+// (and also `@vercel/remix` since they get published at the same time)
+const REMIX_RUN_DEV_MAX_VERSION = remixRunDevForkVersion.slice(
+  remixRunDevForkVersion.lastIndexOf('@') + 1
+);
 
 export const build: BuildV2 = async ({
   entrypoint,
@@ -100,6 +123,33 @@ export const build: BuildV2 = async ({
   const pkgRaw = await fs.readFile(packageJsonPath, 'utf8');
   const pkg = JSON.parse(pkgRaw);
 
+  const remixVersion =
+    pkg.dependencies?.['@remix-run/dev'] ||
+    pkg.devDependencies?.['@remix-run/dev'];
+
+  if (typeof remixVersion !== 'string') {
+    throw new Error('Could not locate `@remix-run/dev` dependency');
+  }
+
+  let remixDevOverrideVersion = resolveSemverMinMax(
+    REMIX_RUN_DEV_MIN_VERSION,
+    REMIX_RUN_DEV_MAX_VERSION,
+    remixVersion
+  );
+  remixDevOverrideVersion =
+    REMIX_RUN_DEV_VERSION_OVERRIDES.get(remixDevOverrideVersion) ||
+    remixDevOverrideVersion;
+
+  const remixDevOverrideNpmString = `npm:@vercel/remix-run-dev@${remixDevOverrideVersion}`;
+  console.log({ remixDevOverrideVersion, remixDevOverrideNpmString });
+
+  if (pkg.dependencies && '@remix-run/dev' in pkg.dependencies) {
+    pkg.dependencies['@remix-run/dev'] = remixDevOverrideNpmString;
+  } else if (pkg.devDependencies && '@remix-run/dev' in pkg.devDependencies) {
+    pkg.devDependencies['@remix-run/dev'] = remixDevOverrideNpmString;
+  }
+  await fs.writeFile(packageJsonPath, JSON.stringify(pkg, null, 2) + '\n');
+
   const spawnOpts = getSpawnOptions(meta, nodeVersion);
   if (!spawnOpts.env) {
     spawnOpts.env = {};
@@ -112,18 +162,31 @@ export const build: BuildV2 = async ({
     env: spawnOpts.env,
   });
 
+  // Prevent frozen lockfile rejections
+  const envForInstall = { ...spawnOpts.env };
+  delete envForInstall.CI;
+  delete envForInstall.VERCEL;
+  delete envForInstall.NOW_BUILDER;
+
   if (typeof installCommand === 'string') {
     if (installCommand.trim()) {
       console.log(`Running "install" command: \`${installCommand}\`...`);
       await execCommand(installCommand, {
         ...spawnOpts,
+        env: envForInstall,
         cwd: entrypointFsDirname,
       });
     } else {
       console.log(`Skipping "install" command...`);
     }
   } else {
-    await runNpmInstall(entrypointFsDirname, [], spawnOpts, meta, nodeVersion);
+    await runNpmInstall(
+      entrypointFsDirname,
+      [],
+      { ...spawnOpts, env: envForInstall },
+      meta,
+      nodeVersion
+    );
   }
 
   // Determine the version of Remix based on the `@remix-run/dev`
@@ -134,11 +197,8 @@ export const build: BuildV2 = async ({
     '@remix-run/dev'
   );
 
-  const remixVersion = JSON.parse(
-    await fs.readFile(join(remixRunDevPath, 'package.json'), 'utf8')
-  ).version;
-
   const remixConfig = await chdirAndReadConfig(
+    remixRunDevPath,
     entrypointFsDirname,
     packageJsonPath
   );
@@ -155,41 +215,21 @@ export const build: BuildV2 = async ({
     );
     if (!pkg.dependencies['@vercel/remix']) {
       // Dependency version resolution logic
-      // 1. Users app is on 1.9.0 -> we install the 1.10.0 (minimum) version of our fork (`@vercel/remix`)
-      // 2. Users app is on 1.11.0 (a version greater than 1.10.0 and less than the latest version of the fork) -> we install the (matching) 1.11.0 version of `@vercel/remix`
-      // 3. Users app is on something greater than our latest version of the fork -> we install the latest version of our fork
-
-      // remixVersion is the version of the `@remix-run/dev` package in the *users' app*
-      const usersRemixVersion = semver.gt(
-        remixVersion,
-        minimumSupportRemixVersion
-      )
-        ? remixVersion
-        : minimumSupportRemixVersion;
-
-      // Prevent frozen lockfile rejections
-      const envForAddDep = { ...spawnOpts.env };
-      delete envForAddDep.CI;
-      delete envForAddDep.VERCEL;
-      delete envForAddDep.NOW_BUILDER;
-      await addDependency(
-        cliType,
-        [
-          `@vercel/remix@${
-            semver.gt(
-              usersRemixVersion,
-              require('@remix-run/dev/package.json').version
-            )
-              ? 'latest'
-              : usersRemixVersion
-          }`,
-        ],
-        {
-          ...spawnOpts,
-          env: envForAddDep,
-          cwd: entrypointFsDirname,
-        }
+      // 1. Users app is on 1.9.0 -> we install the 1.10.0 (minimum) version of `@vercel/remix`.
+      // 2. Users app is on 1.11.0 (a version greater than 1.10.0 and less than the known max
+      //    published version) -> we install the (matching) 1.11.0 version of `@vercel/remix`.
+      // 3. Users app is on something greater than our latest version of the fork -> we install
+      //    the latest known published version of `@vercel/remix`.
+      const vercelRemixVersion = resolveSemverMinMax(
+        VECEL_REMIX_MIN_VERSION,
+        REMIX_RUN_DEV_MAX_VERSION,
+        remixVersion
       );
+      await addDependency(cliType, [`@vercel/remix@${vercelRemixVersion}`], {
+        ...spawnOpts,
+        env: envForInstall,
+        cwd: entrypointFsDirname,
+      });
     }
   }
 
@@ -210,12 +250,8 @@ export const build: BuildV2 = async ({
     ? `${remixConfigPath}.original${extname(remixConfigPath)}`
     : undefined;
 
-  const backupRemixRunDevPath = `${remixRunDevPath}.__vercel_backup`;
-  await fs.rename(remixRunDevPath, backupRemixRunDevPath);
-  await fs.symlink(REMIX_RUN_DEV_PATH, remixRunDevPath);
-
   // These get populated inside the try/catch below
-  let serverBundles: AppConfig['serverBundles'];
+  let serverBundles: ServerBundle[];
   const serverBundlesMap = new Map<string, ConfigRoute[]>();
   const resolvedConfigsMap = new Map<ConfigRoute, ResolvedRouteConfig>();
 
@@ -340,10 +376,6 @@ module.exports = config;`;
     if (remixConfigWrapped && remixConfigPath && renamedRemixConfigPath) {
       await fs.rename(renamedRemixConfigPath, remixConfigPath);
     }
-
-    // Remove `@remix-run/dev` symlink
-    await fs.unlink(remixRunDevPath);
-    await fs.rename(backupRemixRunDevPath, remixRunDevPath);
   }
 
   // This needs to happen before we run NFT to create the Node/Edge functions

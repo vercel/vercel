@@ -1,8 +1,8 @@
+import semver from 'semver';
 import { existsSync, promises as fs } from 'fs';
 import { join, relative, resolve } from 'path';
 import { pathToRegexp, Key } from 'path-to-regexp';
 import { spawnAsync } from '@vercel/build-utils';
-import { readConfig } from '@remix-run/dev/dist/config';
 import type {
   ConfigRoute,
   RouteManifest,
@@ -14,12 +14,15 @@ import type {
   SpawnOptionsExtended,
 } from '@vercel/build-utils/dist/fs/run-user-scripts';
 
+export const _require: typeof require = eval('require');
+
 export interface ResolvedNodeRouteConfig {
   runtime: 'nodejs';
   regions?: string[];
   maxDuration?: number;
   memory?: number;
 }
+
 export interface ResolvedEdgeRouteConfig {
   runtime: 'edge';
   regions?: BaseFunctionConfig['regions'];
@@ -209,7 +212,14 @@ export function syncEnv(source: NodeJS.ProcessEnv, dest: NodeJS.ProcessEnv) {
   return () => syncEnv(originalDest, dest);
 }
 
-export async function chdirAndReadConfig(dir: string, packageJsonPath: string) {
+export async function chdirAndReadConfig(
+  remixRunDevPath: string,
+  dir: string,
+  packageJsonPath: string
+) {
+  const { readConfig } = await import(join(remixRunDevPath, 'dist/config.js'));
+  console.log(readConfig);
+
   const originalCwd = process.cwd();
 
   // As of Remix v1.14.0, reading the config may trigger adding
@@ -265,4 +275,13 @@ export function addDependency(
     }
   }
   return spawnAsync(cliType, args.concat(names), opts);
+}
+
+export function resolveSemverMinMax(
+  min: string,
+  max: string,
+  version: string
+): string {
+  const floored = semver.intersects(version, `>= ${min}`) ? version : min;
+  return semver.intersects(floored, `<= ${max}`) ? floored : max;
 }
