@@ -24,11 +24,14 @@
   "jest": {
     "preset": "ts-jest/presets/default",
     "testEnvironment": "node",
-    "globals": {
-      "ts-jest": {
-        "diagnostics": true,
-        "isolatedModules": true
-      }
+    "transform": {
+      "^.+\\.[tj]s$": [
+        "ts-jest",
+        {
+          "diagnostics": true,
+          "isolatedModules": true
+        }
+      ]
     }
   },
   "devDependencies": {

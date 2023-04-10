@@ -5,6 +5,6 @@
   "main": "index.js",
   "devDependencies": {
     "@vercel/node": "*",
-    "typescript": "3.5.3"
+    "typescript": "3.7.7"
   }
 }
