@@ -20,5 +20,3 @@ const mermaid = generateMermaidOutput(inputFile, traceOutputPath);
 const traceMermaidOutputPath = join(outputPath, 'trace.mmd');
 
 writeFileSync(traceMermaidOutputPath, mermaid);
-
-

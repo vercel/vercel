@@ -2,7 +2,7 @@ const path = require('path');
 const fs = require('fs');
 const { stripRootDirectory } = require('./root-directory');
 
-const addExtension = (filePath) => {
+const addExtension = filePath => {
   if (filePath.endsWith('.json')) {
     return filePath;
   }
@@ -21,11 +21,11 @@ const addExtension = (filePath) => {
     }
   }
   return filePath;
-}
+};
 
-function trace (filePath) {
-  const files = {}
-  function _trace (_filePath) {
+function trace(filePath) {
+  const files = {};
+  function _trace(_filePath) {
     if (_filePath.endsWith('.json') || files[stripRootDirectory(_filePath)]) {
       return;
     }
@@ -37,14 +37,14 @@ function trace (filePath) {
       .map(a => a[0])
       .map(b => /["'](\..*)["']/.exec(b))
       .filter(c => c != null)
-      .map(d => addExtension(path.resolve(path.dirname(_filePath),d[1])));
+      .map(d => addExtension(path.resolve(path.dirname(_filePath), d[1])));
 
     // de-duplicate
     localDepPaths = new Set(localDepPaths);
     localDepPaths = [...localDepPaths];
 
     files[stripRootDirectory(_filePath)] = {
-      dependsOn: localDepPaths.map(stripRootDirectory)
+      dependsOn: localDepPaths.map(stripRootDirectory),
     };
 
     for (const localDepPath of localDepPaths) {
@@ -55,4 +55,4 @@ function trace (filePath) {
   return files;
 }
 
-module.exports = { trace }
+module.exports = { trace };
