@@ -2378,6 +2378,7 @@ export async function getMiddlewareBundle({
   isCorrectMiddlewareOrder,
   prerenderBypassToken,
   nextVersion,
+  appPathRoutesManifest,
 }: {
   config: Config;
   entryPath: string;
@@ -2386,6 +2387,7 @@ export async function getMiddlewareBundle({
   routesManifest: RoutesManifest;
   isCorrectMiddlewareOrder: boolean;
   nextVersion: string;
+  appPathRoutesManifest: Record<string, string>;
 }): Promise<{
   staticRoutes: Route[];
   dynamicRouteMap: Map<string, RouteWithSrc>;
@@ -2550,9 +2552,15 @@ export async function getMiddlewareBundle({
         shortPath.startsWith('app/') &&
         (shortPath.endsWith('/page') || shortPath.endsWith('/route'))
       ) {
-        shortPath =
-          shortPath.replace(/^app\//, '').replace(/(^|\/)(page|route)$/, '') ||
-          'index';
+        const ogRoute = shortPath.replace(/^app\//, '/');
+        shortPath = (
+          appPathRoutesManifest[ogRoute] ||
+          shortPath.replace(/(^|\/)(page|route)$/, '')
+        ).replace(/^\//, '');
+
+        if (!shortPath || shortPath === '/') {
+          shortPath = 'index';
+        }
       }
 
       if (routesManifest?.basePath) {
@@ -2776,7 +2784,7 @@ export function getOperationType({
     }
   }
 
-  return 'SSR';
+  return 'Page'; // aka SSR
 }
 
 export function isApiPage(page: string | undefined) {

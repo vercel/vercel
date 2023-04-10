@@ -1,6 +1,6 @@
 {
   "name": "@vercel/routing-utils",
-  "version": "2.1.11",
+  "version": "2.2.0",
   "description": "Vercel routing utilities",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -12,7 +12,7 @@
     "url": "https://github.com/vercel/vercel.git",
     "directory": "packages/routing-utils"
   },
-  "license": "MIT",
+  "license": "Apache-2.0",
   "scripts": {
     "build": "tsc",
     "test": "jest --env node --verbose --runInBand --bail",
