@@ -1,6 +1,6 @@
 {
   "name": "@vercel/remix-entry-server",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Isomorphic `entry.server` implementation for Vercel's Serverless and Edge runtimes",
   "homepage": "https://vercel.com/docs",
   "repository": {
@@ -13,7 +13,7 @@
   "scripts": {
     "build": "node build.js"
   },
-  "license": "MIT",
+  "license": "Apache-2.0",
   "files": [
     "dist"
   ],
