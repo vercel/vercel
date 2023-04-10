@@ -1,5 +1,5 @@
 import http from 'http';
-import { forkDevServer, readMessage } from '../src/fork-dev-server';
+import { forkDevServer, readMessage } from '../../src/fork-dev-server';
 import { resolve, extname } from 'path';
 
 jest.setTimeout(10 * 1000);
@@ -16,9 +16,9 @@ function testForkDevServer(entrypoint: string) {
     meta: {},
     require_: require,
     tsConfig: undefined,
-    workPath: resolve(__dirname, './dev-fixtures'),
+    workPath: resolve(__dirname, '../dev-fixtures'),
     entrypoint,
-    devServerPath: resolve(__dirname, '../dist/dev-server.mjs'),
+    devServerPath: resolve(__dirname, '../../dist/dev-server.mjs'),
   });
 }
 

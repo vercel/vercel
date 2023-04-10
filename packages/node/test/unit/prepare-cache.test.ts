@@ -1,6 +1,6 @@
 import path from 'path';
 import assert from 'assert';
-import { prepareCache } from '../src';
+import { prepareCache } from '../../src';
 
 describe('prepareCache()', () => {
   test('should cache `**/node_modules/**`', async () => {
@@ -8,8 +8,8 @@ describe('prepareCache()', () => {
       files: {},
       entrypoint: '.',
       config: {},
-      workPath: path.resolve(__dirname, './cache-fixtures/'),
-      repoRootPath: path.resolve(__dirname, './cache-fixtures/'),
+      workPath: path.resolve(__dirname, '../cache-fixtures/'),
+      repoRootPath: path.resolve(__dirname, '../cache-fixtures/'),
     });
 
     expect(files['foo/node_modules/file']).toBeDefined();
@@ -22,8 +22,8 @@ describe('prepareCache()', () => {
       files: {},
       entrypoint: '.',
       config: {},
-      workPath: path.resolve(__dirname, './cache-fixtures/foo/'),
-      repoRootPath: path.resolve(__dirname, './cache-fixtures/foo/'),
+      workPath: path.resolve(__dirname, '../cache-fixtures/foo/'),
+      repoRootPath: path.resolve(__dirname, '../cache-fixtures/foo/'),
     });
 
     const file = files['node_modules/file'];

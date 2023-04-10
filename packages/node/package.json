@@ -1,7 +1,7 @@
 {
   "name": "@vercel/node",
-  "version": "2.10.2",
-  "license": "MIT",
+  "version": "2.10.3",
+  "license": "Apache-2.0",
   "main": "./dist/index",
   "homepage": "https://vercel.com/docs/runtimes#official-runtimes/node-js",
   "repository": {
@@ -12,8 +12,8 @@
   "scripts": {
     "build": "node build",
     "test": "jest --env node --verbose --bail --runInBand",
-    "test-unit": "pnpm test test/prepare-cache.test.ts test/utils.test.ts test/dev.test.ts test/edge-matcher.test.ts",
-    "test-e2e": "pnpm test test/integration-*.test.js"
+    "test-unit": "pnpm test test/unit",
+    "test-e2e": "pnpm test test/integration"
   },
   "files": [
     "dist"
@@ -21,9 +21,9 @@
   "dependencies": {
     "@edge-runtime/vm": "2.0.0",
     "@types/node": "14.18.33",
-    "@vercel/build-utils": "6.7.0",
-    "@vercel/node-bridge": "4.0.0",
-    "@vercel/static-config": "2.0.14",
+    "@vercel/build-utils": "6.7.1",
+    "@vercel/node-bridge": "4.0.1",
+    "@vercel/static-config": "2.0.15",
     "edge-runtime": "2.0.0",
     "esbuild": "0.14.47",
     "exit-hook": "2.2.1",

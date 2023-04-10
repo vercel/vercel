@@ -113,6 +113,9 @@ export const routesSchema = {
           check: {
             type: 'boolean',
           },
+          isInternal: {
+            type: 'boolean',
+          },
           status: {
             type: 'integer',
             minimum: 100,

@@ -29,7 +29,7 @@ export async function injectPlugins(
 ) {
   const plugins = new Set<PluginName>();
 
-  if (process.env.VERCEL_GATSBY_BUILDER_PLUGIN === '1' && detectedVersion) {
+  if (detectedVersion) {
     const version = semver.coerce(detectedVersion);
     if (version && semver.satisfies(version, '>=4.0.0')) {
       plugins.add('@vercel/gatsby-plugin-vercel-builder');
