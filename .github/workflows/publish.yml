@@ -1,6 +1,8 @@
 name: Publish
 
 on:
+  # Allow manual runs
+  workflow_dispatch:
   push:
     branches:
       - main
