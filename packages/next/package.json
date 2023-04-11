@@ -21,19 +21,6 @@
   "files": [
     "dist"
   ],
-  "jest": {
-    "preset": "ts-jest/presets/default",
-    "testEnvironment": "node",
-    "transform": {
-      "^.+\\.[tj]s$": [
-        "ts-jest",
-        {
-          "diagnostics": true,
-          "isolatedModules": true
-        }
-      ]
-    }
-  },
   "devDependencies": {
     "@types/aws-lambda": "8.10.19",
     "@types/buffer-crc32": "0.2.0",
