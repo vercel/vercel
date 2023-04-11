@@ -262,7 +262,7 @@ importers:
       '@vercel/client': 12.4.9
       '@vercel/error-utils': 1.0.9
       '@vercel/frameworks': 1.3.4
-      '@vercel/fs-detectors': 3.8.9
+      '@vercel/fs-detectors': 3.8.10
       '@vercel/fun': 1.0.4
       '@vercel/go': 2.4.4
       '@vercel/hydrogen': 0.0.62
@@ -274,7 +274,7 @@ importers:
       '@vercel/remix-builder': 1.8.4
       '@vercel/routing-utils': 2.2.0
       '@vercel/ruby': 1.3.75
-      '@vercel/static-build': 1.3.22
+      '@vercel/static-build': 1.3.23
       '@zeit/source-map-support': 0.6.2
       ajv: 6.12.2
       alpha-sort: 2.0.1
@@ -1050,9 +1050,9 @@ importers:
       '@types/semver': 7.3.13
       '@vercel/build-utils': 6.7.1
       '@vercel/frameworks': 1.3.4
-      '@vercel/fs-detectors': 3.8.9
+      '@vercel/fs-detectors': 3.8.10
       '@vercel/gatsby-plugin-vercel-analytics': 1.0.9
-      '@vercel/gatsby-plugin-vercel-builder': 1.2.7
+      '@vercel/gatsby-plugin-vercel-builder': 1.2.8
       '@vercel/ncc': 0.24.0
       '@vercel/routing-utils': 2.2.0
       '@vercel/static-config': 2.0.15
@@ -18855,6 +18855,17 @@ packages:
     resolution: {integrity: sha512-1uEe95xksV1O0CYKXo8vQvN1JEbtJp7lb7C5U9HMsIp6IVwntkH/oNUzyVNQSd4S1sYk2FpSSW44FqMc8qee5w==}
     engines: {node: '>=4'}
     dev: false
+
+  /update-browserslist-db/1.0.10_browserslist@4.21.4:
+    resolution: {integrity: sha512-OztqDenkfFkbSG+tRxBeAnCVPckDBcvibKd35yDONx6OU8N7sqgwc7rCbkJ/WcYtVRZ4ba68d6byhC21GFh7sQ==}
+    hasBin: true
+    peerDependencies:
+      browserslist: '>= 4.21.0'
+    dependencies:
+      browserslist: 4.21.4
+      escalade: 3.1.1
+      picocolors: 1.0.0
+    dev: true
 
   /update-browserslist-db/1.0.10_browserslist@4.21.5:
     resolution: {integrity: sha512-OztqDenkfFkbSG+tRxBeAnCVPckDBcvibKd35yDONx6OU8N7sqgwc7rCbkJ/WcYtVRZ4ba68d6byhC21GFh7sQ==}
