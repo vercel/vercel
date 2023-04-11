@@ -1,5 +1,5 @@
 import Client from '../client';
-import { Project } from '@vercel-internals/types';
+import type { Project } from '@vercel-internals/types';
 
 export default async function createProject(
   client: Client,

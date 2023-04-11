@@ -1,9 +1,12 @@
 import chalk from 'chalk';
-import {
-  ProjectEnvTarget,
+import type {
   Project,
-  ProjectEnvType,
+  PROJECT_ENV_TARGET_VALUES,
 } from '@vercel-internals/types';
+import {
+  PROJECT_ENV_TARGET,
+  PROJECT_ENV_TYPE,
+} from '@vercel-internals/constants';
 import { Output } from '../../util/output';
 import Client from '../../util/client';
 import stamp from '../../util/output/stamp';
@@ -56,7 +59,7 @@ export default async function add(
     return 1;
   }
 
-  let envTargets: ProjectEnvTarget[] = [];
+  let envTargets: PROJECT_ENV_TARGET_VALUES[] = [];
   if (envTargetArg) {
     if (!isValidEnvTarget(envTargetArg)) {
       output.error(
@@ -138,7 +141,7 @@ export default async function add(
     !stdInput &&
     !envGitBranch &&
     envTargets.length === 1 &&
-    envTargets[0] === ProjectEnvTarget.Preview
+    envTargets[0] === PROJECT_ENV_TARGET.Preview
   ) {
     const { inputValue } = await client.prompt({
       type: 'input',
@@ -155,7 +158,7 @@ export default async function add(
       output,
       client,
       project.id,
-      ProjectEnvType.Encrypted,
+      PROJECT_ENV_TYPE.Encrypted,
       envName,
       envValue,
       envTargets,

@@ -2,7 +2,11 @@ import chalk from 'chalk';
 import { outputFile } from 'fs-extra';
 import { closeSync, openSync, readSync } from 'fs';
 import { resolve } from 'path';
-import { Project, ProjectEnvTarget } from '@vercel-internals/types';
+import type {
+  Project,
+  PROJECT_ENV_TARGET_VALUES,
+} from '@vercel-internals/types';
+import { PROJECT_ENV_TARGET } from '@vercel-internals/constants';
 import Client from '../../util/client';
 import { emoji, prependEmoji } from '../../util/emoji';
 import confirm from '../../util/input/confirm';
@@ -52,7 +56,7 @@ function tryReadHeadSync(path: string, length: number) {
 export default async function pull(
   client: Client,
   project: Project,
-  environment: ProjectEnvTarget,
+  environment: PROJECT_ENV_TARGET_VALUES,
   opts: Partial<Options>,
   args: string[],
   output: Output,
@@ -101,7 +105,7 @@ export default async function pull(
 
   const records = (
     await pullEnvRecords(output, client, project.id, source, {
-      target: environment || ProjectEnvTarget.Development,
+      target: environment || PROJECT_ENV_TARGET.Development,
       gitBranch,
     })
   ).env;

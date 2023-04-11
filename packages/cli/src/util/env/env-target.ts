@@ -1,11 +1,8 @@
-import { ProjectEnvTarget } from '@vercel-internals/types';
-
-function envTargets(): string[] {
-  return Object.values(ProjectEnvTarget);
-}
+import { PROJECT_ENV_TARGET } from '@vercel-internals/constants';
+import type { PROJECT_ENV_TARGET_VALUES } from '@vercel-internals/types';
 
 export function getEnvTargetChoices() {
-  return Object.entries(ProjectEnvTarget).map(([key, value]) => ({
+  return Object.entries(PROJECT_ENV_TARGET).map(([key, value]) => ({
     name: key,
     value: value,
   }));
@@ -13,10 +10,14 @@ export function getEnvTargetChoices() {
 
 export function isValidEnvTarget(
   target?: string
-): target is ProjectEnvTarget | undefined {
-  return typeof target === 'undefined' || envTargets().includes(target);
+): target is PROJECT_ENV_TARGET_VALUES | undefined {
+  // Specify `Object.values` is return strings, instead of string constants so `.includes` works
+  return (
+    typeof target === 'undefined' ||
+    Object.values<string>(PROJECT_ENV_TARGET).includes(target)
+  );
 }
 
 export function getEnvTargetPlaceholder() {
-  return `<${envTargets().join(' | ')}>`;
+  return `<${Object.values(PROJECT_ENV_TARGET).join(' | ')}>`;
 }

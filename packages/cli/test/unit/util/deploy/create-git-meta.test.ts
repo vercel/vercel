@@ -13,7 +13,7 @@ import { client } from '../../../mocks/client';
 import { parseRepoUrl } from '../../../../src/util/git/connect-git-provider';
 import { useUser } from '../../../mocks/user';
 import { defaultProject, useProject } from '../../../mocks/project';
-import { Project } from '@vercel-internals/types';
+import type { Project } from '@vercel-internals/types';
 
 jest.setTimeout(10 * 1000);
 
