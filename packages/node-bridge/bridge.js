@@ -39,19 +39,20 @@ function normalizeProxyEvent(event) {
     responseCallbackCipherKey,
     responseCallbackStream,
     responseCallbackUrl,
+    features,
   } = payload;
 
   /**
    *
-   * @param {string | Buffer} b
+   * @param {string | Buffer} body
    * @returns Buffer
    */
-  const normalizeBody = b => {
-    if (b) {
-      if (typeof b === 'string' && encoding === 'base64') {
-        bodyBuffer = Buffer.from(b, encoding);
+  const normalizeBody = body => {
+    if (body) {
+      if (typeof body === 'string' && encoding === 'base64') {
+        bodyBuffer = Buffer.from(body, encoding);
       } else if (encoding === undefined) {
-        bodyBuffer = Buffer.from(b);
+        bodyBuffer = Buffer.from(body);
       } else {
         throw new Error(`Unsupported encoding: ${encoding}`);
       }
@@ -62,8 +63,9 @@ function normalizeProxyEvent(event) {
   };
 
   if (payloads) {
-    for (const p of payloads) {
-      p.body = normalizeBody(payload.body);
+    for (const targetPayload of payloads) {
+      targetPayload.features = features;
+      targetPayload.body = normalizeBody(payload.body);
     }
   }
   bodyBuffer = normalizeBody(body);
@@ -75,6 +77,7 @@ function normalizeProxyEvent(event) {
     headers,
     body: bodyBuffer,
     payloads,
+    features,
     responseCallbackCipher,
     responseCallbackCipherIV,
     responseCallbackCipherKey,
@@ -84,50 +87,12 @@ function normalizeProxyEvent(event) {
 }
 
 /**
- * @param {import('aws-lambda').APIGatewayProxyEvent} event
- */
-function normalizeAPIGatewayProxyEvent(event) {
-  let bodyBuffer;
-  const { httpMethod: method, path, headers, body } = event;
-
-  if (body) {
-    if (event.isBase64Encoded) {
-      bodyBuffer = Buffer.from(body, 'base64');
-    } else {
-      bodyBuffer = Buffer.from(body);
-    }
-  } else {
-    bodyBuffer = Buffer.alloc(0);
-  }
-
-  return {
-    body: bodyBuffer,
-    headers,
-    isApiGateway: true,
-    method,
-    path,
-    responseCallbackCipher: undefined,
-    responseCallbackCipherIV: undefined,
-    responseCallbackCipherKey: undefined,
-    responseCallbackStream: undefined,
-    responseCallbackUrl: undefined,
-  };
-}
-
-/**
- * @param {import('./types').VercelProxyEvent | import('aws-lambda').APIGatewayProxyEvent} event
- * @return {import('./types').VercelProxyRequest}
+ * @param {import('./types').VercelProxyEvent } event
+ * @return {import('./types').VercelProxyRequest }
  */
 function normalizeEvent(event) {
-  if ('Action' in event) {
-    if (event.Action === 'Invoke') {
-      return normalizeProxyEvent(event);
-    } else {
-      throw new Error(`Unexpected event.Action: ${event.Action}`);
-    }
-  } else {
-    return normalizeAPIGatewayProxyEvent(event);
-  }
+  if (event.Action === 'Invoke') return normalizeProxyEvent(event);
+  throw new Error(`Unexpected event.Action: ${event.Action}`);
 }
 
 class Bridge {
@@ -207,7 +172,7 @@ class Bridge {
 
   /**
    *
-   * @param {import('./types').VercelProxyEvent | import('aws-lambda').APIGatewayProxyEvent} event
+   * @param {import('./types').VercelProxyEvent} event
    * @param {import('aws-lambda').Context} context
    * @return {Promise<import('./types').VercelProxyResponse>}
    */
@@ -435,7 +400,13 @@ function getStreamResponseCallback({ url, socket, cipher, resolve, reject }) {
     headers += `x-vercel-status-code: ${response.statusCode || 200}${CRLF}`;
     for (const [name, value] of getHeadersIterator(response.headers)) {
       if (!['connection', 'transfer-encoding'].includes(name)) {
-        headers += `x-vercel-header-${name}: ${value}${CRLF}`;
+        if (typeof value === 'string') {
+          headers += `x-vercel-header-${name}: ${value}${CRLF}`;
+        } else {
+          for (const val of value) {
+            headers += `x-vercel-header-${name}: ${val}${CRLF}`;
+          }
+        }
       }
     }
 

@@ -1,4 +1,4 @@
-import { Org, Project } from '../../types';
+import { Org, Project } from '@vercel-internals/types';
 import Client from '../client';
 import setupAndLink from '../link/setup-and-link';
 import param from '../output/param';
@@ -32,7 +32,11 @@ export async function ensureLink(
   cwd: string,
   opts: SetupAndLinkOptions
 ): Promise<LinkResult | number> {
-  let link = await getLinkedProject(client, cwd);
+  let { link } = opts;
+  if (!link) {
+    link = await getLinkedProject(client, cwd);
+    opts.link = link;
+  }
 
   if (
     (link.status === 'linked' && opts.forceDelete) ||

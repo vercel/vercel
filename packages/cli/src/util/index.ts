@@ -14,7 +14,7 @@ import { responseError } from './error';
 import stamp from './output/stamp';
 import { APIError, BuildError } from './errors-ts';
 import printIndications from './print-indications';
-import { GitMetadata, Org } from '../types';
+import { GitMetadata, Org } from '@vercel-internals/types';
 import { VercelConfig } from './dev/types';
 import Client, { FetchOptions, isJSONObject } from './client';
 import { ArchiveFormat, Dictionary } from '@vercel/client';
@@ -259,7 +259,7 @@ export default class Now extends EventEmitter {
         const { key } = error;
         err.message =
           `The env key ${key} has an invalid type: ${typeof env[key]}. ` +
-          'Please supply a String or a Number (https://err.sh/vercel-cli/env-value-invalid-type)';
+          'Please supply a String or a Number (https://err.sh/vercel/env-value-invalid-type)';
       } else if (code === 'unreferenced_build_specifications') {
         const count = unreferencedBuildSpecs.length;
         const prefix = count === 1 ? 'build' : 'builds';
@@ -290,7 +290,8 @@ export default class Now extends EventEmitter {
 
     if (
       error.errorCode === 'BUILD_FAILED' ||
-      error.errorCode === 'UNEXPECTED_ERROR'
+      error.errorCode === 'UNEXPECTED_ERROR' ||
+      error.errorCode.includes('BUILD_UTILS_SPAWN_')
     ) {
       return new BuildError({
         message: error.errorMessage,
@@ -298,7 +299,7 @@ export default class Now extends EventEmitter {
       });
     }
 
-    return new Error(error.message);
+    return new Error(error.message || error.errorMessage);
   }
 
   async listSecrets(next?: number, testWarningFlag?: boolean) {

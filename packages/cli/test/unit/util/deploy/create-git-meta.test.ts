@@ -13,7 +13,9 @@ import { client } from '../../../mocks/client';
 import { parseRepoUrl } from '../../../../src/util/git/connect-git-provider';
 import { useUser } from '../../../mocks/user';
 import { defaultProject, useProject } from '../../../mocks/project';
-import { Project } from '../../../../src/types';
+import { Project } from '@vercel-internals/types';
+
+jest.setTimeout(10 * 1000);
 
 const fixture = (name: string) =>
   join(__dirname, '../../../fixtures/unit/create-git-meta', name);
@@ -174,7 +176,7 @@ describe('createGitMeta', () => {
     const directory = fixture('dirty');
     try {
       await fs.rename(join(directory, 'git'), join(directory, '.git'));
-      const dirty = await isDirty(directory, client.output);
+      const dirty = await isDirty(directory);
       expect(dirty).toBeTruthy();
     } finally {
       await fs.rename(join(directory, '.git'), join(directory, 'git'));
@@ -184,7 +186,7 @@ describe('createGitMeta', () => {
     const directory = fixture('not-dirty');
     try {
       await fs.rename(join(directory, 'git'), join(directory, '.git'));
-      const dirty = await isDirty(directory, client.output);
+      const dirty = await isDirty(directory);
       expect(dirty).toBeFalsy();
     } finally {
       await fs.rename(join(directory, '.git'), join(directory, 'git'));
@@ -277,13 +279,6 @@ describe('createGitMeta', () => {
         `Failed to get last commit. The directory is likely not a Git repo, there are no latest commits, or it is corrupted.`
       );
 
-      // skip next line
-      await lines.next();
-
-      line = await lines.next();
-      expect(line.value).toContain(
-        `Failed to determine if Git repo has been modified:`
-      );
       expect(data).toBeUndefined();
     } finally {
       await fs.remove(tmpDir);

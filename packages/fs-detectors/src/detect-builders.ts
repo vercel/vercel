@@ -453,9 +453,7 @@ function getApiMatches() {
 
   return [
     { src: 'middleware.[jt]s', use: `@vercel/node`, config },
-    { src: 'api/**/*.js', use: `@vercel/node`, config },
-    { src: 'api/**/*.mjs', use: `@vercel/node`, config },
-    { src: 'api/**/*.ts', use: `@vercel/node`, config },
+    { src: 'api/**/*.+(js|mjs|ts|tsx)', use: `@vercel/node`, config },
     { src: 'api/**/!(*_test).go', use: `@vercel/go`, config },
     { src: 'api/**/*.py', use: `@vercel/python`, config },
     { src: 'api/**/*.rb', use: `@vercel/ruby`, config },
@@ -604,12 +602,11 @@ function validateFunctions({ functions = {} }: Options) {
 
     if (
       func.memory !== undefined &&
-      (func.memory < 128 || func.memory > 3008 || func.memory % 64 !== 0)
+      (func.memory < 128 || func.memory > 3008)
     ) {
       return {
         code: 'invalid_function_memory',
-        message:
-          'Functions must have a memory value between 128 and 3008 in steps of 64.',
+        message: 'Functions must have a memory value between 128 and 3008',
       };
     }
 

@@ -1,0 +1,22 @@
+name: 🤖 Issue labeler - Feature Request
+on:
+  issues:
+    types:
+      - labeled
+jobs:
+  add-comment:
+    if: "github.event.label.name == 'triaged: feature request'"
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Add comment
+        uses: peter-evans/create-or-update-comment@5adcb0bb0f9fb3f95ef05400558bdb3f329ee808
+        with:
+          issue-number: ${{ github.event.issue.number }}
+          body: |
+            Thank you for taking the time to created this request!             
+
+            We added it to our backlog but need to discuss design/architecture before we can accept a PR. 
+
+            Please let us know if you would be interested in sending a PR once we approve the design.

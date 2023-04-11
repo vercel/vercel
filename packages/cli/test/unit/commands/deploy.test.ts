@@ -5,7 +5,7 @@ import { randomBytes } from 'crypto';
 import { fileNameSymbol } from '@vercel/client';
 import { client } from '../../mocks/client';
 import deploy from '../../../src/commands/deploy';
-import { setupFixture } from '../../helpers/setup-fixture';
+import { setupUnitFixture } from '../../helpers/setup-unit-fixture';
 import { defaultProject, useProject } from '../../mocks/project';
 import { useTeams } from '../../mocks/team';
 import { useUser } from '../../mocks/user';
@@ -39,7 +39,7 @@ describe('deploy', () => {
   });
 
   it('should reject deploying when `--prebuilt` is used and `vc build` failed before Builders', async () => {
-    const cwd = setupFixture('build-output-api-failed-before-builds');
+    const cwd = setupUnitFixture('build-output-api-failed-before-builds');
 
     client.setArgv('deploy', cwd, '--prebuilt');
     const exitCodePromise = deploy(client);
@@ -50,7 +50,7 @@ describe('deploy', () => {
   });
 
   it('should reject deploying when `--prebuilt` is used and `vc build` failed within a Builder', async () => {
-    const cwd = setupFixture('build-output-api-failed-within-build');
+    const cwd = setupUnitFixture('build-output-api-failed-within-build');
 
     client.setArgv('deploy', cwd, '--prebuilt');
     const exitCodePromise = deploy(client);
@@ -70,7 +70,7 @@ describe('deploy', () => {
   });
 
   it('should reject deploying a directory that was built with a different target environment when `--prebuilt --prod` is used on "preview" output', async () => {
-    const cwd = setupFixture('build-output-api-preview');
+    const cwd = setupUnitFixture('build-output-api-preview');
 
     useUser();
     useTeams('team_dummy');
@@ -92,7 +92,7 @@ describe('deploy', () => {
   });
 
   it('should reject deploying a directory that was built with a different target environment when `--prebuilt` is used on "production" output', async () => {
-    const cwd = setupFixture('build-output-api-production');
+    const cwd = setupUnitFixture('build-output-api-production');
 
     useUser();
     useTeams('team_dummy');
@@ -141,7 +141,7 @@ describe('deploy', () => {
   });
 
   it('should send a tgz file when `--archive=tgz`', async () => {
-    const cwd = setupFixture('commands/deploy/archive');
+    const cwd = setupUnitFixture('commands/deploy/archive');
     const originalCwd = process.cwd();
     try {
       process.chdir(cwd);
@@ -204,7 +204,7 @@ describe('deploy', () => {
   });
 
   it('should upload missing files', async () => {
-    const cwd = setupFixture('commands/deploy/archive');
+    const cwd = setupUnitFixture('commands/deploy/archive');
     const originalCwd = process.cwd();
 
     // Add random 1mb file

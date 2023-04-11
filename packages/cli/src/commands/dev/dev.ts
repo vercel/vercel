@@ -5,7 +5,7 @@ import DevServer from '../../util/dev/server';
 import { parseListen } from '../../util/dev/parse-listen';
 import Client from '../../util/client';
 import { getLinkedProject } from '../../util/projects/link';
-import { ProjectSettings } from '../../types';
+import { ProjectSettings } from '@vercel-internals/types';
 import setupAndLink from '../../util/link/setup-and-link';
 import { getCommandName } from '../../util/pkg-name';
 import param from '../../util/output/param';
@@ -33,6 +33,7 @@ export default async function dev(
   if (link.status === 'not_linked' && !process.env.__VERCEL_SKIP_DEV_CMD) {
     link = await setupAndLink(client, cwd, {
       autoConfirm: opts['--yes'],
+      link,
       successEmoji: 'link',
       setupMsg: 'Set up and develop',
     });
@@ -76,6 +77,9 @@ export default async function dev(
     projectSettings,
     envValues,
   });
+
+  // listen to SIGTERM for graceful shutdown
+  process.on('SIGTERM', () => devServer.stop());
 
   // If there is no Development Command, we must delete the
   // v3 Build Output because it will incorrectly be detected by

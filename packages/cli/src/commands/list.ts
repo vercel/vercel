@@ -36,6 +36,7 @@ const help = () => {
     'DIR'
   )}    Path to the global ${'`.vercel`'} directory
     -d, --debug                    Debug mode [off]
+    --no-color                     No color mode [off]
     -y, --yes                      Skip questions when setting up new project using default scope and settings
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
     'TOKEN'
@@ -147,6 +148,7 @@ export default async function main(client: Client) {
   if (status === 'not_linked' && !app) {
     const linkedProject = await ensureLink('list', client, path, {
       autoConfirm,
+      link,
     });
     if (typeof linkedProject === 'number') {
       return linkedProject;

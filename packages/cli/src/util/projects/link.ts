@@ -12,8 +12,12 @@ import { InvalidToken, isAPIError, ProjectNotFound } from '../errors-ts';
 import getUser from '../get-user';
 import getTeamById from '../teams/get-team-by-id';
 import { Output } from '../output';
-import { Project, ProjectLinkResult } from '../../types';
-import { Org, ProjectLink } from '../../types';
+import {
+  Project,
+  ProjectLinkResult,
+  Org,
+  ProjectLink,
+} from '@vercel-internals/types';
 import { prependEmoji, emoji, EmojiLabel } from '../emoji';
 import { isDirectory } from '../config/global-path';
 import { NowBuildError, getPlatformEnv } from '@vercel/build-utils';
@@ -186,15 +190,14 @@ export async function getLinkedProject(
         })})\n`
       );
       return { status: 'error', exitCode: 1 };
-    } else {
-      output.print(
-        prependEmoji(
-          'Your Project was either deleted, transferred to a new Team, or you don’t have access to it anymore.\n',
-          emoji('warning')
-        )
-      );
     }
 
+    output.print(
+      prependEmoji(
+        'Your Project was either deleted, transferred to a new Team, or you don’t have access to it anymore.\n',
+        emoji('warning')
+      )
+    );
     return { status: 'not_linked', org: null, project: null };
   }
 

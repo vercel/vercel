@@ -1,6 +1,9 @@
 {
-  "name": "webapp",
+  "name": "26-packages-webapp",
   "version": "0.0.1",
+  "engines": {
+    "node": "16.x"
+  },
   "dependencies": {
     "next": "9.3.4",
     "react": "^16.8.6",

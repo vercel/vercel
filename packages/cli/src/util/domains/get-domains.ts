@@ -1,4 +1,4 @@
-import { Domain, PaginationOptions } from '../../types';
+import { Domain, PaginationOptions } from '@vercel-internals/types';
 import Client from '../client';
 
 type Response = {
@@ -6,8 +6,12 @@ type Response = {
   pagination: PaginationOptions;
 };
 
-export default async function getDomains(client: Client, next?: number) {
-  let domainUrl = `/v5/domains?limit=20`;
+export default async function getDomains(
+  client: Client,
+  next?: number,
+  limit = 20
+) {
+  let domainUrl = `/v5/domains?limit=${limit}`;
   if (next) {
     domainUrl += `&until=${next}`;
   }

@@ -18,7 +18,7 @@ import sourceMap from '@zeit/source-map-support';
 import { mkdirp } from 'fs-extra';
 import chalk from 'chalk';
 import epipebomb from 'epipebomb';
-import updateNotifier from 'update-notifier';
+import getLatestVersion from './util/get-latest-version';
 import { URL } from 'url';
 import * as Sentry from '@sentry/node';
 import hp from './util/humanize-path';
@@ -50,17 +50,11 @@ import getUpdateCommand from './util/get-update-command';
 import { metrics, shouldCollectMetrics } from './util/metrics';
 import { getCommandName, getTitleName } from './util/pkg-name';
 import doLoginPrompt from './util/login/prompt';
-import { AuthConfig, GlobalConfig } from './types';
+import { AuthConfig, GlobalConfig } from '@vercel-internals/types';
 import { VercelConfig } from '@vercel/client';
+import box from './util/output/box';
 
 const isCanary = pkg.version.includes('canary');
-
-// Checks for available update and returns an instance
-const notifier = updateNotifier({
-  pkg,
-  distTag: isCanary ? 'canary' : 'latest',
-  updateCheckInterval: 1000 * 60 * 60 * 24 * 7, // 1 week
-});
 
 const VERCEL_DIR = getGlobalPathConfig();
 const VERCEL_CONFIG_PATH = configFiles.getConfigFilePath();
@@ -80,11 +74,12 @@ Sentry.init({
 });
 
 let client: Client;
+let output: Output;
+let { isTTY } = process.stdout;
 let debug: (s: string) => void = () => {};
 let apiUrl = 'https://api.vercel.com';
 
 const main = async () => {
-  let { isTTY } = process.stdout;
   if (process.env.FORCE_TTY === '1') {
     isTTY = true;
     process.stdout.isTTY = true;
@@ -110,7 +105,12 @@ const main = async () => {
   }
 
   const isDebugging = argv['--debug'];
-  const output = new Output(process.stderr, { debug: isDebugging });
+  const isNoColor = argv['--no-color'];
+
+  output = new Output(process.stderr, {
+    debug: isDebugging,
+    noColor: isNoColor,
+  });
 
   debug = output.debug;
 
@@ -148,25 +148,6 @@ const main = async () => {
     process.chdir(cwd);
   }
 
-  // Print update information, if available
-  if (notifier.update && notifier.update.latest !== pkg.version && isTTY) {
-    const { latest } = notifier.update;
-    console.log(
-      info(
-        `${chalk.black.bgCyan('UPDATE AVAILABLE')} ` +
-          `Run ${cmd(
-            await getUpdateCommand()
-          )} to install ${getTitleName()} CLI ${latest}`
-      )
-    );
-
-    console.log(
-      info(
-        `Changelog: https://github.com/vercel/vercel/releases/tag/vercel@${latest}`
-      )
-    );
-  }
-
   // The second argument to the command can be:
   //
   //  * a path to deploy (as in: `vercel path/`)
@@ -174,7 +155,7 @@ const main = async () => {
   const targetOrSubcommand = argv._[2];
 
   // Currently no beta commands - add here as needed
-  const betaCommands: string[] = [];
+  const betaCommands: string[] = ['rollback'];
   if (betaCommands.includes(targetOrSubcommand)) {
     console.log(
       `${chalk.grey(
@@ -286,6 +267,7 @@ const main = async () => {
     config,
     authConfig,
     localConfig,
+    localConfigPath,
     argv: process.argv,
   });
 
@@ -299,7 +281,12 @@ const main = async () => {
       GLOBAL_COMMANDS.has(targetOrSubcommand) ||
       commands.has(targetOrSubcommand);
 
-    if (targetPathExists && subcommandExists && !argv['--cwd']) {
+    if (
+      targetPathExists &&
+      subcommandExists &&
+      !argv['--cwd'] &&
+      !process.env.NOW_BUILDER
+    ) {
       output.warn(
         `Did you mean to deploy the subdirectory "${targetOrSubcommand}"? ` +
           `Use \`vc --cwd ${targetOrSubcommand}\` instead.`
@@ -555,6 +542,9 @@ const main = async () => {
       case 'remove':
         func = require('./commands/remove').default;
         break;
+      case 'rollback':
+        func = require('./commands/rollback').default;
+        break;
       case 'secrets':
         func = require('./commands/secrets').default;
         break;
@@ -711,7 +701,39 @@ process.on('unhandledRejection', handleRejection);
 process.on('uncaughtException', handleUnexpected);
 
 main()
-  .then(exitCode => {
+  .then(async exitCode => {
+    // Print update information, if available
+    if (isTTY && !process.env.NO_UPDATE_NOTIFIER) {
+      // Check if an update is available. If so, `latest` will contain a string
+      // of the latest version, otherwise `undefined`.
+      const latest = getLatestVersion({
+        distTag: isCanary ? 'canary' : 'latest',
+        output,
+        pkg,
+      });
+      if (latest) {
+        const changelog = 'https://github.com/vercel/vercel/releases';
+        const errorMsg =
+          exitCode && exitCode !== 2
+            ? chalk.magenta(
+                `\n\nThe latest update ${chalk.italic(
+                  'may'
+                )} fix any errors that occurred.`
+              )
+            : '';
+        output.print(
+          box(
+            `Update available! ${chalk.gray(`v${pkg.version}`)} ≫ ${chalk.green(
+              `v${latest}`
+            )}
+Changelog: ${output.link(changelog, changelog, { fallback: false })}
+Run ${chalk.cyan(cmd(await getUpdateCommand()))} to update.${errorMsg}`
+          )
+        );
+        output.print('\n\n');
+      }
+    }
+
     process.exitCode = exitCode;
   })
   .catch(handleUnexpected);

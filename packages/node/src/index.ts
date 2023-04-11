@@ -1,5 +1,5 @@
 import url from 'url';
-import { fork, spawn } from 'child_process';
+import { spawn } from 'child_process';
 import {
   readFileSync,
   lstatSync,
@@ -36,7 +36,6 @@ import {
   debug,
   isSymbolicLink,
   walkParentDirs,
-  cloneEnv,
 } from '@vercel/build-utils';
 import type {
   File,
@@ -52,10 +51,21 @@ import type {
 } from '@vercel/build-utils';
 import { getConfig } from '@vercel/static-config';
 
-import { Register, register } from './typescript';
-import { entrypointToOutputPath, getRegExpFromMatchers } from './utils';
+import { fixConfig, Register, register } from './typescript';
+import {
+  EdgeRuntimes,
+  entrypointToOutputPath,
+  getRegExpFromMatchers,
+  isEdgeRuntime,
+} from './utils';
+import {
+  forkDevServer,
+  readMessage as readDevServerMessage,
+} from './fork-dev-server';
 
 export { shouldServe };
+
+type TypescriptModule = typeof import('typescript');
 
 interface DownloadOptions {
   files: Files;
@@ -65,15 +75,7 @@ interface DownloadOptions {
   meta: Meta;
 }
 
-interface PortInfo {
-  port: number;
-}
-
-function isPortInfo(v: any): v is PortInfo {
-  return v && typeof v.port === 'number';
-}
-
-const ALLOWED_RUNTIMES = ['nodejs', 'experimental-edge'];
+const ALLOWED_RUNTIMES = ['nodejs', ...Object.values(EdgeRuntimes)];
 
 const require_ = eval('require');
 
@@ -173,6 +175,10 @@ async function compile(
     return source;
   }
 
+  const conditions = isEdgeFunction
+    ? ['edge-light', 'browser', 'module', 'import', 'require']
+    : undefined;
+
   const { fileList, esmFileList, warnings } = await nodeFileTrace(
     [...inputFiles],
     {
@@ -180,6 +186,7 @@ async function compile(
       processCwd: workPath,
       ts: true,
       mixedModules: true,
+      conditions,
       resolve(id, parent, job, cjsResolve) {
         const normalizedWasmImports = id.replace(/\.wasm\?module$/i, '.wasm');
         return nftResolveDependency(
@@ -190,7 +197,7 @@ async function compile(
         );
       },
       ignore: config.excludeFiles,
-      async readFile(fsPath: string): Promise<Buffer | string | null> {
+      async readFile(fsPath) {
         const relPath = relative(baseDir, fsPath);
 
         // If this file has already been read then return from the cache
@@ -393,7 +400,7 @@ export const build: BuildV3 = async ({
 
   // Will output an `EdgeFunction` for when `config.middleware = true`
   // (i.e. for root-level "middleware" file) or if source code contains:
-  // `export const config = { runtime: 'experimental-edge' }`
+  // `export const config = { runtime: 'edge' }`
   let isEdgeFunction = isMiddleware;
 
   const project = new Project();
@@ -406,7 +413,12 @@ export const build: BuildV3 = async ({
         )} (must be one of: ${JSON.stringify(ALLOWED_RUNTIMES)})`
       );
     }
-    isEdgeFunction = staticConfig.runtime === 'experimental-edge';
+    if (staticConfig.runtime === 'nodejs') {
+      console.log(
+        `Detected unused static config runtime "nodejs" in "${entrypointPath}"`
+      );
+    }
+    isEdgeFunction = isEdgeRuntime(staticConfig.runtime);
   }
 
   debug('Tracing input files...');
@@ -439,9 +451,19 @@ export const build: BuildV3 = async ({
     // Middleware is a catch-all for all paths unless a `matcher` property is defined
     const src = getRegExpFromMatchers(staticConfig?.matcher);
 
+    const middlewareRawSrc: string[] = [];
+    if (staticConfig?.matcher) {
+      if (Array.isArray(staticConfig.matcher)) {
+        middlewareRawSrc.push(...staticConfig.matcher);
+      } else {
+        middlewareRawSrc.push(staticConfig.matcher as string);
+      }
+    }
+
     routes = [
       {
         src,
+        middlewareRawSrc,
         middlewarePath: outputPath,
         continue: true,
         override: true,
@@ -465,8 +487,11 @@ export const build: BuildV3 = async ({
       config.helpers === false || process.env.NODEJS_HELPERS === '0'
     );
 
-    const experimentalResponseStreaming =
-      staticConfig?.experimentalResponseStreaming === true ? true : undefined;
+    const supportsResponseStreaming =
+      (staticConfig?.supportsResponseStreaming ??
+        staticConfig?.experimentalResponseStreaming) === true
+        ? true
+        : undefined;
 
     output = new NodejsLambda({
       files: preparedFiles,
@@ -475,7 +500,7 @@ export const build: BuildV3 = async ({
       shouldAddHelpers,
       shouldAddSourcemapSupport,
       awsLambdaHandler,
-      experimentalResponseStreaming,
+      supportsResponseStreaming,
     });
   }
 
@@ -511,8 +536,9 @@ export const startDevServer: StartDevServer = async opts => {
   }
 
   const entryDir = dirname(entrypointPath);
+  const ext = extname(entrypoint);
 
-  const projectTsConfig = await walkParentDirs({
+  const pathToTsConfig = await walkParentDirs({
     base: workPath,
     start: entryDir,
     filename: 'tsconfig.json',
@@ -523,51 +549,96 @@ export const startDevServer: StartDevServer = async opts => {
     filename: 'package.json',
   });
   const pkg = pathToPkg ? require_(pathToPkg) : {};
+  const isTypescript = ['.ts', '.tsx', '.mts', '.cts'].includes(ext);
+  const maybeTranspile = isTypescript || !['.cjs', '.mjs'].includes(ext);
   const isEsm =
-    entrypoint.endsWith('.mjs') ||
-    (pkg.type === 'module' && entrypoint.endsWith('.js'));
+    ext === '.mjs' ||
+    ext === '.mts' ||
+    (pkg.type === 'module' && ['.js', '.ts', '.tsx'].includes(ext));
 
-  const devServerPath = join(__dirname, 'dev-server.js');
-  const child = fork(devServerPath, [], {
-    cwd: workPath,
-    execArgv: [],
-    env: cloneEnv(process.env, meta.env, {
-      VERCEL_DEV_ENTRYPOINT: entrypoint,
-      VERCEL_DEV_TSCONFIG: projectTsConfig || '',
-      VERCEL_DEV_IS_ESM: isEsm ? '1' : undefined,
-      VERCEL_DEV_CONFIG: JSON.stringify(config),
-      VERCEL_DEV_BUILD_ENV: JSON.stringify(meta.buildEnv || {}),
-    }),
+  let tsConfig: any = {};
+
+  if (maybeTranspile) {
+    const resolveTypescript = (p: string): string => {
+      try {
+        return require_.resolve('typescript', {
+          paths: [p],
+        });
+      } catch (_) {
+        return '';
+      }
+    };
+
+    const requireTypescript = (p: string): TypescriptModule => require_(p);
+
+    let ts: TypescriptModule | null = null;
+
+    // Use the project's version of Typescript if available and supports `target`
+    let compiler = resolveTypescript(process.cwd());
+    if (compiler) {
+      ts = requireTypescript(compiler);
+    }
+
+    // Otherwise fall back to using the copy that `@vercel/node` uses
+    if (!ts) {
+      compiler = resolveTypescript(join(__dirname, '..'));
+      ts = requireTypescript(compiler);
+    }
+
+    if (pathToTsConfig) {
+      try {
+        tsConfig = ts.readConfigFile(pathToTsConfig, ts.sys.readFile).config;
+      } catch (err) {
+        if (err.code !== 'ENOENT') {
+          console.error(`Error while parsing "${pathToTsConfig}"`);
+          throw err;
+        }
+      }
+    }
+
+    const nodeVersionMajor = Number(process.versions.node.split('.')[0]);
+    fixConfig(tsConfig, nodeVersionMajor);
+
+    // In prod, `.ts` inputs use TypeScript and
+    // `.js` inputs use Babel to convert ESM to CJS.
+    // In dev, both `.ts` and `.js` inputs use ts-node
+    // without Babel so we must enable `allowJs`.
+    tsConfig.compilerOptions.allowJs = true;
+
+    // In prod, we emit outputs to the filesystem.
+    // In dev, we don't emit because we use ts-node.
+    tsConfig.compilerOptions.noEmit = true;
+  }
+
+  const child = forkDevServer({
+    workPath,
+    config,
+    entrypoint,
+    require_,
+    isEsm,
+    isTypeScript: isTypescript,
+    maybeTranspile,
+    meta,
+    tsConfig,
   });
 
   const { pid } = child;
-  if (!pid) {
-    throw new Error(
-      `Child Process has no "pid" when forking: "${devServerPath}"`
-    );
-  }
+  const message = await readDevServerMessage(child);
 
-  const onMessage = once<{ port: number }>(child, 'message');
-  const onExit = once.spread<[number, string | null]>(child, 'exit');
-  const result = await Promise.race([onMessage, onExit]);
-  onExit.cancel();
-  onMessage.cancel();
-
-  if (isPortInfo(result)) {
+  if (message.state === 'message') {
     // "message" event
-    const ext = extname(entrypoint);
-    if (ext === '.ts' || ext === '.tsx') {
+    if (isTypescript) {
       // Invoke `tsc --noEmit` asynchronously in the background, so
       // that the HTTP request is not blocked by the type checking.
-      doTypeCheck(opts, projectTsConfig).catch((err: Error) => {
+      doTypeCheck(opts, pathToTsConfig).catch((err: Error) => {
         console.error('Type check for %j failed:', entrypoint, err);
       });
     }
 
-    return { port: result.port, pid };
+    return { port: message.value.port, pid };
   } else {
     // Got "exit" event from child process
-    const [exitCode, signal] = result;
+    const [exitCode, signal] = message.value;
     const reason = signal ? `"${signal}" signal` : `exit code ${exitCode}`;
     throw new Error(`Function \`${entrypoint}\` failed with ${reason}`);
   }
@@ -625,5 +696,5 @@ async function doTypeCheck(
       stdio: 'inherit',
     }
   );
-  await once.spread<[number, string | null]>(child, 'exit');
+  await once.spread<[number, string | null]>(child, 'close');
 }

@@ -4,7 +4,8 @@
   "probes": [
     {
       "path": "/",
-      "mustContain": "declare namespace Test"
+      "mustContain": "declare namespace Test",
+      "logMustContain": "Using built-in TypeScript"
     }
   ]
 }

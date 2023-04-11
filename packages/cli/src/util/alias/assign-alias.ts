@@ -1,4 +1,4 @@
-import { Deployment } from '../../types';
+import type { Deployment } from '@vercel-internals/types';
 import { Output } from '../output';
 import Client from '../client';
 import createAlias from './create-alias';

@@ -1,8 +1,7 @@
 import { Output } from '../output';
 import Client from '../client';
-import { ProjectEnvVariable, ProjectEnvTarget } from '../../types';
+import { ProjectEnvVariable, ProjectEnvTarget } from '@vercel-internals/types';
 import { URLSearchParams } from 'url';
-import * as path from 'path';
 
 /** The CLI command that was used that needs the environment variables. */
 export type EnvRecordsSource =
@@ -71,7 +70,10 @@ export async function pullEnvRecords(
   let url = `/v1/env/pull/${projectId}`;
 
   if (target) {
-    url = path.join(url, target, gitBranch ?? '');
+    url += `/${encodeURIComponent(target)}`;
+    if (gitBranch) {
+      url += `/${encodeURIComponent(gitBranch)}`;
+    }
   }
 
   if (source) {

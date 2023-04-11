@@ -6,9 +6,12 @@ import type { Context } from '../types';
 import { duplicateWithConfig } from '../utils';
 import fs from 'fs-extra';
 import path from 'path';
-import runBuildLambda from '../../../../test/lib/run-build-lambda';
+import * as builder from '../../';
+import { createRunBuildLambda } from '../../../../test/lib/run-build-lambda';
 import { EdgeFunction, Files, streamToBuffer } from '@vercel/build-utils';
 import { createHash } from 'crypto';
+
+const runBuildLambda = createRunBuildLambda(builder);
 
 const SIMPLE_PROJECT = path.resolve(
   __dirname,

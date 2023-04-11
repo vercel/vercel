@@ -473,7 +473,7 @@ describe('Test `detectBuilders`', () => {
   });
 
   it('invalid function memory', async () => {
-    const functions = { 'pages/index.ts': { memory: 200 } };
+    const functions = { 'pages/index.ts': { memory: 127 } };
     const files = ['pages/index.ts'];
     const { builders, errors } = await detectBuilders(files, null, {
       functions,
@@ -482,6 +482,17 @@ describe('Test `detectBuilders`', () => {
     expect(builders).toBe(null);
     expect(errors!.length).toBe(1);
     expect(errors![0].code).toBe('invalid_function_memory');
+  });
+
+  it('should build with function memory not dividable by 64', async () => {
+    const functions = { 'api/index.ts': { memory: 1000 } };
+    const files = ['api/index.ts'];
+    const { builders, errors } = await detectBuilders(files, null, {
+      functions,
+    });
+
+    expect(builders![0].use).toBe('@vercel/node');
+    expect(errors).toBeNull();
   });
 
   it('missing runtime version', async () => {
@@ -1369,6 +1380,25 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect((errorRoutes![0] as Source).status).toBe(404);
   });
 
+  it('api detect node tsx files', async () => {
+    const files = [
+      'api/index.tsx',
+      'api/users.tsx',
+      'api/config/staging.tsx',
+      'api/config/production.tsx',
+      'api/src/controllers/health.tsx',
+      'api/src/controllers/user.module.tsx',
+    ];
+
+    const { builders, errorRoutes } = await detectBuilders(files, undefined, {
+      featHandleMiss,
+    });
+    expect(builders?.length).toBe(6);
+    expect(builders!.every(b => b.src!.endsWith('.tsx'))).toBe(true);
+    expect(errorRoutes?.length).toBe(1);
+    expect((errorRoutes![0] as Source).status).toBe(404);
+  });
+
   it('just public', async () => {
     const files = ['public/index.html', 'public/favicon.ico', 'README.md'];
 
@@ -1701,7 +1731,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
   });
 
   it('invalid function memory', async () => {
-    const functions = { 'pages/index.ts': { memory: 200 } };
+    const functions = { 'pages/index.ts': { memory: 127 } };
     const files = ['pages/index.ts'];
     const { builders, errors } = await detectBuilders(files, null, {
       functions,
@@ -1711,6 +1741,18 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(builders).toBe(null);
     expect(errors!.length).toBe(1);
     expect(errors![0].code).toBe('invalid_function_memory');
+  });
+
+  it('should build with function memory not dividable by 64', async () => {
+    const functions = { 'api/index.ts': { memory: 1000 } };
+    const files = ['api/index.ts'];
+    const { builders, errors } = await detectBuilders(files, null, {
+      functions,
+      featHandleMiss,
+    });
+
+    expect(builders![0].use).toBe('@vercel/node');
+    expect(errors).toBeNull();
   });
 
   it('missing runtime version', async () => {

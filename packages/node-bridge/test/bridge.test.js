@@ -13,41 +13,8 @@ test('port binding', async () => {
 
   // Test port binding
   const info = await bridge.listening;
-  assert.equal(info.address, '127.0.0.1');
-  assert.equal(typeof info.port, 'number');
-
-  server.close();
-});
-
-test('`APIGatewayProxyEvent` normalizing', async () => {
-  const server = new Server((req, res) =>
-    res.end(
-      JSON.stringify({
-        method: req.method,
-        path: req.url,
-        headers: req.headers,
-      })
-    )
-  );
-  const bridge = new Bridge(server);
-  bridge.listen();
-  const context = {};
-  const result = await bridge.launcher(
-    {
-      httpMethod: 'GET',
-      headers: { foo: 'bar' },
-      path: '/apigateway',
-      body: null,
-    },
-    context
-  );
-  assert.equal(result.encoding, 'base64');
-  assert.equal(result.statusCode, 200);
-  const body = JSON.parse(Buffer.from(result.body, 'base64').toString());
-  assert.equal(body.method, 'GET');
-  assert.equal(body.path, '/apigateway');
-  assert.equal(body.headers.foo, 'bar');
-  assert.equal(context.callbackWaitsForEmptyEventLoop, false);
+  assert.strictEqual(info.address, '127.0.0.1');
+  assert.strictEqual(typeof info.port, 'number');
 
   server.close();
 });
@@ -62,8 +29,19 @@ test('`NowProxyEvent` normalizing', async () => {
       })
     )
   );
-  const bridge = new Bridge(server);
+
+  let features;
+
+  class CustomBridge extends Bridge {
+    handleEvent(normalizedEvent) {
+      features = normalizedEvent.features;
+      return super.handleEvent(normalizedEvent);
+    }
+  }
+
+  const bridge = new CustomBridge(server);
   bridge.listen();
+
   const context = { callbackWaitsForEmptyEventLoop: true };
   const result = await bridge.launcher(
     {
@@ -71,19 +49,21 @@ test('`NowProxyEvent` normalizing', async () => {
       body: JSON.stringify({
         method: 'POST',
         headers: { foo: 'baz' },
+        features: { enabled: true },
         path: '/nowproxy',
         body: 'body=1',
       }),
     },
     context
   );
-  assert.equal(result.encoding, 'base64');
-  assert.equal(result.statusCode, 200);
+  assert.deepStrictEqual(features, { enabled: true });
+  assert.strictEqual(result.encoding, 'base64');
+  assert.strictEqual(result.statusCode, 200);
   const body = JSON.parse(Buffer.from(result.body, 'base64').toString());
-  assert.equal(body.method, 'POST');
-  assert.equal(body.path, '/nowproxy');
-  assert.equal(body.headers.foo, 'baz');
-  assert.equal(context.callbackWaitsForEmptyEventLoop, false);
+  assert.strictEqual(body.method, 'POST');
+  assert.strictEqual(body.path, '/nowproxy');
+  assert.strictEqual(body.headers.foo, 'baz');
+  assert.strictEqual(context.callbackWaitsForEmptyEventLoop, false);
 
   server.close();
 });
@@ -137,9 +117,9 @@ test('multi-payload handling', async () => {
     },
     context
   );
-  assert.equal(result.encoding, 'base64');
-  assert.equal(result.statusCode, 200);
-  assert.equal(
+  assert.strictEqual(result.encoding, 'base64');
+  assert.strictEqual(result.statusCode, 200);
+  assert.strictEqual(
     result.headers['content-type'],
     'multipart/mixed; boundary="payload-separator"'
   );
@@ -164,25 +144,34 @@ test('multi-payload handling', async () => {
   // proper parsing of the multipart body
   assert(payloadParts.some(part => part.includes('content-type: text/plain')));
 
-  assert.equal(bodies[0].method, 'GET');
-  assert.equal(bodies[0].path, '/nowproxy');
-  assert.equal(bodies[0].headers.foo, 'baz');
-  assert.equal(bodies[1].method, 'GET');
-  assert.equal(bodies[1].path, '/_next/data/build-id/nowproxy.json');
-  assert.equal(bodies[1].headers.foo, 'baz');
-  assert.equal(bodies[2], '/somewhere');
-  assert.equal(result.headers['x-vercel-payload-3-status'], '307');
-  assert.equal(result.headers['x-vercel-payload-2-status'], undefined);
-  assert.equal(result.headers['x-vercel-payload-1-status'], undefined);
-  assert.equal(result.headers['x-vercel-payload-1-content-type'], 'text/html');
-  assert.equal(
+  assert.strictEqual(bodies[0].method, 'GET');
+  assert.strictEqual(bodies[0].path, '/nowproxy');
+  assert.strictEqual(bodies[0].headers.foo, 'baz');
+  assert.strictEqual(bodies[1].method, 'GET');
+  assert.strictEqual(bodies[1].path, '/_next/data/build-id/nowproxy.json');
+  assert.strictEqual(bodies[1].headers.foo, 'baz');
+  assert.strictEqual(bodies[2], '/somewhere');
+  assert.strictEqual(result.headers['x-vercel-payload-3-status'], '307');
+  assert.strictEqual(result.headers['x-vercel-payload-2-status'], undefined);
+  assert.strictEqual(result.headers['x-vercel-payload-1-status'], undefined);
+  assert.strictEqual(
+    result.headers['x-vercel-payload-1-content-type'],
+    'text/html'
+  );
+  assert.strictEqual(
     result.headers['x-vercel-payload-2-content-type'],
     'application/json'
   );
-  assert.equal(result.headers['x-vercel-payload-3-content-type'], undefined);
-  assert.equal(result.headers['x-vercel-payload-3-location'], '/somewhere');
-  assert.equal(result.headers['x-vercel-payload-2-location'], undefined);
-  assert.equal(context.callbackWaitsForEmptyEventLoop, false);
+  assert.strictEqual(
+    result.headers['x-vercel-payload-3-content-type'],
+    undefined
+  );
+  assert.strictEqual(
+    result.headers['x-vercel-payload-3-location'],
+    '/somewhere'
+  );
+  assert.strictEqual(result.headers['x-vercel-payload-2-location'], undefined);
+  assert.strictEqual(context.callbackWaitsForEmptyEventLoop, false);
 
   server.close();
 });
@@ -288,14 +277,14 @@ test('invalid request headers', async () => {
     },
     context
   );
-  assert.equal(result.encoding, 'base64');
-  assert.equal(result.statusCode, 200);
+  assert.strictEqual(result.encoding, 'base64');
+  assert.strictEqual(result.statusCode, 200);
   const body = JSON.parse(Buffer.from(result.body, 'base64').toString());
-  assert.equal(body.method, 'GET');
-  assert.equal(body.path, '/nowproxy');
-  assert.equal(body.headers.ok, 'true');
+  assert.strictEqual(body.method, 'GET');
+  assert.strictEqual(body.path, '/nowproxy');
+  assert.strictEqual(body.headers.ok, 'true');
   assert(!body.headers.foo);
-  assert.equal(context.callbackWaitsForEmptyEventLoop, false);
+  assert.strictEqual(context.callbackWaitsForEmptyEventLoop, false);
 
   server.close();
 });
