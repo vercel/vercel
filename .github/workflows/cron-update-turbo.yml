@@ -3,33 +3,29 @@ name: Cron Update Turbo
 on:
   # Allow manual runs
   workflow_dispatch:
-  push:
-    branches:
-      - main
-    tags:
-      - '!*'
-
-env:
-  TURBO_REMOTE_ONLY: 'true'
-  TURBO_TEAM: 'vercel'
-  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+  # Run every week https://crontab.guru/every-week
+  schedule:
+    - cron: '0 0 * * 0'
 
 jobs:
-  publish:
-    name: Publish
+  create-pull-request:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      id-token: write
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+        # 0 means fetch all commits so we can commit and push in the script below
         with:
           fetch-depth: 0
-      - name: Trigger Update
+      - name: Enable corepack
+        run: corepack enable pnpm
+      - name: Create Pull Request
         uses: actions/github-script@v6
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN_PULL_REQUESTS }}
+        # See https://github.com/actions/github-script#run-a-separate-file-with-an-async-function
         with:
           github-token: ${{ secrets.GH_TOKEN_PULL_REQUESTS }}
           script: |
-            const script = require('./utils/trigger-update-workflow.js')
+            const script = require('./utils/update-turbo.js')
             await script({ github, context })
