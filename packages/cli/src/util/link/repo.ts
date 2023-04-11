@@ -8,10 +8,10 @@ import toHumanPath from '../humanize-path';
 import type Client from '../client';
 import { VERCEL_DIR } from '../projects/link';
 import { getRemoteUrls } from '../create-git-meta';
-import { Project } from '../../types';
 import link from '../output/link';
 import { emoji, prependEmoji } from '../emoji';
 import selectOrg from '../input/select-org';
+import type { Project } from '@vercel-internals/types';
 
 const home = homedir();
 
