@@ -3,14 +3,14 @@ import Client from '../client';
 import type {
   ProjectEnvTargetValues,
   ProjectEnvVariable,
-  ProjectEnvTypeValues,
+  ProjectEnvType,
 } from '@vercel-internals/types';
 
 export default async function addEnvRecord(
   output: Output,
   client: Client,
   projectId: string,
-  type: ProjectEnvTypeValues,
+  type: ProjectEnvType,
   key: string,
   value: string,
   targets: ProjectEnvTargetValues[],

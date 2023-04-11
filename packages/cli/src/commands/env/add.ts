@@ -1,9 +1,6 @@
 import chalk from 'chalk';
 import type { Project, ProjectEnvTargetValues } from '@vercel-internals/types';
-import {
-  PROJECT_ENV_TARGET,
-  PROJECT_ENV_TYPE,
-} from '@vercel-internals/constants';
+import { PROJECT_ENV_TARGET } from '@vercel-internals/constants';
 import { Output } from '../../util/output';
 import Client from '../../util/client';
 import stamp from '../../util/output/stamp';
@@ -155,7 +152,7 @@ export default async function add(
       output,
       client,
       project.id,
-      PROJECT_ENV_TYPE.Encrypted,
+      'encrypted',
       envName,
       envValue,
       envTargets,

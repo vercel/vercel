@@ -3,13 +3,12 @@ import type { Readable, Writable } from 'stream';
 import type { Route } from '@vercel/routing-utils';
 import {
   PROJECT_ENV_TARGET,
-  PROJECT_ENV_TYPE,
 } from '@vercel-internals/constants';
 
 export type ValueOf<T> = T[keyof T];
 
 export type ProjectEnvTargetValues = ValueOf<PROJECT_ENV_TARGET>;
-export type ProjectEnvTypeValues = ValueOf<PROJECT_ENV_TYPE>;
+export type ProjectEnvType = 'plain' | 'secret' | 'encrypted' | 'system';
 
 export type ProjectSettings = import('@vercel/build-utils').ProjectSettings;
 
@@ -313,7 +312,7 @@ export interface ProjectEnvVariable {
   id: string;
   key: string;
   value: string;
-  type: ProjectEnvTypeValues;
+  type: ProjectEnvType;
   configurationId?: string | null;
   createdAt?: number;
   updatedAt?: number;

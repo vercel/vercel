@@ -2,7 +2,6 @@ import chalk from 'chalk';
 import ms from 'ms';
 import { Output } from '../../util/output';
 import type { Project, ProjectEnvVariable } from '@vercel-internals/types';
-import { PROJECT_ENV_TYPE } from '@vercel-internals/constants';
 import Client from '../../util/client';
 import formatTable from '../../util/format-table';
 import getEnvRecords from '../../util/env/get-env-records';
@@ -96,13 +95,13 @@ function getTable(records: ProjectEnvVariable[]) {
 
 function getRow(env: ProjectEnvVariable) {
   let value: string;
-  if (env.type === PROJECT_ENV_TYPE.Plaintext) {
+  if (env.type === 'plain') {
     // replace space characters (line-break, etc.) with simple spaces
     // to make sure the displayed value is a single line
     const singleLineValue = env.value.replace(/\s/g, ' ');
 
     value = chalk.gray(ellipsis(singleLineValue, 19));
-  } else if (env.type === PROJECT_ENV_TYPE.System) {
+  } else if (env.type === 'system') {
     value = chalk.gray.italic(env.value);
   } else {
     value = chalk.gray.italic('Encrypted');

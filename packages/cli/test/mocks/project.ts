@@ -4,17 +4,14 @@ import type {
   Project,
   ProjectEnvVariable,
 } from '@vercel-internals/types';
-import {
-  PROJECT_ENV_TARGET,
-  PROJECT_ENV_TYPE,
-} from '@vercel-internals/constants';
+import { PROJECT_ENV_TARGET } from '@vercel-internals/constants';
 import { formatProvider } from '../../src/util/git/connect-git-provider';
 import { parseEnvironment } from '../../src/commands/pull';
 import type { Env } from '@vercel/build-utils';
 
 const envs: ProjectEnvVariable[] = [
   {
-    type: PROJECT_ENV_TYPE.Encrypted,
+    type: 'encrypted',
     id: '781dt89g8r2h789g',
     key: 'REDIS_CONNECTION_STRING',
     value: 'redis://abc123@redis.example.com:6379',
@@ -25,7 +22,7 @@ const envs: ProjectEnvVariable[] = [
     createdAt: 1557241361455,
   },
   {
-    type: PROJECT_ENV_TYPE.Encrypted,
+    type: 'encrypted',
     id: '781dt89g8r2h789g',
     key: 'BRANCH_ENV_VAR',
     value: 'env var for a specific branch',
@@ -36,7 +33,7 @@ const envs: ProjectEnvVariable[] = [
     createdAt: 1557241361455,
   },
   {
-    type: PROJECT_ENV_TYPE.Encrypted,
+    type: 'encrypted',
     id: 'r124t6frtu25df16',
     key: 'SQL_CONNECTION_STRING',
     value: 'Server=sql.example.com;Database=app;Uid=root;Pwd=P455W0RD;',
@@ -47,7 +44,7 @@ const envs: ProjectEnvVariable[] = [
     createdAt: 1557241361445,
   },
   {
-    type: PROJECT_ENV_TYPE.Encrypted,
+    type: 'encrypted',
     id: 'a235l6frtu25df32',
     key: 'SPECIAL_FLAG',
     value: '1',
@@ -414,7 +411,7 @@ function exposeSystemEnvs(
   }
 
   for (let env of projectEnvs) {
-    if (env.type === PROJECT_ENV_TYPE.System) {
+    if (env.type === 'system') {
       envs[env.key] = getSystemEnvValue(env.value, { vercelUrl });
     } else {
       envs[env.key] = env.value;
