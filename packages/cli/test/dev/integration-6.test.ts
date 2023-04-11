@@ -12,8 +12,11 @@ describe('[vercel dev] ESM edge functions', () => {
       async (_testPath: any, port: any) => {
         const res = await fetch(`http://localhost:${port}/api/data`);
         validateResponseHeaders(res);
-        const body = await res.json();
-        expect(body).toHaveProperty('isLeapYear');
+        const body = await res.text();
+        console.log('!'.repeat(20));
+        console.log(body);
+        const json = JSON.parse(body);
+        expect(json).toHaveProperty('isLeapYear');
       },
       { skipDeploy: true }
     )
