@@ -2,7 +2,7 @@ import { Output } from '../output';
 import Client from '../client';
 import type {
   ProjectEnvVariable,
-  PROJECT_ENV_TARGET_VALUES,
+  ProjectEnvTargetValues,
 } from '@vercel-internals/types';
 import { URLSearchParams } from 'url';
 
@@ -25,7 +25,7 @@ export default async function getEnvRecords(
     gitBranch,
     decrypt,
   }: {
-    target?: PROJECT_ENV_TARGET_VALUES | string;
+    target?: ProjectEnvTargetValues | string;
     gitBranch?: string;
     decrypt?: boolean;
   } = {}
@@ -54,7 +54,7 @@ export default async function getEnvRecords(
 }
 
 interface PullEnvOptions {
-  target?: PROJECT_ENV_TARGET_VALUES | string;
+  target?: ProjectEnvTargetValues | string;
   gitBranch?: string;
 }
 

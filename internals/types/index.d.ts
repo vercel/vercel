@@ -1,12 +1,15 @@
 import type { BuilderFunctions } from '@vercel/build-utils';
 import type { Readable, Writable } from 'stream';
 import type { Route } from '@vercel/routing-utils';
-import { PROJECT_ENV_TARGET, PROJECT_ENV_TYPE } from '@vercel-internals/constants';
+import {
+  PROJECT_ENV_TARGET,
+  PROJECT_ENV_TYPE,
+} from '@vercel-internals/constants';
 
 export type ValueOf<T> = T[keyof T];
 
-export type PROJECT_ENV_TARGET_VALUES = ValueOf<PROJECT_ENV_TARGET>;
-export type PROJECT_ENV_TYPE_VALUES = ValueOf<PROJECT_ENV_TYPE>;
+export type ProjectEnvTargetValues = ValueOf<PROJECT_ENV_TARGET>;
+export type ProjectEnvTypeValues = ValueOf<PROJECT_ENV_TYPE>;
 
 export type ProjectSettings = import('@vercel/build-utils').ProjectSettings;
 
@@ -310,11 +313,11 @@ export interface ProjectEnvVariable {
   id: string;
   key: string;
   value: string;
-  type: PROJECT_ENV_TYPE_VALUES;
+  type: ProjectEnvTypeValues;
   configurationId?: string | null;
   createdAt?: number;
   updatedAt?: number;
-  target?: PROJECT_ENV_TARGET_VALUES | PROJECT_ENV_TARGET_VALUES[];
+  target?: ProjectEnvTargetValues | ProjectEnvTargetValues[];
   system?: boolean;
   gitBranch?: string;
 }

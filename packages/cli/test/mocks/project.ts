@@ -1,6 +1,6 @@
 import { client } from './client';
 import type {
-  PROJECT_ENV_TARGET_VALUES,
+  ProjectEnvTargetValues,
   Project,
   ProjectEnvVariable,
 } from '@vercel-internals/types';
@@ -285,7 +285,7 @@ export function useProject(project: Partial<Project> = defaultProject) {
     }
   );
   client.scenario.get(`/v8/projects/${project.id}/env`, (req, res) => {
-    const target: PROJECT_ENV_TARGET_VALUES | undefined =
+    const target: ProjectEnvTargetValues | undefined =
       typeof req.query.target === 'string'
         ? parseEnvironment(req.query.target)
         : undefined;
@@ -400,7 +400,7 @@ function exposeSystemEnvs(
   systemEnvValues: string[],
   autoExposeSystemEnvs: boolean | undefined,
   vercelUrl?: string,
-  target?: PROJECT_ENV_TARGET_VALUES
+  target?: ProjectEnvTargetValues
 ) {
   const envs: Env = {};
 

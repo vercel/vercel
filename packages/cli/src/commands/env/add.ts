@@ -1,8 +1,5 @@
 import chalk from 'chalk';
-import type {
-  Project,
-  PROJECT_ENV_TARGET_VALUES,
-} from '@vercel-internals/types';
+import type { Project, ProjectEnvTargetValues } from '@vercel-internals/types';
 import {
   PROJECT_ENV_TARGET,
   PROJECT_ENV_TYPE,
@@ -59,7 +56,7 @@ export default async function add(
     return 1;
   }
 
-  let envTargets: PROJECT_ENV_TARGET_VALUES[] = [];
+  let envTargets: ProjectEnvTargetValues[] = [];
   if (envTargetArg) {
     if (!isValidEnvTarget(envTargetArg)) {
       output.error(

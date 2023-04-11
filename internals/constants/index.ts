@@ -1,12 +1,12 @@
 export const PROJECT_ENV_TARGET = {
   Production: 'production',
   Preview: 'preview',
-  Development: 'development'
+  Development: 'development',
 } as const;
 
 export const PROJECT_ENV_TYPE = {
   Plaintext: 'plain',
   Secret: 'secret',
   Encrypted: 'encrypted',
-  System: 'system'
+  System: 'system',
 } as const;

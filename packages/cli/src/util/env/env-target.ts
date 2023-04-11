@@ -1,5 +1,5 @@
 import { PROJECT_ENV_TARGET } from '@vercel-internals/constants';
-import type { PROJECT_ENV_TARGET_VALUES } from '@vercel-internals/types';
+import type { ProjectEnvTargetValues } from '@vercel-internals/types';
 
 export function getEnvTargetChoices() {
   return Object.entries(PROJECT_ENV_TARGET).map(([key, value]) => ({
@@ -10,7 +10,7 @@ export function getEnvTargetChoices() {
 
 export function isValidEnvTarget(
   target?: string
-): target is PROJECT_ENV_TARGET_VALUES | undefined {
+): target is ProjectEnvTargetValues | undefined {
   // Specify `Object.values` is return strings, instead of string constants so `.includes` works
   return (
     typeof target === 'undefined' ||
