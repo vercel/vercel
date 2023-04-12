@@ -32,7 +32,7 @@ async function createServerlessServer(
     if (options.shouldAddHelpers) addHelpers(req, res);
     return userCode(req, res);
   });
-  exitHook(server.close);
+  exitHook(() => server.close());
   return { url: await listen(server) };
 }
 
