@@ -1,7 +1,7 @@
 import { Output } from '../output';
 import Client from '../client';
 import type {
-  ProjectEnvTargetValues,
+  ProjectEnvTarget,
   ProjectEnvVariable,
   ProjectEnvType,
 } from '@vercel-internals/types';
@@ -13,7 +13,7 @@ export default async function addEnvRecord(
   type: ProjectEnvType,
   key: string,
   value: string,
-  targets: ProjectEnvTargetValues[],
+  targets: ProjectEnvTarget[],
   gitBranch: string
 ): Promise<void> {
   output.debug(

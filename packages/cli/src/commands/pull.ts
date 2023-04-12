@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import { join } from 'path';
 import Client from '../util/client';
-import type { Project, ProjectEnvTargetValues } from '@vercel-internals/types';
+import type { Project, ProjectEnvTarget } from '@vercel-internals/types';
 import { emoji, prependEmoji } from '../util/emoji';
 import getArgs from '../util/get-args';
 import logo from '../util/output/logo';
@@ -79,7 +79,7 @@ function parseArgs(client: Client) {
 }
 
 async function pullAllEnvFiles(
-  environment: ProjectEnvTargetValues,
+  environment: ProjectEnvTarget,
   client: Client,
   project: Project,
   argv: ReturnType<typeof processArgs>,
@@ -100,7 +100,7 @@ async function pullAllEnvFiles(
 
 export function parseEnvironment(
   environment = 'development'
-): ProjectEnvTargetValues {
+): ProjectEnvTarget {
   if (!isValidEnvTarget(environment)) {
     throw new Error(
       `environment "${environment}" not supported; must be one of ${getEnvTargetPlaceholder()}`
