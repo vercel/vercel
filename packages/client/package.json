@@ -34,14 +34,6 @@
     "@types/tar-fs": "1.16.1",
     "typescript": "4.3.4"
   },
-  "jest": {
-    "preset": "ts-jest",
-    "testEnvironment": "node",
-    "verbose": false,
-    "setupFilesAfterEnv": [
-      "<rootDir>/tests/setup/index.ts"
-    ]
-  },
   "dependencies": {
     "@vercel/build-utils": "6.7.1",
     "@vercel/routing-utils": "2.2.0",
