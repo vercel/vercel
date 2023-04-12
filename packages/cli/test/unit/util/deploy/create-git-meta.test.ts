@@ -67,6 +67,13 @@ describe('parseRepoUrl', () => {
     const repoInfo = parseRepoUrl('https://github.com/borked');
     expect(repoInfo).toBeNull();
   });
+  it('should parse url with `.com` in the repo name', () => {
+    const repoInfo = parseRepoUrl('https://github.com/vercel/vercel.com.git');
+    expect(repoInfo).toBeDefined();
+    expect(repoInfo?.provider).toEqual('github');
+    expect(repoInfo?.org).toEqual('vercel');
+    expect(repoInfo?.repo).toEqual('vercel.com');
+  });
   it('should parse url with a period in the repo name', () => {
     const repoInfo = parseRepoUrl('https://github.com/vercel/next.js');
     expect(repoInfo).toBeDefined();
