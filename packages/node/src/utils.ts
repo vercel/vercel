@@ -1,7 +1,7 @@
-import { extname } from 'path';
-import { pathToRegexp } from 'path-to-regexp';
 import { debug, streamToBuffer } from '@vercel/build-utils';
-import { IncomingMessage } from 'http';
+import { pathToRegexp } from 'path-to-regexp';
+import type { IncomingMessage } from 'http';
+import { extname } from 'path';
 
 export function isTypeScriptExtension(filepath: string) {
   const ext = extname(filepath);
@@ -86,13 +86,11 @@ export function isEdgeRuntime(runtime?: string): runtime is EdgeRuntimes {
   );
 }
 
-export async function serializeRequest(message: IncomingMessage) {
-  const bodyBuffer = await streamToBuffer(message);
-  const body = bodyBuffer.toString('base64');
-  return JSON.stringify({
-    url: message.url,
-    method: message.method,
-    headers: message.headers,
-    body,
-  });
+export async function serializeBody(
+  request: IncomingMessage
+): Promise<string | undefined> {
+  const maybeBody = request.method !== 'GET' && request.method !== 'POST';
+  if (!maybeBody) return undefined;
+  const bodyBuffer = await streamToBuffer(request);
+  return bodyBuffer.toString('base64');
 }
