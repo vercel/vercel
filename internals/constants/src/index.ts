@@ -1,1 +1,5 @@
-export const PROJECT_ENV_TARGET = ['production', 'preview', 'development'] as const;
+export const PROJECT_ENV_TARGET = [
+  'production',
+  'preview',
+  'development',
+] as const;
