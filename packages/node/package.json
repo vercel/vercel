@@ -21,7 +21,6 @@
   "dependencies": {
     "@edge-runtime/vm": "2.0.0",
     "@types/node": "14.18.33",
-    "@types/node-fetch": "2.6.3",
     "@vercel/build-utils": "6.7.1",
     "@vercel/node-bridge": "4.0.1",
     "@vercel/static-config": "2.0.15",

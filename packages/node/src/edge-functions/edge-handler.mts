@@ -5,6 +5,7 @@ import exitHook from 'exit-hook';
 import { EdgeRuntime, runServer } from 'edge-runtime';
 import type { EdgeContext } from '@edge-runtime/vm';
 import esbuild from 'esbuild';
+// @ts-ignore node-fetch@2.x is a CommonJS package with a "module" export which confuses TypeScript
 import fetch from 'node-fetch';
 import { createEdgeWasmPlugin, WasmAssets } from './edge-wasm-plugin.mjs';
 import { entrypointToOutputPath, logError } from '../utils.js';

@@ -813,7 +813,6 @@ importers:
       '@types/etag': 1.8.0
       '@types/jest': 29.5.0
       '@types/node': 14.18.33
-      '@types/node-fetch': 2.6.3
       '@types/test-listen': 1.1.0
       '@vercel/build-utils': 6.7.1
       '@vercel/ncc': 0.24.0
@@ -838,7 +837,6 @@ importers:
     dependencies:
       '@edge-runtime/vm': 2.0.0
       '@types/node': 14.18.33
-      '@types/node-fetch': 2.6.3
       '@vercel/build-utils': link:../build-utils
       '@vercel/node-bridge': link:../node-bridge
       '@vercel/static-config': link:../static-config
@@ -5755,13 +5753,6 @@ packages:
       '@types/node': 18.14.6
       form-data: 3.0.1
     dev: true
-
-  /@types/node-fetch/2.6.3:
-    resolution: {integrity: sha512-ETTL1mOEdq/sxUtgtOhKjyB2Irra4cjxksvcMUR5Zr4n+PxVhsCD9WS46oPbHL3et9Zde7CNRr+WUNlcHvsX+w==}
-    dependencies:
-      '@types/node': 14.18.33
-      form-data: 3.0.1
-    dev: false
 
   /@types/node/10.12.18:
     resolution: {integrity: sha512-fh+pAqt4xRzPfqA6eh3Z2y6fyZavRIumvjhaCL753+TVkGKGhpPeyrJG2JftD0T9q4GF00KjefsQ+PQNDdWQaQ==}
@@ -10750,6 +10741,7 @@ packages:
       asynckit: 0.4.0
       combined-stream: 1.0.8
       mime-types: 2.1.35
+    dev: true
 
   /form-data/4.0.0:
     resolution: {integrity: sha512-ETEklSGi5t0QMZuiXoA/Q6vcnxcLQP5vdugSpuAyi6SVGi2clPPp+xgEhuMaHC+zGgn31Kd235W35f7Hykkaww==}
