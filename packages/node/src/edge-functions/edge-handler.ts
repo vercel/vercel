@@ -7,10 +7,9 @@ import { EdgeRuntime, runServer } from 'edge-runtime';
 import { fetch } from 'undici';
 import { isError } from '@vercel/error-utils';
 import { readFileSync } from 'fs';
-import { serializeRequest, entrypointToOutputPath, logError } from '../utils';
+import { serializeBody, entrypointToOutputPath, logError } from '../utils';
 import esbuild from 'esbuild';
 import exitHook from 'exit-hook';
-import type { EdgeContext } from '@edge-runtime/vm';
 import type { HeadersInit } from 'undici';
 import type { VercelProxyResponse } from '../types';
 import type { IncomingMessage } from 'http';
@@ -85,14 +84,8 @@ async function compileUserCode(
 
       // edge handler
       ${edgeHandlerTemplate};
-      const dependencies = {
-        Request,
-        Response
-      };
-      const options = {
-        isMiddleware,
-        entrypointLabel
-      };
+      const dependencies = { Request, Response };
+      const options = { isMiddleware, entrypointLabel };
       registerFetchListener(userEdgeHandler, options, dependencies);
     `;
 
@@ -110,7 +103,7 @@ async function compileUserCode(
   }
 }
 
-async function createEdgeRuntime(params?: {
+async function createEdgeRuntimeServer(params?: {
   userCode: string;
   wasmAssets: WasmAssets;
   nodeCompatBindings: NodeCompatBindings;
@@ -123,9 +116,9 @@ async function createEdgeRuntime(params?: {
     const wasmBindings = await params.wasmAssets.getContext();
     const nodeCompatBindings = params.nodeCompatBindings.getContext();
 
-    const edgeRuntime = new EdgeRuntime({
+    const runtime = new EdgeRuntime({
       initialCode: params.userCode,
-      extend: (context: EdgeContext) => {
+      extend: context => {
         Object.assign(context, {
           // This is required for esbuild wrapping logic to resolve
           module: {},
@@ -148,9 +141,8 @@ async function createEdgeRuntime(params?: {
       },
     });
 
-    const server = await runServer({ runtime: edgeRuntime });
+    const server = await runServer({ runtime });
     exitHook(server.close);
-
     return server;
   } catch (error: any) {
     // We can't easily show a meaningful stack trace from ncc -> edge-runtime.
@@ -172,7 +164,7 @@ export async function createEdgeEventHandler(
     entrypointRelativePath,
     isMiddleware
   );
-  const server = await createEdgeRuntime(userCode);
+  const server = await createEdgeRuntimeServer(userCode);
 
   return async function (request: IncomingMessage) {
     if (!server) {
@@ -182,10 +174,11 @@ export async function createEdgeEventHandler(
       process.exit(1);
     }
 
-    const response = await fetch(server.url, {
-      redirect: 'manual',
-      method: 'post',
-      body: await serializeRequest(request),
+    const query = request.url?.split('?')[1];
+    const url = query === undefined ? server.url : `${server.url}?${query}`;
+    const response = await fetch(url, {
+      method: request.method,
+      body: await serializeBody(request),
       headers: request.headers as HeadersInit,
     });
 

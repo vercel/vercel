@@ -4,7 +4,7 @@ import { createServer } from 'http';
 // @ts-expect-error
 import { dynamicImport } from './dynamic-import.js';
 import { fetch } from 'undici';
-import { isTypeScriptExtension, serializeRequest } from '../utils';
+import { isTypeScriptExtension, serializeBody } from '../utils';
 import exitHook from 'exit-hook';
 import fs from 'fs';
 import listen from 'async-listen';
@@ -66,9 +66,8 @@ export async function createServerlessEventHandler(
     const url = query === undefined ? server.url : `${server.url}?${query}`;
 
     const response = await fetch(url, {
-      redirect: 'manual',
-      method: 'post',
-      body: await serializeRequest(request),
+      method: request.method,
+      body: await serializeBody(request),
       headers: request.headers as HeadersInit,
     });
 
