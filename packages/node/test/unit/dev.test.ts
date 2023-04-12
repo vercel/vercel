@@ -1,15 +1,21 @@
 import { forkDevServer, readMessage } from '../../src/fork-dev-server';
-import { resolve } from 'path';
+import { resolve, extname } from 'path';
 import { fetch } from 'undici';
 
 jest.setTimeout(10 * 1000);
 
 function testForkDevServer(entrypoint: string) {
+  const ext = extname(entrypoint);
+  const isTypeScript = ext === '.ts';
+  const isEsm = ext === '.mjs';
   return forkDevServer({
+    maybeTranspile: true,
     config: {},
-    isEsm: entrypoint.endsWith('.mjs'),
+    isEsm,
+    isTypeScript,
     meta: {},
     require_: require,
+    tsConfig: undefined,
     workPath: resolve(__dirname, '../dev-fixtures'),
     entrypoint,
     devServerPath: resolve(__dirname, '../../dist/dev-server.js'),

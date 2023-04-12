@@ -1,11 +1,15 @@
 import once from '@tootallnate/once';
 import { cloneEnv, Config, Meta } from '@vercel/build-utils';
 import { ChildProcess, fork, ForkOptions } from 'child_process';
+import { pathToFileURL } from 'url';
 import { join } from 'path';
 
 export function forkDevServer(options: {
+  tsConfig: any;
   config: Config;
+  maybeTranspile: boolean;
   workPath: string | undefined;
+  isTypeScript: boolean;
   isEsm: boolean;
   require_: NodeRequire;
   entrypoint: string;
@@ -16,8 +20,28 @@ export function forkDevServer(options: {
    */
   devServerPath?: string;
 }) {
+  let nodeOptions = process.env.NODE_OPTIONS;
+  const tsNodePath = options.require_.resolve('ts-node');
+  const esmLoader = pathToFileURL(join(tsNodePath, '..', '..', 'esm.mjs'));
+  const cjsLoader = join(tsNodePath, '..', '..', 'register', 'index.js');
   const devServerPath =
     options.devServerPath || join(__dirname, 'dev-server.js');
+
+  if (options.maybeTranspile) {
+    if (options.isTypeScript) {
+      if (options.isEsm) {
+        nodeOptions = `--loader ${esmLoader} ${nodeOptions || ''}`;
+      } else {
+        nodeOptions = `--require ${cjsLoader} ${nodeOptions || ''}`;
+      }
+    } else {
+      if (options.isEsm) {
+        // no transform needed because Node.js supports ESM natively
+      } else {
+        nodeOptions = `--require ${cjsLoader} ${nodeOptions || ''}`;
+      }
+    }
+  }
 
   const forkOptions: ForkOptions = {
     cwd: options.workPath,
@@ -27,7 +51,11 @@ export function forkDevServer(options: {
       VERCEL_DEV_IS_ESM: options.isEsm ? '1' : undefined,
       VERCEL_DEV_CONFIG: JSON.stringify(options.config),
       VERCEL_DEV_BUILD_ENV: JSON.stringify(options.meta.buildEnv || {}),
-      NODE_OPTIONS: process.env.NODE_OPTIONS,
+      TS_NODE_TRANSPILE_ONLY: '1',
+      TS_NODE_COMPILER_OPTIONS: options.tsConfig?.compilerOptions
+        ? JSON.stringify(options.tsConfig.compilerOptions)
+        : undefined,
+      NODE_OPTIONS: nodeOptions,
     }),
   };
   const child = fork(devServerPath, [], forkOptions);

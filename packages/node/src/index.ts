@@ -554,8 +554,8 @@ export const startDevServer: StartDevServer = async opts => {
     filename: 'package.json',
   });
   const pkg = pathToPkg ? require_(pathToPkg) : {};
-  const isTypescript = isTypeScriptExtension(entrypoint);
-  const maybeTranspile = isTypescript || !['.cjs', '.mjs'].includes(ext);
+  const isTypeScript = isTypeScriptExtension(entrypoint);
+  const maybeTranspile = isTypeScript || !['.cjs', '.mjs'].includes(ext);
   const isEsm =
     ext === '.mjs' ||
     ext === '.mts' ||
@@ -621,7 +621,10 @@ export const startDevServer: StartDevServer = async opts => {
     entrypoint,
     require_,
     isEsm,
+    isTypeScript,
+    maybeTranspile,
     meta,
+    tsConfig,
   });
 
   const { pid } = child;
@@ -629,7 +632,7 @@ export const startDevServer: StartDevServer = async opts => {
 
   if (message.state === 'message') {
     // "message" event
-    if (isTypescript) {
+    if (isTypeScript) {
       // Invoke `tsc --noEmit` asynchronously in the background, so
       // that the HTTP request is not blocked by the type checking.
       doTypeCheck(opts, pathToTsConfig).catch((err: Error) => {

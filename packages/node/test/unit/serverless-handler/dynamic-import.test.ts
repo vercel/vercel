@@ -9,7 +9,7 @@ describe('dynamic-import', () => {
       '../../dev-fixtures/esm-module.mjs'
     );
     const fn = await dynamicImport(entrypointPath);
-    expect(fn.toString()).toStrictEqual(
+    expect(fn.default.toString()).toStrictEqual(
       "(_req, res) => {\n  res.setHeader('x-hello', 'world');\n  res.send('Hello, world!').end();\n}"
     );
   });
