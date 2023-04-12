@@ -2,17 +2,17 @@ import chalk from 'chalk';
 import pluralize from 'pluralize';
 import { homedir } from 'os';
 import { join, normalize } from 'path';
+import { normalizePath } from '@vercel/build-utils';
 import { lstat, readJSON, outputJSON } from 'fs-extra';
 import confirm from '../input/confirm';
 import toHumanPath from '../humanize-path';
-import type Client from '../client';
 import { VERCEL_DIR, VERCEL_DIR_REPO } from '../projects/link';
 import { getRemoteUrls } from '../create-git-meta';
 import link from '../output/link';
 import { emoji, prependEmoji } from '../emoji';
 import selectOrg from '../input/select-org';
+import type Client from '../client';
 import type { Project } from '@vercel-internals/types';
-import { normalizePath } from '@vercel/build-utils/dist';
 
 const home = homedir();
 
