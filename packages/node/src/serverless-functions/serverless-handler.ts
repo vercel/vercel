@@ -1,14 +1,11 @@
 import { addHelpers } from './helpers';
-import { create as createTsCompiler } from 'ts-node';
 import { createServer } from 'http';
 // @ts-expect-error
 import { dynamicImport } from './dynamic-import.js';
 import { fetch } from 'undici';
-import { isTypeScriptExtension, serializeBody } from '../utils';
+import { serializeBody } from '../utils';
 import exitHook from 'exit-hook';
-import fs from 'fs';
 import listen from 'async-listen';
-import path from 'path';
 import type { HeadersInit } from 'undici';
 import type { ServerResponse, IncomingMessage } from 'http';
 import type { VercelProxyResponse } from '../types';
@@ -40,18 +37,18 @@ async function compileUserCode(
   entrypointPath: string,
   options: ServerlessServerOptions
 ) {
-  let userCode;
-  if (isTypeScriptExtension(entrypointPath)) {
-    const { compile } = createTsCompiler();
-    const content = fs.readFileSync(entrypointPath, 'utf8');
-    const filename = path.basename(entrypointPath);
-    userCode = eval(compile(content, filename)) as ServerlessFunctionSignature;
-  } else {
-    userCode = options.useRequire
-      ? require(entrypointPath)
-      : await dynamicImport(entrypointPath);
+  let fn = options.useRequire
+    ? require(entrypointPath)
+    : await dynamicImport(entrypointPath);
+
+  /**
+   * In some cases we might have nested default props due to TS => JS
+   */
+  for (let i = 0; i < 5; i++) {
+    if (fn.default) fn = fn.default;
   }
-  return userCode;
+
+  return fn;
 }
 
 export async function createServerlessEventHandler(
