@@ -38,6 +38,7 @@ const GatsbyConfigSchema = Type.Object({
   trailingSlash: Type.Optional(
     StringEnum(['always', 'never', 'ignore', 'legacy'])
   ),
+  pathPrefix: Type.Optional(Type.String()),
 });
 export type GatsbyConfig = Static<typeof GatsbyConfigSchema>;
 
