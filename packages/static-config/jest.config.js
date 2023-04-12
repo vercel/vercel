@@ -11,4 +11,6 @@ module.exports = {
       },
     ],
   },
+  verbose: false,
+  testMatch: ['<rootDir>/test/**/*.test.ts'],
 };
