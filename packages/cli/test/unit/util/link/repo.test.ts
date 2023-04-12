@@ -1,7 +1,9 @@
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, sep } from 'node:path';
 import {
+  findProjectFromPath,
   findRepoRoot,
+  RepoProjectConfig,
   traverseDirectories,
 } from '../../../../src/util/link/repo';
 
@@ -52,5 +54,38 @@ describe('traverseDirectories()', () => {
         ]
   )('should traverse "$input"', ({ input, expected }) => {
     expect(Array.from(traverseDirectories(input))).toEqual(expected);
+  });
+});
+
+describe('findProjectFromPath()', () => {
+  const projects: RepoProjectConfig[] = [
+    { id: 'root', name: 'r', directory: '.' },
+    { id: 'site', name: 'a', directory: 'apps/site' },
+    { id: 'site2', name: 'a', directory: 'apps/site2' },
+    { id: 'other', name: 'b', directory: 'apps/other' },
+    { id: 'nested', name: 'n', directory: 'apps/other/nested' },
+  ];
+
+  it.each([
+    { id: 'root', path: '.' },
+    { id: 'root', path: 'lib' },
+    { id: 'root', path: 'lib' },
+    { id: 'site', path: `apps${sep}site` },
+    { id: 'site', path: `apps${sep}site` },
+    { id: 'site', path: `apps${sep}site${sep}components` },
+    { id: 'site2', path: `apps${sep}site2` },
+    { id: 'site2', path: `apps${sep}site2${sep}inner` },
+    { id: 'other', path: `apps${sep}other` },
+    { id: 'other', path: `apps${sep}other${sep}lib` },
+    { id: 'nested', path: `apps${sep}other${sep}nested` },
+    { id: 'nested', path: `apps${sep}other${sep}nested${sep}foo` },
+  ])('should find Project "$id" for path "$path"', ({ path, id }) => {
+    const actual = findProjectFromPath(projects, path);
+    expect(actual?.id).toEqual(id);
+  });
+
+  it('should return `undefined` when there are no matching Projects', () => {
+    const actual = findProjectFromPath([projects[1]], '.');
+    expect(actual).toBeUndefined();
   });
 });

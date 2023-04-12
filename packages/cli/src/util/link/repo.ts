@@ -6,12 +6,13 @@ import { lstat, readJSON, outputJSON } from 'fs-extra';
 import confirm from '../input/confirm';
 import toHumanPath from '../humanize-path';
 import type Client from '../client';
-import { VERCEL_DIR } from '../projects/link';
+import { VERCEL_DIR, VERCEL_DIR_REPO } from '../projects/link';
 import { getRemoteUrls } from '../create-git-meta';
 import link from '../output/link';
 import { emoji, prependEmoji } from '../emoji';
 import selectOrg from '../input/select-org';
 import type { Project } from '@vercel-internals/types';
+import { normalizePath } from '@vercel/build-utils/dist';
 
 const home = homedir();
 
@@ -47,7 +48,7 @@ export async function getRepoLink(cwd: string): Promise<RepoLink> {
 
   // Read the `repo.json`, if this repo has already been linked
   if (rootPath) {
-    repoConfigPath = join(rootPath, VERCEL_DIR, 'repo.json');
+    repoConfigPath = join(rootPath, VERCEL_DIR, VERCEL_DIR_REPO);
     repoConfig = await readJSON(repoConfigPath).catch(err => {
       if (err.code !== 'ENOENT') throw err;
     });
@@ -57,7 +58,7 @@ export async function getRepoLink(cwd: string): Promise<RepoLink> {
 }
 
 /**
- *
+ * TODO
  */
 export async function ensureRepoLink(
   client: Client,
@@ -183,7 +184,9 @@ export async function ensureRepoLink(
     await outputJSON(repoConfigPath, repoConfig, { spaces: 2 });
     // TODO: add `README.txt`
 
+    // TODO: add to `.gitignore`
     let isGitIgnoreUpdated = false;
+
     output.print(
       prependEmoji(
         `Linked to ${link(repoUrl)} under ${chalk.bold(
@@ -235,4 +238,30 @@ export function* traverseDirectories(start: string) {
     const next = join(current, '..');
     current = next === current ? undefined : next;
   }
+}
+
+function sortByDirectory(a: RepoProjectConfig, b: RepoProjectConfig): number {
+  const aParts = a.directory.split('/');
+  const bParts = b.directory.split('/');
+  return bParts.length - aParts.length;
+}
+
+export function findProjectFromPath(
+  projects: RepoProjectConfig[],
+  path: string
+): RepoProjectConfig | undefined {
+  const normalizedPath = normalizePath(path);
+  return projects
+    .slice()
+    .sort(sortByDirectory)
+    .find(project => {
+      if (project.directory === '.') {
+        // Project has no "Root Directory" setting, so any path is valid
+        return true;
+      }
+      return (
+        normalizedPath === project.directory ||
+        normalizedPath.startsWith(`${project.directory}/`)
+      );
+    });
 }

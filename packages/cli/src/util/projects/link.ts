@@ -2,8 +2,8 @@ import fs from 'fs';
 import os from 'os';
 import AJV from 'ajv';
 import chalk from 'chalk';
-import { join } from 'path';
-import { ensureDir } from 'fs-extra';
+import { join, relative } from 'path';
+import { ensureDir, readJSON } from 'fs-extra';
 import { promisify } from 'util';
 
 import getProjectByIdOrName from '../projects/get-project-by-id-or-name';
@@ -23,6 +23,7 @@ import { isDirectory } from '../config/global-path';
 import { NowBuildError, getPlatformEnv } from '@vercel/build-utils';
 import outputCode from '../output/code';
 import { isErrnoException, isError } from '@vercel/error-utils';
+import { findProjectFromPath, findRepoRoot } from '../link/repo';
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
@@ -31,6 +32,7 @@ export const VERCEL_DIR = '.vercel';
 export const VERCEL_DIR_FALLBACK = '.now';
 export const VERCEL_DIR_README = 'README.txt';
 export const VERCEL_DIR_PROJECT = 'project.json';
+export const VERCEL_DIR_REPO = 'repo.json';
 
 const linkSchema = {
   type: 'object',
@@ -53,7 +55,7 @@ const linkSchema = {
  *
  * Throws an error if *both* `.vercel` and `.now` directories exist.
  */
-export function getVercelDirectory(cwd: string = process.cwd()): string {
+export function getVercelDirectory(cwd: string): string {
   const possibleDirs = [join(cwd, VERCEL_DIR), join(cwd, VERCEL_DIR_FALLBACK)];
   const existingDirs = possibleDirs.filter(d => isDirectory(d));
   if (existingDirs.length > 1) {
@@ -67,9 +69,40 @@ export function getVercelDirectory(cwd: string = process.cwd()): string {
   return existingDirs[0] || possibleDirs[0];
 }
 
-async function getLink(path?: string): Promise<ProjectLink | null> {
+async function getLink(path: string): Promise<ProjectLink | null> {
+  // Try the individual project linking style (`${cwd}/.vercel/project.json`)
   const dir = getVercelDirectory(path);
-  return getLinkFromDir(dir);
+  const linkFromProject = await getLinkFromDir(dir);
+  if (linkFromProject) {
+    return linkFromProject;
+  }
+
+  // Try the repo linking style (`${repoRoot}/.vercel/repo.json`)
+  return getLinkFromRepo(path);
+}
+
+async function getLinkFromRepo(path: string): Promise<ProjectLink | null> {
+  const repoRoot = await findRepoRoot(path);
+  if (!repoRoot) {
+    return null;
+  }
+  try {
+    const vercelDir = join(repoRoot, VERCEL_DIR);
+    const repoJsonPath = join(vercelDir, VERCEL_DIR_REPO);
+    const repoJson = await readJSON(repoJsonPath);
+    const project = findProjectFromPath(
+      repoJson.projects,
+      relative(repoRoot, path)
+    );
+    if (project) {
+      return { orgId: repoJson.orgId, projectId: project.id };
+    }
+  } catch (err: unknown) {
+    if (!isErrnoException(err) || err.code !== 'ENOENT') {
+      throw err;
+    }
+  }
+  return null;
 }
 
 export async function getLinkFromDir<T = ProjectLink>(
@@ -123,7 +156,7 @@ async function getOrgById(client: Client, orgId: string): Promise<Org | null> {
 
 export async function getLinkedProject(
   client: Client,
-  path?: string
+  path = process.cwd()
 ): Promise<ProjectLinkResult> {
   const { output } = client;
   const VERCEL_ORG_ID = getPlatformEnv('ORG_ID');
