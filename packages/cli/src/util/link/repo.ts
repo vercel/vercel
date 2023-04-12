@@ -246,6 +246,11 @@ function sortByDirectory(a: RepoProjectConfig, b: RepoProjectConfig): number {
   return bParts.length - aParts.length;
 }
 
+/**
+ * Finds the matching Project from an array of Project links
+ * where the provided relative path is within the Project's
+ * root directory.
+ */
 export function findProjectFromPath(
   projects: RepoProjectConfig[],
   path: string
