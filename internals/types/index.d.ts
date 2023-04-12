@@ -1,13 +1,8 @@
 import type { BuilderFunctions } from '@vercel/build-utils';
 import type { Readable, Writable } from 'stream';
 import type { Route } from '@vercel/routing-utils';
-import {
-  PROJECT_ENV_TARGET,
-} from '@vercel-internals/constants';
 
-export type ValueOf<T> = T[keyof T];
-
-export type ProjectEnvTargetValues = ValueOf<PROJECT_ENV_TARGET>;
+export type ProjectEnvTarget = 'production' | 'preview' | 'development';
 export type ProjectEnvType = 'plain' | 'secret' | 'encrypted' | 'system';
 
 export type ProjectSettings = import('@vercel/build-utils').ProjectSettings;
@@ -316,7 +311,7 @@ export interface ProjectEnvVariable {
   configurationId?: string | null;
   createdAt?: number;
   updatedAt?: number;
-  target?: ProjectEnvTargetValues | ProjectEnvTargetValues[];
+  target?: ProjectEnvTarget | ProjectEnvTarget[];
   system?: boolean;
   gitBranch?: string;
 }

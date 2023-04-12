@@ -7,7 +7,6 @@
     "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@vercel-internals/constants": "*",
     "@vercel/build-utils": "6.3.2",
     "@vercel/routing-utils": "2.1.10"
   },

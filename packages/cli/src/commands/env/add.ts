@@ -1,6 +1,5 @@
 import chalk from 'chalk';
-import type { Project, ProjectEnvTargetValues } from '@vercel-internals/types';
-import { PROJECT_ENV_TARGET } from '@vercel-internals/constants';
+import type { Project, ProjectEnvTarget } from '@vercel-internals/types';
 import { Output } from '../../util/output';
 import Client from '../../util/client';
 import stamp from '../../util/output/stamp';
@@ -9,7 +8,7 @@ import getEnvRecords from '../../util/env/get-env-records';
 import {
   isValidEnvTarget,
   getEnvTargetPlaceholder,
-  getEnvTargetChoices,
+  envTargetChoices,
 } from '../../util/env/env-target';
 import readStandardInput from '../../util/input/read-standard-input';
 import param from '../../util/output/param';
@@ -53,7 +52,7 @@ export default async function add(
     return 1;
   }
 
-  let envTargets: ProjectEnvTargetValues[] = [];
+  let envTargets: ProjectEnvTarget[] = [];
   if (envTargetArg) {
     if (!isValidEnvTarget(envTargetArg)) {
       output.error(
@@ -89,7 +88,7 @@ export default async function add(
   const existing = new Set(
     envs.filter(r => r.key === envName).map(r => r.target)
   );
-  const choices = getEnvTargetChoices().filter(c => !existing.has(c.value));
+  const choices = envTargetChoices.filter(c => !existing.has(c.value));
 
   if (choices.length === 0) {
     output.error(
@@ -135,7 +134,7 @@ export default async function add(
     !stdInput &&
     !envGitBranch &&
     envTargets.length === 1 &&
-    envTargets[0] === PROJECT_ENV_TARGET.Preview
+    envTargets[0] === 'preview'
   ) {
     const { inputValue } = await client.prompt({
       type: 'input',

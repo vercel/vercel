@@ -1,10 +1,9 @@
 import { client } from './client';
 import type {
-  ProjectEnvTargetValues,
+  ProjectEnvTarget,
   Project,
   ProjectEnvVariable,
 } from '@vercel-internals/types';
-import { PROJECT_ENV_TARGET } from '@vercel-internals/constants';
 import { formatProvider } from '../../src/util/git/connect-git-provider';
 import { parseEnvironment } from '../../src/commands/pull';
 import type { Env } from '@vercel/build-utils';
@@ -15,7 +14,7 @@ const envs: ProjectEnvVariable[] = [
     id: '781dt89g8r2h789g',
     key: 'REDIS_CONNECTION_STRING',
     value: 'redis://abc123@redis.example.com:6379',
-    target: [PROJECT_ENV_TARGET.Production, PROJECT_ENV_TARGET.Preview],
+    target: ['production', 'preview'],
     gitBranch: undefined,
     configurationId: null,
     updatedAt: 1557241361455,
@@ -26,7 +25,7 @@ const envs: ProjectEnvVariable[] = [
     id: '781dt89g8r2h789g',
     key: 'BRANCH_ENV_VAR',
     value: 'env var for a specific branch',
-    target: [PROJECT_ENV_TARGET.Preview],
+    target: ['preview'],
     gitBranch: 'feat/awesome-thing',
     configurationId: null,
     updatedAt: 1557241361455,
@@ -37,7 +36,7 @@ const envs: ProjectEnvVariable[] = [
     id: 'r124t6frtu25df16',
     key: 'SQL_CONNECTION_STRING',
     value: 'Server=sql.example.com;Database=app;Uid=root;Pwd=P455W0RD;',
-    target: [PROJECT_ENV_TARGET.Production],
+    target: ['production'],
     gitBranch: undefined,
     configurationId: null,
     updatedAt: 1557241361445,
@@ -48,7 +47,7 @@ const envs: ProjectEnvVariable[] = [
     id: 'a235l6frtu25df32',
     key: 'SPECIAL_FLAG',
     value: '1',
-    target: [PROJECT_ENV_TARGET.Development],
+    target: ['development'],
     gitBranch: undefined,
     configurationId: null,
     updatedAt: 1557241361445,
@@ -282,7 +281,7 @@ export function useProject(project: Partial<Project> = defaultProject) {
     }
   );
   client.scenario.get(`/v8/projects/${project.id}/env`, (req, res) => {
-    const target: ProjectEnvTargetValues | undefined =
+    const target: ProjectEnvTarget | undefined =
       typeof req.query.target === 'string'
         ? parseEnvironment(req.query.target)
         : undefined;
@@ -397,7 +396,7 @@ function exposeSystemEnvs(
   systemEnvValues: string[],
   autoExposeSystemEnvs: boolean | undefined,
   vercelUrl?: string,
-  target?: ProjectEnvTargetValues
+  target?: ProjectEnvTarget
 ) {
   const envs: Env = {};
 
