@@ -1,0 +1,9 @@
+{
+  "probes": [{
+    "path": "/",
+    "mustContain": "django:RANDOMNESS_PLACEHOLDER",
+    "responseHeaders": {
+      "content-type": "text/html; charset=utf-8"
+    }
+  }]
+}

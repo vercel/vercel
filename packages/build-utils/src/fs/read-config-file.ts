@@ -25,12 +25,16 @@ export async function readConfigFile<T>(
 
     if (data) {
       const str = data.toString('utf8');
-      if (name.endsWith('.json')) {
-        return JSON.parse(str) as T;
-      } else if (name.endsWith('.toml')) {
-        return (toml.parse(str) as unknown) as T;
-      } else if (name.endsWith('.yaml') || name.endsWith('.yml')) {
-        return yaml.safeLoad(str, { filename: name }) as T;
+      try {
+        if (name.endsWith('.json')) {
+          return JSON.parse(str) as T;
+        } else if (name.endsWith('.toml')) {
+          return toml.parse(str) as unknown as T;
+        } else if (name.endsWith('.yaml') || name.endsWith('.yml')) {
+          return yaml.safeLoad(str, { filename: name }) as T;
+        }
+      } catch (error: unknown) {
+        console.log(`Error while parsing config file: "${name}"`);
       }
     }
   }

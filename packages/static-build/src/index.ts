@@ -43,9 +43,7 @@ import type { ImagesConfig, BuildConfig } from './utils/_shared';
 import treeKill from 'tree-kill';
 import {
   detectFrameworkRecord,
-  detectFramework,
   LocalFileSystemDetector,
-  packageManagers,
 } from '@vercel/fs-detectors';
 
 const sleep = (n: number) => new Promise(resolve => setTimeout(resolve, n));
@@ -391,20 +389,7 @@ export const build: BuildV2 = async ({
       }
 
       if (framework.slug === 'gatsby') {
-        const injectedPlugins = await GatsbyUtils.injectPlugins(
-          detectedVersion,
-          entrypointDir
-        );
-
-        if (injectedPlugins) {
-          const packageManager = await detectFramework({
-            fs: localFileSystemDetector,
-            frameworkList: packageManagers,
-          });
-          if (packageManager === 'pnpm') {
-            await execCommand('pnpm install --lockfile-only');
-          }
-        }
+        await GatsbyUtils.injectPlugins(detectedVersion, entrypointDir);
       }
 
       if (process.env.VERCEL_ANALYTICS_ID) {
@@ -526,6 +511,10 @@ export const build: BuildV2 = async ({
       }
     }
 
+    if (framework?.slug === 'gatsby') {
+      await GatsbyUtils.createPluginSymlinks(entrypointDir);
+    }
+
     let gemHome: string | undefined = undefined;
     const pathList = [];
 
@@ -636,32 +625,38 @@ export const build: BuildV2 = async ({
         debug(`Executing "${buildCommand}"`);
       }
 
-      const found =
-        typeof buildCommand === 'string'
-          ? await execCommand(buildCommand, {
-              ...spawnOpts,
+      try {
+        const found =
+          typeof buildCommand === 'string'
+            ? await execCommand(buildCommand, {
+                ...spawnOpts,
 
-              // Yarn v2 PnP mode may be activated, so force
-              // "node-modules" linker style
-              env: {
-                YARN_NODE_LINKER: 'node-modules',
-                ...spawnOpts.env,
-              },
+                // Yarn v2 PnP mode may be activated, so force
+                // "node-modules" linker style
+                env: {
+                  YARN_NODE_LINKER: 'node-modules',
+                  ...spawnOpts.env,
+                },
 
-              cwd: entrypointDir,
-            })
-          : await runPackageJsonScript(
-              entrypointDir,
-              ['vercel-build', 'now-build', 'build'],
-              spawnOpts
-            );
+                cwd: entrypointDir,
+              })
+            : await runPackageJsonScript(
+                entrypointDir,
+                ['vercel-build', 'now-build', 'build'],
+                spawnOpts
+              );
 
-      if (!found) {
-        throw new Error(
-          `Missing required "${
-            buildCommand || 'vercel-build'
-          }" script in "${entrypoint}"`
-        );
+        if (!found) {
+          throw new Error(
+            `Missing required "${
+              buildCommand || 'vercel-build'
+            }" script in "${entrypoint}"`
+          );
+        }
+      } finally {
+        if (framework?.slug === 'gatsby') {
+          await GatsbyUtils.cleanupGatsbyFiles(entrypointDir);
+        }
       }
 
       const outputDirPrefix = path.join(workPath, path.dirname(entrypoint));

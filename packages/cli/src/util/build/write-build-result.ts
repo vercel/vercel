@@ -28,6 +28,7 @@ import {
   normalizePath,
 } from '@vercel/build-utils';
 import pipe from 'promisepipe';
+import { merge } from './merge';
 import { unzip } from './unzip';
 import { VERCEL_DIR } from '../projects/link';
 import { fileNameSymbol, VercelConfig } from '@vercel/client';
@@ -426,7 +427,7 @@ async function mergeBuilderOutput(
     // so no need to do anything
     return;
   }
-  await fs.copy(buildResult.buildOutputPath, outputDir);
+  await merge(buildResult.buildOutputPath, outputDir);
 }
 
 /**

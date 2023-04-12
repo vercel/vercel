@@ -1,6 +1,7 @@
 {
-  "name": "app-1",
+  "name": "app-11",
   "version": "0.0.1",
+  "main": "index.js",
   "nx": {
     "targets": {
       "build": {

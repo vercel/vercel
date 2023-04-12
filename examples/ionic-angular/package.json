@@ -18,6 +18,9 @@
     "url": "https://github.com/ionic-team/ionic-conference-app.git"
   },
   "private": true,
+  "engines": {
+    "node": "16.x"
+  },
   "dependencies": {
     "@angular/common": "^8.2.14",
     "@angular/core": "^8.2.14",

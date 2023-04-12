@@ -10,7 +10,7 @@ import getScope from '../util/get-scope';
 import { getPkgName, getCommandName } from '../util/pkg-name';
 import Client from '../util/client';
 import getDeployment from '../util/get-deployment';
-import { Build, Deployment } from '../types';
+import { Build, Deployment } from '@vercel-internals/types';
 import title from 'title';
 import { isErrnoException } from '@vercel/error-utils';
 import { URL } from 'url';
@@ -32,6 +32,7 @@ const help = () => {
     'TOKEN'
   )}        Login token
     -d, --debug                    Debug mode [off]
+    --no-color                     No color mode [off]
     -S, --scope                    Set a custom scope
 
   ${chalk.dim('Examples:')}

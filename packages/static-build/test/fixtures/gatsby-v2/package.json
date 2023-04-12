@@ -1,5 +1,4 @@
 {
-  "name": "gatsby-v2",
   "private": true,
   "dependencies": {
     "gatsby": "2.32.13",

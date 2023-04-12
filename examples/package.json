@@ -1,0 +1,14 @@
+{
+  "private": true,
+  "name": "examples",
+  "description": "Each subdirectory is an example boilerplate for a framework. This package.json only exists for testing purposes.",
+  "scripts": {
+    "test-unit": "pnpm test __tests__/unit/",
+    "test-e2e": "pnpm test __tests__/integration/",
+    "test": "jest --env node --verbose --runInBand --bail"
+  },
+  "devDependencies": {
+    "@types/jest": "27.4.1",
+    "@vercel/frameworks": "1.3.0"
+  }
+}
