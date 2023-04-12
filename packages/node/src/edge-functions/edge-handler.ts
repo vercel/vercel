@@ -142,7 +142,7 @@ async function createEdgeRuntimeServer(params?: {
     });
 
     const server = await runServer({ runtime });
-    exitHook(server.close);
+    exitHook(() => server.close());
     return server;
   } catch (error: any) {
     // We can't easily show a meaningful stack trace from ncc -> edge-runtime.
