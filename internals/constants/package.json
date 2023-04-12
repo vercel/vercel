@@ -1,11 +1,12 @@
 {
   "private": true,
-  "name": "@vercel-internals/types",
-  "types": "index.d.ts",
-  "main": "index.d.ts",
+  "name": "@vercel-internals/constants",
+  "types": "dist/index.d.ts",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
   "dependencies": {
-    "@types/node": "14.14.31",
-    "@vercel-internals/constants": "*",
     "@vercel/build-utils": "6.3.2",
     "@vercel/routing-utils": "2.1.10"
   },
