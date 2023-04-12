@@ -108,14 +108,15 @@ function getURL(input: string) {
 export function parseRepoUrl(originUrl: string): RepoInfo | null {
   const url = getURL(originUrl);
   if (!url) return null;
+
   const hostParts = url.hostname.split('.');
   if (hostParts.length < 2) return null;
   const provider = hostParts[hostParts.length - 2];
 
-  const pathParts = url.pathname.split('/');
-  if (pathParts.length !== 3) return null;
-  const org = pathParts[1];
-  const repo = pathParts[2].replace(/\.git$/, '');
+  const pathParts = url.pathname.split('/').filter(Boolean);
+  if (pathParts.length !== 2) return null;
+  const org = pathParts[0];
+  const repo = pathParts[1].replace(/\.git$/, '');
   return { url: originUrl, provider, org, repo };
 }
 
