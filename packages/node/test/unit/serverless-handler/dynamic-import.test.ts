@@ -8,9 +8,26 @@ describe('dynamic-import', () => {
       __dirname,
       '../../dev-fixtures/esm-module.mjs'
     );
+
     const fn = await dynamicImport(entrypointPath);
-    expect(fn.default.toString()).toStrictEqual(
-      "(_req, res) => {\n  res.setHeader('x-hello', 'world');\n  res.send('Hello, world!').end();\n}"
-    );
+
+    let buffer = '';
+    const headers: Record<string, string> = {};
+
+    const res = {
+      send: (data: string) => {
+        buffer = data;
+        return res;
+      },
+      setHeader: (key: string, value: string) => (headers[key] = value),
+      end: () => {},
+    };
+
+    const req = {};
+
+    fn.default(req, res);
+
+    expect(buffer).toBe('Hello, world!');
+    expect(headers).toStrictEqual({ 'x-hello': 'world' });
   });
 });

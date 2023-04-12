@@ -845,6 +845,7 @@ importers:
       async-listen: 1.2.0
       content-type: 1.0.4
       cookie: 0.4.0
+      cross-env: 7.0.3
       edge-runtime: 2.1.4
       esbuild: 0.14.47
       etag: 1.8.1
@@ -891,6 +892,7 @@ importers:
       '@vercel/nft': 0.22.5
       content-type: 1.0.4
       cookie: 0.4.0
+      cross-env: 7.0.3
       etag: 1.8.1
       execa: 3.2.0
       fs-extra: 11.1.0
@@ -8466,6 +8468,14 @@ packages:
     dependencies:
       kleur: 4.1.5
       prompts: 2.4.2
+    dev: true
+
+  /cross-env/7.0.3:
+    resolution: {integrity: sha512-+/HKd6EgcQCJGh2PSjZuUitQBQynKor4wrFbRg4DtAgS1aWO+gU52xpH7M9ScGgXSYmAVS9bIJ8EzuaGw0oNAw==}
+    engines: {node: '>=10.14', npm: '>=6', yarn: '>=1'}
+    hasBin: true
+    dependencies:
+      cross-spawn: 7.0.3
     dev: true
 
   /cross-spawn/5.1.0:
@@ -18440,6 +18450,7 @@ packages:
   /which/2.0.2:
     resolution: {integrity: sha512-BLI3Tl1TW3Pvl70l3yq3Y64i+awpwXqsGBYWkkqMtnbXgrMD+yj7rhW0kuEDxzJaYXGjEW5ogapKNMEKNMjibA==}
     engines: {node: '>= 8'}
+    hasBin: true
     dependencies:
       isexe: 2.0.0
 
