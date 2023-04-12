@@ -1,6 +1,6 @@
-import http from 'http';
 import { forkDevServer, readMessage } from '../../src/fork-dev-server';
 import { resolve, extname } from 'path';
+import fetch from 'node-fetch';
 
 jest.setTimeout(10 * 1000);
 
@@ -19,43 +19,6 @@ function testForkDevServer(entrypoint: string) {
     workPath: resolve(__dirname, '../dev-fixtures'),
     entrypoint,
     devServerPath: resolve(__dirname, '../../dist/dev-server.mjs'),
-  });
-}
-
-interface FetchResponse {
-  headers: http.IncomingHttpHeaders;
-  json: () => Promise<any>;
-  ok: boolean;
-  status: number | undefined;
-  text: string;
-}
-
-/**
- * This is a minimal replacement for `node-fetch`. We cannot use the real
- * `node-fetch` because it is a ESM package and Jest doesn't support
- * statically or dynamically importing ESM packages.
- */
-async function fetch(url: string): Promise<FetchResponse> {
-  return new Promise((resolve, reject) => {
-    const req = http.get(url, res => {
-      let buf = '';
-      res.on('data', chunk => {
-        buf += chunk;
-      });
-      res.on('end', () => {
-        resolve({
-          headers: res.headers,
-          status: res.statusCode,
-          text: buf,
-          ok: res.statusCode !== undefined && res.statusCode < 400,
-          async json(): Promise<any> {
-            return JSON.parse(buf);
-          },
-        });
-      });
-    });
-    req.on('error', reject);
-    req.end();
   });
 }
 
@@ -98,13 +61,17 @@ test('runs a mjs endpoint', async () => {
     const response = await fetch(
       `http://localhost:${result.value.port}/api/hello`
     );
-    expect(response.status).toEqual(200);
-    expect(response.headers).toEqual(
-      expect.objectContaining({
-        'x-hello': 'world',
-      })
-    );
-    expect(response.text).toEqual('Hello, world!');
+    expect({
+      status: response.status,
+      headers: response.headers.raw(),
+      text: await response.text(),
+    }).toEqual({
+      status: 200,
+      headers: expect.objectContaining({
+        'x-hello': ['world'],
+      }),
+      text: 'Hello, world!',
+    });
   } finally {
     child.kill(9);
   }
@@ -127,13 +94,17 @@ test('runs a esm typescript endpoint', async () => {
     const response = await fetch(
       `http://localhost:${result.value.port}/api/hello`
     );
-    expect(response.status).toEqual(200);
-    expect(response.headers).toEqual(
-      expect.objectContaining({
-        'x-hello': 'world',
-      })
-    );
-    expect(response.text).toEqual('Hello, world!');
+    expect({
+      status: response.status,
+      headers: response.headers.raw(),
+      text: await response.text(),
+    }).toEqual({
+      status: 200,
+      headers: expect.objectContaining({
+        'x-hello': ['world'],
+      }),
+      text: 'Hello, world!',
+    });
   } finally {
     child.kill(9);
   }
