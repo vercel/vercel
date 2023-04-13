@@ -88,9 +88,8 @@ export function isEdgeRuntime(runtime?: string): runtime is EdgeRuntimes {
 
 export async function serializeBody(
   request: IncomingMessage
-): Promise<string | undefined> {
-  const maybeBody = request.method !== 'GET' && request.method !== 'POST';
-  if (!maybeBody) return undefined;
-  const bodyBuffer = await streamToBuffer(request);
-  return bodyBuffer.toString('base64');
+): Promise<Buffer | undefined> {
+  return request.method !== 'GET' && request.method !== 'HEAD'
+    ? await streamToBuffer(request)
+    : undefined;
 }

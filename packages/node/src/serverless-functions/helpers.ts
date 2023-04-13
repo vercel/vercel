@@ -1,4 +1,6 @@
 import type { ServerResponse, IncomingMessage } from 'http';
+import { serializeBody } from '../utils';
+import { PassThrough } from 'stream';
 
 type VercelRequestCookies = { [key: string]: string };
 type VercelRequestQuery = { [key: string]: string | string[] };
@@ -16,6 +18,43 @@ export type VercelResponse = ServerResponse & {
   status: (statusCode: number) => VercelResponse;
   redirect: (statusOrUrl: string | number, url?: string) => VercelResponse;
 };
+
+class ApiError extends Error {
+  readonly statusCode: number;
+  constructor(statusCode: number, message: string) {
+    super(message);
+    this.statusCode = statusCode;
+  }
+}
+
+function getBodyParser(body: Buffer, contentType: string | undefined) {
+  return function parseBody(): VercelRequestBody {
+    const { parse: parseContentType } = require('content-type');
+    const { type } = parseContentType(contentType);
+
+    if (type === 'application/json') {
+      try {
+        const str = body.toString();
+        return str ? JSON.parse(str) : {};
+      } catch (error) {
+        throw new ApiError(400, 'Invalid JSON');
+      }
+    }
+
+    if (type === 'application/octet-stream') return body;
+
+    if (type === 'application/x-www-form-urlencoded') {
+      const { parse: parseQS } = require('querystring');
+      // note: querystring.parse does not produce an iterable object
+      // https://nodejs.org/api/querystring.html#querystring_querystring_parse_str_sep_eq_options
+      return parseQS(body.toString());
+    }
+
+    if (type === 'text/plain') return body.toString();
+
+    return undefined;
+  };
+}
 
 function getQueryParser({ url = '/' }: IncomingMessage) {
   return function parseQuery(): VercelRequestQuery {
@@ -201,12 +240,34 @@ function send(
   return res;
 }
 
-export function addHelpers(_req: IncomingMessage, _res: ServerResponse) {
+function restoreBody(req: IncomingMessage, body: Buffer) {
+  const replicateBody = new PassThrough();
+  const on = replicateBody.on.bind(replicateBody);
+  const originalOn = req.on.bind(req);
+  req.read = replicateBody.read.bind(replicateBody);
+  req.on = req.addListener = (name, cb) =>
+    // @ts-expect-error
+    name === 'data' || name === 'end' ? on(name, cb) : originalOn(name, cb);
+  replicateBody.write(body);
+  replicateBody.end();
+}
+
+async function readBody(req: IncomingMessage) {
+  const body = (await serializeBody(req)) || Buffer.from('');
+  restoreBody(req, body);
+  return body;
+}
+
+export async function addHelpers(_req: IncomingMessage, _res: ServerResponse) {
   const req = _req as VercelRequest;
   const res = _res as VercelResponse;
 
   setLazyProp<VercelRequestCookies>(req, 'cookies', getCookieParser(req));
   setLazyProp<VercelRequestQuery>(req, 'query', getQueryParser(req));
+  const contentType = req.headers['content-type'];
+  const body =
+    contentType === undefined ? Buffer.from('') : await readBody(req);
+  setLazyProp<VercelRequestBody>(req, 'body', getBodyParser(body, contentType));
 
   res.status = statusCode => status(res, statusCode);
   res.redirect = (statusOrUrl, url) => redirect(res, statusOrUrl, url);
