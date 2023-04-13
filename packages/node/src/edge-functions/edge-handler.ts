@@ -13,6 +13,7 @@ import exitHook from 'exit-hook';
 import type { HeadersInit } from 'undici';
 import type { VercelProxyResponse } from '../types';
 import type { IncomingMessage } from 'http';
+import { pathToFileURL } from 'url';
 
 const NODE_VERSION_MAJOR = process.version.match(/^v(\d+)\.\d+/)?.[1];
 const NODE_VERSION_IDENTIFIER = `node${NODE_VERSION_MAJOR}`;
@@ -52,7 +53,23 @@ async function compileUserCode(
       sourcemap: 'inline',
       legalComments: 'none',
       bundle: true,
-      plugins: [edgeWasmPlugin, nodeCompatPlugin.plugin],
+      plugins: [
+        edgeWasmPlugin,
+        nodeCompatPlugin.plugin,
+        {
+          name: 'import.meta.url',
+          setup({ onLoad }) {
+            onLoad({ filter: /()/, namespace: 'file' }, args => {
+              let code = readFileSync(args.path, 'utf8');
+              code = code.replace(
+                /\bimport\.meta\.url\b/g,
+                JSON.stringify(pathToFileURL(__filename))
+              );
+              return { contents: code };
+            });
+          },
+        },
+      ],
       entryPoints: [entrypointFullPath],
       write: false, // operate in memory
       format: 'cjs',
