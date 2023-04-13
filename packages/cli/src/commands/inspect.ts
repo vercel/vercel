@@ -10,13 +10,14 @@ import getScope from '../util/get-scope';
 import { getPkgName, getCommandName } from '../util/pkg-name';
 import Client from '../util/client';
 import getDeployment from '../util/get-deployment';
-import { Build, Deployment } from '@vercel-internals/types';
+import type { Build, Deployment } from '@vercel-internals/types';
 import title from 'title';
 import { isErrnoException } from '@vercel/error-utils';
 import { URL } from 'url';
 import readStandardInput from '../util/input/read-standard-input';
 import sleep from '../util/sleep';
 import ms from 'ms';
+import { isDeploying } from '../util/deploy/is-deploying';
 
 const help = () => {
   console.log(`
@@ -40,7 +41,7 @@ const help = () => {
     --timeout=${chalk.bold.underline(
       'TIME'
     )}                 Time to wait for deployment completion [3m]
-    --wait                         Blocks until site has deployed
+    --wait                         Blocks until deployment completes
 
   ${chalk.dim('Examples:')}
 
@@ -89,7 +90,7 @@ export default async function main(client: Client) {
 
   if (!deploymentIdOrHost) {
     // if the URL is not passed in, check stdin
-    // allows cool stuff like `vc inspect $(vc deploy --prod --no-wait) --wait`
+    // allows cool stuff like `echo my-deployment.vercel.app | vc inspect --wait`
     const stdInput = await readStandardInput(client.stdin);
     if (stdInput) {
       deploymentIdOrHost = stdInput;
@@ -103,9 +104,9 @@ export default async function main(client: Client) {
   }
 
   // validate the timeout
-  const timeout = argv['--timeout'] || '3m';
-  if (ms(timeout) === undefined) {
-    client.output.error(`Invalid timeout "${timeout}"`);
+  const timeout = ms(argv['--timeout'] ?? '3m');
+  if (timeout === undefined) {
+    client.output.error(`Invalid timeout "${argv['--timeout']}"`);
     return 1;
   }
 
@@ -134,18 +135,14 @@ export default async function main(client: Client) {
     `Fetching deployment "${deploymentIdOrHost}" in ${chalk.bold(contextName)}`
   );
 
-  const until = Date.now() + ms(timeout);
+  const until = Date.now() + timeout;
   const wait = argv['--wait'];
 
   // resolve the deployment, since we might have been given an alias
   let deployment = await getDeployment(client, contextName, deploymentIdOrHost);
 
   while (Date.now() < until) {
-    const isPending = ['QUEUED', 'BUILDING', 'INITIALIZING'].includes(
-      deployment.readyState
-    );
-
-    if (!wait || !isPending) {
+    if (!wait || !isDeploying(deployment.readyState)) {
       break;
     }
 

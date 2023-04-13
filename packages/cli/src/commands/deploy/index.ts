@@ -70,6 +70,8 @@ import { isValidArchive } from '../../util/deploy/validate-archive-format';
 import { parseEnv } from '../../util/parse-env';
 import { errorToString, isErrnoException, isError } from '@vercel/error-utils';
 import { pickOverrides } from '../../util/projects/project-settings';
+import { isDeploying } from '../../util/deploy/is-deploying';
+import type { Deployment } from '@vercel-internals/types';
 
 export default async (client: Client): Promise<number> => {
   const { output } = client;
@@ -840,7 +842,7 @@ const printDeploymentStatus = async (
     url: deploymentUrl,
     aliasWarning,
   }: {
-    readyState: string;
+    readyState: Deployment['readyState'];
     alias: string[];
     aliasError: Error;
     target: string;
@@ -859,14 +861,10 @@ const printDeploymentStatus = async (
   indications = indications || [];
   const isProdDeployment = target === 'production';
 
-  let stillBuilding = false;
+  let isStillBuilding = false;
   if (noWait) {
-    if (
-      readyState !== 'READY' &&
-      readyState !== 'CANCELED' &&
-      readyState !== 'ERROR'
-    ) {
-      stillBuilding = true;
+    if (isDeploying(readyState)) {
+      isStillBuilding = true;
       output.print(
         prependEmoji(
           'Note: Deployment is still processing...',
@@ -876,7 +874,7 @@ const printDeploymentStatus = async (
     }
   }
 
-  if (!stillBuilding && readyState !== 'READY') {
+  if (!isStillBuilding && readyState !== 'READY') {
     output.error(
       `Your deployment failed. Please retry later. More: https://err.sh/vercel/deployment-error`
     );
@@ -891,7 +889,8 @@ const printDeploymentStatus = async (
     );
   } else {
     // print preview/production url
-    let previewUrl: string = deploymentUrl;
+    let previewUrl: string;
+    // if `noWait` is true, then use the deployment url, not an alias
     if (!noWait && Array.isArray(aliasList) && aliasList.length > 0) {
       const previewUrlInfo = await getPreferredPreviewURL(client, aliasList);
       if (previewUrlInfo) {
