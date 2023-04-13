@@ -89,6 +89,8 @@ jobs:
           VERCEL_TEST_REGISTRATION_URL: ${{ secrets.VERCEL_TEST_REGISTRATION_URL }}
           FORCE_COLOR: '1'
 
+      - run: find .
+
       - name: Test Reporter
         uses: dorny/test-reporter@v1.6.0
         if: success() || failure()    # run this step even if previous step failed
