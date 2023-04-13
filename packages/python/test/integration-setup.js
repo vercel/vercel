@@ -26,11 +26,6 @@ module.exports = function setupTests(groupIndex) {
     console.log('testing group', groupIndex, chunkedFixtures);
   }
 
-  // filter out '00-request-path' because it has special handling in "integration-1.test.ts"
-  // we wait until after chunking to filter it out so that chunk 1 will have one less test in the chunk
-  // which is backfilled by the special handling
-  chunkedFixtures = chunkedFixtures.filter(f => f !== '00-request-path');
-
   // eslint-disable-next-line no-restricted-syntax
   for (const fixture of chunkedFixtures) {
     const errMsg = testsThatFailToBuild.get(fixture);
