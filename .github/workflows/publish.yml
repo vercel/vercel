@@ -65,3 +65,11 @@ jobs:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN_ELEVATED }}
           GA_TRACKING_ID: ${{ secrets.GA_TRACKING_ID }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+      - name: Trigger Update
+        if: ${{ steps.check-release.outputs.IS_RELEASE == 'true' }}
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GH_TOKEN_PULL_REQUESTS }}
+          script: |
+            const script = require('./utils/trigger-update-workflow.js')
+            await script({ github, context })
