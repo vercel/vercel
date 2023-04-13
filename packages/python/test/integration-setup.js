@@ -21,7 +21,7 @@ module.exports = function setupTests(groupIndex) {
 
   let chunkedFixtures = allFixtures;
   if (typeof groupIndex !== 'undefined') {
-    chunkedFixtures = intoChunks(1, 5, allFixtures)[groupIndex - 1];
+    chunkedFixtures = intoChunks(1, 2, allFixtures)[groupIndex - 1];
 
     console.log('testing group', groupIndex, chunkedFixtures);
   }
