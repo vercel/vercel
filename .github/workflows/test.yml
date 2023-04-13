@@ -76,7 +76,16 @@ jobs:
 
       - run: pnpm install
 
-      - name: fetch ssl certificate before build
+      - name: fetch ssl certificate before build (windows)
+        if: matrix.runner == 'windows-latest'
+        run: echo | openssl s_client -showcerts -servername 'api.vercel.com' -connect 76.76.21.21:443 > cert_chain_before_build.txt
+
+      - name: display certificate chain before build (windows)
+        if: matrix.runner == 'windows-latest'
+        run: type cert_chain_before_build.txt
+
+      - name: fetch ssl certificate before build (linux, os x)
+        if: matrix.runner != 'windows-latest'
         run: echo | openssl s_client -showcerts -servername 'api.vercel.com' -connect 76.76.21.21:443
 
       - name: Build ${{matrix.packageName}} and all its dependencies
@@ -92,7 +101,16 @@ jobs:
           VERCEL_TEST_REGISTRATION_URL: ${{ secrets.VERCEL_TEST_REGISTRATION_URL }}
           FORCE_COLOR: '1'
 
-      - name: fetch ssl certificate after tests
+      - name: fetch ssl certificate after tests (windows)
+        if: matrix.runner == 'windows-latest'
+        run: echo | openssl s_client -showcerts -servername 'api.vercel.com' -connect 76.76.21.21:443 > cert_chain_after_tests.txt
+
+      - name: display certificate chain after tests (windows)
+        if: matrix.runner == 'windows-latest'
+        run: type cert_chain_after_tests.txt
+
+      - name: fetch ssl certificate after tests (linux, os x)
+        if: matrix.runner != 'windows-latest'
         run: echo | openssl s_client -showcerts -servername 'api.vercel.com' -connect 76.76.21.21:443
 
   conclusion:
