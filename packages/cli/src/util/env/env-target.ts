@@ -18,5 +18,5 @@ export function isValidEnvTarget(
 }
 
 export function getEnvTargetPlaceholder() {
-  return `<${envTargetChoices.map<string>(c => c.value).join(' | ')}>`;
+  return `<${envTargetChoices.map(c => c.value).join(' | ')}>`;
 }
