@@ -364,7 +364,7 @@ test('[vercel dev] should support request body', async () => {
       body: JSON.stringify(body),
     });
     validateResponseHeaders(res);
-    expect(await res.json()).toMatchObject(body);
+    expect(await res.json()).toMatchObject({ body, readBody: body });
 
     // Test that `req` "data" events work in dev
     res = await fetch(`http://localhost:${port}/api/data-events`, {

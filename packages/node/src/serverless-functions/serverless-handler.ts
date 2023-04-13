@@ -25,8 +25,8 @@ async function createServerlessServer(
   userCode: ServerlessFunctionSignature,
   options: ServerlessServerOptions
 ) {
-  const server = createServer((req, res) => {
-    if (options.shouldAddHelpers) addHelpers(req, res);
+  const server = createServer(async (req, res) => {
+    if (options.shouldAddHelpers) await addHelpers(req, res);
     return userCode(req, res);
   });
   exitHook(() => server.close());
