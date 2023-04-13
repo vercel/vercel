@@ -9,7 +9,7 @@ import {
   remove,
   symlink,
 } from 'fs-extra';
-import { join, delimiter, dirname } from 'path';
+import { delimiter, dirname, join } from 'path';
 import stringArgv from 'string-argv';
 import { cloneEnv, debug } from '@vercel/build-utils';
 import { pipeline } from 'stream';
@@ -22,7 +22,7 @@ import type { Env } from '@vercel/build-utils';
 const streamPipeline = promisify(pipeline);
 
 const versionMap = new Map([
-  ['1.20', '1.20.1'],
+  ['1.20', '1.20.2'],
   ['1.19', '1.19.6'],
   ['1.18', '1.18.10'],
   ['1.17', '1.17.13'],
@@ -36,17 +36,32 @@ const archMap = new Map([
   ['x86', '386'],
 ]);
 const platformMap = new Map([['win32', 'windows']]);
-export const cacheDir = join('.vercel', 'cache', 'golang');
+export const localCacheDir = join('.vercel', 'cache', 'golang');
+
 const GO_FLAGS = process.platform === 'win32' ? [] : ['-ldflags', '-s -w'];
 const GO_MIN_VERSION = 13;
-const getPlatform = (p: string) => platformMap.get(p) || p;
-const getArch = (a: string) => archMap.get(a) || a;
 
+/**
+ * Determines the URL to download the Golang SDK.
+ * @param version The desireed Go version
+ * @returns The Go download URL
+ */
 function getGoUrl(version: string) {
   const { arch, platform } = process;
-  const goArch = getArch(arch);
-  const goPlatform = getPlatform(platform);
   const ext = platform === 'win32' ? 'zip' : 'tar.gz';
+  const goPlatform = platformMap.get(platform) || platform;
+  let goArch = archMap.get(arch) || arch;
+
+  // Go 1.16 was the first version to support arm64, so if the version is older
+  // we need to download the amd64 version
+  if (
+    platform === 'darwin' &&
+    goArch === 'arm64' &&
+    parseInt(version.split('.')[1], 10) < 16
+  ) {
+    goArch = 'amd64';
+  }
+
   const filename = `go${version}.${goPlatform}-${goArch}.${ext}`;
   return {
     filename,
@@ -61,32 +76,91 @@ export const goGlobalCachePath = join(
 
 export const OUT_EXTENSION = process.platform === 'win32' ? '.exe' : '';
 
-export async function getAnalyzedEntrypoint(
-  workPath: string,
-  filePath: string,
-  modulePath: string
-) {
-  const bin = join(__dirname, `analyze${OUT_EXTENSION}`);
-
-  const isAnalyzeExist = await pathExists(bin);
-  if (!isAnalyzeExist) {
-    debug(`Building analyze bin: ${bin}`);
-    const src = join(__dirname, 'util', 'analyze.go');
-    const go = await createGo({
-      modulePath,
-      workPath,
-    });
-    await go.build(src, bin);
-  }
-
-  debug(`Analyzing entrypoint ${filePath} with modulePath ${modulePath}`);
-  const args = [`-modpath=${modulePath}`, filePath];
-  const analyzed = await execa.stdout(bin, args);
-  debug(`Analyzed entrypoint ${analyzed}`);
-  return analyzed;
+interface Analyzed {
+  functionName: string;
+  packageName: string;
+  watch?: boolean;
 }
 
-class GoWrapper {
+/**
+ * Parses the AST of the specified entrypoint Go file.
+ * @param workPath The work path (e.g. `/path/to/project`)
+ * @param entrypoint The path to the entrypoint file (e.g.
+ * `/path/to/project/api/index.go`)
+ * @param modulePath The path to the directory containing the `go.mod` (e.g.
+ * `/path/to/project/api`)
+ * @returns The results from the AST parsing
+ */
+export async function getAnalyzedEntrypoint({
+  entrypoint,
+  modulePath,
+  workPath,
+}: {
+  entrypoint: string;
+  modulePath?: string;
+  workPath: string;
+}): Promise<Analyzed> {
+  const bin = join(__dirname, `analyze${OUT_EXTENSION}`);
+  let analyzed: string;
+
+  try {
+    // build the `analyze` binary if not found in the `dist` directory
+    const isAnalyzeExist = await pathExists(bin);
+    if (!isAnalyzeExist) {
+      debug(`Building analyze bin: ${bin}`);
+      const src = join(__dirname, 'util', 'analyze.go');
+      let go;
+      const createOpts = {
+        modulePath,
+        opts: { cwd: __dirname },
+        workPath,
+      };
+      try {
+        go = await createGo(createOpts);
+      } catch (err) {
+        // if the version in the `go.mod` is too old, then download the latest
+        if (
+          err instanceof GoError &&
+          err.code === 'ERR_UNSUPPORTED_GO_VERSION'
+        ) {
+          delete createOpts.modulePath;
+          go = await createGo(createOpts);
+        } else {
+          throw err;
+        }
+      }
+      await go.build(src, bin);
+    }
+  } catch (err) {
+    console.error('Failed to build the Go AST analyzer');
+    throw err;
+  }
+
+  try {
+    debug(`Analyzing entrypoint ${entrypoint} with modulePath ${modulePath}`);
+    const args = [`-modpath=${modulePath}`, join(workPath, entrypoint)];
+    analyzed = await execa.stdout(bin, args);
+  } catch (err) {
+    console.error(`Failed to parse AST for "${entrypoint}"`);
+    throw err;
+  }
+
+  debug(`Analyzed entrypoint ${analyzed}`);
+
+  if (!analyzed) {
+    const err = new Error(
+      `Could not find an exported function in "${entrypoint}"
+Learn more: https://vercel.com/docs/runtimes#official-runtimes/go
+      `
+    );
+    console.error(err.message);
+    throw err;
+  }
+
+  return JSON.parse(analyzed) as Analyzed;
+}
+
+export class GoWrapper {
   private env: Env;
   private opts: execa.Options;
 
@@ -101,10 +175,11 @@ class GoWrapper {
   private execute(...args: string[]) {
     const { opts, env } = this;
     debug(
-      `Exec: go ${args
-        .map(a => (a.includes(' ') ? `"${a}"` : a))
-        .join(' ')} CWD=${opts.cwd}`
+      `Exec: go ${args.map(a => (a.includes(' ') ? `"${a}"` : a)).join(' ')}`
     );
+    debug(`  CWD=${opts.cwd}`);
+    debug(`  GOROOT=${(env || opts.env).GOROOT}`);
+    debug(`  GO_BUILD_FLAGS=${(env || opts.env).GO_BUILD_FLAGS}`);
     return execa('go', args, { stdio: 'inherit', ...opts, env });
   }
 
@@ -127,9 +202,8 @@ class GoWrapper {
     debug(`Building optimized 'go' binary ${src} -> ${dest}`);
     const sources = Array.isArray(src) ? src : [src];
 
-    const flags = process.env.GO_BUILD_FLAGS
-      ? stringArgv(process.env.GO_BUILD_FLAGS)
-      : GO_FLAGS;
+    const envGoBuildFlags = (this.env || this.opts.env).GO_BUILD_FLAGS;
+    const flags = envGoBuildFlags ? stringArgv(envGoBuildFlags) : GO_FLAGS;
 
     return this.execute('build', ...flags, '-o', dest, ...sources);
   }
@@ -186,7 +260,7 @@ export async function createGo({
     goGlobalCachePath,
     `${goSelectedVersion}_${platform}_${process.arch}`
   );
-  const goCacheDir = join(workPath, cacheDir);
+  const goCacheDir = join(workPath, localCacheDir);
 
   if (goPreferredVersion) {
     debug(`Preferred go version ${goPreferredVersion} (from go.mod)`);
@@ -234,7 +308,7 @@ export async function createGo({
         debug(`Found go ${version} in ${label}, but version is unsupported`);
       }
       if (version === goSelectedVersion || short === goSelectedVersion) {
-        console.log(`Selected go ${version} (from ${label})`);
+        debug(`Selected go ${version} (from ${label})`);
 
         await setGoEnv(goDir);
         return new GoWrapper(env, opts);
@@ -339,6 +413,10 @@ function parseGoVersionString(goVersionOutput: string) {
   };
 }
 
+class GoError extends Error {
+  code: string | undefined;
+}
+
 /**
  * Attempts to parse the preferred Go version from the `go.mod` file.
  *
@@ -359,6 +437,12 @@ async function parseGoModVersion(
     const full = versionMap.get(`${major}.${minor}`);
     if (major === 1 && minor >= GO_MIN_VERSION && full) {
       version = full;
+    } else if (!isNaN(minor)) {
+      const err = new GoError(
+        `Unsupported Go version ${major}.${minor} in ${file}`
+      );
+      err.code = 'ERR_UNSUPPORTED_GO_VERSION';
+      throw err;
     } else {
       console.log(`Warning: Unknown Go version in ${file}`);
     }
