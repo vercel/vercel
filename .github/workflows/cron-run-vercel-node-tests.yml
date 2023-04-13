@@ -1,16 +1,19 @@
 name: Run @vercel/node tests
+
 on:
-  # Allow manual runs
-  workflow_dispatch:
-  # Run every 5 minutes
+  workflow-dispatch:
   schedule:
-    - cron: '0/5 * * * *'
+    - cron: '*/45 * * * *'
 
 env:
   NODE_VERSION: '16'
   TURBO_REMOTE_ONLY: 'true'
   TURBO_TEAM: 'vercel'
   TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   setup:
@@ -29,6 +32,12 @@ jobs:
       - name: install pnpm@7.31.0
         run: npm i -g pnpm@7.31.0
       - run: pnpm install
+      - id: set-tests
+        run: |
+          TESTS_ARRAY=$(node utils/chunk-tests.js $SCRIPT_NAME)
+          echo "Files to test:"
+          echo "$TESTS_ARRAY"
+          echo "tests=$TESTS_ARRAY" >> $GITHUB_OUTPUT
       - uses: patrickedqvist/wait-for-vercel-preview@ae34b392ef30297f2b672f9afb3c329bde9bd487
         id: waitForTarball
         with:
@@ -37,8 +46,8 @@ jobs:
           check_interval: 5
 
   test:
-    runs-on: ubuntu-latest
     timeout-minutes: 120
+    runs-on: ubuntu-latest
     if: ${{ needs.setup.outputs['tests'] != '[]' }}
     needs:
       - setup
@@ -61,15 +70,14 @@ jobs:
         run: node utils/gen.js && node_modules/.bin/turbo run build --cache-dir=".turbo" --scope=@vercel/node --include-dependencies --no-deps
         env:
           FORCE_COLOR: '1'
-      - name: Test
-        run: node utils/gen.js && node_modules/.bin/turbo run test --cache-dir=".turbo" --scope=@vercel/node --no-deps -- test/integration/integration-4.test.js
+      - name: Test ${{matrix.packageName}}
+        run: node utils/gen.js && node_modules/.bin/turbo run test --cache-dir=".turbo" --scope=@vercel-node --no-deps
         shell: bash
         env:
           VERCEL_CLI_VERSION: ${{ needs.setup.outputs.dplUrl }}/tarballs/vercel.tgz
           VERCEL_TEST_TOKEN: ${{ secrets.VERCEL_TEST_TOKEN }}
           VERCEL_TEST_REGISTRATION_URL: ${{ secrets.VERCEL_TEST_REGISTRATION_URL }}
           FORCE_COLOR: '1'
-
 
   conclusion:
     needs:
