@@ -1,6 +1,6 @@
 require('./integration-setup')(1);
 
-// NOTE: The fixture `00-request-path` has special case handling for `vc dev` support below
+// NOTE: The fixture `00-request-path` has special case handling for local dev support below
 
 const assert = require('assert');
 const fetch = require('node-fetch');
