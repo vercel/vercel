@@ -55,7 +55,7 @@ describe('getConfig for swc', () => {
     const ast = parseFixture('fixtures/node.js');
     const config = getConfig(ast, BaseFunctionConfigSchema);
     expect(config).toMatchInlineSnapshot(`
-      Object {
+      {
         "memory": 1024,
         "runtime": "nodejs",
       }
@@ -71,7 +71,7 @@ describe('getConfig for swc', () => {
       },
     } as const);
     expect(config).toMatchInlineSnapshot(`
-      Object {
+      {
         "location": "https://example.com/page",
         "runtime": "deno",
       }

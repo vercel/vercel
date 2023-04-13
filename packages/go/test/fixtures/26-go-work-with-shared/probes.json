@@ -1,0 +1,8 @@
+{
+  "probes": [
+    {
+      "path": "/api/index.go",
+      "mustContain": "hello:go1.20.2"
+    }
+  ]
+}

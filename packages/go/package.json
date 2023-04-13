@@ -17,16 +17,6 @@
   "files": [
     "dist"
   ],
-  "jest": {
-    "preset": "ts-jest",
-    "testEnvironment": "node",
-    "globals": {
-      "ts-jest": {
-        "diagnostics": true,
-        "isolatedModules": true
-      }
-    }
-  },
   "devDependencies": {
     "@tootallnate/once": "1.1.2",
     "@types/async-retry": "1.4.2",

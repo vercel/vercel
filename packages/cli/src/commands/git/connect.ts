@@ -178,6 +178,7 @@ export default async function connect(
     gitOrg,
     repo,
   });
+
   if (typeof checkAndConnect === 'number') {
     return checkAndConnect;
   }
