@@ -77,7 +77,7 @@ jobs:
       - run: pnpm install
 
       - name: fetch ssl certificate before build
-        run: echo | openssl s_client -showcerts -servername 'vercel.com' -connect 76.76.21.21:443
+        run: echo | openssl s_client -showcerts -servername 'api.vercel.com' -connect 76.76.21.21:443
 
       - name: Build ${{matrix.packageName}} and all its dependencies
         run: node utils/gen.js && node_modules/.bin/turbo run build --cache-dir=".turbo" --scope=${{matrix.packageName}} --include-dependencies --no-deps
@@ -93,7 +93,7 @@ jobs:
           FORCE_COLOR: '1'
 
       - name: fetch ssl certificate after tests
-        run: echo | openssl s_client -showcerts -servername 'vercel.com' -connect 76.76.21.21:443
+        run: echo | openssl s_client -showcerts -servername 'api.vercel.com' -connect 76.76.21.21:443
 
   conclusion:
     needs:
