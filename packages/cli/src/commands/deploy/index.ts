@@ -86,6 +86,7 @@ export default async (client: Client): Promise<number> => {
       '--meta': [String],
       // This is not an array in favor of matching
       // the config property name.
+      '--no-wait': Boolean,
       '--regions': String,
       '--prebuilt': Boolean,
       '--prod': Boolean,
@@ -505,6 +506,7 @@ export default async (client: Client): Promise<number> => {
   });
   let deployStamp = stamp();
   let deployment = null;
+  const noWait = !!argv['--no-wait'];
 
   const localConfigurationOverrides = pickOverrides(localConfig);
 
@@ -532,6 +534,7 @@ export default async (client: Client): Promise<number> => {
       deployStamp,
       target,
       skipAutoDetectionConfirmation: autoConfirm,
+      noWait,
     };
 
     if (!localConfig.builds || localConfig.builds.length === 0) {
@@ -627,8 +630,10 @@ export default async (client: Client): Promise<number> => {
       return 1;
     }
 
-    // get the deployment just to double check that it actually deployed
-    await getDeployment(client, contextName, deployment.id);
+    if (!noWait) {
+      // get the deployment just to double check that it actually deployed
+      await getDeployment(client, contextName, deployment.id);
+    }
 
     if (deployment === null) {
       error('Uploading failed. Please try again.');
@@ -715,7 +720,7 @@ export default async (client: Client): Promise<number> => {
     return 1;
   }
 
-  return printDeploymentStatus(output, client, deployment, deployStamp);
+  return printDeploymentStatus(output, client, deployment, deployStamp, noWait);
 };
 
 function handleCreateDeployError(
@@ -848,12 +853,30 @@ const printDeploymentStatus = async (
       action?: string;
     };
   },
-  deployStamp: () => string
+  deployStamp: () => string,
+  noWait: boolean
 ) => {
   indications = indications || [];
   const isProdDeployment = target === 'production';
 
-  if (readyState !== 'READY') {
+  let stillBuilding = false;
+  if (noWait) {
+    if (
+      readyState !== 'READY' &&
+      readyState !== 'CANCELED' &&
+      readyState !== 'ERROR'
+    ) {
+      stillBuilding = true;
+      output.print(
+        prependEmoji(
+          'Note: Deployment is still processing...',
+          emoji('notice')
+        ) + '\n'
+      );
+    }
+  }
+
+  if (!stillBuilding && readyState !== 'READY') {
     output.error(
       `Your deployment failed. Please retry later. More: https://err.sh/vercel/deployment-error`
     );
@@ -868,8 +891,8 @@ const printDeploymentStatus = async (
     );
   } else {
     // print preview/production url
-    let previewUrl: string;
-    if (Array.isArray(aliasList) && aliasList.length > 0) {
+    let previewUrl: string = deploymentUrl;
+    if (!noWait && Array.isArray(aliasList) && aliasList.length > 0) {
       const previewUrlInfo = await getPreferredPreviewURL(client, aliasList);
       if (previewUrlInfo) {
         previewUrl = previewUrlInfo.previewUrl;
