@@ -1,0 +1,81 @@
+name: Run @vercel/node tests
+on:
+  # Allow manual runs
+  workflow_dispatch:
+  # Run every 5 minutes
+  schedule:
+    - cron: '0/5 * * * *'
+
+env:
+  NODE_VERSION: '16'
+  TURBO_REMOTE_ONLY: 'true'
+  TURBO_TEAM: 'vercel'
+  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+
+jobs:
+  setup:
+    name: Find Changes
+    runs-on: ubuntu-latest
+    outputs:
+      tests: ${{ steps['set-tests'].outputs['tests'] }}
+      dplUrl: ${{ steps.waitForTarball.outputs.url }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 2
+      - uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: install pnpm@7.31.0
+        run: npm i -g pnpm@7.31.0
+      - run: pnpm install
+      - uses: patrickedqvist/wait-for-vercel-preview@ae34b392ef30297f2b672f9afb3c329bde9bd487
+        id: waitForTarball
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          max_timeout: 360
+          check_interval: 5
+
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    if: ${{ needs.setup.outputs['tests'] != '[]' }}
+    needs:
+      - setup
+    strategy:
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 2
+      - uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: install pnpm@7.31.0
+        run: npm i -g pnpm@7.31.0
+
+      - run: pnpm install
+
+      - name: Build @vercel/node and all its dependencies
+        run: node utils/gen.js && node_modules/.bin/turbo run build --cache-dir=".turbo" --scope=@vercel/node --include-dependencies --no-deps
+        env:
+          FORCE_COLOR: '1'
+      - name: Test
+        run: node utils/gen.js && node_modules/.bin/turbo run test --cache-dir=".turbo" --scope=@vercel/node --no-deps -- test/integration/integration-4.test.js
+        shell: bash
+        env:
+          VERCEL_CLI_VERSION: ${{ needs.setup.outputs.dplUrl }}/tarballs/vercel.tgz
+          VERCEL_TEST_TOKEN: ${{ secrets.VERCEL_TEST_TOKEN }}
+          VERCEL_TEST_REGISTRATION_URL: ${{ secrets.VERCEL_TEST_REGISTRATION_URL }}
+          FORCE_COLOR: '1'
+
+
+  conclusion:
+    needs:
+      - test
+    runs-on: ubuntu-latest
+    name: E2E
+    steps:
+      - name: Done
+        run: echo "Done."
