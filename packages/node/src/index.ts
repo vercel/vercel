@@ -599,6 +599,9 @@ export const startDevServer: StartDevServer = async opts => {
     // if we're using ESM, we need to tell TypeScript to use `nodenext` to
     // preserve the `import` semantics
     if (isEsm) {
+      if (!tsConfig.compilerOptions) {
+        tsConfig.compilerOptions = {};
+      }
       if (tsConfig.compilerOptions.module === undefined) {
         tsConfig.compilerOptions.module = 'nodenext';
       }
