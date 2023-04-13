@@ -596,13 +596,19 @@ export const startDevServer: StartDevServer = async opts => {
       }
     }
 
+    // if we're using ESM, we need to tell TypeScript to use `nodenext` to
+    // preserve the `import` semantics
+    if (isEsm) {
+      if (tsConfig.compilerOptions.module === undefined) {
+        tsConfig.compilerOptions.module = 'nodenext';
+      }
+      if (tsConfig.compilerOptions.moduleResolution === undefined) {
+        tsConfig.compilerOptions.moduleResolution = 'nodenext';
+      }
+    }
+
     const nodeVersionMajor = Number(process.versions.node.split('.')[0]);
     fixConfig(tsConfig, nodeVersionMajor);
-
-    if (isEsm) {
-      tsConfig.compilerOptions.module = 'nodenext';
-      tsConfig.compilerOptions.moduleResolution = 'nodenext';
-    }
 
     // In prod, `.ts` inputs use TypeScript and
     // `.js` inputs use Babel to convert ESM to CJS.

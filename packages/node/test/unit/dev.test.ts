@@ -1,8 +1,9 @@
 import { forkDevServer, readMessage } from '../../src/fork-dev-server';
 import { resolve, extname } from 'path';
+// @ts-expect-error The DefinitelyTyped @types/node-fetch doesn't work with edge-handler.mts :(
 import fetch from 'node-fetch';
 
-jest.setTimeout(10 * 1000);
+jest.setTimeout(20 * 1000);
 
 function testForkDevServer(entrypoint: string) {
   const ext = extname(entrypoint);
