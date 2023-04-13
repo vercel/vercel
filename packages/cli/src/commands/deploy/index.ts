@@ -16,7 +16,7 @@ import { handleError } from '../../util/error';
 import Client from '../../util/client';
 import { getPrettyError } from '@vercel/build-utils';
 import toHumanPath from '../../util/humanize-path';
-import Now from '../../util';
+import Now, { CreateOptions } from '../../util';
 import stamp from '../../util/output/stamp';
 import createDeploy from '../../util/deploy/create-deploy';
 import getDeployment from '../../util/get-deployment';
@@ -71,6 +71,16 @@ import { parseEnv } from '../../util/parse-env';
 import { errorToString, isErrnoException, isError } from '@vercel/error-utils';
 import { pickOverrides } from '../../util/projects/project-settings';
 
+function compactObject<T>(dict: Record<string, T>) {
+  const newDict: Record<string, NonNullable<T>> = {};
+  for (const [key, value] of Object.entries(dict)) {
+    if (typeof value !== 'undefined' && value !== null) {
+      newDict[key] = value;
+    }
+  }
+  return newDict;
+}
+
 export default async (client: Client): Promise<number> => {
   const { output } = client;
 
@@ -84,6 +94,7 @@ export default async (client: Client): Promise<number> => {
       '--env': [String],
       '--build-env': [String],
       '--meta': [String],
+      '--no-alias': Boolean,
       // This is not an array in favor of matching
       // the config property name.
       '--regions': String,
@@ -280,7 +291,7 @@ export default async (client: Client): Promise<number> => {
   let { org, project, status } = link;
 
   let newProjectName = null;
-  let rootDirectory = project ? project.rootDirectory : null;
+  let rootDirectory = project?.rootDirectory || undefined;
   let sourceFilesOutsideRootDirectory: boolean | undefined = true;
 
   if (status === 'not_linked') {
@@ -335,10 +346,11 @@ export default async (client: Client): Promise<number> => {
 
     if (typeof projectOrNewProjectName === 'string') {
       newProjectName = projectOrNewProjectName;
-      rootDirectory = await inputRootDirectory(client, path, autoConfirm);
+      rootDirectory =
+        (await inputRootDirectory(client, path, autoConfirm)) ?? undefined;
     } else {
       project = projectOrNewProjectName;
-      rootDirectory = project.rootDirectory;
+      rootDirectory = project.rootDirectory ?? undefined;
       sourceFilesOutsideRootDirectory = project.sourceFilesOutsideRootDirectory;
 
       // we can already link the project
@@ -469,17 +481,17 @@ export default async (client: Client): Promise<number> => {
   const gitMetadata = await createGitMeta(path, output, project);
 
   // Merge dotenv config, `env` from vercel.json, and `--env` / `-e` arguments
-  const deploymentEnv = Object.assign(
-    {},
-    parseEnv(localConfig.env),
-    parseEnv(argv['--env'])
+  const deploymentEnv = compactObject(
+    Object.assign({}, parseEnv(localConfig.env), parseEnv(argv['--env']))
   );
 
   // Merge build env out of  `build.env` from vercel.json, and `--build-env` args
-  const deploymentBuildEnv = Object.assign(
-    {},
-    parseEnv(localConfig.build && localConfig.build.env),
-    parseEnv(argv['--build-env'])
+  const deploymentBuildEnv = compactObject(
+    Object.assign(
+      {},
+      parseEnv(localConfig.build && localConfig.build.env),
+      parseEnv(argv['--build-env'])
+    )
   );
 
   // If there's any undefined values, then inherit them from this process
@@ -508,9 +520,14 @@ export default async (client: Client): Promise<number> => {
 
   const localConfigurationOverrides = pickOverrides(localConfig);
 
+  const name = project ? project.name : newProjectName;
+  if (!name) {
+    throw new Error();
+  }
+
   try {
-    const createArgs: any = {
-      name: project ? project.name : newProjectName,
+    const createArgs: CreateOptions = {
+      name,
       env: deploymentEnv,
       build: { env: deploymentBuildEnv },
       forceNew: argv['--force'],
@@ -518,8 +535,7 @@ export default async (client: Client): Promise<number> => {
       prebuilt: argv['--prebuilt'],
       rootDirectory,
       quiet,
-      wantsPublic: argv['--public'] || localConfig.public,
-      type: null,
+      wantsPublic: (argv['--public'] || localConfig.public) ?? false,
       nowConfig: {
         ...localConfig,
         // `images` is allowed in "vercel.json" and processed
