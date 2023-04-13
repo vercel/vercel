@@ -1,6 +1,6 @@
 require('./integration-setup')(1);
 
-// NOTE: The fixture `00-requrest-path` has special case handling, which is why
+// NOTE: The fixture `00-request-path` has special case handling, which is why
 // it's broken out below. This is also why this fixture is filtered out of the
 // chunking in "integration-setup".
 
