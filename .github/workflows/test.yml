@@ -76,6 +76,10 @@ jobs:
 
       - run: pnpm install
 
+      - name: fetch ssl certificate before build (linux, os x)
+        if: matrix.runner != 'windows-latest'
+        run: echo | openssl s_client -showcerts -servername 'api.vercel.com' -connect 76.76.21.21:443
+
       - name: Build ${{matrix.packageName}} and all its dependencies
         run: node utils/gen.js && node_modules/.bin/turbo run build --cache-dir=".turbo" --scope=${{matrix.packageName}} --include-dependencies --no-deps
         env:
@@ -88,6 +92,10 @@ jobs:
           VERCEL_TEST_TOKEN: ${{ secrets.VERCEL_TEST_TOKEN }}
           VERCEL_TEST_REGISTRATION_URL: ${{ secrets.VERCEL_TEST_REGISTRATION_URL }}
           FORCE_COLOR: '1'
+
+      - name: fetch ssl certificate after tests (linux, os x)
+        if: matrix.runner != 'windows-latest'
+        run: echo | openssl s_client -showcerts -servername 'api.vercel.com' -connect 76.76.21.21:443
 
   conclusion:
     needs:
