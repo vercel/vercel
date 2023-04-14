@@ -75,7 +75,8 @@ function compactObject<T>(dict: Record<string, T>) {
   const newDict: Record<string, NonNullable<T>> = {};
   for (const [key, value] of Object.entries(dict)) {
     if (typeof value !== 'undefined' && value !== null) {
-      newDict[key] = value;
+      // TS should know this is already NonNullable<T>, but oh well
+      newDict[key] = value as NonNullable<T>;
     }
   }
   return newDict;
