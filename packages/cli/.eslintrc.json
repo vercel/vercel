@@ -1,0 +1,24 @@
+{
+  "extends": ["../../.eslintrc.json"],
+  "plugins": ["@limegrass/import-alias"],
+  "rules": {
+    "@limegrass/import-alias/import-alias": [
+      "warn",
+      {
+        "aliasConfigPath": "./packages/cli/tsconfig.json"
+      }
+    ],
+    "lines-between-class-members": 0,
+    "no-async-promise-executor": 0,
+    "no-control-regex": 0,
+    "no-empty": 0,
+    "prefer-const": 0,
+    "prefer-destructuring": 0,
+    "@typescript-eslint/ban-types": 0,
+    "@typescript-eslint/consistent-type-assertions": 0,
+    "@typescript-eslint/member-delimiter-style": 0,
+    "@typescript-eslint/no-empty-function": 0,
+    "@typescript-eslint/no-explicit-any": 0,
+    "@typescript-eslint/no-inferrable-types": 0
+  }
+}

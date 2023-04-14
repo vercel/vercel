@@ -11,8 +11,6 @@ packages/cli/@types
 packages/cli/download
 packages/cli/dist
 packages/cli/test/dev/fixtures
-packages/cli/bin
-packages/cli/link
 packages/cli/src/util/dev/templates/*.ts
 
 # client

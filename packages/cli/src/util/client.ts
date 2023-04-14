@@ -5,13 +5,13 @@ import { URL } from 'url';
 import { VercelConfig } from '@vercel/client';
 import retry, { RetryFunction, Options as RetryOptions } from 'async-retry';
 import fetch, { BodyInit, Headers, RequestInit, Response } from 'node-fetch';
-import ua from './ua';
-import { Output } from './output/create-output';
-import responseError from './response-error';
-import printIndications from './print-indications';
-import reauthenticate from './login/reauthenticate';
-import { SAMLError } from './login/types';
-import { writeToAuthConfigFile } from './config/files';
+import ua from '~/util/ua';
+import { Output } from '~/util/output/create-output';
+import responseError from '~/util/response-error';
+import printIndications from '~/util/print-indications';
+import reauthenticate from '~/util/login/reauthenticate';
+import { SAMLError } from '~/util/login/types';
+import { writeToAuthConfigFile } from '~/util/config/files';
 import type {
   AuthConfig,
   GlobalConfig,
@@ -20,8 +20,8 @@ import type {
   ReadableTTY,
   WritableTTY,
 } from '@vercel-internals/types';
-import { sharedPromise } from './promise';
-import { APIError } from './errors-ts';
+import { sharedPromise } from '~/util/promise';
+import { APIError } from '~/util/errors-ts';
 import { normalizeError } from '@vercel/error-utils';
 
 const isSAMLError = (v: any): v is SAMLError => {

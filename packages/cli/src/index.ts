@@ -18,41 +18,41 @@ import sourceMap from '@zeit/source-map-support';
 import { mkdirp } from 'fs-extra';
 import chalk from 'chalk';
 import epipebomb from 'epipebomb';
-import getLatestVersion from './util/get-latest-version';
+import getLatestVersion from '~/util/get-latest-version';
 import { URL } from 'url';
 import * as Sentry from '@sentry/node';
-import hp from './util/humanize-path';
-import commands from './commands';
-import pkg from './util/pkg';
-import { Output } from './util/output';
-import cmd from './util/output/cmd';
-import info from './util/output/info';
-import error from './util/output/error';
-import param from './util/output/param';
-import highlight from './util/output/highlight';
-import getArgs from './util/get-args';
-import getUser from './util/get-user';
-import getTeams from './util/teams/get-teams';
-import Client from './util/client';
-import { handleError } from './util/error';
-import reportError from './util/report-error';
-import getConfig from './util/get-config';
-import * as configFiles from './util/config/files';
-import getGlobalPathConfig from './util/config/global-path';
+import hp from '~/util/humanize-path';
+import commands from '~/commands';
+import pkg from '~/util/pkg';
+import { Output } from '~/util/output';
+import cmd from '~/util/output/cmd';
+import info from '~/util/output/info';
+import error from '~/util/output/error';
+import param from '~/util/output/param';
+import highlight from '~/util/output/highlight';
+import getArgs from '~/util/get-args';
+import getUser from '~/util/get-user';
+import getTeams from '~/util/teams/get-teams';
+import Client from '~/util/client';
+import { handleError } from '~/util/error';
+import reportError from '~/util/report-error';
+import getConfig from '~/util/get-config';
+import * as configFiles from '~/util/config/files';
+import getGlobalPathConfig from '~/util/config/global-path';
 import {
   defaultAuthConfig,
   defaultGlobalConfig,
-} from './util/config/get-default';
-import * as ERRORS from './util/errors-ts';
-import { APIError } from './util/errors-ts';
-import { SENTRY_DSN } from './util/constants';
-import getUpdateCommand from './util/get-update-command';
-import { metrics, shouldCollectMetrics } from './util/metrics';
-import { getCommandName, getTitleName } from './util/pkg-name';
-import doLoginPrompt from './util/login/prompt';
+} from '~/util/config/get-default';
+import * as ERRORS from '~/util/errors-ts';
+import { APIError } from '~/util/errors-ts';
+import { SENTRY_DSN } from '~/util/constants';
+import getUpdateCommand from '~/util/get-update-command';
+import { metrics, shouldCollectMetrics } from '~/util/metrics';
+import { getCommandName, getTitleName } from '~/util/pkg-name';
+import doLoginPrompt from '~/util/login/prompt';
 import { AuthConfig, GlobalConfig } from '@vercel-internals/types';
 import { VercelConfig } from '@vercel/client';
-import box from './util/output/box';
+import box from '~/util/output/box';
 
 const isCanary = pkg.version.includes('canary');
 
@@ -483,76 +483,76 @@ const main = async () => {
     let func: any;
     switch (targetCommand) {
       case 'alias':
-        func = require('./commands/alias').default;
+        func = require('~/commands/alias').default;
         break;
       case 'bisect':
-        func = require('./commands/bisect').default;
+        func = require('~/commands/bisect').default;
         break;
       case 'build':
-        func = require('./commands/build').default;
+        func = require('~/commands/build').default;
         break;
       case 'certs':
-        func = require('./commands/certs').default;
+        func = require('~/commands/certs').default;
         break;
       case 'deploy':
-        func = require('./commands/deploy').default;
+        func = require('~/commands/deploy').default;
         break;
       case 'dev':
-        func = require('./commands/dev').default;
+        func = require('~/commands/dev').default;
         break;
       case 'dns':
-        func = require('./commands/dns').default;
+        func = require('~/commands/dns').default;
         break;
       case 'domains':
-        func = require('./commands/domains').default;
+        func = require('~/commands/domains').default;
         break;
       case 'env':
-        func = require('./commands/env').default;
+        func = require('~/commands/env').default;
         break;
       case 'git':
-        func = require('./commands/git').default;
+        func = require('~/commands/git').default;
         break;
       case 'init':
-        func = require('./commands/init').default;
+        func = require('~/commands/init').default;
         break;
       case 'inspect':
-        func = require('./commands/inspect').default;
+        func = require('~/commands/inspect').default;
         break;
       case 'link':
-        func = require('./commands/link').default;
+        func = require('~/commands/link').default;
         break;
       case 'list':
-        func = require('./commands/list').default;
+        func = require('~/commands/list').default;
         break;
       case 'logs':
-        func = require('./commands/logs').default;
+        func = require('~/commands/logs').default;
         break;
       case 'login':
-        func = require('./commands/login').default;
+        func = require('~/commands/login').default;
         break;
       case 'logout':
-        func = require('./commands/logout').default;
+        func = require('~/commands/logout').default;
         break;
       case 'project':
-        func = require('./commands/project').default;
+        func = require('~/commands/project').default;
         break;
       case 'pull':
-        func = require('./commands/pull').default;
+        func = require('~/commands/pull').default;
         break;
       case 'remove':
-        func = require('./commands/remove').default;
+        func = require('~/commands/remove').default;
         break;
       case 'rollback':
-        func = require('./commands/rollback').default;
+        func = require('~/commands/rollback').default;
         break;
       case 'secrets':
-        func = require('./commands/secrets').default;
+        func = require('~/commands/secrets').default;
         break;
       case 'teams':
-        func = require('./commands/teams').default;
+        func = require('~/commands/teams').default;
         break;
       case 'whoami':
-        func = require('./commands/whoami').default;
+        func = require('~/commands/whoami').default;
         break;
       default:
         func = null;

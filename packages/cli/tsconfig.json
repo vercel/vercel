@@ -12,7 +12,11 @@
     "resolveJsonModule": true,
     "sourceMap": true,
     "outDir": "./dist",
-    "typeRoots": ["./types", "./node_modules/@types"]
+    "typeRoots": ["./types", "./node_modules/@types"],
+    "baseUrl": ".",
+    "paths": {
+      "~/*": ["./src/*"]
+    }
   },
   "include": ["./types", "src/**/*"],
   "ts-node": {

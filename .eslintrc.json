@@ -1,0 +1,55 @@
+{
+  "root": true,
+  "parser": "@typescript-eslint/parser",
+  "parserOptions": {
+    "ecmaVersion": 2018,
+    "sourceType": "module",
+    "modules": true
+  },
+  "plugins": ["jest"],
+  "extends": [
+    "eslint:recommended",
+    "plugin:@typescript-eslint/eslint-recommended",
+    "plugin:@typescript-eslint/recommended",
+    "prettier"
+  ],
+  "env": {
+    "node": true,
+    "jest": true,
+    "es6": true
+  },
+  "rules": {
+    "no-restricted-syntax": [
+      "warn",
+      "WithStatement",
+      {
+        "message": "substr() is deprecated, use slice() or substring() instead",
+        "selector": "MemberExpression > Identifier[name='substr']"
+      }
+    ],
+    "no-dupe-keys": 2,
+    "require-atomic-updates": 0,
+    "@typescript-eslint/ban-ts-comment": 0,
+    "@typescript-eslint/camelcase": 0,
+    "@typescript-eslint/explicit-module-boundary-types": 0,
+    "@typescript-eslint/no-empty-function": 0,
+    "@typescript-eslint/no-explicit-any": 0,
+    "@typescript-eslint/no-non-null-assertion": 0,
+    "@typescript-eslint/no-unused-vars": 2,
+    "@typescript-eslint/no-use-before-define": 0,
+    "@typescript-eslint/no-var-requires": 0,
+    "jest/no-disabled-tests": 2,
+    "jest/no-focused-tests": 2
+  },
+  "overrides": [
+    {
+      "files": ["packages/client/**/*"],
+      "rules": {
+        "prefer-const": 0,
+        "require-atomic-updates": 0,
+        "@typescript-eslint/ban-ts-ignore": 0,
+        "@typescript-eslint/no-explicit-any": 0
+      }
+    }
+  ]
+}
