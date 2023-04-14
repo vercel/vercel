@@ -1,9 +1,9 @@
 name: Run @vercel/node tests
 
 on:
-  workflow-dispatch:
+  workflow_dispatch:
   schedule:
-    - cron: '*/45 * * * *'
+    - cron: '*/5 * * * *'
 
 env:
   NODE_VERSION: '16'
@@ -70,8 +70,8 @@ jobs:
         run: node utils/gen.js && node_modules/.bin/turbo run build --cache-dir=".turbo" --scope=@vercel/node --include-dependencies --no-deps
         env:
           FORCE_COLOR: '1'
-      - name: Test ${{matrix.packageName}}
-        run: node utils/gen.js && node_modules/.bin/turbo run test --cache-dir=".turbo" --scope=@vercel-node --no-deps
+      - name: Test @vercel/node
+        run: node utils/gen.js && node_modules/.bin/turbo run test --cache-dir=".turbo" --scope=@vercel-node --no-deps -- test/integration/integration-4.test.js
         shell: bash
         env:
           VERCEL_CLI_VERSION: ${{ needs.setup.outputs.dplUrl }}/tarballs/vercel.tgz
