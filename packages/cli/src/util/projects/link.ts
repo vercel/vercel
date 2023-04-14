@@ -12,7 +12,7 @@ import { InvalidToken, isAPIError, ProjectNotFound } from '../errors-ts';
 import getUser from '../get-user';
 import getTeamById from '../teams/get-team-by-id';
 import { Output } from '../output';
-import {
+import type {
   Project,
   ProjectLinkResult,
   Org,

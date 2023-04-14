@@ -5,7 +5,7 @@ import { useTeams } from '../../mocks/team';
 import { defaultProject, useProject } from '../../mocks/project';
 import { client } from '../../mocks/client';
 import git from '../../../src/commands/git';
-import { Project } from '@vercel-internals/types';
+import type { Project } from '@vercel-internals/types';
 
 describe('git', () => {
   describe('connect', () => {

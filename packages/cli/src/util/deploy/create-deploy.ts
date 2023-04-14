@@ -3,7 +3,7 @@ import * as ERRORS_TS from '../errors-ts';
 import * as ERRORS from '../errors';
 import { NowError } from '../now-error';
 import mapCertError from '../certs/map-cert-error';
-import { Org } from '@vercel-internals/types';
+import type { Org } from '@vercel-internals/types';
 import Now, { CreateOptions } from '..';
 import Client from '../client';
 import { ArchiveFormat, DeploymentError } from '@vercel/client';
