@@ -323,6 +323,7 @@ describe('deploy', () => {
   it('should not wait for deployment to finish', async () => {
     const cwd = setupUnitFixture('commands/deploy/node');
     const originalCwd = process.cwd();
+    process.env.FOO = 'bar';
     try {
       process.chdir(cwd);
 
@@ -372,6 +373,7 @@ describe('deploy', () => {
       await expect(exitCodePromise).resolves.toEqual(0);
     } finally {
       process.chdir(originalCwd);
+      delete process.env.FOO;
     }
   });
 });

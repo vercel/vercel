@@ -27,6 +27,9 @@ export async function toOutput(
       matcherHint(matcherName, 'stream', 'test', matcherHintOptions) + '\n\n';
 
     function onData(data: string) {
+      if (process.env.FOO === 'bar') {
+        process.stderr.write(`>>> ${data}`);
+      }
       output += data;
       if (output.includes(test)) {
         cleanup();
