@@ -16,7 +16,7 @@ import {
 import { VercelConfig } from '@vercel/client';
 import { HandleValue, Route } from '@vercel/routing-utils';
 import { Output } from '../output';
-import { ProjectSettings } from '@vercel-internals/types';
+import type { ProjectSettings } from '@vercel-internals/types';
 import { BuilderWithPkg } from '../build/import-builders';
 
 export { VercelConfig };
