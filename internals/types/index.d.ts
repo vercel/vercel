@@ -1,6 +1,10 @@
 import type { BuilderFunctions } from '@vercel/build-utils';
 import type { Readable, Writable } from 'stream';
 import type { Route } from '@vercel/routing-utils';
+import { PROJECT_ENV_TARGET } from '@vercel-internals/constants';
+
+export type ProjectEnvTarget = typeof PROJECT_ENV_TARGET[number];
+export type ProjectEnvType = 'plain' | 'secret' | 'encrypted' | 'system';
 
 export type ProjectSettings = import('@vercel/build-utils').ProjectSettings;
 
@@ -298,20 +302,6 @@ export interface Secret {
   projectId?: string;
   created: string;
   createdAt: number;
-}
-
-// TODO (Ethan-Arrowood) - Replace enums
-export enum ProjectEnvTarget {
-  Production = 'production',
-  Preview = 'preview',
-  Development = 'development',
-}
-
-export enum ProjectEnvType {
-  Plaintext = 'plain',
-  Secret = 'secret',
-  Encrypted = 'encrypted',
-  System = 'system',
 }
 
 export interface ProjectEnvVariable {

@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import { outputFile } from 'fs-extra';
 import { closeSync, openSync, readSync } from 'fs';
 import { resolve } from 'path';
-import { Project, ProjectEnvTarget } from '@vercel-internals/types';
+import type { Project, ProjectEnvTarget } from '@vercel-internals/types';
 import Client from '../../util/client';
 import { emoji, prependEmoji } from '../../util/emoji';
 import confirm from '../../util/input/confirm';
@@ -101,7 +101,7 @@ export default async function pull(
 
   const records = (
     await pullEnvRecords(output, client, project.id, source, {
-      target: environment || ProjectEnvTarget.Development,
+      target: environment || 'development',
       gitBranch,
     })
   ).env;

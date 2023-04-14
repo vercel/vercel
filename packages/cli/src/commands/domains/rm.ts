@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import plural from 'pluralize';
 
 import { DomainNotFound, DomainPermissionDenied } from '../../util/errors-ts';
-import { Domain } from '@vercel-internals/types';
+import type { Domain } from '@vercel-internals/types';
 import { Output } from '../../util/output';
 import Client from '../../util/client';
 import deleteCertById from '../../util/certs/delete-cert-by-id';
