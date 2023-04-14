@@ -58,7 +58,6 @@ import {
   entrypointToOutputPath,
   getRegExpFromMatchers,
   isEdgeRuntime,
-  isTypeScriptExtension,
 } from './utils';
 import {
   forkDevServer,
@@ -554,7 +553,7 @@ export const startDevServer: StartDevServer = async opts => {
     filename: 'package.json',
   });
   const pkg = pathToPkg ? require_(pathToPkg) : {};
-  const isTypeScript = isTypeScriptExtension(entrypoint);
+  const isTypeScript = ['.ts', '.tsx', '.mts', '.cts'].includes(ext);
   const maybeTranspile = isTypeScript || !['.cjs', '.mjs'].includes(ext);
   const isEsm =
     ext === '.mjs' ||
