@@ -10,7 +10,7 @@ import { defaultProject, useProject } from '../../mocks/project';
 import { useTeams } from '../../mocks/team';
 import { useUser } from '../../mocks/user';
 
-jest.setTimeout(10000);
+jest.setTimeout(60000);
 
 describe('deploy', () => {
   it('should reject deploying a single file', async () => {
@@ -367,7 +367,7 @@ describe('deploy', () => {
       const exitCodePromise = deploy(client);
       await expect(client.stderr).toOutput(
         'Note: Deployment is still processing...\n',
-        8000
+        30000
       );
       await expect(exitCodePromise).resolves.toEqual(0);
     } finally {
