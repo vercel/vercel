@@ -85,7 +85,7 @@ import {
   HttpHeadersConfig,
   EnvConfigs,
 } from './types';
-import { ProjectSettings } from '@vercel-internals/types';
+import type { ProjectSettings } from '@vercel-internals/types';
 import { treeKill } from '../tree-kill';
 import { applyOverriddenHeaders, nodeHeadersToFetchHeaders } from './headers';
 import { formatQueryString, parseQueryString } from './parse-query-string';
