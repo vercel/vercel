@@ -84,7 +84,14 @@ export default async function getUpdateCommand(): Promise<string> {
   const tag = isCanary() ? 'canary' : 'latest';
   const pkgAndVersion = `${getPkgName()}@${tag}`;
 
-  const { cliType } = await scanParentDirs(dirname(dirname(process.argv[1])));
+  const entrypoint = await realpath(process.argv[1]);
+  let { cliType, lockfilePath } = await scanParentDirs(
+    dirname(dirname(entrypoint))
+  );
+  if (!lockfilePath) {
+    // Global installs for npm do not have a lockfile
+    cliType = 'npm';
+  }
   const yarn = cliType === 'yarn';
 
   let install = yarn ? 'add' : 'i';
