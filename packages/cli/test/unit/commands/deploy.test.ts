@@ -10,8 +10,6 @@ import { defaultProject, useProject } from '../../mocks/project';
 import { useTeams } from '../../mocks/team';
 import { useUser } from '../../mocks/user';
 
-jest.setTimeout(60000);
-
 describe('deploy', () => {
   it('should reject deploying a single file', async () => {
     client.setArgv('deploy', __filename);
