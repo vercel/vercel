@@ -4,7 +4,7 @@ import {
   NodeCompatBindings,
 } from './edge-node-compat-plugin';
 import { EdgeRuntime, runServer } from 'edge-runtime';
-import { fetch } from 'undici';
+import { fetch, Headers } from 'undici';
 import { isError } from '@vercel/error-utils';
 import { readFileSync } from 'fs';
 import { serializeBody, entrypointToOutputPath, logError } from '../utils';
@@ -101,7 +101,7 @@ async function compileUserCode(
 
       // edge handler
       ${edgeHandlerTemplate};
-      const dependencies = { Request, Response };
+      const dependencies = { Response };
       const options = { isMiddleware, entrypointLabel };
       registerFetchListener(userEdgeHandler, options, dependencies);
     `;
@@ -191,12 +191,16 @@ export async function createEdgeEventHandler(
       process.exit(1);
     }
 
-    const query = request.url?.split('?')[1];
-    const url = query === undefined ? server.url : `${server.url}?${query}`;
+    const url =
+      server.url + (request.url !== undefined ? request.url.substring(1) : '');
+    const body: Buffer | string | undefined = await serializeBody(request);
+
+    const headers = new Headers(request.headers as HeadersInit);
+    if (body !== undefined) headers.set('content-length', String(body.length));
     const response = await fetch(url, {
       method: request.method,
-      body: await serializeBody(request),
-      headers: request.headers as HeadersInit,
+      headers,
+      body,
     });
 
     const isUserError =
