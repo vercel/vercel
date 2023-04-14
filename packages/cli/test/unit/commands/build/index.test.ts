@@ -82,6 +82,9 @@ describe('build', () => {
     const output = join(cwd, '.vercel/output');
     try {
       process.chdir(cwd);
+      client.stdout.pipe(process.stdout);
+      client.stderr.pipe(process.stderr);
+
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
 
@@ -195,6 +198,9 @@ describe('build', () => {
     const output = join(cwd, '.vercel/output');
     try {
       process.chdir(cwd);
+      client.stdout.pipe(process.stdout);
+      client.stderr.pipe(process.stderr);
+
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
 
