@@ -3,7 +3,6 @@ import path from 'path';
 import env from '../../../src/commands/env';
 import { setupUnitFixture } from '../../helpers/setup-unit-fixture';
 import { client } from '../../mocks/client';
-import { ProjectEnvTarget, ProjectEnvType } from '@vercel-internals/types';
 import { defaultProject, useProject } from '../../mocks/project';
 import { useTeams } from '../../mocks/team';
 import { useUser } from '../../mocks/user';
@@ -302,11 +301,11 @@ describe('env', () => {
         useUser();
         useTeams('team_dummy');
         defaultProject.env.push({
-          type: ProjectEnvType.Encrypted,
+          type: 'encrypted',
           id: '781dt89g8r2h789g',
           key: 'NEW_VAR',
           value: '"testvalue"',
-          target: [ProjectEnvTarget.Development],
+          target: ['development'],
           configurationId: null,
           updatedAt: 1557241361455,
           createdAt: 1557241361455,
@@ -339,11 +338,11 @@ describe('env', () => {
         useUser();
         useTeams('team_dummy');
         defaultProject.env.push({
-          type: ProjectEnvType.Encrypted,
+          type: 'encrypted',
           id: '781dt89g8r2h789g',
           key: 'NEW_VAR',
           value: 'testvalue',
-          target: [ProjectEnvTarget.Development],
+          target: ['development'],
           configurationId: null,
           updatedAt: 1557241361455,
           createdAt: 1557241361455,
