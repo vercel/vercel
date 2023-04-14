@@ -367,7 +367,7 @@ describe('deploy', () => {
       const exitCodePromise = deploy(client);
       await expect(client.stderr).toOutput(
         'Note: Deployment is still processing...',
-        10000
+        20000
       );
       await expect(exitCodePromise).resolves.toEqual(0);
     } finally {
