@@ -1242,28 +1242,34 @@ async function getSourceFilePathFromPage({
   // value used during next build
   const extensionsToTry = pageExtensions || ['js', 'jsx', 'ts', 'tsx'];
 
-  let fsPath = path.join(workPath, 'pages', page);
-  if (await usesSrcDirectory(workPath)) {
-    fsPath = path.join(workPath, 'src', 'pages', page);
-  }
+  for (const pageType of ['pages', 'app']) {
+    let fsPath = path.join(workPath, pageType, page);
+    if (await usesSrcDirectory(workPath)) {
+      fsPath = path.join(workPath, 'src', pageType, page);
+    }
 
-  if (fs.existsSync(fsPath)) {
-    return path.relative(workPath, fsPath);
-  }
-  const extensionless = fsPath.slice(0, -3); // remove ".js"
-
-  for (const ext of extensionsToTry) {
-    fsPath = `${extensionless}.${ext}`;
     if (fs.existsSync(fsPath)) {
       return path.relative(workPath, fsPath);
     }
-  }
+    const extensionless = fsPath.slice(0, -3); // remove ".js"
 
-  if (isDirectory(extensionless)) {
     for (const ext of extensionsToTry) {
-      fsPath = path.join(extensionless, `index.${ext}`);
+      fsPath = `${extensionless}.${ext}`;
       if (fs.existsSync(fsPath)) {
         return path.relative(workPath, fsPath);
+      }
+    }
+
+    if (isDirectory(extensionless)) {
+      for (const ext of extensionsToTry) {
+        fsPath = path.join(extensionless, `index.${ext}`);
+        if (fs.existsSync(fsPath)) {
+          return path.relative(workPath, fsPath);
+        }
+        fsPath = path.join(extensionless, `route.${ext}`);
+        if (fs.existsSync(fsPath)) {
+          return path.relative(workPath, fsPath);
+        }
       }
     }
   }
