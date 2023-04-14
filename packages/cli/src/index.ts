@@ -176,7 +176,6 @@ const main = async () => {
   }
 
   // Handle `--version` directly
-  //console.log({ targetOrSubcommand })
   if (!targetOrSubcommand && argv['--version']) {
     console.log(pkg.version);
     return 0;
@@ -302,7 +301,6 @@ const main = async () => {
       subcommand = targetOrSubcommand;
     } else {
       debug('user supplied a possible target for deployment or an extension');
-      //subcommand = 'deploy';
     }
   } else {
     debug('user supplied no target, defaulting to deploy');
@@ -494,6 +492,7 @@ const main = async () => {
       // Try to execute as an extension
       try {
         exitCode = await execExtension(
+          client,
           targetCommand,
           argv._.slice(3),
           cwd,
