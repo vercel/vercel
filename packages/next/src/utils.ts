@@ -1251,7 +1251,7 @@ async function getSourceFilePathFromPage({
     if (fs.existsSync(fsPath)) {
       return path.relative(workPath, fsPath);
     }
-    const extensionless = fsPath.slice(0, -3); // remove ".js"
+    const extensionless = fsPath.replace(path.extname(fsPath), '');
 
     for (const ext of extensionsToTry) {
       fsPath = `${extensionless}.${ext}`;
