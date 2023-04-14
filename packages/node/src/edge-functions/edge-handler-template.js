@@ -1,10 +1,22 @@
 // provided by the edge runtime:
 /* global addEventListener */
 
+function getUrl(url, host) {
+  const urlObj = new URL(url);
+  urlObj.host = host;
+  return urlObj.toString();
+}
+
 async function respond(userEdgeHandler, event, options, dependencies) {
-  const { Response } = dependencies;
+  const { Request, Response } = dependencies;
   const { isMiddleware } = options;
-  let response = await userEdgeHandler(event.request, event);
+
+  const host = event.request.headers.get('x-forwarded-host');
+  event.request.headers.set('host', host);
+  let response = userEdgeHandler(
+    new Request(getUrl(event.request.url, host), event.request),
+    event
+  );
 
   if (!response) {
     if (isMiddleware) {
