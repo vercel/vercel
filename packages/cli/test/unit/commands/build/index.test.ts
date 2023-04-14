@@ -900,18 +900,29 @@ describe('build', () => {
   });
 
   it('should set `VERCEL_ANALYTICS_ID` environment variable', async () => {
+    console.log('>>> A');
     const cwd = fixture('vercel-analytics');
+    console.log('>>> B');
     const output = join(cwd, '.vercel/output');
+    console.log('>>> C');
     try {
       process.chdir(cwd);
+      console.log('>>> D');
       const exitCode = await build(client);
+      console.log('>>> E');
       expect(exitCode).toEqual(0);
 
+      console.log('>>> F');
       const env = await fs.readJSON(join(output, 'static', 'env.json'));
+      console.log('>>> G');
       expect(Object.keys(env).includes('VERCEL_ANALYTICS_ID')).toEqual(true);
+      console.log('>>> H');
     } finally {
+      console.log('>>> J');
       process.chdir(originalCwd);
+      console.log('>>> K');
       delete process.env.__VERCEL_BUILD_RUNNING;
+      console.log('>>> L');
     }
   });
 
