@@ -1,7 +1,6 @@
 import { readFile, realpath } from 'fs-extra';
 import { sep, dirname, join, resolve } from 'path';
 import { scanParentDirs } from '@vercel/build-utils';
-import { isCanary } from './is-canary';
 import { getPkgName } from './pkg-name';
 
 async function getConfigPrefix() {
@@ -81,8 +80,7 @@ async function isGlobal() {
 }
 
 export default async function getUpdateCommand(): Promise<string> {
-  const tag = isCanary() ? 'canary' : 'latest';
-  const pkgAndVersion = `${getPkgName()}@${tag}`;
+  const pkgAndVersion = `${getPkgName()}@latest`;
 
   const entrypoint = await realpath(process.argv[1]);
   let { cliType, lockfilePath } = await scanParentDirs(
