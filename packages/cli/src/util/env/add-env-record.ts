@@ -1,6 +1,6 @@
 import { Output } from '../output';
 import Client from '../client';
-import {
+import type {
   ProjectEnvTarget,
   ProjectEnvVariable,
   ProjectEnvType,
