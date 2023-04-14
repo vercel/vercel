@@ -37,12 +37,16 @@ export async function execExtension(
       env: {
         ...process.env,
         VERCEL_API: proxyUrl,
+        // TODO:
+        //   VERCEL_SCOPE
+        //   VERCEL_DEBUG
+        //   VERCEL_HELP
       },
     }
   );
 
   proxy.close();
-  console.log(result);
+  //console.log(result);
 
   if (result.failed) {
     // TODO: Since we don't get the exec ENOENT (pnpm exists),
