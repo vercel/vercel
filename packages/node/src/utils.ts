@@ -3,11 +3,6 @@ import { pathToRegexp } from 'path-to-regexp';
 import type { IncomingMessage } from 'http';
 import { extname } from 'path';
 
-export function isTypeScriptExtension(filepath: string) {
-  const ext = extname(filepath);
-  return ['.ts', '.tsx', '.mts', '.cts'].includes(ext);
-}
-
 export function getRegExpFromMatchers(matcherOrMatchers: unknown): string {
   if (!matcherOrMatchers) {
     return '^/.*$';
