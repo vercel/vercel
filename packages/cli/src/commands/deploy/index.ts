@@ -88,11 +88,11 @@ export default async (client: Client): Promise<number> => {
       '--meta': [String],
       // This is not an array in favor of matching
       // the config property name.
-      '--no-wait': Boolean,
       '--regions': String,
       '--prebuilt': Boolean,
       '--prod': Boolean,
       '--archive': String,
+      '--no-wait': Boolean,
       '--yes': Boolean,
       '-f': '--force',
       '-p': '--public',

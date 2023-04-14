@@ -106,7 +106,7 @@ export default async function main(client: Client) {
   // validate the timeout
   const timeout = ms(argv['--timeout'] ?? '3m');
   if (timeout === undefined) {
-    client.output.error(`Invalid timeout "${argv['--timeout']}"`);
+    error(`Invalid timeout "${argv['--timeout']}"`);
     return 1;
   }
 

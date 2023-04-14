@@ -317,4 +317,58 @@ describe('deploy', () => {
       process.chdir(originalCwd);
     }
   });
+
+  it('should not wait for deployment to finish', async () => {
+    const cwd = setupUnitFixture('commands/deploy/node');
+    const originalCwd = process.cwd();
+    try {
+      process.chdir(cwd);
+
+      const user = useUser();
+      useTeams('team_dummy');
+
+      const { accountId, createdAt, updatedAt, alias } = defaultProject;
+
+      useProject({
+        id: 'node',
+        name: 'node',
+        accountId,
+        createdAt,
+        updatedAt,
+        alias,
+      });
+
+      const mockDeployment = {
+        creator: {
+          uid: user.id,
+          username: user.username,
+        },
+        projectId: 'node',
+        id: 'dpl_node_test',
+        readyState: 'BUILDING',
+        aliasAssigned: true,
+        alias: [],
+        inspectorUrl: 'https://vercel.com/test/inspect/url',
+        url: 'https://node.vercel.app/',
+      };
+
+      client.scenario.post(`/v13/deployments`, (req, res) => {
+        res.json(mockDeployment);
+      });
+
+      client.scenario.get(`/v13/deployments/dpl_node_test`, (req, res) => {
+        res.json(mockDeployment);
+      });
+
+      client.setArgv('deploy', '--no-wait');
+
+      const exitCodePromise = deploy(client);
+      await expect(client.stderr).toOutput(
+        'Note: Deployment is still processing...\n'
+      );
+      await expect(exitCodePromise).resolves.toEqual(0);
+    } finally {
+      process.chdir(originalCwd);
+    }
+  });
 });
