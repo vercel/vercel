@@ -1,7 +1,6 @@
 import { Stats } from 'fs';
 import { sep, dirname, join, resolve } from 'path';
 import { lstat, readlink, readFile, realpath } from 'fs-extra';
-import { isCanary } from './is-canary';
 import { getPkgName } from './pkg-name';
 
 async function isYarn(): Promise<boolean> {
@@ -99,8 +98,7 @@ async function isGlobal() {
 }
 
 export default async function getUpdateCommand(): Promise<string> {
-  const tag = isCanary() ? 'canary' : 'latest';
-  const pkgAndVersion = `${getPkgName()}@${tag}`;
+  const pkgAndVersion = `${getPkgName()}@latest`;
 
   if (await isGlobal()) {
     return (await isYarn())
