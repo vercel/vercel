@@ -45,7 +45,6 @@ export const help = () => `
     -h, --help                     Output usage information
     -v, --version                  Output the version number
     --cwd                          Current working directory
-    -V, --platform-version         Set the platform version to deploy to
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
   'FILE'
 )}   Path to the local ${'`vercel.json`'} file

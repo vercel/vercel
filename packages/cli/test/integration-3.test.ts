@@ -379,8 +379,6 @@ test('domains inspect', async () => {
 
   const output = await execCli(binaryPath, [
     directory,
-    `-V`,
-    `2`,
     `--name=${projectName}`,
     '--yes',
     '--public',
@@ -1109,8 +1107,6 @@ test('`vercel rm` removes a deployment', async () => {
       '--public',
       '--name',
       session,
-      '-V',
-      '2',
       '--force',
       '--yes',
     ]);
