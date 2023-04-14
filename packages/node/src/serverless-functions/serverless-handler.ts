@@ -59,13 +59,13 @@ export async function createServerlessEventHandler(
   const server = await createServerlessServer(userCode, options);
 
   return async function (request: IncomingMessage) {
-    const query = request.url?.split('?')[1];
-    const url = query === undefined ? server.url : `${server.url}?${query}`;
-
-    const response = await fetch(url, {
+    const response = await fetch(server.url + request.url, {
       method: request.method,
       body: await serializeBody(request),
-      headers: request.headers as HeadersInit,
+      headers: {
+        ...request.headers,
+        host: request.headers['x-forwarded-host'],
+      } as HeadersInit,
     });
 
     return {

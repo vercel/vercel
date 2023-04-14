@@ -101,7 +101,7 @@ async function compileUserCode(
 
       // edge handler
       ${edgeHandlerTemplate};
-      const dependencies = { Response };
+      const dependencies = { Request, Response };
       const options = { isMiddleware, entrypointLabel };
       registerFetchListener(userEdgeHandler, options, dependencies);
     `;
@@ -191,13 +191,11 @@ export async function createEdgeEventHandler(
       process.exit(1);
     }
 
-    const url =
-      server.url + (request.url !== undefined ? request.url.substring(1) : '');
-    const body: Buffer | string | undefined = await serializeBody(request);
-
     const headers = new Headers(request.headers as HeadersInit);
+    const body: Buffer | string | undefined = await serializeBody(request);
     if (body !== undefined) headers.set('content-length', String(body.length));
-    const response = await fetch(url, {
+
+    const response = await fetch(server.url + request.url, {
       method: request.method,
       headers,
       body,
