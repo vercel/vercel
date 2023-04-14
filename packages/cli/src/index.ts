@@ -53,7 +53,7 @@ import doLoginPrompt from './util/login/prompt';
 import { AuthConfig, GlobalConfig } from '@vercel-internals/types';
 import { VercelConfig } from '@vercel/client';
 import box from './util/output/box';
-import execa from 'execa';
+import { execExtension } from './util/extension/exec';
 
 const isCanary = pkg.version.includes('canary');
 
@@ -144,10 +144,11 @@ const main = async () => {
     return 1;
   }
 
-  const cwd = argv['--cwd'];
+  let cwd = argv['--cwd'];
   if (cwd) {
     process.chdir(cwd);
   }
+  cwd = process.cwd();
 
   // The second argument to the command can be:
   //
@@ -278,7 +279,7 @@ const main = async () => {
 
   // Check if we are deploying something
   if (targetOrSubcommand) {
-    const targetPath = join(process.cwd(), targetOrSubcommand);
+    const targetPath = join(cwd, targetOrSubcommand);
     const targetPathExists = existsSync(targetPath);
     const subcommandExists =
       GLOBAL_COMMANDS.has(targetOrSubcommand) ||
@@ -486,35 +487,26 @@ const main = async () => {
   try {
     const start = Date.now();
 
-    //console.log({ targetCommand, subcommand });
     if (!targetCommand) {
       // Set this for the metrics to record it at the end
       targetCommand = argv._[2];
 
       // Try to execute as an extension
-      const extensionCommand = `vercel-${targetCommand}`;
-      const extensionArgv = argv._.slice(3);
-      //console.log({ argv, extensionCommand, extensionArgv });
-
-      // TODO: support npm, yarn (all versions), no package manager?
-      const result = await execa(
-        'pnpm',
-        ['--silent', 'exec', '--', extensionCommand, ...extensionArgv],
-        {
-          reject: false,
-          stdio: 'inherit',
+      try {
+        exitCode = await execExtension(
+          targetCommand,
+          argv._.slice(3),
+          cwd,
+          apiUrl,
+          authConfig.token
+        );
+      } catch (err: unknown) {
+        if (isErrnoException(err) && err.code === 'ENOENT') {
+          // Fall back to `vc deploy <dir>`
+          targetCommand = subcommand = 'deploy';
+        } else {
+          throw err;
         }
-      );
-      //console.log(result);
-
-      if (result.failed) {
-        // TODO: Since we don't get the exec ENOENT (pnpm exists),
-        // we feed to find a way to differentiate between the
-        // command missing (ENOENT) vs. the extension exiting with
-        // a failure exit code.
-        // For "ENOENT" - fall back to "deploy" default command
-        // For valid extension name, but exitCode !== 0 - end the CLI
-        exitCode = result.exitCode;
       }
     }
 
