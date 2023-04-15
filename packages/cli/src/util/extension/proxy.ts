@@ -1,5 +1,5 @@
 import httpProxy from 'http-proxy';
-import { createServer, type Server } from 'http';
+import { createServer, Server } from 'http';
 
 export function createProxy(apiUrl: string, token?: string): Server {
   const proxy = httpProxy.createProxyServer({
