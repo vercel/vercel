@@ -61,12 +61,13 @@ export async function createServerlessEventHandler(
   return async function (request: IncomingMessage) {
     const url = new URL(request.url ?? '/', server.url);
     const response = await fetch(url, {
-      method: request.method,
       body: await serializeBody(request),
       headers: {
         ...request.headers,
         host: request.headers['x-forwarded-host'],
       } as HeadersInit,
+      method: request.method,
+      redirect: 'manual',
     });
 
     return {

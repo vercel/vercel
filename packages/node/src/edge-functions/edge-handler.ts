@@ -197,9 +197,10 @@ export async function createEdgeEventHandler(
 
     const url = new URL(request.url ?? '/', server.url);
     const response = await fetch(url, {
-      method: request.method,
-      headers,
       body,
+      headers,
+      method: request.method,
+      redirect: 'manual',
     });
 
     const isUserError =
