@@ -59,7 +59,8 @@ export async function createServerlessEventHandler(
   const server = await createServerlessServer(userCode, options);
 
   return async function (request: IncomingMessage) {
-    const response = await fetch(server.url + request.url, {
+    const url = new URL(request.url ?? '/', server.url);
+    const response = await fetch(url, {
       method: request.method,
       body: await serializeBody(request),
       headers: {
