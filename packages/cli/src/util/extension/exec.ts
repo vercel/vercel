@@ -57,7 +57,7 @@ export async function execExtension(
     debug(`extension proxy server shut down`);
   });
 
-  const proxyUrl = await listen(proxy);
+  const proxyUrl = await listen(proxy, { host: '127.0.0.1', port: 0 });
   debug(`extension proxy server listening at ${proxyUrl}`);
 
   const result = await execa(extensionPath, args, {
