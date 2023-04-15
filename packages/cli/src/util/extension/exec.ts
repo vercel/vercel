@@ -4,6 +4,7 @@ import listen from 'async-listen';
 import { scanParentDirs, walkParentDirs } from '@vercel/build-utils';
 import { createProxy } from './proxy';
 import type Client from '../client';
+import which from 'which';
 
 /**
  * Attempts to execute a Vercel CLI Extension.
@@ -27,23 +28,24 @@ export async function execExtension(
 
   const { packageJsonPath, lockfilePath } = await scanParentDirs(cwd);
   const baseFile = lockfilePath || packageJsonPath;
-  if (!baseFile) {
-    // TODO: we could improve the hueristic for finding the root of
-    // the project. Perhaps by looking for `.vercel` and/or `.git`.
-    debug('could not locate root of project');
-    throw new ENOENT(extensionCommand);
+  let extensionPath: string | null = null;
+
+  if (baseFile) {
+    // Scan `node_modules/.bin` works for npm / pnpm / yarn v1
+    // TOOD: add support for Yarn PnP
+    extensionPath = await walkParentDirs({
+      base: dirname(baseFile),
+      start: cwd,
+      filename: `node_modules/.bin/${extensionCommand}`,
+    });
   }
 
-  // Scan `node_modules/.bin` works for npm / pnpm / yarn v1
-  // TOOD: add support for Yarn PnP
-  const extensionPath = await walkParentDirs({
-    base: dirname(baseFile),
-    start: cwd,
-    filename: `node_modules/.bin/${extensionCommand}`,
-  });
+  if (!extensionPath) {
+    // Attempt global `$PATH` lookup
+    extensionPath = which.sync(extensionCommand, { nothrow: true });
+  }
 
   if (!extensionPath) {
-    // TODO: do we want to add support for a global $PATH lookup?
     debug(`failed to find extension command with name "${extensionCommand}"`);
     throw new ENOENT(extensionCommand);
   }
