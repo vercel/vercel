@@ -62,7 +62,7 @@ export default class Client extends EventEmitter implements Stdio {
   localConfig?: VercelConfig;
   localConfigPath?: string;
   prompt!: inquirer.PromptModule;
-  private requestIdCounter: number;
+  requestIdCounter: number;
 
   constructor(opts: ClientOptions) {
     super();

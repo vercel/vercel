@@ -52,7 +52,7 @@ export async function execExtension(
 
   debug(`invoking extension: ${extensionPath}`);
 
-  const proxy = createProxy(apiUrl, token);
+  const proxy = createProxy(client, apiUrl, token);
   proxy.once('close', () => {
     debug(`extension proxy server shut down`);
   });
