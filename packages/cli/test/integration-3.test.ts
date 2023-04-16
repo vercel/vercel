@@ -32,7 +32,6 @@ const binaryPath = path.resolve(__dirname, `../scripts/start.js`);
 const deployHelpMessage = `${logo} vercel [options] <command | path>`;
 let session = 'temp-session';
 let secretName: string | undefined;
-const isCanary = pkg.version.includes('canary');
 
 const createFile = (dest: fs.PathLike) => fs.closeSync(fs.openSync(dest, 'w'));
 
@@ -1219,8 +1218,6 @@ test('create zero-config deployment', async () => {
     '--yes',
   ]);
 
-  console.log('isCanary', isCanary);
-
   expect(output.exitCode, formatOutput(output)).toBe(0);
 
   const { host } = new URL(output.stdout);
@@ -1233,13 +1230,11 @@ test('create zero-config deployment', async () => {
 
   expect(data.error).toBe(undefined);
 
-  const validBuilders = data.builds.every(build =>
-    isCanary ? build.use.endsWith('@canary') : !build.use.endsWith('@canary')
+  const validBuilders = data.builds.every(
+    build => !build.use.endsWith('@canary')
   );
 
-  const buildList = JSON.stringify(data.builds.map(b => b.use));
-  const message = `builders match canary (${isCanary}): ${buildList}`;
-  expect(validBuilders, message).toBe(true);
+  expect(validBuilders).toBe(true);
 });
 
 test('next unsupported functions config shows warning link', async () => {
