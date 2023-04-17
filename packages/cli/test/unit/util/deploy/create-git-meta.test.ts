@@ -182,13 +182,12 @@ describe('createGitMeta', () => {
       await fs.rename(join(directory, 'git'), join(directory, '.git'));
       const data = await createGitMeta(directory, client.output);
       expect(data).toEqual({
-        commitAuthorName: 'Chris Barber',
-        commitMessage:
-          '[cli] Add `vc deploy --no-wait` and `vc inspect --wait` (#9802)',
-        commitRef: 'allow-no-remote',
-        commitSha: 'b52df7a533160f605f5584e2e5401e3701297ade',
-        dirty: true,
-        remoteUrl: null,
+        commitAuthorName: 'Matthew Stanciu',
+        commitMessage: 'hi',
+        commitRef: 'master',
+        commitSha: '0499dbfa2f58cd8b3b3ce5b2c02a24200862ac97',
+        dirty: false,
+        remoteUrl: undefined,
       });
     } finally {
       await fs.rename(join(directory, '.git'), join(directory, 'git'));

@@ -164,7 +164,7 @@ export interface GitMetadata {
   commitRef?: string | undefined;
   commitSha?: string | undefined;
   dirty?: boolean | undefined;
-  remoteUrl: string;
+  remoteUrl?: string;
 }
 
 /**
