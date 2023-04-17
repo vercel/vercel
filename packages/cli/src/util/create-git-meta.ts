@@ -59,7 +59,7 @@ export async function createGitMeta(
   const commit = commitResult.value;
 
   return {
-    remoteUrl,
+    remoteUrl: remoteUrl || undefined,
     commitAuthorName: commit.author.name,
     commitMessage: commit.subject,
     commitRef: commit.branch,
