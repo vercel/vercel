@@ -511,7 +511,9 @@ export default async (client: Client): Promise<number> => {
 
   const name = project ? project.name : newProjectName;
   if (!name) {
-    throw new Error();
+    throw new Error(
+      '`name` not found on project or provided by existing project'
+    );
   }
 
   try {
