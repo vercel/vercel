@@ -71,17 +71,6 @@ import { parseEnv } from '../../util/parse-env';
 import { errorToString, isErrnoException, isError } from '@vercel/error-utils';
 import { pickOverrides } from '../../util/projects/project-settings';
 
-function compactObject<T>(dict: Record<string, T>) {
-  const newDict: Record<string, NonNullable<T>> = {};
-  for (const [key, value] of Object.entries(dict)) {
-    if (typeof value !== 'undefined' && value !== null) {
-      // TS should know this is already NonNullable<T>, but oh well
-      newDict[key] = value as NonNullable<T>;
-    }
-  }
-  return newDict;
-}
-
 export default async (client: Client): Promise<number> => {
   const { output } = client;
 
@@ -481,17 +470,17 @@ export default async (client: Client): Promise<number> => {
   const gitMetadata = await createGitMeta(path, output, project);
 
   // Merge dotenv config, `env` from vercel.json, and `--env` / `-e` arguments
-  const deploymentEnv = compactObject(
-    Object.assign({}, parseEnv(localConfig.env), parseEnv(argv['--env']))
+  const deploymentEnv = Object.assign(
+    {},
+    parseEnv(localConfig.env),
+    parseEnv(argv['--env'])
   );
 
   // Merge build env out of  `build.env` from vercel.json, and `--build-env` args
-  const deploymentBuildEnv = compactObject(
-    Object.assign(
-      {},
-      parseEnv(localConfig.build && localConfig.build.env),
-      parseEnv(argv['--build-env'])
-    )
+  const deploymentBuildEnv = Object.assign(
+    {},
+    parseEnv(localConfig.build && localConfig.build.env),
+    parseEnv(argv['--build-env'])
   );
 
   // If there's any undefined values, then inherit them from this process
