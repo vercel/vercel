@@ -132,7 +132,6 @@ function json(
   jsonBody: any
 ): VercelResponse {
   const body = JSON.stringify(jsonBody);
-  // content-type
   if (!res.getHeader('content-type')) {
     res.setHeader('content-type', 'application/json; charset=utf-8');
   }
