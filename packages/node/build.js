@@ -22,21 +22,17 @@ async function main() {
     stdio: 'inherit',
   });
 
+  const pkg = await fs.readJSON(join(__dirname, 'package.json'));
+  const dependencies = Object.keys(pkg.dependencies ?? {});
+  const externs = [];
+  for (const dep of dependencies) {
+    externs.push('--external', dep);
+  }
+
   const mainDir = join(outDir, 'main');
   await execa(
     'ncc',
-    [
-      'build',
-      join(srcDir, 'index.ts'),
-      '-e',
-      '@vercel/node-bridge',
-      '-e',
-      '@vercel/build-utils',
-      '-e',
-      'typescript',
-      '-o',
-      mainDir,
-    ],
+    ['build', join(srcDir, 'index.ts'), ...externs, '-o', mainDir],
     { stdio: 'inherit' }
   );
   await fs.rename(join(mainDir, 'index.js'), join(outDir, 'index.js'));

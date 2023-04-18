@@ -866,6 +866,8 @@ importers:
       esbuild: 0.14.47
       exit-hook: 2.2.1
       node-fetch: 2.6.7
+      path-to-regexp: 6.2.1
+      ts-morph: 12.0.0
       ts-node: 10.9.1_jh3j7gf3qptnaxtpzk3sx5vjku
       typescript: 4.3.4
     devDependencies:
@@ -886,10 +888,8 @@ importers:
       etag: 1.8.1
       execa: 3.2.0
       fs-extra: 11.1.0
-      path-to-regexp: 6.2.1
       source-map-support: 0.5.12
       test-listen: 1.1.0
-      ts-morph: 12.0.0
 
   packages/node-bridge:
     specifiers:
@@ -4373,7 +4373,7 @@ packages:
     dependencies:
       '@npmcli/name-from-folder': 1.0.1
       glob: 8.0.3
-      minimatch: 5.0.1
+      minimatch: 5.1.2
       read-package-json-fast: 2.0.3
     dev: false
 
@@ -10586,7 +10586,7 @@ packages:
   /filelist/1.0.4:
     resolution: {integrity: sha512-w1cEuf3S+DrLCQL7ET6kz+gmlJdbq9J7yXCSjK/OZCPA+qEN1WyF4ZAf0YYJa4/shHJra2t/d/r8SV4Ji+x+8Q==}
     dependencies:
-      minimatch: 5.0.1
+      minimatch: 5.1.2
     dev: false
 
   /fill-range/4.0.0:
@@ -11663,7 +11663,7 @@ packages:
     resolution: {integrity: sha512-yemi4pMf51WKT7khInJqAvsIGzoqYXblnsz0ql8tM+yi1EKYTY1evX4NAbJrLL/Aanr2HyZeluqU+Oi7MGHokw==}
     engines: {node: ^12.13.0 || ^14.15.0 || >=16.0.0}
     dependencies:
-      minimatch: 5.0.1
+      minimatch: 5.1.2
     dev: false
 
   /ignore/4.0.6:
@@ -15319,6 +15319,7 @@ packages:
 
   /path-to-regexp/6.2.1:
     resolution: {integrity: sha512-JLyh7xT1kizaEvcaXOQwOc2/Yhw6KZOvPf1S8401UyLk86CU79LN3vl7ztXGm/pZ+YjoyAJ4rxmHwbkBXJX+yw==}
+    dev: false
 
   /path-type/3.0.0:
     resolution: {integrity: sha512-T2ZUsdZFHgA3u4e5PfPbjd7HDDpxPnQb5jN0SrDsjNSuVXHJqtwTnWqG0B1jZrgmJ/7lj1EmVIByWt1gxGkWvg==}
