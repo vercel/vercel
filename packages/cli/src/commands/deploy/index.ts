@@ -280,7 +280,7 @@ export default async (client: Client): Promise<number> => {
   let { org, project, status } = link;
 
   let newProjectName = null;
-  let rootDirectory = project?.rootDirectory;
+  let rootDirectory = project ? project.rootDirectory : null;
   let sourceFilesOutsideRootDirectory: boolean | undefined = true;
 
   if (status === 'not_linked') {
