@@ -44,6 +44,6 @@ export type NowApiHandler = VercelApiHandler;
 export interface VercelProxyResponse {
   status: number;
   headers: Headers;
-  body: NodeJS.ReadableStream;
+  body: Buffer | NodeJS.ReadableStream;
   encoding: BufferEncoding;
 }

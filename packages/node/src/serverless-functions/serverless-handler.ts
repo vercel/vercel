@@ -2,9 +2,10 @@ import { addHelpers } from './helpers';
 import { createServer } from 'http';
 // @ts-expect-error
 import { dynamicImport } from './dynamic-import.js';
-import fetch from 'node-fetch';
 import { serializeBody } from '../utils';
+import { streamToBuffer } from '@vercel/build-utils';
 import exitHook from 'exit-hook';
+import fetch from 'node-fetch';
 import listen from 'async-listen';
 import type { HeadersInit } from 'node-fetch';
 import type { ServerResponse, IncomingMessage } from 'http';
@@ -14,6 +15,7 @@ import type { VercelRequest, VercelResponse } from './helpers';
 type ServerlessServerOptions = {
   shouldAddHelpers: boolean;
   useRequire: boolean;
+  mode: 'streaming' | 'buffer';
 };
 
 type ServerlessFunctionSignature = (
@@ -70,10 +72,20 @@ export async function createServerlessEventHandler(
       redirect: 'manual',
     });
 
+    let body;
+    if (options.mode === 'streaming') {
+      body = response.body;
+    } else {
+      body = await streamToBuffer(response.body);
+      response.headers.delete('transfer-encoding');
+      //@ts-expect-error
+      response.headers.set('content-length', body.length);
+    }
+
     return {
       status: response.status,
       headers: response.headers,
-      body: response.body,
+      body,
       encoding: 'utf8',
     };
   };

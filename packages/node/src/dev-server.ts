@@ -19,13 +19,10 @@ import { getConfig } from '@vercel/static-config';
 import { Project } from 'ts-morph';
 import listen from 'async-listen';
 
-function parseRuntime(
-  entrypoint: string,
-  entryPointPath: string
-): string | undefined {
-  const project = new Project();
-  const staticConfig = getConfig(project, entryPointPath);
-  const runtime = staticConfig?.runtime;
+const parseConfig = (entryPointPath: string) =>
+  getConfig(new Project(), entryPointPath);
+
+function getRuntime(runtime: string | undefined, entrypoint: string) {
   if (runtime && !isEdgeRuntime(runtime)) {
     throw new Error(
       `Invalid function runtime "${runtime}" for "${entrypoint}". Valid runtimes are: ${JSON.stringify(
@@ -33,7 +30,6 @@ function parseRuntime(
       )}. Learn more: https://vercel.link/creating-edge-functions`
     );
   }
-
   return runtime;
 }
 
@@ -43,7 +39,8 @@ async function createEventHandler(
   options: { shouldAddHelpers: boolean }
 ): Promise<(request: IncomingMessage) => Promise<VercelProxyResponse>> {
   const entrypointPath = join(process.cwd(), entrypoint!);
-  const runtime = parseRuntime(entrypoint, entrypointPath);
+  const staticConfig = parseConfig(entrypointPath);
+  const runtime = getRuntime(staticConfig?.runtime, entrypoint);
 
   // `middleware.js`/`middleware.ts` file is always run as
   // an Edge Function, otherwise needs to be opted-in via
@@ -58,6 +55,7 @@ async function createEventHandler(
   }
 
   return createServerlessEventHandler(entrypointPath, {
+    mode: staticConfig?.supportsResponseStreaming ? 'streaming' : 'buffer',
     shouldAddHelpers: options.shouldAddHelpers,
     useRequire,
   });
@@ -122,7 +120,12 @@ export async function onDevRequest(
         res.setHeader(key, value);
       }
     }
-    body.pipe(res);
+
+    if (body instanceof Buffer) {
+      res.end(body);
+    } else {
+      body.pipe(res);
+    }
   } catch (error: any) {
     res.statusCode = 500;
     res.end(error.stack);
