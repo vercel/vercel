@@ -12,9 +12,10 @@ export const parseEnv = (env?: string | string[] | Dictionary<string>) => {
   }
 
   if (Array.isArray(env)) {
+    const startingDict: Dictionary<string> = {};
     return env.reduce((o, e) => {
-      let key;
-      let value;
+      let key: string | undefined;
+      let value: string | undefined;
       const equalsSign = e.indexOf('=');
 
       if (equalsSign === -1) {
@@ -24,9 +25,12 @@ export const parseEnv = (env?: string | string[] | Dictionary<string>) => {
         value = e.slice(equalsSign + 1);
       }
 
-      o[key] = value;
+      if (typeof value !== 'undefined') {
+        o[key] = value;
+      }
+
       return o;
-    }, {} as Dictionary<string | undefined>);
+    }, startingDict);
   }
 
   // assume it's already an Object
