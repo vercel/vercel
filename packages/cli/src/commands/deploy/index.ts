@@ -529,7 +529,7 @@ export default async (client: Client): Promise<number> => {
       prebuilt: argv['--prebuilt'],
       rootDirectory,
       quiet,
-      wantsPublic: (argv['--public'] || localConfig.public) ?? false,
+      wantsPublic: Boolean(argv['--public'] || localConfig.public),
       nowConfig: {
         ...localConfig,
         // `images` is allowed in "vercel.json" and processed
