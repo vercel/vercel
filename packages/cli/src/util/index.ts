@@ -36,7 +36,7 @@ export interface CreateOptions {
   project?: string;
   wantsPublic: boolean;
   prebuilt?: boolean;
-  rootDirectory?: string;
+  rootDirectory?: string | null;
   meta: Dictionary<string>;
   gitMetadata?: GitMetadata;
   regions?: string[];

@@ -16,7 +16,7 @@ import { handleError } from '../../util/error';
 import Client from '../../util/client';
 import { getPrettyError } from '@vercel/build-utils';
 import toHumanPath from '../../util/humanize-path';
-import Now from '../../util';
+import Now, { CreateOptions } from '../../util';
 import stamp from '../../util/output/stamp';
 import createDeploy from '../../util/deploy/create-deploy';
 import getDeployment from '../../util/get-deployment';
@@ -512,9 +512,16 @@ export default async (client: Client): Promise<number> => {
 
   const localConfigurationOverrides = pickOverrides(localConfig);
 
+  const name = project ? project.name : newProjectName;
+  if (!name) {
+    throw new Error(
+      '`name` not found on project or provided by existing project'
+    );
+  }
+
   try {
-    const createArgs: any = {
-      name: project ? project.name : newProjectName,
+    const createArgs: CreateOptions = {
+      name,
       env: deploymentEnv,
       build: { env: deploymentBuildEnv },
       forceNew: argv['--force'],
@@ -522,8 +529,7 @@ export default async (client: Client): Promise<number> => {
       prebuilt: argv['--prebuilt'],
       rootDirectory,
       quiet,
-      wantsPublic: argv['--public'] || localConfig.public,
-      type: null,
+      wantsPublic: Boolean(argv['--public'] || localConfig.public),
       nowConfig: {
         ...localConfig,
         // `images` is allowed in "vercel.json" and processed
