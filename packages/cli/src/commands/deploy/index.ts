@@ -280,7 +280,7 @@ export default async (client: Client): Promise<number> => {
   let { org, project, status } = link;
 
   let newProjectName = null;
-  let rootDirectory = project?.rootDirectory || undefined;
+  let rootDirectory = project?.rootDirectory;
   let sourceFilesOutsideRootDirectory: boolean | undefined = true;
 
   if (status === 'not_linked') {
@@ -335,11 +335,10 @@ export default async (client: Client): Promise<number> => {
 
     if (typeof projectOrNewProjectName === 'string') {
       newProjectName = projectOrNewProjectName;
-      rootDirectory =
-        (await inputRootDirectory(client, path, autoConfirm)) ?? undefined;
+      rootDirectory = await inputRootDirectory(client, path, autoConfirm);
     } else {
       project = projectOrNewProjectName;
-      rootDirectory = project.rootDirectory ?? undefined;
+      rootDirectory = project.rootDirectory;
       sourceFilesOutsideRootDirectory = project.sourceFilesOutsideRootDirectory;
 
       // we can already link the project
