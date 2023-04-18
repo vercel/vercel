@@ -52,7 +52,7 @@ export default async function processDeployment({
   archive?: ArchiveFormat;
   skipAutoDetectionConfirmation?: boolean;
   cwd?: string;
-  rootDirectory?: string;
+  rootDirectory?: string | null;
 }) {
   let {
     now,
