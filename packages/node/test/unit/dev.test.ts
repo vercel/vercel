@@ -1,6 +1,6 @@
 import { forkDevServer, readMessage } from '../../src/fork-dev-server';
 import { resolve, extname } from 'path';
-import { fetch } from 'undici';
+import fetch from 'node-fetch';
 
 jest.setTimeout(10 * 1000);
 

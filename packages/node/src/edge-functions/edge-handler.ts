@@ -4,13 +4,13 @@ import {
   NodeCompatBindings,
 } from './edge-node-compat-plugin';
 import { EdgeRuntime, runServer } from 'edge-runtime';
-import { fetch, Headers } from 'undici';
+import fetch, { Headers } from 'node-fetch';
 import { isError } from '@vercel/error-utils';
 import { readFileSync } from 'fs';
 import { serializeBody, entrypointToOutputPath, logError } from '../utils';
 import esbuild from 'esbuild';
 import exitHook from 'exit-hook';
-import type { HeadersInit } from 'undici';
+import type { HeadersInit } from 'node-fetch';
 import type { VercelProxyResponse } from '../types';
 import type { IncomingMessage } from 'http';
 import { pathToFileURL } from 'url';

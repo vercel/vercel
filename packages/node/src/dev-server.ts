@@ -8,7 +8,7 @@ if (!entrypoint) {
 import { join } from 'path';
 const useRequire = process.env.VERCEL_DEV_IS_ESM !== '1';
 
-import type { Headers } from 'undici';
+import type { Headers } from 'node-fetch';
 import type { VercelProxyResponse } from './types';
 import { Config } from '@vercel/build-utils';
 import { createEdgeEventHandler } from './edge-functions/edge-handler';
@@ -17,7 +17,6 @@ import { createServerlessEventHandler } from './serverless-functions/serverless-
 import { EdgeRuntimes, isEdgeRuntime, logError } from './utils';
 import { getConfig } from '@vercel/static-config';
 import { Project } from 'ts-morph';
-import { toToReadable } from '@edge-runtime/node-utils';
 import listen from 'async-listen';
 
 function parseRuntime(
@@ -118,12 +117,12 @@ export async function onDevRequest(
   try {
     const { headers, body, status } = await handleEvent(req);
     res.statusCode = status;
-    for (const [key, value] of headers as Headers) {
+    for (const [key, value] of headers as unknown as Headers) {
       if (value !== undefined) {
         res.setHeader(key, value);
       }
     }
-    toToReadable(body).pipe(res);
+    body.pipe(res);
   } catch (error: any) {
     res.statusCode = 500;
     res.end(error.stack);

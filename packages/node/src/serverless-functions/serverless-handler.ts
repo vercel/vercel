@@ -2,11 +2,11 @@ import { addHelpers } from './helpers';
 import { createServer } from 'http';
 // @ts-expect-error
 import { dynamicImport } from './dynamic-import.js';
-import { fetch } from 'undici';
+import fetch from 'node-fetch';
 import { serializeBody } from '../utils';
 import exitHook from 'exit-hook';
 import listen from 'async-listen';
-import type { HeadersInit } from 'undici';
+import type { HeadersInit } from 'node-fetch';
 import type { ServerResponse, IncomingMessage } from 'http';
 import type { VercelProxyResponse } from '../types';
 import type { VercelRequest, VercelResponse } from './helpers';
@@ -65,7 +65,7 @@ export async function createServerlessEventHandler(
       headers: {
         ...request.headers,
         host: request.headers['x-forwarded-host'],
-      } as HeadersInit,
+      } as unknown as HeadersInit,
       method: request.method,
       redirect: 'manual',
     });
