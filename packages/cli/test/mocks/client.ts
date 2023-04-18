@@ -80,12 +80,12 @@ export class MockClient extends Client {
 
     this.stdout = new MockStream();
     this.stdout.setEncoding('utf8');
-    this.stdout.end = () => {};
+    this.stdout.end = () => this.stdout;
     this.stdout.pause();
 
     this.stderr = new MockStream();
     this.stderr.setEncoding('utf8');
-    this.stderr.end = () => {};
+    this.stderr.end = () => this.stderr;
     this.stderr.pause();
     this.stderr.isTTY = true;
 

@@ -1,7 +1,7 @@
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import Client from '../client';
-import { Cert } from '@vercel-internals/types';
+import type { Cert } from '@vercel-internals/types';
 import { isErrnoException } from '@vercel/error-utils';
 import { isAPIError } from '../errors-ts';
 
