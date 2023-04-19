@@ -837,13 +837,16 @@ importers:
       '@types/node-fetch': ^2.6.1
       '@types/test-listen': 1.1.0
       '@vercel/build-utils': 6.7.1
+      '@vercel/error-utils': 1.0.8
       '@vercel/ncc': 0.24.0
       '@vercel/nft': 0.22.5
       '@vercel/node-bridge': 4.0.1
       '@vercel/static-config': 2.0.16
+      async-listen: 1.2.0
       content-type: 1.0.4
       cookie: 0.4.0
-      edge-runtime: 2.0.0
+      cross-env: 7.0.3
+      edge-runtime: 2.1.4
       esbuild: 0.14.47
       etag: 1.8.1
       execa: 3.2.0
@@ -860,9 +863,11 @@ importers:
       '@edge-runtime/vm': 2.0.0
       '@types/node': 14.18.33
       '@vercel/build-utils': link:../build-utils
-      '@vercel/node-bridge': link:../node-bridge
+      '@vercel/error-utils': 1.0.8
+      '@vercel/node-bridge': 4.0.1
       '@vercel/static-config': link:../static-config
-      edge-runtime: 2.0.0
+      async-listen: 1.2.0
+      edge-runtime: 2.1.4
       esbuild: 0.14.47
       exit-hook: 2.2.1
       node-fetch: 2.6.7
@@ -885,35 +890,12 @@ importers:
       '@vercel/nft': 0.22.5
       content-type: 1.0.4
       cookie: 0.4.0
+      cross-env: 7.0.3
       etag: 1.8.1
       execa: 3.2.0
       fs-extra: 11.1.0
       source-map-support: 0.5.12
       test-listen: 1.1.0
-
-  packages/node-bridge:
-    specifiers:
-      '@types/aws-lambda': 8.10.19
-      '@types/node': 14.18.33
-      content-type: 1.0.4
-      cookie: 0.4.0
-      etag: 1.8.1
-      execa: 3.2.0
-      fs-extra: 10.0.0
-      jsonlines: 0.1.1
-      test-listen: 1.1.0
-      typescript: 4.3.4
-    devDependencies:
-      '@types/aws-lambda': 8.10.19
-      '@types/node': 14.18.33
-      content-type: 1.0.4
-      cookie: 0.4.0
-      etag: 1.8.1
-      execa: 3.2.0
-      fs-extra: 10.0.0
-      jsonlines: 0.1.1
-      test-listen: 1.1.0
-      typescript: 4.3.4
 
   packages/python:
     specifiers:
@@ -2475,8 +2457,9 @@ packages:
     dependencies:
       '@jridgewell/trace-mapping': 0.3.9
 
-  /@edge-runtime/format/1.1.0:
-    resolution: {integrity: sha512-MkLDDtPhXZIMx83NykdFmOpF7gVWIdd6GBHYb8V/E+PKWvD2pK/qWx9B30oN1iDJ2XBm0SGDjz02S8nDHI9lMQ==}
+  /@edge-runtime/format/2.0.1:
+    resolution: {integrity: sha512-aE+9DtBvQyg349srixtXEUNauWtIv5HTKPy8Q9dvG1NvpldVIvvhcDBI+SuvDVM8kQl8phbYnp2NTNloBCn/Yg==}
+    engines: {node: '>=14'}
     dev: false
 
   /@edge-runtime/jest-environment/2.0.0:
@@ -2493,10 +2476,22 @@ packages:
   /@edge-runtime/primitives/2.0.0:
     resolution: {integrity: sha512-AXqUq1zruTJAICrllUvZcgciIcEGHdF6KJ3r6FM0n4k8LpFxZ62tPWVIJ9HKm+xt+ncTBUZxwgUaQ73QMUQEKw==}
 
+  /@edge-runtime/primitives/2.1.2:
+    resolution: {integrity: sha512-SR04SMDybALlhIYIi0hiuEUwIl0b7Sn+RKwQkX6hydg4+AKMzBNDFhj2nqHDD1+xkHArV9EhmJIb6iGjShwSzg==}
+    engines: {node: '>=14'}
+    dev: false
+
   /@edge-runtime/vm/2.0.0:
     resolution: {integrity: sha512-BOLrAX8IWHRXu1siZocwLguKJPEUv7cr+rG8tI4hvHgMdIsBWHJlLeB8EjuUVnIURFrUiM49lVKn8DRrECmngw==}
     dependencies:
       '@edge-runtime/primitives': 2.0.0
+
+  /@edge-runtime/vm/2.1.2:
+    resolution: {integrity: sha512-j4H5S26NJhYOyjVMN8T/YJuwwslfnEX1P0j6N2Rq1FaubgNowdYunA9nlO7lg8Rgjv6dqJ2zKuM7GD1HFtNSGw==}
+    engines: {node: '>=14'}
+    dependencies:
+      '@edge-runtime/primitives': 2.1.2
+    dev: false
 
   /@emotion/hash/0.9.0:
     resolution: {integrity: sha512-14FtKiHhy2QoPIzdTcvh//8OyBlknNs2nXRwIhG904opCby3l+9Xaf/wuPvICBF0rc1ZCNBd3nKe9cd2mecVkQ==}
@@ -6442,6 +6437,10 @@ packages:
     resolution: {integrity: sha512-wUYa8eUyTg1jPGRCrjpIxJm1r6hQE7ccbECWzDCAikuWG4iadS2zWrF7bsAcuUj7fTMf8sNFhmsknTJgyN3B3g==}
     dev: false
 
+  /@vercel/error-utils/1.0.8:
+    resolution: {integrity: sha512-s+f7jP2oH1koICbQ8e3K9hOpOeUct7rbCnF9qsNwXemq850wAh2e90tp9R6oYBM0BNpiLRRm+oG5zD2sCIm3HQ==}
+    dev: false
+
   /@vercel/frameworks/1.3.0:
     resolution: {integrity: sha512-guXALpQLhL0bCvIjUhHbYFyS8XusZQ6RtjqCTq0eJM6p8QLun4DI1TToqbIah/o7DY3s+RAyC2OUyOAY91qH4w==}
     dependencies:
@@ -6500,6 +6499,10 @@ packages:
     transitivePeerDependencies:
       - encoding
       - supports-color
+
+  /@vercel/node-bridge/4.0.1:
+    resolution: {integrity: sha512-XEfKfnLGzlIBpad7eGNPql1HnMhoSTv9q3uDNC4axdaAC/kI5yvl8kXjuCPAXYvpbJnVQPpcSUC5/r5ap8F3jA==}
+    dev: false
 
   /@vercel/remix-run-dev/1.15.0_@types+node@14.18.33:
     resolution: {integrity: sha512-pQTM5WmOzrvhpPSHFDShwqX71YnLaTUxffhnly4MxVNKJ2WKV9zqx8bGQ/7cLfpEu9JfY2c+pVjYYb3wAMBt+Q==}
@@ -7219,7 +7222,11 @@ packages:
 
   /async-listen/1.2.0:
     resolution: {integrity: sha512-CcEtRh/oc9Jc4uWeUwdpG/+Mb2YUHKmdaTf0gUr7Wa+bfp4xx70HOb3RuSTJMvqKNB1TkdTfjLdrcz2X4rkkZA==}
-    dev: true
+
+  /async-listen/2.0.3:
+    resolution: {integrity: sha512-WVLi/FGIQaXyfYyNvmkwKT1RZbkzszLLnmW/gFCc5lbVvN/0QQCWpBwRBk2OWSdkkmKRBc8yD6BrKsjA3XKaSw==}
+    engines: {node: '>= 14'}
+    dev: false
 
   /async-retry/1.1.3:
     resolution: {integrity: sha512-fiAB2uaoAoUS5Ua75XFGoMKF4hmQ5H4u4gsINUjwPNof5dygJS1zyL9mh0SOmIkzAwGijwG4ybLNc8yG2OGpEQ==}
@@ -8449,6 +8456,14 @@ packages:
       prompts: 2.4.2
     dev: true
 
+  /cross-env/7.0.3:
+    resolution: {integrity: sha512-+/HKd6EgcQCJGh2PSjZuUitQBQynKor4wrFbRg4DtAgS1aWO+gU52xpH7M9ScGgXSYmAVS9bIJ8EzuaGw0oNAw==}
+    engines: {node: '>=10.14', npm: '>=6', yarn: '>=1'}
+    hasBin: true
+    dependencies:
+      cross-spawn: 7.0.3
+    dev: true
+
   /cross-spawn/5.1.0:
     resolution: {integrity: sha512-pTgQJ5KC0d2hcY8eyL1IzlBPYjTkyH72XRZPnLyKus2mBfNjQs3klqbJU2VILqZryAZUt9JOb3h/mWMy23/f5A==}
     dependencies:
@@ -8957,13 +8972,15 @@ packages:
       safer-buffer: 2.1.2
     dev: true
 
-  /edge-runtime/2.0.0:
-    resolution: {integrity: sha512-TmRJhKi4mlM1e+zgF4CSzVU5gJ1sWj7ia+XhVgZ8PYyYUxk4PPjJU8qScpSLsAbdSxoBghLxdMuwuCzdYLd1sQ==}
+  /edge-runtime/2.1.4:
+    resolution: {integrity: sha512-SertKByzAmjm+MkLbFl1q0ko+/90V24dhZgQM8fcdguQaDYVEVtb6okEBGeg8IQgL1/JUP8oSlUIxSI/bvsVRQ==}
+    engines: {node: '>=14'}
+    hasBin: true
     dependencies:
-      '@edge-runtime/format': 1.1.0
-      '@edge-runtime/vm': 2.0.0
+      '@edge-runtime/format': 2.0.1
+      '@edge-runtime/vm': 2.1.2
+      async-listen: 2.0.3
       exit-hook: 2.2.1
-      http-status: 1.5.3
       mri: 1.2.0
       picocolors: 1.0.0
       pretty-bytes: 5.6.0
@@ -11563,11 +11580,6 @@ packages:
       jsprim: 1.4.2
       sshpk: 1.17.0
     dev: true
-
-  /http-status/1.5.3:
-    resolution: {integrity: sha512-jCClqdnnwigYslmtfb28vPplOgoiZ0siP2Z8C5Ua+3UKbx410v+c+jT+jh1bbI4TvcEySuX0vd/CfFZFbDkJeQ==}
-    engines: {node: '>= 0.4.0'}
-    dev: false
 
   /http2-wrapper/1.0.3:
     resolution: {integrity: sha512-V+23sDMr12Wnz7iTcDeJr3O6AIxlnvT/bmaAAAP/Xda35C90p9599p0F1eHR/N1KILWSoWVAiOMFjBBXaXSMxg==}
@@ -18412,6 +18424,7 @@ packages:
   /which/2.0.2:
     resolution: {integrity: sha512-BLI3Tl1TW3Pvl70l3yq3Y64i+awpwXqsGBYWkkqMtnbXgrMD+yj7rhW0kuEDxzJaYXGjEW5ogapKNMEKNMjibA==}
     engines: {node: '>= 8'}
+    hasBin: true
     dependencies:
       isexe: 2.0.0
 

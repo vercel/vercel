@@ -1,4 +1,5 @@
 import { ServerResponse, IncomingMessage } from 'http';
+import type { Headers } from 'node-fetch';
 
 export type VercelRequestCookies = { [key: string]: string };
 export type VercelRequestQuery = { [key: string]: string | string[] };
@@ -39,3 +40,10 @@ export type NowResponse = VercelResponse;
 
 /** @deprecated Use VercelApiHandler instead. */
 export type NowApiHandler = VercelApiHandler;
+
+export interface VercelProxyResponse {
+  status: number;
+  headers: Headers;
+  body: Buffer | NodeJS.ReadableStream;
+  encoding: BufferEncoding;
+}
