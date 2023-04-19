@@ -1,21 +1,36 @@
-import type {
-  VercelRequest,
-  VercelResponse,
-  VercelRequestCookies,
-  VercelRequestQuery,
-  VercelRequestBody,
-} from './types';
-import { Server } from 'http';
-import type { Bridge } from './bridge';
+import type { ServerResponse, IncomingMessage } from 'http';
+import { serializeBody } from '../utils';
+import { PassThrough } from 'stream';
 
-function getBodyParser(req: VercelRequest, body: Buffer) {
+type VercelRequestCookies = { [key: string]: string };
+type VercelRequestQuery = { [key: string]: string | string[] };
+type VercelRequestBody = any;
+
+export type VercelRequest = IncomingMessage & {
+  query: VercelRequestQuery;
+  cookies: VercelRequestCookies;
+  body: VercelRequestBody;
+};
+
+export type VercelResponse = ServerResponse & {
+  send: (body: any) => VercelResponse;
+  json: (jsonBody: any) => VercelResponse;
+  status: (statusCode: number) => VercelResponse;
+  redirect: (statusOrUrl: string | number, url?: string) => VercelResponse;
+};
+
+class ApiError extends Error {
+  readonly statusCode: number;
+  constructor(statusCode: number, message: string) {
+    super(message);
+    this.statusCode = statusCode;
+  }
+}
+
+function getBodyParser(body: Buffer, contentType: string | undefined) {
   return function parseBody(): VercelRequestBody {
-    if (!req.headers['content-type']) {
-      return undefined;
-    }
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { parse: parseContentType } = require('content-type');
-    const { type } = parseContentType(req.headers['content-type']);
+    const { type } = parseContentType(contentType);
 
     if (type === 'application/json') {
       try {
@@ -26,43 +41,32 @@ function getBodyParser(req: VercelRequest, body: Buffer) {
       }
     }
 
-    if (type === 'application/octet-stream') {
-      return body;
-    }
+    if (type === 'application/octet-stream') return body;
 
     if (type === 'application/x-www-form-urlencoded') {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
       const { parse: parseQS } = require('querystring');
       // note: querystring.parse does not produce an iterable object
       // https://nodejs.org/api/querystring.html#querystring_querystring_parse_str_sep_eq_options
       return parseQS(body.toString());
     }
 
-    if (type === 'text/plain') {
-      return body.toString();
-    }
+    if (type === 'text/plain') return body.toString();
 
     return undefined;
   };
 }
 
-function getQueryParser({ url = '/' }: VercelRequest) {
+function getQueryParser({ url = '/' }: IncomingMessage) {
   return function parseQuery(): VercelRequestQuery {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { parse: parseURL } = require('url');
     return parseURL(url, true).query;
   };
 }
 
-function getCookieParser(req: VercelRequest) {
+function getCookieParser(req: IncomingMessage) {
   return function parseCookie(): VercelRequestCookies {
     const header: undefined | string | string[] = req.headers.cookie;
-
-    if (!header) {
-      return {};
-    }
-
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    if (!header) return {};
     const { parse } = require('cookie');
     return parse(Array.isArray(header) ? header.join(';') : header);
   };
@@ -71,6 +75,13 @@ function getCookieParser(req: VercelRequest) {
 function status(res: VercelResponse, statusCode: number): VercelResponse {
   res.statusCode = statusCode;
   return res;
+}
+
+function setCharset(type: string, charset: string) {
+  const { parse, format } = require('content-type');
+  const parsed = parse(type);
+  parsed.parameters.charset = charset;
+  return format(parsed);
 }
 
 function redirect(
@@ -91,23 +102,42 @@ function redirect(
   return res;
 }
 
-function setCharset(type: string, charset: string) {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { parse, format } = require('content-type');
-  const parsed = parse(type);
-  parsed.parameters.charset = charset;
-  return format(parsed);
+function setLazyProp<T>(req: IncomingMessage, prop: string, getter: () => T) {
+  const opts = { configurable: true, enumerable: true };
+  const optsReset = { ...opts, writable: true };
+
+  Object.defineProperty(req, prop, {
+    ...opts,
+    get: () => {
+      const value = getter();
+      // we set the property on the object to avoid recalculating it
+      Object.defineProperty(req, prop, { ...optsReset, value });
+      return value;
+    },
+    set: value => {
+      Object.defineProperty(req, prop, { ...optsReset, value });
+    },
+  });
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function createETag(body: any, encoding: 'utf8' | undefined) {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
   const etag = require('etag');
   const buf = !Buffer.isBuffer(body) ? Buffer.from(body, encoding) : body;
   return etag(buf, { weak: true });
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function json(
+  req: VercelRequest,
+  res: VercelResponse,
+  jsonBody: any
+): VercelResponse {
+  const body = JSON.stringify(jsonBody);
+  if (!res.getHeader('content-type')) {
+    res.setHeader('content-type', 'application/json; charset=utf-8');
+  }
+  return send(req, res, body);
+}
+
 function send(
   req: VercelRequest,
   res: VercelResponse,
@@ -209,103 +239,37 @@ function send(
   return res;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function json(
-  req: VercelRequest,
-  res: VercelResponse,
-  jsonBody: any
-): VercelResponse {
-  const body = JSON.stringify(jsonBody);
-
-  // content-type
-  if (!res.getHeader('content-type')) {
-    res.setHeader('content-type', 'application/json; charset=utf-8');
-  }
-
-  return send(req, res, body);
+function restoreBody(req: IncomingMessage, body: Buffer) {
+  const replicateBody = new PassThrough();
+  const on = replicateBody.on.bind(replicateBody);
+  const originalOn = req.on.bind(req);
+  req.read = replicateBody.read.bind(replicateBody);
+  req.on = req.addListener = (name, cb) =>
+    // @ts-expect-error
+    name === 'data' || name === 'end' ? on(name, cb) : originalOn(name, cb);
+  replicateBody.write(body);
+  replicateBody.end();
 }
 
-export class ApiError extends Error {
-  readonly statusCode: number;
-
-  constructor(statusCode: number, message: string) {
-    super(message);
-    this.statusCode = statusCode;
-  }
+async function readBody(req: IncomingMessage) {
+  const body = (await serializeBody(req)) || Buffer.from('');
+  restoreBody(req, body);
+  return body;
 }
 
-export function sendError(
-  res: VercelResponse,
-  statusCode: number,
-  message: string
-) {
-  res.statusCode = statusCode;
-  res.statusMessage = message;
-  res.end();
-}
+export async function addHelpers(_req: IncomingMessage, _res: ServerResponse) {
+  const req = _req as VercelRequest;
+  const res = _res as VercelResponse;
 
-function setLazyProp<T>(req: VercelRequest, prop: string, getter: () => T) {
-  const opts = { configurable: true, enumerable: true };
-  const optsReset = { ...opts, writable: true };
+  setLazyProp<VercelRequestCookies>(req, 'cookies', getCookieParser(req));
+  setLazyProp<VercelRequestQuery>(req, 'query', getQueryParser(req));
+  const contentType = req.headers['content-type'];
+  const body =
+    contentType === undefined ? Buffer.from('') : await readBody(req);
+  setLazyProp<VercelRequestBody>(req, 'body', getBodyParser(body, contentType));
 
-  Object.defineProperty(req, prop, {
-    ...opts,
-    get: () => {
-      const value = getter();
-      // we set the property on the object to avoid recalculating it
-      Object.defineProperty(req, prop, { ...optsReset, value });
-      return value;
-    },
-    set: value => {
-      Object.defineProperty(req, prop, { ...optsReset, value });
-    },
-  });
-}
-
-export function createServerWithHelpers(
-  handler: (req: VercelRequest, res: VercelResponse) => void | Promise<void>,
-  bridge: Bridge
-) {
-  const server = new Server(async (_req, _res) => {
-    const req = _req as VercelRequest;
-    const res = _res as VercelResponse;
-
-    try {
-      const reqId = req.headers['x-now-bridge-request-id'];
-
-      // don't expose this header to the client
-      delete req.headers['x-now-bridge-request-id'];
-
-      if (typeof reqId !== 'string') {
-        throw new ApiError(500, 'Internal Server Error');
-      }
-
-      const event = bridge.consumeEvent(reqId);
-
-      setLazyProp<VercelRequestCookies>(req, 'cookies', getCookieParser(req));
-      setLazyProp<VercelRequestQuery>(req, 'query', getQueryParser(req));
-      setLazyProp<VercelRequestBody>(
-        req,
-        'body',
-        getBodyParser(req, event.body)
-      );
-
-      res.status = statusCode => status(res, statusCode);
-      res.redirect = (statusOrUrl, url) => redirect(res, statusOrUrl, url);
-      res.send = body => send(req, res, body);
-      res.json = jsonBody => json(req, res, jsonBody);
-
-      try {
-        await handler(req, res);
-      } catch (err) {
-        console.log(`Error from API Route ${req.url}: ${err.stack}`);
-        process.exit(1);
-      }
-    } catch (err) {
-      console.log(`Error while handling ${req.url}: ${err.message}`);
-      process.exit(1);
-    }
-  });
-
-  return server;
+  res.status = statusCode => status(res, statusCode);
+  res.redirect = (statusOrUrl, url) => redirect(res, statusOrUrl, url);
+  res.send = body => send(req, res, body);
+  res.json = jsonBody => json(req, res, jsonBody);
 }
