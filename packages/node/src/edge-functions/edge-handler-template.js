@@ -1,20 +1,27 @@
 // provided by the edge runtime:
 /* global addEventListener */
 
-function getUrl(url, host) {
+function getUrl(url, headers) {
   const urlObj = new URL(url);
-  urlObj.host = host;
+  const protocol = headers.get('x-forwarded-proto');
+  if (protocol) urlObj.protocol = protocol.split(/\b/).shift();
+  urlObj.host = headers.get('x-forwarded-host');
+  urlObj.port = headers.get('x-forwarded-port');
   return urlObj.toString();
 }
 
 async function respond(userEdgeHandler, event, options, dependencies) {
   const { Request, Response } = dependencies;
   const { isMiddleware } = options;
-
-  const host = event.request.headers.get('x-forwarded-host');
-  event.request.headers.set('host', host);
+  event.request.headers.set(
+    'host',
+    event.request.headers.get('x-forwarded-host')
+  );
   let response = await userEdgeHandler(
-    new Request(getUrl(event.request.url, host), event.request),
+    new Request(
+      getUrl(event.request.url, event.request.headers),
+      event.request
+    ),
     event
   );
 
@@ -71,10 +78,10 @@ function registerFetchListener(userEdgeHandler, options, dependencies) {
   });
 }
 
-// for testing:
 module.exports = {
-  respond,
-  toResponseError,
+  getUrl,
   parseRequestEvent,
   registerFetchListener,
+  respond,
+  toResponseError,
 };
