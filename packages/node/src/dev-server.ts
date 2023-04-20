@@ -5,36 +5,24 @@ if (!entrypoint) {
   throw new Error('`VERCEL_DEV_ENTRYPOINT` must be defined');
 }
 
-delete process.env.TS_NODE_TRANSPILE_ONLY;
-delete process.env.TS_NODE_COMPILER_OPTIONS;
-
 import { join } from 'path';
 const useRequire = process.env.VERCEL_DEV_IS_ESM !== '1';
 
-import { createServer, Server, IncomingMessage, ServerResponse } from 'http';
-import { VercelProxyResponse } from '@vercel/node-bridge/types';
+import type { Headers } from 'node-fetch';
+import type { VercelProxyResponse } from './types';
 import { Config } from '@vercel/build-utils';
+import { createEdgeEventHandler } from './edge-functions/edge-handler';
+import { createServer, IncomingMessage, ServerResponse } from 'http';
+import { createServerlessEventHandler } from './serverless-functions/serverless-handler';
+import { EdgeRuntimes, isEdgeRuntime, logError } from './utils';
 import { getConfig } from '@vercel/static-config';
 import { Project } from 'ts-morph';
-import { EdgeRuntimes, isEdgeRuntime, logError } from './utils';
-import { createEdgeEventHandler } from './edge-functions/edge-handler';
-import { createServerlessEventHandler } from './serverless-functions/serverless-handler';
+import listen from 'async-listen';
 
-function listen(server: Server, port: number, host: string): Promise<void> {
-  return new Promise(resolve => {
-    server.listen(port, host, () => {
-      resolve();
-    });
-  });
-}
+const parseConfig = (entryPointPath: string) =>
+  getConfig(new Project(), entryPointPath);
 
-function parseRuntime(
-  entrypoint: string,
-  entryPointPath: string
-): string | undefined {
-  const project = new Project();
-  const staticConfig = getConfig(project, entryPointPath);
-  const runtime = staticConfig?.runtime;
+function getRuntime(runtime: string | undefined, entrypoint: string) {
   if (runtime && !isEdgeRuntime(runtime)) {
     throw new Error(
       `Invalid function runtime "${runtime}" for "${entrypoint}". Valid runtimes are: ${JSON.stringify(
@@ -42,7 +30,6 @@ function parseRuntime(
       )}. Learn more: https://vercel.link/creating-edge-functions`
     );
   }
-
   return runtime;
 }
 
@@ -52,7 +39,8 @@ async function createEventHandler(
   options: { shouldAddHelpers: boolean }
 ): Promise<(request: IncomingMessage) => Promise<VercelProxyResponse>> {
   const entrypointPath = join(process.cwd(), entrypoint!);
-  const runtime = parseRuntime(entrypoint, entrypointPath);
+  const staticConfig = parseConfig(entrypointPath);
+  const runtime = getRuntime(staticConfig?.runtime, entrypoint);
 
   // `middleware.js`/`middleware.ts` file is always run as
   // an Edge Function, otherwise needs to be opted-in via
@@ -67,6 +55,7 @@ async function createEventHandler(
   }
 
   return createServerlessEventHandler(entrypointPath, {
+    mode: staticConfig?.supportsResponseStreaming ? 'streaming' : 'buffer',
     shouldAddHelpers: options.shouldAddHelpers,
     useRequire,
   });
@@ -87,7 +76,7 @@ async function main() {
   );
 
   const proxyServer = createServer(onDevRequest);
-  await listen(proxyServer, 0, '127.0.0.1');
+  await listen(proxyServer, { host: '127.0.0.1', port: 0 });
 
   try {
     handleEvent = await createEventHandler(entrypoint!, config, {
@@ -124,14 +113,19 @@ export async function onDevRequest(
   }
 
   try {
-    const result = await handleEvent(req);
-    res.statusCode = result.statusCode;
-    for (const [key, value] of Object.entries(result.headers)) {
-      if (typeof value !== 'undefined') {
+    const { headers, body, status } = await handleEvent(req);
+    res.statusCode = status;
+    for (const [key, value] of headers as unknown as Headers) {
+      if (value !== undefined) {
         res.setHeader(key, value);
       }
     }
-    res.end(Buffer.from(result.body, result.encoding));
+
+    if (body instanceof Buffer) {
+      res.end(body);
+    } else {
+      body.pipe(res);
+    }
   } catch (error: any) {
     res.statusCode = 500;
     res.end(error.stack);
