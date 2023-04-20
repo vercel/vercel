@@ -200,6 +200,7 @@ export default async function setupAndLink(
           ...localConfigurationOverrides,
           sourceFilesOutsideRootDirectory,
         },
+        autoPromote: true,
       };
 
       const deployment = await createDeploy(

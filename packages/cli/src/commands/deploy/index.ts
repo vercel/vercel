@@ -93,6 +93,7 @@ export default async (client: Client): Promise<number> => {
       '--prod': Boolean,
       '--archive': String,
       '--no-wait': Boolean,
+      '--no-alias': Boolean,
       '--yes': Boolean,
       '-f': '--force',
       '-p': '--public',
@@ -520,6 +521,8 @@ export default async (client: Client): Promise<number> => {
   }
 
   try {
+    const noAlias = argv['--no-alias'] ?? false;
+
     const createArgs: CreateOptions = {
       name,
       env: deploymentEnv,
@@ -543,6 +546,7 @@ export default async (client: Client): Promise<number> => {
       target,
       skipAutoDetectionConfirmation: autoConfirm,
       noWait,
+      autoPromote: !noAlias,
     };
 
     if (!localConfig.builds || localConfig.builds.length === 0) {
