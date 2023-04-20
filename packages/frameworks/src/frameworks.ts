@@ -1933,6 +1933,16 @@ export const frameworks = [
     ],
   },
   {
+    name: 'Storybook',
+    slug: 'storybook',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/storybook.svg',
+    tagline: 'Frontend workshop for UI development',
+    description:
+      'Storybook is a frontend workshop for building UI components and pages in isolation.',
+    website: 'https://storybook.js.org/',
+    ignoreRuntimes: ['@vercel/node'],
+  },
+  {
     name: 'Other',
     slug: null,
     logo: 'https://api-frameworks.vercel.sh/framework-logos/other.svg',
