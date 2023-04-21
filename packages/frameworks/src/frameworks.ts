@@ -1941,21 +1941,20 @@ export const frameworks = [
       'Storybook is a frontend workshop for building UI components and pages in isolation.',
     website: 'https://storybook.js.org',
     ignoreRuntimes: ['@vercel/next', '@vercel/node'],
-    useRuntime: { src: 'package.json', use: '@vercel/static-build' },
     settings: {
       installCommand: {
         placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
-        placeholder: '`npm run build-storybook`',
+        placeholder:
+          '`npm run build-storybook`, `yarn build-storybook`, or `pnpm build-storybook`',
         value: 'npm run build-storybook',
       },
       devCommand: {
-        placeholder: '`npm run storybook`',
-        value: `npm run storybook`,
+        value: `start-storybook -p 6006`,
       },
       outputDirectory: {
-        value: null,
+        value: 'storybook-static',
       },
     },
   },
