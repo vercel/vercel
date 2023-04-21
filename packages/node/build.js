@@ -44,6 +44,7 @@ async function main() {
     fs.remove(join(outDir, 'edge-functions/edge-handler.d.mts')),
     fs.remove(join(outDir, 'edge-functions/edge-wasm-plugin.d.mts')),
     fs.remove(join(outDir, 'edge-functions/edge-node-compat-plugin.d.mts')),
+    fs.remove(join(outDir, 'serverless-functions/helpers.d.ts')),
     fs.remove(join(outDir, 'serverless-functions/serverless-handler.d.mts')),
   ]);
 
@@ -51,11 +52,6 @@ async function main() {
   await fs.copyFile(
     join(outDir, 'index.d.ts'),
     join(__dirname, 'test/fixtures/15-helpers/ts/types.d.ts')
-  );
-
-  await fs.copyFile(
-    join(__dirname, 'src/serverless-functions/dynamic-import.js'),
-    join(outDir, 'serverless-functions/dynamic-import.js')
   );
 
   await fs.copyFile(

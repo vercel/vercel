@@ -6,8 +6,6 @@ if (!entrypoint) {
 }
 
 import { join } from 'path';
-const useRequire = process.env.VERCEL_DEV_IS_ESM !== '1';
-
 import type { Headers } from 'node-fetch';
 import type { VercelProxyResponse } from './types.js';
 import { Config } from '@vercel/build-utils';
@@ -17,7 +15,9 @@ import { createServerlessEventHandler } from './serverless-functions/serverless-
 import { EdgeRuntimes, isEdgeRuntime, logError } from './utils.js';
 import { getConfig } from '@vercel/static-config';
 import { Project } from 'ts-morph';
-import listen from 'async-listen';
+import asyncListen from 'async-listen';
+
+const { default: listen } = asyncListen;
 
 const parseConfig = (entryPointPath: string) =>
   getConfig(new Project(), entryPointPath);
@@ -57,7 +57,6 @@ async function createEventHandler(
   return createServerlessEventHandler(entrypointPath, {
     mode: staticConfig?.supportsResponseStreaming ? 'streaming' : 'buffer',
     shouldAddHelpers: options.shouldAddHelpers,
-    useRequire,
   });
 }
 
@@ -76,7 +75,6 @@ async function main() {
   );
 
   const proxyServer = createServer(onDevRequest);
-  // @ts-expect-error
   await listen(proxyServer, { host: '127.0.0.1', port: 0 });
 
   try {

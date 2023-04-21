@@ -13,7 +13,7 @@ import exitHook from 'exit-hook';
 import type { HeadersInit } from 'node-fetch';
 import type { VercelProxyResponse } from '../types.js';
 import type { IncomingMessage } from 'http';
-import { fileURLToPath, pathToFileURL } from 'url';
+import { fileURLToPath } from 'url';
 
 const NODE_VERSION_MAJOR = process.version.match(/^v(\d+)\.\d+/)?.[1];
 const NODE_VERSION_IDENTIFIER = `node${NODE_VERSION_MAJOR}`;
@@ -64,7 +64,7 @@ async function compileUserCode(
               let code = readFileSync(args.path, 'utf8');
               code = code.replace(
                 /\bimport\.meta\.url\b/g,
-                JSON.stringify(pathToFileURL(__filename))
+                JSON.stringify(import.meta.url)
               );
               return { contents: code };
             });

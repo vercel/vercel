@@ -1,18 +1,20 @@
 import { addHelpers } from './helpers.js';
 import { createServer } from 'http';
-import { dynamicImport } from './dynamic-import.js';
 import { serializeBody } from '../utils.js';
 import { streamToBuffer } from '@vercel/build-utils';
 import exitHook from 'exit-hook';
 import fetch from 'node-fetch';
-import listen from 'async-listen';
+import asyncListen from 'async-listen';
+import { isAbsolute } from 'path';
+import { pathToFileURL } from 'url';
 import type { ServerResponse, IncomingMessage } from 'http';
 import type { VercelProxyResponse } from '../types.js';
 import type { VercelRequest, VercelResponse } from './helpers.js';
 
+const { default: listen } = asyncListen;
+
 type ServerlessServerOptions = {
   shouldAddHelpers: boolean;
-  useRequire: boolean;
   mode: 'streaming' | 'buffer';
 };
 
@@ -30,17 +32,15 @@ async function createServerlessServer(
     return userCode(req, res);
   });
   exitHook(() => server.close());
-  // @ts-expect-error
   return { url: await listen(server) };
 }
 
 async function compileUserCode(
-  entrypointPath: string,
-  options: ServerlessServerOptions
+  entrypointPath: string
 ) {
-  let fn = options.useRequire
-    ? require(entrypointPath)
-    : await dynamicImport(entrypointPath);
+  // FIX ME: if `entrypoint` is a .ts file, this will blow up because we can't import .ts files
+  const id = isAbsolute(entrypointPath) ? pathToFileURL(entrypointPath).href : entrypointPath;
+  let fn = await import(id);
 
   /**
    * In some cases we might have nested default props due to TS => JS
@@ -56,7 +56,7 @@ export async function createServerlessEventHandler(
   entrypointPath: string,
   options: ServerlessServerOptions
 ): Promise<(request: IncomingMessage) => Promise<VercelProxyResponse>> {
-  const userCode = await compileUserCode(entrypointPath, options);
+  const userCode = await compileUserCode(entrypointPath);
   const server = await createServerlessServer(userCode, options);
 
   return async function (request: IncomingMessage) {
