@@ -141,7 +141,7 @@ describe('deploy', () => {
   });
 
   it('should send a tgz file when `--archive=tgz`', async () => {
-    const cwd = setupUnitFixture('commands/deploy/archive');
+    const cwd = setupUnitFixture('commands/deploy/static');
     const originalCwd = process.cwd();
     try {
       process.chdir(cwd);
@@ -150,8 +150,8 @@ describe('deploy', () => {
       useTeams('team_dummy');
       useProject({
         ...defaultProject,
-        name: 'archive',
-        id: 'archive',
+        name: 'static',
+        id: 'static',
       });
 
       let body: any;
@@ -203,8 +203,60 @@ describe('deploy', () => {
     }
   });
 
+  it('should send noAlias/autoPromote flag', async () => {
+    const cwd = setupUnitFixture('commands/deploy/static');
+    const originalCwd = process.cwd();
+    try {
+      process.chdir(cwd);
+
+      const user = useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        name: 'static',
+        id: 'static',
+      });
+
+      let body: any;
+      client.scenario.post(`/v13/deployments`, (req, res) => {
+        body = req.body;
+        res.json({
+          creator: {
+            uid: user.id,
+            username: user.username,
+          },
+          id: 'dpl_archive_test',
+        });
+      });
+      client.scenario.get(`/v13/deployments/dpl_archive_test`, (req, res) => {
+        res.json({
+          creator: {
+            uid: user.id,
+            username: user.username,
+          },
+          id: 'dpl_archive_test',
+          readyState: 'READY',
+          aliasAssigned: true,
+          alias: [],
+        });
+      });
+
+      client.setArgv('deploy', '--prod', '--no-alias');
+      const exitCode = await deploy(client);
+      expect(exitCode).toEqual(0);
+      expect(body).toMatchObject({
+        target: 'production',
+        source: 'cli',
+        autoPromote: false,
+        version: 2,
+      });
+    } finally {
+      process.chdir(originalCwd);
+    }
+  });
+
   it('should upload missing files', async () => {
-    const cwd = setupUnitFixture('commands/deploy/archive');
+    const cwd = setupUnitFixture('commands/deploy/static');
     const originalCwd = process.cwd();
 
     // Add random 1mb file
@@ -217,8 +269,8 @@ describe('deploy', () => {
       useTeams('team_dummy');
       useProject({
         ...defaultProject,
-        name: 'archive',
-        id: 'archive',
+        name: 'static',
+        id: 'static',
       });
 
       let body: any;
