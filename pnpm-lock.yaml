@@ -840,7 +840,6 @@ importers:
       '@vercel/error-utils': 1.0.8
       '@vercel/ncc': 0.24.0
       '@vercel/nft': 0.22.5
-      '@vercel/node-bridge': 4.0.1
       '@vercel/static-config': 2.0.16
       async-listen: 1.2.0
       content-type: 1.0.4
@@ -864,7 +863,6 @@ importers:
       '@types/node': 14.18.33
       '@vercel/build-utils': link:../build-utils
       '@vercel/error-utils': 1.0.8
-      '@vercel/node-bridge': 4.0.1
       '@vercel/static-config': link:../static-config
       async-listen: 1.2.0
       edge-runtime: 2.1.4
@@ -6499,10 +6497,6 @@ packages:
     transitivePeerDependencies:
       - encoding
       - supports-color
-
-  /@vercel/node-bridge/4.0.1:
-    resolution: {integrity: sha512-XEfKfnLGzlIBpad7eGNPql1HnMhoSTv9q3uDNC4axdaAC/kI5yvl8kXjuCPAXYvpbJnVQPpcSUC5/r5ap8F3jA==}
-    dev: false
 
   /@vercel/remix-run-dev/1.15.0_@types+node@14.18.33:
     resolution: {integrity: sha512-pQTM5WmOzrvhpPSHFDShwqX71YnLaTUxffhnly4MxVNKJ2WKV9zqx8bGQ/7cLfpEu9JfY2c+pVjYYb3wAMBt+Q==}
