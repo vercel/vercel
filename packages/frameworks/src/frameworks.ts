@@ -1939,7 +1939,7 @@ export const frameworks = [
     tagline: 'Frontend workshop for UI development',
     description:
       'Storybook is a frontend workshop for building UI components and pages in isolation.',
-    website: 'https://storybook.js.org/',
+    website: 'https://storybook.js.org',
     ignoreRuntimes: ['@vercel/next', '@vercel/node'],
     useRuntime: { src: 'package.json', use: '@vercel/static-build' },
     settings: {
