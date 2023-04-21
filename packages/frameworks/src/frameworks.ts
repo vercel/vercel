@@ -1946,12 +1946,10 @@ export const frameworks = [
         placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
-        placeholder:
-          '`npm run build-storybook`, `yarn build-storybook`, or `pnpm build-storybook`',
-        value: 'npm run build-storybook',
+        value: 'storybook build',
       },
       devCommand: {
-        value: `start-storybook -p 6006`,
+        value: `start-storybook -p $PORT`,
       },
       outputDirectory: {
         value: 'storybook-static',

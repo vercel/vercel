@@ -1311,6 +1311,7 @@ describe('build', () => {
     const output = join(cwd, '.vercel/output');
     try {
       process.chdir(cwd);
+      process.env.STORYBOOK_TELEMETRY_DEBUG = '1';
       execSync('yarn');
 
       const exitCode = await build(client);
@@ -1336,6 +1337,7 @@ describe('build', () => {
     } finally {
       process.chdir(originalCwd);
       delete process.env.__VERCEL_BUILD_RUNNING;
+      delete process.env.STORYBOOK_TELEMETRY_DEBUG;
     }
   });
 });
