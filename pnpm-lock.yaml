@@ -29,7 +29,7 @@ importers:
       source-map-support: 0.5.12
       ts-eager: 2.0.2
       ts-jest: 29.1.0
-      turbo: 1.8.5
+      turbo: 1.9.1
     dependencies:
       lerna: 5.6.2
     devDependencies:
@@ -57,7 +57,7 @@ importers:
       source-map-support: 0.5.12
       ts-eager: 2.0.2
       ts-jest: 29.1.0_jest@29.5.0
-      turbo: 1.8.5
+      turbo: 1.9.1
 
   api:
     specifiers:
@@ -266,22 +266,22 @@ importers:
       '@vercel-internals/get-package-json': '*'
       '@vercel-internals/types': '*'
       '@vercel/build-utils': 6.7.1
-      '@vercel/client': 12.4.9
-      '@vercel/error-utils': 1.0.9
+      '@vercel/client': 12.4.11
+      '@vercel/error-utils': 1.0.10
       '@vercel/frameworks': 1.3.4
-      '@vercel/fs-detectors': 3.8.10
+      '@vercel/fs-detectors': 3.8.11
       '@vercel/fun': 1.0.4
-      '@vercel/go': 2.4.4
-      '@vercel/hydrogen': 0.0.62
+      '@vercel/go': 2.5.0
+      '@vercel/hydrogen': 0.0.63
       '@vercel/ncc': 0.24.0
-      '@vercel/next': 3.7.4
-      '@vercel/node': 2.10.3
-      '@vercel/python': 3.1.58
+      '@vercel/next': 3.7.5
+      '@vercel/node': 2.12.0
+      '@vercel/python': 3.1.59
       '@vercel/redwood': 1.1.14
-      '@vercel/remix-builder': 1.8.4
+      '@vercel/remix-builder': 1.8.5
       '@vercel/routing-utils': 2.2.0
       '@vercel/ruby': 1.3.75
-      '@vercel/static-build': 1.3.23
+      '@vercel/static-build': 1.3.25
       '@zeit/source-map-support': 0.6.2
       ajv: 6.12.2
       alpha-sort: 2.0.1
@@ -608,7 +608,7 @@ importers:
       '@types/node': 14.18.33
       '@types/semver': 7.3.10
       '@vercel/build-utils': 6.7.1
-      '@vercel/error-utils': 1.0.9
+      '@vercel/error-utils': 1.0.10
       '@vercel/frameworks': 1.3.4
       '@vercel/routing-utils': 2.2.0
       glob: 8.0.3
@@ -657,7 +657,7 @@ importers:
       '@types/node': 14.18.33
       '@types/react': 18.0.26
       '@vercel/build-utils': 6.7.1
-      '@vercel/node': 2.10.3
+      '@vercel/node': 2.12.0
       '@vercel/routing-utils': 2.2.0
       esbuild: 0.14.47
       etag: 1.8.1
@@ -727,7 +727,7 @@ importers:
       '@types/jest': 27.5.1
       '@types/node': 14.18.33
       '@vercel/build-utils': 6.7.1
-      '@vercel/static-config': 2.0.15
+      '@vercel/static-config': 2.0.16
       execa: 3.2.0
       fs-extra: 11.1.0
       ts-morph: 12.0.0
@@ -834,15 +834,18 @@ importers:
       '@types/etag': 1.8.0
       '@types/jest': 29.5.0
       '@types/node': 14.18.33
+      '@types/node-fetch': 2.6.3
       '@types/test-listen': 1.1.0
       '@vercel/build-utils': 6.7.1
+      '@vercel/error-utils': 1.0.8
       '@vercel/ncc': 0.24.0
       '@vercel/nft': 0.22.5
-      '@vercel/node-bridge': 4.0.1
-      '@vercel/static-config': 2.0.15
+      '@vercel/static-config': 2.0.16
+      async-listen: 1.2.0
       content-type: 1.0.4
       cookie: 0.4.0
-      edge-runtime: 2.0.0
+      cross-env: 7.0.3
+      edge-runtime: 2.1.4
       esbuild: 0.14.47
       etag: 1.8.1
       execa: 3.2.0
@@ -858,13 +861,17 @@ importers:
     dependencies:
       '@edge-runtime/vm': 2.0.0
       '@types/node': 14.18.33
+      '@types/node-fetch': 2.6.3
       '@vercel/build-utils': link:../build-utils
-      '@vercel/node-bridge': link:../node-bridge
+      '@vercel/error-utils': 1.0.8
       '@vercel/static-config': link:../static-config
-      edge-runtime: 2.0.0
+      async-listen: 1.2.0
+      edge-runtime: 2.1.4
       esbuild: 0.14.47
       exit-hook: 2.2.1
       node-fetch: 2.6.9
+      path-to-regexp: 6.2.1
+      ts-morph: 12.0.0
       ts-node: 10.9.1_rg75ynmaln4yqago3hi74c2fhe
       typescript: 4.9.5
     devDependencies:
@@ -881,37 +888,12 @@ importers:
       '@vercel/nft': 0.22.5
       content-type: 1.0.4
       cookie: 0.4.0
+      cross-env: 7.0.3
       etag: 1.8.1
       execa: 3.2.0
       fs-extra: 11.1.0
-      path-to-regexp: 6.2.1
       source-map-support: 0.5.12
       test-listen: 1.1.0
-      ts-morph: 12.0.0
-
-  packages/node-bridge:
-    specifiers:
-      '@types/aws-lambda': 8.10.19
-      '@types/node': 14.18.33
-      content-type: 1.0.4
-      cookie: 0.4.0
-      etag: 1.8.1
-      execa: 3.2.0
-      fs-extra: 10.0.0
-      jsonlines: 0.1.1
-      test-listen: 1.1.0
-      typescript: 4.3.4
-    devDependencies:
-      '@types/aws-lambda': 8.10.19
-      '@types/node': 14.18.33
-      content-type: 1.0.4
-      cookie: 0.4.0
-      etag: 1.8.1
-      execa: 3.2.0
-      fs-extra: 10.0.0
-      jsonlines: 0.1.1
-      test-listen: 1.1.0
-      typescript: 4.3.4
 
   packages/python:
     specifiers:
@@ -964,7 +946,7 @@ importers:
       '@types/semver': 7.3.13
       '@vercel/build-utils': 6.7.1
       '@vercel/nft': 0.22.5
-      '@vercel/static-config': 2.0.15
+      '@vercel/static-config': 2.0.16
       path-to-regexp: 6.2.1
       semver: 7.3.8
       ts-morph: 12.0.0
@@ -1051,12 +1033,12 @@ importers:
       '@types/semver': 7.3.13
       '@vercel/build-utils': 6.7.1
       '@vercel/frameworks': 1.3.4
-      '@vercel/fs-detectors': 3.8.10
-      '@vercel/gatsby-plugin-vercel-analytics': 1.0.9
-      '@vercel/gatsby-plugin-vercel-builder': 1.2.8
+      '@vercel/fs-detectors': 3.8.11
+      '@vercel/gatsby-plugin-vercel-analytics': 1.0.10
+      '@vercel/gatsby-plugin-vercel-builder': 1.2.10
       '@vercel/ncc': 0.24.0
       '@vercel/routing-utils': 2.2.0
-      '@vercel/static-config': 2.0.15
+      '@vercel/static-config': 2.0.16
       execa: 3.2.0
       fs-extra: 10.0.0
       get-port: 5.0.0
@@ -2466,8 +2448,9 @@ packages:
     dependencies:
       '@jridgewell/trace-mapping': 0.3.9
 
-  /@edge-runtime/format/1.1.0:
-    resolution: {integrity: sha512-MkLDDtPhXZIMx83NykdFmOpF7gVWIdd6GBHYb8V/E+PKWvD2pK/qWx9B30oN1iDJ2XBm0SGDjz02S8nDHI9lMQ==}
+  /@edge-runtime/format/2.0.1:
+    resolution: {integrity: sha512-aE+9DtBvQyg349srixtXEUNauWtIv5HTKPy8Q9dvG1NvpldVIvvhcDBI+SuvDVM8kQl8phbYnp2NTNloBCn/Yg==}
+    engines: {node: '>=14'}
     dev: false
 
   /@edge-runtime/jest-environment/2.0.0:
@@ -2484,10 +2467,22 @@ packages:
   /@edge-runtime/primitives/2.0.0:
     resolution: {integrity: sha512-AXqUq1zruTJAICrllUvZcgciIcEGHdF6KJ3r6FM0n4k8LpFxZ62tPWVIJ9HKm+xt+ncTBUZxwgUaQ73QMUQEKw==}
 
+  /@edge-runtime/primitives/2.1.2:
+    resolution: {integrity: sha512-SR04SMDybALlhIYIi0hiuEUwIl0b7Sn+RKwQkX6hydg4+AKMzBNDFhj2nqHDD1+xkHArV9EhmJIb6iGjShwSzg==}
+    engines: {node: '>=14'}
+    dev: false
+
   /@edge-runtime/vm/2.0.0:
     resolution: {integrity: sha512-BOLrAX8IWHRXu1siZocwLguKJPEUv7cr+rG8tI4hvHgMdIsBWHJlLeB8EjuUVnIURFrUiM49lVKn8DRrECmngw==}
     dependencies:
       '@edge-runtime/primitives': 2.0.0
+
+  /@edge-runtime/vm/2.1.2:
+    resolution: {integrity: sha512-j4H5S26NJhYOyjVMN8T/YJuwwslfnEX1P0j6N2Rq1FaubgNowdYunA9nlO7lg8Rgjv6dqJ2zKuM7GD1HFtNSGw==}
+    engines: {node: '>=14'}
+    dependencies:
+      '@edge-runtime/primitives': 2.1.2
+    dev: false
 
   /@emotion/hash/0.9.0:
     resolution: {integrity: sha512-14FtKiHhy2QoPIzdTcvh//8OyBlknNs2nXRwIhG904opCby3l+9Xaf/wuPvICBF0rc1ZCNBd3nKe9cd2mecVkQ==}
@@ -5715,6 +5710,13 @@ packages:
       form-data: 3.0.1
     dev: true
 
+  /@types/node-fetch/2.6.3:
+    resolution: {integrity: sha512-ETTL1mOEdq/sxUtgtOhKjyB2Irra4cjxksvcMUR5Zr4n+PxVhsCD9WS46oPbHL3et9Zde7CNRr+WUNlcHvsX+w==}
+    dependencies:
+      '@types/node': 14.18.33
+      form-data: 3.0.1
+    dev: false
+
   /@types/node/10.12.18:
     resolution: {integrity: sha512-fh+pAqt4xRzPfqA6eh3Z2y6fyZavRIumvjhaCL753+TVkGKGhpPeyrJG2JftD0T9q4GF00KjefsQ+PQNDdWQaQ==}
     dev: false
@@ -5880,7 +5882,7 @@ packages:
   /@types/through/0.0.30:
     resolution: {integrity: sha512-FvnCJljyxhPM3gkRgWmxmDZyAQSiBQQWLI0A0VFL0K7W1oRUrPJSqNO0NvTnLkBcotdlp3lKvaT0JrnyRDkzOg==}
     dependencies:
-      '@types/node': 18.14.6
+      '@types/node': 16.18.11
     dev: true
 
   /@types/title/3.4.1:
@@ -6433,6 +6435,10 @@ packages:
     resolution: {integrity: sha512-wUYa8eUyTg1jPGRCrjpIxJm1r6hQE7ccbECWzDCAikuWG4iadS2zWrF7bsAcuUj7fTMf8sNFhmsknTJgyN3B3g==}
     dev: false
 
+  /@vercel/error-utils/1.0.8:
+    resolution: {integrity: sha512-s+f7jP2oH1koICbQ8e3K9hOpOeUct7rbCnF9qsNwXemq850wAh2e90tp9R6oYBM0BNpiLRRm+oG5zD2sCIm3HQ==}
+    dev: false
+
   /@vercel/frameworks/1.3.0:
     resolution: {integrity: sha512-guXALpQLhL0bCvIjUhHbYFyS8XusZQ6RtjqCTq0eJM6p8QLun4DI1TToqbIah/o7DY3s+RAyC2OUyOAY91qH4w==}
     dependencies:
@@ -6826,10 +6832,6 @@ packages:
     resolution: {integrity: sha512-k+iyHEuPgSw6SbuDpGQM+06HQUa04DZ3o+F6CSzXMvvI5KMvnaEqXe+YVe555R9nn6GPt404fos4wcgpw12SDA==}
     engines: {node: '>=0.4.0'}
 
-  /acorn/8.8.1:
-    resolution: {integrity: sha512-7zFpHzhnqYKrkYdUjF1HI1bzd0VygEGX8lFk4k5zVMqHEoES+P+7TKI+EvLO9WVMJ8eekdO0aDEK044xTXwPPA==}
-    engines: {node: '>=0.4.0'}
-
   /acorn/8.8.2:
     resolution: {integrity: sha512-xjIYgE8HBrkpd/sJqOGNspf8uHG+NOHGOw6a/Urj8taM2EXfdNAH2oFcPeIFfsv3+kz/mJrS5VuMqbNLjCa2vw==}
     engines: {node: '>=0.4.0'}
@@ -7211,7 +7213,11 @@ packages:
 
   /async-listen/1.2.0:
     resolution: {integrity: sha512-CcEtRh/oc9Jc4uWeUwdpG/+Mb2YUHKmdaTf0gUr7Wa+bfp4xx70HOb3RuSTJMvqKNB1TkdTfjLdrcz2X4rkkZA==}
-    dev: true
+
+  /async-listen/2.0.3:
+    resolution: {integrity: sha512-WVLi/FGIQaXyfYyNvmkwKT1RZbkzszLLnmW/gFCc5lbVvN/0QQCWpBwRBk2OWSdkkmKRBc8yD6BrKsjA3XKaSw==}
+    engines: {node: '>= 14'}
+    dev: false
 
   /async-retry/1.1.3:
     resolution: {integrity: sha512-fiAB2uaoAoUS5Ua75XFGoMKF4hmQ5H4u4gsINUjwPNof5dygJS1zyL9mh0SOmIkzAwGijwG4ybLNc8yG2OGpEQ==}
@@ -8442,6 +8448,14 @@ packages:
       prompts: 2.4.2
     dev: true
 
+  /cross-env/7.0.3:
+    resolution: {integrity: sha512-+/HKd6EgcQCJGh2PSjZuUitQBQynKor4wrFbRg4DtAgS1aWO+gU52xpH7M9ScGgXSYmAVS9bIJ8EzuaGw0oNAw==}
+    engines: {node: '>=10.14', npm: '>=6', yarn: '>=1'}
+    hasBin: true
+    dependencies:
+      cross-spawn: 7.0.3
+    dev: true
+
   /cross-spawn/5.1.0:
     resolution: {integrity: sha512-pTgQJ5KC0d2hcY8eyL1IzlBPYjTkyH72XRZPnLyKus2mBfNjQs3klqbJU2VILqZryAZUt9JOb3h/mWMy23/f5A==}
     dependencies:
@@ -8580,7 +8594,7 @@ packages:
       supports-color:
         optional: true
     dependencies:
-      ms: 2.1.3
+      ms: 2.1.2
     dev: true
 
   /debug/4.3.4:
@@ -8950,13 +8964,15 @@ packages:
       safer-buffer: 2.1.2
     dev: true
 
-  /edge-runtime/2.0.0:
-    resolution: {integrity: sha512-TmRJhKi4mlM1e+zgF4CSzVU5gJ1sWj7ia+XhVgZ8PYyYUxk4PPjJU8qScpSLsAbdSxoBghLxdMuwuCzdYLd1sQ==}
+  /edge-runtime/2.1.4:
+    resolution: {integrity: sha512-SertKByzAmjm+MkLbFl1q0ko+/90V24dhZgQM8fcdguQaDYVEVtb6okEBGeg8IQgL1/JUP8oSlUIxSI/bvsVRQ==}
+    engines: {node: '>=14'}
+    hasBin: true
     dependencies:
-      '@edge-runtime/format': 1.1.0
-      '@edge-runtime/vm': 2.0.0
+      '@edge-runtime/format': 2.0.1
+      '@edge-runtime/vm': 2.1.2
+      async-listen: 2.0.3
       exit-hook: 2.2.1
-      http-status: 1.5.3
       mri: 1.2.0
       picocolors: 1.0.0
       pretty-bytes: 5.6.0
@@ -9950,7 +9966,7 @@ packages:
       eslint-plugin-jest:
         optional: true
     dependencies:
-      eslint-plugin-jest: 27.2.1_tznlougxon7ncnf7fl5rekheiu
+      eslint-plugin-jest: 27.2.1_6xo4tvwzjwdi6xwjpxfe6jodqe
     dev: true
 
   /eslint-plugin-react-hooks/4.6.0:
@@ -10702,7 +10718,6 @@ packages:
       asynckit: 0.4.0
       combined-stream: 1.0.8
       mime-types: 2.1.35
-    dev: true
 
   /form-data/4.0.0:
     resolution: {integrity: sha512-ETEklSGi5t0QMZuiXoA/Q6vcnxcLQP5vdugSpuAyi6SVGi2clPPp+xgEhuMaHC+zGgn31Kd235W35f7Hykkaww==}
@@ -11557,11 +11572,6 @@ packages:
       jsprim: 1.4.2
       sshpk: 1.17.0
     dev: true
-
-  /http-status/1.5.3:
-    resolution: {integrity: sha512-jCClqdnnwigYslmtfb28vPplOgoiZ0siP2Z8C5Ua+3UKbx410v+c+jT+jh1bbI4TvcEySuX0vd/CfFZFbDkJeQ==}
-    engines: {node: '>= 0.4.0'}
-    dev: false
 
   /http2-wrapper/1.0.3:
     resolution: {integrity: sha512-V+23sDMr12Wnz7iTcDeJr3O6AIxlnvT/bmaAAAP/Xda35C90p9599p0F1eHR/N1KILWSoWVAiOMFjBBXaXSMxg==}
@@ -14374,10 +14384,6 @@ packages:
   /ms/2.1.2:
     resolution: {integrity: sha512-sGkPx+VjMtmA6MX27oA4FBFELFCZZ4S4XqeGOXCv68tT+jb3vk/RyaKWP0PTKyWtmLSM0b+adUTEvbs1PEaH2w==}
 
-  /ms/2.1.3:
-    resolution: {integrity: sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==}
-    dev: true
-
   /multimatch/5.0.0:
     resolution: {integrity: sha512-ypMKuglUrZUD99Tk2bUQ+xNQj43lPEfAeX2o9cTteAmShXy2VHDJpuwu1o0xqoKCt9jLVAvwyFKdLTPXKAfJyA==}
     engines: {node: '>=10'}
@@ -15328,6 +15334,7 @@ packages:
 
   /path-to-regexp/6.2.1:
     resolution: {integrity: sha512-JLyh7xT1kizaEvcaXOQwOc2/Yhw6KZOvPf1S8401UyLk86CU79LN3vl7ztXGm/pZ+YjoyAJ4rxmHwbkBXJX+yw==}
+    dev: false
 
   /path-type/3.0.0:
     resolution: {integrity: sha512-T2ZUsdZFHgA3u4e5PfPbjd7HDDpxPnQb5jN0SrDsjNSuVXHJqtwTnWqG0B1jZrgmJ/7lj1EmVIByWt1gxGkWvg==}
@@ -17560,7 +17567,7 @@ packages:
       '@tsconfig/node14': 1.0.3
       '@tsconfig/node16': 1.0.3
       '@types/node': 14.18.33
-      acorn: 8.8.1
+      acorn: 8.8.2
       acorn-walk: 8.2.0
       arg: 4.1.3
       create-require: 1.1.1
@@ -17591,7 +17598,7 @@ packages:
       '@tsconfig/node14': 1.0.3
       '@tsconfig/node16': 1.0.3
       '@types/node': 14.18.33
-      acorn: 8.8.1
+      acorn: 8.8.2
       acorn-walk: 8.2.0
       arg: 4.1.3
       create-require: 1.1.1
@@ -17710,64 +17717,65 @@ packages:
       safe-buffer: 5.2.1
     dev: true
 
-  /turbo-darwin-64/1.8.5:
-    resolution: {integrity: sha512-CAYh56bzeHfnh7jTm03r29bh8p5a/EjQo1Id5yLUH7hS7msTau/+YpxJWPodLbN0UQsUYivUqHQkglJ+eMJ7xA==}
+  /turbo-darwin-64/1.9.1:
+    resolution: {integrity: sha512-IX/Ph4CO80lFKd9pPx3BWpN2dynt6mcUFifyuHUNVkOP1Usza/G9YuZnKQFG6wUwKJbx40morFLjk1TTeLe04w==}
     cpu: [x64]
     os: [darwin]
     requiresBuild: true
     dev: true
     optional: true
 
-  /turbo-darwin-arm64/1.8.5:
-    resolution: {integrity: sha512-R3jCPOv+lu3dcvMhj8b/Defv6dyUwX6W+tbX7d6YUCA46Plf/bGCQ8+MSbxmr/4E1GyGOVFsn1wRfiYk0us/Dg==}
+  /turbo-darwin-arm64/1.9.1:
+    resolution: {integrity: sha512-6tCbmIboy9dTbhIZ/x9KIpje73nvxbiyVnHbr9xKnsxLJavD0xqjHZzbL5U2tHp8chqmYf0E4WYOXd+XCNg+OQ==}
     cpu: [arm64]
     os: [darwin]
     requiresBuild: true
     dev: true
     optional: true
 
-  /turbo-linux-64/1.8.5:
-    resolution: {integrity: sha512-YRc/KNRZeUVvth11UO4SDQZR2IqGgl9MSsbzqoHuFz4B4Q5QXH7onHogv9aXWE/BZBBbcrSBTlwBSG0Gg+J8hg==}
+  /turbo-linux-64/1.9.1:
+    resolution: {integrity: sha512-ti8XofnJFO1XaadL92lYJXgxb0VBl03Yu9VfhxkOTywFe7USTLBkJcdvQ4EpFk/KZwLiTdCmT2NQVxsG4AxBiQ==}
     cpu: [x64]
     os: [linux]
     requiresBuild: true
     dev: true
     optional: true
 
-  /turbo-linux-arm64/1.8.5:
-    resolution: {integrity: sha512-8exVZb7XBl/V3gHSweuUyG2D9IzfWqwLvlXoeLWlVYSj61Ajgdv+WU7lvUmx+H2s+sSKqmIFmewA5Lw6YY37sg==}
+  /turbo-linux-arm64/1.9.1:
+    resolution: {integrity: sha512-XYvIbeiCCCr+ENujd2Jtck/lJPTKWb8T2MSL/AEBx21Zy3Sa7HgrQX6LX0a0pNHjaleHz00XXt1D0W5hLeP+tA==}
     cpu: [arm64]
     os: [linux]
     requiresBuild: true
     dev: true
     optional: true
 
-  /turbo-windows-64/1.8.5:
-    resolution: {integrity: sha512-fA8PU5ZNoFnQkapG06WiEqfsVQ5wbIPkIqTwUsd/M2Lp+KgxE79SQbuEI+2vQ9SmwM5qoMi515IPjgvXAJXgCw==}
+  /turbo-windows-64/1.9.1:
+    resolution: {integrity: sha512-x7lWAspe4/v3XQ0gaFRWDX/X9uyWdhwFBPEfb8BA0YKtnsrPOHkV0mRHCRrXzvzjA7pcDCl2agGzb7o863O+Jg==}
     cpu: [x64]
     os: [win32]
     requiresBuild: true
     dev: true
     optional: true
 
-  /turbo-windows-arm64/1.8.5:
-    resolution: {integrity: sha512-SW/NvIdhckLsAWjU/iqBbCB0S8kXupKscUK3kEW1DZIr3MYcP/yIuaE/IdPuqcoF3VP0I3TLD4VTYCCKAo3tKA==}
+  /turbo-windows-arm64/1.9.1:
+    resolution: {integrity: sha512-QSLNz8dRBLDqXOUv/KnoesBomSbIz2Huef/a3l2+Pat5wkQVgMfzFxDOnkK5VWujPYXz+/prYz+/7cdaC78/kw==}
     cpu: [arm64]
     os: [win32]
     requiresBuild: true
     dev: true
     optional: true
 
-  /turbo/1.8.5:
-    resolution: {integrity: sha512-UBnH2wIFb5g6OQCk8f34Ud15ZXV4xEMmugeDJTU5Ur2LpVRsNEny0isSCYdb3Iu3howoNyyXmtpaxWsAwNYkkg==}
+  /turbo/1.9.1:
+    resolution: {integrity: sha512-Rqe8SP96e53y4Pk29kk2aZbA8EF11UtHJ3vzXJseadrc1T3V6UhzvAWwiKJL//x/jojyOoX1axnoxmX3UHbZ0g==}
+    hasBin: true
     requiresBuild: true
     optionalDependencies:
-      turbo-darwin-64: 1.8.5
-      turbo-darwin-arm64: 1.8.5
-      turbo-linux-64: 1.8.5
-      turbo-linux-arm64: 1.8.5
-      turbo-windows-64: 1.8.5
-      turbo-windows-arm64: 1.8.5
+      turbo-darwin-64: 1.9.1
+      turbo-darwin-arm64: 1.9.1
+      turbo-linux-64: 1.9.1
+      turbo-linux-arm64: 1.9.1
+      turbo-windows-64: 1.9.1
+      turbo-windows-arm64: 1.9.1
     dev: true
 
   /tweetnacl/0.14.5:
@@ -18420,6 +18428,7 @@ packages:
   /which/2.0.2:
     resolution: {integrity: sha512-BLI3Tl1TW3Pvl70l3yq3Y64i+awpwXqsGBYWkkqMtnbXgrMD+yj7rhW0kuEDxzJaYXGjEW5ogapKNMEKNMjibA==}
     engines: {node: '>= 8'}
+    hasBin: true
     dependencies:
       isexe: 2.0.0
 

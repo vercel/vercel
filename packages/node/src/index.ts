@@ -1,3 +1,4 @@
+import { isErrnoException } from '@vercel/error-utils';
 import url from 'url';
 import { spawn } from 'child_process';
 import {
@@ -247,13 +248,16 @@ async function compile(
           fsCache.set(relPath, entry);
           sourceCache.set(relPath, source);
           return source;
-        } catch (e: any) {
-          if (e.code === 'ENOENT' || e.code === 'EISDIR') {
+        } catch (error: unknown) {
+          if (
+            isErrnoException(error) &&
+            (error.code === 'ENOENT' || error.code === 'EISDIR')
+          ) {
             // `null` represents a not found
             sourceCache.set(relPath, null);
             return null;
           }
-          throw e;
+          throw error;
         }
       },
     }
@@ -549,8 +553,8 @@ export const startDevServer: StartDevServer = async opts => {
     filename: 'package.json',
   });
   const pkg = pathToPkg ? require_(pathToPkg) : {};
-  const isTypescript = ['.ts', '.tsx', '.mts', '.cts'].includes(ext);
-  const maybeTranspile = isTypescript || !['.cjs', '.mjs'].includes(ext);
+  const isTypeScript = ['.ts', '.tsx', '.mts', '.cts'].includes(ext);
+  const maybeTranspile = isTypeScript || !['.cjs', '.mjs'].includes(ext);
   const isEsm =
     ext === '.mjs' ||
     ext === '.mts' ||
@@ -588,10 +592,10 @@ export const startDevServer: StartDevServer = async opts => {
     if (pathToTsConfig) {
       try {
         tsConfig = ts.readConfigFile(pathToTsConfig, ts.sys.readFile).config;
-      } catch (err: any) {
-        if (err.code !== 'ENOENT') {
+      } catch (error: unknown) {
+        if (isErrnoException(error) && error.code !== 'ENOENT') {
           console.error(`Error while parsing "${pathToTsConfig}"`);
-          throw err;
+          throw error;
         }
       }
     }
@@ -630,7 +634,7 @@ export const startDevServer: StartDevServer = async opts => {
     entrypoint,
     require_,
     isEsm,
-    isTypeScript: isTypescript,
+    isTypeScript,
     maybeTranspile,
     meta,
     tsConfig,
@@ -641,7 +645,7 @@ export const startDevServer: StartDevServer = async opts => {
 
   if (message.state === 'message') {
     // "message" event
-    if (isTypescript) {
+    if (isTypeScript) {
       // Invoke `tsc --noEmit` asynchronously in the background, so
       // that the HTTP request is not blocked by the type checking.
       doTypeCheck(opts, pathToTsConfig).catch((err: Error) => {
@@ -688,11 +692,8 @@ async function doTypeCheck(
     const json = JSON.stringify(tsconfig, null, '\t');
     await fsp.mkdir(entrypointCacheDir, { recursive: true });
     await fsp.writeFile(tsconfigPath, json, { flag: 'wx' });
-  } catch (err: any) {
-    // Don't throw if the file already exists
-    if (err.code !== 'EEXIST') {
-      throw err;
-    }
+  } catch (error: unknown) {
+    if (isErrnoException(error) && error.code !== 'EEXIST') throw error;
   }
 
   const child = spawn(

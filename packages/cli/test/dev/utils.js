@@ -5,8 +5,6 @@ const fetch = require('node-fetch');
 const retry = require('async-retry');
 const { satisfies } = require('semver');
 const stripAnsi = require('strip-ansi');
-const { getDistTag } = require('../../src/util/get-dist-tag');
-const { version: cliVersion } = require('../../package.json');
 const {
   fetchCachedToken,
 } = require('../../../../test/lib/deployment/now-deploy');
@@ -16,7 +14,6 @@ jest.setTimeout(10 * 60 * 1000);
 
 const isCI = !!process.env.CI;
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
-const isCanary = () => getDistTag(cliVersion) === 'canary';
 
 let port = 3000;
 
@@ -622,7 +619,6 @@ afterEach(async () => {
 
 module.exports = {
   sleep,
-  isCanary,
   testPath,
   testFixture,
   testFixtureStdio,

@@ -1,57 +1,91 @@
-import { IncomingMessage } from 'http';
-import { Readable } from 'stream';
-import { getVercelLauncher } from '@vercel/node-bridge/launcher.js';
-import type { Bridge, VercelProxyResponse } from '@vercel/node-bridge';
+import { addHelpers } from './helpers.js';
+import { createServer } from 'http';
+import { dynamicImport } from './dynamic-import.js';
+import { serializeBody } from '../utils.js';
+import { streamToBuffer } from '@vercel/build-utils';
+import exitHook from 'exit-hook';
+import fetch from 'node-fetch';
+import listen from 'async-listen';
+import type { ServerResponse, IncomingMessage } from 'http';
+import type { VercelProxyResponse } from '../types.js';
+import type { VercelRequest, VercelResponse } from './helpers.js';
 
-function rawBody(readable: Readable): Promise<Buffer> {
-  return new Promise((resolve, reject) => {
-    let bytes = 0;
-    const chunks: Buffer[] = [];
-    readable.on('error', reject);
-    readable.on('data', chunk => {
-      chunks.push(chunk);
-      bytes += chunk.length;
-    });
-    readable.on('end', () => {
-      resolve(Buffer.concat(chunks, bytes));
-    });
+type ServerlessServerOptions = {
+  shouldAddHelpers: boolean;
+  useRequire: boolean;
+  mode: 'streaming' | 'buffer';
+};
+
+type ServerlessFunctionSignature = (
+  req: IncomingMessage | VercelRequest,
+  res: ServerResponse | VercelResponse
+) => void;
+
+async function createServerlessServer(
+  userCode: ServerlessFunctionSignature,
+  options: ServerlessServerOptions
+) {
+  const server = createServer(async (req, res) => {
+    if (options.shouldAddHelpers) await addHelpers(req, res);
+    return userCode(req, res);
   });
+  exitHook(() => server.close());
+  // @ts-expect-error
+  return { url: await listen(server) };
+}
+
+async function compileUserCode(
+  entrypointPath: string,
+  options: ServerlessServerOptions
+) {
+  let fn = options.useRequire
+    ? require(entrypointPath)
+    : await dynamicImport(entrypointPath);
+
+  /**
+   * In some cases we might have nested default props due to TS => JS
+   */
+  for (let i = 0; i < 5; i++) {
+    if (fn.default) fn = fn.default;
+  }
+
+  return fn;
 }
 
 export async function createServerlessEventHandler(
-  entrypoint: string,
-  options: {
-    shouldAddHelpers: boolean;
-    useRequire: boolean;
-  }
+  entrypointPath: string,
+  options: ServerlessServerOptions
 ): Promise<(request: IncomingMessage) => Promise<VercelProxyResponse>> {
-  const launcher = getVercelLauncher({
-    entrypointPath: entrypoint,
-    helpersPath: './helpers.js',
-    shouldAddHelpers: options.shouldAddHelpers,
-    useRequire: options.useRequire,
-
-    // not used
-    bridgePath: '',
-    sourcemapSupportPath: '',
-  });
-  const bridge: Bridge = launcher();
+  const userCode = await compileUserCode(entrypointPath, options);
+  const server = await createServerlessServer(userCode, options);
 
   return async function (request: IncomingMessage) {
-    const body = await rawBody(request);
-    const event = {
-      Action: 'Invoke',
-      body: JSON.stringify({
-        method: request.method,
-        path: request.url,
-        headers: request.headers,
-        encoding: 'base64',
-        body: body.toString('base64'),
-      }),
-    };
-
-    return bridge.launcher(event, {
-      callbackWaitsForEmptyEventLoop: false,
+    const url = new URL(request.url ?? '/', server.url);
+    // @ts-expect-error
+    const response = await fetch(url, {
+      body: await serializeBody(request),
+      headers: {
+        ...request.headers,
+        host: request.headers['x-forwarded-host'],
+      },
+      method: request.method,
+      redirect: 'manual',
     });
+
+    let body;
+    if (options.mode === 'streaming') {
+      body = response.body;
+    } else {
+      body = await streamToBuffer(response.body);
+      response.headers.delete('transfer-encoding');
+      response.headers.set('content-length', body.length);
+    }
+
+    return {
+      status: response.status,
+      headers: response.headers,
+      body,
+      encoding: 'utf8',
+    };
   };
 }
