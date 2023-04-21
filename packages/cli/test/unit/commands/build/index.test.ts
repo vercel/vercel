@@ -6,6 +6,7 @@ import { client } from '../../../mocks/client';
 import { defaultProject, useProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
+import { execSync } from 'child_process';
 
 jest.setTimeout(2 * 60 * 1000);
 
@@ -1301,6 +1302,39 @@ describe('build', () => {
     } finally {
       process.chdir(originalCwd);
       delete client.localConfigPath;
+      delete process.env.__VERCEL_BUILD_RUNNING;
+    }
+  });
+
+  it('should build Storybook project and ignore middleware', async () => {
+    const cwd = fixture('storybook-with-middleware');
+    const output = join(cwd, '.vercel/output');
+    try {
+      process.chdir(cwd);
+      execSync('yarn');
+
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      // `builds.json` says that "@vercel/static" was run
+      const builds = await fs.readJSON(join(output, 'builds.json'));
+      expect(builds).toMatchObject({
+        target: 'preview',
+        builds: [
+          {
+            require: '@vercel/static-build',
+            apiVersion: 2,
+            src: 'package.json',
+            use: '@vercel/static-build',
+          },
+        ],
+      });
+
+      const files = await fs.readdir(output);
+      // we should NOT see `functions` because that means `middleware.ts` was processed
+      expect(files.sort()).toEqual(['builds.json', 'config.json', 'static']);
+    } finally {
+      process.chdir(originalCwd);
       delete process.env.__VERCEL_BUILD_RUNNING;
     }
   });
