@@ -23,7 +23,6 @@
     "@types/node": "14.18.33",
     "@vercel/build-utils": "6.7.1",
     "@vercel/error-utils": "1.0.8",
-    "@vercel/node-bridge": "4.0.1",
     "@vercel/static-config": "2.0.16",
     "async-listen": "1.2.0",
     "edge-runtime": "2.1.4",
