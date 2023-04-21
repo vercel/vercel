@@ -1313,6 +1313,9 @@ describe('build', () => {
       process.chdir(cwd);
       execSync('yarn');
 
+      client.stdout.pipe(process.stdout);
+      client.stderr.pipe(process.stderr);
+
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
 
