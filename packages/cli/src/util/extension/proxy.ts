@@ -1,41 +1,36 @@
-import { once } from 'events';
-import httpProxy from 'http-proxy';
-import { createServer, Server } from 'http';
+import { createServer } from 'http';
+import { Headers } from 'node-fetch';
+import {
+  toOutgoingHeaders,
+  mergeIntoServerResponse,
+  buildToHeaders,
+} from '@edge-runtime/node-utils';
+import type { Server } from 'http';
 import type Client from '../client';
 
-export function createProxy(
-  client: Client,
-  apiUrl: string,
-  token?: string
-): Server {
-  const { time } = client.output;
+const toHeaders = buildToHeaders({
+  // @ts-expect-error - `node-fetch` Headers is missing `getAll()`
+  Headers,
+});
 
-  const proxy = httpProxy.createProxyServer({
-    target: apiUrl,
-    changeOrigin: true,
+export function createProxy(client: Client): Server {
+  return createServer(async (req, res) => {
+    // Proxy to the upstream Vercel REST API
+    const headers = toHeaders(req.headers);
+    headers.delete('host');
+    const fetchRes = await client.fetch(req.url || '/', {
+      headers,
+      method: req.method,
+      body: req.method === 'GET' || req.method === 'HEAD' ? undefined : req,
+      useCurrentTeam: false,
+      json: false,
+    });
+    res.statusCode = fetchRes.status;
+    mergeIntoServerResponse(
+      // @ts-expect-error - `node-fetch` Headers is missing `getAll()`
+      toOutgoingHeaders(fetchRes.headers),
+      res
+    );
+    fetchRes.body.pipe(res);
   });
-
-  const server = createServer((req, res) => {
-    const requestId = client.requestIdCounter++;
-
-    if (token && !req.headers.authorization) {
-      req.headers.authorization = `Bearer ${token}`;
-    }
-
-    const closePromise = once(res, 'close').then(() => res);
-
-    proxy.web(req, res);
-
-    time(res => {
-      if (res) {
-        return `#${requestId} ← ${res.statusCode} ${
-          res.statusMessage
-        }: ${res.getHeader('x-vercel-id')}`;
-      } else {
-        return `#${requestId} → ${req.method || 'GET'} ${apiUrl}${req.url}`;
-      }
-    }, closePromise);
-  });
-
-  return server;
 }

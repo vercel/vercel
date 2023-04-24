@@ -1,10 +1,10 @@
 import { dirname } from 'path';
+import which from 'which';
 import execa from 'execa';
 import listen from 'async-listen';
 import { scanParentDirs, walkParentDirs } from '@vercel/build-utils';
 import { createProxy } from './proxy';
 import type Client from '../client';
-import which from 'which';
 
 /**
  * Attempts to execute a Vercel CLI Extension.
@@ -19,9 +19,7 @@ export async function execExtension(
   client: Client,
   name: string,
   args: string[],
-  cwd: string,
-  apiUrl: string,
-  token?: string
+  cwd: string
 ): Promise<number> {
   const { debug } = client.output;
   const extensionCommand = `vercel-${name}`;
@@ -52,7 +50,7 @@ export async function execExtension(
 
   debug(`invoking extension: ${extensionPath}`);
 
-  const proxy = createProxy(client, apiUrl, token);
+  const proxy = createProxy(client);
   proxy.once('close', () => {
     debug(`extension proxy server shut down`);
   });

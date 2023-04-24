@@ -129,7 +129,7 @@ export default class Client extends EventEmitter implements Stdio {
     }, fetch(url, { ...opts, headers, body }));
   }
 
-  fetch(url: string, opts: { json: false }): Promise<Response>;
+  fetch(url: string, opts: FetchOptions & { json: false }): Promise<Response>;
   fetch<T>(url: string, opts?: FetchOptions): Promise<T>;
   fetch(url: string, opts: FetchOptions = {}) {
     return this.retry(async bail => {

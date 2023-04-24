@@ -487,9 +487,7 @@ const main = async () => {
           client,
           targetCommand,
           argv._.slice(3),
-          cwd,
-          apiUrl,
-          authConfig.token
+          cwd
         );
       } catch (err: unknown) {
         if (isErrnoException(err) && err.code === 'ENOENT') {
