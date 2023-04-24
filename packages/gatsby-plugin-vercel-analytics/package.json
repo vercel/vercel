@@ -1,7 +1,7 @@
 {
   "name": "@vercel/gatsby-plugin-vercel-analytics",
-  "version": "1.0.9",
-  "description": "Track Core Web Vitals in Gatsby projects with Vercel Analytics.",
+  "version": "1.0.10",
+  "description": "Track Core Web Vitals in Gatsby projects with Vercel Speed Insights.",
   "main": "index.js",
   "files": [
     "gatsby-browser.js",

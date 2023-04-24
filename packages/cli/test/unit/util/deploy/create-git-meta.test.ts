@@ -112,7 +112,6 @@ describe('parseRepoUrl', () => {
   it('should parse github git url with trailing slash', () => {
     const repoInfo = parseRepoUrl('git://github.com/vercel/vercel.git/');
     expect(repoInfo).toBeTruthy();
-    console.log(repoInfo);
     expect(repoInfo?.provider).toEqual('github');
     expect(repoInfo?.org).toEqual('vercel');
     expect(repoInfo?.repo).toEqual('vercel');
@@ -182,7 +181,14 @@ describe('createGitMeta', () => {
     try {
       await fs.rename(join(directory, 'git'), join(directory, '.git'));
       const data = await createGitMeta(directory, client.output);
-      expect(data).toBeUndefined();
+      expect(data).toEqual({
+        commitAuthorName: 'Matthew Stanciu',
+        commitMessage: 'hi',
+        commitRef: 'master',
+        commitSha: '0499dbfa2f58cd8b3b3ce5b2c02a24200862ac97',
+        dirty: false,
+        remoteUrl: undefined,
+      });
     } finally {
       await fs.rename(join(directory, '.git'), join(directory, 'git'));
     }

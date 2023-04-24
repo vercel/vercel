@@ -35,10 +35,6 @@ export async function createGitMeta(
   if (!remoteUrl) {
     remoteUrl = await getOriginUrl(join(directory, '.git/config'), output);
   }
-  // If we can't get the repo URL, then don't return any metadata
-  if (!remoteUrl) {
-    return;
-  }
 
   const [commitResult, dirtyResult] = await Promise.allSettled([
     getLastCommit(directory),
@@ -63,7 +59,7 @@ export async function createGitMeta(
   const commit = commitResult.value;
 
   return {
-    remoteUrl,
+    remoteUrl: remoteUrl || undefined,
     commitAuthorName: commit.author.name,
     commitMessage: commit.subject,
     commitRef: commit.branch,

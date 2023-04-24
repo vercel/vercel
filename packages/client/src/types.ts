@@ -24,7 +24,7 @@ export interface VercelClientOptions {
   apiUrl?: string;
   force?: boolean;
   prebuilt?: boolean;
-  rootDirectory?: string;
+  rootDirectory?: string | null;
   withCache?: boolean;
   userAgent?: string;
   defaultName?: string;
@@ -164,7 +164,7 @@ export interface GitMetadata {
   commitRef?: string | undefined;
   commitSha?: string | undefined;
   dirty?: boolean | undefined;
-  remoteUrl: string;
+  remoteUrl?: string;
 }
 
 /**

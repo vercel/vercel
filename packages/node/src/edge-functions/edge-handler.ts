@@ -1,18 +1,19 @@
-import { IncomingMessage } from 'http';
-import { VercelProxyResponse } from '@vercel/node-bridge/types';
-import { streamToBuffer } from '@vercel/build-utils';
-import exitHook from 'exit-hook';
-import { EdgeRuntime, runServer } from 'edge-runtime';
-import type { EdgeContext } from '@edge-runtime/vm';
-import esbuild from 'esbuild';
-import fetch from 'node-fetch';
 import { createEdgeWasmPlugin, WasmAssets } from './edge-wasm-plugin';
-import { entrypointToOutputPath, logError } from '../utils';
-import { readFileSync } from 'fs';
 import {
   createNodeCompatPlugin,
   NodeCompatBindings,
 } from './edge-node-compat-plugin';
+import { EdgeRuntime, runServer } from 'edge-runtime';
+import fetch, { Headers } from 'node-fetch';
+import { isError } from '@vercel/error-utils';
+import { readFileSync } from 'fs';
+import { serializeBody, entrypointToOutputPath, logError } from '../utils';
+import esbuild from 'esbuild';
+import exitHook from 'exit-hook';
+import type { HeadersInit } from 'node-fetch';
+import type { VercelProxyResponse } from '../types';
+import type { IncomingMessage } from 'http';
+import { pathToFileURL } from 'url';
 
 const NODE_VERSION_MAJOR = process.version.match(/^v(\d+)\.\d+/)?.[1];
 const NODE_VERSION_IDENTIFIER = `node${NODE_VERSION_MAJOR}`;
@@ -25,17 +26,6 @@ if (!NODE_VERSION_MAJOR) {
 const edgeHandlerTemplate = readFileSync(
   `${__dirname}/edge-handler-template.js`
 );
-
-async function serializeRequest(message: IncomingMessage) {
-  const bodyBuffer = await streamToBuffer(message);
-  const body = bodyBuffer.toString('base64');
-  return JSON.stringify({
-    url: message.url,
-    method: message.method,
-    headers: message.headers,
-    body,
-  });
-}
 
 async function compileUserCode(
   entrypointFullPath: string,
@@ -63,7 +53,23 @@ async function compileUserCode(
       sourcemap: 'inline',
       legalComments: 'none',
       bundle: true,
-      plugins: [edgeWasmPlugin, nodeCompatPlugin.plugin],
+      plugins: [
+        edgeWasmPlugin,
+        nodeCompatPlugin.plugin,
+        {
+          name: 'import.meta.url',
+          setup({ onLoad }) {
+            onLoad({ filter: /\.[cm]?js$/, namespace: 'file' }, args => {
+              let code = readFileSync(args.path, 'utf8');
+              code = code.replace(
+                /\bimport\.meta\.url\b/g,
+                JSON.stringify(pathToFileURL(__filename))
+              );
+              return { contents: code };
+            });
+          },
+        },
+      ],
       entryPoints: [entrypointFullPath],
       write: false, // operate in memory
       format: 'cjs',
@@ -95,14 +101,8 @@ async function compileUserCode(
 
       // edge handler
       ${edgeHandlerTemplate};
-      const dependencies = {
-        Request,
-        Response
-      };
-      const options = {
-        isMiddleware,
-        entrypointLabel
-      };
+      const dependencies = { Request, Response };
+      const options = { isMiddleware, entrypointLabel };
       registerFetchListener(userEdgeHandler, options, dependencies);
     `;
 
@@ -111,16 +111,16 @@ async function compileUserCode(
       wasmAssets,
       nodeCompatBindings: nodeCompatPlugin.bindings,
     };
-  } catch (error) {
+  } catch (error: unknown) {
     // We can't easily show a meaningful stack trace from ncc -> edge-runtime.
     // So, stick with just the message for now.
     console.error(`Failed to compile user code for edge runtime.`);
-    logError(error);
+    if (isError(error)) logError(error);
     return undefined;
   }
 }
 
-async function createEdgeRuntime(params?: {
+async function createEdgeRuntimeServer(params?: {
   userCode: string;
   wasmAssets: WasmAssets;
   nodeCompatBindings: NodeCompatBindings;
@@ -133,9 +133,9 @@ async function createEdgeRuntime(params?: {
     const wasmBindings = await params.wasmAssets.getContext();
     const nodeCompatBindings = params.nodeCompatBindings.getContext();
 
-    const edgeRuntime = new EdgeRuntime({
+    const runtime = new EdgeRuntime({
       initialCode: params.userCode,
-      extend: (context: EdgeContext) => {
+      extend: context => {
         Object.assign(context, {
           // This is required for esbuild wrapping logic to resolve
           module: {},
@@ -158,11 +158,10 @@ async function createEdgeRuntime(params?: {
       },
     });
 
-    const server = await runServer({ runtime: edgeRuntime });
-    exitHook(server.close);
-
+    const server = await runServer({ runtime });
+    exitHook(() => server.close());
     return server;
-  } catch (error) {
+  } catch (error: any) {
     // We can't easily show a meaningful stack trace from ncc -> edge-runtime.
     // So, stick with just the message for now.
     console.error('Failed to instantiate edge runtime.');
@@ -182,7 +181,7 @@ export async function createEdgeEventHandler(
     entrypointRelativePath,
     isMiddleware
   );
-  const server = await createEdgeRuntime(userCode);
+  const server = await createEdgeRuntimeServer(userCode);
 
   return async function (request: IncomingMessage) {
     if (!server) {
@@ -192,17 +191,23 @@ export async function createEdgeEventHandler(
       process.exit(1);
     }
 
-    const response = await fetch(server.url, {
-      redirect: 'manual',
-      method: 'post',
-      body: await serializeRequest(request),
-    });
+    const headers = new Headers(request.headers as HeadersInit);
+    const body: Buffer | string | undefined = await serializeBody(request);
+    if (body !== undefined) headers.set('content-length', String(body.length));
 
-    const body = await response.text();
+    const url = new URL(request.url ?? '/', server.url);
+    const response = await fetch(url, {
+      body,
+      headers,
+      method: request.method,
+      redirect: 'manual',
+    });
 
     const isUserError =
       response.headers.get('x-vercel-failed') === 'edge-wrapper';
+
     if (isUserError && response.status >= 500) {
+      const body = await response.text();
       // We can't currently get a real stack trace from the Edge Function error,
       // but we can fake a basic one that is still usefult to the user.
       const fakeStackTrace = `    at (${entrypointRelativePath})`;
@@ -210,6 +215,7 @@ export async function createEdgeEventHandler(
         entrypointRelativePath,
         isZeroConfig
       );
+
       console.log(
         `Error from API Route ${requestPath}: ${body}\n${fakeStackTrace}`
       );
@@ -220,9 +226,9 @@ export async function createEdgeEventHandler(
     }
 
     return {
-      statusCode: response.status,
-      headers: response.headers.raw(),
-      body,
+      status: response.status,
+      headers: response.headers,
+      body: response.body,
       encoding: 'utf8',
     };
   };
