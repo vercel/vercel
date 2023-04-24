@@ -36,7 +36,6 @@ async function createServerlessServer(
 }
 
 async function compileUserCode(entrypointPath: string) {
-  // FIX ME: if `entrypoint` is a .ts file, this will blow up because we can't import .ts files
   const id = isAbsolute(entrypointPath)
     ? pathToFileURL(entrypointPath).href
     : entrypointPath;
