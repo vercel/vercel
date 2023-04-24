@@ -54,7 +54,7 @@ import { getConfig } from '@vercel/static-config';
 
 import { fixConfig, Register, register } from './typescript';
 import {
-  EdgeRuntimes,
+  validateConfiguredRuntime,
   entrypointToOutputPath,
   getRegExpFromMatchers,
   isEdgeRuntime,
@@ -75,8 +75,6 @@ interface DownloadOptions {
   config: Config;
   meta: Meta;
 }
-
-const ALLOWED_RUNTIMES = ['nodejs', ...Object.values(EdgeRuntimes)];
 
 const require_ = eval('require');
 
@@ -409,19 +407,11 @@ export const build: BuildV3 = async ({
 
   const project = new Project();
   const staticConfig = getConfig(project, entrypointPath);
-  if (staticConfig?.runtime) {
-    if (!ALLOWED_RUNTIMES.includes(staticConfig.runtime)) {
-      throw new Error(
-        `Unsupported "runtime" property in \`config\`: ${JSON.stringify(
-          staticConfig.runtime
-        )} (must be one of: ${JSON.stringify(ALLOWED_RUNTIMES)})`
-      );
-    }
-    if (staticConfig.runtime === 'nodejs') {
-      console.log(
-        `Detected unused static config runtime "nodejs" in "${entrypointPath}"`
-      );
-    }
+
+  const runtime = staticConfig?.runtime;
+  validateConfiguredRuntime(runtime, entrypoint);
+
+  if (runtime) {
     isEdgeFunction = isEdgeRuntime(staticConfig.runtime);
   }
 
