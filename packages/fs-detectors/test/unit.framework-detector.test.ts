@@ -393,11 +393,11 @@ describe('DetectorFilesystem', () => {
       expect(await detectFramework({ fs, frameworkList })).toBe('hydrogen');
     });
 
-    it('Detect Storybook via `storybook/*`', async () => {
+    it('Detect Storybook via `storybook`', async () => {
       const fs = new VirtualFilesystem({
         'package.json': JSON.stringify({
           dependencies: {
-            '@storybook/react': 'latest',
+            storybook: 'latest',
           },
         }),
       });
