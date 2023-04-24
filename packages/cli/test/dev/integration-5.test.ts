@@ -554,7 +554,7 @@ describe('[vercel dev] ESM serverless functions', () => {
       async (testPath: any) => {
         // bad gateway
         // require() of ESM Module
-        await testPath(502, '/api/data');
+        await testPath(500, '/api/data');
       },
       { skipDeploy: true }
     )
@@ -567,7 +567,7 @@ describe('[vercel dev] ESM serverless functions', () => {
       async (testPath: any) => {
         // bad gateway
         // require() of ESM Module
-        await testPath(502, '/api/data');
+        await testPath(500, '/api/data');
       },
       { skipDeploy: true }
     )
