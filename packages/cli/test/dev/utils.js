@@ -5,18 +5,15 @@ const fetch = require('node-fetch');
 const retry = require('async-retry');
 const { satisfies } = require('semver');
 const stripAnsi = require('strip-ansi');
-const { getDistTag } = require('../../src/util/get-dist-tag');
-const { version: cliVersion } = require('../../package.json');
 const {
   fetchCachedToken,
 } = require('../../../../test/lib/deployment/now-deploy');
-const { spawnSync } = require('child_process');
+const { spawnSync, execFileSync } = require('child_process');
 
-jest.setTimeout(6 * 60 * 1000);
+jest.setTimeout(10 * 60 * 1000);
 
 const isCI = !!process.env.CI;
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
-const isCanary = () => getDistTag(cliVersion) === 'canary';
 
 let port = 3000;
 
@@ -522,7 +519,7 @@ async function ps(parentPid, pids = {}) {
       : ['ps', '-o', 'pid', '--no-headers', '--ppid', parentPid];
 
   try {
-    const { stdout: buf } = spawnSync(cmd[0], cmd.slice(1), {
+    const buf = execFileSync(cmd[0], cmd.slice(1), {
       encoding: 'utf-8',
     });
     for (let pid of buf.match(/\d+/g)) {
@@ -607,7 +604,6 @@ afterEach(async () => {
 
 module.exports = {
   sleep,
-  isCanary,
   testPath,
   testFixture,
   testFixtureStdio,

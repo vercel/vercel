@@ -12,8 +12,12 @@ import { InvalidToken, isAPIError, ProjectNotFound } from '../errors-ts';
 import getUser from '../get-user';
 import getTeamById from '../teams/get-team-by-id';
 import { Output } from '../output';
-import { Project, ProjectLinkResult } from '../../types';
-import { Org, ProjectLink } from '../../types';
+import type {
+  Project,
+  ProjectLinkResult,
+  Org,
+  ProjectLink,
+} from '@vercel-internals/types';
 import { prependEmoji, emoji, EmojiLabel } from '../emoji';
 import { isDirectory } from '../config/global-path';
 import { NowBuildError, getPlatformEnv } from '@vercel/build-utils';

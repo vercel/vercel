@@ -1,5 +1,5 @@
 import title from 'title';
-import { ProjectEnvVariable } from '../../types';
+import type { ProjectEnvVariable } from '@vercel-internals/types';
 
 export default function formatEnvTarget(env: ProjectEnvVariable): string {
   const target = (Array.isArray(env.target) ? env.target : [env.target || ''])

@@ -1,5 +1,5 @@
 import Client from '../client';
-import { Project } from '../../types';
+import type { Project } from '@vercel-internals/types';
 import { URLSearchParams } from 'url';
 import { isAPIError } from '../errors-ts';
 

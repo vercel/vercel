@@ -9,7 +9,7 @@ import {
 import { Output } from '../output';
 import { progress } from '../output/progress';
 import Now from '../../util';
-import { Org } from '../../types';
+import type { Org } from '@vercel-internals/types';
 import ua from '../ua';
 import { linkFolderToProject } from '../projects/link';
 import { prependEmoji, emoji } from '../emoji';
@@ -34,6 +34,7 @@ export default async function processDeployment({
   isSettingUpProject,
   archive,
   skipAutoDetectionConfirmation,
+  noWait,
   ...args
 }: {
   now: Now;
@@ -52,7 +53,8 @@ export default async function processDeployment({
   archive?: ArchiveFormat;
   skipAutoDetectionConfirmation?: boolean;
   cwd?: string;
-  rootDirectory?: string;
+  rootDirectory?: string | null;
+  noWait?: boolean;
 }) {
   let {
     now,
@@ -178,6 +180,10 @@ export default async function processDeployment({
 
         if (quiet) {
           process.stdout.write(`https://${event.payload.url}`);
+        }
+
+        if (noWait) {
+          return event.payload;
         }
 
         output.spinner(

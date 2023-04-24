@@ -12,7 +12,7 @@ import stamp from '../../util/output/stamp';
 import strlen from '../../util/strlen';
 import getCommandFlags from '../../util/get-command-flags';
 import { getCommandName } from '../../util/pkg-name';
-import { Alias } from '../../types';
+import type { Alias } from '@vercel-internals/types';
 
 export default async function ls(
   client: Client,

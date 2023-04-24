@@ -1,10 +1,10 @@
 import { Output } from '../output';
 import Client from '../client';
-import {
+import type {
   ProjectEnvTarget,
   ProjectEnvVariable,
   ProjectEnvType,
-} from '../../types';
+} from '@vercel-internals/types';
 
 export default async function addEnvRecord(
   output: Output,

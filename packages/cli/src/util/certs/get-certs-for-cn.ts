@@ -1,5 +1,5 @@
 import { stringify } from 'querystring';
-import { Cert } from '../../types';
+import type { Cert } from '@vercel-internals/types';
 import Client from '../client';
 
 /**

@@ -15,6 +15,22 @@ const {
   validateResponseHeaders,
 } = require('./utils.js');
 
+test('[verdel dev] should support serverless functions', async () => {
+  const dir = fixture('serverless-function');
+  const { dev, port, readyResolver } = await testFixture(dir, {});
+
+  try {
+    await readyResolver;
+    let res = await fetch(`http://localhost:${port}/api?foo=bar`);
+    validateResponseHeaders(res);
+    const payload = await res.json();
+    expect(payload).toMatchObject({ url: '/api?foo=bar', method: 'GET' });
+    expect(payload.headers.host).toBe(payload.headers['x-forwarded-host']);
+  } finally {
+    await dev.kill();
+  }
+});
+
 test('[vercel dev] should support edge functions', async () => {
   const dir = fixture('edge-function');
   const { dev, port, readyResolver } = await testFixture(dir, {
@@ -39,8 +55,9 @@ test('[vercel dev] should support edge functions', async () => {
 
     // support for edge functions has to manually ensure that these properties
     // are set up; so, we test that they are all passed through properly
-    expect(await res.json()).toMatchObject({
-      headerContentType: 'application/json',
+    const payload = await res.json();
+    expect(payload).toMatchObject({
+      headers: { 'content-type': 'application/json' },
       url: `http://localhost:${port}/api/edge-success`,
       method: 'POST',
       body: '{"hello":"world"}',
@@ -49,6 +66,7 @@ test('[vercel dev] should support edge functions', async () => {
       optionalChaining: 'fallback',
       ENV_VAR_IN_EDGE: '1',
     });
+    expect(payload.headers.host).toBe(payload.headers['x-forwarded-host']);
   } finally {
     await dev.kill();
   }
@@ -100,15 +118,12 @@ test('[vercel dev] throws an error when an edge function has no response', async
     let res = await fetch(`http://localhost:${port}/api/edge-no-response`);
     validateResponseHeaders(res);
 
-    const { stdout, stderr } = await dev.kill();
+    const { stdout } = await dev.kill();
 
     expect(await res.status).toBe(500);
     expect(await res.text()).toMatch('FUNCTION_INVOCATION_FAILED');
     expect(stdout).toMatch(
-      /Unhandled rejection: Edge Function "api\/edge-no-response.js" did not return a response./g
-    );
-    expect(stderr).toMatch(
-      /Failed to complete request to \/api\/edge-no-response: Error: socket hang up/g
+      /Error from API Route \/api\/edge-no-response: Edge Function did not return a response./g
     );
   } finally {
     await dev.kill();
@@ -158,14 +173,13 @@ test('[vercel dev] should handle runtime errors thrown in edge functions', async
     });
     validateResponseHeaders(res);
 
-    const { stdout, stderr } = await dev.kill();
+    const { stdout } = await dev.kill();
 
     expect(await res.text()).toMatch(
       /<strong>500<\/strong>: INTERNAL_SERVER_ERROR/g
     );
-    expect(stdout).toMatch(/Unhandled rejection: intentional runtime error/g);
-    expect(stderr).toMatch(
-      /Failed to complete request to \/api\/edge-error-runtime: Error: socket hang up/g
+    expect(stdout).toMatch(
+      /Error from API Route \/api\/edge-error-runtime: intentional runtime error/g
     );
   } finally {
     await dev.kill();
@@ -196,9 +210,6 @@ test('[vercel dev] should handle config errors thrown in edge functions', async 
     expect(stderr).toMatch(
       /api\/edge-error-config.js: unsupported "runtime" property in `config`: "invalid-runtime-value" \(must be one of: \["nodejs-experimental","edge","experimental-edge"\]\)/g
     );
-    expect(stderr).toMatch(
-      /Failed to complete request to \/api\/edge-error-config: Error: socket hang up/g
-    );
   } finally {
     await dev.kill();
   }
@@ -227,9 +238,6 @@ test('[vercel dev] should handle startup errors thrown in edge functions', async
     );
     expect(stderr).toMatch(/Failed to instantiate edge runtime./g);
     expect(stderr).toMatch(/intentional startup error/g);
-    expect(stderr).toMatch(
-      /Failed to complete request to \/api\/edge-error-startup: Error: socket hang up/g
-    );
   } finally {
     await dev.kill();
   }
@@ -258,9 +266,6 @@ test('[vercel dev] should handle syntax errors thrown in edge functions', async 
     );
     expect(stderr).toMatch(/Failed to compile user code for edge runtime./g);
     expect(stderr).toMatch(/Unexpected end of file/g);
-    expect(stderr).toMatch(
-      /Failed to complete request to \/api\/edge-error-syntax: Error: socket hang up/g
-    );
   } finally {
     await dev.kill();
   }
@@ -293,9 +298,6 @@ test('[vercel dev] should handle import errors thrown in edge functions', async 
     expect(stderr).toMatch(
       /Could not resolve "unknown-module-893427589372458934795843"/g
     );
-    expect(stderr).toMatch(
-      /Failed to complete request to \/api\/edge-error-unknown-import: Error: socket hang up/g
-    );
   } finally {
     await dev.kill();
   }
@@ -320,16 +322,13 @@ test('[vercel dev] should handle missing handler errors thrown in edge functions
     );
     validateResponseHeaders(res);
 
-    const { stdout, stderr } = await dev.kill();
+    const { stderr } = await dev.kill();
 
     expect(await res.text()).toMatch(
       /<strong>500<\/strong>: INTERNAL_SERVER_ERROR/g
     );
-    expect(stdout).toMatch(
-      /No default export was found. Add a default export to handle requests./g
-    );
     expect(stderr).toMatch(
-      /Failed to complete request to \/api\/edge-error-no-handler: Error: socket hang up/g
+      /No default export was found. Add a default export to handle requests./g
     );
   } finally {
     await dev.kill();
@@ -383,7 +382,7 @@ test('[vercel dev] should support request body', async () => {
       body: JSON.stringify(body),
     });
     validateResponseHeaders(res);
-    expect(await res.json()).toMatchObject(body);
+    expect(await res.json()).toMatchObject({ body, readBody: body });
 
     // Test that `req` "data" events work in dev
     res = await fetch(`http://localhost:${port}/api/data-events`, {

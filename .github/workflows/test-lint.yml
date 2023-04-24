@@ -1,0 +1,35 @@
+name: Lint
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - '!*'
+  pull_request:
+
+env:
+  TURBO_REMOTE_ONLY: 'true'
+  TURBO_TEAM: 'vercel'
+  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+  NODE_VERSION: '16'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  test:
+    name: Lint
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: install pnpm@7.31.0
+        run: npm i -g pnpm@7.31.0
+      - run: pnpm install
+      - run: pnpm run lint
+      - run: pnpm run prettier-check

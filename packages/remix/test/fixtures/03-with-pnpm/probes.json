@@ -1,0 +1,21 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "mustContain": "Welcome to Remix"
+    },
+    {
+      "path": "/edge",
+      "mustContain": "Welcome to Remix@Edge"
+    },
+    { "path": "/b", "mustContain": "B page" },
+    { "path": "/nested", "mustContain": "Nested index page" },
+    { "path": "/nested/another", "mustContain": "Nested another page" },
+    { "path": "/nested/index", "mustContain": "<div>nested/index</div>" },
+    { "path": "/asdf", "mustContain": "<div>asdf</div>" },
+    { "path": "/foo/bar", "mustContain": "<div>foo/bar</div>" },
+    { "path": "/sub", "mustContain": "<div>Sub catch-all</div>" },
+    { "path": "/sub/", "mustContain": "<div>Sub catch-all</div>" },
+    { "path": "/sub/another", "mustContain": "<div>Sub catch-all</div>" }
+  ]
+}

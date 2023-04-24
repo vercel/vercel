@@ -8,7 +8,7 @@ import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import formatTable from '../../util/format-table';
 import { formatDateWithoutTime } from '../../util/format-date';
-import { Domain } from '../../types';
+import type { Domain } from '@vercel-internals/types';
 import getCommandFlags from '../../util/get-command-flags';
 import {
   PaginationOptions,

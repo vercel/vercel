@@ -13,10 +13,8 @@ export const functionsSchema = {
           maxLength: 256,
         },
         memory: {
-          // Number between 128 and 3008 in steps of 64
-          enum: Object.keys(Array.from({ length: 50 }))
-            .slice(2, 48)
-            .map(x => Number(x) * 64),
+          minimum: 128,
+          maximum: 3008,
         },
         maxDuration: {
           type: 'number',
@@ -29,11 +27,6 @@ export const functionsSchema = {
         },
         excludeFiles: {
           type: 'string',
-          maxLength: 256,
-        },
-        cron: {
-          type: 'string',
-          minLength: 9,
           maxLength: 256,
         },
       },

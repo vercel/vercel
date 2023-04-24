@@ -1,7 +1,7 @@
 import fs from 'fs-extra';
 import chalk from 'chalk';
 import dotenv from 'dotenv';
-import { join, normalize, relative, resolve } from 'path';
+import { join, normalize, relative, resolve, sep } from 'path';
 import {
   getDiscontinuedNodeVersions,
   normalizePath,
@@ -16,6 +16,7 @@ import {
   BuildResultV2Typical,
   BuildResultV3,
   NowBuildError,
+  Cron,
 } from '@vercel/build-utils';
 import {
   detectBuilders,
@@ -88,6 +89,7 @@ interface BuildOutputConfig {
   framework?: {
     version: string;
   };
+  crons?: Cron[];
 }
 
 /**
@@ -155,6 +157,7 @@ export default async function main(client: Client): Promise<number> {
     '--output': String,
     '--prod': Boolean,
     '--yes': Boolean,
+    '-y': '--yes',
   });
 
   if (argv['--help']) {
@@ -249,7 +252,7 @@ export default async function main(client: Client): Promise<number> {
       output.debug(`Loaded environment variables from "${envPath}"`);
     }
 
-    // For Vercel Analytics support
+    // For Vercel Speed Insights support
     if (project.settings.analyticsId) {
       envToUnset.add('VERCEL_ANALYTICS_ID');
       process.env.VERCEL_ANALYTICS_ID = project.settings.analyticsId;
@@ -294,13 +297,15 @@ async function doBuild(
   cwd: string,
   outputDir: string
 ): Promise<void> {
-  const { output } = client;
+  const { localConfigPath, output } = client;
 
   const workPath = join(cwd, project.settings.rootDirectory || '.');
 
   const [pkg, vercelConfig, nowConfig] = await Promise.all([
     readJSONFile<PackageJson>(join(workPath, 'package.json')),
-    readJSONFile<VercelConfig>(join(workPath, 'vercel.json')),
+    readJSONFile<VercelConfig>(
+      localConfigPath || join(workPath, 'vercel.json')
+    ),
     readJSONFile<VercelConfig>(join(workPath, 'now.json')),
   ]);
 
@@ -623,6 +628,7 @@ async function doBuild(
   });
 
   const mergedImages = mergeImages(localConfig.images, buildResults.values());
+  const mergedCrons = mergeCrons(localConfig.crons, buildResults.values());
   const mergedWildcard = mergeWildcard(buildResults.values());
   const mergedOverrides: Record<string, PathOverride> =
     overrides.length > 0 ? Object.assign({}, ...overrides) : undefined;
@@ -638,6 +644,7 @@ async function doBuild(
     wildcard: mergedWildcard,
     overrides: mergedOverrides,
     framework,
+    crons: mergedCrons,
   };
   await fs.writeJSON(join(outputDir, 'config.json'), config, { spaces: 2 });
 
@@ -701,17 +708,19 @@ function expandBuild(files: string[], build: Builder): Builder[] {
     throw new NowBuildError({
       code: `invalid_build_specification`,
       message: 'Field `use` is missing in build specification',
-      link: 'https://vercel.com/docs/configuration#project/builds',
+      link: 'https://vercel.com/docs/concepts/projects/project-configuration#builds',
       action: 'View Documentation',
     });
   }
 
-  let src = normalize(build.src || '**');
+  let src = normalize(build.src || '**')
+    .split(sep)
+    .join('/');
   if (src === '.' || src === './') {
     throw new NowBuildError({
       code: `invalid_build_specification`,
       message: 'A build `src` path resolves to an empty string',
-      link: 'https://vercel.com/docs/configuration#project/builds',
+      link: 'https://vercel.com/docs/concepts/projects/project-configuration#builds',
       action: 'View Documentation',
     });
   }
@@ -744,6 +753,18 @@ function mergeImages(
     }
   }
   return images;
+}
+
+function mergeCrons(
+  crons: BuildOutputConfig['crons'] = [],
+  buildResults: Iterable<BuildResult | BuildOutputConfig>
+): BuildOutputConfig['crons'] {
+  for (const result of buildResults) {
+    if ('crons' in result && result.crons) {
+      crons = crons.concat(result.crons);
+    }
+  }
+  return crons;
 }
 
 function mergeWildcard(

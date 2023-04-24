@@ -1,7 +1,9 @@
+import type { Images } from '@vercel/build-utils';
+
 export type Config = {
   version: 3;
   routes?: Route[];
-  images?: ImagesConfig;
+  images?: Images;
   wildcard?: WildcardConfig;
   overrides?: OverrideConfig;
   cache?: string[];
@@ -67,17 +69,6 @@ type Handler = {
   src?: string;
   dest?: string;
   status?: number;
-};
-
-type ImageFormat = 'image/avif' | 'image/webp';
-
-type ImagesConfig = {
-  sizes: number[];
-  domains: string[];
-  minimumCacheTTL?: number; // seconds
-  formats?: ImageFormat[];
-  dangerouslyAllowSVG?: boolean;
-  contentSecurityPolicy?: string;
 };
 
 type WildCard = {

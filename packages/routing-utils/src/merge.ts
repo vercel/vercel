@@ -22,9 +22,11 @@ function getBuilderRoutesMapping(builds: Build[]) {
   return builderRoutes;
 }
 
-function getCheckAndContinue(
-  routes: Route[]
-): { checks: Route[]; continues: Route[]; others: Route[] } {
+function getCheckAndContinue(routes: Route[]): {
+  checks: Route[];
+  continues: Route[];
+  others: Route[];
+} {
   const checks: Route[] = [];
   const continues: Route[] = [];
   const others: Route[] = [];

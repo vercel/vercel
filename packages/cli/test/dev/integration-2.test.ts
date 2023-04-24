@@ -183,6 +183,13 @@ test(
 );
 
 test(
+  '[vercel dev] Should support `*.go` API serverless functions with `go.work` and lib',
+  testFixtureStdio('go-work-with-shared', async (testPath: any) => {
+    await testPath(200, `/api`, 'hello:go1.20.2');
+  })
+);
+
+test(
   '[vercel dev] Should set the `ts-node` "target" to match Node.js version',
   testFixtureStdio('node-ts-node-target', async (testPath: any) => {
     await testPath(200, `/api/subclass`, '{"ok":true}');

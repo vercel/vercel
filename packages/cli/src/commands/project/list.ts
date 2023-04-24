@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import ms from 'ms';
 import table from 'text-table';
-import { Project } from '../../types';
+import type { Project } from '@vercel-internals/types';
 import Client from '../../util/client';
 import getCommandFlags from '../../util/get-command-flags';
 import { getCommandName } from '../../util/pkg-name';

@@ -4,7 +4,6 @@ const {
   fetch,
   sleep,
   fixture,
-  isCanary,
   shouldSkip,
   testFixture,
   fetchWithRetry,
@@ -46,11 +45,7 @@ test('[vercel dev] 02-angular-node', async () => {
 
   await sleep(5000);
 
-  if (isCanary()) {
-    stderr.includes('@now/build-utils@canary');
-  } else {
-    stderr.includes('@now/build-utils@latest');
-  }
+  stderr.includes('@now/build-utils@latest');
 });
 
 test(
@@ -68,27 +63,6 @@ test(
   '[vercel dev] 04-create-react-app',
   testFixtureStdio('04-create-react-app', async (testPath: any) => {
     await testPath(200, '/', /React App/m);
-  })
-);
-/*
-test(
-  '[vercel dev] 05-gatsby',
-  testFixtureStdio('05-gatsby', async (testPath: any) => {
-    await testPath(200, '/', /Gatsby Default Starter/m);
-  })
-);
-*/
-test(
-  '[vercel dev] 06-gridsome',
-  testFixtureStdio('06-gridsome', async (testPath: any) => {
-    await testPath(200, '/');
-    await testPath(200, '/about');
-    await testPath(308, '/support', 'Redirecting to /about?ref=support (308)', {
-      Location: '/about?ref=support',
-    });
-    // Bug with gridsome's dev server: https://github.com/gridsome/gridsome/issues/831
-    // Works in prod only so leave out for now
-    // await testPath(404, '/nothing');
   })
 );
 

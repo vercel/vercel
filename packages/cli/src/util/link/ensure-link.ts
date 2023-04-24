@@ -1,4 +1,4 @@
-import { Org, Project } from '../../types';
+import { Org, Project } from '@vercel-internals/types';
 import Client from '../client';
 import setupAndLink from '../link/setup-and-link';
 import param from '../output/param';

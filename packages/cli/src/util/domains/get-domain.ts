@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import Client from '../client';
-import { Domain } from '../../types';
+import type { Domain } from '@vercel-internals/types';
 import { isAPIError } from '../errors-ts';
 
 type Response = {

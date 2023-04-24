@@ -5,7 +5,7 @@ import minimatch from 'minimatch';
 import { readlink } from 'fs-extra';
 import { isSymbolicLink, isDirectory } from './fs/download';
 import streamToBuffer from './fs/stream-to-buffer';
-import type { Files, Config, Cron } from './types';
+import type { Files, Config, FunctionFramework } from './types';
 
 interface Environment {
   [key: string]: string;
@@ -23,9 +23,13 @@ export interface LambdaOptionsBase {
   regions?: string[];
   supportsMultiPayloads?: boolean;
   supportsWrapper?: boolean;
+  supportsResponseStreaming?: boolean;
+  /**
+   * @deprecated Use the `supportsResponseStreaming` property instead.
+   */
   experimentalResponseStreaming?: boolean;
   operationType?: string;
-  cron?: Cron;
+  framework?: FunctionFramework;
 }
 
 export interface LambdaOptionsWithFiles extends LambdaOptionsBase {
@@ -63,14 +67,14 @@ export class Lambda {
   environment: Environment;
   allowQuery?: string[];
   regions?: string[];
-  cron?: Cron;
   /**
    * @deprecated Use `await lambda.createZip()` instead.
    */
   zipBuffer?: Buffer;
   supportsMultiPayloads?: boolean;
   supportsWrapper?: boolean;
-  experimentalResponseStreaming?: boolean;
+  supportsResponseStreaming?: boolean;
+  framework?: FunctionFramework;
 
   constructor(opts: LambdaOptions) {
     const {
@@ -81,11 +85,12 @@ export class Lambda {
       environment = {},
       allowQuery,
       regions,
-      cron,
       supportsMultiPayloads,
       supportsWrapper,
+      supportsResponseStreaming,
       experimentalResponseStreaming,
       operationType,
+      framework,
     } = opts;
     if ('files' in opts) {
       assert(typeof opts.files === 'object', '"files" must be an object');
@@ -135,8 +140,18 @@ export class Lambda {
       );
     }
 
-    if (cron !== undefined) {
-      assert(typeof cron === 'string', '"cron" is not a string');
+    if (framework !== undefined) {
+      assert(typeof framework === 'object', '"framework" is not an object');
+      assert(
+        typeof framework.slug === 'string',
+        '"framework.slug" is not a string'
+      );
+      if (framework.version !== undefined) {
+        assert(
+          typeof framework.version === 'string',
+          '"framework.version" is not a string'
+        );
+      }
     }
 
     this.type = 'Lambda';
@@ -149,11 +164,12 @@ export class Lambda {
     this.environment = environment;
     this.allowQuery = allowQuery;
     this.regions = regions;
-    this.cron = cron;
     this.zipBuffer = 'zipBuffer' in opts ? opts.zipBuffer : undefined;
     this.supportsMultiPayloads = supportsMultiPayloads;
     this.supportsWrapper = supportsWrapper;
-    this.experimentalResponseStreaming = experimentalResponseStreaming;
+    this.supportsResponseStreaming =
+      supportsResponseStreaming ?? experimentalResponseStreaming;
+    this.framework = framework;
   }
 
   async createZip(): Promise<Buffer> {
@@ -170,6 +186,16 @@ export class Lambda {
       }
     }
     return zipBuffer;
+  }
+
+  /**
+   * @deprecated Use the `supportsResponseStreaming` property instead.
+   */
+  get experimentalResponseStreaming(): boolean | undefined {
+    return this.supportsResponseStreaming;
+  }
+  set experimentalResponseStreaming(v: boolean | undefined) {
+    this.supportsResponseStreaming = v;
   }
 }
 
@@ -228,7 +254,7 @@ export async function getLambdaOptionsFromFunction({
   sourceFile,
   config,
 }: GetLambdaOptionsFromFunctionOptions): Promise<
-  Pick<LambdaOptions, 'memory' | 'maxDuration' | 'cron'>
+  Pick<LambdaOptions, 'memory' | 'maxDuration'>
 > {
   if (config?.functions) {
     for (const [pattern, fn] of Object.entries(config.functions)) {
@@ -236,7 +262,6 @@ export async function getLambdaOptionsFromFunction({
         return {
           memory: fn.memory,
           maxDuration: fn.maxDuration,
-          cron: fn.cron,
         };
       }
     }

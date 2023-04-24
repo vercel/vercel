@@ -3,6 +3,7 @@ import type {
   BuilderFunctions,
   Images,
   ProjectSettings,
+  Cron,
 } from '@vercel/build-utils';
 import type { Header, Route, Redirect, Rewrite } from '@vercel/routing-utils';
 
@@ -23,7 +24,7 @@ export interface VercelClientOptions {
   apiUrl?: string;
   force?: boolean;
   prebuilt?: boolean;
-  rootDirectory?: string;
+  rootDirectory?: string | null;
   withCache?: boolean;
   userAgent?: string;
   defaultName?: string;
@@ -154,6 +155,7 @@ export interface VercelConfig {
   framework?: string | null;
   outputDirectory?: string | null;
   images?: Images;
+  crons?: Cron[];
 }
 
 export interface GitMetadata {
@@ -162,7 +164,7 @@ export interface GitMetadata {
   commitRef?: string | undefined;
   commitSha?: string | undefined;
   dirty?: boolean | undefined;
-  remoteUrl: string;
+  remoteUrl?: string;
 }
 
 /**

@@ -1,4 +1,5 @@
 import { ServerResponse, IncomingMessage } from 'http';
+import type { Headers } from 'node-fetch';
 
 export type VercelRequestCookies = { [key: string]: string };
 export type VercelRequestQuery = { [key: string]: string | string[] };
@@ -39,3 +40,24 @@ export type NowResponse = VercelResponse;
 
 /** @deprecated Use VercelApiHandler instead. */
 export type NowApiHandler = VercelApiHandler;
+
+export interface VercelProxyResponse {
+  status: number;
+  headers: Headers;
+  body: Buffer | NodeJS.ReadableStream;
+  encoding: BufferEncoding;
+}
+
+export type LauncherConfiguration = {
+  launcherType: 'Nodejs' | 'WinterCG-experimental'; // TODO remove -experimental once ready
+  entrypointPath: string;
+  bridgePath: string;
+  helpersPath: string;
+  webHandlerPath: string;
+  sourcemapSupportPath: string;
+  shouldAddHelpers?: boolean;
+  shouldAddSourcemapSupport?: boolean;
+  awsLambdaHandler?: string;
+  useRequire?: boolean;
+  runtime?: string;
+};

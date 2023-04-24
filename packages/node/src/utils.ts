@@ -1,8 +1,9 @@
 import type { LauncherType } from '@vercel/build-utils';
-import type { LauncherConfiguration } from '@vercel/node-bridge/types';
+import type { LauncherConfiguration } from './types';
 import { extname } from 'path';
 import { pathToRegexp } from 'path-to-regexp';
-import { debug, NowBuildError } from '@vercel/build-utils';
+import { debug, NowBuildError, streamToBuffer } from '@vercel/build-utils';
+import type { IncomingMessage } from 'http';
 
 export function getRegExpFromMatchers(matcherOrMatchers: unknown): string {
   if (!matcherOrMatchers) {
@@ -91,15 +92,9 @@ export function checkConfiguredRuntime(
   entrypoint: string
 ) {
   if (runtime) {
-    // TODO remove when nodejs-experimental will land
-    if (runtime === 'nodejs') {
-      throw new Error(
-        `${entrypoint}: \`config.runtime: "nodejs"\` semantics will evolve soon. Please remove the \`runtime\` key to keep the existing behavior.`
-      );
-    }
     if (!ALLOWED_RUNTIMES.includes(runtime)) {
       throw new Error(
-        `${entrypoint}: unsupported "runtime" property in \`config\`: ${JSON.stringify(
+        `${entrypoint}: unsupported "runtime" value in \`config\`: ${JSON.stringify(
           runtime
         )} (must be one of: ${JSON.stringify(
           ALLOWED_RUNTIMES
@@ -107,6 +102,8 @@ export function checkConfiguredRuntime(
       );
     }
   }
+
+  return runtime;
 }
 
 export function isEdgeRuntime(runtime?: string): runtime is EdgeRuntimes {
@@ -140,4 +137,12 @@ export function checkLauncherCompatibility(
       // TODO when documentation will be available, add link: 'https://vercel.link/isomorphic-support',
     });
   }
+}
+
+export async function serializeBody(
+  request: IncomingMessage
+): Promise<Buffer | undefined> {
+  return request.method !== 'GET' && request.method !== 'HEAD'
+    ? await streamToBuffer(request)
+    : undefined;
 }

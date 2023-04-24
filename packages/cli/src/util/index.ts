@@ -14,7 +14,7 @@ import { responseError } from './error';
 import stamp from './output/stamp';
 import { APIError, BuildError } from './errors-ts';
 import printIndications from './print-indications';
-import { GitMetadata, Org } from '../types';
+import { GitMetadata, Org } from '@vercel-internals/types';
 import { VercelConfig } from './dev/types';
 import Client, { FetchOptions, isJSONObject } from './client';
 import { ArchiveFormat, Dictionary } from '@vercel/client';
@@ -36,7 +36,7 @@ export interface CreateOptions {
   project?: string;
   wantsPublic: boolean;
   prebuilt?: boolean;
-  rootDirectory?: string;
+  rootDirectory?: string | null;
   meta: Dictionary<string>;
   gitMetadata?: GitMetadata;
   regions?: string[];
@@ -49,6 +49,7 @@ export interface CreateOptions {
   deployStamp: () => string;
   projectSettings?: any;
   skipAutoDetectionConfirmation?: boolean;
+  noWait?: boolean;
 }
 
 export interface RemoveOptions {
@@ -128,6 +129,7 @@ export default class Now extends EventEmitter {
       deployStamp,
       projectSettings,
       skipAutoDetectionConfirmation,
+      noWait,
     }: CreateOptions,
     org: Org,
     isSettingUpProject: boolean,
@@ -174,6 +176,7 @@ export default class Now extends EventEmitter {
       cwd,
       prebuilt,
       rootDirectory,
+      noWait,
     });
 
     if (deployment && deployment.warnings) {
@@ -290,7 +293,8 @@ export default class Now extends EventEmitter {
 
     if (
       error.errorCode === 'BUILD_FAILED' ||
-      error.errorCode === 'UNEXPECTED_ERROR'
+      error.errorCode === 'UNEXPECTED_ERROR' ||
+      error.errorCode.includes('BUILD_UTILS_SPAWN_')
     ) {
       return new BuildError({
         message: error.errorMessage,
@@ -298,7 +302,7 @@ export default class Now extends EventEmitter {
       });
     }
 
-    return new Error(error.message);
+    return new Error(error.message || error.errorMessage);
   }
 
   async listSecrets(next?: number, testWarningFlag?: boolean) {

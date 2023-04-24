@@ -26,24 +26,34 @@ describe('getMonorepoDefaultSettings', () => {
   });
 
   test.each([
-    ['turbo', 'turbo', false, 'app-14', false],
-    ['turbo-package-config', 'turbo', false, 'app-13', false],
-    ['turbo-npm', 'turbo', true, 'app-15', false],
-    ['turbo-npm-root-proj', 'turbo', true, 'app-root-proj', true],
-    ['nx', 'nx', false, 'app-12', false],
-    ['nx-package-config', 'nx', false, 'app-11', false],
-    ['nx-project-and-package-config-1', 'nx', false, 'app-10', false],
-    ['nx-project-and-package-config-2', 'nx', false, 'app-9', false],
-    ['nx-project-config', 'nx', false, 'app-8', false],
+    ['turbo', 'turbo', false, 'app-14', false, false],
+    ['turbo-has-filter', 'turbo', false, 'app-14', false, true],
+    ['turbo-package-config', 'turbo', false, 'app-13', false, false],
+    ['turbo-npm', 'turbo', true, 'app-15', false, false],
+    ['turbo-npm-root-proj', 'turbo', true, 'app-root-proj', true, false],
+    ['turbo-latest', 'turbo', false, 'app-14', false, false],
+    ['nx', 'nx', false, 'app-12', false, false],
+    ['nx-package-config', 'nx', false, 'app-11', false, false],
+    ['nx-project-and-package-config-1', 'nx', false, 'app-10', false, false],
+    ['nx-project-and-package-config-2', 'nx', false, 'app-9', false, false],
+    ['nx-project-config', 'nx', false, 'app-8', false, false],
   ])(
     'fixture %s',
-    async (fixture, expectedResultKey, isNpm, packageName, isRoot) => {
+    async (
+      fixture,
+      expectedResultKey,
+      isNpm,
+      packageName,
+      isRoot,
+      supportsInference
+    ) => {
       const expectedResultMap: Record<string, Record<string, string>> = {
         turbo: {
           monorepoManager: 'turbo',
-          buildCommand: isRoot
-            ? 'npx turbo run build'
-            : 'cd ../.. && npx turbo run build --filter={packages/app-1}...',
+          buildCommand:
+            isRoot || supportsInference
+              ? 'turbo run build'
+              : 'cd ../.. && turbo run build --filter={packages/app-1}...',
           installCommand:
             isNpm && isRoot
               ? 'npm install'

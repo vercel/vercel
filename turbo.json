@@ -7,43 +7,19 @@
       "outputMode": "new-only",
       "outputs": ["dist/**"]
     },
-    "@vercel/node-bridge#build": {
-      "dependsOn": ["^build"],
-      "outputMode": "new-only",
-      "outputs": ["helpers.js", "source-map-support.js", "web-handler.js"]
-    },
-    "@vercel/gatsby-plugin-vercel-builder#build": {
-      "dependsOn": ["^build"],
-      "outputMode": "new-only",
-      "outputs": ["dist/**", "gatsby-node.js"]
-    },
-    "@vercel/gatsby-plugin-vercel-analytics#build": {
-      "dependsOn": ["^build"],
-      "outputMode": "new-only",
-      "outputs": ["gatsby-browser.js", "web-vitals.js", "index.js"]
-    },
-    "vercel#build": {
-      "dependsOn": ["^build"],
-      "outputMode": "new-only",
-      "outputs": [
-        "dist/**",
-        "src/util/constants.ts",
-        "src/util/dev/templates/*.ts"
-      ]
-    },
     "test-unit": {
       "dependsOn": ["build"],
       "outputMode": "new-only"
     },
-    "test-integration-dev": {
+    "test-dev": {
       "dependsOn": ["build"],
       "outputMode": "new-only"
     },
-    "test-integration-cli": {
+    "test-cli": {
       "dependsOn": ["build"],
       "outputMode": "new-only"
     },
-    "test-integration-once": {
+    "test-e2e": {
       "dependsOn": ["build"],
       "outputMode": "new-only"
     },

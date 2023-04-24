@@ -1,22 +1,22 @@
-import { ProjectEnvTarget } from '../../types';
+import type { ProjectEnvTarget } from '@vercel-internals/types';
+import { PROJECT_ENV_TARGET } from '@vercel-internals/constants';
+import title from 'title';
 
-function envTargets(): string[] {
-  return Object.values(ProjectEnvTarget);
-}
-
-export function getEnvTargetChoices() {
-  return Object.entries(ProjectEnvTarget).map(([key, value]) => ({
-    name: key,
-    value: value,
-  }));
-}
+export const envTargetChoices = PROJECT_ENV_TARGET.map(t => ({
+  name: title(t),
+  value: t,
+}));
 
 export function isValidEnvTarget(
   target?: string
 ): target is ProjectEnvTarget | undefined {
-  return typeof target === 'undefined' || envTargets().includes(target);
+  // Specify `map` returns strings, instead of string constants so `.includes` works
+  return (
+    typeof target === 'undefined' ||
+    envTargetChoices.map<string>(c => c.value).includes(target)
+  );
 }
 
 export function getEnvTargetPlaceholder() {
-  return `<${envTargets().join(' | ')}>`;
+  return `<${envTargetChoices.map(c => c.value).join(' | ')}>`;
 }

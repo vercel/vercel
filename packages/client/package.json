@@ -1,10 +1,10 @@
 {
   "name": "@vercel/client",
-  "version": "12.3.7",
+  "version": "12.4.11",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "homepage": "https://vercel.com",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "files": [
     "dist"
   ],
@@ -15,7 +15,7 @@
   },
   "scripts": {
     "build": "tsc",
-    "test-integration-once": "pnpm test tests/create-deployment.test.ts tests/create-legacy-deployment.test.ts tests/paths.test.ts",
+    "test-e2e": "pnpm test tests/create-deployment.test.ts tests/create-legacy-deployment.test.ts tests/paths.test.ts",
     "test": "jest --env node --verbose --runInBand --bail",
     "test-unit": "pnpm test tests/unit.*test.*"
   },
@@ -34,17 +34,9 @@
     "@types/tar-fs": "1.16.1",
     "typescript": "4.3.4"
   },
-  "jest": {
-    "preset": "ts-jest",
-    "testEnvironment": "node",
-    "verbose": false,
-    "setupFilesAfterEnv": [
-      "<rootDir>/tests/setup/index.ts"
-    ]
-  },
   "dependencies": {
-    "@vercel/build-utils": "6.2.1",
-    "@vercel/routing-utils": "2.1.8",
+    "@vercel/build-utils": "6.7.1",
+    "@vercel/routing-utils": "2.2.0",
     "@zeit/fetch": "5.2.0",
     "async-retry": "1.2.3",
     "async-sema": "3.0.0",
