@@ -1944,7 +1944,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          matchPackage: 'storybook/.+',
+          matchPackage: '@storybook/.+',
         },
       ],
     },

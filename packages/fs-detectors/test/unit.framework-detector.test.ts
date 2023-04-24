@@ -397,7 +397,7 @@ describe('DetectorFilesystem', () => {
       const fs = new VirtualFilesystem({
         'package.json': JSON.stringify({
           dependencies: {
-            'storybook/react': 'latest',
+            '@storybook/react': 'latest',
           },
         }),
       });
