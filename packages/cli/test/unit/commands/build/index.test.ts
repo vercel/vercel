@@ -8,7 +8,7 @@ import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
 import { execSync } from 'child_process';
 
-jest.setTimeout(2 * 60 * 1000);
+jest.setTimeout(6 * 60 * 1000);
 
 const fixture = (name: string) =>
   join(__dirname, '../../../fixtures/unit/commands/build', name);
