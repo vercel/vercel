@@ -412,7 +412,7 @@ export const build: BuildV3 = async ({
   validateConfiguredRuntime(runtime, entrypoint);
 
   if (runtime) {
-    isEdgeFunction = isEdgeRuntime(staticConfig.runtime);
+    isEdgeFunction = isEdgeRuntime(runtime);
   }
 
   debug('Tracing input files...');
