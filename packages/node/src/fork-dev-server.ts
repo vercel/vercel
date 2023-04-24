@@ -49,7 +49,6 @@ export function forkDevServer(options: {
     execArgv: [],
     env: cloneEnv(process.env, options.meta.env, {
       VERCEL_DEV_ENTRYPOINT: options.entrypoint,
-      VERCEL_DEV_IS_ESM: options.isEsm ? '1' : undefined, // this might be no longer used
       VERCEL_DEV_CONFIG: JSON.stringify(options.config),
       VERCEL_DEV_BUILD_ENV: JSON.stringify(options.meta.buildEnv || {}),
       TS_NODE_TRANSPILE_ONLY: '1',
