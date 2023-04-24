@@ -81,7 +81,7 @@ export function isEdgeRuntime(runtime?: string): runtime is EdgeRuntimes {
   );
 }
 
-const ALLOWED_RUNTIMES: string[] = [...Object.values(EdgeRuntimes)];
+const ALLOWED_RUNTIMES: string[] = Object.values(EdgeRuntimes);
 
 export function validateConfiguredRuntime(
   runtime: string | undefined,
