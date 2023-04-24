@@ -1310,6 +1310,9 @@ describe('build', () => {
     const cwd = fixture('storybook-with-middleware');
     const output = join(cwd, '.vercel/output');
     try {
+      client.stdout.pipe(process.stdout);
+      client.stderr.pipe(process.stderr);
+
       process.chdir(cwd);
       process.env.STORYBOOK_TELEMETRY_DEBUG = '1';
       execSync('yarn');
