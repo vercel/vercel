@@ -8,9 +8,10 @@ async function readFileOrNull(file: string) {
   try {
     const data = await readFile(file);
     return data;
-  } catch (err) {
-    if (err.code !== 'ENOENT') {
-      throw err;
+  } catch (err: unknown) {
+    const error = err as Error & { code?: string };
+    if (error.code !== 'ENOENT') {
+      throw error;
     }
   }
 

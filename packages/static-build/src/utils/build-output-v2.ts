@@ -129,7 +129,8 @@ async function getMiddleware(
     if (manifest.pages['_middleware.js'].runtime !== 'web') {
       return;
     }
-  } catch (error) {
+  } catch (err: unknown) {
+    const error = err as Error & { code?: string };
     if (error.code !== 'ENOENT') throw error;
     return;
   }

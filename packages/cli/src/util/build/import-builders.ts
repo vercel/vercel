@@ -15,6 +15,7 @@ import { CantParseJSONFile } from '../errors-ts';
 import { isErrnoException, isError } from '@vercel/error-utils';
 import cmd from '../output/cmd';
 import code from '../output/code';
+import type { Writable } from 'stream';
 
 export interface BuilderWithPkg {
   path: string;
@@ -224,13 +225,10 @@ async function installBuilders(
       .forEach(line => {
         output.warn(line);
       });
-  } catch (err: unknown) {
+  } catch (err: any) {
     if (isError(err)) {
       const execaMessage = err.message;
-      let message =
-        err && 'stderr' in err && typeof err.stderr === 'string'
-          ? err.stderr
-          : execaMessage;
+      let message = getErrorMessage(err, execaMessage);
       if (execaMessage.startsWith('Command failed with ENOENT')) {
         // `npm` is not installed
         message = `Please install ${cmd('npm')} before continuing`;
@@ -283,4 +281,20 @@ async function installBuilders(
   }
 
   return { resolvedSpecs };
+}
+
+type BonusError = Error & {
+  stderr?: string | Writable;
+};
+
+function getErrorMessage(err: BonusError, execaMessage: string) {
+  if (!err || !('stderr' in err)) {
+    return execaMessage;
+  }
+
+  if (err.stderr === 'string') {
+    return err.stderr;
+  }
+
+  return execaMessage;
 }
