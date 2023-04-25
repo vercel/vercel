@@ -1956,7 +1956,7 @@ export const frameworks = [
         value: 'storybook build',
       },
       devCommand: {
-        value: `start-storybook -p $PORT`,
+        value: `storybook dev -p $PORT`,
       },
       outputDirectory: {
         value: 'storybook-static',
