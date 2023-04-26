@@ -21,7 +21,11 @@ export function forkDevServer(options: {
    */
   devServerPath?: string;
 }) {
-  let nodeOptions = process.env.NODE_OPTIONS ?? '--no-warnings';
+  let nodeOptions = process.env.NODE_OPTIONS || '';
+  
+  if (!nodeOptions.includes('--no-warnings')) {
+    nodeOptions  += ' --no-warnings';
+  }
   const tsNodePath = options.require_.resolve('ts-node');
   const esmLoader = pathToFileURL(join(tsNodePath, '..', '..', 'esm.mjs'));
   const cjsLoader = join(tsNodePath, '..', '..', 'register', 'index.js');
