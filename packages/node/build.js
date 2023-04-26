@@ -35,21 +35,23 @@ async function main() {
   await Promise.all([
     fs.remove(mainDir),
     fs.remove(join(outDir, 'babel.d.ts')),
-    fs.remove(join(outDir, 'dev-server.d.ts')),
+    fs.remove(join(outDir, 'dev-server.d.mts')),
+    fs.remove(join(outDir, 'fork-dev-server.d.ts')),
     fs.remove(join(outDir, 'types.d.ts')),
     fs.remove(join(outDir, 'typescript.d.ts')),
     fs.remove(join(outDir, 'utils.d.ts')),
+    fs.remove(join(outDir, 'edge-functions/edge-handler-template.d.ts')),
+    fs.remove(join(outDir, 'edge-functions/edge-handler.d.mts')),
+    fs.remove(join(outDir, 'edge-functions/edge-wasm-plugin.d.mts')),
+    fs.remove(join(outDir, 'edge-functions/edge-node-compat-plugin.d.mts')),
+    fs.remove(join(outDir, 'serverless-functions/helpers.d.ts')),
+    fs.remove(join(outDir, 'serverless-functions/serverless-handler.d.mts')),
   ]);
 
   // Copy type file for ts test
   await fs.copyFile(
     join(outDir, 'index.d.ts'),
     join(__dirname, 'test/fixtures/15-helpers/ts/types.d.ts')
-  );
-
-  await fs.copyFile(
-    join(__dirname, 'src/serverless-functions/dynamic-import.js'),
-    join(outDir, 'serverless-functions/dynamic-import.js')
   );
 
   await fs.copyFile(

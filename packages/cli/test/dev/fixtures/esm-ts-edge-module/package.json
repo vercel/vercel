@@ -1,0 +1,12 @@
+{
+  "name": "esm-ts-edge-module",
+  "dependencies": {
+    "leap-year": "4.0.0"
+  },
+  "devDependencies": {
+    "@vercel/edge": "latest",
+    "typescript": "4.9.5"
+  },
+  "private": true,
+  "type": "module"
+}
