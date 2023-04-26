@@ -298,7 +298,7 @@ function getErrorMessage(err: BonusError, execaMessage: string) {
     return execaMessage;
   }
 
-  if (err.stderr === 'string') {
+  if (typeof err.stderr === 'string') {
     return err.stderr;
   }
 
