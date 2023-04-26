@@ -104,8 +104,14 @@ export async function resolveBuilders(
         // at the top-level of `node_modules` since CLI is installing those directly.
         pkgPath = join(buildersDir, 'node_modules', name, 'package.json');
         builderPkg = await readJSON(pkgPath);
-      } catch (err: any) {
-        if (err?.code !== 'ENOENT') throw err;
+      } catch (error: unknown) {
+        if (!isErrnoException(error)) {
+          throw error;
+        }
+        if (error.code !== 'ENOENT') {
+          throw error;
+        }
+
         // If `pkgPath` wasn't found in `.vercel/builders` then try as a CLI local
         // dependency. `require.resolve()` will throw if the Builder is not a CLI
         // dep, in which case we'll install it into `.vercel/builders`.
@@ -225,7 +231,7 @@ async function installBuilders(
       .forEach(line => {
         output.warn(line);
       });
-  } catch (err: any) {
+  } catch (err: unknown) {
     if (isError(err)) {
       const execaMessage = err.message;
       let message = getErrorMessage(err, execaMessage);
