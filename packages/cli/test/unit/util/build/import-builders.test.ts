@@ -9,7 +9,8 @@ import {
 import vercelNextPkg from '@vercel/next/package.json';
 import vercelNodePkg from '@vercel/node/package.json';
 
-jest.setTimeout(60 * 1000);
+// these tests can take upwards of 190s on macos-latest
+jest.setTimeout(4 * 60 * 1000);
 
 const repoRoot = join(__dirname, '../../../../../..');
 

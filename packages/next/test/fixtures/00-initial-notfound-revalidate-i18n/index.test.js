@@ -40,7 +40,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
   });
 
   it('should render the page on-demand with preview mode enabled', async () => {
-    for (locale of ['fr', 'en-US', 'fr-FR', 'nl', 'nl-NL', 'de']) {
+    for (const locale of ['fr', 'en-US', 'fr-FR', 'nl', 'nl-NL', 'de']) {
       const dataRes = await fetch(
         `${ctx.deploymentUrl}/_next/data/testing-build-id/${locale}/preview-only-not-found.json`
       );
