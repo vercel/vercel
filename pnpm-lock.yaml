@@ -1178,6 +1178,9 @@ importers:
       '@types/node':
         specifier: 14.18.33
         version: 14.18.33
+      '@types/node-fetch':
+        specifier: 2.6.3
+        version: 2.6.3
       '@vercel/build-utils':
         specifier: 6.7.1
         version: link:../build-utils
@@ -1200,8 +1203,8 @@ importers:
         specifier: 2.2.1
         version: 2.2.1
       node-fetch:
-        specifier: 2.6.7
-        version: 2.6.7
+        specifier: 2.6.9
+        version: 2.6.9
       path-to-regexp:
         specifier: 6.2.1
         version: 6.2.1
@@ -1212,8 +1215,8 @@ importers:
         specifier: 10.9.1
         version: 10.9.1(@swc/core@1.2.218)(@types/node@14.18.33)(typescript@4.9.4)
       typescript:
-        specifier: 4.3.4
-        version: 4.3.4
+        specifier: 4.9.5
+        version: 4.9.5
     devDependencies:
       '@babel/core':
         specifier: 7.5.0
@@ -1237,11 +1240,8 @@ importers:
         specifier: 1.8.0
         version: 1.8.0
       '@types/jest':
-        specifier: 27.4.1
-        version: 27.4.1
-      '@types/node-fetch':
-        specifier: ^2.6.1
-        version: 2.6.2
+        specifier: 29.5.0
+        version: 29.5.0
       '@types/test-listen':
         specifier: 1.1.0
         version: 1.1.0
@@ -4237,7 +4237,7 @@ packages:
     resolution: {integrity: sha512-TInJmbrsmYIwUyrRxytjO82KjJbRwm67F7LoZs1shAq6rMvNqi4NxSY9j+hT/939alFmEq1zssoy/caeLXHRfQ==}
     engines: {node: ^14.15.0 || >=16.0.0}
     dependencies:
-      node-fetch: 2.6.7
+      node-fetch: 2.6.9
       npmlog: 6.0.2
     transitivePeerDependencies:
       - encoding
@@ -4692,7 +4692,7 @@ packages:
       detect-libc: 2.0.1
       https-proxy-agent: 5.0.1
       make-dir: 3.1.0
-      node-fetch: 2.6.7
+      node-fetch: 2.6.9
       nopt: 5.0.0
       npmlog: 5.0.1
       rimraf: 3.0.2
@@ -5054,7 +5054,7 @@ packages:
       '@octokit/request-error': 3.0.2
       '@octokit/types': 8.1.0
       is-plain-object: 5.0.0
-      node-fetch: 2.6.7
+      node-fetch: 2.6.9
       universal-user-agent: 6.0.0
     transitivePeerDependencies:
       - encoding
@@ -5989,8 +5989,8 @@ packages:
   /@types/jest@29.5.0:
     resolution: {integrity: sha512-3Emr5VOl/aoBwnWcH/EFQvlSAmjV+XtV9GGu5mwdYew5vhQh0IUZx/60x0TzHDu09Bi7HMx10t/namdJw5QIcg==}
     dependencies:
-      expect: 29.3.1
-      pretty-format: 29.3.1
+      expect: 29.5.0
+      pretty-format: 29.5.0
     dev: true
 
   /@types/js-yaml@3.12.1:
@@ -6116,6 +6116,13 @@ packages:
       '@types/node': 18.14.6
       form-data: 3.0.1
     dev: true
+
+  /@types/node-fetch@2.6.3:
+    resolution: {integrity: sha512-ETTL1mOEdq/sxUtgtOhKjyB2Irra4cjxksvcMUR5Zr4n+PxVhsCD9WS46oPbHL3et9Zde7CNRr+WUNlcHvsX+w==}
+    dependencies:
+      '@types/node': 16.18.11
+      form-data: 3.0.1
+    dev: false
 
   /@types/node@10.12.18:
     resolution: {integrity: sha512-fh+pAqt4xRzPfqA6eh3Z2y6fyZavRIumvjhaCL753+TVkGKGhpPeyrJG2JftD0T9q4GF00KjefsQ+PQNDdWQaQ==}
@@ -6953,7 +6960,7 @@ packages:
       lodash.debounce: 4.0.8
       lru-cache: 7.14.1
       minimatch: 3.1.2
-      node-fetch: 2.6.7
+      node-fetch: 2.6.9
       ora: 5.4.1
       postcss: 8.4.21
       postcss-discard-duplicates: 5.1.0(postcss@8.4.21)
@@ -11136,7 +11143,6 @@ packages:
       asynckit: 0.4.0
       combined-stream: 1.0.8
       mime-types: 2.1.24
-    dev: true
 
   /form-data@4.0.0:
     resolution: {integrity: sha512-ETEklSGi5t0QMZuiXoA/Q6vcnxcLQP5vdugSpuAyi6SVGi2clPPp+xgEhuMaHC+zGgn31Kd235W35f7Hykkaww==}
@@ -13946,7 +13952,6 @@ packages:
 
   /loose-envify@1.4.0:
     resolution: {integrity: sha512-lyuxPGr/Wfhrlem2CL/UcnUc1zcqKAImBDzukY7Y5F/yQiNdko6+fRLevlw1HgMySw7f611UIY408EtxRSoK3Q==}
-    hasBin: true
     dependencies:
       js-tokens: 4.0.0
     dev: true
@@ -14919,6 +14924,17 @@ packages:
     dependencies:
       whatwg-url: 5.0.0
     dev: true
+
+  /node-fetch@2.6.9:
+    resolution: {integrity: sha512-DJm/CJkZkRjKKj4Zi4BsKVZh3ValV5IR5s7LVZnW+6YMh0W1BfNA8XSs6DLMGYlId5F3KnA70uu2qepcR08Qqg==}
+    engines: {node: 4.x || >=6.0.0}
+    peerDependencies:
+      encoding: ^0.1.0
+    peerDependenciesMeta:
+      encoding:
+        optional: true
+    dependencies:
+      whatwg-url: 5.0.0
 
   /node-gyp-build@4.6.0:
     resolution: {integrity: sha512-NTZVKn9IylLwUzaKjkas1e4u2DLNcV4rdYagA4PWdPwW87Bi7z+BznyKSRwS/761tV/lzCGXplWsiaMjLqP2zQ==}
@@ -17629,7 +17645,7 @@ packages:
     dependencies:
       http-proxy-agent: 4.0.1
       https-proxy-agent: 5.0.1
-      node-fetch: 2.6.7
+      node-fetch: 2.6.9
       stream-events: 1.0.5
       uuid: 8.3.2
     transitivePeerDependencies:
@@ -18247,6 +18263,7 @@ packages:
   /typescript@4.3.4:
     resolution: {integrity: sha512-uauPG7XZn9F/mo+7MrsRjyvbxFpzemRjKEZXS4AK83oP2KKOJPvb+9cO/gmnv8arWZvhnjVOXz7B49m1l0e9Ew==}
     engines: {node: '>=4.2.0'}
+    dev: true
 
   /typescript@4.5.2:
     resolution: {integrity: sha512-5BlMof9H1yGt0P8/WF+wPNw6GfctgGjXp5hkblpyT+8rkASSmkUKMXrxR0Xg8ThVCi/JnHQiKXeBaEwCeQwMFw==}

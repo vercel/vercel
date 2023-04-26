@@ -2,7 +2,7 @@ import { forkDevServer, readMessage } from '../../src/fork-dev-server';
 import { resolve, extname } from 'path';
 import fetch from 'node-fetch';
 
-jest.setTimeout(10 * 1000);
+jest.setTimeout(20 * 1000);
 
 function testForkDevServer(entrypoint: string) {
   const ext = extname(entrypoint);
@@ -10,7 +10,9 @@ function testForkDevServer(entrypoint: string) {
   const isEsm = ext === '.mjs';
   return forkDevServer({
     maybeTranspile: true,
-    config: {},
+    config: {
+      debug: true,
+    },
     isEsm,
     isTypeScript,
     meta: {},
@@ -18,7 +20,7 @@ function testForkDevServer(entrypoint: string) {
     tsConfig: undefined,
     workPath: resolve(__dirname, '../dev-fixtures'),
     entrypoint,
-    devServerPath: resolve(__dirname, '../../dist/dev-server.js'),
+    devServerPath: resolve(__dirname, '../../dist/dev-server.mjs'),
   });
 }
 

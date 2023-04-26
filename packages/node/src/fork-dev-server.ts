@@ -1,5 +1,6 @@
 import once from '@tootallnate/once';
-import { cloneEnv, Config, Meta } from '@vercel/build-utils';
+import { cloneEnv } from '@vercel/build-utils';
+import type { Config, Meta } from '@vercel/build-utils';
 import { ChildProcess, fork, ForkOptions } from 'child_process';
 import { pathToFileURL } from 'url';
 import { join } from 'path';
@@ -25,15 +26,11 @@ export function forkDevServer(options: {
   const esmLoader = pathToFileURL(join(tsNodePath, '..', '..', 'esm.mjs'));
   const cjsLoader = join(tsNodePath, '..', '..', 'register', 'index.js');
   const devServerPath =
-    options.devServerPath || join(__dirname, 'dev-server.js');
+    options.devServerPath || join(__dirname, 'dev-server.mjs');
 
   if (options.maybeTranspile) {
     if (options.isTypeScript) {
-      if (options.isEsm) {
-        nodeOptions = `--loader ${esmLoader} ${nodeOptions || ''}`;
-      } else {
-        nodeOptions = `--require ${cjsLoader} ${nodeOptions || ''}`;
-      }
+      nodeOptions = `--loader ${esmLoader} ${nodeOptions || ''}`;
     } else {
       if (options.isEsm) {
         // no transform needed because Node.js supports ESM natively
@@ -48,7 +45,6 @@ export function forkDevServer(options: {
     execArgv: [],
     env: cloneEnv(process.env, options.meta.env, {
       VERCEL_DEV_ENTRYPOINT: options.entrypoint,
-      VERCEL_DEV_IS_ESM: options.isEsm ? '1' : undefined,
       VERCEL_DEV_CONFIG: JSON.stringify(options.config),
       VERCEL_DEV_BUILD_ENV: JSON.stringify(options.meta.buildEnv || {}),
       TS_NODE_TRANSPILE_ONLY: '1',

@@ -83,6 +83,7 @@ describe('build', () => {
     const output = join(cwd, '.vercel/output');
     try {
       process.chdir(cwd);
+
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
 
@@ -196,6 +197,7 @@ describe('build', () => {
     const output = join(cwd, '.vercel/output');
     try {
       process.chdir(cwd);
+
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
 
@@ -1268,9 +1270,6 @@ describe('build', () => {
     const cwd = fixture('local-config');
     const output = join(cwd, '.vercel/output');
     try {
-      client.stdout.pipe(process.stdout);
-      client.stderr.pipe(process.stderr);
-
       process.chdir(cwd);
       let exitCode = await build(client);
       delete process.env.__VERCEL_BUILD_RUNNING;
