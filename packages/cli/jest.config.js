@@ -9,7 +9,6 @@ module.exports = {
   },
   setupFilesAfterEnv: ['@alex_neo/jest-expect-message'],
   verbose: false,
-  silent: false,
   testEnvironment: 'node',
   testMatch: ['<rootDir>/test/**/*.test.ts'],
 };
