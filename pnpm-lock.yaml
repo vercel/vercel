@@ -248,6 +248,9 @@ importers:
       '@types/yazl':
         specifier: 2.4.2
         version: 2.4.2
+      '@vercel/error-utils':
+        specifier: 1.0.10
+        version: link:../error-utils
       '@vercel/ncc':
         specifier: 0.24.0
         version: 0.24.0
@@ -839,6 +842,9 @@ importers:
       '@types/node-fetch':
         specifier: 2.5.8
         version: 2.5.8
+      '@vercel/error-utils':
+        specifier: 1.0.10
+        version: link:../error-utils
       '@vercel/routing-utils':
         specifier: 2.2.0
         version: link:../routing-utils
@@ -1430,6 +1436,9 @@ importers:
       '@vercel/build-utils':
         specifier: 6.7.1
         version: link:../build-utils
+      '@vercel/error-utils':
+        specifier: 1.0.10
+        version: link:../error-utils
       '@vercel/frameworks':
         specifier: 1.3.4
         version: link:../frameworks
@@ -1731,13 +1740,6 @@ packages:
       '@babel/types': 7.21.4
     dev: false
 
-  /@babel/helper-module-imports@7.18.6:
-    resolution: {integrity: sha512-0NFvs3VkuSYbFi1x2Vd6tKrywq+z/cLeYC/RJNFrIX/30Bf5aiGYbtvGXolEktzJH8o5E5KJ3tT+nkxuuZFVlA==}
-    engines: {node: '>=6.9.0'}
-    dependencies:
-      '@babel/types': 7.21.4
-    dev: true
-
   /@babel/helper-module-imports@7.21.4:
     resolution: {integrity: sha512-orajc5T2PsRYUN3ZryCEFeMDYwyw09c/pZeaQEZPH0MpKzSvn3e0uXsDBu3k03VI+9DBiRo+l22BfKTpKwa/Wg==}
     engines: {node: '>=6.9.0'}
@@ -1749,7 +1751,7 @@ packages:
     engines: {node: '>=6.9.0'}
     dependencies:
       '@babel/helper-environment-visitor': 7.18.9
-      '@babel/helper-module-imports': 7.18.6
+      '@babel/helper-module-imports': 7.21.4
       '@babel/helper-simple-access': 7.20.2
       '@babel/helper-split-export-declaration': 7.18.6
       '@babel/helper-validator-identifier': 7.19.1
