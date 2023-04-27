@@ -205,8 +205,8 @@ describe('importBuilders()', () => {
       const spec = '@vercel/does-not-exist@0.0.1';
       const specs = new Set([spec]);
       await importBuilders(specs, cwd, client.output);
-    } catch (_err) {
-      err = _err;
+    } catch (_err: unknown) {
+      err = _err as Error;
     } finally {
       await remove(cwd);
     }
@@ -241,8 +241,8 @@ describe('resolveBuilders()', () => {
     // The empty Map represents `resolveBuilders()` being invoked after the install step
     try {
       await resolveBuilders(process.cwd(), specs, client.output, new Map());
-    } catch (_err: any) {
-      err = _err;
+    } catch (_err: unknown) {
+      err = _err as Error;
     }
 
     if (!err) {

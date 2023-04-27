@@ -141,5 +141,6 @@ export function getConfig<T extends JSONSchema>(
   if (schema) {
     validate(schema, data);
   }
+  // @ts-expect-error - this seems to work just fine, but TS complains it could be infinite nesting
   return data as FromSchema<T>;
 }

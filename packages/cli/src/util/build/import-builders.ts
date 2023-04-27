@@ -15,6 +15,7 @@ import { CantParseJSONFile } from '../errors-ts';
 import { isErrnoException, isError } from '@vercel/error-utils';
 import cmd from '../output/cmd';
 import code from '../output/code';
+import type { Writable } from 'stream';
 
 export interface BuilderWithPkg {
   path: string;
@@ -103,8 +104,14 @@ export async function resolveBuilders(
         // at the top-level of `node_modules` since CLI is installing those directly.
         pkgPath = join(buildersDir, 'node_modules', name, 'package.json');
         builderPkg = await readJSON(pkgPath);
-      } catch (err: any) {
-        if (err?.code !== 'ENOENT') throw err;
+      } catch (error: unknown) {
+        if (!isErrnoException(error)) {
+          throw error;
+        }
+        if (error.code !== 'ENOENT') {
+          throw error;
+        }
+
         // If `pkgPath` wasn't found in `.vercel/builders` then try as a CLI local
         // dependency. `require.resolve()` will throw if the Builder is not a CLI
         // dep, in which case we'll install it into `.vercel/builders`.
@@ -227,10 +234,7 @@ async function installBuilders(
   } catch (err: unknown) {
     if (isError(err)) {
       const execaMessage = err.message;
-      let message =
-        err && 'stderr' in err && typeof err.stderr === 'string'
-          ? err.stderr
-          : execaMessage;
+      let message = getErrorMessage(err, execaMessage);
       if (execaMessage.startsWith('Command failed with ENOENT')) {
         // `npm` is not installed
         message = `Please install ${cmd('npm')} before continuing`;
@@ -283,4 +287,20 @@ async function installBuilders(
   }
 
   return { resolvedSpecs };
+}
+
+type BonusError = Error & {
+  stderr?: string | Writable;
+};
+
+function getErrorMessage(err: BonusError, execaMessage: string) {
+  if (!err || !('stderr' in err)) {
+    return execaMessage;
+  }
+
+  if (typeof err.stderr === 'string') {
+    return err.stderr;
+  }
+
+  return execaMessage;
 }
