@@ -12,7 +12,7 @@ import { Config } from '@vercel/build-utils';
 import { createEdgeEventHandler } from './edge-functions/edge-handler.mjs';
 import { createServer, IncomingMessage, ServerResponse } from 'http';
 import { createServerlessEventHandler } from './serverless-functions/serverless-handler.mjs';
-import { EdgeRuntimes, isEdgeRuntime, logError } from './utils.js';
+import { isEdgeRuntime, logError, validateConfiguredRuntime } from './utils.js';
 import { getConfig } from '@vercel/static-config';
 import { Project } from 'ts-morph';
 import asyncListen from 'async-listen';
@@ -22,17 +22,6 @@ const { default: listen } = asyncListen;
 const parseConfig = (entryPointPath: string) =>
   getConfig(new Project(), entryPointPath);
 
-function getRuntime(runtime: string | undefined, entrypoint: string) {
-  if (runtime && !isEdgeRuntime(runtime)) {
-    throw new Error(
-      `Invalid function runtime "${runtime}" for "${entrypoint}". Valid runtimes are: ${JSON.stringify(
-        Object.values(EdgeRuntimes)
-      )}. Learn more: https://vercel.link/creating-edge-functions`
-    );
-  }
-  return runtime;
-}
-
 async function createEventHandler(
   entrypoint: string,
   config: Config,
@@ -40,7 +29,9 @@ async function createEventHandler(
 ): Promise<(request: IncomingMessage) => Promise<VercelProxyResponse>> {
   const entrypointPath = join(process.cwd(), entrypoint!);
   const staticConfig = parseConfig(entrypointPath);
-  const runtime = getRuntime(staticConfig?.runtime, entrypoint);
+
+  const runtime = staticConfig?.runtime;
+  validateConfiguredRuntime(runtime, entrypoint);
 
   // `middleware.js`/`middleware.ts` file is always run as
   // an Edge Function, otherwise needs to be opted-in via
