@@ -1,7 +1,7 @@
 {
   "extends": "@vercel-internals/tsconfig",
   "compilerOptions": {
-    "outDir": "./dist"
+    "noEmit": true
   },
-  "include": ["index.ts"]
+  "include": ["index.d.ts"]
 }

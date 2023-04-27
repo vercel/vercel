@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "license": "Apache-2.0",
-  "packageManager": "pnpm@7.31.0",
+  "packageManager": "pnpm@8.3.1",
   "dependencies": {
     "lerna": "5.6.2"
   },
@@ -32,14 +32,14 @@
     "source-map-support": "0.5.12",
     "ts-eager": "2.0.2",
     "ts-jest": "29.1.0",
-    "turbo": "1.8.5"
+    "typescript": "4.9.5",
+    "turbo": "1.9.3"
   },
   "scripts": {
     "lerna": "lerna",
     "version": "pnpm install && git add pnpm-lock.yaml",
     "bootstrap": "lerna bootstrap",
     "publish-stable": "echo 'Run `pnpm changelog` for instructions'",
-    "publish-canary": "git checkout main && git pull && lerna version prerelease --preid canary --message \"Publish Canary\" --exact",
     "publish-from-github": "./utils/publish.sh",
     "changelog": "node utils/changelog.js",
     "build": "node utils/gen.js && turbo --no-update-notifier run build",

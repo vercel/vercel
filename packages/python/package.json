@@ -1,6 +1,6 @@
 {
   "name": "@vercel/python",
-  "version": "3.1.58",
+  "version": "3.1.59",
   "main": "./dist/index.js",
   "license": "Apache-2.0",
   "homepage": "https://vercel.com/docs/runtimes#official-runtimes/python",
@@ -25,7 +25,6 @@
     "@types/node": "14.18.33",
     "@vercel/build-utils": "6.7.1",
     "@vercel/ncc": "0.24.0",
-    "execa": "^1.0.0",
-    "typescript": "4.3.4"
+    "execa": "^1.0.0"
   }
 }

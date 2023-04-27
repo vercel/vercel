@@ -26,12 +26,6 @@ packages/hydrogen/edge-entry.js
 packages/next/test/integration/middleware
 packages/next/test/integration/middleware-eval
 
-# node-bridge
-packages/node-bridge/bridge.js
-packages/node-bridge/launcher.js
-packages/node-bridge/helpers.js
-packages/node-bridge/source-map-support.js
-
 # middleware
 packages/middleware/src/entries.js
 

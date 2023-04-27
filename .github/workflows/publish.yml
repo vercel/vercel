@@ -46,8 +46,8 @@ jobs:
           node-version: 16
       - name: install npm@9
         run: npm i -g npm@9
-      - name: install pnpm@7.31.0
-        run: npm i -g pnpm@7.31.0
+      - name: install pnpm@8.3.1
+        run: npm i -g pnpm@8.3.1
       - name: Install
         if: ${{ steps.check-release.outputs.IS_RELEASE == 'true' }}
         run: pnpm install

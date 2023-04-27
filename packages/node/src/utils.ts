@@ -1,6 +1,7 @@
-import { extname } from 'path';
+import { debug, streamToBuffer } from '@vercel/build-utils';
 import { pathToRegexp } from 'path-to-regexp';
-import { debug } from '@vercel/build-utils';
+import type { IncomingMessage } from 'http';
+import { extname } from 'path';
 
 export function getRegExpFromMatchers(matcherOrMatchers: unknown): string {
   if (!matcherOrMatchers) {
@@ -78,4 +79,12 @@ export function isEdgeRuntime(runtime?: string): runtime is EdgeRuntimes {
     runtime !== undefined &&
     Object.values(EdgeRuntimes).includes(runtime as EdgeRuntimes)
   );
+}
+
+export async function serializeBody(
+  request: IncomingMessage
+): Promise<Buffer | undefined> {
+  return request.method !== 'GET' && request.method !== 'HEAD'
+    ? await streamToBuffer(request)
+    : undefined;
 }

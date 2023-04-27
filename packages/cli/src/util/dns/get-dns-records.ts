@@ -1,4 +1,4 @@
-import { DNSRecord } from '@vercel-internals/types';
+import type { DNSRecord } from '@vercel-internals/types';
 import { DomainNotFound } from '../errors-ts';
 import { Output } from '../output';
 import Client from '../client';
