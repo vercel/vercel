@@ -119,6 +119,7 @@ async function compile(
   baseDir: string,
   entrypointPath: string,
   config: Config,
+  meta: Meta,
   nodeVersion: NodeVersion,
   isEdgeFunction: boolean
 ): Promise<{
@@ -333,7 +334,13 @@ async function compile(
         stream: preparedFiles[path].toStream(),
       });
 
-      console.log(`Compiling "${filename}" from ESM to CommonJS modules...`);
+      if (!meta.compiledToCommonJS) {
+        meta.compiledToCommonJS = true;
+        console.log(
+          'Warning: Node.js functions will be compiled from ESM to CommonJS. If this was not intended, add "type": "module" to your package.json file.'
+        );
+      }
+      console.log(`Compiling "${filename}" from ESM to CommonJS...`);
       const { code, map } = babelCompile(filename, source);
       shouldAddSourcemapSupport = true;
       preparedFiles[path] = new FileBlob({
@@ -423,6 +430,7 @@ export const build: BuildV3 = async ({
     baseDir,
     entrypointPath,
     config,
+    meta,
     nodeVersion,
     isEdgeFunction
   );
