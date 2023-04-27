@@ -333,6 +333,7 @@ async function compile(
         stream: preparedFiles[path].toStream(),
       });
 
+      console.log(`Compiling "${filename}" from ESM to CommonJS modules...`);
       const { code, map } = babelCompile(filename, source);
       shouldAddSourcemapSupport = true;
       preparedFiles[path] = new FileBlob({
