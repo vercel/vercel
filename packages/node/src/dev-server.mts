@@ -6,18 +6,18 @@ if (!entrypoint) {
 }
 
 import { join } from 'path';
-const useRequire = process.env.VERCEL_DEV_IS_ESM !== '1';
-
 import type { Headers } from 'node-fetch';
-import type { VercelProxyResponse } from './types';
+import type { VercelProxyResponse } from './types.js';
 import { Config } from '@vercel/build-utils';
-import { createEdgeEventHandler } from './edge-functions/edge-handler';
+import { createEdgeEventHandler } from './edge-functions/edge-handler.mjs';
 import { createServer, IncomingMessage, ServerResponse } from 'http';
-import { createServerlessEventHandler } from './serverless-functions/serverless-handler';
-import { isEdgeRuntime, logError, validateConfiguredRuntime } from './utils';
+import { createServerlessEventHandler } from './serverless-functions/serverless-handler.mjs';
+import { isEdgeRuntime, logError, validateConfiguredRuntime } from './utils.js';
 import { getConfig } from '@vercel/static-config';
 import { Project } from 'ts-morph';
-import listen from 'async-listen';
+import asyncListen from 'async-listen';
+
+const { default: listen } = asyncListen;
 
 const parseConfig = (entryPointPath: string) =>
   getConfig(new Project(), entryPointPath);
@@ -48,7 +48,6 @@ async function createEventHandler(
   return createServerlessEventHandler(entrypointPath, {
     mode: staticConfig?.supportsResponseStreaming ? 'streaming' : 'buffer',
     shouldAddHelpers: options.shouldAddHelpers,
-    useRequire,
   });
 }
 
@@ -86,7 +85,7 @@ async function main() {
   }
 }
 
-export async function onDevRequest(
+async function onDevRequest(
   req: IncomingMessage,
   res: ServerResponse
 ): Promise<void> {
