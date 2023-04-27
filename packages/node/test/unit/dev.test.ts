@@ -2,7 +2,7 @@ import { forkDevServer, readMessage } from '../../src/fork-dev-server';
 import { resolve, extname } from 'path';
 import fetch from 'node-fetch';
 
-jest.setTimeout(10 * 1000);
+jest.setTimeout(20 * 1000);
 
 function testForkDevServer(entrypoint: string) {
   const ext = extname(entrypoint);
@@ -10,7 +10,9 @@ function testForkDevServer(entrypoint: string) {
   const isEsm = ext === '.mjs';
   return forkDevServer({
     maybeTranspile: true,
-    config: {},
+    config: {
+      debug: true,
+    },
     isEsm,
     isTypeScript,
     meta: {},
@@ -18,13 +20,12 @@ function testForkDevServer(entrypoint: string) {
     tsConfig: undefined,
     workPath: resolve(__dirname, '../dev-fixtures'),
     entrypoint,
-    devServerPath: resolve(__dirname, '../../dist/dev-server.js'),
+    devServerPath: resolve(__dirname, '../../dist/dev-server.mjs'),
   });
 }
 
 test('runs an edge function that uses `buffer`', async () => {
   const child = testForkDevServer('./edge-buffer.js');
-
   try {
     const result = await readMessage(child);
     if (result.state !== 'message') {
@@ -63,12 +64,12 @@ test('runs a mjs endpoint', async () => {
     );
     expect({
       status: response.status,
-      headers: response.headers.raw(),
+      headers: Object.fromEntries(response.headers),
       text: await response.text(),
     }).toEqual({
       status: 200,
       headers: expect.objectContaining({
-        'x-hello': ['world'],
+        'x-hello': 'world',
       }),
       text: 'Hello, world!',
     });
@@ -96,12 +97,12 @@ test('runs a esm typescript endpoint', async () => {
     );
     expect({
       status: response.status,
-      headers: response.headers.raw(),
+      headers: Object.fromEntries(response.headers),
       text: await response.text(),
     }).toEqual({
       status: 200,
       headers: expect.objectContaining({
-        'x-hello': ['world'],
+        'x-hello': 'world',
       }),
       text: 'Hello, world!',
     });

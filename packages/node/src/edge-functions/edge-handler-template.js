@@ -1,49 +1,29 @@
 // provided by the edge runtime:
 /* global addEventListener */
 
-function buildUrl(requestDetails) {
-  const host = requestDetails.headers['x-forwarded-host'] || '127.0.0.1';
-  const path = requestDetails.url || '/';
-
-  const allProtocols = requestDetails.headers['x-forwarded-proto'];
-  let proto;
-  if (allProtocols) {
-    // handle multi-protocol like: https,http://...
-    proto = allProtocols.split(/\b/).shift();
-  } else {
-    proto = 'http';
-  }
-
-  return `${proto}://${host}${path}`;
+function getUrl(url, headers) {
+  const urlObj = new URL(url);
+  const protocol = headers.get('x-forwarded-proto');
+  if (protocol) urlObj.protocol = protocol.split(/\b/).shift();
+  urlObj.host = headers.get('x-forwarded-host');
+  urlObj.port = headers.get('x-forwarded-port');
+  return urlObj.toString();
 }
 
-async function respond(
-  userEdgeHandler,
-  requestDetails,
-  event,
-  options,
-  dependencies
-) {
+async function respond(userEdgeHandler, event, options, dependencies) {
   const { Request, Response } = dependencies;
   const { isMiddleware } = options;
-
-  let body;
-
-  if (requestDetails.method !== 'GET' && requestDetails.method !== 'HEAD') {
-    if (requestDetails.body) {
-      body = Uint8Array.from(atob(requestDetails.body), c => c.charCodeAt(0));
-    }
-  }
-
-  const request = new Request(buildUrl(requestDetails), {
-    headers: requestDetails.headers,
-    method: requestDetails.method,
-    body: body,
-  });
-
-  event.request = request;
-
-  let response = await userEdgeHandler(event.request, event);
+  event.request.headers.set(
+    'host',
+    event.request.headers.get('x-forwarded-host')
+  );
+  let response = await userEdgeHandler(
+    new Request(
+      getUrl(event.request.url, event.request.headers),
+      event.request
+    ),
+    event
+  );
 
   if (!response) {
     if (isMiddleware) {
@@ -85,10 +65,8 @@ async function parseRequestEvent(event) {
 function registerFetchListener(userEdgeHandler, options, dependencies) {
   addEventListener('fetch', async event => {
     try {
-      const requestDetails = await parseRequestEvent(event);
       const response = await respond(
         userEdgeHandler,
-        requestDetails,
         event,
         options,
         dependencies
@@ -100,11 +78,10 @@ function registerFetchListener(userEdgeHandler, options, dependencies) {
   });
 }
 
-// for testing:
 module.exports = {
-  buildUrl,
-  respond,
-  toResponseError,
+  getUrl,
   parseRequestEvent,
   registerFetchListener,
+  respond,
+  toResponseError,
 };
