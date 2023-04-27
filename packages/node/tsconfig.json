@@ -1,7 +1,6 @@
 {
   "compilerOptions": {
     "strict": true,
-    "allowJs": true,
     "esModuleInterop": true,
     "lib": ["ES2020", "DOM"],
     "target": "ES2020",
