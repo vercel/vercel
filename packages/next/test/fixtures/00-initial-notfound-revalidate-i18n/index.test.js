@@ -8,7 +8,7 @@ const fetch = require('../../../../../test/lib/deployment/fetch-retry');
 describe(`${__dirname.split(path.sep).pop()}`, () => {
   const ctx = {};
 
-  it('should deploy and pass probe checks', async () => {
+  beforeAll(async () => {
     const res = await deployAndTest(__dirname);
     Object.assign(ctx, res);
   });
