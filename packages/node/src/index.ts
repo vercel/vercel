@@ -337,7 +337,7 @@ async function compile(
       if (!meta.compiledToCommonJS) {
         meta.compiledToCommonJS = true;
         console.warn(
-          'Warning: Node.js functions will be compiled from ESM to CommonJS. If this was not intended, add "type": "module" to your package.json file.'
+          'Warning: Node.js functions are compiled from ESM to CommonJS. If this is not intended, add "type": "module" to your package.json file.'
         );
       }
       console.log(`Compiling "${filename}" from ESM to CommonJS...`);
