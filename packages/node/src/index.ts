@@ -308,7 +308,7 @@ async function compile(
       !file.endsWith('.mjs') &&
       !file.match(libPathRegEx)
   );
-  if (esmPaths.length) {
+  if (!isEdgeFunction && esmPaths.length) {
     const babelCompile = require('./babel').compile;
     for (const path of esmPaths) {
       const pathDir = join(workPath, dirname(path));
