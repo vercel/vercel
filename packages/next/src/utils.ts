@@ -2412,11 +2412,13 @@ function normalizeRegions(regions: Regions): string[] {
     if (region === 'global') {
       // Uses `all` instead as that's how it's implemented on Vercel.
       newRegions.push('all');
+      continue;
     }
 
     // Explicitly mentioned as `auto` is one of the explicit values for preferredRegion in Next.js.
     if (region === 'auto') {
       newRegions.push('auto');
+      continue;
     }
 
     newRegions.push(region);
