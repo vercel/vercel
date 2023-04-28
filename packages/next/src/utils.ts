@@ -2393,6 +2393,10 @@ if (vercelFunctionRegionsVar) {
  * - `global` refers to all regions.
  */
 function normalizeRegions(regions: Regions): string[] {
+  if (typeof regions === 'string') {
+    regions = [regions];
+  }
+
   const newRegions: string[] = [];
   for (const region of regions) {
     // Explicitly mentioned as `home` is one of the explicit values for preferredRegion in Next.js.
