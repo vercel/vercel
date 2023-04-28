@@ -119,6 +119,7 @@ async function compile(
   baseDir: string,
   entrypointPath: string,
   config: Config,
+  meta: Meta,
   nodeVersion: NodeVersion,
   isEdgeFunction: boolean
 ): Promise<{
@@ -308,7 +309,9 @@ async function compile(
       !file.endsWith('.mjs') &&
       !file.match(libPathRegEx)
   );
-  if (esmPaths.length) {
+  const babelCompileEnabled =
+    !isEdgeFunction || process.env.VERCEL_EDGE_NO_BABEL !== '1';
+  if (babelCompileEnabled && esmPaths.length) {
     const babelCompile = require('./babel').compile;
     for (const path of esmPaths) {
       const pathDir = join(workPath, dirname(path));
@@ -333,6 +336,13 @@ async function compile(
         stream: preparedFiles[path].toStream(),
       });
 
+      if (!meta.compiledToCommonJS) {
+        meta.compiledToCommonJS = true;
+        console.warn(
+          'Warning: Node.js functions are compiled from ESM to CommonJS. If this is not intended, add "type": "module" to your package.json file.'
+        );
+      }
+      console.log(`Compiling "${filename}" from ESM to CommonJS...`);
       const { code, map } = babelCompile(filename, source);
       shouldAddSourcemapSupport = true;
       preparedFiles[path] = new FileBlob({
@@ -422,6 +432,7 @@ export const build: BuildV3 = async ({
     baseDir,
     entrypointPath,
     config,
+    meta,
     nodeVersion,
     isEdgeFunction
   );
