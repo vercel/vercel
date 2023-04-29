@@ -141,8 +141,6 @@ async function createEdgeRuntimeServer(params?: {
           // This is required for esbuild wrapping logic to resolve
           module: {},
 
-          WebSocket: require('undici').WebSocket,
-
           // This is required for environment variable access.
           // In production, env var access is provided by static analysis
           // so that only the used values are available.
