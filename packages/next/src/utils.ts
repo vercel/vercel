@@ -2400,9 +2400,11 @@ function normalizeRegions(regions: Regions): string[] {
   const newRegions: string[] = [];
   for (const region of regions) {
     // Explicitly mentioned as `home` is one of the explicit values for preferredRegion in Next.js.
-    if (region === 'home' && vercelFunctionRegions) {
-      // Includes the regions from the VERCEL_FUNCTION_REGIONS env var.
-      newRegions.push(...vercelFunctionRegions);
+    if (region === 'home') {
+      if (vercelFunctionRegions) {
+        // Includes the regions from the VERCEL_FUNCTION_REGIONS env var.
+        newRegions.push(...vercelFunctionRegions);
+      }
       continue;
     }
 
@@ -2410,11 +2412,13 @@ function normalizeRegions(regions: Regions): string[] {
     if (region === 'global') {
       // Uses `all` instead as that's how it's implemented on Vercel.
       newRegions.push('all');
+      continue;
     }
 
     // Explicitly mentioned as `auto` is one of the explicit values for preferredRegion in Next.js.
     if (region === 'auto') {
       newRegions.push('auto');
+      continue;
     }
 
     newRegions.push(region);
