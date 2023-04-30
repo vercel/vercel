@@ -53,6 +53,7 @@ import doLoginPrompt from './util/login/prompt';
 import type { AuthConfig, GlobalConfig } from '@vercel-internals/types';
 import { VercelConfig } from '@vercel/client';
 import box from './util/output/box';
+import { ProxyAgent } from 'proxy-agent';
 
 const VERCEL_DIR = getGlobalPathConfig();
 const VERCEL_CONFIG_PATH = configFiles.getConfigFilePath();
@@ -251,6 +252,7 @@ const main = async () => {
 
   // Shared API `Client` instance for all sub-commands to utilize
   client = new Client({
+    agent: new ProxyAgent(),
     apiUrl,
     stdin: process.stdin,
     stdout: process.stdout,

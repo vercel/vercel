@@ -648,6 +648,9 @@ importers:
       promisepipe:
         specifier: 3.0.0
         version: 3.0.0
+      proxy-agent:
+        specifier: https://proxy-agents-qhzx1beqt-tootallnate.vercel.app/proxy-agent.tgz
+        version: '@proxy-agents-qhzx1beqt-tootallnate.vercel.app/proxy-agent.tgz'
       psl:
         specifier: 1.1.31
         version: 1.1.31
@@ -7561,7 +7564,6 @@ packages:
     engines: {node: '>=4'}
     dependencies:
       tslib: 2.5.0
-    dev: false
 
   /ast-types@0.15.2:
     resolution: {integrity: sha512-c27loCv9QkZinsa5ProX751khO9DJl/AcB5c2KNtA6NRvHKS0PgLfcftz72KVq504vB0Gku5s2kUZzDBvQWvHg==}
@@ -7810,6 +7812,11 @@ packages:
       isobject: 3.0.1
       mixin-deep: 1.3.2
       pascalcase: 0.1.1
+    dev: true
+
+  /basic-ftp@5.0.2:
+    resolution: {integrity: sha512-NgkBwqp7rkhIUBaxLwL601lvUuBUvShJocrLYdiyTsH1WeP/wofMdooZ4p6hz+4hqiU59PBOj0EkaqELwFJLuQ==}
+    engines: {node: '>=10.0.0'}
     dev: true
 
   /bcrypt-pbkdf@1.0.2:
@@ -9101,14 +9108,14 @@ packages:
     resolution: {integrity: sha512-G9pEH1UUMxShy6syWk01VQSRVs3CDWtlxtZu7A+NyqjxaCA4gSlWAKDBx6QiUEKezqS8+DUlXLI14Fp05Hmpwg==}
     dev: true
 
-  /degenerator@3.0.2:
-    resolution: {integrity: sha512-c0mef3SNQo56t6urUU6tdQAs+ThoD0o9B9MJ8HEt7NQcGEILCRFqQb7ZbP9JAv+QF1Ky5plydhMR/IrqWDm+TQ==}
+  /degenerator@3.0.4:
+    resolution: {integrity: sha512-Z66uPeBfHZAHVmue3HPfyKu2Q0rC2cRxbTOsvmU/po5fvvcx27W4mIu9n0PUlQih4oUYvcG1BsbtVv8x7KDOSw==}
     engines: {node: '>= 6'}
     dependencies:
       ast-types: 0.13.4
       escodegen: 1.14.3
       esprima: 4.0.1
-      vm2: 3.9.13
+      vm2: 3.9.17
     dev: false
 
   /del@5.1.0:
@@ -10090,7 +10097,6 @@ packages:
       optionator: 0.8.3
     optionalDependencies:
       source-map: 0.6.1
-    dev: false
 
   /eslint-config-prettier@8.5.0(eslint@8.14.0):
     resolution: {integrity: sha512-obmWKLUNCnhtQRKc+tmnYuQl0pFU1ibYJQ5BGhTVB08bHe9wC8qUeG7c08dj9XX+AuPj1YSGSQIHl1pnDHZR0Q==}
@@ -12250,11 +12256,9 @@ packages:
 
   /ip@1.1.8:
     resolution: {integrity: sha512-PuExPYUiu6qMBQb4l06ecm6T6ujzhmh+MeJcW9wa89PoAz5pvd4zPgN5WJV104mb6S2T1AwNIAaB70JNrLQWhg==}
-    dev: false
 
   /ip@2.0.0:
     resolution: {integrity: sha512-WKa+XuLG1A1R0UWhl2+1XQSi+fZWMsYKffMZTTYsiZaUD8k2yDAj5atimTUD2TZkyCkNEeYE5NhFZmupOGtjYQ==}
-    dev: false
 
   /ipaddr.js@1.9.1:
     resolution: {integrity: sha512-0KI/607xoxSToH7GjN1FfSbLoU0+btTicjsQSWQlh/hZykN8KpmMf7uYwPW3R+akZ6R/w18ZlXSHBYXiYUPO3g==}
@@ -13680,7 +13684,6 @@ packages:
     dependencies:
       prelude-ls: 1.1.2
       type-check: 0.3.2
-    dev: false
 
   /levn@0.4.1:
     resolution: {integrity: sha512-+bT2uH4E5LGE7h/n3evcS/sQlJXCpIp6ym8OWJ5eV6+67Dsql/LaaT7qJBAt2rzfoa/5QBGBhxDix1dMt2kQKQ==}
@@ -13985,6 +13988,11 @@ packages:
     resolution: {integrity: sha512-ysxwsnTKdAx96aTRdhDOCQfDgbHnt8SK0KY8SEjO0wHinhWOFTESbjVCMPbU1uGXg/ch4lifqx0wfjOawU2+WA==}
     engines: {node: '>=12'}
     dev: false
+
+  /lru-cache@9.1.1:
+    resolution: {integrity: sha512-65/Jky17UwSb0BuB9V+MyDpsOtXKmYwzhyl+cOa9XUiI4uV2Ouy/2voFP3+al0BjZbJgMBD8FojMpAf+Z+qn4A==}
+    engines: {node: 14 || >=16.14}
+    dev: true
 
   /lru_map@0.3.3:
     resolution: {integrity: sha512-Pn9cox5CsMYngeDbmChANltQl+5pi6XmTrraMSzhPmMBbmgcxmqWry0U3PGapCU1yB4/LqCcom7qhHZiF/jGfQ==}
@@ -14896,7 +14904,6 @@ packages:
   /netmask@2.0.2:
     resolution: {integrity: sha512-dBpDMdxv9Irdq66304OLfEmQ9tbNRFnFTuZiLo+bD+r332bBmMJ8GBLXklIXXgxd3+v9+KUnZaUR5PJMa75Gsg==}
     engines: {node: '>= 0.4.0'}
-    dev: false
 
   /nice-try@1.0.5:
     resolution: {integrity: sha512-1nh45deeb5olNY7eX82BkPO7SSxR5SSYJiPTrTdFUVYwAl8CKMA5N9PjTYkHiRjisVcxcQ1HXdLhx2qxxJzLNQ==}
@@ -15358,7 +15365,6 @@ packages:
       prelude-ls: 1.1.2
       type-check: 0.3.2
       word-wrap: 1.2.3
-    dev: false
 
   /optionator@0.9.1:
     resolution: {integrity: sha512-74RlY5FCnhq4jRxVUPKDaRwrVNXMqsGsiW6AJw4XK8hmtm10wC0ypZBLw5IIp85NZMr91+qd1RvvENwg7jjRFw==}
@@ -15567,7 +15573,7 @@ packages:
     resolution: {integrity: sha512-cy7u00ko2KVgBAjuhevqpPeHIkCIqPe1v24cydhWjmeuzaBfmUWFCZJ1iAh5TuVzVZoUzXIW7K8sMYOZ84uZ9Q==}
     engines: {node: '>= 8'}
     dependencies:
-      degenerator: 3.0.2
+      degenerator: 3.0.4
       ip: 1.1.8
       netmask: 2.0.2
     dev: false
@@ -15992,7 +15998,6 @@ packages:
   /prelude-ls@1.1.2:
     resolution: {integrity: sha512-ESF23V4SKG6lVSGZgYNpbsiaAkdab6ZgOxe52p7+Kid3W3u3bxR4Vfd/o21dmN7jSt0IwgZ4v5MUd26FEtXE9w==}
     engines: {node: '>= 0.8.0'}
-    dev: false
 
   /prelude-ls@1.2.1:
     resolution: {integrity: sha512-vkcDPrRZo1QZLbn5RLGPpg/WmIQ65qoWWhcGKf/b5eplkkarX0m9z8ppCat4mlOqUsWpyNuYgO3VRyrYHSzX5g==}
@@ -16173,7 +16178,6 @@ packages:
 
   /proxy-from-env@1.1.0:
     resolution: {integrity: sha512-D+zkORCbA9f1tdWRK0RaCR3GPv50cMxcrz4X8k5LTSUD1Dkw47mKJEZQNunItRTkWwgtaUSo1RVFRIG9ZXiFYg==}
-    dev: false
 
   /pseudomap@1.0.2:
     resolution: {integrity: sha512-b/YwNhb8lk1Zz2+bXXpS/LK9OisiZZ1SNsSLxN1x2OXVEhW2Ckr/7mWE5vrC1ZTiJlD9g19jWszTmJsB+oEpFQ==}
@@ -17003,7 +17007,6 @@ packages:
   /smart-buffer@4.2.0:
     resolution: {integrity: sha512-94hK0Hh8rPqQl2xXc3HsaBoOXKV20MToPkcXvwbISWLEs+64sBq5kFgn2kJDHb1Pry9yrP0dxrCI9RRci7RXKg==}
     engines: {node: '>= 6.0.0', npm: '>= 3.0.0'}
-    dev: false
 
   /snapdragon-node@2.1.1:
     resolution: {integrity: sha512-O27l4xaMYt/RSQ5TR3vpWCAB5Kb/czIcqUFOM/C4fYcLnbZUc1PkjTAMjof2pBWaSTwOUd6qUHcFGVGj7aIwnw==}
@@ -17065,7 +17068,6 @@ packages:
     dependencies:
       ip: 2.0.0
       smart-buffer: 4.2.0
-    dev: false
 
   /sort-keys@1.1.2:
     resolution: {integrity: sha512-vzn8aSqKgytVik0iwdBEi+zevbTYZogewTUM6dtpmGwEcdzbub/TX4bCzRhebDCRC3QzXgJsLRKB2V/Oof7HXg==}
@@ -18173,7 +18175,6 @@ packages:
     engines: {node: '>= 0.8.0'}
     dependencies:
       prelude-ls: 1.1.2
-    dev: false
 
   /type-check@0.4.0:
     resolution: {integrity: sha512-XleUoc9uwGXqjWwXaUTZAmzMcFZ5858QA2vvx1Ur5xIcixXIP+8LnFDgRplU30us6teqdlskFfu+ae4K79Ooew==}
@@ -18684,14 +18685,13 @@ packages:
       fsevents: 2.3.2
     dev: false
 
-  /vm2@3.9.13:
-    resolution: {integrity: sha512-0rvxpB8P8Shm4wX2EKOiMp7H2zq+HUE/UwodY0pCZXs9IffIKZq6vUti5OgkVCTakKo9e/fgO4X1fkwfjWxE3Q==}
+  /vm2@3.9.17:
+    resolution: {integrity: sha512-AqwtCnZ/ERcX+AVj9vUsphY56YANXxRuqMb7GsDtAr0m0PcQX3u0Aj3KWiXM0YAHy7i6JEeHrwOnwXbGYgRpAw==}
     engines: {node: '>=6.0'}
     hasBin: true
     dependencies:
       acorn: 8.8.2
       acorn-walk: 8.2.0
-    dev: false
 
   /vscode-oniguruma@1.7.0:
     resolution: {integrity: sha512-L9WMGRfrjOhgHSdOYgCt/yRMsXzLDJSL7BPrOZt73gU0iWO4mpqzqQzOz5srxqTvMBaR0XZTSrVWo4j55Rc6cA==}
@@ -19075,3 +19075,133 @@ packages:
   /zwitch@2.0.4:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
     dev: false
+
+  '@proxy-agents-qhzx1beqt-tootallnate.vercel.app/agent-base.tgz':
+    resolution: {tarball: https://proxy-agents-qhzx1beqt-tootallnate.vercel.app/agent-base.tgz}
+    name: agent-base
+    version: 6.0.2
+    engines: {node: '>= 14'}
+    dependencies:
+      debug: 4.3.4
+    transitivePeerDependencies:
+      - supports-color
+    dev: true
+
+  '@proxy-agents-qhzx1beqt-tootallnate.vercel.app/data-uri-to-buffer.tgz':
+    resolution: {tarball: https://proxy-agents-qhzx1beqt-tootallnate.vercel.app/data-uri-to-buffer.tgz}
+    name: data-uri-to-buffer
+    version: 4.0.1
+    engines: {node: '>= 14'}
+    dev: true
+
+  '@proxy-agents-qhzx1beqt-tootallnate.vercel.app/degenerator.tgz':
+    resolution: {tarball: https://proxy-agents-qhzx1beqt-tootallnate.vercel.app/degenerator.tgz}
+    name: degenerator
+    version: 3.0.4
+    engines: {node: '>= 14'}
+    dependencies:
+      ast-types: 0.13.4
+      escodegen: 1.14.3
+      esprima: 4.0.1
+      vm2: 3.9.17
+    dev: true
+
+  '@proxy-agents-qhzx1beqt-tootallnate.vercel.app/get-uri.tgz':
+    resolution: {tarball: https://proxy-agents-qhzx1beqt-tootallnate.vercel.app/get-uri.tgz}
+    name: get-uri
+    version: 5.0.0
+    engines: {node: '>= 14'}
+    dependencies:
+      '@tootallnate/once': 2.0.0
+      basic-ftp: 5.0.2
+      data-uri-to-buffer: '@proxy-agents-qhzx1beqt-tootallnate.vercel.app/data-uri-to-buffer.tgz'
+      debug: 4.3.4
+      fs-extra: 8.1.0
+    transitivePeerDependencies:
+      - supports-color
+    dev: true
+
+  '@proxy-agents-qhzx1beqt-tootallnate.vercel.app/http-proxy-agent.tgz':
+    resolution: {tarball: https://proxy-agents-qhzx1beqt-tootallnate.vercel.app/http-proxy-agent.tgz}
+    name: http-proxy-agent
+    version: 5.0.0
+    engines: {node: '>= 14'}
+    dependencies:
+      '@tootallnate/once': 2.0.0
+      agent-base: '@proxy-agents-qhzx1beqt-tootallnate.vercel.app/agent-base.tgz'
+      debug: 4.3.4
+    transitivePeerDependencies:
+      - supports-color
+    dev: true
+
+  '@proxy-agents-qhzx1beqt-tootallnate.vercel.app/https-proxy-agent.tgz':
+    resolution: {tarball: https://proxy-agents-qhzx1beqt-tootallnate.vercel.app/https-proxy-agent.tgz}
+    name: https-proxy-agent
+    version: 5.0.1
+    engines: {node: '>= 14'}
+    dependencies:
+      agent-base: '@proxy-agents-qhzx1beqt-tootallnate.vercel.app/agent-base.tgz'
+      debug: 4.3.4
+    transitivePeerDependencies:
+      - supports-color
+    dev: true
+
+  '@proxy-agents-qhzx1beqt-tootallnate.vercel.app/pac-proxy-agent.tgz':
+    resolution: {tarball: https://proxy-agents-qhzx1beqt-tootallnate.vercel.app/pac-proxy-agent.tgz}
+    name: pac-proxy-agent
+    version: 5.0.0
+    engines: {node: '>= 14'}
+    dependencies:
+      '@tootallnate/once': 2.0.0
+      agent-base: '@proxy-agents-qhzx1beqt-tootallnate.vercel.app/agent-base.tgz'
+      debug: 4.3.4
+      get-uri: '@proxy-agents-qhzx1beqt-tootallnate.vercel.app/get-uri.tgz'
+      http-proxy-agent: '@proxy-agents-qhzx1beqt-tootallnate.vercel.app/http-proxy-agent.tgz'
+      https-proxy-agent: '@proxy-agents-qhzx1beqt-tootallnate.vercel.app/https-proxy-agent.tgz'
+      pac-resolver: '@proxy-agents-qhzx1beqt-tootallnate.vercel.app/pac-resolver.tgz'
+      socks-proxy-agent: '@proxy-agents-qhzx1beqt-tootallnate.vercel.app/socks-proxy-agent.tgz'
+    transitivePeerDependencies:
+      - supports-color
+    dev: true
+
+  '@proxy-agents-qhzx1beqt-tootallnate.vercel.app/pac-resolver.tgz':
+    resolution: {tarball: https://proxy-agents-qhzx1beqt-tootallnate.vercel.app/pac-resolver.tgz}
+    name: pac-resolver
+    version: 5.0.1
+    engines: {node: '>= 14'}
+    dependencies:
+      degenerator: '@proxy-agents-qhzx1beqt-tootallnate.vercel.app/degenerator.tgz'
+      ip: 1.1.8
+      netmask: 2.0.2
+    dev: true
+
+  '@proxy-agents-qhzx1beqt-tootallnate.vercel.app/proxy-agent.tgz':
+    resolution: {tarball: https://proxy-agents-qhzx1beqt-tootallnate.vercel.app/proxy-agent.tgz}
+    name: proxy-agent
+    version: 5.0.0
+    engines: {node: '>= 14'}
+    dependencies:
+      agent-base: '@proxy-agents-qhzx1beqt-tootallnate.vercel.app/agent-base.tgz'
+      debug: 4.3.4
+      http-proxy-agent: '@proxy-agents-qhzx1beqt-tootallnate.vercel.app/http-proxy-agent.tgz'
+      https-proxy-agent: '@proxy-agents-qhzx1beqt-tootallnate.vercel.app/https-proxy-agent.tgz'
+      lru-cache: 9.1.1
+      pac-proxy-agent: '@proxy-agents-qhzx1beqt-tootallnate.vercel.app/pac-proxy-agent.tgz'
+      proxy-from-env: 1.1.0
+      socks-proxy-agent: '@proxy-agents-qhzx1beqt-tootallnate.vercel.app/socks-proxy-agent.tgz'
+    transitivePeerDependencies:
+      - supports-color
+    dev: true
+
+  '@proxy-agents-qhzx1beqt-tootallnate.vercel.app/socks-proxy-agent.tgz':
+    resolution: {tarball: https://proxy-agents-qhzx1beqt-tootallnate.vercel.app/socks-proxy-agent.tgz}
+    name: socks-proxy-agent
+    version: 7.0.0
+    engines: {node: '>= 14'}
+    dependencies:
+      agent-base: '@proxy-agents-qhzx1beqt-tootallnate.vercel.app/agent-base.tgz'
+      debug: 4.3.4
+      socks: 2.7.1
+    transitivePeerDependencies:
+      - supports-color
+    dev: true
