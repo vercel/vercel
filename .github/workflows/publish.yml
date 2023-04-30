@@ -46,8 +46,8 @@ jobs:
           node-version: 16
       - name: install npm@9
         run: npm i -g npm@9
-      - name: install pnpm@7.31.0
-        run: npm i -g pnpm@7.31.0
+      - name: install pnpm@8.3.1
+        run: npm i -g pnpm@8.3.1
       - name: Install
         if: ${{ steps.check-release.outputs.IS_RELEASE == 'true' }}
         run: pnpm install
@@ -65,3 +65,11 @@ jobs:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN_ELEVATED }}
           GA_TRACKING_ID: ${{ secrets.GA_TRACKING_ID }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+      - name: Trigger Update
+        if: ${{ steps.check-release.outputs.IS_RELEASE == 'true' }}
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GH_TOKEN_PULL_REQUESTS }}
+          script: |
+            const script = require('./utils/trigger-update-workflow.js')
+            await script({ github, context })

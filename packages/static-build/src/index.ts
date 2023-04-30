@@ -403,7 +403,7 @@ export const build: BuildV2 = async ({
             break;
           default:
             debug(
-              `No analytics plugin injected for framework ${framework.slug}`
+              `No Web Vitals plugin injected for framework ${framework.slug}`
             );
             break;
         }

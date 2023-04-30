@@ -667,7 +667,12 @@ function checkUnusedFunctions(
   // Next.js can use functions only for `src/pages` or `pages`
   if (frontendBuilder && isOfficialRuntime('next', frontendBuilder.use)) {
     for (const fnKey of unusedFunctions.values()) {
-      if (fnKey.startsWith('pages/') || fnKey.startsWith('src/pages')) {
+      if (
+        fnKey.startsWith('pages/') ||
+        fnKey.startsWith('src/pages') ||
+        fnKey.startsWith('app/') ||
+        fnKey.startsWith('src/app/')
+      ) {
         unusedFunctions.delete(fnKey);
       } else {
         return {

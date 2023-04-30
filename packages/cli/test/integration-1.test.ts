@@ -449,6 +449,26 @@ test('should allow deploying a directory that was prebuilt, but has no builds.js
   expect(body).toEqual('readme contents for build-output-api-raw');
 });
 
+test('should deploy and not wait for completion', async () => {
+  const projectDir = await setupE2EFixture('static-deployment');
+
+  await vcLink(projectDir);
+
+  const { exitCode, stdout, stderr } = await execCli(
+    binaryPath,
+    [
+      // omit the default "deploy" command
+      '--no-wait',
+    ],
+    {
+      cwd: projectDir,
+    }
+  );
+
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
+  expect(stderr).toMatch(/Note: Deployment is still processing/);
+});
+
 test('[vc link] with vercel.json configuration overrides should create a valid deployment', async () => {
   const directory = await setupE2EFixture(
     'vercel-json-configuration-overrides-link'

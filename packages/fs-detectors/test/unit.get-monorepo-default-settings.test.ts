@@ -31,6 +31,7 @@ describe('getMonorepoDefaultSettings', () => {
     ['turbo-package-config', 'turbo', false, 'app-13', false, false],
     ['turbo-npm', 'turbo', true, 'app-15', false, false],
     ['turbo-npm-root-proj', 'turbo', true, 'app-root-proj', true, false],
+    ['turbo-latest', 'turbo', false, 'app-14', false, false],
     ['nx', 'nx', false, 'app-12', false, false],
     ['nx-package-config', 'nx', false, 'app-11', false, false],
     ['nx-project-and-package-config-1', 'nx', false, 'app-10', false, false],

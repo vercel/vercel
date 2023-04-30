@@ -8,7 +8,7 @@ describe('getConfig()', () => {
     const sourcePath = join(__dirname, 'fixtures/node.js');
     const config = getConfig(project, sourcePath);
     expect(config).toMatchInlineSnapshot(`
-      Object {
+      {
         "memory": 1024,
         "runtime": "nodejs",
       }
@@ -25,7 +25,7 @@ describe('getConfig()', () => {
       },
     } as const);
     expect(config).toMatchInlineSnapshot(`
-      Object {
+      {
         "location": "https://example.com/page",
         "runtime": "deno",
       }

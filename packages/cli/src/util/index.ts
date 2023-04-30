@@ -36,7 +36,7 @@ export interface CreateOptions {
   project?: string;
   wantsPublic: boolean;
   prebuilt?: boolean;
-  rootDirectory?: string;
+  rootDirectory?: string | null;
   meta: Dictionary<string>;
   gitMetadata?: GitMetadata;
   regions?: string[];
@@ -49,6 +49,7 @@ export interface CreateOptions {
   deployStamp: () => string;
   projectSettings?: any;
   skipAutoDetectionConfirmation?: boolean;
+  noWait?: boolean;
 }
 
 export interface RemoveOptions {
@@ -128,6 +129,7 @@ export default class Now extends EventEmitter {
       deployStamp,
       projectSettings,
       skipAutoDetectionConfirmation,
+      noWait,
     }: CreateOptions,
     org: Org,
     isSettingUpProject: boolean,
@@ -174,6 +176,7 @@ export default class Now extends EventEmitter {
       cwd,
       prebuilt,
       rootDirectory,
+      noWait,
     });
 
     if (deployment && deployment.warnings) {

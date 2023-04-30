@@ -1,6 +1,7 @@
 import yaml from 'js-yaml';
 import toml from '@iarna/toml';
 import { promises } from 'fs';
+import { isErrnoException } from '@vercel/error-utils';
 
 const { readFile } = promises;
 
@@ -8,9 +9,12 @@ async function readFileOrNull(file: string) {
   try {
     const data = await readFile(file);
     return data;
-  } catch (err) {
-    if (err.code !== 'ENOENT') {
-      throw err;
+  } catch (error: unknown) {
+    if (!isErrnoException(error)) {
+      throw error;
+    }
+    if (error.code !== 'ENOENT') {
+      throw error;
     }
   }
 
