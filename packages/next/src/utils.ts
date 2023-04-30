@@ -2352,8 +2352,6 @@ interface MiddlewareManifestV2 {
   functions?: { [page: string]: EdgeFunctionInfoV2 };
 }
 
-type Regions = 'home' | 'global' | 'auto' | string[] | 'all' | 'default';
-
 interface BaseEdgeFunctionInfo {
   env: string[];
   files: string[];
@@ -2361,7 +2359,7 @@ interface BaseEdgeFunctionInfo {
   page: string;
   wasm?: { filePath: string; name: string }[];
   assets?: { filePath: string; name: string }[];
-  regions?: Regions;
+  regions?: 'auto' | string[] | 'all' | 'default';
 }
 
 interface EdgeFunctionInfoV1 extends BaseEdgeFunctionInfo {
@@ -2377,53 +2375,6 @@ interface EdgeFunctionMatcher {
   has?: HasField;
   missing?: HasField;
   originalSource?: string;
-}
-
-const vercelFunctionRegionsVar = process.env.VERCEL_FUNCTION_REGIONS;
-let vercelFunctionRegions: string[] | undefined;
-if (vercelFunctionRegionsVar) {
-  vercelFunctionRegions = vercelFunctionRegionsVar.split(',');
-}
-
-/**
- * Normalizes the regions config that comes from the Next.js edge functions manifest.
- * Ensures that config like `home` and `global` are converted to the corresponding Vercel region config.
- * In the future we'll want to make `home` and `global` part of the Build Output API.
- * - `home` refers to the regions set in vercel.json or on the Vercel dashboard project config.
- * - `global` refers to all regions.
- */
-function normalizeRegions(regions: Regions): string[] {
-  if (typeof regions === 'string') {
-    regions = [regions];
-  }
-
-  const newRegions: string[] = [];
-  for (const region of regions) {
-    // Explicitly mentioned as `home` is one of the explicit values for preferredRegion in Next.js.
-    if (region === 'home') {
-      if (vercelFunctionRegions) {
-        // Includes the regions from the VERCEL_FUNCTION_REGIONS env var.
-        newRegions.push(...vercelFunctionRegions);
-      }
-      continue;
-    }
-
-    // Explicitly mentioned as `global` is one of the explicit values for preferredRegion in Next.js.
-    if (region === 'global') {
-      // Uses `all` instead as that's how it's implemented on Vercel.
-      newRegions.push('all');
-      continue;
-    }
-
-    // Explicitly mentioned as `auto` is one of the explicit values for preferredRegion in Next.js.
-    if (region === 'auto') {
-      newRegions.push('auto');
-      continue;
-    }
-
-    newRegions.push(region);
-  }
-  return [];
 }
 
 export async function getMiddlewareBundle({
@@ -2555,9 +2506,7 @@ export async function getMiddlewareBundle({
                   ...wasmFiles,
                   ...assetFiles,
                 },
-                regions: edgeFunction.regions
-                  ? normalizeRegions(edgeFunction.regions)
-                  : undefined,
+                regions: edgeFunction.regions,
                 entrypoint: 'index.js',
                 envVarsInUse: edgeFunction.env,
                 assets: (edgeFunction.assets ?? []).map(({ name }) => {
