@@ -2392,7 +2392,7 @@ if (vercelFunctionRegionsVar) {
  * - `home` refers to the regions set in vercel.json or on the Vercel dashboard project config.
  * - `global` refers to all regions.
  */
-function normalizeRegions(regions: Regions): undefined | string[] {
+function normalizeRegions(regions: Regions): undefined | string | string[] {
   if (typeof regions === 'string') {
     regions = [regions];
   }
@@ -2411,14 +2411,14 @@ function normalizeRegions(regions: Regions): undefined | string[] {
     // Explicitly mentioned as `global` is one of the explicit values for preferredRegion in Next.js.
     if (region === 'global') {
       // Uses `all` instead as that's how it's implemented on Vercel.
-      newRegions.push('all');
-      continue;
+      // Returns here as when all is provided all regions will be matched.
+      return 'all';
     }
 
     // Explicitly mentioned as `auto` is one of the explicit values for preferredRegion in Next.js.
     if (region === 'auto') {
-      newRegions.push('auto');
-      continue;
+      // Returns here as when auto is provided all regions will be matched.
+      return 'auto';
     }
 
     newRegions.push(region);
