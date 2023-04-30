@@ -2392,7 +2392,7 @@ if (vercelFunctionRegionsVar) {
  * - `home` refers to the regions set in vercel.json or on the Vercel dashboard project config.
  * - `global` refers to all regions.
  */
-function normalizeRegions(regions: Regions): string[] {
+function normalizeRegions(regions: Regions): undefined | string[] {
   if (typeof regions === 'string') {
     regions = [regions];
   }
@@ -2423,7 +2423,13 @@ function normalizeRegions(regions: Regions): string[] {
 
     newRegions.push(region);
   }
-  return [];
+
+  // Ensure we don't pass an empty array as that is not supported.
+  if (newRegions.length === 0) {
+    return undefined;
+  }
+
+  return newRegions;
 }
 
 export async function getMiddlewareBundle({
