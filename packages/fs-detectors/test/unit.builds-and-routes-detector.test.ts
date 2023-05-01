@@ -2358,6 +2358,36 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
       },
     ]);
   });
+
+  it('should add middleware builder with "remix" framework preset', async () => {
+    const files = ['package.json', 'app/routes/index.ts', 'middleware.ts'];
+    const projectSettings = {
+      framework: 'remix',
+      createdAt: Date.parse('2020-02-01'),
+    };
+    const { builders } = await detectBuilders(files, null, {
+      projectSettings,
+      featHandleMiss,
+    });
+    expect(builders).toEqual([
+      {
+        src: 'middleware.ts',
+        use: '@vercel/node',
+        config: {
+          middleware: true,
+          zeroConfig: true,
+        },
+      },
+      {
+        use: '@vercel/remix-builder',
+        src: 'package.json',
+        config: {
+          framework: 'remix',
+          zeroConfig: true,
+        },
+      },
+    ]);
+  });
 });
 
 it('Test `detectRoutes`', async () => {
