@@ -120,7 +120,16 @@ export interface Framework {
      */
     use: string;
   };
+  /**
+   * Names of runtimes which will not be used for zero-config
+   * matches within the "api" directory.
+   */
   ignoreRuntimes?: string[];
+  /**
+   * If `true`, then root-level middleware will not be enabled
+   * for this framework. Defaults to `false`.
+   */
+  disableRootMiddleware?: boolean;
   /**
    * Detectors used to find out the framework
    */
