@@ -130,12 +130,17 @@ export async function detectBuilders(
 
   const { projectSettings = {} } = options;
   const { buildCommand, outputDirectory, framework } = projectSettings;
-  const ignoreRuntimes = new Set(
-    slugToFramework.get(framework || '')?.ignoreRuntimes
-  );
+  const frameworkConfig = slugToFramework.get(framework || '');
+  const ignoreRuntimes = new Set(frameworkConfig?.ignoreRuntimes);
   const withTag = options.tag ? `@${options.tag}` : '';
   const apiMatches = getApiMatches()
-    .filter(b => b.config?.middleware || !ignoreRuntimes.has(b.use))
+    .filter(
+      b =>
+        // Root-level middleware is enabled, unless `ignoreMiddleware: true`
+        (b.config?.middleware && !frameworkConfig?.ignoreMiddleware) ||
+        // "api" dir runtimes are enabled, unless opted-out via `ignoreRuntimes`
+        !ignoreRuntimes.has(b.use)
+    )
     .map(b => {
       b.use = `${b.use}${withTag}`;
       return b;

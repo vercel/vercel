@@ -471,6 +471,7 @@ async function doBuild(
   const repoRootPath = cwd;
   const corepackShimDir = await initCorepack({ repoRootPath });
 
+  console.log(sortedBuilders);
   for (const build of sortedBuilders) {
     if (typeof build.src !== 'string') continue;
 
@@ -522,6 +523,7 @@ async function doBuild(
         `Building entrypoint "${build.src}" with "${builderPkg.name}"`
       );
       const buildResult = await builder.build(buildOptions);
+      console.log(buildResult);
 
       if (
         buildResult &&
@@ -615,6 +617,7 @@ async function doBuild(
         routes: (b[1] as BuildResultV2Typical).routes,
       };
     });
+  console.log(builderRoutes);
   if (zeroConfigRoutes.length) {
     builderRoutes.unshift({
       use: '@vercel/zero-config-routes',
