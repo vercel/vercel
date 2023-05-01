@@ -135,7 +135,7 @@ export async function detectBuilders(
   );
   const withTag = options.tag ? `@${options.tag}` : '';
   const apiMatches = getApiMatches()
-    .filter(b => !ignoreRuntimes.has(b.use))
+    .filter(b => b.config?.middleware || !ignoreRuntimes.has(b.use))
     .map(b => {
       b.use = `${b.use}${withTag}`;
       return b;
@@ -448,11 +448,15 @@ function getFunction(fileName: string, { functions = {} }: Options) {
     : { fnPattern: null, func: null };
 }
 
-function getApiMatches() {
+function getApiMatches(): Builder[] {
   const config = { zeroConfig: true };
 
   return [
-    { src: 'middleware.[jt]s', use: `@vercel/node`, config },
+    {
+      src: 'middleware.[jt]s',
+      use: `@vercel/node`,
+      config: { ...config, middleware: true },
+    },
     { src: 'api/**/*.+(js|mjs|ts|tsx)', use: `@vercel/node`, config },
     { src: 'api/**/!(*_test).go', use: `@vercel/go`, config },
     { src: 'api/**/*.py', use: `@vercel/python`, config },

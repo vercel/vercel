@@ -200,6 +200,7 @@ export const frameworks = [
     website: 'https://remix.run',
     sort: 6,
     useRuntime: { src: 'package.json', use: '@vercel/remix-builder' },
+    ignoreRuntimes: ['@vercel/node'],
     detectors: {
       some: [
         {
