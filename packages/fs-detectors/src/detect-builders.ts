@@ -136,8 +136,8 @@ export async function detectBuilders(
   const apiMatches = getApiMatches()
     .filter(
       b =>
-        // Root-level middleware is enabled, unless `ignoreMiddleware: true`
-        (b.config?.middleware && !frameworkConfig?.ignoreMiddleware) ||
+        // Root-level middleware is enabled, unless `disableRootMiddleware: true`
+        (b.config?.middleware && !frameworkConfig?.disableRootMiddleware) ||
         // "api" dir runtimes are enabled, unless opted-out via `ignoreRuntimes`
         !ignoreRuntimes.has(b.use)
     )

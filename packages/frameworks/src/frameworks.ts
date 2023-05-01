@@ -1941,7 +1941,7 @@ export const frameworks = [
       'Storybook is a frontend workshop for building UI components and pages in isolation.',
     website: 'https://storybook.js.org',
     ignoreRuntimes: ['@vercel/next', '@vercel/node'],
-    ignoreMiddleware: true,
+    disableRootMiddleware: true,
     detectors: {
       every: [
         {

@@ -129,7 +129,7 @@ export interface Framework {
    * If `true`, then root-level middleware will not be enabled
    * for this framework. Defaults to `false`.
    */
-  ignoreMiddleware?: boolean;
+  disableRootMiddleware?: boolean;
   /**
    * Detectors used to find out the framework
    */
