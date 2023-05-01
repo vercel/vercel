@@ -338,7 +338,6 @@ async function writeLambda(
   functionConfiguration?: FunctionConfiguration,
   lambdas?: Map<Lambda, string>
 ) {
-  console.log({ lambda, lambdas, path });
   const dest = join(outputDir, 'functions', `${path}.func`);
 
   // If the `lambda` has already been written to the filesystem at a different
