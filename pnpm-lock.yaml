@@ -649,8 +649,8 @@ importers:
         specifier: 3.0.0
         version: 3.0.0
       proxy-agent:
-        specifier: https://proxy-agents-qhzx1beqt-tootallnate.vercel.app/proxy-agent.tgz
-        version: '@proxy-agents-qhzx1beqt-tootallnate.vercel.app/proxy-agent.tgz'
+        specifier: https://proxy-agents-ndoks9blr-tootallnate.vercel.app/proxy-agent.tgz
+        version: '@proxy-agents-ndoks9blr-tootallnate.vercel.app/proxy-agent.tgz'
       psl:
         specifier: 1.1.31
         version: 1.1.31
@@ -13987,12 +13987,6 @@ packages:
   /lru-cache@7.14.1:
     resolution: {integrity: sha512-ysxwsnTKdAx96aTRdhDOCQfDgbHnt8SK0KY8SEjO0wHinhWOFTESbjVCMPbU1uGXg/ch4lifqx0wfjOawU2+WA==}
     engines: {node: '>=12'}
-    dev: false
-
-  /lru-cache@9.1.1:
-    resolution: {integrity: sha512-65/Jky17UwSb0BuB9V+MyDpsOtXKmYwzhyl+cOa9XUiI4uV2Ouy/2voFP3+al0BjZbJgMBD8FojMpAf+Z+qn4A==}
-    engines: {node: 14 || >=16.14}
-    dev: true
 
   /lru_map@0.3.3:
     resolution: {integrity: sha512-Pn9cox5CsMYngeDbmChANltQl+5pi6XmTrraMSzhPmMBbmgcxmqWry0U3PGapCU1yB4/LqCcom7qhHZiF/jGfQ==}
@@ -19076,8 +19070,8 @@ packages:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
     dev: false
 
-  '@proxy-agents-qhzx1beqt-tootallnate.vercel.app/agent-base.tgz':
-    resolution: {tarball: https://proxy-agents-qhzx1beqt-tootallnate.vercel.app/agent-base.tgz}
+  '@proxy-agents-ndoks9blr-tootallnate.vercel.app/agent-base.tgz':
+    resolution: {tarball: https://proxy-agents-ndoks9blr-tootallnate.vercel.app/agent-base.tgz}
     name: agent-base
     version: 6.0.2
     engines: {node: '>= 14'}
@@ -19087,15 +19081,15 @@ packages:
       - supports-color
     dev: true
 
-  '@proxy-agents-qhzx1beqt-tootallnate.vercel.app/data-uri-to-buffer.tgz':
-    resolution: {tarball: https://proxy-agents-qhzx1beqt-tootallnate.vercel.app/data-uri-to-buffer.tgz}
+  '@proxy-agents-ndoks9blr-tootallnate.vercel.app/data-uri-to-buffer.tgz':
+    resolution: {tarball: https://proxy-agents-ndoks9blr-tootallnate.vercel.app/data-uri-to-buffer.tgz}
     name: data-uri-to-buffer
     version: 4.0.1
     engines: {node: '>= 14'}
     dev: true
 
-  '@proxy-agents-qhzx1beqt-tootallnate.vercel.app/degenerator.tgz':
-    resolution: {tarball: https://proxy-agents-qhzx1beqt-tootallnate.vercel.app/degenerator.tgz}
+  '@proxy-agents-ndoks9blr-tootallnate.vercel.app/degenerator.tgz':
+    resolution: {tarball: https://proxy-agents-ndoks9blr-tootallnate.vercel.app/degenerator.tgz}
     name: degenerator
     version: 3.0.4
     engines: {node: '>= 14'}
@@ -19106,100 +19100,100 @@ packages:
       vm2: 3.9.17
     dev: true
 
-  '@proxy-agents-qhzx1beqt-tootallnate.vercel.app/get-uri.tgz':
-    resolution: {tarball: https://proxy-agents-qhzx1beqt-tootallnate.vercel.app/get-uri.tgz}
+  '@proxy-agents-ndoks9blr-tootallnate.vercel.app/get-uri.tgz':
+    resolution: {tarball: https://proxy-agents-ndoks9blr-tootallnate.vercel.app/get-uri.tgz}
     name: get-uri
     version: 5.0.0
     engines: {node: '>= 14'}
     dependencies:
       '@tootallnate/once': 2.0.0
       basic-ftp: 5.0.2
-      data-uri-to-buffer: '@proxy-agents-qhzx1beqt-tootallnate.vercel.app/data-uri-to-buffer.tgz'
+      data-uri-to-buffer: '@proxy-agents-ndoks9blr-tootallnate.vercel.app/data-uri-to-buffer.tgz'
       debug: 4.3.4
       fs-extra: 8.1.0
     transitivePeerDependencies:
       - supports-color
     dev: true
 
-  '@proxy-agents-qhzx1beqt-tootallnate.vercel.app/http-proxy-agent.tgz':
-    resolution: {tarball: https://proxy-agents-qhzx1beqt-tootallnate.vercel.app/http-proxy-agent.tgz}
+  '@proxy-agents-ndoks9blr-tootallnate.vercel.app/http-proxy-agent.tgz':
+    resolution: {tarball: https://proxy-agents-ndoks9blr-tootallnate.vercel.app/http-proxy-agent.tgz}
     name: http-proxy-agent
     version: 5.0.0
     engines: {node: '>= 14'}
     dependencies:
       '@tootallnate/once': 2.0.0
-      agent-base: '@proxy-agents-qhzx1beqt-tootallnate.vercel.app/agent-base.tgz'
+      agent-base: '@proxy-agents-ndoks9blr-tootallnate.vercel.app/agent-base.tgz'
       debug: 4.3.4
     transitivePeerDependencies:
       - supports-color
     dev: true
 
-  '@proxy-agents-qhzx1beqt-tootallnate.vercel.app/https-proxy-agent.tgz':
-    resolution: {tarball: https://proxy-agents-qhzx1beqt-tootallnate.vercel.app/https-proxy-agent.tgz}
+  '@proxy-agents-ndoks9blr-tootallnate.vercel.app/https-proxy-agent.tgz':
+    resolution: {tarball: https://proxy-agents-ndoks9blr-tootallnate.vercel.app/https-proxy-agent.tgz}
     name: https-proxy-agent
     version: 5.0.1
     engines: {node: '>= 14'}
     dependencies:
-      agent-base: '@proxy-agents-qhzx1beqt-tootallnate.vercel.app/agent-base.tgz'
+      agent-base: '@proxy-agents-ndoks9blr-tootallnate.vercel.app/agent-base.tgz'
       debug: 4.3.4
     transitivePeerDependencies:
       - supports-color
     dev: true
 
-  '@proxy-agents-qhzx1beqt-tootallnate.vercel.app/pac-proxy-agent.tgz':
-    resolution: {tarball: https://proxy-agents-qhzx1beqt-tootallnate.vercel.app/pac-proxy-agent.tgz}
+  '@proxy-agents-ndoks9blr-tootallnate.vercel.app/pac-proxy-agent.tgz':
+    resolution: {tarball: https://proxy-agents-ndoks9blr-tootallnate.vercel.app/pac-proxy-agent.tgz}
     name: pac-proxy-agent
     version: 5.0.0
     engines: {node: '>= 14'}
     dependencies:
       '@tootallnate/once': 2.0.0
-      agent-base: '@proxy-agents-qhzx1beqt-tootallnate.vercel.app/agent-base.tgz'
+      agent-base: '@proxy-agents-ndoks9blr-tootallnate.vercel.app/agent-base.tgz'
       debug: 4.3.4
-      get-uri: '@proxy-agents-qhzx1beqt-tootallnate.vercel.app/get-uri.tgz'
-      http-proxy-agent: '@proxy-agents-qhzx1beqt-tootallnate.vercel.app/http-proxy-agent.tgz'
-      https-proxy-agent: '@proxy-agents-qhzx1beqt-tootallnate.vercel.app/https-proxy-agent.tgz'
-      pac-resolver: '@proxy-agents-qhzx1beqt-tootallnate.vercel.app/pac-resolver.tgz'
-      socks-proxy-agent: '@proxy-agents-qhzx1beqt-tootallnate.vercel.app/socks-proxy-agent.tgz'
+      get-uri: '@proxy-agents-ndoks9blr-tootallnate.vercel.app/get-uri.tgz'
+      http-proxy-agent: '@proxy-agents-ndoks9blr-tootallnate.vercel.app/http-proxy-agent.tgz'
+      https-proxy-agent: '@proxy-agents-ndoks9blr-tootallnate.vercel.app/https-proxy-agent.tgz'
+      pac-resolver: '@proxy-agents-ndoks9blr-tootallnate.vercel.app/pac-resolver.tgz'
+      socks-proxy-agent: '@proxy-agents-ndoks9blr-tootallnate.vercel.app/socks-proxy-agent.tgz'
     transitivePeerDependencies:
       - supports-color
     dev: true
 
-  '@proxy-agents-qhzx1beqt-tootallnate.vercel.app/pac-resolver.tgz':
-    resolution: {tarball: https://proxy-agents-qhzx1beqt-tootallnate.vercel.app/pac-resolver.tgz}
+  '@proxy-agents-ndoks9blr-tootallnate.vercel.app/pac-resolver.tgz':
+    resolution: {tarball: https://proxy-agents-ndoks9blr-tootallnate.vercel.app/pac-resolver.tgz}
     name: pac-resolver
     version: 5.0.1
     engines: {node: '>= 14'}
     dependencies:
-      degenerator: '@proxy-agents-qhzx1beqt-tootallnate.vercel.app/degenerator.tgz'
+      degenerator: '@proxy-agents-ndoks9blr-tootallnate.vercel.app/degenerator.tgz'
       ip: 1.1.8
       netmask: 2.0.2
     dev: true
 
-  '@proxy-agents-qhzx1beqt-tootallnate.vercel.app/proxy-agent.tgz':
-    resolution: {tarball: https://proxy-agents-qhzx1beqt-tootallnate.vercel.app/proxy-agent.tgz}
+  '@proxy-agents-ndoks9blr-tootallnate.vercel.app/proxy-agent.tgz':
+    resolution: {tarball: https://proxy-agents-ndoks9blr-tootallnate.vercel.app/proxy-agent.tgz}
     name: proxy-agent
     version: 5.0.0
     engines: {node: '>= 14'}
     dependencies:
-      agent-base: '@proxy-agents-qhzx1beqt-tootallnate.vercel.app/agent-base.tgz'
+      agent-base: '@proxy-agents-ndoks9blr-tootallnate.vercel.app/agent-base.tgz'
       debug: 4.3.4
-      http-proxy-agent: '@proxy-agents-qhzx1beqt-tootallnate.vercel.app/http-proxy-agent.tgz'
-      https-proxy-agent: '@proxy-agents-qhzx1beqt-tootallnate.vercel.app/https-proxy-agent.tgz'
-      lru-cache: 9.1.1
-      pac-proxy-agent: '@proxy-agents-qhzx1beqt-tootallnate.vercel.app/pac-proxy-agent.tgz'
+      http-proxy-agent: '@proxy-agents-ndoks9blr-tootallnate.vercel.app/http-proxy-agent.tgz'
+      https-proxy-agent: '@proxy-agents-ndoks9blr-tootallnate.vercel.app/https-proxy-agent.tgz'
+      lru-cache: 7.14.1
+      pac-proxy-agent: '@proxy-agents-ndoks9blr-tootallnate.vercel.app/pac-proxy-agent.tgz'
       proxy-from-env: 1.1.0
-      socks-proxy-agent: '@proxy-agents-qhzx1beqt-tootallnate.vercel.app/socks-proxy-agent.tgz'
+      socks-proxy-agent: '@proxy-agents-ndoks9blr-tootallnate.vercel.app/socks-proxy-agent.tgz'
     transitivePeerDependencies:
       - supports-color
     dev: true
 
-  '@proxy-agents-qhzx1beqt-tootallnate.vercel.app/socks-proxy-agent.tgz':
-    resolution: {tarball: https://proxy-agents-qhzx1beqt-tootallnate.vercel.app/socks-proxy-agent.tgz}
+  '@proxy-agents-ndoks9blr-tootallnate.vercel.app/socks-proxy-agent.tgz':
+    resolution: {tarball: https://proxy-agents-ndoks9blr-tootallnate.vercel.app/socks-proxy-agent.tgz}
     name: socks-proxy-agent
     version: 7.0.0
     engines: {node: '>= 14'}
     dependencies:
-      agent-base: '@proxy-agents-qhzx1beqt-tootallnate.vercel.app/agent-base.tgz'
+      agent-base: '@proxy-agents-ndoks9blr-tootallnate.vercel.app/agent-base.tgz'
       debug: 4.3.4
       socks: 2.7.1
     transitivePeerDependencies:
