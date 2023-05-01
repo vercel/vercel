@@ -503,7 +503,8 @@ function detectFrontBuilder(
 
   if (
     pkg &&
-    (framework === undefined || createdAt < Date.parse('2020-03-01'))
+    (framework === undefined ||
+      (framework !== 'storybook' && createdAt < Date.parse('2020-03-01')))
   ) {
     const deps: PackageJson['dependencies'] = {
       ...pkg.dependencies,
