@@ -1,20 +1,20 @@
-import { addHelpers } from './helpers';
+import { addHelpers } from './helpers.js';
 import { createServer } from 'http';
-// @ts-expect-error
-import { dynamicImport } from './dynamic-import.js';
-import { serializeBody } from '../utils';
+import { serializeBody } from '../utils.js';
 import { streamToBuffer } from '@vercel/build-utils';
 import exitHook from 'exit-hook';
 import fetch from 'node-fetch';
-import listen from 'async-listen';
-import type { HeadersInit } from 'node-fetch';
+import asyncListen from 'async-listen';
+import { isAbsolute } from 'path';
+import { pathToFileURL } from 'url';
 import type { ServerResponse, IncomingMessage } from 'http';
-import type { VercelProxyResponse } from '../types';
-import type { VercelRequest, VercelResponse } from './helpers';
+import type { VercelProxyResponse } from '../types.js';
+import type { VercelRequest, VercelResponse } from './helpers.js';
+
+const { default: listen } = asyncListen;
 
 type ServerlessServerOptions = {
   shouldAddHelpers: boolean;
-  useRequire: boolean;
   mode: 'streaming' | 'buffer';
 };
 
@@ -35,13 +35,11 @@ async function createServerlessServer(
   return { url: await listen(server) };
 }
 
-async function compileUserCode(
-  entrypointPath: string,
-  options: ServerlessServerOptions
-) {
-  let fn = options.useRequire
-    ? require(entrypointPath)
-    : await dynamicImport(entrypointPath);
+async function compileUserCode(entrypointPath: string) {
+  const id = isAbsolute(entrypointPath)
+    ? pathToFileURL(entrypointPath).href
+    : entrypointPath;
+  let fn = await import(id);
 
   /**
    * In some cases we might have nested default props due to TS => JS
@@ -57,17 +55,18 @@ export async function createServerlessEventHandler(
   entrypointPath: string,
   options: ServerlessServerOptions
 ): Promise<(request: IncomingMessage) => Promise<VercelProxyResponse>> {
-  const userCode = await compileUserCode(entrypointPath, options);
+  const userCode = await compileUserCode(entrypointPath);
   const server = await createServerlessServer(userCode, options);
 
   return async function (request: IncomingMessage) {
     const url = new URL(request.url ?? '/', server.url);
+    // @ts-expect-error
     const response = await fetch(url, {
       body: await serializeBody(request),
       headers: {
         ...request.headers,
         host: request.headers['x-forwarded-host'],
-      } as unknown as HeadersInit,
+      },
       method: request.method,
       redirect: 'manual',
     });
@@ -78,7 +77,6 @@ export async function createServerlessEventHandler(
     } else {
       body = await streamToBuffer(response.body);
       response.headers.delete('transfer-encoding');
-      //@ts-expect-error
       response.headers.set('content-length', body.length);
     }
 

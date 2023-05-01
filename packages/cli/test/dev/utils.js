@@ -115,6 +115,11 @@ function validateResponseHeaders(res, podId) {
 
 async function exec(directory, args = []) {
   const token = await fetchCachedToken();
+  console.log(
+    `exec() ${binaryPath} dev ${directory} -t ***${
+      process.env.VERCEL_TEAM_ID ? ' --scope ***' : ''
+    } ${args.join(' ')}`
+  );
   return execa(
     binaryPath,
     [
@@ -195,6 +200,11 @@ async function testFixture(directory, opts = {}, args = []) {
   await runNpmInstall(directory);
 
   const token = await fetchCachedToken();
+  console.log(
+    `testFixture() ${binaryPath} dev ${directory} -t ***${
+      process.env.VERCEL_TEAM_ID ? ' --scope ***' : ''
+    } -l ${port} ${args.join(' ')}`
+  );
   const dev = execa(
     binaryPath,
     [
@@ -427,6 +437,11 @@ function testFixtureStdio(
     try {
       let printedOutput = false;
 
+      console.log(
+        `testFixtureStdio() ${binaryPath} dev -l ${port} -t ***${
+          process.env.VERCEL_TEAM_ID ? ' --scope ***' : ''
+        } --debug`
+      );
       const env = skipDeploy
         ? { ...process.env, __VERCEL_SKIP_DEV_CMD: 1 }
         : process.env;

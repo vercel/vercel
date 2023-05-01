@@ -1,19 +1,19 @@
-import { createEdgeWasmPlugin, WasmAssets } from './edge-wasm-plugin';
+import { createEdgeWasmPlugin, WasmAssets } from './edge-wasm-plugin.mjs';
 import {
   createNodeCompatPlugin,
   NodeCompatBindings,
-} from './edge-node-compat-plugin';
+} from './edge-node-compat-plugin.mjs';
 import { EdgeRuntime, runServer } from 'edge-runtime';
 import fetch, { Headers } from 'node-fetch';
 import { isError } from '@vercel/error-utils';
 import { readFileSync } from 'fs';
-import { serializeBody, entrypointToOutputPath, logError } from '../utils';
+import { serializeBody, entrypointToOutputPath, logError } from '../utils.js';
 import esbuild from 'esbuild';
 import exitHook from 'exit-hook';
 import type { HeadersInit } from 'node-fetch';
-import type { VercelProxyResponse } from '../types';
+import type { VercelProxyResponse } from '../types.js';
 import type { IncomingMessage } from 'http';
-import { pathToFileURL } from 'url';
+import { fileURLToPath } from 'url';
 
 const NODE_VERSION_MAJOR = process.version.match(/^v(\d+)\.\d+/)?.[1];
 const NODE_VERSION_IDENTIFIER = `node${NODE_VERSION_MAJOR}`;
@@ -23,6 +23,7 @@ if (!NODE_VERSION_MAJOR) {
   );
 }
 
+const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const edgeHandlerTemplate = readFileSync(
   `${__dirname}/edge-handler-template.js`
 );
@@ -63,7 +64,7 @@ async function compileUserCode(
               let code = readFileSync(args.path, 'utf8');
               code = code.replace(
                 /\bimport\.meta\.url\b/g,
-                JSON.stringify(pathToFileURL(__filename))
+                JSON.stringify(import.meta.url)
               );
               return { contents: code };
             });
@@ -133,12 +134,25 @@ async function createEdgeRuntimeServer(params?: {
     const wasmBindings = await params.wasmAssets.getContext();
     const nodeCompatBindings = params.nodeCompatBindings.getContext();
 
+    let WebSocket: any;
+
+    // undici's WebSocket handling is only available in Node.js >= 18
+    // so fallback to using ws for v16
+    if (Number(process.version.split('.')[0].substring(1)) < 18) {
+      // @ts-ignore
+      WebSocket = (await import('ws')).WebSocket;
+    } else {
+      WebSocket = (await import('undici')).WebSocket;
+    }
+
     const runtime = new EdgeRuntime({
       initialCode: params.userCode,
       extend: context => {
         Object.assign(context, {
           // This is required for esbuild wrapping logic to resolve
           module: {},
+
+          WebSocket,
 
           // This is required for environment variable access.
           // In production, env var access is provided by static analysis
@@ -196,6 +210,7 @@ export async function createEdgeEventHandler(
     if (body !== undefined) headers.set('content-length', String(body.length));
 
     const url = new URL(request.url ?? '/', server.url);
+    // @ts-expect-error
     const response = await fetch(url, {
       body,
       headers,

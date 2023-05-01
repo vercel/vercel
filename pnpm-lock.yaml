@@ -83,6 +83,9 @@ importers:
       turbo:
         specifier: 1.9.3
         version: 1.9.3
+      typescript:
+        specifier: 4.9.5
+        version: 4.9.5
 
   api:
     dependencies:
@@ -114,9 +117,6 @@ importers:
       '@vercel/node':
         specifier: '*'
         version: link:../packages/node
-      typescript:
-        specifier: 4.3.4
-        version: 4.3.4
 
   examples:
     devDependencies:
@@ -248,6 +248,9 @@ importers:
       '@types/yazl':
         specifier: 2.4.2
         version: 2.4.2
+      '@vercel/error-utils':
+        specifier: 1.0.10
+        version: link:../error-utils
       '@vercel/ncc':
         specifier: 0.24.0
         version: 0.24.0
@@ -297,8 +300,8 @@ importers:
         specifier: 6.1.1
         version: 6.1.1
       typescript:
-        specifier: 4.3.4
-        version: 4.3.4
+        specifier: 4.9.5
+        version: 4.9.5
       yazl:
         specifier: 2.5.1
         version: 2.5.1
@@ -306,34 +309,34 @@ importers:
   packages/cli:
     dependencies:
       '@vercel/build-utils':
-        specifier: 6.7.1
+        specifier: 6.7.2
         version: link:../build-utils
       '@vercel/go':
-        specifier: 2.5.0
+        specifier: 2.5.1
         version: link:../go
       '@vercel/hydrogen':
-        specifier: 0.0.63
+        specifier: 0.0.64
         version: link:../hydrogen
       '@vercel/next':
-        specifier: 3.7.5
+        specifier: 3.8.2
         version: link:../next
       '@vercel/node':
-        specifier: 2.12.0
+        specifier: 2.14.0
         version: link:../node
       '@vercel/python':
-        specifier: 3.1.59
+        specifier: 3.1.60
         version: link:../python
       '@vercel/redwood':
-        specifier: 1.1.14
+        specifier: 1.1.15
         version: link:../redwood
       '@vercel/remix-builder':
-        specifier: 1.8.5
+        specifier: 1.8.6
         version: link:../remix
       '@vercel/ruby':
-        specifier: 1.3.75
+        specifier: 1.3.76
         version: link:../ruby
       '@vercel/static-build':
-        specifier: 1.3.25
+        specifier: 1.3.27
         version: link:../static-build
     devDependencies:
       '@alex_neo/jest-expect-message':
@@ -469,16 +472,16 @@ importers:
         specifier: '*'
         version: link:../../internals/types
       '@vercel/client':
-        specifier: 12.4.11
+        specifier: 12.4.12
         version: link:../client
       '@vercel/error-utils':
         specifier: 1.0.10
         version: link:../error-utils
       '@vercel/frameworks':
-        specifier: 1.3.4
+        specifier: 1.3.5
         version: link:../frameworks
       '@vercel/fs-detectors':
-        specifier: 3.8.11
+        specifier: 3.8.13
         version: link:../fs-detectors
       '@vercel/fun':
         specifier: 1.0.4
@@ -487,7 +490,7 @@ importers:
         specifier: 0.24.0
         version: 0.24.0
       '@vercel/routing-utils':
-        specifier: 2.2.0
+        specifier: 2.2.1
         version: link:../routing-utils
       '@zeit/source-map-support':
         specifier: 0.6.2
@@ -695,10 +698,7 @@ importers:
         version: 1.2.2
       ts-node:
         specifier: 10.9.1
-        version: 10.9.1(@swc/core@1.2.218)(@types/node@14.18.33)(typescript@4.9.4)
-      typescript:
-        specifier: 4.9.4
-        version: 4.9.4
+        version: 10.9.1(@swc/core@1.2.218)(@types/node@14.18.33)(typescript@4.9.5)
       universal-analytics:
         specifier: 0.4.20
         version: 0.4.20
@@ -721,10 +721,10 @@ importers:
   packages/client:
     dependencies:
       '@vercel/build-utils':
-        specifier: 6.7.1
+        specifier: 6.7.2
         version: link:../build-utils
       '@vercel/routing-utils':
-        specifier: 2.2.0
+        specifier: 2.2.1
         version: link:../routing-utils
       '@zeit/fetch':
         specifier: 5.2.0
@@ -788,8 +788,8 @@ importers:
         specifier: 1.16.1
         version: 1.16.1
       typescript:
-        specifier: 4.3.4
-        version: 4.3.4
+        specifier: 4.9.5
+        version: 4.9.5
 
   packages/edge:
     devDependencies:
@@ -801,22 +801,22 @@ importers:
         version: 27.4.1
       ts-node:
         specifier: 8.9.1
-        version: 8.9.1(typescript@4.7.4)
+        version: 8.9.1(typescript@4.9.5)
       tsup:
         specifier: 6.1.2
-        version: 6.1.2(ts-node@8.9.1)(typescript@4.7.4)
+        version: 6.1.2(ts-node@8.9.1)(typescript@4.9.5)
       typedoc:
-        specifier: 0.23.10
-        version: 0.23.10(typescript@4.7.4)
+        specifier: 0.24.6
+        version: 0.24.6(typescript@4.9.5)
       typedoc-plugin-markdown:
-        specifier: 3.13.4
-        version: 3.13.4(typedoc@0.23.10)
+        specifier: 3.15.2
+        version: 3.15.2(typedoc@0.24.6)
       typedoc-plugin-mdn-links:
-        specifier: 2.0.0
-        version: 2.0.0(typedoc@0.23.10)
+        specifier: 3.0.3
+        version: 3.0.3(typedoc@0.24.6)
       typescript:
-        specifier: 4.7.4
-        version: 4.7.4
+        specifier: 4.9.5
+        version: 4.9.5
 
   packages/error-utils:
     devDependencies:
@@ -851,15 +851,18 @@ importers:
       '@types/node-fetch':
         specifier: 2.5.8
         version: 2.5.8
+      '@vercel/error-utils':
+        specifier: 1.0.10
+        version: link:../error-utils
       '@vercel/routing-utils':
-        specifier: 2.2.0
+        specifier: 2.2.1
         version: link:../routing-utils
       ajv:
         specifier: 6.12.2
         version: 6.12.2
       typescript:
-        specifier: 4.3.4
-        version: 4.3.4
+        specifier: 4.9.5
+        version: 4.9.5
 
   packages/fs-detectors:
     dependencies:
@@ -867,10 +870,10 @@ importers:
         specifier: 1.0.10
         version: link:../error-utils
       '@vercel/frameworks':
-        specifier: 1.3.4
+        specifier: 1.3.5
         version: link:../frameworks
       '@vercel/routing-utils':
-        specifier: 2.2.0
+        specifier: 2.2.1
         version: link:../routing-utils
       glob:
         specifier: 8.0.3
@@ -907,11 +910,11 @@ importers:
         specifier: 7.3.10
         version: 7.3.10
       '@vercel/build-utils':
-        specifier: 6.7.1
+        specifier: 6.7.2
         version: link:../build-utils
       typescript:
-        specifier: 4.3.4
-        version: 4.3.4
+        specifier: 4.9.5
+        version: 4.9.5
 
   packages/gatsby-plugin-vercel-analytics:
     dependencies:
@@ -935,13 +938,13 @@ importers:
         specifier: 0.25.24
         version: 0.25.24
       '@vercel/build-utils':
-        specifier: 6.7.1
+        specifier: 6.7.2
         version: link:../build-utils
       '@vercel/node':
-        specifier: 2.12.0
+        specifier: 2.14.0
         version: link:../node
       '@vercel/routing-utils':
-        specifier: 2.2.0
+        specifier: 2.2.1
         version: link:../routing-utils
       esbuild:
         specifier: 0.14.47
@@ -966,8 +969,8 @@ importers:
         specifier: 18.0.26
         version: 18.0.26
       typescript:
-        specifier: 4.3.4
-        version: 4.3.4
+        specifier: 4.9.5
+        version: 4.9.5
 
   packages/go:
     devDependencies:
@@ -999,7 +1002,7 @@ importers:
         specifier: 2.1.0
         version: 2.1.0
       '@vercel/build-utils':
-        specifier: 6.7.1
+        specifier: 6.7.2
         version: link:../build-utils
       '@vercel/ncc':
         specifier: 0.24.0
@@ -1041,10 +1044,10 @@ importers:
         specifier: 14.18.33
         version: 14.18.33
       '@vercel/build-utils':
-        specifier: 6.7.1
+        specifier: 6.7.2
         version: link:../build-utils
       '@vercel/static-config':
-        specifier: 2.0.16
+        specifier: 2.0.17
         version: link:../static-config
       execa:
         specifier: 3.2.0
@@ -1055,9 +1058,6 @@ importers:
       ts-morph:
         specifier: 12.0.0
         version: 12.0.0
-      typescript:
-        specifier: 4.6.4
-        version: 4.6.4
 
   packages/next:
     devDependencies:
@@ -1101,13 +1101,13 @@ importers:
         specifier: 3.2.0
         version: 3.2.0
       '@vercel/build-utils':
-        specifier: 6.7.1
+        specifier: 6.7.2
         version: link:../build-utils
       '@vercel/nft':
         specifier: 0.22.5
         version: 0.22.5
       '@vercel/routing-utils':
-        specifier: 2.2.0
+        specifier: 2.2.1
         version: link:../routing-utils
       async-sema:
         specifier: 3.0.1
@@ -1169,9 +1169,6 @@ importers:
       text-table:
         specifier: 0.2.0
         version: 0.2.0
-      typescript:
-        specifier: 4.5.2
-        version: 4.5.2
       webpack-sources:
         specifier: 3.2.3
         version: 3.2.3
@@ -1184,14 +1181,17 @@ importers:
       '@types/node':
         specifier: 14.18.33
         version: 14.18.33
+      '@types/node-fetch':
+        specifier: 2.6.3
+        version: 2.6.3
       '@vercel/build-utils':
-        specifier: 6.7.1
+        specifier: 6.7.2
         version: link:../build-utils
       '@vercel/error-utils':
         specifier: 1.0.8
         version: 1.0.8
       '@vercel/static-config':
-        specifier: 2.0.16
+        specifier: 2.0.17
         version: link:../static-config
       async-listen:
         specifier: 1.2.0
@@ -1206,8 +1206,8 @@ importers:
         specifier: 2.2.1
         version: 2.2.1
       node-fetch:
-        specifier: 2.6.7
-        version: 2.6.7
+        specifier: 2.6.9
+        version: 2.6.9
       path-to-regexp:
         specifier: 6.2.1
         version: 6.2.1
@@ -1216,10 +1216,16 @@ importers:
         version: 12.0.0
       ts-node:
         specifier: 10.9.1
-        version: 10.9.1(@swc/core@1.2.218)(@types/node@14.18.33)(typescript@4.9.4)
+        version: 10.9.1(@swc/core@1.2.218)(@types/node@14.18.33)(typescript@4.9.5)
       typescript:
-        specifier: 4.3.4
-        version: 4.3.4
+        specifier: 4.9.5
+        version: 4.9.5
+      undici:
+        specifier: 5.22.0
+        version: 5.22.0
+      ws:
+        specifier: 8.13.0
+        version: 8.13.0
     devDependencies:
       '@babel/core':
         specifier: 7.5.0
@@ -1243,11 +1249,8 @@ importers:
         specifier: 1.8.0
         version: 1.8.0
       '@types/jest':
-        specifier: 27.4.1
-        version: 27.4.1
-      '@types/node-fetch':
-        specifier: ^2.6.1
-        version: 2.6.2
+        specifier: 29.5.0
+        version: 29.5.0
       '@types/test-listen':
         specifier: 1.1.0
         version: 1.1.0
@@ -1294,7 +1297,7 @@ importers:
         specifier: 14.18.33
         version: 14.18.33
       '@vercel/build-utils':
-        specifier: 6.7.1
+        specifier: 6.7.2
         version: link:../build-utils
       '@vercel/ncc':
         specifier: 0.24.0
@@ -1302,9 +1305,6 @@ importers:
       execa:
         specifier: ^1.0.0
         version: 1.0.0
-      typescript:
-        specifier: 4.3.4
-        version: 4.3.4
 
   packages/redwood:
     dependencies:
@@ -1312,7 +1312,7 @@ importers:
         specifier: 0.22.5
         version: 0.22.5
       '@vercel/routing-utils':
-        specifier: 2.2.0
+        specifier: 2.2.1
         version: link:../routing-utils
       semver:
         specifier: 6.1.1
@@ -1328,7 +1328,7 @@ importers:
         specifier: 6.0.0
         version: 6.0.0
       '@vercel/build-utils':
-        specifier: 6.7.1
+        specifier: 6.7.2
         version: link:../build-utils
       execa:
         specifier: 3.2.0
@@ -1336,9 +1336,6 @@ importers:
       fs-extra:
         specifier: 11.1.0
         version: 11.1.0
-      typescript:
-        specifier: 4.3.4
-        version: 4.3.4
 
   packages/remix:
     dependencies:
@@ -1346,13 +1343,13 @@ importers:
         specifier: npm:@vercel/remix-run-dev@1.15.0
         version: /@vercel/remix-run-dev@1.15.0(@types/node@14.18.33)
       '@vercel/build-utils':
-        specifier: 6.7.1
+        specifier: 6.7.2
         version: link:../build-utils
       '@vercel/nft':
         specifier: 0.22.5
         version: 0.22.5
       '@vercel/static-config':
-        specifier: 2.0.16
+        specifier: 2.0.17
         version: link:../static-config
       path-to-regexp:
         specifier: 6.2.1
@@ -1373,9 +1370,6 @@ importers:
       '@types/semver':
         specifier: 7.3.13
         version: 7.3.13
-      typescript:
-        specifier: 4.9.4
-        version: 4.9.4
 
   packages/routing-utils:
     dependencies:
@@ -1394,8 +1388,8 @@ importers:
         specifier: 14.18.33
         version: 14.18.33
       typescript:
-        specifier: 4.3.4
-        version: 4.3.4
+        specifier: 4.9.5
+        version: 4.9.5
 
   packages/ruby:
     devDependencies:
@@ -1406,7 +1400,7 @@ importers:
         specifier: 6.0.0
         version: 6.0.0
       '@vercel/build-utils':
-        specifier: 6.7.1
+        specifier: 6.7.2
         version: link:../build-utils
       '@vercel/ncc':
         specifier: 0.24.0
@@ -1420,9 +1414,6 @@ importers:
       semver:
         specifier: 6.1.1
         version: 6.1.1
-      typescript:
-        specifier: 4.3.4
-        version: 4.3.4
 
   packages/static-build:
     dependencies:
@@ -1430,7 +1421,7 @@ importers:
         specifier: 1.0.10
         version: link:../gatsby-plugin-vercel-analytics
       '@vercel/gatsby-plugin-vercel-builder':
-        specifier: 1.2.10
+        specifier: 1.3.1
         version: link:../gatsby-plugin-vercel-builder
     devDependencies:
       '@types/aws-lambda':
@@ -1461,22 +1452,25 @@ importers:
         specifier: 7.3.13
         version: 7.3.13
       '@vercel/build-utils':
-        specifier: 6.7.1
+        specifier: 6.7.2
         version: link:../build-utils
+      '@vercel/error-utils':
+        specifier: 1.0.10
+        version: link:../error-utils
       '@vercel/frameworks':
-        specifier: 1.3.4
+        specifier: 1.3.5
         version: link:../frameworks
       '@vercel/fs-detectors':
-        specifier: 3.8.11
+        specifier: 3.8.13
         version: link:../fs-detectors
       '@vercel/ncc':
         specifier: 0.24.0
         version: 0.24.0
       '@vercel/routing-utils':
-        specifier: 2.2.0
+        specifier: 2.2.1
         version: link:../routing-utils
       '@vercel/static-config':
-        specifier: 2.0.16
+        specifier: 2.0.17
         version: link:../static-config
       execa:
         specifier: 3.2.0
@@ -1508,9 +1502,6 @@ importers:
       ts-morph:
         specifier: 12.0.0
         version: 12.0.0
-      typescript:
-        specifier: 4.3.4
-        version: 4.3.4
 
   packages/static-config:
     dependencies:
@@ -1534,8 +1525,8 @@ importers:
         specifier: 14.18.33
         version: 14.18.33
       typescript:
-        specifier: 4.3.4
-        version: 4.3.4
+        specifier: 4.9.5
+        version: 4.9.5
 
 packages:
 
@@ -4248,7 +4239,7 @@ packages:
     resolution: {integrity: sha512-TInJmbrsmYIwUyrRxytjO82KjJbRwm67F7LoZs1shAq6rMvNqi4NxSY9j+hT/939alFmEq1zssoy/caeLXHRfQ==}
     engines: {node: ^14.15.0 || >=16.0.0}
     dependencies:
-      node-fetch: 2.6.7
+      node-fetch: 2.6.9
       npmlog: 6.0.2
     transitivePeerDependencies:
       - encoding
@@ -4703,7 +4694,7 @@ packages:
       detect-libc: 2.0.1
       https-proxy-agent: 5.0.1
       make-dir: 3.1.0
-      node-fetch: 2.6.7
+      node-fetch: 2.6.9
       nopt: 5.0.0
       npmlog: 5.0.1
       rimraf: 3.0.2
@@ -5065,7 +5056,7 @@ packages:
       '@octokit/request-error': 3.0.2
       '@octokit/types': 8.1.0
       is-plain-object: 5.0.0
-      node-fetch: 2.6.7
+      node-fetch: 2.6.9
       universal-user-agent: 6.0.0
     transitivePeerDependencies:
       - encoding
@@ -6128,6 +6119,13 @@ packages:
       form-data: 3.0.1
     dev: true
 
+  /@types/node-fetch@2.6.3:
+    resolution: {integrity: sha512-ETTL1mOEdq/sxUtgtOhKjyB2Irra4cjxksvcMUR5Zr4n+PxVhsCD9WS46oPbHL3et9Zde7CNRr+WUNlcHvsX+w==}
+    dependencies:
+      '@types/node': 16.18.11
+      form-data: 3.0.1
+    dev: false
+
   /@types/node@10.12.18:
     resolution: {integrity: sha512-fh+pAqt4xRzPfqA6eh3Z2y6fyZavRIumvjhaCL753+TVkGKGhpPeyrJG2JftD0T9q4GF00KjefsQ+PQNDdWQaQ==}
     dev: false
@@ -6964,7 +6962,7 @@ packages:
       lodash.debounce: 4.0.8
       lru-cache: 7.14.1
       minimatch: 3.1.2
-      node-fetch: 2.6.7
+      node-fetch: 2.6.9
       ora: 5.4.1
       postcss: 8.4.21
       postcss-discard-duplicates: 5.1.0(postcss@8.4.21)
@@ -7334,6 +7332,10 @@ packages:
   /ansi-regex@5.0.1:
     resolution: {integrity: sha512-quJQXlTSUGL2LH9SUXo8VwsY4soanhgo6LNSm84E1LBcE8s3O0wpdiRzyR9z/ZZJMlMWv37qOOb9pdJlMUEKFQ==}
     engines: {node: '>=8'}
+
+  /ansi-sequence-parser@1.1.0:
+    resolution: {integrity: sha512-lEm8mt52to2fT8GhciPCGeCXACSz2UwIN4X2e2LJSnZ5uAbn2/dsYdOmUXq0AtWS5cpAupysIneExOgH0Vd2TQ==}
+    dev: true
 
   /ansi-styles@2.2.1:
     resolution: {integrity: sha512-kmCevFghRiWM7HB5zTPULl4r9bVFSWjz62MhqizDGUrq2NWuNMQyuv4tHHoKJHs69M/MF64lEcHdYIocrdWQYA==}
@@ -8039,6 +8041,13 @@ packages:
       load-tsconfig: 0.2.3
     dev: true
 
+  /busboy@1.6.0:
+    resolution: {integrity: sha512-8SFQbg/0hQ9xy3UNTB0YEnsNBbWfhf7RtnzpL7TkBiTBRfrQ9Fxcnz7VJsleJpyp6rVLvXiuORqjlHi5q+PYuA==}
+    engines: {node: '>=10.16.0'}
+    dependencies:
+      streamsearch: 1.1.0
+    dev: false
+
   /byte-size@7.0.1:
     resolution: {integrity: sha512-crQdqyCwhokxwV1UyDzLZanhkugAgft7vt0qbbdt60C6Zf3CAiGmtUCylbtYwrU6loOUw3euGrNtW1J651ot1A==}
     engines: {node: '>=10'}
@@ -8592,7 +8601,7 @@ packages:
     dev: true
 
   /concat-map@0.0.1:
-    resolution: {integrity: sha512-/Srv4dswyQNBfohGpz9o6Yb3Gz3SrUDqBH5rTuhGR7ahtlbYKnVxw2bCFMRljaA7EXHaXZ8wsHdodFvbkhKmqg==}
+    resolution: {integrity: sha1-2Klr13/Wjfd5OnMDajug1UBdR3s=}
 
   /concat-stream@2.0.0:
     resolution: {integrity: sha512-MWufYdFw53ccGjCA+Ol7XJYpAlW6/prSMzuPOTRnJGcGzuhLn4Scrz7qf6o8bROZ514ltazcIFJZevcfbo0x7A==}
@@ -10595,7 +10604,6 @@ packages:
   /esprima@4.0.1:
     resolution: {integrity: sha512-eGuFFw7Upda+g4p+QHvnW0RyTX/SVeJBDM/gCtMARO0cLuT2HcEKnTPvhjV6aGeqrCB/sbNop0Kszm0jsaWU4A==}
     engines: {node: '>=4'}
-    hasBin: true
 
   /esquery@1.4.0:
     resolution: {integrity: sha512-cCDispWt5vHHtwMY2YrAQ4ibFkAL8RbH5YGBnZBc90MolvvfkkQcJro/aZiAQUlQ3qgrYS6D6v8Gc5G5CQsc9w==}
@@ -11147,7 +11155,6 @@ packages:
       asynckit: 0.4.0
       combined-stream: 1.0.8
       mime-types: 2.1.24
-    dev: true
 
   /form-data@4.0.0:
     resolution: {integrity: sha512-ETEklSGi5t0QMZuiXoA/Q6vcnxcLQP5vdugSpuAyi6SVGi2clPPp+xgEhuMaHC+zGgn31Kd235W35f7Hykkaww==}
@@ -11758,6 +11765,7 @@ packages:
   /handlebars@4.7.7:
     resolution: {integrity: sha512-aAcXm5OAfE/8IXkcZvCepKU3VzW1/39Fb5ZuqMtgI/hT8X2YgoMvBY5dLhq/cpOvw7Lk1nK/UF71aLG/ZnVYRA==}
     engines: {node: '>=0.4.7'}
+    hasBin: true
     dependencies:
       minimist: 1.2.7
       neo-async: 2.6.2
@@ -13957,7 +13965,6 @@ packages:
 
   /loose-envify@1.4.0:
     resolution: {integrity: sha512-lyuxPGr/Wfhrlem2CL/UcnUc1zcqKAImBDzukY7Y5F/yQiNdko6+fRLevlw1HgMySw7f611UIY408EtxRSoK3Q==}
-    hasBin: true
     dependencies:
       js-tokens: 4.0.0
     dev: true
@@ -14084,9 +14091,10 @@ packages:
     engines: {node: '>=0.10.0'}
     dev: false
 
-  /marked@4.2.5:
-    resolution: {integrity: sha512-jPueVhumq7idETHkb203WDD4fMA3yV9emQ5vLwop58lu8bTclMghBWcYAavlDqIEMaisADinV1TooIFCfqOsYQ==}
+  /marked@4.3.0:
+    resolution: {integrity: sha512-PRsaiG84bK+AMvxziE/lCFss8juXjNaWzVbN5tXAm4XjeaS9NAHhop+PjQxz2A9h8Q4M/xGmzP8vqNwy6JeK0A==}
     engines: {node: '>= 12'}
+    hasBin: true
     dev: true
 
   /mdast-util-definitions@5.1.2:
@@ -14595,7 +14603,6 @@ packages:
   /mime@1.6.0:
     resolution: {integrity: sha512-x0Vn8spI+wuJ1O6S7gnbaQg8Pxh4NNHb7KSINmEWKiPE4RKOplvijn+NkmYmmRgP68mc70j2EbeTFRsrswaQeg==}
     engines: {node: '>=4'}
-    hasBin: true
 
   /mimic-fn@1.2.0:
     resolution: {integrity: sha512-jf84uxzwiuiIVKiOLpfYk7N46TSy8ubTonmneY9vrpHNAnp0QBt2BxWV9dO3/j+BoVAb+a5G6YDPW3M5HOdMWQ==}
@@ -14654,6 +14661,13 @@ packages:
     engines: {node: '>=10'}
     dependencies:
       brace-expansion: 2.0.1
+
+  /minimatch@9.0.0:
+    resolution: {integrity: sha512-0jJj8AvgKqWN05mrwuqi8QYKx1WmYSUoKSxu5Qhs9prezTz10sxAHGNZe9J9cqIJzta8DWsleh2KaVaLl6Ru2w==}
+    engines: {node: '>=16 || 14 >=14.17'}
+    dependencies:
+      brace-expansion: 2.0.1
+    dev: true
 
   /minimist-options@4.1.0:
     resolution: {integrity: sha512-Q4r8ghd80yhO/0j1O3B2BjweX3fiHg9cdOwjJd2J76Q135c+NDxGCqdYKQ1SKBuFfgWbAUzBfvYjPUEeNgqN1A==}
@@ -14930,6 +14944,17 @@ packages:
     dependencies:
       whatwg-url: 5.0.0
     dev: true
+
+  /node-fetch@2.6.9:
+    resolution: {integrity: sha512-DJm/CJkZkRjKKj4Zi4BsKVZh3ValV5IR5s7LVZnW+6YMh0W1BfNA8XSs6DLMGYlId5F3KnA70uu2qepcR08Qqg==}
+    engines: {node: 4.x || >=6.0.0}
+    peerDependencies:
+      encoding: ^0.1.0
+    peerDependenciesMeta:
+      encoding:
+        optional: true
+    dependencies:
+      whatwg-url: 5.0.0
 
   /node-gyp-build@4.6.0:
     resolution: {integrity: sha512-NTZVKn9IylLwUzaKjkas1e4u2DLNcV4rdYagA4PWdPwW87Bi7z+BznyKSRwS/761tV/lzCGXplWsiaMjLqP2zQ==}
@@ -15876,7 +15901,7 @@ packages:
         optional: true
     dependencies:
       lilconfig: 2.0.6
-      ts-node: 8.9.1(typescript@4.7.4)
+      ts-node: 8.9.1(typescript@4.9.5)
       yaml: 1.10.2
     dev: true
 
@@ -16939,12 +16964,13 @@ packages:
     resolution: {integrity: sha512-7++dFhtcx3353uBaq8DDR4NuxBetBzC7ZQOhmTQInHEd6bSrXdiEyzCvG07Z44UYdLShWUyXt5M/yhz8ekcb1A==}
     engines: {node: '>=8'}
 
-  /shiki@0.10.1:
-    resolution: {integrity: sha512-VsY7QJVzU51j5o1+DguUd+6vmCmZ5v/6gYu4vyYAhzjuNQU6P/vmSy4uQaOhvje031qQMiW0d2BwgMH52vqMng==}
+  /shiki@0.14.1:
+    resolution: {integrity: sha512-+Jz4nBkCBe0mEDqo1eKRcCdjRtrCjozmcbTUjbPTX7OOJfEbTZzlUWlZtGe3Gb5oV1/jnojhG//YZc3rs9zSEw==}
     dependencies:
+      ansi-sequence-parser: 1.1.0
       jsonc-parser: 3.2.0
       vscode-oniguruma: 1.7.0
-      vscode-textmate: 5.2.0
+      vscode-textmate: 8.0.0
     dev: true
 
   /side-channel@1.0.4:
@@ -17289,6 +17315,11 @@ packages:
       end-of-stream: 1.1.0
       stream-to-array: 2.3.0
     dev: true
+
+  /streamsearch@1.1.0:
+    resolution: {integrity: sha512-Mcc5wHehp9aXz1ax6bZUyY5afg9u2rv5cqQI3mRrYkGC8rW2hM02jWuwjtL++LS5qinSyhj2QfLyNsuc+VsExg==}
+    engines: {node: '>=10.0.0'}
+    dev: false
 
   /string-argv@0.3.1:
     resolution: {integrity: sha512-a1uQGz7IyVy9YwhqjZIZu1c8JO8dNIe20xBmSS6qu9kv++k3JGzCVmprbNN5Kn+BgzD5E7YYwg1CcjuJMRNsvg==}
@@ -17640,7 +17671,7 @@ packages:
     dependencies:
       http-proxy-agent: 4.0.1
       https-proxy-agent: 5.0.1
-      node-fetch: 2.6.7
+      node-fetch: 2.6.9
       stream-events: 1.0.5
       uuid: 8.3.2
     transitivePeerDependencies:
@@ -17943,7 +17974,7 @@ packages:
       '@ts-morph/common': 0.11.1
       code-block-writer: 10.1.1
 
-  /ts-node@10.9.1(@swc/core@1.2.218)(@types/node@14.18.33)(typescript@4.9.4):
+  /ts-node@10.9.1(@swc/core@1.2.218)(@types/node@14.18.33)(typescript@4.9.5):
     resolution: {integrity: sha512-NtVysVPkxxrwFGUUxGYhfux8k78pQB3JqYBXlLRZgdGUqTO5wU/UyHop5p70iEbGhB7q5KmiZiU0Y3KlJrScEw==}
     hasBin: true
     peerDependencies:
@@ -17970,11 +18001,11 @@ packages:
       create-require: 1.1.1
       diff: 4.0.2
       make-error: 1.3.6
-      typescript: 4.9.4
+      typescript: 4.9.5
       v8-compile-cache-lib: 3.0.1
       yn: 3.1.1
 
-  /ts-node@8.9.1(typescript@4.7.4):
+  /ts-node@8.9.1(typescript@4.9.5):
     resolution: {integrity: sha512-yrq6ODsxEFTLz0R3BX2myf0WBCSQh9A+py8PBo1dCzWIOcvisbyH6akNKqDHMgXePF2kir5mm5JXJTH3OUJYOQ==}
     engines: {node: '>=6.0.0'}
     hasBin: true
@@ -17985,7 +18016,7 @@ packages:
       diff: 4.0.2
       make-error: 1.3.6
       source-map-support: 0.5.21
-      typescript: 4.7.4
+      typescript: 4.9.5
       yn: 3.1.1
     dev: true
 
@@ -18021,7 +18052,7 @@ packages:
   /tslib@2.5.0:
     resolution: {integrity: sha512-336iVw3rtn2BUK7ORdIAHTyxHGRIHVReokCR3XjbckJMK7ms8FysBfhLR8IXnAgy7T0PTPNBWKiH514FOW/WSg==}
 
-  /tsup@6.1.2(ts-node@8.9.1)(typescript@4.7.4):
+  /tsup@6.1.2(ts-node@8.9.1)(typescript@4.9.5):
     resolution: {integrity: sha512-Hw4hKDHaAQkm2eVavlArEOrAPA93bziRDamdfwaNs0vXQdUUFfItvUWY0L/F6oQQMVh6GvjQq1+HpDXw8UKtPA==}
     engines: {node: '>=14'}
     hasBin: true
@@ -18051,7 +18082,7 @@ packages:
       source-map: 0.8.0-beta.0
       sucrase: 3.29.0
       tree-kill: 1.2.2
-      typescript: 4.7.4
+      typescript: 4.9.5
     transitivePeerDependencies:
       - supports-color
       - ts-node
@@ -18224,53 +18255,40 @@ packages:
     resolution: {integrity: sha512-/aCDEGatGvZ2BIk+HmLf4ifCJFwvKFNb9/JeZPMulfgFracn9QFcAf5GO8B/mweUjSoblS5In0cWhqpfs/5PQA==}
     dev: false
 
-  /typedoc-plugin-markdown@3.13.4(typedoc@0.23.10):
-    resolution: {integrity: sha512-E/EBBmu6ARtnbswZGtBVBB/BfukZiGMOlqPc0RXCI/NFitONBahFqbCAF5fKQlijlcfipJj5pw5AMFH3NytrAw==}
+  /typedoc-plugin-markdown@3.15.2(typedoc@0.24.6):
+    resolution: {integrity: sha512-OPXAL9hhdoVJzH/UaKAz6CBS/s8KlYyLWwnxF7ap0fQCuaMMWShA1JBq4n1SXbiGjx+7DOhOfTKQ5OzwryN3Vw==}
     peerDependencies:
-      typedoc: '>=0.23.0'
+      typedoc: '>=0.24.0'
     dependencies:
       handlebars: 4.7.7
-      typedoc: 0.23.10(typescript@4.7.4)
+      typedoc: 0.24.6(typescript@4.9.5)
+      typedoc-plugin-mdn-links: 3.0.3(typedoc@0.24.6)
     dev: true
 
-  /typedoc-plugin-mdn-links@2.0.0(typedoc@0.23.10):
-    resolution: {integrity: sha512-IGLuelXPOenGdmklr5DHgPPf/MfZj7aEYCxCMtPN8C1D0lA7w0YLahd0jhDDcOMU7zL1EPcM5pPnhZHltDhqGQ==}
+  /typedoc-plugin-mdn-links@3.0.3(typedoc@0.24.6):
+    resolution: {integrity: sha512-NXhIpwQnsg7BcyMCHVqj3tUK+DL4g3Bt96JbFl4APzTGFkA+iM6GfZ/fn3TAqJ8O0CXG5R9BfWxolw1m1omNuQ==}
     peerDependencies:
-      typedoc: 0.22.x || 0.23.x
+      typedoc: '>= 0.23.14 || 0.24.x'
     dependencies:
-      typedoc: 0.23.10(typescript@4.7.4)
+      typedoc: 0.24.6(typescript@4.9.5)
     dev: true
 
-  /typedoc@0.23.10(typescript@4.7.4):
-    resolution: {integrity: sha512-03EUiu/ZuScUBMnY6p0lY+HTH8SwhzvRE3gImoemdPDWXPXlks83UGTx++lyquWeB1MTwm9D9Ca8RIjkK3AFfQ==}
+  /typedoc@0.24.6(typescript@4.9.5):
+    resolution: {integrity: sha512-c3y3h45xJv3qYwKDAwU6Cl+26CjT0ZvblHzfHJ+SjQDM4p1mZxtgHky4lhmG0+nNarRht8kADfZlbspJWdZarQ==}
     engines: {node: '>= 14.14'}
     hasBin: true
     peerDependencies:
-      typescript: 4.6.x || 4.7.x
+      typescript: 4.6.x || 4.7.x || 4.8.x || 4.9.x || 5.0.x
     dependencies:
       lunr: 2.3.9
-      marked: 4.2.5
-      minimatch: 5.1.2
-      shiki: 0.10.1
-      typescript: 4.7.4
+      marked: 4.3.0
+      minimatch: 9.0.0
+      shiki: 0.14.1
+      typescript: 4.9.5
     dev: true
 
   /typescript@4.3.4:
     resolution: {integrity: sha512-uauPG7XZn9F/mo+7MrsRjyvbxFpzemRjKEZXS4AK83oP2KKOJPvb+9cO/gmnv8arWZvhnjVOXz7B49m1l0e9Ew==}
-    engines: {node: '>=4.2.0'}
-
-  /typescript@4.5.2:
-    resolution: {integrity: sha512-5BlMof9H1yGt0P8/WF+wPNw6GfctgGjXp5hkblpyT+8rkASSmkUKMXrxR0Xg8ThVCi/JnHQiKXeBaEwCeQwMFw==}
-    engines: {node: '>=4.2.0'}
-    dev: true
-
-  /typescript@4.6.4:
-    resolution: {integrity: sha512-9ia/jWHIEbo49HfjrLGfKbZSuWo9iTMwXO+Ca3pRsSpbsMbc7/IU8NKdCZVRRBafVPGnoJeFL76ZOAA84I9fEg==}
-    engines: {node: '>=4.2.0'}
-    dev: true
-
-  /typescript@4.7.4:
-    resolution: {integrity: sha512-C0WQT0gezHuw6AdY1M2jxUO83Rjf0HP7Sk1DtXj6j1EwkQNZrHAg2XPWlq62oqEhYvONq5pkC2Y9oPljWToLmQ==}
     engines: {node: '>=4.2.0'}
     dev: true
 
@@ -18278,6 +18296,7 @@ packages:
     resolution: {integrity: sha512-Uz+dTXYzxXXbsFpM86Wh3dKCxrQqUcVMxwU54orwlJjOpO3ao8L7j5lH+dWfTwgCwIuM9GQ2kvVotzYJMXTBZg==}
     engines: {node: '>=4.2.0'}
     hasBin: true
+    dev: true
 
   /typescript@4.9.5:
     resolution: {integrity: sha512-1FXk9E2Hm+QzZQ7z+McJiHL4NW1F2EzMu9Nq9i3zAaGqibafqYwCVU6WyWAuyQRRzOlxou8xZSyXLEN8oKj24g==}
@@ -18291,6 +18310,7 @@ packages:
   /uglify-js@3.17.4:
     resolution: {integrity: sha512-T9q82TJI9e/C1TAxYvfb16xO120tMVFZrGA3f9/P4424DNu6ypK103y0GPFVa17yotwSyZW5iYXgjYHkGrJW/g==}
     engines: {node: '>=0.8.0'}
+    hasBin: true
     requiresBuild: true
     optional: true
 
@@ -18306,6 +18326,13 @@ packages:
       has-symbols: 1.0.3
       which-boxed-primitive: 1.0.2
     dev: true
+
+  /undici@5.22.0:
+    resolution: {integrity: sha512-fR9RXCc+6Dxav4P9VV/sp5w3eFiSdOjJYsbtWfd4s5L5C4ogyuVpdKIVHeW0vV1MloM65/f7W45nR9ZxwVdyiA==}
+    engines: {node: '>=14.0'}
+    dependencies:
+      busboy: 1.6.0
+    dev: false
 
   /unicode-canonical-property-names-ecmascript@2.0.0:
     resolution: {integrity: sha512-yY5PpDlfVIU5+y/BSCxAJRBIS1Zc2dDG3Ujq+sR0U+JjUevW2JhocOF+soROYDSaAezOzOKuyyixhD6mBknSmQ==}
@@ -18681,8 +18708,8 @@ packages:
     resolution: {integrity: sha512-L9WMGRfrjOhgHSdOYgCt/yRMsXzLDJSL7BPrOZt73gU0iWO4mpqzqQzOz5srxqTvMBaR0XZTSrVWo4j55Rc6cA==}
     dev: true
 
-  /vscode-textmate@5.2.0:
-    resolution: {integrity: sha512-Uw5ooOQxRASHgu6C7GVvUxisKXfSgW4oFlO+aa+PAkgmH89O3CXxEEzNRNtHSqtXFTl0nAC1uYj0GMSH27uwtQ==}
+  /vscode-textmate@8.0.0:
+    resolution: {integrity: sha512-AFbieoL7a5LMqcnOF04ji+rpXadgOXnZsxQr//r83kLPr7biP7am3g9zbaZIaBGwBRWeSvoMD4mgPdX3e4NWBg==}
     dev: true
 
   /walk-up-path@1.0.0:
@@ -18895,6 +18922,19 @@ packages:
     peerDependencies:
       bufferutil: ^4.0.1
       utf-8-validate: ^5.0.2
+    peerDependenciesMeta:
+      bufferutil:
+        optional: true
+      utf-8-validate:
+        optional: true
+    dev: false
+
+  /ws@8.13.0:
+    resolution: {integrity: sha512-x9vcZYTrFPC7aSIbj7sRCYo7L/Xb8Iy+pW0ng0wt2vCJv7M9HOMy0UoN3rr+IFC7hb7vXoqS+P9ktyLLLhO+LA==}
+    engines: {node: '>=10.0.0'}
+    peerDependencies:
+      bufferutil: ^4.0.1
+      utf-8-validate: '>=5.0.2'
     peerDependenciesMeta:
       bufferutil:
         optional: true

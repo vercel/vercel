@@ -81,6 +81,31 @@ export function isEdgeRuntime(runtime?: string): runtime is EdgeRuntimes {
   );
 }
 
+const ALLOWED_RUNTIMES: string[] = Object.values(EdgeRuntimes);
+
+export function validateConfiguredRuntime(
+  runtime: string | undefined,
+  entrypoint: string
+) {
+  if (runtime) {
+    if (runtime === 'nodejs') {
+      throw new Error(
+        `${entrypoint}: \`config.runtime: "nodejs"\` semantics will evolve soon. Please remove the \`runtime\` key to keep the existing behavior.`
+      );
+    }
+
+    if (!ALLOWED_RUNTIMES.includes(runtime)) {
+      throw new Error(
+        `${entrypoint}: unsupported "runtime" value in \`config\`: ${JSON.stringify(
+          runtime
+        )} (must be one of: ${JSON.stringify(
+          ALLOWED_RUNTIMES
+        )}). Learn more: https://vercel.link/creating-edge-functions`
+      );
+    }
+  }
+}
+
 export async function serializeBody(
   request: IncomingMessage
 ): Promise<Buffer | undefined> {
