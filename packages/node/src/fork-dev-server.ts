@@ -21,7 +21,11 @@ export function forkDevServer(options: {
    */
   devServerPath?: string;
 }) {
-  let nodeOptions = process.env.NODE_OPTIONS;
+  let nodeOptions = process.env.NODE_OPTIONS || '';
+
+  if (!nodeOptions.includes('--no-warnings')) {
+    nodeOptions += ' --no-warnings';
+  }
   const tsNodePath = options.require_.resolve('ts-node');
   const esmLoader = pathToFileURL(join(tsNodePath, '..', '..', 'esm.mjs'));
   const cjsLoader = join(tsNodePath, '..', '..', 'register', 'index.js');
@@ -78,7 +82,7 @@ function checkForPid(
 export async function readMessage(
   child: ChildProcess
 ): Promise<
-  | { state: 'message'; value: { port: number } }
+  | { state: 'message'; value: { address?: string; port: number } }
   | { state: 'exit'; value: [number, string | null] }
 > {
   const onMessage = once<{ port: number }>(child, 'message');

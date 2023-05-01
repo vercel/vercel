@@ -24,6 +24,31 @@ function testForkDevServer(entrypoint: string) {
   });
 }
 
+test('runs an edge function that uses `WebSocket`', async () => {
+  const child = testForkDevServer('./edge-websocket.js');
+  try {
+    const result = await readMessage(child);
+    if (result.state !== 'message') {
+      throw new Error('Exited. error: ' + JSON.stringify(result.value));
+    }
+
+    const { address, port } = result.value;
+    const response = await fetch(
+      `http://${address}:${port}/api/edge-websocket`
+    );
+
+    expect({
+      status: response.status,
+      body: await response.text(),
+    }).toEqual({
+      status: 200,
+      body: '3210',
+    });
+  } finally {
+    child.kill(9);
+  }
+});
+
 test('runs an edge function that uses `buffer`', async () => {
   const child = testForkDevServer('./edge-buffer.js');
   try {
