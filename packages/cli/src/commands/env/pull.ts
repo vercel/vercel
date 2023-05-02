@@ -67,7 +67,7 @@ export default async function pull(
   }
 
   // handle relative or absolute filename
-  const [filename = '.env'] = args;
+  const [filename = '.env.local'] = args;
   const fullPath = resolve(cwd, filename);
   const skipConfirmation = opts['--yes'];
   const gitBranch = opts['--git-branch'];
