@@ -1933,38 +1933,6 @@ export const frameworks = [
     ],
   },
   {
-    name: 'Storybook',
-    slug: 'storybook',
-    logo: 'https://api-frameworks.vercel.sh/framework-logos/storybook.svg',
-    tagline: 'Frontend workshop for UI development',
-    description:
-      'Storybook is a frontend workshop for building UI components and pages in isolation.',
-    website: 'https://storybook.js.org',
-    ignoreRuntimes: ['@vercel/next', '@vercel/node'],
-    disableRootMiddleware: true,
-    detectors: {
-      every: [
-        {
-          matchPackage: 'storybook',
-        },
-      ],
-    },
-    settings: {
-      installCommand: {
-        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
-      },
-      buildCommand: {
-        value: 'storybook build',
-      },
-      devCommand: {
-        value: `storybook dev -p $PORT`,
-      },
-      outputDirectory: {
-        value: 'storybook-static',
-      },
-    },
-  },
-  {
     name: 'Other',
     slug: null,
     logo: 'https://api-frameworks.vercel.sh/framework-logos/other.svg',
