@@ -203,7 +203,7 @@ describe('deploy', () => {
     }
   });
 
-  it('should send noAlias/autoPromote flag', async () => {
+  it('should pass flag to skip custom domain assignment', async () => {
     const cwd = setupUnitFixture('commands/deploy/static');
     const originalCwd = process.cwd();
     try {
@@ -241,13 +241,13 @@ describe('deploy', () => {
         });
       });
 
-      client.setArgv('deploy', '--prod', '--no-alias');
+      client.setArgv('deploy', '--prod', '--skip-domain');
       const exitCode = await deploy(client);
       expect(exitCode).toEqual(0);
       expect(body).toMatchObject({
         target: 'production',
         source: 'cli',
-        autoPromote: false,
+        skipDomain: true, // TODO: ?
         version: 2,
       });
     } finally {

@@ -93,7 +93,7 @@ export default async (client: Client): Promise<number> => {
       '--prod': Boolean,
       '--archive': String,
       '--no-wait': Boolean,
-      '--no-alias': Boolean,
+      '--skip-domain': Boolean,
       '--yes': Boolean,
       '-f': '--force',
       '-p': '--public',
@@ -521,7 +521,7 @@ export default async (client: Client): Promise<number> => {
   }
 
   try {
-    const noAlias = argv['--no-alias'] ?? false;
+    const autoAssignCustomDomains = !argv['--skip-domain'];
 
     const createArgs: CreateOptions = {
       name,
@@ -546,7 +546,7 @@ export default async (client: Client): Promise<number> => {
       target,
       skipAutoDetectionConfirmation: autoConfirm,
       noWait,
-      autoPromote: !noAlias,
+      autoAssignCustomDomains,
     };
 
     if (!localConfig.builds || localConfig.builds.length === 0) {
