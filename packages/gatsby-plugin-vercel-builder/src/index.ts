@@ -76,8 +76,18 @@ export async function generateVercelBuildOutputAPI3Output({
     await writeJson('.vercel/output/config.json', config);
     console.log('Vercel output has been generated');
   } else {
+    const errors = [...validateGatsbyState.Errors(state)];
     throw new Error(
-      'Gatsby state validation error. Please file an issue https://vercel.com/help#issues'
+      `Gatsby state validation failed:\n${errors
+        .map(
+          err =>
+            `  - ${err.message}, got ${typeof err.value} (${JSON.stringify(
+              err.value
+            )}) at path "${err.path}"\n`
+        )
+        .join(
+          ''
+        )}Please check your Gatsby configuration files, or file an issue at https://vercel.com/help#issues`
     );
   }
 }

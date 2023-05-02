@@ -54,7 +54,7 @@ import { getConfig } from '@vercel/static-config';
 
 import { fixConfig, Register, register } from './typescript';
 import {
-  EdgeRuntimes,
+  validateConfiguredRuntime,
   entrypointToOutputPath,
   getRegExpFromMatchers,
   isEdgeRuntime,
@@ -75,8 +75,6 @@ interface DownloadOptions {
   config: Config;
   meta: Meta;
 }
-
-const ALLOWED_RUNTIMES = ['nodejs', ...Object.values(EdgeRuntimes)];
 
 const require_ = eval('require');
 
@@ -121,6 +119,7 @@ async function compile(
   baseDir: string,
   entrypointPath: string,
   config: Config,
+  meta: Meta,
   nodeVersion: NodeVersion,
   isEdgeFunction: boolean
 ): Promise<{
@@ -310,7 +309,9 @@ async function compile(
       !file.endsWith('.mjs') &&
       !file.match(libPathRegEx)
   );
-  if (esmPaths.length) {
+  const babelCompileEnabled =
+    !isEdgeFunction || process.env.VERCEL_EDGE_NO_BABEL !== '1';
+  if (babelCompileEnabled && esmPaths.length) {
     const babelCompile = require('./babel').compile;
     for (const path of esmPaths) {
       const pathDir = join(workPath, dirname(path));
@@ -335,6 +336,13 @@ async function compile(
         stream: preparedFiles[path].toStream(),
       });
 
+      if (!meta.compiledToCommonJS) {
+        meta.compiledToCommonJS = true;
+        console.warn(
+          'Warning: Node.js functions are compiled from ESM to CommonJS. If this is not intended, add "type": "module" to your package.json file.'
+        );
+      }
+      console.log(`Compiling "${filename}" from ESM to CommonJS...`);
       const { code, map } = babelCompile(filename, source);
       shouldAddSourcemapSupport = true;
       preparedFiles[path] = new FileBlob({
@@ -409,20 +417,12 @@ export const build: BuildV3 = async ({
 
   const project = new Project();
   const staticConfig = getConfig(project, entrypointPath);
-  if (staticConfig?.runtime) {
-    if (!ALLOWED_RUNTIMES.includes(staticConfig.runtime)) {
-      throw new Error(
-        `Unsupported "runtime" property in \`config\`: ${JSON.stringify(
-          staticConfig.runtime
-        )} (must be one of: ${JSON.stringify(ALLOWED_RUNTIMES)})`
-      );
-    }
-    if (staticConfig.runtime === 'nodejs') {
-      console.log(
-        `Detected unused static config runtime "nodejs" in "${entrypointPath}"`
-      );
-    }
-    isEdgeFunction = isEdgeRuntime(staticConfig.runtime);
+
+  const runtime = staticConfig?.runtime;
+  validateConfiguredRuntime(runtime, entrypoint);
+
+  if (runtime) {
+    isEdgeFunction = isEdgeRuntime(runtime);
   }
 
   debug('Tracing input files...');
@@ -432,6 +432,7 @@ export const build: BuildV3 = async ({
     baseDir,
     entrypointPath,
     config,
+    meta,
     nodeVersion,
     isEdgeFunction
   );
@@ -597,6 +598,20 @@ export const startDevServer: StartDevServer = async opts => {
           console.error(`Error while parsing "${pathToTsConfig}"`);
           throw error;
         }
+      }
+    }
+
+    // if we're using ESM, we need to tell TypeScript to use `nodenext` to
+    // preserve the `import` semantics
+    if (isEsm) {
+      if (!tsConfig.compilerOptions) {
+        tsConfig.compilerOptions = {};
+      }
+      if (tsConfig.compilerOptions.module === undefined) {
+        tsConfig.compilerOptions.module = 'nodenext';
+      }
+      if (tsConfig.compilerOptions.moduleResolution === undefined) {
+        tsConfig.compilerOptions.moduleResolution = 'nodenext';
       }
     }
 

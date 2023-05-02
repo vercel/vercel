@@ -65,14 +65,21 @@ if (parseInt(process.versions.node.split('.')[0], 10) >= 16) {
       }
     }
 
-    expect(lambdas.size).toBe(2);
+    expect(lambdas.size).toBe(3);
     expect(buildResult.output['dashboard']).toBeDefined();
     expect(buildResult.output['dashboard/another']).toBeDefined();
     expect(buildResult.output['dashboard/changelog']).toBeDefined();
     expect(buildResult.output['dashboard/deployments/[id]']).toBeDefined();
 
+    expect(buildResult.output['api/hello']).toBeDefined();
+    expect(buildResult.output['api/hello'].type).toBe('Lambda');
+    expect(buildResult.output['api/hello'].memory).toBe(512);
+    expect(buildResult.output['api/hello'].maxDuration).toBe(5);
+
     expect(buildResult.output['api/hello-again']).toBeDefined();
     expect(buildResult.output['api/hello-again'].type).toBe('Lambda');
+    expect(buildResult.output['api/hello-again'].memory).toBe(512);
+    expect(buildResult.output['api/hello-again'].maxDuration).toBe(5);
     expect(
       buildResult.output['api/hello-again'].supportsResponseStreaming
     ).toBe(true);
