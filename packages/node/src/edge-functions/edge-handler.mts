@@ -133,17 +133,8 @@ async function createEdgeRuntimeServer(params?: {
 
     const wasmBindings = await params.wasmAssets.getContext();
     const nodeCompatBindings = params.nodeCompatBindings.getContext();
-
-    let WebSocket: any;
-
-    // undici's WebSocket handling is only available in Node.js >= 18
-    // so fallback to using ws for v16
-    if (Number(process.version.split('.')[0].substring(1)) < 18) {
-      // @ts-ignore
-      WebSocket = (await import('ws')).WebSocket;
-    } else {
-      WebSocket = (await import('undici')).WebSocket;
-    }
+    // @ts-ignore
+    const WebSocket = (await import('ws')).WebSocket;
 
     const runtime = new EdgeRuntime({
       initialCode: params.userCode,
@@ -151,7 +142,6 @@ async function createEdgeRuntimeServer(params?: {
         Object.assign(context, {
           // This is required for esbuild wrapping logic to resolve
           module: {},
-
           WebSocket,
 
           // This is required for environment variable access.
