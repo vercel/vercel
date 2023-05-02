@@ -13,7 +13,13 @@ describe('examples should be detected', () => {
         throw new Error(`Framework not detected for example "${exampleName}".`);
       }
 
-      expect(framework).toBe(exampleName);
+      if (exampleName === 'storybook') {
+        // Storybook isn't really a "framework", in this case, it's really a
+        // Next.js app
+        expect(framework).toBe('nextjs');
+      } else {
+        expect(framework).toBe(exampleName);
+      }
     }
   );
 });
