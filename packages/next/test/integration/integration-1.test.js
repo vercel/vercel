@@ -65,7 +65,12 @@ if (parseInt(process.versions.node.split('.')[0], 10) >= 16) {
       }
     }
 
-    expect(lambdas.size).toBe(3);
+    expect(lambdas.size).toBe(2);
+    expect(buildResult.output['index']).toBeDefined();
+    expect(buildResult.output['index'].type).toBe('Prerender');
+    expect(buildResult.output['index'].lambda.memory).toBe(512);
+    expect(buildResult.output['index'].lambda.maxDuration).toBe(5);
+
     expect(buildResult.output['dashboard']).toBeDefined();
     expect(buildResult.output['dashboard/another']).toBeDefined();
     expect(buildResult.output['dashboard/changelog']).toBeDefined();

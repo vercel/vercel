@@ -1254,21 +1254,38 @@ async function getSourceFilePathFromPage({
     const extensionless = fsPath.replace(path.extname(fsPath), '');
 
     for (const ext of extensionsToTry) {
-      fsPath = `${extensionless}.${ext}`;
+      // for appDir, we need to treat "index.js" as root-level "page.js"
+      fsPath =
+        extensionless === path.join(workPath, 'app/index') ||
+        extensionless === path.join(workPath, 'src/app/index')
+          ? `${extensionless.replace(/index$/, 'page')}.${ext}`
+          : `${extensionless}.${ext}`;
       if (fs.existsSync(fsPath)) {
         return path.relative(workPath, fsPath);
       }
     }
 
     if (isDirectory(extensionless)) {
-      for (const ext of extensionsToTry) {
-        fsPath = path.join(extensionless, `index.${ext}`);
-        if (fs.existsSync(fsPath)) {
-          return path.relative(workPath, fsPath);
+      if (pageType === 'pages') {
+        for (const ext of extensionsToTry) {
+          fsPath = path.join(extensionless, `index.${ext}`);
+          if (fs.existsSync(fsPath)) {
+            return path.relative(workPath, fsPath);
+          }
         }
-        fsPath = path.join(extensionless, `route.${ext}`);
-        if (fs.existsSync(fsPath)) {
-          return path.relative(workPath, fsPath);
+        // appDir
+      } else {
+        for (const ext of extensionsToTry) {
+          // RSC
+          fsPath = path.join(extensionless, `page.${ext}`);
+          if (fs.existsSync(fsPath)) {
+            return path.relative(workPath, fsPath);
+          }
+          // Route Handlers
+          fsPath = path.join(extensionless, `route.${ext}`);
+          if (fs.existsSync(fsPath)) {
+            return path.relative(workPath, fsPath);
+          }
         }
       }
     }
