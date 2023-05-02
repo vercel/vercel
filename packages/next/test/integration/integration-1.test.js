@@ -66,6 +66,7 @@ if (parseInt(process.versions.node.split('.')[0], 10) >= 16) {
     }
 
     expect(lambdas.size).toBe(2);
+    // RSC, root-level page.js
     expect(buildResult.output['index']).toBeDefined();
     expect(buildResult.output['index'].type).toBe('Prerender');
     expect(buildResult.output['index'].lambda.memory).toBe(512);
