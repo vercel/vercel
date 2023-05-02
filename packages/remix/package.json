@@ -20,7 +20,7 @@
     "defaults"
   ],
   "dependencies": {
-    "@remix-run/dev": "https://remix-8fr7fgajz-vercel-labs.vercel.app/remix-dev.tgz",
+    "@remix-run/dev": "https://remix-4qx80l0ai.vercel.sh/remix-dev.tgz",
     "@vercel/build-utils": "6.7.2",
     "@vercel/nft": "0.22.5",
     "@vercel/static-config": "2.0.17",
