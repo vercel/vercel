@@ -56,7 +56,7 @@ export async function* checkDeploymentStatus(
         teamId ? `?teamId=${teamId}` : ''
       }`,
       token,
-      { apiUrl, userAgent }
+      { apiUrl, userAgent, agent: clientOptions.agent }
     );
     const deploymentUpdate = await deploymentData.json();
 
