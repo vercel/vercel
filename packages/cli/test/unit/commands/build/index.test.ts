@@ -6,6 +6,7 @@ import { client } from '../../../mocks/client';
 import { defaultProject, useProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
+import { execSync } from 'child_process';
 
 jest.setTimeout(6 * 60 * 1000);
 
