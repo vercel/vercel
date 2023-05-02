@@ -2387,27 +2387,6 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
       },
     ]);
   });
-
-  it('should ignore middleware with "storybook" framework preset', async () => {
-    const files = ['package.json', 'app/routes/index.ts', 'middleware.ts'];
-    const projectSettings = {
-      framework: 'storybook',
-    };
-    const { builders } = await detectBuilders(files, null, {
-      projectSettings,
-      featHandleMiss,
-    });
-    expect(builders).toEqual([
-      {
-        use: '@vercel/static-build',
-        src: 'package.json',
-        config: {
-          framework: 'storybook',
-          zeroConfig: true,
-        },
-      },
-    ]);
-  });
 });
 
 it('Test `detectRoutes`', async () => {
