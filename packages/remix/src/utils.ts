@@ -225,11 +225,14 @@ export async function chdirAndReadConfig(dir: string, packageJsonPath: string) {
     modifiedPackageJson = true;
   }
 
+  const warn = console.warn;
   let remixConfig: RemixConfig;
   try {
     process.chdir(dir);
+    console.warn = () => {};
     remixConfig = await readConfig(dir);
   } finally {
+    console.warn = warn;
     process.chdir(originalCwd);
     if (modifiedPackageJson) {
       await fs.writeFile(packageJsonPath, pkgRaw);
