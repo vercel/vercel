@@ -66,7 +66,14 @@ const Schema = {
   type: 'array',
   items: {
     type: 'object',
-    required: ['name', 'slug', 'logo', 'description', 'settings'],
+    required: [
+      'name',
+      'slug',
+      'logo',
+      'description',
+      'settings',
+      'getOutputDirName',
+    ],
     properties: {
       name: { type: 'string' },
       slug: { type: ['string', 'null'] },
@@ -115,6 +122,9 @@ const Schema = {
           devCommand: SchemaSettings,
           outputDirectory: SchemaSettings,
         },
+      },
+      getOutputDirName: {
+        isFunction: true,
       },
       recommendedIntegrations: {
         type: 'array',
@@ -167,7 +177,8 @@ describe('frameworks', () => {
   });
 
   it('ensure schema', async () => {
-    const ajv = new Ajv();
+    const ajv = getValidator();
+
     const result = ajv.validate(Schema, frameworkList);
 
     if (ajv.errors) {
@@ -246,3 +257,16 @@ describe('frameworks', () => {
     );
   });
 });
+
+function getValidator() {
+  const ajv = new Ajv();
+
+  ajv.addKeyword('isFunction', {
+    compile: shouldMatch => data => {
+      const matches = data instanceof Function;
+      return (shouldMatch && matches) || (!shouldMatch && !matches);
+    },
+  });
+
+  return ajv;
+}
