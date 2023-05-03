@@ -62,10 +62,25 @@ const SchemaSettings = {
   ],
 };
 
+const RouteSchema = {
+  type: 'array',
+  items: {
+    properties: {
+      src: { type: 'string' },
+      dest: { type: 'string' },
+      status: { type: 'number' },
+      handle: { type: 'string' },
+      headers: { type: 'object' },
+      continue: { type: 'boolean' },
+    },
+  },
+};
+
 const Schema = {
   type: 'array',
   items: {
     type: 'object',
+    additionalProperties: false,
     required: [
       'name',
       'slug',
@@ -79,6 +94,8 @@ const Schema = {
       slug: { type: ['string', 'null'] },
       sort: { type: 'number' },
       logo: { type: 'string' },
+      darkModeLogo: { type: 'string' },
+      screenshot: { type: 'string' },
       demo: { type: 'string' },
       tagline: { type: 'string' },
       website: { type: 'string' },
@@ -125,6 +142,23 @@ const Schema = {
       },
       getOutputDirName: {
         isFunction: true,
+      },
+      defaultRoutes: {
+        oneOf: [{ isFunction: true }, RouteSchema],
+      },
+      defaulHeaders: {
+        type: 'array',
+        items: {
+          properties: {
+            source: { type: 'string' },
+            regex: { type: 'string' },
+            headers: { type: 'object' },
+            continue: { type: 'boolean' },
+          },
+        },
+      },
+      disableRootMiddleware: {
+        type: 'boolean',
       },
       recommendedIntegrations: {
         type: 'array',
