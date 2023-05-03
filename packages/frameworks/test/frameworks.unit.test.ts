@@ -297,7 +297,7 @@ function getValidator() {
 
   ajv.addKeyword('isFunction', {
     compile: shouldMatch => data => {
-      const matches = data instanceof Function;
+      const matches = typeof data === 'function';
       return (shouldMatch && matches) || (!shouldMatch && !matches);
     },
   });
