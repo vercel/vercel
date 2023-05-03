@@ -1962,6 +1962,7 @@ export const frameworks = [
       outputDirectory: {
         value: 'storybook-static',
       },
+      getOutputDirName: async () => 'storybook-static',
     },
   },
   {
