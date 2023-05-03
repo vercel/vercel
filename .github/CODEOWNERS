@@ -4,7 +4,6 @@
 *                                        @TooTallNate @EndangeredMassa @styfle @cb1kenobi @Ethan-Arrowood
 /.github/workflows                       @TooTallNate @EndangeredMassa @styfle @cb1kenobi @Ethan-Arrowood @ijjk
 /packages/fs-detectors                   @TooTallNate @EndangeredMassa @styfle @cb1kenobi @Ethan-Arrowood @agadzik @chloetedder
-/packages/node-bridge                    @TooTallNate @EndangeredMassa @styfle @cb1kenobi @Ethan-Arrowood @ijjk
 /packages/next                           @TooTallNate @EndangeredMassa @styfle @cb1kenobi @Ethan-Arrowood @ijjk
 /packages/routing-utils                  @TooTallNate @EndangeredMassa @styfle @cb1kenobi @Ethan-Arrowood @ijjk
 /packages/edge                           @vercel/edge-compute
@@ -14,3 +13,4 @@
 /examples/hugo                           @styfle
 /examples/jekyll                         @styfle
 /examples/zola                           @styfle
+/packages/node                           @TooTallNate @EndangeredMassa @styfle @cb1kenobi @Ethan-Arrowood @Kikobeats

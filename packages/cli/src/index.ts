@@ -50,11 +50,9 @@ import getUpdateCommand from './util/get-update-command';
 import { metrics, shouldCollectMetrics } from './util/metrics';
 import { getCommandName, getTitleName } from './util/pkg-name';
 import doLoginPrompt from './util/login/prompt';
-import { AuthConfig, GlobalConfig } from '@vercel-internals/types';
+import type { AuthConfig, GlobalConfig } from '@vercel-internals/types';
 import { VercelConfig } from '@vercel/client';
 import box from './util/output/box';
-
-const isCanary = pkg.version.includes('canary');
 
 const VERCEL_DIR = getGlobalPathConfig();
 const VERCEL_CONFIG_PATH = configFiles.getConfigFilePath();
@@ -70,7 +68,7 @@ sourceMap.install();
 Sentry.init({
   dsn: SENTRY_DSN,
   release: `vercel-cli@${pkg.version}`,
-  environment: isCanary ? 'canary' : 'stable',
+  environment: 'stable',
 });
 
 let client: Client;
@@ -165,13 +163,7 @@ const main = async () => {
       )}`
     );
   } else {
-    output.print(
-      `${chalk.grey(
-        `${getTitleName()} CLI ${pkg.version}${
-          isCanary ? ' — https://vercel.com/feedback' : ''
-        }`
-      )}\n`
-    );
+    output.print(`${chalk.grey(`${getTitleName()} CLI ${pkg.version}`)}\n`);
   }
 
   // Handle `--version` directly
@@ -707,7 +699,6 @@ main()
       // Check if an update is available. If so, `latest` will contain a string
       // of the latest version, otherwise `undefined`.
       const latest = getLatestVersion({
-        distTag: isCanary ? 'canary' : 'latest',
         output,
         pkg,
       });

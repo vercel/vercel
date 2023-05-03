@@ -9,7 +9,7 @@ import strlen from '../../util/strlen';
 import confirm from '../../util/input/confirm';
 import findAliasByAliasOrId from '../../util/alias/find-alias-by-alias-or-id';
 
-import { Alias } from '@vercel-internals/types';
+import type { Alias } from '@vercel-internals/types';
 import { isValidName } from '../../util/is-valid-name';
 import { getCommandName } from '../../util/pkg-name';
 

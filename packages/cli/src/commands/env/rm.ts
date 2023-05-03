@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import { Project } from '@vercel-internals/types';
+import type { Project } from '@vercel-internals/types';
 import { Output } from '../../util/output';
 import confirm from '../../util/input/confirm';
 import removeEnvRecord from '../../util/env/remove-env-record';

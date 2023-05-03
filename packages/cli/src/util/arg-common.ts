@@ -24,8 +24,6 @@ const ARG_COMMON = {
 
   '--api': String,
 
-  '--target': String,
-
   '--cwd': String,
 };
 

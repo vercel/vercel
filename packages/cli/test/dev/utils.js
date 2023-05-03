@@ -5,8 +5,6 @@ const fetch = require('node-fetch');
 const retry = require('async-retry');
 const { satisfies } = require('semver');
 const stripAnsi = require('strip-ansi');
-const { getDistTag } = require('../../src/util/get-dist-tag');
-const { version: cliVersion } = require('../../package.json');
 const {
   fetchCachedToken,
 } = require('../../../../test/lib/deployment/now-deploy');
@@ -16,7 +14,6 @@ jest.setTimeout(10 * 60 * 1000);
 
 const isCI = !!process.env.CI;
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
-const isCanary = () => getDistTag(cliVersion) === 'canary';
 
 let port = 3000;
 
@@ -118,6 +115,11 @@ function validateResponseHeaders(res, podId) {
 
 async function exec(directory, args = []) {
   const token = await fetchCachedToken();
+  console.log(
+    `exec() ${binaryPath} dev ${directory} -t ***${
+      process.env.VERCEL_TEAM_ID ? ' --scope ***' : ''
+    } ${args.join(' ')}`
+  );
   return execa(
     binaryPath,
     [
@@ -198,6 +200,11 @@ async function testFixture(directory, opts = {}, args = []) {
   await runNpmInstall(directory);
 
   const token = await fetchCachedToken();
+  console.log(
+    `testFixture() ${binaryPath} dev ${directory} -t ***${
+      process.env.VERCEL_TEAM_ID ? ' --scope ***' : ''
+    } -l ${port} ${args.join(' ')}`
+  );
   const dev = execa(
     binaryPath,
     [
@@ -430,6 +437,11 @@ function testFixtureStdio(
     try {
       let printedOutput = false;
 
+      console.log(
+        `testFixtureStdio() ${binaryPath} dev -l ${port} -t ***${
+          process.env.VERCEL_TEAM_ID ? ' --scope ***' : ''
+        } --debug`
+      );
       const env = skipDeploy
         ? { ...process.env, __VERCEL_SKIP_DEV_CMD: 1 }
         : process.env;
@@ -607,7 +619,6 @@ afterEach(async () => {
 
 module.exports = {
   sleep,
-  isCanary,
   testPath,
   testFixture,
   testFixtureStdio,

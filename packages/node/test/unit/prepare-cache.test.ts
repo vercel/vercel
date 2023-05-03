@@ -23,6 +23,7 @@ describe('prepareCache()', () => {
       entrypoint: '.',
       config: {},
       workPath: path.resolve(__dirname, '../cache-fixtures/foo/'),
+      repoRootPath: path.resolve(__dirname, '../cache-fixtures/foo/'),
     });
 
     const file = files['node_modules/file'];

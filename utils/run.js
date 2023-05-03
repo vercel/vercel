@@ -10,7 +10,6 @@ const allPackages = [
   'static-config',
   'client',
   'next',
-  'node-bridge',
   'node',
   'go',
   'python',
