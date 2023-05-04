@@ -3,10 +3,11 @@ import { createServer } from 'http';
 import { serializeBody } from '../utils.js';
 import { streamToBuffer } from '@vercel/build-utils';
 import exitHook from 'exit-hook';
-import fetch from 'node-fetch';
+import { fetch } from '@edge-runtime/primitives';
 import asyncListen from 'async-listen';
 import { isAbsolute } from 'path';
 import { pathToFileURL } from 'url';
+import { toToReadable } from '@edge-runtime/node-utils';
 import type { ServerResponse, IncomingMessage } from 'http';
 import type { VercelProxyResponse } from '../types.js';
 import type { VercelRequest, VercelResponse } from './helpers.js';
@@ -60,24 +61,25 @@ export async function createServerlessEventHandler(
 
   return async function (request: IncomingMessage) {
     const url = new URL(request.url ?? '/', server.url);
-    // @ts-expect-error
     const response = await fetch(url, {
       body: await serializeBody(request),
       headers: {
         ...request.headers,
         host: request.headers['x-forwarded-host'],
-      },
+      } as any,
       method: request.method,
       redirect: 'manual',
     });
 
-    let body;
-    if (options.mode === 'streaming') {
-      body = response.body;
-    } else {
-      body = await streamToBuffer(response.body);
-      response.headers.delete('transfer-encoding');
-      response.headers.set('content-length', body.length);
+    let body = null;
+    if (response.body !== null) {
+      if (options.mode === 'streaming') {
+        body = response.body;
+      } else {
+        body = await streamToBuffer(toToReadable(response.body));
+        response.headers.delete('transfer-encoding');
+        response.headers.set('content-length', String(body.length));
+      }
     }
 
     return {

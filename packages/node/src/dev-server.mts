@@ -6,13 +6,13 @@ if (!entrypoint) {
 }
 
 import { join } from 'path';
-import type { Headers } from 'node-fetch';
 import type { VercelProxyResponse } from './types.js';
 import { Config } from '@vercel/build-utils';
 import { createEdgeEventHandler } from './edge-functions/edge-handler.mjs';
 import { createServer, IncomingMessage, ServerResponse } from 'http';
 import { createServerlessEventHandler } from './serverless-functions/serverless-handler.mjs';
 import { isEdgeRuntime, logError, validateConfiguredRuntime } from './utils.js';
+import { toToReadable } from '@edge-runtime/node-utils';
 import { getConfig } from '@vercel/static-config';
 import { Project } from 'ts-morph';
 import asyncListen from 'async-listen';
@@ -106,18 +106,16 @@ async function onDevRequest(
     const { headers, body, status } = await handleEvent(req);
     res.statusCode = status;
 
-    for (const [key, value] of headers as unknown as Headers) {
-      // node-fetch does not support headers.getSetCookie(), so we need to
-      // manually set the raw value which can be an array of strings
-      if (value !== undefined) {
-        res.setHeader(key, key === 'set-cookie' ? headers.raw()[key] : value);
-      }
+    for (const [key, value] of headers as any) {
+      if (value !== undefined) res.setHeader(key, value);
     }
 
-    if (body instanceof Buffer) {
-      res.end(body);
-    } else {
-      body.pipe(res);
+    if (body !== null) {
+      if (body instanceof Buffer) {
+        res.end(body);
+      } else {
+        toToReadable(body).pipe(res);
+      }
     }
   } catch (error: any) {
     res.statusCode = 500;
