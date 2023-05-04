@@ -1,13 +1,11 @@
 import { addHelpers } from './helpers.js';
 import { createServer } from 'http';
 import { serializeBody } from '../utils.js';
-import { streamToBuffer } from '@vercel/build-utils';
 import exitHook from 'exit-hook';
 import { fetch } from '@edge-runtime/primitives';
 import asyncListen from 'async-listen';
 import { isAbsolute } from 'path';
 import { pathToFileURL } from 'url';
-import { toToReadable } from '@edge-runtime/node-utils';
 import type { ServerResponse, IncomingMessage } from 'http';
 import type { VercelProxyResponse } from '../types.js';
 import type { VercelRequest, VercelResponse } from './helpers.js';
@@ -76,7 +74,7 @@ export async function createServerlessEventHandler(
       if (options.mode === 'streaming') {
         body = response.body;
       } else {
-        body = await streamToBuffer(toToReadable(response.body));
+        body = Buffer.from(await response.text());
         response.headers.delete('transfer-encoding');
         response.headers.set('content-length', String(body.length));
       }

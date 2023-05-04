@@ -1,6 +1,6 @@
 import { forkDevServer, readMessage } from '../../src/fork-dev-server';
 import { resolve, extname } from 'path';
-import fetch from 'node-fetch';
+import { fetch } from '@edge-runtime/primitives';
 
 jest.setTimeout(20 * 1000);
 
@@ -89,7 +89,7 @@ test('runs a mjs endpoint', async () => {
     );
     expect({
       status: response.status,
-      headers: Object.fromEntries(response.headers),
+      headers: Object.fromEntries(response.headers as any),
       text: await response.text(),
     }).toEqual({
       status: 200,
@@ -122,7 +122,7 @@ test('runs a esm typescript endpoint', async () => {
     );
     expect({
       status: response.status,
-      headers: Object.fromEntries(response.headers),
+      headers: Object.fromEntries(response.headers as any),
       text: await response.text(),
     }).toEqual({
       status: 200,
