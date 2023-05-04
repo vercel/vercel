@@ -77,7 +77,11 @@ module.exports = async ({ github, context } = {}) => {
           const cwd = dirname(file);
           try {
             if (await pathExists(join(cwd, 'yarn.lock'))) {
-              exec('yarn', ['generate-lock-entry'], { cwd });
+              if (await pathExists(join(cwd, '.yarnrc.yml'))) {
+                exec('yarn', ['install', '--mode', 'update-lockfile'], { cwd });
+              } else {
+                exec('yarn', ['generate-lock-entry'], { cwd });
+              }
             } else if (await pathExists(join(cwd, 'pnpm-lock.yaml'))) {
               exec('pnpm', ['install', '--lockfile-only'], { cwd });
             } else if (await pathExists(join(cwd, 'package-lock.json'))) {
