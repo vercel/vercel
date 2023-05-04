@@ -105,9 +105,12 @@ async function onDevRequest(
   try {
     const { headers, body, status } = await handleEvent(req);
     res.statusCode = status;
+
     for (const [key, value] of headers as unknown as Headers) {
+      // node-fetch does not support headers.getSetCookie(), so we need to
+      // manually set the raw value which can be an array of strings
       if (value !== undefined) {
-        res.setHeader(key, value);
+        res.setHeader(key, key === 'set-cookie' ? headers.raw()[key] : value);
       }
     }
 

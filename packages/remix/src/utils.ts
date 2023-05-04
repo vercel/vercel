@@ -1,7 +1,7 @@
 import { existsSync, promises as fs } from 'fs';
 import { join, relative, resolve } from 'path';
 import { pathToRegexp, Key } from 'path-to-regexp';
-import { spawnAsync } from '@vercel/build-utils';
+import { debug, spawnAsync } from '@vercel/build-utils';
 import { readConfig } from '@remix-run/dev/dist/config';
 import type {
   ConfigRoute,
@@ -225,11 +225,18 @@ export async function chdirAndReadConfig(dir: string, packageJsonPath: string) {
     modifiedPackageJson = true;
   }
 
+  // Suppress any warnings emitted from `readConfig()` to avoid
+  // printing them > 1 time. They will already be printed during
+  // `remix build` when invoking the Build Command.
+  const warn = console.warn;
+  console.warn = debug;
+
   let remixConfig: RemixConfig;
   try {
     process.chdir(dir);
     remixConfig = await readConfig(dir);
   } finally {
+    console.warn = warn;
     process.chdir(originalCwd);
     if (modifiedPackageJson) {
       await fs.writeFile(packageJsonPath, pkgRaw);
