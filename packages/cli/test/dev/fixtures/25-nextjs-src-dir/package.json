@@ -1,5 +1,6 @@
 {
   "name": "nextjs-src-dir",
+  "version": "0.0.0",
   "license": "MIT",
   "scripts": {
     "dev": "next",

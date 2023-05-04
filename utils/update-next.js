@@ -13,11 +13,12 @@ function exec(cmd, args, opts) {
   return output;
 }
 
-module.exports = async ({ github, context }) => {
+module.exports = async ({ github, context } = {}) => {
   const newVersion = exec('npm', ['view', 'next', 'dist-tags.latest']);
   const branch = `next-${newVersion.replaceAll('.', '-')}`;
 
   if (
+    github &&
     exec('git', ['ls-remote', '--heads', 'origin', branch]).toString().trim()
   ) {
     console.log(`Branch ${branch} already exists, skipping update.`);
@@ -29,7 +30,7 @@ module.exports = async ({ github, context }) => {
   // update `examples/nextjs`
   const oldVersion = require('../examples/nextjs/package.json').dependencies
     .next;
-  if (oldVersion !== newVersion) {
+  if (github && oldVersion !== newVersion) {
     updatedCount++;
     exec('rm', ['-rf', './examples/nextjs']);
     exec('npx', ['--yes', 'create-next-app@latest', './examples/nextjs']);
@@ -105,6 +106,10 @@ module.exports = async ({ github, context }) => {
       updatedCount === 1 ? '' : 's'
     } to Next.js version ${newVersion}`
   );
+
+  if (!github || !context) {
+    return;
+  }
 
   const { repo, owner } = context.repo;
 
