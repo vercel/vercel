@@ -1,4 +1,6 @@
 {
+  "name": "00-cached-build",
+  "version": "0.0.0",
   "workspaces": [
     "apps/*"
   ],
