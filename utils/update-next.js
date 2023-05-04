@@ -6,7 +6,7 @@ const { glob } = require('glob');
 const { pathExists, readJson, writeJson } = require('fs-extra');
 
 function exec(cmd, args, opts) {
-  console.log({ input: `${cmd} ${args.join(' ')}` });
+  console.log({ input: `${cmd} ${args.join(' ')}`, cwd: opts?.cwd });
   const output = execFileSync(cmd, args, opts).toString().trim();
   console.log({ output });
   console.log();
@@ -70,16 +70,21 @@ module.exports = async ({ github, context }) => {
         if (oldVersion && oldVersion !== newVersion) {
           updatedCount++;
           deps.next = newVersion;
-          await writeJson(file, pkgJson);
+          await writeJson(file, pkgJson, { spaces: 2 });
 
           // update lock file
           const cwd = dirname(file);
-          if (await pathExists(join(cwd, 'yarn.lock'))) {
-            exec('yarn', ['generate-lock-entry'], { cwd });
-          } else if (await pathExists(join(cwd, 'pnpm-lock.yaml'))) {
-            exec('pnpm', ['install', '--lockfile-only'], { cwd });
-          } else if (await pathExists(join(cwd, 'package-lock.json'))) {
-            exec('npm', ['install', '--package-lock-only'], { cwd });
+          try {
+            if (await pathExists(join(cwd, 'yarn.lock'))) {
+              exec('yarn', ['generate-lock-entry'], { cwd });
+            } else if (await pathExists(join(cwd, 'pnpm-lock.yaml'))) {
+              exec('pnpm', ['install', '--lockfile-only'], { cwd });
+            } else if (await pathExists(join(cwd, 'package-lock.json'))) {
+              exec('npm', ['install', '--package-lock-only'], { cwd });
+            }
+          } catch (err) {
+            console.error(`Failed to update next: ${cwd}`);
+            console.error(err.toString());
           }
 
           break;
