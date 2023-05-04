@@ -1,4 +1,6 @@
 {
+  "name": "10a-nextjs-routes",
+  "version": "0.0.0",
   "private": true,
   "dependencies": {
     "next": "13.0.4",
