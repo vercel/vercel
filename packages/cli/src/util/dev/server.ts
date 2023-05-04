@@ -857,10 +857,10 @@ export default class DevServer {
     const { ig } = await getVercelIgnore(this.cwd);
     this.filter = ig.createFilter();
 
-    let address: URL | null = null;
-    while (!(address instanceof URL)) {
+    let address: string | null = null;
+    while (typeof address !== 'string') {
       try {
-        address = (await listen(this.server, ...listenSpec)) as URL;
+        address = await listen(this.server, ...listenSpec);
       } catch (err: unknown) {
         if (isErrnoException(err)) {
           this.output.debug(`Got listen error: ${err.code}`);
@@ -888,7 +888,7 @@ export default class DevServer {
       }
     }
 
-    this._address = new URL(replaceLocalhost(address.href));
+    this._address = new URL(replaceLocalhost(address));
 
     const vercelConfig = await this.getVercelConfig();
     const devCommandPromise = this.runDevCommand();
