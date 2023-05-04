@@ -147,7 +147,7 @@
     "pcre-to-regexp": "1.0.0",
     "pluralize": "7.0.0",
     "promisepipe": "3.0.0",
-    "proxy-agent": "https://proxy-agents-33eg29y2i-tootallnate.vercel.app/proxy-agent.tgz",
+    "proxy-agent": "6.1.0",
     "psl": "1.1.31",
     "qr-image": "3.2.0",
     "raw-body": "2.4.1",
