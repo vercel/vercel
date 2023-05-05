@@ -78,7 +78,9 @@ module.exports = async ({ github, context } = {}) => {
           try {
             if (await pathExists(join(cwd, 'yarn.lock'))) {
               if (await pathExists(join(cwd, '.yarnrc.yml'))) {
-                exec('yarn', ['install', '--mode', 'update-lockfile'], { cwd });
+                console.warn(
+                  'Found .yarnrc.yml and this package probably uses Yarn v2/v3 which is not supported'
+                );
               } else {
                 exec('yarn', ['generate-lock-entry'], { cwd });
               }
