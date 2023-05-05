@@ -397,7 +397,7 @@ test('default command should work with --cwd option', async () => {
   );
 });
 
-test('should allow deploying a directory that was built with a target environment of "preview" and `--prebuilt` is used without specifying a target', async () => {
+test('should allow deploying a directory that was built with a target environment of "preview" and `--skip-build` is used without specifying a target', async () => {
   const projectDir = await setupE2EFixture(
     'deploy-default-with-prebuilt-preview'
   );
@@ -408,7 +408,7 @@ test('should allow deploying a directory that was built with a target environmen
     binaryPath,
     [
       // omit the default "deploy" command
-      '--prebuilt',
+      '--skip-build',
     ],
     {
       cwd: projectDir,
@@ -434,7 +434,7 @@ test('should allow deploying a directory that was prebuilt, but has no builds.js
     binaryPath,
     [
       // omit the default "deploy" command
-      '--prebuilt',
+      '--skip-build',
     ],
     {
       cwd: projectDir,

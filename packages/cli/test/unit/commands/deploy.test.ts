@@ -38,10 +38,10 @@ describe('deploy', () => {
     await expect(exitCodePromise).resolves.toEqual(1);
   });
 
-  it('should reject deploying when `--prebuilt` is used and `vc build` failed before Builders', async () => {
+  it('should reject deploying when `--skip-build` is used and `vc build` failed before Builders', async () => {
     const cwd = setupUnitFixture('build-output-api-failed-before-builds');
 
-    client.setArgv('deploy', cwd, '--prebuilt');
+    client.setArgv('deploy', cwd, '--skip-build');
     const exitCodePromise = deploy(client);
     await expect(client.stderr).toOutput(
       '> Prebuilt deployment cannot be created because `vercel build` failed with error:\n\nError: The build failed (top-level)\n'
@@ -49,10 +49,10 @@ describe('deploy', () => {
     await expect(exitCodePromise).resolves.toEqual(1);
   });
 
-  it('should reject deploying when `--prebuilt` is used and `vc build` failed within a Builder', async () => {
+  it('should reject deploying when `--skip-build` is used and `vc build` failed within a Builder', async () => {
     const cwd = setupUnitFixture('build-output-api-failed-within-build');
 
-    client.setArgv('deploy', cwd, '--prebuilt');
+    client.setArgv('deploy', cwd, '--skip-build');
     const exitCodePromise = deploy(client);
     await expect(client.stderr).toOutput(
       '> Prebuilt deployment cannot be created because `vercel build` failed with error:\n\nError: The build failed within a Builder\n'
@@ -60,16 +60,16 @@ describe('deploy', () => {
     await expect(exitCodePromise).resolves.toEqual(1);
   });
 
-  it('should reject deploying a directory that does not contain ".vercel/output" when `--prebuilt` is used', async () => {
-    client.setArgv('deploy', __dirname, '--prebuilt');
+  it('should reject deploying a directory that does not contain ".vercel/output" when `--skip-build` is used', async () => {
+    client.setArgv('deploy', __dirname, '--skip-build');
     const exitCodePromise = deploy(client);
     await expect(client.stderr).toOutput(
-      'Error: The "--prebuilt" option was used, but no prebuilt output found in ".vercel/output". Run `vercel build` to generate a local build.\n'
+      'Error: The "--skip-build" option was used, but no prebuilt output found in ".vercel/output". Run `vercel build` to generate a local build.\n'
     );
     await expect(exitCodePromise).resolves.toEqual(1);
   });
 
-  it('should reject deploying a directory that was built with a different target environment when `--prebuilt --prod` is used on "preview" output', async () => {
+  it('should reject deploying a directory that was built with a different target environment when `--skip-build --prod` is used on "preview" output', async () => {
     const cwd = setupUnitFixture('build-output-api-preview');
 
     useUser();
@@ -80,18 +80,18 @@ describe('deploy', () => {
       name: 'build-output-api-preview',
     });
 
-    client.setArgv('deploy', cwd, '--prebuilt', '--prod');
+    client.setArgv('deploy', cwd, '--skip-build', '--prod');
     const exitCodePromise = deploy(client);
     await expect(client.stderr).toOutput(
-      'Error: The "--prebuilt" option was used with the target environment "production",' +
+      'Error: The "--skip-build" option was used with the target environment "production",' +
         ' but the prebuilt output found in ".vercel/output" was built with target environment "preview".' +
-        ' Please run `vercel --prebuilt`.\n' +
+        ' Please run `vercel --skip-build`.\n' +
         'Learn More: https://vercel.link/prebuilt-environment-mismatch\n'
     );
     await expect(exitCodePromise).resolves.toEqual(1);
   });
 
-  it('should reject deploying a directory that was built with a different target environment when `--prebuilt` is used on "production" output', async () => {
+  it('should reject deploying a directory that was built with a different target environment when `--skip-build` is used on "production" output', async () => {
     const cwd = setupUnitFixture('build-output-api-production');
 
     useUser();
@@ -102,12 +102,12 @@ describe('deploy', () => {
       name: 'build-output-api-preview',
     });
 
-    client.setArgv('deploy', cwd, '--prebuilt');
+    client.setArgv('deploy', cwd, '--skip-build');
     const exitCodePromise = deploy(client);
     await expect(client.stderr).toOutput(
-      'Error: The "--prebuilt" option was used with the target environment "preview",' +
+      'Error: The "--skip-build" option was used with the target environment "preview",' +
         ' but the prebuilt output found in ".vercel/output" was built with target environment "production".' +
-        ' Please run `vercel --prebuilt --prod`.\n' +
+        ' Please run `vercel --skip-build --prod`.\n' +
         'Learn More: https://vercel.link/prebuilt-environment-mismatch\n'
     );
     await expect(exitCodePromise).resolves.toEqual(1);

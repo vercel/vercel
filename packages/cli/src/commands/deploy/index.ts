@@ -89,7 +89,7 @@ export default async (client: Client): Promise<number> => {
       // This is not an array in favor of matching
       // the config property name.
       '--regions': String,
-      '--prebuilt': Boolean,
+      '--skip-build': Boolean,
       '--prod': Boolean,
       '--archive': String,
       '--no-wait': Boolean,
@@ -108,6 +108,7 @@ export default async (client: Client): Promise<number> => {
       '--target': String,
       '--confirm': Boolean,
       '-c': '--confirm',
+      '--prebuilt': '--skip-build',
     });
 
     if ('--confirm' in argv) {
@@ -217,14 +218,14 @@ export default async (client: Client): Promise<number> => {
     return target;
   }
 
-  // build `--prebuilt`
-  if (argv['--prebuilt']) {
+  // use prebuilt output
+  if (argv['--skip-build']) {
     const prebuiltExists = await fs.pathExists(join(path, '.vercel/output'));
     if (!prebuiltExists) {
       error(
-        `The ${param(
+        `The ${param('--skip-build')} (or ${param(
           '--prebuilt'
-        )} option was used, but no prebuilt output found in ".vercel/output". Run ${getCommandName(
+        )}) option was used, but no prebuilt output found in ".vercel/output". Run ${getCommandName(
           'build'
         )} to generate a local build.`
       );
@@ -256,11 +257,11 @@ export default async (client: Client): Promise<number> => {
       }
 
       prettyError({
-        message: `The ${param(
+        message: `The ${param('--skip-build')} (or ${param(
           '--prebuilt'
-        )} option was used with the target environment "${assumedTarget}", but the prebuilt output found in ".vercel/output" was built with target environment "${
+        )}) option was used with the target environment "${assumedTarget}", but the prebuilt output found in ".vercel/output" was built with target environment "${
           prebuiltBuild.target
-        }". Please run ${getCommandName(`--prebuilt${specifyTarget}`)}.`,
+        }". Please run ${getCommandName(`--skip-build${specifyTarget}`)}.`,
         link: 'https://vercel.link/prebuilt-environment-mismatch',
       });
       return 1;
@@ -526,7 +527,7 @@ export default async (client: Client): Promise<number> => {
       build: { env: deploymentBuildEnv },
       forceNew: argv['--force'],
       withCache: argv['--with-cache'],
-      prebuilt: argv['--prebuilt'],
+      prebuilt: argv['--skip-build'],
       rootDirectory,
       quiet,
       wantsPublic: Boolean(argv['--public'] || localConfig.public),

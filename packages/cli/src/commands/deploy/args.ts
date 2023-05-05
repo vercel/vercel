@@ -7,6 +7,7 @@ export const help = () => {
   ${chalk.bold(`${logo} ${getPkgName()} [deploy]`)} [path-to-project] [options]
 
   --prod                         Create a production deployment
+  --skip-build, --prebuilt       Use prebuilt output from ".vercel/output"
   -p, --public                   Deployment is public (${chalk.dim(
     '`/_src`'
   )} is exposed)
@@ -41,7 +42,7 @@ export const help = () => {
   ${chalk.gray('–')} Deploy with prebuilt outputs
 
     ${chalk.cyan(`$ ${getPkgName()} build`)}
-    ${chalk.cyan(`$ ${getPkgName()} deploy --prebuilt`)}
+    ${chalk.cyan(`$ ${getPkgName()} deploy --skip-build`)}
 
   ${chalk.gray('–')} Write Deployment URL to a file
 
