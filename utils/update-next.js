@@ -84,7 +84,10 @@ module.exports = async ({ github, context } = {}) => {
             if (await pathExists(join(cwd, 'yarn.lock'))) {
               if (await pathExists(join(cwd, '.yarnrc.yml'))) {
                 console.warn(
-                  `Found ${join(cwd, '.yarnrc.yml')} and this package probably uses Yarn v2/v3 which is not supported`
+                  `Found ${join(
+                    cwd,
+                    '.yarnrc.yml'
+                  )} and this package probably uses Yarn v2/v3 which is not supported`
                 );
               } else {
                 exec('yarn', ['generate-lock-entry'], { cwd });
