@@ -4,15 +4,15 @@ import {
   NodeCompatBindings,
 } from './edge-node-compat-plugin.mjs';
 import { EdgeRuntime, runServer } from 'edge-runtime';
-import fetch, { Headers } from 'node-fetch';
+import { fetch, Headers } from 'undici';
 import { isError } from '@vercel/error-utils';
 import { readFileSync } from 'fs';
 import { serializeBody, entrypointToOutputPath, logError } from '../utils.js';
 import esbuild from 'esbuild';
 import exitHook from 'exit-hook';
-import type { HeadersInit } from 'node-fetch';
 import type { VercelProxyResponse } from '../types.js';
 import type { IncomingMessage } from 'http';
+import type { HeadersInit } from 'undici';
 import { fileURLToPath } from 'url';
 
 const NODE_VERSION_MAJOR = process.version.match(/^v(\d+)\.\d+/)?.[1];
@@ -196,11 +196,10 @@ export async function createEdgeEventHandler(
     }
 
     const headers = new Headers(request.headers as HeadersInit);
-    const body: Buffer | string | undefined = await serializeBody(request);
+    const body = await serializeBody(request);
     if (body !== undefined) headers.set('content-length', String(body.length));
 
     const url = new URL(request.url ?? '/', server.url);
-    // @ts-expect-error
     const response = await fetch(url, {
       body,
       headers,
