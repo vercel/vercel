@@ -1,12 +1,17 @@
 import { addHelpers } from './helpers.js';
+import { buildToNodeHandler } from '@edge-runtime/node-utils';
 import { createServer } from 'http';
+import { getConfig } from '@vercel/static-config';
+import { Project } from 'ts-morph';
 import { serializeBody } from '../utils.js';
 import { streamToBuffer } from '@vercel/build-utils';
+import primitives from '@edge-runtime/primitives'
 import exitHook from 'exit-hook';
 import fetch from 'node-fetch';
 import { listen } from 'async-listen';
 import { isAbsolute } from 'path';
 import { pathToFileURL } from 'url';
+import type { BuildDependencies } from '@edge-runtime/node-utils';
 import type { ServerResponse, IncomingMessage } from 'http';
 import type { VercelProxyResponse } from '../types.js';
 import type { VercelRequest, VercelResponse } from './helpers.js';
@@ -20,6 +25,9 @@ type ServerlessFunctionSignature = (
   req: IncomingMessage | VercelRequest,
   res: ServerResponse | VercelResponse
 ) => void;
+
+const parseConfig = (entryPointPath: string) =>
+  getConfig(new Project(), entryPointPath);
 
 async function createServerlessServer(
   userCode: ServerlessFunctionSignature,
@@ -46,7 +54,21 @@ async function compileUserCode(entrypointPath: string) {
     if (fn.default) fn = fn.default;
   }
 
-  return fn;
+  const staticConfig = parseConfig(entrypointPath);
+  if (staticConfig?.runtime !== 'nodejs-web') return fn
+
+  return buildToNodeHandler(
+    {
+      Headers: primitives.Headers as BuildDependencies['Headers'],
+      ReadableStream: primitives.ReadableStream,
+      Request: primitives.Request as BuildDependencies['Request'],
+      Uint8Array: Uint8Array,
+      FetchEvent: primitives.FetchEvent
+    },
+    /** fallback when headers.host is missing for creating the absolute `req.url` URL  */
+    { defaultOrigin: 'https://vercel.com' }
+  )(fn)
+
 }
 
 export async function createServerlessEventHandler(
