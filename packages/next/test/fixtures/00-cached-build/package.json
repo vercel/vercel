@@ -13,5 +13,6 @@
   },
   "scripts": {
     "build": "turbo build --cache-dir=turbo-cache"
-  }
+  },
+  "ignoreNextjsUpdates": true
 }
