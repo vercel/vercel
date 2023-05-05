@@ -2,9 +2,6 @@ const ARG_COMMON = {
   '--help': Boolean,
   '-h': '--help',
 
-  '--platform-version': Number,
-  '-V': '--platform-version',
-
   '--debug': Boolean,
   '-d': '--debug',
 
@@ -27,9 +24,11 @@ const ARG_COMMON = {
 
   '--api': String,
 
-  '--target': String,
-
   '--cwd': String,
+
+  // Deprecated
+  '--platform-version': Number,
+  '-V': '--platform-version',
 };
 
 export default () => ARG_COMMON;

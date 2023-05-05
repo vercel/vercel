@@ -52,8 +52,10 @@ import { getCommandName, getTitleName } from './util/pkg-name';
 import doLoginPrompt from './util/login/prompt';
 import type { AuthConfig, GlobalConfig } from '@vercel-internals/types';
 import { VercelConfig } from '@vercel/client';
+import { ProxyAgent } from 'proxy-agent';
 import box from './util/output/box';
 import { execExtension } from './util/extension/exec';
+import { help } from './args';
 
 const VERCEL_DIR = getGlobalPathConfig();
 const VERCEL_CONFIG_PATH = configFiles.getConfigFilePath();
@@ -153,6 +155,7 @@ const main = async () => {
   //  * a path to deploy (as in: `vercel path/`)
   //  * a subcommand (as in: `vercel ls`)
   const targetOrSubcommand = argv._[2];
+  const subSubCommand = argv._[3];
 
   const betaCommands: string[] = ['rollback'];
   if (betaCommands.includes(targetOrSubcommand)) {
@@ -171,6 +174,14 @@ const main = async () => {
   if (!targetOrSubcommand && argv['--version']) {
     console.log(pkg.version);
     return 0;
+  }
+
+  // Handle bare `-h` directly
+  const bareHelpOption = !targetOrSubcommand && argv['--help'];
+  const bareHelpSubcommand = targetOrSubcommand === 'help' && !subSubCommand;
+  if (bareHelpOption || bareHelpSubcommand) {
+    output.print(help());
+    return 2;
   }
 
   // Ensure that the Vercel global configuration directory exists
@@ -252,6 +263,7 @@ const main = async () => {
 
   // Shared API `Client` instance for all sub-commands to utilize
   client = new Client({
+    agent: new ProxyAgent({ keepAlive: true }),
     apiUrl,
     stdin: process.stdin,
     stdout: process.stdout,
@@ -300,7 +312,7 @@ const main = async () => {
   }
 
   if (subcommand === 'help') {
-    subcommand = argv._[3] || 'deploy';
+    subcommand = subSubCommand || 'deploy';
     client.argv.push('-h');
   }
 
@@ -413,7 +425,7 @@ const main = async () => {
     targetCommand !== 'login' &&
     targetCommand !== 'dev' &&
     targetCommand !== 'build' &&
-    !(targetCommand === 'teams' && argv._[3] !== 'invite')
+    !(targetCommand === 'teams' && subSubCommand !== 'invite')
   ) {
     let user = null;
 

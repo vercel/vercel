@@ -6,8 +6,9 @@ import { client } from '../../../mocks/client';
 import { defaultProject, useProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
+import { execSync } from 'child_process';
 
-jest.setTimeout(2 * 60 * 1000);
+jest.setTimeout(6 * 60 * 1000);
 
 const fixture = (name: string) =>
   join(__dirname, '../../../fixtures/unit/commands/build', name);
@@ -82,6 +83,7 @@ describe('build', () => {
     const output = join(cwd, '.vercel/output');
     try {
       process.chdir(cwd);
+
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
 
@@ -195,6 +197,7 @@ describe('build', () => {
     const output = join(cwd, '.vercel/output');
     try {
       process.chdir(cwd);
+
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
 
@@ -1267,9 +1270,6 @@ describe('build', () => {
     const cwd = fixture('local-config');
     const output = join(cwd, '.vercel/output');
     try {
-      client.stdout.pipe(process.stdout);
-      client.stderr.pipe(process.stderr);
-
       process.chdir(cwd);
       let exitCode = await build(client);
       delete process.env.__VERCEL_BUILD_RUNNING;
@@ -1302,6 +1302,44 @@ describe('build', () => {
       process.chdir(originalCwd);
       delete client.localConfigPath;
       delete process.env.__VERCEL_BUILD_RUNNING;
+    }
+  });
+
+  it('should build Storybook project and ignore middleware', async () => {
+    const cwd = fixture('storybook-with-middleware');
+    const output = join(cwd, '.vercel/output');
+    try {
+      client.stdout.pipe(process.stdout);
+      client.stderr.pipe(process.stderr);
+
+      process.chdir(cwd);
+      process.env.STORYBOOK_DISABLE_TELEMETRY = '1';
+      execSync('yarn');
+
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      // `builds.json` says that "@vercel/static" was run
+      const builds = await fs.readJSON(join(output, 'builds.json'));
+      expect(builds).toMatchObject({
+        target: 'preview',
+        builds: [
+          {
+            require: '@vercel/static-build',
+            apiVersion: 2,
+            src: 'package.json',
+            use: '@vercel/static-build',
+          },
+        ],
+      });
+
+      const files = await fs.readdir(output);
+      // we should NOT see `functions` because that means `middleware.ts` was processed
+      expect(files.sort()).toEqual(['builds.json', 'config.json', 'static']);
+    } finally {
+      process.chdir(originalCwd);
+      delete process.env.__VERCEL_BUILD_RUNNING;
+      delete process.env.STORYBOOK_DISABLE_TELEMETRY;
     }
   });
 });
