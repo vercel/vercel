@@ -5,7 +5,7 @@ import { getPkgName } from './util/pkg-name';
 export const help = () => `
   ${chalk.bold(`${logo} ${getPkgName()}`)} [options] <command | path>
 
-  ${chalk.dim('For deploy command help, run `vercel deploy --help`.')}
+  ${chalk.dim('For deploy command help, run `vercel deploy --help`')}
 
   ${chalk.dim('Commands:')}
 
