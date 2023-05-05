@@ -1,4 +1,4 @@
-import listen from 'async-listen';
+import { listen } from 'async-listen';
 import { createProxy } from 'proxy';
 import { ProxyAgent } from 'proxy-agent';
 import { client } from '../../mocks/client';
@@ -12,7 +12,7 @@ describe('Client', () => {
     it('should respect the `HTTPS_PROXY` env var', async () => {
       let connectCount = 0;
       const proxy = createProxy();
-      const proxyUrl = new URL(await listen(proxy));
+      const proxyUrl = await listen(proxy);
       proxy.on('connect', () => {
         connectCount++;
       });
