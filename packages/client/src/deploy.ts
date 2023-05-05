@@ -46,6 +46,7 @@ async function* postDeployment(
         }),
         apiUrl: clientOptions.apiUrl,
         userAgent: clientOptions.userAgent,
+        agent: clientOptions.agent,
       }
     );
 

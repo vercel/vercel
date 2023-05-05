@@ -101,6 +101,9 @@ export class MockClient extends Client {
     this.localConfig = {};
 
     this.scenario = Router();
+
+    this.agent?.destroy();
+    this.agent = undefined;
   }
 
   async startMockServer() {
