@@ -43,7 +43,7 @@ export const help = () => {
     ${chalk.cyan(`$ ${getPkgName()} build`)}
     ${chalk.cyan(`$ ${getPkgName()} deploy --prebuilt`)}
 
-  ${chalk.gray('–')} Save reference to Deployment URL
+  ${chalk.gray('–')} Write Deployment URL to a file
 
     ${chalk.cyan(`$ ${getPkgName()} > deployment-url.txt`)}
 `;
