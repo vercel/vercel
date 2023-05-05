@@ -2,7 +2,7 @@ import os from 'os';
 import url from 'url';
 import fs from 'fs-extra';
 import { join } from 'path';
-import listen from 'async-listen';
+import { listen } from 'async-listen';
 import stripAnsi from 'strip-ansi';
 import { createServer } from 'http';
 

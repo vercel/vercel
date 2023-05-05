@@ -1,5 +1,5 @@
 import fetch from 'node-fetch';
-import listen from 'async-listen';
+import { listen } from 'async-listen';
 import { createServer, IncomingMessage, Server, ServerResponse } from 'http';
 import type { JSONValue } from '@vercel-internals/types';
 import {
@@ -22,7 +22,7 @@ describe('responseError()', () => {
 
   beforeAll(async () => {
     server = createServer((req, res) => handler(req, res));
-    url = await listen(server);
+    url = (await listen(server)).toString();
   });
 
   afterAll(() => {
