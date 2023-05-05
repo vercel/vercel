@@ -60,6 +60,11 @@ module.exports = async ({ github, context } = {}) => {
   for (const pattern of testGlobs) {
     const files = await glob(pattern);
     for (const file of files) {
+      if (file.includes('node_modules')) {
+        // don't go into node_modules of fixtures
+        return;
+      }
+
       const pkgJson = await readJson(file);
       if (pkgJson.ignoreNextjsUpdates) {
         continue;
