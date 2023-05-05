@@ -20,22 +20,25 @@ jobs:
       - name: Checkout Repo
         uses: actions/checkout@v3
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 8.3.1
-
-      - name: Setup Node.js 16.x
+      - name: Setup Node
         uses: actions/setup-node@v3
         with:
-          node-version: 16.x
-          cache: 'pnpm'
+          node-version: 16
+
+      - name: install npm@9
+        run: npm i -g npm@9
+
+      - name: install pnpm@8.3.1
+        run: npm i -g pnpm@8.3.1
 
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
 
       - name: Build Packages
         run: pnpm build
+        env:
+          GA_TRACKING_ID: ${{ secrets.GA_TRACKING_ID }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
 
       - name: Create Release Pull Request or Publish to npm
         id: changesets
@@ -45,7 +48,10 @@ jobs:
           publish: pnpm release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_PROVENANCE: 'true'
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN_ELEVATED }}
+          GA_TRACKING_ID: ${{ secrets.GA_TRACKING_ID }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
 
       - name: Trigger Update (if a Publish Happened)
         if: steps.changesets.outputs.published == 'true'
