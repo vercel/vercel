@@ -5,6 +5,8 @@ import { getPkgName } from './util/pkg-name';
 export const help = () => `
   ${chalk.bold(`${logo} ${getPkgName()}`)} [options] <command | path>
 
+  ${chalk.dim('For deploy command help, run `vercel deploy --help`.')}
+
   ${chalk.dim('Commands:')}
 
     ${chalk.dim('Basic')}
@@ -40,7 +42,7 @@ export const help = () => `
       teams                            Manages your teams
       whoami                           Shows the username of the currently logged in user
 
-  ${chalk.dim('Options:')}
+  ${chalk.dim('Global Options:')}
 
     -h, --help                     Output usage information
     -v, --version                  Output the version number
