@@ -52,7 +52,7 @@ export default async function main(client: Client) {
   try {
     argv = getArgs(client.argv.slice(2), {
       '--force': Boolean,
-      '-f': Boolean,
+      '-f': '--force',
     });
     args = getSubcommand(argv._.slice(1), COMMAND_CONFIG).args;
   } catch (err) {
