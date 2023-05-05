@@ -135,3 +135,34 @@ test('runs a esm typescript endpoint', async () => {
     child.kill(9);
   }
 });
+
+test('allow setting multiple cookies with same name', async () => {
+  if (process.platform === 'win32') {
+    console.log('Skipping test on Windows');
+    return;
+  }
+
+  const child = testForkDevServer('./multiple-cookies.ts');
+
+  try {
+    const result = await readMessage(child);
+    if (result.state !== 'message') {
+      throw new Error(`Exited. error: ${JSON.stringify(result.value)}`);
+    }
+
+    const response = await fetch(
+      `http://localhost:${result.value.port}/api/hello`
+    );
+    expect({
+      status: response.status,
+      text: await response.text(),
+    }).toEqual({
+      status: 200,
+      text: 'Hello, world!',
+    });
+
+    expect(response.headers.raw()['set-cookie']).toEqual(['a=x', 'b=y', 'c=z']);
+  } finally {
+    child.kill(9);
+  }
+});
