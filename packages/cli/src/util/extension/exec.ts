@@ -1,7 +1,7 @@
-import { dirname } from 'path';
 import which from 'which';
 import execa from 'execa';
-import listen from 'async-listen';
+import { dirname } from 'path';
+import { listen } from 'async-listen';
 import { scanParentDirs, walkParentDirs } from '@vercel/build-utils';
 import { createProxy } from './proxy';
 import type Client from '../client';
@@ -64,7 +64,7 @@ export async function execExtension(
     stdio: 'inherit',
     env: {
       ...process.env,
-      VERCEL_API: proxyUrl,
+      VERCEL_API: proxyUrl.href,
       // TODO:
       //   VERCEL_SCOPE
       //   VERCEL_DEBUG
