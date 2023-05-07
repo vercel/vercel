@@ -55,8 +55,9 @@ export async function execExtension(
     debug(`extension proxy server shut down`);
   });
 
-  const proxyUrl = await listen(proxy, { host: '127.0.0.1', port: 0 });
-  debug(`extension proxy server listening at ${proxyUrl}`);
+  const proxyUrl = await listen(proxy, { port: 0, host: '127.0.0.1' });
+  const VERCEL_API = proxyUrl.href.replace(/\/$/, '');
+  debug(`extension proxy server listening at ${VERCEL_API}`);
 
   const result = await execa(extensionPath, args, {
     cwd,
@@ -64,7 +65,7 @@ export async function execExtension(
     stdio: 'inherit',
     env: {
       ...process.env,
-      VERCEL_API: proxyUrl.href,
+      VERCEL_API,
       // TODO:
       //   VERCEL_SCOPE
       //   VERCEL_DEBUG
