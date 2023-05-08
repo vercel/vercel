@@ -290,6 +290,7 @@ config.serverBuildTarget = undefined;
 config.serverModuleFormat = 'cjs';
 config.serverPlatform = 'node';
 config.serverBuildPath = undefined;
+config.server = undefined;
 config.serverBundles = ${JSON.stringify(serverBundles)};
 export default config;`;
       } else {
@@ -300,6 +301,7 @@ config.serverBuildTarget = undefined;
 config.serverModuleFormat = 'cjs';
 config.serverPlatform = 'node';
 config.serverBuildPath = undefined;
+config.server = undefined;
 config.serverBundles = ${JSON.stringify(serverBundles)};
 module.exports = config;`;
       }
