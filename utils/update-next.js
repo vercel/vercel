@@ -138,12 +138,18 @@ module.exports = async ({ github, context } = {}) => {
     } to Next.js version ${newVersion}`,
   });
 
-  await github.rest.pulls.requestReviewers({
-    owner,
-    repo,
-    pull_number: pr.data.number,
-    reviewers: ['ijjk', 'styfle'],
-  });
+  try {
+    await github.rest.pulls.requestReviewers({
+      owner,
+      repo,
+      pull_number: pr.data.number,
+      reviewers: ['ijjk', 'styfle'],
+    });
+  } catch (err) {
+    console.log(
+      `Skipping requesting reviews due to permission issues: ${err.message}`
+    );
+  }
 
   await github.rest.issues.addLabels({
     owner,
