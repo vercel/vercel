@@ -5,7 +5,7 @@ import chalk from 'chalk';
 import { PassThrough } from 'stream';
 import { createServer, Server } from 'http';
 import express, { Express, Router } from 'express';
-import listen from 'async-listen';
+import { listen } from 'async-listen';
 import Client from '../../src/util/client';
 import { Output } from '../../src/util/output';
 
@@ -101,6 +101,9 @@ export class MockClient extends Client {
     this.localConfig = {};
 
     this.scenario = Router();
+
+    this.agent?.destroy();
+    this.agent = undefined;
   }
 
   async startMockServer() {
