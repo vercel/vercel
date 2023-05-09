@@ -156,7 +156,7 @@ const main = async () => {
   const subSubCommand = argv._[3];
 
   // Currently no beta commands - add here as needed
-  const betaCommands: string[] = ['rollback'];
+  const betaCommands: string[] = [];
   if (betaCommands.includes(targetOrSubcommand)) {
     console.log(
       `${chalk.grey(
