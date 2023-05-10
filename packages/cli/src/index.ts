@@ -511,6 +511,8 @@ const main = async () => {
       }
     }
 
+    // Not using an `else` here because if the CLI extension
+    // was not found then we have to fall back to `vc deploy`
     if (subcommand) {
       let func: any;
       switch (targetCommand) {
