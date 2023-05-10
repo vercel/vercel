@@ -1343,8 +1343,8 @@ importers:
   packages/remix:
     dependencies:
       '@remix-run/dev':
-        specifier: npm:@vercel/remix-run-dev@1.16.0
-        version: /@vercel/remix-run-dev@1.16.0(@types/node@14.18.33)
+        specifier: npm:@vercel/remix-run-dev@1.16.0-patch.1
+        version: /@vercel/remix-run-dev@1.16.0-patch.1(@types/node@14.18.33)
       '@vercel/build-utils':
         specifier: 6.7.2
         version: link:../build-utils
@@ -6714,8 +6714,8 @@ packages:
       - encoding
       - supports-color
 
-  /@vercel/remix-run-dev@1.16.0(@types/node@14.18.33):
-    resolution: {integrity: sha512-kKkuXzXUX0Js6L3X2M8iprc4CRJaY6w+l/9FGOprgzsBcDUJ+wSYoryhZAGdVMQr9+yLn7zRlViILpH5E57Efw==}
+  /@vercel/remix-run-dev@1.16.0-patch.1(@types/node@14.18.33):
+    resolution: {integrity: sha512-W4ugL5WYJEye91kRsBnH2D3Ia+4nTN9IcCH72ykOr660svw9Xise0Zi5sPtV8FP2RncAVgs2wAyAblQzsm6IqQ==}
     engines: {node: '>=14'}
     hasBin: true
     peerDependencies:
@@ -8622,7 +8622,7 @@ packages:
     resolution: {integrity: sha512-fmvV4caBnofhPe8kOcitBwSn2f39QLjnAnGq3gO9dfd75mUytzKNZB1hde6QHunW2Rt+OwuBOMc3i1tNElbszA==}
     engines: {node: '>=6'}
     dependencies:
-      graceful-fs: 4.2.10
+      graceful-fs: 4.2.11
       make-dir: 2.1.0
       nested-error-stacks: 2.1.1
       pify: 4.0.1
@@ -11498,7 +11498,7 @@ packages:
     resolution: {integrity: sha512-ollPHROa5mcxDEkwg6bPt3QbEf4pDQSNtd6JPL1YvOvAo/7/0VAm9TccUeoTmarjPw4pfUthSCqcyfNB1I3ZSg==}
     engines: {node: '>=6'}
     dependencies:
-      '@types/glob': 7.1.1
+      '@types/glob': 7.2.0
       array-union: 1.0.2
       dir-glob: 2.2.2
       fast-glob: 2.2.7
