@@ -52,8 +52,9 @@ import { getCommandName, getTitleName } from './util/pkg-name';
 import doLoginPrompt from './util/login/prompt';
 import type { AuthConfig, GlobalConfig } from '@vercel-internals/types';
 import { VercelConfig } from '@vercel/client';
-import box from './util/output/box';
 import { ProxyAgent } from 'proxy-agent';
+import box from './util/output/box';
+import { execExtension } from './util/extension/exec';
 import { help } from './args';
 
 const VERCEL_DIR = getGlobalPathConfig();
@@ -143,10 +144,11 @@ const main = async () => {
     return 1;
   }
 
-  const cwd = argv['--cwd'];
+  let cwd = argv['--cwd'];
   if (cwd) {
     process.chdir(cwd);
   }
+  cwd = process.cwd();
 
   // The second argument to the command can be:
   //
@@ -155,7 +157,6 @@ const main = async () => {
   const targetOrSubcommand = argv._[2];
   const subSubCommand = argv._[3];
 
-  // Currently no beta commands - add here as needed
   const betaCommands: string[] = ['rollback'];
   if (betaCommands.includes(targetOrSubcommand)) {
     console.log(
@@ -275,11 +276,13 @@ const main = async () => {
     argv: process.argv,
   });
 
-  let subcommand;
+  // Gets populated to the subcommand name when a built-in is
+  // provided, otherwise it remains undefined for an extension
+  let subcommand: string | undefined = undefined;
 
   // Check if we are deploying something
   if (targetOrSubcommand) {
-    const targetPath = join(process.cwd(), targetOrSubcommand);
+    const targetPath = join(cwd, targetOrSubcommand);
     const targetPathExists = existsSync(targetPath);
     const subcommandExists =
       GLOBAL_COMMANDS.has(targetOrSubcommand) ||
@@ -301,8 +304,7 @@ const main = async () => {
       debug(`user supplied known subcommand: "${targetOrSubcommand}"`);
       subcommand = targetOrSubcommand;
     } else {
-      debug('user supplied a possible target for deployment');
-      subcommand = 'deploy';
+      debug('user supplied a possible target for deployment or an extension');
     }
   } else {
     debug('user supplied no target, defaulting to deploy');
@@ -322,6 +324,7 @@ const main = async () => {
     !client.argv.includes('-h') &&
     !client.argv.includes('--help') &&
     !argv['--token'] &&
+    subcommand &&
     !subcommandsWithoutToken.includes(subcommand)
   ) {
     if (isTTY) {
@@ -413,7 +416,8 @@ const main = async () => {
     );
   }
 
-  const targetCommand = commands.get(subcommand);
+  let targetCommand =
+    typeof subcommand === 'string' ? commands.get(subcommand) : undefined;
   const scope = argv['--scope'] || argv['--team'] || localConfig?.scope;
 
   if (
@@ -484,96 +488,123 @@ const main = async () => {
 
   try {
     const start = Date.now();
-    let func: any;
-    switch (targetCommand) {
-      case 'alias':
-        func = require('./commands/alias').default;
-        break;
-      case 'bisect':
-        func = require('./commands/bisect').default;
-        break;
-      case 'build':
-        func = require('./commands/build').default;
-        break;
-      case 'certs':
-        func = require('./commands/certs').default;
-        break;
-      case 'deploy':
-        func = require('./commands/deploy').default;
-        break;
-      case 'dev':
-        func = require('./commands/dev').default;
-        break;
-      case 'dns':
-        func = require('./commands/dns').default;
-        break;
-      case 'domains':
-        func = require('./commands/domains').default;
-        break;
-      case 'env':
-        func = require('./commands/env').default;
-        break;
-      case 'git':
-        func = require('./commands/git').default;
-        break;
-      case 'init':
-        func = require('./commands/init').default;
-        break;
-      case 'inspect':
-        func = require('./commands/inspect').default;
-        break;
-      case 'link':
-        func = require('./commands/link').default;
-        break;
-      case 'list':
-        func = require('./commands/list').default;
-        break;
-      case 'logs':
-        func = require('./commands/logs').default;
-        break;
-      case 'login':
-        func = require('./commands/login').default;
-        break;
-      case 'logout':
-        func = require('./commands/logout').default;
-        break;
-      case 'project':
-        func = require('./commands/project').default;
-        break;
-      case 'pull':
-        func = require('./commands/pull').default;
-        break;
-      case 'remove':
-        func = require('./commands/remove').default;
-        break;
-      case 'rollback':
-        func = require('./commands/rollback').default;
-        break;
-      case 'secrets':
-        func = require('./commands/secrets').default;
-        break;
-      case 'teams':
-        func = require('./commands/teams').default;
-        break;
-      case 'whoami':
-        func = require('./commands/whoami').default;
-        break;
-      default:
-        func = null;
-        break;
+
+    if (!targetCommand) {
+      // Set this for the metrics to record it at the end
+      targetCommand = argv._[2];
+
+      // Try to execute as an extension
+      try {
+        exitCode = await execExtension(
+          client,
+          targetCommand,
+          argv._.slice(3),
+          cwd
+        );
+      } catch (err: unknown) {
+        if (isErrnoException(err) && err.code === 'ENOENT') {
+          // Fall back to `vc deploy <dir>`
+          targetCommand = subcommand = 'deploy';
+        } else {
+          throw err;
+        }
+      }
     }
 
-    if (!func || !targetCommand) {
-      const sub = param(subcommand);
-      output.error(`The ${sub} subcommand does not exist`);
-      return 1;
-    }
+    // Not using an `else` here because if the CLI extension
+    // was not found then we have to fall back to `vc deploy`
+    if (subcommand) {
+      let func: any;
+      switch (targetCommand) {
+        case 'alias':
+          func = require('./commands/alias').default;
+          break;
+        case 'bisect':
+          func = require('./commands/bisect').default;
+          break;
+        case 'build':
+          func = require('./commands/build').default;
+          break;
+        case 'certs':
+          func = require('./commands/certs').default;
+          break;
+        case 'deploy':
+          func = require('./commands/deploy').default;
+          break;
+        case 'dev':
+          func = require('./commands/dev').default;
+          break;
+        case 'dns':
+          func = require('./commands/dns').default;
+          break;
+        case 'domains':
+          func = require('./commands/domains').default;
+          break;
+        case 'env':
+          func = require('./commands/env').default;
+          break;
+        case 'git':
+          func = require('./commands/git').default;
+          break;
+        case 'init':
+          func = require('./commands/init').default;
+          break;
+        case 'inspect':
+          func = require('./commands/inspect').default;
+          break;
+        case 'link':
+          func = require('./commands/link').default;
+          break;
+        case 'list':
+          func = require('./commands/list').default;
+          break;
+        case 'logs':
+          func = require('./commands/logs').default;
+          break;
+        case 'login':
+          func = require('./commands/login').default;
+          break;
+        case 'logout':
+          func = require('./commands/logout').default;
+          break;
+        case 'project':
+          func = require('./commands/project').default;
+          break;
+        case 'pull':
+          func = require('./commands/pull').default;
+          break;
+        case 'remove':
+          func = require('./commands/remove').default;
+          break;
+        case 'rollback':
+          func = require('./commands/rollback').default;
+          break;
+        case 'secrets':
+          func = require('./commands/secrets').default;
+          break;
+        case 'teams':
+          func = require('./commands/teams').default;
+          break;
+        case 'whoami':
+          func = require('./commands/whoami').default;
+          break;
+        default:
+          func = null;
+          break;
+      }
 
-    if (func.default) {
-      func = func.default;
-    }
+      if (!func || !targetCommand) {
+        const sub = param(subcommand);
+        output.error(`The ${sub} subcommand does not exist`);
+        return 1;
+      }
 
-    exitCode = await func(client);
+      if (func.default) {
+        func = func.default;
+      }
+
+      exitCode = await func(client);
+    }
     const end = Date.now() - start;
 
     if (shouldCollectMetrics) {
