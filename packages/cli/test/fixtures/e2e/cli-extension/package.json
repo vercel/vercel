@@ -1,0 +1,6 @@
+{
+  "private": true,
+  "dependencies": {
+    "cli-extension-whoami": "file:../cli-extension-whoami"
+  }
+}
