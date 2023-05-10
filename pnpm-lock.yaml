@@ -321,7 +321,7 @@ importers:
         specifier: 3.8.2
         version: link:../next
       '@vercel/node':
-        specifier: 2.14.1
+        specifier: 2.14.2
         version: link:../node
       '@vercel/python':
         specifier: 3.1.60
@@ -336,7 +336,7 @@ importers:
         specifier: 1.3.76
         version: link:../ruby
       '@vercel/static-build':
-        specifier: 1.3.29
+        specifier: 1.3.30
         version: link:../static-build
     devDependencies:
       '@alex_neo/jest-expect-message':
@@ -472,16 +472,16 @@ importers:
         specifier: '*'
         version: link:../../internals/types
       '@vercel/client':
-        specifier: 12.4.12
+        specifier: 12.5.0
         version: link:../client
       '@vercel/error-utils':
         specifier: 1.0.10
         version: link:../error-utils
       '@vercel/frameworks':
-        specifier: 1.4.1
+        specifier: 1.4.2
         version: link:../frameworks
       '@vercel/fs-detectors':
-        specifier: 3.9.1
+        specifier: 3.9.2
         version: link:../fs-detectors
       '@vercel/fun':
         specifier: 1.0.4
@@ -876,7 +876,7 @@ importers:
         specifier: 1.0.10
         version: link:../error-utils
       '@vercel/frameworks':
-        specifier: 1.4.1
+        specifier: 1.4.2
         version: link:../frameworks
       '@vercel/routing-utils':
         specifier: 2.2.1
@@ -947,7 +947,7 @@ importers:
         specifier: 6.7.2
         version: link:../build-utils
       '@vercel/node':
-        specifier: 2.14.1
+        specifier: 2.14.2
         version: link:../node
       '@vercel/routing-utils':
         specifier: 2.2.1
@@ -1424,7 +1424,7 @@ importers:
         specifier: 1.0.10
         version: link:../gatsby-plugin-vercel-analytics
       '@vercel/gatsby-plugin-vercel-builder':
-        specifier: 1.3.2
+        specifier: 1.3.3
         version: link:../gatsby-plugin-vercel-builder
     devDependencies:
       '@types/aws-lambda':
@@ -1461,10 +1461,10 @@ importers:
         specifier: 1.0.10
         version: link:../error-utils
       '@vercel/frameworks':
-        specifier: 1.4.1
+        specifier: 1.4.2
         version: link:../frameworks
       '@vercel/fs-detectors':
-        specifier: 3.9.1
+        specifier: 3.9.2
         version: link:../fs-detectors
       '@vercel/ncc':
         specifier: 0.24.0
