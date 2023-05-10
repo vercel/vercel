@@ -46,7 +46,7 @@
     "prettier-check": "prettier --check .",
     "prepare": "husky install",
     "pack": "cd utils && node -r ts-eager/register ./pack.ts",
-    "version:prepare": "changeset version && pnpm install --no-frozen-lockfile",
+    "version:prepare": "changeset version && pnpm install --no-frozen-lockfile && rm -f packages/*/CHANGELOG.md",
     "release": "changeset publish"
   },
   "lint-staged": {
