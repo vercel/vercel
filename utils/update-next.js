@@ -147,7 +147,7 @@ function updatePackageJson(file, newVersion) {
 
     if (oldVersion && oldVersion !== newVersion) {
       deps.next = newVersion;
-      writeFileSync(file, JSON.stringify(pkgJson, null, 2), 'utf-8');
+      writeFileSync(file, `${JSON.stringify(pkgJson, null, 2)}\n`, 'utf-8');
 
       // update lock file
       const cwd = dirname(file);
