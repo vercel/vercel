@@ -4,10 +4,9 @@
   "private": true,
   "license": "Apache-2.0",
   "packageManager": "pnpm@8.3.1",
-  "dependencies": {
-    "lerna": "5.6.2"
-  },
   "devDependencies": {
+    "@changesets/cli": "2.26.1",
+    "@svitejs/changesets-changelog-github-compact": "1.1.0",
     "@types/node": "14.18.33",
     "@typescript-eslint/eslint-plugin": "5.21.0",
     "@typescript-eslint/parser": "5.21.0",
@@ -32,16 +31,10 @@
     "source-map-support": "0.5.12",
     "ts-eager": "2.0.2",
     "ts-jest": "29.1.0",
-    "typescript": "4.9.5",
-    "turbo": "1.9.3"
+    "turbo": "1.9.3",
+    "typescript": "4.9.5"
   },
   "scripts": {
-    "lerna": "lerna",
-    "version": "pnpm install && git add pnpm-lock.yaml",
-    "bootstrap": "lerna bootstrap",
-    "publish-stable": "echo 'Run `pnpm changelog` for instructions'",
-    "publish-from-github": "./utils/publish.sh",
-    "changelog": "node utils/changelog.js",
     "build": "node utils/gen.js && turbo --no-update-notifier run build",
     "vercel-build": "pnpm build && pnpm run pack && cd api && node -r ts-eager/register ./_lib/script/build.ts",
     "pre-commit": "lint-staged",
@@ -53,7 +46,9 @@
     "lint": "eslint . --cache --ext .ts,.js",
     "prettier-check": "prettier --check .",
     "prepare": "husky install",
-    "pack": "cd utils && node -r ts-eager/register ./pack.ts"
+    "pack": "cd utils && node -r ts-eager/register ./pack.ts",
+    "version:prepare": "changeset version && pnpm install --no-frozen-lockfile",
+    "release": "changeset publish"
   },
   "lint-staged": {
     "./{*,{api,packages,test,utils}/**/*}.{js,ts}": [
