@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import type Client from '../util/client';
-import { ensureLink } from '../util/link/ensure-link';
+// import { ensureLink } from '../util/link/ensure-link';
 import getArgs from '../util/get-args';
 import { getDeploymentByIdOrURL } from '../util/deploy/get-deployment-by-id-or-url';
 import { getPkgName } from '../util/pkg-name';
@@ -8,6 +8,8 @@ import getScope from '../util/get-scope';
 import handleError from '../util/handle-error';
 import logo from '../util/output/logo';
 import validatePaths from '../util/validate-paths';
+import { printDeploymentStatus } from '../util/deploy/print-deployment-status';
+import stamp from '../util/output/stamp';
 
 const help = () => {
   console.log(`
@@ -28,6 +30,7 @@ const help = () => {
   )}    Path to the global ${'`.vercel`'} directory
     -d, --debug                    Debug mode [off]
     --no-color                     No color mode [off]
+    --no-wait                      Don't wait for the redeploy to finish
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
     'TOKEN'
   )}        Login token
@@ -52,6 +55,7 @@ export default async (client: Client): Promise<number> => {
     argv = getArgs(client.argv.slice(2), {
       '--debug': Boolean,
       '-d': '--debug',
+      '--no-wait': Boolean,
       '--yes': Boolean,
       '-y': '--yes',
     });
@@ -72,33 +76,33 @@ export default async (client: Client): Promise<number> => {
     return pathValidation.exitCode;
   }
 
-  // ensure the current directory is a linked project
-  const linkedProject = await ensureLink(
-    'redeploy',
-    client,
-    pathValidation.path,
-    {
-      autoConfirm: Boolean(argv['--yes']),
-    }
-  );
-  if (typeof linkedProject === 'number') {
-    return linkedProject;
-  }
-
-  const { project } = linkedProject;
   const actionOrDeployId = argv._[1] || 'status';
   const { contextName } = await getScope(client);
+  const noWait = !!argv['--no-wait'];
 
-  const deployment = await getDeploymentByIdOrURL({
+  const fromDeployment = await getDeploymentByIdOrURL({
     client,
     contextName,
     deployId: actionOrDeployId,
   });
 
-  console.log({
-    project,
-    deployment,
+  const deployStamp = stamp();
+
+  const deployment = await client.fetch<any>(`/v13/deployments?forceNew=1`, {
+    body: {
+      deploymentId: fromDeployment.id,
+      meta: {
+        action: 'redeploy',
+      },
+      name: fromDeployment.name,
+      target: fromDeployment.target || 'production',
+    },
+    method: 'POST',
   });
 
-  return 0;
+  if (!noWait) {
+    // poll until the deployment finishes
+  }
+
+  return printDeploymentStatus(client, deployment, deployStamp, noWait);
 };
