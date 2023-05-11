@@ -12,6 +12,7 @@ packages/gatsby-plugin-vercel-analytics
 node_modules
 dist
 pnpm-lock.yaml
+.changeset
 .vscode
 .DS_Store
 .next

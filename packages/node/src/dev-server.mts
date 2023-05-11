@@ -15,9 +15,7 @@ import { createServerlessEventHandler } from './serverless-functions/serverless-
 import { isEdgeRuntime, logError, validateConfiguredRuntime } from './utils.js';
 import { getConfig } from '@vercel/static-config';
 import { Project } from 'ts-morph';
-import asyncListen from 'async-listen';
-
-const { default: listen } = asyncListen;
+import { listen } from 'async-listen';
 
 const parseConfig = (entryPointPath: string) =>
   getConfig(new Project(), entryPointPath);
@@ -105,9 +103,12 @@ async function onDevRequest(
   try {
     const { headers, body, status } = await handleEvent(req);
     res.statusCode = status;
+
     for (const [key, value] of headers as unknown as Headers) {
+      // node-fetch does not support headers.getSetCookie(), so we need to
+      // manually set the raw value which can be an array of strings
       if (value !== undefined) {
-        res.setHeader(key, value);
+        res.setHeader(key, key === 'set-cookie' ? headers.raw()[key] : value);
       }
     }
 
