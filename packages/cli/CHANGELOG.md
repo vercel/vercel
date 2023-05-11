@@ -1,5 +1,11 @@
 # vercel
 
+## 29.3.0
+
+### Minor Changes
+
+- [cli] remove `vc rollback` beta label ([#9928](https://github.com/vercel/vercel/pull/9928))
+
 ## 29.2.1
 
 ### Patch Changes
