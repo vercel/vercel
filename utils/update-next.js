@@ -2,8 +2,13 @@
 
 const { dirname, join } = require('path');
 const { execFileSync } = require('child_process');
-const { glob } = require('glob');
-const { pathExists, readJson, writeJson } = require('fs-extra');
+const {
+  existsSync,
+  readdirSync,
+  readFileSync,
+  statSync,
+  writeFileSync,
+} = require('fs');
 
 function exec(cmd, args, opts) {
   console.log({ input: `${cmd} ${args.join(' ')}`, cwd: opts?.cwd });
@@ -49,61 +54,30 @@ module.exports = async ({ github, context } = {}) => {
   }
 
   // update tests
-  const testGlobs = [
-    'packages/cli/test/dev/fixtures/*/package.json',
-    'packages/cli/test/fixtures/unit/**/package.json',
-    'packages/fs-detectors/test/fixtures/**/package.json',
-    'packages/next/test/fixtures/*/package.json',
-    'packages/next/test/integration/*/package.json',
-    'packages/static-build/test/fixtures/*/package.json',
+  const testPaths = [
+    'packages/cli/test/dev/fixtures',
+    'packages/cli/test/fixtures/unit',
+    'packages/fs-detectors/test/fixtures',
+    'packages/next/test/fixtures',
+    'packages/next/test/integration',
+    'packages/static-build/test/fixtures',
   ];
-  for (const pattern of testGlobs) {
-    const files = await glob(pattern);
-    for (const file of files) {
-      if (file.includes('node_modules')) {
-        // don't go into node_modules of fixtures
-        return;
+
+  while (testPaths.length) {
+    const dir = testPaths.pop();
+
+    const pkgJsonFile = join(dir, 'package.json');
+    if (existsSync(pkgJsonFile)) {
+      if (updatePackageJson(pkgJsonFile, newVersion)) {
+        updatedCount++;
       }
+      continue;
+    }
 
-      const pkgJson = await readJson(file);
-      if (pkgJson.ignoreNextjsUpdates) {
-        continue;
-      }
-
-      const dependencies = [pkgJson.dependencies, pkgJson.devDependencies];
-      for (const deps of dependencies) {
-        const oldVersion = deps?.next;
-        if (oldVersion && oldVersion !== newVersion) {
-          updatedCount++;
-          deps.next = newVersion;
-          await writeJson(file, pkgJson, { spaces: 2 });
-
-          // update lock file
-          const cwd = dirname(file);
-          try {
-            if (await pathExists(join(cwd, 'yarn.lock'))) {
-              if (await pathExists(join(cwd, '.yarnrc.yml'))) {
-                console.warn(
-                  `Found ${join(
-                    cwd,
-                    '.yarnrc.yml'
-                  )} and this package probably uses Yarn v2/v3 which is not supported`
-                );
-              } else {
-                exec('yarn', ['generate-lock-entry'], { cwd });
-              }
-            } else if (await pathExists(join(cwd, 'pnpm-lock.yaml'))) {
-              exec('pnpm', ['install', '--lockfile-only'], { cwd });
-            } else if (await pathExists(join(cwd, 'package-lock.json'))) {
-              exec('npm', ['install', '--package-lock-only'], { cwd });
-            }
-          } catch (err) {
-            console.error(`Failed to update next: ${cwd}`);
-            console.error(err.toString());
-          }
-
-          break;
-        }
+    for (const name of readdirSync(dir)) {
+      const file = join(dir, name);
+      if (statSync(file).isDirectory() && name !== 'node_modules') {
+        testPaths.push(file);
       }
     }
   }
@@ -158,3 +132,50 @@ module.exports = async ({ github, context } = {}) => {
     labels: ['area: examples', 'area: tests', 'semver: none', 'pr: automerge'],
   });
 };
+
+function updatePackageJson(file, newVersion) {
+  const pkgJson = JSON.parse(readFileSync(file, 'utf-8'));
+
+  if (pkgJson.ignoreNextjsUpdates) {
+    return false;
+  }
+
+  const dependencies = [pkgJson.dependencies, pkgJson.devDependencies];
+
+  for (const deps of dependencies) {
+    const oldVersion = deps?.next;
+
+    if (oldVersion && oldVersion !== newVersion) {
+      deps.next = newVersion;
+      writeFileSync(file, JSON.stringify(pkgJson, null, 2), 'utf-8');
+
+      // update lock file
+      const cwd = dirname(file);
+      try {
+        if (existsSync(join(cwd, 'yarn.lock'))) {
+          if (existsSync(join(cwd, '.yarnrc.yml'))) {
+            console.warn(
+              `Found ${join(
+                cwd,
+                '.yarnrc.yml'
+              )} and this package probably uses Yarn v2/v3 which is not supported`
+            );
+          } else {
+            exec('yarn', ['generate-lock-entry'], { cwd });
+          }
+        } else if (existsSync(join(cwd, 'pnpm-lock.yaml'))) {
+          exec('pnpm', ['install', '--lockfile-only'], { cwd });
+        } else if (existsSync(join(cwd, 'package-lock.json'))) {
+          exec('npm', ['install', '--package-lock-only'], { cwd });
+        }
+      } catch (err) {
+        console.error(`Failed to update next: ${cwd}`);
+        console.error(err.toString());
+      }
+
+      return true;
+    }
+  }
+
+  return false;
+}
