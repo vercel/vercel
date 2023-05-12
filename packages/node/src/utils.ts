@@ -72,7 +72,6 @@ export function logError(error: Error) {
 export enum EdgeRuntimes {
   Edge = 'edge',
   ExperimentalEdge = 'experimental-edge',
-  NodeJsWeb = 'nodejs-web',
 }
 
 export function isEdgeRuntime(runtime?: string): runtime is EdgeRuntimes {

@@ -1,11 +1,9 @@
 import { addHelpers } from './helpers.js';
 import { buildToNodeHandler } from '@edge-runtime/node-utils';
 import { createServer } from 'http';
-import { getConfig } from '@vercel/static-config';
-import { Project } from 'ts-morph';
 import { serializeBody } from '../utils.js';
 import { streamToBuffer } from '@vercel/build-utils';
-import primitives from '@edge-runtime/primitives'
+import primitives from '@edge-runtime/primitives';
 import exitHook from 'exit-hook';
 import fetch from 'node-fetch';
 import { listen } from 'async-listen';
@@ -26,57 +24,83 @@ type ServerlessFunctionSignature = (
   res: ServerResponse | VercelResponse
 ) => void;
 
-const parseConfig = (entryPointPath: string) =>
-  getConfig(new Project(), entryPointPath);
+/* https://nextjs.org/docs/app/building-your-application/routing/router-handlers#supported-http-methods */
+const HTTP_METHODS = [
+  'GET',
+  'HEAD',
+  'OPTIONS',
+  'POST',
+  'PUT',
+  'DELETE',
+  'PATCH',
+] as const;
 
-async function createServerlessServer(
-  userCode: ServerlessFunctionSignature,
-  options: ServerlessServerOptions
-) {
-  const server = createServer(async (req, res) => {
-    if (options.shouldAddHelpers) await addHelpers(req, res);
-    return userCode(req, res);
-  });
+type HTTP_METHOD = typeof HTTP_METHODS[number];
+
+function isHTTPMethod(maybeMethod: string): maybeMethod is HTTP_METHOD {
+  return HTTP_METHODS.includes(maybeMethod as HTTP_METHOD);
+}
+
+const defaultHttpHandler: ServerlessFunctionSignature = (_, res) => {
+  res.statusCode = 405;
+  res.end();
+};
+
+async function createServerlessServer(userCode: ServerlessFunctionSignature) {
+  const server = createServer(userCode);
   exitHook(() => server.close());
   return { url: await listen(server) };
 }
 
-async function compileUserCode(entrypointPath: string) {
+async function compileUserCode(
+  entrypointPath: string,
+  options: ServerlessServerOptions
+) {
   const id = isAbsolute(entrypointPath)
     ? pathToFileURL(entrypointPath).href
     : entrypointPath;
-  let fn = await import(id);
+  let listener = await import(id);
 
   /**
    * In some cases we might have nested default props due to TS => JS
    */
   for (let i = 0; i < 5; i++) {
-    if (fn.default) fn = fn.default;
+    if (listener.default) listener = listener.default;
   }
 
-  const staticConfig = parseConfig(entrypointPath);
-  if (staticConfig?.runtime !== 'nodejs-web') return fn
+  if (Object.keys(listener).every(key => !isHTTPMethod(key))) {
+    return async (req: IncomingMessage, res: ServerResponse) => {
+      if (options.shouldAddHelpers) await addHelpers(req, res);
+      return listener(req, res);
+    };
+  }
 
-  return buildToNodeHandler(
-    {
-      Headers: primitives.Headers as BuildDependencies['Headers'],
-      ReadableStream: primitives.ReadableStream,
-      Request: primitives.Request as BuildDependencies['Request'],
-      Uint8Array: Uint8Array,
-      FetchEvent: primitives.FetchEvent
-    },
-    /** fallback when headers.host is missing for creating the absolute `req.url` URL  */
-    { defaultOrigin: 'https://vercel.com' }
-  )(fn)
+  HTTP_METHODS.forEach(httpMethod => {
+    listener[httpMethod] =
+      listener[httpMethod] === undefined
+        ? defaultHttpHandler
+        : buildToNodeHandler(
+            {
+              Headers: primitives.Headers as BuildDependencies['Headers'],
+              ReadableStream: primitives.ReadableStream,
+              Request: primitives.Request as BuildDependencies['Request'],
+              Uint8Array: Uint8Array,
+              FetchEvent: primitives.FetchEvent,
+            },
+            { defaultOrigin: 'https://vercel.com' }
+          )(listener[httpMethod]);
+  });
 
+  return (req: IncomingMessage, res: ServerResponse) =>
+    listener[req.method ?? 'GET'](req, res);
 }
 
 export async function createServerlessEventHandler(
   entrypointPath: string,
   options: ServerlessServerOptions
 ): Promise<(request: IncomingMessage) => Promise<VercelProxyResponse>> {
-  const userCode = await compileUserCode(entrypointPath);
-  const server = await createServerlessServer(userCode, options);
+  const userCode = await compileUserCode(entrypointPath, options);
+  const server = await createServerlessServer(userCode);
 
   return async function (request: IncomingMessage) {
     const url = new URL(request.url ?? '/', server.url);

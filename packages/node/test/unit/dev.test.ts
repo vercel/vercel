@@ -24,8 +24,8 @@ function testForkDevServer(entrypoint: string) {
   });
 }
 
-test('runs a nodejs-web function', async () => {
-  const child = testForkDevServer('./nodejs-web.js');
+test('runs an serverless function that exports GET', async () => {
+  const child = testForkDevServer('./serverless-web.js');
   try {
     const result = await readMessage(child);
     if (result.state !== 'message') {
@@ -34,7 +34,7 @@ test('runs a nodejs-web function', async () => {
 
     const { address, port } = result.value;
     const response = await fetch(
-      `http://${address}:${port}/api/nodejs-web?name=Vercel`
+      `http://${address}:${port}/api/serverless-web?name=Vercel`
     );
 
     expect({
