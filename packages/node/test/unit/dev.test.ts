@@ -82,9 +82,8 @@ test('runs an edge function that uses `buffer`', async () => {
       throw new Error('Exited. error: ' + JSON.stringify(result.value));
     }
 
-    const response = await fetch(
-      `http://localhost:${result.value.port}/api/edge-buffer`
-    );
+    const { address, port } = result.value;
+    const response = await fetch(`http://${address}:${port}/api/edge-buffer`);
     expect({
       status: response.status,
       json: await response.json(),
@@ -109,9 +108,8 @@ test('runs a mjs endpoint', async () => {
       throw new Error('Exited. error: ' + JSON.stringify(result.value));
     }
 
-    const response = await fetch(
-      `http://localhost:${result.value.port}/api/hello`
-    );
+    const { address, port } = result.value;
+    const response = await fetch(`http://${address}:${port}/api/hello`);
     expect({
       status: response.status,
       headers: Object.fromEntries(response.headers),
@@ -142,9 +140,8 @@ test('runs a esm typescript endpoint', async () => {
       throw new Error('Exited. error: ' + JSON.stringify(result.value));
     }
 
-    const response = await fetch(
-      `http://localhost:${result.value.port}/api/hello`
-    );
+    const { address, port } = result.value;
+    const response = await fetch(`http://${address}:${port}/api/hello`);
     expect({
       status: response.status,
       headers: Object.fromEntries(response.headers),
@@ -175,9 +172,8 @@ test('allow setting multiple cookies with same name', async () => {
       throw new Error(`Exited. error: ${JSON.stringify(result.value)}`);
     }
 
-    const response = await fetch(
-      `http://localhost:${result.value.port}/api/hello`
-    );
+    const { address, port } = result.value;
+    const response = await fetch(`http://${address}:${port}/api/hello`);
     expect({
       status: response.status,
       text: await response.text(),
