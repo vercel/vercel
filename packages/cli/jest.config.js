@@ -1,11 +1,14 @@
 /** @type {import('@ts-jest/dist/types').InitialOptionsTsJest} */
 module.exports = {
   preset: 'ts-jest',
-  globals: {
-    'ts-jest': {
-      diagnostics: false,
-      isolatedModules: true,
-    },
+  transform: {
+    '^.+\\.[tj]s$': [
+      'ts-jest',
+      {
+        diagnostics: true,
+        isolatedModules: true,
+      },
+    ],
   },
   setupFilesAfterEnv: ['@alex_neo/jest-expect-message'],
   verbose: false,

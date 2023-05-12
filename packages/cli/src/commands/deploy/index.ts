@@ -16,7 +16,7 @@ import { handleError } from '../../util/error';
 import Client from '../../util/client';
 import { getPrettyError } from '@vercel/build-utils';
 import toHumanPath from '../../util/humanize-path';
-import Now from '../../util';
+import Now, { CreateOptions } from '../../util';
 import stamp from '../../util/output/stamp';
 import createDeploy from '../../util/deploy/create-deploy';
 import getDeployment from '../../util/get-deployment';
@@ -70,6 +70,8 @@ import { isValidArchive } from '../../util/deploy/validate-archive-format';
 import { parseEnv } from '../../util/parse-env';
 import { errorToString, isErrnoException, isError } from '@vercel/error-utils';
 import { pickOverrides } from '../../util/projects/project-settings';
+import { isDeploying } from '../../util/deploy/is-deploying';
+import type { Deployment } from '@vercel-internals/types';
 
 export default async (client: Client): Promise<number> => {
   const { output } = client;
@@ -90,6 +92,7 @@ export default async (client: Client): Promise<number> => {
       '--prebuilt': Boolean,
       '--prod': Boolean,
       '--archive': String,
+      '--no-wait': Boolean,
       '--yes': Boolean,
       '-f': '--force',
       '-p': '--public',
@@ -505,12 +508,20 @@ export default async (client: Client): Promise<number> => {
   });
   let deployStamp = stamp();
   let deployment = null;
+  const noWait = !!argv['--no-wait'];
 
   const localConfigurationOverrides = pickOverrides(localConfig);
 
+  const name = project ? project.name : newProjectName;
+  if (!name) {
+    throw new Error(
+      '`name` not found on project or provided by existing project'
+    );
+  }
+
   try {
-    const createArgs: any = {
-      name: project ? project.name : newProjectName,
+    const createArgs: CreateOptions = {
+      name,
       env: deploymentEnv,
       build: { env: deploymentBuildEnv },
       forceNew: argv['--force'],
@@ -518,8 +529,7 @@ export default async (client: Client): Promise<number> => {
       prebuilt: argv['--prebuilt'],
       rootDirectory,
       quiet,
-      wantsPublic: argv['--public'] || localConfig.public,
-      type: null,
+      wantsPublic: Boolean(argv['--public'] || localConfig.public),
       nowConfig: {
         ...localConfig,
         // `images` is allowed in "vercel.json" and processed
@@ -532,6 +542,7 @@ export default async (client: Client): Promise<number> => {
       deployStamp,
       target,
       skipAutoDetectionConfirmation: autoConfirm,
+      noWait,
     };
 
     if (!localConfig.builds || localConfig.builds.length === 0) {
@@ -627,8 +638,10 @@ export default async (client: Client): Promise<number> => {
       return 1;
     }
 
-    // get the deployment just to double check that it actually deployed
-    await getDeployment(client, contextName, deployment.id);
+    if (!noWait) {
+      // get the deployment just to double check that it actually deployed
+      await getDeployment(client, contextName, deployment.id);
+    }
 
     if (deployment === null) {
       error('Uploading failed. Please try again.');
@@ -715,7 +728,7 @@ export default async (client: Client): Promise<number> => {
     return 1;
   }
 
-  return printDeploymentStatus(output, client, deployment, deployStamp);
+  return printDeploymentStatus(output, client, deployment, deployStamp, noWait);
 };
 
 function handleCreateDeployError(
@@ -835,7 +848,7 @@ const printDeploymentStatus = async (
     url: deploymentUrl,
     aliasWarning,
   }: {
-    readyState: string;
+    readyState: Deployment['readyState'];
     alias: string[];
     aliasError: Error;
     target: string;
@@ -848,12 +861,26 @@ const printDeploymentStatus = async (
       action?: string;
     };
   },
-  deployStamp: () => string
+  deployStamp: () => string,
+  noWait: boolean
 ) => {
   indications = indications || [];
   const isProdDeployment = target === 'production';
 
-  if (readyState !== 'READY') {
+  let isStillBuilding = false;
+  if (noWait) {
+    if (isDeploying(readyState)) {
+      isStillBuilding = true;
+      output.print(
+        prependEmoji(
+          'Note: Deployment is still processing...',
+          emoji('notice')
+        ) + '\n'
+      );
+    }
+  }
+
+  if (!isStillBuilding && readyState !== 'READY') {
     output.error(
       `Your deployment failed. Please retry later. More: https://err.sh/vercel/deployment-error`
     );
@@ -869,7 +896,8 @@ const printDeploymentStatus = async (
   } else {
     // print preview/production url
     let previewUrl: string;
-    if (Array.isArray(aliasList) && aliasList.length > 0) {
+    // if `noWait` is true, then use the deployment url, not an alias
+    if (!noWait && Array.isArray(aliasList) && aliasList.length > 0) {
       const previewUrlInfo = await getPreferredPreviewURL(client, aliasList);
       if (previewUrlInfo) {
         previewUrl = previewUrlInfo.previewUrl;

@@ -5,7 +5,7 @@ import chalk from 'chalk';
 import { PassThrough } from 'stream';
 import { createServer, Server } from 'http';
 import express, { Express, Router } from 'express';
-import listen from 'async-listen';
+import { listen } from 'async-listen';
 import Client from '../../src/util/client';
 import { Output } from '../../src/util/output';
 
@@ -80,12 +80,12 @@ export class MockClient extends Client {
 
     this.stdout = new MockStream();
     this.stdout.setEncoding('utf8');
-    this.stdout.end = () => {};
+    this.stdout.end = () => this.stdout;
     this.stdout.pause();
 
     this.stderr = new MockStream();
     this.stderr.setEncoding('utf8');
-    this.stderr.end = () => {};
+    this.stderr.end = () => this.stderr;
     this.stderr.pause();
     this.stderr.isTTY = true;
 
@@ -101,6 +101,9 @@ export class MockClient extends Client {
     this.localConfig = {};
 
     this.scenario = Router();
+
+    this.agent?.destroy();
+    this.agent = undefined;
   }
 
   async startMockServer() {

@@ -36,7 +36,7 @@ export interface CreateOptions {
   project?: string;
   wantsPublic: boolean;
   prebuilt?: boolean;
-  rootDirectory?: string;
+  rootDirectory?: string | null;
   meta: Dictionary<string>;
   gitMetadata?: GitMetadata;
   regions?: string[];
@@ -49,6 +49,7 @@ export interface CreateOptions {
   deployStamp: () => string;
   projectSettings?: any;
   skipAutoDetectionConfirmation?: boolean;
+  noWait?: boolean;
 }
 
 export interface RemoveOptions {
@@ -128,6 +129,7 @@ export default class Now extends EventEmitter {
       deployStamp,
       projectSettings,
       skipAutoDetectionConfirmation,
+      noWait,
     }: CreateOptions,
     org: Org,
     isSettingUpProject: boolean,
@@ -159,6 +161,7 @@ export default class Now extends EventEmitter {
     const deployment = await processDeployment({
       now: this,
       output: this._output,
+      agent: this._client.agent,
       paths,
       requestBody,
       uploadStamp,
@@ -174,6 +177,7 @@ export default class Now extends EventEmitter {
       cwd,
       prebuilt,
       rootDirectory,
+      noWait,
     });
 
     if (deployment && deployment.warnings) {
@@ -291,7 +295,7 @@ export default class Now extends EventEmitter {
     if (
       error.errorCode === 'BUILD_FAILED' ||
       error.errorCode === 'UNEXPECTED_ERROR' ||
-      error.errorCode.includes('BUILD_UTILS_SPAWN_')
+      error.errorCode?.includes('BUILD_UTILS_SPAWN_')
     ) {
       return new BuildError({
         message: error.errorMessage,

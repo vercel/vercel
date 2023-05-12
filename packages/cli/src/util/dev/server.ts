@@ -5,7 +5,7 @@ import chalk from 'chalk';
 import fetch from 'node-fetch';
 import plural from 'pluralize';
 import rawBody from 'raw-body';
-import listen from 'async-listen';
+import { listen } from 'async-listen';
 import minimatch from 'minimatch';
 import httpProxy from 'http-proxy';
 import { randomBytes } from 'crypto';
@@ -51,10 +51,8 @@ import link from '../output/link';
 import sleep from '../sleep';
 import { Output } from '../output';
 import { relative } from '../path-helpers';
-import { getDistTag } from '../get-dist-tag';
 import getVercelConfigPath from '../config/local-path';
 import { MissingDotenvVarsError } from '../errors-ts';
-import cliPkg from '../pkg';
 import { getVercelDirectory } from '../projects/link';
 import { staticFiles as getFiles } from '../get-files';
 import { validateConfig } from '../validate-config';
@@ -85,7 +83,7 @@ import {
   HttpHeadersConfig,
   EnvConfigs,
 } from './types';
-import { ProjectSettings } from '@vercel-internals/types';
+import type { ProjectSettings } from '@vercel-internals/types';
 import { treeKill } from '../tree-kill';
 import { applyOverriddenHeaders, nodeHeadersToFetchHeaders } from './headers';
 import { formatQueryString, parseQueryString } from './parse-query-string';
@@ -593,7 +591,7 @@ export default class DevServer {
         rewriteRoutes,
         errorRoutes,
       } = await detectBuilders(files, pkg, {
-        tag: getDistTag(cliPkg.version) === 'canary' ? 'canary' : 'latest',
+        tag: 'latest',
         functions: vercelConfig.functions,
         projectSettings: projectSettings || this.projectSettings,
         featHandleMiss,
@@ -862,7 +860,7 @@ export default class DevServer {
     let address: string | null = null;
     while (typeof address !== 'string') {
       try {
-        address = await listen(this.server, ...listenSpec);
+        address = (await listen(this.server, ...listenSpec)).toString();
       } catch (err: unknown) {
         if (isErrnoException(err)) {
           this.output.debug(`Got listen error: ${err.code}`);

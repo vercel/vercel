@@ -149,7 +149,7 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
       // we must eval it since we use devalue to stringify it
       global.__BUILD_MANIFEST_CB = null;
       ctx.nextBuildManifest = eval(
-        `self = {};` + manifestContent + `;self.__BUILD_MANIFEST`
+        `var self = {};` + manifestContent + `;self.__BUILD_MANIFEST`
       );
     }
     let scriptRelativePath = ctx.nextBuildManifest[scriptName];

@@ -2,29 +2,29 @@ import { getNewHandlerFunctionName } from '../index';
 
 describe('getNewHandlerFunctionName', function () {
   it('does nothing with empty original function name', async () => {
-    let error;
+    let error: Error | undefined;
     try {
       getNewHandlerFunctionName('', 'some/kind-of-file.js');
-    } catch (err) {
-      error = err;
+    } catch (err: unknown) {
+      error = err as Error;
     }
 
     expect(error).toBeDefined();
-    expect(error.message).toEqual(
+    expect(error?.message).toEqual(
       'Handler function renaming failed because original function name was empty.'
     );
   });
 
   it('does nothing with empty original function name', async () => {
-    let error;
+    let error: Error | undefined;
     try {
       getNewHandlerFunctionName('Handler', '');
-    } catch (err) {
-      error = err;
+    } catch (err: unknown) {
+      error = err as Error;
     }
 
     expect(error).toBeDefined();
-    expect(error.message).toEqual(
+    expect(error?.message).toEqual(
       'Handler function renaming failed because entrypoint was empty.'
     );
   });
