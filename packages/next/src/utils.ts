@@ -1216,13 +1216,21 @@ let _usesSrcCache: boolean | undefined;
 async function usesSrcDirectory(workPath: string): Promise<boolean> {
   if (!_usesSrcCache) {
     const sourcePages = path.join(workPath, 'src', 'pages');
+
+    try {
+      if ((await fs.stat(sourcePages)).isDirectory()) {
+        _usesSrcCache = true;
+      }
+    } catch (_err) {
+      _usesSrcCache = false;
+    }
+  }
+
+  if (!_usesSrcCache) {
     const sourceAppdir = path.join(workPath, 'src', 'app');
 
     try {
-      if (
-        (await fs.stat(sourcePages)).isDirectory() ||
-        (await fs.stat(sourceAppdir)).isDirectory()
-      ) {
+      if ((await fs.stat(sourceAppdir)).isDirectory()) {
         _usesSrcCache = true;
       }
     } catch (_err) {
