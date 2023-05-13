@@ -1254,12 +1254,16 @@ async function getSourceFilePathFromPage({
     const extensionless = fsPath.replace(path.extname(fsPath), '');
 
     for (const ext of extensionsToTry) {
+      fsPath = path.join(extensionless, `index.${ext}`);
       // for appDir, we need to treat "index.js" as root-level "page.js"
-      fsPath =
-        extensionless === path.join(workPath, 'app/index') ||
-        extensionless === path.join(workPath, 'src/app/index')
-          ? `${extensionless.replace(/index$/, 'page')}.${ext}`
-          : `${extensionless}.${ext}`;
+      if (pageType === 'app') {
+        if (
+          extensionless === path.join(workPath, 'app/index') ||
+          extensionless === path.join(workPath, 'src/app/index')
+        ) {
+          fsPath = `${extensionless.replace(/index$/, 'page')}.${ext}`;
+        }
+      }
       if (fs.existsSync(fsPath)) {
         return path.relative(workPath, fsPath);
       }
