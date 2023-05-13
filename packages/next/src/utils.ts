@@ -1259,7 +1259,7 @@ async function getSourceFilePathFromPage({
     const extensionless = fsPath.replace(path.extname(fsPath), '');
 
     for (const ext of extensionsToTry) {
-      fsPath = path.join(extensionless, `index.${ext}`);
+      fsPath = `${extensionless}.${ext}`;
       // for appDir, we need to treat "index.js" as root-level "page.js"
       if (
         pageType === 'app' &&
