@@ -43,16 +43,16 @@ const help = () => {
 
       ${chalk.cyan(`$ ${getPkgName()} link --yes`)}
 
-  ${chalk.gray(
-    '–'
-  )} Link to the current Git repository, allowing for multiple Vercel
-    Projects to be linked simultaneously (useful for monorepos)
-
-      ${chalk.cyan(`$ ${getPkgName()} link --repo`)}
-
   ${chalk.gray('–')} Link a specific directory to a Vercel Project
 
       ${chalk.cyan(`$ ${getPkgName()} link --cwd /path/to/project`)}
+
+  ${chalk.gray('–')} ${chalk.yellow(
+    '(alpha)'
+  )} Link to the current Git repository, allowing for multiple
+    Vercel Projects to be linked simultaneously (useful for monorepos)
+
+      ${chalk.cyan(`$ ${getPkgName()} link --repo`)}
 `);
 };
 
@@ -94,6 +94,9 @@ export default async function main(client: Client) {
   }
 
   if (argv['--repo']) {
+    client.output.warn(
+      `The ${cmd('--repo')} flag is in alpha, please report issues`
+    );
     await ensureRepoLink(client, cwd, yes);
   } else {
     const link = await ensureLink('link', client, cwd, {

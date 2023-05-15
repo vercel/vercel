@@ -57,9 +57,6 @@ export async function getRepoLink(cwd: string): Promise<RepoLink> {
   return { rootPath, repoConfig, repoConfigPath };
 }
 
-/**
- * TODO
- */
 export async function ensureRepoLink(
   client: Client,
   cwd: string,
