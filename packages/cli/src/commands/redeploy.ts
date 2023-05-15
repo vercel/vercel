@@ -1,15 +1,18 @@
 import chalk from 'chalk';
+import { checkDeploymentStatus } from '@vercel/client';
 import type Client from '../util/client';
-// import { ensureLink } from '../util/link/ensure-link';
+import { emoji, prependEmoji } from '../util/emoji';
 import getArgs from '../util/get-args';
+import { getCommandName, getPkgName } from '../util/pkg-name';
 import { getDeploymentByIdOrURL } from '../util/deploy/get-deployment-by-id-or-url';
-import { getPkgName } from '../util/pkg-name';
 import getScope from '../util/get-scope';
 import handleError from '../util/handle-error';
 import logo from '../util/output/logo';
-import validatePaths from '../util/validate-paths';
+import Now from '../util';
 import { printDeploymentStatus } from '../util/deploy/print-deployment-status';
 import stamp from '../util/output/stamp';
+import ua from '../util/ua';
+import type { VercelClientOptions } from '@vercel/client';
 
 const help = () => {
   console.log(`
@@ -69,26 +72,30 @@ export default async (client: Client): Promise<number> => {
     return 2;
   }
 
-  // ensure the current directory is good
-  const cwd = argv['--cwd'] || process.cwd();
-  const pathValidation = await validatePaths(client, [cwd]);
-  if (!pathValidation.valid) {
-    return pathValidation.exitCode;
+  const { output } = client;
+  const deployId = argv._[1];
+  if (!deployId) {
+    output.error(
+      `Missing required deployment id or URL: ${getCommandName(
+        `redeploy <deployment-id-or-url>`
+      )}`
+    );
+    return 1;
   }
 
-  const actionOrDeployId = argv._[1] || 'status';
   const { contextName } = await getScope(client);
   const noWait = !!argv['--no-wait'];
 
   const fromDeployment = await getDeploymentByIdOrURL({
     client,
     contextName,
-    deployId: actionOrDeployId,
+    deployId,
   });
 
   const deployStamp = stamp();
+  output.spinner(`Redeploying project ${fromDeployment.id}`, 0);
 
-  const deployment = await client.fetch<any>(`/v13/deployments?forceNew=1`, {
+  let deployment = await client.fetch<any>(`/v13/deployments?forceNew=1`, {
     body: {
       deploymentId: fromDeployment.id,
       meta: {
@@ -100,8 +107,84 @@ export default async (client: Client): Promise<number> => {
     method: 'POST',
   });
 
+  output.stopSpinner();
+  output.print(
+    `${prependEmoji(
+      `Inspect: ${chalk.bold(deployment.inspectorUrl)} ${deployStamp()}`,
+      emoji('inspect')
+    )}\n`
+  );
+
+  if (!client.stdout.isTTY) {
+    process.stdout.write(`https://${deployment.url}`);
+  }
+
   if (!noWait) {
-    // poll until the deployment finishes
+    output.spinner(
+      deployment.readyState === 'QUEUED' ? 'Queued' : 'Building',
+      0
+    );
+
+    if (deployment.readyState === 'READY' && deployment.aliasAssigned) {
+      output.spinner('Completing', 0);
+    } else {
+      try {
+        const clientOptions: VercelClientOptions = {
+          agent: client.agent,
+          apiUrl: client.apiUrl,
+          debug: client.output.debugEnabled,
+          path: '', // unused by checkDeploymentStatus()
+          teamId: fromDeployment.team?.id,
+          token: client.authConfig.token!,
+          userAgent: ua,
+        };
+
+        for await (const event of checkDeploymentStatus(
+          deployment,
+          clientOptions
+        )) {
+          if (event.type === 'building') {
+            output.spinner('Building', 0);
+          } else if (
+            event.type === 'ready' &&
+            ((event.payload as any).checksState
+              ? (event.payload as any).checksState === 'completed'
+              : true)
+          ) {
+            output.spinner('Completing', 0);
+          } else if (event.type === 'checks-running') {
+            output.spinner('Running Checks', 0);
+          } else if (
+            event.type === 'alias-assigned' ||
+            event.type === 'checks-conclusion-failed'
+          ) {
+            output.stopSpinner();
+            deployment = event.payload;
+            break;
+          } else if (event.type === 'canceled') {
+            output.stopSpinner();
+            output.print('The deployment has been canceled.\n');
+            return 1;
+          } else if (event.type === 'error') {
+            output.stopSpinner();
+
+            const now = new Now({
+              client,
+              currentTeam: fromDeployment.team?.id,
+            });
+            const error = await now.handleDeploymentError(event.payload, {
+              env: {},
+            });
+            throw error;
+          }
+        }
+      } catch (err: unknown) {
+        if (err instanceof Error) {
+          output.error(err.toString());
+        }
+        process.exit(1);
+      }
+    }
   }
 
   return printDeploymentStatus(client, deployment, deployStamp, noWait);
