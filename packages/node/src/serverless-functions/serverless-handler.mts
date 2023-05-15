@@ -4,14 +4,12 @@ import { serializeBody } from '../utils.js';
 import { streamToBuffer } from '@vercel/build-utils';
 import exitHook from 'exit-hook';
 import fetch from 'node-fetch';
-import asyncListen from 'async-listen';
+import { listen } from 'async-listen';
 import { isAbsolute } from 'path';
 import { pathToFileURL } from 'url';
 import type { ServerResponse, IncomingMessage } from 'http';
 import type { VercelProxyResponse } from '../types.js';
 import type { VercelRequest, VercelResponse } from './helpers.js';
-
-const { default: listen } = asyncListen;
 
 type ServerlessServerOptions = {
   shouldAddHelpers: boolean;

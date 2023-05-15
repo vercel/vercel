@@ -15,9 +15,7 @@ import { createServerlessEventHandler } from './serverless-functions/serverless-
 import { isEdgeRuntime, logError, validateConfiguredRuntime } from './utils.js';
 import { getConfig } from '@vercel/static-config';
 import { Project } from 'ts-morph';
-import asyncListen from 'async-listen';
-
-const { default: listen } = asyncListen;
+import { listen } from 'async-listen';
 
 const parseConfig = (entryPointPath: string) =>
   getConfig(new Project(), entryPointPath);

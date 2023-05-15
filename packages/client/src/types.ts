@@ -1,3 +1,4 @@
+import type { Agent } from 'http';
 import type {
   Builder,
   BuilderFunctions,
@@ -31,6 +32,7 @@ export interface VercelClientOptions {
   isDirectory?: boolean;
   skipAutoDetectionConfirmation?: boolean;
   archive?: ArchiveFormat;
+  agent?: Agent;
 }
 
 /** @deprecated Use VercelClientOptions instead. */

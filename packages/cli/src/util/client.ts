@@ -23,6 +23,7 @@ import type {
 import { sharedPromise } from './promise';
 import { APIError } from './errors-ts';
 import { normalizeError } from '@vercel/error-utils';
+import type { Agent } from 'http';
 
 const isSAMLError = (v: any): v is SAMLError => {
   return v && v.saml;
@@ -44,6 +45,7 @@ export interface ClientOptions extends Stdio {
   config: GlobalConfig;
   localConfig?: VercelConfig;
   localConfigPath?: string;
+  agent?: Agent;
 }
 
 export const isJSONObject = (v: any): v is JSONObject => {
@@ -59,13 +61,15 @@ export default class Client extends EventEmitter implements Stdio {
   stderr: WritableTTY;
   output: Output;
   config: GlobalConfig;
+  agent?: Agent;
   localConfig?: VercelConfig;
   localConfigPath?: string;
   prompt!: inquirer.PromptModule;
-  private requestIdCounter: number;
+  requestIdCounter: number;
 
   constructor(opts: ClientOptions) {
     super();
+    this.agent = opts.agent;
     this.argv = opts.argv;
     this.apiUrl = opts.apiUrl;
     this.authConfig = opts.authConfig;
@@ -126,10 +130,10 @@ export default class Client extends EventEmitter implements Stdio {
       } else {
         return `#${requestId} → ${opts.method || 'GET'} ${url.href}`;
       }
-    }, fetch(url, { ...opts, headers, body }));
+    }, fetch(url, { agent: this.agent, ...opts, headers, body }));
   }
 
-  fetch(url: string, opts: { json: false }): Promise<Response>;
+  fetch(url: string, opts: FetchOptions & { json: false }): Promise<Response>;
   fetch<T>(url: string, opts?: FetchOptions): Promise<T>;
   fetch(url: string, opts: FetchOptions = {}) {
     return this.retry(async bail => {

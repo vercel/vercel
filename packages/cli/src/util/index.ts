@@ -164,6 +164,7 @@ export default class Now extends EventEmitter {
     const deployment = await processDeployment({
       now: this,
       output: this._output,
+      agent: this._client.agent,
       paths,
       requestBody,
       uploadStamp,
@@ -297,7 +298,7 @@ export default class Now extends EventEmitter {
     if (
       error.errorCode === 'BUILD_FAILED' ||
       error.errorCode === 'UNEXPECTED_ERROR' ||
-      error.errorCode.includes('BUILD_UTILS_SPAWN_')
+      error.errorCode?.includes('BUILD_UTILS_SPAWN_')
     ) {
       return new BuildError({
         message: error.errorMessage,
