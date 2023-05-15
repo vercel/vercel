@@ -122,8 +122,9 @@ export default async function pull(
 
   const contents =
     CONTENTS_PREFIX +
-    Object.entries(records)
-      .map(([key, value]) => `${key}="${escapeValue(value)}"`)
+    Object.keys(records)
+      .sort()
+      .map(key => `${key}="${escapeValue(records[key])}"`)
       .join('\n') +
     '\n';
 
