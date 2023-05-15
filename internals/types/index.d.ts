@@ -348,6 +348,8 @@ export interface Project extends ProjectSettings {
     disabledAt?: number;
     canceledAt?: number | null;
   };
+  // FIX ME: `env` is for testing purposes only and should be removed
+  env?: Record<string | undefined>[];
   name: string;
   accountId: string;
   updatedAt: number;

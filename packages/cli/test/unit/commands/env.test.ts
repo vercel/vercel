@@ -308,6 +308,9 @@ describe('env', () => {
       try {
         useUser();
         useTeams('team_dummy');
+        if (!defaultProject.env) {
+          defaultProject.env = [];
+        }
         defaultProject.env.push({
           type: 'encrypted',
           id: '781dt89g8r2h789g',
@@ -336,7 +339,7 @@ describe('env', () => {
       } finally {
         client.setArgv('env', 'rm', 'NEW_VAR', '--yes', '--cwd', cwd);
         await env(client);
-        defaultProject.env.pop();
+        defaultProject.env?.pop();
       }
     });
 
@@ -345,6 +348,9 @@ describe('env', () => {
       try {
         useUser();
         useTeams('team_dummy');
+        if (!defaultProject.env) {
+          defaultProject.env = [];
+        }
         defaultProject.env.push({
           type: 'encrypted',
           id: '781dt89g8r2h789g',
@@ -373,7 +379,7 @@ describe('env', () => {
       } finally {
         client.setArgv('env', 'rm', 'NEW_VAR', '--yes', '--cwd', cwd);
         await env(client);
-        defaultProject.env.pop();
+        defaultProject.env?.pop();
       }
     });
   });

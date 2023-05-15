@@ -107,6 +107,8 @@ export const defaultProject: Project = {
   accountId: 'K4amb7K9dAt5R2vBJWF32bmY',
   createdAt: 1555413045188,
   updatedAt: 1555413045188,
+  // FIX ME: `env` is for testing purposes only and should be removed
+  env: envs,
   latestDeployments: [
     {
       alias: ['foobar.com'],
