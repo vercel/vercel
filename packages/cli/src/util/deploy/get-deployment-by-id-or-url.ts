@@ -42,7 +42,7 @@ export async function getDeploymentByIdOrURL({
     }
 
     if (deploymentResult.status === 'rejected') {
-      throw new Error(deploymentResult.reason);
+      throw new Error(deploymentResult.reason.message);
     }
 
     team = teamResult.value;
