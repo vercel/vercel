@@ -1,5 +1,11 @@
 # vercel
 
+## 29.3.2
+
+### Patch Changes
+
+- [vc dev] Fix serverless function size limit condition ([#9961](https://github.com/vercel/vercel/pull/9961))
+
 ## 29.3.1
 
 ### Patch Changes
