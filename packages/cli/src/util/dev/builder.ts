@@ -339,8 +339,7 @@ export async function executeBuild(
   for (const asset of Object.values(result.output)) {
     if (
       asset.type === 'Lambda' &&
-      !(typeof asset.runtime === 'string' &&
-      asset.runtime.startsWith('python'))
+      !(typeof asset.runtime === 'string' && asset.runtime.startsWith('python'))
     ) {
       const size = asset.zipBuffer.length;
       if (size > maxLambdaBytes) {
