@@ -1,5 +1,11 @@
 # vercel
 
+## 29.3.1
+
+### Patch Changes
+
+- Sort environment variables alphabetically in `vercel env pull` ([#9949](https://github.com/vercel/vercel/pull/9949))
+
 ## 29.3.0
 
 ### Minor Changes
