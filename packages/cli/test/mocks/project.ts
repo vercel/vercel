@@ -8,7 +8,7 @@ import { formatProvider } from '../../src/util/git/connect-git-provider';
 import { parseEnvironment } from '../../src/commands/pull';
 import type { Env } from '@vercel/build-utils';
 
-const envs: ProjectEnvVariable[] = [
+export const envs: ProjectEnvVariable[] = [
   {
     type: 'encrypted',
     id: '781dt89g8r2h789g',
@@ -107,8 +107,6 @@ export const defaultProject: Project = {
   accountId: 'K4amb7K9dAt5R2vBJWF32bmY',
   createdAt: 1555413045188,
   updatedAt: 1555413045188,
-  // FIX ME: `env` is for testing purposes only and should be removed
-  env: envs,
   latestDeployments: [
     {
       alias: ['foobar.com'],
@@ -203,7 +201,10 @@ export function useUnknownProject() {
   });
 }
 
-export function useProject(project: Partial<Project> = defaultProject) {
+export function useProject(
+  project: Partial<Project> = defaultProject,
+  projectEnvs: ProjectEnvVariable[] = envs
+) {
   client.scenario.get(`/v8/projects/${project.name}`, (_req, res) => {
     res.json(project);
   });
@@ -221,7 +222,6 @@ export function useProject(project: Partial<Project> = defaultProject) {
         typeof req.params.target === 'string'
           ? parseEnvironment(req.params.target)
           : undefined;
-      let projectEnvs = envs;
       if (target) {
         projectEnvs = projectEnvs.filter(env => {
           if (!env.target) return false;

@@ -4,7 +4,7 @@ import { parse } from 'dotenv';
 import env from '../../../src/commands/env';
 import { setupUnitFixture } from '../../helpers/setup-unit-fixture';
 import { client } from '../../mocks/client';
-import { defaultProject, useProject } from '../../mocks/project';
+import { defaultProject, envs, useProject } from '../../mocks/project';
 import { useTeams } from '../../mocks/team';
 import { useUser } from '../../mocks/user';
 
@@ -308,24 +308,26 @@ describe('env', () => {
       try {
         useUser();
         useTeams('team_dummy');
-        if (!defaultProject.env) {
-          defaultProject.env = [];
-        }
-        defaultProject.env.push({
-          type: 'encrypted',
-          id: '781dt89g8r2h789g',
-          key: 'NEW_VAR',
-          value: '"testvalue"',
-          target: ['development'],
-          configurationId: null,
-          updatedAt: 1557241361455,
-          createdAt: 1557241361455,
-        });
-        useProject({
-          ...defaultProject,
-          id: 'env-pull-delta-quotes',
-          name: 'env-pull-delta-quotes',
-        });
+        useProject(
+          {
+            ...defaultProject,
+            id: 'env-pull-delta-quotes',
+            name: 'env-pull-delta-quotes',
+          },
+          [
+            ...envs,
+            {
+              type: 'encrypted',
+              id: '781dt89g8r2h789g',
+              key: 'NEW_VAR',
+              value: '"testvalue"',
+              target: ['development'],
+              configurationId: null,
+              updatedAt: 1557241361455,
+              createdAt: 1557241361455,
+            },
+          ]
+        );
 
         client.setArgv('env', 'pull', '--yes', '--cwd', cwd);
         const pullPromise = env(client);
@@ -339,7 +341,6 @@ describe('env', () => {
       } finally {
         client.setArgv('env', 'rm', 'NEW_VAR', '--yes', '--cwd', cwd);
         await env(client);
-        defaultProject.env?.pop();
       }
     });
 
@@ -348,24 +349,26 @@ describe('env', () => {
       try {
         useUser();
         useTeams('team_dummy');
-        if (!defaultProject.env) {
-          defaultProject.env = [];
-        }
-        defaultProject.env.push({
-          type: 'encrypted',
-          id: '781dt89g8r2h789g',
-          key: 'NEW_VAR',
-          value: 'testvalue',
-          target: ['development'],
-          configurationId: null,
-          updatedAt: 1557241361455,
-          createdAt: 1557241361455,
-        });
-        useProject({
-          ...defaultProject,
-          id: 'env-pull-delta-quotes',
-          name: 'env-pull-delta-quotes',
-        });
+        useProject(
+          {
+            ...defaultProject,
+            id: 'env-pull-delta-quotes',
+            name: 'env-pull-delta-quotes',
+          },
+          [
+            ...envs,
+            {
+              type: 'encrypted',
+              id: '781dt89g8r2h789g',
+              key: 'NEW_VAR',
+              value: 'testvalue',
+              target: ['development'],
+              configurationId: null,
+              updatedAt: 1557241361455,
+              createdAt: 1557241361455,
+            },
+          ]
+        );
 
         client.setArgv('env', 'pull', '.env.testquotes', '--yes', '--cwd', cwd);
         const pullPromise = env(client);
@@ -379,7 +382,6 @@ describe('env', () => {
       } finally {
         client.setArgv('env', 'rm', 'NEW_VAR', '--yes', '--cwd', cwd);
         await env(client);
-        defaultProject.env?.pop();
       }
     });
   });
