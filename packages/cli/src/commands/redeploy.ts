@@ -42,9 +42,19 @@ const help = () => {
 
   ${chalk.dim('Examples:')}
 
+  ${chalk.gray('–')} Rebuild and deploy an existing deployment using id or url
+
+    ${chalk.cyan(`$ ${getPkgName()} redeploy <deployment id/url>`)}
+
   ${chalk.gray('–')} Redeploy a deployment using id or url
 
     ${chalk.cyan(`$ ${getPkgName()} redeploy <deployment id/url>`)}
+
+  ${chalk.gray('–')} Write Deployment URL to a file
+
+    ${chalk.cyan(
+      `$ ${getPkgName()} redeploy my-deployment.vercel.app > deployment-url.txt`
+    )}
 `);
 };
 
