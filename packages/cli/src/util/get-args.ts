@@ -15,7 +15,7 @@ export default function getArgs<T extends Spec>(
   argv: string[],
   argsOptions?: T,
   argOptions: ArgOptions = {}
-): arg.Result<T> {
+) {
   return arg(Object.assign({}, getCommonArgs(), argsOptions), {
     ...argOptions,
     argv,

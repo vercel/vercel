@@ -1,5 +1,4 @@
 import { Dictionary } from '@vercel/client';
-import arg from 'arg';
 import chalk from 'chalk';
 import { join } from 'path';
 import { Org, Project, ProjectLinkData } from '@vercel-internals/types';
@@ -52,7 +51,7 @@ interface PromptConnectArgParams {
 
 export default async function connect(
   client: Client,
-  argv: arg.Result<any>,
+  argv: any,
   args: string[],
   project: Project | undefined,
   org: Org | undefined
@@ -198,8 +197,16 @@ async function connectArg({
   project,
   repoInfo,
 }: ConnectArgParams) {
-  const { url: repoUrl, provider, org: gitOrg, repo } = repoInfo;
+  const { url: repoUrl } = repoInfo;
   client.output.log(`Connecting Git remote: ${link(repoUrl)}`);
+  const parsedRepoArg = parseRepoUrl(repoUrl);
+  if (!parsedRepoArg) {
+    client.output.error(
+      `Failed to parse URL "${repoUrl}". Please ensure the URL is valid.`
+    );
+    return 1;
+  }
+  const { provider, org: gitOrg, repo } = parsedRepoArg;
 
   const repoPath = `${gitOrg}/${repo}`;
   const connect = await checkExistsAndConnect({
