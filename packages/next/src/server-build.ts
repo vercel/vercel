@@ -1041,7 +1041,8 @@ export async function serverBuild({
     canUsePreviewMode,
     prerenderManifest.bypassToken || '',
     true,
-    middleware.dynamicRouteMap
+    middleware.dynamicRouteMap,
+    inversedAppPathManifest
   ).then(arr =>
     localizeDynamicRoutes(
       arr,
@@ -1200,24 +1201,6 @@ export async function serverBuild({
   const rscVaryHeader =
     routesManifest?.rsc?.varyHeader ||
     'RSC, Next-Router-State-Tree, Next-Router-Prefetch';
-
-  const completeDynamicRoutes: typeof dynamicRoutes = [];
-
-  if (appDir) {
-    for (const route of dynamicRoutes) {
-      completeDynamicRoutes.push({
-        ...route,
-        src: route.src.replace(
-          new RegExp(escapeStringRegexp('(?:/)?$')),
-          '(?:\\.rsc)(?:/)?$'
-        ),
-        dest: route.dest?.replace(/($|\?)/, '.rsc$1'),
-      });
-      completeDynamicRoutes.push(route);
-    }
-  } else {
-    completeDynamicRoutes.push(...dynamicRoutes);
-  }
 
   return {
     wildcard: wildcardConfig,
@@ -1598,7 +1581,8 @@ export async function serverBuild({
         ? // when resolving data routes for middleware we need to include
           // all dynamic routes including non-SSG/SSP so that the priority
           // is correct
-          completeDynamicRoutes
+          dynamicRoutes
+            .filter(route => !route.src.includes('.rsc'))
             .map(route => {
               route = Object.assign({}, route);
               let normalizedSrc = route.src;
@@ -1673,7 +1657,7 @@ export async function serverBuild({
 
       // Dynamic routes (must come after dataRoutes as dataRoutes are more
       // specific)
-      ...completeDynamicRoutes,
+      ...dynamicRoutes,
 
       ...(isNextDataServerResolving
         ? [
