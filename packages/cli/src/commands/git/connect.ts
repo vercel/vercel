@@ -207,7 +207,6 @@ async function connectArg({
     return 1;
   }
   const { provider, org: gitOrg, repo } = parsedRepoArg;
-
   const repoPath = `${gitOrg}/${repo}`;
   const connect = await checkExistsAndConnect({
     client,

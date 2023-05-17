@@ -65,6 +65,58 @@ describe('git', () => {
         process.chdir(originalCwd);
       }
     });
+    it('connects an unlinked project with a remote url', async () => {
+      const cwd = fixture('unlinked');
+      try {
+        process.chdir(cwd);
+        await fs.rename(join(cwd, 'git'), join(cwd, '.git'));
+        useUser();
+        useTeams('team_dummy');
+        useProject({
+          ...defaultProject,
+          id: 'unlinked',
+          name: 'unlinked',
+        });
+        client.setArgv('git', 'connect', 'https://github.com/user2/repo2');
+        const gitPromise = git(client);
+
+        await expect(client.stderr).toOutput('Set up');
+        client.stdin.write('y\n');
+
+        await expect(client.stderr).toOutput(
+          'Which scope should contain your project?'
+        );
+        client.stdin.write('\r');
+
+        await expect(client.stderr).toOutput('Found project');
+        client.stdin.write('y\n');
+
+        await expect(client.stderr).toOutput(
+          `Connecting Git remote: https://github.com/user2/repo2.git`
+        );
+
+        const exitCode = await gitPromise;
+        await expect(client.stderr).toOutput(
+          'Connected GitHub repository user2/repo2!'
+        );
+
+        expect(exitCode).toEqual(0);
+
+        const project: Project = await client.fetch(`/v8/projects/unlinked`);
+        expect(project.link).toMatchObject({
+          type: 'github',
+          repo: 'user2/repo2',
+          repoId: 1010,
+          gitCredentialId: '',
+          sourceless: true,
+          createdAt: 1656109539791,
+          updatedAt: 1656109539791,
+        });
+      } finally {
+        await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
+        process.chdir(originalCwd);
+      }
+    });
     it('should fail when there is no git config', async () => {
       const cwd = fixture('no-git-config');
       try {
