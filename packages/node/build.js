@@ -48,11 +48,7 @@ async function main() {
     fs.remove(join(outDir, 'serverless-functions/serverless-handler.d.mts')),
   ]);
 
-  console.log({
-    NODE_ENV: process.env.NODE_ENV,
-  });
-
-  if (process.env.NODE_ENV === 'test') {
+  if (process.env.CI) {
     // Copy type file for ts test
     await fs.copyFile(
       join(outDir, 'index.d.ts'),
