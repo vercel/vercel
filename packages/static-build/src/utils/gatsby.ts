@@ -33,6 +33,10 @@ export async function injectPlugins(
     const version = semver.coerce(detectedVersion);
     if (version && semver.satisfies(version, '>=4.0.0')) {
       plugins.add('@vercel/gatsby-plugin-vercel-builder');
+
+      process.on('exit', async () => {
+        await cleanupGatsbyFiles(dir);
+      });
     }
   }
 
