@@ -1,3 +1,4 @@
+import arg from 'arg';
 import chalk from 'chalk';
 import ms from 'ms';
 import table from 'text-table';
@@ -9,7 +10,7 @@ import strlen from '../../util/strlen';
 
 export default async function list(
   client: Client,
-  argv: any,
+  argv: arg.Result<any>,
   args: string[],
   contextName: string
 ) {

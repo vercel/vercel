@@ -55,13 +55,15 @@ const COMMAND_CONFIG = {
 };
 
 export default async function main(client: Client) {
-  let argv: any;
+  let argv;
   let subcommand: string | string[];
 
   try {
     argv = getArgs(client.argv.slice(2), {
       '--yes': Boolean,
       '-y': '--yes',
+      '--help': Boolean,
+      '-h': '--help',
 
       // deprecated
       '-c': '--yes',
