@@ -1350,6 +1350,7 @@ export type LambdaGroup = {
   pages: string[];
   memory?: number;
   maxDuration?: number;
+  isAppRouter?: boolean;
   isStreaming?: boolean;
   isPrerenders?: boolean;
   isApiLambda: boolean;
@@ -1376,6 +1377,7 @@ export async function getPageLambdaGroups({
   internalPages,
   pageExtensions,
 }: {
+  appPathsManifest?: Record<string, string>;
   entryPath: string;
   config: Config;
   pages: string[];

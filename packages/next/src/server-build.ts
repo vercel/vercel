@@ -386,7 +386,7 @@ export async function serverBuild({
 
     const apiPages: string[] = [];
     const nonApiPages: string[] = [];
-    const streamingPages: string[] = [];
+    const appRouterPages: string[] = [];
 
     lambdaPageKeys.forEach(page => {
       if (
@@ -401,15 +401,19 @@ export async function serverBuild({
       if (nonLambdaSsgPages.has(pathname)) {
         return;
       }
+      const normalizedPathname = normalizePage(pathname);
 
-      if (isDynamicRoute(pathname)) {
-        dynamicPages.push(normalizePage(pathname));
+      if (isDynamicRoute(normalizedPathname)) {
+        dynamicPages.push(normalizedPathname);
       }
 
       if (pageMatchesApi(page)) {
         apiPages.push(page);
-      } else if (appDir && lambdaAppPaths[page]) {
-        streamingPages.push(page);
+      } else if (
+        appPathRoutesManifest?.[normalizedPathname] &&
+        lambdaAppPaths[page]
+      ) {
+        appRouterPages.push(page);
       } else {
         nonApiPages.push(page);
       }
@@ -570,6 +574,15 @@ export async function serverBuild({
         `${getNextServerPath(nextVersion)}/next-server.js`
       );
 
+    const appLauncher = launcher.replace(
+      '// pre-next-server-target',
+      `process.env.__NEXT_PRIVATE_PREBUNDLED_REACT = "${
+        requiredServerFilesManifest.config?.experimental?.serverActions
+          ? 'experimental'
+          : 'next'
+      }"`
+    );
+
     if (
       entryDirectory !== '.' &&
       path.posix.join('/', entryDirectory) !== routesManifest.basePath
@@ -585,10 +598,6 @@ export async function serverBuild({
       );
     }
 
-    const launcherFiles: { [name: string]: FileFsRef | FileBlob } = {
-      [path.join(path.relative(baseDir, projectDir), '___next_launcher.cjs')]:
-        new FileBlob({ data: launcher }),
-    };
     const pageTraces: {
       [page: string]: { [key: string]: FileFsRef };
     } = {};
@@ -597,7 +606,7 @@ export async function serverBuild({
     } = {};
     const mergedPageKeys = [
       ...nonApiPages,
-      ...streamingPages,
+      ...appRouterPages,
       ...apiPages,
       ...internalPages,
     ];
@@ -756,12 +765,13 @@ export async function serverBuild({
       initialPseudoLayerUncompressed: uncompressedInitialSize,
       internalPages,
       pageExtensions,
+      appPathsManifest: inversedAppPathManifest,
     });
 
-    const streamingPageLambdaGroups = await getPageLambdaGroups({
+    const appRouterLambdaGroups = await getPageLambdaGroups({
       entryPath: projectDir,
       config,
-      pages: streamingPages,
+      pages: appRouterPages,
       prerenderRoutes,
       pageTraces,
       compressedPages,
@@ -771,12 +781,14 @@ export async function serverBuild({
       initialPseudoLayerUncompressed: uncompressedInitialSize,
       internalPages,
       pageExtensions,
+      appPathsManifest: inversedAppPathManifest,
     });
 
-    for (const group of streamingPageLambdaGroups) {
+    for (const group of appRouterLambdaGroups) {
       if (!group.isPrerenders) {
         group.isStreaming = true;
       }
+      group.isAppRouter = true;
     }
 
     const apiLambdaGroups = await getPageLambdaGroups({
@@ -791,6 +803,7 @@ export async function serverBuild({
       initialPseudoLayerUncompressed: uncompressedInitialSize,
       lambdaCompressedByteLimit,
       internalPages,
+      appPathsManifest: inversedAppPathManifest,
     });
 
     for (const group of apiLambdaGroups) {
@@ -812,7 +825,7 @@ export async function serverBuild({
             pseudoLayerBytes: group.pseudoLayerBytes,
             uncompressedLayerBytes: group.pseudoLayerUncompressedBytes,
           })),
-          streamingPageLambdaGroups: streamingPageLambdaGroups.map(group => ({
+          appRouterLambdaGroups: appRouterLambdaGroups.map(group => ({
             pages: group.pages,
             isPrerender: group.isPrerenders,
             pseudoLayerBytes: group.pseudoLayerBytes,
@@ -826,7 +839,7 @@ export async function serverBuild({
     );
     const combinedGroups = [
       ...pageLambdaGroups,
-      ...streamingPageLambdaGroups,
+      ...appRouterLambdaGroups,
       ...apiLambdaGroups,
     ];
 
@@ -905,6 +918,10 @@ export async function serverBuild({
         }
       }
 
+      const launcherFiles: { [name: string]: FileFsRef | FileBlob } = {
+        [path.join(path.relative(baseDir, projectDir), '___next_launcher.cjs')]:
+          new FileBlob({ data: group.isAppRouter ? appLauncher : launcher }),
+      };
       const operationType = getOperationType({ group, prerenderManifest });
 
       const lambda = await createLambdaFromPseudoLayers({
