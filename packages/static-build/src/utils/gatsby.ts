@@ -1,3 +1,4 @@
+import { isErrnoException } from '@vercel/error-utils';
 import fs from 'fs-extra';
 import * as path from 'path';
 import semver from 'semver';
@@ -333,8 +334,8 @@ export function cleanupGatsbyFiles(dir: string) {
         const backupFile = `${baseFile}${backup}${fileEnding}`;
         const backupFilePath = path.join(dir, backupFile);
 
-        const baseFileContent = fs.readFileSync(baseFilePath, 'utf-8');
-        const backupFileContent = fs.readFileSync(backupFilePath, 'utf-8');
+        const baseFileContent = tryReadFileSync(baseFilePath);
+        const backupFileContent = tryReadFileSync(backupFilePath);
 
         if (
           baseFileContent &&
@@ -368,4 +369,20 @@ export async function createPluginSymlinks(dir: string) {
       fs.symlink(PLUGIN_PATHS[name], path.join(nodeModulesDir, name))
     )
   );
+}
+
+function tryReadFileSync(filePath: string) {
+  try {
+    return fs.readFileSync(filePath, 'utf-8');
+  } catch (error: unknown) {
+    if (!isErrnoException(error)) {
+      console.error(error);
+    } else {
+      if (error.code !== 'ENOENT') {
+        console.error(error);
+      }
+    }
+
+    return undefined;
+  }
 }
