@@ -1,5 +1,25 @@
 # vercel
 
+## 29.3.3
+
+### Patch Changes
+
+- Updated dependencies [[`6c6f3ce9d`](https://github.com/vercel/vercel/commit/6c6f3ce9d228b1e038641e4bafb38c3487e7dff7)]:
+  - @vercel/next@3.8.3
+
+## 29.3.2
+
+### Patch Changes
+
+- [vc dev] Fix serverless function size limit condition ([#9961](https://github.com/vercel/vercel/pull/9961))
+
+## 29.3.1
+
+### Patch Changes
+
+- Sort environment variables alphabetically in `vercel env pull` ([#9949](https://github.com/vercel/vercel/pull/9949))
+- Skip 50MB zip size limit for Python ([#9944](https://github.com/vercel/vercel/pull/9944))
+
 ## 29.3.0
 
 ### Minor Changes

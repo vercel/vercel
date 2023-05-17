@@ -33,6 +33,16 @@ const envs: ProjectEnvVariable[] = [
   },
   {
     type: 'encrypted',
+    id: '781dt89g8r2h789g',
+    key: 'ANOTHER',
+    value: 'one',
+    target: ['preview'],
+    configurationId: null,
+    updatedAt: 1557241361455,
+    createdAt: 1557241361455,
+  },
+  {
+    type: 'encrypted',
     id: 'r124t6frtu25df16',
     key: 'SQL_CONNECTION_STRING',
     value: 'Server=sql.example.com;Database=app;Uid=root;Pwd=P455W0RD;',

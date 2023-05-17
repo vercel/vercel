@@ -304,7 +304,8 @@ export async function getDynamicRoutes(
   canUsePreviewMode?: boolean,
   bypassToken?: string,
   isServerMode?: boolean,
-  dynamicMiddlewareRouteMap?: Map<string, RouteWithSrc>
+  dynamicMiddlewareRouteMap?: Map<string, RouteWithSrc>,
+  appPathRoutesManifest?: Record<string, string>
 ): Promise<RouteWithSrc[]> {
   if (routesManifest) {
     switch (routesManifest.version) {
@@ -324,55 +325,74 @@ export async function getDynamicRoutes(
       }
       case 3:
       case 4: {
-        return routesManifest.dynamicRoutes
-          .filter(({ page }) => canUsePreviewMode || !omittedRoutes?.has(page))
-          .map(params => {
-            if ('isMiddleware' in params) {
-              const route = dynamicMiddlewareRouteMap?.get(params.page);
-              if (!route) {
-                throw new Error(
-                  `Could not find dynamic middleware route for ${params.page}`
-                );
-              }
-              return route;
+        const routes: RouteWithSrc[] = [];
+
+        for (const dynamicRoute of routesManifest.dynamicRoutes) {
+          if (!canUsePreviewMode && omittedRoutes?.has(dynamicRoute.page)) {
+            continue;
+          }
+          const params = dynamicRoute;
+
+          if ('isMiddleware' in params) {
+            const route = dynamicMiddlewareRouteMap?.get(params.page);
+            if (!route) {
+              throw new Error(
+                `Could not find dynamic middleware route for ${params.page}`
+              );
             }
 
-            const { page, namedRegex, regex, routeKeys } = params;
-            const route: RouteWithSrc = {
-              src: namedRegex || regex,
-              dest: `${
-                !isDev ? path.posix.join('/', entryDirectory, page) : page
-              }${
-                routeKeys
-                  ? `?${Object.keys(routeKeys)
-                      .map(key => `${routeKeys[key]}=$${key}`)
-                      .join('&')}`
-                  : ''
-              }`,
-            };
+            routes.push(route);
+            continue;
+          }
 
-            if (!isServerMode) {
-              route.check = true;
-            }
+          const { page, namedRegex, regex, routeKeys } = params;
+          const route: RouteWithSrc = {
+            src: namedRegex || regex,
+            dest: `${
+              !isDev ? path.posix.join('/', entryDirectory, page) : page
+            }${
+              routeKeys
+                ? `?${Object.keys(routeKeys)
+                    .map(key => `${routeKeys[key]}=$${key}`)
+                    .join('&')}`
+                : ''
+            }`,
+          };
 
-            if (isServerMode && canUsePreviewMode && omittedRoutes?.has(page)) {
-              // only match this route when in preview mode so
-              // preview works for non-prerender fallback: false pages
-              route.has = [
-                {
-                  type: 'cookie',
-                  key: '__prerender_bypass',
-                  value: bypassToken || undefined,
-                },
-                {
-                  type: 'cookie',
-                  key: '__next_preview_data',
-                },
-              ];
-            }
+          if (!isServerMode) {
+            route.check = true;
+          }
 
-            return route;
-          });
+          if (isServerMode && canUsePreviewMode && omittedRoutes?.has(page)) {
+            // only match this route when in preview mode so
+            // preview works for non-prerender fallback: false pages
+            route.has = [
+              {
+                type: 'cookie',
+                key: '__prerender_bypass',
+                value: bypassToken || undefined,
+              },
+              {
+                type: 'cookie',
+                key: '__next_preview_data',
+              },
+            ];
+          }
+
+          if (appPathRoutesManifest?.[page]) {
+            routes.push({
+              ...route,
+              src: route.src.replace(
+                new RegExp(escapeStringRegexp('(?:/)?$')),
+                '(?:\\.rsc)(?:/)?$'
+              ),
+              dest: route.dest?.replace(/($|\?)/, '.rsc$1'),
+            });
+          }
+          routes.push(route);
+          continue;
+        }
+        return routes;
       }
       default: {
         // update MIN_ROUTES_MANIFEST_VERSION
