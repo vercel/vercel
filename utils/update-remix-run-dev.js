@@ -50,7 +50,7 @@ module.exports = async ({ github, context }, newVersion) => {
 '@vercel/remix-builder': patch
 ---
 
-Upgrade \`@remix-run/dev\` fork to v${newVersion}
+Update \`@remix-run/dev\` fork to v${newVersion}
 `
   );
 
@@ -66,7 +66,7 @@ Upgrade \`@remix-run/dev\` fork to v${newVersion}
     repo,
     head: branch,
     base: 'main',
-    title: `[remix] Upgrade \`@remix-run/dev\` to v${newVersion}`,
+    title: `[remix] Update \`@remix-run/dev\` to v${newVersion}`,
     body: `This auto-generated PR updates \`@remix-run/dev\` to version ${newVersion}.`,
   });
 
