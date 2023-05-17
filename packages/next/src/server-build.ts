@@ -410,7 +410,8 @@ export async function serverBuild({
       if (pageMatchesApi(page)) {
         apiPages.push(page);
       } else if (
-        appPathRoutesManifest?.[normalizedPathname] &&
+        (appPathRoutesManifest?.[`${normalizedPathname}/page`] ||
+          appPathRoutesManifest?.[`${normalizedPathname}/route`]) &&
         lambdaAppPaths[page]
       ) {
         appRouterPages.push(page);
