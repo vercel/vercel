@@ -35,7 +35,7 @@ export async function injectPlugins(
       plugins.add('@vercel/gatsby-plugin-vercel-builder');
 
       process.on('exit', async () => {
-        await cleanupGatsbyFiles(dir);
+        cleanupGatsbyFiles(dir);
       });
     }
   }
@@ -315,7 +315,8 @@ module.exports = gatsbyNode;
   );
 }
 
-export async function cleanupGatsbyFiles(dir: string) {
+// must remain sync because it's called in an exit handler
+export function cleanupGatsbyFiles(dir: string) {
   const backup = '.__vercel_builder_backup__';
   const fileEndings = ['.js', '.ts', '.mjs'];
 
@@ -326,20 +327,18 @@ export async function cleanupGatsbyFiles(dir: string) {
       const backupFile = `${baseFile}${backup}${fileEnding}`;
       const backupFilePath = path.join(dir, backupFile);
 
-      const [baseFileContent, backupFileContent] = await Promise.all([
-        fs.readFile(baseFilePath, 'utf-8').catch(() => null),
-        fs.readFile(backupFilePath, 'utf-8').catch(() => null),
-      ]);
+      const baseFileContent = fs.readFileSync(baseFilePath, 'utf-8');
+      const backupFileContent = fs.readFileSync(backupFilePath, 'utf-8');
 
       if (
         baseFileContent &&
         baseFileContent.startsWith(GENERATED_FILE_COMMENT)
       ) {
-        await fs.rm(baseFilePath);
+        fs.rmSync(baseFilePath);
       }
 
       if (backupFileContent) {
-        await fs.rename(backupFilePath, baseFilePath);
+        fs.renameSync(backupFilePath, baseFilePath);
       }
     }
   }
