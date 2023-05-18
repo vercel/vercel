@@ -1,6 +1,6 @@
 module.exports = async ({ github, context }) => {
   const { owner, repo } = context.repo;
-  const response = await github.repos.listReleases({ owner, repo });
+  const response = await github.rest.repos.listReleases({ owner, repo });
 
   function isVercelCliRelease(release) {
     return release.tag_name.startsWith('vercel@');
@@ -15,7 +15,7 @@ module.exports = async ({ github, context }) => {
   const latestVercelRelease = response.data.find(isVercelCliRelease);
   console.log(`Promoting "${latestVercelRelease.tag_name}" to latest release`);
 
-  await github.repos.updateRelease({
+  await github.rest.repos.updateRelease({
     owner,
     repo,
     release_id: latestVercelRelease.id,
