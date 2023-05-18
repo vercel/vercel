@@ -3,14 +3,19 @@ import pluralize from 'pluralize';
 import { homedir } from 'os';
 import { join, normalize } from 'path';
 import { normalizePath } from '@vercel/build-utils';
-import { lstat, readJSON, outputJSON } from 'fs-extra';
+import { lstat, readJSON, outputJSON, writeFile, readFile } from 'fs-extra';
 import confirm from '../input/confirm';
 import toHumanPath from '../humanize-path';
-import { VERCEL_DIR, VERCEL_DIR_REPO } from '../projects/link';
+import {
+  VERCEL_DIR,
+  VERCEL_DIR_README,
+  VERCEL_DIR_REPO,
+} from '../projects/link';
 import { getRemoteUrls } from '../create-git-meta';
 import link from '../output/link';
 import { emoji, prependEmoji } from '../emoji';
 import selectOrg from '../input/select-org';
+import { addToGitIgnore } from './add-to-gitignore';
 import type Client from '../client';
 import type { Project } from '@vercel-internals/types';
 
@@ -76,9 +81,9 @@ export async function ensureRepoLink(
       yes ||
       (await confirm(
         client,
-        `Link to Git repository at ${chalk.cyan(
+        `Link Git repository at ${chalk.cyan(
           `“${toHumanPath(rootPath)}”`
-        )}?`,
+        )} to your Project(s)?`,
         true
       ));
 
@@ -173,10 +178,14 @@ export async function ensureRepoLink(
       }),
     };
     await outputJSON(repoConfigPath, repoConfig, { spaces: 2 });
-    // TODO: add `README.txt`
 
-    // TODO: add to `.gitignore`
-    let isGitIgnoreUpdated = false;
+    await writeFile(
+      join(rootPath, VERCEL_DIR, VERCEL_DIR_README),
+      await readFile(join(__dirname, 'VERCEL_DIR_README.txt'), 'utf8')
+    );
+
+    // update .gitignore
+    const isGitIgnoreUpdated = await addToGitIgnore(rootPath);
 
     output.print(
       prependEmoji(

@@ -1,5 +1,4 @@
 import fs from 'fs';
-import os from 'os';
 import AJV from 'ajv';
 import chalk from 'chalk';
 import { join, relative } from 'path';
@@ -24,6 +23,7 @@ import { NowBuildError, getPlatformEnv } from '@vercel/build-utils';
 import outputCode from '../output/code';
 import { isErrnoException, isError } from '@vercel/error-utils';
 import { findProjectFromPath, findRepoRoot } from '../link/repo';
+import { addToGitIgnore } from '../link/add-to-gitignore';
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
@@ -285,29 +285,7 @@ export async function linkFolderToProject(
   );
 
   // update .gitignore
-  let isGitIgnoreUpdated = false;
-  try {
-    const gitIgnorePath = join(path, '.gitignore');
-
-    let gitIgnore =
-      (await readFile(gitIgnorePath, 'utf8').catch(() => null)) ?? '';
-    const EOL = gitIgnore.includes('\r\n') ? '\r\n' : os.EOL;
-    let contentModified = false;
-
-    if (!gitIgnore.split(EOL).includes(VERCEL_DIR)) {
-      gitIgnore += `${
-        gitIgnore.endsWith(EOL) || gitIgnore.length === 0 ? '' : EOL
-      }${VERCEL_DIR}${EOL}`;
-      contentModified = true;
-    }
-
-    if (contentModified) {
-      await writeFile(gitIgnorePath, gitIgnore);
-      isGitIgnoreUpdated = true;
-    }
-  } catch (error) {
-    // ignore errors since this is non-critical
-  }
+  const isGitIgnoreUpdated = await addToGitIgnore(path);
 
   output.print(
     prependEmoji(
