@@ -161,6 +161,16 @@
       "mustContain": "hello from pages/blog/[slug]"
     },
     {
+      "path": "/blog-ssr/123",
+      "status": 200,
+      "mustContain": "hello from pages/blog-ssr/[slug]"
+    },
+    {
+      "path": "/blog-ssr/321",
+      "status": 200,
+      "mustContain": "hello context"
+    },
+    {
       "path": "/dynamic/category-1/id-1",
       "status": 200,
       "mustContain": "{&quot;category&quot;:&quot;category-1&quot;,&quot;id&quot;:&quot;id-1&quot;}"

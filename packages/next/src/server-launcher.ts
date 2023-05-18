@@ -18,6 +18,8 @@ if (process.env.NODE_ENV !== 'production' && region !== 'dev1') {
   process.env.NODE_ENV = 'production';
 }
 
+// pre-next-server-target
+
 // eslint-disable-next-line
 const NextServer = require('__NEXT_SERVER_PATH__').default;
 const nextServer = new NextServer({
