@@ -29,8 +29,8 @@ export interface RepoProjectsConfig {
 }
 
 export interface RepoLink {
-  rootPath?: string;
-  repoConfigPath?: string;
+  rootPath: string;
+  repoConfigPath: string;
   repoConfig?: RepoProjectsConfig;
 }
 
@@ -39,20 +39,18 @@ export interface RepoLink {
  * and returns the parsed `.vercel/repo.json` file if the repository
  * has already been linked.
  */
-export async function getRepoLink(cwd: string): Promise<RepoLink> {
-  let repoConfigPath: string | undefined;
-  let repoConfig: RepoProjectsConfig | undefined;
-
+export async function getRepoLink(cwd: string): Promise<RepoLink | undefined> {
   // Determine where the root of the repo is
   const rootPath = await findRepoRoot(cwd);
+  if (!rootPath) return undefined;
 
   // Read the `repo.json`, if this repo has already been linked
-  if (rootPath) {
-    repoConfigPath = join(rootPath, VERCEL_DIR, VERCEL_DIR_REPO);
-    repoConfig = await readJSON(repoConfigPath).catch(err => {
+  const repoConfigPath = join(rootPath, VERCEL_DIR, VERCEL_DIR_REPO);
+  const repoConfig: RepoProjectsConfig = await readJSON(repoConfigPath).catch(
+    err => {
       if (err.code !== 'ENOENT') throw err;
-    });
-  }
+    }
+  );
 
   return { rootPath, repoConfig, repoConfigPath };
 }
@@ -64,17 +62,13 @@ export async function ensureRepoLink(
 ): Promise<RepoLink | undefined> {
   const { output } = client;
 
-  let { rootPath, repoConfig, repoConfigPath } = await getRepoLink(cwd);
-  if (rootPath) {
-    output.debug(`Found Git repository root directory: ${rootPath}`);
+  const repoLink = await getRepoLink(cwd);
+  if (repoLink) {
+    output.debug(`Found Git repository root directory: ${repoLink.rootPath}`);
   } else {
     throw new Error('Could not determine Git repository root directory');
   }
-
-  // If `repoPath` is defined then this should always be defined
-  if (!repoConfigPath) {
-    throw new Error('`repoConfigPath` not defined');
-  }
+  let { rootPath, repoConfig, repoConfigPath } = repoLink;
 
   if (!repoConfig) {
     // Not yet linked, so prompt user to begin linking
@@ -209,7 +203,7 @@ export async function ensureRepoLink(
  * the Git config was found, or `undefined` when no Git repo was found.
  */
 export async function findRepoRoot(start: string): Promise<string | undefined> {
-  for (const current of traverseDirectories(start)) {
+  for (const current of traverseUpDirectories(start)) {
     if (current === home) {
       // Sometimes the $HOME directory is set up as a Git repo
       // (for dotfiles, etc.). In this case it's safe to say that
@@ -227,7 +221,7 @@ export async function findRepoRoot(start: string): Promise<string | undefined> {
   }
 }
 
-export function* traverseDirectories(start: string) {
+export function* traverseUpDirectories(start: string) {
   let current: string | undefined = normalize(start);
   while (current) {
     yield current;

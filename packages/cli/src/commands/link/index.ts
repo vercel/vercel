@@ -14,7 +14,7 @@ const help = () => {
   ${chalk.dim('Options:')}
 
     -h, --help                     Output usage information
-    -r, --repo                     Link multiple projects based on Git repository
+    -r, --repo                     Link multiple projects based on Git repository (alpha)
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
     'FILE'
   )}   Path to the local ${'`vercel.json`'} file
