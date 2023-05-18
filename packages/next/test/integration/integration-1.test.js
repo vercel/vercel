@@ -72,7 +72,7 @@ if (parseInt(process.versions.node.split('.')[0], 10) >= 16) {
       )
     ).toBeFalsy();
 
-    expect(lambdas.size).toBe(2);
+    expect(lambdas.size).toBe(3);
 
     // RSC, root-level page.js
     expect(buildResult.output['index']).toBeDefined();

@@ -1383,6 +1383,7 @@ export type LambdaGroup = {
   pages: string[];
   memory?: number;
   maxDuration?: number;
+  isAppRouter?: boolean;
   isStreaming?: boolean;
   isPrerenders?: boolean;
   isApiLambda: boolean;
