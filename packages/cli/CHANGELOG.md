@@ -1,5 +1,33 @@
 # vercel
 
+## 29.3.4
+
+### Patch Changes
+
+- Updated dependencies [[`67e556bc8`](https://github.com/vercel/vercel/commit/67e556bc80c821c233120a2ec1611adb8e195baa), [`ba10fb4dd`](https://github.com/vercel/vercel/commit/ba10fb4dd4155a75df79b98a0c43a6c42eac7b62)]:
+  - @vercel/remix-builder@1.8.9
+  - @vercel/next@3.8.4
+
+## 29.3.3
+
+### Patch Changes
+
+- Updated dependencies [[`6c6f3ce9d`](https://github.com/vercel/vercel/commit/6c6f3ce9d228b1e038641e4bafb38c3487e7dff7)]:
+  - @vercel/next@3.8.3
+
+## 29.3.2
+
+### Patch Changes
+
+- [vc dev] Fix serverless function size limit condition ([#9961](https://github.com/vercel/vercel/pull/9961))
+
+## 29.3.1
+
+### Patch Changes
+
+- Sort environment variables alphabetically in `vercel env pull` ([#9949](https://github.com/vercel/vercel/pull/9949))
+- Skip 50MB zip size limit for Python ([#9944](https://github.com/vercel/vercel/pull/9944))
+
 ## 29.3.0
 
 ### Minor Changes

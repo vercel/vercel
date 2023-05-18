@@ -65,7 +65,14 @@ if (parseInt(process.versions.node.split('.')[0], 10) >= 16) {
       }
     }
 
-    expect(lambdas.size).toBe(3);
+    expect(
+      buildResult.routes.some(
+        route =>
+          route.src?.includes('_next/data') && route.src?.includes('.rsc')
+      )
+    ).toBeFalsy();
+
+    expect(lambdas.size).toBe(4);
     expect(buildResult.output['dashboard']).toBeDefined();
     expect(buildResult.output['dashboard/another']).toBeDefined();
     expect(buildResult.output['dashboard/changelog']).toBeDefined();
