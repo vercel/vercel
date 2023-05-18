@@ -1,32 +1,20 @@
 import chalk from 'chalk';
-import type Client from '../client';
 import type {
+  LastAliasRequest,
   Deployment,
-  PaginationOptions,
+  // PaginationOptions,
   Project,
-  RollbackTarget,
 } from '@vercel-internals/types';
+import type Client from '../client';
 import elapsed from '../output/elapsed';
 import formatDate from '../format-date';
 import getDeployment from '../get-deployment';
+import { getPkgName } from '../pkg-name';
 import getScope from '../get-scope';
 import ms from 'ms';
-import renderAliasStatus from '../alias/render-alias-status';
 import sleep from '../sleep';
-
-interface RollbackAlias {
-  alias: {
-    alias: string;
-    deploymentId: string;
-  };
-  id: string;
-  status: 'completed' | 'in-progress' | 'pending' | 'failed';
-}
-
-interface RollbackAliasesResponse {
-  aliases: RollbackAlias[];
-  pagination: PaginationOptions;
-}
+import getProjectByNameOrId from '../projects/get-project-by-id-or-name';
+import { ProjectNotFound } from '../errors-ts';
 
 /**
  * Continuously checks a deployment status until it has succeeded, failed, or
@@ -35,12 +23,12 @@ interface RollbackAliasesResponse {
  * @param {string} [contextName] - The scope name; if not specified, it will be
  * extracted from the `client`
  * @param {Deployment} [deployment] - Info about the deployment which is used
- * to display different output following a rollback request
+ * to display different output following a promotion request
  * @param {Project} project - Project info instance
  * @param {string} [timeout] - Milliseconds to poll for succeeded/failed state
  * @returns {Promise<number>} Resolves an exit code; 0 on success
  */
-export default async function rollbackStatus({
+export default async function promoteStatus({
   client,
   contextName,
   deployment,
@@ -55,18 +43,11 @@ export default async function rollbackStatus({
 }): Promise<number> {
   const { output } = client;
   const recentThreshold = Date.now() - ms('3m');
-  const rollbackTimeout = Date.now() + ms(timeout);
+  const promoteTimeout = Date.now() + ms(timeout);
   let counter = 0;
   let spinnerMessage = deployment
-    ? 'Rollback in progress'
-    : `Checking rollback status of ${project.name}`;
-
-  const check = async () => {
-    const { lastRollbackTarget } = await client.fetch<any>(
-      `/v9/projects/${project.id}?rollbackInfo=true`
-    );
-    return lastRollbackTarget;
-  };
+    ? 'Promote in progress'
+    : `Checking promotion status of ${project.name}`;
 
   if (!contextName) {
     ({ contextName } = await getScope(client));
@@ -75,11 +56,26 @@ export default async function rollbackStatus({
   try {
     output.spinner(`${spinnerMessage}…`);
 
-    // continuously loop until the rollback has explicitly succeeded, failed,
+    // continuously loop until the promotion has explicitly succeeded, failed,
     // or timed out
     for (;;) {
-      const { jobStatus, requestedAt, toDeploymentId }: RollbackTarget =
-        (await check()) ?? {};
+      const projectCheck = await getProjectByNameOrId(
+        client,
+        project.id,
+        project.accountId
+      );
+      if (projectCheck instanceof ProjectNotFound) {
+        throw projectCheck;
+      }
+
+      console.log(projectCheck.lastAliasRequest);
+
+      const {
+        jobStatus,
+        requestedAt,
+        toDeploymentId,
+        type,
+      }: Partial<LastAliasRequest> = projectCheck.lastAliasRequest ?? {};
 
       if (
         !jobStatus ||
@@ -89,13 +85,18 @@ export default async function rollbackStatus({
         output.log(`${spinnerMessage}…`);
       }
 
-      if (!jobStatus || requestedAt < recentThreshold) {
-        output.log('No deployment rollback in progress');
+      if (
+        !jobStatus ||
+        !requestedAt ||
+        !toDeploymentId ||
+        requestedAt < recentThreshold
+      ) {
+        output.log('No deployment promotion in progress');
         return 0;
       }
 
-      if (jobStatus === 'skipped') {
-        output.log('Rollback was skipped');
+      if (jobStatus === 'skipped' && type === 'promote') {
+        output.log('Promote deployment was skipped');
         return 0;
       }
 
@@ -103,7 +104,7 @@ export default async function rollbackStatus({
         return await renderJobSucceeded({
           client,
           contextName,
-          performingRollback: !!deployment,
+          performingPromote: !!deployment,
           requestedAt,
           project,
           toDeploymentId,
@@ -115,7 +116,7 @@ export default async function rollbackStatus({
           client,
           contextName,
           deployment,
-          project,
+          // project,
           toDeploymentId,
         });
       }
@@ -123,15 +124,15 @@ export default async function rollbackStatus({
       // lastly, if we're not pending/in-progress, then we don't know what
       // the status is, so bail
       if (jobStatus !== 'pending' && jobStatus !== 'in-progress') {
-        output.log(`Unknown rollback status "${jobStatus}"`);
+        output.log(`Unknown promote deployment status "${jobStatus}"`);
         return 1;
       }
 
       // check if we have been running for too long
-      if (requestedAt < recentThreshold || Date.now() >= rollbackTimeout) {
+      if (requestedAt < recentThreshold || Date.now() >= promoteTimeout) {
         output.log(
-          `The rollback exceeded its deadline - rerun ${chalk.bold(
-            `vercel rollback ${toDeploymentId}`
+          `The promotion exceeded its deadline - rerun ${chalk.bold(
+            `${getPkgName} promote ${toDeploymentId}`
           )} to try again`
         );
         return 1;
@@ -155,13 +156,13 @@ async function renderJobFailed({
   client,
   contextName,
   deployment,
-  project,
+  // project,
   toDeploymentId,
 }: {
   client: Client;
   contextName: string;
   deployment?: Deployment;
-  project: Project;
+  // project: Project;
   toDeploymentId: string;
 }) {
   const { output } = client;
@@ -181,31 +182,31 @@ async function renderJobFailed({
 
   // aliases are paginated, so continuously loop until all of them have been
   // fetched
-  let nextTimestamp;
-  for (;;) {
-    let url = `/v9/projects/${project.id}/rollback/aliases?failedOnly=true&limit=20`;
-    if (nextTimestamp) {
-      url += `&until=${nextTimestamp}`;
-    }
+  // let nextTimestamp;
+  // for (;;) {
+  //   let url = `/v9/projects/${project.id}/rollback/aliases?failedOnly=true&limit=20`;
+  //   if (nextTimestamp) {
+  //     url += `&until=${nextTimestamp}`;
+  //   }
 
-    const { aliases, pagination } = await client.fetch<RollbackAliasesResponse>(
-      url
-    );
+  //   const { aliases, pagination } = await client.fetch<RollbackAliasesResponse>(
+  //     url
+  //   );
 
-    for (const { alias, status } of aliases) {
-      output.log(
-        `  ${renderAliasStatus(status).padEnd(11)}  ${alias.alias} (${
-          alias.deploymentId
-        })`
-      );
-    }
+  //   for (const { alias, status } of aliases) {
+  //     output.log(
+  //       `  ${renderAliasStatus(status).padEnd(11)}  ${alias.alias} (${
+  //         alias.deploymentId
+  //       })`
+  //     );
+  //   }
 
-    if (pagination?.next) {
-      nextTimestamp = pagination.next;
-    } else {
-      break;
-    }
-  }
+  //   if (pagination?.next) {
+  //     nextTimestamp = pagination.next;
+  //   } else {
+  //     break;
+  //   }
+  // }
 
   return 1;
 }
@@ -213,14 +214,14 @@ async function renderJobFailed({
 async function renderJobSucceeded({
   client,
   contextName,
-  performingRollback,
+  performingPromote,
   project,
   requestedAt,
   toDeploymentId,
 }: {
   client: Client;
   contextName: string;
-  performingRollback: boolean;
+  performingPromote: boolean;
   project: Project;
   requestedAt: number;
   toDeploymentId: string;
@@ -241,7 +242,7 @@ async function renderJobSucceeded({
     deploymentInfo = chalk.bold(toDeploymentId);
   }
 
-  const duration = performingRollback ? elapsed(Date.now() - requestedAt) : '';
+  const duration = performingPromote ? elapsed(Date.now() - requestedAt) : '';
   output.log(
     `Success! ${chalk.bold(
       project.name
