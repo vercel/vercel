@@ -375,12 +375,12 @@ function tryReadFileSync(filePath: string) {
   try {
     return fs.readFileSync(filePath, 'utf-8');
   } catch (error: unknown) {
-    if (!isErrnoException(error)) {
-      console.error(error);
-    } else {
+    if (isErrnoException(error)) {
       if (error.code !== 'ENOENT') {
         console.error(error);
       }
+    } else {
+      console.error(error);
     }
 
     return undefined;
