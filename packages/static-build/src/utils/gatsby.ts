@@ -1,3 +1,4 @@
+import { isErrnoException } from '@vercel/error-utils';
 import fs from 'fs-extra';
 import * as path from 'path';
 import semver from 'semver';
@@ -23,6 +24,8 @@ const PLUGIN_PATHS: Record<PluginName, string> = {
   ),
 };
 
+let GLOBAL_EXIT_HANDLER: undefined | (() => void);
+
 export async function injectPlugins(
   detectedVersion: string | null,
   dir: string
@@ -33,6 +36,13 @@ export async function injectPlugins(
     const version = semver.coerce(detectedVersion);
     if (version && semver.satisfies(version, '>=4.0.0')) {
       plugins.add('@vercel/gatsby-plugin-vercel-builder');
+
+      if (!GLOBAL_EXIT_HANDLER) {
+        GLOBAL_EXIT_HANDLER = () => {
+          cleanupGatsbyFiles(dir);
+        };
+        process.on('exit', GLOBAL_EXIT_HANDLER);
+      }
     }
   }
 
@@ -311,32 +321,39 @@ module.exports = gatsbyNode;
   );
 }
 
-export async function cleanupGatsbyFiles(dir: string) {
-  const backup = '.__vercel_builder_backup__';
-  const fileEndings = ['.js', '.ts', '.mjs'];
+// must remain sync because it's called in an exit handler
+export function cleanupGatsbyFiles(dir: string) {
+  try {
+    const backup = '.__vercel_builder_backup__';
+    const fileEndings = ['.js', '.ts', '.mjs'];
 
-  for (const fileName of [GATSBY_CONFIG_FILE, GATSBY_NODE_FILE]) {
-    for (const fileEnding of fileEndings) {
-      const baseFile = `${fileName}${fileEnding}`;
-      const baseFilePath = path.join(dir, baseFile);
-      const backupFile = `${baseFile}${backup}${fileEnding}`;
-      const backupFilePath = path.join(dir, backupFile);
+    for (const fileName of [GATSBY_CONFIG_FILE, GATSBY_NODE_FILE]) {
+      for (const fileEnding of fileEndings) {
+        const baseFile = `${fileName}${fileEnding}`;
+        const baseFilePath = path.join(dir, baseFile);
+        const backupFile = `${baseFile}${backup}${fileEnding}`;
+        const backupFilePath = path.join(dir, backupFile);
 
-      const [baseFileContent, backupFileContent] = await Promise.all([
-        fs.readFile(baseFilePath, 'utf-8').catch(() => null),
-        fs.readFile(backupFilePath, 'utf-8').catch(() => null),
-      ]);
+        const baseFileContent = tryReadFileSync(baseFilePath);
+        const backupFileContent = tryReadFileSync(backupFilePath);
 
-      if (
-        baseFileContent &&
-        baseFileContent.startsWith(GENERATED_FILE_COMMENT)
-      ) {
-        await fs.rm(baseFilePath);
+        if (
+          baseFileContent &&
+          baseFileContent.startsWith(GENERATED_FILE_COMMENT)
+        ) {
+          fs.rmSync(baseFilePath);
+        }
+
+        if (backupFileContent) {
+          fs.renameSync(backupFilePath, baseFilePath);
+        }
       }
+    }
+  } catch (error) {
+    console.error(error);
 
-      if (backupFileContent) {
-        await fs.rename(backupFilePath, baseFilePath);
-      }
+    if (GLOBAL_EXIT_HANDLER) {
+      process.off('exit', GLOBAL_EXIT_HANDLER);
     }
   }
 }
@@ -352,4 +369,20 @@ export async function createPluginSymlinks(dir: string) {
       fs.symlink(PLUGIN_PATHS[name], path.join(nodeModulesDir, name))
     )
   );
+}
+
+function tryReadFileSync(filePath: string) {
+  try {
+    return fs.readFileSync(filePath, 'utf-8');
+  } catch (error: unknown) {
+    if (isErrnoException(error)) {
+      if (error.code !== 'ENOENT') {
+        console.error(error);
+      }
+    } else {
+      console.error(error);
+    }
+
+    return undefined;
+  }
 }
