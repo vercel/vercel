@@ -128,7 +128,7 @@ export default async (client: Client): Promise<number> => {
     );
 
     if (!client.stdout.isTTY) {
-      process.stdout.write(`https://${deployment.url}`);
+      client.stdout.write(`https://${deployment.url}`);
     }
 
     if (!noWait) {
