@@ -393,7 +393,7 @@ export type ProjectLinkResult =
     };
 
 /**
- * @deprecated - `RollbackJobStatus` has been replace by `typeof LastAliasRequest[jobStatus]`.
+ * @deprecated - `RollbackJobStatus` has been replace by `LastAliasRequest['jobStatus']`.
  */
 export type RollbackJobStatus =
   | 'pending'
