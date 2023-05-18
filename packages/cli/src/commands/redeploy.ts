@@ -63,8 +63,6 @@ export default async (client: Client): Promise<number> => {
   let argv;
   try {
     argv = getArgs(client.argv.slice(2), {
-      '--debug': Boolean,
-      '-d': '--debug',
       '--no-wait': Boolean,
       '--yes': Boolean,
       '-y': '--yes',
