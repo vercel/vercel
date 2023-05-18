@@ -38,7 +38,7 @@ export default async function requestRollback({
     });
 
     // create the rollback
-    await client.fetch<any>(
+    await client.fetch(
       `/v9/projects/${project.id}/rollback/${deployment.id}`,
       {
         body: {}, // required
