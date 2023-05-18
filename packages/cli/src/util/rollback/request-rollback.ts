@@ -11,19 +11,19 @@ import rollbackStatus from './status';
 /**
  * Requests a rollback and waits for it complete.
  * @param {Client} client - The Vercel client instance
- * @param {string} deployId - The deployment name or id to rollback
+ * @param {string} deployIdOrUrl - The deployment name or id to rollback
  * @param {Project} project - Project info instance
  * @param {string} [timeout] - Time to poll for succeeded/failed state
  * @returns {Promise<number>} Resolves an exit code; 0 on success
  */
 export default async function requestRollback({
   client,
-  deployId,
+  deployIdOrUrl,
   project,
   timeout,
 }: {
   client: Client;
-  deployId: string;
+  deployIdOrUrl: string;
   project: Project;
   timeout?: string;
 }): Promise<number> {
@@ -34,17 +34,14 @@ export default async function requestRollback({
     const deployment = await getDeploymentByIdOrURL({
       client,
       contextName,
-      deployId,
+      deployIdOrUrl,
     });
 
     // create the rollback
-    await client.fetch(
-      `/v9/projects/${project.id}/rollback/${deployment.id}`,
-      {
-        body: {}, // required
-        method: 'POST',
-      }
-    );
+    await client.fetch(`/v9/projects/${project.id}/rollback/${deployment.id}`, {
+      body: {}, // required
+      method: 'POST',
+    });
 
     if (timeout !== undefined && ms(timeout) === 0) {
       output.log(

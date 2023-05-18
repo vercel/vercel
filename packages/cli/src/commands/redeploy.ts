@@ -78,8 +78,8 @@ export default async (client: Client): Promise<number> => {
   }
 
   const { output } = client;
-  const deployId = argv._[1];
-  if (!deployId) {
+  const deployIdOrUrl = argv._[1];
+  if (!deployIdOrUrl) {
     output.error(
       `Missing required deployment id or url: ${getCommandName(
         `redeploy <deployment-id-or-url>`
@@ -95,7 +95,7 @@ export default async (client: Client): Promise<number> => {
     const fromDeployment = await getDeploymentByIdOrURL({
       client,
       contextName,
-      deployId,
+      deployIdOrUrl,
     });
 
     const deployStamp = stamp();

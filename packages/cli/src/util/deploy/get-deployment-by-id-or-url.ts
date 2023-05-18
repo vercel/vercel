@@ -5,20 +5,29 @@ import { isValidName } from '../is-valid-name';
 import type Client from '../client';
 import type { Deployment, Team } from '@vercel-internals/types';
 
+/**
+ * Renders feedback while retrieving a deployment, then validates the
+ * deployment belongs to the current team.
+ *
+ * @param client - The CLI client instance.
+ * @param contextName - The context/team name.
+ * @param deployIdOrUrl - The deployment id or URL.
+ * @returns The deployment info.
+ */
 export async function getDeploymentByIdOrURL({
   client,
   contextName,
-  deployId,
+  deployIdOrUrl,
 }: {
   client: Client;
   contextName: string;
-  deployId: string;
+  deployIdOrUrl: string;
 }): Promise<Deployment> {
   const { config, output } = client;
 
-  if (!isValidName(deployId)) {
+  if (!isValidName(deployIdOrUrl)) {
     throw new Error(
-      `The provided argument "${deployId}" is not a valid deployment or project`
+      `The provided argument "${deployIdOrUrl}" is not a valid deployment or project`
     );
   }
 
@@ -27,12 +36,12 @@ export async function getDeploymentByIdOrURL({
 
   try {
     output.spinner(
-      `Fetching deployment "${deployId}" in ${chalk.bold(contextName)}…`
+      `Fetching deployment "${deployIdOrUrl}" in ${chalk.bold(contextName)}…`
     );
 
     const [teamResult, deploymentResult] = await Promise.allSettled([
       config.currentTeam ? getTeamById(client, config.currentTeam) : undefined,
-      getDeployment(client, contextName, deployId),
+      getDeployment(client, contextName, deployIdOrUrl),
     ]);
 
     if (teamResult.status === 'rejected') {
@@ -50,7 +59,7 @@ export async function getDeploymentByIdOrURL({
 
     // re-render the spinner text because it goes so fast
     output.log(
-      `Fetching deployment "${deployId}" in ${chalk.bold(contextName)}…`
+      `Fetching deployment "${deployIdOrUrl}" in ${chalk.bold(contextName)}…`
     );
   } finally {
     output.stopSpinner();

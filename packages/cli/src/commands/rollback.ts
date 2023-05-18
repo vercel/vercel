@@ -116,7 +116,7 @@ export default async (client: Client): Promise<number> => {
 
   return await requestRollback({
     client,
-    deployId: actionOrDeployId,
+    deployIdOrUrl: actionOrDeployId,
     project,
     timeout,
   });
