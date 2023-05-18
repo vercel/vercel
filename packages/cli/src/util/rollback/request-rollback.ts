@@ -67,9 +67,7 @@ export default async function requestRollback({
       timeout,
     });
   } catch (err: unknown) {
-    if (err instanceof Error) {
-      output.error(err.message);
-    }
+    output.prettyError(err);
     if (isErrnoException(err) && err.code === 'ERR_INVALID_TEAM') {
       output.error(
         `Use ${chalk.bold('vc switch')} to change your current team`
