@@ -62,13 +62,12 @@ export default async function promoteStatus({
       const projectCheck = await getProjectByNameOrId(
         client,
         project.id,
-        project.accountId
+        project.accountId,
+        true
       );
       if (projectCheck instanceof ProjectNotFound) {
         throw projectCheck;
       }
-
-      console.log(projectCheck.lastAliasRequest);
 
       const {
         jobStatus,
@@ -246,7 +245,7 @@ async function renderJobSucceeded({
   output.log(
     `Success! ${chalk.bold(
       project.name
-    )} was rolled back to ${deploymentInfo} ${duration}`
+    )} was promoted to ${deploymentInfo} ${duration}`
   );
   return 0;
 }

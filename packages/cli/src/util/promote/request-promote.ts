@@ -31,13 +31,11 @@ export default async function requestPromote({
   });
 
   // request the promotion
-  await client.fetch<any>(
-    `/v9/projects/${project.id}/promote/${deployment.id}`,
-    {
-      body: {}, // required
-      method: 'POST',
-    }
-  );
+  await client.fetch(`/v9/projects/${project.id}/promote/${deployment.id}`, {
+    body: {}, // required
+    json: false,
+    method: 'POST',
+  });
 
   if (timeout !== undefined && ms(timeout) === 0) {
     output.log(
