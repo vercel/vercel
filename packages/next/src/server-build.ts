@@ -766,7 +766,6 @@ export async function serverBuild({
       initialPseudoLayerUncompressed: uncompressedInitialSize,
       internalPages,
       pageExtensions,
-      appPathsManifest: inversedAppPathManifest,
     });
 
     const appRouterLambdaGroups = await getPageLambdaGroups({
@@ -782,7 +781,6 @@ export async function serverBuild({
       initialPseudoLayerUncompressed: uncompressedInitialSize,
       internalPages,
       pageExtensions,
-      appPathsManifest: inversedAppPathManifest,
     });
 
     for (const group of appRouterLambdaGroups) {
@@ -804,7 +802,6 @@ export async function serverBuild({
       initialPseudoLayerUncompressed: uncompressedInitialSize,
       lambdaCompressedByteLimit,
       internalPages,
-      appPathsManifest: inversedAppPathManifest,
     });
 
     for (const group of apiLambdaGroups) {

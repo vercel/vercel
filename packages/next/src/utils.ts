@@ -1377,7 +1377,6 @@ export async function getPageLambdaGroups({
   internalPages,
   pageExtensions,
 }: {
-  appPathsManifest?: Record<string, string>;
   entryPath: string;
   config: Config;
   pages: string[];
