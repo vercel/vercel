@@ -140,20 +140,20 @@ it('should ignore node version in vercel dev getNodeVersion()', async () => {
 
 it('should select project setting from config when no package.json is found and fallback undefined', async () => {
   expect(
-    await getNodeVersion('/tmp', undefined, { nodeVersion: '16.x' }, {})
-  ).toHaveProperty('range', '16.x');
+    await getNodeVersion('/tmp', undefined, { nodeVersion: '18.x' }, {})
+  ).toHaveProperty('range', '18.x');
   expect(warningMessages).toStrictEqual([]);
 });
 
 it('should select project setting from config when no package.json is found and fallback is null', async () => {
   expect(
-    await getNodeVersion('/tmp', null as any, { nodeVersion: '16.x' }, {})
-  ).toHaveProperty('range', '16.x');
+    await getNodeVersion('/tmp', null as any, { nodeVersion: '18.x' }, {})
+  ).toHaveProperty('range', '18.x');
   expect(warningMessages).toStrictEqual([]);
 });
 
 it('should select project setting from fallback when no package.json is found', async () => {
-  expect(await getNodeVersion('/tmp', '16.x')).toHaveProperty('range', '16.x');
+  expect(await getNodeVersion('/tmp', '18.x')).toHaveProperty('range', '18.x');
   expect(warningMessages).toStrictEqual([]);
 });
 
@@ -165,9 +165,9 @@ it('should prefer package.json engines over project setting from config and warn
       { nodeVersion: '12.x' },
       {}
     )
-  ).toHaveProperty('range', '14.x');
+  ).toHaveProperty('range', '18.x');
   expect(warningMessages).toStrictEqual([
-    'Warning: Due to "engines": { "node": "14.x" } in your `package.json` file, the Node.js Version defined in your Project Settings ("12.x") will not apply. Learn More: http://vercel.link/node-version',
+    'Warning: Due to "engines": { "node": "18.x" } in your `package.json` file, the Node.js Version defined in your Project Settings ("12.x") will not apply. Learn More: http://vercel.link/node-version',
   ]);
 });
 
@@ -179,9 +179,9 @@ it('should warn when package.json engines is exact version', async () => {
       {},
       {}
     )
-  ).toHaveProperty('range', '16.x');
+  ).toHaveProperty('range', '18.x');
   expect(warningMessages).toStrictEqual([
-    'Warning: Detected "engines": { "node": "16.14.0" } in your `package.json` with major.minor.patch, but only major Node.js Version can be selected. Learn More: http://vercel.link/node-version',
+    'Warning: Detected "engines": { "node": "18.2.0" } in your `package.json` with major.minor.patch, but only major Node.js Version can be selected. Learn More: http://vercel.link/node-version',
   ]);
 });
 
@@ -204,30 +204,30 @@ it('should not warn when package.json engines matches project setting from confi
     await getNodeVersion(
       path.join(__dirname, 'pkg-engine-node'),
       undefined,
-      { nodeVersion: '14' },
+      { nodeVersion: '18' },
       {}
     )
-  ).toHaveProperty('range', '14.x');
+  ).toHaveProperty('range', '18.x');
   expect(warningMessages).toStrictEqual([]);
 
   expect(
     await getNodeVersion(
       path.join(__dirname, 'pkg-engine-node'),
       undefined,
-      { nodeVersion: '14.x' },
+      { nodeVersion: '18.x' },
       {}
     )
-  ).toHaveProperty('range', '14.x');
+  ).toHaveProperty('range', '18.x');
   expect(warningMessages).toStrictEqual([]);
 
   expect(
     await getNodeVersion(
       path.join(__dirname, 'pkg-engine-node'),
       undefined,
-      { nodeVersion: '<15' },
+      { nodeVersion: '<19' },
       {}
     )
-  ).toHaveProperty('range', '14.x');
+  ).toHaveProperty('range', '18.x');
   expect(warningMessages).toStrictEqual([]);
 });
 
@@ -286,6 +286,14 @@ it('should warn for deprecated versions, soon to be discontinued', async () => {
   expect(await getSupportedNodeVersion('14.x', false)).toHaveProperty(
     'major',
     14
+  );
+  expect(await getSupportedNodeVersion('14.x', true)).toHaveProperty(
+    'major',
+    14
+  );
+  expect(await getSupportedNodeVersion('16.x', false)).toHaveProperty(
+    'major',
+    16
   );
   expect(await getSupportedNodeVersion('16.x', true)).toHaveProperty(
     'major',
