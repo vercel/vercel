@@ -199,9 +199,7 @@ export default async (client: Client): Promise<number> => {
 
     return printDeploymentStatus(client, deployment, deployStamp, noWait);
   } catch (err: unknown) {
-    if (err instanceof Error) {
-      output.error(err.message);
-    }
+    output.prettyError(err);
     if (isErrnoException(err) && err.code === 'ERR_INVALID_TEAM') {
       output.error(
         `Use ${chalk.bold('vc switch')} to change your current team`
