@@ -191,9 +191,7 @@ export default async (client: Client): Promise<number> => {
             }
           }
         } catch (err: unknown) {
-          if (err instanceof Error) {
-            output.error(err.toString());
-          }
+          output.prettyError(err);
           process.exit(1);
         }
       }
