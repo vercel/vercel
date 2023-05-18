@@ -27,12 +27,17 @@ export default async function getDeployment(
   }
 
   try {
-    return await client.fetch<Deployment>(
+    return client.fetch<Deployment>(
       `/v13/deployments/${encodeURIComponent(hostOrId)}`
     );
   } catch (err: unknown) {
     if (isAPIError(err)) {
       if (err.status === 404) {
+        if (/^[A-Za-z0-9]+$/.test(hostOrId)) {
+          // try again with the `dpl_' prefix
+          return getDeployment(client, contextName, `dpl_${hostOrId}`);
+        }
+
         throw new DeploymentNotFound({ id: hostOrId, context: contextName });
       }
       if (err.status === 403) {
