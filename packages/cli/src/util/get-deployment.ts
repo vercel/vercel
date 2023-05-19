@@ -29,7 +29,7 @@ export default async function getDeployment(
   }
 
   try {
-    return client.fetch<Deployment>(
+    return await client.fetch<Deployment>(
       `/v13/deployments/${encodeURIComponent(hostOrId)}`
     );
   } catch (err: unknown) {
@@ -37,7 +37,7 @@ export default async function getDeployment(
       if (err.status === 404) {
         if (/^[A-Za-z0-9]+$/.test(hostOrId)) {
           // try again with the `dpl_' prefix
-          return getDeployment(client, contextName, `dpl_${hostOrId}`);
+          return await getDeployment(client, contextName, `dpl_${hostOrId}`);
         }
 
         throw new DeploymentNotFound({ id: hostOrId, context: contextName });
