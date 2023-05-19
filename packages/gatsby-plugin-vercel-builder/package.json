@@ -8,6 +8,11 @@
     "gatsby-node.js",
     "gatsby-node.js.map"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vercel/vercel.git",
+    "directory": "packages/gatsby-plugin-vercel-builder"
+  },
   "scripts": {
     "build": "pnpm build:src && pnpm build:gatsby",
     "build:gatsby": "tsc -p tsconfig.gatsby.json",
