@@ -415,12 +415,7 @@ export interface RollbackTarget {
 
 export interface LastAliasRequest {
   fromDeploymentId: string;
-  jobStatus:
-    | 'pending'
-    | 'in-progress'
-    | 'succeeded'
-    | 'failed'
-    | 'skipped';
+  jobStatus: 'pending' | 'in-progress' | 'succeeded' | 'failed' | 'skipped';
   requestedAt: number;
   toDeploymentId: string;
   type: string;
