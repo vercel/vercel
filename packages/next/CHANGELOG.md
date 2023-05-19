@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 3.8.5
+
+### Patch Changes
+
+- [next] Ensure app functions are detected/separated properly ([#9989](https://github.com/vercel/vercel/pull/9989))
+
 ## 3.8.4
 
 ### Patch Changes
