@@ -21,6 +21,7 @@
     "eslint-plugin-jest": "26.1.5",
     "execa": "3.2.0",
     "fs-extra": "11.1.0",
+    "glob": "10.2.3",
     "husky": "7.0.4",
     "jest": "29.5.0",
     "json5": "2.1.1",
