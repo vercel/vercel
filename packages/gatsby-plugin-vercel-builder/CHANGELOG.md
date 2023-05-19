@@ -1,5 +1,11 @@
 # @vercel/gatsby-plugin-vercel-builder
 
+## 1.3.5
+
+### Patch Changes
+
+- add repo details for gatsby-plugin-vercel-builder ([#9990](https://github.com/vercel/vercel/pull/9990))
+
 ## 1.3.4
 
 ### Patch Changes
