@@ -117,9 +117,7 @@ export default async (client: Client): Promise<number> => {
       }
     }
 
-    if (err instanceof Error) {
-      client.output.error(err.message);
-    }
+    client.output.prettyError(err);
     return 1;
   }
 };

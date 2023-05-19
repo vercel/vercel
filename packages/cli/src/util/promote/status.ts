@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import type {
   LastAliasRequest,
   Deployment,
-  // PaginationOptions,
+  PaginationOptions,
   Project,
 } from '@vercel-internals/types';
 import type Client from '../client';
@@ -15,6 +15,21 @@ import ms from 'ms';
 import sleep from '../sleep';
 import getProjectByNameOrId from '../projects/get-project-by-id-or-name';
 import { ProjectNotFound } from '../errors-ts';
+import renderAliasStatus from '../alias/render-alias-status';
+
+interface DeploymentAlias {
+  alias: {
+    alias: string;
+    deploymentId: string;
+  };
+  id: string;
+  status: 'completed' | 'in-progress' | 'pending' | 'failed';
+}
+
+interface AliasesResponse {
+  aliases: DeploymentAlias[];
+  pagination: PaginationOptions;
+}
 
 /**
  * Continuously checks a deployment status until it has succeeded, failed, or
@@ -116,7 +131,7 @@ export default async function promoteStatus({
           client,
           contextName,
           deployment,
-          // project,
+          project,
           toDeploymentId,
         });
       }
@@ -156,13 +171,13 @@ async function renderJobFailed({
   client,
   contextName,
   deployment,
-  // project,
+  project,
   toDeploymentId,
 }: {
   client: Client;
   contextName: string;
   deployment?: Deployment;
-  // project: Project;
+  project: Project;
   toDeploymentId: string;
 }) {
   const { output } = client;
@@ -182,31 +197,29 @@ async function renderJobFailed({
 
   // aliases are paginated, so continuously loop until all of them have been
   // fetched
-  // let nextTimestamp;
-  // for (;;) {
-  //   let url = `/v9/projects/${project.id}/rollback/aliases?failedOnly=true&limit=20`;
-  //   if (nextTimestamp) {
-  //     url += `&until=${nextTimestamp}`;
-  //   }
+  let nextTimestamp;
+  for (;;) {
+    let url = `/v9/projects/${project.id}/promote/aliases?failedOnly=true&limit=20`;
+    if (nextTimestamp) {
+      url += `&until=${nextTimestamp}`;
+    }
 
-  //   const { aliases, pagination } = await client.fetch<RollbackAliasesResponse>(
-  //     url
-  //   );
+    const { aliases, pagination } = await client.fetch<AliasesResponse>(url);
 
-  //   for (const { alias, status } of aliases) {
-  //     output.log(
-  //       `  ${renderAliasStatus(status).padEnd(11)}  ${alias.alias} (${
-  //         alias.deploymentId
-  //       })`
-  //     );
-  //   }
+    for (const { alias, status } of aliases) {
+      output.log(
+        `  ${renderAliasStatus(status).padEnd(11)}  ${alias.alias} (${
+          alias.deploymentId
+        })`
+      );
+    }
 
-  //   if (pagination?.next) {
-  //     nextTimestamp = pagination.next;
-  //   } else {
-  //     break;
-  //   }
-  // }
+    if (pagination?.next) {
+      nextTimestamp = pagination.next;
+    } else {
+      break;
+    }
+  }
 
   return 1;
 }
