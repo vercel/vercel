@@ -1,5 +1,12 @@
 # vercel
 
+## 29.3.6
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/static-build@1.3.32
+
 ## 29.3.5
 
 ### Patch Changes
