@@ -4,11 +4,11 @@ import getArgs from '../util/get-args';
 import getProjectByCwdOrLink from '../util/projects/get-project-by-cwd-or-link';
 import { getPkgName } from '../util/pkg-name';
 import handleError from '../util/handle-error';
+import { isErrnoException } from '@vercel/error-utils';
 import logo from '../util/output/logo';
 import ms from 'ms';
 import requestPromote from '../util/promote/request-promote';
 import promoteStatus from '../util/promote/status';
-import { isErrnoException } from '@vercel/error-utils';
 
 const help = () => {
   console.log(`

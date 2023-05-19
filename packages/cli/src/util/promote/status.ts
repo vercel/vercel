@@ -19,6 +19,7 @@ import { ProjectNotFound } from '../errors-ts';
 /**
  * Continuously checks a deployment status until it has succeeded, failed, or
  * taken longer than the timeout (default 3 minutes).
+ *
  * @param {Client} client - The Vercel client instance
  * @param {string} [contextName] - The scope name; if not specified, it will be
  * extracted from the `client`
