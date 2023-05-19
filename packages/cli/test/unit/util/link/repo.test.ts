@@ -4,7 +4,7 @@ import {
   findProjectFromPath,
   findRepoRoot,
   RepoProjectConfig,
-  traverseDirectories,
+  traverseUpDirectories,
 } from '../../../../src/util/link/repo';
 
 const isWindows = process.platform === 'win32';
@@ -29,7 +29,7 @@ describe('findRepoRoot()', () => {
   });
 });
 
-describe('traverseDirectories()', () => {
+describe('traverseUpDirectories()', () => {
   test.each(
     isWindows
       ? [
@@ -53,7 +53,7 @@ describe('traverseDirectories()', () => {
           },
         ]
   )('should traverse "$input"', ({ input, expected }) => {
-    expect(Array.from(traverseDirectories(input))).toEqual(expected);
+    expect(Array.from(traverseUpDirectories(input))).toEqual(expected);
   });
 });
 

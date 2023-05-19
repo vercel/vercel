@@ -2,9 +2,9 @@ import chalk from 'chalk';
 import Client from '../../util/client';
 import getArgs from '../../util/get-args';
 import logo from '../../util/output/logo';
+import cmd from '../../util/output/cmd';
 import { getPkgName } from '../../util/pkg-name';
 import { ensureLink } from '../../util/link/ensure-link';
-import cmd from '../../util/output/cmd';
 import { ensureRepoLink } from '../../util/link/repo';
 
 const help = () => {
