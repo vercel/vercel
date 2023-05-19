@@ -339,7 +339,7 @@ export async function detectBuilders(
       warnings.push({
         code: 'conflicting_files',
         message:
-          'When using Next.js, it is recommended to place Node.js Functions inside of the `pages/api` (provided by Next.js) directory instead of `api` (provided by Vercel). Other (non-Node.js) Functions should still go in the `api` directory.',
+          'When using Next.js, it is recommended to place JavaScript Functions inside of the `pages/api` (provided by Next.js) directory instead of `api` (provided by Vercel). Other languages (Python, Go, etc) should still go in the `api` directory.',
         link: 'https://nextjs.org/docs/api-routes/introduction',
         action: 'Learn More',
       });
