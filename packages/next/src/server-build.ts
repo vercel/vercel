@@ -407,14 +407,10 @@ export async function serverBuild({
         dynamicPages.push(normalizedPathname);
       }
 
-      if (pageMatchesApi(page)) {
-        apiPages.push(page);
-      } else if (
-        (appPathRoutesManifest?.[`${normalizedPathname}/page`] ||
-          appPathRoutesManifest?.[`${normalizedPathname}/route`]) &&
-        lambdaAppPaths[page]
-      ) {
+      if (lambdaAppPaths[page]) {
         appRouterPages.push(page);
+      } else if (pageMatchesApi(page)) {
+        apiPages.push(page);
       } else {
         nonApiPages.push(page);
       }
