@@ -21,7 +21,7 @@
   "devDependencies": {
     "@types/jest": "27.5.1",
     "@types/node": "14.18.33",
-    "@vercel/build-utils": "6.7.2",
+    "@vercel/build-utils": "6.7.3",
     "@vercel/static-config": "2.0.17",
     "execa": "3.2.0",
     "fs-extra": "11.1.0",

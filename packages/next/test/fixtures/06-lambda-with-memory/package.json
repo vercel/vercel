@@ -7,5 +7,6 @@
     "react": "latest",
     "react-dom": "latest",
     "typescript": "4.9.5"
-  }
+  },
+  "ignoreNextjsUpdates": true
 }

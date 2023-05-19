@@ -359,7 +359,7 @@ describe('gatsby utilities', () => {
       );
 
       expect((await fs.readdir(dir)).length).toBe(6);
-      await cleanupGatsbyFiles(dir);
+      cleanupGatsbyFiles(dir);
       expect((await fs.readdir(dir)).length).toBe(0);
     });
   });
@@ -393,7 +393,7 @@ describe('gatsby utilities', () => {
     );
 
     expect((await fs.readdir(dir)).length).toBe(12);
-    await cleanupGatsbyFiles(dir);
+    cleanupGatsbyFiles(dir);
     const afterDelete = await fs.readdir(dir);
     expect(afterDelete.length).toBe(6);
     expect(afterDelete.sort()).toEqual(files.sort());
