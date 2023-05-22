@@ -56,15 +56,6 @@ jobs:
           GA_TRACKING_ID: ${{ secrets.GA_TRACKING_ID }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
 
-      - name: Set latest Release to `vercel` (if a Publish Happened)
-        if: steps.changesets.outputs.published == 'true'
-        uses: actions/github-script@v6
-        with:
-          github-token: ${{ secrets.GH_TOKEN_PULL_REQUESTS }}
-          script: |
-            const script = require('./utils/update-latest-release.js')
-            await script({ github, context })
-
       - name: Trigger Update (if a Publish Happened)
         if: steps.changesets.outputs.published == 'true'
         uses: actions/github-script@v6
@@ -72,4 +63,13 @@ jobs:
           github-token: ${{ secrets.GH_TOKEN_PULL_REQUESTS }}
           script: |
             const script = require('./utils/trigger-update-workflow.js')
+            await script({ github, context })
+
+      - name: Set latest Release to `vercel` (if a Publish Happened)
+        if: steps.changesets.outputs.published == 'true'
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GH_TOKEN_PULL_REQUESTS }}
+          script: |
+            const script = require('./utils/update-latest-release.js')
             await script({ github, context })
