@@ -353,11 +353,11 @@ export interface Project extends ProjectSettings {
   link?: ProjectLinkData;
   alias?: ProjectAliasTarget[];
   latestDeployments?: Partial<Deployment>[];
-  lastAliasRequest?: LastAliasRequest;
+  lastAliasRequest?: LastAliasRequest | null;
   /**
    * @deprecated - Use `lastAliasRequest` instead
    */
-  lastRollbackTarget?: RollbackTarget;
+  lastRollbackTarget?: RollbackTarget | null;
 }
 
 export interface Org {
