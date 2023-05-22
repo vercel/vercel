@@ -12,7 +12,7 @@ import promoteStatus from '../util/promote/status';
 
 const help = () => {
   console.log(`
-  ${chalk.bold(`${logo} ${getPkgName()} promote`)} [deploymentId|deploymentName]
+  ${chalk.bold(`${logo} ${getPkgName()} promote`)} [deployment id/url]
 
   Promote an existing deployment to current.
 

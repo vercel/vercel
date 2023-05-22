@@ -12,9 +12,7 @@ import validatePaths from '../util/validate-paths';
 
 const help = () => {
   console.log(`
-  ${chalk.bold(
-    `${logo} ${getPkgName()} rollback`
-  )} [deploymentId|deploymentName]
+  ${chalk.bold(`${logo} ${getPkgName()} rollback`)} [deployment id/url]
 
   Quickly revert back to a previous deployment.
 
