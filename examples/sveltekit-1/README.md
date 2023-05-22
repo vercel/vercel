@@ -15,11 +15,7 @@ npm run dev
 npm run dev -- --open
 ```
 
-In order to run your application locally, you need a `.env` file with `VERCEL_ANALYTICS_ID=` (no value in dev, automatically provided on Vercel).
-
 ## Building
-
-In order to build your application, you need a `.env` file with `VERCEL_ANALYTICS_ID=` (no value, automatically provided on Vercel).
 
 To create a production version of your app:
 

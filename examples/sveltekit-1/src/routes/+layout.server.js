@@ -1,6 +1,6 @@
-import { VERCEL_ANALYTICS_ID } from '$env/static/private';
+import { env } from '$env/dynamic/private';
 
 /** @type {import('./$types').LayoutServerLoad} */
 export function load() {
-	return { analyticsId: VERCEL_ANALYTICS_ID };
+	return { analyticsId: env.VERCEL_ANALYTICS_ID };
 }
