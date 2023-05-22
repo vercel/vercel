@@ -153,7 +153,7 @@ describe('promote', () => {
     await expect(exitCodePromise).resolves.toEqual(1);
   });
 
-  it('should error if rollback fails (no aliases)', async () => {
+  it('should error if promote fails (no aliases)', async () => {
     const { cwd, previousDeployment } = initPromoteTest({
       promoteJobStatus: 'failed',
     });
