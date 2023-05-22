@@ -157,6 +157,7 @@ export type Deployment = {
   errorLink?: string;
   errorMessage?: string | null;
   errorStep?: string;
+  forced?: boolean;
   functions?: BuilderFunctions | null;
   gitSource?: {
     org?: string;
@@ -183,6 +184,7 @@ export type Deployment = {
   ownerId?: string;
   plan?: 'enterprise' | 'hobby' | 'oss' | 'pro';
   previewCommentsEnabled?: boolean;
+  private?: boolean;
   projectId?: string;
   projectSettings?: {
     buildCommand?: string | null;

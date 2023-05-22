@@ -28,6 +28,7 @@ export default new Map([
   ['projects', 'project'],
   ['promote', 'promote'],
   ['pull', 'pull'],
+  ['redeploy', 'redeploy'],
   ['remove', 'remove'],
   ['rm', 'remove'],
   ['rollback', 'rollback'],

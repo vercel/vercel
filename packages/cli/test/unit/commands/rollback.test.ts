@@ -40,7 +40,7 @@ describe('rollback', () => {
 
     await expect(client.stderr).toOutput('Retrieving project…');
     await expect(client.stderr).toOutput(
-      'Error: The provided argument "????" is not a valid deployment or project'
+      'Error: The provided argument "????" is not a valid deployment ID or URL'
     );
     await expect(exitCodePromise).resolves.toEqual(1);
   });
@@ -51,9 +51,8 @@ describe('rollback', () => {
     const exitCodePromise = rollback(client);
 
     await expect(client.stderr).toOutput('Retrieving project…');
-    await expect(client.stderr).toOutput('Fetching deployment "foo" in ');
     await expect(client.stderr).toOutput(
-      'Error: Error: Can\'t find the deployment "foo" under the context'
+      'Error: Can\'t find the deployment "foo" under the context'
     );
 
     await expect(exitCodePromise).resolves.toEqual(1);
@@ -147,14 +146,14 @@ describe('rollback', () => {
     });
 
     client.setArgv('rollback', previousDeployment.id, '--yes', '--cwd', cwd);
-    const exitCodePromise = rollback(client);
+    const exitCode = await rollback(client);
 
+    expect(exitCode).toBe(1);
     await expect(client.stderr).toOutput('Retrieving project…');
     await expect(client.stderr).toOutput(
       `Fetching deployment "${previousDeployment.id}" in ${previousDeployment.creator?.username}`
     );
-
-    await expect(exitCodePromise).rejects.toThrow('Response Error (500)');
+    await expect(client.stderr).toOutput('Response Error (500)');
   });
 
   it('should error if rollback fails (no aliases)', async () => {
@@ -222,7 +221,7 @@ describe('rollback', () => {
       '--cwd',
       cwd,
       '--timeout',
-      '2s'
+      '1s'
     );
     const exitCodePromise = rollback(client);
 

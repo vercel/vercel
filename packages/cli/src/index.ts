@@ -577,6 +577,9 @@ const main = async () => {
         case 'pull':
           func = require('./commands/pull').default;
           break;
+        case 'redeploy':
+          func = require('./commands/redeploy').default;
+          break;
         case 'remove':
           func = require('./commands/remove').default;
           break;
