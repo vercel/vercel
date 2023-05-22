@@ -1,4 +1,6 @@
 {
+  "name": "24-custom-output-dir",
+  "version": "0.0.0",
   "scripts": {
     "build": "next build"
   },
@@ -9,5 +11,6 @@
     "next": "canary",
     "react": "latest",
     "react-dom": "latest"
-  }
+  },
+  "ignoreNextjsUpdates": true
 }

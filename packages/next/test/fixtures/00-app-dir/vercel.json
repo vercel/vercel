@@ -19,6 +19,11 @@
   ],
   "probes": [
     {
+      "path": "/dashboard/hello",
+      "status": 200,
+      "mustContain": "hello from app/dashboard/rootonly/hello"
+    },
+    {
       "path": "/dashboard/another-edge",
       "status": 200,
       "mustContain": "hello from newroot/dashboard/another"
