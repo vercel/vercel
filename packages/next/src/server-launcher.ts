@@ -33,12 +33,14 @@ const nextServer = new NextServer({
 });
 const requestHandler = nextServer.getRequestHandler();
 
-for (const chunk of fs.readdirSync('./.next/server/chunks')) {
-  console.log('[compute] load chunk', chunk);
-  require(`./.next/server/chunks/${chunk}`);
+const logs = [`[compute] ${process.cwd()}`];
+for (const page of fs.readdirSync('./.next/server/pages')) {
+  logs.push('[compute] load page', page);
+  require(`./.next/server/pages/${page}`);
 }
 
 module.exports = async (req: IncomingMessage, res: ServerResponse) => {
+  console.log('request!', ...logs);
   try {
     // entryDirectory handler
     await requestHandler(req, res);
