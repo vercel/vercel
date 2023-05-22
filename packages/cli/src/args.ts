@@ -25,6 +25,7 @@ export const help = () => `
       login                [email]     Logs into your account or creates a new one
       logout                           Logs out of your account
       pull                 [path]      Pull your Project Settings from the cloud
+      redeploy             [url|id]    Rebuild and deploy a previous deployment.
       rollback             [url|id]    Quickly revert back to a previous deployment
       switch               [scope]     Switches between teams and your personal account
 
