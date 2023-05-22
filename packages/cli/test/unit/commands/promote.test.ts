@@ -216,7 +216,7 @@ describe('promote', () => {
       '--cwd',
       cwd,
       '--timeout',
-      '2s'
+      '1s'
     );
     const exitCodePromise = promote(client);
 
