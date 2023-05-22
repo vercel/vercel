@@ -10,15 +10,9 @@ import { useTeams } from '../../mocks/team';
 import { useUser } from '../../mocks/user';
 import sleep from '../../../src/util/sleep';
 
-let globalPromoteTimer: NodeJS.Timeout | undefined = undefined;
-
 jest.setTimeout(60000);
 
 describe('promote', () => {
-  afterEach(() => {
-    clearTimeout(globalPromoteTimer);
-  });
-
   it('should error if cwd is invalid', async () => {
     client.setArgv('promote', '--cwd', __filename);
     const exitCodePromise = promote(client);
@@ -153,135 +147,137 @@ describe('promote', () => {
       `Fetching deployment "${previousDeployment.id}" in ${previousDeployment.creator?.username}`
     );
 
-    await expect(client.stderr).toOutput('Response Error (500)');
+    // we need to wait a super long time because fetch will return on 500
+    await expect(client.stderr).toOutput('Response Error (500)', 20000);
 
-    await expect(exitCodePromise).toEqual(1);
+    await expect(exitCodePromise).resolves.toEqual(1);
   });
 
-  //   it('should error if rollback fails (no aliases)', async () => {
-  //     const { cwd, previousDeployment } = initPromoteTest({
-  //       rollbackJobStatus: 'failed',
-  //     });
-  //     client.setArgv('rollback', previousDeployment.id, '--yes', '--cwd', cwd);
-  //     const exitCodePromise = promote(client);
+  it('should error if rollback fails (no aliases)', async () => {
+    const { cwd, previousDeployment } = initPromoteTest({
+      promoteJobStatus: 'failed',
+    });
+    client.setArgv('promote', previousDeployment.id, '--yes', '--cwd', cwd);
+    const exitCodePromise = promote(client);
 
-  //     await expect(client.stderr).toOutput(
-  //       `Fetching deployment "${previousDeployment.id}" in ${previousDeployment.creator?.username}`
-  //     );
-  //     await expect(client.stderr).toOutput('Rollback in progress');
-  //     await expect(client.stderr).toOutput(
-  //       `Error: Failed to remap all aliases to the requested deployment ${previousDeployment.url} (${previousDeployment.id})`
-  //     );
+    await expect(client.stderr).toOutput(
+      `Fetching deployment "${previousDeployment.id}" in ${previousDeployment.creator?.username}`
+    );
+    await expect(client.stderr).toOutput('Promote in progress');
+    await expect(client.stderr).toOutput(
+      `Error: Failed to remap all aliases to the requested deployment ${previousDeployment.url} (${previousDeployment.id})`
+    );
 
-  //     await expect(exitCodePromise).resolves.toEqual(1);
-  //   });
+    await expect(exitCodePromise).resolves.toEqual(1);
+  });
 
-  //   it('should error if rollback fails (with aliases)', async () => {
-  //     const { cwd, previousDeployment } = initPromoteTest({
-  //       rollbackAliases: [
-  //         {
-  //           alias: { alias: 'foo', deploymentId: 'foo_123' },
-  //           status: 'completed',
-  //         },
-  //         {
-  //           alias: { alias: 'bar', deploymentId: 'bar_123' },
-  //           status: 'failed',
-  //         },
-  //       ],
-  //       rollbackJobStatus: 'failed',
-  //     });
-  //     client.setArgv('rollback', previousDeployment.id, '--yes', '--cwd', cwd);
-  //     const exitCodePromise = promote(client);
+  it('should error if promote fails (with aliases)', async () => {
+    const { cwd, previousDeployment } = initPromoteTest({
+      promoteAliases: [
+        {
+          alias: { alias: 'foo', deploymentId: 'foo_123' },
+          status: 'completed',
+        },
+        {
+          alias: { alias: 'bar', deploymentId: 'bar_123' },
+          status: 'failed',
+        },
+      ],
+      promoteJobStatus: 'failed',
+    });
+    client.setArgv('promote', previousDeployment.id, '--yes', '--cwd', cwd);
+    const exitCodePromise = promote(client);
 
-  //     await expect(client.stderr).toOutput(
-  //       `Fetching deployment "${previousDeployment.id}" in ${previousDeployment.creator?.username}`
-  //     );
-  //     await expect(client.stderr).toOutput('Rollback in progress');
-  //     await expect(client.stderr).toOutput(
-  //       `Error: Failed to remap all aliases to the requested deployment ${previousDeployment.url} (${previousDeployment.id})`
-  //     );
-  //     await expect(client.stderr).toOutput(
-  //       `  ${chalk.green('completed')}    foo (foo_123)`
-  //     );
-  //     await expect(client.stderr).toOutput(
-  //       `  ${chalk.red('failed')}       bar (bar_123)`
-  //     );
+    await expect(client.stderr).toOutput(
+      `Fetching deployment "${previousDeployment.id}" in ${previousDeployment.creator?.username}`
+    );
+    await expect(client.stderr).toOutput('Promote in progress');
+    await expect(client.stderr).toOutput(
+      `Error: Failed to remap all aliases to the requested deployment ${previousDeployment.url} (${previousDeployment.id})`
+    );
+    await expect(client.stderr).toOutput(
+      `  ${chalk.green('completed')}    foo (foo_123)`
+    );
+    await expect(client.stderr).toOutput(
+      `  ${chalk.red('failed')}       bar (bar_123)`
+    );
 
-  //     await expect(exitCodePromise).resolves.toEqual(1);
-  //   });
+    await expect(exitCodePromise).resolves.toEqual(1);
+  });
 
-  //   it('should error if deployment times out', async () => {
-  //     const { cwd, previousDeployment } = initPromoteTest({
-  //       rollbackPollCount: 10,
-  //     });
-  //     client.setArgv(
-  //       'rollback',
-  //       previousDeployment.id,
-  //       '--yes',
-  //       '--cwd',
-  //       cwd,
-  //       '--timeout',
-  //       '2s'
-  //     );
-  //     const exitCodePromise = promote(client);
+  it('should error if deployment times out', async () => {
+    const { cwd, previousDeployment } = initPromoteTest({
+      promotePollCount: 10,
+    });
+    client.setArgv(
+      'promote',
+      previousDeployment.id,
+      '--yes',
+      '--cwd',
+      cwd,
+      '--timeout',
+      '2s'
+    );
+    const exitCodePromise = promote(client);
 
-  //     await expect(client.stderr).toOutput(
-  //       `Fetching deployment "${previousDeployment.id}" in ${previousDeployment.creator?.username}`
-  //     );
-  //     await expect(client.stderr).toOutput('Rollback in progress');
-  //     await expect(client.stderr).toOutput(
-  //       `The rollback exceeded its deadline - rerun ${chalk.bold(
-  //         `vercel rollback ${previousDeployment.id}`
-  //       )} to try again`
-  //     );
+    await expect(client.stderr).toOutput(
+      `Fetching deployment "${previousDeployment.id}" in ${previousDeployment.creator?.username}`
+    );
+    await expect(client.stderr).toOutput('Promote in progress');
+    await expect(client.stderr).toOutput(
+      `The promotion exceeded its deadline - rerun ${chalk.bold(
+        `vercel promote ${previousDeployment.id}`
+      )} to try again`,
+      10000
+    );
 
-  //     await expect(exitCodePromise).resolves.toEqual(1);
-  //   });
+    await expect(exitCodePromise).resolves.toEqual(1);
+  });
 
-  //   it('should immediately exit after requesting rollback', async () => {
-  //     const { cwd, previousDeployment } = initPromoteTest();
-  //     client.setArgv(
-  //       'rollback',
-  //       previousDeployment.id,
-  //       '--yes',
-  //       '--cwd',
-  //       cwd,
-  //       '--timeout',
-  //       '0'
-  //     );
-  //     const exitCodePromise = promote(client);
+  it('should immediately exit after requesting promote', async () => {
+    const { cwd, previousDeployment } = initPromoteTest();
+    client.setArgv(
+      'promote',
+      previousDeployment.id,
+      '--yes',
+      '--cwd',
+      cwd,
+      '--timeout',
+      '0'
+    );
+    const exitCodePromise = promote(client);
 
-  //     await expect(client.stderr).toOutput(
-  //       `Fetching deployment "${previousDeployment.id}" in ${previousDeployment.creator?.username}`
-  //     );
-  //     await expect(client.stderr).toOutput(
-  //       `Successfully requested rollback of ${chalk.bold('vercel-promote')} to ${
-  //         previousDeployment.url
-  //       } (${previousDeployment.id})`
-  //     );
+    await expect(client.stderr).toOutput(
+      `Fetching deployment "${previousDeployment.id}" in ${previousDeployment.creator?.username}`
+    );
+    await expect(client.stderr).toOutput(
+      `Successfully requested promote of ${chalk.bold('vercel-promote')} to ${
+        previousDeployment.url
+      } (${previousDeployment.id})`
+    );
 
-  //     await expect(exitCodePromise).resolves.toEqual(0);
-  //   });
+    await expect(exitCodePromise).resolves.toEqual(0);
+  });
 
-  //   it('should error if deployment belongs to different team', async () => {
-  //     const { cwd, previousDeployment } = initPromoteTest();
-  //     previousDeployment.team = {
-  //       id: 'abc',
-  //       name: 'abc',
-  //       slug: 'abc',
-  //     };
-  //     client.setArgv('rollback', previousDeployment.id, '--yes', '--cwd', cwd);
-  //     const exitCodePromise = promote(client);
+  it('should error if deployment belongs to different team', async () => {
+    const { cwd, previousDeployment } = initPromoteTest();
+    previousDeployment.team = {
+      id: 'abc',
+      name: 'abc',
+      slug: 'abc',
+    };
+    client.setArgv('promote', previousDeployment.id, '--yes', '--cwd', cwd);
+    const exitCodePromise = promote(client);
 
-  //     await expect(client.stderr).toOutput(
-  //       `Fetching deployment "${previousDeployment.id}" in ${previousDeployment.creator?.username}`
-  //     );
-  //     await expect(client.stderr).toOutput(
-  //       'Error: Deployment belongs to a different team'
-  //     );
+    await expect(client.stderr).toOutput(
+      `Fetching deployment "${previousDeployment.id}" in ${previousDeployment.creator?.username}`
+    );
+    await expect(client.stderr).toOutput(
+      'Error: Deployment belongs to a different team'
+    );
 
-  //     await expect(exitCodePromise).resolves.toEqual(1);
-  //   });
+    await expect(exitCodePromise).resolves.toEqual(1);
+  });
 });
 
 type DeploymentAlias = {
@@ -315,9 +311,18 @@ function initPromoteTest({
   const currentDeployment = useDeployment({ creator: user, project });
   const previousDeployment = useDeployment({ creator: user, project });
 
+  let pollCounter = 0;
+  let lastAliasRequest: LastAliasRequest | null = null;
+
   client.scenario.post(
     '/:version/projects/:project/promote/:id',
     (req: Request, res: Response) => {
+      if (promoteStatusCode === 500) {
+        res.statusCode = 500;
+        res.end('Server error');
+        return;
+      }
+
       const { id } = req.params;
       if (previousDeployment.id !== id) {
         res.statusCode = 404;
@@ -327,13 +332,7 @@ function initPromoteTest({
         return;
       }
 
-      if (promoteStatusCode === 500) {
-        res.statusCode = 500;
-        res.end('Server error');
-        return;
-      }
-
-      project.lastAliasRequest = {
+      lastAliasRequest = {
         fromDeploymentId: currentDeployment.id,
         jobStatus: 'in-progress',
         requestedAt: Date.now(),
@@ -341,29 +340,26 @@ function initPromoteTest({
         type: 'promote',
       };
 
-      globalPromoteTimer = setTimeout(() => {
-        if (project.lastAliasRequest) {
-          project.lastAliasRequest.jobStatus = 'succeeded';
-        }
-      }, 500);
+      Object.defineProperty(project, 'lastAliasRequest', {
+        get(): LastAliasRequest | null {
+          if (
+            lastAliasRequest &&
+            promotePollCount !== undefined &&
+            pollCounter++ > promotePollCount
+          ) {
+            lastAliasRequest.jobStatus = promoteJobStatus;
+          }
+          return lastAliasRequest;
+        },
+        set(value: LastAliasRequest | null) {
+          lastAliasRequest = value;
+        },
+      });
 
       res.statusCode = 201;
       res.end();
     }
   );
-
-  let counter = 0;
-
-  client.scenario.get(`/:version/projects/${project.id}`, (req, res) => {
-    const data = { ...project };
-    if (req.query?.rollbackInfo === 'true') {
-      if (project.lastAliasRequest && counter++ > promotePollCount) {
-        project.lastAliasRequest.jobStatus = promoteJobStatus;
-      }
-      data.lastAliasRequest = project.lastAliasRequest;
-    }
-    res.json(data);
-  });
 
   client.scenario.get(
     '/:version/projects/:project/promote/aliases',

@@ -147,7 +147,7 @@ export default async function promoteStatus({
       if (requestedAt < recentThreshold || Date.now() >= promoteTimeout) {
         output.log(
           `The promotion exceeded its deadline - rerun ${chalk.bold(
-            `${getPkgName} promote ${toDeploymentId}`
+            `${getPkgName()} promote ${toDeploymentId}`
           )} to try again`
         );
         return 1;
