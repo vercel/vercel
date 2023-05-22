@@ -318,6 +318,8 @@ function initRollbackTest({
 
   const currentDeployment = useDeployment({ creator: user });
   const previousDeployment = useDeployment({ creator: user });
+
+  let pollCounter = 0;
   let lastRollbackTarget: RollbackTarget | null = null;
 
   client.scenario.post(
@@ -344,6 +346,23 @@ function initRollbackTest({
         requestedAt: Date.now(),
         toDeploymentId: id,
       };
+
+      Object.defineProperty(project, 'lastRollbackTarget', {
+        get(): RollbackTarget | null {
+          if (
+            lastRollbackTarget &&
+            rollbackPollCount !== undefined &&
+            pollCounter++ > rollbackPollCount
+          ) {
+            lastRollbackTarget.jobStatus = rollbackJobStatus;
+          }
+          return lastRollbackTarget;
+        },
+        set(value: RollbackTarget | null) {
+          lastRollbackTarget = value;
+        },
+      });
+
       res.statusCode = 201;
       res.end();
     }
