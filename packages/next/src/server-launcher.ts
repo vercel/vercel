@@ -35,8 +35,12 @@ const requestHandler = nextServer.getRequestHandler();
 
 const logs = [`[compute] ${process.cwd()}`];
 for (const page of fs.readdirSync('./.next/server/pages')) {
-  logs.push('[compute] load page', page);
-  require(`./.next/server/pages/${page}`);
+  if (page.endsWith('.js')) {
+    logs.push('[compute] load page', page);
+    require(`./.next/server/pages/${page}`);
+  } else {
+    logs.push('[compute] skip page', page);
+  }
 }
 
 module.exports = async (req: IncomingMessage, res: ServerResponse) => {
