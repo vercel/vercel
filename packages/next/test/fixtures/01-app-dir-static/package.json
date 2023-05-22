@@ -6,5 +6,6 @@
   },
   "scripts": {
     "vercel-build": "next build"
-  }
+  },
+  "ignoreNextjsUpdates": true
 }

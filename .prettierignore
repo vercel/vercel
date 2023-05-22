@@ -12,6 +12,7 @@ packages/gatsby-plugin-vercel-analytics
 node_modules
 dist
 pnpm-lock.yaml
+.changeset
 .vscode
 .DS_Store
 .next
@@ -31,4 +32,4 @@ packages/**/test/fixtures
 packages/**/test/dev/fixtures
 packages/**/test/build-fixtures
 packages/**/test/cache-fixtures
-
+packages/cli/src/util/dev/templates/*.ts

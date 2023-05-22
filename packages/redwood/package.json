@@ -27,7 +27,7 @@
     "@types/aws-lambda": "8.10.19",
     "@types/node": "14.18.33",
     "@types/semver": "6.0.0",
-    "@vercel/build-utils": "6.7.2",
+    "@vercel/build-utils": "6.7.3",
     "execa": "3.2.0",
     "fs-extra": "11.1.0"
   }

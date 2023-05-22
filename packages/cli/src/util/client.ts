@@ -65,7 +65,7 @@ export default class Client extends EventEmitter implements Stdio {
   localConfig?: VercelConfig;
   localConfigPath?: string;
   prompt!: inquirer.PromptModule;
-  private requestIdCounter: number;
+  requestIdCounter: number;
 
   constructor(opts: ClientOptions) {
     super();
@@ -133,7 +133,7 @@ export default class Client extends EventEmitter implements Stdio {
     }, fetch(url, { agent: this.agent, ...opts, headers, body }));
   }
 
-  fetch(url: string, opts: { json: false }): Promise<Response>;
+  fetch(url: string, opts: FetchOptions & { json: false }): Promise<Response>;
   fetch<T>(url: string, opts?: FetchOptions): Promise<T>;
   fetch(url: string, opts: FetchOptions = {}) {
     return this.retry(async bail => {

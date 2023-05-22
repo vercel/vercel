@@ -655,7 +655,7 @@ export const build: BuildV2 = async ({
         }
       } finally {
         if (framework?.slug === 'gatsby') {
-          await GatsbyUtils.cleanupGatsbyFiles(entrypointDir);
+          GatsbyUtils.cleanupGatsbyFiles(entrypointDir);
         }
       }
 

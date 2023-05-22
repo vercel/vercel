@@ -48,11 +48,13 @@ async function main() {
     fs.remove(join(outDir, 'serverless-functions/serverless-handler.d.mts')),
   ]);
 
-  // Copy type file for ts test
-  await fs.copyFile(
-    join(outDir, 'index.d.ts'),
-    join(__dirname, 'test/fixtures/15-helpers/ts/types.d.ts')
-  );
+  if (process.env.CI) {
+    // Copy type file for ts test
+    await fs.copyFile(
+      join(outDir, 'index.d.ts'),
+      join(__dirname, 'test/fixtures/15-helpers/ts/types.d.ts')
+    );
+  }
 
   await fs.copyFile(
     join(__dirname, 'src/edge-functions/edge-handler-template.js'),
