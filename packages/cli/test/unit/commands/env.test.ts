@@ -1,5 +1,6 @@
 import fs from 'fs-extra';
 import path from 'path';
+import { parse } from 'dotenv';
 import env from '../../../src/commands/env';
 import { setupUnitFixture } from '../../helpers/setup-unit-fixture';
 import { client } from '../../mocks/client';
@@ -103,6 +104,13 @@ describe('env', () => {
       expect(rawDevEnv).toContain(
         'BRANCH_ENV_VAR="env var for a specific branch"'
       );
+
+      const parsed = parse(rawDevEnv);
+      const keys = Object.keys(parsed);
+      expect(keys).toHaveLength(3);
+      expect(keys[0]).toEqual('ANOTHER');
+      expect(keys[1]).toEqual('BRANCH_ENV_VAR');
+      expect(keys[2]).toEqual('REDIS_CONNECTION_STRING');
     });
 
     it('should handle alternate filename', async () => {

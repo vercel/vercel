@@ -19,6 +19,11 @@
   ],
   "probes": [
     {
+      "path": "/dashboard/hello",
+      "status": 200,
+      "mustContain": "hello from app/dashboard/rootonly/hello"
+    },
+    {
       "path": "/dashboard/another-edge",
       "status": 200,
       "mustContain": "hello from newroot/dashboard/another"
@@ -159,6 +164,16 @@
       "path": "/blog/123",
       "status": 200,
       "mustContain": "hello from pages/blog/[slug]"
+    },
+    {
+      "path": "/blog-ssr/123",
+      "status": 200,
+      "mustContain": "hello from pages/blog-ssr/[slug]"
+    },
+    {
+      "path": "/blog-ssr/321",
+      "status": 200,
+      "mustContain": "hello context"
     },
     {
       "path": "/dynamic/category-1/id-1",

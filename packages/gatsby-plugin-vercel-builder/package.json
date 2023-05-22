@@ -1,6 +1,6 @@
 {
   "name": "@vercel/gatsby-plugin-vercel-builder",
-  "version": "1.3.1",
+  "version": "1.3.5",
   "main": "dist/index.js",
   "files": [
     "dist",
@@ -8,6 +8,11 @@
     "gatsby-node.js",
     "gatsby-node.js.map"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vercel/vercel.git",
+    "directory": "packages/gatsby-plugin-vercel-builder"
+  },
   "scripts": {
     "build": "pnpm build:src && pnpm build:gatsby",
     "build:gatsby": "tsc -p tsconfig.gatsby.json",
@@ -15,8 +20,8 @@
   },
   "dependencies": {
     "@sinclair/typebox": "0.25.24",
-    "@vercel/build-utils": "6.7.2",
-    "@vercel/node": "2.14.0",
+    "@vercel/build-utils": "6.7.3",
+    "@vercel/node": "2.14.3",
     "@vercel/routing-utils": "2.2.1",
     "esbuild": "0.14.47",
     "etag": "1.8.1",

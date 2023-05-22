@@ -5,6 +5,7 @@ import { URL, parse as parseUrl } from 'url';
 import semVer from 'semver';
 import { Readable } from 'stream';
 import { homedir } from 'os';
+import { runNpmInstall } from '@vercel/build-utils';
 import { execCli } from './helpers/exec';
 import fetch, { RequestInit, RequestInfo } from 'node-fetch';
 import retry from 'async-retry';
@@ -1414,6 +1415,19 @@ test('use build-env', async () => {
   const response = await fetch(href);
   const content = await response.text();
   expect(content.trim()).toBe('bar');
+});
+
+test('should invoke CLI extension', async () => {
+  const fixture = path.join(__dirname, 'fixtures/e2e/cli-extension');
+
+  // Ensure the `.bin` is populated in the fixture
+  await runNpmInstall(fixture);
+
+  const output = await execCli(binaryPath, ['mywhoami'], { cwd: fixture });
+  const formatted = formatOutput(output);
+  expect(output.stdout, formatted).toContain('Hello from a CLI extension!');
+  expect(output.stdout, formatted).toContain('VERCEL_API: http://127.0.0.1:');
+  expect(output.stdout, formatted).toContain(`Username: ${contextName}`);
 });
 
 // NOTE: Order matters here. This must be the last test in the file.

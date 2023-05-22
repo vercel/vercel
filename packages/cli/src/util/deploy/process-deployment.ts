@@ -13,6 +13,7 @@ import type { Org } from '@vercel-internals/types';
 import ua from '../ua';
 import { linkFolderToProject } from '../projects/link';
 import { prependEmoji, emoji } from '../emoji';
+import type { Agent } from 'http';
 
 function printInspectUrl(
   output: Output,
@@ -35,6 +36,7 @@ export default async function processDeployment({
   archive,
   skipAutoDetectionConfirmation,
   noWait,
+  agent,
   ...args
 }: {
   now: Now;
@@ -55,6 +57,7 @@ export default async function processDeployment({
   cwd?: string;
   rootDirectory?: string | null;
   noWait?: boolean;
+  agent?: Agent;
 }) {
   let {
     now,
@@ -91,6 +94,7 @@ export default async function processDeployment({
     rootDirectory,
     skipAutoDetectionConfirmation,
     archive,
+    agent,
   };
 
   const deployingSpinnerVal = isSettingUpProject

@@ -5,7 +5,7 @@ import chalk from 'chalk';
 import fetch from 'node-fetch';
 import plural from 'pluralize';
 import rawBody from 'raw-body';
-import listen from 'async-listen';
+import { listen } from 'async-listen';
 import minimatch from 'minimatch';
 import httpProxy from 'http-proxy';
 import { randomBytes } from 'crypto';
@@ -860,7 +860,7 @@ export default class DevServer {
     let address: string | null = null;
     while (typeof address !== 'string') {
       try {
-        address = await listen(this.server, ...listenSpec);
+        address = (await listen(this.server, ...listenSpec)).toString();
       } catch (err: unknown) {
         if (isErrnoException(err)) {
           this.output.debug(`Got listen error: ${err.code}`);
