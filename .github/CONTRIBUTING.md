@@ -15,7 +15,6 @@ git clone https://github.com/vercel/vercel
 cd vercel
 corepack enable
 pnpm install
-pnpm bootstrap
 pnpm build
 pnpm lint
 pnpm test-unit
