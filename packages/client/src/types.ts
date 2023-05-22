@@ -194,5 +194,5 @@ export interface DeploymentOptions {
   meta?: Dictionary<string>;
   projectSettings?: ProjectSettings;
   gitMetadata?: GitMetadata;
-  skipDomain?: boolean;
+  autoAssignCustomDomains?: boolean;
 }

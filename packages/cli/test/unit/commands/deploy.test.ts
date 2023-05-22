@@ -247,7 +247,7 @@ describe('deploy', () => {
       expect(body).toMatchObject({
         target: 'production',
         source: 'cli',
-        skipDomain: true, // TODO: ?
+        autoAssignCustomDomains: false,
         version: 2,
       });
     } finally {
