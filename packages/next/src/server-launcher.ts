@@ -1,4 +1,6 @@
 import { IncomingMessage, ServerResponse } from 'http';
+import fs from 'fs';
+
 // The Next.js builder can emit the project in a subdirectory depending on how
 // many folder levels of `node_modules` are traced. To ensure `process.cwd()`
 // returns the proper path, we change the directory to the folder with the
@@ -30,6 +32,11 @@ const nextServer = new NextServer({
   customServer: false,
 });
 const requestHandler = nextServer.getRequestHandler();
+
+for (const chunk of fs.readdirSync('./.next/server/chunks')) {
+  console.log('[compute] load chunk', chunk);
+  require(`./.next/server/chunks/${chunk}`);
+}
 
 module.exports = async (req: IncomingMessage, res: ServerResponse) => {
   try {
