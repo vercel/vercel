@@ -10,7 +10,7 @@ import mapCertError from './certs/map-cert-error';
 import toHost from './to-host';
 
 /**
- * Retrieves a v13 deployment.
+ * Retrieves a deployment by id or URL.
  *
  * @param client - The Vercel CLI client instance.
  * @param contextName - The scope context/team name.
