@@ -10,9 +10,7 @@ import mapCertError from './certs/map-cert-error';
 import toHost from './to-host';
 
 /**
- * Retrieves a deployment by id or URL. If the deployment is not found and the
- * deployment `hostOrId` contains alpha-numeric characters only, it will retry
- * with the `dpl_` prefix.
+ * Retrieves a deployment by id or URL.
  *
  * @param client - The Vercel CLI client instance.
  * @param contextName - The scope context/team name.
