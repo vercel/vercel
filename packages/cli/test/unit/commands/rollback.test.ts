@@ -40,7 +40,7 @@ describe('rollback', () => {
 
     await expect(client.stderr).toOutput('Retrieving project…');
     await expect(client.stderr).toOutput(
-      'Error: The provided argument "????" is not a valid deployment or project'
+      'Error: The provided argument "????" is not a valid deployment ID or URL'
     );
     await expect(exitCodePromise).resolves.toEqual(1);
   });
@@ -51,9 +51,8 @@ describe('rollback', () => {
     const exitCodePromise = rollback(client);
 
     await expect(client.stderr).toOutput('Retrieving project…');
-    await expect(client.stderr).toOutput('Fetching deployment "foo" in ');
     await expect(client.stderr).toOutput(
-      'Error: Can\'t find the deployment "foo" under the context'
+      'Error: Can\'t find the deployment "dpl_foo" under the context'
     );
 
     await expect(exitCodePromise).resolves.toEqual(1);
