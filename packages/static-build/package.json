@@ -35,7 +35,7 @@
     "@vercel/build-utils": "6.7.3",
     "@vercel/error-utils": "1.0.10",
     "@vercel/frameworks": "1.4.2",
-    "@vercel/fs-detectors": "3.9.2",
+    "@vercel/fs-detectors": "3.9.3",
     "@vercel/ncc": "0.24.0",
     "@vercel/routing-utils": "2.2.1",
     "@vercel/static-config": "2.0.17",
