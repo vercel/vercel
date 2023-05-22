@@ -1,7 +1,7 @@
 import chalk from 'chalk';
-import type Client from '../client';
-import { getCommandName } from '../pkg-name';
-import getProjectByDeployment from '../projects/get-project-by-deployment';
+import type Client from '../../util/client';
+import { getCommandName } from '../../util/pkg-name';
+import getProjectByDeployment from '../../util/projects/get-project-by-deployment';
 import ms from 'ms';
 import promoteStatus from './status';
 

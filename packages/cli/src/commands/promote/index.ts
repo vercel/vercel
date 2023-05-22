@@ -1,14 +1,14 @@
 import chalk from 'chalk';
-import type Client from '../util/client';
-import getArgs from '../util/get-args';
-import getProjectByCwdOrLink from '../util/projects/get-project-by-cwd-or-link';
-import { getPkgName } from '../util/pkg-name';
-import handleError from '../util/handle-error';
+import type Client from '../../util/client';
+import getArgs from '../../util/get-args';
+import getProjectByCwdOrLink from '../../util/projects/get-project-by-cwd-or-link';
+import { getPkgName } from '../../util/pkg-name';
+import handleError from '../../util/handle-error';
 import { isErrnoException } from '@vercel/error-utils';
-import logo from '../util/output/logo';
+import logo from '../../util/output/logo';
 import ms from 'ms';
-import requestPromote from '../util/promote/request-promote';
-import promoteStatus from '../util/promote/status';
+import requestPromote from './request-promote';
+import promoteStatus from './status';
 
 const help = () => {
   console.log(`

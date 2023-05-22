@@ -5,17 +5,17 @@ import type {
   PaginationOptions,
   Project,
 } from '@vercel-internals/types';
-import type Client from '../client';
-import elapsed from '../output/elapsed';
-import formatDate from '../format-date';
-import getDeployment from '../get-deployment';
-import { getPkgName } from '../pkg-name';
-import getScope from '../get-scope';
+import type Client from '../../util/client';
+import elapsed from '../../util/output/elapsed';
+import formatDate from '../../util/format-date';
+import getDeployment from '../../util/get-deployment';
+import { getPkgName } from '../../util/pkg-name';
+import getScope from '../../util/get-scope';
 import ms from 'ms';
-import sleep from '../sleep';
-import getProjectByNameOrId from '../projects/get-project-by-id-or-name';
-import { ProjectNotFound } from '../errors-ts';
-import renderAliasStatus from '../alias/render-alias-status';
+import sleep from '../../util/sleep';
+import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
+import { ProjectNotFound } from '../../util/errors-ts';
+import renderAliasStatus from '../../util/alias/render-alias-status';
 
 interface DeploymentAlias {
   alias: {
