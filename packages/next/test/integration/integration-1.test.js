@@ -72,7 +72,7 @@ if (parseInt(process.versions.node.split('.')[0], 10) >= 16) {
       )
     ).toBeFalsy();
 
-    expect(lambdas.size).toBe(3);
+    expect(lambdas.size).toBe(4);
     expect(buildResult.output['dashboard']).toBeDefined();
     expect(buildResult.output['dashboard/another']).toBeDefined();
     expect(buildResult.output['dashboard/changelog']).toBeDefined();
