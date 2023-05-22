@@ -33,7 +33,7 @@ describe('promote', () => {
     await expect(exitCodePromise).resolves.toEqual(1);
   });
 
-  it('should error if invalid deployment name', async () => {
+  it('should error if invalid deployment ID', async () => {
     const { cwd } = initPromoteTest();
     client.setArgv('promote', '????', '--yes', '--cwd', cwd);
     const exitCodePromise = promote(client);
