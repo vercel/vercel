@@ -23,7 +23,7 @@
     "@types/node": "14.18.33",
     "@types/node-fetch": "2.6.3",
     "@vercel/build-utils": "6.7.3",
-    "@vercel/error-utils": "1.0.8",
+    "@vercel/error-utils": "1.0.10",
     "@vercel/static-config": "2.0.17",
     "async-listen": "3.0.0",
     "edge-runtime": "2.1.4",
