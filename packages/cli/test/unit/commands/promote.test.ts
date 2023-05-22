@@ -57,7 +57,7 @@ describe('promote', () => {
     await expect(exitCodePromise).resolves.toEqual(1);
   });
 
-  it('should show status when not rolling back', async () => {
+  it('should show status when not promoting', async () => {
     const { cwd } = initPromoteTest();
     client.setArgv('promote', '--yes', '--cwd', cwd);
     const exitCodePromise = promote(client);
