@@ -92,7 +92,12 @@ describe('git', () => {
         client.stdin.write('y\n');
 
         await expect(client.stderr).toOutput(
-          `Connecting Git remote: https://github.com/user2/repo2.git`
+          `Do you still want to connect https://github.com/user2/repo2?`
+        );
+        client.stdin.write('y\n');
+
+        await expect(client.stderr).toOutput(
+          `Connecting Git remote: https://github.com/user2/repo2`
         );
 
         const exitCode = await gitPromise;
