@@ -24,10 +24,10 @@ describe('env', () => {
       await expect(client.stderr).toOutput(
         'Downloading `development` Environment Variables for Project vercel-env-pull'
       );
-      await expect(client.stderr).toOutput('Created .env file');
+      await expect(client.stderr).toOutput('Created .env.local file');
       await expect(exitCodePromise).resolves.toEqual(0);
 
-      const rawDevEnv = await fs.readFile(path.join(cwd, '.env'));
+      const rawDevEnv = await fs.readFile(path.join(cwd, '.env.local'));
 
       // check for development env value
       const devFileHasDevEnv = rawDevEnv.toString().includes('SPECIAL_FLAG');
@@ -56,11 +56,11 @@ describe('env', () => {
       await expect(client.stderr).toOutput(
         'Downloading `preview` Environment Variables for Project vercel-env-pull'
       );
-      await expect(client.stderr).toOutput('Created .env file');
+      await expect(client.stderr).toOutput('Created .env.local file');
       await expect(exitCodePromise).resolves.toEqual(0);
 
       // check for Preview env vars
-      const rawDevEnv = await fs.readFile(path.join(cwd, '.env'), 'utf8');
+      const rawDevEnv = await fs.readFile(path.join(cwd, '.env.local'), 'utf8');
       expect(rawDevEnv).toContain(
         'REDIS_CONNECTION_STRING="redis://abc123@redis.example.com:6379"'
       );
@@ -93,11 +93,11 @@ describe('env', () => {
       await expect(client.stderr).toOutput(
         'Downloading `preview` Environment Variables for Project vercel-env-pull'
       );
-      await expect(client.stderr).toOutput('Created .env file');
+      await expect(client.stderr).toOutput('Created .env.local file');
       await expect(exitCodePromise).resolves.toEqual(0);
 
       // check for Preview env vars
-      const rawDevEnv = await fs.readFile(path.join(cwd, '.env'), 'utf8');
+      const rawDevEnv = await fs.readFile(path.join(cwd, '.env.local'), 'utf8');
       expect(rawDevEnv).toContain(
         'REDIS_CONNECTION_STRING="redis://abc123@redis.example.com:6379"'
       );
@@ -159,10 +159,10 @@ describe('env', () => {
       await expect(client.stderr).toOutput(
         `Downloading \`production\` Environment Variables for Project vercel-env-pull`
       );
-      await expect(client.stderr).toOutput('Created .env file');
+      await expect(client.stderr).toOutput('Created .env.local file');
       await expect(exitCodePromise).resolves.toEqual(0);
 
-      const rawProdEnv = await fs.readFile(path.join(cwd, '.env'));
+      const rawProdEnv = await fs.readFile(path.join(cwd, '.env.local'));
 
       // check for development env value
       const envFileHasEnv = rawProdEnv
@@ -261,7 +261,7 @@ describe('env', () => {
         await expect(client.stderr).toOutput(
           '+ SPECIAL_FLAG (Updated)\n+ NEW_VAR\n- TEST\n'
         );
-        await expect(client.stderr).toOutput('Updated .env file');
+        await expect(client.stderr).toOutput('Updated .env.local file');
 
         await expect(pullPromise).resolves.toEqual(0);
       } finally {
@@ -282,7 +282,7 @@ describe('env', () => {
 
       client.setArgv('env', 'pull', '--yes', '--cwd', cwd);
       const pullPromise = env(client);
-      await expect(client.stderr).toOutput('Updated .env file');
+      await expect(client.stderr).toOutput('Updated .env.local file');
       await expect(pullPromise).resolves.toEqual(0);
     });
 
@@ -299,7 +299,7 @@ describe('env', () => {
       client.setArgv('env', 'pull', '--yes', '--cwd', cwd);
       const pullPromise = env(client);
       await expect(client.stderr).toOutput('> No changes found.');
-      await expect(client.stderr).toOutput('Updated .env file');
+      await expect(client.stderr).toOutput('Updated .env.local file');
       await expect(pullPromise).resolves.toEqual(0);
     });
 
@@ -335,7 +335,7 @@ describe('env', () => {
           'Downloading `development` Environment Variables for Project env-pull-delta'
         );
         await expect(client.stderr).toOutput('No changes found.\n');
-        await expect(client.stderr).toOutput('Updated .env file');
+        await expect(client.stderr).toOutput('Updated .env.local file');
 
         await expect(pullPromise).resolves.toEqual(0);
       } finally {
