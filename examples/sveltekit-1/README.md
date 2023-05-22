@@ -15,7 +15,11 @@ npm run dev
 npm run dev -- --open
 ```
 
+In order to run your application locally, you need a `.env` file with `VERCEL_ANALYTICS_ID=` (no value in dev, automatically provided on Vercel).
+
 ## Building
+
+In order to build your application, you need a `.env` file with `VERCEL_ANALYTICS_ID=` (no value, automatically provided on Vercel).
 
 To create a production version of your app:
 
@@ -27,6 +31,6 @@ You can preview the production build with `npm run preview`.
 
 ## Speed Insights
 
-Once deployed on Vercel, you can benefit from [Speed Insights](https://vercel.com/docs/concepts/speed-insights) simply by navigating to Vercel's dashboard, clicking on the 'Speed Insights' tab, and enabling the product. 
+Once deployed on Vercel, you can benefit from [Speed Insights](https://vercel.com/docs/concepts/speed-insights) simply by navigating to Vercel's dashboard, clicking on the 'Speed Insights' tab, and enabling the product.
 
 You will get data once your application will be re-deployed and will receive visitors.
