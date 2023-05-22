@@ -486,7 +486,7 @@ importers:
         specifier: 1.4.2
         version: link:../frameworks
       '@vercel/fs-detectors':
-        specifier: 3.9.2
+        specifier: 3.9.3
         version: link:../fs-detectors
       '@vercel/fun':
         specifier: 1.0.4
@@ -1469,7 +1469,7 @@ importers:
         specifier: 1.4.2
         version: link:../frameworks
       '@vercel/fs-detectors':
-        specifier: 3.9.2
+        specifier: 3.9.3
         version: link:../fs-detectors
       '@vercel/ncc':
         specifier: 0.24.0

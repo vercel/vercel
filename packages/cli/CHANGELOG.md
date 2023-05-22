@@ -1,5 +1,11 @@
 # vercel
 
+## 29.4.0
+
+### Minor Changes
+
+- Add `vercel link --repo` flag to link to repository (multiple projects), rather than an individual project (alpha) ([#8931](https://github.com/vercel/vercel/pull/8931))
+
 ## 29.3.6
 
 ### Patch Changes
