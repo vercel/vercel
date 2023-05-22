@@ -418,7 +418,7 @@ export interface LastAliasRequest {
   jobStatus: 'pending' | 'in-progress' | 'succeeded' | 'failed' | 'skipped';
   requestedAt: number;
   toDeploymentId: string;
-  type: string;
+  type: 'rollback' | 'promote';
 }
 
 export interface Token {
