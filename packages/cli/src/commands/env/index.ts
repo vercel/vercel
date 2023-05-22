@@ -26,7 +26,7 @@ const help = () => {
     ls      [environment] [gitbranch]         List all variables for the specified Environment
     add     [name] [environment] [gitbranch]  Add an Environment Variable (see examples below)
     rm      [name] [environment] [gitbranch]  Remove an Environment Variable (see examples below)
-    pull    [filename]                        Pull all Development Environment Variables from the cloud and write to a file [.env]
+    pull    [filename]                        Pull all Development Environment Variables from the cloud and write to a file [.env.local]
 
   ${chalk.dim('Options:')}
 
