@@ -35,11 +35,6 @@ export default async function getDeployment(
   } catch (err: unknown) {
     if (isAPIError(err)) {
       if (err.status === 404) {
-        if (/^[A-Za-z0-9]+$/.test(hostOrId)) {
-          // try again with the `dpl_' prefix
-          return await getDeployment(client, contextName, `dpl_${hostOrId}`);
-        }
-
         throw new DeploymentNotFound({ id: hostOrId, context: contextName });
       }
       if (err.status === 403) {

@@ -24,7 +24,7 @@ describe('redeploy', () => {
 
     await expect(client.stderr).toOutput('Fetching deployment "foo" in ');
     await expect(client.stderr).toOutput(
-      'Error: Can\'t find the deployment "dpl_foo" under the context'
+      'Error: Can\'t find the deployment "foo" under the context'
     );
     await expect(exitCodePromise).resolves.toEqual(1);
   });

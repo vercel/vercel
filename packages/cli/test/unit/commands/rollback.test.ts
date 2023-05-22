@@ -52,7 +52,7 @@ describe('rollback', () => {
 
     await expect(client.stderr).toOutput('Retrieving project…');
     await expect(client.stderr).toOutput(
-      'Error: Can\'t find the deployment "dpl_foo" under the context'
+      'Error: Can\'t find the deployment "foo" under the context'
     );
 
     await expect(exitCodePromise).resolves.toEqual(1);
@@ -221,7 +221,7 @@ describe('rollback', () => {
       '--cwd',
       cwd,
       '--timeout',
-      '2s'
+      '1s'
     );
     const exitCodePromise = rollback(client);
 
