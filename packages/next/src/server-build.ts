@@ -843,9 +843,8 @@ export async function serverBuild({
       compressedPages
     );
 
-    let commonRequiredFiles: string[] | undefined = undefined;
-
     for (const group of combinedGroups) {
+      let commonRequiredFiles: string[] | undefined = undefined;
       const groupPageFiles: { [key: string]: PseudoFile } = {};
 
       for (const page of [...group.pages, ...internalPages]) {
@@ -855,7 +854,7 @@ export async function serverBuild({
         groupPageFiles[pageFileName] = compressedPages[page];
 
         const traceFile = getBuildTraceFile(getOriginalPagePath(page));
-        if (traceFile) {
+        if (traceFile && !internalPages.includes(page)) {
           const { files } = JSON.parse(
             await fs.readFile(traceFile.fsPath, 'utf8')
           );
