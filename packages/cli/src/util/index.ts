@@ -50,6 +50,7 @@ export interface CreateOptions {
   projectSettings?: any;
   skipAutoDetectionConfirmation?: boolean;
   noWait?: boolean;
+  autoAssignCustomDomains: boolean;
 }
 
 export interface RemoveOptions {
@@ -130,6 +131,7 @@ export default class Now extends EventEmitter {
       projectSettings,
       skipAutoDetectionConfirmation,
       noWait,
+      autoAssignCustomDomains,
     }: CreateOptions,
     org: Org,
     isSettingUpProject: boolean,
@@ -152,6 +154,7 @@ export default class Now extends EventEmitter {
       target: target || undefined,
       projectSettings,
       source: 'cli',
+      autoAssignCustomDomains,
     };
 
     // Ignore specific items from vercel.json
