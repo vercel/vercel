@@ -83,11 +83,13 @@ module.exports = (async () => {
   const after = Date.now();
 
   return async (req: IncomingMessage, res: ServerResponse) => {
-    console.log(`[compute] eager load dependencies took ${after - before}ms`);
-    console.log(`[compute] logs: ${logs.length} lines`);
-    for (const log of logs) {
-      console.log(log);
-    }
+    setTimeout(() => {
+      console.log(`[compute] eager load dependencies took ${after - before}ms`);
+      console.log(`[compute] logs: ${logs.length} lines`);
+      for (const log of logs) {
+        console.log(log);
+      }
+    }, 10);
 
     try {
       // entryDirectory handler
