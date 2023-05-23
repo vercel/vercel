@@ -116,7 +116,7 @@ describe('promote', () => {
     promote(client);
 
     // need to wait for the promote request to be accepted
-    await sleep(500);
+    await sleep(300);
 
     // get the status
     client.setArgv('promote', '--yes', '--cwd', cwd);
@@ -216,7 +216,7 @@ describe('promote', () => {
       '--cwd',
       cwd,
       '--timeout',
-      '1s'
+      '1'
     );
     const exitCodePromise = promote(client);
 
