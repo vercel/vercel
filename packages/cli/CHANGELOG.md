@@ -1,5 +1,23 @@
 # vercel
 
+## 30.0.0
+
+### Major Changes
+
+- Change `vc env pull` default output file to `.env.local` ([#9892](https://github.com/vercel/vercel/pull/9892))
+
+- Remove `--platform-version` global common arg ([#9807](https://github.com/vercel/vercel/pull/9807))
+
+### Minor Changes
+
+- [cli] implement `vc deploy --prod --skip-build` ([#9836](https://github.com/vercel/vercel/pull/9836))
+
+- New `vc redeploy` command ([#9956](https://github.com/vercel/vercel/pull/9956))
+
+### Patch Changes
+
+- Fix `vercel git connect` command when passing a URL parameter ([#9967](https://github.com/vercel/vercel/pull/9967))
+
 ## 29.4.0
 
 ### Minor Changes

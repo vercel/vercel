@@ -1,6 +1,6 @@
 {
   "name": "@vercel/client",
-  "version": "12.5.1",
+  "version": "12.6.0",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "homepage": "https://vercel.com",
