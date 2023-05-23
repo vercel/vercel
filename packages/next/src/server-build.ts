@@ -854,7 +854,7 @@ export async function serverBuild({
         );
         groupPageFiles[pageFileName] = compressedPages[page];
 
-        const traceFile = getBuildTraceFile(page.replace(/\.js$/, ''));
+        const traceFile = getBuildTraceFile(getOriginalPagePath(page));
 
         if (traceFile) {
           const { files } = JSON.parse(
