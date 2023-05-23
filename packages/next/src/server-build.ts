@@ -843,7 +843,7 @@ export async function serverBuild({
       compressedPages
     );
 
-    let commonRequiredFiles: string[] = [];
+    let commonRequiredFiles: string[] | undefined = undefined;
 
     for (const group of combinedGroups) {
       const groupPageFiles: { [key: string]: PseudoFile } = {};
@@ -855,15 +855,22 @@ export async function serverBuild({
         groupPageFiles[pageFileName] = compressedPages[page];
 
         const traceFile = getBuildTraceFile(getOriginalPagePath(page));
-
         if (traceFile) {
           const { files } = JSON.parse(
             await fs.readFile(traceFile.fsPath, 'utf8')
           );
 
-          commonRequiredFiles = files.filter((file: string) =>
-            commonRequiredFiles.includes(file)
-          );
+          commonRequiredFiles = files
+            // make the files relative to the server launcher
+            .map((file: string) =>
+              path.relative(
+                path.resolve(entryPath, outputDirectory),
+                path.resolve(traceFile.fsPath, file)
+              )
+            )
+            .filter((file: string) =>
+              commonRequiredFiles ? commonRequiredFiles.includes(file) : true
+            );
         }
       }
 
@@ -926,17 +933,14 @@ export async function serverBuild({
         }
       }
 
-      const launcherContent = group.isAppRouter ? appLauncher : launcher;
+      let launcherContent = group.isAppRouter ? appLauncher : launcher;
 
-      console.log(commonRequiredFiles);
-      if (commonRequiredFiles.length > 0) {
-        console.log('writing common files');
-        launcherContent.replace(
+      if (commonRequiredFiles && commonRequiredFiles.length > 0) {
+        launcherContent = launcherContent.replace(
           '// common-files-require-target',
-          `
-            const commonFiles = ${JSON.stringify(commonRequiredFiles)};
-            await Promise.all(commonFiles.map(file => import(file)));
-          `
+          `const commonFiles = ${JSON.stringify(
+            commonRequiredFiles
+          )};await Promise.all(commonFiles.map(file => import(file)));`
         );
       }
 
