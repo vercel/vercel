@@ -247,19 +247,19 @@ function sortByDirectory(a: RepoProjectConfig, b: RepoProjectConfig): number {
 }
 
 /**
- * Finds the matching Project from an array of Project links
+ * Finds the matching Projects from an array of Project links
  * where the provided relative path is within the Project's
  * root directory.
  */
 export function findProjectFromPath(
   projects: RepoProjectConfig[],
   path: string
-): RepoProjectConfig | undefined {
+): RepoProjectConfig[] {
   const normalizedPath = normalizePath(path);
   return projects
     .slice()
     .sort(sortByDirectory)
-    .find(project => {
+    .filter(project => {
       if (project.directory === '.') {
         // Project has no "Root Directory" setting, so any path is valid
         return true;

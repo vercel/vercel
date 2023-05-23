@@ -40,7 +40,6 @@ export default async function processDeployment({
   ...args
 }: {
   now: Now;
-  output: Output;
   paths: string[];
   requestBody: DeploymentOptions;
   uploadStamp: () => string;
@@ -61,7 +60,6 @@ export default async function processDeployment({
 }) {
   let {
     now,
-    output,
     paths,
     requestBody,
     deployStamp,
@@ -72,10 +70,9 @@ export default async function processDeployment({
     rootDirectory,
   } = args;
 
-  const { debug } = output;
-
+  const client = now._client;
+  const { output } = client;
   const { env = {} } = requestBody;
-
   const token = now._token;
   if (!token) {
     throw new Error('Missing authentication token');
@@ -114,7 +111,7 @@ export default async function processDeployment({
 
       if (event.type === 'file-count') {
         const { total, missing, uploads } = event.payload;
-        debug(`Total files ${total.size}, ${missing.length} changed`);
+        output.debug(`Total files ${total.size}, ${missing.length} changed`);
 
         const missingSize = missing
           .map((sha: string) => total.get(sha).data.length)
@@ -157,7 +154,7 @@ export default async function processDeployment({
       }
 
       if (event.type === 'file-uploaded') {
-        debug(
+        output.debug(
           `Uploaded: ${event.payload.file.names.join(' ')} (${bytes(
             event.payload.file.data.length
           )})`
@@ -166,7 +163,7 @@ export default async function processDeployment({
 
       if (event.type === 'created') {
         await linkFolderToProject(
-          output,
+          client,
           cwd || paths[0],
           {
             orgId: org.id,

@@ -163,7 +163,6 @@ export default class Now extends EventEmitter {
 
     const deployment = await processDeployment({
       now: this,
-      output: this._output,
       agent: this._client.agent,
       paths,
       requestBody,

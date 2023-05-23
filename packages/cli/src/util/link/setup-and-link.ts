@@ -133,7 +133,7 @@ export default async function setupAndLink(
     const project = projectOrNewProjectName;
 
     await linkFolderToProject(
-      output,
+      client,
       path,
       {
         projectId: project.id,
@@ -251,7 +251,7 @@ export default async function setupAndLink(
     Object.assign(project, settings);
 
     await linkFolderToProject(
-      output,
+      client,
       path,
       {
         projectId: project.id,

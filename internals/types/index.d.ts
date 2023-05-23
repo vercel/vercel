@@ -367,6 +367,7 @@ export interface Org {
 export interface ProjectLink {
   projectId: string;
   orgId: string;
+  repoRoot?: string;
 }
 
 export interface PaginationOptions {
@@ -376,7 +377,7 @@ export interface PaginationOptions {
 }
 
 export type ProjectLinkResult =
-  | { status: 'linked'; org: Org; project: Project }
+  | { status: 'linked'; org: Org; project: Project, repoRoot?: string }
   | { status: 'not_linked'; org: null; project: null }
   | {
       status: 'error';

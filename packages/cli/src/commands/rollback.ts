@@ -8,7 +8,6 @@ import logo from '../util/output/logo';
 import ms from 'ms';
 import requestRollback from '../util/rollback/request-rollback';
 import rollbackStatus from '../util/rollback/status';
-import validatePaths from '../util/validate-paths';
 
 const help = () => {
   console.log(`
@@ -76,22 +75,10 @@ export default async (client: Client): Promise<number> => {
     return 2;
   }
 
-  // ensure the current directory is good
-  const cwd = argv['--cwd'] || process.cwd();
-  const pathValidation = await validatePaths(client, [cwd]);
-  if (!pathValidation.valid) {
-    return pathValidation.exitCode;
-  }
-
   // ensure the current directory is a linked project
-  const linkedProject = await ensureLink(
-    'rollback',
-    client,
-    pathValidation.path,
-    {
-      autoConfirm: Boolean(argv['--yes']),
-    }
-  );
+  const linkedProject = await ensureLink('rollback', client, process.cwd(), {
+    autoConfirm: Boolean(argv['--yes']),
+  });
   if (typeof linkedProject === 'number') {
     return linkedProject;
   }

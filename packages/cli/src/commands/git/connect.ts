@@ -16,7 +16,6 @@ import {
   parseRepoUrl,
   printRemoteUrls,
 } from '../../util/git/connect-git-provider';
-import validatePaths from '../../util/validate-paths';
 
 interface GitRepoCheckParams {
   client: Client;
@@ -77,13 +76,7 @@ export default async function connect(
     return 1;
   }
 
-  let paths = [process.cwd()];
-
-  const validate = await validatePaths(client, paths);
-  if (!validate.valid) {
-    return validate.exitCode;
-  }
-  const { path } = validate;
+  const path = process.cwd();
 
   const gitProviderLink = project.link;
   client.config.currentTeam = org.type === 'team' ? org.id : undefined;

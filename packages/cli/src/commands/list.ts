@@ -15,7 +15,6 @@ import getCommandFlags from '../util/get-command-flags';
 import { getPkgName, getCommandName } from '../util/pkg-name';
 import Client from '../util/client';
 import { Deployment } from '@vercel/client';
-import validatePaths from '../util/validate-paths';
 import { getLinkedProject } from '../util/projects/link';
 import { ensureLink } from '../util/link/ensure-link';
 import getScope from '../util/get-scope';
@@ -115,16 +114,8 @@ export default async function main(client: Client) {
 
   const autoConfirm = !!argv['--yes'];
   const prod = argv['--prod'] || false;
-
   const meta = parseMeta(argv['--meta']);
-
-  let paths = [process.cwd()];
-  const pathValidation = await validatePaths(client, paths);
-  if (!pathValidation.valid) {
-    return pathValidation.exitCode;
-  }
-
-  const { path } = pathValidation;
+  const path = process.cwd();
 
   // retrieve `project` and `org` from .vercel
   let link = await getLinkedProject(client, path);

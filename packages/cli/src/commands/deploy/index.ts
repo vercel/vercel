@@ -183,7 +183,7 @@ export default async (client: Client): Promise<number> => {
     return pathValidation.exitCode;
   }
 
-  const { path } = pathValidation;
+  let { path } = pathValidation;
   const autoConfirm = argv['--yes'];
 
   // deprecate --name
@@ -344,7 +344,7 @@ export default async (client: Client): Promise<number> => {
 
       // we can already link the project
       await linkFolderToProject(
-        output,
+        client,
         path,
         {
           projectId: project.id,
@@ -355,6 +355,11 @@ export default async (client: Client): Promise<number> => {
       );
       status = 'linked';
     }
+  }
+
+  // For repo-style linking, reset the path to the root of the repository
+  if (link.status === 'linked' && link.repoRoot) {
+    path = link.repoRoot;
   }
 
   // At this point `org` should be populated
