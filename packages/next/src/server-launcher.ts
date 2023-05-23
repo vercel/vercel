@@ -1,5 +1,5 @@
 import { IncomingMessage, ServerResponse } from 'http';
-import fs from 'fs';
+import fs from 'fs/promises';
 
 // The Next.js builder can emit the project in a subdirectory depending on how
 // many folder levels of `node_modules` are traced. To ensure `process.cwd()`
@@ -33,26 +33,62 @@ const nextServer = new NextServer({
 });
 const requestHandler = nextServer.getRequestHandler();
 
-const logs = [`[compute] ${process.cwd()}`];
-for (const page of fs.readdirSync('./.next/server/pages')) {
-  if (page.endsWith('.js')) {
-    logs.push('[compute] load page', page);
-    require(`./.next/server/pages/${page}`);
-  } else {
-    logs.push('[compute] skip page', page);
+async function eagerLoadDependencies(rootDir: string) {
+  const files = await fs.readdir(rootDir);
+  const promises = [] as Promise<void>[];
+  for (const file of files) {
+    const filePath = `${rootDir}/${file}`;
+    const stat = await fs.stat(filePath);
+    if (stat.isDirectory()) {
+      promises.push(eagerLoadDependencies(filePath));
+    } else if (file.endsWith('.js')) {
+      logs.push('[compute] load dependency', filePath);
+      promises.push(extractDependencies(filePath));
+    }
   }
+  return Promise.allSettled(promises).then(() => void 0);
 }
 
-module.exports = async (req: IncomingMessage, res: ServerResponse) => {
-  console.log('request!', ...logs);
-  try {
-    // entryDirectory handler
-    await requestHandler(req, res);
-  } catch (err) {
-    console.error(err);
-    // crash the lambda immediately to clean up any bad module state,
-    // this was previously handled in ___vc_bridge on an unhandled rejection
-    // but we can do this quicker by triggering here
-    process.exit(1);
+async function extractDependencies(filePath: string): Promise<void> {
+  const promises = [] as Promise<unknown>[];
+  const contents = await fs.readFile(filePath, 'utf8');
+  const matches = contents.matchAll(/\b(require|import)\("(.+?)"\)\b/g);
+  for (const match of matches) {
+    if (!match[2] || match[2].startsWith('.')) {
+      logs.push(`[${filePath}] skip dependency ${match[1]}`);
+      continue;
+    }
+
+    promises.push(import(match[1]));
   }
-};
+  return Promise.allSettled(promises).then(() => void 0);
+}
+
+const logs = [] as string[];
+
+const before = Date.now();
+const deps$ = eagerLoadDependencies('./.next/server/pages');
+
+module.exports = (async () => {
+  await deps$;
+  const after = Date.now();
+  logs.push(`[compute] eager load dependencies took ${after - before}ms`);
+
+  return async (req: IncomingMessage, res: ServerResponse) => {
+    for (const log of logs) {
+      console.log(log);
+    }
+    logs.length = 0;
+
+    try {
+      // entryDirectory handler
+      await requestHandler(req, res);
+    } catch (err) {
+      console.error(err);
+      // crash the lambda immediately to clean up any bad module state,
+      // this was previously handled in ___vc_bridge on an unhandled rejection
+      // but we can do this quicker by triggering here
+      process.exit(1);
+    }
+  };
+})();
