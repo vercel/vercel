@@ -58,7 +58,7 @@ async function extractDependencies(filePath: string): Promise<void> {
   logs.push(`[${filePath}] extracting`);
   const promises = [] as Promise<unknown>[];
   const contents = await fs.readFile(filePath, 'utf8');
-  const matches = contents.matchAll(/\b(require|import)\("(.+?)"\)\b/g);
+  const matches = contents.matchAll(/\b(require|import)\("(.+?)"\)/g);
   let i = 0;
   for (const match of matches) {
     i++;
