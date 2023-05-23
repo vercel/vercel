@@ -88,7 +88,6 @@ module.exports = (async () => {
     for (const log of logs) {
       console.log(log);
     }
-    logs.length = 0;
 
     try {
       // entryDirectory handler
