@@ -34,6 +34,7 @@ const nextServer = new NextServer({
 const requestHandler = nextServer.getRequestHandler();
 
 async function eagerLoadDependencies(rootDir: string) {
+  logs.push(`[${rootDir}] traversing...`);
   const files = await fs.readdir(rootDir);
   const promises = [] as Promise<void>[];
   for (const file of files) {
@@ -46,14 +47,18 @@ async function eagerLoadDependencies(rootDir: string) {
       promises.push(extractDependencies(filePath));
     }
   }
+  logs.push(`[${rootDir}] ${promises.length} promises`);
   return Promise.allSettled(promises).then(() => void 0);
 }
 
 async function extractDependencies(filePath: string): Promise<void> {
+  logs.push(`[${filePath}] extracting`);
   const promises = [] as Promise<unknown>[];
   const contents = await fs.readFile(filePath, 'utf8');
   const matches = contents.matchAll(/\b(require|import)\("(.+?)"\)\b/g);
+  let i = 0;
   for (const match of matches) {
+    i++;
     if (!match[2] || match[2].startsWith('.')) {
       logs.push(`[${filePath}] skip dependency ${match[1]}`);
       continue;
@@ -61,6 +66,7 @@ async function extractDependencies(filePath: string): Promise<void> {
 
     promises.push(import(match[1]));
   }
+  logs.push(`[${filePath}] ${promises.length} deps, ${i} matches`);
   return Promise.allSettled(promises).then(() => void 0);
 }
 
