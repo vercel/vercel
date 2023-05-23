@@ -116,7 +116,7 @@ export default async function connect(
       confirm,
       org,
       project,
-      repoInfo: repoArg,
+      repoInfo: parsedUrlArg,
     });
   }
 

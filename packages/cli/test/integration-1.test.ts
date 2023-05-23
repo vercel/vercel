@@ -751,9 +751,9 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
     );
 
     expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
-    expect(stderr).toMatch(/Created .env file/gm);
+    expect(stderr).toMatch(/Created .env.local file/gm);
 
-    const contents = fs.readFileSync(path.join(target, '.env'), 'utf8');
+    const contents = fs.readFileSync(path.join(target, '.env.local'), 'utf8');
     expect(contents).toMatch(/^# Created by Vercel CLI\n/);
     expect(contents).toMatch(/MY_NEW_ENV_VAR="my plaintext value"/);
     expect(contents).toMatch(/MY_STDIN_VAR="{"expect":"quotes"}"/);
@@ -771,12 +771,12 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
     );
 
     expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
-    expect(stderr).toMatch(/Overwriting existing .env file/gm);
-    expect(stderr).toMatch(/Updated .env file/gm);
+    expect(stderr).toMatch(/Overwriting existing .env.local file/gm);
+    expect(stderr).toMatch(/Updated .env.local file/gm);
   }
 
   async function vcEnvPullConfirm() {
-    fs.writeFileSync(path.join(target, '.env'), 'hahaha');
+    fs.writeFileSync(path.join(target, '.env.local'), 'hahaha');
 
     const vc = execCli(binaryPath, ['env', 'pull'], {
       cwd: target,
@@ -784,7 +784,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
 
     await waitForPrompt(
       vc,
-      'Found existing file ".env". Do you want to overwrite?'
+      'Found existing file ".env.local". Do you want to overwrite?'
     );
     vc.stdin?.end('y\n');
 
@@ -904,7 +904,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
 
     expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
-    const contents = fs.readFileSync(path.join(target, '.env'), 'utf8');
+    const contents = fs.readFileSync(path.join(target, '.env.local'), 'utf8');
 
     const lines = new Set(contents.split('\n'));
 
@@ -1024,11 +1024,11 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
     await vcEnvPullConfirm();
     await vcDeployWithVar();
     await vcDevWithEnv();
-    fs.unlinkSync(path.join(target, '.env'));
+    fs.unlinkSync(path.join(target, '.env.local'));
     await vcDevAndFetchCloudVars();
     await enableAutoExposeSystemEnvs();
     await vcEnvPullFetchSystemVars();
-    fs.unlinkSync(path.join(target, '.env'));
+    fs.unlinkSync(path.join(target, '.env.local'));
     await vcDevAndFetchSystemVars();
     await vcEnvRemove();
     await vcEnvRemoveWithArgs();
