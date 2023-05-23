@@ -843,6 +843,8 @@ export async function serverBuild({
       compressedPages
     );
 
+    let commonRequiredFiles: string[] = [];
+
     for (const group of combinedGroups) {
       const groupPageFiles: { [key: string]: PseudoFile } = {};
 
@@ -851,6 +853,18 @@ export async function serverBuild({
           path.relative(baseDir, lambdaPages[page].fsPath)
         );
         groupPageFiles[pageFileName] = compressedPages[page];
+
+        const traceFile = getBuildTraceFile(page.replace(/\.js$/, ''));
+
+        if (traceFile) {
+          const { files } = JSON.parse(
+            await fs.readFile(traceFile.fsPath, 'utf8')
+          );
+
+          commonRequiredFiles = files.filter((file: string) =>
+            commonRequiredFiles.includes(file)
+          );
+        }
       }
 
       const updatedManifestFiles: { [name: string]: FileBlob } = {};
@@ -912,9 +926,21 @@ export async function serverBuild({
         }
       }
 
+      const launcherContent = group.isAppRouter ? appLauncher : launcher;
+
+      if (commonRequiredFiles.length > 0) {
+        launcherContent.replace(
+          '// common-files-require-target',
+          `
+            const commonFiles = ${JSON.stringify(commonRequiredFiles)};
+            await Promise.all(commonFiles.map(file => import(file)));
+          `
+        );
+      }
+
       const launcherFiles: { [name: string]: FileFsRef | FileBlob } = {
         [path.join(path.relative(baseDir, projectDir), '___next_launcher.cjs')]:
-          new FileBlob({ data: group.isAppRouter ? appLauncher : launcher }),
+          new FileBlob({ data: launcherContent }),
       };
       const operationType = getOperationType({ group, prerenderManifest });
 
