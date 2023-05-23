@@ -33,6 +33,7 @@ const nextServer = new NextServer({
 });
 const requestHandler = nextServer.getRequestHandler();
 
+const logs = [] as string[];
 async function eagerLoadDependencies(rootDir: string) {
   logs.push(`[${rootDir}] traversing...`);
   const files = await fs.readdir(rootDir);
@@ -51,6 +52,8 @@ async function eagerLoadDependencies(rootDir: string) {
   return Promise.allSettled(promises).then(() => void 0);
 }
 
+const dynImport = eval('x => import(x)');
+
 async function extractDependencies(filePath: string): Promise<void> {
   logs.push(`[${filePath}] extracting`);
   const promises = [] as Promise<unknown>[];
@@ -64,19 +67,19 @@ async function extractDependencies(filePath: string): Promise<void> {
       continue;
     }
 
-    promises.push(import(match[1]));
+    promises.push(dynImport(match[1]));
   }
   logs.push(`[${filePath}] ${promises.length} deps, ${i} matches`);
   return Promise.allSettled(promises).then(() => void 0);
 }
 
-const logs = [] as string[];
-
 const before = Date.now();
 const deps$ = eagerLoadDependencies('./.next/server/pages');
 
 module.exports = (async () => {
-  await deps$;
+  await deps$.catch(() => {
+    logs.push('[compute] eager load dependencies failed');
+  });
   const after = Date.now();
 
   return async (req: IncomingMessage, res: ServerResponse) => {
