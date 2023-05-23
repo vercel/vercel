@@ -867,6 +867,12 @@ export async function serverBuild({
                 path.resolve(traceFile.fsPath, file)
               )
             )
+            .map((file: string) => {
+              if (!file.startsWith('..') && !path.isAbsolute(file)) {
+                return `./${file}`;
+              }
+              return file;
+            })
             .filter((file: string) =>
               commonRequiredFiles ? commonRequiredFiles.includes(file) : true
             );
