@@ -62,12 +62,22 @@ async function extractDependencies(filePath: string): Promise<void> {
   let i = 0;
   for (const match of matches) {
     i++;
-    if (!match[2] || match[2].startsWith('.')) {
-      logs.push(`[${filePath}] skip dependency ${match[1]}`);
+    const [, importType, depName] = match;
+    if (!depName || depName.startsWith('.')) {
+      logs.push(`[${filePath}] skip dependency ${depName}`);
       continue;
     }
 
-    promises.push(dynImport(match[1]));
+    const time = Date.now();
+    promises.push(
+      dynImport(depName).finally(() => {
+        logs.push(
+          `[${filePath}] ${importType} dependency ${depName} in ${
+            Date.now() - time
+          }ms`
+        );
+      })
+    );
   }
   logs.push(`[${filePath}] ${promises.length} deps, ${i} matches`);
   return Promise.allSettled(promises).then(() => void 0);
