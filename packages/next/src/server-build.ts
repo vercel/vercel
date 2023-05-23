@@ -928,7 +928,9 @@ export async function serverBuild({
 
       const launcherContent = group.isAppRouter ? appLauncher : launcher;
 
+      console.log(commonRequiredFiles);
       if (commonRequiredFiles.length > 0) {
+        console.log('writing common files');
         launcherContent.replace(
           '// common-files-require-target',
           `
