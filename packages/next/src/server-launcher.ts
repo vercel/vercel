@@ -78,9 +78,10 @@ const deps$ = eagerLoadDependencies('./.next/server/pages');
 module.exports = (async () => {
   await deps$;
   const after = Date.now();
-  logs.push(`[compute] eager load dependencies took ${after - before}ms`);
 
   return async (req: IncomingMessage, res: ServerResponse) => {
+    console.log(`[compute] eager load dependencies took ${after - before}ms`);
+    console.log(`[compute] logs: ${logs.length} lines`);
     for (const log of logs) {
       console.log(log);
     }
