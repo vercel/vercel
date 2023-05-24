@@ -28,12 +28,6 @@ export class EdgeFunction {
   files: Files;
 
   /**
-   * Extra environment variables in use for the user code, to be
-   * assigned to the edge function.
-   */
-  envVarsInUse?: string[];
-
-  /**
    * Extra binary files to be included in the edge function
    */
   assets?: { name: string; path: string }[];
@@ -50,7 +44,6 @@ export class EdgeFunction {
     this.deploymentTarget = params.deploymentTarget;
     this.entrypoint = params.entrypoint;
     this.files = params.files;
-    this.envVarsInUse = params.envVarsInUse;
     this.assets = params.assets;
     this.regions = params.regions;
     this.framework = params.framework;
