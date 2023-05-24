@@ -26,6 +26,7 @@ export default new Map([
   ['ls', 'list'],
   ['project', 'project'],
   ['projects', 'project'],
+  ['promote', 'promote'],
   ['pull', 'pull'],
   ['redeploy', 'redeploy'],
   ['remove', 'remove'],
