@@ -8,7 +8,7 @@
 	/** @type {import('./$types').LayoutServerData} */
 	export let data;
 
-	if (browser && data?.analyticsId) {
+	$: if (browser && data?.analyticsId) {
 		webVitals({
 			path: $page.url.pathname,
 			params: $page.params,
