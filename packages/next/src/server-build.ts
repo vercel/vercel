@@ -879,7 +879,7 @@ export async function serverBuild({
                 path.resolve(baseDir),
                 path.resolve(absolutePath)
               );
-              if (!relPath.startsWith('..') && !relPath.startsWith('.')) {
+              if (!relPath.startsWith('..')) {
                 relPath = './' + relPath;
               }
               newCommonRequiredFiles.push(relPath);

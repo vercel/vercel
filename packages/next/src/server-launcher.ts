@@ -20,8 +20,6 @@ if (process.env.NODE_ENV !== 'production' && region !== 'dev1') {
 
 // pre-next-server-target
 
-// common-files-require-target
-
 // eslint-disable-next-line
 const NextServer = require('__NEXT_SERVER_PATH__').default;
 const nextServer = new NextServer({
@@ -31,17 +29,21 @@ const nextServer = new NextServer({
   minimalMode: true,
   customServer: false,
 });
+
 const requestHandler = nextServer.getRequestHandler();
 
-module.exports = async (req: IncomingMessage, res: ServerResponse) => {
-  try {
-    // entryDirectory handler
-    await requestHandler(req, res);
-  } catch (err) {
-    console.error(err);
-    // crash the lambda immediately to clean up any bad module state,
-    // this was previously handled in ___vc_bridge on an unhandled rejection
-    // but we can do this quicker by triggering here
-    process.exit(1);
-  }
-};
+module.exports = (async () => {
+  // common-files-require-target
+  return async (req: IncomingMessage, res: ServerResponse) => {
+    try {
+      // entryDirectory handler
+      await requestHandler(req, res);
+    } catch (err) {
+      console.error(err);
+      // crash the lambda immediately to clean up any bad module state,
+      // this was previously handled in ___vc_bridge on an unhandled rejection
+      // but we can do this quicker by triggering here
+      process.exit(1);
+    }
+  };
+})();
