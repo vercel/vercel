@@ -1,21 +1,21 @@
 import chalk from 'chalk';
+import type Client from '../../util/client';
 import type {
-  LastAliasRequest,
   Deployment,
+  LastAliasRequest,
   PaginationOptions,
   Project,
 } from '@vercel-internals/types';
-import type Client from '../../util/client';
 import elapsed from '../../util/output/elapsed';
 import formatDate from '../../util/format-date';
 import getDeployment from '../../util/get-deployment';
 import { getPkgName } from '../../util/pkg-name';
+import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
 import getScope from '../../util/get-scope';
 import ms from 'ms';
-import sleep from '../../util/sleep';
-import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
 import { ProjectNotFound } from '../../util/errors-ts';
 import renderAliasStatus from '../../util/alias/render-alias-status';
+import sleep from '../../util/sleep';
 
 interface DeploymentAlias {
   alias: {

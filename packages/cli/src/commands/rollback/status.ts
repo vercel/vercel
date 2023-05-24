@@ -9,12 +9,13 @@ import type {
 import elapsed from '../../util/output/elapsed';
 import formatDate from '../../util/format-date';
 import getDeployment from '../../util/get-deployment';
+import { getPkgName } from '../../util/pkg-name';
+import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
 import getScope from '../../util/get-scope';
 import ms from 'ms';
+import { ProjectNotFound } from '../../util/errors-ts';
 import renderAliasStatus from '../../util/alias/render-alias-status';
 import sleep from '../../util/sleep';
-import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
-import { ProjectNotFound } from '../../util/errors-ts';
 
 interface RollbackAlias {
   alias: {
@@ -145,7 +146,7 @@ export default async function rollbackStatus({
       if (requestedAt < recentThreshold || Date.now() >= rollbackTimeout) {
         output.log(
           `The rollback exceeded its deadline - rerun ${chalk.bold(
-            `vercel rollback ${toDeploymentId}`
+            `${getPkgName()} rollback ${toDeploymentId}`
           )} to try again`
         );
         return 1;
