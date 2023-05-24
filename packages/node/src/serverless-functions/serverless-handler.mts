@@ -21,7 +21,7 @@ type ServerlessFunctionSignature = (
   res: ServerResponse | VercelResponse
 ) => void;
 
-const [nodeMajor] = process.versions.node.split('.').map(v => Number(v));
+const [NODE_MAJOR] = process.versions.node.split('.').map(v => Number(v));
 
 /* https://nextjs.org/docs/app/building-your-application/routing/router-handlers#supported-http-methods */
 const HTTP_METHODS = [
@@ -57,7 +57,7 @@ async function compileUserCode(
   }
 
   if (HTTP_METHODS.some(method => typeof listener[method] === 'function')) {
-    if (nodeMajor < 18) throw new Error('Node.js v18 or above is needed')
+    if (NODE_MAJOR < 18) throw new Error('Node.js v18 or above is needed');
     const { getWebExportsHandler } = await import('./helpers-web.js');
     return getWebExportsHandler(listener, HTTP_METHODS);
   }

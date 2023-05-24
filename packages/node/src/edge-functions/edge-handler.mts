@@ -89,12 +89,7 @@ async function compileUserCode(
 
       // user code
       ${compiledFile.text};
-      const userEdgeHandler = module.exports.default;
-      if (!userEdgeHandler) {
-        throw new Error(
-          'No default export was found. Add a default export to handle requests. Learn more: https://vercel.link/creating-edge-middleware'
-        );
-      }
+      const handler = module.exports;
 
       // request metadata
       const isMiddleware = ${isMiddleware};
@@ -104,7 +99,7 @@ async function compileUserCode(
       ${edgeHandlerTemplate};
       const dependencies = { Request, Response };
       const options = { isMiddleware, entrypointLabel };
-      registerFetchListener(userEdgeHandler, options, dependencies);
+      registerFetchListener(handler, options, dependencies);
     `;
 
     return {
