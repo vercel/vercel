@@ -4,7 +4,7 @@ import { parse } from 'dotenv';
 import env from '../../../src/commands/env';
 import { setupUnitFixture } from '../../helpers/setup-unit-fixture';
 import { client } from '../../mocks/client';
-import { defaultProject, useProject } from '../../mocks/project';
+import { defaultProject, envs, useProject } from '../../mocks/project';
 import { useTeams } from '../../mocks/team';
 import { useUser } from '../../mocks/user';
 
@@ -24,10 +24,10 @@ describe('env', () => {
       await expect(client.stderr).toOutput(
         'Downloading `development` Environment Variables for Project vercel-env-pull'
       );
-      await expect(client.stderr).toOutput('Created .env file');
+      await expect(client.stderr).toOutput('Created .env.local file');
       await expect(exitCodePromise).resolves.toEqual(0);
 
-      const rawDevEnv = await fs.readFile(path.join(cwd, '.env'));
+      const rawDevEnv = await fs.readFile(path.join(cwd, '.env.local'));
 
       // check for development env value
       const devFileHasDevEnv = rawDevEnv.toString().includes('SPECIAL_FLAG');
@@ -56,11 +56,11 @@ describe('env', () => {
       await expect(client.stderr).toOutput(
         'Downloading `preview` Environment Variables for Project vercel-env-pull'
       );
-      await expect(client.stderr).toOutput('Created .env file');
+      await expect(client.stderr).toOutput('Created .env.local file');
       await expect(exitCodePromise).resolves.toEqual(0);
 
       // check for Preview env vars
-      const rawDevEnv = await fs.readFile(path.join(cwd, '.env'), 'utf8');
+      const rawDevEnv = await fs.readFile(path.join(cwd, '.env.local'), 'utf8');
       expect(rawDevEnv).toContain(
         'REDIS_CONNECTION_STRING="redis://abc123@redis.example.com:6379"'
       );
@@ -93,11 +93,11 @@ describe('env', () => {
       await expect(client.stderr).toOutput(
         'Downloading `preview` Environment Variables for Project vercel-env-pull'
       );
-      await expect(client.stderr).toOutput('Created .env file');
+      await expect(client.stderr).toOutput('Created .env.local file');
       await expect(exitCodePromise).resolves.toEqual(0);
 
       // check for Preview env vars
-      const rawDevEnv = await fs.readFile(path.join(cwd, '.env'), 'utf8');
+      const rawDevEnv = await fs.readFile(path.join(cwd, '.env.local'), 'utf8');
       expect(rawDevEnv).toContain(
         'REDIS_CONNECTION_STRING="redis://abc123@redis.example.com:6379"'
       );
@@ -159,10 +159,10 @@ describe('env', () => {
       await expect(client.stderr).toOutput(
         `Downloading \`production\` Environment Variables for Project vercel-env-pull`
       );
-      await expect(client.stderr).toOutput('Created .env file');
+      await expect(client.stderr).toOutput('Created .env.local file');
       await expect(exitCodePromise).resolves.toEqual(0);
 
-      const rawProdEnv = await fs.readFile(path.join(cwd, '.env'));
+      const rawProdEnv = await fs.readFile(path.join(cwd, '.env.local'));
 
       // check for development env value
       const envFileHasEnv = rawProdEnv
@@ -261,7 +261,7 @@ describe('env', () => {
         await expect(client.stderr).toOutput(
           '+ SPECIAL_FLAG (Updated)\n+ NEW_VAR\n- TEST\n'
         );
-        await expect(client.stderr).toOutput('Updated .env file');
+        await expect(client.stderr).toOutput('Updated .env.local file');
 
         await expect(pullPromise).resolves.toEqual(0);
       } finally {
@@ -282,7 +282,7 @@ describe('env', () => {
 
       client.setArgv('env', 'pull', '--yes', '--cwd', cwd);
       const pullPromise = env(client);
-      await expect(client.stderr).toOutput('Updated .env file');
+      await expect(client.stderr).toOutput('Updated .env.local file');
       await expect(pullPromise).resolves.toEqual(0);
     });
 
@@ -299,7 +299,7 @@ describe('env', () => {
       client.setArgv('env', 'pull', '--yes', '--cwd', cwd);
       const pullPromise = env(client);
       await expect(client.stderr).toOutput('> No changes found.');
-      await expect(client.stderr).toOutput('Updated .env file');
+      await expect(client.stderr).toOutput('Updated .env.local file');
       await expect(pullPromise).resolves.toEqual(0);
     });
 
@@ -308,21 +308,26 @@ describe('env', () => {
       try {
         useUser();
         useTeams('team_dummy');
-        defaultProject.env.push({
-          type: 'encrypted',
-          id: '781dt89g8r2h789g',
-          key: 'NEW_VAR',
-          value: '"testvalue"',
-          target: ['development'],
-          configurationId: null,
-          updatedAt: 1557241361455,
-          createdAt: 1557241361455,
-        });
-        useProject({
-          ...defaultProject,
-          id: 'env-pull-delta-quotes',
-          name: 'env-pull-delta-quotes',
-        });
+        useProject(
+          {
+            ...defaultProject,
+            id: 'env-pull-delta-quotes',
+            name: 'env-pull-delta-quotes',
+          },
+          [
+            ...envs,
+            {
+              type: 'encrypted',
+              id: '781dt89g8r2h789g',
+              key: 'NEW_VAR',
+              value: '"testvalue"',
+              target: ['development'],
+              configurationId: null,
+              updatedAt: 1557241361455,
+              createdAt: 1557241361455,
+            },
+          ]
+        );
 
         client.setArgv('env', 'pull', '--yes', '--cwd', cwd);
         const pullPromise = env(client);
@@ -330,13 +335,12 @@ describe('env', () => {
           'Downloading `development` Environment Variables for Project env-pull-delta'
         );
         await expect(client.stderr).toOutput('No changes found.\n');
-        await expect(client.stderr).toOutput('Updated .env file');
+        await expect(client.stderr).toOutput('Updated .env.local file');
 
         await expect(pullPromise).resolves.toEqual(0);
       } finally {
         client.setArgv('env', 'rm', 'NEW_VAR', '--yes', '--cwd', cwd);
         await env(client);
-        defaultProject.env.pop();
       }
     });
 
@@ -345,21 +349,26 @@ describe('env', () => {
       try {
         useUser();
         useTeams('team_dummy');
-        defaultProject.env.push({
-          type: 'encrypted',
-          id: '781dt89g8r2h789g',
-          key: 'NEW_VAR',
-          value: 'testvalue',
-          target: ['development'],
-          configurationId: null,
-          updatedAt: 1557241361455,
-          createdAt: 1557241361455,
-        });
-        useProject({
-          ...defaultProject,
-          id: 'env-pull-delta-quotes',
-          name: 'env-pull-delta-quotes',
-        });
+        useProject(
+          {
+            ...defaultProject,
+            id: 'env-pull-delta-quotes',
+            name: 'env-pull-delta-quotes',
+          },
+          [
+            ...envs,
+            {
+              type: 'encrypted',
+              id: '781dt89g8r2h789g',
+              key: 'NEW_VAR',
+              value: 'testvalue',
+              target: ['development'],
+              configurationId: null,
+              updatedAt: 1557241361455,
+              createdAt: 1557241361455,
+            },
+          ]
+        );
 
         client.setArgv('env', 'pull', '.env.testquotes', '--yes', '--cwd', cwd);
         const pullPromise = env(client);
@@ -373,7 +382,6 @@ describe('env', () => {
       } finally {
         client.setArgv('env', 'rm', 'NEW_VAR', '--yes', '--cwd', cwd);
         await env(client);
-        defaultProject.env.pop();
       }
     });
   });
