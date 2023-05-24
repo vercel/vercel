@@ -365,9 +365,24 @@ export interface Org {
 }
 
 export interface ProjectLink {
+  /**
+   * ID of the Vercel Project.
+   */
   projectId: string;
+  /**
+   * User or Team ID of the owner of the Vercel Project.
+   */
   orgId: string;
+  /**
+   * When linked as a repository, contains the absolute path
+   * to the root directory of the repository.
+   */
   repoRoot?: string;
+  /**
+   * When linked as a repository, contains the absolute path
+   * to the root directory of the Project.
+   */
+  projectRoot?: string;
 }
 
 export interface PaginationOptions {
