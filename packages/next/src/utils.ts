@@ -1419,6 +1419,7 @@ export async function getPageLambdaGroups({
 
     let matchingGroup = groups.find(group => {
       const matches =
+        !process.env.VERCEL_NEXT_GROUPING_DISABLED &&
         group.maxDuration === opts.maxDuration &&
         group.memory === opts.memory &&
         group.isPrerenders === isPrerenderRoute;

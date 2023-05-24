@@ -912,9 +912,24 @@ export async function serverBuild({
         }
       }
 
+      let finalLauncher = group.isAppRouter ? appLauncher : launcher;
+
+      if (process.env.VERCEL_NEXT_GROUPING_DISABLED) {
+        finalLauncher = finalLauncher.replace(
+          '// preload-next-page-target',
+          `
+          require('./.next/server/pages/_app.js');
+          require('./.next/server/pages/_error.js');
+          require('./.next/server/pages/_document.js');
+          require('./${path.normalize(
+            path.relative(baseDir, lambdaPages[group.pages[0]].fsPath)
+          )}');`
+        );
+      }
+
       const launcherFiles: { [name: string]: FileFsRef | FileBlob } = {
         [path.join(path.relative(baseDir, projectDir), '___next_launcher.cjs')]:
-          new FileBlob({ data: group.isAppRouter ? appLauncher : launcher }),
+          new FileBlob({ data: finalLauncher }),
       };
       const operationType = getOperationType({ group, prerenderManifest });
 
