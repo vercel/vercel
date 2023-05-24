@@ -858,24 +858,35 @@ export async function serverBuild({
           const { files } = JSON.parse(
             await fs.readFile(traceFile.fsPath, 'utf8')
           );
+          const isAppPath = appDir && lambdaAppPaths[page];
+          const curPagesDir = isAppPath && appDir ? appDir : pagesDir;
+          const originalPagePath = getOriginalPagePath(page);
+          const pageDir = path.dirname(
+            path.join(curPagesDir, originalPagePath)
+          );
+          const normalizedBaseDir = `${baseDir}${
+            baseDir.endsWith(path.sep) ? '' : path.sep
+          }`;
 
-          commonRequiredFiles = files
-            // make the files relative to the server launcher
-            .map((file: string) =>
-              path.relative(
-                path.resolve(entryPath, outputDirectory),
-                path.resolve(traceFile.fsPath, file)
-              )
-            )
-            .map((file: string) => {
-              if (!file.startsWith('..') && !path.isAbsolute(file)) {
-                return `./${file}`;
+          const newCommonRequiredFiles: string[] = [];
+          files.forEach((file: string) => {
+            const absolutePath = path.join(pageDir, file);
+            if (
+              absolutePath.startsWith(normalizedBaseDir) &&
+              (commonRequiredFiles ? commonRequiredFiles.includes(file) : true)
+            ) {
+              let relPath = path.relative(
+                path.resolve(baseDir),
+                path.resolve(absolutePath)
+              );
+              if (!relPath.startsWith('..') && !relPath.startsWith('.')) {
+                relPath = './' + relPath;
               }
-              return file;
-            })
-            .filter((file: string) =>
-              commonRequiredFiles ? commonRequiredFiles.includes(file) : true
-            );
+              newCommonRequiredFiles.push(relPath);
+            }
+          });
+
+          commonRequiredFiles = newCommonRequiredFiles;
         }
       }
 
