@@ -356,10 +356,6 @@ export interface Project extends ProjectSettings {
   alias?: ProjectAliasTarget[];
   latestDeployments?: Partial<Deployment>[];
   lastAliasRequest?: LastAliasRequest | null;
-  /**
-   * @deprecated - Use `lastAliasRequest` instead
-   */
-  lastRollbackTarget?: RollbackTarget | null;
 }
 
 export interface Org {
