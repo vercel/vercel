@@ -1,15 +1,12 @@
 import { addHelpers } from './helpers.js';
-import { buildToNodeHandler } from '@edge-runtime/node-utils';
 import { createServer } from 'http';
 import { serializeBody } from '../utils.js';
 import { streamToBuffer } from '@vercel/build-utils';
-import primitives from '@edge-runtime/primitives';
 import exitHook from 'exit-hook';
 import fetch from 'node-fetch';
 import { listen } from 'async-listen';
 import { isAbsolute } from 'path';
 import { pathToFileURL } from 'url';
-import type { BuildDependencies } from '@edge-runtime/node-utils';
 import type { ServerResponse, IncomingMessage } from 'http';
 import type { VercelProxyResponse } from '../types.js';
 import type { VercelRequest, VercelResponse } from './helpers.js';
@@ -24,6 +21,8 @@ type ServerlessFunctionSignature = (
   res: ServerResponse | VercelResponse
 ) => void;
 
+const [nodeMajor] = process.versions.node.split('.').map(v => Number(v));
+
 /* https://nextjs.org/docs/app/building-your-application/routing/router-handlers#supported-http-methods */
 const HTTP_METHODS = [
   'GET',
@@ -33,18 +32,7 @@ const HTTP_METHODS = [
   'PUT',
   'DELETE',
   'PATCH',
-] as const;
-
-type HTTP_METHOD = typeof HTTP_METHODS[number];
-
-function isHTTPMethod(maybeMethod: string): maybeMethod is HTTP_METHOD {
-  return HTTP_METHODS.includes(maybeMethod as HTTP_METHOD);
-}
-
-const defaultHttpHandler: ServerlessFunctionSignature = (_, res) => {
-  res.statusCode = 405;
-  res.end();
-};
+];
 
 async function createServerlessServer(userCode: ServerlessFunctionSignature) {
   const server = createServer(userCode);
@@ -68,31 +56,16 @@ async function compileUserCode(
     if (listener.default) listener = listener.default;
   }
 
-  if (Object.keys(listener).every(key => !isHTTPMethod(key))) {
-    return async (req: IncomingMessage, res: ServerResponse) => {
-      if (options.shouldAddHelpers) await addHelpers(req, res);
-      return listener(req, res);
-    };
+  if (HTTP_METHODS.some(method => typeof listener[method] === 'function')) {
+    if (nodeMajor < 18) throw new Error('Node.js v18 or above is needed')
+    const { getWebExportsHandler } = await import('./helpers-web.js');
+    return getWebExportsHandler(listener, HTTP_METHODS);
   }
 
-  HTTP_METHODS.forEach(httpMethod => {
-    listener[httpMethod] =
-      listener[httpMethod] === undefined
-        ? defaultHttpHandler
-        : buildToNodeHandler(
-            {
-              Headers: primitives.Headers as BuildDependencies['Headers'],
-              ReadableStream: primitives.ReadableStream,
-              Request: primitives.Request as BuildDependencies['Request'],
-              Uint8Array: Uint8Array,
-              FetchEvent: primitives.FetchEvent,
-            },
-            { defaultOrigin: 'https://vercel.com' }
-          )(listener[httpMethod]);
-  });
-
-  return (req: IncomingMessage, res: ServerResponse) =>
-    listener[req.method ?? 'GET'](req, res);
+  return async (req: IncomingMessage, res: ServerResponse) => {
+    if (options.shouldAddHelpers) await addHelpers(req, res);
+    return listener(req, res);
+  };
 }
 
 export async function createServerlessEventHandler(
