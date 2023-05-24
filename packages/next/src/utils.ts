@@ -1258,8 +1258,6 @@ async function getSourceFilePathFromPage({
   page: string;
   pageExtensions?: string[];
 }) {
-  // TODO: this should be updated to get the pageExtensions
-  // value used during next build
   const extensionsToTry = pageExtensions || ['js', 'jsx', 'ts', 'tsx'];
 
   for (const pageType of ['pages', 'app']) {
