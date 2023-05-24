@@ -3,7 +3,7 @@ import { client } from '../../mocks/client';
 import { defaultProject, useProject } from '../../mocks/project';
 import { Request, Response } from 'express';
 import rollback from '../../../src/commands/rollback';
-import { RollbackJobStatus, RollbackTarget } from '@vercel-internals/types';
+import type { LastAliasRequest } from '@vercel-internals/types';
 import { setupUnitFixture } from '../../helpers/setup-unit-fixture';
 import { useDeployment } from '../../mocks/deployment';
 import { useTeams } from '../../mocks/team';
@@ -33,12 +33,11 @@ describe('rollback', () => {
     await expect(exitCodePromise).resolves.toEqual(1);
   });
 
-  it('should error if invalid deployment name', async () => {
+  it('should error if invalid deployment ID', async () => {
     const { cwd } = initRollbackTest();
     client.setArgv('rollback', '????', '--yes', '--cwd', cwd);
     const exitCodePromise = rollback(client);
 
-    await expect(client.stderr).toOutput('Retrieving project…');
     await expect(client.stderr).toOutput(
       'Error: The provided argument "????" is not a valid deployment ID or URL'
     );
@@ -50,7 +49,6 @@ describe('rollback', () => {
     client.setArgv('rollback', 'foo', '--yes', '--cwd', cwd);
     const exitCodePromise = rollback(client);
 
-    await expect(client.stderr).toOutput('Retrieving project…');
     await expect(client.stderr).toOutput(
       'Error: Can\'t find the deployment "foo" under the context'
     );
@@ -63,7 +61,6 @@ describe('rollback', () => {
     client.setArgv('rollback', '--yes', '--cwd', cwd);
     const exitCodePromise = rollback(client);
 
-    await expect(client.stderr).toOutput('Retrieving project…');
     await expect(client.stderr).toOutput(
       'Checking rollback status of vercel-rollback'
     );
@@ -77,7 +74,6 @@ describe('rollback', () => {
     client.setArgv('rollback', previousDeployment.id, '--yes', '--cwd', cwd);
     const exitCodePromise = rollback(client);
 
-    await expect(client.stderr).toOutput('Retrieving project…');
     await expect(client.stderr).toOutput(
       `Fetching deployment "${previousDeployment.id}" in ${previousDeployment.creator?.username}`
     );
@@ -96,7 +92,6 @@ describe('rollback', () => {
     client.setArgv('rollback', previousDeployment.url, '--yes', '--cwd', cwd);
     const exitCodePromise = rollback(client);
 
-    await expect(client.stderr).toOutput('Retrieving project…');
     await expect(client.stderr).toOutput(
       `Fetching deployment "${previousDeployment.url}" in ${previousDeployment.creator?.username}`
     );
@@ -120,13 +115,12 @@ describe('rollback', () => {
     rollback(client);
 
     // need to wait for the rollback request to be accepted
-    await sleep(500);
+    await sleep(300);
 
     // get the status
     client.setArgv('rollback', '--yes', '--cwd', cwd);
     const exitCodePromise = rollback(client);
 
-    await expect(client.stderr).toOutput('Retrieving project…');
     await expect(client.stderr).toOutput(
       `Checking rollback status of ${project.name}`
     );
@@ -146,14 +140,15 @@ describe('rollback', () => {
     });
 
     client.setArgv('rollback', previousDeployment.id, '--yes', '--cwd', cwd);
-    const exitCode = await rollback(client);
+    const exitCodePromise = rollback(client);
 
-    expect(exitCode).toBe(1);
-    await expect(client.stderr).toOutput('Retrieving project…');
     await expect(client.stderr).toOutput(
       `Fetching deployment "${previousDeployment.id}" in ${previousDeployment.creator?.username}`
     );
-    await expect(client.stderr).toOutput('Response Error (500)');
+    // we need to wait a super long time because fetch will return on 500
+    await expect(client.stderr).toOutput('Response Error (500)', 20000);
+
+    await expect(exitCodePromise).resolves.toEqual(1);
   });
 
   it('should error if rollback fails (no aliases)', async () => {
@@ -163,7 +158,6 @@ describe('rollback', () => {
     client.setArgv('rollback', previousDeployment.id, '--yes', '--cwd', cwd);
     const exitCodePromise = rollback(client);
 
-    await expect(client.stderr).toOutput('Retrieving project…');
     await expect(client.stderr).toOutput(
       `Fetching deployment "${previousDeployment.id}" in ${previousDeployment.creator?.username}`
     );
@@ -192,7 +186,6 @@ describe('rollback', () => {
     client.setArgv('rollback', previousDeployment.id, '--yes', '--cwd', cwd);
     const exitCodePromise = rollback(client);
 
-    await expect(client.stderr).toOutput('Retrieving project…');
     await expect(client.stderr).toOutput(
       `Fetching deployment "${previousDeployment.id}" in ${previousDeployment.creator?.username}`
     );
@@ -221,11 +214,10 @@ describe('rollback', () => {
       '--cwd',
       cwd,
       '--timeout',
-      '1s'
+      '1'
     );
     const exitCodePromise = rollback(client);
 
-    await expect(client.stderr).toOutput('Retrieving project…');
     await expect(client.stderr).toOutput(
       `Fetching deployment "${previousDeployment.id}" in ${previousDeployment.creator?.username}`
     );
@@ -252,7 +244,6 @@ describe('rollback', () => {
     );
     const exitCodePromise = rollback(client);
 
-    await expect(client.stderr).toOutput('Retrieving project…');
     await expect(client.stderr).toOutput(
       `Fetching deployment "${previousDeployment.id}" in ${previousDeployment.creator?.username}`
     );
@@ -275,7 +266,6 @@ describe('rollback', () => {
     client.setArgv('rollback', previousDeployment.id, '--yes', '--cwd', cwd);
     const exitCodePromise = rollback(client);
 
-    await expect(client.stderr).toOutput('Retrieving project…');
     await expect(client.stderr).toOutput(
       `Fetching deployment "${previousDeployment.id}" in ${previousDeployment.creator?.username}`
     );
@@ -302,11 +292,11 @@ function initRollbackTest({
   rollbackStatusCode,
 }: {
   rollbackAliases?: RollbackAlias[];
-  rollbackJobStatus?: RollbackJobStatus;
+  rollbackJobStatus?: LastAliasRequest['jobStatus'];
   rollbackPollCount?: number;
   rollbackStatusCode?: number;
 } = {}) {
-  const cwd = setupUnitFixture('vercel-rollback');
+  const cwd = setupUnitFixture('commands/rollback/simple-next-site');
   const user = useUser();
   useTeams('team_dummy');
   const { project } = useProject({
@@ -315,11 +305,11 @@ function initRollbackTest({
     name: 'vercel-rollback',
   });
 
-  const currentDeployment = useDeployment({ creator: user });
-  const previousDeployment = useDeployment({ creator: user });
+  const currentDeployment = useDeployment({ creator: user, project });
+  const previousDeployment = useDeployment({ creator: user, project });
 
   let pollCounter = 0;
-  let lastRollbackTarget: RollbackTarget | null = null;
+  let lastAliasRequest: LastAliasRequest | null = null;
 
   client.scenario.post(
     '/:version/projects/:project/rollback/:id',
@@ -339,26 +329,27 @@ function initRollbackTest({
         return;
       }
 
-      lastRollbackTarget = {
+      lastAliasRequest = {
         fromDeploymentId: currentDeployment.id,
         jobStatus: 'in-progress',
         requestedAt: Date.now(),
         toDeploymentId: id,
+        type: 'rollback',
       };
 
-      Object.defineProperty(project, 'lastRollbackTarget', {
-        get(): RollbackTarget | null {
+      Object.defineProperty(project, 'lastAliasRequest', {
+        get(): LastAliasRequest | null {
           if (
-            lastRollbackTarget &&
+            lastAliasRequest &&
             rollbackPollCount !== undefined &&
             pollCounter++ > rollbackPollCount
           ) {
-            lastRollbackTarget.jobStatus = rollbackJobStatus;
+            lastAliasRequest.jobStatus = rollbackJobStatus;
           }
-          return lastRollbackTarget;
+          return lastAliasRequest;
         },
-        set(value: RollbackTarget | null) {
-          lastRollbackTarget = value;
+        set(value: LastAliasRequest | null) {
+          lastAliasRequest = value;
         },
       });
 
@@ -366,19 +357,6 @@ function initRollbackTest({
       res.end();
     }
   );
-
-  let counter = 0;
-
-  client.scenario.get(`/:version/projects/${project.id}`, (req, res) => {
-    const data = { ...project };
-    if (req.query?.rollbackInfo === 'true') {
-      if (lastRollbackTarget && counter++ > rollbackPollCount) {
-        lastRollbackTarget.jobStatus = rollbackJobStatus;
-      }
-      data.lastRollbackTarget = lastRollbackTarget;
-    }
-    res.json(data);
-  });
 
   client.scenario.get(
     '/:version/projects/:project/rollback/aliases',

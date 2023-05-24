@@ -27,7 +27,7 @@ export default async function getProjectByDeployment({
 
   if (!isValidName(deployId)) {
     throw new Error(
-      `The provided argument "${deployId}" is not a valid deployment`
+      `The provided argument "${deployId}" is not a valid deployment ID or URL`
     );
   }
 

@@ -39,7 +39,7 @@ describe('promote', () => {
     const exitCodePromise = promote(client);
 
     await expect(client.stderr).toOutput(
-      'Error: The provided argument "????" is not a valid deployment'
+      'Error: The provided argument "????" is not a valid deployment ID or URL'
     );
     await expect(exitCodePromise).resolves.toEqual(1);
   });

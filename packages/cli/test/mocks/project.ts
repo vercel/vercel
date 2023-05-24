@@ -129,7 +129,6 @@ export const defaultProject: Project = {
     },
   ],
   lastAliasRequest: null,
-  lastRollbackTarget: null,
   alias: [
     {
       domain: 'foobar.com',
