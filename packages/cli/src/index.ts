@@ -571,6 +571,9 @@ const main = async () => {
         case 'project':
           func = require('./commands/project').default;
           break;
+        case 'promote':
+          func = require('./commands/promote').default;
+          break;
         case 'pull':
           func = require('./commands/pull').default;
           break;

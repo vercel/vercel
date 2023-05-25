@@ -56,7 +56,7 @@ export async function toOutput(
       resolve({
         pass: false,
         message() {
-          return `${hint}Timed out waiting ${timeout} ms for output`;
+          return `${hint}Timed out waiting ${timeout} ms for output.\n\nExpected: "${test}"\nReceived: "${output}"`;
         },
       });
     }

@@ -2,8 +2,8 @@ import chalk from 'chalk';
 import { client } from '../../mocks/client';
 import { defaultProject, useProject } from '../../mocks/project';
 import { Request, Response } from 'express';
-import rollback from '../../../src/commands/rollback';
-import type { LastAliasRequest } from '@vercel-internals/types';
+import promote from '../../../src/commands/promote';
+import { LastAliasRequest } from '@vercel-internals/types';
 import { setupUnitFixture } from '../../helpers/setup-unit-fixture';
 import { useDeployment } from '../../mocks/deployment';
 import { useTeams } from '../../mocks/team';
@@ -12,10 +12,10 @@ import sleep from '../../../src/util/sleep';
 
 jest.setTimeout(60000);
 
-describe('rollback', () => {
+describe('promote', () => {
   it('should error if cwd is invalid', async () => {
-    client.setArgv('rollback', '--cwd', __filename);
-    const exitCodePromise = rollback(client);
+    client.setArgv('promote', '--cwd', __filename);
+    const exitCodePromise = promote(client);
 
     await expect(client.stderr).toOutput(
       'Error: Support for single file deployments has been removed.'
@@ -25,18 +25,18 @@ describe('rollback', () => {
   });
 
   it('should error if timeout is invalid', async () => {
-    const { cwd } = initRollbackTest();
-    client.setArgv('rollback', '--yes', '--cwd', cwd, '--timeout', 'foo');
-    const exitCodePromise = rollback(client);
+    const { cwd } = initPromoteTest();
+    client.setArgv('promote', '--yes', '--cwd', cwd, '--timeout', 'foo');
+    const exitCodePromise = promote(client);
 
     await expect(client.stderr).toOutput('Error: Invalid timeout "foo"');
     await expect(exitCodePromise).resolves.toEqual(1);
   });
 
   it('should error if invalid deployment ID', async () => {
-    const { cwd } = initRollbackTest();
-    client.setArgv('rollback', '????', '--yes', '--cwd', cwd);
-    const exitCodePromise = rollback(client);
+    const { cwd } = initPromoteTest();
+    client.setArgv('promote', '????', '--yes', '--cwd', cwd);
+    const exitCodePromise = promote(client);
 
     await expect(client.stderr).toOutput(
       'Error: The provided argument "????" is not a valid deployment ID or URL'
@@ -45,41 +45,42 @@ describe('rollback', () => {
   });
 
   it('should error if deployment not found', async () => {
-    const { cwd } = initRollbackTest();
-    client.setArgv('rollback', 'foo', '--yes', '--cwd', cwd);
-    const exitCodePromise = rollback(client);
+    const { cwd } = initPromoteTest();
+    client.setArgv('promote', 'foo', '--yes', '--cwd', cwd);
+    const exitCodePromise = promote(client);
 
+    await expect(client.stderr).toOutput('Fetching deployment "foo" in ');
     await expect(client.stderr).toOutput(
-      'Error: Can\'t find the deployment "foo" under the context'
+      'Error: Error: Can\'t find the deployment "foo" under the context'
     );
 
     await expect(exitCodePromise).resolves.toEqual(1);
   });
 
-  it('should show status when not rolling back', async () => {
-    const { cwd } = initRollbackTest();
-    client.setArgv('rollback', '--yes', '--cwd', cwd);
-    const exitCodePromise = rollback(client);
+  it('should show status when not promoting', async () => {
+    const { cwd } = initPromoteTest();
+    client.setArgv('promote', '--yes', '--cwd', cwd);
+    const exitCodePromise = promote(client);
 
     await expect(client.stderr).toOutput(
-      'Checking rollback status of vercel-rollback'
+      'Checking promotion status of vercel-promote'
     );
-    await expect(client.stderr).toOutput('No deployment rollback in progress');
+    await expect(client.stderr).toOutput('No deployment promotion in progress');
 
     await expect(exitCodePromise).resolves.toEqual(0);
   });
 
-  it('should rollback by deployment id', async () => {
-    const { cwd, previousDeployment } = initRollbackTest();
-    client.setArgv('rollback', previousDeployment.id, '--yes', '--cwd', cwd);
-    const exitCodePromise = rollback(client);
+  it('should promote by deployment id', async () => {
+    const { cwd, previousDeployment } = initPromoteTest();
+    client.setArgv('promote', previousDeployment.id, '--yes', '--cwd', cwd);
+    const exitCodePromise = promote(client);
 
     await expect(client.stderr).toOutput(
       `Fetching deployment "${previousDeployment.id}" in ${previousDeployment.creator?.username}`
     );
-    await expect(client.stderr).toOutput('Rollback in progress');
+    await expect(client.stderr).toOutput('Promote in progress');
     await expect(client.stderr).toOutput(
-      `Success! ${chalk.bold('vercel-rollback')} was rolled back to ${
+      `Success! ${chalk.bold('vercel-promote')} was promoted to ${
         previousDeployment.url
       } (${previousDeployment.id})`
     );
@@ -87,17 +88,17 @@ describe('rollback', () => {
     await expect(exitCodePromise).resolves.toEqual(0);
   });
 
-  it('should rollback by deployment url', async () => {
-    const { cwd, previousDeployment } = initRollbackTest();
-    client.setArgv('rollback', previousDeployment.url, '--yes', '--cwd', cwd);
-    const exitCodePromise = rollback(client);
+  it('should promote by deployment url', async () => {
+    const { cwd, previousDeployment } = initPromoteTest();
+    client.setArgv('promote', previousDeployment.url, '--yes', '--cwd', cwd);
+    const exitCodePromise = promote(client);
 
     await expect(client.stderr).toOutput(
       `Fetching deployment "${previousDeployment.url}" in ${previousDeployment.creator?.username}`
     );
-    await expect(client.stderr).toOutput('Rollback in progress');
+    await expect(client.stderr).toOutput('Promote in progress');
     await expect(client.stderr).toOutput(
-      `Success! ${chalk.bold('vercel-rollback')} was rolled back to ${
+      `Success! ${chalk.bold('vercel-promote')} was promoted to ${
         previousDeployment.url
       } (${previousDeployment.id})`
     );
@@ -105,27 +106,27 @@ describe('rollback', () => {
     await expect(exitCodePromise).resolves.toEqual(0);
   });
 
-  it('should get status while rolling back', async () => {
-    const { cwd, previousDeployment, project } = initRollbackTest({
-      rollbackPollCount: 10,
+  it('should get status while promoting', async () => {
+    const { cwd, previousDeployment, project } = initPromoteTest({
+      promotePollCount: 10,
     });
 
-    // start the rollback
-    client.setArgv('rollback', previousDeployment.id, '--yes', '--cwd', cwd);
-    rollback(client);
+    // start the promote
+    client.setArgv('promote', previousDeployment.id, '--yes', '--cwd', cwd);
+    promote(client);
 
-    // need to wait for the rollback request to be accepted
+    // need to wait for the promote request to be accepted
     await sleep(300);
 
     // get the status
-    client.setArgv('rollback', '--yes', '--cwd', cwd);
-    const exitCodePromise = rollback(client);
+    client.setArgv('promote', '--yes', '--cwd', cwd);
+    const exitCodePromise = promote(client);
 
     await expect(client.stderr).toOutput(
-      `Checking rollback status of ${project.name}`
+      `Checking promotion status of ${project.name}`
     );
     await expect(client.stderr).toOutput(
-      `Success! ${chalk.bold('vercel-rollback')} was rolled back to ${
+      `Success! ${chalk.bold('vercel-promote')} was promoted to ${
         previousDeployment.url
       } (${previousDeployment.id})`
     );
@@ -133,35 +134,36 @@ describe('rollback', () => {
     await expect(exitCodePromise).resolves.toEqual(0);
   });
 
-  it('should error if rollback request fails', async () => {
-    const { cwd, previousDeployment } = initRollbackTest({
-      rollbackPollCount: 10,
-      rollbackStatusCode: 500,
+  it('should error if promote request fails', async () => {
+    const { cwd, previousDeployment } = initPromoteTest({
+      promotePollCount: 10,
+      promoteStatusCode: 500,
     });
 
-    client.setArgv('rollback', previousDeployment.id, '--yes', '--cwd', cwd);
-    const exitCodePromise = rollback(client);
+    client.setArgv('promote', previousDeployment.id, '--yes', '--cwd', cwd);
+    const exitCodePromise = promote(client);
 
     await expect(client.stderr).toOutput(
       `Fetching deployment "${previousDeployment.id}" in ${previousDeployment.creator?.username}`
     );
+
     // we need to wait a super long time because fetch will return on 500
     await expect(client.stderr).toOutput('Response Error (500)', 20000);
 
     await expect(exitCodePromise).resolves.toEqual(1);
   });
 
-  it('should error if rollback fails (no aliases)', async () => {
-    const { cwd, previousDeployment } = initRollbackTest({
-      rollbackJobStatus: 'failed',
+  it('should error if promote fails (no aliases)', async () => {
+    const { cwd, previousDeployment } = initPromoteTest({
+      promoteJobStatus: 'failed',
     });
-    client.setArgv('rollback', previousDeployment.id, '--yes', '--cwd', cwd);
-    const exitCodePromise = rollback(client);
+    client.setArgv('promote', previousDeployment.id, '--yes', '--cwd', cwd);
+    const exitCodePromise = promote(client);
 
     await expect(client.stderr).toOutput(
       `Fetching deployment "${previousDeployment.id}" in ${previousDeployment.creator?.username}`
     );
-    await expect(client.stderr).toOutput('Rollback in progress');
+    await expect(client.stderr).toOutput('Promote in progress');
     await expect(client.stderr).toOutput(
       `Error: Failed to remap all aliases to the requested deployment ${previousDeployment.url} (${previousDeployment.id})`
     );
@@ -169,9 +171,9 @@ describe('rollback', () => {
     await expect(exitCodePromise).resolves.toEqual(1);
   });
 
-  it('should error if rollback fails (with aliases)', async () => {
-    const { cwd, previousDeployment } = initRollbackTest({
-      rollbackAliases: [
+  it('should error if promote fails (with aliases)', async () => {
+    const { cwd, previousDeployment } = initPromoteTest({
+      promoteAliases: [
         {
           alias: { alias: 'foo', deploymentId: 'foo_123' },
           status: 'completed',
@@ -181,15 +183,15 @@ describe('rollback', () => {
           status: 'failed',
         },
       ],
-      rollbackJobStatus: 'failed',
+      promoteJobStatus: 'failed',
     });
-    client.setArgv('rollback', previousDeployment.id, '--yes', '--cwd', cwd);
-    const exitCodePromise = rollback(client);
+    client.setArgv('promote', previousDeployment.id, '--yes', '--cwd', cwd);
+    const exitCodePromise = promote(client);
 
     await expect(client.stderr).toOutput(
       `Fetching deployment "${previousDeployment.id}" in ${previousDeployment.creator?.username}`
     );
-    await expect(client.stderr).toOutput('Rollback in progress');
+    await expect(client.stderr).toOutput('Promote in progress');
     await expect(client.stderr).toOutput(
       `Error: Failed to remap all aliases to the requested deployment ${previousDeployment.url} (${previousDeployment.id})`
     );
@@ -204,11 +206,11 @@ describe('rollback', () => {
   });
 
   it('should error if deployment times out', async () => {
-    const { cwd, previousDeployment } = initRollbackTest({
-      rollbackPollCount: 10,
+    const { cwd, previousDeployment } = initPromoteTest({
+      promotePollCount: 10,
     });
     client.setArgv(
-      'rollback',
+      'promote',
       previousDeployment.id,
       '--yes',
       '--cwd',
@@ -216,25 +218,26 @@ describe('rollback', () => {
       '--timeout',
       '1'
     );
-    const exitCodePromise = rollback(client);
+    const exitCodePromise = promote(client);
 
     await expect(client.stderr).toOutput(
       `Fetching deployment "${previousDeployment.id}" in ${previousDeployment.creator?.username}`
     );
-    await expect(client.stderr).toOutput('Rollback in progress');
+    await expect(client.stderr).toOutput('Promote in progress');
     await expect(client.stderr).toOutput(
-      `The rollback exceeded its deadline - rerun ${chalk.bold(
-        `vercel rollback ${previousDeployment.id}`
-      )} to try again`
+      `The promotion exceeded its deadline - rerun ${chalk.bold(
+        `vercel promote ${previousDeployment.id}`
+      )} to try again`,
+      10000
     );
 
     await expect(exitCodePromise).resolves.toEqual(1);
   });
 
-  it('should immediately exit after requesting rollback', async () => {
-    const { cwd, previousDeployment } = initRollbackTest();
+  it('should immediately exit after requesting promote', async () => {
+    const { cwd, previousDeployment } = initPromoteTest();
     client.setArgv(
-      'rollback',
+      'promote',
       previousDeployment.id,
       '--yes',
       '--cwd',
@@ -242,13 +245,13 @@ describe('rollback', () => {
       '--timeout',
       '0'
     );
-    const exitCodePromise = rollback(client);
+    const exitCodePromise = promote(client);
 
     await expect(client.stderr).toOutput(
       `Fetching deployment "${previousDeployment.id}" in ${previousDeployment.creator?.username}`
     );
     await expect(client.stderr).toOutput(
-      `Successfully requested rollback of ${chalk.bold('vercel-rollback')} to ${
+      `Successfully requested promote of ${chalk.bold('vercel-promote')} to ${
         previousDeployment.url
       } (${previousDeployment.id})`
     );
@@ -257,14 +260,14 @@ describe('rollback', () => {
   });
 
   it('should error if deployment belongs to different team', async () => {
-    const { cwd, previousDeployment } = initRollbackTest();
+    const { cwd, previousDeployment } = initPromoteTest();
     previousDeployment.team = {
       id: 'abc',
       name: 'abc',
       slug: 'abc',
     };
-    client.setArgv('rollback', previousDeployment.id, '--yes', '--cwd', cwd);
-    const exitCodePromise = rollback(client);
+    client.setArgv('promote', previousDeployment.id, '--yes', '--cwd', cwd);
+    const exitCodePromise = promote(client);
 
     await expect(client.stderr).toOutput(
       `Fetching deployment "${previousDeployment.id}" in ${previousDeployment.creator?.username}`
@@ -277,7 +280,7 @@ describe('rollback', () => {
   });
 });
 
-type RollbackAlias = {
+type DeploymentAlias = {
   alias: {
     alias: string;
     deploymentId: string;
@@ -285,24 +288,24 @@ type RollbackAlias = {
   status: string;
 };
 
-function initRollbackTest({
-  rollbackAliases = [],
-  rollbackJobStatus = 'succeeded',
-  rollbackPollCount = 2,
-  rollbackStatusCode,
+function initPromoteTest({
+  promoteAliases = [],
+  promoteJobStatus = 'succeeded',
+  promotePollCount = 2,
+  promoteStatusCode,
 }: {
-  rollbackAliases?: RollbackAlias[];
-  rollbackJobStatus?: LastAliasRequest['jobStatus'];
-  rollbackPollCount?: number;
-  rollbackStatusCode?: number;
+  promoteAliases?: DeploymentAlias[];
+  promoteJobStatus?: LastAliasRequest['jobStatus'];
+  promotePollCount?: number;
+  promoteStatusCode?: number;
 } = {}) {
-  const cwd = setupUnitFixture('commands/rollback/simple-next-site');
+  const cwd = setupUnitFixture('commands/promote/simple-next-site');
   const user = useUser();
   useTeams('team_dummy');
   const { project } = useProject({
     ...defaultProject,
-    id: 'vercel-rollback',
-    name: 'vercel-rollback',
+    id: 'vercel-promote',
+    name: 'vercel-promote',
   });
 
   const currentDeployment = useDeployment({ creator: user, project });
@@ -312,8 +315,14 @@ function initRollbackTest({
   let lastAliasRequest: LastAliasRequest | null = null;
 
   client.scenario.post(
-    '/:version/projects/:project/rollback/:id',
+    '/:version/projects/:project/promote/:id',
     (req: Request, res: Response) => {
+      if (promoteStatusCode === 500) {
+        res.statusCode = 500;
+        res.end('Server error');
+        return;
+      }
+
       const { id } = req.params;
       if (previousDeployment.id !== id) {
         res.statusCode = 404;
@@ -323,28 +332,22 @@ function initRollbackTest({
         return;
       }
 
-      if (rollbackStatusCode === 500) {
-        res.statusCode = 500;
-        res.end('Server error');
-        return;
-      }
-
       lastAliasRequest = {
         fromDeploymentId: currentDeployment.id,
         jobStatus: 'in-progress',
         requestedAt: Date.now(),
         toDeploymentId: id,
-        type: 'rollback',
+        type: 'promote',
       };
 
       Object.defineProperty(project, 'lastAliasRequest', {
         get(): LastAliasRequest | null {
           if (
             lastAliasRequest &&
-            rollbackPollCount !== undefined &&
-            pollCounter++ > rollbackPollCount
+            promotePollCount !== undefined &&
+            pollCounter++ > promotePollCount
           ) {
-            lastAliasRequest.jobStatus = rollbackJobStatus;
+            lastAliasRequest.jobStatus = promoteJobStatus;
           }
           return lastAliasRequest;
         },
@@ -359,10 +362,10 @@ function initRollbackTest({
   );
 
   client.scenario.get(
-    '/:version/projects/:project/rollback/aliases',
+    '/:version/projects/:project/promote/aliases',
     (req, res) => {
       res.json({
-        aliases: rollbackAliases,
+        aliases: promoteAliases,
         pagination: null,
       });
     }

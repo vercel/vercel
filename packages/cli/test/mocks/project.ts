@@ -128,7 +128,7 @@ export const defaultProject: Project = {
       url: 'a-project-name-rjtr4pz3f.vercel.app',
     },
   ],
-  lastRollbackTarget: null,
+  lastAliasRequest: null,
   alias: [
     {
       domain: 'foobar.com',
@@ -205,10 +205,10 @@ export function useProject(
   project: Partial<Project> = defaultProject,
   projectEnvs: ProjectEnvVariable[] = envs
 ) {
-  client.scenario.get(`/v8/projects/${project.name}`, (_req, res) => {
+  client.scenario.get(`/:version/projects/${project.name}`, (_req, res) => {
     res.json(project);
   });
-  client.scenario.get(`/v8/projects/${project.id}`, (_req, res) => {
+  client.scenario.get(`/:version/projects/${project.id}`, (_req, res) => {
     res.json(project);
   });
   client.scenario.patch(`/:version/projects/${project.id}`, (req, res) => {
