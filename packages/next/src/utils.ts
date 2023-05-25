@@ -2132,7 +2132,8 @@ export const onPrerenderRoute =
         routesManifest?.rsc?.varyHeader ||
         'RSC, Next-Router-State-Tree, Next-Router-Prefetch';
       const rscContentTypeHeader =
-        routesManifest?.rsc?.contentTypeHeader || 'text/x-component';
+        routesManifest?.rsc?.contentTypeHeader ||
+        'text/x-component; charset=utf-8';
 
       let sourcePath: string | undefined;
       if (`/${outputPathPage}` !== srcRoute && srcRoute) {
@@ -2409,7 +2410,6 @@ interface MiddlewareManifestV2 {
 type Regions = 'home' | 'global' | 'auto' | string[] | 'all' | 'default';
 
 interface BaseEdgeFunctionInfo {
-  env: string[];
   files: string[];
   name: string;
   page: string;
@@ -2619,7 +2619,6 @@ export async function getMiddlewareBundle({
                   ? normalizeRegions(edgeFunction.regions)
                   : undefined,
                 entrypoint: 'index.js',
-                envVarsInUse: edgeFunction.env,
                 assets: (edgeFunction.assets ?? []).map(({ name }) => {
                   return {
                     name,

@@ -1,18 +1,21 @@
 import chalk from 'chalk';
-import type Client from '../client';
+import type Client from '../../util/client';
 import type {
   Deployment,
+  LastAliasRequest,
   PaginationOptions,
   Project,
-  RollbackTarget,
 } from '@vercel-internals/types';
-import elapsed from '../output/elapsed';
-import formatDate from '../format-date';
-import getDeployment from '../get-deployment';
-import getScope from '../get-scope';
+import elapsed from '../../util/output/elapsed';
+import formatDate from '../../util/format-date';
+import getDeployment from '../../util/get-deployment';
+import { getPkgName } from '../../util/pkg-name';
+import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
+import getScope from '../../util/get-scope';
 import ms from 'ms';
-import renderAliasStatus from './render-alias-status';
-import sleep from '../sleep';
+import { ProjectNotFound } from '../../util/errors-ts';
+import renderAliasStatus from '../../util/alias/render-alias-status';
+import sleep from '../../util/sleep';
 
 interface RollbackAlias {
   alias: {
@@ -61,13 +64,6 @@ export default async function rollbackStatus({
     ? 'Rollback in progress'
     : `Checking rollback status of ${project.name}`;
 
-  const check = async () => {
-    const { lastRollbackTarget } = await client.fetch<any>(
-      `/v9/projects/${project.id}?rollbackInfo=true`
-    );
-    return lastRollbackTarget;
-  };
-
   if (!contextName) {
     ({ contextName } = await getScope(client));
   }
@@ -78,8 +74,22 @@ export default async function rollbackStatus({
     // continuously loop until the rollback has explicitly succeeded, failed,
     // or timed out
     for (;;) {
-      const { jobStatus, requestedAt, toDeploymentId }: RollbackTarget =
-        (await check()) ?? {};
+      const projectCheck = await getProjectByNameOrId(
+        client,
+        project.id,
+        project.accountId,
+        true
+      );
+      if (projectCheck instanceof ProjectNotFound) {
+        throw projectCheck;
+      }
+
+      const {
+        jobStatus,
+        requestedAt,
+        toDeploymentId,
+        type,
+      }: Partial<LastAliasRequest> = projectCheck.lastAliasRequest ?? {};
 
       if (
         !jobStatus ||
@@ -89,12 +99,17 @@ export default async function rollbackStatus({
         output.log(`${spinnerMessage}…`);
       }
 
-      if (!jobStatus || requestedAt < recentThreshold) {
+      if (
+        !jobStatus ||
+        !requestedAt ||
+        !toDeploymentId ||
+        requestedAt < recentThreshold
+      ) {
         output.log('No deployment rollback in progress');
         return 0;
       }
 
-      if (jobStatus === 'skipped') {
+      if (jobStatus === 'skipped' && type === 'rollback') {
         output.log('Rollback was skipped');
         return 0;
       }
@@ -131,7 +146,7 @@ export default async function rollbackStatus({
       if (requestedAt < recentThreshold || Date.now() >= rollbackTimeout) {
         output.log(
           `The rollback exceeded its deadline - rerun ${chalk.bold(
-            `vercel rollback ${toDeploymentId}`
+            `${getPkgName()} rollback ${toDeploymentId}`
           )} to try again`
         );
         return 1;
