@@ -30,7 +30,7 @@
         "RSC": "1"
       },
       "responseHeaders": {
-        "content-type": "text/x-component",
+        "content-type": "text/x-component; charset=utf-8",
         "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch"
       }
     },
