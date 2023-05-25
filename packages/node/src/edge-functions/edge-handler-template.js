@@ -80,7 +80,7 @@ function registerFetchListener(module, options, dependencies) {
             : () => new dependencies.Response(null, { status: 405 });
       } else {
         throw new Error(
-          'No default export was found. Add a default export to handle requests. Learn more: https://vercel.link/creating-edge-middleware'
+          `No default export was found at ${event.request.url}. Add a default export to handle requests. Learn more: https://vercel.link/creating-edge-middleware`
         );
       }
     }
