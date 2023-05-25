@@ -1235,10 +1235,22 @@ let _usesSrcCache: boolean | undefined;
 
 async function usesSrcDirectory(workPath: string): Promise<boolean> {
   if (!_usesSrcCache) {
-    const source = path.join(workPath, 'src', 'pages');
+    const sourcePages = path.join(workPath, 'src', 'pages');
 
     try {
-      if ((await fs.stat(source)).isDirectory()) {
+      if ((await fs.stat(sourcePages)).isDirectory()) {
+        _usesSrcCache = true;
+      }
+    } catch (_err) {
+      _usesSrcCache = false;
+    }
+  }
+
+  if (!_usesSrcCache) {
+    const sourceAppdir = path.join(workPath, 'src', 'app');
+
+    try {
+      if ((await fs.stat(sourceAppdir)).isDirectory()) {
         _usesSrcCache = true;
       }
     } catch (_err) {
@@ -1258,13 +1270,14 @@ async function getSourceFilePathFromPage({
   page: string;
   pageExtensions?: string[];
 }) {
+  const usesSrcDir = await usesSrcDirectory(workPath);
   // TODO: this should be updated to get the pageExtensions
   // value used during next build
   const extensionsToTry = pageExtensions || ['js', 'jsx', 'ts', 'tsx'];
 
   for (const pageType of ['pages', 'app']) {
     let fsPath = path.join(workPath, pageType, page);
-    if (await usesSrcDirectory(workPath)) {
+    if (usesSrcDir) {
       fsPath = path.join(workPath, 'src', pageType, page);
     }
 
@@ -1275,20 +1288,40 @@ async function getSourceFilePathFromPage({
 
     for (const ext of extensionsToTry) {
       fsPath = `${extensionless}.${ext}`;
+      // for appDir, we need to treat "index.js" as root-level "page.js"
+      if (
+        pageType === 'app' &&
+        extensionless ===
+          path.join(workPath, `${usesSrcDir ? 'src/' : ''}app/index`)
+      ) {
+        fsPath = `${extensionless.replace(/index$/, 'page')}.${ext}`;
+      }
       if (fs.existsSync(fsPath)) {
         return path.relative(workPath, fsPath);
       }
     }
 
     if (isDirectory(extensionless)) {
-      for (const ext of extensionsToTry) {
-        fsPath = path.join(extensionless, `index.${ext}`);
-        if (fs.existsSync(fsPath)) {
-          return path.relative(workPath, fsPath);
+      if (pageType === 'pages') {
+        for (const ext of extensionsToTry) {
+          fsPath = path.join(extensionless, `index.${ext}`);
+          if (fs.existsSync(fsPath)) {
+            return path.relative(workPath, fsPath);
+          }
         }
-        fsPath = path.join(extensionless, `route.${ext}`);
-        if (fs.existsSync(fsPath)) {
-          return path.relative(workPath, fsPath);
+        // appDir
+      } else {
+        for (const ext of extensionsToTry) {
+          // RSC
+          fsPath = path.join(extensionless, `page.${ext}`);
+          if (fs.existsSync(fsPath)) {
+            return path.relative(workPath, fsPath);
+          }
+          // Route Handlers
+          fsPath = path.join(extensionless, `route.${ext}`);
+          if (fs.existsSync(fsPath)) {
+            return path.relative(workPath, fsPath);
+          }
         }
       }
     }
