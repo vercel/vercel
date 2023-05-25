@@ -2376,7 +2376,6 @@ interface MiddlewareManifestV2 {
 type Regions = 'home' | 'global' | 'auto' | string[] | 'all' | 'default';
 
 interface BaseEdgeFunctionInfo {
-  env: string[];
   files: string[];
   name: string;
   page: string;
@@ -2586,7 +2585,6 @@ export async function getMiddlewareBundle({
                   ? normalizeRegions(edgeFunction.regions)
                   : undefined,
                 entrypoint: 'index.js',
-                envVarsInUse: edgeFunction.env,
                 assets: (edgeFunction.assets ?? []).map(({ name }) => {
                   return {
                     name,
