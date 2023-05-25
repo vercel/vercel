@@ -89,7 +89,7 @@ async function compileUserCode(
 
       // user code
       ${compiledFile.text};
-      const handler = module.exports;
+      const userModule = module.exports;
 
       // request metadata
       const isMiddleware = ${isMiddleware};
@@ -99,7 +99,7 @@ async function compileUserCode(
       ${edgeHandlerTemplate};
       const dependencies = { Request, Response };
       const options = { isMiddleware, entrypointLabel };
-      registerFetchListener(handler, options, dependencies);
+      registerFetchListener(userModule, options, dependencies);
     `;
 
     return {
