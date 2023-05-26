@@ -392,7 +392,7 @@ export interface PaginationOptions {
 }
 
 export type ProjectLinkResult =
-  | { status: 'linked'; org: Org; project: Project, repoRoot?: string }
+  | { status: 'linked'; org: Org; project: Project; repoRoot?: string }
   | { status: 'not_linked'; org: null; project: null }
   | {
       status: 'error';

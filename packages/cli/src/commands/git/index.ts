@@ -80,10 +80,9 @@ export default async function main(client: Client) {
   subcommand = argv._[0];
   const args = argv._.slice(1);
   const autoConfirm = Boolean(argv['--yes']);
-  const { output } = client;
-  const path = process.cwd();
+  const { cwd, output } = client;
 
-  const linkedProject = await ensureLink('git', client, path, { autoConfirm });
+  const linkedProject = await ensureLink('git', client, cwd, { autoConfirm });
   if (typeof linkedProject === 'number') {
     return linkedProject;
   }

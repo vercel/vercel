@@ -55,7 +55,7 @@ export default async function connect(
   project: Project | undefined,
   org: Org | undefined
 ) {
-  const { output } = client;
+  const { cwd, output } = client;
   const confirm = Boolean(argv['--yes']);
   const repoArg = argv._[1];
 
@@ -76,13 +76,11 @@ export default async function connect(
     return 1;
   }
 
-  const path = process.cwd();
-
   const gitProviderLink = project.link;
   client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
   // get project from .git
-  const gitConfigPath = join(path, '.git/config');
+  const gitConfigPath = join(cwd, '.git/config');
   const gitConfig = await parseGitConfig(gitConfigPath, output);
 
   if (repoArg) {
