@@ -9,6 +9,7 @@ import { setupUnitFixture } from '../../helpers/setup-unit-fixture';
 import { defaultProject, useProject } from '../../mocks/project';
 import { useTeams } from '../../mocks/team';
 import { useUser } from '../../mocks/user';
+import humanizePath from '../../../src/util/humanize-path';
 
 describe('deploy', () => {
   it('should reject deploying a single file', async () => {
@@ -30,10 +31,13 @@ describe('deploy', () => {
   });
 
   it('should reject deploying a directory that does not exist', async () => {
-    client.setArgv('deploy', 'does-not-exists');
+    const badName = 'does-not-exist';
+    client.setArgv('deploy', badName);
     const exitCodePromise = deploy(client);
     await expect(client.stderr).toOutput(
-      `Error: The specified file or directory "does-not-exists" does not exist.\n`
+      `Error: Could not find “${humanizePath(
+        join(client.cwd, 'does-not-exist')
+      )}”\n`
     );
     await expect(exitCodePromise).resolves.toEqual(1);
   });
