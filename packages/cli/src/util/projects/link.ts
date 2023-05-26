@@ -21,7 +21,7 @@ import { isDirectory } from '../config/global-path';
 import { NowBuildError, getPlatformEnv } from '@vercel/build-utils';
 import outputCode from '../output/code';
 import { isErrnoException, isError } from '@vercel/error-utils';
-import { findProjectFromPath, findRepoRoot } from '../link/repo';
+import { findProjectsFromPath, findRepoRoot } from '../link/repo';
 import { addToGitIgnore } from '../link/add-to-gitignore';
 
 const readFile = promisify(fs.readFile);
@@ -95,7 +95,7 @@ async function getLinkFromRepo(
     const vercelDir = join(repoRoot, VERCEL_DIR);
     const repoJsonPath = join(vercelDir, VERCEL_DIR_REPO);
     const repoJson = await readJSON(repoJsonPath);
-    const projects = findProjectFromPath(
+    const projects = findProjectsFromPath(
       repoJson.projects,
       relative(repoRoot, path)
     );

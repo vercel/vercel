@@ -251,7 +251,7 @@ function sortByDirectory(a: RepoProjectConfig, b: RepoProjectConfig): number {
  * where the provided relative path is within the Project's
  * root directory.
  */
-export function findProjectFromPath(
+export function findProjectsFromPath(
   projects: RepoProjectConfig[],
   path: string
 ): RepoProjectConfig[] {
@@ -269,4 +269,14 @@ export function findProjectFromPath(
         normalizedPath.startsWith(`${project.directory}/`)
       );
     });
+}
+
+/**
+ * TODO: remove
+ */
+export function findProjectFromPath(
+  projects: RepoProjectConfig[],
+  path: string
+): RepoProjectConfig | undefined {
+  return findProjectsFromPath(projects, path)[0];
 }
