@@ -982,6 +982,8 @@ describe('build', () => {
     let output: string;
 
     beforeAll(async function () {
+      delete process.env.__VERCEL_BUILD_RUNNING;
+
       const cwd = fixture('import-from-main-keys');
       output = join(cwd, '.vercel/output');
 
