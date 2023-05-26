@@ -371,6 +371,13 @@ async function writeLambda(
   }
 
   const memory = functionConfiguration?.memory ?? lambda.memory;
+
+  if (functionConfiguration?.maxDuration && lambda.maxDuration) {
+    throw new Error(
+      `Cannot specify both \`maxDuration\` in \`vercel.json\` and \`${path}\``
+    );
+  }
+
   const maxDuration = functionConfiguration?.maxDuration ?? lambda.maxDuration;
 
   const config = {
