@@ -157,6 +157,7 @@ export type Deployment = {
   errorLink?: string;
   errorMessage?: string | null;
   errorStep?: string;
+  forced?: boolean;
   functions?: BuilderFunctions | null;
   gitSource?: {
     org?: string;
@@ -183,6 +184,7 @@ export type Deployment = {
   ownerId?: string;
   plan?: 'enterprise' | 'hobby' | 'oss' | 'pro';
   previewCommentsEnabled?: boolean;
+  private?: boolean;
   projectId?: string;
   projectSettings?: {
     buildCommand?: string | null;
@@ -353,7 +355,7 @@ export interface Project extends ProjectSettings {
   link?: ProjectLinkData;
   alias?: ProjectAliasTarget[];
   latestDeployments?: Partial<Deployment>[];
-  lastRollbackTarget: RollbackTarget | null;
+  lastAliasRequest?: LastAliasRequest | null;
 }
 
 export interface Org {
@@ -388,6 +390,9 @@ export type ProjectLinkResult =
         | 'MISSING_PROJECT_SETTINGS';
     };
 
+/**
+ * @deprecated - `RollbackJobStatus` has been replace by `LastAliasRequest['jobStatus']`.
+ */
 export type RollbackJobStatus =
   | 'pending'
   | 'in-progress'
@@ -395,11 +400,23 @@ export type RollbackJobStatus =
   | 'failed'
   | 'skipped';
 
+/**
+ * @deprecated - `RollbackTarget` has been renamed to `LastAliasRequest` so it can
+ * be shared with "promote".
+ */
 export interface RollbackTarget {
   fromDeploymentId: string;
   jobStatus: RollbackJobStatus;
   requestedAt: number;
   toDeploymentId: string;
+}
+
+export interface LastAliasRequest {
+  fromDeploymentId: string;
+  jobStatus: 'pending' | 'in-progress' | 'succeeded' | 'failed' | 'skipped';
+  requestedAt: number;
+  toDeploymentId: string;
+  type: 'rollback' | 'promote';
 }
 
 export interface Token {

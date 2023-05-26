@@ -144,12 +144,6 @@ const main = async () => {
     return 1;
   }
 
-  let cwd = argv['--cwd'];
-  if (cwd) {
-    process.chdir(cwd);
-  }
-  cwd = process.cwd();
-
   // The second argument to the command can be:
   //
   //  * a path to deploy (as in: `vercel path/`)
@@ -276,6 +270,12 @@ const main = async () => {
     localConfigPath,
     argv: process.argv,
   });
+
+  // The `--cwd` flag is respected for all sub-commands
+  if (argv['--cwd']) {
+    client.cwd = argv['--cwd'];
+  }
+  const { cwd } = client;
 
   // Gets populated to the subcommand name when a built-in is
   // provided, otherwise it remains undefined for an extension
@@ -571,8 +571,14 @@ const main = async () => {
         case 'project':
           func = require('./commands/project').default;
           break;
+        case 'promote':
+          func = require('./commands/promote').default;
+          break;
         case 'pull':
           func = require('./commands/pull').default;
+          break;
+        case 'redeploy':
+          func = require('./commands/redeploy').default;
           break;
         case 'remove':
           func = require('./commands/remove').default;

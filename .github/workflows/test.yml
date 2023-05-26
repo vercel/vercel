@@ -41,7 +41,7 @@ jobs:
           echo "Files to test:"
           echo "$TESTS_ARRAY"
           echo "tests=$TESTS_ARRAY" >> $GITHUB_OUTPUT
-      - uses: patrickedqvist/wait-for-vercel-preview@ae34b392ef30297f2b672f9afb3c329bde9bd487
+      - uses: patrickedqvist/wait-for-vercel-preview@bfdff514ff78a669f2536e9f4dd4ef5813a704a2
         id: waitForTarball
         with:
           token: ${{ secrets.GITHUB_TOKEN }}

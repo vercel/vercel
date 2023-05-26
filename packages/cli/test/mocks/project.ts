@@ -8,7 +8,7 @@ import { formatProvider } from '../../src/util/git/connect-git-provider';
 import { parseEnvironment } from '../../src/commands/pull';
 import type { Env } from '@vercel/build-utils';
 
-const envs: ProjectEnvVariable[] = [
+export const envs: ProjectEnvVariable[] = [
   {
     type: 'encrypted',
     id: '781dt89g8r2h789g',
@@ -101,34 +101,12 @@ const systemEnvs = [
   },
 ];
 
-export const defaultProject = {
+export const defaultProject: Project = {
   id: 'foo',
   name: 'cli',
   accountId: 'K4amb7K9dAt5R2vBJWF32bmY',
   createdAt: 1555413045188,
   updatedAt: 1555413045188,
-  env: envs,
-  targets: {
-    production: {
-      alias: ['foobar.com'],
-      aliasAssigned: 1571239348998,
-      createdAt: 1571239348998,
-      createdIn: 'sfo1',
-      deploymentHostname: 'a-project-name-rjtr4pz3f',
-      forced: false,
-      id: 'dpl_89qyp1cskzkLrVicDaZoDbjyHuDJ',
-      meta: {},
-      plan: 'pro',
-      private: true,
-      readyState: 'READY',
-      requestedAt: 1571239348998,
-      target: 'production',
-      teamId: null,
-      type: 'LAMBDAS',
-      url: 'a-project-name-rjtr4pz3f.vercel.app',
-      userId: 'K4amb7K9dAt5R2vBJWF32bmY',
-    },
-  },
   latestDeployments: [
     {
       alias: ['foobar.com'],
@@ -136,21 +114,21 @@ export const defaultProject = {
       buildingAt: 1571239348998,
       createdAt: 1571239348998,
       createdIn: 'sfo1',
+      creator: {
+        uid: 'K4amb7K9dAt5R2vBJWF32bmY',
+      },
       forced: false,
       id: 'dpl_89qyp1cskzkLrVicDaZoDbjyHuDJ',
       meta: {},
       plan: 'pro',
       private: true,
       readyState: 'READY',
-      requestedAt: 1571239348998,
       target: 'production',
-      teamId: null,
       type: undefined,
       url: 'a-project-name-rjtr4pz3f.vercel.app',
-      userId: 'K4amb7K9dAt5R2vBJWF32bmY',
     },
   ],
-  lastRollbackTarget: null,
+  lastAliasRequest: null,
   alias: [
     {
       domain: 'foobar.com',
@@ -223,11 +201,14 @@ export function useUnknownProject() {
   });
 }
 
-export function useProject(project: Partial<Project> = defaultProject) {
-  client.scenario.get(`/v8/projects/${project.name}`, (_req, res) => {
+export function useProject(
+  project: Partial<Project> = defaultProject,
+  projectEnvs: ProjectEnvVariable[] = envs
+) {
+  client.scenario.get(`/:version/projects/${project.name}`, (_req, res) => {
     res.json(project);
   });
-  client.scenario.get(`/v8/projects/${project.id}`, (_req, res) => {
+  client.scenario.get(`/:version/projects/${project.id}`, (_req, res) => {
     res.json(project);
   });
   client.scenario.patch(`/:version/projects/${project.id}`, (req, res) => {
@@ -241,7 +222,6 @@ export function useProject(project: Partial<Project> = defaultProject) {
         typeof req.params.target === 'string'
           ? parseEnvironment(req.params.target)
           : undefined;
-      let projectEnvs = envs;
       if (target) {
         projectEnvs = projectEnvs.filter(env => {
           if (!env.target) return false;
