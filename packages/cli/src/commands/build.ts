@@ -133,7 +133,7 @@ const help = () => {
 };
 
 export default async function main(client: Client): Promise<number> {
-  const { output } = client;
+  const { cwd, output } = client;
 
   // Ensure that `vc build` is not being invoked recursively
   if (process.env.__VERCEL_BUILD_RUNNING) {
@@ -164,8 +164,6 @@ export default async function main(client: Client): Promise<number> {
     help();
     return 2;
   }
-
-  const cwd = process.cwd();
 
   // Build `target` influences which environment variables will be used
   const target = argv['--prod'] ? 'production' : 'preview';

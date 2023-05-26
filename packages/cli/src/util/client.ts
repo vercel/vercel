@@ -207,4 +207,12 @@ export default class Client extends EventEmitter implements Stdio {
       output: this.stderr as NodeJS.WriteStream,
     });
   }
+
+  get cwd(): string {
+    return process.cwd();
+  }
+
+  set cwd(v: string) {
+    process.chdir(v);
+  }
 }

@@ -90,7 +90,7 @@ export default async function main(client: Client) {
       )} instead`
     );
   } else {
-    cwd = process.cwd();
+    cwd = client.cwd;
   }
 
   if (argv['--repo']) {
