@@ -130,10 +130,9 @@ export default async function main(client: Client) {
     return 2;
   }
 
-  const cwd = argv['--cwd'] || process.cwd();
   const subArgs = argv._.slice(1);
   const { subcommand, args } = getSubcommand(subArgs, COMMAND_CONFIG);
-  const { output, config } = client;
+  const { cwd, output, config } = client;
 
   const target = argv['--environment']?.toLowerCase() || 'development';
   if (!isValidEnvTarget(target)) {

@@ -12,12 +12,10 @@ import {
 import { tmpdir } from 'os';
 
 describe('link', () => {
-  const origCwd = process.cwd();
-
   it('should prompt for link', async () => {
     const cwd = await mkdtemp(join(tmpdir(), 'cli-'));
+    client.cwd = cwd;
     try {
-      process.chdir(cwd);
       const user = useUser();
       useTeams('team_dummy');
       const { project } = useProject({
@@ -50,15 +48,14 @@ describe('link', () => {
       expect(projectJson.orgId).toEqual(user.id);
       expect(projectJson.projectId).toEqual(project.id);
     } finally {
-      process.chdir(origCwd);
       await remove(cwd);
     }
   });
 
   it('should allow specifying `--project` flag', async () => {
     const cwd = await mkdtemp(join(tmpdir(), 'cli-'));
+    client.cwd = cwd;
     try {
-      process.chdir(cwd);
       const user = useUser();
       useTeams('team_dummy');
       const { project } = useProject({
@@ -81,15 +78,14 @@ describe('link', () => {
       expect(projectJson.orgId).toEqual(user.id);
       expect(projectJson.projectId).toEqual(project.id);
     } finally {
-      process.chdir(origCwd);
       await remove(cwd);
     }
   });
 
   it('should allow overwriting existing link', async () => {
     const cwd = await mkdtemp(join(tmpdir(), 'cli-'));
+    client.cwd = cwd;
     try {
-      process.chdir(cwd);
       const user = useUser();
       useTeams('team_dummy');
       const { project: proj1 } = useProject({
@@ -118,7 +114,6 @@ describe('link', () => {
       expect(projectJson.orgId).toEqual(user.id);
       expect(projectJson.projectId).toEqual(proj2.id);
     } finally {
-      process.chdir(origCwd);
       await remove(cwd);
     }
   });
