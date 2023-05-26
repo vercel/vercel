@@ -798,6 +798,7 @@ export async function serverBuild({
       initialPseudoLayerUncompressed: uncompressedInitialSize,
       lambdaCompressedByteLimit,
       internalPages,
+      pageExtensions,
     });
 
     for (const group of apiLambdaGroups) {
