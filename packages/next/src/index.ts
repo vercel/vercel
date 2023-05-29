@@ -200,6 +200,8 @@ export const build: BuildV2 = async ({
   entrypoint,
   config = {},
   meta = {},
+}: Parameters<BuildV2>[0] & {
+  config: Parameters<BuildV2>[0]['config'] & { deploymentId?: 'string' };
 }) => {
   validateEntrypoint(entrypoint);
 
@@ -243,6 +245,13 @@ export const build: BuildV2 = async ({
 
   for (const [key, value] of Object.entries(prefixedEnvs)) {
     process.env[key] = value;
+  }
+
+  // expose deploymentId if available, this isn't NEXT_PUBLIC
+  // prefixed as it shouldn't cause a nx/turbo cache miss if it'd
+  // otherwise be a cache hit
+  if (config.deploymentId) {
+    process.env.NEXT_DEPLOYMENT_ID = config.deploymentId;
   }
 
   await download(files, workPath, meta);
