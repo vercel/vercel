@@ -47,8 +47,8 @@ jobs:
         id: changesets
         uses: changesets/action@v1
         with:
-          version: pnpm version:prepare
-          publish: pnpm release
+          version: pnpm ci:version
+          publish: pnpm ci:publish
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN_PULL_REQUESTS }}
           NPM_CONFIG_PROVENANCE: 'true'
