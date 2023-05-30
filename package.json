@@ -32,7 +32,7 @@
     "source-map-support": "0.5.12",
     "ts-eager": "2.0.2",
     "ts-jest": "29.1.0",
-    "turbo": "1.9.8",
+    "turbo": "1.9.9",
     "typescript": "4.9.5"
   },
   "scripts": {
@@ -48,8 +48,8 @@
     "prettier-check": "prettier --check .",
     "prepare": "husky install",
     "pack": "cd utils && node -r ts-eager/register ./pack.ts",
-    "ci:version": "changeset version && pnpm install --no-frozen-lockfile",
-    "ci:publish": "pnpm publish -r"
+    "version:prepare": "changeset version && pnpm install --no-frozen-lockfile",
+    "release": "changeset publish"
   },
   "lint-staged": {
     "./{*,{api,packages,test,utils}/**/*}.{js,ts}": [

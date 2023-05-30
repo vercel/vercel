@@ -13,20 +13,10 @@ import sleep from '../../../src/util/sleep';
 jest.setTimeout(60000);
 
 describe('promote', () => {
-  it('should error if cwd is invalid', async () => {
-    client.setArgv('promote', '--cwd', __filename);
-    const exitCodePromise = promote(client);
-
-    await expect(client.stderr).toOutput(
-      'Error: Support for single file deployments has been removed.'
-    );
-
-    await expect(exitCodePromise).resolves.toEqual(1);
-  });
-
   it('should error if timeout is invalid', async () => {
     const { cwd } = initPromoteTest();
-    client.setArgv('promote', '--yes', '--cwd', cwd, '--timeout', 'foo');
+    client.cwd = cwd;
+    client.setArgv('promote', '--yes', '--timeout', 'foo');
     const exitCodePromise = promote(client);
 
     await expect(client.stderr).toOutput('Error: Invalid timeout "foo"');
@@ -35,7 +25,8 @@ describe('promote', () => {
 
   it('should error if invalid deployment ID', async () => {
     const { cwd } = initPromoteTest();
-    client.setArgv('promote', '????', '--yes', '--cwd', cwd);
+    client.cwd = cwd;
+    client.setArgv('promote', '????', '--yes');
     const exitCodePromise = promote(client);
 
     await expect(client.stderr).toOutput(
@@ -46,7 +37,8 @@ describe('promote', () => {
 
   it('should error if deployment not found', async () => {
     const { cwd } = initPromoteTest();
-    client.setArgv('promote', 'foo', '--yes', '--cwd', cwd);
+    client.cwd = cwd;
+    client.setArgv('promote', 'foo', '--yes');
     const exitCodePromise = promote(client);
 
     await expect(client.stderr).toOutput('Fetching deployment "foo" in ');
@@ -59,7 +51,8 @@ describe('promote', () => {
 
   it('should show status when not promoting', async () => {
     const { cwd } = initPromoteTest();
-    client.setArgv('promote', '--yes', '--cwd', cwd);
+    client.cwd = cwd;
+    client.setArgv('promote', '--yes');
     const exitCodePromise = promote(client);
 
     await expect(client.stderr).toOutput(
@@ -72,7 +65,8 @@ describe('promote', () => {
 
   it('should promote by deployment id', async () => {
     const { cwd, previousDeployment } = initPromoteTest();
-    client.setArgv('promote', previousDeployment.id, '--yes', '--cwd', cwd);
+    client.cwd = cwd;
+    client.setArgv('promote', previousDeployment.id, '--yes');
     const exitCodePromise = promote(client);
 
     await expect(client.stderr).toOutput(
@@ -90,7 +84,8 @@ describe('promote', () => {
 
   it('should promote by deployment url', async () => {
     const { cwd, previousDeployment } = initPromoteTest();
-    client.setArgv('promote', previousDeployment.url, '--yes', '--cwd', cwd);
+    client.cwd = cwd;
+    client.setArgv('promote', previousDeployment.url, '--yes');
     const exitCodePromise = promote(client);
 
     await expect(client.stderr).toOutput(
@@ -110,16 +105,17 @@ describe('promote', () => {
     const { cwd, previousDeployment, project } = initPromoteTest({
       promotePollCount: 10,
     });
+    client.cwd = cwd;
 
     // start the promote
-    client.setArgv('promote', previousDeployment.id, '--yes', '--cwd', cwd);
+    client.setArgv('promote', previousDeployment.id, '--yes');
     promote(client);
 
     // need to wait for the promote request to be accepted
     await sleep(300);
 
     // get the status
-    client.setArgv('promote', '--yes', '--cwd', cwd);
+    client.setArgv('promote', '--yes');
     const exitCodePromise = promote(client);
 
     await expect(client.stderr).toOutput(
@@ -139,8 +135,8 @@ describe('promote', () => {
       promotePollCount: 10,
       promoteStatusCode: 500,
     });
-
-    client.setArgv('promote', previousDeployment.id, '--yes', '--cwd', cwd);
+    client.cwd = cwd;
+    client.setArgv('promote', previousDeployment.id, '--yes');
     const exitCodePromise = promote(client);
 
     await expect(client.stderr).toOutput(
@@ -157,7 +153,8 @@ describe('promote', () => {
     const { cwd, previousDeployment } = initPromoteTest({
       promoteJobStatus: 'failed',
     });
-    client.setArgv('promote', previousDeployment.id, '--yes', '--cwd', cwd);
+    client.cwd = cwd;
+    client.setArgv('promote', previousDeployment.id, '--yes');
     const exitCodePromise = promote(client);
 
     await expect(client.stderr).toOutput(
@@ -185,7 +182,8 @@ describe('promote', () => {
       ],
       promoteJobStatus: 'failed',
     });
-    client.setArgv('promote', previousDeployment.id, '--yes', '--cwd', cwd);
+    client.cwd = cwd;
+    client.setArgv('promote', previousDeployment.id, '--yes');
     const exitCodePromise = promote(client);
 
     await expect(client.stderr).toOutput(
@@ -209,15 +207,8 @@ describe('promote', () => {
     const { cwd, previousDeployment } = initPromoteTest({
       promotePollCount: 10,
     });
-    client.setArgv(
-      'promote',
-      previousDeployment.id,
-      '--yes',
-      '--cwd',
-      cwd,
-      '--timeout',
-      '1'
-    );
+    client.cwd = cwd;
+    client.setArgv('promote', previousDeployment.id, '--yes', '--timeout', '1');
     const exitCodePromise = promote(client);
 
     await expect(client.stderr).toOutput(
@@ -236,15 +227,8 @@ describe('promote', () => {
 
   it('should immediately exit after requesting promote', async () => {
     const { cwd, previousDeployment } = initPromoteTest();
-    client.setArgv(
-      'promote',
-      previousDeployment.id,
-      '--yes',
-      '--cwd',
-      cwd,
-      '--timeout',
-      '0'
-    );
+    client.cwd = cwd;
+    client.setArgv('promote', previousDeployment.id, '--yes', '--timeout', '0');
     const exitCodePromise = promote(client);
 
     await expect(client.stderr).toOutput(
@@ -261,12 +245,13 @@ describe('promote', () => {
 
   it('should error if deployment belongs to different team', async () => {
     const { cwd, previousDeployment } = initPromoteTest();
+    client.cwd = cwd;
     previousDeployment.team = {
       id: 'abc',
       name: 'abc',
       slug: 'abc',
     };
-    client.setArgv('promote', previousDeployment.id, '--yes', '--cwd', cwd);
+    client.setArgv('promote', previousDeployment.id, '--yes');
     const exitCodePromise = promote(client);
 
     await expect(client.stderr).toOutput(
