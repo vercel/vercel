@@ -40,7 +40,7 @@ export default async function processDeployment({
   ...args
 }: {
   now: Now;
-  paths: string[];
+  path: string;
   requestBody: DeploymentOptions;
   uploadStamp: () => string;
   deployStamp: () => string;
@@ -60,7 +60,7 @@ export default async function processDeployment({
 }) {
   let {
     now,
-    paths,
+    path,
     requestBody,
     deployStamp,
     force,
@@ -84,7 +84,7 @@ export default async function processDeployment({
     token,
     debug: now._debug,
     userAgent: ua,
-    path: paths[0],
+    path,
     force,
     withCache,
     prebuilt,

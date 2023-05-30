@@ -207,7 +207,7 @@ export default async function setupAndLink(
         client,
         now,
         config.currentTeam || 'current user',
-        [sourcePath],
+        sourcePath,
         createArgs,
         org,
         true,

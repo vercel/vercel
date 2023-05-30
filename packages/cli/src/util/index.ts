@@ -107,7 +107,7 @@ export default class Now extends EventEmitter {
   }
 
   async create(
-    paths: string[],
+    path: string,
     {
       // Legacy
       nowConfig: nowConfig = {},
@@ -164,7 +164,7 @@ export default class Now extends EventEmitter {
     const deployment = await processDeployment({
       now: this,
       agent: this._client.agent,
-      paths,
+      path,
       requestBody,
       uploadStamp,
       deployStamp,

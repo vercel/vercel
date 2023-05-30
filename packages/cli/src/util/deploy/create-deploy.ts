@@ -12,7 +12,7 @@ export default async function createDeploy(
   client: Client,
   now: Now,
   contextName: string,
-  paths: string[],
+  path: string,
   createArgs: CreateOptions,
   org: Org,
   isSettingUpProject: boolean,
@@ -21,7 +21,7 @@ export default async function createDeploy(
 ): Promise<any | DeploymentError> {
   try {
     return await now.create(
-      paths,
+      path,
       createArgs,
       org,
       isSettingUpProject,
@@ -109,7 +109,7 @@ export default async function createDeploy(
           client,
           now,
           contextName,
-          paths,
+          path,
           createArgs,
           org,
           isSettingUpProject,
