@@ -1,8 +1,8 @@
 import fs from 'fs';
 import AJV from 'ajv';
 import chalk from 'chalk';
-import { join, relative, resolve } from 'path';
-import { ensureDir, readJSON } from 'fs-extra';
+import { join, relative } from 'path';
+import { ensureDir } from 'fs-extra';
 import { promisify } from 'util';
 
 import getProjectByIdOrName from '../projects/get-project-by-id-or-name';
@@ -18,14 +18,10 @@ import type {
 } from '@vercel-internals/types';
 import { prependEmoji, emoji, EmojiLabel } from '../emoji';
 import { isDirectory } from '../config/global-path';
-import {
-  NowBuildError,
-  getPlatformEnv,
-  walkParentDirs,
-} from '@vercel/build-utils';
+import { NowBuildError, getPlatformEnv } from '@vercel/build-utils';
 import outputCode from '../output/code';
 import { isErrnoException, isError } from '@vercel/error-utils';
-import { findProjectsFromPath, findRepoRoot, RepoLink } from '../link/repo';
+import { findProjectsFromPath, getRepoLink } from '../link/repo';
 import { addToGitIgnore } from '../link/add-to-gitignore';
 import type { RepoProjectConfig } from '../link/repo';
 
@@ -81,20 +77,6 @@ async function getProjectLink(
     (await getProjectLinkFromRepoLink(client, path)) ||
     (await getLinkFromDir(getVercelDirectory(path)))
   );
-}
-
-async function getRepoLink(path: string): Promise<RepoLink | null> {
-  const repoConfigPath = await walkParentDirs({
-    start: path,
-    base: (await findRepoRoot(path)) ?? resolve(path, '/'),
-    filename: '.vercel/repo.json',
-  });
-  if (!repoConfigPath) {
-    return null;
-  }
-  const rootPath = join(repoConfigPath, '../..');
-  const repoConfig = await readJSON(repoConfigPath);
-  return { rootPath, repoConfigPath, repoConfig };
 }
 
 async function getProjectLinkFromRepoLink(

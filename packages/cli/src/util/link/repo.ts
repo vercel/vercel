@@ -220,8 +220,20 @@ export async function findRepoRoot(start: string): Promise<string | undefined> {
       break;
     }
 
+    // if `.vercel/repo.json` exists (already linked),
+    // then consider this the repo root
+    const repoConfigPath = join(current, VERCEL_DIR, VERCEL_DIR_REPO);
+    let stat = await lstat(repoConfigPath).catch(err => {
+      if (err.code !== 'ENOENT') throw err;
+    });
+    if (stat) {
+      return current;
+    }
+
+    // if `.git/config` exists (unlinked),
+    // then consider this the repo root
     const gitConfigPath = join(current, '.git/config');
-    const stat = await lstat(gitConfigPath).catch(err => {
+    stat = await lstat(gitConfigPath).catch(err => {
       if (err.code !== 'ENOENT') throw err;
     });
     if (stat) {
