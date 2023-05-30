@@ -16,7 +16,7 @@ export default async function createDeploy(
   createArgs: CreateOptions,
   org: Org,
   isSettingUpProject: boolean,
-  cwd?: string,
+  cwd: string,
   archive?: ArchiveFormat
 ): Promise<any | DeploymentError> {
   try {
@@ -25,8 +25,8 @@ export default async function createDeploy(
       createArgs,
       org,
       isSettingUpProject,
-      archive,
-      cwd
+      cwd,
+      archive
     );
   } catch (err: unknown) {
     if (ERRORS_TS.isAPIError(err)) {
@@ -112,7 +112,8 @@ export default async function createDeploy(
           paths,
           createArgs,
           org,
-          isSettingUpProject
+          isSettingUpProject,
+          cwd
         );
       }
 

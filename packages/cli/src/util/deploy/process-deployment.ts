@@ -53,7 +53,7 @@ export default async function processDeployment({
   isSettingUpProject: boolean;
   archive?: ArchiveFormat;
   skipAutoDetectionConfirmation?: boolean;
-  cwd?: string;
+  cwd: string;
   rootDirectory?: string | null;
   noWait?: boolean;
   agent?: Agent;
@@ -164,7 +164,7 @@ export default async function processDeployment({
       if (event.type === 'created') {
         await linkFolderToProject(
           client,
-          cwd || paths[0],
+          cwd,
           {
             orgId: org.id,
             projectId: event.payload.projectId,

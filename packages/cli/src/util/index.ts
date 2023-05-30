@@ -135,8 +135,8 @@ export default class Now extends EventEmitter {
     }: CreateOptions,
     org: Org,
     isSettingUpProject: boolean,
-    archive?: ArchiveFormat,
-    cwd?: string
+    cwd: string,
+    archive?: ArchiveFormat
   ) {
     let hashes: any = {};
     const uploadStamp = stamp();
