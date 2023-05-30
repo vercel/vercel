@@ -25,9 +25,9 @@ import {
 } from '@vercel/build-utils';
 import outputCode from '../output/code';
 import { isErrnoException, isError } from '@vercel/error-utils';
-import { findProjectsFromPath, findRepoRoot } from '../link/repo';
+import { findProjectsFromPath, findRepoRoot, RepoLink } from '../link/repo';
 import { addToGitIgnore } from '../link/add-to-gitignore';
-import type { RepoProjectConfig, RepoProjectsConfig } from '../link/repo';
+import type { RepoProjectConfig } from '../link/repo';
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
@@ -73,48 +73,63 @@ export function getVercelDirectory(cwd: string): string {
   return existingDirs[0] || possibleDirs[0];
 }
 
-async function getLink(
+async function getProjectLink(
   client: Client,
   path: string
 ): Promise<ProjectLink | null> {
   return (
-    (await getLinkFromRepo(client, path)) ||
+    (await getProjectLinkFromRepoLink(client, path)) ||
     (await getLinkFromDir(getVercelDirectory(path)))
   );
 }
 
-async function getLinkFromRepo(
-  client: Client,
-  path: string
-): Promise<ProjectLink | null> {
-  const repoJsonPath = await walkParentDirs({
+async function getRepoLink(path: string): Promise<RepoLink | null> {
+  const repoConfigPath = await walkParentDirs({
     start: path,
     base: (await findRepoRoot(path)) ?? resolve(path, '/'),
     filename: '.vercel/repo.json',
   });
-  if (!repoJsonPath) {
+  if (!repoConfigPath) {
     return null;
   }
-  const repoRoot = join(repoJsonPath, '../..');
-  const repoJson: RepoProjectsConfig = await readJSON(repoJsonPath);
+  const rootPath = join(repoConfigPath, '../..');
+  const repoConfig = await readJSON(repoConfigPath);
+  return { rootPath, repoConfigPath, repoConfig };
+}
+
+async function getProjectLinkFromRepoLink(
+  client: Client,
+  path: string
+): Promise<ProjectLink | null> {
+  const repoLink = await getRepoLink(path);
+  if (!repoLink?.repoConfig) {
+    return null;
+  }
   const projects = findProjectsFromPath(
-    repoJson.projects,
-    relative(repoRoot, path)
+    repoLink.repoConfig.projects,
+    relative(repoLink.rootPath, path)
   );
   let project: RepoProjectConfig | undefined;
   if (projects.length === 1) {
     project = projects[0];
   } else {
-    const { result } = await client.prompt({
-      name: 'result',
+    const { p } = await client.prompt({
+      name: 'p',
       type: 'list',
       message: `Which Project are you deploying?`,
-      choices: repoJson.projects.map(p => ({ value: p, name: p.name })),
+      choices: repoLink.repoConfig.projects.map(p => ({
+        value: p,
+        name: p.name,
+      })),
     });
-    project = result;
+    project = p;
   }
   if (project) {
-    return { orgId: repoJson.orgId, projectId: project.id, repoRoot };
+    return {
+      orgId: repoLink.repoConfig.orgId,
+      projectId: project.id,
+      repoRoot: repoLink.rootPath,
+    };
   }
   return null;
 }
@@ -168,6 +183,42 @@ async function getOrgById(client: Client, orgId: string): Promise<Org | null> {
   return { type: 'user', id: orgId, slug: user.username };
 }
 
+async function hasProjectLink(
+  projectLink: ProjectLink,
+  path: string
+): Promise<boolean> {
+  // "linked" via env vars?
+  const VERCEL_ORG_ID = getPlatformEnv('ORG_ID');
+  const VERCEL_PROJECT_ID = getPlatformEnv('PROJECT_ID');
+  if (
+    VERCEL_ORG_ID === projectLink.orgId &&
+    VERCEL_PROJECT_ID === projectLink.projectId
+  ) {
+    return true;
+  }
+
+  // linked via `repo.json`?
+  const repoLink = await getRepoLink(path);
+  if (
+    repoLink?.repoConfig?.orgId === projectLink.orgId &&
+    repoLink.repoConfig.projects.find(p => p.id === projectLink.projectId)
+  ) {
+    return true;
+  }
+
+  // if the project is already linked, we skip linking
+  const link = await getLinkFromDir(getVercelDirectory(path));
+  if (
+    link &&
+    link.orgId === projectLink.orgId &&
+    link.projectId === projectLink.projectId
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
 export async function getLinkedProject(
   client: Client,
   path = client.cwd
@@ -191,7 +242,7 @@ export async function getLinkedProject(
   const link =
     VERCEL_ORG_ID && VERCEL_PROJECT_ID
       ? { orgId: VERCEL_ORG_ID, projectId: VERCEL_PROJECT_ID }
-      : await getLink(client, path);
+      : await getProjectLink(client, path);
 
   if (!link) {
     return { status: 'not_linked', org: null, project: null };
@@ -259,21 +310,8 @@ export async function linkFolderToProject(
   orgSlug: string,
   successEmoji: EmojiLabel = 'link'
 ) {
-  const VERCEL_ORG_ID = getPlatformEnv('ORG_ID');
-  const VERCEL_PROJECT_ID = getPlatformEnv('PROJECT_ID');
-
-  // if defined, skip linking
-  if (VERCEL_ORG_ID || VERCEL_PROJECT_ID) {
-    return;
-  }
-
   // if the project is already linked, we skip linking
-  const link = await getLink(client, path);
-  if (
-    link &&
-    link.orgId === projectLink.orgId &&
-    link.projectId === projectLink.projectId
-  ) {
+  if (await hasProjectLink(projectLink, path)) {
     return;
   }
 
