@@ -98,7 +98,7 @@ async function getProjectLinkFromRepoLink(
     const { p } = await client.prompt({
       name: 'p',
       type: 'list',
-      message: `Which Project are you deploying?`,
+      message: `Please select a Project:`,
       choices: repoLink.repoConfig.projects.map(p => ({
         value: p,
         name: p.name,

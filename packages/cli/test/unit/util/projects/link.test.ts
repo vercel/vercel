@@ -157,7 +157,7 @@ describe('getLinkedProject', () => {
     const linkPromise = getLinkedProject(client, cwd);
 
     // wait for prompt
-    await expect(client.stderr).toOutput('Which Project');
+    await expect(client.stderr).toOutput('Please select a Project:');
 
     // make selection
     client.stdin.write('\r');
