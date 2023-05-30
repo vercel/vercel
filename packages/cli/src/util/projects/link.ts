@@ -27,6 +27,7 @@ import outputCode from '../output/code';
 import { isErrnoException, isError } from '@vercel/error-utils';
 import { findProjectsFromPath, findRepoRoot } from '../link/repo';
 import { addToGitIgnore } from '../link/add-to-gitignore';
+import type { RepoProjectConfig, RepoProjectsConfig } from '../link/repo';
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
@@ -95,15 +96,25 @@ async function getLinkFromRepo(
     return null;
   }
   const repoRoot = join(repoJsonPath, '../..');
-  const repoJson = await readJSON(repoJsonPath);
+  const repoJson: RepoProjectsConfig = await readJSON(repoJsonPath);
   const projects = findProjectsFromPath(
     repoJson.projects,
     relative(repoRoot, path)
   );
+  let project: RepoProjectConfig | undefined;
   if (projects.length === 1) {
-    return { orgId: repoJson.orgId, projectId: projects[0].id, repoRoot };
+    project = projects[0];
   } else {
-    // TODO: show selector to pick available projects
+    const { result } = await client.prompt({
+      name: 'result',
+      type: 'list',
+      message: `Which Project are you deploying?`,
+      choices: repoJson.projects.map(p => ({ value: p, name: p.name })),
+    });
+    project = result;
+  }
+  if (project) {
+    return { orgId: repoJson.orgId, projectId: project.id, repoRoot };
   }
   return null;
 }

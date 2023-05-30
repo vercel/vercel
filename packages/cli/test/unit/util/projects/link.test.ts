@@ -142,4 +142,33 @@ describe('getLinkedProject', () => {
     expect(link.project.id).toEqual('QmScb7GPQt6gsS');
     expect(link.repoRoot).toEqual(cwd);
   });
+
+  it('should show project selector prompt link with `repo.json`', async () => {
+    const cwd = fixture('monorepo-link');
+
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'QmbKpqpiUqbcke',
+      name: 'monorepo-dashboard',
+    });
+
+    const linkPromise = getLinkedProject(client, cwd);
+
+    // wait for prompt
+    await expect(client.stderr).toOutput('Which Project');
+
+    // make selection
+    client.stdin.write('\r');
+
+    const link = await linkPromise;
+    if (link.status !== 'linked') {
+      throw new Error('Expected to be linked');
+    }
+    expect(link.org.id).toEqual('team_dummy');
+    expect(link.org.type).toEqual('team');
+    expect(link.project.id).toEqual('QmbKpqpiUqbcke');
+    expect(link.repoRoot).toEqual(cwd);
+  });
 });
