@@ -97,12 +97,13 @@ jobs:
         if: matrix.runner != 'windows-latest'
         run: echo | openssl s_client -showcerts -servername 'api.vercel.com' -connect 76.76.21.21:443
 
-  conclusion:
+  summary:
+    name: Summary
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
     if: always()
     needs:
       - test
-    runs-on: ubuntu-latest
-    name: Conclusion
     steps:
       - run: |-
           for status in ${{ join(needs.*.result, ' ') }}
