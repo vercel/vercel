@@ -102,7 +102,7 @@ jobs:
     needs:
       - test
     runs-on: ubuntu-latest
-    name: All
+    name: Conclusion
     steps:
       - run: exit 0
         if: success()
