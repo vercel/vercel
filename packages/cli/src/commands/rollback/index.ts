@@ -1,20 +1,18 @@
 import chalk from 'chalk';
-import type Client from '../util/client';
-import { ensureLink } from '../util/link/ensure-link';
-import getArgs from '../util/get-args';
-import { getPkgName } from '../util/pkg-name';
-import handleError from '../util/handle-error';
-import logo from '../util/output/logo';
+import type Client from '../../util/client';
+import getArgs from '../../util/get-args';
+import getProjectByCwdOrLink from '../../util/projects/get-project-by-cwd-or-link';
+import { getPkgName } from '../../util/pkg-name';
+import handleError from '../../util/handle-error';
+import { isErrnoException } from '@vercel/error-utils';
+import logo from '../../util/output/logo';
 import ms from 'ms';
-import requestRollback from '../util/rollback/request-rollback';
-import rollbackStatus from '../util/rollback/status';
-import validatePaths from '../util/validate-paths';
+import requestRollback from './request-rollback';
+import rollbackStatus from './status';
 
 const help = () => {
   console.log(`
-  ${chalk.bold(
-    `${logo} ${getPkgName()} rollback`
-  )} [deploymentId|deploymentName]
+  ${chalk.bold(`${logo} ${getPkgName()} rollback`)} [deployment id/url]
 
   Quickly revert back to a previous deployment.
 
@@ -43,6 +41,7 @@ const help = () => {
 
     ${chalk.cyan(`$ ${getPkgName()} rollback`)}
     ${chalk.cyan(`$ ${getPkgName()} rollback status`)}
+    ${chalk.cyan(`$ ${getPkgName()} rollback status <project>`)}
     ${chalk.cyan(`$ ${getPkgName()} rollback status --timeout 30s`)}
 
   ${chalk.gray('–')} Rollback a deployment using id or url
@@ -60,8 +59,6 @@ export default async (client: Client): Promise<number> => {
   let argv;
   try {
     argv = getArgs(client.argv.slice(2), {
-      '--debug': Boolean,
-      '-d': '--debug',
       '--timeout': String,
       '--yes': Boolean,
       '-y': '--yes',
@@ -76,26 +73,6 @@ export default async (client: Client): Promise<number> => {
     return 2;
   }
 
-  // ensure the current directory is good
-  const cwd = argv['--cwd'] || process.cwd();
-  const pathValidation = await validatePaths(client, [cwd]);
-  if (!pathValidation.valid) {
-    return pathValidation.exitCode;
-  }
-
-  // ensure the current directory is a linked project
-  const linkedProject = await ensureLink(
-    'rollback',
-    client,
-    pathValidation.path,
-    {
-      autoConfirm: Boolean(argv['--yes']),
-    }
-  );
-  if (typeof linkedProject === 'number') {
-    return linkedProject;
-  }
-
   // validate the timeout
   let timeout = argv['--timeout'];
   if (timeout && ms(timeout) === undefined) {
@@ -103,21 +80,42 @@ export default async (client: Client): Promise<number> => {
     return 1;
   }
 
-  const { project } = linkedProject;
   const actionOrDeployId = argv._[1] || 'status';
 
-  if (actionOrDeployId === 'status') {
-    return await rollbackStatus({
+  try {
+    if (actionOrDeployId === 'status') {
+      const project = await getProjectByCwdOrLink({
+        autoConfirm: Boolean(argv['--yes']),
+        client,
+        commandName: 'promote',
+        cwd: client.cwd,
+        projectNameOrId: argv._[2],
+      });
+
+      return await rollbackStatus({
+        client,
+        project,
+        timeout,
+      });
+    }
+
+    return await requestRollback({
       client,
-      project,
+      deployId: actionOrDeployId,
       timeout,
     });
-  }
+  } catch (err) {
+    if (isErrnoException(err)) {
+      if (err.code === 'ERR_CANCELED') {
+        return 0;
+      }
+      if (err.code === 'ERR_INVALID_CWD' || err.code === 'ERR_LINK_PROJECT') {
+        // do not show the message
+        return 1;
+      }
+    }
 
-  return await requestRollback({
-    client,
-    deployIdOrUrl: actionOrDeployId,
-    project,
-    timeout,
-  });
+    client.output.prettyError(err);
+    return 1;
+  }
 };
