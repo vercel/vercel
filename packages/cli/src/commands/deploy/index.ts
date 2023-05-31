@@ -346,9 +346,8 @@ export default async (client: Client): Promise<number> => {
   }
 
   // For repo-style linking, reset the path to the root of the repository
-  //console.log(link);
   if (link.status === 'linked' && link.repoRoot) {
-    cwd = join(link.repoRoot);
+    cwd = link.repoRoot;
   }
 
   // At this point `org` should be populated
