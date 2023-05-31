@@ -23,6 +23,9 @@ jobs:
       - name: Checkout Repo
         uses: actions/checkout@v3
 
+      - name: Fetch git tags
+        run: git fetch origin 'refs/tags/*:refs/tags/*'
+
       - name: Setup Node
         uses: actions/setup-node@v3
         with:
@@ -47,8 +50,8 @@ jobs:
         id: changesets
         uses: changesets/action@v1
         with:
-          version: pnpm version:prepare
-          publish: pnpm release
+          version: pnpm ci:version
+          publish: pnpm ci:publish
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN_PULL_REQUESTS }}
           NPM_CONFIG_PROVENANCE: 'true'
