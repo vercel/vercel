@@ -918,7 +918,6 @@ export async function serverBuild({
       if (process.env.VERCEL_NEXT_PRELOAD_INIT) {
         let preloadCode = `
           require('./.next/server/pages/_app.js');
-          require('./.next/server/pages/_error.js');
           require('./.next/server/pages/_document.js');
           `;
 
