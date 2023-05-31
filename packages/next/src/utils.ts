@@ -2130,8 +2130,7 @@ export const onPrerenderRoute =
         routesManifest?.rsc?.varyHeader ||
         'RSC, Next-Router-State-Tree, Next-Router-Prefetch';
       const rscContentTypeHeader =
-        routesManifest?.rsc?.contentTypeHeader ||
-        'text/x-component; charset=utf-8';
+        routesManifest?.rsc?.contentTypeHeader || 'text/x-component';
 
       let sourcePath: string | undefined;
       if (`/${outputPathPage}` !== srcRoute && srcRoute) {
