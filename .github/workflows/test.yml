@@ -105,7 +105,8 @@ jobs:
     needs:
       - test
     steps:
-      - run: |-
+      - name: Check All
+        run: |-
           for status in ${{ join(needs.*.result, ' ') }}
           do
             if [ "$status" != "success" ] && [ "$status" != "skipped" ]
