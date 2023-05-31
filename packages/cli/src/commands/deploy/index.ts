@@ -69,6 +69,7 @@ import { parseEnv } from '../../util/parse-env';
 import { errorToString, isErrnoException, isError } from '@vercel/error-utils';
 import { pickOverrides } from '../../util/projects/project-settings';
 import { printDeploymentStatus } from '../../util/deploy/print-deployment-status';
+import { validateNpmrc } from '../../util/deploy/validate-npmrc';
 
 export default async (client: Client): Promise<number> => {
   const { output } = client;
@@ -173,6 +174,13 @@ export default async (client: Client): Promise<number> => {
 
   let { path: cwd } = pathValidation;
   const autoConfirm = argv['--yes'];
+
+  try {
+    await validateNpmrc(cwd);
+  } catch (err) {
+    prettyError(err);
+    return 1;
+  }
 
   // deprecate --name
   if (argv['--name']) {
