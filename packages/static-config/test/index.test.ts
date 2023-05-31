@@ -7,12 +7,7 @@ describe('getConfig()', () => {
     const project = new Project();
     const sourcePath = join(__dirname, 'fixtures/node.js');
     const config = getConfig(project, sourcePath);
-    expect(config).toMatchInlineSnapshot(`
-      {
-        "memory": 1024,
-        "runtime": "nodejs",
-      }
-    `);
+    expect(config).toBe('borked');
   });
 
   it('should parse config from Deno file', () => {
