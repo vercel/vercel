@@ -98,10 +98,13 @@ jobs:
         run: echo | openssl s_client -showcerts -servername 'api.vercel.com' -connect 76.76.21.21:443
 
   conclusion:
+    if: always()
     needs:
       - test
     runs-on: ubuntu-latest
-    name: E2E
+    name: All
     steps:
-      - name: Done
-        run: echo "Done."
+      - run: exit 0
+        if: success()
+      - run: exit 1
+        if: failure()
