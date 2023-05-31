@@ -53,7 +53,6 @@ import createServerlessConfig from './create-serverless-config';
 import nextLegacyVersions from './legacy-versions';
 import { serverBuild } from './server-build';
 import {
-  MIB,
   collectTracedFiles,
   createLambdaFromPseudoLayers,
   createPseudoLayer,
@@ -90,6 +89,7 @@ import {
   validateEntrypoint,
   getOperationType,
   isApiPage,
+  MAX_COMPRESSED_LAMBDA_SIZE,
 } from './utils';
 
 export const version = 2;
@@ -205,7 +205,7 @@ export const build: BuildV2 = async ({
 
   // Limit for max size each lambda can be, 50 MB if no custom limit
   const lambdaCompressedByteLimit = (config.maxLambdaSize ||
-    50 * MIB) as number;
+    MAX_COMPRESSED_LAMBDA_SIZE) as number;
 
   let entryDirectory = path.dirname(entrypoint);
   let entryPath = path.join(workPath, entryDirectory);

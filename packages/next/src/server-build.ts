@@ -914,16 +914,22 @@ export async function serverBuild({
 
       let finalLauncher = group.isAppRouter ? appLauncher : launcher;
 
-      if (process.env.VERCEL_NEXT_GROUPING_DISABLED) {
-        finalLauncher = finalLauncher.replace(
-          '// preload-next-page-target',
-          `
+      if (process.env.VERCEL_NEXT_PRELOAD_INIT) {
+        let preloadCode = `
           require('./.next/server/pages/_app.js');
           require('./.next/server/pages/_error.js');
           require('./.next/server/pages/_document.js');
-          require('./${path.normalize(
-            path.relative(baseDir, lambdaPages[group.pages[0]].fsPath)
-          )}');`
+          `;
+
+        for (const page of group.pages) {
+          preloadCode += `require('./${path.normalize(
+            path.relative(baseDir, lambdaPages[page].fsPath)
+          )}');`;
+        }
+
+        finalLauncher = finalLauncher.replace(
+          '// preload-next-page-target',
+          preloadCode
         );
       }
 

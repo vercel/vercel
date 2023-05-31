@@ -1359,7 +1359,13 @@ export type LambdaGroup = {
   pseudoLayerUncompressedBytes: number;
 };
 
-export const MAX_UNCOMPRESSED_LAMBDA_SIZE = 250 * MIB;
+const USE_REDUCED_LAMBDA_SIZE = !!process.env.VERCEL_NEXT_REDUCED_LAMBDA_SIZE;
+
+// the ratio for a compressed lambda is 1/4 the size of an uncompressed lambda
+export const MAX_UNCOMPRESSED_LAMBDA_SIZE =
+  (USE_REDUCED_LAMBDA_SIZE ? 50 : 250) * MIB;
+export const MAX_COMPRESSED_LAMBDA_SIZE =
+  (USE_REDUCED_LAMBDA_SIZE ? 10 : 50) * MIB;
 const LAMBDA_RESERVED_UNCOMPRESSED_SIZE = 2.5 * MIB;
 const LAMBDA_RESERVED_COMPRESSED_SIZE = 250 * KIB;
 
