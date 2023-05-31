@@ -6,7 +6,6 @@ import getInvalidSubcommand from '../../util/get-invalid-subcommand';
 import handleError from '../../util/handle-error';
 import logo from '../../util/output/logo';
 import { getPkgName } from '../../util/pkg-name';
-import validatePaths from '../../util/validate-paths';
 import connect from './connect';
 import disconnect from './disconnect';
 
@@ -81,16 +80,9 @@ export default async function main(client: Client) {
   subcommand = argv._[0];
   const args = argv._.slice(1);
   const autoConfirm = Boolean(argv['--yes']);
-  const { output } = client;
+  const { cwd, output } = client;
 
-  let paths = [process.cwd()];
-  const pathValidation = await validatePaths(client, paths);
-  if (!pathValidation.valid) {
-    return pathValidation.exitCode;
-  }
-  const { path } = pathValidation;
-
-  const linkedProject = await ensureLink('git', client, path, { autoConfirm });
+  const linkedProject = await ensureLink('git', client, cwd, { autoConfirm });
   if (typeof linkedProject === 'number') {
     return linkedProject;
   }

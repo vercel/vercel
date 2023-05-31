@@ -9,6 +9,7 @@ import { setupUnitFixture } from '../../helpers/setup-unit-fixture';
 import { defaultProject, useProject } from '../../mocks/project';
 import { useTeams } from '../../mocks/team';
 import { useUser } from '../../mocks/user';
+import humanizePath from '../../../src/util/humanize-path';
 
 describe('deploy', () => {
   it('should reject deploying a single file', async () => {
@@ -30,10 +31,13 @@ describe('deploy', () => {
   });
 
   it('should reject deploying a directory that does not exist', async () => {
-    client.setArgv('deploy', 'does-not-exists');
+    const badName = 'does-not-exist';
+    client.setArgv('deploy', badName);
     const exitCodePromise = deploy(client);
     await expect(client.stderr).toOutput(
-      `Error: The specified file or directory "does-not-exists" does not exist.\n`
+      `Error: Could not find “${humanizePath(
+        join(client.cwd, 'does-not-exist')
+      )}”\n`
     );
     await expect(exitCodePromise).resolves.toEqual(1);
   });
@@ -342,5 +346,49 @@ describe('deploy', () => {
     expect(
       uploadingLines[4].startsWith('Uploading [====================]')
     ).toEqual(true);
+  });
+
+  it('should deploy project linked with `repo.json`', async () => {
+    const user = useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      name: 'app',
+      id: 'QmbKpqpiUqbcke',
+    });
+
+    let body: any;
+    client.scenario.post(`/v13/deployments`, (req, res) => {
+      body = req.body;
+      res.json({
+        creator: {
+          uid: user.id,
+          username: user.username,
+        },
+        id: 'dpl_archive_test',
+      });
+    });
+    client.scenario.get(`/v13/deployments/dpl_archive_test`, (req, res) => {
+      res.json({
+        creator: {
+          uid: user.id,
+          username: user.username,
+        },
+        id: 'dpl_archive_test',
+        readyState: 'READY',
+        aliasAssigned: true,
+        alias: [],
+      });
+    });
+
+    const repoRoot = setupUnitFixture('commands/deploy/monorepo-static');
+    client.cwd = join(repoRoot, 'app');
+    client.setArgv('deploy');
+    const exitCode = await deploy(client);
+    expect(exitCode).toEqual(0);
+    expect(body).toMatchObject({
+      source: 'cli',
+      version: 2,
+    });
   });
 });
