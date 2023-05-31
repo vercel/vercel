@@ -916,7 +916,9 @@ export async function serverBuild({
       let finalLauncher = group.isAppRouter ? appLauncher : launcher;
 
       if (process.env.VERCEL_NEXT_PRELOAD_INIT) {
-        let preloadCode = group.isAppRouter ? '' : `
+        let preloadCode = group.isAppRouter
+          ? ''
+          : `
           require('./.next/server/pages/_app.js');
           require('./.next/server/pages/_document.js');
           `;
