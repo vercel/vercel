@@ -220,8 +220,20 @@ export async function findRepoRoot(start: string): Promise<string | undefined> {
       break;
     }
 
+    // if `.vercel/repo.json` exists (already linked),
+    // then consider this the repo root
+    const repoConfigPath = join(current, VERCEL_DIR, VERCEL_DIR_REPO);
+    let stat = await lstat(repoConfigPath).catch(err => {
+      if (err.code !== 'ENOENT') throw err;
+    });
+    if (stat) {
+      return current;
+    }
+
+    // if `.git/config` exists (unlinked),
+    // then consider this the repo root
     const gitConfigPath = join(current, '.git/config');
-    const stat = await lstat(gitConfigPath).catch(err => {
+    stat = await lstat(gitConfigPath).catch(err => {
       if (err.code !== 'ENOENT') throw err;
     });
     if (stat) {
@@ -247,19 +259,19 @@ function sortByDirectory(a: RepoProjectConfig, b: RepoProjectConfig): number {
 }
 
 /**
- * Finds the matching Project from an array of Project links
+ * Finds the matching Projects from an array of Project links
  * where the provided relative path is within the Project's
  * root directory.
  */
-export function findProjectFromPath(
+export function findProjectsFromPath(
   projects: RepoProjectConfig[],
   path: string
-): RepoProjectConfig | undefined {
+): RepoProjectConfig[] {
   const normalizedPath = normalizePath(path);
   return projects
     .slice()
     .sort(sortByDirectory)
-    .find(project => {
+    .filter(project => {
       if (project.directory === '.') {
         // Project has no "Root Directory" setting, so any path is valid
         return true;
@@ -269,4 +281,14 @@ export function findProjectFromPath(
         normalizedPath.startsWith(`${project.directory}/`)
       );
     });
+}
+
+/**
+ * TODO: remove
+ */
+export function findProjectFromPath(
+  projects: RepoProjectConfig[],
+  path: string
+): RepoProjectConfig | undefined {
+  return findProjectsFromPath(projects, path)[0];
 }

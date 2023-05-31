@@ -107,7 +107,7 @@ export default class Now extends EventEmitter {
   }
 
   async create(
-    paths: string[],
+    path: string,
     {
       // Legacy
       nowConfig: nowConfig = {},
@@ -135,8 +135,8 @@ export default class Now extends EventEmitter {
     }: CreateOptions,
     org: Org,
     isSettingUpProject: boolean,
-    archive?: ArchiveFormat,
-    cwd?: string
+    cwd: string,
+    archive?: ArchiveFormat
   ) {
     let hashes: any = {};
     const uploadStamp = stamp();
@@ -163,9 +163,8 @@ export default class Now extends EventEmitter {
 
     const deployment = await processDeployment({
       now: this,
-      output: this._output,
       agent: this._client.agent,
-      paths,
+      path,
       requestBody,
       uploadStamp,
       deployStamp,
