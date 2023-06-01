@@ -40,8 +40,7 @@ export default async function processDeployment({
   ...args
 }: {
   now: Now;
-  output: Output;
-  paths: string[];
+  path: string;
   requestBody: DeploymentOptions;
   uploadStamp: () => string;
   deployStamp: () => string;
@@ -54,15 +53,14 @@ export default async function processDeployment({
   isSettingUpProject: boolean;
   archive?: ArchiveFormat;
   skipAutoDetectionConfirmation?: boolean;
-  cwd?: string;
+  cwd: string;
   rootDirectory?: string | null;
   noWait?: boolean;
   agent?: Agent;
 }) {
   let {
     now,
-    output,
-    paths,
+    path,
     requestBody,
     deployStamp,
     force,
@@ -72,10 +70,9 @@ export default async function processDeployment({
     rootDirectory,
   } = args;
 
-  const { debug } = output;
-
+  const client = now._client;
+  const { output } = client;
   const { env = {} } = requestBody;
-
   const token = now._token;
   if (!token) {
     throw new Error('Missing authentication token');
@@ -87,7 +84,7 @@ export default async function processDeployment({
     token,
     debug: now._debug,
     userAgent: ua,
-    path: paths[0],
+    path,
     force,
     withCache,
     prebuilt,
@@ -114,7 +111,7 @@ export default async function processDeployment({
 
       if (event.type === 'file-count') {
         const { total, missing, uploads } = event.payload;
-        debug(`Total files ${total.size}, ${missing.length} changed`);
+        output.debug(`Total files ${total.size}, ${missing.length} changed`);
 
         const missingSize = missing
           .map((sha: string) => total.get(sha).data.length)
@@ -157,7 +154,7 @@ export default async function processDeployment({
       }
 
       if (event.type === 'file-uploaded') {
-        debug(
+        output.debug(
           `Uploaded: ${event.payload.file.names.join(' ')} (${bytes(
             event.payload.file.data.length
           )})`
@@ -166,8 +163,8 @@ export default async function processDeployment({
 
       if (event.type === 'created') {
         await linkFolderToProject(
-          output,
-          cwd || paths[0],
+          client,
+          cwd,
           {
             orgId: org.id,
             projectId: event.payload.projectId,

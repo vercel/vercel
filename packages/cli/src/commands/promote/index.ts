@@ -88,7 +88,7 @@ export default async (client: Client): Promise<number> => {
         autoConfirm: Boolean(argv['--yes']),
         client,
         commandName: 'promote',
-        cwd: argv['--cwd'] || process.cwd(),
+        cwd: client.cwd,
         projectNameOrId: argv._[2],
       });
 

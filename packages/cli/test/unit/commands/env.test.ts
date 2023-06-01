@@ -11,7 +11,6 @@ import { useUser } from '../../mocks/user';
 describe('env', () => {
   describe('pull', () => {
     it('should handle pulling', async () => {
-      const cwd = setupUnitFixture('vercel-env-pull');
       useUser();
       useTeams('team_dummy');
       useProject({
@@ -19,7 +18,9 @@ describe('env', () => {
         id: 'vercel-env-pull',
         name: 'vercel-env-pull',
       });
-      client.setArgv('env', 'pull', '--yes', '--cwd', cwd);
+      const cwd = setupUnitFixture('vercel-env-pull');
+      client.cwd = cwd;
+      client.setArgv('env', 'pull', '--yes');
       const exitCodePromise = env(client);
       await expect(client.stderr).toOutput(
         'Downloading `development` Environment Variables for Project vercel-env-pull'
@@ -35,7 +36,6 @@ describe('env', () => {
     });
 
     it('should handle pulling from Preview env vars', async () => {
-      const cwd = setupUnitFixture('vercel-env-pull');
       useUser();
       useTeams('team_dummy');
       useProject({
@@ -43,15 +43,9 @@ describe('env', () => {
         id: 'vercel-env-pull',
         name: 'vercel-env-pull',
       });
-      client.setArgv(
-        'env',
-        'pull',
-        '--yes',
-        '--cwd',
-        cwd,
-        '--environment',
-        'preview'
-      );
+      const cwd = setupUnitFixture('vercel-env-pull');
+      client.cwd = cwd;
+      client.setArgv('env', 'pull', '--yes', '--environment', 'preview');
       const exitCodePromise = env(client);
       await expect(client.stderr).toOutput(
         'Downloading `preview` Environment Variables for Project vercel-env-pull'
@@ -70,7 +64,6 @@ describe('env', () => {
     });
 
     it('should handle pulling from specific Git branch', async () => {
-      const cwd = setupUnitFixture('vercel-env-pull');
       useUser();
       useTeams('team_dummy');
       useProject({
@@ -78,12 +71,12 @@ describe('env', () => {
         id: 'vercel-env-pull',
         name: 'vercel-env-pull',
       });
+      const cwd = setupUnitFixture('vercel-env-pull');
+      client.cwd = cwd;
       client.setArgv(
         'env',
         'pull',
         '--yes',
-        '--cwd',
-        cwd,
         '--environment',
         'preview',
         '--git-branch',
@@ -114,7 +107,6 @@ describe('env', () => {
     });
 
     it('should handle alternate filename', async () => {
-      const cwd = setupUnitFixture('vercel-env-pull');
       useUser();
       useTeams('team_dummy');
       useProject({
@@ -122,7 +114,9 @@ describe('env', () => {
         id: 'vercel-env-pull',
         name: 'vercel-env-pull',
       });
-      client.setArgv('env', 'pull', 'other.env', '--yes', '--cwd', cwd);
+      const cwd = setupUnitFixture('vercel-env-pull');
+      client.cwd = cwd;
+      client.setArgv('env', 'pull', 'other.env', '--yes');
       const exitCodePromise = env(client);
       await expect(client.stderr).toOutput(
         'Downloading `development` Environment Variables for Project vercel-env-pull'
@@ -138,7 +132,6 @@ describe('env', () => {
     });
 
     it('should use given environment', async () => {
-      const cwd = setupUnitFixture('vercel-env-pull');
       useUser();
       useTeams('team_dummy');
       useProject({
@@ -146,15 +139,9 @@ describe('env', () => {
         id: 'vercel-env-pull',
         name: 'vercel-env-pull',
       });
-
-      client.setArgv(
-        'env',
-        'pull',
-        '--environment',
-        'production',
-        '--cwd',
-        cwd
-      );
+      const cwd = setupUnitFixture('vercel-env-pull');
+      client.cwd = cwd;
+      client.setArgv('env', 'pull', '--environment', 'production');
       const exitCodePromise = env(client);
       await expect(client.stderr).toOutput(
         `Downloading \`production\` Environment Variables for Project vercel-env-pull`
@@ -172,7 +159,6 @@ describe('env', () => {
     });
 
     it('should throw an error when it does not recognize given environment', async () => {
-      const cwd = setupUnitFixture('vercel-env-pull');
       useUser();
       useTeams('team_dummy');
       useProject({
@@ -180,15 +166,14 @@ describe('env', () => {
         id: 'vercel-env-pull',
         name: 'vercel-env-pull',
       });
-
+      const cwd = setupUnitFixture('vercel-env-pull');
+      client.cwd = cwd;
       client.setArgv(
         'env',
         'pull',
         '.env.production',
         '--environment',
-        'something-invalid',
-        '--cwd',
-        cwd
+        'something-invalid'
       );
 
       const exitCodePromise = env(client);
@@ -200,7 +185,6 @@ describe('env', () => {
     });
 
     it('should expose production system env variables', async () => {
-      const cwd = setupUnitFixture('vercel-env-pull');
       useUser();
       useTeams('team_dummy');
       useProject({
@@ -209,8 +193,9 @@ describe('env', () => {
         name: 'vercel-env-pull',
         autoExposeSystemEnvs: true,
       });
-
-      client.setArgv('env', 'pull', 'other.env', '--yes', '--cwd', cwd);
+      const cwd = setupUnitFixture('vercel-env-pull');
+      client.cwd = cwd;
+      client.setArgv('env', 'pull', 'other.env', '--yes');
       const exitCodePromise = env(client);
       await expect(client.stderr).toOutput(
         'Downloading `development` Environment Variables for Project vercel-env-pull'
@@ -228,6 +213,7 @@ describe('env', () => {
 
     it('should show a delta string', async () => {
       const cwd = setupUnitFixture('vercel-env-pull-delta');
+      client.cwd = cwd;
       try {
         useUser();
         useTeams('team_dummy');
@@ -237,7 +223,7 @@ describe('env', () => {
           name: 'env-pull-delta',
         });
 
-        client.setArgv('env', 'add', 'NEW_VAR', '--cwd', cwd);
+        client.setArgv('env', 'add', 'NEW_VAR');
         const addPromise = env(client);
 
         await expect(client.stderr).toOutput('What’s the value of NEW_VAR?');
@@ -253,7 +239,7 @@ describe('env', () => {
 
         await expect(addPromise).resolves.toEqual(0);
 
-        client.setArgv('env', 'pull', '--yes', '--cwd', cwd);
+        client.setArgv('env', 'pull', '--yes');
         const pullPromise = env(client);
         await expect(client.stderr).toOutput(
           'Downloading `development` Environment Variables for Project env-pull-delta'
@@ -265,13 +251,12 @@ describe('env', () => {
 
         await expect(pullPromise).resolves.toEqual(0);
       } finally {
-        client.setArgv('env', 'rm', 'NEW_VAR', '--yes', '--cwd', cwd);
+        client.setArgv('env', 'rm', 'NEW_VAR', '--yes');
         await env(client);
       }
     });
 
     it('should not show a delta string when it fails to read a file', async () => {
-      const cwd = setupUnitFixture('vercel-env-pull-delta-corrupt');
       useUser();
       useTeams('team_dummy');
       useProject({
@@ -279,15 +264,15 @@ describe('env', () => {
         id: 'env-pull-delta-corrupt',
         name: 'env-pull-delta-corrupt',
       });
-
-      client.setArgv('env', 'pull', '--yes', '--cwd', cwd);
+      const cwd = setupUnitFixture('vercel-env-pull-delta-corrupt');
+      client.cwd = cwd;
+      client.setArgv('env', 'pull', '--yes');
       const pullPromise = env(client);
       await expect(client.stderr).toOutput('Updated .env.local file');
       await expect(pullPromise).resolves.toEqual(0);
     });
 
     it('should show that no changes were found', async () => {
-      const cwd = setupUnitFixture('vercel-env-pull-delta-no-changes');
       useUser();
       useTeams('team_dummy');
       useProject({
@@ -295,8 +280,8 @@ describe('env', () => {
         id: 'env-pull-delta-no-changes',
         name: 'env-pull-delta-no-changes',
       });
-
-      client.setArgv('env', 'pull', '--yes', '--cwd', cwd);
+      client.cwd = setupUnitFixture('vercel-env-pull-delta-no-changes');
+      client.setArgv('env', 'pull', '--yes');
       const pullPromise = env(client);
       await expect(client.stderr).toOutput('> No changes found.');
       await expect(client.stderr).toOutput('Updated .env.local file');
@@ -305,6 +290,7 @@ describe('env', () => {
 
     it('should correctly render delta string when env variable has quotes', async () => {
       const cwd = setupUnitFixture('vercel-env-pull-delta-quotes');
+      client.cwd = cwd;
       try {
         useUser();
         useTeams('team_dummy');
@@ -329,7 +315,7 @@ describe('env', () => {
           ]
         );
 
-        client.setArgv('env', 'pull', '--yes', '--cwd', cwd);
+        client.setArgv('env', 'pull', '--yes');
         const pullPromise = env(client);
         await expect(client.stderr).toOutput(
           'Downloading `development` Environment Variables for Project env-pull-delta'
@@ -339,13 +325,14 @@ describe('env', () => {
 
         await expect(pullPromise).resolves.toEqual(0);
       } finally {
-        client.setArgv('env', 'rm', 'NEW_VAR', '--yes', '--cwd', cwd);
+        client.setArgv('env', 'rm', 'NEW_VAR', '--yes');
         await env(client);
       }
     });
 
     it('should correctly render delta string when local env variable has quotes', async () => {
       const cwd = setupUnitFixture('vercel-env-pull-delta-quotes');
+      client.cwd = cwd;
       try {
         useUser();
         useTeams('team_dummy');
@@ -370,7 +357,7 @@ describe('env', () => {
           ]
         );
 
-        client.setArgv('env', 'pull', '.env.testquotes', '--yes', '--cwd', cwd);
+        client.setArgv('env', 'pull', '.env.testquotes', '--yes');
         const pullPromise = env(client);
         await expect(client.stderr).toOutput(
           'Downloading `development` Environment Variables for Project env-pull-delta'
@@ -380,7 +367,7 @@ describe('env', () => {
 
         await expect(pullPromise).resolves.toEqual(0);
       } finally {
-        client.setArgv('env', 'rm', 'NEW_VAR', '--yes', '--cwd', cwd);
+        client.setArgv('env', 'rm', 'NEW_VAR', '--yes');
         await env(client);
       }
     });
