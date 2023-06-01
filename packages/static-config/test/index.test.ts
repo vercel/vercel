@@ -9,6 +9,7 @@ describe('getConfig()', () => {
     const config = getConfig(project, sourcePath);
     expect(config).toMatchInlineSnapshot(`
       {
+        "maxDuration": 60,
         "memory": 1024,
         "runtime": "nodejs",
       }
@@ -27,6 +28,7 @@ describe('getConfig()', () => {
     expect(config).toMatchInlineSnapshot(`
       {
         "location": "https://example.com/page",
+        "maxDuration": 60,
         "runtime": "deno",
       }
     `);
