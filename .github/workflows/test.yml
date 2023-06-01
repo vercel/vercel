@@ -97,11 +97,21 @@ jobs:
         if: matrix.runner != 'windows-latest'
         run: echo | openssl s_client -showcerts -servername 'api.vercel.com' -connect 76.76.21.21:443
 
-  conclusion:
+  summary:
+    name: Summary
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: always()
     needs:
       - test
-    runs-on: ubuntu-latest
-    name: E2E
     steps:
-      - name: Done
-        run: echo "Done."
+      - name: Check All
+        run: |-
+          for status in ${{ join(needs.*.result, ' ') }}
+          do
+            if [ "$status" != "success" ] && [ "$status" != "skipped" ]
+            then
+              echo "Some checks failed"
+              exit 1
+            fi
+          done
