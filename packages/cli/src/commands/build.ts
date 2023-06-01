@@ -17,6 +17,7 @@ import {
   BuildResultV3,
   NowBuildError,
   Cron,
+  validateNpmrc,
 } from '@vercel/build-utils';
 import {
   detectBuilders,
@@ -168,6 +169,13 @@ export default async function main(client: Client): Promise<number> {
   // Build `target` influences which environment variables will be used
   const target = argv['--prod'] ? 'production' : 'preview';
   const yes = Boolean(argv['--yes']);
+
+  try {
+    await validateNpmrc(cwd);
+  } catch (err) {
+    output.prettyError(err);
+    return 1;
+  }
 
   // TODO: read project settings from the API, fall back to local `project.json` if that fails
 

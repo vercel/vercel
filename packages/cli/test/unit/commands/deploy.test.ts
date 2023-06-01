@@ -391,13 +391,4 @@ describe('deploy', () => {
       version: 2,
     });
   });
-
-  it('should error if .npmrc exists containing use-node-version', async () => {
-    const cwd = setupUnitFixture('deploy/validate-npmrc/has-use-node-version');
-
-    client.setArgv('deploy', cwd);
-    const exitCodePromise = deploy(client);
-    await expect(client.stderr).toOutput('Error: Detected unsupported');
-    await expect(exitCodePromise).resolves.toEqual(1);
-  });
 });

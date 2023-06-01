@@ -1,8 +1,7 @@
 import { join } from 'path';
-import { validateNpmrc } from '../../../../src/util/deploy/validate-npmrc';
+import { validateNpmrc } from '../src/validate-npmrc';
 
-const fixture = (name: string) =>
-  join(__dirname, '../../../fixtures/unit/deploy/validate-npmrc', name);
+const fixture = (name: string) => join(__dirname, 'fixtures', '29-npmrc', name);
 
 describe('validateNpmrc', () => {
   it('should not error with no use-node-version', async () => {
