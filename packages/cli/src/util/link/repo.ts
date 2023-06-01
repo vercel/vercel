@@ -128,9 +128,30 @@ export async function ensureRepoLink(
     output.spinner(
       `Fetching Projects for ${link(repoUrl)} under ${chalk.bold(org.slug)}…`
     );
-    // TODO: Add pagination to fetch all Projects
-    const query = new URLSearchParams({ repoUrl, limit: '100' });
-    const projects: Project[] = await client.fetch(`/v2/projects?${query}`);
+    let projects: Project[] = [];
+    const query = new URLSearchParams({ repoUrl });
+    const projectsIterator = client.fetchPaginated<{
+      projects: Project[];
+    }>(`/v9/projects?${query}`);
+    let printedFound = false;
+    for await (const chunk of projectsIterator) {
+      projects = projects.concat(chunk.projects);
+      if (!printedFound && projects.length > 0) {
+        output.log(
+          `${pluralize('Project', chunk.projects.length)} linked to ${link(
+            repoUrl
+          )} under ${chalk.bold(org.slug)}:`
+        );
+        printedFound = true;
+      }
+      for (const project of chunk.projects) {
+        output.print(`  * ${chalk.cyan(`${org.slug}/${project.name}\n`)}`);
+      }
+      if (chunk.pagination.next) {
+        output.spinner(`Found ${chalk.bold(projects.length)} Projects…`, 0);
+      }
+    }
+
     if (projects.length === 0) {
       output.log(
         `No Projects are linked to ${link(repoUrl)} under ${chalk.bold(
@@ -140,24 +161,17 @@ export async function ensureRepoLink(
       // TODO: run detection logic to find potential projects.
       // then prompt user to select valid projects.
       // then create new Projects
-    } else {
-      output.log(
-        `Found ${chalk.bold(projects.length)} ${pluralize(
-          'Project',
-          projects.length
-        )} linked to ${link(repoUrl)} under ${chalk.bold(org.slug)}:`
-      );
-    }
-
-    for (const project of projects) {
-      output.print(`  * ${chalk.cyan(`${org.slug}/${project.name}\n`)}`);
     }
 
     shouldLink =
       yes ||
       (await confirm(
         client,
-        `Link to ${projects.length === 1 ? 'it' : 'them'}?`,
+        `Link to ${
+          projects.length === 1
+            ? 'this Project'
+            : `these ${chalk.bold(projects.length)} Projects`
+        }?`,
         true
       ));
 

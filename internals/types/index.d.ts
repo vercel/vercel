@@ -383,7 +383,7 @@ export interface ProjectLink {
 export interface PaginationOptions {
   prev: number;
   count: number;
-  next?: number;
+  next?: number | null;
 }
 
 export type ProjectLinkResult =

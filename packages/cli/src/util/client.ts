@@ -19,11 +19,13 @@ import type {
   Stdio,
   ReadableTTY,
   WritableTTY,
+  PaginationOptions,
 } from '@vercel-internals/types';
 import { sharedPromise } from './promise';
 import { APIError } from './errors-ts';
 import { normalizeError } from '@vercel/error-utils';
 import type { Agent } from 'http';
+import sleep from './sleep';
 
 const isSAMLError = (v: any): v is SAMLError => {
   return v && v.saml;
@@ -174,6 +176,31 @@ export default class Client extends EventEmitter implements Stdio {
 
       return contentType.includes('application/json') ? res.json() : res;
     }, opts.retry);
+  }
+
+  async *fetchPaginated<T>(
+    url: string | URL,
+    opts?: FetchOptions
+  ): AsyncGenerator<T & { pagination: PaginationOptions }> {
+    const endpoint =
+      typeof url === 'string' ? new URL(url, this.apiUrl) : new URL(url.href);
+    if (!endpoint.searchParams.has('limit')) {
+      endpoint.searchParams.set('limit', '100');
+    }
+    let next: number | null | undefined;
+    do {
+      if (next) {
+        // Small sleep to avoid rate limiting
+        await sleep(100);
+        endpoint.searchParams.set('until', String(next));
+      }
+      const res = await this.fetch<T & { pagination: PaginationOptions }>(
+        endpoint.href,
+        opts
+      );
+      yield res;
+      next = res.pagination?.next;
+    } while (next);
   }
 
   reauthenticate = sharedPromise(async function (
