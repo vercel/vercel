@@ -506,9 +506,7 @@ export const build: BuildV3 = async ({
       shouldAddSourcemapSupport,
       awsLambdaHandler,
       supportsResponseStreaming,
-      ...(staticConfig?.maxDuration
-        ? { maxDuration: staticConfig.maxDuration }
-        : {}),
+      maxDuration: staticConfig?.maxDuration,
     });
   }
 
