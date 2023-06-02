@@ -14,8 +14,8 @@ export const build: BuildV2 = async ({ entrypoint, files, config }) => {
       filename === 'vercel.json' ||
       filename === '.vercelignore' ||
       filename === 'now.json' ||
-      filename === '.nowignore' // ||
-      // filename.startsWith('.env')
+      filename === '.nowignore' ||
+      filename.startsWith('.env')
     ) {
       continue;
     }
