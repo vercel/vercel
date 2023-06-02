@@ -1,5 +1,13 @@
 # vercel
 
+## 30.1.1
+
+### Patch Changes
+
+- [cli] vc build ignore '.env\*' & ignore files for '@vercel/static' ([#10056](https://github.com/vercel/vercel/pull/10056))
+
+- [cli] Ensure .npmrc does not contain use-node-version ([#10049](https://github.com/vercel/vercel/pull/10049))
+
 ## 30.1.0
 
 ### Minor Changes
