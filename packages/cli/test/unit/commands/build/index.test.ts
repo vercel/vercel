@@ -1154,4 +1154,13 @@ describe('build', () => {
       delete process.env.STORYBOOK_DISABLE_TELEMETRY;
     }
   });
+
+  it('should error if .npmrc exists containing use-node-version', async () => {
+    const cwd = fixture('npmrc-use-node-version');
+    client.cwd = cwd;
+    client.setArgv('build');
+    const exitCodePromise = build(client);
+    await expect(client.stderr).toOutput('Error: Detected unsupported');
+    await expect(exitCodePromise).resolves.toEqual(1);
+  });
 });
