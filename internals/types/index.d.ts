@@ -381,9 +381,21 @@ export interface ProjectLink {
 }
 
 export interface PaginationOptions {
-  prev: number;
+  /**
+   * Amount of items in the current page.
+   * @example 20
+   */
   count: number;
-  next?: number | null;
+  /**
+   * Timestamp that must be used to request the next page.
+   * @example 1540095775951
+   */
+  next: number | null;
+  /**
+   * Timestamp that must be used to request the previous page.
+   * @example 1540095775951
+   */
+  prev: number | null;
 }
 
 export type ProjectLinkResult =
