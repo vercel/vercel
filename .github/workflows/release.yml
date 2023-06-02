@@ -23,6 +23,9 @@ jobs:
       - name: Checkout Repo
         uses: actions/checkout@v3
 
+      - name: Fetch git tags
+        run: git fetch origin 'refs/tags/*:refs/tags/*'
+
       - name: Setup Node
         uses: actions/setup-node@v3
         with:

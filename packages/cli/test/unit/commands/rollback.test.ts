@@ -13,20 +13,10 @@ import sleep from '../../../src/util/sleep';
 jest.setTimeout(60000);
 
 describe('rollback', () => {
-  it('should error if cwd is invalid', async () => {
-    client.setArgv('rollback', '--cwd', __filename);
-    const exitCodePromise = rollback(client);
-
-    await expect(client.stderr).toOutput(
-      'Error: Support for single file deployments has been removed.'
-    );
-
-    await expect(exitCodePromise).resolves.toEqual(1);
-  });
-
   it('should error if timeout is invalid', async () => {
     const { cwd } = initRollbackTest();
-    client.setArgv('rollback', '--yes', '--cwd', cwd, '--timeout', 'foo');
+    client.cwd = cwd;
+    client.setArgv('rollback', '--yes', '--timeout', 'foo');
     const exitCodePromise = rollback(client);
 
     await expect(client.stderr).toOutput('Error: Invalid timeout "foo"');
@@ -35,7 +25,8 @@ describe('rollback', () => {
 
   it('should error if invalid deployment ID', async () => {
     const { cwd } = initRollbackTest();
-    client.setArgv('rollback', '????', '--yes', '--cwd', cwd);
+    client.cwd = cwd;
+    client.setArgv('rollback', '????', '--yes');
     const exitCodePromise = rollback(client);
 
     await expect(client.stderr).toOutput(
@@ -46,7 +37,8 @@ describe('rollback', () => {
 
   it('should error if deployment not found', async () => {
     const { cwd } = initRollbackTest();
-    client.setArgv('rollback', 'foo', '--yes', '--cwd', cwd);
+    client.cwd = cwd;
+    client.setArgv('rollback', 'foo', '--yes');
     const exitCodePromise = rollback(client);
 
     await expect(client.stderr).toOutput(
@@ -58,7 +50,8 @@ describe('rollback', () => {
 
   it('should show status when not rolling back', async () => {
     const { cwd } = initRollbackTest();
-    client.setArgv('rollback', '--yes', '--cwd', cwd);
+    client.cwd = cwd;
+    client.setArgv('rollback', '--yes');
     const exitCodePromise = rollback(client);
 
     await expect(client.stderr).toOutput(
@@ -71,7 +64,8 @@ describe('rollback', () => {
 
   it('should rollback by deployment id', async () => {
     const { cwd, previousDeployment } = initRollbackTest();
-    client.setArgv('rollback', previousDeployment.id, '--yes', '--cwd', cwd);
+    client.cwd = cwd;
+    client.setArgv('rollback', previousDeployment.id, '--yes');
     const exitCodePromise = rollback(client);
 
     await expect(client.stderr).toOutput(
@@ -89,7 +83,8 @@ describe('rollback', () => {
 
   it('should rollback by deployment url', async () => {
     const { cwd, previousDeployment } = initRollbackTest();
-    client.setArgv('rollback', previousDeployment.url, '--yes', '--cwd', cwd);
+    client.cwd = cwd;
+    client.setArgv('rollback', previousDeployment.url, '--yes');
     const exitCodePromise = rollback(client);
 
     await expect(client.stderr).toOutput(
@@ -109,16 +104,17 @@ describe('rollback', () => {
     const { cwd, previousDeployment, project } = initRollbackTest({
       rollbackPollCount: 10,
     });
+    client.cwd = cwd;
 
     // start the rollback
-    client.setArgv('rollback', previousDeployment.id, '--yes', '--cwd', cwd);
+    client.setArgv('rollback', previousDeployment.id, '--yes');
     rollback(client);
 
     // need to wait for the rollback request to be accepted
     await sleep(300);
 
     // get the status
-    client.setArgv('rollback', '--yes', '--cwd', cwd);
+    client.setArgv('rollback', '--yes');
     const exitCodePromise = rollback(client);
 
     await expect(client.stderr).toOutput(
@@ -138,8 +134,9 @@ describe('rollback', () => {
       rollbackPollCount: 10,
       rollbackStatusCode: 500,
     });
+    client.cwd = cwd;
 
-    client.setArgv('rollback', previousDeployment.id, '--yes', '--cwd', cwd);
+    client.setArgv('rollback', previousDeployment.id, '--yes');
     const exitCodePromise = rollback(client);
 
     await expect(client.stderr).toOutput(
@@ -155,7 +152,8 @@ describe('rollback', () => {
     const { cwd, previousDeployment } = initRollbackTest({
       rollbackJobStatus: 'failed',
     });
-    client.setArgv('rollback', previousDeployment.id, '--yes', '--cwd', cwd);
+    client.cwd = cwd;
+    client.setArgv('rollback', previousDeployment.id, '--yes');
     const exitCodePromise = rollback(client);
 
     await expect(client.stderr).toOutput(
@@ -183,7 +181,8 @@ describe('rollback', () => {
       ],
       rollbackJobStatus: 'failed',
     });
-    client.setArgv('rollback', previousDeployment.id, '--yes', '--cwd', cwd);
+    client.cwd = cwd;
+    client.setArgv('rollback', previousDeployment.id, '--yes');
     const exitCodePromise = rollback(client);
 
     await expect(client.stderr).toOutput(
@@ -207,12 +206,11 @@ describe('rollback', () => {
     const { cwd, previousDeployment } = initRollbackTest({
       rollbackPollCount: 10,
     });
+    client.cwd = cwd;
     client.setArgv(
       'rollback',
       previousDeployment.id,
       '--yes',
-      '--cwd',
-      cwd,
       '--timeout',
       '1'
     );
@@ -233,12 +231,11 @@ describe('rollback', () => {
 
   it('should immediately exit after requesting rollback', async () => {
     const { cwd, previousDeployment } = initRollbackTest();
+    client.cwd = cwd;
     client.setArgv(
       'rollback',
       previousDeployment.id,
       '--yes',
-      '--cwd',
-      cwd,
       '--timeout',
       '0'
     );
@@ -263,7 +260,8 @@ describe('rollback', () => {
       name: 'abc',
       slug: 'abc',
     };
-    client.setArgv('rollback', previousDeployment.id, '--yes', '--cwd', cwd);
+    client.cwd = cwd;
+    client.setArgv('rollback', previousDeployment.id, '--yes');
     const exitCodePromise = rollback(client);
 
     await expect(client.stderr).toOutput(
