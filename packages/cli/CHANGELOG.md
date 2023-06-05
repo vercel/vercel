@@ -1,5 +1,46 @@
 # vercel
 
+## 30.1.2
+
+### Patch Changes
+
+- Publish missing build-utils ([`cd35071f6`](https://github.com/vercel/vercel/commit/cd35071f609d615d47bc04634c123b33768436cb))
+
+- Updated dependencies [[`cd35071f6`](https://github.com/vercel/vercel/commit/cd35071f609d615d47bc04634c123b33768436cb)]:
+  - @vercel/build-utils@6.7.5
+  - @vercel/node@2.14.5
+  - @vercel/remix-builder@1.8.12
+  - @vercel/static-build@1.3.34
+
+## 30.1.1
+
+### Patch Changes
+
+- [cli] vc build ignore '.env\*' & ignore files for '@vercel/static' ([#10056](https://github.com/vercel/vercel/pull/10056))
+
+- [cli] Ensure .npmrc does not contain use-node-version ([#10049](https://github.com/vercel/vercel/pull/10049))
+
+## 30.1.0
+
+### Minor Changes
+
+- New `vc promote` command ([#9984](https://github.com/vercel/vercel/pull/9984))
+
+### Patch Changes
+
+- Support `deploy` subcommand in "repo linked" mode ([#10013](https://github.com/vercel/vercel/pull/10013))
+
+- [cli] Update `vc rollback` to use `lastRequestAlias` instead of `lastRollbackTarget` ([#10019](https://github.com/vercel/vercel/pull/10019))
+
+- Fix `--cwd` flag with a relative path for `env`, `link`, `promote`, and `rollback` subcommands ([#10031](https://github.com/vercel/vercel/pull/10031))
+
+- Updated dependencies [[`c6c19354e`](https://github.com/vercel/vercel/commit/c6c19354e852cfc1338b223058c4b07fdc71c723), [`b56ac2717`](https://github.com/vercel/vercel/commit/b56ac2717d6769eb400f9746f0a05431929b4501), [`c63679ea0`](https://github.com/vercel/vercel/commit/c63679ea0a6bc48c0759ccf3c0c0a8106bd324f0), [`c7bcea408`](https://github.com/vercel/vercel/commit/c7bcea408131df2d65338e50ce319a6d8e4a8a82)]:
+  - @vercel/next@3.8.6
+  - @vercel/build-utils@6.7.4
+  - @vercel/node@2.14.4
+  - @vercel/remix-builder@1.8.11
+  - @vercel/static-build@1.3.33
+
 ## 30.0.0
 
 ### Major Changes
