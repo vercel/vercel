@@ -19,31 +19,32 @@ concurrency:
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
+  enforce-changeset:
+    name: Enforce Changeset
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          ref: main
+      - run: git checkout ${{ github.event.pull_request.head.ref }}
+      - run: git branch
+      - name: install pnpm@8.3.1
+        run: npm i -g pnpm@8.3.1
+      - run: pnpm install
+      # Enforce a changeset file to be present
+      - run: pnpm exec changeset status --since=main
+
   test:
     name: Lint
     timeout-minutes: 10
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-        if: github.event_name == 'pull_request'
-        with:
-          fetch-depth: 0
-          ref: ${{ github.event.pull_request.head.ref }}
-
-      - uses: actions/checkout@v3
-        if: github.event_name == 'push'
-        with:
-          fetch-depth: 0
-
       - uses: actions/setup-node@v3
         with:
           node-version: ${{ env.NODE_VERSION }}
-
-      - run: git fetch origin main
-      - run: git branch
-      # Enforce a changeset file to be present
-      - run: pnpm exec changeset status --since=main
-
       - name: install pnpm@8.3.1
         run: npm i -g pnpm@8.3.1
       - run: pnpm install
