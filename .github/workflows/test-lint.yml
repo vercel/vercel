@@ -29,7 +29,6 @@ jobs:
           fetch-depth: 0
           ref: main
       - run: git checkout ${{ github.event.pull_request.head.ref }}
-      - run: git branch
       - name: install pnpm@8.3.1
         run: npm i -g pnpm@8.3.1
       - run: pnpm install
