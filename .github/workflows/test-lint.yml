@@ -40,11 +40,12 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
 
       - run: git fetch origin main
+      - run: git branch
+      # Enforce a changeset file to be present
+      - run: pnpm exec changeset status --since=main
+
       - name: install pnpm@8.3.1
         run: npm i -g pnpm@8.3.1
       - run: pnpm install
       - run: pnpm run lint
       - run: pnpm run prettier-check
-
-      # Enforce a changeset file to be present
-      - run: pnpm exec changeset status --since=main
