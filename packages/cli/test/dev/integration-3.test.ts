@@ -143,13 +143,20 @@ test('[vercel dev] framework system env vars should be exposed automatically', a
   try {
     await readyResolver;
     {
-      const res = await fetch(`http://localhost:${port}/api/env`);
-      validateResponseHeaders(res);
-      const body = await res.json();
-      expect(body.VERCEL_ENV).toBe('development');
-      expect(body.NEXT_PUBLIC_VERCEL_ENV).toBe('development');
-      expect(body.VERCEL_URL).toBe(`localhost:${port}`);
-      expect(body.NEXT_PUBLIC_VERCEL_URL).toBe(`localhost:${port}`);
+      const apiRes = await fetch(`http://localhost:${port}/api/env`);
+      validateResponseHeaders(apiRes);
+      const apiJson = await apiRes.json();
+      expect(apiJson.VERCEL_ENV).toBe('development');
+      expect(apiJson.NEXT_PUBLIC_VERCEL_ENV).toBe('development');
+      expect(apiJson.VERCEL_URL).toBe(`localhost:${port}`);
+      expect(apiJson.NEXT_PUBLIC_VERCEL_URL).toBe(`localhost:${port}`);
+
+      const homeRes = await fetch(`http://localhost:${port}/env`);
+      const homeText = await homeRes.text();
+      expect(homeText).toContain('NEXT_PUBLIC_VERCEL_ENV: <!-- -->development');
+      expect(homeText).toContain(
+        `NEXT_PUBLIC_VERCEL_URL: <!-- -->localhost:${port}`
+      );
     }
   } finally {
     await dev.kill();
