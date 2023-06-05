@@ -544,6 +544,29 @@ export default class DevServer {
     return undefined;
   }
 
+  exposePrefixedEnvVars({
+    envPrefix,
+    envs,
+  }: {
+    envPrefix: string | undefined;
+    envs: Env;
+  }): Env {
+    // TODO: expose VERCEL_GIT_ env vars as well once we add support (VCCLI-303)
+    const allowed = ['VERCEL_URL', 'VERCEL_ENV'];
+    const newEnvs: Env = {};
+    if (envPrefix) {
+      Object.keys(envs).forEach(key => {
+        if (allowed.includes(key)) {
+          newEnvs[`${envPrefix}${key}`] = envs[key];
+        }
+        newEnvs[key] = envs[key];
+      });
+      return newEnvs;
+    } else {
+      return envs;
+    }
+  }
+
   async _getVercelConfig(): Promise<VercelConfig> {
     const configPath = getVercelConfigPath(this.cwd);
 
@@ -693,11 +716,33 @@ export default class DevServer {
     buildEnv['NOW_REGION'] = 'dev1';
     allEnv['NOW_REGION'] = 'dev1';
 
-    // mirror how VERCEL_REGION is injected in prod/preview
-    // only inject in `runEnvs`, because `allEnvs` is exposed to dev command
-    // and should not contain VERCEL_REGION
     if (this.projectSettings?.autoExposeSystemEnvs) {
+      // mirror how VERCEL_REGION is injected in prod/preview
+      // only inject in `runEnvs`, because `allEnvs` is exposed to dev command
+      // and should not contain VERCEL_REGION
       runEnv['VERCEL_REGION'] = 'dev1';
+
+      // expose VERCEL_ENV and VERCEL_URL to dev command
+      allEnv['VERCEL_ENV'] = 'development';
+      if (this.address.host) {
+        allEnv['VERCEL_URL'] = this.address.host;
+      }
+
+      // automaticaly expose VERCEL_URL, VERCEL_ENV
+      // as prefixed (framework) env vars
+      if (this.projectSettings?.framework) {
+        const frameworkSlug = this.projectSettings.framework;
+        const framework = frameworkList.find(f => f.slug === frameworkSlug);
+        const envPrefix = framework?.envPrefix;
+
+        if (envPrefix) {
+          [buildEnv, runEnv, allEnv] = await Promise.all([
+            this.exposePrefixedEnvVars({ envPrefix, envs: buildEnv }),
+            this.exposePrefixedEnvVars({ envPrefix, envs: runEnv }),
+            this.exposePrefixedEnvVars({ envPrefix, envs: allEnv }),
+          ]);
+        }
+      }
     }
 
     this.envConfigs = { buildEnv, runEnv, allEnv };
@@ -818,6 +863,8 @@ export default class DevServer {
         env['VERCEL_URL'] = this.address.host;
       } else if (name === 'VERCEL_REGION') {
         env['VERCEL_REGION'] = 'dev1';
+      } else if (name === 'VERCEL_ENV') {
+        env['VERCEL_ENV'] = 'development';
       }
     }
 

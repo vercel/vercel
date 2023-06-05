@@ -136,6 +136,26 @@ test(
   })
 );
 
+test('[vercel dev] framework system env vars should be exposed automatically', async () => {
+  const dir = fixture('10a-nextjs-routes');
+  const { dev, port, readyResolver } = await testFixture(dir);
+
+  try {
+    await readyResolver;
+    {
+      const res = await fetch(`http://localhost:${port}/api/env`);
+      validateResponseHeaders(res);
+      const body = await res.json();
+      expect(body.VERCEL_ENV).toBe('development');
+      expect(body.NEXT_PUBLIC_VERCEL_ENV).toBe('development');
+      expect(body.VERCEL_URL).toBe(`localhost:${port}`);
+      expect(body.NEXT_PUBLIC_VERCEL_URL).toBe(`localhost:${port}`);
+    }
+  } finally {
+    await dev.kill();
+  }
+});
+
 test(
   '[vercel dev] 12-polymer-node',
   testFixtureStdio(
