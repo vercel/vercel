@@ -33,3 +33,6 @@ jobs:
       - run: pnpm install
       - run: pnpm run lint
       - run: pnpm run prettier-check
+
+      # Enforce a changeset file to be present
+      - run: changeset status --since=main
