@@ -778,4 +778,3 @@ Run ${chalk.cyan(cmd(await getUpdateCommand()))} to update.${errorMsg}`
     process.exitCode = exitCode;
   })
   .catch(handleUnexpected);
-// test
