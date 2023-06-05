@@ -63,8 +63,9 @@ async function parseRequestEvent(event) {
 // This will be invoked by logic using this template
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function registerFetchListener(module, options, dependencies) {
+  let handler;
+
   addEventListener('fetch', async event => {
-    let handler;
     if (typeof module.default === 'function') {
       handler = module.default;
     } else {
@@ -78,19 +79,18 @@ function registerFetchListener(module, options, dependencies) {
           typeof module[method] === 'function'
             ? module[method]
             : () => new dependencies.Response(null, { status: 405 });
-      } else {
-        throw new Error(
-          `No default export was found at ${event.request.url}. Add a default export to handle requests. Learn more: https://vercel.link/creating-edge-middleware`
-        );
       }
     }
 
-    try {
-      const response = await respond(handler, event, options, dependencies);
-      return event.respondWith(response);
-    } catch (error) {
-      event.respondWith(toResponseError(error, dependencies.Response));
+    if (!handler) {
+      const error = new Error(
+        `No default export was found at ${event.request.url}. Add a default export to handle requests. Learn more: https://vercel.link/creating-edge-middleware`
+      );
+      return event.respondWith(toResponseError(error, dependencies.Response));
     }
+
+    const response = await respond(handler, event, options, dependencies);
+    event.respondWith(response);
   });
 }
 
