@@ -35,4 +35,4 @@ jobs:
       - run: pnpm run prettier-check
 
       # Enforce a changeset file to be present
-      - run: changeset status --since=main
+      - run: pnpm exec changeset status --since=main
