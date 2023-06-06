@@ -85,7 +85,7 @@ function registerFetchListener(module, options, dependencies) {
       if (!handler) {
         const url = getUrl(event.request.url, event.request.headers);
         throw new Error(
-          `No default export was found at ${url}. Add a default export to handle requests. Learn more: https://vercel.link/creating-edge-middleware`
+          `No default or HTTP-named export was found at ${url}. Add one to handle requests. Learn more: https://vercel.link/creating-edge-middleware`
         );
       }
       const response = await respond(handler, event, options, dependencies);
