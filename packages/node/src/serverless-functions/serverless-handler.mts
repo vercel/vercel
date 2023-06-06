@@ -58,7 +58,9 @@ async function compileUserCode(
 
   if (HTTP_METHODS.some(method => typeof listener[method] === 'function')) {
     if (NODE_MAJOR < 18) {
-      throw new Error('Node.js v18 or above is required to use HTTP method exports in your functions.');
+      throw new Error(
+        'Node.js v18 or above is required to use HTTP method exports in your functions.'
+      );
     }
     const { getWebExportsHandler } = await import('./helpers-web.js');
     return getWebExportsHandler(listener, HTTP_METHODS);
