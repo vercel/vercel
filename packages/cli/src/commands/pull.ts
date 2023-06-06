@@ -116,7 +116,7 @@ export default async function main(client: Client) {
     return argv;
   }
 
-  let cwd = argv._[1] || process.cwd();
+  let cwd = argv._[1] || client.cwd;
   const autoConfirm = Boolean(argv['--yes']);
   const environment = parseEnvironment(argv['--environment'] || undefined);
 

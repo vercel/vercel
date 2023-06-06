@@ -378,6 +378,11 @@ export interface ProjectLink {
    * to the root directory of the repository.
    */
   repoRoot?: string;
+  /**
+   * When linked as a repository, contains the relative path
+   * to the selected project root directory.
+   */
+  projectRootDirectory?: string;
 }
 
 export interface PaginationOptions {
