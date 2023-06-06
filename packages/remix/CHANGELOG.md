@@ -1,5 +1,11 @@
 # @vercel/remix-builder
 
+## 1.8.13
+
+### Patch Changes
+
+- Update `@remix-run/dev` fork to v1.17.0 ([#10072](https://github.com/vercel/vercel/pull/10072))
+
 ## 1.8.12
 
 ### Patch Changes
