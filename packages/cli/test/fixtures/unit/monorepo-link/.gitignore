@@ -1,1 +1,3 @@
-!.vercel
+dist
+!/.vercel
+.vercel/output

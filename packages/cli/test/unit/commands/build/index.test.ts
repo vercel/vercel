@@ -1174,4 +1174,77 @@ describe('build', () => {
     expect(fs.existsSync(join(output, 'static', 'index.html'))).toBe(true);
     expect(fs.existsSync(join(output, 'static', '.env'))).toBe(false);
   });
+
+  it('should build with `repo.json` link', async () => {
+    const cwd = fixture('../../monorepo-link');
+
+    useUser();
+    useTeams('team_dummy');
+
+    // "blog" app
+    useProject({
+      ...defaultProject,
+      id: 'QmScb7GPQt6gsS',
+      name: 'monorepo-blog',
+      rootDirectory: 'blog',
+      outputDirectory: 'dist',
+      framework: null,
+    });
+    let output = join(cwd, 'blog/.vercel/output');
+    client.cwd = join(cwd, 'blog');
+    client.setArgv('build', '--yes');
+    let exitCode = await build(client);
+    expect(exitCode).toEqual(0);
+    delete process.env.__VERCEL_BUILD_RUNNING;
+
+    let files = await fs.readdir(join(output, 'static'));
+    expect(files.sort()).toEqual(['index.txt']);
+    expect(
+      (await fs.readFile(join(output, 'static/index.txt'), 'utf8')).trim()
+    ).toEqual('blog');
+
+    // "dashboard" app
+    useProject({
+      ...defaultProject,
+      id: 'QmbKpqpiUqbcke',
+      name: 'monorepo-dashboard',
+      rootDirectory: 'dashboard',
+      outputDirectory: 'dist',
+      framework: null,
+    });
+    output = join(cwd, 'dashboard/.vercel/output');
+    client.cwd = join(cwd, 'dashboard');
+    client.setArgv('build', '--yes');
+    exitCode = await build(client);
+    expect(exitCode).toEqual(0);
+    delete process.env.__VERCEL_BUILD_RUNNING;
+
+    files = await fs.readdir(join(output, 'static'));
+    expect(files.sort()).toEqual(['index.txt']);
+    expect(
+      (await fs.readFile(join(output, 'static/index.txt'), 'utf8')).trim()
+    ).toEqual('dashboard');
+
+    // "marketing" app
+    useProject({
+      ...defaultProject,
+      id: 'QmX6P93ChNDoZP',
+      name: 'monorepo-marketing',
+      rootDirectory: 'marketing',
+      outputDirectory: 'dist',
+      framework: null,
+    });
+    output = join(cwd, 'marketing/.vercel/output');
+    client.cwd = join(cwd, 'marketing');
+    client.setArgv('build', '--yes');
+    exitCode = await build(client);
+    expect(exitCode).toEqual(0);
+    delete process.env.__VERCEL_BUILD_RUNNING;
+
+    files = await fs.readdir(join(output, 'static'));
+    expect(files.sort()).toEqual(['index.txt']);
+    expect(
+      (await fs.readFile(join(output, 'static/index.txt'), 'utf8')).trim()
+    ).toEqual('marketing');
+  });
 });
