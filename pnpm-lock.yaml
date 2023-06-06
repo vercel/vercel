@@ -1189,6 +1189,12 @@ importers:
 
   packages/node:
     dependencies:
+      '@edge-runtime/node-utils':
+        specifier: 2.0.3
+        version: 2.0.3
+      '@edge-runtime/primitives':
+        specifier: 2.1.2
+        version: 2.1.2
       '@edge-runtime/vm':
         specifier: 2.0.0
         version: 2.0.0
@@ -1351,8 +1357,8 @@ importers:
   packages/remix:
     dependencies:
       '@remix-run/dev':
-        specifier: npm:@vercel/remix-run-dev@1.16.1
-        version: /@vercel/remix-run-dev@1.16.1(@types/node@14.18.33)
+        specifier: npm:@vercel/remix-run-dev@1.17.0
+        version: /@vercel/remix-run-dev@1.17.0(@types/node@14.18.33)
       '@vercel/build-utils':
         specifier: 6.7.5
         version: link:../build-utils
@@ -3152,7 +3158,6 @@ packages:
   /@edge-runtime/node-utils@2.0.3:
     resolution: {integrity: sha512-JUSbi5xu/A8+D2t9B9wfirCI1J8n8q0660FfmqZgA+n3RqxD3y7SnamL1sKRE5/AbHsKs9zcqCbK2YDklbc9Bg==}
     engines: {node: '>=14'}
-    dev: true
 
   /@edge-runtime/primitives@2.0.0:
     resolution: {integrity: sha512-AXqUq1zruTJAICrllUvZcgciIcEGHdF6KJ3r6FM0n4k8LpFxZ62tPWVIJ9HKm+xt+ncTBUZxwgUaQ73QMUQEKw==}
@@ -4147,16 +4152,16 @@ packages:
       tslib: 2.5.0
     dev: true
 
-  /@remix-run/router@1.6.2:
-    resolution: {integrity: sha512-LzqpSrMK/3JBAVBI9u3NWtOhWNw5AMQfrUFYB0+bDHTSw17z++WJLsPsxAuK+oSddsxk4d7F/JcdDPM1M5YAhA==}
+  /@remix-run/router@1.6.3:
+    resolution: {integrity: sha512-EXJysQ7J3veRECd0kZFQwYYd5sJMcq2O/m60zu1W2l3oVQ9xtub8jTOtYRE0+M2iomyG/W3Ps7+vp2kna0C27Q==}
     engines: {node: '>=14'}
     dev: false
 
-  /@remix-run/server-runtime@1.16.1:
-    resolution: {integrity: sha512-HG+f3PGE9kzTTPe5i5Hv7UGrJLmFID1Ae4BMohP5e0xXOxbdlKDPj6NN6yGDgE7OqKFuDVliW2B5LlUdJZgUFw==}
+  /@remix-run/server-runtime@1.17.0:
+    resolution: {integrity: sha512-xcUXaOibfIFZlvuyuWouz/t3fYhHCqRoKeGxQFGd1BvQBCmPaiau7B1Ao4aJFKyY7eU/L35KCaGzZBTdIF+d5w==}
     engines: {node: '>=14'}
     dependencies:
-      '@remix-run/router': 1.6.2
+      '@remix-run/router': 1.6.3
       '@web3-storage/multipart-parser': 1.0.0
       cookie: 0.4.2
       set-cookie-parser: 2.5.1
@@ -5956,12 +5961,12 @@ packages:
       - encoding
       - supports-color
 
-  /@vercel/remix-run-dev@1.16.1(@types/node@14.18.33):
-    resolution: {integrity: sha512-b+gIUNqW9JwPKHSfGs0ylMk9U80dbvEmkjczNmyWvO7r1tz8O9dEmTUmbJ22/aRPPJQ/aEYosqP7UNJtDvieqw==}
+  /@vercel/remix-run-dev@1.17.0(@types/node@14.18.33):
+    resolution: {integrity: sha512-S71dx9sxHi/9Ery9za+ryQYNq5rEA/OeWFaKalHsgA7jYhiJC2U2iP9lV4m251oLXp3K6J8gwY0zF1CWmA7ANA==}
     engines: {node: '>=14'}
     hasBin: true
     peerDependencies:
-      '@remix-run/serve': ^1.16.1
+      '@remix-run/serve': ^1.17.0
     peerDependenciesMeta:
       '@remix-run/serve':
         optional: true
@@ -5976,7 +5981,7 @@ packages:
       '@babel/traverse': 7.21.5
       '@babel/types': 7.21.5
       '@npmcli/package-json': 2.0.0
-      '@remix-run/server-runtime': 1.16.1
+      '@remix-run/server-runtime': 1.17.0
       '@vanilla-extract/integration': 6.2.1(@types/node@14.18.33)
       arg: 5.0.2
       cacache: 15.3.0
@@ -6001,6 +6006,7 @@ packages:
       minimatch: 9.0.0
       node-fetch: 2.6.9
       ora: 5.4.1
+      picomatch: 2.3.1
       postcss: 8.4.21
       postcss-discard-duplicates: 5.1.0(postcss@8.4.21)
       postcss-load-config: 4.0.1(postcss@8.4.21)

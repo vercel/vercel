@@ -19,6 +19,8 @@
     "dist"
   ],
   "dependencies": {
+    "@edge-runtime/node-utils": "2.0.3",
+    "@edge-runtime/primitives": "2.1.2",
     "@edge-runtime/vm": "2.0.0",
     "@types/node": "14.18.33",
     "@types/node-fetch": "2.6.3",
