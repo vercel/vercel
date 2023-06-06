@@ -10,14 +10,14 @@ function getUrl(url, headers) {
   return urlObj.toString();
 }
 
-async function respond(userEdgeHandler, event, options, dependencies) {
+async function respond(handler, event, options, dependencies) {
   const { Request, Response } = dependencies;
   const { isMiddleware } = options;
   event.request.headers.set(
     'host',
     event.request.headers.get('x-forwarded-host')
   );
-  let response = await userEdgeHandler(
+  let response = await handler(
     new Request(
       getUrl(event.request.url, event.request.headers),
       event.request
@@ -62,16 +62,34 @@ async function parseRequestEvent(event) {
 
 // This will be invoked by logic using this template
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-function registerFetchListener(userEdgeHandler, options, dependencies) {
+function registerFetchListener(module, options, dependencies) {
+  let handler;
+
   addEventListener('fetch', async event => {
     try {
-      const response = await respond(
-        userEdgeHandler,
-        event,
-        options,
-        dependencies
-      );
-      return event.respondWith(response);
+      if (typeof module.default === 'function') {
+        handler = module.default;
+      } else {
+        if (
+          ['GET', 'HEAD', 'OPTIONS', 'POST', 'PUT', 'DELETE', 'PATCH'].some(
+            method => typeof module[method] === 'function'
+          )
+        ) {
+          const method = event.request.method ?? 'GET';
+          handler =
+            typeof module[method] === 'function'
+              ? module[method]
+              : () => new dependencies.Response(null, { status: 405 });
+        }
+      }
+      if (!handler) {
+        const url = getUrl(event.request.url, event.request.headers);
+        throw new Error(
+          `No default or HTTP-named export was found at ${url}. Add one to handle requests. Learn more: https://vercel.link/creating-edge-middleware`
+        );
+      }
+      const response = await respond(handler, event, options, dependencies);
+      event.respondWith(response);
     } catch (error) {
       event.respondWith(toResponseError(error, dependencies.Response));
     }
