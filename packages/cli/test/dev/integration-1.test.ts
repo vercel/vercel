@@ -322,14 +322,16 @@ test('[vercel dev] should handle missing handler errors thrown in edge functions
     );
     validateResponseHeaders(res);
 
-    const { stderr } = await dev.kill();
+    const { stdout } = await dev.kill();
 
     expect(await res.text()).toMatch(
       /<strong>500<\/strong>: INTERNAL_SERVER_ERROR/g
     );
-    expect(stderr).toMatch(
-      /No default export was found. Add a default export to handle requests./g
-    );
+    expect(stdout).toMatchInlineSnapshot(`
+      "Error from API Route /api/edge-error-no-handler: No default export was found at http://localhost:${port}/api/edge-error-no-handler. Add a default export to handle requests. Learn more: https://vercel.link/creating-edge-middleware
+          at (api/edge-error-no-handler.js)
+      "
+    `);
   } finally {
     await dev.kill();
   }
