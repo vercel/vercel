@@ -198,9 +198,7 @@ describe('pull', () => {
       `Created .vercel${path.sep}.env.development.local file`
     );
     await expect(client.stderr).toOutput(
-      `Downloaded project settings to ${process.cwd()}${path.sep}.vercel${
-        path.sep
-      }project.json`
+      `Downloaded project settings to ${cwd}${path.sep}dashboard${path.sep}.vercel${path.sep}project.json`
     );
     await expect(exitCodePromise).resolves.toEqual(0);
   });
