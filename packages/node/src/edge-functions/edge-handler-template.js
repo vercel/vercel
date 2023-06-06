@@ -66,31 +66,35 @@ function registerFetchListener(module, options, dependencies) {
   let handler;
 
   addEventListener('fetch', async event => {
-    if (typeof module.default === 'function') {
-      handler = module.default;
-    } else {
-      if (
-        ['GET', 'HEAD', 'OPTIONS', 'POST', 'PUT', 'DELETE', 'PATCH'].some(
-          method => typeof module[method] === 'function'
-        )
-      ) {
-        const method = event.request.method ?? 'GET';
-        handler =
-          typeof module[method] === 'function'
-            ? module[method]
-            : () => new dependencies.Response(null, { status: 405 });
+    try {
+      if (typeof module.default === 'function') {
+        handler = module.default;
+      } else {
+        if (
+          ['GET', 'HEAD', 'OPTIONS', 'POST', 'PUT', 'DELETE', 'PATCH'].some(
+            method => typeof module[method] === 'function'
+          )
+        ) {
+          const method = event.request.method ?? 'GET';
+          handler =
+            typeof module[method] === 'function'
+              ? module[method]
+              : () => new dependencies.Response(null, { status: 405 });
+        }
       }
-    }
 
-    if (!handler) {
-      const error = new Error(
-        `No default export was found at ${event.request.url}. Add a default export to handle requests. Learn more: https://vercel.link/creating-edge-middleware`
-      );
-      return event.respondWith(toResponseError(error, dependencies.Response));
-    }
+      if (!handler) {
+        const error = new Error(
+          `No default export was found at ${event.request.url}. Add a default export to handle requests. Learn more: https://vercel.link/creating-edge-middleware`
+        );
+        return event.respondWith(toResponseError(error, dependencies.Response));
+      }
 
-    const response = await respond(handler, event, options, dependencies);
-    event.respondWith(response);
+      const response = await respond(handler, event, options, dependencies);
+      event.respondWith(response);
+    } catch (error) {
+      event.respondWith(toResponseError(error, dependencies.Response));
+    }
   });
 }
 
