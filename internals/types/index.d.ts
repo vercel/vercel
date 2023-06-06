@@ -3,7 +3,7 @@ import type { Readable, Writable } from 'stream';
 import type { Route } from '@vercel/routing-utils';
 import { PROJECT_ENV_TARGET } from '@vercel-internals/constants';
 
-export type ProjectEnvTarget = typeof PROJECT_ENV_TARGET[number];
+export type ProjectEnvTarget = (typeof PROJECT_ENV_TARGET)[number];
 export type ProjectEnvType = 'plain' | 'secret' | 'encrypted' | 'system';
 
 export type ProjectSettings = import('@vercel/build-utils').ProjectSettings;
@@ -423,7 +423,10 @@ export type ProjectLinkedError = {
     | 'MISSING_PROJECT_SETTINGS';
 };
 
-export type ProjectLinkResult = ProjectLinked | ProjectNotLinked | ProjectLinkedError;
+export type ProjectLinkResult =
+  | ProjectLinked
+  | ProjectNotLinked
+  | ProjectLinkedError;
 
 /**
  * @deprecated - `RollbackJobStatus` has been replace by `LastAliasRequest['jobStatus']`.
