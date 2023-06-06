@@ -1,5 +1,20 @@
 # vercel
 
+## 30.2.0
+
+### Minor Changes
+
+- [node] Add isomorphic functions ([#9947](https://github.com/vercel/vercel/pull/9947))
+
+### Patch Changes
+
+- Add `client.fetchPaginated()` helper function ([#10054](https://github.com/vercel/vercel/pull/10054))
+
+- Updated dependencies [[`bc5afe24c`](https://github.com/vercel/vercel/commit/bc5afe24c4547dbf798b939199e8212c4b34038e), [`49c717856`](https://github.com/vercel/vercel/commit/49c7178567ec5bcebe633b598c8c9c0e1aa40fbb), [`0039c8b5c`](https://github.com/vercel/vercel/commit/0039c8b5cea975316a62c4f6aaca5d66d731cc0d)]:
+  - @vercel/node@2.15.0
+  - @vercel/remix-builder@1.8.13
+  - @vercel/static-build@1.3.35
+
 ## 30.1.2
 
 ### Patch Changes

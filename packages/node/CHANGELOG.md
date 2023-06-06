@@ -1,5 +1,13 @@
 # @vercel/node
 
+## 2.15.0
+
+### Minor Changes
+
+- Add maxDuration config support for vc node deployments ([#10028](https://github.com/vercel/vercel/pull/10028))
+
+- [node] Add isomorphic functions ([#9947](https://github.com/vercel/vercel/pull/9947))
+
 ## 2.14.5
 
 ### Patch Changes
