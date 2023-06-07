@@ -58,7 +58,13 @@ export default async function dev(
   let projectSettings: ProjectSettings | undefined;
   let envValues: Record<string, string> = {};
   if (link.status === 'linked') {
-    const { project, org } = link;
+    const { project, org, repoRoot } = link;
+
+    // If repo linked, update `cwd` to the repo root
+    if (repoRoot) {
+      cwd = repoRoot;
+    }
+
     client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
     projectSettings = project;
