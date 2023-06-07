@@ -5,7 +5,7 @@ import { join } from 'path';
 import { VercelConfig } from '@vercel/client';
 import { PartialProjectSettings } from '../input/edit-project-settings';
 
-export type ProjectLinkAndSettings = Partial<ProjectLink> & {
+export type ProjectLinkAndSettings = ProjectLink & {
   settings: {
     createdAt: Project['createdAt'];
     installCommand: Project['installCommand'];
@@ -26,8 +26,7 @@ export type ProjectLinkAndSettings = Partial<ProjectLink> & {
 export async function writeProjectSettings(
   cwd: string,
   project: Project,
-  org: Org,
-  isRepoLinked: boolean
+  org: Org
 ) {
   let analyticsId: string | undefined;
   if (
@@ -40,8 +39,8 @@ export async function writeProjectSettings(
   }
 
   const projectLinkAndSettings: ProjectLinkAndSettings = {
-    projectId: isRepoLinked ? undefined : project.id,
-    orgId: isRepoLinked ? undefined : org.id,
+    projectId: project.id,
+    orgId: org.id,
     settings: {
       createdAt: project.createdAt,
       framework: project.framework,
