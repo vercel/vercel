@@ -195,7 +195,10 @@ export async function ensureRepoLink(
 
     await writeFile(
       join(rootPath, VERCEL_DIR, VERCEL_DIR_README),
-      await readFile(join(__dirname, 'VERCEL_DIR_README.txt'), 'utf8')
+      await readFile(
+        join(__dirname, '..', 'projects', 'VERCEL_DIR_README.txt'),
+        'utf8'
+      )
     );
 
     // update .gitignore
