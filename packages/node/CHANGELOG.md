@@ -1,5 +1,11 @@
 # @vercel/node
 
+## 2.15.1
+
+### Patch Changes
+
+- handle undefined content type in `vc dev` ([#10077](https://github.com/vercel/vercel/pull/10077))
+
 ## 2.15.0
 
 ### Minor Changes

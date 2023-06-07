@@ -27,10 +27,19 @@ class ApiError extends Error {
   }
 }
 
+function normalizeContentType(contentType: string | undefined) {
+  if (!contentType) {
+    return 'text/plain';
+  }
+
+  const { parse: parseContentType } = require('content-type');
+  const { type } = parseContentType(contentType);
+  return type;
+}
+
 function getBodyParser(body: Buffer, contentType: string | undefined) {
   return function parseBody(): VercelRequestBody {
-    const { parse: parseContentType } = require('content-type');
-    const { type } = parseContentType(contentType);
+    const type = normalizeContentType(contentType);
 
     if (type === 'application/json') {
       try {
