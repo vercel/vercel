@@ -3,14 +3,10 @@ import pluralize from 'pluralize';
 import { homedir } from 'os';
 import { join, normalize } from 'path';
 import { normalizePath } from '@vercel/build-utils';
-import { lstat, readJSON, outputJSON, writeFile, readFile } from 'fs-extra';
+import { lstat, readJSON, outputJSON } from 'fs-extra';
 import confirm from '../input/confirm';
 import toHumanPath from '../humanize-path';
-import {
-  VERCEL_DIR,
-  VERCEL_DIR_README,
-  VERCEL_DIR_REPO,
-} from '../projects/link';
+import { VERCEL_DIR, VERCEL_DIR_REPO, writeReadme } from '../projects/link';
 import { getRemoteUrls } from '../create-git-meta';
 import link from '../output/link';
 import { emoji, prependEmoji } from '../emoji';
@@ -193,13 +189,7 @@ export async function ensureRepoLink(
     };
     await outputJSON(repoConfigPath, repoConfig, { spaces: 2 });
 
-    await writeFile(
-      join(rootPath, VERCEL_DIR, VERCEL_DIR_README),
-      await readFile(
-        join(__dirname, '..', 'projects', 'VERCEL_DIR_README.txt'),
-        'utf8'
-      )
-    );
+    await writeReadme(rootPath);
 
     // update .gitignore
     const isGitIgnoreUpdated = await addToGitIgnore(rootPath);

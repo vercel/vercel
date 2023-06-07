@@ -285,6 +285,13 @@ export async function getLinkedProject(
   return { status: 'linked', org, project, repoRoot: link.repoRoot };
 }
 
+export async function writeReadme(path: string) {
+  await writeFile(
+    join(path, VERCEL_DIR, VERCEL_DIR_README),
+    await readFile(join(__dirname, 'VERCEL_DIR_README.txt'), 'utf8')
+  );
+}
+
 export async function linkFolderToProject(
   client: Client,
   path: string,
@@ -314,10 +321,7 @@ export async function linkFolderToProject(
     JSON.stringify(projectLink)
   );
 
-  await writeFile(
-    join(path, VERCEL_DIR, VERCEL_DIR_README),
-    await readFile(join(__dirname, 'VERCEL_DIR_README.txt'), 'utf8')
-  );
+  await writeReadme(path);
 
   // update .gitignore
   const isGitIgnoreUpdated = await addToGitIgnore(path);
