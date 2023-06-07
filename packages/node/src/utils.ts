@@ -59,7 +59,12 @@ export function entrypointToOutputPath(
 }
 
 export function logError(error: Error) {
-  console.error(error.message);
+  let message = error.message;
+  if (!message.startsWith('Error:')) {
+    message = `Error: ${message}`;
+  }
+  console.error(message);
+
   if (error.stack) {
     // only show the stack trace if debug is enabled
     // because it points to internals, not user code

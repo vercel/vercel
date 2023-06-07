@@ -128,9 +128,30 @@ export async function ensureRepoLink(
     output.spinner(
       `Fetching Projects for ${link(repoUrl)} under ${chalk.bold(org.slug)}…`
     );
-    // TODO: Add pagination to fetch all Projects
-    const query = new URLSearchParams({ repoUrl, limit: '100' });
-    const projects: Project[] = await client.fetch(`/v2/projects?${query}`);
+    let projects: Project[] = [];
+    const query = new URLSearchParams({ repoUrl });
+    const projectsIterator = client.fetchPaginated<{
+      projects: Project[];
+    }>(`/v9/projects?${query}`);
+    let printedFound = false;
+    for await (const chunk of projectsIterator) {
+      projects = projects.concat(chunk.projects);
+      if (!printedFound && projects.length > 0) {
+        output.log(
+          `${pluralize('Project', chunk.projects.length)} linked to ${link(
+            repoUrl
+          )} under ${chalk.bold(org.slug)}:`
+        );
+        printedFound = true;
+      }
+      for (const project of chunk.projects) {
+        output.print(`  * ${chalk.cyan(`${org.slug}/${project.name}\n`)}`);
+      }
+      if (chunk.pagination.next) {
+        output.spinner(`Found ${chalk.bold(projects.length)} Projects…`, 0);
+      }
+    }
+
     if (projects.length === 0) {
       output.log(
         `No Projects are linked to ${link(repoUrl)} under ${chalk.bold(
@@ -140,24 +161,17 @@ export async function ensureRepoLink(
       // TODO: run detection logic to find potential projects.
       // then prompt user to select valid projects.
       // then create new Projects
-    } else {
-      output.log(
-        `Found ${chalk.bold(projects.length)} ${pluralize(
-          'Project',
-          projects.length
-        )} linked to ${link(repoUrl)} under ${chalk.bold(org.slug)}:`
-      );
-    }
-
-    for (const project of projects) {
-      output.print(`  * ${chalk.cyan(`${org.slug}/${project.name}\n`)}`);
     }
 
     shouldLink =
       yes ||
       (await confirm(
         client,
-        `Link to ${projects.length === 1 ? 'it' : 'them'}?`,
+        `Link to ${
+          projects.length === 1
+            ? 'this Project'
+            : `these ${chalk.bold(projects.length)} Projects`
+        }?`,
         true
       ));
 
@@ -181,7 +195,10 @@ export async function ensureRepoLink(
 
     await writeFile(
       join(rootPath, VERCEL_DIR, VERCEL_DIR_README),
-      await readFile(join(__dirname, 'VERCEL_DIR_README.txt'), 'utf8')
+      await readFile(
+        join(__dirname, '..', 'projects', 'VERCEL_DIR_README.txt'),
+        'utf8'
+      )
     );
 
     // update .gitignore
@@ -220,8 +237,20 @@ export async function findRepoRoot(start: string): Promise<string | undefined> {
       break;
     }
 
+    // if `.vercel/repo.json` exists (already linked),
+    // then consider this the repo root
+    const repoConfigPath = join(current, VERCEL_DIR, VERCEL_DIR_REPO);
+    let stat = await lstat(repoConfigPath).catch(err => {
+      if (err.code !== 'ENOENT') throw err;
+    });
+    if (stat) {
+      return current;
+    }
+
+    // if `.git/config` exists (unlinked),
+    // then consider this the repo root
     const gitConfigPath = join(current, '.git/config');
-    const stat = await lstat(gitConfigPath).catch(err => {
+    stat = await lstat(gitConfigPath).catch(err => {
       if (err.code !== 'ENOENT') throw err;
     });
     if (stat) {
@@ -247,19 +276,19 @@ function sortByDirectory(a: RepoProjectConfig, b: RepoProjectConfig): number {
 }
 
 /**
- * Finds the matching Project from an array of Project links
+ * Finds the matching Projects from an array of Project links
  * where the provided relative path is within the Project's
  * root directory.
  */
-export function findProjectFromPath(
+export function findProjectsFromPath(
   projects: RepoProjectConfig[],
   path: string
-): RepoProjectConfig | undefined {
+): RepoProjectConfig[] {
   const normalizedPath = normalizePath(path);
   return projects
     .slice()
     .sort(sortByDirectory)
-    .find(project => {
+    .filter(project => {
       if (project.directory === '.') {
         // Project has no "Root Directory" setting, so any path is valid
         return true;
@@ -269,4 +298,14 @@ export function findProjectFromPath(
         normalizedPath.startsWith(`${project.directory}/`)
       );
     });
+}
+
+/**
+ * TODO: remove
+ */
+export function findProjectFromPath(
+  projects: RepoProjectConfig[],
+  path: string
+): RepoProjectConfig | undefined {
+  return findProjectsFromPath(projects, path)[0];
 }

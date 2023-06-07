@@ -15,7 +15,6 @@ import getCommandFlags from '../util/get-command-flags';
 import { getPkgName, getCommandName } from '../util/pkg-name';
 import Client from '../util/client';
 import { Deployment } from '@vercel/client';
-import validatePaths from '../util/validate-paths';
 import { getLinkedProject } from '../util/projects/link';
 import { ensureLink } from '../util/link/ensure-link';
 import getScope from '../util/get-scope';
@@ -94,7 +93,7 @@ export default async function main(client: Client) {
     return 1;
   }
 
-  const { output, config } = client;
+  const { cwd, output, config } = client;
 
   if ('--confirm' in argv) {
     output.warn('`--confirm` is deprecated, please use `--yes` instead');
@@ -115,19 +114,10 @@ export default async function main(client: Client) {
 
   const autoConfirm = !!argv['--yes'];
   const prod = argv['--prod'] || false;
-
   const meta = parseMeta(argv['--meta']);
 
-  let paths = [process.cwd()];
-  const pathValidation = await validatePaths(client, paths);
-  if (!pathValidation.valid) {
-    return pathValidation.exitCode;
-  }
-
-  const { path } = pathValidation;
-
   // retrieve `project` and `org` from .vercel
-  let link = await getLinkedProject(client, path);
+  let link = await getLinkedProject(client, cwd);
 
   if (link.status === 'error') {
     return link.exitCode;
@@ -146,7 +136,7 @@ export default async function main(client: Client) {
   // If there's no linked project and user doesn't pass `app` arg,
   // prompt to link their current directory.
   if (status === 'not_linked' && !app) {
-    const linkedProject = await ensureLink('list', client, path, {
+    const linkedProject = await ensureLink('list', client, cwd, {
       autoConfirm,
       link,
     });

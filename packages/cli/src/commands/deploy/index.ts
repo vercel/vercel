@@ -2,7 +2,7 @@ import ms from 'ms';
 import fs from 'fs-extra';
 import bytes from 'bytes';
 import chalk from 'chalk';
-import { join, resolve, basename } from 'path';
+import { join, resolve } from 'path';
 import {
   fileNameSymbol,
   VALID_ARCHIVE_FORMATS,
@@ -130,24 +130,19 @@ export default async (client: Client): Promise<number> => {
   if (argv._.length > 0) {
     // If path is relative: resolve
     // if path is absolute: clear up strange `/` etc
-    paths = argv._.map(item => resolve(process.cwd(), item));
+    paths = argv._.map(item => resolve(client.cwd, item));
   } else {
-    paths = [process.cwd()];
+    paths = [client.cwd];
+  }
+
+  // check paths
+  const pathValidation = await validatePaths(client, paths);
+
+  if (!pathValidation.valid) {
+    return pathValidation.exitCode;
   }
 
   let localConfig = client.localConfig || readLocalConfig(paths[0]);
-
-  for (const path of paths) {
-    try {
-      await fs.stat(path);
-    } catch (err) {
-      output.error(
-        `The specified file or directory "${basename(path)}" does not exist.`
-      );
-      return 1;
-    }
-  }
-
   if (localConfig) {
     const { version } = localConfig;
     const file = highlight(localConfig[fileNameSymbol]!);
@@ -176,14 +171,7 @@ export default async (client: Client): Promise<number> => {
 
   const quiet = !client.stdout.isTTY;
 
-  // check paths
-  const pathValidation = await validatePaths(client, paths);
-
-  if (!pathValidation.valid) {
-    return pathValidation.exitCode;
-  }
-
-  const { path } = pathValidation;
+  let { path: cwd } = pathValidation;
   const autoConfirm = argv['--yes'];
 
   // deprecate --name
@@ -217,7 +205,7 @@ export default async (client: Client): Promise<number> => {
 
   // build `--prebuilt`
   if (argv['--prebuilt']) {
-    const prebuiltExists = await fs.pathExists(join(path, '.vercel/output'));
+    const prebuiltExists = await fs.pathExists(join(cwd, '.vercel/output'));
     if (!prebuiltExists) {
       error(
         `The ${param(
@@ -229,7 +217,7 @@ export default async (client: Client): Promise<number> => {
       return 1;
     }
 
-    const prebuiltBuild = await getPrebuiltJson(path);
+    const prebuiltBuild = await getPrebuiltJson(cwd);
 
     // Ensure that there was not a build error
     const prebuiltError =
@@ -272,7 +260,7 @@ export default async (client: Client): Promise<number> => {
   }
 
   // retrieve `project` and `org` from .vercel
-  const link = await getLinkedProject(client, path);
+  const link = await getLinkedProject(client, cwd);
 
   if (link.status === 'error') {
     return link.exitCode;
@@ -289,7 +277,7 @@ export default async (client: Client): Promise<number> => {
       autoConfirm ||
       (await confirm(
         client,
-        `Set up and deploy ${chalk.cyan(`“${toHumanPath(path)}”`)}?`,
+        `Set up and deploy ${chalk.cyan(`“${toHumanPath(cwd)}”`)}?`,
         true
       ));
 
@@ -336,7 +324,7 @@ export default async (client: Client): Promise<number> => {
 
     if (typeof projectOrNewProjectName === 'string') {
       newProjectName = projectOrNewProjectName;
-      rootDirectory = await inputRootDirectory(client, path, autoConfirm);
+      rootDirectory = await inputRootDirectory(client, cwd, autoConfirm);
     } else {
       project = projectOrNewProjectName;
       rootDirectory = project.rootDirectory;
@@ -344,8 +332,8 @@ export default async (client: Client): Promise<number> => {
 
       // we can already link the project
       await linkFolderToProject(
-        output,
-        path,
+        client,
+        cwd,
         {
           projectId: project.id,
           orgId: org.id,
@@ -355,6 +343,11 @@ export default async (client: Client): Promise<number> => {
       );
       status = 'linked';
     }
+  }
+
+  // For repo-style linking, reset the path to the root of the repository
+  if (link.status === 'linked' && link.repoRoot) {
+    cwd = link.repoRoot;
   }
 
   // At this point `org` should be populated
@@ -371,14 +364,14 @@ export default async (client: Client): Promise<number> => {
   // and upload the entire directory.
   const sourcePath =
     rootDirectory && !sourceFilesOutsideRootDirectory
-      ? join(path, rootDirectory)
-      : path;
+      ? join(cwd, rootDirectory)
+      : cwd;
 
   if (
     rootDirectory &&
     (await validateRootDirectory(
       output,
-      path,
+      cwd,
       sourcePath,
       project
         ? `To change your Project Settings, go to https://vercel.com/${org?.slug}/${project.name}/settings`
@@ -391,7 +384,7 @@ export default async (client: Client): Promise<number> => {
   // If Root Directory is used we'll try to read the config
   // from there instead and use it if it exists.
   if (rootDirectory) {
-    const rootDirectoryConfig = readLocalConfig(join(path, rootDirectory));
+    const rootDirectoryConfig = readLocalConfig(join(cwd, rootDirectory));
 
     if (rootDirectoryConfig) {
       debug(`Read local config from root directory (${rootDirectory})`);
@@ -467,7 +460,7 @@ export default async (client: Client): Promise<number> => {
     parseMeta(argv['--meta'])
   );
 
-  const gitMetadata = await createGitMeta(path, output, project);
+  const gitMetadata = await createGitMeta(cwd, output, project);
 
   // Merge dotenv config, `env` from vercel.json, and `--env` / `-e` arguments
   const deploymentEnv = Object.assign(
@@ -560,11 +553,11 @@ export default async (client: Client): Promise<number> => {
       client,
       now,
       contextName,
-      [sourcePath],
+      sourcePath,
       createArgs,
       org,
       !project,
-      path,
+      cwd,
       archive
     );
 
@@ -596,11 +589,11 @@ export default async (client: Client): Promise<number> => {
         client,
         now,
         contextName,
-        [sourcePath],
+        sourcePath,
         createArgs,
         org,
         false,
-        path
+        cwd
       );
     }
 

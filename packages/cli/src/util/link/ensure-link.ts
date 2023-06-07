@@ -1,15 +1,10 @@
-import { Org, Project } from '@vercel-internals/types';
 import Client from '../client';
 import setupAndLink from '../link/setup-and-link';
 import param from '../output/param';
 import { getCommandName } from '../pkg-name';
 import { getLinkedProject } from '../projects/link';
 import type { SetupAndLinkOptions } from '../link/setup-and-link';
-
-type LinkResult = {
-  org: Org;
-  project: Project;
-};
+import type { ProjectLinked } from '@vercel-internals/types';
 
 /**
  * Checks if a project is already linked and if not, links the project and
@@ -23,15 +18,15 @@ type LinkResult = {
  * directory
  * @param opts.projectName - The project name to use when linking, otherwise
  * the current directory
- * @returns {Promise<LinkResult|number>} Returns a numeric exit code when aborted or
+ * @returns {Promise<ProjectLinked|number>} Returns a numeric exit code when aborted or
  * error, otherwise an object containing the org an project
  */
 export async function ensureLink(
   commandName: string,
   client: Client,
   cwd: string,
-  opts: SetupAndLinkOptions
-): Promise<LinkResult | number> {
+  opts: SetupAndLinkOptions = {}
+): Promise<ProjectLinked | number> {
   let { link } = opts;
   if (!link) {
     link = await getLinkedProject(client, cwd);
@@ -61,5 +56,5 @@ export async function ensureLink(
     return link.exitCode;
   }
 
-  return { org: link.org, project: link.project };
+  return link;
 }

@@ -12,6 +12,7 @@ import retry from 'async-retry';
 import fs, { ensureDir } from 'fs-extra';
 import logo from '../src/util/output/logo';
 import sleep from '../src/util/sleep';
+import humanizePath from '../src/util/humanize-path';
 import pkg from '../package.json';
 import { fetchTokenWithRetry } from '../../../test/lib/deployment/now-deploy';
 import waitForPrompt from './helpers/wait-for-prompt';
@@ -819,7 +820,9 @@ test('create a production deployment', async () => {
 });
 
 test('try to deploy non-existing path', async () => {
-  const goal = `Error: The specified file or directory "${session}" does not exist.`;
+  const goal = `Error: Could not find “${humanizePath(
+    path.join(process.cwd(), session)
+  )}”`;
 
   const { stderr, stdout, exitCode } = await execCli(binaryPath, [
     session,
@@ -1201,9 +1204,13 @@ test('vercel hasOwnProperty not a valid subcommand', async () => {
   const output = await execCli(binaryPath, ['hasOwnProperty']);
 
   expect(output.exitCode, formatOutput(output)).toBe(1);
-  expect(output.stderr).toMatch(
-    /The specified file or directory "hasOwnProperty" does not exist/gm
-  );
+  expect(
+    output.stderr.endsWith(
+      `Error: Could not find “${humanizePath(
+        path.join(process.cwd(), 'hasOwnProperty')
+      )}”`
+    )
+  ).toEqual(true);
 });
 
 test('create zero-config deployment', async () => {
