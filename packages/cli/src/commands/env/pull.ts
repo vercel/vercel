@@ -2,7 +2,11 @@ import chalk from 'chalk';
 import { outputFile } from 'fs-extra';
 import { closeSync, openSync, readSync } from 'fs';
 import { resolve } from 'path';
-import type { Project, ProjectEnvTarget } from '@vercel-internals/types';
+import type {
+  Project,
+  ProjectEnvTarget,
+  ProjectLinked,
+} from '@vercel-internals/types';
 import Client from '../../util/client';
 import { emoji, prependEmoji } from '../../util/emoji';
 import confirm from '../../util/input/confirm';
@@ -20,7 +24,6 @@ import {
 } from '../../util/env/diff-env-files';
 import { isErrnoException } from '@vercel/error-utils';
 import { addToGitIgnore } from '../../util/link/add-to-gitignore';
-import { getRepoLink } from '../../util/link/repo';
 
 const CONTENTS_PREFIX = '# Created by Vercel CLI\n';
 
@@ -53,6 +56,7 @@ function tryReadHeadSync(path: string, length: number) {
 
 export default async function pull(
   client: Client,
+  link: ProjectLinked,
   project: Project,
   environment: ProjectEnvTarget,
   opts: Partial<Options>,
@@ -145,8 +149,7 @@ export default async function pull(
     // We use '.env*.local' to match the default .gitignore from
     // create-next-app template. See:
     // https://github.com/vercel/next.js/blob/06abd634899095b6cc28e6e8315b1e8b9c8df939/packages/create-next-app/templates/app/js/gitignore#L28
-    const repoLink = await getRepoLink(cwd);
-    const rootPath = repoLink?.rootPath ?? cwd;
+    const rootPath = link.repoRoot ?? cwd;
     isGitIgnoreUpdated = await addToGitIgnore(rootPath, '.env*.local');
   }
 
