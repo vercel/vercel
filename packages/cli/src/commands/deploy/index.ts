@@ -316,7 +316,6 @@ export default async (client: Client): Promise<number> => {
     ) {
       cwd = join(cwd, link.project.rootDirectory);
     }
-    console.log({ cwd });
 
     const prebuiltExists = await fs.pathExists(join(cwd, '.vercel/output'));
     if (!prebuiltExists) {
