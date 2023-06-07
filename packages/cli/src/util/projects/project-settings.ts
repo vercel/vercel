@@ -1,9 +1,10 @@
-import { outputJSON } from 'fs-extra';
-import { Org, Project, ProjectLink } from '@vercel-internals/types';
-import { getLinkFromDir, VERCEL_DIR, VERCEL_DIR_PROJECT } from './link';
 import { join } from 'path';
+import { outputJSON, readFile } from 'fs-extra';
 import { VercelConfig } from '@vercel/client';
+import { VERCEL_DIR, VERCEL_DIR_PROJECT } from './link';
 import { PartialProjectSettings } from '../input/edit-project-settings';
+import type { Org, Project, ProjectLink } from '@vercel-internals/types';
+import { isErrnoException, isError } from '@vercel/error-utils';
 
 export type ProjectLinkAndSettings = Partial<ProjectLink> & {
   settings: {
@@ -61,8 +62,28 @@ export async function writeProjectSettings(
   });
 }
 
-export async function readProjectSettings(cwd: string) {
-  return await getLinkFromDir<ProjectLinkAndSettings>(cwd);
+export async function readProjectSettings(vercelDir: string) {
+  try {
+    return JSON.parse(
+      await readFile(join(vercelDir, VERCEL_DIR_PROJECT), 'utf8')
+    );
+  } catch (err: unknown) {
+    // `project.json` file does not exists, so project settings have not been pulled
+    if (
+      isErrnoException(err) &&
+      err.code &&
+      ['ENOENT', 'ENOTDIR'].includes(err.code)
+    ) {
+      return null;
+    }
+
+    // failed to parse JSON, treat the same as if project settings have not been pulled
+    if (isError(err) && err.name === 'SyntaxError') {
+      return null;
+    }
+
+    throw err;
+  }
 }
 
 export function pickOverrides(

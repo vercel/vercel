@@ -69,7 +69,7 @@ export function getVercelDirectory(cwd: string): string {
   return existingDirs[0] || possibleDirs[0];
 }
 
-async function getProjectLink(
+export async function getProjectLink(
   client: Client,
   path: string
 ): Promise<ProjectLink | null> {
@@ -108,9 +108,10 @@ async function getProjectLinkFromRepoLink(
   }
   if (project) {
     return {
+      repoRoot: repoLink.rootPath,
       orgId: repoLink.repoConfig.orgId,
       projectId: project.id,
-      repoRoot: repoLink.rootPath,
+      projectRootDirectory: project.directory,
     };
   }
   return null;

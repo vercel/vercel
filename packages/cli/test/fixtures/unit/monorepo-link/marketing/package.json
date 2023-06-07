@@ -1,0 +1,6 @@
+{
+  "name": "marketing",
+  "scripts": {
+    "build": "mkdir -p dist && echo marketing > dist/index.txt"
+  }
+}
