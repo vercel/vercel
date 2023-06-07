@@ -47,7 +47,7 @@ export function setupTmpDir(fixtureName?: string) {
 
   const cwd = path.join(tempRoot.name, String(tempNumber++), fixtureName ?? '');
   fs.mkdirpSync(cwd);
-  return fs.realpathSync(cwd);
+  return cwd;
 }
 
 export function cleanupFixtures() {

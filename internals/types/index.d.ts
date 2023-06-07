@@ -398,35 +398,20 @@ export interface PaginationOptions {
   prev: number | null;
 }
 
-export type ProjectLinked = {
-  status: 'linked';
-  org: Org;
-  project: Project;
-  repoRoot?: string;
-};
-
-export type ProjectNotLinked = {
-  status: 'not_linked';
-  org: null;
-  project: null;
-};
-
-export type ProjectLinkedError = {
-  status: 'error';
-  exitCode: number;
-  reason?:
-    | 'HEADLESS'
-    | 'NOT_AUTHORIZED'
-    | 'TEAM_DELETED'
-    | 'PATH_IS_FILE'
-    | 'INVALID_ROOT_DIRECTORY'
-    | 'MISSING_PROJECT_SETTINGS';
-};
-
 export type ProjectLinkResult =
-  | ProjectLinked
-  | ProjectNotLinked
-  | ProjectLinkedError;
+  | { status: 'linked'; org: Org; project: Project; repoRoot?: string }
+  | { status: 'not_linked'; org: null; project: null }
+  | {
+      status: 'error';
+      exitCode: number;
+      reason?:
+        | 'HEADLESS'
+        | 'NOT_AUTHORIZED'
+        | 'TEAM_DELETED'
+        | 'PATH_IS_FILE'
+        | 'INVALID_ROOT_DIRECTORY'
+        | 'MISSING_PROJECT_SETTINGS';
+    };
 
 /**
  * @deprecated - `RollbackJobStatus` has been replace by `LastAliasRequest['jobStatus']`.
