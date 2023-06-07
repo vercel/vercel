@@ -19,6 +19,8 @@ import {
   createEnvObject,
 } from '../../util/env/diff-env-files';
 import { isErrnoException } from '@vercel/error-utils';
+import { addToGitIgnore } from '../../util/link/add-to-gitignore';
+import { getRepoLink } from '../../util/link/repo';
 
 const CONTENTS_PREFIX = '# Created by Vercel CLI\n';
 
@@ -136,11 +138,23 @@ export default async function pull(
     output.log('No changes found.');
   }
 
+  let isGitIgnoreUpdated = false;
+  if (filename === '.env.local') {
+    // When the file is `.env.local`, we also add it to `.gitignore`
+    // to avoid accidentally committing it to git.
+    // We use '.env*.local' to match the default .gitignore from
+    // create-next-app template. See:
+    // https://github.com/vercel/next.js/blob/06abd634899095b6cc28e6e8315b1e8b9c8df939/packages/create-next-app/templates/app/js/gitignore#L28
+    const repoLink = await getRepoLink(cwd);
+    const rootPath = repoLink?.rootPath ?? cwd;
+    isGitIgnoreUpdated = await addToGitIgnore(rootPath, '.env*.local');
+  }
+
   output.print(
     `${prependEmoji(
-      `${exists ? 'Updated' : 'Created'} ${chalk.bold(
-        filename
-      )} file ${chalk.gray(pullStamp())}`,
+      `${exists ? 'Updated' : 'Created'} ${chalk.bold(filename)} file ${
+        isGitIgnoreUpdated ? 'and added it to .gitignore' : ''
+      } ${chalk.gray(pullStamp())}`,
       emoji('success')
     )}\n`
   );
