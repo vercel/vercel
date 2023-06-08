@@ -624,6 +624,9 @@ const main = async () => {
         .send();
     }
   } catch (err: unknown) {
+    // close any inprogress runs
+    await client.spaces.finishRun({ exitCode: 1 });
+
     if (isErrnoException(err) && err.code === 'ENOTFOUND') {
       // Error message will look like the following:
       // "request to https://api.vercel.com/v2/user failed, reason: getaddrinfo ENOTFOUND api.vercel.com"
@@ -703,6 +706,9 @@ const main = async () => {
     if (!metric) metric = metrics();
     metric.event(eventCategory, `${exitCode}`, pkg.version).send();
   }
+
+  client.stopLogCapture();
+  await client.spaces.finishRun({ exitCode });
 
   return exitCode;
 };

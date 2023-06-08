@@ -26,6 +26,8 @@ import { APIError } from './errors-ts';
 import { normalizeError } from '@vercel/error-utils';
 import type { Agent } from 'http';
 import sleep from './sleep';
+import { interceptor } from './interceptor';
+import Spaces from './spaces';
 
 const isSAMLError = (v: any): v is SAMLError => {
   return v && v.saml;
@@ -48,6 +50,7 @@ export interface ClientOptions extends Stdio {
   localConfig?: VercelConfig;
   localConfigPath?: string;
   agent?: Agent;
+  spaceId?: string;
 }
 
 export const isJSONObject = (v: any): v is JSONObject => {
@@ -68,6 +71,12 @@ export default class Client extends EventEmitter implements Stdio {
   localConfigPath?: string;
   prompt!: inquirer.PromptModule;
   requestIdCounter: number;
+  spaces: Spaces;
+  logs: {
+    restore?: () => void;
+    stdout: string[];
+    stderr: string[];
+  };
 
   constructor(opts: ClientOptions) {
     super();
@@ -83,7 +92,14 @@ export default class Client extends EventEmitter implements Stdio {
     this.localConfig = opts.localConfig;
     this.localConfigPath = opts.localConfigPath;
     this.requestIdCounter = 1;
+    this.spaces = new Spaces({ client: this, spaceId: opts.spaceId });
+    this.logs = {
+      stdout: [],
+      stderr: [],
+    };
+
     this._createPromptModule();
+    this._startLogCapture();
   }
 
   retry<T>(fn: RetryFunction<T>, { retries = 3, maxTimeout = Infinity } = {}) {
@@ -241,5 +257,20 @@ export default class Client extends EventEmitter implements Stdio {
 
   set cwd(v: string) {
     process.chdir(v);
+  }
+
+  _startLogCapture() {
+    this.logs.restore = interceptor({
+      stdout: log => this.logs.stdout.push(log.toString()),
+      stderr: log => this.logs.stderr.push(log.toString()),
+    });
+  }
+
+  stopLogCapture() {
+    this.logs.restore?.();
+    this.logs = {
+      stdout: [],
+      stderr: [],
+    };
   }
 }

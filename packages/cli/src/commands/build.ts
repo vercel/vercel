@@ -134,7 +134,7 @@ const help = () => {
 
 export default async function main(client: Client): Promise<number> {
   let { cwd } = client;
-  const { output } = client;
+  const { output, spaces } = client;
 
   // Ensure that `vc build` is not being invoked recursively
   if (process.env.__VERCEL_BUILD_RUNNING) {
@@ -230,6 +230,8 @@ export default async function main(client: Client): Promise<number> {
     client.argv = originalArgv;
     project = await readProjectSettings(vercelDir);
   }
+
+  await spaces.createRun({ project });
 
   // Delete output directory from potential previous build
   const defaultOutputDir = join(cwd, projectRootDirectory, OUTPUT_DIR);
@@ -566,6 +568,12 @@ async function doBuild(
       // Store the build result to generate the final `config.json` after
       // all builds have completed
       buildResults.set(build, buildResult);
+      await client.spaces.createTask({
+        key: `${builderPkg.name}:${builder.version}`,
+        name: `${builderPkg.name}:build`,
+        workspace: pkg?.name ?? 'unknown',
+        log: 'Coming Soon',
+      });
 
       // Start flushing the file outputs to the filesystem asynchronously
       ops.push(
