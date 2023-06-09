@@ -29,7 +29,7 @@ describe('getProjectByDeployment', () => {
     expect(deployment.id).toBe(d.id);
   });
 
-  it('should project and deployment associated to a team', async () => {
+  it('should get project and deployment associated to a team', async () => {
     const [team] = useTeams('team_dummy');
     const user = useUser();
     const { project: p } = useProject({
