@@ -6,7 +6,7 @@ import { useDeployment } from '../../../mocks/deployment';
 import { defaultProject, useProject } from '../../../mocks/project';
 
 describe('getProjectByDeployment', () => {
-  it('should project and deployment', async () => {
+  it('should get project and deployment', async () => {
     const user = useUser();
     const { project: p } = useProject({
       ...defaultProject,
