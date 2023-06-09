@@ -132,6 +132,18 @@ importers:
         specifier: 1.4.2
         version: link:../packages/frameworks
 
+  internals/cli-help-command:
+    devDependencies:
+      '@vercel-internals/tsconfig':
+        specifier: 1.0.0
+        version: link:../tsconfig
+      '@vercel/style-guide':
+        specifier: 4.0.2
+        version: 4.0.2(eslint@8.39.0)(jest@29.5.0)(prettier@2.6.2)(typescript@4.9.4)
+      typescript:
+        specifier: 4.9.4
+        version: 4.9.4
+
   internals/constants:
     dependencies:
       '@vercel/build-utils':
@@ -140,6 +152,25 @@ importers:
       '@vercel/routing-utils':
         specifier: 2.2.1
         version: link:../../packages/routing-utils
+    devDependencies:
+      '@vercel-internals/tsconfig':
+        specifier: 1.0.0
+        version: link:../tsconfig
+      '@vercel/style-guide':
+        specifier: 4.0.2
+        version: 4.0.2(eslint@8.39.0)(jest@29.5.0)(prettier@2.6.2)(typescript@4.9.4)
+      typescript:
+        specifier: 4.9.4
+        version: 4.9.4
+
+  internals/get-help-output:
+    dependencies:
+      '@vercel-internals/constants':
+        specifier: workspace:1.0.2
+        version: link:../constants
+      chalk:
+        specifier: 4.1.0
+        version: 4.1.0
     devDependencies:
       '@vercel-internals/tsconfig':
         specifier: 1.0.0
@@ -1595,29 +1626,6 @@ packages:
     resolution: {integrity: sha512-KYMqFYTaenzMK4yUtf4EW9wc4N9ef80FsbMtkwool5zpwl4YrT1SdWYSTRcT94KO4hannogdS+LxY7L+arP3gA==}
     engines: {node: '>=6.9.0'}
 
-  /@babel/core@7.21.4:
-    resolution: {integrity: sha512-qt/YV149Jman/6AfmlxJ04LMIu8bMoyl3RB91yTFrxQmgbrSvQMy7cI8Q62FHx1t8wJ8B5fu0UDoLwHAhUo1QA==}
-    engines: {node: '>=6.9.0'}
-    dependencies:
-      '@ampproject/remapping': 2.2.1
-      '@babel/code-frame': 7.21.4
-      '@babel/generator': 7.21.5
-      '@babel/helper-compilation-targets': 7.21.5(@babel/core@7.21.4)
-      '@babel/helper-module-transforms': 7.21.5
-      '@babel/helpers': 7.21.5
-      '@babel/parser': 7.21.8
-      '@babel/template': 7.20.7
-      '@babel/traverse': 7.21.5
-      '@babel/types': 7.21.5
-      convert-source-map: 1.8.0
-      debug: 4.3.4
-      gensync: 1.0.0-beta.2
-      json5: 2.2.2
-      semver: 6.3.0
-    transitivePeerDependencies:
-      - supports-color
-    dev: true
-
   /@babel/core@7.21.8:
     resolution: {integrity: sha512-YeM22Sondbo523Sz0+CirSPnbj9bG3P0CdHcBZdqUuaeOaYEFbOLoGU7lebvGP6P5J/WE9wOn7u7C4J9HvS1xQ==}
     engines: {node: '>=6.9.0'}
@@ -1662,14 +1670,14 @@ packages:
       - supports-color
     dev: true
 
-  /@babel/eslint-parser@7.19.1(@babel/core@7.21.4)(eslint@8.39.0):
+  /@babel/eslint-parser@7.19.1(@babel/core@7.21.8)(eslint@8.39.0):
     resolution: {integrity: sha512-AqNf2QWt1rtu2/1rLswy6CDP7H9Oh3mMhk177Y67Rg8d7RD9WfOLLv8CGn6tisFvS2htm86yIe1yLF6I1UDaGQ==}
     engines: {node: ^10.13.0 || ^12.13.0 || >=14.0.0}
     peerDependencies:
       '@babel/core': '>=7.11.0'
       eslint: ^7.5.0 || ^8.0.0
     dependencies:
-      '@babel/core': 7.21.4
+      '@babel/core': 7.21.8
       '@nicolo-ribaudo/eslint-scope-5-internals': 5.1.1-v1
       eslint: 8.39.0
       eslint-visitor-keys: 2.1.0
@@ -1708,20 +1716,6 @@ packages:
       '@babel/helper-explode-assignable-expression': 7.18.6
       '@babel/types': 7.21.5
     dev: false
-
-  /@babel/helper-compilation-targets@7.21.5(@babel/core@7.21.4):
-    resolution: {integrity: sha512-1RkbFGUKex4lvsB9yhIfWltJM5cZKUftB2eNajaDv3dCMEp49iBG0K14uH8NnX9IPux2+mK7JGEOB0jn48/J6w==}
-    engines: {node: '>=6.9.0'}
-    peerDependencies:
-      '@babel/core': ^7.0.0
-    dependencies:
-      '@babel/compat-data': 7.21.7
-      '@babel/core': 7.21.4
-      '@babel/helper-validator-option': 7.21.0
-      browserslist: 4.21.5
-      lru-cache: 5.1.1
-      semver: 6.3.0
-    dev: true
 
   /@babel/helper-compilation-targets@7.21.5(@babel/core@7.21.8):
     resolution: {integrity: sha512-1RkbFGUKex4lvsB9yhIfWltJM5cZKUftB2eNajaDv3dCMEp49iBG0K14uH8NnX9IPux2+mK7JGEOB0jn48/J6w==}
@@ -5836,7 +5830,7 @@ packages:
     engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0}
     dependencies:
       '@typescript-eslint/types': 5.21.0
-      eslint-visitor-keys: 3.3.0
+      eslint-visitor-keys: 3.4.0
     dev: true
 
   /@typescript-eslint/visitor-keys@5.48.1:
@@ -5844,7 +5838,7 @@ packages:
     engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0}
     dependencies:
       '@typescript-eslint/types': 5.48.1
-      eslint-visitor-keys: 3.3.0
+      eslint-visitor-keys: 3.4.0
     dev: true
 
   /@typescript-eslint/visitor-keys@5.54.1:
@@ -5852,7 +5846,7 @@ packages:
     engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0}
     dependencies:
       '@typescript-eslint/types': 5.54.1
-      eslint-visitor-keys: 3.3.0
+      eslint-visitor-keys: 3.4.0
     dev: true
 
   /@vanilla-extract/babel-plugin-debug-ids@1.0.2:
@@ -6057,8 +6051,8 @@ packages:
       typescript:
         optional: true
     dependencies:
-      '@babel/core': 7.21.4
-      '@babel/eslint-parser': 7.19.1(@babel/core@7.21.4)(eslint@8.39.0)
+      '@babel/core': 7.21.8
+      '@babel/eslint-parser': 7.19.1(@babel/core@7.21.8)(eslint@8.39.0)
       '@rushstack/eslint-patch': 1.2.0
       '@typescript-eslint/eslint-plugin': 5.54.1(@typescript-eslint/parser@5.54.1)(eslint@8.39.0)(typescript@4.9.4)
       '@typescript-eslint/parser': 5.54.1(eslint@8.39.0)(typescript@4.9.4)
@@ -6103,8 +6097,8 @@ packages:
       typescript:
         optional: true
     dependencies:
-      '@babel/core': 7.21.4
-      '@babel/eslint-parser': 7.19.1(@babel/core@7.21.4)(eslint@8.39.0)
+      '@babel/core': 7.21.8
+      '@babel/eslint-parser': 7.19.1(@babel/core@7.21.8)(eslint@8.39.0)
       '@rushstack/eslint-patch': 1.2.0
       '@typescript-eslint/eslint-plugin': 5.54.1(@typescript-eslint/parser@5.54.1)(eslint@8.39.0)(typescript@4.9.5)
       '@typescript-eslint/parser': 5.54.1(eslint@8.39.0)(typescript@4.9.5)
@@ -9163,7 +9157,7 @@ packages:
       clean-regexp: 1.0.0
       eslint: 8.39.0
       eslint-utils: 3.0.0(eslint@8.39.0)
-      esquery: 1.4.0
+      esquery: 1.5.0
       indent-string: 4.0.0
       is-builtin-module: 3.2.1
       lodash: 4.17.21
@@ -9337,7 +9331,7 @@ packages:
     dependencies:
       acorn: 8.8.2
       acorn-jsx: 5.3.2(acorn@8.8.2)
-      eslint-visitor-keys: 3.3.0
+      eslint-visitor-keys: 3.4.0
     dev: true
 
   /espree@9.5.1:
