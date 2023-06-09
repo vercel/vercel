@@ -1,8 +1,16 @@
 import chalk from 'chalk';
+import inquirer from 'inquirer';
 import pluralize from 'pluralize';
 import { homedir } from 'os';
-import { join, normalize } from 'path';
+import { basename, join, normalize } from 'path';
+import frameworks from '@vercel/frameworks';
 import { normalizePath } from '@vercel/build-utils';
+import {
+  detectFramework,
+  getWorkspacePackagePaths,
+  getWorkspaces,
+  LocalFileSystemDetector,
+} from '@vercel/fs-detectors';
 import { lstat, readJSON, outputJSON } from 'fs-extra';
 import confirm from '../input/confirm';
 import toHumanPath from '../humanize-path';
@@ -14,6 +22,7 @@ import selectOrg from '../input/select-org';
 import { addToGitIgnore } from './add-to-gitignore';
 import type Client from '../client';
 import type { Project } from '@vercel-internals/types';
+import createProject from '../projects/create-project';
 
 const home = homedir();
 
@@ -33,6 +42,11 @@ export interface RepoLink {
   rootPath: string;
   repoConfigPath: string;
   repoConfig?: RepoProjectsConfig;
+}
+
+export interface EnsureRepoLinkOptions {
+  yes: boolean;
+  overwrite: boolean;
 }
 
 /**
@@ -56,10 +70,33 @@ export async function getRepoLink(cwd: string): Promise<RepoLink | undefined> {
   return { rootPath, repoConfig, repoConfigPath };
 }
 
+async function detectProjects(cwd: string) {
+  const fs = new LocalFileSystemDetector(cwd);
+  const workspaces = await getWorkspaces({ fs });
+  const detectedProjects = new Map<string, string>();
+  if (workspaces.length === 0) detectedProjects;
+  // TODO: get package paths for all workspaces
+  const packagePaths = await getWorkspacePackagePaths({
+    fs,
+    workspace: workspaces[0],
+  });
+  await Promise.all(
+    packagePaths.map(async p => {
+      const framework = await detectFramework({
+        fs: fs.chdir(join('.', p)),
+        frameworkList: frameworks,
+      });
+      if (!framework) return;
+      detectedProjects.set(p.slice(1), framework);
+    })
+  );
+  return detectedProjects;
+}
+
 export async function ensureRepoLink(
   client: Client,
   cwd: string,
-  yes = false
+  { yes, overwrite }: EnsureRepoLinkOptions
 ): Promise<RepoLink | undefined> {
   const { output } = client;
 
@@ -71,7 +108,14 @@ export async function ensureRepoLink(
   }
   let { rootPath, repoConfig, repoConfigPath } = repoLink;
 
-  if (!repoConfig) {
+  if (overwrite || !repoConfig) {
+    // Detect the projects on the filesystem out of band, so that
+    // they will be ready by the time the projects are listed
+    const detectedProjectsPromise = detectProjects(rootPath).catch(err => {
+      output.debug(`Failed to detect local projects: ${err}`);
+      return new Map<string, string>();
+    });
+
     // Not yet linked, so prompt user to begin linking
     let shouldLink =
       yes ||
@@ -129,20 +173,9 @@ export async function ensureRepoLink(
     const projectsIterator = client.fetchPaginated<{
       projects: Project[];
     }>(`/v9/projects?${query}`);
-    let printedFound = false;
+    const detectedProjects = await detectedProjectsPromise;
     for await (const chunk of projectsIterator) {
       projects = projects.concat(chunk.projects);
-      if (!printedFound && projects.length > 0) {
-        output.log(
-          `${pluralize('Project', chunk.projects.length)} linked to ${link(
-            repoUrl
-          )} under ${chalk.bold(org.slug)}:`
-        );
-        printedFound = true;
-      }
-      for (const project of chunk.projects) {
-        output.print(`  * ${chalk.cyan(`${org.slug}/${project.name}\n`)}`);
-      }
       if (chunk.pagination.next) {
         output.spinner(`Found ${chalk.bold(projects.length)} Projects…`, 0);
       }
@@ -154,26 +187,77 @@ export async function ensureRepoLink(
           org.slug
         )}.`
       );
-      // TODO: run detection logic to find potential projects.
-      // then prompt user to select valid projects.
-      // then create new Projects
+    } else {
+      output.log(
+        `Found ${pluralize('Project', projects.length, true)} linked to ${link(
+          repoUrl
+        )} under ${chalk.bold(org.slug)}`
+      );
     }
 
-    shouldLink =
-      yes ||
-      (await confirm(
-        client,
-        `Link to ${
-          projects.length === 1
-            ? 'this Project'
-            : `these ${chalk.bold(projects.length)} Projects`
-        }?`,
-        true
-      ));
+    // For any projects that already exists on Vercel, remove them from the
+    // locally detected directories. Any remaining ones will be prompted to
+    // create new Projects for.
+    for (const project of projects) {
+      detectedProjects.delete(project.rootDirectory ?? '');
+    }
 
-    if (!shouldLink) {
-      output.print(`Canceled. Repository not linked.\n`);
+    if (detectedProjects.size > 0) {
+      output.log(
+        `Detected ${pluralize(
+          'new Project',
+          detectedProjects.size,
+          true
+        )} that may be created.`
+      );
+    }
+
+    const { selected } = await client.prompt({
+      type: 'checkbox',
+      name: 'selected',
+      message: `Which Projects should be ${
+        projects.length ? 'linked to' : 'created'
+      }?`,
+      choices: [
+        ...projects.map(project => {
+          return {
+            name: `${org.slug}/${project.name}`,
+            value: project,
+            checked: true,
+          };
+        }),
+        ...(projects.length && detectedProjects.size
+          ? [new inquirer.Separator('----- New Projects to be created -----')]
+          : []),
+        ...Array.from(detectedProjects.entries()).map(
+          ([rootDirectory, framework]) => {
+            const name = basename(rootDirectory);
+            return {
+              name: `${org.slug}/${name} (${framework})`,
+              value: {
+                newProject: true,
+                rootDirectory,
+                name,
+                framework,
+              },
+            };
+          }
+        ),
+      ],
+    });
+    console.log(selected);
+
+    if (selected.length === 0) {
+      output.print(`No Projects were selected. Repository not linked.\n`);
       return;
+    }
+
+    for (let i = 0; i < selected.length; i++) {
+      const selection = selected[i];
+      if (!selection.newProject) continue;
+      // TODO: allow for editing name / framework / etc.
+      selected[i] = await createProject(client, selection.name);
+      output.log(`Created new Project`);
     }
 
     repoConfig = {
