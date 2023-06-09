@@ -275,7 +275,7 @@ export function findProjectsFromPath(
   path: string
 ): RepoProjectConfig[] {
   const normalizedPath = normalizePath(path);
-  return projects
+  const matches = projects
     .slice()
     .sort(sortByDirectory)
     .filter(project => {
@@ -288,14 +288,9 @@ export function findProjectsFromPath(
         normalizedPath.startsWith(`${project.directory}/`)
       );
     });
-}
-
-/**
- * TODO: remove
- */
-export function findProjectFromPath(
-  projects: RepoProjectConfig[],
-  path: string
-): RepoProjectConfig | undefined {
-  return findProjectsFromPath(projects, path)[0];
+  // If there are multiple matches, we only want the most relevant
+  // selections (with the deepest directory depth), so pick the first
+  // one and filter on those matches.
+  const firstMatch = matches[0];
+  return matches.filter(match => match.directory === firstMatch.directory);
 }
