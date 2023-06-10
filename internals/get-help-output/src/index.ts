@@ -2,8 +2,7 @@ import chalk from 'chalk';
 import stripAnsi from 'strip-ansi';
 import { LOGO, NAME } from '@vercel-internals/constants';
 
-const SPACE = ' ';
-const INDENT = SPACE.repeat(2);
+const INDENT = ' '.repeat(2);
 const NEWLINE = '\n';
 const MAX_LINE_LENGTH = process.stdout.columns;
 
@@ -199,7 +198,7 @@ const commands: Command[] = [
 ];
 
 function calcLineLength(line: string[]) {
-  return lineToString(line).length;
+  return stripAnsi(lineToString(line)).length;
 }
 
 // Insert spaces in between non-whitespace items only
@@ -308,7 +307,7 @@ function buildCommandOptionLines(command: Command) {
       // insert a new line when the next word would match or exceed the maximum line length
       if (
         calcLineLength(lines[lines.length - 1]) +
-          stripAnsi(descriptionWord).length >=
+          stripAnsi(descriptionWord).length >
         MAX_LINE_LENGTH
       ) {
         // initialize the new line with the necessary whitespace. The INDENT is apart of `maxLineStartLength`
