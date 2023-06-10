@@ -1,12 +1,17 @@
 import chalk from 'chalk';
+import stripAnsi from 'strip-ansi';
 import { LOGO, NAME } from '@vercel-internals/constants';
 
-const INDENT = '  ';
+const SPACE = ' ';
+const INDENT = SPACE.repeat(2);
+const NEWLINE = '\n';
+const MAX_LINE_LENGTH = process.stdout.columns;
 
 interface CommandOption {
   name: string;
   shorthand: string | null;
   type: string;
+  argument?: string;
   deprecated: boolean;
   description: string;
 }
@@ -61,6 +66,7 @@ const commands: Command[] = [
         'name': 'env',
         'shorthand': 'e',
         'type': 'array-string',
+        'argument': 'key=value',
         'deprecated': false,
         'description': `Specify environment variables during ${chalk.bold('run-time')} (e.g. ${chalk.dim('`-e KEY1=value1 -e KEY2=value2`')})`,
       },
@@ -68,6 +74,7 @@ const commands: Command[] = [
         'name': 'build-env',
         'shorthand': 'b',
         'type': 'array-string',
+        'argument': 'key=value',
         'deprecated': false,
         'description': `Specify environment variables during ${chalk.bold('build-time')} (e.g. ${chalk.dim('`-b KEY1=value1 -b KEY2=value2`')})`,
       },
@@ -75,6 +82,7 @@ const commands: Command[] = [
         'name': 'meta',
         'shorthand': 'm',
         'type': 'array-string',
+        'argument': 'key=value',
         'deprecated': false,
         'description': `Specify metadata for the deployment (e.g. ${chalk.dim('`-m KEY1=value1 -m KEY2=value2`')})`,
       },
@@ -184,13 +192,39 @@ const commands: Command[] = [
   }
 ];
 
+function calcLineLength (line: string[]) {
+  return lineToString(line).length;
+}
+
+// Insert spaces in between non-whitespace items only
+function lineToString (line: string[]) {
+  let string = '';
+  for (let i = 0; i < line.length; i++) {
+    if (i === line.length - 1) {
+      string += line[i];
+    } else {
+      const curr = line[i]!;
+      const next = line[i+1]!;
+      string += curr;
+      if (curr.trim() !== '' && next.trim() !== '') {
+        string += ' ';
+      }
+    }
+  }
+  return string;
+}
+
+function outputArrayToString(outputArray: string[]) {
+  return outputArray.reduce((acc, line) => acc + `${line}${NEWLINE}`, '');
+}
+
 /**
  * Example: `▲ vercel deploy [path] [options]`
  * @param command
  * @returns
  */
 function buildCommandSynopsisLine (command: Command) {
-  const line = [
+  const line: string[] =[
     LOGO,
     chalk.bold(NAME),
     chalk.bold(command.name),
@@ -203,86 +237,130 @@ function buildCommandSynopsisLine (command: Command) {
   if (command.options.length > 0) {
     line.push('[options]');
   }
-  return line.join(` `);
+  return lineToString(line);
 }
 
 function buildCommandOptionLines (command: Command) {
-  const out = [
-    chalk.dim(`Options:`),
-    ``,
-  ]
-  const spacing = 32;
+  // Initialize output array with header and empty line
+  const outputArray: string[] = [chalk.dim(`Options:`), ''];
+
+  // Start building option lines
+  const optionLines: string[][] = [];
+  // Sort command options alphabetically
   command.options.sort((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
+  // Keep track of longest "start" of an option line to determine description spacing
+  let maxLineStartLength = 0;
+  // Iterate over options and create the "start" of each option (e.g. `  -b, --build-env <key=value>`)
   for (const option of command.options) {
-    const line = [INDENT];
+    const startLine: string[] = [INDENT];
     if (option.shorthand) {
-      line.push(`-${option.shorthand}, `);
+      startLine.push(`-${option.shorthand},`);
     }
-    line.push(`--${option.name}`);
-    line.push(' '.repeat(spacing - line.join('').length));
-    line.push(option.description);
-    out.push(line.join(''));
+    startLine.push(`--${option.name}`);
+    if (option.argument) {
+      startLine.push(`<${option.argument}>`);
+    }
+    // the length includes the INDENT
+    const lineLength = calcLineLength(startLine);
+    maxLineStartLength = lineLength > maxLineStartLength ? lineLength : maxLineStartLength;
+    optionLines.push(startLine);
   }
-  return out.join('\n');
+  /*
+  * Iterate over in-progress option lines to add space-filler and description
+  * For Example:
+  * |  --archive                    My description starts here.
+  * |
+  * |  -b, --build-env <key=value>  Start of description here then
+  * |                               it wraps here.
+  * |
+  * |  -e, --env <key=value>        My description is short.
+  *
+  * Breaking down option lines:
+  * |  -b, --build-env <key=value>  Start of description here then
+  * |[][                         ][][                             ]
+  * |↑ ↑                          ↑ ↑
+  * |1 2                          3 4
+  * |                               it wraps here.
+  * |[][                           ][                            ]
+  * |↑ ↑                            ↑
+  * |5 6                            7
+  * | 1, 5 = indent
+  * | 2 = start
+  * | 3, 6 = space-filler
+  * | 4, 7 = description
+  */
+  for (let i = 0; i < optionLines.length; i++) {
+    const optionLine = optionLines[i];
+    const option = command.options[i];
+    // Add only 2 spaces to the longest line, and then make all shorter lines the same length.
+    optionLine.push(' '.repeat(2 + (maxLineStartLength - calcLineLength(optionLine))));
+
+    // Descriptions may be longer than max line length. Wrap them to the same column as the first description line
+    const lines: string[][] = [optionLine];
+    for (const descriptionWord of option.description.split(' ')) {
+      // insert a new line when the next word would match or exceed the maximum line length
+      if (calcLineLength(lines[lines.length - 1]) + stripAnsi(descriptionWord).length >= MAX_LINE_LENGTH) {
+        // initialize the new line with the necessary whitespace. The INDENT is apart of `maxLineStartLength`
+        lines.push([' '.repeat(maxLineStartLength + 2)]);
+      }
+      // insert the word to the current last line
+      lines[lines.length - 1].push(descriptionWord);
+    }
+    // for every line, transform into a string and push it to the output
+    for (const line of lines) {
+      outputArray.push(lineToString(line));
+    }
+    // add an empty line in between in each option block for readability (skip the last block)
+    if (i !== optionLines.length - 1) outputArray.push('');
+  }
+
+  // return the entire list of options as a single string after delete the last '\n' added to the option list
+  const outputString = outputArrayToString(outputArray);
+  return outputString.substring(0, outputString.length - 1);
 }
 
 function buildCommandExampleLines (command: Command) {
-  const out = [
+  const outputArray: string[] = [
     chalk.dim(`Examples:`),
-    ``,
+    '',
   ];
   for (const example of command.examples) {
-    const nameLine = [INDENT];
-    nameLine.push(chalk.gray('- '));
+    const nameLine: string[] = [INDENT];
+    nameLine.push(chalk.gray('-'));
     nameLine.push(example.name);
-    out.push(nameLine.join(''));
-    out.push('');
-    const valueLine = (value: string) => `${INDENT.repeat(2)}${chalk.cyan(`$ ${value}`)}`;
+    outputArray.push(lineToString(nameLine));
+    outputArray.push('');
+    const buildValueLine = (value: string) => {
+      return lineToString([INDENT, INDENT, chalk.cyan(`$ ${value}`)]);
+    }
     if (Array.isArray(example.value)) {
       for (const line of example.value) {
-        out.push(valueLine(line));
+        outputArray.push(buildValueLine(line));
       }
     } else {
-      out.push(valueLine(example.value));
+      outputArray.push(buildValueLine(example.value));
     }
-    out.push('');
+    outputArray.push('');
   }
-  return out.join('\n');
+  // delete the last newline added after examples iteration
+  outputArray.splice(-1);
+  // delete the last newline appended to the last example line
+  const outputString = outputArrayToString(outputArray);
+  return outputString.substring(0, outputString.length - 1);
 }
 
-export function wrap (input: string, limit?: number) {
-  if (!limit) return input;
-  const split = input.split(' ');
-  const result: string[][] = [[]];
-  let count = 0;
-  let resultIter = 0;
-  for (let i = 0; i < split.length; i++) {
-    const item = split[i];
-    if (!item) break;
-    if (count + item.length > limit) {
-      count = 0;
-      resultIter++;
-      result.push([]);
-    }
-
-    result[resultIter]?.push(item);
-    count += item.length;
-  }
-  return result.map(line => line.join(' ')).join('\n');
-}
-
-function builder (command: typeof commands[number], wrapLimit = 60) {
-  const out = [
+function builder (command: typeof commands[number]) {
+  const outputArray: string[] = [
     buildCommandSynopsisLine(command),
-    ``,
-    wrap(command.description, wrapLimit),
-    ``,
+    '',
+    command.description,
+    '',
     buildCommandOptionLines(command),
-    ``,
-    buildCommandExampleLines(command),
+    '',
+    buildCommandExampleLines(command)
   ];
 
-  return out.join('\n');
+  return outputArrayToString(outputArray);
 }
 
 export function help (commandName: string) {
@@ -294,29 +372,3 @@ export function help (commandName: string) {
 }
 
 console.log(help('deploy'));
-
-/*
-
-Vercel CLI 30.2.1
-
-▲ vercel [deploy] [path-to-project] [options]
-
-Deploy your project to Vercel. The `deploy` command is the default command for
-the Vercel CLI, and can be omitted (`vc deploy my-app` equals `vc my-app`).
-
-Options:
-
---prod                Create a production deployment
-
--p, --public          Deployment is public (`/_src` is exposed)
-
--e, --env             Specify environment variables during **run time**. Can be specified multiple times.
-  Example: `-e KEY1=value1 -e KEY2=value2`
-
--b, --build-env       Specify environment variables during **build time**. Can be specified multiple times.
-  Example: `-b KEY1=value1 -b KEY2=value2`
-
---no-wait             Don't wait for the deployment to finish before exiting
-
-
-*/

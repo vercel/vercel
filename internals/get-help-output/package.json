@@ -9,7 +9,8 @@
   },
   "dependencies": {
     "@vercel-internals/constants": "workspace:1.0.2",
-    "chalk": "4.1.0"
+    "chalk": "4.1.0",
+    "strip-ansi": "6.0.1"
   },
   "devDependencies": {
     "@vercel-internals/tsconfig": "1.0.0",
