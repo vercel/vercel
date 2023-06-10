@@ -307,7 +307,7 @@ function buildCommandOptionLines(command: Command) {
       // insert a new line when the next word would match or exceed the maximum line length
       if (
         calcLineLength(lines[lines.length - 1]) +
-          stripAnsi(descriptionWord).length >
+          stripAnsi(descriptionWord).length >=
         MAX_LINE_LENGTH
       ) {
         // initialize the new line with the necessary whitespace. The INDENT is apart of `maxLineStartLength`
