@@ -35,7 +35,6 @@ describe.each<[string, string[]]>([
     const fs = new LocalFileSystemDetector(fixture);
 
     const workspaces = await getWorkspaces({ fs });
-    console.log(workspaces);
     const actualPackagePaths = (
       await Promise.all(
         workspaces.map(workspace => getWorkspacePackagePaths({ fs, workspace }))
