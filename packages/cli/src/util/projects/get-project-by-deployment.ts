@@ -74,9 +74,7 @@ export default async function getProjectByDeployment({
         err.code = 'ERR_INVALID_TEAM';
         throw err;
       }
-    }
-
-    if (team) {
+    } else if (team) {
       const err: NodeJS.ErrnoException = new Error(
         `Deployment doesn't belong to current team ${chalk.bold(contextName)}`
       );
