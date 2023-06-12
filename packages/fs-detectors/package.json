@@ -15,8 +15,8 @@
   "license": "Apache-2.0",
   "scripts": {
     "build": "tsc",
-    "test": "jest --env node --verbose --runInBand --bail test/unit.*test.*",
-    "test-unit": "pnpm test"
+    "test": "jest --env node --verbose --runInBand --bail",
+    "test-unit": "pnpm test test/unit.*test.*"
   },
   "dependencies": {
     "@vercel/error-utils": "1.0.10",

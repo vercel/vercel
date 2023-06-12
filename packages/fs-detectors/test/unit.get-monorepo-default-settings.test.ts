@@ -1,13 +1,12 @@
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
 import {
   getMonorepoDefaultSettings,
   LocalFileSystemDetector,
   MissingBuildPipeline,
   MissingBuildTarget,
 } from '../src';
-import path from 'path';
-import fs from 'fs';
-import os from 'os';
-import { FixtureFilesystem } from './utils/fixture-filesystem';
 
 describe('getMonorepoDefaultSettings', () => {
   test('MissingBuildTarget is an error', () => {
@@ -69,7 +68,7 @@ describe('getMonorepoDefaultSettings', () => {
         },
       };
 
-      const ffs = new FixtureFilesystem(
+      const ffs = new LocalFileSystemDetector(
         path.join(
           __dirname,
           'fixtures',
