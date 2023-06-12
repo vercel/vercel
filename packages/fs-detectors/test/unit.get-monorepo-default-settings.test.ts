@@ -1,6 +1,6 @@
-import fs from 'fs';
 import os from 'os';
 import path from 'path';
+import { mkdtempSync } from 'fs';
 import {
   getMonorepoDefaultSettings,
   LocalFileSystemDetector,
@@ -68,7 +68,7 @@ describe('getMonorepoDefaultSettings', () => {
         },
       };
 
-      const ffs = new LocalFileSystemDetector(
+      const fs = new LocalFileSystemDetector(
         path.join(
           __dirname,
           'fixtures',
@@ -80,16 +80,16 @@ describe('getMonorepoDefaultSettings', () => {
         packageName,
         isRoot ? '/' : 'packages/app-1',
         isRoot ? '/' : '../..',
-        ffs
+        fs
       );
       expect(result).toStrictEqual(expectedResultMap[expectedResultKey]);
     }
   );
 
   test('returns null when neither nx nor turbo is detected', async () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'monorepo-test-'));
-    const lfs = new LocalFileSystemDetector(dir);
-    const result = await getMonorepoDefaultSettings('', '', '', lfs);
+    const dir = mkdtempSync(path.join(os.tmpdir(), 'monorepo-test-'));
+    const fs = new LocalFileSystemDetector(dir);
+    const result = await getMonorepoDefaultSettings('', '', '', fs);
     expect(result).toBe(null);
   });
 });
