@@ -60,7 +60,7 @@ export class LocalFileSystemDetector extends DetectorFilesystem {
 
   private getRelativeFilePath(name: string) {
     return name.startsWith(this.rootPath)
-      ? name.substring(this.rootPath.length + 1)
+      ? path.relative(this.rootPath, name)
       : name;
   }
 
