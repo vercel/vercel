@@ -6,10 +6,12 @@ import { isErrnoException } from '@vercel/error-utils';
 
 export class LocalFileSystemDetector extends DetectorFilesystem {
   private rootPath: string;
+
   constructor(rootPath: string) {
     super();
     this.rootPath = rootPath;
   }
+
   async _hasPath(name: string): Promise<boolean> {
     try {
       await fs.stat(this.getFilePath(name));
@@ -21,13 +23,16 @@ export class LocalFileSystemDetector extends DetectorFilesystem {
       throw err;
     }
   }
+
   _readFile(name: string): Promise<Buffer> {
     return fs.readFile(this.getFilePath(name));
   }
+
   async _isFile(name: string): Promise<boolean> {
     const stat = await fs.stat(this.getFilePath(name));
     return stat.isFile();
   }
+
   async _readdir(name: string): Promise<DetectorFilesystemStat[]> {
     const dirPath = this.getFilePath(name);
     const dir = await fs.readdir(dirPath, {
@@ -44,14 +49,22 @@ export class LocalFileSystemDetector extends DetectorFilesystem {
     };
     return dir.map(dirent => ({
       name: dirent.name,
-      path: path.join(dirPath, dirent.name),
+      path: path.join(this.getRelativeFilePath(name), dirent.name),
       type: getType(dirent),
     }));
   }
+
   _chdir(name: string): DetectorFilesystem {
     return new LocalFileSystemDetector(this.getFilePath(name));
   }
+
+  private getRelativeFilePath(name: string) {
+    return name.startsWith(this.rootPath)
+      ? name.substring(this.rootPath.length + 1)
+      : name;
+  }
+
   private getFilePath(name: string) {
-    return path.join(this.rootPath, name);
+    return path.join(this.rootPath, this.getRelativeFilePath(name));
   }
 }
