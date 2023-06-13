@@ -197,56 +197,6 @@ export default async (client: Client): Promise<number> => {
     return target;
   }
 
-  // build `--prebuilt`
-  if (argv['--prebuilt']) {
-    const prebuiltExists = await fs.pathExists(join(cwd, '.vercel/output'));
-    if (!prebuiltExists) {
-      error(
-        `The ${param(
-          '--prebuilt'
-        )} option was used, but no prebuilt output found in ".vercel/output". Run ${getCommandName(
-          'build'
-        )} to generate a local build.`
-      );
-      return 1;
-    }
-
-    const prebuiltBuild = await getPrebuiltJson(cwd);
-
-    // Ensure that there was not a build error
-    const prebuiltError =
-      prebuiltBuild?.error ||
-      prebuiltBuild?.builds?.find(build => 'error' in build)?.error;
-    if (prebuiltError) {
-      output.log(
-        `Prebuilt deployment cannot be created because ${getCommandName(
-          'build'
-        )} failed with error:\n`
-      );
-      prettyError(prebuiltError);
-      return 1;
-    }
-
-    // Ensure that the deploy target matches the build target
-    const assumedTarget = target || 'preview';
-    if (prebuiltBuild?.target && prebuiltBuild.target !== assumedTarget) {
-      let specifyTarget = '';
-      if (prebuiltBuild.target === 'production') {
-        specifyTarget = ` --prod`;
-      }
-
-      prettyError({
-        message: `The ${param(
-          '--prebuilt'
-        )} option was used with the target environment "${assumedTarget}", but the prebuilt output found in ".vercel/output" was built with target environment "${
-          prebuiltBuild.target
-        }". Please run ${getCommandName(`--prebuilt${specifyTarget}`)}.`,
-        link: 'https://vercel.link/prebuilt-environment-mismatch',
-      });
-      return 1;
-    }
-  }
-
   const archive = argv['--archive'];
   if (typeof archive === 'string' && !isValidArchive(archive)) {
     output.error(`Format must be one of: ${VALID_ARCHIVE_FORMATS.join(', ')}`);
@@ -347,6 +297,66 @@ export default async (client: Client): Promise<number> => {
   // At this point `org` should be populated
   if (!org) {
     throw new Error(`"org" is not defined`);
+  }
+
+  // build `--prebuilt`
+  if (argv['--prebuilt']) {
+    // For repo-style linking, update `cwd` to be the Project
+    // subdirectory when `rootDirectory` setting is defined
+    if (
+      link.status === 'linked' &&
+      link.repoRoot &&
+      link.project.rootDirectory
+    ) {
+      cwd = join(cwd, link.project.rootDirectory);
+    }
+
+    const prebuiltExists = await fs.pathExists(join(cwd, '.vercel/output'));
+    if (!prebuiltExists) {
+      error(
+        `The ${param(
+          '--prebuilt'
+        )} option was used, but no prebuilt output found in ".vercel/output". Run ${getCommandName(
+          'build'
+        )} to generate a local build.`
+      );
+      return 1;
+    }
+
+    const prebuiltBuild = await getPrebuiltJson(cwd);
+
+    // Ensure that there was not a build error
+    const prebuiltError =
+      prebuiltBuild?.error ||
+      prebuiltBuild?.builds?.find(build => 'error' in build)?.error;
+    if (prebuiltError) {
+      output.log(
+        `Prebuilt deployment cannot be created because ${getCommandName(
+          'build'
+        )} failed with error:\n`
+      );
+      prettyError(prebuiltError);
+      return 1;
+    }
+
+    // Ensure that the deploy target matches the build target
+    const assumedTarget = target || 'preview';
+    if (prebuiltBuild?.target && prebuiltBuild.target !== assumedTarget) {
+      let specifyTarget = '';
+      if (prebuiltBuild.target === 'production') {
+        specifyTarget = ` --prod`;
+      }
+
+      prettyError({
+        message: `The ${param(
+          '--prebuilt'
+        )} option was used with the target environment "${assumedTarget}", but the prebuilt output found in ".vercel/output" was built with target environment "${
+          prebuiltBuild.target
+        }". Please run ${getCommandName(`--prebuilt${specifyTarget}`)}.`,
+        link: 'https://vercel.link/prebuilt-environment-mismatch',
+      });
+      return 1;
+    }
   }
 
   // Set the `contextName` and `currentTeam` as specified by the

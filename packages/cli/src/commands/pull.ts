@@ -1,7 +1,11 @@
 import chalk from 'chalk';
 import { join } from 'path';
 import Client from '../util/client';
-import type { Project, ProjectEnvTarget } from '@vercel-internals/types';
+import type {
+  Project,
+  ProjectEnvTarget,
+  ProjectLinked,
+} from '@vercel-internals/types';
 import { emoji, prependEmoji } from '../util/emoji';
 import getArgs from '../util/get-args';
 import logo from '../util/output/logo';
@@ -82,6 +86,7 @@ function parseArgs(client: Client) {
 async function pullAllEnvFiles(
   environment: ProjectEnvTarget,
   client: Client,
+  link: ProjectLinked,
   project: Project,
   argv: ReturnType<typeof processArgs>,
   cwd: string
@@ -89,6 +94,7 @@ async function pullAllEnvFiles(
   const environmentFile = `.env.${environment}.local`;
   return envPull(
     client,
+    link,
     project,
     environment,
     argv,
@@ -136,6 +142,7 @@ export default async function main(client: Client) {
   const pullResultCode = await pullAllEnvFiles(
     environment,
     client,
+    link,
     project,
     argv,
     cwd
