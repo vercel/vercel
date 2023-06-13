@@ -32,7 +32,6 @@
     "node": ">= 14"
   },
   "dependencies": {
-    "@vercel-internals/get-help-output": "workspace:*",
     "@vercel/build-utils": "6.7.5",
     "@vercel/go": "2.5.1",
     "@vercel/hydrogen": "0.0.64",
@@ -87,6 +86,7 @@
     "@types/write-json-file": "2.2.1",
     "@types/yauzl-promise": "2.1.0",
     "@vercel-internals/constants": "1.0.2",
+    "@vercel-internals/get-help-output": "1.0.0",
     "@vercel-internals/get-package-json": "1.0.0",
     "@vercel-internals/types": "1.0.2",
     "@vercel/client": "12.6.2",
