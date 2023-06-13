@@ -41,7 +41,7 @@ export const COMMANDS: Command[] = [
         type: 'boolean',
         deprecated: false,
         description: 'Force a new deployment even if nothing has changed',
-        multi: false
+        multi: false,
       },
       {
         name: 'with-cache',
@@ -49,7 +49,7 @@ export const COMMANDS: Command[] = [
         type: 'boolean',
         deprecated: false,
         description: 'Retain build cache when using "--force"',
-        multi: false
+        multi: false,
       },
       {
         name: 'public',
@@ -57,7 +57,7 @@ export const COMMANDS: Command[] = [
         type: 'boolean',
         deprecated: false,
         description: 'Deployment is public (`/_src`) is exposed)',
-        multi: false
+        multi: false,
       },
       {
         name: 'env',
@@ -66,7 +66,8 @@ export const COMMANDS: Command[] = [
         argument: 'key=value',
         deprecated: false,
         multi: true,
-        description: 'Specify environment variables during run-time (e.g. `-e KEY1=value1 -e KEY2=value2`)',
+        description:
+          'Specify environment variables during run-time (e.g. `-e KEY1=value1 -e KEY2=value2`)',
       },
       {
         name: 'build-env',
@@ -75,7 +76,8 @@ export const COMMANDS: Command[] = [
         argument: 'key=value',
         deprecated: false,
         multi: true,
-        description: 'Specify environment variables during build-time (e.g. `-b KEY1=value1 -b KEY2=value2`)',
+        description:
+          'Specify environment variables during build-time (e.g. `-b KEY1=value1 -b KEY2=value2`)',
       },
       {
         name: 'meta',
@@ -84,7 +86,8 @@ export const COMMANDS: Command[] = [
         argument: 'key=value',
         deprecated: false,
         multi: true,
-        description: 'Specify metadata for the deployment (e.g. `-m KEY1=value1 -m KEY2=value2`)',
+        description:
+          'Specify metadata for the deployment (e.g. `-m KEY1=value1 -m KEY2=value2`)',
       },
       {
         name: 'regions',
@@ -92,7 +95,7 @@ export const COMMANDS: Command[] = [
         type: 'string',
         deprecated: false,
         description: 'Set default regions to enable the deployment on',
-        multi: false
+        multi: false,
       },
       {
         name: 'prebuilt',
@@ -100,7 +103,7 @@ export const COMMANDS: Command[] = [
         type: 'boolean',
         deprecated: false,
         description: 'TODO: Description for --prebuilt',
-        multi: false
+        multi: false,
       },
       {
         name: 'prod',
@@ -108,7 +111,7 @@ export const COMMANDS: Command[] = [
         type: 'boolean',
         deprecated: false,
         description: 'Create a production deployment',
-        multi: false
+        multi: false,
       },
       {
         name: 'archive',
@@ -116,7 +119,7 @@ export const COMMANDS: Command[] = [
         type: 'string',
         deprecated: false,
         description: 'TODO: Description for --archive',
-        multi: false
+        multi: false,
       },
       {
         name: 'no-wait',
@@ -124,7 +127,7 @@ export const COMMANDS: Command[] = [
         type: 'boolean',
         deprecated: false,
         description: "Don't wait for the deployment to finish",
-        multi: false
+        multi: false,
       },
       {
         name: 'skip-domain',
@@ -132,7 +135,7 @@ export const COMMANDS: Command[] = [
         type: 'boolean',
         deprecated: false,
         description: 'TODO: Description for --skip-domain',
-        multi: false
+        multi: false,
       },
       {
         name: 'yes',
@@ -140,7 +143,7 @@ export const COMMANDS: Command[] = [
         type: 'boolean',
         deprecated: false,
         description: 'TODO: Description for --yes',
-        multi: false
+        multi: false,
       },
       {
         name: 'name',
@@ -148,7 +151,7 @@ export const COMMANDS: Command[] = [
         type: 'string',
         deprecated: true,
         description: 'TODO: Description for --name',
-        multi: false
+        multi: false,
       },
       {
         name: 'no-clipboard',
@@ -156,7 +159,7 @@ export const COMMANDS: Command[] = [
         type: 'boolean',
         deprecated: true,
         description: 'TODO: Description for --no-clipboard',
-        multi: false
+        multi: false,
       },
       {
         name: 'target',
@@ -164,7 +167,7 @@ export const COMMANDS: Command[] = [
         type: 'string',
         deprecated: true,
         description: 'TODO: Description for --target',
-        multi: false
+        multi: false,
       },
       {
         name: 'confirm',
@@ -172,7 +175,7 @@ export const COMMANDS: Command[] = [
         type: 'boolean',
         deprecated: true,
         description: 'TODO: Description for --confirm',
-        multi: false
+        multi: false,
       },
     ],
     examples: [

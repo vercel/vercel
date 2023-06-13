@@ -53,7 +53,7 @@ function buildCommandSynopsisLine(command: Command) {
 
 function buildCommandOptionLines(command: Command) {
   // Filter out deprecated options.
-  command.options = command.options.filter(option => !option.deprecated)
+  command.options = command.options.filter(option => !option.deprecated);
 
   // Initialize output array with header and empty line
   const outputArray: string[] = [chalk.dim(`Options:`), ''];
