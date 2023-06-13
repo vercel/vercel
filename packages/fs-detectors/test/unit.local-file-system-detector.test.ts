@@ -5,7 +5,7 @@ import { LocalFileSystemDetector, DetectorFilesystem } from '../src';
 
 const tmpdir = path.join(os.tmpdir(), 'local-file-system-test');
 
-const dirs = ['', 'a', 'a/b']; // root, single-nested, double-nested
+const dirs = ['', 'a', `a${path.sep}b`]; // root, single-nested, double-nested
 const files = ['foo', 'bar'];
 const filePaths = dirs.flatMap(dir => files.map(file => path.join(dir, file)));
 
