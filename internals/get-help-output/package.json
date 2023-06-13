@@ -8,7 +8,7 @@
     "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@vercel-internals/constants": "workspace:1.0.2",
+    "@vercel-internals/constants": "1.0.2",
     "chalk": "4.1.0",
     "strip-ansi": "6.0.1"
   },

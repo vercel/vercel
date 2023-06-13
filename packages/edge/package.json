@@ -23,6 +23,7 @@
   "devDependencies": {
     "@edge-runtime/jest-environment": "2.0.0",
     "@types/jest": "27.4.1",
+    "esbuild": "0.14.47",
     "ts-node": "8.9.1",
     "tsup": "6.1.2",
     "typedoc": "0.24.6",
