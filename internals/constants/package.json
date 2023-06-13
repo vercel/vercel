@@ -9,7 +9,8 @@
   },
   "dependencies": {
     "@vercel/build-utils": "6.7.5",
-    "@vercel/routing-utils": "2.2.1"
+    "@vercel/routing-utils": "2.2.1",
+    "chalk": "4.1.0"
   },
   "devDependencies": {
     "@vercel-internals/tsconfig": "1.0.0",

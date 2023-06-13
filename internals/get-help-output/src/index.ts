@@ -1,201 +1,11 @@
 import chalk from 'chalk';
 import stripAnsi from 'strip-ansi';
-import { LOGO, NAME } from '@vercel-internals/constants';
+import { LOGO, NAME, COMMANDS } from '@vercel-internals/constants';
+import type { Command } from '@vercel-internals/constants';
 
 const INDENT = ' '.repeat(2);
 const NEWLINE = '\n';
 const MAX_LINE_LENGTH = process.stdout.columns;
-
-interface CommandOption {
-  name: string;
-  shorthand: string | null;
-  type: string;
-  argument?: string;
-  deprecated: boolean;
-  description: string;
-}
-interface CommandArgument {
-  name: string;
-  required: boolean;
-}
-interface CommandExample {
-  name: string;
-  value: string | string[];
-}
-interface Command {
-  name: string;
-  description: string;
-  arguments: CommandArgument[];
-  options: CommandOption[];
-  examples: CommandExample[];
-}
-const commands: Command[] = [
-  {
-    name: 'deploy',
-    description:
-      'Deploy your project to Vercel. The `deploy` command is the default command for the Vercel CLI, and can be omitted (`vc deploy my-app` equals `vc my-app`).',
-    arguments: [
-      {
-        name: 'project-path',
-        required: false,
-      },
-    ],
-    options: [
-      {
-        name: 'force',
-        shorthand: 'f',
-        type: 'boolean',
-        deprecated: false,
-        description: 'Force a new deployment even if nothing has changed',
-      },
-      {
-        name: 'with-cache',
-        shorthand: null,
-        type: 'boolean',
-        deprecated: false,
-        description: 'Retain build cache when using "--force"',
-      },
-      {
-        name: 'public',
-        shorthand: 'p',
-        type: 'boolean',
-        deprecated: false,
-        description: `Deployment is public (${chalk.dim(
-          '`/_src`'
-        )} is exposed)`,
-      },
-      {
-        name: 'env',
-        shorthand: 'e',
-        type: 'array-string',
-        argument: 'key=value',
-        deprecated: false,
-        description: `Specify environment variables during ${chalk.bold(
-          'run-time'
-        )} (e.g. ${chalk.dim('`-e KEY1=value1 -e KEY2=value2`')})`,
-      },
-      {
-        name: 'build-env',
-        shorthand: 'b',
-        type: 'array-string',
-        argument: 'key=value',
-        deprecated: false,
-        description: `Specify environment variables during ${chalk.bold(
-          'build-time'
-        )} (e.g. ${chalk.dim('`-b KEY1=value1 -b KEY2=value2`')})`,
-      },
-      {
-        name: 'meta',
-        shorthand: 'm',
-        type: 'array-string',
-        argument: 'key=value',
-        deprecated: false,
-        description: `Specify metadata for the deployment (e.g. ${chalk.dim(
-          '`-m KEY1=value1 -m KEY2=value2`'
-        )})`,
-      },
-      {
-        name: 'regions',
-        shorthand: null,
-        type: 'string',
-        deprecated: false,
-        description: 'Set default regions to enable the deployment on',
-      },
-      {
-        name: 'prebuilt',
-        shorthand: null,
-        type: 'boolean',
-        deprecated: false,
-        description: 'TODO: Description for --prebuilt',
-      },
-      {
-        name: 'prod',
-        shorthand: null,
-        type: 'boolean',
-        deprecated: false,
-        description: 'Create a production deployment',
-      },
-      {
-        name: 'archive',
-        shorthand: null,
-        type: 'string',
-        deprecated: false,
-        description: 'TODO: Description for --archive',
-      },
-      {
-        name: 'no-wait',
-        shorthand: null,
-        type: 'boolean',
-        deprecated: false,
-        description: "Don't wait for the deployment to finish",
-      },
-      {
-        name: 'skip-domain',
-        shorthand: null,
-        type: 'boolean',
-        deprecated: false,
-        description: 'TODO: Description for --skip-domain',
-      },
-      {
-        name: 'yes',
-        shorthand: 'y',
-        type: 'boolean',
-        deprecated: false,
-        description: 'TODO: Description for --yes',
-      },
-      {
-        name: 'name',
-        shorthand: 'n',
-        type: 'string',
-        deprecated: true,
-        description: 'TODO: Description for --name',
-      },
-      {
-        name: 'no-clipboard',
-        shorthand: null,
-        type: 'boolean',
-        deprecated: true,
-        description: 'TODO: Description for --no-clipboard',
-      },
-      {
-        name: 'target',
-        shorthand: null,
-        type: 'string',
-        deprecated: true,
-        description: 'TODO: Description for --target',
-      },
-      {
-        name: 'confirm',
-        shorthand: 'c',
-        type: 'boolean',
-        deprecated: true,
-        description: 'TODO: Description for --confirm',
-      },
-    ],
-    examples: [
-      {
-        name: 'Deploy the current directory',
-        value: 'vercel',
-      },
-      {
-        name: 'Deploy a custom path',
-        value: 'vercel /usr/src/project',
-      },
-      {
-        name: 'Deploy with run-time Environment Variables',
-        value: 'vercel -e NODE_ENV=production',
-      },
-      {
-        name: 'Deploy with prebuilt outputs',
-        value: ['vercel build', 'vercel deploy --prebuilt'],
-      },
-      {
-        name: 'Write Deployment URL to a file',
-        value: 'vercel > deployment-url.txt',
-      },
-    ],
-  },
-];
 
 function calcLineLength(line: string[]) {
   return stripAnsi(lineToString(line)).length;
@@ -208,8 +18,8 @@ function lineToString(line: string[]) {
     if (i === line.length - 1) {
       string += line[i];
     } else {
-      const curr = line[i]!;
-      const next = line[i + 1]!;
+      const curr = line[i];
+      const next = line[i + 1];
       string += curr;
       if (curr.trim() !== '' && next.trim() !== '') {
         string += ' ';
@@ -242,6 +52,9 @@ function buildCommandSynopsisLine(command: Command) {
 }
 
 function buildCommandOptionLines(command: Command) {
+  // Filter out deprecated options.
+  command.options = command.options.filter(option => !option.deprecated)
+
   // Initialize output array with header and empty line
   const outputArray: string[] = [chalk.dim(`Options:`), ''];
 
@@ -356,7 +169,7 @@ function buildCommandExampleLines(command: Command) {
   return outputString.substring(0, outputString.length - 1);
 }
 
-function builder(command: (typeof commands)[number]) {
+function builder(command: Command) {
   const outputArray: string[] = [
     buildCommandSynopsisLine(command),
     '',
@@ -371,11 +184,9 @@ function builder(command: (typeof commands)[number]) {
 }
 
 export function help(commandName: string) {
-  const command = commands.find(command => command.name === commandName);
+  const command = COMMANDS.find(command => command.name === commandName);
   if (!command) {
     throw new Error(`Undefined command: ${commandName}`);
   }
   return builder(command);
 }
-
-console.log(help('deploy'));

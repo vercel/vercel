@@ -32,6 +32,7 @@
     "node": ">= 14"
   },
   "dependencies": {
+    "@vercel-internals/get-help-output": "workspace:*",
     "@vercel/build-utils": "6.7.5",
     "@vercel/go": "2.5.1",
     "@vercel/hydrogen": "0.0.64",
