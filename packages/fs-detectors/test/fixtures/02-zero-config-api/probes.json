@@ -31,12 +31,12 @@
     },
     {
       "path": "/api/date",
-      "mustContain": "hello from api/date/index.js",
+      "mustContain": "hello from api/date.js",
       "status": 200
     },
     {
       "path": "/api/date/",
-      "mustContain": "hello from api/date/index.js",
+      "mustContain": "hello from api/date.js",
       "status": 200
     },
     {
