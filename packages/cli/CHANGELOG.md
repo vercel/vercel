@@ -1,5 +1,23 @@
 # vercel
 
+## 30.2.2
+
+### Patch Changes
+
+- [cli] vc env pull should add `.env*.local` to `.gitignore` ([#10085](https://github.com/vercel/vercel/pull/10085))
+
+- [cli] Fix team validation bug where you are apart of a team ([#10092](https://github.com/vercel/vercel/pull/10092))
+
+- Add support for `vc dev` command with repo link ([#10082](https://github.com/vercel/vercel/pull/10082))
+
+- Add support for `vc deploy --prebuilt` command with repo link ([#10083](https://github.com/vercel/vercel/pull/10083))
+
+- Move readme copy logic to a helper function for `vc link` ([#10084](https://github.com/vercel/vercel/pull/10084))
+
+- Add support for `vc pull` command with repo link ([#10078](https://github.com/vercel/vercel/pull/10078))
+
+- Add support for `vc build` command with repo link ([#10075](https://github.com/vercel/vercel/pull/10075))
+
 ## 30.2.1
 
 ### Patch Changes
