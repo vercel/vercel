@@ -765,7 +765,7 @@ async function writeEntrypointFile(
         `The "${relative(
           rootDir,
           dirname(path)
-        )}" directory does not exist. Please contact support@vercel.com.`
+        )}" directory does not exist. Please contact support at https://vercel.com/help.`
       );
     }
     throw err;
