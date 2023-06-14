@@ -152,15 +152,14 @@ export async function ensureRepoLink(
       remoteName = remoteNames[0];
     } else {
       // Prompt user to select which remote to use
-      const originIndex = remoteNames.indexOf('origin');
       const answer = await client.prompt({
         type: 'list',
         name: 'value',
         message: 'Which Git remote should be used?',
-        choices: remoteNames.map(name => {
+        choices: remoteNames.sort().map(name => {
           return { name: name, value: name };
         }),
-        default: originIndex === -1 ? 0 : originIndex,
+        default: remoteNames.includes('origin') ? 'origin' : undefined,
       });
       remoteName = answer.value;
     }
@@ -212,6 +211,7 @@ export async function ensureRepoLink(
       );
     }
 
+    const addSeparators = projects.length > 0 && detectedProjects.size > 0;
     const { selected } = await client.prompt({
       type: 'checkbox',
       name: 'selected',
@@ -219,6 +219,9 @@ export async function ensureRepoLink(
         projects.length ? 'linked to' : 'created'
       }?`,
       choices: [
+        ...(addSeparators
+          ? [new inquirer.Separator('----- Existing Projects -----')]
+          : []),
         ...projects.map(project => {
           return {
             name: `${org.slug}/${project.name}`,
@@ -226,7 +229,7 @@ export async function ensureRepoLink(
             checked: true,
           };
         }),
-        ...(projects.length && detectedProjects.size
+        ...(addSeparators
           ? [new inquirer.Separator('----- New Projects to be created -----')]
           : []),
         ...Array.from(detectedProjects.entries()).map(

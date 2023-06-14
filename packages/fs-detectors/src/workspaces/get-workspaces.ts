@@ -1,12 +1,10 @@
 import path from 'path';
-import {
-  DetectorFilesystem,
-  DetectorFilesystemStat,
-} from '../detectors/filesystem';
+import { DetectorFilesystem } from '../detectors/filesystem';
 import { workspaceManagers } from './workspace-managers';
 import { detectFramework as detectWorkspaceManagers } from '../detect-framework';
 
 const MAX_DEPTH_TRAVERSE = 3;
+const posixPath = path.posix;
 
 export interface GetWorkspaceOptions {
   fs: DetectorFilesystem;
@@ -34,12 +32,7 @@ export async function getWorkspaces({
   });
 
   if (workspaceType === null) {
-    let directoryContents: DetectorFilesystemStat[];
-    try {
-      directoryContents = await fs.readdir(cwd);
-    } catch (err) {
-      return [];
-    }
+    const directoryContents = await fs.readdir('./');
     const childDirectories = directoryContents.filter(
       stat => stat.type === 'dir'
     );
@@ -48,9 +41,9 @@ export async function getWorkspaces({
       await Promise.all(
         childDirectories.map(childDirectory =>
           getWorkspaces({
-            fs,
+            fs: fs.chdir(childDirectory.path),
             depth: depth - 1,
-            cwd: path.join(cwd, childDirectory.name),
+            cwd: posixPath.join(cwd, childDirectory.path),
           })
         )
       )
