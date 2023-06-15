@@ -521,7 +521,8 @@ export default async (client: Client): Promise<number> => {
   }
 
   try {
-    const autoAssignCustomDomains = !argv['--skip-domain'];
+    // if this flag is not set, use `undefined` to allow the project setting to be used
+    const autoAssignCustomDomains = argv['--skip-domain'] ? false : undefined;
 
     const createArgs: CreateOptions = {
       name,
