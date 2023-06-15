@@ -1,6 +1,8 @@
 import type { ServerResponse, IncomingMessage } from 'http';
 import { serializeBody } from '../utils';
 import { PassThrough } from 'stream';
+import { parse as parseContentType } from 'content-type';
+import { parse as parseQS } from 'querystring';
 
 type VercelRequestCookies = { [key: string]: string };
 type VercelRequestQuery = { [key: string]: string | string[] };
@@ -32,12 +34,11 @@ function normalizeContentType(contentType: string | undefined) {
     return 'text/plain';
   }
 
-  const { parse: parseContentType } = require('content-type');
   const { type } = parseContentType(contentType);
   return type;
 }
 
-function getBodyParser(body: Buffer, contentType: string | undefined) {
+export function getBodyParser(body: Buffer, contentType: string | undefined) {
   return function parseBody(): VercelRequestBody {
     const type = normalizeContentType(contentType);
 
@@ -53,7 +54,6 @@ function getBodyParser(body: Buffer, contentType: string | undefined) {
     if (type === 'application/octet-stream') return body;
 
     if (type === 'application/x-www-form-urlencoded') {
-      const { parse: parseQS } = require('querystring');
       // note: querystring.parse does not produce an iterable object
       // https://nodejs.org/api/querystring.html#querystring_querystring_parse_str_sep_eq_options
       return parseQS(body.toString());
