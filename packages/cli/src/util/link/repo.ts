@@ -17,6 +17,9 @@ import type { Project } from '@vercel-internals/types';
 
 const home = homedir();
 
+const REPO_JSON_PATH = join(VERCEL_DIR, VERCEL_DIR_REPO);
+const GIT_CONFIG_PATH = normalize('.git/config');
+
 export interface RepoProjectConfig {
   id: string;
   name: string;
@@ -40,9 +43,12 @@ export interface RepoLink {
  * and returns the parsed `.vercel/repo.json` file if the repository
  * has already been linked.
  */
-export async function getRepoLink(cwd: string): Promise<RepoLink | undefined> {
+export async function getRepoLink(
+  client: Client,
+  cwd: string
+): Promise<RepoLink | undefined> {
   // Determine where the root of the repo is
-  const rootPath = await findRepoRoot(cwd);
+  const rootPath = await findRepoRoot(client, cwd);
   if (!rootPath) return undefined;
 
   // Read the `repo.json`, if this repo has already been linked
@@ -63,7 +69,7 @@ export async function ensureRepoLink(
 ): Promise<RepoLink | undefined> {
   const { output } = client;
 
-  const repoLink = await getRepoLink(cwd);
+  const repoLink = await getRepoLink(client, cwd);
   if (repoLink) {
     output.debug(`Found Git repository root directory: ${repoLink.rootPath}`);
   } else {
@@ -218,35 +224,45 @@ export async function ensureRepoLink(
  * the nearest `.git/config` file is found. Returns the directory where
  * the Git config was found, or `undefined` when no Git repo was found.
  */
-export async function findRepoRoot(start: string): Promise<string | undefined> {
+export async function findRepoRoot(
+  client: Client,
+  start: string
+): Promise<string | undefined> {
+  const { debug } = client.output;
+
   for (const current of traverseUpDirectories(start)) {
     if (current === home) {
       // Sometimes the $HOME directory is set up as a Git repo
       // (for dotfiles, etc.). In this case it's safe to say that
       // this isn't the repo we're looking for. Bail.
+      debug('Arrived at home directory - aborting search for repo root');
       break;
     }
 
     // if `.vercel/repo.json` exists (already linked),
     // then consider this the repo root
-    const repoConfigPath = join(current, VERCEL_DIR, VERCEL_DIR_REPO);
+    const repoConfigPath = join(current, REPO_JSON_PATH);
     let stat = await lstat(repoConfigPath).catch(err => {
       if (err.code !== 'ENOENT') throw err;
     });
     if (stat) {
+      debug(`Found "${REPO_JSON_PATH}" - detected "${current}" as repo root`);
       return current;
     }
 
     // if `.git/config` exists (unlinked),
     // then consider this the repo root
-    const gitConfigPath = join(current, '.git/config');
+    const gitConfigPath = join(current, GIT_CONFIG_PATH);
     stat = await lstat(gitConfigPath).catch(err => {
       if (err.code !== 'ENOENT') throw err;
     });
     if (stat) {
+      debug(`Found "${GIT_CONFIG_PATH}" - detected "${current}" as repo root`);
       return current;
     }
   }
+
+  debug('Arrived at filesystem root directory - aborting search for repo root');
 }
 
 export function* traverseUpDirectories(start: string) {

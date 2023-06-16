@@ -83,7 +83,7 @@ async function getProjectLinkFromRepoLink(
   client: Client,
   path: string
 ): Promise<ProjectLink | null> {
-  const repoLink = await getRepoLink(path);
+  const repoLink = await getRepoLink(client, path);
   if (!repoLink?.repoConfig) {
     return null;
   }
@@ -167,6 +167,7 @@ async function getOrgById(client: Client, orgId: string): Promise<Org | null> {
 }
 
 async function hasProjectLink(
+  client: Client,
   projectLink: ProjectLink,
   path: string
 ): Promise<boolean> {
@@ -181,7 +182,7 @@ async function hasProjectLink(
   }
 
   // linked via `repo.json`?
-  const repoLink = await getRepoLink(path);
+  const repoLink = await getRepoLink(client, path);
   if (
     repoLink?.repoConfig?.orgId === projectLink.orgId &&
     repoLink.repoConfig.projects.find(p => p.id === projectLink.projectId)
@@ -301,7 +302,7 @@ export async function linkFolderToProject(
   successEmoji: EmojiLabel = 'link'
 ) {
   // if the project is already linked, we skip linking
-  if (await hasProjectLink(projectLink, path)) {
+  if (await hasProjectLink(client, projectLink, path)) {
     return;
   }
 
