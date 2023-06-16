@@ -1,11 +1,35 @@
 import chalk from 'chalk';
 import stripAnsi from 'strip-ansi';
-import { LOGO, NAME, COMMANDS } from '@vercel-internals/constants';
-import type { Command } from '@vercel-internals/constants';
+import { LOGO, NAME } from '@vercel-internals/constants';
 
 const INDENT = ' '.repeat(2);
 const NEWLINE = '\n';
 const MAX_LINE_LENGTH = process.stdout.columns;
+
+export interface CommandOption {
+  name: string;
+  shorthand: string | null;
+  type: 'boolean' | 'string';
+  argument?: string;
+  deprecated: boolean;
+  description: string;
+  multi: boolean;
+}
+export interface CommandArgument {
+  name: string;
+  required: boolean;
+}
+export interface CommandExample {
+  name: string;
+  value: string | string[];
+}
+export interface Command {
+  name: string;
+  description: string;
+  arguments: CommandArgument[];
+  options: CommandOption[];
+  examples: CommandExample[];
+}
 
 function calcLineLength(line: string[]) {
   return stripAnsi(lineToString(line)).length;
@@ -169,7 +193,7 @@ function buildCommandExampleLines(command: Command) {
   return outputString.substring(0, outputString.length - 1);
 }
 
-function builder(command: Command) {
+function buildHelpOutput(command: Command) {
   const outputArray: string[] = [
     buildCommandSynopsisLine(command),
     '',
@@ -183,10 +207,6 @@ function builder(command: Command) {
   return outputArrayToString(outputArray);
 }
 
-export function help(commandName: string) {
-  const command = COMMANDS.find(command => command.name === commandName);
-  if (!command) {
-    throw new Error(`Undefined command: ${commandName}`);
-  }
-  return builder(command);
+export function help(command: Command) {
+  return buildHelpOutput(command);
 }

@@ -7,5 +7,3 @@ export const PROJECT_ENV_TARGET = [
 export const LOGO = '▲' as const;
 export const NAME = 'vercel' as const;
 export const TITLE = 'Vercel' as const;
-
-export * from './commands';
