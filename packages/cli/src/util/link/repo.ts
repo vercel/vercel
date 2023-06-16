@@ -234,7 +234,7 @@ export async function findRepoRoot(
       // Sometimes the $HOME directory is set up as a Git repo
       // (for dotfiles, etc.). In this case it's safe to say that
       // this isn't the repo we're looking for. Bail.
-      debug('Arrived at home directory - aborting search for repo root');
+      debug('Arrived at home directory');
       break;
     }
 
@@ -261,7 +261,7 @@ export async function findRepoRoot(
     }
   }
 
-  debug('Arrived at filesystem root directory - aborting search for repo root');
+  debug('Aborting search for repo root');
 }
 
 export function* traverseUpDirectories(start: string) {
