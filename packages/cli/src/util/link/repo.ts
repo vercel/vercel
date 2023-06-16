@@ -17,9 +17,6 @@ import type { Project } from '@vercel-internals/types';
 
 const home = homedir();
 
-const REPO_JSON_PATH = join(VERCEL_DIR, VERCEL_DIR_REPO);
-const GIT_CONFIG_PATH = normalize('.git/config');
-
 export interface RepoProjectConfig {
   id: string;
   name: string;
@@ -229,6 +226,8 @@ export async function findRepoRoot(
   start: string
 ): Promise<string | undefined> {
   const { debug } = client.output;
+  const REPO_JSON_PATH = join(VERCEL_DIR, VERCEL_DIR_REPO);
+  const GIT_CONFIG_PATH = normalize('.git/config');
 
   for (const current of traverseUpDirectories(start)) {
     if (current === home) {
