@@ -144,5 +144,9 @@
         }
       }
     ]
+  },
+  "dependencies": {
+    "pnpm": "8.6.2",
+    "turbo-linux-64": "1.10.3"
   }
 }

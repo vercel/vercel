@@ -23,7 +23,7 @@ Vercel's frontend cloud gives developers frameworks, workflows, and infrastructu
 
 ## Deploy
 
-Get started by [importing a project](https://vercel.com/new) or using the [Vercel CLI](https://vercel.com/cli). Then, `git push` to deploy.
+Get started by [importing a project](https://vercel.com/new) or using the [Vercel CLI]. Then, `git push` to deploy.
 
 ## Documentation
 
@@ -42,3 +42,5 @@ See the [Contributing Guidelines](./.github/CONTRIBUTING.md) for more details.
 - [Code of Conduct](./.github/CODE_OF_CONDUCT.md)
 - [Contributing Guidelines](./.github/CONTRIBUTING.md)
 - [Apache 2.0 License](./LICENSE)
+
+[def]: https://vercel.com/cli
