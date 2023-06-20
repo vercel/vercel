@@ -1,5 +1,11 @@
 # @vercel/remix-builder
 
+## 1.8.14
+
+### Patch Changes
+
+- Link to `https://vercel.com/help` ([#10106](https://github.com/vercel/vercel/pull/10106))
+
 ## 1.8.13
 
 ### Patch Changes
