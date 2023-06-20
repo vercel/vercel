@@ -1,5 +1,16 @@
 # vercel
 
+## 30.2.3
+
+### Patch Changes
+
+- [cli] do not force auto-assign value on deployments ([#10110](https://github.com/vercel/vercel/pull/10110))
+
+- Updated dependencies [[`91406abdb`](https://github.com/vercel/vercel/commit/91406abdb0c332152fc6c7c1e4bd3a872b084434), [`2230ea6cc`](https://github.com/vercel/vercel/commit/2230ea6cc1b84c1f03227a4e197b7684635b5955), [`8b3a4146a`](https://github.com/vercel/vercel/commit/8b3a4146af68d2b7288c80a5b919d832dba929b5)]:
+  - @vercel/node@2.15.2
+  - @vercel/remix-builder@1.8.14
+  - @vercel/static-build@1.3.37
+
 ## 30.2.2
 
 ### Patch Changes
