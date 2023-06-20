@@ -6,6 +6,7 @@ import {
   RepoProjectConfig,
   traverseUpDirectories,
 } from '../../../../src/util/link/repo';
+import { client } from '../../../mocks/client';
 
 const isWindows = process.platform === 'win32';
 
@@ -14,17 +15,17 @@ const vercelRepoRoot = join(__dirname, '../../../../../..');
 
 describe('findRepoRoot()', () => {
   it('should find Git repo root from root', async () => {
-    const repoRoot = await findRepoRoot(vercelRepoRoot);
+    const repoRoot = await findRepoRoot(client, vercelRepoRoot);
     expect(repoRoot).toEqual(vercelRepoRoot);
   });
 
   it('should find Git repo root sub directory', async () => {
-    const repoRoot = await findRepoRoot(__dirname);
+    const repoRoot = await findRepoRoot(client, __dirname);
     expect(repoRoot).toEqual(vercelRepoRoot);
   });
 
   it('should return `undefined` when no Git root found', async () => {
-    const repoRoot = await findRepoRoot(tmpdir());
+    const repoRoot = await findRepoRoot(client, tmpdir());
     expect(repoRoot).toEqual(undefined);
   });
 });
