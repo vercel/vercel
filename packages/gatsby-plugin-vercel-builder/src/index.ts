@@ -5,6 +5,7 @@ import {
   createServerlessFunctions,
   createAPIRoutes,
 } from './helpers/functions';
+import { fixHtmlFileRoutes } from './handlers/build';
 import { createStaticDir } from './helpers/static';
 import type { Config } from './types';
 
@@ -67,6 +68,8 @@ export async function generateVercelBuildOutputAPI3Output({
         permanent: isPermanent,
       })),
     });
+
+    fixHtmlFileRoutes(pathPrefix, routes);
 
     const config: Config = {
       version: 3,

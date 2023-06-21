@@ -12,6 +12,7 @@ import {
 import type {
   NodejsServerlessFunctionConfig,
   PrerenderFunctionConfig,
+  Route,
 } from './../types';
 
 export const writeHandler = async ({
@@ -112,6 +113,25 @@ export async function copyHTMLFiles({ functionDir }: { functionDir: string }) {
         console.error('Failed to copy HTML files', e.message);
         process.exit(1);
       }
+    }
+  }
+}
+
+export function fixHtmlFileRoutes(pathPrefix: string, routes: Route[] | null) {
+  // If there's a pathPrefix, the redirect to custom 404 and 500 pages will be broken by default
+  if (pathPrefix) {
+    const route404 = routes?.find(
+      r => r.status === 404 && r.dest === '404.html'
+    );
+    if (route404) {
+      route404.dest = `${pathPrefix}/404.html`;
+    }
+
+    const route500 = routes?.find(
+      r => r.status === 500 && r.dest === '500.html'
+    );
+    if (route500) {
+      route500.dest = `${pathPrefix}/500.html`;
     }
   }
 }
