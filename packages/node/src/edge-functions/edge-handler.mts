@@ -128,8 +128,6 @@ async function createEdgeRuntimeServer(params?: {
 
     const wasmBindings = await params.wasmAssets.getContext();
     const nodeCompatBindings = params.nodeCompatBindings.getContext();
-    // @ts-ignore
-    const WebSocket = (await import('ws')).WebSocket;
 
     const runtime = new EdgeRuntime({
       initialCode: params.userCode,
@@ -137,7 +135,6 @@ async function createEdgeRuntimeServer(params?: {
         Object.assign(context, {
           // This is required for esbuild wrapping logic to resolve
           module: {},
-          WebSocket,
 
           // This is required for environment variable access.
           // In production, env var access is provided by static analysis
