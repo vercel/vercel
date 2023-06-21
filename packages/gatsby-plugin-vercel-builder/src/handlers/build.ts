@@ -124,14 +124,14 @@ export function fixHtmlFileRoutes(pathPrefix: string, routes: Route[] | null) {
       r => r.status === 404 && r.dest === '404.html'
     );
     if (route404) {
-      route404.dest = `${pathPrefix}/404.html`;
+      route404.dest = `/${pathPrefix}/404.html`;
     }
 
     const route500 = routes?.find(
       r => r.status === 500 && r.dest === '500.html'
     );
     if (route500) {
-      route500.dest = `${pathPrefix}/500.html`;
+      route500.dest = `/${pathPrefix}/500.html`;
     }
   }
 }
