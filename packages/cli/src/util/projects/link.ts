@@ -95,11 +95,13 @@ async function getProjectLinkFromRepoLink(
   if (projects.length === 1) {
     project = projects[0];
   } else {
+    const selectableProjects =
+      projects.length > 0 ? projects : repoLink.repoConfig.projects;
     const { p } = await client.prompt({
       name: 'p',
       type: 'list',
       message: `Please select a Project:`,
-      choices: repoLink.repoConfig.projects.map(p => ({
+      choices: selectableProjects.map(p => ({
         value: p,
         name: p.name,
       })),
