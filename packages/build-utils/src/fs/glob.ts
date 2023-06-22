@@ -1,16 +1,14 @@
 import path from 'path';
 import assert from 'assert';
-import vanillaGlob_ from 'glob';
-import { promisify } from 'util';
+import { glob as vanillaGlob } from 'glob';
 import { lstat, readlink, Stats } from 'fs-extra';
 import { normalizePath } from './normalize-path';
 import FileFsRef from '../file-fs-ref';
+import type { GlobOptions as VanillaGlobOptions } from 'glob';
 
-export interface GlobOptions extends vanillaGlob_.IOptions {
+export interface GlobOptions extends VanillaGlobOptions {
   includeDirectories?: boolean;
 }
-
-const vanillaGlob = promisify(vanillaGlob_);
 
 export default async function glob(
   pattern: string,
@@ -25,7 +23,7 @@ export default async function glob(
     );
   }
 
-  if (!path.isAbsolute(options.cwd)) {
+  if (!path.isAbsolute(options.cwd.toString())) {
     throw new Error(`basePath/cwd must be an absolute path (${options.cwd})`);
   }
 
@@ -35,8 +33,8 @@ export default async function glob(
 
   const files = await vanillaGlob(pattern, {
     ...options,
-    symlinks,
-    statCache,
+    // symlinks, // TODO: fix
+    // statCache, // TODO: fix
     stat: true,
     dot: true,
   });
@@ -45,7 +43,7 @@ export default async function glob(
   const dirsWithEntries = new Set<string>();
 
   for (const relativePath of files) {
-    const absPath = path.join(options.cwd, relativePath);
+    const absPath = path.join(options.cwd.toString(), relativePath.toString());
     const fsPath = normalizePath(absPath);
 
     let stat = statCache[fsPath];
@@ -64,7 +62,11 @@ export default async function glob(
     ) {
       const target = await readlink(absPath);
       const absTarget = path.resolve(path.dirname(absPath), target);
-      if (path.relative(options.cwd, absTarget).startsWith(`..${path.sep}`)) {
+      if (
+        path
+          .relative(options.cwd.toString(), absTarget)
+          .startsWith(`..${path.sep}`)
+      ) {
         continue;
       }
     }
@@ -75,14 +77,14 @@ export default async function glob(
       }
 
       // Some bookkeeping to track which directories already have entries within
-      const dirname = path.dirname(relativePath);
+      const dirname = path.dirname(relativePath.toString());
       dirsWithEntries.add(dirname);
       if (stat.isDirectory()) {
-        dirs.add(relativePath);
+        dirs.add(relativePath.toString());
         continue;
       }
 
-      let finalPath = relativePath;
+      let finalPath = relativePath.toString();
       if (mountpoint) {
         finalPath = path.join(mountpoint, finalPath);
       }
@@ -101,7 +103,9 @@ export default async function glob(
         finalPath = path.join(mountpoint, finalPath);
       }
 
-      const fsPath = normalizePath(path.join(options.cwd, relativePath));
+      const fsPath = normalizePath(
+        path.join(options.cwd.toString(), relativePath)
+      );
       const stat = statCache[fsPath];
 
       results[finalPath] = new FileFsRef({ mode: stat.mode, fsPath });

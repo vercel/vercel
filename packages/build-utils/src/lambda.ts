@@ -1,7 +1,7 @@
 import assert from 'assert';
 import Sema from 'async-sema';
 import { ZipFile } from 'yazl';
-import minimatch from 'minimatch';
+import { minimatch } from 'minimatch';
 import { readlink } from 'fs-extra';
 import { isSymbolicLink, isDirectory } from './fs/download';
 import streamToBuffer from './fs/stream-to-buffer';
