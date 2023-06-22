@@ -35,7 +35,6 @@ describe.each<[string, Workspace[]]>([
 
   it(testName, async () => {
     const fixture = path.join(__dirname, 'fixtures', fixturePath);
-    console.log(fixture);
     const fs = new LocalFileSystemDetector(fixture);
 
     const actualWorkspaces = await getWorkspaces({ fs });
