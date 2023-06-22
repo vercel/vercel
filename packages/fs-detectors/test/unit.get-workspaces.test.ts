@@ -23,6 +23,7 @@ describe.each<[string, Workspace[]]>([
     ],
   ],
   ['22-pnpm', []],
+  ['35-no-monorepo', []],
 ])('`getWorkspaces()`', (fixturePath, workspaces) => {
   const expectedImplementations = workspaces.map(({ type }) => type);
   const testName =
@@ -34,6 +35,7 @@ describe.each<[string, Workspace[]]>([
 
   it(testName, async () => {
     const fixture = path.join(__dirname, 'fixtures', fixturePath);
+    console.log(fixture);
     const fs = new LocalFileSystemDetector(fixture);
 
     const actualWorkspaces = await getWorkspaces({ fs });
