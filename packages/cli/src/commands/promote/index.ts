@@ -30,6 +30,7 @@ const help = () => {
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
     'TOKEN'
   )}        Login token
+    --force                        Force promote of a preview deployment
     --timeout=${chalk.bold.underline(
       'TIME'
     )}                 Time to wait for promotion completion [3m]
