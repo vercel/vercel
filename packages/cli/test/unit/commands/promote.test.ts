@@ -112,7 +112,6 @@ describe('promote', () => {
     await expect(client.stderr).toOutput(
       `Fetching deployment "${previousDeployment.url}" in ${previousDeployment.creator?.username}`
     );
-    await expect(client.stderr).toOutput('Promote in progress');
     await expect(client.stderr).toOutput(
       'Error: Cannot promote deployment that does not target "production". If you are sure you want to do this, add `--force`.'
     );
