@@ -116,7 +116,7 @@ describe('promote', () => {
       'Error: Cannot promote deployment that does not target "production". If you are sure you want to do this, add `--force`.'
     );
 
-    await expect(exitCodePromise).resolves.toEqual(0);
+    await expect(exitCodePromise).resolves.toEqual(1);
   });
 
   it('should promote a preview deployment with --force', async () => {
