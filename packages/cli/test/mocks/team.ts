@@ -5,9 +5,11 @@ export function useTeams(
   teamId?: string,
   options: {
     failMissingToken?: boolean;
+    failInvalidToken?: boolean;
     failNoAccess?: boolean;
   } = {
     failMissingToken: false,
+    failInvalidToken: false,
     failNoAccess: false,
   }
 ) {
@@ -31,6 +33,15 @@ export function useTeams(
           message: 'The request is missing an authentication token',
           code: 'forbidden',
           missingToken: true,
+        });
+        return;
+      }
+      if (options.failInvalidToken) {
+        res.statusCode = 403;
+        res.json({
+          message: 'Not authorized',
+          code: 'forbidden',
+          invalidToken: true,
         });
         return;
       }
