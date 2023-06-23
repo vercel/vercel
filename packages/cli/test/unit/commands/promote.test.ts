@@ -101,6 +101,46 @@ describe('promote', () => {
     await expect(exitCodePromise).resolves.toEqual(0);
   });
 
+  it('should fail to promote a preview deployment', async () => {
+    const { cwd, previousDeployment } = initPromoteTest({
+      deploymentTarget: 'preview',
+    });
+    client.cwd = cwd;
+    client.setArgv('promote', previousDeployment.url, '--yes');
+    const exitCodePromise = promote(client);
+
+    await expect(client.stderr).toOutput(
+      `Fetching deployment "${previousDeployment.url}" in ${previousDeployment.creator?.username}`
+    );
+    await expect(client.stderr).toOutput('Promote in progress');
+    await expect(client.stderr).toOutput(
+      'Error: Cannot promote deployment that does not target "production". If you are sure you want to do this, add `--force`.'
+    );
+
+    await expect(exitCodePromise).resolves.toEqual(0);
+  });
+
+  it('should promote a preview deployment with --force', async () => {
+    const { cwd, previousDeployment } = initPromoteTest({
+      deploymentTarget: 'preview',
+    });
+    client.cwd = cwd;
+    client.setArgv('promote', previousDeployment.url, '--yes', '--force');
+    const exitCodePromise = promote(client);
+
+    await expect(client.stderr).toOutput(
+      `Fetching deployment "${previousDeployment.url}" in ${previousDeployment.creator?.username}`
+    );
+    await expect(client.stderr).toOutput('Promote in progress');
+    await expect(client.stderr).toOutput(
+      `Success! ${chalk.bold('vercel-promote')} was promoted to ${
+        previousDeployment.url
+      } (${previousDeployment.id})`
+    );
+
+    await expect(exitCodePromise).resolves.toEqual(0);
+  });
+
   it('should get status while promoting', async () => {
     const { cwd, previousDeployment, project } = initPromoteTest({
       promotePollCount: 10,
@@ -278,11 +318,13 @@ function initPromoteTest({
   promoteJobStatus = 'succeeded',
   promotePollCount = 2,
   promoteStatusCode,
+  deploymentTarget,
 }: {
   promoteAliases?: DeploymentAlias[];
   promoteJobStatus?: LastAliasRequest['jobStatus'];
   promotePollCount?: number;
   promoteStatusCode?: number;
+  deploymentTarget?: Deployment['target'];
 } = {}) {
   const cwd = setupUnitFixture('commands/promote/simple-next-site');
   const user = useUser();
@@ -294,7 +336,11 @@ function initPromoteTest({
   });
 
   const currentDeployment = useDeployment({ creator: user, project });
-  const previousDeployment = useDeployment({ creator: user, project });
+  const previousDeployment = useDeployment({
+    creator: user,
+    project,
+    target: deploymentTarget,
+  });
 
   let pollCounter = 0;
   let lastAliasRequest: LastAliasRequest | null = null;

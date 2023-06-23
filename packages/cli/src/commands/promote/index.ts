@@ -60,6 +60,7 @@ export default async (client: Client): Promise<number> => {
   try {
     argv = getArgs(client.argv.slice(2), {
       '--timeout': String,
+      '--force': Boolean,
       '--yes': Boolean,
       '-y': '--yes',
     });
@@ -72,6 +73,8 @@ export default async (client: Client): Promise<number> => {
     help();
     return 2;
   }
+
+  const force = argv['--force'] ?? false;
 
   // validate the timeout
   let timeout = argv['--timeout'];
@@ -103,6 +106,7 @@ export default async (client: Client): Promise<number> => {
       client,
       deployId: actionOrDeployId,
       timeout,
+      force,
     });
   } catch (err) {
     if (isErrnoException(err)) {

@@ -16,10 +16,12 @@ export default async function requestPromote({
   client,
   deployId,
   timeout,
+  force,
 }: {
   client: Client;
   deployId: string;
   timeout?: string;
+  force: boolean;
 }): Promise<number> {
   const { output } = client;
 
@@ -28,6 +30,13 @@ export default async function requestPromote({
     deployId,
     output: client.output,
   });
+
+  if (deployment.target !== 'production' && !force) {
+    output.error(
+      'Cannot promote deployment that does not target "production". If you are sure you want to do this, add `--force`.'
+    );
+    return 1;
+  }
 
   // request the promotion
   await client.fetch(`/v9/projects/${project.id}/promote/${deployment.id}`, {

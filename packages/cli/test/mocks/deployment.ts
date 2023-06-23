@@ -18,6 +18,7 @@ export function useDeployment({
   state = 'READY',
   createdAt,
   project = defaultProject,
+  target = 'production',
 }: {
   creator: Pick<User, 'id' | 'email' | 'name' | 'username'>;
   state?:
@@ -29,6 +30,7 @@ export function useDeployment({
     | 'CANCELED';
   createdAt?: number;
   project: any; // FIX ME: Use `Project` once PR #9956 is merged
+  target?: Deployment['target'];
 }) {
   setupDeploymentEndpoints();
 
@@ -63,7 +65,7 @@ export function useDeployment({
     regions: [],
     routes: [],
     status: state,
-    target: 'production',
+    target,
     type: 'LAMBDAS',
     url: url.hostname,
     version: 2,
