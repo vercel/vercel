@@ -1,6 +1,9 @@
 import path from 'path';
-import { packageManagers, detectFramework } from '../src';
-import { FixtureFilesystem } from './utils/fixture-filesystem';
+import {
+  packageManagers,
+  detectFramework,
+  LocalFileSystemDetector,
+} from '../src';
 
 describe('package-managers', () => {
   describe.each([
@@ -16,7 +19,7 @@ describe('package-managers', () => {
 
     it(testName, async () => {
       const fixture = path.join(__dirname, 'fixtures', fixturePath);
-      const fs = new FixtureFilesystem(fixture);
+      const fs = new LocalFileSystemDetector(fixture);
 
       const result = await detectFramework({
         fs,

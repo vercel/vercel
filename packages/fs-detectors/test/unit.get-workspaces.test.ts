@@ -1,6 +1,6 @@
 import path from 'path';
+import { LocalFileSystemDetector } from '../src';
 import { getWorkspaces, Workspace } from '../src/workspaces/get-workspaces';
-import { FixtureFilesystem } from './utils/fixture-filesystem';
 
 describe.each<[string, Workspace[]]>([
   ['21-npm-workspaces', [{ type: 'npm', rootPath: '/' }]],
@@ -23,6 +23,7 @@ describe.each<[string, Workspace[]]>([
     ],
   ],
   ['22-pnpm', []],
+  ['35-no-monorepo', []],
 ])('`getWorkspaces()`', (fixturePath, workspaces) => {
   const expectedImplementations = workspaces.map(({ type }) => type);
   const testName =
@@ -34,7 +35,7 @@ describe.each<[string, Workspace[]]>([
 
   it(testName, async () => {
     const fixture = path.join(__dirname, 'fixtures', fixturePath);
-    const fs = new FixtureFilesystem(fixture);
+    const fs = new LocalFileSystemDetector(fixture);
 
     const actualWorkspaces = await getWorkspaces({ fs });
 

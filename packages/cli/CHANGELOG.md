@@ -1,5 +1,34 @@
 # vercel
 
+## 30.2.3
+
+### Patch Changes
+
+- [cli] do not force auto-assign value on deployments ([#10110](https://github.com/vercel/vercel/pull/10110))
+
+- Updated dependencies [[`91406abdb`](https://github.com/vercel/vercel/commit/91406abdb0c332152fc6c7c1e4bd3a872b084434), [`2230ea6cc`](https://github.com/vercel/vercel/commit/2230ea6cc1b84c1f03227a4e197b7684635b5955), [`8b3a4146a`](https://github.com/vercel/vercel/commit/8b3a4146af68d2b7288c80a5b919d832dba929b5)]:
+  - @vercel/node@2.15.2
+  - @vercel/remix-builder@1.8.14
+  - @vercel/static-build@1.3.37
+
+## 30.2.2
+
+### Patch Changes
+
+- [cli] vc env pull should add `.env*.local` to `.gitignore` ([#10085](https://github.com/vercel/vercel/pull/10085))
+
+- [cli] Fix team validation bug where you are apart of a team ([#10092](https://github.com/vercel/vercel/pull/10092))
+
+- Add support for `vc dev` command with repo link ([#10082](https://github.com/vercel/vercel/pull/10082))
+
+- Add support for `vc deploy --prebuilt` command with repo link ([#10083](https://github.com/vercel/vercel/pull/10083))
+
+- Move readme copy logic to a helper function for `vc link` ([#10084](https://github.com/vercel/vercel/pull/10084))
+
+- Add support for `vc pull` command with repo link ([#10078](https://github.com/vercel/vercel/pull/10078))
+
+- Add support for `vc build` command with repo link ([#10075](https://github.com/vercel/vercel/pull/10075))
+
 ## 30.2.1
 
 ### Patch Changes

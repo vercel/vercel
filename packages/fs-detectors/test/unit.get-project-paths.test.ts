@@ -1,7 +1,7 @@
 import path from 'path';
 import { normalizePath } from '@vercel/build-utils';
 import { getProjectPaths, ProjectPath } from '../src/get-project-paths';
-import { FixtureFilesystem } from './utils/fixture-filesystem';
+import { LocalFileSystemDetector } from '../src';
 
 describe.each<{
   fixturePath: string;
@@ -52,7 +52,7 @@ describe.each<{
 
     it(testName, async () => {
       const fixture = path.join(__dirname, 'fixtures', fixturePath);
-      const fs = new FixtureFilesystem(fixture);
+      const fs = new LocalFileSystemDetector(fixture);
       const mockReaddir = jest.fn().mockImplementation(fs.readdir);
       const mockHasPath = jest.fn().mockImplementation(fs.hasPath);
       fs.readdir = mockReaddir;
