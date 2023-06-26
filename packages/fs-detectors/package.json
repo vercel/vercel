@@ -1,6 +1,6 @@
 {
   "name": "@vercel/fs-detectors",
-  "version": "3.9.3",
+  "version": "4.0.0",
   "description": "Vercel filesystem detectors",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -16,7 +16,8 @@
   "scripts": {
     "build": "tsc",
     "test": "jest --env node --verbose --runInBand --bail",
-    "test-unit": "pnpm test test/unit.*test.*"
+    "test-unit": "pnpm test test/unit.*test.*",
+    "test-e2e": "pnpm test test/integration.test.ts"
   },
   "dependencies": {
     "@vercel/error-utils": "1.0.10",

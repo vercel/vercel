@@ -160,7 +160,8 @@ const deployCommand: Command = {
       shorthand: null,
       type: 'string',
       deprecated: false,
-      description: 'Compress the deployment code into a file before uploading it',
+      description:
+        'Compress the deployment code into a file before uploading it',
       multi: false,
     },
     {
@@ -687,7 +688,8 @@ export default async (client: Client): Promise<number> => {
   }
 
   try {
-    const autoAssignCustomDomains = !argv['--skip-domain'];
+    // if this flag is not set, use `undefined` to allow the project setting to be used
+    const autoAssignCustomDomains = argv['--skip-domain'] ? false : undefined;
 
     const createArgs: CreateOptions = {
       name,

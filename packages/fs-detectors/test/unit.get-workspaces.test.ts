@@ -23,6 +23,7 @@ describe.each<[string, Workspace[]]>([
     ],
   ],
   ['22-pnpm', []],
+  ['35-no-monorepo', []],
 ])('`getWorkspaces()`', (fixturePath, workspaces) => {
   const expectedImplementations = workspaces.map(({ type }) => type);
   const testName =
