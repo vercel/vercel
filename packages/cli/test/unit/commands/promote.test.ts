@@ -119,11 +119,9 @@ describe('promote', () => {
     // say "no" to the prompt
     client.stdin.write('n\n');
 
-    await expect(client.stderr).toOutput(
-      'User declined to promote a deployment that did not target production.'
-    );
+    await expect(client.stderr).toOutput('Error: Canceled');
 
-    await expect(exitCodePromise).resolves.toEqual(1);
+    await expect(exitCodePromise).resolves.toEqual(0);
   });
 
   it('should promote a preview deployment when user says yes', async () => {
