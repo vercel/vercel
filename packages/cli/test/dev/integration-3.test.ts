@@ -233,7 +233,7 @@ test(
         expect(res.headers.get('location')).toBe(
           `http://localhost:${port}/?foo=bar`
         );
-        expect(body).toBe('Redirecting to /?foo=bar (301)\n');
+        expect(body).toBe('Redirecting...\n');
       }
 
       {

@@ -197,21 +197,18 @@ test(
     await testPath(200, '/sub', 'Sub Index Page');
     await testPath(200, '/sub/another', 'Sub Another Page');
     await testPath(200, '/style.css', 'body { color: green }');
-    await testPath(308, '/index.html', 'Redirecting to / (308)', {
+    await testPath(308, '/index.html', 'Redirecting...', {
       Location: '/',
     });
-    await testPath(308, '/about.html', 'Redirecting to /about (308)', {
+    await testPath(308, '/about.html', 'Redirecting...', {
       Location: '/about',
     });
-    await testPath(308, '/sub/index.html', 'Redirecting to /sub (308)', {
+    await testPath(308, '/sub/index.html', 'Redirecting...', {
       Location: '/sub',
     });
-    await testPath(
-      308,
-      '/sub/another.html',
-      'Redirecting to /sub/another (308)',
-      { Location: '/sub/another' }
-    );
+    await testPath(308, '/sub/another.html', 'Redirecting...', {
+      Location: '/sub/another',
+    });
   })
 );
 
@@ -225,21 +222,18 @@ test(
       await testPath(200, '/sub', 'Sub Index Page');
       await testPath(200, '/sub/another', 'Sub Another Page');
       await testPath(200, '/style.css', 'body { color: green }');
-      await testPath(308, '/index.html', 'Redirecting to / (308)', {
+      await testPath(308, '/index.html', 'Redirecting...', {
         Location: '/',
       });
-      await testPath(308, '/about.html', 'Redirecting to /about (308)', {
+      await testPath(308, '/about.html', 'Redirecting...', {
         Location: '/about',
       });
-      await testPath(308, '/sub/index.html', 'Redirecting to /sub (308)', {
+      await testPath(308, '/sub/index.html', 'Redirecting...', {
         Location: '/sub',
       });
-      await testPath(
-        308,
-        '/sub/another.html',
-        'Redirecting to /sub/another (308)',
-        { Location: '/sub/another' }
-      );
+      await testPath(308, '/sub/another.html', 'Redirecting...', {
+        Location: '/sub/another',
+      });
     }
   )
 );
@@ -264,21 +258,16 @@ test(
     await testPath(200, '/sub/another/', 'Sub Another Page');
     await testPath(200, '/style.css', 'body { color: green }');
     //TODO: fix this test so that location is `/` instead of `//`
-    //await testPath(308, '/index.html', 'Redirecting to / (308)', { Location: '/' });
-    await testPath(308, '/about.html', 'Redirecting to /about/ (308)', {
+    //await testPath(308, '/index.html', 'Redirecting...', { Location: '/' });
+    await testPath(308, '/about.html', 'Redirecting...', {
       Location: '/about/',
     });
-    await testPath(308, '/sub/index.html', 'Redirecting to /sub/ (308)', {
+    await testPath(308, '/sub/index.html', 'Redirecting...', {
       Location: '/sub/',
     });
-    await testPath(
-      308,
-      '/sub/another.html',
-      'Redirecting to /sub/another/ (308)',
-      {
-        Location: '/sub/another/',
-      }
-    );
+    await testPath(308, '/sub/another.html', 'Redirecting...', {
+      Location: '/sub/another/',
+    });
   })
 );
 
@@ -315,13 +304,13 @@ test(
     await testPath(200, '/sub/index.html', 'Sub Index Page');
     await testPath(200, '/sub/another.html', 'Sub Another Page');
     await testPath(200, '/style.css', 'body { color: green }');
-    await testPath(308, '/about.html/', 'Redirecting to /about.html (308)', {
+    await testPath(308, '/about.html/', 'Redirecting...', {
       Location: '/about.html',
     });
-    await testPath(308, '/style.css/', 'Redirecting to /style.css (308)', {
+    await testPath(308, '/style.css/', 'Redirecting...', {
       Location: '/style.css',
     });
-    await testPath(308, '/sub', 'Redirecting to /sub/ (308)', {
+    await testPath(308, '/sub', 'Redirecting...', {
       Location: '/sub/',
     });
   })
@@ -347,20 +336,15 @@ test(
     await testPath(200, '/sub/index.html', 'Sub Index Page');
     await testPath(200, '/sub/another.html', 'Sub Another Page');
     await testPath(200, '/style.css', 'body { color: green }');
-    await testPath(308, '/about.html/', 'Redirecting to /about.html (308)', {
+    await testPath(308, '/about.html/', 'Redirecting...', {
       Location: '/about.html',
     });
-    await testPath(308, '/sub/', 'Redirecting to /sub (308)', {
+    await testPath(308, '/sub/', 'Redirecting...', {
       Location: '/sub',
     });
-    await testPath(
-      308,
-      '/sub/another.html/',
-      'Redirecting to /sub/another.html (308)',
-      {
-        Location: '/sub/another.html',
-      }
-    );
+    await testPath(308, '/sub/another.html/', 'Redirecting...', {
+      Location: '/sub/another.html',
+    });
   })
 );
 

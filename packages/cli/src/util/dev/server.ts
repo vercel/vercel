@@ -1131,7 +1131,7 @@ export default class DevServer {
       body = redirectTemplate({ location, statusCode });
     } else {
       res.setHeader('content-type', 'text/plain; charset=utf-8');
-      body = `Redirecting to ${location} (${statusCode})\n`;
+      body = `Redirecting...\n`;
     }
     res.end(body);
   }
