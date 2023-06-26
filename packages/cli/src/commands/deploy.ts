@@ -160,7 +160,7 @@ const deployCommand: Command = {
       shorthand: null,
       type: 'string',
       deprecated: false,
-      description: 'TODO: Description for --archive',
+      description: 'Compress the deployment code into a file before uploading it',
       multi: false,
     },
     {
