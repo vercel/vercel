@@ -12,7 +12,7 @@ export interface CommandOption {
   type: 'boolean' | 'string';
   argument?: string;
   deprecated: boolean;
-  description: string;
+  description?: string;
   multi: boolean;
 }
 export interface CommandArgument {
@@ -76,8 +76,8 @@ function buildCommandSynopsisLine(command: Command) {
 }
 
 function buildCommandOptionLines(command: Command) {
-  // Filter out deprecated options.
-  command.options = command.options.filter(option => !option.deprecated);
+  // Filter out deprecated and intentionally undocumented options
+  command.options = command.options.filter(option => !option.deprecated && !option.description);
 
   // Initialize output array with header and empty line
   const outputArray: string[] = [chalk.dim(`Options:`), ''];
@@ -102,8 +102,7 @@ function buildCommandOptionLines(command: Command) {
     }
     // the length includes the INDENT
     const lineLength = calcLineLength(startLine);
-    maxLineStartLength =
-      lineLength > maxLineStartLength ? lineLength : maxLineStartLength;
+    maxLineStartLength = Math.max(lineLength, maxLineStartLength);
     optionLines.push(startLine);
   }
   /*

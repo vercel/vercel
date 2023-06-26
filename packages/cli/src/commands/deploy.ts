@@ -176,7 +176,7 @@ const deployCommand: Command = {
       shorthand: null,
       type: 'boolean',
       deprecated: false,
-      description: 'TODO: Description for --skip-domain',
+      description: undefined,
       multi: false,
     },
     {
@@ -184,7 +184,7 @@ const deployCommand: Command = {
       shorthand: 'y',
       type: 'boolean',
       deprecated: false,
-      description: 'TODO: Description for --yes',
+      description: 'Use default options to skip all prompts',
       multi: false,
     },
     {
@@ -192,7 +192,7 @@ const deployCommand: Command = {
       shorthand: 'n',
       type: 'string',
       deprecated: true,
-      description: 'TODO: Description for --name',
+      description: 'provide a Vercel Project name',
       multi: false,
     },
     {
@@ -200,7 +200,7 @@ const deployCommand: Command = {
       shorthand: null,
       type: 'boolean',
       deprecated: true,
-      description: 'TODO: Description for --no-clipboard',
+      description: 'Do not copy deployment URL to clipboard',
       multi: false,
     },
     {
@@ -208,7 +208,7 @@ const deployCommand: Command = {
       shorthand: null,
       type: 'string',
       deprecated: true,
-      description: 'TODO: Description for --target',
+      description: 'Specify the target deployment environment',
       multi: false,
     },
     {
@@ -216,7 +216,7 @@ const deployCommand: Command = {
       shorthand: 'c',
       type: 'boolean',
       deprecated: true,
-      description: 'TODO: Description for --confirm',
+      description: 'Use default options to skip all prompts',
       multi: false,
     },
   ],
