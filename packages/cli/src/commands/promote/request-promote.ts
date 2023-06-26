@@ -35,12 +35,10 @@ export default async function requestPromote({
   if (deployment.target !== 'production' && !yes) {
     const question =
       'This deployment does not target production, therefore promotion will not apply production environment variables. Are you sure you want to continue?';
-    const answer = await confirm(client, question, true);
+    const answer = await confirm(client, question, false);
     if (!answer) {
-      output.error(
-        'User declined to promote a deployment that did not target production.'
-      );
-      return 1;
+      output.error('Canceled');
+      return 0;
     }
   }
 
