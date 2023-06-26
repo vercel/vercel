@@ -119,6 +119,10 @@ describe('promote', () => {
     // say "no" to the prompt
     client.stdin.write('n\n');
 
+    await expect(client.stderr).toOutput(
+      'User declined to promote a deployment that did not target production.'
+    );
+
     await expect(exitCodePromise).resolves.toEqual(1);
   });
 
