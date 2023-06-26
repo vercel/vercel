@@ -4,6 +4,7 @@ import { getCommandName } from '../../util/pkg-name';
 import getProjectByDeployment from '../../util/projects/get-project-by-deployment';
 import ms from 'ms';
 import promoteStatus from './status';
+import confirm from '../../util/input/confirm';
 
 /**
  * Requests a promotion and waits for it complete.
@@ -16,12 +17,12 @@ export default async function requestPromote({
   client,
   deployId,
   timeout,
-  force,
+  yes,
 }: {
   client: Client;
   deployId: string;
   timeout?: string;
-  force: boolean;
+  yes: boolean;
 }): Promise<number> {
   const { output } = client;
 
@@ -31,11 +32,16 @@ export default async function requestPromote({
     output: client.output,
   });
 
-  if (deployment.target !== 'production' && !force) {
-    output.error(
-      'Cannot promote deployment that does not target "production". If you are sure you want to do this, add `--force`.'
-    );
-    return 1;
+  if (deployment.target !== 'production' && !yes) {
+    const question =
+      'This deployment does not target production, therefore promotion will not apply production environment variables. Are you sure you want to continue?';
+    const answer = await confirm(client, question, true);
+    if (!answer) {
+      output.error(
+        'User declined to promote a deployment that did not target production.'
+      );
+      return 1;
+    }
   }
 
   // request the promotion

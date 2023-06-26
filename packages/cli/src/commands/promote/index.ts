@@ -30,7 +30,6 @@ const help = () => {
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
     'TOKEN'
   )}        Login token
-    --force                        Force promote of a preview deployment
     --timeout=${chalk.bold.underline(
       'TIME'
     )}                 Time to wait for promotion completion [3m]
@@ -61,7 +60,6 @@ export default async (client: Client): Promise<number> => {
   try {
     argv = getArgs(client.argv.slice(2), {
       '--timeout': String,
-      '--force': Boolean,
       '--yes': Boolean,
       '-y': '--yes',
     });
@@ -75,7 +73,7 @@ export default async (client: Client): Promise<number> => {
     return 2;
   }
 
-  const force = argv['--force'] ?? false;
+  const yes = argv['--yes'] ?? false;
 
   // validate the timeout
   let timeout = argv['--timeout'];
@@ -107,7 +105,7 @@ export default async (client: Client): Promise<number> => {
       client,
       deployId: actionOrDeployId,
       timeout,
-      force,
+      yes,
     });
   } catch (err) {
     if (isErrnoException(err)) {

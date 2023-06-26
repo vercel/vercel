@@ -101,30 +101,54 @@ describe('promote', () => {
     await expect(exitCodePromise).resolves.toEqual(0);
   });
 
-  it('should fail to promote a preview deployment', async () => {
+  it('should fail to promote a preview deployment when user says no', async () => {
     const { cwd, previousDeployment } = initPromoteTest({
       deploymentTarget: 'preview',
     });
     client.cwd = cwd;
-    client.setArgv('promote', previousDeployment.url, '--yes');
+    client.setArgv('promote', previousDeployment.url);
     const exitCodePromise = promote(client);
 
     await expect(client.stderr).toOutput(
       `Fetching deployment "${previousDeployment.url}" in ${previousDeployment.creator?.username}`
     );
     await expect(client.stderr).toOutput(
-      'Error: Cannot promote deployment that does not target "production". If you are sure you want to do this, add `--force`.'
+      '? This deployment does not target production, therefore promotion will not apply\n production environment variables. Are you sure you want to continue?'
     );
+
+    // say "no" to the prompt
+    client.stdin.write('n\n');
 
     await expect(exitCodePromise).resolves.toEqual(1);
   });
 
-  it('should promote a preview deployment with --force', async () => {
+  it('should promote a preview deployment when user says yes', async () => {
     const { cwd, previousDeployment } = initPromoteTest({
       deploymentTarget: 'preview',
     });
     client.cwd = cwd;
-    client.setArgv('promote', previousDeployment.url, '--yes', '--force');
+    client.setArgv('promote', previousDeployment.url);
+    const exitCodePromise = promote(client);
+
+    await expect(client.stderr).toOutput(
+      `Fetching deployment "${previousDeployment.url}" in ${previousDeployment.creator?.username}`
+    );
+    await expect(client.stderr).toOutput(
+      '? This deployment does not target production, therefore promotion will not apply\n production environment variables. Are you sure you want to continue?'
+    );
+
+    // say "yes" to the prompt
+    client.stdin.write('y\n');
+
+    await expect(exitCodePromise).resolves.toEqual(0);
+  });
+
+  it('should promote a preview deployment with --yes', async () => {
+    const { cwd, previousDeployment } = initPromoteTest({
+      deploymentTarget: 'preview',
+    });
+    client.cwd = cwd;
+    client.setArgv('promote', previousDeployment.url, '--yes');
     const exitCodePromise = promote(client);
 
     await expect(client.stderr).toOutput(
