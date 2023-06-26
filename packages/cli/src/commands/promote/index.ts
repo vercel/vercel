@@ -73,6 +73,8 @@ export default async (client: Client): Promise<number> => {
     return 2;
   }
 
+  const yes = argv['--yes'] ?? false;
+
   // validate the timeout
   let timeout = argv['--timeout'];
   if (timeout && ms(timeout) === undefined) {
@@ -103,6 +105,7 @@ export default async (client: Client): Promise<number> => {
       client,
       deployId: actionOrDeployId,
       timeout,
+      yes,
     });
   } catch (err) {
     if (isErrnoException(err)) {
