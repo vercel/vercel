@@ -1092,7 +1092,7 @@ export const build: BuildV2 = async ({
           operationType: 'Page', // always Page because we're in legacy mode
           shouldAddHelpers: false,
           shouldAddSourcemapSupport: false,
-          supportsMultiPayloads: !!process.env.NEXT_PRIVATE_MULTI_PAYLOAD,
+          supportsMultiPayloads: true,
           framework: {
             slug: 'nextjs',
             version: nextVersion,
