@@ -433,7 +433,7 @@ export const build: BuildV2 = async ({
     // Add `node_modules/.bin` to PATH
     const nodeBinPaths = getNodeBinPaths({
       start: entryPath,
-      root: repoRootPath,
+      base: repoRootPath,
     });
     const nodeBinPath = nodeBinPaths.join(path.delimiter);
     env.PATH = `${nodeBinPath}${path.delimiter}${env.PATH}`;

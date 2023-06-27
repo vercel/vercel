@@ -522,7 +522,7 @@ export const build: BuildV2 = async ({
     if (isNpmInstall || (pkg && (buildCommand || devCommand))) {
       const nodeBinPaths = getNodeBinPaths({
         start: entrypointDir,
-        root: repoRootPath,
+        base: repoRootPath,
       });
       pathList.push(...nodeBinPaths); // Add `./node_modules/.bin`
       debug(

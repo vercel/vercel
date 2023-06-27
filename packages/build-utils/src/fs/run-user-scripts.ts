@@ -44,21 +44,31 @@ export interface ScanParentDirsResult {
   lockfileVersion?: number;
 }
 
-export interface WalkParentDirsProps {
+export interface TraverseUpDirectoriesProps {
   /**
-   * The highest directory, typically the workPath root of the project.
-   * If this directory is reached and it doesn't contain the file, null is returned.
-   */
-  base: string;
-  /**
-   * The directory to start searching, typically the same directory of the entrypoint.
-   * If this directory doesn't contain the file, the parent is checked, etc.
+   * The directory to start iterating from, typically the same directory of the entrypoint.
    */
   start: string;
+  /**
+   * The highest directory, typically the workPath root of the project.
+   */
+  base?: string;
+}
+
+export interface WalkParentDirsProps
+  extends Required<TraverseUpDirectoriesProps> {
   /**
    * The name of the file to search for, typically `package.json` or `Gemfile`.
    */
   filename: string;
+}
+
+export interface WalkParentDirsMultiProps
+  extends Required<TraverseUpDirectoriesProps> {
+  /**
+   * The name of the file to search for, typically `package.json` or `Gemfile`.
+   */
+  filenames: string[];
 }
 
 export interface SpawnOptionsExtended extends SpawnOptions {
@@ -131,9 +141,12 @@ export async function execCommand(command: string, options: SpawnOptions = {}) {
   return true;
 }
 
-export function* traverseUpDirectories(start: string, root?: string) {
+export function* traverseUpDirectories({
+  start,
+  base,
+}: TraverseUpDirectoriesProps) {
   let current: string | undefined = path.normalize(start);
-  const normalizedRoot = root ? path.normalize(root) : undefined;
+  const normalizedRoot = base ? path.normalize(base) : undefined;
   while (current) {
     yield current;
     if (current === normalizedRoot) break;
@@ -158,12 +171,12 @@ export async function getNodeBinPath({
 
 export function getNodeBinPaths({
   start,
-  root,
+  base,
 }: {
   start: string;
-  root: string;
+  base: string;
 }): string[] {
-  return Array.from(traverseUpDirectories(start, root)).map(dir =>
+  return Array.from(traverseUpDirectories({ start, base })).map(dir =>
     path.join(dir, 'node_modules/.bin')
   );
 }
@@ -325,7 +338,7 @@ export async function walkParentDirs({
   assert(path.isAbsolute(base), 'Expected "base" to be absolute path');
   assert(path.isAbsolute(start), 'Expected "start" to be absolute path');
 
-  for (const dir of traverseUpDirectories(start, base)) {
+  for (const dir of traverseUpDirectories({ start, base })) {
     const fullPath = path.join(dir, filename);
 
     // eslint-disable-next-line no-await-in-loop
@@ -341,12 +354,8 @@ async function walkParentDirsMulti({
   base,
   start,
   filenames,
-}: {
-  base: string;
-  start: string;
-  filenames: string[];
-}): Promise<(string | undefined)[]> {
-  for (const dir of traverseUpDirectories(start, base)) {
+}: WalkParentDirsMultiProps): Promise<(string | undefined)[]> {
+  for (const dir of traverseUpDirectories({ start, base })) {
     const fullPaths = filenames.map(f => path.join(dir, f));
     const existResults = await Promise.all(
       fullPaths.map(f => fs.pathExists(f))

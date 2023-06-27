@@ -229,7 +229,7 @@ export async function findRepoRoot(
   const REPO_JSON_PATH = join(VERCEL_DIR, VERCEL_DIR_REPO);
   const GIT_CONFIG_PATH = normalize('.git/config');
 
-  for (const current of traverseUpDirectories(start)) {
+  for (const current of traverseUpDirectories({ start })) {
     if (current === home) {
       // Sometimes the $HOME directory is set up as a Git repo
       // (for dotfiles, etc.). In this case it's safe to say that

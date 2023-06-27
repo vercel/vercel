@@ -16,7 +16,7 @@ describe('traverseUpDirectories()', () => {
           },
           {
             start: 'C:\\foo\\bar\\baz\\another',
-            root: 'C:\\foo\\bar',
+            base: 'C:\\foo\\bar',
             expected: [
               'C:\\foo\\bar\\baz\\another',
               'C:\\foo\\bar\\baz',
@@ -35,14 +35,16 @@ describe('traverseUpDirectories()', () => {
           },
           {
             start: '/foo/bar/baz/another',
-            root: '/foo/bar',
+            base: '/foo/bar',
             expected: ['/foo/bar/baz/another', '/foo/bar/baz', '/foo/bar'],
           },
         ]
   )(
-    'should traverse start="$start", root="$root"',
-    ({ start, root, expected }) => {
-      expect(Array.from(traverseUpDirectories(start, root))).toEqual(expected);
+    'should traverse start="$start", base="$base"',
+    ({ start, base, expected }) => {
+      expect(Array.from(traverseUpDirectories({ start, base }))).toEqual(
+        expected
+      );
     }
   );
 });
