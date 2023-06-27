@@ -131,6 +131,21 @@ export async function execCommand(command: string, options: SpawnOptions = {}) {
   return true;
 }
 
+export function* traverseUpDirectories(start: string, root?: string) {
+  let current: string | undefined = path.normalize(start);
+  const normalizedRoot = root ? path.normalize(root) : undefined;
+  while (current) {
+    yield current;
+    if (current === normalizedRoot) break;
+    // Go up one directory
+    const next = path.join(current, '..');
+    current = next === current ? undefined : next;
+  }
+}
+
+/**
+ * @deprecated Use `getNodeBinPaths()` instead.
+ */
 export async function getNodeBinPath({
   cwd,
 }: {
@@ -139,6 +154,18 @@ export async function getNodeBinPath({
   const { lockfilePath } = await scanParentDirs(cwd);
   const dir = path.dirname(lockfilePath || cwd);
   return path.join(dir, 'node_modules', '.bin');
+}
+
+export function getNodeBinPaths({
+  start,
+  root,
+}: {
+  start: string;
+  root: string;
+}): string[] {
+  return Array.from(traverseUpDirectories(start, root)).map(dir =>
+    path.join(dir, 'node_modules/.bin')
+  );
 }
 
 async function chmodPlusX(fsPath: string) {
@@ -297,21 +324,13 @@ export async function walkParentDirs({
 }: WalkParentDirsProps): Promise<string | null> {
   assert(path.isAbsolute(base), 'Expected "base" to be absolute path');
   assert(path.isAbsolute(start), 'Expected "start" to be absolute path');
-  let parent = '';
 
-  for (let current = start; base.length <= current.length; current = parent) {
-    const fullPath = path.join(current, filename);
+  for (const dir of traverseUpDirectories(start, base)) {
+    const fullPath = path.join(dir, filename);
 
     // eslint-disable-next-line no-await-in-loop
     if (await fs.pathExists(fullPath)) {
       return fullPath;
-    }
-
-    parent = path.dirname(current);
-
-    if (parent === current) {
-      // Reached root directory of the filesystem
-      break;
     }
   }
 
@@ -327,9 +346,8 @@ async function walkParentDirsMulti({
   start: string;
   filenames: string[];
 }): Promise<(string | undefined)[]> {
-  let parent = '';
-  for (let current = start; base.length <= current.length; current = parent) {
-    const fullPaths = filenames.map(f => path.join(current, f));
+  for (const dir of traverseUpDirectories(start, base)) {
+    const fullPaths = filenames.map(f => path.join(dir, f));
     const existResults = await Promise.all(
       fullPaths.map(f => fs.pathExists(f))
     );
@@ -337,13 +355,6 @@ async function walkParentDirsMulti({
 
     if (foundOneOrMore) {
       return fullPaths.map((f, i) => (existResults[i] ? f : undefined));
-    }
-
-    parent = path.dirname(current);
-
-    if (parent === current) {
-      // Reached root directory of the filesystem
-      break;
     }
   }
 

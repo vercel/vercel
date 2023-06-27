@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import pluralize from 'pluralize';
 import { homedir } from 'os';
 import { join, normalize } from 'path';
-import { normalizePath } from '@vercel/build-utils';
+import { normalizePath, traverseUpDirectories } from '@vercel/build-utils';
 import { lstat, readJSON, outputJSON } from 'fs-extra';
 import confirm from '../input/confirm';
 import toHumanPath from '../humanize-path';
@@ -262,16 +262,6 @@ export async function findRepoRoot(
   }
 
   debug('Aborting search for repo root');
-}
-
-export function* traverseUpDirectories(start: string) {
-  let current: string | undefined = normalize(start);
-  while (current) {
-    yield current;
-    // Go up one directory
-    const next = join(current, '..');
-    current = next === current ? undefined : next;
-  }
 }
 
 function sortByDirectory(a: RepoProjectConfig, b: RepoProjectConfig): number {
