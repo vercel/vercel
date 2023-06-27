@@ -172,10 +172,7 @@ export async function getNodeBinPath({
 export function getNodeBinPaths({
   start,
   base,
-}: {
-  start: string;
-  base: string;
-}): string[] {
+}: TraverseUpDirectoriesProps): string[] {
   return Array.from(traverseUpDirectories({ start, base })).map(dir =>
     path.join(dir, 'node_modules/.bin')
   );
