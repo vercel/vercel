@@ -77,7 +77,7 @@ export default async (client: Client): Promise<number> => {
   let argv = null;
 
   const argOptions: {
-    [k in string]:
+    [k: string]:
       | BooleanConstructor
       | StringConstructor
       | string

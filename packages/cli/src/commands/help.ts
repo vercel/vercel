@@ -4,7 +4,6 @@ import { LOGO, NAME } from '@vercel-internals/constants';
 
 const INDENT = ' '.repeat(2);
 const NEWLINE = '\n';
-const MAX_LINE_LENGTH = process.stdout.columns;
 
 export interface CommandOption {
   name: string;
@@ -76,6 +75,7 @@ export function buildCommandSynopsisLine(command: Command) {
 }
 
 export function buildCommandOptionLines(command: Command) {
+  const MAX_LINE_LENGTH = process.stdout.columns;
   // Filter out deprecated and intentionally undocumented options
   command.options = command.options.filter(
     option => !option.deprecated && option.description !== undefined
