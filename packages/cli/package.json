@@ -11,7 +11,6 @@
     "directory": "packages/cli"
   },
   "scripts": {
-    "preinstall": "node ./scripts/preinstall.js",
     "test": "jest --env node --verbose --bail",
     "test-unit": "pnpm test test/unit/",
     "test-e2e": "rimraf test/fixtures/integration && pnpm test test/integration-1.test.ts test/integration-2.test.ts test/integration-3.test.ts",
