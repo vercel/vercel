@@ -409,7 +409,10 @@ async function nowDeployIndexTgz(file) {
   return (await nowDeploy('pack-n-deploy', bodies)).deploymentUrl;
 }
 
-async function fetchDeploymentUrl(url, opts) {
+async function fetchDeploymentUrl(url, opts = {}) {
+  // force modern router
+  opts.headers = opts.headers || {};
+  opts.headers['x-vercel-debug-router-implementation'] = 'modern';
   for (let i = 0; i < 50; i += 1) {
     const resp = await fetch(url, opts);
     const text = await resp.text();
