@@ -1,6 +1,6 @@
 {
   "name": "vercel",
-  "version": "31.0.0",
+  "version": "31.0.1",
   "preferGlobal": true,
   "license": "Apache-2.0",
   "description": "The command-line interface for Vercel",
@@ -35,7 +35,7 @@
     "@vercel/build-utils": "6.8.0",
     "@vercel/go": "2.5.1",
     "@vercel/hydrogen": "0.0.64",
-    "@vercel/next": "3.8.7",
+    "@vercel/next": "3.8.8",
     "@vercel/node": "2.15.3",
     "@vercel/python": "3.1.60",
     "@vercel/redwood": "1.1.15",
