@@ -37,6 +37,9 @@ function execa(...args) {
 }
 
 function fetchWithRetry(url, opts = {}) {
+  // force modern router
+  opts.headers = opts.headers || {};
+  opts.headers['x-vercel-debug-router-implementation'] = 'modern';
   return retry(
     async () => {
       const res = await fetch(url, opts);
