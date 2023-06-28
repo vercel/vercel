@@ -10,14 +10,20 @@ import {
 export async function detectProjects(cwd: string) {
   const fs = new LocalFileSystemDetector(cwd);
   const workspaces = await getWorkspaces({ fs });
-  console.log({ workspaces });
   const detectedProjects = new Map<string, string>();
-  if (workspaces.length === 0) detectedProjects;
-  // TODO: get package paths for all workspaces
-  const packagePaths = await getWorkspacePackagePaths({
-    fs,
-    workspace: workspaces[0],
-  });
+  const packagePaths = (
+    await Promise.all(
+      workspaces.map(workspace =>
+        getWorkspacePackagePaths({
+          fs,
+          workspace,
+        })
+      )
+    )
+  ).flat();
+  if (packagePaths.length === 0) {
+    packagePaths.push('/');
+  }
   await Promise.all(
     packagePaths.map(async p => {
       const framework = await detectFramework({
