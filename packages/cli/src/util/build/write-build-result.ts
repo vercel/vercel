@@ -163,7 +163,8 @@ async function writeBuildResultV2(
         let usedHardLink = false;
         if ('fsPath' in fallback) {
           try {
-            return await fs.link(fallback.fsPath, fallbackPath);
+            await fs.link(fallback.fsPath, fallbackPath);
+            usedHardLink = true;
           } catch (_) {
             // if link fails we continue attempting to copy
           }
