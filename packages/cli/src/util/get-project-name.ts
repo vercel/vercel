@@ -2,7 +2,7 @@ import { basename } from 'path';
 import { VercelConfig } from '@vercel/client';
 
 export interface GetProjectNameOptions {
-  argv: { [k in string]?: string };
+  argv: { [k: string]: string | undefined };
   nowConfig?: VercelConfig;
   paths?: string[];
 }
