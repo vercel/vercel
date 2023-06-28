@@ -1198,7 +1198,11 @@ export async function serverBuild({
       if (ogRoute.endsWith('/route')) {
         continue;
       }
-      route = path.posix.join('./', route === '/' ? '/index' : route);
+      route = path.posix.join(
+        './',
+        entryDirectory,
+        route === '/' ? '/index' : route
+      );
 
       if (lambdas[route]) {
         lambdas[`${route}.rsc`] = lambdas[route];
