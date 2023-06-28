@@ -132,8 +132,6 @@ async function writeBuildResultV2(
   const lambdas = new Map<Lambda, string>();
   const overrides: Record<string, PathOverride> = {};
 
-  const isBuildContainer = !!process.env.VERCEL;
-
   for (const [path, output] of Object.entries(buildResult.output)) {
     const normalizedPath = stripDuplicateSlashes(path);
     if (isLambda(output)) {
@@ -160,9 +158,9 @@ async function writeBuildResultV2(
         const fallbackName = `${normalizedPath}.prerender-fallback${ext}`;
         const fallbackPath = join(outputDir, 'functions', fallbackName);
 
-        // if we're in the build container and fallback is already
-        // on the disk just move it to avoid duplicating output
-        if (isBuildContainer && 'fsPath' in fallback) {
+        // if file is already on the disk we can hard link
+        // instead of creating a new copy
+        if ('fsPath' in fallback) {
           await fs.link(fallback.fsPath, fallbackPath);
         } else {
           const stream = fallback.toStream();
@@ -298,6 +296,10 @@ async function writeStaticFile(
   const dest = join(outputDir, 'static', fsPath);
   await fs.mkdirp(dirname(dest));
 
+  // if already on disk hard link instead of copying
+  if ('fsPath' in file) {
+    return await fs.link(file.fsPath, dest);
+  }
   await downloadFile(file, dest);
 }
 
