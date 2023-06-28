@@ -131,6 +131,9 @@ async function writeBuildResultV2(
 
   const lambdas = new Map<Lambda, string>();
   const overrides: Record<string, PathOverride> = {};
+
+  const isBuildContainer = !!process.env.VERCEL;
+
   for (const [path, output] of Object.entries(buildResult.output)) {
     const normalizedPath = stripDuplicateSlashes(path);
     if (isLambda(output)) {
@@ -159,8 +162,8 @@ async function writeBuildResultV2(
 
         // if we're in the build container and fallback is already
         // on the disk just move it to avoid duplicating output
-        if (process.env.VERCEL && 'fsPath' in fallback) {
-          await fs.move(fallback.fsPath, fallbackPath);
+        if (isBuildContainer && 'fsPath' in fallback) {
+          await fs.link(fallback.fsPath, fallbackPath);
         } else {
           const stream = fallback.toStream();
           await pipe(
