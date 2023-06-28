@@ -1,5 +1,4 @@
 ---
-'@vercel-internals/get-help-output': patch
 '@vercel-internals/constants': patch
 'vercel': patch
 ---
