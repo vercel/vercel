@@ -1,5 +1,28 @@
 # vercel
 
+## 31.0.0
+
+### Major Changes
+
+- Update `vc dev` redirect response to match production behavior ([#10143](https://github.com/vercel/vercel/pull/10143))
+
+### Patch Changes
+
+- require `--yes` to promote preview deployment ([#10135](https://github.com/vercel/vercel/pull/10135))
+
+- [cli] Optimize write build result for vc build ([#10154](https://github.com/vercel/vercel/pull/10154))
+
+- Only show relevant Project matches in Project selector ([#10114](https://github.com/vercel/vercel/pull/10114))
+
+- [cli] Fix error message when token is invalid ([#10131](https://github.com/vercel/vercel/pull/10131))
+
+- Updated dependencies [[`e4895d979`](https://github.com/vercel/vercel/commit/e4895d979b57e369e0618481c5974243887d72cc), [`346892210`](https://github.com/vercel/vercel/commit/3468922108f411482a72acd0331f0f2ee52a6d4c), [`346892210`](https://github.com/vercel/vercel/commit/3468922108f411482a72acd0331f0f2ee52a6d4c), [`a6de052ed`](https://github.com/vercel/vercel/commit/a6de052ed2f09cc80bf4c2d0f06bedd267a63cdc)]:
+  - @vercel/next@3.8.7
+  - @vercel/static-build@1.3.38
+  - @vercel/build-utils@6.8.0
+  - @vercel/remix-builder@1.8.15
+  - @vercel/node@2.15.3
+
 ## 30.2.3
 
 ### Patch Changes
