@@ -1,5 +1,14 @@
 # @vercel/fs-detectors
 
+## 4.0.1
+
+### Patch Changes
+
+- Resolve symlinks in `LocalFileSystemDetector#readdir()` ([#10126](https://github.com/vercel/vercel/pull/10126))
+
+- Updated dependencies [[`0867f11a6`](https://github.com/vercel/vercel/commit/0867f11a6a1086ef4f4701db2b98da8fcc299586)]:
+  - @vercel/frameworks@1.4.3
+
 ## 4.0.0
 
 ### Major Changes
