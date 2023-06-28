@@ -160,9 +160,16 @@ async function writeBuildResultV2(
 
         // if file is already on the disk we can hard link
         // instead of creating a new copy
+        let usedHardLink = false;
         if ('fsPath' in fallback) {
-          await fs.link(fallback.fsPath, fallbackPath);
-        } else {
+          try {
+            return await fs.link(fallback.fsPath, fallbackPath);
+          } catch (_) {
+            // if link fails we continue attempting to copy
+          }
+        }
+
+        if (!usedHardLink) {
           const stream = fallback.toStream();
           await pipe(
             stream,
@@ -298,7 +305,11 @@ async function writeStaticFile(
 
   // if already on disk hard link instead of copying
   if ('fsPath' in file) {
-    return await fs.link(file.fsPath, dest);
+    try {
+      return await fs.link(file.fsPath, dest);
+    } catch (_) {
+      // if link fails we continue attempting to copy
+    }
   }
   await downloadFile(file, dest);
 }
