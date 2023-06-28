@@ -8,20 +8,20 @@ import {
   VALID_ARCHIVE_FORMATS,
   VercelConfig,
 } from '@vercel/client';
-import code from '../util/output/code';
-import highlight from '../util/output/highlight';
-import { readLocalConfig } from '../util/config/files';
-import getArgs from '../util/get-args';
-import { handleError } from '../util/error';
-import Client from '../util/client';
+import code from '../../util/output/code';
+import highlight from '../../util/output/highlight';
+import { readLocalConfig } from '../../util/config/files';
+import getArgs from '../../util/get-args';
+import { handleError } from '../../util/error';
+import Client from '../../util/client';
 import { getPrettyError } from '@vercel/build-utils';
-import toHumanPath from '../util/humanize-path';
-import Now, { CreateOptions } from '../util';
-import stamp from '../util/output/stamp';
-import createDeploy from '../util/deploy/create-deploy';
-import getDeployment from '../util/get-deployment';
-import parseMeta from '../util/parse-meta';
-import param from '../util/output/param';
+import toHumanPath from '../../util/humanize-path';
+import Now, { CreateOptions } from '../../util';
+import stamp from '../../util/output/stamp';
+import createDeploy from '../../util/deploy/create-deploy';
+import getDeployment from '../../util/get-deployment';
+import parseMeta from '../../util/parse-meta';
+import param from '../../util/output/param';
 import {
   BuildsRateLimited,
   DeploymentNotFound,
@@ -40,211 +40,36 @@ import {
   BuildError,
   NotDomainOwner,
   isAPIError,
-} from '../util/errors-ts';
-import { SchemaValidationFailed } from '../util/errors';
-import purchaseDomainIfAvailable from '../util/domains/purchase-domain-if-available';
-import confirm from '../util/input/confirm';
-import editProjectSettings from '../util/input/edit-project-settings';
-import { getLinkedProject, linkFolderToProject } from '../util/projects/link';
-import getProjectName from '../util/get-project-name';
-import selectOrg from '../util/input/select-org';
-import inputProject from '../util/input/input-project';
-import { prependEmoji, emoji } from '../util/emoji';
-import { inputRootDirectory } from '../util/input/input-root-directory';
-import validatePaths, { validateRootDirectory } from '../util/validate-paths';
-import { getCommandName } from '../util/pkg-name';
-import { Output } from '../util/output';
-import { getDeploymentChecks } from '../util/deploy/get-deployment-checks';
-import parseTarget from '../util/deploy/parse-target';
-import getPrebuiltJson from '../util/deploy/get-prebuilt-json';
-import { createGitMeta } from '../util/create-git-meta';
-import { isValidArchive } from '../util/deploy/validate-archive-format';
-import { parseEnv } from '../util/parse-env';
+} from '../../util/errors-ts';
+import { SchemaValidationFailed } from '../../util/errors';
+import purchaseDomainIfAvailable from '../../util/domains/purchase-domain-if-available';
+import confirm from '../../util/input/confirm';
+import editProjectSettings from '../../util/input/edit-project-settings';
+import {
+  getLinkedProject,
+  linkFolderToProject,
+} from '../../util/projects/link';
+import getProjectName from '../../util/get-project-name';
+import selectOrg from '../../util/input/select-org';
+import inputProject from '../../util/input/input-project';
+import { prependEmoji, emoji } from '../../util/emoji';
+import { inputRootDirectory } from '../../util/input/input-root-directory';
+import validatePaths, {
+  validateRootDirectory,
+} from '../../util/validate-paths';
+import { getCommandName } from '../../util/pkg-name';
+import { Output } from '../../util/output';
+import { getDeploymentChecks } from '../../util/deploy/get-deployment-checks';
+import parseTarget from '../../util/deploy/parse-target';
+import getPrebuiltJson from '../../util/deploy/get-prebuilt-json';
+import { createGitMeta } from '../../util/create-git-meta';
+import { isValidArchive } from '../../util/deploy/validate-archive-format';
+import { parseEnv } from '../../util/parse-env';
 import { errorToString, isErrnoException, isError } from '@vercel/error-utils';
-import { pickOverrides } from '../util/projects/project-settings';
-import { printDeploymentStatus } from '../util/deploy/print-deployment-status';
-import { help } from './help';
-import type { Command } from './help';
-
-const deployCommand: Command = {
-  name: 'deploy',
-  description:
-    'Deploy your project to Vercel. The `deploy` command is the default command for the Vercel CLI, and can be omitted (`vc deploy my-app` equals `vc my-app`).',
-  arguments: [
-    {
-      name: 'project-path',
-      required: false,
-    },
-  ],
-  options: [
-    {
-      name: 'force',
-      shorthand: 'f',
-      type: 'boolean',
-      deprecated: false,
-      description: 'Force a new deployment even if nothing has changed',
-      multi: false,
-    },
-    {
-      name: 'with-cache',
-      shorthand: null,
-      type: 'boolean',
-      deprecated: false,
-      description: 'Retain build cache when using "--force"',
-      multi: false,
-    },
-    {
-      name: 'public',
-      shorthand: 'p',
-      type: 'boolean',
-      deprecated: false,
-      description: 'Deployment is public (`/_src`) is exposed)',
-      multi: false,
-    },
-    {
-      name: 'env',
-      shorthand: 'e',
-      type: 'string',
-      argument: 'key=value',
-      deprecated: false,
-      multi: true,
-      description:
-        'Specify environment variables during run-time (e.g. `-e KEY1=value1 -e KEY2=value2`)',
-    },
-    {
-      name: 'build-env',
-      shorthand: 'b',
-      type: 'string',
-      argument: 'key=value',
-      deprecated: false,
-      multi: true,
-      description:
-        'Specify environment variables during build-time (e.g. `-b KEY1=value1 -b KEY2=value2`)',
-    },
-    {
-      name: 'meta',
-      shorthand: 'm',
-      type: 'string',
-      argument: 'key=value',
-      deprecated: false,
-      multi: true,
-      description:
-        'Specify metadata for the deployment (e.g. `-m KEY1=value1 -m KEY2=value2`)',
-    },
-    {
-      name: 'regions',
-      shorthand: null,
-      type: 'string',
-      deprecated: false,
-      description: 'Set default regions to enable the deployment on',
-      multi: false,
-    },
-    {
-      name: 'prebuilt',
-      shorthand: null,
-      type: 'boolean',
-      deprecated: false,
-      description:
-        'Use in combination with `vc build`. Deploy an existing build',
-      multi: false,
-    },
-    {
-      name: 'prod',
-      shorthand: null,
-      type: 'boolean',
-      deprecated: false,
-      description: 'Create a production deployment',
-      multi: false,
-    },
-    {
-      name: 'archive',
-      shorthand: null,
-      type: 'string',
-      deprecated: false,
-      description:
-        'Compress the deployment code into a file before uploading it',
-      multi: false,
-    },
-    {
-      name: 'no-wait',
-      shorthand: null,
-      type: 'boolean',
-      deprecated: false,
-      description: "Don't wait for the deployment to finish",
-      multi: false,
-    },
-    {
-      name: 'skip-domain',
-      shorthand: null,
-      type: 'boolean',
-      deprecated: false,
-      description: undefined,
-      multi: false,
-    },
-    {
-      name: 'yes',
-      shorthand: 'y',
-      type: 'boolean',
-      deprecated: false,
-      description: 'Use default options to skip all prompts',
-      multi: false,
-    },
-    {
-      name: 'name',
-      shorthand: 'n',
-      type: 'string',
-      deprecated: true,
-      description: 'Provide a Vercel Project name',
-      multi: false,
-    },
-    {
-      name: 'no-clipboard',
-      shorthand: null,
-      type: 'boolean',
-      deprecated: true,
-      description: 'Do not copy deployment URL to clipboard',
-      multi: false,
-    },
-    {
-      name: 'target',
-      shorthand: null,
-      type: 'string',
-      deprecated: true,
-      description: 'Specify the target deployment environment',
-      multi: false,
-    },
-    {
-      name: 'confirm',
-      shorthand: 'c',
-      type: 'boolean',
-      deprecated: true,
-      description: 'Use default options to skip all prompts',
-      multi: false,
-    },
-  ],
-  examples: [
-    {
-      name: 'Deploy the current directory',
-      value: 'vercel',
-    },
-    {
-      name: 'Deploy a custom path',
-      value: 'vercel /usr/src/project',
-    },
-    {
-      name: 'Deploy with run-time Environment Variables',
-      value: 'vercel -e NODE_ENV=production',
-    },
-    {
-      name: 'Deploy with prebuilt outputs',
-      value: ['vercel build', 'vercel deploy --prebuilt'],
-    },
-    {
-      name: 'Write Deployment URL to a file',
-      value: 'vercel > deployment-url.txt',
-    },
-  ],
-};
+import { pickOverrides } from '../../util/projects/project-settings';
+import { printDeploymentStatus } from '../../util/deploy/print-deployment-status';
+import { help } from '../help';
+import { deployCommand } from './command';
 
 export default async (client: Client): Promise<number> => {
   const { output } = client;

@@ -31,12 +31,12 @@ export interface Command {
   examples: CommandExample[];
 }
 
-function calcLineLength(line: string[]) {
+export function calcLineLength(line: string[]) {
   return stripAnsi(lineToString(line)).length;
 }
 
 // Insert spaces in between non-whitespace items only
-function lineToString(line: string[]) {
+export function lineToString(line: string[]) {
   let string = '';
   for (let i = 0; i < line.length; i++) {
     if (i === line.length - 1) {
@@ -53,8 +53,8 @@ function lineToString(line: string[]) {
   return string;
 }
 
-function outputArrayToString(outputArray: string[]) {
-  return outputArray.reduce((acc, line) => acc + `${line}${NEWLINE}`, '');
+export function outputArrayToString(outputArray: string[]) {
+  return outputArray.join(NEWLINE);
 }
 
 /**
@@ -62,7 +62,7 @@ function outputArrayToString(outputArray: string[]) {
  * @param command
  * @returns
  */
-function buildCommandSynopsisLine(command: Command) {
+export function buildCommandSynopsisLine(command: Command) {
   const line: string[] = [LOGO, chalk.bold(NAME), chalk.bold(command.name)];
   if (command.arguments.length > 0) {
     for (const argument of command.arguments) {
@@ -75,7 +75,7 @@ function buildCommandSynopsisLine(command: Command) {
   return lineToString(line);
 }
 
-function buildCommandOptionLines(command: Command) {
+export function buildCommandOptionLines(command: Command) {
   // Filter out deprecated and intentionally undocumented options
   command.options = command.options.filter(
     option => !option.deprecated && option.description !== undefined
@@ -165,11 +165,10 @@ function buildCommandOptionLines(command: Command) {
   }
 
   // return the entire list of options as a single string after delete the last '\n' added to the option list
-  const outputString = outputArrayToString(outputArray);
-  return outputString.substring(0, outputString.length - 1);
+  return outputArrayToString(outputArray);
 }
 
-function buildCommandExampleLines(command: Command) {
+export function buildCommandExampleLines(command: Command) {
   const outputArray: string[] = [chalk.dim(`Examples:`), ''];
   for (const example of command.examples) {
     const nameLine: string[] = [INDENT];
@@ -191,12 +190,11 @@ function buildCommandExampleLines(command: Command) {
   }
   // delete the last newline added after examples iteration
   outputArray.splice(-1);
-  // delete the last newline appended to the last example line
-  const outputString = outputArrayToString(outputArray);
-  return outputString.substring(0, outputString.length - 1);
+
+  return outputArrayToString(outputArray);
 }
 
-function buildHelpOutput(command: Command) {
+export function buildHelpOutput(command: Command) {
   const outputArray: string[] = [
     buildCommandSynopsisLine(command),
     '',
