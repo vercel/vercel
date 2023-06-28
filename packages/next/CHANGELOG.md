@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 3.8.8
+
+### Patch Changes
+
+- [next] Ensure RSC paths handle basePath ([#10155](https://github.com/vercel/vercel/pull/10155))
+
 ## 3.8.7
 
 ### Patch Changes
