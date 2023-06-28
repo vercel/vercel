@@ -32,7 +32,9 @@ function fetchTokenInformation(token: string, retries = 3) {
 
       if (!res.ok) {
         throw new Error(
-          `Failed to fetch ${url}, received status ${res.status}`
+          `Failed to fetch "${url}", status: ${
+            res.status
+          }, id: ${res.headers.get('x-vercel-id')}`
         );
       }
 
