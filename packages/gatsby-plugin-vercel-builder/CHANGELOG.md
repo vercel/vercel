@@ -1,5 +1,13 @@
 # @vercel/gatsby-plugin-vercel-builder
 
+## 1.3.11
+
+### Patch Changes
+
+- Updated dependencies [[`346892210`](https://github.com/vercel/vercel/commit/3468922108f411482a72acd0331f0f2ee52a6d4c)]:
+  - @vercel/build-utils@6.8.0
+  - @vercel/node@2.15.3
+
 ## 1.3.10
 
 ### Patch Changes

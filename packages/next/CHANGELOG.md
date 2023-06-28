@@ -1,5 +1,13 @@
 # @vercel/next
 
+## 3.8.7
+
+### Patch Changes
+
+- [next] Update payload flag ([#10147](https://github.com/vercel/vercel/pull/10147))
+
+- Use `getNodeBinPaths()` function to improve monorepo support ([#10150](https://github.com/vercel/vercel/pull/10150))
+
 ## 3.8.6
 
 ### Patch Changes
