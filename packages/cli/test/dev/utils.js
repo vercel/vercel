@@ -44,7 +44,9 @@ function fetchWithRetry(url, opts = {}) {
       if (res.status !== opts.status) {
         const text = await res.text();
         throw new Error(
-          `Failed to fetch ${url} with status ${res.status} (expected ${opts.status}):\n\n${text}\n\n`
+          `Failed to fetch "${url}", received ${res.status}, expected ${
+            opts.status
+          }, id: ${res.headers.get('x-vercel-id')}:\n\n${text}\n\n`
         );
       }
 
