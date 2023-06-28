@@ -144,7 +144,8 @@ const deployCommand: Command = {
       shorthand: null,
       type: 'boolean',
       deprecated: false,
-      description: 'TODO: Description for --prebuilt',
+      description:
+        'Use in combination with `vc build`. Deploy an existing build',
       multi: false,
     },
     {
@@ -193,7 +194,7 @@ const deployCommand: Command = {
       shorthand: 'n',
       type: 'string',
       deprecated: true,
-      description: 'provide a Vercel Project name',
+      description: 'Provide a Vercel Project name',
       multi: false,
     },
     {

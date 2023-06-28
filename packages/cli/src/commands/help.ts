@@ -77,7 +77,9 @@ function buildCommandSynopsisLine(command: Command) {
 
 function buildCommandOptionLines(command: Command) {
   // Filter out deprecated and intentionally undocumented options
-  command.options = command.options.filter(option => !option.deprecated && !option.description);
+  command.options = command.options.filter(
+    option => !option.deprecated && option.description !== undefined
+  );
 
   // Initialize output array with header and empty line
   const outputArray: string[] = [chalk.dim(`Options:`), ''];
@@ -139,18 +141,20 @@ function buildCommandOptionLines(command: Command) {
 
     // Descriptions may be longer than max line length. Wrap them to the same column as the first description line
     const lines: string[][] = [optionLine];
-    for (const descriptionWord of option.description.split(' ')) {
-      // insert a new line when the next word would match or exceed the maximum line length
-      if (
-        calcLineLength(lines[lines.length - 1]) +
-          stripAnsi(descriptionWord).length >=
-        MAX_LINE_LENGTH
-      ) {
-        // initialize the new line with the necessary whitespace. The INDENT is apart of `maxLineStartLength`
-        lines.push([' '.repeat(maxLineStartLength + 2)]);
+    if (option.description) {
+      for (const descriptionWord of option.description.split(' ')) {
+        // insert a new line when the next word would match or exceed the maximum line length
+        if (
+          calcLineLength(lines[lines.length - 1]) +
+            stripAnsi(descriptionWord).length >=
+          MAX_LINE_LENGTH
+        ) {
+          // initialize the new line with the necessary whitespace. The INDENT is apart of `maxLineStartLength`
+          lines.push([' '.repeat(maxLineStartLength + 2)]);
+        }
+        // insert the word to the current last line
+        lines[lines.length - 1].push(descriptionWord);
       }
-      // insert the word to the current last line
-      lines[lines.length - 1].push(descriptionWord);
     }
     // for every line, transform into a string and push it to the output
     for (const line of lines) {
