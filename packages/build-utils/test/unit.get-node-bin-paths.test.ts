@@ -6,7 +6,7 @@ describe('getNodeBinPaths()', () => {
 
   it('should return array of `node_modules/.bin` paths', () => {
     const start = join(cwd, 'foo/bar/baz');
-    const paths = getNodeBinPaths({ start, root: cwd });
+    const paths = getNodeBinPaths({ start, base: cwd });
     expect(paths).toEqual([
       join(cwd, 'foo/bar/baz/node_modules/.bin'),
       join(cwd, 'foo/bar/node_modules/.bin'),
