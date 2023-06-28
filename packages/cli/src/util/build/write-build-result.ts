@@ -156,11 +156,18 @@ async function writeBuildResultV2(
         const ext = getFileExtension(fallback);
         const fallbackName = `${normalizedPath}.prerender-fallback${ext}`;
         const fallbackPath = join(outputDir, 'functions', fallbackName);
-        const stream = fallback.toStream();
-        await pipe(
-          stream,
-          fs.createWriteStream(fallbackPath, { mode: fallback.mode })
-        );
+
+        // if we're in the build container and fallback is already
+        // on the disk just move it to avoid duplicating output
+        if (process.env.VERCEL && 'fsPath' in fallback) {
+          await fs.move(fallback.fsPath, fallbackPath);
+        } else {
+          const stream = fallback.toStream();
+          await pipe(
+            stream,
+            fs.createWriteStream(fallbackPath, { mode: fallback.mode })
+          );
+        }
         fallback = new FileFsRef({
           ...output.fallback,
           fsPath: basename(fallbackName),
