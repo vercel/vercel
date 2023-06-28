@@ -4,11 +4,8 @@ import {
   findProjectsFromPath,
   findRepoRoot,
   RepoProjectConfig,
-  traverseUpDirectories,
 } from '../../../../src/util/link/repo';
 import { client } from '../../../mocks/client';
-
-const isWindows = process.platform === 'win32';
 
 // Root of `vercel/vercel` repo
 const vercelRepoRoot = join(__dirname, '../../../../../..');
@@ -27,34 +24,6 @@ describe('findRepoRoot()', () => {
   it('should return `undefined` when no Git root found', async () => {
     const repoRoot = await findRepoRoot(client, tmpdir());
     expect(repoRoot).toEqual(undefined);
-  });
-});
-
-describe('traverseUpDirectories()', () => {
-  test.each(
-    isWindows
-      ? [
-          {
-            input: 'C:\\foo\\bar\\baz',
-            expected: ['C:\\foo\\bar\\baz', 'C:\\foo\\bar', 'C:\\foo', 'C:\\'],
-          },
-          {
-            input: 'C:\\foo\\..\\bar\\.\\baz',
-            expected: ['C:\\bar\\baz', 'C:\\bar', 'C:\\'],
-          },
-        ]
-      : [
-          {
-            input: '/foo/bar/baz',
-            expected: ['/foo/bar/baz', '/foo/bar', '/foo', '/'],
-          },
-          {
-            input: '/foo/../bar/./baz',
-            expected: ['/bar/baz', '/bar', '/'],
-          },
-        ]
-  )('should traverse "$input"', ({ input, expected }) => {
-    expect(Array.from(traverseUpDirectories(input))).toEqual(expected);
   });
 });
 

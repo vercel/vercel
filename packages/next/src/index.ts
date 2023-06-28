@@ -18,7 +18,7 @@ import {
   runPackageJsonScript,
   execCommand,
   getEnvForPackageManager,
-  getNodeBinPath,
+  getNodeBinPaths,
   scanParentDirs,
   BuildV2,
   PrepareCache,
@@ -431,7 +431,11 @@ export const build: BuildV2 = async ({
 
   if (buildCommand) {
     // Add `node_modules/.bin` to PATH
-    const nodeBinPath = await getNodeBinPath({ cwd: entryPath });
+    const nodeBinPaths = getNodeBinPaths({
+      start: entryPath,
+      base: repoRootPath,
+    });
+    const nodeBinPath = nodeBinPaths.join(path.delimiter);
     env.PATH = `${nodeBinPath}${path.delimiter}${env.PATH}`;
 
     // Yarn v2 PnP mode may be activated, so force "node-modules" linker style
