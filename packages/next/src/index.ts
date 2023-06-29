@@ -206,6 +206,8 @@ export const build: BuildV2 = async ({
 }) => {
   validateEntrypoint(entrypoint);
 
+  console.log("Using Andy's version of @vercel/next");
+
   // Limit for max size each lambda can be, 50 MB if no custom limit
   const lambdaCompressedByteLimit = (config.maxLambdaSize ||
     50 * MIB) as number;
