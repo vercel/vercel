@@ -111,7 +111,7 @@ export default async (client: Client): Promise<number> => {
   }
 
   if (argv['--help']) {
-    output.print(help(deployCommand));
+    output.print(help(deployCommand, { columns: client.stderr.columns }));
     return 2;
   }
 

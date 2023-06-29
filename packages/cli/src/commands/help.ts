@@ -74,8 +74,10 @@ export function buildCommandSynopsisLine(command: Command) {
   return lineToString(line);
 }
 
-export function buildCommandOptionLines(command: Command) {
-  const MAX_LINE_LENGTH = process.stdout.columns;
+export function buildCommandOptionLines(
+  command: Command,
+  options: BuildHelpOutputOptions
+) {
   // Filter out deprecated and intentionally undocumented options
   command.options = command.options.filter(
     option => !option.deprecated && option.description !== undefined
@@ -147,7 +149,7 @@ export function buildCommandOptionLines(command: Command) {
         if (
           calcLineLength(lines[lines.length - 1]) +
             stripAnsi(descriptionWord).length >=
-          MAX_LINE_LENGTH
+          options.columns
         ) {
           // initialize the new line with the necessary whitespace. The INDENT is apart of `maxLineStartLength`
           lines.push([' '.repeat(maxLineStartLength + 2)]);
@@ -194,13 +196,20 @@ export function buildCommandExampleLines(command: Command) {
   return outputArrayToString(outputArray);
 }
 
-export function buildHelpOutput(command: Command) {
+interface BuildHelpOutputOptions {
+  columns: number;
+}
+
+export function buildHelpOutput(
+  command: Command,
+  options: BuildHelpOutputOptions
+) {
   const outputArray: string[] = [
     buildCommandSynopsisLine(command),
     '',
     command.description,
     '',
-    buildCommandOptionLines(command),
+    buildCommandOptionLines(command, options),
     '',
     buildCommandExampleLines(command),
   ];
@@ -208,6 +217,13 @@ export function buildHelpOutput(command: Command) {
   return outputArrayToString(outputArray);
 }
 
-export function help(command: Command) {
-  return buildHelpOutput(command);
+export interface HelpOptions {
+  columns?: number;
+}
+
+export function help(command: Command, options: HelpOptions) {
+  console.log(options);
+  return buildHelpOutput(command, {
+    columns: options.columns ?? 80,
+  });
 }

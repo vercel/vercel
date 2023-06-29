@@ -64,13 +64,8 @@ describe('help command', () => {
   });
 
   describe('help output snapshots', () => {
-    const origCol = process.stdout.columns;
-    afterAll(() => {
-      process.stdout.columns = origCol;
-    });
     test.each([40, 80, 120])('column width %i', width => {
-      process.stdout.columns = width;
-      expect(help(deployCommand)).toMatchSnapshot();
+      expect(help(deployCommand, { columns: width })).toMatchSnapshot();
     });
   });
 });
