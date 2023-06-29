@@ -434,6 +434,15 @@ export interface Cron {
   schedule: string;
 }
 
+/**
+ * @todo: Complete the type for this one
+ */
+export interface Flag {
+  key: string;
+  type: unknown;
+  metadata: Record<string, string>;
+}
+
 /** The framework which created the function */
 export interface FunctionFramework {
   slug: string;
@@ -458,6 +467,7 @@ export interface BuildResultV2Typical {
   framework?: {
     version: string;
   };
+  flags?: Flag[];
 }
 
 export type BuildResultV2 = BuildResultV2Typical | BuildResultBuildOutput;

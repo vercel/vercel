@@ -21,6 +21,7 @@ import {
   NowBuildError,
   Cron,
   validateNpmrc,
+  Flag,
 } from '@vercel/build-utils';
 import {
   detectBuilders,
@@ -93,6 +94,7 @@ interface BuildOutputConfig {
     version: string;
   };
   crons?: Cron[];
+  flags?: Flag[];
 }
 
 /**
@@ -627,6 +629,9 @@ async function doBuild(
   const mergedWildcard = mergeWildcard(buildResults.values());
   const mergedOverrides: Record<string, PathOverride> =
     overrides.length > 0 ? Object.assign({}, ...overrides) : undefined;
+  const mergedFlags = mergeFlags(buildResults.values());
+
+  console.log('DEBUG', 'mergedFlags', JSON.stringify(mergedFlags, null, 2));
 
   const framework = await getFramework(cwd, buildResults);
 
@@ -640,6 +645,7 @@ async function doBuild(
     overrides: mergedOverrides,
     framework,
     crons: mergedCrons,
+    flags: mergedFlags,
   };
   await fs.writeJSON(join(outputDir, 'config.json'), config, { spaces: 2 });
 
@@ -773,4 +779,18 @@ function mergeWildcard(
     }
   }
   return wildcard;
+}
+
+function mergeFlags(
+  buildResults: Iterable<BuildResult | BuildOutputConfig>
+): BuildResultV2Typical['flags'] {
+  let flags: Flag[] = [];
+
+  for (const result of buildResults) {
+    if ('flags' in result) {
+      flags.push(...(result.flags ?? []));
+    }
+  }
+
+  return flags;
 }
