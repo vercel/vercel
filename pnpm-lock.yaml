@@ -133,13 +133,6 @@ importers:
         version: link:../packages/frameworks
 
   internals/constants:
-    dependencies:
-      '@vercel/build-utils':
-        specifier: 6.8.0
-        version: link:../../packages/build-utils
-      '@vercel/routing-utils':
-        specifier: 2.2.1
-        version: link:../../packages/routing-utils
     devDependencies:
       '@vercel-internals/tsconfig':
         specifier: 1.0.0
