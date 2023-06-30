@@ -90,6 +90,7 @@ import {
   validateEntrypoint,
   getOperationType,
   isApiPage,
+  getFunctionsConfigManifest,
 } from './utils';
 
 export const version = 2;
@@ -272,7 +273,7 @@ export const build: BuildV2 = async ({
   });
 
   let hasLegacyRoutes = false;
-  const hasFunctionsConfig = !!config.functions;
+  const hasFunctionsConfig = Boolean(config.functions);
 
   if (await pathExists(dotNextStatic)) {
     console.warn('WARNING: You should not upload the `.next` directory.');
@@ -483,7 +484,12 @@ export const build: BuildV2 = async ({
     ? await getRequiredServerFilesManifest(entryPath, outputDirectory)
     : false;
 
-  isServerMode = !!requiredServerFilesManifest;
+  isServerMode = Boolean(requiredServerFilesManifest);
+
+  const functionsConfigManifest = await getFunctionsConfigManifest(
+    entryPath,
+    outputDirectory
+  );
 
   const routesManifest = await getRoutesManifest(
     entryPath,
@@ -1308,6 +1314,7 @@ export const build: BuildV2 = async ({
 
       return serverBuild({
         config,
+        functionsConfigManifest,
         nextVersion,
         trailingSlash,
         appPathRoutesManifest,
@@ -1566,6 +1573,7 @@ export const build: BuildV2 = async ({
       const initialPageLambdaGroups = await getPageLambdaGroups({
         entryPath,
         config,
+        functionsConfigManifest,
         pages: nonApiPages,
         prerenderRoutes: new Set(),
         pageTraces,
@@ -1582,6 +1590,7 @@ export const build: BuildV2 = async ({
       const initialApiLambdaGroups = await getPageLambdaGroups({
         entryPath,
         config,
+        functionsConfigManifest,
         pages: apiPages,
         prerenderRoutes: new Set(),
         pageTraces,

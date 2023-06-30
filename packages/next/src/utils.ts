@@ -1397,6 +1397,7 @@ const LAMBDA_RESERVED_COMPRESSED_SIZE = 250 * KIB;
 export async function getPageLambdaGroups({
   entryPath,
   config,
+  functionsConfigManifest,
   pages,
   prerenderRoutes,
   pageTraces,
@@ -1410,6 +1411,7 @@ export async function getPageLambdaGroups({
 }: {
   entryPath: string;
   config: Config;
+  functionsConfigManifest?: FunctionsConfigManifest;
   pages: string[];
   prerenderRoutes: Set<string>;
   pageTraces: {
@@ -1436,16 +1438,36 @@ export async function getPageLambdaGroups({
 
     let opts: { memory?: number; maxDuration?: number } = {};
 
+    if (functionsConfigManifest && functionsConfigManifest[routeName]) {
+      opts = functionsConfigManifest[routeName];
+    }
+
     if (config && config.functions) {
       const sourceFile = await getSourceFilePathFromPage({
         workPath: entryPath,
         page,
         pageExtensions,
       });
-      opts = await getLambdaOptionsFromFunction({
+
+      const configOpts = await getLambdaOptionsFromFunction({
         sourceFile,
         config,
       });
+
+      // If a user tries to customize in both handler and vercel.json we throw
+      const duplicateKeys = Object.keys(opts).filter(key =>
+        Object.keys(configOpts).includes(key)
+      );
+
+      if (duplicateKeys.length > 0) {
+        throw new Error(
+          `The route ${routeName} has duplicate configuration in both handler and vercel.json for: ${duplicateKeys.join(
+            ', '
+          )}`
+        );
+      }
+
+      opts = { ...configOpts, ...opts };
     }
 
     let matchingGroup = groups.find(group => {
@@ -2388,6 +2410,13 @@ export {
   getSourceFilePathFromPage,
 };
 
+export type FunctionsConfigManifest = Record<
+  string,
+  {
+    maxDuration?: number;
+  }
+>;
+
 type MiddlewareManifest = MiddlewareManifestV1 | MiddlewareManifestV2;
 
 interface MiddlewareManifestV1 {
@@ -2729,6 +2758,37 @@ export async function getMiddlewareBundle({
     dynamicRouteMap: new Map(),
     edgeFunctions: {},
   };
+}
+
+/**
+ * Attempts to read the functions config manifest from the pre-defined
+ * location. If the manifest can't be found it will resolve to
+ * undefined.
+ */
+export async function getFunctionsConfigManifest(
+  entryPath: string,
+  outputDirectory: string
+): Promise<FunctionsConfigManifest | undefined> {
+  const functionConfigManifestPath = path.join(
+    entryPath,
+    outputDirectory,
+    './server/functions-config-manifest.json'
+  );
+
+  const hasManifest = await fs
+    .access(functionConfigManifestPath)
+    .then(() => true)
+    .catch(() => false);
+
+  if (!hasManifest) {
+    return;
+  }
+
+  const manifest = (await fs.readJSON(
+    functionConfigManifestPath
+  )) as FunctionsConfigManifest;
+
+  return manifest;
 }
 
 /**
