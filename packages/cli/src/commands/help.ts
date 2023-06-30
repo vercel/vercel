@@ -222,7 +222,6 @@ export interface HelpOptions {
 }
 
 export function help(command: Command, options: HelpOptions) {
-  console.log(options);
   return buildHelpOutput(command, {
     columns: options.columns ?? 80,
   });
