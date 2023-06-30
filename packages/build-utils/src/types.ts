@@ -439,8 +439,8 @@ export interface Cron {
  */
 export interface Flag {
   key: string;
-  type: unknown;
-  metadata: Record<string, string>;
+  defaultValue?: unknown;
+  metadata: Record<string, unknown>;
 }
 
 /** The framework which created the function */
