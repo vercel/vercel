@@ -1,6 +1,6 @@
 import { join } from 'path';
 import { Project } from 'ts-morph';
-import { getConfig } from '../src';
+import { getConfig, getSegmentConfig } from '../src';
 
 describe('getConfig()', () => {
   it('should parse config from Node.js file', () => {
@@ -12,6 +12,17 @@ describe('getConfig()', () => {
         "maxDuration": 60,
         "memory": 1024,
         "runtime": "nodejs",
+      }
+    `);
+  });
+
+  it('should parse segment config from Node.js file', () => {
+    const project = new Project();
+    const sourcePath = join(__dirname, 'fixtures/node-named-config.js');
+    const config = getSegmentConfig(project, sourcePath);
+    expect(config).toMatchInlineSnapshot(`
+      {
+        "maxDuration": 30,
       }
     `);
   });

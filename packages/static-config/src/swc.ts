@@ -144,3 +144,30 @@ export function getConfig<T extends JSONSchema>(
   // @ts-expect-error - this seems to work just fine, but TS complains it could be infinite nesting
   return data as FromSchema<T>;
 }
+
+// Extracts the value of segement options e.g. `export const maxDuration = 10` in the given swc AST (`module`).
+//
+// Returns null if no declaration is found.
+//
+// Throws exceptions if it contains a syntax node which're not literal or
+// the validation fails.
+export function getSegmentConfig<T extends JSONSchema>(
+  module: Module,
+  schema?: T
+): FromSchema<T> | null {
+  const maxDuration = extractExportedConstValue(module, 'maxDuration');
+
+  if (!maxDuration) {
+    return null;
+  }
+
+  const config = {
+    maxDuration,
+  };
+
+  if (schema) {
+    validate(schema, config);
+  }
+  // @ts-expect-error - this seems to work just fine, but TS complains it could be infinite nesting
+  return config as FromSchema<T>;
+}

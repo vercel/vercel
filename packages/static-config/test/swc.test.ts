@@ -4,6 +4,7 @@ import * as swc from '@swc/core';
 import {
   extractExportedConstValue,
   getConfig,
+  getSegmentConfig,
   UnsupportedValueError,
 } from '../src/swc';
 import {
@@ -59,6 +60,16 @@ describe('getConfig for swc', () => {
         "maxDuration": 60,
         "memory": 1024,
         "runtime": "nodejs",
+      }
+    `);
+  });
+
+  it('should parse segment config from Node.js file', () => {
+    const ast = parseFixture('fixtures/node-named-config.js');
+    const config = getSegmentConfig(ast, BaseFunctionConfigSchema);
+    expect(config).toMatchInlineSnapshot(`
+      {
+        "maxDuration": 30,
       }
     `);
   });
