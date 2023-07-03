@@ -1,5 +1,87 @@
 # vercel
 
+## 31.0.1
+
+### Patch Changes
+
+- Updated dependencies [[`aa734efc6`](https://github.com/vercel/vercel/commit/aa734efc6c42badd4aa9bf64487904aa64e9bd49)]:
+  - @vercel/next@3.8.8
+
+## 31.0.0
+
+### Major Changes
+
+- Update `vc dev` redirect response to match production behavior ([#10143](https://github.com/vercel/vercel/pull/10143))
+
+### Patch Changes
+
+- require `--yes` to promote preview deployment ([#10135](https://github.com/vercel/vercel/pull/10135))
+
+- [cli] Optimize write build result for vc build ([#10154](https://github.com/vercel/vercel/pull/10154))
+
+- Only show relevant Project matches in Project selector ([#10114](https://github.com/vercel/vercel/pull/10114))
+
+- [cli] Fix error message when token is invalid ([#10131](https://github.com/vercel/vercel/pull/10131))
+
+- Updated dependencies [[`e4895d979`](https://github.com/vercel/vercel/commit/e4895d979b57e369e0618481c5974243887d72cc), [`346892210`](https://github.com/vercel/vercel/commit/3468922108f411482a72acd0331f0f2ee52a6d4c), [`346892210`](https://github.com/vercel/vercel/commit/3468922108f411482a72acd0331f0f2ee52a6d4c), [`a6de052ed`](https://github.com/vercel/vercel/commit/a6de052ed2f09cc80bf4c2d0f06bedd267a63cdc)]:
+  - @vercel/next@3.8.7
+  - @vercel/static-build@1.3.38
+  - @vercel/build-utils@6.8.0
+  - @vercel/remix-builder@1.8.15
+  - @vercel/node@2.15.3
+
+## 30.2.3
+
+### Patch Changes
+
+- [cli] do not force auto-assign value on deployments ([#10110](https://github.com/vercel/vercel/pull/10110))
+
+- Updated dependencies [[`91406abdb`](https://github.com/vercel/vercel/commit/91406abdb0c332152fc6c7c1e4bd3a872b084434), [`2230ea6cc`](https://github.com/vercel/vercel/commit/2230ea6cc1b84c1f03227a4e197b7684635b5955), [`8b3a4146a`](https://github.com/vercel/vercel/commit/8b3a4146af68d2b7288c80a5b919d832dba929b5)]:
+  - @vercel/node@2.15.2
+  - @vercel/remix-builder@1.8.14
+  - @vercel/static-build@1.3.37
+
+## 30.2.2
+
+### Patch Changes
+
+- [cli] vc env pull should add `.env*.local` to `.gitignore` ([#10085](https://github.com/vercel/vercel/pull/10085))
+
+- [cli] Fix team validation bug where you are apart of a team ([#10092](https://github.com/vercel/vercel/pull/10092))
+
+- Add support for `vc dev` command with repo link ([#10082](https://github.com/vercel/vercel/pull/10082))
+
+- Add support for `vc deploy --prebuilt` command with repo link ([#10083](https://github.com/vercel/vercel/pull/10083))
+
+- Move readme copy logic to a helper function for `vc link` ([#10084](https://github.com/vercel/vercel/pull/10084))
+
+- Add support for `vc pull` command with repo link ([#10078](https://github.com/vercel/vercel/pull/10078))
+
+- Add support for `vc build` command with repo link ([#10075](https://github.com/vercel/vercel/pull/10075))
+
+## 30.2.1
+
+### Patch Changes
+
+- Updated dependencies [[`a04bf557f`](https://github.com/vercel/vercel/commit/a04bf557fc6e1080a117428977d0993dec78b004)]:
+  - @vercel/node@2.15.1
+  - @vercel/static-build@1.3.36
+
+## 30.2.0
+
+### Minor Changes
+
+- [node] Add isomorphic functions ([#9947](https://github.com/vercel/vercel/pull/9947))
+
+### Patch Changes
+
+- Add `client.fetchPaginated()` helper function ([#10054](https://github.com/vercel/vercel/pull/10054))
+
+- Updated dependencies [[`bc5afe24c`](https://github.com/vercel/vercel/commit/bc5afe24c4547dbf798b939199e8212c4b34038e), [`49c717856`](https://github.com/vercel/vercel/commit/49c7178567ec5bcebe633b598c8c9c0e1aa40fbb), [`0039c8b5c`](https://github.com/vercel/vercel/commit/0039c8b5cea975316a62c4f6aaca5d66d731cc0d)]:
+  - @vercel/node@2.15.0
+  - @vercel/remix-builder@1.8.13
+  - @vercel/static-build@1.3.35
+
 ## 30.1.2
 
 ### Patch Changes

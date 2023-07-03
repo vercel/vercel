@@ -22,7 +22,7 @@ jobs:
   enforce-changeset:
     name: Enforce Changeset
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' && github.event.pull_request.title != 'Version Packages'
     steps:
       - uses: actions/checkout@v3
         with:

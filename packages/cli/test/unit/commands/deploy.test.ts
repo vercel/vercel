@@ -45,6 +45,14 @@ describe('deploy', () => {
   it('should reject deploying when `--prebuilt` is used and `vc build` failed before Builders', async () => {
     const cwd = setupUnitFixture('build-output-api-failed-before-builds');
 
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'build-output-api-failed-before-builds',
+      name: 'build-output-api-failed-before-builds',
+    });
+
     client.setArgv('deploy', cwd, '--prebuilt');
     const exitCodePromise = deploy(client);
     await expect(client.stderr).toOutput(
@@ -56,6 +64,14 @@ describe('deploy', () => {
   it('should reject deploying when `--prebuilt` is used and `vc build` failed within a Builder', async () => {
     const cwd = setupUnitFixture('build-output-api-failed-within-build');
 
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'build-output-api-failed-within-build',
+      name: 'build-output-api-failed-within-build',
+    });
+
     client.setArgv('deploy', cwd, '--prebuilt');
     const exitCodePromise = deploy(client);
     await expect(client.stderr).toOutput(
@@ -65,7 +81,16 @@ describe('deploy', () => {
   });
 
   it('should reject deploying a directory that does not contain ".vercel/output" when `--prebuilt` is used', async () => {
-    client.setArgv('deploy', __dirname, '--prebuilt');
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      name: 'static',
+      id: 'static',
+    });
+
+    client.cwd = setupUnitFixture('commands/deploy/static');
+    client.setArgv('deploy', '--prebuilt');
     const exitCodePromise = deploy(client);
     await expect(client.stderr).toOutput(
       'Error: The "--prebuilt" option was used, but no prebuilt output found in ".vercel/output". Run `vercel build` to generate a local build.\n'
@@ -102,8 +127,8 @@ describe('deploy', () => {
     useTeams('team_dummy');
     useProject({
       ...defaultProject,
-      id: 'build-output-api-preview',
-      name: 'build-output-api-preview',
+      id: 'build-output-api-production',
+      name: 'build-output-api-production',
     });
 
     client.setArgv('deploy', cwd, '--prebuilt');

@@ -821,7 +821,7 @@ export async function createLambdaFromPseudoLayers({
     files,
     shouldAddHelpers: false,
     shouldAddSourcemapSupport: false,
-    supportsMultiPayloads: !!process.env.NEXT_PRIVATE_MULTI_PAYLOAD,
+    supportsMultiPayloads: true,
     framework: {
       slug: 'nextjs',
       version: nextVersion,

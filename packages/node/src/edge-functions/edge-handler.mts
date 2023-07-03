@@ -89,12 +89,7 @@ async function compileUserCode(
 
       // user code
       ${compiledFile.text};
-      const userEdgeHandler = module.exports.default;
-      if (!userEdgeHandler) {
-        throw new Error(
-          'No default export was found. Add a default export to handle requests. Learn more: https://vercel.link/creating-edge-middleware'
-        );
-      }
+      const userModule = module.exports;
 
       // request metadata
       const isMiddleware = ${isMiddleware};
@@ -104,7 +99,7 @@ async function compileUserCode(
       ${edgeHandlerTemplate};
       const dependencies = { Request, Response };
       const options = { isMiddleware, entrypointLabel };
-      registerFetchListener(userEdgeHandler, options, dependencies);
+      registerFetchListener(userModule, options, dependencies);
     `;
 
     return {
@@ -133,8 +128,6 @@ async function createEdgeRuntimeServer(params?: {
 
     const wasmBindings = await params.wasmAssets.getContext();
     const nodeCompatBindings = params.nodeCompatBindings.getContext();
-    // @ts-ignore
-    const WebSocket = (await import('ws')).WebSocket;
 
     const runtime = new EdgeRuntime({
       initialCode: params.userCode,
@@ -142,7 +135,6 @@ async function createEdgeRuntimeServer(params?: {
         Object.assign(context, {
           // This is required for esbuild wrapping logic to resolve
           module: {},
-          WebSocket,
 
           // This is required for environment variable access.
           // In production, env var access is provided by static analysis

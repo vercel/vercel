@@ -50,7 +50,7 @@ export interface CreateOptions {
   projectSettings?: any;
   skipAutoDetectionConfirmation?: boolean;
   noWait?: boolean;
-  autoAssignCustomDomains: boolean;
+  autoAssignCustomDomains?: boolean;
 }
 
 export interface RemoveOptions {

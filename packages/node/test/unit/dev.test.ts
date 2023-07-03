@@ -4,6 +4,8 @@ import fetch from 'node-fetch';
 
 jest.setTimeout(20 * 1000);
 
+const [NODE_MAJOR] = process.versions.node.split('.').map(v => Number(v));
+
 function testForkDevServer(entrypoint: string) {
   const ext = extname(entrypoint);
   const isTypeScript = ext === '.ts';
@@ -23,6 +25,41 @@ function testForkDevServer(entrypoint: string) {
     devServerPath: resolve(__dirname, '../../dist/dev-server.mjs'),
   });
 }
+
+(NODE_MAJOR < 18 ? test.skip : test)(
+  'runs an serverless function that exports GET',
+  async () => {
+    const child = testForkDevServer('./serverless-web.js');
+    try {
+      const result = await readMessage(child);
+      if (result.state !== 'message') {
+        throw new Error('Exited. error: ' + JSON.stringify(result.value));
+      }
+
+      const { address, port } = result.value;
+
+      {
+        const response = await fetch(
+          `http://${address}:${port}/api/serverless-web?name=Vercel`
+        );
+        expect({
+          status: response.status,
+          body: await response.text(),
+        }).toEqual({ status: 200, body: 'Greetings, Vercel' });
+      }
+
+      {
+        const response = await fetch(
+          `http://${address}:${port}/api/serverless-web?name=Vercel`,
+          { method: 'HEAD' }
+        );
+        expect({ status: response.status }).toEqual({ status: 405 });
+      }
+    } finally {
+      child.kill(9);
+    }
+  }
+);
 
 test('runs an edge function that uses `WebSocket`', async () => {
   const child = testForkDevServer('./edge-websocket.js');
@@ -57,9 +94,8 @@ test('runs an edge function that uses `buffer`', async () => {
       throw new Error('Exited. error: ' + JSON.stringify(result.value));
     }
 
-    const response = await fetch(
-      `http://localhost:${result.value.port}/api/edge-buffer`
-    );
+    const { address, port } = result.value;
+    const response = await fetch(`http://${address}:${port}/api/edge-buffer`);
     expect({
       status: response.status,
       json: await response.json(),
@@ -84,9 +120,8 @@ test('runs a mjs endpoint', async () => {
       throw new Error('Exited. error: ' + JSON.stringify(result.value));
     }
 
-    const response = await fetch(
-      `http://localhost:${result.value.port}/api/hello`
-    );
+    const { address, port } = result.value;
+    const response = await fetch(`http://${address}:${port}/api/hello`);
     expect({
       status: response.status,
       headers: Object.fromEntries(response.headers),
@@ -117,9 +152,8 @@ test('runs a esm typescript endpoint', async () => {
       throw new Error('Exited. error: ' + JSON.stringify(result.value));
     }
 
-    const response = await fetch(
-      `http://localhost:${result.value.port}/api/hello`
-    );
+    const { address, port } = result.value;
+    const response = await fetch(`http://${address}:${port}/api/hello`);
     expect({
       status: response.status,
       headers: Object.fromEntries(response.headers),
@@ -150,9 +184,8 @@ test('allow setting multiple cookies with same name', async () => {
       throw new Error(`Exited. error: ${JSON.stringify(result.value)}`);
     }
 
-    const response = await fetch(
-      `http://localhost:${result.value.port}/api/hello`
-    );
+    const { address, port } = result.value;
+    const response = await fetch(`http://${address}:${port}/api/hello`);
     expect({
       status: response.status,
       text: await response.text(),

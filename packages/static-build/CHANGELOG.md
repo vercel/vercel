@@ -1,5 +1,35 @@
 # @vercel/static-build
 
+## 1.3.38
+
+### Patch Changes
+
+- Use `getNodeBinPaths()` function to improve monorepo support ([#10150](https://github.com/vercel/vercel/pull/10150))
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@1.3.11
+
+## 1.3.37
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@1.3.10
+
+## 1.3.36
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@1.3.9
+
+## 1.3.35
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@1.3.8
+
 ## 1.3.34
 
 ### Patch Changes

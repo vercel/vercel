@@ -5,7 +5,7 @@ import { LocalFileSystemDetector, DetectorFilesystem } from '../src';
 
 const tmpdir = path.join(os.tmpdir(), 'local-file-system-test');
 
-const dirs = ['', 'a', 'a/b']; // root, single-nested, double-nested
+const dirs = ['', 'a', `a${path.sep}b`]; // root, single-nested, double-nested
 const files = ['foo', 'bar'];
 const filePaths = dirs.flatMap(dir => files.map(file => path.join(dir, file)));
 
@@ -63,12 +63,7 @@ describe('LocalFileSystemDetector', () => {
     const readdirResults = await Promise.all(
       dirs.map(dir => localFileSystem.readdir(dir))
     );
-    const expectedPaths = [
-      ...dirs.map(dir => path.join(tmpdir, dir)),
-      ...filePaths.map(filePath => path.join(tmpdir, filePath)),
-    ]
-      .sort()
-      .slice(1); // drop the first path since its the root
+    const expectedPaths = [...dirs, ...filePaths].sort().slice(1); // drop the first path since its the root
     const actualPaths = readdirResults
       .flatMap(result => result.map(stat => stat.path))
       .sort();

@@ -1,7 +1,11 @@
 import chalk from 'chalk';
 import { join } from 'path';
 import Client from '../util/client';
-import type { Project, ProjectEnvTarget } from '@vercel-internals/types';
+import type {
+  Project,
+  ProjectEnvTarget,
+  ProjectLinked,
+} from '@vercel-internals/types';
 import { emoji, prependEmoji } from '../util/emoji';
 import getArgs from '../util/get-args';
 import logo from '../util/output/logo';
@@ -15,6 +19,7 @@ import {
   getEnvTargetPlaceholder,
 } from '../util/env/env-target';
 import { ensureLink } from '../util/link/ensure-link';
+import humanizePath from '../util/humanize-path';
 
 const help = () => {
   return console.log(`
@@ -81,6 +86,7 @@ function parseArgs(client: Client) {
 async function pullAllEnvFiles(
   environment: ProjectEnvTarget,
   client: Client,
+  link: ProjectLinked,
   project: Project,
   argv: ReturnType<typeof processArgs>,
   cwd: string
@@ -88,6 +94,7 @@ async function pullAllEnvFiles(
   const environmentFile = `.env.${environment}.local`;
   return envPull(
     client,
+    link,
     project,
     environment,
     argv,
@@ -115,7 +122,7 @@ export default async function main(client: Client) {
     return argv;
   }
 
-  const cwd = argv._[1] || process.cwd();
+  let cwd = argv._[1] || client.cwd;
   const autoConfirm = Boolean(argv['--yes']);
   const environment = parseEnvironment(argv['--environment'] || undefined);
 
@@ -124,13 +131,18 @@ export default async function main(client: Client) {
     return link;
   }
 
-  const { project, org } = link;
+  const { project, org, repoRoot } = link;
+
+  if (repoRoot) {
+    cwd = join(repoRoot, project.rootDirectory || '');
+  }
 
   client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
   const pullResultCode = await pullAllEnvFiles(
     environment,
     client,
+    link,
     project,
     argv,
     cwd
@@ -141,13 +153,14 @@ export default async function main(client: Client) {
 
   client.output.print('\n');
   client.output.log('Downloading project settings');
-  await writeProjectSettings(cwd, project, org);
+  const isRepoLinked = typeof repoRoot === 'string';
+  await writeProjectSettings(cwd, project, org, isRepoLinked);
 
   const settingsStamp = stamp();
   client.output.print(
     `${prependEmoji(
       `Downloaded project settings to ${chalk.bold(
-        join(VERCEL_DIR, VERCEL_DIR_PROJECT)
+        humanizePath(join(cwd, VERCEL_DIR, VERCEL_DIR_PROJECT))
       )} ${chalk.gray(settingsStamp())}`,
       emoji('success')
     )}\n`

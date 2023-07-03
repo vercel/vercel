@@ -167,6 +167,7 @@ export default async function main(client: Client) {
       case 'pull':
         return pull(
           client,
+          link,
           project,
           target,
           argv,

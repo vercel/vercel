@@ -1,5 +1,34 @@
 # @vercel/node
 
+## 2.15.3
+
+### Patch Changes
+
+- Updated dependencies [[`346892210`](https://github.com/vercel/vercel/commit/3468922108f411482a72acd0331f0f2ee52a6d4c)]:
+  - @vercel/build-utils@6.8.0
+
+## 2.15.2
+
+### Patch Changes
+
+- add tests to getBodyParser helper ([#10109](https://github.com/vercel/vercel/pull/10109))
+
+- [node] use `undici.Websocket` when is possible ([#10051](https://github.com/vercel/vercel/pull/10051))
+
+## 2.15.1
+
+### Patch Changes
+
+- handle undefined content type in `vc dev` ([#10077](https://github.com/vercel/vercel/pull/10077))
+
+## 2.15.0
+
+### Minor Changes
+
+- Add maxDuration config support for vc node deployments ([#10028](https://github.com/vercel/vercel/pull/10028))
+
+- [node] Add isomorphic functions ([#9947](https://github.com/vercel/vercel/pull/9947))
+
 ## 2.14.5
 
 ### Patch Changes
