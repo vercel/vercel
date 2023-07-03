@@ -222,7 +222,6 @@ export async function ensureRepoLink(
         ),
       ],
     });
-    console.log(selected);
 
     if (selected.length === 0) {
       output.print(`No Projects were selected. Repository not linked.\n`);
@@ -233,8 +232,10 @@ export async function ensureRepoLink(
       const selection = selected[i];
       if (!selection.newProject) continue;
       // TODO: allow for editing name / framework / etc.
-      selected[i] = await createProject(client, selection.name);
-      output.log(`Created new Project`);
+      const name = `${basename(rootPath)}-${selection.name}`;
+      delete selection.newProject;
+      selected[i] = await createProject(client, { ...selection, name });
+      output.log(`Created new Project: ${selected[i].name}`);
     }
 
     repoConfig = {
