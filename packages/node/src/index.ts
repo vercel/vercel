@@ -50,7 +50,7 @@ import type {
   NodeVersion,
   BuildResultV3,
 } from '@vercel/build-utils';
-import { getConfig } from '@vercel/static-config';
+import { getConfig, getSegmentConfig } from '@vercel/static-config';
 
 import { fixConfig, Register, register } from './typescript';
 import {
@@ -416,7 +416,28 @@ export const build: BuildV3 = async ({
   let isEdgeFunction = isMiddleware;
 
   const project = new Project();
-  const staticConfig = getConfig(project, entrypointPath);
+  const objectConfig = getConfig(project, entrypointPath);
+  const segmentConfig = getSegmentConfig(project, entrypointPath);
+
+  if (objectConfig && segmentConfig) {
+    // If a user tries to customize in both handler and vercel.json we throw
+    const duplicateKeys = Object.keys(objectConfig).filter(key =>
+      Object.keys(segmentConfig).includes(key)
+    );
+
+    if (duplicateKeys.length > 0) {
+      throw new Error(
+        `The entrypoint ${entrypoint} has duplicate options for ${duplicateKeys.join(
+          ', '
+        )}`
+      );
+    }
+  }
+
+  const staticConfig = {
+    ...segmentConfig,
+    ...objectConfig,
+  };
 
   const runtime = staticConfig?.runtime;
   validateConfiguredRuntime(runtime, entrypoint);
