@@ -59,7 +59,6 @@ import validatePaths, {
 } from '../../util/validate-paths';
 import { getCommandName } from '../../util/pkg-name';
 import { Output } from '../../util/output';
-import { help } from './args';
 import { getDeploymentChecks } from '../../util/deploy/get-deployment-checks';
 import parseTarget from '../../util/deploy/parse-target';
 import getPrebuiltJson from '../../util/deploy/get-prebuilt-json';
@@ -69,44 +68,38 @@ import { parseEnv } from '../../util/parse-env';
 import { errorToString, isErrnoException, isError } from '@vercel/error-utils';
 import { pickOverrides } from '../../util/projects/project-settings';
 import { printDeploymentStatus } from '../../util/deploy/print-deployment-status';
+import { help } from '../help';
+import { deployCommand } from './command';
 
 export default async (client: Client): Promise<number> => {
   const { output } = client;
 
   let argv = null;
 
-  try {
-    argv = getArgs(client.argv.slice(2), {
-      '--force': Boolean,
-      '--with-cache': Boolean,
-      '--public': Boolean,
-      '--env': [String],
-      '--build-env': [String],
-      '--meta': [String],
-      // This is not an array in favor of matching
-      // the config property name.
-      '--regions': String,
-      '--prebuilt': Boolean,
-      '--prod': Boolean,
-      '--archive': String,
-      '--no-wait': Boolean,
-      '--skip-domain': Boolean,
-      '--yes': Boolean,
-      '-f': '--force',
-      '-p': '--public',
-      '-e': '--env',
-      '-b': '--build-env',
-      '-m': '--meta',
-      '-y': '--yes',
+  const argOptions: {
+    [k: string]:
+      | BooleanConstructor
+      | StringConstructor
+      | string
+      | [StringConstructor];
+  } = {};
+  for (const option of deployCommand.options) {
+    argOptions[`--${option.name}`] =
+      option.type === 'boolean' ? Boolean : String;
+    if (option.shorthand) {
+      argOptions[`-${option.shorthand}`] = `--${option.name}`;
+    }
+    if (
+      option.name === 'env' ||
+      option.name === 'build-env' ||
+      option.name === 'meta'
+    ) {
+      argOptions[`--${option.name}`] = [String];
+    }
+  }
 
-      // deprecated
-      '--name': String,
-      '-n': '--name',
-      '--no-clipboard': Boolean,
-      '--target': String,
-      '--confirm': Boolean,
-      '-c': '--confirm',
-    });
+  try {
+    argv = getArgs(client.argv.slice(2), argOptions);
 
     if ('--confirm' in argv) {
       output.warn('`--confirm` is deprecated, please use `--yes` instead');
@@ -118,7 +111,7 @@ export default async (client: Client): Promise<number> => {
   }
 
   if (argv['--help']) {
-    output.print(help());
+    output.print(help(deployCommand, { columns: client.stderr.columns }));
     return 2;
   }
 

@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 6.8.0
+
+### Minor Changes
+
+- Add `getNodeBinPaths()` and `traverseUpDirectories()` functions ([#10150](https://github.com/vercel/vercel/pull/10150))
+
 ## 6.7.5
 
 ### Patch Changes
