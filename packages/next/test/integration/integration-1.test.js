@@ -98,6 +98,11 @@ if (parseInt(process.versions.node.split('.')[0], 10) >= 16) {
       buildResult.output['api/hello-again'].supportsResponseStreaming
     ).toBe(true);
 
+    expect(buildResult.output['api/hello-with-options'].maxDuration).toBe(7);
+    expect(buildResult.output['api/hello-again-with-options'].maxDuration).toBe(
+      7
+    );
+
     expect(buildResult.output['edge-route-handler']).toBeDefined();
     expect(buildResult.output['edge-route-handler'].type).toBe('EdgeFunction');
     expect(buildResult.output['edge-route-handler.rsc']).not.toBeDefined();
