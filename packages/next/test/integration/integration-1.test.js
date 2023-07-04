@@ -98,11 +98,6 @@ if (parseInt(process.versions.node.split('.')[0], 10) >= 16) {
       buildResult.output['api/hello-again'].supportsResponseStreaming
     ).toBe(true);
 
-    expect(buildResult.output['api/hello-with-options'].maxDuration).toBe(7);
-    expect(buildResult.output['api/hello-again-with-options'].maxDuration).toBe(
-      7
-    );
-
     expect(buildResult.output['edge-route-handler']).toBeDefined();
     expect(buildResult.output['edge-route-handler'].type).toBe('EdgeFunction');
     expect(buildResult.output['edge-route-handler.rsc']).not.toBeDefined();
@@ -125,6 +120,40 @@ if (parseInt(process.versions.node.split('.')[0], 10) >= 16) {
     // expect(buildResult.output['dashboard/index.rsc'].fallback.fsPath).toMatch(
     //   /server\/app\/dashboard\/index\.rsc$/
     // );
+  });
+
+  it('should build with app-dir with segment options correctly', async () => {
+    const { buildResult } = await runBuildLambda(
+      path.join(__dirname, '../fixtures/00-app-dir-with-segment-options')
+    );
+
+    const lambdas = new Set();
+
+    for (const key of Object.keys(buildResult.output)) {
+      if (buildResult.output[key].type === 'Lambda') {
+        lambdas.add(buildResult.output[key]);
+      }
+    }
+
+    expect(
+      buildResult.routes.some(
+        route =>
+          route.src?.includes('_next/data') && route.src?.includes('.rsc')
+      )
+    ).toBeFalsy();
+
+    expect(lambdas.size).toBe(1);
+
+    expect(buildResult.output['api/hello']).toBeDefined();
+    expect(buildResult.output['api/hello'].type).toBe('Lambda');
+    expect(buildResult.output['api/hello'].maxDuration).toBe(7);
+
+    expect(buildResult.output['api/hello-again']).toBeDefined();
+    expect(buildResult.output['api/hello-again'].type).toBe('Lambda');
+    expect(buildResult.output['api/hello-again'].maxDuration).toBe(7);
+    expect(
+      buildResult.output['api/hello-again'].supportsResponseStreaming
+    ).toBe(true);
   });
 
   it('should build with app-dir in edge runtime correctly', async () => {
