@@ -212,6 +212,7 @@ export function buildHelpOutput(
     buildCommandOptionLines(command, options),
     '',
     buildCommandExampleLines(command),
+    '',
   ];
 
   return outputArrayToString(outputArray);
