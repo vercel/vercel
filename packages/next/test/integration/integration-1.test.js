@@ -142,7 +142,7 @@ if (parseInt(process.versions.node.split('.')[0], 10) >= 16) {
       )
     ).toBeFalsy();
 
-    expect(lambdas.size).toBe(1);
+    expect(lambdas.size).toBe(2);
 
     expect(buildResult.output['api/hello']).toBeDefined();
     expect(buildResult.output['api/hello'].type).toBe('Lambda');
