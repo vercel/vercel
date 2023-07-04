@@ -124,7 +124,7 @@ if (parseInt(process.versions.node.split('.')[0], 10) >= 16) {
 
   it('should build with app-dir with segment options correctly', async () => {
     const { buildResult } = await runBuildLambda(
-      path.join(__dirname, '../fixtures/00-app-dir-with-segment-options')
+      path.join(__dirname, '../fixtures/00-app-dir-segment-options')
     );
 
     const lambdas = new Set();
