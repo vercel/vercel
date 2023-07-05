@@ -13,5 +13,5 @@ it('should have configured `maxDuration` in build output', async () => {
 
   expect(buildResult.output).toBeDefined();
   expect(typeof buildResult.output.maxDuration).toBe('number');
-  expect(buildResult.output.maxDuration).toMatchInlineSnapshot(`5`);
+  expect(buildResult.output.maxDuration).toEqual(5);
 });
