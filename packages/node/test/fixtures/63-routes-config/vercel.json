@@ -1,0 +1,3 @@
+{
+  "builds": [{ "src": "api/handler.js", "use": "@vercel/node" }]
+}
