@@ -7,10 +7,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json"
   },
-  "dependencies": {
-    "@vercel/build-utils": "6.8.0",
-    "@vercel/routing-utils": "2.2.1"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@vercel-internals/tsconfig": "1.0.0",
     "@vercel/style-guide": "4.0.2",

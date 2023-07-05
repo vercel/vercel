@@ -19,6 +19,7 @@ function exec(cmd, args, opts) {
 }
 
 module.exports = async ({ github, context } = {}) => {
+  process.env.COREPACK_ENABLE_STRICT = '0';
   const newVersion = exec('npm', ['view', 'next', 'dist-tags.latest']);
   const branch = `next-${newVersion.replaceAll('.', '-')}`;
 
@@ -95,7 +96,11 @@ module.exports = async ({ github, context } = {}) => {
     } to Next.js version ${newVersion}`
   );
 
+  const changeset = join(__dirname, '..', '.changeset', `${branch}.md`);
+  writeFileSync(changeset, `---\n---\n\n`, 'utf-8');
+
   if (!github || !context) {
+    console.error('Error: missing github or context');
     return;
   }
 
