@@ -1,4 +1,4 @@
-// bust cache again
+// bust cache
 const assert = require('assert');
 const { createHash } = require('crypto');
 const path = require('path');
