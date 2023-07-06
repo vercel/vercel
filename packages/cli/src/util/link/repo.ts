@@ -2,6 +2,7 @@ import chalk from 'chalk';
 import inquirer from 'inquirer';
 import pluralize from 'pluralize';
 import { homedir } from 'os';
+import slugify from '@sindresorhus/slugify';
 import { basename, join, normalize } from 'path';
 import { normalizePath, traverseUpDirectories } from '@vercel/build-utils';
 import { lstat, readJSON, outputJSON } from 'fs-extra';
@@ -17,6 +18,8 @@ import type Client from '../client';
 import type { Project } from '@vercel-internals/types';
 import createProject from '../projects/create-project';
 import { detectProjects } from '../projects/detect-projects';
+import { repoInfoToUrl } from '../git/repo-info-to-url';
+import { connectGitProvider, parseRepoUrl } from '../git/connect-git-provider';
 
 const home = homedir();
 
@@ -138,8 +141,15 @@ export async function ensureRepoLink(
       remoteName = answer.value;
     }
     const repoUrl = remoteUrls[remoteName];
+    const parsedRepoUrl = parseRepoUrl(repoUrl);
+    if (!parsedRepoUrl) {
+      throw new Error(`Failed to parse Git URL: ${repoUrl}`);
+    }
+    const repoUrlLink = output.link(repoUrl, repoInfoToUrl(parsedRepoUrl), {
+      fallback: () => link(repoUrl),
+    });
     output.spinner(
-      `Fetching Projects for ${link(repoUrl)} under ${chalk.bold(org.slug)}…`
+      `Fetching Projects for ${repoUrlLink} under ${chalk.bold(org.slug)}…`
     );
     let projects: Project[] = [];
     const query = new URLSearchParams({ repoUrl });
@@ -156,15 +166,17 @@ export async function ensureRepoLink(
 
     if (projects.length === 0) {
       output.log(
-        `No Projects are linked to ${link(repoUrl)} under ${chalk.bold(
+        `No Projects are linked to ${repoUrlLink} under ${chalk.bold(
           org.slug
         )}.`
       );
     } else {
       output.log(
-        `Found ${pluralize('Project', projects.length, true)} linked to ${link(
-          repoUrl
-        )} under ${chalk.bold(org.slug)}`
+        `Found ${pluralize(
+          'Project',
+          projects.length,
+          true
+        )} linked to ${repoUrlLink} under ${chalk.bold(org.slug)}`
       );
     }
 
@@ -208,7 +220,11 @@ export async function ensureRepoLink(
           : []),
         ...Array.from(detectedProjects.entries()).map(
           ([rootDirectory, framework]) => {
-            const name = basename(rootDirectory);
+            const name = slugify(
+              [basename(rootPath), basename(rootDirectory)]
+                .filter(Boolean)
+                .join('-')
+            );
             return {
               name: `${org.slug}/${name} (${framework})`,
               value: {
@@ -231,17 +247,30 @@ export async function ensureRepoLink(
     for (let i = 0; i < selected.length; i++) {
       const selection = selected[i];
       if (!selection.newProject) continue;
-      // TODO: allow for editing name / framework / etc.
-      const name = `${basename(rootPath)}-${selection.name}`;
+      const orgAndName = `${org.slug}/${selection.name}`;
+      output.spinner(`Creating new Project: ${orgAndName}`);
       delete selection.newProject;
-      selected[i] = await createProject(client, { ...selection, name });
-      output.log(`Created new Project: ${selected[i].name}`);
+      if (!selection.rootDirectory) delete selection.rootDirectory;
+      selected[i] = await createProject(client, selection);
+      await connectGitProvider(
+        client,
+        org,
+        selected[i].id,
+        parsedRepoUrl.provider,
+        `${parsedRepoUrl.org}/${parsedRepoUrl.repo}`
+      );
+      output.log(
+        `Created new Project: ${output.link(
+          orgAndName,
+          `https://vercel.com/${orgAndName}`
+        )}`
+      );
     }
 
     repoConfig = {
       orgId: org.id,
       remoteName,
-      projects: projects.map(project => {
+      projects: selected.map((project: Project) => {
         return {
           id: project.id,
           name: project.name,
@@ -258,7 +287,7 @@ export async function ensureRepoLink(
 
     output.print(
       prependEmoji(
-        `Linked to ${link(repoUrl)} under ${chalk.bold(
+        `Linked to ${repoUrlLink} under ${chalk.bold(
           org.slug
         )} (created ${VERCEL_DIR}${
           isGitIgnoreUpdated ? ' and added it to .gitignore' : ''
