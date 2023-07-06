@@ -83,6 +83,7 @@ export async function createServerlessEventHandler(
     const url = new URL(request.url ?? '/', server.url);
     // @ts-expect-error
     const response = await fetch(url, {
+      compress: false,
       body: await serializeBody(request),
       headers: {
         ...request.headers,
@@ -97,8 +98,20 @@ export async function createServerlessEventHandler(
       body = response.body;
     } else {
       body = await streamToBuffer(response.body);
+
+      /**
+       * `transfer-encoding` is related to streaming chunks.
+       * Since we are buffering the response.body, it should be stripped.
+       */
       response.headers.delete('transfer-encoding');
-      response.headers.set('content-length', body.length);
+
+      /**
+       * Since the entity-length and the transfer-length is different,
+       * the content-length should be stripped.
+       */
+      if (response.headers.has('content-encoding')) {
+        response.headers.delete('content-length')
+      }
     }
 
     return {
