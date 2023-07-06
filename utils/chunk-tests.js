@@ -48,6 +48,7 @@ async function getChunkedTests() {
       ...scripts,
       `--cache-dir=.turbo`,
       '--output-logs=full',
+      '--log-order=stream',
       '--',
       '--', // need two of these due to pnpm arg parsing
       '--listTests',
