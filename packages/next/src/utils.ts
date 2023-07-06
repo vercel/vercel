@@ -1454,20 +1454,7 @@ export async function getPageLambdaGroups({
         config,
       });
 
-      // If a user tries to customize in both handler and vercel.json we throw
-      const duplicateKeys = Object.keys(opts).filter(key =>
-        Object.keys(configOpts).includes(key)
-      );
-
-      if (duplicateKeys.length > 0) {
-        throw new Error(
-          `The route ${routeName} has duplicate configuration in both handler and vercel.json for: ${duplicateKeys.join(
-            ', '
-          )}`
-        );
-      }
-
-      opts = { ...configOpts, ...opts };
+      opts = { ...opts, ...configOpts };
     }
 
     let matchingGroup = groups.find(group => {
