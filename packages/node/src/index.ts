@@ -421,8 +421,9 @@ export const build: BuildV3 = async ({
 
   if (objectConfig && segmentConfig) {
     // If a user tries to customize in both handler and vercel.json we throw
+    const segmentConfigKeys = new Set(Object.keys(segmentConfig));
     const duplicateKeys = Object.keys(objectConfig).filter(key =>
-      Object.keys(segmentConfig).includes(key)
+      segmentConfigKeys.has(key)
     );
 
     if (duplicateKeys.length > 0) {
