@@ -110,7 +110,7 @@ export async function createServerlessEventHandler(
        * the content-length should be stripped.
        */
       if (response.headers.has('content-encoding')) {
-        response.headers.delete('content-length')
+        response.headers.delete('content-length');
       }
     }
 
