@@ -1411,7 +1411,7 @@ export async function getPageLambdaGroups({
 }: {
   entryPath: string;
   config: Config;
-  functionsConfigManifest?: FunctionsConfigManifest;
+  functionsConfigManifest: FunctionsConfigManifest;
   pages: string[];
   prerenderRoutes: Set<string>;
   pageTraces: {
