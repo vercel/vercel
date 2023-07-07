@@ -64,7 +64,7 @@ function testForkDevServer(entrypoint: string) {
   }
 );
 
-(NODE_MAJOR < 18 ? test.skip : test.only)(
+(NODE_MAJOR < 18 ? test.skip : test)(
   'buffer fetch response correctly',
   async () => {
     const child = testForkDevServer('./serverless-fetch.js');
