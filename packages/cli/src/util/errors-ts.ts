@@ -1079,3 +1079,16 @@ export class BuildError extends NowError<'BUILD_ERROR', {}> {
     });
   }
 }
+
+export class AccessDenied extends NowError<
+  'ACCESS_DENIED',
+  { resource: string; context: string }
+> {
+  constructor(resource: string, context: string) {
+    super({
+      code: 'ACCESS_DENIED',
+      meta: { resource, context },
+      message: `Access denied: You need additional permissions for ${resource} under ${context}.`,
+    });
+  }
+}
