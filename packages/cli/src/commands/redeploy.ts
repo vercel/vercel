@@ -108,7 +108,7 @@ export default async (client: Client): Promise<number> => {
           action: 'redeploy',
         },
         name: fromDeployment.name,
-        target: fromDeployment.target || 'production',
+        target: fromDeployment.target,
       },
       method: 'POST',
     });
