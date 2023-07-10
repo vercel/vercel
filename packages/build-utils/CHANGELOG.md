@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 6.8.1
+
+### Patch Changes
+
+- Revert "[build-utils] Allow file-ref sema to be controlled through env flag" ([#10167](https://github.com/vercel/vercel/pull/10167))
+
 ## 6.8.0
 
 ### Minor Changes
