@@ -248,8 +248,6 @@ export async function getLinkedProject(
 
       if (err.missingToken || err.invalidToken) {
         throw new InvalidToken();
-      } else if (err.code === 'forbidden') {
-        throw err;
       } else {
         throw new NowBuildError({
           message: `Could not retrieve Project Settings. To link your Project, remove the ${outputCode(
