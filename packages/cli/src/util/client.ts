@@ -147,7 +147,7 @@ export default class Client extends EventEmitter implements Stdio {
         const error = await responseError(res);
 
         // we should force reauth only if error has a teamId
-        if (isSAMLError(error) && error.teamId !== null) {
+        if (isSAMLError(error) && error.teamId) {
           try {
             // A SAML error means the token is expired, or is not
             // designated for the requested team, so the user needs
