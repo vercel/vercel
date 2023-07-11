@@ -7,6 +7,7 @@ export {
 export { detectFileSystemAPI } from './detect-file-system-api';
 export {
   detectFramework,
+  detectFrameworks,
   detectFrameworkRecord,
   detectFrameworkVersion,
 } from './detect-framework';
