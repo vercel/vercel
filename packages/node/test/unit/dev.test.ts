@@ -1,6 +1,9 @@
 import { forkDevServer, readMessage } from '../../src/fork-dev-server';
 import { resolve, extname } from 'path';
 import fetch from 'node-fetch';
+import { createServer } from 'http';
+import { listen } from 'async-listen';
+import zlib from 'zlib';
 
 jest.setTimeout(20 * 1000);
 
@@ -29,7 +32,7 @@ function testForkDevServer(entrypoint: string) {
 (NODE_MAJOR < 18 ? test.skip : test)(
   'runs an serverless function that exports GET',
   async () => {
-    const child = testForkDevServer('./serverless-web.js');
+    const child = testForkDevServer('./serverless-response.js');
     try {
       const result = await readMessage(child);
       if (result.state !== 'message') {
@@ -40,7 +43,7 @@ function testForkDevServer(entrypoint: string) {
 
       {
         const response = await fetch(
-          `http://${address}:${port}/api/serverless-web?name=Vercel`
+          `http://${address}:${port}/api/serverless-response?name=Vercel`
         );
         expect({
           status: response.status,
@@ -50,12 +53,96 @@ function testForkDevServer(entrypoint: string) {
 
       {
         const response = await fetch(
-          `http://${address}:${port}/api/serverless-web?name=Vercel`,
+          `http://${address}:${port}/api/serverless-response?name=Vercel`,
           { method: 'HEAD' }
         );
         expect({ status: response.status }).toEqual({ status: 405 });
       }
     } finally {
+      child.kill(9);
+    }
+  }
+);
+
+(NODE_MAJOR < 18 ? test.skip : test)(
+  'buffer fetch response correctly',
+  async () => {
+    const child = testForkDevServer('./serverless-fetch.js');
+
+    const server = createServer((req, res) => {
+      res.setHeader('Content-Encoding', 'br');
+      const searchParams = new URLSearchParams(req.url!.substring(1));
+      const encoding = searchParams.get('encoding') ?? 'identity';
+      res.writeHead(200, {
+        'content-type': 'text/plain',
+        'content-encoding': encoding,
+      });
+      let payload = Buffer.from('Greetings, Vercel');
+
+      if (encoding === 'br') {
+        payload = zlib.brotliCompressSync(payload, {
+          params: {
+            [zlib.constants.BROTLI_PARAM_QUALITY]: 0,
+          },
+        });
+      } else if (encoding === 'gzip') {
+        payload = zlib.gzipSync(payload, {
+          level: zlib.constants.Z_BEST_SPEED,
+        });
+      } else if (encoding === 'deflate') {
+        payload = zlib.deflateSync(payload, {
+          level: zlib.constants.Z_BEST_SPEED,
+        });
+      }
+
+      res.end(payload);
+    });
+
+    const serverUrl = (await listen(server)).toString();
+
+    try {
+      const result = await readMessage(child);
+      if (result.state !== 'message') {
+        throw new Error('Exited. error: ' + JSON.stringify(result.value));
+      }
+
+      const { address, port } = result.value;
+
+      {
+        const response = await fetch(
+          `http://${address}:${port}/api/serverless-fetch?url=${serverUrl}&encoding=br`
+        );
+        expect(response.headers.get('content-encoding')).toBe('br');
+        expect(response.headers.get('content-length')).toBe('21');
+        expect({
+          status: response.status,
+          body: await response.text(),
+        }).toEqual({ status: 200, body: 'Greetings, Vercel' });
+      }
+      {
+        const response = await fetch(
+          `http://${address}:${port}/api/serverless-fetch?url=${serverUrl}&encoding=gzip`
+        );
+        expect(response.headers.get('content-encoding')).toBe('gzip');
+        expect(response.headers.get('content-length')).toBe('37');
+        expect({
+          status: response.status,
+          body: await response.text(),
+        }).toEqual({ status: 200, body: 'Greetings, Vercel' });
+      }
+      {
+        const response = await fetch(
+          `http://${address}:${port}/api/serverless-fetch?url=${serverUrl}&encoding=deflate`
+        );
+        expect(response.headers.get('content-encoding')).toBe('deflate');
+        expect(response.headers.get('content-length')).toBe('25');
+        expect({
+          status: response.status,
+          body: await response.text(),
+        }).toEqual({ status: 200, body: 'Greetings, Vercel' });
+      }
+    } finally {
+      server.close();
       child.kill(9);
     }
   }
