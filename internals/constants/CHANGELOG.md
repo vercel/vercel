@@ -1,5 +1,11 @@
 # @vercel-internals/constants
 
+## 1.0.4
+
+### Patch Changes
+
+- Create new help output and arg parsing for deploy command ([#10090](https://github.com/vercel/vercel/pull/10090))
+
 ## 1.0.3
 
 ### Patch Changes
