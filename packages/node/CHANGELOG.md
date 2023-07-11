@@ -1,5 +1,14 @@
 # @vercel/node
 
+## 2.15.4
+
+### Patch Changes
+
+- [node] fix decompress mismatching ([#10184](https://github.com/vercel/vercel/pull/10184))
+
+- Updated dependencies [[`7021279b2`](https://github.com/vercel/vercel/commit/7021279b284f314a4d1bdbb4306b4c22291efa08)]:
+  - @vercel/build-utils@6.8.1
+
 ## 2.15.3
 
 ### Patch Changes
