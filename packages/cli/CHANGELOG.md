@@ -1,5 +1,28 @@
 # vercel
 
+## 31.0.2
+
+### Patch Changes
+
+- Allow additional project settings in `createProject()` ([#10172](https://github.com/vercel/vercel/pull/10172))
+
+- Run local Project detection during `vc link --repo`. ([#10094](https://github.com/vercel/vercel/pull/10094))
+  This allows for creation of new Projects that do not yet exist under the selected scope.
+
+- Redeploy command no longer redeploys preview deployments to production ([#10186](https://github.com/vercel/vercel/pull/10186))
+
+- Added trailing new line at end of help output ([#10170](https://github.com/vercel/vercel/pull/10170))
+
+- Create new help output and arg parsing for deploy command ([#10090](https://github.com/vercel/vercel/pull/10090))
+
+- [cli] Remove `preinstall` script ([#10157](https://github.com/vercel/vercel/pull/10157))
+
+- Updated dependencies [[`7021279b2`](https://github.com/vercel/vercel/commit/7021279b284f314a4d1bdbb4306b4c22291efa08), [`5e5332fbc`](https://github.com/vercel/vercel/commit/5e5332fbc9317a8f3cc4ed0b72ec1a2c76020891), [`027bce00b`](https://github.com/vercel/vercel/commit/027bce00b3821d9b4a8f7ec320cd1c43ab9f4215)]:
+  - @vercel/build-utils@6.8.1
+  - @vercel/node@2.15.4
+  - @vercel/remix-builder@1.8.16
+  - @vercel/static-build@1.3.39
+
 ## 31.0.1
 
 ### Patch Changes

@@ -1,5 +1,14 @@
 # @vercel/remix-builder
 
+## 1.8.16
+
+### Patch Changes
+
+- Update `@remix-run/dev` fork to v1.18.1 ([#10180](https://github.com/vercel/vercel/pull/10180))
+
+- Updated dependencies [[`7021279b2`](https://github.com/vercel/vercel/commit/7021279b284f314a4d1bdbb4306b4c22291efa08)]:
+  - @vercel/build-utils@6.8.1
+
 ## 1.8.15
 
 ### Patch Changes
