@@ -38,6 +38,10 @@ export default async function rm(client: Client, args: string[]) {
       client.output.error('No such project exists');
       return 1;
     }
+    if (isAPIError(err) && err.status === 403) {
+      client.output.error(err.message);
+      return 1;
+    }
   }
   const elapsed = ms(Date.now() - start);
   client.output.log(
