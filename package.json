@@ -1,6 +1,6 @@
 {
   "name": "vercel-monorepo",
-  "version": "0.0.0-barba.1",
+  "version": "0.0.0-barba.2",
   "private": true,
   "license": "Apache-2.0",
   "packageManager": "pnpm@8.3.1",
