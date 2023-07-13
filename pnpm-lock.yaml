@@ -1,5 +1,9 @@
 lockfileVersion: '6.0'
 
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
 importers:
 
   .:
@@ -163,7 +167,7 @@ importers:
         version: 29.5.0(@types/node@14.14.31)
       ts-jest:
         specifier: 29.1.0
-        version: 29.1.0(@babel/core@7.5.0)(jest@29.5.0)(typescript@4.9.4)
+        version: 29.1.0(@babel/core@7.21.8)(jest@29.5.0)(typescript@4.9.4)
       typescript:
         specifier: 4.9.4
         version: 4.9.4
@@ -683,8 +687,8 @@ importers:
         specifier: 5.1.0
         version: 5.1.0
       supports-hyperlinks:
-        specifier: 2.2.0
-        version: 2.2.0
+        specifier: 3.0.0
+        version: 3.0.0
       tar-fs:
         specifier: 1.16.3
         version: 1.16.3
@@ -15625,9 +15629,9 @@ packages:
       has-flag: 4.0.0
     dev: true
 
-  /supports-hyperlinks@2.2.0:
-    resolution: {integrity: sha512-6sXEzV5+I5j8Bmq9/vUphGRM/RJNT9SCURJLjwfOg51heRtguGWDzcaBlgAzKhQa0EVNpPEKzQuBwZ8S8WaCeQ==}
-    engines: {node: '>=8'}
+  /supports-hyperlinks@3.0.0:
+    resolution: {integrity: sha512-QBDPHyPQDRTy9ku4URNGY5Lah8PAaXs6tAAwp55sL5WCsSW7GIfdf6W5ixfziW+t7wh3GVvHyHHyQ1ESsoRvaA==}
+    engines: {node: '>=14.18'}
     dependencies:
       has-flag: 4.0.0
       supports-color: 7.2.0
@@ -15955,7 +15959,7 @@ packages:
     resolution: {integrity: sha512-Y/arvbn+rrz3JCKl9C4kVNfTfSm2/mEp5FSz5EsZSANGPSlQrpRI5M4PKF+mJnE52jOO90PnPSc3Ur3bTQw0gA==}
     dev: true
 
-  /ts-jest@29.1.0(@babel/core@7.5.0)(jest@29.5.0)(typescript@4.9.4):
+  /ts-jest@29.1.0(@babel/core@7.21.8)(jest@29.5.0)(typescript@4.9.4):
     resolution: {integrity: sha512-ZhNr7Z4PcYa+JjMl62ir+zPiNJfXJN6E8hSLnaUKhOgqcn8vb3e537cpkd0FuAfRK3sR1LSqM1MOhliXNgOFPA==}
     engines: {node: ^14.15.0 || ^16.10.0 || >=18.0.0}
     hasBin: true
@@ -15976,7 +15980,7 @@ packages:
       esbuild:
         optional: true
     dependencies:
-      '@babel/core': 7.5.0
+      '@babel/core': 7.21.8
       bs-logger: 0.2.6
       fast-json-stable-stringify: 2.1.0
       jest: 29.5.0(@types/node@14.14.31)
