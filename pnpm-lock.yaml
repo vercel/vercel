@@ -1,9 +1,5 @@
 lockfileVersion: '6.0'
 
-settings:
-  autoInstallPeers: true
-  excludeLinksFromLockfile: false
-
 importers:
 
   .:
@@ -167,7 +163,7 @@ importers:
         version: 29.5.0(@types/node@14.14.31)
       ts-jest:
         specifier: 29.1.0
-        version: 29.1.0(@babel/core@7.21.8)(jest@29.5.0)(typescript@4.9.4)
+        version: 29.1.0(@babel/core@7.5.0)(jest@29.5.0)(typescript@4.9.4)
       typescript:
         specifier: 4.9.4
         version: 4.9.4
@@ -187,7 +183,7 @@ importers:
         specifier: 1.0.4
         version: link:../constants
       '@vercel/build-utils':
-        specifier: 6.8.1
+        specifier: 6.8.2
         version: link:../../packages/build-utils
       '@vercel/routing-utils':
         specifier: 2.2.1
@@ -311,7 +307,7 @@ importers:
   packages/cli:
     dependencies:
       '@vercel/build-utils':
-        specifier: 6.8.1
+        specifier: 6.8.2
         version: link:../build-utils
       '@vercel/go':
         specifier: 2.5.1
@@ -323,7 +319,7 @@ importers:
         specifier: 3.8.8
         version: link:../next
       '@vercel/node':
-        specifier: 2.15.4
+        specifier: 2.15.5
         version: link:../node
       '@vercel/python':
         specifier: 3.1.60
@@ -332,13 +328,13 @@ importers:
         specifier: 1.1.15
         version: link:../redwood
       '@vercel/remix-builder':
-        specifier: 1.8.16
+        specifier: 1.8.17
         version: link:../remix
       '@vercel/ruby':
         specifier: 1.3.76
         version: link:../ruby
       '@vercel/static-build':
-        specifier: 1.3.39
+        specifier: 1.3.40
         version: link:../static-build
     devDependencies:
       '@alex_neo/jest-expect-message':
@@ -471,10 +467,10 @@ importers:
         specifier: 1.0.0
         version: link:../../internals/get-package-json
       '@vercel-internals/types':
-        specifier: 1.0.4
+        specifier: 1.0.5
         version: link:../../internals/types
       '@vercel/client':
-        specifier: 12.6.4
+        specifier: 12.6.5
         version: link:../client
       '@vercel/error-utils':
         specifier: 1.0.10
@@ -483,7 +479,7 @@ importers:
         specifier: 1.4.3
         version: link:../frameworks
       '@vercel/fs-detectors':
-        specifier: 4.0.1
+        specifier: 4.1.0
         version: link:../fs-detectors
       '@vercel/fun':
         specifier: 1.0.4
@@ -732,7 +728,7 @@ importers:
   packages/client:
     dependencies:
       '@vercel/build-utils':
-        specifier: 6.8.1
+        specifier: 6.8.2
         version: link:../build-utils
       '@vercel/routing-utils':
         specifier: 2.2.1
@@ -921,7 +917,7 @@ importers:
         specifier: 7.3.10
         version: 7.3.10
       '@vercel/build-utils':
-        specifier: 6.8.1
+        specifier: 6.8.2
         version: link:../build-utils
       typescript:
         specifier: 4.9.5
@@ -949,10 +945,10 @@ importers:
         specifier: 0.25.24
         version: 0.25.24
       '@vercel/build-utils':
-        specifier: 6.8.1
+        specifier: 6.8.2
         version: link:../build-utils
       '@vercel/node':
-        specifier: 2.15.4
+        specifier: 2.15.5
         version: link:../node
       '@vercel/routing-utils':
         specifier: 2.2.1
@@ -1013,7 +1009,7 @@ importers:
         specifier: 2.1.0
         version: 2.1.0
       '@vercel/build-utils':
-        specifier: 6.8.1
+        specifier: 6.8.2
         version: link:../build-utils
       '@vercel/ncc':
         specifier: 0.24.0
@@ -1055,7 +1051,7 @@ importers:
         specifier: 14.18.33
         version: 14.18.33
       '@vercel/build-utils':
-        specifier: 6.8.1
+        specifier: 6.8.2
         version: link:../build-utils
       '@vercel/static-config':
         specifier: 2.0.17
@@ -1112,7 +1108,7 @@ importers:
         specifier: 3.2.0
         version: 3.2.0
       '@vercel/build-utils':
-        specifier: 6.8.1
+        specifier: 6.8.2
         version: link:../build-utils
       '@vercel/nft':
         specifier: 0.22.5
@@ -1202,7 +1198,7 @@ importers:
         specifier: 2.6.3
         version: 2.6.3
       '@vercel/build-utils':
-        specifier: 6.8.1
+        specifier: 6.8.2
         version: link:../build-utils
       '@vercel/error-utils':
         specifier: 1.0.10
@@ -1308,7 +1304,7 @@ importers:
         specifier: 14.18.33
         version: 14.18.33
       '@vercel/build-utils':
-        specifier: 6.8.1
+        specifier: 6.8.2
         version: link:../build-utils
       '@vercel/ncc':
         specifier: 0.24.0
@@ -1339,7 +1335,7 @@ importers:
         specifier: 6.0.0
         version: 6.0.0
       '@vercel/build-utils':
-        specifier: 6.8.1
+        specifier: 6.8.2
         version: link:../build-utils
       execa:
         specifier: 3.2.0
@@ -1354,7 +1350,7 @@ importers:
         specifier: npm:@vercel/remix-run-dev@1.18.1
         version: /@vercel/remix-run-dev@1.18.1(@types/node@14.18.33)
       '@vercel/build-utils':
-        specifier: 6.8.1
+        specifier: 6.8.2
         version: link:../build-utils
       '@vercel/nft':
         specifier: 0.22.5
@@ -1411,7 +1407,7 @@ importers:
         specifier: 6.0.0
         version: 6.0.0
       '@vercel/build-utils':
-        specifier: 6.8.1
+        specifier: 6.8.2
         version: link:../build-utils
       '@vercel/ncc':
         specifier: 0.24.0
@@ -1432,7 +1428,7 @@ importers:
         specifier: 1.0.10
         version: link:../gatsby-plugin-vercel-analytics
       '@vercel/gatsby-plugin-vercel-builder':
-        specifier: 1.3.12
+        specifier: 1.3.13
         version: link:../gatsby-plugin-vercel-builder
     devDependencies:
       '@types/aws-lambda':
@@ -1463,7 +1459,7 @@ importers:
         specifier: 7.3.13
         version: 7.3.13
       '@vercel/build-utils':
-        specifier: 6.8.1
+        specifier: 6.8.2
         version: link:../build-utils
       '@vercel/error-utils':
         specifier: 1.0.10
@@ -1472,7 +1468,7 @@ importers:
         specifier: 1.4.3
         version: link:../frameworks
       '@vercel/fs-detectors':
-        specifier: 4.0.1
+        specifier: 4.1.0
         version: link:../fs-detectors
       '@vercel/ncc':
         specifier: 0.24.0
@@ -15959,7 +15955,7 @@ packages:
     resolution: {integrity: sha512-Y/arvbn+rrz3JCKl9C4kVNfTfSm2/mEp5FSz5EsZSANGPSlQrpRI5M4PKF+mJnE52jOO90PnPSc3Ur3bTQw0gA==}
     dev: true
 
-  /ts-jest@29.1.0(@babel/core@7.21.8)(jest@29.5.0)(typescript@4.9.4):
+  /ts-jest@29.1.0(@babel/core@7.5.0)(jest@29.5.0)(typescript@4.9.4):
     resolution: {integrity: sha512-ZhNr7Z4PcYa+JjMl62ir+zPiNJfXJN6E8hSLnaUKhOgqcn8vb3e537cpkd0FuAfRK3sR1LSqM1MOhliXNgOFPA==}
     engines: {node: ^14.15.0 || ^16.10.0 || >=18.0.0}
     hasBin: true
@@ -15980,7 +15976,7 @@ packages:
       esbuild:
         optional: true
     dependencies:
-      '@babel/core': 7.21.8
+      '@babel/core': 7.5.0
       bs-logger: 0.2.6
       fast-json-stable-stringify: 2.1.0
       jest: 29.5.0(@types/node@14.14.31)
@@ -16724,6 +16720,7 @@ packages:
   /vm2@3.9.17:
     resolution: {integrity: sha512-AqwtCnZ/ERcX+AVj9vUsphY56YANXxRuqMb7GsDtAr0m0PcQX3u0Aj3KWiXM0YAHy7i6JEeHrwOnwXbGYgRpAw==}
     engines: {node: '>=6.0'}
+    deprecated: The library contains critical security issues and should not be used for production! The maintenance of the project has been discontinued. Consider migrating your code to isolated-vm.
     hasBin: true
     dependencies:
       acorn: 8.8.2
@@ -17117,3 +17114,7 @@ packages:
   /zwitch@2.0.4:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
     dev: false
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
