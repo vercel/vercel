@@ -214,11 +214,8 @@ export async function ensureRepoLink(
           ? [new inquirer.Separator('----- Existing Projects -----')]
           : []),
         ...projects.map(project => {
-          const orgAndName = `${org.slug}/${project.name}`;
           return {
-            name: output.link(orgAndName, `https://vercel.com/${orgAndName}`, {
-              fallback: false,
-            }),
+            name: `${org.slug}/${project.name}`,
             value: project,
             checked: true,
           };
