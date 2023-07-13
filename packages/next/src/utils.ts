@@ -2397,9 +2397,10 @@ export {
   getSourceFilePathFromPage,
 };
 
-export type FunctionsConfig = Record<
+export type FunctionsConfigManifestV1 = Record<
   string,
   {
+    version: 1,
     maxDuration?: number;
   }
 >;
