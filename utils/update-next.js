@@ -122,7 +122,7 @@ module.exports = async ({ github, context } = {}) => {
       owner,
       repo,
       pull_number: pr.data.number,
-      reviewers: ['ijjk', 'styfle'],
+      reviewers: ['ijjk', 'styfle', 'huozhi'],
     });
   } catch (err) {
     console.log(
