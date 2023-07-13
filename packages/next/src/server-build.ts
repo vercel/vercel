@@ -44,7 +44,7 @@ import {
   getFilesMapFromReasons,
   UnwrapPromise,
   getOperationType,
-  FunctionsConfig,
+  FunctionsConfigManifestV1,
 } from './utils';
 import {
   nodeFileTrace,
@@ -107,7 +107,7 @@ export async function serverBuild({
   dynamicPages: string[];
   trailingSlash: boolean;
   config: Config;
-  functionsConfigManifest?: FunctionsConfig;
+  functionsConfigManifest?: FunctionsConfigManifestV1;
   pagesDir: string;
   baseDir: string;
   canUsePreviewMode: boolean;

@@ -1411,7 +1411,7 @@ export async function getPageLambdaGroups({
 }: {
   entryPath: string;
   config: Config;
-  functionsConfigManifest?: FunctionsConfig;
+  functionsConfigManifest?: FunctionsConfigManifestV1;
   pages: string[];
   prerenderRoutes: Set<string>;
   pageTraces: {
@@ -1438,8 +1438,11 @@ export async function getPageLambdaGroups({
 
     let opts: { memory?: number; maxDuration?: number } = {};
 
-    if (functionsConfigManifest && functionsConfigManifest[routeName]) {
-      opts = functionsConfigManifest[routeName];
+    if (
+      functionsConfigManifest &&
+      functionsConfigManifest.functions[routeName]
+    ) {
+      opts = functionsConfigManifest.functions[routeName];
     }
 
     if (config && config.functions) {
@@ -2397,13 +2400,15 @@ export {
   getSourceFilePathFromPage,
 };
 
-export type FunctionsConfigManifestV1 = Record<
-  string,
-  {
-    version: 1,
-    maxDuration?: number;
-  }
->;
+export type FunctionsConfigManifestV1 = {
+  version: 1;
+  functions: Record<
+    string,
+    {
+      maxDuration?: number;
+    }
+  >;
+};
 
 type MiddlewareManifest = MiddlewareManifestV1 | MiddlewareManifestV2;
 
@@ -2756,7 +2761,7 @@ export async function getMiddlewareBundle({
 export async function getFunctionsConfigManifest(
   entryPath: string,
   outputDirectory: string
-): Promise<FunctionsConfig | undefined> {
+): Promise<FunctionsConfigManifestV1 | undefined> {
   const functionConfigManifestPath = path.join(
     entryPath,
     outputDirectory,
@@ -2772,12 +2777,11 @@ export async function getFunctionsConfigManifest(
     return;
   }
 
-  const manifest: {
-    version: number;
-    functions: Record<string, Record<string, unknown>>;
-  } = await fs.readJSON(functionConfigManifestPath);
+  const manifest: FunctionsConfigManifestV1 = await fs.readJSON(
+    functionConfigManifestPath
+  );
 
-  return manifest.version === 1 ? manifest.functions : undefined;
+  return manifest.version === 1 ? manifest : undefined;
 }
 
 /**
