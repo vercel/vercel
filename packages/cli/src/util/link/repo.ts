@@ -15,6 +15,7 @@ import { emoji, prependEmoji } from '../emoji';
 import selectOrg from '../input/select-org';
 import { addToGitIgnore } from './add-to-gitignore';
 import type Client from '../client';
+import type { Framework } from '@vercel/frameworks';
 import type { Project } from '@vercel-internals/types';
 import createProject from '../projects/create-project';
 import { detectProjects } from '../projects/detect-projects';
@@ -90,7 +91,7 @@ export async function ensureRepoLink(
     // they will be ready by the time the projects are listed
     const detectedProjectsPromise = detectProjects(rootPath).catch(err => {
       output.debug(`Failed to detect local projects: ${err}`);
-      return new Map<string, string>();
+      return new Map<string, Framework[]>();
     });
 
     // Not yet linked, so prompt user to begin linking
@@ -187,17 +188,21 @@ export async function ensureRepoLink(
       detectedProjects.delete(project.rootDirectory ?? '');
     }
 
-    if (detectedProjects.size > 0) {
+    const detectedProjectsCount = Array.from(detectedProjects.values()).reduce(
+      (o, f) => o + f.length,
+      0
+    );
+    if (detectedProjectsCount > 0) {
       output.log(
         `Detected ${pluralize(
           'new Project',
-          detectedProjects.size,
+          detectedProjectsCount,
           true
         )} that may be created.`
       );
     }
 
-    const addSeparators = projects.length > 0 && detectedProjects.size > 0;
+    const addSeparators = projects.length > 0 && detectedProjectsCount > 0;
     const { selected } = await client.prompt({
       type: 'checkbox',
       name: 'selected',
@@ -209,8 +214,11 @@ export async function ensureRepoLink(
           ? [new inquirer.Separator('----- Existing Projects -----')]
           : []),
         ...projects.map(project => {
+          const orgAndName = `${org.slug}/${project.name}`;
           return {
-            name: `${org.slug}/${project.name}`,
+            name: output.link(orgAndName, `https://vercel.com/${orgAndName}`, {
+              fallback: false,
+            }),
             value: project,
             checked: true,
           };
@@ -218,23 +226,30 @@ export async function ensureRepoLink(
         ...(addSeparators
           ? [new inquirer.Separator('----- New Projects to be created -----')]
           : []),
-        ...Array.from(detectedProjects.entries()).map(
-          ([rootDirectory, framework]) => {
-            const name = slugify(
-              [basename(rootPath), basename(rootDirectory)]
-                .filter(Boolean)
-                .join('-')
-            );
-            return {
-              name: `${org.slug}/${name} (${framework})`,
-              value: {
-                newProject: true,
-                rootDirectory,
-                name,
-                framework,
-              },
-            };
-          }
+        ...Array.from(detectedProjects.entries()).flatMap(
+          ([rootDirectory, frameworks]) =>
+            frameworks.map((framework, i) => {
+              const name = slugify(
+                [
+                  basename(rootPath),
+                  basename(rootDirectory),
+                  i > 0 ? framework.slug : '',
+                ]
+                  .filter(Boolean)
+                  .join('-')
+              );
+              return {
+                name: `${org.slug}/${name} (${framework.name})`,
+                value: {
+                  newProject: true,
+                  rootDirectory,
+                  name,
+                  framework,
+                },
+                // Checked by default when there are no other existing Projects
+                checked: projects.length === 0,
+              };
+            })
         ),
       ],
     });
@@ -251,7 +266,10 @@ export async function ensureRepoLink(
       output.spinner(`Creating new Project: ${orgAndName}`);
       delete selection.newProject;
       if (!selection.rootDirectory) delete selection.rootDirectory;
-      selected[i] = await createProject(client, selection);
+      selected[i] = await createProject(client, {
+        ...selection,
+        framework: selection.framework.slug,
+      });
       await connectGitProvider(
         client,
         org,
@@ -262,7 +280,8 @@ export async function ensureRepoLink(
       output.log(
         `Created new Project: ${output.link(
           orgAndName,
-          `https://vercel.com/${orgAndName}`
+          `https://vercel.com/${orgAndName}`,
+          { fallback: false }
         )}`
       );
     }
@@ -287,9 +306,11 @@ export async function ensureRepoLink(
 
     output.print(
       prependEmoji(
-        `Linked to ${repoUrlLink} under ${chalk.bold(
-          org.slug
-        )} (created ${VERCEL_DIR}${
+        `Linked to ${pluralize(
+          'Project',
+          selected.length,
+          true
+        )} under ${chalk.bold(org.slug)} (created ${VERCEL_DIR}${
           isGitIgnoreUpdated ? ' and added it to .gitignore' : ''
         })`,
         emoji('link')

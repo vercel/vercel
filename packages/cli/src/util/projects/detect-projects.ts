@@ -1,7 +1,7 @@
 import { join } from 'path';
-import frameworks from '@vercel/frameworks';
+import frameworkList, { Framework } from '@vercel/frameworks';
 import {
-  detectFramework,
+  detectFrameworks,
   getWorkspacePackagePaths,
   getWorkspaces,
   LocalFileSystemDetector,
@@ -10,7 +10,7 @@ import {
 export async function detectProjects(cwd: string) {
   const fs = new LocalFileSystemDetector(cwd);
   const workspaces = await getWorkspaces({ fs });
-  const detectedProjects = new Map<string, string>();
+  const detectedProjects = new Map<string, Framework[]>();
   const packagePaths = (
     await Promise.all(
       workspaces.map(workspace =>
@@ -26,12 +26,12 @@ export async function detectProjects(cwd: string) {
   }
   await Promise.all(
     packagePaths.map(async p => {
-      const framework = await detectFramework({
+      const frameworks = await detectFrameworks({
         fs: fs.chdir(join('.', p)),
-        frameworkList: frameworks,
+        frameworkList,
       });
-      if (!framework) return;
-      detectedProjects.set(p.slice(1), framework);
+      if (frameworks.length === 0) return;
+      detectedProjects.set(p.slice(1), frameworks);
     })
   );
   return detectedProjects;
