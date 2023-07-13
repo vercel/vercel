@@ -35,7 +35,7 @@
     "@types/semver": "6.0.0",
     "@types/text-table": "0.2.1",
     "@types/webpack-sources": "3.2.0",
-    "@vercel/build-utils": "6.8.1",
+    "@vercel/build-utils": "6.8.2",
     "@vercel/nft": "0.22.5",
     "@vercel/routing-utils": "2.2.1",
     "async-sema": "3.0.1",
