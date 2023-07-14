@@ -1,5 +1,21 @@
 # vercel
 
+## 31.0.3
+
+### Patch Changes
+
+- Fix redeploy target to be undefined when null ([#10201](https://github.com/vercel/vercel/pull/10201))
+
+- Respect forbidden API responses ([#10178](https://github.com/vercel/vercel/pull/10178))
+
+- Update `supports-hyperlinks` to v3 ([#10208](https://github.com/vercel/vercel/pull/10208))
+
+- Updated dependencies [[`0750517af`](https://github.com/vercel/vercel/commit/0750517af99aea41410d4f1f772ce427699554e7)]:
+  - @vercel/build-utils@6.8.2
+  - @vercel/static-build@1.3.40
+  - @vercel/node@2.15.5
+  - @vercel/remix-builder@1.8.17
+
 ## 31.0.2
 
 ### Patch Changes

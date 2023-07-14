@@ -44,6 +44,7 @@ import {
   getFilesMapFromReasons,
   UnwrapPromise,
   getOperationType,
+  FunctionsConfigManifestV1,
 } from './utils';
 import {
   nodeFileTrace,
@@ -66,6 +67,7 @@ export async function serverBuild({
   dynamicPages,
   pagesDir,
   config = {},
+  functionsConfigManifest,
   privateOutputs,
   baseDir,
   workPath,
@@ -105,6 +107,7 @@ export async function serverBuild({
   dynamicPages: string[];
   trailingSlash: boolean;
   config: Config;
+  functionsConfigManifest?: FunctionsConfigManifestV1;
   pagesDir: string;
   baseDir: string;
   canUsePreviewMode: boolean;
@@ -752,6 +755,7 @@ export async function serverBuild({
     const pageLambdaGroups = await getPageLambdaGroups({
       entryPath: projectDir,
       config,
+      functionsConfigManifest,
       pages: nonApiPages,
       prerenderRoutes,
       pageTraces,
@@ -767,6 +771,7 @@ export async function serverBuild({
     const appRouterLambdaGroups = await getPageLambdaGroups({
       entryPath: projectDir,
       config,
+      functionsConfigManifest,
       pages: appRouterPages,
       prerenderRoutes,
       pageTraces,
@@ -789,6 +794,7 @@ export async function serverBuild({
     const apiLambdaGroups = await getPageLambdaGroups({
       entryPath: projectDir,
       config,
+      functionsConfigManifest,
       pages: apiPages,
       prerenderRoutes,
       pageTraces,

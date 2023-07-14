@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 6.8.2
+
+### Patch Changes
+
+- Push back `nodejs16.x` discontinue date to `2024-02-06` ([#10209](https://github.com/vercel/vercel/pull/10209))
+
 ## 6.8.1
 
 ### Patch Changes
