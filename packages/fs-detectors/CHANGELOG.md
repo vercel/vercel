@@ -1,5 +1,11 @@
 # @vercel/fs-detectors
 
+## 4.1.0
+
+### Minor Changes
+
+- Add `detectFrameworks()` function ([#10195](https://github.com/vercel/vercel/pull/10195))
+
 ## 4.0.1
 
 ### Patch Changes
