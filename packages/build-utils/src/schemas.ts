@@ -14,7 +14,7 @@ export const functionsSchema = {
         },
         memory: {
           minimum: 128,
-          maximum: 3008,
+          maximum: 10240,
         },
         maxDuration: {
           type: 'number',
