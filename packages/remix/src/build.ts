@@ -16,7 +16,6 @@ import {
   runNpmInstall,
   runPackageJsonScript,
   scanParentDirs,
-  walkParentDirs,
 } from '@vercel/build-utils';
 import { getConfig } from '@vercel/static-config';
 import { nodeFileTrace } from '@vercel/nft';
@@ -43,6 +42,7 @@ import {
   findEntry,
   chdirAndReadConfig,
   addDependency,
+  ensureResolvable,
 } from './utils';
 import semver from 'semver';
 
@@ -657,99 +657,6 @@ async function createRenderEdgeFunction(
   });
 
   return fn;
-}
-
-async function ensureResolvable(
-  start: string,
-  base: string,
-  pkgName: string
-): Promise<string> {
-  try {
-    const resolvedPkgPath = _require.resolve(`${pkgName}/package.json`, {
-      paths: [start],
-    });
-    const resolvedPath = dirname(resolvedPkgPath);
-    if (!relative(base, resolvedPath).startsWith(`..${sep}`)) {
-      // Resolved path is within the root of the project, so all good
-      debug(`"${pkgName}" resolved to '${resolvedPath}'`);
-      return resolvedPath;
-    }
-  } catch (err: any) {
-    if (err.code !== 'MODULE_NOT_FOUND') {
-      throw err;
-    }
-  }
-
-  // If we got to here then `pkgName` was not resolvable up to the root
-  // of the project. Try a couple symlink tricks, otherwise we'll bail.
-
-  // Attempt to find the package in `node_modules/.pnpm` (pnpm)
-  const pnpmDir = await walkParentDirs({
-    base,
-    start,
-    filename: 'node_modules/.pnpm',
-  });
-  if (pnpmDir) {
-    const prefix = `${pkgName.replace('/', '+')}@`;
-    const packages = await fs.readdir(pnpmDir);
-    const match = packages.find(p => p.startsWith(prefix));
-    if (match) {
-      const pkgDir = join(pnpmDir, match, 'node_modules', pkgName);
-      await ensureSymlink(pkgDir, join(pnpmDir, '..'), pkgName);
-      return pkgDir;
-    }
-  }
-
-  // Attempt to find the package in `node_modules/.store` (npm 9+ linked mode)
-  const npmDir = await walkParentDirs({
-    base,
-    start,
-    filename: 'node_modules/.store',
-  });
-  if (npmDir) {
-    const prefix = `${basename(pkgName)}@`;
-    const prefixDir = join(npmDir, dirname(pkgName));
-    const packages = await fs.readdir(prefixDir);
-    const match = packages.find(p => p.startsWith(prefix));
-    if (match) {
-      const pkgDir = join(prefixDir, match, 'node_modules', pkgName);
-      await ensureSymlink(pkgDir, join(npmDir, '..'), pkgName);
-      return pkgDir;
-    }
-  }
-
-  throw new Error(
-    `Failed to resolve "${pkgName}". To fix this error, add "${pkgName}" to "dependencies" in your \`package.json\` file.`
-  );
-}
-
-async function ensureSymlink(
-  target: string,
-  nodeModulesDir: string,
-  pkgName: string
-) {
-  const symlinkPath = join(nodeModulesDir, pkgName);
-  const symlinkDir = dirname(symlinkPath);
-  const relativeTarget = relative(symlinkDir, target);
-
-  try {
-    const existingTarget = await fs.readlink(symlinkPath);
-    if (existingTarget === relativeTarget) {
-      // Symlink is already the expected value, so do nothing
-      return;
-    } else {
-      // If a symlink already exists then delete it if the target doesn't match
-      await fs.unlink(symlinkPath);
-    }
-  } catch (err: any) {
-    // Ignore when path does not exist or is not a symlink
-    if (err.code !== 'ENOENT' && err.code !== 'EINVAL') {
-      throw err;
-    }
-  }
-
-  await fs.symlink(relativeTarget, symlinkPath);
-  debug(`Created symlink for "${pkgName}"`);
 }
 
 async function writeEntrypointFile(
