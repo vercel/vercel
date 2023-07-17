@@ -2685,7 +2685,9 @@ export async function getMiddlewareBundle({
         shortPath = shortPath.replace(/^pages\//, '');
       } else if (
         shortPath.startsWith('app/') &&
-        (shortPath.endsWith('/page') || shortPath.endsWith('/route'))
+        (shortPath.endsWith('/page') ||
+          shortPath.endsWith('/route') ||
+          shortPath === 'app/_not-found')
       ) {
         const ogRoute = shortPath.replace(/^app\//, '/');
         shortPath = (

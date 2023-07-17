@@ -1,0 +1,20 @@
+{
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next"
+    }
+  ],
+  "probes": [
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "My page"
+    },
+    {
+      "path": "/not-found-page",
+      "status": 404,
+      "mustContain": "This Is The Not Found Page"
+    }
+  ]
+}
