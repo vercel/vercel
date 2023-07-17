@@ -2,4 +2,4 @@
 "@vercel/next": patch
 ---
 
-[next] fix 404 page in edge runtime
+Fix 404 page in edge runtime
