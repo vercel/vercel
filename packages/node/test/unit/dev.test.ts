@@ -148,6 +148,27 @@ function testForkDevServer(entrypoint: string) {
   }
 );
 
+test("user code doesn't interfer with runtime", async () => {
+  const child = testForkDevServer('./edge-self.js');
+  try {
+    const result = await readMessage(child);
+    if (result.state !== 'message') {
+      throw new Error('Exited. error: ' + JSON.stringify(result.value));
+    }
+
+    const { address, port } = result.value;
+    const response = await fetch(`http://${address}:${port}/api/edge-self`);
+
+    expect({
+      status: response.status,
+    }).toEqual({
+      status: 200,
+    });
+  } finally {
+    child.kill(9);
+  }
+});
+
 test('runs an edge function that uses `WebSocket`', async () => {
   const child = testForkDevServer('./edge-websocket.js');
   try {
