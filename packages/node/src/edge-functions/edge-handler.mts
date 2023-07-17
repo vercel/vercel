@@ -88,7 +88,10 @@ async function compileUserCode(
       "use strict";var regeneratorRuntime;
 
       // user code
-      ${compiledFile.text};
+      (() => {
+        ${compiledFile.text};
+      })();
+
       const userModule = module.exports;
 
       // request metadata
