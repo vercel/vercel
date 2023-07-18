@@ -1,5 +1,9 @@
 lockfileVersion: '6.0'
 
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
 importers:
 
   .:
@@ -656,8 +660,8 @@ importers:
         specifier: 2.0.0
         version: 2.0.0
       proxy-agent:
-        specifier: 6.1.1
-        version: 6.1.1
+        specifier: 6.3.0
+        version: 6.3.0
       psl:
         specifier: 1.1.31
         version: 1.1.31
@@ -4636,6 +4640,10 @@ packages:
     engines: {node: '>= 10'}
     dev: true
 
+  /@tootallnate/quickjs-emscripten@0.23.0:
+    resolution: {integrity: sha512-C5Mc6rdnsaJDjO3UpGW/CQTHtCKaYlScZTly4JIu97Jxo/odCiH0ITnDXSJPTOrEKk/ycSZ0AOgTmkDtkOsvIA==}
+    dev: true
+
   /@ts-morph/common@0.11.1:
     resolution: {integrity: sha512-7hWZS0NRpEsNV8vWJzg7FEz6V8MaLNeJOmwmghqUXTpzk16V1LLZhdo+4QvE/+zv4cVci0OviuJFnqhEfoV3+g==}
     dependencies:
@@ -6202,8 +6210,8 @@ packages:
     transitivePeerDependencies:
       - supports-color
 
-  /agent-base@7.0.0:
-    resolution: {integrity: sha512-awaqsf16R0tAUMxWiVikaBDKrbt0im7XdzPMh3I8TFC097G4ZowjGgLBfXt+tGPsE+1U1FyLBGuWMd/EPVblWg==}
+  /agent-base@7.1.0:
+    resolution: {integrity: sha512-o/zjMZRhJxny7OyEF+Op8X+efiELC7k7yOjMzgfzVqOzXqkBkWI79YoTdOtsuWd5BWhAGAuOY/Xa6xpiaWXiNg==}
     engines: {node: '>= 14'}
     dependencies:
       debug: 4.3.4
@@ -7688,8 +7696,8 @@ packages:
     engines: {node: '>= 6'}
     dev: false
 
-  /data-uri-to-buffer@5.0.0:
-    resolution: {integrity: sha512-RqYkPrQOBOGLS/OYpNwPuoyYvjKFmCePfA8SOrbCd1ohhtGNT/GSheWZzNTJlPvUWQYI9N4bcM0wbsp08AJyWw==}
+  /data-uri-to-buffer@5.0.1:
+    resolution: {integrity: sha512-a9l6T1qqDogvvnw0nKlfZzqsyikEBZBClF39V3TFoKhDtGBqHu2HkuomJc02j5zft8zrUaXEuoicLeW54RkzPg==}
     engines: {node: '>= 14'}
     dev: true
 
@@ -7902,14 +7910,13 @@ packages:
       vm2: 3.9.17
     dev: false
 
-  /degenerator@4.0.0:
-    resolution: {integrity: sha512-nOeN1hviprhZsELEPo7QDh7pP4aPi7l77WfriQi/rAwb2Oexcm83jokXEb+S4xjQLp1J3baDfCT+HQ4sjxzovQ==}
+  /degenerator@5.0.0:
+    resolution: {integrity: sha512-pdRxyYVe0unlUE/eeXBxFdB8w8J7QNNf7hFE/BKOAlTCz0bkF9h1MC82ii0r1ypqB/PTKYDbg4K9SZT9yfd9Fg==}
     engines: {node: '>= 14'}
     dependencies:
       ast-types: 0.13.4
       escodegen: 1.14.3
       esprima: 4.0.1
-      vm2: 3.9.17
     dev: true
 
   /del@5.1.0:
@@ -10105,12 +10112,12 @@ packages:
       - supports-color
     dev: false
 
-  /get-uri@6.0.0:
-    resolution: {integrity: sha512-XxbO7y+8c+srFbHbeHzXMQzARaGjkS0oOwYHCfmtPhQ7+7qgv/cBLOUJt2wJGjp1kbeWVGK7F6T62qDiVhMxng==}
+  /get-uri@6.0.1:
+    resolution: {integrity: sha512-7ZqONUVqaabogsYNWlYj0t3YZaL6dhuEueZXGF+/YVmf6dHmaFg8/6psJKqhx9QykIDKzpGcy2cn4oV4YC7V/Q==}
     engines: {node: '>= 14'}
     dependencies:
       basic-ftp: 5.0.2
-      data-uri-to-buffer: 5.0.0
+      data-uri-to-buffer: 5.0.1
       debug: 4.3.4
       fs-extra: 8.1.0
     transitivePeerDependencies:
@@ -10585,11 +10592,11 @@ packages:
     transitivePeerDependencies:
       - supports-color
 
-  /http-proxy-agent@6.0.0:
-    resolution: {integrity: sha512-tmlr1P183cfJxzneOlOnQrv4hMkOBcTow1rjlT3tnaJbJGlz4xnZuOEAvHFfKqX5RhvIxkCABPQHo3tQEj3ouw==}
+  /http-proxy-agent@7.0.0:
+    resolution: {integrity: sha512-+ZT+iBxVUQ1asugqnD6oWoRiS25AkjNfG085dKJGtGxkdwLQrMKU5wJr2bOOFAXzKcTuqq+7fZlTMgG3SRfIYQ==}
     engines: {node: '>= 14'}
     dependencies:
-      agent-base: 7.0.0
+      agent-base: 7.1.0
       debug: 4.3.4
     transitivePeerDependencies:
       - supports-color
@@ -10652,11 +10659,11 @@ packages:
     transitivePeerDependencies:
       - supports-color
 
-  /https-proxy-agent@6.0.0:
-    resolution: {integrity: sha512-g821um/ZvXlENs8tqKh96b6G0wafab6ypfkZdFZImJEGZrn47oLeRhWMKvCYxrasOgNi3Yh6Cxkws2Zn13v2QA==}
+  /https-proxy-agent@7.0.1:
+    resolution: {integrity: sha512-Eun8zV0kcYS1g19r78osiQLEFIRspRUDd9tIfBCTBPBeMieF/EsJNL8VI3xOIdYRDEkjQnqOYPsZ2DsWsVsFwQ==}
     engines: {node: '>= 14'}
     dependencies:
-      agent-base: 7.0.0
+      agent-base: 7.1.0
       debug: 4.3.4
     transitivePeerDependencies:
       - supports-color
@@ -13738,17 +13745,18 @@ packages:
       - supports-color
     dev: false
 
-  /pac-proxy-agent@6.0.0:
-    resolution: {integrity: sha512-7Hg6R8RFuzeOw4pnYgZQQ3TtdV3KkfkJ4pEVRY2aLnIhPPobQni4xCxZYaVYsNa1YVpke+vSaivLANsY29Ag7Q==}
+  /pac-proxy-agent@7.0.0:
+    resolution: {integrity: sha512-t4tRAMx0uphnZrio0S0Jw9zg3oDbz1zVhQ/Vy18FjLfP1XOLNUEjaVxYCYRI6NS+BsMBXKIzV6cTLOkO9AtywA==}
     engines: {node: '>= 14'}
     dependencies:
-      agent-base: 7.0.0
+      '@tootallnate/quickjs-emscripten': 0.23.0
+      agent-base: 7.1.0
       debug: 4.3.4
-      get-uri: 6.0.0
-      http-proxy-agent: 6.0.0
-      https-proxy-agent: 6.0.0
-      pac-resolver: 6.0.0
-      socks-proxy-agent: 8.0.0
+      get-uri: 6.0.1
+      http-proxy-agent: 7.0.0
+      https-proxy-agent: 7.0.1
+      pac-resolver: 7.0.0
+      socks-proxy-agent: 8.0.1
     transitivePeerDependencies:
       - supports-color
     dev: true
@@ -13762,11 +13770,11 @@ packages:
       netmask: 2.0.2
     dev: false
 
-  /pac-resolver@6.0.0:
-    resolution: {integrity: sha512-1RjGH42MfLpVN58LRmUz1AOBOTkHy/Z8GT+7zgfqJ7M2KgJdCwjU7hiOnVcw/AYZLbsC32cVvL8O6hnfni3lSA==}
+  /pac-resolver@7.0.0:
+    resolution: {integrity: sha512-Fd9lT9vJbHYRACT8OhCbZBbxr6KRSawSovFpy8nDGshaK99S/EBhVIHp9+crhxrsZOuvLpgL1n23iyPg6Rl2hg==}
     engines: {node: '>= 14'}
     dependencies:
-      degenerator: 4.0.0
+      degenerator: 5.0.0
       ip: 1.1.8
       netmask: 2.0.2
     dev: true
@@ -14304,18 +14312,18 @@ packages:
       - supports-color
     dev: false
 
-  /proxy-agent@6.1.1:
-    resolution: {integrity: sha512-zlPFyvAulI8LC8+oXqJI3ygVHnEThwQcCjlzrmOM2esDTlDh3cLnDS9hC6ncXj1sra19JTos1SC3MpOYdE5PZQ==}
+  /proxy-agent@6.3.0:
+    resolution: {integrity: sha512-0LdR757eTj/JfuU7TL2YCuAZnxWXu3tkJbg4Oq3geW/qFNT/32T0sp2HnZ9O0lMR4q3vwAt0+xCA8SR0WAD0og==}
     engines: {node: '>= 14'}
     dependencies:
-      agent-base: 7.0.0
+      agent-base: 7.1.0
       debug: 4.3.4
-      http-proxy-agent: 6.0.0
-      https-proxy-agent: 6.0.0
+      http-proxy-agent: 7.0.0
+      https-proxy-agent: 7.0.1
       lru-cache: 7.14.1
-      pac-proxy-agent: 6.0.0
+      pac-proxy-agent: 7.0.0
       proxy-from-env: 1.1.0
-      socks-proxy-agent: 8.0.0
+      socks-proxy-agent: 8.0.1
     transitivePeerDependencies:
       - supports-color
     dev: true
@@ -15146,11 +15154,11 @@ packages:
       - supports-color
     dev: false
 
-  /socks-proxy-agent@8.0.0:
-    resolution: {integrity: sha512-5tX6GGsT0q6nXjBd/fDtIXxdX9OOOaZjdo5jvtA8fODcP/4Fa2BH+8zfEgxdtyGN4fRVfZcxsSu8vkJILbrD5g==}
+  /socks-proxy-agent@8.0.1:
+    resolution: {integrity: sha512-59EjPbbgg8U3x62hhKOFVAmySQUcfRQ4C7Q/D5sEHnZTQRrQlNKINks44DMR1gwXp0p4LaVIeccX2KHTTcHVqQ==}
     engines: {node: '>= 14'}
     dependencies:
-      agent-base: 7.0.0
+      agent-base: 7.1.0
       debug: 4.3.4
       socks: 2.7.1
     transitivePeerDependencies:
@@ -16725,6 +16733,7 @@ packages:
     dependencies:
       acorn: 8.8.2
       acorn-walk: 8.2.0
+    dev: false
 
   /vscode-oniguruma@1.7.0:
     resolution: {integrity: sha512-L9WMGRfrjOhgHSdOYgCt/yRMsXzLDJSL7BPrOZt73gU0iWO4mpqzqQzOz5srxqTvMBaR0XZTSrVWo4j55Rc6cA==}
@@ -17114,7 +17123,3 @@ packages:
   /zwitch@2.0.4:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
     dev: false
-
-settings:
-  autoInstallPeers: true
-  excludeLinksFromLockfile: false
