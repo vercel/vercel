@@ -137,7 +137,11 @@ function getCommand(
     return propValue;
   }
 
-  if (pkg) {
+  const ignorePackageJsonScript =
+    name === 'build' &&
+    framework?.settings.buildCommand.ignorePackageJsonScript;
+
+  if (pkg && !ignorePackageJsonScript) {
     const scriptName = getScriptName(pkg, name, config);
 
     if (hasScript(scriptName, pkg)) {

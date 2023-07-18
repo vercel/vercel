@@ -1955,6 +1955,7 @@ export const frameworks = [
       },
       buildCommand: {
         value: 'storybook build',
+        ignorePackageJsonScript: true,
       },
       devCommand: {
         value: `storybook dev -p $PORT`,
