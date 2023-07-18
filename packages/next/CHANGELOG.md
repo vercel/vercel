@@ -1,5 +1,15 @@
 # @vercel/next
 
+## 3.9.0
+
+### Minor Changes
+
+- Support maxDuration in Next.js deployments ([#10069](https://github.com/vercel/vercel/pull/10069))
+
+### Patch Changes
+
+- Fix 404 page in edge runtime ([#10223](https://github.com/vercel/vercel/pull/10223))
+
 ## 3.8.8
 
 ### Patch Changes
