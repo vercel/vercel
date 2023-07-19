@@ -46,7 +46,8 @@ export interface SettingValue {
    * When set to `true`, then the builder will not
    * invoke the equivalent script in `package.json`,
    * and instead will invoke the command specified in
-   * configuration setting directly.
+   * configuration setting directly. When this
+   * configuration is enabled, `value` must be a string.
    */
   ignorePackageJsonScript?: boolean;
 }
