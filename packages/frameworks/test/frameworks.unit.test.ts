@@ -47,6 +47,9 @@ const SchemaSettings = {
         placeholder: {
           type: 'string',
         },
+        ignorePackageJsonScript: {
+          type: 'boolean',
+        },
       },
     },
     {
