@@ -152,7 +152,6 @@ export async function getVercelIgnore(
       '.vercel',
       '.npmignore',
       '.dockerignore',
-      '.gitignore',
       '.*.swp',
       '.DS_Store',
       '.wafpicke-*',
@@ -172,19 +171,24 @@ export async function getVercelIgnore(
 
     const files = await Promise.all(
       cwds.map(async cwd => {
-        const [vercelignore, nowignore] = await Promise.all([
+        const [vercelignore, nowignore, gitignore] = await Promise.all([
           maybeRead(join(cwd, '.vercelignore'), ''),
           maybeRead(join(cwd, '.nowignore'), ''),
+          maybeRead(join(cwd, '.gitignore'), ''),
         ]);
-        if (vercelignore && nowignore) {
+        if (
+          (vercelignore && nowignore) ||
+          (gitignore && vercelignore) ||
+          (gitignore && nowignore)
+        ) {
           throw new NowBuildError({
             code: 'CONFLICTING_IGNORE_FILES',
             message:
-              'Cannot use both a `.vercelignore` and `.nowignore` file. Please delete the `.nowignore` file.',
+              'Cannot use `.gitignore`, `.vercelignore` and `.nowignore` together. Please make sure that only one of these files is present.',
             link: 'https://vercel.link/combining-old-and-new-config',
           });
         }
-        return vercelignore || nowignore;
+        return gitignore || vercelignore || nowignore;
       })
     );
 

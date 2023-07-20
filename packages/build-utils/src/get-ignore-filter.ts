@@ -47,12 +47,23 @@ export default async function (
     rootDirectory || '',
     '.nowignore'
   );
+
+  const gitIgnorePath = path.join(
+    downloadPath,
+    rootDirectory || '',
+    '.gitignore'
+  );
+
   const ignoreContents = [];
 
   try {
     ignoreContents.push(
       ...(
-        await Promise.all([readFile(vercelIgnorePath), readFile(nowIgnorePath)])
+        await Promise.all([
+          readFile(gitIgnorePath),
+          readFile(vercelIgnorePath),
+          readFile(nowIgnorePath),
+        ])
       ).filter(Boolean)
     );
   } catch (error) {
@@ -63,9 +74,9 @@ export default async function (
     }
   }
 
-  if (ignoreContents.length === 2) {
+  if (ignoreContents.length >= 2) {
     throw new Error(
-      'Cannot use both a `.vercelignore` and `.nowignore` file. Please delete the `.nowignore` file.'
+      'Cannot use `.gitignore`, `.vercelignore` and `.nowignore` together. Please make sure that only one of these files is present.'
     );
   }
 
