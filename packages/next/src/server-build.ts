@@ -207,6 +207,7 @@ export async function serverBuild({
 
   const { i18n } = routesManifest;
   const hasPages404 = routesManifest.pages404;
+  let localePrefixed404 = false;
 
   let static404Page =
     staticPages[path.posix.join(entryDirectory, '404')] && hasPages404
@@ -216,11 +217,16 @@ export async function serverBuild({
       : undefined;
 
   if (!static404Page && i18n) {
-    static404Page = staticPages[
-      path.posix.join(entryDirectory, i18n.defaultLocale, '404')
-    ]
-      ? path.posix.join(entryDirectory, i18n.defaultLocale, '404')
-      : undefined;
+    if (
+      staticPages[path.posix.join(entryDirectory, i18n.defaultLocale, '404')]
+    ) {
+      localePrefixed404 = true;
+      static404Page = path.posix.join(
+        entryDirectory,
+        i18n.defaultLocale,
+        '404'
+      );
+    }
   }
 
   if (!hasStatic500 && i18n) {
@@ -967,6 +973,7 @@ export async function serverBuild({
         if (
           i18n &&
           !isPrerender &&
+          !group.isAppRouter &&
           (!isCorrectLocaleAPIRoutes ||
             !(pageNoExt === 'api' || pageNoExt.startsWith('api/')))
         ) {
@@ -1004,6 +1011,7 @@ export async function serverBuild({
     isSharedLambdas: false,
     canUsePreviewMode,
     static404Page,
+    localePrefixed404,
     hasPages404: routesManifest.pages404,
     isCorrectNotFoundRoutes,
     isEmptyAllowQueryForPrendered,
@@ -1070,7 +1078,8 @@ export async function serverBuild({
       prerenderManifest,
       routesManifest,
       true,
-      isCorrectLocaleAPIRoutes
+      isCorrectLocaleAPIRoutes,
+      inversedAppPathManifest
     )
   );
 
