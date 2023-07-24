@@ -1986,7 +1986,7 @@ export const onPrerenderRoute =
                 : pagesDir,
               `${
                 isOmittedOrNotFound
-                  ? static404Page
+                  ? `${static404Page}.html`
                   : isAppPathRoute
                   ? dataRoute
                   : routeFileNoExt + '.json'
