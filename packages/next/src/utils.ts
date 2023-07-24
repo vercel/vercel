@@ -1799,6 +1799,7 @@ export const onPrerenderRouteInitial = (
 type OnPrerenderRouteArgs = {
   appDir: string | null;
   pagesDir: string;
+  localePrefixed404?: boolean;
   static404Page?: string;
   hasPages404: boolean;
   entryDirectory: string;
@@ -1836,6 +1837,7 @@ export const onPrerenderRoute =
       appDir,
       pagesDir,
       static404Page,
+      localePrefixed404,
       entryDirectory,
       prerenderManifest,
       isSharedLambdas,
@@ -1970,7 +1972,11 @@ export const onPrerenderRoute =
                   : // Otherwise, the route itself should exist as a static HTML
                     // file.
                     `${
-                      isOmittedOrNotFound ? static404Page : routeFileNoExt
+                      isOmittedOrNotFound
+                        ? localePrefixed404
+                          ? addLocaleOrDefault('/404', routesManifest, locale)
+                          : '/404'
+                        : routeFileNoExt
                     }.html`
               ),
             });
@@ -1986,7 +1992,9 @@ export const onPrerenderRoute =
                 : pagesDir,
               `${
                 isOmittedOrNotFound
-                  ? `${static404Page}.html`
+                  ? localePrefixed404
+                    ? addLocaleOrDefault('/404.html', routesManifest, locale)
+                    : '/404.html'
                   : isAppPathRoute
                   ? dataRoute
                   : routeFileNoExt + '.json'
