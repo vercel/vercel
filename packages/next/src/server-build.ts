@@ -967,6 +967,7 @@ export async function serverBuild({
         if (
           i18n &&
           !isPrerender &&
+          !group.isAppRouter &&
           (!isCorrectLocaleAPIRoutes ||
             !(pageNoExt === 'api' || pageNoExt.startsWith('api/')))
         ) {
@@ -1070,7 +1071,8 @@ export async function serverBuild({
       prerenderManifest,
       routesManifest,
       true,
-      isCorrectLocaleAPIRoutes
+      isCorrectLocaleAPIRoutes,
+      inversedAppPathManifest
     )
   );
 

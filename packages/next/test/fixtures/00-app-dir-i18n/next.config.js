@@ -3,7 +3,7 @@ module.exports = {
     appDir: true,
   },
   i18n: {
-    locales: ['en'],
+    locales: ['en', 'fr', 'de'],
     defaultLocale: 'en',
   },
 };
