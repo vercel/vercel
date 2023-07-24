@@ -16,7 +16,7 @@ import { cloneEnv } from '../clone-env';
 // Only allow one `runNpmInstall()` invocation to run concurrently
 const runNpmInstallSema = new Sema(1);
 
-export type CliType = 'yarn' | 'npm' | 'pnpm';
+export type CliType = 'yarn' | 'npm' | 'pnpm' | 'bun';
 
 export interface ScanParentDirsResult {
   /**
@@ -284,26 +284,34 @@ export async function scanParentDirs(
     readPackageJson && pkgJsonPath
       ? JSON.parse(await fs.readFile(pkgJsonPath, 'utf8'))
       : undefined;
-  const [yarnLockPath, npmLockPath, pnpmLockPath] = await walkParentDirsMulti({
-    base: '/',
-    start: destPath,
-    filenames: ['yarn.lock', 'package-lock.json', 'pnpm-lock.yaml'],
-  });
+  const [yarnLockPath, npmLockPath, pnpmLockPath, bunLockPath] =
+    await walkParentDirsMulti({
+      base: '/',
+      start: destPath,
+      filenames: [
+        'yarn.lock',
+        'package-lock.json',
+        'pnpm-lock.yaml',
+        'bun.lockb',
+      ],
+    });
   let lockfilePath: string | undefined;
   let lockfileVersion: number | undefined;
   let cliType: CliType = 'yarn';
 
-  const [hasYarnLock, packageLockJson, pnpmLockYaml] = await Promise.all([
-    Boolean(yarnLockPath),
-    npmLockPath
-      ? readConfigFile<{ lockfileVersion: number }>(npmLockPath)
-      : null,
-    pnpmLockPath
-      ? readConfigFile<{ lockfileVersion: number }>(pnpmLockPath)
-      : null,
-  ]);
+  const [hasYarnLock, packageLockJson, pnpmLockYaml, hasBunLock] =
+    await Promise.all([
+      Boolean(yarnLockPath),
+      npmLockPath
+        ? readConfigFile<{ lockfileVersion: number }>(npmLockPath)
+        : null,
+      pnpmLockPath
+        ? readConfigFile<{ lockfileVersion: number }>(pnpmLockPath)
+        : null,
+      Boolean(bunLockPath),
+    ]);
 
-  // Priority order is Yarn > pnpm > npm
+  // Priority order is Yarn > pnpm > npm > Bun
   if (hasYarnLock) {
     cliType = 'yarn';
     lockfilePath = yarnLockPath;
@@ -315,6 +323,9 @@ export async function scanParentDirs(
     cliType = 'npm';
     lockfilePath = npmLockPath;
     lockfileVersion = packageLockJson.lockfileVersion;
+  } else if (hasBunLock) {
+    cliType = 'bun';
+    lockfilePath = bunLockPath;
   }
 
   const packageJsonPath = pkgJsonPath || undefined;
@@ -451,6 +462,9 @@ export async function runNpmInstall(
       commandArgs = args
         .filter(a => a !== '--prefer-offline')
         .concat(['install', '--unsafe-perm']);
+    } else if (cliType === 'bun') {
+      opts.prettyCommand = 'bun install';
+      commandArgs = ['install', ...args];
     } else {
       opts.prettyCommand = 'yarn install';
       commandArgs = ['install', ...args];
@@ -614,6 +628,8 @@ export async function runPackageJsonScript(
     opts.prettyCommand = `npm run ${scriptName}`;
   } else if (cliType === 'pnpm') {
     opts.prettyCommand = `pnpm run ${scriptName}`;
+  } else if (cliType === 'bun') {
+    opts.prettyCommand = `bun run ${scriptName}`;
   } else {
     opts.prettyCommand = `yarn run ${scriptName}`;
   }

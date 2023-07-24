@@ -222,3 +222,15 @@ it('should throw error when install failed - npm', async () => {
     message: 'Command "npm install" exited with 1',
   });
 });
+
+it('should throw error when install failed - bun', async () => {
+  spawnExitCode = 1;
+  const meta: Meta = {};
+  const fixture = path.join(__dirname, 'fixtures', '30-bun');
+  await expect(
+    runNpmInstall(fixture, [], undefined, meta)
+  ).rejects.toMatchObject({
+    name: 'Error',
+    message: 'Command "bun install" exited with 1',
+  });
+});

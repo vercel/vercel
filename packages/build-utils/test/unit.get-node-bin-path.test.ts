@@ -38,6 +38,12 @@ describe('Test `getNodeBinPath()`', () => {
     expect(result).toBe(join(cwd, '..', 'node_modules', '.bin'));
   });
 
+  it('should work with bun', async () => {
+    const cwd = join(__dirname, 'fixtures', '30-bun');
+    const result = await getNodeBinPath({ cwd });
+    expect(result).toBe(join(cwd, 'node_modules', '.bin'));
+  });
+
   it('should fallback to cwd if no lockfile found', async () => {
     const cwd = parse(process.cwd()).root;
     const result = await getNodeBinPath({ cwd });

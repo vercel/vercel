@@ -14,6 +14,7 @@ describe('package-managers', () => {
     ['54-yarn-with-corepack', 'yarn'],
     ['55-pnpm-with-lockfile', 'pnpm'],
     ['56-pnpm-with-corepack', 'pnpm'],
+    ['57-bun-with-lockfile', 'bun'],
   ])('with detectFramework', (fixturePath, frameworkSlug) => {
     const testName = `should detect package manager '${frameworkSlug}' for ${fixturePath}`;
 

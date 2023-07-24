@@ -545,6 +545,15 @@ it('should retry npm install when peer deps invalid and npm@8 on node@16', async
   ]);
 });
 
+it('should detect bun', async () => {
+  const fixture = path.join(__dirname, 'fixtures', '30-bun');
+  const result = await scanParentDirs(fixture);
+  expect(result.cliType).toEqual('bun');
+  expect(result.lockfileVersion).toEqual(undefined);
+  expect(result.lockfilePath).toEqual(path.join(fixture, 'bun.lockb'));
+  expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
+});
+
 describe('rename', () => {
   it('should rename keys of files map', () => {
     const before: Files = {};

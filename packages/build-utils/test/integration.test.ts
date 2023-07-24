@@ -23,6 +23,7 @@ const skipFixtures: string[] = [
   '23-pnpm-workspaces',
   '41-nx-monorepo',
   '42-npm-workspace-with-nx',
+  '30-bun', // not supported in build image
 ];
 
 // eslint-disable-next-line no-restricted-syntax

@@ -38,6 +38,23 @@ export const packageManagers: Array<
     },
   },
   {
+    name: 'bun',
+    slug: 'bun',
+    logo: '',
+    darkModeLogo: '',
+    detectors: {
+      some: [
+        {
+          path: 'bun.lockb',
+        },
+        {
+          path: 'package.json',
+          matchContent: '"packageManager":\\s*"bun@.*"',
+        },
+      ],
+    },
+  },
+  {
     name: 'yarn',
     slug: 'yarn',
     logo: '',
