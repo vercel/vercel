@@ -44,8 +44,9 @@ const help = () => {
     -m, --meta                     Filter deployments by metadata (e.g.: ${chalk.dim(
       '`-m KEY=value`'
     )}). Can appear many times.
-    --preview                      Filter for preview URLs
-    --prod                         Filter for production URLs
+    --environment=${chalk.bold.underline(
+      'ENVIRONMENT'
+    )}      Filter by environment (production|preview)
     -N, --next                     Show next page of results
 
   ${chalk.dim('Examples:')}
@@ -77,12 +78,12 @@ export default async function main(client: Client) {
 
   try {
     argv = getArgs(client.argv.slice(2), {
+      '--environment': String,
       '--meta': [String],
       '-m': '--meta',
       '--next': Number,
       '-N': '--next',
-      '--preview': Boolean,
-      '--prod': Boolean,
+      '--prod': Boolean, // this can be deprecated someday
       '--yes': Boolean,
       '-y': '--yes',
 
@@ -119,8 +120,8 @@ export default async function main(client: Client) {
 
   const target = argv['--prod']
     ? 'production'
-    : argv['--preview']
-    ? 'preview'
+    : typeof argv['--environment'] === 'string'
+    ? argv['--environment'].toLowerCase()
     : undefined;
 
   // retrieve `project` and `org` from .vercel
@@ -298,7 +299,7 @@ export default async function main(client: Client) {
 
   print('\n');
 
-  const headers = ['Age', 'Deployment', 'Status', 'Target', 'Duration'];
+  const headers = ['Age', 'Deployment', 'Status', 'Environment', 'Duration'];
   if (showUsername) headers.push('Username');
   const urls: string[] = [];
 

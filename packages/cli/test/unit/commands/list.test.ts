@@ -58,7 +58,7 @@ describe('list', () => {
       'Age',
       'Deployment',
       'Status',
-      'Target',
+      'Environment',
       'Duration',
       'Username',
     ]);
@@ -113,7 +113,7 @@ describe('list', () => {
       'Age',
       'Deployment',
       'Status',
-      'Target',
+      'Environment',
       'Duration',
     ]);
 
@@ -169,7 +169,7 @@ describe('list', () => {
       'Age',
       'Deployment',
       'Status',
-      'Target',
+      'Environment',
       'Duration',
       'Username',
     ]);
@@ -215,13 +215,13 @@ describe('list', () => {
     await prom;
 
     // run again with preview deployments only
-    client.setArgv('--preview');
+    client.setArgv('--environment', 'preview');
     prom = list(client);
     await expect(client.stdout).toOutput(`https://${previewDeployment.url}`);
     await prom;
 
     // run again with production deployments only
-    client.setArgv('--prod');
+    client.setArgv('--environment', 'production');
     prom = list(client);
     await expect(client.stdout).toOutput(`https://${prodDeployment.url}`);
     await prom;
