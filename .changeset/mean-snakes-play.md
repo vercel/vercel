@@ -2,4 +2,4 @@
 'vercel': minor
 ---
 
-Add 'Target' column to 'vc list' with new '--preview' filter flag and pipe urls to stdout
+Add 'Environment' column to 'vc list' with new '--environment' filter and pipe URLs to stdout
