@@ -1,5 +1,21 @@
 # vercel
 
+## 31.1.0
+
+### Minor Changes
+
+- Add 'Environment' column to 'vc list' with new '--environment' filter and pipe URLs to stdout ([#10239](https://github.com/vercel/vercel/pull/10239))
+
+### Patch Changes
+
+- Update `proxy-agent` to v6.3.0 ([#10226](https://github.com/vercel/vercel/pull/10226))
+
+- Use `getNodeBinPaths()` in `vc dev` ([#10225](https://github.com/vercel/vercel/pull/10225))
+
+- Updated dependencies [[`b1c14cde0`](https://github.com/vercel/vercel/commit/b1c14cde03f94b2c15ba12c9be9d19c72df2fdbb), [`ce4633fe4`](https://github.com/vercel/vercel/commit/ce4633fe4d00cb5c251cdabbfab08f39ec3f3b5f)]:
+  - @vercel/next@3.9.1
+  - @vercel/static-build@1.3.42
+
 ## 31.0.4
 
 ### Patch Changes
