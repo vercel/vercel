@@ -1,5 +1,18 @@
 # @vercel/node
 
+## 2.15.6
+
+### Patch Changes
+
+- [node] fix: runs edge user code inside IIFE ([#10220](https://github.com/vercel/vercel/pull/10220))
+
+## 2.15.5
+
+### Patch Changes
+
+- Updated dependencies [[`0750517af`](https://github.com/vercel/vercel/commit/0750517af99aea41410d4f1f772ce427699554e7)]:
+  - @vercel/build-utils@6.8.2
+
 ## 2.15.4
 
 ### Patch Changes

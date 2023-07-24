@@ -1,5 +1,33 @@
 # vercel
 
+## 31.0.4
+
+### Patch Changes
+
+- Detect multiple frameworks within the same root directory during `vc link --repo` ([#10203](https://github.com/vercel/vercel/pull/10203))
+
+- Updated dependencies [[`b56639b62`](https://github.com/vercel/vercel/commit/b56639b624e9ad1df048a4c85083e26888696060), [`cae60155f`](https://github.com/vercel/vercel/commit/cae60155f34883f08a5e4f51b547e2a1a5fee694), [`c670e5171`](https://github.com/vercel/vercel/commit/c670e51712022193e078bd68b055f7e61013015d), [`5439d7c0c`](https://github.com/vercel/vercel/commit/5439d7c0c9b79e7161bf4fa84ffdb357365f9e7e)]:
+  - @vercel/node@2.15.6
+  - @vercel/next@3.9.0
+  - @vercel/remix-builder@1.8.18
+  - @vercel/static-build@1.3.41
+
+## 31.0.3
+
+### Patch Changes
+
+- Fix redeploy target to be undefined when null ([#10201](https://github.com/vercel/vercel/pull/10201))
+
+- Respect forbidden API responses ([#10178](https://github.com/vercel/vercel/pull/10178))
+
+- Update `supports-hyperlinks` to v3 ([#10208](https://github.com/vercel/vercel/pull/10208))
+
+- Updated dependencies [[`0750517af`](https://github.com/vercel/vercel/commit/0750517af99aea41410d4f1f772ce427699554e7)]:
+  - @vercel/build-utils@6.8.2
+  - @vercel/static-build@1.3.40
+  - @vercel/node@2.15.5
+  - @vercel/remix-builder@1.8.17
+
 ## 31.0.2
 
 ### Patch Changes

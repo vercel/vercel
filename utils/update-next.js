@@ -38,6 +38,8 @@ module.exports = async ({ github, context } = {}) => {
     .next;
   if (github && oldVersion !== newVersion) {
     updatedCount++;
+    const changeset = join(__dirname, '..', '.changeset', `${branch}.md`);
+    writeFileSync(changeset, `---\n---\n\n`, 'utf-8');
     exec('rm', ['-rf', './examples/nextjs']);
     exec('npx', ['--yes', 'create-next-app@latest', './examples/nextjs']);
     exec('git', [
@@ -96,9 +98,6 @@ module.exports = async ({ github, context } = {}) => {
     } to Next.js version ${newVersion}`
   );
 
-  const changeset = join(__dirname, '..', '.changeset', `${branch}.md`);
-  writeFileSync(changeset, `---\n---\n\n`, 'utf-8');
-
   if (!github || !context) {
     console.error('Error: missing github or context');
     return;
@@ -122,7 +121,7 @@ module.exports = async ({ github, context } = {}) => {
       owner,
       repo,
       pull_number: pr.data.number,
-      reviewers: ['ijjk', 'styfle'],
+      reviewers: ['ijjk', 'styfle', 'huozhi'],
     });
   } catch (err) {
     console.log(

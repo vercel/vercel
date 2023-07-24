@@ -1,5 +1,18 @@
 # @vercel/remix-builder
 
+## 1.8.18
+
+### Patch Changes
+
+- Create ensured dependency symlink at the `start` directory, instead of root of repo ([#10224](https://github.com/vercel/vercel/pull/10224))
+
+## 1.8.17
+
+### Patch Changes
+
+- Updated dependencies [[`0750517af`](https://github.com/vercel/vercel/commit/0750517af99aea41410d4f1f772ce427699554e7)]:
+  - @vercel/build-utils@6.8.2
+
 ## 1.8.16
 
 ### Patch Changes

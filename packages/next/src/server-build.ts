@@ -44,6 +44,7 @@ import {
   getFilesMapFromReasons,
   UnwrapPromise,
   getOperationType,
+  FunctionsConfigManifestV1,
 } from './utils';
 import {
   nodeFileTrace,
@@ -66,6 +67,7 @@ export async function serverBuild({
   dynamicPages,
   pagesDir,
   config = {},
+  functionsConfigManifest,
   privateOutputs,
   baseDir,
   workPath,
@@ -105,6 +107,7 @@ export async function serverBuild({
   dynamicPages: string[];
   trailingSlash: boolean;
   config: Config;
+  functionsConfigManifest?: FunctionsConfigManifestV1;
   pagesDir: string;
   baseDir: string;
   canUsePreviewMode: boolean;
@@ -752,6 +755,7 @@ export async function serverBuild({
     const pageLambdaGroups = await getPageLambdaGroups({
       entryPath: projectDir,
       config,
+      functionsConfigManifest,
       pages: nonApiPages,
       prerenderRoutes,
       pageTraces,
@@ -767,6 +771,7 @@ export async function serverBuild({
     const appRouterLambdaGroups = await getPageLambdaGroups({
       entryPath: projectDir,
       config,
+      functionsConfigManifest,
       pages: appRouterPages,
       prerenderRoutes,
       pageTraces,
@@ -789,6 +794,7 @@ export async function serverBuild({
     const apiLambdaGroups = await getPageLambdaGroups({
       entryPath: projectDir,
       config,
+      functionsConfigManifest,
       pages: apiPages,
       prerenderRoutes,
       pageTraces,
@@ -1217,6 +1223,7 @@ export async function serverBuild({
   const rscVaryHeader =
     routesManifest?.rsc?.varyHeader ||
     'RSC, Next-Router-State-Tree, Next-Router-Prefetch';
+  const appNotFoundPath = path.posix.join('.', entryDirectory, '_not-found');
 
   return {
     wildcard: wildcardConfig,
@@ -1749,6 +1756,7 @@ export async function serverBuild({
       { handle: 'error' } as RouteWithHandle,
 
       // Custom Next.js 404 page
+
       ...(i18n && (static404Page || hasIsr404Page || lambdaPages['404.js'])
         ? [
             {
@@ -1783,6 +1791,10 @@ export async function serverBuild({
                   hasIsr404Page ||
                   lambdas[path.posix.join(entryDirectory, '404')]
                   ? '/404'
+                  : appPathRoutesManifest &&
+                    (middleware.edgeFunctions[appNotFoundPath] ||
+                      lambdas[appNotFoundPath])
+                  ? '/_not-found'
                   : '/_error'
               ),
               status: 404,

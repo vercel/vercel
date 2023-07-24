@@ -86,8 +86,8 @@ importers:
         specifier: 29.1.0
         version: 29.1.0(@babel/core@7.5.0)(jest@29.5.0)(typescript@4.9.5)
       turbo:
-        specifier: 1.10.7
-        version: 1.10.7
+        specifier: 1.10.9
+        version: 1.10.9
       typescript:
         specifier: 4.9.5
         version: 4.9.5
@@ -183,7 +183,7 @@ importers:
         specifier: 1.0.4
         version: link:../constants
       '@vercel/build-utils':
-        specifier: 6.8.1
+        specifier: 6.8.2
         version: link:../../packages/build-utils
       '@vercel/routing-utils':
         specifier: 2.2.1
@@ -307,7 +307,7 @@ importers:
   packages/cli:
     dependencies:
       '@vercel/build-utils':
-        specifier: 6.8.1
+        specifier: 6.8.2
         version: link:../build-utils
       '@vercel/go':
         specifier: 2.5.1
@@ -316,10 +316,10 @@ importers:
         specifier: 0.0.64
         version: link:../hydrogen
       '@vercel/next':
-        specifier: 3.8.8
+        specifier: 3.9.0
         version: link:../next
       '@vercel/node':
-        specifier: 2.15.4
+        specifier: 2.15.6
         version: link:../node
       '@vercel/python':
         specifier: 3.1.60
@@ -328,13 +328,13 @@ importers:
         specifier: 1.1.15
         version: link:../redwood
       '@vercel/remix-builder':
-        specifier: 1.8.16
+        specifier: 1.8.18
         version: link:../remix
       '@vercel/ruby':
         specifier: 1.3.76
         version: link:../ruby
       '@vercel/static-build':
-        specifier: 1.3.39
+        specifier: 1.3.41
         version: link:../static-build
     devDependencies:
       '@alex_neo/jest-expect-message':
@@ -467,10 +467,10 @@ importers:
         specifier: 1.0.0
         version: link:../../internals/get-package-json
       '@vercel-internals/types':
-        specifier: 1.0.4
+        specifier: 1.0.5
         version: link:../../internals/types
       '@vercel/client':
-        specifier: 12.6.4
+        specifier: 12.6.5
         version: link:../client
       '@vercel/error-utils':
         specifier: 1.0.10
@@ -479,7 +479,7 @@ importers:
         specifier: 1.4.3
         version: link:../frameworks
       '@vercel/fs-detectors':
-        specifier: 4.0.1
+        specifier: 4.1.0
         version: link:../fs-detectors
       '@vercel/fun':
         specifier: 1.0.4
@@ -656,8 +656,8 @@ importers:
         specifier: 2.0.0
         version: 2.0.0
       proxy-agent:
-        specifier: 6.1.1
-        version: 6.1.1
+        specifier: 6.3.0
+        version: 6.3.0
       psl:
         specifier: 1.1.31
         version: 1.1.31
@@ -683,8 +683,8 @@ importers:
         specifier: 5.1.0
         version: 5.1.0
       supports-hyperlinks:
-        specifier: 2.2.0
-        version: 2.2.0
+        specifier: 3.0.0
+        version: 3.0.0
       tar-fs:
         specifier: 1.16.3
         version: 1.16.3
@@ -728,7 +728,7 @@ importers:
   packages/client:
     dependencies:
       '@vercel/build-utils':
-        specifier: 6.8.1
+        specifier: 6.8.2
         version: link:../build-utils
       '@vercel/routing-utils':
         specifier: 2.2.1
@@ -917,7 +917,7 @@ importers:
         specifier: 7.3.10
         version: 7.3.10
       '@vercel/build-utils':
-        specifier: 6.8.1
+        specifier: 6.8.2
         version: link:../build-utils
       typescript:
         specifier: 4.9.5
@@ -945,10 +945,10 @@ importers:
         specifier: 0.25.24
         version: 0.25.24
       '@vercel/build-utils':
-        specifier: 6.8.1
+        specifier: 6.8.2
         version: link:../build-utils
       '@vercel/node':
-        specifier: 2.15.4
+        specifier: 2.15.6
         version: link:../node
       '@vercel/routing-utils':
         specifier: 2.2.1
@@ -1009,7 +1009,7 @@ importers:
         specifier: 2.1.0
         version: 2.1.0
       '@vercel/build-utils':
-        specifier: 6.8.1
+        specifier: 6.8.2
         version: link:../build-utils
       '@vercel/ncc':
         specifier: 0.24.0
@@ -1051,7 +1051,7 @@ importers:
         specifier: 14.18.33
         version: 14.18.33
       '@vercel/build-utils':
-        specifier: 6.8.1
+        specifier: 6.8.2
         version: link:../build-utils
       '@vercel/static-config':
         specifier: 2.0.17
@@ -1108,7 +1108,7 @@ importers:
         specifier: 3.2.0
         version: 3.2.0
       '@vercel/build-utils':
-        specifier: 6.8.1
+        specifier: 6.8.2
         version: link:../build-utils
       '@vercel/nft':
         specifier: 0.22.5
@@ -1198,7 +1198,7 @@ importers:
         specifier: 2.6.3
         version: 2.6.3
       '@vercel/build-utils':
-        specifier: 6.8.1
+        specifier: 6.8.2
         version: link:../build-utils
       '@vercel/error-utils':
         specifier: 1.0.10
@@ -1304,7 +1304,7 @@ importers:
         specifier: 14.18.33
         version: 14.18.33
       '@vercel/build-utils':
-        specifier: 6.8.1
+        specifier: 6.8.2
         version: link:../build-utils
       '@vercel/ncc':
         specifier: 0.24.0
@@ -1335,7 +1335,7 @@ importers:
         specifier: 6.0.0
         version: 6.0.0
       '@vercel/build-utils':
-        specifier: 6.8.1
+        specifier: 6.8.2
         version: link:../build-utils
       execa:
         specifier: 3.2.0
@@ -1350,7 +1350,7 @@ importers:
         specifier: npm:@vercel/remix-run-dev@1.18.1
         version: /@vercel/remix-run-dev@1.18.1(@types/node@14.18.33)
       '@vercel/build-utils':
-        specifier: 6.8.1
+        specifier: 6.8.2
         version: link:../build-utils
       '@vercel/nft':
         specifier: 0.22.5
@@ -1407,7 +1407,7 @@ importers:
         specifier: 6.0.0
         version: 6.0.0
       '@vercel/build-utils':
-        specifier: 6.8.1
+        specifier: 6.8.2
         version: link:../build-utils
       '@vercel/ncc':
         specifier: 0.24.0
@@ -1428,7 +1428,7 @@ importers:
         specifier: 1.0.10
         version: link:../gatsby-plugin-vercel-analytics
       '@vercel/gatsby-plugin-vercel-builder':
-        specifier: 1.3.12
+        specifier: 1.3.14
         version: link:../gatsby-plugin-vercel-builder
     devDependencies:
       '@types/aws-lambda':
@@ -1459,7 +1459,7 @@ importers:
         specifier: 7.3.13
         version: 7.3.13
       '@vercel/build-utils':
-        specifier: 6.8.1
+        specifier: 6.8.2
         version: link:../build-utils
       '@vercel/error-utils':
         specifier: 1.0.10
@@ -1468,7 +1468,7 @@ importers:
         specifier: 1.4.3
         version: link:../frameworks
       '@vercel/fs-detectors':
-        specifier: 4.0.1
+        specifier: 4.1.0
         version: link:../fs-detectors
       '@vercel/ncc':
         specifier: 0.24.0
@@ -4636,6 +4636,10 @@ packages:
     engines: {node: '>= 10'}
     dev: true
 
+  /@tootallnate/quickjs-emscripten@0.23.0:
+    resolution: {integrity: sha512-C5Mc6rdnsaJDjO3UpGW/CQTHtCKaYlScZTly4JIu97Jxo/odCiH0ITnDXSJPTOrEKk/ycSZ0AOgTmkDtkOsvIA==}
+    dev: true
+
   /@ts-morph/common@0.11.1:
     resolution: {integrity: sha512-7hWZS0NRpEsNV8vWJzg7FEz6V8MaLNeJOmwmghqUXTpzk16V1LLZhdo+4QvE/+zv4cVci0OviuJFnqhEfoV3+g==}
     dependencies:
@@ -6202,8 +6206,8 @@ packages:
     transitivePeerDependencies:
       - supports-color
 
-  /agent-base@7.0.0:
-    resolution: {integrity: sha512-awaqsf16R0tAUMxWiVikaBDKrbt0im7XdzPMh3I8TFC097G4ZowjGgLBfXt+tGPsE+1U1FyLBGuWMd/EPVblWg==}
+  /agent-base@7.1.0:
+    resolution: {integrity: sha512-o/zjMZRhJxny7OyEF+Op8X+efiELC7k7yOjMzgfzVqOzXqkBkWI79YoTdOtsuWd5BWhAGAuOY/Xa6xpiaWXiNg==}
     engines: {node: '>= 14'}
     dependencies:
       debug: 4.3.4
@@ -7688,8 +7692,8 @@ packages:
     engines: {node: '>= 6'}
     dev: false
 
-  /data-uri-to-buffer@5.0.0:
-    resolution: {integrity: sha512-RqYkPrQOBOGLS/OYpNwPuoyYvjKFmCePfA8SOrbCd1ohhtGNT/GSheWZzNTJlPvUWQYI9N4bcM0wbsp08AJyWw==}
+  /data-uri-to-buffer@5.0.1:
+    resolution: {integrity: sha512-a9l6T1qqDogvvnw0nKlfZzqsyikEBZBClF39V3TFoKhDtGBqHu2HkuomJc02j5zft8zrUaXEuoicLeW54RkzPg==}
     engines: {node: '>= 14'}
     dev: true
 
@@ -7902,14 +7906,13 @@ packages:
       vm2: 3.9.17
     dev: false
 
-  /degenerator@4.0.0:
-    resolution: {integrity: sha512-nOeN1hviprhZsELEPo7QDh7pP4aPi7l77WfriQi/rAwb2Oexcm83jokXEb+S4xjQLp1J3baDfCT+HQ4sjxzovQ==}
+  /degenerator@5.0.0:
+    resolution: {integrity: sha512-pdRxyYVe0unlUE/eeXBxFdB8w8J7QNNf7hFE/BKOAlTCz0bkF9h1MC82ii0r1ypqB/PTKYDbg4K9SZT9yfd9Fg==}
     engines: {node: '>= 14'}
     dependencies:
       ast-types: 0.13.4
       escodegen: 1.14.3
       esprima: 4.0.1
-      vm2: 3.9.17
     dev: true
 
   /del@5.1.0:
@@ -10105,12 +10108,12 @@ packages:
       - supports-color
     dev: false
 
-  /get-uri@6.0.0:
-    resolution: {integrity: sha512-XxbO7y+8c+srFbHbeHzXMQzARaGjkS0oOwYHCfmtPhQ7+7qgv/cBLOUJt2wJGjp1kbeWVGK7F6T62qDiVhMxng==}
+  /get-uri@6.0.1:
+    resolution: {integrity: sha512-7ZqONUVqaabogsYNWlYj0t3YZaL6dhuEueZXGF+/YVmf6dHmaFg8/6psJKqhx9QykIDKzpGcy2cn4oV4YC7V/Q==}
     engines: {node: '>= 14'}
     dependencies:
       basic-ftp: 5.0.2
-      data-uri-to-buffer: 5.0.0
+      data-uri-to-buffer: 5.0.1
       debug: 4.3.4
       fs-extra: 8.1.0
     transitivePeerDependencies:
@@ -10585,11 +10588,11 @@ packages:
     transitivePeerDependencies:
       - supports-color
 
-  /http-proxy-agent@6.0.0:
-    resolution: {integrity: sha512-tmlr1P183cfJxzneOlOnQrv4hMkOBcTow1rjlT3tnaJbJGlz4xnZuOEAvHFfKqX5RhvIxkCABPQHo3tQEj3ouw==}
+  /http-proxy-agent@7.0.0:
+    resolution: {integrity: sha512-+ZT+iBxVUQ1asugqnD6oWoRiS25AkjNfG085dKJGtGxkdwLQrMKU5wJr2bOOFAXzKcTuqq+7fZlTMgG3SRfIYQ==}
     engines: {node: '>= 14'}
     dependencies:
-      agent-base: 7.0.0
+      agent-base: 7.1.0
       debug: 4.3.4
     transitivePeerDependencies:
       - supports-color
@@ -10652,11 +10655,11 @@ packages:
     transitivePeerDependencies:
       - supports-color
 
-  /https-proxy-agent@6.0.0:
-    resolution: {integrity: sha512-g821um/ZvXlENs8tqKh96b6G0wafab6ypfkZdFZImJEGZrn47oLeRhWMKvCYxrasOgNi3Yh6Cxkws2Zn13v2QA==}
+  /https-proxy-agent@7.0.1:
+    resolution: {integrity: sha512-Eun8zV0kcYS1g19r78osiQLEFIRspRUDd9tIfBCTBPBeMieF/EsJNL8VI3xOIdYRDEkjQnqOYPsZ2DsWsVsFwQ==}
     engines: {node: '>= 14'}
     dependencies:
-      agent-base: 7.0.0
+      agent-base: 7.1.0
       debug: 4.3.4
     transitivePeerDependencies:
       - supports-color
@@ -13738,17 +13741,18 @@ packages:
       - supports-color
     dev: false
 
-  /pac-proxy-agent@6.0.0:
-    resolution: {integrity: sha512-7Hg6R8RFuzeOw4pnYgZQQ3TtdV3KkfkJ4pEVRY2aLnIhPPobQni4xCxZYaVYsNa1YVpke+vSaivLANsY29Ag7Q==}
+  /pac-proxy-agent@7.0.0:
+    resolution: {integrity: sha512-t4tRAMx0uphnZrio0S0Jw9zg3oDbz1zVhQ/Vy18FjLfP1XOLNUEjaVxYCYRI6NS+BsMBXKIzV6cTLOkO9AtywA==}
     engines: {node: '>= 14'}
     dependencies:
-      agent-base: 7.0.0
+      '@tootallnate/quickjs-emscripten': 0.23.0
+      agent-base: 7.1.0
       debug: 4.3.4
-      get-uri: 6.0.0
-      http-proxy-agent: 6.0.0
-      https-proxy-agent: 6.0.0
-      pac-resolver: 6.0.0
-      socks-proxy-agent: 8.0.0
+      get-uri: 6.0.1
+      http-proxy-agent: 7.0.0
+      https-proxy-agent: 7.0.1
+      pac-resolver: 7.0.0
+      socks-proxy-agent: 8.0.1
     transitivePeerDependencies:
       - supports-color
     dev: true
@@ -13762,11 +13766,11 @@ packages:
       netmask: 2.0.2
     dev: false
 
-  /pac-resolver@6.0.0:
-    resolution: {integrity: sha512-1RjGH42MfLpVN58LRmUz1AOBOTkHy/Z8GT+7zgfqJ7M2KgJdCwjU7hiOnVcw/AYZLbsC32cVvL8O6hnfni3lSA==}
+  /pac-resolver@7.0.0:
+    resolution: {integrity: sha512-Fd9lT9vJbHYRACT8OhCbZBbxr6KRSawSovFpy8nDGshaK99S/EBhVIHp9+crhxrsZOuvLpgL1n23iyPg6Rl2hg==}
     engines: {node: '>= 14'}
     dependencies:
-      degenerator: 4.0.0
+      degenerator: 5.0.0
       ip: 1.1.8
       netmask: 2.0.2
     dev: true
@@ -14304,18 +14308,18 @@ packages:
       - supports-color
     dev: false
 
-  /proxy-agent@6.1.1:
-    resolution: {integrity: sha512-zlPFyvAulI8LC8+oXqJI3ygVHnEThwQcCjlzrmOM2esDTlDh3cLnDS9hC6ncXj1sra19JTos1SC3MpOYdE5PZQ==}
+  /proxy-agent@6.3.0:
+    resolution: {integrity: sha512-0LdR757eTj/JfuU7TL2YCuAZnxWXu3tkJbg4Oq3geW/qFNT/32T0sp2HnZ9O0lMR4q3vwAt0+xCA8SR0WAD0og==}
     engines: {node: '>= 14'}
     dependencies:
-      agent-base: 7.0.0
+      agent-base: 7.1.0
       debug: 4.3.4
-      http-proxy-agent: 6.0.0
-      https-proxy-agent: 6.0.0
+      http-proxy-agent: 7.0.0
+      https-proxy-agent: 7.0.1
       lru-cache: 7.14.1
-      pac-proxy-agent: 6.0.0
+      pac-proxy-agent: 7.0.0
       proxy-from-env: 1.1.0
-      socks-proxy-agent: 8.0.0
+      socks-proxy-agent: 8.0.1
     transitivePeerDependencies:
       - supports-color
     dev: true
@@ -15146,11 +15150,11 @@ packages:
       - supports-color
     dev: false
 
-  /socks-proxy-agent@8.0.0:
-    resolution: {integrity: sha512-5tX6GGsT0q6nXjBd/fDtIXxdX9OOOaZjdo5jvtA8fODcP/4Fa2BH+8zfEgxdtyGN4fRVfZcxsSu8vkJILbrD5g==}
+  /socks-proxy-agent@8.0.1:
+    resolution: {integrity: sha512-59EjPbbgg8U3x62hhKOFVAmySQUcfRQ4C7Q/D5sEHnZTQRrQlNKINks44DMR1gwXp0p4LaVIeccX2KHTTcHVqQ==}
     engines: {node: '>= 14'}
     dependencies:
-      agent-base: 7.0.0
+      agent-base: 7.1.0
       debug: 4.3.4
       socks: 2.7.1
     transitivePeerDependencies:
@@ -15625,9 +15629,9 @@ packages:
       has-flag: 4.0.0
     dev: true
 
-  /supports-hyperlinks@2.2.0:
-    resolution: {integrity: sha512-6sXEzV5+I5j8Bmq9/vUphGRM/RJNT9SCURJLjwfOg51heRtguGWDzcaBlgAzKhQa0EVNpPEKzQuBwZ8S8WaCeQ==}
-    engines: {node: '>=8'}
+  /supports-hyperlinks@3.0.0:
+    resolution: {integrity: sha512-QBDPHyPQDRTy9ku4URNGY5Lah8PAaXs6tAAwp55sL5WCsSW7GIfdf6W5ixfziW+t7wh3GVvHyHHyQ1ESsoRvaA==}
+    engines: {node: '>=14.18'}
     dependencies:
       has-flag: 4.0.0
       supports-color: 7.2.0
@@ -16183,65 +16187,65 @@ packages:
       safe-buffer: 5.2.1
     dev: true
 
-  /turbo-darwin-64@1.10.7:
-    resolution: {integrity: sha512-N2MNuhwrl6g7vGuz4y3fFG2aR1oCs0UZ5HKl8KSTn/VC2y2YIuLGedQ3OVbo0TfEvygAlF3QGAAKKtOCmGPNKA==}
+  /turbo-darwin-64@1.10.9:
+    resolution: {integrity: sha512-Avz3wsYYb8/vjyHPVRFbNbowIiaF33vcBRklIUkPchTLvZekrT5x3ltQBCflyoi2zJV9g08hK4xXTGuCxeVvPA==}
     cpu: [x64]
     os: [darwin]
     requiresBuild: true
     dev: true
     optional: true
 
-  /turbo-darwin-arm64@1.10.7:
-    resolution: {integrity: sha512-WbJkvjU+6qkngp7K4EsswOriO3xrNQag7YEGRtfLoDdMTk4O4QTeU6sfg2dKfDsBpTidTvEDwgIYJhYVGzrz9Q==}
+  /turbo-darwin-arm64@1.10.9:
+    resolution: {integrity: sha512-HyggdSPc/v2HuYrJF75smhIlurn8bY2cWpZYCjOL5Pj2DpLyhBs+nk+JirZl7XQiaUEVFj6eTbsejXyDP2Ritw==}
     cpu: [arm64]
     os: [darwin]
     requiresBuild: true
     dev: true
     optional: true
 
-  /turbo-linux-64@1.10.7:
-    resolution: {integrity: sha512-x1CF2CDP1pDz/J8/B2T0hnmmOQI2+y11JGIzNP0KtwxDM7rmeg3DDTtDM/9PwGqfPotN9iVGgMiMvBuMFbsLhg==}
+  /turbo-linux-64@1.10.9:
+    resolution: {integrity: sha512-qvdEgJKzDjOYY8o/HlnSwD+TIXiAML+3l6wUG4Ojuh/6cIhemLMRaHmEG+LygRW7GRw3dDv3hpp9OtiKmyxFdQ==}
     cpu: [x64]
     os: [linux]
     requiresBuild: true
     dev: true
     optional: true
 
-  /turbo-linux-arm64@1.10.7:
-    resolution: {integrity: sha512-JtnBmaBSYbs7peJPkXzXxsRGSGBmBEIb6/kC8RRmyvPAMyqF8wIex0pttsI+9plghREiGPtRWv/lfQEPRlXnNQ==}
+  /turbo-linux-arm64@1.10.9:
+    resolution: {integrity: sha512-gva8H3CS8F6HlXL6YTDJAPrvPXVjBCxdd4DKABghjAxdknV5mZV1WWwMuGf0Z2W8qtmNG1XS0Dt2Wrb1ERFnLw==}
     cpu: [arm64]
     os: [linux]
     requiresBuild: true
     dev: true
     optional: true
 
-  /turbo-windows-64@1.10.7:
-    resolution: {integrity: sha512-7A/4CByoHdolWS8dg3DPm99owfu1aY/W0V0+KxFd0o2JQMTQtoBgIMSvZesXaWM57z3OLsietFivDLQPuzE75w==}
+  /turbo-windows-64@1.10.9:
+    resolution: {integrity: sha512-OZ+bkSBJIkyl4JBDk8FX2/bOqtrElfXQV/KQ8/ibddB8Clzn/owx9FS1eXGdvttRZ9IJWzPrdFv+k4vbWQfE7w==}
     cpu: [x64]
     os: [win32]
     requiresBuild: true
     dev: true
     optional: true
 
-  /turbo-windows-arm64@1.10.7:
-    resolution: {integrity: sha512-D36K/3b6+hqm9IBAymnuVgyePktwQ+F0lSXr2B9JfAdFPBktSqGmp50JNC7pahxhnuCLj0Vdpe9RqfnJw5zATA==}
+  /turbo-windows-arm64@1.10.9:
+    resolution: {integrity: sha512-WhhhioGaePkGdGOIlrOB8LF8400FJUAQcVf8yCTvjzDB+OWn3dJQ3nalFjxH0PlZ17l6TPGt1WvWQiDVXUE4pw==}
     cpu: [arm64]
     os: [win32]
     requiresBuild: true
     dev: true
     optional: true
 
-  /turbo@1.10.7:
-    resolution: {integrity: sha512-xm0MPM28TWx1e6TNC3wokfE5eaDqlfi0G24kmeHupDUZt5Wd0OzHFENEHMPqEaNKJ0I+AMObL6nbSZonZBV2HA==}
+  /turbo@1.10.9:
+    resolution: {integrity: sha512-s1ZRRD89NelCYHty1SpV1Elpv2LRrktgcddbZm9oTq1RPNpJFSrrEOAJhNz/w0fxTSjSN1Ey3TWZghjUjgKuzg==}
     hasBin: true
     requiresBuild: true
     optionalDependencies:
-      turbo-darwin-64: 1.10.7
-      turbo-darwin-arm64: 1.10.7
-      turbo-linux-64: 1.10.7
-      turbo-linux-arm64: 1.10.7
-      turbo-windows-64: 1.10.7
-      turbo-windows-arm64: 1.10.7
+      turbo-darwin-64: 1.10.9
+      turbo-darwin-arm64: 1.10.9
+      turbo-linux-64: 1.10.9
+      turbo-linux-arm64: 1.10.9
+      turbo-windows-64: 1.10.9
+      turbo-windows-arm64: 1.10.9
     dev: true
 
   /tweetnacl@0.14.5:
@@ -16720,10 +16724,12 @@ packages:
   /vm2@3.9.17:
     resolution: {integrity: sha512-AqwtCnZ/ERcX+AVj9vUsphY56YANXxRuqMb7GsDtAr0m0PcQX3u0Aj3KWiXM0YAHy7i6JEeHrwOnwXbGYgRpAw==}
     engines: {node: '>=6.0'}
+    deprecated: The library contains critical security issues and should not be used for production! The maintenance of the project has been discontinued. Consider migrating your code to isolated-vm.
     hasBin: true
     dependencies:
       acorn: 8.8.2
       acorn-walk: 8.2.0
+    dev: false
 
   /vscode-oniguruma@1.7.0:
     resolution: {integrity: sha512-L9WMGRfrjOhgHSdOYgCt/yRMsXzLDJSL7BPrOZt73gU0iWO4mpqzqQzOz5srxqTvMBaR0XZTSrVWo4j55Rc6cA==}
@@ -17113,3 +17119,7 @@ packages:
   /zwitch@2.0.4:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
     dev: false
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false

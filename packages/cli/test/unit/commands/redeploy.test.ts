@@ -104,6 +104,14 @@ function initRedeployTest({ target }: { target?: Deployment['target'] } = {}) {
   const toDeployment = useDeployment({ creator: user, target });
 
   client.scenario.post(`/v13/deployments`, (req, res) => {
+    const { target } = req.body;
+    if (target !== undefined && typeof target !== 'string') {
+      res.status(400).json({
+        message: 'Invalid request: `target` should be string',
+      });
+      return;
+    }
+
     res.json(toDeployment);
   });
 

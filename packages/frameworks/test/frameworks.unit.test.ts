@@ -51,6 +51,22 @@ const SchemaSettings = {
     },
     {
       type: 'object',
+      required: ['value', 'ignorePackageJsonScript'],
+      additionalProperties: false,
+      properties: {
+        value: {
+          type: 'string',
+        },
+        placeholder: {
+          type: 'string',
+        },
+        ignorePackageJsonScript: {
+          type: 'boolean',
+        },
+      },
+    },
+    {
+      type: 'object',
       required: ['placeholder'],
       additionalProperties: false,
       properties: {
