@@ -1347,8 +1347,8 @@ importers:
   packages/remix:
     dependencies:
       '@remix-run/dev':
-        specifier: npm:@vercel/remix-run-dev@1.18.1
-        version: /@vercel/remix-run-dev@1.18.1(@types/node@14.18.33)
+        specifier: npm:@vercel/remix-run-dev@1.19.1
+        version: /@vercel/remix-run-dev@1.19.1(@types/node@14.18.33)
       '@vercel/build-utils':
         specifier: 6.8.2
         version: link:../build-utils
@@ -4121,16 +4121,16 @@ packages:
       tslib: 2.5.0
     dev: true
 
-  /@remix-run/router@1.7.1:
-    resolution: {integrity: sha512-bgVQM4ZJ2u2CM8k1ey70o1ePFXsEzYVZoWghh6WjM8p59jQ7HxzbHW4SbnWFG7V9ig9chLawQxDTZ3xzOF8MkQ==}
+  /@remix-run/router@1.7.2:
+    resolution: {integrity: sha512-7Lcn7IqGMV+vizMPoEl5F0XDshcdDYtMI6uJLQdQz5CfZAwy3vvGKYSUk789qndt5dEC4HfSjviSYlSoHGL2+A==}
     engines: {node: '>=14'}
     dev: false
 
-  /@remix-run/server-runtime@1.18.1:
-    resolution: {integrity: sha512-E0sQlgUQG2ytFmUH7zRH7n2MufnP6WWWq1KpRoiuwJZxfTFIzaiCCIiNqbP/uXGWDGcwEevpawNUzzszL1tT0w==}
+  /@remix-run/server-runtime@1.19.1:
+    resolution: {integrity: sha512-sRTx/Ibl8HSLGhEr73YTZz3GzO5eZRCusfSJ8MBh1Kq0Mo571W9g4AJ/qJsF3G/wKTKxU2n75MVo0nIfTh4oZQ==}
     engines: {node: '>=14.0.0'}
     dependencies:
-      '@remix-run/router': 1.7.1
+      '@remix-run/router': 1.7.2
       '@types/cookie': 0.4.1
       '@web3-storage/multipart-parser': 1.0.0
       cookie: 0.4.2
@@ -5927,12 +5927,12 @@ packages:
       - encoding
       - supports-color
 
-  /@vercel/remix-run-dev@1.18.1(@types/node@14.18.33):
-    resolution: {integrity: sha512-V9RCT+3VDB0wLbwq8Dp0XO6Cc1LxY4tCyxJ5loyX0L8sPBCgQ3/vMre3VKr8jLhjnfUGSrbXADxFM8/bq4ZeDQ==}
+  /@vercel/remix-run-dev@1.19.1(@types/node@14.18.33):
+    resolution: {integrity: sha512-slG3mjDN5O0ISs2tNem7x2bjAwLrp3M81llbo2EKE+CAQWnhD+dLHNYEdEHXScl7Mr6b6deVcnofKmP71b959g==}
     engines: {node: '>=14.0.0'}
     hasBin: true
     peerDependencies:
-      '@remix-run/serve': ^1.18.1
+      '@remix-run/serve': ^1.19.1
     peerDependenciesMeta:
       '@remix-run/serve':
         optional: true
@@ -5947,7 +5947,7 @@ packages:
       '@babel/traverse': 7.21.5
       '@babel/types': 7.21.5
       '@npmcli/package-json': 2.0.0
-      '@remix-run/server-runtime': 1.18.1
+      '@remix-run/server-runtime': 1.19.1
       '@vanilla-extract/integration': 6.2.1(@types/node@14.18.33)
       arg: 5.0.2
       cacache: 15.3.0
@@ -5955,7 +5955,7 @@ packages:
       chokidar: 3.5.3
       dotenv: 16.0.3
       esbuild: 0.17.6
-      esbuild-plugins-node-modules-polyfill: 1.1.0(esbuild@0.17.6)
+      esbuild-plugins-node-modules-polyfill: 1.3.0(esbuild@0.17.6)
       execa: 5.1.1
       exit-hook: 2.2.1
       express: 4.17.1
@@ -8572,8 +8572,8 @@ packages:
     dev: true
     optional: true
 
-  /esbuild-plugins-node-modules-polyfill@1.1.0(esbuild@0.17.6):
-    resolution: {integrity: sha512-pfJAbt00Luc9uuYtXGlaUrcTzf4h95Cr9Lfw+7smTFmZWtbwbrN5Hsf+La4lfD6OygHvZeefZFILOGK1ZnuyjA==}
+  /esbuild-plugins-node-modules-polyfill@1.3.0(esbuild@0.17.6):
+    resolution: {integrity: sha512-r/aNOvAlIaIzqJwvFHWhDGrPF/Aj5qI1zKVeHbCFpKH+bnKW1BG2LGixMd3s6hyWcZHcfdl2QZRucVuOLzFRrA==}
     engines: {node: '>=14.0.0'}
     peerDependencies:
       esbuild: ^0.14.0 || ^0.15.0 || ^0.16.0 || ^0.17.0 || ^0.18.0
