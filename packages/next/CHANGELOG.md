@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 3.9.1
+
+### Patch Changes
+
+- Fix pages and app router i18n handling ([#10243](https://github.com/vercel/vercel/pull/10243))
+
 ## 3.9.0
 
 ### Minor Changes

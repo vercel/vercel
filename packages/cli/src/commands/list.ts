@@ -44,7 +44,9 @@ const help = () => {
     -m, --meta                     Filter deployments by metadata (e.g.: ${chalk.dim(
       '`-m KEY=value`'
     )}). Can appear many times.
-    --prod                         Filter for production URLs
+    --environment=${chalk.bold.underline(
+      'ENVIRONMENT'
+    )}      Filter by environment (production|preview)
     -N, --next                     Show next page of results
 
   ${chalk.dim('Examples:')}
@@ -76,11 +78,12 @@ export default async function main(client: Client) {
 
   try {
     argv = getArgs(client.argv.slice(2), {
+      '--environment': String,
       '--meta': [String],
       '-m': '--meta',
       '--next': Number,
       '-N': '--next',
-      '--prod': Boolean,
+      '--prod': Boolean, // this can be deprecated someday
       '--yes': Boolean,
       '-y': '--yes',
 
@@ -113,8 +116,13 @@ export default async function main(client: Client) {
   }
 
   const autoConfirm = !!argv['--yes'];
-  const prod = argv['--prod'] || false;
   const meta = parseMeta(argv['--meta']);
+
+  const target = argv['--prod']
+    ? 'production'
+    : typeof argv['--environment'] === 'string'
+    ? argv['--environment'].toLowerCase()
+    : undefined;
 
   // retrieve `project` and `org` from .vercel
   let link = await getLinkedProject(client, cwd);
@@ -219,15 +227,12 @@ export default async function main(client: Client) {
 
   debug('Fetching deployments');
 
-  const response = await now.list(
-    app,
-    {
-      version: 6,
-      meta,
-      nextTimestamp,
-    },
-    prod
-  );
+  const response = await now.list(app, {
+    version: 6,
+    meta,
+    nextTimestamp,
+    target,
+  });
 
   let {
     deployments,
@@ -280,9 +285,11 @@ export default async function main(client: Client) {
   }
 
   log(
-    `${prod ? `Production deployments` : `Deployments`} for ${chalk.bold(
-      app
-    )} under ${chalk.bold(contextName)} ${elapsed(Date.now() - start)}`
+    `${
+      target === 'production' ? `Production deployments` : `Deployments`
+    } for ${chalk.bold(app)} under ${chalk.bold(contextName)} ${elapsed(
+      Date.now() - start
+    )}`
   );
 
   // information to help the user find other deployments or instances
@@ -292,8 +299,9 @@ export default async function main(client: Client) {
 
   print('\n');
 
-  const headers = ['Age', 'Deployment', 'Status', 'Duration'];
+  const headers = ['Age', 'Deployment', 'Status', 'Environment', 'Duration'];
   if (showUsername) headers.push('Username');
+  const urls: string[] = [];
 
   client.output.print(
     `${table(
@@ -301,18 +309,17 @@ export default async function main(client: Client) {
         headers.map(header => chalk.bold(chalk.cyan(header))),
         ...deployments
           .sort(sortRecent())
-          .map(dep => [
-            [
+          .map(dep => {
+            urls.push(`https://${dep.url}`);
+            return [
               chalk.gray(ms(Date.now() - dep.createdAt)),
               `https://${dep.url}`,
               stateString(dep.state || ''),
+              dep.target === 'production' ? 'Production' : 'Preview',
               chalk.gray(getDeploymentDuration(dep)),
               showUsername ? chalk.gray(dep.creator?.username) : '',
-            ],
-          ])
-          // flatten since the previous step returns a nested
-          // array of the deployment and (optionally) its instances
-          .flat()
+            ];
+          })
           .filter(app =>
             // if an app wasn't supplied to filter by,
             // we only want to render one deployment per app
@@ -326,6 +333,11 @@ export default async function main(client: Client) {
       }
     ).replace(/^/gm, '  ')}\n\n`
   );
+
+  if (!client.stdout.isTTY) {
+    client.stdout.write(urls.join('\n'));
+    client.stdout.write('\n');
+  }
 
   if (pagination && pagination.count === 20) {
     const flags = getCommandFlags(argv, ['_', '--next']);

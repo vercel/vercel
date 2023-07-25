@@ -35,6 +35,7 @@ const help = () => {
     'DIR'
   )}    Path to the global ${'`.vercel`'} directory
     -d, --debug                    Debug mode [off]
+    --git-branch                   Specify the Git branch to pull specific Environment Variables for
     --no-color                     No color mode [off]
     --environment [environment]    Deployment environment [development]
     -y, --yes                      Skip questions when setting up new project using default scope and settings

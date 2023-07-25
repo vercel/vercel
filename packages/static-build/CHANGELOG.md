@@ -1,5 +1,13 @@
 # @vercel/static-build
 
+## 1.3.42
+
+### Patch Changes
+
+- Add `ignorePackageJsonScript` configuration for Framework command settings to ignore the `package.json` script. ([#10228](https://github.com/vercel/vercel/pull/10228))
+
+  Enable this mode for Storybook's `buildCommand`, since it should not invoke the "build" script, which is most likely designated for the frontend app build.
+
 ## 1.3.41
 
 ### Patch Changes

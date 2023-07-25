@@ -35,6 +35,42 @@
       "path": "/en/other",
       "status": 200,
       "mustContain": "My Other Page"
+    },
+    {
+      "fetchOptions": { "redirect": "manual" },
+      "path": "/dynamic/first",
+      "status": 200,
+      "mustContain": "dynamic page"
+    },
+    {
+      "fetchOptions": { "redirect": "manual" },
+      "path": "/dynamic/third",
+      "status": 200,
+      "mustContain": "dynamic page"
+    },
+    {
+      "fetchOptions": { "redirect": "manual" },
+      "path": "/another",
+      "status": 200,
+      "mustContain": "pages/another"
+    },
+    {
+      "fetchOptions": { "redirect": "manual" },
+      "path": "/fr/another",
+      "status": 200,
+      "mustContain": "pages/another"
+    },
+    {
+      "fetchOptions": { "redirect": "manual" },
+      "path": "/api/hello",
+      "status": 200,
+      "mustContain": "hello world"
+    },
+    {
+      "fetchOptions": { "redirect": "manual" },
+      "path": "/api/hello-app",
+      "status": 200,
+      "mustContain": "hello world"
     }
   ]
 }
