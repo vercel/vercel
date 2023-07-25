@@ -217,10 +217,10 @@ export async function serverBuild({
       : undefined;
 
   if (!static404Page && i18n) {
+    localePrefixed404 = true;
     if (
       staticPages[path.posix.join(entryDirectory, i18n.defaultLocale, '404')]
     ) {
-      localePrefixed404 = true;
       static404Page = path.posix.join(
         entryDirectory,
         i18n.defaultLocale,
