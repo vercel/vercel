@@ -1,13 +1,10 @@
-import { lstat as lstatRaw } from 'fs';
-import { promisify } from 'util';
+import { lstat } from 'fs-extra';
 import { Output } from './output';
 import chalk from 'chalk';
 import { homedir } from 'os';
 import confirm from './input/confirm';
 import toHumanPath from './humanize-path';
 import Client from './client';
-
-const stat = promisify(lstatRaw);
 
 /**
  * A helper function to validate the `rootDirectory` input.
@@ -18,7 +15,7 @@ export async function validateRootDirectory(
   path: string,
   errorSuffix: string
 ) {
-  const pathStat = await stat(path).catch(() => null);
+  const pathStat = await lstat(path).catch(() => null);
   const suffix = errorSuffix ? ` ${errorSuffix}` : '';
 
   if (!pathStat) {
@@ -66,7 +63,7 @@ export default async function validatePaths(
   const path = paths[0];
 
   // can only deploy a directory
-  const pathStat = await stat(path).catch(() => null);
+  const pathStat = await lstat(path).catch(() => null);
 
   if (!pathStat) {
     output.error(`Could not find ${chalk.cyan(`“${toHumanPath(path)}”`)}`);

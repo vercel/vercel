@@ -2,9 +2,6 @@ const ARG_COMMON = {
   '--help': Boolean,
   '-h': '--help',
 
-  '--platform-version': Number,
-  '-V': '--platform-version',
-
   '--debug': Boolean,
   '-d': '--debug',
 
@@ -26,8 +23,6 @@ const ARG_COMMON = {
   '-Q': '--global-config',
 
   '--api': String,
-
-  '--target': String,
 
   '--cwd': String,
 };

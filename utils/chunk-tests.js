@@ -16,17 +16,17 @@ const runnersMap = new Map([
   ['test-dev', { min: 1, max: 5, runners: ['ubuntu-latest', 'macos-latest'] }],
 ]);
 
-const optionsOverrides = {
-  examples: { min: 1, max: 1 },
+const packageOptionsOverrides = {
+  // 'some-package': { min: 1, max: 1 },
 };
 
 function getRunnerOptions(scriptName, packageName) {
   let runnerOptions = runnersMap.get(scriptName);
-  if (optionsOverrides[packageName]) {
+  if (packageOptionsOverrides[packageName]) {
     runnerOptions = Object.assign(
       {},
       runnerOptions,
-      optionsOverrides[packageName]
+      packageOptionsOverrides[packageName]
     );
   }
   return (
@@ -48,6 +48,7 @@ async function getChunkedTests() {
       ...scripts,
       `--cache-dir=.turbo`,
       '--output-logs=full',
+      '--log-order=stream',
       '--',
       '--', // need two of these due to pnpm arg parsing
       '--listTests',
@@ -183,6 +184,7 @@ async function main() {
   }
 }
 
+// @ts-ignore
 if (module === require.main || !module.parent) {
   main();
 }

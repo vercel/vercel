@@ -11,7 +11,7 @@
       "status": 200,
       "mustContain": "hello from app/dashboard",
       "responseHeaders": {
-        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch"
+        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Url"
       }
     },
     {
@@ -31,7 +31,7 @@
       },
       "responseHeaders": {
         "content-type": "text/x-component",
-        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch"
+        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Url"
       }
     },
     {

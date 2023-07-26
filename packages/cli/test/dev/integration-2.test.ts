@@ -88,10 +88,10 @@ test(
     async (testPath: any) => {
       const vcRobots = `https://vercel.com/robots.txt`;
       await testPath(200, '/rewrite', /User-Agent: \*/m);
-      await testPath(308, '/redirect', `Redirecting to ${vcRobots} (308)`, {
+      await testPath(308, '/redirect', `Redirecting...`, {
         Location: vcRobots,
       });
-      await testPath(307, '/tempRedirect', `Redirecting to ${vcRobots} (307)`, {
+      await testPath(307, '/tempRedirect', `Redirecting...`, {
         Location: vcRobots,
       });
     }
@@ -103,10 +103,10 @@ test(
   testFixtureStdio('test-routing-case-sensitive', async (testPath: any) => {
     await testPath(200, '/Path', 'UPPERCASE');
     await testPath(200, '/path', 'lowercase');
-    await testPath(308, '/GoTo', 'Redirecting to /upper.html (308)', {
+    await testPath(308, '/GoTo', 'Redirecting...', {
       Location: '/upper.html',
     });
-    await testPath(308, '/goto', 'Redirecting to /lower.html (308)', {
+    await testPath(308, '/goto', 'Redirecting...', {
       Location: '/lower.html',
     });
   })
@@ -179,6 +179,13 @@ test(
     await testPath(200, '/api/another.go', 'This is another page');
     await testPath(200, `/api/foo`, 'Req Path: /api/foo');
     await testPath(200, `/api/bar`, 'Req Path: /api/bar');
+  })
+);
+
+test(
+  '[vercel dev] Should support `*.go` API serverless functions with `go.work` and lib',
+  testFixtureStdio('go-work-with-shared', async (testPath: any) => {
+    await testPath(200, `/api`, 'hello:go1.20.2');
   })
 );
 

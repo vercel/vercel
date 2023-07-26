@@ -18,7 +18,7 @@ import {
   runPackageJsonScript,
   execCommand,
   getEnvForPackageManager,
-  getNodeBinPath,
+  getNodeBinPaths,
   scanParentDirs,
   BuildV2,
   PrepareCache,
@@ -90,6 +90,7 @@ import {
   validateEntrypoint,
   getOperationType,
   isApiPage,
+  getFunctionsConfigManifest,
 } from './utils';
 
 export const version = 2;
@@ -272,7 +273,7 @@ export const build: BuildV2 = async ({
   });
 
   let hasLegacyRoutes = false;
-  const hasFunctionsConfig = !!config.functions;
+  const hasFunctionsConfig = Boolean(config.functions);
 
   if (await pathExists(dotNextStatic)) {
     console.warn('WARNING: You should not upload the `.next` directory.');
@@ -431,7 +432,11 @@ export const build: BuildV2 = async ({
 
   if (buildCommand) {
     // Add `node_modules/.bin` to PATH
-    const nodeBinPath = await getNodeBinPath({ cwd: entryPath });
+    const nodeBinPaths = getNodeBinPaths({
+      start: entryPath,
+      base: repoRootPath,
+    });
+    const nodeBinPath = nodeBinPaths.join(path.delimiter);
     env.PATH = `${nodeBinPath}${path.delimiter}${env.PATH}`;
 
     // Yarn v2 PnP mode may be activated, so force "node-modules" linker style
@@ -483,7 +488,12 @@ export const build: BuildV2 = async ({
     ? await getRequiredServerFilesManifest(entryPath, outputDirectory)
     : false;
 
-  isServerMode = !!requiredServerFilesManifest;
+  isServerMode = Boolean(requiredServerFilesManifest);
+
+  const functionsConfigManifest = await getFunctionsConfigManifest(
+    entryPath,
+    outputDirectory
+  );
 
   const routesManifest = await getRoutesManifest(
     entryPath,
@@ -1092,7 +1102,7 @@ export const build: BuildV2 = async ({
           operationType: 'Page', // always Page because we're in legacy mode
           shouldAddHelpers: false,
           shouldAddSourcemapSupport: false,
-          supportsMultiPayloads: !!process.env.NEXT_PRIVATE_MULTI_PAYLOAD,
+          supportsMultiPayloads: true,
           framework: {
             slug: 'nextjs',
             version: nextVersion,
@@ -1129,8 +1139,9 @@ export const build: BuildV2 = async ({
     const canUsePreviewMode = Object.keys(pages).some(page =>
       isApiPage(pages[page].fsPath)
     );
+    const originalStaticPages = await glob('**/*.html', pagesDir);
     staticPages = await filterStaticPages(
-      await glob('**/*.html', pagesDir),
+      originalStaticPages,
       dynamicPages,
       entryDirectory,
       htmlContentType,
@@ -1306,14 +1317,27 @@ export const build: BuildV2 = async ({
         );
       }
 
+      const localePrefixed404 = !!(
+        routesManifest.i18n &&
+        originalStaticPages[
+          path.posix.join(
+            entryDirectory,
+            routesManifest.i18n.defaultLocale,
+            '404.html'
+          )
+        ]
+      );
+
       return serverBuild({
         config,
+        functionsConfigManifest,
         nextVersion,
         trailingSlash,
         appPathRoutesManifest,
         dynamicPages,
         canUsePreviewMode,
         staticPages,
+        localePrefixed404,
         lambdaPages: pages,
         lambdaAppPaths,
         omittedPrerenderRoutes,
@@ -1566,6 +1590,7 @@ export const build: BuildV2 = async ({
       const initialPageLambdaGroups = await getPageLambdaGroups({
         entryPath,
         config,
+        functionsConfigManifest,
         pages: nonApiPages,
         prerenderRoutes: new Set(),
         pageTraces,
@@ -1582,6 +1607,7 @@ export const build: BuildV2 = async ({
       const initialApiLambdaGroups = await getPageLambdaGroups({
         entryPath,
         config,
+        functionsConfigManifest,
         pages: apiPages,
         prerenderRoutes: new Set(),
         pageTraces,

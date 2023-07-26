@@ -19,6 +19,22 @@ concurrency:
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
+  enforce-changeset:
+    name: Enforce Changeset
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && github.event.pull_request.title != 'Version Packages'
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          ref: main
+      - run: git checkout ${{ github.event.pull_request.head.ref }}
+      - name: install pnpm@8.3.1
+        run: npm i -g pnpm@8.3.1
+      - run: pnpm install
+      # Enforce a changeset file to be present
+      - run: pnpm exec changeset status --since=main
+
   test:
     name: Lint
     timeout-minutes: 10
@@ -28,8 +44,8 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: ${{ env.NODE_VERSION }}
-      - name: install pnpm@7.31.0
-        run: npm i -g pnpm@7.31.0
+      - name: install pnpm@8.3.1
+        run: npm i -g pnpm@8.3.1
       - run: pnpm install
       - run: pnpm run lint
       - run: pnpm run prettier-check

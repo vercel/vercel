@@ -7,7 +7,8 @@ module.exports = async ({ github, context }, newVersion) => {
   execSync('git config --global user.name vercel-release-bot');
   execSync('git checkout main');
 
-  const packagePath = path.join(__dirname, '..', 'packages', 'remix');
+  const repoRootPath = path.join(__dirname, '..');
+  const packagePath = path.join(repoRootPath, 'packages', 'remix');
   const oldVersion = JSON.parse(
     fs.readFileSync(path.join(packagePath, 'package.json'), 'utf-8')
   ).devDependencies['@remix-run/dev'];
@@ -42,6 +43,17 @@ module.exports = async ({ github, context }, newVersion) => {
     { cwd: packagePath }
   );
 
+  const changesetName = path.join(repoRootPath, `.changeset/${branch}.md`);
+  fs.writeFileSync(
+    changesetName,
+    `---
+'@vercel/remix-builder': patch
+---
+
+Update \`@remix-run/dev\` fork to v${newVersion}
+`
+  );
+
   execSync(`git checkout -b ${branch}`);
   execSync('git add -A');
   execSync(`git commit -m ${branch}`);
@@ -54,8 +66,8 @@ module.exports = async ({ github, context }, newVersion) => {
     repo,
     head: branch,
     base: 'main',
-    title: `[remix] Upgrade @remix-run/dev to version ${newVersion}`,
-    body: `This auto-generated PR updates @remix-run/dev to version ${newVersion}`,
+    title: `[remix] Update \`@remix-run/dev\` to v${newVersion}`,
+    body: `This auto-generated PR updates \`@remix-run/dev\` to version ${newVersion}.`,
   });
 
   await github.rest.issues.addLabels({

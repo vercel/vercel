@@ -8,7 +8,7 @@ import zlib from 'zlib';
 import { promisify } from 'util';
 import { prettyBytes } from '../utils';
 
-// @ts-expect-error this is a prebuilt file, based on `../../scripts/build-edge-function-template.js`
+// @ts-ignore this is a prebuilt file, based on `../../scripts/build-edge-function-template.js`
 import template from '../../dist/___get-nextjs-edge-function.js';
 
 const gzip = promisify<zlib.InputType, Buffer>(zlib.gzip);

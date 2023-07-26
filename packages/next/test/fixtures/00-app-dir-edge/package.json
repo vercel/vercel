@@ -6,5 +6,6 @@
     "next": "canary",
     "react": "experimental",
     "react-dom": "experimental"
-  }
+  },
+  "ignoreNextjsUpdates": true
 }

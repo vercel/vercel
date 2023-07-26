@@ -2,7 +2,7 @@ const assert = require('assert');
 const bufferReplace = require('buffer-replace');
 const fs = require('fs');
 const json5 = require('json5');
-const glob = require('util').promisify(require('glob'));
+const { glob } = require('glob');
 const path = require('path');
 const { spawn } = require('child_process');
 const fetch = require('./fetch-retry.js');
@@ -149,7 +149,7 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
       // we must eval it since we use devalue to stringify it
       global.__BUILD_MANIFEST_CB = null;
       ctx.nextBuildManifest = eval(
-        `self = {};` + manifestContent + `;self.__BUILD_MANIFEST`
+        `var self = {};` + manifestContent + `;self.__BUILD_MANIFEST`
       );
     }
     let scriptRelativePath = ctx.nextBuildManifest[scriptName];

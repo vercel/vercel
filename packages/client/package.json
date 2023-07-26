@@ -1,6 +1,6 @@
 {
   "name": "@vercel/client",
-  "version": "12.4.9",
+  "version": "12.6.5",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "homepage": "https://vercel.com",
@@ -32,19 +32,11 @@
     "@types/node-fetch": "2.5.4",
     "@types/recursive-readdir": "2.2.0",
     "@types/tar-fs": "1.16.1",
-    "typescript": "4.3.4"
-  },
-  "jest": {
-    "preset": "ts-jest",
-    "testEnvironment": "node",
-    "verbose": false,
-    "setupFilesAfterEnv": [
-      "<rootDir>/tests/setup/index.ts"
-    ]
+    "typescript": "4.9.5"
   },
   "dependencies": {
-    "@vercel/build-utils": "6.7.1",
-    "@vercel/routing-utils": "2.2.0",
+    "@vercel/build-utils": "6.8.2",
+    "@vercel/routing-utils": "2.2.1",
     "@zeit/fetch": "5.2.0",
     "async-retry": "1.2.3",
     "async-sema": "3.0.0",

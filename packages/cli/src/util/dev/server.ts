@@ -5,7 +5,7 @@ import chalk from 'chalk';
 import fetch from 'node-fetch';
 import plural from 'pluralize';
 import rawBody from 'raw-body';
-import listen from 'async-listen';
+import { listen } from 'async-listen';
 import minimatch from 'minimatch';
 import httpProxy from 'http-proxy';
 import { randomBytes } from 'crypto';
@@ -32,7 +32,7 @@ import {
   Builder,
   cloneEnv,
   Env,
-  getNodeBinPath,
+  getNodeBinPaths,
   StartDevServerResult,
   FileFsRef,
   PackageJson,
@@ -51,10 +51,8 @@ import link from '../output/link';
 import sleep from '../sleep';
 import { Output } from '../output';
 import { relative } from '../path-helpers';
-import { getDistTag } from '../get-dist-tag';
 import getVercelConfigPath from '../config/local-path';
 import { MissingDotenvVarsError } from '../errors-ts';
-import cliPkg from '../pkg';
 import { getVercelDirectory } from '../projects/link';
 import { staticFiles as getFiles } from '../get-files';
 import { validateConfig } from '../validate-config';
@@ -85,7 +83,7 @@ import {
   HttpHeadersConfig,
   EnvConfigs,
 } from './types';
-import { ProjectSettings } from '@vercel-internals/types';
+import type { ProjectSettings } from '@vercel-internals/types';
 import { treeKill } from '../tree-kill';
 import { applyOverriddenHeaders, nodeHeadersToFetchHeaders } from './headers';
 import { formatQueryString, parseQueryString } from './parse-query-string';
@@ -126,6 +124,7 @@ function sortBuilders(buildA: Builder, buildB: Builder) {
 
 export default class DevServer {
   public cwd: string;
+  public repoRoot: string;
   public output: Output;
   public proxy: httpProxy;
   public envConfigs: EnvConfigs;
@@ -171,6 +170,7 @@ export default class DevServer {
 
   constructor(cwd: string, options: DevServerOptions) {
     this.cwd = cwd;
+    this.repoRoot = options.repoRoot ?? cwd;
     this.output = options.output;
     this.envConfigs = { buildEnv: {}, runEnv: {}, allEnv: {} };
     this.envValues = options.envValues || {};
@@ -593,7 +593,7 @@ export default class DevServer {
         rewriteRoutes,
         errorRoutes,
       } = await detectBuilders(files, pkg, {
-        tag: getDistTag(cliPkg.version) === 'canary' ? 'canary' : 'latest',
+        tag: 'latest',
         functions: vercelConfig.functions,
         projectSettings: projectSettings || this.projectSettings,
         featHandleMiss,
@@ -862,7 +862,7 @@ export default class DevServer {
     let address: string | null = null;
     while (typeof address !== 'string') {
       try {
-        address = await listen(this.server, ...listenSpec);
+        address = (await listen(this.server, ...listenSpec)).toString();
       } catch (err: unknown) {
         if (isErrnoException(err)) {
           this.output.debug(`Got listen error: ${err.code}`);
@@ -1133,7 +1133,7 @@ export default class DevServer {
       body = redirectTemplate({ location, statusCode });
     } else {
       res.setHeader('content-type', 'text/plain; charset=utf-8');
-      body = `Redirecting to ${location} (${statusCode})\n`;
+      body = `Redirecting...\n`;
     }
     res.end(body);
   }
@@ -1414,7 +1414,7 @@ export default class DevServer {
             files,
             entrypoint: middleware.entrypoint,
             workPath,
-            repoRootPath: this.cwd,
+            repoRootPath: this.repoRoot,
             config: middleware.config || {},
             meta: {
               isDev: true,
@@ -1851,7 +1851,7 @@ export default class DevServer {
           entrypoint: match.entrypoint,
           workPath,
           config: match.config || {},
-          repoRootPath: this.cwd,
+          repoRootPath: this.repoRoot,
           meta: {
             isDev: true,
             requestPath,
@@ -2239,7 +2239,8 @@ export default class DevServer {
     );
 
     // add the node_modules/.bin directory to the PATH
-    const nodeBinPath = await getNodeBinPath({ cwd });
+    const nodeBinPaths = getNodeBinPaths({ base: this.repoRoot, start: cwd });
+    const nodeBinPath = nodeBinPaths.join(path.delimiter);
     env.PATH = `${nodeBinPath}${path.delimiter}${env.PATH}`;
 
     // This is necesary so that the dev command in the Project

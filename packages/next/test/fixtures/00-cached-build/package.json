@@ -1,4 +1,6 @@
 {
+  "name": "00-cached-build",
+  "version": "0.0.0",
   "workspaces": [
     "apps/*"
   ],
@@ -11,5 +13,6 @@
   },
   "scripts": {
     "build": "turbo build --cache-dir=turbo-cache"
-  }
+  },
+  "ignoreNextjsUpdates": true
 }

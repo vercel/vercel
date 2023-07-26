@@ -34,17 +34,20 @@ export function setupUnitFixture(fixtureName: string) {
     );
   }
 
+  const cwd = setupTmpDir(fixtureName);
+  fs.copySync(fixturePath, cwd);
+  return cwd;
+}
+
+export function setupTmpDir(fixtureName?: string) {
   if (!tempRoot) {
     // Create a shared root temp directory for fixture files
     tempRoot = tmp.dirSync({ unsafeCleanup: true }); // clean up even if files are left
   }
 
-  const cwd = path.join(tempRoot.name, String(tempNumber++), fixtureName);
-
+  const cwd = path.join(tempRoot.name, String(tempNumber++), fixtureName ?? '');
   fs.mkdirpSync(cwd);
-  fs.copySync(fixturePath, cwd);
-
-  return cwd;
+  return fs.realpathSync(cwd);
 }
 
 export function cleanupFixtures() {

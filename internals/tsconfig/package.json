@@ -1,6 +1,7 @@
 {
   "private": true,
   "name": "@vercel-internals/tsconfig",
+  "version": "1.0.0",
   "description": "Node.js tsconfig file based on `@vercel/style-guide`",
   "files": [
     "tsconfig.json"

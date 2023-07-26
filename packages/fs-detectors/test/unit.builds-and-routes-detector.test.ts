@@ -2358,6 +2358,56 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
       },
     ]);
   });
+
+  it('should add middleware builder with "remix" framework preset', async () => {
+    const files = ['package.json', 'app/routes/index.ts', 'middleware.ts'];
+    const projectSettings = {
+      framework: 'remix',
+    };
+    const { builders } = await detectBuilders(files, null, {
+      projectSettings,
+      featHandleMiss,
+    });
+    expect(builders).toEqual([
+      {
+        src: 'middleware.ts',
+        use: '@vercel/node',
+        config: {
+          middleware: true,
+          zeroConfig: true,
+        },
+      },
+      {
+        use: '@vercel/remix-builder',
+        src: 'package.json',
+        config: {
+          framework: 'remix',
+          zeroConfig: true,
+        },
+      },
+    ]);
+  });
+
+  it('should ignore middleware with "storybook" framework preset', async () => {
+    const files = ['package.json', 'app/routes/index.ts', 'middleware.ts'];
+    const projectSettings = {
+      framework: 'storybook',
+    };
+    const { builders } = await detectBuilders(files, null, {
+      projectSettings,
+      featHandleMiss,
+    });
+    expect(builders).toEqual([
+      {
+        use: '@vercel/static-build',
+        src: 'package.json',
+        config: {
+          framework: 'storybook',
+          zeroConfig: true,
+        },
+      },
+    ]);
+  });
 });
 
 it('Test `detectRoutes`', async () => {
@@ -2735,7 +2785,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
       {
         code: 'conflicting_files',
         message:
-          'When using Next.js, it is recommended to place Node.js Serverless Functions inside of the `pages/api` (provided by Next.js) directory instead of `api` (provided by Vercel).',
+          'When using Next.js, it is recommended to place JavaScript Functions inside of the `pages/api` (provided by Next.js) directory instead of `api` (provided by Vercel). Other languages (Python, Go, etc) should still go in the `api` directory.',
         link: 'https://nextjs.org/docs/api-routes/introduction',
         action: 'Learn More',
       },
@@ -2770,7 +2820,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
       {
         code: 'conflicting_files',
         message:
-          'When using Next.js, it is recommended to place Node.js Serverless Functions inside of the `pages/api` (provided by Next.js) directory instead of `api` (provided by Vercel).',
+          'When using Next.js, it is recommended to place JavaScript Functions inside of the `pages/api` (provided by Next.js) directory instead of `api` (provided by Vercel). Other languages (Python, Go, etc) should still go in the `api` directory.',
         link: 'https://nextjs.org/docs/api-routes/introduction',
         action: 'Learn More',
       },

@@ -5,12 +5,14 @@ import { URL, parse as parseUrl } from 'url';
 import semVer from 'semver';
 import { Readable } from 'stream';
 import { homedir } from 'os';
+import { runNpmInstall } from '@vercel/build-utils';
 import { execCli } from './helpers/exec';
 import fetch, { RequestInit, RequestInfo } from 'node-fetch';
 import retry from 'async-retry';
 import fs, { ensureDir } from 'fs-extra';
 import logo from '../src/util/output/logo';
 import sleep from '../src/util/sleep';
+import humanizePath from '../src/util/humanize-path';
 import pkg from '../package.json';
 import { fetchTokenWithRetry } from '../../../test/lib/deployment/now-deploy';
 import waitForPrompt from './helpers/wait-for-prompt';
@@ -32,7 +34,6 @@ const binaryPath = path.resolve(__dirname, `../scripts/start.js`);
 const deployHelpMessage = `${logo} vercel [options] <command | path>`;
 let session = 'temp-session';
 let secretName: string | undefined;
-const isCanary = pkg.version.includes('canary');
 
 const createFile = (dest: fs.PathLike) => fs.closeSync(fs.openSync(dest, 'w'));
 
@@ -46,7 +47,9 @@ function fetchTokenInformation(token: string, retries = 3) {
 
       if (!res.ok) {
         throw new Error(
-          `Failed to fetch ${url}, received status ${res.status}`
+          `Failed to fetch "${url}", status: ${
+            res.status
+          }, id: ${res.headers.get('x-vercel-id')}`
         );
       }
 
@@ -379,8 +382,6 @@ test('domains inspect', async () => {
 
   const output = await execCli(binaryPath, [
     directory,
-    `-V`,
-    `2`,
     `--name=${projectName}`,
     '--yes',
     '--public',
@@ -821,7 +822,9 @@ test('create a production deployment', async () => {
 });
 
 test('try to deploy non-existing path', async () => {
-  const goal = `Error: The specified file or directory "${session}" does not exist.`;
+  const goal = `Error: Could not find “${humanizePath(
+    path.join(process.cwd(), session)
+  )}”`;
 
   const { stderr, stdout, exitCode } = await execCli(binaryPath, [
     session,
@@ -1109,8 +1112,6 @@ test('`vercel rm` removes a deployment', async () => {
       '--public',
       '--name',
       session,
-      '-V',
-      '2',
       '--force',
       '--yes',
     ]);
@@ -1205,9 +1206,13 @@ test('vercel hasOwnProperty not a valid subcommand', async () => {
   const output = await execCli(binaryPath, ['hasOwnProperty']);
 
   expect(output.exitCode, formatOutput(output)).toBe(1);
-  expect(output.stderr).toMatch(
-    /The specified file or directory "hasOwnProperty" does not exist/gm
-  );
+  expect(
+    output.stderr.endsWith(
+      `Error: Could not find “${humanizePath(
+        path.join(process.cwd(), 'hasOwnProperty')
+      )}”`
+    )
+  ).toEqual(true);
 });
 
 test('create zero-config deployment', async () => {
@@ -1218,8 +1223,6 @@ test('create zero-config deployment', async () => {
     '--public',
     '--yes',
   ]);
-
-  console.log('isCanary', isCanary);
 
   expect(output.exitCode, formatOutput(output)).toBe(0);
 
@@ -1233,13 +1236,11 @@ test('create zero-config deployment', async () => {
 
   expect(data.error).toBe(undefined);
 
-  const validBuilders = data.builds.every(build =>
-    isCanary ? build.use.endsWith('@canary') : !build.use.endsWith('@canary')
+  const validBuilders = data.builds.every(
+    build => !build.use.endsWith('@canary')
   );
 
-  const buildList = JSON.stringify(data.builds.map(b => b.use));
-  const message = `builders match canary (${isCanary}): ${buildList}`;
-  expect(validBuilders, message).toBe(true);
+  expect(validBuilders).toBe(true);
 });
 
 test('next unsupported functions config shows warning link', async () => {
@@ -1423,6 +1424,19 @@ test('use build-env', async () => {
   const response = await fetch(href);
   const content = await response.text();
   expect(content.trim()).toBe('bar');
+});
+
+test('should invoke CLI extension', async () => {
+  const fixture = path.join(__dirname, 'fixtures/e2e/cli-extension');
+
+  // Ensure the `.bin` is populated in the fixture
+  await runNpmInstall(fixture);
+
+  const output = await execCli(binaryPath, ['mywhoami'], { cwd: fixture });
+  const formatted = formatOutput(output);
+  expect(output.stdout, formatted).toContain('Hello from a CLI extension!');
+  expect(output.stdout, formatted).toContain('VERCEL_API: http://127.0.0.1:');
+  expect(output.stdout, formatted).toContain(`Username: ${contextName}`);
 });
 
 // NOTE: Order matters here. This must be the last test in the file.

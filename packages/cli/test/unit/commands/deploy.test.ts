@@ -9,6 +9,7 @@ import { setupUnitFixture } from '../../helpers/setup-unit-fixture';
 import { defaultProject, useProject } from '../../mocks/project';
 import { useTeams } from '../../mocks/team';
 import { useUser } from '../../mocks/user';
+import humanizePath from '../../../src/util/humanize-path';
 
 describe('deploy', () => {
   it('should reject deploying a single file', async () => {
@@ -30,16 +31,27 @@ describe('deploy', () => {
   });
 
   it('should reject deploying a directory that does not exist', async () => {
-    client.setArgv('deploy', 'does-not-exists');
+    const badName = 'does-not-exist';
+    client.setArgv('deploy', badName);
     const exitCodePromise = deploy(client);
     await expect(client.stderr).toOutput(
-      `Error: The specified file or directory "does-not-exists" does not exist.\n`
+      `Error: Could not find “${humanizePath(
+        join(client.cwd, 'does-not-exist')
+      )}”\n`
     );
     await expect(exitCodePromise).resolves.toEqual(1);
   });
 
   it('should reject deploying when `--prebuilt` is used and `vc build` failed before Builders', async () => {
     const cwd = setupUnitFixture('build-output-api-failed-before-builds');
+
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'build-output-api-failed-before-builds',
+      name: 'build-output-api-failed-before-builds',
+    });
 
     client.setArgv('deploy', cwd, '--prebuilt');
     const exitCodePromise = deploy(client);
@@ -52,6 +64,14 @@ describe('deploy', () => {
   it('should reject deploying when `--prebuilt` is used and `vc build` failed within a Builder', async () => {
     const cwd = setupUnitFixture('build-output-api-failed-within-build');
 
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'build-output-api-failed-within-build',
+      name: 'build-output-api-failed-within-build',
+    });
+
     client.setArgv('deploy', cwd, '--prebuilt');
     const exitCodePromise = deploy(client);
     await expect(client.stderr).toOutput(
@@ -61,7 +81,16 @@ describe('deploy', () => {
   });
 
   it('should reject deploying a directory that does not contain ".vercel/output" when `--prebuilt` is used', async () => {
-    client.setArgv('deploy', __dirname, '--prebuilt');
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      name: 'static',
+      id: 'static',
+    });
+
+    client.cwd = setupUnitFixture('commands/deploy/static');
+    client.setArgv('deploy', '--prebuilt');
     const exitCodePromise = deploy(client);
     await expect(client.stderr).toOutput(
       'Error: The "--prebuilt" option was used, but no prebuilt output found in ".vercel/output". Run `vercel build` to generate a local build.\n'
@@ -98,8 +127,8 @@ describe('deploy', () => {
     useTeams('team_dummy');
     useProject({
       ...defaultProject,
-      id: 'build-output-api-preview',
-      name: 'build-output-api-preview',
+      id: 'build-output-api-production',
+      name: 'build-output-api-production',
     });
 
     client.setArgv('deploy', cwd, '--prebuilt');
@@ -141,21 +170,122 @@ describe('deploy', () => {
   });
 
   it('should send a tgz file when `--archive=tgz`', async () => {
-    const cwd = setupUnitFixture('commands/deploy/archive');
-    const originalCwd = process.cwd();
-    try {
-      process.chdir(cwd);
+    const user = useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      name: 'static',
+      id: 'static',
+    });
 
-      const user = useUser();
-      useTeams('team_dummy');
-      useProject({
-        ...defaultProject,
-        name: 'archive',
-        id: 'archive',
+    let body: any;
+    client.scenario.post(`/v13/deployments`, (req, res) => {
+      body = req.body;
+      res.json({
+        creator: {
+          uid: user.id,
+          username: user.username,
+        },
+        id: 'dpl_archive_test',
       });
+    });
+    client.scenario.get(`/v13/deployments/dpl_archive_test`, (req, res) => {
+      res.json({
+        creator: {
+          uid: user.id,
+          username: user.username,
+        },
+        id: 'dpl_archive_test',
+        readyState: 'READY',
+        aliasAssigned: true,
+        alias: [],
+      });
+    });
+    client.scenario.get(`/v10/now/deployments/dpl_archive_test`, (req, res) => {
+      res.json({
+        creator: {
+          uid: user.id,
+          username: user.username,
+        },
+        id: 'dpl_archive_test',
+        readyState: 'READY',
+        aliasAssigned: true,
+        alias: [],
+      });
+    });
 
-      let body: any;
-      client.scenario.post(`/v13/deployments`, (req, res) => {
+    client.cwd = setupUnitFixture('commands/deploy/static');
+    client.setArgv('deploy', '--archive=tgz');
+    const exitCode = await deploy(client);
+    expect(exitCode).toEqual(0);
+    expect(body?.files?.length).toEqual(1);
+    expect(body?.files?.[0].file).toEqual('.vercel/source.tgz');
+  });
+
+  it('should pass flag to skip custom domain assignment', async () => {
+    const user = useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      name: 'static',
+      id: 'static',
+    });
+
+    let body: any;
+    client.scenario.post(`/v13/deployments`, (req, res) => {
+      body = req.body;
+      res.json({
+        creator: {
+          uid: user.id,
+          username: user.username,
+        },
+        id: 'dpl_archive_test',
+      });
+    });
+    client.scenario.get(`/v13/deployments/dpl_archive_test`, (req, res) => {
+      res.json({
+        creator: {
+          uid: user.id,
+          username: user.username,
+        },
+        id: 'dpl_archive_test',
+        readyState: 'READY',
+        aliasAssigned: true,
+        alias: [],
+      });
+    });
+
+    client.cwd = setupUnitFixture('commands/deploy/static');
+    client.setArgv('deploy', '--prod', '--skip-domain');
+    const exitCode = await deploy(client);
+    expect(exitCode).toEqual(0);
+    expect(body).toMatchObject({
+      target: 'production',
+      source: 'cli',
+      autoAssignCustomDomains: false,
+      version: 2,
+    });
+  });
+
+  it('should upload missing files', async () => {
+    const cwd = setupUnitFixture('commands/deploy/static');
+    client.cwd = cwd;
+
+    // Add random 1mb file
+    await fs.writeFile(join(cwd, 'data'), randomBytes(bytes('1mb')));
+
+    const user = useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      name: 'static',
+      id: 'static',
+    });
+
+    let body: any;
+    let fileUploaded = false;
+    client.scenario.post(`/v13/deployments`, (req, res) => {
+      if (fileUploaded) {
         body = req.body;
         res.json({
           creator: {
@@ -164,157 +294,126 @@ describe('deploy', () => {
           },
           id: 'dpl_archive_test',
         });
-      });
-      client.scenario.get(`/v13/deployments/dpl_archive_test`, (req, res) => {
-        res.json({
-          creator: {
-            uid: user.id,
-            username: user.username,
+      } else {
+        const sha = req.body.files[0].sha;
+        res.status(400).json({
+          error: {
+            code: 'missing_files',
+            message: 'Missing files',
+            missing: [sha],
           },
-          id: 'dpl_archive_test',
-          readyState: 'READY',
-          aliasAssigned: true,
-          alias: [],
         });
+      }
+    });
+    client.scenario.post('/v2/files', (req, res) => {
+      // Wait for file to be finished uploading
+      req.on('data', () => {
+        // Noop
       });
-      client.scenario.get(
-        `/v10/now/deployments/dpl_archive_test`,
-        (req, res) => {
-          res.json({
-            creator: {
-              uid: user.id,
-              username: user.username,
-            },
-            id: 'dpl_archive_test',
-            readyState: 'READY',
-            aliasAssigned: true,
-            alias: [],
-          });
-        }
-      );
+      req.on('end', () => {
+        fileUploaded = true;
+        res.end();
+      });
+    });
+    client.scenario.get(`/v13/deployments/dpl_archive_test`, (req, res) => {
+      res.json({
+        creator: {
+          uid: user.id,
+          username: user.username,
+        },
+        id: 'dpl_archive_test',
+        readyState: 'READY',
+        aliasAssigned: true,
+        alias: [],
+      });
+    });
+    client.scenario.get(`/v10/now/deployments/dpl_archive_test`, (req, res) => {
+      res.json({
+        creator: {
+          uid: user.id,
+          username: user.username,
+        },
+        id: 'dpl_archive_test',
+        readyState: 'READY',
+        aliasAssigned: true,
+        alias: [],
+      });
+    });
 
-      client.setArgv('deploy', '--archive=tgz');
-      const exitCode = await deploy(client);
-      expect(exitCode).toEqual(0);
-      expect(body?.files?.length).toEqual(1);
-      expect(body?.files?.[0].file).toEqual('.vercel/source.tgz');
-    } finally {
-      process.chdir(originalCwd);
-    }
+    // When stderr is not a TTY we expect 5 progress lines to be printed
+    client.stderr.isTTY = false;
+
+    client.setArgv('deploy', '--archive=tgz');
+    const uploadingLines: string[] = [];
+    client.stderr.on('data', data => {
+      if (data.startsWith('Uploading [')) {
+        uploadingLines.push(data);
+      }
+    });
+    client.stderr.resume();
+    const exitCode = await deploy(client);
+    expect(exitCode).toEqual(0);
+    expect(body?.files?.length).toEqual(1);
+    expect(body?.files?.[0].file).toEqual('.vercel/source.tgz');
+    expect(uploadingLines.length).toEqual(5);
+    expect(
+      uploadingLines[0].startsWith('Uploading [--------------------]')
+    ).toEqual(true);
+    expect(
+      uploadingLines[1].startsWith('Uploading [=====---------------]')
+    ).toEqual(true);
+    expect(
+      uploadingLines[2].startsWith('Uploading [==========----------]')
+    ).toEqual(true);
+    expect(
+      uploadingLines[3].startsWith('Uploading [===============-----]')
+    ).toEqual(true);
+    expect(
+      uploadingLines[4].startsWith('Uploading [====================]')
+    ).toEqual(true);
   });
 
-  it('should upload missing files', async () => {
-    const cwd = setupUnitFixture('commands/deploy/archive');
-    const originalCwd = process.cwd();
+  it('should deploy project linked with `repo.json`', async () => {
+    const user = useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      name: 'app',
+      id: 'QmbKpqpiUqbcke',
+    });
 
-    // Add random 1mb file
-    await fs.writeFile(join(cwd, 'data'), randomBytes(bytes('1mb')));
-
-    try {
-      process.chdir(cwd);
-
-      const user = useUser();
-      useTeams('team_dummy');
-      useProject({
-        ...defaultProject,
-        name: 'archive',
-        id: 'archive',
+    let body: any;
+    client.scenario.post(`/v13/deployments`, (req, res) => {
+      body = req.body;
+      res.json({
+        creator: {
+          uid: user.id,
+          username: user.username,
+        },
+        id: 'dpl_archive_test',
       });
+    });
+    client.scenario.get(`/v13/deployments/dpl_archive_test`, (req, res) => {
+      res.json({
+        creator: {
+          uid: user.id,
+          username: user.username,
+        },
+        id: 'dpl_archive_test',
+        readyState: 'READY',
+        aliasAssigned: true,
+        alias: [],
+      });
+    });
 
-      let body: any;
-      let fileUploaded = false;
-      client.scenario.post(`/v13/deployments`, (req, res) => {
-        if (fileUploaded) {
-          body = req.body;
-          res.json({
-            creator: {
-              uid: user.id,
-              username: user.username,
-            },
-            id: 'dpl_archive_test',
-          });
-        } else {
-          const sha = req.body.files[0].sha;
-          res.status(400).json({
-            error: {
-              code: 'missing_files',
-              message: 'Missing files',
-              missing: [sha],
-            },
-          });
-        }
-      });
-      client.scenario.post('/v2/files', (req, res) => {
-        // Wait for file to be finished uploading
-        req.on('data', () => {
-          // Noop
-        });
-        req.on('end', () => {
-          fileUploaded = true;
-          res.end();
-        });
-      });
-      client.scenario.get(`/v13/deployments/dpl_archive_test`, (req, res) => {
-        res.json({
-          creator: {
-            uid: user.id,
-            username: user.username,
-          },
-          id: 'dpl_archive_test',
-          readyState: 'READY',
-          aliasAssigned: true,
-          alias: [],
-        });
-      });
-      client.scenario.get(
-        `/v10/now/deployments/dpl_archive_test`,
-        (req, res) => {
-          res.json({
-            creator: {
-              uid: user.id,
-              username: user.username,
-            },
-            id: 'dpl_archive_test',
-            readyState: 'READY',
-            aliasAssigned: true,
-            alias: [],
-          });
-        }
-      );
-
-      // When stderr is not a TTY we expect 5 progress lines to be printed
-      client.stderr.isTTY = false;
-
-      client.setArgv('deploy', '--archive=tgz');
-      const uploadingLines: string[] = [];
-      client.stderr.on('data', data => {
-        if (data.startsWith('Uploading [')) {
-          uploadingLines.push(data);
-        }
-      });
-      client.stderr.resume();
-      const exitCode = await deploy(client);
-      expect(exitCode).toEqual(0);
-      expect(body?.files?.length).toEqual(1);
-      expect(body?.files?.[0].file).toEqual('.vercel/source.tgz');
-      expect(uploadingLines.length).toEqual(5);
-      expect(
-        uploadingLines[0].startsWith('Uploading [--------------------]')
-      ).toEqual(true);
-      expect(
-        uploadingLines[1].startsWith('Uploading [=====---------------]')
-      ).toEqual(true);
-      expect(
-        uploadingLines[2].startsWith('Uploading [==========----------]')
-      ).toEqual(true);
-      expect(
-        uploadingLines[3].startsWith('Uploading [===============-----]')
-      ).toEqual(true);
-      expect(
-        uploadingLines[4].startsWith('Uploading [====================]')
-      ).toEqual(true);
-    } finally {
-      process.chdir(originalCwd);
-    }
+    const repoRoot = setupUnitFixture('commands/deploy/monorepo-static');
+    client.cwd = join(repoRoot, 'app');
+    client.setArgv('deploy');
+    const exitCode = await deploy(client);
+    expect(exitCode).toEqual(0);
+    expect(body).toMatchObject({
+      source: 'cli',
+      version: 2,
+    });
   });
 });

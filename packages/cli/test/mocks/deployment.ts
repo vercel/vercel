@@ -3,6 +3,7 @@ import chance from 'chance';
 import { client } from './client';
 import { Build, Deployment, User } from '@vercel-internals/types';
 import type { Request, Response } from 'express';
+import { defaultProject } from './project';
 
 let deployments = new Map<string, Deployment>();
 let deploymentBuilds = new Map<Deployment, Build[]>();
@@ -16,6 +17,8 @@ export function useDeployment({
   creator,
   state = 'READY',
   createdAt,
+  project = defaultProject,
+  target = 'production',
 }: {
   creator: Pick<User, 'id' | 'email' | 'name' | 'username'>;
   state?:
@@ -26,6 +29,8 @@ export function useDeployment({
     | 'READY'
     | 'CANCELED';
   createdAt?: number;
+  project: any; // FIX ME: Use `Project` once PR #9956 is merged
+  target?: Deployment['target'];
 }) {
   setupDeploymentEndpoints();
 
@@ -53,13 +58,14 @@ export function useDeployment({
     name,
     ownerId: creator.id,
     plan: 'hobby',
+    projectId: project.id,
     public: false,
     ready: createdAt + 30000,
     readyState: state,
     regions: [],
     routes: [],
     status: state,
-    target: 'production',
+    target,
     type: 'LAMBDAS',
     url: url.hostname,
     version: 2,

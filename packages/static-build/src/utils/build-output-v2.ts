@@ -12,6 +12,7 @@ import {
 import { isObjectEmpty } from './_shared';
 import { Project } from 'ts-morph';
 import { getConfig } from '@vercel/static-config';
+import { isErrnoException } from '@vercel/error-utils';
 
 const BUILD_OUTPUT_DIR = '.output';
 const BRIDGE_MIDDLEWARE_V2_TO_V3 = `
@@ -129,9 +130,13 @@ async function getMiddleware(
     if (manifest.pages['_middleware.js'].runtime !== 'web') {
       return;
     }
-  } catch (error) {
-    if (error.code !== 'ENOENT') throw error;
-    return;
+  } catch (error: unknown) {
+    if (!isErrnoException(error)) {
+      throw error;
+    }
+    if (error.code !== 'ENOENT') {
+      throw error;
+    }
   }
 
   const middlewareRelativePath = path.join(

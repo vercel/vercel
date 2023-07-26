@@ -2,10 +2,27 @@
   "builds": [
     {
       "src": "package.json",
-      "use": "@vercel/next"
+      "use": "@vercel/next",
+      "config": {
+        "functions": {
+          "app/**/*": {
+            "maxDuration": 5,
+            "memory": 512
+          },
+          "pages/api/**/*": {
+            "maxDuration": 5,
+            "memory": 512
+          }
+        }
+      }
     }
   ],
   "probes": [
+    {
+      "path": "/dashboard/hello",
+      "status": 200,
+      "mustContain": "hello from app/dashboard/rootonly/hello"
+    },
     {
       "path": "/dashboard/another-edge",
       "status": 200,
@@ -25,14 +42,14 @@
       "status": 200,
       "mustContain": "hello from /ssg",
       "responseHeaders": {
-        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch"
+        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Url"
       }
     },
     {
       "path": "/ssg",
       "status": 200,
       "responseHeaders": {
-        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch"
+        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Url"
       },
       "headers": {
         "RSC": "1"
@@ -65,14 +82,14 @@
       "status": 200,
       "mustContain": "hello from app/dashboard/deployments/[id]/settings",
       "responseHeaders": {
-        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch"
+        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Url"
       }
     },
     {
       "path": "/dashboard/deployments/123/settings",
       "status": 200,
       "responseHeaders": {
-        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch"
+        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Url"
       },
       "headers": {
         "RSC": "1"
@@ -85,14 +102,14 @@
       "status": 200,
       "mustContain": "catchall",
       "responseHeaders": {
-        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch"
+        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Url"
       }
     },
     {
       "path": "/dashboard/deployments/catchall/something",
       "status": 200,
       "responseHeaders": {
-        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch"
+        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Url"
       },
       "headers": {
         "RSC": "1"
@@ -105,7 +122,7 @@
       "status": 200,
       "mustContain": "hello from app/dashboard",
       "responseHeaders": {
-        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch"
+        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Url"
       }
     },
     {
@@ -125,7 +142,7 @@
       },
       "responseHeaders": {
         "content-type": "text/x-component",
-        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch"
+        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Url"
       }
     },
     {
@@ -147,6 +164,16 @@
       "path": "/blog/123",
       "status": 200,
       "mustContain": "hello from pages/blog/[slug]"
+    },
+    {
+      "path": "/blog-ssr/123",
+      "status": 200,
+      "mustContain": "hello from pages/blog-ssr/[slug]"
+    },
+    {
+      "path": "/blog-ssr/321",
+      "status": 200,
+      "mustContain": "hello context"
     },
     {
       "path": "/dynamic/category-1/id-1",

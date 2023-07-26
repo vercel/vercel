@@ -1,7 +1,10 @@
 import fs from 'fs-extra';
 import chalk from 'chalk';
 import dotenv from 'dotenv';
+import semver from 'semver';
+import minimatch from 'minimatch';
 import { join, normalize, relative, resolve, sep } from 'path';
+import frameworks from '@vercel/frameworks';
 import {
   getDiscontinuedNodeVersions,
   normalizePath,
@@ -17,13 +20,14 @@ import {
   BuildResultV3,
   NowBuildError,
   Cron,
+  validateNpmrc,
 } from '@vercel/build-utils';
 import {
   detectBuilders,
   detectFrameworkRecord,
+  detectFrameworkVersion,
   LocalFileSystemDetector,
 } from '@vercel/fs-detectors';
-import minimatch from 'minimatch';
 import {
   appendRoutesToPhase,
   getTransformedRoutes,
@@ -48,7 +52,7 @@ import {
   ProjectLinkAndSettings,
   readProjectSettings,
 } from '../util/projects/project-settings';
-import { VERCEL_DIR } from '../util/projects/link';
+import { getProjectLink, VERCEL_DIR } from '../util/projects/link';
 import confirm from '../util/input/confirm';
 import { emoji, prependEmoji } from '../util/emoji';
 import stamp from '../util/output/stamp';
@@ -62,11 +66,7 @@ import { initCorepack, cleanupCorepack } from '../util/build/corepack';
 import { sortBuilders } from '../util/build/sort-builders';
 import { toEnumerableError } from '../util/error';
 import { validateConfig } from '../util/validate-config';
-
 import { setMonorepoDefaultSettings } from '../util/build/monorepo';
-import frameworks from '@vercel/frameworks';
-import { detectFrameworkVersion } from '@vercel/fs-detectors';
-import semver from 'semver';
 
 type BuildResult = BuildResultV2 | BuildResultV3;
 
@@ -133,6 +133,7 @@ const help = () => {
 };
 
 export default async function main(client: Client): Promise<number> {
+  let { cwd } = client;
   const { output } = client;
 
   // Ensure that `vc build` is not being invoked recursively
@@ -165,16 +166,29 @@ export default async function main(client: Client): Promise<number> {
     return 2;
   }
 
-  const cwd = process.cwd();
-
   // Build `target` influences which environment variables will be used
   const target = argv['--prod'] ? 'production' : 'preview';
   const yes = Boolean(argv['--yes']);
 
+  try {
+    await validateNpmrc(cwd);
+  } catch (err) {
+    output.prettyError(err);
+    return 1;
+  }
+
+  // If repo linked, update `cwd` to the repo root
+  const link = await getProjectLink(client, cwd);
+  const projectRootDirectory = link?.projectRootDirectory ?? '';
+  if (link?.repoRoot) {
+    cwd = client.cwd = link.repoRoot;
+  }
+
   // TODO: read project settings from the API, fall back to local `project.json` if that fails
 
   // Read project settings, and pull them from Vercel if necessary
-  let project = await readProjectSettings(join(cwd, VERCEL_DIR));
+  const vercelDir = join(cwd, projectRootDirectory, VERCEL_DIR);
+  let project = await readProjectSettings(vercelDir);
   const isTTY = process.stdin.isTTY;
   while (!project?.settings) {
     let confirmed = yes;
@@ -201,6 +215,7 @@ export default async function main(client: Client): Promise<number> {
       return 0;
     }
     const { argv: originalArgv } = client;
+    client.cwd = join(cwd, projectRootDirectory);
     client.argv = [
       ...originalArgv.slice(0, 2),
       'pull',
@@ -211,12 +226,13 @@ export default async function main(client: Client): Promise<number> {
     if (result !== 0) {
       return result;
     }
+    client.cwd = cwd;
     client.argv = originalArgv;
-    project = await readProjectSettings(join(cwd, VERCEL_DIR));
+    project = await readProjectSettings(vercelDir);
   }
 
   // Delete output directory from potential previous build
-  const defaultOutputDir = join(cwd, OUTPUT_DIR);
+  const defaultOutputDir = join(cwd, projectRootDirectory, OUTPUT_DIR);
   const outputDir = argv['--output']
     ? resolve(argv['--output'])
     : defaultOutputDir;
@@ -235,7 +251,12 @@ export default async function main(client: Client): Promise<number> {
   const envToUnset = new Set<string>(['VERCEL', 'NOW_BUILDER']);
 
   try {
-    const envPath = join(cwd, VERCEL_DIR, `.env.${target}.local`);
+    const envPath = join(
+      cwd,
+      projectRootDirectory,
+      VERCEL_DIR,
+      `.env.${target}.local`
+    );
     // TODO (maybe?): load env vars from the API, fall back to the local file if that fails
     const dotenvResult = dotenv.config({
       path: envPath,
@@ -252,7 +273,7 @@ export default async function main(client: Client): Promise<number> {
       output.debug(`Loaded environment variables from "${envPath}"`);
     }
 
-    // For Vercel Analytics support
+    // For Vercel Speed Insights support
     if (project.settings.analyticsId) {
       envToUnset.add('VERCEL_ANALYTICS_ID');
       process.env.VERCEL_ANALYTICS_ID = project.settings.analyticsId;

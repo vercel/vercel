@@ -5,7 +5,7 @@ import DevServer from '../../util/dev/server';
 import { parseListen } from '../../util/dev/parse-listen';
 import Client from '../../util/client';
 import { getLinkedProject } from '../../util/projects/link';
-import { ProjectSettings } from '@vercel-internals/types';
+import type { ProjectSettings } from '@vercel-internals/types';
 import setupAndLink from '../../util/link/setup-and-link';
 import { getCommandName } from '../../util/pkg-name';
 import param from '../../util/output/param';
@@ -57,8 +57,15 @@ export default async function dev(
 
   let projectSettings: ProjectSettings | undefined;
   let envValues: Record<string, string> = {};
+  let repoRoot: string | undefined;
   if (link.status === 'linked') {
     const { project, org } = link;
+
+    // If repo linked, update `cwd` to the repo root
+    if (link.repoRoot) {
+      repoRoot = cwd = link.repoRoot;
+    }
+
     client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
     projectSettings = project;
@@ -76,6 +83,7 @@ export default async function dev(
     output,
     projectSettings,
     envValues,
+    repoRoot,
   });
 
   // listen to SIGTERM for graceful shutdown

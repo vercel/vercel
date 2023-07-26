@@ -22,6 +22,18 @@ export class MissingBuildTarget extends Error {
   }
 }
 
+function supportsRootCommand(turboSemVer: string | undefined) {
+  if (!turboSemVer) {
+    return false;
+  }
+
+  if (!semver.validRange(turboSemVer)) {
+    return false;
+  }
+
+  return !semver.intersects(turboSemVer, '<1.8.0');
+}
+
 type MonorepoDefaultSettings = {
   buildCommand?: string | null;
   installCommand?: string | null;
@@ -91,7 +103,7 @@ export async function getMonorepoDefaultSettings(
 
     let buildCommand = null;
     if (projectPath) {
-      if (turboSemVer && !semver.intersects(turboSemVer, '<1.8.0')) {
+      if (supportsRootCommand(turboSemVer)) {
         buildCommand = `turbo run build`;
       } else {
         // We don't know for sure if the local `turbo` supports inference.

@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import ms from 'ms';
 import { DomainNotFound } from '../../util/errors-ts';
-import { DNSRecord } from '@vercel-internals/types';
+import type { DNSRecord } from '@vercel-internals/types';
 import Client from '../../util/client';
 import formatTable from '../../util/format-table';
 import getDNSRecords, {

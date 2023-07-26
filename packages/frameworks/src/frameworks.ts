@@ -1291,7 +1291,7 @@ export const frameworks = [
     tagline:
       'Saber is a framework for building static sites in Vue.js that supports data from any source.',
     description: 'A Saber site, created with npm init.',
-    website: 'https://saber.land/',
+    website: 'https://saber.egoist.dev',
     detectors: {
       every: [
         {
@@ -1931,6 +1931,40 @@ export const frameworks = [
         dest: '/index.html',
       },
     ],
+  },
+  {
+    name: 'Storybook',
+    slug: 'storybook',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/storybook.svg',
+    tagline: 'Frontend workshop for UI development',
+    description:
+      'Storybook is a frontend workshop for building UI components and pages in isolation.',
+    website: 'https://storybook.js.org',
+    ignoreRuntimes: ['@vercel/next', '@vercel/node'],
+    disableRootMiddleware: true,
+    detectors: {
+      every: [
+        {
+          matchPackage: 'storybook',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
+      },
+      buildCommand: {
+        value: 'storybook build',
+        ignorePackageJsonScript: true,
+      },
+      devCommand: {
+        value: `storybook dev -p $PORT`,
+      },
+      outputDirectory: {
+        value: 'storybook-static',
+      },
+    },
+    getOutputDirName: async () => 'storybook-static',
   },
   {
     name: 'Other',

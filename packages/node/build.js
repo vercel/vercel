@@ -3,13 +3,6 @@ const fs = require('fs-extra');
 const execa = require('execa');
 const { join } = require('path');
 
-async function copyToDist(sourcePath, outDir) {
-  return fs.copyFile(
-    join(__dirname, sourcePath),
-    join(outDir, 'edge-functions/edge-handler-template.js')
-  );
-}
-
 async function main() {
   const srcDir = join(__dirname, 'src');
   const outDir = join(__dirname, 'dist');
@@ -22,21 +15,17 @@ async function main() {
     stdio: 'inherit',
   });
 
+  const pkg = await fs.readJSON(join(__dirname, 'package.json'));
+  const dependencies = Object.keys(pkg.dependencies ?? {});
+  const externs = [];
+  for (const dep of dependencies) {
+    externs.push('--external', dep);
+  }
+
   const mainDir = join(outDir, 'main');
   await execa(
     'ncc',
-    [
-      'build',
-      join(srcDir, 'index.ts'),
-      '-e',
-      '@vercel/node-bridge',
-      '-e',
-      '@vercel/build-utils',
-      '-e',
-      'typescript',
-      '-o',
-      mainDir,
-    ],
+    ['build', join(srcDir, 'index.ts'), ...externs, '-o', mainDir],
     { stdio: 'inherit' }
   );
   await fs.rename(join(mainDir, 'index.js'), join(outDir, 'index.js'));
@@ -46,19 +35,31 @@ async function main() {
   await Promise.all([
     fs.remove(mainDir),
     fs.remove(join(outDir, 'babel.d.ts')),
-    fs.remove(join(outDir, 'dev-server.d.ts')),
+    fs.remove(join(outDir, 'dev-server.d.mts')),
+    fs.remove(join(outDir, 'fork-dev-server.d.ts')),
     fs.remove(join(outDir, 'types.d.ts')),
     fs.remove(join(outDir, 'typescript.d.ts')),
     fs.remove(join(outDir, 'utils.d.ts')),
+    fs.remove(join(outDir, 'edge-functions/edge-handler-template.d.ts')),
+    fs.remove(join(outDir, 'edge-functions/edge-handler.d.mts')),
+    fs.remove(join(outDir, 'edge-functions/edge-wasm-plugin.d.mts')),
+    fs.remove(join(outDir, 'edge-functions/edge-node-compat-plugin.d.mts')),
+    fs.remove(join(outDir, 'serverless-functions/helpers.d.ts')),
+    fs.remove(join(outDir, 'serverless-functions/serverless-handler.d.mts')),
   ]);
 
-  // Copy type file for ts test
-  await fs.copyFile(
-    join(outDir, 'index.d.ts'),
-    join(__dirname, 'test/fixtures/15-helpers/ts/types.d.ts')
-  );
+  if (process.env.CI) {
+    // Copy type file for ts test
+    await fs.copyFile(
+      join(outDir, 'index.d.ts'),
+      join(__dirname, 'test/fixtures/15-helpers/ts/types.d.ts')
+    );
+  }
 
-  await copyToDist('src/edge-functions/edge-handler-template.js', outDir);
+  await fs.copyFile(
+    join(__dirname, 'src/edge-functions/edge-handler-template.js'),
+    join(outDir, 'edge-functions/edge-handler-template.js')
+  );
 }
 
 main().catch(err => {
