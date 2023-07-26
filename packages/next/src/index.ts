@@ -1139,8 +1139,9 @@ export const build: BuildV2 = async ({
     const canUsePreviewMode = Object.keys(pages).some(page =>
       isApiPage(pages[page].fsPath)
     );
+    const originalStaticPages = await glob('**/*.html', pagesDir);
     staticPages = await filterStaticPages(
-      await glob('**/*.html', pagesDir),
+      originalStaticPages,
       dynamicPages,
       entryDirectory,
       htmlContentType,
@@ -1316,6 +1317,17 @@ export const build: BuildV2 = async ({
         );
       }
 
+      const localePrefixed404 = !!(
+        routesManifest.i18n &&
+        originalStaticPages[
+          path.posix.join(
+            entryDirectory,
+            routesManifest.i18n.defaultLocale,
+            '404.html'
+          )
+        ]
+      );
+
       return serverBuild({
         config,
         functionsConfigManifest,
@@ -1325,6 +1337,7 @@ export const build: BuildV2 = async ({
         dynamicPages,
         canUsePreviewMode,
         staticPages,
+        localePrefixed404,
         lambdaPages: pages,
         lambdaAppPaths,
         omittedPrerenderRoutes,

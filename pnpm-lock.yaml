@@ -320,7 +320,7 @@ importers:
         specifier: 0.0.64
         version: link:../hydrogen
       '@vercel/next':
-        specifier: 3.9.1
+        specifier: 3.9.2
         version: link:../next
       '@vercel/node':
         specifier: 2.15.6
