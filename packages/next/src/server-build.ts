@@ -1745,7 +1745,7 @@ export async function serverBuild({
       // TODO: remove below workaround when `/` is allowed to be output
       // different than `/index`
       {
-        src: path.posix.join('/', entryDirectory, '/index'),
+        src: `${path.posix.join('/', entryDirectory)}($|/index)`,
         headers: {
           'x-matched-path': '/',
         },
