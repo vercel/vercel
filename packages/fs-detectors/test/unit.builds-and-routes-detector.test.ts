@@ -2359,6 +2359,26 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     ]);
   });
 
+  it('should not add middleware builder when building "nextjs" + undefined project settings', async () => {
+    const files = ['package.json', 'pages/index.ts', 'middleware.ts'];
+    const pkg = {
+      scripts: { build: 'next build' },
+      dependencies: { next: '12.2.0' },
+    };
+    const { builders } = await detectBuilders(files, pkg, {
+      featHandleMiss,
+    });
+    expect(builders).toEqual([
+      {
+        use: '@vercel/next',
+        src: 'package.json',
+        config: {
+          zeroConfig: true,
+        },
+      },
+    ]);
+  });
+
   it('should add middleware builder with "remix" framework preset', async () => {
     const files = ['package.json', 'app/routes/index.ts', 'middleware.ts'];
     const projectSettings = {

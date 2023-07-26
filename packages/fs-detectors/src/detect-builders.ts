@@ -312,7 +312,7 @@ export async function detectBuilders(
   // we need to check if it's a Next.js app here again for the case where
   // `projectSettings.framework == null`.
   if (
-    framework === null &&
+    framework == null &&
     frontendBuilder?.use === '@vercel/next' &&
     apiBuilders.length > 0
   ) {
