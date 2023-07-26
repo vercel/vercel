@@ -42,14 +42,14 @@
       "status": 200,
       "mustContain": "hello from /ssg",
       "responseHeaders": {
-        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Url, Next-Url"
+        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Url"
       }
     },
     {
       "path": "/ssg",
       "status": 200,
       "responseHeaders": {
-        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Url, Next-Url"
+        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Url"
       },
       "headers": {
         "RSC": "1"
