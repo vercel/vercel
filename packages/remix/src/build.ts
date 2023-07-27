@@ -71,17 +71,8 @@ const nodeServerSrcPromise = fs.readFile(
 // Minimum supported version of the `@vercel/remix` package
 const VECEL_REMIX_MIN_VERSION = '1.10.0';
 
-// Mapping for special case versions of `@remix-run/dev` that
-// should install a specific version of `@vercel/remix-run-dev` fork
-const REMIX_RUN_DEV_VERSION_OVERRIDES = new Map<string, string>(
-  Object.entries({
-    '1.13.0': '1.13.0-patch.2',
-    '1.14.3': '1.14.3-patch.1',
-  })
-);
-
-// Minimum supported version of the `@vercel/remix` package
-const REMIX_RUN_DEV_MIN_VERSION = '1.13.0';
+// Minimum supported version of the `@vercel/remix-run-dev` forked compiler
+const REMIX_RUN_DEV_MIN_VERSION = '1.15.0';
 
 // Maximum version of `@vercel/remix-run-dev` fork
 // (and also `@vercel/remix` since they get published at the same time)
@@ -172,10 +163,13 @@ export const build: BuildV2 = async ({
   const depsToAdd: string[] = [];
 
   if (remixRunDevPkg.name !== '@vercel/remix-run-dev') {
+    const remixDevForkVersion = resolveSemverMinMax(
+      REMIX_RUN_DEV_MIN_VERSION,
+      REMIX_RUN_DEV_MAX_VERSION,
+      remixVersion
+    );
     depsToAdd.push(
-      `@remix-run/dev@npm:@vercel/remix-run-dev@${resolveRemixDevForkVersion(
-        remixVersion
-      )}`
+      `@remix-run/dev@npm:@vercel/remix-run-dev@${remixDevForkVersion}`
     );
   }
 
@@ -203,10 +197,12 @@ export const build: BuildV2 = async ({
     }
   }
 
-  await addDependencies(cliType, depsToAdd, {
-    ...spawnOpts,
-    cwd: entrypointFsDirname,
-  });
+  if (depsToAdd.length) {
+    await addDependencies(cliType, depsToAdd, {
+      ...spawnOpts,
+      cwd: entrypointFsDirname,
+    });
+  }
 
   const userEntryClientFile = findEntry(
     remixConfig.appDirectory,
@@ -684,17 +680,4 @@ async function writeEntrypointFile(
     }
     throw err;
   }
-}
-
-function resolveRemixDevForkVersion(remixVersion: string) {
-  const remixDevOverrideVersion = resolveSemverMinMax(
-    REMIX_RUN_DEV_MIN_VERSION,
-    REMIX_RUN_DEV_MAX_VERSION,
-    remixVersion
-  );
-
-  return (
-    REMIX_RUN_DEV_VERSION_OVERRIDES.get(remixDevOverrideVersion) ||
-    remixDevOverrideVersion
-  );
 }
