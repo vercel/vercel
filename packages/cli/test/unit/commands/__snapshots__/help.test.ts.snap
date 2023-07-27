@@ -5,7 +5,7 @@ exports[`help command help output snapshots column width 40 1`] = `
 
 Deploy your project to Vercel. The \`deploy\` command is the default command for the Vercel CLI, and can be omitted (\`vc deploy my-app\` equals \`vc my-app\`).
 
-[2mOptions:[22m
+[2mOptions[22m:
 
   --archive                    Compress
                                the
@@ -15,7 +15,6 @@ Deploy your project to Vercel. The \`deploy\` command is the default command for
                                before
                                uploading
                                it
-
   -b, --build-env <key=value>  Specify
                                environment
                                variables
@@ -25,7 +24,6 @@ Deploy your project to Vercel. The \`deploy\` command is the default command for
                                KEY1=value1
                                -b
                                KEY2=value2\`)
-
   -e, --env <key=value>        Specify
                                environment
                                variables
@@ -35,7 +33,6 @@ Deploy your project to Vercel. The \`deploy\` command is the default command for
                                KEY1=value1
                                -e
                                KEY2=value2\`)
-
   -f, --force                  Force a
                                new
                                deployment
@@ -43,7 +40,6 @@ Deploy your project to Vercel. The \`deploy\` command is the default command for
                                nothing
                                has
                                changed
-
   -m, --meta <key=value>       Specify
                                metadata
                                for the
@@ -52,13 +48,11 @@ Deploy your project to Vercel. The \`deploy\` command is the default command for
                                KEY1=value1
                                -m
                                KEY2=value2\`)
-
   --no-wait                    Don't
                                wait for
                                the
                                deployment
                                to finish
-
   --prebuilt                   Use in
                                combination
                                with \`vc
@@ -66,18 +60,15 @@ Deploy your project to Vercel. The \`deploy\` command is the default command for
                                Deploy an
                                existing
                                build
-
   --prod                       Create a
                                production
                                deployment
-
   -p, --public                 
                                Deployment
                                is public
                                (\`/_src\`)
                                is
                                exposed)
-
   --regions                    Set
                                default
                                regions
@@ -85,20 +76,54 @@ Deploy your project to Vercel. The \`deploy\` command is the default command for
                                the
                                deployment
                                on
-
   --with-cache                 Retain
                                build
                                cache
                                when
                                using
                                "--force"
-
   -y, --yes                    Use
                                default
                                options
                                to skip
                                all
                                prompts
+
+[2mGlobal Options[22m:
+
+  --cwd <DIR>                Sets the
+                             current
+                             working
+                             directory
+                             for a
+                             single run
+                             of a
+                             command
+  -d, --debug                Debug mode
+                             (default
+                             off)
+  -Q, --global-config <DIR>  Path to the
+                             global
+                             \`.vercel\`
+                             directory
+  -h, --help                 Output
+                             usage
+                             information
+  -A, --local-config <FILE>  Path to the
+                             local
+                             \`vercel.json\`
+                             file
+  --no-color                 No color
+                             mode
+                             (default
+                             off)
+  -S, --scope                Set a
+                             custom
+                             scope
+  -t, --token <TOKEN>        Login token
+  -v, --version              Output the
+                             version
+                             number
 
 [2mExamples:[22m
 
@@ -130,37 +155,39 @@ exports[`help command help output snapshots column width 80 1`] = `
 
 Deploy your project to Vercel. The \`deploy\` command is the default command for the Vercel CLI, and can be omitted (\`vc deploy my-app\` equals \`vc my-app\`).
 
-[2mOptions:[22m
+[2mOptions[22m:
 
   --archive                    Compress the deployment code into a file before
                                uploading it
-
   -b, --build-env <key=value>  Specify environment variables during build-time
                                (e.g. \`-b KEY1=value1 -b KEY2=value2\`)
-
   -e, --env <key=value>        Specify environment variables during run-time
                                (e.g. \`-e KEY1=value1 -e KEY2=value2\`)
-
   -f, --force                  Force a new deployment even if nothing has
                                changed
-
   -m, --meta <key=value>       Specify metadata for the deployment (e.g. \`-m
                                KEY1=value1 -m KEY2=value2\`)
-
   --no-wait                    Don't wait for the deployment to finish
-
   --prebuilt                   Use in combination with \`vc build\`. Deploy an
                                existing build
-
   --prod                       Create a production deployment
-
   -p, --public                 Deployment is public (\`/_src\`) is exposed)
-
   --regions                    Set default regions to enable the deployment on
-
   --with-cache                 Retain build cache when using "--force"
-
   -y, --yes                    Use default options to skip all prompts
+
+[2mGlobal Options[22m:
+
+  --cwd <DIR>                Sets the current working directory for a single run
+                             of a command
+  -d, --debug                Debug mode (default off)
+  -Q, --global-config <DIR>  Path to the global \`.vercel\` directory
+  -h, --help                 Output usage information
+  -A, --local-config <FILE>  Path to the local \`vercel.json\` file
+  --no-color                 No color mode (default off)
+  -S, --scope                Set a custom scope
+  -t, --token <TOKEN>        Login token
+  -v, --version              Output the version number
 
 [2mExamples:[22m
 
@@ -192,31 +219,32 @@ exports[`help command help output snapshots column width 120 1`] = `
 
 Deploy your project to Vercel. The \`deploy\` command is the default command for the Vercel CLI, and can be omitted (\`vc deploy my-app\` equals \`vc my-app\`).
 
-[2mOptions:[22m
+[2mOptions[22m:
 
   --archive                    Compress the deployment code into a file before uploading it
-
   -b, --build-env <key=value>  Specify environment variables during build-time (e.g. \`-b KEY1=value1 -b KEY2=value2\`)
-
   -e, --env <key=value>        Specify environment variables during run-time (e.g. \`-e KEY1=value1 -e KEY2=value2\`)
-
   -f, --force                  Force a new deployment even if nothing has changed
-
   -m, --meta <key=value>       Specify metadata for the deployment (e.g. \`-m KEY1=value1 -m KEY2=value2\`)
-
   --no-wait                    Don't wait for the deployment to finish
-
   --prebuilt                   Use in combination with \`vc build\`. Deploy an existing build
-
   --prod                       Create a production deployment
-
   -p, --public                 Deployment is public (\`/_src\`) is exposed)
-
   --regions                    Set default regions to enable the deployment on
-
   --with-cache                 Retain build cache when using "--force"
-
   -y, --yes                    Use default options to skip all prompts
+
+[2mGlobal Options[22m:
+
+  --cwd <DIR>                Sets the current working directory for a single run of a command
+  -d, --debug                Debug mode (default off)
+  -Q, --global-config <DIR>  Path to the global \`.vercel\` directory
+  -h, --help                 Output usage information
+  -A, --local-config <FILE>  Path to the local \`vercel.json\` file
+  --no-color                 No color mode (default off)
+  -S, --scope                Set a custom scope
+  -t, --token <TOKEN>        Login token
+  -v, --version              Output the version number
 
 [2mExamples:[22m
 
