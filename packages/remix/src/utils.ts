@@ -269,6 +269,10 @@ export function addDependencies(
   names: string[],
   opts: AddDependenciesOptions = {}
 ) {
+  debug('Installing additional dependencies:');
+  for (const name of names) {
+    debug(` - ${name}`);
+  }
   const args: string[] = [];
   if (cliType === 'npm' || cliType === 'pnpm') {
     args.push('install');
