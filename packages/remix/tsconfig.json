@@ -12,6 +12,7 @@
     "noUnusedParameters": true,
     "outDir": "./dist",
     "types": ["node", "jest"],
+    "skipLibCheck": true,
     "strict": true,
     "target": "ES2020",
     "sourceMap": true

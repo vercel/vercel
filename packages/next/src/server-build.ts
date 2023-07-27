@@ -91,6 +91,7 @@ export async function serverBuild({
   routesManifest,
   staticPages,
   lambdaPages,
+  localePrefixed404,
   nextVersion,
   lambdaAppPaths,
   canUsePreviewMode,
@@ -112,6 +113,7 @@ export async function serverBuild({
   baseDir: string;
   canUsePreviewMode: boolean;
   omittedPrerenderRoutes: Set<string>;
+  localePrefixed404: boolean;
   staticPages: { [key: string]: FileFsRef };
   lambdaAppPaths: { [key: string]: FileFsRef };
   lambdaPages: { [key: string]: FileFsRef };
@@ -207,7 +209,6 @@ export async function serverBuild({
 
   const { i18n } = routesManifest;
   const hasPages404 = routesManifest.pages404;
-  let localePrefixed404 = false;
 
   let static404Page =
     staticPages[path.posix.join(entryDirectory, '404')] && hasPages404
@@ -216,17 +217,12 @@ export async function serverBuild({
       ? path.posix.join(entryDirectory, '_errors/404')
       : undefined;
 
-  if (!static404Page && i18n) {
-    if (
-      staticPages[path.posix.join(entryDirectory, i18n.defaultLocale, '404')]
-    ) {
-      localePrefixed404 = true;
-      static404Page = path.posix.join(
-        entryDirectory,
-        i18n.defaultLocale,
-        '404'
-      );
-    }
+  if (
+    !static404Page &&
+    i18n &&
+    staticPages[path.posix.join(entryDirectory, i18n.defaultLocale, '404')]
+  ) {
+    static404Page = path.posix.join(entryDirectory, i18n.defaultLocale, '404');
   }
 
   if (!hasStatic500 && i18n) {
