@@ -41,7 +41,7 @@ import {
   ResolvedEdgeRouteConfig,
   findEntry,
   chdirAndReadConfig,
-  addDependency,
+  addDependencies,
   resolveSemverMinMax,
   ensureResolvable,
 } from './utils';
@@ -123,16 +123,6 @@ export const build: BuildV2 = async ({
   const pkgRaw = await fs.readFile(packageJsonPath, 'utf8');
   const pkg = JSON.parse(pkgRaw);
 
-  const remixVersion =
-    pkg.dependencies?.['@remix-run/dev'] ||
-    pkg.devDependencies?.['@remix-run/dev'];
-
-  if (typeof remixVersion !== 'string') {
-    throw new Error('Could not locate `@remix-run/dev` dependency');
-  }
-
-  await overrideRemixDevVersion(remixVersion, packageJsonPath, pkg);
-
   const spawnOpts = getSpawnOptions(meta, nodeVersion);
   if (!spawnOpts.env) {
     spawnOpts.env = {};
@@ -145,31 +135,18 @@ export const build: BuildV2 = async ({
     env: spawnOpts.env,
   });
 
-  // Prevent frozen lockfile rejections
-  const envForInstall = { ...spawnOpts.env };
-  delete envForInstall.CI;
-  delete envForInstall.VERCEL;
-  delete envForInstall.NOW_BUILDER;
-
   if (typeof installCommand === 'string') {
     if (installCommand.trim()) {
       console.log(`Running "install" command: \`${installCommand}\`...`);
       await execCommand(installCommand, {
         ...spawnOpts,
-        env: envForInstall,
         cwd: entrypointFsDirname,
       });
     } else {
       console.log(`Skipping "install" command...`);
     }
   } else {
-    await runNpmInstall(
-      entrypointFsDirname,
-      [],
-      { ...spawnOpts, env: envForInstall },
-      meta,
-      nodeVersion
-    );
+    await runNpmInstall(entrypointFsDirname, [], spawnOpts, meta, nodeVersion);
   }
 
   // Determine the version of Remix based on the `@remix-run/dev`
@@ -179,6 +156,10 @@ export const build: BuildV2 = async ({
     repoRootPath,
     '@remix-run/dev'
   );
+  const remixRunDevPkg = JSON.parse(
+    readFileSync(join(remixRunDevPath, 'package.json'), 'utf8')
+  );
+  const remixVersion = remixRunDevPkg.version;
 
   const remixConfig = await chdirAndReadConfig(
     remixRunDevPath,
@@ -187,6 +168,16 @@ export const build: BuildV2 = async ({
   );
   const { serverEntryPoint, appDirectory } = remixConfig;
   const remixRoutes = Object.values(remixConfig.routes);
+
+  const depsToAdd: string[] = [];
+
+  if (remixRunDevPkg.name !== '@vercel/remix-run-dev') {
+    depsToAdd.push(
+      `@remix-run/dev@npm:@vercel/remix-run-dev@${resolveRemixDevForkVersion(
+        remixVersion
+      )}`
+    );
+  }
 
   // `app/entry.server.tsx` and `app/entry.client.tsx` are optional in Remix,
   // so if either of those files are missing then add our own versions.
@@ -208,13 +199,14 @@ export const build: BuildV2 = async ({
         REMIX_RUN_DEV_MAX_VERSION,
         remixVersion
       );
-      await addDependency(cliType, [`@vercel/remix@${vercelRemixVersion}`], {
-        ...spawnOpts,
-        env: envForInstall,
-        cwd: entrypointFsDirname,
-      });
+      depsToAdd.push(`@vercel/remix@${vercelRemixVersion}`);
     }
   }
+
+  await addDependencies(cliType, depsToAdd, {
+    ...spawnOpts,
+    cwd: entrypointFsDirname,
+  });
 
   const userEntryClientFile = findEntry(
     remixConfig.appDirectory,
@@ -694,31 +686,15 @@ async function writeEntrypointFile(
   }
 }
 
-async function overrideRemixDevVersion(
-  remixVersion: string,
-  packageJsonPath: string,
-  pkg: PackageJson
-) {
-  if (remixVersion.startsWith('npm:@vercel/remix-run-dev')) {
-    // `package.json` is already patched with our fork, so skip
-    return;
-  }
-
-  let remixDevOverrideVersion = resolveSemverMinMax(
+function resolveRemixDevForkVersion(remixVersion: string) {
+  const remixDevOverrideVersion = resolveSemverMinMax(
     REMIX_RUN_DEV_MIN_VERSION,
     REMIX_RUN_DEV_MAX_VERSION,
     remixVersion
   );
-  remixDevOverrideVersion =
+
+  return (
     REMIX_RUN_DEV_VERSION_OVERRIDES.get(remixDevOverrideVersion) ||
-    remixDevOverrideVersion;
-
-  const remixDevOverrideNpmString = `npm:@vercel/remix-run-dev@${remixDevOverrideVersion}`;
-
-  if (pkg.dependencies && '@remix-run/dev' in pkg.dependencies) {
-    pkg.dependencies['@remix-run/dev'] = remixDevOverrideNpmString;
-  } else if (pkg.devDependencies && '@remix-run/dev' in pkg.devDependencies) {
-    pkg.devDependencies['@remix-run/dev'] = remixDevOverrideNpmString;
-  }
-  await fs.writeFile(packageJsonPath, JSON.stringify(pkg, null, 2) + '\n');
+    remixDevOverrideVersion
+  );
 }

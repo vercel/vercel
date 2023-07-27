@@ -218,7 +218,8 @@ export async function chdirAndReadConfig(
   dir: string,
   packageJsonPath: string
 ) {
-  const { readConfig } = await import(join(remixRunDevPath, 'dist/config.js'));
+  const { readConfig }: typeof import('@remix-run/dev/dist/config') =
+    await import(join(remixRunDevPath, 'dist/config.js'));
 
   const originalCwd = process.cwd();
 
@@ -256,17 +257,17 @@ export async function chdirAndReadConfig(
   return remixConfig;
 }
 
-export interface AddDependencyOptions extends SpawnOptionsExtended {
+export interface AddDependenciesOptions extends SpawnOptionsExtended {
   saveDev?: boolean;
 }
 
 /**
  * Runs `npm i ${name}` / `pnpm i ${name}` / `yarn add ${name}`.
  */
-export function addDependency(
+export function addDependencies(
   cliType: CliType,
   names: string[],
-  opts: AddDependencyOptions = {}
+  opts: AddDependenciesOptions = {}
 ) {
   const args: string[] = [];
   if (cliType === 'npm' || cliType === 'pnpm') {
