@@ -71,7 +71,7 @@ const globalCommandOptions: CommandOption[] = [
     shorthand: 'Q',
     type: 'string',
     argument: 'DIR',
-    description: "Path to the global ${'`.vercel`'} directory",
+    description: 'Path to the global `.vercel` directory',
     deprecated: false,
     multi: false,
   },
@@ -169,7 +169,7 @@ export function buildCommandOptionLines(
   }
 
   // Initialize output array with header and empty line
-  const outputArray: string[] = [chalk.dim(sectionTitle), ''];
+  const outputArray: string[] = [`${chalk.dim(sectionTitle)}:`, ''];
 
   // Start building option lines
   const optionLines: string[][] = [];
