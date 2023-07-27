@@ -1140,7 +1140,7 @@ export const build: BuildV2 = async ({
       isApiPage(pages[page].fsPath)
     );
     const originalStaticPages = await glob('**/*.html', pagesDir);
-    staticPages = await filterStaticPages(
+    staticPages = filterStaticPages(
       originalStaticPages,
       dynamicPages,
       entryDirectory,
@@ -2692,6 +2692,7 @@ async function getServerlessPages(params: {
       ? Promise.all([
           glob('**/page.js', path.join(params.pagesDir, '../app')),
           glob('**/route.js', path.join(params.pagesDir, '../app')),
+          glob('**/_not-found.js', path.join(params.pagesDir, '../app')),
         ]).then(items => Object.assign(...items))
       : Promise.resolve({}),
     getMiddlewareManifest(params.entryPath, params.outputDirectory),
