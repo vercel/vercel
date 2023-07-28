@@ -390,3 +390,14 @@ async function ensureSymlink(
   await fs.symlink(relativeTarget, symlinkPath);
   debug(`Created symlink for "${pkgName}"`);
 }
+
+export function isESM(path: string): boolean {
+  // Figure out if the `remix.config` file is using ESM syntax
+  let isESM = false;
+  try {
+    _require(path);
+  } catch (err: any) {
+    isESM = err.code === 'ERR_REQUIRE_ESM';
+  }
+  return isESM;
+}

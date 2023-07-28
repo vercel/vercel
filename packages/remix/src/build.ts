@@ -29,7 +29,6 @@ import type {
 import type { ConfigRoute } from '@remix-run/dev/dist/config/routes';
 import type { BaseFunctionConfig } from '@vercel/static-config';
 import {
-  _require,
   calculateRouteConfigHash,
   findConfig,
   getPathFromRoute,
@@ -44,6 +43,7 @@ import {
   addDependencies,
   resolveSemverMinMax,
   ensureResolvable,
+  isESM,
 } from './utils';
 
 interface ServerBundle {
@@ -280,16 +280,9 @@ export const build: BuildV2 = async ({
     if (remixConfigPath && renamedRemixConfigPath) {
       await fs.rename(remixConfigPath, renamedRemixConfigPath);
 
-      // Figure out if the `remix.config` file is using ESM syntax
-      let isESM = false;
-      try {
-        _require(renamedRemixConfigPath);
-      } catch (err: any) {
-        isESM = err.code === 'ERR_REQUIRE_ESM';
-      }
-
       let patchedConfig: string;
-      if (isESM) {
+      // Figure out if the `remix.config` file is using ESM syntax
+      if (isESM(renamedRemixConfigPath)) {
         patchedConfig = `import config from './${basename(
           renamedRemixConfigPath
         )}';
