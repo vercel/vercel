@@ -30,6 +30,86 @@ export interface Command {
   examples: CommandExample[];
 }
 
+const globalCommandOptions: CommandOption[] = [
+  {
+    name: 'help',
+    shorthand: 'h',
+    type: 'string',
+    description: 'Output usage information',
+    deprecated: false,
+    multi: false,
+  },
+  {
+    name: 'version',
+    shorthand: 'v',
+    type: 'string',
+    description: 'Output the version number',
+    deprecated: false,
+    multi: false,
+  },
+  {
+    name: 'cwd',
+    shorthand: null,
+    type: 'string',
+    argument: 'DIR',
+    description:
+      'Sets the current working directory for a single run of a command',
+    deprecated: false,
+    multi: false,
+  },
+  {
+    name: 'local-config',
+    shorthand: 'A',
+    type: 'string',
+    argument: 'FILE',
+    description: 'Path to the local `vercel.json` file',
+    deprecated: false,
+    multi: false,
+  },
+  {
+    name: 'global-config',
+    shorthand: 'Q',
+    type: 'string',
+    argument: 'DIR',
+    description: 'Path to the global `.vercel` directory',
+    deprecated: false,
+    multi: false,
+  },
+  {
+    name: 'debug',
+    shorthand: 'd',
+    type: 'string',
+    description: 'Debug mode (default off)',
+    deprecated: false,
+    multi: false,
+  },
+  {
+    name: 'no-color',
+    shorthand: null,
+    type: 'string',
+    description: 'No color mode (default off)',
+    deprecated: false,
+    multi: false,
+  },
+  {
+    name: 'scope',
+    shorthand: 'S',
+    type: 'string',
+    description: 'Set a custom scope',
+    deprecated: false,
+    multi: false,
+  },
+  {
+    name: 'token',
+    shorthand: 't',
+    type: 'string',
+    argument: 'TOKEN',
+    description: 'Login token',
+    deprecated: false,
+    multi: false,
+  },
+];
+
 export function calcLineLength(line: string[]) {
   return stripAnsi(lineToString(line)).length;
 }
@@ -75,27 +155,32 @@ export function buildCommandSynopsisLine(command: Command) {
 }
 
 export function buildCommandOptionLines(
-  command: Command,
-  options: BuildHelpOutputOptions
+  commandOptions: CommandOption[],
+  options: BuildHelpOutputOptions,
+  sectionTitle: String
 ) {
   // Filter out deprecated and intentionally undocumented options
-  command.options = command.options.filter(
+  commandOptions = commandOptions.filter(
     option => !option.deprecated && option.description !== undefined
   );
 
+  if (commandOptions.length === 0) {
+    return '';
+  }
+
   // Initialize output array with header and empty line
-  const outputArray: string[] = [chalk.dim(`Options:`), ''];
+  const outputArray: string[] = [`${chalk.dim(sectionTitle)}:`, ''];
 
   // Start building option lines
   const optionLines: string[][] = [];
   // Sort command options alphabetically
-  command.options.sort((a, b) =>
+  commandOptions.sort((a, b) =>
     a.name < b.name ? -1 : a.name > b.name ? 1 : 0
   );
   // Keep track of longest "start" of an option line to determine description spacing
   let maxLineStartLength = 0;
   // Iterate over options and create the "start" of each option (e.g. `  -b, --build-env <key=value>`)
-  for (const option of command.options) {
+  for (const option of commandOptions) {
     const startLine: string[] = [INDENT];
     if (option.shorthand) {
       startLine.push(`-${option.shorthand},`);
@@ -135,7 +220,7 @@ export function buildCommandOptionLines(
    */
   for (let i = 0; i < optionLines.length; i++) {
     const optionLine = optionLines[i];
-    const option = command.options[i];
+    const option = commandOptions[i];
     // Add only 2 spaces to the longest line, and then make all shorter lines the same length.
     optionLine.push(
       ' '.repeat(2 + (maxLineStartLength - calcLineLength(optionLine)))
@@ -162,8 +247,6 @@ export function buildCommandOptionLines(
     for (const line of lines) {
       outputArray.push(lineToString(line));
     }
-    // add an empty line in between in each option block for readability (skip the last block)
-    if (i !== optionLines.length - 1) outputArray.push('');
   }
 
   // return the entire list of options as a single string after delete the last '\n' added to the option list
@@ -209,7 +292,9 @@ export function buildHelpOutput(
     '',
     command.description,
     '',
-    buildCommandOptionLines(command, options),
+    buildCommandOptionLines(command.options, options, 'Options'),
+    '',
+    buildCommandOptionLines(globalCommandOptions, options, 'Global Options'),
     '',
     buildCommandExampleLines(command),
     '',
