@@ -8,6 +8,18 @@ jest.setTimeout(ms('6m'));
 
 describe(`${__dirname.split(path.sep).pop()}`, () => {
   it('should normalize routes in build results output', async () => {
+    // TODO: remove after bug with edge functions on Windows
+    // is resolved upstream in Next.js
+    if (process.platform === 'win32') {
+      const indexPage = path.join(__dirname, 'pages/index.tsx');
+      await fs.writeFile(
+        indexPage,
+        (
+          await fs.readFile(indexPage, 'utf8')
+        ).replace('runtime: ', '// runtime: ')
+      );
+    }
+
     const files = [
       'index.test.js',
       'next.config.js',
@@ -35,5 +47,9 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
 
     expect(output).toHaveProperty('test/api/hello');
     expect(output['test/api/hello'].type).toEqual('EdgeFunction');
+
+    for (const name in output) {
+      expect(output[name].type).not.toBe('Lambda');
+    }
   });
 });

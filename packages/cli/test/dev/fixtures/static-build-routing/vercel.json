@@ -3,7 +3,7 @@
   "builds": [
     {
       "src": "package.json",
-      "use": "@vercel/static-build@canary",
+      "use": "@vercel/static-build",
       "config": {
         "distDir": "public"
       }
@@ -13,5 +13,7 @@
       "use": "@vercel/node"
     }
   ],
+  "buildCommand": "rm -Rf public && cp -r src public",
+  "devCommand": "serve -l $PORT src",
   "routes": [{ "src": "^/api/date$", "dest": "api/date.js" }]
 }

@@ -2,7 +2,7 @@
 
 ## Hierarchy
 
-- `Omit`<`ResponseInit`, `"headers"`\>
+- [`Omit`](https://www.typescriptlang.org/docs/handbook/utility-types.html#omittype-keys)<`ResponseInit`, `"headers"`\>
 
   ↳ **`ExtraResponseInit`**
 
@@ -26,7 +26,7 @@ along with the response headers from the origin.
 
 #### Defined in
 
-[src/middleware-helpers.ts:31](https://github.com/vercel/vercel/blob/main/packages/edge/src/middleware-helpers.ts#L31)
+[packages/edge/src/middleware-helpers.ts:31](https://github.com/vercel/vercel/blob/main/packages/edge/src/middleware-helpers.ts#L31)
 
 ---
 
@@ -38,7 +38,7 @@ Fields to rewrite for the upstream request.
 
 #### Defined in
 
-[src/middleware-helpers.ts:35](https://github.com/vercel/vercel/blob/main/packages/edge/src/middleware-helpers.ts#L35)
+[packages/edge/src/middleware-helpers.ts:35](https://github.com/vercel/vercel/blob/main/packages/edge/src/middleware-helpers.ts#L35)
 
 ---
 
@@ -52,7 +52,7 @@ Omit.status
 
 #### Defined in
 
-node_modules/typescript/lib/lib.dom.d.ts:1578
+node_modules/typescript/lib/lib.dom.d.ts:1624
 
 ---
 
@@ -66,4 +66,4 @@ Omit.statusText
 
 #### Defined in
 
-node_modules/typescript/lib/lib.dom.d.ts:1579
+node_modules/typescript/lib/lib.dom.d.ts:1625

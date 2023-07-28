@@ -21,6 +21,7 @@ const help = () => {
 
     -h, --help        Output usage information
     -d, --debug       Debug mode [off]
+    --no-color        No color mode [off]
     -f, --force       Overwrite destination directory if exists [off]
 
   ${chalk.dim('Examples:')}
@@ -51,7 +52,7 @@ export default async function main(client: Client) {
   try {
     argv = getArgs(client.argv.slice(2), {
       '--force': Boolean,
-      '-f': Boolean,
+      '-f': '--force',
     });
     args = getSubcommand(argv._.slice(1), COMMAND_CONFIG).args;
   } catch (err) {

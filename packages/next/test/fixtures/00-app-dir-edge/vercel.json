@@ -17,7 +17,7 @@
       "headers": {
         "RSC": "1"
       },
-      "mustContain": "M1:{",
+      "mustContain": ":{",
       "mustNotContain": "<html"
     },
     {
@@ -27,7 +27,7 @@
         "RSC": "1"
       },
       "responseHeaders": {
-        "content-type": "application/octet-stream"
+        "content-type": "text/x-component"
       }
     },
     {
@@ -41,7 +41,7 @@
       "headers": {
         "RSC": "1"
       },
-      "mustContain": "M1:{",
+      "mustContain": ":{",
       "mustNotContain": "<html"
     },
     {
@@ -51,7 +51,7 @@
         "RSC": "1"
       },
       "responseHeaders": {
-        "content-type": "application/octet-stream"
+        "content-type": "text/x-component"
       }
     }
   ]

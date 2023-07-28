@@ -36,6 +36,31 @@ it('should clone env with PATH', () => {
   });
 });
 
+it('should not overwrite PATH when path is undefined', () => {
+  expect(
+    cloneEnv(
+      {
+        PATH: 'baz',
+      },
+      new Proxy(
+        {
+          Path: undefined,
+        },
+        {
+          get(target: typeof process.env, prop: string) {
+            if (prop === 'PATH') {
+              return target.PATH ?? target.Path;
+            }
+            return target[prop];
+          },
+        }
+      )
+    )
+  ).toEqual({
+    PATH: 'baz',
+  });
+});
+
 it('should clone and merge multiple env objects', () => {
   // note: this also tests the last object doesn't overwrite `PATH` with
   // `undefined`

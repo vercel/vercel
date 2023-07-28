@@ -2,6 +2,9 @@
   "name": "ionic-react",
   "version": "0.0.1",
   "private": true,
+  "engines": {
+    "node": "16.x"
+  },
   "dependencies": {
     "@ionic/react": "^4.11.0",
     "@ionic/react-router": "^4.11.0",

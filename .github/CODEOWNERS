@@ -1,20 +1,20 @@
 # Documentation
 # https://help.github.com/en/articles/about-code-owners
 
-*                                        @TooTallNate @EndangeredMassa @styfle @cb1kenobi @Ethan-Arrowood
-/.github/workflows                       @TooTallNate @EndangeredMassa @styfle @cb1kenobi @Ethan-Arrowood @ijjk
-/packages/cli/src/commands/domains       @mglagola @anatrajkovska
-/packages/cli/src/commands/certs         @mglagola @anatrajkovska
-/packages/cli/src/commands/env           @TooTallNate @EndangeredMassa @styfle @cb1kenobi @Ethan-Arrowood
-/packages/fs-detectors                   @TooTallNate @EndangeredMassa @styfle @cb1kenobi @Ethan-Arrowood @agadzik @chloetedder
-/packages/middleware                     @gdborton @vercel/edge-function
-/packages/node-bridge                    @TooTallNate @EndangeredMassa @styfle @cb1kenobi @Ethan-Arrowood @ijjk
-/packages/next                           @TooTallNate @EndangeredMassa @styfle @cb1kenobi @Ethan-Arrowood @ijjk
-/packages/routing-utils                  @TooTallNate @EndangeredMassa @styfle @cb1kenobi @Ethan-Arrowood @ijjk
-/packages/edge                           @vercel/edge-function
+# Restricted Paths
+*                                        @TooTallNate @EndangeredMassa @styfle @cb1kenobi @Ethan-Arrowood @trek
+/.github/workflows                       @TooTallNate @EndangeredMassa @styfle @cb1kenobi @Ethan-Arrowood @trek @ijjk
+/packages/fs-detectors                   @TooTallNate @EndangeredMassa @styfle @cb1kenobi @Ethan-Arrowood @trek @agadzik @chloetedder
+/packages/next                           @TooTallNate @EndangeredMassa @styfle @cb1kenobi @Ethan-Arrowood @trek @ijjk
+/packages/routing-utils                  @TooTallNate @EndangeredMassa @styfle @cb1kenobi @Ethan-Arrowood @trek @ijjk
+/packages/edge                           @vercel/compute
 /examples                                @leerob
 /examples/create-react-app               @Timer
 /examples/nextjs                         @timneutkens @ijjk @styfle
 /examples/hugo                           @styfle
 /examples/jekyll                         @styfle
 /examples/zola                           @styfle
+/packages/node                           @TooTallNate @EndangeredMassa @styfle @cb1kenobi @Ethan-Arrowood @trek @Kikobeats
+
+# Unrestricted Paths
+.changeset/

@@ -11,7 +11,7 @@
       "status": 200,
       "mustContain": "hello from app/dashboard",
       "responseHeaders": {
-        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch"
+        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Url"
       }
     },
     {
@@ -20,7 +20,7 @@
       "headers": {
         "RSC": "1"
       },
-      "mustContain": "M1:{",
+      "mustContain": ":{",
       "mustNotContain": "<html"
     },
     {
@@ -30,8 +30,8 @@
         "RSC": "1"
       },
       "responseHeaders": {
-        "content-type": "application/octet-stream",
-        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch"
+        "content-type": "text/x-component",
+        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Url"
       }
     },
     {
@@ -65,7 +65,7 @@
       "headers": {
         "RSC": "1"
       },
-      "mustContain": "M1:{",
+      "mustContain": ":{",
       "mustNotContain": "<html"
     }
   ]

@@ -20,6 +20,7 @@ describe('middleware routes', () => {
       {
         continue: true,
         middlewarePath: 'middleware',
+        middlewareRawSrc: [],
         missing: [
           {
             key: 'x-prerender-revalidate',
@@ -51,6 +52,7 @@ describe('middleware routes', () => {
       {
         continue: true,
         middlewarePath: 'middleware',
+        middlewareRawSrc: [],
         missing: [
           {
             key: 'x-prerender-revalidate',
@@ -94,6 +96,7 @@ describe('middleware routes', () => {
       {
         continue: true,
         middlewarePath: 'middleware',
+        middlewareRawSrc: [],
         missing: [
           {
             key: 'x-prerender-revalidate',
@@ -114,6 +117,7 @@ describe('middleware routes', () => {
           },
         ],
         middlewarePath: 'middleware',
+        middlewareRawSrc: [],
         missing: [
           {
             key: 'x-prerender-revalidate',
@@ -161,6 +165,7 @@ describe('middleware routes', () => {
           },
         ],
         middlewarePath: 'middleware',
+        middlewareRawSrc: [],
         missing: [
           {
             key: 'x-prerender-revalidate',
@@ -193,6 +198,7 @@ describe('middleware routes', () => {
       {
         continue: true,
         middlewarePath: 'middleware',
+        middlewareRawSrc: [],
         missing: [
           {
             key: 'x-prerender-revalidate',

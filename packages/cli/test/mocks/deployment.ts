@@ -1,24 +1,36 @@
 import { URL } from 'url';
 import chance from 'chance';
-import { Deployment } from '@vercel/client';
 import { client } from './client';
-import { Build, User } from '../../src/types';
+import { Build, Deployment, User } from '@vercel-internals/types';
 import type { Request, Response } from 'express';
+import { defaultProject } from './project';
 
 let deployments = new Map<string, Deployment>();
 let deploymentBuilds = new Map<Deployment, Build[]>();
 let alreadySetupDeplomentEndpoints = false;
 
-type State = Deployment['readyState'];
-
+/**
+ * Initializes a mock deployment and wires up the deployment endpoint
+ * scenarios.
+ */
 export function useDeployment({
   creator,
   state = 'READY',
   createdAt,
+  project = defaultProject,
+  target = 'production',
 }: {
   creator: Pick<User, 'id' | 'email' | 'name' | 'username'>;
-  state?: State;
+  state?:
+    | 'BUILDING'
+    | 'ERROR'
+    | 'INITIALIZING'
+    | 'QUEUED'
+    | 'READY'
+    | 'CANCELED';
   createdAt?: number;
+  project: any; // FIX ME: Use `Project` once PR #9956 is merged
+  target?: Deployment['target'];
 }) {
   setupDeploymentEndpoints();
 
@@ -28,35 +40,35 @@ export function useDeployment({
   const id = `dpl_${chance().guid()}`;
 
   const deployment: Deployment = {
-    id,
-    url: url.hostname,
-    name,
-    meta: {},
-    regions: [],
-    routes: [],
-    plan: 'hobby',
-    public: false,
-    version: 2,
-    createdAt,
-    createdIn: 'sfo1',
-    buildingAt: Date.now(),
-    ownerId: creator.id,
-    creator: {
-      uid: creator.id,
-      email: creator.email,
-      name: creator.name,
-      username: creator.username,
-    },
-    readyState: state,
-    state: state,
-    ready: createdAt + 30000,
-    env: {},
-    build: { env: {} },
-    target: 'production',
     alias: [],
     aliasAssigned: true,
     aliasError: null,
+    build: { env: [] },
+    buildingAt: Date.now(),
+    createdAt,
+    createdIn: 'sfo1',
+    creator: {
+      uid: creator.id,
+      username: creator.username,
+    },
+    env: [],
+    id,
     inspectorUrl: `https://vercel.com/${creator.name}/${id}`,
+    meta: {},
+    name,
+    ownerId: creator.id,
+    plan: 'hobby',
+    projectId: project.id,
+    public: false,
+    ready: createdAt + 30000,
+    readyState: state,
+    regions: [],
+    routes: [],
+    status: state,
+    target,
+    type: 'LAMBDAS',
+    url: url.hostname,
+    version: 2,
   };
 
   deployments.set(deployment.id, deployment);
@@ -108,17 +120,18 @@ beforeEach(() => {
   alreadySetupDeplomentEndpoints = false;
 });
 
-function setupDeploymentEndpoints() {
+function setupDeploymentEndpoints(): void {
   if (alreadySetupDeplomentEndpoints) {
     return;
   }
 
   alreadySetupDeplomentEndpoints = true;
 
-  client.scenario.get('/:version/deployments/:id', (req, res) => {
+  client.scenario.get('/v13/deployments/:id', (req, res) => {
     const { id } = req.params;
     const { url } = req.query;
     let deployment;
+
     if (id === 'get') {
       if (typeof url !== 'string') {
         res.statusCode = 400;
@@ -127,20 +140,26 @@ function setupDeploymentEndpoints() {
       deployment = Array.from(deployments.values()).find(d => {
         return d.url === url;
       });
+    } else if (id.includes('.')) {
+      deployment = Array.from(deployments.values()).find(d => {
+        return d.url === id;
+      });
     } else {
       // lookup by ID
       deployment = deployments.get(id);
     }
+
     if (!deployment) {
       res.statusCode = 404;
       return res.json({
         error: { code: 'not_found', message: 'Deployment not found', id },
       });
     }
+
     res.json(deployment);
   });
 
-  client.scenario.get('/:version/deployments/:id/builds', (req, res) => {
+  client.scenario.get('/v11/deployments/:id/builds', (req, res) => {
     const { id } = req.params;
     const deployment = deployments.get(id);
     if (!deployment) {
@@ -155,7 +174,7 @@ function setupDeploymentEndpoints() {
     const currentDeployments = Array.from(deployments.values()).sort(
       (a: Deployment, b: Deployment) => {
         // sort in reverse chronological order
-        return b.createdAt - a.createdAt;
+        return (b?.createdAt || 0) - (a?.createdAt || 0);
       }
     );
 

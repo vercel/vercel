@@ -1,7 +1,7 @@
 {
   "name": "@vercel/build-utils",
-  "version": "5.5.7",
-  "license": "MIT",
+  "version": "6.8.2",
+  "license": "Apache-2.0",
   "main": "./dist/index.js",
   "types": "./dist/index.d.js",
   "homepage": "https://github.com/vercel/vercel/blob/main/DEVELOPING_A_RUNTIME.md",
@@ -13,8 +13,8 @@
   "scripts": {
     "build": "node build",
     "test": "jest --env node --verbose --runInBand --bail",
-    "test-unit": "yarn test test/unit.*test.*",
-    "test-integration-once": "yarn test test/integration.test.ts"
+    "test-unit": "pnpm test test/unit.*test.*",
+    "test-e2e": "pnpm test test/integration.test.ts"
   },
   "devDependencies": {
     "@iarna/toml": "2.2.3",
@@ -25,26 +25,31 @@
     "@types/glob": "7.2.0",
     "@types/jest": "27.4.1",
     "@types/js-yaml": "3.12.1",
+    "@types/minimatch": "^5.1.2",
     "@types/ms": "0.7.31",
     "@types/multistream": "2.1.1",
+    "@types/node": "14.18.33",
     "@types/node-fetch": "^2.1.6",
     "@types/semver": "6.0.0",
     "@types/yazl": "2.4.2",
+    "@vercel/error-utils": "1.0.10",
     "@vercel/ncc": "0.24.0",
     "aggregate-error": "3.0.1",
     "async-retry": "1.2.3",
     "async-sema": "2.1.4",
     "cross-spawn": "6.0.5",
     "end-of-stream": "1.4.1",
+    "execa": "3.2.0",
     "fs-extra": "10.0.0",
     "glob": "8.0.3",
+    "ignore": "4.0.6",
     "into-stream": "5.0.0",
     "js-yaml": "3.13.1",
-    "minimatch": "3.0.4",
+    "minimatch": "3.1.2",
     "multistream": "2.1.1",
     "node-fetch": "2.6.7",
     "semver": "6.1.1",
-    "typescript": "4.3.4",
+    "typescript": "4.9.5",
     "yazl": "2.5.1"
   }
 }

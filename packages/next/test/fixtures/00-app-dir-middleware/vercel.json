@@ -1,0 +1,82 @@
+{
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next"
+    }
+  ],
+  "probes": [
+    {
+      "path": "/",
+      "status": 200,
+      "fetchOptions": {
+        "redirect": "manual"
+      },
+      "mustContain": "no-variant",
+      "mustNotContain": "index"
+    },
+    {
+      "path": "/",
+      "status": 200,
+      "fetchOptions": {
+        "redirect": "manual"
+      },
+      "responseHeaders": {
+        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Url"
+      },
+      "headers": {
+        "RSC": "1"
+      },
+      "mustContain": ":{",
+      "mustNotContain": "<html"
+    },
+    {
+      "path": "/shop",
+      "status": 200,
+      "fetchOptions": {
+        "redirect": "manual"
+      },
+      "mustContain": "no-variant",
+      "mustNotContain": "shop.rsc"
+    },
+    {
+      "path": "/shop",
+      "status": 200,
+      "fetchOptions": {
+        "redirect": "manual"
+      },
+      "responseHeaders": {
+        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Url"
+      },
+      "headers": {
+        "RSC": "1"
+      },
+      "mustContain": ":{",
+      "mustNotContain": "<html"
+    },
+    {
+      "path": "/no-variant/shop",
+      "status": 200,
+      "fetchOptions": {
+        "redirect": "manual"
+      },
+      "mustContain": "no-variant",
+      "mustNotContain": "shop.rsc"
+    },
+    {
+      "path": "/no-variant/shop",
+      "status": 200,
+      "fetchOptions": {
+        "redirect": "manual"
+      },
+      "responseHeaders": {
+        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Url"
+      },
+      "headers": {
+        "RSC": "1"
+      },
+      "mustContain": ":{",
+      "mustNotContain": "<html"
+    }
+  ]
+}

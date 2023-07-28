@@ -1,12 +1,17 @@
 import { Files } from '../types';
 type Delegate = (name: string) => string;
 
+/**
+ * Renames the keys of a `Files` map.
+ *
+ * @param files A map of filenames to `File` instances
+ * @param delegate A function that returns the new filename
+ * @returns A new file map with the renamed filenames
+ */
 export default function rename(files: Files, delegate: Delegate): Files {
-  return Object.keys(files).reduce(
-    (newFiles, name) => ({
-      ...newFiles,
-      [delegate(name)]: files[name],
-    }),
-    {}
-  );
+  const result: Files = {};
+  for (const [name, file] of Object.entries(files)) {
+    result[delegate(name)] = file;
+  }
+  return result;
 }

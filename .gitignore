@@ -19,6 +19,7 @@ packages/cli/test/dev/fixtures/**/dist
 packages/cli/test/dev/fixtures/**/public
 packages/cli/test/dev/fixtures/**/.now
 packages/cli/test/dev/fixtures/**/.vercel
+!packages/cli/test/fixtures/unit/commands/build/monorepo-detection/**/yarn.lock
 packages/cli/test/fixtures/integration
 test/lib/deployment/failed-page.txt
 .DS_Store
@@ -28,4 +29,5 @@ test/lib/deployment/failed-page.txt
 __pycache__
 .vercel
 .turbo
+.eslintcache
 turbo-cache-key.json

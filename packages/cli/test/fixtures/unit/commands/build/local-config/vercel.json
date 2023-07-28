@@ -1,0 +1,15 @@
+{
+  "name": "original",
+  "builds": [
+    {
+      "src": "main.html",
+      "use": "@vercel/static"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/another-main",
+      "dest": "/main.html"
+    }
+  ]
+}

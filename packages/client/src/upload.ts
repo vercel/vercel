@@ -5,7 +5,7 @@ import { EventEmitter } from 'events';
 import retry from 'async-retry';
 import { Sema } from 'async-sema';
 
-import { DeploymentFile } from './utils/hashes';
+import { DeploymentFile, FilesMap } from './utils/hashes';
 import { fetch, API_FILES, createDebug } from './utils';
 import { DeploymentError } from './errors';
 import { deploy } from './deploy';
@@ -29,7 +29,7 @@ const isClientNetworkError = (err: Error) => {
 };
 
 export async function* upload(
-  files: Map<string, DeploymentFile>,
+  files: FilesMap,
   clientOptions: VercelClientOptions,
   deploymentOptions: DeploymentOptions
 ): AsyncIterableIterator<any> {
@@ -79,7 +79,7 @@ export async function* upload(
   debug('Building an upload list...');
 
   const semaphore = new Sema(50, { capacity: 50 });
-  const agent = apiUrl?.startsWith('https://')
+  const defaultAgent = apiUrl?.startsWith('https://')
     ? new https.Agent({ keepAlive: true })
     : new http.Agent({ keepAlive: true });
 
@@ -98,6 +98,10 @@ export async function* upload(
         await semaphore.acquire();
 
         const { data } = file;
+        if (typeof data === 'undefined') {
+          // Directories don't need to be uploaded
+          return;
+        }
 
         uploadProgress.bytesUploaded = 0;
 
@@ -128,7 +132,7 @@ export async function* upload(
             API_FILES,
             token,
             {
-              agent,
+              agent: clientOptions.agent || defaultAgent,
               method: 'POST',
               headers: {
                 'Content-Type': 'application/octet-stream',

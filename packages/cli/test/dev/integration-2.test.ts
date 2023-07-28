@@ -1,17 +1,5 @@
-// eslint-disable-next-line
-import { join } from 'path';
-import ms from 'ms';
-import fs, { mkdirp } from 'fs-extra';
-
-const {
-  exec,
-  fetch,
-  fixture,
-  sleep,
-  testFixture,
-  testFixtureStdio,
-  validateResponseHeaders,
-} = require('./utils.js');
+import { isIP } from 'net';
+const { exec, fixture, testFixture, testFixtureStdio } = require('./utils.js');
 
 test('[vercel dev] validate redirects', async () => {
   const directory = fixture('invalid-redirects');
@@ -44,19 +32,16 @@ test('[vercel dev] validate mixed routes and rewrites', async () => {
   expect(output.stderr).toMatch(/vercel\.link\/mix-routing-props/m);
 });
 
-// Test seems unstable: It won't return sometimes.
 test('[vercel dev] validate env var names', async () => {
   const directory = fixture('invalid-env-var-name');
-  const { dev } = await testFixture(directory, { stdio: 'pipe' });
+  const { dev } = await testFixture(directory, { encoding: 'utf8' });
 
   try {
     let stderr = '';
-    dev.stderr.setEncoding('utf8');
 
     await new Promise<void>((resolve, reject) => {
-      dev.stderr.on('data', (b: any) => {
-        stderr += b.toString();
-
+      dev.stderr.on('data', (b: string) => {
+        stderr += b;
         if (
           stderr.includes('Ignoring env var "1" because name is invalid') &&
           stderr.includes(
@@ -71,10 +56,10 @@ test('[vercel dev] validate env var names', async () => {
       });
 
       dev.on('error', reject);
-      dev.on('exit', resolve);
+      dev.on('close', resolve);
     });
   } finally {
-    dev.kill('SIGTERM');
+    await dev.kill();
   }
 });
 
@@ -103,10 +88,10 @@ test(
     async (testPath: any) => {
       const vcRobots = `https://vercel.com/robots.txt`;
       await testPath(200, '/rewrite', /User-Agent: \*/m);
-      await testPath(308, '/redirect', `Redirecting to ${vcRobots} (308)`, {
+      await testPath(308, '/redirect', `Redirecting...`, {
         Location: vcRobots,
       });
-      await testPath(307, '/tempRedirect', `Redirecting to ${vcRobots} (307)`, {
+      await testPath(307, '/tempRedirect', `Redirecting...`, {
         Location: vcRobots,
       });
     }
@@ -118,270 +103,129 @@ test(
   testFixtureStdio('test-routing-case-sensitive', async (testPath: any) => {
     await testPath(200, '/Path', 'UPPERCASE');
     await testPath(200, '/path', 'lowercase');
-    await testPath(308, '/GoTo', 'Redirecting to /upper.html (308)', {
+    await testPath(308, '/GoTo', 'Redirecting...', {
       Location: '/upper.html',
     });
-    await testPath(308, '/goto', 'Redirecting to /lower.html (308)', {
+    await testPath(308, '/goto', 'Redirecting...', {
       Location: '/lower.html',
     });
   })
 );
 
 test(
-  '[vercel dev] test cleanUrls serve correct content',
-  testFixtureStdio('test-clean-urls', async (testPath: any) => {
-    await testPath(200, '/', 'Index Page');
-    await testPath(200, '/about', 'About Page');
-    await testPath(200, '/sub', 'Sub Index Page');
-    await testPath(200, '/sub/another', 'Sub Another Page');
-    await testPath(200, '/style.css', 'body { color: green }');
-    await testPath(308, '/index.html', 'Redirecting to / (308)', {
-      Location: '/',
+  '[vercel dev] Use `@vercel/python` with Flask requirements.txt',
+  testFixtureStdio('python-flask', async (testPath: any) => {
+    const name = 'Alice';
+    const year = new Date().getFullYear();
+    await testPath(200, `/api/user?name=${name}`, new RegExp(`Hello ${name}`));
+    await testPath(200, `/api/date`, new RegExp(`Current date is ${year}`));
+    await testPath(200, `/api/date.py`, new RegExp(`Current date is ${year}`));
+    await testPath(200, `/api/headers`, (body: any, res: any) => {
+      // @ts-ignore
+      const { host } = new URL(res.url);
+      expect(body).toBe(host);
     });
-    await testPath(308, '/about.html', 'Redirecting to /about (308)', {
-      Location: '/about',
-    });
-    await testPath(308, '/sub/index.html', 'Redirecting to /sub (308)', {
-      Location: '/sub',
-    });
+  })
+);
+
+test(
+  '[vercel dev] Use custom runtime from the "functions" property',
+  testFixtureStdio('custom-runtime', async (testPath: any) => {
+    await testPath(200, `/api/user`, /Hello, from Bash!/m);
+    await testPath(200, `/api/user.sh`, /Hello, from Bash!/m);
+  })
+);
+
+test(
+  '[vercel dev] Should work with nested `tsconfig.json` files',
+  testFixtureStdio('nested-tsconfig', async (testPath: any) => {
+    await testPath(200, `/`, /Nested tsconfig.json test page/);
+    await testPath(200, `/api`, 'Nested `tsconfig.json` API endpoint');
+  })
+);
+
+test(
+  '[vercel dev] Should force `tsc` option "module: commonjs" for `startDevServer()`',
+  testFixtureStdio('force-module-commonjs', async (testPath: any) => {
+    await testPath(200, `/`, /Force &quot;module: commonjs&quot; test page/);
     await testPath(
-      308,
-      '/sub/another.html',
-      'Redirecting to /sub/another (308)',
-      { Location: '/sub/another' }
+      200,
+      `/api`,
+      'Force "module: commonjs" JavaScript with ES Modules API endpoint'
+    );
+    await testPath(
+      200,
+      `/api/ts`,
+      'Force "module: commonjs" TypeScript API endpoint'
     );
   })
 );
 
 test(
-  '[vercel dev] test cleanUrls serve correct content when using `outputDirectory`',
-  testFixtureStdio(
-    'test-clean-urls-with-output-directory',
-    async (testPath: any) => {
-      await testPath(200, '/', 'Index Page');
-      await testPath(200, '/about', 'About Page');
-      await testPath(200, '/sub', 'Sub Index Page');
-      await testPath(200, '/sub/another', 'Sub Another Page');
-      await testPath(200, '/style.css', 'body { color: green }');
-      await testPath(308, '/index.html', 'Redirecting to / (308)', {
-        Location: '/',
-      });
-      await testPath(308, '/about.html', 'Redirecting to /about (308)', {
-        Location: '/about',
-      });
-      await testPath(308, '/sub/index.html', 'Redirecting to /sub (308)', {
-        Location: '/sub',
-      });
-      await testPath(
-        308,
-        '/sub/another.html',
-        'Redirecting to /sub/another (308)',
-        { Location: '/sub/another' }
-      );
-    }
-  )
-);
-
-test(
-  '[vercel dev] should serve custom 404 when `cleanUrls: true`',
-  testFixtureStdio('test-clean-urls-custom-404', async (testPath: any) => {
-    await testPath(200, '/', 'This is the home page');
-    await testPath(200, '/about', 'The about page');
-    await testPath(200, '/contact/me', 'Contact Me Subdirectory');
-    await testPath(404, '/nothing', 'Custom 404 Page');
-    await testPath(404, '/nothing/', 'Custom 404 Page');
+  '[vercel dev] should prioritize index.html over other file named index.*',
+  testFixtureStdio('index-html-priority', async (testPath: any) => {
+    await testPath(200, '/', 'This is index.html');
+    await testPath(200, '/index.css', 'This is index.css');
   })
 );
 
 test(
-  '[vercel dev] test cleanUrls and trailingSlash serve correct content',
-  testFixtureStdio('test-clean-urls-trailing-slash', async (testPath: any) => {
-    await testPath(200, '/', 'Index Page');
-    await testPath(200, '/about/', 'About Page');
-    await testPath(200, '/sub/', 'Sub Index Page');
-    await testPath(200, '/sub/another/', 'Sub Another Page');
-    await testPath(200, '/style.css', 'body { color: green }');
-    //TODO: fix this test so that location is `/` instead of `//`
-    //await testPath(308, '/index.html', 'Redirecting to / (308)', { Location: '/' });
-    await testPath(308, '/about.html', 'Redirecting to /about/ (308)', {
-      Location: '/about/',
-    });
-    await testPath(308, '/sub/index.html', 'Redirecting to /sub/ (308)', {
-      Location: '/sub/',
-    });
+  '[vercel dev] Should support `*.go` API serverless functions',
+  testFixtureStdio('go', async (testPath: any) => {
+    await testPath(200, `/api`, 'This is the index page');
+    await testPath(200, `/api/index`, 'This is the index page');
+    await testPath(200, `/api/index.go`, 'This is the index page');
+    await testPath(200, `/api/another`, 'This is another page');
+    await testPath(200, '/api/another.go', 'This is another page');
+    await testPath(200, `/api/foo`, 'Req Path: /api/foo');
+    await testPath(200, `/api/bar`, 'Req Path: /api/bar');
+  })
+);
+
+test(
+  '[vercel dev] Should support `*.go` API serverless functions with `go.work` and lib',
+  testFixtureStdio('go-work-with-shared', async (testPath: any) => {
+    await testPath(200, `/api`, 'hello:go1.20.2');
+  })
+);
+
+test(
+  '[vercel dev] Should set the `ts-node` "target" to match Node.js version',
+  testFixtureStdio('node-ts-node-target', async (testPath: any) => {
+    await testPath(200, `/api/subclass`, '{"ok":true}');
     await testPath(
-      308,
-      '/sub/another.html',
-      'Redirecting to /sub/another/ (308)',
-      {
-        Location: '/sub/another/',
-      }
+      200,
+      `/api/array`,
+      '{"months":[1,2,3,4,5,6,7,8,9,10,11,12]}'
     );
-  })
-);
 
-test(
-  '[vercel dev] test cors headers work with OPTIONS',
-  testFixtureStdio('test-cors-routes', async (testPath: any) => {
-    const headers = {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Headers':
-        'Content-Type, Authorization, Accept, Content-Length, Origin, User-Agent',
-      'Access-Control-Allow-Methods':
-        'GET, POST, OPTIONS, HEAD, PATCH, PUT, DELETE',
-    };
-    await testPath(200, '/', 'status api', headers, { method: 'GET' });
-    await testPath(200, '/', 'status api', headers, { method: 'POST' });
-    await testPath(200, '/api/status.js', 'status api', headers, {
-      method: 'GET',
-    });
-    await testPath(200, '/api/status.js', 'status api', headers, {
-      method: 'POST',
-    });
-    await testPath(204, '/', '', headers, { method: 'OPTIONS' });
-    await testPath(204, '/api/status.js', '', headers, { method: 'OPTIONS' });
-  })
-);
+    await testPath(200, `/api/dump`, (body: any, res: any, isDev: any) => {
+      // @ts-ignore
+      const { host } = new URL(res.url);
+      const { env, headers } = JSON.parse(body);
 
-test(
-  '[vercel dev] test trailingSlash true serve correct content',
-  testFixtureStdio('test-trailing-slash', async (testPath: any) => {
-    await testPath(200, '/', 'Index Page');
-    await testPath(200, '/index.html', 'Index Page');
-    await testPath(200, '/about.html', 'About Page');
-    await testPath(200, '/sub/', 'Sub Index Page');
-    await testPath(200, '/sub/index.html', 'Sub Index Page');
-    await testPath(200, '/sub/another.html', 'Sub Another Page');
-    await testPath(200, '/style.css', 'body { color: green }');
-    await testPath(308, '/about.html/', 'Redirecting to /about.html (308)', {
-      Location: '/about.html',
-    });
-    await testPath(308, '/style.css/', 'Redirecting to /style.css (308)', {
-      Location: '/style.css',
-    });
-    await testPath(308, '/sub', 'Redirecting to /sub/ (308)', {
-      Location: '/sub/',
-    });
-  })
-);
+      // Test that the API endpoint receives the Vercel proxy request headers
+      expect(headers['x-forwarded-host']).toBe(host);
+      expect(headers['x-vercel-deployment-url']).toBe(host);
+      expect(isIP(headers['x-real-ip'])).toBeTruthy();
+      expect(isIP(headers['x-forwarded-for'])).toBeTruthy();
+      expect(isIP(headers['x-vercel-forwarded-for'])).toBeTruthy();
 
-test(
-  '[vercel dev] should serve custom 404 when `trailingSlash: true`',
-  testFixtureStdio('test-trailing-slash-custom-404', async (testPath: any) => {
-    await testPath(200, '/', 'This is the home page');
-    await testPath(200, '/about.html', 'The about page');
-    await testPath(200, '/contact/', 'Contact Subdirectory');
-    await testPath(404, '/nothing/', 'Custom 404 Page');
-  })
-);
-
-test(
-  '[vercel dev] test trailingSlash false serve correct content',
-  testFixtureStdio('test-trailing-slash-false', async (testPath: any) => {
-    await testPath(200, '/', 'Index Page');
-    await testPath(200, '/index.html', 'Index Page');
-    await testPath(200, '/about.html', 'About Page');
-    await testPath(200, '/sub', 'Sub Index Page');
-    await testPath(200, '/sub/index.html', 'Sub Index Page');
-    await testPath(200, '/sub/another.html', 'Sub Another Page');
-    await testPath(200, '/style.css', 'body { color: green }');
-    await testPath(308, '/about.html/', 'Redirecting to /about.html (308)', {
-      Location: '/about.html',
-    });
-    await testPath(308, '/sub/', 'Redirecting to /sub (308)', {
-      Location: '/sub',
-    });
-    await testPath(
-      308,
-      '/sub/another.html/',
-      'Redirecting to /sub/another.html (308)',
-      {
-        Location: '/sub/another.html',
+      // Test that the API endpoint has the Vercel platform env vars defined.
+      expect(env.NOW_REGION).toMatch(/^[a-z]{3}\d$/);
+      if (isDev) {
+        // Only dev is tested because in production these are opt-in.
+        expect(env.VERCEL_URL).toBe(host);
+        expect(env.VERCEL_REGION).toBe('dev1');
       }
-    );
+    });
   })
 );
 
 test(
-  '[vercel dev] throw when invalid builder routes detected',
-  testFixtureStdio(
-    'invalid-builder-routes',
-    async (testPath: any) => {
-      await testPath(
-        500,
-        '/',
-        /Route at index 0 has invalid `src` regular expression/m
-      );
-    },
-    { skipDeploy: true }
-  )
-);
-
-test(
-  '[vercel dev] support legacy `@now` scope runtimes',
-  testFixtureStdio('legacy-now-runtime', async (testPath: any) => {
-    await testPath(200, '/', /A simple deployment with the Vercel API!/m);
-  })
-);
-
-test(
-  '[vercel dev] 00-list-directory',
-  testFixtureStdio(
-    '00-list-directory',
-    async (testPath: any) => {
-      await testPath(200, '/', /Files within/m);
-      await testPath(200, '/', /test[0-3]\.txt/m);
-      await testPath(200, '/', /\.well-known/m);
-      await testPath(200, '/.well-known/keybase.txt', 'proof goes here');
-    },
-    { projectSettings: { directoryListing: true } }
-  )
-);
-
-test(
-  '[vercel dev] 01-node',
-  testFixtureStdio('01-node', async (testPath: any) => {
-    await testPath(200, '/', /A simple deployment with the Vercel API!/m);
-  })
-);
-
-test(
-  '[vercel dev] add a `api/fn.ts` when `api` does not exist at startup`',
-  testFixtureStdio('no-api', async (_testPath: any, port: any) => {
-    const directory = fixture('no-api');
-    const apiDir = join(directory, 'api');
-
-    try {
-      {
-        const response = await fetch(`http://localhost:${port}/api/new-file`);
-        validateResponseHeaders(response);
-        expect(response.status).toBe(404);
-      }
-
-      const fileContents = `
-          export const config = {
-            runtime: 'experimental-edge'
-          }
-
-          export default async function edge(request, event) {
-            return new Response('from new file');
-          }
-        `;
-
-      await mkdirp(apiDir);
-      await fs.writeFile(join(apiDir, 'new-file.js'), fileContents);
-
-      // Wait until file events have been processed
-      await sleep(ms('1s'));
-
-      {
-        const response = await fetch(`http://localhost:${port}/api/new-file`);
-        validateResponseHeaders(response);
-        const body = await response.text();
-        expect(body.trim()).toBe('from new file');
-      }
-    } finally {
-      await fs.remove(apiDir);
-    }
+  '[vercel dev] Do not fail if `src` is missing',
+  testFixtureStdio('missing-src-property', async (testPath: any) => {
+    await testPath(200, '/', /hello:index.txt/m);
+    await testPath(404, '/i-do-not-exist');
   })
 );

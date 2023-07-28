@@ -1,4 +1,4 @@
-import { DeploymentFile } from './utils/hashes';
+import { FilesMap } from './utils/hashes';
 import { generateQueryString } from './utils/query-string';
 import { isReady, isAliasAssigned } from './utils/ready-state';
 import { checkDeploymentStatus } from './check-deployment-status';
@@ -16,7 +16,7 @@ import {
 } from './types';
 
 async function* postDeployment(
-  files: Map<string, DeploymentFile>,
+  files: FilesMap,
   clientOptions: VercelClientOptions,
   deploymentOptions: DeploymentOptions
 ): AsyncIterableIterator<{
@@ -46,6 +46,7 @@ async function* postDeployment(
         }),
         apiUrl: clientOptions.apiUrl,
         userAgent: clientOptions.userAgent,
+        agent: clientOptions.agent,
       }
     );
 
@@ -90,7 +91,7 @@ async function* postDeployment(
 }
 
 function getDefaultName(
-  files: Map<string, DeploymentFile>,
+  files: FilesMap,
   clientOptions: VercelClientOptions
 ): string {
   const debug = createDebug(clientOptions.debug);
@@ -109,7 +110,7 @@ function getDefaultName(
 }
 
 export async function* deploy(
-  files: Map<string, DeploymentFile>,
+  files: FilesMap,
   clientOptions: VercelClientOptions,
   deploymentOptions: DeploymentOptions
 ): AsyncIterableIterator<{ type: string; payload: any }> {

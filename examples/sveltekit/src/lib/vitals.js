@@ -32,7 +32,7 @@ function sendToAnalytics(metric, options) {
   };
 
   if (options.debug) {
-    console.log('[Analytics]', metric.name, JSON.stringify(body, null, 2));
+    console.log('[Web Vitals]', metric.name, JSON.stringify(body, null, 2));
   }
 
   const blob = new Blob([new URLSearchParams(body).toString()], {
@@ -61,6 +61,6 @@ export function webVitals(options) {
     getCLS((metric) => sendToAnalytics(metric, options));
     getFCP((metric) => sendToAnalytics(metric, options));
   } catch (err) {
-    console.error('[Analytics]', err);
+    console.error('[Web Vitals]', err);
   }
 }

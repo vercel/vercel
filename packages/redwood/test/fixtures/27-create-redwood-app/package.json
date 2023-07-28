@@ -11,7 +11,7 @@
     "@redwoodjs/core": "^0.27.1"
   },
   "engines": {
-    "node": ">=14",
+    "node": "16.x",
     "yarn": ">=1.15"
   },
   "resolutions": {

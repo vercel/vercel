@@ -1,8 +1,8 @@
-# `@now/next` Legacy Mode
+# `@vercel/next` Legacy Mode
 
 #### Why This Warning Occurred
 
-`@now/next` has two modes: `legacy` and `serverless`. You will always want to use the `serverless` mode. `legacy` is to provide backwards compatibility with previous `@now/next` versions.
+`@vercel/next` has two modes: `legacy` and `serverless`. You will always want to use the `serverless` mode. `legacy` is to provide backwards compatibility with previous `@vercel/next` versions.
 
 The differences:
 
@@ -27,7 +27,7 @@ Serverless:
 - Runs `npm run now-build`
 - Does not run `npm install --production` as the output from the build is all that's needed to bundle lambdas.
 - No runtime dependencies, meaning smaller lambda functions
-- Optimized for fast [cold start](https://vercel.com/blog/serverless-ssr#cold-start)
+- Optimized for fast cold start
 
 #### Possible Ways to Fix It
 
@@ -63,7 +63,7 @@ module.exports = {
 ```js
 {
   "version": 2,
-  "builds": [{ "src": "package.json", "use": "@now/next" }]
+  "builds": [{ "src": "package.json", "use": "@vercel/next" }]
 }
 ```
 

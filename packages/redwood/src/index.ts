@@ -256,7 +256,7 @@ export const build: BuildV2 = async ({
 
     lambdaFiles[relative(workPath, fileFsRef.fsPath)] = fileFsRef;
 
-    const { memory, maxDuration } = await getLambdaOptionsFromFunction({
+    const lambdaOptions = await getLambdaOptionsFromFunction({
       sourceFile,
       config,
     });
@@ -265,11 +265,10 @@ export const build: BuildV2 = async ({
       files: lambdaFiles,
       handler: relativeEntrypoint,
       runtime: nodeVersion.runtime,
-      memory,
-      maxDuration,
       shouldAddHelpers: false,
       shouldAddSourcemapSupport: false,
       awsLambdaHandler,
+      ...lambdaOptions,
     });
     lambdaOutputs[outputName] = lambda;
   }

@@ -1,0 +1,5 @@
+body:
+  - type: markdown
+    attributes:
+      value: |
+        > **Note**: This category should not be used for new discussions. Please visit the [Vercel Community](https://github.com/orgs/vercel/discussions)

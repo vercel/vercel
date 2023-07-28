@@ -6,7 +6,6 @@ import getInvalidSubcommand from '../../util/get-invalid-subcommand';
 import handleError from '../../util/handle-error';
 import logo from '../../util/output/logo';
 import { getPkgName } from '../../util/pkg-name';
-import validatePaths from '../../util/validate-paths';
 import connect from './connect';
 import disconnect from './disconnect';
 
@@ -34,7 +33,7 @@ const help = () => {
   )} Connect your Vercel Project to your Git repository defined in your local .git config
 
     ${chalk.cyan(`$ ${getPkgName()} git connect`)}
-  
+
   ${chalk.gray(
     '–'
   )} Connect your Vercel Project to a Git repository using the remote URL
@@ -81,21 +80,15 @@ export default async function main(client: Client) {
   subcommand = argv._[0];
   const args = argv._.slice(1);
   const autoConfirm = Boolean(argv['--yes']);
-  const { output } = client;
+  const { cwd, output } = client;
 
-  let paths = [process.cwd()];
-  const pathValidation = await validatePaths(client, paths);
-  if (!pathValidation.valid) {
-    return pathValidation.exitCode;
-  }
-  const { path } = pathValidation;
-
-  const linkedProject = await ensureLink('git', client, path, { autoConfirm });
+  const linkedProject = await ensureLink('git', client, cwd, { autoConfirm });
   if (typeof linkedProject === 'number') {
     return linkedProject;
   }
 
   const { org, project } = linkedProject;
+  client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
   switch (subcommand) {
     case 'connect':

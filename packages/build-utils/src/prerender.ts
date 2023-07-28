@@ -3,25 +3,29 @@ import { Lambda } from './lambda';
 
 interface PrerenderOptions {
   expiration: number | false;
-  lambda: Lambda;
+  lambda?: Lambda;
   fallback: File | null;
   group?: number;
   bypassToken?: string | null /* optional to be non-breaking change */;
   allowQuery?: string[];
   initialHeaders?: Record<string, string>;
   initialStatus?: number;
+  passQuery?: boolean;
+  sourcePath?: string;
 }
 
 export class Prerender {
   public type: 'Prerender';
   public expiration: number | false;
-  public lambda: Lambda;
+  public lambda?: Lambda;
   public fallback: File | null;
   public group?: number;
   public bypassToken: string | null;
   public allowQuery?: string[];
   public initialHeaders?: Record<string, string>;
   public initialStatus?: number;
+  public passQuery?: boolean;
+  public sourcePath?: string;
 
   constructor({
     expiration,
@@ -32,10 +36,18 @@ export class Prerender {
     allowQuery,
     initialHeaders,
     initialStatus,
+    passQuery,
+    sourcePath,
   }: PrerenderOptions) {
     this.type = 'Prerender';
     this.expiration = expiration;
+    this.sourcePath = sourcePath;
+
     this.lambda = lambda;
+    if (this.lambda) {
+      // "ISR" is the platform default lambda label for prerender functions
+      this.lambda.operationType = this.lambda.operationType || 'ISR';
+    }
 
     if (
       typeof group !== 'undefined' &&
@@ -46,6 +58,17 @@ export class Prerender {
       );
     }
     this.group = group;
+
+    if (passQuery === true) {
+      this.passQuery = true;
+    } else if (
+      typeof passQuery !== 'boolean' &&
+      typeof passQuery !== 'undefined'
+    ) {
+      throw new Error(
+        `The \`passQuery\` argument for \`Prerender\` must be a boolean.`
+      );
+    }
 
     if (bypassToken == null) {
       this.bypassToken = null;

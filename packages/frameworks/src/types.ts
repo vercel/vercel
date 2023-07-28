@@ -2,15 +2,24 @@ import { Rewrite, Route } from '@vercel/routing-utils';
 
 export interface FrameworkDetectionItem {
   /**
-   * A file path
-   * @example "package.json"
+   * A file path to detect.
+   * If specified, "matchPackage" cannot be specified.
+   * @example "some-framework.config.json"
    */
-  path: string;
+  path?: string;
   /**
-   * A matcher
+   * A matcher for the entire file.
+   * If specified, "matchPackage" cannot be specified.
    * @example "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"next\":\\s*\".+?\"[^}]*}"
    */
   matchContent?: string;
+  /**
+   * A matcher for a package specifically found in a "package.json" file.
+   * If specified, "path" and "matchContext" cannot be specified.
+   * If specified in multiple detectors, the first one will be used to resolve the framework version.
+   * @example "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"next\":\\s*\".+?\"[^}]*}"
+   */
+  matchPackage?: string;
 }
 
 export interface SettingPlaceholder {
@@ -23,11 +32,24 @@ export interface SettingPlaceholder {
 
 export interface SettingValue {
   /**
-   * A predefined setting for the detected framework
+   * A predefined setting for the detected framework.
    * @example "next dev --port $PORT"
    */
   value: string | null;
+  /**
+   * Placeholder text that may be shown in the UI when
+   * the user is configuring this setting value.
+   * @example "`npm run build` or `next build`"
+   */
   placeholder?: string;
+  /**
+   * When set to `true`, then the builder will not
+   * invoke the equivalent script in `package.json`,
+   * and instead will invoke the command specified in
+   * configuration setting directly. When this
+   * configuration is enabled, `value` must be a string.
+   */
+  ignorePackageJsonScript?: boolean;
 }
 
 export type Setting = SettingValue | SettingPlaceholder;
@@ -111,7 +133,16 @@ export interface Framework {
      */
     use: string;
   };
+  /**
+   * Names of runtimes which will not be used for zero-config
+   * matches within the "api" directory.
+   */
   ignoreRuntimes?: string[];
+  /**
+   * If `true`, then root-level middleware will not be enabled
+   * for this framework. Defaults to `false`.
+   */
+  disableRootMiddleware?: boolean;
   /**
    * Detectors used to find out the framework
    */

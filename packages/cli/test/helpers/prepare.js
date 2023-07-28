@@ -96,7 +96,15 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
       ),
     },
     'dev-fail-on-recursion-command': {
-      'package.json': '{}',
+      'package.json': JSON.stringify({
+        scripts: {
+          build: 'echo "build script"',
+        },
+      }),
+      'vercel.json': JSON.stringify({
+        version: 2,
+        devCommand: `${binaryPath} dev`,
+      }),
     },
     'build-fail-on-recursion-command': {
       'package.json': '{}',
@@ -176,12 +184,12 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
     'local-config-v2': {
       [`main-${session}.html`]: '<h1>hello main</h1>',
       [`test-${session}.html`]: '<h1>hello test</h1>',
-      'now.json': JSON.stringify({
+      'vercel.json': JSON.stringify({
         name: 'original',
         builds: [{ src: `main-${session}.html`, use: '@vercel/static' }],
         routes: [{ src: '/another-main', dest: `/main-${session}.html` }],
       }),
-      'now-test.json': JSON.stringify({
+      'vercel-test.json': JSON.stringify({
         name: 'secondary',
         builds: [{ src: `test-${session}.html`, use: '@vercel/static' }],
         routes: [{ src: '/another-test', dest: `/test-${session}.html` }],
@@ -271,7 +279,7 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
         },
       }),
     },
-    'lambda-with-200-memory': {
+    'lambda-with-123-memory': {
       'api/memory.js': `
         module.exports = (req, res) => {
           res.json({ memory: parseInt(process.env.AWS_LAMBDA_FUNCTION_MEMORY_SIZE) });
@@ -280,7 +288,7 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
       'now.json': JSON.stringify({
         functions: {
           'api/**/*.js': {
-            memory: 200,
+            memory: 123,
           },
         },
       }),

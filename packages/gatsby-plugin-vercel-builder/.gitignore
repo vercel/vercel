@@ -1,0 +1,4 @@
+gatsby-node.*
+!gatsby-node.ts
+
+dist

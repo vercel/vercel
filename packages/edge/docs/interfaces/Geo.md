@@ -23,7 +23,7 @@ The city that the request originated from.
 
 #### Defined in
 
-[src/edge-headers.ts:47](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L47)
+[packages/edge/src/edge-headers.ts:47](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L47)
 
 ---
 
@@ -35,7 +35,7 @@ The country that the request originated from.
 
 #### Defined in
 
-[src/edge-headers.ts:50](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L50)
+[packages/edge/src/edge-headers.ts:50](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L50)
 
 ---
 
@@ -48,7 +48,7 @@ See [docs](https://vercel.com/docs/concepts/edge-network/headers#x-vercel-ip-cou
 
 #### Defined in
 
-[src/edge-headers.ts:58](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L58)
+[packages/edge/src/edge-headers.ts:58](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L58)
 
 ---
 
@@ -60,7 +60,7 @@ The latitude of the client.
 
 #### Defined in
 
-[src/edge-headers.ts:61](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L61)
+[packages/edge/src/edge-headers.ts:61](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L61)
 
 ---
 
@@ -72,7 +72,7 @@ The longitude of the client.
 
 #### Defined in
 
-[src/edge-headers.ts:64](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L64)
+[packages/edge/src/edge-headers.ts:64](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L64)
 
 ---
 
@@ -84,4 +84,4 @@ The [Vercel Edge Network region](https://vercel.com/docs/concepts/edge-network/r
 
 #### Defined in
 
-[src/edge-headers.ts:53](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L53)
+[packages/edge/src/edge-headers.ts:53](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L53)

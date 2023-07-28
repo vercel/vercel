@@ -1,6 +1,5 @@
 {
-  "name": "test-limit",
-  "version": "1.0.0",
+  "private": true,
   "scripts": {
     "build": "next build"
   },
@@ -10,5 +9,6 @@
     "next": "canary",
     "react": "latest",
     "react-dom": "latest"
-  }
+  },
+  "ignoreNextjsUpdates": true
 }

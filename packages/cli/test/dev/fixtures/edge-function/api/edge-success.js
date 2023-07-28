@@ -2,7 +2,7 @@ import { snakeCase } from 'snake-case';
 import { upper } from '../lib/upper';
 
 export const config = {
-  runtime: 'experimental-edge',
+  runtime: 'edge',
 };
 
 export default async function edge(request, event) {
@@ -10,7 +10,7 @@ export default async function edge(request, event) {
 
   return new Response(
     JSON.stringify({
-      headerContentType: request.headers.get('content-type'),
+      headers: Object.fromEntries(request.headers),
       url: request.url,
       method: request.method,
       body: requestBody,

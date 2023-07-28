@@ -3,6 +3,7 @@ const {
   excludeFiles,
   validateEntrypoint,
   normalizePackageJson,
+  getImagesConfig,
   getNextConfig,
 } = require('../../dist/utils');
 const { FileRef } = require('@vercel/build-utils');
@@ -24,6 +25,91 @@ describe('getNextConfig', () => {
   it('return null on nothing', async () => {
     const file = await getNextConfig('/', '/');
     expect(file).toMatchSnapshot();
+  });
+});
+
+describe('getImagesConfig', () => {
+  it('should return undefined when undefined config', async () => {
+    const result = await getImagesConfig(undefined);
+    expect(result).toBeUndefined();
+  });
+
+  it('should return undefined when null config', async () => {
+    const result = await getImagesConfig(null);
+    expect(result).toBeUndefined();
+  });
+
+  it('should return undefined when empty object config', async () => {
+    const result = await getImagesConfig({ images: {} });
+    expect(result).toBeUndefined();
+  });
+
+  it('should return pass-through props when loader is default and unoptimized undefined', async () => {
+    const images = {
+      loader: 'default',
+      domains: ['example.com'],
+      sizes: [512, 1024],
+      remotePatterns: undefined,
+      formats: ['image/webp'],
+      minimumCacheTTL: 60,
+      dangerouslyAllowSVG: false,
+      contentSecurityPolicy: undefined,
+      contentDispositionType: undefined,
+    };
+    const result = await getImagesConfig({ images });
+    expect(result).toEqual({
+      domains: ['example.com'],
+      sizes: [512, 1024],
+      remotePatterns: undefined,
+      formats: ['image/webp'],
+      minimumCacheTTL: 60,
+      dangerouslyAllowSVG: false,
+      contentSecurityPolicy: undefined,
+      contentDispositionType: undefined,
+    });
+  });
+
+  it('should return pass-through props when loader is default and unoptimized false', async () => {
+    const images = {
+      unoptimized: false,
+      loader: 'default',
+      domains: ['example.com'],
+      sizes: [512, 1024],
+      remotePatterns: undefined,
+      formats: ['image/webp'],
+      minimumCacheTTL: 60,
+      dangerouslyAllowSVG: false,
+      contentSecurityPolicy: undefined,
+      contentDispositionType: 'attachment',
+    };
+    const result = await getImagesConfig({ images });
+    expect(result).toEqual({
+      domains: ['example.com'],
+      sizes: [512, 1024],
+      remotePatterns: undefined,
+      formats: ['image/webp'],
+      minimumCacheTTL: 60,
+      dangerouslyAllowSVG: false,
+      contentSecurityPolicy: undefined,
+      contentDispositionType: 'attachment',
+    });
+  });
+
+  it('return return undefined when loader is default and unoptimized true', async () => {
+    const images = {
+      unoptimized: true,
+      loader: 'default',
+      domains: ['example.com'],
+      sizes: [512, 1024],
+      remotePatterns: undefined,
+      formats: ['image/webp'],
+      minimumCacheTTL: 60,
+      dangerouslyAllowSVG: false,
+      contentSecurityPolicy: undefined,
+      contentDispositionType: undefined,
+    };
+    const result = await getImagesConfig({ images });
+    expect(result).toBeUndefined();
   });
 });
 

@@ -44,7 +44,8 @@ export function getPrettyError(obj: {
   message?: string;
   params: any;
 }): NowBuildError {
-  const docsUrl = 'https://vercel.com/docs/configuration';
+  const docsUrl =
+    'https://vercel.com/docs/concepts/projects/project-configuration';
   try {
     const { dataPath, params, message: ajvMessage } = obj;
     const prop = getTopLevelPropertyName(dataPath);
@@ -63,7 +64,7 @@ export function getPrettyError(obj: {
     return new NowBuildError({
       code: 'INVALID_VERCEL_CONFIG',
       message: message,
-      link: prop ? `${docsUrl}#project/${prop.toLowerCase()}` : docsUrl,
+      link: prop ? `${docsUrl}#${prop.toLowerCase()}` : docsUrl,
       action: 'View Documentation',
     });
   } catch (e) {

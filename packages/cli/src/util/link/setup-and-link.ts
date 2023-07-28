@@ -1,7 +1,7 @@
 import { join, basename } from 'path';
 import chalk from 'chalk';
 import { remove } from 'fs-extra';
-import { ProjectLinkResult, ProjectSettings } from '../../types';
+import { ProjectLinkResult, ProjectSettings } from '@vercel-internals/types';
 import {
   getLinkedProject,
   linkFolderToProject,
@@ -10,7 +10,6 @@ import {
   VERCEL_DIR_PROJECT,
 } from '../projects/link';
 import createProject from '../projects/create-project';
-import updateProject from '../projects/update-project';
 import Client from '../client';
 import handleError from '../handle-error';
 import confirm from '../input/confirm';
@@ -30,8 +29,9 @@ import Now, { CreateOptions } from '../index';
 import { isAPIError } from '../errors-ts';
 
 export interface SetupAndLinkOptions {
-  forceDelete?: boolean;
   autoConfirm?: boolean;
+  forceDelete?: boolean;
+  link?: ProjectLinkResult;
   successEmoji?: EmojiLabel;
   setupMsg?: string;
   projectName?: string;
@@ -41,8 +41,9 @@ export default async function setupAndLink(
   client: Client,
   path: string,
   {
-    forceDelete = false,
     autoConfirm = false,
+    forceDelete = false,
+    link,
     successEmoji = 'link',
     setupMsg = 'Set up',
     projectName,
@@ -56,7 +57,9 @@ export default async function setupAndLink(
     output.error(`Expected directory but found file: ${path}`);
     return { status: 'error', exitCode: 1, reason: 'PATH_IS_FILE' };
   }
-  const link = await getLinkedProject(client, path);
+  if (!link) {
+    link = await getLinkedProject(client, path);
+  }
   const isTTY = client.stdin.isTTY;
   const quiet = !isTTY;
   let rootDirectory: string | null = null;
@@ -129,7 +132,7 @@ export default async function setupAndLink(
     const project = projectOrNewProjectName;
 
     await linkFolderToProject(
-      output,
+      client,
       path,
       {
         projectId: project.id,
@@ -196,13 +199,14 @@ export default async function setupAndLink(
           ...localConfigurationOverrides,
           sourceFilesOutsideRootDirectory,
         },
+        autoAssignCustomDomains: true,
       };
 
       const deployment = await createDeploy(
         client,
         now,
         config.currentTeam || 'current user',
-        [sourcePath],
+        sourcePath,
         createArgs,
         org,
         true,
@@ -240,13 +244,13 @@ export default async function setupAndLink(
       settings.rootDirectory = rootDirectory;
     }
 
-    const project = await createProject(client, newProjectName);
-
-    await updateProject(client, project.id, settings);
-    Object.assign(project, settings);
+    const project = await createProject(client, {
+      ...settings,
+      name: newProjectName,
+    });
 
     await linkFolderToProject(
-      output,
+      client,
       path,
       {
         projectId: project.id,

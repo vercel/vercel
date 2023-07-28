@@ -1,8 +1,10 @@
 {
-  "name": "test-limit",
-  "version": "1.0.0",
+  "private": true,
   "scripts": {
     "build": "next build"
+  },
+  "engines": {
+    "node": "16.x"
   },
   "dependencies": {
     "chrome-aws-lambda": "8.0.0",
@@ -10,5 +12,9 @@
     "next": "10.0.8",
     "react": "17.0.1",
     "react-dom": "17.0.1"
-  }
+  },
+  "resolutions": {
+    "@babel/compat-data": "7.21.4"
+  },
+  "ignoreNextjsUpdates": true
 }

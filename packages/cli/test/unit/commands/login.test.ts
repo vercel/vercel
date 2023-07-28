@@ -1,6 +1,9 @@
 import login from '../../../src/commands/login';
+import { emoji } from '../../../src/util/emoji';
 import { client } from '../../mocks/client';
 import { useUser } from '../../mocks/user';
+
+jest.setTimeout(10000);
 
 describe('login', () => {
   it('should not allow the `--token` flag', async () => {
@@ -27,7 +30,7 @@ describe('login', () => {
       const user = useUser();
       client.setArgv('login');
       const exitCodePromise = login(client);
-      await expect(client.stderr).toOutput(`> Log in to Vercel`);
+      await expect(client.stderr).toOutput(`? Log in to Vercel`);
 
       // Move down to "Email" option
       client.stdin.write('\x1B[B'); // Down arrow
@@ -35,7 +38,7 @@ describe('login', () => {
       client.stdin.write('\x1B[B'); // Down arrow
       client.stdin.write('\r'); // Return key
 
-      await expect(client.stderr).toOutput('> Enter your email address:');
+      await expect(client.stderr).toOutput('? Enter your email address:');
 
       client.stdin.write(`${user.email}\n`);
 
@@ -44,6 +47,116 @@ describe('login', () => {
       );
 
       await expect(exitCodePromise).resolves.toEqual(0);
+    });
+
+    it('should allow the `--no-color` flag', async () => {
+      const user = useUser();
+      client.setArgv('login', '--no-color');
+      const exitCodePromise = login(client);
+      await expect(client.stderr).toOutput(`? Log in to Vercel`);
+
+      // Move down to "Email" option
+      client.stdin.write('\x1B[B'); // Down arrow
+      client.stdin.write('\x1B[B'); // Down arrow
+      client.stdin.write('\x1B[B'); // Down arrow
+      client.stdin.write('\r'); // Return key
+
+      await expect(client.stderr).toOutput('? Enter your email address:');
+
+      client.stdin.write(`${user.email}\n`);
+
+      await expect(client.stderr).toOutput(
+        `Success! Email authentication complete for ${user.email}`
+      );
+
+      await expect(client.stderr).not.toOutput(emoji('tip'));
+
+      await expect(exitCodePromise).resolves.toEqual(0);
+    });
+
+    describe('with NO_COLOR="1" env var', () => {
+      let previousNoColor: string | undefined;
+
+      beforeEach(() => {
+        previousNoColor = process.env.NO_COLOR;
+        process.env.NO_COLOR = '1';
+      });
+
+      afterEach(() => {
+        delete process.env.NO_COLOR;
+        if (previousNoColor) {
+          process.env.NO_COLOR = previousNoColor;
+        }
+      });
+
+      it('should remove emoji the `NO_COLOR` env var with 1', async () => {
+        client.resetOutput();
+
+        const user = useUser();
+        client.setArgv('login');
+        const exitCodePromise = login(client);
+        await expect(client.stderr).toOutput(`? Log in to Vercel`);
+
+        // Move down to "Email" option
+        client.stdin.write('\x1B[B'); // Down arrow
+        client.stdin.write('\x1B[B'); // Down arrow
+        client.stdin.write('\x1B[B'); // Down arrow
+        client.stdin.write('\r'); // Return key
+
+        await expect(client.stderr).toOutput('? Enter your email address:');
+
+        client.stdin.write(`${user.email}\n`);
+
+        await expect(client.stderr).toOutput(
+          `Success! Email authentication complete for ${user.email}`
+        );
+
+        await expect(client.stderr).not.toOutput(emoji('tip'));
+
+        await expect(exitCodePromise).resolves.toEqual(0);
+      });
+    });
+
+    describe('with FORCE_COLOR="0" env var', () => {
+      let previousForceColor: string | undefined;
+
+      beforeEach(() => {
+        previousForceColor = process.env.FORCE_COLOR;
+        process.env.FORCE_COLOR = '0';
+      });
+
+      afterEach(() => {
+        delete process.env.FORCE_COLOR;
+        if (previousForceColor) {
+          process.env.FORCE_COLOR = previousForceColor;
+        }
+      });
+
+      it('should remove emoji the `FORCE_COLOR` env var with 0', async () => {
+        client.resetOutput();
+
+        const user = useUser();
+        client.setArgv('login');
+        const exitCodePromise = login(client);
+        await expect(client.stderr).toOutput(`? Log in to Vercel`);
+
+        // Move down to "Email" option
+        client.stdin.write('\x1B[B'); // Down arrow
+        client.stdin.write('\x1B[B'); // Down arrow
+        client.stdin.write('\x1B[B'); // Down arrow
+        client.stdin.write('\r'); // Return key
+
+        await expect(client.stderr).toOutput('? Enter your email address:');
+
+        client.stdin.write(`${user.email}\n`);
+
+        await expect(client.stderr).toOutput(
+          `Success! Email authentication complete for ${user.email}`
+        );
+
+        await expect(client.stderr).not.toOutput(emoji('tip'));
+        await expect(exitCodePromise).resolves.toEqual(0);
+      });
     });
   });
 });

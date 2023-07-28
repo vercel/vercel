@@ -5,17 +5,15 @@ const fetch = require('node-fetch');
 const retry = require('async-retry');
 const { satisfies } = require('semver');
 const stripAnsi = require('strip-ansi');
-const { getDistTag } = require('../../src/util/get-dist-tag');
-const { version: cliVersion } = require('../../package.json');
 const {
   fetchCachedToken,
 } = require('../../../../test/lib/deployment/now-deploy');
+const { spawnSync, execFileSync } = require('child_process');
 
-jest.setTimeout(6 * 60 * 1000);
+jest.setTimeout(10 * 60 * 1000);
 
 const isCI = !!process.env.CI;
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
-const isCanary = () => getDistTag(cliVersion) === 'canary';
 
 let port = 3000;
 
@@ -33,7 +31,7 @@ function execa(...args) {
   const child = _execa(...args);
 
   processList.set(procId, child);
-  child.on('exit', () => processList.delete(procId));
+  child.on('close', () => processList.delete(procId));
 
   return child;
 }
@@ -46,7 +44,9 @@ function fetchWithRetry(url, opts = {}) {
       if (res.status !== opts.status) {
         const text = await res.text();
         throw new Error(
-          `Failed to fetch ${url} with status ${res.status} (expected ${opts.status}):\n\n${text}\n\n`
+          `Failed to fetch "${url}", received ${res.status}, expected ${
+            opts.status
+          }, id: ${res.headers.get('x-vercel-id')}:\n\n${text}\n\n`
         );
       }
 
@@ -117,6 +117,11 @@ function validateResponseHeaders(res, podId) {
 
 async function exec(directory, args = []) {
   const token = await fetchCachedToken();
+  console.log(
+    `exec() ${binaryPath} dev ${directory} -t ***${
+      process.env.VERCEL_TEAM_ID ? ' --scope ***' : ''
+    } ${args.join(' ')}`
+  );
   return execa(
     binaryPath,
     [
@@ -142,6 +147,7 @@ async function runNpmInstall(fixturePath) {
     await execa('yarn', ['install'], {
       cwd: fixturePath,
       shell: true,
+      stdio: 'inherit',
     });
   }
 }
@@ -196,6 +202,11 @@ async function testFixture(directory, opts = {}, args = []) {
   await runNpmInstall(directory);
 
   const token = await fetchCachedToken();
+  console.log(
+    `testFixture() ${binaryPath} dev ${directory} -t ***${
+      process.env.VERCEL_TEAM_ID ? ' --scope ***' : ''
+    } -l ${port} ${args.join(' ')}`
+  );
   const dev = execa(
     binaryPath,
     [
@@ -212,7 +223,6 @@ async function testFixture(directory, opts = {}, args = []) {
     ],
     {
       reject: false,
-      detached: true,
       shell: true,
       stdio: 'pipe',
       ...opts,
@@ -240,8 +250,22 @@ async function testFixture(directory, opts = {}, args = []) {
   });
 
   let printedOutput = false;
+  let devTimer = null;
 
-  dev.on('exit', () => {
+  dev.on('exit', code => {
+    devTimer = setTimeout(async () => {
+      const pids = Object.keys(await ps(dev.pid)).join(', ');
+      console.error(
+        `Test ${directory} exited with code ${code}, but has timed out closing stdio\n` +
+          (pids
+            ? `Hanging child processes: ${pids}`
+            : `${dev.pid} already exited`)
+      );
+    }, 5000);
+  });
+
+  dev.on('close', () => {
+    clearTimeout(devTimer);
     if (!printedOutput) {
       printOutput(directory, stdout, stderr);
       printedOutput = true;
@@ -260,8 +284,12 @@ async function testFixture(directory, opts = {}, args = []) {
   });
 
   dev._kill = dev.kill;
-  dev.kill = async (...args) => {
-    dev._kill(...args);
+  dev.kill = async () => {
+    // kill the entire process tree for the child as some tests will spawn
+    // child processes that either become defunct or assigned a new parent
+    // process
+    await nukeProcessTree(dev.pid);
+
     await exitResolver;
     return {
       stdout,
@@ -411,6 +439,11 @@ function testFixtureStdio(
     try {
       let printedOutput = false;
 
+      console.log(
+        `testFixtureStdio() ${binaryPath} dev -l ${port} -t ***${
+          process.env.VERCEL_TEAM_ID ? ' --scope ***' : ''
+        } --debug`
+      );
       const env = skipDeploy
         ? { ...process.env, __VERCEL_SKIP_DEV_CMD: 1 }
         : process.env;
@@ -443,7 +476,7 @@ function testFixtureStdio(
         stdout += data;
       });
 
-      dev.stderr.on('data', data => {
+      dev.stderr.on('data', async data => {
         stderr += data;
 
         if (stripAnsi(data).includes('Ready! Available at')) {
@@ -452,19 +485,19 @@ function testFixtureStdio(
         }
 
         if (stderr.includes(`Requested port ${port} is already in use`)) {
-          dev.kill('SIGTERM');
+          await nukeProcessTree(dev.pid);
           throw new Error(
             `Failed for "${directory}" with port ${port} with stderr "${stderr}".`
           );
         }
 
         if (stderr.includes('Command failed')) {
-          dev.kill('SIGTERM');
+          await nukeProcessTree(dev.pid);
           throw new Error(`Failed for "${directory}" with stderr "${stderr}".`);
         }
       });
 
-      dev.on('exit', () => {
+      dev.on('close', () => {
         if (!printedOutput) {
           printOutput(directory, stdout, stderr);
           printedOutput = true;
@@ -490,10 +523,78 @@ function testFixtureStdio(
       };
       await fn(helperTestPath, port);
     } finally {
-      dev.kill('SIGTERM');
+      await nukeProcessTree(dev.pid);
       await exitResolver;
     }
   };
+}
+
+async function ps(parentPid, pids = {}) {
+  const cmd =
+    process.platform === 'darwin'
+      ? ['pgrep', '-P', parentPid]
+      : ['ps', '-o', 'pid', '--no-headers', '--ppid', parentPid];
+
+  try {
+    const buf = execFileSync(cmd[0], cmd.slice(1), {
+      encoding: 'utf-8',
+    });
+    for (let pid of buf.match(/\d+/g)) {
+      pid = parseInt(pid);
+      const recurse = Object.prototype.hasOwnProperty.call(pids, pid);
+      pids[parentPid].push(pid);
+      pids[pid] = [];
+      if (recurse) {
+        await ps(pid, pids);
+      }
+    }
+  } catch (e) {
+    console.log(`Failed to get processes: ${e.toString()}`);
+  }
+  return pids;
+}
+
+async function nukePID(pid, signal = 'SIGTERM', retries = 10) {
+  if (retries === 0) {
+    console.log(`pid ${pid} won't die, giving up`);
+    return;
+  }
+
+  // kill the process
+  try {
+    process.kill(pid, signal);
+  } catch (e) {
+    // process does not exist
+    console.log(`pid ${pid} is not running`);
+    return;
+  }
+
+  await sleep(250);
+
+  try {
+    // check if killed
+    process.kill(pid, 0);
+  } catch (e) {
+    console.log(`pid ${pid} is not running`);
+    return;
+  }
+
+  console.log(`pid ${pid} didn't exit, sending SIGKILL (retries ${retries})`);
+  await nukePID(pid, 'SIGKILL', retries - 1);
+}
+
+async function nukeProcessTree(pid, signal) {
+  if (process.platform === 'win32') {
+    spawnSync('taskkill', ['/pid', pid, '/T', '/F'], { stdio: 'inherit' });
+    return;
+  }
+
+  const pids = await ps(pid, {
+    [pid]: [],
+  });
+
+  console.log(`Nuking pids: ${Object.keys(pids).join(', ')}`);
+  await Promise.all(Object.keys(pids).map(pid => nukePID(pid, signal)));
 }
 
 beforeEach(() => {
@@ -503,17 +604,15 @@ beforeEach(() => {
 afterEach(async () => {
   await Promise.all(
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    Array.from(processList).map(([_procId, proc]) => {
-      if (proc.killed === false) {
-        console.log(
-          `killing process ${proc.pid} "${proc.spawnargs.join(' ')}"`
-        );
+    Array.from(processList).map(async ([_procId, proc]) => {
+      console.log(`killing process ${proc.pid} "${proc.spawnargs.join(' ')}"`);
 
-        try {
-          process.kill(proc.pid, 'SIGTERM');
-        } catch (err) {
-          // Was already killed
-          console.error(`Failed to kill process`, proc.pid, err);
+      try {
+        await nukeProcessTree(proc.pid);
+      } catch (err) {
+        // Was already killed
+        if (err.code !== 'ESRCH') {
+          console.error('Failed to kill process', proc.pid, err);
         }
       }
     })
@@ -522,7 +621,6 @@ afterEach(async () => {
 
 module.exports = {
   sleep,
-  isCanary,
   testPath,
   testFixture,
   testFixtureStdio,

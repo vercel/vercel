@@ -15,7 +15,6 @@ import getCommandFlags from '../util/get-command-flags';
 import { getPkgName, getCommandName } from '../util/pkg-name';
 import Client from '../util/client';
 import { Deployment } from '@vercel/client';
-import validatePaths from '../util/validate-paths';
 import { getLinkedProject } from '../util/projects/link';
 import { ensureLink } from '../util/link/ensure-link';
 import getScope from '../util/get-scope';
@@ -36,6 +35,7 @@ const help = () => {
     'DIR'
   )}    Path to the global ${'`.vercel`'} directory
     -d, --debug                    Debug mode [off]
+    --no-color                     No color mode [off]
     -y, --yes                      Skip questions when setting up new project using default scope and settings
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
     'TOKEN'
@@ -44,7 +44,9 @@ const help = () => {
     -m, --meta                     Filter deployments by metadata (e.g.: ${chalk.dim(
       '`-m KEY=value`'
     )}). Can appear many times.
-    --prod                         Filter for production URLs
+    --environment=${chalk.bold.underline(
+      'ENVIRONMENT'
+    )}      Filter by environment (production|preview)
     -N, --next                     Show next page of results
 
   ${chalk.dim('Examples:')}
@@ -76,11 +78,12 @@ export default async function main(client: Client) {
 
   try {
     argv = getArgs(client.argv.slice(2), {
+      '--environment': String,
       '--meta': [String],
       '-m': '--meta',
       '--next': Number,
       '-N': '--next',
-      '--prod': Boolean,
+      '--prod': Boolean, // this can be deprecated someday
       '--yes': Boolean,
       '-y': '--yes',
 
@@ -93,7 +96,7 @@ export default async function main(client: Client) {
     return 1;
   }
 
-  const { output, config } = client;
+  const { cwd, output, config } = client;
 
   if ('--confirm' in argv) {
     output.warn('`--confirm` is deprecated, please use `--yes` instead');
@@ -113,20 +116,16 @@ export default async function main(client: Client) {
   }
 
   const autoConfirm = !!argv['--yes'];
-  const prod = argv['--prod'] || false;
-
   const meta = parseMeta(argv['--meta']);
 
-  let paths = [process.cwd()];
-  const pathValidation = await validatePaths(client, paths);
-  if (!pathValidation.valid) {
-    return pathValidation.exitCode;
-  }
-
-  const { path } = pathValidation;
+  const target = argv['--prod']
+    ? 'production'
+    : typeof argv['--environment'] === 'string'
+    ? argv['--environment'].toLowerCase()
+    : undefined;
 
   // retrieve `project` and `org` from .vercel
-  let link = await getLinkedProject(client, path);
+  let link = await getLinkedProject(client, cwd);
 
   if (link.status === 'error') {
     return link.exitCode;
@@ -145,8 +144,9 @@ export default async function main(client: Client) {
   // If there's no linked project and user doesn't pass `app` arg,
   // prompt to link their current directory.
   if (status === 'not_linked' && !app) {
-    const linkedProject = await ensureLink('list', client, path, {
+    const linkedProject = await ensureLink('list', client, cwd, {
       autoConfirm,
+      link,
     });
     if (typeof linkedProject === 'number') {
       return linkedProject;
@@ -227,15 +227,12 @@ export default async function main(client: Client) {
 
   debug('Fetching deployments');
 
-  const response = await now.list(
-    app,
-    {
-      version: 6,
-      meta,
-      nextTimestamp,
-    },
-    prod
-  );
+  const response = await now.list(app, {
+    version: 6,
+    meta,
+    nextTimestamp,
+    target,
+  });
 
   let {
     deployments,
@@ -288,9 +285,11 @@ export default async function main(client: Client) {
   }
 
   log(
-    `${prod ? `Production deployments` : `Deployments`} for ${chalk.bold(
-      app
-    )} under ${chalk.bold(contextName)} ${elapsed(Date.now() - start)}`
+    `${
+      target === 'production' ? `Production deployments` : `Deployments`
+    } for ${chalk.bold(app)} under ${chalk.bold(contextName)} ${elapsed(
+      Date.now() - start
+    )}`
   );
 
   // information to help the user find other deployments or instances
@@ -300,8 +299,9 @@ export default async function main(client: Client) {
 
   print('\n');
 
-  const headers = ['Age', 'Deployment', 'Status', 'Duration'];
+  const headers = ['Age', 'Deployment', 'Status', 'Environment', 'Duration'];
   if (showUsername) headers.push('Username');
+  const urls: string[] = [];
 
   client.output.print(
     `${table(
@@ -309,18 +309,17 @@ export default async function main(client: Client) {
         headers.map(header => chalk.bold(chalk.cyan(header))),
         ...deployments
           .sort(sortRecent())
-          .map(dep => [
-            [
+          .map(dep => {
+            urls.push(`https://${dep.url}`);
+            return [
               chalk.gray(ms(Date.now() - dep.createdAt)),
               `https://${dep.url}`,
               stateString(dep.state || ''),
+              dep.target === 'production' ? 'Production' : 'Preview',
               chalk.gray(getDeploymentDuration(dep)),
               showUsername ? chalk.gray(dep.creator?.username) : '',
-            ],
-          ])
-          // flatten since the previous step returns a nested
-          // array of the deployment and (optionally) its instances
-          .flat()
+            ];
+          })
           .filter(app =>
             // if an app wasn't supplied to filter by,
             // we only want to render one deployment per app
@@ -334,6 +333,11 @@ export default async function main(client: Client) {
       }
     ).replace(/^/gm, '  ')}\n\n`
   );
+
+  if (!client.stdout.isTTY) {
+    client.stdout.write(urls.join('\n'));
+    client.stdout.write('\n');
+  }
 
   if (pagination && pagination.count === 20) {
     const flags = getCommandFlags(argv, ['_', '--next']);

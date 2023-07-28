@@ -1,7 +1,7 @@
 {
   "name": "@vercel/static-config",
-  "version": "2.0.6",
-  "license": "MIT",
+  "version": "2.0.17",
+  "license": "Apache-2.0",
   "main": "./dist/index",
   "repository": {
     "type": "git",
@@ -10,7 +10,7 @@
   },
   "scripts": {
     "build": "tsc",
-    "test-unit": "yarn test",
+    "test-unit": "pnpm test",
     "test": "jest --env node --verbose --runInBand --bail"
   },
   "files": [
@@ -24,20 +24,7 @@
   "devDependencies": {
     "@swc/core": "1.2.182",
     "@types/jest": "27.4.1",
-    "@types/node": "14.18.33"
-  },
-  "jest": {
-    "preset": "ts-jest",
-    "globals": {
-      "ts-jest": {
-        "diagnostics": false,
-        "isolatedModules": true
-      }
-    },
-    "verbose": false,
-    "testEnvironment": "node",
-    "testMatch": [
-      "<rootDir>/test/**/*.test.ts"
-    ]
+    "@types/node": "14.18.33",
+    "typescript": "4.9.5"
   }
 }

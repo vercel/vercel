@@ -4,9 +4,7 @@
   "version": "0.0.0",
   "description": "API for the vercel/vercel repo",
   "main": "index.js",
-  "scripts": {
-    "//TODO": "We should add this pkg to yarn workspaces"
-  },
+  "scripts": {},
   "dependencies": {
     "@sentry/node": "5.11.1",
     "got": "10.2.1",
@@ -16,9 +14,8 @@
     "unzip-stream": "0.3.0"
   },
   "devDependencies": {
-    "@types/node": "14.18.33",
+    "@types/node": "16.18.11",
     "@types/node-fetch": "2.5.4",
-    "@vercel/node": "1.9.0",
-    "typescript": "3.9.6"
+    "@vercel/node": "*"
   }
 }

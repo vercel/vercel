@@ -2,7 +2,7 @@ import os from 'os';
 import url from 'url';
 import fs from 'fs-extra';
 import { join } from 'path';
-import listen from 'async-listen';
+import { listen } from 'async-listen';
 import stripAnsi from 'strip-ansi';
 import { createServer } from 'http';
 
@@ -14,6 +14,22 @@ const {
   testFixtureStdio,
   validateResponseHeaders,
 } = require('./utils.js');
+
+test('[verdel dev] should support serverless functions', async () => {
+  const dir = fixture('serverless-function');
+  const { dev, port, readyResolver } = await testFixture(dir, {});
+
+  try {
+    await readyResolver;
+    let res = await fetch(`http://localhost:${port}/api?foo=bar`);
+    validateResponseHeaders(res);
+    const payload = await res.json();
+    expect(payload).toMatchObject({ url: '/api?foo=bar', method: 'GET' });
+    expect(payload.headers.host).toBe(payload.headers['x-forwarded-host']);
+  } finally {
+    await dev.kill();
+  }
+});
 
 test('[vercel dev] should support edge functions', async () => {
   const dir = fixture('edge-function');
@@ -39,8 +55,9 @@ test('[vercel dev] should support edge functions', async () => {
 
     // support for edge functions has to manually ensure that these properties
     // are set up; so, we test that they are all passed through properly
-    expect(await res.json()).toMatchObject({
-      headerContentType: 'application/json',
+    const payload = await res.json();
+    expect(payload).toMatchObject({
+      headers: { 'content-type': 'application/json' },
       url: `http://localhost:${port}/api/edge-success`,
       method: 'POST',
       body: '{"hello":"world"}',
@@ -49,8 +66,9 @@ test('[vercel dev] should support edge functions', async () => {
       optionalChaining: 'fallback',
       ENV_VAR_IN_EDGE: '1',
     });
+    expect(payload.headers.host).toBe(payload.headers['x-forwarded-host']);
   } finally {
-    await dev.kill('SIGTERM');
+    await dev.kill();
   }
 });
 
@@ -77,7 +95,7 @@ test('[vercel dev] edge functions support WebAssembly files', async () => {
       await expect(res.text()).resolves.toEqual(`${number} + 1 = ${result}`);
     }
   } finally {
-    await dev.kill('SIGTERM');
+    await dev.kill();
   }
 });
 
@@ -100,18 +118,15 @@ test('[vercel dev] throws an error when an edge function has no response', async
     let res = await fetch(`http://localhost:${port}/api/edge-no-response`);
     validateResponseHeaders(res);
 
-    const { stdout, stderr } = await dev.kill('SIGTERM');
+    const { stdout } = await dev.kill();
 
     expect(await res.status).toBe(500);
     expect(await res.text()).toMatch('FUNCTION_INVOCATION_FAILED');
     expect(stdout).toMatch(
-      /Unhandled rejection: Edge Function "api\/edge-no-response.js" did not return a response./g
-    );
-    expect(stderr).toMatch(
-      /Failed to complete request to \/api\/edge-no-response: Error: socket hang up/g
+      /Error from API Route \/api\/edge-no-response: Edge Function did not return a response./g
     );
   } finally {
-    await dev.kill('SIGTERM');
+    await dev.kill();
   }
 });
 
@@ -138,7 +153,7 @@ test('[vercel dev] should support edge functions returning intentional 500 respo
       'responding with intentional 500 from user code'
     );
   } finally {
-    await dev.kill('SIGTERM');
+    await dev.kill();
   }
 });
 
@@ -158,17 +173,16 @@ test('[vercel dev] should handle runtime errors thrown in edge functions', async
     });
     validateResponseHeaders(res);
 
-    const { stdout, stderr } = await dev.kill('SIGTERM');
+    const { stdout } = await dev.kill();
 
     expect(await res.text()).toMatch(
       /<strong>500<\/strong>: INTERNAL_SERVER_ERROR/g
     );
-    expect(stdout).toMatch(/Unhandled rejection: intentional runtime error/g);
-    expect(stderr).toMatch(
-      /Failed to complete request to \/api\/edge-error-runtime: Error: socket hang up/g
+    expect(stdout).toMatch(
+      /Error from API Route \/api\/edge-error-runtime: intentional runtime error/g
     );
   } finally {
-    await dev.kill('SIGTERM');
+    await dev.kill();
   }
 });
 
@@ -188,19 +202,16 @@ test('[vercel dev] should handle config errors thrown in edge functions', async 
     });
     validateResponseHeaders(res);
 
-    const { stderr } = await dev.kill('SIGTERM');
+    const { stderr } = await dev.kill();
 
     expect(await res.text()).toMatch(
       /<strong>500<\/strong>: INTERNAL_SERVER_ERROR/g
     );
-    expect(stderr).toMatch(
-      /Invalid function runtime "invalid-runtime-value" for "api\/edge-error-config.js". Valid runtimes are: \["experimental-edge"\]/g
-    );
-    expect(stderr).toMatch(
-      /Failed to complete request to \/api\/edge-error-config: Error: socket hang up/g
+    expect(stderr).toContain(
+      'api/edge-error-config.js: unsupported "runtime" value in `config`: "invalid-runtime-value" (must be one of: ["edge","experimental-edge"]). Learn more: https://vercel.link/creating-edge-functions'
     );
   } finally {
-    await dev.kill('SIGTERM');
+    await dev.kill();
   }
 });
 
@@ -220,18 +231,15 @@ test('[vercel dev] should handle startup errors thrown in edge functions', async
     });
     validateResponseHeaders(res);
 
-    const { stderr } = await dev.kill('SIGTERM');
+    const { stderr } = await dev.kill();
 
     expect(await res.text()).toMatch(
       /<strong>500<\/strong>: INTERNAL_SERVER_ERROR/g
     );
     expect(stderr).toMatch(/Failed to instantiate edge runtime./g);
     expect(stderr).toMatch(/intentional startup error/g);
-    expect(stderr).toMatch(
-      /Failed to complete request to \/api\/edge-error-startup: Error: socket hang up/g
-    );
   } finally {
-    await dev.kill('SIGTERM');
+    await dev.kill();
   }
 });
 
@@ -251,18 +259,15 @@ test('[vercel dev] should handle syntax errors thrown in edge functions', async 
     });
     validateResponseHeaders(res);
 
-    const { stderr } = await dev.kill('SIGTERM');
+    const { stderr } = await dev.kill();
 
     expect(await res.text()).toMatch(
       /<strong>500<\/strong>: INTERNAL_SERVER_ERROR/g
     );
     expect(stderr).toMatch(/Failed to compile user code for edge runtime./g);
     expect(stderr).toMatch(/Unexpected end of file/g);
-    expect(stderr).toMatch(
-      /Failed to complete request to \/api\/edge-error-syntax: Error: socket hang up/g
-    );
   } finally {
-    await dev.kill('SIGTERM');
+    await dev.kill();
   }
 });
 
@@ -285,7 +290,7 @@ test('[vercel dev] should handle import errors thrown in edge functions', async 
     );
     validateResponseHeaders(res);
 
-    const { stderr } = await dev.kill('SIGTERM');
+    const { stderr } = await dev.kill();
 
     expect(await res.text()).toMatch(
       /<strong>500<\/strong>: INTERNAL_SERVER_ERROR/g
@@ -293,11 +298,8 @@ test('[vercel dev] should handle import errors thrown in edge functions', async 
     expect(stderr).toMatch(
       /Could not resolve "unknown-module-893427589372458934795843"/g
     );
-    expect(stderr).toMatch(
-      /Failed to complete request to \/api\/edge-error-unknown-import: Error: socket hang up/g
-    );
   } finally {
-    await dev.kill('SIGTERM');
+    await dev.kill();
   }
 });
 
@@ -320,19 +322,19 @@ test('[vercel dev] should handle missing handler errors thrown in edge functions
     );
     validateResponseHeaders(res);
 
-    const { stdout, stderr } = await dev.kill('SIGTERM');
+    const { stdout } = await dev.kill();
 
     expect(await res.text()).toMatch(
       /<strong>500<\/strong>: INTERNAL_SERVER_ERROR/g
     );
-    expect(stdout).toMatch(
-      /No default export was found. Add a default export to handle requests./g
-    );
-    expect(stderr).toMatch(
-      /Failed to complete request to \/api\/edge-error-no-handler: Error: socket hang up/g
-    );
+    const url = `http://localhost:${port}/api/edge-error-no-handler`;
+    expect(stdout).toMatchInlineSnapshot(`
+      "Error from API Route /api/edge-error-no-handler: No default or HTTP-named export was found at ${url}. Add one to handle requests. Learn more: https://vercel.link/creating-edge-middleware
+          at (api/edge-error-no-handler.js)
+      "
+    `);
   } finally {
-    await dev.kill('SIGTERM');
+    await dev.kill();
   }
 });
 
@@ -352,7 +354,7 @@ test('[vercel dev] should handle invalid middleware config', async () => {
     });
     validateResponseHeaders(res);
 
-    const { stderr } = await dev.kill('SIGTERM');
+    const { stderr } = await dev.kill();
 
     expect(await res.text()).toMatch(
       /<strong>500<\/strong>: INTERNAL_SERVER_ERROR/g
@@ -361,7 +363,7 @@ test('[vercel dev] should handle invalid middleware config', async () => {
       /Middleware's `config.matcher` .+ Received: not-a-valid-matcher/g
     );
   } finally {
-    await dev.kill('SIGTERM');
+    await dev.kill();
   }
 });
 
@@ -383,7 +385,7 @@ test('[vercel dev] should support request body', async () => {
       body: JSON.stringify(body),
     });
     validateResponseHeaders(res);
-    expect(await res.json()).toMatchObject(body);
+    expect(await res.json()).toMatchObject({ body, readBody: body });
 
     // Test that `req` "data" events work in dev
     res = await fetch(`http://localhost:${port}/api/data-events`, {
@@ -394,7 +396,7 @@ test('[vercel dev] should support request body', async () => {
       body: JSON.stringify(body),
     });
   } finally {
-    dev.kill('SIGTERM');
+    await dev.kill();
   }
 });
 
@@ -414,7 +416,7 @@ test('[vercel dev] should maintain query when invoking serverless function', asy
     expect(parsed.query['url-param']).toEqual('a');
     expect(parsed.query['route-param']).toEqual('b');
   } finally {
-    dev.kill('SIGTERM');
+    await dev.kill();
   }
 });
 
@@ -445,7 +447,7 @@ test('[vercel dev] should maintain query when proxy passing', async () => {
     expect(parsed.query['route-param']).toEqual('b');
   } finally {
     dest.close();
-    dev.kill('SIGTERM');
+    await dev.kill();
   }
 });
 
@@ -475,7 +477,7 @@ test('[vercel dev] should maintain query when dev server defines routes', async 
     expect(query['url-param']).toEqual('a');
     expect(query['route-param']).toEqual('b');
   } finally {
-    dev.kill('SIGTERM');
+    await dev.kill();
   }
 });
 
@@ -491,7 +493,7 @@ test('[vercel dev] should allow `cache-control` to be overwritten', async () => 
     );
     expect(res.headers.get('cache-control')).toEqual('immutable');
   } finally {
-    dev.kill('SIGTERM');
+    await dev.kill();
   }
 });
 
@@ -508,7 +510,7 @@ test('[vercel dev] should send `etag` header for static files', async () => {
     const body = await res.text();
     expect(body.trim()).toEqual('hi');
   } finally {
-    dev.kill('SIGTERM');
+    await dev.kill();
   }
 });
 
@@ -542,7 +544,7 @@ test('[vercel dev] should frontend dev server and routes', async () => {
     body = await res.text();
     expect(body).toEqual('hello and welcome');
   } finally {
-    dev.kill('SIGTERM');
+    await dev.kill();
   }
 });
 
@@ -558,7 +560,7 @@ test('[vercel dev] should support `@vercel/static` routing', async () => {
     const body = await res.text();
     expect(body.trim()).toEqual('<body>Hello!</body>');
   } finally {
-    dev.kill('SIGTERM');
+    await dev.kill();
   }
 });
 
@@ -574,7 +576,7 @@ test('[vercel dev] should support `@vercel/static-build` routing', async () => {
     const body = await res.text();
     expect(body.startsWith('The current date:')).toBeTruthy();
   } finally {
-    dev.kill('SIGTERM');
+    await dev.kill();
   }
 });
 
@@ -607,7 +609,7 @@ test('[vercel dev] should support directory listing', async () => {
     res = await fetch(`http://localhost:${port}/does-not-exist`);
     expect(res.status).toEqual(404);
   } finally {
-    dev.kill('SIGTERM');
+    await dev.kill();
   }
 });
 
@@ -651,7 +653,7 @@ test('[vercel dev] should respond with 404 listing with Accept header support', 
     );
     expect(body).toEqual('The page could not be found.\n\nNOT_FOUND\n');
   } finally {
-    dev.kill('SIGTERM');
+    await dev.kill();
   }
 });
 
@@ -670,7 +672,7 @@ test('[vercel dev] should support `public` directory with zero config', async ()
     body = await res.text();
     expect(body.startsWith('<h1>hello world</h1>')).toBeTruthy();
   } finally {
-    dev.kill('SIGTERM');
+    await dev.kill();
   }
 });
 
@@ -686,10 +688,11 @@ test('[vercel dev] should support static files with zero config', async () => {
     expect(body).toEqual('bye:user');
 
     res = await fetch(`http://localhost:${port}/`);
+    expect(res.headers.get('content-type')).toBe('text/html; charset=utf-8');
     body = await res.text();
     expect(body.startsWith('<h1>goodbye world</h1>')).toBeTruthy();
   } finally {
-    dev.kill('SIGTERM');
+    await dev.kill();
   }
 });
 
@@ -718,7 +721,7 @@ test('[vercel dev] should support custom 404 routes', async () => {
     body = await res.text();
     expect(body).toEqual('The page could not be found.\n\nNOT_FOUND\n');
   } finally {
-    dev.kill('SIGTERM');
+    await dev.kill();
   }
 });
 
@@ -762,7 +765,7 @@ test('[vercel dev] `vercel.json` should be invalidated if deleted', async () => 
       expect(body.FOO).toBe(undefined);
     }
   } finally {
-    dev.kill('SIGTERM');
+    await dev.kill();
     await fs.writeJSON(configPath, originalConfig);
   }
 });
@@ -862,7 +865,7 @@ test('[vercel dev] reflects changes to config and env without restart', async ()
       expect(body.query.foo).toBe('boo');
     }
   } finally {
-    dev.kill('SIGTERM');
+    await dev.kill();
     await fs.writeJSON(configPath, originalConfig);
   }
 });
@@ -891,7 +894,7 @@ test('[vercel dev] `@vercel/node` TypeScript should be resolved by default', asy
     const body = await res.text();
     expect(body).toBe('world');
   } finally {
-    dev.kill('SIGTERM');
+    await dev.kill();
     await fs.remove(dir);
   }
 });

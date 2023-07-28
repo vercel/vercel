@@ -1,6 +1,7 @@
-import { extname } from 'path';
+import { debug, streamToBuffer } from '@vercel/build-utils';
 import { pathToRegexp } from 'path-to-regexp';
-import { debug } from '@vercel/build-utils';
+import type { IncomingMessage } from 'http';
+import { extname } from 'path';
 
 export function getRegExpFromMatchers(matcherOrMatchers: unknown): string {
   if (!matcherOrMatchers) {
@@ -58,7 +59,12 @@ export function entrypointToOutputPath(
 }
 
 export function logError(error: Error) {
-  console.error(error.message);
+  let message = error.message;
+  if (!message.startsWith('Error:')) {
+    message = `Error: ${message}`;
+  }
+  console.error(message);
+
   if (error.stack) {
     // only show the stack trace if debug is enabled
     // because it points to internals, not user code
@@ -66,4 +72,49 @@ export function logError(error: Error) {
     const errorMessageLength = errorPrefixLength + error.message.length;
     debug(error.stack.substring(errorMessageLength + 1));
   }
+}
+
+export enum EdgeRuntimes {
+  Edge = 'edge',
+  ExperimentalEdge = 'experimental-edge',
+}
+
+export function isEdgeRuntime(runtime?: string): runtime is EdgeRuntimes {
+  return (
+    runtime !== undefined &&
+    Object.values(EdgeRuntimes).includes(runtime as EdgeRuntimes)
+  );
+}
+
+const ALLOWED_RUNTIMES: string[] = Object.values(EdgeRuntimes);
+
+export function validateConfiguredRuntime(
+  runtime: string | undefined,
+  entrypoint: string
+) {
+  if (runtime) {
+    if (runtime === 'nodejs') {
+      throw new Error(
+        `${entrypoint}: \`config.runtime: "nodejs"\` semantics will evolve soon. Please remove the \`runtime\` key to keep the existing behavior.`
+      );
+    }
+
+    if (!ALLOWED_RUNTIMES.includes(runtime)) {
+      throw new Error(
+        `${entrypoint}: unsupported "runtime" value in \`config\`: ${JSON.stringify(
+          runtime
+        )} (must be one of: ${JSON.stringify(
+          ALLOWED_RUNTIMES
+        )}). Learn more: https://vercel.link/creating-edge-functions`
+      );
+    }
+  }
+}
+
+export async function serializeBody(
+  request: IncomingMessage
+): Promise<Buffer | undefined> {
+  return request.method !== 'GET' && request.method !== 'HEAD'
+    ? await streamToBuffer(request)
+    : undefined;
 }

@@ -1,3 +1,4 @@
+import createLineIterator from 'line-async-iterator';
 import { client } from '../../mocks/client';
 import { useUser } from '../../mocks/user';
 import list, {
@@ -8,7 +9,6 @@ import { join } from 'path';
 import { useTeams } from '../../mocks/team';
 import { defaultProject, useProject } from '../../mocks/project';
 import { useDeployment } from '../../mocks/deployment';
-import { readOutputStream } from '../../helpers/read-output-stream';
 import {
   parseSpacedTableRow,
   pluckIdentifiersFromDeploymentList,
@@ -18,128 +18,212 @@ const fixture = (name: string) =>
   join(__dirname, '../../fixtures/unit/commands/list', name);
 
 describe('list', () => {
-  const originalCwd = process.cwd();
   let teamSlug: string;
 
   it('should get deployments from a project linked by a directory', async () => {
-    const cwd = fixture('with-team');
-    try {
-      process.chdir(cwd);
+    const user = useUser();
+    const team = useTeams('team_dummy');
+    teamSlug = team[0].slug;
+    useProject({
+      ...defaultProject,
+      id: 'with-team',
+      name: 'with-team',
+    });
+    const deployment = useDeployment({ creator: user });
 
-      const user = useUser();
-      const team = useTeams('team_dummy');
-      teamSlug = team[0].slug;
-      useProject({
-        ...defaultProject,
-        id: 'with-team',
-        name: 'with-team',
-      });
-      const deployment = useDeployment({ creator: user });
+    client.cwd = fixture('with-team');
+    await list(client);
 
-      await list(client);
+    const lines = createLineIterator(client.stderr);
 
-      const output = await readOutputStream(client, 6);
+    let line = await lines.next();
+    expect(line.value).toEqual('Retrieving project…');
 
-      const { org } = pluckIdentifiersFromDeploymentList(output.split('\n')[2]);
-      const header: string[] = parseSpacedTableRow(output.split('\n')[5]);
-      const data: string[] = parseSpacedTableRow(output.split('\n')[6]);
-      data.shift();
+    line = await lines.next();
+    expect(line.value).toEqual(`Fetching deployments in ${team[0].slug}`);
 
-      expect(org).toEqual(team[0].slug);
-      expect(header).toEqual([
-        'Age',
-        'Deployment',
-        'Status',
-        'Duration',
-        'Username',
-      ]);
+    line = await lines.next();
+    const { org } = pluckIdentifiersFromDeploymentList(line.value!);
+    expect(org).toEqual(team[0].slug);
 
-      expect(data).toEqual([
-        `https://${deployment.url}`,
-        stateString(deployment.state || ''),
-        getDeploymentDuration(deployment),
-        user.username,
-      ]);
-    } finally {
-      process.chdir(originalCwd);
-    }
+    // skip next line
+    await lines.next();
+
+    line = await lines.next();
+    expect(line.value).toEqual('');
+
+    line = await lines.next();
+    const header = parseSpacedTableRow(line.value!);
+    expect(header).toEqual([
+      'Age',
+      'Deployment',
+      'Status',
+      'Environment',
+      'Duration',
+      'Username',
+    ]);
+
+    line = await lines.next();
+    const data = parseSpacedTableRow(line.value!);
+    data.shift();
+    expect(data).toEqual([
+      `https://${deployment.url}`,
+      stateString(deployment.state || ''),
+      deployment.target === 'production' ? 'Production' : 'Preview',
+      getDeploymentDuration(deployment),
+      user.username,
+    ]);
   });
+
   it('should get deployments for linked project where the scope is a user', async () => {
-    const cwd = fixture('with-team');
-    try {
-      process.chdir(cwd);
+    const user = useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'with-team',
+      name: 'with-team',
+    });
+    const deployment = useDeployment({ creator: user });
 
-      const user = useUser();
-      useTeams('team_dummy');
-      useProject({
-        ...defaultProject,
-        id: 'with-team',
-        name: 'with-team',
-      });
-      const deployment = useDeployment({ creator: user });
+    client.cwd = fixture('with-team');
+    client.setArgv('-S', user.username);
+    await list(client);
 
-      client.setArgv('-S', user.username);
-      await list(client);
+    const lines = createLineIterator(client.stderr);
 
-      const output = await readOutputStream(client, 6);
+    let line = await lines.next();
+    expect(line.value).toEqual('Retrieving project…');
 
-      const { org } = pluckIdentifiersFromDeploymentList(output.split('\n')[2]);
-      const header: string[] = parseSpacedTableRow(output.split('\n')[5]);
-      const data: string[] = parseSpacedTableRow(output.split('\n')[6]);
-      data.shift();
+    line = await lines.next();
+    expect(line.value).toEqual(`Fetching deployments in ${user.username}`);
 
-      expect(org).toEqual(user.username);
-      expect(header).toEqual(['Age', 'Deployment', 'Status', 'Duration']);
-      expect(data).toEqual([
-        'https://' + deployment.url,
-        stateString(deployment.state || ''),
-        getDeploymentDuration(deployment),
-      ]);
-    } finally {
-      process.chdir(originalCwd);
-    }
+    line = await lines.next();
+    const { org } = pluckIdentifiersFromDeploymentList(line.value!);
+    expect(org).toEqual(user.username);
+
+    // skip next line
+    await lines.next();
+
+    line = await lines.next();
+    expect(line.value).toEqual('');
+
+    line = await lines.next();
+    const header = parseSpacedTableRow(line.value!);
+    expect(header).toEqual([
+      'Age',
+      'Deployment',
+      'Status',
+      'Environment',
+      'Duration',
+    ]);
+
+    line = await lines.next();
+    const data = parseSpacedTableRow(line.value!);
+    data.shift();
+
+    expect(data).toEqual([
+      'https://' + deployment.url,
+      stateString(deployment.state || ''),
+      deployment.target === 'production' ? 'Production' : 'Preview',
+      getDeploymentDuration(deployment),
+    ]);
   });
+
   it('should get the deployments for a specified project', async () => {
-    const cwd = fixture('with-team');
-    try {
-      process.chdir(cwd);
+    const user = useUser();
+    const team = useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'with-team',
+      name: 'with-team',
+    });
+    const deployment = useDeployment({ creator: user });
 
-      const user = useUser();
-      const team = useTeams('team_dummy');
-      useProject({
-        ...defaultProject,
-        id: 'with-team',
-        name: 'with-team',
-      });
-      const deployment = useDeployment({ creator: user });
+    client.cwd = fixture('with-team');
+    client.setArgv(deployment.name);
+    await list(client);
 
-      client.setArgv(deployment.name);
-      await list(client);
+    const lines = createLineIterator(client.stderr);
 
-      const output = await readOutputStream(client, 6);
+    let line = await lines.next();
+    expect(line.value).toEqual('Retrieving project…');
 
-      const { org } = pluckIdentifiersFromDeploymentList(output.split('\n')[2]);
-      const header: string[] = parseSpacedTableRow(output.split('\n')[5]);
-      const data: string[] = parseSpacedTableRow(output.split('\n')[6]);
-      data.shift();
+    line = await lines.next();
+    expect(line.value).toEqual(
+      `Fetching deployments in ${teamSlug || team[0].slug}`
+    );
 
-      expect(org).toEqual(teamSlug || team[0].slug);
+    line = await lines.next();
+    const { org } = pluckIdentifiersFromDeploymentList(line.value!);
+    expect(org).toEqual(teamSlug || team[0].slug);
 
-      expect(header).toEqual([
-        'Age',
-        'Deployment',
-        'Status',
-        'Duration',
-        'Username',
-      ]);
-      expect(data).toEqual([
-        `https://${deployment.url}`,
-        stateString(deployment.state || ''),
-        getDeploymentDuration(deployment),
-        user.username,
-      ]);
-    } finally {
-      process.chdir(originalCwd);
-    }
+    // skip next line
+    await lines.next();
+
+    line = await lines.next();
+    expect(line.value).toEqual('');
+
+    line = await lines.next();
+    const header = parseSpacedTableRow(line.value!);
+    expect(header).toEqual([
+      'Age',
+      'Deployment',
+      'Status',
+      'Environment',
+      'Duration',
+      'Username',
+    ]);
+
+    line = await lines.next();
+    const data = parseSpacedTableRow(line.value!);
+    data.shift();
+    expect(data).toEqual([
+      `https://${deployment.url}`,
+      stateString(deployment.state || ''),
+      deployment.target === 'production' ? 'Production' : 'Preview',
+      getDeploymentDuration(deployment),
+      user.username,
+    ]);
+  });
+
+  it('should output deployment URLs to stdout', async () => {
+    const user = useUser();
+    useProject({
+      ...defaultProject,
+      id: 'with-team',
+      name: 'with-team',
+    });
+    const prodDeployment = useDeployment({
+      creator: user,
+      createdAt: Date.now() - 1000,
+      target: 'production',
+    });
+    const previewDeployment = useDeployment({
+      creator: user,
+      createdAt: Date.now(),
+      target: undefined,
+    });
+
+    client.stdout.isTTY = false;
+    client.cwd = fixture('with-team');
+
+    // run with all deployments
+    let prom = list(client);
+    await expect(client.stdout).toOutput(
+      `https://${previewDeployment.url}\nhttps://${prodDeployment.url}`
+    );
+    await prom;
+
+    // run again with preview deployments only
+    client.setArgv('--environment', 'preview');
+    prom = list(client);
+    await expect(client.stdout).toOutput(`https://${previewDeployment.url}`);
+    await prom;
+
+    // run again with production deployments only
+    client.setArgv('--environment', 'production');
+    prom = list(client);
+    await expect(client.stdout).toOutput(`https://${prodDeployment.url}`);
+    await prom;
   });
 });

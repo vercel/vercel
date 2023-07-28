@@ -78,7 +78,7 @@ async function createBuildProcess(
   });
   match.buildProcess = buildProcess;
 
-  buildProcess.on('exit', (code, signal) => {
+  buildProcess.on('close', (code, signal) => {
     output.debug(
       `Build process for "${match.entrypoint}" exited with ${signal || code}`
     );
@@ -191,10 +191,10 @@ export async function executeBuild(
         reject(err);
       }
       function cleanup() {
-        buildProcess!.removeListener('exit', onExit);
+        buildProcess!.removeListener('close', onExit);
         buildProcess!.removeListener('message', onMessage);
       }
-      buildProcess!.on('exit', onExit);
+      buildProcess!.on('close', onExit);
       buildProcess!.on('message', onMessage);
     });
   } else {
@@ -337,7 +337,10 @@ export async function executeBuild(
   // Enforce the lambda zip size soft watermark
   const maxLambdaBytes = bytes('50mb');
   for (const asset of Object.values(result.output)) {
-    if (asset.type === 'Lambda') {
+    if (
+      asset.type === 'Lambda' &&
+      !(typeof asset.runtime === 'string' && asset.runtime.startsWith('python'))
+    ) {
       const size = asset.zipBuffer.length;
       if (size > maxLambdaBytes) {
         throw new LambdaSizeExceededError(size, maxLambdaBytes);

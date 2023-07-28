@@ -33,6 +33,7 @@ const help = () => {
 
     -h, --help                     Output usage information
     -d, --debug                    Debug mode [off]
+    --no-color                     No color mode [off]
     -f, --force                    Force a domain on a project and remove it from an existing one
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
     'FILE'
@@ -45,6 +46,9 @@ const help = () => {
   )}        Login token
     -S, --scope                    Set a custom scope
     -N, --next                     Show next page of results
+    --limit=${chalk.bold.underline(
+      'VALUE'
+    )}                  Number of results to return per page (default: 20, max: 100)
     -y, --yes                      Skip the confirmation prompt when removing a domain
 
   ${chalk.dim('Examples:')}
@@ -94,6 +98,7 @@ export default async function main(client: Client) {
       '--next': Number,
       '-N': '--next',
       '-y': '--yes',
+      '--limit': Number,
     });
   } catch (error) {
     handleError(error);

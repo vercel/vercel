@@ -1,0 +1,39 @@
+{
+  "name": "@vercel/gatsby-plugin-vercel-analytics",
+  "version": "1.0.10",
+  "description": "Track Core Web Vitals in Gatsby projects with Vercel Speed Insights.",
+  "main": "index.js",
+  "files": [
+    "gatsby-browser.js",
+    "web-vitals.js"
+  ],
+  "scripts": {
+    "build": "babel src --out-dir ."
+  },
+  "dependencies": {
+    "@babel/runtime": "7.12.1",
+    "web-vitals": "0.2.4"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vercel/vercel.git",
+    "directory": "packages/gatsby-plugin-vercel-analytics"
+  },
+  "keywords": [
+    "gatsby",
+    "gatsby-plugin",
+    "gatsby-plugin-vercel",
+    "web vitals",
+    "vercel",
+    "cls",
+    "fcp",
+    "fid",
+    "lcp",
+    "ttfb"
+  ],
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "@babel/cli": "7.20.7",
+    "@babel/core": "7.5.0"
+  }
+}

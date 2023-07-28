@@ -9,13 +9,15 @@ import { handleError } from '../util/error';
 import getScope from '../util/get-scope';
 import { getPkgName, getCommandName } from '../util/pkg-name';
 import Client from '../util/client';
-import { getDeployment } from '../util/get-deployment';
-import { Deployment } from '@vercel/client';
-import { Build } from '../types';
+import getDeployment from '../util/get-deployment';
+import type { Build, Deployment } from '@vercel-internals/types';
 import title from 'title';
 import { isErrnoException } from '@vercel/error-utils';
-import { isAPIError } from '../util/errors-ts';
 import { URL } from 'url';
+import readStandardInput from '../util/input/read-standard-input';
+import sleep from '../util/sleep';
+import ms from 'ms';
+import { isDeploying } from '../util/deploy/is-deploying';
 
 const help = () => {
   console.log(`
@@ -34,7 +36,12 @@ const help = () => {
     'TOKEN'
   )}        Login token
     -d, --debug                    Debug mode [off]
+    --no-color                     No color mode [off]
     -S, --scope                    Set a custom scope
+    --timeout=${chalk.bold.underline(
+      'TIME'
+    )}                 Time to wait for deployment completion [3m]
+    --wait                         Blocks until deployment completes
 
   ${chalk.dim('Examples:')}
 
@@ -45,15 +52,27 @@ const help = () => {
   ${chalk.gray('-')} Get information about the deployment an alias points to
 
     ${chalk.cyan(`$ ${getPkgName()} inspect my-deployment.vercel.app`)}
+
+  ${chalk.gray('-')} Get information about a deployment by piping in the URL
+
+    ${chalk.cyan(`$ echo my-deployment.vercel.app | ${getPkgName()} inspect`)}
+
+  ${chalk.gray('-')} Wait up to 90 seconds for deployment to complete
+
+    ${chalk.cyan(
+      `$ ${getPkgName()} inspect my-deployment.vercel.app --wait --timeout 90s`
+    )}
   `);
 };
 
 export default async function main(client: Client) {
-  let deployment;
   let argv;
 
   try {
-    argv = getArgs(client.argv.slice(2));
+    argv = getArgs(client.argv.slice(2), {
+      '--timeout': String,
+      '--wait': Boolean,
+    });
   } catch (err) {
     handleError(err);
     return 1;
@@ -69,9 +88,25 @@ export default async function main(client: Client) {
   // extract the first parameter
   let [, deploymentIdOrHost] = argv._;
 
-  if (argv._.length !== 2) {
+  if (!deploymentIdOrHost) {
+    // if the URL is not passed in, check stdin
+    // allows cool stuff like `echo my-deployment.vercel.app | vc inspect --wait`
+    const stdInput = await readStandardInput(client.stdin);
+    if (stdInput) {
+      deploymentIdOrHost = stdInput;
+    }
+  }
+
+  if (!deploymentIdOrHost) {
     error(`${getCommandName('inspect <url>')} expects exactly one argument`);
     help();
+    return 1;
+  }
+
+  // validate the timeout
+  const timeout = ms(argv['--timeout'] ?? '3m');
+  if (timeout === undefined) {
+    error(`Invalid timeout "${argv['--timeout']}"`);
     return 1;
   }
 
@@ -100,30 +135,21 @@ export default async function main(client: Client) {
     `Fetching deployment "${deploymentIdOrHost}" in ${chalk.bold(contextName)}`
   );
 
+  const until = Date.now() + timeout;
+  const wait = argv['--wait'];
+
   // resolve the deployment, since we might have been given an alias
-  try {
-    deployment = await getDeployment(client, deploymentIdOrHost);
-  } catch (err: unknown) {
-    if (isAPIError(err)) {
-      if (err.status === 404) {
-        error(
-          `Failed to find deployment "${deploymentIdOrHost}" in ${chalk.bold(
-            contextName
-          )}`
-        );
-        return 1;
-      }
-      if (err.status === 403) {
-        error(
-          `No permission to access deployment "${deploymentIdOrHost}" in ${chalk.bold(
-            contextName
-          )}`
-        );
-        return 1;
-      }
+  let deployment = await getDeployment(client, contextName, deploymentIdOrHost);
+
+  while (Date.now() < until) {
+    if (!wait || !isDeploying(deployment.readyState)) {
+      break;
     }
-    // unexpected
-    throw err;
+
+    await sleep(250);
+
+    // check the deployment state again
+    deployment = await getDeployment(client, contextName, deploymentIdOrHost);
   }
 
   const {
@@ -138,11 +164,11 @@ export default async function main(client: Client) {
 
   const { builds } =
     deployment.version === 2
-      ? await client.fetch<{ builds: Build[] }>(`/v1/deployments/${id}/builds`)
+      ? await client.fetch<{ builds: Build[] }>(`/v11/deployments/${id}/builds`)
       : { builds: [] };
 
   log(
-    `Fetched deployment ${chalk.bold(url)} in ${chalk.bold(
+    `Fetched deployment "${chalk.bold(url)}" in ${chalk.bold(
       contextName
     )} ${elapsed(Date.now() - depFetchStart)}`
   );
@@ -163,7 +189,7 @@ export default async function main(client: Client) {
   }
   print('\n\n');
 
-  if (aliases.length > 0) {
+  if (aliases !== undefined && aliases.length > 0) {
     print(chalk.bold('  Aliases\n\n'));
     let aliasList = '';
     for (const alias of aliases) {
@@ -202,8 +228,6 @@ function stateString(s: Deployment['readyState']) {
   switch (s) {
     case 'INITIALIZING':
     case 'BUILDING':
-    case 'DEPLOYING':
-    case 'ANALYZING':
       return chalk.yellow(CIRCLE) + sTitle;
     case 'ERROR':
       return chalk.red(CIRCLE) + sTitle;

@@ -25,7 +25,11 @@ export function cloneEnv(...envs: (Env | undefined)[]): Env {
       // however we lose this proxied value when we destructure and
       // thus we must explicitly copy it, but we must also remove the
       // `Path` property since we can't have both a `PATH` and `Path`
-      obj.PATH = obj.Path;
+
+      if (obj.Path !== undefined) {
+        obj.PATH = obj.Path;
+      }
+
       delete obj.Path;
     }
 

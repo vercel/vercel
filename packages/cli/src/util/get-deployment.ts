@@ -1,27 +1,53 @@
-import { stringify } from 'querystring';
-import { Deployment } from '@vercel/client';
-import Client from './client';
+import type Client from './client';
+import {
+  DeploymentNotFound,
+  DeploymentPermissionDenied,
+  InvalidDeploymentId,
+  isAPIError,
+} from './errors-ts';
+import type { Deployment } from '@vercel-internals/types';
+import mapCertError from './certs/map-cert-error';
+import toHost from './to-host';
 
-export async function getDeployment(
+/**
+ * Retrieves a deployment by id or URL.
+ *
+ * @param client - The Vercel CLI client instance.
+ * @param contextName - The scope context/team name.
+ * @param hostOrId - A deployment host or id.
+ * @returns The deployment information.
+ */
+export default async function getDeployment(
   client: Client,
+  contextName: string,
   hostOrId: string
 ): Promise<Deployment> {
-  let url = `/v13/deployments`;
-
   if (hostOrId.includes('.')) {
-    let host = hostOrId.replace(/^https:\/\//i, '');
-
-    if (host.slice(-1) === '/') {
-      host = host.slice(0, -1);
-    }
-
-    url += `/get?${stringify({
-      url: host,
-    })}`;
-  } else {
-    url += `/${encodeURIComponent(hostOrId)}`;
+    hostOrId = toHost(hostOrId);
   }
 
-  const deployment = await client.fetch<Deployment>(url);
-  return deployment;
+  try {
+    return await client.fetch<Deployment>(
+      `/v13/deployments/${encodeURIComponent(hostOrId)}`
+    );
+  } catch (err: unknown) {
+    if (isAPIError(err)) {
+      if (err.status === 404) {
+        throw new DeploymentNotFound({ id: hostOrId, context: contextName });
+      }
+      if (err.status === 403) {
+        throw new DeploymentPermissionDenied(hostOrId, contextName);
+      }
+      if (err.status === 400 && err.message.includes('`id`')) {
+        throw new InvalidDeploymentId(hostOrId);
+      }
+
+      const certError = mapCertError(err);
+      if (certError) {
+        throw certError;
+      }
+    }
+
+    throw err;
+  }
 }

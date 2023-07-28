@@ -1,7 +1,7 @@
 import Client from '../client';
 import getUser from '../get-user';
 import getTeams from '../teams/get-teams';
-import { User, Team, Org } from '../../types';
+import { User, Team, Org } from '@vercel-internals/types';
 
 type Choice = { name: string; value: Org };
 

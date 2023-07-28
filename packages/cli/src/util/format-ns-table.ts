@@ -22,19 +22,23 @@ export default function formatNSTable(
       sortedCurrent[i] || chalk.gray('-'),
       sortedIntended[i] === sortedCurrent[i]
         ? chalk.green(chars.tick)
-        : chalk.red(chars.cross)
+        : chalk.red(chars.cross),
     ]);
   }
 
   return table(
     [
-      [chalk.gray('Intended Nameservers'), chalk.gray('Current Nameservers'), ''],
-      ...rows
+      [
+        chalk.gray('Intended Nameservers'),
+        chalk.gray('Current Nameservers'),
+        '',
+      ],
+      ...rows,
     ],
     {
       align: ['l', 'l', 'l', 'l'],
       hsep: ' '.repeat(4),
-      stringLength: strlen
+      stringLength: strlen,
     }
   ).replace(/^(.*)/gm, `${extraSpace}$1`);
 }

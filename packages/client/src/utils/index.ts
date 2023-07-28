@@ -1,4 +1,4 @@
-import { DeploymentFile } from './hashes';
+import { FilesMap } from './hashes';
 import { FetchOptions } from '@zeit/fetch';
 import { nodeFetch, zeitFetch } from './fetch';
 import { join, sep, relative } from 'path';
@@ -256,15 +256,15 @@ export const fetch = async (
 
 export interface PreparedFile {
   file: string;
-  sha: string;
-  size: number;
+  sha?: string;
+  size?: number;
   mode: number;
 }
 
 const isWin = process.platform.includes('win');
 
 export const prepareFiles = (
-  files: Map<string, DeploymentFile>,
+  files: FilesMap,
   clientOptions: VercelClientOptions
 ): PreparedFile[] => {
   const preparedFiles: PreparedFile[] = [];
@@ -286,9 +286,9 @@ export const prepareFiles = (
 
       preparedFiles.push({
         file: isWin ? fileName.replace(/\\/g, '/') : fileName,
-        size: file.data.byteLength || file.data.length,
+        size: file.data?.byteLength || file.data?.length,
         mode: file.mode,
-        sha,
+        sha: sha || undefined,
       });
     }
   }

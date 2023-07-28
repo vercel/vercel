@@ -19,5 +19,8 @@
   "dependencies": {
     "camel-case": "^4.1.2",
     "sirv-cli": "^0.4.4"
+  },
+  "engines": {
+    "node": "16.x"
   }
 }

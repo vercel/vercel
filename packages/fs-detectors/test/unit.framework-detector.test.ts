@@ -1,131 +1,7 @@
-import path from 'path';
 import frameworkList from '@vercel/frameworks';
 import workspaceManagers from '../src/workspaces/workspace-managers';
-import { detectFramework, DetectorFilesystem } from '../src';
-import { DetectorFilesystemStat } from '../src/detectors/filesystem';
-
-const posixPath = path.posix;
-
-class VirtualFilesystem extends DetectorFilesystem {
-  private files: Map<string, Buffer>;
-  private cwd: string;
-
-  constructor(files: { [key: string]: string | Buffer }, cwd = '') {
-    super();
-    this.files = new Map();
-    this.cwd = cwd;
-    Object.entries(files).map(([key, value]) => {
-      const buffer = typeof value === 'string' ? Buffer.from(value) : value;
-      this.files.set(key, buffer);
-    });
-  }
-
-  private _normalizePath(rawPath: string): string {
-    return posixPath.normalize(rawPath);
-  }
-
-  async _hasPath(name: string): Promise<boolean> {
-    const basePath = this._normalizePath(posixPath.join(this.cwd, name));
-    for (const file of this.files.keys()) {
-      if (file.startsWith(basePath)) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  async _isFile(name: string): Promise<boolean> {
-    const basePath = this._normalizePath(posixPath.join(this.cwd, name));
-    return this.files.has(basePath);
-  }
-
-  async _readFile(name: string): Promise<Buffer> {
-    const basePath = this._normalizePath(posixPath.join(this.cwd, name));
-    const file = this.files.get(basePath);
-
-    if (file === undefined) {
-      throw new Error('File does not exist');
-    }
-
-    if (typeof file === 'string') {
-      return Buffer.from(file);
-    }
-
-    return file;
-  }
-
-  /**
-   * An example of how to implement readdir for a virtual filesystem.
-   */
-  async _readdir(name = '/'): Promise<DetectorFilesystemStat[]> {
-    return (
-      [...this.files.keys()]
-        .map(filepath => {
-          const basePath = this._normalizePath(
-            posixPath.join(this.cwd, name === '/' ? '' : name)
-          );
-          const fileDirectoryName = posixPath.dirname(filepath);
-
-          if (fileDirectoryName === basePath) {
-            return {
-              name: posixPath.basename(filepath),
-              path: filepath.replace(
-                this.cwd === '' ? this.cwd : `${this.cwd}/`,
-                ''
-              ),
-              type: 'file',
-            };
-          }
-
-          if (
-            (basePath === '.' && fileDirectoryName !== '.') ||
-            fileDirectoryName.startsWith(basePath)
-          ) {
-            let subDirectoryName = fileDirectoryName.replace(
-              basePath === '.' ? '' : `${basePath}/`,
-              ''
-            );
-
-            if (subDirectoryName.includes('/')) {
-              subDirectoryName = subDirectoryName.split('/')[0];
-            }
-
-            return {
-              name: subDirectoryName,
-              path:
-                name === '/'
-                  ? subDirectoryName
-                  : this._normalizePath(posixPath.join(name, subDirectoryName)),
-              type: 'dir',
-            };
-          }
-
-          return null;
-        })
-        // remove nulls
-        .filter((stat): stat is DetectorFilesystemStat => stat !== null)
-        // remove duplicates
-        .filter(
-          (stat, index, self) =>
-            index ===
-            self.findIndex(s => s.name === stat.name && s.path === stat.path)
-        )
-    );
-  }
-
-  /**
-   * An example of how to implement chdir for a virtual filesystem.
-   */
-  _chdir(name: string): DetectorFilesystem {
-    const basePath = this._normalizePath(posixPath.join(this.cwd, name));
-    const files = Object.fromEntries(
-      [...this.files.keys()].map(key => [key, this.files.get(key) ?? ''])
-    );
-
-    return new VirtualFilesystem(files, basePath);
-  }
-}
+import { detectFramework, detectFrameworks } from '../src';
+import VirtualFilesystem from './virtual-file-system';
 
 describe('DetectorFilesystem', () => {
   it('should return the directory contents relative to the cwd', async () => {
@@ -238,12 +114,12 @@ describe('DetectorFilesystem', () => {
     expect(await packagesFs.isFile('app2')).toBe(false);
     expect(await packagesFs.isFile('app1/package.json')).toBe(true);
     expect(await packagesFs.isFile('app2/package.json')).toBe(true);
-    expect(
-      await (await packagesFs.readFile('app1/package.json')).toString()
-    ).toEqual(nextPackageJson);
-    expect(
-      await (await packagesFs.readFile('app2/package.json')).toString()
-    ).toEqual(gatsbyPackageJson);
+    expect((await packagesFs.readFile('app1/package.json')).toString()).toEqual(
+      nextPackageJson
+    );
+    expect((await packagesFs.readFile('app2/package.json')).toString()).toEqual(
+      gatsbyPackageJson
+    );
 
     expect(await detectFramework({ fs: packagesFs, frameworkList })).toBe(null);
 
@@ -267,158 +143,294 @@ describe('DetectorFilesystem', () => {
       { name: 'package.json', path: 'package.json', type: 'file' },
     ]);
 
-    expect(
-      await (await gatsbyAppFs.readFile('package.json')).toString()
-    ).toEqual(gatsbyPackageJson);
+    expect((await gatsbyAppFs.readFile('package.json')).toString()).toEqual(
+      gatsbyPackageJson
+    );
 
     expect(await detectFramework({ fs: gatsbyAppFs, frameworkList })).toBe(
       'gatsby'
     );
   });
+});
 
-  describe('#detectFramework', () => {
-    it('Do not detect anything', async () => {
-      const fs = new VirtualFilesystem({
-        'README.md': '# hi',
-        'api/cheese.js': 'export default (req, res) => res.end("cheese");',
-      });
-
-      expect(await detectFramework({ fs, frameworkList })).toBe(null);
+describe('detectFramework()', () => {
+  it('Do not detect anything', async () => {
+    const fs = new VirtualFilesystem({
+      'README.md': '# hi',
+      'api/cheese.js': 'export default (req, res) => res.end("cheese");',
     });
 
-    it('Detect nx', async () => {
-      const fs = new VirtualFilesystem({
-        'workspace.json': JSON.stringify({
-          projects: { 'app-one': 'apps/app-one' },
-        }),
-      });
+    expect(await detectFramework({ fs, frameworkList })).toBe(null);
+  });
 
-      expect(
-        await detectFramework({ fs, frameworkList: workspaceManagers })
-      ).toBe('nx');
+  it('Detect nx', async () => {
+    const fs = new VirtualFilesystem({
+      'workspace.json': JSON.stringify({
+        projects: { 'app-one': 'apps/app-one' },
+      }),
     });
 
-    it('Do not detect anything', async () => {
-      const fs = new VirtualFilesystem({
-        'workspace.json': JSON.stringify({ projects: {} }),
-      });
+    expect(
+      await detectFramework({ fs, frameworkList: workspaceManagers })
+    ).toBe('nx');
+  });
 
-      expect(
-        await detectFramework({ fs, frameworkList: workspaceManagers })
-      ).toBe(null);
+  it('Do not detect anything', async () => {
+    const fs = new VirtualFilesystem({
+      'workspace.json': JSON.stringify({ projects: {} }),
     });
 
-    it('Detect Next.js', async () => {
-      const fs = new VirtualFilesystem({
-        'package.json': JSON.stringify({
-          dependencies: {
-            next: '9.0.0',
-          },
-        }),
-      });
+    expect(
+      await detectFramework({ fs, frameworkList: workspaceManagers })
+    ).toBe(null);
+  });
 
-      expect(await detectFramework({ fs, frameworkList })).toBe('nextjs');
+  it('Detect Next.js', async () => {
+    const fs = new VirtualFilesystem({
+      'package.json': JSON.stringify({
+        dependencies: {
+          next: '9.0.0',
+        },
+      }),
     });
 
-    it('Detect frameworks based on ascending order in framework list', async () => {
-      const fs = new VirtualFilesystem({
-        'package.json': JSON.stringify({
-          dependencies: {
-            next: '9.0.0',
-            gatsby: '4.18.0',
-          },
-        }),
-      });
+    expect(await detectFramework({ fs, frameworkList })).toBe('nextjs');
+  });
 
-      expect(await detectFramework({ fs, frameworkList })).toBe('nextjs');
+  it('Detect frameworks based on ascending order in framework list', async () => {
+    const fs = new VirtualFilesystem({
+      'package.json': JSON.stringify({
+        dependencies: {
+          next: '9.0.0',
+          gatsby: '4.18.0',
+        },
+      }),
     });
 
-    it('Detect Nuxt.js', async () => {
-      const fs = new VirtualFilesystem({
-        'package.json': JSON.stringify({
-          dependencies: {
-            nuxt: '1.0.0',
-          },
-        }),
-      });
+    expect(await detectFramework({ fs, frameworkList })).toBe('nextjs');
+  });
 
-      expect(await detectFramework({ fs, frameworkList })).toBe('nuxtjs');
+  it('Detect Nuxt.js', async () => {
+    const fs = new VirtualFilesystem({
+      'package.json': JSON.stringify({
+        dependencies: {
+          nuxt: '1.0.0',
+        },
+      }),
     });
 
-    it('Detect Gatsby', async () => {
-      const fs = new VirtualFilesystem({
-        'package.json': JSON.stringify({
-          dependencies: {
-            gatsby: '1.0.0',
-          },
-        }),
-      });
+    expect(await detectFramework({ fs, frameworkList })).toBe('nuxtjs');
+  });
 
-      expect(await detectFramework({ fs, frameworkList })).toBe('gatsby');
+  it('Detect Nuxt.js Edge', async () => {
+    const fs = new VirtualFilesystem({
+      'package.json': JSON.stringify({
+        dependencies: {
+          'nuxt-edge': '1.0.0',
+        },
+      }),
     });
 
-    it('Detect Hugo #1', async () => {
-      const fs = new VirtualFilesystem({
-        'config.yaml': 'baseURL: http://example.org/',
-        'content/post.md': '# hello world',
-      });
+    expect(await detectFramework({ fs, frameworkList })).toBe('nuxtjs');
+  });
 
-      expect(await detectFramework({ fs, frameworkList })).toBe('hugo');
+  it('Detect Nuxt.js 3', async () => {
+    const fs = new VirtualFilesystem({
+      'package.json': JSON.stringify({
+        dependencies: {
+          nuxt3: '1.0.0',
+        },
+      }),
     });
 
-    it('Detect Hugo #2', async () => {
-      const fs = new VirtualFilesystem({
-        'config.json': '{ "baseURL": "http://example.org/" }',
-        'content/post.md': '# hello world',
-      });
+    expect(await detectFramework({ fs, frameworkList })).toBe('nuxtjs');
+  });
 
-      expect(await detectFramework({ fs, frameworkList })).toBe('hugo');
+  it('Detect Gatsby', async () => {
+    const fs = new VirtualFilesystem({
+      'package.json': JSON.stringify({
+        dependencies: {
+          gatsby: '1.0.0',
+        },
+      }),
     });
 
-    it('Detect Hugo #3', async () => {
-      const fs = new VirtualFilesystem({
-        'config.toml': 'baseURL = "http://example.org/"',
-        'content/post.md': '# hello world',
-      });
+    expect(await detectFramework({ fs, frameworkList })).toBe('gatsby');
+  });
 
-      expect(await detectFramework({ fs, frameworkList })).toBe('hugo');
+  it('Detect Hugo #1', async () => {
+    const fs = new VirtualFilesystem({
+      'config.yaml': 'baseURL: http://example.org/',
+      'content/post.md': '# hello world',
     });
 
-    it('Detect Jekyll', async () => {
-      const fs = new VirtualFilesystem({
-        '_config.yml': 'config',
-      });
+    expect(await detectFramework({ fs, frameworkList })).toBe('hugo');
+  });
 
-      expect(await detectFramework({ fs, frameworkList })).toBe('jekyll');
+  it('Detect Hugo #2', async () => {
+    const fs = new VirtualFilesystem({
+      'config.json': '{ "baseURL": "http://example.org/" }',
+      'content/post.md': '# hello world',
     });
 
-    it('Detect Middleman', async () => {
-      const fs = new VirtualFilesystem({
-        'config.rb': 'config',
-      });
+    expect(await detectFramework({ fs, frameworkList })).toBe('hugo');
+  });
 
-      expect(await detectFramework({ fs, frameworkList })).toBe('middleman');
+  it('Detect Hugo #3', async () => {
+    const fs = new VirtualFilesystem({
+      'config.toml': 'baseURL = "http://example.org/"',
+      'content/post.md': '# hello world',
     });
 
-    it('Detect Scully', async () => {
-      const fs = new VirtualFilesystem({
-        'package.json': JSON.stringify({
-          dependencies: {
-            '@angular/cli': 'latest',
-            '@scullyio/init': 'latest',
-          },
-        }),
-      });
+    expect(await detectFramework({ fs, frameworkList })).toBe('hugo');
+  });
 
-      expect(await detectFramework({ fs, frameworkList })).toBe('scully');
+  it('Detect Jekyll', async () => {
+    const fs = new VirtualFilesystem({
+      '_config.yml': 'config',
     });
 
-    it('Detect Zola', async () => {
-      const fs = new VirtualFilesystem({
-        'config.toml': 'base_url = "/"',
-      });
+    expect(await detectFramework({ fs, frameworkList })).toBe('jekyll');
+  });
 
-      expect(await detectFramework({ fs, frameworkList })).toBe('zola');
+  it('Detect Middleman', async () => {
+    const fs = new VirtualFilesystem({
+      'config.rb': 'config',
     });
+
+    expect(await detectFramework({ fs, frameworkList })).toBe('middleman');
+  });
+
+  it('Detect Scully', async () => {
+    const fs = new VirtualFilesystem({
+      'package.json': JSON.stringify({
+        dependencies: {
+          '@angular/cli': 'latest',
+          '@scullyio/init': 'latest',
+        },
+      }),
+    });
+
+    expect(await detectFramework({ fs, frameworkList })).toBe('scully');
+  });
+
+  it('Detect Zola', async () => {
+    const fs = new VirtualFilesystem({
+      'config.toml': 'base_url = "/"',
+    });
+
+    expect(await detectFramework({ fs, frameworkList })).toBe('zola');
+  });
+
+  it('Detect Blitz.js (Legacy)', async () => {
+    const fs = new VirtualFilesystem({
+      'blitz.config.js': '// some config',
+    });
+
+    expect(await detectFramework({ fs, frameworkList })).toBe('blitzjs');
+  });
+
+  it('Detect Ember via `ember-source`', async () => {
+    const fs = new VirtualFilesystem({
+      'package.json': JSON.stringify({
+        dependencies: {
+          'ember-source': 'latest',
+        },
+      }),
+    });
+
+    expect(await detectFramework({ fs, frameworkList })).toBe('ember');
+  });
+
+  it('Detect Ember via `ember-cli`', async () => {
+    const fs = new VirtualFilesystem({
+      'package.json': JSON.stringify({
+        dependencies: {
+          'ember-cli': 'latest',
+        },
+      }),
+    });
+
+    expect(await detectFramework({ fs, frameworkList })).toBe('ember');
+  });
+
+  it('Detect Brunch via `brunch`', async () => {
+    const fs = new VirtualFilesystem({
+      'package.json': JSON.stringify({
+        dependencies: {
+          brunch: 'latest',
+        },
+      }),
+    });
+
+    expect(await detectFramework({ fs, frameworkList })).toBe('brunch');
+  });
+
+  it('Detect Brunch via `brunch-config.js`', async () => {
+    const fs = new VirtualFilesystem({
+      'brunch-config.js': '// some config',
+    });
+
+    expect(await detectFramework({ fs, frameworkList })).toBe('brunch');
+  });
+
+  it('Detect Hydrogen via `hydrogen.config.js`', async () => {
+    const fs = new VirtualFilesystem({
+      'hydrogen.config.js': '// some config',
+    });
+
+    expect(await detectFramework({ fs, frameworkList })).toBe('hydrogen');
+  });
+
+  it('Detect Hydrogen via `@shopify/hydrogen`', async () => {
+    const fs = new VirtualFilesystem({
+      'package.json': JSON.stringify({
+        dependencies: {
+          '@shopify/hydrogen': 'latest',
+        },
+      }),
+    });
+
+    expect(await detectFramework({ fs, frameworkList })).toBe('hydrogen');
+  });
+
+  it('Detect Storybook via `storybook`', async () => {
+    const fs = new VirtualFilesystem({
+      'package.json': JSON.stringify({
+        dependencies: {
+          storybook: 'latest',
+        },
+      }),
+    });
+
+    expect(await detectFramework({ fs, frameworkList })).toBe('storybook');
+  });
+});
+
+describe('detectFrameworks()', () => {
+  it('Return empty array when there are no matches', async () => {
+    const fs = new VirtualFilesystem({
+      'package.json': JSON.stringify({
+        dependencies: {},
+      }),
+    });
+
+    expect(await detectFrameworks({ fs, frameworkList })).toEqual([]);
+  });
+
+  it('Detect `nextjs` and `storybook`', async () => {
+    const fs = new VirtualFilesystem({
+      'package.json': JSON.stringify({
+        dependencies: {
+          next: 'latest',
+          storybook: 'latest',
+        },
+      }),
+    });
+
+    const slugs = (await detectFrameworks({ fs, frameworkList })).map(
+      f => f.slug
+    );
+    expect(slugs).toEqual(['nextjs', 'storybook']);
   });
 });

@@ -113,6 +113,9 @@ export const routesSchema = {
           check: {
             type: 'boolean',
           },
+          isInternal: {
+            type: 'boolean',
+          },
           status: {
             type: 'integer',
             minimum: 100,
@@ -155,6 +158,12 @@ export const routesSchema = {
           },
           middleware: { type: 'number' },
           middlewarePath: { type: 'string' },
+          middlewareRawSrc: {
+            type: 'array',
+            items: {
+              type: 'string',
+            },
+          },
           has: hasSchema,
           missing: hasSchema,
         },

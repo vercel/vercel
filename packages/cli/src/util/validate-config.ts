@@ -21,6 +21,9 @@ const imagesSchema = {
   additionalProperties: false,
   required: ['sizes'],
   properties: {
+    contentDispositionType: {
+      enum: ['inline', 'attachment'],
+    },
     contentSecurityPolicy: {
       type: 'string',
       minLength: 1,
@@ -93,6 +96,29 @@ const imagesSchema = {
   },
 };
 
+const cronsSchema = {
+  type: 'array',
+  minItems: 0,
+  items: {
+    type: 'object',
+    additionalProperties: false,
+    required: ['path', 'schedule'],
+    properties: {
+      path: {
+        type: 'string',
+        minLength: 1,
+        maxLength: 512,
+        pattern: '^/.*',
+      },
+      schedule: {
+        type: 'string',
+        minLength: 9,
+        maxLength: 256,
+      },
+    },
+  },
+};
+
 const vercelConfigSchema = {
   type: 'object',
   // These are not all possibilities because `vc dev`
@@ -108,6 +134,7 @@ const vercelConfigSchema = {
     trailingSlash: trailingSlashSchema,
     functions: functionsSchema,
     images: imagesSchema,
+    crons: cronsSchema,
   },
 };
 

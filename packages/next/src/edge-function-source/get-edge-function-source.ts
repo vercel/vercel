@@ -6,9 +6,9 @@ import { join } from 'path';
 import { EDGE_FUNCTION_SIZE_LIMIT } from './constants';
 import zlib from 'zlib';
 import { promisify } from 'util';
-import bytes from 'pretty-bytes';
+import { prettyBytes } from '../utils';
 
-// @ts-expect-error this is a prebuilt file, based on `../../scripts/build-edge-function-template.js`
+// @ts-ignore this is a prebuilt file, based on `../../scripts/build-edge-function-template.js`
 import template from '../../dist/___get-nextjs-edge-function.js';
 
 const gzip = promisify<zlib.InputType, Buffer>(zlib.gzip);
@@ -44,7 +44,9 @@ export async function getNextjsEdgeFunctionSource(
    * We validate at this point because we want to verify against user code.
    * It should not count the Worker wrapper nor the Next.js wrapper.
    */
-  const wasmFiles = (wasm ?? []).map(({ filePath }) => join(outputDir, filePath));
+  const wasmFiles = (wasm ?? []).map(({ filePath }) =>
+    join(outputDir, filePath)
+  );
   await validateSize(text, wasmFiles);
 
   // Wrap to fake module.exports
@@ -83,9 +85,9 @@ async function validateSize(script: string, wasmFiles: string[]) {
   const gzipped = await gzip(content);
   if (gzipped.length > EDGE_FUNCTION_SIZE_LIMIT) {
     throw new Error(
-      `Exceeds maximum edge function size: ${bytes(
+      `Exceeds maximum edge function size: ${prettyBytes(
         gzipped.length
-      )} / ${bytes(EDGE_FUNCTION_SIZE_LIMIT)}`
+      )} / ${prettyBytes(EDGE_FUNCTION_SIZE_LIMIT)}`
     );
   }
 }

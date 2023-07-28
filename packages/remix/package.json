@@ -1,7 +1,7 @@
 {
-  "name": "@vercel/remix",
-  "version": "1.0.35",
-  "license": "MIT",
+  "name": "@vercel/remix-builder",
+  "version": "1.8.18",
+  "license": "Apache-2.0",
   "main": "./dist/index.js",
   "homepage": "https://vercel.com/docs",
   "repository": {
@@ -11,21 +11,26 @@
   },
   "scripts": {
     "build": "node build.js",
-    "test-integration-once": "yarn test test/test.js",
     "test": "jest --env node --verbose --bail --runInBand",
-    "test-unit": "yarn test test/build.test.ts"
+    "test-unit": "pnpm test test/unit.*test.*",
+    "test-e2e": "pnpm test test/integration.test.ts"
   },
   "files": [
     "dist",
-    "default-server.js"
+    "defaults"
   ],
   "dependencies": {
-    "@vercel/nft": "0.22.1"
+    "@remix-run/dev": "npm:@vercel/remix-run-dev@1.19.1",
+    "@vercel/build-utils": "6.8.2",
+    "@vercel/nft": "0.22.5",
+    "@vercel/static-config": "2.0.17",
+    "path-to-regexp": "6.2.1",
+    "semver": "7.3.8",
+    "ts-morph": "12.0.0"
   },
   "devDependencies": {
     "@types/jest": "27.5.1",
     "@types/node": "14.18.33",
-    "@vercel/build-utils": "5.5.7",
-    "typescript": "4.6.4"
+    "@types/semver": "7.3.13"
   }
 }

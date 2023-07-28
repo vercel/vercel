@@ -94,7 +94,6 @@ export async function detectBuilders(
   redirectRoutes: Route[] | null;
   rewriteRoutes: Route[] | null;
   errorRoutes: Route[] | null;
-  limitedRoutes: LimitedRoutes | null;
 }> {
   const errors: ErrorResponse[] = [];
   const warnings: ErrorResponse[] = [];
@@ -113,7 +112,6 @@ export async function detectBuilders(
       redirectRoutes: null,
       rewriteRoutes: null,
       errorRoutes: null,
-      limitedRoutes: null,
     };
   }
 
@@ -132,12 +130,17 @@ export async function detectBuilders(
 
   const { projectSettings = {} } = options;
   const { buildCommand, outputDirectory, framework } = projectSettings;
-  const ignoreRuntimes = new Set(
-    slugToFramework.get(framework || '')?.ignoreRuntimes
-  );
+  const frameworkConfig = slugToFramework.get(framework || '');
+  const ignoreRuntimes = new Set(frameworkConfig?.ignoreRuntimes);
   const withTag = options.tag ? `@${options.tag}` : '';
   const apiMatches = getApiMatches()
-    .filter(b => !ignoreRuntimes.has(b.use))
+    .filter(
+      b =>
+        // Root-level middleware is enabled, unless `disableRootMiddleware: true`
+        (b.config?.middleware && !frameworkConfig?.disableRootMiddleware) ||
+        // "api" dir runtimes are enabled, unless opted-out via `ignoreRuntimes`
+        !ignoreRuntimes.has(b.use)
+    )
     .map(b => {
       b.use = `${b.use}${withTag}`;
       return b;
@@ -179,7 +182,6 @@ export async function detectBuilders(
           redirectRoutes: null,
           rewriteRoutes: null,
           errorRoutes: null,
-          limitedRoutes: null,
         };
       }
 
@@ -258,7 +260,6 @@ export async function detectBuilders(
         defaultRoutes: null,
         rewriteRoutes: null,
         errorRoutes: null,
-        limitedRoutes: null,
       };
     }
 
@@ -301,7 +302,6 @@ export async function detectBuilders(
       defaultRoutes: null,
       rewriteRoutes: null,
       errorRoutes: null,
-      limitedRoutes: null,
     };
   }
 
@@ -339,7 +339,7 @@ export async function detectBuilders(
       warnings.push({
         code: 'conflicting_files',
         message:
-          'When using Next.js, it is recommended to place Node.js Serverless Functions inside of the `pages/api` (provided by Next.js) directory instead of `api` (provided by Vercel).',
+          'When using Next.js, it is recommended to place JavaScript Functions inside of the `pages/api` (provided by Next.js) directory instead of `api` (provided by Vercel). Other languages (Python, Go, etc) should still go in the `api` directory.',
         link: 'https://nextjs.org/docs/api-routes/introduction',
         action: 'Learn More',
       });
@@ -347,7 +347,6 @@ export async function detectBuilders(
   }
 
   const routesResult = getRouteResult(
-    pkg,
     apiRoutes,
     dynamicRoutes,
     usedOutputDirectory,
@@ -364,7 +363,6 @@ export async function detectBuilders(
     defaultRoutes: routesResult.defaultRoutes,
     rewriteRoutes: routesResult.rewriteRoutes,
     errorRoutes: routesResult.errorRoutes,
-    limitedRoutes: routesResult.limitedRoutes,
   };
 }
 
@@ -455,14 +453,16 @@ function getFunction(fileName: string, { functions = {} }: Options) {
     : { fnPattern: null, func: null };
 }
 
-function getApiMatches() {
+function getApiMatches(): Builder[] {
   const config = { zeroConfig: true };
 
   return [
-    { src: 'middleware.[jt]s', use: `@vercel/node`, config },
-    { src: 'api/**/*.js', use: `@vercel/node`, config },
-    { src: 'api/**/*.mjs', use: `@vercel/node`, config },
-    { src: 'api/**/*.ts', use: `@vercel/node`, config },
+    {
+      src: 'middleware.[jt]s',
+      use: `@vercel/node`,
+      config: { ...config, middleware: true },
+    },
+    { src: 'api/**/*.+(js|mjs|ts|tsx)', use: `@vercel/node`, config },
     { src: 'api/**/!(*_test).go', use: `@vercel/go`, config },
     { src: 'api/**/*.py', use: `@vercel/python`, config },
     { src: 'api/**/*.rb', use: `@vercel/ruby`, config },
@@ -512,7 +512,8 @@ function detectFrontBuilder(
 
   if (
     pkg &&
-    (framework === undefined || createdAt < Date.parse('2020-03-01'))
+    (framework === undefined ||
+      (framework !== 'storybook' && createdAt < Date.parse('2020-03-01')))
   ) {
     const deps: PackageJson['dependencies'] = {
       ...pkg.dependencies,
@@ -611,12 +612,11 @@ function validateFunctions({ functions = {} }: Options) {
 
     if (
       func.memory !== undefined &&
-      (func.memory < 128 || func.memory > 3008 || func.memory % 64 !== 0)
+      (func.memory < 128 || func.memory > 3008)
     ) {
       return {
         code: 'invalid_function_memory',
-        message:
-          'Functions must have a memory value between 128 and 3008 in steps of 64.',
+        message: 'Functions must have a memory value between 128 and 3008',
       };
     }
 
@@ -677,7 +677,12 @@ function checkUnusedFunctions(
   // Next.js can use functions only for `src/pages` or `pages`
   if (frontendBuilder && isOfficialRuntime('next', frontendBuilder.use)) {
     for (const fnKey of unusedFunctions.values()) {
-      if (fnKey.startsWith('pages/') || fnKey.startsWith('src/pages')) {
+      if (
+        fnKey.startsWith('pages/') ||
+        fnKey.startsWith('src/pages') ||
+        fnKey.startsWith('app/') ||
+        fnKey.startsWith('src/app/')
+      ) {
         unusedFunctions.delete(fnKey);
       } else {
         return {
@@ -969,14 +974,7 @@ function createRouteFromPath(
   return { route, isDynamic };
 }
 
-interface LimitedRoutes {
-  defaultRoutes: Route[];
-  redirectRoutes: Route[];
-  rewriteRoutes: Route[];
-}
-
 function getRouteResult(
-  pkg: PackageJson | undefined | null,
   apiRoutes: RouteWithSrc[],
   dynamicRoutes: RouteWithSrc[],
   outputDirectory: string,
@@ -988,18 +986,11 @@ function getRouteResult(
   redirectRoutes: Route[];
   rewriteRoutes: Route[];
   errorRoutes: Route[];
-  limitedRoutes: LimitedRoutes;
 } {
-  const deps = Object.assign({}, pkg?.dependencies, pkg?.devDependencies);
   const defaultRoutes: Route[] = [];
   const redirectRoutes: Route[] = [];
   const rewriteRoutes: Route[] = [];
   const errorRoutes: Route[] = [];
-  const limitedRoutes: LimitedRoutes = {
-    defaultRoutes: [],
-    redirectRoutes: [],
-    rewriteRoutes: [],
-  };
   const framework = frontendBuilder?.config?.framework || '';
   const isNextjs =
     framework === 'nextjs' || isOfficialRuntime('next', frontendBuilder?.use);
@@ -1012,36 +1003,8 @@ function getRouteResult(
       // return a copy of routes.
       // We should exclud errorRoutes and
       const extSet = detectApiExtensions(apiBuilders);
-      const withTag = options.tag ? `@${options.tag}` : '';
-      const extSetLimited = detectApiExtensions(
-        apiBuilders.filter(b => {
-          if (
-            b.use === `@vercel/python${withTag}` &&
-            !('vercel-plugin-python' in deps)
-          ) {
-            return false;
-          }
-          if (
-            b.use === `@vercel/go${withTag}` &&
-            !('vercel-plugin-go' in deps)
-          ) {
-            return false;
-          }
-          if (
-            b.use === `@vercel/ruby${withTag}` &&
-            !('vercel-plugin-ruby' in deps)
-          ) {
-            return false;
-          }
-          return true;
-        })
-      );
-
       if (extSet.size > 0) {
         const extGroup = `(?:\\.(?:${Array.from(extSet)
-          .map(ext => ext.slice(1))
-          .join('|')}))`;
-        const extGroupLimited = `(?:\\.(?:${Array.from(extSetLimited)
           .map(ext => ext.slice(1))
           .join('|')}))`;
 
@@ -1059,20 +1022,6 @@ function getRouteResult(
             },
             status: 308,
           });
-
-          limitedRoutes.redirectRoutes.push({
-            src: `^/(api(?:.+)?)/index${extGroupLimited}?/?$`,
-            headers: { Location: options.trailingSlash ? '/$1/' : '/$1' },
-            status: 308,
-          });
-
-          limitedRoutes.redirectRoutes.push({
-            src: `^/api/(.+)${extGroupLimited}/?$`,
-            headers: {
-              Location: options.trailingSlash ? '/api/$1/' : '/api/$1',
-            },
-            status: 308,
-          });
         } else {
           defaultRoutes.push({ handle: 'miss' });
           defaultRoutes.push({
@@ -1080,20 +1029,15 @@ function getRouteResult(
             dest: '/api/$1',
             check: true,
           });
-
-          limitedRoutes.defaultRoutes.push({ handle: 'miss' });
-          limitedRoutes.defaultRoutes.push({
-            src: `^/api/(.+)${extGroupLimited}$`,
-            dest: '/api/$1',
-            check: true,
-          });
         }
       }
 
       rewriteRoutes.push(...dynamicRoutes);
-      limitedRoutes.rewriteRoutes.push(...dynamicRoutes);
 
-      if (typeof ignoreRuntimes === 'undefined') {
+      const hasApiBuild = apiBuilders.find(builder => {
+        return builder.src?.startsWith('api/');
+      });
+      if (typeof ignoreRuntimes === 'undefined' && hasApiBuild) {
         // This route is only necessary to hide the directory listing
         // to avoid enumerating serverless function names.
         // But it causes issues in `vc dev` for frameworks that handle
@@ -1142,7 +1086,6 @@ function getRouteResult(
     redirectRoutes,
     rewriteRoutes,
     errorRoutes,
-    limitedRoutes,
   };
 }
 

@@ -33,11 +33,15 @@ const help = () => {
     'DIR'
   )}    Path to the global ${'`.vercel`'} directory
     -d, --debug                    Debug mode [off]
+    --no-color                     No color mode [off]
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
     'TOKEN'
   )}        Login token
     -S, --scope                    Set a custom scope
     -N, --next                     Show next page of results
+    --limit=${chalk.bold.underline(
+      'VALUE'
+    )}                  Number of results to return per page (default: 20, max: 100)
 
   ${chalk.dim('Examples:')}
 
@@ -100,7 +104,11 @@ export default async function main(client: Client) {
   let argv;
 
   try {
-    argv = getArgs(client.argv.slice(2), { '--next': Number, '-N': '--next' });
+    argv = getArgs(client.argv.slice(2), {
+      '--next': Number,
+      '-N': '--next',
+      '--limit': Number,
+    });
   } catch (error) {
     handleError(error);
     return 1;

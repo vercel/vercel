@@ -355,6 +355,8 @@ export interface BuilderV3 {
 
 type ImageFormat = 'image/avif' | 'image/webp';
 
+type ImageContentDispositionType = 'inline' | 'attachment';
+
 export type RemotePattern = {
   /**
    * Must be `http` or `https`.
@@ -390,6 +392,7 @@ export interface Images {
   formats?: ImageFormat[];
   dangerouslyAllowSVG?: boolean;
   contentSecurityPolicy?: string;
+  contentDispositionType?: ImageContentDispositionType;
 }
 
 /**
@@ -410,6 +413,17 @@ export interface BuildResultBuildOutput {
   buildOutputPath: string;
 }
 
+export interface Cron {
+  path: string;
+  schedule: string;
+}
+
+/** The framework which created the function */
+export interface FunctionFramework {
+  slug: string;
+  version?: string;
+}
+
 /**
  * When a Builder implements `version: 2`, the `build()` function is expected
  * to return this type.
@@ -425,6 +439,9 @@ export interface BuildResultV2Typical {
     domain: string;
     value: string;
   }>;
+  framework?: {
+    version: string;
+  };
 }
 
 export type BuildResultV2 = BuildResultV2Typical | BuildResultBuildOutput;

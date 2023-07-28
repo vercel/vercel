@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import { DNSRecordData } from '../../types';
+import type { DNSRecordData } from '@vercel-internals/types';
 import textInput from '../input/text';
 import promptBool from '../input/prompt-bool';
 import Client from '../client';

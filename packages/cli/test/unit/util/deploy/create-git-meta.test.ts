@@ -1,6 +1,7 @@
 import { join } from 'path';
 import fs from 'fs-extra';
 import os from 'os';
+import createLineIterator from 'line-async-iterator';
 import { getWriteableDirectory } from '@vercel/build-utils';
 import {
   createGitMeta,
@@ -10,10 +11,11 @@ import {
 } from '../../../../src/util/create-git-meta';
 import { client } from '../../../mocks/client';
 import { parseRepoUrl } from '../../../../src/util/git/connect-git-provider';
-import { readOutputStream } from '../../../helpers/read-output-stream';
 import { useUser } from '../../../mocks/user';
 import { defaultProject, useProject } from '../../../mocks/project';
-import { Project } from '../../../../src/types';
+import type { Project } from '@vercel-internals/types';
+
+jest.setTimeout(10 * 1000);
 
 const fixture = (name: string) =>
   join(__dirname, '../../../fixtures/unit/create-git-meta', name);
@@ -65,44 +67,58 @@ describe('parseRepoUrl', () => {
     const repoInfo = parseRepoUrl('https://github.com/borked');
     expect(repoInfo).toBeNull();
   });
+  it('should parse url with `.com` in the repo name', () => {
+    const repoInfo = parseRepoUrl('https://github.com/vercel/vercel.com.git');
+    expect(repoInfo).toBeTruthy();
+    expect(repoInfo?.provider).toEqual('github');
+    expect(repoInfo?.org).toEqual('vercel');
+    expect(repoInfo?.repo).toEqual('vercel.com');
+  });
   it('should parse url with a period in the repo name', () => {
     const repoInfo = parseRepoUrl('https://github.com/vercel/next.js');
-    expect(repoInfo).toBeDefined();
+    expect(repoInfo).toBeTruthy();
     expect(repoInfo?.provider).toEqual('github');
     expect(repoInfo?.org).toEqual('vercel');
     expect(repoInfo?.repo).toEqual('next.js');
   });
   it('should parse url that ends with .git', () => {
     const repoInfo = parseRepoUrl('https://github.com/vercel/next.js.git');
-    expect(repoInfo).toBeDefined();
+    expect(repoInfo).toBeTruthy();
     expect(repoInfo?.provider).toEqual('github');
     expect(repoInfo?.org).toEqual('vercel');
     expect(repoInfo?.repo).toEqual('next.js');
   });
   it('should parse github https url', () => {
     const repoInfo = parseRepoUrl('https://github.com/vercel/vercel.git');
-    expect(repoInfo).toBeDefined();
+    expect(repoInfo).toBeTruthy();
     expect(repoInfo?.provider).toEqual('github');
     expect(repoInfo?.org).toEqual('vercel');
     expect(repoInfo?.repo).toEqual('vercel');
   });
   it('should parse github https url without the .git suffix', () => {
     const repoInfo = parseRepoUrl('https://github.com/vercel/vercel');
-    expect(repoInfo).toBeDefined();
+    expect(repoInfo).toBeTruthy();
     expect(repoInfo?.provider).toEqual('github');
     expect(repoInfo?.org).toEqual('vercel');
     expect(repoInfo?.repo).toEqual('vercel');
   });
   it('should parse github git url', () => {
     const repoInfo = parseRepoUrl('git://github.com/vercel/vercel.git');
-    expect(repoInfo).toBeDefined();
+    expect(repoInfo).toBeTruthy();
+    expect(repoInfo?.provider).toEqual('github');
+    expect(repoInfo?.org).toEqual('vercel');
+    expect(repoInfo?.repo).toEqual('vercel');
+  });
+  it('should parse github git url with trailing slash', () => {
+    const repoInfo = parseRepoUrl('git://github.com/vercel/vercel.git/');
+    expect(repoInfo).toBeTruthy();
     expect(repoInfo?.provider).toEqual('github');
     expect(repoInfo?.org).toEqual('vercel');
     expect(repoInfo?.repo).toEqual('vercel');
   });
   it('should parse github ssh url', () => {
     const repoInfo = parseRepoUrl('git@github.com:vercel/vercel.git');
-    expect(repoInfo).toBeDefined();
+    expect(repoInfo).toBeTruthy();
     expect(repoInfo?.provider).toEqual('github');
     expect(repoInfo?.org).toEqual('vercel');
     expect(repoInfo?.repo).toEqual('vercel');
@@ -112,7 +128,7 @@ describe('parseRepoUrl', () => {
     const repoInfo = parseRepoUrl(
       'https://gitlab.com/gitlab-examples/knative-kotlin-app.git'
     );
-    expect(repoInfo).toBeDefined();
+    expect(repoInfo).toBeTruthy();
     expect(repoInfo?.provider).toEqual('gitlab');
     expect(repoInfo?.org).toEqual('gitlab-examples');
     expect(repoInfo?.repo).toEqual('knative-kotlin-app');
@@ -121,7 +137,7 @@ describe('parseRepoUrl', () => {
     const repoInfo = parseRepoUrl(
       'git@gitlab.com:gitlab-examples/knative-kotlin-app.git'
     );
-    expect(repoInfo).toBeDefined();
+    expect(repoInfo).toBeTruthy();
     expect(repoInfo?.provider).toEqual('gitlab');
     expect(repoInfo?.org).toEqual('gitlab-examples');
     expect(repoInfo?.repo).toEqual('knative-kotlin-app');
@@ -131,7 +147,7 @@ describe('parseRepoUrl', () => {
     const repoInfo = parseRepoUrl(
       'https://bitbucket.org/atlassianlabs/maven-project-example.git'
     );
-    expect(repoInfo).toBeDefined();
+    expect(repoInfo).toBeTruthy();
     expect(repoInfo?.provider).toEqual('bitbucket');
     expect(repoInfo?.org).toEqual('atlassianlabs');
     expect(repoInfo?.repo).toEqual('maven-project-example');
@@ -140,7 +156,7 @@ describe('parseRepoUrl', () => {
     const repoInfo = parseRepoUrl(
       'git@bitbucket.org:atlassianlabs/maven-project-example.git'
     );
-    expect(repoInfo).toBeDefined();
+    expect(repoInfo).toBeTruthy();
     expect(repoInfo?.provider).toEqual('bitbucket');
     expect(repoInfo?.org).toEqual('atlassianlabs');
     expect(repoInfo?.repo).toEqual('maven-project-example');
@@ -165,7 +181,14 @@ describe('createGitMeta', () => {
     try {
       await fs.rename(join(directory, 'git'), join(directory, '.git'));
       const data = await createGitMeta(directory, client.output);
-      expect(data).toBeUndefined();
+      expect(data).toEqual({
+        commitAuthorName: 'Matthew Stanciu',
+        commitMessage: 'hi',
+        commitRef: 'master',
+        commitSha: '0499dbfa2f58cd8b3b3ce5b2c02a24200862ac97',
+        dirty: false,
+        remoteUrl: undefined,
+      });
     } finally {
       await fs.rename(join(directory, '.git'), join(directory, 'git'));
     }
@@ -174,7 +197,7 @@ describe('createGitMeta', () => {
     const directory = fixture('dirty');
     try {
       await fs.rename(join(directory, 'git'), join(directory, '.git'));
-      const dirty = await isDirty(directory, client.output);
+      const dirty = await isDirty(directory);
       expect(dirty).toBeTruthy();
     } finally {
       await fs.rename(join(directory, '.git'), join(directory, 'git'));
@@ -184,7 +207,7 @@ describe('createGitMeta', () => {
     const directory = fixture('not-dirty');
     try {
       await fs.rename(join(directory, 'git'), join(directory, '.git'));
-      const dirty = await isDirty(directory, client.output);
+      const dirty = await isDirty(directory);
       expect(dirty).toBeFalsy();
     } finally {
       await fs.rename(join(directory, '.git'), join(directory, 'git'));
@@ -270,24 +293,22 @@ describe('createGitMeta', () => {
       client.output.debugEnabled = true;
       const data = await createGitMeta(tmpDir, client.output);
 
-      const output = await readOutputStream(client, 2);
+      const lines = createLineIterator(client.stderr);
 
-      expect(output).toContain(
+      let line = await lines.next();
+      expect(line.value).toContain(
         `Failed to get last commit. The directory is likely not a Git repo, there are no latest commits, or it is corrupted.`
       );
-      expect(output).toContain(
-        `Failed to determine if Git repo has been modified:`
-      );
+
       expect(data).toBeUndefined();
     } finally {
       await fs.remove(tmpDir);
     }
   });
   it('uses the repo url for a connected project', async () => {
-    const originalCwd = process.cwd();
     const directory = fixture('connected-repo');
+    client.cwd = directory;
     try {
-      process.chdir(directory);
       await fs.rename(join(directory, 'git'), join(directory, '.git'));
 
       useUser();
@@ -321,7 +342,6 @@ describe('createGitMeta', () => {
       });
     } finally {
       await fs.rename(join(directory, '.git'), join(directory, 'git'));
-      process.chdir(originalCwd);
     }
   });
 });

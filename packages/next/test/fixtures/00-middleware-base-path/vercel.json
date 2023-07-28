@@ -8,6 +8,15 @@
   ],
   "probes": [
     {
+      "path": "/docs/_next/data/testing-build-id/index.json",
+      "status": 200,
+      "headers": {
+        "x-nextjs-data": 1
+      },
+      "mustContain": "\"pageProps\":{",
+      "mustNotContain": "<html"
+    },
+    {
       "path": "/docs/_next/data/testing-build-id/dynamic/static.json",
       "status": 200,
       "headers": {
@@ -44,7 +53,7 @@
         "x-nextjs-data": 1
       },
       "mustContain": "site\":\"subdomain-1\"",
-      "mustNotContain": "<html>"
+      "mustNotContain": "<html"
     },
     {
       "path": "/docs/redirect-me",
@@ -113,7 +122,7 @@
       "fetchOptions": {
         "redirect": "manual"
       },
-      "mustNotContain": "<html>",
+      "mustNotContain": "<html",
       "mustContain": "\"site\":\"subdomain-1\""
     }
   ]

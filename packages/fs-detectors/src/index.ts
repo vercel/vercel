@@ -5,7 +5,12 @@ export {
   detectApiExtensions,
 } from './detect-builders';
 export { detectFileSystemAPI } from './detect-file-system-api';
-export { detectFramework } from './detect-framework';
+export {
+  detectFramework,
+  detectFrameworks,
+  detectFrameworkRecord,
+  detectFrameworkVersion,
+} from './detect-framework';
 export { getProjectPaths } from './get-project-paths';
 export { DetectorFilesystem } from './detectors/filesystem';
 export { LocalFileSystemDetector } from './detectors/local-file-system-detector';
@@ -23,3 +28,4 @@ export {
 export { monorepoManagers } from './monorepos/monorepo-managers';
 export { isOfficialRuntime, isStaticRuntime } from './is-official-runtime';
 export { packageManagers } from './package-managers/package-managers';
+export * from './monorepos/get-monorepo-default-settings';

@@ -1,5 +1,6 @@
 {
-  "name": "a",
+  "private": true,
+  "name": "frontend-a30",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -10,6 +11,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "debug": "^4.3.2"
+    "debug": "^4.3.2",
+    "hexo": "*"
   }
 }

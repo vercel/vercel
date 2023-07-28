@@ -73,7 +73,7 @@ def webrick_handler(httpMethod, path, body, headers)
   {
     :statusCode => res.code.to_i,
     :headers => res_headers,
-    :body => res.body,
+    :body => res.body.nil? ? "" : res.body,
   }
 end
 

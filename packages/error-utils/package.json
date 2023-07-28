@@ -1,6 +1,6 @@
 {
   "name": "@vercel/error-utils",
-  "version": "1.0.3",
+  "version": "1.0.10",
   "description": "A collection of error utilities for vercel/vercel",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -12,14 +12,12 @@
   "scripts": {
     "build": "tsc",
     "test": "jest --coverage --env node --verbose",
-    "test-unit": "yarn test"
+    "test-unit": "pnpm test"
   },
-  "license": "MIT",
+  "license": "Apache-2.0",
   "devDependencies": {
     "@types/jest": "29.2.1",
     "@types/node": "14.18.33",
-    "jest": "29.2.2",
-    "ts-jest": "29.0.3",
-    "typescript": "^4.8.4"
+    "typescript": "4.9.5"
   }
 }

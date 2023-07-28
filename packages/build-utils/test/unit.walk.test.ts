@@ -2,7 +2,7 @@ import { walkParentDirs } from '../src';
 import { strict } from 'assert';
 import { join } from 'path';
 import { promises } from 'fs';
-const { deepEqual, notDeepEqual, fail } = strict;
+const { notDeepEqual, fail } = strict;
 const { readFile } = promises;
 const fixture = (name: string) => join(__dirname, 'walk', name);
 const filename = 'file.txt';
@@ -10,7 +10,7 @@ const filename = 'file.txt';
 async function assertContent(target: string | null, contents: string) {
   notDeepEqual(target, null);
   const actual = await readFile(target!, 'utf8');
-  deepEqual(actual.trim(), contents.trim());
+  strict.deepEqual(actual.trim(), contents.trim());
 }
 
 describe('Test `walkParentDirs`', () => {
@@ -21,7 +21,7 @@ describe('Test `walkParentDirs`', () => {
       await walkParentDirs({ base, start, filename });
       fail('Expected error');
     } catch (error) {
-      deepEqual(
+      strict.deepEqual(
         (error as Error).message,
         'Expected "base" to be absolute path'
       );
@@ -35,7 +35,7 @@ describe('Test `walkParentDirs`', () => {
       await walkParentDirs({ base, start, filename });
       fail('Expected error');
     } catch (error) {
-      deepEqual(
+      strict.deepEqual(
         (error as Error).message,
         'Expected "start" to be absolute path'
       );
@@ -67,21 +67,21 @@ describe('Test `walkParentDirs`', () => {
     const base = fixture('not-found');
     const start = base;
     const target = await walkParentDirs({ base, start, filename });
-    deepEqual(target, null);
+    strict.deepEqual(target, null);
   });
 
   it('should not find nested two', async () => {
     const base = fixture('not-found');
     const start = join(base, 'two');
     const target = await walkParentDirs({ base, start, filename });
-    deepEqual(target, null);
+    strict.deepEqual(target, null);
   });
 
   it('should not find nested three', async () => {
     const base = fixture('not-found');
     const start = join(base, 'two', 'three');
     const target = await walkParentDirs({ base, start, filename });
-    deepEqual(target, null);
+    strict.deepEqual(target, null);
   });
 
   it('should find only one', async () => {

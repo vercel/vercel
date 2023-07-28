@@ -1,0 +1,13 @@
+{
+  "name": "test-root-dir",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "dependencies": {
+    "@next/font": "13.1.2",
+    "next": "13.1.2",
+    "react": "18.2.0",
+    "react-dom": "18.2.0"
+  },
+  "ignoreNextjsUpdates": true
+}

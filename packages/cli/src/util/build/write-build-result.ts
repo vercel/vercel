@@ -28,9 +28,10 @@ import {
   normalizePath,
 } from '@vercel/build-utils';
 import pipe from 'promisepipe';
+import { merge } from './merge';
 import { unzip } from './unzip';
 import { VERCEL_DIR } from '../projects/link';
-import { VercelConfig } from '@vercel/client';
+import { fileNameSymbol, VercelConfig } from '@vercel/client';
 
 const { normalize } = posix;
 export const OUTPUT_DIR = join(VERCEL_DIR, 'output');
@@ -56,6 +57,7 @@ export async function writeBuildResult(
     return writeBuildResultV2(
       outputDir,
       buildResult as BuildResultV2,
+      build,
       vercelConfig
     );
   } else if (version === 3) {
@@ -107,6 +109,7 @@ function stripDuplicateSlashes(path: string): string {
 async function writeBuildResultV2(
   outputDir: string,
   buildResult: BuildResultV2,
+  build: Builder,
   vercelConfig: VercelConfig | null
 ) {
   if ('buildOutputPath' in buildResult) {
@@ -114,13 +117,32 @@ async function writeBuildResultV2(
     return;
   }
 
+  // Some very old `@now` scoped Builders return `output` at the top-level.
+  // These Builders are no longer supported.
+  if (!buildResult.output) {
+    const configFile = vercelConfig?.[fileNameSymbol];
+    const updateMessage = build.use.startsWith('@now/')
+      ? ` Please update from "@now" to "@vercel" in your \`${configFile}\` file.`
+      : '';
+    throw new Error(
+      `The build result from "${build.use}" is missing the "output" property.${updateMessage}`
+    );
+  }
+
   const lambdas = new Map<Lambda, string>();
   const overrides: Record<string, PathOverride> = {};
+
   for (const [path, output] of Object.entries(buildResult.output)) {
     const normalizedPath = stripDuplicateSlashes(path);
     if (isLambda(output)) {
       await writeLambda(outputDir, output, normalizedPath, undefined, lambdas);
     } else if (isPrerender(output)) {
+      if (!output.lambda) {
+        throw new Error(
+          `Invalid Prerender with no "lambda" property: ${normalizedPath}`
+        );
+      }
+
       await writeLambda(
         outputDir,
         output.lambda,
@@ -135,11 +157,26 @@ async function writeBuildResultV2(
         const ext = getFileExtension(fallback);
         const fallbackName = `${normalizedPath}.prerender-fallback${ext}`;
         const fallbackPath = join(outputDir, 'functions', fallbackName);
-        const stream = fallback.toStream();
-        await pipe(
-          stream,
-          fs.createWriteStream(fallbackPath, { mode: fallback.mode })
-        );
+
+        // if file is already on the disk we can hard link
+        // instead of creating a new copy
+        let usedHardLink = false;
+        if ('fsPath' in fallback) {
+          try {
+            await fs.link(fallback.fsPath, fallbackPath);
+            usedHardLink = true;
+          } catch (_) {
+            // if link fails we continue attempting to copy
+          }
+        }
+
+        if (!usedHardLink) {
+          const stream = fallback.toStream();
+          await pipe(
+            stream,
+            fs.createWriteStream(fallbackPath, { mode: fallback.mode })
+          );
+        }
         fallback = new FileFsRef({
           ...output.fallback,
           fsPath: basename(fallbackName),
@@ -267,6 +304,14 @@ async function writeStaticFile(
   const dest = join(outputDir, 'static', fsPath);
   await fs.mkdirp(dirname(dest));
 
+  // if already on disk hard link instead of copying
+  if ('fsPath' in file) {
+    try {
+      return await fs.link(file.fsPath, dest);
+    } catch (_) {
+      // if link fails we continue attempting to copy
+    }
+  }
   await downloadFile(file, dest);
 }
 
@@ -406,7 +451,7 @@ async function mergeBuilderOutput(
     // so no need to do anything
     return;
   }
-  await fs.copy(buildResult.buildOutputPath, outputDir);
+  await merge(buildResult.buildOutputPath, outputDir);
 }
 
 /**

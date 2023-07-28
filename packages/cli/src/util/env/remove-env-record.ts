@@ -1,6 +1,6 @@
 import { Output } from '../output';
 import Client from '../client';
-import { ProjectEnvVariable } from '../../types';
+import type { ProjectEnvVariable } from '@vercel-internals/types';
 
 export default async function removeEnvRecord(
   output: Output,

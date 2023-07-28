@@ -5,18 +5,17 @@ import { useTeams } from '../../mocks/team';
 import { defaultProject, useProject } from '../../mocks/project';
 import { client } from '../../mocks/client';
 import git from '../../../src/commands/git';
-import { Project } from '../../../src/types';
+import type { Project } from '@vercel-internals/types';
 
 describe('git', () => {
   describe('connect', () => {
-    const originalCwd = process.cwd();
     const fixture = (name: string) =>
       join(__dirname, '../../fixtures/unit/commands/git/connect', name);
 
     it('connects an unlinked project', async () => {
       const cwd = fixture('unlinked');
+      client.cwd = cwd;
       try {
-        process.chdir(cwd);
         await fs.rename(join(cwd, 'git'), join(cwd, '.git'));
         useUser();
         useTeams('team_dummy');
@@ -62,34 +61,84 @@ describe('git', () => {
         });
       } finally {
         await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
-        process.chdir(originalCwd);
       }
     });
-    it('should fail when there is no git config', async () => {
-      const cwd = fixture('no-git-config');
+    it('connects an unlinked project with a remote url', async () => {
+      const cwd = fixture('unlinked');
+      client.cwd = cwd;
       try {
-        process.chdir(cwd);
+        await fs.rename(join(cwd, 'git'), join(cwd, '.git'));
         useUser();
         useTeams('team_dummy');
         useProject({
           ...defaultProject,
-          id: 'no-git-config',
-          name: 'no-git-config',
+          id: 'unlinked',
+          name: 'unlinked',
         });
-        client.setArgv('git', 'connect', '--yes');
-        const exitCode = await git(client);
-        expect(exitCode).toEqual(1);
+        client.setArgv('git', 'connect', 'https://github.com/user2/repo2');
+        const gitPromise = git(client);
+
+        await expect(client.stderr).toOutput('Set up');
+        client.stdin.write('y\n');
+
         await expect(client.stderr).toOutput(
-          `Error: No local Git repository found. Run \`git clone <url>\` to clone a remote Git repository first.\n`
+          'Which scope should contain your project?'
         );
+        client.stdin.write('\r');
+
+        await expect(client.stderr).toOutput('Found project');
+        client.stdin.write('y\n');
+
+        await expect(client.stderr).toOutput(
+          `Do you still want to connect https://github.com/user2/repo2?`
+        );
+        client.stdin.write('y\n');
+
+        await expect(client.stderr).toOutput(
+          `Connecting Git remote: https://github.com/user2/repo2`
+        );
+
+        const exitCode = await gitPromise;
+        await expect(client.stderr).toOutput(
+          'Connected GitHub repository user2/repo2!'
+        );
+
+        expect(exitCode).toEqual(0);
+
+        const project: Project = await client.fetch(`/v8/projects/unlinked`);
+        expect(project.link).toMatchObject({
+          type: 'github',
+          repo: 'user2/repo2',
+          repoId: 1010,
+          gitCredentialId: '',
+          sourceless: true,
+          createdAt: 1656109539791,
+          updatedAt: 1656109539791,
+        });
       } finally {
-        process.chdir(originalCwd);
+        await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
       }
+    });
+    it('should fail when there is no git config', async () => {
+      client.cwd = fixture('no-git-config');
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'no-git-config',
+        name: 'no-git-config',
+      });
+      client.setArgv('git', 'connect', '--yes');
+      const exitCode = await git(client);
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput(
+        `Error: No local Git repository found. Run \`git clone <url>\` to clone a remote Git repository first.\n`
+      );
     });
     it('should fail when there is no remote url', async () => {
       const cwd = fixture('no-remote-url');
+      client.cwd = cwd;
       try {
-        process.chdir(cwd);
         await fs.rename(join(cwd, 'git'), join(cwd, '.git'));
         useUser();
         useTeams('team_dummy');
@@ -106,13 +155,12 @@ describe('git', () => {
         );
       } finally {
         await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
-        process.chdir(originalCwd);
       }
     });
     it('should fail when the remote url is bad', async () => {
       const cwd = fixture('bad-remote-url');
+      client.cwd = cwd;
       try {
-        process.chdir(cwd);
         await fs.rename(join(cwd, 'git'), join(cwd, '.git'));
         useUser();
         useTeams('team_dummy');
@@ -133,13 +181,12 @@ describe('git', () => {
         );
       } finally {
         await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
-        process.chdir(originalCwd);
       }
     });
     it('should connect a repo to a project that is not already connected', async () => {
       const cwd = fixture('new-connection');
+      client.cwd = cwd;
       try {
-        process.chdir(cwd);
         await fs.rename(join(cwd, 'git'), join(cwd, '.git'));
         useUser();
         useTeams('team_dummy');
@@ -175,13 +222,12 @@ describe('git', () => {
         });
       } finally {
         await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
-        process.chdir(originalCwd);
       }
     });
     it('should replace an old connection with a new one', async () => {
       const cwd = fixture('existing-connection');
+      client.cwd = cwd;
       try {
-        process.chdir(cwd);
         await fs.rename(join(cwd, 'git'), join(cwd, '.git'));
         useUser();
         useTeams('team_dummy');
@@ -228,13 +274,12 @@ describe('git', () => {
         });
       } finally {
         await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
-        process.chdir(originalCwd);
       }
     });
     it('should exit when an already-connected repo is connected', async () => {
       const cwd = fixture('new-connection');
+      client.cwd = cwd;
       try {
-        process.chdir(cwd);
         await fs.rename(join(cwd, 'git'), join(cwd, '.git'));
         useUser();
         useTeams('team_dummy');
@@ -267,13 +312,12 @@ describe('git', () => {
         expect(exitCode).toEqual(1);
       } finally {
         await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
-        process.chdir(originalCwd);
       }
     });
     it('should fail when it cannot find the repository', async () => {
       const cwd = fixture('invalid-repo');
+      client.cwd = cwd;
       try {
-        process.chdir(cwd);
         await fs.rename(join(cwd, 'git'), join(cwd, '.git'));
         useUser();
         useTeams('team_dummy');
@@ -297,13 +341,12 @@ describe('git', () => {
         expect(exitCode).toEqual(1);
       } finally {
         await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
-        process.chdir(originalCwd);
       }
     });
     it('should connect the default option of multiple remotes', async () => {
       const cwd = fixture('multiple-remotes');
+      client.cwd = cwd;
       try {
-        process.chdir(cwd);
         await fs.rename(join(cwd, 'git'), join(cwd, '.git'));
         useUser();
         useTeams('team_dummy');
@@ -347,19 +390,17 @@ describe('git', () => {
         });
       } finally {
         await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
-        process.chdir(originalCwd);
       }
     });
   });
   describe('disconnect', () => {
-    const originalCwd = process.cwd();
     const fixture = (name: string) =>
       join(__dirname, '../../fixtures/unit/commands/git/connect', name);
 
     it('should disconnect a repository', async () => {
       const cwd = fixture('new-connection');
+      client.cwd = cwd;
       try {
-        process.chdir(cwd);
         await fs.rename(join(cwd, 'git'), join(cwd, '.git'));
         useUser();
         useTeams('team_dummy');
@@ -396,13 +437,12 @@ describe('git', () => {
         expect(exitCode).toEqual(0);
       } finally {
         await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
-        process.chdir(originalCwd);
       }
     });
     it('should fail if there is no repository to disconnect', async () => {
       const cwd = fixture('new-connection');
+      client.cwd = cwd;
       try {
-        process.chdir(cwd);
         await fs.rename(join(cwd, 'git'), join(cwd, '.git'));
         useUser();
         useTeams('team_dummy');
@@ -423,13 +463,12 @@ describe('git', () => {
         expect(exitCode).toEqual(1);
       } finally {
         await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
-        process.chdir(originalCwd);
       }
     });
     it('should connect a given repository', async () => {
       const cwd = fixture('no-remote-url');
+      client.cwd = cwd;
       try {
-        process.chdir(cwd);
         await fs.rename(join(cwd, 'git'), join(cwd, '.git'));
         useUser();
         useTeams('team_dummy');
@@ -465,13 +504,12 @@ describe('git', () => {
         await expect(gitPromise).resolves.toEqual(0);
       } finally {
         await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
-        process.chdir(originalCwd);
       }
     });
     it('should prompt when it finds a repository', async () => {
       const cwd = fixture('new-connection');
+      client.cwd = cwd;
       try {
-        process.chdir(cwd);
         await fs.rename(join(cwd, 'git'), join(cwd, '.git'));
         useUser();
         useTeams('team_dummy');
@@ -514,13 +552,12 @@ describe('git', () => {
         await expect(gitPromise).resolves.toEqual(0);
       } finally {
         await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
-        process.chdir(originalCwd);
       }
     });
     it('should prompt when it finds multiple remotes', async () => {
       const cwd = fixture('multiple-remotes');
+      client.cwd = cwd;
       try {
-        process.chdir(cwd);
         await fs.rename(join(cwd, 'git'), join(cwd, '.git'));
         useUser();
         useTeams('team_dummy');
@@ -564,13 +601,12 @@ describe('git', () => {
         await expect(gitPromise).resolves.toEqual(0);
       } finally {
         await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
-        process.chdir(originalCwd);
       }
     });
     it('should continue as normal when input matches single git remote', async () => {
       const cwd = fixture('new-connection');
+      client.cwd = cwd;
       try {
-        process.chdir(cwd);
         await fs.rename(join(cwd, 'git'), join(cwd, '.git'));
         useUser();
         useTeams('team_dummy');
@@ -606,7 +642,6 @@ describe('git', () => {
         await expect(gitPromise).resolves.toEqual(0);
       } finally {
         await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
-        process.chdir(originalCwd);
       }
     });
   });

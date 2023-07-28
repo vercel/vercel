@@ -5,6 +5,5 @@
       "src": "index.py",
       "use": "@vercel/python"
     }
-  ],
-  "probes": [{ "path": "/", "mustContain": "django:RANDOMNESS_PLACEHOLDER" }]
+  ]
 }

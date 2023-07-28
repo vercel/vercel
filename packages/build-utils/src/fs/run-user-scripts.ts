@@ -44,21 +44,31 @@ export interface ScanParentDirsResult {
   lockfileVersion?: number;
 }
 
-export interface WalkParentDirsProps {
+export interface TraverseUpDirectoriesProps {
   /**
-   * The highest directory, typically the workPath root of the project.
-   * If this directory is reached and it doesn't contain the file, null is returned.
-   */
-  base: string;
-  /**
-   * The directory to start searching, typically the same directory of the entrypoint.
-   * If this directory doesn't contain the file, the parent is checked, etc.
+   * The directory to start iterating from, typically the same directory of the entrypoint.
    */
   start: string;
+  /**
+   * The highest directory, typically the workPath root of the project.
+   */
+  base?: string;
+}
+
+export interface WalkParentDirsProps
+  extends Required<TraverseUpDirectoriesProps> {
   /**
    * The name of the file to search for, typically `package.json` or `Gemfile`.
    */
   filename: string;
+}
+
+export interface WalkParentDirsMultiProps
+  extends Required<TraverseUpDirectoriesProps> {
+  /**
+   * The name of the file to search for, typically `package.json` or `Gemfile`.
+   */
+  filenames: string[];
 }
 
 export interface SpawnOptionsExtended extends SpawnOptions {
@@ -111,53 +121,6 @@ export function spawnAsync(
   });
 }
 
-export function execAsync(
-  command: string,
-  args: string[],
-  opts: SpawnOptionsExtended = {}
-) {
-  return new Promise<{ stdout: string; stderr: string; code: number }>(
-    (resolve, reject) => {
-      opts.stdio = 'pipe';
-
-      const stdoutList: Buffer[] = [];
-      const stderrList: Buffer[] = [];
-
-      const child = spawn(command, args, opts);
-
-      child.stderr!.on('data', data => {
-        stderrList.push(data);
-      });
-
-      child.stdout!.on('data', data => {
-        stdoutList.push(data);
-      });
-
-      child.on('error', reject);
-      child.on('close', (code, signal) => {
-        if (code === 0 || opts.ignoreNon0Exit) {
-          return resolve({
-            code,
-            stdout: Buffer.concat(stdoutList).toString(),
-            stderr: Buffer.concat(stderrList).toString(),
-          });
-        }
-
-        const cmd = opts.prettyCommand
-          ? `Command "${opts.prettyCommand}"`
-          : 'Command';
-
-        return reject(
-          new NowBuildError({
-            code: `BUILD_UTILS_EXEC_${code || signal}`,
-            message: `${cmd} exited with ${code || signal}`,
-          })
-        );
-      });
-    }
-  );
-}
-
 export function spawnCommand(command: string, options: SpawnOptions = {}) {
   const opts = { ...options, prettyCommand: command };
   if (process.platform === 'win32') {
@@ -178,6 +141,24 @@ export async function execCommand(command: string, options: SpawnOptions = {}) {
   return true;
 }
 
+export function* traverseUpDirectories({
+  start,
+  base,
+}: TraverseUpDirectoriesProps) {
+  let current: string | undefined = path.normalize(start);
+  const normalizedRoot = base ? path.normalize(base) : undefined;
+  while (current) {
+    yield current;
+    if (current === normalizedRoot) break;
+    // Go up one directory
+    const next = path.join(current, '..');
+    current = next === current ? undefined : next;
+  }
+}
+
+/**
+ * @deprecated Use `getNodeBinPaths()` instead.
+ */
 export async function getNodeBinPath({
   cwd,
 }: {
@@ -186,6 +167,15 @@ export async function getNodeBinPath({
   const { lockfilePath } = await scanParentDirs(cwd);
   const dir = path.dirname(lockfilePath || cwd);
   return path.join(dir, 'node_modules', '.bin');
+}
+
+export function getNodeBinPaths({
+  start,
+  base,
+}: TraverseUpDirectoriesProps): string[] {
+  return Array.from(traverseUpDirectories({ start, base })).map(dir =>
+    path.join(dir, 'node_modules/.bin')
+  );
 }
 
 async function chmodPlusX(fsPath: string) {
@@ -246,7 +236,7 @@ export function getSpawnOptions(
 
 export async function getNodeVersion(
   destPath: string,
-  _nodeVersion?: string,
+  nodeVersionFallback = process.env.VERCEL_PROJECT_SETTINGS_NODE_VERSION,
   config: Config = {},
   meta: Meta = {}
 ): Promise<NodeVersion> {
@@ -256,7 +246,7 @@ export async function getNodeVersion(
     return { ...latest, runtime: 'nodejs' };
   }
   const { packageJson } = await scanParentDirs(destPath, true);
-  let { nodeVersion } = config;
+  let nodeVersion = config.nodeVersion || nodeVersionFallback;
   let isAuto = true;
   if (packageJson?.engines?.node) {
     const { node } = packageJson.engines;
@@ -344,21 +334,13 @@ export async function walkParentDirs({
 }: WalkParentDirsProps): Promise<string | null> {
   assert(path.isAbsolute(base), 'Expected "base" to be absolute path');
   assert(path.isAbsolute(start), 'Expected "start" to be absolute path');
-  let parent = '';
 
-  for (let current = start; base.length <= current.length; current = parent) {
-    const fullPath = path.join(current, filename);
+  for (const dir of traverseUpDirectories({ start, base })) {
+    const fullPath = path.join(dir, filename);
 
     // eslint-disable-next-line no-await-in-loop
     if (await fs.pathExists(fullPath)) {
       return fullPath;
-    }
-
-    parent = path.dirname(current);
-
-    if (parent === current) {
-      // Reached root directory of the filesystem
-      break;
     }
   }
 
@@ -369,14 +351,9 @@ async function walkParentDirsMulti({
   base,
   start,
   filenames,
-}: {
-  base: string;
-  start: string;
-  filenames: string[];
-}): Promise<(string | undefined)[]> {
-  let parent = '';
-  for (let current = start; base.length <= current.length; current = parent) {
-    const fullPaths = filenames.map(f => path.join(current, f));
+}: WalkParentDirsMultiProps): Promise<(string | undefined)[]> {
+  for (const dir of traverseUpDirectories({ start, base })) {
+    const fullPaths = filenames.map(f => path.join(dir, f));
     const existResults = await Promise.all(
       fullPaths.map(f => fs.pathExists(f))
     );
@@ -384,13 +361,6 @@ async function walkParentDirsMulti({
 
     if (foundOneOrMore) {
       return fullPaths.map((f, i) => (existResults[i] ? f : undefined));
-    }
-
-    parent = path.dirname(current);
-
-    if (parent === current) {
-      // Reached root directory of the filesystem
-      break;
     }
   }
 
@@ -492,7 +462,7 @@ export async function runNpmInstall(
 
     try {
       await spawnAsync(cliType, commandArgs, opts);
-    } catch (_) {
+    } catch (err: unknown) {
       const potentialErrorPath = path.join(
         process.env.HOME || '/',
         '.npm',
@@ -508,6 +478,8 @@ export async function runNpmInstall(
         );
         commandArgs.push('--legacy-peer-deps');
         await spawnAsync(cliType, commandArgs, opts);
+      } else {
+        throw err;
       }
     }
     debug(`Install complete [${Date.now() - installTime}ms]`);
@@ -532,6 +504,7 @@ export function getEnvForPackageManager({
   const oldPath = env.PATH + '';
   const npm7 = '/node16/bin-npm7';
   const pnpm7 = '/pnpm7/node_modules/.bin';
+  const pnpm8 = '/pnpm8/node_modules/.bin';
   const corepackEnabled = env.ENABLE_EXPERIMENTAL_COREPACK === '1';
   if (cliType === 'npm') {
     if (
@@ -554,7 +527,20 @@ export function getEnvForPackageManager({
     ) {
       // Ensure that pnpm 7 is at the beginning of the `$PATH`
       newEnv.PATH = `${pnpm7}${path.delimiter}${oldPath}`;
-      console.log('Detected `pnpm-lock.yaml` generated by pnpm 7...');
+      console.log(
+        `Detected \`pnpm-lock.yaml\` version ${lockfileVersion} generated by pnpm 7...`
+      );
+    } else if (
+      typeof lockfileVersion === 'number' &&
+      lockfileVersion >= 6 &&
+      !oldPath.includes(pnpm8) &&
+      !corepackEnabled
+    ) {
+      // Ensure that pnpm 8 is at the beginning of the `$PATH`
+      newEnv.PATH = `${pnpm8}${path.delimiter}${oldPath}`;
+      console.log(
+        `Detected \`pnpm-lock.yaml\` version ${lockfileVersion} generated by pnpm 8...`
+      );
     }
   } else {
     // Yarn v2 PnP mode may be activated, so force "node-modules" linker style

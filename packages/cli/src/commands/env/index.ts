@@ -26,12 +26,13 @@ const help = () => {
     ls      [environment] [gitbranch]         List all variables for the specified Environment
     add     [name] [environment] [gitbranch]  Add an Environment Variable (see examples below)
     rm      [name] [environment] [gitbranch]  Remove an Environment Variable (see examples below)
-    pull    [filename]                        Pull all Development Environment Variables from the cloud and write to a file [.env]
+    pull    [filename]                        Pull all Development Environment Variables from the cloud and write to a file [.env.local]
 
   ${chalk.dim('Options:')}
 
     -h, --help                     Output usage information
     --environment                  Set the Environment (development, preview, production) when pulling Environment Variables
+    --git-branch                   Specify the Git branch to pull specific Environment Variables for
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
     'FILE'
   )}   Path to the local ${'`vercel.json`'} file
@@ -39,6 +40,7 @@ const help = () => {
     'DIR'
   )}    Path to the global ${'`.vercel`'} directory
     -d, --debug                    Debug mode [off]
+    --no-color                     No color mode [off]
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
     'TOKEN'
   )}        Login token
@@ -116,6 +118,7 @@ export default async function main(client: Client) {
       '--yes': Boolean,
       '-y': '--yes',
       '--environment': String,
+      '--git-branch': String,
     });
   } catch (error) {
     handleError(error);
@@ -127,10 +130,9 @@ export default async function main(client: Client) {
     return 2;
   }
 
-  const cwd = argv['--cwd'] || process.cwd();
   const subArgs = argv._.slice(1);
   const { subcommand, args } = getSubcommand(subArgs, COMMAND_CONFIG);
-  const { output, config } = client;
+  const { cwd, output, config } = client;
 
   const target = argv['--environment']?.toLowerCase() || 'development';
   if (!isValidEnvTarget(target)) {
@@ -165,6 +167,7 @@ export default async function main(client: Client) {
       case 'pull':
         return pull(
           client,
+          link,
           project,
           target,
           argv,

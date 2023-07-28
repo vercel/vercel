@@ -3,3 +3,33 @@
 # ignore these files with an intentional syntax error
 packages/cli/test/dev/fixtures/edge-function-error/api/edge-error-syntax.js
 packages/cli/test/fixtures/unit/commands/build/node-error/api/typescript.ts
+examples/sveltekit-1
+
+# gatsby-plugin-vercel-analytics
+packages/gatsby-plugin-vercel-analytics
+
+# ignore directories that are not source code
+node_modules
+dist
+pnpm-lock.yaml
+.changeset
+.vscode
+.DS_Store
+.next
+.vercel
+.turbo
+.eslintcache
+.output
+.vercel_build_output
+.vercel
+coverage
+turbo-cache-key.json
+/examples
+/public
+packages/*/dist
+packages/*/node_modules
+packages/**/test/fixtures
+packages/**/test/dev/fixtures
+packages/**/test/build-fixtures
+packages/**/test/cache-fixtures
+packages/cli/src/util/dev/templates/*.ts

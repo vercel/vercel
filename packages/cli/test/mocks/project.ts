@@ -1,43 +1,63 @@
 import { client } from './client';
-import {
-  Project,
+import type {
   ProjectEnvTarget,
-  ProjectEnvType,
+  Project,
   ProjectEnvVariable,
-} from '../../src/types';
+} from '@vercel-internals/types';
 import { formatProvider } from '../../src/util/git/connect-git-provider';
 import { parseEnvironment } from '../../src/commands/pull';
-import { Env } from '@vercel/build-utils/dist';
+import type { Env } from '@vercel/build-utils';
 
-const envs: ProjectEnvVariable[] = [
+export const envs: ProjectEnvVariable[] = [
   {
-    type: ProjectEnvType.Encrypted,
+    type: 'encrypted',
     id: '781dt89g8r2h789g',
     key: 'REDIS_CONNECTION_STRING',
     value: 'redis://abc123@redis.example.com:6379',
-    target: [ProjectEnvTarget.Production, ProjectEnvTarget.Preview],
+    target: ['production', 'preview'],
     gitBranch: undefined,
     configurationId: null,
     updatedAt: 1557241361455,
     createdAt: 1557241361455,
   },
   {
-    type: ProjectEnvType.Encrypted,
+    type: 'encrypted',
+    id: '781dt89g8r2h789g',
+    key: 'BRANCH_ENV_VAR',
+    value: 'env var for a specific branch',
+    target: ['preview'],
+    gitBranch: 'feat/awesome-thing',
+    configurationId: null,
+    updatedAt: 1557241361455,
+    createdAt: 1557241361455,
+  },
+  {
+    type: 'encrypted',
+    id: '781dt89g8r2h789g',
+    key: 'ANOTHER',
+    value: 'one',
+    target: ['preview'],
+    configurationId: null,
+    updatedAt: 1557241361455,
+    createdAt: 1557241361455,
+  },
+  {
+    type: 'encrypted',
     id: 'r124t6frtu25df16',
     key: 'SQL_CONNECTION_STRING',
     value: 'Server=sql.example.com;Database=app;Uid=root;Pwd=P455W0RD;',
-    target: [ProjectEnvTarget.Production],
+    target: ['production'],
     gitBranch: undefined,
     configurationId: null,
     updatedAt: 1557241361445,
     createdAt: 1557241361445,
   },
   {
-    type: ProjectEnvType.Encrypted,
+    type: 'encrypted',
     id: 'a235l6frtu25df32',
     key: 'SPECIAL_FLAG',
     value: '1',
-    target: [ProjectEnvTarget.Development],
+    target: ['development'],
     gitBranch: undefined,
     configurationId: null,
     updatedAt: 1557241361445,
@@ -81,55 +101,34 @@ const systemEnvs = [
   },
 ];
 
-export const defaultProject = {
+export const defaultProject: Project = {
   id: 'foo',
   name: 'cli',
   accountId: 'K4amb7K9dAt5R2vBJWF32bmY',
   createdAt: 1555413045188,
   updatedAt: 1555413045188,
-  env: envs,
-  targets: {
-    production: {
-      alias: ['foobar.com'],
-      aliasAssigned: 1571239348998,
-      createdAt: 1571239348998,
-      createdIn: 'sfo1',
-      deploymentHostname: 'a-project-name-rjtr4pz3f',
-      forced: false,
-      id: 'dpl_89qyp1cskzkLrVicDaZoDbjyHuDJ',
-      meta: {},
-      plan: 'pro',
-      private: true,
-      readyState: 'READY',
-      requestedAt: 1571239348998,
-      target: 'production',
-      teamId: null,
-      type: 'LAMBDAS',
-      url: 'a-project-name-rjtr4pz3f.vercel.app',
-      userId: 'K4amb7K9dAt5R2vBJWF32bmY',
-    },
-  },
   latestDeployments: [
     {
       alias: ['foobar.com'],
       aliasAssigned: 1571239348998,
+      buildingAt: 1571239348998,
       createdAt: 1571239348998,
       createdIn: 'sfo1',
-      deploymentHostname: 'a-project-name-rjtr4pz3f',
+      creator: {
+        uid: 'K4amb7K9dAt5R2vBJWF32bmY',
+      },
       forced: false,
       id: 'dpl_89qyp1cskzkLrVicDaZoDbjyHuDJ',
       meta: {},
       plan: 'pro',
       private: true,
       readyState: 'READY',
-      requestedAt: 1571239348998,
       target: 'production',
-      teamId: null,
       type: undefined,
       url: 'a-project-name-rjtr4pz3f.vercel.app',
-      userId: 'K4amb7K9dAt5R2vBJWF32bmY',
     },
   ],
+  lastAliasRequest: null,
   alias: [
     {
       domain: 'foobar.com',
@@ -202,11 +201,14 @@ export function useUnknownProject() {
   });
 }
 
-export function useProject(project: Partial<Project> = defaultProject) {
-  client.scenario.get(`/v8/projects/${project.name}`, (_req, res) => {
+export function useProject(
+  project: Partial<Project> = defaultProject,
+  projectEnvs: ProjectEnvVariable[] = envs
+) {
+  client.scenario.get(`/:version/projects/${project.name}`, (_req, res) => {
     res.json(project);
   });
-  client.scenario.get(`/v8/projects/${project.id}`, (_req, res) => {
+  client.scenario.get(`/:version/projects/${project.id}`, (_req, res) => {
     res.json(project);
   });
   client.scenario.patch(`/:version/projects/${project.id}`, (req, res) => {
@@ -216,20 +218,22 @@ export function useProject(project: Partial<Project> = defaultProject) {
   client.scenario.get(
     `/v1/env/pull/${project.id}/:target?/:gitBranch?`,
     (req, res) => {
-      const target: ProjectEnvTarget | undefined =
+      const target =
         typeof req.params.target === 'string'
           ? parseEnvironment(req.params.target)
           : undefined;
-      let projectEnvs = envs;
       if (target) {
         projectEnvs = projectEnvs.filter(env => {
-          if (typeof env.target === 'string') {
-            return env.target === target;
-          }
-          if (Array.isArray(env.target)) {
-            return env.target.includes(target);
-          }
-          return false;
+          if (!env.target) return false;
+
+          // Ensure `target` matches
+          const targets = Array.isArray(env.target) ? env.target : [env.target];
+          const matchingTarget = targets.includes(target);
+          if (!matchingTarget) return false;
+
+          // Ensure `gitBranch` matches
+          if (!env.gitBranch) return true;
+          return req.params.gitBranch === env.gitBranch;
         });
       }
       const allEnvs = Object.entries(
@@ -396,7 +400,7 @@ function exposeSystemEnvs(
   }
 
   for (let env of projectEnvs) {
-    if (env.type === ProjectEnvType.System) {
+    if (env.type === 'system') {
       envs[env.key] = getSystemEnvValue(env.value, { vercelUrl });
     } else {
       envs[env.key] = env.value;

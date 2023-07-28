@@ -1,6 +1,6 @@
 import mod from '../increment.wasm?module';
 
-export const config = { runtime: 'experimental-edge' };
+export const config = { runtime: 'edge' };
 
 const init$ = WebAssembly.instantiate(mod);
 

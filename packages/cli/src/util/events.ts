@@ -7,7 +7,8 @@ import jsonlines from 'jsonlines';
 import { eraseLines } from 'ansi-escapes';
 
 import Client from './client';
-import { getDeployment } from './get-deployment';
+import getDeployment from './get-deployment';
+import getScope from './get-scope';
 
 export interface FindOpts {
   direction: 'forward' | 'backward';
@@ -37,6 +38,7 @@ async function printEvents(
   { mode, onEvent, quiet, findOpts }: PrintEventsOptions
 ) {
   const { log, debug } = client.output;
+  const { contextName } = await getScope(client);
 
   // we keep track of how much we log in case we
   // drop the connection and have to start over
@@ -74,7 +76,11 @@ async function printEvents(
             poller = (function startPoller() {
               return setTimeout(async () => {
                 try {
-                  const json = await getDeployment(client, deploymentIdOrURL);
+                  const json = await getDeployment(
+                    client,
+                    contextName,
+                    deploymentIdOrURL
+                  );
                   if (json.readyState === 'READY') {
                     stream.end();
                     finish();

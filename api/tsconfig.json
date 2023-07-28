@@ -12,5 +12,5 @@
     "resolveJsonModule": true,
     "isolatedModules": true
   },
-  "include": ["examples", "frameworks.ts"]
+  "include": ["examples", "frameworks.ts", "_lib"]
 }

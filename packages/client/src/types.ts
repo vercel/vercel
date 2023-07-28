@@ -1,8 +1,10 @@
+import type { Agent } from 'http';
 import type {
   Builder,
   BuilderFunctions,
   Images,
   ProjectSettings,
+  Cron,
 } from '@vercel/build-utils';
 import type { Header, Route, Redirect, Rewrite } from '@vercel/routing-utils';
 
@@ -23,13 +25,14 @@ export interface VercelClientOptions {
   apiUrl?: string;
   force?: boolean;
   prebuilt?: boolean;
-  rootDirectory?: string;
+  rootDirectory?: string | null;
   withCache?: boolean;
   userAgent?: string;
   defaultName?: string;
   isDirectory?: boolean;
   skipAutoDetectionConfirmation?: boolean;
   archive?: ArchiveFormat;
+  agent?: Agent;
 }
 
 /** @deprecated Use VercelClientOptions instead. */
@@ -154,6 +157,7 @@ export interface VercelConfig {
   framework?: string | null;
   outputDirectory?: string | null;
   images?: Images;
+  crons?: Cron[];
 }
 
 export interface GitMetadata {
@@ -162,7 +166,7 @@ export interface GitMetadata {
   commitRef?: string | undefined;
   commitSha?: string | undefined;
   dirty?: boolean | undefined;
-  remoteUrl: string;
+  remoteUrl?: string;
 }
 
 /**
@@ -190,4 +194,5 @@ export interface DeploymentOptions {
   meta?: Dictionary<string>;
   projectSettings?: ProjectSettings;
   gitMetadata?: GitMetadata;
+  autoAssignCustomDomains?: boolean;
 }

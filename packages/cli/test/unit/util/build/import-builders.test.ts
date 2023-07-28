@@ -1,4 +1,3 @@
-import ms from 'ms';
 import { join } from 'path';
 import { remove } from 'fs-extra';
 import { getWriteableDirectory } from '@vercel/build-utils';
@@ -10,7 +9,8 @@ import {
 import vercelNextPkg from '@vercel/next/package.json';
 import vercelNodePkg from '@vercel/node/package.json';
 
-jest.setTimeout(ms('30 seconds'));
+// these tests can take upwards of 190s on macos-latest
+jest.setTimeout(4 * 60 * 1000);
 
 const repoRoot = join(__dirname, '../../../../../..');
 
@@ -105,6 +105,7 @@ describe('importBuilders()', () => {
       await expect(client.stderr).toOutput(
         '> Installing Builder: @vercel/node'
       );
+      await expect(client.stderr).not.toOutput('npm WARN deprecated');
     } finally {
       await remove(cwd);
     }
@@ -146,6 +147,33 @@ describe('importBuilders()', () => {
     }
   });
 
+  it('should install and warn when Builder is deprecated', async () => {
+    if (process.platform === 'win32') {
+      // this test creates symlinks which require admin by default on Windows
+      console.log('Skipping test on Windows');
+      return;
+    }
+
+    const cwd = await getWriteableDirectory();
+    try {
+      const spec = '@now/node';
+      const specs = new Set([spec]);
+      const builders = await importBuilders(specs, cwd, client.output);
+      expect(builders.size).toEqual(1);
+      expect(builders.get(spec)?.pkg.name).toEqual('@now/node');
+      expect(builders.get(spec)?.pkg.version).toEqual('1.8.5');
+      expect(builders.get(spec)?.pkgPath).toEqual(
+        join(cwd, '.vercel/builders/node_modules/@now/node/package.json')
+      );
+      expect(typeof builders.get(spec)?.builder.build).toEqual('function');
+      await expect(client.stderr).toOutput(
+        'npm WARN deprecated @now/node@1.8.5: "@now/node" is deprecated and will stop receiving updates on December 31, 2020. Please use "@vercel/node" instead.'
+      );
+    } finally {
+      await remove(cwd);
+    }
+  });
+
   it('should install and import legacy `@now/build-utils` Builders', async () => {
     if (process.platform === 'win32') {
       // this test creates symlinks which require admin by default on Windows
@@ -177,8 +205,8 @@ describe('importBuilders()', () => {
       const spec = '@vercel/does-not-exist@0.0.1';
       const specs = new Set([spec]);
       await importBuilders(specs, cwd, client.output);
-    } catch (_err) {
-      err = _err;
+    } catch (_err: unknown) {
+      err = _err as Error;
     } finally {
       await remove(cwd);
     }
@@ -213,8 +241,8 @@ describe('resolveBuilders()', () => {
     // The empty Map represents `resolveBuilders()` being invoked after the install step
     try {
       await resolveBuilders(process.cwd(), specs, client.output, new Map());
-    } catch (_err: any) {
-      err = _err;
+    } catch (_err: unknown) {
+      err = _err as Error;
     }
 
     if (!err) {

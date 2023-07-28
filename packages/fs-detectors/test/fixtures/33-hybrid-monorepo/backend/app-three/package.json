@@ -1,5 +1,5 @@
 {
-  "name": "app-three",
+  "name": "app-three33",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -11,5 +11,6 @@
   "license": "ISC",
   "dependencies": {
     "next": "^4.3.2"
-  }
+  },
+  "ignoreNextjsUpdates": true
 }

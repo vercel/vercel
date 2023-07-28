@@ -18,22 +18,25 @@ const { readdir, readFile, unlink } = promises;
 
 export const frameworks = [
   {
-    name: 'Blitz.js',
+    name: 'Blitz.js (Legacy)',
     slug: 'blitzjs',
     demo: 'https://blitz-template.vercel.app',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/blitz.svg',
     tagline: 'Blitz.js: The Fullstack React Framework',
     description:
-      'A brand new Blitz.js app - the result of running `npx blitz new`.',
+      'A brand new Blitz.js app - the result of running `npx blitz@0.45.4 new`.',
     website: 'https://blitzjs.com',
     envPrefix: 'NEXT_PUBLIC_',
     useRuntime: { src: 'package.json', use: '@vercel/next' },
     detectors: {
-      every: [
+      some: [
+        // Intentionally does not detect a package name
+        // https://github.com/vercel/vercel/pull/8432
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"blitz":\\s*".+?"[^}]*}',
+          path: 'blitz.config.js',
+        },
+        {
+          path: 'blitz.config.ts',
         },
       ],
     },
@@ -62,7 +65,7 @@ export const frameworks = [
     darkModeLogo:
       'https://api-frameworks.vercel.sh/framework-logos/next-dark.svg',
     screenshot:
-      'https://assets.vercel.com/image/upload/v1647366075/front/import/nextjs.png',
+      'https://assets.vercel.com/image/upload/v1673027027/front/import/nextjs.png',
     tagline:
       'Next.js makes you productive with React instantly — whether you want to build static or dynamic sites.',
     description: 'A Next.js app and a Serverless Function API.',
@@ -73,9 +76,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"next":\\s*".+?"[^}]*}',
+          matchPackage: 'next',
         },
       ],
     },
@@ -118,9 +119,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"gatsby":\\s*".+?"[^}]*}',
+          matchPackage: 'gatsby',
         },
       ],
     },
@@ -200,12 +199,15 @@ export const frameworks = [
     description: 'A new Remix app — the result of running `npx create-remix`.',
     website: 'https://remix.run',
     sort: 6,
-    useRuntime: { src: 'package.json', use: '@vercel/remix' },
+    useRuntime: { src: 'package.json', use: '@vercel/remix-builder' },
     ignoreRuntimes: ['@vercel/node'],
     detectors: {
-      every: [
+      some: [
         {
           path: 'remix.config.js',
+        },
+        {
+          path: 'remix.config.mjs',
         },
       ],
     },
@@ -243,9 +245,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"astro":\\s*".+?"[^}]*}',
+          matchPackage: 'astro',
         },
       ],
     },
@@ -269,16 +269,14 @@ export const frameworks = [
     getOutputDirName: async () => 'dist',
     defaultRoutes: [
       {
-        src: '^/dist/(.*)$',
+        src: '^/assets/(.*)$',
         headers: { 'cache-control': 'public, max-age=31536000, immutable' },
         continue: true,
       },
       {
-        handle: 'filesystem',
-      },
-      {
-        src: '/(.*)',
-        dest: '/index.html',
+        src: '^/_astro/(.*)$',
+        headers: { 'cache-control': 'public, max-age=31536000, immutable' },
+        continue: true,
       },
     ],
   },
@@ -294,9 +292,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"hexo":\\s*".+?"[^}]*}',
+          matchPackage: 'hexo',
         },
       ],
     },
@@ -331,9 +327,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"@11ty\\/eleventy":\\s*".+?"[^}]*}',
+          matchPackage: '@11ty/eleventy',
         },
       ],
     },
@@ -370,9 +364,7 @@ export const frameworks = [
     detectors: {
       some: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"@docusaurus\\/core":\\s*".+?"[^}]*}',
+          matchPackage: '@docusaurus/core',
         },
       ],
     },
@@ -458,9 +450,7 @@ export const frameworks = [
     detectors: {
       some: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"docusaurus":\\s*".+?"[^}]*}',
+          matchPackage: 'docusaurus',
         },
       ],
     },
@@ -508,10 +498,10 @@ export const frameworks = [
     website: 'https://preactjs.com',
     detectors: {
       every: [
+        // Intentionally does not detect "preact" package because that can be
+        // used to power other frameworks.
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"preact-cli":\\s*".+?"[^}]*}',
+          matchPackage: 'preact-cli',
         },
       ],
     },
@@ -555,14 +545,10 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"solid-js":\\s*".+?"[^}]*}',
+          matchPackage: 'solid-js',
         },
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"solid-start":\\s*".+?"[^}]*}',
+          matchPackage: 'solid-start',
         },
       ],
     },
@@ -595,9 +581,7 @@ export const frameworks = [
     detectors: {
       some: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"@dojo\\/framework":\\s*".+?"[^}]*}',
+          matchPackage: '@dojo/framework',
         },
         {
           path: '.dojorc',
@@ -655,11 +639,12 @@ export const frameworks = [
     description: 'An Ember app, created with the Ember CLI.',
     website: 'https://emberjs.com/',
     detectors: {
-      every: [
+      some: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"ember-cli":\\s*".+?"[^}]*}',
+          matchPackage: 'ember-source',
+        },
+        {
+          matchPackage: 'ember-cli',
         },
       ],
     },
@@ -704,9 +689,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"@vue\\/cli-service":\\s*".+?"[^}]*}',
+          matchPackage: '@vue/cli-service',
         },
       ],
     },
@@ -759,9 +742,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"@scullyio\\/init":\\s*".+?"[^}]*}',
+          matchPackage: '@scullyio/init',
         },
       ],
     },
@@ -796,9 +777,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"@ionic\\/angular":\\s*".+?"[^}]*}',
+          matchPackage: '@ionic/angular',
         },
       ],
     },
@@ -841,9 +820,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"@angular\\/cli":\\s*".+?"[^}]*}',
+          matchPackage: '@angular/cli',
         },
       ],
     },
@@ -901,9 +878,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"polymer-cli":\\s*".+?"[^}]*}',
+          matchPackage: 'polymer-cli',
         },
       ],
     },
@@ -959,14 +934,10 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"svelte":\\s*".+?"[^}]*}',
+          matchPackage: 'svelte',
         },
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"sirv-cli":\\s*".+?"[^}]*}',
+          matchPackage: 'sirv-cli',
         },
       ],
     },
@@ -998,7 +969,8 @@ export const frameworks = [
     ],
   },
   {
-    name: 'SvelteKit',
+    // TODO: fix detected as "sveltekit-1"
+    name: 'SvelteKit (Legacy Beta)',
     slug: 'sveltekit',
     demo: 'https://sveltekit-template.vercel.app',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/svelte.svg',
@@ -1006,15 +978,16 @@ export const frameworks = [
       'https://assets.vercel.com/image/upload/v1647366075/front/import/sveltekit.png',
     tagline:
       'SvelteKit is a framework for building web applications of all sizes.',
-    description: 'A SvelteKit app optimized Edge-first.',
+    description: 'A SvelteKit legacy app optimized Edge-first.',
     website: 'https://kit.svelte.dev',
+    sort: 99,
     envPrefix: 'VITE_',
     detectors: {
       every: [
         {
           path: 'package.json',
           matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"@sveltejs\\/kit":\\s*".+?"[^}]*}',
+            '"(dev)?(d|D)ependencies":\\s*{[^}]*"@sveltejs\\/kit":\\s*"1\\.0\\.0-next\\.(\\d+)"[^}]*}',
         },
       ],
     },
@@ -1037,6 +1010,44 @@ export const frameworks = [
     getOutputDirName: async () => 'public',
   },
   {
+    name: 'SvelteKit',
+    slug: 'sveltekit-1',
+    demo: 'https://sveltekit-1-template.vercel.app',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/svelte.svg',
+    screenshot:
+      'https://assets.vercel.com/image/upload/v1647366075/front/import/sveltekit.png',
+    tagline:
+      'SvelteKit is a framework for building web applications of all sizes.',
+    description: 'A SvelteKit app optimized Edge-first.',
+    website: 'https://kit.svelte.dev',
+    detectors: {
+      every: [
+        {
+          path: 'package.json',
+          matchContent:
+            '"(dev)?(d|D)ependencies":\\s*{[^}]*"@sveltejs\\/kit":\\s*".+?"[^}]*}',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
+      },
+      buildCommand: {
+        placeholder: 'vite build',
+        value: 'vite build',
+      },
+      devCommand: {
+        placeholder: 'vite dev',
+        value: 'vite dev --port $PORT',
+      },
+      outputDirectory: {
+        value: 'public',
+      },
+    },
+    getOutputDirName: async () => 'public',
+  },
+  {
     name: 'Ionic React',
     slug: 'ionic-react',
     demo: 'https://ionic-react-template.vercel.app',
@@ -1048,9 +1059,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"@ionic\\/react":\\s*".+?"[^}]*}',
+          matchPackage: '@ionic/react',
         },
       ],
     },
@@ -1110,14 +1119,10 @@ export const frameworks = [
     detectors: {
       some: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"react-scripts":\\s*".+?"[^}]*}',
+          matchPackage: 'react-scripts',
         },
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"react-dev-utils":\\s*".+?"[^}]*}',
+          matchPackage: 'react-dev-utils',
         },
       ],
     },
@@ -1176,9 +1181,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"gridsome":\\s*".+?"[^}]*}',
+          matchPackage: 'gridsome',
         },
       ],
     },
@@ -1213,9 +1216,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"umi":\\s*".+?"[^}]*}',
+          matchPackage: 'umi',
         },
       ],
     },
@@ -1259,9 +1260,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"sapper":\\s*".+?"[^}]*}',
+          matchPackage: 'sapper',
         },
       ],
     },
@@ -1292,13 +1291,11 @@ export const frameworks = [
     tagline:
       'Saber is a framework for building static sites in Vue.js that supports data from any source.',
     description: 'A Saber site, created with npm init.',
-    website: 'https://saber.land/',
+    website: 'https://saber.egoist.dev',
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"saber":\\s*".+?"[^}]*}',
+          matchPackage: 'saber',
         },
       ],
     },
@@ -1347,9 +1344,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"@stencil\\/core":\\s*".+?"[^}]*}',
+          matchPackage: '@stencil/core',
         },
       ],
     },
@@ -1410,11 +1405,15 @@ export const frameworks = [
     sort: 2,
     envPrefix: 'NUXT_ENV_',
     detectors: {
-      every: [
+      some: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"nuxt3?(-edge)?":\\s*".+?"[^}]*}',
+          matchPackage: 'nuxt',
+        },
+        {
+          matchPackage: 'nuxt3',
+        },
+        {
+          matchPackage: 'nuxt-edge',
         },
       ],
     },
@@ -1470,9 +1469,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"@redwoodjs\\/core":\\s*".+?"[^}]*}',
+          matchPackage: '@redwoodjs/core',
         },
       ],
     },
@@ -1597,7 +1594,10 @@ export const frameworks = [
     description: 'A Brunch app, created with the Brunch CLI.',
     website: 'https://brunch.io/',
     detectors: {
-      every: [
+      some: [
+        {
+          matchPackage: 'brunch',
+        },
         {
           path: 'brunch-config.js',
         },
@@ -1691,6 +1691,48 @@ export const frameworks = [
     defaultVersion: '0.13.0', // Must match the build image
   },
   {
+    name: 'Hydrogen',
+    slug: 'hydrogen',
+    demo: 'https://hydrogen-template.vercel.app',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/hydrogen.svg',
+    tagline: 'React framework for headless commerce',
+    description: 'React framework for headless commerce',
+    website: 'https://hydrogen.shopify.dev',
+    useRuntime: { src: 'package.json', use: '@vercel/hydrogen' },
+    envPrefix: 'PUBLIC_',
+    detectors: {
+      some: [
+        {
+          matchPackage: '@shopify/hydrogen',
+        },
+        {
+          path: 'hydrogen.config.js',
+        },
+        {
+          path: 'hydrogen.config.ts',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
+      },
+      buildCommand: {
+        value: 'shopify hydrogen build',
+        placeholder: '`npm run build` or `shopify hydrogen build`',
+      },
+      devCommand: {
+        value: 'shopify hydrogen dev',
+        placeholder: 'shopify hydrogen dev',
+      },
+      outputDirectory: {
+        value: 'dist',
+      },
+    },
+    dependency: '@shopify/hydrogen',
+    getOutputDirName: async () => 'dist',
+  },
+  {
     name: 'Vite',
     slug: 'vite',
     demo: 'https://vite-vue-template.vercel.app',
@@ -1703,9 +1745,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"vite":\\s*".+?"[^}]*}',
+          matchPackage: 'vite',
         },
       ],
     },
@@ -1729,6 +1769,70 @@ export const frameworks = [
     getOutputDirName: async () => 'dist',
   },
   {
+    name: 'VitePress',
+    slug: 'vitepress',
+    demo: 'https://vitepress-starter-template.vercel.app',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/vite.svg',
+    tagline: "VitePress is VuePress' little brother, built on top of Vite.",
+    description: 'VuePress on top of Vite',
+    website: 'https://vitepress.vuejs.org/',
+    detectors: {
+      every: [
+        {
+          matchPackage: 'vitepress',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
+      },
+      buildCommand: {
+        placeholder: '`npm run build` or `vitepress build docs`',
+        value: 'vitepress build docs',
+      },
+      devCommand: {
+        value: 'vitepress dev docs --port $PORT',
+      },
+      outputDirectory: {
+        value: 'docs/.vitepress/dist',
+      },
+    },
+    getOutputDirName: async () => 'docs/.vitepress/dist',
+  },
+  {
+    name: 'VuePress',
+    slug: 'vuepress',
+    demo: 'https://vuepress-starter-template.vercel.app',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/vuepress.png',
+    tagline: 'Vue-powered Static Site Generator',
+    description: 'Vue-powered Static Site Generator',
+    website: 'https://vuepress.vuejs.org/',
+    detectors: {
+      every: [
+        {
+          matchPackage: 'vuepress',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
+      },
+      buildCommand: {
+        placeholder: '`npm run build` or `vuepress build src`',
+        value: 'vuepress build src',
+      },
+      devCommand: {
+        value: 'vuepress dev src --port $PORT',
+      },
+      outputDirectory: {
+        value: 'src/.vuepress/dist',
+      },
+    },
+    getOutputDirName: async () => 'src/.vuepress/dist',
+  },
+  {
     name: 'Parcel',
     slug: 'parcel',
     demo: 'https://parcel-template.vercel.app',
@@ -1740,9 +1844,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"parcel":\\s*".+?"[^}]*}',
+          matchPackage: 'parcel',
         },
       ],
     },
@@ -1831,21 +1933,19 @@ export const frameworks = [
     ],
   },
   {
-    name: 'Hydrogen',
-    slug: 'hydrogen',
-    demo: 'https://hydrogen-template.vercel.app',
-    logo: 'https://api-frameworks.vercel.sh/framework-logos/hydrogen.svg',
-    tagline: 'React framework for headless commerce',
-    description: 'React framework for headless commerce',
-    website: 'https://hydrogen.shopify.dev',
-    useRuntime: { src: 'package.json', use: '@vercel/hydrogen' },
+    name: 'Storybook',
+    slug: 'storybook',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/storybook.svg',
+    tagline: 'Frontend workshop for UI development',
+    description:
+      'Storybook is a frontend workshop for building UI components and pages in isolation.',
+    website: 'https://storybook.js.org',
+    ignoreRuntimes: ['@vercel/next', '@vercel/node'],
+    disableRootMiddleware: true,
     detectors: {
-      some: [
+      every: [
         {
-          path: 'hydrogen.config.js',
-        },
-        {
-          path: 'hydrogen.config.ts',
+          matchPackage: 'storybook',
         },
       ],
     },
@@ -1854,19 +1954,17 @@ export const frameworks = [
         placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
-        value: 'shopify hydrogen build',
-        placeholder: '`npm run build` or `shopify hydrogen build`',
+        value: 'storybook build',
+        ignorePackageJsonScript: true,
       },
       devCommand: {
-        value: 'shopify hydrogen dev',
-        placeholder: 'shopify hydrogen dev',
+        value: `storybook dev -p $PORT`,
       },
       outputDirectory: {
-        value: 'dist',
+        value: 'storybook-static',
       },
     },
-    dependency: '@shopify/hydrogen',
-    getOutputDirName: async () => 'dist',
+    getOutputDirName: async () => 'storybook-static',
   },
   {
     name: 'Other',

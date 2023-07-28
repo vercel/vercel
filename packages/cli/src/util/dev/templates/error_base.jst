@@ -8,7 +8,8 @@
     <style>
       html {
         font-size: 62.5%;
-        box-sizing: border-box
+        box-sizing: border-box;
+        height: -webkit-fill-available
       }
 
       *,
@@ -29,7 +30,9 @@
         text-rendering: optimizeLegibility;
         hyphens: auto;
         height: 100vh;
+        height: -webkit-fill-available;
         max-height: 100vh;
+        max-height: -webkit-fill-available;
         margin: 0
       }
 
@@ -88,7 +91,7 @@
         display: flex;
         justify-content: center;
         flex-direction: column;
-        min-height: 100vh
+        min-height: 100%
       }
 
       main {
@@ -103,11 +106,17 @@
 
       .error-title {
         font-size: 2rem;
-        border-left: 2px solid #ff0080;
         padding-left: 22px;
         line-height: 1.5;
         margin-bottom: 24px;
-        font-weight: 500
+      }
+
+      .error-title-guilty {
+        border-left: 2px solid #ED367F;
+      }
+
+      .error-title-innocent {
+        border-left: 2px solid #59B89C;
       }
 
       main p {
@@ -222,11 +231,16 @@
         margin-left: .8rem
       }
 
+      .note {
+        padding: 8pt 16pt;
+        border-radius: 5px;
+        border: 1px solid #0070f3;
+        font-size: 14px;
+        line-height: 1.8;
+        color: #0070f3;
+      }
+
       @media (max-width:500px) {
-        .devinfo-container .devinfo-line {
-          display: flex;
-          flex-direction: column
-        }
         .devinfo-container .devinfo-line code {
           margin-top: .4rem
         }
@@ -253,25 +267,18 @@
           font-size: 1.4rem;
           line-height: 1.55;
         }
+        footer {
+          display: none;
+        }
+        .note {
+          margin-top: 16px;
+        }
       }
     </style>
   </head>
   <body>
     <div class="container">
       {{=it.view}}
-      <footer>
-        <a href="https://vercel.com" target="_blank" rel="noopener noreferrer">Powered by
-          <svg height="20" viewBox="0 0 131 30" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M17.0669.0 34.1338 29.5211H0L17.0669.0z" fill="#000"></path>
-            <path d="M73.6183 15.6831C73.6183 10.932 70.1127 7.61091 65.0849 7.61091 60.057 7.61091 56.5514 10.932 56.5514 15.6831 56.5514 20.3419 60.3338 23.7553 65.5461 23.7553 68.406 23.7553 70.9891 22.6944 72.6497 20.757L69.513 18.9581C68.5444 19.9268 67.1144 20.5264 65.5461 20.5264 63.2398 20.5264 61.2563 19.281 60.5644 17.3898L60.4261 17.0669H73.4799C73.5722 16.6056 73.6183 16.1444 73.6183 15.6831zM60.3799 14.2993 60.4722 14.0225C61.0718 12.0391 62.8246 10.8398 65.0387 10.8398 67.2989 10.8398 69.0056 12.0391 69.6053 14.0225L69.6975 14.2993H60.3799z" fill="#000"></path>
-            <path d="M123.297 15.6831C123.297 10.932 119.791 7.61091 114.763 7.61091 109.736 7.61091 106.23 10.932 106.23 15.6831 106.23 20.3419 110.012 23.7553 115.225 23.7553 118.085 23.7553 120.668 22.6944 122.328 20.757L119.192 18.9581C118.223 19.9268 116.793 20.5264 115.225 20.5264 112.918 20.5264 110.935 19.281 110.243 17.3898L110.105 17.0669H123.158C123.251 16.6056 123.297 16.1444 123.297 15.6831zM110.058 14.2993 110.151 14.0225C110.75 12.0391 112.503 10.8398 114.717 10.8398 116.977 10.8398 118.684 12.0391 119.284 14.0225L119.376 14.2993H110.058z" fill="#000"></path>
-            <path d="M101.156 13.0539 104.293 11.2549C102.817 8.94858 100.187 7.65703 97.0046 7.65703 91.9768 7.65703 88.4711 10.9782 88.4711 15.7292 88.4711 20.4803 91.9768 23.8014 97.0046 23.8014 100.187 23.8014 102.817 22.5098 104.293 20.2035L101.156 18.4046C100.326 19.7884 98.8497 20.5725 97.0046 20.5725 94.0986 20.5725 92.1613 18.6352 92.1613 15.7292 92.1613 12.8232 94.0986 10.8859 97.0046 10.8859 98.8035 10.8859 100.326 11.6701 101.156 13.0539z" fill="#000"></path>
-            <path d="M130.216 2.5831H126.526V23.3401H130.216V2.5831z" fill="#000"></path>
-            <path d="M59.2729 2.5831H55.0292L46.9109 16.6056 38.7926 2.5831H34.5028L46.9109 23.9859 59.2729 2.5831z" fill="#000"></path>
-            <path d="M85.3806 11.9007C85.7958 11.9007 86.2109 11.9468 86.6261 12.0391V8.1183C83.4894 8.21056 80.5373 9.96338 80.5373 12.1313V8.1183H76.8472V23.3401H80.5373V16.744C80.5373 13.8841 82.5208 11.9007 85.3806 11.9007z" fill="#000"></path>
-          </svg>
-        </a>
-      </footer>
     </div>
   </body>
 </html>

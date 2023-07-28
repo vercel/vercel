@@ -26,12 +26,6 @@ packages/hydrogen/edge-entry.js
 packages/next/test/integration/middleware
 packages/next/test/integration/middleware-eval
 
-# node-bridge
-packages/node-bridge/bridge.js
-packages/node-bridge/launcher.js
-packages/node-bridge/helpers.js
-packages/node-bridge/source-map-support.js
-
 # middleware
 packages/middleware/src/entries.js
 
@@ -42,3 +36,9 @@ packages/static-build/test/cache-fixtures
 
 # redwood
 packages/redwood/test/fixtures
+
+# remix
+packages/remix/test/fixtures
+
+# gatsby-plugin-vercel-analytics
+packages/gatsby-plugin-vercel-analytics

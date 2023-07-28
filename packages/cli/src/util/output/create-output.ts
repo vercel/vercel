@@ -1,33 +1,54 @@
 import chalk from 'chalk';
+import * as ansiEscapes from 'ansi-escapes';
+import { supportsHyperlink as detectSupportsHyperlink } from 'supports-hyperlinks';
 import renderLink from './link';
 import wait, { StopSpinner } from './wait';
-import type { WritableTTY } from '../../types';
 import { errorToString } from '@vercel/error-utils';
+import { removeEmoji } from '../emoji';
+import type * as tty from 'tty';
 
 const IS_TEST = process.env.NODE_ENV === 'test';
 
 export interface OutputOptions {
   debug?: boolean;
+  supportsHyperlink?: boolean;
+  noColor?: boolean;
 }
 
 export interface LogOptions {
   color?: typeof chalk;
 }
 
+interface LinkOptions {
+  fallback?: false | (() => string);
+}
+
 export class Output {
-  stream: WritableTTY;
+  stream: tty.WriteStream;
   debugEnabled: boolean;
+  supportsHyperlink: boolean;
+  colorDisabled: boolean;
   private spinnerMessage: string;
   private _spinner: StopSpinner | null;
 
   constructor(
-    stream: WritableTTY,
-    { debug: debugEnabled = false }: OutputOptions = {}
+    stream: tty.WriteStream,
+    {
+      debug: debugEnabled = false,
+      supportsHyperlink = detectSupportsHyperlink(stream),
+      noColor = false,
+    }: OutputOptions = {}
   ) {
     this.stream = stream;
     this.debugEnabled = debugEnabled;
+    this.supportsHyperlink = supportsHyperlink;
     this.spinnerMessage = '';
     this._spinner = null;
+
+    this.colorDisabled = getNoColor(noColor);
+    if (this.colorDisabled) {
+      chalk.level = 0;
+    }
   }
 
   isDebugEnabled = () => {
@@ -35,6 +56,9 @@ export class Output {
   };
 
   print = (str: string) => {
+    if (this.colorDisabled) {
+      str = removeEmoji(str);
+    }
     this.stopSpinner();
     this.stream.write(str);
   };
@@ -167,4 +191,38 @@ export class Output {
 
     return promise;
   };
+
+  /**
+   * Returns an ANSI formatted hyperlink when support has been enabled.
+   */
+  link = (
+    text: string,
+    url: string,
+    { fallback }: LinkOptions = {}
+  ): string => {
+    // Based on https://github.com/sindresorhus/terminal-link (MIT license)
+    if (!this.supportsHyperlink) {
+      // If the fallback has been explicitly disabled, don't modify the text itself
+      if (fallback === false) {
+        return renderLink(text);
+      }
+
+      return typeof fallback === 'function'
+        ? fallback()
+        : `${text} (${renderLink(url)})`;
+    }
+
+    return ansiEscapes.link(chalk.cyan(text), url);
+  };
+}
+
+function getNoColor(noColorArg: boolean | undefined): boolean {
+  // FORCE_COLOR: the standard supported by chalk https://github.com/chalk/chalk#supportscolor
+  // NO_COLOR: the standard we want to support https://no-color.org/
+  // noColorArg: the `--no-color` arg passed to the CLI command
+  const noColor =
+    process.env.FORCE_COLOR === '0' ||
+    process.env.NO_COLOR === '1' ||
+    noColorArg;
+  return !!noColor;
 }

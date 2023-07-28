@@ -1,0 +1,11 @@
+{
+  "dependencies": {
+    "next": "canary",
+    "react": "latest",
+    "react-dom": "latest"
+  },
+  "scripts": {
+    "vercel-build": "next build"
+  },
+  "ignoreNextjsUpdates": true
+}
