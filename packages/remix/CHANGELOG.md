@@ -1,5 +1,15 @@
 # @vercel/remix-builder
 
+## 1.9.0
+
+### Minor Changes
+
+- Install `@vercel/remix-run-dev` at build-time instead of using symlink ([#9784](https://github.com/vercel/vercel/pull/9784))
+
+### Patch Changes
+
+- Update `@remix-run/dev` fork to v1.19.1 ([#10246](https://github.com/vercel/vercel/pull/10246))
+
 ## 1.8.18
 
 ### Patch Changes
