@@ -69,7 +69,7 @@ const nodeServerSrcPromise = fs.readFile(
 );
 
 // Minimum supported version of the `@vercel/remix` package
-const VECEL_REMIX_MIN_VERSION = '1.10.0';
+const VERCEL_REMIX_MIN_VERSION = '1.10.0';
 
 // Minimum supported version of the `@vercel/remix-run-dev` forked compiler
 const REMIX_RUN_DEV_MIN_VERSION = '1.15.0';
@@ -189,7 +189,7 @@ export const build: BuildV2 = async ({
       // 3. Users app is on something greater than our latest version of the fork -> we install
       //    the latest known published version of `@vercel/remix`.
       const vercelRemixVersion = resolveSemverMinMax(
-        VECEL_REMIX_MIN_VERSION,
+        VERCEL_REMIX_MIN_VERSION,
         REMIX_RUN_DEV_MAX_VERSION,
         remixVersion
       );
