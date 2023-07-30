@@ -1,5 +1,9 @@
 lockfileVersion: '6.0'
 
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
 importers:
 
   .:
@@ -1209,6 +1213,9 @@ importers:
       async-listen:
         specifier: 3.0.0
         version: 3.0.0
+      content-type:
+        specifier: 1.0.4
+        version: 1.0.4
       edge-runtime:
         specifier: 2.4.3
         version: 2.4.3
@@ -1224,6 +1231,9 @@ importers:
       path-to-regexp:
         specifier: 6.2.1
         version: 6.2.1
+      querystring:
+        specifier: ^0.2.0
+        version: 0.2.1
       ts-morph:
         specifier: 12.0.0
         version: 12.0.0
@@ -1267,9 +1277,6 @@ importers:
       '@vercel/nft':
         specifier: 0.22.5
         version: 0.22.5
-      content-type:
-        specifier: 1.0.4
-        version: 1.0.4
       cookie:
         specifier: 0.4.0
         version: 0.4.0
@@ -7555,7 +7562,6 @@ packages:
   /content-type@1.0.4:
     resolution: {integrity: sha512-hIP3EEPs8tB9AT1L+NUqtwOAps4mk2Zob89MWXMHjHWg9milF/j4osnnQLXBCBFBk/tvIG/tUc9mOUJiPBhPXA==}
     engines: {node: '>= 0.6'}
-    dev: true
 
   /convert-hrtime@3.0.0:
     resolution: {integrity: sha512-7V+KqSvMiHp8yWDuwfww06XleMWVVB9b9tURBx+G7UTADuo5hYPuowKloz4OzOqbPezxgo+fdQ1522WzPG4OeA==}
@@ -13459,6 +13465,7 @@ packages:
 
   /node-addon-api@1.7.2:
     resolution: {integrity: sha512-ibPK3iA+vaY1eEjESkQkM0BbCqFOaZMiXRTtdB0u7b4djtY6JnsjvPdUHVMg6xQt3B8fpTTWHI9A+ADjM9frzg==}
+    requiresBuild: true
     dev: true
     optional: true
 
@@ -17319,7 +17326,3 @@ packages:
   /zwitch@2.0.4:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
     dev: true
-
-settings:
-  autoInstallPeers: true
-  excludeLinksFromLockfile: false
