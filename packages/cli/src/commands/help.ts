@@ -174,7 +174,7 @@ export function buildCommandOptionLines(
   }
 
   // Initialize output array with header and empty line
-  const outputArray: string[] = [`${chalk.dim(sectionTitle)}:`, ''];
+  const outputArray: string[] = [`${INDENT}${chalk.dim(sectionTitle)}:`, ''];
 
   // Start building option lines
   const optionLines: string[][] = [];
@@ -186,7 +186,7 @@ export function buildCommandOptionLines(
   let maxLineStartLength = 0;
   // Iterate over options and create the "start" of each option (e.g. `  -b, --build-env <key=value>`)
   for (const option of commandOptions) {
-    const startLine: string[] = [INDENT];
+    const startLine: string[] = [INDENT, INDENT, INDENT];
     if (option.shorthand) {
       startLine.push(`-${option.shorthand},`);
     }
@@ -259,7 +259,7 @@ export function buildCommandOptionLines(
 }
 
 export function buildCommandExampleLines(command: Command) {
-  const outputArray: string[] = [chalk.dim(`Examples:`), ''];
+  const outputArray: string[] = [`${INDENT}${chalk.dim('Examples:')}`, ''];
   for (const example of command.examples) {
     const nameLine: string[] = [INDENT];
     nameLine.push(chalk.gray('-'));
