@@ -142,7 +142,12 @@ export function outputArrayToString(outputArray: string[]) {
  * @returns
  */
 export function buildCommandSynopsisLine(command: Command) {
-  const line: string[] = [LOGO, chalk.bold(NAME), chalk.bold(command.name)];
+  const line: string[] = [
+    INDENT,
+    LOGO,
+    chalk.bold(NAME),
+    chalk.bold(command.name),
+  ];
   if (command.arguments.length > 0) {
     for (const argument of command.arguments) {
       line.push(argument.required ? argument.name : `[${argument.name}]`);
