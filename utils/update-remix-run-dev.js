@@ -11,14 +11,13 @@ module.exports = async ({ github, context }, newVersion) => {
   const packagePath = path.join(repoRootPath, 'packages', 'remix');
   const oldVersion = JSON.parse(
     fs.readFileSync(path.join(packagePath, 'package.json'), 'utf-8')
-  ).dependencies['@remix-run/dev'];
+  ).devDependencies['@remix-run/dev'];
   if (newVersion === '') {
     newVersion = execSync('npm view @vercel/remix-run-dev dist-tags.latest', {
       encoding: 'utf-8',
     });
   }
   newVersion = newVersion.trim();
-  const branch = `vercel-remix-run-dev-${newVersion.replaceAll('.', '-')}`;
 
   if (oldVersion === newVersion) {
     // eslint-disable-next-line no-console
@@ -28,6 +27,7 @@ module.exports = async ({ github, context }, newVersion) => {
     return;
   }
 
+  const branch = `vercel-remix-run-dev-${newVersion.replaceAll('.', '-')}`;
   if (
     execSync(`git ls-remote --heads origin ${branch}`, { encoding: 'utf-8' })
       .toString()
@@ -39,7 +39,7 @@ module.exports = async ({ github, context }, newVersion) => {
   }
 
   execSync(
-    `pnpm install @remix-run/dev@npm:@vercel/remix-run-dev@${newVersion} --save-exact --lockfile-only`,
+    `pnpm install @remix-run/dev@npm:@vercel/remix-run-dev@${newVersion} --save-exact --save-dev --lockfile-only`,
     { cwd: packagePath }
   );
 
