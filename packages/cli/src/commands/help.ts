@@ -284,6 +284,11 @@ export function buildCommandExampleLines(command: Command) {
   return outputArrayToString(outputArray);
 }
 
+function buildDescriptionLine(command: Command) {
+  const line: string[] = [INDENT, command.description];
+  return lineToString(line);
+}
+
 interface BuildHelpOutputOptions {
   columns: number;
 }
@@ -296,7 +301,7 @@ export function buildHelpOutput(
     '',
     buildCommandSynopsisLine(command),
     '',
-    command.description,
+    buildDescriptionLine(command),
     '',
     buildCommandOptionLines(command.options, options, 'Options'),
     '',
