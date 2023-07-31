@@ -111,7 +111,7 @@ function isValidSourceMapData(encoding: string, data: string): boolean {
   data = data.replace(/\s/g, '').replace('*/', '');
 
   if (encoding !== 'base64') {
-    // Unknown encoding. I think the comment is not that long if it's not
+    // Unknown encoding. I think the comment is short (e.g. URL) if it's not
     // base64 encoded, so let's keep it to be safe.
     return false;
   }
