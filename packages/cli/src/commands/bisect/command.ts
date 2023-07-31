@@ -3,7 +3,7 @@ import { getPkgName } from '../../util/pkg-name';
 
 export const bisectCommand: Command = {
   name: 'bisect',
-  description: 'Bisect the current project interactively',
+  description: 'Bisect the current project interactively.',
   arguments: [],
   options: [
     {
