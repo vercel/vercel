@@ -288,6 +288,7 @@ export function buildHelpOutput(
   options: BuildHelpOutputOptions
 ) {
   const outputArray: string[] = [
+    '',
     buildCommandSynopsisLine(command),
     '',
     command.description,
