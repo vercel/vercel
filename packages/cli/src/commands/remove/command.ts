@@ -3,7 +3,7 @@ import { getPkgName } from '../../util/pkg-name';
 
 export const removeCommand: Command = {
   name: 'remove',
-  description: 'Remove a deployment by name or id',
+  description: 'Remove a deployment by name or id.',
   arguments: [
     {
       name: '...deploymentId|deploymentName',
