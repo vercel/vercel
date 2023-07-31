@@ -1,5 +1,17 @@
 # vercel
 
+## 31.2.1
+
+### Patch Changes
+
+- Migrate bisect command to new structure ([#10276](https://github.com/vercel/vercel/pull/10276))
+
+- Migrate remove command to new structure ([#10268](https://github.com/vercel/vercel/pull/10268))
+
+- Updated dependencies [[`fc413707d`](https://github.com/vercel/vercel/commit/fc413707d017e234d5013b761d885f65f9b981bc)]:
+  - @vercel/node@2.15.7
+  - @vercel/static-build@1.3.43
+
 ## 31.2.0
 
 ### Minor Changes
