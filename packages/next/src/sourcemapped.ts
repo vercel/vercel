@@ -100,7 +100,7 @@ export function stringifySourceMap(
   return JSON.stringify(obj);
 }
 
-// https://github.com/thlorenz/convert-source-map/blob/master/index.js#L4 (MIT license)
+// Based on https://github.com/thlorenz/convert-source-map/blob/f1ed815b4edacfa9c3c5552dd342e71a3cffbb0a/index.js#L4 (MIT license)
 // Groups: 1: media type, 2: MIME type, 3: charset, 4: encoding, 5: data.
 const SOURCE_MAP_COMMENT_REGEX =
   // eslint-disable-next-line no-useless-escape
