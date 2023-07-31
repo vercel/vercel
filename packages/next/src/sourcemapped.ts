@@ -116,7 +116,7 @@ function isValidSourceMapData(encoding: string, data: string): boolean {
     return false;
   }
 
-  // Base64. If it's an invalid base64 string, it must be a sourceMappingURL
+  // If it's an invalid base64 string, it must be a sourceMappingURL
   // inside a template literal like the follwoing.
   // https://github.com/webpack-contrib/style-loader/blob/16e401b17a39544d5c8ca47c9032f02e2b60d8f5/src/runtime/styleDomAPI.js#L35C1-L40C1
   return /^[a-zA-Z0-9+=/]+$/.test(data);
