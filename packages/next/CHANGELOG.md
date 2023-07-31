@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 3.9.3
+
+### Patch Changes
+
+- fix dynamic not found pages ([#10262](https://github.com/vercel/vercel/pull/10262))
+
 ## 3.9.2
 
 ### Patch Changes
