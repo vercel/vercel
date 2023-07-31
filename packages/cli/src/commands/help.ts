@@ -278,8 +278,6 @@ export function buildCommandExampleLines(command: Command) {
     }
     outputArray.push('');
   }
-  // delete the last newline added after examples iteration
-  outputArray.splice(-1);
 
   return outputArrayToString(outputArray);
 }
