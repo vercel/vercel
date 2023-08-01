@@ -1,55 +1,24 @@
 import { validate as validateEmail } from 'email-validator';
 import chalk from 'chalk';
-import hp from '../util/humanize-path';
-import getArgs from '../util/get-args';
-import logo from '../util/output/logo';
-import prompt from '../util/login/prompt';
-import doSamlLogin from '../util/login/saml';
-import doEmailLogin from '../util/login/email';
-import doGithubLogin from '../util/login/github';
-import doGitlabLogin from '../util/login/gitlab';
-import doBitbucketLogin from '../util/login/bitbucket';
-import { prependEmoji, emoji } from '../util/emoji';
-import { getCommandName, getPkgName } from '../util/pkg-name';
-import getGlobalPathConfig from '../util/config/global-path';
-import { writeToAuthConfigFile, writeToConfigFile } from '../util/config/files';
-import Client from '../util/client';
-import { LoginResult } from '../util/login/types';
-
-const help = () => {
-  console.log(`
-  ${chalk.bold(`${logo} ${getPkgName()} login`)} <email or team>
-
-  ${chalk.dim('Options:')}
-
-    -h, --help                     Output usage information
-    --no-color                     No color mode [off]
-    -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
-    'FILE'
-  )}   Path to the local ${'`vercel.json`'} file
-    -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
-    'DIR'
-  )}    Path to the global ${'`.vercel`'} directory
-
-  ${chalk.dim('Examples:')}
-
-  ${chalk.gray('–')} Log into the Vercel platform
-
-    ${chalk.cyan(`$ ${getPkgName()} login`)}
-
-  ${chalk.gray('–')} Log in using a specific email address
-
-    ${chalk.cyan(`$ ${getPkgName()} login john@doe.com`)}
-
-  ${chalk.gray('–')} Log in using a specific team "slug" for SAML Single Sign-On
-
-    ${chalk.cyan(`$ ${getPkgName()} login acme`)}
-
-  ${chalk.gray('–')} Log in using GitHub in "out-of-band" mode
-
-    ${chalk.cyan(`$ ${getPkgName()} login --github --oob`)}
-`);
-};
+import hp from '../../util/humanize-path';
+import getArgs from '../../util/get-args';
+import prompt from '../../util/login/prompt';
+import doSamlLogin from '../../util/login/saml';
+import doEmailLogin from '../../util/login/email';
+import doGithubLogin from '../../util/login/github';
+import doGitlabLogin from '../../util/login/gitlab';
+import doBitbucketLogin from '../../util/login/bitbucket';
+import { prependEmoji, emoji } from '../../util/emoji';
+import { getCommandName } from '../../util/pkg-name';
+import getGlobalPathConfig from '../../util/config/global-path';
+import {
+  writeToAuthConfigFile,
+  writeToConfigFile,
+} from '../../util/config/files';
+import Client from '../../util/client';
+import { LoginResult } from '../../util/login/types';
+import { help } from '../help';
+import { loginCommand } from './command';
 
 export default async function login(client: Client): Promise<number> {
   const { output } = client;
@@ -62,7 +31,7 @@ export default async function login(client: Client): Promise<number> {
   });
 
   if (argv['--help']) {
-    help();
+    output.print(help(loginCommand, { columns: client.stderr.columns }));
     return 2;
   }
 
