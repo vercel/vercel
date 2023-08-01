@@ -4,7 +4,8 @@ import { getEnvTargetPlaceholder } from '../../util/env/env-target';
 
 export const pullCommand: Command = {
   name: 'pull',
-  description: 'Pull latest environment variables and project settings from Vercel.',
+  description:
+    'Pull latest environment variables and project settings from Vercel. ',
   arguments: [
     {
       name: 'project-path',
