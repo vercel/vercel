@@ -1,60 +1,15 @@
 import chalk from 'chalk';
-import logo from '../util/output/logo';
-import elapsed from '../util/output/elapsed';
-import { maybeURL, normalizeURL } from '../util/url';
-import printEvents, { DeploymentEvent } from '../util/events';
-import getScope from '../util/get-scope';
-import { getPkgName } from '../util/pkg-name';
-import getArgs from '../util/get-args';
-import Client from '../util/client';
-import getDeployment from '../util/get-deployment';
+import elapsed from '../../util/output/elapsed';
+import { maybeURL, normalizeURL } from '../../util/url';
+import printEvents, { DeploymentEvent } from '../../util/events';
+import getScope from '../../util/get-scope';
+import getArgs from '../../util/get-args';
+import Client from '../../util/client';
+import getDeployment from '../../util/get-deployment';
+import { help } from '../help';
+import { logsCommand } from './command';
 
-const help = () => {
-  console.log(`
-  ${chalk.bold(`${logo} ${getPkgName()} logs`)} <url|deploymentId>
-
-  ${chalk.dim('Options:')}
-
-    -h, --help                     Output usage information
-    -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
-    'FILE'
-  )}   Path to the local ${'`vercel.json`'} file
-    -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
-    'DIR'
-  )}    Path to the global ${'`.vercel`'} directory
-    -d, --debug                    Debug mode [off]
-    --no-color                     No color mode [off]
-    -f, --follow                   Wait for additional data [off]
-    -n ${chalk.bold.underline(
-      'NUMBER'
-    )}                      Number of logs [100]
-    -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
-    'TOKEN'
-  )}        Login token
-    --since=${chalk.bold.underline(
-      'SINCE'
-    )}                  Only return logs after date (ISO 8601)
-    --until=${chalk.bold.underline(
-      'UNTIL'
-    )}                  Only return logs before date (ISO 8601), ignored for ${'`-f`'}
-    -S, --scope                    Set a custom scope
-    -o ${chalk.bold.underline('MODE')}, --output=${chalk.bold.underline(
-    'MODE'
-  )}         Specify the output format (${Object.keys(logPrinters).join(
-    '|'
-  )}) [short]
-
-  ${chalk.dim('Examples:')}
-
-  ${chalk.gray('–')} Print the logs for the deployment ${chalk.dim(
-    '`deploymentId`'
-  )}
-
-    ${chalk.cyan(`$ ${getPkgName()} logs deploymentId`)}
-`);
-};
-
-export default async function main(client: Client) {
+export default async function logs(client: Client) {
   let head;
   let limit;
   let follow;
@@ -76,13 +31,12 @@ export default async function main(client: Client) {
 
   argv._ = argv._.slice(1);
   deploymentIdOrURL = argv._[0];
+  const { output } = client;
 
   if (argv['--help'] || !deploymentIdOrURL || deploymentIdOrURL === 'help') {
-    help();
+    output.print(help(logsCommand, { columns: client.stderr.columns }));
     return 2;
   }
-
-  const { output } = client;
 
   try {
     since = argv['--since'] ? toTimestamp(argv['--since']) : 0;
