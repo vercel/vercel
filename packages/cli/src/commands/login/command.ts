@@ -3,7 +3,7 @@ import { getPkgName } from '../../util/pkg-name';
 
 export const loginCommand: Command = {
   name: 'login',
-  description: 'Authenticate a email or team.',
+  description: 'Authenticate using your email or team id.',
   arguments: [
     {
       name: 'email or team id',
