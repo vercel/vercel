@@ -6,7 +6,7 @@ export const loginCommand: Command = {
   description: 'Authenticate a email or team.',
   arguments: [
     {
-      name: 'email or team',
+      name: 'email or team id',
       required: false,
     },
   ],
