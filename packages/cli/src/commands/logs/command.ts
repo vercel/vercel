@@ -3,7 +3,7 @@ import { getPkgName } from '../../util/pkg-name';
 
 export const logsCommand: Command = {
   name: 'logs',
-  description: 'Print vercel logs for a deployment.',
+  description: 'Display logs for a specific deployment.',
   arguments: [
     {
       name: 'url|deploymentId',
