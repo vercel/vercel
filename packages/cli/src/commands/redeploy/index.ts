@@ -1,66 +1,29 @@
 import chalk from 'chalk';
 import { checkDeploymentStatus } from '@vercel/client';
-import type Client from '../util/client';
-import { emoji, prependEmoji } from '../util/emoji';
-import getArgs from '../util/get-args';
-import { getCommandName, getPkgName } from '../util/pkg-name';
-import { getDeploymentByIdOrURL } from '../util/deploy/get-deployment-by-id-or-url';
-import getScope from '../util/get-scope';
-import handleError from '../util/handle-error';
+import type Client from '../../util/client';
+import { emoji, prependEmoji } from '../../util/emoji';
+import getArgs from '../../util/get-args';
+import { getCommandName } from '../../util/pkg-name';
+import { getDeploymentByIdOrURL } from '../../util/deploy/get-deployment-by-id-or-url';
+import getScope from '../../util/get-scope';
+import handleError from '../../util/handle-error';
 import { isErrnoException } from '@vercel/error-utils';
-import logo from '../util/output/logo';
-import Now from '../util';
-import { printDeploymentStatus } from '../util/deploy/print-deployment-status';
-import stamp from '../util/output/stamp';
-import ua from '../util/ua';
+import Now from '../../util';
+import { printDeploymentStatus } from '../../util/deploy/print-deployment-status';
+import stamp from '../../util/output/stamp';
+import ua from '../../util/ua';
 import type { VercelClientOptions } from '@vercel/client';
-
-const help = () => {
-  console.log(`
-  ${chalk.bold(
-    `${logo} ${getPkgName()} redeploy`
-  )} [deploymentId|deploymentName]
-
-  Rebuild and deploy a previous deployment.
-
-  ${chalk.dim('Options:')}
-
-    -h, --help                     Output usage information
-    -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
-    'FILE'
-  )}   Path to the local ${'`vercel.json`'} file
-    -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
-    'DIR'
-  )}    Path to the global ${'`.vercel`'} directory
-    -d, --debug                    Debug mode [off]
-    --no-color                     No color mode [off]
-    --no-wait                      Don't wait for the redeploy to finish
-    -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
-    'TOKEN'
-  )}        Login token
-    -y, --yes                      Skip questions when setting up new project using default scope and settings
-
-  ${chalk.dim('Examples:')}
-
-  ${chalk.gray('–')} Rebuild and deploy an existing deployment using id or url
-
-    ${chalk.cyan(`$ ${getPkgName()} redeploy my-deployment.vercel.app`)}
-
-  ${chalk.gray('–')} Write Deployment URL to a file
-
-    ${chalk.cyan(
-      `$ ${getPkgName()} redeploy my-deployment.vercel.app > deployment-url.txt`
-    )}
-`);
-};
+import { help } from '../help';
+import { redeployCommand } from './command';
 
 /**
  * `vc redeploy` command
  * @param {Client} client
  * @returns {Promise<number>} Resolves an exit code; 0 on success
  */
-export default async (client: Client): Promise<number> => {
+export default async function redeploy(client: Client): Promise<number> {
   let argv;
+  const { output } = client;
   try {
     argv = getArgs(client.argv.slice(2), {
       '--no-wait': Boolean,
@@ -73,11 +36,10 @@ export default async (client: Client): Promise<number> => {
   }
 
   if (argv['--help'] || argv._[0] === 'help') {
-    help();
+    output.print(help(redeployCommand, { columns: client.stderr.columns }));
     return 2;
   }
 
-  const { output } = client;
   const deployIdOrUrl = argv._[1];
   if (!deployIdOrUrl) {
     output.error(
@@ -201,4 +163,4 @@ export default async (client: Client): Promise<number> => {
     }
     return 1;
   }
-};
+}
