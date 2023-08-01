@@ -13,7 +13,7 @@ export const loginCommand: Command = {
   options: [
     {
       name: 'github',
-      description: 'Log in with github',
+      description: 'Log in with GitHub',
       shorthand: null,
       type: 'string',
       deprecated: false,
