@@ -2,78 +2,27 @@ import chalk from 'chalk';
 import ms from 'ms';
 import table from 'text-table';
 import title from 'title';
-import Now from '../util';
-import getArgs from '../util/get-args';
-import { handleError } from '../util/error';
-import logo from '../util/output/logo';
-import elapsed from '../util/output/elapsed';
-import strlen from '../util/strlen';
-import toHost from '../util/to-host';
-import parseMeta from '../util/parse-meta';
-import { isValidName } from '../util/is-valid-name';
-import getCommandFlags from '../util/get-command-flags';
-import { getPkgName, getCommandName } from '../util/pkg-name';
-import Client from '../util/client';
+import Now from '../../util';
+import getArgs from '../../util/get-args';
+import { handleError } from '../../util/error';
+import elapsed from '../../util/output/elapsed';
+import strlen from '../../util/strlen';
+import toHost from '../../util/to-host';
+import parseMeta from '../../util/parse-meta';
+import { isValidName } from '../../util/is-valid-name';
+import getCommandFlags from '../../util/get-command-flags';
+import { getCommandName } from '../../util/pkg-name';
+import Client from '../../util/client';
 import { Deployment } from '@vercel/client';
-import { getLinkedProject } from '../util/projects/link';
-import { ensureLink } from '../util/link/ensure-link';
-import getScope from '../util/get-scope';
-import { isAPIError } from '../util/errors-ts';
+import { getLinkedProject } from '../../util/projects/link';
+import { ensureLink } from '../../util/link/ensure-link';
+import getScope from '../../util/get-scope';
+import { isAPIError } from '../../util/errors-ts';
 import { isErrnoException } from '@vercel/error-utils';
+import { help } from '../help';
+import { listCommand } from './command';
 
-const help = () => {
-  console.log(`
-  ${chalk.bold(`${logo} ${getPkgName()} list`)} [app]
-
-  ${chalk.dim('Options:')}
-
-    -h, --help                     Output usage information
-    -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
-    'FILE'
-  )}   Path to the local ${'`vercel.json`'} file
-    -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
-    'DIR'
-  )}    Path to the global ${'`.vercel`'} directory
-    -d, --debug                    Debug mode [off]
-    --no-color                     No color mode [off]
-    -y, --yes                      Skip questions when setting up new project using default scope and settings
-    -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
-    'TOKEN'
-  )}        Login token
-    -S, --scope                    Set a custom scope
-    -m, --meta                     Filter deployments by metadata (e.g.: ${chalk.dim(
-      '`-m KEY=value`'
-    )}). Can appear many times.
-    --environment=${chalk.bold.underline(
-      'ENVIRONMENT'
-    )}      Filter by environment (production|preview)
-    -N, --next                     Show next page of results
-
-  ${chalk.dim('Examples:')}
-
-  ${chalk.gray('–')} List all deployments for the currently linked project
-
-    ${chalk.cyan(`$ ${getPkgName()} ls`)}
-
-  ${chalk.gray('–')} List all deployments for the project ${chalk.dim(
-    '`my-app`'
-  )} in the team of the currently linked project
-
-    ${chalk.cyan(`$ ${getPkgName()} ls my-app`)}
-
-  ${chalk.gray('–')} Filter deployments by metadata
-
-    ${chalk.cyan(`$ ${getPkgName()} ls -m key1=value1 -m key2=value2`)}
-
-  ${chalk.gray('–')} Paginate deployments for a project, where ${chalk.dim(
-    '`1584722256178`'
-  )} is the time in milliseconds since the UNIX epoch.
-
-    ${chalk.cyan(`$ ${getPkgName()} ls my-app --next 1584722256178`)}
-`);
-};
-
-export default async function main(client: Client) {
+export default async function list(client: Client) {
   let argv;
 
   try {
@@ -111,7 +60,7 @@ export default async function main(client: Client) {
   }
 
   if (argv['--help']) {
-    help();
+    output.print(help(listCommand, { columns: client.stderr.columns }));
     return 2;
   }
 
