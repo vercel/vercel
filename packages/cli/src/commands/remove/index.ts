@@ -2,74 +2,31 @@ import chalk from 'chalk';
 import ms from 'ms';
 import plural from 'pluralize';
 import table from 'text-table';
-import Now from '../util';
-import getAliases from '../util/alias/get-aliases';
-import logo from '../util/output/logo';
-import elapsed from '../util/output/elapsed';
-import { normalizeURL } from '../util/url';
-import getScope from '../util/get-scope';
-import { isValidName } from '../util/is-valid-name';
-import removeProject from '../util/projects/remove-project';
-import getProjectByIdOrName from '../util/projects/get-project-by-id-or-name';
-import getDeployment from '../util/get-deployment';
-import getDeploymentsByProjectId from '../util/deploy/get-deployments-by-project-id';
-import { getPkgName, getCommandName } from '../util/pkg-name';
-import getArgs from '../util/get-args';
-import handleError from '../util/handle-error';
-import type Client from '../util/client';
-import { Output } from '../util/output';
+import Now from '../../util';
+import getAliases from '../../util/alias/get-aliases';
+import elapsed from '../../util/output/elapsed';
+import { normalizeURL } from '../../util/url';
+import getScope from '../../util/get-scope';
+import { isValidName } from '../../util/is-valid-name';
+import removeProject from '../../util/projects/remove-project';
+import getProjectByIdOrName from '../../util/projects/get-project-by-id-or-name';
+import getDeployment from '../../util/get-deployment';
+import getDeploymentsByProjectId from '../../util/deploy/get-deployments-by-project-id';
+import { getCommandName } from '../../util/pkg-name';
+import getArgs from '../../util/get-args';
+import handleError from '../../util/handle-error';
+import type Client from '../../util/client';
+import { Output } from '../../util/output';
 import { Alias, Deployment, Project } from '@vercel-internals/types';
-import { NowError } from '../util/now-error';
+import { NowError } from '../../util/now-error';
+import { help } from '../help';
+import { removeCommand } from './command';
 
 type DeploymentWithAliases = Deployment & {
   aliases: Alias[];
 };
 
-const help = () => {
-  console.log(`
-  ${chalk.bold(
-    `${logo} ${getPkgName()} remove`
-  )} [...deploymentId|deploymentName]
-
-  ${chalk.dim('Options:')}
-
-    -h, --help                     Output usage information
-    -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
-    'FILE'
-  )}   Path to the local ${'`vercel.json`'} file
-    -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
-    'DIR'
-  )}    Path to the global ${'`.vercel`'} directory
-    -d, --debug                    Debug mode [off]
-    --no-color                     No color mode [off]
-    -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
-    'TOKEN'
-  )}        Login token
-    -y, --yes                      Skip confirmation
-    -s, --safe                     Skip deployments with an active alias
-    -S, --scope                    Set a custom scope
-
-  ${chalk.dim('Examples:')}
-
-  ${chalk.gray('–')} Remove a deployment identified by ${chalk.dim(
-    '`deploymentId`'
-  )}
-
-    ${chalk.cyan(`$ ${getPkgName()} rm deploymentId`)}
-
-  ${chalk.gray('–')} Remove all deployments with name ${chalk.dim('`my-app`')}
-
-    ${chalk.cyan(`$ ${getPkgName()} rm my-app`)}
-
-  ${chalk.gray('–')} Remove two deployments with IDs ${chalk.dim(
-    '`eyWt6zuSdeus`'
-  )} and ${chalk.dim('`uWHoA9RQ1d1o`')}
-
-    ${chalk.cyan(`$ ${getPkgName()} rm eyWt6zuSdeus uWHoA9RQ1d1o`)}
-`);
-};
-
-export default async function main(client: Client) {
+export default async function remove(client: Client) {
   let argv;
 
   try {
@@ -98,13 +55,13 @@ export default async function main(client: Client) {
   const { success, error, log } = output;
 
   if (argv['--help'] || ids[0] === 'help') {
-    help();
+    output.print(help(removeCommand, { columns: client.stderr.columns }));
     return 2;
   }
 
   if (ids.length < 1) {
     error(`${getCommandName('rm')} expects at least one argument`);
-    help();
+    output.print(help(removeCommand, { columns: client.stderr.columns }));
     return 1;
   }
 
