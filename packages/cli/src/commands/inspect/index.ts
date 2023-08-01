@@ -1,71 +1,27 @@
 import chalk from 'chalk';
-import getArgs from '../util/get-args';
-import buildsList from '../util/output/builds';
-import routesList from '../util/output/routes';
-import indent from '../util/output/indent';
-import logo from '../util/output/logo';
-import elapsed from '../util/output/elapsed';
-import { handleError } from '../util/error';
-import getScope from '../util/get-scope';
-import { getPkgName, getCommandName } from '../util/pkg-name';
-import Client from '../util/client';
-import getDeployment from '../util/get-deployment';
+import getArgs from '../../util/get-args';
+import buildsList from '../../util/output/builds';
+import routesList from '../../util/output/routes';
+import indent from '../../util/output/indent';
+import elapsed from '../../util/output/elapsed';
+import { handleError } from '../../util/error';
+import getScope from '../../util/get-scope';
+import { getCommandName } from '../../util/pkg-name';
+import Client from '../../util/client';
+import getDeployment from '../../util/get-deployment';
 import type { Build, Deployment } from '@vercel-internals/types';
 import title from 'title';
 import { isErrnoException } from '@vercel/error-utils';
 import { URL } from 'url';
-import readStandardInput from '../util/input/read-standard-input';
-import sleep from '../util/sleep';
+import readStandardInput from '../../util/input/read-standard-input';
+import sleep from '../../util/sleep';
 import ms from 'ms';
-import { isDeploying } from '../util/deploy/is-deploying';
+import { isDeploying } from '../../util/deploy/is-deploying';
+import { help } from '../help';
+import { inspectCommand } from './command';
 
-const help = () => {
-  console.log(`
-  ${chalk.bold(`${logo} ${getPkgName()} inspect`)} <url>
-
-  ${chalk.dim('Options:')}
-
-    -h, --help                     Output usage information
-    -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
-    'FILE'
-  )}   Path to the local ${'`vercel.json`'} file
-    -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
-    'DIR'
-  )}    Path to the global ${'`.vercel`'} directory
-    -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
-    'TOKEN'
-  )}        Login token
-    -d, --debug                    Debug mode [off]
-    --no-color                     No color mode [off]
-    -S, --scope                    Set a custom scope
-    --timeout=${chalk.bold.underline(
-      'TIME'
-    )}                 Time to wait for deployment completion [3m]
-    --wait                         Blocks until deployment completes
-
-  ${chalk.dim('Examples:')}
-
-  ${chalk.gray('–')} Get information about a deployment by its unique URL
-
-    ${chalk.cyan(`$ ${getPkgName()} inspect my-deployment-ji2fjij2.vercel.app`)}
-
-  ${chalk.gray('-')} Get information about the deployment an alias points to
-
-    ${chalk.cyan(`$ ${getPkgName()} inspect my-deployment.vercel.app`)}
-
-  ${chalk.gray('-')} Get information about a deployment by piping in the URL
-
-    ${chalk.cyan(`$ echo my-deployment.vercel.app | ${getPkgName()} inspect`)}
-
-  ${chalk.gray('-')} Wait up to 90 seconds for deployment to complete
-
-    ${chalk.cyan(
-      `$ ${getPkgName()} inspect my-deployment.vercel.app --wait --timeout 90s`
-    )}
-  `);
-};
-
-export default async function main(client: Client) {
+export default async function inspect(client: Client) {
+  const { output } = client;
   let argv;
 
   try {
@@ -79,7 +35,7 @@ export default async function main(client: Client) {
   }
 
   if (argv['--help']) {
-    help();
+    output.print(help(inspectCommand, { columns: client.stderr.columns }));
     return 2;
   }
 
@@ -99,7 +55,7 @@ export default async function main(client: Client) {
 
   if (!deploymentIdOrHost) {
     error(`${getCommandName('inspect <url>')} expects exactly one argument`);
-    help();
+    output.print(help(inspectCommand, { columns: client.stderr.columns }));
     return 1;
   }
 
