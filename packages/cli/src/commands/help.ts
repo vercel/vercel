@@ -132,8 +132,8 @@ export function lineToString(line: string[]) {
   return string;
 }
 
-export function outputArrayToString(outputArray: string[]) {
-  return outputArray.join(NEWLINE);
+export function outputArrayToString(outputArray: (string | null)[]) {
+  return outputArray.filter(line => line !== null).join(NEWLINE);
 }
 
 /**
@@ -156,6 +156,8 @@ export function buildCommandSynopsisLine(command: Command) {
   if (command.options.length > 0) {
     line.push('[options]');
   }
+
+  line.push(NEWLINE);
   return lineToString(line);
 }
 
@@ -170,7 +172,7 @@ export function buildCommandOptionLines(
   );
 
   if (commandOptions.length === 0) {
-    return '';
+    return null;
   }
 
   // Initialize output array with header and empty line
@@ -254,8 +256,7 @@ export function buildCommandOptionLines(
     }
   }
 
-  // return the entire list of options as a single string after delete the last '\n' added to the option list
-  return outputArrayToString(outputArray);
+  return `${outputArrayToString(outputArray)}${NEWLINE}`;
 }
 
 export function buildCommandExampleLines(command: Command) {
@@ -283,7 +284,7 @@ export function buildCommandExampleLines(command: Command) {
 }
 
 function buildDescriptionLine(command: Command) {
-  const line: string[] = [INDENT, command.description];
+  const line: string[] = [INDENT, command.description, NEWLINE];
   return lineToString(line);
 }
 
@@ -295,16 +296,12 @@ export function buildHelpOutput(
   command: Command,
   options: BuildHelpOutputOptions
 ) {
-  const outputArray: string[] = [
+  const outputArray: (string | null)[] = [
     '',
     buildCommandSynopsisLine(command),
-    '',
     buildDescriptionLine(command),
-    '',
     buildCommandOptionLines(command.options, options, 'Options'),
-    '',
     buildCommandOptionLines(globalCommandOptions, options, 'Global Options'),
-    '',
     buildCommandExampleLines(command),
     '',
   ];
