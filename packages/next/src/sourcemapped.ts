@@ -103,18 +103,18 @@ export function stringifySourceMap(
 // Based on https://github.com/thlorenz/convert-source-map/blob/f1ed815b4edacfa9c3c5552dd342e71a3cffbb0a/index.js#L4 (MIT license)
 // Groups: 1: media type, 2: MIME type, 3: charset, 4: encoding, 5: data.
 const SOURCE_MAP_COMMENT_REGEX =
-  // eslint-disable-next-line no-useless-escape
-  /^\s*?\/[\/\*][@#]\s+?sourceMappingURL=data:(((?:application|text)\/json)(?:;charset=([^;,]+?)?)?)?(?:;(base64))?,(.*?)$/gm;
+  /^\s*?\/[/*][@#]\s+?sourceMappingURL=data:(((?:application|text)\/json)(?:;charset=([^;,]+?)?)?)?(?:;(base64))?,(.*?)$/gm;
 
 function isValidSourceMapData(encoding: string, data: string): boolean {
-  // Remove any spaces and the trailing `*/`.
-  data = data.replace(/\s/g, '').replace('*/', '');
-
   if (encoding !== 'base64') {
     // Unknown encoding. I think the comment is short (e.g. URL) if it's not
     // base64 encoded, so let's keep it to be safe.
     return false;
   }
+
+  // Remove any spaces and "*/" of the source map comment. They should not be
+  // considered as a part of the source map data.
+  data = data.replace(/\s/g, '').replace(/\*\//g, '');
 
   // If it's an invalid base64 string, it must be a sourceMappingURL
   // inside a template literal like the follwoing.
