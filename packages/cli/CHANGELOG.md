@@ -1,5 +1,29 @@
 # vercel
 
+## 31.2.1
+
+### Patch Changes
+
+- Migrate bisect command to new structure ([#10276](https://github.com/vercel/vercel/pull/10276))
+
+- Migrate remove command to new structure ([#10268](https://github.com/vercel/vercel/pull/10268))
+
+- Updated dependencies [[`fc413707d`](https://github.com/vercel/vercel/commit/fc413707d017e234d5013b761d885f65f9b981bc)]:
+  - @vercel/node@2.15.7
+  - @vercel/static-build@1.3.43
+
+## 31.2.0
+
+### Minor Changes
+
+- Add a "Global Options" section to help output ([#10250](https://github.com/vercel/vercel/pull/10250))
+
+### Patch Changes
+
+- Updated dependencies [[`d1b0dbe3a`](https://github.com/vercel/vercel/commit/d1b0dbe3a7d8754286aa2b7ba0c8b55d3adafdea), [`4a8622a10`](https://github.com/vercel/vercel/commit/4a8622a10d52260cb629a1c4a6f797ade05ea154), [`6469ef1b8`](https://github.com/vercel/vercel/commit/6469ef1b8ce37e93f50ab4a108aa0953d7631fe8)]:
+  - @vercel/remix-builder@1.9.0
+  - @vercel/next@3.9.3
+
 ## 31.1.1
 
 ### Patch Changes
