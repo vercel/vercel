@@ -38,35 +38,37 @@ import {
 import { fileNameSymbol } from '@vercel/client';
 import type { VercelConfig } from '@vercel/client';
 
-import pull from './pull';
-import { staticFiles as getFiles } from '../util/get-files';
-import Client from '../util/client';
-import getArgs from '../util/get-args';
-import cmd from '../util/output/cmd';
-import * as cli from '../util/pkg-name';
-import cliPkg from '../util/pkg';
-import readJSONFile from '../util/read-json-file';
-import { CantParseJSONFile } from '../util/errors-ts';
+import pull from '../pull';
+import { staticFiles as getFiles } from '../../util/get-files';
+import Client from '../../util/client';
+import getArgs from '../../util/get-args';
+import cmd from '../../util/output/cmd';
+import * as cli from '../../util/pkg-name';
+import cliPkg from '../../util/pkg';
+import readJSONFile from '../../util/read-json-file';
+import { CantParseJSONFile } from '../../util/errors-ts';
 import {
   pickOverrides,
   ProjectLinkAndSettings,
   readProjectSettings,
-} from '../util/projects/project-settings';
-import { getProjectLink, VERCEL_DIR } from '../util/projects/link';
-import confirm from '../util/input/confirm';
-import { emoji, prependEmoji } from '../util/emoji';
-import stamp from '../util/output/stamp';
+} from '../../util/projects/project-settings';
+import { getProjectLink, VERCEL_DIR } from '../../util/projects/link';
+import confirm from '../../util/input/confirm';
+import { emoji, prependEmoji } from '../../util/emoji';
+import stamp from '../../util/output/stamp';
 import {
   OUTPUT_DIR,
   PathOverride,
   writeBuildResult,
-} from '../util/build/write-build-result';
-import { importBuilders } from '../util/build/import-builders';
-import { initCorepack, cleanupCorepack } from '../util/build/corepack';
-import { sortBuilders } from '../util/build/sort-builders';
-import { toEnumerableError } from '../util/error';
-import { validateConfig } from '../util/validate-config';
-import { setMonorepoDefaultSettings } from '../util/build/monorepo';
+} from '../../util/build/write-build-result';
+import { importBuilders } from '../../util/build/import-builders';
+import { initCorepack, cleanupCorepack } from '../../util/build/corepack';
+import { sortBuilders } from '../../util/build/sort-builders';
+import { toEnumerableError } from '../../util/error';
+import { validateConfig } from '../../util/validate-config';
+import { setMonorepoDefaultSettings } from '../../util/build/monorepo';
+import { help } from '../help';
+import { buildCommand } from './command';
 
 type BuildResult = BuildResultV2 | BuildResultV3;
 
@@ -103,35 +105,6 @@ export interface BuildsManifest {
   builds?: SerializedBuilder[];
 }
 
-const help = () => {
-  return console.log(`
-   ${chalk.bold(`${cli.logo} ${cli.name} build`)}
-
-   ${chalk.dim('Options:')}
-
-      -h, --help                     Output usage information
-      -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
-    'FILE'
-  )}   Path to the local ${'`vercel.json`'} file
-      -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
-    'DIR'
-  )}    Path to the global ${'`.vercel`'} directory
-      --cwd [path]                   The current working directory
-      --output [path]                Directory where built assets should be written to
-      --prod                         Build a production deployment
-      -d, --debug                    Debug mode [off]
-      --no-color                     No color mode [off]
-      -y, --yes                      Skip the confirmation prompt about pulling environment variables and project settings when not found locally
-
-    ${chalk.dim('Examples:')}
-
-    ${chalk.gray('-')} Build the project
-
-      ${chalk.cyan(`$ ${cli.name} build`)}
-      ${chalk.cyan(`$ ${cli.name} build --cwd ./path-to-project`)}
-`);
-};
-
 export default async function main(client: Client): Promise<number> {
   let { cwd } = client;
   const { output } = client;
@@ -162,7 +135,7 @@ export default async function main(client: Client): Promise<number> {
   });
 
   if (argv['--help']) {
-    help();
+    output.print(help(buildCommand, { columns: client.stderr.columns }));
     return 2;
   }
 
