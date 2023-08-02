@@ -132,8 +132,8 @@ export function lineToString(line: string[]) {
   return string;
 }
 
-export function outputArrayToString(outputArray: string[]) {
-  return outputArray.join(NEWLINE);
+export function outputArrayToString(outputArray: (string | null)[]) {
+  return outputArray.filter(line => line !== null).join(NEWLINE);
 }
 
 /**
@@ -142,7 +142,12 @@ export function outputArrayToString(outputArray: string[]) {
  * @returns
  */
 export function buildCommandSynopsisLine(command: Command) {
-  const line: string[] = [LOGO, chalk.bold(NAME), chalk.bold(command.name)];
+  const line: string[] = [
+    INDENT,
+    LOGO,
+    chalk.bold(NAME),
+    chalk.bold(command.name),
+  ];
   if (command.arguments.length > 0) {
     for (const argument of command.arguments) {
       line.push(argument.required ? argument.name : `[${argument.name}]`);
@@ -151,6 +156,8 @@ export function buildCommandSynopsisLine(command: Command) {
   if (command.options.length > 0) {
     line.push('[options]');
   }
+
+  line.push(NEWLINE);
   return lineToString(line);
 }
 
@@ -165,11 +172,11 @@ export function buildCommandOptionLines(
   );
 
   if (commandOptions.length === 0) {
-    return '';
+    return null;
   }
 
   // Initialize output array with header and empty line
-  const outputArray: string[] = [`${chalk.dim(sectionTitle)}:`, ''];
+  const outputArray: string[] = [`${INDENT}${chalk.dim(sectionTitle)}:`, ''];
 
   // Start building option lines
   const optionLines: string[][] = [];
@@ -181,7 +188,7 @@ export function buildCommandOptionLines(
   let maxLineStartLength = 0;
   // Iterate over options and create the "start" of each option (e.g. `  -b, --build-env <key=value>`)
   for (const option of commandOptions) {
-    const startLine: string[] = [INDENT];
+    const startLine: string[] = [INDENT, INDENT, INDENT];
     if (option.shorthand) {
       startLine.push(`-${option.shorthand},`);
     }
@@ -249,12 +256,11 @@ export function buildCommandOptionLines(
     }
   }
 
-  // return the entire list of options as a single string after delete the last '\n' added to the option list
-  return outputArrayToString(outputArray);
+  return `${outputArrayToString(outputArray)}${NEWLINE}`;
 }
 
 export function buildCommandExampleLines(command: Command) {
-  const outputArray: string[] = [chalk.dim(`Examples:`), ''];
+  const outputArray: string[] = [`${INDENT}${chalk.dim('Examples:')}`, ''];
   for (const example of command.examples) {
     const nameLine: string[] = [INDENT];
     nameLine.push(chalk.gray('-'));
@@ -273,10 +279,13 @@ export function buildCommandExampleLines(command: Command) {
     }
     outputArray.push('');
   }
-  // delete the last newline added after examples iteration
-  outputArray.splice(-1);
 
   return outputArrayToString(outputArray);
+}
+
+function buildDescriptionLine(command: Command) {
+  const line: string[] = [INDENT, command.description, NEWLINE];
+  return lineToString(line);
 }
 
 interface BuildHelpOutputOptions {
@@ -287,15 +296,12 @@ export function buildHelpOutput(
   command: Command,
   options: BuildHelpOutputOptions
 ) {
-  const outputArray: string[] = [
+  const outputArray: (string | null)[] = [
+    '',
     buildCommandSynopsisLine(command),
-    '',
-    command.description,
-    '',
+    buildDescriptionLine(command),
     buildCommandOptionLines(command.options, options, 'Options'),
-    '',
     buildCommandOptionLines(globalCommandOptions, options, 'Global Options'),
-    '',
     buildCommandExampleLines(command),
     '',
   ];
