@@ -146,7 +146,7 @@ test(
 test(
   '[vercel dev] 43-compress-encoding',
   testFixtureStdio('43-compress-encoding', async (testPath: any) => {
-    await testPath(200, '/', 'Hello World!');
+    await testPath(200, '/api', 'Hello World!');
   })
 );
 
