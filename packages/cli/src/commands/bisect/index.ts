@@ -8,53 +8,19 @@ import { URLSearchParams, parse } from 'url';
 import box from '../../util/output/box';
 import formatDate from '../../util/format-date';
 import link from '../../util/output/link';
-import logo from '../../util/output/logo';
 import getArgs from '../../util/get-args';
 import Client from '../../util/client';
-import { getPkgName } from '../../util/pkg-name';
 import { Deployment } from '@vercel-internals/types';
 import { normalizeURL } from '../../util/bisect/normalize-url';
 import getScope from '../../util/get-scope';
 import getDeployment from '../../util/get-deployment';
+import { help } from '../help';
+import { bisectCommand } from './command';
 
 interface Deployments {
   deployments: Deployment[];
 }
-
-const pkgName = getPkgName();
-
-const help = () => {
-  console.log(`
-  ${chalk.bold(`${logo} ${pkgName} bisect`)} [options]
-
-  ${chalk.dim('Options:')}
-
-    -h, --help                 Output usage information
-    -d, --debug                Debug mode [off]
-    --no-color                 No color mode [off]
-    -b, --bad                  Known bad URL
-    -g, --good                 Known good URL
-    -o, --open                 Automatically open each URL in the browser
-    -p, --path                 Subpath of the deployment URL to test
-    -r, --run                  Test script to run for each deployment
-
-  ${chalk.dim('Examples:')}
-
-  ${chalk.gray('–')} Bisect the current project interactively
-
-      ${chalk.cyan(`$ ${pkgName} bisect`)}
-
-  ${chalk.gray('–')} Bisect with a known bad deployment
-
-      ${chalk.cyan(`$ ${pkgName} bisect --bad example-310pce9i0.vercel.app`)}
-
-  ${chalk.gray('–')} Automated bisect with a run script
-
-      ${chalk.cyan(`$ ${pkgName} bisect --run ./test.sh`)}
-  `);
-};
-
-export default async function main(client: Client): Promise<number> {
+export default async function bisect(client: Client): Promise<number> {
   const { output } = client;
   const scope = await getScope(client);
   const { contextName } = scope;
@@ -73,7 +39,7 @@ export default async function main(client: Client): Promise<number> {
   });
 
   if (argv['--help']) {
-    help();
+    output.print(help(bisectCommand, { columns: client.stderr.columns }));
     return 2;
   }
 
