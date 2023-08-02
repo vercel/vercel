@@ -1,5 +1,11 @@
 # @vercel/node
 
+## 2.15.7
+
+### Patch Changes
+
+- fix: move content-type as dependency ([#10274](https://github.com/vercel/vercel/pull/10274))
+
 ## 2.15.6
 
 ### Patch Changes
