@@ -274,6 +274,7 @@ export function addDependencies(
     debug(` - ${name}`);
   }
   const args: string[] = [];
+
   if (cliType === 'npm' || cliType === 'pnpm') {
     args.push('install');
     if (opts.saveDev) {
@@ -281,11 +282,19 @@ export function addDependencies(
     }
   } else {
     // 'yarn'
-    args.push('add');
+    args.push('add', '--ignore-workspace-root-check');
     if (opts.saveDev) {
       args.push('--dev');
     }
   }
+
+  // Don't fail if pnpm is being run at the workspace root
+  if (cliType === 'pnpm' && opts.cwd) {
+    if (existsSync(join(opts.cwd, 'pnpm-workspace.yaml'))) {
+      args.push('--workspace-root');
+    }
+  }
+
   return spawnAsync(cliType, args.concat(names), opts);
 }
 
