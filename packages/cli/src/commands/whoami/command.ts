@@ -3,7 +3,7 @@ import { getPkgName } from '../../util/pkg-name';
 
 export const whoamiCommand: Command = {
   name: 'whoami',
-  description: 'Shows the username of the currently logged in user',
+  description: 'Shows the username of the currently logged in user.',
   arguments: [],
   options: [],
   examples: [
