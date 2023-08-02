@@ -144,6 +144,13 @@ test(
 );
 
 test(
+  '[vercel dev] 43-compress-encoding',
+  testFixtureStdio('43-compress-encoding', async (testPath: any) => {
+    await testPath(200, '/', 'Hello World!');
+  })
+);
+
+test(
   '[vercel dev] Middleware that returns a 200 response',
   testFixtureStdio('middleware-response', async (testPath: any) => {
     await testPath(200, '/', 'hi from middleware');
