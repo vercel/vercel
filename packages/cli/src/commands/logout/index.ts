@@ -1,37 +1,19 @@
-import chalk from 'chalk';
-import logo from '../util/output/logo';
-import { handleError } from '../util/error';
-import { writeToConfigFile, writeToAuthConfigFile } from '../util/config/files';
-import getArgs from '../util/get-args';
-import Client from '../util/client';
-import { getCommandName, getPkgName } from '../util/pkg-name';
-import { isAPIError } from '../util/errors-ts';
+import { handleError } from '../../util/error';
+import {
+  writeToConfigFile,
+  writeToAuthConfigFile,
+} from '../../util/config/files';
+import getArgs from '../../util/get-args';
+import Client from '../../util/client';
+import { getCommandName } from '../../util/pkg-name';
+import { isAPIError } from '../../util/errors-ts';
 import { errorToString } from '@vercel/error-utils';
-
-const help = () => {
-  console.log(`
-  ${chalk.bold(`${logo} ${getPkgName()} logout`)}
-
-  ${chalk.dim('Options:')}
-
-    -h, --help                     Output usage information
-    -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
-    'FILE'
-  )}   Path to the local ${'`vercel.json`'} file
-    -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
-    'DIR'
-  )}    Path to the global ${'`.vercel`'} directory
-
-  ${chalk.dim('Examples:')}
-
-  ${chalk.gray('–')} Logout from the CLI:
-
-    ${chalk.cyan(`$ ${getPkgName()} logout`)}
-`);
-};
+import { help } from '../help';
+import { logoutCommand } from './command';
 
 export default async function main(client: Client): Promise<number> {
   let argv;
+  const { authConfig, config, output } = client;
 
   try {
     argv = getArgs(client.argv.slice(2), {
@@ -44,11 +26,9 @@ export default async function main(client: Client): Promise<number> {
   }
 
   if (argv['--help']) {
-    help();
+    output.print(help(logoutCommand, { columns: client.stderr.columns }));
     return 2;
   }
-
-  const { authConfig, config, output } = client;
 
   if (!authConfig.token) {
     output.note(
