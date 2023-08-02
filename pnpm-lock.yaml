@@ -1063,8 +1063,8 @@ importers:
         specifier: 11.1.0
         version: 11.1.0
       ts-morph:
-        specifier: 12.0.0
-        version: 12.0.0
+        specifier: 19.0.0
+        version: 19.0.0
 
   packages/next:
     devDependencies:
@@ -1231,8 +1231,8 @@ importers:
         specifier: 6.2.1
         version: 6.2.1
       ts-morph:
-        specifier: 12.0.0
-        version: 12.0.0
+        specifier: 19.0.0
+        version: 19.0.0
       ts-node:
         specifier: 10.9.1
         version: 10.9.1(@swc/core@1.2.218)(@types/node@14.18.33)(typescript@4.9.5)
@@ -1362,8 +1362,8 @@ importers:
         specifier: 7.3.8
         version: 7.3.8
       ts-morph:
-        specifier: 12.0.0
-        version: 12.0.0
+        specifier: 19.0.0
+        version: 19.0.0
     devDependencies:
       '@remix-run/dev':
         specifier: npm:@vercel/remix-run-dev@1.19.1
@@ -1507,8 +1507,8 @@ importers:
         specifier: 1.2.2
         version: 1.2.2
       ts-morph:
-        specifier: 12.0.0
-        version: 12.0.0
+        specifier: 19.0.0
+        version: 19.0.0
 
   packages/static-config:
     dependencies:
@@ -1519,8 +1519,8 @@ importers:
         specifier: 1.6.4
         version: 1.6.4
       ts-morph:
-        specifier: 12.0.0
-        version: 12.0.0
+        specifier: 19.0.0
+        version: 19.0.0
     devDependencies:
       '@swc/core':
         specifier: 1.2.182
@@ -4681,12 +4681,12 @@ packages:
     resolution: {integrity: sha512-C5Mc6rdnsaJDjO3UpGW/CQTHtCKaYlScZTly4JIu97Jxo/odCiH0ITnDXSJPTOrEKk/ycSZ0AOgTmkDtkOsvIA==}
     dev: true
 
-  /@ts-morph/common@0.11.1:
-    resolution: {integrity: sha512-7hWZS0NRpEsNV8vWJzg7FEz6V8MaLNeJOmwmghqUXTpzk16V1LLZhdo+4QvE/+zv4cVci0OviuJFnqhEfoV3+g==}
+  /@ts-morph/common@0.20.0:
+    resolution: {integrity: sha512-7uKjByfbPpwuzkstL3L5MQyuXPSKdoNG93Fmi2JoDcTf3pEP731JdRFAduRVkOs8oqxPsXKA+ScrWkdQ8t/I+Q==}
     dependencies:
       fast-glob: 3.2.12
-      minimatch: 3.1.2
-      mkdirp: 1.0.4
+      minimatch: 7.4.6
+      mkdirp: 2.1.6
       path-browserify: 1.0.1
 
   /@tsconfig/node10@1.0.9:
@@ -7453,8 +7453,8 @@ packages:
     engines: {iojs: '>= 1.0.0', node: '>= 0.12.0'}
     dev: true
 
-  /code-block-writer@10.1.1:
-    resolution: {integrity: sha512-67ueh2IRGst/51p0n6FvPrnRjAGHY5F8xdjkgrYE7DDzpJe6qA07RYQ9VcoUeo5ATOjSOiWpSL3SWBRRbempMw==}
+  /code-block-writer@12.0.0:
+    resolution: {integrity: sha512-q4dMFMlXtKR3XNBHyMHt/3pwYNA69EDk00lloMOaaUMKPUXBw6lpXtbu3MMVG6/uOihGnRDOlkyqsONEUj60+w==}
 
   /code-point-at@1.1.0:
     resolution: {integrity: sha512-RpAVKQA5T63xEj6/giIbUEtZwJ4UFIc3ZtvEkiaUERylqe8xb5IvqcgOurZLahv93CLKfxcw5YI+DZcUBRyLXA==}
@@ -13234,6 +13234,12 @@ packages:
     dependencies:
       brace-expansion: 2.0.1
 
+  /minimatch@7.4.6:
+    resolution: {integrity: sha512-sBz8G/YjVniEz6lKPNpKxXwazJe4c19fEfV2GDMX6AjFz+MX9uDWIZW8XreVhkFW3fkIdTv/gxWr/Kks5FFAVw==}
+    engines: {node: '>=10'}
+    dependencies:
+      brace-expansion: 2.0.1
+
   /minimatch@9.0.0:
     resolution: {integrity: sha512-0jJj8AvgKqWN05mrwuqi8QYKx1WmYSUoKSxu5Qhs9prezTz10sxAHGNZe9J9cqIJzta8DWsleh2KaVaLl6Ru2w==}
     engines: {node: '>=16 || 14 >=14.17'}
@@ -13335,6 +13341,11 @@ packages:
 
   /mkdirp@1.0.4:
     resolution: {integrity: sha512-vVqVZQyf3WLx2Shd0qJ9xuvqgAyKPLAiqITEtqW0oIUjzo3PePDd6fW9iFz30ef7Ysp/oiWqbhszeGWW2T6Gzw==}
+    engines: {node: '>=10'}
+    hasBin: true
+
+  /mkdirp@2.1.6:
+    resolution: {integrity: sha512-+hEnITedc8LAtIP9u3HJDFIdcLV2vXP33sqLLIzkv1Db1zO/1OxbvYf0Y1OC/S/Qo5dxHXepofhmxL02PsKe+A==}
     engines: {node: '>=10'}
     hasBin: true
 
@@ -16213,11 +16224,11 @@ packages:
       yargs-parser: 21.1.1
     dev: true
 
-  /ts-morph@12.0.0:
-    resolution: {integrity: sha512-VHC8XgU2fFW7yO1f/b3mxKDje1vmyzFXHWzOYmKEkCEwcLjDtbdLgBQviqj4ZwP4MJkQtRo6Ha2I29lq/B+VxA==}
+  /ts-morph@19.0.0:
+    resolution: {integrity: sha512-D6qcpiJdn46tUqV45vr5UGM2dnIEuTGNxVhg0sk5NX11orcouwj6i1bMqZIz2mZTZB1Hcgy7C3oEVhAT+f6mbQ==}
     dependencies:
-      '@ts-morph/common': 0.11.1
-      code-block-writer: 10.1.1
+      '@ts-morph/common': 0.20.0
+      code-block-writer: 12.0.0
 
   /ts-node@10.9.1(@swc/core@1.2.218)(@types/node@14.18.33)(typescript@4.9.5):
     resolution: {integrity: sha512-NtVysVPkxxrwFGUUxGYhfux8k78pQB3JqYBXlLRZgdGUqTO5wU/UyHop5p70iEbGhB7q5KmiZiU0Y3KlJrScEw==}
