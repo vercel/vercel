@@ -3,7 +3,7 @@ import { getPkgName } from '../../util/pkg-name';
 
 export const linkCommand: Command = {
   name: 'link',
-  description: 'Show information about a deployment.',
+  description: 'Link a local directory to a Vercel Project.',
   arguments: [],
   options: [
     {
