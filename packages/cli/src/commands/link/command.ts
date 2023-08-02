@@ -2,7 +2,7 @@ import { Command } from '../help';
 import { getPkgName } from '../../util/pkg-name';
 
 export const linkCommand: Command = {
-  name: 'inspect',
+  name: 'link',
   description: 'Show information about a deployment.',
   arguments: [],
   options: [
