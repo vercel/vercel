@@ -1,5 +1,36 @@
 # vercel
 
+## 31.2.2
+
+### Patch Changes
+
+- Migrate list command to new structure ([#10284](https://github.com/vercel/vercel/pull/10284))
+
+- Migrate whoami command to new structure ([#10266](https://github.com/vercel/vercel/pull/10266))
+
+- Migrate logs command to new structure ([#10281](https://github.com/vercel/vercel/pull/10281))
+
+- Migrate login command to new structure ([#10283](https://github.com/vercel/vercel/pull/10283))
+
+- Migrate pull command to new structure ([#10280](https://github.com/vercel/vercel/pull/10280))
+
+- Migrate logout command to new structure ([#10282](https://github.com/vercel/vercel/pull/10282))
+
+- Migrate build command to new structure ([#10286](https://github.com/vercel/vercel/pull/10286))
+
+- Migrate inspect command to new structure ([#10277](https://github.com/vercel/vercel/pull/10277))
+
+- Migrate redeploy command to new structure ([#10279](https://github.com/vercel/vercel/pull/10279))
+
+- Migrate link command to new structure ([#10285](https://github.com/vercel/vercel/pull/10285))
+
+- Update spacing of --help output for CLI ([#10287](https://github.com/vercel/vercel/pull/10287))
+
+- Updated dependencies [[`4af242af8`](https://github.com/vercel/vercel/commit/4af242af8633e58b6a9bf920564416da3ef22ad4), [`0cbdae141`](https://github.com/vercel/vercel/commit/0cbdae1411aa7936ff7dfe551919ca5e56cd6e98), [`85dd66778`](https://github.com/vercel/vercel/commit/85dd667781693539d753d587566e53964bbe189d)]:
+  - @vercel/node@2.15.8
+  - @vercel/remix-builder@1.9.1
+  - @vercel/static-build@1.3.44
+
 ## 31.2.1
 
 ### Patch Changes

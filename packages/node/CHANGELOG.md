@@ -1,5 +1,13 @@
 # @vercel/node
 
+## 2.15.8
+
+### Patch Changes
+
+- Move `@types/content-type` to dev dependency ([#10292](https://github.com/vercel/vercel/pull/10292))
+
+- fix: compress condition ([#10288](https://github.com/vercel/vercel/pull/10288))
+
 ## 2.15.7
 
 ### Patch Changes
