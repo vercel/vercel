@@ -1,5 +1,11 @@
 # @vercel/remix-builder
 
+## 1.9.1
+
+### Patch Changes
+
+- Disable root workspace check in pnpm and yarn when adding deps ([#10291](https://github.com/vercel/vercel/pull/10291))
+
 ## 1.9.0
 
 ### Minor Changes
