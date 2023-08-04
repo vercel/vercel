@@ -8,7 +8,7 @@ import remove from '../../../src/commands/remove';
 import { useDeployment } from '../../mocks/deployment';
 import { useUser } from '../../mocks/user';
 
-describe('redeploy', () => {
+describe('remove', () => {
   it('should error if missing deployment url', async () => {
     client.setArgv('remove');
     const exitCodePromise = remove(client);
