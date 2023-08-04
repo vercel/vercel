@@ -86,6 +86,7 @@ export default async function remove(client: Client) {
   let projects: Project[];
   let deployments: DeploymentWithAliases[];
   const findStart = Date.now();
+
   try {
     const searchFilter = (d: Deployment) =>
       ids.some(
