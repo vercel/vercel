@@ -1,0 +1,10 @@
+{
+  "buildEnv":{
+    "SESSION_SECRET":"foobar",
+    "PUBLIC_STORE_DOMAIN":"mock.shop"
+  },
+  "env":{
+    "SESSION_SECRET":"foobar",
+    "PUBLIC_STORE_DOMAIN":"mock.shop"
+  }
+}
