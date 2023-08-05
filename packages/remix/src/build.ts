@@ -45,6 +45,7 @@ import {
   ensureResolvable,
   isESM,
 } from './utils';
+import { patchHydrogenServer } from './hydrogen';
 
 interface ServerBundle {
   serverBuildPath: string;
@@ -140,6 +141,10 @@ export const build: BuildV2 = async ({
     await runNpmInstall(entrypointFsDirname, [], spawnOpts, meta, nodeVersion);
   }
 
+  const isHydrogen2 =
+    pkg.dependencies?.['@shopify/remix-oxygen'] ||
+    pkg.devDependencies?.['@shopify/remix-oxygen'];
+
   // Determine the version of Remix based on the `@remix-run/dev`
   // package version.
   const remixRunDevPath = await ensureResolvable(
@@ -162,7 +167,9 @@ export const build: BuildV2 = async ({
 
   const depsToAdd: string[] = [];
 
-  if (remixRunDevPkg.name !== '@vercel/remix-run-dev') {
+  // Override the official `@remix-run/dev` package with the
+  // Vercel fork, which supports the `serverBundles` config
+  if (!isHydrogen2 && remixRunDevPkg.name !== '@vercel/remix-run-dev') {
     const remixDevForkVersion = resolveSemverMinMax(
       REMIX_RUN_DEV_MIN_VERSION,
       REMIX_RUN_DEV_MAX_VERSION,
@@ -216,6 +223,8 @@ export const build: BuildV2 = async ({
   }
 
   let remixConfigWrapped = false;
+  let serverEntryPointAbs: string | undefined;
+  let originalServerEntryPoint: string | undefined;
   const remixConfigPath = findConfig(entrypointFsDirname, 'remix.config');
   const renamedRemixConfigPath = remixConfigPath
     ? `${remixConfigPath}.original${extname(remixConfigPath)}`
@@ -232,7 +241,13 @@ export const build: BuildV2 = async ({
     const staticConfigsMap = new Map<ConfigRoute, BaseFunctionConfig | null>();
     for (const route of remixRoutes) {
       const routePath = join(remixConfig.appDirectory, route.file);
-      const staticConfig = getConfig(project, routePath);
+      let staticConfig = getConfig(project, routePath);
+      if (staticConfig && isHydrogen2) {
+        console.log(
+          'WARN: `export const config` is currently not supported for Hydrogen v2 apps'
+        );
+        staticConfig = null;
+      }
       staticConfigsMap.set(route, staticConfig);
     }
 
@@ -240,7 +255,8 @@ export const build: BuildV2 = async ({
       const config = getResolvedRouteConfig(
         route,
         remixConfig.routes,
-        staticConfigsMap
+        staticConfigsMap,
+        isHydrogen2
       );
       resolvedConfigsMap.set(route, config);
     }
@@ -269,7 +285,12 @@ export const build: BuildV2 = async ({
       ([hash, routes]) => {
         const runtime = resolvedConfigsMap.get(routes[0])?.runtime ?? 'nodejs';
         return {
-          serverBuildPath: `build/build-${runtime}-${hash}.js`,
+          serverBuildPath: isHydrogen2
+            ? relative(entrypointFsDirname, remixConfig.serverBuildPath)
+            : `${relative(
+                entrypointFsDirname,
+                dirname(remixConfig.serverBuildPath)
+              )}/build-${runtime}-${hash}.js`,
           routes: routes.map(r => r.id),
         };
       }
@@ -277,7 +298,7 @@ export const build: BuildV2 = async ({
 
     // We need to patch the `remix.config.js` file to force some values necessary
     // for a build that works on either Node.js or the Edge runtime
-    if (remixConfigPath && renamedRemixConfigPath) {
+    if (!isHydrogen2 && remixConfigPath && renamedRemixConfigPath) {
       await fs.rename(remixConfigPath, renamedRemixConfigPath);
 
       let patchedConfig: string;
@@ -305,6 +326,32 @@ module.exports = config;`;
       }
       await fs.writeFile(remixConfigPath, patchedConfig);
       remixConfigWrapped = true;
+    }
+
+    // For Hydrogen v2, patch the `server.ts` file to be Vercel-compatible
+    if (isHydrogen2) {
+      if (remixConfig.serverEntryPoint) {
+        serverEntryPointAbs = join(
+          entrypointFsDirname,
+          remixConfig.serverEntryPoint
+        );
+        originalServerEntryPoint = await fs.readFile(
+          serverEntryPointAbs,
+          'utf8'
+        );
+        const patchedServerEntryPoint = patchHydrogenServer(
+          project,
+          serverEntryPointAbs
+        );
+        if (patchedServerEntryPoint) {
+          debug(
+            `Patched Hydrogen server file: ${remixConfig.serverEntryPoint}`
+          );
+          await fs.writeFile(serverEntryPointAbs, patchedServerEntryPoint);
+        }
+      } else {
+        console.log('WARN: No "server" field found in Remix config');
+      }
     }
 
     // Make `remix build` output production mode
@@ -336,10 +383,28 @@ module.exports = config;`;
       }
     }
   } finally {
+    const cleanupOps: Promise<void>[] = [];
     // Clean up our patched `remix.config.js` to be polite
     if (remixConfigWrapped && remixConfigPath && renamedRemixConfigPath) {
-      await fs.rename(renamedRemixConfigPath, remixConfigPath);
+      cleanupOps.push(
+        fs
+          .rename(renamedRemixConfigPath, remixConfigPath)
+          .then(() =>
+            debug(`Restored original "${basename(remixConfigPath)}" file`)
+          )
+      );
     }
+    // Restore original server entrypoint if it was modified (for Hydrogen v2)
+    if (serverEntryPointAbs && originalServerEntryPoint) {
+      cleanupOps.push(
+        fs
+          .writeFile(serverEntryPointAbs, originalServerEntryPoint)
+          .then(() =>
+            debug(`Restored original "${basename(serverEntryPointAbs!)}" file`)
+          )
+      );
+    }
+    await Promise.all(cleanupOps);
   }
 
   // This needs to happen before we run NFT to create the Node/Edge functions
@@ -349,11 +414,21 @@ module.exports = config;`;
       repoRootPath,
       '@remix-run/server-runtime'
     ),
-    ensureResolvable(entrypointFsDirname, repoRootPath, '@remix-run/node'),
+    !isHydrogen2
+      ? ensureResolvable(entrypointFsDirname, repoRootPath, '@remix-run/node')
+      : null,
   ]);
 
+  const staticDir = join(
+    remixConfig.assetsBuildDirectory,
+    ...remixConfig.publicPath
+      .replace(/^\/|\/$/g, '')
+      .split('/')
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      .map(_ => '..')
+  );
   const [staticFiles, ...functions] = await Promise.all([
-    glob('**', join(entrypointFsDirname, 'public')),
+    glob('**', staticDir),
     ...serverBundles.map(bundle => {
       const firstRoute = remixConfig.routes[bundle.routes[0]];
       const config = resolvedConfigsMap.get(firstRoute) ?? {
