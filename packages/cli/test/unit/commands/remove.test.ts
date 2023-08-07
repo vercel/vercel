@@ -43,7 +43,6 @@ describe('remove', () => {
 
     const deployment = useDeployment({
       creator: user,
-      state: 'ERROR',
       project,
     });
 
