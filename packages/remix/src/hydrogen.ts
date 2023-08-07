@@ -1,5 +1,5 @@
 import { basename } from 'path';
-import { Node, Project } from 'ts-morph';
+import { Node, Project, SyntaxKind } from 'ts-morph';
 
 /**
  * For Hydrogen v2, the `server.ts` file exports a signature like:
@@ -27,7 +27,9 @@ export function patchHydrogenServer(
   serverEntryPoint: string
 ) {
   const sourceFile = project.addSourceFileAtPath(serverEntryPoint);
-  const defaultExportSymbol = sourceFile.getDefaultExportSymbol();
+  const defaultExportSymbol = sourceFile.getDescendantsOfKind(
+    SyntaxKind.ExportAssignment
+  )[0];
   const envProperties: string[] = [];
 
   if (!defaultExportSymbol) {
@@ -37,15 +39,9 @@ export function patchHydrogenServer(
     return;
   }
 
-  const declaration = defaultExportSymbol.getDeclarations()[0];
-  if (!Node.isExportAssignment(declaration)) {
-    console.log(
-      `WARN: No default export found in "${basename(serverEntryPoint)}"`
-    );
-    return;
-  }
-
-  const objectLiteral = declaration.getExpression();
+  const objectLiteral = defaultExportSymbol.getFirstChildByKind(
+    SyntaxKind.ObjectLiteralExpression
+  );
   if (!Node.isObjectLiteralExpression(objectLiteral)) {
     console.log(
       `WARN: Default export in "${basename(
@@ -99,7 +95,7 @@ export function patchHydrogenServer(
   const newFunction = `export default async function(${parameters
     .map(p => p.getText())
     .join(', ')}) ${fetchMethod.getBody()!.getText()}`;
-  declaration.replaceWithText(newFunction);
+  defaultExportSymbol.replaceWithText(newFunction);
 
   const envCode = `const env = { ${envProperties
     .map(name => `${name}: process.env.${name}`)
