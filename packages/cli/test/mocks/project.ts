@@ -144,7 +144,7 @@ export const defaultProject: Project = {
  */
 export function useUnknownProject() {
   let project: Project;
-  client.scenario.get(`/v8/projects/:projectNameOrId`, (_req, res) => {
+  client.scenario.get(`/:version/projects/:projectNameOrId`, (_req, res) => {
     res.status(404).send();
   });
   client.scenario.post(`/:version/projects`, (req, res) => {
