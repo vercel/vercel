@@ -679,9 +679,6 @@ importers:
       strip-ansi:
         specifier: 6.0.1
         version: 6.0.1
-      stripe:
-        specifier: 5.1.0
-        version: 5.1.0
       supports-hyperlinks:
         specifier: 3.0.0
         version: 3.0.0
@@ -12455,10 +12452,6 @@ packages:
     resolution: {integrity: sha512-m/M1U1f3ddMCs6Hq2tAsYThTBDaAKFDX3dwDo97GEYzamXi9SqUpjWi/Rrj/gf3X2n8ktwgZrlP1z6E3v/IExQ==}
     dev: true
 
-  /lodash.isplainobject@4.0.6:
-    resolution: {integrity: sha512-oSXzaWypCMHkPC3NvBEaPHf0KsA5mvPrOPgQWDsbg8n7orZ290M0BmC/jgRZ4vcJ6DTAhjrsSYgdsW/F+MFOBA==}
-    dev: true
-
   /lodash.memoize@4.1.2:
     resolution: {integrity: sha512-t7j+NzmgnQzTAYXcsHYLgimltOV1MXHtlOWf6GjL9Kj8GK5FInw5JotxvbOs+IvV1/Dzo04/fCGfLVs7aXb4Ag==}
     dev: true
@@ -15641,16 +15634,6 @@ packages:
   /strip-json-comments@3.1.1:
     resolution: {integrity: sha512-6fPc+R4ihwqP6N/aIv2f1gMH8lOVtWQHoqC4yK6oSDVVocumAsfCqjkXnqiYMhmMwS/mEHLp7Vehlt3ql6lEig==}
     engines: {node: '>=8'}
-    dev: true
-
-  /stripe@5.1.0:
-    resolution: {integrity: sha512-thkCqKbsBAjYc5UJDgYtrtjZaQ8eoqUzSWzjGkCbOK34Wa89A1T13OM5Kx8q4aCagiauCAG5qy6FkKwBGCBRNQ==}
-    engines: {node: '>=4'}
-    dependencies:
-      bluebird: 3.7.2
-      lodash.isplainobject: 4.0.6
-      qs: 6.5.3
-      safe-buffer: 5.2.1
     dev: true
 
   /stubs@3.0.0:
