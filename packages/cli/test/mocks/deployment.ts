@@ -170,12 +170,10 @@ function setupDeploymentEndpoints(): void {
     res.json({ builds });
   });
 
-  client.scenario.get('/now/deployments/:id/aliases', (req, res) => {
+  client.scenario.get('/:version/deployments/:id/aliases', (req, res) => {
     const limit = parseInt(req.query.limit);
-    const { id } = req.params;
-    const deployment = deployments.get(id);
     res.json({
-      aliases: deployment?.alias ? [deployment.alias] : [],
+      aliases: [],
       pagination: { count: limit, total: limit, page: 1, pages: 1 },
     });
   });
