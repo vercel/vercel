@@ -150,7 +150,6 @@ export default async function main(client: Client): Promise<number> {
     return 1;
   }
 
-  // comment just to test changesets
   // If repo linked, update `cwd` to the repo root
   const link = await getProjectLink(client, cwd);
   const projectRootDirectory = link?.projectRootDirectory ?? '';
