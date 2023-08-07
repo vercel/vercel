@@ -58,7 +58,7 @@ export async function fileToSource(
   fullFilePath?: string
 ): Promise<Source> {
   const sourcemap = await getSourceMap(content, fullFilePath);
-  const cleanContent = convertSourceMap.removeComments(content);
+  const cleanContent = removeInlinedSourceMap(content);
   return sourcemap
     ? new SourceMapSource(cleanContent, sourceName, sourcemap)
     : new OriginalSource(cleanContent, sourceName);
@@ -98,4 +98,43 @@ export function stringifySourceMap(
       : convertSourceMap.fromJSON(sourceMap).toObject();
   delete obj.sourcesContent;
   return JSON.stringify(obj);
+}
+
+// Based on https://github.com/thlorenz/convert-source-map/blob/f1ed815b4edacfa9c3c5552dd342e71a3cffbb0a/index.js#L4 (MIT license)
+// Groups: 1: media type, 2: MIME type, 3: charset, 4: encoding, 5: data.
+const SOURCE_MAP_COMMENT_REGEX =
+  /^\s*?\/[/*][@#]\s+?sourceMappingURL=data:(((?:application|text)\/json)(?:;charset=([^;,]+?)?)?)?(?:;(base64))?,(.*?)$/gm;
+
+function isValidSourceMapData(encoding: string, data: string): boolean {
+  if (encoding !== 'base64') {
+    // Unknown encoding. I think the comment is short (e.g. URL) if it's not
+    // base64 encoded, so let's keep it to be safe.
+    return false;
+  }
+
+  // Remove any spaces and "*/" of the source map comment. They should not be
+  // considered as a part of the source map data.
+  data = data.replace(/\s/g, '').replace(/\*\//g, '');
+
+  // If it's an invalid base64 string, it must be a sourceMappingURL
+  // inside a template literal like the follwoing.
+  // https://github.com/webpack-contrib/style-loader/blob/16e401b17a39544d5c8ca47c9032f02e2b60d8f5/src/runtime/styleDomAPI.js#L35C1-L40C1
+  return /^[a-zA-Z0-9+=/]+$/.test(data);
+}
+
+/*
+ * Removes sourceMappingURL comments from a string.
+ */
+export function removeInlinedSourceMap(source: string): string {
+  for (const m of source.matchAll(SOURCE_MAP_COMMENT_REGEX)) {
+    // Check if it's certainly a sourceMappingURL in a comment, not a part
+    // of JavaScript code (e.g. template literal).
+    if (!isValidSourceMapData(m[4], m[5])) {
+      continue;
+    }
+
+    source = source.replace(m[0], '');
+  }
+
+  return source;
 }
