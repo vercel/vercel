@@ -113,6 +113,33 @@ describe('scrubArgv()', () => {
   });
 
   describe('Multiple', () => {
+    it('should scrub vc build arg', () => {
+      const result = scrubArgv([
+        'vc',
+        'build',
+        '--cwd',
+        '/path/to/project',
+        '--env',
+        '"NODE_ENV=production"',
+        '--token',
+        '"$TOKEN"',
+        '--prod',
+        '--yes',
+      ]);
+      expect(result).toEqual([
+        'vc',
+        'build',
+        '--cwd',
+        '/path/to/project',
+        '--env',
+        'REDACTED',
+        '--token',
+        'REDACTED',
+        '--prod',
+        '--yes',
+      ]);
+    });
+
     it('should scrub multiple args', () => {
       const result = scrubArgv([
         'a',
