@@ -93,6 +93,7 @@ export default async function getDeploymentsByProjectId(
       regions: [],
       source: depl.source,
       status: depl.state,
+      state: depl.state,
       target: depl.target,
       type: depl.type,
       url: depl.url,

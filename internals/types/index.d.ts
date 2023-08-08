@@ -131,6 +131,14 @@ type RouteOrMiddleware =
       middleware: 0;
     };
 
+type DeploymentStates =
+  | 'BUILDING'
+  | 'ERROR'
+  | 'INITIALIZING'
+  | 'QUEUED'
+  | 'READY'
+  | 'CANCELED';
+
 export type Deployment = {
   alias?: string[];
   aliasAssigned?: boolean | null | number;
@@ -173,6 +181,7 @@ export type Deployment = {
     type: string;
     workspaceUuid: string;
   };
+  uid?: string;
   id: string;
   initReadyAt?: number;
   inspectorUrl?: string | null;
@@ -196,23 +205,12 @@ export type Deployment = {
   };
   public: boolean;
   ready?: number;
-  readyState:
-    | 'BUILDING'
-    | 'ERROR'
-    | 'INITIALIZING'
-    | 'QUEUED'
-    | 'READY'
-    | 'CANCELED';
+  readyState: DeploymentStates;
   regions: string[];
   routes?: RouteOrMiddleware[] | null;
   source?: 'cli' | 'git' | 'import' | 'import/repo' | 'clone/repo';
-  status:
-    | 'BUILDING'
-    | 'ERROR'
-    | 'INITIALIZING'
-    | 'QUEUED'
-    | 'READY'
-    | 'CANCELED';
+  status: DeploymentStates;
+  state: DeploymentStates;
   target?: 'staging' | 'production' | null;
   team?: {
     id: string;
