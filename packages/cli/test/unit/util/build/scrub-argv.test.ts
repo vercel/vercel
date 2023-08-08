@@ -111,4 +111,59 @@ describe('scrubArgv()', () => {
       expect(result).toEqual(['foo', '-xyt', 'REDACTED', 'baz']);
     });
   });
+
+  describe('Multiple', () => {
+    it('should scrub multiple args', () => {
+      const result = scrubArgv([
+        'a',
+        '--token',
+        'b',
+        'c',
+        '-xyt',
+        'd',
+        '--env',
+        'e=f',
+        '-e',
+        'g=h',
+        '--build-env',
+        'i',
+        '-b',
+        'j=k',
+        '-vb=l',
+        'm',
+        '--env2',
+        'n',
+        '-ot',
+        'p',
+        '-t=',
+        '-e="r"',
+        's',
+      ]);
+      expect(result).toEqual([
+        'a',
+        '--token',
+        'REDACTED',
+        'c',
+        '-xyt',
+        'REDACTED',
+        '--env',
+        'REDACTED',
+        '-e',
+        'REDACTED',
+        '--build-env',
+        'REDACTED',
+        '-b',
+        'REDACTED',
+        '-vb=REDACTED',
+        'm',
+        '--env2',
+        'n',
+        '-ot',
+        'REDACTED',
+        '-t=REDACTED',
+        '-e=REDACTED',
+        's',
+      ]);
+    });
+  });
 });
