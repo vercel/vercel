@@ -10,7 +10,6 @@ import {
   VERCEL_DIR_PROJECT,
 } from '../projects/link';
 import createProject from '../projects/create-project';
-import updateProject from '../projects/update-project';
 import Client from '../client';
 import handleError from '../handle-error';
 import confirm from '../input/confirm';
@@ -133,7 +132,7 @@ export default async function setupAndLink(
     const project = projectOrNewProjectName;
 
     await linkFolderToProject(
-      output,
+      client,
       path,
       {
         projectId: project.id,
@@ -200,13 +199,14 @@ export default async function setupAndLink(
           ...localConfigurationOverrides,
           sourceFilesOutsideRootDirectory,
         },
+        autoAssignCustomDomains: true,
       };
 
       const deployment = await createDeploy(
         client,
         now,
         config.currentTeam || 'current user',
-        [sourcePath],
+        sourcePath,
         createArgs,
         org,
         true,
@@ -244,13 +244,13 @@ export default async function setupAndLink(
       settings.rootDirectory = rootDirectory;
     }
 
-    const project = await createProject(client, newProjectName);
-
-    await updateProject(client, project.id, settings);
-    Object.assign(project, settings);
+    const project = await createProject(client, {
+      ...settings,
+      name: newProjectName,
+    });
 
     await linkFolderToProject(
-      output,
+      client,
       path,
       {
         projectId: project.id,

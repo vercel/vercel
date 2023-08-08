@@ -2,7 +2,7 @@
 
 ## Hierarchy
 
-- `Omit`<`ResponseInit`, `"headers"`\>
+- [`Omit`](https://www.typescriptlang.org/docs/handbook/utility-types.html#omittype-keys)<`ResponseInit`, `"headers"`\>
 
   ↳ **`ExtraResponseInit`**
 
@@ -52,7 +52,7 @@ Omit.status
 
 #### Defined in
 
-node_modules/typescript/lib/lib.dom.d.ts:1578
+node_modules/typescript/lib/lib.dom.d.ts:1624
 
 ---
 
@@ -66,4 +66,4 @@ Omit.statusText
 
 #### Defined in
 
-node_modules/typescript/lib/lib.dom.d.ts:1579
+node_modules/typescript/lib/lib.dom.d.ts:1625

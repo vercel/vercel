@@ -16,6 +16,28 @@ const runnersMap = new Map([
   ['test-dev', { min: 1, max: 5, runners: ['ubuntu-latest', 'macos-latest'] }],
 ]);
 
+const packageOptionsOverrides = {
+  // 'some-package': { min: 1, max: 1 },
+};
+
+function getRunnerOptions(scriptName, packageName) {
+  let runnerOptions = runnersMap.get(scriptName);
+  if (packageOptionsOverrides[packageName]) {
+    runnerOptions = Object.assign(
+      {},
+      runnerOptions,
+      packageOptionsOverrides[packageName]
+    );
+  }
+  return (
+    runnerOptions || {
+      min: 1,
+      max: 1,
+      runners: ['ubuntu-latest'],
+    }
+  );
+}
+
 async function getChunkedTests() {
   const scripts = [...runnersMap.keys()];
   const rootPath = path.resolve(__dirname, '..');
@@ -26,6 +48,7 @@ async function getChunkedTests() {
       ...scripts,
       `--cache-dir=.turbo`,
       '--output-logs=full',
+      '--log-order=stream',
       '--',
       '--', // need two of these due to pnpm arg parsing
       '--listTests',
@@ -67,11 +90,9 @@ async function getChunkedTests() {
     ([packagePathAndName, scriptNames]) => {
       const [packagePath, packageName] = packagePathAndName.split(',');
       return Object.entries(scriptNames).flatMap(([scriptName, testPaths]) => {
-        const {
-          runners = ['ubuntu-latest'],
-          min = 1,
-          max = 1,
-        } = runnersMap.get(scriptName) || {};
+        const runnerOptions = getRunnerOptions(scriptName, packageName);
+        const { runners, min, max } = runnerOptions;
+
         const sortedTestPaths = testPaths.sort((a, b) => a.localeCompare(b));
         return intoChunks(min, max, sortedTestPaths).flatMap(
           (chunk, chunkNumber, allChunks) => {
@@ -163,6 +184,7 @@ async function main() {
   }
 }
 
+// @ts-ignore
 if (module === require.main || !module.parent) {
   main();
 }

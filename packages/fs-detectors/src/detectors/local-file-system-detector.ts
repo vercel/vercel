@@ -1,15 +1,16 @@
 import fs from 'fs/promises';
-import type { Dirent } from 'fs';
-import path from 'path';
+import { join, relative } from 'path';
 import { DetectorFilesystem, DetectorFilesystemStat } from './filesystem';
 import { isErrnoException } from '@vercel/error-utils';
 
 export class LocalFileSystemDetector extends DetectorFilesystem {
   private rootPath: string;
+
   constructor(rootPath: string) {
     super();
     this.rootPath = rootPath;
   }
+
   async _hasPath(name: string): Promise<boolean> {
     try {
       await fs.stat(this.getFilePath(name));
@@ -21,37 +22,50 @@ export class LocalFileSystemDetector extends DetectorFilesystem {
       throw err;
     }
   }
+
   _readFile(name: string): Promise<Buffer> {
     return fs.readFile(this.getFilePath(name));
   }
+
   async _isFile(name: string): Promise<boolean> {
     const stat = await fs.stat(this.getFilePath(name));
     return stat.isFile();
   }
-  async _readdir(name: string): Promise<DetectorFilesystemStat[]> {
-    const dirPath = this.getFilePath(name);
-    const dir = await fs.readdir(dirPath, {
-      withFileTypes: true,
-    });
-    const getType = (dirent: Dirent) => {
-      if (dirent.isFile()) {
-        return 'file';
-      } else if (dirent.isDirectory()) {
-        return 'dir';
-      } else {
-        throw new Error(`Dirent was neither file nor directory`);
-      }
-    };
-    return dir.map(dirent => ({
-      name: dirent.name,
-      path: path.join(dirPath, dirent.name),
-      type: getType(dirent),
-    }));
+
+  async _readdir(dir: string): Promise<DetectorFilesystemStat[]> {
+    const dirPath = this.getFilePath(dir);
+    const files = await fs.readdir(dirPath);
+    return Promise.all(
+      files.map(async name => {
+        const absPath = join(this.rootPath, dir, name);
+        const path = join(this.getRelativeFilePath(dir), name);
+
+        const stat = await fs.stat(absPath);
+        let type: DetectorFilesystemStat['type'];
+        if (stat.isFile()) {
+          type = 'file';
+        } else if (stat.isDirectory()) {
+          type = 'dir';
+        } else {
+          throw new Error(`Dirent was neither file nor directory: ${path}`);
+        }
+
+        return { name, path, type };
+      })
+    );
   }
+
   _chdir(name: string): DetectorFilesystem {
     return new LocalFileSystemDetector(this.getFilePath(name));
   }
+
+  private getRelativeFilePath(name: string) {
+    return name.startsWith(this.rootPath)
+      ? relative(this.rootPath, name)
+      : name;
+  }
+
   private getFilePath(name: string) {
-    return path.join(this.rootPath, name);
+    return join(this.rootPath, this.getRelativeFilePath(name));
   }
 }

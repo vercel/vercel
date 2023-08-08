@@ -16,7 +16,6 @@
   "devDependencies": {
     "@types/node": "16.18.11",
     "@types/node-fetch": "2.5.4",
-    "@vercel/node": "*",
-    "typescript": "4.3.4"
+    "@vercel/node": "*"
   }
 }

@@ -1,4 +1,3 @@
-import url from 'url';
 import { getTransformedRoutes } from '@vercel/routing-utils';
 import { writeJson } from 'fs-extra';
 import { validateGatsbyState } from './schemas';
@@ -10,7 +9,6 @@ import { createStaticDir } from './helpers/static';
 import type { Config } from './types';
 
 export interface GenerateVercelBuildOutputAPI3OutputOptions {
-  pathPrefix: string;
   gatsbyStoreState: {
     pages: Map<string, unknown>;
     redirects: unknown;
@@ -20,7 +18,6 @@ export interface GenerateVercelBuildOutputAPI3OutputOptions {
 }
 
 export async function generateVercelBuildOutputAPI3Output({
-  pathPrefix: _pathPrefix,
   gatsbyStoreState,
 }: GenerateVercelBuildOutputAPI3OutputOptions) {
   const state = {
@@ -33,11 +30,8 @@ export async function generateVercelBuildOutputAPI3Output({
   if (validateGatsbyState.Check(state)) {
     console.log('▲ Creating Vercel build output');
 
-    // `_pathPrefix` contains `assetPrefix` + `pathPrefix`,
-    // so strip off the `assetPrefix` portion
-    const pathPrefix = url.parse(_pathPrefix).pathname ?? '';
-
     const { pages, redirects, functions, config: gatsbyConfig } = state;
+    const { pathPrefix = '' } = gatsbyConfig;
 
     const ssrRoutes = pages
       .map(p => p[1])
@@ -82,8 +76,18 @@ export async function generateVercelBuildOutputAPI3Output({
     await writeJson('.vercel/output/config.json', config);
     console.log('Vercel output has been generated');
   } else {
+    const errors = [...validateGatsbyState.Errors(state)];
     throw new Error(
-      'Gatsby state validation error. Please file an issue https://vercel.com/help#issues'
+      `Gatsby state validation failed:\n${errors
+        .map(
+          err =>
+            `  - ${err.message}, got ${typeof err.value} (${JSON.stringify(
+              err.value
+            )}) at path "${err.path}"\n`
+        )
+        .join(
+          ''
+        )}Please check your Gatsby configuration files, or file an issue at https://vercel.com/help#issues`
     );
   }
 }

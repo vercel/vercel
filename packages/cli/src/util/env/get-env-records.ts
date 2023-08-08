@@ -1,6 +1,9 @@
 import { Output } from '../output';
 import Client from '../client';
-import { ProjectEnvVariable, ProjectEnvTarget } from '@vercel-internals/types';
+import type {
+  ProjectEnvVariable,
+  ProjectEnvTarget,
+} from '@vercel-internals/types';
 import { URLSearchParams } from 'url';
 
 /** The CLI command that was used that needs the environment variables. */

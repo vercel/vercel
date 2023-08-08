@@ -140,20 +140,20 @@ it('should ignore node version in vercel dev getNodeVersion()', async () => {
 
 it('should select project setting from config when no package.json is found and fallback undefined', async () => {
   expect(
-    await getNodeVersion('/tmp', undefined, { nodeVersion: '16.x' }, {})
-  ).toHaveProperty('range', '16.x');
+    await getNodeVersion('/tmp', undefined, { nodeVersion: '18.x' }, {})
+  ).toHaveProperty('range', '18.x');
   expect(warningMessages).toStrictEqual([]);
 });
 
 it('should select project setting from config when no package.json is found and fallback is null', async () => {
   expect(
-    await getNodeVersion('/tmp', null as any, { nodeVersion: '16.x' }, {})
-  ).toHaveProperty('range', '16.x');
+    await getNodeVersion('/tmp', null as any, { nodeVersion: '18.x' }, {})
+  ).toHaveProperty('range', '18.x');
   expect(warningMessages).toStrictEqual([]);
 });
 
 it('should select project setting from fallback when no package.json is found', async () => {
-  expect(await getNodeVersion('/tmp', '16.x')).toHaveProperty('range', '16.x');
+  expect(await getNodeVersion('/tmp', '18.x')).toHaveProperty('range', '18.x');
   expect(warningMessages).toStrictEqual([]);
 });
 
@@ -165,9 +165,9 @@ it('should prefer package.json engines over project setting from config and warn
       { nodeVersion: '12.x' },
       {}
     )
-  ).toHaveProperty('range', '14.x');
+  ).toHaveProperty('range', '18.x');
   expect(warningMessages).toStrictEqual([
-    'Warning: Due to "engines": { "node": "14.x" } in your `package.json` file, the Node.js Version defined in your Project Settings ("12.x") will not apply. Learn More: http://vercel.link/node-version',
+    'Warning: Due to "engines": { "node": "18.x" } in your `package.json` file, the Node.js Version defined in your Project Settings ("12.x") will not apply. Learn More: http://vercel.link/node-version',
   ]);
 });
 
@@ -179,9 +179,9 @@ it('should warn when package.json engines is exact version', async () => {
       {},
       {}
     )
-  ).toHaveProperty('range', '16.x');
+  ).toHaveProperty('range', '18.x');
   expect(warningMessages).toStrictEqual([
-    'Warning: Detected "engines": { "node": "16.14.0" } in your `package.json` with major.minor.patch, but only major Node.js Version can be selected. Learn More: http://vercel.link/node-version',
+    'Warning: Detected "engines": { "node": "18.2.0" } in your `package.json` with major.minor.patch, but only major Node.js Version can be selected. Learn More: http://vercel.link/node-version',
   ]);
 });
 
@@ -204,30 +204,30 @@ it('should not warn when package.json engines matches project setting from confi
     await getNodeVersion(
       path.join(__dirname, 'pkg-engine-node'),
       undefined,
-      { nodeVersion: '14' },
+      { nodeVersion: '18' },
       {}
     )
-  ).toHaveProperty('range', '14.x');
+  ).toHaveProperty('range', '18.x');
   expect(warningMessages).toStrictEqual([]);
 
   expect(
     await getNodeVersion(
       path.join(__dirname, 'pkg-engine-node'),
       undefined,
-      { nodeVersion: '14.x' },
+      { nodeVersion: '18.x' },
       {}
     )
-  ).toHaveProperty('range', '14.x');
+  ).toHaveProperty('range', '18.x');
   expect(warningMessages).toStrictEqual([]);
 
   expect(
     await getNodeVersion(
       path.join(__dirname, 'pkg-engine-node'),
       undefined,
-      { nodeVersion: '<15' },
+      { nodeVersion: '<19' },
       {}
     )
-  ).toHaveProperty('range', '14.x');
+  ).toHaveProperty('range', '18.x');
   expect(warningMessages).toStrictEqual([]);
 });
 
@@ -238,7 +238,7 @@ it('should get latest node version', async () => {
 it('should throw for discontinued versions', async () => {
   // Mock a future date so that Node 8 and 10 become discontinued
   const realDateNow = Date.now.bind(global.Date);
-  global.Date.now = () => new Date('2022-10-15').getTime();
+  global.Date.now = () => new Date('2024-02-13').getTime();
 
   expect(getSupportedNodeVersion('8.10.x', false)).rejects.toThrow();
   expect(getSupportedNodeVersion('8.10.x', true)).rejects.toThrow();
@@ -246,12 +246,18 @@ it('should throw for discontinued versions', async () => {
   expect(getSupportedNodeVersion('10.x', true)).rejects.toThrow();
   expect(getSupportedNodeVersion('12.x', false)).rejects.toThrow();
   expect(getSupportedNodeVersion('12.x', true)).rejects.toThrow();
+  expect(getSupportedNodeVersion('14.x', false)).rejects.toThrow();
+  expect(getSupportedNodeVersion('14.x', true)).rejects.toThrow();
+  expect(getSupportedNodeVersion('16.x', false)).rejects.toThrow();
+  expect(getSupportedNodeVersion('16.x', true)).rejects.toThrow();
 
   const discontinued = getDiscontinuedNodeVersions();
-  expect(discontinued.length).toBe(3);
-  expect(discontinued[0]).toHaveProperty('range', '12.x');
-  expect(discontinued[1]).toHaveProperty('range', '10.x');
-  expect(discontinued[2]).toHaveProperty('range', '8.10.x');
+  expect(discontinued.length).toBe(5);
+  expect(discontinued[0]).toHaveProperty('range', '16.x');
+  expect(discontinued[1]).toHaveProperty('range', '14.x');
+  expect(discontinued[2]).toHaveProperty('range', '12.x');
+  expect(discontinued[3]).toHaveProperty('range', '10.x');
+  expect(discontinued[4]).toHaveProperty('range', '8.10.x');
 
   global.Date.now = realDateNow;
 });
@@ -277,11 +283,31 @@ it('should warn for deprecated versions, soon to be discontinued', async () => {
     'major',
     12
   );
+  expect(await getSupportedNodeVersion('14.x', false)).toHaveProperty(
+    'major',
+    14
+  );
+  expect(await getSupportedNodeVersion('14.x', true)).toHaveProperty(
+    'major',
+    14
+  );
+  expect(await getSupportedNodeVersion('16.x', false)).toHaveProperty(
+    'major',
+    16
+  );
+  expect(await getSupportedNodeVersion('16.x', true)).toHaveProperty(
+    'major',
+    16
+  );
   expect(warningMessages).toStrictEqual([
     'Error: Node.js version 10.x has reached End-of-Life. Deployments created on or after 2021-04-20 will fail to build. Please set "engines": { "node": "18.x" } in your `package.json` file to use Node.js 18.',
     'Error: Node.js version 10.x has reached End-of-Life. Deployments created on or after 2021-04-20 will fail to build. Please set Node.js Version to 18.x in your Project Settings to use Node.js 18.',
     'Error: Node.js version 12.x has reached End-of-Life. Deployments created on or after 2022-10-03 will fail to build. Please set "engines": { "node": "18.x" } in your `package.json` file to use Node.js 18.',
     'Error: Node.js version 12.x has reached End-of-Life. Deployments created on or after 2022-10-03 will fail to build. Please set Node.js Version to 18.x in your Project Settings to use Node.js 18.',
+    'Error: Node.js version 14.x has reached End-of-Life. Deployments created on or after 2023-08-15 will fail to build. Please set "engines": { "node": "18.x" } in your `package.json` file to use Node.js 18.',
+    'Error: Node.js version 14.x has reached End-of-Life. Deployments created on or after 2023-08-15 will fail to build. Please set Node.js Version to 18.x in your Project Settings to use Node.js 18.',
+    'Error: Node.js version 16.x has reached End-of-Life. Deployments created on or after 2024-02-06 will fail to build. Please set "engines": { "node": "18.x" } in your `package.json` file to use Node.js 18.',
+    'Error: Node.js version 16.x has reached End-of-Life. Deployments created on or after 2024-02-06 will fail to build. Please set Node.js Version to 18.x in your Project Settings to use Node.js 18.',
   ]);
 
   global.Date.now = realDateNow;
@@ -480,7 +506,7 @@ it('should detect package.json in nested backend', async () => {
   const result = await scanParentDirs(fixture);
   expect(result.cliType).toEqual('pnpm');
   // There is no lockfile but this test will pick up vercel/vercel/pnpm-lock.yaml
-  expect(result.lockfileVersion).toEqual(5.4);
+  expect(result.lockfileVersion).toEqual(6);
   expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
 });
 
@@ -492,7 +518,7 @@ it('should detect package.json in nested frontend', async () => {
   const result = await scanParentDirs(fixture);
   expect(result.cliType).toEqual('pnpm');
   // There is no lockfile but this test will pick up vercel/vercel/pnpm-lock.yaml
-  expect(result.lockfileVersion).toEqual(5.4);
+  expect(result.lockfileVersion).toEqual(6);
   expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
 });
 

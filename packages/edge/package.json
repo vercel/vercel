@@ -1,7 +1,7 @@
 {
   "name": "@vercel/edge",
-  "version": "0.3.1",
-  "license": "MIT",
+  "version": "0.3.4",
+  "license": "Apache-2.0",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
@@ -21,23 +21,13 @@
     "build:docs": "typedoc && node scripts/fix-links.js && prettier --write docs/**/*.md docs/*.md"
   },
   "devDependencies": {
-    "@edge-runtime/jest-environment": "2.0.0",
+    "@edge-runtime/jest-environment": "2.2.3",
     "@types/jest": "27.4.1",
     "ts-node": "8.9.1",
     "tsup": "6.1.2",
-    "typedoc": "0.23.10",
-    "typedoc-plugin-markdown": "3.13.4",
-    "typedoc-plugin-mdn-links": "2.0.0",
-    "typescript": "4.7.4"
-  },
-  "jest": {
-    "preset": "ts-jest",
-    "testEnvironment": "node",
-    "globals": {
-      "ts-jest": {
-        "diagnostics": true,
-        "isolatedModules": true
-      }
-    }
+    "typedoc": "0.24.6",
+    "typedoc-plugin-markdown": "3.15.2",
+    "typedoc-plugin-mdn-links": "3.0.3",
+    "typescript": "4.9.5"
   }
 }

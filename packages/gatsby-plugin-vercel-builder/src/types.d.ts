@@ -1,4 +1,5 @@
 import type { Images } from '@vercel/build-utils';
+
 export type Config = {
   version: 3;
   routes?: Route[];

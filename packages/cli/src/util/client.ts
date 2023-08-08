@@ -18,11 +18,14 @@ import type {
   JSONObject,
   Stdio,
   ReadableTTY,
-  WritableTTY,
+  PaginationOptions,
 } from '@vercel-internals/types';
 import { sharedPromise } from './promise';
 import { APIError } from './errors-ts';
 import { normalizeError } from '@vercel/error-utils';
+import type { Agent } from 'http';
+import sleep from './sleep';
+import type * as tty from 'tty';
 
 const isSAMLError = (v: any): v is SAMLError => {
   return v && v.saml;
@@ -44,6 +47,7 @@ export interface ClientOptions extends Stdio {
   config: GlobalConfig;
   localConfig?: VercelConfig;
   localConfigPath?: string;
+  agent?: Agent;
 }
 
 export const isJSONObject = (v: any): v is JSONObject => {
@@ -55,17 +59,19 @@ export default class Client extends EventEmitter implements Stdio {
   apiUrl: string;
   authConfig: AuthConfig;
   stdin: ReadableTTY;
-  stdout: WritableTTY;
-  stderr: WritableTTY;
+  stdout: tty.WriteStream;
+  stderr: tty.WriteStream;
   output: Output;
   config: GlobalConfig;
+  agent?: Agent;
   localConfig?: VercelConfig;
   localConfigPath?: string;
   prompt!: inquirer.PromptModule;
-  private requestIdCounter: number;
+  requestIdCounter: number;
 
   constructor(opts: ClientOptions) {
     super();
+    this.agent = opts.agent;
     this.argv = opts.argv;
     this.apiUrl = opts.apiUrl;
     this.authConfig = opts.authConfig;
@@ -126,10 +132,10 @@ export default class Client extends EventEmitter implements Stdio {
       } else {
         return `#${requestId} → ${opts.method || 'GET'} ${url.href}`;
       }
-    }, fetch(url, { ...opts, headers, body }));
+    }, fetch(url, { agent: this.agent, ...opts, headers, body }));
   }
 
-  fetch(url: string, opts: { json: false }): Promise<Response>;
+  fetch(url: string, opts: FetchOptions & { json: false }): Promise<Response>;
   fetch<T>(url: string, opts?: FetchOptions): Promise<T>;
   fetch(url: string, opts: FetchOptions = {}) {
     return this.retry(async bail => {
@@ -140,7 +146,8 @@ export default class Client extends EventEmitter implements Stdio {
       if (!res.ok) {
         const error = await responseError(res);
 
-        if (isSAMLError(error)) {
+        // we should force reauth only if error has a teamId
+        if (isSAMLError(error) && error.teamId) {
           try {
             // A SAML error means the token is expired, or is not
             // designated for the requested team, so the user needs
@@ -170,6 +177,31 @@ export default class Client extends EventEmitter implements Stdio {
 
       return contentType.includes('application/json') ? res.json() : res;
     }, opts.retry);
+  }
+
+  async *fetchPaginated<T>(
+    url: string | URL,
+    opts?: FetchOptions
+  ): AsyncGenerator<T & { pagination: PaginationOptions }> {
+    const endpoint =
+      typeof url === 'string' ? new URL(url, this.apiUrl) : new URL(url.href);
+    if (!endpoint.searchParams.has('limit')) {
+      endpoint.searchParams.set('limit', '100');
+    }
+    let next: number | null | undefined;
+    do {
+      if (next) {
+        // Small sleep to avoid rate limiting
+        await sleep(100);
+        endpoint.searchParams.set('until', String(next));
+      }
+      const res = await this.fetch<T & { pagination: PaginationOptions }>(
+        endpoint.href,
+        opts
+      );
+      yield res;
+      next = res.pagination?.next;
+    } while (next);
   }
 
   reauthenticate = sharedPromise(async function (
@@ -202,5 +234,13 @@ export default class Client extends EventEmitter implements Stdio {
       input: this.stdin as NodeJS.ReadStream,
       output: this.stderr as NodeJS.WriteStream,
     });
+  }
+
+  get cwd(): string {
+    return process.cwd();
+  }
+
+  set cwd(v: string) {
+    process.chdir(v);
   }
 }

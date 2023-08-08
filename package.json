@@ -3,11 +3,10 @@
   "version": "0.0.0",
   "private": true,
   "license": "Apache-2.0",
-  "packageManager": "pnpm@7.24.2",
-  "dependencies": {
-    "lerna": "5.6.2"
-  },
+  "packageManager": "pnpm@8.3.1",
   "devDependencies": {
+    "@changesets/cli": "2.26.1",
+    "@svitejs/changesets-changelog-github-compact": "1.1.0",
     "@types/node": "14.18.33",
     "@typescript-eslint/eslint-plugin": "5.21.0",
     "@typescript-eslint/parser": "5.21.0",
@@ -22,8 +21,9 @@
     "eslint-plugin-jest": "26.1.5",
     "execa": "3.2.0",
     "fs-extra": "11.1.0",
+    "glob": "10.2.3",
     "husky": "7.0.4",
-    "jest": "28.0.2",
+    "jest": "29.5.0",
     "json5": "2.1.1",
     "lint-staged": "9.2.5",
     "node-fetch": "2.6.7",
@@ -31,17 +31,11 @@
     "prettier": "2.6.2",
     "source-map-support": "0.5.12",
     "ts-eager": "2.0.2",
-    "ts-jest": "28.0.5",
-    "turbo": "1.8.5"
+    "ts-jest": "29.1.0",
+    "turbo": "1.10.12",
+    "typescript": "4.9.5"
   },
   "scripts": {
-    "lerna": "lerna",
-    "version": "pnpm install && git add pnpm-lock.yaml",
-    "bootstrap": "lerna bootstrap",
-    "publish-stable": "echo 'Run `pnpm changelog` for instructions'",
-    "publish-canary": "git checkout main && git pull && lerna version prerelease --preid canary --message \"Publish Canary\" --exact",
-    "publish-from-github": "./utils/publish.sh",
-    "changelog": "node utils/changelog.js",
     "build": "node utils/gen.js && turbo --no-update-notifier run build",
     "vercel-build": "pnpm build && pnpm run pack && cd api && node -r ts-eager/register ./_lib/script/build.ts",
     "pre-commit": "lint-staged",
@@ -53,7 +47,9 @@
     "lint": "eslint . --cache --ext .ts,.js",
     "prettier-check": "prettier --check .",
     "prepare": "husky install",
-    "pack": "cd utils && node -r ts-eager/register ./pack.ts"
+    "pack": "cd utils && node -r ts-eager/register ./pack.ts",
+    "ci:version": "changeset version && pnpm install --no-frozen-lockfile",
+    "ci:publish": "pnpm publish -r && changeset tag"
   },
   "lint-staged": {
     "./{*,{api,packages,test,utils}/**/*}.{js,ts}": [

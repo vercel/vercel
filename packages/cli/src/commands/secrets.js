@@ -99,7 +99,7 @@ const main = async client => {
 
   if (argv.help || !subcommand) {
     help();
-    await exit(0);
+    await exit(2);
   }
 
   const {

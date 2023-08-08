@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import { SetDifference } from 'utility-types';
 import { AliasRecord } from '../../util/alias/create-alias';
-import { Domain } from '@vercel-internals/types';
+import type { Domain } from '@vercel-internals/types';
 import { Output } from '../../util/output';
 import * as ERRORS from '../../util/errors-ts';
 import assignAlias from '../../util/alias/assign-alias';

@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import Client from '../client';
-import { Domain } from '@vercel-internals/types';
+import type { Domain } from '@vercel-internals/types';
 import {
   DomainPermissionDenied,
   DomainNotFound,

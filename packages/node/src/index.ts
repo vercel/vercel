@@ -1,3 +1,4 @@
+import { isErrnoException } from '@vercel/error-utils';
 import url from 'url';
 import { spawn } from 'child_process';
 import {
@@ -53,7 +54,7 @@ import { getConfig } from '@vercel/static-config';
 
 import { fixConfig, Register, register } from './typescript';
 import {
-  EdgeRuntimes,
+  validateConfiguredRuntime,
   entrypointToOutputPath,
   getRegExpFromMatchers,
   isEdgeRuntime,
@@ -74,8 +75,6 @@ interface DownloadOptions {
   config: Config;
   meta: Meta;
 }
-
-const ALLOWED_RUNTIMES = ['nodejs', ...Object.values(EdgeRuntimes)];
 
 const require_ = eval('require');
 
@@ -120,6 +119,7 @@ async function compile(
   baseDir: string,
   entrypointPath: string,
   config: Config,
+  meta: Meta,
   nodeVersion: NodeVersion,
   isEdgeFunction: boolean
 ): Promise<{
@@ -247,13 +247,16 @@ async function compile(
           fsCache.set(relPath, entry);
           sourceCache.set(relPath, source);
           return source;
-        } catch (e) {
-          if (e.code === 'ENOENT' || e.code === 'EISDIR') {
+        } catch (error: unknown) {
+          if (
+            isErrnoException(error) &&
+            (error.code === 'ENOENT' || error.code === 'EISDIR')
+          ) {
             // `null` represents a not found
             sourceCache.set(relPath, null);
             return null;
           }
-          throw e;
+          throw error;
         }
       },
     }
@@ -306,7 +309,9 @@ async function compile(
       !file.endsWith('.mjs') &&
       !file.match(libPathRegEx)
   );
-  if (esmPaths.length) {
+  const babelCompileEnabled =
+    !isEdgeFunction || process.env.VERCEL_EDGE_NO_BABEL !== '1';
+  if (babelCompileEnabled && esmPaths.length) {
     const babelCompile = require('./babel').compile;
     for (const path of esmPaths) {
       const pathDir = join(workPath, dirname(path));
@@ -331,6 +336,13 @@ async function compile(
         stream: preparedFiles[path].toStream(),
       });
 
+      if (!meta.compiledToCommonJS) {
+        meta.compiledToCommonJS = true;
+        console.warn(
+          'Warning: Node.js functions are compiled from ESM to CommonJS. If this is not intended, add "type": "module" to your package.json file.'
+        );
+      }
+      console.log(`Compiling "${filename}" from ESM to CommonJS...`);
       const { code, map } = babelCompile(filename, source);
       shouldAddSourcemapSupport = true;
       preparedFiles[path] = new FileBlob({
@@ -405,20 +417,12 @@ export const build: BuildV3 = async ({
 
   const project = new Project();
   const staticConfig = getConfig(project, entrypointPath);
-  if (staticConfig?.runtime) {
-    if (!ALLOWED_RUNTIMES.includes(staticConfig.runtime)) {
-      throw new Error(
-        `Unsupported "runtime" property in \`config\`: ${JSON.stringify(
-          staticConfig.runtime
-        )} (must be one of: ${JSON.stringify(ALLOWED_RUNTIMES)})`
-      );
-    }
-    if (staticConfig.runtime === 'nodejs') {
-      console.log(
-        `Detected unused static config runtime "nodejs" in "${entrypointPath}"`
-      );
-    }
-    isEdgeFunction = isEdgeRuntime(staticConfig.runtime);
+
+  const runtime = staticConfig?.runtime;
+  validateConfiguredRuntime(runtime, entrypoint);
+
+  if (runtime) {
+    isEdgeFunction = isEdgeRuntime(runtime);
   }
 
   debug('Tracing input files...');
@@ -428,6 +432,7 @@ export const build: BuildV3 = async ({
     baseDir,
     entrypointPath,
     config,
+    meta,
     nodeVersion,
     isEdgeFunction
   );
@@ -487,8 +492,11 @@ export const build: BuildV3 = async ({
       config.helpers === false || process.env.NODEJS_HELPERS === '0'
     );
 
-    const experimentalResponseStreaming =
-      staticConfig?.experimentalResponseStreaming === true ? true : undefined;
+    const supportsResponseStreaming =
+      (staticConfig?.supportsResponseStreaming ??
+        staticConfig?.experimentalResponseStreaming) === true
+        ? true
+        : undefined;
 
     output = new NodejsLambda({
       files: preparedFiles,
@@ -497,7 +505,8 @@ export const build: BuildV3 = async ({
       shouldAddHelpers,
       shouldAddSourcemapSupport,
       awsLambdaHandler,
-      experimentalResponseStreaming,
+      supportsResponseStreaming,
+      maxDuration: staticConfig?.maxDuration,
     });
   }
 
@@ -546,8 +555,8 @@ export const startDevServer: StartDevServer = async opts => {
     filename: 'package.json',
   });
   const pkg = pathToPkg ? require_(pathToPkg) : {};
-  const isTypescript = ['.ts', '.tsx', '.mts', '.cts'].includes(ext);
-  const maybeTranspile = isTypescript || !['.cjs', '.mjs'].includes(ext);
+  const isTypeScript = ['.ts', '.tsx', '.mts', '.cts'].includes(ext);
+  const maybeTranspile = isTypeScript || !['.cjs', '.mjs'].includes(ext);
   const isEsm =
     ext === '.mjs' ||
     ext === '.mts' ||
@@ -585,11 +594,25 @@ export const startDevServer: StartDevServer = async opts => {
     if (pathToTsConfig) {
       try {
         tsConfig = ts.readConfigFile(pathToTsConfig, ts.sys.readFile).config;
-      } catch (err) {
-        if (err.code !== 'ENOENT') {
+      } catch (error: unknown) {
+        if (isErrnoException(error) && error.code !== 'ENOENT') {
           console.error(`Error while parsing "${pathToTsConfig}"`);
-          throw err;
+          throw error;
         }
+      }
+    }
+
+    // if we're using ESM, we need to tell TypeScript to use `nodenext` to
+    // preserve the `import` semantics
+    if (isEsm) {
+      if (!tsConfig.compilerOptions) {
+        tsConfig.compilerOptions = {};
+      }
+      if (tsConfig.compilerOptions.module === undefined) {
+        tsConfig.compilerOptions.module = 'nodenext';
+      }
+      if (tsConfig.compilerOptions.moduleResolution === undefined) {
+        tsConfig.compilerOptions.moduleResolution = 'nodenext';
       }
     }
 
@@ -613,7 +636,7 @@ export const startDevServer: StartDevServer = async opts => {
     entrypoint,
     require_,
     isEsm,
-    isTypeScript: isTypescript,
+    isTypeScript,
     maybeTranspile,
     meta,
     tsConfig,
@@ -624,7 +647,7 @@ export const startDevServer: StartDevServer = async opts => {
 
   if (message.state === 'message') {
     // "message" event
-    if (isTypescript) {
+    if (isTypeScript) {
       // Invoke `tsc --noEmit` asynchronously in the background, so
       // that the HTTP request is not blocked by the type checking.
       doTypeCheck(opts, pathToTsConfig).catch((err: Error) => {
@@ -671,11 +694,8 @@ async function doTypeCheck(
     const json = JSON.stringify(tsconfig, null, '\t');
     await fsp.mkdir(entrypointCacheDir, { recursive: true });
     await fsp.writeFile(tsconfigPath, json, { flag: 'wx' });
-  } catch (err) {
-    // Don't throw if the file already exists
-    if (err.code !== 'EEXIST') {
-      throw err;
-    }
+  } catch (error: unknown) {
+    if (isErrnoException(error) && error.code !== 'EEXIST') throw error;
   }
 
   const child = spawn(

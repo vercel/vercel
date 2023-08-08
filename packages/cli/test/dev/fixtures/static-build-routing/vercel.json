@@ -3,7 +3,7 @@
   "builds": [
     {
       "src": "package.json",
-      "use": "@vercel/static-build@canary",
+      "use": "@vercel/static-build",
       "config": {
         "distDir": "public"
       }

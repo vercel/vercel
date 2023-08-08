@@ -6,57 +6,21 @@ import chalk, { Chalk } from 'chalk';
 import { URLSearchParams, parse } from 'url';
 
 import box from '../../util/output/box';
-import sleep from '../../util/sleep';
 import formatDate from '../../util/format-date';
 import link from '../../util/output/link';
-import logo from '../../util/output/logo';
 import getArgs from '../../util/get-args';
 import Client from '../../util/client';
-import { getPkgName } from '../../util/pkg-name';
-import { Deployment, PaginationOptions } from '@vercel-internals/types';
+import { Deployment } from '@vercel-internals/types';
 import { normalizeURL } from '../../util/bisect/normalize-url';
 import getScope from '../../util/get-scope';
 import getDeployment from '../../util/get-deployment';
+import { help } from '../help';
+import { bisectCommand } from './command';
 
 interface Deployments {
   deployments: Deployment[];
-  pagination: PaginationOptions;
 }
-
-const pkgName = getPkgName();
-
-const help = () => {
-  console.log(`
-  ${chalk.bold(`${logo} ${pkgName} bisect`)} [options]
-
-  ${chalk.dim('Options:')}
-
-    -h, --help                 Output usage information
-    -d, --debug                Debug mode [off]
-    --no-color                 No color mode [off]
-    -b, --bad                  Known bad URL
-    -g, --good                 Known good URL
-    -o, --open                 Automatically open each URL in the browser
-    -p, --path                 Subpath of the deployment URL to test
-    -r, --run                  Test script to run for each deployment
-
-  ${chalk.dim('Examples:')}
-
-  ${chalk.gray('–')} Bisect the current project interactively
-
-      ${chalk.cyan(`$ ${pkgName} bisect`)}
-
-  ${chalk.gray('–')} Bisect with a known bad deployment
-
-      ${chalk.cyan(`$ ${pkgName} bisect --bad example-310pce9i0.vercel.app`)}
-
-  ${chalk.gray('–')} Automated bisect with a run script
-
-      ${chalk.cyan(`$ ${pkgName} bisect --run ./test.sh`)}
-  `);
-};
-
-export default async function main(client: Client): Promise<number> {
+export default async function bisect(client: Client): Promise<number> {
   const { output } = client;
   const scope = await getScope(client);
   const { contextName } = scope;
@@ -75,7 +39,7 @@ export default async function main(client: Client): Promise<number> {
   });
 
   if (argv['--help']) {
-    help();
+    output.print(help(bisectCommand, { columns: client.stderr.columns }));
     return 2;
   }
 
@@ -206,44 +170,34 @@ export default async function main(client: Client): Promise<number> {
 
   // Fetch all the project's "READY" deployments with the pagination API
   let deployments: Deployment[] = [];
-  let next: number | undefined = badDeployment.createdAt + 1;
-  do {
-    const query = new URLSearchParams();
-    query.set('projectId', projectId);
-    if (badDeployment.target) {
-      query.set('target', badDeployment.target);
-    }
-    query.set('limit', '100');
-    query.set('state', 'READY');
-    if (next) {
-      query.set('until', String(next));
-    }
 
-    const res = await client.fetch<Deployments>(`/v6/deployments?${query}`, {
+  const query = new URLSearchParams();
+  query.set('projectId', projectId);
+  if (badDeployment.target) {
+    query.set('target', badDeployment.target);
+  }
+  query.set('state', 'READY');
+  query.set('until', String(badDeployment.createdAt + 1));
+
+  for await (const chunk of client.fetchPaginated<Deployments>(
+    `/v6/deployments?${query}`,
+    {
       accountId: badDeployment.ownerId,
-    });
-
-    next = res.pagination.next;
-
-    let newDeployments = res.deployments;
+    }
+  )) {
+    let newDeployments = chunk.deployments;
 
     // If we have the "good" deployment in this chunk, then we're done
     for (let i = 0; i < newDeployments.length; i++) {
       if (newDeployments[i].url === good) {
         // grab all deployments up until the good one
         newDeployments = newDeployments.slice(0, i);
-        next = undefined;
         break;
       }
     }
 
     deployments = deployments.concat(newDeployments);
-
-    if (next) {
-      // Small sleep to avoid rate limiting
-      await sleep(100);
-    }
-  } while (next);
+  }
 
   if (!deployments.length) {
     output.error(

@@ -8,9 +8,10 @@
     "start": "next start"
   },
   "dependencies": {
-    "next": "canary",
+    "next": "latest",
     "react": "latest",
     "react-dom": "latest",
     "is-odd": "3.0.1"
-  }
+  },
+  "ignoreNextjsUpdates": true
 }

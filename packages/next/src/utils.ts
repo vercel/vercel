@@ -304,7 +304,8 @@ export async function getDynamicRoutes(
   canUsePreviewMode?: boolean,
   bypassToken?: string,
   isServerMode?: boolean,
-  dynamicMiddlewareRouteMap?: Map<string, RouteWithSrc>
+  dynamicMiddlewareRouteMap?: Map<string, RouteWithSrc>,
+  appPathRoutesManifest?: Record<string, string>
 ): Promise<RouteWithSrc[]> {
   if (routesManifest) {
     switch (routesManifest.version) {
@@ -324,55 +325,74 @@ export async function getDynamicRoutes(
       }
       case 3:
       case 4: {
-        return routesManifest.dynamicRoutes
-          .filter(({ page }) => canUsePreviewMode || !omittedRoutes?.has(page))
-          .map(params => {
-            if ('isMiddleware' in params) {
-              const route = dynamicMiddlewareRouteMap?.get(params.page);
-              if (!route) {
-                throw new Error(
-                  `Could not find dynamic middleware route for ${params.page}`
-                );
-              }
-              return route;
+        const routes: RouteWithSrc[] = [];
+
+        for (const dynamicRoute of routesManifest.dynamicRoutes) {
+          if (!canUsePreviewMode && omittedRoutes?.has(dynamicRoute.page)) {
+            continue;
+          }
+          const params = dynamicRoute;
+
+          if ('isMiddleware' in params) {
+            const route = dynamicMiddlewareRouteMap?.get(params.page);
+            if (!route) {
+              throw new Error(
+                `Could not find dynamic middleware route for ${params.page}`
+              );
             }
 
-            const { page, namedRegex, regex, routeKeys } = params;
-            const route: RouteWithSrc = {
-              src: namedRegex || regex,
-              dest: `${
-                !isDev ? path.posix.join('/', entryDirectory, page) : page
-              }${
-                routeKeys
-                  ? `?${Object.keys(routeKeys)
-                      .map(key => `${routeKeys[key]}=$${key}`)
-                      .join('&')}`
-                  : ''
-              }`,
-            };
+            routes.push(route);
+            continue;
+          }
 
-            if (!isServerMode) {
-              route.check = true;
-            }
+          const { page, namedRegex, regex, routeKeys } = params;
+          const route: RouteWithSrc = {
+            src: namedRegex || regex,
+            dest: `${
+              !isDev ? path.posix.join('/', entryDirectory, page) : page
+            }${
+              routeKeys
+                ? `?${Object.keys(routeKeys)
+                    .map(key => `${routeKeys[key]}=$${key}`)
+                    .join('&')}`
+                : ''
+            }`,
+          };
 
-            if (isServerMode && canUsePreviewMode && omittedRoutes?.has(page)) {
-              // only match this route when in preview mode so
-              // preview works for non-prerender fallback: false pages
-              route.has = [
-                {
-                  type: 'cookie',
-                  key: '__prerender_bypass',
-                  value: bypassToken || undefined,
-                },
-                {
-                  type: 'cookie',
-                  key: '__next_preview_data',
-                },
-              ];
-            }
+          if (!isServerMode) {
+            route.check = true;
+          }
 
-            return route;
-          });
+          if (isServerMode && canUsePreviewMode && omittedRoutes?.has(page)) {
+            // only match this route when in preview mode so
+            // preview works for non-prerender fallback: false pages
+            route.has = [
+              {
+                type: 'cookie',
+                key: '__prerender_bypass',
+                value: bypassToken || undefined,
+              },
+              {
+                type: 'cookie',
+                key: '__next_preview_data',
+              },
+            ];
+          }
+
+          if (appPathRoutesManifest?.[page]) {
+            routes.push({
+              ...route,
+              src: route.src.replace(
+                new RegExp(escapeStringRegexp('(?:/)?$')),
+                '(?:\\.rsc)(?:/)?$'
+              ),
+              dest: route.dest?.replace(/($|\?)/, '.rsc$1'),
+            });
+          }
+          routes.push(route);
+          continue;
+        }
+        return routes;
       }
       default: {
         // update MIN_ROUTES_MANIFEST_VERSION
@@ -459,7 +479,8 @@ export function localizeDynamicRoutes(
   prerenderManifest: NextPrerenderedRoutes,
   routesManifest?: RoutesManifest,
   isServerMode?: boolean,
-  isCorrectLocaleAPIRoutes?: boolean
+  isCorrectLocaleAPIRoutes?: boolean,
+  inversedAppPathRoutesManifest?: Record<string, string>
 ): RouteWithSrc[] {
   return dynamicRoutes.map((route: RouteWithSrc) => {
     // i18n is already handled for middleware
@@ -478,6 +499,9 @@ export function localizeDynamicRoutes(
       const isAutoExport =
         staticPages[addLocaleOrDefault(pathname!, routesManifest).substring(1)];
 
+      const isAppRoute =
+        inversedAppPathRoutesManifest?.[pathnameNoPrefix || ''];
+
       const isLocalePrefixed =
         isFallback || isBlocking || isAutoExport || isServerMode;
 
@@ -488,7 +512,11 @@ export function localizeDynamicRoutes(
         }${i18n.locales.map(locale => escapeStringRegexp(locale)).join('|')})?`
       );
 
-      if (isLocalePrefixed && !(isCorrectLocaleAPIRoutes && isApiRoute)) {
+      if (
+        isLocalePrefixed &&
+        !(isCorrectLocaleAPIRoutes && isApiRoute) &&
+        !isAppRoute
+      ) {
         // ensure destination has locale prefix to match prerender output
         // path so that the prerender object is used
         route.dest = route.dest!.replace(
@@ -795,13 +823,13 @@ export async function createLambdaFromPseudoLayers({
     ...lambdaOptions,
     ...(isStreaming
       ? {
-          experimentalResponseStreaming: true,
+          supportsResponseStreaming: true,
         }
       : {}),
     files,
     shouldAddHelpers: false,
     shouldAddSourcemapSupport: false,
-    supportsMultiPayloads: !!process.env.NEXT_PRIVATE_MULTI_PAYLOAD,
+    supportsMultiPayloads: true,
     framework: {
       slug: 'nextjs',
       version: nextVersion,
@@ -1215,10 +1243,22 @@ let _usesSrcCache: boolean | undefined;
 
 async function usesSrcDirectory(workPath: string): Promise<boolean> {
   if (!_usesSrcCache) {
-    const source = path.join(workPath, 'src', 'pages');
+    const sourcePages = path.join(workPath, 'src', 'pages');
 
     try {
-      if ((await fs.stat(source)).isDirectory()) {
+      if ((await fs.stat(sourcePages)).isDirectory()) {
+        _usesSrcCache = true;
+      }
+    } catch (_err) {
+      _usesSrcCache = false;
+    }
+  }
+
+  if (!_usesSrcCache) {
+    const sourceAppdir = path.join(workPath, 'src', 'app');
+
+    try {
+      if ((await fs.stat(sourceAppdir)).isDirectory()) {
         _usesSrcCache = true;
       }
     } catch (_err) {
@@ -1238,32 +1278,57 @@ async function getSourceFilePathFromPage({
   page: string;
   pageExtensions?: string[];
 }) {
-  // TODO: this should be updated to get the pageExtensions
-  // value used during next build
+  const usesSrcDir = await usesSrcDirectory(workPath);
   const extensionsToTry = pageExtensions || ['js', 'jsx', 'ts', 'tsx'];
 
-  let fsPath = path.join(workPath, 'pages', page);
-  if (await usesSrcDirectory(workPath)) {
-    fsPath = path.join(workPath, 'src', 'pages', page);
-  }
+  for (const pageType of ['pages', 'app']) {
+    let fsPath = path.join(workPath, pageType, page);
+    if (usesSrcDir) {
+      fsPath = path.join(workPath, 'src', pageType, page);
+    }
 
-  if (fs.existsSync(fsPath)) {
-    return path.relative(workPath, fsPath);
-  }
-  const extensionless = fsPath.slice(0, -3); // remove ".js"
-
-  for (const ext of extensionsToTry) {
-    fsPath = `${extensionless}.${ext}`;
     if (fs.existsSync(fsPath)) {
       return path.relative(workPath, fsPath);
     }
-  }
+    const extensionless = fsPath.replace(path.extname(fsPath), '');
 
-  if (isDirectory(extensionless)) {
     for (const ext of extensionsToTry) {
-      fsPath = path.join(extensionless, `index.${ext}`);
+      fsPath = `${extensionless}.${ext}`;
+      // for appDir, we need to treat "index.js" as root-level "page.js"
+      if (
+        pageType === 'app' &&
+        extensionless ===
+          path.join(workPath, `${usesSrcDir ? 'src/' : ''}app/index`)
+      ) {
+        fsPath = `${extensionless.replace(/index$/, 'page')}.${ext}`;
+      }
       if (fs.existsSync(fsPath)) {
         return path.relative(workPath, fsPath);
+      }
+    }
+
+    if (isDirectory(extensionless)) {
+      if (pageType === 'pages') {
+        for (const ext of extensionsToTry) {
+          fsPath = path.join(extensionless, `index.${ext}`);
+          if (fs.existsSync(fsPath)) {
+            return path.relative(workPath, fsPath);
+          }
+        }
+        // appDir
+      } else {
+        for (const ext of extensionsToTry) {
+          // RSC
+          fsPath = path.join(extensionless, `page.${ext}`);
+          if (fs.existsSync(fsPath)) {
+            return path.relative(workPath, fsPath);
+          }
+          // Route Handlers
+          fsPath = path.join(extensionless, `route.${ext}`);
+          if (fs.existsSync(fsPath)) {
+            return path.relative(workPath, fsPath);
+          }
+        }
       }
     }
   }
@@ -1324,6 +1389,7 @@ export type LambdaGroup = {
   pages: string[];
   memory?: number;
   maxDuration?: number;
+  isAppRouter?: boolean;
   isStreaming?: boolean;
   isPrerenders?: boolean;
   isApiLambda: boolean;
@@ -1339,6 +1405,7 @@ const LAMBDA_RESERVED_COMPRESSED_SIZE = 250 * KIB;
 export async function getPageLambdaGroups({
   entryPath,
   config,
+  functionsConfigManifest,
   pages,
   prerenderRoutes,
   pageTraces,
@@ -1352,6 +1419,7 @@ export async function getPageLambdaGroups({
 }: {
   entryPath: string;
   config: Config;
+  functionsConfigManifest?: FunctionsConfigManifestV1;
   pages: string[];
   prerenderRoutes: Set<string>;
   pageTraces: {
@@ -1378,16 +1446,26 @@ export async function getPageLambdaGroups({
 
     let opts: { memory?: number; maxDuration?: number } = {};
 
+    if (
+      functionsConfigManifest &&
+      functionsConfigManifest.functions[routeName]
+    ) {
+      opts = functionsConfigManifest.functions[routeName];
+    }
+
     if (config && config.functions) {
       const sourceFile = await getSourceFilePathFromPage({
         workPath: entryPath,
         page,
         pageExtensions,
       });
-      opts = await getLambdaOptionsFromFunction({
+
+      const vercelConfigOpts = await getLambdaOptionsFromFunction({
         sourceFile,
         config,
       });
+
+      opts = { ...vercelConfigOpts, ...opts };
     }
 
     let matchingGroup = groups.find(group => {
@@ -1721,6 +1799,7 @@ export const onPrerenderRouteInitial = (
 type OnPrerenderRouteArgs = {
   appDir: string | null;
   pagesDir: string;
+  localePrefixed404?: boolean;
   static404Page?: string;
   hasPages404: boolean;
   entryDirectory: string;
@@ -1758,6 +1837,7 @@ export const onPrerenderRoute =
       appDir,
       pagesDir,
       static404Page,
+      localePrefixed404,
       entryDirectory,
       prerenderManifest,
       isSharedLambdas,
@@ -1893,7 +1973,9 @@ export const onPrerenderRoute =
                     // file.
                     `${
                       isOmittedOrNotFound
-                        ? addLocaleOrDefault('/404', routesManifest, locale)
+                        ? localePrefixed404
+                          ? addLocaleOrDefault('/404', routesManifest, locale)
+                          : '/404'
                         : routeFileNoExt
                     }.html`
               ),
@@ -1910,7 +1992,9 @@ export const onPrerenderRoute =
                 : pagesDir,
               `${
                 isOmittedOrNotFound
-                  ? addLocaleOrDefault('/404.html', routesManifest, locale)
+                  ? localePrefixed404
+                    ? addLocaleOrDefault('/404.html', routesManifest, locale)
+                    : '/404.html'
                   : isAppPathRoute
                   ? dataRoute
                   : routeFileNoExt + '.json'
@@ -2330,6 +2414,16 @@ export {
   getSourceFilePathFromPage,
 };
 
+export type FunctionsConfigManifestV1 = {
+  version: 1;
+  functions: Record<
+    string,
+    {
+      maxDuration?: number;
+    }
+  >;
+};
+
 type MiddlewareManifest = MiddlewareManifestV1 | MiddlewareManifestV2;
 
 interface MiddlewareManifestV1 {
@@ -2346,14 +2440,15 @@ interface MiddlewareManifestV2 {
   functions?: { [page: string]: EdgeFunctionInfoV2 };
 }
 
+type Regions = 'home' | 'global' | 'auto' | string[] | 'all' | 'default';
+
 interface BaseEdgeFunctionInfo {
-  env: string[];
   files: string[];
   name: string;
   page: string;
   wasm?: { filePath: string; name: string }[];
   assets?: { filePath: string; name: string }[];
-  regions?: 'auto' | string[] | 'all' | 'default';
+  regions?: Regions;
 }
 
 interface EdgeFunctionInfoV1 extends BaseEdgeFunctionInfo {
@@ -2371,6 +2466,59 @@ interface EdgeFunctionMatcher {
   originalSource?: string;
 }
 
+const vercelFunctionRegionsVar = process.env.VERCEL_FUNCTION_REGIONS;
+let vercelFunctionRegions: string[] | undefined;
+if (vercelFunctionRegionsVar) {
+  vercelFunctionRegions = vercelFunctionRegionsVar.split(',');
+}
+
+/**
+ * Normalizes the regions config that comes from the Next.js edge functions manifest.
+ * Ensures that config like `home` and `global` are converted to the corresponding Vercel region config.
+ * In the future we'll want to make `home` and `global` part of the Build Output API.
+ * - `home` refers to the regions set in vercel.json or on the Vercel dashboard project config.
+ * - `global` refers to all regions.
+ */
+function normalizeRegions(regions: Regions): undefined | string | string[] {
+  if (typeof regions === 'string') {
+    regions = [regions];
+  }
+
+  const newRegions: string[] = [];
+  for (const region of regions) {
+    // Explicitly mentioned as `home` is one of the explicit values for preferredRegion in Next.js.
+    if (region === 'home') {
+      if (vercelFunctionRegions) {
+        // Includes the regions from the VERCEL_FUNCTION_REGIONS env var.
+        newRegions.push(...vercelFunctionRegions);
+      }
+      continue;
+    }
+
+    // Explicitly mentioned as `global` is one of the explicit values for preferredRegion in Next.js.
+    if (region === 'global') {
+      // Uses `all` instead as that's how it's implemented on Vercel.
+      // Returns here as when all is provided all regions will be matched.
+      return 'all';
+    }
+
+    // Explicitly mentioned as `auto` is one of the explicit values for preferredRegion in Next.js.
+    if (region === 'auto') {
+      // Returns here as when auto is provided all regions will be matched.
+      return 'auto';
+    }
+
+    newRegions.push(region);
+  }
+
+  // Ensure we don't pass an empty array as that is not supported.
+  if (newRegions.length === 0) {
+    return undefined;
+  }
+
+  return newRegions;
+}
+
 export async function getMiddlewareBundle({
   entryPath,
   outputDirectory,
@@ -2378,6 +2526,7 @@ export async function getMiddlewareBundle({
   isCorrectMiddlewareOrder,
   prerenderBypassToken,
   nextVersion,
+  appPathRoutesManifest,
 }: {
   config: Config;
   entryPath: string;
@@ -2386,6 +2535,7 @@ export async function getMiddlewareBundle({
   routesManifest: RoutesManifest;
   isCorrectMiddlewareOrder: boolean;
   nextVersion: string;
+  appPathRoutesManifest: Record<string, string>;
 }): Promise<{
   staticRoutes: Route[];
   dynamicRouteMap: Map<string, RouteWithSrc>;
@@ -2498,9 +2648,10 @@ export async function getMiddlewareBundle({
                   ...wasmFiles,
                   ...assetFiles,
                 },
-                regions: edgeFunction.regions,
+                regions: edgeFunction.regions
+                  ? normalizeRegions(edgeFunction.regions)
+                  : undefined,
                 entrypoint: 'index.js',
-                envVarsInUse: edgeFunction.env,
                 assets: (edgeFunction.assets ?? []).map(({ name }) => {
                   return {
                     name,
@@ -2548,11 +2699,19 @@ export async function getMiddlewareBundle({
         shortPath = shortPath.replace(/^pages\//, '');
       } else if (
         shortPath.startsWith('app/') &&
-        (shortPath.endsWith('/page') || shortPath.endsWith('/route'))
+        (shortPath.endsWith('/page') ||
+          shortPath.endsWith('/route') ||
+          shortPath === 'app/_not-found')
       ) {
-        shortPath =
-          shortPath.replace(/^app\//, '').replace(/(^|\/)(page|route)$/, '') ||
-          'index';
+        const ogRoute = shortPath.replace(/^app\//, '/');
+        shortPath = (
+          appPathRoutesManifest[ogRoute] ||
+          shortPath.replace(/(^|\/)(page|route)$/, '')
+        ).replace(/^\//, '');
+
+        if (!shortPath || shortPath === '/') {
+          shortPath = 'index';
+        }
       }
 
       if (routesManifest?.basePath) {
@@ -2608,6 +2767,37 @@ export async function getMiddlewareBundle({
     dynamicRouteMap: new Map(),
     edgeFunctions: {},
   };
+}
+
+/**
+ * Attempts to read the functions config manifest from the pre-defined
+ * location. If the manifest can't be found it will resolve to
+ * undefined.
+ */
+export async function getFunctionsConfigManifest(
+  entryPath: string,
+  outputDirectory: string
+): Promise<FunctionsConfigManifestV1 | undefined> {
+  const functionConfigManifestPath = path.join(
+    entryPath,
+    outputDirectory,
+    './server/functions-config-manifest.json'
+  );
+
+  const hasManifest = await fs
+    .access(functionConfigManifestPath)
+    .then(() => true)
+    .catch(() => false);
+
+  if (!hasManifest) {
+    return;
+  }
+
+  const manifest: FunctionsConfigManifestV1 = await fs.readJSON(
+    functionConfigManifestPath
+  );
+
+  return manifest.version === 1 ? manifest : undefined;
 }
 
 /**
@@ -2776,7 +2966,7 @@ export function getOperationType({
     }
   }
 
-  return 'SSR';
+  return 'Page'; // aka SSR
 }
 
 export function isApiPage(page: string | undefined) {
