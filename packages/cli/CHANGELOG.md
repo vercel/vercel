@@ -1,5 +1,22 @@
 # vercel
 
+## 31.2.3
+
+### Patch Changes
+
+- Be looser in tests with mock server urls ([#10300](https://github.com/vercel/vercel/pull/10300))
+
+- Handle calls for deployment aliases when mocking deployments ([#10303](https://github.com/vercel/vercel/pull/10303))
+
+- Remove unused code ([#10309](https://github.com/vercel/vercel/pull/10309))
+
+- Updated dependencies [[`5bf1fe4c7`](https://github.com/vercel/vercel/commit/5bf1fe4c743f6be3f7d5a24447ea5b083a68dc67), [`a8ecf40d6`](https://github.com/vercel/vercel/commit/a8ecf40d6f50e2fc8b13b02c8ef50b3dcafad3a6), [`08da4b9c9`](https://github.com/vercel/vercel/commit/08da4b9c923501d9d28eb6e3f26f4605fee83042), [`0945d24cb`](https://github.com/vercel/vercel/commit/0945d24cbe901ca3f0eedd011251ad499c72d472)]:
+  - @vercel/next@3.9.4
+  - @vercel/build-utils@6.8.3
+  - @vercel/remix-builder@1.10.0
+  - @vercel/node@2.15.9
+  - @vercel/static-build@1.3.45
+
 ## 31.2.2
 
 ### Patch Changes
