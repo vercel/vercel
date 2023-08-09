@@ -1,6 +1,8 @@
 import chalk from 'chalk';
 import stripAnsi from 'strip-ansi';
 import { LOGO, NAME } from '@vercel-internals/constants';
+import { start } from 'repl';
+import arg from 'arg';
 
 const INDENT = ' '.repeat(2);
 const NEWLINE = '\n';
@@ -26,6 +28,7 @@ export interface Command {
   name: string;
   description: string;
   arguments: CommandArgument[];
+  subcommands?: Command[];
   options: CommandOption[];
   examples: CommandExample[];
 }
@@ -259,6 +262,31 @@ export function buildCommandOptionLines(
   return `${outputArrayToString(outputArray)}${NEWLINE}`;
 }
 
+export function buildSubcommandLines(
+  subcommands: Command[] | undefined,
+  options: BuildHelpOutputOptions
+) {
+  if (!subcommands) {
+    return null;
+  }
+
+  // Initialize output array with header and empty line
+  const outputArray: string[] = [`${INDENT}${chalk.dim('Commands')}:`, ''];
+
+  // Iterate over options and create the "start" of each option (e.g. `  -b, --build-env <key=value>`)
+  for (const command of subcommands) {
+    let line: string[] = [INDENT, command.name];
+    if (command.arguments && command.arguments.length) {
+      for (const argument of command.arguments) {
+        line.push(argument.required ? argument.name : `[${argument.name}]`);
+      }
+    }
+    line.push(command.description);
+    outputArray.push(line.join(INDENT));
+  }
+  return outputArray.join(NEWLINE);
+}
+
 export function buildCommandExampleLines(command: Command) {
   const outputArray: string[] = [`${INDENT}${chalk.dim('Examples:')}`, ''];
   for (const example of command.examples) {
@@ -300,6 +328,7 @@ export function buildHelpOutput(
     '',
     buildCommandSynopsisLine(command),
     buildDescriptionLine(command),
+    buildSubcommandLines(command.subcommands, options),
     buildCommandOptionLines(command.options, options, 'Options'),
     buildCommandOptionLines(globalCommandOptions, options, 'Global Options'),
     buildCommandExampleLines(command),
