@@ -78,7 +78,8 @@ function isEdgeRuntime(runtime: string): boolean {
 export function getResolvedRouteConfig(
   route: ConfigRoute,
   routes: RouteManifest,
-  configs: Map<ConfigRoute, BaseFunctionConfig | null>
+  configs: Map<ConfigRoute, BaseFunctionConfig | null>,
+  isHydrogen2: boolean
 ): ResolvedRouteConfig {
   let runtime: ResolvedRouteConfig['runtime'] | undefined;
   let regions: ResolvedRouteConfig['regions'];
@@ -107,8 +108,8 @@ export function getResolvedRouteConfig(
     regions = Array.from(new Set(regions)).sort();
   }
 
-  if (runtime === 'edge') {
-    return { runtime, regions };
+  if (isHydrogen2 || runtime === 'edge') {
+    return { runtime: 'edge', regions };
   }
 
   if (regions && !Array.isArray(regions)) {
