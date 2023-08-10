@@ -4,15 +4,14 @@ import getArgs from '../../util/get-args';
 import getInvalidSubcommand from '../../util/get-invalid-subcommand';
 import getScope from '../../util/get-scope';
 import handleError from '../../util/handle-error';
-import logo from '../../util/output/logo';
-import { getPkgName } from '../../util/pkg-name';
+import { packageName, logo } from '../../util/pkg-name';
 import add from './add';
 import list from './list';
 import rm from './rm';
 
 const help = () => {
   console.log(`
-  ${chalk.bold(`${logo} ${getPkgName()} project`)} [options] <command>
+  ${chalk.bold(`${logo} ${packageName} project`)} [options] <command>
 
   ${chalk.dim('Commands:')}
 
@@ -33,13 +32,13 @@ const help = () => {
 
   ${chalk.gray('–')} Add a new project
 
-    ${chalk.cyan(`$ ${getPkgName()} project add my-project`)}
+    ${chalk.cyan(`$ ${packageName} project add my-project`)}
 
   ${chalk.gray('–')} Paginate projects, where ${chalk.dim(
     '`1584722256178`'
   )} is the time in milliseconds since the UNIX epoch.
 
-    ${chalk.cyan(`$ ${getPkgName()} project ls --next 1584722256178`)}
+    ${chalk.cyan(`$ ${packageName} project ls --next 1584722256178`)}
 `);
 };
 
