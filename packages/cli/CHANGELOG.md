@@ -1,5 +1,84 @@
 # vercel
 
+## 31.2.3
+
+### Patch Changes
+
+- Be looser in tests with mock server urls ([#10300](https://github.com/vercel/vercel/pull/10300))
+
+- Handle calls for deployment aliases when mocking deployments ([#10303](https://github.com/vercel/vercel/pull/10303))
+
+- Remove unused code ([#10309](https://github.com/vercel/vercel/pull/10309))
+
+- Updated dependencies [[`5bf1fe4c7`](https://github.com/vercel/vercel/commit/5bf1fe4c743f6be3f7d5a24447ea5b083a68dc67), [`a8ecf40d6`](https://github.com/vercel/vercel/commit/a8ecf40d6f50e2fc8b13b02c8ef50b3dcafad3a6), [`08da4b9c9`](https://github.com/vercel/vercel/commit/08da4b9c923501d9d28eb6e3f26f4605fee83042), [`0945d24cb`](https://github.com/vercel/vercel/commit/0945d24cbe901ca3f0eedd011251ad499c72d472)]:
+  - @vercel/next@3.9.4
+  - @vercel/build-utils@6.8.3
+  - @vercel/remix-builder@1.10.0
+  - @vercel/node@2.15.9
+  - @vercel/static-build@1.3.45
+
+## 31.2.2
+
+### Patch Changes
+
+- Migrate list command to new structure ([#10284](https://github.com/vercel/vercel/pull/10284))
+
+- Migrate whoami command to new structure ([#10266](https://github.com/vercel/vercel/pull/10266))
+
+- Migrate logs command to new structure ([#10281](https://github.com/vercel/vercel/pull/10281))
+
+- Migrate login command to new structure ([#10283](https://github.com/vercel/vercel/pull/10283))
+
+- Migrate pull command to new structure ([#10280](https://github.com/vercel/vercel/pull/10280))
+
+- Migrate logout command to new structure ([#10282](https://github.com/vercel/vercel/pull/10282))
+
+- Migrate build command to new structure ([#10286](https://github.com/vercel/vercel/pull/10286))
+
+- Migrate inspect command to new structure ([#10277](https://github.com/vercel/vercel/pull/10277))
+
+- Migrate redeploy command to new structure ([#10279](https://github.com/vercel/vercel/pull/10279))
+
+- Migrate link command to new structure ([#10285](https://github.com/vercel/vercel/pull/10285))
+
+- Update spacing of --help output for CLI ([#10287](https://github.com/vercel/vercel/pull/10287))
+
+- Updated dependencies [[`4af242af8`](https://github.com/vercel/vercel/commit/4af242af8633e58b6a9bf920564416da3ef22ad4), [`0cbdae141`](https://github.com/vercel/vercel/commit/0cbdae1411aa7936ff7dfe551919ca5e56cd6e98), [`85dd66778`](https://github.com/vercel/vercel/commit/85dd667781693539d753d587566e53964bbe189d)]:
+  - @vercel/node@2.15.8
+  - @vercel/remix-builder@1.9.1
+  - @vercel/static-build@1.3.44
+
+## 31.2.1
+
+### Patch Changes
+
+- Migrate bisect command to new structure ([#10276](https://github.com/vercel/vercel/pull/10276))
+
+- Migrate remove command to new structure ([#10268](https://github.com/vercel/vercel/pull/10268))
+
+- Updated dependencies [[`fc413707d`](https://github.com/vercel/vercel/commit/fc413707d017e234d5013b761d885f65f9b981bc)]:
+  - @vercel/node@2.15.7
+  - @vercel/static-build@1.3.43
+
+## 31.2.0
+
+### Minor Changes
+
+- Add a "Global Options" section to help output ([#10250](https://github.com/vercel/vercel/pull/10250))
+
+### Patch Changes
+
+- Updated dependencies [[`d1b0dbe3a`](https://github.com/vercel/vercel/commit/d1b0dbe3a7d8754286aa2b7ba0c8b55d3adafdea), [`4a8622a10`](https://github.com/vercel/vercel/commit/4a8622a10d52260cb629a1c4a6f797ade05ea154), [`6469ef1b8`](https://github.com/vercel/vercel/commit/6469ef1b8ce37e93f50ab4a108aa0953d7631fe8)]:
+  - @vercel/remix-builder@1.9.0
+  - @vercel/next@3.9.3
+
+## 31.1.1
+
+### Patch Changes
+
+- Updated dependencies [[`7c30b13cc`](https://github.com/vercel/vercel/commit/7c30b13ccb79bdf0ac240282bba4c084f1d0d122)]:
+  - @vercel/next@3.9.2
+
 ## 31.1.0
 
 ### Minor Changes

@@ -4,14 +4,13 @@ import { ensureLink } from '../../util/link/ensure-link';
 import getArgs from '../../util/get-args';
 import getInvalidSubcommand from '../../util/get-invalid-subcommand';
 import handleError from '../../util/handle-error';
-import logo from '../../util/output/logo';
-import { getPkgName } from '../../util/pkg-name';
+import { packageName, logo } from '../../util/pkg-name';
 import connect from './connect';
 import disconnect from './disconnect';
 
 const help = () => {
   console.log(`
-  ${chalk.bold(`${logo} ${getPkgName()} git`)} <command>
+  ${chalk.bold(`${logo} ${packageName} git`)} <command>
 
   ${chalk.dim('Commands:')}
 
@@ -32,19 +31,19 @@ const help = () => {
     '–'
   )} Connect your Vercel Project to your Git repository defined in your local .git config
 
-    ${chalk.cyan(`$ ${getPkgName()} git connect`)}
+    ${chalk.cyan(`$ ${packageName} git connect`)}
 
   ${chalk.gray(
     '–'
   )} Connect your Vercel Project to a Git repository using the remote URL
 
     ${chalk.cyan(
-      `$ ${getPkgName()} git connect https://github.com/user/repo.git`
+      `$ ${packageName} git connect https://github.com/user/repo.git`
     )}
 
   ${chalk.gray('–')} Disconnect the Git provider repository
 
-    ${chalk.cyan(`$ ${getPkgName()} git disconnect`)}
+    ${chalk.cyan(`$ ${packageName} git disconnect`)}
 `);
 };
 

@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 6.8.3
+
+### Patch Changes
+
+- Fix `getPrefixedEnvVars()` to handle `VERCEL_BRANCH_URL` ([#10315](https://github.com/vercel/vercel/pull/10315))
+
 ## 6.8.2
 
 ### Patch Changes

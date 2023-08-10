@@ -1,8 +1,8 @@
+import semver from 'semver';
 import { existsSync, promises as fs } from 'fs';
 import { basename, dirname, join, relative, resolve, sep } from 'path';
 import { pathToRegexp, Key } from 'path-to-regexp';
 import { debug, spawnAsync } from '@vercel/build-utils';
-import { readConfig } from '@remix-run/dev/dist/config';
 import { walkParentDirs } from '@vercel/build-utils';
 import type {
   ConfigRoute,
@@ -15,12 +15,15 @@ import type {
   SpawnOptionsExtended,
 } from '@vercel/build-utils/dist/fs/run-user-scripts';
 
+export const _require: typeof require = eval('require');
+
 export interface ResolvedNodeRouteConfig {
   runtime: 'nodejs';
   regions?: string[];
   maxDuration?: number;
   memory?: number;
 }
+
 export interface ResolvedEdgeRouteConfig {
   runtime: 'edge';
   regions?: BaseFunctionConfig['regions'];
@@ -42,8 +45,6 @@ export interface ResolvedRoutePaths {
    */
   rePath: string;
 }
-
-const _require: typeof require = eval('require');
 
 const SPLAT_PATH = '/:params*';
 
@@ -77,7 +78,8 @@ function isEdgeRuntime(runtime: string): boolean {
 export function getResolvedRouteConfig(
   route: ConfigRoute,
   routes: RouteManifest,
-  configs: Map<ConfigRoute, BaseFunctionConfig | null>
+  configs: Map<ConfigRoute, BaseFunctionConfig | null>,
+  isHydrogen2: boolean
 ): ResolvedRouteConfig {
   let runtime: ResolvedRouteConfig['runtime'] | undefined;
   let regions: ResolvedRouteConfig['regions'];
@@ -106,8 +108,8 @@ export function getResolvedRouteConfig(
     regions = Array.from(new Set(regions)).sort();
   }
 
-  if (runtime === 'edge') {
-    return { runtime, regions };
+  if (isHydrogen2 || runtime === 'edge') {
+    return { runtime: 'edge', regions };
   }
 
   if (regions && !Array.isArray(regions)) {
@@ -212,7 +214,14 @@ export function syncEnv(source: NodeJS.ProcessEnv, dest: NodeJS.ProcessEnv) {
   return () => syncEnv(originalDest, dest);
 }
 
-export async function chdirAndReadConfig(dir: string, packageJsonPath: string) {
+export async function chdirAndReadConfig(
+  remixRunDevPath: string,
+  dir: string,
+  packageJsonPath: string
+) {
+  const { readConfig }: typeof import('@remix-run/dev/dist/config') =
+    await import(join(remixRunDevPath, 'dist/config.js'));
+
   const originalCwd = process.cwd();
 
   // As of Remix v1.14.0, reading the config may trigger adding
@@ -249,19 +258,24 @@ export async function chdirAndReadConfig(dir: string, packageJsonPath: string) {
   return remixConfig;
 }
 
-export interface AddDependencyOptions extends SpawnOptionsExtended {
+export interface AddDependenciesOptions extends SpawnOptionsExtended {
   saveDev?: boolean;
 }
 
 /**
  * Runs `npm i ${name}` / `pnpm i ${name}` / `yarn add ${name}`.
  */
-export function addDependency(
+export function addDependencies(
   cliType: CliType,
   names: string[],
-  opts: AddDependencyOptions = {}
+  opts: AddDependenciesOptions = {}
 ) {
+  debug('Installing additional dependencies:');
+  for (const name of names) {
+    debug(` - ${name}`);
+  }
   const args: string[] = [];
+
   if (cliType === 'npm' || cliType === 'pnpm') {
     args.push('install');
     if (opts.saveDev) {
@@ -269,12 +283,29 @@ export function addDependency(
     }
   } else {
     // 'yarn'
-    args.push('add');
+    args.push('add', '--ignore-workspace-root-check');
     if (opts.saveDev) {
       args.push('--dev');
     }
   }
+
+  // Don't fail if pnpm is being run at the workspace root
+  if (cliType === 'pnpm' && opts.cwd) {
+    if (existsSync(join(opts.cwd, 'pnpm-workspace.yaml'))) {
+      args.push('--workspace-root');
+    }
+  }
+
   return spawnAsync(cliType, args.concat(names), opts);
+}
+
+export function resolveSemverMinMax(
+  min: string,
+  max: string,
+  version: string
+): string {
+  const floored = semver.intersects(version, `>= ${min}`) ? version : min;
+  return semver.intersects(floored, `<= ${max}`) ? floored : max;
 }
 
 export async function ensureResolvable(
@@ -368,4 +399,15 @@ async function ensureSymlink(
 
   await fs.symlink(relativeTarget, symlinkPath);
   debug(`Created symlink for "${pkgName}"`);
+}
+
+export function isESM(path: string): boolean {
+  // Figure out if the `remix.config` file is using ESM syntax
+  let isESM = false;
+  try {
+    _require(path);
+  } catch (err: any) {
+    isESM = err.code === 'ERR_REQUIRE_ESM';
+  }
+  return isESM;
 }

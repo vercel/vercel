@@ -70,7 +70,23 @@ describe('getResolvedRouteConfig()', () => {
     },
   ])('should resolve config for "$id" route', ({ id, expected }) => {
     const route = routes[id];
-    const config = getResolvedRouteConfig(route, routes, staticConfigsMap);
+    const config = getResolvedRouteConfig(
+      route,
+      routes,
+      staticConfigsMap,
+      false
+    );
     expect(config).toMatchObject(expected);
+  });
+
+  it('should resolve config as "edge" for Hydrogen v2', () => {
+    const route = routes['root'];
+    const config = getResolvedRouteConfig(
+      route,
+      routes,
+      staticConfigsMap,
+      true
+    );
+    expect(config).toMatchObject({ runtime: 'edge', regions: undefined });
   });
 });

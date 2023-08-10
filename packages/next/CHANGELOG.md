@@ -1,5 +1,23 @@
 # @vercel/next
 
+## 3.9.4
+
+### Patch Changes
+
+- Preserve sourceMappingURL comments in template literals ([#10275](https://github.com/vercel/vercel/pull/10275))
+
+## 3.9.3
+
+### Patch Changes
+
+- fix dynamic not found pages ([#10262](https://github.com/vercel/vercel/pull/10262))
+
+## 3.9.2
+
+### Patch Changes
+
+- Fix pages/404 gsp + i18n case ([#10258](https://github.com/vercel/vercel/pull/10258))
+
 ## 3.9.1
 
 ### Patch Changes

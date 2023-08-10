@@ -7,7 +7,7 @@ import note from '../../util/output/note';
 import textInput from '../../util/input/text';
 import invite from './invite';
 import { writeToConfigFile } from '../../util/config/files';
-import { getPkgName, getCommandName } from '../../util/pkg-name';
+import { packageName, getCommandName } from '../../util/pkg-name';
 import Client from '../../util/client';
 import createTeam from '../../util/teams/create-team';
 import patchTeam from '../../util/teams/patch-team';
@@ -26,7 +26,7 @@ const validateNameKeypress = (data: string, value: string) =>
 const gracefulExit = () => {
   console.log(); // Blank line
   note(
-    `Your team is now active for all ${getPkgName()} commands!\n  Run ${getCommandName(
+    `Your team is now active for all ${packageName} commands!\n  Run ${getCommandName(
       `switch`
     )} to change it in the future.`
   );

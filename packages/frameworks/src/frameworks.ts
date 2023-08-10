@@ -1691,7 +1691,7 @@ export const frameworks = [
     defaultVersion: '0.13.0', // Must match the build image
   },
   {
-    name: 'Hydrogen',
+    name: 'Hydrogen (v1)',
     slug: 'hydrogen',
     demo: 'https://hydrogen-template.vercel.app',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/hydrogen.svg',

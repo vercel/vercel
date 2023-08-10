@@ -1,17 +1,16 @@
 import chalk from 'chalk';
 import error from '../../util/output/error';
-import logo from '../../util/output/logo';
 import list from './list';
 import add from './add';
 import change from './switch';
 import invite from './invite';
-import { getPkgName } from '../../util/pkg-name';
+import { packageName, logo } from '../../util/pkg-name';
 import getArgs from '../../util/get-args';
 import Client from '../../util/client';
 
 const help = () => {
   console.log(`
-  ${chalk.bold(`${logo} ${getPkgName()} teams`)} [options] <command>
+  ${chalk.bold(`${logo} ${packageName} teams`)} [options] <command>
 
   ${chalk.dim('Commands:')}
 
@@ -37,7 +36,7 @@ const help = () => {
 
   ${chalk.gray('–')} Switch to a team
 
-      ${chalk.cyan(`$ ${getPkgName()} switch <slug>`)}
+      ${chalk.cyan(`$ ${packageName} switch <slug>`)}
 
       ${chalk.gray(
         '–'
@@ -50,13 +49,13 @@ const help = () => {
 
   ${chalk.gray('–')} Invite new members (interactively)
 
-      ${chalk.cyan(`$ ${getPkgName()} teams invite`)}
+      ${chalk.cyan(`$ ${packageName} teams invite`)}
 
   ${chalk.gray('–')} Paginate results, where ${chalk.dim(
     '`1584722256178`'
   )} is the time in milliseconds since the UNIX epoch.
 
-      ${chalk.cyan(`$ ${getPkgName()} teams ls --next 1584722256178`)}
+      ${chalk.cyan(`$ ${packageName} teams ls --next 1584722256178`)}
   `);
 };
 

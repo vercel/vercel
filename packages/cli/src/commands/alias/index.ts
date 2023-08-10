@@ -5,8 +5,7 @@ import { handleError } from '../../util/error';
 import Client from '../../util/client';
 import getArgs from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
-import logo from '../../util/output/logo';
-import { getPkgName } from '../../util/pkg-name';
+import { packageName, logo } from '../../util/pkg-name';
 
 import ls from './ls';
 import rm from './rm';
@@ -14,7 +13,7 @@ import set from './set';
 
 const help = () => {
   console.log(`
-  ${chalk.bold(`${logo} ${getPkgName()} alias`)} [options] <command>
+  ${chalk.bold(`${logo} ${packageName} alias`)} [options] <command>
 
   ${chalk.dim('Commands:')}
 
@@ -48,7 +47,7 @@ const help = () => {
   ${chalk.gray('–')} Add a new alias to ${chalk.underline('my-api.vercel.app')}
 
       ${chalk.cyan(
-        `$ ${getPkgName()} alias set ${chalk.underline(
+        `$ ${packageName} alias set ${chalk.underline(
           'api-ownv3nc9f8.vercel.app'
         )} ${chalk.underline('my-api.vercel.app')}`
       )}
@@ -56,7 +55,7 @@ const help = () => {
       Custom domains work as alias targets
 
       ${chalk.cyan(
-        `$ ${getPkgName()} alias set ${chalk.underline(
+        `$ ${packageName} alias set ${chalk.underline(
           'api-ownv3nc9f8.vercel.app'
         )} ${chalk.underline('my-api.com')}`
       )}
