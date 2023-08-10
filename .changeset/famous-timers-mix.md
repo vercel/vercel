@@ -1,5 +1,5 @@
 ---
-'@vercel/node': minor
+'@vercel/node': patch
 ---
 
-Update 'edge/runtime' to 2.4.4
+Update 'edge-runtime' to 2.4.4
