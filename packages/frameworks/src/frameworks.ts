@@ -970,7 +970,7 @@ export const frameworks = [
   },
   {
     // TODO: fix detected as "sveltekit-1"
-    name: 'SvelteKit (Legacy Beta)',
+    name: 'SvelteKit (v0)',
     slug: 'sveltekit',
     demo: 'https://sveltekit-template.vercel.app',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/svelte.svg',
