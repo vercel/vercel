@@ -1,5 +1,5 @@
 import { Command } from '../help';
-import { getPkgName } from '../../util/pkg-name';
+import { packageName } from '../../util/pkg-name';
 
 export const buildCommand: Command = {
   name: 'build',
@@ -36,11 +36,11 @@ export const buildCommand: Command = {
   examples: [
     {
       name: 'Build the project',
-      value: `${getPkgName()} build`,
+      value: `${packageName} build`,
     },
     {
       name: 'Build the project in a specific directory',
-      value: `${getPkgName()} build --cwd ./path-to-project`,
+      value: `${packageName} build --cwd ./path-to-project`,
     },
   ],
 };

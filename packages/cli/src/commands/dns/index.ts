@@ -4,8 +4,7 @@ import Client from '../../util/client';
 import getArgs from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 import handleError from '../../util/handle-error';
-import logo from '../../util/output/logo';
-import { getPkgName } from '../../util/pkg-name';
+import { packageName, logo } from '../../util/pkg-name';
 
 import add from './add';
 import importZone from './import';
@@ -14,7 +13,7 @@ import rm from './rm';
 
 const help = () => {
   console.log(`
-  ${chalk.bold(`${logo} ${getPkgName()} dns`)} [options] <command>
+  ${chalk.bold(`${logo} ${packageName} dns`)} [options] <command>
 
   ${chalk.dim('Commands:')}
 
@@ -48,48 +47,48 @@ const help = () => {
   ${chalk.gray('–')} Add an A record for a subdomain
 
       ${chalk.cyan(
-        `$ ${getPkgName()} dns add <DOMAIN> <SUBDOMAIN> <A | AAAA | ALIAS | CNAME | TXT>  <VALUE>`
+        `$ ${packageName} dns add <DOMAIN> <SUBDOMAIN> <A | AAAA | ALIAS | CNAME | TXT>  <VALUE>`
       )}
-      ${chalk.cyan(`$ ${getPkgName()} dns add zeit.rocks api A 198.51.100.100`)}
+      ${chalk.cyan(`$ ${packageName} dns add zeit.rocks api A 198.51.100.100`)}
 
   ${chalk.gray('–')} Add an MX record (@ as a name refers to the domain)
 
       ${chalk.cyan(
-        `$ ${getPkgName()} dns add <DOMAIN> '@' MX <RECORD VALUE> <PRIORITY>`
+        `$ ${packageName} dns add <DOMAIN> '@' MX <RECORD VALUE> <PRIORITY>`
       )}
       ${chalk.cyan(
-        `$ ${getPkgName()} dns add zeit.rocks '@' MX mail.zeit.rocks 10`
+        `$ ${packageName} dns add zeit.rocks '@' MX mail.zeit.rocks 10`
       )}
 
   ${chalk.gray('–')} Add an SRV record
 
       ${chalk.cyan(
-        `$ ${getPkgName()} dns add <DOMAIN> <NAME> SRV <PRIORITY> <WEIGHT> <PORT> <TARGET>`
+        `$ ${packageName} dns add <DOMAIN> <NAME> SRV <PRIORITY> <WEIGHT> <PORT> <TARGET>`
       )}
       ${chalk.cyan(
-        `$ ${getPkgName()} dns add zeit.rocks '@' SRV 10 0 389 zeit.party`
+        `$ ${packageName} dns add zeit.rocks '@' SRV 10 0 389 zeit.party`
       )}
 
   ${chalk.gray('–')} Add a CAA record
 
       ${chalk.cyan(
-        `$ ${getPkgName()} dns add <DOMAIN> <NAME> CAA '<FLAGS> <TAG> "<VALUE>"'`
+        `$ ${packageName} dns add <DOMAIN> <NAME> CAA '<FLAGS> <TAG> "<VALUE>"'`
       )}
       ${chalk.cyan(
-        `$ ${getPkgName()} dns add zeit.rocks '@' CAA '0 issue "example.com"'`
+        `$ ${packageName} dns add zeit.rocks '@' CAA '0 issue "example.com"'`
       )}
 
   ${chalk.gray('–')} Import a Zone file
 
-      ${chalk.cyan(`$ ${getPkgName()} dns import <DOMAIN> <FILE>`)}
-      ${chalk.cyan(`$ ${getPkgName()} dns import zeit.rocks ./zonefile.txt`)}
+      ${chalk.cyan(`$ ${packageName} dns import <DOMAIN> <FILE>`)}
+      ${chalk.cyan(`$ ${packageName} dns import zeit.rocks ./zonefile.txt`)}
 
   ${chalk.gray('–')} Paginate results, where ${chalk.dim(
     '`1584722256178`'
   )} is the time in milliseconds since the UNIX epoch.
 
-      ${chalk.cyan(`$ ${getPkgName()} dns ls --next 1584722256178`)}
-      ${chalk.cyan(`$ ${getPkgName()} dns ls zeit.rocks --next 1584722256178`)}
+      ${chalk.cyan(`$ ${packageName} dns ls --next 1584722256178`)}
+      ${chalk.cyan(`$ ${packageName} dns ls zeit.rocks --next 1584722256178`)}
 `);
 };
 

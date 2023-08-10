@@ -4,9 +4,8 @@ import getArgs from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 import Client from '../../util/client';
 import handleError from '../../util/handle-error';
-import logo from '../../util/output/logo';
 import init from './init';
-import { getPkgName } from '../../util/pkg-name';
+import { packageName, logo } from '../../util/pkg-name';
 import { isError } from '@vercel/error-utils';
 
 const COMMAND_CONFIG = {
@@ -15,7 +14,7 @@ const COMMAND_CONFIG = {
 
 const help = () => {
   console.log(`
-  ${chalk.bold(`${logo} ${getPkgName()} init`)} [example] [dir] [-f | --force]
+  ${chalk.bold(`${logo} ${packageName} init`)} [example] [dir] [-f | --force]
 
   ${chalk.dim('Options:')}
 
@@ -28,19 +27,19 @@ const help = () => {
 
   ${chalk.gray('–')}  Choose from all available examples
 
-      ${chalk.cyan(`$ ${getPkgName()} init`)}
+      ${chalk.cyan(`$ ${packageName} init`)}
 
   ${chalk.gray('–')}  Initialize example project into a new directory
 
-      ${chalk.cyan(`$ ${getPkgName()} init <example>`)}
+      ${chalk.cyan(`$ ${packageName} init <example>`)}
 
   ${chalk.gray('–')}  Initialize example project into specified directory
 
-      ${chalk.cyan(`$ ${getPkgName()} init <example> <dir>`)}
+      ${chalk.cyan(`$ ${packageName} init <example> <dir>`)}
 
   ${chalk.gray('–')}  Initialize example project without checking
 
-      ${chalk.cyan(`$ ${getPkgName()} init <example> --force`)}
+      ${chalk.cyan(`$ ${packageName} init <example> --force`)}
   `);
 };
 
