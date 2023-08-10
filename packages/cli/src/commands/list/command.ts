@@ -1,5 +1,5 @@
 import { Command } from '../help';
-import { getPkgName } from '../../util/pkg-name';
+import { packageName } from '../../util/pkg-name';
 
 export const listCommand: Command = {
   name: 'list',
@@ -43,19 +43,19 @@ export const listCommand: Command = {
   examples: [
     {
       name: 'List all deployments for the currently linked project',
-      value: `${getPkgName()} list`,
+      value: `${packageName} list`,
     },
     {
       name: 'List all deployments for the project `my-app` in the team of the currently linked project',
-      value: `${getPkgName()} list my-app`,
+      value: `${packageName} list my-app`,
     },
     {
       name: 'Filter deployments by metadata',
-      value: `${getPkgName()} list -m key1=value1 -m key2=value2`,
+      value: `${packageName} list -m key1=value1 -m key2=value2`,
     },
     {
       name: 'Paginate deployments for a project, where `1584722256178` is the time in milliseconds since the UNIX epoch',
-      value: `${getPkgName()} list my-app --next 1584722256178`,
+      value: `${packageName} list my-app --next 1584722256178`,
     },
   ],
 };

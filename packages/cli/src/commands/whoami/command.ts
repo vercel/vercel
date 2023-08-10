@@ -1,5 +1,5 @@
 import { Command } from '../help';
-import { getPkgName } from '../../util/pkg-name';
+import { packageName } from '../../util/pkg-name';
 
 export const whoamiCommand: Command = {
   name: 'whoami',
@@ -9,7 +9,7 @@ export const whoamiCommand: Command = {
   examples: [
     {
       name: 'Shows the username of the currently logged in user',
-      value: `${getPkgName()} whoami`,
+      value: `${packageName} whoami`,
     },
   ],
 };

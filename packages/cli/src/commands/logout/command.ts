@@ -1,5 +1,5 @@
 import { Command } from '../help';
-import { getPkgName } from '../../util/pkg-name';
+import { packageName } from '../../util/pkg-name';
 
 export const logoutCommand: Command = {
   name: 'logout',
@@ -9,7 +9,7 @@ export const logoutCommand: Command = {
   examples: [
     {
       name: 'Logout from the CLI',
-      value: `${getPkgName()} logout`,
+      value: `${packageName} logout`,
     },
   ],
 };

@@ -1,5 +1,5 @@
 import { Command } from '../help';
-import { getPkgName } from '../../util/pkg-name';
+import { packageName } from '../../util/pkg-name';
 
 export const linkCommand: Command = {
   name: 'link',
@@ -36,19 +36,19 @@ export const linkCommand: Command = {
   examples: [
     {
       name: 'Link current directory to a Vercel Project',
-      value: `${getPkgName()} link`,
+      value: `${packageName} link`,
     },
     {
       name: 'Link current directory with default options and skip questions',
-      value: `${getPkgName()} link --yes`,
+      value: `${packageName} link --yes`,
     },
     {
       name: 'Link a specific directory to a Vercel Project',
-      value: `${getPkgName()} link --cwd /path/to/project`,
+      value: `${packageName} link --cwd /path/to/project`,
     },
     {
       name: 'Link to the current Git repository, allowing for multiple Vercel Projects to be linked simultaneously (useful for monorepos)',
-      value: `${getPkgName()} link --repo`,
+      value: `${packageName} link --repo`,
     },
   ],
 };
