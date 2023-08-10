@@ -155,7 +155,11 @@ export default async function remove(client: Client) {
   }
 
   deployments = deployments.filter((match, i) => {
-    if (safe && aliases[i].length > 0) {
+    if (
+      safe &&
+      (aliases[i].length > 0 ||
+        ['QUEUED', 'INITIALIZING', 'BUILDING'].includes(match.status))
+    ) {
       return false;
     }
 
