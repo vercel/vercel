@@ -6,12 +6,11 @@ import strlen from '../util/strlen.ts';
 import { handleError, error } from '../util/error';
 import NowSecrets from '../util/secrets';
 import exit from '../util/exit';
-import logo from '../util/output/logo';
 import getScope from '../util/get-scope.ts';
 import confirm from '../util/input/confirm';
 import getCommandFlags from '../util/get-command-flags';
 import getPrefixedFlags from '../util/get-prefixed-flags';
-import { getPkgName, getCommandName } from '../util/pkg-name.ts';
+import { packageName, getCommandName, logo } from '../util/pkg-name.ts';
 
 const help = () => {
   console.log(`
@@ -21,7 +20,7 @@ const help = () => {
     )} command is recommended instead of ${getCommandName('secrets')}`
   )}
 
-  ${chalk.bold(`${logo} ${getPkgName()} secrets`)} [options] <command>
+  ${chalk.bold(`${logo} ${packageName} secrets`)} [options] <command>
 
   ${chalk.dim('Commands:')}
 
@@ -50,7 +49,7 @@ const help = () => {
 
   ${chalk.gray('–')} Add a new secret
 
-    ${chalk.cyan(`$ ${getPkgName()} secrets add my-secret "my value"`)}
+    ${chalk.cyan(`$ ${packageName} secrets add my-secret "my value"`)}
 
     ${chalk.gray(
       '–'
@@ -66,13 +65,13 @@ const help = () => {
     '`@`'
   )} symbol)
 
-    ${chalk.cyan(`$ ${getPkgName()} -e MY_SECRET=${chalk.bold('@my-secret')}`)}
+    ${chalk.cyan(`$ ${packageName} -e MY_SECRET=${chalk.bold('@my-secret')}`)}
 
   ${chalk.gray('–')} Paginate results, where ${chalk.dim(
     '`1584722256178`'
   )} is the time in milliseconds since the UNIX epoch
 
-    ${chalk.cyan(`$ ${getPkgName()} secrets ls --next 1584722256178`)}
+    ${chalk.cyan(`$ ${packageName} secrets ls --next 1584722256178`)}
 `);
 };
 

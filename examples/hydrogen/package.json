@@ -44,6 +44,5 @@
     "react-use": "^17.4.0",
     "title": "^3.4.4",
     "typographic-base": "^1.0.4"
-  },
-  "author": "nrajlich"
+  }
 }

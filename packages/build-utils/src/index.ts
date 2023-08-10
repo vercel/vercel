@@ -30,7 +30,9 @@ import {
   getNodeVersion,
   getSpawnOptions,
   getNodeBinPath,
+  getNodeBinPaths,
   scanParentDirs,
+  traverseUpDirectories,
 } from './fs/run-user-scripts';
 import {
   getLatestNodeVersion,
@@ -68,6 +70,7 @@ export {
   spawnCommand,
   walkParentDirs,
   getNodeBinPath,
+  getNodeBinPaths,
   runNpmInstall,
   runBundleInstall,
   runPipInstall,
@@ -89,6 +92,7 @@ export {
   getIgnoreFilter,
   cloneEnv,
   hardLinkDir,
+  traverseUpDirectories,
   validateNpmrc,
 };
 

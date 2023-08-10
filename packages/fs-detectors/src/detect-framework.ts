@@ -152,6 +152,24 @@ export async function detectFramework({
 }
 
 /**
+ * Detects all matching Frameworks based on the given virtual filesystem.
+ */
+export async function detectFrameworks({
+  fs,
+  frameworkList,
+}: DetectFrameworkRecordOptions): Promise<Framework[]> {
+  const result = await Promise.all(
+    frameworkList.map(async frameworkMatch => {
+      if (await matches(fs, frameworkMatch)) {
+        return frameworkMatch;
+      }
+      return null;
+    })
+  );
+  return result.filter(res => res !== null) as Framework[];
+}
+
+/**
  * Framework with a `detectedVersion` specifying the version
  * or version range of the relevant package
  */

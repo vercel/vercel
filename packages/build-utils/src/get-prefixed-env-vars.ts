@@ -14,7 +14,12 @@ export function getPrefixedEnvVars({
   envs: Envs;
 }): Envs {
   const vercelSystemEnvPrefix = 'VERCEL_';
-  const allowed = ['VERCEL_URL', 'VERCEL_ENV', 'VERCEL_REGION'];
+  const allowed = [
+    'VERCEL_URL',
+    'VERCEL_ENV',
+    'VERCEL_REGION',
+    'VERCEL_BRANCH_URL',
+  ];
   const newEnvs: Envs = {};
   if (envPrefix && envs.VERCEL_URL) {
     Object.keys(envs)

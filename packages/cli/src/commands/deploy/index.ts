@@ -59,7 +59,6 @@ import validatePaths, {
 } from '../../util/validate-paths';
 import { getCommandName } from '../../util/pkg-name';
 import { Output } from '../../util/output';
-import { help } from './args';
 import { getDeploymentChecks } from '../../util/deploy/get-deployment-checks';
 import parseTarget from '../../util/deploy/parse-target';
 import getPrebuiltJson from '../../util/deploy/get-prebuilt-json';
@@ -69,44 +68,38 @@ import { parseEnv } from '../../util/parse-env';
 import { errorToString, isErrnoException, isError } from '@vercel/error-utils';
 import { pickOverrides } from '../../util/projects/project-settings';
 import { printDeploymentStatus } from '../../util/deploy/print-deployment-status';
+import { help } from '../help';
+import { deployCommand } from './command';
 
 export default async (client: Client): Promise<number> => {
   const { output } = client;
 
   let argv = null;
 
-  try {
-    argv = getArgs(client.argv.slice(2), {
-      '--force': Boolean,
-      '--with-cache': Boolean,
-      '--public': Boolean,
-      '--env': [String],
-      '--build-env': [String],
-      '--meta': [String],
-      // This is not an array in favor of matching
-      // the config property name.
-      '--regions': String,
-      '--prebuilt': Boolean,
-      '--prod': Boolean,
-      '--archive': String,
-      '--no-wait': Boolean,
-      '--skip-domain': Boolean,
-      '--yes': Boolean,
-      '-f': '--force',
-      '-p': '--public',
-      '-e': '--env',
-      '-b': '--build-env',
-      '-m': '--meta',
-      '-y': '--yes',
+  const argOptions: {
+    [k: string]:
+      | BooleanConstructor
+      | StringConstructor
+      | string
+      | [StringConstructor];
+  } = {};
+  for (const option of deployCommand.options) {
+    argOptions[`--${option.name}`] =
+      option.type === 'boolean' ? Boolean : String;
+    if (option.shorthand) {
+      argOptions[`-${option.shorthand}`] = `--${option.name}`;
+    }
+    if (
+      option.name === 'env' ||
+      option.name === 'build-env' ||
+      option.name === 'meta'
+    ) {
+      argOptions[`--${option.name}`] = [String];
+    }
+  }
 
-      // deprecated
-      '--name': String,
-      '-n': '--name',
-      '--no-clipboard': Boolean,
-      '--target': String,
-      '--confirm': Boolean,
-      '-c': '--confirm',
-    });
+  try {
+    argv = getArgs(client.argv.slice(2), argOptions);
 
     if ('--confirm' in argv) {
       output.warn('`--confirm` is deprecated, please use `--yes` instead');
@@ -118,7 +111,7 @@ export default async (client: Client): Promise<number> => {
   }
 
   if (argv['--help']) {
-    output.print(help());
+    output.print(help(deployCommand, { columns: client.stderr.columns }));
     return 2;
   }
 
@@ -201,56 +194,6 @@ export default async (client: Client): Promise<number> => {
   const target = parseTarget(output, argv['--target'], argv['--prod']);
   if (typeof target === 'number') {
     return target;
-  }
-
-  // build `--prebuilt`
-  if (argv['--prebuilt']) {
-    const prebuiltExists = await fs.pathExists(join(cwd, '.vercel/output'));
-    if (!prebuiltExists) {
-      error(
-        `The ${param(
-          '--prebuilt'
-        )} option was used, but no prebuilt output found in ".vercel/output". Run ${getCommandName(
-          'build'
-        )} to generate a local build.`
-      );
-      return 1;
-    }
-
-    const prebuiltBuild = await getPrebuiltJson(cwd);
-
-    // Ensure that there was not a build error
-    const prebuiltError =
-      prebuiltBuild?.error ||
-      prebuiltBuild?.builds?.find(build => 'error' in build)?.error;
-    if (prebuiltError) {
-      output.log(
-        `Prebuilt deployment cannot be created because ${getCommandName(
-          'build'
-        )} failed with error:\n`
-      );
-      prettyError(prebuiltError);
-      return 1;
-    }
-
-    // Ensure that the deploy target matches the build target
-    const assumedTarget = target || 'preview';
-    if (prebuiltBuild?.target && prebuiltBuild.target !== assumedTarget) {
-      let specifyTarget = '';
-      if (prebuiltBuild.target === 'production') {
-        specifyTarget = ` --prod`;
-      }
-
-      prettyError({
-        message: `The ${param(
-          '--prebuilt'
-        )} option was used with the target environment "${assumedTarget}", but the prebuilt output found in ".vercel/output" was built with target environment "${
-          prebuiltBuild.target
-        }". Please run ${getCommandName(`--prebuilt${specifyTarget}`)}.`,
-        link: 'https://vercel.link/prebuilt-environment-mismatch',
-      });
-      return 1;
-    }
   }
 
   const archive = argv['--archive'];
@@ -353,6 +296,66 @@ export default async (client: Client): Promise<number> => {
   // At this point `org` should be populated
   if (!org) {
     throw new Error(`"org" is not defined`);
+  }
+
+  // build `--prebuilt`
+  if (argv['--prebuilt']) {
+    // For repo-style linking, update `cwd` to be the Project
+    // subdirectory when `rootDirectory` setting is defined
+    if (
+      link.status === 'linked' &&
+      link.repoRoot &&
+      link.project.rootDirectory
+    ) {
+      cwd = join(cwd, link.project.rootDirectory);
+    }
+
+    const prebuiltExists = await fs.pathExists(join(cwd, '.vercel/output'));
+    if (!prebuiltExists) {
+      error(
+        `The ${param(
+          '--prebuilt'
+        )} option was used, but no prebuilt output found in ".vercel/output". Run ${getCommandName(
+          'build'
+        )} to generate a local build.`
+      );
+      return 1;
+    }
+
+    const prebuiltBuild = await getPrebuiltJson(cwd);
+
+    // Ensure that there was not a build error
+    const prebuiltError =
+      prebuiltBuild?.error ||
+      prebuiltBuild?.builds?.find(build => 'error' in build)?.error;
+    if (prebuiltError) {
+      output.log(
+        `Prebuilt deployment cannot be created because ${getCommandName(
+          'build'
+        )} failed with error:\n`
+      );
+      prettyError(prebuiltError);
+      return 1;
+    }
+
+    // Ensure that the deploy target matches the build target
+    const assumedTarget = target || 'preview';
+    if (prebuiltBuild?.target && prebuiltBuild.target !== assumedTarget) {
+      let specifyTarget = '';
+      if (prebuiltBuild.target === 'production') {
+        specifyTarget = ` --prod`;
+      }
+
+      prettyError({
+        message: `The ${param(
+          '--prebuilt'
+        )} option was used with the target environment "${assumedTarget}", but the prebuilt output found in ".vercel/output" was built with target environment "${
+          prebuiltBuild.target
+        }". Please run ${getCommandName(`--prebuilt${specifyTarget}`)}.`,
+        link: 'https://vercel.link/prebuilt-environment-mismatch',
+      });
+      return 1;
+    }
   }
 
   // Set the `contextName` and `currentTeam` as specified by the
@@ -511,7 +514,8 @@ export default async (client: Client): Promise<number> => {
   }
 
   try {
-    const autoAssignCustomDomains = !argv['--skip-domain'];
+    // if this flag is not set, use `undefined` to allow the project setting to be used
+    const autoAssignCustomDomains = argv['--skip-domain'] ? false : undefined;
 
     const createArgs: CreateOptions = {
       name,

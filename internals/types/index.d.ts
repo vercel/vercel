@@ -1,5 +1,6 @@
 import type { BuilderFunctions } from '@vercel/build-utils';
 import type { Readable, Writable } from 'stream';
+import type * as tty from 'tty';
 import type { Route } from '@vercel/routing-utils';
 import { PROJECT_ENV_TARGET } from '@vercel-internals/constants';
 
@@ -378,28 +379,60 @@ export interface ProjectLink {
    * to the root directory of the repository.
    */
   repoRoot?: string;
+  /**
+   * When linked as a repository, contains the relative path
+   * to the selected project root directory.
+   */
+  projectRootDirectory?: string;
 }
 
 export interface PaginationOptions {
-  prev: number;
+  /**
+   * Amount of items in the current page.
+   * @example 20
+   */
   count: number;
-  next?: number;
+  /**
+   * Timestamp that must be used to request the next page.
+   * @example 1540095775951
+   */
+  next: number | null;
+  /**
+   * Timestamp that must be used to request the previous page.
+   * @example 1540095775951
+   */
+  prev: number | null;
 }
 
+export type ProjectLinked = {
+  status: 'linked';
+  org: Org;
+  project: Project;
+  repoRoot?: string;
+};
+
+export type ProjectNotLinked = {
+  status: 'not_linked';
+  org: null;
+  project: null;
+};
+
+export type ProjectLinkedError = {
+  status: 'error';
+  exitCode: number;
+  reason?:
+    | 'HEADLESS'
+    | 'NOT_AUTHORIZED'
+    | 'TEAM_DELETED'
+    | 'PATH_IS_FILE'
+    | 'INVALID_ROOT_DIRECTORY'
+    | 'MISSING_PROJECT_SETTINGS';
+};
+
 export type ProjectLinkResult =
-  | { status: 'linked'; org: Org; project: Project; repoRoot?: string }
-  | { status: 'not_linked'; org: null; project: null }
-  | {
-      status: 'error';
-      exitCode: number;
-      reason?:
-        | 'HEADLESS'
-        | 'NOT_AUTHORIZED'
-        | 'TEAM_DELETED'
-        | 'PATH_IS_FILE'
-        | 'INVALID_ROOT_DIRECTORY'
-        | 'MISSING_PROJECT_SETTINGS';
-    };
+  | ProjectLinked
+  | ProjectNotLinked
+  | ProjectLinkedError;
 
 /**
  * @deprecated - `RollbackJobStatus` has been replace by `LastAliasRequest['jobStatus']`.
@@ -599,6 +632,6 @@ export interface WritableTTY extends Writable {
 
 export interface Stdio {
   stdin: ReadableTTY;
-  stdout: WritableTTY;
-  stderr: WritableTTY;
+  stdout: tty.WriteStream;
+  stderr: tty.WriteStream;
 }

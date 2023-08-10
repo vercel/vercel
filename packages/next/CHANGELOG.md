@@ -1,5 +1,53 @@
 # @vercel/next
 
+## 3.9.4
+
+### Patch Changes
+
+- Preserve sourceMappingURL comments in template literals ([#10275](https://github.com/vercel/vercel/pull/10275))
+
+## 3.9.3
+
+### Patch Changes
+
+- fix dynamic not found pages ([#10262](https://github.com/vercel/vercel/pull/10262))
+
+## 3.9.2
+
+### Patch Changes
+
+- Fix pages/404 gsp + i18n case ([#10258](https://github.com/vercel/vercel/pull/10258))
+
+## 3.9.1
+
+### Patch Changes
+
+- Fix pages and app router i18n handling ([#10243](https://github.com/vercel/vercel/pull/10243))
+
+## 3.9.0
+
+### Minor Changes
+
+- Support maxDuration in Next.js deployments ([#10069](https://github.com/vercel/vercel/pull/10069))
+
+### Patch Changes
+
+- Fix 404 page in edge runtime ([#10223](https://github.com/vercel/vercel/pull/10223))
+
+## 3.8.8
+
+### Patch Changes
+
+- [next] Ensure RSC paths handle basePath ([#10155](https://github.com/vercel/vercel/pull/10155))
+
+## 3.8.7
+
+### Patch Changes
+
+- [next] Update payload flag ([#10147](https://github.com/vercel/vercel/pull/10147))
+
+- Use `getNodeBinPaths()` function to improve monorepo support ([#10150](https://github.com/vercel/vercel/pull/10150))
+
 ## 3.8.6
 
 ### Patch Changes

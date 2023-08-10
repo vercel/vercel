@@ -8,8 +8,7 @@ import getArgs from '../../util/get-args';
 import getInvalidSubcommand from '../../util/get-invalid-subcommand';
 import getSubcommand from '../../util/get-subcommand';
 import handleError from '../../util/handle-error';
-import logo from '../../util/output/logo';
-import { getCommandName, getPkgName } from '../../util/pkg-name';
+import { getCommandName, packageName, logo } from '../../util/pkg-name';
 import { getLinkedProject } from '../../util/projects/link';
 import add from './add';
 import ls from './ls';
@@ -19,7 +18,7 @@ import rm from './rm';
 const help = () => {
   const targetPlaceholder = getEnvTargetPlaceholder();
   console.log(`
-  ${chalk.bold(`${logo} ${getPkgName()} env`)} [options] <command>
+  ${chalk.bold(`${logo} ${packageName} env`)} [options] <command>
 
   ${chalk.dim('Commands:')}
 
@@ -52,54 +51,54 @@ const help = () => {
     '–'
   )} Pull all Development Environment Variables down from the cloud
 
-      ${chalk.cyan(`$ ${getPkgName()} env pull <file>`)}
-      ${chalk.cyan(`$ ${getPkgName()} env pull .env.development.local`)}
+      ${chalk.cyan(`$ ${packageName} env pull <file>`)}
+      ${chalk.cyan(`$ ${packageName} env pull .env.development.local`)}
 
   ${chalk.gray('–')} Add a new variable to multiple Environments
 
-      ${chalk.cyan(`$ ${getPkgName()} env add <name>`)}
-      ${chalk.cyan(`$ ${getPkgName()} env add API_TOKEN`)}
+      ${chalk.cyan(`$ ${packageName} env add <name>`)}
+      ${chalk.cyan(`$ ${packageName} env add API_TOKEN`)}
 
   ${chalk.gray('–')} Add a new variable for a specific Environment
 
-      ${chalk.cyan(`$ ${getPkgName()} env add <name> ${targetPlaceholder}`)}
-      ${chalk.cyan(`$ ${getPkgName()} env add DB_PASS production`)}
+      ${chalk.cyan(`$ ${packageName} env add <name> ${targetPlaceholder}`)}
+      ${chalk.cyan(`$ ${packageName} env add DB_PASS production`)}
 
   ${chalk.gray(
     '–'
   )} Add a new variable for a specific Environment and Git Branch
 
       ${chalk.cyan(
-        `$ ${getPkgName()} env add <name> ${targetPlaceholder} <gitbranch>`
+        `$ ${packageName} env add <name> ${targetPlaceholder} <gitbranch>`
       )}
-      ${chalk.cyan(`$ ${getPkgName()} env add DB_PASS preview feat1`)}
+      ${chalk.cyan(`$ ${packageName} env add DB_PASS preview feat1`)}
 
   ${chalk.gray('–')} Add a new Environment Variable from stdin
 
       ${chalk.cyan(
-        `$ cat <file> | ${getPkgName()} env add <name> ${targetPlaceholder}`
+        `$ cat <file> | ${packageName} env add <name> ${targetPlaceholder}`
       )}
-      ${chalk.cyan(`$ cat ~/.npmrc | ${getPkgName()} env add NPM_RC preview`)}
-      ${chalk.cyan(`$ ${getPkgName()} env add API_URL production < url.txt`)}
+      ${chalk.cyan(`$ cat ~/.npmrc | ${packageName} env add NPM_RC preview`)}
+      ${chalk.cyan(`$ ${packageName} env add API_URL production < url.txt`)}
 
   ${chalk.gray('–')} Remove a variable from multiple Environments
 
-      ${chalk.cyan(`$ ${getPkgName()} env rm <name>`)}
-      ${chalk.cyan(`$ ${getPkgName()} env rm API_TOKEN`)}
+      ${chalk.cyan(`$ ${packageName} env rm <name>`)}
+      ${chalk.cyan(`$ ${packageName} env rm API_TOKEN`)}
 
   ${chalk.gray('–')} Remove a variable from a specific Environment
 
-      ${chalk.cyan(`$ ${getPkgName()} env rm <name> ${targetPlaceholder}`)}
-      ${chalk.cyan(`$ ${getPkgName()} env rm NPM_RC preview`)}
+      ${chalk.cyan(`$ ${packageName} env rm <name> ${targetPlaceholder}`)}
+      ${chalk.cyan(`$ ${packageName} env rm NPM_RC preview`)}
 
   ${chalk.gray(
     '–'
   )} Remove a variable from a specific Environment and Git Branch
 
       ${chalk.cyan(
-        `$ ${getPkgName()} env rm <name> ${targetPlaceholder} <gitbranch>`
+        `$ ${packageName} env rm <name> ${targetPlaceholder} <gitbranch>`
       )}
-      ${chalk.cyan(`$ ${getPkgName()} env rm NPM_RC preview feat1`)}
+      ${chalk.cyan(`$ ${packageName} env rm NPM_RC preview feat1`)}
 `);
 };
 
@@ -167,6 +166,7 @@ export default async function main(client: Client) {
       case 'pull':
         return pull(
           client,
+          link,
           project,
           target,
           argv,

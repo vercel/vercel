@@ -5,6 +5,7 @@ import { setupUnitFixture } from '../../helpers/setup-unit-fixture';
 import { useDeployment } from '../../mocks/deployment';
 import { useTeams } from '../../mocks/team';
 import { useUser } from '../../mocks/user';
+import { Deployment } from '@vercel-internals/types';
 
 describe('redeploy', () => {
   it('should error if missing deployment url', async () => {
@@ -77,9 +78,20 @@ describe('redeploy', () => {
 
     await expect(exitCodePromise).resolves.toEqual(0);
   });
+
+  it('should redeploy to preview', async () => {
+    const { fromDeployment } = initRedeployTest({ target: null });
+    client.setArgv('rollback', fromDeployment.id);
+    const exitCodePromise = redeploy(client);
+    await expect(client.stderr).toOutput(
+      `Fetching deployment "${fromDeployment.id}" in ${fromDeployment.creator?.username}`
+    );
+    await expect(client.stderr).toOutput('Preview');
+    await expect(exitCodePromise).resolves.toEqual(0);
+  });
 });
 
-function initRedeployTest() {
+function initRedeployTest({ target }: { target?: Deployment['target'] } = {}) {
   setupUnitFixture('commands/redeploy/simple-static');
   const user = useUser();
   useTeams('team_dummy');
@@ -88,10 +100,18 @@ function initRedeployTest() {
     id: 'vercel-redeploy',
     name: 'vercel-redeploy',
   });
-  const fromDeployment = useDeployment({ creator: user });
-  const toDeployment = useDeployment({ creator: user });
+  const fromDeployment = useDeployment({ creator: user, target });
+  const toDeployment = useDeployment({ creator: user, target });
 
   client.scenario.post(`/v13/deployments`, (req, res) => {
+    const { target } = req.body;
+    if (target !== undefined && typeof target !== 'string') {
+      res.status(400).json({
+        message: 'Invalid request: `target` should be string',
+      });
+      return;
+    }
+
     res.json(toDeployment);
   });
 

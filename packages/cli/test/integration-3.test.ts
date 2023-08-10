@@ -10,7 +10,7 @@ import { execCli } from './helpers/exec';
 import fetch, { RequestInit, RequestInfo } from 'node-fetch';
 import retry from 'async-retry';
 import fs, { ensureDir } from 'fs-extra';
-import logo from '../src/util/output/logo';
+import { logo } from '../src/util/pkg-name';
 import sleep from '../src/util/sleep';
 import humanizePath from '../src/util/humanize-path';
 import pkg from '../package.json';
@@ -47,7 +47,9 @@ function fetchTokenInformation(token: string, retries = 3) {
 
       if (!res.ok) {
         throw new Error(
-          `Failed to fetch ${url}, received status ${res.status}`
+          `Failed to fetch "${url}", status: ${
+            res.status
+          }, id: ${res.headers.get('x-vercel-id')}`
         );
       }
 

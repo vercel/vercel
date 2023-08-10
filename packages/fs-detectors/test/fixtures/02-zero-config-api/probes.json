@@ -1,0 +1,57 @@
+{
+  "probes": [
+    {
+      "path": "/api/not-okay",
+      "status": 404
+    },
+    {
+      "path": "/api",
+      "mustContain": "hello from api/index.js",
+      "status": 200
+    },
+    {
+      "path": "/api/",
+      "mustContain": "hello from api/index.js",
+      "status": 200
+    },
+    {
+      "path": "/api/index",
+      "mustContain": "hello from api/index.js",
+      "status": 200
+    },
+    {
+      "path": "/api/index.js",
+      "mustContain": "hello from api/index.js",
+      "status": 200
+    },
+    {
+      "path": "/api/date.js",
+      "mustContain": "hello from api/date.js",
+      "status": 200
+    },
+    {
+      "path": "/api/date",
+      "mustContain": "hello from api/date.js",
+      "status": 200
+    },
+    {
+      "path": "/api/date/",
+      "mustContain": "hello from api/date.js",
+      "status": 200
+    },
+    {
+      "path": "/api/date/index",
+      "mustContain": "hello from api/date/index.js",
+      "status": 200
+    },
+    {
+      "path": "/api/date/index.js",
+      "mustContain": "hello from api/date/index.js",
+      "status": 200
+    },
+    {
+      "path": "/",
+      "mustContain": "hello from index.txt"
+    }
+  ]
+}

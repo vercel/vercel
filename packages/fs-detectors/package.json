@@ -1,6 +1,6 @@
 {
   "name": "@vercel/fs-detectors",
-  "version": "3.9.3",
+  "version": "4.1.1",
   "description": "Vercel filesystem detectors",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -15,12 +15,13 @@
   "license": "Apache-2.0",
   "scripts": {
     "build": "tsc",
-    "test": "jest --env node --verbose --runInBand --bail test/unit.*test.*",
-    "test-unit": "pnpm test"
+    "test": "jest --env node --verbose --runInBand --bail",
+    "test-unit": "pnpm test test/unit.*test.*",
+    "test-e2e": "pnpm test test/integration.test.ts"
   },
   "dependencies": {
     "@vercel/error-utils": "1.0.10",
-    "@vercel/frameworks": "1.4.2",
+    "@vercel/frameworks": "1.5.0",
     "@vercel/routing-utils": "2.2.1",
     "glob": "8.0.3",
     "js-yaml": "4.1.0",
@@ -35,7 +36,7 @@
     "@types/minimatch": "3.0.5",
     "@types/node": "14.18.33",
     "@types/semver": "7.3.10",
-    "@vercel/build-utils": "6.7.5",
+    "@vercel/build-utils": "6.8.3",
     "typescript": "4.9.5"
   }
 }

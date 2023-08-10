@@ -10,7 +10,7 @@ function getOptions() {
       major: 16,
       range: '16.x',
       runtime: 'nodejs16.x',
-      discontinueDate: new Date('2023-08-15'),
+      discontinueDate: new Date('2024-02-06'),
     },
     {
       major: 14,
