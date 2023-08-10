@@ -352,7 +352,7 @@ export const frameworks = [
     cachePattern: '.cache/**',
   },
   {
-    name: 'Docusaurus 2',
+    name: 'Docusaurus (v2)',
     slug: 'docusaurus-2',
     demo: 'https://docusaurus-2-template.vercel.app',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/docusaurus.svg',
@@ -438,7 +438,7 @@ export const frameworks = [
     ],
   },
   {
-    name: 'Docusaurus 1',
+    name: 'Docusaurus (v1)',
     slug: 'docusaurus',
     demo: 'https://docusaurus-template.vercel.app',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/docusaurus.svg',
