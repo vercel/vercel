@@ -96,6 +96,19 @@ jobs:
       - name: fetch ssl certificate after tests (linux, os x)
         if: matrix.runner != 'windows-latest'
         run: echo | openssl s_client -showcerts -servername 'api.vercel.com' -connect 76.76.21.21:443
+  
+  report_to_datadog:
+    name: Upload test results to DataDog
+    runs-on: ubuntu-latest
+    if: always()
+    needs:
+      - test
+    env:
+      DD_ENV: ci
+      DATADOG_API_KEY: ${{ secrets.DATADOG_API_KEY }}
+    steps:
+      - name: 'Upload'
+        run: ''
 
   summary:
     name: Summary
