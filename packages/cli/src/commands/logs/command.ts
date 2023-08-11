@@ -1,5 +1,5 @@
 import { Command } from '../help';
-import { getPkgName } from '../../util/pkg-name';
+import { packageName } from '../../util/pkg-name';
 
 export const logsCommand: Command = {
   name: 'logs',
@@ -60,7 +60,7 @@ export const logsCommand: Command = {
   examples: [
     {
       name: 'Print the logs for the deployment DEPLOYMENT_ID',
-      value: `${getPkgName()} logs DEPLOYMENT_ID`,
+      value: `${packageName} logs DEPLOYMENT_ID`,
     },
   ],
 };
