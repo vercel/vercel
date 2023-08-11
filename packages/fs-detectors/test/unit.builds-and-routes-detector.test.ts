@@ -797,6 +797,49 @@ describe('Test `detectBuilders`', () => {
     ]);
   });
 
+  it('Works with fallback last', async () => {
+    const files = ['api/simple.rs', 'api/complex.rs'];
+    const functions = {
+      'api/simple.rs': {
+        runtime: 'ecklf-tmp-runtime-test@1.0.142',
+        maxDuration: 120,
+      },
+      'api/**/*.rs': {
+        runtime: 'ecklf-tmp-runtime-test@1.0.142',
+        maxDuration: 180,
+      },
+    };
+
+    const { errors } = await detectBuilders(files, null, { functions });
+
+    expect(errors).toBe(null);
+  });
+
+  it('Errors with fallback first', async () => {
+    const files = ['api/simple.rs', 'api/complex.rs'];
+    const functions = {
+      'api/**/*.rs': {
+        runtime: 'ecklf-tmp-runtime-test@1.0.142',
+        maxDuration: 180,
+      },
+      'api/simple.rs': {
+        runtime: 'ecklf-tmp-runtime-test@1.0.142',
+        maxDuration: 120,
+      },
+    };
+
+    const { errors } = await detectBuilders(files, null, { functions });
+
+    expect(errors).toEqual([
+      {
+        code: 'unused_function',
+        message: `The pattern "api/simple.rs" defined in \`functions\` doesn't match any Serverless Functions inside the \`api\` directory.`,
+        action: 'Learn More',
+        link: 'https://vercel.link/unmatched-function-pattern',
+      },
+    ]);
+  });
+
   it('All static if `buildCommand` is an empty string', async () => {
     const files = ['index.html'];
     const projectSettings = { buildCommand: '' };
