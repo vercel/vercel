@@ -103,12 +103,9 @@ jobs:
     if: always()
     needs:
       - test
-    env:
-      DD_ENV: ci
-      DATADOG_API_KEY: ${{ secrets.DATADOG_API_KEY }}
     steps:
       - name: 'Upload'
-        run: ''
+        run: 'DATADOG_API_KEY=${{secrets.DATADOG_API_KEY_CLI}} DD_ENV=ci datadog-ci junit upload --service vercel-cli unit-tests/junit-reports e2e-tests/single-report.xml'
 
   summary:
     name: Summary
