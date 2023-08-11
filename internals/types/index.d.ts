@@ -409,6 +409,13 @@ export type ProjectLinked = {
   org: Org;
   project: Project;
   repoRoot?: string;
+  offline: false;
+};
+
+export type ProjectOfflineMode = {
+  status: 'linked';
+  repoRoot?: string;
+  offline: true;
 };
 
 export type ProjectNotLinked = {
@@ -432,7 +439,8 @@ export type ProjectLinkedError = {
 export type ProjectLinkResult =
   | ProjectLinked
   | ProjectNotLinked
-  | ProjectLinkedError;
+  | ProjectLinkedError
+  | ProjectOfflineMode;
 
 /**
  * @deprecated - `RollbackJobStatus` has been replace by `LastAliasRequest['jobStatus']`.

@@ -58,7 +58,7 @@ export default async function dev(
   let projectSettings: ProjectSettings | undefined;
   let envValues: Record<string, string> = {};
   let repoRoot: string | undefined;
-  if (link.status === 'linked') {
+  if (link.status === 'linked' && !link.offline) {
     const { project, org } = link;
 
     // If repo linked, update `cwd` to the repo root

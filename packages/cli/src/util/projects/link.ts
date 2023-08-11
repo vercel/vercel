@@ -24,6 +24,7 @@ import { isErrnoException, isError } from '@vercel/error-utils';
 import { findProjectsFromPath, getRepoLink } from '../link/repo';
 import { addToGitIgnore } from '../link/add-to-gitignore';
 import type { RepoProjectConfig } from '../link/repo';
+import highlight from '../output/highlight';
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
@@ -194,6 +195,7 @@ async function hasProjectLink(
 
   // if the project is already linked, we skip linking
   const link = await getLinkFromDir(getVercelDirectory(path));
+
   if (
     link &&
     link.orgId === projectLink.orgId &&
@@ -259,7 +261,27 @@ export async function getLinkedProject(
       }
     }
 
-    // Not a special case 403, we should still throw it
+    if (isErrnoException(err) && err.code === 'ENOTFOUND' && link) {
+      const matches = /getaddrinfo ENOTFOUND (.*)$/.exec(err.message || '');
+      if (matches && matches[1]) {
+        const hostname = matches[1];
+
+        output.warn(
+          `The hostname ${highlight(
+            hostname
+          )} could not be resolved. Please verify your internet connectivity and DNS configuration.`
+        );
+
+        output.warn('Offline Mode. Local project settings will be used.');
+      }
+
+      return {
+        status: 'linked',
+        offline: true,
+        repoRoot: link.repoRoot,
+      };
+    }
+
     throw err;
   } finally {
     output.stopSpinner();
