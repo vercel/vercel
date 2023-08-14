@@ -124,6 +124,6 @@ jobs:
       - summary
     steps:
       - name: install datadog-ci
-        run: npm i -g datadog-ci
+        run: npm i -g @datadog/datadog-ci@2.18.1
       - name: 'Upload'
         run: 'DATADOG_API_KEY=${{secrets.DATADOG_API_KEY_CLI}} DD_ENV=ci datadog-ci junit upload --service vercel-cli unit-tests/junit-reports e2e-tests/single-report.xml'
