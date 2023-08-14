@@ -1,34 +1,11 @@
 import {
-  calcLineLength,
   help,
   lineToString,
   outputArrayToString,
 } from '../../../src/commands/help';
 import { deployCommand } from '../../../src/commands/deploy/command';
 
-import chalk from 'chalk';
-
 describe('help command', () => {
-  describe('calcLineLength', () => {
-    test.each([
-      {
-        name: 'without ansi',
-        line: ['a line without ansi'],
-        expectedLength: 19,
-      },
-      {
-        name: 'with ansi',
-        line: [`a line with ${chalk.red('ansi')}`],
-        expectedLength: 16,
-      },
-    ])(
-      'should calculate the correct line length $name',
-      ({ line, expectedLength }) => {
-        expect(calcLineLength(line)).toBe(expectedLength);
-      }
-    );
-  });
-
   describe('lineToString', () => {
     test.each([
       {
