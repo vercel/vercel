@@ -133,6 +133,7 @@
     "is-port-reachable": "3.1.0",
     "is-url": "1.2.2",
     "jaro-winkler": "0.2.8",
+    "jest-junit": "16.0.0",
     "jest-matcher-utils": "29.3.1",
     "jsonlines": "0.1.1",
     "line-async-iterator": "3.0.0",

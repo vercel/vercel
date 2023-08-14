@@ -83,6 +83,7 @@ jobs:
       - name: Build ${{matrix.packageName}} and all its dependencies
         run: node utils/gen.js && node_modules/.bin/turbo run build --cache-dir=".turbo" --log-order=stream --scope=${{matrix.packageName}} --include-dependencies --no-deps
         env:
+          JEST_JUNIT_OUTPUT_NAME: ./junit-reports/${{matrix.scriptName}}-${{matrix.packageName}}-${{matrix.chunkNumber}}-${{ matrix.runner }}.xml
           FORCE_COLOR: '1'
       - name: Test ${{matrix.packageName}}
         run: node utils/gen.js && node_modules/.bin/turbo run test --cache-dir=".turbo" --log-order=stream --scope=${{matrix.packageName}} --no-deps -- ${{ join(matrix.testPaths, ' ') }}
@@ -126,4 +127,4 @@ jobs:
       - name: install datadog-ci
         run: npm i -g @datadog/datadog-ci@2.18.1
       - name: 'Upload'
-        run: 'DATADOG_API_KEY=${{secrets.DATADOG_API_KEY_CLI}} DD_ENV=ci datadog-ci junit upload --service vercel-cli unit-tests/junit-reports e2e-tests/single-report.xml'
+        run: 'DATADOG_API_KEY=${{secrets.DATADOG_API_KEY_CLI}} DD_ENV=ci datadog-ci junit upload --service vercel-cli junit-reports
