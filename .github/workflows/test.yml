@@ -123,7 +123,7 @@ jobs:
     needs:
       - summary
     steps:
-      - name: install pnpm@8.3.1
-        run: npm i -g pnpm@8.3.1
+      - name: install datadog-ci
+        run: npm i -g datadog-ci
       - name: 'Upload'
-        run: 'DATADOG_API_KEY=${{secrets.DATADOG_API_KEY_CLI}} DD_ENV=ci pnpm exec datadog-ci junit upload --service vercel-cli unit-tests/junit-reports e2e-tests/single-report.xml'
+        run: 'DATADOG_API_KEY=${{secrets.DATADOG_API_KEY_CLI}} DD_ENV=ci datadog-ci junit upload --service vercel-cli unit-tests/junit-reports e2e-tests/single-report.xml'
