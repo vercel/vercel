@@ -121,6 +121,7 @@ jobs:
     runs-on: ubuntu-latest
     if: always()
     needs:
+      - setup
       - summary
     steps:
       - name: 'Upload'
