@@ -38,6 +38,10 @@ Using Hydrogen requires a few [environment variables](https://shopify.dev/docs/c
 
 ## Local development
 
+Rename the `.env.example` file to `.env` in order for the Shopify dev server to use those environment variables during local development. If you defined/modified additional environment variables based on the section above, be sure to apply those changes in your `.env` file as well.
+
+Then run the following commands:
+
 ```bash
 npm install
 npm run dev
