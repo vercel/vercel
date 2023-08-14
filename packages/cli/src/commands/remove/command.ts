@@ -1,5 +1,5 @@
 import { Command } from '../help';
-import { getPkgName } from '../../util/pkg-name';
+import { packageName } from '../../util/pkg-name';
 
 export const removeCommand: Command = {
   name: 'remove',
@@ -31,15 +31,15 @@ export const removeCommand: Command = {
   examples: [
     {
       name: 'Remove a deployment identified by `deploymentId`',
-      value: `${getPkgName()} remove my-app`,
+      value: `${packageName} remove my-app`,
     },
     {
       name: 'Remove all deployments with name `my-app`',
-      value: `${getPkgName()} remove deploymentId`,
+      value: `${packageName} remove deploymentId`,
     },
     {
       name: 'Remove two deployments with IDs `eyWt6zuSdeus` and `uWHoA9RQ1d1o`',
-      value: `${getPkgName()} remove eyWt6zuSdeus uWHoA9RQ1d1o`,
+      value: `${packageName} remove eyWt6zuSdeus uWHoA9RQ1d1o`,
     },
   ],
 };

@@ -1213,8 +1213,8 @@ importers:
         specifier: 1.0.5
         version: 1.0.5
       edge-runtime:
-        specifier: 2.4.3
-        version: 2.4.3
+        specifier: 2.4.4
+        version: 2.4.4
       esbuild:
         specifier: 0.14.47
         version: 0.14.47
@@ -9566,8 +9566,8 @@ packages:
       safe-buffer: 5.2.1
     dev: true
 
-  /edge-runtime@2.4.3:
-    resolution: {integrity: sha512-Amv/P+OJhxopvoVXFr7UXAKheBpdLeCcdR5Vw4GSdNFDWVny9sioQbczjEKPLER5WsMXl17P+llS011Xftducw==}
+  /edge-runtime@2.4.4:
+    resolution: {integrity: sha512-uq1YdIxkMDsBYLdSSp/w62PciCL46ic4m1Z/2G6N8RcAPI8p35O8u6hJQT83j28Dnt4U5iyvmwFMYouHMK51uA==}
     engines: {node: '>=14'}
     hasBin: true
     dependencies:
@@ -19141,7 +19141,3 @@ packages:
   /zwitch@2.0.4:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
     dev: true
-
-settings:
-  autoInstallPeers: true
-  excludeLinksFromLockfile: false

@@ -1,5 +1,5 @@
 import { Command } from '../help';
-import { getPkgName } from '../../util/pkg-name';
+import { packageName } from '../../util/pkg-name';
 
 export const bisectCommand: Command = {
   name: 'bisect',
@@ -55,15 +55,15 @@ export const bisectCommand: Command = {
   examples: [
     {
       name: 'Bisect the current project interactively',
-      value: `${getPkgName()} bisect`,
+      value: `${packageName} bisect`,
     },
     {
       name: 'Bisect with a known bad deployment',
-      value: `${getPkgName()} bisect --bad example-310pce9i0.vercel.app`,
+      value: `${packageName} bisect --bad example-310pce9i0.vercel.app`,
     },
     {
       name: 'Automated bisect with a run script',
-      value: `${getPkgName()} bisect --run ./test.sh`,
+      value: `${packageName} bisect --run ./test.sh`,
     },
   ],
 };

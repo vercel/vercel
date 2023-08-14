@@ -9,7 +9,7 @@ import type {
 import elapsed from '../../util/output/elapsed';
 import formatDate from '../../util/format-date';
 import getDeployment from '../../util/get-deployment';
-import { getPkgName } from '../../util/pkg-name';
+import { packageName } from '../../util/pkg-name';
 import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
 import getScope from '../../util/get-scope';
 import ms from 'ms';
@@ -146,7 +146,7 @@ export default async function rollbackStatus({
       if (requestedAt < recentThreshold || Date.now() >= rollbackTimeout) {
         output.log(
           `The rollback exceeded its deadline - rerun ${chalk.bold(
-            `${getPkgName()} rollback ${toDeploymentId}`
+            `${packageName} rollback ${toDeploymentId}`
           )} to try again`
         );
         return 1;

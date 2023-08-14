@@ -114,7 +114,7 @@ export default async function main(client: Client): Promise<number> {
   if (process.env.__VERCEL_BUILD_RUNNING) {
     output.error(
       `${cmd(
-        `${cli.name} build`
+        `${cli.packageName} build`
       )} must not recursively invoke itself. Check the Build Command in the Project Settings or the ${cmd(
         'build'
       )} script in ${cmd('package.json')}`
