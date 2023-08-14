@@ -124,4 +124,4 @@ jobs:
       - summary
     steps:
       - name: 'Upload'
-        run: 'DATADOG_API_KEY=${{secrets.DATADOG_API_KEY_CLI}} DD_ENV=ci datadog-ci junit upload --service vercel-cli unit-tests/junit-reports e2e-tests/single-report.xml'
+        run: 'DATADOG_API_KEY=${{secrets.DATADOG_API_KEY_CLI}} DD_ENV=ci pnpm exec datadog-ci junit upload --service vercel-cli unit-tests/junit-reports e2e-tests/single-report.xml'
