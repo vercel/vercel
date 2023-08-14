@@ -34,7 +34,7 @@ Hydrogen is Shopify’s stack for headless commerce. Hydrogen is designed to dov
 
 ## Environment Variables
 
-Using Hydrogen requires a few [environment variables](https://shopify.dev/docs/custom-storefronts/hydrogen/environment-variables) to be set in order to properly connect to Shopify. For this template, the minimal set of environment variables are defined in the `vercel.json` file, which will be applied to the deployment when deployed to Vercel. However, you should migrate these default environment variables to your Project's Environment Variables configuration in the Vercel dashboard (or using the `vc env` commands), and update them according to your needs (also change the `SESSION_SECRET` to your own value). Once that is done, delete the `vercel.json` file from your project to prevent the environment variables defined there from taking precedence.
+Using Hydrogen requires a few [environment variables](https://shopify.dev/docs/custom-storefronts/hydrogen/environment-variables) to be set in order to properly connect to Shopify. Set these environment variables to your Project's Environment Variables configuration in the Vercel dashboard (or using the `vc env` commands), and update them according to your needs (also change the `SESSION_SECRET` to your own value).
 
 ## Local development
 
