@@ -97,16 +97,6 @@ jobs:
         if: matrix.runner != 'windows-latest'
         run: echo | openssl s_client -showcerts -servername 'api.vercel.com' -connect 76.76.21.21:443
   
-  report_to_datadog:
-    name: Upload test results to DataDog
-    runs-on: ubuntu-latest
-    if: always()
-    needs:
-      - test
-    steps:
-      - name: 'Upload'
-        run: 'DATADOG_API_KEY=${{secrets.DATADOG_API_KEY_CLI}} DD_ENV=ci datadog-ci junit upload --service vercel-cli unit-tests/junit-reports e2e-tests/single-report.xml'
-
   summary:
     name: Summary
     runs-on: ubuntu-latest
@@ -125,3 +115,13 @@ jobs:
               exit 1
             fi
           done
+          
+  report_to_datadog:
+    name: Upload test results to DataDog
+    runs-on: ubuntu-latest
+    if: always()
+    needs:
+      - summary
+    steps:
+      - name: 'Upload'
+        run: 'DATADOG_API_KEY=${{secrets.DATADOG_API_KEY_CLI}} DD_ENV=ci datadog-ci junit upload --service vercel-cli unit-tests/junit-reports e2e-tests/single-report.xml'
