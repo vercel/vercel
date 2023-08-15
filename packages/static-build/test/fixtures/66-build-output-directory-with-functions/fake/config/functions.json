@@ -9,7 +9,7 @@
   "sleeper": {
     "memory": 128,
     "maxDuration": 2,
-    "runtime": "nodejs14.x",
+    "runtime": "nodejs18.x",
     "handler": "index.handler",
     "regions": ["hkg1"]
   }
