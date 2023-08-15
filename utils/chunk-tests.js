@@ -8,12 +8,12 @@ const runnersMap = new Map([
     {
       min: 1,
       max: 1,
-      runners: ['ubuntu-latest'],
+      runners: ['ubuntu-latest', 'macos-latest', 'windows-latest'],
     },
   ],
   ['test-e2e', { min: 1, max: 5, runners: ['ubuntu-latest'] }],
   ['test-next-local', { min: 1, max: 5, runners: ['ubuntu-latest'] }],
-  ['test-dev', { min: 1, max: 5, runners: ['ubuntu-latest'] }],
+  ['test-dev', { min: 1, max: 5, runners: ['ubuntu-latest', 'macos-latest'] }],
 ]);
 
 const packageOptionsOverrides = {
