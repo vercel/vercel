@@ -80,14 +80,9 @@ jobs:
         if: matrix.runner != 'windows-latest'
         run: echo | openssl s_client -showcerts -servername 'api.vercel.com' -connect 76.76.21.21:443
 
-      - name: 'Where are we?!?'
-        run: pwd
-      - name: 'What have we here'
-        run: 'ls -la'
       - name: Build ${{matrix.packageName}} and all its dependencies
         run: node utils/gen.js && node_modules/.bin/turbo run build --cache-dir=".turbo" --log-order=stream --scope=${{matrix.packageName}} --include-dependencies --no-deps
         env:
-          JEST_JUNIT_OUTPUT_NAME: ${{github.workspace}}/junit-reports/${{matrix.scriptName}}-${{matrix.packageName}}-${{matrix.chunkNumber}}-${{ matrix.runner }}.xml
           FORCE_COLOR: '1'
       - name: Test ${{matrix.packageName}}
         run: node utils/gen.js && node_modules/.bin/turbo run test --cache-dir=".turbo" --log-order=stream --scope=${{matrix.packageName}} --no-deps -- ${{ join(matrix.testPaths, ' ') }}
@@ -104,6 +99,8 @@ jobs:
         run: echo | openssl s_client -showcerts -servername 'api.vercel.com' -connect 76.76.21.21:443
       - name: 'Where are we?!?'
         run: pwd
+      - name: 'what is GH Workspace'
+        run: 'echo ${{github.workspace}}'
       - name: 'What have we here'
         run: 'ls -la'
   summary:
