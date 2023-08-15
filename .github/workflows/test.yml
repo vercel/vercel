@@ -126,6 +126,10 @@ jobs:
     needs:
       - summary
     steps:
+      - name: 'Print Location'
+        run: pwd
+      - name: 'See files'
+        run: 'ls -la'
       - name: install datadog-ci
         run: npm i -g @datadog/datadog-ci@2.18.1
       - name: 'Upload'
