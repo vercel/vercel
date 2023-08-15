@@ -3,7 +3,7 @@ import { client } from './client';
 import { createDomain } from './domains';
 
 export function useDns() {
-  client.scenario.get('/v3/domains/:domain?/records', (_req, res) => {
+  client.scenario.get(`/v3/domains/:domain?/records`, (_req, res) => {
     res.json({
       records: [
         {
