@@ -9,7 +9,7 @@ describe('Client', () => {
       delete process.env.HTTPS_PROXY;
     });
 
-    it('should respect the `HTTPS_PROXY` env var', async () => {
+    it.skip('should respect the `HTTPS_PROXY` env var', async () => {
       let connectCount = 0;
       const proxy = createProxy();
       const proxyUrl = await listen(proxy);

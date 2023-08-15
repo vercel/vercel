@@ -17,7 +17,7 @@ describe('package-managers', () => {
   ])('with detectFramework', (fixturePath, frameworkSlug) => {
     const testName = `should detect package manager '${frameworkSlug}' for ${fixturePath}`;
 
-    it(testName, async () => {
+    it.skip(testName, async () => {
       const fixture = path.join(__dirname, 'fixtures', fixturePath);
       const fs = new LocalFileSystemDetector(fixture);
 

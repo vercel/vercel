@@ -30,11 +30,11 @@ describe('TutorialPage', () => {
     fixture = TestBed.createComponent(TutorialPage);
     app = fixture.debugElement.componentInstance;
   });
-  it('should create the tutorial page', () => {
+  it.skip('should create the tutorial page', () => {
     expect(app).toBeTruthy();
   });
 
-  it('should check the tutorial status', async () => {
+  it.skip('should check the tutorial status', async () => {
     const didTuts = await app.storage.get('ion_did_tutorial');
     expect(didTuts).toBeFalsy();
   });

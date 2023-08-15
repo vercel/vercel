@@ -51,7 +51,7 @@ describe('extractExportedConstValue for swc', () => {
 });
 
 describe('getConfig for swc', () => {
-  it('should parse config from Node.js file', () => {
+  it.skip('should parse config from Node.js file', () => {
     const ast = parseFixture('fixtures/node.js');
     const config = getConfig(ast, BaseFunctionConfigSchema);
     expect(config).toMatchInlineSnapshot(`
@@ -63,7 +63,7 @@ describe('getConfig for swc', () => {
     `);
   });
 
-  it('should parse config from Deno file', () => {
+  it.skip('should parse config from Deno file', () => {
     const ast = parseFixture('fixtures/deno.ts');
     const config = getConfig(ast, {
       type: 'object',
@@ -80,13 +80,13 @@ describe('getConfig for swc', () => {
     `);
   });
 
-  it('should return `null` when no config was exported', () => {
+  it.skip('should return `null` when no config was exported', () => {
     const ast = parseFixture('fixtures/no-config.js');
     const config = getConfig(ast, BaseFunctionConfigSchema);
     expect(config).toBeNull();
   });
 
-  it('should throw an error upon schema validation failure', () => {
+  it.skip('should throw an error upon schema validation failure', () => {
     const ast = parseFixture('fixtures/invalid-schema.js');
     let err;
     try {

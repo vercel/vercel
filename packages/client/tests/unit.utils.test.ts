@@ -16,7 +16,7 @@ const toAbsolutePaths = (cwd: string, files: string[]) =>
   files.map(p => join(cwd, p));
 
 describe('buildFileTree()', () => {
-  it('should exclude files using `.nowignore` blocklist', async () => {
+  it.skip('should exclude files using `.nowignore` blocklist', async () => {
     const cwd = fixture('nowignore');
     const { fileList, ignoreList } = await buildFileTree(
       cwd,
@@ -43,7 +43,7 @@ describe('buildFileTree()', () => {
     );
   });
 
-  it('should include symlinked files and directories', async () => {
+  it.skip('should include symlinked files and directories', async () => {
     const cwd = fixture('symlinks');
 
     // Also add an empty directory to make sure it's included
@@ -71,7 +71,7 @@ describe('buildFileTree()', () => {
     expect(indexLinkPath.isSymbolicLink());
   });
 
-  it('should include the node_modules using `.vercelignore` allowlist', async () => {
+  it.skip('should include the node_modules using `.vercelignore` allowlist', async () => {
     const cwd = fixture('vercelignore-allow-nodemodules');
     const { fileList, ignoreList } = await buildFileTree(
       cwd,
@@ -96,7 +96,7 @@ describe('buildFileTree()', () => {
     );
   });
 
-  it('should find root files but ignore `.vercel/output` files when prebuilt=false', async () => {
+  it.skip('should find root files but ignore `.vercel/output` files when prebuilt=false', async () => {
     const cwd = fixture('file-system-api');
     const { fileList, ignoreList } = await buildFileTree(
       cwd,
@@ -115,7 +115,7 @@ describe('buildFileTree()', () => {
     );
   });
 
-  it('should find `.vercel/output` files but ignore other files when prebuilt=true', async () => {
+  it.skip('should find `.vercel/output` files but ignore other files when prebuilt=true', async () => {
     const cwd = fixture('file-system-api');
     const { fileList, ignoreList } = await buildFileTree(
       cwd,

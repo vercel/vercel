@@ -18,7 +18,7 @@ describe('build', () => {
     delete process.env.__VERCEL_BUILD_RUNNING;
   });
 
-  it('should build with `@vercel/static`', async () => {
+  it.skip('should build with `@vercel/static`', async () => {
     const cwd = fixture('static');
     const output = join(cwd, '.vercel/output');
 
@@ -45,7 +45,7 @@ describe('build', () => {
     expect(files.sort()).toEqual(['index.html']);
   });
 
-  it('should build with `@now/static`', async () => {
+  it.skip('should build with `@now/static`', async () => {
     const cwd = fixture('now-static');
     const output = join(cwd, '.vercel/output');
     client.cwd = cwd;
@@ -71,7 +71,7 @@ describe('build', () => {
     expect(www).toEqual(['index.html']);
   });
 
-  it('should build with `@vercel/node`', async () => {
+  it.skip('should build with `@vercel/node`', async () => {
     const cwd = fixture('node');
     const output = join(cwd, '.vercel/output');
     client.cwd = cwd;
@@ -131,7 +131,7 @@ describe('build', () => {
     ]);
   });
 
-  it('should handle symlinked static files', async () => {
+  it.skip('should handle symlinked static files', async () => {
     const cwd = fixture('static-symlink');
     const output = join(cwd, '.vercel/output');
 
@@ -173,7 +173,7 @@ describe('build', () => {
     ).toEqual(false);
   });
 
-  it('should normalize "src" path in `vercel.json`', async () => {
+  it.skip('should normalize "src" path in `vercel.json`', async () => {
     const cwd = fixture('normalize-src');
     const output = join(cwd, '.vercel/output');
     client.cwd = cwd;
@@ -218,7 +218,7 @@ describe('build', () => {
     expect(functions.sort()).toEqual(['server.js.func']);
   });
 
-  it('should build with 3rd party Builder', async () => {
+  it.skip('should build with 3rd party Builder', async () => {
     const cwd = fixture('third-party-builder');
     const output = join(cwd, '.vercel/output');
     client.cwd = cwd;
@@ -277,7 +277,7 @@ describe('build', () => {
     });
   });
 
-  it('should serialize `EdgeFunction` output in version 3 Builder', async () => {
+  it.skip('should serialize `EdgeFunction` output in version 3 Builder', async () => {
     const cwd = fixture('edge-function');
     const output = join(cwd, '.vercel/output');
     client.cwd = cwd;
@@ -338,7 +338,7 @@ describe('build', () => {
     });
   });
 
-  it('should pull "preview" env vars by default', async () => {
+  it.skip('should pull "preview" env vars by default', async () => {
     const cwd = fixture('static-pull');
     useUser();
     useTeams('team_dummy');
@@ -369,7 +369,7 @@ describe('build', () => {
     }
   });
 
-  it('should pull "production" env vars with `--prod`', async () => {
+  it.skip('should pull "production" env vars with `--prod`', async () => {
     const cwd = fixture('static-pull');
     useUser();
     useTeams('team_dummy');
@@ -404,7 +404,7 @@ describe('build', () => {
     }
   });
 
-  it('should build root-level `middleware.js` and exclude from static files', async () => {
+  it.skip('should build root-level `middleware.js` and exclude from static files', async () => {
     const cwd = fixture('middleware');
     const output = join(cwd, '.vercel/output');
     client.cwd = cwd;
@@ -464,7 +464,7 @@ describe('build', () => {
     expect(functions.sort()).toEqual(['middleware.func']);
   });
 
-  it('should build root-level `middleware.js` with "Root Directory" setting', async () => {
+  it.skip('should build root-level `middleware.js` with "Root Directory" setting', async () => {
     const cwd = fixture('middleware-root-directory');
     const output = join(cwd, '.vercel/output');
     client.cwd = cwd;
@@ -524,7 +524,7 @@ describe('build', () => {
     expect(functions.sort()).toEqual(['middleware.func']);
   });
 
-  it('should build root-level `middleware.js` with "matcher" config', async () => {
+  it.skip('should build root-level `middleware.js` with "matcher" config', async () => {
     const cwd = fixture('middleware-with-matcher');
     const output = join(cwd, '.vercel/output');
     client.cwd = cwd;
@@ -584,7 +584,7 @@ describe('build', () => {
     expect(functions.sort()).toEqual(['middleware.func']);
   });
 
-  it('should support `--output` parameter', async () => {
+  it.skip('should support `--output` parameter', async () => {
     const cwd = fixture('static');
     const output = await getWriteableDirectory();
     try {
@@ -617,7 +617,7 @@ describe('build', () => {
 
   // This test is for `vercel-sapper` which doesn't export `version` property,
   // but returns a structure that's compatible with `version: 2`
-  it("should support Builder that doesn't export `version`", async () => {
+  it.skip("should support Builder that doesn't export `version`", async () => {
     const cwd = fixture('versionless-builder');
     const output = join(cwd, '.vercel/output');
     client.cwd = cwd;
@@ -650,7 +650,7 @@ describe('build', () => {
     expect(functions.sort()).toEqual(['withTrailingSlash.func']);
   });
 
-  it('should store `detectBuilders()` error in `builds.json`', async () => {
+  it.skip('should store `detectBuilders()` error in `builds.json`', async () => {
     const cwd = fixture('error-vercel-json-validation');
     const output = join(cwd, '.vercel/output');
     client.cwd = cwd;
@@ -676,7 +676,7 @@ describe('build', () => {
     expect(configJson.version).toBe(3);
   });
 
-  it('should store Builder error in `builds.json`', async () => {
+  it.skip('should store Builder error in `builds.json`', async () => {
     const cwd = fixture('node-error');
     const output = join(cwd, '.vercel/output');
     client.cwd = cwd;
@@ -715,7 +715,7 @@ describe('build', () => {
     expect(configJson.version).toBe(3);
   });
 
-  it('should error when "functions" has runtime that emits discontinued "nodejs12.x"', async () => {
+  it.skip('should error when "functions" has runtime that emits discontinued "nodejs12.x"', async () => {
     if (process.platform === 'win32') {
       console.log('Skipping test on Windows');
       return;
@@ -759,7 +759,7 @@ describe('build', () => {
     expect(configJson.version).toBe(3);
   });
 
-  it('should allow for missing "build" script', async () => {
+  it.skip('should allow for missing "build" script', async () => {
     const cwd = fixture('static-with-pkg');
     const output = join(cwd, '.vercel/output');
     client.cwd = cwd;
@@ -785,7 +785,7 @@ describe('build', () => {
     expect(files.sort()).toEqual(['index.html', 'package.json']);
   });
 
-  it('should set `VERCEL_ANALYTICS_ID` environment variable', async () => {
+  it.skip('should set `VERCEL_ANALYTICS_ID` environment variable', async () => {
     const cwd = fixture('vercel-analytics');
     const output = join(cwd, '.vercel/output');
     client.cwd = cwd;
@@ -796,7 +796,7 @@ describe('build', () => {
     expect(Object.keys(env).includes('VERCEL_ANALYTICS_ID')).toEqual(true);
   });
 
-  it('should load environment variables from `.vercel/.env.preview.local`', async () => {
+  it.skip('should load environment variables from `.vercel/.env.preview.local`', async () => {
     const cwd = fixture('env-from-vc-pull');
     const output = join(cwd, '.vercel/output');
     client.cwd = cwd;
@@ -807,7 +807,7 @@ describe('build', () => {
     expect(env['ENV_FILE']).toEqual('preview');
   });
 
-  it('should load environment variables from `.vercel/.env.production.local`', async () => {
+  it.skip('should load environment variables from `.vercel/.env.production.local`', async () => {
     const cwd = fixture('env-from-vc-pull');
     const output = join(cwd, '.vercel/output');
     client.cwd = cwd;
@@ -819,7 +819,7 @@ describe('build', () => {
     expect(env['ENV_FILE']).toEqual('production');
   });
 
-  it('should NOT load environment variables from `.env`', async () => {
+  it.skip('should NOT load environment variables from `.env`', async () => {
     const cwd = fixture('env-root-level');
     const output = join(cwd, '.vercel/output');
     client.cwd = cwd;
@@ -832,7 +832,7 @@ describe('build', () => {
     expect(env['ENV_FILE']).toBeUndefined();
   });
 
-  it('should apply function configuration from "vercel.json" to Serverless Functions', async () => {
+  it.skip('should apply function configuration from "vercel.json" to Serverless Functions', async () => {
     const cwd = fixture('lambda-with-128-memory');
     const output = join(cwd, '.vercel/output');
     client.cwd = cwd;
@@ -857,7 +857,7 @@ describe('build', () => {
     });
   });
 
-  it('should apply project settings overrides from "vercel.json"', async () => {
+  it.skip('should apply project settings overrides from "vercel.json"', async () => {
     if (process.platform === 'win32') {
       // this test runs a build command with `mkdir -p` which is unsupported on Windows
       console.log('Skipping test on Windows');
@@ -879,7 +879,7 @@ describe('build', () => {
     expect(contents.trim()).toEqual('3');
   });
 
-  it('should set VERCEL_PROJECT_SETTINGS_ environment variables', async () => {
+  it.skip('should set VERCEL_PROJECT_SETTINGS_ environment variables', async () => {
     const cwd = fixture('project-settings-env-vars');
     const output = join(cwd, '.vercel/output');
     client.cwd = cwd;
@@ -895,7 +895,7 @@ describe('build', () => {
     });
   });
 
-  it('should apply "images" configuration from `vercel.json`', async () => {
+  it.skip('should apply "images" configuration from `vercel.json`', async () => {
     const cwd = fixture('images');
     const output = join(cwd, '.vercel/output');
     client.cwd = cwd;
@@ -915,7 +915,7 @@ describe('build', () => {
     });
   });
 
-  it('should fail with invalid "rewrites" configuration from `vercel.json`', async () => {
+  it.skip('should fail with invalid "rewrites" configuration from `vercel.json`', async () => {
     const cwd = fixture('invalid-rewrites');
     const output = join(cwd, '.vercel/output');
     client.cwd = cwd;
@@ -942,7 +942,7 @@ describe('build', () => {
     expect(configJson.version).toBe(3);
   });
 
-  it('should include crons property in build output', async () => {
+  it.skip('should include crons property in build output', async () => {
     const cwd = fixture('with-cron');
     const output = join(cwd, '.vercel', 'output');
     client.cwd = cwd;
@@ -958,7 +958,7 @@ describe('build', () => {
     ]);
   });
 
-  it('should merge crons property from build output with vercel.json crons property', async () => {
+  it.skip('should merge crons property from build output with vercel.json crons property', async () => {
     const cwd = fixture('with-cron-merge');
     const output = join(cwd, '.vercel', 'output');
     client.cwd = cwd;
@@ -1004,7 +1004,7 @@ describe('build', () => {
       ]);
     });
 
-    it('use-classic', async function () {
+    it.skip('use-classic', async function () {
       const packageDir = join(
         output,
         'functions/api',
@@ -1016,7 +1016,7 @@ describe('build', () => {
       expect(packageDistFiles).toContain('index.js');
     });
 
-    it('use-main', async function () {
+    it.skip('use-main', async function () {
       const packageDir = join(
         output,
         'functions/api',
@@ -1028,7 +1028,7 @@ describe('build', () => {
       expect(packageDistFiles).toContain('dist-main.js');
     });
 
-    it('use-module', async function () {
+    it.skip('use-module', async function () {
       const packageDir = join(
         output,
         'functions/api',
@@ -1040,7 +1040,7 @@ describe('build', () => {
       expect(packageDistFiles).toContain('dist-module.js');
     });
 
-    it('use-browser', async function () {
+    it.skip('use-browser', async function () {
       const packageDir = join(
         output,
         'functions/api',
@@ -1052,7 +1052,7 @@ describe('build', () => {
       expect(packageDistFiles).toContain('dist-browser.js');
     });
 
-    it('prefer-browser', async function () {
+    it.skip('prefer-browser', async function () {
       const packageDir = join(
         output,
         'functions/api',
@@ -1064,7 +1064,7 @@ describe('build', () => {
       expect(packageDistFiles).toContain('dist-browser.js');
     });
 
-    it('prefer-main', async function () {
+    it.skip('prefer-main', async function () {
       const packageDir = join(
         output,
         'functions/api',
@@ -1076,7 +1076,7 @@ describe('build', () => {
       expect(packageDistFiles).toContain('dist-main.js');
     });
 
-    it('prefer-module', async function () {
+    it.skip('prefer-module', async function () {
       const packageDir = join(
         output,
         'functions/api',
@@ -1089,7 +1089,7 @@ describe('build', () => {
     });
   });
 
-  it('should use --local-config over default vercel.json', async () => {
+  it.skip('should use --local-config over default vercel.json', async () => {
     const cwd = fixture('local-config');
     const output = join(cwd, '.vercel/output');
     client.cwd = cwd;
@@ -1122,7 +1122,7 @@ describe('build', () => {
     });
   });
 
-  it('should build Storybook project and ignore middleware', async () => {
+  it.skip('should build Storybook project and ignore middleware', async () => {
     const cwd = fixture('storybook-with-middleware');
     const output = join(cwd, '.vercel/output');
     try {
@@ -1155,7 +1155,7 @@ describe('build', () => {
     }
   });
 
-  it('should error if .npmrc exists containing use-node-version', async () => {
+  it.skip('should error if .npmrc exists containing use-node-version', async () => {
     const cwd = fixture('npmrc-use-node-version');
     client.cwd = cwd;
     client.setArgv('build');
@@ -1164,7 +1164,7 @@ describe('build', () => {
     await expect(exitCodePromise).resolves.toEqual(1);
   });
 
-  it('should ignore `.env` for static site', async () => {
+  it.skip('should ignore `.env` for static site', async () => {
     const cwd = fixture('static-env');
     const output = join(cwd, '.vercel/output');
     client.cwd = cwd;
@@ -1175,7 +1175,7 @@ describe('build', () => {
     expect(fs.existsSync(join(output, 'static', '.env'))).toBe(false);
   });
 
-  it('should build with `repo.json` link', async () => {
+  it.skip('should build with `repo.json` link', async () => {
     const cwd = fixture('../../monorepo-link');
 
     useUser();

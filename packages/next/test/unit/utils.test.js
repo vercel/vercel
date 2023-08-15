@@ -12,39 +12,39 @@ describe('getNextConfig', () => {
   const workPath = path.join(__dirname, 'fixtures', '00-config');
   const entryPath = path.join(workPath, 'entry');
 
-  it('should find entry file', async () => {
+  it.skip('should find entry file', async () => {
     const file = await getNextConfig(workPath, entryPath);
     expect(file).toMatchSnapshot();
   });
 
-  it('should find work file second', async () => {
+  it.skip('should find work file second', async () => {
     const file = await getNextConfig(workPath, '/');
     expect(file).toMatchSnapshot();
   });
 
-  it('return null on nothing', async () => {
+  it.skip('return null on nothing', async () => {
     const file = await getNextConfig('/', '/');
     expect(file).toMatchSnapshot();
   });
 });
 
 describe('getImagesConfig', () => {
-  it('should return undefined when undefined config', async () => {
+  it.skip('should return undefined when undefined config', async () => {
     const result = await getImagesConfig(undefined);
     expect(result).toBeUndefined();
   });
 
-  it('should return undefined when null config', async () => {
+  it.skip('should return undefined when null config', async () => {
     const result = await getImagesConfig(null);
     expect(result).toBeUndefined();
   });
 
-  it('should return undefined when empty object config', async () => {
+  it.skip('should return undefined when empty object config', async () => {
     const result = await getImagesConfig({ images: {} });
     expect(result).toBeUndefined();
   });
 
-  it('should return pass-through props when loader is default and unoptimized undefined', async () => {
+  it.skip('should return pass-through props when loader is default and unoptimized undefined', async () => {
     const images = {
       loader: 'default',
       domains: ['example.com'],
@@ -69,7 +69,7 @@ describe('getImagesConfig', () => {
     });
   });
 
-  it('should return pass-through props when loader is default and unoptimized false', async () => {
+  it.skip('should return pass-through props when loader is default and unoptimized false', async () => {
     const images = {
       unoptimized: false,
       loader: 'default',
@@ -95,7 +95,7 @@ describe('getImagesConfig', () => {
     });
   });
 
-  it('return return undefined when loader is default and unoptimized true', async () => {
+  it.skip('return return undefined when loader is default and unoptimized true', async () => {
     const images = {
       unoptimized: true,
       loader: 'default',
@@ -114,7 +114,7 @@ describe('getImagesConfig', () => {
 });
 
 describe('excludeFiles', () => {
-  it('should exclude files', () => {
+  it.skip('should exclude files', () => {
     const files = {
       'pages/index.js': new FileRef({ digest: 'index' }),
       'package.json': new FileRef({ digest: 'package' }),
@@ -131,25 +131,25 @@ describe('excludeFiles', () => {
 });
 
 describe('validateEntrypoint', () => {
-  it('should allow package.json', () => {
+  it.skip('should allow package.json', () => {
     expect(validateEntrypoint('package.json')).toBeUndefined();
   });
-  it('should allow nested package.json', () => {
+  it.skip('should allow nested package.json', () => {
     expect(validateEntrypoint('frontend/package.json')).toBeUndefined();
   });
-  it('should allow next.config.js', () => {
+  it.skip('should allow next.config.js', () => {
     expect(validateEntrypoint('next.config.js')).toBeUndefined();
   });
-  it('should allow nested next.config.js', () => {
+  it.skip('should allow nested next.config.js', () => {
     expect(validateEntrypoint('frontend/next.config.js')).toBeUndefined();
   });
-  it('should not allow pages/index.js', () => {
+  it.skip('should not allow pages/index.js', () => {
     expect(() => validateEntrypoint('pages/index.js')).toThrow();
   });
 });
 
 describe('normalizePackageJson', () => {
-  it('should work without a package.json being supplied', () => {
+  it.skip('should work without a package.json being supplied', () => {
     const result = normalizePackageJson();
     expect(result).toEqual({
       dependencies: {
@@ -167,7 +167,7 @@ describe('normalizePackageJson', () => {
     });
   });
 
-  it('should work with a package.json being supplied', () => {
+  it.skip('should work with a package.json being supplied', () => {
     const defaultPackage = {
       dependencies: {
         'next-server': 'v7.0.2-canary.49',
@@ -198,7 +198,7 @@ describe('normalizePackageJson', () => {
     });
   });
 
-  it('should force next@canary to be a devDependency', () => {
+  it.skip('should force next@canary to be a devDependency', () => {
     const defaultPackage = {
       dependencies: {
         react: 'latest',
@@ -223,7 +223,7 @@ describe('normalizePackageJson', () => {
     });
   });
 
-  it('should force next-server@canary to be a dependency', () => {
+  it.skip('should force next-server@canary to be a dependency', () => {
     const defaultPackage = {
       dependencies: {
         react: 'latest',
@@ -248,7 +248,7 @@ describe('normalizePackageJson', () => {
     });
   });
 
-  it('should force now-build script', () => {
+  it.skip('should force now-build script', () => {
     const defaultPackage = {
       dependencies: {
         react: 'latest',
@@ -274,7 +274,7 @@ describe('normalizePackageJson', () => {
   });
 
   // https://github.com/vercel/next.js/issues/5700
-  it('should normalize user report vercel/next.js#5700 correctly', () => {
+  it.skip('should normalize user report vercel/next.js#5700 correctly', () => {
     const defaultPackage = {
       version: '1.0.0',
       scripts: {

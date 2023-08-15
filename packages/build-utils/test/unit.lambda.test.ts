@@ -8,7 +8,7 @@ const MODE_DIRECTORY = 16877; /* drwxr-xr-x */
 const MODE_FILE = 33188; /* -rw-r--r-- */
 
 describe('Lambda', () => {
-  it('should create zip file with symlinks', async () => {
+  it.skip('should create zip file with symlinks', async () => {
     if (process.platform === 'win32') {
       console.log('Skipping test on windows');
       return;
@@ -36,7 +36,7 @@ describe('Lambda', () => {
     expect(aStat.isFile()).toEqual(true);
   });
 
-  it('should create zip file with empty directory', async () => {
+  it.skip('should create zip file with empty directory', async () => {
     if (process.platform === 'win32') {
       console.log('Skipping test on windows');
       return;

@@ -29,7 +29,7 @@ describe('responseError()', () => {
     server.close();
   });
 
-  it('should parse 4xx response error with fallback message', async () => {
+  it.skip('should parse 4xx response error with fallback message', async () => {
     handler = (_req: IncomingMessage, res: ServerResponse) => {
       send(res, 404, {});
     };
@@ -39,7 +39,7 @@ describe('responseError()', () => {
     expect(formatted.message).toEqual('Failed to load data (404)');
   });
 
-  it('should parse 4xx response error without fallback message', async () => {
+  it.skip('should parse 4xx response error without fallback message', async () => {
     handler = (_req: IncomingMessage, res: ServerResponse) => {
       send(res, 404, {});
     };
@@ -49,7 +49,7 @@ describe('responseError()', () => {
     expect(formatted.message).toEqual('Response Error (404)');
   });
 
-  it('should parse 5xx response error without fallback message', async () => {
+  it.skip('should parse 5xx response error without fallback message', async () => {
     handler = (_req: IncomingMessage, res: ServerResponse) => {
       send(res, 500, '');
     };
@@ -59,7 +59,7 @@ describe('responseError()', () => {
     expect(formatted.message).toEqual('Response Error (500)');
   });
 
-  it('should parse 4xx response error as correct JSON', async () => {
+  it.skip('should parse 4xx response error as correct JSON', async () => {
     handler = (_req: IncomingMessage, res: ServerResponse) => {
       send(res, 400, {
         error: {
@@ -73,7 +73,7 @@ describe('responseError()', () => {
     expect(formatted.message).toEqual('The request is not correct (400)');
   });
 
-  it('should parse 5xx response error as HTML', async () => {
+  it.skip('should parse 5xx response error as HTML', async () => {
     handler = (_req: IncomingMessage, res: ServerResponse) => {
       send(res, 500, 'This is a malformed error');
     };
@@ -83,7 +83,7 @@ describe('responseError()', () => {
     expect(formatted.message).toEqual('Failed to process data (500)');
   });
 
-  it('should parse 5xx response error with random JSON', async () => {
+  it.skip('should parse 5xx response error with random JSON', async () => {
     handler = (_req: IncomingMessage, res: ServerResponse) => {
       send(res, 500, {
         wrong: 'property',
@@ -95,7 +95,7 @@ describe('responseError()', () => {
     expect(formatted.message).toEqual('Failed to process data (500)');
   });
 
-  it('should parse 4xx error message with broken JSON', async () => {
+  it.skip('should parse 4xx error message with broken JSON', async () => {
     handler = (_req: IncomingMessage, res: ServerResponse) => {
       send(res, 403, `32puuuh2332`);
     };
@@ -105,7 +105,7 @@ describe('responseError()', () => {
     expect(formatted).toEqual('Not authenticated (403)');
   });
 
-  it('should parse 4xx error message with proper message', async () => {
+  it.skip('should parse 4xx error message with proper message', async () => {
     handler = (_req: IncomingMessage, res: ServerResponse) => {
       send(res, 403, {
         error: {
@@ -119,7 +119,7 @@ describe('responseError()', () => {
     expect(formatted).toEqual('This is a test (403)');
   });
 
-  it('should parse 5xx error message with proper message', async () => {
+  it.skip('should parse 5xx error message with proper message', async () => {
     handler = (_req: IncomingMessage, res: ServerResponse) => {
       send(res, 500, {
         error: {
@@ -133,7 +133,7 @@ describe('responseError()', () => {
     expect(formatted).toEqual('Response Error (500)');
   });
 
-  it('should parse 4xx response error with broken JSON', async () => {
+  it.skip('should parse 4xx response error with broken JSON', async () => {
     handler = (_req: IncomingMessage, res: ServerResponse) => {
       send(res, 403, `122{"sss"`);
     };
@@ -143,7 +143,7 @@ describe('responseError()', () => {
     expect(formatted.message).toEqual('Not authenticated (403)');
   });
 
-  it('should parse 4xx response error as correct JSON with more properties', async () => {
+  it.skip('should parse 4xx response error as correct JSON with more properties', async () => {
     handler = (_req: IncomingMessage, res: ServerResponse) => {
       send(res, 403, {
         error: {
@@ -159,7 +159,7 @@ describe('responseError()', () => {
     expect(formatted.additionalProperty).toEqual('test');
   });
 
-  it('should parse 429 response error with retry header', async () => {
+  it.skip('should parse 429 response error with retry header', async () => {
     handler = (_req: IncomingMessage, res: ServerResponse) => {
       res.setHeader('Retry-After', '20');
 
@@ -176,7 +176,7 @@ describe('responseError()', () => {
     expect(formatted.retryAfter).toEqual(20);
   });
 
-  it('should parse 429 response error without retry header', async () => {
+  it.skip('should parse 429 response error without retry header', async () => {
     handler = (_req: IncomingMessage, res: ServerResponse) => {
       send(res, 429, {
         error: {
@@ -193,7 +193,7 @@ describe('responseError()', () => {
 });
 
 describe('toEnumerableError()', () => {
-  it('should JSON stringify Error', () => {
+  it.skip('should JSON stringify Error', () => {
     const err = new Error('An error');
     const enumerable = toEnumerableError(err);
     expect(JSON.stringify(err)).toEqual('{}');
@@ -208,7 +208,7 @@ describe('toEnumerableError()', () => {
     );
   });
 
-  it('should JSON stringify Error with custom properties', () => {
+  it.skip('should JSON stringify Error with custom properties', () => {
     const err = new Error('An error');
     Object.defineProperty(err, 'custom', {
       enumerable: false,

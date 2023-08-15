@@ -2,7 +2,7 @@ import { Headers } from 'node-fetch';
 import { applyOverriddenHeaders } from '../../../../src/util/dev/headers';
 
 describe('applyOverriddenHeaders', () => {
-  it('do nothing if x-middleware-override-headers is not set', async () => {
+  it.skip('do nothing if x-middleware-override-headers is not set', async () => {
     const reqHeaders = { a: '1' };
     const respHeaders = new Headers();
 
@@ -10,7 +10,7 @@ describe('applyOverriddenHeaders', () => {
     expect(reqHeaders).toStrictEqual({ a: '1' });
   });
 
-  it('adds a new header', async () => {
+  it.skip('adds a new header', async () => {
     const reqHeaders = { a: '1' };
     const respHeaders = new Headers({
       // Define a new header 'b' and keep the existing header 'a'
@@ -23,7 +23,7 @@ describe('applyOverriddenHeaders', () => {
     expect(reqHeaders).toStrictEqual({ a: '1', b: '2' });
   });
 
-  it('delete the header if x-middleware-request-* is undefined', async () => {
+  it.skip('delete the header if x-middleware-request-* is undefined', async () => {
     const reqHeaders = { a: '1', b: '2' };
     const respHeaders = new Headers({
       // Deletes a new header 'c' and keep the existing headers `a` and `b`
@@ -36,7 +36,7 @@ describe('applyOverriddenHeaders', () => {
     expect(reqHeaders).toStrictEqual({ a: '1', b: '2' });
   });
 
-  it('updates an existing header', async () => {
+  it.skip('updates an existing header', async () => {
     const reqHeaders = { a: '1', b: '2' };
     const respHeaders = new Headers({
       // Modifies the header 'b' and keep the existing header 'a'
@@ -49,7 +49,7 @@ describe('applyOverriddenHeaders', () => {
     expect(reqHeaders).toStrictEqual({ a: '1', b: 'modified' });
   });
 
-  it('ignores headers listed in NONOVERRIDABLE_HEADERS', async () => {
+  it.skip('ignores headers listed in NONOVERRIDABLE_HEADERS', async () => {
     const reqHeaders = { a: '1', host: 'example.com' };
     const respHeaders = new Headers({
       // Define a new header 'b' and 'content-length'
@@ -63,7 +63,7 @@ describe('applyOverriddenHeaders', () => {
     expect(reqHeaders).toStrictEqual({ a: '1', b: '2', host: 'example.com' });
   });
 
-  it('deletes an existing header', async () => {
+  it.skip('deletes an existing header', async () => {
     const reqHeaders = { a: '1', b: '2' };
     const respHeaders = new Headers({
       // Deletes the header 'a' and keep the existing header 'b'

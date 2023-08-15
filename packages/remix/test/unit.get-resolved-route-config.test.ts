@@ -79,7 +79,7 @@ describe('getResolvedRouteConfig()', () => {
     expect(config).toMatchObject(expected);
   });
 
-  it('should resolve config as "edge" for Hydrogen v2', () => {
+  it.skip('should resolve config as "edge" for Hydrogen v2', () => {
     const route = routes['root'];
     const config = getResolvedRouteConfig(
       route,

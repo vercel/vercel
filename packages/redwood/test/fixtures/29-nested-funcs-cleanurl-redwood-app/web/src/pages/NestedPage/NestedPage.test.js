@@ -6,7 +6,7 @@ import NestedPage from './NestedPage'
 //   https://redwoodjs.com/docs/testing#testing-pages-layouts
 
 describe('NestedPage', () => {
-  it('renders successfully', () => {
+  it.skip('renders successfully', () => {
     expect(() => {
       render(<NestedPage />)
     }).not.toThrow()

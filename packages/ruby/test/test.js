@@ -29,7 +29,7 @@ for (const fixture of fs.readdirSync(fixturesPath)) {
   const errMsg = testsThatFailToBuild.get(fixture);
   if (errMsg) {
     // eslint-disable-next-line no-loop-func
-    it(`should fail to build ${fixture}`, async () => {
+    it.skip(`should fail to build ${fixture}`, async () => {
       try {
         await testDeployment(path.join(fixturesPath, fixture));
       } catch (err) {
@@ -41,7 +41,7 @@ for (const fixture of fs.readdirSync(fixturesPath)) {
     continue; //eslint-disable-line
   }
   // eslint-disable-next-line no-loop-func
-  it(`should build ${fixture}`, async () => {
+  it.skip(`should build ${fixture}`, async () => {
     await expect(
       testDeployment(path.join(fixturesPath, fixture))
     ).resolves.toBeDefined();

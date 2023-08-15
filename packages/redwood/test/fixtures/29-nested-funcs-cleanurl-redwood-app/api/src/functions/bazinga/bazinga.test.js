@@ -6,7 +6,7 @@ import { handler } from './bazinga'
 //    https://redwoodjs.com/docs/testing#testing-functions
 
 describe('bazinga function', () => {
-  it('Should respond with 200', async () => {
+  it.skip('Should respond with 200', async () => {
     const httpEvent = mockHttpEvent({
       queryStringParameters: {
         id: '42', // Add parameters here

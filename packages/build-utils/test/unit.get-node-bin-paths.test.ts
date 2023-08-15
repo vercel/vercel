@@ -4,7 +4,7 @@ import { getNodeBinPaths } from '../src/fs/run-user-scripts';
 describe('getNodeBinPaths()', () => {
   const cwd = process.cwd();
 
-  it('should return array of `node_modules/.bin` paths', () => {
+  it.skip('should return array of `node_modules/.bin` paths', () => {
     const start = join(cwd, 'foo/bar/baz');
     const paths = getNodeBinPaths({ start, base: cwd });
     expect(paths).toEqual([

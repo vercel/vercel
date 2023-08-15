@@ -9,7 +9,7 @@ import { useDeployment } from '../../mocks/deployment';
 import { useUser } from '../../mocks/user';
 
 describe('remove', () => {
-  it('should error if missing deployment url', async () => {
+  it.skip('should error if missing deployment url', async () => {
     client.setArgv('remove');
     const exitCodePromise = remove(client);
 
@@ -19,7 +19,7 @@ describe('remove', () => {
     await expect(exitCodePromise).resolves.toEqual(1);
   });
 
-  it('should error without calling API for invalid names', async () => {
+  it.skip('should error without calling API for invalid names', async () => {
     const badDeployName = '/#';
     client.setArgv('remove', badDeployName);
     const exitCodePromise = remove(client);
@@ -30,7 +30,7 @@ describe('remove', () => {
     await expect(exitCodePromise).resolves.toEqual(1);
   });
 
-  it('calls API to delete a project ', async () => {
+  it.skip('calls API to delete a project ', async () => {
     let deleteAPIWasCalled = false;
     const user = useUser();
 

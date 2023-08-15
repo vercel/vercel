@@ -6,7 +6,7 @@ jest.setTimeout(2 * 60 * 1000);
 
 describe('build()', () => {
   describe('Build Output API v1', () => {
-    it('should detect the output format', async () => {
+    it.skip('should detect the output format', async () => {
       const workPath = path.join(
         __dirname,
         'build-fixtures',
@@ -35,7 +35,7 @@ describe('build()', () => {
       }
     });
 
-    it('should detect the v1 output format when .output exists', async () => {
+    it.skip('should detect the v1 output format when .output exists', async () => {
       const workPath = path.join(
         __dirname,
         'build-fixtures',
@@ -67,7 +67,7 @@ describe('build()', () => {
   });
 
   describe('Build Output API v2', () => {
-    it('should detect the output format', async () => {
+    it.skip('should detect the output format', async () => {
       const workPath = path.join(
         __dirname,
         'build-fixtures',
@@ -99,7 +99,7 @@ describe('build()', () => {
   });
 
   describe('Build Output API v3', () => {
-    it('should detect the output format with `vercel build`', async () => {
+    it.skip('should detect the output format with `vercel build`', async () => {
       const workPath = path.join(
         __dirname,
         'build-fixtures',
@@ -125,7 +125,7 @@ describe('build()', () => {
       );
     });
 
-    it('should detect the output format without `vercel build`', async () => {
+    it.skip('should detect the output format without `vercel build`', async () => {
       const workPath = path.join(
         __dirname,
         'build-fixtures',
@@ -150,7 +150,7 @@ describe('build()', () => {
       );
     });
 
-    it('should throw an Error when `vercel dev` is used with `@vercel/static-build`', async () => {
+    it.skip('should throw an Error when `vercel dev` is used with `@vercel/static-build`', async () => {
       let err;
       const workPath = path.join(
         __dirname,

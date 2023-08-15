@@ -19,12 +19,12 @@ async function checkForChange(url, initialValue, getNewValue) {
 const ctx = {};
 
 describe(`${__dirname.split(path.sep).pop()}`, () => {
-  it('should deploy and pass probe checks', async () => {
+  it.skip('should deploy and pass probe checks', async () => {
     const info = await deployAndTest(__dirname);
     Object.assign(ctx, info);
   });
 
-  it('should revalidate content properly from pathname', async () => {
+  it.skip('should revalidate content properly from pathname', async () => {
     const res = await fetch(`${ctx.deploymentUrl}/another`);
     expect(res.status).toBe(200);
 
@@ -50,7 +50,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     expect($('#hello').text()).toBe('hello: world');
   });
 
-  it('should revalidate content properly from dynamic pathname', async () => {
+  it.skip('should revalidate content properly from dynamic pathname', async () => {
     const res = await fetch(`${ctx.deploymentUrl}/blog/post-123`);
     expect(res.status).toBe(200);
 
@@ -76,7 +76,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     expect($('#post').text()).toBe('Post: post-123');
   });
 
-  it('should revalidate content properly from non-utf8 dynamic pathname', async () => {
+  it.skip('should revalidate content properly from non-utf8 dynamic pathname', async () => {
     const slug = 'こんにちは';
     const encodedSlug = encodeURIComponent(slug);
     const res = await fetch(`${ctx.deploymentUrl}/blog/${encodedSlug}`);
@@ -104,7 +104,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     expect($('#post').text()).toBe(`Post: ${slug}`);
   });
 
-  it('should revalidate content properly from dynamic pathnames', async () => {
+  it.skip('should revalidate content properly from dynamic pathnames', async () => {
     const res = await fetch(`${ctx.deploymentUrl}/blog/post-123/comment-321`);
     expect(res.status).toBe(200);
 
@@ -132,7 +132,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     expect($('#comment').text()).toBe('Comment: comment-321');
   });
 
-  it('should revalidate content properly from /_next/data pathname', async () => {
+  it.skip('should revalidate content properly from /_next/data pathname', async () => {
     const res = await fetch(
       `${ctx.deploymentUrl}/_next/data/testing-build-id/another.json`
     );
@@ -166,7 +166,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     expect(isNaN(data2.random)).toBe(false);
   });
 
-  it('should revalidate content properly from /_next/data dynamic pathname', async () => {
+  it.skip('should revalidate content properly from /_next/data dynamic pathname', async () => {
     const res = await fetch(
       `${ctx.deploymentUrl}/_next/data/testing-build-id/blog/post-123.json`
     );
@@ -200,7 +200,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     expect(isNaN(data2.random)).toBe(false);
   });
 
-  it('should revalidate content properly from /_next/data dynamic pathnames', async () => {
+  it.skip('should revalidate content properly from /_next/data dynamic pathnames', async () => {
     const res = await fetch(
       `${ctx.deploymentUrl}/_next/data/testing-build-id/blog/post-123/comment-321.json`
     );

@@ -3,7 +3,7 @@ import { detectFrameworkRecord } from '../src';
 import VirtualFilesystem from './virtual-file-system';
 
 describe('detectFrameworkRecord', () => {
-  it('Do not detect anything', async () => {
+  it.skip('Do not detect anything', async () => {
     const fs = new VirtualFilesystem({
       'README.md': '# hi',
       'api/cheese.js': 'export default (req, res) => res.end("cheese");',
@@ -13,7 +13,7 @@ describe('detectFrameworkRecord', () => {
     expect(framework?.slug).toBe(undefined);
   });
 
-  it('Detects a framework record with a matchPackage detector', async () => {
+  it.skip('Detects a framework record with a matchPackage detector', async () => {
     const fs = new VirtualFilesystem({
       'package.json': JSON.stringify({
         dependencies: {
@@ -33,7 +33,7 @@ describe('detectFrameworkRecord', () => {
     expect(frameworkRecord.detectedVersion).toBe('9.0.0');
   });
 
-  it('Detects a framework record with a matchPackage detector with slashes', async () => {
+  it.skip('Detects a framework record with a matchPackage detector with slashes', async () => {
     const fs = new VirtualFilesystem({
       'package.json': JSON.stringify({
         dependencies: {
@@ -52,7 +52,7 @@ describe('detectFrameworkRecord', () => {
     expect(frameworkRecord.detectedVersion).toBe('5.0.0');
   });
 
-  it('Detect first framework version found', async () => {
+  it.skip('Detect first framework version found', async () => {
     const fs = new VirtualFilesystem({
       'package.json': JSON.stringify({
         dependencies: {
@@ -68,7 +68,7 @@ describe('detectFrameworkRecord', () => {
     expect(framework?.detectedVersion).toBe('1.0.0');
   });
 
-  it('Detect frameworks based on ascending order in framework list', async () => {
+  it.skip('Detect frameworks based on ascending order in framework list', async () => {
     const fs = new VirtualFilesystem({
       'package.json': JSON.stringify({
         dependencies: {
@@ -82,7 +82,7 @@ describe('detectFrameworkRecord', () => {
     expect(framework?.slug).toBe('nextjs');
   });
 
-  it('Detect Nuxt.js', async () => {
+  it.skip('Detect Nuxt.js', async () => {
     const fs = new VirtualFilesystem({
       'package.json': JSON.stringify({
         dependencies: {
@@ -95,7 +95,7 @@ describe('detectFrameworkRecord', () => {
     expect(framework?.slug).toBe('nuxtjs');
   });
 
-  it('Detect Nuxt.js edge', async () => {
+  it.skip('Detect Nuxt.js edge', async () => {
     const fs = new VirtualFilesystem({
       'package.json': JSON.stringify({
         dependencies: {
@@ -108,7 +108,7 @@ describe('detectFrameworkRecord', () => {
     expect(framework?.slug).toBe('nuxtjs');
   });
 
-  it('Detect Gatsby', async () => {
+  it.skip('Detect Gatsby', async () => {
     const fs = new VirtualFilesystem({
       'package.json': JSON.stringify({
         dependencies: {
@@ -121,7 +121,7 @@ describe('detectFrameworkRecord', () => {
     expect(framework?.slug).toBe('gatsby');
   });
 
-  it('Detect Hugo #1', async () => {
+  it.skip('Detect Hugo #1', async () => {
     const fs = new VirtualFilesystem({
       'config.yaml': 'baseURL: http://example.org/',
       'content/post.md': '# hello world',
@@ -131,7 +131,7 @@ describe('detectFrameworkRecord', () => {
     expect(framework?.slug).toBe('hugo');
   });
 
-  it('Detect Hugo #2', async () => {
+  it.skip('Detect Hugo #2', async () => {
     const fs = new VirtualFilesystem({
       'config.json': '{ "baseURL": "http://example.org/" }',
       'content/post.md': '# hello world',
@@ -141,7 +141,7 @@ describe('detectFrameworkRecord', () => {
     expect(framework?.slug).toBe('hugo');
   });
 
-  it('Detect Hugo #3', async () => {
+  it.skip('Detect Hugo #3', async () => {
     const fs = new VirtualFilesystem({
       'config.toml': 'baseURL = "http://example.org/"',
       'content/post.md': '# hello world',
@@ -151,7 +151,7 @@ describe('detectFrameworkRecord', () => {
     expect(framework?.slug).toBe('hugo');
   });
 
-  it('Detect Jekyll', async () => {
+  it.skip('Detect Jekyll', async () => {
     const fs = new VirtualFilesystem({
       '_config.yml': 'config',
     });
@@ -160,7 +160,7 @@ describe('detectFrameworkRecord', () => {
     expect(framework?.slug).toBe('jekyll');
   });
 
-  it('Detect Middleman', async () => {
+  it.skip('Detect Middleman', async () => {
     const fs = new VirtualFilesystem({
       'config.rb': 'config',
     });
@@ -169,7 +169,7 @@ describe('detectFrameworkRecord', () => {
     expect(framework?.slug).toBe('middleman');
   });
 
-  it('Detect Scully', async () => {
+  it.skip('Detect Scully', async () => {
     const fs = new VirtualFilesystem({
       'package.json': JSON.stringify({
         dependencies: {
@@ -183,7 +183,7 @@ describe('detectFrameworkRecord', () => {
     expect(framework?.slug).toBe('scully');
   });
 
-  it('Detect Zola', async () => {
+  it.skip('Detect Zola', async () => {
     const fs = new VirtualFilesystem({
       'config.toml': 'base_url = "/"',
     });

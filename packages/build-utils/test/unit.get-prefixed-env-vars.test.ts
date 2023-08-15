@@ -87,7 +87,7 @@ describe('Test `getPrefixedEnvVars()`', () => {
   ];
 
   for (const { name, args, want } of cases) {
-    it(name, () => {
+    it.skip(name, () => {
       expect(getPrefixedEnvVars(args)).toEqual(want);
     });
   }

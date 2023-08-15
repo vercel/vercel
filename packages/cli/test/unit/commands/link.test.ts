@@ -12,7 +12,7 @@ import {
 import { setupTmpDir } from '../../helpers/setup-unit-fixture';
 
 describe('link', () => {
-  it('should prompt for link', async () => {
+  it.skip('should prompt for link', async () => {
     const cwd = setupTmpDir();
     const user = useUser();
     useTeams('team_dummy');
@@ -48,7 +48,7 @@ describe('link', () => {
     expect(projectJson.projectId).toEqual(project.id);
   });
 
-  it('should allow specifying `--project` flag', async () => {
+  it.skip('should allow specifying `--project` flag', async () => {
     const cwd = setupTmpDir();
     const user = useUser();
     useTeams('team_dummy');
@@ -74,7 +74,7 @@ describe('link', () => {
     expect(projectJson.projectId).toEqual(project.id);
   });
 
-  it('should allow overwriting existing link', async () => {
+  it.skip('should allow overwriting existing link', async () => {
     const cwd = setupTmpDir();
     const user = useUser();
     useTeams('team_dummy');

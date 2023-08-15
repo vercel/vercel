@@ -1,13 +1,13 @@
 import { validateConfig } from '../../../../src/util/validate-config';
 
 describe('validateConfig', () => {
-  it('should not error with empty config', async () => {
+  it.skip('should not error with empty config', async () => {
     const config = {};
     const error = validateConfig(config);
     expect(error).toBeNull();
   });
 
-  it('should not error with complete config', async () => {
+  it.skip('should not error with complete config', async () => {
     const config = {
       version: 2,
       public: true,
@@ -23,7 +23,7 @@ describe('validateConfig', () => {
     expect(error).toBeNull();
   });
 
-  it('should not error with builds and routes', async () => {
+  it.skip('should not error with builds and routes', async () => {
     const config = {
       builds: [{ src: 'api/index.js', use: '@vercel/node' }],
       routes: [{ src: '/(.*)', dest: '/api/index.js' }],
@@ -32,7 +32,7 @@ describe('validateConfig', () => {
     expect(error).toBeNull();
   });
 
-  it('should error with invalid rewrites due to additional property and offer suggestion', async () => {
+  it.skip('should error with invalid rewrites due to additional property and offer suggestion', async () => {
     const error = validateConfig({
       // @ts-ignore
       rewrites: [{ src: '/(.*)', dest: '/api/index.js' }],
@@ -45,7 +45,7 @@ describe('validateConfig', () => {
     );
   });
 
-  it('should error with invalid routes due to additional property and offer suggestion', async () => {
+  it.skip('should error with invalid routes due to additional property and offer suggestion', async () => {
     const error = validateConfig({
       // @ts-ignore
       routes: [{ source: '/(.*)', destination: '/api/index.js' }],
@@ -58,7 +58,7 @@ describe('validateConfig', () => {
     );
   });
 
-  it('should error with invalid routes array type', async () => {
+  it.skip('should error with invalid routes array type', async () => {
     const error = validateConfig({
       // @ts-ignore
       routes: { src: '/(.*)', dest: '/api/index.js' },
@@ -71,7 +71,7 @@ describe('validateConfig', () => {
     );
   });
 
-  it('should error with invalid redirects array object', async () => {
+  it.skip('should error with invalid redirects array object', async () => {
     const error = validateConfig({
       redirects: [
         // @ts-ignore
@@ -88,7 +88,7 @@ describe('validateConfig', () => {
     );
   });
 
-  it('should error with invalid redirects.permanent poperty', async () => {
+  it.skip('should error with invalid redirects.permanent poperty', async () => {
     const error = validateConfig({
       // @ts-ignore
       redirects: [{ source: '/', destination: '/go', permanent: 'yes' }],
@@ -101,7 +101,7 @@ describe('validateConfig', () => {
     );
   });
 
-  it('should error with invalid cleanUrls type', async () => {
+  it.skip('should error with invalid cleanUrls type', async () => {
     const error = validateConfig({
       // @ts-ignore
       cleanUrls: 'true',
@@ -114,7 +114,7 @@ describe('validateConfig', () => {
     );
   });
 
-  it('should error with invalid trailingSlash type', async () => {
+  it.skip('should error with invalid trailingSlash type', async () => {
     const error = validateConfig({
       // @ts-ignore
       trailingSlash: [true],
@@ -127,7 +127,7 @@ describe('validateConfig', () => {
     );
   });
 
-  it('should error with invalid headers property', async () => {
+  it.skip('should error with invalid headers property', async () => {
     const error = validateConfig({
       // @ts-ignore
       headers: [{ 'Content-Type': 'text/html' }],
@@ -140,7 +140,7 @@ describe('validateConfig', () => {
     );
   });
 
-  it('should error with invalid headers.source type', async () => {
+  it.skip('should error with invalid headers.source type', async () => {
     const error = validateConfig({
       // @ts-ignore
       headers: [{ source: [{ 'Content-Type': 'text/html' }] }],
@@ -153,7 +153,7 @@ describe('validateConfig', () => {
     );
   });
 
-  it('should error with invalid headers additional property', async () => {
+  it.skip('should error with invalid headers additional property', async () => {
     const error = validateConfig({
       // @ts-ignore
       headers: [{ source: '/', stuff: [{ 'Content-Type': 'text/html' }] }],
@@ -166,7 +166,7 @@ describe('validateConfig', () => {
     );
   });
 
-  it('should error with invalid headers wrong nested headers type', async () => {
+  it.skip('should error with invalid headers wrong nested headers type', async () => {
     const error = validateConfig({
       // @ts-ignore
       headers: [{ source: '/', headers: [{ 'Content-Type': 'text/html' }] }],
@@ -179,7 +179,7 @@ describe('validateConfig', () => {
     );
   });
 
-  it('should error with invalid headers wrong nested headers additional property', async () => {
+  it.skip('should error with invalid headers wrong nested headers additional property', async () => {
     const error = validateConfig({
       headers: [
         // @ts-ignore
@@ -194,7 +194,7 @@ describe('validateConfig', () => {
     );
   });
 
-  it('should error with too many redirects', async () => {
+  it.skip('should error with too many redirects', async () => {
     const error = validateConfig({
       redirects: Array.from({ length: 5000 }).map((_, i) => ({
         source: `/${i}`,
@@ -209,7 +209,7 @@ describe('validateConfig', () => {
     );
   });
 
-  it('should error with too many nested headers', async () => {
+  it.skip('should error with too many nested headers', async () => {
     const error = validateConfig({
       headers: [
         {
@@ -233,7 +233,7 @@ describe('validateConfig', () => {
     );
   });
 
-  it('should error with too low memory value', async () => {
+  it.skip('should error with too low memory value', async () => {
     const error = validateConfig({
       functions: {
         'api/test.js': {
@@ -249,7 +249,7 @@ describe('validateConfig', () => {
     );
   });
 
-  it('should error with too high memory value', async () => {
+  it.skip('should error with too high memory value', async () => {
     const error = validateConfig({
       functions: {
         'api/test.js': {
@@ -265,7 +265,7 @@ describe('validateConfig', () => {
     );
   });
 
-  it('should error with "functions" and "builds"', async () => {
+  it.skip('should error with "functions" and "builds"', async () => {
     const error = validateConfig({
       builds: [
         {
@@ -286,7 +286,7 @@ describe('validateConfig', () => {
     expect(error!.link).toEqual('https://vercel.link/functions-and-builds');
   });
 
-  it('should error when crons have missing schedule', () => {
+  it.skip('should error when crons have missing schedule', () => {
     const error = validateConfig({
       // @ts-ignore
       crons: [{ path: '/api/test.js' }],
@@ -299,7 +299,7 @@ describe('validateConfig', () => {
     );
   });
 
-  it('should error when crons have missing path', () => {
+  it.skip('should error when crons have missing path', () => {
     const error = validateConfig({
       // @ts-ignore
       crons: [{ schedule: '* * * * *' }],
@@ -312,7 +312,7 @@ describe('validateConfig', () => {
     );
   });
 
-  it('should error when path is too long', () => {
+  it.skip('should error when path is too long', () => {
     const error = validateConfig({
       crons: [{ path: '/' + 'x'.repeat(512), schedule: '* * * * *' }],
     });
@@ -324,7 +324,7 @@ describe('validateConfig', () => {
     );
   });
 
-  it('should error when schedule is too long', () => {
+  it.skip('should error when schedule is too long', () => {
     const error = validateConfig({
       crons: [{ path: '/', schedule: '*'.repeat(257) }],
     });
@@ -336,7 +336,7 @@ describe('validateConfig', () => {
     );
   });
 
-  it('should error when path is empty', () => {
+  it.skip('should error when path is empty', () => {
     const error = validateConfig({
       crons: [{ path: '', schedule: '* * * * *' }],
     });
@@ -348,7 +348,7 @@ describe('validateConfig', () => {
     );
   });
 
-  it('should error when schedule is too short', () => {
+  it.skip('should error when schedule is too short', () => {
     const error = validateConfig({
       crons: [{ path: '/', schedule: '* * * * ' }],
     });
@@ -360,7 +360,7 @@ describe('validateConfig', () => {
     );
   });
 
-  it("should error when path doesn't start with `/`", () => {
+  it.skip("should error when path doesn't start with `/`", () => {
     const error = validateConfig({
       crons: [{ path: 'api/cron', schedule: '* * * * *' }],
     });

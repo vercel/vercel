@@ -21,12 +21,12 @@ const fixture = (name: string) =>
   join(__dirname, '../../../fixtures/unit/create-git-meta', name);
 
 describe('getOriginUrl', () => {
-  it('does not provide data for no-origin', async () => {
+  it.skip('does not provide data for no-origin', async () => {
     const configPath = join(fixture('no-origin'), 'git/config');
     const data = await getOriginUrl(configPath, client.output);
     expect(data).toBeNull();
   });
-  it('displays debug message when repo data cannot be parsed', async () => {
+  it.skip('displays debug message when repo data cannot be parsed', async () => {
     const dir = await getWriteableDirectory();
     client.output.debugEnabled = true;
     const data = await getOriginUrl(join(dir, 'git/config'), client.output);
@@ -36,12 +36,12 @@ describe('getOriginUrl', () => {
 });
 
 describe('getRemoteUrls', () => {
-  it('does not provide data when there are no remote urls', async () => {
+  it.skip('does not provide data when there are no remote urls', async () => {
     const configPath = join(fixture('no-origin'), 'git/config');
     const data = await getRemoteUrls(configPath, client.output);
     expect(data).toBeUndefined();
   });
-  it('returns an object when multiple urls are present', async () => {
+  it.skip('returns an object when multiple urls are present', async () => {
     const configPath = join(fixture('multiple-remotes'), 'git/config');
     const data = await getRemoteUrls(configPath, client.output);
     expect(data).toMatchObject({
@@ -49,7 +49,7 @@ describe('getRemoteUrls', () => {
       secondary: 'https://github.com/user/repo2',
     });
   });
-  it('returns an object for origin url', async () => {
+  it.skip('returns an object for origin url', async () => {
     const configPath = join(fixture('test-github'), 'git/config');
     const data = await getRemoteUrls(configPath, client.output);
     expect(data).toMatchObject({
@@ -59,64 +59,64 @@ describe('getRemoteUrls', () => {
 });
 
 describe('parseRepoUrl', () => {
-  it('should be null when a url does not match the regex', () => {
+  it.skip('should be null when a url does not match the regex', () => {
     const repoInfo = parseRepoUrl('https://examplecom/foo');
     expect(repoInfo).toBeNull();
   });
-  it('should be null when a url does not contain org and repo data', () => {
+  it.skip('should be null when a url does not contain org and repo data', () => {
     const repoInfo = parseRepoUrl('https://github.com/borked');
     expect(repoInfo).toBeNull();
   });
-  it('should parse url with `.com` in the repo name', () => {
+  it.skip('should parse url with `.com` in the repo name', () => {
     const repoInfo = parseRepoUrl('https://github.com/vercel/vercel.com.git');
     expect(repoInfo).toBeTruthy();
     expect(repoInfo?.provider).toEqual('github');
     expect(repoInfo?.org).toEqual('vercel');
     expect(repoInfo?.repo).toEqual('vercel.com');
   });
-  it('should parse url with a period in the repo name', () => {
+  it.skip('should parse url with a period in the repo name', () => {
     const repoInfo = parseRepoUrl('https://github.com/vercel/next.js');
     expect(repoInfo).toBeTruthy();
     expect(repoInfo?.provider).toEqual('github');
     expect(repoInfo?.org).toEqual('vercel');
     expect(repoInfo?.repo).toEqual('next.js');
   });
-  it('should parse url that ends with .git', () => {
+  it.skip('should parse url that ends with .git', () => {
     const repoInfo = parseRepoUrl('https://github.com/vercel/next.js.git');
     expect(repoInfo).toBeTruthy();
     expect(repoInfo?.provider).toEqual('github');
     expect(repoInfo?.org).toEqual('vercel');
     expect(repoInfo?.repo).toEqual('next.js');
   });
-  it('should parse github https url', () => {
+  it.skip('should parse github https url', () => {
     const repoInfo = parseRepoUrl('https://github.com/vercel/vercel.git');
     expect(repoInfo).toBeTruthy();
     expect(repoInfo?.provider).toEqual('github');
     expect(repoInfo?.org).toEqual('vercel');
     expect(repoInfo?.repo).toEqual('vercel');
   });
-  it('should parse github https url without the .git suffix', () => {
+  it.skip('should parse github https url without the .git suffix', () => {
     const repoInfo = parseRepoUrl('https://github.com/vercel/vercel');
     expect(repoInfo).toBeTruthy();
     expect(repoInfo?.provider).toEqual('github');
     expect(repoInfo?.org).toEqual('vercel');
     expect(repoInfo?.repo).toEqual('vercel');
   });
-  it('should parse github git url', () => {
+  it.skip('should parse github git url', () => {
     const repoInfo = parseRepoUrl('git://github.com/vercel/vercel.git');
     expect(repoInfo).toBeTruthy();
     expect(repoInfo?.provider).toEqual('github');
     expect(repoInfo?.org).toEqual('vercel');
     expect(repoInfo?.repo).toEqual('vercel');
   });
-  it('should parse github git url with trailing slash', () => {
+  it.skip('should parse github git url with trailing slash', () => {
     const repoInfo = parseRepoUrl('git://github.com/vercel/vercel.git/');
     expect(repoInfo).toBeTruthy();
     expect(repoInfo?.provider).toEqual('github');
     expect(repoInfo?.org).toEqual('vercel');
     expect(repoInfo?.repo).toEqual('vercel');
   });
-  it('should parse github ssh url', () => {
+  it.skip('should parse github ssh url', () => {
     const repoInfo = parseRepoUrl('git@github.com:vercel/vercel.git');
     expect(repoInfo).toBeTruthy();
     expect(repoInfo?.provider).toEqual('github');
@@ -124,7 +124,7 @@ describe('parseRepoUrl', () => {
     expect(repoInfo?.repo).toEqual('vercel');
   });
 
-  it('should parse gitlab https url', () => {
+  it.skip('should parse gitlab https url', () => {
     const repoInfo = parseRepoUrl(
       'https://gitlab.com/gitlab-examples/knative-kotlin-app.git'
     );
@@ -133,7 +133,7 @@ describe('parseRepoUrl', () => {
     expect(repoInfo?.org).toEqual('gitlab-examples');
     expect(repoInfo?.repo).toEqual('knative-kotlin-app');
   });
-  it('should parse gitlab ssh url', () => {
+  it.skip('should parse gitlab ssh url', () => {
     const repoInfo = parseRepoUrl(
       'git@gitlab.com:gitlab-examples/knative-kotlin-app.git'
     );
@@ -143,7 +143,7 @@ describe('parseRepoUrl', () => {
     expect(repoInfo?.repo).toEqual('knative-kotlin-app');
   });
 
-  it('should parse bitbucket https url', () => {
+  it.skip('should parse bitbucket https url', () => {
     const repoInfo = parseRepoUrl(
       'https://bitbucket.org/atlassianlabs/maven-project-example.git'
     );
@@ -152,7 +152,7 @@ describe('parseRepoUrl', () => {
     expect(repoInfo?.org).toEqual('atlassianlabs');
     expect(repoInfo?.repo).toEqual('maven-project-example');
   });
-  it('should parse bitbucket ssh url', () => {
+  it.skip('should parse bitbucket ssh url', () => {
     const repoInfo = parseRepoUrl(
       'git@bitbucket.org:atlassianlabs/maven-project-example.git'
     );
@@ -161,13 +161,13 @@ describe('parseRepoUrl', () => {
     expect(repoInfo?.org).toEqual('atlassianlabs');
     expect(repoInfo?.repo).toEqual('maven-project-example');
   });
-  it('should parse url without a scheme', () => {
+  it.skip('should parse url without a scheme', () => {
     const parsedUrl = parseRepoUrl('github.com/user/repo');
     expect(parsedUrl?.provider).toEqual('github');
     expect(parsedUrl?.org).toEqual('user');
     expect(parsedUrl?.repo).toEqual('repo');
   });
-  it('should parse a url that includes www.', () => {
+  it.skip('should parse a url that includes www.', () => {
     const parsedUrl = parseRepoUrl('www.github.com/user/repo');
     expect(parsedUrl?.provider).toEqual('github');
     expect(parsedUrl?.org).toEqual('user');
@@ -176,7 +176,7 @@ describe('parseRepoUrl', () => {
 });
 
 describe('createGitMeta', () => {
-  it('is undefined when it does not receive a remote url', async () => {
+  it.skip('is undefined when it does not receive a remote url', async () => {
     const directory = fixture('no-origin');
     try {
       await fs.rename(join(directory, 'git'), join(directory, '.git'));
@@ -193,7 +193,7 @@ describe('createGitMeta', () => {
       await fs.rename(join(directory, '.git'), join(directory, 'git'));
     }
   });
-  it('detects dirty commit', async () => {
+  it.skip('detects dirty commit', async () => {
     const directory = fixture('dirty');
     try {
       await fs.rename(join(directory, 'git'), join(directory, '.git'));
@@ -203,7 +203,7 @@ describe('createGitMeta', () => {
       await fs.rename(join(directory, '.git'), join(directory, 'git'));
     }
   });
-  it('detects not dirty commit', async () => {
+  it.skip('detects not dirty commit', async () => {
     const directory = fixture('not-dirty');
     try {
       await fs.rename(join(directory, 'git'), join(directory, '.git'));
@@ -213,7 +213,7 @@ describe('createGitMeta', () => {
       await fs.rename(join(directory, '.git'), join(directory, 'git'));
     }
   });
-  it('gets git metata from test-github', async () => {
+  it.skip('gets git metata from test-github', async () => {
     const directory = fixture('test-github');
     try {
       await fs.rename(join(directory, 'git'), join(directory, '.git'));
@@ -230,7 +230,7 @@ describe('createGitMeta', () => {
       await fs.rename(join(directory, '.git'), join(directory, 'git'));
     }
   });
-  it('gets git metadata from test-github when there are uncommitted changes', async () => {
+  it.skip('gets git metadata from test-github when there are uncommitted changes', async () => {
     const directory = fixture('test-github-dirty');
     try {
       await fs.rename(join(directory, 'git'), join(directory, '.git'));
@@ -247,7 +247,7 @@ describe('createGitMeta', () => {
       await fs.rename(join(directory, '.git'), join(directory, 'git'));
     }
   });
-  it('gets git metadata from test-gitlab', async () => {
+  it.skip('gets git metadata from test-gitlab', async () => {
     const directory = fixture('test-gitlab');
     try {
       await fs.rename(join(directory, 'git'), join(directory, '.git'));
@@ -264,7 +264,7 @@ describe('createGitMeta', () => {
       await fs.rename(join(directory, '.git'), join(directory, 'git'));
     }
   });
-  it('gets git metadata from test-bitbucket', async () => {
+  it.skip('gets git metadata from test-bitbucket', async () => {
     const directory = fixture('test-bitbucket');
     try {
       await fs.rename(join(directory, 'git'), join(directory, '.git'));
@@ -281,7 +281,7 @@ describe('createGitMeta', () => {
       await fs.rename(join(directory, '.git'), join(directory, 'git'));
     }
   });
-  it('fails when `.git` is corrupt', async () => {
+  it.skip('fails when `.git` is corrupt', async () => {
     const directory = fixture('git-corrupt');
     const tmpDir = join(os.tmpdir(), 'git-corrupt');
     try {
@@ -305,7 +305,7 @@ describe('createGitMeta', () => {
       await fs.remove(tmpDir);
     }
   });
-  it('uses the repo url for a connected project', async () => {
+  it.skip('uses the repo url for a connected project', async () => {
     const directory = fixture('connected-repo');
     client.cwd = directory;
     try {

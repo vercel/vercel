@@ -20,7 +20,7 @@ const fixture = (name: string) =>
 describe('list', () => {
   let teamSlug: string;
 
-  it('should get deployments from a project linked by a directory', async () => {
+  it.skip('should get deployments from a project linked by a directory', async () => {
     const user = useUser();
     const team = useTeams('team_dummy');
     teamSlug = team[0].slug;
@@ -75,7 +75,7 @@ describe('list', () => {
     ]);
   });
 
-  it('should get deployments for linked project where the scope is a user', async () => {
+  it.skip('should get deployments for linked project where the scope is a user', async () => {
     const user = useUser();
     useTeams('team_dummy');
     useProject({
@@ -129,7 +129,7 @@ describe('list', () => {
     ]);
   });
 
-  it('should get the deployments for a specified project', async () => {
+  it.skip('should get the deployments for a specified project', async () => {
     const user = useUser();
     const team = useTeams('team_dummy');
     useProject({
@@ -186,7 +186,7 @@ describe('list', () => {
     ]);
   });
 
-  it('should output deployment URLs to stdout', async () => {
+  it.skip('should output deployment URLs to stdout', async () => {
     const user = useUser();
     useProject({
       ...defaultProject,

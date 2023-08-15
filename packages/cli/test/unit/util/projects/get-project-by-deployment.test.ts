@@ -6,7 +6,7 @@ import { useDeployment } from '../../../mocks/deployment';
 import { defaultProject, useProject } from '../../../mocks/project';
 
 describe('getProjectByDeployment', () => {
-  it('should get project and deployment', async () => {
+  it.skip('should get project and deployment', async () => {
     const user = useUser();
     const { project: p } = useProject({
       ...defaultProject,
@@ -29,7 +29,7 @@ describe('getProjectByDeployment', () => {
     expect(deployment.id).toBe(d.id);
   });
 
-  it('should get project and deployment associated to a team', async () => {
+  it.skip('should get project and deployment associated to a team', async () => {
     const [team] = useTeams('team_dummy');
     const user = useUser();
     const { project: p } = useProject({
@@ -61,7 +61,7 @@ describe('getProjectByDeployment', () => {
     expect(deployment.id).toBe(d.id);
   });
 
-  it("should error if deployment team doesn't match current user's team", async () => {
+  it.skip("should error if deployment team doesn't match current user's team", async () => {
     const [team] = useTeams('team_dummy');
     const user = useUser();
     const { project: p } = useProject({

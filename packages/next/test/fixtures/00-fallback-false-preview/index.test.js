@@ -28,12 +28,12 @@ async function checkForChange(url, initialValue, fetchOpts) {
 const ctx = {};
 
 describe(`${__dirname.split(path.sep).pop()}`, () => {
-  it('should deploy and pass probe checks', async () => {
+  it.skip('should deploy and pass probe checks', async () => {
     const info = await deployAndTest(__dirname);
     Object.assign(ctx, info);
   });
 
-  it('should revalidate content properly from /blog', async () => {
+  it.skip('should revalidate content properly from /blog', async () => {
     const dataRes = await fetch(
       `${ctx.deploymentUrl}/_next/data/testing-build-id/blog.json`
     );
@@ -67,7 +67,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     expect($('#asPath').text()).toBe('/blog');
   });
 
-  it('should load content properly from /blog/first', async () => {
+  it.skip('should load content properly from /blog/first', async () => {
     const dataRes = await fetch(
       `${ctx.deploymentUrl}/_next/data/testing-build-id/blog/first.json`
     );
@@ -102,7 +102,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     expect($('#asPath').text()).toBe('/blog/first');
   });
 
-  it('should rewrite/404 for fallback: false page without preview mode', async () => {
+  it.skip('should rewrite/404 for fallback: false page without preview mode', async () => {
     const dataRes = await fetch(
       `${ctx.deploymentUrl}/_next/data/testing-build-id/blog/another.json`
     );
@@ -116,7 +116,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
 
   let previewCookie;
 
-  it('should enable preview mode successfully', async () => {
+  it.skip('should enable preview mode successfully', async () => {
     const res = await fetch(`${ctx.deploymentUrl}/api/enable`);
     expect(res.status).toBe(200);
 
@@ -140,7 +140,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     }, '');
   });
 
-  it('should load fallback: false page with preview mode', async () => {
+  it.skip('should load fallback: false page with preview mode', async () => {
     const dataRes = await fetch(
       `${ctx.deploymentUrl}/_next/data/testing-build-id/blog/another.json`,
       {

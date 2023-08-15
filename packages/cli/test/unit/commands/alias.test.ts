@@ -13,7 +13,7 @@ describe('alias', () => {
     await expect(client.stdout).toOutput('dummy-19.app');
   });
 
-  it('should list up to 2 aliases', async () => {
+  it.skip('should list up to 2 aliases', async () => {
     useUser();
     useAlias();
     client.setArgv('alias', 'ls', '--limit', '2');

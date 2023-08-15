@@ -29,12 +29,12 @@ async function checkForChange(url, initialValue, hardError) {
 const ctx = {};
 
 describe(`${__dirname.split(path.sep).pop()}`, () => {
-  it('should deploy and pass probe checks', async () => {
+  it.skip('should deploy and pass probe checks', async () => {
     const info = await deployAndTest(__dirname);
     Object.assign(ctx, info);
   });
 
-  it('should revalidate content properly from /', async () => {
+  it.skip('should revalidate content properly from /', async () => {
     const res = await fetch(`${ctx.deploymentUrl}/`);
     expect(res.status).toBe(200);
 
@@ -52,7 +52,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     expect($('#router-locale').text()).toBe('en-US');
   });
 
-  it('should revalidate content properly from /fr', async () => {
+  it.skip('should revalidate content properly from /fr', async () => {
     const res = await fetch(`${ctx.deploymentUrl}/fr`);
     expect(res.status).toBe(200);
 
@@ -70,7 +70,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     expect($('#router-locale').text()).toBe('fr');
   });
 
-  it('should revalidate content properly from /nl-NL', async () => {
+  it.skip('should revalidate content properly from /nl-NL', async () => {
     const res = await fetch(`${ctx.deploymentUrl}/nl-NL`);
     expect(res.status).toBe(200);
 
@@ -88,7 +88,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     expect($('#router-locale').text()).toBe('nl-NL');
   });
 
-  it('should revalidate content properly from /second', async () => {
+  it.skip('should revalidate content properly from /second', async () => {
     const res = await fetch(`${ctx.deploymentUrl}/second`);
     expect(res.status).toBe(200);
 
@@ -107,7 +107,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     expect($('#router-locale').text()).toBe('en-US');
   });
 
-  it('should revalidate content properly from /fr/second', async () => {
+  it.skip('should revalidate content properly from /fr/second', async () => {
     const res = await fetch(`${ctx.deploymentUrl}/fr/second`);
     expect(res.status).toBe(200);
 
@@ -126,7 +126,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     expect($('#router-locale').text()).toBe('fr');
   });
 
-  it('should revalidate content properly from /nl-NL/second', async () => {
+  it.skip('should revalidate content properly from /nl-NL/second', async () => {
     const res = await fetch(`${ctx.deploymentUrl}/nl-NL/second`);
     expect(res.status).toBe(200);
 

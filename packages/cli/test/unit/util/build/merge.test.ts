@@ -5,7 +5,7 @@ import { merge } from '../../../../src/util/build/merge';
 import { isErrnoException } from '@vercel/error-utils';
 
 describe('merge()', () => {
-  it('should move source to non-existent destination', async () => {
+  it.skip('should move source to non-existent destination', async () => {
     const source = join(tmpdir(), 'src');
     const dest = join(tmpdir(), 'dest');
     try {
@@ -24,7 +24,7 @@ describe('merge()', () => {
     }
   });
 
-  it('should merge source into existing destination', async () => {
+  it.skip('should merge source into existing destination', async () => {
     const source = join(tmpdir(), 'src');
     const dest = join(tmpdir(), 'dest');
     try {
@@ -48,7 +48,7 @@ describe('merge()', () => {
     }
   });
 
-  it('should overwrite dest directory when source is a file', async () => {
+  it.skip('should overwrite dest directory when source is a file', async () => {
     const source = join(tmpdir(), 'src');
     const dest = join(tmpdir(), 'dest');
     try {

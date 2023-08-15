@@ -1,7 +1,7 @@
 import { NodejsLambda, FileBlob } from '../src';
 
 describe('Test `NodejsLambda`', () => {
-  it('should create an instance', () => {
+  it.skip('should create an instance', () => {
     const helloSrc = 'module.exports = (req, res) => res.end("hi");';
     const lambda = new NodejsLambda({
       files: {

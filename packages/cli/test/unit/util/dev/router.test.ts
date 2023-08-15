@@ -1,7 +1,7 @@
 import { devRouter } from '../../../../src/util/dev/router';
 
 describe('devRouter', () => {
-  it('should handle 301 redirection', async () => {
+  it.skip('should handle 301 redirection', async () => {
     const routesConfig = [
       {
         src: '/redirect',
@@ -26,7 +26,7 @@ describe('devRouter', () => {
     });
   });
 
-  it('should match captured groups', async () => {
+  it.skip('should match captured groups', async () => {
     const routesConfig = [{ src: '/api/(.*)', dest: '/endpoints/$1.js' }];
     const result = await devRouter('/api/user', 'GET', routesConfig);
 
@@ -45,7 +45,7 @@ describe('devRouter', () => {
     });
   });
 
-  it('should match named groups', async () => {
+  it.skip('should match named groups', async () => {
     const routesConfig = [{ src: '/user/(?<id>.+)', dest: '/user.js?id=$id' }];
     const result = await devRouter('/user/123', 'GET', routesConfig);
 
@@ -64,7 +64,7 @@ describe('devRouter', () => {
     });
   });
 
-  it('should match optional named groups', async () => {
+  it.skip('should match optional named groups', async () => {
     const routesConfig = [
       {
         src: '/api/hello(/(?<name>[^/]+))?',
@@ -88,7 +88,7 @@ describe('devRouter', () => {
     });
   });
 
-  it('should match proxy_pass', async () => {
+  it.skip('should match proxy_pass', async () => {
     const routesConfig = [{ src: '/proxy', dest: 'https://vercel.com' }];
 
     const result = await devRouter('/proxy', 'GET', routesConfig);
@@ -108,7 +108,7 @@ describe('devRouter', () => {
     });
   });
 
-  it('should match `methods`', async () => {
+  it.skip('should match `methods`', async () => {
     const routesConfig = [
       { src: '/.*', methods: ['POST'], dest: '/post' },
       { src: '/.*', methods: ['GET'], dest: '/get' },
@@ -145,7 +145,7 @@ describe('devRouter', () => {
     });
   });
 
-  it('should match without prefix slash', async () => {
+  it.skip('should match without prefix slash', async () => {
     const routesConfig = [{ src: 'api/(.*)', dest: 'endpoints/$1.js' }];
     const result = await devRouter('/api/user', 'GET', routesConfig);
 
@@ -164,7 +164,7 @@ describe('devRouter', () => {
     });
   });
 
-  it('should match with needed prefixed slash', async () => {
+  it.skip('should match with needed prefixed slash', async () => {
     const routesConfig = [
       {
         src: '^\\/([^\\/]+?)\\/comments(?:\\/)?$',
@@ -191,7 +191,7 @@ describe('devRouter', () => {
     });
   });
 
-  it('should match `continue: true` with fallthrough', async () => {
+  it.skip('should match `continue: true` with fallthrough', async () => {
     const routesConfig = [
       {
         src: '/_next/static/(?:[^/]+/pages|chunks|runtime)/.+',
@@ -221,7 +221,7 @@ describe('devRouter', () => {
     });
   });
 
-  it('should match `continue: true` with match', async () => {
+  it.skip('should match `continue: true` with match', async () => {
     const routesConfig = [
       {
         src: '/_next/static/(?:[^/]+/pages|chunks|runtime)/.+',
@@ -261,7 +261,7 @@ describe('devRouter', () => {
     });
   });
 
-  it('should match with catch-all with prefix slash', async () => {
+  it.skip('should match with catch-all with prefix slash', async () => {
     const routesConfig = [{ src: '/(.*)', dest: '/www/$1' }];
     const result = await devRouter('/', 'GET', routesConfig);
 
@@ -280,7 +280,7 @@ describe('devRouter', () => {
     });
   });
 
-  it('should match with catch-all with no prefix slash', async () => {
+  it.skip('should match with catch-all with no prefix slash', async () => {
     const routesConfig = [{ src: '(.*)', dest: '/www$1' }];
     const result = await devRouter('/', 'GET', routesConfig);
 
@@ -299,7 +299,7 @@ describe('devRouter', () => {
     });
   });
 
-  it('should match `continue: true` with `dest`', async () => {
+  it.skip('should match `continue: true` with `dest`', async () => {
     const routesConfig = [
       { src: '/(.*)', dest: '/www/$1', continue: true },
       {

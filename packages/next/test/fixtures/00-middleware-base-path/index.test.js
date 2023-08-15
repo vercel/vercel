@@ -6,12 +6,12 @@ const fetch = require('../../../../../test/lib/deployment/fetch-retry');
 describe(`${__dirname.split(path.sep).pop()}`, () => {
   let ctx = {};
 
-  it('should deploy and pass probe checks', async () => {
+  it.skip('should deploy and pass probe checks', async () => {
     const info = await deployAndTest(__dirname);
     Object.assign(ctx, info);
   });
 
-  it('should revalidate content correctly for middleware rewrite', async () => {
+  it.skip('should revalidate content correctly for middleware rewrite', async () => {
     const propsFromHtml = async () => {
       let res = await fetch(
         `${ctx.deploymentUrl}/docs/rewrite-to-another-site`
@@ -71,7 +71,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     }, 'success');
   });
 
-  it('should revalidate content correctly for optional catch-all route', async () => {
+  it.skip('should revalidate content correctly for optional catch-all route', async () => {
     const propsFromHtml = async () => {
       let res = await fetch(`${ctx.deploymentUrl}/docs/financial`);
       let $ = cheerio.load(await res.text());

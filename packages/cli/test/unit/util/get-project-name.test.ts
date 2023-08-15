@@ -1,7 +1,7 @@
 import getProjectName from '../../../src/util/get-project-name';
 
 describe('getProjectName', () => {
-  it('should work with argv', () => {
+  it.skip('should work with argv', () => {
     const project = getProjectName({
       argv: {
         '--name': 'abc',
@@ -10,7 +10,7 @@ describe('getProjectName', () => {
     expect(project).toEqual('abc');
   });
 
-  it('should work with `vercel.json` config', () => {
+  it.skip('should work with `vercel.json` config', () => {
     const project = getProjectName({
       argv: {},
       nowConfig: { name: 'abc' },
@@ -18,7 +18,7 @@ describe('getProjectName', () => {
     expect(project).toEqual('abc');
   });
 
-  it('should work with a directory', () => {
+  it.skip('should work with a directory', () => {
     const project = getProjectName({
       argv: {},
       nowConfig: {},

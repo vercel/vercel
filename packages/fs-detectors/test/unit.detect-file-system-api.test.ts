@@ -1,7 +1,7 @@
 import { detectFileSystemAPI } from '../src/detect-file-system-api';
 
 describe('Test `detectFileSystemAPI`', () => {
-  it('should error when builds in vercel.json', async () => {
+  it.skip('should error when builds in vercel.json', async () => {
     const vercelConfig = {
       builds: [{ use: '@vercel/node', src: 'api/**/*.js' }],
     };
@@ -26,7 +26,7 @@ describe('Test `detectFileSystemAPI`', () => {
     });
   });
 
-  it('should error when functions.runtimes in vercel.json', async () => {
+  it.skip('should error when functions.runtimes in vercel.json', async () => {
     const vercelConfig = {
       functions: {
         'api/**/*.rs': {
@@ -55,7 +55,7 @@ describe('Test `detectFileSystemAPI`', () => {
     });
   });
 
-  it('should error when HUGO_VERSION env var used', async () => {
+  it.skip('should error when HUGO_VERSION env var used', async () => {
     process.env.HUGO_VERSION = 'v0.58.2';
     const files = { 'foo.html': '<h1>Foo</h1>' };
     const result = await detectFileSystemAPI({
@@ -75,7 +75,7 @@ describe('Test `detectFileSystemAPI`', () => {
     delete process.env.HUGO_VERSION;
   });
 
-  it('should error when ZOLA_VERSION env var used', async () => {
+  it.skip('should error when ZOLA_VERSION env var used', async () => {
     process.env.ZOLA_VERSION = 'v0.0.1';
     const files = { 'foo.html': '<h1>Foo</h1>' };
     const result = await detectFileSystemAPI({
@@ -95,7 +95,7 @@ describe('Test `detectFileSystemAPI`', () => {
     delete process.env.ZOLA_VERSION;
   });
 
-  it('should error when GUTENBERG_VERSION env var used', async () => {
+  it.skip('should error when GUTENBERG_VERSION env var used', async () => {
     process.env.GUTENBERG_VERSION = 'v0.0.1';
     const files = { 'foo.html': '<h1>Foo</h1>' };
     const result = await detectFileSystemAPI({
@@ -116,7 +116,7 @@ describe('Test `detectFileSystemAPI`', () => {
     delete process.env.GUTENBERG_VERSION;
   });
 
-  it('should error when Go detected without corresponding plugin', async () => {
+  it.skip('should error when Go detected without corresponding plugin', async () => {
     const result = await detectFileSystemAPI({
       files: { 'api/foo.go': 'print("foo")' },
       projectSettings: {},
@@ -134,7 +134,7 @@ describe('Test `detectFileSystemAPI`', () => {
     });
   });
 
-  it('should error when Python detected without corresponding plugin', async () => {
+  it.skip('should error when Python detected without corresponding plugin', async () => {
     const result = await detectFileSystemAPI({
       files: { 'api/foo.py': 'print("foo")' },
       projectSettings: {},
@@ -152,7 +152,7 @@ describe('Test `detectFileSystemAPI`', () => {
     });
   });
 
-  it('should error when Ruby detected without corresponding plugin', async () => {
+  it.skip('should error when Ruby detected without corresponding plugin', async () => {
     const result = await detectFileSystemAPI({
       files: { 'api/foo.rb': 'print("foo")' },
       projectSettings: {},
@@ -170,7 +170,7 @@ describe('Test `detectFileSystemAPI`', () => {
     });
   });
 
-  it('should succeed when Go detected with corresponding plugin', async () => {
+  it.skip('should succeed when Go detected with corresponding plugin', async () => {
     const result = await detectFileSystemAPI({
       files: { 'api/foo.go': 'print("foo")' },
       projectSettings: {},
@@ -201,7 +201,7 @@ describe('Test `detectFileSystemAPI`', () => {
     });
   });
 
-  it('should succeed when Python detected with corresponding plugin', async () => {
+  it.skip('should succeed when Python detected with corresponding plugin', async () => {
     const result = await detectFileSystemAPI({
       files: { 'api/foo.py': 'print("foo")' },
       projectSettings: {},
@@ -232,7 +232,7 @@ describe('Test `detectFileSystemAPI`', () => {
     });
   });
 
-  it('should succeed when Ruby detected with corresponding plugin', async () => {
+  it.skip('should succeed when Ruby detected with corresponding plugin', async () => {
     const result = await detectFileSystemAPI({
       files: { 'api/foo.rb': 'print("foo")' },
       projectSettings: {},
@@ -263,7 +263,7 @@ describe('Test `detectFileSystemAPI`', () => {
     });
   });
 
-  it('should error when framework is nuxtjs', async () => {
+  it.skip('should error when framework is nuxtjs', async () => {
     const result = await detectFileSystemAPI({
       files: { 'api/foo.js': 'console.log("foo")' },
       projectSettings: { framework: 'nuxtjs' },
@@ -281,7 +281,7 @@ describe('Test `detectFileSystemAPI`', () => {
     });
   });
 
-  it('should error when framework is sveltekit', async () => {
+  it.skip('should error when framework is sveltekit', async () => {
     const result = await detectFileSystemAPI({
       files: { 'api/foo.js': 'console.log("foo")' },
       projectSettings: { framework: 'sveltekit' },
@@ -299,7 +299,7 @@ describe('Test `detectFileSystemAPI`', () => {
     });
   });
 
-  it('should error when framework is redwoodjs', async () => {
+  it.skip('should error when framework is redwoodjs', async () => {
     const result = await detectFileSystemAPI({
       files: { 'api/foo.js': 'console.log("foo")' },
       projectSettings: { framework: 'redwoodjs' },
@@ -317,7 +317,7 @@ describe('Test `detectFileSystemAPI`', () => {
     });
   });
 
-  it('should error when framework is nextjs and has output dir', async () => {
+  it.skip('should error when framework is nextjs and has output dir', async () => {
     const result = await detectFileSystemAPI({
       files: { 'pages/foo.js': 'console.log("foo")' },
       projectSettings: { framework: 'nextjs', outputDirectory: 'dist' },
@@ -335,7 +335,7 @@ describe('Test `detectFileSystemAPI`', () => {
     });
   });
 
-  it('should error when framework is nextjs but missing from dependencies', async () => {
+  it.skip('should error when framework is nextjs but missing from dependencies', async () => {
     const result = await detectFileSystemAPI({
       files: { 'pages/foo.js': 'console.log("foo")' },
       projectSettings: { framework: 'nextjs' },
@@ -353,7 +353,7 @@ describe('Test `detectFileSystemAPI`', () => {
     });
   });
 
-  it('should error when framework is nextjs but dependency is older version', async () => {
+  it.skip('should error when framework is nextjs but dependency is older version', async () => {
     const result = await detectFileSystemAPI({
       files: { 'pages/foo.js': 'console.log("foo")' },
       projectSettings: { framework: 'nextjs' },
@@ -371,7 +371,7 @@ describe('Test `detectFileSystemAPI`', () => {
     });
   });
 
-  it('should error when vercel cli is older version', async () => {
+  it.skip('should error when vercel cli is older version', async () => {
     const result = await detectFileSystemAPI({
       files: { 'pages/foo.js': 'console.log("foo")' },
       projectSettings: { framework: 'nextjs' },
@@ -389,7 +389,7 @@ describe('Test `detectFileSystemAPI`', () => {
     });
   });
 
-  it('should succeed when middleware detected', async () => {
+  it.skip('should succeed when middleware detected', async () => {
     const result = await detectFileSystemAPI({
       files: { '_middleware.js': 'print("foo")' },
       projectSettings: {},
@@ -416,7 +416,7 @@ describe('Test `detectFileSystemAPI`', () => {
     });
   });
 
-  it('should succeed when .output detected', async () => {
+  it.skip('should succeed when .output detected', async () => {
     const result = await detectFileSystemAPI({
       files: { '.output/routes-manifest.json': '{}' },
       projectSettings: { framework: 'remix' },

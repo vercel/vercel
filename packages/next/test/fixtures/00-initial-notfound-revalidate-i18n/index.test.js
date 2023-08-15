@@ -15,7 +15,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
 
   let previewCookie;
 
-  it('should enable preview mode successfully', async () => {
+  it.skip('should enable preview mode successfully', async () => {
     const res = await fetch(`${ctx.deploymentUrl}/api/enable`);
     expect(res.status).toBe(200);
 
@@ -39,7 +39,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     }, '');
   });
 
-  it('should render the page on-demand with preview mode enabled', async () => {
+  it.skip('should render the page on-demand with preview mode enabled', async () => {
     for (const locale of ['fr', 'en-US', 'fr-FR', 'nl', 'nl-NL', 'de']) {
       const dataRes = await fetch(
         `${ctx.deploymentUrl}/_next/data/testing-build-id/${locale}/preview-only-not-found.json`

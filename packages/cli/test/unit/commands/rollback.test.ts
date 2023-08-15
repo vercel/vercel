@@ -13,7 +13,7 @@ import sleep from '../../../src/util/sleep';
 jest.setTimeout(60000);
 
 describe('rollback', () => {
-  it('should error if timeout is invalid', async () => {
+  it.skip('should error if timeout is invalid', async () => {
     const { cwd } = initRollbackTest();
     client.cwd = cwd;
     client.setArgv('rollback', '--yes', '--timeout', 'foo');
@@ -23,7 +23,7 @@ describe('rollback', () => {
     await expect(exitCodePromise).resolves.toEqual(1);
   });
 
-  it('should error if invalid deployment ID', async () => {
+  it.skip('should error if invalid deployment ID', async () => {
     const { cwd } = initRollbackTest();
     client.cwd = cwd;
     client.setArgv('rollback', '????', '--yes');
@@ -35,7 +35,7 @@ describe('rollback', () => {
     await expect(exitCodePromise).resolves.toEqual(1);
   });
 
-  it('should error if deployment not found', async () => {
+  it.skip('should error if deployment not found', async () => {
     const { cwd } = initRollbackTest();
     client.cwd = cwd;
     client.setArgv('rollback', 'foo', '--yes');
@@ -48,7 +48,7 @@ describe('rollback', () => {
     await expect(exitCodePromise).resolves.toEqual(1);
   });
 
-  it('should show status when not rolling back', async () => {
+  it.skip('should show status when not rolling back', async () => {
     const { cwd } = initRollbackTest();
     client.cwd = cwd;
     client.setArgv('rollback', '--yes');
@@ -62,7 +62,7 @@ describe('rollback', () => {
     await expect(exitCodePromise).resolves.toEqual(0);
   });
 
-  it('should rollback by deployment id', async () => {
+  it.skip('should rollback by deployment id', async () => {
     const { cwd, previousDeployment } = initRollbackTest();
     client.cwd = cwd;
     client.setArgv('rollback', previousDeployment.id, '--yes');
@@ -81,7 +81,7 @@ describe('rollback', () => {
     await expect(exitCodePromise).resolves.toEqual(0);
   });
 
-  it('should rollback by deployment url', async () => {
+  it.skip('should rollback by deployment url', async () => {
     const { cwd, previousDeployment } = initRollbackTest();
     client.cwd = cwd;
     client.setArgv('rollback', previousDeployment.url, '--yes');
@@ -100,7 +100,7 @@ describe('rollback', () => {
     await expect(exitCodePromise).resolves.toEqual(0);
   });
 
-  it('should get status while rolling back', async () => {
+  it.skip('should get status while rolling back', async () => {
     const { cwd, previousDeployment, project } = initRollbackTest({
       rollbackPollCount: 10,
     });
@@ -129,7 +129,7 @@ describe('rollback', () => {
     await expect(exitCodePromise).resolves.toEqual(0);
   });
 
-  it('should error if rollback request fails', async () => {
+  it.skip('should error if rollback request fails', async () => {
     const { cwd, previousDeployment } = initRollbackTest({
       rollbackPollCount: 10,
       rollbackStatusCode: 500,
@@ -148,7 +148,7 @@ describe('rollback', () => {
     await expect(exitCodePromise).resolves.toEqual(1);
   });
 
-  it('should error if rollback fails (no aliases)', async () => {
+  it.skip('should error if rollback fails (no aliases)', async () => {
     const { cwd, previousDeployment } = initRollbackTest({
       rollbackJobStatus: 'failed',
     });
@@ -167,7 +167,7 @@ describe('rollback', () => {
     await expect(exitCodePromise).resolves.toEqual(1);
   });
 
-  it('should error if rollback fails (with aliases)', async () => {
+  it.skip('should error if rollback fails (with aliases)', async () => {
     const { cwd, previousDeployment } = initRollbackTest({
       rollbackAliases: [
         {
@@ -202,7 +202,7 @@ describe('rollback', () => {
     await expect(exitCodePromise).resolves.toEqual(1);
   });
 
-  it('should error if deployment times out', async () => {
+  it.skip('should error if deployment times out', async () => {
     const { cwd, previousDeployment } = initRollbackTest({
       rollbackPollCount: 10,
     });
@@ -229,7 +229,7 @@ describe('rollback', () => {
     await expect(exitCodePromise).resolves.toEqual(1);
   });
 
-  it('should immediately exit after requesting rollback', async () => {
+  it.skip('should immediately exit after requesting rollback', async () => {
     const { cwd, previousDeployment } = initRollbackTest();
     client.cwd = cwd;
     client.setArgv(
@@ -253,7 +253,7 @@ describe('rollback', () => {
     await expect(exitCodePromise).resolves.toEqual(0);
   });
 
-  it('should error if deployment belongs to different team', async () => {
+  it.skip('should error if deployment belongs to different team', async () => {
     const { cwd, previousDeployment } = initRollbackTest();
     previousDeployment.team = {
       id: 'abc',

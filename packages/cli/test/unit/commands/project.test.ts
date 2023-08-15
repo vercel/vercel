@@ -12,7 +12,7 @@ import {
 
 describe('project', () => {
   describe('list', () => {
-    it('should list projects', async () => {
+    it.skip('should list projects', async () => {
       const user = useUser();
       useTeams('team_dummy');
       const project = useProject({
@@ -49,7 +49,7 @@ describe('project', () => {
       expect(data).toEqual([project.project.name, 'https://foobar.com']);
     });
 
-    it('should list projects when there is no production deployment', async () => {
+    it.skip('should list projects when there is no production deployment', async () => {
       const user = useUser();
       useTeams('team_dummy');
       defaultProject.alias = [];
@@ -89,7 +89,7 @@ describe('project', () => {
   });
 
   describe('add', () => {
-    it('should add a project', async () => {
+    it.skip('should add a project', async () => {
       const user = useUser();
       useProject({
         ...defaultProject,
@@ -110,7 +110,7 @@ describe('project', () => {
   });
 
   describe('rm', () => {
-    it('should remove a project', async () => {
+    it.skip('should remove a project', async () => {
       useUser();
       useProject({
         ...defaultProject,

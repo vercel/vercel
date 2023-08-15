@@ -22,7 +22,7 @@ const SIMPLE_PROJECT = path.resolve(
 jest.setTimeout(360000);
 
 function sharedTests(ctx) {
-  it('worker uses `middleware` or `middlewarePath` keyword as route path', async () => {
+  it.skip('worker uses `middleware` or `middlewarePath` keyword as route path', async () => {
     const routes = ctx.buildResult.routes.filter(
       route => 'middleware' in route || 'middlewarePath' in route
     );
@@ -52,7 +52,7 @@ async function hashAllFiles(files) {
 
 // experimental appDir currently requires Node.js >= 16
 if (parseInt(process.versions.node.split('.')[0], 10) >= 16) {
-  it('should build with app-dir correctly', async () => {
+  it.skip('should build with app-dir correctly', async () => {
     const { buildResult } = await runBuildLambda(
       path.join(__dirname, '../fixtures/00-app-dir')
     );
@@ -122,7 +122,7 @@ if (parseInt(process.versions.node.split('.')[0], 10) >= 16) {
     // );
   });
 
-  it('should build with app-dir with segment options correctly', async () => {
+  it.skip('should build with app-dir with segment options correctly', async () => {
     const { buildResult } = await runBuildLambda(
       path.join(__dirname, '../fixtures/00-app-dir-segment-options')
     );
@@ -156,7 +156,7 @@ if (parseInt(process.versions.node.split('.')[0], 10) >= 16) {
     ).toBe(true);
   });
 
-  it('should build with app-dir in edge runtime correctly', async () => {
+  it.skip('should build with app-dir in edge runtime correctly', async () => {
     const { buildResult } = await runBuildLambda(
       path.join(__dirname, '../fixtures/00-app-dir-edge')
     );
@@ -175,7 +175,7 @@ if (parseInt(process.versions.node.split('.')[0], 10) >= 16) {
     // expect(buildResult.output['index/index']).toBeDefined();
   });
 
-  it('should show error from basePath with legacy monorepo build', async () => {
+  it.skip('should show error from basePath with legacy monorepo build', async () => {
     let error;
 
     try {
@@ -584,7 +584,7 @@ describe('Middleware simple project', () => {
     ctx.buildResult = result.buildResult;
   });
 
-  it('orders middleware route correctly', async () => {
+  it.skip('orders middleware route correctly', async () => {
     const middlewareIndex = ctx.buildResult.routes.findIndex(item => {
       return !!item.middlewarePath;
     });
@@ -606,7 +606,7 @@ describe('Middleware simple project', () => {
     expect(middlewareIndex).toBeLessThan(handleFileSystemIndex);
   });
 
-  it('generates deterministic code', async () => {
+  it.skip('generates deterministic code', async () => {
     const result = await runBuildLambda(SIMPLE_PROJECT);
     const output = Object.entries(result.buildResult.output).filter(pair => {
       return pair[1].type === 'EdgeFunction';

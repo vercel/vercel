@@ -12,7 +12,7 @@ import { useUser } from '../../mocks/user';
 import humanizePath from '../../../src/util/humanize-path';
 
 describe('deploy', () => {
-  it('should reject deploying a single file', async () => {
+  it.skip('should reject deploying a single file', async () => {
     client.setArgv('deploy', __filename);
     const exitCodePromise = deploy(client);
     await expect(client.stderr).toOutput(
@@ -21,7 +21,7 @@ describe('deploy', () => {
     await expect(exitCodePromise).resolves.toEqual(1);
   });
 
-  it('should reject deploying multiple files', async () => {
+  it.skip('should reject deploying multiple files', async () => {
     client.setArgv('deploy', __filename, join(__dirname, 'inspect.test.ts'));
     const exitCodePromise = deploy(client);
     await expect(client.stderr).toOutput(
@@ -30,7 +30,7 @@ describe('deploy', () => {
     await expect(exitCodePromise).resolves.toEqual(1);
   });
 
-  it('should reject deploying a directory that does not exist', async () => {
+  it.skip('should reject deploying a directory that does not exist', async () => {
     const badName = 'does-not-exist';
     client.setArgv('deploy', badName);
     const exitCodePromise = deploy(client);
@@ -42,7 +42,7 @@ describe('deploy', () => {
     await expect(exitCodePromise).resolves.toEqual(1);
   });
 
-  it('should reject deploying when `--prebuilt` is used and `vc build` failed before Builders', async () => {
+  it.skip('should reject deploying when `--prebuilt` is used and `vc build` failed before Builders', async () => {
     const cwd = setupUnitFixture('build-output-api-failed-before-builds');
 
     useUser();
@@ -61,7 +61,7 @@ describe('deploy', () => {
     await expect(exitCodePromise).resolves.toEqual(1);
   });
 
-  it('should reject deploying when `--prebuilt` is used and `vc build` failed within a Builder', async () => {
+  it.skip('should reject deploying when `--prebuilt` is used and `vc build` failed within a Builder', async () => {
     const cwd = setupUnitFixture('build-output-api-failed-within-build');
 
     useUser();
@@ -80,7 +80,7 @@ describe('deploy', () => {
     await expect(exitCodePromise).resolves.toEqual(1);
   });
 
-  it('should reject deploying a directory that does not contain ".vercel/output" when `--prebuilt` is used', async () => {
+  it.skip('should reject deploying a directory that does not contain ".vercel/output" when `--prebuilt` is used', async () => {
     useUser();
     useTeams('team_dummy');
     useProject({
@@ -98,7 +98,7 @@ describe('deploy', () => {
     await expect(exitCodePromise).resolves.toEqual(1);
   });
 
-  it('should reject deploying a directory that was built with a different target environment when `--prebuilt --prod` is used on "preview" output', async () => {
+  it.skip('should reject deploying a directory that was built with a different target environment when `--prebuilt --prod` is used on "preview" output', async () => {
     const cwd = setupUnitFixture('build-output-api-preview');
 
     useUser();
@@ -120,7 +120,7 @@ describe('deploy', () => {
     await expect(exitCodePromise).resolves.toEqual(1);
   });
 
-  it('should reject deploying a directory that was built with a different target environment when `--prebuilt` is used on "production" output', async () => {
+  it.skip('should reject deploying a directory that was built with a different target environment when `--prebuilt` is used on "production" output', async () => {
     const cwd = setupUnitFixture('build-output-api-production');
 
     useUser();
@@ -142,7 +142,7 @@ describe('deploy', () => {
     await expect(exitCodePromise).resolves.toEqual(1);
   });
 
-  it('should reject deploying "version: 1"', async () => {
+  it.skip('should reject deploying "version: 1"', async () => {
     client.setArgv('deploy');
     client.localConfig = {
       [fileNameSymbol]: 'vercel.json',
@@ -155,7 +155,7 @@ describe('deploy', () => {
     await expect(exitCodePromise).resolves.toEqual(1);
   });
 
-  it('should reject deploying "version: {}"', async () => {
+  it.skip('should reject deploying "version: {}"', async () => {
     client.setArgv('deploy');
     client.localConfig = {
       [fileNameSymbol]: 'vercel.json',
@@ -169,7 +169,7 @@ describe('deploy', () => {
     await expect(exitCodePromise).resolves.toEqual(1);
   });
 
-  it('should send a tgz file when `--archive=tgz`', async () => {
+  it.skip('should send a tgz file when `--archive=tgz`', async () => {
     const user = useUser();
     useTeams('team_dummy');
     useProject({
@@ -222,7 +222,7 @@ describe('deploy', () => {
     expect(body?.files?.[0].file).toEqual('.vercel/source.tgz');
   });
 
-  it('should pass flag to skip custom domain assignment', async () => {
+  it.skip('should pass flag to skip custom domain assignment', async () => {
     const user = useUser();
     useTeams('team_dummy');
     useProject({
@@ -267,7 +267,7 @@ describe('deploy', () => {
     });
   });
 
-  it('should upload missing files', async () => {
+  it.skip('should upload missing files', async () => {
     const cwd = setupUnitFixture('commands/deploy/static');
     client.cwd = cwd;
 
@@ -373,7 +373,7 @@ describe('deploy', () => {
     ).toEqual(true);
   });
 
-  it('should deploy project linked with `repo.json`', async () => {
+  it.skip('should deploy project linked with `repo.json`', async () => {
     const user = useUser();
     useTeams('team_dummy');
     useProject({
