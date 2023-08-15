@@ -246,7 +246,7 @@ export async function getLinkedProject(
     if (isAPIError(err) && err.status === 403) {
       output.stopSpinner();
 
-      if (err.missingToken) {
+      if (err.missingToken || err.invalidToken) {
         throw new InvalidToken();
       } else {
         throw new NowBuildError({

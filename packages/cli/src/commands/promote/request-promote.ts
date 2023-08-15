@@ -4,6 +4,7 @@ import { getCommandName } from '../../util/pkg-name';
 import getProjectByDeployment from '../../util/projects/get-project-by-deployment';
 import ms from 'ms';
 import promoteStatus from './status';
+import confirm from '../../util/input/confirm';
 
 /**
  * Requests a promotion and waits for it complete.
@@ -16,10 +17,12 @@ export default async function requestPromote({
   client,
   deployId,
   timeout,
+  yes,
 }: {
   client: Client;
   deployId: string;
   timeout?: string;
+  yes: boolean;
 }): Promise<number> {
   const { output } = client;
 
@@ -28,6 +31,16 @@ export default async function requestPromote({
     deployId,
     output: client.output,
   });
+
+  if (deployment.target !== 'production' && !yes) {
+    const question =
+      'This deployment does not target production, therefore promotion will not apply production environment variables. Are you sure you want to continue?';
+    const answer = await confirm(client, question, false);
+    if (!answer) {
+      output.error('Canceled');
+      return 0;
+    }
+  }
 
   // request the promotion
   await client.fetch(`/v9/projects/${project.id}/promote/${deployment.id}`, {

@@ -1,5 +1,71 @@
 # @vercel/remix-builder
 
+## 1.10.1
+
+### Patch Changes
+
+- Set default env vars for Hydrogen v2 deployments ([#10341](https://github.com/vercel/vercel/pull/10341))
+
+## 1.10.0
+
+### Minor Changes
+
+- Add initial support for Hydrogen v2 ([#10305](https://github.com/vercel/vercel/pull/10305))
+
+### Patch Changes
+
+- Update `@remix-run/dev` fork to v1.19.2 ([#10299](https://github.com/vercel/vercel/pull/10299))
+
+- Updated dependencies [[`a8ecf40d6`](https://github.com/vercel/vercel/commit/a8ecf40d6f50e2fc8b13b02c8ef50b3dcafad3a6)]:
+  - @vercel/build-utils@6.8.3
+
+## 1.9.1
+
+### Patch Changes
+
+- Disable root workspace check in pnpm and yarn when adding deps ([#10291](https://github.com/vercel/vercel/pull/10291))
+
+## 1.9.0
+
+### Minor Changes
+
+- Install `@vercel/remix-run-dev` at build-time instead of using symlink ([#9784](https://github.com/vercel/vercel/pull/9784))
+
+### Patch Changes
+
+- Update `@remix-run/dev` fork to v1.19.1 ([#10246](https://github.com/vercel/vercel/pull/10246))
+
+## 1.8.18
+
+### Patch Changes
+
+- Create ensured dependency symlink at the `start` directory, instead of root of repo ([#10224](https://github.com/vercel/vercel/pull/10224))
+
+## 1.8.17
+
+### Patch Changes
+
+- Updated dependencies [[`0750517af`](https://github.com/vercel/vercel/commit/0750517af99aea41410d4f1f772ce427699554e7)]:
+  - @vercel/build-utils@6.8.2
+
+## 1.8.16
+
+### Patch Changes
+
+- Update `@remix-run/dev` fork to v1.18.1 ([#10180](https://github.com/vercel/vercel/pull/10180))
+
+- Updated dependencies [[`7021279b2`](https://github.com/vercel/vercel/commit/7021279b284f314a4d1bdbb4306b4c22291efa08)]:
+  - @vercel/build-utils@6.8.1
+
+## 1.8.15
+
+### Patch Changes
+
+- Update `@remix-run/dev` fork to v1.18.0 ([#10146](https://github.com/vercel/vercel/pull/10146))
+
+- Updated dependencies [[`346892210`](https://github.com/vercel/vercel/commit/3468922108f411482a72acd0331f0f2ee52a6d4c)]:
+  - @vercel/build-utils@6.8.0
+
 ## 1.8.14
 
 ### Patch Changes

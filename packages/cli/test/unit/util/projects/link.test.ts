@@ -41,6 +41,35 @@ describe('getLinkedProject', () => {
     );
   });
 
+  it('should fail to return a link when token is invalid', async () => {
+    const cwd = fixture('vercel-pull-next');
+
+    useUser();
+    useTeams('team_dummy', { failInvalidToken: true });
+    useProject({
+      ...defaultProject,
+      id: 'vercel-pull-next',
+      name: 'vercel-pull-next',
+    });
+
+    let link: UnPromisify<ReturnType<typeof getLinkedProject>> | undefined;
+    let error: Error | undefined;
+    try {
+      link = await getLinkedProject(client, cwd);
+    } catch (err) {
+      error = err as Error;
+    }
+
+    expect(link).toBeUndefined();
+
+    if (!error) {
+      throw new Error(`Expected an error to be thrown.`);
+    }
+    expect(error.message).toBe(
+      'The specified token is not valid. Use `vercel login` to generate a new token.'
+    );
+  });
+
   it('should fail to return a link when no access to team', async () => {
     const cwd = fixture('vercel-pull-next');
 

@@ -2,17 +2,16 @@ import chalk from 'chalk';
 import type Client from '../../util/client';
 import getArgs from '../../util/get-args';
 import getProjectByCwdOrLink from '../../util/projects/get-project-by-cwd-or-link';
-import { getPkgName } from '../../util/pkg-name';
+import { packageName, logo } from '../../util/pkg-name';
 import handleError from '../../util/handle-error';
 import { isErrnoException } from '@vercel/error-utils';
-import logo from '../../util/output/logo';
 import ms from 'ms';
 import requestRollback from './request-rollback';
 import rollbackStatus from './status';
 
 const help = () => {
   console.log(`
-  ${chalk.bold(`${logo} ${getPkgName()} rollback`)} [deployment id/url]
+  ${chalk.bold(`${logo} ${packageName} rollback`)} [deployment id/url]
 
   Quickly revert back to a previous deployment.
 
@@ -39,14 +38,14 @@ const help = () => {
 
   ${chalk.gray('–')} Show the status of any current pending rollbacks
 
-    ${chalk.cyan(`$ ${getPkgName()} rollback`)}
-    ${chalk.cyan(`$ ${getPkgName()} rollback status`)}
-    ${chalk.cyan(`$ ${getPkgName()} rollback status <project>`)}
-    ${chalk.cyan(`$ ${getPkgName()} rollback status --timeout 30s`)}
+    ${chalk.cyan(`$ ${packageName} rollback`)}
+    ${chalk.cyan(`$ ${packageName} rollback status`)}
+    ${chalk.cyan(`$ ${packageName} rollback status <project>`)}
+    ${chalk.cyan(`$ ${packageName} rollback status --timeout 30s`)}
 
   ${chalk.gray('–')} Rollback a deployment using id or url
 
-    ${chalk.cyan(`$ ${getPkgName()} rollback <deployment id/url>`)}
+    ${chalk.cyan(`$ ${packageName} rollback <deployment id/url>`)}
 `);
 };
 

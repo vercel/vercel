@@ -7,6 +7,7 @@ import fetch from 'node-fetch';
 import { listen } from 'async-listen';
 import { isAbsolute } from 'path';
 import { pathToFileURL } from 'url';
+import zlib from 'zlib';
 import type { ServerResponse, IncomingMessage } from 'http';
 import type { VercelProxyResponse } from '../types.js';
 import type { VercelRequest, VercelResponse } from './helpers.js';
@@ -33,6 +34,27 @@ const HTTP_METHODS = [
   'DELETE',
   'PATCH',
 ];
+
+function compress(body: Buffer, encoding: string): Buffer {
+  switch (encoding) {
+    case 'br':
+      return zlib.brotliCompressSync(body, {
+        params: {
+          [zlib.constants.BROTLI_PARAM_QUALITY]: 0,
+        },
+      });
+    case 'gzip':
+      return zlib.gzipSync(body, {
+        level: zlib.constants.Z_BEST_SPEED,
+      });
+    case 'deflate':
+      return zlib.deflateSync(body, {
+        level: zlib.constants.Z_BEST_SPEED,
+      });
+    default:
+      throw new Error(`encoding '${encoding}' not supported`);
+  }
+}
 
 async function createServerlessServer(userCode: ServerlessFunctionSignature) {
   const server = createServer(userCode);
@@ -78,12 +100,14 @@ export async function createServerlessEventHandler(
 ): Promise<(request: IncomingMessage) => Promise<VercelProxyResponse>> {
   const userCode = await compileUserCode(entrypointPath, options);
   const server = await createServerlessServer(userCode);
+  const isStreaming = options.mode === 'streaming';
 
   return async function (request: IncomingMessage) {
     const url = new URL(request.url ?? '/', server.url);
     // @ts-expect-error
     const response = await fetch(url, {
       body: await serializeBody(request),
+      compress: !isStreaming,
       headers: {
         ...request.headers,
         host: request.headers['x-forwarded-host'],
@@ -93,12 +117,22 @@ export async function createServerlessEventHandler(
     });
 
     let body;
-    if (options.mode === 'streaming') {
+    if (isStreaming) {
       body = response.body;
     } else {
       body = await streamToBuffer(response.body);
+
+      const contentEncoding = response.headers.get('content-encoding');
+      if (contentEncoding) {
+        body = compress(body, contentEncoding);
+        response.headers.set('content-length', Buffer.byteLength(body));
+      }
+
+      /**
+       * `transfer-encoding` is related to streaming chunks.
+       * Since we are buffering the response.body, it should be stripped.
+       */
       response.headers.delete('transfer-encoding');
-      response.headers.set('content-length', body.length);
     }
 
     return {

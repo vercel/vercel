@@ -2,17 +2,16 @@ import chalk from 'chalk';
 import type Client from '../../util/client';
 import getArgs from '../../util/get-args';
 import getProjectByCwdOrLink from '../../util/projects/get-project-by-cwd-or-link';
-import { getPkgName } from '../../util/pkg-name';
+import { packageName, logo } from '../../util/pkg-name';
 import handleError from '../../util/handle-error';
 import { isErrnoException } from '@vercel/error-utils';
-import logo from '../../util/output/logo';
 import ms from 'ms';
 import requestPromote from './request-promote';
 import promoteStatus from './status';
 
 const help = () => {
   console.log(`
-  ${chalk.bold(`${logo} ${getPkgName()} promote`)} [deployment id/url]
+  ${chalk.bold(`${logo} ${packageName} promote`)} [deployment id/url]
 
   Promote an existing deployment to current.
 
@@ -39,14 +38,14 @@ const help = () => {
 
   ${chalk.gray('–')} Show the status of any current pending promotions
 
-    ${chalk.cyan(`$ ${getPkgName()} promote`)}
-    ${chalk.cyan(`$ ${getPkgName()} promote status`)}
-    ${chalk.cyan(`$ ${getPkgName()} promote status <project>`)}
-    ${chalk.cyan(`$ ${getPkgName()} promote status --timeout 30s`)}
+    ${chalk.cyan(`$ ${packageName} promote`)}
+    ${chalk.cyan(`$ ${packageName} promote status`)}
+    ${chalk.cyan(`$ ${packageName} promote status <project>`)}
+    ${chalk.cyan(`$ ${packageName} promote status --timeout 30s`)}
 
   ${chalk.gray('–')} Promote a deployment using id or url
 
-    ${chalk.cyan(`$ ${getPkgName()} promote <deployment id/url>`)}
+    ${chalk.cyan(`$ ${packageName} promote <deployment id/url>`)}
 `);
 };
 
@@ -72,6 +71,8 @@ export default async (client: Client): Promise<number> => {
     help();
     return 2;
   }
+
+  const yes = argv['--yes'] ?? false;
 
   // validate the timeout
   let timeout = argv['--timeout'];
@@ -103,6 +104,7 @@ export default async (client: Client): Promise<number> => {
       client,
       deployId: actionOrDeployId,
       timeout,
+      yes,
     });
   } catch (err) {
     if (isErrnoException(err)) {

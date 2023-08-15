@@ -352,7 +352,7 @@ export const frameworks = [
     cachePattern: '.cache/**',
   },
   {
-    name: 'Docusaurus 2',
+    name: 'Docusaurus (v2)',
     slug: 'docusaurus-2',
     demo: 'https://docusaurus-2-template.vercel.app',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/docusaurus.svg',
@@ -438,7 +438,7 @@ export const frameworks = [
     ],
   },
   {
-    name: 'Docusaurus 1',
+    name: 'Docusaurus (v1)',
     slug: 'docusaurus',
     demo: 'https://docusaurus-template.vercel.app',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/docusaurus.svg',
@@ -970,7 +970,7 @@ export const frameworks = [
   },
   {
     // TODO: fix detected as "sveltekit-1"
-    name: 'SvelteKit (Legacy Beta)',
+    name: 'SvelteKit (v0)',
     slug: 'sveltekit',
     demo: 'https://sveltekit-template.vercel.app',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/svelte.svg',
@@ -1010,7 +1010,7 @@ export const frameworks = [
     getOutputDirName: async () => 'public',
   },
   {
-    name: 'SvelteKit',
+    name: 'SvelteKit (v1)',
     slug: 'sveltekit-1',
     demo: 'https://sveltekit-1-template.vercel.app',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/svelte.svg',
@@ -1291,7 +1291,7 @@ export const frameworks = [
     tagline:
       'Saber is a framework for building static sites in Vue.js that supports data from any source.',
     description: 'A Saber site, created with npm init.',
-    website: 'https://saber.land/',
+    website: 'https://saber.egoist.dev',
     detectors: {
       every: [
         {
@@ -1691,7 +1691,7 @@ export const frameworks = [
     defaultVersion: '0.13.0', // Must match the build image
   },
   {
-    name: 'Hydrogen',
+    name: 'Hydrogen (v1)',
     slug: 'hydrogen',
     demo: 'https://hydrogen-template.vercel.app',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/hydrogen.svg',
@@ -1955,6 +1955,7 @@ export const frameworks = [
       },
       buildCommand: {
         value: 'storybook build',
+        ignorePackageJsonScript: true,
       },
       devCommand: {
         value: `storybook dev -p $PORT`,

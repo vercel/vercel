@@ -44,6 +44,7 @@ import {
   getFilesMapFromReasons,
   UnwrapPromise,
   getOperationType,
+  FunctionsConfigManifestV1,
 } from './utils';
 import {
   nodeFileTrace,
@@ -66,6 +67,7 @@ export async function serverBuild({
   dynamicPages,
   pagesDir,
   config = {},
+  functionsConfigManifest,
   privateOutputs,
   baseDir,
   workPath,
@@ -89,6 +91,7 @@ export async function serverBuild({
   routesManifest,
   staticPages,
   lambdaPages,
+  localePrefixed404,
   nextVersion,
   lambdaAppPaths,
   canUsePreviewMode,
@@ -105,10 +108,12 @@ export async function serverBuild({
   dynamicPages: string[];
   trailingSlash: boolean;
   config: Config;
+  functionsConfigManifest?: FunctionsConfigManifestV1;
   pagesDir: string;
   baseDir: string;
   canUsePreviewMode: boolean;
   omittedPrerenderRoutes: Set<string>;
+  localePrefixed404: boolean;
   staticPages: { [key: string]: FileFsRef };
   lambdaAppPaths: { [key: string]: FileFsRef };
   lambdaPages: { [key: string]: FileFsRef };
@@ -212,12 +217,12 @@ export async function serverBuild({
       ? path.posix.join(entryDirectory, '_errors/404')
       : undefined;
 
-  if (!static404Page && i18n) {
-    static404Page = staticPages[
-      path.posix.join(entryDirectory, i18n.defaultLocale, '404')
-    ]
-      ? path.posix.join(entryDirectory, i18n.defaultLocale, '404')
-      : undefined;
+  if (
+    !static404Page &&
+    i18n &&
+    staticPages[path.posix.join(entryDirectory, i18n.defaultLocale, '404')]
+  ) {
+    static404Page = path.posix.join(entryDirectory, i18n.defaultLocale, '404');
   }
 
   if (!hasStatic500 && i18n) {
@@ -752,6 +757,7 @@ export async function serverBuild({
     const pageLambdaGroups = await getPageLambdaGroups({
       entryPath: projectDir,
       config,
+      functionsConfigManifest,
       pages: nonApiPages,
       prerenderRoutes,
       pageTraces,
@@ -767,6 +773,7 @@ export async function serverBuild({
     const appRouterLambdaGroups = await getPageLambdaGroups({
       entryPath: projectDir,
       config,
+      functionsConfigManifest,
       pages: appRouterPages,
       prerenderRoutes,
       pageTraces,
@@ -789,6 +796,7 @@ export async function serverBuild({
     const apiLambdaGroups = await getPageLambdaGroups({
       entryPath: projectDir,
       config,
+      functionsConfigManifest,
       pages: apiPages,
       prerenderRoutes,
       pageTraces,
@@ -961,6 +969,7 @@ export async function serverBuild({
         if (
           i18n &&
           !isPrerender &&
+          !group.isAppRouter &&
           (!isCorrectLocaleAPIRoutes ||
             !(pageNoExt === 'api' || pageNoExt.startsWith('api/')))
         ) {
@@ -998,6 +1007,7 @@ export async function serverBuild({
     isSharedLambdas: false,
     canUsePreviewMode,
     static404Page,
+    localePrefixed404,
     hasPages404: routesManifest.pages404,
     isCorrectNotFoundRoutes,
     isEmptyAllowQueryForPrendered,
@@ -1064,7 +1074,8 @@ export async function serverBuild({
       prerenderManifest,
       routesManifest,
       true,
-      isCorrectLocaleAPIRoutes
+      isCorrectLocaleAPIRoutes,
+      inversedAppPathManifest
     )
   );
 
@@ -1198,7 +1209,11 @@ export async function serverBuild({
       if (ogRoute.endsWith('/route')) {
         continue;
       }
-      route = path.posix.join('./', route === '/' ? '/index' : route);
+      route = path.posix.join(
+        './',
+        entryDirectory,
+        route === '/' ? '/index' : route
+      );
 
       if (lambdas[route]) {
         lambdas[`${route}.rsc`] = lambdas[route];
@@ -1213,6 +1228,7 @@ export async function serverBuild({
   const rscVaryHeader =
     routesManifest?.rsc?.varyHeader ||
     'RSC, Next-Router-State-Tree, Next-Router-Prefetch';
+  const appNotFoundPath = path.posix.join('.', entryDirectory, '_not-found');
 
   return {
     wildcard: wildcardConfig,
@@ -1745,6 +1761,7 @@ export async function serverBuild({
       { handle: 'error' } as RouteWithHandle,
 
       // Custom Next.js 404 page
+
       ...(i18n && (static404Page || hasIsr404Page || lambdaPages['404.js'])
         ? [
             {
@@ -1779,6 +1796,10 @@ export async function serverBuild({
                   hasIsr404Page ||
                   lambdas[path.posix.join(entryDirectory, '404')]
                   ? '/404'
+                  : appPathRoutesManifest &&
+                    (middleware.edgeFunctions[appNotFoundPath] ||
+                      lambdas[appNotFoundPath])
+                  ? '/_not-found'
                   : '/_error'
               ),
               status: 404,

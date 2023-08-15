@@ -234,6 +234,10 @@ export default async function processDeployment({
           return error;
         }
 
+        if (error.code === 'forbidden') {
+          return error;
+        }
+
         throw error;
       }
 

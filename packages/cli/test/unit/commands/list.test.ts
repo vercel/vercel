@@ -58,6 +58,7 @@ describe('list', () => {
       'Age',
       'Deployment',
       'Status',
+      'Environment',
       'Duration',
       'Username',
     ]);
@@ -68,6 +69,7 @@ describe('list', () => {
     expect(data).toEqual([
       `https://${deployment.url}`,
       stateString(deployment.state || ''),
+      deployment.target === 'production' ? 'Production' : 'Preview',
       getDeploymentDuration(deployment),
       user.username,
     ]);
@@ -107,7 +109,13 @@ describe('list', () => {
 
     line = await lines.next();
     const header = parseSpacedTableRow(line.value!);
-    expect(header).toEqual(['Age', 'Deployment', 'Status', 'Duration']);
+    expect(header).toEqual([
+      'Age',
+      'Deployment',
+      'Status',
+      'Environment',
+      'Duration',
+    ]);
 
     line = await lines.next();
     const data = parseSpacedTableRow(line.value!);
@@ -116,6 +124,7 @@ describe('list', () => {
     expect(data).toEqual([
       'https://' + deployment.url,
       stateString(deployment.state || ''),
+      deployment.target === 'production' ? 'Production' : 'Preview',
       getDeploymentDuration(deployment),
     ]);
   });
@@ -160,6 +169,7 @@ describe('list', () => {
       'Age',
       'Deployment',
       'Status',
+      'Environment',
       'Duration',
       'Username',
     ]);
@@ -170,8 +180,50 @@ describe('list', () => {
     expect(data).toEqual([
       `https://${deployment.url}`,
       stateString(deployment.state || ''),
+      deployment.target === 'production' ? 'Production' : 'Preview',
       getDeploymentDuration(deployment),
       user.username,
     ]);
+  });
+
+  it('should output deployment URLs to stdout', async () => {
+    const user = useUser();
+    useProject({
+      ...defaultProject,
+      id: 'with-team',
+      name: 'with-team',
+    });
+    const prodDeployment = useDeployment({
+      creator: user,
+      createdAt: Date.now() - 1000,
+      target: 'production',
+    });
+    const previewDeployment = useDeployment({
+      creator: user,
+      createdAt: Date.now(),
+      target: undefined,
+    });
+
+    client.stdout.isTTY = false;
+    client.cwd = fixture('with-team');
+
+    // run with all deployments
+    let prom = list(client);
+    await expect(client.stdout).toOutput(
+      `https://${previewDeployment.url}\nhttps://${prodDeployment.url}`
+    );
+    await prom;
+
+    // run again with preview deployments only
+    client.setArgv('--environment', 'preview');
+    prom = list(client);
+    await expect(client.stdout).toOutput(`https://${previewDeployment.url}`);
+    await prom;
+
+    // run again with production deployments only
+    client.setArgv('--environment', 'production');
+    prom = list(client);
+    await expect(client.stdout).toOutput(`https://${prodDeployment.url}`);
+    await prom;
   });
 });

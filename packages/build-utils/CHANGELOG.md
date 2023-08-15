@@ -1,5 +1,29 @@
 # @vercel/build-utils
 
+## 6.8.3
+
+### Patch Changes
+
+- Fix `getPrefixedEnvVars()` to handle `VERCEL_BRANCH_URL` ([#10315](https://github.com/vercel/vercel/pull/10315))
+
+## 6.8.2
+
+### Patch Changes
+
+- Push back `nodejs16.x` discontinue date to `2024-02-06` ([#10209](https://github.com/vercel/vercel/pull/10209))
+
+## 6.8.1
+
+### Patch Changes
+
+- Revert "[build-utils] Allow file-ref sema to be controlled through env flag" ([#10167](https://github.com/vercel/vercel/pull/10167))
+
+## 6.8.0
+
+### Minor Changes
+
+- Add `getNodeBinPaths()` and `traverseUpDirectories()` functions ([#10150](https://github.com/vercel/vercel/pull/10150))
+
 ## 6.7.5
 
 ### Patch Changes

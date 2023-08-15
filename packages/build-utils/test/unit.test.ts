@@ -238,7 +238,7 @@ it('should get latest node version', async () => {
 it('should throw for discontinued versions', async () => {
   // Mock a future date so that Node 8 and 10 become discontinued
   const realDateNow = Date.now.bind(global.Date);
-  global.Date.now = () => new Date('2023-10-01').getTime();
+  global.Date.now = () => new Date('2024-02-13').getTime();
 
   expect(getSupportedNodeVersion('8.10.x', false)).rejects.toThrow();
   expect(getSupportedNodeVersion('8.10.x', true)).rejects.toThrow();
@@ -306,8 +306,8 @@ it('should warn for deprecated versions, soon to be discontinued', async () => {
     'Error: Node.js version 12.x has reached End-of-Life. Deployments created on or after 2022-10-03 will fail to build. Please set Node.js Version to 18.x in your Project Settings to use Node.js 18.',
     'Error: Node.js version 14.x has reached End-of-Life. Deployments created on or after 2023-08-15 will fail to build. Please set "engines": { "node": "18.x" } in your `package.json` file to use Node.js 18.',
     'Error: Node.js version 14.x has reached End-of-Life. Deployments created on or after 2023-08-15 will fail to build. Please set Node.js Version to 18.x in your Project Settings to use Node.js 18.',
-    'Error: Node.js version 16.x has reached End-of-Life. Deployments created on or after 2023-08-15 will fail to build. Please set "engines": { "node": "18.x" } in your `package.json` file to use Node.js 18.',
-    'Error: Node.js version 16.x has reached End-of-Life. Deployments created on or after 2023-08-15 will fail to build. Please set Node.js Version to 18.x in your Project Settings to use Node.js 18.',
+    'Error: Node.js version 16.x has reached End-of-Life. Deployments created on or after 2024-02-06 will fail to build. Please set "engines": { "node": "18.x" } in your `package.json` file to use Node.js 18.',
+    'Error: Node.js version 16.x has reached End-of-Life. Deployments created on or after 2024-02-06 will fail to build. Please set Node.js Version to 18.x in your Project Settings to use Node.js 18.',
   ]);
 
   global.Date.now = realDateNow;

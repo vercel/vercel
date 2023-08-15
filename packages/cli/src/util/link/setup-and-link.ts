@@ -10,7 +10,6 @@ import {
   VERCEL_DIR_PROJECT,
 } from '../projects/link';
 import createProject from '../projects/create-project';
-import updateProject from '../projects/update-project';
 import Client from '../client';
 import handleError from '../handle-error';
 import confirm from '../input/confirm';
@@ -245,10 +244,10 @@ export default async function setupAndLink(
       settings.rootDirectory = rootDirectory;
     }
 
-    const project = await createProject(client, newProjectName);
-
-    await updateProject(client, project.id, settings);
-    Object.assign(project, settings);
+    const project = await createProject(client, {
+      ...settings,
+      name: newProjectName,
+    });
 
     await linkFolderToProject(
       client,

@@ -18,7 +18,6 @@ import type {
   JSONObject,
   Stdio,
   ReadableTTY,
-  WritableTTY,
   PaginationOptions,
 } from '@vercel-internals/types';
 import { sharedPromise } from './promise';
@@ -26,6 +25,7 @@ import { APIError } from './errors-ts';
 import { normalizeError } from '@vercel/error-utils';
 import type { Agent } from 'http';
 import sleep from './sleep';
+import type * as tty from 'tty';
 
 const isSAMLError = (v: any): v is SAMLError => {
   return v && v.saml;
@@ -59,8 +59,8 @@ export default class Client extends EventEmitter implements Stdio {
   apiUrl: string;
   authConfig: AuthConfig;
   stdin: ReadableTTY;
-  stdout: WritableTTY;
-  stderr: WritableTTY;
+  stdout: tty.WriteStream;
+  stderr: tty.WriteStream;
   output: Output;
   config: GlobalConfig;
   agent?: Agent;
@@ -146,7 +146,8 @@ export default class Client extends EventEmitter implements Stdio {
       if (!res.ok) {
         const error = await responseError(res);
 
-        if (isSAMLError(error)) {
+        // we should force reauth only if error has a teamId
+        if (isSAMLError(error) && error.teamId) {
           try {
             // A SAML error means the token is expired, or is not
             // designated for the requested team, so the user needs

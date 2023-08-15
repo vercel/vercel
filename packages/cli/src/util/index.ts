@@ -61,6 +61,7 @@ export interface ListOptions {
   version?: number;
   meta?: Dictionary<string>;
   nextTimestamp?: number;
+  target?: string;
 }
 
 export default class Now extends EventEmitter {
@@ -339,7 +340,7 @@ export default class Now extends EventEmitter {
 
   async list(
     app?: string,
-    { version = 4, meta = {}, nextTimestamp }: ListOptions = {},
+    { version = 4, meta = {}, nextTimestamp, target }: ListOptions = {},
     prod?: boolean
   ) {
     const fetchRetry = async (url: string, options: FetchOptions = {}) => {
@@ -405,6 +406,8 @@ export default class Now extends EventEmitter {
     }
     if (prod) {
       query.set('target', 'production');
+    } else if (target) {
+      query.set('target', target);
     }
 
     const response = await fetchRetry(`/v${version}/now/deployments?${query}`);

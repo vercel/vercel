@@ -2,8 +2,6 @@
   "orgId": ".",
   "projectId": ".",
   "settings": {
-    "framework": "storybook",
-    "buildCommand": "npm run build-storybook",
-    "outputDirectory": "storybook-static"
+    "framework": "storybook"
   }
 }

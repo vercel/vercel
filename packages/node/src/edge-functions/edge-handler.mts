@@ -48,6 +48,7 @@ async function compileUserCode(
       // bundling behavior: use globals (like "browser") instead
       // of "require" statements for core libraries (like "node")
       platform: 'browser',
+      conditions: ['edge-light', 'development'],
       // target syntax: only use syntax available on the current
       // version of node
       target: NODE_VERSION_IDENTIFIER,
@@ -88,7 +89,10 @@ async function compileUserCode(
       "use strict";var regeneratorRuntime;
 
       // user code
-      ${compiledFile.text};
+      (() => {
+        ${compiledFile.text};
+      })();
+
       const userModule = module.exports;
 
       // request metadata

@@ -9,7 +9,7 @@ import type {
 import elapsed from '../../util/output/elapsed';
 import formatDate from '../../util/format-date';
 import getDeployment from '../../util/get-deployment';
-import { getPkgName } from '../../util/pkg-name';
+import { packageName } from '../../util/pkg-name';
 import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
 import getScope from '../../util/get-scope';
 import ms from 'ms';
@@ -147,7 +147,7 @@ export default async function promoteStatus({
       if (requestedAt < recentThreshold || Date.now() >= promoteTimeout) {
         output.log(
           `The promotion exceeded its deadline - rerun ${chalk.bold(
-            `${getPkgName()} promote ${toDeploymentId}`
+            `${packageName} promote ${toDeploymentId}`
           )} to try again`
         );
         return 1;

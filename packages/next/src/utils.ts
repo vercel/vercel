@@ -479,7 +479,8 @@ export function localizeDynamicRoutes(
   prerenderManifest: NextPrerenderedRoutes,
   routesManifest?: RoutesManifest,
   isServerMode?: boolean,
-  isCorrectLocaleAPIRoutes?: boolean
+  isCorrectLocaleAPIRoutes?: boolean,
+  inversedAppPathRoutesManifest?: Record<string, string>
 ): RouteWithSrc[] {
   return dynamicRoutes.map((route: RouteWithSrc) => {
     // i18n is already handled for middleware
@@ -498,6 +499,9 @@ export function localizeDynamicRoutes(
       const isAutoExport =
         staticPages[addLocaleOrDefault(pathname!, routesManifest).substring(1)];
 
+      const isAppRoute =
+        inversedAppPathRoutesManifest?.[pathnameNoPrefix || ''];
+
       const isLocalePrefixed =
         isFallback || isBlocking || isAutoExport || isServerMode;
 
@@ -508,7 +512,11 @@ export function localizeDynamicRoutes(
         }${i18n.locales.map(locale => escapeStringRegexp(locale)).join('|')})?`
       );
 
-      if (isLocalePrefixed && !(isCorrectLocaleAPIRoutes && isApiRoute)) {
+      if (
+        isLocalePrefixed &&
+        !(isCorrectLocaleAPIRoutes && isApiRoute) &&
+        !isAppRoute
+      ) {
         // ensure destination has locale prefix to match prerender output
         // path so that the prerender object is used
         route.dest = route.dest!.replace(
@@ -821,7 +829,7 @@ export async function createLambdaFromPseudoLayers({
     files,
     shouldAddHelpers: false,
     shouldAddSourcemapSupport: false,
-    supportsMultiPayloads: !!process.env.NEXT_PRIVATE_MULTI_PAYLOAD,
+    supportsMultiPayloads: true,
     framework: {
       slug: 'nextjs',
       version: nextVersion,
@@ -1397,6 +1405,7 @@ const LAMBDA_RESERVED_COMPRESSED_SIZE = 250 * KIB;
 export async function getPageLambdaGroups({
   entryPath,
   config,
+  functionsConfigManifest,
   pages,
   prerenderRoutes,
   pageTraces,
@@ -1410,6 +1419,7 @@ export async function getPageLambdaGroups({
 }: {
   entryPath: string;
   config: Config;
+  functionsConfigManifest?: FunctionsConfigManifestV1;
   pages: string[];
   prerenderRoutes: Set<string>;
   pageTraces: {
@@ -1436,16 +1446,26 @@ export async function getPageLambdaGroups({
 
     let opts: { memory?: number; maxDuration?: number } = {};
 
+    if (
+      functionsConfigManifest &&
+      functionsConfigManifest.functions[routeName]
+    ) {
+      opts = functionsConfigManifest.functions[routeName];
+    }
+
     if (config && config.functions) {
       const sourceFile = await getSourceFilePathFromPage({
         workPath: entryPath,
         page,
         pageExtensions,
       });
-      opts = await getLambdaOptionsFromFunction({
+
+      const vercelConfigOpts = await getLambdaOptionsFromFunction({
         sourceFile,
         config,
       });
+
+      opts = { ...vercelConfigOpts, ...opts };
     }
 
     let matchingGroup = groups.find(group => {
@@ -1779,6 +1799,7 @@ export const onPrerenderRouteInitial = (
 type OnPrerenderRouteArgs = {
   appDir: string | null;
   pagesDir: string;
+  localePrefixed404?: boolean;
   static404Page?: string;
   hasPages404: boolean;
   entryDirectory: string;
@@ -1816,6 +1837,7 @@ export const onPrerenderRoute =
       appDir,
       pagesDir,
       static404Page,
+      localePrefixed404,
       entryDirectory,
       prerenderManifest,
       isSharedLambdas,
@@ -1951,7 +1973,9 @@ export const onPrerenderRoute =
                     // file.
                     `${
                       isOmittedOrNotFound
-                        ? addLocaleOrDefault('/404', routesManifest, locale)
+                        ? localePrefixed404
+                          ? addLocaleOrDefault('/404', routesManifest, locale)
+                          : '/404'
                         : routeFileNoExt
                     }.html`
               ),
@@ -1968,7 +1992,9 @@ export const onPrerenderRoute =
                 : pagesDir,
               `${
                 isOmittedOrNotFound
-                  ? addLocaleOrDefault('/404.html', routesManifest, locale)
+                  ? localePrefixed404
+                    ? addLocaleOrDefault('/404.html', routesManifest, locale)
+                    : '/404.html'
                   : isAppPathRoute
                   ? dataRoute
                   : routeFileNoExt + '.json'
@@ -2388,6 +2414,16 @@ export {
   getSourceFilePathFromPage,
 };
 
+export type FunctionsConfigManifestV1 = {
+  version: 1;
+  functions: Record<
+    string,
+    {
+      maxDuration?: number;
+    }
+  >;
+};
+
 type MiddlewareManifest = MiddlewareManifestV1 | MiddlewareManifestV2;
 
 interface MiddlewareManifestV1 {
@@ -2663,7 +2699,9 @@ export async function getMiddlewareBundle({
         shortPath = shortPath.replace(/^pages\//, '');
       } else if (
         shortPath.startsWith('app/') &&
-        (shortPath.endsWith('/page') || shortPath.endsWith('/route'))
+        (shortPath.endsWith('/page') ||
+          shortPath.endsWith('/route') ||
+          shortPath === 'app/_not-found')
       ) {
         const ogRoute = shortPath.replace(/^app\//, '/');
         shortPath = (
@@ -2729,6 +2767,37 @@ export async function getMiddlewareBundle({
     dynamicRouteMap: new Map(),
     edgeFunctions: {},
   };
+}
+
+/**
+ * Attempts to read the functions config manifest from the pre-defined
+ * location. If the manifest can't be found it will resolve to
+ * undefined.
+ */
+export async function getFunctionsConfigManifest(
+  entryPath: string,
+  outputDirectory: string
+): Promise<FunctionsConfigManifestV1 | undefined> {
+  const functionConfigManifestPath = path.join(
+    entryPath,
+    outputDirectory,
+    './server/functions-config-manifest.json'
+  );
+
+  const hasManifest = await fs
+    .access(functionConfigManifestPath)
+    .then(() => true)
+    .catch(() => false);
+
+  if (!hasManifest) {
+    return;
+  }
+
+  const manifest: FunctionsConfigManifestV1 = await fs.readJSON(
+    functionConfigManifestPath
+  );
+
+  return manifest.version === 1 ? manifest : undefined;
 }
 
 /**
