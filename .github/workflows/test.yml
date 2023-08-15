@@ -82,6 +82,8 @@ jobs:
       
       - name: 'Where are we?!?'
         run: pwd 
+      - name: 'What have we here'
+        run: ls -la
       - name: Build ${{matrix.packageName}} and all its dependencies
         run: node utils/gen.js && node_modules/.bin/turbo run build --cache-dir=".turbo" --log-order=stream --scope=${{matrix.packageName}} --include-dependencies --no-deps
         env:
@@ -99,7 +101,10 @@ jobs:
       - name: fetch ssl certificate after tests (linux, os x)
         if: matrix.runner != 'windows-latest'
         run: echo | openssl s_client -showcerts -servername 'api.vercel.com' -connect 76.76.21.21:443
-  
+      - name: 'Where are we?!?'
+        run: pwd 
+      - name: 'What have we here'
+        run: ls -la
   summary:
     name: Summary
     runs-on: ubuntu-latest
