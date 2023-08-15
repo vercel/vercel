@@ -334,7 +334,7 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
       'vercel.json': JSON.stringify({
         functions: {
           'api/**/*.php': {
-            runtime: 'vercel-php@0.5.2',
+            runtime: 'vercel-php@0.6.0',
           },
         },
       }),
