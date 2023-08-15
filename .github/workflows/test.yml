@@ -96,6 +96,8 @@ jobs:
         run: 'echo ${{github.workspace}}'
       - name: 'What have we here'
         run: 'ls -la'
+      - name: 'anything in packages/cli'
+        run: 'ls packages/cli'
   summary:
     name: Summary
     runs-on: ubuntu-latest
