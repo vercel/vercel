@@ -82,8 +82,6 @@ jobs:
 
       - name: 'Where are we?!?'
         run: pwd
-      - name: 'Add a file'
-        run: 'touch demo.txt'
       - name: 'What have we here'
         run: 'ls -la'
       - name: Build ${{matrix.packageName}} and all its dependencies
