@@ -83,7 +83,7 @@ jobs:
       - name: 'Where are we?!?'
         run: pwd 
       - name: 'What have we here'
-        run: ls -la
+        run: 'ls -la'
       - name: Build ${{matrix.packageName}} and all its dependencies
         run: node utils/gen.js && node_modules/.bin/turbo run build --cache-dir=".turbo" --log-order=stream --scope=${{matrix.packageName}} --include-dependencies --no-deps
         env:
@@ -104,7 +104,7 @@ jobs:
       - name: 'Where are we?!?'
         run: pwd 
       - name: 'What have we here'
-        run: ls -la
+        run: 'ls -la'
   summary:
     name: Summary
     runs-on: ubuntu-latest
