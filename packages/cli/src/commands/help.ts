@@ -183,8 +183,8 @@ export function buildCommandOptionLines(
   );
 
   // word wrapping requires the wrapped cell to have a fixed width.
-  // We need to track cell sizes to make the final column of cells is
-  // equal to  the remaindner of unused horizontal space.
+  // We need to track cell sizes to ensure the final column of cells is
+  // equal to the remainder of unused horizontal space.
   let maxWidthOfUnwrappedColumns = 0;
   const rows: (string | undefined | _CellOptions)[][] = [];
   for (const option of commandOptions) {
