@@ -73,7 +73,7 @@ export async function generateVercelBuildOutputAPI3Output({
     if (pathPrefix && (await pathExists(join('public', '404.html')))) {
       routes?.push({
         status: 404,
-        src: '(?!/api).*$',
+        src: '^(?!/api).*$',
         dest: join(pathPrefix, '404.html'),
       });
     }
