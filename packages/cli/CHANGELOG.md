@@ -1,5 +1,12 @@
 # vercel
 
+## 31.3.1
+
+### Patch Changes
+
+- Updated dependencies [[`844fb6e88`](https://github.com/vercel/vercel/commit/844fb6e880a980f26945f15a7437b4d67bcb5394)]:
+  - @vercel/remix-builder@1.10.1
+
 ## 31.3.0
 
 ### Minor Changes
