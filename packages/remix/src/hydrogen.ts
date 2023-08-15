@@ -108,7 +108,7 @@ export function patchHydrogenServer(
       ([k, v]) =>
         `if (!env.${k}) { env.${k} = ${JSON.stringify(
           v
-        )}; console.warn('${JSON.stringify(
+        )}; console.warn('Warning: ${JSON.stringify(
           k
         )} env var not set - using default value ${JSON.stringify(v)}'); }`
     )
