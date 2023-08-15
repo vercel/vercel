@@ -24,7 +24,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       tests: ${{ steps['set-tests'].outputs['tests'] }}
-      dplUrl: ${{ steps.waitForTarball.outputs.url }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -41,12 +40,6 @@ jobs:
           echo "Files to test:"
           echo "$TESTS_ARRAY"
           echo "tests=$TESTS_ARRAY" >> $GITHUB_OUTPUT
-      - uses: patrickedqvist/wait-for-vercel-preview@bfdff514ff78a669f2536e9f4dd4ef5813a704a2
-        id: waitForTarball
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          max_timeout: 360
-          check_interval: 5
 
   test:
     timeout-minutes: 120
