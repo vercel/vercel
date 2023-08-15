@@ -199,6 +199,7 @@ export const frameworks = [
     description: 'A new Remix app — the result of running `npx create-remix`.',
     website: 'https://remix.run',
     sort: 6,
+    supercedes: 'hydrogen',
     useRuntime: { src: 'package.json', use: '@vercel/remix-builder' },
     ignoreRuntimes: ['@vercel/node'],
     detectors: {
@@ -1698,6 +1699,7 @@ export const frameworks = [
     tagline: 'React framework for headless commerce',
     description: 'React framework for headless commerce',
     website: 'https://hydrogen.shopify.dev',
+    supercedes: 'vite',
     useRuntime: { src: 'package.json', use: '@vercel/hydrogen' },
     envPrefix: 'PUBLIC_',
     detectors: {

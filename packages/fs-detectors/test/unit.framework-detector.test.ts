@@ -1,7 +1,14 @@
+import { join } from 'path';
 import frameworkList from '@vercel/frameworks';
 import workspaceManagers from '../src/workspaces/workspace-managers';
-import { detectFramework, detectFrameworks } from '../src';
+import {
+  detectFramework,
+  detectFrameworks,
+  LocalFileSystemDetector,
+} from '../src';
 import VirtualFilesystem from './virtual-file-system';
+
+const EXAMPLES_DIR = join(__dirname, '../../../examples');
 
 describe('DetectorFilesystem', () => {
   it('should return the directory contents relative to the cwd', async () => {
@@ -418,7 +425,33 @@ describe('detectFrameworks()', () => {
     expect(await detectFrameworks({ fs, frameworkList })).toEqual([]);
   });
 
-  it('Detect `nextjs` and `storybook`', async () => {
+  it('Should detect `nextjs`', async () => {
+    const fs = new VirtualFilesystem({
+      'package.json': JSON.stringify({
+        dependencies: {
+          next: 'latest',
+        },
+      }),
+    });
+
+    const slugs = (await detectFrameworks({ fs, frameworkList })).map(
+      f => f.slug
+    );
+    expect(slugs).toEqual(['nextjs']);
+  });
+
+  it('Should detect `remix`', async () => {
+    const fs = new VirtualFilesystem({
+      'remix.config.js': '',
+    });
+
+    const slugs = (await detectFrameworks({ fs, frameworkList })).map(
+      f => f.slug
+    );
+    expect(slugs).toEqual(['remix']);
+  });
+
+  it('Should detect `nextjs` and `storybook`', async () => {
     const fs = new VirtualFilesystem({
       'package.json': JSON.stringify({
         dependencies: {
@@ -432,5 +465,23 @@ describe('detectFrameworks()', () => {
       f => f.slug
     );
     expect(slugs).toEqual(['nextjs', 'storybook']);
+  });
+
+  it('Should detect "hydrogen" template as `hydrogen`', async () => {
+    const fs = new LocalFileSystemDetector(join(EXAMPLES_DIR, 'hydrogen'));
+
+    const slugs = (await detectFrameworks({ fs, frameworkList })).map(
+      f => f.slug
+    );
+    expect(slugs).toEqual(['hydrogen']);
+  });
+
+  it('Should detect "hydrogen-2" template as `remix`', async () => {
+    const fs = new LocalFileSystemDetector(join(EXAMPLES_DIR, 'hydrogen-2'));
+
+    const slugs = (await detectFrameworks({ fs, frameworkList })).map(
+      f => f.slug
+    );
+    expect(slugs).toEqual(['remix']);
   });
 });
