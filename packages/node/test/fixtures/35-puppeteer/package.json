@@ -1,7 +1,7 @@
 {
   "private": true,
   "engines": {
-    "node": "14.x"
+    "node": "16.x"
   },
   "dependencies": {
     "chrome-aws-lambda": "7.0.0",
