@@ -10,7 +10,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
 
   afterAll(() => fs.remove(fixtureDir));
 
-  it.skip('should deploy and pass probe checks', async () => {
+  it('should deploy and pass probe checks', async () => {
     await fs.copy(path.join(__dirname, '../00-app-dir'), fixtureDir);
     const nextConfigPath = path.join(fixtureDir, 'next.config.js');
 

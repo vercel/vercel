@@ -4,7 +4,7 @@ import { useUser } from '../../mocks/user';
 import { useDomains } from '../../mocks/domains';
 
 describe('domains', () => {
-  it.skip('should list up to 20 domains by default', async () => {
+  it('should list up to 20 domains by default', async () => {
     useUser();
     useDomains();
     client.setArgv('domains', 'ls');
@@ -13,7 +13,7 @@ describe('domains', () => {
     await expect(exitCodePromise).resolves.toEqual(0);
   });
 
-  it.skip('should list up to 2 domains if limit set to 2', async () => {
+  it('should list up to 2 domains if limit set to 2', async () => {
     useUser();
     useDomains();
     client.setArgv('domains', 'ls', '--limit', '2');

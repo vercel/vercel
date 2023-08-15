@@ -546,7 +546,7 @@ it('should retry npm install when peer deps invalid and npm@8 on node@16', async
 });
 
 describe('rename', () => {
-  it.skip('should rename keys of files map', () => {
+  it('should rename keys of files map', () => {
     const before: Files = {};
     const toUpper = (s: string) => s.toUpperCase();
 

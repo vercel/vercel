@@ -2,7 +2,7 @@ import assert from 'assert';
 import { isOfficialRuntime, isStaticRuntime } from '../src';
 
 describe('Test `isOfficialRuntime()`', () => {
-  it.skip('should be correct', () => {
+  it('should be correct', () => {
     assert.equal(true, isOfficialRuntime('static', '@vercel/static'));
     assert.equal(true, isOfficialRuntime('static', '@now/static'));
     assert.equal(false, isOfficialRuntime('static', '@vercel/static-build'));
@@ -30,7 +30,7 @@ describe('Test `isOfficialRuntime()`', () => {
 });
 
 describe('Test `isStaticRuntime()`', () => {
-  it.skip('should be correct', () => {
+  it('should be correct', () => {
     assert.equal(true, isStaticRuntime('@vercel/static'));
     assert.equal(true, isStaticRuntime('@now/static'));
     assert.equal(false, isStaticRuntime('@vercel/static-build'));

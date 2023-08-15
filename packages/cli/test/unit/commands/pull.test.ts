@@ -8,7 +8,7 @@ import { useTeams } from '../../mocks/team';
 import { useUser } from '../../mocks/user';
 
 describe('pull', () => {
-  it.skip('should handle pulling', async () => {
+  it('should handle pulling', async () => {
     const cwd = setupUnitFixture('vercel-pull-next');
     useUser();
     useTeams('team_dummy');
@@ -37,7 +37,7 @@ describe('pull', () => {
     expect(devFileHasDevEnv).toBeTruthy();
   });
 
-  it.skip('should fail with message to pull without a link and without --env', async () => {
+  it('should fail with message to pull without a link and without --env', async () => {
     client.stdin.isTTY = false;
 
     const cwd = setupUnitFixture('vercel-pull-unlinked');
@@ -52,7 +52,7 @@ describe('pull', () => {
     await expect(exitCodePromise).resolves.toEqual(1);
   });
 
-  it.skip('should fail without message to pull without a link and with --env', async () => {
+  it('should fail without message to pull without a link and with --env', async () => {
     const cwd = setupUnitFixture('vercel-pull-next');
     useUser();
     useTeams('team_dummy');
@@ -65,7 +65,7 @@ describe('pull', () => {
     await expect(exitCodePromise).resolves.toEqual(1);
   });
 
-  it.skip('should handle pulling with env vars (headless mode)', async () => {
+  it('should handle pulling with env vars (headless mode)', async () => {
     try {
       process.env.VERCEL_PROJECT_ID = 'vercel-pull-next';
       process.env.VERCEL_ORG_ID = 'team_dummy';
@@ -112,7 +112,7 @@ describe('pull', () => {
     }
   });
 
-  it.skip('should handle --environment=preview flag', async () => {
+  it('should handle --environment=preview flag', async () => {
     const cwd = setupUnitFixture('vercel-pull-next');
     useUser();
     useTeams('team_dummy');
@@ -143,7 +143,7 @@ describe('pull', () => {
     expect(previewFileHasPreviewEnv).toBeTruthy();
   });
 
-  it.skip('should handle --environment=production flag', async () => {
+  it('should handle --environment=production flag', async () => {
     const cwd = setupUnitFixture('vercel-pull-next');
     useUser();
     useTeams('team_dummy');
@@ -178,7 +178,7 @@ describe('pull', () => {
     expect(previewFileHasPreviewEnv2).toBeTruthy();
   });
 
-  it.skip('should work with repo link', async () => {
+  it('should work with repo link', async () => {
     const cwd = setupUnitFixture('monorepo-link');
     useUser();
     useTeams('team_dummy');

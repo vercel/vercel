@@ -27,11 +27,11 @@ describe('LocalFileSystemDetector', () => {
     await fs.rm(tmpdir, { recursive: true, force: true });
   });
 
-  it.skip('should be instance of DetectorFilesystem', () => {
+  it('should be instance of DetectorFilesystem', () => {
     expect(localFileSystem instanceof DetectorFilesystem).toBe(true);
   });
 
-  it.skip('should call hasPath correctly', async () => {
+  it('should call hasPath correctly', async () => {
     const hasPathSpy = jest.spyOn(localFileSystem, '_hasPath');
     const hasPath = await Promise.all(
       filePaths.map(filePath => localFileSystem.hasPath(filePath))
@@ -40,7 +40,7 @@ describe('LocalFileSystemDetector', () => {
     expect(hasPathSpy).toHaveBeenCalledTimes(filePaths.length);
   });
 
-  it.skip('should call readFile correctly', async () => {
+  it('should call readFile correctly', async () => {
     const readFile = await Promise.all(
       filePaths.map(filePath => localFileSystem.readFile(filePath))
     );
@@ -52,14 +52,14 @@ describe('LocalFileSystemDetector', () => {
     ).toBe(true);
   });
 
-  it.skip('should call isFile correctly', async () => {
+  it('should call isFile correctly', async () => {
     const isFile = await Promise.all(
       filePaths.map(filePath => localFileSystem.isFile(filePath))
     );
     expect(isFile.every(v => v)).toBe(true);
   });
 
-  it.skip('should call readdir correctly', async () => {
+  it('should call readdir correctly', async () => {
     const readdirResults = await Promise.all(
       dirs.map(dir => localFileSystem.readdir(dir))
     );
@@ -70,7 +70,7 @@ describe('LocalFileSystemDetector', () => {
     expect(actualPaths).toEqual(expectedPaths);
   });
 
-  it.skip('should call chdir correctly', async () => {
+  it('should call chdir correctly', async () => {
     const a = localFileSystem.chdir('a');
     expect(a instanceof LocalFileSystemDetector);
     const readdirResult = await a.readdir('');

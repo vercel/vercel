@@ -6,7 +6,7 @@ import { useUser } from '../../mocks/user';
 jest.setTimeout(10000);
 
 describe('login', () => {
-  it.skip('should not allow the `--token` flag', async () => {
+  it('should not allow the `--token` flag', async () => {
     client.setArgv('login', '--token', 'foo');
     const exitCodePromise = login(client);
     await expect(client.stderr).toOutput(
@@ -15,7 +15,7 @@ describe('login', () => {
     await expect(exitCodePromise).resolves.toEqual(2);
   });
 
-  it.skip('should allow login via email as argument', async () => {
+  it('should allow login via email as argument', async () => {
     const user = useUser();
     client.setArgv('login', user.email);
     const exitCodePromise = login(client);
@@ -26,7 +26,7 @@ describe('login', () => {
   });
 
   describe('interactive', () => {
-    it.skip('should allow login via email', async () => {
+    it('should allow login via email', async () => {
       const user = useUser();
       client.setArgv('login');
       const exitCodePromise = login(client);
@@ -49,7 +49,7 @@ describe('login', () => {
       await expect(exitCodePromise).resolves.toEqual(0);
     });
 
-    it.skip('should allow the `--no-color` flag', async () => {
+    it('should allow the `--no-color` flag', async () => {
       const user = useUser();
       client.setArgv('login', '--no-color');
       const exitCodePromise = login(client);
@@ -89,7 +89,7 @@ describe('login', () => {
         }
       });
 
-      it.skip('should remove emoji the `NO_COLOR` env var with 1', async () => {
+      it('should remove emoji the `NO_COLOR` env var with 1', async () => {
         client.resetOutput();
 
         const user = useUser();
@@ -132,7 +132,7 @@ describe('login', () => {
         }
       });
 
-      it.skip('should remove emoji the `FORCE_COLOR` env var with 0', async () => {
+      it('should remove emoji the `FORCE_COLOR` env var with 0', async () => {
         client.resetOutput();
 
         const user = useUser();

@@ -26,7 +26,7 @@ describe('create v2 deployment', () => {
     }
   });
 
-  it.skip('will display an empty deployment warning', async () => {
+  it('will display an empty deployment warning', async () => {
     for await (const event of createDeployment(
       {
         token,
@@ -47,7 +47,7 @@ describe('create v2 deployment', () => {
     }
   });
 
-  it.skip('will report correct file count event', async () => {
+  it('will report correct file count event', async () => {
     for await (const event of createDeployment(
       {
         token,
@@ -68,7 +68,7 @@ describe('create v2 deployment', () => {
     }
   });
 
-  it.skip('will create a v2 deployment', async () => {
+  it('will create a v2 deployment', async () => {
     for await (const event of createDeployment(
       {
         token,
@@ -86,7 +86,7 @@ describe('create v2 deployment', () => {
     }
   });
 
-  it.skip('will create a v2 deployment with correct file permissions', async () => {
+  it('will create a v2 deployment with correct file permissions', async () => {
     let error = null;
     for await (const event of createDeployment(
       {
@@ -124,7 +124,7 @@ describe('create v2 deployment', () => {
     expect(text).toContain('executed bash script');
   });
 
-  it.skip('will create a v2 deployment and ignore files specified in .nowignore', async () => {
+  it('will create a v2 deployment and ignore files specified in .nowignore', async () => {
     let error = null;
     for await (const event of createDeployment(
       {

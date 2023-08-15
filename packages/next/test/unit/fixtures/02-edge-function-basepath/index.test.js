@@ -7,7 +7,7 @@ const { FileFsRef } = require('@vercel/build-utils');
 jest.setTimeout(ms('6m'));
 
 describe(`${__dirname.split(path.sep).pop()}`, () => {
-  it.skip('should normalize routes in build results output', async () => {
+  it('should normalize routes in build results output', async () => {
     // TODO: remove after bug with edge functions on Windows
     // is resolved upstream in Next.js
     if (process.platform === 'win32') {

@@ -14,7 +14,7 @@ const tests = {
 
 describe('isValidName', () => {
   for (const [value, expected] of Object.entries(tests)) {
-    it.skip(`should detect "${value}" as \`${expected}\``, () => {
+    it(`should detect "${value}" as \`${expected}\``, () => {
       expect(isValidName(value)).toEqual(expected);
     });
   }

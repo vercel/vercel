@@ -3,7 +3,7 @@ import chalk from 'chalk';
 import stripAnsi from 'strip-ansi';
 
 describe('box()', () => {
-  it.skip('should show single line box with default padding', () => {
+  it('should show single line box with default padding', () => {
     const result = box('Hello world!');
     expect(stripAnsi(result)).toEqual(
       `
@@ -16,7 +16,7 @@ describe('box()', () => {
     );
   });
 
-  it.skip('should show single line box without padding', () => {
+  it('should show single line box without padding', () => {
     const result = box('Hello world!', { padding: 0 });
     expect(stripAnsi(result)).toEqual(
       `
@@ -27,7 +27,7 @@ describe('box()', () => {
     );
   });
 
-  it.skip('should show single line box with padding 2', () => {
+  it('should show single line box with padding 2', () => {
     const result = box('Hello world!', { padding: 2 });
     expect(stripAnsi(result)).toEqual(
       `
@@ -42,7 +42,7 @@ describe('box()', () => {
     );
   });
 
-  it.skip('should show multiple lines with default padding', () => {
+  it('should show multiple lines with default padding', () => {
     const result = box(
       'Hello world!\nThis is a really, really long line of text\n\nWow!'
     );
@@ -60,7 +60,7 @@ describe('box()', () => {
     );
   });
 
-  it.skip('should ignore ansi color escape sequences', () => {
+  it('should ignore ansi color escape sequences', () => {
     const result = box(chalk.red('This text is red'));
     expect(stripAnsi(result)).toEqual(
       `
@@ -73,7 +73,7 @@ describe('box()', () => {
     );
   });
 
-  it.skip('should left align contents', () => {
+  it('should left align contents', () => {
     const result = box(
       'This is left aligned\nThis is a really, really long line of text',
       { textAlignment: 'left' }
@@ -90,7 +90,7 @@ describe('box()', () => {
     );
   });
 
-  it.skip('should right align contents', () => {
+  it('should right align contents', () => {
     const result = box(
       'This is right aligned\nThis is a really, really long line of text',
       { textAlignment: 'right' }
@@ -107,7 +107,7 @@ describe('box()', () => {
     );
   });
 
-  it.skip('should slim if terminal width too small', () => {
+  it('should slim if terminal width too small', () => {
     const result = box('This is a really, really long line of text', {
       terminalColumns: 30,
     });

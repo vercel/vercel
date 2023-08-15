@@ -10,12 +10,12 @@ describe('parseTarget', () => {
     output.error = jest.fn();
   });
 
-  it.skip('defaults to `undefined`', () => {
+  it('defaults to `undefined`', () => {
     let result = parseTarget(output);
     expect(result).toEqual(undefined);
   });
 
-  it.skip('fails when given invalid target', () => {
+  it('fails when given invalid target', () => {
     const result = parseTarget(output, 'not-a-real-environment');
     expect(result).toEqual(1);
 
@@ -25,7 +25,7 @@ describe('parseTarget', () => {
     );
   });
 
-  it.skip('parses "production" target', () => {
+  it('parses "production" target', () => {
     let result = parseTarget(output, 'production');
     expect(result).toEqual('production');
     expect(output.warn).toHaveBeenCalledWith(
@@ -33,22 +33,22 @@ describe('parseTarget', () => {
     );
   });
 
-  it.skip('parses "staging" target', () => {
+  it('parses "staging" target', () => {
     let result = parseTarget(output, 'staging');
     expect(result).toEqual('staging');
   });
 
-  it.skip('prefers target over production argument', () => {
+  it('prefers target over production argument', () => {
     let result = parseTarget(output, 'staging', true);
     expect(result).toEqual('staging');
   });
 
-  it.skip('parses production argument when `true`', () => {
+  it('parses production argument when `true`', () => {
     let result = parseTarget(output, undefined, true);
     expect(result).toEqual('production');
   });
 
-  it.skip('parses production argument when `false`', () => {
+  it('parses production argument when `false`', () => {
     let result = parseTarget(output, undefined, false);
     expect(result).toEqual(undefined);
   });

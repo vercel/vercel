@@ -13,7 +13,7 @@ import sleep from '../../../src/util/sleep';
 jest.setTimeout(60000);
 
 describe('promote', () => {
-  it.skip('should error if timeout is invalid', async () => {
+  it('should error if timeout is invalid', async () => {
     const { cwd } = initPromoteTest();
     client.cwd = cwd;
     client.setArgv('promote', '--yes', '--timeout', 'foo');
@@ -23,7 +23,7 @@ describe('promote', () => {
     await expect(exitCodePromise).resolves.toEqual(1);
   });
 
-  it.skip('should error if invalid deployment ID', async () => {
+  it('should error if invalid deployment ID', async () => {
     const { cwd } = initPromoteTest();
     client.cwd = cwd;
     client.setArgv('promote', '????', '--yes');
@@ -35,7 +35,7 @@ describe('promote', () => {
     await expect(exitCodePromise).resolves.toEqual(1);
   });
 
-  it.skip('should error if deployment not found', async () => {
+  it('should error if deployment not found', async () => {
     const { cwd } = initPromoteTest();
     client.cwd = cwd;
     client.setArgv('promote', 'foo', '--yes');
@@ -49,7 +49,7 @@ describe('promote', () => {
     await expect(exitCodePromise).resolves.toEqual(1);
   });
 
-  it.skip('should show status when not promoting', async () => {
+  it('should show status when not promoting', async () => {
     const { cwd } = initPromoteTest();
     client.cwd = cwd;
     client.setArgv('promote', '--yes');
@@ -63,7 +63,7 @@ describe('promote', () => {
     await expect(exitCodePromise).resolves.toEqual(0);
   });
 
-  it.skip('should promote by deployment id', async () => {
+  it('should promote by deployment id', async () => {
     const { cwd, previousDeployment } = initPromoteTest();
     client.cwd = cwd;
     client.setArgv('promote', previousDeployment.id, '--yes');
@@ -82,7 +82,7 @@ describe('promote', () => {
     await expect(exitCodePromise).resolves.toEqual(0);
   });
 
-  it.skip('should promote by deployment url', async () => {
+  it('should promote by deployment url', async () => {
     const { cwd, previousDeployment } = initPromoteTest();
     client.cwd = cwd;
     client.setArgv('promote', previousDeployment.url, '--yes');
@@ -101,7 +101,7 @@ describe('promote', () => {
     await expect(exitCodePromise).resolves.toEqual(0);
   });
 
-  it.skip('should fail to promote a preview deployment when user says no', async () => {
+  it('should fail to promote a preview deployment when user says no', async () => {
     const { cwd, previousDeployment } = initPromoteTest({
       deploymentTarget: 'preview',
     });
@@ -124,7 +124,7 @@ describe('promote', () => {
     await expect(exitCodePromise).resolves.toEqual(0);
   });
 
-  it.skip('should promote a preview deployment when user says yes', async () => {
+  it('should promote a preview deployment when user says yes', async () => {
     const { cwd, previousDeployment } = initPromoteTest({
       deploymentTarget: 'preview',
     });
@@ -145,7 +145,7 @@ describe('promote', () => {
     await expect(exitCodePromise).resolves.toEqual(0);
   });
 
-  it.skip('should promote a preview deployment with --yes', async () => {
+  it('should promote a preview deployment with --yes', async () => {
     const { cwd, previousDeployment } = initPromoteTest({
       deploymentTarget: 'preview',
     });
@@ -166,7 +166,7 @@ describe('promote', () => {
     await expect(exitCodePromise).resolves.toEqual(0);
   });
 
-  it.skip('should get status while promoting', async () => {
+  it('should get status while promoting', async () => {
     const { cwd, previousDeployment, project } = initPromoteTest({
       promotePollCount: 10,
     });
@@ -195,7 +195,7 @@ describe('promote', () => {
     await expect(exitCodePromise).resolves.toEqual(0);
   });
 
-  it.skip('should error if promote request fails', async () => {
+  it('should error if promote request fails', async () => {
     const { cwd, previousDeployment } = initPromoteTest({
       promotePollCount: 10,
       promoteStatusCode: 500,
@@ -214,7 +214,7 @@ describe('promote', () => {
     await expect(exitCodePromise).resolves.toEqual(1);
   });
 
-  it.skip('should error if promote fails (no aliases)', async () => {
+  it('should error if promote fails (no aliases)', async () => {
     const { cwd, previousDeployment } = initPromoteTest({
       promoteJobStatus: 'failed',
     });
@@ -233,7 +233,7 @@ describe('promote', () => {
     await expect(exitCodePromise).resolves.toEqual(1);
   });
 
-  it.skip('should error if promote fails (with aliases)', async () => {
+  it('should error if promote fails (with aliases)', async () => {
     const { cwd, previousDeployment } = initPromoteTest({
       promoteAliases: [
         {
@@ -268,7 +268,7 @@ describe('promote', () => {
     await expect(exitCodePromise).resolves.toEqual(1);
   });
 
-  it.skip('should error if deployment times out', async () => {
+  it('should error if deployment times out', async () => {
     const { cwd, previousDeployment } = initPromoteTest({
       promotePollCount: 10,
     });
@@ -290,7 +290,7 @@ describe('promote', () => {
     await expect(exitCodePromise).resolves.toEqual(1);
   });
 
-  it.skip('should immediately exit after requesting promote', async () => {
+  it('should immediately exit after requesting promote', async () => {
     const { cwd, previousDeployment } = initPromoteTest();
     client.cwd = cwd;
     client.setArgv('promote', previousDeployment.id, '--yes', '--timeout', '0');
@@ -308,7 +308,7 @@ describe('promote', () => {
     await expect(exitCodePromise).resolves.toEqual(0);
   });
 
-  it.skip('should error if deployment belongs to different team', async () => {
+  it('should error if deployment belongs to different team', async () => {
     const { cwd, previousDeployment } = initPromoteTest();
     client.cwd = cwd;
     previousDeployment.team = {

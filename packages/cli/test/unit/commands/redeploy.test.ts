@@ -8,7 +8,7 @@ import { useUser } from '../../mocks/user';
 import { Deployment } from '@vercel-internals/types';
 
 describe('redeploy', () => {
-  it.skip('should error if missing deployment url', async () => {
+  it('should error if missing deployment url', async () => {
     client.setArgv('redeploy');
     const exitCodePromise = redeploy(client);
 
@@ -18,7 +18,7 @@ describe('redeploy', () => {
     await expect(exitCodePromise).resolves.toEqual(1);
   });
 
-  it.skip('should error if deployment not found', async () => {
+  it('should error if deployment not found', async () => {
     initRedeployTest();
     client.setArgv('redeploy', 'foo');
     const exitCodePromise = redeploy(client);
@@ -30,7 +30,7 @@ describe('redeploy', () => {
     await expect(exitCodePromise).resolves.toEqual(1);
   });
 
-  it.skip('should error if deployment belongs to another team', async () => {
+  it('should error if deployment belongs to another team', async () => {
     const { fromDeployment } = initRedeployTest();
     fromDeployment.team = {
       id: 'abc',
@@ -50,7 +50,7 @@ describe('redeploy', () => {
     await expect(exitCodePromise).resolves.toEqual(1);
   });
 
-  it.skip('should redeploy an existing deployment', async () => {
+  it('should redeploy an existing deployment', async () => {
     const { fromDeployment } = initRedeployTest();
     client.setArgv('rollback', fromDeployment.id);
 
@@ -63,7 +63,7 @@ describe('redeploy', () => {
     await expect(exitCodePromise).resolves.toEqual(0);
   });
 
-  it.skip('should redeploy and not wait for completion', async () => {
+  it('should redeploy and not wait for completion', async () => {
     const { fromDeployment, toDeployment } = initRedeployTest();
     toDeployment.readyState = 'QUEUED';
     client.setArgv('rollback', fromDeployment.id, '--no-wait');
@@ -79,7 +79,7 @@ describe('redeploy', () => {
     await expect(exitCodePromise).resolves.toEqual(0);
   });
 
-  it.skip('should redeploy to preview', async () => {
+  it('should redeploy to preview', async () => {
     const { fromDeployment } = initRedeployTest({ target: null });
     client.setArgv('rollback', fromDeployment.id);
     const exitCodePromise = redeploy(client);

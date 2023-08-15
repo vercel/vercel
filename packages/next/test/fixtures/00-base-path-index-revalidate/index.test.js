@@ -35,12 +35,12 @@ async function checkForChange(url, initialValue, hardError) {
 const ctx = {};
 
 describe(`${__dirname.split(path.sep).pop()}`, () => {
-  it.skip('should deploy and pass probe checks', async () => {
+  it('should deploy and pass probe checks', async () => {
     const info = await deployAndTest(__dirname);
     Object.assign(ctx, info);
   });
 
-  it.skip('should revalidate content properly from /docs', async () => {
+  it('should revalidate content properly from /docs', async () => {
     const dataRes = await fetch(
       `${ctx.deploymentUrl}/docs/_next/data/testing-build-id/index.json`
     );
@@ -74,7 +74,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     expect($('#asPath').text()).toBe('asPath /');
   });
 
-  it.skip('should load content properly from /docs/hello', async () => {
+  it('should load content properly from /docs/hello', async () => {
     const dataRes = await fetch(
       `${ctx.deploymentUrl}/docs/_next/data/testing-build-id/hello.json`
     );
@@ -109,7 +109,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     expect($('#asPath').text()).toBe('asPath /hello');
   });
 
-  it.skip('should revalidate content properly from /docs/blog', async () => {
+  it('should revalidate content properly from /docs/blog', async () => {
     const dataRes = await fetch(
       `${ctx.deploymentUrl}/docs/_next/data/testing-build-id/blog.json`
     );
@@ -143,7 +143,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     expect($('#asPath').text()).toBe('asPath /blog');
   });
 
-  it.skip('should revalidate content properly from /docs/blog/another', async () => {
+  it('should revalidate content properly from /docs/blog/another', async () => {
     const dataRes = await fetch(
       `${ctx.deploymentUrl}/docs/_next/data/testing-build-id/blog/another.json`
     );

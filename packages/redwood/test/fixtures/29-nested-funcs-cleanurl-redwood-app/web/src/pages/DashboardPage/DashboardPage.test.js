@@ -6,7 +6,7 @@ import DashboardPage from './DashboardPage'
 //   https://redwoodjs.com/docs/testing#testing-pages-layouts
 
 describe('DashboardPage', () => {
-  it.skip('renders successfully', () => {
+  it('renders successfully', () => {
     expect(() => {
       render(<DashboardPage />)
     }).not.toThrow()

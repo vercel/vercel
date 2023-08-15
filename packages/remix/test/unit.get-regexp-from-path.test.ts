@@ -199,7 +199,7 @@ describe('getRegExpFromPath()', () => {
   ])('with path "$path"', ({ path, urls }) => {
     const re = getRegExpFromPath(path) as RegExp;
 
-    it.skip('should return RegExp', () => {
+    it('should return RegExp', () => {
       expect(re).toBeInstanceOf(RegExp);
     });
 

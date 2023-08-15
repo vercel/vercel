@@ -10,7 +10,7 @@ import { useUser } from '../../mocks/user';
 
 describe('env', () => {
   describe('pull', () => {
-    it.skip('should handle pulling', async () => {
+    it('should handle pulling', async () => {
       useUser();
       useTeams('team_dummy');
       useProject({
@@ -37,7 +37,7 @@ describe('env', () => {
       expect(devFileHasDevEnv).toBeTruthy();
     });
 
-    it.skip('should handle pulling from Preview env vars', async () => {
+    it('should handle pulling from Preview env vars', async () => {
       useUser();
       useTeams('team_dummy');
       useProject({
@@ -67,7 +67,7 @@ describe('env', () => {
       );
     });
 
-    it.skip('should handle pulling from specific Git branch', async () => {
+    it('should handle pulling from specific Git branch', async () => {
       useUser();
       useTeams('team_dummy');
       useProject({
@@ -112,7 +112,7 @@ describe('env', () => {
       expect(keys[2]).toEqual('REDIS_CONNECTION_STRING');
     });
 
-    it.skip('should handle alternate filename', async () => {
+    it('should handle alternate filename', async () => {
       useUser();
       useTeams('team_dummy');
       useProject({
@@ -138,7 +138,7 @@ describe('env', () => {
       expect(devFileHasDevEnv).toBeTruthy();
     });
 
-    it.skip('should use given environment', async () => {
+    it('should use given environment', async () => {
       useUser();
       useTeams('team_dummy');
       useProject({
@@ -167,7 +167,7 @@ describe('env', () => {
       expect(envFileHasEnv).toBeTruthy();
     });
 
-    it.skip('should throw an error when it does not recognize given environment', async () => {
+    it('should throw an error when it does not recognize given environment', async () => {
       useUser();
       useTeams('team_dummy');
       useProject({
@@ -193,7 +193,7 @@ describe('env', () => {
       await expect(exitCodePromise).resolves.toEqual(1);
     });
 
-    it.skip('should expose production system env variables', async () => {
+    it('should expose production system env variables', async () => {
       useUser();
       useTeams('team_dummy');
       useProject({
@@ -221,7 +221,7 @@ describe('env', () => {
       expect(productionFileHasVercelEnv).toBeTruthy();
     });
 
-    it.skip('should show a delta string', async () => {
+    it('should show a delta string', async () => {
       const cwd = setupUnitFixture('vercel-env-pull-delta');
       client.cwd = cwd;
       try {
@@ -268,7 +268,7 @@ describe('env', () => {
       }
     });
 
-    it.skip('should not show a delta string when it fails to read a file', async () => {
+    it('should not show a delta string when it fails to read a file', async () => {
       useUser();
       useTeams('team_dummy');
       useProject({
@@ -286,7 +286,7 @@ describe('env', () => {
       await expect(pullPromise).resolves.toEqual(0);
     });
 
-    it.skip('should show that no changes were found', async () => {
+    it('should show that no changes were found', async () => {
       useUser();
       useTeams('team_dummy');
       useProject({
@@ -304,7 +304,7 @@ describe('env', () => {
       await expect(pullPromise).resolves.toEqual(0);
     });
 
-    it.skip('should correctly render delta string when env variable has quotes', async () => {
+    it('should correctly render delta string when env variable has quotes', async () => {
       const cwd = setupUnitFixture('vercel-env-pull-delta-quotes');
       client.cwd = cwd;
       try {
@@ -348,7 +348,7 @@ describe('env', () => {
       }
     });
 
-    it.skip('should correctly render delta string when local env variable has quotes', async () => {
+    it('should correctly render delta string when local env variable has quotes', async () => {
       const cwd = setupUnitFixture('vercel-env-pull-delta-quotes');
       client.cwd = cwd;
       try {
@@ -390,7 +390,7 @@ describe('env', () => {
       }
     });
 
-    it.skip('should not update .gitignore if it contains a match', async () => {
+    it('should not update .gitignore if it contains a match', async () => {
       const prj = 'vercel-env-pull-with-gitignore';
       useUser();
       useTeams('team_dummy');

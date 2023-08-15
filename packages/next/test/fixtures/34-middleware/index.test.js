@@ -7,7 +7,7 @@ const fixturePath = path.resolve('test/integration/middleware');
 jest.setTimeout(360000);
 
 describe.skip(`${__dirname.split(path.sep).pop()}`, () => {
-  it.skip('should deploy and pass probe checks', async () => {
+  it('should deploy and pass probe checks', async () => {
     // TODO: add probe checks
     await deployAndTest(fixturePath);
   });

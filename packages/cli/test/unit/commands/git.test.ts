@@ -12,7 +12,7 @@ describe('git', () => {
     const fixture = (name: string) =>
       join(__dirname, '../../fixtures/unit/commands/git/connect', name);
 
-    it.skip('connects an unlinked project', async () => {
+    it('connects an unlinked project', async () => {
       const cwd = fixture('unlinked');
       client.cwd = cwd;
       try {
@@ -63,7 +63,7 @@ describe('git', () => {
         await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
       }
     });
-    it.skip('connects an unlinked project with a remote url', async () => {
+    it('connects an unlinked project with a remote url', async () => {
       const cwd = fixture('unlinked');
       client.cwd = cwd;
       try {
@@ -119,7 +119,7 @@ describe('git', () => {
         await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
       }
     });
-    it.skip('should fail when there is no git config', async () => {
+    it('should fail when there is no git config', async () => {
       client.cwd = fixture('no-git-config');
       useUser();
       useTeams('team_dummy');
@@ -135,7 +135,7 @@ describe('git', () => {
         `Error: No local Git repository found. Run \`git clone <url>\` to clone a remote Git repository first.\n`
       );
     });
-    it.skip('should fail when there is no remote url', async () => {
+    it('should fail when there is no remote url', async () => {
       const cwd = fixture('no-remote-url');
       client.cwd = cwd;
       try {
@@ -157,7 +157,7 @@ describe('git', () => {
         await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
       }
     });
-    it.skip('should fail when the remote url is bad', async () => {
+    it('should fail when the remote url is bad', async () => {
       const cwd = fixture('bad-remote-url');
       client.cwd = cwd;
       try {
@@ -183,7 +183,7 @@ describe('git', () => {
         await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
       }
     });
-    it.skip('should connect a repo to a project that is not already connected', async () => {
+    it('should connect a repo to a project that is not already connected', async () => {
       const cwd = fixture('new-connection');
       client.cwd = cwd;
       try {
@@ -224,7 +224,7 @@ describe('git', () => {
         await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
       }
     });
-    it.skip('should replace an old connection with a new one', async () => {
+    it('should replace an old connection with a new one', async () => {
       const cwd = fixture('existing-connection');
       client.cwd = cwd;
       try {
@@ -276,7 +276,7 @@ describe('git', () => {
         await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
       }
     });
-    it.skip('should exit when an already-connected repo is connected', async () => {
+    it('should exit when an already-connected repo is connected', async () => {
       const cwd = fixture('new-connection');
       client.cwd = cwd;
       try {
@@ -314,7 +314,7 @@ describe('git', () => {
         await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
       }
     });
-    it.skip('should fail when it cannot find the repository', async () => {
+    it('should fail when it cannot find the repository', async () => {
       const cwd = fixture('invalid-repo');
       client.cwd = cwd;
       try {
@@ -343,7 +343,7 @@ describe('git', () => {
         await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
       }
     });
-    it.skip('should connect the default option of multiple remotes', async () => {
+    it('should connect the default option of multiple remotes', async () => {
       const cwd = fixture('multiple-remotes');
       client.cwd = cwd;
       try {
@@ -397,7 +397,7 @@ describe('git', () => {
     const fixture = (name: string) =>
       join(__dirname, '../../fixtures/unit/commands/git/connect', name);
 
-    it.skip('should disconnect a repository', async () => {
+    it('should disconnect a repository', async () => {
       const cwd = fixture('new-connection');
       client.cwd = cwd;
       try {
@@ -439,7 +439,7 @@ describe('git', () => {
         await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
       }
     });
-    it.skip('should fail if there is no repository to disconnect', async () => {
+    it('should fail if there is no repository to disconnect', async () => {
       const cwd = fixture('new-connection');
       client.cwd = cwd;
       try {
@@ -465,7 +465,7 @@ describe('git', () => {
         await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
       }
     });
-    it.skip('should connect a given repository', async () => {
+    it('should connect a given repository', async () => {
       const cwd = fixture('no-remote-url');
       client.cwd = cwd;
       try {
@@ -506,7 +506,7 @@ describe('git', () => {
         await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
       }
     });
-    it.skip('should prompt when it finds a repository', async () => {
+    it('should prompt when it finds a repository', async () => {
       const cwd = fixture('new-connection');
       client.cwd = cwd;
       try {
@@ -554,7 +554,7 @@ describe('git', () => {
         await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
       }
     });
-    it.skip('should prompt when it finds multiple remotes', async () => {
+    it('should prompt when it finds multiple remotes', async () => {
       const cwd = fixture('multiple-remotes');
       client.cwd = cwd;
       try {
@@ -603,7 +603,7 @@ describe('git', () => {
         await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
       }
     });
-    it.skip('should continue as normal when input matches single git remote', async () => {
+    it('should continue as normal when input matches single git remote', async () => {
       const cwd = fixture('new-connection');
       client.cwd = cwd;
       try {

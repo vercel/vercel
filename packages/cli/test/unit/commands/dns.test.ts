@@ -4,7 +4,7 @@ import { useUser } from '../../mocks/user';
 import { useDns } from '../../mocks/dns';
 
 describe('dns', () => {
-  it.skip('should list up to 20 dns by default', async () => {
+  it('should list up to 20 dns by default', async () => {
     useUser();
     useDns();
     client.setArgv('dns', 'ls');
@@ -13,7 +13,7 @@ describe('dns', () => {
     await expect(exitCodePromise).resolves.toEqual(0);
   });
 
-  it.skip('should list up to 2 dns if limit set to 2', async () => {
+  it('should list up to 2 dns if limit set to 2', async () => {
     useUser();
     useDns();
     client.setArgv('dns', 'ls', '--limit', 2);

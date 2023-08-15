@@ -4,7 +4,7 @@ import bisect from '../../../src/commands/bisect';
 import { useDeployment } from '../../mocks/deployment';
 
 describe('bisect', () => {
-  it.skip('should find the bad deployment', async () => {
+  it('should find the bad deployment', async () => {
     const user = useUser();
 
     const now = Date.now();

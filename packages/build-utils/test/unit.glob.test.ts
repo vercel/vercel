@@ -4,7 +4,7 @@ import { tmpdir } from 'os';
 import { glob, isDirectory, isSymbolicLink } from '../src';
 
 describe('glob()', () => {
-  it.skip('should not return entries for empty directories by default', async () => {
+  it('should not return entries for empty directories by default', async () => {
     const dir = await fs.mkdtemp(join(tmpdir(), 'build-utils-test'));
     try {
       await Promise.all([
@@ -31,7 +31,7 @@ describe('glob()', () => {
     }
   });
 
-  it.skip('should return entries for empty directories with `includeDirectories: true`', async () => {
+  it('should return entries for empty directories with `includeDirectories: true`', async () => {
     const dir = await fs.mkdtemp(join(tmpdir(), 'build-utils-test'));
     try {
       await Promise.all([
@@ -63,7 +63,7 @@ describe('glob()', () => {
     }
   });
 
-  it.skip('should allow for following symlinks', async () => {
+  it('should allow for following symlinks', async () => {
     const rootDir = await fs.mkdtemp(join(tmpdir(), 'build-utils-test'));
     const dir = await fs.mkdtemp(join(rootDir, 'build-utils-test'));
     try {

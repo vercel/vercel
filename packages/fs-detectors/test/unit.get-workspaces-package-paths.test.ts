@@ -30,7 +30,7 @@ describe.each<[string, string[]]>([
         } for ${fixturePath}`
       : `should not detect any workspace for ${fixturePath}`;
 
-  it.skip(testName, async () => {
+  it(testName, async () => {
     const fixture = path.join(__dirname, 'fixtures', fixturePath);
     const fs = new LocalFileSystemDetector(fixture);
 

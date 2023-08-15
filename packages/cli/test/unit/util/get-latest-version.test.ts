@@ -24,7 +24,7 @@ const versionRE = /^\d+\.\d+\.\d+$/;
 describe('get latest version', () => {
   afterEach(() => fs.remove(cacheDir));
 
-  it.skip('should find newer version async', async () => {
+  it('should find newer version async', async () => {
     // 1. first call, no cache file
     let latest = getLatestVersion({
       cacheDir,
@@ -62,7 +62,7 @@ describe('get latest version', () => {
     expect(latest).toEqual(undefined);
   });
 
-  it.skip('should not find a newer version', async () => {
+  it('should not find a newer version', async () => {
     // 1. first call, no cache file
     let latest = getLatestVersion({
       cacheDir,
@@ -88,7 +88,7 @@ describe('get latest version', () => {
     expect(latest).toEqual(undefined);
   });
 
-  it.skip('should not check twice', async () => {
+  it('should not check twice', async () => {
     // 1. first call, no cache file
     let latest = getLatestVersion({
       cacheDir,
@@ -117,11 +117,11 @@ describe('get latest version', () => {
     expect(latest).toEqual(expect.stringMatching(versionRE));
   });
 
-  it.skip('should error if no arguments are passed in', () => {
+  it('should error if no arguments are passed in', () => {
     expect(() => getLatestVersion(undefined as any)).toThrow(TypeError);
   });
 
-  it.skip('should error package is invalid', () => {
+  it('should error package is invalid', () => {
     expect(() => getLatestVersion({} as any)).toThrow(TypeError);
     expect(() => getLatestVersion({ pkg: null as any })).toThrow(TypeError);
     expect(() => getLatestVersion({ pkg: {} })).toThrow(TypeError);
@@ -131,7 +131,7 @@ describe('get latest version', () => {
     expect(() => getLatestVersion({ pkg: { name: '' } })).toThrow(TypeError);
   });
 
-  it.skip('should reset notify if newer version is available', async () => {
+  it('should reset notify if newer version is available', async () => {
     // 1. seed the cache file with both a expireAt and notifyAt in the future
     //    with an out-of-date latest version
     await fs.mkdirs(join(cacheDir, 'package-updates'));

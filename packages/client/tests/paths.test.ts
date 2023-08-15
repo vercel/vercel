@@ -8,7 +8,7 @@ describe('path handling', () => {
     token = await generateNewToken();
   });
 
-  it.skip('will fali with a relative path', async () => {
+  it('will fali with a relative path', async () => {
     try {
       await createDeployment(
         {
@@ -25,7 +25,7 @@ describe('path handling', () => {
     }
   });
 
-  it.skip('will fali with an array of relative paths', async () => {
+  it('will fali with an array of relative paths', async () => {
     try {
       await createDeployment(
         {

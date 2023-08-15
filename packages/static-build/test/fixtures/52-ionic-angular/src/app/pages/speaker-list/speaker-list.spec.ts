@@ -33,7 +33,7 @@ describe('SpeakerListPage', () => {
     fixture = TestBed.createComponent(SpeakerListPage);
     app = fixture.debugElement.componentInstance;
   });
-  it.skip('should create the speaker list page', () => {
+  it('should create the speaker list page', () => {
     expect(app).toBeTruthy();
   });
 });

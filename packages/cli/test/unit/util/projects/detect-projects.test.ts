@@ -18,19 +18,19 @@ function mapDetected(
 }
 
 describe('detectProjects()', () => {
-  it.skip('should match 1 Project in "nextjs" example', async () => {
+  it('should match 1 Project in "nextjs" example', async () => {
     const dir = join(EXAMPLES_DIR, 'nextjs');
     const detected = await detectProjects(dir);
     expect(mapDetected(detected)).toEqual([['', ['nextjs']]]);
   });
 
-  it.skip('should match 2 Projects in "storybook" example', async () => {
+  it('should match 2 Projects in "storybook" example', async () => {
     const dir = join(EXAMPLES_DIR, 'storybook');
     const detected = await detectProjects(dir);
     expect(mapDetected(detected)).toEqual([['', ['nextjs', 'storybook']]]);
   });
 
-  it.skip('should match "30-double-nested-workspaces"', async () => {
+  it('should match "30-double-nested-workspaces"', async () => {
     const dir = join(FS_DETECTORS_FIXTURES, '30-double-nested-workspaces');
     const detected = await detectProjects(dir);
     expect(mapDetected(detected)).toEqual([

@@ -55,11 +55,11 @@ describe('AppComponent', () => {
     app = fixture.debugElement.componentInstance;
   });
 
-  it.skip('should create the app', () => {
+  it('should create the app', () => {
     expect(app).toBeTruthy();
   });
 
-  it.skip('should initialize the app', async () => {
+  it('should initialize the app', async () => {
     expect(platformSpy.ready).toHaveBeenCalled();
     await platformReadySpy;
     expect(statusBarSpy.styleDefault).toHaveBeenCalled();

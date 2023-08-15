@@ -53,12 +53,12 @@ async function checkForChange(url, initialValue, hardError) {
 }
 
 describe(`${__dirname.split(path.sep).pop()}`, () => {
-  it.skip('should deploy and pass probe checks', async () => {
+  it('should deploy and pass probe checks', async () => {
     const info = await deployAndTest(__dirname);
     Object.assign(ctx, info);
   });
 
-  it.skip('should render / correctly', async () => {
+  it('should render / correctly', async () => {
     const props = await getInitialData('/index');
     expect(props.pageProps.params).toEqual({});
 
@@ -67,7 +67,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     await checkForChange('/', props.pageProps.random);
   });
 
-  it.skip('should render /a correctly', async () => {
+  it('should render /a correctly', async () => {
     const props = await getInitialData('/a');
     expect(props.pageProps.params).toEqual({ slug: ['a'] });
 
@@ -76,7 +76,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     await checkForChange('/a', props.pageProps.random);
   });
 
-  it.skip('should render /hello/world correctly', async () => {
+  it('should render /hello/world correctly', async () => {
     const props = await getInitialData('/hello/world');
     expect(props.pageProps.params).toEqual({ slug: ['hello', 'world'] });
 
@@ -85,7 +85,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     await checkForChange('/hello/world', props.pageProps.random);
   });
 
-  it.skip('should render /posts correctly', async () => {
+  it('should render /posts correctly', async () => {
     const props = await getInitialData('/posts');
     expect(props.pageProps.params).toEqual({});
 
@@ -94,7 +94,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     await checkForChange('/posts', props.pageProps.random);
   });
 
-  it.skip('should render /posts/a correctly', async () => {
+  it('should render /posts/a correctly', async () => {
     const props = await getInitialData('/posts/a');
     expect(props.pageProps.params).toEqual({ slug: ['a'] });
 
@@ -103,7 +103,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     await checkForChange('/posts/a', props.pageProps.random);
   });
 
-  it.skip('should render /posts/hello/world correctly', async () => {
+  it('should render /posts/hello/world correctly', async () => {
     const props = await getInitialData('/posts/hello/world');
     expect(props.pageProps.params).toEqual({ slug: ['hello', 'world'] });
 

@@ -20,12 +20,12 @@ async function checkForChange(url, initialValue, getNewValue) {
 }
 
 describe(`${__dirname.split(path.sep).pop()}`, () => {
-  it.skip('should deploy and pass probe checks', async () => {
+  it('should deploy and pass probe checks', async () => {
     const info = await deployAndTest(__dirname);
     Object.assign(ctx, info);
   });
 
-  it.skip('should revalidate content properly from dynamic pathname', async () => {
+  it('should revalidate content properly from dynamic pathname', async () => {
     const res = await fetch(`${ctx.deploymentUrl}/regenerated/blue`);
     expect(res.status).toBe(200);
 
@@ -50,7 +50,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     expect($('#slug').text()).toBe('blue');
   });
 
-  it.skip('should revalidate content properly from /_next/data dynamic pathname', async () => {
+  it('should revalidate content properly from /_next/data dynamic pathname', async () => {
     const res = await fetch(
       `${ctx.deploymentUrl}/_next/data/testing-build-id/regenerated/blue.json`
     );

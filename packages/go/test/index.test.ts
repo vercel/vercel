@@ -1,7 +1,7 @@
 import { getNewHandlerFunctionName } from '../index';
 
 describe('getNewHandlerFunctionName', function () {
-  it.skip('does nothing with empty original function name', async () => {
+  it('does nothing with empty original function name', async () => {
     let error: Error | undefined;
     try {
       getNewHandlerFunctionName('', 'some/kind-of-file.js');
@@ -15,7 +15,7 @@ describe('getNewHandlerFunctionName', function () {
     );
   });
 
-  it.skip('does nothing with empty original function name', async () => {
+  it('does nothing with empty original function name', async () => {
     let error: Error | undefined;
     try {
       getNewHandlerFunctionName('Handler', '');
@@ -29,7 +29,7 @@ describe('getNewHandlerFunctionName', function () {
     );
   });
 
-  it.skip('generates slug with back slashes in file path', async () => {
+  it('generates slug with back slashes in file path', async () => {
     const newFunctionName = getNewHandlerFunctionName(
       'Handler',
       'some\\file.js'
@@ -37,7 +37,7 @@ describe('getNewHandlerFunctionName', function () {
     expect(newFunctionName).toEqual('Handler_some_file_js');
   });
 
-  it.skip('generates slug with forward slashes in file path', async () => {
+  it('generates slug with forward slashes in file path', async () => {
     const newFunctionName = getNewHandlerFunctionName(
       'Handler',
       'some/file.js'
@@ -45,7 +45,7 @@ describe('getNewHandlerFunctionName', function () {
     expect(newFunctionName).toEqual('Handler_some_file_js');
   });
 
-  it.skip('generates slug with dashes in file path', async () => {
+  it('generates slug with dashes in file path', async () => {
     const newFunctionName = getNewHandlerFunctionName(
       'Handler',
       'kind-of-file.js'
@@ -53,7 +53,7 @@ describe('getNewHandlerFunctionName', function () {
     expect(newFunctionName).toEqual('Handler_kind_of_file_js');
   });
 
-  it.skip('generates slug with dashes in file path', async () => {
+  it('generates slug with dashes in file path', async () => {
     const newFunctionName = getNewHandlerFunctionName(
       'Handler',
       'kind-of-file.js'
@@ -61,7 +61,7 @@ describe('getNewHandlerFunctionName', function () {
     expect(newFunctionName).toEqual('Handler_kind_of_file_js');
   });
 
-  it.skip('generates slug with brackets in file path', async () => {
+  it('generates slug with brackets in file path', async () => {
     const newFunctionName = getNewHandlerFunctionName(
       'Handler',
       '[segment].js'
@@ -74,7 +74,7 @@ describe('getNewHandlerFunctionName', function () {
     expect(newFunctionName).toEqual('Handler__segment__js');
   });
 
-  it.skip('generates slug with space in file path', async () => {
+  it('generates slug with space in file path', async () => {
     const newFunctionName = getNewHandlerFunctionName(
       'Handler',
       'kind of file.js'
@@ -82,7 +82,7 @@ describe('getNewHandlerFunctionName', function () {
     expect(newFunctionName).toEqual('Handler_kind_of_file_js');
   });
 
-  it.skip('generates slug with periods in file path', async () => {
+  it('generates slug with periods in file path', async () => {
     const newFunctionName = getNewHandlerFunctionName(
       'Handler',
       'kind.of.file.js'

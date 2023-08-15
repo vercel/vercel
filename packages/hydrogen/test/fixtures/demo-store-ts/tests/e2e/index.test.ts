@@ -22,7 +22,7 @@ describe('index', () => {
     await hydrogen.cleanUp();
   });
 
-  it.skip('should be a 200 response', async () => {
+  it('should be a 200 response', async () => {
     const response = await session.visit('/');
     expect(response!.status()).toBe(200);
   }, 60000);

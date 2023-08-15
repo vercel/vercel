@@ -182,7 +182,7 @@ describe('Test `getEnvForPackageManager()`', () => {
   ];
 
   for (const { name, want, args } of cases) {
-    it.skip(name, () => {
+    it(name, () => {
       assert.deepStrictEqual(
         getEnvForPackageManager({
           cliType: args.cliType,

@@ -3,7 +3,7 @@ import { client } from '../../../mocks/client';
 
 describe('Output', () => {
   describe('link()', () => {
-    it.skip('should return hyperlink ANSI codes when `supportsHyperlink=true`', () => {
+    it('should return hyperlink ANSI codes when `supportsHyperlink=true`', () => {
       client.output.supportsHyperlink = true;
       const val = client.output.link('Click Here', 'https://example.com');
       expect(val).toEqual(
@@ -12,13 +12,13 @@ describe('Output', () => {
       expect(stripAnsi(val)).toEqual('Click Here');
     });
 
-    it.skip('should return default fallback when `supportsHyperlink=false`', () => {
+    it('should return default fallback when `supportsHyperlink=false`', () => {
       client.output.supportsHyperlink = false;
       const val = client.output.link('Click Here', 'https://example.com');
       expect(val).toEqual('Click Here (https://example.com)');
     });
 
-    it.skip('should return text fallback when `supportsHyperlink=false` with `fallback: false`', () => {
+    it('should return text fallback when `supportsHyperlink=false` with `fallback: false`', () => {
       client.output.supportsHyperlink = false;
       const val = client.output.link('Click Here', 'https://example.com', {
         fallback: false,
@@ -26,7 +26,7 @@ describe('Output', () => {
       expect(val).toEqual('Click Here');
     });
 
-    it.skip('should return fallback when `supportsHyperlink=false` with `fallback` function', () => {
+    it('should return fallback when `supportsHyperlink=false` with `fallback` function', () => {
       client.output.supportsHyperlink = false;
       const val = client.output.link('Click Here', 'https://example.com', {
         fallback: () => 'other',

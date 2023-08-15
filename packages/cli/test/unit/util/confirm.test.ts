@@ -2,7 +2,7 @@ import confirm from '../../../src/util/input/confirm';
 import { client } from '../../mocks/client';
 
 describe('confirm()', () => {
-  it.skip('should work with multiple prompts', async () => {
+  it('should work with multiple prompts', async () => {
     // true (explicit)
     let confirmedPromise = confirm(client, 'Explictly true?', false);
     await expect(client.stderr).toOutput('Explictly true? [y/N]');

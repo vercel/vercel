@@ -17,7 +17,7 @@ describe('workspace-managers', () => {
       ? `should detect a ${frameworkSlug} workspace for ${fixturePath}`
       : `should not detect framework for ${fixturePath}`;
 
-    it.skip(testName, async () => {
+    it(testName, async () => {
       const fixture = path.join(__dirname, 'fixtures', fixturePath);
       const fs = new LocalFileSystemDetector(fixture);
 

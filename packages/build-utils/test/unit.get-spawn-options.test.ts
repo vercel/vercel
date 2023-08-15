@@ -102,7 +102,7 @@ describe('Test `getSpawnOptions()`', () => {
   ];
 
   for (const { name, args, envPath, want } of cases) {
-    it.skip(name, () => {
+    it(name, () => {
       process.env.PATH = envPath;
       const opts = getSpawnOptions(...args);
       expect(opts.env?.PATH).toBe(want);

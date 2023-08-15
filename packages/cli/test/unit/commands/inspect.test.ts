@@ -5,7 +5,7 @@ import inspect from '../../../src/commands/inspect';
 import sleep from '../../../src/util/sleep';
 
 describe('inspect', () => {
-  it.skip('should print out deployment information', async () => {
+  it('should print out deployment information', async () => {
     const user = useUser();
     const deployment = useDeployment({ creator: user });
     client.setArgv('inspect', deployment.url);
@@ -16,7 +16,7 @@ describe('inspect', () => {
     expect(exitCode).toEqual(0);
   });
 
-  it.skip('should print out deployment information for piped URL', async () => {
+  it('should print out deployment information for piped URL', async () => {
     const user = useUser();
     const deployment = useDeployment({ creator: user });
     client.stdin.isTTY = false;
@@ -29,7 +29,7 @@ describe('inspect', () => {
     expect(exitCode).toEqual(0);
   });
 
-  it.skip('should strip the scheme of a url', async () => {
+  it('should strip the scheme of a url', async () => {
     const user = useUser();
     const deployment = useDeployment({ creator: user });
     client.setArgv('inspect', `http://${deployment.url}`);
@@ -40,7 +40,7 @@ describe('inspect', () => {
     );
   });
 
-  it.skip('should print error when deployment not found', async () => {
+  it('should print error when deployment not found', async () => {
     const user = useUser();
     useDeployment({ creator: user });
     client.setArgv('inspect', 'bad.com');
@@ -49,7 +49,7 @@ describe('inspect', () => {
     );
   });
 
-  it.skip('should print error if timeout is invalid', async () => {
+  it('should print error if timeout is invalid', async () => {
     const user = useUser();
     useDeployment({ creator: user });
     client.setArgv('inspect', 'foo.com', '--timeout', 'bar');
@@ -58,7 +58,7 @@ describe('inspect', () => {
     await expect(client.stderr).toOutput(`Invalid timeout "bar"`);
   });
 
-  it.skip('should wait for a deployment to finish', async () => {
+  it('should wait for a deployment to finish', async () => {
     const user = useUser();
     const deployment = useDeployment({ creator: user, state: 'BUILDING' });
     client.setArgv('inspect', deployment.url, '--wait');

@@ -2,7 +2,7 @@ import assert from 'assert';
 import { getScriptName } from '../src';
 
 describe('Test `getScriptName()`', () => {
-  it.skip('should return "vercel-*"', () => {
+  it('should return "vercel-*"', () => {
     const pkg = {
       scripts: {
         'vercel-dev': '',
@@ -23,7 +23,7 @@ describe('Test `getScriptName()`', () => {
     assert.equal(getScriptName(pkg, ['build']), 'build');
   });
 
-  it.skip('should return "now-*"', () => {
+  it('should return "now-*"', () => {
     const pkg = {
       scripts: {
         'now-dev': '',
@@ -44,7 +44,7 @@ describe('Test `getScriptName()`', () => {
     assert.equal(getScriptName(pkg, ['build']), 'build');
   });
 
-  it.skip('should return base script name', () => {
+  it('should return base script name', () => {
     const pkg = {
       scripts: {
         dev: '',
@@ -55,7 +55,7 @@ describe('Test `getScriptName()`', () => {
     assert.equal(getScriptName(pkg, ['build']), 'build');
   });
 
-  it.skip('should return `null`', () => {
+  it('should return `null`', () => {
     assert.equal(getScriptName(undefined, ['build']), null);
     assert.equal(getScriptName({}, ['build']), null);
     assert.equal(getScriptName({ scripts: {} }, ['build']), null);

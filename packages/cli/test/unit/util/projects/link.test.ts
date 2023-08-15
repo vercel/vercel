@@ -12,7 +12,7 @@ const fixture = (name: string) =>
   join(__dirname, '../../../fixtures/unit', name);
 
 describe('getLinkedProject', () => {
-  it.skip('should fail to return a link when token is missing', async () => {
+  it('should fail to return a link when token is missing', async () => {
     const cwd = fixture('vercel-pull-next');
 
     useUser();
@@ -41,7 +41,7 @@ describe('getLinkedProject', () => {
     );
   });
 
-  it.skip('should fail to return a link when token is invalid', async () => {
+  it('should fail to return a link when token is invalid', async () => {
     const cwd = fixture('vercel-pull-next');
 
     useUser();
@@ -70,7 +70,7 @@ describe('getLinkedProject', () => {
     );
   });
 
-  it.skip('should fail to return a link when no access to team', async () => {
+  it('should fail to return a link when no access to team', async () => {
     const cwd = fixture('vercel-pull-next');
 
     useUser();
@@ -99,7 +99,7 @@ describe('getLinkedProject', () => {
     );
   });
 
-  it.skip('should return link with `project.json`', async () => {
+  it('should return link with `project.json`', async () => {
     const cwd = fixture('vercel-pull-next');
 
     useUser();
@@ -120,7 +120,7 @@ describe('getLinkedProject', () => {
     expect(link.repoRoot).toBeUndefined();
   });
 
-  it.skip('should return link with `repo.json`', async () => {
+  it('should return link with `repo.json`', async () => {
     const cwd = fixture('monorepo-link');
 
     useUser();
@@ -172,7 +172,7 @@ describe('getLinkedProject', () => {
     expect(link.repoRoot).toEqual(cwd);
   });
 
-  it.skip('should show project selector prompt link with `repo.json`', async () => {
+  it('should show project selector prompt link with `repo.json`', async () => {
     const cwd = fixture('monorepo-link');
 
     useUser();

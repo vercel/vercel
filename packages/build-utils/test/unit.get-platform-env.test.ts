@@ -2,7 +2,7 @@ import assert from 'assert';
 import { getPlatformEnv } from '../src';
 
 describe('Test `getPlatformEnv()`', () => {
-  it.skip('should support `VERCEL_` prefix', () => {
+  it('should support `VERCEL_` prefix', () => {
     try {
       assert.equal(undefined, getPlatformEnv('FOO'));
 
@@ -13,7 +13,7 @@ describe('Test `getPlatformEnv()`', () => {
     }
   });
 
-  it.skip('should support `NOW_` prefix', () => {
+  it('should support `NOW_` prefix', () => {
     try {
       assert.equal(undefined, getPlatformEnv('FOO'));
 
@@ -24,7 +24,7 @@ describe('Test `getPlatformEnv()`', () => {
     }
   });
 
-  it.skip('should throw an error if both env vars exist', () => {
+  it('should throw an error if both env vars exist', () => {
     let err: Error | null = null;
     try {
       process.env.NOW_FOO = 'bar';

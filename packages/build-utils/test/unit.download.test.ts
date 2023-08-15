@@ -17,7 +17,7 @@ describe('download()', () => {
     console.warn = originalConsoleWarn;
   });
 
-  it.skip('should re-create FileFsRef symlinks properly', async () => {
+  it('should re-create FileFsRef symlinks properly', async () => {
     if (process.platform === 'win32') {
       console.log('Skipping test on windows');
       return;
@@ -49,7 +49,7 @@ describe('download()', () => {
     strictEqual(linkTextContents, './a.txt');
   });
 
-  it.skip('should re-create FileBlob symlinks properly', async () => {
+  it('should re-create FileBlob symlinks properly', async () => {
     if (process.platform === 'win32') {
       console.log('Skipping test on windows');
       return;
@@ -107,7 +107,7 @@ describe('download()', () => {
     strictEqual(linkTextContents, 'a.txt');
   });
 
-  it.skip('should download symlinks even with incorrect file', async () => {
+  it('should download symlinks even with incorrect file', async () => {
     if (process.platform === 'win32') {
       console.log('Skipping test on windows');
       return;
@@ -154,7 +154,7 @@ describe('download()', () => {
     ]);
   });
 
-  it.skip('should create empty directory entries', async () => {
+  it('should create empty directory entries', async () => {
     const outDir = path.join(__dirname, 'symlinks-out');
     await fs.remove(outDir);
     const files = {

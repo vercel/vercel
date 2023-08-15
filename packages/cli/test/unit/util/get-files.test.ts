@@ -29,7 +29,7 @@ const normalizeWindowsPaths = (files: string[]) => {
 };
 
 describe('staticFiles', () => {
-  it.skip('should discover files for builds deployment', async () => {
+  it('should discover files for builds deployment', async () => {
     const path = 'now-json-static-no-files';
     let files = await getStaticFiles(fixture(path));
     files = files.sort(alpha);
@@ -41,7 +41,7 @@ describe('staticFiles', () => {
     expect(base(files[3])).toEqual(`${path}/package.json`);
   });
 
-  it.skip('should respect `.vercelignore` file rules', async () => {
+  it('should respect `.vercelignore` file rules', async () => {
     const path = 'vercelignore';
     let files = await getStaticFiles(fixture(path));
     files = files.sort(alpha);

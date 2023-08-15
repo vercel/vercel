@@ -9,12 +9,12 @@ const ctx = {};
 let previewCookie;
 
 describe(`${__dirname.split(path.sep).pop()}`, () => {
-  it.skip('should deploy and pass probe checks', async () => {
+  it('should deploy and pass probe checks', async () => {
     const info = await deployAndTest(__dirname);
     Object.assign(ctx, info);
   });
 
-  it.skip('should enable preview mode successfully', async () => {
+  it('should enable preview mode successfully', async () => {
     const res = await fetch(`${ctx.deploymentUrl}/api/enable`);
     expect(res.status).toBe(200);
 
@@ -38,7 +38,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     }, '');
   });
 
-  it.skip('should disable preview mode successfully', async () => {
+  it('should disable preview mode successfully', async () => {
     const res = await fetch(`${ctx.deploymentUrl}/api/disable`);
     expect(res.status).toBe(200);
 
@@ -58,7 +58,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     expect(previewDataCookie.value.length === 0).toBe(true);
   });
 
-  it.skip('should render the page on-demand with preview mode enabled (normal page)', async () => {
+  it('should render the page on-demand with preview mode enabled (normal page)', async () => {
     const res = await fetch(`${ctx.deploymentUrl}/docs`);
     expect(res.status).toBe(200);
 
@@ -85,7 +85,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     expect(previewProps.hello).toBe('world');
   });
 
-  it.skip('should render the page on-demand with preview mode enabled (dynamic page)', async () => {
+  it('should render the page on-demand with preview mode enabled (dynamic page)', async () => {
     const res = await fetch(`${ctx.deploymentUrl}/docs/first`);
     expect(res.status).toBe(200);
 

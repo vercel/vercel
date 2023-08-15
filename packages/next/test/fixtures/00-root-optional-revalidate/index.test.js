@@ -35,12 +35,12 @@ const getProps = async path => {
 };
 
 describe(`${__dirname.split(path.sep).pop()}`, () => {
-  it.skip('should deploy and pass probe checks', async () => {
+  it('should deploy and pass probe checks', async () => {
     const info = await deployAndTest(__dirname);
     Object.assign(ctx, info);
   });
 
-  it.skip('should render / correctly', async () => {
+  it('should render / correctly', async () => {
     const props = await getProps('/');
     expect(props.params).toEqual({});
 
@@ -53,7 +53,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     expect(newProps.params).toEqual({});
   });
 
-  it.skip('should render /a correctly', async () => {
+  it('should render /a correctly', async () => {
     const props = await getProps('/a');
     expect(props.params).toEqual({ slug: ['a'] });
 
@@ -66,7 +66,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     expect(newProps.params).toEqual({ slug: ['a'] });
   });
 
-  it.skip('should render /hello/world correctly', async () => {
+  it('should render /hello/world correctly', async () => {
     const props = await getProps('/hello/world');
     expect(props.params).toEqual({ slug: ['hello', 'world'] });
 

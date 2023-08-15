@@ -32,7 +32,7 @@ for (const fixture of fs.readdirSync(fixturesPath)) {
   }
 
   // eslint-disable-next-line no-loop-func
-  it.skip(`Should build "${fixture}"`, async () => {
+  it(`Should build "${fixture}"`, async () => {
     await expect(
       testDeployment(path.join(fixturesPath, fixture))
     ).resolves.toBeDefined();
@@ -55,7 +55,7 @@ for (const builder of buildersToTestWith) {
     // don't run all foreign fixtures, just some
     if (['01-cowsay', '01-cache-headers', '03-env-vars'].includes(fixture)) {
       // eslint-disable-next-line no-loop-func
-      it.skip(`Should build "${builder}/${fixture}"`, async () => {
+      it(`Should build "${builder}/${fixture}"`, async () => {
         await expect(
           testDeployment(path.join(fixturesPath2, fixture))
         ).resolves.toBeDefined();

@@ -5,14 +5,14 @@
 import { json } from '../src/response';
 
 describe('json', () => {
-  it.skip('returns a response with JSON content', async () => {
+  it('returns a response with JSON content', async () => {
     const content = { foo: 'bar' };
     const response = json(content);
     expect(response.headers.get('content-type')).toEqual('application/json');
     expect(await response.json()).toEqual(content);
   });
 
-  it.skip('can set response init', async () => {
+  it('can set response init', async () => {
     const content = { bar: 'baz' };
     const status = 201;
     const statusText = 'it is in';

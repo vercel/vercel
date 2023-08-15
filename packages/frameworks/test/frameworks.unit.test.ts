@@ -214,7 +214,7 @@ async function getDeployment(host: string) {
 }
 
 describe('frameworks', () => {
-  it.skip('ensure there is an example for every framework', async () => {
+  it('ensure there is an example for every framework', async () => {
     const root = join(__dirname, '..', '..', '..');
     const getExample = (name: string) => join(root, 'examples', name);
 
@@ -226,7 +226,7 @@ describe('frameworks', () => {
     expect(result).toEqual([]);
   });
 
-  it.skip('ensure schema', async () => {
+  it('ensure schema', async () => {
     const ajv = getValidator();
 
     const result = ajv.validate(Schema, frameworkList);
@@ -238,7 +238,7 @@ describe('frameworks', () => {
     expect(result).toBe(true);
   });
 
-  it.skip('ensure logo starts with url prefix', async () => {
+  it('ensure logo starts with url prefix', async () => {
     const invalid = frameworkList
       .map(f => f.logo)
       .filter(logo => {
@@ -248,7 +248,7 @@ describe('frameworks', () => {
     expect(invalid).toEqual([]);
   });
 
-  it.skip('ensure darkModeLogo starts with url prefix', async () => {
+  it('ensure darkModeLogo starts with url prefix', async () => {
     const invalid = frameworkList
       .map(f => f.darkModeLogo)
       .filter(darkModeLogo => {
@@ -258,7 +258,7 @@ describe('frameworks', () => {
     expect(invalid).toEqual([]);
   });
 
-  it.skip('ensure logo file exists in ./packages/frameworks/logos/', async () => {
+  it('ensure logo file exists in ./packages/frameworks/logos/', async () => {
     const missing = frameworkList
       .map(f => f.logo)
       .filter(logo => {
@@ -270,7 +270,7 @@ describe('frameworks', () => {
     expect(missing).toEqual([]);
   });
 
-  it.skip('ensure unique sort number', async () => {
+  it('ensure unique sort number', async () => {
     const sortNumToSlug = new Map<number, string | null>();
     frameworkList.forEach(f => {
       if (f.sort) {
@@ -281,7 +281,7 @@ describe('frameworks', () => {
     });
   });
 
-  it.skip('ensure unique slug', async () => {
+  it('ensure unique slug', async () => {
     const slugs = new Set<string>();
     for (const { slug } of frameworkList) {
       if (typeof slug === 'string') {
@@ -291,7 +291,7 @@ describe('frameworks', () => {
     }
   });
 
-  it.skip('ensure all demo URLs are "public"', async () => {
+  it('ensure all demo URLs are "public"', async () => {
     await Promise.all(
       frameworkList
         .filter(f => typeof f.demo === 'string')

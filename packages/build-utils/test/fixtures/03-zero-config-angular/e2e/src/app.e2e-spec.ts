@@ -8,7 +8,7 @@ describe('workspace-project App', () => {
     page = new AppPage();
   });
 
-  it.skip('should display welcome message', () => {
+  it('should display welcome message', () => {
     page.navigateTo();
     expect(page.getTitleText()).toEqual('angular app is running!');
   });

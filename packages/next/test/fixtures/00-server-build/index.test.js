@@ -22,7 +22,7 @@ async function checkForChange(url, initialValue, getNewValue) {
 const ctx = {};
 
 describe(`${__dirname.split(path.sep).pop()}`, () => {
-  it.skip('should deploy and pass probe checks', async () => {
+  it('should deploy and pass probe checks', async () => {
     const info = await deployAndTest(__dirname);
     Object.assign(ctx, info);
   });
@@ -142,7 +142,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     expect(preRevalidateRandomData).toBeDefined();
   });
 
-  it.skip('should revalidate 404 page itself correctly', async () => {
+  it('should revalidate 404 page itself correctly', async () => {
     const initial404 = await fetch(`${ctx.deploymentUrl}/404`);
     const initial404Html = await initial404.text();
     const initial404Props = JSON.parse(

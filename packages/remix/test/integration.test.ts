@@ -14,7 +14,7 @@ const exampleAbsolute = (name: string) =>
 // eslint-disable-next-line no-restricted-syntax
 for (const fixture of fs.readdirSync(fixturesPath)) {
   // eslint-disable-next-line no-loop-func
-  it.skip(`should build ${fixture}`, async () => {
+  it(`should build ${fixture}`, async () => {
     await expect(
       testDeployment(join(fixturesPath, fixture))
     ).resolves.toBeDefined();

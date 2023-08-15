@@ -4,7 +4,7 @@ import {
 } from '../../../../src/util/dev/parse-query-string';
 
 describe('parseQueryString', () => {
-  it.skip('should parse to Map and format back to original String', async () => {
+  it('should parse to Map and format back to original String', async () => {
     const querystring =
       '?a&a=&a&b=1&c=2&c=3&d=&d&d=&space%20bar=4&html=%3Ch1%3E';
     const parsed = parseQueryString(querystring);
@@ -19,25 +19,25 @@ describe('parseQueryString', () => {
     const format = formatQueryString(parsed);
     expect(format).toEqual(querystring);
   });
-  it.skip('should work with empty string', async () => {
+  it('should work with empty string', async () => {
     const parsed = parseQueryString('');
     expect(parsed).toEqual({});
     const format = formatQueryString(parsed);
     expect(format).toEqual(null);
   });
-  it.skip('should work with question mark', async () => {
+  it('should work with question mark', async () => {
     const parsed = parseQueryString('?');
     expect(parsed).toEqual({});
     const format = formatQueryString(parsed);
     expect(format).toEqual(null);
   });
-  it.skip('should work without question mark', async () => {
+  it('should work without question mark', async () => {
     const parsed = parseQueryString('blarg');
     expect(parsed).toEqual({});
     const format = formatQueryString(parsed);
     expect(format).toEqual(null);
   });
-  it.skip('should work with undefined', async () => {
+  it('should work with undefined', async () => {
     const parsed = parseQueryString(undefined);
     expect(parsed).toEqual({});
     const format = formatQueryString(parsed);

@@ -5,7 +5,7 @@ const { deployAndTest } = require('../../utils');
 describe(`${__dirname.split(path.sep).pop()}`, () => {
   const ctx = {};
 
-  it.skip('should deploy and pass probe checks', async () => {
+  it('should deploy and pass probe checks', async () => {
     const res = await deployAndTest(__dirname);
     Object.assign(ctx, res);
   });

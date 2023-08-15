@@ -2,7 +2,7 @@ const { getMiddlewareBundle } = require('../../dist/utils');
 const { genDir } = require('../utils');
 
 describe('middleware routes', () => {
-  it.skip('should generate a route for v1 middleware manifest', async () => {
+  it('should generate a route for v1 middleware manifest', async () => {
     const routes = await getMiddlewareRoutes({
       version: 1,
       sortedMiddleware: ['/'],
@@ -34,7 +34,7 @@ describe('middleware routes', () => {
     ]);
   });
 
-  it.skip('should generate a route for v2 middleware manifest', async () => {
+  it('should generate a route for v2 middleware manifest', async () => {
     const routes = await getMiddlewareRoutes({
       version: 2,
       sortedMiddleware: ['/'],
@@ -66,7 +66,7 @@ describe('middleware routes', () => {
     ]);
   });
 
-  it.skip('should generate multiple routes for v2 middleware manifest', async () => {
+  it('should generate multiple routes for v2 middleware manifest', async () => {
     const routes = await getMiddlewareRoutes({
       version: 2,
       sortedMiddleware: ['/'],
@@ -131,7 +131,7 @@ describe('middleware routes', () => {
     ]);
   });
 
-  it.skip('should make header key lowercase', async () => {
+  it('should make header key lowercase', async () => {
     const routes = await getMiddlewareRoutes({
       version: 2,
       sortedMiddleware: ['/'],
@@ -179,7 +179,7 @@ describe('middleware routes', () => {
     ]);
   });
 
-  it.skip('should generate routes with _next/data', async () => {
+  it('should generate routes with _next/data', async () => {
     const routes = await getMiddlewareRoutes({
       version: 1,
       sortedMiddleware: ['/'],

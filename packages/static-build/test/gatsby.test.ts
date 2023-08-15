@@ -50,12 +50,12 @@ describe('gatsby utilities', () => {
     process.env = existingEnv;
   });
 
-  it.skip('should return false when env vars are not set', async () => {
+  it('should return false when env vars are not set', async () => {
     const result = await injectPlugins(null, '');
     expect(result).toBeFalsy();
   });
 
-  it.skip('should not inject builder plugin when gatsby version is <v4', async () => {
+  it('should not inject builder plugin when gatsby version is <v4', async () => {
     process.env.VERCEL_ANALYTICS_ID = '1';
     const fixture = await prepareFixture(path.join(fixturesPath, 'gatsby-v3'));
     const version = await detectVersion(fixture);
@@ -69,7 +69,7 @@ describe('gatsby utilities', () => {
     `);
   });
 
-  it.skip('should inject plugins and create gatsby-node.js and gatsby-config.js', async () => {
+  it('should inject plugins and create gatsby-node.js and gatsby-config.js', async () => {
     process.env.VERCEL_ANALYTICS_ID = '1';
     const fixture = await prepareFixture(path.join(fixturesPath, 'gatsby-v4'));
     const version = await detectVersion(fixture);
@@ -88,7 +88,7 @@ describe('gatsby utilities', () => {
     `);
   });
 
-  it.skip('should inject builder plugin and update gatsby-node.js and gatsby-config.js', async () => {
+  it('should inject builder plugin and update gatsby-node.js and gatsby-config.js', async () => {
     process.env.VERCEL_ANALYTICS_ID = '1';
     const fixture = await prepareFixture(
       path.join(fixturesPath, 'gatsby-v4-existing-files-js')
@@ -163,7 +163,7 @@ describe('gatsby utilities', () => {
     `);
   });
 
-  it.skip('should inject builder plugin and update gatsby-node.ts and gatsby-config.ts', async () => {
+  it('should inject builder plugin and update gatsby-node.ts and gatsby-config.ts', async () => {
     process.env.VERCEL_ANALYTICS_ID = '1';
     const fixture = await prepareFixture(
       path.join(fixturesPath, 'gatsby-v4-existing-files-ts')
@@ -240,7 +240,7 @@ describe('gatsby utilities', () => {
     `);
   });
 
-  it.skip('should inject builder plugin and update gatsby-node.mjs and gatsby-config.mjs', async () => {
+  it('should inject builder plugin and update gatsby-node.mjs and gatsby-config.mjs', async () => {
     process.env.VERCEL_ANALYTICS_ID = '1';
     const fixture = await prepareFixture(
       path.join(fixturesPath, 'gatsby-v4-existing-files-mjs')
@@ -315,7 +315,7 @@ describe('gatsby utilities', () => {
   });
 
   describe(`createPluginSymlinks()`, () => {
-    it.skip('should add symlinks for Gatsby plugins', async () => {
+    it('should add symlinks for Gatsby plugins', async () => {
       const fixture = await prepareFixture(
         path.join(fixturesPath, 'gatsby-v4-existing-files-mjs')
       );
@@ -337,7 +337,7 @@ describe('gatsby utilities', () => {
   });
 
   describe('cleanupGatsbyFiles()', () => {
-    it.skip('should delete base files starting with the generated comment', async () => {
+    it('should delete base files starting with the generated comment', async () => {
       const files = [
         'gatsby-node.js',
         'gatsby-config.js',
@@ -364,7 +364,7 @@ describe('gatsby utilities', () => {
     });
   });
 
-  it.skip('should restore backups', async () => {
+  it('should restore backups', async () => {
     const files = [
       'gatsby-node.js',
       'gatsby-config.js',

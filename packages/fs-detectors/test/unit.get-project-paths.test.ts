@@ -50,7 +50,7 @@ describe.each<{
           } for ${fixturePath}`
         : `should not detect any path for ${fixturePath}`;
 
-    it.skip(testName, async () => {
+    it(testName, async () => {
       const fixture = path.join(__dirname, 'fixtures', fixturePath);
       const fs = new LocalFileSystemDetector(fixture);
       const mockReaddir = jest.fn().mockImplementation(fs.readdir);

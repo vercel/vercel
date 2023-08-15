@@ -5,12 +5,12 @@ const fetch = require('../../../../../test/lib/deployment/fetch-retry');
 const ctx = {};
 
 describe(`${__dirname.split(path.sep).pop()}`, () => {
-  it.skip('should deploy and pass probe checks', async () => {
+  it('should deploy and pass probe checks', async () => {
     const info = await deployAndTest(__dirname);
     Object.assign(ctx, info);
   });
 
-  it.skip('should revalidate content correctly', async () => {
+  it('should revalidate content correctly', async () => {
     const res = await fetch(`${ctx.deploymentUrl}/another`);
     expect(res.status).toBe(200);
 
@@ -41,7 +41,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     }, 'success');
   });
 
-  it.skip('should revalidate content correctly', async () => {
+  it('should revalidate content correctly', async () => {
     const res = await fetch(`${ctx.deploymentUrl}/post`);
     expect(res.status).toBe(200);
 

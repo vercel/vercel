@@ -15,7 +15,7 @@ jest.setTimeout(4 * 60 * 1000);
 const repoRoot = join(__dirname, '../../../../../..');
 
 describe('importBuilders()', () => {
-  it.skip('should import built-in Builders', async () => {
+  it('should import built-in Builders', async () => {
     const specs = new Set(['@vercel/node', '@vercel/next']);
     const builders = await importBuilders(specs, process.cwd(), client.output);
     expect(builders.size).toEqual(2);
@@ -35,7 +35,7 @@ describe('importBuilders()', () => {
     );
   });
 
-  it.skip('should import built-in Builders using `@latest`', async () => {
+  it('should import built-in Builders using `@latest`', async () => {
     const specs = new Set(['@vercel/node@latest', '@vercel/next@latest']);
     const builders = await importBuilders(specs, process.cwd(), client.output);
     expect(builders.size).toEqual(2);
@@ -59,7 +59,7 @@ describe('importBuilders()', () => {
     );
   });
 
-  it.skip('should import built-in Builders using `@canary`', async () => {
+  it('should import built-in Builders using `@canary`', async () => {
     const specs = new Set(['@vercel/node@canary', '@vercel/next@canary']);
     const builders = await importBuilders(specs, process.cwd(), client.output);
     expect(builders.size).toEqual(2);
@@ -83,7 +83,7 @@ describe('importBuilders()', () => {
     );
   });
 
-  it.skip('should install and import 1st party Builders with explicit version', async () => {
+  it('should install and import 1st party Builders with explicit version', async () => {
     if (process.platform === 'win32') {
       // this test creates symlinks which require admin by default on Windows
       console.log('Skipping test on Windows');
@@ -111,7 +111,7 @@ describe('importBuilders()', () => {
     }
   });
 
-  it.skip('should install and import 3rd party Builders', async () => {
+  it('should install and import 3rd party Builders', async () => {
     if (process.platform === 'win32') {
       // this test creates symlinks which require admin by default on Windows
       console.log('Skipping test on Windows');
@@ -147,7 +147,7 @@ describe('importBuilders()', () => {
     }
   });
 
-  it.skip('should install and warn when Builder is deprecated', async () => {
+  it('should install and warn when Builder is deprecated', async () => {
     if (process.platform === 'win32') {
       // this test creates symlinks which require admin by default on Windows
       console.log('Skipping test on Windows');
@@ -174,7 +174,7 @@ describe('importBuilders()', () => {
     }
   });
 
-  it.skip('should install and import legacy `@now/build-utils` Builders', async () => {
+  it('should install and import legacy `@now/build-utils` Builders', async () => {
     if (process.platform === 'win32') {
       // this test creates symlinks which require admin by default on Windows
       console.log('Skipping test on Windows');
@@ -198,7 +198,7 @@ describe('importBuilders()', () => {
     }
   });
 
-  it.skip('should throw when importing a Builder that is not on npm registry', async () => {
+  it('should throw when importing a Builder that is not on npm registry', async () => {
     let err: Error | undefined;
     const cwd = await getWriteableDirectory();
     try {
@@ -225,7 +225,7 @@ describe('importBuilders()', () => {
 });
 
 describe('resolveBuilders()', () => {
-  it.skip('should return builders to install when missing', async () => {
+  it('should return builders to install when missing', async () => {
     const specs = new Set(['@vercel/does-not-exist']);
     const result = await resolveBuilders(process.cwd(), specs, client.output);
     if (!('buildersToAdd' in result)) {
@@ -234,7 +234,7 @@ describe('resolveBuilders()', () => {
     expect([...result.buildersToAdd]).toEqual(['@vercel/does-not-exist']);
   });
 
-  it.skip('should throw error when `MODULE_NOT_FOUND` on 2nd pass', async () => {
+  it('should throw error when `MODULE_NOT_FOUND` on 2nd pass', async () => {
     let err: Error | undefined;
     const specs = new Set(['@vercel/does-not-exist']);
 

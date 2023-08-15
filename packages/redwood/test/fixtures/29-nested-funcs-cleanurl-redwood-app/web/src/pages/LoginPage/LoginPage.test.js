@@ -6,7 +6,7 @@ import LoginPage from './LoginPage'
 //   https://redwoodjs.com/docs/testing#testing-pages-layouts
 
 describe('LoginPage', () => {
-  it.skip('renders successfully', () => {
+  it('renders successfully', () => {
     expect(() => {
       render(<LoginPage />)
     }).not.toThrow()

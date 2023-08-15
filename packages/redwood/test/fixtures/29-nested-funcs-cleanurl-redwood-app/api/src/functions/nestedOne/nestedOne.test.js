@@ -6,7 +6,7 @@ import { handler } from './nestedOne'
 //    https://redwoodjs.com/docs/testing#testing-functions
 
 describe('nestedOne function', () => {
-  it.skip('Should respond with 200', async () => {
+  it('Should respond with 200', async () => {
     const httpEvent = mockHttpEvent({
       queryStringParameters: {
         id: '42', // Add parameters here

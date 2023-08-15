@@ -2,28 +2,28 @@ import { getBodyParser } from '../../../src/serverless-functions/helpers';
 
 describe('serverless-functions/helpers', () => {
   describe('getBodyParser', () => {
-    it.skip('content type undefined should return the original string', () => {
+    it('content type undefined should return the original string', () => {
       const rawBody = 'body content';
       const body = Buffer.from(rawBody);
       const result = getBodyParser(body, undefined)();
       expect(result).toBe(rawBody);
     });
 
-    it.skip('content type "text/plain" should return the original string', () => {
+    it('content type "text/plain" should return the original string', () => {
       const rawBody = 'body content';
       const body = Buffer.from(rawBody);
       const result = getBodyParser(body, 'text/plain')();
       expect(result).toBe(rawBody);
     });
 
-    it.skip('content type "application/octet-stream" should return the body buffer', () => {
+    it('content type "application/octet-stream" should return the body buffer', () => {
       const rawBody = 'body content';
       const body = Buffer.from(rawBody);
       const result = getBodyParser(body, 'application/octet-stream')();
       expect(result).toBe(body);
     });
 
-    it.skip('content type "application/x-www-form-urlencoded" should return the parsed query string', () => {
+    it('content type "application/x-www-form-urlencoded" should return the parsed query string', () => {
       const rawBody = 'foo=bar&baz=zim';
       const body = Buffer.from(rawBody);
 
@@ -34,7 +34,7 @@ describe('serverless-functions/helpers', () => {
       });
     });
 
-    it.skip('content type "application/json" should return the parsed object', () => {
+    it('content type "application/json" should return the parsed object', () => {
       const rawBody = '{"foo": "bar", "baz": "zim"}';
       const body = Buffer.from(rawBody);
       const result = getBodyParser(body, 'application/json')();
@@ -44,7 +44,7 @@ describe('serverless-functions/helpers', () => {
       });
     });
 
-    it.skip('content type "application/json" should throw when parsing bad json', () => {
+    it('content type "application/json" should throw when parsing bad json', () => {
       const rawBody = 'not valid json';
       const body = Buffer.from(rawBody);
       expect(() => {

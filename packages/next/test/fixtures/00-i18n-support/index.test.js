@@ -31,7 +31,7 @@ async function checkForChange(url, initialValue, hardError) {
 const ctx = {};
 
 describe(`${__dirname.split(path.sep).pop()}`, () => {
-  it.skip('should deploy and pass probe checks', async () => {
+  it('should deploy and pass probe checks', async () => {
     const info = await deployAndTest(__dirname);
     Object.assign(ctx, info);
 
@@ -43,7 +43,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     }
   });
 
-  it.skip('should revalidate content properly from /', async () => {
+  it('should revalidate content properly from /', async () => {
     const dataRes = await fetch(
       `${ctx.deploymentUrl}/_next/data/testing-build-id/en-US.json`
     );
@@ -70,7 +70,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     expect(JSON.parse($('#router-query').text())).toEqual({});
   });
 
-  it.skip('should revalidate content properly from /fr', async () => {
+  it('should revalidate content properly from /fr', async () => {
     const dataRes = await fetch(
       `${ctx.deploymentUrl}/_next/data/testing-build-id/fr.json`
     );
@@ -96,7 +96,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     expect(JSON.parse($('#router-query').text())).toEqual({});
   });
 
-  it.skip('should revalidate content properly from /nl-NL', async () => {
+  it('should revalidate content properly from /nl-NL', async () => {
     const dataRes = await fetch(
       `${ctx.deploymentUrl}/_next/data/testing-build-id/nl-NL.json`
     );
@@ -122,7 +122,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     expect(JSON.parse($('#router-query').text())).toEqual({});
   });
 
-  it.skip('should revalidate content properly from /gsp/fallback/first', async () => {
+  it('should revalidate content properly from /gsp/fallback/first', async () => {
     // check the _next/data URL first
     const dataRes = await fetch(
       `${ctx.deploymentUrl}/_next/data/testing-build-id/en-US/gsp/fallback/first.json`
@@ -156,7 +156,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     expect(JSON.parse($('#router-query').text())).toEqual({ slug: 'first' });
   });
 
-  it.skip('should revalidate content properly from /fr/gsp/fallback/first', async () => {
+  it('should revalidate content properly from /fr/gsp/fallback/first', async () => {
     // check the _next/data URL first
     const dataRes = await fetch(
       `${ctx.deploymentUrl}/_next/data/testing-build-id/fr/gsp/fallback/first.json`
@@ -190,7 +190,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     expect(JSON.parse($('#router-query').text())).toEqual({ slug: 'first' });
   });
 
-  it.skip('should revalidate content properly from /nl-NL/gsp/fallback/first', async () => {
+  it('should revalidate content properly from /nl-NL/gsp/fallback/first', async () => {
     // check the _next/data URL first
     const dataRes = await fetch(
       `${ctx.deploymentUrl}/_next/data/testing-build-id/nl-NL/gsp/fallback/first.json`
@@ -224,7 +224,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     expect(JSON.parse($('#router-query').text())).toEqual({ slug: 'first' });
   });
 
-  it.skip('should revalidate content properly from /gsp/fallback/new-page', async () => {
+  it('should revalidate content properly from /gsp/fallback/new-page', async () => {
     // we have to hit the _next/data URL first
     const dataRes = await fetch(
       `${ctx.deploymentUrl}/_next/data/testing-build-id/en-US/gsp/fallback/new-page.json`
@@ -261,7 +261,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     expect($('#router-locale').text()).toBe('en-US');
   });
 
-  it.skip('should revalidate content properly from /fr/gsp/fallback/new-page', async () => {
+  it('should revalidate content properly from /fr/gsp/fallback/new-page', async () => {
     // we have to hit the _next/data URL first
     const dataRes = await fetch(
       `${ctx.deploymentUrl}/_next/data/testing-build-id/fr/gsp/fallback/new-page.json`
@@ -298,7 +298,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     expect($('#router-locale').text()).toBe('fr');
   });
 
-  it.skip('should revalidate content properly from /nl-NL/gsp/fallback/new-page', async () => {
+  it('should revalidate content properly from /nl-NL/gsp/fallback/new-page', async () => {
     // we have to hit the _next/data URL first
     const dataRes = await fetch(
       `${ctx.deploymentUrl}/_next/data/testing-build-id/nl-NL/gsp/fallback/new-page.json`
@@ -342,7 +342,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     expect(JSON.parse($('#router-query').text())).toEqual({ slug: 'new-page' });
   });
 
-  it.skip('should revalidate content properly from /gsp/no-fallback/first', async () => {
+  it('should revalidate content properly from /gsp/no-fallback/first', async () => {
     const dataRes = await fetch(
       `${ctx.deploymentUrl}/_next/data/testing-build-id/en-US/gsp/no-fallback/first.json`
     );
@@ -374,7 +374,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     expect(JSON.parse($('#router-query').text())).toEqual({ slug: 'first' });
   });
 
-  it.skip('should revalidate content properly from /fr/gsp/no-fallback/first', async () => {
+  it('should revalidate content properly from /fr/gsp/no-fallback/first', async () => {
     const dataRes = await fetch(
       `${ctx.deploymentUrl}/_next/data/testing-build-id/fr/gsp/no-fallback/first.json`
     );
@@ -406,7 +406,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     expect(JSON.parse($('#router-query').text())).toEqual({ slug: 'first' });
   });
 
-  it.skip('should revalidate content properly from /nl-NL/gsp/no-fallback/second', async () => {
+  it('should revalidate content properly from /nl-NL/gsp/no-fallback/second', async () => {
     const dataRes = await fetch(
       `${ctx.deploymentUrl}/_next/data/testing-build-id/nl-NL/gsp/no-fallback/second.json`
     );

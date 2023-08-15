@@ -6,7 +6,7 @@ import LandingLayout from './LandingLayout'
 //   https://redwoodjs.com/docs/testing#testing-pages-layouts
 
 describe('LandingLayout', () => {
-  it.skip('renders successfully', () => {
+  it('renders successfully', () => {
     expect(() => {
       render(<LandingLayout />)
     }).not.toThrow()

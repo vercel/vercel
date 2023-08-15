@@ -11,7 +11,7 @@ import {
 } from '../src';
 
 describe('Test `detectBuilders`', () => {
-  it.skip('should never select now.json src', async () => {
+  it('should never select now.json src', async () => {
     const files = ['docs/index.md', 'mkdocs.yml', 'now.json'];
     const { builders, errors } = await detectBuilders(files, null, {
       projectSettings: {
@@ -24,7 +24,7 @@ describe('Test `detectBuilders`', () => {
     expect(builders![0].src).not.toBe('now.json');
   });
 
-  it.skip('package.json + no build', async () => {
+  it('package.json + no build', async () => {
     const pkg = { dependencies: { next: '9.0.0' } };
     const files = ['package.json', 'pages/index.js', 'public/index.html'];
     const { builders, errors } = await detectBuilders(files, pkg);
@@ -32,7 +32,7 @@ describe('Test `detectBuilders`', () => {
     expect(errors!.length).toBe(1);
   });
 
-  it.skip('package.json + no build + next', async () => {
+  it('package.json + no build + next', async () => {
     const pkg = {
       scripts: { build: 'next build' },
       dependencies: { next: '9.0.0' },
@@ -43,7 +43,7 @@ describe('Test `detectBuilders`', () => {
     expect(errors).toBe(null);
   });
 
-  it.skip('package.json + no build + next', async () => {
+  it('package.json + no build + next', async () => {
     const pkg = {
       scripts: { build: 'next build' },
       devDependencies: { next: '9.0.0' },
@@ -54,7 +54,7 @@ describe('Test `detectBuilders`', () => {
     expect(errors).toBe(null);
   });
 
-  it.skip('package.json + no build', async () => {
+  it('package.json + no build', async () => {
     const pkg = {};
     const files = ['package.json'];
     const { builders, errors } = await detectBuilders(files, pkg);
@@ -62,21 +62,21 @@ describe('Test `detectBuilders`', () => {
     expect(errors!.length).toBe(1);
   });
 
-  it.skip('static file', async () => {
+  it('static file', async () => {
     const files = ['index.html'];
     const { builders, errors } = await detectBuilders(files);
     expect(builders).toBe(null);
     expect(errors).toBe(null);
   });
 
-  it.skip('no package.json + public', async () => {
+  it('no package.json + public', async () => {
     const files = ['api/users.js', 'public/index.html'];
     const { builders, errors } = await detectBuilders(files);
     expect(builders![1].use).toBe('@vercel/static');
     expect(errors).toBe(null);
   });
 
-  it.skip('no package.json + no build + raw static + api', async () => {
+  it('no package.json + no build + raw static + api', async () => {
     const files = ['api/users.js', 'index.html'];
     const { builders, errors } = await detectBuilders(files);
     expect(builders![0].use).toBe('@vercel/node');
@@ -87,7 +87,7 @@ describe('Test `detectBuilders`', () => {
     expect(errors).toBe(null);
   });
 
-  it.skip('package.json + no build + root + api', async () => {
+  it('package.json + no build + root + api', async () => {
     const files = ['index.html', 'api/[endpoint].js', 'static/image.png'];
     const { builders, errors } = await detectBuilders(files);
     expect(builders![0].use).toBe('@vercel/node');
@@ -98,7 +98,7 @@ describe('Test `detectBuilders`', () => {
     expect(errors).toBe(null);
   });
 
-  it.skip('api + ignore files', async () => {
+  it('api + ignore files', async () => {
     const files = [
       'api/_utils/handler.js',
       'api/[endpoint]/.helper.js',
@@ -111,7 +111,7 @@ describe('Test `detectBuilders`', () => {
     expect(builders!.length).toBe(1);
   });
 
-  it.skip('api + next + public', async () => {
+  it('api + next + public', async () => {
     const pkg = {
       scripts: { build: 'next build' },
       devDependencies: { next: '9.0.0' },
@@ -126,7 +126,7 @@ describe('Test `detectBuilders`', () => {
     expect(builders!.length).toBe(2);
   });
 
-  it.skip('api + next + raw static', async () => {
+  it('api + next + raw static', async () => {
     const pkg = {
       scripts: { build: 'next build' },
       devDependencies: { next: '9.0.0' },
@@ -141,7 +141,7 @@ describe('Test `detectBuilders`', () => {
     expect(builders!.length).toBe(2);
   });
 
-  it.skip('api + raw static', async () => {
+  it('api + raw static', async () => {
     const files = ['api/endpoint.js', 'index.html', 'favicon.ico'];
 
     const { builders } = await detectBuilders(files);
@@ -152,7 +152,7 @@ describe('Test `detectBuilders`', () => {
     expect(builders!.length).toBe(2);
   });
 
-  it.skip('api + public', async () => {
+  it('api + public', async () => {
     const files = [
       'api/endpoint.js',
       'public/index.html',
@@ -168,7 +168,7 @@ describe('Test `detectBuilders`', () => {
     expect(builders!.length).toBe(2);
   });
 
-  it.skip('api go with test files', async () => {
+  it('api go with test files', async () => {
     const files = [
       'api/index.go',
       'api/index_test.go',
@@ -189,7 +189,7 @@ describe('Test `detectBuilders`', () => {
     expect(builders!.some(b => b.src!.endsWith('_test.go'))).toBe(false);
   });
 
-  it.skip('just public', async () => {
+  it('just public', async () => {
     const files = ['public/index.html', 'public/favicon.ico', 'README.md'];
 
     const { builders } = await detectBuilders(files);
@@ -197,7 +197,7 @@ describe('Test `detectBuilders`', () => {
     expect(builders!.length).toBe(1);
   });
 
-  it.skip('next + public', async () => {
+  it('next + public', async () => {
     const pkg = {
       scripts: { build: 'next build' },
       devDependencies: { next: '9.0.0' },
@@ -210,7 +210,7 @@ describe('Test `detectBuilders`', () => {
     expect(builders!.length).toBe(1);
   });
 
-  it.skip('nuxt', async () => {
+  it('nuxt', async () => {
     const pkg = {
       scripts: { build: 'nuxt build' },
       dependencies: { nuxt: '2.8.1' },
@@ -223,7 +223,7 @@ describe('Test `detectBuilders`', () => {
     expect(builders!.length).toBe(1);
   });
 
-  it.skip('nuxt + tag canary', async () => {
+  it('nuxt + tag canary', async () => {
     const pkg = {
       scripts: { build: 'nuxt build' },
       dependencies: { nuxt: '2.8.1' },
@@ -236,7 +236,7 @@ describe('Test `detectBuilders`', () => {
     expect(builders!.length).toBe(1);
   });
 
-  it.skip('package.json with no build + api', async () => {
+  it('package.json with no build + api', async () => {
     const pkg = { dependencies: { next: '9.0.0' } };
     const files = ['package.json', 'api/[endpoint].js'];
 
@@ -246,7 +246,7 @@ describe('Test `detectBuilders`', () => {
     expect(builders!.length).toBe(1);
   });
 
-  it.skip('package.json with no build + public directory', async () => {
+  it('package.json with no build + public directory', async () => {
     const pkg = { dependencies: { next: '9.0.0' } };
     const files = ['package.json', 'public/index.html'];
 
@@ -255,14 +255,14 @@ describe('Test `detectBuilders`', () => {
     expect(errors!.length).toBe(1);
   });
 
-  it.skip('no package.json + api', async () => {
+  it('no package.json + api', async () => {
     const files = ['api/[endpoint].js', 'api/[endpoint]/[id].js'];
 
     const { builders } = await detectBuilders(files);
     expect(builders!.length).toBe(2);
   });
 
-  it.skip('no package.json + no api', async () => {
+  it('no package.json + no api', async () => {
     const files = ['index.html'];
 
     const { builders, errors } = await detectBuilders(files);
@@ -270,7 +270,7 @@ describe('Test `detectBuilders`', () => {
     expect(errors).toBe(null);
   });
 
-  it.skip('package.json + api + canary', async () => {
+  it('package.json + api + canary', async () => {
     const pkg = {
       scripts: { build: 'next build' },
       dependencies: { next: '9.0.0' },
@@ -288,7 +288,7 @@ describe('Test `detectBuilders`', () => {
     expect(builders!.length).toBe(3);
   });
 
-  it.skip('package.json + api + latest', async () => {
+  it('package.json + api + latest', async () => {
     const pkg = {
       scripts: { build: 'next build' },
       dependencies: { next: '9.0.0' },
@@ -306,7 +306,7 @@ describe('Test `detectBuilders`', () => {
     expect(builders!.length).toBe(3);
   });
 
-  it.skip('package.json + api + random tag', async () => {
+  it('package.json + api + random tag', async () => {
     const pkg = {
       scripts: { build: 'next build' },
       dependencies: { next: '9.0.0' },
@@ -324,7 +324,7 @@ describe('Test `detectBuilders`', () => {
     expect(builders!.length).toBe(3);
   });
 
-  it.skip('next.js pages/api + api', async () => {
+  it('next.js pages/api + api', async () => {
     const pkg = {
       scripts: { build: 'next build' },
       dependencies: { next: '9.0.0' },
@@ -342,7 +342,7 @@ describe('Test `detectBuilders`', () => {
     expect(builders![1].use).toBe('@vercel/next');
   });
 
-  it.skip('many static files + one api file', async () => {
+  it('many static files + one api file', async () => {
     const files = Array.from({ length: 5000 }).map((_, i) => `file${i}.html`);
     files.push('api/index.ts');
     const { builders } = await detectBuilders(files);
@@ -354,7 +354,7 @@ describe('Test `detectBuilders`', () => {
     expect(builders![1].src).toBe('!{api/**,package.json,middleware.[jt]s}');
   });
 
-  it.skip('functions with nextjs', async () => {
+  it('functions with nextjs', async () => {
     const pkg = {
       scripts: { build: 'next build' },
       dependencies: { next: '9.0.0' },
@@ -391,7 +391,7 @@ describe('Test `detectBuilders`', () => {
     });
   });
 
-  it.skip('extend with functions', async () => {
+  it('extend with functions', async () => {
     const pkg = {
       scripts: { build: 'next build' },
       dependencies: { next: '9.0.0' },
@@ -448,7 +448,7 @@ describe('Test `detectBuilders`', () => {
     });
   });
 
-  it.skip('invalid function key', async () => {
+  it('invalid function key', async () => {
     const functions = { ['a'.repeat(1000)]: { memory: 128 } };
     const files = ['pages/index.ts'];
     const { builders, errors } = await detectBuilders(files, null, {
@@ -460,7 +460,7 @@ describe('Test `detectBuilders`', () => {
     expect(errors![0].code).toBe('invalid_function_glob');
   });
 
-  it.skip('invalid function maxDuration', async () => {
+  it('invalid function maxDuration', async () => {
     const functions = { 'pages/index.ts': { maxDuration: -1 } };
     const files = ['pages/index.ts'];
     const { builders, errors } = await detectBuilders(files, null, {
@@ -472,7 +472,7 @@ describe('Test `detectBuilders`', () => {
     expect(errors![0].code).toBe('invalid_function_duration');
   });
 
-  it.skip('invalid function memory', async () => {
+  it('invalid function memory', async () => {
     const functions = { 'pages/index.ts': { memory: 127 } };
     const files = ['pages/index.ts'];
     const { builders, errors } = await detectBuilders(files, null, {
@@ -484,7 +484,7 @@ describe('Test `detectBuilders`', () => {
     expect(errors![0].code).toBe('invalid_function_memory');
   });
 
-  it.skip('should build with function memory not dividable by 64', async () => {
+  it('should build with function memory not dividable by 64', async () => {
     const functions = { 'api/index.ts': { memory: 1000 } };
     const files = ['api/index.ts'];
     const { builders, errors } = await detectBuilders(files, null, {
@@ -495,7 +495,7 @@ describe('Test `detectBuilders`', () => {
     expect(errors).toBeNull();
   });
 
-  it.skip('missing runtime version', async () => {
+  it('missing runtime version', async () => {
     const functions = { 'pages/index.ts': { runtime: 'haha' } };
     const files = ['pages/index.ts'];
     const { builders, errors } = await detectBuilders(files, null, {
@@ -507,7 +507,7 @@ describe('Test `detectBuilders`', () => {
     expect(errors![0].code).toBe('invalid_function_runtime');
   });
 
-  it.skip('use a custom runtime', async () => {
+  it('use a custom runtime', async () => {
     const functions = { 'api/user.php': { runtime: 'vercel-php@0.1.0' } };
     const files = ['api/user.php'];
     const { builders, errors } = await detectBuilders(files, null, {
@@ -519,7 +519,7 @@ describe('Test `detectBuilders`', () => {
     expect(builders![0].use).toBe('vercel-php@0.1.0');
   });
 
-  it.skip('use a custom runtime but without a source', async () => {
+  it('use a custom runtime but without a source', async () => {
     const functions = { 'api/user.php': { runtime: 'vercel-php@0.1.0' } };
     const files = ['api/team.js'];
     const { errors } = await detectBuilders(files, null, {
@@ -530,7 +530,7 @@ describe('Test `detectBuilders`', () => {
     expect(errors![0].code).toBe('unused_function');
   });
 
-  it.skip('do not allow empty functions', async () => {
+  it('do not allow empty functions', async () => {
     const functions = { 'api/user.php': {} };
     const files = ['api/user.php'];
     const { errors } = await detectBuilders(files, null, {
@@ -541,7 +541,7 @@ describe('Test `detectBuilders`', () => {
     expect(errors![0].code).toBe('invalid_function');
   });
 
-  it.skip('do not allow null functions', async () => {
+  it('do not allow null functions', async () => {
     const functions = { 'api/user.php': null };
     const files = ['api/user.php'];
     // @ts-ignore
@@ -554,7 +554,7 @@ describe('Test `detectBuilders`', () => {
     expect(errors![0].code).toBe('invalid_function');
   });
 
-  it.skip('Do not allow functions that are not used by @vercel/next', async () => {
+  it('Do not allow functions that are not used by @vercel/next', async () => {
     const pkg = {
       scripts: { build: 'next build' },
       dependencies: { next: '9.0.0' },
@@ -568,7 +568,7 @@ describe('Test `detectBuilders`', () => {
     expect(errors![0].code).toBe('unused_function');
   });
 
-  it.skip('Must include includeFiles config property', async () => {
+  it('Must include includeFiles config property', async () => {
     const functions = {
       'api/test.js': { includeFiles: 'text/include.txt' },
     };
@@ -588,7 +588,7 @@ describe('Test `detectBuilders`', () => {
     });
   });
 
-  it.skip('Must include excludeFiles config property', async () => {
+  it('Must include excludeFiles config property', async () => {
     const functions = {
       'api/test.js': { excludeFiles: 'text/exclude.txt' },
     };
@@ -608,7 +608,7 @@ describe('Test `detectBuilders`', () => {
     });
   });
 
-  it.skip('Must include excludeFiles and includeFiles config property', async () => {
+  it('Must include excludeFiles and includeFiles config property', async () => {
     const functions = {
       'api/test.js': {
         excludeFiles: 'text/exclude.txt',
@@ -632,7 +632,7 @@ describe('Test `detectBuilders`', () => {
     });
   });
 
-  it.skip('Must fail for includeFiles config property', async () => {
+  it('Must fail for includeFiles config property', async () => {
     const functions = {
       'api/test.js': { includeFiles: { test: 1 } },
     };
@@ -645,7 +645,7 @@ describe('Test `detectBuilders`', () => {
     expect(errors![0].code).toBe('invalid_function_property');
   });
 
-  it.skip('Must fail for excludeFiles config property', async () => {
+  it('Must fail for excludeFiles config property', async () => {
     const functions = {
       'api/test.js': { excludeFiles: { test: 1 } },
     };
@@ -658,7 +658,7 @@ describe('Test `detectBuilders`', () => {
     expect(errors![0].code).toBe('invalid_function_property');
   });
 
-  it.skip('Must fail when function patterns start with a slash', async () => {
+  it('Must fail when function patterns start with a slash', async () => {
     const functions = {
       '/api/test.js': { memory: 128 },
     };
@@ -670,7 +670,7 @@ describe('Test `detectBuilders`', () => {
     expect(errors![0].code).toBe('invalid_function_source');
   });
 
-  it.skip('Custom static output directory', async () => {
+  it('Custom static output directory', async () => {
     const projectSettings = {
       outputDirectory: 'dist',
     };
@@ -690,7 +690,7 @@ describe('Test `detectBuilders`', () => {
     expect(defaultRoutes![0].dest).toBe('/dist/$1');
   });
 
-  it.skip('Custom static output directory with api', async () => {
+  it('Custom static output directory with api', async () => {
     const projectSettings = {
       outputDirectory: 'output',
     };
@@ -711,7 +711,7 @@ describe('Test `detectBuilders`', () => {
     expect(defaultRoutes![2].dest).toBe('/output/$1');
   });
 
-  it.skip('Framework with non-package.json entrypoint', async () => {
+  it('Framework with non-package.json entrypoint', async () => {
     const files = ['config.yaml'];
     const projectSettings = {
       framework: 'hugo',
@@ -731,7 +731,7 @@ describe('Test `detectBuilders`', () => {
     ]);
   });
 
-  it.skip('No framework, only package.json', async () => {
+  it('No framework, only package.json', async () => {
     const files = ['package.json'];
     const pkg = {
       scripts: {
@@ -752,7 +752,7 @@ describe('Test `detectBuilders`', () => {
     ]);
   });
 
-  it.skip('Framework with an API', async () => {
+  it('Framework with an API', async () => {
     const files = ['config.rb', 'api/date.rb'];
     const projectSettings = { framework: 'middleman' };
 
@@ -777,7 +777,7 @@ describe('Test `detectBuilders`', () => {
     ]);
   });
 
-  it.skip('Error for non-api functions', async () => {
+  it('Error for non-api functions', async () => {
     const files = ['server/hello.ts', 'public/index.html'];
     const functions = {
       'server/**/*.ts': {
@@ -797,7 +797,7 @@ describe('Test `detectBuilders`', () => {
     ]);
   });
 
-  it.skip('Works with fallback last', async () => {
+  it('Works with fallback last', async () => {
     const files = ['api/simple.rs', 'api/complex.rs'];
     const functions = {
       'api/simple.rs': {
@@ -815,7 +815,7 @@ describe('Test `detectBuilders`', () => {
     expect(errors).toBe(null);
   });
 
-  it.skip('Errors with fallback first', async () => {
+  it('Errors with fallback first', async () => {
     const files = ['api/simple.rs', 'api/complex.rs'];
     const functions = {
       'api/**/*.rs': {
@@ -840,7 +840,7 @@ describe('Test `detectBuilders`', () => {
     ]);
   });
 
-  it.skip('All static if `buildCommand` is an empty string', async () => {
+  it('All static if `buildCommand` is an empty string', async () => {
     const files = ['index.html'];
     const projectSettings = { buildCommand: '' };
     const { builders, errors } = await detectBuilders(files, null, {
@@ -850,7 +850,7 @@ describe('Test `detectBuilders`', () => {
     expect(builders).toBe(null);
   });
 
-  it.skip('All static if `outputDirectory` is an empty string', async () => {
+  it('All static if `outputDirectory` is an empty string', async () => {
     const files = ['index.html'];
     const projectSettings = { outputDirectory: '' };
     const { builders, errors } = await detectBuilders(files, null, {
@@ -860,7 +860,7 @@ describe('Test `detectBuilders`', () => {
     expect(builders).toBe(null);
   });
 
-  it.skip('All static if `buildCommand` is an empty string with an `outputDirectory`', async () => {
+  it('All static if `buildCommand` is an empty string with an `outputDirectory`', async () => {
     const files = ['out/index.html'];
     const projectSettings = { buildCommand: '', outputDirectory: 'out' };
     const { builders, errors } = await detectBuilders(files, null, {
@@ -871,7 +871,7 @@ describe('Test `detectBuilders`', () => {
     expect(builders![0]!.src).toBe('out/**/*');
   });
 
-  it.skip('do not require build script when `buildCommand` is an empty string', async () => {
+  it('do not require build script when `buildCommand` is an empty string', async () => {
     const files = ['index.html', 'about.html', 'package.json'];
     const projectSettings = { buildCommand: '', outputDirectory: '' };
     const pkg = {
@@ -891,7 +891,7 @@ describe('Test `detectBuilders`', () => {
 describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
   const featHandleMiss = true;
 
-  it.skip('should select "installCommand"', async () => {
+  it('should select "installCommand"', async () => {
     const pkg = {
       scripts: { build: 'next build' },
       dependencies: { next: '9.0.0' },
@@ -914,7 +914,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     );
   });
 
-  it.skip('should select empty "installCommand"', async () => {
+  it('should select empty "installCommand"', async () => {
     const pkg = {
       scripts: { build: 'next build' },
       dependencies: { next: '9.0.0' },
@@ -935,7 +935,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(builders![0].config!.installCommand).toStrictEqual('');
   });
 
-  it.skip('should never select now.json src', async () => {
+  it('should never select now.json src', async () => {
     const files = ['docs/index.md', 'mkdocs.yml', 'now.json'];
     const { builders, errors } = await detectBuilders(files, null, {
       featHandleMiss,
@@ -949,7 +949,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(builders![0].src).not.toBe('now.json');
   });
 
-  it.skip('package.json + no build', async () => {
+  it('package.json + no build', async () => {
     const pkg = { dependencies: { next: '9.0.0' } };
     const files = ['package.json', 'pages/index.js', 'public/index.html'];
     const { builders, errors } = await detectBuilders(files, pkg, {
@@ -959,7 +959,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(errors!.length).toBe(1);
   });
 
-  it.skip('package.json + no build + next', async () => {
+  it('package.json + no build + next', async () => {
     const pkg = {
       scripts: { build: 'next build' },
       dependencies: { next: '9.0.0' },
@@ -981,7 +981,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(errorRoutes).toStrictEqual([]);
   });
 
-  it.skip('package.json + no build + next', async () => {
+  it('package.json + no build + next', async () => {
     const pkg = {
       scripts: { build: 'next build' },
       devDependencies: { next: '9.0.0' },
@@ -1003,7 +1003,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(errorRoutes).toStrictEqual([]);
   });
 
-  it.skip('package.json + no build', async () => {
+  it('package.json + no build', async () => {
     const pkg = {};
     const files = ['package.json'];
     const { builders, errors } = await detectBuilders(files, pkg, {
@@ -1013,7 +1013,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(errors!.length).toBe(1);
   });
 
-  it.skip('static file', async () => {
+  it('static file', async () => {
     const files = ['index.html'];
     const {
       builders,
@@ -1032,7 +1032,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect((errorRoutes![0] as Source).status).toBe(404);
   });
 
-  it.skip('no package.json + public', async () => {
+  it('no package.json + public', async () => {
     const files = ['api/users.js', 'public/index.html'];
     const {
       builders,
@@ -1055,7 +1055,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect((errorRoutes![0] as Source).status).toBe(404);
   });
 
-  it.skip('no package.json + no build + raw static + api', async () => {
+  it('no package.json + no build + raw static + api', async () => {
     const files = ['api/users.js', 'index.html'];
     const {
       builders,
@@ -1082,7 +1082,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect((errorRoutes![0] as Source).status).toBe(404);
   });
 
-  it.skip('package.json + no build + root + api', async () => {
+  it('package.json + no build + root + api', async () => {
     const files = ['index.html', 'api/[endpoint].js', 'static/image.png'];
     const { builders, errors } = await detectBuilders(files, null, {
       featHandleMiss,
@@ -1095,7 +1095,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(errors).toBe(null);
   });
 
-  it.skip('api + ignore files', async () => {
+  it('api + ignore files', async () => {
     const files = [
       'api/_utils/handler.js',
       'api/[endpoint]/.helper.js',
@@ -1124,7 +1124,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect((errorRoutes![0] as Source).status).toBe(404);
   });
 
-  it.skip('api + next + public', async () => {
+  it('api + next + public', async () => {
     const pkg = {
       scripts: { build: 'next build' },
       devDependencies: { next: '9.0.0' },
@@ -1153,7 +1153,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(errorRoutes).toStrictEqual([]);
   });
 
-  it.skip('api + next + raw static', async () => {
+  it('api + next + raw static', async () => {
     const pkg = {
       scripts: { build: 'next build' },
       devDependencies: { next: '9.0.0' },
@@ -1182,7 +1182,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(errorRoutes).toStrictEqual([]);
   });
 
-  it.skip('Using "Create React App" framework with `next` in dependencies should NOT autodetect Next.js for new projects', async () => {
+  it('Using "Create React App" framework with `next` in dependencies should NOT autodetect Next.js for new projects', async () => {
     const pkg = {
       scripts: {
         dev: 'react-scripts start',
@@ -1222,7 +1222,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect((errorRoutes![0] as Source).status).toBe(404);
   });
 
-  it.skip('Using "Other" framework with Storybook should NOT autodetect Next.js for new projects', async () => {
+  it('Using "Other" framework with Storybook should NOT autodetect Next.js for new projects', async () => {
     const pkg = {
       scripts: {
         dev: 'next dev',
@@ -1268,7 +1268,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect((errorRoutes![0] as Source).status).toBe(404);
   });
 
-  it.skip('Using "Other" framework should autodetect Next.js for old projects', async () => {
+  it('Using "Other" framework should autodetect Next.js for old projects', async () => {
     const pkg = {
       scripts: {
         dev: 'next dev',
@@ -1303,7 +1303,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(errorRoutes).toStrictEqual([]);
   });
 
-  it.skip('api + raw static', async () => {
+  it('api + raw static', async () => {
     const files = ['api/endpoint.js', 'index.html', 'favicon.ico'];
 
     const {
@@ -1329,7 +1329,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect((errorRoutes![0] as Source).status).toBe(404);
   });
 
-  it.skip('api + raw static + package.json no build script', async () => {
+  it('api + raw static + package.json no build script', async () => {
     const pkg = {
       private: true,
       engines: { node: '12.x' },
@@ -1359,7 +1359,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect((errorRoutes![0] as Source).status).toBe(404);
   });
 
-  it.skip('api + public', async () => {
+  it('api + public', async () => {
     const files = [
       'api/endpoint.js',
       'public/index.html',
@@ -1379,7 +1379,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect((errorRoutes![0] as Source).status).toBe(404);
   });
 
-  it.skip('api go with test files', async () => {
+  it('api go with test files', async () => {
     const files = [
       'api/index.go',
       'api/index_test.go',
@@ -1404,7 +1404,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect((errorRoutes![0] as Source).status).toBe(404);
   });
 
-  it.skip('api detect node mjs files', async () => {
+  it('api detect node mjs files', async () => {
     const files = [
       'api/index.mjs',
       'api/users.mjs',
@@ -1423,7 +1423,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect((errorRoutes![0] as Source).status).toBe(404);
   });
 
-  it.skip('api detect node tsx files', async () => {
+  it('api detect node tsx files', async () => {
     const files = [
       'api/index.tsx',
       'api/users.tsx',
@@ -1442,7 +1442,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect((errorRoutes![0] as Source).status).toBe(404);
   });
 
-  it.skip('just public', async () => {
+  it('just public', async () => {
     const files = ['public/index.html', 'public/favicon.ico', 'README.md'];
 
     const { builders, errorRoutes } = await detectBuilders(files, undefined, {
@@ -1455,7 +1455,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect((errorRoutes![0] as Source).status).toBe(404);
   });
 
-  it.skip('next + public', async () => {
+  it('next + public', async () => {
     const pkg = {
       scripts: { build: 'next build' },
       devDependencies: { next: '9.0.0' },
@@ -1471,7 +1471,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(errorRoutes!.length).toBe(0);
   });
 
-  it.skip('nuxt', async () => {
+  it('nuxt', async () => {
     const pkg = {
       scripts: { build: 'nuxt build' },
       dependencies: { nuxt: '2.8.1' },
@@ -1488,7 +1488,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect((errorRoutes![0] as Source).status).toBe(404);
   });
 
-  it.skip('nuxt + tag canary', async () => {
+  it('nuxt + tag canary', async () => {
     const pkg = {
       scripts: { build: 'nuxt build' },
       dependencies: { nuxt: '2.8.1' },
@@ -1506,7 +1506,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect((errorRoutes![0] as Source).status).toBe(404);
   });
 
-  it.skip('package.json with no build + api', async () => {
+  it('package.json with no build + api', async () => {
     const pkg = { dependencies: { next: '9.0.0' } };
     const files = ['package.json', 'api/[endpoint].js'];
 
@@ -1520,7 +1520,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect((errorRoutes![0] as Source).status).toBe(404);
   });
 
-  it.skip('package.json with no build + public directory', async () => {
+  it('package.json with no build + public directory', async () => {
     const pkg = { dependencies: { next: '9.0.0' } };
     const files = ['package.json', 'public/index.html'];
 
@@ -1531,7 +1531,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(errors!.length).toBe(1);
   });
 
-  it.skip('no package.json + api', async () => {
+  it('no package.json + api', async () => {
     const files = ['api/[endpoint].js', 'api/[endpoint]/[id].js'];
 
     const { builders } = await detectBuilders(files, undefined, {
@@ -1540,7 +1540,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(builders!.length).toBe(2);
   });
 
-  it.skip('no package.json + no api', async () => {
+  it('no package.json + no api', async () => {
     const files = ['index.html'];
 
     const { builders, errors } = await detectBuilders(files, undefined, {
@@ -1550,7 +1550,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(errors).toBe(null);
   });
 
-  it.skip('package.json + api + canary', async () => {
+  it('package.json + api + canary', async () => {
     const pkg = {
       scripts: { build: 'next build' },
       dependencies: { next: '9.0.0' },
@@ -1571,7 +1571,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(builders!.length).toBe(3);
   });
 
-  it.skip('package.json + api + latest', async () => {
+  it('package.json + api + latest', async () => {
     const pkg = {
       scripts: { build: 'next build' },
       dependencies: { next: '9.0.0' },
@@ -1592,7 +1592,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(builders!.length).toBe(3);
   });
 
-  it.skip('package.json + api + random tag', async () => {
+  it('package.json + api + random tag', async () => {
     const pkg = {
       scripts: { build: 'next build' },
       dependencies: { next: '9.0.0' },
@@ -1613,7 +1613,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(builders!.length).toBe(3);
   });
 
-  it.skip('next.js pages/api + api', async () => {
+  it('next.js pages/api + api', async () => {
     const pkg = {
       scripts: { build: 'next build' },
       dependencies: { next: '9.0.0' },
@@ -1633,7 +1633,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(builders![1].use).toBe('@vercel/next');
   });
 
-  it.skip('many static files + one api file', async () => {
+  it('many static files + one api file', async () => {
     const files = Array.from({ length: 5000 }).map((_, i) => `file${i}.html`);
     files.push('api/index.ts');
     const { builders, errorRoutes } = await detectBuilders(files, undefined, {
@@ -1649,7 +1649,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect((errorRoutes![0] as Source).status).toBe(404);
   });
 
-  it.skip('functions with nextjs', async () => {
+  it('functions with nextjs', async () => {
     const pkg = {
       scripts: { build: 'next build' },
       dependencies: { next: '9.0.0' },
@@ -1687,7 +1687,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     });
   });
 
-  it.skip('extend with functions', async () => {
+  it('extend with functions', async () => {
     const pkg = {
       scripts: { build: 'next build' },
       dependencies: { next: '9.0.0' },
@@ -1747,7 +1747,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     });
   });
 
-  it.skip('invalid function key', async () => {
+  it('invalid function key', async () => {
     const functions = { ['a'.repeat(1000)]: { memory: 128 } };
     const files = ['pages/index.ts'];
     const { builders, errors } = await detectBuilders(files, null, {
@@ -1760,7 +1760,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(errors![0].code).toBe('invalid_function_glob');
   });
 
-  it.skip('invalid function maxDuration', async () => {
+  it('invalid function maxDuration', async () => {
     const functions = { 'pages/index.ts': { maxDuration: -1 } };
     const files = ['pages/index.ts'];
     const { builders, errors } = await detectBuilders(files, null, {
@@ -1773,7 +1773,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(errors![0].code).toBe('invalid_function_duration');
   });
 
-  it.skip('invalid function memory', async () => {
+  it('invalid function memory', async () => {
     const functions = { 'pages/index.ts': { memory: 127 } };
     const files = ['pages/index.ts'];
     const { builders, errors } = await detectBuilders(files, null, {
@@ -1786,7 +1786,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(errors![0].code).toBe('invalid_function_memory');
   });
 
-  it.skip('should build with function memory not dividable by 64', async () => {
+  it('should build with function memory not dividable by 64', async () => {
     const functions = { 'api/index.ts': { memory: 1000 } };
     const files = ['api/index.ts'];
     const { builders, errors } = await detectBuilders(files, null, {
@@ -1798,7 +1798,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(errors).toBeNull();
   });
 
-  it.skip('missing runtime version', async () => {
+  it('missing runtime version', async () => {
     const functions = { 'pages/index.ts': { runtime: 'haha' } };
     const files = ['pages/index.ts'];
     const { builders, errors } = await detectBuilders(files, null, {
@@ -1811,7 +1811,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(errors![0].code).toBe('invalid_function_runtime');
   });
 
-  it.skip('use a custom runtime', async () => {
+  it('use a custom runtime', async () => {
     const functions = { 'api/user.php': { runtime: 'vercel-php@0.1.0' } };
     const files = ['api/user.php'];
     const { builders, errors } = await detectBuilders(files, null, {
@@ -1824,7 +1824,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(builders![0].use).toBe('vercel-php@0.1.0');
   });
 
-  it.skip('use a custom runtime but without a source', async () => {
+  it('use a custom runtime but without a source', async () => {
     const functions = { 'api/user.php': { runtime: 'vercel-php@0.1.0' } };
     const files = ['api/team.js'];
     const { errors } = await detectBuilders(files, null, {
@@ -1836,7 +1836,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(errors![0].code).toBe('unused_function');
   });
 
-  it.skip('do not allow empty functions', async () => {
+  it('do not allow empty functions', async () => {
     const functions = { 'api/user.php': {} };
     const files = ['api/user.php'];
     const { errors } = await detectBuilders(files, null, {
@@ -1848,7 +1848,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(errors![0].code).toBe('invalid_function');
   });
 
-  it.skip('do not allow null functions', async () => {
+  it('do not allow null functions', async () => {
     const functions = { 'api/user.php': null };
     const files = ['api/user.php'];
     // @ts-ignore
@@ -1862,7 +1862,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(errors![0].code).toBe('invalid_function');
   });
 
-  it.skip('Do not allow functions that are not used by @vercel/next', async () => {
+  it('Do not allow functions that are not used by @vercel/next', async () => {
     const pkg = {
       scripts: { build: 'next build' },
       dependencies: { next: '9.0.0' },
@@ -1879,7 +1879,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(errors![0].code).toBe('unused_function');
   });
 
-  it.skip('Must include includeFiles config property', async () => {
+  it('Must include includeFiles config property', async () => {
     const functions = {
       'api/test.js': { includeFiles: 'text/include.txt' },
     };
@@ -1900,7 +1900,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     });
   });
 
-  it.skip('Must include excludeFiles config property', async () => {
+  it('Must include excludeFiles config property', async () => {
     const functions = {
       'api/test.js': { excludeFiles: 'text/exclude.txt' },
     };
@@ -1921,7 +1921,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     });
   });
 
-  it.skip('Must include excludeFiles and includeFiles config property', async () => {
+  it('Must include excludeFiles and includeFiles config property', async () => {
     const functions = {
       'api/test.js': {
         excludeFiles: 'text/exclude.txt',
@@ -1946,7 +1946,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     });
   });
 
-  it.skip('Must fail for includeFiles config property', async () => {
+  it('Must fail for includeFiles config property', async () => {
     const functions = {
       'api/test.js': { includeFiles: { test: 1 } },
     };
@@ -1963,7 +1963,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(errors![0].code).toBe('invalid_function_property');
   });
 
-  it.skip('Must fail for excludeFiles config property', async () => {
+  it('Must fail for excludeFiles config property', async () => {
     const functions = {
       'api/test.js': { excludeFiles: { test: 1 } },
     };
@@ -1980,7 +1980,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(errors![0].code).toBe('invalid_function_property');
   });
 
-  it.skip('Must fail when function patterns start with a slash', async () => {
+  it('Must fail when function patterns start with a slash', async () => {
     const functions = {
       '/api/test.js': { memory: 128 },
     };
@@ -1995,7 +1995,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(errors![0].code).toBe('invalid_function_source');
   });
 
-  it.skip('Custom static output directory', async () => {
+  it('Custom static output directory', async () => {
     const projectSettings = {
       outputDirectory: 'dist',
     };
@@ -2024,7 +2024,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect((errorRoutes![0] as Source).status).toBe(404);
   });
 
-  it.skip('Custom static output directory with api', async () => {
+  it('Custom static output directory with api', async () => {
     const projectSettings = {
       outputDirectory: 'output',
     };
@@ -2056,7 +2056,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect((errorRoutes![0] as Source).status).toBe(404);
   });
 
-  it.skip('Framework with non-package.json entrypoint', async () => {
+  it('Framework with non-package.json entrypoint', async () => {
     const files = ['config.yaml'];
     const projectSettings = {
       framework: 'hugo',
@@ -2096,7 +2096,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     'api/src/lib/db.js',
   ];
 
-  it.skip('RedwoodJS should only use Redwood builder and not Node builder', async () => {
+  it('RedwoodJS should only use Redwood builder and not Node builder', async () => {
     const files = [...redwoodFiles].sort();
     const projectSettings = {
       framework: 'redwoodjs',
@@ -2129,7 +2129,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     ]);
   });
 
-  it.skip('RedwoodJS should allow usage of non-js API and not add 404 api route', async () => {
+  it('RedwoodJS should allow usage of non-js API and not add 404 api route', async () => {
     const files = [...redwoodFiles, 'api/golang.go', 'api/python.py'].sort();
     const projectSettings = {
       framework: 'redwoodjs',
@@ -2183,7 +2183,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     ]);
   });
 
-  it.skip('No framework, only package.json', async () => {
+  it('No framework, only package.json', async () => {
     const files = ['package.json'];
     const pkg = {
       scripts: {
@@ -2208,7 +2208,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect((errorRoutes![0] as Source).status).toBe(404);
   });
 
-  it.skip('Framework with an API', async () => {
+  it('Framework with an API', async () => {
     const files = ['config.rb', 'api/date.rb'];
     const projectSettings = { framework: 'middleman' };
 
@@ -2238,7 +2238,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect((errorRoutes![0] as Source).status).toBe(404);
   });
 
-  it.skip('Error for non-api functions', async () => {
+  it('Error for non-api functions', async () => {
     const files = ['server/hello.ts', 'public/index.html'];
     const functions = {
       'server/**/*.ts': {
@@ -2261,7 +2261,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     ]);
   });
 
-  it.skip('All static if `buildCommand` is an empty string', async () => {
+  it('All static if `buildCommand` is an empty string', async () => {
     const files = ['index.html'];
     const projectSettings = { buildCommand: '' };
     const { builders, errors } = await detectBuilders(files, null, {
@@ -2272,7 +2272,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(builders).toBe(null);
   });
 
-  it.skip('All static if `outputDirectory` is an empty string', async () => {
+  it('All static if `outputDirectory` is an empty string', async () => {
     const files = ['index.html'];
     const projectSettings = { outputDirectory: '' };
     const { builders, errors } = await detectBuilders(files, null, {
@@ -2283,7 +2283,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(builders).toBe(null);
   });
 
-  it.skip('All static if `buildCommand` is an empty string with an `outputDirectory`', async () => {
+  it('All static if `buildCommand` is an empty string with an `outputDirectory`', async () => {
     const files = ['out/index.html'];
     const projectSettings = { buildCommand: '', outputDirectory: 'out' };
     const { builders, errors, errorRoutes } = await detectBuilders(
@@ -2301,7 +2301,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect((errorRoutes![0] as Source).status).toBe(404);
   });
 
-  it.skip('do not require build script when `buildCommand` is an empty string', async () => {
+  it('do not require build script when `buildCommand` is an empty string', async () => {
     const files = ['index.html', 'about.html', 'package.json'];
     const projectSettings = { buildCommand: '', outputDirectory: '' };
     const pkg = {
@@ -2318,7 +2318,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(errors).toBe(null);
   });
 
-  it.skip('no package.json + no build + root-level "middleware.js"', async () => {
+  it('no package.json + no build + root-level "middleware.js"', async () => {
     const files = ['middleware.js', 'index.html', 'web/middleware.js'];
     const { builders, rewriteRoutes, errors } = await detectBuilders(
       files,
@@ -2337,7 +2337,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(errors).toBe(null);
   });
 
-  it.skip('no package.json + no build + root-level "middleware.ts"', async () => {
+  it('no package.json + no build + root-level "middleware.ts"', async () => {
     const files = ['middleware.ts', 'index.html', 'web/middleware.js'];
     const { builders, rewriteRoutes, errors } = await detectBuilders(
       files,
@@ -2356,7 +2356,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(errors).toBe(null);
   });
 
-  it.skip('should not add middleware builder when "nextjs" framework is selected', async () => {
+  it('should not add middleware builder when "nextjs" framework is selected', async () => {
     const files = ['package.json', 'pages/index.ts', 'middleware.ts'];
     const projectSettings = {
       framework: 'nextjs',
@@ -2377,7 +2377,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     ]);
   });
 
-  it.skip('should not add middleware builder when building "nextjs"', async () => {
+  it('should not add middleware builder when building "nextjs"', async () => {
     const files = ['package.json', 'pages/index.ts', 'middleware.ts'];
     const pkg = {
       scripts: { build: 'next build' },
@@ -2402,7 +2402,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     ]);
   });
 
-  it.skip('should add middleware builder with "remix" framework preset', async () => {
+  it('should add middleware builder with "remix" framework preset', async () => {
     const files = ['package.json', 'app/routes/index.ts', 'middleware.ts'];
     const projectSettings = {
       framework: 'remix',
@@ -2431,7 +2431,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     ]);
   });
 
-  it.skip('should ignore middleware with "storybook" framework preset', async () => {
+  it('should ignore middleware with "storybook" framework preset', async () => {
     const files = ['package.json', 'app/routes/index.ts', 'middleware.ts'];
     const projectSettings = {
       framework: 'storybook',
@@ -3490,7 +3490,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `trailingS
 });
 
 describe('Test `detectOutputDirectory`', () => {
-  it.skip('should be `null` with no config', async () => {
+  it('should be `null` with no config', async () => {
     const builders = [
       {
         use: '@vercel/static',
@@ -3501,7 +3501,7 @@ describe('Test `detectOutputDirectory`', () => {
     expect(result).toBe(null);
   });
 
-  it.skip('should be `null` with no zero config builds', async () => {
+  it('should be `null` with no zero config builds', async () => {
     const builders = [
       {
         use: '@vercel/static',
@@ -3513,7 +3513,7 @@ describe('Test `detectOutputDirectory`', () => {
     expect(result).toBe(null);
   });
 
-  it.skip('should be `public` with one zero config', async () => {
+  it('should be `public` with one zero config', async () => {
     const builders = [
       {
         use: '@vercel/static',
@@ -3525,7 +3525,7 @@ describe('Test `detectOutputDirectory`', () => {
     expect(result).toBe('public');
   });
 
-  it.skip('should be `public` with one zero config and one without config', async () => {
+  it('should be `public` with one zero config and one without config', async () => {
     const builders = [
       {
         use: '@vercel/static',
@@ -3543,7 +3543,7 @@ describe('Test `detectOutputDirectory`', () => {
 });
 
 describe('Test `detectApiDirectory`', () => {
-  it.skip('should be `null` with no config', async () => {
+  it('should be `null` with no config', async () => {
     const builders = [
       {
         use: '@vercel/node',
@@ -3554,7 +3554,7 @@ describe('Test `detectApiDirectory`', () => {
     expect(result).toBe(null);
   });
 
-  it.skip('should be `null` with no zero config builds', async () => {
+  it('should be `null` with no zero config builds', async () => {
     const builders = [
       {
         use: '@vercel/node',
@@ -3566,7 +3566,7 @@ describe('Test `detectApiDirectory`', () => {
     expect(result).toBe(null);
   });
 
-  it.skip('should be `api` with one zero config', async () => {
+  it('should be `api` with one zero config', async () => {
     const builders = [
       {
         use: '@vercel/node',
@@ -3578,7 +3578,7 @@ describe('Test `detectApiDirectory`', () => {
     expect(result).toBe('api');
   });
 
-  it.skip('should be `api` with one zero config and one without config', async () => {
+  it('should be `api` with one zero config and one without config', async () => {
     const builders = [
       {
         use: '@vercel/node',
@@ -3594,7 +3594,7 @@ describe('Test `detectApiDirectory`', () => {
     expect(result).toBe('api');
   });
 
-  it.skip('should be `null` with zero config but without api directory', async () => {
+  it('should be `null` with zero config but without api directory', async () => {
     const builders = [
       {
         use: '@vercel/next',
@@ -3608,7 +3608,7 @@ describe('Test `detectApiDirectory`', () => {
 });
 
 describe('Test `detectApiExtensions`', () => {
-  it.skip('should have correct extensions', async () => {
+  it('should have correct extensions', async () => {
     const builders = [
       {
         use: '@vercel/node',
