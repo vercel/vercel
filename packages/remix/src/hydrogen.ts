@@ -97,9 +97,22 @@ export function patchHydrogenServer(
     .join(', ')}) ${fetchMethod.getBody()!.getText()}`;
   defaultExportSymbol.replaceWithText(newFunction);
 
+  const defaultEnvVars = {
+    SESSION_SECRET: 'foobar',
+    PUBLIC_STORE_DOMAIN: 'mock.shop',
+  };
   const envCode = `const env = { ${envProperties
     .map(name => `${name}: process.env.${name}`)
-    .join(', ')} };`;
+    .join(', ')} };\n${Object.entries(defaultEnvVars)
+    .map(
+      ([k, v]) =>
+        `if (!env.${k}) { env.${k} = ${JSON.stringify(
+          v
+        )}; console.warn('Warning: ${JSON.stringify(
+          k
+        )} env var not set - using default value ${JSON.stringify(v)}'); }`
+    )
+    .join('\n')}`;
 
   const updatedCodeString = sourceFile.getFullText();
   return `${envCode}\n${updatedCodeString}`;

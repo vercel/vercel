@@ -1,5 +1,11 @@
 # @vercel/remix-builder
 
+## 1.10.1
+
+### Patch Changes
+
+- Set default env vars for Hydrogen v2 deployments ([#10341](https://github.com/vercel/vercel/pull/10341))
+
 ## 1.10.0
 
 ### Minor Changes
