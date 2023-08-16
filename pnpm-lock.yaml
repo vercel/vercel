@@ -61,6 +61,9 @@ importers:
       jest:
         specifier: 29.5.0
         version: 29.5.0(@types/node@14.18.33)
+      jest-junit:
+        specifier: 16.0.0
+        version: 16.0.0
       json5:
         specifier: 2.1.1
         version: 2.1.1
