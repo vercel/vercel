@@ -66,9 +66,9 @@ jobs:
 
       - name: install pnpm@8.3.1
         run: npm i -g pnpm@8.3.1
-
+      
       - run: pnpm install
-
+      - run: pnpm install jest-junit
       - name: fetch ssl certificate before build (linux, os x)
         if: matrix.runner != 'windows-latest'
         run: echo | openssl s_client -showcerts -servername 'api.vercel.com' -connect 76.76.21.21:443
