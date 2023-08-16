@@ -800,6 +800,9 @@ importers:
       '@types/tar-fs':
         specifier: 1.16.1
         version: 1.16.1
+      jest-junit:
+        specifier: 16.0.0
+        version: 16.0.0
       typescript:
         specifier: 4.9.5
         version: 4.9.5
