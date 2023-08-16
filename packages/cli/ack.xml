@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuites name="jest tests" tests="2" failures="0" errors="0" time="0.822">
-  <testsuite name="alias" errors="0" failures="0" skipped="0" timestamp="2023-08-16T14:49:35" time="0.782" tests="2">
-    <testcase classname="alias should list up to 20 aliases by default" name="alias should list up to 20 aliases by default" time="0.028">
-    </testcase>
-    <testcase classname="alias should list up to 2 aliases" name="alias should list up to 2 aliases" time="0.006">
-    </testcase>
-  </testsuite>
-</testsuites>

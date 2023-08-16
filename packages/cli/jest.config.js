@@ -14,5 +14,4 @@ module.exports = {
   verbose: false,
   testEnvironment: 'node',
   testMatch: ['<rootDir>/test/**/*.test.ts'],
-  reporters: ['default'],
 };
