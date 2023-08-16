@@ -104,6 +104,7 @@ jobs:
       - name: 'anything in packages/cli'
         run: 'ls packages/cli'
       - name: install datadog-ci
+        if: always()
         run: npm i -g @datadog/datadog-ci@2.18.1
       - name: 'Upload'
         if: always()
