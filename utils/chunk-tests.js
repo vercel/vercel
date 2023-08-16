@@ -39,21 +39,21 @@ function getRunnerOptions(scriptName, packageName) {
 }
 
 async function getChunkedTests() {
-  // const scripts = [...runnersMap.keys()];
-  // const rootPath = path.resolve(__dirname, '..');
+  const scripts = [...runnersMap.keys()];
+  const rootPath = path.resolve(__dirname, '..');
 
-  // const dryRunText = (
-  //   await turbo([
-  //     `run`,
-  //     ...scripts,
-  //     `--cache-dir=.turbo`,
-  //     '--output-logs=full',
-  //     '--log-order=stream',
-  //     '--',
-  //     '--', // need two of these due to pnpm arg parsing
-  //     '--listTests',
-  //   ])
-  // ).toString('utf8');
+  const dryRunText = (
+    await turbo([
+      `run`,
+      ...scripts,
+      `--cache-dir=.turbo`,
+      '--output-logs=full',
+      '--log-order=stream',
+      '--',
+      '--', // need two of these due to pnpm arg parsing
+      '--listTests',
+    ])
+  ).toString('utf8');
 
   /**
    * @typedef {string} TestPath
@@ -61,30 +61,30 @@ async function getChunkedTests() {
    */
   const testsToRun = {};
 
-  // dryRunText
-  //   .split('\n')
-  //   .flatMap(line => {
-  //     const [packageAndScriptName, possiblyPath] = line.split(' ');
-  //     const [packageName, scriptName] = packageAndScriptName.split(':');
+  dryRunText
+    .split('\n')
+    .flatMap(line => {
+      const [packageAndScriptName, possiblyPath] = line.split(' ');
+      const [packageName, scriptName] = packageAndScriptName.split(':');
 
-  //     if (!packageName || !scriptName || !possiblyPath?.includes(rootPath)) {
-  //       return [];
-  //     }
+      if (!packageName || !scriptName || !possiblyPath?.includes(rootPath)) {
+        return [];
+      }
 
-  //     return { testPath: possiblyPath, scriptName, packageName };
-  //   })
-  //   .forEach(({ testPath, scriptName, packageName }) => {
-  //     const [, packageDir, shortPackageName] = testPath
-  //       .replace(rootPath, '')
-  //       .split(path.sep);
+      return { testPath: possiblyPath, scriptName, packageName };
+    })
+    .forEach(({ testPath, scriptName, packageName }) => {
+      const [, packageDir, shortPackageName] = testPath
+        .replace(rootPath, '')
+        .split(path.sep);
 
-  //     const packagePath =
-  //       path.join(packageDir, shortPackageName) + ',' + packageName;
-  //     testsToRun[packagePath] = testsToRun[packagePath] || {};
-  //     testsToRun[packagePath][scriptName] =
-  //       testsToRun[packagePath][scriptName] || [];
-  //     testsToRun[packagePath][scriptName].push(testPath);
-  //   });
+      const packagePath =
+        path.join(packageDir, shortPackageName) + ',' + packageName;
+      testsToRun[packagePath] = testsToRun[packagePath] || {};
+      testsToRun[packagePath][scriptName] =
+        testsToRun[packagePath][scriptName] || [];
+      testsToRun[packagePath][scriptName].push(testPath);
+    });
 
   const chunkedTests = Object.entries(testsToRun).flatMap(
     ([packagePathAndName, scriptNames]) => {
