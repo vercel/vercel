@@ -1520,8 +1520,8 @@ export const frameworks = [
         placeholder: 'None',
       },
       buildCommand: {
-        placeholder: '`npm run build` or `hugo -D --gc`',
-        value: 'hugo -D --gc',
+        placeholder: '`npm run build` or `hugo --gc`',
+        value: 'hugo --gc',
       },
       devCommand: {
         value: 'hugo server -D -w -p $PORT',
