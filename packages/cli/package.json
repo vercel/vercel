@@ -11,7 +11,7 @@
     "directory": "packages/cli"
   },
   "scripts": {
-    "test": "jest --env node --verbose --bail --reporters='default' --reporters='jest-junit'",
+    "test": "jest --env node --verbose --bail --reporters=default --reporters=jest-junit",
     "test-unit": "pnpm test test/unit/",
     "test-e2e": "rimraf test/fixtures/integration && pnpm test test/integration-1.test.ts test/integration-2.test.ts test/integration-3.test.ts",
     "test-dev": "pnpm test test/dev/",
