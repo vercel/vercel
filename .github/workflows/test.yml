@@ -86,7 +86,7 @@ jobs:
         run: env && node utils/gen.js && node_modules/.bin/turbo run test --cache-dir=".turbo" --log-order=stream --scope=${{matrix.packageName}} --no-deps -- ${{ join(matrix.testPaths, ' ') }}
         shell: bash
         env:
-          JEST_JUNIT_OUTPUT_FILE: ${{github.workspace}}/junit-reports/${{matrix.scriptName}}-${{matrix.packageName}}-${{matrix.chunkNumber}}-${{ matrix.runner }}.xml
+          JEST_JUNIT_OUTPUT_FILE: ${{github.workspace}}/.junit-reports/${{matrix.scriptName}}-${{matrix.packageName}}-${{matrix.chunkNumber}}-${{ matrix.runner }}.xml
           VERCEL_CLI_VERSION: ${{ needs.setup.outputs.dplUrl }}/tarballs/vercel.tgz
           VERCEL_TEST_TOKEN: ${{ secrets.VERCEL_TEST_TOKEN }}
           VERCEL_TEST_REGISTRATION_URL: ${{ secrets.VERCEL_TEST_REGISTRATION_URL }}
@@ -100,9 +100,14 @@ jobs:
       - name: 'what is GH Workspace'
         run: 'echo ${{github.workspace}}'
       - name: 'What have we here'
-        run: 'ls -la'
+        run: 'ls'
       - name: 'anything in packages/cli'
         run: 'ls packages/cli'
+      - name: install datadog-ci
+        run: npm i -g @datadog/datadog-ci@2.18.1
+      - name: 'Upload'
+        if: always()
+        run: 'DATADOG_API_KEY=${{secrets.DATADOG_API_KEY_CLI}} DD_ENV=ci datadog-ci junit upload --service vercel-cli .junit-reports'
   summary:
     name: Summary
     runs-on: ubuntu-latest
@@ -121,19 +126,3 @@ jobs:
               exit 1
             fi
           done
-
-  report_to_datadog:
-    name: Upload test results to DataDog
-    runs-on: ubuntu-latest
-    if: always()
-    needs:
-      - summary
-    steps:
-      - name: 'Print Location'
-        run: pwd
-      - name: 'See files'
-        run: 'ls -la'
-      - name: install datadog-ci
-        run: npm i -g @datadog/datadog-ci@2.18.1
-      - name: 'Upload'
-        run: 'DATADOG_API_KEY=${{secrets.DATADOG_API_KEY_CLI}} DD_ENV=ci datadog-ci junit upload --service vercel-cli junit-reports'
