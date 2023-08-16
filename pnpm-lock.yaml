@@ -282,6 +282,9 @@ importers:
       into-stream:
         specifier: 5.0.0
         version: 5.0.0
+      jest-junit:
+        specifier: 16.0.0
+        version: 16.0.0
       js-yaml:
         specifier: 3.13.1
         version: 3.13.1
