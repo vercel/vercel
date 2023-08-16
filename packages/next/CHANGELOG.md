@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 3.9.4
+
+### Patch Changes
+
+- Preserve sourceMappingURL comments in template literals ([#10275](https://github.com/vercel/vercel/pull/10275))
+
 ## 3.9.3
 
 ### Patch Changes

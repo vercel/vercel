@@ -1,5 +1,76 @@
 # vercel
 
+## 31.3.1
+
+### Patch Changes
+
+- Updated dependencies [[`844fb6e88`](https://github.com/vercel/vercel/commit/844fb6e880a980f26945f15a7437b4d67bcb5394)]:
+  - @vercel/remix-builder@1.10.1
+
+## 31.3.0
+
+### Minor Changes
+
+- Update help output to use cli-table3 ([#10333](https://github.com/vercel/vercel/pull/10333))
+
+### Patch Changes
+
+- Sanitize argv in log during `vc build`. ([#10311](https://github.com/vercel/vercel/pull/10311))
+
+- Respect `--yes` flag for all prompts during `vc link --repo` ([#10337](https://github.com/vercel/vercel/pull/10337))
+
+- Updated dependencies [[`8cb9385fd`](https://github.com/vercel/vercel/commit/8cb9385fd306d0c2b8771d7bb063e6948ed15729), [`94c93dfb5`](https://github.com/vercel/vercel/commit/94c93dfb5b29aa58317f9d0854273d4880d91a62)]:
+  - @vercel/node@2.15.10
+  - @vercel/static-build@1.3.46
+
+## 31.2.3
+
+### Patch Changes
+
+- Be looser in tests with mock server urls ([#10300](https://github.com/vercel/vercel/pull/10300))
+
+- Handle calls for deployment aliases when mocking deployments ([#10303](https://github.com/vercel/vercel/pull/10303))
+
+- Remove unused code ([#10309](https://github.com/vercel/vercel/pull/10309))
+
+- Updated dependencies [[`5bf1fe4c7`](https://github.com/vercel/vercel/commit/5bf1fe4c743f6be3f7d5a24447ea5b083a68dc67), [`a8ecf40d6`](https://github.com/vercel/vercel/commit/a8ecf40d6f50e2fc8b13b02c8ef50b3dcafad3a6), [`08da4b9c9`](https://github.com/vercel/vercel/commit/08da4b9c923501d9d28eb6e3f26f4605fee83042), [`0945d24cb`](https://github.com/vercel/vercel/commit/0945d24cbe901ca3f0eedd011251ad499c72d472)]:
+  - @vercel/next@3.9.4
+  - @vercel/build-utils@6.8.3
+  - @vercel/remix-builder@1.10.0
+  - @vercel/node@2.15.9
+  - @vercel/static-build@1.3.45
+
+## 31.2.2
+
+### Patch Changes
+
+- Migrate list command to new structure ([#10284](https://github.com/vercel/vercel/pull/10284))
+
+- Migrate whoami command to new structure ([#10266](https://github.com/vercel/vercel/pull/10266))
+
+- Migrate logs command to new structure ([#10281](https://github.com/vercel/vercel/pull/10281))
+
+- Migrate login command to new structure ([#10283](https://github.com/vercel/vercel/pull/10283))
+
+- Migrate pull command to new structure ([#10280](https://github.com/vercel/vercel/pull/10280))
+
+- Migrate logout command to new structure ([#10282](https://github.com/vercel/vercel/pull/10282))
+
+- Migrate build command to new structure ([#10286](https://github.com/vercel/vercel/pull/10286))
+
+- Migrate inspect command to new structure ([#10277](https://github.com/vercel/vercel/pull/10277))
+
+- Migrate redeploy command to new structure ([#10279](https://github.com/vercel/vercel/pull/10279))
+
+- Migrate link command to new structure ([#10285](https://github.com/vercel/vercel/pull/10285))
+
+- Update spacing of --help output for CLI ([#10287](https://github.com/vercel/vercel/pull/10287))
+
+- Updated dependencies [[`4af242af8`](https://github.com/vercel/vercel/commit/4af242af8633e58b6a9bf920564416da3ef22ad4), [`0cbdae141`](https://github.com/vercel/vercel/commit/0cbdae1411aa7936ff7dfe551919ca5e56cd6e98), [`85dd66778`](https://github.com/vercel/vercel/commit/85dd667781693539d753d587566e53964bbe189d)]:
+  - @vercel/node@2.15.8
+  - @vercel/remix-builder@1.9.1
+  - @vercel/static-build@1.3.44
+
 ## 31.2.1
 
 ### Patch Changes

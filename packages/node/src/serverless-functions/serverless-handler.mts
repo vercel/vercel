@@ -107,7 +107,7 @@ export async function createServerlessEventHandler(
     // @ts-expect-error
     const response = await fetch(url, {
       body: await serializeBody(request),
-      compress: isStreaming,
+      compress: !isStreaming,
       headers: {
         ...request.headers,
         host: request.headers['x-forwarded-host'],

@@ -1,6 +1,6 @@
 import chalk from 'chalk';
-import stripAnsi from 'strip-ansi';
 import { LOGO, NAME } from '@vercel-internals/constants';
+import Table, { CellOptions } from 'cli-table3';
 
 const INDENT = ' '.repeat(2);
 const NEWLINE = '\n';
@@ -29,6 +29,12 @@ export interface Command {
   options: CommandOption[];
   examples: CommandExample[];
 }
+
+// https://github.com/cli-table/cli-table3/pull/303 adds
+// word wrapping per cell but did not include updated types.
+type _CellOptions = CellOptions & {
+  wordWrap?: boolean;
+};
 
 const globalCommandOptions: CommandOption[] = [
   {
@@ -110,10 +116,6 @@ const globalCommandOptions: CommandOption[] = [
   },
 ];
 
-export function calcLineLength(line: string[]) {
-  return stripAnsi(lineToString(line)).length;
-}
-
 // Insert spaces in between non-whitespace items only
 export function lineToString(line: string[]) {
   let string = '';
@@ -132,8 +134,8 @@ export function lineToString(line: string[]) {
   return string;
 }
 
-export function outputArrayToString(outputArray: string[]) {
-  return outputArray.join(NEWLINE);
+export function outputArrayToString(outputArray: (string | null)[]) {
+  return outputArray.filter(line => line !== null).join(NEWLINE);
 }
 
 /**
@@ -142,7 +144,12 @@ export function outputArrayToString(outputArray: string[]) {
  * @returns
  */
 export function buildCommandSynopsisLine(command: Command) {
-  const line: string[] = [LOGO, chalk.bold(NAME), chalk.bold(command.name)];
+  const line: string[] = [
+    INDENT,
+    LOGO,
+    chalk.bold(NAME),
+    chalk.bold(command.name),
+  ];
   if (command.arguments.length > 0) {
     for (const argument of command.arguments) {
       line.push(argument.required ? argument.name : `[${argument.name}]`);
@@ -151,6 +158,8 @@ export function buildCommandSynopsisLine(command: Command) {
   if (command.options.length > 0) {
     line.push('[options]');
   }
+
+  line.push(NEWLINE);
   return lineToString(line);
 }
 
@@ -159,102 +168,93 @@ export function buildCommandOptionLines(
   options: BuildHelpOutputOptions,
   sectionTitle: String
 ) {
+  if (commandOptions.length === 0) {
+    return null;
+  }
+
   // Filter out deprecated and intentionally undocumented options
   commandOptions = commandOptions.filter(
     option => !option.deprecated && option.description !== undefined
   );
 
-  if (commandOptions.length === 0) {
-    return '';
-  }
-
-  // Initialize output array with header and empty line
-  const outputArray: string[] = [`${chalk.dim(sectionTitle)}:`, ''];
-
-  // Start building option lines
-  const optionLines: string[][] = [];
   // Sort command options alphabetically
   commandOptions.sort((a, b) =>
     a.name < b.name ? -1 : a.name > b.name ? 1 : 0
   );
-  // Keep track of longest "start" of an option line to determine description spacing
-  let maxLineStartLength = 0;
-  // Iterate over options and create the "start" of each option (e.g. `  -b, --build-env <key=value>`)
+
+  // word wrapping requires the wrapped cell to have a fixed width.
+  // We need to track cell sizes to ensure the final column of cells is
+  // equal to the remainder of unused horizontal space.
+  let maxWidthOfUnwrappedColumns = 0;
+  const rows: (string | undefined | _CellOptions)[][] = [];
   for (const option of commandOptions) {
-    const startLine: string[] = [INDENT];
-    if (option.shorthand) {
-      startLine.push(`-${option.shorthand},`);
-    }
-    startLine.push(`--${option.name}`);
+    const shorthandCell = option.shorthand
+      ? `${INDENT}-${option.shorthand},`
+      : '';
+    let longhandCell = `${INDENT}--${option.name}`;
+
     if (option.argument) {
-      startLine.push(`<${option.argument}>`);
+      longhandCell += ` <${option.argument}>`;
     }
-    // the length includes the INDENT
-    const lineLength = calcLineLength(startLine);
-    maxLineStartLength = Math.max(lineLength, maxLineStartLength);
-    optionLines.push(startLine);
-  }
-  /*
-   * Iterate over in-progress option lines to add space-filler and description
-   * For Example:
-   * |  --archive                    My description starts here.
-   * |
-   * |  -b, --build-env <key=value>  Start of description here then
-   * |                               it wraps here.
-   * |
-   * |  -e, --env <key=value>        My description is short.
-   *
-   * Breaking down option lines:
-   * |  -b, --build-env <key=value>  Start of description here then
-   * |[][                         ][][                             ]
-   * |↑ ↑                          ↑ ↑
-   * |1 2                          3 4
-   * |                               it wraps here.
-   * |[][                           ][                            ]
-   * |↑ ↑                            ↑
-   * |5 6                            7
-   * | 1, 5 = indent
-   * | 2 = start
-   * | 3, 6 = space-filler
-   * | 4, 7 = description
-   */
-  for (let i = 0; i < optionLines.length; i++) {
-    const optionLine = optionLines[i];
-    const option = commandOptions[i];
-    // Add only 2 spaces to the longest line, and then make all shorter lines the same length.
-    optionLine.push(
-      ' '.repeat(2 + (maxLineStartLength - calcLineLength(optionLine)))
+
+    longhandCell += INDENT;
+
+    const widthOfUnwrappedColumns = shorthandCell.length + longhandCell.length;
+    maxWidthOfUnwrappedColumns = Math.max(
+      widthOfUnwrappedColumns,
+      maxWidthOfUnwrappedColumns
     );
 
-    // Descriptions may be longer than max line length. Wrap them to the same column as the first description line
-    const lines: string[][] = [optionLine];
-    if (option.description) {
-      for (const descriptionWord of option.description.split(' ')) {
-        // insert a new line when the next word would match or exceed the maximum line length
-        if (
-          calcLineLength(lines[lines.length - 1]) +
-            stripAnsi(descriptionWord).length >=
-          options.columns
-        ) {
-          // initialize the new line with the necessary whitespace. The INDENT is apart of `maxLineStartLength`
-          lines.push([' '.repeat(maxLineStartLength + 2)]);
-        }
-        // insert the word to the current last line
-        lines[lines.length - 1].push(descriptionWord);
-      }
-    }
-    // for every line, transform into a string and push it to the output
-    for (const line of lines) {
-      outputArray.push(lineToString(line));
-    }
+    rows.push([
+      shorthandCell,
+      longhandCell,
+      {
+        content: option.description,
+        wordWrap: true,
+      },
+    ]);
   }
 
-  // return the entire list of options as a single string after delete the last '\n' added to the option list
-  return outputArrayToString(outputArray);
+  const finalColumnWidth = options.columns - maxWidthOfUnwrappedColumns;
+
+  const table = new Table({
+    chars: {
+      top: '',
+      'top-mid': '',
+      'top-left': '',
+      'top-right': '',
+      bottom: '',
+      'bottom-mid': '',
+      'bottom-left': '',
+      'bottom-right': '',
+      left: '',
+      'left-mid': '',
+      mid: '',
+      'mid-mid': '',
+      right: '',
+      'right-mid': '',
+      middle: '',
+    },
+    style: {
+      'padding-left': 0,
+      'padding-right': 0,
+    },
+    colWidths: [null, null, finalColumnWidth],
+  });
+
+  table.push(...rows);
+  return [
+    `${INDENT}${chalk.dim(sectionTitle)}:`,
+    NEWLINE,
+    NEWLINE,
+    table.toString(),
+    NEWLINE,
+    NEWLINE,
+  ].join('');
 }
 
 export function buildCommandExampleLines(command: Command) {
-  const outputArray: string[] = [chalk.dim(`Examples:`), ''];
+  const outputArray: string[] = [`${INDENT}${chalk.dim('Examples:')}`, ''];
   for (const example of command.examples) {
     const nameLine: string[] = [INDENT];
     nameLine.push(chalk.gray('-'));
@@ -273,10 +273,13 @@ export function buildCommandExampleLines(command: Command) {
     }
     outputArray.push('');
   }
-  // delete the last newline added after examples iteration
-  outputArray.splice(-1);
 
   return outputArrayToString(outputArray);
+}
+
+function buildDescriptionLine(command: Command) {
+  const line: string[] = [INDENT, command.description, NEWLINE];
+  return lineToString(line);
 }
 
 interface BuildHelpOutputOptions {
@@ -287,15 +290,12 @@ export function buildHelpOutput(
   command: Command,
   options: BuildHelpOutputOptions
 ) {
-  const outputArray: string[] = [
+  const outputArray: (string | null)[] = [
+    '',
     buildCommandSynopsisLine(command),
-    '',
-    command.description,
-    '',
+    buildDescriptionLine(command),
     buildCommandOptionLines(command.options, options, 'Options'),
-    '',
     buildCommandOptionLines(globalCommandOptions, options, 'Global Options'),
-    '',
     buildCommandExampleLines(command),
     '',
   ];
