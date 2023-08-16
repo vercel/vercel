@@ -95,18 +95,18 @@ jobs:
       - name: fetch ssl certificate after tests (linux, os x)
         if: matrix.runner != 'windows-latest'
         run: echo | openssl s_client -showcerts -servername 'api.vercel.com' -connect 76.76.21.21:443
-      - name: 'Where are we?!?'
-        run: pwd
-      - name: 'what is GH Workspace'
-        run: 'echo ${{github.workspace}}'
-      - name: 'What have we here'
-        run: 'ls -la'
-      - name: 'anything in packages/cli'
-        run: 'ls -la packages/cli'
+      # - name: 'Where are we?!?'
+      #   run: pwd
+      # - name: 'what is GH Workspace'
+      #   run: 'echo ${{github.workspace}}'
+      # - name: 'What have we here'
+      #   run: 'ls -la'
+      # - name: 'anything in packages/cli'
+      #   run: 'ls -la packages/cli'
       - name: install datadog-ci
         if: always()
         run: npm i -g @datadog/datadog-ci@2.18.1
-      - name: 'Upload'
+      - name: 'Upload Test Report to Datadog'
         if: always()
         run: 'DATADOG_API_KEY=${{secrets.DATADOG_API_KEY_CLI}} DD_ENV=ci datadog-ci junit upload --service vercel-cli .junit-reports'
   summary:
