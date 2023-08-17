@@ -219,4 +219,8 @@ export interface Framework {
    * @example "0.13.0"
    */
   defaultVersion?: string;
+  /**
+   * Slug of another framework preset in which this framework supersedes.
+   */
+  supersedes?: string;
 }
