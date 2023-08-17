@@ -82,6 +82,17 @@ export function mergeRoutes({ userRoutes, builds }: MergeRoutesProps): Route[] {
           if (!routes) {
             builderHandleMap.set(builderPrevHandle, [route]);
           } else {
+            if (
+              builderPrevHandle === 'error' &&
+              (route.status === 404 || route.status === 500)
+            ) {
+              // insert 404 and 500 routes before `/` root error handlers
+              const p = routes.findIndex(r => r.status === route.status);
+              if (p !== -1) {
+                routes.splice(p, 0, route);
+                return;
+              }
+            }
             routes.push(route);
           }
         }

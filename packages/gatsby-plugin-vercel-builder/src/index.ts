@@ -6,6 +6,8 @@ import {
   createAPIRoutes,
 } from './helpers/functions';
 import { createStaticDir } from './helpers/static';
+import { pathExists } from 'fs-extra';
+import { join } from 'path';
 import type { Config } from './types';
 
 export interface GenerateVercelBuildOutputAPI3OutputOptions {
@@ -59,14 +61,26 @@ export async function generateVercelBuildOutputAPI3Output({
       trailingSlash = false;
     }
 
-    const { routes } = getTransformedRoutes({
-      trailingSlash,
-      redirects: redirects.map(({ fromPath, toPath, isPermanent }) => ({
-        source: fromPath,
-        destination: toPath,
-        permanent: isPermanent,
-      })),
-    });
+    const routes =
+      getTransformedRoutes({
+        trailingSlash,
+        redirects: redirects.map(({ fromPath, toPath, isPermanent }) => ({
+          source: fromPath,
+          destination: toPath,
+          permanent: isPermanent,
+        })),
+      }).routes || [];
+
+    if (pathPrefix && (await pathExists(join('public', '404.html')))) {
+      routes.push({
+        handle: 'error',
+      });
+      routes.push({
+        status: 404,
+        src: '^(?!/api).*$',
+        dest: join(pathPrefix, '404.html'),
+      });
+    }
 
     const config: Config = {
       version: 3,
