@@ -135,7 +135,7 @@ async function matches(
   };
 }
 
-function removeSupercededFramework(
+function removeSupersededFramework(
   matches: (Pick<Framework, 'supersedes' | 'slug'> | null)[],
   slug: string
 ) {
@@ -143,18 +143,18 @@ function removeSupercededFramework(
   const framework = matches[index];
   if (framework) {
     if (framework.supersedes) {
-      removeSupercededFramework(matches, framework.supersedes);
+      removeSupersededFramework(matches, framework.supersedes);
     }
     matches.splice(index, 1);
   }
 }
 
-export function removeSupercededFrameworks(
+export function removeSupersededFrameworks(
   matches: (Pick<Framework, 'supersedes' | 'slug'> | null)[]
 ) {
   for (const match of matches.slice()) {
     if (match?.supersedes) {
-      removeSupercededFramework(matches, match.supersedes);
+      removeSupersededFramework(matches, match.supersedes);
     }
   }
 }
@@ -172,7 +172,7 @@ export async function detectFramework({
       return null;
     })
   );
-  removeSupercededFrameworks(result);
+  removeSupersededFrameworks(result);
   return result.find(res => res !== null)?.slug ?? null;
 }
 
@@ -191,7 +191,7 @@ export async function detectFrameworks({
       return null;
     })
   );
-  removeSupercededFrameworks(result);
+  removeSupersededFrameworks(result);
   return result.filter(res => res !== null) as Framework[];
 }
 
@@ -220,7 +220,7 @@ export async function detectFrameworkRecord({
       return null;
     })
   );
-  removeSupercededFrameworks(result);
+  removeSupersededFrameworks(result);
   return result.find(res => res !== null) ?? null;
 }
 
