@@ -442,6 +442,9 @@ export interface BuildResultV2Typical {
   framework?: {
     version: string;
   };
+  buildRuntime?: {
+    version: string;
+  };
 }
 
 export type BuildResultV2 = BuildResultV2Typical | BuildResultBuildOutput;

@@ -90,8 +90,10 @@ export function spawnAsync(
   args: string[],
   opts: SpawnOptionsExtended = {}
 ) {
-  return new Promise<void>((resolve, reject) => {
+  return new Promise<string | undefined>((resolve, reject) => {
     const stderrLogs: Buffer[] = [];
+    const stdoutLogs: Buffer[] = [];
+
     opts = { stdio: 'inherit', ...opts };
     const child = spawn(command, args, opts);
 
@@ -99,10 +101,19 @@ export function spawnAsync(
       child.stderr.on('data', data => stderrLogs.push(data));
     }
 
+    // TODO: Do we need to check for "pipe" here and for stderr?
+    if (opts.stdio === 'pipe' && child.stdout) {
+      child.stdout.on('data', data => stdoutLogs.push(data));
+    }
+
     child.on('error', reject);
     child.on('close', (code, signal) => {
       if (code === 0 || opts.ignoreNon0Exit) {
-        return resolve();
+        if (stdoutLogs.length) {
+          const logs = stdoutLogs.map(line => line.toString()).join('');
+          return resolve(logs);
+        }
+        return resolve(undefined);
       }
 
       const cmd = opts.prettyCommand
