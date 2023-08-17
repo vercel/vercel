@@ -1,4 +1,5 @@
 import semver from 'semver';
+import { execSync } from 'child_process';
 import { existsSync, promises as fs } from 'fs';
 import { basename, dirname, join, relative, resolve, sep } from 'path';
 import { pathToRegexp, Key } from 'path-to-regexp';
@@ -283,9 +284,15 @@ export function addDependencies(
     }
   } else {
     // 'yarn'
-    args.push('add', '--ignore-workspace-root-check');
+    args.push('add');
     if (opts.saveDev) {
       args.push('--dev');
+    }
+    const yarnVersion = execSync('yarn -v', { encoding: 'utf8' }).trim();
+    const isYarnV1 = semver.satisfies(yarnVersion, '1');
+    if (isYarnV1) {
+      // Ignoring workspace check is only needed on Yarn v1
+      args.push('--ignore-workspace-root-check');
     }
   }
 
