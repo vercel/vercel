@@ -7,6 +7,7 @@ import {
   LocalFileSystemDetector,
 } from '../src';
 import VirtualFilesystem from './virtual-file-system';
+import { removeSupercededFrameworks } from '../src/detect-framework';
 
 const EXAMPLES_DIR = join(__dirname, '../../../examples');
 
@@ -157,6 +158,35 @@ describe('DetectorFilesystem', () => {
     expect(await detectFramework({ fs: gatsbyAppFs, frameworkList })).toBe(
       'gatsby'
     );
+  });
+});
+
+describe('removeSupercededFrameworks()', () => {
+  it('should remove "vite" when "hydrogen" is present', () => {
+    const matches = [
+      { slug: 'storybook' },
+      { slug: 'vite' },
+      { slug: 'hydrogen', supersedes: 'vite' },
+    ];
+    removeSupercededFrameworks(matches);
+    expect(matches).toEqual([
+      { slug: 'storybook' },
+      { slug: 'hydrogen', supersedes: 'vite' },
+    ]);
+  });
+
+  it('should remove "hydrogen" when "remix" is present', () => {
+    const matches = [
+      { slug: 'storybook' },
+      { slug: 'vite' },
+      { slug: 'hydrogen', supersedes: 'vite' },
+      { slug: 'remix', supersedes: 'hydrogen' },
+    ];
+    removeSupercededFrameworks(matches);
+    expect(matches).toEqual([
+      { slug: 'storybook' },
+      { slug: 'remix', supersedes: 'hydrogen' },
+    ]);
   });
 });
 

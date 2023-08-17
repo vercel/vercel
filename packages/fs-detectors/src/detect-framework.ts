@@ -149,7 +149,7 @@ function removeSupercededFramework(
   }
 }
 
-function removeSupercededFrameworks(
+export function removeSupercededFrameworks(
   matches: (Pick<Framework, 'supersedes' | 'slug'> | null)[]
 ) {
   for (const match of matches.slice()) {
