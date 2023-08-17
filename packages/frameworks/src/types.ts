@@ -220,7 +220,7 @@ export interface Framework {
    */
   defaultVersion?: string;
   /**
-   * Slug of another framework preset in which this framework supercedes.
+   * Slug of another framework preset in which this framework supersedes.
    */
-  supercedes?: string;
+  supersedes?: string;
 }

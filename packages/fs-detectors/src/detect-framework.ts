@@ -136,26 +136,26 @@ async function matches(
 }
 
 function removeSupercededFramework(
-  matches: (Pick<Framework, 'supercedes' | 'slug'> | null)[],
+  matches: (Pick<Framework, 'supersedes' | 'slug'> | null)[],
   slug: string
 ) {
   const index = matches.findIndex(f => f?.slug === slug);
   if (index !== -1) {
     const framework = matches[index]!;
-    if (framework.supercedes) {
-      removeSupercededFramework(matches, framework.supercedes);
+    if (framework.supersedes) {
+      removeSupercededFramework(matches, framework.supersedes);
     }
     matches.splice(index, 1);
   }
 }
 
 function removeSupercededFrameworks(
-  matches: (Pick<Framework, 'supercedes' | 'slug'> | null)[]
+  matches: (Pick<Framework, 'supersedes' | 'slug'> | null)[]
 ) {
   for (const match of matches.slice()) {
     if (!match) continue;
-    if (match.supercedes) {
-      removeSupercededFramework(matches, match.supercedes);
+    if (match.supersedes) {
+      removeSupercededFramework(matches, match.supersedes);
     }
   }
 }

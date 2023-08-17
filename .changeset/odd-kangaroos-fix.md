@@ -3,4 +3,4 @@
 '@vercel/fs-detectors': patch
 ---
 
-Add "supercedes" prop to Framework interface
+Add "supersedes" prop to Framework interface
