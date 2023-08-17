@@ -140,8 +140,8 @@ function removeSupercededFramework(
   slug: string
 ) {
   const index = matches.findIndex(f => f?.slug === slug);
-  if (index !== -1) {
-    const framework = matches[index]!;
+  const framework = matches[index];
+  if (framework) {
     if (framework.supersedes) {
       removeSupercededFramework(matches, framework.supersedes);
     }
@@ -153,8 +153,7 @@ export function removeSupercededFrameworks(
   matches: (Pick<Framework, 'supersedes' | 'slug'> | null)[]
 ) {
   for (const match of matches.slice()) {
-    if (!match) continue;
-    if (match.supersedes) {
+    if (match?.supersedes) {
       removeSupercededFramework(matches, match.supersedes);
     }
   }
