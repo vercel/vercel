@@ -95,12 +95,7 @@ jobs:
       - name: fetch ssl certificate after tests (linux, os x)
         if: matrix.runner != 'windows-latest'
         run: echo | openssl s_client -showcerts -servername 'api.vercel.com' -connect 76.76.21.21:443
-      - name: install datadog-ci
-        if: always()
-        run: npm i -g @datadog/datadog-ci@2.18.1
-      - name: 'Upload Test Report to Datadog'
-        if: always()
-        run: 'datadog-ci junit upload --service vercel-cli .junit-reports'
+        run: 'npx @datadog/datadog-ci@2.18.1 junit upload --service vercel-cli .junit-reports'
         env:
           DATADOG_API_KEY: ${{secrets.DATADOG_API_KEY_CLI}}
           DD_ENV: ci
