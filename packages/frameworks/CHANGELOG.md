@@ -1,5 +1,11 @@
 # @vercel/frameworks
 
+## 1.6.0
+
+### Minor Changes
+
+- [frameworks] Amend Hugo default `buildCommand` to exclude drafts enabled flag ([#7326](https://github.com/vercel/vercel/pull/7326))
+
 ## 1.5.1
 
 ### Patch Changes
