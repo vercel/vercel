@@ -55,6 +55,7 @@
     "etag": "1.8.1",
     "execa": "3.2.0",
     "fs-extra": "11.1.0",
+    "jest-junit": "16.0.0",
     "source-map-support": "0.5.12",
     "test-listen": "1.1.0"
   }

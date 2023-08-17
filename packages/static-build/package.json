@@ -14,7 +14,7 @@
   },
   "scripts": {
     "build": "node build",
-    "test": "jest --env node --verbose --bail --runInBand",
+    "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --bail --runInBand",
     "test-unit": "pnpm test test/build.test.ts test/gatsby.test.ts test/prepare-cache.test.ts",
     "test-e2e": "pnpm test test/integration-*.test.js"
   },
@@ -43,6 +43,7 @@
     "fs-extra": "10.0.0",
     "get-port": "5.0.0",
     "is-port-reachable": "2.0.1",
+    "jest-junit": "16.0.0",
     "ms": "2.1.2",
     "node-fetch": "2.6.7",
     "rc9": "1.2.0",

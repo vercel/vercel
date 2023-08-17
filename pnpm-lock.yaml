@@ -882,6 +882,9 @@ importers:
       ajv:
         specifier: 6.12.2
         version: 6.12.2
+      jest-junit:
+        specifier: 16.0.0
+        version: 16.0.0
       typescript:
         specifier: 4.9.5
         version: 4.9.5
@@ -956,6 +959,9 @@ importers:
       '@babel/core':
         specifier: 7.5.0
         version: 7.5.0
+      jest-junit:
+        specifier: 16.0.0
+        version: 16.0.0
 
   packages/gatsby-plugin-vercel-builder:
     dependencies:
@@ -993,6 +999,9 @@ importers:
       '@types/react':
         specifier: 18.0.26
         version: 18.0.26
+      jest-junit:
+        specifier: 16.0.0
+        version: 16.0.0
       typescript:
         specifier: 4.9.5
         version: 4.9.5
@@ -1041,6 +1050,9 @@ importers:
       fs-extra:
         specifier: ^7.0.0
         version: 7.0.1
+      jest-junit:
+        specifier: 16.0.0
+        version: 16.0.0
       node-fetch:
         specifier: ^2.2.1
         version: 2.6.8
@@ -1080,6 +1092,9 @@ importers:
       fs-extra:
         specifier: 11.1.0
         version: 11.1.0
+      jest-junit:
+        specifier: 16.0.0
+        version: 16.0.0
       ts-morph:
         specifier: 12.0.0
         version: 12.0.0
@@ -1167,6 +1182,9 @@ importers:
       get-port:
         specifier: 5.0.0
         version: 5.0.0
+      jest-junit:
+        specifier: 16.0.0
+        version: 16.0.0
       nanoid:
         specifier: 3.3.4
         version: 3.3.4
@@ -1303,6 +1321,9 @@ importers:
       fs-extra:
         specifier: 11.1.0
         version: 11.1.0
+      jest-junit:
+        specifier: 16.0.0
+        version: 16.0.0
       source-map-support:
         specifier: 0.5.12
         version: 0.5.12
@@ -1330,6 +1351,9 @@ importers:
       execa:
         specifier: ^1.0.0
         version: 1.0.0
+      jest-junit:
+        specifier: 16.0.0
+        version: 16.0.0
 
   packages/redwood:
     dependencies:
@@ -1361,6 +1385,9 @@ importers:
       fs-extra:
         specifier: 11.1.0
         version: 11.1.0
+      jest-junit:
+        specifier: 16.0.0
+        version: 16.0.0
 
   packages/remix:
     dependencies:
@@ -1395,6 +1422,9 @@ importers:
       '@types/semver':
         specifier: 7.3.13
         version: 7.3.13
+      jest-junit:
+        specifier: 16.0.0
+        version: 16.0.0
 
   packages/routing-utils:
     dependencies:
@@ -1412,6 +1442,9 @@ importers:
       '@types/node':
         specifier: 14.18.33
         version: 14.18.33
+      jest-junit:
+        specifier: 16.0.0
+        version: 16.0.0
       typescript:
         specifier: 4.9.5
         version: 4.9.5
@@ -1436,6 +1469,9 @@ importers:
       fs-extra:
         specifier: ^7.0.1
         version: 7.0.1
+      jest-junit:
+        specifier: 16.0.0
+        version: 16.0.0
       semver:
         specifier: 6.1.1
         version: 6.1.1
@@ -1509,6 +1545,9 @@ importers:
       is-port-reachable:
         specifier: 2.0.1
         version: 2.0.1
+      jest-junit:
+        specifier: 16.0.0
+        version: 16.0.0
       ms:
         specifier: 2.1.2
         version: 2.1.2
@@ -1549,6 +1588,9 @@ importers:
       '@types/node':
         specifier: 14.18.33
         version: 14.18.33
+      jest-junit:
+        specifier: 16.0.0
+        version: 16.0.0
       typescript:
         specifier: 4.9.5
         version: 4.9.5
