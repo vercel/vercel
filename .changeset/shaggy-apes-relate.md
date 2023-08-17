@@ -1,5 +1,6 @@
 ---
 'vercel': minor
+'@vercel/static-build': minor
 ---
 
-v31.4.0
+Force-publish
