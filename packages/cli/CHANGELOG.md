@@ -1,5 +1,16 @@
 # vercel
 
+## 31.4.0
+
+### Minor Changes
+
+- Force-publish ([#10358](https://github.com/vercel/vercel/pull/10358))
+
+### Patch Changes
+
+- Updated dependencies [[`6e44757ff`](https://github.com/vercel/vercel/commit/6e44757ff5d7d80ba6db2ab5ea65213392ecf1cd)]:
+  - @vercel/static-build@1.4.0
+
 ## 31.3.1
 
 ### Patch Changes

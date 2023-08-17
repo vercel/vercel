@@ -16,7 +16,7 @@
   },
   "scripts": {
     "build": "node build",
-    "test": "jest --env node --verbose --runInBand --bail",
+    "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --runInBand --bail",
     "test-e2e": "pnpm test"
   },
   "devDependencies": {
@@ -26,6 +26,7 @@
     "@vercel/ncc": "0.24.0",
     "execa": "2.0.4",
     "fs-extra": "^7.0.1",
+    "jest-junit": "16.0.0",
     "semver": "6.1.1"
   }
 }

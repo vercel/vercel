@@ -50,13 +50,13 @@ afterEach(() => {
 });
 
 it('should only match supported node versions, otherwise throw an error', async () => {
-  expect(await getSupportedNodeVersion('14.x', false)).toHaveProperty(
-    'major',
-    14
-  );
   expect(await getSupportedNodeVersion('16.x', false)).toHaveProperty(
     'major',
     16
+  );
+  expect(await getSupportedNodeVersion('18.x', false)).toHaveProperty(
+    'major',
+    18
   );
 
   const autoMessage =
@@ -70,13 +70,13 @@ it('should only match supported node versions, otherwise throw an error', async 
   await expectBuilderError(getSupportedNodeVersion('foo', true), autoMessage);
   await expectBuilderError(getSupportedNodeVersion('=> 10', true), autoMessage);
 
-  expect(await getSupportedNodeVersion('14.x', true)).toHaveProperty(
-    'major',
-    14
-  );
   expect(await getSupportedNodeVersion('16.x', true)).toHaveProperty(
     'major',
     16
+  );
+  expect(await getSupportedNodeVersion('18.x', true)).toHaveProperty(
+    'major',
+    18
   );
 
   const foundMessage =
@@ -99,23 +99,23 @@ it('should only match supported node versions, otherwise throw an error', async 
 
 it('should match all semver ranges', async () => {
   // See https://docs.npmjs.com/files/package.json#engines
-  expect(await getSupportedNodeVersion('14.0.0')).toHaveProperty('major', 14);
-  expect(await getSupportedNodeVersion('14.x')).toHaveProperty('major', 14);
+  expect(await getSupportedNodeVersion('16.0.0')).toHaveProperty('major', 16);
+  expect(await getSupportedNodeVersion('16.x')).toHaveProperty('major', 16);
   expect(await getSupportedNodeVersion('>=10')).toHaveProperty('major', 18);
   expect(await getSupportedNodeVersion('>=10.3.0')).toHaveProperty('major', 18);
   expect(await getSupportedNodeVersion('16.5.0 - 16.9.0')).toHaveProperty(
     'major',
     16
   );
-  expect(await getSupportedNodeVersion('>=9.5.0 <=14.5.0')).toHaveProperty(
+  expect(await getSupportedNodeVersion('>=9.5.0 <=16.5.0')).toHaveProperty(
     'major',
-    14
+    16
   );
-  expect(await getSupportedNodeVersion('~14.5.0')).toHaveProperty('major', 14);
-  expect(await getSupportedNodeVersion('^14.5.0')).toHaveProperty('major', 14);
-  expect(await getSupportedNodeVersion('14.5.0 - 14.20.0')).toHaveProperty(
+  expect(await getSupportedNodeVersion('~16.5.0')).toHaveProperty('major', 16);
+  expect(await getSupportedNodeVersion('^16.5.0')).toHaveProperty('major', 16);
+  expect(await getSupportedNodeVersion('16.5.0 - 16.20.0')).toHaveProperty(
     'major',
-    14
+    16
   );
 });
 

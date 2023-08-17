@@ -7,7 +7,7 @@
   "scripts": {
     "build": "node build.js",
     "build-dev": "node build.js --dev",
-    "test": "jest --env node --verbose --bail --runInBand --testTimeout=360000",
+    "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --bail --runInBand --testTimeout=360000",
     "test-unit": "pnpm test test/unit/",
     "test-next-local": "pnpm test test/integration/*.test.js test/integration/*.test.ts",
     "test-next-local:middleware": "pnpm test test/integration/middleware.test.ts",
@@ -49,6 +49,7 @@
     "find-up": "4.1.0",
     "fs-extra": "7.0.0",
     "get-port": "5.0.0",
+    "jest-junit": "16.0.0",
     "nanoid": "3.3.4",
     "ndjson": "2.0.0",
     "pretty-bytes": "5.3.0",

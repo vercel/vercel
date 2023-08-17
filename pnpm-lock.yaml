@@ -129,7 +129,7 @@ importers:
         specifier: 27.4.1
         version: 27.4.1
       '@vercel/frameworks':
-        specifier: 1.5.1
+        specifier: 1.6.0
         version: link:../packages/frameworks
 
   internals/constants:
@@ -282,6 +282,9 @@ importers:
       into-stream:
         specifier: 5.0.0
         version: 5.0.0
+      jest-junit:
+        specifier: 16.0.0
+        version: 16.0.0
       js-yaml:
         specifier: 3.13.1
         version: 3.13.1
@@ -334,7 +337,7 @@ importers:
         specifier: 1.3.76
         version: link:../ruby
       '@vercel/static-build':
-        specifier: 1.3.46
+        specifier: 1.4.0
         version: link:../static-build
     devDependencies:
       '@alex_neo/jest-expect-message':
@@ -476,10 +479,10 @@ importers:
         specifier: 1.0.10
         version: link:../error-utils
       '@vercel/frameworks':
-        specifier: 1.5.1
+        specifier: 1.6.0
         version: link:../frameworks
       '@vercel/fs-detectors':
-        specifier: 4.1.2
+        specifier: 4.1.3
         version: link:../fs-detectors
       '@vercel/fun':
         specifier: 1.0.4
@@ -610,6 +613,9 @@ importers:
       jaro-winkler:
         specifier: 0.2.8
         version: 0.2.8
+      jest-junit:
+        specifier: 16.0.0
+        version: 16.0.0
       jest-matcher-utils:
         specifier: 29.3.1
         version: 29.3.1
@@ -794,6 +800,9 @@ importers:
       '@types/tar-fs':
         specifier: 1.16.1
         version: 1.16.1
+      jest-junit:
+        specifier: 16.0.0
+        version: 16.0.0
       typescript:
         specifier: 4.9.5
         version: 4.9.5
@@ -806,6 +815,9 @@ importers:
       '@types/jest':
         specifier: 27.4.1
         version: 27.4.1
+      jest-junit:
+        specifier: 16.0.0
+        version: 16.0.0
       ts-node:
         specifier: 8.9.1
         version: 8.9.1(typescript@4.9.5)
@@ -833,6 +845,9 @@ importers:
       '@types/node':
         specifier: 14.18.33
         version: 14.18.33
+      jest-junit:
+        specifier: 16.0.0
+        version: 16.0.0
       typescript:
         specifier: 4.9.5
         version: 4.9.5
@@ -867,6 +882,9 @@ importers:
       ajv:
         specifier: 6.12.2
         version: 6.12.2
+      jest-junit:
+        specifier: 16.0.0
+        version: 16.0.0
       typescript:
         specifier: 4.9.5
         version: 4.9.5
@@ -877,7 +895,7 @@ importers:
         specifier: 1.0.10
         version: link:../error-utils
       '@vercel/frameworks':
-        specifier: 1.5.1
+        specifier: 1.6.0
         version: link:../frameworks
       '@vercel/routing-utils':
         specifier: 2.2.1
@@ -919,6 +937,9 @@ importers:
       '@vercel/build-utils':
         specifier: 6.8.3
         version: link:../build-utils
+      jest-junit:
+        specifier: 16.0.0
+        version: 16.0.0
       typescript:
         specifier: 4.9.5
         version: 4.9.5
@@ -938,6 +959,9 @@ importers:
       '@babel/core':
         specifier: 7.5.0
         version: 7.5.0
+      jest-junit:
+        specifier: 16.0.0
+        version: 16.0.0
 
   packages/gatsby-plugin-vercel-builder:
     dependencies:
@@ -975,6 +999,9 @@ importers:
       '@types/react':
         specifier: 18.0.26
         version: 18.0.26
+      jest-junit:
+        specifier: 16.0.0
+        version: 16.0.0
       typescript:
         specifier: 4.9.5
         version: 4.9.5
@@ -1023,6 +1050,9 @@ importers:
       fs-extra:
         specifier: ^7.0.0
         version: 7.0.1
+      jest-junit:
+        specifier: 16.0.0
+        version: 16.0.0
       node-fetch:
         specifier: ^2.2.1
         version: 2.6.8
@@ -1062,6 +1092,9 @@ importers:
       fs-extra:
         specifier: 11.1.0
         version: 11.1.0
+      jest-junit:
+        specifier: 16.0.0
+        version: 16.0.0
       ts-morph:
         specifier: 12.0.0
         version: 12.0.0
@@ -1149,6 +1182,9 @@ importers:
       get-port:
         specifier: 5.0.0
         version: 5.0.0
+      jest-junit:
+        specifier: 16.0.0
+        version: 16.0.0
       nanoid:
         specifier: 3.3.4
         version: 3.3.4
@@ -1285,6 +1321,9 @@ importers:
       fs-extra:
         specifier: 11.1.0
         version: 11.1.0
+      jest-junit:
+        specifier: 16.0.0
+        version: 16.0.0
       source-map-support:
         specifier: 0.5.12
         version: 0.5.12
@@ -1312,6 +1351,9 @@ importers:
       execa:
         specifier: ^1.0.0
         version: 1.0.0
+      jest-junit:
+        specifier: 16.0.0
+        version: 16.0.0
 
   packages/redwood:
     dependencies:
@@ -1343,6 +1385,9 @@ importers:
       fs-extra:
         specifier: 11.1.0
         version: 11.1.0
+      jest-junit:
+        specifier: 16.0.0
+        version: 16.0.0
 
   packages/remix:
     dependencies:
@@ -1377,6 +1422,9 @@ importers:
       '@types/semver':
         specifier: 7.3.13
         version: 7.3.13
+      jest-junit:
+        specifier: 16.0.0
+        version: 16.0.0
 
   packages/routing-utils:
     dependencies:
@@ -1394,6 +1442,9 @@ importers:
       '@types/node':
         specifier: 14.18.33
         version: 14.18.33
+      jest-junit:
+        specifier: 16.0.0
+        version: 16.0.0
       typescript:
         specifier: 4.9.5
         version: 4.9.5
@@ -1418,6 +1469,9 @@ importers:
       fs-extra:
         specifier: ^7.0.1
         version: 7.0.1
+      jest-junit:
+        specifier: 16.0.0
+        version: 16.0.0
       semver:
         specifier: 6.1.1
         version: 6.1.1
@@ -1465,10 +1519,10 @@ importers:
         specifier: 1.0.10
         version: link:../error-utils
       '@vercel/frameworks':
-        specifier: 1.5.1
+        specifier: 1.6.0
         version: link:../frameworks
       '@vercel/fs-detectors':
-        specifier: 4.1.2
+        specifier: 4.1.3
         version: link:../fs-detectors
       '@vercel/ncc':
         specifier: 0.24.0
@@ -1491,6 +1545,9 @@ importers:
       is-port-reachable:
         specifier: 2.0.1
         version: 2.0.1
+      jest-junit:
+        specifier: 16.0.0
+        version: 16.0.0
       ms:
         specifier: 2.1.2
         version: 2.1.2
@@ -1531,6 +1588,9 @@ importers:
       '@types/node':
         specifier: 14.18.33
         version: 14.18.33
+      jest-junit:
+        specifier: 16.0.0
+        version: 16.0.0
       typescript:
         specifier: 4.9.5
         version: 4.9.5
@@ -6169,7 +6229,7 @@ packages:
     peerDependencies:
       node-fetch: '*'
     dependencies:
-      async-retry: 1.3.3
+      async-retry: 1.3.1
       debug: 3.1.0
       node-fetch: 2.6.7
     transitivePeerDependencies:
@@ -6628,13 +6688,6 @@ packages:
     resolution: {integrity: sha512-aiieFW/7h3hY0Bq5d+ktDBejxuwR78vRu9hDUdR8rNhSaQ29VzPL4AoIRG7D/c7tdenwOcKvgPM6tIxB3cB6HA==}
     dependencies:
       retry: 0.12.0
-    dev: true
-
-  /async-retry@1.3.3:
-    resolution: {integrity: sha512-wfr/jstw9xNi/0teMHrRW7dsz3Lt5ARhYNZ2ewpadnhaIp5mbALhOAP+EAdsC7t4Z6wqsDVv9+W6gm1Dk9mEyw==}
-    dependencies:
-      retry: 0.13.1
-    dev: false
 
   /async-sema@2.1.4:
     resolution: {integrity: sha512-NKdMgXT9RfmkscybzytzK/6uGF4cL8Mt3PSeO9QHXYKs3oFWkUwIepnAkzLWkqttOdDDFoED3c8kriS8RzP+ow==}
@@ -11785,6 +11838,16 @@ packages:
       fsevents: 2.3.2
     dev: true
 
+  /jest-junit@16.0.0:
+    resolution: {integrity: sha512-A94mmw6NfJab4Fg/BlvVOUXzXgF0XIH6EmTgJ5NDPp4xoKq0Kr7sErb+4Xs9nZvu58pJojz5RFGpqnZYJTrRfQ==}
+    engines: {node: '>=10.12.0'}
+    dependencies:
+      mkdirp: 1.0.4
+      strip-ansi: 6.0.1
+      uuid: 8.3.2
+      xml: 1.0.1
+    dev: true
+
   /jest-leak-detector@29.5.0:
     resolution: {integrity: sha512-u9YdeeVnghBUtpN5mVxjID7KbkKE1QU4f6uUwuxiY0vYRi9BUCLKlPEZfDGR67ofdFmDz9oPAy2G92Ujrntmow==}
     engines: {node: ^14.15.0 || ^16.10.0 || >=18.0.0}
@@ -13305,6 +13368,7 @@ packages:
 
   /mkdirp@0.5.6:
     resolution: {integrity: sha512-FP+p8RB8OWpF3YZBCrP5gtADmtXApB5AMLn+vdyA+PyxCjrCs00mjyUozssO33cwDeT3wNGdLxJ5M//YqtHAJw==}
+    hasBin: true
     dependencies:
       minimist: 1.2.7
 
@@ -13472,6 +13536,7 @@ packages:
 
   /node-gyp-build@4.6.0:
     resolution: {integrity: sha512-NTZVKn9IylLwUzaKjkas1e4u2DLNcV4rdYagA4PWdPwW87Bi7z+BznyKSRwS/761tV/lzCGXplWsiaMjLqP2zQ==}
+    hasBin: true
 
   /node-int64@0.4.0:
     resolution: {integrity: sha512-O5lz91xSOeoXP6DulyHfllpq+Eg00MWitZIbtPfoSEvqIHdl5gfcY6hYzDWnj0qD5tz52PI08u9qUvSVeUBeHw==}
@@ -14916,11 +14981,6 @@ packages:
     resolution: {integrity: sha512-9LkiTwjUh6rT555DtE9rTX+BKByPfrMzEAtnlEtdEwr3Nkffwiihqe2bWADg+OQRjt9gl6ICdmB/ZFDCGAtSow==}
     engines: {node: '>= 4'}
 
-  /retry@0.13.1:
-    resolution: {integrity: sha512-XQBQ3I8W1Cge0Seh+6gjj03LbmRFWuoszgK9ooCpwYIrhhoO80pfq4cUkU5DkknwfOfFteRwlZ56PYOGYyFWdg==}
-    engines: {node: '>= 4'}
-    dev: false
-
   /reusify@1.0.4:
     resolution: {integrity: sha512-U9nH88a3fc/ekCF1l0/UP1IosiuIjyTh7hBvXVMHYgVcfGvt897Xguj2UOLDeI5BG2m7/uwyaLVT6fbtCwTyzw==}
     engines: {iojs: '>=1.0.0', node: '>=0.10.0'}
@@ -15403,6 +15463,7 @@ packages:
   /sshpk@1.17.0:
     resolution: {integrity: sha512-/9HIEs1ZXGhSPE8X6Ccm7Nam1z8KcoCqPdI7ecm1N33EzAetWahvQWVqLZtaZQ+IDKX4IyA2o0gBzqIMkAagHQ==}
     engines: {node: '>=0.10.0'}
+    hasBin: true
     dependencies:
       asn1: 0.2.6
       assert-plus: 1.0.0
@@ -16678,6 +16739,7 @@ packages:
 
   /uuid@8.3.2:
     resolution: {integrity: sha512-+NYs2QeMWy+GWFOEm9xnn6HCDp0l7QBD7ml8zLUmJ+93Q5NF0NocErnwkTkXVFNiX3/fpC6afS8Dhb/gz7R7eg==}
+    hasBin: true
     dev: true
 
   /uvu@0.5.6:
@@ -17074,6 +17136,10 @@ packages:
       - supports-color
     dev: true
 
+  /xml@1.0.1:
+    resolution: {integrity: sha512-huCv9IH9Tcf95zuYCsQraZtWnJvBtLVE0QHMOs8bWyZAFZNDcYjsPq1nEx8jKA9y+Beo9v+7OBPRisQTjinQMw==}
+    dev: true
+
   /xtend@4.0.2:
     resolution: {integrity: sha512-LKYU1iAXJXUgAXn9URjiu+MWhyUXHsvfp7mcuYm9dSUKK0/CjtrUwFAxD82/mCWbtLsGjFIad0wIsod4zrTAEQ==}
     engines: {node: '>=0.4'}
@@ -17203,7 +17269,3 @@ packages:
   /zwitch@2.0.4:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
     dev: true
-
-settings:
-  autoInstallPeers: true
-  excludeLinksFromLockfile: false

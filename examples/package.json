@@ -5,10 +5,10 @@
   "scripts": {
     "test-unit": "pnpm test __tests__/unit/",
     "test-e2e": "pnpm test __tests__/integration/",
-    "test": "jest --env node --verbose --runInBand --bail"
+    "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --runInBand --bail"
   },
   "devDependencies": {
     "@types/jest": "27.4.1",
-    "@vercel/frameworks": "1.5.1"
+    "@vercel/frameworks": "1.6.0"
   }
 }

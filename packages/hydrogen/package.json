@@ -12,7 +12,7 @@
   "scripts": {
     "build": "node build.js",
     "test-e2e": "pnpm test test/test.js",
-    "test": "jest --env node --verbose --bail --runInBand"
+    "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --bail --runInBand"
   },
   "files": [
     "dist",
@@ -25,6 +25,7 @@
     "@vercel/static-config": "2.0.17",
     "execa": "3.2.0",
     "fs-extra": "11.1.0",
+    "jest-junit": "16.0.0",
     "ts-morph": "12.0.0"
   }
 }

@@ -1,6 +1,6 @@
 {
   "name": "@vercel/frameworks",
-  "version": "1.5.1",
+  "version": "1.6.0",
   "main": "./dist/frameworks.js",
   "types": "./dist/frameworks.d.ts",
   "files": [
@@ -14,7 +14,7 @@
   "license": "Apache-2.0",
   "scripts": {
     "build": "tsc",
-    "test": "jest --env node --verbose --runInBand --bail",
+    "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --runInBand --bail",
     "test-unit": "pnpm test"
   },
   "dependencies": {
@@ -29,6 +29,7 @@
     "@vercel/error-utils": "1.0.10",
     "@vercel/routing-utils": "2.2.1",
     "ajv": "6.12.2",
+    "jest-junit": "16.0.0",
     "typescript": "4.9.5"
   }
 }

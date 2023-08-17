@@ -15,7 +15,7 @@
   "scripts": {
     "build": "node build.js",
     "test-e2e": "pnpm test test/test.js",
-    "test": "jest --env node --verbose --bail --runInBand",
+    "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --bail --runInBand",
     "test-unit": "pnpm test test/prepare-cache.test.js"
   },
   "dependencies": {
@@ -29,6 +29,7 @@
     "@types/semver": "6.0.0",
     "@vercel/build-utils": "6.8.3",
     "execa": "3.2.0",
-    "fs-extra": "11.1.0"
+    "fs-extra": "11.1.0",
+    "jest-junit": "16.0.0"
   }
 }
