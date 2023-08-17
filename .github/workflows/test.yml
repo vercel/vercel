@@ -108,7 +108,11 @@ jobs:
         run: npm i -g @datadog/datadog-ci@2.18.1
       - name: 'Upload Test Report to Datadog'
         if: always()
-        run: 'DATADOG_API_KEY=${{secrets.DATADOG_API_KEY_CLI}} DD_ENV=ci datadog-ci junit upload --service vercel-cli .junit-reports'
+        run: 'datadog-ci junit upload --service vercel-cli .junit-reports'
+        env:
+          DATADOG_API_KEY: ${{secrets.DATADOG_API_KEY_CLI}}
+          DD_ENV: ci
+
   summary:
     name: Summary
     runs-on: ubuntu-latest
