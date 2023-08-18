@@ -992,6 +992,7 @@ function getRouteResult(
   const rewriteRoutes: Route[] = [];
   const errorRoutes: Route[] = [];
   const framework = frontendBuilder?.config?.framework || '';
+  const isGastby = framework === 'gatsby';
   const isNextjs =
     framework === 'nextjs' || isOfficialRuntime('next', frontendBuilder?.use);
   const ignoreRuntimes = slugToFramework.get(framework)?.ignoreRuntimes;
@@ -1071,7 +1072,7 @@ function getRouteResult(
     });
   }
 
-  if (options.featHandleMiss && !isNextjs) {
+  if (options.featHandleMiss && !isNextjs && !isGastby) {
     // Exclude Next.js to avoid overriding custom error page
     // https://nextjs.org/docs/advanced-features/custom-error-page
     errorRoutes.push({
