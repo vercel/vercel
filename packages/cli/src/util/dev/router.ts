@@ -132,7 +132,7 @@ export async function devRouter(
           !isDestUrl
         ) {
           let { pathname } = url.parse(destPath);
-          pathname ??= '/';
+          pathname = pathname || '/';
           const hasDestFile = await devServer.hasFilesystem(
             pathname,
             vercelConfig
@@ -190,7 +190,7 @@ export async function devRouter(
           }
           let { pathname: destPathname, search: destSearch } =
             url.parse(destPath);
-          destPathname ??= '/';
+          destPathname = destPathname || '/';
           const destQuery = parseQueryString(destSearch);
           Object.assign(destQuery, reqQuery);
           result = {
