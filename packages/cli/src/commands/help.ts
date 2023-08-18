@@ -141,7 +141,7 @@ const globalCommandOptions: CommandOption[] = [
 ];
 
 // Use the word wrapping ability of cli-table3
-// by creating a one row, one cell, one column talbe.
+// by creating a one row, one cell, one column table.
 // This allows us to avoid pulling in the word-wrap
 // package which ironically seems to do a worse job.
 function wordWrap(text: string, maxWidth: number) {
