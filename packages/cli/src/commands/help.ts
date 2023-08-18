@@ -140,6 +140,28 @@ const globalCommandOptions: CommandOption[] = [
   },
 ];
 
+// Use the word wrapping ability of cli-table3
+// by creating a one row, one cell, one column talbe.
+// This allows us to avoid pulling in the word-wrap
+// package which ironically seems to do a worse job.
+function wordWrap(text: string, maxWidth: number) {
+  const _tableOptions = Object.assign({}, tableOptions, {
+    colWidths: [maxWidth],
+    style: {
+      'padding-left': INDENT.length,
+    },
+  });
+  const table = new Table(_tableOptions);
+  table.push([
+    {
+      content: text,
+      wordWrap: true,
+    } as _CellOptions,
+  ]);
+
+  return table.toString();
+}
+
 // Insert spaces in between non-whitespace items only
 export function lineToString(line: string[]) {
   let string = '';
@@ -286,21 +308,8 @@ function buildDescriptionLine(
   command: Command,
   options: BuildHelpOutputOptions
 ) {
-  const _tableOptions = Object.assign({}, tableOptions, {
-    colWidths: [options.columns],
-    style: {
-      'padding-left': INDENT.length,
-    },
-  });
-  const table = new Table(_tableOptions);
-  table.push([
-    {
-      content: command.description,
-      wordWrap: true,
-    } as _CellOptions,
-  ]);
-
-  return `${table.toString()}${NEWLINE}`;
+  let wrapingText = wordWrap(command.description, options.columns);
+  return `${wrapingText}${NEWLINE}`;
 }
 
 interface BuildHelpOutputOptions {
