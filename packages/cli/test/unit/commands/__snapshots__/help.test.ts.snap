@@ -4,7 +4,11 @@ exports[`help command help output snapshots column width 40 1`] = `
 "
   ▲ [1mvercel[22m [1mdeploy[22m [project-path] [options]
 
-  Deploy your project to Vercel. The \`deploy\` command is the default command for the Vercel CLI, and can be omitted (\`vc deploy my-app\` equals \`vc my-app\`).
+  Deploy your project to Vercel. The    
+  \`deploy\` command is the default       
+  command for the Vercel CLI, and can   
+  be omitted (\`vc deploy my-app\` equals 
+  \`vc my-app\`).                         
 
   [2mOptions[22m:
 
@@ -166,7 +170,9 @@ exports[`help command help output snapshots column width 80 1`] = `
 "
   ▲ [1mvercel[22m [1mdeploy[22m [project-path] [options]
 
-  Deploy your project to Vercel. The \`deploy\` command is the default command for the Vercel CLI, and can be omitted (\`vc deploy my-app\` equals \`vc my-app\`).
+  Deploy your project to Vercel. The \`deploy\` command is the default command    
+  for the Vercel CLI, and can be omitted (\`vc deploy my-app\` equals \`vc         
+  my-app\`).                                                                     
 
   [2mOptions[22m:
 
@@ -234,7 +240,8 @@ exports[`help command help output snapshots column width 120 1`] = `
 "
   ▲ [1mvercel[22m [1mdeploy[22m [project-path] [options]
 
-  Deploy your project to Vercel. The \`deploy\` command is the default command for the Vercel CLI, and can be omitted (\`vc deploy my-app\` equals \`vc my-app\`).
+  Deploy your project to Vercel. The \`deploy\` command is the default command for the Vercel CLI, and can be omitted     
+  (\`vc deploy my-app\` equals \`vc my-app\`).                                                                              
 
   [2mOptions[22m:
 
