@@ -36,6 +36,30 @@ type _CellOptions = CellOptions & {
   wordWrap?: boolean;
 };
 
+const tableOptions = {
+  chars: {
+    top: '',
+    'top-mid': '',
+    'top-left': '',
+    'top-right': '',
+    bottom: '',
+    'bottom-mid': '',
+    'bottom-left': '',
+    'bottom-right': '',
+    left: '',
+    'left-mid': '',
+    mid: '',
+    'mid-mid': '',
+    right: '',
+    'right-mid': '',
+    middle: '',
+  },
+  style: {
+    'padding-left': 0,
+    'padding-right': 0,
+  },
+};
+
 const globalCommandOptions: CommandOption[] = [
   {
     name: 'help',
@@ -217,30 +241,11 @@ export function buildCommandOptionLines(
 
   const finalColumnWidth = options.columns - maxWidthOfUnwrappedColumns;
 
-  const table = new Table({
-    chars: {
-      top: '',
-      'top-mid': '',
-      'top-left': '',
-      'top-right': '',
-      bottom: '',
-      'bottom-mid': '',
-      'bottom-left': '',
-      'bottom-right': '',
-      left: '',
-      'left-mid': '',
-      mid: '',
-      'mid-mid': '',
-      right: '',
-      'right-mid': '',
-      middle: '',
-    },
-    style: {
-      'padding-left': 0,
-      'padding-right': 0,
-    },
-    colWidths: [null, null, finalColumnWidth],
-  });
+  const table = new Table(
+    Object.assign({}, tableOptions, {
+      colWidths: [null, null, finalColumnWidth],
+    })
+  );
 
   table.push(...rows);
   return [
@@ -277,9 +282,25 @@ export function buildCommandExampleLines(command: Command) {
   return outputArrayToString(outputArray);
 }
 
-function buildDescriptionLine(command: Command) {
-  const line: string[] = [INDENT, command.description, NEWLINE];
-  return lineToString(line);
+function buildDescriptionLine(
+  command: Command,
+  options: BuildHelpOutputOptions
+) {
+  const _tableOptions = Object.assign({}, tableOptions, {
+    colWidths: [options.columns],
+    style: {
+      'padding-left': INDENT.length,
+    },
+  });
+  const table = new Table(_tableOptions);
+  table.push([
+    {
+      content: command.description,
+      wordWrap: true,
+    } as _CellOptions,
+  ]);
+
+  return `${table.toString()}${NEWLINE}`;
 }
 
 interface BuildHelpOutputOptions {
@@ -293,7 +314,7 @@ export function buildHelpOutput(
   const outputArray: (string | null)[] = [
     '',
     buildCommandSynopsisLine(command),
-    buildDescriptionLine(command),
+    buildDescriptionLine(command, options),
     buildCommandOptionLines(command.options, options, 'Options'),
     buildCommandOptionLines(globalCommandOptions, options, 'Global Options'),
     buildCommandExampleLines(command),
