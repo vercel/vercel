@@ -70,16 +70,21 @@ export async function generateVercelBuildOutputAPI3Output({
         })),
       }).routes || [];
 
-    routes.push(
-      {
-        handle: 'error',
-      },
-      {
+    routes.push({
+      handle: 'error',
+    });
+    if (pathPrefix) {
+      routes.push({
         status: 404,
         src: '^(?!/api).*$',
-        dest: pathPrefix ? join(pathPrefix, '404.html') : '404.html',
-      }
-    );
+        dest: join(pathPrefix, '404.html'),
+      });
+    }
+    routes.push({
+      status: 404,
+      src: '^(?!/api).*$',
+      dest: '404.html',
+    });
 
     const config: Config = {
       version: 3,
