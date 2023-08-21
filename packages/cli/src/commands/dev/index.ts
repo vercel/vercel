@@ -7,13 +7,12 @@ import getSubcommand from '../../util/get-subcommand';
 import Client from '../../util/client';
 import { NowError } from '../../util/now-error';
 import handleError from '../../util/handle-error';
-import logo from '../../util/output/logo';
 import cmd from '../../util/output/cmd';
 import highlight from '../../util/output/highlight';
 import dev from './dev';
 import readConfig from '../../util/config/read-config';
 import readJSONFile from '../../util/read-json-file';
-import { getPkgName, getCommandName } from '../../util/pkg-name';
+import { packageName, getCommandName, logo } from '../../util/pkg-name';
 import { CantParseJSONFile } from '../../util/errors-ts';
 import { isErrnoException } from '@vercel/error-utils';
 
@@ -23,9 +22,9 @@ const COMMAND_CONFIG = {
 
 const help = () => {
   console.log(`
-  ${chalk.bold(`${logo} ${getPkgName()} dev`)} [options] <dir>
+  ${chalk.bold(`${logo} ${packageName} dev`)} [options] <dir>
 
-  Starts the \`${getPkgName()} dev\` server.
+  Starts the \`${packageName} dev\` server.
 
   ${chalk.dim('Options:')}
 
@@ -38,15 +37,15 @@ const help = () => {
 
   ${chalk.dim('Examples:')}
 
-  ${chalk.gray('–')} Start the \`${getPkgName()} dev\` server on port 8080
+  ${chalk.gray('–')} Start the \`${packageName} dev\` server on port 8080
 
-      ${chalk.cyan(`$ ${getPkgName()} dev --listen 8080`)}
+      ${chalk.cyan(`$ ${packageName} dev --listen 8080`)}
 
   ${chalk.gray(
     '–'
   )} Make the \`vercel dev\` server bind to localhost on port 5000
 
-      ${chalk.cyan(`$ ${getPkgName()} dev --listen 127.0.0.1:5000`)}
+      ${chalk.cyan(`$ ${packageName} dev --listen 127.0.0.1:5000`)}
   `);
 };
 
@@ -54,7 +53,7 @@ export default async function main(client: Client) {
   if (process.env.__VERCEL_DEV_RUNNING) {
     client.output.error(
       `${cmd(
-        `${getPkgName()} dev`
+        `${packageName} dev`
       )} must not recursively invoke itself. Check the Development Command in the Project Settings or the ${cmd(
         'dev'
       )} script in ${cmd('package.json')}`
@@ -126,7 +125,7 @@ export default async function main(client: Client) {
     if (/\b(now|vercel)\b\W+\bdev\b/.test(pkg?.scripts?.dev || '')) {
       client.output.error(
         `${cmd(
-          `${getPkgName()} dev`
+          `${packageName} dev`
         )} must not recursively invoke itself. Check the Development Command in the Project Settings or the ${cmd(
           'dev'
         )} script in ${cmd('package.json')}`

@@ -1,5 +1,19 @@
 # @vercel/frameworks
 
+## 1.6.0
+
+### Minor Changes
+
+- [frameworks] Amend Hugo default `buildCommand` to exclude drafts enabled flag ([#7326](https://github.com/vercel/vercel/pull/7326))
+
+## 1.5.1
+
+### Patch Changes
+
+- Add "(v1)" suffix to "hydrogen" preset ([#10320](https://github.com/vercel/vercel/pull/10320))
+
+- Use parenthesis on Docusaurus "name" fields ([#10324](https://github.com/vercel/vercel/pull/10324))
+
 ## 1.5.0
 
 ### Minor Changes

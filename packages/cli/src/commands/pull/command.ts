@@ -1,5 +1,5 @@
 import { Command } from '../help';
-import { getPkgName } from '../../util/pkg-name';
+import { packageName } from '../../util/pkg-name';
 import { getEnvTargetPlaceholder } from '../../util/env/env-target';
 
 export const pullCommand: Command = {
@@ -35,19 +35,19 @@ export const pullCommand: Command = {
   examples: [
     {
       name: 'Pull the latest Environment Variables and Project Settings from the cloud',
-      value: `${getPkgName()} pull`,
+      value: `${packageName} pull`,
     },
     {
       name: 'Pull the latest Environment Variables and Project Settings from the cloud targeting a directory',
-      value: `${getPkgName()} pull ./path-to-project`,
+      value: `${packageName} pull ./path-to-project`,
     },
     {
       name: 'Pull for a specific environment',
-      value: `${getPkgName()} pull --environment=${getEnvTargetPlaceholder()}`,
+      value: `${packageName} pull --environment=${getEnvTargetPlaceholder()}`,
     },
     {
       name: 'If you want to download environment variables to a specific file, use `vercel env pull` instead',
-      value: `${getPkgName()} env pull`,
+      value: `${packageName} env pull`,
     },
   ],
 };

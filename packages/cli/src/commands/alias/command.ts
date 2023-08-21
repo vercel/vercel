@@ -1,5 +1,5 @@
 import { Command } from '../help';
-import { getPkgName } from '../../util/pkg-name';
+import { packageName } from '../../util/pkg-name';
 
 export const aliasCommand: Command = {
   name: 'alias',
@@ -83,15 +83,15 @@ export const aliasCommand: Command = {
   examples: [
     {
       name: 'Add a new alias to `my-api.vercel.app`',
-      value: `${getPkgName()} alias set api-ownv3nc9f8.vercel.app my-api.vercel.app`,
+      value: `${packageName} alias set api-ownv3nc9f8.vercel.app my-api.vercel.app`,
     },
     {
       name: 'Custom domains work as alias targets',
-      value: `${getPkgName()} alias set api-ownv3nc9f8.vercel.app my-api.com`,
+      value: `${packageName} alias set api-ownv3nc9f8.vercel.app my-api.com`,
     },
     {
       name: 'The subcommand `set` is the default and can be skipped. Protocols in the URLs are unneeded and ignored',
-      value: `${getPkgName()} alias api-ownv3nc9f8.vercel.app my-api.com`,
+      value: `${packageName} alias api-ownv3nc9f8.vercel.app my-api.com`,
     },
   ],
 };

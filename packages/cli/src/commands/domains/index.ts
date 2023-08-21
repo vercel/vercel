@@ -4,8 +4,6 @@ import Client from '../../util/client';
 import getArgs from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 import handleError from '../../util/handle-error';
-import logo from '../../util/output/logo';
-
 import add from './add';
 import buy from './buy';
 import transferIn from './transfer-in';
@@ -13,11 +11,11 @@ import inspect from './inspect';
 import ls from './ls';
 import rm from './rm';
 import move from './move';
-import { getPkgName } from '../../util/pkg-name';
+import { packageName, logo } from '../../util/pkg-name';
 
 const help = () => {
   console.log(`
-  ${chalk.bold(`${logo} ${getPkgName()} domains`)} [options] <command>
+  ${chalk.bold(`${logo} ${packageName} domains`)} [options] <command>
 
   ${chalk.dim('Commands:')}
 
@@ -56,14 +54,14 @@ const help = () => {
   ${chalk.gray('–')} Add a domain that you already own
 
       ${chalk.cyan(
-        `$ ${getPkgName()} domains add ${chalk.underline('domain-name.com')}`
+        `$ ${packageName} domains add ${chalk.underline('domain-name.com')}`
       )}
 
       Make sure the domain's DNS nameservers are at least 2 of the
       ones listed on ${chalk.underline('https://vercel.com/edge-network')}.
 
       ${chalk.yellow('NOTE:')} Running ${chalk.dim(
-    `${getPkgName()} alias`
+    `${packageName} alias`
   )} will automatically register your domain
       if it's configured with these nameservers (no need to ${chalk.dim(
         '`domain add`'
@@ -73,7 +71,7 @@ const help = () => {
     '`1584722256178`'
   )} is the time in milliseconds since the UNIX epoch.
 
-      ${chalk.cyan(`$ ${getPkgName()} domains ls --next 1584722256178`)}
+      ${chalk.cyan(`$ ${packageName} domains ls --next 1584722256178`)}
 `);
 };
 

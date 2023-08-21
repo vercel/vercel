@@ -1,7 +1,7 @@
 import { readFile, realpath } from 'fs-extra';
 import { sep, dirname, join, resolve } from 'path';
 import { scanParentDirs } from '@vercel/build-utils';
-import { getPkgName } from './pkg-name';
+import { packageName } from './pkg-name';
 
 async function getConfigPrefix() {
   const paths = [
@@ -80,7 +80,7 @@ async function isGlobal() {
 }
 
 export default async function getUpdateCommand(): Promise<string> {
-  const pkgAndVersion = `${getPkgName()}@latest`;
+  const pkgAndVersion = `${packageName}@latest`;
 
   const entrypoint = await realpath(process.argv[1]);
   let { cliType, lockfilePath } = await scanParentDirs(

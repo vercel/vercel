@@ -135,6 +135,30 @@ async function matches(
   };
 }
 
+function removeSupersededFramework(
+  matches: (Pick<Framework, 'supersedes' | 'slug'> | null)[],
+  slug: string
+) {
+  const index = matches.findIndex(f => f?.slug === slug);
+  const framework = matches[index];
+  if (framework) {
+    if (framework.supersedes) {
+      removeSupersededFramework(matches, framework.supersedes);
+    }
+    matches.splice(index, 1);
+  }
+}
+
+export function removeSupersededFrameworks(
+  matches: (Pick<Framework, 'supersedes' | 'slug'> | null)[]
+) {
+  for (const match of matches.slice()) {
+    if (match?.supersedes) {
+      removeSupersededFramework(matches, match.supersedes);
+    }
+  }
+}
+
 // TODO: Deprecate and replace with `detectFrameworkRecord`
 export async function detectFramework({
   fs,
@@ -143,12 +167,13 @@ export async function detectFramework({
   const result = await Promise.all(
     frameworkList.map(async frameworkMatch => {
       if (await matches(fs, frameworkMatch)) {
-        return frameworkMatch.slug;
+        return frameworkMatch;
       }
       return null;
     })
   );
-  return result.find(res => res !== null) ?? null;
+  removeSupersededFrameworks(result);
+  return result.find(res => res !== null)?.slug ?? null;
 }
 
 /**
@@ -166,6 +191,7 @@ export async function detectFrameworks({
       return null;
     })
   );
+  removeSupersededFrameworks(result);
   return result.filter(res => res !== null) as Framework[];
 }
 
@@ -194,9 +220,8 @@ export async function detectFrameworkRecord({
       return null;
     })
   );
-  const frameworkRecord = result.find(res => res !== null) ?? null;
-
-  return frameworkRecord;
+  removeSupersededFrameworks(result);
+  return result.find(res => res !== null) ?? null;
 }
 
 export function detectFrameworkVersion(

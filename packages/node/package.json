@@ -1,6 +1,6 @@
 {
   "name": "@vercel/node",
-  "version": "2.15.9",
+  "version": "2.15.10",
   "license": "Apache-2.0",
   "main": "./dist/index",
   "homepage": "https://vercel.com/docs/runtimes#official-runtimes/node-js",
@@ -29,7 +29,7 @@
     "@vercel/static-config": "2.0.17",
     "async-listen": "3.0.0",
     "content-type": "1.0.5",
-    "edge-runtime": "2.4.3",
+    "edge-runtime": "2.4.4",
     "esbuild": "0.14.47",
     "exit-hook": "2.2.1",
     "node-fetch": "2.6.9",
@@ -55,6 +55,7 @@
     "etag": "1.8.1",
     "execa": "3.2.0",
     "fs-extra": "11.1.0",
+    "jest-junit": "16.0.0",
     "source-map-support": "0.5.12",
     "test-listen": "1.1.0"
   }

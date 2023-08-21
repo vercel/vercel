@@ -1,5 +1,5 @@
 import { Command } from '../help';
-import { getPkgName } from '../../util/pkg-name';
+import { packageName } from '../../util/pkg-name';
 
 export const loginCommand: Command = {
   name: 'login',
@@ -31,19 +31,19 @@ export const loginCommand: Command = {
   examples: [
     {
       name: 'Log into the Vercel platform',
-      value: `${getPkgName()} login`,
+      value: `${packageName} login`,
     },
     {
       name: 'Log in using a specific email address',
-      value: `${getPkgName()} login username@example.com`,
+      value: `${packageName} login username@example.com`,
     },
     {
       name: 'Log in using a specific team "slug" for SAML Single Sign-On',
-      value: `${getPkgName()} login acme`,
+      value: `${packageName} login acme`,
     },
     {
       name: 'Log in using GitHub in "out-of-band" mode',
-      value: `${getPkgName()} login --github --oob`,
+      value: `${packageName} login --github --oob`,
     },
   ],
 };

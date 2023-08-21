@@ -47,6 +47,13 @@ export interface EnsureRepoLinkOptions {
   overwrite: boolean;
 }
 
+interface NewProject {
+  newProject?: true;
+  rootDirectory?: string;
+  name: string;
+  framework: Framework;
+}
+
 /**
  * Given a directory path `cwd`, finds the root of the Git repository
  * and returns the parsed `.vercel/repo.json` file if the repository
@@ -124,22 +131,29 @@ export async function ensureRepoLink(
     if (!remoteUrls) {
       throw new Error('Could not determine Git remote URLs');
     }
-    const remoteNames = Object.keys(remoteUrls);
+    const remoteNames = Object.keys(remoteUrls).sort();
     let remoteName: string;
     if (remoteNames.length === 1) {
       remoteName = remoteNames[0];
     } else {
       // Prompt user to select which remote to use
-      const answer = await client.prompt({
-        type: 'list',
-        name: 'value',
-        message: 'Which Git remote should be used?',
-        choices: remoteNames.sort().map(name => {
-          return { name: name, value: name };
-        }),
-        default: remoteNames.includes('origin') ? 'origin' : undefined,
-      });
-      remoteName = answer.value;
+      const defaultRemote = remoteNames.includes('origin')
+        ? 'origin'
+        : remoteNames[0];
+      if (yes) {
+        remoteName = defaultRemote;
+      } else {
+        const answer = await client.prompt({
+          type: 'list',
+          name: 'value',
+          message: 'Which Git remote should be used?',
+          choices: remoteNames.map(name => {
+            return { name: name, value: name };
+          }),
+          default: defaultRemote,
+        });
+        remoteName = answer.value;
+      }
     }
     const repoUrl = remoteUrls[remoteName];
     const parsedRepoUrl = parseRepoUrl(repoUrl);
@@ -202,54 +216,60 @@ export async function ensureRepoLink(
       );
     }
 
-    const addSeparators = projects.length > 0 && detectedProjectsCount > 0;
-    const { selected } = await client.prompt({
-      type: 'checkbox',
-      name: 'selected',
-      message: `Which Projects should be ${
-        projects.length ? 'linked to' : 'created'
-      }?`,
-      choices: [
-        ...(addSeparators
-          ? [new inquirer.Separator('----- Existing Projects -----')]
-          : []),
-        ...projects.map(project => {
-          return {
-            name: `${org.slug}/${project.name}`,
-            value: project,
-            checked: true,
-          };
-        }),
-        ...(addSeparators
-          ? [new inquirer.Separator('----- New Projects to be created -----')]
-          : []),
-        ...Array.from(detectedProjects.entries()).flatMap(
-          ([rootDirectory, frameworks]) =>
-            frameworks.map((framework, i) => {
-              const name = slugify(
-                [
-                  basename(rootPath),
-                  basename(rootDirectory),
-                  i > 0 ? framework.slug : '',
-                ]
-                  .filter(Boolean)
-                  .join('-')
-              );
-              return {
-                name: `${org.slug}/${name} (${framework.name})`,
-                value: {
-                  newProject: true,
-                  rootDirectory,
-                  name,
-                  framework,
-                },
-                // Checked by default when there are no other existing Projects
-                checked: projects.length === 0,
-              };
-            })
-        ),
-      ],
-    });
+    let selected: (Project | NewProject)[];
+    if (yes) {
+      selected = projects;
+    } else {
+      const addSeparators = projects.length > 0 && detectedProjectsCount > 0;
+      const answer = await client.prompt({
+        type: 'checkbox',
+        name: 'selected',
+        message: `Which Projects should be ${
+          projects.length ? 'linked to' : 'created'
+        }?`,
+        choices: [
+          ...(addSeparators
+            ? [new inquirer.Separator('----- Existing Projects -----')]
+            : []),
+          ...projects.map(project => {
+            return {
+              name: `${org.slug}/${project.name}`,
+              value: project,
+              checked: true,
+            };
+          }),
+          ...(addSeparators
+            ? [new inquirer.Separator('----- New Projects to be created -----')]
+            : []),
+          ...Array.from(detectedProjects.entries()).flatMap(
+            ([rootDirectory, frameworks]) =>
+              frameworks.map((framework, i) => {
+                const name = slugify(
+                  [
+                    basename(rootPath),
+                    basename(rootDirectory),
+                    i > 0 ? framework.slug : '',
+                  ]
+                    .filter(Boolean)
+                    .join('-')
+                );
+                return {
+                  name: `${org.slug}/${name} (${framework.name})`,
+                  value: {
+                    newProject: true,
+                    rootDirectory,
+                    name,
+                    framework,
+                  },
+                  // Checked by default when there are no other existing Projects
+                  checked: projects.length === 0,
+                };
+              })
+          ),
+        ],
+      });
+      selected = answer.selected;
+    }
 
     if (selected.length === 0) {
       output.print(`No Projects were selected. Repository not linked.\n`);
@@ -258,19 +278,19 @@ export async function ensureRepoLink(
 
     for (let i = 0; i < selected.length; i++) {
       const selection = selected[i];
-      if (!selection.newProject) continue;
+      if (!('newProject' in selection && selection.newProject)) continue;
       const orgAndName = `${org.slug}/${selection.name}`;
       output.spinner(`Creating new Project: ${orgAndName}`);
       delete selection.newProject;
       if (!selection.rootDirectory) delete selection.rootDirectory;
-      selected[i] = await createProject(client, {
+      const project = (selected[i] = await createProject(client, {
         ...selection,
         framework: selection.framework.slug,
-      });
+      }));
       await connectGitProvider(
         client,
         org,
-        selected[i].id,
+        project.id,
         parsedRepoUrl.provider,
         `${parsedRepoUrl.org}/${parsedRepoUrl.repo}`
       );
@@ -286,7 +306,11 @@ export async function ensureRepoLink(
     repoConfig = {
       orgId: org.id,
       remoteName,
-      projects: selected.map((project: Project) => {
+      projects: selected.map(project => {
+        if (!('id' in project)) {
+          // Shouldn't happen at this point, but just to make TS happy
+          throw new TypeError(`Not a Project: ${JSON.stringify(project)}`);
+        }
         return {
           id: project.id,
           name: project.name,

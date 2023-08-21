@@ -1,5 +1,18 @@
 # @vercel/static-build
 
+## 1.4.0
+
+### Minor Changes
+
+- Force-publish ([#10358](https://github.com/vercel/vercel/pull/10358))
+
+## 1.3.46
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@1.3.18
+
 ## 1.3.45
 
 ### Patch Changes

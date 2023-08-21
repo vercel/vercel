@@ -15,7 +15,7 @@ const COMMAND_CONFIG = {
   set: ['set'],
 };
 
-export default async function main(client: Client) {
+export default async function alias(client: Client) {
   let argv;
 
   try {

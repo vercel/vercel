@@ -1,5 +1,5 @@
 import { Command } from '../help';
-import { getPkgName } from '../../util/pkg-name';
+import { packageName } from '../../util/pkg-name';
 
 export const inspectCommand: Command = {
   name: 'inspect',
@@ -32,19 +32,19 @@ export const inspectCommand: Command = {
   examples: [
     {
       name: 'Get information about a deployment by its unique URL',
-      value: `${getPkgName()} inspect my-deployment-ji2fjij2.vercel.app`,
+      value: `${packageName} inspect my-deployment-ji2fjij2.vercel.app`,
     },
     {
       name: 'Get information about the deployment an alias points to',
-      value: `${getPkgName()} inspect my-deployment.vercel.app`,
+      value: `${packageName} inspect my-deployment.vercel.app`,
     },
     {
       name: 'Get information about a deployment by piping in the URL',
-      value: `echo my-deployment.vercel.app | ${getPkgName()} inspect`,
+      value: `echo my-deployment.vercel.app | ${packageName} inspect`,
     },
     {
       name: 'Wait up to 90 seconds for deployment to complete',
-      value: `${getPkgName()} inspect my-deployment.vercel.app --wait --timeout 90s`,
+      value: `${packageName} inspect my-deployment.vercel.app --wait --timeout 90s`,
     },
   ],
 };

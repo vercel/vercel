@@ -1,5 +1,13 @@
 # @vercel/node
 
+## 2.15.10
+
+### Patch Changes
+
+- Update 'edge-runtime' to 2.4.4 ([#10255](https://github.com/vercel/vercel/pull/10255))
+
+- `edge-light` condition interoperability with `vercel dev` ([#10313](https://github.com/vercel/vercel/pull/10313))
+
 ## 2.15.9
 
 ### Patch Changes

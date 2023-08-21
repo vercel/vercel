@@ -1,5 +1,5 @@
 import { Command } from '../help';
-import { getPkgName } from '../../util/pkg-name';
+import { packageName } from '../../util/pkg-name';
 
 export const redeployCommand: Command = {
   name: 'redeploy',
@@ -23,11 +23,11 @@ export const redeployCommand: Command = {
   examples: [
     {
       name: 'Rebuild and deploy an existing deployment using id or url',
-      value: `${getPkgName()} redeploy my-deployment.vercel.app`,
+      value: `${packageName} redeploy my-deployment.vercel.app`,
     },
     {
       name: 'Write Deployment URL to a file',
-      value: `${getPkgName()} redeploy my-deployment.vercel.app > deployment-url.txt`,
+      value: `${packageName} redeploy my-deployment.vercel.app > deployment-url.txt`,
     },
   ],
 };
