@@ -1,5 +1,27 @@
 # vercel
 
+## 32.0.0
+
+### Major Changes
+
+- BREAKING CHANGE: Drop Node.js 14, bump minimum to Node.js 16 ([#10369](https://github.com/vercel/vercel/pull/10369))
+
+### Patch Changes
+
+- text wrap help output description ([#10370](https://github.com/vercel/vercel/pull/10370))
+
+- Updated dependencies [[`37f5c6270`](https://github.com/vercel/vercel/commit/37f5c6270058336072ca733673ea72dd6c56bd6a), [`09174df6c`](https://github.com/vercel/vercel/commit/09174df6cfbe697ea13e75468b9cd3c6ec7ad01c)]:
+  - @vercel/build-utils@7.0.0
+  - @vercel/go@3.0.0
+  - @vercel/hydrogen@1.0.0
+  - @vercel/next@4.0.0
+  - @vercel/node@3.0.0
+  - @vercel/python@4.0.0
+  - @vercel/redwood@2.0.0
+  - @vercel/remix-builder@2.0.0
+  - @vercel/ruby@2.0.0
+  - @vercel/static-build@2.0.0
+
 ## 31.4.0
 
 ### Minor Changes

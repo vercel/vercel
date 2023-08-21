@@ -26,6 +26,7 @@ export interface Command {
   name: string;
   description: string;
   arguments: CommandArgument[];
+  subcommands?: Command[];
   options: CommandOption[];
   examples: CommandExample[];
 }
@@ -280,6 +281,66 @@ export function buildCommandOptionLines(
   ].join('');
 }
 
+export function buildSubcommandLines(
+  subcommands: Command[] | undefined,
+  options: BuildHelpOutputOptions
+) {
+  if (!subcommands) {
+    return null;
+  }
+
+  // word wrapping requires the wrapped cell to have a fixed width.
+  // We need to track cell sizes to ensure the final column of cells is
+  // equal to the remainder of unused horizontal space.
+  let maxWidthOfUnwrappedColumns = 0;
+  const rows: (string | undefined | _CellOptions)[][] = [];
+  for (const command of subcommands) {
+    const nameCell = `${INDENT}${command.name}`;
+    let argsCell = INDENT;
+
+    argsCell += command.arguments
+      .map(arg => {
+        return arg.required ? arg.name : `[${arg.name}]`;
+      })
+      .join(' ');
+
+    argsCell += INDENT;
+
+    const widthOfUnwrappedColumns = nameCell.length + argsCell.length;
+    maxWidthOfUnwrappedColumns = Math.max(
+      widthOfUnwrappedColumns,
+      maxWidthOfUnwrappedColumns
+    );
+
+    rows.push([
+      nameCell,
+      argsCell,
+      {
+        content: command.description,
+        wordWrap: true,
+      },
+    ]);
+  }
+
+  const finalColumnWidth = options.columns - maxWidthOfUnwrappedColumns;
+
+  const table = new Table(
+    Object.assign({}, tableOptions, {
+      colWidths: [null, null, finalColumnWidth],
+    })
+  );
+
+  table.push(...rows);
+  return [
+    `${INDENT}${chalk.dim('Commands')}:`,
+    NEWLINE,
+    NEWLINE,
+    table.toString(),
+    NEWLINE,
+    NEWLINE,
+  ].join('');
+}
+
 export function buildCommandExampleLines(command: Command) {
   const outputArray: string[] = [`${INDENT}${chalk.dim('Examples:')}`, ''];
   for (const example of command.examples) {
@@ -324,6 +385,7 @@ export function buildHelpOutput(
     '',
     buildCommandSynopsisLine(command),
     buildDescriptionLine(command, options),
+    buildSubcommandLines(command.subcommands, options),
     buildCommandOptionLines(command.options, options, 'Options'),
     buildCommandOptionLines(globalCommandOptions, options, 'Global Options'),
     buildCommandExampleLines(command),
