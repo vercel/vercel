@@ -1,5 +1,15 @@
 # @vercel/frameworks
 
+## 2.0.0
+
+### Major Changes
+
+- BREAKING CHANGE: Drop Node.js 14, bump minimum to Node.js 16 ([#10369](https://github.com/vercel/vercel/pull/10369))
+
+### Minor Changes
+
+- Add "supersedes" prop to Framework interface ([#10345](https://github.com/vercel/vercel/pull/10345))
+
 ## 1.6.0
 
 ### Minor Changes
