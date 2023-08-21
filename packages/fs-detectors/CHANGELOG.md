@@ -1,5 +1,22 @@
 # @vercel/fs-detectors
 
+## 5.0.0
+
+### Major Changes
+
+- BREAKING CHANGE: Drop Node.js 14, bump minimum to Node.js 16 ([#10369](https://github.com/vercel/vercel/pull/10369))
+
+### Patch Changes
+
+- Exclude Gatsby from default 404 error route ([#10365](https://github.com/vercel/vercel/pull/10365))
+
+- Add "supersedes" prop to Framework interface ([#10345](https://github.com/vercel/vercel/pull/10345))
+
+- Updated dependencies [[`37f5c6270`](https://github.com/vercel/vercel/commit/37f5c6270058336072ca733673ea72dd6c56bd6a), [`ed806d8a6`](https://github.com/vercel/vercel/commit/ed806d8a6b560b173ba80b24cbfafaa6f179d8b1)]:
+  - @vercel/error-utils@2.0.0
+  - @vercel/frameworks@2.0.0
+  - @vercel/routing-utils@3.0.0
+
 ## 4.1.3
 
 ### Patch Changes

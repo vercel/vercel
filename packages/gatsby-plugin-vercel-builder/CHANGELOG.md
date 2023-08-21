@@ -1,5 +1,20 @@
 # @vercel/gatsby-plugin-vercel-builder
 
+## 2.0.0
+
+### Major Changes
+
+- BREAKING CHANGE: Drop Node.js 14, bump minimum to Node.js 16 ([#10369](https://github.com/vercel/vercel/pull/10369))
+
+### Patch Changes
+
+- Exclude Gatsby from default 404 error route ([#10365](https://github.com/vercel/vercel/pull/10365))
+
+- Updated dependencies [[`37f5c6270`](https://github.com/vercel/vercel/commit/37f5c6270058336072ca733673ea72dd6c56bd6a)]:
+  - @vercel/build-utils@7.0.0
+  - @vercel/node@3.0.0
+  - @vercel/routing-utils@3.0.0
+
 ## 1.3.18
 
 ### Patch Changes
