@@ -7,10 +7,6 @@ export const aliasCommand: Command = {
   arguments: [
     {
       name: 'command',
-      required: true,
-    },
-    {
-      name: 'options',
       required: false,
     },
   ],
