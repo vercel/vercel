@@ -28,7 +28,7 @@
     "scripts/preinstall.js"
   ],
   "engines": {
-    "node": ">= 14"
+    "node": ">= 16"
   },
   "dependencies": {
     "@vercel/build-utils": "6.8.3",

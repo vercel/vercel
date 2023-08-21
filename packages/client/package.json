@@ -20,7 +20,7 @@
     "test-unit": "pnpm test tests/unit.*test.*"
   },
   "engines": {
-    "node": ">= 14"
+    "node": ">= 16"
   },
   "devDependencies": {
     "@types/async-retry": "1.4.5",
