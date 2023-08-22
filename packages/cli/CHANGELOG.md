@@ -1,5 +1,19 @@
 # vercel
 
+## 32.0.1
+
+### Patch Changes
+
+- Add `--git-branch` to pull command help output ([#10382](https://github.com/vercel/vercel/pull/10382))
+
+- Update new help structure to support subcommands ([#10372](https://github.com/vercel/vercel/pull/10372))
+
+- Migrate certs command to new structure ([#10377](https://github.com/vercel/vercel/pull/10377))
+
+- Updated dependencies []:
+  - @vercel/static-build@2.0.1
+  - @vercel/node@3.0.1
+
 ## 32.0.0
 
 ### Major Changes
