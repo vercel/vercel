@@ -1,5 +1,12 @@
 # @vercel/node
 
+## 3.0.1
+
+### Patch Changes
+
+- Updated dependencies [[`96f99c714`](https://github.com/vercel/vercel/commit/96f99c714715651b85eb7a03f58ecc9e1316d156)]:
+  - @vercel/error-utils@2.0.1
+
 ## 3.0.0
 
 ### Major Changes
