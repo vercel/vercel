@@ -7,7 +7,7 @@ export const dnsCommand: Command = {
   arguments: [
     {
       name: 'command',
-      required: false,
+      required: true,
     },
   ],
   subcommands: [
