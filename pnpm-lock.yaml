@@ -857,6 +857,9 @@ importers:
       '@iarna/toml':
         specifier: 2.2.3
         version: 2.2.3
+      '@vercel/error-utils':
+        specifier: 2.0.0
+        version: link:../error-utils
       js-yaml:
         specifier: 3.13.1
         version: 3.13.1
@@ -873,9 +876,6 @@ importers:
       '@types/node-fetch':
         specifier: 2.5.8
         version: 2.5.8
-      '@vercel/error-utils':
-        specifier: 2.0.0
-        version: link:../error-utils
       '@vercel/routing-utils':
         specifier: 3.0.0
         version: link:../routing-utils
