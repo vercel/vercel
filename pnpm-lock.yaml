@@ -1411,8 +1411,8 @@ importers:
         version: 12.0.0
     devDependencies:
       '@remix-run/dev':
-        specifier: npm:@vercel/remix-run-dev@1.19.2
-        version: /@vercel/remix-run-dev@1.19.2(@types/node@14.18.33)
+        specifier: npm:@vercel/remix-run-dev@1.19.3
+        version: /@vercel/remix-run-dev@1.19.3(@types/node@14.18.33)
       '@types/jest':
         specifier: 27.5.1
         version: 27.5.1
@@ -4234,8 +4234,8 @@ packages:
     engines: {node: '>=14'}
     dev: true
 
-  /@remix-run/server-runtime@1.19.2:
-    resolution: {integrity: sha512-d+oOaQlBPFHPum1nstJCntRgwgi4fzijW51yPCo3ljUxIrjlDjutX2GCQ72Apd6Ffpd11/6nEq+B90EY+Ala9Q==}
+  /@remix-run/server-runtime@1.19.3:
+    resolution: {integrity: sha512-KzQ+htUsKqpBgKE2tWo7kIIGy3MyHP58Io/itUPvV+weDjApwr9tQr9PZDPA3yAY6rAzLax7BU0NMSYCXWFY5A==}
     engines: {node: '>=14.0.0'}
     dependencies:
       '@remix-run/router': 1.7.2
@@ -6030,12 +6030,12 @@ packages:
       - encoding
       - supports-color
 
-  /@vercel/remix-run-dev@1.19.2(@types/node@14.18.33):
-    resolution: {integrity: sha512-SWvccKSjRheW4FhFVRvz/a2ipY2zmvjWKm0v2yi+WuKwmcMcYPwYSFn/yBiW1dMfrnmnVaXe0KLt61SWJRUpCw==}
+  /@vercel/remix-run-dev@1.19.3(@types/node@14.18.33):
+    resolution: {integrity: sha512-Sxg6X0Sp8t2ZpHPE9V/HASgbF9V3kYH7ll4NGDdABpRQVvgx4Y2kn4DZdFiDXslIWE7/ExBLCeN70S+JhdW1UQ==}
     engines: {node: '>=14.0.0'}
     hasBin: true
     peerDependencies:
-      '@remix-run/serve': ^1.19.2
+      '@remix-run/serve': ^1.19.3
     peerDependenciesMeta:
       '@remix-run/serve':
         optional: true
@@ -6050,7 +6050,7 @@ packages:
       '@babel/traverse': 7.21.5
       '@babel/types': 7.21.5
       '@npmcli/package-json': 2.0.0
-      '@remix-run/server-runtime': 1.19.2
+      '@remix-run/server-runtime': 1.19.3
       '@vanilla-extract/integration': 6.2.1(@types/node@14.18.33)
       arg: 5.0.2
       cacache: 15.3.0
@@ -15075,6 +15075,7 @@ packages:
 
   /semver@5.7.1:
     resolution: {integrity: sha512-sauaDf/PZdVgrLTNYHRtpXa1iRiKcaebiKQ1BJdpQlWH2lCvexQdX55snPFyK7QzpudqbCI0qXFfOasHdyNDGQ==}
+    hasBin: true
     dev: true
 
   /semver@6.1.1:
