@@ -4,6 +4,9 @@
   "version": "1.0.7",
   "types": "index.d.ts",
   "main": "index.d.ts",
+  "files": [
+    "*.d.ts"
+  ],
   "dependencies": {
     "@types/node": "14.14.31",
     "@vercel-internals/constants": "1.0.4",
