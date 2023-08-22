@@ -19,15 +19,15 @@
   },
   "dependencies": {
     "@iarna/toml": "2.2.3",
-    "js-yaml": "3.13.1"
+    "js-yaml": "3.13.1",
+    "@vercel/error-utils": "2.0.0",
+    "@vercel/routing-utils": "3.0.0"
   },
   "devDependencies": {
     "@types/jest": "27.4.1",
     "@types/js-yaml": "3.12.1",
     "@types/node": "14.18.33",
     "@types/node-fetch": "2.5.8",
-    "@vercel/error-utils": "2.0.0",
-    "@vercel/routing-utils": "3.0.0",
     "ajv": "6.12.2",
     "jest-junit": "16.0.0",
     "typescript": "4.9.5"
