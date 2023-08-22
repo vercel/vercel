@@ -23,6 +23,16 @@ export const pullCommand: Command = {
       multi: false,
     },
     {
+      name: 'git-branch',
+      description:
+        'Specify the Git branch to pull specific Environment Variables for',
+      argument: 'branch',
+      shorthand: null,
+      type: 'string',
+      deprecated: false,
+      multi: false,
+    },
+    {
       name: 'yes',
       description:
         'Skip questions when setting up new project using default scope and settings',
@@ -44,6 +54,10 @@ export const pullCommand: Command = {
     {
       name: 'Pull for a specific environment',
       value: `${packageName} pull --environment=${getEnvTargetPlaceholder()}`,
+    },
+    {
+      name: 'Pull for a preview feature branch',
+      value: `${packageName} pull --environment=preview --git-branch=feature-branch`,
     },
     {
       name: 'If you want to download environment variables to a specific file, use `vercel env pull` instead',
