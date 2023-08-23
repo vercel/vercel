@@ -1543,6 +1543,39 @@ export async function serverBuild({
       // with that routing section
       ...afterFilesRewrites,
 
+      ...(appDir
+        ? [
+            // check routes that end in `.rsc` to see if a page with the resulting name (sans-.rsc) exists in the filesystem
+            // if so, we want to match that page instead. (This matters when prefetching a pages route while on an appdir route)
+            {
+              src: `^${path.posix.join('/', entryDirectory, '/(.*)\\.rsc$')}`,
+              dest: path.posix.join('/', entryDirectory, '/$1'),
+              has: [
+                {
+                  type: 'header',
+                  key: rscHeader,
+                },
+              ],
+              check: true,
+            },
+
+            // rewrite route back to `.rsc`, but skip checking fs
+            {
+              src: `^${path.posix.join('/', entryDirectory, '/(.*)$')}`,
+              has: [
+                {
+                  type: 'header',
+                  key: rscHeader,
+                },
+              ],
+              dest: path.posix.join('/', entryDirectory, '/$1.rsc'),
+              headers: { vary: rscVaryHeader },
+              continue: true,
+              override: true,
+            },
+          ]
+        : []),
+
       // make sure 404 page is used when a directory is matched without
       // an index page
       { handle: 'resource' },

@@ -1,0 +1,30 @@
+{
+  "probes": [
+    {
+      "path": "/en",
+      "status": 200,
+      "mustContain": "Home"
+    },
+    {
+      "path": "/en/about",
+      "status": 200,
+      "mustContain": "About Page"
+    },
+    {
+      "path": "/en/about",
+      "status": 200,
+      "headers": {
+        "RSC": "1"
+      },
+      "mustContain": "<html"
+    },
+    {
+      "path": "/en/foobar",
+      "status": 200,
+      "headers": {
+        "RSC": "1"
+      },
+      "mustNotContain": "<html"
+    }
+  ]
+}
