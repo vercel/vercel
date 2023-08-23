@@ -38,11 +38,40 @@
       "mustNotContain": "<html"
     },
     {
+      "path": "/dynamic/category-1/id-1",
+      "status": 200,
+      "headers": {
+        "RSC": "1",
+        "Next-Router-Prefetch": "1"
+      },
+      "mustContain": ":",
+      "mustNotContain": "<html"
+    },
+    {
       "path": "/ssg",
       "status": 200,
       "mustContain": "hello from /ssg",
       "responseHeaders": {
         "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Url"
+      }
+    },
+    {
+      "path": "/client-nested",
+      "status": 200,
+      "mustContain": ":",
+      "mustNotContain": "<html",
+      "headers": {
+        "Next-Router-Prefetch": "1",
+        "RSC": "1"
+      }
+    },
+    {
+      "path": "/client-nested",
+      "status": 200,
+      "mustContain": "hello",
+      "mustNotContain": "<html",
+      "headers": {
+        "RSC": "1"
       }
     },
     {
@@ -53,6 +82,19 @@
       },
       "headers": {
         "RSC": "1"
+      },
+      "mustContain": ":{",
+      "mustNotContain": "<html"
+    },
+    {
+      "path": "/ssg",
+      "status": 200,
+      "responseHeaders": {
+        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Url"
+      },
+      "headers": {
+        "RSC": "1",
+        "Next-Router-Prefetch": "1"
       },
       "mustContain": ":{",
       "mustNotContain": "<html"

@@ -236,6 +236,7 @@ type RoutesManifestOld = {
   rsc?: {
     header: string;
     varyHeader: string;
+    prefetchHeader?: string;
     contentTypeHeader: string;
   };
   skipMiddlewareUrlNormalize?: boolean;
