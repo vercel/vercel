@@ -2002,6 +2002,10 @@ export const onPrerenderRoute =
             ),
           });
 
+    if (isOmittedOrNotFound) {
+      initialStatus = 404;
+    }
+
     if (isAppPathRoute) {
       // for literal index routes we need to append an additional /index
       // due to the proxy's normalizing for /index routes
