@@ -1,6 +1,5 @@
 import chalk from 'chalk';
 import table from 'text-table';
-import mri from 'mri';
 import ms from 'ms';
 import strlen from '../util/strlen.ts';
 import { handleError, error } from '../util/error';
@@ -9,8 +8,8 @@ import exit from '../util/exit';
 import getScope from '../util/get-scope.ts';
 import confirm from '../util/input/confirm';
 import getCommandFlags from '../util/get-command-flags';
-import getPrefixedFlags from '../util/get-prefixed-flags';
 import { packageName, getCommandName, logo } from '../util/pkg-name.ts';
+import getArgs from '../util/get-args';
 
 const help = () => {
   console.log(`
@@ -81,14 +80,11 @@ let subcommand;
 let nextTimestamp;
 
 const main = async client => {
-  argv = mri(client.argv.slice(2), {
-    boolean: ['help', 'debug', 'yes'],
-    alias: {
-      help: 'h',
-      debug: 'd',
-      yes: 'y',
-      next: 'N',
-    },
+  argv = getArgs(client.argv.slice(2), {
+    '--yes': Boolean,
+    '--next': Number,
+    '-y': '--yes',
+    '-N': '--next',
   });
 
   argv._ = argv._.slice(1);
@@ -190,14 +186,7 @@ async function run({ output, contextName, currentTeam, client }) {
     }
 
     if (pagination && pagination.count === 20) {
-      const prefixedArgs = getPrefixedFlags(argv);
-      const flags = getCommandFlags(prefixedArgs, [
-        '_',
-        '--next',
-        '-N',
-        '-d',
-        '-y',
-      ]);
+      const flags = getCommandFlags(argv, ['_', '--next', '-N', '-d', '-y']);
       const nextCmd = `secrets ${subcommand}${flags} --next ${pagination.next}`;
       output.log(`To display the next page run ${getCommandName(nextCmd)}`);
     }
