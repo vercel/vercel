@@ -1539,10 +1539,6 @@ export async function serverBuild({
           ]
         : []),
 
-      // These need to come before handle: miss or else they are grouped
-      // with that routing section
-      ...afterFilesRewrites,
-
       ...(appDir
         ? [
             // check routes that end in `.rsc` to see if a page with the resulting name (sans-.rsc) exists in the filesystem
@@ -1558,7 +1554,15 @@ export async function serverBuild({
               ],
               check: true,
             },
+          ]
+        : []),
 
+      // These need to come before handle: miss or else they are grouped
+      // with that routing section
+      ...afterFilesRewrites,
+
+      ...(appDir
+        ? [
             // rewrite route back to `.rsc`, but skip checking fs
             {
               src: `^${path.posix.join('/', entryDirectory, '/(.*)$')}`,
