@@ -1,6 +1,6 @@
 import { forkDevServer, readMessage } from '../../src/fork-dev-server';
 import { resolve, extname } from 'path';
-import fetch from 'node-fetch';
+import { fetch } from 'undici';
 import { createServer } from 'http';
 import { listen } from 'async-listen';
 import zlib from 'zlib';
@@ -302,7 +302,7 @@ test('allow setting multiple cookies with same name', async () => {
       text: 'Hello, world!',
     });
 
-    expect(response.headers.raw()['set-cookie']).toEqual(['a=x', 'b=y', 'c=z']);
+    expect(response.headers.getSetCookie()).toEqual(['a=x', 'b=y', 'c=z']);
   } finally {
     child.kill(9);
   }
