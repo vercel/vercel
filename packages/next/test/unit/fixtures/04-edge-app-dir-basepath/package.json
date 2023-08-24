@@ -1,0 +1,15 @@
+{
+  "name": "02-edge-function-basepath",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "next": "^13.4.19",
+    "react": "latest",
+    "react-dom": "latest"
+  }
+}
