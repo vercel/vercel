@@ -1,5 +1,5 @@
 {
-  "name": "02-edge-function-basepath",
+  "name": "04-edge-app-dir-basepath",
   "version": "0.1.0",
   "private": true,
   "scripts": {
