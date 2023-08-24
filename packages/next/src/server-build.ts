@@ -1595,14 +1595,14 @@ export async function serverBuild({
                 entryDirectory,
                 `/index${APP_PREFETCH_SUFFIX}`
               ),
-              dest: `^${path.posix.join('/', entryDirectory, '/index.rsc')}`,
+              dest: path.posix.join('/', entryDirectory, '/index.rsc'),
               has: [
                 {
                   type: 'header',
                   key: rscPrefetchHeader,
                 },
               ],
-              check: true,
+              continue: true,
               override: true,
             },
             {
@@ -1611,14 +1611,14 @@ export async function serverBuild({
                 entryDirectory,
                 `/(.+?)${APP_PREFETCH_SUFFIX}(?:/)?$`
               )}`,
+              dest: path.posix.join('/', entryDirectory, '/$1.rsc'),
               has: [
                 {
                   type: 'header',
                   key: rscPrefetchHeader,
                 },
               ],
-              dest: path.posix.join('/', entryDirectory, '/$1.rsc'),
-              check: true,
+              continue: true,
               override: true,
             },
           ]
@@ -1637,8 +1637,18 @@ export async function serverBuild({
                   key: rscHeader,
                 },
               ],
+              ...(rscPrefetchHeader
+                ? {
+                    missing: [
+                      {
+                        type: 'header',
+                        key: rscPrefetchHeader,
+                      },
+                    ],
+                  }
+                : {}),
               check: true,
-            },
+            } as Route,
           ]
         : []),
 
@@ -1650,7 +1660,11 @@ export async function serverBuild({
         ? [
             // rewrite route back to `.rsc`, but skip checking fs
             {
-              src: `^${path.posix.join('/', entryDirectory, '/(.*)$')}`,
+              src: `^${path.posix.join(
+                '/',
+                entryDirectory,
+                '/((?!.+\\.rsc).+?)(?:/)?$'
+              )}`,
               has: [
                 {
                   type: 'header',
