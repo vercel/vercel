@@ -13,9 +13,12 @@ interface Environment {
 
 export type LambdaOptions = LambdaOptionsWithFiles | LambdaOptionsWithZipBuffer;
 
+export type LambdaArchitecture = 'x86_64' | 'arm64';
+
 export interface LambdaOptionsBase {
   handler: string;
   runtime: string;
+  architecture?: LambdaArchitecture;
   memory?: number;
   maxDuration?: number;
   environment?: Environment;
@@ -62,6 +65,7 @@ export class Lambda {
   files?: Files;
   handler: string;
   runtime: string;
+  architecture?: LambdaArchitecture;
   memory?: number;
   maxDuration?: number;
   environment: Environment;
@@ -81,6 +85,7 @@ export class Lambda {
       handler,
       runtime,
       maxDuration,
+      architecture,
       memory,
       environment = {},
       allowQuery,
@@ -101,6 +106,13 @@ export class Lambda {
     assert(typeof handler === 'string', '"handler" is not a string');
     assert(typeof runtime === 'string', '"runtime" is not a string');
     assert(typeof environment === 'object', '"environment" is not an object');
+
+    if (architecture !== undefined) {
+      assert(
+        architecture === 'x86_64' || architecture === 'arm64',
+        '"architecture" must be either "x86_64" or "arm64"'
+      );
+    }
 
     if (memory !== undefined) {
       assert(typeof memory === 'number', '"memory" is not a number');
@@ -159,6 +171,7 @@ export class Lambda {
     this.files = 'files' in opts ? opts.files : undefined;
     this.handler = handler;
     this.runtime = runtime;
+    this.architecture = architecture;
     this.memory = memory;
     this.maxDuration = maxDuration;
     this.environment = environment;
