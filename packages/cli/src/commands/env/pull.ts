@@ -24,6 +24,7 @@ import {
 } from '../../util/env/diff-env-files';
 import { isErrnoException } from '@vercel/error-utils';
 import { addToGitIgnore } from '../../util/link/add-to-gitignore';
+import JSONparse from 'json-parse-better-errors';
 
 const CONTENTS_PREFIX = '# Created by Vercel CLI\n';
 
@@ -121,7 +122,7 @@ export default async function pull(
       // We need this because double quotes are stripped from the local .env file,
       // but `records` is already in the form of a JSON object that doesn't filter
       // double quotes.
-      const newEnv = JSON.parse(JSON.stringify(records).replace(/\\"/g, ''));
+      const newEnv = JSONparse(JSON.stringify(records).replace(/\\"/g, ''));
       deltaString = buildDeltaString(oldEnv, newEnv);
     }
   }
