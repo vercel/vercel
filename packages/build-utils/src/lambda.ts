@@ -109,10 +109,6 @@ export class Lambda {
 
     if (architecture !== undefined) {
       assert(
-        typeof architecture === 'string',
-        '"architecture" is not a string'
-      );
-      assert(
         architecture === 'x86_64' || architecture === 'arm64',
         '"architecture" must be either "x86_64" or "arm64"'
       );
