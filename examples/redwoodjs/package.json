@@ -14,7 +14,7 @@
     "extends": "@redwoodjs/eslint-config"
   },
   "engines": {
-    "node": ">=12",
+    "node": ">=16",
     "yarn": ">=1.15"
   }
 }
