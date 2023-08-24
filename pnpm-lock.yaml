@@ -319,10 +319,10 @@ importers:
         specifier: 1.0.0
         version: link:../hydrogen
       '@vercel/next':
-        specifier: 4.0.0
+        specifier: 4.0.1
         version: link:../next
       '@vercel/node':
-        specifier: 3.0.1
+        specifier: 3.0.2
         version: link:../node
       '@vercel/python':
         specifier: 4.0.0
@@ -331,13 +331,13 @@ importers:
         specifier: 2.0.0
         version: link:../redwood
       '@vercel/remix-builder':
-        specifier: 2.0.0
+        specifier: 2.0.1
         version: link:../remix
       '@vercel/ruby':
         specifier: 2.0.0
         version: link:../ruby
       '@vercel/static-build':
-        specifier: 2.0.1
+        specifier: 2.0.2
         version: link:../static-build
     devDependencies:
       '@alex_neo/jest-expect-message':
@@ -412,9 +412,6 @@ importers:
       '@types/minimatch':
         specifier: 3.0.3
         version: 3.0.3
-      '@types/mri':
-        specifier: 1.1.0
-        version: 1.1.0
       '@types/ms':
         specifier: 0.7.30
         version: 0.7.30
@@ -634,9 +631,6 @@ importers:
       minimatch:
         specifier: 3.1.2
         version: 3.1.2
-      mri:
-        specifier: 1.1.5
-        version: 1.1.5
       ms:
         specifier: 2.1.2
         version: 2.1.2
@@ -972,7 +966,7 @@ importers:
         specifier: 7.0.0
         version: link:../build-utils
       '@vercel/node':
-        specifier: 3.0.1
+        specifier: 3.0.2
         version: link:../node
       '@vercel/routing-utils':
         specifier: 3.0.0
@@ -1482,7 +1476,7 @@ importers:
         specifier: 1.0.10
         version: link:../gatsby-plugin-vercel-analytics
       '@vercel/gatsby-plugin-vercel-builder':
-        specifier: 2.0.1
+        specifier: 2.0.2
         version: link:../gatsby-plugin-vercel-builder
     devDependencies:
       '@types/aws-lambda':
@@ -5176,10 +5170,6 @@ packages:
     resolution: {integrity: sha512-M2BLHQdEmDmH671h0GIlOQQJrgezd1vNqq7PVj1VOsHZ2uQQb4iPiQIl0SlMdhxZPUsLIfEklmeEHXg8DJRewA==}
     dependencies:
       minipass: 5.0.0
-    dev: true
-
-  /@types/mri@1.1.0:
-    resolution: {integrity: sha512-fMl88ZoZXOB7VKazJ6wUMpZc9QIn+jcigSFRf2K/rrw4DcXn+/uGxlWX8DDlcE7JkwgIZ7BDH+JgxZPlc/Ap3g==}
     dev: true
 
   /@types/ms@0.7.30:
@@ -9115,7 +9105,7 @@ packages:
       '@typescript-eslint/eslint-plugin': 5.54.1(@typescript-eslint/parser@5.54.1)(eslint@8.42.0)(typescript@4.9.4)
       '@typescript-eslint/utils': 5.54.1(eslint@8.42.0)(typescript@4.9.4)
       eslint: 8.42.0
-      jest: 29.5.0(@types/node@14.14.31)
+      jest: 29.5.0(@types/node@14.18.33)
     transitivePeerDependencies:
       - supports-color
       - typescript
@@ -13385,15 +13375,9 @@ packages:
     engines: {node: '>=4'}
     dev: true
 
-  /mri@1.1.5:
-    resolution: {integrity: sha512-d2RKzMD4JNyHMbnbWnznPaa8vbdlq/4pNZ3IgdaGrVbBhebBsGUUE/6qorTMYNS6TwuH3ilfOlD2bf4Igh8CKg==}
-    engines: {node: '>=4'}
-    dev: true
-
   /mri@1.2.0:
     resolution: {integrity: sha512-tzzskb3bG8LvYGFF/mDTpq3jpI6Q9wc3LEmBaghu+DdCssd1FakN7Bc0hVNmEyGq1bq3RgfkCb3cmQLpNPOroA==}
     engines: {node: '>=4'}
-    dev: false
 
   /ms@2.0.0:
     resolution: {integrity: sha512-Tpp60P6IUJDTuOq/5Z8cdskzJujfwqfOTkrwIwj7IRISpnkJnT6SyJ4PCPnGMoFjC9ddhal5KVIYtAt97ix05A==}
@@ -15026,7 +15010,7 @@ packages:
     resolution: {integrity: sha512-xal3CZX1Xlo/k4ApwCFrHVACi9fBqJ7V+mwhBsuf/1IOKbBy098Fex+Wa/5QMubw09pSZ/u8EY8PWgevJsXp1A==}
     engines: {node: '>=6'}
     dependencies:
-      mri: 1.1.5
+      mri: 1.2.0
     dev: true
 
   /safe-buffer@5.1.2:
