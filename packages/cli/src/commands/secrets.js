@@ -83,6 +83,7 @@ const main = async client => {
   argv = getArgs(client.argv.slice(2), {
     '--yes': Boolean,
     '--next': Number,
+    '--test-warning': Boolean,
     '-y': '--yes',
     '-N': '--next',
   });
@@ -130,7 +131,8 @@ async function run({ output, contextName, currentTeam, client }) {
   const secrets = new NowSecrets({ client, currentTeam });
   const args = argv._.slice(1);
   const start = Date.now();
-  const { 'test-warning': testWarningFlag } = argv;
+  const { '--test-warning': testWarningFlag } = argv;
+
   const commandName = getCommandName('secret ' + subcommand);
 
   if (subcommand === 'ls' || subcommand === 'list') {
