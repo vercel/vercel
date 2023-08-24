@@ -1,6 +1,6 @@
 {
   "name": "@vercel/remix-builder",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "license": "Apache-2.0",
   "main": "./dist/index.js",
   "homepage": "https://vercel.com/docs",
@@ -20,7 +20,7 @@
     "defaults"
   ],
   "dependencies": {
-    "@vercel/build-utils": "7.0.0",
+    "@vercel/build-utils": "7.1.0",
     "@vercel/nft": "0.22.5",
     "@vercel/static-config": "3.0.0",
     "path-to-regexp": "6.2.1",
