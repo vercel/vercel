@@ -20,6 +20,7 @@ import isPortReachable from 'is-port-reachable';
 import deepEqual from 'fast-deep-equal';
 import npa from 'npm-package-arg';
 import type { ChildProcess } from 'child_process';
+import JSONparse from 'json-parse-better-errors';
 
 import { getVercelIgnore, fileNameSymbol } from '@vercel/client';
 import {
@@ -726,7 +727,7 @@ export default class DevServer {
 
     try {
       const raw = await fs.readFile(abs, 'utf8');
-      const parsed: WithFileNameSymbol<T> = JSON.parse(raw);
+      const parsed: WithFileNameSymbol<T> = JSONparse(raw);
       parsed[fileNameSymbol] = rel;
       return parsed;
     } catch (err: unknown) {
