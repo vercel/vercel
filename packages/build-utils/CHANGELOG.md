@@ -1,5 +1,10 @@
 # @vercel/build-utils
 
+## 7.0.1
+
+- Added `getOutputPath` to abstract the logic of determining the output folder. It will return a string which ought to be the path to the output folder.
+- Added `isDirectoryPath` which is the helper function used to determine whether a path is a directory, or not when it is a file or doesn't exist at all. It will return a boolean.
+
 ## 7.0.0
 
 ### Major Changes
