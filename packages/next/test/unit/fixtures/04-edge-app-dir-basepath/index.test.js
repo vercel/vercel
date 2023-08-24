@@ -45,7 +45,6 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     });
 
     for (const name in output) {
-      console.log(name, output[name]);
       expect(output[name].type).not.toBe('Lambda');
     }
   });

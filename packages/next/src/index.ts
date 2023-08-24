@@ -2720,7 +2720,11 @@ async function getServerlessPages(params: {
   for (const edgeFunctionFile of Object.keys(
     middlewareManifest?.functions ?? {}
   )) {
-    const edgePath = (edgeFunctionFile.slice(1) || 'index') + '.js';
+    let fileName = edgeFunctionFile.slice(1) || 'index';
+    if (fileName === 'page') {
+      fileName = 'index';
+    }
+    const edgePath = fileName + '.js';
     delete normalizedAppPaths[edgePath];
     delete pages[edgePath];
   }
