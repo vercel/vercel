@@ -2721,7 +2721,14 @@ async function getServerlessPages(params: {
     middlewareManifest?.functions ?? {}
   )) {
     let fileName = edgeFunctionFile.slice(1) || 'index';
-    if (fileName === 'page') {
+    // when using app directory the index page will have path /page
+    if (
+      fileName === 'page' &&
+      // `page` is index path only when using app directory
+      middlewareManifest?.functions?.[fileName + '.js']?.files?.some(
+        (file: string) => file.includes('/app/')
+      )
+    ) {
       fileName = 'index';
     }
     const edgePath = fileName + '.js';
