@@ -668,13 +668,14 @@ export class CertMissing extends NowError<'ALIAS_IN_USE', { domain: string }> {
 
 export class CantParseJSONFile extends NowError<
   'CANT_PARSE_JSON_FILE',
-  { file: string }
+  { file: string; parseErrorLocation: string }
 > {
-  constructor(file: string) {
+  constructor(file: string, parseErrorLocation: string) {
+    const message = `Can't parse json file ${file}: ${parseErrorLocation}`;
     super({
       code: 'CANT_PARSE_JSON_FILE',
-      meta: { file },
-      message: `Can't parse json file`,
+      meta: { file, parseErrorLocation },
+      message,
     });
   }
 }

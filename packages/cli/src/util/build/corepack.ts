@@ -20,7 +20,8 @@ export async function initCorepack({
   );
   if (pkg instanceof CantParseJSONFile) {
     console.warn(
-      'Warning: Could not enable corepack because package.json is invalid JSON'
+      'Warning: Could not enable corepack because package.json is invalid JSON',
+      pkg.meta.parseErrorLocation
     );
   } else if (!pkg?.packageManager) {
     console.warn(
