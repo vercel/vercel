@@ -12,6 +12,8 @@ import download, {
 } from './fs/download';
 import getWriteableDirectory from './fs/get-writable-directory';
 import glob, { GlobOptions } from './fs/glob';
+import { isDirectoryPath } from './fs/is-directory-path';
+import { getOutputPath } from './get-output-path';
 import rename from './fs/rename';
 import {
   spawnAsync,
@@ -80,6 +82,7 @@ export {
   getNodeVersion,
   getLatestNodeVersion,
   getDiscontinuedNodeVersions,
+  getOutputPath,
   getSpawnOptions,
   getPlatformEnv,
   getPrefixedEnvVars,
@@ -87,6 +90,7 @@ export {
   debug,
   isSymbolicLink,
   isDirectory,
+  isDirectoryPath,
   getLambdaOptionsFromFunction,
   scanParentDirs,
   getIgnoreFilter,
