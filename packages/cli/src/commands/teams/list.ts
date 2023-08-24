@@ -2,7 +2,6 @@ import chars from '../../util/output/chars';
 import table from '../../util/output/table';
 import getUser from '../../util/get-user';
 import getTeams from '../../util/teams/get-teams';
-import getPrefixedFlags from '../../util/get-prefixed-flags';
 import { packageName } from '../../util/pkg-name';
 import getCommandFlags from '../../util/get-command-flags';
 import cmd from '../../util/output/cmd';
@@ -81,8 +80,7 @@ export default async function list(client: Client): Promise<number> {
   );
 
   if (pagination?.count === 20) {
-    const prefixedArgs = getPrefixedFlags(argv);
-    const flags = getCommandFlags(prefixedArgs, ['_', '--next', '-N', '-d']);
+    const flags = getCommandFlags(argv, ['_', '--next', '-N', '-d']);
     const nextCmd = `${packageName} teams ls${flags} --next ${pagination.next}`;
     console.log(); // empty line
     output.log(`To display the next page run ${cmd(nextCmd)}`);
