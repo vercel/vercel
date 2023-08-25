@@ -1,5 +1,19 @@
 # vercel
 
+## 32.1.0
+
+### Minor Changes
+
+- Improve error messages for JSON parse failures ([#10396](https://github.com/vercel/vercel/pull/10396))
+
+### Patch Changes
+
+- Updated dependencies [[`9e3827c78`](https://github.com/vercel/vercel/commit/9e3827c785e1bc45f2bed421132167381481770f)]:
+  - @vercel/build-utils@7.1.0
+  - @vercel/node@3.0.3
+  - @vercel/remix-builder@2.0.2
+  - @vercel/static-build@2.0.3
+
 ## 32.0.2
 
 ### Patch Changes
