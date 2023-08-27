@@ -2725,7 +2725,7 @@ async function getServerlessPages(params: {
     if (
       fileName === 'page' &&
       // `page` is index path only when using app directory
-      middlewareManifest?.functions?.[fileName]?.name === 'app/page'
+      middlewareManifest?.functions?.[edgeFunctionFile]?.name === 'app/page'
     ) {
       fileName = 'index';
     }
