@@ -12,7 +12,7 @@ Look at the [Nuxt 3 documentation](https://v3.nuxtjs.org) to learn more.
 
 Make sure to install the dependencies:<br>
 
-## Installation details for dependecies (npm,yarn,pnpm)
+**Installation details for dependecies (npm,yarn,pnpm)**
 
 1.Install npm.  [<a href="https://docs.npmjs.com/downloading-and-installing-node-js-and-npm">npm installation details</a>]
 
