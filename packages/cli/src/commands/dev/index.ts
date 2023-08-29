@@ -118,7 +118,7 @@ export default async function main(client: Client) {
     const pkg = await readJSONFile<PackageJson>(path.join(dir, 'package.json'));
 
     if (pkg instanceof CantParseJSONFile) {
-      client.output.error('Could not parse package.json');
+      client.output.error(pkg.message);
       return 1;
     }
 

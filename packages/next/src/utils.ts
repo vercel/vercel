@@ -236,6 +236,7 @@ type RoutesManifestOld = {
   rsc?: {
     header: string;
     varyHeader: string;
+    prefetchHeader?: string;
     contentTypeHeader: string;
   };
   skipMiddlewareUrlNormalize?: boolean;
@@ -2001,6 +2002,10 @@ export const onPrerenderRoute =
               }`
             ),
           });
+
+    if (isOmittedOrNotFound) {
+      initialStatus = 404;
+    }
 
     if (isAppPathRoute) {
       // for literal index routes we need to append an additional /index

@@ -1,5 +1,20 @@
 # @vercel/node
 
+## 3.0.3
+
+### Patch Changes
+
+- Updated dependencies [[`9e3827c78`](https://github.com/vercel/vercel/commit/9e3827c785e1bc45f2bed421132167381481770f)]:
+  - @vercel/build-utils@7.1.0
+
+## 3.0.2
+
+### Patch Changes
+
+- upgrade edge-runtime ([#10385](https://github.com/vercel/vercel/pull/10385))
+
+- use `undici` instead of `node-fetch` ([#10387](https://github.com/vercel/vercel/pull/10387))
+
 ## 3.0.1
 
 ### Patch Changes
