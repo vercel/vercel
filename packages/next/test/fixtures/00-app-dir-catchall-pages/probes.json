@@ -12,7 +12,7 @@
     },
     {
       "path": "/en/about",
-      "status": 200,
+      "status": 404,
       "headers": {
         "RSC": "1"
       },

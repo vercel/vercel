@@ -1066,8 +1066,7 @@ export async function serverBuild({
     canUsePreviewMode,
     prerenderManifest.bypassToken || '',
     true,
-    middleware.dynamicRouteMap,
-    inversedAppPathManifest
+    middleware.dynamicRouteMap
   ).then(arr =>
     localizeDynamicRoutes(
       arr,
@@ -1624,72 +1623,22 @@ export async function serverBuild({
           ]
         : []),
 
-      ...(appDir
-        ? [
-            // check routes that end in `.rsc` to see if a page with the resulting name (sans-.rsc) exists in the filesystem
-            // if so, we want to match that page instead. (This matters when prefetching a pages route while on an appdir route)
-            {
-              src: `^${path.posix.join('/', entryDirectory, '/(.*)\\.rsc$')}`,
-              dest: path.posix.join('/', entryDirectory, '/$1'),
-              has: [
-                {
-                  type: 'header',
-                  key: rscHeader,
-                },
-              ],
-              ...(rscPrefetchHeader
-                ? {
-                    missing: [
-                      {
-                        type: 'header',
-                        key: rscPrefetchHeader,
-                      },
-                    ],
-                  }
-                : {}),
-              check: true,
-            } as Route,
-          ]
-        : []),
-
       // These need to come before handle: miss or else they are grouped
       // with that routing section
       ...afterFilesRewrites,
 
-      ...(appDir
-        ? [
-            // rewrite route back to `.rsc`, but skip checking fs
-            {
-              src: `^${path.posix.join(
-                '/',
-                entryDirectory,
-                '/((?!.+\\.rsc).+?)(?:/)?$'
-              )}`,
-              has: [
-                {
-                  type: 'header',
-                  key: rscHeader,
-                },
-              ],
-              dest: path.posix.join('/', entryDirectory, '/$1.rsc'),
-              headers: { vary: rscVaryHeader },
-              continue: true,
-              override: true,
-            },
-          ]
-        : []),
-
-      // make sure 404 page is used when a directory is matched without
-      // an index page
       { handle: 'resource' },
 
       ...fallbackRewrites,
 
+      // make sure 404 page is used when a directory is matched without
+      // an index page
       { src: path.posix.join('/', entryDirectory, '.*'), status: 404 },
+
+      { handle: 'miss' },
 
       // We need to make sure to 404 for /_next after handle: miss since
       // handle: miss is called before rewrites and to prevent rewriting /_next
-      { handle: 'miss' },
       {
         src: path.posix.join(
           '/',

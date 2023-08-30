@@ -305,8 +305,7 @@ export async function getDynamicRoutes(
   canUsePreviewMode?: boolean,
   bypassToken?: string,
   isServerMode?: boolean,
-  dynamicMiddlewareRouteMap?: Map<string, RouteWithSrc>,
-  appPathRoutesManifest?: Record<string, string>
+  dynamicMiddlewareRouteMap?: Map<string, RouteWithSrc>
 ): Promise<RouteWithSrc[]> {
   if (routesManifest) {
     switch (routesManifest.version) {
@@ -379,17 +378,15 @@ export async function getDynamicRoutes(
               },
             ];
           }
+          routes.push({
+            ...route,
+            src: route.src.replace(
+              new RegExp(escapeStringRegexp('(?:/)?$')),
+              '(?:\\.rsc)(?:/)?$'
+            ),
+            dest: route.dest?.replace(/($|\?)/, '.rsc$1'),
+          });
 
-          if (appPathRoutesManifest?.[page]) {
-            routes.push({
-              ...route,
-              src: route.src.replace(
-                new RegExp(escapeStringRegexp('(?:/)?$')),
-                '(?:\\.rsc)(?:/)?$'
-              ),
-              dest: route.dest?.replace(/($|\?)/, '.rsc$1'),
-            });
-          }
           routes.push(route);
           continue;
         }
