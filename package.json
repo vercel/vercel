@@ -49,7 +49,7 @@
     "prepare": "husky install",
     "pack": "cd utils && node -r ts-eager/register ./pack.ts",
     "ci:version": "changeset version && pnpm install --no-frozen-lockfile",
-    "ci:publish": "pnpm publish -r && changeset tag"
+    "ci:publish": "pnpm publish -r && node utils/update-canary-tags.mjs && changeset tag"
   },
   "lint-staged": {
     "./{*,{api,packages,test,utils}/**/*}.{js,ts}": [
