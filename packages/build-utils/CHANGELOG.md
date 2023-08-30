@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 7.1.0
+
+### Minor Changes
+
+- Support serverless function architecture ([#10392](https://github.com/vercel/vercel/pull/10392))
+
 ## 7.0.0
 
 ### Major Changes

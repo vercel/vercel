@@ -183,7 +183,7 @@ importers:
         specifier: 1.0.4
         version: link:../constants
       '@vercel/build-utils':
-        specifier: 7.0.0
+        specifier: 7.1.0
         version: link:../../packages/build-utils
       '@vercel/routing-utils':
         specifier: 3.0.0
@@ -310,7 +310,7 @@ importers:
   packages/cli:
     dependencies:
       '@vercel/build-utils':
-        specifier: 7.0.0
+        specifier: 7.1.0
         version: link:../build-utils
       '@vercel/go':
         specifier: 3.0.0
@@ -319,10 +319,10 @@ importers:
         specifier: 1.0.0
         version: link:../hydrogen
       '@vercel/next':
-        specifier: 4.0.0
+        specifier: 4.0.1
         version: link:../next
       '@vercel/node':
-        specifier: 3.0.1
+        specifier: 3.0.3
         version: link:../node
       '@vercel/python':
         specifier: 4.0.0
@@ -331,13 +331,13 @@ importers:
         specifier: 2.0.0
         version: link:../redwood
       '@vercel/remix-builder':
-        specifier: 2.0.0
+        specifier: 2.0.2
         version: link:../remix
       '@vercel/ruby':
         specifier: 2.0.0
         version: link:../ruby
       '@vercel/static-build':
-        specifier: 2.0.1
+        specifier: 2.0.3
         version: link:../static-build
     devDependencies:
       '@alex_neo/jest-expect-message':
@@ -403,6 +403,9 @@ importers:
       '@types/jest-expect-message':
         specifier: 1.0.3
         version: 1.0.3
+      '@types/json-parse-better-errors':
+        specifier: 1.0.0
+        version: 1.0.0
       '@types/load-json-file':
         specifier: 2.0.7
         version: 2.0.7
@@ -412,9 +415,6 @@ importers:
       '@types/minimatch':
         specifier: 3.0.3
         version: 3.0.3
-      '@types/mri':
-        specifier: 1.1.0
-        version: 1.1.0
       '@types/ms':
         specifier: 0.7.30
         version: 0.7.30
@@ -470,10 +470,10 @@ importers:
         specifier: 1.0.0
         version: link:../../internals/get-package-json
       '@vercel-internals/types':
-        specifier: 1.0.7
+        specifier: 1.0.8
         version: link:../../internals/types
       '@vercel/client':
-        specifier: 13.0.0
+        specifier: 13.0.1
         version: link:../client
       '@vercel/error-utils':
         specifier: 2.0.1
@@ -619,6 +619,9 @@ importers:
       jest-matcher-utils:
         specifier: 29.3.1
         version: 29.3.1
+      json-parse-better-errors:
+        specifier: 1.0.2
+        version: 1.0.2
       jsonlines:
         specifier: 0.1.1
         version: 0.1.1
@@ -634,9 +637,6 @@ importers:
       minimatch:
         specifier: 3.1.2
         version: 3.1.2
-      mri:
-        specifier: 1.1.5
-        version: 1.1.5
       ms:
         specifier: 2.1.2
         version: 2.1.2
@@ -734,7 +734,7 @@ importers:
   packages/client:
     dependencies:
       '@vercel/build-utils':
-        specifier: 7.0.0
+        specifier: 7.1.0
         version: link:../build-utils
       '@vercel/routing-utils':
         specifier: 3.0.0
@@ -935,7 +935,7 @@ importers:
         specifier: 7.3.10
         version: 7.3.10
       '@vercel/build-utils':
-        specifier: 7.0.0
+        specifier: 7.1.0
         version: link:../build-utils
       jest-junit:
         specifier: 16.0.0
@@ -969,10 +969,10 @@ importers:
         specifier: 0.25.24
         version: 0.25.24
       '@vercel/build-utils':
-        specifier: 7.0.0
+        specifier: 7.1.0
         version: link:../build-utils
       '@vercel/node':
-        specifier: 3.0.1
+        specifier: 3.0.3
         version: link:../node
       '@vercel/routing-utils':
         specifier: 3.0.0
@@ -1036,7 +1036,7 @@ importers:
         specifier: 2.1.0
         version: 2.1.0
       '@vercel/build-utils':
-        specifier: 7.0.0
+        specifier: 7.1.0
         version: link:../build-utils
       '@vercel/ncc':
         specifier: 0.24.0
@@ -1081,7 +1081,7 @@ importers:
         specifier: 14.18.33
         version: 14.18.33
       '@vercel/build-utils':
-        specifier: 7.0.0
+        specifier: 7.1.0
         version: link:../build-utils
       '@vercel/static-config':
         specifier: 3.0.0
@@ -1141,7 +1141,7 @@ importers:
         specifier: 3.2.0
         version: 3.2.0
       '@vercel/build-utils':
-        specifier: 7.0.0
+        specifier: 7.1.0
         version: link:../build-utils
       '@vercel/nft':
         specifier: 0.22.5
@@ -1231,7 +1231,7 @@ importers:
         specifier: 14.18.33
         version: 14.18.33
       '@vercel/build-utils':
-        specifier: 7.0.0
+        specifier: 7.1.0
         version: link:../build-utils
       '@vercel/error-utils':
         specifier: 2.0.1
@@ -1343,7 +1343,7 @@ importers:
         specifier: 14.18.33
         version: 14.18.33
       '@vercel/build-utils':
-        specifier: 7.0.0
+        specifier: 7.1.0
         version: link:../build-utils
       '@vercel/ncc':
         specifier: 0.24.0
@@ -1377,7 +1377,7 @@ importers:
         specifier: 6.0.0
         version: 6.0.0
       '@vercel/build-utils':
-        specifier: 7.0.0
+        specifier: 7.1.0
         version: link:../build-utils
       execa:
         specifier: 3.2.0
@@ -1392,7 +1392,7 @@ importers:
   packages/remix:
     dependencies:
       '@vercel/build-utils':
-        specifier: 7.0.0
+        specifier: 7.1.0
         version: link:../build-utils
       '@vercel/nft':
         specifier: 0.22.5
@@ -1458,7 +1458,7 @@ importers:
         specifier: 6.0.0
         version: 6.0.0
       '@vercel/build-utils':
-        specifier: 7.0.0
+        specifier: 7.1.0
         version: link:../build-utils
       '@vercel/ncc':
         specifier: 0.24.0
@@ -1482,7 +1482,7 @@ importers:
         specifier: 1.0.10
         version: link:../gatsby-plugin-vercel-analytics
       '@vercel/gatsby-plugin-vercel-builder':
-        specifier: 2.0.1
+        specifier: 2.0.3
         version: link:../gatsby-plugin-vercel-builder
     devDependencies:
       '@types/aws-lambda':
@@ -1513,7 +1513,7 @@ importers:
         specifier: 7.3.13
         version: 7.3.13
       '@vercel/build-utils':
-        specifier: 7.0.0
+        specifier: 7.1.0
         version: link:../build-utils
       '@vercel/error-utils':
         specifier: 2.0.1
@@ -5112,6 +5112,10 @@ packages:
     resolution: {integrity: sha512-FhpRzf927MNQdRZP0J5DLIdTXhjLYzeUTmLAu69mnVksLH9CJY3IuSeEgbKUki7GQZm0WqDkGzyxju2EZGD2wA==}
     dev: true
 
+  /@types/json-parse-better-errors@1.0.0:
+    resolution: {integrity: sha512-JAsGXEMsiw2ttNrlady/Z8ztrSEl1y8IoG9ge7hpBQ4I+ilKxelOPGKnVmt9TX69lkXdJioDWCkzkktWcdAshA==}
+    dev: true
+
   /@types/json-schema@7.0.11:
     resolution: {integrity: sha512-wOuvG1SN4Us4rez+tylwwwCV1psiNVOkJeM3AUWUNWg/jDQY2+HE/444y5gc+jBmRqASOm2Oeh5c1axHobwRKQ==}
 
@@ -5176,10 +5180,6 @@ packages:
     resolution: {integrity: sha512-M2BLHQdEmDmH671h0GIlOQQJrgezd1vNqq7PVj1VOsHZ2uQQb4iPiQIl0SlMdhxZPUsLIfEklmeEHXg8DJRewA==}
     dependencies:
       minipass: 5.0.0
-    dev: true
-
-  /@types/mri@1.1.0:
-    resolution: {integrity: sha512-fMl88ZoZXOB7VKazJ6wUMpZc9QIn+jcigSFRf2K/rrw4DcXn+/uGxlWX8DDlcE7JkwgIZ7BDH+JgxZPlc/Ap3g==}
     dev: true
 
   /@types/ms@0.7.30:
@@ -9115,7 +9115,7 @@ packages:
       '@typescript-eslint/eslint-plugin': 5.54.1(@typescript-eslint/parser@5.54.1)(eslint@8.42.0)(typescript@4.9.4)
       '@typescript-eslint/utils': 5.54.1(eslint@8.42.0)(typescript@4.9.4)
       eslint: 8.42.0
-      jest: 29.5.0(@types/node@14.14.31)
+      jest: 29.5.0(@types/node@14.18.33)
     transitivePeerDependencies:
       - supports-color
       - typescript
@@ -13385,15 +13385,9 @@ packages:
     engines: {node: '>=4'}
     dev: true
 
-  /mri@1.1.5:
-    resolution: {integrity: sha512-d2RKzMD4JNyHMbnbWnznPaa8vbdlq/4pNZ3IgdaGrVbBhebBsGUUE/6qorTMYNS6TwuH3ilfOlD2bf4Igh8CKg==}
-    engines: {node: '>=4'}
-    dev: true
-
   /mri@1.2.0:
     resolution: {integrity: sha512-tzzskb3bG8LvYGFF/mDTpq3jpI6Q9wc3LEmBaghu+DdCssd1FakN7Bc0hVNmEyGq1bq3RgfkCb3cmQLpNPOroA==}
     engines: {node: '>=4'}
-    dev: false
 
   /ms@2.0.0:
     resolution: {integrity: sha512-Tpp60P6IUJDTuOq/5Z8cdskzJujfwqfOTkrwIwj7IRISpnkJnT6SyJ4PCPnGMoFjC9ddhal5KVIYtAt97ix05A==}
@@ -15026,7 +15020,7 @@ packages:
     resolution: {integrity: sha512-xal3CZX1Xlo/k4ApwCFrHVACi9fBqJ7V+mwhBsuf/1IOKbBy098Fex+Wa/5QMubw09pSZ/u8EY8PWgevJsXp1A==}
     engines: {node: '>=6'}
     dependencies:
-      mri: 1.1.5
+      mri: 1.2.0
     dev: true
 
   /safe-buffer@5.1.2:

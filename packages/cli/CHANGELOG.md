@@ -1,5 +1,35 @@
 # vercel
 
+## 32.1.0
+
+### Minor Changes
+
+- Improve error messages for JSON parse failures ([#10396](https://github.com/vercel/vercel/pull/10396))
+
+### Patch Changes
+
+- Updated dependencies [[`9e3827c78`](https://github.com/vercel/vercel/commit/9e3827c785e1bc45f2bed421132167381481770f)]:
+  - @vercel/build-utils@7.1.0
+  - @vercel/node@3.0.3
+  - @vercel/remix-builder@2.0.2
+  - @vercel/static-build@2.0.3
+
+## 32.0.2
+
+### Patch Changes
+
+- Remove use of mri preferring use of arg package ([#10389](https://github.com/vercel/vercel/pull/10389))
+
+- upgrade edge-runtime ([#10385](https://github.com/vercel/vercel/pull/10385))
+
+- Update dns commands to new structure ([#10379](https://github.com/vercel/vercel/pull/10379))
+
+- Updated dependencies [[`09446a8fe`](https://github.com/vercel/vercel/commit/09446a8fe8b8201dbe3ead3ca645ef0aa1833b6b), [`597a8a817`](https://github.com/vercel/vercel/commit/597a8a81764c39e70c65b98e78bf4c3827a779a7), [`442232686`](https://github.com/vercel/vercel/commit/44223268651f1bbd5c6f2b0b315239685dd5716e), [`3f6d99470`](https://github.com/vercel/vercel/commit/3f6d99470db86681e006d66507f32afcea086b41), [`37e93a91a`](https://github.com/vercel/vercel/commit/37e93a91a8659934eac7f5cd441b310511bf5646)]:
+  - @vercel/next@4.0.1
+  - @vercel/node@3.0.2
+  - @vercel/remix-builder@2.0.1
+  - @vercel/static-build@2.0.2
+
 ## 32.0.1
 
 ### Patch Changes
