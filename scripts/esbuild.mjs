@@ -10,7 +10,8 @@ const files = globSync(pattern);
 await build({
   entryPoints: files,
   format: 'cjs',
-  platform: 'node',
-  sourcemap: true,
   outdir: dist,
+  platform: 'node',
+  target: 'es2021',
+  sourcemap: true,
 });
