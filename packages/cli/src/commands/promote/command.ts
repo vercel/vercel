@@ -7,7 +7,7 @@ export const promoteCommand: Command = {
   arguments: [
     {
       name: 'deployment id/url',
-      required: false,
+      required: true,
     },
   ],
   subcommands: [
