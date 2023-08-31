@@ -9,7 +9,9 @@
     "directory": "packages/static-config"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "run-p build:*",
+    "build:js": "node ../../scripts/esbuild.mjs",
+    "build:types": "tsc --declaration --emitDeclarationOnly",
     "test-unit": "pnpm test",
     "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --runInBand --bail"
   },
