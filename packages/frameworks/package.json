@@ -13,7 +13,9 @@
   },
   "license": "Apache-2.0",
   "scripts": {
-    "build": "tsc",
+    "build": "run-p build:*",
+    "build:src": "node ../../scripts/esbuild.mjs",
+    "build:types": "tsc --declaration --emitDeclarationOnly",
     "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --runInBand --bail",
     "test-unit": "pnpm test"
   },
