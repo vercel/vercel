@@ -16,22 +16,22 @@ export const envCommand: Command = {
   subcommands: [
     {
       name: 'ls',
-      description: 'Show all aliases.',
+      description: 'List all variables for the specified Environment',
       arguments: [],
       options: [],
       examples: [],
     },
     {
-      name: 'set',
-      description: 'Create a new alias',
+      name: 'add',
+      description: 'Add an Environment Variable (see examples below)',
       arguments: [
         {
-          name: 'deployment',
+          name: 'name',
           required: true,
         },
         {
-          name: 'alias',
-          required: true,
+          name: 'environment',
+          required: false,
         },
       ],
       options: [],
@@ -39,11 +39,28 @@ export const envCommand: Command = {
     },
     {
       name: 'rm',
-      description: 'Remove an alias using its hostname.',
+      description: 'Remove an Environment Variable (see examples below)',
       arguments: [
         {
-          name: 'alias',
+          name: 'name',
           required: true,
+        },
+        {
+          name: 'environment',
+          required: false,
+        },
+      ],
+      options: [],
+      examples: [],
+    },
+    {
+      name: 'pull',
+      description:
+        'Pull all Development Environment Variables from the cloud and write to a file [.env.local]',
+      arguments: [
+        {
+          name: 'filename',
+          required: false,
         },
       ],
       options: [],
