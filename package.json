@@ -16,6 +16,7 @@
     "buffer-replace": "1.0.0",
     "create-svelte": "2.0.1",
     "dot": "1.1.3",
+    "esbuild": "0.19.2",
     "eslint": "8.14.0",
     "eslint-config-prettier": "8.5.0",
     "eslint-plugin-jest": "26.1.5",

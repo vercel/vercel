@@ -13,7 +13,9 @@
     "directory": "packages/error-utils"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "pnpm run build:js && pnpm run build:types",
+    "build:js": "node ../../scripts/esbuild.mjs",
+    "build:types": "tsc --declaration --emitDeclarationOnly",
     "test": "jest --reporters=default --reporters=jest-junit --coverage --env node --verbose",
     "test-unit": "pnpm test"
   },
