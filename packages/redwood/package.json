@@ -13,7 +13,9 @@
     "directory": "packages/redwood"
   },
   "scripts": {
-    "build": "node build.js",
+    "build": "run-p build:*",
+    "build:js": "node ../../scripts/esbuild.mjs --bundle",
+    "build:types": "tsc --declaration --emitDeclarationOnly",
     "test-e2e": "pnpm test test/test.js",
     "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --bail --runInBand",
     "test-unit": "pnpm test test/prepare-cache.test.js"
