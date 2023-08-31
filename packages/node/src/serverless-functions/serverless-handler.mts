@@ -127,7 +127,6 @@ export async function createServerlessEventHandler(
       if (contentEncoding) {
         body = compress(body, contentEncoding);
         const clonedHeaders = [];
-        console.log(response.headers.entries());
         for (const [key, value] of response.headers.entries()) {
           if (key !== 'transfer-encoding') {
             // transfer-encoding is only for streaming response
