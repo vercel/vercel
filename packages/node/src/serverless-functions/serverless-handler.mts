@@ -1,9 +1,8 @@
 import { addHelpers } from './helpers.js';
 import { createServer } from 'http';
 import { serializeBody } from '../utils.js';
-import { streamToBuffer } from '@vercel/build-utils';
 import exitHook from 'exit-hook';
-import fetch from 'node-fetch';
+import { Headers, fetch } from 'undici';
 import { listen } from 'async-listen';
 import { isAbsolute } from 'path';
 import { pathToFileURL } from 'url';
@@ -104,10 +103,10 @@ export async function createServerlessEventHandler(
 
   return async function (request: IncomingMessage) {
     const url = new URL(request.url ?? '/', server.url);
-    // @ts-expect-error
     const response = await fetch(url, {
       body: await serializeBody(request),
       compress: !isStreaming,
+      // @ts-expect-error
       headers: {
         ...request.headers,
         host: request.headers['x-forwarded-host'],
@@ -116,28 +115,32 @@ export async function createServerlessEventHandler(
       redirect: 'manual',
     });
 
-    let body;
+    let body: Buffer | null = null;
+    let headers: Headers = response.headers;
+
     if (isStreaming) {
       body = response.body;
     } else {
-      body = await streamToBuffer(response.body);
+      body = Buffer.from(await response.arrayBuffer());
 
       const contentEncoding = response.headers.get('content-encoding');
       if (contentEncoding) {
         body = compress(body, contentEncoding);
-        response.headers.set('content-length', Buffer.byteLength(body));
+        const clonedHeaders = [];
+        for (const [key, value] of response.headers.entries()) {
+          if (key !== 'transfer-encoding') {
+            // transfer-encoding is only for streaming response
+            clonedHeaders.push([key, value]);
+          }
+        }
+        clonedHeaders.push(['content-length', String(Buffer.byteLength(body))]);
+        headers = new Headers(clonedHeaders);
       }
-
-      /**
-       * `transfer-encoding` is related to streaming chunks.
-       * Since we are buffering the response.body, it should be stripped.
-       */
-      response.headers.delete('transfer-encoding');
     }
 
     return {
       status: response.status,
-      headers: response.headers,
+      headers,
       body,
       encoding: 'utf8',
     };

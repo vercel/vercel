@@ -1,5 +1,12 @@
 # @vercel-internals/types
 
+## 1.0.8
+
+### Patch Changes
+
+- Updated dependencies [[`9e3827c78`](https://github.com/vercel/vercel/commit/9e3827c785e1bc45f2bed421132167381481770f)]:
+  - @vercel/build-utils@7.1.0
+
 ## 1.0.7
 
 ### Patch Changes

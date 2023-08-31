@@ -26,6 +26,7 @@ const webHandlerToNodeHandler = buildToNodeHandler(
   {
     Headers,
     ReadableStream,
+    // @ts-expect-error Property 'duplex' is missing in type 'Request'
     Request: class extends Request {
       constructor(input: RequestInfo | URL, init?: RequestInit | undefined) {
         super(input, addDuplexToInit(init));
