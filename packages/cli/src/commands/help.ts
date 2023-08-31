@@ -12,6 +12,7 @@ export interface CommandOption {
   argument?: string;
   deprecated: boolean;
   description?: string;
+  /** supports multiple entries */
   multi: boolean;
 }
 export interface CommandArgument {
