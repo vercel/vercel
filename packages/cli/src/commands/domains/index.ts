@@ -1,5 +1,3 @@
-import chalk from 'chalk';
-
 import Client from '../../util/client';
 import getArgs from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
