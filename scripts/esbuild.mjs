@@ -6,6 +6,7 @@ const cwd = process.cwd();
 const dist = join(cwd, 'dist');
 const pattern = join(cwd, 'src/**/*.{js,ts}');
 const files = globSync(pattern);
+console.log({ files, dist });
 
 await build({
   entryPoints: files,
