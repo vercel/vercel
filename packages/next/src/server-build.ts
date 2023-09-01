@@ -437,11 +437,19 @@ export async function serverBuild({
 
       if (i18n) {
         for (const locale of i18n.locales) {
-          const static404File =
-            staticPages[path.posix.join(entryDirectory, locale, '/404')] ||
-            new FileFsRef({
+          let static404File =
+            staticPages[path.posix.join(entryDirectory, locale, '/404')];
+
+          if (!static404File) {
+            static404File = new FileFsRef({
               fsPath: path.join(pagesDir, locale, '/404.html'),
             });
+            if (!fs.existsSync(static404File.fsPath)) {
+              static404File = new FileFsRef({
+                fsPath: path.join(pagesDir, '/404.html'),
+              });
+            }
+          }
           requiredFiles[path.relative(baseDir, static404File.fsPath)] =
             static404File;
         }
