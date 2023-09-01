@@ -8,70 +8,103 @@ import exit from '../util/exit';
 import getScope from '../util/get-scope.ts';
 import confirm from '../util/input/confirm';
 import getCommandFlags from '../util/get-command-flags';
-import { packageName, getCommandName, logo } from '../util/pkg-name.ts';
+import { packageName, getCommandName } from '../util/pkg-name.ts';
 import getArgs from '../util/get-args';
+import { help } from './help';
 
-const help = () => {
-  console.log(`
-  ${chalk.yellow(
-    `${chalk.bold('NOTE:')} The ${getCommandName(
-      'env'
-    )} command is recommended instead of ${getCommandName('secrets')}`
-  )}
+export const secretsCommand = {
+  name: 'secrets',
+  description: `NOTE: The ${getCommandName(
+    'env'
+  )} command is recommended instead of ${getCommandName('secrets')}`,
+  arguments: [
+    {
+      name: 'command',
+      required: false,
+    },
+  ],
+  subcommands: [
+    {
+      name: 'ls',
+      description: 'Show all secrets in a list',
+      arguments: [],
+      options: [],
+      examples: [],
+    },
+    {
+      name: 'add',
+      description: 'Add a new secret',
+      arguments: [
+        {
+          name: 'name',
+          required: true,
+        },
+        {
+          name: 'value',
+          required: true,
+        },
+      ],
+      options: [],
+      examples: [],
+    },
+    {
+      name: 'rename',
+      description: 'Change the name of a secret',
+      arguments: [
+        {
+          name: 'old-name',
+          required: true,
+        },
+        {
+          name: 'new-name',
+          required: true,
+        },
+      ],
+      options: [],
+      examples: [],
+    },
+    {
+      name: 'rm',
+      description: 'Remove a secret',
+      arguments: [
+        {
+          name: 'name',
+          required: true,
+        },
+      ],
+      options: [],
+      examples: [],
+    },
+  ],
+  options: [
+    {
+      name: 'next',
+      description: 'Show next page of results',
+      argument: 'MS',
+      shorthand: 'n',
+      type: 'string',
+      deprecated: false,
+      multi: false,
+    },
+  ],
+  examples: [
+    {
+      name: 'Add a new secret',
+      value: `${packageName} secrets add my-secret "my value"
 
-  ${chalk.bold(`${logo} ${packageName} secrets`)} [options] <command>
-
-  ${chalk.dim('Commands:')}
-
-    ls                               Show all secrets in a list
-    add      [name] [value]          Add a new secret
-    rename   [old-name] [new-name]   Change the name of a secret
-    rm       [name]                  Remove a secret
-
-  ${chalk.dim('Options:')}
-
-    -h, --help                     Output usage information
-    -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
-    'FILE'
-  )}   Path to the local ${'`vercel.json`'} file
-    -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
-    'DIR'
-  )}    Path to the global ${'`.vercel`'} directory
-    -d, --debug                    Debug mode [off]
-    -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
-    'TOKEN'
-  )}        Login token
-    -S, --scope                    Set a custom scope
-    -N, --next                     Show next page of results
-
-  ${chalk.dim('Examples:')}
-
-  ${chalk.gray('–')} Add a new secret
-
-    ${chalk.cyan(`$ ${packageName} secrets add my-secret "my value"`)}
-
-    ${chalk.gray(
-      '–'
-    )} Once added, a secret's value can't be retrieved in plain text anymore
-    ${chalk.gray(
-      '–'
-    )} If the secret's value is more than one word, wrap it in quotes
-    ${chalk.gray('–')} When in doubt, always wrap your value in quotes
-
-  ${chalk.gray(
-    '–'
-  )} Expose a secret as an environment variable (notice the ${chalk.cyan.bold(
-    '`@`'
-  )} symbol)
-
-    ${chalk.cyan(`$ ${packageName} -e MY_SECRET=${chalk.bold('@my-secret')}`)}
-
-  ${chalk.gray('–')} Paginate results, where ${chalk.dim(
-    '`1584722256178`'
-  )} is the time in milliseconds since the UNIX epoch
-
-    ${chalk.cyan(`$ ${packageName} secrets ls --next 1584722256178`)}
-`);
+      - Once added, a secret's value can't be retrieved in plain text anymore
+      - If the secret's value is more than one word, wrap it in quotes
+      - When in doubt, always wrap your value in quotes`,
+    },
+    {
+      name: 'Expose a secret as an environment variable (notice the `@` symbol)',
+      value: `${packageName} -e MY_SECRET=@my-secret`,
+    },
+    {
+      name: 'Paginate results, where 1584722256178 is the time in milliseconds since the UNIX epoch',
+      value: `$ ${packageName} secrets ls --next 1584722256178`,
+    },
+  ],
 };
 
 // Options
@@ -94,7 +127,9 @@ const main = async client => {
   nextTimestamp = argv.next;
 
   if (argv.help || !subcommand) {
-    help();
+    client.output.print(
+      help(secretsCommand, { columns: client.stderr.columns })
+    );
     await exit(2);
   }
 
@@ -340,7 +375,7 @@ async function run({ output, contextName, currentTeam, client }) {
   console.error(
     error('Please specify a valid subcommand: ls | add | rename | rm')
   );
-  help();
+  client.output.print(help(secretsCommand, { columns: client.stderr.columns }));
   return 2;
 }
 
