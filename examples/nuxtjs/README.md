@@ -8,6 +8,10 @@ _Live Example: https://nuxtjs-template.vercel.app_
 
 Look at the [Nuxt 3 documentation](https://v3.nuxtjs.org) to learn more.
 
+## Note
+
+Please make sure that there are **no spaces in the folder names** that your project resides in.
+
 ## Setup
 
 Make sure to install the dependencies:<br>
