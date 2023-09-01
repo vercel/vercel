@@ -1089,6 +1089,36 @@ export async function serverBuild({
     )
   );
 
+  let pagesPlaceholderRscEntries;
+
+  if (appDir) {
+    // since we attempt to rewrite all paths to an .rsc variant,
+    // we need to create dummy rsc outputs for all pages entries
+    // this is so that an RSC request to a `pages` entry will match
+    // rather than falling back to a catchall `app` entry
+    // on the nextjs side, invalid RSC response payloads will correctly trigger an mpa navigation
+    const pagesManifest = path.join(
+      entryPath,
+      outputDirectory,
+      `server/pages-manifest.json`
+    );
+
+    const pagesData = await fs.readJSON(pagesManifest);
+    const pagesEntries = Object.keys(pagesData);
+
+    if (pagesEntries.length > 0) {
+      const dummyFilePath = path.join('./', 'dummyFile');
+      await fs.writeFile(dummyFilePath, 'RSC Placeholder');
+
+      pagesPlaceholderRscEntries = pagesEntries.reduce((acc, page) => {
+        acc[`${page.slice(1)}.rsc`] = new FileFsRef({
+          fsPath: dummyFilePath,
+        });
+        return acc;
+      }, {} as Record<string, FileFsRef>);
+    }
+  }
+
   const { staticFiles, publicDirectoryFiles, staticDirectoryFiles } =
     await getStaticFiles(entryPath, entryDirectory, outputDirectory);
 
@@ -1248,6 +1278,7 @@ export async function serverBuild({
       ...publicDirectoryFiles,
       ...lambdas,
       ...appRscPrefetches,
+      ...pagesPlaceholderRscEntries,
       // Prerenders may override Lambdas -- this is an intentional behavior.
       ...prerenders,
       ...staticPages,

@@ -12,11 +12,11 @@
     },
     {
       "path": "/en/about",
-      "status": 404,
+      "status": 200,
       "headers": {
         "RSC": "1"
       },
-      "mustContain": "<html"
+      "mustContain": "RSC Placeholder"
     },
     {
       "path": "/en/foobar",

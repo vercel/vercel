@@ -49,12 +49,12 @@
     },
     {
       "path": "/docs/categories/foo?_rsc=f7pci",
-      "status": 404,
+      "status": 200,
       "headers": {
         "RSC": "1",
         "Next-Router-Prefetch": "1"
       },
-      "mustContain": "<html"
+      "mustContain": "RSC Placeholder"
     },
     {
       "path": "/ssg",
