@@ -49,6 +49,9 @@ export interface Geo {
   /** The country that the request originated from. */
   country?: string;
 
+  /** The flag emoji for the country the request originated from. */
+  flag?: string;
+
   /** The [Vercel Edge Network region](https://vercel.com/docs/concepts/edge-network/regions) that received the request. */
   region?: string;
 
@@ -66,6 +69,16 @@ export interface Geo {
 
 function getHeader(request: Request, key: string): string | undefined {
   return request.headers.get(key) ?? undefined;
+}
+
+function getFlag(countryCode: string | undefined): string | undefined {
+  if (!countryCode) return undefined;
+  return String.fromCodePoint(
+    ...countryCode
+      .toUpperCase()
+      .split('')
+      .map(char => 127397 + char.charCodeAt(0))
+  );
 }
 
 /**
@@ -107,6 +120,7 @@ export function geolocation(request: Request): Geo {
   return {
     city: getHeader(request, CITY_HEADER_NAME),
     country: getHeader(request, COUNTRY_HEADER_NAME),
+    flag: getFlag(getHeader(request, COUNTRY_HEADER_NAME)),
     countryRegion: getHeader(request, REGION_HEADER_NAME),
     region: getRegionFromRequestId(getHeader(request, REQUEST_ID_HEADER_NAME)),
     latitude: getHeader(request, LATITUDE_HEADER_NAME),

@@ -29,6 +29,7 @@ describe('`geolocation`', () => {
     const req = new Request('https://example.vercel.sh');
     expect(geolocation(req)).toEqual({
       city: undefined,
+      flag: undefined,
       country: undefined,
       countryRegion: undefined,
       latitude: undefined,
@@ -41,7 +42,7 @@ describe('`geolocation`', () => {
     const req = new Request('https://example.vercel.sh', {
       headers: {
         [CITY_HEADER_NAME]: 'Tel Aviv',
-        [COUNTRY_HEADER_NAME]: 'Israel',
+        [COUNTRY_HEADER_NAME]: 'IL',
         [LATITUDE_HEADER_NAME]: '32.109333',
         [LONGITUDE_HEADER_NAME]: '34.855499',
         [REGION_HEADER_NAME]: 'TA', // https://en.wikipedia.org/wiki/ISO_3166-2:IL
@@ -50,7 +51,8 @@ describe('`geolocation`', () => {
     });
     expect(geolocation(req)).toEqual<Geo>({
       city: 'Tel Aviv',
-      country: 'Israel',
+      flag: '🇮🇱',
+      country: 'IL',
       latitude: '32.109333',
       longitude: '34.855499',
       region: 'fra1',
@@ -62,7 +64,7 @@ describe('`geolocation`', () => {
     const req = new Request('https://example.vercel.sh', {
       headers: {
         [CITY_HEADER_NAME]: 'Tokyo',
-        [COUNTRY_HEADER_NAME]: 'Japan',
+        [COUNTRY_HEADER_NAME]: 'JP',
         [LATITUDE_HEADER_NAME]: '37.1233',
         [LONGITUDE_HEADER_NAME]: '30.733399',
         [REGION_HEADER_NAME]: '13',
@@ -71,7 +73,8 @@ describe('`geolocation`', () => {
     });
     expect(geolocation(req)).toEqual<Geo>({
       city: 'Tokyo',
-      country: 'Japan',
+      flag: '🇯🇵',
+      country: 'JP',
       latitude: '37.1233',
       longitude: '30.733399',
       region: 'hnd1',
@@ -83,7 +86,7 @@ describe('`geolocation`', () => {
     const req = new Request('https://example.vercel.sh', {
       headers: {
         [CITY_HEADER_NAME]: 'Tokyo',
-        [COUNTRY_HEADER_NAME]: 'Japan',
+        [COUNTRY_HEADER_NAME]: 'JP',
         [LATITUDE_HEADER_NAME]: '37.1233',
         [LONGITUDE_HEADER_NAME]: '30.733399',
         [REGION_HEADER_NAME]: '13',
@@ -91,7 +94,8 @@ describe('`geolocation`', () => {
     });
     expect(geolocation(req)).toEqual<Geo>({
       city: 'Tokyo',
-      country: 'Japan',
+      flag: '🇯🇵',
+      country: 'JP',
       latitude: '37.1233',
       longitude: '30.733399',
       region: 'dev1',
