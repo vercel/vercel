@@ -102,4 +102,25 @@ describe('`geolocation`', () => {
       countryRegion: '13',
     });
   });
+
+  test('returns underfined if countryCode is invalud', () => {
+    const req = new Request('https://example.vercel.sh', {
+      headers: {
+        [CITY_HEADER_NAME]: 'Tokyo',
+        [COUNTRY_HEADER_NAME]: 'AAA',
+        [LATITUDE_HEADER_NAME]: '37.1233',
+        [LONGITUDE_HEADER_NAME]: '30.733399',
+        [REGION_HEADER_NAME]: '13',
+      },
+    });
+    expect(geolocation(req)).toEqual<Geo>({
+      city: 'Tokyo',
+      flag: undefined,
+      country: 'JP',
+      latitude: '37.1233',
+      longitude: '30.733399',
+      region: 'dev1',
+      countryRegion: '13',
+    });
+  });
 });
