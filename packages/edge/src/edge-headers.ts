@@ -30,6 +30,10 @@ export const REGION_HEADER_NAME = 'x-vercel-ip-country-region';
 export const REQUEST_ID_HEADER_NAME = 'x-vercel-id';
 
 /**
+ * Unicode characters for emoji flags start at theh beow number and run up to 127469
+ */
+export const EMOJI_FLAG_UNICODE_STARTING_POSITION = 127462;
+/**
  * We define a new type so this function can be reused with
  * the global `Request`, `node-fetch` and other types.
  */
@@ -71,13 +75,20 @@ function getHeader(request: Request, key: string): string | undefined {
   return request.headers.get(key) ?? undefined;
 }
 
+/**
+ * Converts the 2 digit countryCode into a flag emoji but adding the current character value to the unicode starting position.
+ *
+ * @param countryCode The country code returned by: `getHeader(request, COUNTRY_HEADER_NAME)`.
+ * @returns A flag emoji.
+ */
 function getFlag(countryCode: string | undefined): string | undefined {
-  if (!countryCode) return undefined;
+  const regex = new RegExp(`/^[A-Z]{2}$/`);
+  if (!countryCode || !regex.test(countryCode)) return undefined;
   return String.fromCodePoint(
     ...countryCode
       .toUpperCase()
       .split('')
-      .map(char => 127397 + char.charCodeAt(0))
+      .map(char => EMOJI_FLAG_UNICODE_STARTING_POSITION + char.charCodeAt(0))
   );
 }
 
