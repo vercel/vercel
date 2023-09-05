@@ -30,7 +30,7 @@ export const REGION_HEADER_NAME = 'x-vercel-ip-country-region';
 export const REQUEST_ID_HEADER_NAME = 'x-vercel-id';
 
 /**
- * Unicode characters for emoji flags start at theh beow number and run up to 127469
+ * Unicode characters for emoji flags start at this number, and run up to 127469
  */
 export const EMOJI_FLAG_UNICODE_STARTING_POSITION = 127397;
 /**
