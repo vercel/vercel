@@ -292,7 +292,7 @@ test('[vc dev] should print help from `vc develop --help`', async () => {
   );
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(2);
-  expect(stdout).toMatch(/▲ vercel dev/gm);
+  expect(stderr).toMatch(/▲ vercel dev/gm);
 });
 
 test('default command should deploy directory', async () => {
