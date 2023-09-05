@@ -1,53 +1,13 @@
-import chalk from 'chalk';
 import type Client from '../../util/client';
 import getArgs from '../../util/get-args';
 import getProjectByCwdOrLink from '../../util/projects/get-project-by-cwd-or-link';
-import { packageName, logo } from '../../util/pkg-name';
 import handleError from '../../util/handle-error';
 import { isErrnoException } from '@vercel/error-utils';
 import ms from 'ms';
 import requestRollback from './request-rollback';
 import rollbackStatus from './status';
-
-const help = () => {
-  console.log(`
-  ${chalk.bold(`${logo} ${packageName} rollback`)} [deployment id/url]
-
-  Quickly revert back to a previous deployment.
-
-  ${chalk.dim('Options:')}
-
-    -h, --help                     Output usage information
-    -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
-    'FILE'
-  )}   Path to the local ${'`vercel.json`'} file
-    -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
-    'DIR'
-  )}    Path to the global ${'`.vercel`'} directory
-    -d, --debug                    Debug mode [off]
-    --no-color                     No color mode [off]
-    -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
-    'TOKEN'
-  )}        Login token
-    --timeout=${chalk.bold.underline(
-      'TIME'
-    )}                 Time to wait for rollback completion [3m]
-    -y, --yes                      Skip questions when setting up new project using default scope and settings
-
-  ${chalk.dim('Examples:')}
-
-  ${chalk.gray('–')} Show the status of any current pending rollbacks
-
-    ${chalk.cyan(`$ ${packageName} rollback`)}
-    ${chalk.cyan(`$ ${packageName} rollback status`)}
-    ${chalk.cyan(`$ ${packageName} rollback status <project>`)}
-    ${chalk.cyan(`$ ${packageName} rollback status --timeout 30s`)}
-
-  ${chalk.gray('–')} Rollback a deployment using id or url
-
-    ${chalk.cyan(`$ ${packageName} rollback <deployment id/url>`)}
-`);
-};
+import { help } from '../help';
+import { rollbackCommand } from './command';
 
 /**
  * `vc rollback` command
@@ -68,7 +28,9 @@ export default async (client: Client): Promise<number> => {
   }
 
   if (argv['--help'] || argv._[0] === 'help') {
-    help();
+    client.output.print(
+      help(rollbackCommand, { columns: client.stderr.columns })
+    );
     return 2;
   }
 
