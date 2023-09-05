@@ -78,7 +78,7 @@ function getHeader(request: Request, key: string): string | undefined {
  * Converts the 2 digit countryCode into a flag emoji by adding the current character value to the emoji flag unicode starting position.
  *
  * @param countryCode The country code returned by: `getHeader(request, COUNTRY_HEADER_NAME)`.
- * @returns A flag emoji.
+ * @returns A flag emoji or undefined.
  */
 function getFlag(countryCode: string | undefined): string | undefined {
   const regex = new RegExp('^[A-Z]{2}$').test(countryCode!);
