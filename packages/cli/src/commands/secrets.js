@@ -334,18 +334,7 @@ async function run({ output, contextName, currentTeam, client }) {
     }
 
     const [name, parsedValue] = args;
-    const [originalName, originalValue] = client.argv.slice(-2);
-
     let value = parsedValue;
-    if (
-      name === originalName &&
-      typeof parsedValue === 'boolean' &&
-      parsedValue !== originalValue
-    ) {
-      // Corner case where `mri` transforms the secret value into a boolean because
-      // it starts with a `-` so it thinks its a flag, so we use the original value instead.
-      value = originalValue;
-    }
 
     if (typeof value === 'boolean') {
       const example = chalk.cyan(
