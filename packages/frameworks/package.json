@@ -15,7 +15,7 @@
   "scripts": {
     "build": "run-p build:*",
     "build:src": "node ../../scripts/esbuild.mjs",
-    "build:types": "tsc --declaration --emitDeclarationOnly",
+    "build:types": "tsc",
     "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --runInBand --bail",
     "test-unit": "pnpm test"
   },
