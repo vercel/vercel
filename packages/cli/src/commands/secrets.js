@@ -333,7 +333,7 @@ async function run({ output, contextName, currentTeam, client }) {
       return 1;
     }
 
-    const [name, parsedValue] = args;
+    const [name, value] = args;
     let value = parsedValue;
 
     if (typeof value === 'boolean') {
