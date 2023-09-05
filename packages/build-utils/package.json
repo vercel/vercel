@@ -15,7 +15,7 @@
     "build:js": "run-s build:single build:bundle",
     "build:single": "node ../../scripts/esbuild.mjs",
     "build:bundle": "node ../../scripts/esbuild.mjs --bundle",
-    "build:types": "tsc --declaration --emitDeclarationOnly",
+    "build:types": "tsc",
     "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --runInBand --bail",
     "test-unit": "pnpm test test/unit.*test.*",
     "test-e2e": "pnpm test test/integration.test.ts"
