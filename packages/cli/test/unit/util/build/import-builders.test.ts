@@ -22,7 +22,7 @@ describe('importBuilders()', () => {
     expect(builders.get('@vercel/node')?.pkg).toMatchObject(vercelNodePkg);
     expect(builders.get('@vercel/next')?.pkg).toMatchObject(vercelNextPkg);
     expect(builders.get('@vercel/node')?.pkgPath).toEqual(
-      join(repoRoot, 'packages/node/package.json')
+      join(repoRoot, 'packages/runtime-node/package.json')
     );
     expect(builders.get('@vercel/next')?.pkgPath).toEqual(
       join(repoRoot, 'packages/next/package.json')
@@ -46,7 +46,7 @@ describe('importBuilders()', () => {
       vercelNextPkg
     );
     expect(builders.get('@vercel/node@latest')?.pkgPath).toEqual(
-      join(repoRoot, 'packages/node/package.json')
+      join(repoRoot, 'packages/runtime-node/package.json')
     );
     expect(builders.get('@vercel/next@latest')?.pkgPath).toEqual(
       join(repoRoot, 'packages/next/package.json')
@@ -70,7 +70,7 @@ describe('importBuilders()', () => {
       vercelNextPkg
     );
     expect(builders.get('@vercel/node@canary')?.pkgPath).toEqual(
-      join(repoRoot, 'packages/node/package.json')
+      join(repoRoot, 'packages/runtime-node/package.json')
     );
     expect(builders.get('@vercel/next@canary')?.pkgPath).toEqual(
       join(repoRoot, 'packages/next/package.json')

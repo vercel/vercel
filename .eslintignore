@@ -2,7 +2,7 @@ node_modules
 dist
 examples
 
-packages/node/src/bridge.ts
+packages/runtime-node/src/bridge.ts
 
 packages/*/test/fixtures
 

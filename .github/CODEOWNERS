@@ -14,7 +14,7 @@
 /examples/hugo                           @styfle
 /examples/jekyll                         @styfle
 /examples/zola                           @styfle
-/packages/node                           @TooTallNate @EndangeredMassa @styfle @cb1kenobi @Ethan-Arrowood @trek @Kikobeats
+/packages/runtime-node                   @TooTallNate @EndangeredMassa @styfle @cb1kenobi @Ethan-Arrowood @trek @Kikobeats
 
 # Unrestricted Paths
 .changeset/

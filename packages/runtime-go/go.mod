@@ -14,7 +14,7 @@ go 1.20
 //   "mode": "auto",
 //   "program": "${fileDirname}",
 //   "args": [
-//     "-modpath=YOUR_VERCEL_DIR/packages/go/test/fixtures/24-bad-handler/api/",
-//     "YOUR_VERCEL_DIR/packages/go/test/fixtures/24-bad-handler/api/index.go"
+//     "-modpath=YOUR_VERCEL_DIR/packages/runtime-go/test/fixtures/24-bad-handler/api/",
+//     "YOUR_VERCEL_DIR/packages/runtime-go/test/fixtures/24-bad-handler/api/index.go"
 //   ]
 // }
