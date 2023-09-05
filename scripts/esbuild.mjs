@@ -31,7 +31,7 @@ const configPath = path.join(cwd, 'tsconfig.json');
 const tsconfig = parseTsConfig(configPath);
 
 if (!tsconfig) {
-    process.exit(1);
+  process.exit(1);
 }
 
 await build({
