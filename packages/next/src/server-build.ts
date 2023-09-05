@@ -1090,7 +1090,7 @@ export async function serverBuild({
     )
   );
 
-  let pagesPlaceholderRscEntries;
+  const pagesPlaceholderRscEntries: Record<string, FileFsRef> = {};
 
   if (appDir) {
     // since we attempt to rewrite all paths to an .rsc variant,
@@ -1111,12 +1111,12 @@ export async function serverBuild({
       const placeholderFilePath = path.join(tmpdir(), 'rsc-placeholder');
       await fs.writeFile(placeholderFilePath, 'RSC Placeholder');
 
-      pagesPlaceholderRscEntries = pagesEntries.reduce((acc, page) => {
-        acc[`${page.slice(1)}.rsc`] = new FileFsRef({
+      for (const page of pagesEntries) {
+        const pathName = page.startsWith('/') ? page.slice(1) : page;
+        pagesPlaceholderRscEntries[`${pathName}.rsc`] = new FileFsRef({
           fsPath: placeholderFilePath,
         });
-        return acc;
-      }, {} as Record<string, FileFsRef>);
+      }
     }
   }
 
