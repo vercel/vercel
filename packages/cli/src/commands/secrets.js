@@ -334,7 +334,6 @@ async function run({ output, contextName, currentTeam, client }) {
     }
 
     const [name, value] = args;
-    let value = parsedValue;
 
     if (typeof value === 'boolean') {
       const example = chalk.cyan(
