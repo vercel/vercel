@@ -103,7 +103,7 @@ describe('`geolocation`', () => {
     });
   });
 
-  test('returns underfined if countryCode is invalud', () => {
+  test('returns undefined if countryCode is invalid', () => {
     const req = new Request('https://example.vercel.sh', {
       headers: {
         [CITY_HEADER_NAME]: 'Tokyo',
@@ -116,7 +116,7 @@ describe('`geolocation`', () => {
     expect(geolocation(req)).toEqual<Geo>({
       city: 'Tokyo',
       flag: undefined,
-      country: 'JP',
+      country: 'AAA',
       latitude: '37.1233',
       longitude: '30.733399',
       region: 'dev1',
