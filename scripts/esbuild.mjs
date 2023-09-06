@@ -36,10 +36,10 @@ if (!tsconfig) {
 
 const bundle = process.argv.includes('--bundle');
 const entryPoints = bundle
-  // When bundling, assume `src/index.ts` is the entrypoint file
-  ? [path.join(cwd, 'src/index.ts')]
-  // When not bundling, compile all files referenced by the `tsconfig.json` file
-  : tsconfig.fileNames;
+  ? // When bundling, assume `src/index.ts` is the entrypoint file
+    [path.join(cwd, 'src/index.ts')]
+  : // When not bundling, compile all files referenced by the `tsconfig.json` file
+    tsconfig.fileNames;
 
 await build({
   entryPoints,
