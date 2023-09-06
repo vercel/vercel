@@ -16,7 +16,7 @@
       "headers": {
         "RSC": "1"
       },
-      "mustContain": "RSC Placeholder"
+      "bodyMustBe": "{}"
     },
     {
       "path": "/en/foobar",

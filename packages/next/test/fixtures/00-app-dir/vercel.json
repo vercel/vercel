@@ -54,7 +54,7 @@
         "RSC": "1",
         "Next-Router-Prefetch": "1"
       },
-      "mustContain": "RSC Placeholder"
+      "bodyMustBe": "{}"
     },
     {
       "path": "/ssg",

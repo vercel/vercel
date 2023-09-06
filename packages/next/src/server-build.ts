@@ -1110,7 +1110,8 @@ export async function serverBuild({
       for (const page of pagesEntries) {
         const pathName = page.startsWith('/') ? page.slice(1) : page;
         pagesPlaceholderRscEntries[`${pathName}.rsc`] = new FileBlob({
-          data: 'RSC Placeholder',
+          data: '{}',
+          contentType: 'application/json',
         });
       }
     }
