@@ -61,6 +61,7 @@ async function main() {
   const packagesDir = join(repoRoot, 'packages');
   const packages = await fs.readdir(packagesDir);
   for (const pkg of packages) {
+    console.log(pkg);
     const fullDir = join(packagesDir, pkg);
     const packageJsonRaw = await fs.readFile(
       join(fullDir, 'package.json'),
