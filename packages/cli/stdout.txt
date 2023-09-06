@@ -1,5 +1,0 @@
-
-> vercel@32.1.0 dev /Users/smassa/source/vercel/vercel-2/packages/cli
-> ts-node ./src/index.ts "--cwd" "/Users/smassa/source/demo/edge-errors"
-
-https://edge-errors-lyjh65sto-uncurated-tests.vercel.app
