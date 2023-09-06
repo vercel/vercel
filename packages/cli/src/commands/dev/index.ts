@@ -12,41 +12,14 @@ import highlight from '../../util/output/highlight';
 import dev from './dev';
 import readConfig from '../../util/config/read-config';
 import readJSONFile from '../../util/read-json-file';
-import { packageName, getCommandName, logo } from '../../util/pkg-name';
+import { packageName, getCommandName } from '../../util/pkg-name';
 import { CantParseJSONFile } from '../../util/errors-ts';
 import { isErrnoException } from '@vercel/error-utils';
+import { help } from '../help';
+import { devCommand } from './command';
 
 const COMMAND_CONFIG = {
   dev: ['dev'],
-};
-
-const help = () => {
-  console.log(`
-  ${chalk.bold(`${logo} ${packageName} dev`)} [options] <dir>
-
-  Starts the \`${packageName} dev\` server.
-
-  ${chalk.dim('Options:')}
-
-    -h, --help             Output usage information
-    -d, --debug            Debug mode [off]
-    --no-color             No color mode [off]
-    -l, --listen  [uri]    Specify a URI endpoint on which to listen [0.0.0.0:3000]
-    -t, --token   [token]  Specify an Authorization Token
-    -y, --yes              Skip questions when setting up new project using default scope and settings
-
-  ${chalk.dim('Examples:')}
-
-  ${chalk.gray('–')} Start the \`${packageName} dev\` server on port 8080
-
-      ${chalk.cyan(`$ ${packageName} dev --listen 8080`)}
-
-  ${chalk.gray(
-    '–'
-  )} Make the \`vercel dev\` server bind to localhost on port 5000
-
-      ${chalk.cyan(`$ ${packageName} dev --listen 127.0.0.1:5000`)}
-  `);
 };
 
 export default async function main(client: Client) {
@@ -100,7 +73,7 @@ export default async function main(client: Client) {
   }
 
   if (argv['--help']) {
-    help();
+    client.output.print(help(devCommand, { columns: client.stderr.columns }));
     return 2;
   }
 
