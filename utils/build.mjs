@@ -49,7 +49,7 @@ export async function esbuild(opts = {}, cwd = process.cwd()) {
     platform: 'node',
     target: ts.ScriptTarget[tsconfig.options.target],
     sourcemap: tsconfig.options.sourceMap,
-    ...opts
+    ...opts,
   });
 }
 
