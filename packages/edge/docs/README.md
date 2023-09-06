@@ -58,7 +58,7 @@ Country of the original client IP as calculated by Vercel Proxy.
 
 • `Const` **EMOJI_FLAG_UNICODE_STARTING_POSITION**: `127462`
 
-Unicode characters for emoji flags start at theh beow number and run up to 127469
+Unicode characters for emoji flags start at this number, and run up to 127469
 
 #### Defined in
 
