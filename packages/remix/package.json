@@ -10,7 +10,7 @@
     "directory": "packages/remix"
   },
   "scripts": {
-    "build": "node build.js",
+    "build": "node ../../utils/build.mjs",
     "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --bail --runInBand",
     "test-unit": "pnpm test test/unit.*test.*",
     "test-e2e": "pnpm test test/integration.test.ts"
