@@ -1,6 +1,6 @@
 export const runtime = 'edge';
 
-const Layout = ({ children }: any) => {
+const Layout = ({ children }) => {
   return (
     <html>
       <body>{children}</body>
