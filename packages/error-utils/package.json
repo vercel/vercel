@@ -13,7 +13,7 @@
     "directory": "packages/error-utils"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "node ../../utils/build.mjs",
     "test": "jest --reporters=default --reporters=jest-junit --coverage --env node --verbose",
     "test-unit": "pnpm test"
   },
