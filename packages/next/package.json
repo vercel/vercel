@@ -54,7 +54,7 @@
     "ndjson": "2.0.0",
     "pretty-bytes": "5.3.0",
     "resolve-from": "5.0.0",
-    "semver": "6.1.1",
+    "semver": "6.3.1",
     "set-cookie-parser": "2.4.6",
     "source-map": "0.7.3",
     "test-listen": "1.1.0",
