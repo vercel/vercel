@@ -8,6 +8,7 @@
     "outDir": "dist",
     "sourceMap": true,
     "declaration": true,
+    "emitDeclarationOnly": true,
     "moduleResolution": "node",
     "typeRoots": ["./@types", "./node_modules/@types"]
   },
