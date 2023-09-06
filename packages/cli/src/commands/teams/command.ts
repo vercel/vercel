@@ -48,7 +48,7 @@ export const teamsCommand: Command = {
   options: [
     {
       name: 'next',
-      shorthand: 'n',
+      shorthand: 'N',
       type: 'string',
       argument: 'MS',
       deprecated: false,
