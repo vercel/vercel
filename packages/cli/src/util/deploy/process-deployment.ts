@@ -168,16 +168,12 @@ export default async function processDeployment({
       if (event.type === 'created') {
         const deployment: Deployment = event.payload;
 
-        if (!deployment.projectId) {
-          throw new Error(`Deployment ${deployment.id} missing "projectId".`);
-        }
-
         await linkFolderToProject(
           client,
           cwd,
           {
             orgId: org.id,
-            projectId: deployment.projectId,
+            projectId: deployment.projectId!,
           },
           projectName,
           org.slug
