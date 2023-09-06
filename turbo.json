@@ -1,6 +1,11 @@
 {
   "$schema": "https://turborepo.org/schema.json",
-  "globalDependencies": ["turbo-cache-key.json", "package.json", "test/lib/**"],
+  "globalDependencies": [
+    "turbo-cache-key.json",
+    "package.json",
+    "test/lib/**",
+    "utils/build.mjs"
+  ],
   "pipeline": {
     "build": {
       "dependsOn": ["^build"],
