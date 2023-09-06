@@ -55,7 +55,6 @@ import resolveFrom from 'resolve-from';
 import fs, { lstat } from 'fs-extra';
 import escapeStringRegexp from 'escape-string-regexp';
 import prettyBytes from 'pretty-bytes';
-import { tmpdir } from 'os';
 
 // related PR: https://github.com/vercel/next.js/pull/30046
 const CORRECT_NOT_FOUND_ROUTES_VERSION = 'v12.0.1';
@@ -1090,7 +1089,7 @@ export async function serverBuild({
     )
   );
 
-  const pagesPlaceholderRscEntries: Record<string, FileFsRef> = {};
+  const pagesPlaceholderRscEntries: Record<string, FileBlob> = {};
 
   if (appDir) {
     // since we attempt to rewrite all paths to an .rsc variant,
@@ -1108,13 +1107,10 @@ export async function serverBuild({
     const pagesEntries = Object.keys(pagesData);
 
     if (pagesEntries.length > 0) {
-      const placeholderFilePath = path.join(tmpdir(), 'rsc-placeholder');
-      await fs.writeFile(placeholderFilePath, 'RSC Placeholder');
-
       for (const page of pagesEntries) {
         const pathName = page.startsWith('/') ? page.slice(1) : page;
-        pagesPlaceholderRscEntries[`${pathName}.rsc`] = new FileFsRef({
-          fsPath: placeholderFilePath,
+        pagesPlaceholderRscEntries[`${pathName}.rsc`] = new FileBlob({
+          data: 'RSC Placeholder',
         });
       }
     }
