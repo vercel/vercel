@@ -4,7 +4,7 @@
     "turbo-cache-key.json",
     "package.json",
     "test/lib/**",
-    "scripts/esbuild.mjs"
+    "utils/build.mjs"
   ],
   "pipeline": {
     "build": {

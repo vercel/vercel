@@ -10,9 +10,7 @@
     "directory": "packages/hydrogen"
   },
   "scripts": {
-    "build": "run-p build:*",
-    "build:js": "node ../../scripts/esbuild.mjs",
-    "build:types": "tsc",
+    "build": "node ../../utils/build.mjs",
     "test-e2e": "pnpm test test/test.js",
     "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --bail --runInBand"
   },
