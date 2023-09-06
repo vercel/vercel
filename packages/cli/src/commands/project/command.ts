@@ -48,7 +48,7 @@ export const projectCommand: Command = {
       name: 'next',
       description: 'Show next page of results',
       argument: 'MS',
-      shorthand: 'n',
+      shorthand: 'N',
       type: 'string',
       deprecated: false,
       multi: false,
