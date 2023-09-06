@@ -85,7 +85,6 @@ function getFlag(countryCode: string | undefined): string | undefined {
   if (!countryCode || !regex) return undefined;
   return String.fromCodePoint(
     ...countryCode
-      .toUpperCase()
       .split('')
       .map(char => EMOJI_FLAG_UNICODE_STARTING_POSITION + char.charCodeAt(0))
   );
