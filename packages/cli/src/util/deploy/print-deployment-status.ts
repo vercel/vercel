@@ -6,6 +6,9 @@ import { isDeploying } from '../../util/deploy/is-deploying';
 import linkStyle from '../output/link';
 import { prependEmoji, emoji } from '../../util/emoji';
 
+/**
+ * Prints (to `client.output`) warnings and errors, if any.
+ */
 export async function printDeploymentStatus(
   client: Client,
   {
