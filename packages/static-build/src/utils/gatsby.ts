@@ -13,7 +13,7 @@ type PluginName = typeof PLUGINS[number];
 const GATSBY_CONFIG_FILE = 'gatsby-config';
 const GATSBY_NODE_FILE = 'gatsby-node';
 
-const _require: typeof require = (0, eval)('require');
+const _require: typeof require = eval('require');
 
 const PLUGIN_PATHS: Record<PluginName, string> = {
   '@vercel/gatsby-plugin-vercel-analytics': path.dirname(
