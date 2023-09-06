@@ -1,4 +1,3 @@
-
 export const runtime = 'edge';
 
 const Home = () => {
