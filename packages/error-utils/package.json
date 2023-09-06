@@ -14,7 +14,6 @@
   },
   "scripts": {
     "build": "node ../../utils/build.mjs",
-    "build:types": "tsc",
     "test": "jest --reporters=default --reporters=jest-junit --coverage --env node --verbose",
     "test-unit": "pnpm test"
   },
