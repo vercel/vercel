@@ -1074,8 +1074,7 @@ export async function serverBuild({
     canUsePreviewMode,
     prerenderManifest.bypassToken || '',
     true,
-    middleware.dynamicRouteMap,
-    inversedAppPathManifest
+    middleware.dynamicRouteMap
   ).then(arr =>
     localizeDynamicRoutes(
       arr,
@@ -1089,6 +1088,32 @@ export async function serverBuild({
       inversedAppPathManifest
     )
   );
+
+  const pagesPlaceholderRscEntries: Record<string, FileBlob> = {};
+
+  if (appDir) {
+    // since we attempt to rewrite all paths to an .rsc variant,
+    // we need to create dummy rsc outputs for all pages entries
+    // this is so that an RSC request to a `pages` entry will match
+    // rather than falling back to a catchall `app` entry
+    // on the nextjs side, invalid RSC response payloads will correctly trigger an mpa navigation
+    const pagesManifest = path.join(
+      entryPath,
+      outputDirectory,
+      `server/pages-manifest.json`
+    );
+
+    const pagesData = await fs.readJSON(pagesManifest);
+    const pagesEntries = Object.keys(pagesData);
+
+    for (const page of pagesEntries) {
+      const pathName = page.startsWith('/') ? page.slice(1) : page;
+      pagesPlaceholderRscEntries[`${pathName}.rsc`] = new FileBlob({
+        data: '{}',
+        contentType: 'application/json',
+      });
+    }
+  }
 
   const { staticFiles, publicDirectoryFiles, staticDirectoryFiles } =
     await getStaticFiles(entryPath, entryDirectory, outputDirectory);
@@ -1248,6 +1273,7 @@ export async function serverBuild({
       ...publicDirectoryFiles,
       ...lambdas,
       ...appRscPrefetches,
+      ...pagesPlaceholderRscEntries,
       // Prerenders may override Lambdas -- this is an intentional behavior.
       ...prerenders,
       ...staticPages,
@@ -1631,72 +1657,22 @@ export async function serverBuild({
           ]
         : []),
 
-      ...(appDir
-        ? [
-            // check routes that end in `.rsc` to see if a page with the resulting name (sans-.rsc) exists in the filesystem
-            // if so, we want to match that page instead. (This matters when prefetching a pages route while on an appdir route)
-            {
-              src: `^${path.posix.join('/', entryDirectory, '/(.*)\\.rsc$')}`,
-              dest: path.posix.join('/', entryDirectory, '/$1'),
-              has: [
-                {
-                  type: 'header',
-                  key: rscHeader,
-                },
-              ],
-              ...(rscPrefetchHeader
-                ? {
-                    missing: [
-                      {
-                        type: 'header',
-                        key: rscPrefetchHeader,
-                      },
-                    ],
-                  }
-                : {}),
-              check: true,
-            } as Route,
-          ]
-        : []),
-
       // These need to come before handle: miss or else they are grouped
       // with that routing section
       ...afterFilesRewrites,
 
-      ...(appDir
-        ? [
-            // rewrite route back to `.rsc`, but skip checking fs
-            {
-              src: `^${path.posix.join(
-                '/',
-                entryDirectory,
-                '/((?!.+\\.rsc).+?)(?:/)?$'
-              )}`,
-              has: [
-                {
-                  type: 'header',
-                  key: rscHeader,
-                },
-              ],
-              dest: path.posix.join('/', entryDirectory, '/$1.rsc'),
-              headers: { vary: rscVaryHeader },
-              continue: true,
-              override: true,
-            },
-          ]
-        : []),
-
-      // make sure 404 page is used when a directory is matched without
-      // an index page
       { handle: 'resource' },
 
       ...fallbackRewrites,
 
+      // make sure 404 page is used when a directory is matched without
+      // an index page
       { src: path.posix.join('/', entryDirectory, '.*'), status: 404 },
+
+      { handle: 'miss' },
 
       // We need to make sure to 404 for /_next after handle: miss since
       // handle: miss is called before rewrites and to prevent rewriting /_next
-      { handle: 'miss' },
       {
         src: path.posix.join(
           '/',
