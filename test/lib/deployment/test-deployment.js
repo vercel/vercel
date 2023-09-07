@@ -220,6 +220,16 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
     hadTest = true;
   }
 
+  if (probe.bodyMustBe) {
+    if (text !== probe.bodyMustBe) {
+      throw new Error(
+        `Fetched page ${probeUrl} does not have an exact body match of ${probe.bodyMustBe}. Content: ${text}`
+      );
+    }
+
+    hadTest = true;
+  }
+
   /**
    * @type Record<string, string[]>
    */
