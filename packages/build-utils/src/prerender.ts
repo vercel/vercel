@@ -12,7 +12,7 @@ interface PrerenderOptions {
   initialStatus?: number;
   passQuery?: boolean;
   sourcePath?: string;
-  experimentalSteramingLambda?: string;
+  experimentalStreamingLambda?: string;
 }
 
 export class Prerender {
