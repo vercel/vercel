@@ -13,5 +13,7 @@
     "outDir": "dist",
     "strict": true,
     "target": "ES2021"
-  }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules"]
 }
