@@ -1033,7 +1033,7 @@ importers:
         specifier: ^2.3.0
         version: 2.6.2
       '@types/tar':
-        specifier: ^6.1.5
+        specifier: 6.1.5
         version: 6.1.5
       '@types/yauzl-promise':
         specifier: 2.1.0
