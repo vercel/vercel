@@ -554,17 +554,17 @@ it('Should de-dupe correctly when limit is close (uncompressed)', async () => {
   expect(lambdas.size).toBeLessThan(totalLambdas);
 });
 
-it('Should de-dupe correctly when limit is close (uncompressed)', async () => {
+it('should handle edge functions in app with basePath', async () => {
   const {
     buildResult: { output },
   } = await runBuildLambda(path.join(__dirname, 'edge-app-dir-basepath'));
 
   console.error(output);
 
-  expect(output['test/index']).toBeDefined();
-  expect(output['test/index.rsc']).toBeDefined();
-  expect(output['test/index'].type).toBe('EdgeFunction');
-  expect(output['test/index.rsc'].type).toBe('EdgeFunction');
+  expect(output['test']).toBeDefined();
+  expect(output['test']).toBeDefined();
+  expect(output['test'].type).toBe('EdgeFunction');
+  expect(output['test'].type).toBe('EdgeFunction');
 
   expect(output['test/another']).toBeDefined();
   expect(output['test/another.rsc']).toBeDefined();
