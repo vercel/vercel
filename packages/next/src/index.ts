@@ -1321,11 +1321,7 @@ export const build: BuildV2 = async ({
       const localePrefixed404 = !!(
         routesManifest.i18n &&
         originalStaticPages[
-          path.posix.join(
-            entryDirectory,
-            routesManifest.i18n.defaultLocale,
-            '404.html'
-          )
+          path.posix.join('.', routesManifest.i18n.defaultLocale, '404.html')
         ]
       );
 
