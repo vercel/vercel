@@ -16,7 +16,7 @@
       "headers": {
         "RSC": "1"
       },
-      "mustContain": "<html"
+      "bodyMustBe": "{}"
     },
     {
       "path": "/en/foobar",
