@@ -1106,14 +1106,12 @@ export async function serverBuild({
     const pagesData = await fs.readJSON(pagesManifest);
     const pagesEntries = Object.keys(pagesData);
 
-    if (pagesEntries.length > 0) {
-      for (const page of pagesEntries) {
-        const pathName = page.startsWith('/') ? page.slice(1) : page;
-        pagesPlaceholderRscEntries[`${pathName}.rsc`] = new FileBlob({
-          data: '{}',
-          contentType: 'application/json',
-        });
-      }
+    for (const page of pagesEntries) {
+      const pathName = page.startsWith('/') ? page.slice(1) : page;
+      pagesPlaceholderRscEntries[`${pathName}.rsc`] = new FileBlob({
+        data: '{}',
+        contentType: 'application/json',
+      });
     }
   }
 
