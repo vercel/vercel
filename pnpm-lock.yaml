@@ -124,7 +124,7 @@ importers:
         version: 2.5.4
       '@vercel/node':
         specifier: '*'
-        version: link:../packages/node
+        version: link:../packages/runtime-node
 
   examples:
     devDependencies:
@@ -317,7 +317,7 @@ importers:
         version: link:../build-utils
       '@vercel/go':
         specifier: 3.0.0
-        version: link:../go
+        version: link:../runtime-go
       '@vercel/hydrogen':
         specifier: 1.0.0
         version: link:../hydrogen
@@ -326,10 +326,10 @@ importers:
         version: link:../next
       '@vercel/node':
         specifier: 3.0.3
-        version: link:../node
+        version: link:../runtime-node
       '@vercel/python':
         specifier: 4.0.0
-        version: link:../python
+        version: link:../runtime-python
       '@vercel/redwood':
         specifier: 2.0.0
         version: link:../redwood
@@ -338,7 +338,7 @@ importers:
         version: link:../remix
       '@vercel/ruby':
         specifier: 2.0.0
-        version: link:../ruby
+        version: link:../runtime-ruby
       '@vercel/static-build':
         specifier: 2.0.3
         version: link:../static-build
@@ -976,7 +976,7 @@ importers:
         version: link:../build-utils
       '@vercel/node':
         specifier: 3.0.3
-        version: link:../node
+        version: link:../runtime-node
       '@vercel/routing-utils':
         specifier: 3.0.0
         version: link:../routing-utils
@@ -1008,72 +1008,6 @@ importers:
       typescript:
         specifier: 4.9.5
         version: 4.9.5
-
-  packages/go:
-    devDependencies:
-      '@tootallnate/once':
-        specifier: 1.1.2
-        version: 1.1.2
-      '@types/async-retry':
-        specifier: 1.4.2
-        version: 1.4.2
-      '@types/execa':
-        specifier: ^0.9.0
-        version: 0.9.0
-      '@types/fs-extra':
-        specifier: ^5.0.5
-        version: 5.1.0
-      '@types/jest':
-        specifier: 28.1.6
-        version: 28.1.6
-      '@types/node':
-        specifier: 14.18.33
-        version: 14.18.33
-      '@types/node-fetch':
-        specifier: ^2.3.0
-        version: 2.5.4
-      '@types/tar':
-        specifier: ^4.0.0
-        version: 4.0.5
-      '@types/yauzl-promise':
-        specifier: 2.1.0
-        version: 2.1.0
-      '@vercel/build-utils':
-        specifier: 7.1.0
-        version: link:../build-utils
-      '@vercel/ncc':
-        specifier: 0.24.0
-        version: 0.24.0
-      async-retry:
-        specifier: 1.3.1
-        version: 1.3.1
-      execa:
-        specifier: ^1.0.0
-        version: 1.0.0
-      fs-extra:
-        specifier: ^7.0.0
-        version: 7.0.1
-      jest-junit:
-        specifier: 16.0.0
-        version: 16.0.0
-      node-fetch:
-        specifier: ^2.2.1
-        version: 2.6.7
-      string-argv:
-        specifier: 0.3.1
-        version: 0.3.1
-      tar:
-        specifier: 4.4.6
-        version: 4.4.6
-      typescript:
-        specifier: 4.3.4
-        version: 4.3.4
-      xdg-app-paths:
-        specifier: 5.1.0
-        version: 5.1.0
-      yauzl-promise:
-        specifier: 2.1.3
-        version: 2.1.3
 
   packages/hydrogen:
     devDependencies:
@@ -1219,7 +1153,167 @@ importers:
         specifier: 3.2.3
         version: 3.2.3
 
-  packages/node:
+  packages/redwood:
+    dependencies:
+      '@vercel/nft':
+        specifier: 0.22.5
+        version: 0.22.5
+      '@vercel/routing-utils':
+        specifier: 3.0.0
+        version: link:../routing-utils
+      semver:
+        specifier: 6.3.1
+        version: 6.3.1
+    devDependencies:
+      '@types/aws-lambda':
+        specifier: 8.10.19
+        version: 8.10.19
+      '@types/node':
+        specifier: 14.18.33
+        version: 14.18.33
+      '@types/semver':
+        specifier: 6.0.0
+        version: 6.0.0
+      '@vercel/build-utils':
+        specifier: 7.1.0
+        version: link:../build-utils
+      execa:
+        specifier: 3.2.0
+        version: 3.2.0
+      fs-extra:
+        specifier: 11.1.0
+        version: 11.1.0
+      jest-junit:
+        specifier: 16.0.0
+        version: 16.0.0
+
+  packages/remix:
+    dependencies:
+      '@vercel/build-utils':
+        specifier: 7.1.0
+        version: link:../build-utils
+      '@vercel/nft':
+        specifier: 0.22.5
+        version: 0.22.5
+      '@vercel/static-config':
+        specifier: 3.0.0
+        version: link:../static-config
+      path-to-regexp:
+        specifier: 6.2.1
+        version: 6.2.1
+      semver:
+        specifier: 7.5.2
+        version: 7.5.2
+      ts-morph:
+        specifier: 12.0.0
+        version: 12.0.0
+    devDependencies:
+      '@remix-run/dev':
+        specifier: npm:@vercel/remix-run-dev@1.19.3
+        version: /@vercel/remix-run-dev@1.19.3(@types/node@14.18.33)
+      '@types/jest':
+        specifier: 27.5.1
+        version: 27.5.1
+      '@types/node':
+        specifier: 14.18.33
+        version: 14.18.33
+      '@types/semver':
+        specifier: 7.3.13
+        version: 7.3.13
+      jest-junit:
+        specifier: 16.0.0
+        version: 16.0.0
+
+  packages/routing-utils:
+    dependencies:
+      path-to-regexp:
+        specifier: 6.1.0
+        version: 6.1.0
+    optionalDependencies:
+      ajv:
+        specifier: ^6.0.0
+        version: 6.12.2
+    devDependencies:
+      '@types/jest':
+        specifier: 27.4.1
+        version: 27.4.1
+      '@types/node':
+        specifier: 14.18.33
+        version: 14.18.33
+      jest-junit:
+        specifier: 16.0.0
+        version: 16.0.0
+      typescript:
+        specifier: 4.9.5
+        version: 4.9.5
+
+  packages/runtime-go:
+    devDependencies:
+      '@tootallnate/once':
+        specifier: 1.1.2
+        version: 1.1.2
+      '@types/async-retry':
+        specifier: 1.4.2
+        version: 1.4.2
+      '@types/execa':
+        specifier: ^0.9.0
+        version: 0.9.0
+      '@types/fs-extra':
+        specifier: ^5.0.5
+        version: 5.1.0
+      '@types/jest':
+        specifier: 28.1.6
+        version: 28.1.6
+      '@types/node':
+        specifier: 14.18.33
+        version: 14.18.33
+      '@types/node-fetch':
+        specifier: ^2.3.0
+        version: 2.5.4
+      '@types/tar':
+        specifier: ^4.0.0
+        version: 4.0.5
+      '@types/yauzl-promise':
+        specifier: 2.1.0
+        version: 2.1.0
+      '@vercel/build-utils':
+        specifier: 7.1.0
+        version: link:../build-utils
+      '@vercel/ncc':
+        specifier: 0.24.0
+        version: 0.24.0
+      async-retry:
+        specifier: 1.3.1
+        version: 1.3.1
+      execa:
+        specifier: ^1.0.0
+        version: 1.0.0
+      fs-extra:
+        specifier: ^7.0.0
+        version: 7.0.1
+      jest-junit:
+        specifier: 16.0.0
+        version: 16.0.0
+      node-fetch:
+        specifier: ^2.2.1
+        version: 2.6.7
+      string-argv:
+        specifier: 0.3.1
+        version: 0.3.1
+      tar:
+        specifier: 4.4.6
+        version: 4.4.6
+      typescript:
+        specifier: 4.3.4
+        version: 4.3.4
+      xdg-app-paths:
+        specifier: 5.1.0
+        version: 5.1.0
+      yauzl-promise:
+        specifier: 2.1.3
+        version: 2.1.3
+
+  packages/runtime-node:
     dependencies:
       '@edge-runtime/node-utils':
         specifier: 2.2.0
@@ -1334,7 +1428,7 @@ importers:
         specifier: 1.1.0
         version: 1.1.0
 
-  packages/python:
+  packages/runtime-python:
     devDependencies:
       '@types/execa':
         specifier: ^0.9.0
@@ -1358,101 +1452,7 @@ importers:
         specifier: 16.0.0
         version: 16.0.0
 
-  packages/redwood:
-    dependencies:
-      '@vercel/nft':
-        specifier: 0.22.5
-        version: 0.22.5
-      '@vercel/routing-utils':
-        specifier: 3.0.0
-        version: link:../routing-utils
-      semver:
-        specifier: 6.3.1
-        version: 6.3.1
-    devDependencies:
-      '@types/aws-lambda':
-        specifier: 8.10.19
-        version: 8.10.19
-      '@types/node':
-        specifier: 14.18.33
-        version: 14.18.33
-      '@types/semver':
-        specifier: 6.0.0
-        version: 6.0.0
-      '@vercel/build-utils':
-        specifier: 7.1.0
-        version: link:../build-utils
-      execa:
-        specifier: 3.2.0
-        version: 3.2.0
-      fs-extra:
-        specifier: 11.1.0
-        version: 11.1.0
-      jest-junit:
-        specifier: 16.0.0
-        version: 16.0.0
-
-  packages/remix:
-    dependencies:
-      '@vercel/build-utils':
-        specifier: 7.1.0
-        version: link:../build-utils
-      '@vercel/nft':
-        specifier: 0.22.5
-        version: 0.22.5
-      '@vercel/static-config':
-        specifier: 3.0.0
-        version: link:../static-config
-      path-to-regexp:
-        specifier: 6.2.1
-        version: 6.2.1
-      semver:
-        specifier: 7.5.2
-        version: 7.5.2
-      ts-morph:
-        specifier: 12.0.0
-        version: 12.0.0
-    devDependencies:
-      '@remix-run/dev':
-        specifier: npm:@vercel/remix-run-dev@1.19.3
-        version: /@vercel/remix-run-dev@1.19.3(@types/node@14.18.33)
-      '@types/jest':
-        specifier: 27.5.1
-        version: 27.5.1
-      '@types/node':
-        specifier: 14.18.33
-        version: 14.18.33
-      '@types/semver':
-        specifier: 7.3.13
-        version: 7.3.13
-      jest-junit:
-        specifier: 16.0.0
-        version: 16.0.0
-
-  packages/routing-utils:
-    dependencies:
-      path-to-regexp:
-        specifier: 6.1.0
-        version: 6.1.0
-    optionalDependencies:
-      ajv:
-        specifier: ^6.0.0
-        version: 6.12.2
-    devDependencies:
-      '@types/jest':
-        specifier: 27.4.1
-        version: 27.4.1
-      '@types/node':
-        specifier: 14.18.33
-        version: 14.18.33
-      jest-junit:
-        specifier: 16.0.0
-        version: 16.0.0
-      typescript:
-        specifier: 4.9.5
-        version: 4.9.5
-
-  packages/ruby:
+  packages/runtime-ruby:
     devDependencies:
       '@types/fs-extra':
         specifier: 8.0.0
@@ -7756,6 +7756,7 @@ packages:
 
   /color-support@1.1.3:
     resolution: {integrity: sha512-qiBjkpbMLO/HL68y+lh4q0/O1MZFj2RX6X/KmMa3+gJD3z+WwI1ZzDHysvqHGS3mP6mznPckpXmw1nI9cJjyRg==}
+    hasBin: true
 
   /combined-stream@1.0.8:
     resolution: {integrity: sha512-FQN4MRfuJeHf7cBbBMJFXhKSDq+2kAArBlmRBvcvFE5BB1HZKXtSFASDhdlz9zOYwxh8lDdnvmMOe/+5cdoEdg==}
@@ -16359,7 +16360,7 @@ packages:
       json5: 2.2.3
       lodash.memoize: 4.1.2
       make-error: 1.3.6
-      semver: 7.3.8
+      semver: 7.5.2
       typescript: 4.9.5
       yargs-parser: 21.1.1
     dev: true
