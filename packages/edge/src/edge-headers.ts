@@ -29,7 +29,7 @@ export const REGION_HEADER_NAME = 'x-vercel-ip-country-region';
  */
 export const REQUEST_ID_HEADER_NAME = 'x-vercel-id';
 /**
- * Unicode characters for emoji flags start at this number, and run up to 127469
+ * Unicode characters for emoji flags start at this number, and run up to 127469.
  */
 export const EMOJI_FLAG_UNICODE_STARTING_POSITION = 127397;
 /**
@@ -75,7 +75,7 @@ function getHeader(request: Request, key: string): string | undefined {
 }
 
 /**
- * Converts the 2 digit countryCode into a flag emoji by adding the current character value to the emoji flag unicode starting position.
+ * Converts the 2 digit countryCode into a flag emoji by adding the current character value to the emoji flag unicode starting position. See [Country Code to Flag Emoji](https://dev.to/jorik/country-code-to-flag-emoji-a21) by Jorik Tangelder.
  *
  * @param countryCode The country code returned by: `getHeader(request, COUNTRY_HEADER_NAME)`.
  * @returns A flag emoji or undefined.
