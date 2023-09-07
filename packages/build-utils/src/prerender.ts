@@ -12,6 +12,7 @@ interface PrerenderOptions {
   initialStatus?: number;
   passQuery?: boolean;
   sourcePath?: string;
+  experimentalSteramingLambda?: string;
 }
 
 export class Prerender {
@@ -26,6 +27,7 @@ export class Prerender {
   public initialStatus?: number;
   public passQuery?: boolean;
   public sourcePath?: string;
+  public experimentalStreamingLambda?: string;
 
   constructor({
     expiration,
@@ -38,6 +40,7 @@ export class Prerender {
     initialStatus,
     passQuery,
     sourcePath,
+    experimentalSteramingLambda,
   }: PrerenderOptions) {
     this.type = 'Prerender';
     this.expiration = expiration;
@@ -130,5 +133,7 @@ export class Prerender {
       }
       this.allowQuery = allowQuery;
     }
+
+    this.experimentalStreamingLambda = experimentalSteramingLambda;
   }
 }
