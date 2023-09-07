@@ -91,6 +91,7 @@ import {
   getOperationType,
   isApiPage,
   getFunctionsConfigManifest,
+  normalizeEdgeFunctionPath,
 } from './utils';
 
 export const version = 2;
@@ -2720,16 +2721,15 @@ async function getServerlessPages(params: {
   for (const edgeFunctionFile of Object.keys(
     middlewareManifest?.functions ?? {}
   )) {
-    let fileName = edgeFunctionFile.slice(1) || 'index';
-    // when using app directory the index page will have path /page
-    if (
-      fileName === 'page' &&
-      // `page` is index path only when using app directory
-      middlewareManifest?.functions?.[edgeFunctionFile]?.name === 'app/page'
-    ) {
-      fileName = 'index';
-    }
-    const edgePath = fileName + '.js';
+    let edgePath =
+      middlewareManifest?.functions?.[edgeFunctionFile].name ||
+      edgeFunctionFile;
+
+    edgePath = normalizeEdgeFunctionPath(
+      edgePath,
+      params.appPathRoutesManifest || {}
+    );
+    edgePath = (edgePath || 'index') + '.js';
     delete normalizedAppPaths[edgePath];
     delete pages[edgePath];
   }
