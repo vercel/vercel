@@ -40,7 +40,7 @@ export class Prerender {
     initialStatus,
     passQuery,
     sourcePath,
-    experimentalSteramingLambda,
+    experimentalStreamingLambda,
   }: PrerenderOptions) {
     this.type = 'Prerender';
     this.expiration = expiration;
@@ -134,6 +134,6 @@ export class Prerender {
       this.allowQuery = allowQuery;
     }
 
-    this.experimentalStreamingLambda = experimentalSteramingLambda;
+    this.experimentalStreamingLambda = experimentalStreamingLambda;
   }
 }
