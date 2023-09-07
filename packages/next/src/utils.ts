@@ -2347,7 +2347,7 @@ export function normalizeIndexOutput(
   outputName: string,
   isServerMode: boolean
 ) {
-  if (outputName !== '/index' && isServerMode) {
+  if (outputName !== 'index' && outputName !== '/index' && isServerMode) {
     return outputName.replace(/\/index$/, '');
   }
   return outputName;
@@ -2730,9 +2730,14 @@ export async function getMiddlewareBundle({
       }
 
       if (routesManifest?.basePath) {
-        shortPath = path.posix
-          .join(routesManifest.basePath, shortPath)
-          .replace(/^\//, '');
+        shortPath = normalizeIndexOutput(
+          path.posix.join(
+            './',
+            routesManifest?.basePath,
+            shortPath.replace(/^\//, '')
+          ),
+          true
+        );
       }
 
       worker.edgeFunction.name = shortPath;
