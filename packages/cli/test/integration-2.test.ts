@@ -735,6 +735,12 @@ test('deploys with only vercel.json and README.md', async () => {
   });
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
+
+  // assert timing order of showing URLs vs status updates
+  expect(stderr).toMatch(
+    /Inspect.*\nPreview.*\nQueued.*\nBuilding.*\nCompleting/
+  );
+
   const { host } = new URL(stdout);
   const res = await fetch(`https://${host}/README.md`);
   const text = await res.text();
