@@ -501,7 +501,7 @@ it('should detect pnpm with workspaces', async () => {
 it('should detect package.json in nested backend', async () => {
   const fixture = path.join(
     __dirname,
-    '../../node/test/fixtures/18.1-nested-packagejson/backend'
+    '../../runtime-node/test/fixtures/18.1-nested-packagejson/backend'
   );
   const result = await scanParentDirs(fixture);
   expect(result.cliType).toEqual('pnpm');
@@ -513,7 +513,7 @@ it('should detect package.json in nested backend', async () => {
 it('should detect package.json in nested frontend', async () => {
   const fixture = path.join(
     __dirname,
-    '../../node/test/fixtures/18.1-nested-packagejson/frontend'
+    '../../runtime-node/test/fixtures/18.1-nested-packagejson/frontend'
   );
   const result = await scanParentDirs(fixture);
   expect(result.cliType).toEqual('pnpm');
