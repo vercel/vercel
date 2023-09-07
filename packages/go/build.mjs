@@ -1,3 +1,3 @@
-import { tsc, esbuild } from '../../utils/build.mjs';
+import { esbuild } from '../../utils/build.mjs';
 
-await Promise.all([tsc(), esbuild().then(() => esbuild({ bundle: true }))]);
+await esbuild({ bundle: true, external: ['@vercel/build-utils'] });
