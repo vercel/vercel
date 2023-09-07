@@ -621,7 +621,7 @@ async function copyDevServer(
   functionName: string,
   dest: string
 ): Promise<void> {
-  const data = await readFile(join(__dirname, 'dev-server.go'), 'utf8');
+  const data = await readFile(join(__dirname, '../dev-server.go'), 'utf8');
 
   // Populate the handler function name
   const patched = data.replace('__HANDLER_FUNC_NAME', functionName);
@@ -634,7 +634,10 @@ async function writeEntrypoint(
   goPackageName: string,
   goFuncName: string
 ) {
-  const modMainGoContents = await readFile(join(__dirname, 'main.go'), 'utf8');
+  const modMainGoContents = await readFile(
+    join(__dirname, '../main.go'),
+    'utf8'
+  );
   const mainModGoContents = modMainGoContents
     .replace('__VC_HANDLER_PACKAGE_NAME', goPackageName)
     .replace('__VC_HANDLER_FUNC_NAME', goFuncName);
