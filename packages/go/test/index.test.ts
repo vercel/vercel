@@ -1,4 +1,4 @@
-import { getNewHandlerFunctionName } from '../index';
+import { getNewHandlerFunctionName } from '../src/index';
 
 describe('getNewHandlerFunctionName', function () {
   it('does nothing with empty original function name', async () => {

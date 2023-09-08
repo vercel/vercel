@@ -1,5 +1,13 @@
 # @vercel/build-utils
 
+## 7.1.1
+
+### Patch Changes
+
+- add descriptions to NodeVersion properties ([#10403](https://github.com/vercel/vercel/pull/10403))
+
+- Updated semver dependency ([#10411](https://github.com/vercel/vercel/pull/10411))
+
 ## 7.1.0
 
 ### Minor Changes

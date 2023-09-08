@@ -553,3 +553,52 @@ it('Should de-dupe correctly when limit is close (uncompressed)', async () => {
   expect(lambdas.size).toBe(2);
   expect(lambdas.size).toBeLessThan(totalLambdas);
 });
+
+it('should handle edge functions in app with basePath', async () => {
+  const {
+    buildResult: { output },
+  } = await runBuildLambda(path.join(__dirname, 'edge-app-dir-basepath'));
+
+  console.error(output);
+
+  expect(output['test']).toBeDefined();
+  expect(output['test']).toBeDefined();
+  expect(output['test'].type).toBe('EdgeFunction');
+  expect(output['test'].type).toBe('EdgeFunction');
+
+  expect(output['test/another']).toBeDefined();
+  expect(output['test/another.rsc']).toBeDefined();
+  expect(output['test/another'].type).toBe('EdgeFunction');
+  expect(output['test/another.rsc'].type).toBe('EdgeFunction');
+
+  expect(output['test/dynamic/[slug]']).toBeDefined();
+  expect(output['test/dynamic/[slug].rsc']).toBeDefined();
+  expect(output['test/dynamic/[slug]'].type).toBe('EdgeFunction');
+  expect(output['test/dynamic/[slug].rsc'].type).toBe('EdgeFunction');
+
+  expect(output['test/dynamic/[slug]']).toBeDefined();
+  expect(output['test/dynamic/[slug].rsc']).toBeDefined();
+  expect(output['test/dynamic/[slug]'].type).toBe('EdgeFunction');
+  expect(output['test/dynamic/[slug].rsc'].type).toBe('EdgeFunction');
+
+  expect(output['test/test']).toBeDefined();
+  expect(output['test/test.rsc']).toBeDefined();
+  expect(output['test/test'].type).toBe('EdgeFunction');
+  expect(output['test/test.rsc'].type).toBe('EdgeFunction');
+
+  expect(output['test/_not-found']).toBeDefined();
+  expect(output['test/_not-found'].type).toBe('Lambda');
+
+  const lambdas = new Set();
+  const edgeFunctions = new Set();
+
+  for (const item of Object.values(output)) {
+    if (item.type === 'Lambda') {
+      lambdas.add(item);
+    } else if (item.type === 'EdgeFunction') {
+      edgeFunctions.add(item);
+    }
+  }
+  expect(lambdas.size).toBe(1);
+  expect(edgeFunctions.size).toBe(4);
+});

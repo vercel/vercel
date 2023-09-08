@@ -1,5 +1,19 @@
 # @vercel/next
 
+## 4.0.2
+
+### Patch Changes
+
+- Fix Next.js with `basePath` + Edge runtime + App Router on a top level `page.jsx` ([#10465](https://github.com/vercel/vercel/pull/10465))
+
+- Updated semver dependency ([#10411](https://github.com/vercel/vercel/pull/10411))
+
+- Fix RSC rewrite behavior ([#10415](https://github.com/vercel/vercel/pull/10415))
+
+- fix ENOENT on /404.html when `fallback: false` w/ `basePath` ([#10473](https://github.com/vercel/vercel/pull/10473))
+
+- fix 404 enoent for i18n ([#10416](https://github.com/vercel/vercel/pull/10416))
+
 ## 4.0.1
 
 ### Patch Changes
