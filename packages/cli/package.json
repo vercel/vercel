@@ -1,6 +1,6 @@
 {
   "name": "vercel",
-  "version": "32.1.0",
+  "version": "32.2.0",
   "preferGlobal": true,
   "license": "Apache-2.0",
   "description": "The command-line interface for Vercel",
@@ -31,16 +31,16 @@
     "node": ">= 16"
   },
   "dependencies": {
-    "@vercel/build-utils": "7.1.0",
+    "@vercel/build-utils": "7.1.1",
     "@vercel/go": "3.0.0",
     "@vercel/hydrogen": "1.0.0",
-    "@vercel/next": "4.0.1",
-    "@vercel/node": "3.0.3",
+    "@vercel/next": "4.0.2",
+    "@vercel/node": "3.0.4",
     "@vercel/python": "4.0.0",
-    "@vercel/redwood": "2.0.0",
-    "@vercel/remix-builder": "2.0.2",
-    "@vercel/ruby": "2.0.0",
-    "@vercel/static-build": "2.0.3"
+    "@vercel/redwood": "2.0.1",
+    "@vercel/remix-builder": "2.0.3",
+    "@vercel/ruby": "2.0.1",
+    "@vercel/static-build": "2.0.4"
   },
   "devDependencies": {
     "@alex_neo/jest-expect-message": "1.0.5",
@@ -86,11 +86,11 @@
     "@types/yauzl-promise": "2.1.0",
     "@vercel-internals/constants": "1.0.4",
     "@vercel-internals/get-package-json": "1.0.0",
-    "@vercel-internals/types": "1.0.8",
-    "@vercel/client": "13.0.1",
+    "@vercel-internals/types": "1.0.9",
+    "@vercel/client": "13.0.2",
     "@vercel/error-utils": "2.0.1",
     "@vercel/frameworks": "2.0.1",
-    "@vercel/fs-detectors": "5.0.1",
+    "@vercel/fs-detectors": "5.0.2",
     "@vercel/fun": "1.1.0",
     "@vercel/ncc": "0.24.0",
     "@vercel/routing-utils": "3.0.0",
