@@ -28,10 +28,10 @@ import { Sema } from 'async-sema';
 import crc32 from 'buffer-crc32';
 import fs, { lstat, stat } from 'fs-extra';
 import path from 'path';
-import resolveFrom from 'resolve-from';
 import semver from 'semver';
 import zlib from 'zlib';
 import url from 'url';
+import { createRequire } from 'module';
 import escapeStringRegexp from 'escape-string-regexp';
 import { htmlContentType } from '.';
 import textTable from 'text-table';
@@ -42,6 +42,8 @@ import type { RawSourceMap } from 'source-map';
 import bytes from 'bytes';
 
 type stringMap = { [key: string]: string };
+
+export const require_ = createRequire(__filename);
 
 export const KIB = 1024;
 export const MIB = 1024 * KIB;
@@ -417,10 +419,10 @@ export async function getDynamicRoutes(
   let getSortedRoutes: ((normalizedPages: string[]) => string[]) | undefined;
 
   try {
-    // NOTE: `eval('require')` is necessary to avoid bad transpilation to `__webpack_require__`
-    ({ getRouteRegex, getSortedRoutes } = eval('require')(
-      resolveFrom(entryPath, 'next-server/dist/lib/router/utils')
-    ));
+    const resolved = require_.resolve('next-server/dist/lib/router/utils', {
+      paths: [entryPath],
+    });
+    ({ getRouteRegex, getSortedRoutes } = require_(resolved));
     if (typeof getRouteRegex !== 'function') {
       getRouteRegex = undefined;
     }
@@ -428,10 +430,11 @@ export async function getDynamicRoutes(
 
   if (!getRouteRegex || !getSortedRoutes) {
     try {
-      // NOTE: `eval('require')` is necessary to avoid bad transpilation to `__webpack_require__`
-      ({ getRouteRegex, getSortedRoutes } = eval('require')(
-        resolveFrom(entryPath, 'next/dist/next-server/lib/router/utils')
-      ));
+      const resolved = require_.resolve(
+        'next/dist/next-server/lib/router/utils',
+        { paths: [entryPath] }
+      );
+      ({ getRouteRegex, getSortedRoutes } = require_(resolved));
       if (typeof getRouteRegex !== 'function') {
         getRouteRegex = undefined;
       }

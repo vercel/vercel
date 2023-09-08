@@ -1104,6 +1104,13 @@ importers:
         version: 16.0.0
 
   packages/next:
+    dependencies:
+      '@vercel/nft':
+        specifier: 0.22.5
+        version: 0.22.5
+      esbuild:
+        specifier: 0.12.22
+        version: 0.12.22
     devDependencies:
       '@types/aws-lambda':
         specifier: 8.10.19
@@ -1147,9 +1154,6 @@ importers:
       '@vercel/build-utils':
         specifier: 7.1.1
         version: link:../build-utils
-      '@vercel/nft':
-        specifier: 0.22.5
-        version: 0.22.5
       '@vercel/routing-utils':
         specifier: 3.0.0
         version: link:../routing-utils
@@ -1168,9 +1172,6 @@ importers:
       convert-source-map:
         specifier: 1.8.0
         version: 1.8.0
-      esbuild:
-        specifier: 0.12.22
-        version: 0.12.22
       escape-string-regexp:
         specifier: 2.0.0
         version: 2.0.0
@@ -8790,7 +8791,7 @@ packages:
   /esbuild@0.12.22:
     resolution: {integrity: sha512-yWCr9RoFehpqoe/+MwZXJpYOEIt7KOEvNnjIeMZpMSyQt+KCBASM3y7yViiN5dJRphf1wGdUz1+M4rTtWd/ulA==}
     requiresBuild: true
-    dev: true
+    dev: false
 
   /esbuild@0.14.47:
     resolution: {integrity: sha512-wI4ZiIfFxpkuxB8ju4MHrGwGLyp1+awEHAHVpx6w7a+1pmYIq8T9FGEVVwFo0iFierDoMj++Xq69GXWYn2EiwA==}
