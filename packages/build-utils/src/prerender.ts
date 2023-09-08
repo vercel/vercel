@@ -1,4 +1,4 @@
-import { File } from './types';
+import type { File, HasField } from './types';
 import { Lambda } from './lambda';
 
 interface PrerenderOptions {
@@ -7,6 +7,7 @@ interface PrerenderOptions {
   fallback: File | null;
   group?: number;
   bypassToken?: string | null /* optional to be non-breaking change */;
+  experimentalBypassFor?: HasField;
   allowQuery?: string[];
   initialHeaders?: Record<string, string>;
   initialStatus?: number;
@@ -26,6 +27,7 @@ export class Prerender {
   public initialStatus?: number;
   public passQuery?: boolean;
   public sourcePath?: string;
+  public experimentalBypassFor?: HasField;
 
   constructor({
     expiration,
@@ -33,6 +35,7 @@ export class Prerender {
     fallback,
     group,
     bypassToken,
+    experimentalBypassFor,
     allowQuery,
     initialHeaders,
     initialStatus,
@@ -84,6 +87,26 @@ export class Prerender {
       throw new Error(
         'The `bypassToken` argument for `Prerender` must be a `string`.'
       );
+    }
+
+    if (experimentalBypassFor !== undefined) {
+      if (
+        !Array.isArray(experimentalBypassFor) ||
+        experimentalBypassFor.some(
+          field =>
+            typeof field !== 'object' ||
+            // host doesn't need a key
+            (field.type !== 'host' && typeof field.key !== 'string') ||
+            typeof field.type !== 'string' ||
+            (field.value !== undefined && typeof field.value !== 'string')
+        )
+      ) {
+        throw new Error(
+          'The `experimentalBypassFor` argument for `Prerender` must be Array of objects with fields `type`, `key` and optionally `value`.'
+        );
+      }
+
+      this.experimentalBypassFor = experimentalBypassFor;
     }
 
     if (typeof fallback === 'undefined') {
