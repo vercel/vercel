@@ -2,4 +2,4 @@
 '@vercel/build-utils': minor
 ---
 
-Add new optional prerender field: experimentalStreamingLambda
+Add new optional prerender field: experimentalStreamingLambdaPath

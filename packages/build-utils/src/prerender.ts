@@ -12,7 +12,7 @@ interface PrerenderOptions {
   initialStatus?: number;
   passQuery?: boolean;
   sourcePath?: string;
-  experimentalStreamingLambda?: string;
+  experimentalStreamingLambdaPath?: string;
 }
 
 export class Prerender {
@@ -27,7 +27,7 @@ export class Prerender {
   public initialStatus?: number;
   public passQuery?: boolean;
   public sourcePath?: string;
-  public experimentalStreamingLambda?: string;
+  public experimentalStreamingLambdaPath?: string;
 
   constructor({
     expiration,
@@ -40,7 +40,7 @@ export class Prerender {
     initialStatus,
     passQuery,
     sourcePath,
-    experimentalStreamingLambda,
+    experimentalStreamingLambdaPath,
   }: PrerenderOptions) {
     this.type = 'Prerender';
     this.expiration = expiration;
@@ -134,6 +134,13 @@ export class Prerender {
       this.allowQuery = allowQuery;
     }
 
-    this.experimentalStreamingLambda = experimentalStreamingLambda;
+    if (experimentalStreamingLambdaPath !== undefined) {
+      if (typeof experimentalStreamingLambdaPath !== 'string') {
+        throw new Error(
+          'The `experimentalStreamingLambdaPath` argument for `Prerender` must be a string.'
+        );
+      }
+      this.experimentalStreamingLambdaPath = experimentalStreamingLambdaPath;
+    }
   }
 }
