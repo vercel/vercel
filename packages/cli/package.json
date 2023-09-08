@@ -91,7 +91,7 @@
     "@vercel/error-utils": "2.0.1",
     "@vercel/frameworks": "2.0.1",
     "@vercel/fs-detectors": "5.0.2",
-    "@vercel/fun": "1.0.4",
+    "@vercel/fun": "1.1.0",
     "@vercel/ncc": "0.24.0",
     "@vercel/routing-utils": "3.0.0",
     "@zeit/source-map-support": "0.6.2",
