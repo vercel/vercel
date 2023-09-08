@@ -1,5 +1,11 @@
 # @vercel/fs-detectors
 
+## 5.0.2
+
+### Patch Changes
+
+- Updated semver dependency ([#10411](https://github.com/vercel/vercel/pull/10411))
+
 ## 5.0.1
 
 ### Patch Changes
