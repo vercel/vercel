@@ -91,6 +91,7 @@ import {
   getOperationType,
   isApiPage,
   getFunctionsConfigManifest,
+  normalizeEdgeFunctionPath,
 } from './utils';
 
 export const version = 2;
@@ -1320,11 +1321,7 @@ export const build: BuildV2 = async ({
       const localePrefixed404 = !!(
         routesManifest.i18n &&
         originalStaticPages[
-          path.posix.join(
-            entryDirectory,
-            routesManifest.i18n.defaultLocale,
-            '404.html'
-          )
+          path.posix.join('.', routesManifest.i18n.defaultLocale, '404.html')
         ]
       );
 
@@ -2720,7 +2717,15 @@ async function getServerlessPages(params: {
   for (const edgeFunctionFile of Object.keys(
     middlewareManifest?.functions ?? {}
   )) {
-    const edgePath = (edgeFunctionFile.slice(1) || 'index') + '.js';
+    let edgePath =
+      middlewareManifest?.functions?.[edgeFunctionFile].name ||
+      edgeFunctionFile;
+
+    edgePath = normalizeEdgeFunctionPath(
+      edgePath,
+      params.appPathRoutesManifest || {}
+    );
+    edgePath = (edgePath || 'index') + '.js';
     delete normalizedAppPaths[edgePath];
     delete pages[edgePath];
   }
