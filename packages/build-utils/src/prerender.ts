@@ -7,12 +7,12 @@ interface PrerenderOptions {
   fallback: File | null;
   group?: number;
   bypassToken?: string | null /* optional to be non-breaking change */;
-  experimentalBypassFor?: HasField;
   allowQuery?: string[];
   initialHeaders?: Record<string, string>;
   initialStatus?: number;
   passQuery?: boolean;
   sourcePath?: string;
+  experimentalBypassFor?: HasField;
   experimentalStreamingLambdaPath?: string;
 }
 

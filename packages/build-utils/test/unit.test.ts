@@ -373,7 +373,6 @@ it('should support experimentalBypassFor correctly', async () => {
     bypassToken: 'some-long-bypass-token-to-make-it-work',
     experimentalBypassFor: [{ type: 'query', key: 'bypass', value: '1' }],
   });
-
   new Prerender({
     expiration: 1,
     fallback: null,
