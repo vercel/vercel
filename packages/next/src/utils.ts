@@ -2344,7 +2344,7 @@ export function normalizeIndexOutput(
   outputName: string,
   isServerMode: boolean
 ) {
-  if (outputName !== '/index' && isServerMode) {
+  if (outputName !== 'index' && outputName !== '/index' && isServerMode) {
     return outputName.replace(/\/index$/, '');
   }
   return outputName;
@@ -2519,6 +2519,29 @@ function normalizeRegions(regions: Regions): undefined | string | string[] {
   }
 
   return newRegions;
+}
+
+export function normalizeEdgeFunctionPath(
+  shortPath: string,
+  appPathRoutesManifest: Record<string, string>
+) {
+  if (
+    shortPath.startsWith('app/') &&
+    (shortPath.endsWith('/page') ||
+      shortPath.endsWith('/route') ||
+      shortPath === 'app/_not-found')
+  ) {
+    const ogRoute = shortPath.replace(/^app\//, '/');
+    shortPath = (
+      appPathRoutesManifest[ogRoute] ||
+      shortPath.replace(/(^|\/)(page|route)$/, '')
+    ).replace(/^\//, '');
+
+    if (!shortPath || shortPath === '/') {
+      shortPath = 'index';
+    }
+  }
+  return shortPath;
 }
 
 export async function getMiddlewareBundle({
@@ -2699,27 +2722,19 @@ export async function getMiddlewareBundle({
       //    app/index/page -> index/index
       if (shortPath.startsWith('pages/')) {
         shortPath = shortPath.replace(/^pages\//, '');
-      } else if (
-        shortPath.startsWith('app/') &&
-        (shortPath.endsWith('/page') ||
-          shortPath.endsWith('/route') ||
-          shortPath === 'app/_not-found')
-      ) {
-        const ogRoute = shortPath.replace(/^app\//, '/');
-        shortPath = (
-          appPathRoutesManifest[ogRoute] ||
-          shortPath.replace(/(^|\/)(page|route)$/, '')
-        ).replace(/^\//, '');
-
-        if (!shortPath || shortPath === '/') {
-          shortPath = 'index';
-        }
+      } else {
+        shortPath = normalizeEdgeFunctionPath(shortPath, appPathRoutesManifest);
       }
 
       if (routesManifest?.basePath) {
-        shortPath = path.posix
-          .join(routesManifest.basePath, shortPath)
-          .replace(/^\//, '');
+        shortPath = normalizeIndexOutput(
+          path.posix.join(
+            './',
+            routesManifest?.basePath,
+            shortPath.replace(/^\//, '')
+          ),
+          true
+        );
       }
 
       worker.edgeFunction.name = shortPath;
