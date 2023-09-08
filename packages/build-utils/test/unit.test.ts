@@ -452,6 +452,42 @@ it('should support passQuery correctly', async () => {
   );
 });
 
+it('should support experimentalStreamingLambdaPath correctly', async () => {
+  new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    experimentalStreamingLambdaPath: undefined,
+  });
+  new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    experimentalStreamingLambdaPath: '/some/path/to/lambda',
+  });
+  new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+  });
+
+  expect(() => {
+    new Prerender({
+      expiration: 1,
+      fallback: null,
+      group: 1,
+      bypassToken: 'some-long-bypass-token-to-make-it-work',
+      // @ts-expect-error testing invalid field
+      experimentalStreamingLambdaPath: 1,
+    });
+  }).toThrowError(
+    `The \`experimentalStreamingLambdaPath\` argument for \`Prerender\` must be a string.`
+  );
+});
+
 it('should support require by path for legacy builders', () => {
   const index = require('../');
 

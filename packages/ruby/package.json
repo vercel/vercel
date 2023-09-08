@@ -15,7 +15,7 @@
     "directory": "packages/ruby"
   },
   "scripts": {
-    "build": "node build",
+    "build": "node ../../utils/build-builder.mjs",
     "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --runInBand --bail",
     "test-e2e": "pnpm test"
   },
