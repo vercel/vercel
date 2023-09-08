@@ -5,6 +5,7 @@ import { basename, dirname, join, relative, resolve, sep } from 'path';
 import { pathToRegexp, Key } from 'path-to-regexp';
 import { debug, spawnAsync } from '@vercel/build-utils';
 import { walkParentDirs } from '@vercel/build-utils';
+import { createRequire } from 'module';
 import type {
   ConfigRoute,
   RouteManifest,
@@ -16,7 +17,7 @@ import type {
   SpawnOptionsExtended,
 } from '@vercel/build-utils/dist/fs/run-user-scripts';
 
-export const _require: typeof require = eval('require');
+export const require_ = createRequire(__filename);
 
 export interface ResolvedNodeRouteConfig {
   runtime: 'nodejs';
@@ -321,7 +322,7 @@ export async function ensureResolvable(
   pkgName: string
 ): Promise<string> {
   try {
-    const resolvedPkgPath = _require.resolve(`${pkgName}/package.json`, {
+    const resolvedPkgPath = require_.resolve(`${pkgName}/package.json`, {
       paths: [start],
     });
     const resolvedPath = dirname(resolvedPkgPath);
@@ -412,7 +413,7 @@ export function isESM(path: string): boolean {
   // Figure out if the `remix.config` file is using ESM syntax
   let isESM = false;
   try {
-    _require(path);
+    require_(path);
   } catch (err: any) {
     isESM = err.code === 'ERR_REQUIRE_ESM';
   }
