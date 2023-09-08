@@ -108,7 +108,7 @@ export async function getAnalyzedEntrypoint({
     const isAnalyzeExist = await pathExists(bin);
     if (!isAnalyzeExist) {
       debug(`Building analyze bin: ${bin}`);
-      const src = join(__dirname, 'util', 'analyze.go');
+      const src = join(__dirname, '../analyze.go');
       let go;
       const createOpts = {
         modulePath,
