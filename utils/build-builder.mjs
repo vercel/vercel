@@ -4,15 +4,17 @@
  *
  * `@vercel/build-utils` is marked as external because it's always an implicit
  * dependency when the Builder is invoked by `vercel build`.
- *
- * `@vercel/nft` is marked as external because esbuild has trouble bundling
- * it due to some optional dependencies which we don't install, but also this
- * is beneficial because the package will be de-duped at the node_modules level
- * between the Builders which share this dependency.
  */
+import { join } from 'node:path';
+import { readFileSync } from 'node:fs';
 import { esbuild } from './build.mjs';
+
+const pkgPath = join(process.cwd(), 'package.json');
+const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
+
+const externals = Object.keys(pkg.dependencies || {});
 
 await esbuild({
   bundle: true,
-  external: ['@vercel/build-utils', '@vercel/nft'],
+  external: ['@vercel/build-utils', ...externals],
 });
