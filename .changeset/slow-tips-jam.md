@@ -1,5 +1,5 @@
 ---
-'@vercel/go': patch
+'@vercel/python': patch
 ---
 
 Update to esbuild script
