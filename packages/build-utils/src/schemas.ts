@@ -22,7 +22,7 @@ export const functionsSchema = {
           maximum: 900,
         },
         includeFiles: {
-          type: 'string',
+          type: ['string','array'],
           maxLength: 256,
         },
         excludeFiles: {
