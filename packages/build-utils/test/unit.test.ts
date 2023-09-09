@@ -344,6 +344,70 @@ it('should support initialHeaders and initialStatus correctly', async () => {
   });
 });
 
+it('should support experimentalBypassFor correctly', async () => {
+  new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    experimentalBypassFor: [{ type: 'header', key: 'Next-Action' }],
+  });
+  new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    experimentalBypassFor: [
+      { type: 'header', key: 'Next-Action' },
+      {
+        type: 'cookie',
+        key: '__prerender_bypass',
+        value: 'some-long-bypass-token-to-make-it-work',
+      },
+    ],
+  });
+  new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    experimentalBypassFor: [{ type: 'query', key: 'bypass', value: '1' }],
+  });
+  new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    experimentalBypassFor: [{ type: 'host', value: 'vercel.com' }],
+  });
+
+  expect(() => {
+    new Prerender({
+      expiration: 1,
+      fallback: null,
+      group: 1,
+      bypassToken: 'some-long-bypass-token-to-make-it-work',
+      // @ts-expect-error: testing invalid args
+      experimentalBypassFor: 'foo',
+    });
+  }).toThrowError(
+    'The `experimentalBypassFor` argument for `Prerender` must be Array of objects with fields `type`, `key` and optionally `value`.'
+  );
+
+  expect(() => {
+    new Prerender({
+      expiration: 1,
+      fallback: null,
+      group: 1,
+      bypassToken: 'some-long-bypass-token-to-make-it-work',
+      // @ts-expect-error: testing invalid args
+      experimentalBypassFor: [{ type: 'header', value: { foo: 'bar' } }],
+    });
+  }).toThrowError(
+    'The `experimentalBypassFor` argument for `Prerender` must be Array of objects with fields `type`, `key` and optionally `value`.'
+  );
+});
+
 it('should support passQuery correctly', async () => {
   new Prerender({
     expiration: 1,
