@@ -347,8 +347,8 @@ importers:
         specifier: 1.0.5
         version: 1.0.5
       '@edge-runtime/node-utils':
-        specifier: 2.2.0
-        version: 2.2.0
+        specifier: 2.2.1
+        version: 2.2.1
       '@next/env':
         specifier: 11.1.2
         version: 11.1.2
@@ -813,8 +813,8 @@ importers:
   packages/edge:
     devDependencies:
       '@edge-runtime/jest-environment':
-        specifier: 2.3.0
-        version: 2.3.0
+        specifier: 2.3.1
+        version: 2.3.1
       '@types/jest':
         specifier: 27.4.1
         version: 27.4.1
@@ -1223,14 +1223,14 @@ importers:
   packages/node:
     dependencies:
       '@edge-runtime/node-utils':
-        specifier: 2.2.0
-        version: 2.2.0
+        specifier: 2.2.1
+        version: 2.2.1
       '@edge-runtime/primitives':
-        specifier: 3.1.0
-        version: 3.1.0
+        specifier: 3.1.1
+        version: 3.1.1
       '@edge-runtime/vm':
-        specifier: 3.1.0
-        version: 3.1.0
+        specifier: 3.1.1
+        version: 3.1.1
       '@types/node':
         specifier: 14.18.33
         version: 14.18.33
@@ -1250,8 +1250,8 @@ importers:
         specifier: 1.0.5
         version: 1.0.5
       edge-runtime:
-        specifier: 2.5.0
-        version: 2.5.0
+        specifier: 2.5.1
+        version: 2.5.1
       esbuild:
         specifier: 0.14.47
         version: 0.14.47
@@ -3252,8 +3252,8 @@ packages:
     dependencies:
       '@jridgewell/trace-mapping': 0.3.9
 
-  /@edge-runtime/cookies@3.4.0:
-    resolution: {integrity: sha512-rhkTN7D8YO78lf76gdmK4FYc4Z5zQMGPABFLCWiJzeHmHgaCievF/lHEf1WO1OGZVxe1V34NYxsNTZsXwLht3Q==}
+  /@edge-runtime/cookies@3.4.1:
+    resolution: {integrity: sha512-z27BvgPxI73CgSlxU/NAUf1Q/shnqi6cobHEowf6VuLdSjGR3NjI2Y5dZUIBbK2zOJVZbXcHsVzJjz8LklteFQ==}
     engines: {node: '>=16'}
 
   /@edge-runtime/format@2.2.0:
@@ -3261,32 +3261,32 @@ packages:
     engines: {node: '>=16'}
     dev: false
 
-  /@edge-runtime/jest-environment@2.3.0:
-    resolution: {integrity: sha512-ecjoJ6Ai/Cr/QOFpLC9nu5WC8LHnyFrnbkd8/L53q7sSmeWPKkzvjeFnaS1GLbYHPKZ1GidTsCquw6IPL1xlxA==}
+  /@edge-runtime/jest-environment@2.3.1:
+    resolution: {integrity: sha512-ll0uJZxLO/+QwXpUAQc92lIiZEYa1fpzfjJXFmPpsvreK8bapH2IMCeThL3ilYy1QGbwUWO0WLmq6cOXiPwepA==}
     engines: {node: '>=16'}
     dependencies:
-      '@edge-runtime/vm': 3.1.0
+      '@edge-runtime/vm': 3.1.1
       '@jest/environment': 29.5.0
       '@jest/fake-timers': 29.5.0
       jest-mock: 29.5.0
       jest-util: 29.5.0
     dev: true
 
-  /@edge-runtime/node-utils@2.2.0:
-    resolution: {integrity: sha512-eRM3d/zwF+VczI9+YY9j0b5s/NQ6Cj6y6XY1Fb3HHdu8rCphH8Z41qjTYt4S315FUXo78GcDgnYv7GUvqQ0a8A==}
+  /@edge-runtime/node-utils@2.2.1:
+    resolution: {integrity: sha512-RUl/439BHKshkhSGFRlZ1kzy68wL4mn8VNKDSZr3p0tciyZ33Mjfpl+vofqnHqXRmDI6nLnZpfJvhY3D88o0pA==}
     engines: {node: '>=16'}
     dependencies:
-      '@edge-runtime/cookies': 3.4.0
+      '@edge-runtime/cookies': 3.4.1
 
-  /@edge-runtime/primitives@3.1.0:
-    resolution: {integrity: sha512-yxr1QM/lC8nrU38zxePeDqVeIjwsJ83gKGTH8YJ4CoHTv3q+6xEeqRIT+/9IPX/FApWYtnxHauhNqr6CHRj5YA==}
+  /@edge-runtime/primitives@3.1.1:
+    resolution: {integrity: sha512-ROO22py+KdAfzqWZu6CtVMC4qV6mS0W1jPI51jGXE+uenyBUN7cQTWB9ReQc8Bm4cnjqmhajvpqEx3j7Y9iSOg==}
     engines: {node: '>=16'}
 
-  /@edge-runtime/vm@3.1.0:
-    resolution: {integrity: sha512-Y2JZgJP+4byI17SiDeEZhvBUvJ+om7E5ll/jrS7aGRpet5qKnJSsGep6xxhMjqT/j8ulFvTMN/kdlMMy5pEKBQ==}
+  /@edge-runtime/vm@3.1.1:
+    resolution: {integrity: sha512-6NJRRG04/91qnWLZj+wZm27q6fJkTbkZdIJdo/Ig++GTxkAv8Wh/45nIcz9Xg7AzIAMpAkflFdiCrCoZ3hp1Iw==}
     engines: {node: '>=16'}
     dependencies:
-      '@edge-runtime/primitives': 3.1.0
+      '@edge-runtime/primitives': 3.1.1
 
   /@emotion/hash@0.9.0:
     resolution: {integrity: sha512-14FtKiHhy2QoPIzdTcvh//8OyBlknNs2nXRwIhG904opCby3l+9Xaf/wuPvICBF0rc1ZCNBd3nKe9cd2mecVkQ==}
@@ -8426,13 +8426,13 @@ packages:
       safer-buffer: 2.1.2
     dev: true
 
-  /edge-runtime@2.5.0:
-    resolution: {integrity: sha512-QgDNX6R+RPwhY3+vqHpvYE4XUoB/cFG60nGBKu9pmPOJxQleeTCj2F5CHimIpNqex9h1Cy2Y3tuQ+Vq2GzmZIA==}
+  /edge-runtime@2.5.1:
+    resolution: {integrity: sha512-E0kY1Dqvwvk9yh7dvR56KnCjXf/dlbrrGjO5Sjnz9Ja3WqYT3csv2B8O4erxJiOWfWy9NTukBk4Kb3yrR66gBw==}
     engines: {node: '>=16'}
     hasBin: true
     dependencies:
       '@edge-runtime/format': 2.2.0
-      '@edge-runtime/vm': 3.1.0
+      '@edge-runtime/vm': 3.1.1
       async-listen: 3.0.1
       mri: 1.2.0
       picocolors: 1.0.0
@@ -9114,7 +9114,7 @@ packages:
       '@typescript-eslint/eslint-plugin': 5.54.1(@typescript-eslint/parser@5.54.1)(eslint@8.42.0)(typescript@4.9.4)
       '@typescript-eslint/utils': 5.54.1(eslint@8.42.0)(typescript@4.9.4)
       eslint: 8.42.0
-      jest: 29.5.0(@types/node@14.18.33)
+      jest: 29.5.0(@types/node@14.14.31)
     transitivePeerDependencies:
       - supports-color
       - typescript
