@@ -1,5 +1,14 @@
 # @vercel/static-build
 
+## 2.0.4
+
+### Patch Changes
+
+- Updated semver dependency ([#10411](https://github.com/vercel/vercel/pull/10411))
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.4
+
 ## 2.0.3
 
 ### Patch Changes

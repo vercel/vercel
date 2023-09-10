@@ -11,8 +11,10 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noImplicitThis": false,
+    "outDir": "./dist",
     "types": ["node", "jest"],
     "strict": true,
     "target": "ES2021"
-  }
+  },
+  "include": ["src/**/*"]
 }

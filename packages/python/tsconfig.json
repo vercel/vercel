@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "declaration": true,
+    "declaration": false,
     "esModuleInterop": true,
     "lib": ["ES2021"],
     "module": "commonjs",
@@ -15,6 +15,5 @@
     "strict": true,
     "target": "ES2021"
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules"]
+  "include": ["src/**/*"]
 }
