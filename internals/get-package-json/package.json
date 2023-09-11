@@ -8,7 +8,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "node ../../utils/build.mjs",
     "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --runInBand --bail",
     "test-unit": "pnpm test tests/unit"
   },

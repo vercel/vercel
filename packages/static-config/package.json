@@ -9,7 +9,7 @@
     "directory": "packages/static-config"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "node ../../utils/build.mjs",
     "test-unit": "pnpm test",
     "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --runInBand --bail"
   },
