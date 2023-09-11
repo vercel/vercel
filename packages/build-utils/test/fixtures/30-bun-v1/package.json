@@ -1,7 +1,7 @@
 {
   "private": true,
   "scripts": {
-    "build": "mkdir -p public && (printf \"bun version: \" && bun -v) > public/index.txt"
+    "build": "bun build.js"
   },
   "dependencies": {
     "cowsay": "1.5.0"
