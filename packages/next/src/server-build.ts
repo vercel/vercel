@@ -608,7 +608,9 @@ export async function serverBuild({
       )
       .replace(
         '__NEXT_SERVER_PATH__',
-        `${getNextServerPath(nextVersion)}/next-server.js`
+        useBundledServer
+          ? BUNDLED_SERVER_NEXT_PATH
+          : `${getNextServerPath(nextVersion)}/next-server.js`
       );
 
     const appLauncher = launcher.replace(
