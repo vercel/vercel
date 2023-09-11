@@ -64,7 +64,6 @@ const EMPTY_ALLOW_QUERY_FOR_PRERENDERED_VERSION = 'v12.2.0';
 const CORRECTED_MANIFESTS_VERSION = 'v12.2.0';
 
 // related PR: https://github.com/vercel/next.js/pull/52997
-// BEFORE LANDING: put the version here
 const BUNDLED_SERVER_NEXT_VERSION = '13.4.20-canary.22';
 
 const BUNDLED_SERVER_NEXT_PATH =
