@@ -447,10 +447,10 @@ export async function serverBuild({
       }
 
       if (lambdaAppPaths[page]) {
-        if (lambdaAppPaths[page].fsPath.endsWith('page.js')) {
-          appRouterPages.push(page);
-        } else {
+        if (lambdaAppPaths[page].fsPath.endsWith('route.js')) {
           appRouteHandlers.push(page);
+        } else {
+          appRouterPages.push(page);
         }
       } else if (pageMatchesApi(page)) {
         apiPages.push(page);
