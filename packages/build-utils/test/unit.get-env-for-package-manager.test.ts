@@ -134,6 +134,22 @@ describe('Test `getEnvForPackageManager()`', () => {
       },
     },
     {
+      name: 'should set path if bun v1 is detected',
+      args: {
+        cliType: 'bun',
+        nodeVersion: { major: 18, range: '18.x', runtime: 'nodejs18.x' },
+        lockfileVersion: 0,
+        env: {
+          FOO: 'bar',
+          PATH: '/usr/local/bin',
+        },
+      },
+      want: {
+        FOO: 'bar',
+        PATH: `/bun1${delimiter}/usr/local/bin`,
+      },
+    },
+    {
       name: 'should not set pnpm path if corepack is enabled',
       args: {
         cliType: 'pnpm',
