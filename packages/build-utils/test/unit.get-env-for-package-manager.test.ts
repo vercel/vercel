@@ -146,7 +146,7 @@ describe('Test `getEnvForPackageManager()`', () => {
       },
       want: {
         FOO: 'bar',
-        PATH: `/bun1/bun${delimiter}/usr/local/bin`,
+        PATH: `/bun1${delimiter}/usr/local/bin`,
       },
     },
     {

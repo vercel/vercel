@@ -522,7 +522,7 @@ export function getEnvForPackageManager({
   const npm7 = '/node16/bin-npm7';
   const pnpm7 = '/pnpm7/node_modules/.bin';
   const pnpm8 = '/pnpm8/node_modules/.bin';
-  const bun1 = '/bun1/bun';
+  const bun1 = '/bun1';
   const corepackEnabled = env.ENABLE_EXPERIMENTAL_COREPACK === '1';
   if (cliType === 'npm') {
     if (
