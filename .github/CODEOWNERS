@@ -5,12 +5,12 @@
 *                                        @TooTallNate @EndangeredMassa @styfle @cb1kenobi @Ethan-Arrowood @trek
 /.github/workflows                       @TooTallNate @EndangeredMassa @styfle @cb1kenobi @Ethan-Arrowood @trek @ijjk
 /packages/fs-detectors                   @TooTallNate @EndangeredMassa @styfle @cb1kenobi @Ethan-Arrowood @trek @agadzik @chloetedder
-/packages/next                           @TooTallNate @EndangeredMassa @styfle @cb1kenobi @Ethan-Arrowood @trek @ijjk
+/packages/next                           @TooTallNate @EndangeredMassa @styfle @cb1kenobi @Ethan-Arrowood @trek @ijjk @ztanner
 /packages/routing-utils                  @TooTallNate @EndangeredMassa @styfle @cb1kenobi @Ethan-Arrowood @trek @ijjk
 /packages/edge                           @vercel/compute
 /examples                                @leerob
 /examples/create-react-app               @Timer
-/examples/nextjs                         @timneutkens @ijjk @styfle
+/examples/nextjs                         @timneutkens @ijjk @styfle @ztanner
 /examples/hugo                           @styfle
 /examples/jekyll                         @styfle
 /examples/zola                           @styfle

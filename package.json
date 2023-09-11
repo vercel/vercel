@@ -16,6 +16,7 @@
     "buffer-replace": "1.0.0",
     "create-svelte": "2.0.1",
     "dot": "1.1.3",
+    "esbuild": "0.19.2",
     "eslint": "8.14.0",
     "eslint-config-prettier": "8.5.0",
     "eslint-plugin-jest": "26.1.5",
@@ -32,7 +33,7 @@
     "source-map-support": "0.5.12",
     "ts-eager": "2.0.2",
     "ts-jest": "29.1.0",
-    "turbo": "1.10.12",
+    "turbo": "1.10.13",
     "typescript": "4.9.5"
   },
   "scripts": {
@@ -49,7 +50,7 @@
     "prepare": "husky install",
     "pack": "cd utils && node -r ts-eager/register ./pack.ts",
     "ci:version": "changeset version && pnpm install --no-frozen-lockfile",
-    "ci:publish": "pnpm publish -r && changeset tag"
+    "ci:publish": "pnpm publish -r && node utils/update-canary-tags.mjs && changeset tag"
   },
   "lint-staged": {
     "./{*,{api,packages,test,utils}/**/*}.{js,ts}": [

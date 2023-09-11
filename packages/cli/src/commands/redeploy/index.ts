@@ -76,11 +76,22 @@ export default async function redeploy(client: Client): Promise<number> {
     });
 
     output.stopSpinner();
+
+    const isProdDeployment = deployment.target === 'production';
+    const previewUrl = `https://${deployment.url}`;
     output.print(
       `${prependEmoji(
         `Inspect: ${chalk.bold(deployment.inspectorUrl)} ${deployStamp()}`,
         emoji('inspect')
       )}\n`
+    );
+    output.print(
+      prependEmoji(
+        `${isProdDeployment ? 'Production' : 'Preview'}: ${chalk.bold(
+          previewUrl
+        )} ${deployStamp()}`,
+        emoji('success')
+      ) + `\n`
     );
 
     if (!client.stdout.isTTY) {

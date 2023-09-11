@@ -12,6 +12,7 @@ export interface CommandOption {
   argument?: string;
   deprecated: boolean;
   description?: string;
+  /** supports multiple entries */
   multi: boolean;
 }
 export interface CommandArgument {
@@ -322,7 +323,10 @@ export function buildSubcommandLines(
     ]);
   }
 
-  const finalColumnWidth = options.columns - maxWidthOfUnwrappedColumns;
+  // Really long descriptions go RIGHT up to the edge, which looks unpleasant.
+  const rightMargin = INDENT.repeat(4).length;
+  const finalColumnWidth =
+    options.columns - maxWidthOfUnwrappedColumns - rightMargin;
 
   const table = new Table(
     Object.assign({}, tableOptions, {

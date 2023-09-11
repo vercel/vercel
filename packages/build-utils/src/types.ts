@@ -45,6 +45,18 @@ export interface Config {
   [key: string]: unknown;
 }
 
+export type HasField = Array<
+  | {
+      type: 'host';
+      value: string;
+    }
+  | {
+      type: 'header' | 'cookie' | 'query';
+      key: string;
+      value?: string;
+    }
+>;
+
 export interface Meta {
   isDev?: boolean;
   devCacheDir?: string;
@@ -300,9 +312,13 @@ export interface PackageJson {
 }
 
 export interface NodeVersion {
+  /** major version number: 18 */
   major: number;
+  /** major version range: "18.x" */
   range: string;
+  /** runtime descriptor: "nodejs18.x" */
   runtime: string;
+  /** date beyond which this version is discontinued: 2023-08-17T19:05:45.951Z */
   discontinueDate?: Date;
 }
 
