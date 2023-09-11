@@ -1,0 +1,9 @@
+{
+  "private": true,
+  "scripts": {
+    "build": "mkdir -p public && (printf \"bun version: \" && bun -v) > public/index.txt"
+  },
+  "dependencies": {
+    "cowsay": "1.5.0"
+  }
+}
