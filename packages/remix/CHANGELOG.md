@@ -1,5 +1,11 @@
 # @vercel/remix-builder
 
+## 2.0.4
+
+### Patch Changes
+
+- Use `build-builder.mjs` script to bundle, and remove types and source maps ([#10479](https://github.com/vercel/vercel/pull/10479))
+
 ## 2.0.3
 
 ### Patch Changes
