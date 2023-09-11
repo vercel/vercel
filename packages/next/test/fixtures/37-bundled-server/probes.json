@@ -1,0 +1,24 @@
+{
+  "probes": [
+    {
+      "path": "/app",
+      "status": 200,
+      "mustContain": "hello world"
+    },
+    {
+      "path": "/app-route",
+      "status": 200,
+      "mustContain": "hello world"
+    },
+    {
+      "path": "/api/hello",
+      "status": 200,
+      "mustContain": "hello world"
+    },
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "hello world"
+    }
+  ]
+}
