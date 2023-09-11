@@ -1,5 +1,14 @@
 # @vercel/static-build
 
+## 2.0.5
+
+### Patch Changes
+
+- Build package using "esbuild" ([#10462](https://github.com/vercel/vercel/pull/10462))
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.5
+
 ## 2.0.4
 
 ### Patch Changes
