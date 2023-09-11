@@ -58,7 +58,7 @@ export const teamsCommand: Command = {
   ],
   examples: [
     {
-      name: "Switch to a team. If your team's url is 'vercel.com/teams/name', then 'name' is the slug. If the slug is omitted, you can choose interactively.",
+      name: "Switch to a team. If your team's url is 'vercel.com/name', then 'name' is the slug. If the slug is omitted, you can choose interactively.",
       value: `${packageName} teams switch <slug>`,
     },
     {

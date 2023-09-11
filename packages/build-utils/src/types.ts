@@ -45,6 +45,18 @@ export interface Config {
   [key: string]: unknown;
 }
 
+export type HasField = Array<
+  | {
+      type: 'host';
+      value: string;
+    }
+  | {
+      type: 'header' | 'cookie' | 'query';
+      key: string;
+      value?: string;
+    }
+>;
+
 export interface Meta {
   isDev?: boolean;
   devCacheDir?: string;
