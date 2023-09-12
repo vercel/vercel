@@ -330,7 +330,7 @@ export async function serverBuild({
             entryPath,
             outputDirectory,
             useBundledServer
-              ? 'minimal-next-server.js.nft.json'
+              ? 'next-minimal-server.js.nft.json'
               : 'next-server.js.nft.json'
           ),
           'utf8'
