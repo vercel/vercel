@@ -316,7 +316,6 @@ export function addDependencies(
     }
   }
 
-  console.log(args.concat(names));
   return spawnAsync(cliType, args.concat(names), opts);
 }
 
