@@ -30,8 +30,6 @@ const nextServer = new NextServer({
   customServer: false,
 });
 
-// next-server-preload-target
-
 const requestHandler = nextServer.getRequestHandler();
 
 module.exports = async (req: IncomingMessage, res: ServerResponse) => {

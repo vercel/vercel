@@ -70,14 +70,6 @@ const BUNDLED_SERVER_NEXT_VERSION = '13.4.20-canary.22';
 
 const BUNDLED_SERVER_NEXT_PATH =
   'next/dist/compiled/next-server/server.runtime.prod.js';
-const BUNDLED_NEXT_PAGES_RUNTIME_PATH =
-  'next/dist/compiled/next-server/pages.runtime.prod.js';
-const BUNDLED_NEXT_PAGES_API_RUNTIME_PATH =
-  'next/dist/compiled/next-server/pages-api.runtime.prod.js';
-const BUNDLED_NEXT_APP_PAGES_RUNTIME_PATH =
-  'next/dist/compiled/next-server/app-page.runtime.prod.js';
-const BUNDLED_NEXT_APP_ROUTE_RUNTIME_PATH =
-  'next/dist/compiled/next-server/app-route.runtime.prod.js';
 
 export async function serverBuild({
   dynamicPages,
@@ -1019,41 +1011,9 @@ export async function serverBuild({
         }
       }
 
-      let baseLauncher = group.isAppRouter ? appLauncher : launcher;
-
-      // TODO @feedthejim: remove this in favor of a preload manifest in Next.js
-      if (useBundledServer) {
-        let preloadModules: string[] = [];
-
-        if (group.isPages) {
-          preloadModules = [
-            BUNDLED_NEXT_PAGES_RUNTIME_PATH,
-            'react',
-            'react-dom',
-            'react-dom/server.browser',
-          ];
-        } else if (group.isApiLambda) {
-          preloadModules = [BUNDLED_NEXT_PAGES_API_RUNTIME_PATH];
-        } else if (group.isAppRouter && !group.isAppRouteHandler) {
-          preloadModules = [
-            BUNDLED_NEXT_APP_PAGES_RUNTIME_PATH,
-            'react',
-            'react-dom',
-            'react-dom/server.edge',
-          ];
-        } else if (group.isAppRouteHandler) {
-          preloadModules = [BUNDLED_NEXT_APP_ROUTE_RUNTIME_PATH];
-        }
-
-        baseLauncher = baseLauncher.replace(
-          '// next-server-preload-target',
-          preloadModules.map(m => `require('${m}')`).join('\n')
-        );
-      }
-
       const launcherFiles: { [name: string]: FileFsRef | FileBlob } = {
         [path.join(path.relative(baseDir, projectDir), '___next_launcher.cjs')]:
-          new FileBlob({ data: baseLauncher }),
+          new FileBlob({ data: group.isAppRouter ? appLauncher : launcher }),
       };
       const operationType = getOperationType({ group, prerenderManifest });
 
