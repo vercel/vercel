@@ -856,6 +856,7 @@ export type NextPrerenderedRoutes = {
       srcRoute: string | null;
       initialStatus?: number;
       initialHeaders?: Record<string, string>;
+      experimentalBypassFor?: HasField;
     };
   };
 
@@ -1084,6 +1085,7 @@ export async function getPrerenderManifest(
             dataRoute: string | null;
             initialStatus?: number;
             initialHeaders?: Record<string, string>;
+            experimentalBypassFor?: HasField;
           };
         };
         dynamicRoutes: {
@@ -1177,10 +1179,12 @@ export async function getPrerenderManifest(
 
         let initialStatus: undefined | number;
         let initialHeaders: undefined | Record<string, string>;
+        let experimentalBypassFor: undefined | HasField;
 
         if (manifest.version === 4) {
           initialStatus = manifest.routes[route].initialStatus;
           initialHeaders = manifest.routes[route].initialHeaders;
+          experimentalBypassFor = manifest.routes[route].experimentalBypassFor;
         }
 
         ret.staticRoutes[route] = {
@@ -1192,6 +1196,7 @@ export async function getPrerenderManifest(
           srcRoute,
           initialStatus,
           initialHeaders,
+          experimentalBypassFor,
         };
       });
 
@@ -1909,6 +1914,7 @@ export const onPrerenderRoute =
     let dataRoute: string | null;
     let initialStatus: number | undefined;
     let initialHeaders: Record<string, string> | undefined;
+    let experimentalBypassFor: HasField | undefined;
 
     if (isFallback || isBlocking) {
       const pr = isFallback
@@ -1937,6 +1943,7 @@ export const onPrerenderRoute =
         dataRoute,
         initialHeaders,
         initialStatus,
+        experimentalBypassFor,
       } = pr);
     }
 
@@ -2177,6 +2184,7 @@ export const onPrerenderRoute =
         fallback: htmlFsRef,
         group: prerenderGroup,
         bypassToken: prerenderManifest.bypassToken,
+        experimentalBypassFor,
         initialStatus,
         initialHeaders,
         sourcePath,
