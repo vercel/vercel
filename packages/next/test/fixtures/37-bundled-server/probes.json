@@ -3,22 +3,22 @@
     {
       "path": "/app",
       "status": 200,
-      "mustContain": "hello world"
+      "mustContain": "hello world from app router"
     },
     {
       "path": "/app-route",
       "status": 200,
-      "mustContain": "hello world"
+      "mustContain": "hello world from app route"
     },
     {
       "path": "/api/hello",
       "status": 200,
-      "mustContain": "hello world"
+      "mustContain": "hello world from api"
     },
     {
       "path": "/",
       "status": 200,
-      "mustContain": "hello world"
+      "mustContain": "hello world from pages"
     }
   ]
 }
