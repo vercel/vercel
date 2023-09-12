@@ -55,6 +55,12 @@ function tryReadHeadSync(path: string, length: number) {
   }
 }
 
+const VARIABLES_TO_IGNORE = [
+  'VERCEL_ANALYTICS_ID',
+  'VERCEL_SPEED_INSIGHTS_ID',
+  'VERCEL_WEB_ANALYTICS_ID',
+];
+
 export default async function pull(
   client: Client,
   link: ProjectLinked,
@@ -131,6 +137,7 @@ export default async function pull(
     CONTENTS_PREFIX +
     Object.keys(records)
       .sort()
+      .filter(key => !VARIABLES_TO_IGNORE.includes(key))
       .map(key => `${key}="${escapeValue(records[key])}"`)
       .join('\n') +
     '\n';
