@@ -207,6 +207,12 @@ export const rewritesSchema = {
       },
       has: hasSchema,
       missing: hasSchema,
+      statusCode: {
+        private: true,
+        type: 'integer',
+        minimum: 100,
+        maximum: 999,
+      },
     },
   },
 } as const;
