@@ -256,7 +256,8 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder:
+          '`yarn install`, `pnpm install`, `npm install`, or `bun install`',
       },
       buildCommand: {
         value: 'astro build',
