@@ -1022,7 +1022,7 @@ export async function serverBuild({
           ];
         } else if (group.isApiLambda) {
           preloadModules = [BUNDLED_NEXT_PAGES_API_RUNTIME_PATH];
-        } else if (group.isAppRouter) {
+        } else if (group.isAppRouter && !group.isAppRouteHandler) {
           preloadModules = [
             BUNDLED_NEXT_APP_PAGES_RUNTIME_PATH,
             'react',
