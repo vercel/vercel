@@ -1,5 +1,11 @@
 # @vercel/ruby
 
+## 2.0.2
+
+### Patch Changes
+
+- Update to esbuild script ([#10472](https://github.com/vercel/vercel/pull/10472))
+
 ## 2.0.1
 
 ### Patch Changes

@@ -3,9 +3,10 @@
 This directory is a brief example of an [Astro](https://astro.build/) site that can be deployed to Vercel with zero configuration. This demo showcases:
 
 - `/` - A static page (pre-rendered)
-- `/ssr` - A page that uses server-side rendering (through Vercel Edge Functions)
-- `/ssr-with-swr-caching` - Similar to the previous page, but also caches the response on the Vercel Edge Network using `cache-control` headers
-- `/edge.json` - An Astro API Endpoint that returns JSON data using Vercel Edge Functions
+- `/ssr` - A page that uses server-side rendering (through [Vercel Edge Functions](https://vercel.com/docs/functions/edge-functions))
+- `/ssr-with-swr-caching` - Similar to the previous page, but also caches the response on the [Vercel Edge Network](https://vercel.com/docs/edge-network/overview) using `cache-control` headers
+- `/image` - Astro [Asset](https://docs.astro.build/en/guides/assets/) using Vercel [Image Optimization](https://vercel.com/docs/image-optimization)
+- `/edge.json` - An Astro API Endpoint that returns JSON data using [Vercel Edge Functions](https://vercel.com/docs/functions/edge-functions)
 
 Learn more about [Astro on Vercel](https://vercel.com/docs/frameworks/astro).
 

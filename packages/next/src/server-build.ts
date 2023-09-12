@@ -45,6 +45,8 @@ import {
   UnwrapPromise,
   getOperationType,
   FunctionsConfigManifestV1,
+  RSC_CONTENT_TYPE,
+  RSC_PREFETCH_SUFFIX,
 } from './utils';
 import {
   nodeFileTrace,
@@ -182,7 +184,6 @@ export async function serverBuild({
     }
   }
 
-  const APP_PREFETCH_SUFFIX = '.prefetch.rsc';
   let appRscPrefetches: UnwrapPromise<ReturnType<typeof glob>> = {};
   let appBuildTraces: UnwrapPromise<ReturnType<typeof glob>> = {};
   let appDir: string | null = null;
@@ -190,7 +191,18 @@ export async function serverBuild({
   if (appPathRoutesManifest) {
     appDir = path.join(pagesDir, '../app');
     appBuildTraces = await glob('**/*.js.nft.json', appDir);
-    appRscPrefetches = await glob(`**/*${APP_PREFETCH_SUFFIX}`, appDir);
+    appRscPrefetches = await glob(`**/*${RSC_PREFETCH_SUFFIX}`, appDir);
+
+    const rscContentTypeHeader =
+      routesManifest?.rsc?.contentTypeHeader || RSC_CONTENT_TYPE;
+
+    // ensure all appRscPrefetches have a contentType since this is used by Next.js
+    // to determine if it's a valid response
+    for (const value of Object.values(appRscPrefetches)) {
+      if (!value.contentType) {
+        value.contentType = rscContentTypeHeader;
+      }
+    }
   }
 
   const isCorrectNotFoundRoutes = semver.gte(
@@ -1633,7 +1645,7 @@ export async function serverBuild({
                     dest: path.posix.join(
                       '/',
                       entryDirectory,
-                      '/index.prefetch.rsc'
+                      `/index${RSC_PREFETCH_SUFFIX}`
                     ),
                     headers: { vary: rscVaryHeader },
                     continue: true,
@@ -1654,7 +1666,7 @@ export async function serverBuild({
                     dest: path.posix.join(
                       '/',
                       entryDirectory,
-                      `/$1${APP_PREFETCH_SUFFIX}`
+                      `/$1${RSC_PREFETCH_SUFFIX}`
                     ),
                     headers: { vary: rscVaryHeader },
                     continue: true,
@@ -1733,7 +1745,7 @@ export async function serverBuild({
               src: path.posix.join(
                 '/',
                 entryDirectory,
-                `/index${APP_PREFETCH_SUFFIX}`
+                `/index${RSC_PREFETCH_SUFFIX}`
               ),
               dest: path.posix.join('/', entryDirectory, '/index.rsc'),
               has: [
@@ -1749,7 +1761,7 @@ export async function serverBuild({
               src: `^${path.posix.join(
                 '/',
                 entryDirectory,
-                `/(.+?)${APP_PREFETCH_SUFFIX}(?:/)?$`
+                `/(.+?)${RSC_PREFETCH_SUFFIX}(?:/)?$`
               )}`,
               dest: path.posix.join('/', entryDirectory, '/$1.rsc'),
               has: [

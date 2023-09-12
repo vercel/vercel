@@ -48,6 +48,9 @@ export const MIB = 1024 * KIB;
 
 export const prettyBytes = (n: number) => bytes(n, { unitSeparator: ' ' });
 
+export const RSC_CONTENT_TYPE = 'x-component';
+export const RSC_PREFETCH_SUFFIX = '.prefetch.rsc';
+
 // Identify /[param]/ in route string
 // eslint-disable-next-line no-useless-escape
 const TEST_DYNAMIC_ROUTE = /\/\[[^\/]+?\](?=\/|$)/;
@@ -2160,7 +2163,7 @@ export const onPrerenderRoute =
         routesManifest?.rsc?.varyHeader ||
         'RSC, Next-Router-State-Tree, Next-Router-Prefetch';
       const rscContentTypeHeader =
-        routesManifest?.rsc?.contentTypeHeader || 'text/x-component';
+        routesManifest?.rsc?.contentTypeHeader || RSC_CONTENT_TYPE;
 
       let sourcePath: string | undefined;
       if (`/${outputPathPage}` !== srcRoute && srcRoute) {

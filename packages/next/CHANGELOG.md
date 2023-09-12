@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.0.3
+
+### Patch Changes
+
+- fix content-type for RSC prefetches ([#10487](https://github.com/vercel/vercel/pull/10487))
+
 ## 4.0.2
 
 ### Patch Changes
