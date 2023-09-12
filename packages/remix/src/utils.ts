@@ -278,29 +278,41 @@ export function addDependencies(
   }
   const args: string[] = [];
 
-  if (cliType === 'npm' || cliType === 'pnpm') {
-    args.push('install');
-    if (opts.saveDev) {
-      args.push('--save-dev');
-    }
-  } else {
-    // 'yarn'
-    args.push('add');
-    if (opts.saveDev) {
-      args.push('--dev');
-    }
-    const yarnVersion = execSync('yarn -v', { encoding: 'utf8' }).trim();
-    const isYarnV1 = semver.satisfies(yarnVersion, '1');
-    if (isYarnV1) {
-      // Ignoring workspace check is only needed on Yarn v1
-      args.push('--ignore-workspace-root-check');
-    }
-  }
+  switch (cliType) {
+    case 'npm':
+    case 'pnpm':
+      args.push('install');
+      if (opts.saveDev) {
+        args.push('--save-dev');
+      }
 
-  // Don't fail if pnpm is being run at the workspace root
-  if (cliType === 'pnpm' && opts.cwd) {
-    if (existsSync(join(opts.cwd, 'pnpm-workspace.yaml'))) {
-      args.push('--workspace-root');
+      // Don't fail if pnpm is being run at the workspace root
+      if (cliType === 'pnpm' && opts.cwd) {
+        if (existsSync(join(opts.cwd, 'pnpm-workspace.yaml'))) {
+          args.push('--workspace-root');
+        }
+      }
+      break;
+
+    case 'bun':
+    case 'yarn':
+      args.push('add');
+      if (opts.saveDev) {
+        args.push('--dev');
+      }
+      if (cliType === 'yarn') {
+        const yarnVersion = execSync('yarn -v', { encoding: 'utf8' }).trim();
+        const isYarnV1 = semver.satisfies(yarnVersion, '1');
+        if (isYarnV1) {
+          // Ignoring workspace check is only needed on Yarn v1
+          args.push('--ignore-workspace-root-check');
+        }
+      }
+      break;
+
+    default: {
+      const n: never = cliType;
+      throw new Error(`Unexpected package manager: ${n}`);
     }
   }
 
