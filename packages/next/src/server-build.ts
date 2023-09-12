@@ -66,7 +66,7 @@ const EMPTY_ALLOW_QUERY_FOR_PRERENDERED_VERSION = 'v12.2.0';
 const CORRECTED_MANIFESTS_VERSION = 'v12.2.0';
 
 // related PR: https://github.com/vercel/next.js/pull/52997
-const BUNDLED_SERVER_NEXT_VERSION = '13.4.20-canary.22';
+const BUNDLED_SERVER_NEXT_VERSION = '13.4.20-canary.26';
 
 const BUNDLED_SERVER_NEXT_PATH =
   'next/dist/compiled/next-server/server.runtime.prod.js';
