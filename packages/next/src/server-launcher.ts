@@ -29,6 +29,7 @@ const nextServer = new NextServer({
   minimalMode: true,
   customServer: false,
 });
+
 const requestHandler = nextServer.getRequestHandler();
 
 module.exports = async (req: IncomingMessage, res: ServerResponse) => {

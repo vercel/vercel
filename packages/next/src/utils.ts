@@ -1391,8 +1391,10 @@ export type LambdaGroup = {
   memory?: number;
   maxDuration?: number;
   isAppRouter?: boolean;
+  isAppRouteHandler?: boolean;
   isStreaming?: boolean;
   isPrerenders?: boolean;
+  isPages?: boolean;
   isApiLambda: boolean;
   pseudoLayer: PseudoLayer;
   pseudoLayerBytes: number;
