@@ -2213,6 +2213,7 @@ export const onPrerenderRoute =
           fallback: jsonFsRef,
           group: prerenderGroup,
           bypassToken: prerenderManifest.bypassToken,
+          experimentalBypassFor,
 
           ...(isNotFound
             ? {
