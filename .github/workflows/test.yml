@@ -91,10 +91,8 @@ jobs:
           VERCEL_TEST_TOKEN: ${{ secrets.VERCEL_TEST_TOKEN }}
           VERCEL_TEST_REGISTRATION_URL: ${{ secrets.VERCEL_TEST_REGISTRATION_URL }}
           FORCE_COLOR: '1'
-      - name: 'see that turbo file'
-        run: 'echo `ls -t1 .turbo/runs`'
       - name: 'see turbo file contents'
-        run: 'grep -roh ''"status": "HIT"'' .turbo | wc -l | xargs'
+        run: 'grep -roh ''"status": "MISS"'' .turbo | wc -l | xargs'
       - name: fetch ssl certificate after tests (linux, os x)
         if: matrix.runner != 'windows-latest'
         run: echo | openssl s_client -showcerts -servername 'api.vercel.com' -connect 76.76.21.21:443
