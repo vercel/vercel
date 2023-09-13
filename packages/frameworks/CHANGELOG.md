@@ -1,5 +1,11 @@
 # @vercel/frameworks
 
+## 2.0.2
+
+### Patch Changes
+
+- Add `bun install` placeholder ([#10492](https://github.com/vercel/vercel/pull/10492))
+
 ## 2.0.1
 
 ### Patch Changes
