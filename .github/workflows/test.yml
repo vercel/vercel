@@ -92,7 +92,7 @@ jobs:
           VERCEL_TEST_REGISTRATION_URL: ${{ secrets.VERCEL_TEST_REGISTRATION_URL }}
           FORCE_COLOR: '1'
       - name: 'see that turbo file'
-        run: 'echo `ls -lt1 .turbo/runs`'
+        run: 'echo `ls -t1 .turbo/runs`'
       - name: 'see turbo file contents'
         run: cat .turbo/runs/$(ls -lt1 .turbo/runs)
       - name: fetch ssl certificate after tests (linux, os x)
