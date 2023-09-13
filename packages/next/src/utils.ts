@@ -865,6 +865,7 @@ export type NextPrerenderedRoutes = {
       routeRegex: string;
       dataRoute: string | null;
       dataRouteRegex: string | null;
+      experimentalBypassFor?: HasField;
     };
   };
 
@@ -874,6 +875,7 @@ export type NextPrerenderedRoutes = {
       routeRegex: string;
       dataRoute: string | null;
       dataRouteRegex: string | null;
+      experimentalBypassFor?: HasField;
     };
   };
 
@@ -882,6 +884,7 @@ export type NextPrerenderedRoutes = {
       routeRegex: string;
       dataRoute: string | null;
       dataRouteRegex: string | null;
+      experimentalBypassFor?: HasField;
     };
   };
 
@@ -1094,6 +1097,7 @@ export async function getPrerenderManifest(
             fallback: string | false;
             dataRoute: string | null;
             dataRouteRegex: string | null;
+            experimentalBypassFor?: HasField;
           };
         };
         preview: {
@@ -1203,9 +1207,16 @@ export async function getPrerenderManifest(
       lazyRoutes.forEach(lazyRoute => {
         const { routeRegex, fallback, dataRoute, dataRouteRegex } =
           manifest.dynamicRoutes[lazyRoute];
+        let experimentalBypassFor: undefined | HasField;
+
+        if (manifest.version === 4) {
+          experimentalBypassFor =
+            manifest.dynamicRoutes[lazyRoute].experimentalBypassFor;
+        }
 
         if (typeof fallback === 'string') {
           ret.fallbackRoutes[lazyRoute] = {
+            experimentalBypassFor,
             routeRegex,
             fallback,
             dataRoute,
@@ -1213,6 +1224,7 @@ export async function getPrerenderManifest(
           };
         } else if (fallback === null) {
           ret.blockingFallbackRoutes[lazyRoute] = {
+            experimentalBypassFor,
             routeRegex,
             dataRoute,
             dataRouteRegex,
@@ -1221,6 +1233,7 @@ export async function getPrerenderManifest(
           // Fallback behavior is disabled, all routes would've been provided
           // in the top-level `routes` key (`staticRoutes`).
           ret.omittedRoutes[lazyRoute] = {
+            experimentalBypassFor,
             routeRegex,
             dataRoute,
             dataRouteRegex,
