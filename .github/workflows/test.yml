@@ -94,7 +94,7 @@ jobs:
       - name: 'see that turbo file'
         run: ls -1 .turbo/runs
       - name: 'see turbo file contents'
-        run: cat $(ls -lt1 .turbo/runs)
+        run: cat .turbo/runs/$(ls -lt1 .turbo/runs)
       - name: fetch ssl certificate after tests (linux, os x)
         if: matrix.runner != 'windows-latest'
         run: echo | openssl s_client -showcerts -servername 'api.vercel.com' -connect 76.76.21.21:443
