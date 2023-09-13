@@ -1944,10 +1944,13 @@ export const onPrerenderRoute =
       }
       srcRoute = null;
       dataRoute = pr.dataRoute;
+      experimentalBypassFor = pr.experimentalBypassFor;
     } else if (isOmitted) {
       initialRevalidate = false;
       srcRoute = routeKey;
       dataRoute = prerenderManifest.omittedRoutes[routeKey].dataRoute;
+      experimentalBypassFor =
+        prerenderManifest.omittedRoutes[routeKey].experimentalBypassFor;
     } else {
       const pr = prerenderManifest.staticRoutes[routeKey];
       ({
