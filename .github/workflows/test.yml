@@ -93,7 +93,7 @@ jobs:
           FORCE_COLOR: '1'
       - name: 'see turbo file contents'
         run: |
-          'TURBO_CACHE_MISS_COUNT= grep -roh ''"status": "MISS"'' .turbo | wc -l | xargs'
+          TURBO_CACHE_MISS_COUNT=$(grep -roh ''"status": "MISS"'' .turbo | wc -l | xargs)
           echo "$TURBO_CACHE_MISS_COUNT"
           echo "TURBO_CACHE_MISS_COUNT=$TURBO_CACHE_MISS_COUNT" >> $GITHUB_OUTPUT
       - name: fetch ssl certificate after tests (linux, os x)
