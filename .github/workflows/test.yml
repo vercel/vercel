@@ -94,8 +94,6 @@ jobs:
       - name: 'see turbo file contents'
         run: |
           TURBO_CACHE_MISS_COUNT=$(grep -roh ''"status": "MISS"'' .turbo | wc -l | xargs)
-          echo "$TURBO_CACHE_MISS_COUNT"
-          echo "TURBO_CACHE_MISS_COUNT=$TURBO_CACHE_MISS_COUNT" >> $GITHUB_OUTPUT
       - name: fetch ssl certificate after tests (linux, os x)
         if: matrix.runner != 'windows-latest'
         run: echo | openssl s_client -showcerts -servername 'api.vercel.com' -connect 76.76.21.21:443
