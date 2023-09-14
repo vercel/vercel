@@ -52,7 +52,6 @@ import {
 import { installRequirement, installRequirementsFile } from './install';
 import { getLatestPythonVersion, getSupportedPythonVersion } from './version';
 
-
 function isReadable(v: any): v is Readable {
   return v && v.readable === true;
 }
@@ -257,7 +256,7 @@ export async function startDevServer(
   opts: StartDevServerOptions
 ): Promise<StartDevServerResult> {
   opts.config;
-  
+
   const { entrypoint, workPath, meta = {} } = opts;
   const { devCacheDir = join(workPath, '.vercel', 'cache') } = meta;
   const entrypointDir = dirname(entrypoint);
@@ -270,7 +269,11 @@ export async function startDevServer(
     entrypointWithExt += '.go';
   }
 
-  const tmp = join(devCacheDir, 'python', Math.random().toString(32).substring(2));
+  const tmp = join(
+    devCacheDir,
+    'python',
+    Math.random().toString(32).substring(2)
+  );
   const tmpPackage = join(tmp, entrypointDir);
   await mkdirp(tmpPackage);
 
@@ -300,19 +303,18 @@ export async function startDevServer(
   //   TMP,
   //   `vercel-dev-port-${Math.random().toString(32).substring(2)}`
   // );
-  
 
   // const env = cloneEnv(process.env, meta.env, {
   //   VERCEL_DEV_PORT_FILE: portFile,
   // });
 
-
   const env = cloneEnv(process.env, meta.env, {
     VERCEL_DEV_PORT_FILE: '9999',
   });
 
-  const executable = `./vercel-dev-server-go${process.platform === 'win32' ? '.exe' : ''
-    }`;
+  const executable = `./vercel-dev-server-go${
+    process.platform === 'win32' ? '.exe' : ''
+  }`;
 
   // Note: We must run `go build`, then manually spawn the dev server instead
   // of spawning `go run`. See https://github.com/vercel/vercel/pull/8718 for
