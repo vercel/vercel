@@ -4,9 +4,7 @@
   "main": "dist/index.js",
   "files": [
     "dist",
-    "gatsby-node.ts",
-    "gatsby-node.js",
-    "gatsby-node.js.map"
+    "gatsby-node.js"
   ],
   "repository": {
     "type": "git",

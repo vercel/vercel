@@ -24,7 +24,7 @@ export const writeHandler = async ({
   const { major } = await getNodeVersion(process.cwd());
 
   try {
-    return await build({
+    await build({
       entryPoints: [handlerFile],
       loader: { '.ts': 'ts' },
       outfile: join(outDir, 'index.js'),
