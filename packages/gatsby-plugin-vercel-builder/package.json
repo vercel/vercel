@@ -12,9 +12,7 @@
     "directory": "packages/gatsby-plugin-vercel-builder"
   },
   "scripts": {
-    "build": "pnpm build:src && pnpm build:gatsby",
-    "build:gatsby": "tsc -p tsconfig.gatsby.json",
-    "build:src": "tsc -p tsconfig.src.json"
+    "build": "node ../../utils/build-builder.mjs"
   },
   "dependencies": {
     "@sinclair/typebox": "0.25.24",
