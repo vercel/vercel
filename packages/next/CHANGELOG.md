@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.0.5
+
+### Patch Changes
+
+- missed a prerender for experimentalBypassFor ([#10504](https://github.com/vercel/vercel/pull/10504))
+
 ## 4.0.4
 
 ### Patch Changes
