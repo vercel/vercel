@@ -93,6 +93,9 @@ jobs:
           FORCE_COLOR: '1'
       - name: 'Determing Turbo HIT or MISS'
         run: node utils/determine-turbo-hit-or-miss.js
+      - name: 'Test run if'
+        run: echo YES
+        if: node utils/determine-turbo-hit-or-miss.js
       - name: fetch ssl certificate after tests (linux, os x)
         if: matrix.runner != 'windows-latest'
         run: echo | openssl s_client -showcerts -servername 'api.vercel.com' -connect 76.76.21.21:443
