@@ -91,8 +91,9 @@ jobs:
           VERCEL_TEST_TOKEN: ${{ secrets.VERCEL_TEST_TOKEN }}
           VERCEL_TEST_REGISTRATION_URL: ${{ secrets.VERCEL_TEST_REGISTRATION_URL }}
           FORCE_COLOR: '1'
-      - name: 'Determing Turbo HIT or MISS (*nix)'
+      - name: 'Determing Turbo HIT or MISS'
         id: turbo-summary
+        shell: bash
         run: |
           TURBO_MISS_COUNT=`node utils/determine-turbo-hit-or-miss.js`
           echo "MISS COUNT"
