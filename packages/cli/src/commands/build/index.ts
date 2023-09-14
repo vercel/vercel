@@ -426,8 +426,13 @@ async function doBuild(
 
   const ops: Promise<Error | void>[] = [];
 
-  const isUsingSpeedInsights = Boolean(
-    pkg?.dependencies?.['@vercel/speed-insights']
+  const dependencies = [
+    ...Object.keys(pkg?.dependencies ?? {}),
+    ...Object.keys(pkg?.devDependencies ?? {}),
+  ];
+
+  const isUsingSpeedInsights = dependencies.some(
+    d => d === '@vercel/speed-insights'
   );
 
   if (isUsingSpeedInsights && process.env.VERCEL_ANALYTICS_ID) {
