@@ -25,6 +25,6 @@ async function main() {
 }
 
 main().catch(err => {
-  console.log('error determining', err);
+  console.log('error determining Turbo HIT or MISS', err);
   process.exit(1);
 });
