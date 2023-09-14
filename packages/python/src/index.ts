@@ -1,7 +1,41 @@
 import { join, dirname, basename } from 'path';
+import { spawn } from 'child_process';
 import execa from 'execa';
 import fs from 'fs';
 import { promisify } from 'util';
+import retry from 'async-retry';
+import { Readable } from 'stream';
+
+import {
+  BuildOptions,
+  Files,
+  PrepareCacheOptions,
+  StartDevServerOptions,
+  StartDevServerResult,
+  glob,
+  download,
+  Lambda,
+  getWriteableDirectory,
+  shouldServe,
+  debug,
+  cloneEnv,
+} from '@vercel/build-utils';
+
+import {
+  readFile,
+  writeFile,
+  lstat,
+  pathExists,
+  mkdirp,
+  move,
+  readlink,
+  remove,
+  rmdir,
+  readdir,
+  unlink,
+  copy,
+} from 'fs-extra';
+
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
 import {
@@ -17,6 +51,11 @@ import {
 } from '@vercel/build-utils';
 import { installRequirement, installRequirementsFile } from './install';
 import { getLatestPythonVersion, getSupportedPythonVersion } from './version';
+
+
+function isReadable(v: any): v is Readable {
+  return v && v.readable === true;
+}
 
 async function pipenvConvert(cmd: string, srcDir: string) {
   debug('Running pipfile2req...');
@@ -213,6 +252,136 @@ export const build = async ({
 
   return { output: lambda };
 };
+
+export async function startDevServer(
+  opts: StartDevServerOptions
+): Promise<StartDevServerResult> {
+  opts.config;
+  
+  const { entrypoint, workPath, meta = {} } = opts;
+  const { devCacheDir = join(workPath, '.vercel', 'cache') } = meta;
+  const entrypointDir = dirname(entrypoint);
+  entrypointDir;
+
+  // For some reason, if `entrypoint` is a path segment (filename contains `[]`
+  // brackets) then the `.go` suffix on the entrypoint is missing. Fix that here…
+  let entrypointWithExt = entrypoint;
+  if (!entrypoint.endsWith('.go')) {
+    entrypointWithExt += '.go';
+  }
+
+  const tmp = join(devCacheDir, 'python', Math.random().toString(32).substring(2));
+  const tmpPackage = join(tmp, entrypointDir);
+  await mkdirp(tmpPackage);
+
+  // const { goModPath } = await findGoModPath(
+  //   join(workPath, entrypointDir),
+  //   workPath
+  // );
+  // const modulePath = goModPath ? dirname(goModPath) : undefined;
+  // const analyzed = await getAnalyzedEntrypoint({
+  //   entrypoint: entrypointWithExt,
+  //   modulePath,
+  //   workPath,
+  // });
+
+  // await Promise.all([
+  //   copyEntrypoint(entrypointWithExt, tmpPackage),
+  //   copyDevServer(analyzed.functionName, tmpPackage),
+  //   writeGoMod({
+  //     destDir: tmp,
+  //     goModPath,
+  //     packageName: analyzed.packageName,
+  //   }),
+  //   writeGoWork(tmp, workPath, modulePath),
+  // ]);
+
+  // const portFile = join(
+  //   TMP,
+  //   `vercel-dev-port-${Math.random().toString(32).substring(2)}`
+  // );
+  
+
+  // const env = cloneEnv(process.env, meta.env, {
+  //   VERCEL_DEV_PORT_FILE: portFile,
+  // });
+
+
+  const env = cloneEnv(process.env, meta.env, {
+    VERCEL_DEV_PORT_FILE: '9999',
+  });
+
+  const executable = `./vercel-dev-server-go${process.platform === 'win32' ? '.exe' : ''
+    }`;
+
+  // Note: We must run `go build`, then manually spawn the dev server instead
+  // of spawning `go run`. See https://github.com/vercel/vercel/pull/8718 for
+  // more info.
+
+  // // build the dev server
+  // const go = await createGo({
+  //   modulePath,
+  //   opts: {
+  //     cwd: tmp,
+  //     env,
+  //   },
+  //   workPath,
+  // });
+  // await go.build('./...', executable);
+
+  // run the dev server
+  debug(`SPAWNING ${executable} CWD=${tmp}`);
+  const child = spawn(executable, [], {
+    cwd: tmp,
+    env,
+    stdio: ['ignore', 'inherit', 'inherit', 'pipe'],
+  });
+
+  child.on('close', async () => {
+    try {
+      await retry(() => remove(tmp));
+    } catch (err: any) {
+      console.error(`Could not delete tmp directory: ${tmp}: ${err}`);
+    }
+  });
+
+  const portPipe = child.stdio[3];
+  if (!isReadable(portPipe)) {
+    throw new Error('File descriptor 3 is not readable');
+  }
+
+  // // `dev-server.go` writes the ephemeral port number to FD 3 to be consumed here
+  // const onPort = new Promise<PortInfo>(resolve => {
+  //   portPipe.setEncoding('utf8');
+  //   portPipe.once('data', d => {
+  //     resolve({ port: Number(d) });
+  //   });
+  // });
+  // const onPortFile = waitForPortFile(portFile);
+  // const onExit = once.spread<[number, string | null]>(child, 'exit');
+  // const result = await Promise.race([onPort, onPortFile, onExit]);
+  // onExit.cancel();
+  // onPortFile.cancel();
+
+  // if (isPortInfo(result)) {
+  //   return {
+  //     port: result.port,
+  //     pid: child.pid,
+  //   };
+  // } else if (Array.isArray(result)) {
+  //   // Got "exit" event from child process
+  //   const [exitCode, signal] = result;
+  //   const reason = signal ? `"${signal}" signal` : `exit code ${exitCode}`;
+  //   throw new Error(`\`go run ${entrypointWithExt}\` failed with ${reason}`);
+  // } else {
+  //   throw new Error(`Unexpected result type: ${typeof result}`);
+  // }
+
+  return {
+    port: 9999,
+    pid: 5,
+  };
+}
 
 export { shouldServe };
 
