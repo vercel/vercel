@@ -132,7 +132,7 @@ importers:
         specifier: 27.4.1
         version: 27.4.1
       '@vercel/frameworks':
-        specifier: 2.0.1
+        specifier: 2.0.2
         version: link:../packages/frameworks
 
   internals/constants:
@@ -322,7 +322,7 @@ importers:
         specifier: 1.0.1
         version: link:../hydrogen
       '@vercel/next':
-        specifier: 4.0.3
+        specifier: 4.0.4
         version: link:../next
       '@vercel/node':
         specifier: 3.0.5
@@ -334,7 +334,7 @@ importers:
         specifier: 2.0.2
         version: link:../redwood
       '@vercel/remix-builder':
-        specifier: 2.0.4
+        specifier: 2.0.5
         version: link:../remix
       '@vercel/ruby':
         specifier: 2.0.2
@@ -482,10 +482,10 @@ importers:
         specifier: 2.0.1
         version: link:../error-utils
       '@vercel/frameworks':
-        specifier: 2.0.1
+        specifier: 2.0.2
         version: link:../frameworks
       '@vercel/fs-detectors':
-        specifier: 5.0.2
+        specifier: 5.0.3
         version: link:../fs-detectors
       '@vercel/fun':
         specifier: 1.1.0
@@ -898,7 +898,7 @@ importers:
         specifier: 2.0.1
         version: link:../error-utils
       '@vercel/frameworks':
-        specifier: 2.0.1
+        specifier: 2.0.2
         version: link:../frameworks
       '@vercel/routing-utils':
         specifier: 3.0.0
@@ -1523,10 +1523,10 @@ importers:
         specifier: 2.0.1
         version: link:../error-utils
       '@vercel/frameworks':
-        specifier: 2.0.1
+        specifier: 2.0.2
         version: link:../frameworks
       '@vercel/fs-detectors':
-        specifier: 5.0.2
+        specifier: 5.0.3
         version: link:../fs-detectors
       '@vercel/ncc':
         specifier: 0.24.0
