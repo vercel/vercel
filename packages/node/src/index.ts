@@ -25,6 +25,7 @@ import nftResolveDependency from '@vercel/nft/out/resolve-dependency';
 import {
   glob,
   download,
+  execCommand,
   FileBlob,
   FileFsRef,
   EdgeFunction,
@@ -99,7 +100,21 @@ async function downloadInstallAndBundle({
     meta
   );
   const spawnOpts = getSpawnOptions(meta, nodeVersion);
-  await runNpmInstall(entrypointFsDirname, [], spawnOpts, meta, nodeVersion);
+
+  if (config.zeroConfig) {
+    const installCommand =
+      typeof config.installCommand === 'string' && config.installCommand.trim();
+    if (installCommand) {
+      console.log(`Running "install" command: \`${installCommand}\`...`);
+      await execCommand(installCommand, {
+        ...spawnOpts,
+        cwd: entrypointFsDirname,
+      });
+    }
+  } else {
+    await runNpmInstall(entrypointFsDirname, [], spawnOpts, meta, nodeVersion);
+  }
+
   const entrypointPath = downloadedFiles[entrypoint].fsPath;
   return { entrypointPath, entrypointFsDirname, nodeVersion, spawnOpts };
 }
