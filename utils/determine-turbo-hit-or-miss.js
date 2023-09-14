@@ -12,7 +12,6 @@ async function main() {
     const tasksReports = runData.tasks || [];
 
     const missCount = tasksReports.reduce((total, taskData) => {
-      console.log(taskData.cache.status);
       if (taskData.cache.status === 'MISS') {
         return total + 1;
       }
