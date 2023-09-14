@@ -41,7 +41,7 @@ export async function initCorepack({
     const pkgManagerName = pkg.packageManager.split('@')[0];
     // We must explicitly call `corepack enable npm` since `corepack enable`
     // doesn't work with npm. See https://github.com/nodejs/corepack/pull/24
-    // Also, `corepack enable` is too broad and will change the verison of
+    // Also, `corepack enable` is too broad and will change the version of
     // yarn & pnpm even though those versions are not specified by the user.
     // See https://github.com/nodejs/corepack#known-good-releases
     // Finally, we use `--install-directory` so we can cache the result to

@@ -1,5 +1,11 @@
 # @vercel/remix-builder
 
+## 2.0.5
+
+### Patch Changes
+
+- Fix usage with `bun install` ([#10489](https://github.com/vercel/vercel/pull/10489))
+
 ## 2.0.4
 
 ### Patch Changes
