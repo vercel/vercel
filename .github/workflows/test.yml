@@ -96,8 +96,7 @@ jobs:
         shell: bash
         run: |
           TURBO_MISS_COUNT=`node utils/determine-turbo-hit-or-miss.js`
-          echo "MISS COUNT"
-          echo "$TURBO_MISS_COUNT"
+          echo "MISS count: $TURBO_MISS_COUNT"
           echo "misses=$TURBO_MISS_COUNT" >> $GITHUB_OUTPUT
       - name: fetch ssl certificate after tests (linux, os x)
         if: matrix.runner != 'windows-latest'
