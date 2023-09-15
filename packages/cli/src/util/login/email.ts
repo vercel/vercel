@@ -11,8 +11,7 @@ import { errorToString } from '@vercel/error-utils';
 
 export default async function doEmailLogin(
   client: Client,
-  email: string,
-  ssoUserId?: string
+  email: string
 ): Promise<LoginResult> {
   let securityCode;
   let verificationToken;
@@ -46,13 +45,7 @@ export default async function doEmailLogin(
   while (!result) {
     try {
       await sleep(ms('1s'));
-      result = await verify(
-        client,
-        verificationToken,
-        email,
-        'Email',
-        ssoUserId
-      );
+      result = await verify(client, verificationToken, email, 'Email');
     } catch (err: unknown) {
       if (!isAPIError(err) || err.serverMessage !== 'Confirmation incomplete') {
         output.error(errorToString(err));

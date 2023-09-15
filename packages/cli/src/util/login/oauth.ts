@@ -15,8 +15,7 @@ export default async function doOauthLogin(
   client: Client,
   url: URL,
   provider: string,
-  outOfBand = isHeadless(),
-  ssoUserId?: string
+  outOfBand = isHeadless()
 ): Promise<LoginResult> {
   url.searchParams.set('mode', 'login');
 
@@ -37,8 +36,7 @@ export default async function doOauthLogin(
       client,
       result.verificationToken,
       undefined,
-      provider,
-      ssoUserId
+      provider
     );
     output.success(
       `${provider} authentication complete for ${highlight(result.email)}`
@@ -81,6 +79,7 @@ async function getVerificationTokenInBand(
 
           const query = new URL(req.url || '/', 'http://localhost')
             .searchParams;
+
           resolve(query);
 
           // Redirect the user's web browser back to

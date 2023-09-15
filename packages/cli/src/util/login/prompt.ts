@@ -12,8 +12,7 @@ import doBitbucketLogin from './bitbucket';
 export default async function prompt(
   client: Client,
   error?: Pick<SAMLError, 'teamId'>,
-  outOfBand?: boolean,
-  ssoUserId?: string
+  outOfBand?: boolean
 ) {
   let result: LoginResult = 1;
 
@@ -25,7 +24,7 @@ export default async function prompt(
     { name: 'Continue with SAML Single Sign-On', value: 'saml', short: 'saml' },
   ];
 
-  if (ssoUserId || (error && !error.teamId)) {
+  if (error && !error.teamId) {
     // Remove SAML login option if we're connecting SAML Profile,
     // or if this is a SAML error for a user / team without SAML
     choices.pop();
@@ -37,18 +36,18 @@ export default async function prompt(
   });
 
   if (choice === 'github') {
-    result = await doGithubLogin(client, outOfBand, ssoUserId);
+    result = await doGithubLogin(client, outOfBand);
   } else if (choice === 'gitlab') {
-    result = await doGitlabLogin(client, outOfBand, ssoUserId);
+    result = await doGitlabLogin(client, outOfBand);
   } else if (choice === 'bitbucket') {
-    result = await doBitbucketLogin(client, outOfBand, ssoUserId);
+    result = await doBitbucketLogin(client, outOfBand);
   } else if (choice === 'email') {
     const email = await readInput(client, 'Enter your email address:');
-    result = await doEmailLogin(client, email, ssoUserId);
+    result = await doEmailLogin(client, email);
   } else if (choice === 'saml') {
     const slug =
       error?.teamId || (await readInput(client, 'Enter your Team slug:'));
-    result = await doSamlLogin(client, slug, outOfBand, ssoUserId);
+    result = await doSamlLogin(client, slug, outOfBand);
   }
 
   return result;
