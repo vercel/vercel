@@ -1,5 +1,14 @@
 # vercel
 
+## 32.2.4
+
+### Patch Changes
+
+- Add support for bun detection in monorepo ([#10511](https://github.com/vercel/vercel/pull/10511))
+
+- Updated dependencies [[`1b6f3a0f6`](https://github.com/vercel/vercel/commit/1b6f3a0f6534f71c7486a4e33ac199f1da330626)]:
+  - @vercel/static-build@2.0.6
+
 ## 32.2.3
 
 ### Patch Changes
