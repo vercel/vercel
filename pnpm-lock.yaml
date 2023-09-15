@@ -340,7 +340,7 @@ importers:
         specifier: 2.0.2
         version: link:../ruby
       '@vercel/static-build':
-        specifier: 2.0.5
+        specifier: 2.0.6
         version: link:../static-build
     devDependencies:
       '@alex_neo/jest-expect-message':
@@ -485,7 +485,7 @@ importers:
         specifier: 2.0.2
         version: link:../frameworks
       '@vercel/fs-detectors':
-        specifier: 5.0.3
+        specifier: 5.1.0
         version: link:../fs-detectors
       '@vercel/fun':
         specifier: 1.1.0
@@ -1526,7 +1526,7 @@ importers:
         specifier: 2.0.2
         version: link:../frameworks
       '@vercel/fs-detectors':
-        specifier: 5.0.3
+        specifier: 5.1.0
         version: link:../fs-detectors
       '@vercel/ncc':
         specifier: 0.24.0
