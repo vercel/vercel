@@ -978,6 +978,7 @@ export default class DevServer {
       // log address without trailing slash to maintain backwards compatibility
       addressFormatted = addressFormatted.replace(/\/$/, '');
     }
+
     this.output.ready(`Available at ${link(addressFormatted)}`);
   }
 
@@ -1450,7 +1451,7 @@ export default class DevServer {
           );
 
           const middlewareBody = await middlewareRes.buffer();
-
+          console.error('Here?');
           if (middlewareRes.status === 500 && middlewareBody.byteLength === 0) {
             await this.sendError(
               req,

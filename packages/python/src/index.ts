@@ -2,9 +2,10 @@ import { join, dirname, basename } from 'path';
 import { spawn } from 'child_process';
 import execa from 'execa';
 import fs from 'fs';
-import { promisify } from 'util';
+import { tmpdir } from 'os';
 import retry from 'async-retry';
 import { Readable } from 'stream';
+import once from '@tootallnate/once';
 
 import {
   BuildOptions,
@@ -21,36 +22,14 @@ import {
   cloneEnv,
 } from '@vercel/build-utils';
 
-import {
-  readFile,
-  writeFile,
-  lstat,
-  pathExists,
-  mkdirp,
-  move,
-  readlink,
-  remove,
-  rmdir,
-  readdir,
-  unlink,
-  copy,
-} from 'fs-extra';
+import { readFile, writeFile, mkdirp, remove } from 'fs-extra';
 
-const readFile = promisify(fs.readFile);
-const writeFile = promisify(fs.writeFile);
-import {
-  GlobOptions,
-  BuildOptions,
-  getWriteableDirectory,
-  download,
-  glob,
-  createLambda,
-  shouldServe,
-  debug,
-  NowBuildError,
-} from '@vercel/build-utils';
+import { GlobOptions, createLambda, NowBuildError } from '@vercel/build-utils';
+
 import { installRequirement, installRequirementsFile } from './install';
 import { getLatestPythonVersion, getSupportedPythonVersion } from './version';
+
+const TMP = tmpdir();
 
 function isReadable(v: any): v is Readable {
   return v && v.readable === true;
@@ -242,8 +221,10 @@ export const build = async ({
         : 'node_modules/**',
   };
 
+  const files = await glob('**', globOptions);
+  console.log(files);
   const lambda = await createLambda({
-    files: await glob('**', globOptions),
+    files,
     handler: `${handlerPyFilename}.vc_handler`,
     runtime: pythonVersion.runtime,
     environment: {},
@@ -251,6 +232,64 @@ export const build = async ({
 
   return { output: lambda };
 };
+
+interface PortInfo {
+  port: number;
+}
+
+function isPortInfo(v: any): v is PortInfo {
+  return v && typeof v.port === 'number';
+}
+
+export interface CancelablePromise<T> extends Promise<T> {
+  cancel: () => void;
+}
+
+function waitForPortFile(portFile: string) {
+  const opts = { portFile, canceled: false };
+  const promise = waitForPortFile_(opts) as CancelablePromise<PortInfo | void>;
+  promise.cancel = () => {
+    opts.canceled = true;
+  };
+  return promise;
+}
+
+async function waitForPortFile_(opts: {
+  portFile: string;
+  canceled: boolean;
+}): Promise<PortInfo | void> {
+  while (!opts.canceled) {
+    await new Promise(resolve => setTimeout(resolve, 100));
+    try {
+      const port = Number(await readFile(opts.portFile, 'ascii'));
+      retry(() => remove(opts.portFile)).catch((err: Error) => {
+        console.error(`Could not delete port file: ${opts.portFile}: ${err}`);
+      });
+      return { port };
+    } catch (err: any) {
+      if (err.code !== 'ENOENT') {
+        throw err;
+      }
+    }
+  }
+}
+
+async function copyDevServer(
+  serverlessFunctionString: string,
+  dest: string
+): Promise<void> {
+  const serverTemplate = await readFile(
+    join(__dirname, '../dev-server.py'),
+    'utf8'
+  );
+  const patched = serverTemplate.replace(
+    '__HANDLER_CLASS_TEMPLATE',
+    serverlessFunctionString
+  );
+
+  console.log('Writing vercel-dev-server-main.py to ', dest);
+  await writeFile(join(dest, 'vercel-dev-server-main.py'), patched);
+}
 
 export async function startDevServer(
   opts: StartDevServerOptions
@@ -262,13 +301,6 @@ export async function startDevServer(
   const entrypointDir = dirname(entrypoint);
   entrypointDir;
 
-  // For some reason, if `entrypoint` is a path segment (filename contains `[]`
-  // brackets) then the `.go` suffix on the entrypoint is missing. Fix that here…
-  let entrypointWithExt = entrypoint;
-  if (!entrypoint.endsWith('.go')) {
-    entrypointWithExt += '.go';
-  }
-
   const tmp = join(
     devCacheDir,
     'python',
@@ -277,63 +309,23 @@ export async function startDevServer(
   const tmpPackage = join(tmp, entrypointDir);
   await mkdirp(tmpPackage);
 
-  // const { goModPath } = await findGoModPath(
-  //   join(workPath, entrypointDir),
-  //   workPath
-  // );
-  // const modulePath = goModPath ? dirname(goModPath) : undefined;
-  // const analyzed = await getAnalyzedEntrypoint({
-  //   entrypoint: entrypointWithExt,
-  //   modulePath,
-  //   workPath,
-  // });
+  let serverlessFunctionBody = await readFile(join(workPath, entrypoint));
+  await copyDevServer(serverlessFunctionBody, tmpPackage);
 
-  // await Promise.all([
-  //   copyEntrypoint(entrypointWithExt, tmpPackage),
-  //   copyDevServer(analyzed.functionName, tmpPackage),
-  //   writeGoMod({
-  //     destDir: tmp,
-  //     goModPath,
-  //     packageName: analyzed.packageName,
-  //   }),
-  //   writeGoWork(tmp, workPath, modulePath),
-  // ]);
-
-  // const portFile = join(
-  //   TMP,
-  //   `vercel-dev-port-${Math.random().toString(32).substring(2)}`
-  // );
-
-  // const env = cloneEnv(process.env, meta.env, {
-  //   VERCEL_DEV_PORT_FILE: portFile,
-  // });
+  const portFile = join(
+    TMP,
+    `vercel-dev-port-${Math.random().toString(32).substring(2)}`
+  );
 
   const env = cloneEnv(process.env, meta.env, {
-    VERCEL_DEV_PORT_FILE: '9999',
+    VERCEL_DEV_PORT_FILE: portFile,
   });
 
-  const executable = `./vercel-dev-server-go${
-    process.platform === 'win32' ? '.exe' : ''
-  }`;
-
-  // Note: We must run `go build`, then manually spawn the dev server instead
-  // of spawning `go run`. See https://github.com/vercel/vercel/pull/8718 for
-  // more info.
-
-  // // build the dev server
-  // const go = await createGo({
-  //   modulePath,
-  //   opts: {
-  //     cwd: tmp,
-  //     env,
-  //   },
-  //   workPath,
-  // });
-  // await go.build('./...', executable);
+  const executable = 'python3';
 
   // run the dev server
   debug(`SPAWNING ${executable} CWD=${tmp}`);
-  const child = spawn(executable, [], {
+  const child = spawn(executable, ['api/vercel-dev-server-main.py'], {
     cwd: tmp,
     env,
     stdio: ['ignore', 'inherit', 'inherit', 'pipe'],
@@ -353,36 +345,31 @@ export async function startDevServer(
   }
 
   // // `dev-server.go` writes the ephemeral port number to FD 3 to be consumed here
-  // const onPort = new Promise<PortInfo>(resolve => {
-  //   portPipe.setEncoding('utf8');
-  //   portPipe.once('data', d => {
-  //     resolve({ port: Number(d) });
-  //   });
-  // });
-  // const onPortFile = waitForPortFile(portFile);
-  // const onExit = once.spread<[number, string | null]>(child, 'exit');
-  // const result = await Promise.race([onPort, onPortFile, onExit]);
-  // onExit.cancel();
-  // onPortFile.cancel();
+  const onPort = new Promise<PortInfo>(resolve => {
+    portPipe.setEncoding('utf8');
+    portPipe.once('data', d => {
+      resolve({ port: Number(d) });
+    });
+  });
+  const onPortFile = waitForPortFile(portFile);
+  const onExit = once.spread<[number, string | null]>(child, 'exit');
+  const result = await Promise.race([onPort, onPortFile, onExit]);
+  onExit.cancel();
+  onPortFile.cancel();
 
-  // if (isPortInfo(result)) {
-  //   return {
-  //     port: result.port,
-  //     pid: child.pid,
-  //   };
-  // } else if (Array.isArray(result)) {
-  //   // Got "exit" event from child process
-  //   const [exitCode, signal] = result;
-  //   const reason = signal ? `"${signal}" signal` : `exit code ${exitCode}`;
-  //   throw new Error(`\`go run ${entrypointWithExt}\` failed with ${reason}`);
-  // } else {
-  //   throw new Error(`Unexpected result type: ${typeof result}`);
-  // }
-
-  return {
-    port: 9999,
-    pid: 5,
-  };
+  if (isPortInfo(result)) {
+    return {
+      port: 9999, //result.port,
+      pid: child.pid,
+    };
+  } else if (Array.isArray(result)) {
+    // Got "exit" event from child process
+    const [exitCode, signal] = result;
+    const reason = signal ? `"${signal}" signal` : `exit code ${exitCode}`;
+    throw new Error(`\`python3 ${entrypoint}\` failed with ${reason}`);
+  } else {
+    throw new Error(`Unexpected result type: ${typeof result}`);
+  }
 }
 
 export { shouldServe };
