@@ -101,7 +101,7 @@ async function downloadInstallAndBundle({
   );
   const spawnOpts = getSpawnOptions(meta, nodeVersion);
 
-  if (config.zeroConfig) {
+  if (config.zeroConfig && config.installCommand === 'string') {
     const installCommand =
       typeof config.installCommand === 'string' && config.installCommand.trim();
     if (installCommand) {
