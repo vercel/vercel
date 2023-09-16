@@ -101,16 +101,17 @@ async function downloadInstallAndBundle({
   );
   const spawnOpts = getSpawnOptions(meta, nodeVersion);
 
-  if (config.zeroConfig && config.installCommand === 'string') {
-    const installCommand =
-      typeof config.installCommand === 'string' && config.installCommand.trim();
-    if (installCommand) {
-      console.log(`Running "install" command: \`${installCommand}\`...`);
-      await execCommand(installCommand, {
-        ...spawnOpts,
-        cwd: entrypointFsDirname,
-      });
-    }
+  const installCommand =
+    config.zeroConfig &&
+    typeof config.installCommand === 'string' &&
+    config.installCommand.trim();
+
+  if (installCommand) {
+    console.log(`Running "install" command: \`${installCommand}\`...`);
+    await execCommand(installCommand, {
+      ...spawnOpts,
+      cwd: entrypointFsDirname,
+    });
   } else {
     await runNpmInstall(entrypointFsDirname, [], spawnOpts, meta, nodeVersion);
   }
