@@ -1,30 +1,35 @@
 const fs = require('fs-extra');
 const path = require('path');
 
-async function main() {
-  const rootDir = path.join(__dirname, '..');
-  const turboRunDir = path.join(rootDir, '.turbo/runs');
+async function main(turboRunDirectory, turboRunDirectoryParent) {
+  const turboRunDir = path.join(turboRunDirectoryParent, turboRunDirectory);
   const turboRunFiles = await fs.readdir(turboRunDir);
 
-  turboRunFiles.forEach(async fileName => {
-    const runFile = path.join(turboRunDir, fileName);
-    const runData = await fs.readJson(runFile);
-    const tasksReports = runData.tasks || [];
+  let missCount = 0;
 
-    const missCount = tasksReports.reduce((total, taskData) => {
-      if (taskData.cache.status === 'MISS') {
-        return total + 1;
-      }
+  await Promise.all(
+    turboRunFiles.map(async fileName => {
+      const runFile = path.join(turboRunDir, fileName);
+      const runData = await fs.readJson(runFile);
+      const { attempted, cached } = runData.execution;
 
-      return total;
-    }, 0);
+      missCount += attempted - cached;
+    })
+  );
 
-    console.log(missCount);
-    return process.exit(missCount);
-  });
+  // log because STDOUT is how GitHub Actions communicates
+  console.log(missCount);
+
+  // Return so we can unit test.
+  return missCount;
 }
 
-main().catch(err => {
+const turboRunDirectory = '.turbo/runs';
+const turboRunDirectoryParent = path.join(__dirname, '..');
+
+main(turboRunDirectory, turboRunDirectoryParent).catch(err => {
   console.log('error determining Turbo HIT or MISS', err);
   process.exit(1);
 });
+
+module.exports = main;
