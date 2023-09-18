@@ -9,13 +9,10 @@ import once from '@tootallnate/once';
 
 import {
   BuildOptions,
-  Files,
-  PrepareCacheOptions,
   StartDevServerOptions,
   StartDevServerResult,
   glob,
   download,
-  Lambda,
   getWriteableDirectory,
   shouldServe,
   debug,
@@ -309,7 +306,7 @@ export async function startDevServer(
   const tmpPackage = join(tmp, entrypointDir);
   await mkdirp(tmpPackage);
 
-  let serverlessFunctionBody = await readFile(join(workPath, entrypoint));
+  const serverlessFunctionBody = await readFile(join(workPath, entrypoint));
   await copyDevServer(serverlessFunctionBody, tmpPackage);
 
   const portFile = join(
@@ -344,7 +341,7 @@ export async function startDevServer(
     throw new Error('File descriptor 3 is not readable');
   }
 
-  // // `dev-server.go` writes the ephemeral port number to FD 3 to be consumed here
+  // // `dev-server.python` writes the ephemeral port number to FD 3 to be consumed here
   const onPort = new Promise<PortInfo>(resolve => {
     portPipe.setEncoding('utf8');
     portPipe.once('data', d => {
@@ -357,9 +354,10 @@ export async function startDevServer(
   onExit.cancel();
   onPortFile.cancel();
 
+  console.log(`Hosting on http://127.0.0.1:${result.port}`);
   if (isPortInfo(result)) {
     return {
-      port: 9999, //result.port,
+      port: result.port,
       pid: child.pid,
     };
   } else if (Array.isArray(result)) {

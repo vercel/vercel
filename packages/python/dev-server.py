@@ -1,22 +1,10 @@
 from http.server import HTTPServer
 import os
-
-hostName = "localhost"
-serverPort = 9999
-
-from http.server import BaseHTTPRequestHandler
-class handler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        print("I got here!")
-        self.send_response(200)
-        self.send_header('Content-type','text/plain')
-        self.end_headers()
-        self.wfile.write('Hello, world!'.encode('utf-8'))
-        return
-
-# __HANDLER_CLASS_TEMPLATE
+import sys
+__HANDLER_CLASS_TEMPLATE
 
 if __name__ == "__main__":
+    hostName = "localhost"
     errorMessage = 'Neither `app` nor `handler` defined in serverless function {}. See: https://vercel.com/docs/functions/serverless-functions/runtimes/python'.format(__file__)
 
     if 'handler' in dir():
@@ -28,17 +16,21 @@ if __name__ == "__main__":
     if not 'appOrHandler' in dir():
         raise Exception(errorMessage)
 
-    webServer = HTTPServer((hostName, serverPort), appOrHandler)
+    # Port 0 is unix-speak for 'first available port'
+    httpd = HTTPServer((hostName, 0), appOrHandler)
+    serverPort = httpd.socket.getsockname()[1]
+
     print("Server started http://%s:%s" % (hostName, serverPort))
 
-    with os.fdopen(3, 'w') as fdfile:
+    fd = os.open("pipe", os.O_RDWR|os.O_CREAT)
+    with os.fdopen(fd, 'w') as fdfile:
         fdfile.write(str(serverPort))
         fdfile.close()
         
     try:
-        webServer.serve_forever()
+        httpd.serve_forever()
     except KeyboardInterrupt:
         pass
 
-    webServer.server_close()
+    httpd.server_close()
     print("Server stopped.")
