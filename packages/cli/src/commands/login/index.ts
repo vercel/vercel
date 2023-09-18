@@ -86,7 +86,7 @@ export default async function login(client: Client): Promise<number> {
       } catch (err: unknown) {
         // Shouldn't happen since we just logged in
         output.error('Not able to load user');
-        return 2;
+        return 1;
       }
       if (user.version === 'northstar' && user.defaultTeamId) {
         client.config.currentTeam = user.defaultTeamId;
