@@ -22,7 +22,6 @@ describe('teams', () => {
         });
         useTeams(undefined, { apiVersion: 2 });
         const exitCodePromise = teamsList(client);
-        // Test that personal account is not displayed in scope switcher
         await expect(client.stdout).not.toOutput(user.username);
         await expect(exitCodePromise).resolves.toEqual(0);
       });
