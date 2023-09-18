@@ -167,9 +167,17 @@ export const build: BuildV2 = async ({
 
   const depsToAdd: string[] = [];
 
+  const remixRunDevPkgVersion =
+    pkg.dependencies?.['@remix-run/dev'] ||
+    pkg.devDependencies?.['@remix-run/dev'];
+
   // Override the official `@remix-run/dev` package with the
   // Vercel fork, which supports the `serverBundles` config
-  if (!isHydrogen2 && remixRunDevPkg.name !== '@vercel/remix-run-dev') {
+  if (
+    !isHydrogen2 &&
+    remixRunDevPkg.name !== '@vercel/remix-run-dev' &&
+    !remixRunDevPkgVersion.startsWith('https:')
+  ) {
     const remixDevForkVersion = resolveSemverMinMax(
       REMIX_RUN_DEV_MIN_VERSION,
       REMIX_RUN_DEV_MAX_VERSION,
@@ -308,7 +316,7 @@ export const build: BuildV2 = async ({
           renamedRemixConfigPath
         )}';
 config.serverBuildTarget = undefined;
-config.serverModuleFormat = 'cjs';
+config.serverModuleFormat = '${pkg.type === 'module' ? 'esm' : 'cjs'}';
 config.serverPlatform = 'node';
 config.serverBuildPath = undefined;
 config.serverBundles = ${JSON.stringify(serverBundles)};
@@ -318,7 +326,7 @@ export default config;`;
           renamedRemixConfigPath
         )}');
 config.serverBuildTarget = undefined;
-config.serverModuleFormat = 'cjs';
+config.serverModuleFormat = '${pkg.type === 'module' ? 'esm' : 'cjs'}';
 config.serverPlatform = 'node';
 config.serverBuildPath = undefined;
 config.serverBundles = ${JSON.stringify(serverBundles)};
