@@ -135,7 +135,7 @@ export default async function list(client: Client) {
 
   const nextTimestamp = argv['--next'];
 
-  if (typeof nextTimestamp !== undefined && Number.isNaN(nextTimestamp)) {
+  if (typeof nextTimestamp !== 'undefined' && Number.isNaN(nextTimestamp)) {
     error('Please provide a number for flag `--next`');
     return 1;
   }

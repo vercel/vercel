@@ -2612,11 +2612,11 @@ function filterFrontendBuilds(build: Builder) {
 
 function hasNewRoutingProperties(vercelConfig: VercelConfig) {
   return (
-    typeof vercelConfig.cleanUrls !== undefined ||
-    typeof vercelConfig.headers !== undefined ||
-    typeof vercelConfig.redirects !== undefined ||
-    typeof vercelConfig.rewrites !== undefined ||
-    typeof vercelConfig.trailingSlash !== undefined
+    typeof vercelConfig.cleanUrls !== 'undefined' ||
+    typeof vercelConfig.headers !== 'undefined' ||
+    typeof vercelConfig.redirects !== 'undefined' ||
+    typeof vercelConfig.rewrites !== 'undefined' ||
+    typeof vercelConfig.trailingSlash !== 'undefined'
   );
 }
 
