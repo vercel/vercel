@@ -14,7 +14,6 @@
     "@remix-run/node": "^2.0.0",
     "@remix-run/react": "^2.0.0",
     "@remix-run/serve": "^2.0.0",
-    "@vercel/analytics": "^1.0.2",
     "@vercel/remix": "^2.0.0",
     "isbot": "^3.6.8",
     "react": "^18.2.0",
@@ -22,10 +21,8 @@
   },
   "devDependencies": {
     "@remix-run/dev": "^2.0.0",
-    "@remix-run/eslint-config": "^2.0.0",
     "@types/react": "^18.2.20",
     "@types/react-dom": "^18.2.7",
-    "eslint": "^8.38.0",
     "typescript": "^5.1.6"
   },
   "engines": {
