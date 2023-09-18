@@ -141,9 +141,10 @@ export const build: BuildV2 = async ({
     await runNpmInstall(entrypointFsDirname, [], spawnOpts, meta, nodeVersion);
   }
 
-  const isHydrogen2 =
+  const isHydrogen2 = Boolean(
     pkg.dependencies?.['@shopify/remix-oxygen'] ||
-    pkg.devDependencies?.['@shopify/remix-oxygen'];
+      pkg.devDependencies?.['@shopify/remix-oxygen']
+  );
 
   // Determine the version of Remix based on the `@remix-run/dev`
   // package version.
@@ -167,7 +168,7 @@ export const build: BuildV2 = async ({
 
   const depsToAdd: string[] = [];
 
-  const remixRunDevPkgVersion =
+  const remixRunDevPkgVersion: string | undefined =
     pkg.dependencies?.['@remix-run/dev'] ||
     pkg.devDependencies?.['@remix-run/dev'];
 
@@ -176,7 +177,7 @@ export const build: BuildV2 = async ({
   if (
     !isHydrogen2 &&
     remixRunDevPkg.name !== '@vercel/remix-run-dev' &&
-    !remixRunDevPkgVersion.startsWith('https:')
+    !remixRunDevPkgVersion?.startsWith('https:')
   ) {
     const remixDevForkVersion = resolveSemverMinMax(
       REMIX_RUN_DEV_MIN_VERSION,
