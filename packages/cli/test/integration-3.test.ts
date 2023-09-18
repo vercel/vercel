@@ -371,7 +371,7 @@ test('list the scopes', async () => {
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   const include = new RegExp(`✔ ${contextName}\\s+${email}`);
-  expect(stderr).toMatch(include);
+  expect(stdout).toMatch(include);
 });
 
 test('domains inspect', async () => {

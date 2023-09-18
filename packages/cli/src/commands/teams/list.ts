@@ -74,19 +74,21 @@ export default async function list(client: Client): Promise<number> {
 
   // Printing
   output.stopSpinner();
-  output.print('\n'); // empty line
+  client.stdout.write('\n'); // empty line
 
   table(
     ['', 'id', 'email / name'],
     teamList.map(team => [team.current, team.value, team.name]),
     [1, 5],
-    output
+    (str: string) => {
+      client.stdout.write(str);
+    }
   );
 
   if (pagination?.count === 20) {
     const flags = getCommandFlags(argv, ['_', '--next', '-N', '-d']);
     const nextCmd = `${packageName} teams ls${flags} --next ${pagination.next}`;
-    output.print('\n'); // empty line
+    client.stdout.write('\n'); // empty line
     output.log(`To display the next page run ${cmd(nextCmd)}`);
   }
 

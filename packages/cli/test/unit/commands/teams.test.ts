@@ -10,7 +10,7 @@ describe('teams', () => {
         const user = useUser();
         useTeams(undefined, { apiVersion: 2 });
         const exitCodePromise = teamsList(client);
-        await expect(client.stderr).toOutput(user.username);
+        await expect(client.stdout).toOutput(user.username);
         await expect(exitCodePromise).resolves.toEqual(0);
       });
     });
@@ -23,7 +23,7 @@ describe('teams', () => {
         useTeams(undefined, { apiVersion: 2 });
         const exitCodePromise = teamsList(client);
         // Test that personal account is not displayed in scope switcher
-        await expect(client.stderr).not.toOutput(user.username);
+        await expect(client.stdout).not.toOutput(user.username);
         await expect(exitCodePromise).resolves.toEqual(0);
       });
     });
