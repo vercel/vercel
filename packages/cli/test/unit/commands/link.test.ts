@@ -13,8 +13,8 @@ import { setupTmpDir } from '../../helpers/setup-unit-fixture';
 
 describe('link', () => {
   it('should prompt for link', async () => {
-    const cwd = setupTmpDir();
     const user = useUser();
+    const cwd = setupTmpDir();
     useTeams('team_dummy');
     const { project } = useProject({
       ...defaultProject,
