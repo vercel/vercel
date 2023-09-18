@@ -70,8 +70,8 @@ export default async function main(client: Client, desiredSlug?: string) {
       suffix += ` ${emoji('locked')}`;
     }
 
-    const choices = [
-      ...(user.version === 'northstar'
+    const personalAccountChoice =
+      user.version === 'northstar'
         ? []
         : [
             { separator: 'Personal Account' },
@@ -81,7 +81,10 @@ export default async function main(client: Client, desiredSlug?: string) {
               short: user.username,
               selected: personalScopeSelected,
             },
-          ]),
+          ];
+
+    const choices = [
+      ...personalAccountChoice,
       { separator: 'Teams' },
       ...teamChoices,
     ];

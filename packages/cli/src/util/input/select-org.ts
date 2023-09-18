@@ -25,15 +25,18 @@ export default async function selectOrg(
     output.stopSpinner();
   }
 
-  const choices: Choice[] = [
-    ...(user.version === 'northstar'
+  const personalAccountChoice =
+    user.version === 'northstar'
       ? []
       : [
           {
             name: user.name || user.username,
             value: { type: 'user', id: user.id, slug: user.username },
           } as const,
-        ]),
+        ];
+
+  const choices: Choice[] = [
+    ...personalAccountChoice,
     ...teams.map<Choice>(team => ({
       name: team.name || team.slug,
       value: { type: 'team', id: team.id, slug: team.slug },
