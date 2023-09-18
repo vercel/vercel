@@ -39,10 +39,11 @@ export default async function list(client: Client): Promise<number> {
     apiVersion: 2,
   });
   let { currentTeam } = config;
-  const accountIsCurrent = !currentTeam;
 
   output.spinner('Fetching user information');
   const user = await getUser(client);
+
+  const accountIsCurrent = !currentTeam && user.version !== 'northstar';
 
   if (accountIsCurrent) {
     currentTeam = user.id;
@@ -55,12 +56,14 @@ export default async function list(client: Client): Promise<number> {
     current: id === currentTeam ? chars.tick : '',
   }));
 
-  teamList.unshift({
-    id: user.id,
-    name: user.email,
-    value: user.username || user.email,
-    current: accountIsCurrent ? chars.tick : '',
-  });
+  if (user.version !== 'northstar') {
+    teamList.unshift({
+      id: user.id,
+      name: user.email,
+      value: user.username || user.email,
+      current: accountIsCurrent ? chars.tick : '',
+    });
+  }
 
   // Bring the current Team to the beginning of the list
   if (!accountIsCurrent) {
@@ -71,18 +74,19 @@ export default async function list(client: Client): Promise<number> {
 
   // Printing
   output.stopSpinner();
-  console.log(); // empty line
+  output.print('\n'); // empty line
 
   table(
     ['', 'id', 'email / name'],
     teamList.map(team => [team.current, team.value, team.name]),
-    [1, 5]
+    [1, 5],
+    output
   );
 
   if (pagination?.count === 20) {
     const flags = getCommandFlags(argv, ['_', '--next', '-N', '-d']);
     const nextCmd = `${packageName} teams ls${flags} --next ${pagination.next}`;
-    console.log(); // empty line
+    output.print('\n'); // empty line
     output.log(`To display the next page run ${cmd(nextCmd)}`);
   }
 

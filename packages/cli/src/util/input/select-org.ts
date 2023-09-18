@@ -26,10 +26,14 @@ export default async function selectOrg(
   }
 
   const choices: Choice[] = [
-    {
-      name: user.name || user.username,
-      value: { type: 'user', id: user.id, slug: user.username },
-    },
+    ...(user.version === 'northstar'
+      ? []
+      : [
+          {
+            name: user.name || user.username,
+            value: { type: 'user', id: user.id, slug: user.username },
+          } as const,
+        ]),
     ...teams.map<Choice>(team => ({
       name: team.name || team.slug,
       value: { type: 'team', id: team.id, slug: team.slug },

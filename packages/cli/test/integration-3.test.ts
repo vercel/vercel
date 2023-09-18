@@ -89,6 +89,8 @@ function mockLoginApi(req: http.IncomingMessage, res: http.ServerResponse) {
     query.email === email
   ) {
     res.end(JSON.stringify({ token }));
+  } else if (method === 'GET' && pathname === '/v2/user') {
+    res.end(JSON.stringify({ user: { email } }));
   } else {
     res.statusCode = 405;
     res.end(JSON.stringify({ code: 'method_not_allowed' }));
@@ -369,7 +371,7 @@ test('list the scopes', async () => {
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   const include = new RegExp(`✔ ${contextName}\\s+${email}`);
-  expect(stdout).toMatch(include);
+  expect(stderr).toMatch(include);
 });
 
 test('domains inspect', async () => {

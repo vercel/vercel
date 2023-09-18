@@ -27,7 +27,7 @@ export const help = () => `
       pull                 [path]      Pull your Project Settings from the cloud
       redeploy             [url|id]    Rebuild and deploy a previous deployment.
       rollback             [url|id]    Quickly revert back to a previous deployment
-      switch               [scope]     Switches between teams and your personal account
+      switch               [scope]     Switches between different scopes
 
     ${chalk.dim('Advanced')}
 

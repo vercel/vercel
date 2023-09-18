@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import { Output } from './create-output';
 
 const printLine = (data: string[], sizes: number[]) =>
   data.reduce((line, col, i) => line + col.padEnd(sizes[i]), '');
@@ -9,7 +10,8 @@ const printLine = (data: string[], sizes: number[]) =>
 export default function table(
   fieldNames: string[] = [],
   data: string[][] = [],
-  margins: number[] = []
+  margins: number[] = [],
+  output: Output
 ) {
   // Compute size of each column
   const sizes = data
@@ -26,10 +28,12 @@ export default function table(
     .map((size, i) => (i < margins.length && size + margins[i]) || size);
 
   // Print header
-  console.log(chalk.grey(printLine(fieldNames, sizes)));
+  output.print(chalk.grey(printLine(fieldNames, sizes)));
+  output.print('\n');
 
   // Print content
   for (const row of data) {
-    console.log(printLine(row, sizes));
+    output.print(printLine(row, sizes));
+    output.print('\n');
   }
 }

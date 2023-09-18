@@ -341,7 +341,20 @@ const main = async () => {
         // SSO login, so set the current scope to the appropriate Team
         client.config.currentTeam = result.teamId;
       } else {
-        delete client.config.currentTeam;
+        let user = null;
+        try {
+          user = await getUser(client);
+        } catch (err: unknown) {
+          // Shouldn't happen since we just logged in
+          console.error(error('Not able to load user'));
+          return 1;
+        }
+
+        if (user.version === 'northstar' && user.defaultTeamId) {
+          client.config.currentTeam = user.defaultTeamId;
+        } else {
+          delete client.config.currentTeam;
+        }
       }
 
       // When `result` is a string it's the user's authentication token.
@@ -447,7 +460,12 @@ const main = async () => {
     }
 
     if (user.id === scope || user.email === scope || user.username === scope) {
-      delete client.config.currentTeam;
+      if (user.version === 'northstar') {
+        output.error('You cannot set your Personal Account as the scope.');
+        return 1;
+      } else {
+        delete client.config.currentTeam;
+      }
     } else {
       let teams = [];
 

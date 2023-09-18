@@ -17,6 +17,7 @@ import {
 } from '../../util/config/files';
 import Client from '../../util/client';
 import { LoginResult } from '../../util/login/types';
+import getUser from '../../util/get-user';
 import { help } from '../help';
 import { loginCommand } from './command';
 
@@ -67,19 +68,33 @@ export default async function login(client: Client): Promise<number> {
     return result;
   }
 
+  const isNewLogin = !client.authConfig.token;
+
+  // Save the user's authentication token to the configuration file.
+  client.authConfig.token = result.token;
+
   // If the token was upgraded (not a new login), then don't modify
   // the current scope.
-  if (!client.authConfig.token) {
+  if (isNewLogin) {
     if (result.teamId) {
       // SSO login, so set the current scope to the appropriate Team
       client.config.currentTeam = result.teamId;
     } else {
-      delete client.config.currentTeam;
+      let user = null;
+      try {
+        user = await getUser(client);
+      } catch (err: unknown) {
+        // Shouldn't happen since we just logged in
+        output.error('Not able to load user');
+        return 2;
+      }
+      if (user.version === 'northstar' && user.defaultTeamId) {
+        client.config.currentTeam = user.defaultTeamId;
+      } else {
+        delete client.config.currentTeam;
+      }
     }
   }
-
-  // Save the user's authentication token to the configuration file.
-  client.authConfig.token = result.token;
 
   writeToAuthConfigFile(client.authConfig);
   writeToConfigFile(client.config);
