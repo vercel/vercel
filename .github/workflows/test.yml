@@ -91,11 +91,19 @@ jobs:
           VERCEL_TEST_TOKEN: ${{ secrets.VERCEL_TEST_TOKEN }}
           VERCEL_TEST_REGISTRATION_URL: ${{ secrets.VERCEL_TEST_REGISTRATION_URL }}
           FORCE_COLOR: '1'
+      - name: 'Determing Turbo HIT or MISS'
+        id: turbo-summary
+        shell: bash
+        run: |
+          TURBO_MISS_COUNT=`node utils/determine-turbo-hit-or-miss.js`
+          echo "MISS COUNT"
+          echo "$TURBO_MISS_COUNT"
+          echo "misses=$TURBO_MISS_COUNT" >> $GITHUB_OUTPUT
       - name: fetch ssl certificate after tests (linux, os x)
         if: matrix.runner != 'windows-latest'
         run: echo | openssl s_client -showcerts -servername 'api.vercel.com' -connect 76.76.21.21:443
       - name: 'Upload Test Report to Datadog'
-        if: always()
+        if: ${{ steps['turbo-summary'].outputs.misses != '0' }}
         run: 'npx @datadog/datadog-ci@2.18.1 junit upload --service vercel-cli .junit-reports'
         env:
           DATADOG_API_KEY: ${{secrets.DATADOG_API_KEY_CLI}}
