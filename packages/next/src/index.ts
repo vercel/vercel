@@ -2162,7 +2162,7 @@ export const build: BuildV2 = async ({
         entryDirectory,
         routeKey === '/' ? '/index' : routeKey
       );
-      if (typeof lambdas[routeFileNoExt] === undefined) {
+      if (typeof lambdas[routeFileNoExt] === 'undefined') {
         throw new NowBuildError({
           code: 'NEXT__UNKNOWN_ROUTE_KEY',
           message: `invariant: unknown lambda ${routeKey} (lookup: ${routeFileNoExt}) | please report this immediately`,
@@ -2691,7 +2691,7 @@ async function getServerlessPages(params: {
           glob('**/route.js', path.join(params.pagesDir, '../app')),
           glob('**/_not-found.js', path.join(params.pagesDir, '../app')),
         ]).then(items => Object.assign(...items))
-      : Promise.resolve({}),
+      : Promise.resolve({} as Record<string, FileFsRef>),
     getMiddlewareManifest(params.entryPath, params.outputDirectory),
   ]);
 

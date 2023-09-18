@@ -37,7 +37,6 @@
     "node-fetch": "^2.2.1",
     "string-argv": "0.3.1",
     "tar": "6.2.0",
-    "typescript": "4.3.4",
     "xdg-app-paths": "5.1.0",
     "yauzl-promise": "2.1.3"
   }

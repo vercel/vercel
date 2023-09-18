@@ -29,7 +29,6 @@
     "@types/node-fetch": "2.5.8",
     "@vercel/routing-utils": "3.0.0",
     "ajv": "6.12.2",
-    "jest-junit": "16.0.0",
-    "typescript": "4.9.5"
+    "jest-junit": "16.0.0"
   }
 }
