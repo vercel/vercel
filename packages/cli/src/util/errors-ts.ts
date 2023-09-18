@@ -59,7 +59,7 @@ export class TeamDeleted extends NowError<'TEAM_DELETED', {}> {
   constructor() {
     super({
       code: 'TEAM_DELETED',
-      message: `Your team was deleted, or you were removed from the team. You can switch to a different one using ${getCommandName(
+      message: `Your team was deleted or you were removed from the team. You can switch to a different one using ${getCommandName(
         `switch`
       )}.`,
       meta: {},
