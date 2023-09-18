@@ -10,6 +10,9 @@ describe('resolveSemverMinMax()', () => {
     { min: '1.0.0', max: '1.15.0', version: '1.16.0', expected: '1.15.0' },
     { min: '1.0.0', max: '1.15.0', version: '^1.12.0', expected: '^1.12.0' },
     { min: '1.0.0', max: '1.15.0', version: '0.x.x', expected: '1.0.0' },
+    { min: '1.0.0', max: '2.0.0', version: '1.x.x', expected: '1.x.x' },
+    { min: '1.0.0', max: '2.0.0', version: '2.x.x', expected: '2.x.x' },
+    { min: '1.0.0', max: '2.0.0', version: '^2.0.0', expected: '^2.0.0' },
   ])(
     'Should return "$expected" for version "$version" (min=$min, max=$max)',
     ({ min, max, version, expected }) => {
