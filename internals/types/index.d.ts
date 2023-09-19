@@ -65,6 +65,8 @@ export type User = {
   billing: Billing;
   name?: string;
   limited?: boolean;
+  version?: 'northstar';
+  defaultTeamId?: string;
 };
 
 export interface Team {

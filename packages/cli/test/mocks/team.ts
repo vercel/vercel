@@ -7,10 +7,12 @@ export function useTeams(
     failMissingToken?: boolean;
     failInvalidToken?: boolean;
     failNoAccess?: boolean;
+    apiVersion?: number;
   } = {
     failMissingToken: false,
     failInvalidToken: false,
     failNoAccess: false,
+    apiVersion: 1,
   }
 ) {
   const id = teamId || chance().guid();
@@ -59,11 +61,11 @@ export function useTeams(
     });
   }
 
-  client.scenario.get('/v1/teams', (_req, res) => {
+  client.scenario.get(`/v${options.apiVersion}/teams`, (_req, res) => {
     res.json({
       teams,
     });
   });
 
-  return teams;
+  return options.apiVersion === 2 ? { teams } : teams;
 }

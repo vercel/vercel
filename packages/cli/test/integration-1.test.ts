@@ -16,7 +16,6 @@ import {
 import formatOutput from './helpers/format-output';
 import type http from 'http';
 import type { CLIProcess } from './helpers/types';
-import type {} from './helpers/types';
 const TEST_TIMEOUT = 3 * 60 * 1000;
 jest.setTimeout(TEST_TIMEOUT);
 
@@ -105,6 +104,8 @@ function mockLoginApi(req: http.IncomingMessage, res: http.ServerResponse) {
     query.email === email
   ) {
     res.end(JSON.stringify({ token }));
+  } else if (method === 'GET' && pathname === '/v2/user') {
+    res.end(JSON.stringify({ user: { email } }));
   } else {
     res.statusCode = 405;
     res.end(JSON.stringify({ code: 'method_not_allowed' }));
