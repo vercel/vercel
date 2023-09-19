@@ -1,4 +1,2 @@
 node_modules
 .DS_Store
-gatsby-browser.js
-web-vitals.js
