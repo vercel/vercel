@@ -19,7 +19,7 @@ import Client from '../../util/client';
 import { LoginResult } from '../../util/login/types';
 import { help } from '../help';
 import { loginCommand } from './command';
-import { updateCurrentTeamAfterLogin } from './util/login/update-current-team-after-login';
+import { updateCurrentTeamAfterLogin } from '../../util/login/update-current-team-after-login';
 
 export default async function login(client: Client): Promise<number> {
   const { output } = client;

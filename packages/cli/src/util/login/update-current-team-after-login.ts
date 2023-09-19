@@ -1,5 +1,5 @@
 import type Client from '../client';
-import type { Output } from '..//output';
+import type { Output } from '../output';
 import getUser from '../get-user';
 
 export async function updateCurrentTeamAfterLogin(
