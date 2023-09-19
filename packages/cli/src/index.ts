@@ -346,7 +346,7 @@ const main = async () => {
           user = await getUser(client);
         } catch (err: unknown) {
           // Shouldn't happen since we just logged in
-          console.error(error('Not able to load user'));
+          console.error(error('Failed to fetch the logged in user. Please try again.'));
           return 1;
         }
 
