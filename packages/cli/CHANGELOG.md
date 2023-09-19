@@ -1,5 +1,37 @@
 # vercel
 
+## 32.2.5
+
+### Patch Changes
+
+- Updated dependencies [[`849eedf0f`](https://github.com/vercel/vercel/commit/849eedf0f2841211e4175d374f1cf01330bf9611), [`f6f16b034`](https://github.com/vercel/vercel/commit/f6f16b0347bac9f5c33c79ccb1fb9fd9d254cae5), [`3035e18fb`](https://github.com/vercel/vercel/commit/3035e18fb67dfe7031e235a74136a41948f86d5a), [`cb784aeb9`](https://github.com/vercel/vercel/commit/cb784aeb9c9e4eddf1c65b61849a87edb1117af1)]:
+  - @vercel/next@4.0.6
+  - @vercel/remix-builder@2.0.6
+
+## 32.2.4
+
+### Patch Changes
+
+- Add support for bun detection in monorepo ([#10511](https://github.com/vercel/vercel/pull/10511))
+
+- Updated dependencies [[`1b6f3a0f6`](https://github.com/vercel/vercel/commit/1b6f3a0f6534f71c7486a4e33ac199f1da330626)]:
+  - @vercel/static-build@2.0.6
+
+## 32.2.3
+
+### Patch Changes
+
+- Updated dependencies [[`083aad448`](https://github.com/vercel/vercel/commit/083aad448e45edae296da3201eec9f890a01d22d)]:
+  - @vercel/next@4.0.5
+
+## 32.2.2
+
+### Patch Changes
+
+- Updated dependencies [[`7a0fed970`](https://github.com/vercel/vercel/commit/7a0fed970c39cb8f4df70544ded3284d3538b06a), [`2f461a8b0`](https://github.com/vercel/vercel/commit/2f461a8b0bcbdd05da0516395c2905c2d0242682), [`1bab21026`](https://github.com/vercel/vercel/commit/1bab21026ec0bb8a4a8fbeac3d6e4a197f1030fd)]:
+  - @vercel/next@4.0.4
+  - @vercel/remix-builder@2.0.5
+
 ## 32.2.1
 
 ### Patch Changes
