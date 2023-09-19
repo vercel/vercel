@@ -10,7 +10,7 @@
 /packages/edge                           @vercel/compute
 /examples                                @leerob
 /examples/create-react-app               @Timer
-/examples/nextjs                         @timneutkens @ijjk @styfle @ztanner
+/examples/nextjs                         @timneutkens @ijjk @styfle @ztanner @huozhi
 /examples/hugo                           @styfle
 /examples/jekyll                         @styfle
 /examples/zola                           @styfle

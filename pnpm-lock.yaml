@@ -949,19 +949,10 @@ importers:
 
   packages/gatsby-plugin-vercel-analytics:
     dependencies:
-      '@babel/runtime':
-        specifier: 7.12.1
-        version: 7.12.1
       web-vitals:
         specifier: 0.2.4
         version: 0.2.4
     devDependencies:
-      '@babel/cli':
-        specifier: 7.20.7
-        version: 7.20.7(@babel/core@7.5.0)
-      '@babel/core':
-        specifier: 7.5.0
-        version: 7.5.0
       jest-junit:
         specifier: 16.0.0
         version: 16.0.0
@@ -1488,6 +1479,12 @@ importers:
       '@vercel/gatsby-plugin-vercel-builder':
         specifier: 2.0.5
         version: link:../gatsby-plugin-vercel-builder
+      '@vercel/static-config':
+        specifier: 3.0.0
+        version: link:../static-config
+      ts-morph:
+        specifier: 12.0.0
+        version: 12.0.0
     devDependencies:
       '@types/aws-lambda':
         specifier: 8.10.64
@@ -1534,9 +1531,6 @@ importers:
       '@vercel/routing-utils':
         specifier: 3.0.0
         version: link:../routing-utils
-      '@vercel/static-config':
-        specifier: 3.0.0
-        version: link:../static-config
       execa:
         specifier: 3.2.0
         version: 3.2.0
@@ -1567,9 +1561,6 @@ importers:
       tree-kill:
         specifier: 1.2.2
         version: 1.2.2
-      ts-morph:
-        specifier: 12.0.0
-        version: 12.0.0
 
   packages/static-config:
     dependencies:
@@ -1611,26 +1602,6 @@ packages:
     dependencies:
       '@jridgewell/gen-mapping': 0.3.3
       '@jridgewell/trace-mapping': 0.3.18
-    dev: true
-
-  /@babel/cli@7.20.7(@babel/core@7.5.0):
-    resolution: {integrity: sha512-WylgcELHB66WwQqItxNILsMlaTd8/SO6SgTTjMp4uCI7P4QyH1r3nqgFmO3BfM4AtfniHgFMH3EpYFj/zynBkQ==}
-    engines: {node: '>=6.9.0'}
-    hasBin: true
-    peerDependencies:
-      '@babel/core': ^7.0.0-0
-    dependencies:
-      '@babel/core': 7.5.0
-      '@jridgewell/trace-mapping': 0.3.17
-      commander: 4.1.1
-      convert-source-map: 1.9.0
-      fs-readdir-recursive: 1.1.0
-      glob: 7.2.3
-      make-dir: 2.1.0
-      slash: 2.0.0
-    optionalDependencies:
-      '@nicolo-ribaudo/chokidar-2': 2.1.8-no-fsevents.3
-      chokidar: 3.5.3
     dev: true
 
   /@babel/code-frame@7.18.6:
@@ -2196,6 +2167,7 @@ packages:
     resolution: {integrity: sha512-J5AIf3vPj3UwXaAzb5j1xM4WAQDX3EMgemF8rjCP3SoW09LfRKAXQKt6CoVYl230P6iWdRcBbnLDDdnqWxZSCA==}
     dependencies:
       regenerator-runtime: 0.13.11
+    dev: true
 
   /@babel/runtime@7.20.7:
     resolution: {integrity: sha512-UF0tvkUtxwAgZ5W/KrkHf0Rn0fdnLDU9ScxBrEVNUprE/MzirjK4MJUX1/BVDv00Sv8cljtukVK1aky++X1SjQ==}
@@ -3479,13 +3451,6 @@ packages:
   /@jridgewell/sourcemap-codec@1.4.15:
     resolution: {integrity: sha512-eF2rxCRulEKXHTRiDrDy6erMYWqNw4LPdQ8UQA4huuxaQsVeRPFl2oM8oDGxMFhJUWZf9McpLtJasDDZb/Bpeg==}
 
-  /@jridgewell/trace-mapping@0.3.17:
-    resolution: {integrity: sha512-MCNzAp77qzKca9+W/+I0+sEpaUnZoeasnghNeVc41VZCEKaCH73Vq3BZZ/SzWIgrqE4H4ceI+p+b6C0mHf9T4g==}
-    dependencies:
-      '@jridgewell/resolve-uri': 3.1.0
-      '@jridgewell/sourcemap-codec': 1.4.14
-    dev: true
-
   /@jridgewell/trace-mapping@0.3.18:
     resolution: {integrity: sha512-w+niJYzMHdd7USdiH2U6869nqhD2nbfZXND5Yp93qIbEmnDNk7PD48o+YchRVpzMU7M6jVCbenTR7PA1FLQ9pA==}
     dependencies:
@@ -3588,12 +3553,6 @@ packages:
   /@next/env@11.1.2:
     resolution: {integrity: sha512-+fteyVdQ7C/OoulfcF6vd1Yk0FEli4453gr8kSFbU8sKseNSizYq6df5MKz/AjwLptsxrUeIkgBdAzbziyJ3mA==}
     dev: true
-
-  /@nicolo-ribaudo/chokidar-2@2.1.8-no-fsevents.3:
-    resolution: {integrity: sha512-s88O1aVtXftvp5bCPB7WnmXc5IwOZZ7YPuwNPt+GtOOXpPvad1LfbmjYv+qII7zP6RU2QGnqve27dnLycEnyEQ==}
-    requiresBuild: true
-    dev: true
-    optional: true
 
   /@nicolo-ribaudo/eslint-scope-5-internals@5.1.1-v1:
     resolution: {integrity: sha512-54/JRvkLIzzDWshCWfuhadfrfZVPiElY8Fcgmg1HroEly/EDSszzhBAsarCux+D/kOslTRquNzuyGSmUSTTHGg==}
@@ -4217,6 +4176,7 @@ packages:
       minimatch: 3.1.2
       mkdirp: 1.0.4
       path-browserify: 1.0.1
+    dev: false
 
   /@tsconfig/node10@1.0.9:
     resolution: {integrity: sha512-jNsYVVxU8v5g43Erja32laIDHXeoNvFEpX33OK4d6hljo3jDhCBDhx5dhCCTMWUojscpAagGiRkBKxpdl9fxqA==}
@@ -6924,6 +6884,7 @@ packages:
 
   /code-block-writer@10.1.1:
     resolution: {integrity: sha512-67ueh2IRGst/51p0n6FvPrnRjAGHY5F8xdjkgrYE7DDzpJe6qA07RYQ9VcoUeo5ATOjSOiWpSL3SWBRRbempMw==}
+    dev: false
 
   /code-point-at@1.1.0:
     resolution: {integrity: sha512-RpAVKQA5T63xEj6/giIbUEtZwJ4UFIc3ZtvEkiaUERylqe8xb5IvqcgOurZLahv93CLKfxcw5YI+DZcUBRyLXA==}
@@ -8307,7 +8268,7 @@ packages:
       '@typescript-eslint/eslint-plugin': 5.54.1(@typescript-eslint/parser@5.54.1)(eslint@8.42.0)(typescript@4.9.4)
       '@typescript-eslint/utils': 5.54.1(eslint@8.42.0)(typescript@4.9.4)
       eslint: 8.42.0
-      jest: 29.5.0(@types/node@14.14.31)
+      jest: 29.5.0(@types/node@14.18.33)
     transitivePeerDependencies:
       - supports-color
       - typescript
@@ -9281,10 +9242,6 @@ packages:
     engines: {node: ^14.17.0 || ^16.13.0 || >=18.0.0}
     dependencies:
       minipass: 7.0.3
-    dev: true
-
-  /fs-readdir-recursive@1.1.0:
-    resolution: {integrity: sha512-GNanXlVr2pf02+sPN40XN8HG+ePaNcvM0q5mZBd668Obwb0yD5GiUbZOFgwn8kGMY6I3mdyDJzieUy3PTYyTRA==}
     dev: true
 
   /fs.realpath@1.0.0:
@@ -13174,6 +13131,7 @@ packages:
 
   /path-browserify@1.0.1:
     resolution: {integrity: sha512-b7uo2UCUOYZcnF/3ID0lulOJi/bafxa1xPe7ZPsammBSpjSWQkjNxlt635YGS2MiR9GjvuXCtz2emr3jbsz98g==}
+    dev: false
 
   /path-dirname@1.0.2:
     resolution: {integrity: sha512-ALzNPpyNq9AqXMBjeymIjFDAkAFH06mHJH/cSBHAgU0s4vfpBn6b2nf8tiRLvagKD8RbTpq2FKTBg7cl9l3c7Q==}
@@ -13871,6 +13829,7 @@ packages:
 
   /regenerator-runtime@0.13.11:
     resolution: {integrity: sha512-kY1AZVr2Ra+t+piVaJ4gxaFaReZVH40AKNo7UCX6W+dEwBo/2oZJzqfuN1qLq1oL45o56cPaTXELwrTh8Fpggg==}
+    dev: true
 
   /regex-not@1.0.2:
     resolution: {integrity: sha512-J6SDjUgDxQj5NusnOtdFxDwN/+HWykR8GELwctJ7mdqhcyy1xEc4SRFHUXvxTp661YaVKAjfRLZ9cCqS6tn32A==}
@@ -15293,6 +15252,7 @@ packages:
     dependencies:
       '@ts-morph/common': 0.11.1
       code-block-writer: 10.1.1
+    dev: false
 
   /ts-node@10.9.1(@swc/core@1.2.218)(@types/node@14.18.33)(typescript@4.9.5):
     resolution: {integrity: sha512-NtVysVPkxxrwFGUUxGYhfux8k78pQB3JqYBXlLRZgdGUqTO5wU/UyHop5p70iEbGhB7q5KmiZiU0Y3KlJrScEw==}
