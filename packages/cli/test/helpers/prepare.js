@@ -428,7 +428,7 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
           build: 'mkdir -p public && echo hi > public/index.txt',
         },
         dependencies: {
-          '@vercel/speed-insights': 'latest',
+          '@vercel/speed-insights': '0.0.1',
         },
       }),
     },

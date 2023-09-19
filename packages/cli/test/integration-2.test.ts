@@ -1152,7 +1152,7 @@ test('[vc build] should build project with `@vercel/static-build`', async () => 
   expect(builds.builds[0].use).toBe('@vercel/static-build');
 });
 
-test('[vc build] should build project with `@vercel/static-build`', async () => {
+test('[vc build] should build project with `@vercel/speed-insights`', async () => {
   try {
     process.env.VERCEL_ANALYTICS_ID = '123';
 
