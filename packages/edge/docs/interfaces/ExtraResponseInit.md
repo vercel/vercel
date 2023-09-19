@@ -26,7 +26,7 @@ along with the response headers from the origin.
 
 #### Defined in
 
-[packages/edge/src/middleware-helpers.ts:31](https://github.com/vercel/vercel/blob/main/packages/edge/src/middleware-helpers.ts#L31)
+[packages/edge/src/middleware-helpers.ts:31](https://github.com/EvanNotFound/vercel/blob/main/packages/edge/src/middleware-helpers.ts#L31)
 
 ---
 
@@ -38,7 +38,7 @@ Fields to rewrite for the upstream request.
 
 #### Defined in
 
-[packages/edge/src/middleware-helpers.ts:35](https://github.com/vercel/vercel/blob/main/packages/edge/src/middleware-helpers.ts#L35)
+[packages/edge/src/middleware-helpers.ts:35](https://github.com/EvanNotFound/vercel/blob/main/packages/edge/src/middleware-helpers.ts#L35)
 
 ---
 

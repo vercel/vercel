@@ -1,5 +1,3 @@
-<!DOCTYPE html>
-<html>
 <head>
   <meta charset="utf-8">
   <%- partial('google-analytics') %>
@@ -21,16 +19,21 @@
   }
   %>
   <title><% if (title){ %><%= title %> | <% } %><%= config.title %></title>
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <%- open_graph({twitter_id: theme.twitter, google_plus: theme.google_plus, fb_admins: theme.fb_admins, fb_app_id: theme.fb_app_id}) %>
-  <% if (theme.rss){ %>
-    <link rel="alternate" href="<%= url_for(theme.rss) %>" title="<%= config.title %>" type="application/atom+xml">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <%- open_graph({twitter_id: theme.twitter, fb_admins: theme.fb_admins, fb_app_id: theme.fb_app_id}) %>
+  <% if (config.feed) { %>
+    <%- feed_tag() %>
+  <% } else if (theme.rss) { %>
+    <%- feed_tag(theme.rss) %>
   <% } %>
   <% if (theme.favicon){ %>
-    <link rel="icon" href="<%- theme.favicon %>">
+    <%- favicon_tag(theme.favicon) %>
   <% } %>
   <% if (config.highlight.enable){ %>
-    <link href="//fonts.googleapis.com/css?family=Source+Code+Pro" rel="stylesheet" type="text/css">
+    <%- css('https://cdn.jsdelivr.net/npm/typeface-source-code-pro@0.0.71/index.min.css') %>
   <% } %>
   <%- css('css/style') %>
+  <% if (theme.fancybox){ %>
+    <%- css('fancybox/jquery.fancybox.min.css') %>
+  <% } %>
 </head>

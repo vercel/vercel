@@ -5,9 +5,9 @@
       <h1 id="logo-wrap">
         <a href="<%- url_for() %>" id="logo"><%= config.title %></a>
       </h1>
-      <% if (theme.subtitle){ %>
+      <% if (theme.subtitle || config.subtitle){ %>
         <h2 id="subtitle-wrap">
-          <a href="<%- url_for() %>" id="subtitle"><%= theme.subtitle %></a>
+          <a href="<%- url_for() %>" id="subtitle"><%= theme.subtitle || config.subtitle %></a>
         </h2>
       <% } %>
     </div>
@@ -25,7 +25,7 @@
         <a id="nav-search-btn" class="nav-icon" title="<%= __('search') %>"></a>
       </nav>
       <div id="search-form-wrap">
-        <%- search_form({button: '&#xF002;'}) %>
+        <%- search_form({button: '&#xF002;', text: __('search')}) %>
       </div>
     </div>
   </div>

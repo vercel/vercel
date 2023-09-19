@@ -6,20 +6,41 @@
   <% } %>
   (function(){
     var dsq = document.createElement('script');
-    dsq.type = 'text/javascript';
     dsq.async = true;
-    dsq.src = '//' + disqus_shortname + '.disqus.com/<% if (page.comments) { %>embed.js<% } else { %>count.js<% } %>';
+    dsq.src = 'https://' + disqus_shortname + '.disqus.com/<% if (page.comments) { %>embed.js<% } else { %>count.js<% } %>';
     (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
   })();
 </script>
 <% } %>
 
-<script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+<%- js('js/jquery-3.4.1.min.js') %>
 
 <% if (theme.fancybox){ %>
-  <%- css('fancybox/jquery.fancybox') %>
-  <%- js('fancybox/jquery.fancybox.pack') %>
+  <%- js('fancybox/jquery.fancybox.min.js') %>
 <% } %>
 
 <%- js('js/script') %>
 <%- partial('gauges-analytics') %>
+
+<% if(theme.valine.enable && theme.valine.appId && theme.valine.appKey){ %>
+  <%- js('https://cdn.jsdelivr.net/npm/valine@1.3.10/dist/Valine.min.js') %>
+<script>
+    var GUEST_INFO = ['nick','mail','link'];
+    var guest_info = '<%= theme.valine.guest_info %>'.split(',').filter(function(item){
+        return GUEST_INFO.indexOf(item) > -1
+    });
+    var notify = '<%= theme.valine.notify %>' == true;
+    var verify = '<%= theme.valine.verify %>' == true;
+    new Valine({
+        el: '.vcomment',
+        notify: notify,
+        verify: verify,
+        appId: "<%= theme.valine.appId %>",
+        appKey: "<%= theme.valine.appKey %>",
+        placeholder: "<%= theme.valine.placeholder %>",
+        pageSize:'<%= theme.valine.pageSize %>',
+        avatar:'<%= theme.valine.avatar %>',
+        lang:'<%= theme.valine.lang %>'
+    });
+</script>
+<% } %>

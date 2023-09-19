@@ -28,7 +28,8 @@
     <% var prev_text = "&laquo; " + __('prev');var next_text = __('next') + " &raquo;"%>
     <%- paginator({
       prev_text: prev_text,
-      next_text: next_text
+      next_text: next_text,
+      escape: false
     }) %>
   </nav>
 <% } %>
