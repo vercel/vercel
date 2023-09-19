@@ -990,9 +990,6 @@ importers:
       '@types/react':
         specifier: 18.0.26
         version: 18.0.26
-      '@vercel/node':
-        specifier: 3.0.5
-        version: link:../node
       jest-junit:
         specifier: 16.0.0
         version: 16.0.0
