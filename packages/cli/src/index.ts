@@ -338,11 +338,11 @@ const main = async () => {
         return result;
       }
 
-      await updateCurrentTeamAfterLogin(client, output, result.teamId);
-
       // When `result` is a string it's the user's authentication token.
       // It needs to be saved to the configuration file.
       client.authConfig.token = result.token;
+
+      await updateCurrentTeamAfterLogin(client, output, result.teamId);
 
       configFiles.writeToAuthConfigFile(client.authConfig);
       configFiles.writeToConfigFile(client.config);
