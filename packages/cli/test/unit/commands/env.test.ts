@@ -456,6 +456,12 @@ describe('env', () => {
       const cwd = setupUnitFixture('vercel-env-pull');
       client.cwd = cwd;
       client.setArgv('env', 'pull', '--yes');
+      const exitCodePromise = env(client);
+      await expect(client.stderr).toOutput(
+        'Downloading `development` Environment Variables for Project '
+      );
+      await expect(client.stderr).toOutput('Created .env.local file');
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       const rawDevEnv = await fs.readFile(path.join(cwd, '.env.local'));
 
