@@ -5,4 +5,4 @@
 '@vercel/node': patch
 ---
 
-Update @vercel/nft.
+Update `@vercel/nft` to v0.24.1.
