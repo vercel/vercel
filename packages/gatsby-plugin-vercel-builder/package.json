@@ -4,6 +4,7 @@
   "main": "dist/index.js",
   "files": [
     "dist",
+    "templates",
     "gatsby-node.js"
   ],
   "repository": {

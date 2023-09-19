@@ -3,8 +3,6 @@ import etag from 'etag';
 import { parse } from 'url';
 import { copySync, existsSync } from 'fs-extra';
 import { join, dirname, basename } from 'path';
-import { getPageSSRHelpers, getGraphQLEngine } from '../utils';
-import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 const TMP_DATA_PATH = join(os.tmpdir(), 'data/datastore');
 const CUR_DATA_PATH = join(__dirname, '.cache/data/datastore');
@@ -14,9 +12,21 @@ if (!existsSync(TMP_DATA_PATH)) {
   copySync(CUR_DATA_PATH, TMP_DATA_PATH);
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  let pageName: string;
-  const pathname = parse(req.url!).pathname || '/';
+async function getGraphQLEngine() {
+  const { GraphQLEngine } = await import(
+    join(__dirname, '.cache/query-engine/index.js')
+  );
+
+  return new GraphQLEngine({ dbPath: TMP_DATA_PATH });
+}
+
+async function getPageSSRHelpers() {
+  return await import(join(__dirname, '.cache/page-ssr/index.js'));
+}
+
+export default async function handler(req, res) {
+  let pageName;
+  const pathname = parse(req.url).pathname || '/';
   const isPageData = pathname.startsWith('/page-data/');
   if (isPageData) {
     // /page-data/index/page-data.json
@@ -53,7 +63,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (data.serverDataHeaders) {
     for (const [name, value] of Object.entries(data.serverDataHeaders)) {
-      res.setHeader(name, value as string);
+      res.setHeader(name, value);
     }
   }
 
