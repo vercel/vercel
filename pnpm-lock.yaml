@@ -1488,6 +1488,12 @@ importers:
       '@vercel/gatsby-plugin-vercel-builder':
         specifier: 2.0.5
         version: link:../gatsby-plugin-vercel-builder
+      '@vercel/static-config':
+        specifier: 3.0.0
+        version: link:../static-config
+      ts-morph:
+        specifier: 12.0.0
+        version: 12.0.0
     devDependencies:
       '@types/aws-lambda':
         specifier: 8.10.64
@@ -1534,9 +1540,6 @@ importers:
       '@vercel/routing-utils':
         specifier: 3.0.0
         version: link:../routing-utils
-      '@vercel/static-config':
-        specifier: 3.0.0
-        version: link:../static-config
       execa:
         specifier: 3.2.0
         version: 3.2.0
@@ -1567,9 +1570,6 @@ importers:
       tree-kill:
         specifier: 1.2.2
         version: 1.2.2
-      ts-morph:
-        specifier: 12.0.0
-        version: 12.0.0
 
   packages/static-config:
     dependencies:
@@ -4217,6 +4217,7 @@ packages:
       minimatch: 3.1.2
       mkdirp: 1.0.4
       path-browserify: 1.0.1
+    dev: false
 
   /@tsconfig/node10@1.0.9:
     resolution: {integrity: sha512-jNsYVVxU8v5g43Erja32laIDHXeoNvFEpX33OK4d6hljo3jDhCBDhx5dhCCTMWUojscpAagGiRkBKxpdl9fxqA==}
@@ -6924,6 +6925,7 @@ packages:
 
   /code-block-writer@10.1.1:
     resolution: {integrity: sha512-67ueh2IRGst/51p0n6FvPrnRjAGHY5F8xdjkgrYE7DDzpJe6qA07RYQ9VcoUeo5ATOjSOiWpSL3SWBRRbempMw==}
+    dev: false
 
   /code-point-at@1.1.0:
     resolution: {integrity: sha512-RpAVKQA5T63xEj6/giIbUEtZwJ4UFIc3ZtvEkiaUERylqe8xb5IvqcgOurZLahv93CLKfxcw5YI+DZcUBRyLXA==}
@@ -8307,7 +8309,7 @@ packages:
       '@typescript-eslint/eslint-plugin': 5.54.1(@typescript-eslint/parser@5.54.1)(eslint@8.42.0)(typescript@4.9.4)
       '@typescript-eslint/utils': 5.54.1(eslint@8.42.0)(typescript@4.9.4)
       eslint: 8.42.0
-      jest: 29.5.0(@types/node@14.14.31)
+      jest: 29.5.0(@types/node@14.18.33)
     transitivePeerDependencies:
       - supports-color
       - typescript
@@ -13174,6 +13176,7 @@ packages:
 
   /path-browserify@1.0.1:
     resolution: {integrity: sha512-b7uo2UCUOYZcnF/3ID0lulOJi/bafxa1xPe7ZPsammBSpjSWQkjNxlt635YGS2MiR9GjvuXCtz2emr3jbsz98g==}
+    dev: false
 
   /path-dirname@1.0.2:
     resolution: {integrity: sha512-ALzNPpyNq9AqXMBjeymIjFDAkAFH06mHJH/cSBHAgU0s4vfpBn6b2nf8tiRLvagKD8RbTpq2FKTBg7cl9l3c7Q==}
@@ -15293,6 +15296,7 @@ packages:
     dependencies:
       '@ts-morph/common': 0.11.1
       code-block-writer: 10.1.1
+    dev: false
 
   /ts-node@10.9.1(@swc/core@1.2.218)(@types/node@14.18.33)(typescript@4.9.5):
     resolution: {integrity: sha512-NtVysVPkxxrwFGUUxGYhfux8k78pQB3JqYBXlLRZgdGUqTO5wU/UyHop5p70iEbGhB7q5KmiZiU0Y3KlJrScEw==}
