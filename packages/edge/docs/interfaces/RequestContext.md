@@ -76,4 +76,4 @@ export async function handleRequest(
 
 #### Defined in
 
-[packages/edge/src/request.ts:47](https://github.com/PaulieScanlon/vercel/blob/main/packages/edge/src/request.ts#L47)
+[packages/edge/src/request.ts:47](https://github.com/vercel/vercel/blob/main/packages/edge/src/request.ts#L47)

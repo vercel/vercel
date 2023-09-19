@@ -35,4 +35,4 @@ export default async function middleware(request: Request): Promise<Response> {
 
 #### Defined in
 
-[packages/edge/src/middleware-helpers.ts:23](https://github.com/PaulieScanlon/vercel/blob/main/packages/edge/src/middleware-helpers.ts#L23)
+[packages/edge/src/middleware-helpers.ts:23](https://github.com/vercel/vercel/blob/main/packages/edge/src/middleware-helpers.ts#L23)
