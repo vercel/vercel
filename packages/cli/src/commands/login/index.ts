@@ -73,8 +73,7 @@ export default async function login(client: Client): Promise<number> {
   // Save the user's authentication token to the configuration file.
   client.authConfig.token = result.token;
 
-  // If the token was upgraded (not a new login), then don't modify
-  // the current scope.
+  // If we have a new login, update `currentTeam`
   if (isNewLogin) {
     if (result.teamId) {
       // SSO login, so set the current scope to the appropriate Team
