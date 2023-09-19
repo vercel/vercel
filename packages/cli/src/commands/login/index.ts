@@ -85,7 +85,7 @@ export default async function login(client: Client): Promise<number> {
         user = await getUser(client);
       } catch (err: unknown) {
         // Shouldn't happen since we just logged in
-        output.error('Not able to load user');
+        output.error('Failed to fetch the logged in user. Please try again.');
         return 1;
       }
       if (user.version === 'northstar' && user.defaultTeamId) {
