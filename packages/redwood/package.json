@@ -19,7 +19,7 @@
     "test-unit": "pnpm test test/prepare-cache.test.js"
   },
   "dependencies": {
-    "@vercel/nft": "0.22.5",
+    "@vercel/nft": "0.24.1",
     "@vercel/routing-utils": "3.0.0",
     "semver": "6.3.1"
   },

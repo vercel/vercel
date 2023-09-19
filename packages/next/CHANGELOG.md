@@ -1,5 +1,17 @@
 # @vercel/next
 
+## 4.0.6
+
+### Patch Changes
+
+- Fix feature flag detection ([#10531](https://github.com/vercel/vercel/pull/10531))
+
+## 4.0.5
+
+### Patch Changes
+
+- missed a prerender for experimentalBypassFor ([#10504](https://github.com/vercel/vercel/pull/10504))
+
 ## 4.0.4
 
 ### Patch Changes

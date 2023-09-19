@@ -1,5 +1,11 @@
 # @vercel/fs-detectors
 
+## 5.1.0
+
+### Minor Changes
+
+- Add support for bun detection in monorepo ([#10511](https://github.com/vercel/vercel/pull/10511))
+
 ## 5.0.3
 
 ### Patch Changes
