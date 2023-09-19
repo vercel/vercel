@@ -56,6 +56,7 @@ import { ProxyAgent } from 'proxy-agent';
 import box from './util/output/box';
 import { execExtension } from './util/extension/exec';
 import { help } from './args';
+import { updateCurrentTeamAfterLogin } from './util/login/update-current-team-after-login';
 
 const VERCEL_DIR = getGlobalPathConfig();
 const VERCEL_CONFIG_PATH = configFiles.getConfigFilePath();
@@ -337,25 +338,7 @@ const main = async () => {
         return result;
       }
 
-      if (result.teamId) {
-        // SSO login, so set the current scope to the appropriate Team
-        client.config.currentTeam = result.teamId;
-      } else {
-        let user = null;
-        try {
-          user = await getUser(client);
-        } catch (err: unknown) {
-          // Shouldn't happen since we just logged in
-          console.error(error('Failed to fetch the logged in user. Please try again.'));
-          return 1;
-        }
-
-        if (user.version === 'northstar' && user.defaultTeamId) {
-          client.config.currentTeam = user.defaultTeamId;
-        } else {
-          delete client.config.currentTeam;
-        }
-      }
+      await updateCurrentTeamAfterLogin(client, output, result.teamId);
 
       // When `result` is a string it's the user's authentication token.
       // It needs to be saved to the configuration file.

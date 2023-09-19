@@ -17,9 +17,9 @@ import {
 } from '../../util/config/files';
 import Client from '../../util/client';
 import { LoginResult } from '../../util/login/types';
-import getUser from '../../util/get-user';
 import { help } from '../help';
 import { loginCommand } from './command';
+import { updateCurrentTeamAfterLogin } from './util/login/update-current-team-after-login';
 
 export default async function login(client: Client): Promise<number> {
   const { output } = client;
@@ -75,24 +75,7 @@ export default async function login(client: Client): Promise<number> {
 
   // If we have a new login, update `currentTeam`
   if (isNewLogin) {
-    if (result.teamId) {
-      // SSO login, so set the current scope to the appropriate Team
-      client.config.currentTeam = result.teamId;
-    } else {
-      let user = null;
-      try {
-        user = await getUser(client);
-      } catch (err: unknown) {
-        // Shouldn't happen since we just logged in
-        output.error('Failed to fetch the logged in user. Please try again.');
-        return 1;
-      }
-      if (user.version === 'northstar' && user.defaultTeamId) {
-        client.config.currentTeam = user.defaultTeamId;
-      } else {
-        delete client.config.currentTeam;
-      }
-    }
+    await updateCurrentTeamAfterLogin(client, output, result.teamId);
   }
 
   writeToAuthConfigFile(client.authConfig);
