@@ -13,6 +13,7 @@
 
 - [CITY_HEADER_NAME](README.md#city_header_name)
 - [COUNTRY_HEADER_NAME](README.md#country_header_name)
+- [EMOJI_FLAG_UNICODE_STARTING_POSITION](README.md#emoji_flag_unicode_starting_position)
 - [IP_HEADER_NAME](README.md#ip_header_name)
 - [LATITUDE_HEADER_NAME](README.md#latitude_header_name)
 - [LONGITUDE_HEADER_NAME](README.md#longitude_header_name)
@@ -50,6 +51,18 @@ Country of the original client IP as calculated by Vercel Proxy.
 #### Defined in
 
 [packages/edge/src/edge-headers.ts:8](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L8)
+
+---
+
+### EMOJI_FLAG_UNICODE_STARTING_POSITION
+
+• `Const` **EMOJI_FLAG_UNICODE_STARTING_POSITION**: `127397`
+
+Unicode characters for emoji flags start at this number, and run up to 127469.
+
+#### Defined in
+
+[packages/edge/src/edge-headers.ts:34](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L34)
 
 ---
 
@@ -141,7 +154,7 @@ Returns the location information for the incoming request.
 
 #### Defined in
 
-[packages/edge/src/edge-headers.ts:106](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L106)
+[packages/edge/src/edge-headers.ts:128](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L128)
 
 ---
 
@@ -167,7 +180,7 @@ Returns the IP address of the request from the headers.
 
 #### Defined in
 
-[packages/edge/src/edge-headers.ts:77](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L77)
+[packages/edge/src/edge-headers.ts:99](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L99)
 
 ---
 
