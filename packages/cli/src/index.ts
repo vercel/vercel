@@ -463,9 +463,9 @@ const main = async () => {
       if (user.version === 'northstar') {
         output.error('You cannot set your Personal Account as the scope.');
         return 1;
-      } else {
-        delete client.config.currentTeam;
       }
+
+      delete client.config.currentTeam;
     } else {
       let teams = [];
 
