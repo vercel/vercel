@@ -2,6 +2,7 @@ import type Client from '../client';
 import type { Output } from '../output';
 import getUser from '../get-user';
 
+// NOTE: `client.authConfig.token` must be set before calling this
 export async function updateCurrentTeamAfterLogin(
   client: Client,
   output: Output,
