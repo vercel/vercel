@@ -12,6 +12,7 @@ import {
   debug,
   glob,
   Files,
+  Flag,
   BuildResultV2Typical as BuildResult,
 } from '@vercel/build-utils';
 import { Route, RouteWithHandle } from '@vercel/routing-utils';
@@ -45,6 +46,7 @@ import {
   UnwrapPromise,
   getOperationType,
   FunctionsConfigManifestV1,
+  VariantsManifest,
   RSC_CONTENT_TYPE,
   RSC_PREFETCH_SUFFIX,
 } from './utils';
@@ -111,6 +113,7 @@ export async function serverBuild({
   isCorrectLocaleAPIRoutes,
   lambdaCompressedByteLimit,
   requiredServerFilesManifest,
+  variantsManifest,
 }: {
   appPathRoutesManifest?: Record<string, string>;
   dynamicPages: string[];
@@ -151,6 +154,7 @@ export async function serverBuild({
   imagesManifest?: NextImagesManifest;
   prerenderManifest: NextPrerenderedRoutes;
   requiredServerFilesManifest: NextRequiredServerFilesManifest;
+  variantsManifest: VariantsManifest | null;
 }): Promise<BuildResult> {
   lambdaPages = Object.assign({}, lambdaPages, lambdaAppPaths);
 
@@ -1345,6 +1349,17 @@ export async function serverBuild({
     'RSC, Next-Router-State-Tree, Next-Router-Prefetch';
   const appNotFoundPath = path.posix.join('.', entryDirectory, '_not-found');
 
+  const flags: Flag[] = [];
+  if (variantsManifest) {
+    Object.entries(variantsManifest).forEach(([key, value]) => {
+      flags.push({
+        key,
+        ...value,
+        metadata: value.metadata ?? {},
+      });
+    });
+  }
+
   return {
     wildcard: wildcardConfig,
     images: getImagesConfig(imagesManifest),
@@ -2046,5 +2061,6 @@ export async function serverBuild({
           ]),
     ],
     framework: { version: nextVersion },
+    flags,
   };
 }
