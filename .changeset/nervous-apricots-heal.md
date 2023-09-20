@@ -4,4 +4,4 @@
 'vercel': patch
 ---
 
-Initial variants implementation
+Internal variants
