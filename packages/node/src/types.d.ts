@@ -1,4 +1,4 @@
-import { ServerResponse, IncomingMessage } from 'http';
+import type { ServerResponse, IncomingMessage } from 'http';
 import type { Headers } from 'undici';
 
 export type VercelRequestCookies = { [key: string]: string };
