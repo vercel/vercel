@@ -21,7 +21,7 @@ export async function createServerlessFunctions(
 ) {
   let functionName: string;
   let functionDir: string;
-  const handlerFile = join(__dirname, '../handlers/templates/ssr-handler.js');
+  const handlerFile = join(__dirname, '../templates/ssr-handler.js');
 
   await Promise.all(
     ssrRoutes.map(async (page, index) => {

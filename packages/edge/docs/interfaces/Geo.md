@@ -9,6 +9,7 @@ The location information of a given request.
 - [city](Geo.md#city)
 - [country](Geo.md#country)
 - [countryRegion](Geo.md#countryregion)
+- [flag](Geo.md#flag)
 - [latitude](Geo.md#latitude)
 - [longitude](Geo.md#longitude)
 - [region](Geo.md#region)
@@ -23,7 +24,7 @@ The city that the request originated from.
 
 #### Defined in
 
-[packages/edge/src/edge-headers.ts:47](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L47)
+[packages/edge/src/edge-headers.ts:50](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L50)
 
 ---
 
@@ -35,7 +36,7 @@ The country that the request originated from.
 
 #### Defined in
 
-[packages/edge/src/edge-headers.ts:50](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L50)
+[packages/edge/src/edge-headers.ts:53](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L53)
 
 ---
 
@@ -48,7 +49,19 @@ See [docs](https://vercel.com/docs/concepts/edge-network/headers#x-vercel-ip-cou
 
 #### Defined in
 
-[packages/edge/src/edge-headers.ts:58](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L58)
+[packages/edge/src/edge-headers.ts:64](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L64)
+
+---
+
+### flag
+
+• `Optional` **flag**: `string`
+
+The flag emoji for the country the request originated from.
+
+#### Defined in
+
+[packages/edge/src/edge-headers.ts:56](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L56)
 
 ---
 
@@ -60,7 +73,7 @@ The latitude of the client.
 
 #### Defined in
 
-[packages/edge/src/edge-headers.ts:61](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L61)
+[packages/edge/src/edge-headers.ts:67](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L67)
 
 ---
 
@@ -72,7 +85,7 @@ The longitude of the client.
 
 #### Defined in
 
-[packages/edge/src/edge-headers.ts:64](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L64)
+[packages/edge/src/edge-headers.ts:70](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L70)
 
 ---
 
@@ -84,4 +97,4 @@ The [Vercel Edge Network region](https://vercel.com/docs/concepts/edge-network/r
 
 #### Defined in
 
-[packages/edge/src/edge-headers.ts:53](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L53)
+[packages/edge/src/edge-headers.ts:59](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L59)

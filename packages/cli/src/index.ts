@@ -56,6 +56,7 @@ import { ProxyAgent } from 'proxy-agent';
 import box from './util/output/box';
 import { execExtension } from './util/extension/exec';
 import { help } from './args';
+import { updateCurrentTeamAfterLogin } from './util/login/update-current-team-after-login';
 
 const VERCEL_DIR = getGlobalPathConfig();
 const VERCEL_CONFIG_PATH = configFiles.getConfigFilePath();
@@ -337,16 +338,11 @@ const main = async () => {
         return result;
       }
 
-      if (result.teamId) {
-        // SSO login, so set the current scope to the appropriate Team
-        client.config.currentTeam = result.teamId;
-      } else {
-        delete client.config.currentTeam;
-      }
-
       // When `result` is a string it's the user's authentication token.
       // It needs to be saved to the configuration file.
       client.authConfig.token = result.token;
+
+      await updateCurrentTeamAfterLogin(client, output, result.teamId);
 
       configFiles.writeToAuthConfigFile(client.authConfig);
       configFiles.writeToConfigFile(client.config);
@@ -447,6 +443,11 @@ const main = async () => {
     }
 
     if (user.id === scope || user.email === scope || user.username === scope) {
+      if (user.version === 'northstar') {
+        output.error('You cannot set your Personal Account as the scope.');
+        return 1;
+      }
+
       delete client.config.currentTeam;
     } else {
       let teams = [];
