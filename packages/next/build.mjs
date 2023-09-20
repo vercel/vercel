@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import { readFileSync, unlinkSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { esbuild } from '../../utils/build.mjs';
 import buildEdgeFunctionTemplate from './scripts/build-edge-function-template.js';
 
@@ -24,7 +24,3 @@ await esbuild({
   bundle: true,
   external: ['@vercel/build-utils', ...externals],
 });
-
-// The file from `buildEdgeFunctionTemplate()` has been bundled,
-// and is no longer needed, so clean it up
-unlinkSync(new URL('dist/___get-nextjs-edge-function.js', import.meta.url));
