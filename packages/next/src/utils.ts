@@ -3025,3 +3025,35 @@ export function isApiPage(page: string | undefined) {
     .replace(/\\/g, '/')
     .match(/(serverless|server)\/pages\/api(\/|\.js$)/);
 }
+
+export type VariantsManifest = Record<
+  string,
+  {
+    defaultValue?: unknown;
+    metadata?: Record<string, unknown>;
+  }
+>;
+
+export async function getVariantsManifest(
+  entryPath: string,
+  outputDirectory: string
+): Promise<null | VariantsManifest> {
+  const pathVariantsManifest = path.join(
+    entryPath,
+    outputDirectory,
+    'variants-manifest.json'
+  );
+
+  const hasVariantsManifest = await fs
+    .access(pathVariantsManifest)
+    .then(() => true)
+    .catch(() => false);
+
+  if (!hasVariantsManifest) return null;
+
+  const variantsManifest: VariantsManifest = await fs.readJSON(
+    pathVariantsManifest
+  );
+
+  return variantsManifest;
+}
