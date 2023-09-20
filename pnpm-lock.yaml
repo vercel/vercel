@@ -965,9 +965,6 @@ importers:
       '@vercel/build-utils':
         specifier: 7.2.0
         version: link:../build-utils
-      '@vercel/node':
-        specifier: 3.0.5
-        version: link:../node
       '@vercel/routing-utils':
         specifier: 3.0.0
         version: link:../routing-utils
