@@ -1228,6 +1228,9 @@ importers:
       '@vercel/error-utils':
         specifier: 2.0.1
         version: link:../error-utils
+      '@vercel/nft':
+        specifier: 0.24.1
+        version: 0.24.1
       '@vercel/static-config':
         specifier: 3.0.0
         version: link:../static-config
@@ -1289,15 +1292,9 @@ importers:
       '@types/jest':
         specifier: 29.5.0
         version: 29.5.0
-      '@types/test-listen':
-        specifier: 1.1.0
-        version: 1.1.0
       '@vercel/ncc':
         specifier: 0.24.0
         version: 0.24.0
-      '@vercel/nft':
-        specifier: 0.24.1
-        version: 0.24.1
       cookie:
         specifier: 0.4.0
         version: 0.4.0
@@ -1319,9 +1316,6 @@ importers:
       source-map-support:
         specifier: 0.5.12
         version: 0.5.12
-      test-listen:
-        specifier: 1.1.0
-        version: 1.1.0
 
   packages/python:
     devDependencies:
@@ -4791,12 +4785,6 @@ packages:
     dependencies:
       '@types/node': 16.18.11
       minipass: 4.2.8
-    dev: true
-
-  /@types/test-listen@1.1.0:
-    resolution: {integrity: sha512-y6ZfbSzYHniCeY6ZAzsQjSAdJInNVoEz4Uhsb81W+RCoNYA59yoG/+XbqPqCPj2KCU3Wa6RFWSozutkGIHIsNQ==}
-    dependencies:
-      '@types/node': 16.18.11
     dev: true
 
   /@types/text-table@0.2.0:
