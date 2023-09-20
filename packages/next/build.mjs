@@ -20,7 +20,10 @@ await Promise.all([
   buildEdgeFunctionTemplate(),
 ]);
 
-await esbuild({ bundle: true, external: ['@vercel/build-utils', ...externals] });
+await esbuild({
+  bundle: true,
+  external: ['@vercel/build-utils', ...externals],
+});
 
 // The file from `buildEdgeFunctionTemplate()` has been bundled,
 // and is no longer needed, so clean it up
