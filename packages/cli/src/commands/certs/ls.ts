@@ -43,10 +43,7 @@ async function ls(
   }
 
   // Get the list of certificates
-  const { certs, pagination } = await getCerts(
-    client,
-    ...paginationOptions
-  ).catch(err => err);
+  const { certs, pagination } = await getCerts(client, ...paginationOptions);
 
   output.log(
     `${
