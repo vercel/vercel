@@ -28,10 +28,10 @@ import { Sema } from 'async-sema';
 import crc32 from 'buffer-crc32';
 import fs, { lstat, stat } from 'fs-extra';
 import path from 'path';
-import resolveFrom from 'resolve-from';
 import semver from 'semver';
 import zlib from 'zlib';
 import url from 'url';
+import { createRequire } from 'module';
 import escapeStringRegexp from 'escape-string-regexp';
 import { htmlContentType } from '.';
 import textTable from 'text-table';
@@ -39,14 +39,18 @@ import { getNextjsEdgeFunctionSource } from './edge-function-source/get-edge-fun
 import type { LambdaOptionsWithFiles } from '@vercel/build-utils/dist/lambda';
 import { stringifySourceMap } from './sourcemapped';
 import type { RawSourceMap } from 'source-map';
-import bytes from 'bytes';
+import { prettyBytes } from './pretty-bytes';
+import {
+  MIB,
+  KIB,
+  MAX_UNCOMPRESSED_LAMBDA_SIZE,
+  LAMBDA_RESERVED_COMPRESSED_SIZE,
+  LAMBDA_RESERVED_UNCOMPRESSED_SIZE,
+} from './constants';
 
 type stringMap = { [key: string]: string };
 
-export const KIB = 1024;
-export const MIB = 1024 * KIB;
-
-export const prettyBytes = (n: number) => bytes(n, { unitSeparator: ' ' });
+export const require_ = createRequire(__filename);
 
 export const RSC_CONTENT_TYPE = 'x-component';
 export const RSC_PREFETCH_SUFFIX = '.prefetch.rsc';
@@ -420,10 +424,10 @@ export async function getDynamicRoutes(
   let getSortedRoutes: ((normalizedPages: string[]) => string[]) | undefined;
 
   try {
-    // NOTE: `eval('require')` is necessary to avoid bad transpilation to `__webpack_require__`
-    ({ getRouteRegex, getSortedRoutes } = eval('require')(
-      resolveFrom(entryPath, 'next-server/dist/lib/router/utils')
-    ));
+    const resolved = require_.resolve('next-server/dist/lib/router/utils', {
+      paths: [entryPath],
+    });
+    ({ getRouteRegex, getSortedRoutes } = require_(resolved));
     if (typeof getRouteRegex !== 'function') {
       getRouteRegex = undefined;
     }
@@ -431,10 +435,11 @@ export async function getDynamicRoutes(
 
   if (!getRouteRegex || !getSortedRoutes) {
     try {
-      // NOTE: `eval('require')` is necessary to avoid bad transpilation to `__webpack_require__`
-      ({ getRouteRegex, getSortedRoutes } = eval('require')(
-        resolveFrom(entryPath, 'next/dist/next-server/lib/router/utils')
-      ));
+      const resolved = require_.resolve(
+        'next/dist/next-server/lib/router/utils',
+        { paths: [entryPath] }
+      );
+      ({ getRouteRegex, getSortedRoutes } = require_(resolved));
       if (typeof getRouteRegex !== 'function') {
         getRouteRegex = undefined;
       }
@@ -1418,10 +1423,6 @@ export type LambdaGroup = {
   pseudoLayerBytes: number;
   pseudoLayerUncompressedBytes: number;
 };
-
-export const MAX_UNCOMPRESSED_LAMBDA_SIZE = 250 * MIB;
-const LAMBDA_RESERVED_UNCOMPRESSED_SIZE = 2.5 * MIB;
-const LAMBDA_RESERVED_COMPRESSED_SIZE = 250 * KIB;
 
 export async function getPageLambdaGroups({
   entryPath,

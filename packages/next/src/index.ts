@@ -46,14 +46,13 @@ import {
   writeFile,
 } from 'fs-extra';
 import path from 'path';
-import resolveFrom from 'resolve-from';
 import semver from 'semver';
 import url from 'url';
 import createServerlessConfig from './create-serverless-config';
 import nextLegacyVersions from './legacy-versions';
 import { serverBuild } from './server-build';
+import { MIB } from './constants';
 import {
-  MIB,
   collectTracedFiles,
   createLambdaFromPseudoLayers,
   createPseudoLayer,
@@ -93,6 +92,7 @@ import {
   isApiPage,
   getFunctionsConfigManifest,
   normalizeEdgeFunctionPath,
+  require_,
 } from './utils';
 
 export const version = 2;
@@ -148,10 +148,10 @@ function getRealNextVersion(entryPath: string): string | false {
     // package.json. This allows the builder to be used with frameworks like Blitz that
     // bundle Next but where Next isn't in the project root's package.json
 
-    // NOTE: `eval('require')` is necessary to avoid bad transpilation to `__webpack_require__`
-    const nextVersion: string = eval('require')(
-      resolveFrom(entryPath, 'next/package.json')
-    ).version;
+    const resolved = require_.resolve('next/package.json', {
+      paths: [entryPath],
+    });
+    const nextVersion: string = require_(resolved).version;
     console.log(`Detected Next.js version: ${nextVersion}`);
     return nextVersion;
   } catch (_ignored) {
@@ -1934,8 +1934,8 @@ export const build: BuildV2 = async ({
             const groupPageKeys = Object.keys(group.pages);
 
             const launcher = launcherData.replace(
-              /\/\/ __LAUNCHER_PAGE_HANDLER__/g,
-              `
+              'let page = {};',
+              `let page = {};
               const url = require('url');
 
               ${

@@ -3,10 +3,10 @@ import { readFile } from 'fs-extra';
 import { ConcatSource, Source } from 'webpack-sources';
 import { fileToSource, raw, sourcemapped } from '../sourcemapped';
 import { join } from 'path';
-import { EDGE_FUNCTION_SIZE_LIMIT } from './constants';
+import { EDGE_FUNCTION_SIZE_LIMIT } from '../constants';
 import zlib from 'zlib';
 import { promisify } from 'util';
-import { prettyBytes } from '../utils';
+import { prettyBytes } from '../pretty-bytes';
 
 // @ts-ignore this is a prebuilt file, based on `../../scripts/build-edge-function-template.js`
 import template from '../../dist/___get-nextjs-edge-function.js';
