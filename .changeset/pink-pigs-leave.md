@@ -2,4 +2,4 @@
 'vercel': patch
 ---
 
-let bail APIErrors from getCerts call
+Better rendering upon authentication error in `vc cert ls`
