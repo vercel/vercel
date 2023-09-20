@@ -428,6 +428,23 @@ async function doBuild(
 
   const ops: Promise<Error | void>[] = [];
 
+  const dependencies = [
+    ...Object.keys(pkg?.dependencies ?? {}),
+    ...Object.keys(pkg?.devDependencies ?? {}),
+  ];
+
+  const isUsingSpeedInsights = dependencies.some(
+    d => d === '@vercel/speed-insights'
+  );
+
+  if (isUsingSpeedInsights && process.env.VERCEL_ANALYTICS_ID) {
+    output.warn(
+      `The \`VERCEL_ANALYTICS_ID\` environment variable is deprecated and will be removed in a future release. Please remove it from your environment variables`
+    );
+
+    delete process.env.VERCEL_ANALYTICS_ID;
+  }
+
   // Write the `detectedBuilders` result to output dir
   const buildsJsonBuilds = new Map<Builder, SerializedBuilder>(
     builds.map(build => {

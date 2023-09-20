@@ -426,5 +426,46 @@ describe('env', () => {
       );
       expect(gitignoreAfter).toBe(gitignoreBefore);
     });
+
+    it('should not pull VERCEL_ANALYTICS_ID', async () => {
+      useUser();
+      useTeams('team_dummy');
+      useProject(
+        {
+          ...defaultProject,
+          id: 'vercel-env-pull',
+          name: 'vercel-env-pull',
+          analytics: {
+            id: 'VC-ANALYTICS-ID',
+            enabledAt: Date.now(),
+          },
+        },
+        [
+          {
+            type: 'encrypted',
+            id: '781dt89g8r2h789g',
+            key: 'VERCEL_ANALYTICS_ID',
+            value: 'VC-ANALYTICS-ID',
+            target: ['development'],
+            configurationId: null,
+            updatedAt: 1557241361455,
+            createdAt: 1557241361455,
+          },
+        ]
+      );
+      const cwd = setupUnitFixture('vercel-env-pull');
+      client.cwd = cwd;
+      client.setArgv('env', 'pull', '--yes');
+      const exitCodePromise = env(client);
+      await expect(client.stderr).toOutput(
+        'Downloading `development` Environment Variables for Project '
+      );
+      await expect(client.stderr).toOutput('Created .env.local file');
+      await expect(exitCodePromise).resolves.toEqual(0);
+
+      const rawDevEnv = await fs.readFile(path.join(cwd, '.env.local'));
+
+      expect(rawDevEnv.toString().includes('VERCEL_ANALYTICS_ID')).toBeFalsy();
+    });
   });
 });
