@@ -1,5 +1,27 @@
 # vercel
 
+## 32.3.0
+
+### Minor Changes
+
+- [cli] Support northstar users ([#10535](https://github.com/vercel/vercel/pull/10535))
+
+### Patch Changes
+
+- Internal variants ([#10549](https://github.com/vercel/vercel/pull/10549))
+
+- [speed insights] Prepare for migration to new speed insights package ([#10500](https://github.com/vercel/vercel/pull/10500))
+
+- Updated dependencies [[`b0898a665`](https://github.com/vercel/vercel/commit/b0898a66591d5296dc38ffcf0e8345c9338b72f3), [`10d4e51ac`](https://github.com/vercel/vercel/commit/10d4e51ac57b76f05ddc0bf3adf220e2490244fc), [`decdf27fb`](https://github.com/vercel/vercel/commit/decdf27fb5ca914fe50a9320c4fd50ef79d2fbb3), [`f5ca497b7`](https://github.com/vercel/vercel/commit/f5ca497b7522a2dad637cef238da9716ac133057), [`ab329f0fe`](https://github.com/vercel/vercel/commit/ab329f0fe88e9cb72607d0cba41f5e168d77e077), [`d0d052011`](https://github.com/vercel/vercel/commit/d0d0520111264434d57d5920de0f622f6a2588dc), [`9bb3067de`](https://github.com/vercel/vercel/commit/9bb3067de28be77f3ce268a31a7aa6184836dfb1)]:
+  - @vercel/static-build@2.0.7
+  - @vercel/node@3.0.6
+  - @vercel/build-utils@7.2.1
+  - @vercel/next@4.0.7
+  - @vercel/python@4.0.2
+  - @vercel/redwood@2.0.3
+  - @vercel/remix-builder@2.0.7
+  - @vercel/go@3.0.2
+
 ## 32.2.5
 
 ### Patch Changes
