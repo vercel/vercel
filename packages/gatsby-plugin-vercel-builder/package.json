@@ -4,9 +4,8 @@
   "main": "dist/index.js",
   "files": [
     "dist",
-    "gatsby-node.ts",
-    "gatsby-node.js",
-    "gatsby-node.js.map"
+    "templates",
+    "gatsby-node.js"
   ],
   "repository": {
     "type": "git",
@@ -14,14 +13,11 @@
     "directory": "packages/gatsby-plugin-vercel-builder"
   },
   "scripts": {
-    "build": "pnpm build:src && pnpm build:gatsby",
-    "build:gatsby": "tsc -p tsconfig.gatsby.json",
-    "build:src": "tsc -p tsconfig.src.json"
+    "build": "node ../../utils/build-builder.mjs"
   },
   "dependencies": {
     "@sinclair/typebox": "0.25.24",
     "@vercel/build-utils": "7.2.0",
-    "@vercel/node": "3.0.5",
     "@vercel/routing-utils": "3.0.0",
     "esbuild": "0.14.47",
     "etag": "1.8.1",
