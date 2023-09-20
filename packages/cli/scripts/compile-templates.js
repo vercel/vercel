@@ -17,16 +17,16 @@ async function main() {
   const compiledFiles = files.filter(f => f.endsWith('.js'));
 
   // Prettier
-  console.log('\nMaking the compiled template functions prettier...');
-  const prettier = join(dirRoot, '../../node_modules/prettier/bin-prettier.js');
-  await execa(
-    process.execPath,
-    [prettier, '--write', '--single-quote', ...compiledFiles],
-    {
-      cwd: templatesDir,
-      stdio: 'inherit',
-    }
-  );
+  //console.log('\nMaking the compiled template functions prettier...');
+  //const prettier = join(dirRoot, '../../node_modules/prettier/bin-prettier.js');
+  //await execa(
+  //  process.execPath,
+  //  [prettier, '--write', '--single-quote', ...compiledFiles],
+  //  {
+  //    cwd: templatesDir,
+  //    stdio: 'inherit',
+  //  }
+  //);
 
   console.log('\nConverting template functions to TypeScript');
   for (const file of compiledFiles) {
