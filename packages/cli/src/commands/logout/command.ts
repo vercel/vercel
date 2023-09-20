@@ -3,7 +3,7 @@ import { packageName } from '../../util/pkg-name';
 
 export const logoutCommand: Command = {
   name: 'logout',
-  description: 'Logout the current authenticated user or team.',
+  description: 'Logout the current authenticated user.',
   arguments: [],
   options: [],
   examples: [

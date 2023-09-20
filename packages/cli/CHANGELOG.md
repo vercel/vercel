@@ -1,5 +1,57 @@
 # vercel
 
+## 32.2.5
+
+### Patch Changes
+
+- Updated dependencies [[`849eedf0f`](https://github.com/vercel/vercel/commit/849eedf0f2841211e4175d374f1cf01330bf9611), [`f6f16b034`](https://github.com/vercel/vercel/commit/f6f16b0347bac9f5c33c79ccb1fb9fd9d254cae5), [`3035e18fb`](https://github.com/vercel/vercel/commit/3035e18fb67dfe7031e235a74136a41948f86d5a), [`cb784aeb9`](https://github.com/vercel/vercel/commit/cb784aeb9c9e4eddf1c65b61849a87edb1117af1)]:
+  - @vercel/next@4.0.6
+  - @vercel/remix-builder@2.0.6
+
+## 32.2.4
+
+### Patch Changes
+
+- Add support for bun detection in monorepo ([#10511](https://github.com/vercel/vercel/pull/10511))
+
+- Updated dependencies [[`1b6f3a0f6`](https://github.com/vercel/vercel/commit/1b6f3a0f6534f71c7486a4e33ac199f1da330626)]:
+  - @vercel/static-build@2.0.6
+
+## 32.2.3
+
+### Patch Changes
+
+- Updated dependencies [[`083aad448`](https://github.com/vercel/vercel/commit/083aad448e45edae296da3201eec9f890a01d22d)]:
+  - @vercel/next@4.0.5
+
+## 32.2.2
+
+### Patch Changes
+
+- Updated dependencies [[`7a0fed970`](https://github.com/vercel/vercel/commit/7a0fed970c39cb8f4df70544ded3284d3538b06a), [`2f461a8b0`](https://github.com/vercel/vercel/commit/2f461a8b0bcbdd05da0516395c2905c2d0242682), [`1bab21026`](https://github.com/vercel/vercel/commit/1bab21026ec0bb8a4a8fbeac3d6e4a197f1030fd)]:
+  - @vercel/next@4.0.4
+  - @vercel/remix-builder@2.0.5
+
+## 32.2.1
+
+### Patch Changes
+
+- Update @vercel/fun@1.1.0 ([#10477](https://github.com/vercel/vercel/pull/10477))
+
+- [node] upgrade edge-runtime ([#10451](https://github.com/vercel/vercel/pull/10451))
+
+- Updated dependencies [[`6784e7751`](https://github.com/vercel/vercel/commit/6784e77516ba180a691e3c48323b32bb4506d7b6), [`a8ad17626`](https://github.com/vercel/vercel/commit/a8ad176262ef822860ce338927e6f959961d2d32), [`0ee089a50`](https://github.com/vercel/vercel/commit/0ee089a501ebb78901c4afe1658e794917998f8f), [`f15cba614`](https://github.com/vercel/vercel/commit/f15cba6148a0cdb6975db7724775c35ab7d929b2), [`b265e13d4`](https://github.com/vercel/vercel/commit/b265e13d40d541b77148fa79ac60b4c4dd10974c), [`50e04dd85`](https://github.com/vercel/vercel/commit/50e04dd8584664c842a86c15d92d654f4ea8dcbb), [`45b73c7e8`](https://github.com/vercel/vercel/commit/45b73c7e86458564dc0bab007f6f6365c4c4ab5d), [`a732d30c8`](https://github.com/vercel/vercel/commit/a732d30c8409f96f59ea5406e974a6c4186cc130), [`9d64312aa`](https://github.com/vercel/vercel/commit/9d64312aaaa875a4e193b7602c50e5dc68979aad), [`6baefc825`](https://github.com/vercel/vercel/commit/6baefc825ad7cfc3a5edce31cb4244721452f753), [`989f0d813`](https://github.com/vercel/vercel/commit/989f0d813910d8d67ed355de93018f1dcd91b6ba), [`d8bc570f6`](https://github.com/vercel/vercel/commit/d8bc570f604950d97156d4f33c8accecf3b3b28f)]:
+  - @vercel/go@3.0.1
+  - @vercel/redwood@2.0.2
+  - @vercel/remix-builder@2.0.4
+  - @vercel/hydrogen@1.0.1
+  - @vercel/static-build@2.0.5
+  - @vercel/build-utils@7.2.0
+  - @vercel/next@4.0.3
+  - @vercel/node@3.0.5
+  - @vercel/python@4.0.1
+  - @vercel/ruby@2.0.2
+
 ## 32.2.0
 
 ### Minor Changes

@@ -72,7 +72,7 @@ export const domainsCommand: Command = {
     },
     {
       name: 'move',
-      description: 'Move a domain to another user or team',
+      description: 'Move a domain to another scope',
       arguments: [
         {
           name: 'name',

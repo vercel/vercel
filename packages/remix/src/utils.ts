@@ -5,6 +5,7 @@ import { basename, dirname, join, relative, resolve, sep } from 'path';
 import { pathToRegexp, Key } from 'path-to-regexp';
 import { debug, spawnAsync } from '@vercel/build-utils';
 import { walkParentDirs } from '@vercel/build-utils';
+import { createRequire } from 'module';
 import type {
   ConfigRoute,
   RouteManifest,
@@ -16,7 +17,7 @@ import type {
   SpawnOptionsExtended,
 } from '@vercel/build-utils/dist/fs/run-user-scripts';
 
-export const _require: typeof require = eval('require');
+export const require_ = createRequire(__filename);
 
 export interface ResolvedNodeRouteConfig {
   runtime: 'nodejs';
@@ -277,29 +278,41 @@ export function addDependencies(
   }
   const args: string[] = [];
 
-  if (cliType === 'npm' || cliType === 'pnpm') {
-    args.push('install');
-    if (opts.saveDev) {
-      args.push('--save-dev');
-    }
-  } else {
-    // 'yarn'
-    args.push('add');
-    if (opts.saveDev) {
-      args.push('--dev');
-    }
-    const yarnVersion = execSync('yarn -v', { encoding: 'utf8' }).trim();
-    const isYarnV1 = semver.satisfies(yarnVersion, '1');
-    if (isYarnV1) {
-      // Ignoring workspace check is only needed on Yarn v1
-      args.push('--ignore-workspace-root-check');
-    }
-  }
+  switch (cliType) {
+    case 'npm':
+    case 'pnpm':
+      args.push('install');
+      if (opts.saveDev) {
+        args.push('--save-dev');
+      }
 
-  // Don't fail if pnpm is being run at the workspace root
-  if (cliType === 'pnpm' && opts.cwd) {
-    if (existsSync(join(opts.cwd, 'pnpm-workspace.yaml'))) {
-      args.push('--workspace-root');
+      // Don't fail if pnpm is being run at the workspace root
+      if (cliType === 'pnpm' && opts.cwd) {
+        if (existsSync(join(opts.cwd, 'pnpm-workspace.yaml'))) {
+          args.push('--workspace-root');
+        }
+      }
+      break;
+
+    case 'bun':
+    case 'yarn':
+      args.push('add');
+      if (opts.saveDev) {
+        args.push('--dev');
+      }
+      if (cliType === 'yarn') {
+        const yarnVersion = execSync('yarn -v', { encoding: 'utf8' }).trim();
+        const isYarnV1 = semver.satisfies(yarnVersion, '1');
+        if (isYarnV1) {
+          // Ignoring workspace check is only needed on Yarn v1
+          args.push('--ignore-workspace-root-check');
+        }
+      }
+      break;
+
+    default: {
+      const n: never = cliType;
+      throw new Error(`Unexpected package manager: ${n}`);
     }
   }
 
@@ -321,7 +334,7 @@ export async function ensureResolvable(
   pkgName: string
 ): Promise<string> {
   try {
-    const resolvedPkgPath = _require.resolve(`${pkgName}/package.json`, {
+    const resolvedPkgPath = require_.resolve(`${pkgName}/package.json`, {
       paths: [start],
     });
     const resolvedPath = dirname(resolvedPkgPath);
@@ -412,7 +425,7 @@ export function isESM(path: string): boolean {
   // Figure out if the `remix.config` file is using ESM syntax
   let isESM = false;
   try {
-    _require(path);
+    require_(path);
   } catch (err: any) {
     isESM = err.code === 'ERR_REQUIRE_ESM';
   }

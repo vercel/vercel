@@ -30,7 +30,7 @@ if 'handler' in __vc_variables or 'Handler' in __vc_variables:
     base = __vc_module.handler if ('handler' in __vc_variables) else  __vc_module.Handler
     if not issubclass(base, BaseHTTPRequestHandler):
         print('Handler must inherit from BaseHTTPRequestHandler')
-        print('See the docs https://vercel.com/docs/runtimes#advanced-usage/advanced-python-usage')
+        print('See the docs: https://vercel.com/docs/functions/serverless-functions/runtimes/python')
         exit(1)
 
     print('using HTTP Handler')
@@ -307,5 +307,5 @@ elif 'app' in __vc_variables:
 
 else:
     print('Missing variable `handler` or `app` in file "__VC_HANDLER_ENTRYPOINT".')
-    print('See the docs https://vercel.com/docs/runtimes#advanced-usage/advanced-python-usage')
+    print('See the docs: https://vercel.com/docs/functions/serverless-functions/runtimes/python')
     exit(1)

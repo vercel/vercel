@@ -1,5 +1,27 @@
 # @vercel/remix-builder
 
+## 2.0.6
+
+### Patch Changes
+
+- Fix ESM mode for Edge runtime ([#10530](https://github.com/vercel/vercel/pull/10530))
+
+- Update `@remix-run/dev` fork to v2.0.0 ([#10526](https://github.com/vercel/vercel/pull/10526))
+
+- Fixes for Remix v2 ([#10525](https://github.com/vercel/vercel/pull/10525))
+
+## 2.0.5
+
+### Patch Changes
+
+- Fix usage with `bun install` ([#10489](https://github.com/vercel/vercel/pull/10489))
+
+## 2.0.4
+
+### Patch Changes
+
+- Use `build-builder.mjs` script to bundle, and remove types and source maps ([#10479](https://github.com/vercel/vercel/pull/10479))
+
 ## 2.0.3
 
 ### Patch Changes

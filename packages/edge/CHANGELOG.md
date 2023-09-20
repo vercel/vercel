@@ -1,5 +1,11 @@
 # @vercel/edge
 
+## 1.0.2
+
+### Patch Changes
+
+- [node] upgrade edge-runtime ([#10451](https://github.com/vercel/vercel/pull/10451))
+
 ## 1.0.1
 
 ### Patch Changes

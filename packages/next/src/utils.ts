@@ -50,6 +50,9 @@ export const MIB = 1024 * KIB;
 
 export const prettyBytes = (n: number) => bytes(n, { unitSeparator: ' ' });
 
+export const RSC_CONTENT_TYPE = 'x-component';
+export const RSC_PREFETCH_SUFFIX = '.prefetch.rsc';
+
 // Identify /[param]/ in route string
 // eslint-disable-next-line no-useless-escape
 const TEST_DYNAMIC_ROUTE = /\/\[[^\/]+?\](?=\/|$)/;
@@ -856,6 +859,7 @@ export type NextPrerenderedRoutes = {
       srcRoute: string | null;
       initialStatus?: number;
       initialHeaders?: Record<string, string>;
+      experimentalBypassFor?: HasField;
     };
   };
 
@@ -864,6 +868,7 @@ export type NextPrerenderedRoutes = {
       routeRegex: string;
       dataRoute: string | null;
       dataRouteRegex: string | null;
+      experimentalBypassFor?: HasField;
     };
   };
 
@@ -873,6 +878,7 @@ export type NextPrerenderedRoutes = {
       routeRegex: string;
       dataRoute: string | null;
       dataRouteRegex: string | null;
+      experimentalBypassFor?: HasField;
     };
   };
 
@@ -881,6 +887,7 @@ export type NextPrerenderedRoutes = {
       routeRegex: string;
       dataRoute: string | null;
       dataRouteRegex: string | null;
+      experimentalBypassFor?: HasField;
     };
   };
 
@@ -1084,6 +1091,7 @@ export async function getPrerenderManifest(
             dataRoute: string | null;
             initialStatus?: number;
             initialHeaders?: Record<string, string>;
+            experimentalBypassFor?: HasField;
           };
         };
         dynamicRoutes: {
@@ -1092,6 +1100,7 @@ export async function getPrerenderManifest(
             fallback: string | false;
             dataRoute: string | null;
             dataRouteRegex: string | null;
+            experimentalBypassFor?: HasField;
           };
         };
         preview: {
@@ -1177,10 +1186,12 @@ export async function getPrerenderManifest(
 
         let initialStatus: undefined | number;
         let initialHeaders: undefined | Record<string, string>;
+        let experimentalBypassFor: undefined | HasField;
 
         if (manifest.version === 4) {
           initialStatus = manifest.routes[route].initialStatus;
           initialHeaders = manifest.routes[route].initialHeaders;
+          experimentalBypassFor = manifest.routes[route].experimentalBypassFor;
         }
 
         ret.staticRoutes[route] = {
@@ -1192,15 +1203,23 @@ export async function getPrerenderManifest(
           srcRoute,
           initialStatus,
           initialHeaders,
+          experimentalBypassFor,
         };
       });
 
       lazyRoutes.forEach(lazyRoute => {
         const { routeRegex, fallback, dataRoute, dataRouteRegex } =
           manifest.dynamicRoutes[lazyRoute];
+        let experimentalBypassFor: undefined | HasField;
+
+        if (manifest.version === 4) {
+          experimentalBypassFor =
+            manifest.dynamicRoutes[lazyRoute].experimentalBypassFor;
+        }
 
         if (typeof fallback === 'string') {
           ret.fallbackRoutes[lazyRoute] = {
+            experimentalBypassFor,
             routeRegex,
             fallback,
             dataRoute,
@@ -1208,6 +1227,7 @@ export async function getPrerenderManifest(
           };
         } else if (fallback === null) {
           ret.blockingFallbackRoutes[lazyRoute] = {
+            experimentalBypassFor,
             routeRegex,
             dataRoute,
             dataRouteRegex,
@@ -1216,6 +1236,7 @@ export async function getPrerenderManifest(
           // Fallback behavior is disabled, all routes would've been provided
           // in the top-level `routes` key (`staticRoutes`).
           ret.omittedRoutes[lazyRoute] = {
+            experimentalBypassFor,
             routeRegex,
             dataRoute,
             dataRouteRegex,
@@ -1391,8 +1412,10 @@ export type LambdaGroup = {
   memory?: number;
   maxDuration?: number;
   isAppRouter?: boolean;
+  isAppRouteHandler?: boolean;
   isStreaming?: boolean;
   isPrerenders?: boolean;
+  isPages?: boolean;
   isApiLambda: boolean;
   pseudoLayer: PseudoLayer;
   pseudoLayerBytes: number;
@@ -1907,6 +1930,7 @@ export const onPrerenderRoute =
     let dataRoute: string | null;
     let initialStatus: number | undefined;
     let initialHeaders: Record<string, string> | undefined;
+    let experimentalBypassFor: HasField | undefined;
 
     if (isFallback || isBlocking) {
       const pr = isFallback
@@ -1923,10 +1947,13 @@ export const onPrerenderRoute =
       }
       srcRoute = null;
       dataRoute = pr.dataRoute;
+      experimentalBypassFor = pr.experimentalBypassFor;
     } else if (isOmitted) {
       initialRevalidate = false;
       srcRoute = routeKey;
       dataRoute = prerenderManifest.omittedRoutes[routeKey].dataRoute;
+      experimentalBypassFor =
+        prerenderManifest.omittedRoutes[routeKey].experimentalBypassFor;
     } else {
       const pr = prerenderManifest.staticRoutes[routeKey];
       ({
@@ -1935,6 +1962,7 @@ export const onPrerenderRoute =
         dataRoute,
         initialHeaders,
         initialStatus,
+        experimentalBypassFor,
       } = pr);
     }
 
@@ -2161,7 +2189,7 @@ export const onPrerenderRoute =
         routesManifest?.rsc?.varyHeader ||
         'RSC, Next-Router-State-Tree, Next-Router-Prefetch';
       const rscContentTypeHeader =
-        routesManifest?.rsc?.contentTypeHeader || 'text/x-component';
+        routesManifest?.rsc?.contentTypeHeader || RSC_CONTENT_TYPE;
 
       let sourcePath: string | undefined;
       if (`/${outputPathPage}` !== srcRoute && srcRoute) {
@@ -2175,6 +2203,7 @@ export const onPrerenderRoute =
         fallback: htmlFsRef,
         group: prerenderGroup,
         bypassToken: prerenderManifest.bypassToken,
+        experimentalBypassFor,
         initialStatus,
         initialHeaders,
         sourcePath,
@@ -2203,6 +2232,7 @@ export const onPrerenderRoute =
           fallback: jsonFsRef,
           group: prerenderGroup,
           bypassToken: prerenderManifest.bypassToken,
+          experimentalBypassFor,
 
           ...(isNotFound
             ? {

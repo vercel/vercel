@@ -1,6 +1,6 @@
 {
   "name": "@vercel/remix-builder",
-  "version": "2.0.3",
+  "version": "2.0.6",
   "license": "Apache-2.0",
   "main": "./dist/index.js",
   "homepage": "https://vercel.com/docs",
@@ -10,7 +10,7 @@
     "directory": "packages/remix"
   },
   "scripts": {
-    "build": "node ../../utils/build.mjs",
+    "build": "node ../../utils/build-builder.mjs",
     "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --bail --runInBand",
     "test-unit": "pnpm test test/unit.*test.*",
     "test-e2e": "pnpm test test/integration.test.ts"
@@ -20,18 +20,18 @@
     "defaults"
   ],
   "dependencies": {
-    "@vercel/build-utils": "7.1.1",
-    "@vercel/nft": "0.22.5",
+    "@vercel/nft": "0.24.1",
     "@vercel/static-config": "3.0.0",
-    "path-to-regexp": "6.2.1",
-    "semver": "7.5.2",
     "ts-morph": "12.0.0"
   },
   "devDependencies": {
-    "@remix-run/dev": "npm:@vercel/remix-run-dev@1.19.3",
+    "@remix-run/dev": "npm:@vercel/remix-run-dev@2.0.0",
     "@types/jest": "27.5.1",
     "@types/node": "14.18.33",
     "@types/semver": "7.3.13",
-    "jest-junit": "16.0.0"
+    "@vercel/build-utils": "7.2.0",
+    "jest-junit": "16.0.0",
+    "path-to-regexp": "6.2.1",
+    "semver": "7.5.2"
   }
 }

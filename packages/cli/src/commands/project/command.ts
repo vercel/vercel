@@ -13,7 +13,7 @@ export const projectCommand: Command = {
   subcommands: [
     {
       name: 'ls',
-      description: 'Show all projects in the selected team/user',
+      description: 'Show all projects in the selected scope',
       arguments: [],
       options: [],
       examples: [],
