@@ -1237,9 +1237,6 @@ importers:
       async-listen:
         specifier: 3.0.0
         version: 3.0.0
-      content-type:
-        specifier: 1.0.5
-        version: 1.0.5
       edge-runtime:
         specifier: 2.5.1
         version: 2.5.1
@@ -1295,6 +1292,9 @@ importers:
       '@vercel/ncc':
         specifier: 0.24.0
         version: 0.24.0
+      content-type:
+        specifier: 1.0.5
+        version: 1.0.5
       cookie:
         specifier: 0.4.0
         version: 0.4.0
@@ -6977,6 +6977,7 @@ packages:
   /content-type@1.0.5:
     resolution: {integrity: sha512-nTjqfcBFEipKdXCv4YDQWCfmcLZKm81ldF0pAopTvyrFGVbcR6P/VAAd5G7N+0tTr8QqiU0tFadD6FK4NtJwOA==}
     engines: {node: '>= 0.6'}
+    dev: true
 
   /convert-hrtime@3.0.0:
     resolution: {integrity: sha512-7V+KqSvMiHp8yWDuwfww06XleMWVVB9b9tURBx+G7UTADuo5hYPuowKloz4OzOqbPezxgo+fdQ1522WzPG4OeA==}
