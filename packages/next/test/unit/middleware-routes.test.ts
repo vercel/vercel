@@ -1,5 +1,5 @@
-const { getMiddlewareBundle } = require('../../dist/utils');
-const { genDir } = require('../utils');
+import { getMiddlewareBundle } from '../../src/utils';
+import { genDir } from '../utils';
 
 describe('middleware routes', () => {
   it('should generate a route for v1 middleware manifest', async () => {
