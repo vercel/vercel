@@ -421,6 +421,7 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
         projectId: '.',
         settings: {
           framework: null,
+          installCommand: 'echo "skipping install"',
         },
       }),
       'package.json': JSON.stringify({
