@@ -1349,16 +1349,11 @@ export async function serverBuild({
     'RSC, Next-Router-State-Tree, Next-Router-Prefetch';
   const appNotFoundPath = path.posix.join('.', entryDirectory, '_not-found');
 
-  const flags: Flag[] = [];
-  if (variantsManifest) {
-    Object.entries(variantsManifest).forEach(([key, value]) => {
-      flags.push({
+  let flags: Flag[] = variantsManifest ? Object.entries(variantsManifest).map(([key, value]) => ({
         key,
         ...value,
         metadata: value.metadata ?? {},
-      });
-    });
-  }
+    })) : [];
 
   return {
     wildcard: wildcardConfig,
