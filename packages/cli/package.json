@@ -24,14 +24,15 @@
     "vercel": "./dist/index.js"
   },
   "files": [
-    "dist",
-    "scripts/preinstall.js"
+    "dist"
   ],
   "engines": {
     "node": ">= 16"
   },
   "dependencies": {
+    "chokidar": "3.3.1",
     "@vercel/build-utils": "7.2.0",
+    "@vercel/fun": "1.1.0",
     "@vercel/go": "3.0.1",
     "@vercel/hydrogen": "1.0.1",
     "@vercel/next": "4.0.6",
@@ -91,7 +92,6 @@
     "@vercel/error-utils": "2.0.1",
     "@vercel/frameworks": "2.0.2",
     "@vercel/fs-detectors": "5.1.0",
-    "@vercel/fun": "1.1.0",
     "@vercel/ncc": "0.24.0",
     "@vercel/routing-utils": "3.0.0",
     "@zeit/source-map-support": "0.6.2",
@@ -106,7 +106,6 @@
     "bytes": "3.0.0",
     "chalk": "4.1.0",
     "chance": "1.1.7",
-    "chokidar": "3.3.1",
     "cli-table3": "0.6.3",
     "codecov": "3.8.2",
     "cpy": "7.2.0",
