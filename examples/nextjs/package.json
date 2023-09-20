@@ -9,13 +9,13 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@types/node": "20.6.2",
+    "@types/node": "20.6.3",
     "@types/react": "18.2.22",
     "@types/react-dom": "18.2.7",
     "autoprefixer": "10.4.15",
     "eslint": "8.49.0",
-    "eslint-config-next": "13.5.1",
-    "next": "13.5.1",
+    "eslint-config-next": "13.5.2",
+    "next": "13.5.2",
     "postcss": "8.4.30",
     "react": "18.2.0",
     "react-dom": "18.2.0",
