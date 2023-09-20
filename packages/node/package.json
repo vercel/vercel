@@ -10,7 +10,7 @@
     "directory": "packages/node"
   },
   "scripts": {
-    "build": "node build",
+    "build": "node build.mjs",
     "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --env node --verbose --bail --runInBand",
     "test-unit": "pnpm test test/unit",
     "test-e2e": "pnpm test test/integration"
@@ -25,11 +25,12 @@
     "@types/node": "14.18.33",
     "@vercel/build-utils": "7.2.0",
     "@vercel/error-utils": "2.0.1",
+    "@vercel/nft": "0.24.1",
     "@vercel/static-config": "3.0.0",
     "async-listen": "3.0.0",
-    "content-type": "1.0.5",
     "edge-runtime": "2.5.1",
     "esbuild": "0.14.47",
+    "etag": "1.8.1",
     "exit-hook": "2.2.1",
     "node-fetch": "2.6.9",
     "path-to-regexp": "6.2.1",
@@ -47,16 +48,13 @@
     "@types/cookie": "0.3.3",
     "@types/etag": "1.8.0",
     "@types/jest": "29.5.0",
-    "@types/test-listen": "1.1.0",
     "@vercel/ncc": "0.24.0",
-    "@vercel/nft": "0.24.1",
+    "content-type": "1.0.5",
     "cookie": "0.4.0",
     "cross-env": "7.0.3",
-    "etag": "1.8.1",
     "execa": "3.2.0",
     "fs-extra": "11.1.0",
     "jest-junit": "16.0.0",
-    "source-map-support": "0.5.12",
-    "test-listen": "1.1.0"
+    "source-map-support": "0.5.12"
   }
 }
