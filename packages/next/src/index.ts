@@ -1927,7 +1927,7 @@ export const build: BuildV2 = async ({
             const groupPageKeys = Object.keys(group.pages);
 
             const launcher = launcherData.replace(
-              /\/\/ __LAUNCHER_PAGE_HANDLER__/g,
+              'let page = {};',
               `
               const url = require('url');
 
