@@ -75,6 +75,7 @@ import {
   getRoutesManifest,
   getSourceFilePathFromPage,
   getStaticFiles,
+  getVariantsManifest,
   isDynamicRoute,
   localizeDynamicRoutes,
   normalizeIndexOutput,
@@ -492,6 +493,11 @@ export const build: BuildV2 = async ({
   isServerMode = Boolean(requiredServerFilesManifest);
 
   const functionsConfigManifest = await getFunctionsConfigManifest(
+    entryPath,
+    outputDirectory
+  );
+
+  const variantsManifest = await getVariantsManifest(
     entryPath,
     outputDirectory
   );
@@ -1365,6 +1371,7 @@ export const build: BuildV2 = async ({
         privateOutputs,
         hasIsr404Page,
         hasIsr500Page,
+        variantsManifest,
       });
     }
 
