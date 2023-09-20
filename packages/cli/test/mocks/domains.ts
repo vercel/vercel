@@ -40,3 +40,15 @@ export function useDomains() {
     });
   });
 }
+
+export function useDomain(postfix: string) {
+  client.scenario.get(
+    `/v4/domains/${encodeURIComponent(`example-${postfix}.com`)}`,
+    (req, res) => {
+      const domain = createDomain(postfix);
+      res.json({
+        domain,
+      });
+    }
+  );
+}
