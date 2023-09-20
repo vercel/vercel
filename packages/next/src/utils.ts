@@ -39,16 +39,18 @@ import { getNextjsEdgeFunctionSource } from './edge-function-source/get-edge-fun
 import type { LambdaOptionsWithFiles } from '@vercel/build-utils/dist/lambda';
 import { stringifySourceMap } from './sourcemapped';
 import type { RawSourceMap } from 'source-map';
-import bytes from 'bytes';
+import { prettyBytes } from './pretty-bytes';
+import {
+  MIB,
+  KIB,
+  MAX_UNCOMPRESSED_LAMBDA_SIZE,
+  LAMBDA_RESERVED_COMPRESSED_SIZE,
+  LAMBDA_RESERVED_UNCOMPRESSED_SIZE,
+} from './constants';
 
 type stringMap = { [key: string]: string };
 
 export const require_ = createRequire(__filename);
-
-export const KIB = 1024;
-export const MIB = 1024 * KIB;
-
-export const prettyBytes = (n: number) => bytes(n, { unitSeparator: ' ' });
 
 export const RSC_CONTENT_TYPE = 'x-component';
 export const RSC_PREFETCH_SUFFIX = '.prefetch.rsc';
@@ -1421,10 +1423,6 @@ export type LambdaGroup = {
   pseudoLayerBytes: number;
   pseudoLayerUncompressedBytes: number;
 };
-
-export const MAX_UNCOMPRESSED_LAMBDA_SIZE = 250 * MIB;
-const LAMBDA_RESERVED_UNCOMPRESSED_SIZE = 2.5 * MIB;
-const LAMBDA_RESERVED_COMPRESSED_SIZE = 250 * KIB;
 
 export async function getPageLambdaGroups({
   entryPath,

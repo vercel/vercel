@@ -16,6 +16,7 @@ import {
 } from '@vercel/build-utils';
 import { Route, RouteWithHandle } from '@vercel/routing-utils';
 import { MAX_AGE_ONE_YEAR } from '.';
+import { MAX_UNCOMPRESSED_LAMBDA_SIZE } from './constants';
 import {
   NextRequiredServerFilesManifest,
   NextImagesManifest,
@@ -36,7 +37,6 @@ import {
   PseudoFile,
   detectLambdaLimitExceeding,
   outputFunctionFileSizeInfo,
-  MAX_UNCOMPRESSED_LAMBDA_SIZE,
   normalizeIndexOutput,
   getImagesConfig,
   getNextServerPath,
