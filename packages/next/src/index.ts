@@ -1928,7 +1928,7 @@ export const build: BuildV2 = async ({
 
             const launcher = launcherData.replace(
               'let page = {};',
-              `
+              `let page = {};
               const url = require('url');
 
               ${
