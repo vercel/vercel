@@ -782,13 +782,11 @@ function mergeWildcard(
 function mergeFlags(
   buildResults: Iterable<BuildResult | BuildOutputConfig>
 ): BuildResultV2Typical['flags'] {
-  let flags: Flag[] = [];
-
-  for (const result of buildResults) {
+  return Array.from(buildResults).flatMap(result => {
     if ('flags' in result) {
-      flags.push(...(result.flags ?? []));
+      return result.flags ?? [];
     }
-  }
 
-  return flags;
+    return [];
+  });
 }
