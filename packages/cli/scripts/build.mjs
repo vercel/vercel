@@ -1,10 +1,12 @@
 import { join } from 'node:path';
 import { copyFileSync, readFileSync, writeFileSync } from 'node:fs';
-import { esbuild } from '../../utils/build.mjs';
-import { compileDevTemplates } from './scripts/compile-templates.mjs';
+import { esbuild } from '../../../utils/build.mjs';
+import { compileDevTemplates } from './compile-templates.mjs';
+
+const repoRoot = new URL('../', import.meta.url);
 
 function createConstants() {
-  const filename = new URL('src/util/constants.ts', import.meta.url);
+  const filename = new URL('src/util/constants.ts', repoRoot);
   const contents = `// This file is auto-generated
 export const GA_TRACKING_ID: string | undefined = ${envToString(
     'GA_TRACKING_ID'
@@ -37,16 +39,16 @@ await esbuild({
 });
 
 // Copy a few static files into `dist`
-const distRoot = new URL('dist/', import.meta.url);
+const distRoot = new URL('dist/', repoRoot);
 copyFileSync(
-  new URL('src/util/projects/VERCEL_DIR_README.txt', import.meta.url),
+  new URL('src/util/projects/VERCEL_DIR_README.txt', repoRoot),
   new URL('VERCEL_DIR_README.txt', distRoot)
 );
 copyFileSync(
-  new URL('src/util/dev/builder-worker.js', import.meta.url),
+  new URL('src/util/dev/builder-worker.js', repoRoot),
   new URL('builder-worker.js', distRoot)
 );
 copyFileSync(
-  new URL('src/util/get-latest-version/get-latest-worker.js', import.meta.url),
+  new URL('src/util/get-latest-version/get-latest-worker.js', repoRoot),
   new URL('get-latest-worker.js', distRoot)
 );

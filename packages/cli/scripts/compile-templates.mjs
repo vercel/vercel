@@ -7,10 +7,12 @@ export async function compileDevTemplates() {
 
   // Compile the `doT.js` template files for `vercel dev`
   const templatesDir = new URL('src/util/dev/templates/', dirRoot);
-  const dotPacker = fileURLToPath(new URL('../../node_modules/dot/bin/dot-packer', dirRoot));
+  const dotPacker = fileURLToPath(
+    new URL('../../node_modules/dot/bin/dot-packer', dirRoot)
+  );
   await execa(process.execPath, [dotPacker], {
     cwd: templatesDir,
-    stdio: ['ignore', 'ignore', 'inherit']
+    stdio: ['ignore', 'ignore', 'inherit'],
   });
 
   const files = await readdir(templatesDir);
@@ -19,7 +21,10 @@ export async function compileDevTemplates() {
   for (const file of compiledFiles) {
     const fnPath = new URL(file, templatesDir);
     const tsPath = fnPath.href.replace(/\.js$/, '.ts');
-    const def = await readFile(new URL(fnPath.href.replace(/\.js$/, '.tsdef')), 'utf8');
+    const def = await readFile(
+      new URL(fnPath.href.replace(/\.js$/, '.tsdef')),
+      'utf8'
+    );
     const interfaceName = def.match(/interface (\w+)/)[1];
 
     const { default: fn } = await import(fnPath);
@@ -50,6 +55,9 @@ export async function compileDevTemplates() {
       ...def.split('\n')
     );
 
-    await Promise.all([writeFile(new URL(tsPath), lines.join('\n')), unlink(fnPath)]);
+    await Promise.all([
+      writeFile(new URL(tsPath), lines.join('\n')),
+      unlink(fnPath),
+    ]);
   }
 }
