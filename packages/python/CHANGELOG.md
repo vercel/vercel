@@ -1,5 +1,11 @@
 # @vercel/python
 
+## 4.0.2
+
+### Patch Changes
+
+- Fix docs URL in error message ([#10544](https://github.com/vercel/vercel/pull/10544))
+
 ## 4.0.1
 
 ### Patch Changes

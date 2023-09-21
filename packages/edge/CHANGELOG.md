@@ -1,5 +1,17 @@
 # @vercel/edge
 
+## 1.1.0
+
+### Minor Changes
+
+- Add flag to geolocation ([#10443](https://github.com/vercel/vercel/pull/10443))
+
+  Usage
+
+  ```
+  const { flag } = geolocation(req)
+  ```
+
 ## 1.0.2
 
 ### Patch Changes

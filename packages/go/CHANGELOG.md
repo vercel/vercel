@@ -1,5 +1,11 @@
 # @vercel/go
 
+## 3.0.2
+
+### Patch Changes
+
+- Add support for Go v1.21.0 ([#10552](https://github.com/vercel/vercel/pull/10552))
+
 ## 3.0.1
 
 ### Patch Changes

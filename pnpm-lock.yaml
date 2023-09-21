@@ -186,7 +186,7 @@ importers:
         specifier: 1.0.4
         version: link:../constants
       '@vercel/build-utils':
-        specifier: 7.2.0
+        specifier: 7.2.1
         version: link:../../packages/build-utils
       '@vercel/routing-utils':
         specifier: 3.0.0
@@ -313,34 +313,34 @@ importers:
   packages/cli:
     dependencies:
       '@vercel/build-utils':
-        specifier: 7.2.0
+        specifier: 7.2.1
         version: link:../build-utils
       '@vercel/go':
-        specifier: 3.0.1
+        specifier: 3.0.2
         version: link:../go
       '@vercel/hydrogen':
         specifier: 1.0.1
         version: link:../hydrogen
       '@vercel/next':
-        specifier: 4.0.6
+        specifier: 4.0.7
         version: link:../next
       '@vercel/node':
-        specifier: 3.0.5
+        specifier: 3.0.6
         version: link:../node
       '@vercel/python':
-        specifier: 4.0.1
+        specifier: 4.0.2
         version: link:../python
       '@vercel/redwood':
-        specifier: 2.0.2
+        specifier: 2.0.3
         version: link:../redwood
       '@vercel/remix-builder':
-        specifier: 2.0.6
+        specifier: 2.0.7
         version: link:../remix
       '@vercel/ruby':
         specifier: 2.0.2
         version: link:../ruby
       '@vercel/static-build':
-        specifier: 2.0.6
+        specifier: 2.0.7
         version: link:../static-build
     devDependencies:
       '@alex_neo/jest-expect-message':
@@ -473,10 +473,10 @@ importers:
         specifier: 1.0.0
         version: link:../../internals/get-package-json
       '@vercel-internals/types':
-        specifier: 1.0.10
+        specifier: 1.0.11
         version: link:../../internals/types
       '@vercel/client':
-        specifier: 13.0.3
+        specifier: 13.0.4
         version: link:../client
       '@vercel/error-utils':
         specifier: 2.0.1
@@ -737,7 +737,7 @@ importers:
   packages/client:
     dependencies:
       '@vercel/build-utils':
-        specifier: 7.2.0
+        specifier: 7.2.1
         version: link:../build-utils
       '@vercel/routing-utils':
         specifier: 3.0.0
@@ -938,7 +938,7 @@ importers:
         specifier: 7.3.10
         version: 7.3.10
       '@vercel/build-utils':
-        specifier: 7.2.0
+        specifier: 7.2.1
         version: link:../build-utils
       jest-junit:
         specifier: 16.0.0
@@ -963,7 +963,7 @@ importers:
         specifier: 0.25.24
         version: 0.25.24
       '@vercel/build-utils':
-        specifier: 7.2.0
+        specifier: 7.2.1
         version: link:../build-utils
       '@vercel/routing-utils':
         specifier: 3.0.0
@@ -1027,7 +1027,7 @@ importers:
         specifier: 2.1.0
         version: 2.1.0
       '@vercel/build-utils':
-        specifier: 7.2.0
+        specifier: 7.2.1
         version: link:../build-utils
       '@vercel/ncc':
         specifier: 0.24.0
@@ -1079,7 +1079,7 @@ importers:
         specifier: 14.18.33
         version: 14.18.33
       '@vercel/build-utils':
-        specifier: 7.2.0
+        specifier: 7.2.1
         version: link:../build-utils
       execa:
         specifier: 3.2.0
@@ -1140,7 +1140,7 @@ importers:
         specifier: 3.2.0
         version: 3.2.0
       '@vercel/build-utils':
-        specifier: 7.2.0
+        specifier: 7.2.1
         version: link:../build-utils
       '@vercel/routing-utils':
         specifier: 3.0.0
@@ -1227,7 +1227,7 @@ importers:
         specifier: 14.18.33
         version: 14.18.33
       '@vercel/build-utils':
-        specifier: 7.2.0
+        specifier: 7.2.1
         version: link:../build-utils
       '@vercel/error-utils':
         specifier: 2.0.1
@@ -1333,7 +1333,7 @@ importers:
         specifier: 14.18.33
         version: 14.18.33
       '@vercel/build-utils':
-        specifier: 7.2.0
+        specifier: 7.2.1
         version: link:../build-utils
       '@vercel/ncc':
         specifier: 0.24.0
@@ -1367,7 +1367,7 @@ importers:
         specifier: 6.0.0
         version: 6.0.0
       '@vercel/build-utils':
-        specifier: 7.2.0
+        specifier: 7.2.1
         version: link:../build-utils
       execa:
         specifier: 3.2.0
@@ -1404,7 +1404,7 @@ importers:
         specifier: 7.3.13
         version: 7.3.13
       '@vercel/build-utils':
-        specifier: 7.2.0
+        specifier: 7.2.1
         version: link:../build-utils
       jest-junit:
         specifier: 16.0.0
@@ -1448,7 +1448,7 @@ importers:
         specifier: 6.0.0
         version: 6.0.0
       '@vercel/build-utils':
-        specifier: 7.2.0
+        specifier: 7.2.1
         version: link:../build-utils
       '@vercel/ncc':
         specifier: 0.24.0
@@ -1469,10 +1469,10 @@ importers:
   packages/static-build:
     dependencies:
       '@vercel/gatsby-plugin-vercel-analytics':
-        specifier: 1.0.10
+        specifier: 1.0.11
         version: link:../gatsby-plugin-vercel-analytics
       '@vercel/gatsby-plugin-vercel-builder':
-        specifier: 2.0.5
+        specifier: 2.0.6
         version: link:../gatsby-plugin-vercel-builder
       '@vercel/static-config':
         specifier: 3.0.0
@@ -1509,7 +1509,7 @@ importers:
         specifier: 7.3.13
         version: 7.3.13
       '@vercel/build-utils':
-        specifier: 7.2.0
+        specifier: 7.2.1
         version: link:../build-utils
       '@vercel/error-utils':
         specifier: 2.0.1
@@ -2156,12 +2156,6 @@ packages:
       '@babel/plugin-transform-typescript': 7.21.3(@babel/core@7.21.8)
     transitivePeerDependencies:
       - supports-color
-    dev: true
-
-  /@babel/runtime@7.12.1:
-    resolution: {integrity: sha512-J5AIf3vPj3UwXaAzb5j1xM4WAQDX3EMgemF8rjCP3SoW09LfRKAXQKt6CoVYl230P6iWdRcBbnLDDdnqWxZSCA==}
-    dependencies:
-      regenerator-runtime: 0.13.11
     dev: true
 
   /@babel/runtime@7.20.7:
@@ -3466,7 +3460,7 @@ packages:
   /@manypkg/find-root@1.1.0:
     resolution: {integrity: sha512-mki5uBvhHzO8kYYix/WRy2WX8S3B5wdVSc9D6KcU5lQNglP2yt58/VfLuAK49glRXChosY8ap2oJ1qgma3GUVA==}
     dependencies:
-      '@babel/runtime': 7.12.1
+      '@babel/runtime': 7.20.7
       '@types/node': 12.20.55
       find-up: 4.1.0
       fs-extra: 8.1.0
@@ -3475,7 +3469,7 @@ packages:
   /@manypkg/get-packages@1.1.3:
     resolution: {integrity: sha512-fo+QhuU3qE/2TQMQmbVMqaQ6EWbMhi4ABWP+O4AM1NqPBuy0OrApV5LO6BrrgnhtAHS2NH6RrVk9OL181tTi8A==}
     dependencies:
-      '@babel/runtime': 7.12.1
+      '@babel/runtime': 7.20.7
       '@changesets/types': 4.1.0
       '@manypkg/find-root': 1.1.0
       fs-extra: 8.1.0
