@@ -1,8 +1,8 @@
 import os from 'os';
 import etag from 'etag';
 import { parse } from 'url';
+import { join } from 'path';
 import { copySync, existsSync } from 'fs-extra';
-import { join, dirname, basename } from 'path';
 
 const TMP_DATA_PATH = join(os.tmpdir(), 'data/datastore');
 const CUR_DATA_PATH = join(__dirname, '.cache/data/datastore');
@@ -27,25 +27,28 @@ async function getPageSSRHelpers() {
 export default async function handler(req, res) {
   let pageName;
   const pathname = parse(req.url).pathname || '/';
-  const isPageData = pathname.startsWith('/page-data/');
+  const isPageData =
+    pathname.startsWith('/page-data/') && pathname.endsWith('/page-data.json');
   if (isPageData) {
-    // /page-data/index/page-data.json
-    // /page-data/using-ssr/page-data.json
-    pageName = basename(dirname(pathname));
+    // /page-data/index/page-data.json -> "/"
+    // /page-data/using-ssr/page-data.json -> "using-ssr"
+    // /page-data/blog/test/page-data.json -> "blog/test"
+    pageName = pathname.split('/').slice(2, -1).join('/');
     if (pageName === 'index') {
       pageName = '/';
     }
   } else {
-    // /using-ssr
-    // /using-ssr/
-    // /using-ssr/index.html
-    pageName = basename(pathname);
-    if (pageName === 'index.html') {
-      pageName = basename(dirname(pathname));
+    // /using-ssr -> "using-ssr"
+    // /using-ssr/ -> "using-ssr"
+    // /using-ssr/index.html -> "using-ssr"
+    // /blog/test/ -> "blog/test"
+    const parts = pathname.split('/').slice(1);
+    const last = parts[parts.length - 1];
+    if (!last || last === 'index.html') {
+      parts.pop();
     }
-    if (!pageName) {
-      pageName = '/';
-    }
+    pageName = parts.join('/');
+    if (!pageName) pageName = '/';
   }
 
   const [graphqlEngine, { getData, renderHTML, renderPageData }] =
