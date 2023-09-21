@@ -1,5 +1,15 @@
 # @vercel/static-build
 
+## 2.0.7
+
+### Patch Changes
+
+- Mark `@vercel/static-config` and `ts-morph` as externals ([#10543](https://github.com/vercel/vercel/pull/10543))
+
+- Updated dependencies [[`4b376a564`](https://github.com/vercel/vercel/commit/4b376a564a09679dc1085d3bfcd6290c6f15760e), [`b8bc682d3`](https://github.com/vercel/vercel/commit/b8bc682d3eef0e6033fd6e8db2089c6c4ca671af)]:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.6
+  - @vercel/gatsby-plugin-vercel-analytics@1.0.11
+
 ## 2.0.6
 
 ### Patch Changes
