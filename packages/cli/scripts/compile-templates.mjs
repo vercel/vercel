@@ -1,5 +1,4 @@
 import execa from 'execa';
-import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readFile, writeFile, readdir, unlink } from 'node:fs/promises';
 
