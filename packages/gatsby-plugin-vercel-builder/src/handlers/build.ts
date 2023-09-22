@@ -95,10 +95,6 @@ export async function copyFunctionLibs({
         src: join('.cache', 'caches'),
         dest: join(functionDir, '.cache', 'caches'),
       },
-      {
-        src: join('.cache', 'caches-lmdb'),
-        dest: join(functionDir, '.cache', 'caches-lmdb'),
-      },
     ].map(({ src, dest }) => copy(src, dest))
   );
 }
