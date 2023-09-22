@@ -1389,8 +1389,8 @@ importers:
         version: 12.0.0
     devDependencies:
       '@remix-run/dev':
-        specifier: npm:@vercel/remix-run-dev@2.0.0
-        version: /@vercel/remix-run-dev@2.0.0(@types/node@14.18.33)(typescript@4.9.5)
+        specifier: npm:@vercel/remix-run-dev@2.0.1
+        version: /@vercel/remix-run-dev@2.0.1(@types/node@14.18.33)(typescript@4.9.5)
       '@types/jest':
         specifier: 27.5.1
         version: 27.5.1
@@ -3626,8 +3626,8 @@ packages:
     engines: {node: '>=14.0.0'}
     dev: true
 
-  /@remix-run/server-runtime@2.0.0(typescript@4.9.5):
-    resolution: {integrity: sha512-HaNszj/mp/A1Qz5sVupVIXqDyeEni3nwW5iKDqGAqv0n8E6FRkzEhOtAJypRABcKWBq0M9VM3fm6IO0vaMti8Q==}
+  /@remix-run/server-runtime@2.0.1(typescript@4.9.5):
+    resolution: {integrity: sha512-xCW2aw9EILx7F3orEHN2fcpEkNzZTRU8VzP7gS9pmHP45qteFqsY5Qg2/dnF17royWmeeBNhnXaJOgb76W1KEA==}
     engines: {node: '>=18.0.0'}
     peerDependencies:
       typescript: ^5.1.0
@@ -5409,12 +5409,12 @@ packages:
       - supports-color
     dev: false
 
-  /@vercel/remix-run-dev@2.0.0(@types/node@14.18.33)(typescript@4.9.5):
-    resolution: {integrity: sha512-cN8R/W6UskMAAzHeUBYrMgw1kQ6mYf4XleX28coXGiB72VI4YzPFEfG2L6yocmr+zJzHFPnX9diVqYxlK60wRA==}
+  /@vercel/remix-run-dev@2.0.1(@types/node@14.18.33)(typescript@4.9.5):
+    resolution: {integrity: sha512-THitmSH7BQsSDOH0EiANzKg8fgaO5XazSGZML0KaRp5WHx6ISXvr6v5NmsyvV7UKV0Q8EK4s05cXxwM4cRroTA==}
     engines: {node: '>=18.0.0'}
     hasBin: true
     peerDependencies:
-      '@remix-run/serve': ^2.0.0
+      '@remix-run/serve': ^2.0.1
       typescript: ^5.1.0
     peerDependenciesMeta:
       '@remix-run/serve':
@@ -5431,7 +5431,7 @@ packages:
       '@babel/traverse': 7.21.5
       '@mdx-js/mdx': 2.3.0
       '@npmcli/package-json': 4.0.1
-      '@remix-run/server-runtime': 2.0.0(typescript@4.9.5)
+      '@remix-run/server-runtime': 2.0.1(typescript@4.9.5)
       '@types/mdx': 2.0.7
       '@vanilla-extract/integration': 6.2.1(@types/node@14.18.33)
       arg: 5.0.2
