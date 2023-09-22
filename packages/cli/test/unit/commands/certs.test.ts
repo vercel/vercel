@@ -21,4 +21,24 @@ describe('certs', () => {
     await expect(client.stdout).toOutput('dummy-1.cert');
     await expect(exitCodePromise).resolves.toEqual(0);
   });
+
+  it('should show Authorization error if user does not have permission', async () => {
+    useUser();
+    client.scenario.get('/v4/now/certs', (_req, res) => {
+      res.status(403).json({
+        error: {
+          code: 'forbidden',
+          message: "You don't have permission to list the domain certificate.",
+        },
+      });
+    });
+
+    client.setArgv('certs', 'ls');
+
+    const exec = certs(client);
+
+    await expect(exec).rejects.toThrow(
+      "You don't have permission to list the domain certificate."
+    );
+  });
 });
