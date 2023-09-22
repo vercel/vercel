@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.0.8
+
+### Patch Changes
+
+- Fix edge case for setting `__NEXT_PRIVATE_PREBUNDLED_REACT` ([#10568](https://github.com/vercel/vercel/pull/10568))
+
 ## 4.0.7
 
 ### Patch Changes

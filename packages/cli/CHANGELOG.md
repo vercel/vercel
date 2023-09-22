@@ -1,5 +1,15 @@
 # vercel
 
+## 32.3.1
+
+### Patch Changes
+
+- Use "esbuild" to build CLI ([#10555](https://github.com/vercel/vercel/pull/10555))
+
+- Updated dependencies [[`9f63ca60a`](https://github.com/vercel/vercel/commit/9f63ca60ad914af0f7ba18c9bbe1656eeea68a0a), [`e3f9faf51`](https://github.com/vercel/vercel/commit/e3f9faf513bd97900d8966f2f1116fc3ca07221b)]:
+  - @vercel/next@4.0.8
+  - @vercel/remix-builder@2.0.8
+
 ## 32.3.0
 
 ### Minor Changes
