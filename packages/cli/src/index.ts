@@ -81,6 +81,8 @@ let { isTTY } = process.stdout;
 let debug: (s: string) => void = () => {};
 let apiUrl = 'https://api.vercel.com';
 
+// TEST: this should run cli tests only
+
 const main = async () => {
   if (process.env.FORCE_TTY === '1') {
     isTTY = true;
