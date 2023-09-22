@@ -10,8 +10,8 @@
  * the world, but something to be aware of.
  *
  * IMPORTANT! This file must NOT depend on any 3rd party dependencies. This
- * file is NOT bundled by `ncc` and thus any 3rd party dependencies will never
- * be available.
+ * file is NOT bundled by `esbuild` and thus any 3rd party dependencies will
+ * never be available.
  */
 
 const https = require('https');

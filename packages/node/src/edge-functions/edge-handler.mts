@@ -112,7 +112,7 @@ async function compileUserCode(
       nodeCompatBindings: nodeCompatPlugin.bindings,
     };
   } catch (error: unknown) {
-    // We can't easily show a meaningful stack trace from ncc -> edge-runtime.
+    // We can't easily show a meaningful stack trace from esbuild -> edge-runtime.
     // So, stick with just the message for now.
     console.error(`Failed to compile user code for edge runtime.`);
     if (isError(error)) logError(error);
@@ -162,7 +162,7 @@ async function createEdgeRuntimeServer(params?: {
     exitHook(() => server.close());
     return server;
   } catch (error: any) {
-    // We can't easily show a meaningful stack trace from ncc -> edge-runtime.
+    // We can't easily show a meaningful stack trace from esbuild -> edge-runtime.
     // So, stick with just the message for now.
     console.error('Failed to instantiate edge runtime.');
     logError(error);
