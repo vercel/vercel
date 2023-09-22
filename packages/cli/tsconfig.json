@@ -10,7 +10,7 @@
     "allowJs": true,
     "lib": ["ES2021"],
     "resolveJsonModule": true,
-    "sourceMap": true,
+    "sourceMap": false,
     "outDir": "./dist",
     "typeRoots": ["./types", "./node_modules/@types"]
   },
