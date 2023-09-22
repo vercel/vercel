@@ -11,7 +11,6 @@
     "@typescript-eslint/eslint-plugin": "5.21.0",
     "@typescript-eslint/parser": "5.21.0",
     "@vercel/build-utils": "*",
-    "@vercel/ncc": "0.24.0",
     "async-retry": "1.2.3",
     "buffer-replace": "1.0.0",
     "create-svelte": "2.0.1",
