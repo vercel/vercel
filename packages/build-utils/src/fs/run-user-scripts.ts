@@ -311,23 +311,23 @@ export async function scanParentDirs(
       bunLockPath ? fs.readFile(bunLockPath, 'utf8') : null,
     ]);
 
-  // Priority order is Yarn > pnpm > npm > bun
-  if (hasYarnLock) {
-    cliType = 'yarn';
-    lockfilePath = yarnLockPath;
+  // Priority order is npm > pnpm > bun > yarn
+  if (packageLockJson) {
+    cliType = 'npm';
+    lockfilePath = npmLockPath;
+    lockfileVersion = packageLockJson.lockfileVersion;
   } else if (pnpmLockYaml) {
     cliType = 'pnpm';
     lockfilePath = pnpmLockPath;
     lockfileVersion = Number(pnpmLockYaml.lockfileVersion);
-  } else if (packageLockJson) {
-    cliType = 'npm';
-    lockfilePath = npmLockPath;
-    lockfileVersion = packageLockJson.lockfileVersion;
   } else if (bunLockBin) {
     cliType = 'bun';
     lockfilePath = bunLockPath;
     // TODO: read "bun-lockfile-format-v0"
     lockfileVersion = 0;
+  } else if (hasYarnLock) {
+    cliType = 'yarn';
+    lockfilePath = yarnLockPath;
   }
 
   const packageJsonPath = pkgJsonPath || undefined;
