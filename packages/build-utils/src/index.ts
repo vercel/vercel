@@ -96,8 +96,6 @@ export {
   validateNpmrc,
 };
 
-// TEST: this commit should run all tests
-
 export { EdgeFunction } from './edge-function';
 export { readConfigFile } from './fs/read-config-file';
 export { normalizePath } from './fs/normalize-path';
