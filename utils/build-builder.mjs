@@ -11,7 +11,6 @@ import { esbuild } from './build.mjs';
 
 const pkgPath = join(process.cwd(), 'package.json');
 const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
-
 const externals = Object.keys(pkg.dependencies || {});
 
 await esbuild({

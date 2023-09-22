@@ -42,10 +42,12 @@ export async function esbuild(opts = {}, cwd = process.cwd()) {
     : // When not bundling, compile all files referenced by the `tsconfig.json` file
       tsconfig.fileNames;
 
+  let outdir = opts.outfile ? undefined : tsconfig.options.outDir;
+
   await build({
     entryPoints,
     format: 'cjs',
-    outdir: tsconfig.options.outDir,
+    outdir,
     platform: 'node',
     target: ts.ScriptTarget[tsconfig.options.target],
     sourcemap: tsconfig.options.sourceMap,

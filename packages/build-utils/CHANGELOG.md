@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 7.2.1
+
+### Patch Changes
+
+- Internal variants ([#10549](https://github.com/vercel/vercel/pull/10549))
+
 ## 7.2.0
 
 ### Minor Changes

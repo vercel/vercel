@@ -1,5 +1,6 @@
-import { NowBuildError } from '@vercel/build-utils';
+import { createRequire } from 'module';
 import { relative, basename, dirname } from 'path';
+import { NowBuildError } from '@vercel/build-utils';
 import type _ts from 'typescript';
 
 /*
@@ -113,6 +114,8 @@ function cachedLookup<T>(fn: (arg: string) => T): (arg: string) => T {
   };
 }
 
+const require_ = createRequire(__filename);
+
 /**
  * Maps the config path to a build func
  */
@@ -134,7 +137,6 @@ export function register(opts: Options = {}): Register {
   // Require the TypeScript compiler and configuration.
   const cwd = options.basePath || process.cwd();
   let compiler: string;
-  const require_ = eval('require');
   try {
     compiler = require_.resolve(options.compiler || 'typescript', {
       paths: [options.project || cwd],

@@ -7,11 +7,9 @@
     "module": "nodenext",
     "outDir": "dist",
     "sourceMap": false,
-    "declaration": true,
+    "declaration": false,
     "skipLibCheck": true,
-    "moduleResolution": "nodenext",
-    "typeRoots": ["./@types", "./node_modules/@types"]
+    "moduleResolution": "nodenext"
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules"]
+  "include": ["src/**/*"]
 }

@@ -415,6 +415,24 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
         projectId: 'QmRoBYhejkkmssotLZr8tWgewPdPcjYucYUNERFbhJrRNi',
       }),
     },
+    'vc-build-speed-insights': {
+      '.vercel/project.json': JSON.stringify({
+        orgId: '.',
+        projectId: '.',
+        settings: {
+          framework: null,
+          installCommand: 'echo "skipping install"',
+        },
+      }),
+      'package.json': JSON.stringify({
+        scripts: {
+          build: 'mkdir -p public && echo hi > public/index.txt',
+        },
+        dependencies: {
+          '@vercel/speed-insights': '0.0.1',
+        },
+      }),
+    },
     'vc-build-static-build': {
       '.vercel/project.json': JSON.stringify({
         orgId: '.',
