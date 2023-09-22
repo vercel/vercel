@@ -633,7 +633,7 @@ export async function serverBuild({
       );
 
     const appLauncher = launcher.replace(
-      '// pre-next-server-target',
+      '// @preserve pre-next-server-target',
       `process.env.__NEXT_PRIVATE_PREBUNDLED_REACT = "${
         requiredServerFilesManifest.config?.experimental?.serverActions
           ? 'experimental'
@@ -649,7 +649,7 @@ export async function serverBuild({
       // Next.js isn't aware of it and it isn't included in the
       // x-matched-path header
       launcher = launcher.replace(
-        '// entryDirectory handler',
+        '// @preserve entryDirectory handler',
         `req.url = req.url.replace(/^${path.posix
           .join('/', entryDirectory)
           .replace(/\//g, '\\/')}/, '')`
