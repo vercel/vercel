@@ -22,7 +22,7 @@ describe('certs', () => {
     await expect(exitCodePromise).resolves.toEqual(0);
   });
 
-  it('should show Authorization error if user does not have permission', async () => {
+  it('should show permission error if user does not have permission', async () => {
     useUser();
     client.scenario.get('/v4/now/certs', (_req, res) => {
       res.status(403).json({
