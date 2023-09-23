@@ -14,7 +14,6 @@ try {
 
 import { join } from 'path';
 import { existsSync } from 'fs';
-import sourceMap from '@zeit/source-map-support';
 import { mkdirp } from 'fs-extra';
 import chalk from 'chalk';
 import epipebomb from 'epipebomb';
@@ -65,8 +64,6 @@ const VERCEL_AUTH_CONFIG_PATH = configFiles.getAuthConfigFilePath();
 const GLOBAL_COMMANDS = new Set(['help']);
 
 epipebomb();
-
-sourceMap.install();
 
 // Configure the error reporting system
 Sentry.init({

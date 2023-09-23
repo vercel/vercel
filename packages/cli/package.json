@@ -30,7 +30,6 @@
     "node": ">= 16"
   },
   "dependencies": {
-    "chokidar": "3.3.1",
     "@vercel/build-utils": "7.2.1",
     "@vercel/fun": "1.1.0",
     "@vercel/go": "3.0.2",
@@ -41,7 +40,8 @@
     "@vercel/redwood": "2.0.3",
     "@vercel/remix-builder": "2.0.8",
     "@vercel/ruby": "2.0.2",
-    "@vercel/static-build": "2.0.7"
+    "@vercel/static-build": "2.0.7",
+    "chokidar": "3.3.1"
   },
   "devDependencies": {
     "@alex_neo/jest-expect-message": "1.0.5",
@@ -93,7 +93,6 @@
     "@vercel/frameworks": "2.0.2",
     "@vercel/fs-detectors": "5.1.0",
     "@vercel/routing-utils": "3.0.0",
-    "@zeit/source-map-support": "0.6.2",
     "ajv": "6.12.2",
     "alpha-sort": "2.0.1",
     "ansi-escapes": "4.3.2",
