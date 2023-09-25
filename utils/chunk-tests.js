@@ -11,9 +11,9 @@ const runnersMap = new Map([
       runners: ['ubuntu-latest', 'macos-latest', 'windows-latest'],
     },
   ],
-  ['test-e2e', { min: 1, max: 5, runners: ['ubuntu-latest'] }],
+  ['test-e2e', { min: 1, max: 7, runners: ['ubuntu-latest'] }],
   ['test-next-local', { min: 1, max: 5, runners: ['ubuntu-latest'] }],
-  ['test-dev', { min: 1, max: 5, runners: ['ubuntu-latest', 'macos-latest'] }],
+  ['test-dev', { min: 1, max: 7, runners: ['ubuntu-latest', 'macos-latest'] }],
 ]);
 
 const packageOptionsOverrides = {
@@ -47,7 +47,7 @@ async function getChunkedTests() {
       `run`,
       ...scripts,
       `--cache-dir=.turbo`,
-      '--output-logs=full',
+      '--output-logs=new-only',
       '--log-order=stream',
       '--',
       '--', // need two of these due to pnpm arg parsing
