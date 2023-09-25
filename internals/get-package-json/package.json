@@ -5,11 +5,11 @@
   "types": "dist/index.d.ts",
   "main": "dist/index.js",
   "files": [
-    "dist/*"
+    "dist"
   ],
   "scripts": {
-    "build": "tsc",
-    "test": "jest --env node --verbose --runInBand --bail",
+    "build": "node ../../utils/build.mjs",
+    "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --runInBand --bail",
     "test-unit": "pnpm test tests/unit"
   },
   "devDependencies": {

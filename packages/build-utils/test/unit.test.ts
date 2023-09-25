@@ -50,13 +50,13 @@ afterEach(() => {
 });
 
 it('should only match supported node versions, otherwise throw an error', async () => {
-  expect(await getSupportedNodeVersion('14.x', false)).toHaveProperty(
-    'major',
-    14
-  );
   expect(await getSupportedNodeVersion('16.x', false)).toHaveProperty(
     'major',
     16
+  );
+  expect(await getSupportedNodeVersion('18.x', false)).toHaveProperty(
+    'major',
+    18
   );
 
   const autoMessage =
@@ -70,13 +70,13 @@ it('should only match supported node versions, otherwise throw an error', async 
   await expectBuilderError(getSupportedNodeVersion('foo', true), autoMessage);
   await expectBuilderError(getSupportedNodeVersion('=> 10', true), autoMessage);
 
-  expect(await getSupportedNodeVersion('14.x', true)).toHaveProperty(
-    'major',
-    14
-  );
   expect(await getSupportedNodeVersion('16.x', true)).toHaveProperty(
     'major',
     16
+  );
+  expect(await getSupportedNodeVersion('18.x', true)).toHaveProperty(
+    'major',
+    18
   );
 
   const foundMessage =
@@ -99,23 +99,23 @@ it('should only match supported node versions, otherwise throw an error', async 
 
 it('should match all semver ranges', async () => {
   // See https://docs.npmjs.com/files/package.json#engines
-  expect(await getSupportedNodeVersion('14.0.0')).toHaveProperty('major', 14);
-  expect(await getSupportedNodeVersion('14.x')).toHaveProperty('major', 14);
+  expect(await getSupportedNodeVersion('16.0.0')).toHaveProperty('major', 16);
+  expect(await getSupportedNodeVersion('16.x')).toHaveProperty('major', 16);
   expect(await getSupportedNodeVersion('>=10')).toHaveProperty('major', 18);
   expect(await getSupportedNodeVersion('>=10.3.0')).toHaveProperty('major', 18);
   expect(await getSupportedNodeVersion('16.5.0 - 16.9.0')).toHaveProperty(
     'major',
     16
   );
-  expect(await getSupportedNodeVersion('>=9.5.0 <=14.5.0')).toHaveProperty(
+  expect(await getSupportedNodeVersion('>=9.5.0 <=16.5.0')).toHaveProperty(
     'major',
-    14
+    16
   );
-  expect(await getSupportedNodeVersion('~14.5.0')).toHaveProperty('major', 14);
-  expect(await getSupportedNodeVersion('^14.5.0')).toHaveProperty('major', 14);
-  expect(await getSupportedNodeVersion('14.5.0 - 14.20.0')).toHaveProperty(
+  expect(await getSupportedNodeVersion('~16.5.0')).toHaveProperty('major', 16);
+  expect(await getSupportedNodeVersion('^16.5.0')).toHaveProperty('major', 16);
+  expect(await getSupportedNodeVersion('16.5.0 - 16.20.0')).toHaveProperty(
     'major',
-    14
+    16
   );
 });
 
@@ -238,7 +238,7 @@ it('should get latest node version', async () => {
 it('should throw for discontinued versions', async () => {
   // Mock a future date so that Node 8 and 10 become discontinued
   const realDateNow = Date.now.bind(global.Date);
-  global.Date.now = () => new Date('2023-10-01').getTime();
+  global.Date.now = () => new Date('2024-02-13').getTime();
 
   expect(getSupportedNodeVersion('8.10.x', false)).rejects.toThrow();
   expect(getSupportedNodeVersion('8.10.x', true)).rejects.toThrow();
@@ -306,8 +306,8 @@ it('should warn for deprecated versions, soon to be discontinued', async () => {
     'Error: Node.js version 12.x has reached End-of-Life. Deployments created on or after 2022-10-03 will fail to build. Please set Node.js Version to 18.x in your Project Settings to use Node.js 18.',
     'Error: Node.js version 14.x has reached End-of-Life. Deployments created on or after 2023-08-15 will fail to build. Please set "engines": { "node": "18.x" } in your `package.json` file to use Node.js 18.',
     'Error: Node.js version 14.x has reached End-of-Life. Deployments created on or after 2023-08-15 will fail to build. Please set Node.js Version to 18.x in your Project Settings to use Node.js 18.',
-    'Error: Node.js version 16.x has reached End-of-Life. Deployments created on or after 2023-08-15 will fail to build. Please set "engines": { "node": "18.x" } in your `package.json` file to use Node.js 18.',
-    'Error: Node.js version 16.x has reached End-of-Life. Deployments created on or after 2023-08-15 will fail to build. Please set Node.js Version to 18.x in your Project Settings to use Node.js 18.',
+    'Error: Node.js version 16.x has reached End-of-Life. Deployments created on or after 2024-02-06 will fail to build. Please set "engines": { "node": "18.x" } in your `package.json` file to use Node.js 18.',
+    'Error: Node.js version 16.x has reached End-of-Life. Deployments created on or after 2024-02-06 will fail to build. Please set Node.js Version to 18.x in your Project Settings to use Node.js 18.',
   ]);
 
   global.Date.now = realDateNow;
@@ -342,6 +342,70 @@ it('should support initialHeaders and initialStatus correctly', async () => {
       'x-initial': 'true',
     },
   });
+});
+
+it('should support experimentalBypassFor correctly', async () => {
+  new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    experimentalBypassFor: [{ type: 'header', key: 'Next-Action' }],
+  });
+  new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    experimentalBypassFor: [
+      { type: 'header', key: 'Next-Action' },
+      {
+        type: 'cookie',
+        key: '__prerender_bypass',
+        value: 'some-long-bypass-token-to-make-it-work',
+      },
+    ],
+  });
+  new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    experimentalBypassFor: [{ type: 'query', key: 'bypass', value: '1' }],
+  });
+  new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    experimentalBypassFor: [{ type: 'host', value: 'vercel.com' }],
+  });
+
+  expect(() => {
+    new Prerender({
+      expiration: 1,
+      fallback: null,
+      group: 1,
+      bypassToken: 'some-long-bypass-token-to-make-it-work',
+      // @ts-expect-error: testing invalid args
+      experimentalBypassFor: 'foo',
+    });
+  }).toThrowError(
+    'The `experimentalBypassFor` argument for `Prerender` must be Array of objects with fields `type`, `key` and optionally `value`.'
+  );
+
+  expect(() => {
+    new Prerender({
+      expiration: 1,
+      fallback: null,
+      group: 1,
+      bypassToken: 'some-long-bypass-token-to-make-it-work',
+      // @ts-expect-error: testing invalid args
+      experimentalBypassFor: [{ type: 'header', value: { foo: 'bar' } }],
+    });
+  }).toThrowError(
+    'The `experimentalBypassFor` argument for `Prerender` must be Array of objects with fields `type`, `key` and optionally `value`.'
+  );
 });
 
 it('should support passQuery correctly', async () => {
@@ -384,6 +448,42 @@ it('should support passQuery correctly', async () => {
     });
   }).toThrowError(
     `The \`passQuery\` argument for \`Prerender\` must be a boolean.`
+  );
+});
+
+it('should support experimentalStreamingLambdaPath correctly', async () => {
+  new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    experimentalStreamingLambdaPath: undefined,
+  });
+  new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    experimentalStreamingLambdaPath: '/some/path/to/lambda',
+  });
+  new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+  });
+
+  expect(() => {
+    new Prerender({
+      expiration: 1,
+      fallback: null,
+      group: 1,
+      bypassToken: 'some-long-bypass-token-to-make-it-work',
+      // @ts-expect-error testing invalid field
+      experimentalStreamingLambdaPath: 1,
+    });
+  }).toThrowError(
+    `The \`experimentalStreamingLambdaPath\` argument for \`Prerender\` must be a string.`
   );
 });
 
@@ -439,6 +539,15 @@ it(
   },
   ms('1m')
 );
+
+it('should return cliType bun and correct lock file for bun v1', async () => {
+  const fixture = path.join(__dirname, 'fixtures', '30-bun-v1');
+  const result = await scanParentDirs(fixture);
+  expect(result.cliType).toEqual('bun');
+  expect(result.lockfileVersion).toEqual(0);
+  expect(result.lockfilePath).toEqual(path.join(fixture, 'bun.lockb'));
+  expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
+});
 
 it('should return lockfileVersion 2 with npm7', async () => {
   const fixture = path.join(__dirname, 'fixtures', '20-npm-7');

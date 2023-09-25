@@ -1,79 +1,16 @@
-import chalk from 'chalk';
-
 // @ts-ignore
 import { handleError } from '../../util/error';
 
 import getArgs from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
-import logo from '../../util/output/logo';
 
 import add from './add';
 import issue from './issue';
 import ls from './ls';
 import rm from './rm';
+import { certsCommand } from './command';
+import { help } from '../help';
 import Client from '../../util/client';
-import { getPkgName } from '../../util/pkg-name';
-
-const help = () => {
-  console.log(`
-  ${chalk.bold(`${logo} ${getPkgName()} certs`)} [options] <command>
-
-  ${chalk.yellow('NOTE:')} This command is intended for advanced use only.
-  By default, Vercel manages your certificates automatically.
-
-  ${chalk.dim('Commands:')}
-
-    ls                        Show all available certificates
-    issue      <cn> [<cn>]    Issue a new certificate for a domain
-    rm         <id>           Remove a certificate by id
-
-  ${chalk.dim('Options:')}
-
-    -h, --help                     Output usage information
-    -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
-    'FILE'
-  )}   Path to the local ${'`vercel.json`'} file
-    -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
-    'DIR'
-  )}    Path to the global ${'`.vercel`'} directory
-    -d, --debug                    Debug mode [off]
-    --no-color                     No color mode [off]
-    -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
-    'TOKEN'
-  )}        Login token
-    -S, --scope                    Set a custom scope
-    --challenge-only               Only show challenges needed to issue a cert
-    --crt ${chalk.bold.underline('FILE')}                     Certificate file
-    --key ${chalk.bold.underline(
-      'FILE'
-    )}                     Certificate key file
-    --ca ${chalk.bold.underline(
-      'FILE'
-    )}                      CA certificate chain file
-    -N, --next                     Show next page of results
-    --limit=${chalk.bold.underline(
-      'VALUE'
-    )}                  Number of results to return per page (default: 20, max: 100)
-
-  ${chalk.dim('Examples:')}
-
-  ${chalk.gray(
-    '–'
-  )} Generate a certificate with the cnames "acme.com" and "www.acme.com"
-
-      ${chalk.cyan(`$ ${getPkgName()} certs issue acme.com www.acme.com`)}
-
-  ${chalk.gray('–')} Remove a certificate
-
-      ${chalk.cyan(`$ ${getPkgName()} certs rm id`)}
-
-  ${chalk.gray('–')} Paginate results, where ${chalk.dim(
-    '`1584722256178`'
-  )} is the time in milliseconds since the UNIX epoch.
-
-      ${chalk.cyan(`$ ${getPkgName()} certs ls --next 1584722256178`)}
-  `);
-};
 
 const COMMAND_CONFIG = {
   add: ['add'],
@@ -104,7 +41,7 @@ export default async function main(client: Client) {
   }
 
   if (argv['--help']) {
-    help();
+    client.output.print(help(certsCommand, { columns: client.stderr.columns }));
     return 2;
   }
 
@@ -124,7 +61,9 @@ export default async function main(client: Client) {
       return 1;
     default:
       output.error('Please specify a valid subcommand: ls | issue | rm');
-      help();
+      client.output.print(
+        help(certsCommand, { columns: client.stderr.columns })
+      );
       return 2;
   }
 }

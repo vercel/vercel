@@ -334,7 +334,7 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
       'vercel.json': JSON.stringify({
         functions: {
           'api/**/*.php': {
-            runtime: 'vercel-php@0.5.2',
+            runtime: 'vercel-php@0.6.0',
           },
         },
       }),
@@ -413,6 +413,24 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
       '.vercel/project.json': JSON.stringify({
         orgId: 'team_JgimPl9u9uauL7E4MjMLt605',
         projectId: 'QmRoBYhejkkmssotLZr8tWgewPdPcjYucYUNERFbhJrRNi',
+      }),
+    },
+    'vc-build-speed-insights': {
+      '.vercel/project.json': JSON.stringify({
+        orgId: '.',
+        projectId: '.',
+        settings: {
+          framework: null,
+          installCommand: 'echo "skipping install"',
+        },
+      }),
+      'package.json': JSON.stringify({
+        scripts: {
+          build: 'mkdir -p public && echo hi > public/index.txt',
+        },
+        dependencies: {
+          '@vercel/speed-insights': '0.0.1',
+        },
       }),
     },
     'vc-build-static-build': {

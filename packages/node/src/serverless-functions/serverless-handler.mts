@@ -1,12 +1,12 @@
 import { addHelpers } from './helpers.js';
 import { createServer } from 'http';
 import { serializeBody } from '../utils.js';
-import { streamToBuffer } from '@vercel/build-utils';
 import exitHook from 'exit-hook';
-import fetch from 'node-fetch';
+import { Headers, fetch } from 'undici';
 import { listen } from 'async-listen';
 import { isAbsolute } from 'path';
 import { pathToFileURL } from 'url';
+import zlib from 'zlib';
 import type { ServerResponse, IncomingMessage } from 'http';
 import type { VercelProxyResponse } from '../types.js';
 import type { VercelRequest, VercelResponse } from './helpers.js';
@@ -33,6 +33,27 @@ const HTTP_METHODS = [
   'DELETE',
   'PATCH',
 ];
+
+function compress(body: Buffer, encoding: string): Buffer {
+  switch (encoding) {
+    case 'br':
+      return zlib.brotliCompressSync(body, {
+        params: {
+          [zlib.constants.BROTLI_PARAM_QUALITY]: 0,
+        },
+      });
+    case 'gzip':
+      return zlib.gzipSync(body, {
+        level: zlib.constants.Z_BEST_SPEED,
+      });
+    case 'deflate':
+      return zlib.deflateSync(body, {
+        level: zlib.constants.Z_BEST_SPEED,
+      });
+    default:
+      throw new Error(`encoding '${encoding}' not supported`);
+  }
+}
 
 async function createServerlessServer(userCode: ServerlessFunctionSignature) {
   const server = createServer(userCode);
@@ -78,12 +99,14 @@ export async function createServerlessEventHandler(
 ): Promise<(request: IncomingMessage) => Promise<VercelProxyResponse>> {
   const userCode = await compileUserCode(entrypointPath, options);
   const server = await createServerlessServer(userCode);
+  const isStreaming = options.mode === 'streaming';
 
   return async function (request: IncomingMessage) {
     const url = new URL(request.url ?? '/', server.url);
-    // @ts-expect-error
     const response = await fetch(url, {
       body: await serializeBody(request),
+      compress: !isStreaming,
+      // @ts-expect-error
       headers: {
         ...request.headers,
         host: request.headers['x-forwarded-host'],
@@ -92,18 +115,32 @@ export async function createServerlessEventHandler(
       redirect: 'manual',
     });
 
-    let body;
-    if (options.mode === 'streaming') {
+    let body: Buffer | null = null;
+    let headers: Headers = response.headers;
+
+    if (isStreaming) {
       body = response.body;
     } else {
-      body = await streamToBuffer(response.body);
-      response.headers.delete('transfer-encoding');
-      response.headers.set('content-length', body.length);
+      body = Buffer.from(await response.arrayBuffer());
+
+      const contentEncoding = response.headers.get('content-encoding');
+      if (contentEncoding) {
+        body = compress(body, contentEncoding);
+        const clonedHeaders = [];
+        for (const [key, value] of response.headers.entries()) {
+          if (key !== 'transfer-encoding') {
+            // transfer-encoding is only for streaming response
+            clonedHeaders.push([key, value]);
+          }
+        }
+        clonedHeaders.push(['content-length', String(Buffer.byteLength(body))]);
+        headers = new Headers(clonedHeaders);
+      }
     }
 
     return {
       status: response.status,
-      headers: response.headers,
+      headers,
       body,
       encoding: 'utf8',
     };

@@ -1,8 +1,10 @@
 {
+  "private": true,
   "name": "backend-d30",
   "license": "MIT",
   "version": "0.1.0",
   "devDependencies": {
+    "next": "*",
     "once": "1.4.0"
   }
 }

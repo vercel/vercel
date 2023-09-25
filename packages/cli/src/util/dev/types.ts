@@ -25,6 +25,7 @@ export interface DevServerOptions {
   output: Output;
   projectSettings?: ProjectSettings;
   envValues?: Record<string, string>;
+  repoRoot?: string;
 }
 
 export interface EnvConfigs {

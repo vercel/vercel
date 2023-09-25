@@ -1,8 +1,8 @@
 {
   "compilerOptions": {
-    "declaration": true,
+    "declaration": false,
     "esModuleInterop": true,
-    "lib": ["ES2020"],
+    "lib": ["ES2021"],
     "module": "commonjs",
     "moduleResolution": "node",
     "noEmitOnError": true,
@@ -12,9 +12,9 @@
     "noUnusedParameters": true,
     "outDir": "./dist",
     "types": ["node", "jest"],
+    "skipLibCheck": true,
     "strict": true,
-    "target": "ES2020",
-    "sourceMap": true
+    "target": "ES2021"
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules"]

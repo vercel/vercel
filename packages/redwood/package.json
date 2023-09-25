@@ -1,6 +1,6 @@
 {
   "name": "@vercel/redwood",
-  "version": "1.1.15",
+  "version": "2.0.3",
   "main": "./dist/index.js",
   "license": "Apache-2.0",
   "homepage": "https://vercel.com/docs",
@@ -13,22 +13,23 @@
     "directory": "packages/redwood"
   },
   "scripts": {
-    "build": "node build.js",
+    "build": "node ../../utils/build-builder.mjs",
     "test-e2e": "pnpm test test/test.js",
-    "test": "jest --env node --verbose --bail --runInBand",
+    "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --bail --runInBand",
     "test-unit": "pnpm test test/prepare-cache.test.js"
   },
   "dependencies": {
-    "@vercel/nft": "0.22.5",
-    "@vercel/routing-utils": "2.2.1",
-    "semver": "6.1.1"
+    "@vercel/nft": "0.24.1",
+    "@vercel/routing-utils": "3.0.0",
+    "semver": "6.3.1"
   },
   "devDependencies": {
     "@types/aws-lambda": "8.10.19",
     "@types/node": "14.18.33",
     "@types/semver": "6.0.0",
-    "@vercel/build-utils": "6.7.5",
+    "@vercel/build-utils": "7.2.1",
     "execa": "3.2.0",
-    "fs-extra": "11.1.0"
+    "fs-extra": "11.1.0",
+    "jest-junit": "16.0.0"
   }
 }

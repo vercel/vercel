@@ -4,13 +4,13 @@ import {
   NodeCompatBindings,
 } from './edge-node-compat-plugin.mjs';
 import { EdgeRuntime, runServer } from 'edge-runtime';
-import fetch, { Headers } from 'node-fetch';
+import { fetch, Headers } from 'undici';
 import { isError } from '@vercel/error-utils';
 import { readFileSync } from 'fs';
 import { serializeBody, entrypointToOutputPath, logError } from '../utils.js';
 import esbuild from 'esbuild';
 import exitHook from 'exit-hook';
-import type { HeadersInit } from 'node-fetch';
+import type { HeadersInit } from 'undici';
 import type { VercelProxyResponse } from '../types.js';
 import type { IncomingMessage } from 'http';
 import { fileURLToPath } from 'url';
@@ -48,6 +48,7 @@ async function compileUserCode(
       // bundling behavior: use globals (like "browser") instead
       // of "require" statements for core libraries (like "node")
       platform: 'browser',
+      conditions: ['edge-light', 'development'],
       // target syntax: only use syntax available on the current
       // version of node
       target: NODE_VERSION_IDENTIFIER,
@@ -88,7 +89,10 @@ async function compileUserCode(
       "use strict";var regeneratorRuntime;
 
       // user code
-      ${compiledFile.text};
+      (() => {
+        ${compiledFile.text};
+      })();
+
       const userModule = module.exports;
 
       // request metadata
@@ -108,7 +112,7 @@ async function compileUserCode(
       nodeCompatBindings: nodeCompatPlugin.bindings,
     };
   } catch (error: unknown) {
-    // We can't easily show a meaningful stack trace from ncc -> edge-runtime.
+    // We can't easily show a meaningful stack trace from esbuild -> edge-runtime.
     // So, stick with just the message for now.
     console.error(`Failed to compile user code for edge runtime.`);
     if (isError(error)) logError(error);
@@ -158,7 +162,7 @@ async function createEdgeRuntimeServer(params?: {
     exitHook(() => server.close());
     return server;
   } catch (error: any) {
-    // We can't easily show a meaningful stack trace from ncc -> edge-runtime.
+    // We can't easily show a meaningful stack trace from esbuild -> edge-runtime.
     // So, stick with just the message for now.
     console.error('Failed to instantiate edge runtime.');
     logError(error);
@@ -192,7 +196,6 @@ export async function createEdgeEventHandler(
     if (body !== undefined) headers.set('content-length', String(body.length));
 
     const url = new URL(request.url ?? '/', server.url);
-    // @ts-expect-error
     const response = await fetch(url, {
       body,
       headers,

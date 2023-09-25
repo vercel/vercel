@@ -1,6 +1,6 @@
 import { glob } from '@vercel/build-utils';
 import { dirname, join, relative } from 'path';
-import { chdirAndReadConfig } from './utils';
+import { require_, chdirAndReadConfig } from './utils';
 import type { PrepareCache } from '@vercel/build-utils';
 
 export const prepareCache: PrepareCache = async ({
@@ -12,7 +12,13 @@ export const prepareCache: PrepareCache = async ({
   const mountpoint = dirname(entrypoint);
   const entrypointFsDirname = join(workPath, mountpoint);
   const packageJsonPath = join(entrypointFsDirname, 'package.json');
+  const remixRunDevPath = dirname(
+    require_.resolve('@remix-run/dev/package.json', {
+      paths: [entrypointFsDirname],
+    })
+  );
   const remixConfig = await chdirAndReadConfig(
+    remixRunDevPath,
     entrypointFsDirname,
     packageJsonPath
   );

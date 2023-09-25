@@ -12,10 +12,12 @@ import {
   debug,
   glob,
   Files,
+  Flag,
   BuildResultV2Typical as BuildResult,
 } from '@vercel/build-utils';
 import { Route, RouteWithHandle } from '@vercel/routing-utils';
 import { MAX_AGE_ONE_YEAR } from '.';
+import { MAX_UNCOMPRESSED_LAMBDA_SIZE } from './constants';
 import {
   NextRequiredServerFilesManifest,
   NextImagesManifest,
@@ -36,7 +38,6 @@ import {
   PseudoFile,
   detectLambdaLimitExceeding,
   outputFunctionFileSizeInfo,
-  MAX_UNCOMPRESSED_LAMBDA_SIZE,
   normalizeIndexOutput,
   getImagesConfig,
   getNextServerPath,
@@ -44,6 +45,10 @@ import {
   getFilesMapFromReasons,
   UnwrapPromise,
   getOperationType,
+  FunctionsConfigManifestV1,
+  VariantsManifest,
+  RSC_CONTENT_TYPE,
+  RSC_PREFETCH_SUFFIX,
 } from './utils';
 import {
   nodeFileTrace,
@@ -62,10 +67,17 @@ const NEXT_DATA_MIDDLEWARE_RESOLVING_VERSION = 'v12.1.7-canary.33';
 const EMPTY_ALLOW_QUERY_FOR_PRERENDERED_VERSION = 'v12.2.0';
 const CORRECTED_MANIFESTS_VERSION = 'v12.2.0';
 
+// related PR: https://github.com/vercel/next.js/pull/52997
+const BUNDLED_SERVER_NEXT_VERSION = '13.4.20-canary.26';
+
+const BUNDLED_SERVER_NEXT_PATH =
+  'next/dist/compiled/next-server/server.runtime.prod.js';
+
 export async function serverBuild({
   dynamicPages,
   pagesDir,
   config = {},
+  functionsConfigManifest,
   privateOutputs,
   baseDir,
   workPath,
@@ -89,6 +101,7 @@ export async function serverBuild({
   routesManifest,
   staticPages,
   lambdaPages,
+  localePrefixed404,
   nextVersion,
   lambdaAppPaths,
   canUsePreviewMode,
@@ -100,15 +113,18 @@ export async function serverBuild({
   isCorrectLocaleAPIRoutes,
   lambdaCompressedByteLimit,
   requiredServerFilesManifest,
+  variantsManifest,
 }: {
   appPathRoutesManifest?: Record<string, string>;
   dynamicPages: string[];
   trailingSlash: boolean;
   config: Config;
+  functionsConfigManifest?: FunctionsConfigManifestV1;
   pagesDir: string;
   baseDir: string;
   canUsePreviewMode: boolean;
   omittedPrerenderRoutes: Set<string>;
+  localePrefixed404: boolean;
   staticPages: { [key: string]: FileFsRef };
   lambdaAppPaths: { [key: string]: FileFsRef };
   lambdaPages: { [key: string]: FileFsRef };
@@ -138,6 +154,7 @@ export async function serverBuild({
   imagesManifest?: NextImagesManifest;
   prerenderManifest: NextPrerenderedRoutes;
   requiredServerFilesManifest: NextRequiredServerFilesManifest;
+  variantsManifest: VariantsManifest | null;
 }): Promise<BuildResult> {
   lambdaPages = Object.assign({}, lambdaPages, lambdaAppPaths);
 
@@ -163,12 +180,25 @@ export async function serverBuild({
     }
   }
 
+  let appRscPrefetches: UnwrapPromise<ReturnType<typeof glob>> = {};
   let appBuildTraces: UnwrapPromise<ReturnType<typeof glob>> = {};
   let appDir: string | null = null;
 
   if (appPathRoutesManifest) {
     appDir = path.join(pagesDir, '../app');
     appBuildTraces = await glob('**/*.js.nft.json', appDir);
+    appRscPrefetches = await glob(`**/*${RSC_PREFETCH_SUFFIX}`, appDir);
+
+    const rscContentTypeHeader =
+      routesManifest?.rsc?.contentTypeHeader || RSC_CONTENT_TYPE;
+
+    // ensure all appRscPrefetches have a contentType since this is used by Next.js
+    // to determine if it's a valid response
+    for (const value of Object.values(appRscPrefetches)) {
+      if (!value.contentType) {
+        value.contentType = rscContentTypeHeader;
+      }
+    }
   }
 
   const isCorrectNotFoundRoutes = semver.gte(
@@ -212,12 +242,12 @@ export async function serverBuild({
       ? path.posix.join(entryDirectory, '_errors/404')
       : undefined;
 
-  if (!static404Page && i18n) {
-    static404Page = staticPages[
-      path.posix.join(entryDirectory, i18n.defaultLocale, '404')
-    ]
-      ? path.posix.join(entryDirectory, i18n.defaultLocale, '404')
-      : undefined;
+  if (
+    !static404Page &&
+    i18n &&
+    staticPages[path.posix.join(entryDirectory, i18n.defaultLocale, '404')]
+  ) {
+    static404Page = path.posix.join(entryDirectory, i18n.defaultLocale, '404');
   }
 
   if (!hasStatic500 && i18n) {
@@ -285,16 +315,32 @@ export async function serverBuild({
     let nextServerBuildTrace;
     let instrumentationHookBuildTrace;
 
+    const useBundledServer =
+      semver.gte(nextVersion, BUNDLED_SERVER_NEXT_VERSION) &&
+      process.env.VERCEL_NEXT_BUNDLED_SERVER === '1';
+
+    if (useBundledServer) {
+      debug('Using bundled Next.js server');
+    }
+
     const nextServerFile = resolveFrom(
       projectDir,
-      `${getNextServerPath(nextVersion)}/next-server.js`
+      useBundledServer
+        ? BUNDLED_SERVER_NEXT_PATH
+        : `${getNextServerPath(nextVersion)}/next-server.js`
     );
 
     try {
       // leverage next-server trace from build if available
       nextServerBuildTrace = JSON.parse(
         await fs.readFile(
-          path.join(entryPath, outputDirectory, 'next-server.js.nft.json'),
+          path.join(
+            entryPath,
+            outputDirectory,
+            useBundledServer
+              ? 'next-minimal-server.js.nft.json'
+              : 'next-server.js.nft.json'
+          ),
           'utf8'
         )
       );
@@ -387,6 +433,7 @@ export async function serverBuild({
     const apiPages: string[] = [];
     const nonApiPages: string[] = [];
     const appRouterPages: string[] = [];
+    const appRouteHandlers: string[] = [];
 
     lambdaPageKeys.forEach(page => {
       if (
@@ -408,7 +455,11 @@ export async function serverBuild({
       }
 
       if (lambdaAppPaths[page]) {
-        appRouterPages.push(page);
+        if (lambdaAppPaths[page].fsPath.endsWith('route.js')) {
+          appRouteHandlers.push(page);
+        } else {
+          appRouterPages.push(page);
+        }
       } else if (pageMatchesApi(page)) {
         apiPages.push(page);
       } else {
@@ -429,11 +480,19 @@ export async function serverBuild({
 
       if (i18n) {
         for (const locale of i18n.locales) {
-          const static404File =
-            staticPages[path.posix.join(entryDirectory, locale, '/404')] ||
-            new FileFsRef({
+          let static404File =
+            staticPages[path.posix.join(entryDirectory, locale, '/404')];
+
+          if (!static404File) {
+            static404File = new FileFsRef({
               fsPath: path.join(pagesDir, locale, '/404.html'),
             });
+            if (!fs.existsSync(static404File.fsPath)) {
+              static404File = new FileFsRef({
+                fsPath: path.join(pagesDir, '/404.html'),
+              });
+            }
+          }
           requiredFiles[path.relative(baseDir, static404File.fsPath)] =
             static404File;
         }
@@ -568,11 +627,13 @@ export async function serverBuild({
       )
       .replace(
         '__NEXT_SERVER_PATH__',
-        `${getNextServerPath(nextVersion)}/next-server.js`
+        useBundledServer
+          ? BUNDLED_SERVER_NEXT_PATH
+          : `${getNextServerPath(nextVersion)}/next-server.js`
       );
 
     const appLauncher = launcher.replace(
-      '// pre-next-server-target',
+      '// @preserve pre-next-server-target',
       `process.env.__NEXT_PRIVATE_PREBUNDLED_REACT = "${
         requiredServerFilesManifest.config?.experimental?.serverActions
           ? 'experimental'
@@ -588,7 +649,7 @@ export async function serverBuild({
       // Next.js isn't aware of it and it isn't included in the
       // x-matched-path header
       launcher = launcher.replace(
-        '// entryDirectory handler',
+        '// @preserve entryDirectory handler',
         `req.url = req.url.replace(/^${path.posix
           .join('/', entryDirectory)
           .replace(/\//g, '\\/')}/, '')`
@@ -604,6 +665,7 @@ export async function serverBuild({
     const mergedPageKeys = [
       ...nonApiPages,
       ...appRouterPages,
+      ...appRouteHandlers,
       ...apiPages,
       ...internalPages,
     ];
@@ -752,6 +814,7 @@ export async function serverBuild({
     const pageLambdaGroups = await getPageLambdaGroups({
       entryPath: projectDir,
       config,
+      functionsConfigManifest,
       pages: nonApiPages,
       prerenderRoutes,
       pageTraces,
@@ -764,10 +827,31 @@ export async function serverBuild({
       pageExtensions,
     });
 
+    for (const group of pageLambdaGroups) {
+      group.isPages = true;
+    }
+
     const appRouterLambdaGroups = await getPageLambdaGroups({
       entryPath: projectDir,
       config,
+      functionsConfigManifest,
       pages: appRouterPages,
+      prerenderRoutes,
+      pageTraces,
+      compressedPages,
+      tracedPseudoLayer: tracedPseudoLayer.pseudoLayer,
+      initialPseudoLayer,
+      lambdaCompressedByteLimit,
+      initialPseudoLayerUncompressed: uncompressedInitialSize,
+      internalPages,
+      pageExtensions,
+    });
+
+    const appRouteHandlersLambdaGroups = await getPageLambdaGroups({
+      entryPath: projectDir,
+      config,
+      functionsConfigManifest,
+      pages: appRouteHandlers,
       prerenderRoutes,
       pageTraces,
       compressedPages,
@@ -786,9 +870,18 @@ export async function serverBuild({
       group.isAppRouter = true;
     }
 
+    for (const group of appRouteHandlersLambdaGroups) {
+      if (!group.isPrerenders) {
+        group.isStreaming = true;
+      }
+      group.isAppRouter = true;
+      group.isAppRouteHandler = true;
+    }
+
     const apiLambdaGroups = await getPageLambdaGroups({
       entryPath: projectDir,
       config,
+      functionsConfigManifest,
       pages: apiPages,
       prerenderRoutes,
       pageTraces,
@@ -826,6 +919,14 @@ export async function serverBuild({
             pseudoLayerBytes: group.pseudoLayerBytes,
             uncompressedLayerBytes: group.pseudoLayerUncompressedBytes,
           })),
+          appRouteHandlersLambdaGroups: appRouteHandlersLambdaGroups.map(
+            group => ({
+              pages: group.pages,
+              isPrerender: group.isPrerenders,
+              pseudoLayerBytes: group.pseudoLayerBytes,
+              uncompressedLayerBytes: group.pseudoLayerUncompressedBytes,
+            })
+          ),
           nextServerLayerSize: initialPseudoLayer.pseudoLayerBytes,
         },
         null,
@@ -836,6 +937,7 @@ export async function serverBuild({
       ...pageLambdaGroups,
       ...appRouterLambdaGroups,
       ...apiLambdaGroups,
+      ...appRouteHandlersLambdaGroups,
     ];
 
     await detectLambdaLimitExceeding(
@@ -961,6 +1063,7 @@ export async function serverBuild({
         if (
           i18n &&
           !isPrerender &&
+          !group.isAppRouter &&
           (!isCorrectLocaleAPIRoutes ||
             !(pageNoExt === 'api' || pageNoExt.startsWith('api/')))
         ) {
@@ -998,6 +1101,7 @@ export async function serverBuild({
     isSharedLambdas: false,
     canUsePreviewMode,
     static404Page,
+    localePrefixed404,
     hasPages404: routesManifest.pages404,
     isCorrectNotFoundRoutes,
     isEmptyAllowQueryForPrendered,
@@ -1053,8 +1157,7 @@ export async function serverBuild({
     canUsePreviewMode,
     prerenderManifest.bypassToken || '',
     true,
-    middleware.dynamicRouteMap,
-    inversedAppPathManifest
+    middleware.dynamicRouteMap
   ).then(arr =>
     localizeDynamicRoutes(
       arr,
@@ -1064,9 +1167,36 @@ export async function serverBuild({
       prerenderManifest,
       routesManifest,
       true,
-      isCorrectLocaleAPIRoutes
+      isCorrectLocaleAPIRoutes,
+      inversedAppPathManifest
     )
   );
+
+  const pagesPlaceholderRscEntries: Record<string, FileBlob> = {};
+
+  if (appDir) {
+    // since we attempt to rewrite all paths to an .rsc variant,
+    // we need to create dummy rsc outputs for all pages entries
+    // this is so that an RSC request to a `pages` entry will match
+    // rather than falling back to a catchall `app` entry
+    // on the nextjs side, invalid RSC response payloads will correctly trigger an mpa navigation
+    const pagesManifest = path.join(
+      entryPath,
+      outputDirectory,
+      `server/pages-manifest.json`
+    );
+
+    const pagesData = await fs.readJSON(pagesManifest);
+    const pagesEntries = Object.keys(pagesData);
+
+    for (const page of pagesEntries) {
+      const pathName = page.startsWith('/') ? page.slice(1) : page;
+      pagesPlaceholderRscEntries[`${pathName}.rsc`] = new FileBlob({
+        data: '{}',
+        contentType: 'application/json',
+      });
+    }
+  }
 
   const { staticFiles, publicDirectoryFiles, staticDirectoryFiles } =
     await getStaticFiles(entryPath, entryDirectory, outputDirectory);
@@ -1198,7 +1328,10 @@ export async function serverBuild({
       if (ogRoute.endsWith('/route')) {
         continue;
       }
-      route = path.posix.join('./', route === '/' ? '/index' : route);
+      route = normalizeIndexOutput(
+        path.posix.join('./', entryDirectory, route === '/' ? '/index' : route),
+        true
+      );
 
       if (lambdas[route]) {
         lambdas[`${route}.rsc`] = lambdas[route];
@@ -1210,9 +1343,19 @@ export async function serverBuild({
   }
 
   const rscHeader = routesManifest.rsc?.header?.toLowerCase() || '__rsc__';
+  const rscPrefetchHeader = routesManifest.rsc?.prefetchHeader?.toLowerCase();
   const rscVaryHeader =
     routesManifest?.rsc?.varyHeader ||
     'RSC, Next-Router-State-Tree, Next-Router-Prefetch';
+  const appNotFoundPath = path.posix.join('.', entryDirectory, '_not-found');
+
+  const flags: Flag[] = variantsManifest
+    ? Object.entries(variantsManifest).map(([key, value]) => ({
+        key,
+        ...value,
+        metadata: value.metadata ?? {},
+      }))
+    : [];
 
   return {
     wildcard: wildcardConfig,
@@ -1220,6 +1363,8 @@ export async function serverBuild({
     output: {
       ...publicDirectoryFiles,
       ...lambdas,
+      ...appRscPrefetches,
+      ...pagesPlaceholderRscEntries,
       // Prerenders may override Lambdas -- this is an intentional behavior.
       ...prerenders,
       ...staticPages,
@@ -1459,6 +1604,49 @@ export async function serverBuild({
 
       ...(appDir
         ? [
+            ...(rscPrefetchHeader
+              ? [
+                  {
+                    src: `^${path.posix.join('/', entryDirectory, '/')}`,
+                    has: [
+                      {
+                        type: 'header',
+                        key: rscPrefetchHeader,
+                      },
+                    ],
+                    dest: path.posix.join(
+                      '/',
+                      entryDirectory,
+                      `/index${RSC_PREFETCH_SUFFIX}`
+                    ),
+                    headers: { vary: rscVaryHeader },
+                    continue: true,
+                    override: true,
+                  },
+                  {
+                    src: `^${path.posix.join(
+                      '/',
+                      entryDirectory,
+                      '/((?!.+\\.rsc).+?)(?:/)?$'
+                    )}`,
+                    has: [
+                      {
+                        type: 'header',
+                        key: rscPrefetchHeader,
+                      },
+                    ],
+                    dest: path.posix.join(
+                      '/',
+                      entryDirectory,
+                      `/$1${RSC_PREFETCH_SUFFIX}`
+                    ),
+                    headers: { vary: rscVaryHeader },
+                    continue: true,
+                    override: true,
+                  },
+                ]
+              : []),
+
             {
               src: `^${path.posix.join('/', entryDirectory, '/')}`,
               has: [
@@ -1523,21 +1711,59 @@ export async function serverBuild({
           ]
         : []),
 
+      ...(rscPrefetchHeader
+        ? [
+            {
+              src: path.posix.join(
+                '/',
+                entryDirectory,
+                `/index${RSC_PREFETCH_SUFFIX}`
+              ),
+              dest: path.posix.join('/', entryDirectory, '/index.rsc'),
+              has: [
+                {
+                  type: 'header',
+                  key: rscPrefetchHeader,
+                },
+              ],
+              continue: true,
+              override: true,
+            },
+            {
+              src: `^${path.posix.join(
+                '/',
+                entryDirectory,
+                `/(.+?)${RSC_PREFETCH_SUFFIX}(?:/)?$`
+              )}`,
+              dest: path.posix.join('/', entryDirectory, '/$1.rsc'),
+              has: [
+                {
+                  type: 'header',
+                  key: rscPrefetchHeader,
+                },
+              ],
+              continue: true,
+              override: true,
+            },
+          ]
+        : []),
+
       // These need to come before handle: miss or else they are grouped
       // with that routing section
       ...afterFilesRewrites,
 
-      // make sure 404 page is used when a directory is matched without
-      // an index page
       { handle: 'resource' },
 
       ...fallbackRewrites,
 
+      // make sure 404 page is used when a directory is matched without
+      // an index page
       { src: path.posix.join('/', entryDirectory, '.*'), status: 404 },
+
+      { handle: 'miss' },
 
       // We need to make sure to 404 for /_next after handle: miss since
       // handle: miss is called before rewrites and to prevent rewriting /_next
-      { handle: 'miss' },
       {
         src: path.posix.join(
           '/',
@@ -1745,6 +1971,7 @@ export async function serverBuild({
       { handle: 'error' } as RouteWithHandle,
 
       // Custom Next.js 404 page
+
       ...(i18n && (static404Page || hasIsr404Page || lambdaPages['404.js'])
         ? [
             {
@@ -1779,6 +2006,10 @@ export async function serverBuild({
                   hasIsr404Page ||
                   lambdas[path.posix.join(entryDirectory, '404')]
                   ? '/404'
+                  : appPathRoutesManifest &&
+                    (middleware.edgeFunctions[appNotFoundPath] ||
+                      lambdas[appNotFoundPath])
+                  ? '/_not-found'
                   : '/_error'
               ),
               status: 404,
@@ -1827,5 +2058,6 @@ export async function serverBuild({
           ]),
     ],
     framework: { version: nextVersion },
+    flags,
   };
 }

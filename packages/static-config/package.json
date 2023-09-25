@@ -1,6 +1,6 @@
 {
   "name": "@vercel/static-config",
-  "version": "2.0.17",
+  "version": "3.0.0",
   "license": "Apache-2.0",
   "main": "./dist/index",
   "repository": {
@@ -9,9 +9,9 @@
     "directory": "packages/static-config"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "node ../../utils/build.mjs",
     "test-unit": "pnpm test",
-    "test": "jest --env node --verbose --runInBand --bail"
+    "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --runInBand --bail"
   },
   "files": [
     "dist"
@@ -25,6 +25,7 @@
     "@swc/core": "1.2.182",
     "@types/jest": "27.4.1",
     "@types/node": "14.18.33",
+    "jest-junit": "16.0.0",
     "typescript": "4.9.5"
   }
 }

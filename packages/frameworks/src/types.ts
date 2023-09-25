@@ -32,11 +32,24 @@ export interface SettingPlaceholder {
 
 export interface SettingValue {
   /**
-   * A predefined setting for the detected framework
+   * A predefined setting for the detected framework.
    * @example "next dev --port $PORT"
    */
   value: string | null;
+  /**
+   * Placeholder text that may be shown in the UI when
+   * the user is configuring this setting value.
+   * @example "`npm run build` or `next build`"
+   */
   placeholder?: string;
+  /**
+   * When set to `true`, then the builder will not
+   * invoke the equivalent script in `package.json`,
+   * and instead will invoke the command specified in
+   * configuration setting directly. When this
+   * configuration is enabled, `value` must be a string.
+   */
+  ignorePackageJsonScript?: boolean;
 }
 
 export type Setting = SettingValue | SettingPlaceholder;
@@ -206,4 +219,8 @@ export interface Framework {
    * @example "0.13.0"
    */
   defaultVersion?: string;
+  /**
+   * Slug of another framework preset in which this framework supersedes.
+   */
+  supersedes?: string;
 }

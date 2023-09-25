@@ -1,52 +1,12 @@
-import chalk from 'chalk';
 import Client from '../../util/client';
 import { ensureLink } from '../../util/link/ensure-link';
 import getArgs from '../../util/get-args';
 import getInvalidSubcommand from '../../util/get-invalid-subcommand';
 import handleError from '../../util/handle-error';
-import logo from '../../util/output/logo';
-import { getPkgName } from '../../util/pkg-name';
 import connect from './connect';
 import disconnect from './disconnect';
-
-const help = () => {
-  console.log(`
-  ${chalk.bold(`${logo} ${getPkgName()} git`)} <command>
-
-  ${chalk.dim('Commands:')}
-
-    connect [url]             Connect your Vercel Project to your Git repository or provide the remote URL to your Git repository
-    disconnect                Disconnect the Git provider repository from your project
-
-  ${chalk.dim('Options:')}
-
-    -h, --help                Output usage information
-    -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
-    'TOKEN'
-  )}   Login token
-    -y, --yes                 Skip confirmation when connecting a Git provider
-
-  ${chalk.dim('Examples:')}
-
-  ${chalk.gray(
-    '–'
-  )} Connect your Vercel Project to your Git repository defined in your local .git config
-
-    ${chalk.cyan(`$ ${getPkgName()} git connect`)}
-
-  ${chalk.gray(
-    '–'
-  )} Connect your Vercel Project to a Git repository using the remote URL
-
-    ${chalk.cyan(
-      `$ ${getPkgName()} git connect https://github.com/user/repo.git`
-    )}
-
-  ${chalk.gray('–')} Disconnect the Git provider repository
-
-    ${chalk.cyan(`$ ${getPkgName()} git disconnect`)}
-`);
-};
+import { help } from '../help';
+import { gitCommand } from './command';
 
 const COMMAND_CONFIG = {
   connect: ['connect'],
@@ -72,7 +32,7 @@ export default async function main(client: Client) {
   }
 
   if (argv['--help']) {
-    help();
+    client.output.print(help(gitCommand, { columns: client.stderr.columns }));
     return 2;
   }
 
@@ -97,7 +57,7 @@ export default async function main(client: Client) {
       return await disconnect(client, args, project, org);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
-      help();
+      client.output.print(help(gitCommand, { columns: client.stderr.columns }));
       return 2;
   }
 }

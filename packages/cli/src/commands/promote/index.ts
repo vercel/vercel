@@ -1,54 +1,13 @@
-import chalk from 'chalk';
 import type Client from '../../util/client';
 import getArgs from '../../util/get-args';
 import getProjectByCwdOrLink from '../../util/projects/get-project-by-cwd-or-link';
-import { getPkgName } from '../../util/pkg-name';
 import handleError from '../../util/handle-error';
 import { isErrnoException } from '@vercel/error-utils';
-import logo from '../../util/output/logo';
 import ms from 'ms';
 import requestPromote from './request-promote';
 import promoteStatus from './status';
-
-const help = () => {
-  console.log(`
-  ${chalk.bold(`${logo} ${getPkgName()} promote`)} [deployment id/url]
-
-  Promote an existing deployment to current.
-
-  ${chalk.dim('Options:')}
-
-    -h, --help                     Output usage information
-    -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
-    'FILE'
-  )}   Path to the local ${'`vercel.json`'} file
-    -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
-    'DIR'
-  )}    Path to the global ${'`.vercel`'} directory
-    -d, --debug                    Debug mode [off]
-    --no-color                     No color mode [off]
-    -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
-    'TOKEN'
-  )}        Login token
-    --timeout=${chalk.bold.underline(
-      'TIME'
-    )}                 Time to wait for promotion completion [3m]
-    -y, --yes                      Skip questions when setting up new project using default scope and settings
-
-  ${chalk.dim('Examples:')}
-
-  ${chalk.gray('–')} Show the status of any current pending promotions
-
-    ${chalk.cyan(`$ ${getPkgName()} promote`)}
-    ${chalk.cyan(`$ ${getPkgName()} promote status`)}
-    ${chalk.cyan(`$ ${getPkgName()} promote status <project>`)}
-    ${chalk.cyan(`$ ${getPkgName()} promote status --timeout 30s`)}
-
-  ${chalk.gray('–')} Promote a deployment using id or url
-
-    ${chalk.cyan(`$ ${getPkgName()} promote <deployment id/url>`)}
-`);
-};
+import { promoteCommand } from './command';
+import { help } from '../help';
 
 /**
  * `vc promote` command
@@ -69,7 +28,9 @@ export default async (client: Client): Promise<number> => {
   }
 
   if (argv['--help'] || argv._[0] === 'help') {
-    help();
+    client.output.print(
+      help(promoteCommand, { columns: client.stderr.columns })
+    );
     return 2;
   }
 

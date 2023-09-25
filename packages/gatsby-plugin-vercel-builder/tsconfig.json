@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "declaration": false,
+    "esModuleInterop": true,
+    "lib": ["ES2021"],
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "noEmitOnError": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitReturns": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "outDir": "./dist",
+    "types": ["node", "jest"],
+    "skipLibCheck": true,
+    "strict": true,
+    "target": "ES2021"
+  },
+  "include": ["src/**/*"]
+}

@@ -18,7 +18,7 @@ import {
   runPackageJsonScript,
   execCommand,
   getEnvForPackageManager,
-  getNodeBinPath,
+  getNodeBinPaths,
   scanParentDirs,
   BuildV2,
   PrepareCache,
@@ -46,14 +46,13 @@ import {
   writeFile,
 } from 'fs-extra';
 import path from 'path';
-import resolveFrom from 'resolve-from';
 import semver from 'semver';
 import url from 'url';
 import createServerlessConfig from './create-serverless-config';
 import nextLegacyVersions from './legacy-versions';
 import { serverBuild } from './server-build';
+import { MIB } from './constants';
 import {
-  MIB,
   collectTracedFiles,
   createLambdaFromPseudoLayers,
   createPseudoLayer,
@@ -76,6 +75,7 @@ import {
   getRoutesManifest,
   getSourceFilePathFromPage,
   getStaticFiles,
+  getVariantsManifest,
   isDynamicRoute,
   localizeDynamicRoutes,
   normalizeIndexOutput,
@@ -90,6 +90,9 @@ import {
   validateEntrypoint,
   getOperationType,
   isApiPage,
+  getFunctionsConfigManifest,
+  normalizeEdgeFunctionPath,
+  require_,
 } from './utils';
 
 export const version = 2;
@@ -145,10 +148,10 @@ function getRealNextVersion(entryPath: string): string | false {
     // package.json. This allows the builder to be used with frameworks like Blitz that
     // bundle Next but where Next isn't in the project root's package.json
 
-    // NOTE: `eval('require')` is necessary to avoid bad transpilation to `__webpack_require__`
-    const nextVersion: string = eval('require')(
-      resolveFrom(entryPath, 'next/package.json')
-    ).version;
+    const resolved = require_.resolve('next/package.json', {
+      paths: [entryPath],
+    });
+    const nextVersion: string = require_(resolved).version;
     console.log(`Detected Next.js version: ${nextVersion}`);
     return nextVersion;
   } catch (_ignored) {
@@ -272,7 +275,7 @@ export const build: BuildV2 = async ({
   });
 
   let hasLegacyRoutes = false;
-  const hasFunctionsConfig = !!config.functions;
+  const hasFunctionsConfig = Boolean(config.functions);
 
   if (await pathExists(dotNextStatic)) {
     console.warn('WARNING: You should not upload the `.next` directory.');
@@ -431,7 +434,11 @@ export const build: BuildV2 = async ({
 
   if (buildCommand) {
     // Add `node_modules/.bin` to PATH
-    const nodeBinPath = await getNodeBinPath({ cwd: entryPath });
+    const nodeBinPaths = getNodeBinPaths({
+      start: entryPath,
+      base: repoRootPath,
+    });
+    const nodeBinPath = nodeBinPaths.join(path.delimiter);
     env.PATH = `${nodeBinPath}${path.delimiter}${env.PATH}`;
 
     // Yarn v2 PnP mode may be activated, so force "node-modules" linker style
@@ -483,7 +490,17 @@ export const build: BuildV2 = async ({
     ? await getRequiredServerFilesManifest(entryPath, outputDirectory)
     : false;
 
-  isServerMode = !!requiredServerFilesManifest;
+  isServerMode = Boolean(requiredServerFilesManifest);
+
+  const functionsConfigManifest = await getFunctionsConfigManifest(
+    entryPath,
+    outputDirectory
+  );
+
+  const variantsManifest = await getVariantsManifest(
+    entryPath,
+    outputDirectory
+  );
 
   const routesManifest = await getRoutesManifest(
     entryPath,
@@ -1092,7 +1109,7 @@ export const build: BuildV2 = async ({
           operationType: 'Page', // always Page because we're in legacy mode
           shouldAddHelpers: false,
           shouldAddSourcemapSupport: false,
-          supportsMultiPayloads: !!process.env.NEXT_PRIVATE_MULTI_PAYLOAD,
+          supportsMultiPayloads: true,
           framework: {
             slug: 'nextjs',
             version: nextVersion,
@@ -1129,8 +1146,9 @@ export const build: BuildV2 = async ({
     const canUsePreviewMode = Object.keys(pages).some(page =>
       isApiPage(pages[page].fsPath)
     );
-    staticPages = await filterStaticPages(
-      await glob('**/*.html', pagesDir),
+    const originalStaticPages = await glob('**/*.html', pagesDir);
+    staticPages = filterStaticPages(
+      originalStaticPages,
       dynamicPages,
       entryDirectory,
       htmlContentType,
@@ -1306,14 +1324,23 @@ export const build: BuildV2 = async ({
         );
       }
 
+      const localePrefixed404 = !!(
+        routesManifest.i18n &&
+        originalStaticPages[
+          path.posix.join('.', routesManifest.i18n.defaultLocale, '404.html')
+        ]
+      );
+
       return serverBuild({
         config,
+        functionsConfigManifest,
         nextVersion,
         trailingSlash,
         appPathRoutesManifest,
         dynamicPages,
         canUsePreviewMode,
         staticPages,
+        localePrefixed404,
         lambdaPages: pages,
         lambdaAppPaths,
         omittedPrerenderRoutes,
@@ -1344,6 +1371,7 @@ export const build: BuildV2 = async ({
         privateOutputs,
         hasIsr404Page,
         hasIsr500Page,
+        variantsManifest,
       });
     }
 
@@ -1566,6 +1594,7 @@ export const build: BuildV2 = async ({
       const initialPageLambdaGroups = await getPageLambdaGroups({
         entryPath,
         config,
+        functionsConfigManifest,
         pages: nonApiPages,
         prerenderRoutes: new Set(),
         pageTraces,
@@ -1582,6 +1611,7 @@ export const build: BuildV2 = async ({
       const initialApiLambdaGroups = await getPageLambdaGroups({
         entryPath,
         config,
+        functionsConfigManifest,
         pages: apiPages,
         prerenderRoutes: new Set(),
         pageTraces,
@@ -1904,8 +1934,8 @@ export const build: BuildV2 = async ({
             const groupPageKeys = Object.keys(group.pages);
 
             const launcher = launcherData.replace(
-              /\/\/ __LAUNCHER_PAGE_HANDLER__/g,
-              `
+              'let page = {};',
+              `let page = {};
               const url = require('url');
 
               ${
@@ -2666,6 +2696,7 @@ async function getServerlessPages(params: {
       ? Promise.all([
           glob('**/page.js', path.join(params.pagesDir, '../app')),
           glob('**/route.js', path.join(params.pagesDir, '../app')),
+          glob('**/_not-found.js', path.join(params.pagesDir, '../app')),
         ]).then(items => Object.assign(...items))
       : Promise.resolve({}),
     getMiddlewareManifest(params.entryPath, params.outputDirectory),
@@ -2693,7 +2724,15 @@ async function getServerlessPages(params: {
   for (const edgeFunctionFile of Object.keys(
     middlewareManifest?.functions ?? {}
   )) {
-    const edgePath = (edgeFunctionFile.slice(1) || 'index') + '.js';
+    let edgePath =
+      middlewareManifest?.functions?.[edgeFunctionFile].name ||
+      edgeFunctionFile;
+
+    edgePath = normalizeEdgeFunctionPath(
+      edgePath,
+      params.appPathRoutesManifest || {}
+    );
+    edgePath = (edgePath || 'index') + '.js';
     delete normalizedAppPaths[edgePath];
     delete pages[edgePath];
   }

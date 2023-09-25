@@ -1,5 +1,5 @@
 import { Project } from 'ts-morph';
-import { promises as fs } from 'fs';
+import { readFileSync, promises as fs } from 'fs';
 import { basename, dirname, extname, join, relative, sep } from 'path';
 import {
   debug,
@@ -16,7 +16,6 @@ import {
   runNpmInstall,
   runPackageJsonScript,
   scanParentDirs,
-  walkParentDirs,
 } from '@vercel/build-utils';
 import { getConfig } from '@vercel/static-config';
 import { nodeFileTrace } from '@vercel/nft';
@@ -27,7 +26,6 @@ import type {
   PackageJson,
   BuildResultV2Typical,
 } from '@vercel/build-utils';
-import type { AppConfig } from '@remix-run/dev/dist/config';
 import type { ConfigRoute } from '@remix-run/dev/dist/config/routes';
 import type { BaseFunctionConfig } from '@vercel/static-config';
 import {
@@ -42,15 +40,23 @@ import {
   ResolvedEdgeRouteConfig,
   findEntry,
   chdirAndReadConfig,
-  addDependency,
+  addDependencies,
+  resolveSemverMinMax,
+  ensureResolvable,
+  isESM,
 } from './utils';
-import semver from 'semver';
+import { patchHydrogenServer } from './hydrogen';
 
-const _require: typeof require = eval('require');
+interface ServerBundle {
+  serverBuildPath: string;
+  routes: string[];
+}
 
-const REMIX_RUN_DEV_PATH = dirname(
-  _require.resolve('@remix-run/dev/package.json')
+const remixBuilderPkg = JSON.parse(
+  readFileSync(join(__dirname, '../package.json'), 'utf8')
 );
+const remixRunDevForkVersion =
+  remixBuilderPkg.devDependencies['@remix-run/dev'];
 
 const DEFAULTS_PATH = join(__dirname, '../defaults');
 
@@ -63,8 +69,17 @@ const nodeServerSrcPromise = fs.readFile(
   'utf-8'
 );
 
-// This value is the minimum supported version for our fork of Remix
-const minimumSupportRemixVersion = '1.10.0';
+// Minimum supported version of the `@vercel/remix` package
+const VERCEL_REMIX_MIN_VERSION = '1.10.0';
+
+// Minimum supported version of the `@vercel/remix-run-dev` forked compiler
+const REMIX_RUN_DEV_MIN_VERSION = '1.15.0';
+
+// Maximum version of `@vercel/remix-run-dev` fork
+// (and also `@vercel/remix` since they get published at the same time)
+const REMIX_RUN_DEV_MAX_VERSION = remixRunDevForkVersion.slice(
+  remixRunDevForkVersion.lastIndexOf('@') + 1
+);
 
 export const build: BuildV2 = async ({
   entrypoint,
@@ -126,6 +141,11 @@ export const build: BuildV2 = async ({
     await runNpmInstall(entrypointFsDirname, [], spawnOpts, meta, nodeVersion);
   }
 
+  const isHydrogen2 = Boolean(
+    pkg.dependencies?.['@shopify/remix-oxygen'] ||
+      pkg.devDependencies?.['@shopify/remix-oxygen']
+  );
+
   // Determine the version of Remix based on the `@remix-run/dev`
   // package version.
   const remixRunDevPath = await ensureResolvable(
@@ -133,17 +153,41 @@ export const build: BuildV2 = async ({
     repoRootPath,
     '@remix-run/dev'
   );
-
-  const remixVersion = JSON.parse(
-    await fs.readFile(join(remixRunDevPath, 'package.json'), 'utf8')
-  ).version;
+  const remixRunDevPkg = JSON.parse(
+    readFileSync(join(remixRunDevPath, 'package.json'), 'utf8')
+  );
+  const remixVersion = remixRunDevPkg.version;
 
   const remixConfig = await chdirAndReadConfig(
+    remixRunDevPath,
     entrypointFsDirname,
     packageJsonPath
   );
   const { serverEntryPoint, appDirectory } = remixConfig;
   const remixRoutes = Object.values(remixConfig.routes);
+
+  const depsToAdd: string[] = [];
+
+  const remixRunDevPkgVersion: string | undefined =
+    pkg.dependencies?.['@remix-run/dev'] ||
+    pkg.devDependencies?.['@remix-run/dev'];
+
+  // Override the official `@remix-run/dev` package with the
+  // Vercel fork, which supports the `serverBundles` config
+  if (
+    !isHydrogen2 &&
+    remixRunDevPkg.name !== '@vercel/remix-run-dev' &&
+    !remixRunDevPkgVersion?.startsWith('https:')
+  ) {
+    const remixDevForkVersion = resolveSemverMinMax(
+      REMIX_RUN_DEV_MIN_VERSION,
+      REMIX_RUN_DEV_MAX_VERSION,
+      remixVersion
+    );
+    depsToAdd.push(
+      `@remix-run/dev@npm:@vercel/remix-run-dev@${remixDevForkVersion}`
+    );
+  }
 
   // `app/entry.server.tsx` and `app/entry.client.tsx` are optional in Remix,
   // so if either of those files are missing then add our own versions.
@@ -155,42 +199,25 @@ export const build: BuildV2 = async ({
     );
     if (!pkg.dependencies['@vercel/remix']) {
       // Dependency version resolution logic
-      // 1. Users app is on 1.9.0 -> we install the 1.10.0 (minimum) version of our fork (`@vercel/remix`)
-      // 2. Users app is on 1.11.0 (a version greater than 1.10.0 and less than the latest version of the fork) -> we install the (matching) 1.11.0 version of `@vercel/remix`
-      // 3. Users app is on something greater than our latest version of the fork -> we install the latest version of our fork
-
-      // remixVersion is the version of the `@remix-run/dev` package in the *users' app*
-      const usersRemixVersion = semver.gt(
-        remixVersion,
-        minimumSupportRemixVersion
-      )
-        ? remixVersion
-        : minimumSupportRemixVersion;
-
-      // Prevent frozen lockfile rejections
-      const envForAddDep = { ...spawnOpts.env };
-      delete envForAddDep.CI;
-      delete envForAddDep.VERCEL;
-      delete envForAddDep.NOW_BUILDER;
-      await addDependency(
-        cliType,
-        [
-          `@vercel/remix@${
-            semver.gt(
-              usersRemixVersion,
-              require('@remix-run/dev/package.json').version
-            )
-              ? 'latest'
-              : usersRemixVersion
-          }`,
-        ],
-        {
-          ...spawnOpts,
-          env: envForAddDep,
-          cwd: entrypointFsDirname,
-        }
+      // 1. Users app is on 1.9.0 -> we install the 1.10.0 (minimum) version of `@vercel/remix`.
+      // 2. Users app is on 1.11.0 (a version greater than 1.10.0 and less than the known max
+      //    published version) -> we install the (matching) 1.11.0 version of `@vercel/remix`.
+      // 3. Users app is on something greater than our latest version of the fork -> we install
+      //    the latest known published version of `@vercel/remix`.
+      const vercelRemixVersion = resolveSemverMinMax(
+        VERCEL_REMIX_MIN_VERSION,
+        REMIX_RUN_DEV_MAX_VERSION,
+        remixVersion
       );
+      depsToAdd.push(`@vercel/remix@${vercelRemixVersion}`);
     }
+  }
+
+  if (depsToAdd.length) {
+    await addDependencies(cliType, depsToAdd, {
+      ...spawnOpts,
+      cwd: entrypointFsDirname,
+    });
   }
 
   const userEntryClientFile = findEntry(
@@ -205,17 +232,15 @@ export const build: BuildV2 = async ({
   }
 
   let remixConfigWrapped = false;
+  let serverEntryPointAbs: string | undefined;
+  let originalServerEntryPoint: string | undefined;
   const remixConfigPath = findConfig(entrypointFsDirname, 'remix.config');
   const renamedRemixConfigPath = remixConfigPath
     ? `${remixConfigPath}.original${extname(remixConfigPath)}`
     : undefined;
 
-  const backupRemixRunDevPath = `${remixRunDevPath}.__vercel_backup`;
-  await fs.rename(remixRunDevPath, backupRemixRunDevPath);
-  await fs.symlink(REMIX_RUN_DEV_PATH, remixRunDevPath);
-
   // These get populated inside the try/catch below
-  let serverBundles: AppConfig['serverBundles'];
+  let serverBundles: ServerBundle[];
   const serverBundlesMap = new Map<string, ConfigRoute[]>();
   const resolvedConfigsMap = new Map<ConfigRoute, ResolvedRouteConfig>();
 
@@ -225,7 +250,13 @@ export const build: BuildV2 = async ({
     const staticConfigsMap = new Map<ConfigRoute, BaseFunctionConfig | null>();
     for (const route of remixRoutes) {
       const routePath = join(remixConfig.appDirectory, route.file);
-      const staticConfig = getConfig(project, routePath);
+      let staticConfig = getConfig(project, routePath);
+      if (staticConfig && isHydrogen2) {
+        console.log(
+          'WARN: `export const config` is currently not supported for Hydrogen v2 apps'
+        );
+        staticConfig = null;
+      }
       staticConfigsMap.set(route, staticConfig);
     }
 
@@ -233,7 +264,8 @@ export const build: BuildV2 = async ({
       const config = getResolvedRouteConfig(
         route,
         remixConfig.routes,
-        staticConfigsMap
+        staticConfigsMap,
+        isHydrogen2
       );
       resolvedConfigsMap.set(route, config);
     }
@@ -262,7 +294,12 @@ export const build: BuildV2 = async ({
       ([hash, routes]) => {
         const runtime = resolvedConfigsMap.get(routes[0])?.runtime ?? 'nodejs';
         return {
-          serverBuildPath: `build/build-${runtime}-${hash}.js`,
+          serverBuildPath: isHydrogen2
+            ? relative(entrypointFsDirname, remixConfig.serverBuildPath)
+            : `${relative(
+                entrypointFsDirname,
+                dirname(remixConfig.serverBuildPath)
+              )}/build-${runtime}-${hash}.js`,
           routes: routes.map(r => r.id),
         };
       }
@@ -270,24 +307,17 @@ export const build: BuildV2 = async ({
 
     // We need to patch the `remix.config.js` file to force some values necessary
     // for a build that works on either Node.js or the Edge runtime
-    if (remixConfigPath && renamedRemixConfigPath) {
+    if (!isHydrogen2 && remixConfigPath && renamedRemixConfigPath) {
       await fs.rename(remixConfigPath, renamedRemixConfigPath);
 
-      // Figure out if the `remix.config` file is using ESM syntax
-      let isESM = false;
-      try {
-        _require(renamedRemixConfigPath);
-      } catch (err: any) {
-        isESM = err.code === 'ERR_REQUIRE_ESM';
-      }
-
       let patchedConfig: string;
-      if (isESM) {
+      // Figure out if the `remix.config` file is using ESM syntax
+      if (isESM(renamedRemixConfigPath)) {
         patchedConfig = `import config from './${basename(
           renamedRemixConfigPath
         )}';
 config.serverBuildTarget = undefined;
-config.serverModuleFormat = 'cjs';
+config.serverModuleFormat = '${pkg.type === 'module' ? 'esm' : 'cjs'}';
 config.serverPlatform = 'node';
 config.serverBuildPath = undefined;
 config.serverBundles = ${JSON.stringify(serverBundles)};
@@ -297,7 +327,7 @@ export default config;`;
           renamedRemixConfigPath
         )}');
 config.serverBuildTarget = undefined;
-config.serverModuleFormat = 'cjs';
+config.serverModuleFormat = '${pkg.type === 'module' ? 'esm' : 'cjs'}';
 config.serverPlatform = 'node';
 config.serverBuildPath = undefined;
 config.serverBundles = ${JSON.stringify(serverBundles)};
@@ -305,6 +335,32 @@ module.exports = config;`;
       }
       await fs.writeFile(remixConfigPath, patchedConfig);
       remixConfigWrapped = true;
+    }
+
+    // For Hydrogen v2, patch the `server.ts` file to be Vercel-compatible
+    if (isHydrogen2) {
+      if (remixConfig.serverEntryPoint) {
+        serverEntryPointAbs = join(
+          entrypointFsDirname,
+          remixConfig.serverEntryPoint
+        );
+        originalServerEntryPoint = await fs.readFile(
+          serverEntryPointAbs,
+          'utf8'
+        );
+        const patchedServerEntryPoint = patchHydrogenServer(
+          project,
+          serverEntryPointAbs
+        );
+        if (patchedServerEntryPoint) {
+          debug(
+            `Patched Hydrogen server file: ${remixConfig.serverEntryPoint}`
+          );
+          await fs.writeFile(serverEntryPointAbs, patchedServerEntryPoint);
+        }
+      } else {
+        console.log('WARN: No "server" field found in Remix config');
+      }
     }
 
     // Make `remix build` output production mode
@@ -336,14 +392,28 @@ module.exports = config;`;
       }
     }
   } finally {
+    const cleanupOps: Promise<void>[] = [];
     // Clean up our patched `remix.config.js` to be polite
     if (remixConfigWrapped && remixConfigPath && renamedRemixConfigPath) {
-      await fs.rename(renamedRemixConfigPath, remixConfigPath);
+      cleanupOps.push(
+        fs
+          .rename(renamedRemixConfigPath, remixConfigPath)
+          .then(() =>
+            debug(`Restored original "${basename(remixConfigPath)}" file`)
+          )
+      );
     }
-
-    // Remove `@remix-run/dev` symlink
-    await fs.unlink(remixRunDevPath);
-    await fs.rename(backupRemixRunDevPath, remixRunDevPath);
+    // Restore original server entrypoint if it was modified (for Hydrogen v2)
+    if (serverEntryPointAbs && originalServerEntryPoint) {
+      cleanupOps.push(
+        fs
+          .writeFile(serverEntryPointAbs, originalServerEntryPoint)
+          .then(() =>
+            debug(`Restored original "${basename(serverEntryPointAbs!)}" file`)
+          )
+      );
+    }
+    await Promise.all(cleanupOps);
   }
 
   // This needs to happen before we run NFT to create the Node/Edge functions
@@ -353,11 +423,21 @@ module.exports = config;`;
       repoRootPath,
       '@remix-run/server-runtime'
     ),
-    ensureResolvable(entrypointFsDirname, repoRootPath, '@remix-run/node'),
+    !isHydrogen2
+      ? ensureResolvable(entrypointFsDirname, repoRootPath, '@remix-run/node')
+      : null,
   ]);
 
+  const staticDir = join(
+    remixConfig.assetsBuildDirectory,
+    ...remixConfig.publicPath
+      .replace(/^\/|\/$/g, '')
+      .split('/')
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      .map(_ => '..')
+  );
   const [staticFiles, ...functions] = await Promise.all([
-    glob('**', join(entrypointFsDirname, 'public')),
+    glob('**', staticDir),
     ...serverBundles.map(bundle => {
       const firstRoute = remixConfig.routes[bundle.routes[0]];
       const config = resolvedConfigsMap.get(firstRoute) ?? {
@@ -657,99 +737,6 @@ async function createRenderEdgeFunction(
   });
 
   return fn;
-}
-
-async function ensureResolvable(
-  start: string,
-  base: string,
-  pkgName: string
-): Promise<string> {
-  try {
-    const resolvedPkgPath = _require.resolve(`${pkgName}/package.json`, {
-      paths: [start],
-    });
-    const resolvedPath = dirname(resolvedPkgPath);
-    if (!relative(base, resolvedPath).startsWith(`..${sep}`)) {
-      // Resolved path is within the root of the project, so all good
-      debug(`"${pkgName}" resolved to '${resolvedPath}'`);
-      return resolvedPath;
-    }
-  } catch (err: any) {
-    if (err.code !== 'MODULE_NOT_FOUND') {
-      throw err;
-    }
-  }
-
-  // If we got to here then `pkgName` was not resolvable up to the root
-  // of the project. Try a couple symlink tricks, otherwise we'll bail.
-
-  // Attempt to find the package in `node_modules/.pnpm` (pnpm)
-  const pnpmDir = await walkParentDirs({
-    base,
-    start,
-    filename: 'node_modules/.pnpm',
-  });
-  if (pnpmDir) {
-    const prefix = `${pkgName.replace('/', '+')}@`;
-    const packages = await fs.readdir(pnpmDir);
-    const match = packages.find(p => p.startsWith(prefix));
-    if (match) {
-      const pkgDir = join(pnpmDir, match, 'node_modules', pkgName);
-      await ensureSymlink(pkgDir, join(pnpmDir, '..'), pkgName);
-      return pkgDir;
-    }
-  }
-
-  // Attempt to find the package in `node_modules/.store` (npm 9+ linked mode)
-  const npmDir = await walkParentDirs({
-    base,
-    start,
-    filename: 'node_modules/.store',
-  });
-  if (npmDir) {
-    const prefix = `${basename(pkgName)}@`;
-    const prefixDir = join(npmDir, dirname(pkgName));
-    const packages = await fs.readdir(prefixDir);
-    const match = packages.find(p => p.startsWith(prefix));
-    if (match) {
-      const pkgDir = join(prefixDir, match, 'node_modules', pkgName);
-      await ensureSymlink(pkgDir, join(npmDir, '..'), pkgName);
-      return pkgDir;
-    }
-  }
-
-  throw new Error(
-    `Failed to resolve "${pkgName}". To fix this error, add "${pkgName}" to "dependencies" in your \`package.json\` file.`
-  );
-}
-
-async function ensureSymlink(
-  target: string,
-  nodeModulesDir: string,
-  pkgName: string
-) {
-  const symlinkPath = join(nodeModulesDir, pkgName);
-  const symlinkDir = dirname(symlinkPath);
-  const relativeTarget = relative(symlinkDir, target);
-
-  try {
-    const existingTarget = await fs.readlink(symlinkPath);
-    if (existingTarget === relativeTarget) {
-      // Symlink is already the expected value, so do nothing
-      return;
-    } else {
-      // If a symlink already exists then delete it if the target doesn't match
-      await fs.unlink(symlinkPath);
-    }
-  } catch (err: any) {
-    // Ignore when path does not exist or is not a symlink
-    if (err.code !== 'ENOENT' && err.code !== 'EINVAL') {
-      throw err;
-    }
-  }
-
-  await fs.symlink(relativeTarget, symlinkPath);
-  debug(`Created symlink for "${pkgName}"`);
 }
 
 async function writeEntrypointFile(

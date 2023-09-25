@@ -131,6 +131,7 @@ async function writeBuildResultV2(
 
   const lambdas = new Map<Lambda, string>();
   const overrides: Record<string, PathOverride> = {};
+
   for (const [path, output] of Object.entries(buildResult.output)) {
     const normalizedPath = stripDuplicateSlashes(path);
     if (isLambda(output)) {
@@ -156,11 +157,26 @@ async function writeBuildResultV2(
         const ext = getFileExtension(fallback);
         const fallbackName = `${normalizedPath}.prerender-fallback${ext}`;
         const fallbackPath = join(outputDir, 'functions', fallbackName);
-        const stream = fallback.toStream();
-        await pipe(
-          stream,
-          fs.createWriteStream(fallbackPath, { mode: fallback.mode })
-        );
+
+        // if file is already on the disk we can hard link
+        // instead of creating a new copy
+        let usedHardLink = false;
+        if ('fsPath' in fallback) {
+          try {
+            await fs.link(fallback.fsPath, fallbackPath);
+            usedHardLink = true;
+          } catch (_) {
+            // if link fails we continue attempting to copy
+          }
+        }
+
+        if (!usedHardLink) {
+          const stream = fallback.toStream();
+          await pipe(
+            stream,
+            fs.createWriteStream(fallbackPath, { mode: fallback.mode })
+          );
+        }
         fallback = new FileFsRef({
           ...output.fallback,
           fsPath: basename(fallbackName),
@@ -288,6 +304,14 @@ async function writeStaticFile(
   const dest = join(outputDir, 'static', fsPath);
   await fs.mkdirp(dirname(dest));
 
+  // if already on disk hard link instead of copying
+  if ('fsPath' in file) {
+    try {
+      return await fs.link(file.fsPath, dest);
+    } catch (_) {
+      // if link fails we continue attempting to copy
+    }
+  }
   await downloadFile(file, dest);
 }
 

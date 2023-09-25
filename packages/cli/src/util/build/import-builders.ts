@@ -3,6 +3,7 @@ import plural from 'pluralize';
 import npa from 'npm-package-arg';
 import { satisfies } from 'semver';
 import { dirname, join } from 'path';
+import { createRequire } from 'module';
 import { mkdirp, outputJSON, readJSON, symlink } from 'fs-extra';
 import { isStaticRuntime } from '@vercel/fs-detectors';
 import { BuilderV2, BuilderV3, PackageJson } from '@vercel/build-utils';
@@ -27,6 +28,9 @@ export interface BuilderWithPkg {
 type ResolveBuildersResult =
   | { buildersToAdd: Set<string> }
   | { builders: Map<string, BuilderWithPkg> };
+
+// Get a real `require()` reference that esbuild won't mutate
+const require_ = createRequire(__filename);
 
 /**
  * Imports the specified Vercel Builders, installing any missing ones
@@ -115,10 +119,9 @@ export async function resolveBuilders(
         // If `pkgPath` wasn't found in `.vercel/builders` then try as a CLI local
         // dependency. `require.resolve()` will throw if the Builder is not a CLI
         // dep, in which case we'll install it into `.vercel/builders`.
-        // NOTE: `eval('require')` is necessary to avoid bad transpilation to `__webpack_require__`
-        pkgPath = eval('require').resolve(`${name}/package.json`, {
+        pkgPath = require_.resolve(`${name}/package.json`, {
           paths: [__dirname],
-        }) as string;
+        });
         builderPkg = await readJSON(pkgPath);
       }
 
@@ -159,8 +162,7 @@ export async function resolveBuilders(
 
       const path = join(dirname(pkgPath), builderPkg.main || 'index.js');
 
-      // NOTE: `eval('require')` is necessary to avoid bad transpilation to `__webpack_require__`
-      const builder = eval('require')(path);
+      const builder = require_(path);
 
       builders.set(spec, {
         builder,

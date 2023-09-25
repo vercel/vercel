@@ -16,7 +16,6 @@ import {
 import formatOutput from './helpers/format-output';
 import type http from 'http';
 import type { CLIProcess } from './helpers/types';
-import type {} from './helpers/types';
 const TEST_TIMEOUT = 3 * 60 * 1000;
 jest.setTimeout(TEST_TIMEOUT);
 
@@ -32,7 +31,9 @@ function fetchTokenInformation(token: string, retries = 3) {
 
       if (!res.ok) {
         throw new Error(
-          `Failed to fetch ${url}, received status ${res.status}`
+          `Failed to fetch "${url}", status: ${
+            res.status
+          }, id: ${res.headers.get('x-vercel-id')}`
         );
       }
 
@@ -103,6 +104,8 @@ function mockLoginApi(req: http.IncomingMessage, res: http.ServerResponse) {
     query.email === email
   ) {
     res.end(JSON.stringify({ token }));
+  } else if (method === 'GET' && pathname === '/v2/user') {
+    res.end(JSON.stringify({ user: { email } }));
   } else {
     res.statusCode = 405;
     res.end(JSON.stringify({ code: 'method_not_allowed' }));
@@ -290,7 +293,7 @@ test('[vc dev] should print help from `vc develop --help`', async () => {
   );
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(2);
-  expect(stdout).toMatch(/▲ vercel dev/gm);
+  expect(stderr).toMatch(/▲ vercel dev/gm);
 });
 
 test('default command should deploy directory', async () => {

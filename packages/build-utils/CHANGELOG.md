@@ -1,5 +1,67 @@
 # @vercel/build-utils
 
+## 7.2.1
+
+### Patch Changes
+
+- Internal variants ([#10549](https://github.com/vercel/vercel/pull/10549))
+
+## 7.2.0
+
+### Minor Changes
+
+- Add new optional prerender field: experimentalStreamingLambdaPath ([#10476](https://github.com/vercel/vercel/pull/10476))
+
+- [build-utils] Add zero config detection for bun package manager ([#10486](https://github.com/vercel/vercel/pull/10486))
+
+### Patch Changes
+
+- add `experimentalBypassFor` field to Prerender ([#10481](https://github.com/vercel/vercel/pull/10481))
+
+## 7.1.1
+
+### Patch Changes
+
+- add descriptions to NodeVersion properties ([#10403](https://github.com/vercel/vercel/pull/10403))
+
+- Updated semver dependency ([#10411](https://github.com/vercel/vercel/pull/10411))
+
+## 7.1.0
+
+### Minor Changes
+
+- Support serverless function architecture ([#10392](https://github.com/vercel/vercel/pull/10392))
+
+## 7.0.0
+
+### Major Changes
+
+- BREAKING CHANGE: Drop Node.js 14, bump minimum to Node.js 16 ([#10369](https://github.com/vercel/vercel/pull/10369))
+
+## 6.8.3
+
+### Patch Changes
+
+- Fix `getPrefixedEnvVars()` to handle `VERCEL_BRANCH_URL` ([#10315](https://github.com/vercel/vercel/pull/10315))
+
+## 6.8.2
+
+### Patch Changes
+
+- Push back `nodejs16.x` discontinue date to `2024-02-06` ([#10209](https://github.com/vercel/vercel/pull/10209))
+
+## 6.8.1
+
+### Patch Changes
+
+- Revert "[build-utils] Allow file-ref sema to be controlled through env flag" ([#10167](https://github.com/vercel/vercel/pull/10167))
+
+## 6.8.0
+
+### Minor Changes
+
+- Add `getNodeBinPaths()` and `traverseUpDirectories()` functions ([#10150](https://github.com/vercel/vercel/pull/10150))
+
 ## 6.7.5
 
 ### Patch Changes

@@ -57,12 +57,13 @@ export default async function dev(
 
   let projectSettings: ProjectSettings | undefined;
   let envValues: Record<string, string> = {};
+  let repoRoot: string | undefined;
   if (link.status === 'linked') {
-    const { project, org, repoRoot } = link;
+    const { project, org } = link;
 
     // If repo linked, update `cwd` to the repo root
-    if (repoRoot) {
-      cwd = repoRoot;
+    if (link.repoRoot) {
+      repoRoot = cwd = link.repoRoot;
     }
 
     client.config.currentTeam = org.type === 'team' ? org.id : undefined;
@@ -82,6 +83,7 @@ export default async function dev(
     output,
     projectSettings,
     envValues,
+    repoRoot,
   });
 
   // listen to SIGTERM for graceful shutdown
