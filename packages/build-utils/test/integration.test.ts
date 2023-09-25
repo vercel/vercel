@@ -11,8 +11,8 @@ const fixturesPath = path.resolve(__dirname, 'fixtures');
 
 // Fixtures that have separate tests and should be skipped in the loop
 const skipFixtures: string[] = [
-  '01-zero-config-api',
   '02-zero-config-api',
+  '01-zero-config-api',
   '03-zero-config-angular',
   '04-zero-config-brunch',
   '05-zero-config-gatsby',
