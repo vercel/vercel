@@ -319,7 +319,7 @@ importers:
         specifier: 1.0.1
         version: link:../hydrogen
       '@vercel/next':
-        specifier: 4.0.7
+        specifier: 4.0.8
         version: link:../next
       '@vercel/node':
         specifier: 3.0.6
@@ -331,7 +331,7 @@ importers:
         specifier: 2.0.3
         version: link:../redwood
       '@vercel/remix-builder':
-        specifier: 2.0.7
+        specifier: 2.0.8
         version: link:../remix
       '@vercel/ruby':
         specifier: 2.0.2
@@ -490,9 +490,6 @@ importers:
       '@vercel/routing-utils':
         specifier: 3.0.0
         version: link:../routing-utils
-      '@zeit/source-map-support':
-        specifier: 0.6.2
-        version: 0.6.2
       ajv:
         specifier: 6.12.2
         version: 6.12.2
@@ -5601,12 +5598,6 @@ packages:
     transitivePeerDependencies:
       - supports-color
     dev: false
-
-  /@zeit/source-map-support@0.6.2:
-    resolution: {integrity: sha512-hSGbAEUxKhrE6DAWe5cPVdlRxtpjOnNdeMI5kNIHOvJxYrWUrIdIDeTbM7hpoz0R/SSWYFxKjPJRSLs74ffVIQ==}
-    dependencies:
-      source-map: 0.6.1
-    dev: true
 
   /abbrev@1.1.1:
     resolution: {integrity: sha512-nne9/IiQ/hzIhY6pdDnbBtz7DjPTKrY00P/zvPSm5pOFkl6xuGrGnXn/VtTNNfNtAfZ9/1RtehkszU9qcTii0Q==}
@@ -13756,6 +13747,7 @@ packages:
   /source-map@0.6.1:
     resolution: {integrity: sha512-UjgapumWlbMhkBgzT7Ykc5YXUT46F0iKu8SGXq0bcwP5dz/h0Plj6enJqjz1Zbq2l5WaqYnrVbwWOWMyF3F47g==}
     engines: {node: '>=0.10.0'}
+    requiresBuild: true
     dev: true
 
   /source-map@0.7.3:
