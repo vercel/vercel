@@ -42,18 +42,29 @@ async function getChunkedTests() {
   const scripts = [...runnersMap.keys()];
   const rootPath = path.resolve(__dirname, '..');
 
-  const dryRunText = (
-    await turbo([
-      `run`,
-      ...scripts,
-      `--cache-dir=.turbo`,
-      '--output-logs=full',
-      '--log-order=stream',
-      '--',
-      '--', // need two of these due to pnpm arg parsing
-      '--listTests',
-    ])
-  ).toString('utf8');
+  const dryRunJson = await spawn('turbo', [
+    `run`,
+    ...scripts,
+    `--cache-dir=.turbo`,
+    '--dry-run=json',
+  ]);
+
+  const uniquePackages = new Set(
+    JSON.parse(dryRunJson)
+      .tasks.filter(t => t.cache.status === 'MISS')
+      .map(t => t.package)
+  );
+
+  const listTestsText = await spawn('turbo', [
+    `run`,
+    ...scripts,
+    `--cache-dir=.turbo`,
+    '--output-logs=full',
+    '--log-order=stream',
+    '--',
+    '--', // need two of these due to pnpm arg parsing
+    '--listTests',
+  ]);
 
   /**
    * @typedef {string} TestPath
@@ -61,13 +72,18 @@ async function getChunkedTests() {
    */
   const testsToRun = {};
 
-  dryRunText
+  listTestsText
     .split('\n')
     .flatMap(line => {
       const [packageAndScriptName, possiblyPath] = line.split(' ');
       const [packageName, scriptName] = packageAndScriptName.split(':');
 
-      if (!packageName || !scriptName || !possiblyPath?.includes(rootPath)) {
+      if (
+        !packageName ||
+        !scriptName ||
+        !possiblyPath?.includes(rootPath) ||
+        !uniquePackages.has(packageName)
+      ) {
         return [];
       }
 
@@ -122,16 +138,17 @@ async function getChunkedTests() {
 }
 
 /**
- * Run turbo cli
+ * Run a binary by spawning a child process.
+ * @param {string} command
  * @param {string[]} args
  */
-async function turbo(args) {
+async function spawn(command, args) {
   const chunks = [];
   try {
     await new Promise((resolve, reject) => {
       const root = path.resolve(__dirname, '..');
-      const turbo = path.join(root, 'node_modules', '.bin', 'turbo');
-      const spawned = child_process.spawn(turbo, args, {
+      const bin = path.join(root, 'node_modules', '.bin', command);
+      const spawned = child_process.spawn(bin, args, {
         cwd: root,
         env: process.env,
       });
@@ -150,7 +167,7 @@ async function turbo(args) {
         }
       });
     });
-    return Buffer.concat(chunks);
+    return Buffer.concat(chunks).toString('utf8');
   } catch (e) {
     console.error(e.message);
     process.exit(1);
