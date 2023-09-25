@@ -1076,8 +1076,8 @@ importers:
   packages/next:
     dependencies:
       '@vercel/nft':
-        specifier: 0.24.1
-        version: 0.24.1
+        specifier: 0.22.5
+        version: 0.22.5
     devDependencies:
       '@types/aws-lambda':
         specifier: 8.10.19
@@ -1215,8 +1215,8 @@ importers:
         specifier: 2.0.1
         version: link:../error-utils
       '@vercel/nft':
-        specifier: 0.24.1
-        version: 0.24.1
+        specifier: 0.22.5
+        version: 0.22.5
       '@vercel/static-config':
         specifier: 3.0.0
         version: link:../static-config
@@ -1324,8 +1324,8 @@ importers:
   packages/redwood:
     dependencies:
       '@vercel/nft':
-        specifier: 0.24.1
-        version: 0.24.1
+        specifier: 0.22.5
+        version: 0.22.5
       '@vercel/routing-utils':
         specifier: 3.0.0
         version: link:../routing-utils
@@ -1358,8 +1358,8 @@ importers:
   packages/remix:
     dependencies:
       '@vercel/nft':
-        specifier: 0.24.1
-        version: 0.24.1
+        specifier: 0.22.5
+        version: 0.22.5
       '@vercel/static-config':
         specifier: 3.0.0
         version: link:../static-config
@@ -5357,9 +5357,9 @@ packages:
       - supports-color
     dev: false
 
-  /@vercel/nft@0.24.1:
-    resolution: {integrity: sha512-bGYrA/w98LNl9edxXcAezKs+Ixa2a+RkAvxXK38gH3815v+WkNa2AGY+wQv59vu2f9il9+zIKj6YrnlYIbh+jA==}
-    engines: {node: '>=16'}
+  /@vercel/nft@0.22.5:
+    resolution: {integrity: sha512-mug57Wd1BL7GMj9gXMgMeKUjdqO0e4u+0QLPYMFE1rwdJ+55oPy6lp3nIBCS8gOvigT62UI4QKUL2sGqcoW4Hw==}
+    engines: {node: '>=14'}
     hasBin: true
     dependencies:
       '@mapbox/node-pre-gyp': 1.0.10
@@ -13747,7 +13747,6 @@ packages:
   /source-map@0.6.1:
     resolution: {integrity: sha512-UjgapumWlbMhkBgzT7Ykc5YXUT46F0iKu8SGXq0bcwP5dz/h0Plj6enJqjz1Zbq2l5WaqYnrVbwWOWMyF3F47g==}
     engines: {node: '>=0.10.0'}
-    requiresBuild: true
     dev: true
 
   /source-map@0.7.3:
