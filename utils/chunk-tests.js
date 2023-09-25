@@ -55,7 +55,9 @@ async function getChunkedTests() {
       .map(t => t.package)
   );
 
-  console.log('uniquePackages', uniquePackages);
+  process.stderr.write(
+    `\nFound uniquePackages: ${JSON.stringify([...uniquePackages])}\n`
+  );
 
   const listTestsText = await spawn('turbo', [
     `run`,
@@ -79,7 +81,7 @@ async function getChunkedTests() {
     .flatMap(line => {
       const [packageAndScriptName, possiblyPath] = line.split(' ');
       const [packageName, scriptName] = packageAndScriptName.split(':');
-      console.log('packageName', packageName);
+
       if (
         !packageName ||
         !scriptName ||
