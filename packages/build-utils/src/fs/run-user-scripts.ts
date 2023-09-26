@@ -312,7 +312,7 @@ export async function scanParentDirs(
     ]);
 
   // Priority order is Yarn > pnpm > npm > bun
-  if (bunLockBin && hasYarnLock) {
+  if (process.env.THIS_WILL_NEVER_RUN_WAT) {
     cliType = 'bun';
     lockfilePath = bunLockPath;
     // TODO: read "bun-lockfile-format-v0"
