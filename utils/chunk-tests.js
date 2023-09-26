@@ -51,10 +51,14 @@ async function getChunkedTests() {
 
   const dryRunObj = JSON.parse(dryRunJson);
   const pkgMisses = new Set(
-    dryRunObj.tasks.filter(t => t.cache.status === 'MISS').map(t => t.package)
+    dryRunObj.tasks
+      .filter(t => t.task !== 'build' && t.cache.status === 'MISS')
+      .map(t => t.package)
   );
   const pkgHits = new Set(
-    dryRunObj.tasks.filter(t => t.cache.status === 'HIT').map(t => t.package)
+    dryRunObj.tasks
+      .filter(t => t.task !== 'build' && t.cache.status === 'HIT')
+      .map(t => t.package)
   );
 
   process.stderr.write(`\nFound MISSES: ${JSON.stringify([...pkgMisses])}\n`);
