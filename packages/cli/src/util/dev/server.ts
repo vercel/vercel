@@ -1318,6 +1318,12 @@ export default class DevServer {
       return true;
     }
 
+    if (!match && !routeResult.found && status && phase !== 'miss') {
+      this.output.debug(`Route found with with status code ${status}`);
+      await this.sendError(req, res, requestId, '', status, headers);
+      return true;
+    }
+
     return false;
   };
 
