@@ -33,7 +33,7 @@ module.exports = function setupTests(groupIndex) {
   let fixtures = fs.readdirSync(fixturesPath);
 
   if (typeof groupIndex !== 'undefined') {
-    fixtures = intoChunks(1, 5, fixtures)[groupIndex - 1];
+    fixtures = intoChunks(1, 8, fixtures)[groupIndex - 1];
 
     console.log('testing group', groupIndex, fixtures);
   }
