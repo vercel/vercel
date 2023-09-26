@@ -9,5 +9,15 @@
       }
     }
   ],
-  "rewrites": [{ "source": "/hello", "destination": "index.html" }]
+  "rewrites": [
+    {
+      "source": "/hello",
+      "destination": "index.html"
+    },
+    {
+      "source": "/status-rewrite-404",
+      "destination": "index.html",
+      "status": 404
+    }
+  ]
 }

@@ -82,6 +82,13 @@ test(
 );
 
 test(
+  '[vercel dev] test rewrites can change status code',
+  testFixtureStdio('test-rewrites', async (testPath: any) => {
+    await testPath(404, '/status-rewrite-404', 'Hello World');
+  })
+);
+
+test(
   '[vercel dev] test rewrites and redirects serve correct external content',
   testFixtureStdio(
     'test-external-rewrites-and-redirects',
