@@ -38,26 +38,34 @@ module.exports = function setupTests(groupIndex) {
     console.log('testing group', groupIndex, fixtures);
   }
 
-  // eslint-disable-next-line no-restricted-syntax
-  for (const fixture of fixtures) {
-    const errMsg = testsThatFailToBuild.get(fixture);
-    if (errMsg) {
-      // eslint-disable-next-line no-loop-func
-      it(`should fail to build ${fixture}`, async () => {
-        try {
-          await testDeployment(path.join(fixturesPath, fixture));
-        } catch (err) {
-          expect(err).toBeTruthy();
-          expect(err.deployment).toBeTruthy();
-          expect(err.deployment.errorMessage).toBe(errMsg);
-        }
-      });
-      continue; //eslint-disable-line
-    }
-    it(`should build ${fixture}`, async () => {
-      await expect(
-        testDeployment(path.join(fixturesPath, fixture))
-      ).resolves.toBeDefined();
+  const tests = Promise.all(
+    fixtures.map(fixture => {
+      const errMsg = testsThatFailToBuild.get(fixture);
+      if (errMsg) {
+        return it(`should fail to build ${fixture}`, async () => {
+          try {
+            await testDeployment(path.join(fixturesPath, fixture));
+          } catch (err) {
+            expect(err).toBeTruthy();
+            expect(err.deployment).toBeTruthy();
+            expect(err.deployment.errorMessage).toBe(errMsg);
+          }
+        });
+      } else {
+        return it(`should build ${fixture}`, async () => {
+          await expect(
+            testDeployment(path.join(fixturesPath, fixture))
+          ).resolves.toBeDefined();
+        });
+      }
+    })
+  );
+
+  tests
+    .then(() => {
+      console.log('All tests passed');
+    })
+    .catch(error => {
+      console.error('A test failed', error);
     });
-  }
 };
