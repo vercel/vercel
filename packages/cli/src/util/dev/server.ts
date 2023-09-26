@@ -1050,6 +1050,7 @@ export default class DevServer {
     statusCode: number = 500,
     headers: HttpHeadersConfig = {}
   ): Promise<void> {
+    console.log('HERE');
     res.statusCode = statusCode;
     this.setResponseHeaders(res, requestId, headers);
 
@@ -1315,12 +1316,6 @@ export default class DevServer {
     if (status && location && 300 <= status && status <= 399) {
       this.output.debug(`Route found with redirect status code ${status}`);
       await this.sendRedirect(req, res, requestId, location, status);
-      return true;
-    }
-
-    if (!match && status && phase !== 'miss') {
-      this.output.debug(`Route found with with status code ${status}`);
-      await this.sendError(req, res, requestId, '', status, headers);
       return true;
     }
 
