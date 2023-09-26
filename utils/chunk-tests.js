@@ -46,6 +46,7 @@ async function getChunkedTests() {
     `run`,
     ...scripts,
     `--cache-dir=.turbo`,
+    `--log-order=stream`,
     '--dry-run=json',
   ]);
 
