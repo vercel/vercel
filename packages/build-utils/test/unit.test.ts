@@ -540,7 +540,7 @@ it(
   ms('1m')
 );
 
-it('should return cliType bun and correct lock file for bun v1 with yarn.lock file', async () => {
+it('should return cliType bun and correct lock file for bun v1', async () => {
   const fixture = path.join(__dirname, 'fixtures', '30-bun-v1');
   const result = await scanParentDirs(fixture);
   expect(result.cliType).toEqual('bun');
