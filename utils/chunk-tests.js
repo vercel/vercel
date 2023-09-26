@@ -49,15 +49,16 @@ async function getChunkedTests() {
     '--dry-run=json',
   ]);
 
-  const uniquePackages = new Set(
-    JSON.parse(dryRunJson)
-      .tasks.filter(t => t.cache.status === 'MISS')
-      .map(t => t.package)
+  const dryRunObj = JSON.parse(dryRunJson);
+  const pkgMisses = new Set(
+    dryRunObj.tasks.filter(t => t.cache.status === 'MISS').map(t => t.package)
+  );
+  const pkgHits = new Set(
+    dryRunObj.tasks.filter(t => t.cache.status === 'HIT').map(t => t.package)
   );
 
-  process.stderr.write(
-    `\nFound uniquePackages: ${JSON.stringify([...uniquePackages])}\n`
-  );
+  process.stderr.write(`\nFound MISSES: ${JSON.stringify([...pkgMisses])}\n`);
+  process.stderr.write(`\nFound HITS: ${JSON.stringify([...pkgHits])}\n`);
 
   const listTestsText = await spawn('turbo', [
     `run`,
@@ -86,7 +87,7 @@ async function getChunkedTests() {
         !packageName ||
         !scriptName ||
         !possiblyPath?.includes(rootPath) ||
-        !uniquePackages.has(packageName)
+        !pkgMisses.has(packageName)
       ) {
         return [];
       }
