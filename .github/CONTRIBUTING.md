@@ -16,11 +16,16 @@ cd vercel
 corepack enable
 pnpm install
 pnpm build
-pnpm lint
-pnpm test-unit
 ```
 
-Make sure all the tests pass before making changes.
+To run the tests, we'll need a `VERCEL_TOKEN`. To get that token:
+
+- Option 1: Login to https://vercel.com, go to Settings, Tokens, then create a "Full Account" token to use for this purpose.
+- Option 2: If you've logged in with the `vercel` CLI before, you can find the token value in `~/Library/Application Support/com.vercel.cli/auth.json`.
+
+Save that token or export it in your terminal profile.
+
+Then run the tests with `pnpm turbo run test`.
 
 ### Running Vercel CLI Changes
 
@@ -35,13 +40,13 @@ See [CLI Local Development](../packages/cli#local-development) for more details.
 
 ## Verifying your change
 
-Once you are done with your changes (we even suggest doing it along the way), make sure all the tests still pass by running:
+Once you are done with your changes (we even suggest doing it along the way), make sure the relevant tests still pass by running the relevant tests. Example:
 
 ```
-pnpm test-unit
+# from root of this project
+cd packages/cli
+pnpm test test/integration-1.test.ts
 ```
-
-from the root of the project.
 
 If any test fails, make sure to fix it along with your changes. See [Interpreting test errors](#Interpreting-test-errors) for more information about how the tests are executed, especially the integration tests.
 
