@@ -1050,7 +1050,6 @@ export default class DevServer {
     statusCode: number = 500,
     headers: HttpHeadersConfig = {}
   ): Promise<void> {
-    console.log('HERE');
     res.statusCode = statusCode;
     this.setResponseHeaders(res, requestId, headers);
 
