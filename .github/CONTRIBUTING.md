@@ -18,7 +18,7 @@ pnpm install
 pnpm build
 ```
 
-To run the tests, we'll need a `VERCEL_TOKEN`. To get that token:
+To run the e2e tests, you'll need a `VERCEL_TOKEN`. To get that token:
 
 - Option 1: Login to https://vercel.com, go to Settings, Tokens, then create a "Full Account" token to use for this purpose.
 - Option 2: If you've logged in with the `vercel` CLI before, you can find the token value in `~/Library/Application Support/com.vercel.cli/auth.json`.
