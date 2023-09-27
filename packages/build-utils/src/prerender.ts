@@ -14,6 +14,7 @@ interface PrerenderOptions {
   sourcePath?: string;
   experimentalBypassFor?: HasField;
   experimentalStreamingLambdaPath?: string;
+  experimentalFallbackMetadataPrefixLength?: number;
 }
 
 export class Prerender {
@@ -30,6 +31,7 @@ export class Prerender {
   public sourcePath?: string;
   public experimentalBypassFor?: HasField;
   public experimentalStreamingLambdaPath?: string;
+  public experimentalFallbackMetadataPrefixLength?: number;
 
   constructor({
     expiration,
@@ -44,6 +46,7 @@ export class Prerender {
     sourcePath,
     experimentalBypassFor,
     experimentalStreamingLambdaPath,
+    experimentalFallbackMetadataPrefixLength,
   }: PrerenderOptions) {
     this.type = 'Prerender';
     this.expiration = expiration;
@@ -164,6 +167,16 @@ export class Prerender {
         );
       }
       this.experimentalStreamingLambdaPath = experimentalStreamingLambdaPath;
+    }
+
+    if (experimentalFallbackMetadataPrefixLength !== undefined) {
+      if (typeof experimentalFallbackMetadataPrefixLength !== 'number') {
+        throw new Error(
+          'The `experimentalFallbackMetadataPrefixLength` argument for `Prerender` must be a string.'
+        );
+      }
+      this.experimentalFallbackMetadataPrefixLength =
+        experimentalFallbackMetadataPrefixLength;
     }
   }
 }

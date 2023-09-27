@@ -487,6 +487,44 @@ it('should support experimentalStreamingLambdaPath correctly', async () => {
   );
 });
 
+it('should support experimentalFallbackMetadataPrefixLength correctly', async () => {
+  new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    experimentalFallbackMetadataPrefixLength: undefined,
+  });
+
+  new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    experimentalFallbackMetadataPrefixLength: 200,
+  });
+
+  new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+  });
+
+  expect(() => {
+    new Prerender({
+      expiration: 1,
+      fallback: null,
+      group: 1,
+      bypassToken: 'some-long-bypass-token-to-make-it-work',
+      // @ts-expect-error testing invalid field
+      experimentalFallbackMetadataPrefixLength: '1',
+    });
+  }).toThrowError(
+    `The \`experimentalFallbackMetadataPrefixLength\` argument for \`Prerender\` must be a string.`
+  );
+});
+
 it('should support require by path for legacy builders', () => {
   const index = require('../');
 
