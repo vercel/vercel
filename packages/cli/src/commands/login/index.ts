@@ -32,8 +32,6 @@ export default async function login(client: Client): Promise<number> {
     '--github': Boolean,
     '--gitlab': Boolean,
     '--bitbucket': Boolean,
-    '--saml': Boolean,
-    '--team-id': String,
   });
 
   if (argv['--help']) {
@@ -63,8 +61,6 @@ export default async function login(client: Client): Promise<number> {
     result = await doGitlabLogin(client, argv['--oob']);
   } else if (argv['--bitbucket']) {
     result = await doBitbucketLogin(client, argv['--oob']);
-  } else if (argv['--saml'] && argv['--team-id']) {
-    result = await doSamlLogin(client, argv['--team-id'], argv['--oob']);
   } else {
     // Interactive mode
     result = await prompt(client, undefined, argv['--oob']);
@@ -98,7 +94,7 @@ export default async function login(client: Client): Promise<number> {
   writeToAuthConfigFile(client.authConfig);
   writeToConfigFile(client.config);
 
-  output.print(`Saved credentials in "${hp(getGlobalPathConfig())}"`);
+  output.debug(`Saved credentials in "${hp(getGlobalPathConfig())}"`);
 
   output.print(
     `${chalk.cyan('Congratulations!')} ` +
