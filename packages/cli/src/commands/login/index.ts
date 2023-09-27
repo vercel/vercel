@@ -24,11 +24,16 @@ import { updateCurrentTeamAfterLogin } from '../../util/login/update-current-tea
 export default async function login(client: Client): Promise<number> {
   const { output } = client;
 
+  // user is not currently authenticated on this machine
+  const isInitialLogin = !client.authConfig.token;
+
   const argv = getArgs(client.argv.slice(2), {
     '--oob': Boolean,
     '--github': Boolean,
     '--gitlab': Boolean,
     '--bitbucket': Boolean,
+    '--saml': Boolean,
+    '--team-id': String,
   });
 
   if (argv['--help']) {
@@ -58,6 +63,8 @@ export default async function login(client: Client): Promise<number> {
     result = await doGitlabLogin(client, argv['--oob']);
   } else if (argv['--bitbucket']) {
     result = await doBitbucketLogin(client, argv['--oob']);
+  } else if (argv['--saml'] && argv['--team-id']) {
+    result = await doSamlLogin(client, argv['--team-id'], argv['--oob']);
   } else {
     // Interactive mode
     result = await prompt(client, undefined, argv['--oob']);
@@ -68,20 +75,30 @@ export default async function login(client: Client): Promise<number> {
     return result;
   }
 
-  const isNewLogin = !client.authConfig.token;
-
   // Save the user's authentication token to the configuration file.
   client.authConfig.token = result.token;
 
-  // If we have a new login, update `currentTeam`
-  if (isNewLogin) {
-    await updateCurrentTeamAfterLogin(client, output, result.teamId);
+  // Save the user's team (possibly `undefined`) to the global configuration file.
+  client.config.currentTeam = result.teamId;
+
+  // Delete undefined `currentTeam` key to avoid writing key with no value to JSON file.
+  if (!client.config.currentTeam === undefined) {
+    delete client.config.currentTeam;
+  }
+
+  // If we have a brand new login, update `currentTeam`
+  if (isInitialLogin) {
+    await updateCurrentTeamAfterLogin(
+      client,
+      output,
+      client.config.currentTeam
+    );
   }
 
   writeToAuthConfigFile(client.authConfig);
   writeToConfigFile(client.config);
 
-  output.debug(`Saved credentials in "${hp(getGlobalPathConfig())}"`);
+  output.print(`Saved credentials in "${hp(getGlobalPathConfig())}"`);
 
   output.print(
     `${chalk.cyan('Congratulations!')} ` +
