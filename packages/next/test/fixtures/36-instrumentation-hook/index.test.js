@@ -1,6 +1,7 @@
 const path = require('path');
 const { deployAndTest } = require('../../utils');
 const { describe } = require('node:test');
+const fetch = require('../../../../../test/lib/deployment/fetch-retry');
 
 const ctx = {};
 
