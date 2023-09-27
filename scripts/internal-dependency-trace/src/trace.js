@@ -11,7 +11,7 @@ const addExtension = filePath => {
     try {
       fs.statSync(filePath); // its a directory, now try index.ts and index.js
       try {
-        fs.statSync(filePath + '/index.ts')
+        fs.statSync(filePath + '/index.ts');
         filePath += '/index.ts';
       } catch (e) {
         fs.statSync(filePath + '/index.js');
