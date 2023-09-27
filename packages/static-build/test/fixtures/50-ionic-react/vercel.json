@@ -8,5 +8,5 @@
       }
     }
   ],
-  "probes": [{ "path": "/", "mustContain": "Hello, World!" }]
+  "probes": [{ "path": "/", "mustContain": "Ionic on Vercel" }]
 }
