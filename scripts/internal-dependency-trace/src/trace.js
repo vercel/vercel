@@ -6,10 +6,17 @@ const addExtension = filePath => {
   if (filePath.endsWith('.json')) {
     return filePath;
   }
+
   if (!filePath.endsWith('.ts')) {
     try {
-      fs.statSync(filePath);
-      filePath += '/index.ts';
+      fs.statSync(filePath); // its a directory, now try index.ts and index.js
+      try {
+        fs.statSync(filePath + '/index.ts');
+        filePath += '/index.ts';
+      } catch (e) {
+        fs.statSync(filePath + '/index.js');
+        filePath += '/index.js';
+      }
     } catch (e) {
       try {
         fs.statSync(filePath + '.ts');
@@ -20,6 +27,7 @@ const addExtension = filePath => {
       }
     }
   }
+
   return filePath;
 };
 
