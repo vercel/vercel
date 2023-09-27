@@ -76,3 +76,22 @@ jobs:
           script: |
             const script = require('./utils/update-latest-release.js')
             await script({ github, context })
+- ad: .NET Core SDK Kurulumu
+  kullanımlar: eylemler/setup-dotnet@v3.2.0
+  ile:
+    # Kullanılacak isteğe bağlı SDK sürümü/sürümleri. Sağlanmazsa global.json sürümü mevcut olduğunda yüklenecektir. Örnekler: 2.2.104, 3.1, 3.1.x, 3.x, 6.0.2xx
+    dotnet sürümü: # isteğe bağlı
+    # Yapının isteğe bağlı kalitesi. Olası değerler şunlardır: günlük, imzalı, doğrulanmış, önizleme, ga.
+    dotnet kalitesi: # isteğe bağlı
+    # Global.json dosyanız reponun kökünde bulunmuyorsa, isteğe bağlı global.json konumu.
+    global-json dosyası: # isteğe bağlı
+    # Kimlik doğrulamanın kurulacağı isteğe bağlı paket kaynağı. Deponun kökündeki mevcut herhangi bir NuGet.config'e başvuracak ve NUGET_AUTH_TOKEN ortam değişkenini ClearTextPassword olarak kullanarak geçici bir NuGet.config sağlayacak
+    kaynak-url: # isteğe bağlı
+    # Mevcut havuzun sahibi dışındaki GitHub Paket Kayıt Kuruluşlarından/kullanıcılarından gelen paketleri kullanmak için isteğe bağlı SAHİP. Yalnızca kaynak URL'sinde bir GPR URL'si de sağlanmışsa kullanılır
+    sahip: # isteğe bağlı
+    # NuGet.config dosyanız deponun kökünde bulunmuyorsa isteğe bağlı NuGet.config konumu.
+    yapılandırma dosyası: # isteğe bağlı
+    # NuGet global paketler klasörünün önbelleğe alınmasını etkinleştirmek için isteğe bağlı giriş
+    önbellek: # isteğe bağlı
+    # Bir bağımlılık dosyasının yolunu belirtmek için kullanılır: package.lock.json. Birden fazla bağımlılığı önbelleğe almak için joker karakterleri veya dosya adları listesini destekler.
+    önbellek bağımlılığı yolu: # isteğe bağlı
