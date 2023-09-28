@@ -12,7 +12,6 @@ async function main(turboRunDirectory, turboRunDirectoryParent) {
       const runFile = path.join(turboRunDir, fileName);
       const runData = await fs.readJson(runFile);
       const { attempted, cached } = runData.execution;
-      console.log(JSON.stringify(runData, null, 2));
       missCount += attempted - cached;
     })
   );
