@@ -3,7 +3,7 @@
     { "path": "/foo/", "mustContain": "<h1>Gatsby - index</h1>" },
     {
       "path": "/foo/ssr/",
-      "mustContain": "<h1>This page is<!-- -->{serverData.message}</h1>"
+      "mustContain": "<h1>This page is<!-- -->rendered server side</h1>"
     },
     {
       "path": "/foo/dsg/",
