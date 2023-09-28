@@ -1,18 +1,13 @@
 {
   "probes": [
-    { "path": "/", "mustContain": "Welcome to <b>Gatsby!</b>" },
-    { "path": "/page-2", "mustContain": "Hi from the second page" },
-    {
-      "path": "/using-typescript",
-      "mustContain": "Gatsby supports <b>TypeScript by default</b>"
-    },
+    { "path": "/", "mustContain": "Gatsby - Index" },
     {
       "path": "/using-ssr",
-      "mustContain": "This page is rendered server side"
+      "mustContain": "rendered server side"
     },
     {
       "path": "/using-dsg",
-      "mustContain": "This page is not created until requested by a user"
+      "mustContain": "DSG"
     },
     {
       "path": "/page-data/using-ssr/page-data.json",

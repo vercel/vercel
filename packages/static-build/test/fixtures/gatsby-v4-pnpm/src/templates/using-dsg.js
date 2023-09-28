@@ -1,16 +1,13 @@
 import * as React from 'react';
 
-import Layout from '../components/layout';
-import Seo from '../components/seo';
-
 const UsingDSG = () => (
-  <Layout>
+  <div>
     <h1>
       Hello from a DSG Page
     </h1>
-  </Layout>
+  </div>
 );
 
-export const Head = () => <Seo title="Using DSG" />;
+export const Head = () => <title>Using DSG</title>;
 
 export default UsingDSG;

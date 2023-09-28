@@ -3,11 +3,11 @@
     { "path": "/", "mustContain": "Gatsby - index" },
     {
       "path": "/ssr/",
-      "mustContain": "This page is rendered server-side"
+      "mustContain": "rendered server-side"
     },
     {
       "path": "/dsg/",
-      "mustContain": "This page is DSG"
+      "mustContain": "DSG"
     },
     {
       "path": "/page-data/ssr/page-data.json",

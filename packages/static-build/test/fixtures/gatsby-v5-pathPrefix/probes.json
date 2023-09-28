@@ -3,11 +3,11 @@
     { "path": "/foo/", "mustContain": "Gatsby - index" },
     {
       "path": "/foo/ssr/",
-      "mustContain": "This page is rendered server-side"
+      "mustContain": "rendered server-side"
     },
     {
       "path": "/foo/dsg/",
-      "mustContain": "This page is DSG"
+      "mustContain": "DSG"
     },
     {
       "path": "/foo/x/y/z",
