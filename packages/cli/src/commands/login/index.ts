@@ -74,11 +74,9 @@ export default async function login(client: Client): Promise<number> {
   // Save the user's authentication token to the configuration file.
   client.authConfig.token = result.token;
 
-  // Save the user's team (possibly `undefined`) to the global configuration file.
-  client.config.currentTeam = result.teamId;
-
-  // Delete undefined `currentTeam` key to avoid writing key with no value to JSON file.
-  if (client.config.currentTeam === undefined) {
+  if (result.teamId) {
+    client.config.currentTeam = result.teamId;
+  } else {
     delete client.config.currentTeam;
   }
 
