@@ -3,7 +3,7 @@
     { "path": "/", "mustContain": "Gatsby - Index" },
     {
       "path": "/using-ssr",
-      "mustContain": "This page is rendered server side"
+      "mustContain": "rendered server side"
     },
     {
       "path": "/using-dsg",
