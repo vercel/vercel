@@ -78,7 +78,7 @@ export default async function login(client: Client): Promise<number> {
   client.config.currentTeam = result.teamId;
 
   // Delete undefined `currentTeam` key to avoid writing key with no value to JSON file.
-  if (!client.config.currentTeam === undefined) {
+  if (client.config.currentTeam === undefined) {
     delete client.config.currentTeam;
   }
 
