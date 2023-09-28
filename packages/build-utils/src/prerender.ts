@@ -172,7 +172,7 @@ export class Prerender {
     if (experimentalFallbackMetadataPrefixLength !== undefined) {
       if (typeof experimentalFallbackMetadataPrefixLength !== 'number') {
         throw new Error(
-          'The `experimentalFallbackMetadataPrefixLength` argument for `Prerender` must be a string.'
+          'The `experimentalFallbackMetadataPrefixLength` argument for `Prerender` must be a number.'
         );
       }
       this.experimentalFallbackMetadataPrefixLength =
