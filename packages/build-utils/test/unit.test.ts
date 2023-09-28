@@ -521,7 +521,7 @@ it('should support experimentalFallbackMetadataPrefixLength correctly', async ()
       experimentalFallbackMetadataPrefixLength: '1',
     });
   }).toThrowError(
-    `The \`experimentalFallbackMetadataPrefixLength\` argument for \`Prerender\` must be a string.`
+    `The \`experimentalFallbackMetadataPrefixLength\` argument for \`Prerender\` must be a number.`
   );
 });
 
