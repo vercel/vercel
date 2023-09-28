@@ -1,13 +1,13 @@
 {
   "probes": [
-    { "path": "/", "mustContain": "Gatsby - index" },
+    { "path": "/", "mustContain": "<h1>Gatsby - index</h1>" },
     {
       "path": "/ssr/",
-      "mustContain": "rendered server-side"
+      "mustContain": "<h1>This page is<!-- -->{serverData.message}</h1>"
     },
     {
       "path": "/dsg/",
-      "mustContain": "DSG"
+      "mustContain": "<h1>This page is DSG</h1>"
     },
     {
       "path": "/page-data/ssr/page-data.json",
