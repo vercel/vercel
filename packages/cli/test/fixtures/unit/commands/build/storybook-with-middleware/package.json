@@ -29,7 +29,7 @@
     "@storybook/react": "^7.0.6",
     "@storybook/testing-library": "^0.0.14-next.2",
     "storybook": "^7.0.6",
-    "esbuild": "0.18.20"
+    "esbuild": "0.19.2"
   },
   "engines": {
     "node": ">=16"
