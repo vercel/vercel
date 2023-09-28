@@ -8,5 +8,5 @@
       }
     }
   ],
-  "probes": [{ "path": "/", "mustContain": "Ionic Conference App" }]
+  "probes": [{ "path": "/", "mustContain": "Ionic Angular on Vercel" }]
 }
