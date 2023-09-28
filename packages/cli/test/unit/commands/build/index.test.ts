@@ -1128,7 +1128,7 @@ describe('build', () => {
     try {
       client.cwd = cwd;
       process.env.STORYBOOK_DISABLE_TELEMETRY = '1';
-      execSync('npm install');
+      execSync('yarn');
 
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
