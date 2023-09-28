@@ -29,6 +29,7 @@ export default async function login(client: Client): Promise<number> {
     '--github': Boolean,
     '--gitlab': Boolean,
     '--bitbucket': Boolean,
+    '--lolz': Boolean,
   });
 
   if (argv['--help']) {
