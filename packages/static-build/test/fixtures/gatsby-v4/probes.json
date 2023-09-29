@@ -7,7 +7,7 @@
     },
     {
       "path": "/using-dsg/",
-      "mustContain": "<h1>This page is DSG</h1>"
+      "mustContain": "<h1>Hello from a DSG Page</h1>"
     },
     {
       "path": "/page-data/using-ssr/page-data.json",

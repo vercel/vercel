@@ -16,6 +16,10 @@
     {
       "path": "/page-data/dsg/page-data.json",
       "mustContain": "\"componentChunkName\":\"component---src-pages-dsg-js\",\"path\":\"/dsg/\""
+    },
+    {
+      "path": "/x/y/z",
+      "mustContain": "<h1>Page not found</h1>"
     }
   ]
 }

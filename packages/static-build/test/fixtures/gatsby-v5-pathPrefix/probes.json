@@ -11,7 +11,7 @@
     },
     {
       "path": "/foo/x/y/z",
-      "mustContain": "Page not found"
+      "mustContain": "<h1>Page not found</h1>"
     }
   ]
 }
