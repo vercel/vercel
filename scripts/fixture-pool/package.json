@@ -1,0 +1,10 @@
+{
+  "dependencies": {
+    "piscina": "^4.1.0",
+    "typescript": "^5.2.2"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index"
+  }
+}
