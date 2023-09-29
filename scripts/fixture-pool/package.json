@@ -1,6 +1,7 @@
 {
   "dependencies": {
     "piscina": "^4.1.0",
+    "tap": "^18.4.0",
     "typescript": "^5.2.2"
   },
   "scripts": {

@@ -1,3 +1,4 @@
+import tap from 'tap';
 import Piscina from 'piscina';
 
 const fixtures = [
@@ -9,7 +10,11 @@ const fixtures = [
 const piscina = new Piscina({ filename: require.resolve('./worker') });
 
 const runs = Promise.all(
-  fixtures.flatMap(({ framework, versions }) => versions.map(version => piscina.run({ framework, version })))
+  fixtures.flatMap(({ framework, versions }) => versions.map(version =>
+    tap.test(`Testing framework ${framework}@${version}`, async (t) => {
+      t.resolveMatch(piscina.run({ framework, version }), true)
+    })
+  ))
 )
 
 runs.then(() => {
