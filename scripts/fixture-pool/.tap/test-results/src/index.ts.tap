@@ -1,0 +1,75 @@
+TAP version 14
+# Subtest: Testing framework nextjs@13
+Deploying fixture: nextjs@13
+Checking probes...
+Success!
+    ok 1 - expected to resolve and match provided pattern
+    1..1
+ok 1 - Testing framework nextjs@13 # time=329.105ms
+
+# Subtest: Testing framework nextjs@12
+Deploying fixture: nextjs@12
+Checking probes...
+Success!
+    ok 1 - expected to resolve and match provided pattern
+    1..1
+ok 2 - Testing framework nextjs@12 # time=7.979ms
+
+# Subtest: Testing framework nextjs@11
+Deploying fixture: nextjs@11
+Checking probes...
+Success!
+    ok 1 - expected to resolve and match provided pattern
+    1..1
+ok 3 - Testing framework nextjs@11 # time=8.656ms
+
+# Subtest: Testing framework nextjs@10
+Deploying fixture: nextjs@10
+Checking probes...
+Success!
+    ok 1 - expected to resolve and match provided pattern
+    1..1
+ok 4 - Testing framework nextjs@10 # time=7.796ms
+
+# Subtest: Testing framework nextjs@9
+Deploying fixture: nextjs@9
+Checking probes...
+Success!
+    ok 1 - expected to resolve and match provided pattern
+    1..1
+ok 5 - Testing framework nextjs@9 # time=8.124ms
+
+# Subtest: Testing framework svelte@3
+Deploying fixture: svelte@3
+Checking probes...
+Success!
+    ok 1 - expected to resolve and match provided pattern
+    1..1
+ok 6 - Testing framework svelte@3 # time=9.166ms
+
+# Subtest: Testing framework svelte@4
+Deploying fixture: svelte@4
+Checking probes...
+Success!
+    ok 1 - expected to resolve and match provided pattern
+    1..1
+ok 7 - Testing framework svelte@4 # time=7.716ms
+
+# Subtest: Testing framework astro@3
+Deploying fixture: astro@3
+Checking probes...
+Success!
+    ok 1 - expected to resolve and match provided pattern
+    1..1
+ok 8 - Testing framework astro@3 # time=8.838ms
+
+# Subtest: Testing framework astro@2
+Deploying fixture: astro@2
+Checking probes...
+Success!
+    ok 1 - expected to resolve and match provided pattern
+    1..1
+ok 9 - Testing framework astro@2 # time=7.842ms
+
+Done!
+1..9

@@ -1,0 +1,33 @@
+{
+  "date": "2023-09-29T20:32:10.522Z",
+  "argv": [
+    "/Users/ethanarrowood/Library/Application Support/fnm/node-versions/v18.18.0/installation/bin/node",
+    "/Users/ethanarrowood/Documents/github/vercel/vercel/scripts/fixture-pool/src/index.ts"
+  ],
+  "execArgv": [
+    "--loader=file:///Users/ethanarrowood/Documents/github/vercel/vercel/scripts/fixture-pool/node_modules/.pnpm/@tapjs+run@1.4.0_@tapjs+core@1.3.4_@types+node@20.7.2_react-dom@18.2.0_react@18.2.0_typescript@5.2.2/node_modules/ts-node/esm.mjs",
+    "--loader=file:///Users/ethanarrowood/Documents/github/vercel/vercel/scripts/fixture-pool/node_modules/.pnpm/node_modules/@tapjs/mock/dist/esm/legacy-loader.mjs",
+    "--no-warnings",
+    "--enable-source-maps",
+    "--loader=file:///Users/ethanarrowood/Documents/github/vercel/vercel/scripts/fixture-pool/node_modules/.pnpm/@tapjs+run@1.4.0_@tapjs+core@1.3.4_@types+node@20.7.2_react-dom@18.2.0_react@18.2.0_typescript@5.2.2/node_modules/@tapjs/processinfo/dist/esm/loader.mjs"
+  ],
+  "NODE_OPTIONS": "\"--loader=file:///Users/ethanarrowood/Documents/github/vercel/vercel/scripts/fixture-pool/node_modules/.pnpm/@tapjs+processinfo@3.1.2/node_modules/@tapjs/processinfo/dist/esm/loader-legacy.mjs\" \"--no-warnings\"",
+  "cwd": "/Users/ethanarrowood/Documents/github/vercel/vercel/scripts/fixture-pool",
+  "pid": 58494,
+  "ppid": 58488,
+  "parent": null,
+  "uuid": "f92d0b6d-6ff6-4841-8c0c-b54d7c88b526",
+  "files": [
+    "/Users/ethanarrowood/Documents/github/vercel/vercel/scripts/fixture-pool/src/index.ts"
+  ],
+  "sources": {
+    "/Users/ethanarrowood/Documents/github/vercel/vercel/scripts/fixture-pool/src/index.ts": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/scripts/fixture-pool/src/index.ts"
+    ]
+  },
+  "root": "f92d0b6d-6ff6-4841-8c0c-b54d7c88b526",
+  "externalID": "src/index.ts",
+  "code": 0,
+  "signal": null,
+  "runtime": 671.425917
+}
