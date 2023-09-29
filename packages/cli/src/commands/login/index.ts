@@ -32,7 +32,6 @@ export default async function login(client: Client): Promise<number> {
     '--github': Boolean,
     '--gitlab': Boolean,
     '--bitbucket': Boolean,
-    '--test': Boolean,
   });
 
   if (argv['--help']) {
