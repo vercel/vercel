@@ -106,6 +106,7 @@ export interface BuildsManifest {
   argv: string[];
   error?: any;
   builds?: SerializedBuilder[];
+  features?: { speedInsights: boolean };
 }
 
 export default async function main(client: Client): Promise<number> {
@@ -249,10 +250,13 @@ export default async function main(client: Client): Promise<number> {
       output.debug(`Loaded environment variables from "${envPath}"`);
     }
 
-    // For Vercel Speed Insights support
-    if (project.settings.analyticsId) {
-      envToUnset.add('VERCEL_ANALYTICS_ID');
-      process.env.VERCEL_ANALYTICS_ID = project.settings.analyticsId;
+    // For Vercel Legacy speed Insights support
+    if (process.env.VERCEL_ANALYTICS_ID) {
+      output.warn(
+        `The \`VERCEL_ANALYTICS_ID\` environment variable is deprecated and will be removed in a future release. Please remove it from your environment variables`
+      );
+
+      delete process.env.VERCEL_ANALYTICS_ID;
     }
 
     // Some build processes use these env vars to platform detect Vercel
@@ -428,21 +432,18 @@ async function doBuild(
 
   const ops: Promise<Error | void>[] = [];
 
-  const dependencies = [
-    ...Object.keys(pkg?.dependencies ?? {}),
-    ...Object.keys(pkg?.devDependencies ?? {}),
-  ];
+  if (isUsingSpeedInsights(pkg)) {
+    if (process.env.VERCEL_ANALYTICS_ID) {
+      output.warn(
+        `The \`VERCEL_ANALYTICS_ID\` environment variable is deprecated and will be removed in a future release. Please remove it from your environment variables`
+      );
 
-  const isUsingSpeedInsights = dependencies.some(
-    d => d === '@vercel/speed-insights'
-  );
-
-  if (isUsingSpeedInsights && process.env.VERCEL_ANALYTICS_ID) {
-    output.warn(
-      `The \`VERCEL_ANALYTICS_ID\` environment variable is deprecated and will be removed in a future release. Please remove it from your environment variables`
-    );
-
-    delete process.env.VERCEL_ANALYTICS_ID;
+      delete process.env.VERCEL_ANALYTICS_ID;
+    }
+    buildsJson.features = {
+      ...(buildsJson.features ?? {}),
+      speedInsights: true,
+    };
   }
 
   // Write the `detectedBuilders` result to output dir
@@ -806,4 +807,13 @@ function mergeFlags(
 
     return [];
   });
+}
+
+function isUsingSpeedInsights(pkg: PackageJson | null): boolean {
+  const dependencies = [
+    ...Object.keys(pkg?.dependencies ?? {}),
+    ...Object.keys(pkg?.devDependencies ?? {}),
+  ];
+
+  return dependencies.some(d => d === '@vercel/speed-insights');
 }
