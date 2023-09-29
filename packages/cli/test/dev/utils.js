@@ -148,7 +148,6 @@ async function runNpmInstall(fixturePath) {
       cwd: fixturePath,
       shell: true,
       stdio: 'inherit',
-      stderr: 'string',
     });
   }
 }
