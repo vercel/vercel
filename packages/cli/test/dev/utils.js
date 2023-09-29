@@ -149,7 +149,7 @@ async function runNpmInstall(fixturePath) {
       result = await execa('npm', ['install'], {
         cwd: fixturePath,
         shell: true,
-        stdio: 'string',
+        stdio: 'inherit',
       });
     } catch (e) {
       console.error(result.stderr);
