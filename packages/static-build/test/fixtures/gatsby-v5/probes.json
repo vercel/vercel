@@ -1,6 +1,6 @@
 {
   "probes": [
-    { "path": "/", "mustContain": "<h1>Gatsby - index</h1>" },
+    { "path": "/", "mustContain": "<h1>Gatsby - Index</h1>" },
     {
       "path": "/ssr/",
       "mustContain": "<h1>This page is <!-- -->rendered server side</h1>"

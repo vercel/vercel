@@ -16,6 +16,6 @@ export default UsingSSR;
 
 export async function getServerData() {
   return {
-    props: { message: 'rendered server-side' },
+    props: { message: 'rendered server side' },
   }
 }

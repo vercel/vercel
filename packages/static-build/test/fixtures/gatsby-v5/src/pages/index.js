@@ -3,7 +3,7 @@ import * as React from 'react';
 const IndexPage = () => {
   return (
     <main>
-      <h1>Gatsby - index</h1>
+      <h1>Gatsby - Index</h1>
     </main>
   );
 };
