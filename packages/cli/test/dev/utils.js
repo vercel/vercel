@@ -152,6 +152,7 @@ async function runNpmInstall(fixturePath) {
         stdio: 'inherit',
       });
     } catch (e) {
+      console.error(e.message);
       console.error(result.stderr);
     }
   }
