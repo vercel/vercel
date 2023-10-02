@@ -20,6 +20,5 @@ describe('alias', () => {
     const exitCodePromise = alias(client);
     await expect(exitCodePromise).resolves.toEqual(0);
     await expect(client.stdout).toOutput('dummy-1.app');
-    await expect(true).toEqual(false);
   });
 });
