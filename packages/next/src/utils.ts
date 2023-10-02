@@ -2520,6 +2520,11 @@ export function normalizeEdgeFunctionPath(
   if (!shortPath || shortPath === '/') {
     shortPath = 'index';
   }
+
+  if (shortPath.startsWith('pages/')) {
+    shortPath = shortPath.replace(/^pages\//, '');
+  }
+
   return shortPath;
 }
 
