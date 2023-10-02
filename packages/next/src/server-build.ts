@@ -111,7 +111,6 @@ export async function serverBuild({
   omittedPrerenderRoutes,
   trailingSlashRedirects,
   isCorrectLocaleAPIRoutes,
-  lambdaCompressedByteLimit,
   requiredServerFilesManifest,
   variantsManifest,
 }: {
@@ -149,7 +148,6 @@ export async function serverBuild({
   hasIsr500Page: boolean;
   trailingSlashRedirects: Route[];
   routesManifest: RoutesManifest;
-  lambdaCompressedByteLimit: number;
   isCorrectLocaleAPIRoutes: boolean;
   imagesManifest?: NextImagesManifest;
   prerenderManifest: NextPrerenderedRoutes;
@@ -572,32 +570,19 @@ export async function serverBuild({
     );
     initialPseudoLayer.pseudoLayerBytes += requiredFilesLayer.pseudoLayerBytes;
 
-    const uncompressedInitialSize = Object.keys(
-      initialPseudoLayer.pseudoLayer
-    ).reduce((prev, cur) => {
-      const file = initialPseudoLayer.pseudoLayer[cur] as PseudoFile;
-      return prev + file.uncompressedSize || 0;
-    }, 0);
-
     debug(
       JSON.stringify(
         {
-          uncompressedInitialSize,
-          compressedInitialSize: initialPseudoLayer.pseudoLayerBytes,
+          initializeSizeUncompressed: initialPseudoLayer.pseudoLayerBytes,
         },
         null,
         2
       )
     );
 
-    if (
-      initialPseudoLayer.pseudoLayerBytes > lambdaCompressedByteLimit ||
-      uncompressedInitialSize > MAX_UNCOMPRESSED_LAMBDA_SIZE
-    ) {
+    if (initialPseudoLayer.pseudoLayerBytes > MAX_UNCOMPRESSED_LAMBDA_SIZE) {
       console.log(
         `Warning: Max serverless function size of ${prettyBytes(
-          lambdaCompressedByteLimit
-        )} compressed or ${prettyBytes(
           MAX_UNCOMPRESSED_LAMBDA_SIZE
         )} uncompressed reached`
       );
@@ -606,12 +591,11 @@ export async function serverBuild({
         [],
         initialPseudoLayer.pseudoLayer,
         initialPseudoLayer.pseudoLayerBytes,
-        uncompressedInitialSize,
         {}
       );
 
       throw new NowBuildError({
-        message: `Required files read using Node.js fs library and node_modules exceed max lambda size of ${lambdaCompressedByteLimit} bytes`,
+        message: `Required files read using Node.js fs library and node_modules exceed max lambda size of ${MAX_UNCOMPRESSED_LAMBDA_SIZE} bytes`,
         code: 'NEXT_REQUIRED_FILES_LIMIT',
         link: 'https://vercel.com/docs/platform/limits#serverless-function-size',
       });
@@ -840,8 +824,6 @@ export async function serverBuild({
       compressedPages,
       tracedPseudoLayer: tracedPseudoLayer.pseudoLayer,
       initialPseudoLayer,
-      lambdaCompressedByteLimit,
-      initialPseudoLayerUncompressed: uncompressedInitialSize,
       internalPages,
       pageExtensions,
     });
@@ -860,8 +842,6 @@ export async function serverBuild({
       compressedPages,
       tracedPseudoLayer: tracedPseudoLayer.pseudoLayer,
       initialPseudoLayer,
-      lambdaCompressedByteLimit,
-      initialPseudoLayerUncompressed: uncompressedInitialSize,
       internalPages,
       pageExtensions,
     });
@@ -876,8 +856,6 @@ export async function serverBuild({
       compressedPages,
       tracedPseudoLayer: tracedPseudoLayer.pseudoLayer,
       initialPseudoLayer,
-      lambdaCompressedByteLimit,
-      initialPseudoLayerUncompressed: uncompressedInitialSize,
       internalPages,
       pageExtensions,
     });
@@ -907,8 +885,6 @@ export async function serverBuild({
       compressedPages,
       tracedPseudoLayer: tracedPseudoLayer.pseudoLayer,
       initialPseudoLayer,
-      initialPseudoLayerUncompressed: uncompressedInitialSize,
-      lambdaCompressedByteLimit,
       internalPages,
       pageExtensions,
     });
@@ -924,26 +900,22 @@ export async function serverBuild({
             pages: group.pages,
             isPrerender: group.isPrerenders,
             pseudoLayerBytes: group.pseudoLayerBytes,
-            uncompressedLayerBytes: group.pseudoLayerUncompressedBytes,
           })),
           pageLambdaGroups: pageLambdaGroups.map(group => ({
             pages: group.pages,
             isPrerender: group.isPrerenders,
             pseudoLayerBytes: group.pseudoLayerBytes,
-            uncompressedLayerBytes: group.pseudoLayerUncompressedBytes,
           })),
           appRouterLambdaGroups: appRouterLambdaGroups.map(group => ({
             pages: group.pages,
             isPrerender: group.isPrerenders,
             pseudoLayerBytes: group.pseudoLayerBytes,
-            uncompressedLayerBytes: group.pseudoLayerUncompressedBytes,
           })),
           appRouteHandlersLambdaGroups: appRouteHandlersLambdaGroups.map(
             group => ({
               pages: group.pages,
               isPrerender: group.isPrerenders,
               pseudoLayerBytes: group.pseudoLayerBytes,
-              uncompressedLayerBytes: group.pseudoLayerUncompressedBytes,
             })
           ),
           nextServerLayerSize: initialPseudoLayer.pseudoLayerBytes,
@@ -959,11 +931,7 @@ export async function serverBuild({
       ...appRouteHandlersLambdaGroups,
     ];
 
-    await detectLambdaLimitExceeding(
-      combinedGroups,
-      lambdaCompressedByteLimit,
-      compressedPages
-    );
+    await detectLambdaLimitExceeding(combinedGroups, compressedPages);
 
     await Promise.all(
       combinedGroups.map(async group => {
