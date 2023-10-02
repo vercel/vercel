@@ -92,7 +92,7 @@ jobs:
           VERCEL_TEST_REGISTRATION_URL: ${{ secrets.VERCEL_TEST_REGISTRATION_URL }}
           FORCE_COLOR: '1'
       - name: 'Determine Turbo HIT or MISS'
-        if: !cancelled()
+        if: ${{ !cancelled() }}
         id: turbo-summary
         shell: bash
         run: |
