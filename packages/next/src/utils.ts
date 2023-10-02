@@ -9,7 +9,6 @@ import {
   Prerender,
   getLambdaOptionsFromFunction,
   getPlatformEnv,
-  streamToBuffer,
   NowBuildError,
   isSymbolicLink,
   NodejsLambda,
@@ -25,11 +24,9 @@ import type {
   RouteWithSrc,
 } from '@vercel/routing-utils';
 import { Sema } from 'async-sema';
-import crc32 from 'buffer-crc32';
 import fs, { lstat, stat } from 'fs-extra';
 import path from 'path';
 import semver from 'semver';
-import zlib from 'zlib';
 import url from 'url';
 import { createRequire } from 'module';
 import escapeStringRegexp from 'escape-string-regexp';
@@ -44,7 +41,6 @@ import {
   MIB,
   KIB,
   MAX_UNCOMPRESSED_LAMBDA_SIZE,
-  LAMBDA_RESERVED_COMPRESSED_SIZE,
   LAMBDA_RESERVED_UNCOMPRESSED_SIZE,
 } from './constants';
 
@@ -677,35 +673,34 @@ export function getFilesMapFromReasons(
   return parentFilesMap;
 }
 
-export const collectTracedFiles =
-  (
-    baseDir: string,
-    lstatResults: { [key: string]: ReturnType<typeof lstat> },
-    lstatSema: Sema,
-    reasons: NodeFileTraceReasons,
-    files: { [filePath: string]: FileFsRef }
-  ) =>
-  async (file: string) => {
-    const reason = reasons.get(file);
-    if (reason && reason.type.includes('initial')) {
-      // Initial files are manually added to the lambda later
-      return;
-    }
-    const filePath = path.join(baseDir, file);
+export const collectTracedFiles = async (
+  file: string,
+  baseDir: string,
+  lstatResults: { [key: string]: ReturnType<typeof lstat> },
+  lstatSema: Sema,
+  reasons: NodeFileTraceReasons,
+  files: { [filePath: string]: FileFsRef }
+) => {
+  const reason = reasons.get(file);
+  if (reason && reason.type.includes('initial')) {
+    // Initial files are manually added to the lambda later
+    return;
+  }
+  const filePath = path.join(baseDir, file);
 
-    if (!lstatResults[filePath]) {
-      lstatResults[filePath] = lstatSema
-        .acquire()
-        .then(() => lstat(filePath))
-        .finally(() => lstatSema.release());
-    }
-    const { mode } = await lstatResults[filePath];
+  if (!lstatResults[filePath]) {
+    lstatResults[filePath] = lstatSema
+      .acquire()
+      .then(() => lstat(filePath))
+      .finally(() => lstatSema.release());
+  }
+  const { mode } = await lstatResults[filePath];
 
-    files[file] = new FileFsRef({
-      fsPath: path.join(baseDir, file),
-      mode,
-    });
-  };
+  files[file] = new FileFsRef({
+    fsPath: path.join(baseDir, file),
+    mode,
+  });
+};
 
 export const ExperimentalTraceVersion = `9.0.4-canary.1`;
 
@@ -716,8 +711,6 @@ export type PseudoLayer = {
 export type PseudoFile = {
   file: FileFsRef;
   isSymlink: false;
-  crc32: number;
-  compBuffer: Buffer;
   uncompressedSize: number;
 };
 
@@ -727,54 +720,57 @@ export type PseudoSymbolicLink = {
   symlinkTarget: string;
 };
 
-const compressBuffer = (buf: Buffer): Promise<Buffer> => {
-  return new Promise((resolve, reject) => {
-    zlib.deflateRaw(
-      buf,
-      { level: zlib.constants.Z_BEST_COMPRESSION },
-      (err, compBuf) => {
-        if (err) return reject(err);
-        resolve(compBuf);
-      }
-    );
-  });
-};
-
 export type PseudoLayerResult = {
   pseudoLayer: PseudoLayer;
   pseudoLayerBytes: number;
 };
 
-export async function createPseudoLayer(files: {
-  [fileName: string]: FileFsRef;
+export async function createPseudoLayer({
+  files,
+  lstatSema,
+  lstatResults,
+}: {
+  lstatSema: Sema;
+  lstatResults: { [key: string]: ReturnType<typeof lstat> };
+  files: {
+    [fileName: string]: FileFsRef;
+  };
 }): Promise<PseudoLayerResult> {
-  const pseudoLayer: PseudoLayer = {};
   let pseudoLayerBytes = 0;
+  const pseudoLayer: PseudoLayer = {};
+  const fileNames = Object.keys(files);
 
-  for (const fileName of Object.keys(files)) {
-    const file = files[fileName];
+  await Promise.all(
+    fileNames.map(async fileName => {
+      await lstatSema.acquire();
+      const file = files[fileName];
 
-    if (isSymbolicLink(file.mode)) {
-      const symlinkTarget = await fs.readlink(file.fsPath);
-      pseudoLayer[fileName] = {
-        file,
-        isSymlink: true,
-        symlinkTarget,
-      };
-    } else {
-      const origBuffer = await streamToBuffer(file.toStream());
-      const compBuffer = await compressBuffer(origBuffer);
-      pseudoLayerBytes += compBuffer.byteLength;
-      pseudoLayer[fileName] = {
-        file,
-        compBuffer,
-        isSymlink: false,
-        crc32: crc32.unsigned(origBuffer),
-        uncompressedSize: origBuffer.byteLength,
-      };
-    }
-  }
+      if (isSymbolicLink(file.mode)) {
+        const symlinkTarget = await fs.readlink(file.fsPath);
+        pseudoLayer[fileName] = {
+          file,
+          isSymlink: true,
+          symlinkTarget,
+        };
+      } else {
+        if (!lstatResults[file.fsPath]) {
+          lstatResults[file.fsPath] = lstatSema
+            .acquire()
+            .then(() => lstat(file.fsPath))
+            .finally(() => lstatSema.release());
+        }
+        const { size } = await lstatResults[file.fsPath];
 
+        pseudoLayerBytes += size;
+        pseudoLayer[fileName] = {
+          file,
+          isSymlink: false,
+          uncompressedSize: size,
+        };
+      }
+      lstatSema.release();
+    })
+  );
   return { pseudoLayer, pseudoLayerBytes };
 }
 
@@ -784,10 +780,6 @@ interface CreateLambdaFromPseudoLayersOptions extends LambdaOptionsWithFiles {
   nextVersion?: string;
 }
 
-// measured with 1, 2, 5, 10, and `os.cpus().length || 5`
-// and sema(1) produced the best results
-const createLambdaSema = new Sema(1);
-
 export async function createLambdaFromPseudoLayers({
   files: baseFiles,
   layers,
@@ -795,8 +787,6 @@ export async function createLambdaFromPseudoLayers({
   nextVersion,
   ...lambdaOptions
 }: CreateLambdaFromPseudoLayersOptions) {
-  await createLambdaSema.acquire();
-
   const files: Files = {};
   const addedFiles = new Set();
 
@@ -822,8 +812,6 @@ export async function createLambdaFromPseudoLayers({
     files[fileName] = file;
     addedFiles.add(fileName);
   }
-
-  createLambdaSema.release();
 
   return new NodejsLambda({
     ...lambdaOptions,
@@ -1435,7 +1423,6 @@ export async function getPageLambdaGroups({
   tracedPseudoLayer,
   initialPseudoLayer,
   initialPseudoLayerUncompressed,
-  lambdaCompressedByteLimit,
   internalPages,
   pageExtensions,
 }: {
@@ -1497,7 +1484,6 @@ export async function getPageLambdaGroups({
         group.isPrerenders === isPrerenderRoute;
 
       if (matches) {
-        let newTracedFilesSize = group.pseudoLayerBytes;
         let newTracedFilesUncompressedSize = group.pseudoLayerUncompressedBytes;
 
         for (const newPage of newPages) {
@@ -1505,11 +1491,9 @@ export async function getPageLambdaGroups({
             if (!group.pseudoLayer[file]) {
               const item = tracedPseudoLayer[file] as PseudoFile;
 
-              newTracedFilesSize += item.compBuffer?.byteLength || 0;
               newTracedFilesUncompressedSize += item.uncompressedSize || 0;
             }
           });
-          newTracedFilesSize += compressedPages[newPage].compBuffer.byteLength;
           newTracedFilesUncompressedSize +=
             compressedPages[newPage].uncompressedSize;
         }
@@ -1517,11 +1501,8 @@ export async function getPageLambdaGroups({
         const underUncompressedLimit =
           newTracedFilesUncompressedSize <
           MAX_UNCOMPRESSED_LAMBDA_SIZE - LAMBDA_RESERVED_UNCOMPRESSED_SIZE;
-        const underCompressedLimit =
-          newTracedFilesSize <
-          lambdaCompressedByteLimit - LAMBDA_RESERVED_COMPRESSED_SIZE;
 
-        return underUncompressedLimit && underCompressedLimit;
+        return underUncompressedLimit;
       }
       return false;
     });
@@ -1545,11 +1526,9 @@ export async function getPageLambdaGroups({
     for (const newPage of newPages) {
       Object.keys(pageTraces[newPage] || {}).map(file => {
         const pseudoItem = tracedPseudoLayer[file] as PseudoFile;
-        const compressedSize = pseudoItem?.compBuffer?.byteLength || 0;
 
         if (!matchingGroup!.pseudoLayer[file]) {
           matchingGroup!.pseudoLayer[file] = pseudoItem;
-          matchingGroup!.pseudoLayerBytes += compressedSize;
           matchingGroup!.pseudoLayerUncompressedBytes +=
             pseudoItem.uncompressedSize || 0;
         }
@@ -1557,8 +1536,6 @@ export async function getPageLambdaGroups({
 
       // ensure the page file itself is accounted for when grouping as
       // large pages can be created that can push the group over the limit
-      matchingGroup!.pseudoLayerBytes +=
-        compressedPages[newPage].compBuffer.byteLength;
       matchingGroup!.pseudoLayerUncompressedBytes +=
         compressedPages[newPage].uncompressedSize;
     }
@@ -1583,15 +1560,10 @@ export const outputFunctionFileSizeInfo = (
       ', '
     )}`
   );
-  exceededLimitOutput.push([
-    'Large Dependencies',
-    'Uncompressed size',
-    'Compressed size',
-  ]);
+  exceededLimitOutput.push(['Large Dependencies', 'Uncompressed size']);
 
   const dependencies: {
     [key: string]: {
-      compressed: number;
       uncompressed: number;
     };
   } = {};
@@ -1603,19 +1575,16 @@ export const outputFunctionFileSizeInfo = (
 
       if (!dependencies[depKey]) {
         dependencies[depKey] = {
-          compressed: 0,
           uncompressed: 0,
         };
       }
 
-      dependencies[depKey].compressed += fileItem.compBuffer.byteLength;
       dependencies[depKey].uncompressed += fileItem.uncompressedSize;
     }
   }
 
   for (const page of pages) {
     dependencies[`pages/${page}`] = {
-      compressed: compressedPages[page].compBuffer.byteLength,
       uncompressed: compressedPages[page].uncompressedSize,
     };
   }
@@ -1627,10 +1596,10 @@ export const outputFunctionFileSizeInfo = (
       const aDep = dependencies[a];
       const bDep = dependencies[b];
 
-      if (aDep.compressed > bDep.compressed) {
+      if (aDep.uncompressed > bDep.uncompressed) {
         return -1;
       }
-      if (aDep.compressed < bDep.compressed) {
+      if (aDep.uncompressed < bDep.uncompressed) {
         return 1;
       }
       return 0;
@@ -1638,15 +1607,11 @@ export const outputFunctionFileSizeInfo = (
     .forEach(depKey => {
       const dep = dependencies[depKey];
 
-      if (dep.compressed < 100 * KIB && dep.uncompressed < 500 * KIB) {
+      if (dep.uncompressed < 500 * KIB) {
         // ignore smaller dependencies to reduce noise
         return;
       }
-      exceededLimitOutput.push([
-        depKey,
-        prettyBytes(dep.uncompressed),
-        prettyBytes(dep.compressed),
-      ]);
+      exceededLimitOutput.push([depKey, prettyBytes(dep.uncompressed)]);
       numLargeDependencies += 1;
     });
 
@@ -1678,7 +1643,6 @@ export const detectLambdaLimitExceeding = async (
   }
 ) => {
   // show debug info if within 5 MB of exceeding the limit
-  const COMPRESSED_SIZE_LIMIT_CLOSE = compressedSizeLimit - 5 * MIB;
   const UNCOMPRESSED_SIZE_LIMIT_CLOSE = MAX_UNCOMPRESSED_LAMBDA_SIZE - 5 * MIB;
 
   let numExceededLimit = 0;
@@ -1693,7 +1657,6 @@ export const detectLambdaLimitExceeding = async (
       group.pseudoLayerUncompressedBytes > MAX_UNCOMPRESSED_LAMBDA_SIZE;
 
     const closeToLimit =
-      group.pseudoLayerBytes > COMPRESSED_SIZE_LIMIT_CLOSE ||
       group.pseudoLayerUncompressedBytes > UNCOMPRESSED_SIZE_LIMIT_CLOSE;
 
     if (
@@ -2567,10 +2530,13 @@ export function normalizeEdgeFunctionPath(
       appPathRoutesManifest[ogRoute] ||
       shortPath.replace(/(^|\/)(page|route)$/, '')
     ).replace(/^\//, '');
+  }
 
-    if (!shortPath || shortPath === '/') {
-      shortPath = 'index';
-    }
+  if (shortPath.startsWith('pages/')) {
+    shortPath = shortPath.replace(/^pages\//, '');
+  }
+  if (!shortPath || shortPath === '/') {
+    shortPath = 'index';
   }
   return shortPath;
 }

@@ -1449,6 +1449,8 @@ export const build: BuildV2 = async ({
     let tracedPseudoLayer: PseudoLayerResult | undefined;
     const apiPages: string[] = [];
     const nonApiPages: string[] = [];
+    const lstatSema = new Sema(25);
+    const lstatResults: { [key: string]: ReturnType<typeof lstat> } = {};
 
     for (const page of pageKeys) {
       const pagePath = pages[page].fsPath;
@@ -1464,7 +1466,11 @@ export const build: BuildV2 = async ({
 
       compressedPages[page] = (
         await createPseudoLayer({
-          [page]: pages[page],
+          files: {
+            [page]: pages[page],
+          },
+          lstatResults,
+          lstatSema,
         })
       ).pseudoLayer[page] as PseudoFile;
     }
@@ -1482,8 +1488,6 @@ export const build: BuildV2 = async ({
       }
 
       const nftCache = Object.create(null);
-      const lstatSema = new Sema(25);
-      const lstatResults: { [key: string]: ReturnType<typeof lstat> } = {};
       const pathsToTrace = mergedPageKeys.map(page => pages[page].fsPath);
 
       const result = await nodeFileTrace(pathsToTrace, {
@@ -1512,15 +1516,16 @@ export const build: BuildV2 = async ({
         const reasons = result.reasons;
 
         await Promise.all(
-          Array.from(fileList).map(
-            collectTracedFiles(
+          Array.from(fileList).map(async file => {
+            await collectTracedFiles(
+              file,
               baseDir,
               lstatResults,
               lstatSema,
               reasons,
               tracedFiles
-            )
-          )
+            );
+          })
         );
         pageTraces[page] = tracedFiles;
       }
@@ -1536,12 +1541,14 @@ export const build: BuildV2 = async ({
       if (hasLambdas) {
         console.time(zippingLabel);
       }
-      tracedPseudoLayer = await createPseudoLayer(
-        mergedPageKeys.reduce((prev, page) => {
+      tracedPseudoLayer = await createPseudoLayer({
+        files: mergedPageKeys.reduce((prev, page) => {
           Object.assign(prev, pageTraces[page]);
           return prev;
-        }, {})
-      );
+        }, {}),
+        lstatResults,
+        lstatSema,
+      });
 
       if (hasLambdas) {
         console.timeEnd(zippingLabel);
