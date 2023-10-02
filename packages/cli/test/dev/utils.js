@@ -144,17 +144,11 @@ async function exec(directory, args = []) {
 
 async function runNpmInstall(fixturePath) {
   if (await fs.pathExists(join(fixturePath, 'package.json'))) {
-    let result;
-    try {
-      result = await execa('npm', ['install'], {
-        cwd: fixturePath,
-        shell: true,
-        stdio: 'inherit',
-      });
-    } catch (e) {
-      console.error(e.message);
-      console.error(result.stderr);
-    }
+    await execa('npm', ['install'], {
+      cwd: fixturePath,
+      shell: true,
+      stdio: 'inherit',
+    });
   }
 }
 
