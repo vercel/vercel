@@ -1,5 +1,19 @@
 # @vercel/next
 
+## 4.0.9
+
+### Patch Changes
+
+- Correct output file tracing and limit calculation ([#10631](https://github.com/vercel/vercel/pull/10631))
+
+- Fix the instrumentation hook on Next.js Edge Functions ([#10608](https://github.com/vercel/vercel/pull/10608))
+
+- [next] fix lambda creation for i18n edge pages ([#10630](https://github.com/vercel/vercel/pull/10630))
+
+- Revert "[next][node][redwood][remix] Update @vercel/nft (#10540)" ([#10633](https://github.com/vercel/vercel/pull/10633))
+
+- Update `@vercel/nft` to 0.24.2 ([#10644](https://github.com/vercel/vercel/pull/10644))
+
 ## 4.0.8
 
 ### Patch Changes

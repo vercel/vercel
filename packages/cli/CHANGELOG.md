@@ -1,5 +1,28 @@
 # vercel
 
+## 32.4.0
+
+### Minor Changes
+
+- Restore unsetting teamId for non-team accounts ([#10612](https://github.com/vercel/vercel/pull/10612))
+
+### Patch Changes
+
+- remove unused source map pkg ([#10577](https://github.com/vercel/vercel/pull/10577))
+
+- disable source map for prod build ([#10575](https://github.com/vercel/vercel/pull/10575))
+
+- Better rendering upon authentication error in `vc cert ls` ([#10551](https://github.com/vercel/vercel/pull/10551))
+
+- Updated dependencies [[`e9026c7a6`](https://github.com/vercel/vercel/commit/e9026c7a692937122e60e73b91100cf7009e022d), [`ea5bc8806`](https://github.com/vercel/vercel/commit/ea5bc8806276abf5ba14bdb4a966267497e5d14d), [`a4996e1c5`](https://github.com/vercel/vercel/commit/a4996e1c5a7e6986d5410b662014dc584c0f7c54), [`a18ed98f2`](https://github.com/vercel/vercel/commit/a18ed98f2df78fe1256410ea8676686564ed9b35), [`2f5b0aeeb`](https://github.com/vercel/vercel/commit/2f5b0aeeb183ed3ea8cbc68cb3bc3c949c486ada), [`09f1bbfa4`](https://github.com/vercel/vercel/commit/09f1bbfa41a87cf0063a3fb3022b7531d03862b5), [`ce7e82fa7`](https://github.com/vercel/vercel/commit/ce7e82fa7aa6cec5f5d7b4953353b297b7ad1694)]:
+  - @vercel/next@4.0.9
+  - @vercel/go@3.0.3
+  - @vercel/build-utils@7.2.2
+  - @vercel/node@3.0.7
+  - @vercel/redwood@2.0.4
+  - @vercel/remix-builder@2.0.9
+  - @vercel/static-build@2.0.8
+
 ## 32.3.1
 
 ### Patch Changes
