@@ -8,9 +8,9 @@
     "node": "16.x"
   },
   "devDependencies": {
-    "saber": "latest",
-    "saber-theme-minima": "latest",
-    "saber-plugin-feed": "latest",
-    "saber-plugin-query-posts": "latest"
+    "saber": "^0.0.0",
+    "saber-theme-minima": "^0.0.0",
+    "saber-plugin-feed": "^0.0.0",
+    "saber-plugin-query-posts": "^0.0.0"
   }
 }
