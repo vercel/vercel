@@ -37,14 +37,14 @@ it('should ignore minor version in vercel dev', async () => {
 it('should select latest version when no Piplock detected', async () => {
   expect(
     getSupportedPythonVersion({ pipLockPythonVersion: undefined })
-  ).toHaveProperty('runtime', 'python3.9');
+  ).toHaveProperty('runtime', 'python3.11');
   expect(warningMessages).toStrictEqual([]);
 });
 
 it('should select latest version and warn when invalid Piplock detected', async () => {
   expect(
     getSupportedPythonVersion({ pipLockPythonVersion: '999' })
-  ).toHaveProperty('runtime', 'python3.9');
+  ).toHaveProperty('runtime', 'python3.11');
   expect(warningMessages).toStrictEqual([
     'Warning: Python version "999" detected in Pipfile.lock is invalid and will be ignored. http://vercel.link/python-version',
   ]);
