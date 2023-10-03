@@ -35,7 +35,9 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     }, {});
 
     const { output } = await build({
-      config: {},
+      config: {
+        installCommand: 'yarn',
+      },
       entrypoint: 'package.json',
       files,
       meta: {

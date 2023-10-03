@@ -91,7 +91,8 @@ jobs:
           VERCEL_TEST_TOKEN: ${{ secrets.VERCEL_TEST_TOKEN }}
           VERCEL_TEST_REGISTRATION_URL: ${{ secrets.VERCEL_TEST_REGISTRATION_URL }}
           FORCE_COLOR: '1'
-      - name: 'Determing Turbo HIT or MISS'
+      - name: 'Determine Turbo HIT or MISS'
+        if: ${{ !cancelled() }}
         id: turbo-summary
         shell: bash
         run: |
@@ -102,7 +103,7 @@ jobs:
         if: matrix.runner != 'windows-latest'
         run: echo | openssl s_client -showcerts -servername 'api.vercel.com' -connect 76.76.21.21:443
       - name: 'Upload Test Report to Datadog'
-        if: ${{ steps['turbo-summary'].outputs.misses != '0' && (success() || failure()) }}
+        if: ${{ steps['turbo-summary'].outputs.misses != '0' && !cancelled() }}
         run: 'npx @datadog/datadog-ci@2.18.1 junit upload --service vercel-cli .junit-reports'
         env:
           DATADOG_API_KEY: ${{secrets.DATADOG_API_KEY_CLI}}
