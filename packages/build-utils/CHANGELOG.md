@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 7.2.2
+
+### Patch Changes
+
+- [cli] Update bun detection and add tests for projects with both bunlock binary and yarn.lock text files ([#10583](https://github.com/vercel/vercel/pull/10583))
+
 ## 7.2.1
 
 ### Patch Changes

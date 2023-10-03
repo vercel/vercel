@@ -1,6 +1,6 @@
 {
   "name": "@vercel/node",
-  "version": "3.0.6",
+  "version": "3.0.7",
   "license": "Apache-2.0",
   "main": "./dist/index",
   "homepage": "https://vercel.com/docs/runtimes#official-runtimes/node-js",
@@ -23,7 +23,7 @@
     "@edge-runtime/primitives": "3.1.1",
     "@edge-runtime/vm": "3.1.1",
     "@types/node": "14.18.33",
-    "@vercel/build-utils": "7.2.1",
+    "@vercel/build-utils": "7.2.2",
     "@vercel/error-utils": "2.0.1",
     "@vercel/nft": "0.24.2",
     "@vercel/static-config": "3.0.0",

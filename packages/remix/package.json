@@ -1,6 +1,6 @@
 {
   "name": "@vercel/remix-builder",
-  "version": "2.0.8",
+  "version": "2.0.9",
   "license": "Apache-2.0",
   "main": "./dist/index.js",
   "homepage": "https://vercel.com/docs",
@@ -29,7 +29,7 @@
     "@types/jest": "27.5.1",
     "@types/node": "14.18.33",
     "@types/semver": "7.3.13",
-    "@vercel/build-utils": "7.2.1",
+    "@vercel/build-utils": "7.2.2",
     "jest-junit": "16.0.0",
     "path-to-regexp": "6.2.1",
     "semver": "7.5.2"
