@@ -245,8 +245,6 @@ it('Should invoke build command with serverless-no-config', async () => {
   ).toBeFalsy();
 });
 
-// TODO: should we delete these tests, they are unreliable as size can fluctuate
-// and also requires creating massive lambdas (> 250MB) to test
 // eslint-disable-next-line jest/no-disabled-tests
 it.skip('Should not exceed function limit for large dependencies (server build)', async () => {
   let logs = '';
@@ -352,8 +350,7 @@ it.skip('Should not exceed function limit for large dependencies (shared lambda)
   expect(logs).toContain('node_modules/chrome-aws-lambda/bin');
 });
 
-// eslint-disable-next-line jest/no-disabled-tests
-it.skip('Should provide lambda info when limit is hit (server build)', async () => {
+it('Should provide lambda info when limit is hit (server build)', async () => {
   let logs = '';
 
   const origLog = console.log;
@@ -376,7 +373,7 @@ it.skip('Should provide lambda info when limit is hit (server build)', async () 
     'Max serverless function size was exceeded for 2 functions'
   );
   expect(logs).toContain(
-    'Max serverless function size of 250 MB uncompressed reached'
+    'Max serverless function size of 50 MB compressed or 250 MB uncompressed reached'
   );
   expect(logs).toContain(`Serverless Function's page: api/both.js`);
   expect(logs).toMatch(
@@ -390,8 +387,7 @@ it.skip('Should provide lambda info when limit is hit (server build)', async () 
   expect(logs).toMatch(/big-image-2/);
 });
 
-// eslint-disable-next-line jest/no-disabled-tests
-it.skip('Should provide lambda info when limit is hit (shared lambdas)', async () => {
+it('Should provide lambda info when limit is hit (shared lambdas)', async () => {
   let logs = '';
 
   const origLog = console.log;
@@ -414,7 +410,7 @@ it.skip('Should provide lambda info when limit is hit (shared lambdas)', async (
     'Max serverless function size was exceeded for 1 function'
   );
   expect(logs).toContain(
-    'Max serverless function size of 250 MB uncompressed reached'
+    'Max serverless function size of 50 MB compressed or 250 MB uncompressed reached'
   );
   expect(logs).toContain(`Serverless Function's page: api/both.js`);
   expect(logs).toMatch(
@@ -426,8 +422,7 @@ it.skip('Should provide lambda info when limit is hit (shared lambdas)', async (
   expect(logs).toMatch(/node_modules\/@firebase\/firestore.*?\d{1}.*?MB/);
 });
 
-// eslint-disable-next-line jest/no-disabled-tests
-it.skip('Should provide lambda info when limit is hit for internal pages (server build)', async () => {
+it('Should provide lambda info when limit is hit for internal pages (server build)', async () => {
   let logs = '';
 
   const origLog = console.log;
@@ -447,7 +442,7 @@ it.skip('Should provide lambda info when limit is hit for internal pages (server
   console.log = origLog;
 
   expect(logs).toContain(
-    'Max serverless function size of 250 MB uncompressed reached'
+    'Max serverless function size of 50 MB compressed or 250 MB uncompressed reached'
   );
   // expect(logs).toContain(`Serverless Function's page: api/firebase.js`);
   expect(logs).toContain(`Serverless Function's page: api/chrome.js`);
@@ -463,8 +458,7 @@ it.skip('Should provide lambda info when limit is hit for internal pages (server
   expect(logs).toMatch(/public\/big-image-2\.jpg/);
 });
 
-// eslint-disable-next-line jest/no-disabled-tests
-it.skip('Should provide lambda info when limit is hit (uncompressed)', async () => {
+it('Should provide lambda info when limit is hit (uncompressed)', async () => {
   let logs = '';
 
   const origLog = console.log;
@@ -487,7 +481,7 @@ it.skip('Should provide lambda info when limit is hit (uncompressed)', async () 
     'Max serverless function size was exceeded for 1 function'
   );
   expect(logs).toContain(
-    'Max serverless function size of 250 MB uncompressed reached'
+    'Max serverless function size of 50 MB compressed or 250 MB uncompressed reached'
   );
   expect(logs).toContain(`Serverless Function's page: api/hello.js`);
   expect(logs).toMatch(
