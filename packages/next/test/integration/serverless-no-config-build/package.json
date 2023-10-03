@@ -3,7 +3,7 @@
     "build": "next build && echo 'hello' > .next/world.txt"
   },
   "dependencies": {
-    "next": "latest",
+    "next": "13.4.9",
     "react": "latest",
     "react-dom": "latest"
   },

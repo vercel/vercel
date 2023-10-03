@@ -8,7 +8,7 @@
     "start": "next start"
   },
   "dependencies": {
-    "next": "latest",
+    "next": "13.4.9",
     "react": "latest",
     "react-dom": "latest",
     "is-odd": "3.0.1"

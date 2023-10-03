@@ -3,7 +3,7 @@
     "node": "16.x"
   },
   "dependencies": {
-    "next": "canary",
+    "next": "13.4.9",
     "react": "experimental",
     "react-dom": "experimental"
   },
