@@ -1,5 +1,16 @@
 # @vercel/node
 
+## 3.0.7
+
+### Patch Changes
+
+- Revert "[next][node][redwood][remix] Update @vercel/nft (#10540)" ([#10633](https://github.com/vercel/vercel/pull/10633))
+
+- Update `@vercel/nft` to 0.24.2 ([#10644](https://github.com/vercel/vercel/pull/10644))
+
+- Updated dependencies [[`2f5b0aeeb`](https://github.com/vercel/vercel/commit/2f5b0aeeb183ed3ea8cbc68cb3bc3c949c486ada)]:
+  - @vercel/build-utils@7.2.2
+
 ## 3.0.6
 
 ### Patch Changes
