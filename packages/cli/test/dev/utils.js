@@ -150,7 +150,7 @@ async function runNpmInstall(fixturePath) {
     } else {
       command = 'yarn';
     }
-    await execa(command, ['install', '--force'], {
+    await execa(command, ['install'], {
       cwd: fixturePath,
       shell: true,
       stdio: 'inherit',
