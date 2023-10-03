@@ -10,7 +10,8 @@
     "test-unit": "pnpm test test/unit/",
     "test-next-local": "pnpm test test/integration/*.test.js test/integration/*.test.ts",
     "test-next-local:middleware": "pnpm test test/integration/middleware.test.ts",
-    "test-e2e": "rm -f test/builder-info.json; pnpm test test/fixtures/**/*.test.js"
+    "test-e2e": "rm -f test/builder-info.json; pnpm test test/fixtures/**/*.test.js",
+    "type-check": "tsc --noEmit"
   },
   "repository": {
     "type": "git",

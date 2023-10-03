@@ -12,7 +12,8 @@
   "scripts": {
     "build": "node ../../utils/build-builder.mjs",
     "test-e2e": "pnpm test test/test.js",
-    "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --bail --runInBand"
+    "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --bail --runInBand",
+    "type-check": "tsc --noEmit"
   },
   "files": [
     "dist",

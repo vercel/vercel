@@ -1,0 +1,12 @@
+{
+  "description": "The base configuration for all packages.",
+  "extends": "@vercel/style-guide/typescript",
+  "compilerOptions": {
+    "noEmitOnError": true,
+    "noImplicitReturns": true,
+    "noUncheckedIndexedAccess": false,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "sourceMap": false
+  }
+}

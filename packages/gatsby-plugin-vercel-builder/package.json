@@ -13,7 +13,8 @@
     "directory": "packages/gatsby-plugin-vercel-builder"
   },
   "scripts": {
-    "build": "node ../../utils/build-builder.mjs"
+    "build": "node ../../utils/build-builder.mjs",
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "@sinclair/typebox": "0.25.24",

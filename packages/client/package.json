@@ -17,7 +17,8 @@
     "build": "node ../../utils/build.mjs",
     "test-e2e": "pnpm test tests/create-deployment.test.ts tests/create-legacy-deployment.test.ts tests/paths.test.ts",
     "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --runInBand --bail",
-    "test-unit": "pnpm test tests/unit.*test.*"
+    "test-unit": "pnpm test tests/unit.*test.*",
+    "type-check": "tsc --noEmit"
   },
   "engines": {
     "node": ">= 16"

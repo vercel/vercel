@@ -1,21 +1,13 @@
 {
   "compilerOptions": {
-    "declaration": true,
-    "emitDeclarationOnly": true,
-    "esModuleInterop": true,
     "lib": ["ES2021"],
     "module": "commonjs",
     "moduleResolution": "node",
-    "noEmitOnError": true,
-    "noFallthroughCasesInSwitch": true,
-    "noImplicitReturns": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
     "outDir": "./dist",
-    "types": ["node", "jest"],
-    "strict": true,
-    "target": "ES2021"
+    "target": "ES2021",
+    "types": ["node", "jest"]
   },
+  "extends": "../../tsconfig.base.json",
   "include": ["src/*.ts"],
   "exclude": ["node_modules"]
 }
