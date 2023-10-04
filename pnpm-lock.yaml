@@ -1305,21 +1305,33 @@ importers:
       '@types/execa':
         specifier: ^0.9.0
         version: 0.9.0
+      '@types/fs-extra':
+        specifier: 11.0.2
+        version: 11.0.2
       '@types/jest':
         specifier: 27.4.1
         version: 27.4.1
       '@types/node':
         specifier: 14.18.33
         version: 14.18.33
+      '@types/which':
+        specifier: 3.0.0
+        version: 3.0.0
       '@vercel/build-utils':
         specifier: 7.2.2
         version: link:../build-utils
       execa:
         specifier: ^1.0.0
         version: 1.0.0
+      fs-extra:
+        specifier: 11.1.1
+        version: 11.1.1
       jest-junit:
         specifier: 16.0.0
         version: 16.0.0
+      which:
+        specifier: 3.0.0
+        version: 3.0.0
 
   packages/redwood:
     dependencies:
@@ -4216,7 +4228,7 @@ packages:
     dependencies:
       '@types/http-cache-semantics': 4.0.1
       '@types/keyv': 3.1.4
-      '@types/node': 14.18.33
+      '@types/node': 16.18.11
       '@types/responselike': 1.0.0
     dev: false
 
@@ -4333,6 +4345,13 @@ packages:
 
   /@types/fs-extra@11.0.1:
     resolution: {integrity: sha512-MxObHvNl4A69ofaTRU8DFqvgzzv8s9yRtaPPm5gud9HDNvpB3GPQFvNuTWAI59B9huVGV5jXYJwbCsmBsOGYWA==}
+    dependencies:
+      '@types/jsonfile': 6.1.1
+      '@types/node': 16.18.11
+    dev: true
+
+  /@types/fs-extra@11.0.2:
+    resolution: {integrity: sha512-c0hrgAOVYr21EX8J0jBMXGLMgJqVf/v6yxi0dLaJboW9aQPh16Id+z6w2Tx1hm+piJOLv8xPfVKZCLfjPw/IMQ==}
     dependencies:
       '@types/jsonfile': 6.1.1
       '@types/node': 16.18.11
@@ -4516,7 +4535,7 @@ packages:
   /@types/keyv@3.1.4:
     resolution: {integrity: sha512-BQ5aZNSCpj7D6K2ksrRCTmKRLEpnPvWDiLPfoGyhZ++8YtiK9d/3DBKPJgry359X/P1PfruyYwvnvwFjuEiEIg==}
     dependencies:
-      '@types/node': 14.18.33
+      '@types/node': 16.18.11
     dev: false
 
   /@types/load-json-file@2.0.7:
@@ -4692,7 +4711,7 @@ packages:
   /@types/responselike@1.0.0:
     resolution: {integrity: sha512-85Y2BjiufFzaMIlvJDvTTB8Fxl2xfLo4HgmHzVBz08w4wDePCTjYw66PdrolO0kzli3yam/YCgRufyo1DdQVTA==}
     dependencies:
-      '@types/node': 14.18.33
+      '@types/node': 16.18.11
     dev: false
 
   /@types/retry@0.12.2:
@@ -8867,6 +8886,15 @@ packages:
       graceful-fs: 4.2.10
       jsonfile: 6.1.0
       universalify: 2.0.0
+
+  /fs-extra@11.1.1:
+    resolution: {integrity: sha512-MGIE4HOvQCeUCzmlHs0vXpih4ysz4wg9qiSAu6cd42lVwPbTM1TjV7RusoyQqMmk/95gdQZX72u+YW+c3eEpFQ==}
+    engines: {node: '>=14.14'}
+    dependencies:
+      graceful-fs: 4.2.11
+      jsonfile: 6.1.0
+      universalify: 2.0.0
+    dev: true
 
   /fs-extra@7.0.0:
     resolution: {integrity: sha512-EglNDLRpmaTWiD/qraZn6HREAEAHJcJOmxNEYwq6xeMKnVMAy3GUcFB+wXt2C6k4CNvB/mP1y/U3dzvKKj5OtQ==}

@@ -1,4 +1,5 @@
 import { NowBuildError } from '@vercel/build-utils';
+import which from 'which';
 
 interface PythonVersion {
   version: string;
@@ -46,6 +47,7 @@ function getDevPythonVersion(): PythonVersion {
     runtime: 'python3',
   };
 }
+
 export function getLatestPythonVersion({
   isDev,
 }: {
@@ -54,7 +56,16 @@ export function getLatestPythonVersion({
   if (isDev) {
     return getDevPythonVersion();
   }
-  return allOptions[0];
+
+  const selection = allOptions.find(isInstalled);
+  if (!selection) {
+    throw new NowBuildError({
+      code: 'PYTHON_NOT_FOUND',
+      link: 'http://vercel.link/python-version',
+      message: `Unable to find any supported Python versions.`,
+    });
+  }
+  return selection;
 }
 
 export function getSupportedPythonVersion({
@@ -67,10 +78,13 @@ export function getSupportedPythonVersion({
   if (isDev) {
     return getDevPythonVersion();
   }
+
   let selection = getLatestPythonVersion({ isDev: false });
 
   if (typeof pipLockPythonVersion === 'string') {
-    const found = allOptions.find(o => o.version === pipLockPythonVersion);
+    const found = allOptions.find(
+      o => o.version === pipLockPythonVersion && isInstalled(o)
+    );
     if (found) {
       selection = found;
     } else {
@@ -101,4 +115,11 @@ export function getSupportedPythonVersion({
 function isDiscontinued({ discontinueDate }: PythonVersion): boolean {
   const today = Date.now();
   return discontinueDate !== undefined && discontinueDate.getTime() <= today;
+}
+
+function isInstalled({ pipPath, pythonPath }: PythonVersion): boolean {
+  return (
+    !!which.sync(pipPath, { nothrow: true }) &&
+    !!which.sync(pythonPath, { nothrow: true })
+  );
 }
