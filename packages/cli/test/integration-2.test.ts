@@ -1174,6 +1174,16 @@ test('[vc build] should build project with `@vercel/speed-insights`', async () =
   }
 });
 
+test('[vc build] should build project with `@vercel/analytics`', async () => {
+  const directory = await setupE2EFixture('vc-build-web-analytics');
+  const output = await execCli(binaryPath, ['build'], { cwd: directory });
+  expect(output.exitCode, formatOutput(output)).toBe(0);
+  const builds = await fs.readJSON(
+    path.join(directory, '.vercel/output/builds.json')
+  );
+  expect(builds?.features?.webAnalytics).toEqual(true);
+});
+
 test('[vc build] should not include .vercel when distDir is "."', async () => {
   const directory = await setupE2EFixture('static-build-dist-dir');
   const output = await execCli(binaryPath, ['build'], { cwd: directory });

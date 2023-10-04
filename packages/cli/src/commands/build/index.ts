@@ -106,7 +106,7 @@ export interface BuildsManifest {
   argv: string[];
   error?: any;
   builds?: SerializedBuilder[];
-  features?: { speedInsights: boolean };
+  features?: { speedInsights: boolean; webAnalytics: boolean };
 }
 
 export default async function main(client: Client): Promise<number> {
@@ -443,6 +443,12 @@ async function doBuild(
     buildsJson.features = {
       ...(buildsJson.features ?? {}),
       speedInsights: true,
+    };
+  }
+  if (isUsingWebAnaytics(pkg)) {
+    buildsJson.features = {
+      ...(buildsJson.features ?? {}),
+      webAnalytics: true,
     };
   }
 
@@ -816,4 +822,13 @@ function isUsingSpeedInsights(pkg: PackageJson | null): boolean {
   ];
 
   return dependencies.some(d => d === '@vercel/speed-insights');
+}
+
+function isUsingWebAnaytics(pkg: PackageJson | null): boolean {
+  const dependencies = [
+    ...Object.keys(pkg?.dependencies ?? {}),
+    ...Object.keys(pkg?.devDependencies ?? {}),
+  ];
+
+  return dependencies.some(d => d === '@vercel/analytics');
 }

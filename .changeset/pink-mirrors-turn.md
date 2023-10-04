@@ -2,4 +2,4 @@
 'vercel': minor
 ---
 
-Indicates whether speed-insights is used
+Indicates whether @vercel/speed-insights or @vercel/analytics are used
