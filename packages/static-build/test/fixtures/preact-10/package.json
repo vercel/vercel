@@ -23,11 +23,11 @@
     "eslint-config-synacor": "^2.0.2",
     "identity-obj-proxy": "^3.0.0",
     "per-env": "^1.0.2",
-    "preact-cli": "^2.2.1"
+    "preact-cli": "^3.5.0"
   },
   "dependencies": {
     "preact": "^10.18.1",
-    "preact-render-to-string": "^4.1.0",
+    "preact-render-to-string": "^6.2.2",
     "preact-router": "^4.1.2"
   }
 }
