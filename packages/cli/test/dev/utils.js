@@ -20,8 +20,6 @@ let port = 3000;
 const binaryPath = resolve(__dirname, `../../scripts/start.js`);
 const fixture = name => join('test', 'dev', 'fixtures', name);
 const fixtureAbsolute = name => join(__dirname, 'fixtures', name);
-const exampleAbsolute = name =>
-  join(__dirname, '..', '..', '..', '..', 'examples', name);
 
 let processCounter = 0;
 const processList = new Map();
@@ -313,23 +311,10 @@ async function testFixture(directory, opts = {}, args = []) {
 function testFixtureStdio(
   directory,
   fn,
-  {
-    expectedCode = 0,
-    skipDeploy,
-    isExample,
-    projectSettings,
-    readyTimeout = 0,
-  } = {}
+  { skipDeploy, projectSettings, readyTimeout = 0 } = {}
 ) {
   return async () => {
-    const nodeMajor = Number(process.versions.node.split('.')[0]);
-    if (isExample && nodeMajor < 12) {
-      console.log(`Skipping ${directory} on Node ${process.version}`);
-      return;
-    }
-    const cwd = isExample
-      ? exampleAbsolute(directory)
-      : fixtureAbsolute(directory);
+    const cwd = fixtureAbsolute(directory);
     const token = await fetchCachedToken();
     let deploymentUrl;
 
@@ -409,10 +394,10 @@ function testFixtureStdio(
           stdout: deployResult.stdout,
           stderr: deployResult.stderr,
         });
-        expect(deployResult.exitCode).toBe(expectedCode);
-        if (expectedCode === 0) {
-          deploymentUrl = new URL(deployResult.stdout).host;
-        }
+
+        // Expect the deploy succeeded with exit of 0;
+        expect(deployResult.exitCode).toBe(0);
+        deploymentUrl = new URL(deployResult.stdout).host;
       } finally {
         if (!hasGitignore) {
           await fs.remove(gitignore);
