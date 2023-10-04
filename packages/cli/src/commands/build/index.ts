@@ -811,21 +811,19 @@ function mergeFlags(
     return [];
   });
 }
-
-function isUsingSpeedInsights(pkg: PackageJson | null): boolean {
+function isPackageInstalled(name: string; pkg: PackageJson | null) {
   const dependencies = [
     ...Object.keys(pkg?.dependencies ?? {}),
     ...Object.keys(pkg?.devDependencies ?? {}),
   ];
 
-  return dependencies.some(d => d === '@vercel/speed-insights');
+  return dependencies.some(d => d === name);
+}
+
+function isUsingSpeedInsights(pkg: PackageJson | null): boolean {
+  return isPackageInstalled('@vercel/speed-insights', pkg);
 }
 
 function isUsingWebAnaytics(pkg: PackageJson | null): boolean {
-  const dependencies = [
-    ...Object.keys(pkg?.dependencies ?? {}),
-    ...Object.keys(pkg?.devDependencies ?? {}),
-  ];
-
-  return dependencies.some(d => d === '@vercel/analytics');
+   return isPackageInstalled('@vercel/analytics', pkg);
 }
