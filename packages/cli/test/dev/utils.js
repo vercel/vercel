@@ -313,13 +313,7 @@ async function testFixture(directory, opts = {}, args = []) {
 function testFixtureStdio(
   directory,
   fn,
-  {
-    expectedCode = 0,
-    skipDeploy,
-    isExample,
-    projectSettings,
-    readyTimeout = 0,
-  } = {}
+  { skipDeploy, isExample, projectSettings, readyTimeout = 0 } = {}
 ) {
   return async () => {
     const nodeMajor = Number(process.versions.node.split('.')[0]);
@@ -409,10 +403,10 @@ function testFixtureStdio(
           stdout: deployResult.stdout,
           stderr: deployResult.stderr,
         });
-        expect(deployResult.exitCode).toBe(expectedCode);
-        if (expectedCode === 0) {
-          deploymentUrl = new URL(deployResult.stdout).host;
-        }
+
+        // Expect the deploy succeeded with exit of 0;
+        expect(deployResult.exitCode).toBe(0);
+        deploymentUrl = new URL(deployResult.stdout).host;
       } finally {
         if (!hasGitignore) {
           await fs.remove(gitignore);
