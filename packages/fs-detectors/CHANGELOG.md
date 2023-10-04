@@ -1,5 +1,11 @@
 # @vercel/fs-detectors
 
+## 5.1.1
+
+### Patch Changes
+
+- [cli] Update bun detection and add tests for projects with both bunlock binary and yarn.lock text files ([#10583](https://github.com/vercel/vercel/pull/10583))
+
 ## 5.1.0
 
 ### Minor Changes

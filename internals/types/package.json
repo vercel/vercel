@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "@vercel-internals/types",
-  "version": "1.0.11",
+  "version": "1.0.12",
   "types": "index.d.ts",
   "main": "index.d.ts",
   "files": [
@@ -10,7 +10,7 @@
   "dependencies": {
     "@types/node": "14.14.31",
     "@vercel-internals/constants": "1.0.4",
-    "@vercel/build-utils": "7.2.1",
+    "@vercel/build-utils": "7.2.2",
     "@vercel/routing-utils": "3.0.0"
   },
   "devDependencies": {
