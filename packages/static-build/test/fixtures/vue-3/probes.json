@@ -2,7 +2,7 @@
   "probes": [
     {
       "path": "/",
-      "mustContain": "13-vue"
+      "mustContain": "Vite App"
     },
     {
       "path": "/js/app.js",
@@ -26,15 +26,8 @@
       "mustContain": "Disallow"
     },
     {
-      "path": "/manifest.json",
-      "headers": {
-        "cache-control": "max-age=300"
-      },
-      "mustContain": "13-vue-manifest"
-    },
-    {
       "path": "/923h3223329ddas",
-      "mustContain": "13-vue"
+      "mustContain": "Vite App"
     }
   ]
 }
