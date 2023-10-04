@@ -41,7 +41,7 @@ See [CLI Local Development](../packages/cli#local-development) for more details.
 
 ## Verifying your change
 
-Once you are done with your changes (we even suggest doing it along the way), make sure the relevant tests still pass by running the relevant tests. Example:
+Once you are done with your changes (we even suggest doing it along the way), make sure the relevant tests still pass by running them. Example:
 
 ```
 # from root of this project
