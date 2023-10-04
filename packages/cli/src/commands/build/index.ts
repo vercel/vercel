@@ -251,12 +251,9 @@ export default async function main(client: Client): Promise<number> {
     }
 
     // For Vercel Legacy speed Insights support
-    if (process.env.VERCEL_ANALYTICS_ID) {
-      output.warn(
-        `The \`VERCEL_ANALYTICS_ID\` environment variable is deprecated and will be removed in a future release. Please remove it from your environment variables`
-      );
-
-      delete process.env.VERCEL_ANALYTICS_ID;
+    if (project.settings.analyticsId) {
+      envToUnset.add('VERCEL_ANALYTICS_ID');
+      process.env.VERCEL_ANALYTICS_ID = project.settings.analyticsId;
     }
 
     // Some build processes use these env vars to platform detect Vercel
