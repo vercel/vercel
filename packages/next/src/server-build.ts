@@ -112,6 +112,7 @@ export async function serverBuild({
   omittedPrerenderRoutes,
   trailingSlashRedirects,
   isCorrectLocaleAPIRoutes,
+  lambdaCompressedByteLimit,
   requiredServerFilesManifest,
   variantsManifest,
 }: {
@@ -149,6 +150,7 @@ export async function serverBuild({
   hasIsr500Page: boolean;
   trailingSlashRedirects: Route[];
   routesManifest: RoutesManifest;
+  lambdaCompressedByteLimit: number;
   isCorrectLocaleAPIRoutes: boolean;
   imagesManifest?: NextImagesManifest;
   prerenderManifest: NextPrerenderedRoutes;
@@ -302,6 +304,7 @@ export async function serverBuild({
 
   if (hasLambdas) {
     const initialTracingLabel = 'Traced Next.js server files in';
+
     console.time(initialTracingLabel);
 
     const initialTracedFiles: {
@@ -410,24 +413,19 @@ export async function serverBuild({
 
     debug('collecting initial Next.js server files');
     await Promise.all(
-      initialFileList.map(async file => {
-        await collectTracedFiles(
-          file,
+      initialFileList.map(
+        collectTracedFiles(
           baseDir,
           lstatResults,
           lstatSema,
           initialFileReasons,
           initialTracedFiles
-        );
-      })
+        )
+      )
     );
 
     debug('creating initial pseudo layer');
-    const initialPseudoLayer = await createPseudoLayer({
-      files: initialTracedFiles,
-      lstatResults,
-      lstatSema,
-    });
+    const initialPseudoLayer = await createPseudoLayer(initialTracedFiles);
     console.timeEnd(initialTracingLabel);
 
     const lambdaCreationLabel = 'Created all serverless functions in';
@@ -438,18 +436,18 @@ export async function serverBuild({
     const appRouterPages: string[] = [];
     const appRouteHandlers: string[] = [];
 
-    for (const page of lambdaPageKeys) {
+    lambdaPageKeys.forEach(page => {
       if (
         internalPages.includes(page) &&
         page !== '404.js' &&
         !(page === '_error.js' && !(static404Page || lambdaPages['404.js']))
       ) {
-        continue;
+        return;
       }
       const pathname = page.replace(/\.js$/, '');
 
       if (nonLambdaSsgPages.has(pathname)) {
-        continue;
+        return;
       }
       const normalizedPathname = normalizePage(pathname);
 
@@ -468,7 +466,7 @@ export async function serverBuild({
       } else {
         nonApiPages.push(page);
       }
-    }
+    });
 
     const requiredFiles: { [key: string]: FileFsRef } = {};
 
@@ -560,30 +558,39 @@ export async function serverBuild({
 
     // add required files and internal pages to initial pseudo layer
     // so that we account for these in the size of each page group
-    const requiredFilesLayer = await createPseudoLayer({
-      files: requiredFiles,
-      lstatResults,
-      lstatSema,
-    });
+    const requiredFilesLayer = await createPseudoLayer(requiredFiles);
     Object.assign(
       initialPseudoLayer.pseudoLayer,
       requiredFilesLayer.pseudoLayer
     );
     initialPseudoLayer.pseudoLayerBytes += requiredFilesLayer.pseudoLayerBytes;
 
+    const uncompressedInitialSize = Object.keys(
+      initialPseudoLayer.pseudoLayer
+    ).reduce((prev, cur) => {
+      const file = initialPseudoLayer.pseudoLayer[cur] as PseudoFile;
+      return prev + file.uncompressedSize || 0;
+    }, 0);
+
     debug(
       JSON.stringify(
         {
-          initializeSizeUncompressed: initialPseudoLayer.pseudoLayerBytes,
+          uncompressedInitialSize,
+          compressedInitialSize: initialPseudoLayer.pseudoLayerBytes,
         },
         null,
         2
       )
     );
 
-    if (initialPseudoLayer.pseudoLayerBytes > MAX_UNCOMPRESSED_LAMBDA_SIZE) {
+    if (
+      initialPseudoLayer.pseudoLayerBytes > lambdaCompressedByteLimit ||
+      uncompressedInitialSize > MAX_UNCOMPRESSED_LAMBDA_SIZE
+    ) {
       console.log(
         `Warning: Max serverless function size of ${prettyBytes(
+          lambdaCompressedByteLimit
+        )} compressed or ${prettyBytes(
           MAX_UNCOMPRESSED_LAMBDA_SIZE
         )} uncompressed reached`
       );
@@ -592,11 +599,12 @@ export async function serverBuild({
         [],
         initialPseudoLayer.pseudoLayer,
         initialPseudoLayer.pseudoLayerBytes,
+        uncompressedInitialSize,
         {}
       );
 
       throw new NowBuildError({
-        message: `Required files read using Node.js fs library and node_modules exceed max lambda size of ${MAX_UNCOMPRESSED_LAMBDA_SIZE} bytes`,
+        message: `Required files read using Node.js fs library and node_modules exceed max lambda size of ${lambdaCompressedByteLimit} bytes`,
         code: 'NEXT_REQUIRED_FILES_LIMIT',
         link: 'https://vercel.com/docs/platform/limits#serverless-function-size',
       });
@@ -674,15 +682,16 @@ export async function serverBuild({
       return originalPagePath;
     };
 
-    const getBuildTraceFile = (page: string) =>
-      pageBuildTraces[page + '.nft.json'] || appBuildTraces[page + '.nft.json'];
+    const getBuildTraceFile = (page: string) => {
+      return (
+        pageBuildTraces[page + '.nft.json'] ||
+        appBuildTraces[page + '.nft.json']
+      );
+    };
 
     const pathsToTrace: string[] = mergedPageKeys
       .map(page => {
-        const originalPagePath = getOriginalPagePath(page);
-        const pageBuildTrace = getBuildTraceFile(originalPagePath);
-
-        if (!pageBuildTrace) {
+        if (!getBuildTraceFile(page)) {
           return lambdaPages[page].fsPath;
         }
       })
@@ -692,10 +701,6 @@ export async function serverBuild({
     let parentFilesMap: Map<string, Set<string>> | undefined;
 
     if (pathsToTrace.length > 0) {
-      console.warn(
-        `Warning: running tracing as trace files were not present for:\n`,
-        JSON.stringify(pathsToTrace, null, 2)
-      );
       traceResult = await nodeFileTrace(pathsToTrace, {
         base: baseDir,
         cache: traceCache,
@@ -779,39 +784,31 @@ export async function serverBuild({
         reasons = traceResult?.reasons || new Map();
       }
 
-      await Promise.all([
-        createPseudoLayer({
-          files: {
-            [page]: lambdaPages[page],
-          },
-          lstatResults,
-          lstatSema,
-        }).then(res => {
-          compressedPages[page] = res.pseudoLayer[page] as PseudoFile;
-        }),
-        ...fileList.map(async file => {
-          await collectTracedFiles(
-            file,
+      await Promise.all(
+        fileList.map(
+          collectTracedFiles(
             baseDir,
             lstatResults,
             lstatSema,
             reasons,
             tracedFiles
-          );
-        }),
-      ]);
-
+          )
+        )
+      );
       pageTraces[page] = tracedFiles;
+      compressedPages[page] = (
+        await createPseudoLayer({
+          [page]: lambdaPages[page],
+        })
+      ).pseudoLayer[page] as PseudoFile;
     }
 
-    const tracedPseudoLayer = await createPseudoLayer({
-      files: mergedPageKeys.reduce((prev, page) => {
+    const tracedPseudoLayer = await createPseudoLayer(
+      mergedPageKeys.reduce((prev, page) => {
         Object.assign(prev, pageTraces[page]);
         return prev;
-      }, {}),
-      lstatResults,
-      lstatSema,
-    });
+      }, {})
+    );
 
     const pageExtensions = requiredServerFilesManifest.config?.pageExtensions;
 
@@ -825,6 +822,8 @@ export async function serverBuild({
       compressedPages,
       tracedPseudoLayer: tracedPseudoLayer.pseudoLayer,
       initialPseudoLayer,
+      lambdaCompressedByteLimit,
+      initialPseudoLayerUncompressed: uncompressedInitialSize,
       internalPages,
       pageExtensions,
     });
@@ -843,6 +842,8 @@ export async function serverBuild({
       compressedPages,
       tracedPseudoLayer: tracedPseudoLayer.pseudoLayer,
       initialPseudoLayer,
+      lambdaCompressedByteLimit,
+      initialPseudoLayerUncompressed: uncompressedInitialSize,
       internalPages,
       pageExtensions,
     });
@@ -857,6 +858,8 @@ export async function serverBuild({
       compressedPages,
       tracedPseudoLayer: tracedPseudoLayer.pseudoLayer,
       initialPseudoLayer,
+      lambdaCompressedByteLimit,
+      initialPseudoLayerUncompressed: uncompressedInitialSize,
       internalPages,
       pageExtensions,
     });
@@ -886,6 +889,8 @@ export async function serverBuild({
       compressedPages,
       tracedPseudoLayer: tracedPseudoLayer.pseudoLayer,
       initialPseudoLayer,
+      initialPseudoLayerUncompressed: uncompressedInitialSize,
+      lambdaCompressedByteLimit,
       internalPages,
       pageExtensions,
     });
@@ -901,22 +906,26 @@ export async function serverBuild({
             pages: group.pages,
             isPrerender: group.isPrerenders,
             pseudoLayerBytes: group.pseudoLayerBytes,
+            uncompressedLayerBytes: group.pseudoLayerUncompressedBytes,
           })),
           pageLambdaGroups: pageLambdaGroups.map(group => ({
             pages: group.pages,
             isPrerender: group.isPrerenders,
             pseudoLayerBytes: group.pseudoLayerBytes,
+            uncompressedLayerBytes: group.pseudoLayerUncompressedBytes,
           })),
           appRouterLambdaGroups: appRouterLambdaGroups.map(group => ({
             pages: group.pages,
             isPrerender: group.isPrerenders,
             pseudoLayerBytes: group.pseudoLayerBytes,
+            uncompressedLayerBytes: group.pseudoLayerUncompressedBytes,
           })),
           appRouteHandlersLambdaGroups: appRouteHandlersLambdaGroups.map(
             group => ({
               pages: group.pages,
               isPrerender: group.isPrerenders,
               pseudoLayerBytes: group.pseudoLayerBytes,
+              uncompressedLayerBytes: group.pseudoLayerUncompressedBytes,
             })
           ),
           nextServerLayerSize: initialPseudoLayer.pseudoLayerBytes,
@@ -932,152 +941,150 @@ export async function serverBuild({
       ...appRouteHandlersLambdaGroups,
     ];
 
-    await detectLambdaLimitExceeding(combinedGroups, compressedPages);
-
-    await Promise.all(
-      combinedGroups.map(async group => {
-        const groupPageFiles: { [key: string]: PseudoFile } = {};
-
-        for (const page of [...group.pages, ...internalPages]) {
-          const pageFileName = path.normalize(
-            path.relative(baseDir, lambdaPages[page].fsPath)
-          );
-          groupPageFiles[pageFileName] = compressedPages[page];
-        }
-
-        const updatedManifestFiles: { [name: string]: FileBlob } = {};
-
-        if (isCorrectManifests) {
-          // filter dynamic routes to only the included dynamic routes
-          // in this specific serverless function so that we don't
-          // accidentally match a dynamic route while resolving that
-          // is not actually in this specific serverless function
-          for (const manifest of [
-            'routes-manifest.json',
-            'server/pages-manifest.json',
-          ] as const) {
-            const fsPath = path.join(entryPath, outputDirectory, manifest);
-
-            const relativePath = path.relative(baseDir, fsPath);
-            delete group.pseudoLayer[relativePath];
-
-            const manifestData = await fs.readJSON(fsPath);
-            const normalizedPages = new Set(
-              group.pages.map(page => {
-                page = `/${page.replace(/\.js$/, '')}`;
-                if (page === '/index') page = '/';
-                return page;
-              })
-            );
-
-            switch (manifest) {
-              case 'routes-manifest.json': {
-                const filterItem = (item: { page: string }) =>
-                  normalizedPages.has(item.page);
-
-                manifestData.dynamicRoutes =
-                  manifestData.dynamicRoutes?.filter(filterItem);
-                manifestData.staticRoutes =
-                  manifestData.staticRoutes?.filter(filterItem);
-                break;
-              }
-              case 'server/pages-manifest.json': {
-                for (const key of Object.keys(manifestData)) {
-                  if (isDynamicRoute(key) && !normalizedPages.has(key)) {
-                    delete manifestData[key];
-                  }
-                }
-                break;
-              }
-              default: {
-                throw new NowBuildError({
-                  message: `Unexpected manifest value ${manifest}, please contact support if this continues`,
-                  code: 'NEXT_MANIFEST_INVARIANT',
-                });
-              }
-            }
-
-            updatedManifestFiles[relativePath] = new FileBlob({
-              contentType: 'application/json',
-              data: JSON.stringify(manifestData),
-            });
-          }
-        }
-
-        const launcherFiles: { [name: string]: FileFsRef | FileBlob } = {
-          [path.join(
-            path.relative(baseDir, projectDir),
-            '___next_launcher.cjs'
-          )]: new FileBlob({
-            data: group.isAppRouter ? appLauncher : launcher,
-          }),
-        };
-        const operationType = getOperationType({ group, prerenderManifest });
-
-        const lambda = await createLambdaFromPseudoLayers({
-          files: {
-            ...launcherFiles,
-            ...updatedManifestFiles,
-          },
-          layers: [group.pseudoLayer, groupPageFiles],
-          handler: path.join(
-            path.relative(baseDir, projectDir),
-            '___next_launcher.cjs'
-          ),
-          operationType,
-          memory: group.memory,
-          runtime: nodeVersion.runtime,
-          maxDuration: group.maxDuration,
-          isStreaming: group.isStreaming,
-          nextVersion,
-        });
-
-        for (const page of group.pages) {
-          const pageNoExt = page.replace(/\.js$/, '');
-          let isPrerender = prerenderRoutes.has(
-            path.join('/', pageNoExt === 'index' ? '' : pageNoExt)
-          );
-
-          if (!isPrerender && routesManifest?.i18n) {
-            isPrerender = routesManifest.i18n.locales.some(locale => {
-              return prerenderRoutes.has(
-                path.join('/', locale, pageNoExt === 'index' ? '' : pageNoExt)
-              );
-            });
-          }
-
-          const outputName = normalizeIndexOutput(
-            path.posix.join(entryDirectory, pageNoExt),
-            true
-          );
-
-          // we add locale prefixed outputs for SSR pages,
-          // this is handled in onPrerenderRoute for SSG pages
-          if (
-            i18n &&
-            !isPrerender &&
-            !group.isAppRouter &&
-            (!isCorrectLocaleAPIRoutes ||
-              !(pageNoExt === 'api' || pageNoExt.startsWith('api/')))
-          ) {
-            for (const locale of i18n.locales) {
-              lambdas[
-                normalizeIndexOutput(
-                  path.posix.join(
-                    entryDirectory,
-                    locale,
-                    pageNoExt === 'index' ? '' : pageNoExt
-                  ),
-                  true
-                )
-              ] = lambda;
-            }
-          } else {
-            lambdas[outputName] = lambda;
-          }
-        }
-      })
+    await detectLambdaLimitExceeding(
+      combinedGroups,
+      lambdaCompressedByteLimit,
+      compressedPages
     );
+
+    for (const group of combinedGroups) {
+      const groupPageFiles: { [key: string]: PseudoFile } = {};
+
+      for (const page of [...group.pages, ...internalPages]) {
+        const pageFileName = path.normalize(
+          path.relative(baseDir, lambdaPages[page].fsPath)
+        );
+        groupPageFiles[pageFileName] = compressedPages[page];
+      }
+
+      const updatedManifestFiles: { [name: string]: FileBlob } = {};
+
+      if (isCorrectManifests) {
+        // filter dynamic routes to only the included dynamic routes
+        // in this specific serverless function so that we don't
+        // accidentally match a dynamic route while resolving that
+        // is not actually in this specific serverless function
+        for (const manifest of [
+          'routes-manifest.json',
+          'server/pages-manifest.json',
+        ] as const) {
+          const fsPath = path.join(entryPath, outputDirectory, manifest);
+
+          const relativePath = path.relative(baseDir, fsPath);
+          delete group.pseudoLayer[relativePath];
+
+          const manifestData = await fs.readJSON(fsPath);
+          const normalizedPages = new Set(
+            group.pages.map(page => {
+              page = `/${page.replace(/\.js$/, '')}`;
+              if (page === '/index') page = '/';
+              return page;
+            })
+          );
+
+          switch (manifest) {
+            case 'routes-manifest.json': {
+              const filterItem = (item: { page: string }) =>
+                normalizedPages.has(item.page);
+
+              manifestData.dynamicRoutes =
+                manifestData.dynamicRoutes?.filter(filterItem);
+              manifestData.staticRoutes =
+                manifestData.staticRoutes?.filter(filterItem);
+              break;
+            }
+            case 'server/pages-manifest.json': {
+              for (const key of Object.keys(manifestData)) {
+                if (isDynamicRoute(key) && !normalizedPages.has(key)) {
+                  delete manifestData[key];
+                }
+              }
+              break;
+            }
+            default: {
+              throw new NowBuildError({
+                message: `Unexpected manifest value ${manifest}, please contact support if this continues`,
+                code: 'NEXT_MANIFEST_INVARIANT',
+              });
+            }
+          }
+
+          updatedManifestFiles[relativePath] = new FileBlob({
+            contentType: 'application/json',
+            data: JSON.stringify(manifestData),
+          });
+        }
+      }
+
+      const launcherFiles: { [name: string]: FileFsRef | FileBlob } = {
+        [path.join(path.relative(baseDir, projectDir), '___next_launcher.cjs')]:
+          new FileBlob({ data: group.isAppRouter ? appLauncher : launcher }),
+      };
+      const operationType = getOperationType({ group, prerenderManifest });
+
+      const lambda = await createLambdaFromPseudoLayers({
+        files: {
+          ...launcherFiles,
+          ...updatedManifestFiles,
+        },
+        layers: [group.pseudoLayer, groupPageFiles],
+        handler: path.join(
+          path.relative(baseDir, projectDir),
+          '___next_launcher.cjs'
+        ),
+        operationType,
+        memory: group.memory,
+        runtime: nodeVersion.runtime,
+        maxDuration: group.maxDuration,
+        isStreaming: group.isStreaming,
+        nextVersion,
+      });
+
+      for (const page of group.pages) {
+        const pageNoExt = page.replace(/\.js$/, '');
+        let isPrerender = prerenderRoutes.has(
+          path.join('/', pageNoExt === 'index' ? '' : pageNoExt)
+        );
+
+        if (!isPrerender && routesManifest?.i18n) {
+          isPrerender = routesManifest.i18n.locales.some(locale => {
+            return prerenderRoutes.has(
+              path.join('/', locale, pageNoExt === 'index' ? '' : pageNoExt)
+            );
+          });
+        }
+
+        const outputName = normalizeIndexOutput(
+          path.posix.join(entryDirectory, pageNoExt),
+          true
+        );
+
+        // we add locale prefixed outputs for SSR pages,
+        // this is handled in onPrerenderRoute for SSG pages
+        if (
+          i18n &&
+          !isPrerender &&
+          !group.isAppRouter &&
+          (!isCorrectLocaleAPIRoutes ||
+            !(pageNoExt === 'api' || pageNoExt.startsWith('api/')))
+        ) {
+          for (const locale of i18n.locales) {
+            lambdas[
+              normalizeIndexOutput(
+                path.posix.join(
+                  entryDirectory,
+                  locale,
+                  pageNoExt === 'index' ? '' : pageNoExt
+                ),
+                true
+              )
+            ] = lambda;
+          }
+        } else {
+          lambdas[outputName] = lambda;
+        }
+      }
+    }
     console.timeEnd(lambdaCreationLabel);
   }
 
