@@ -1165,7 +1165,6 @@ test('[vc build] should build project with `@vercel/speed-insights`', async () =
     expect(output.stderr).toContain(
       'The `VERCEL_ANALYTICS_ID` environment variable is deprecated and will be removed in a future release. Please remove it from your environment variables'
     );
-    console.log(output.stderr, output.stdout);
     const builds = await fs.readJSON(
       path.join(directory, '.vercel/output/builds.json')
     );
