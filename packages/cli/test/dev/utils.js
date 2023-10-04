@@ -144,7 +144,13 @@ async function exec(directory, args = []) {
 
 async function runNpmInstall(fixturePath) {
   if (await fs.pathExists(join(fixturePath, 'package.json'))) {
-    await execa('yarn', ['install'], {
+    let command;
+    if (await fs.pathExists(join(fixturePath, 'package-lock.json'))) {
+      command = 'npm';
+    } else {
+      command = 'yarn';
+    }
+    await execa(command, ['install'], {
       cwd: fixturePath,
       shell: true,
       stdio: 'inherit',
