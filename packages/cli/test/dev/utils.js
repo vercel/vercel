@@ -20,8 +20,6 @@ let port = 3000;
 const binaryPath = resolve(__dirname, `../../scripts/start.js`);
 const fixture = name => join('test', 'dev', 'fixtures', name);
 const fixtureAbsolute = name => join(__dirname, 'fixtures', name);
-const exampleAbsolute = name =>
-  join(__dirname, '..', '..', '..', '..', 'examples', name);
 
 let processCounter = 0;
 const processList = new Map();
@@ -313,17 +311,10 @@ async function testFixture(directory, opts = {}, args = []) {
 function testFixtureStdio(
   directory,
   fn,
-  { skipDeploy, isExample, projectSettings, readyTimeout = 0 } = {}
+  { skipDeploy, projectSettings, readyTimeout = 0 } = {}
 ) {
   return async () => {
-    const nodeMajor = Number(process.versions.node.split('.')[0]);
-    if (isExample && nodeMajor < 12) {
-      console.log(`Skipping ${directory} on Node ${process.version}`);
-      return;
-    }
-    const cwd = isExample
-      ? exampleAbsolute(directory)
-      : fixtureAbsolute(directory);
+    const cwd = fixtureAbsolute(directory);
     const token = await fetchCachedToken();
     let deploymentUrl;
 
