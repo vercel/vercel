@@ -1,5 +1,13 @@
 # @vercel/next
 
+## 4.0.10
+
+### Patch Changes
+
+- Revert "[next] Correct output file tracing and limit calculation (#10631)" ([#10651](https://github.com/vercel/vercel/pull/10651))
+
+- next: bump minimal version for bundled server usage ([#10646](https://github.com/vercel/vercel/pull/10646))
+
 ## 4.0.9
 
 ### Patch Changes
