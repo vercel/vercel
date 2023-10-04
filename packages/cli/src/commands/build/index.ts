@@ -811,7 +811,8 @@ function mergeFlags(
     return [];
   });
 }
-function isPackageInstalled(name: string; pkg: PackageJson | null) {
+
+function isPackageInstalled(name: string, pkg: PackageJson | null): boolean {
   const dependencies = [
     ...Object.keys(pkg?.dependencies ?? {}),
     ...Object.keys(pkg?.devDependencies ?? {}),
@@ -825,5 +826,5 @@ function isUsingSpeedInsights(pkg: PackageJson | null): boolean {
 }
 
 function isUsingWebAnaytics(pkg: PackageJson | null): boolean {
-   return isPackageInstalled('@vercel/analytics', pkg);
+  return isPackageInstalled('@vercel/analytics', pkg);
 }
