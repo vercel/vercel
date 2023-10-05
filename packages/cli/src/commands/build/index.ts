@@ -106,7 +106,10 @@ export interface BuildsManifest {
   argv: string[];
   error?: any;
   builds?: SerializedBuilder[];
-  features?: { speedInsightsVersion: string; webAnalyticsVersion: string };
+  features?: {
+    speedInsightsVersion?: string | undefined;
+    webAnalyticsVersion?: string | undefined;
+  };
 }
 
 export default async function main(client: Client): Promise<number> {
