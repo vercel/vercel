@@ -119,7 +119,7 @@ function isDiscontinued({ discontinueDate }: PythonVersion): boolean {
 
 function isInstalled({ pipPath, pythonPath }: PythonVersion): boolean {
   return (
-    !!which.sync(pipPath, { nothrow: true }) &&
-    !!which.sync(pythonPath, { nothrow: true })
+    Boolean(which.sync(pipPath, { nothrow: true })) &&
+    Boolean(which.sync(pythonPath, { nothrow: true }))
   );
 }

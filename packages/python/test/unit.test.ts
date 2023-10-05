@@ -28,13 +28,13 @@ afterEach(() => {
   }
 });
 
-it('should only match supported versions, otherwise throw an error', async () => {
+it('should only match supported versions, otherwise throw an error', () => {
+  makeMockPython('3.9');
   const result = getSupportedPythonVersion({ pipLockPythonVersion: '3.9' });
-  expect(result).toHaveProperty('runtime');
-  expect(result.runtime).toMatch(/^python3\.\d+$/);
+  expect(result).toHaveProperty('runtime', 'python3.9');
 });
 
-it('should ignore minor version in vercel dev', async () => {
+it('should ignore minor version in vercel dev', () => {
   expect(
     getSupportedPythonVersion({ pipLockPythonVersion: '3.9', isDev: true })
   ).toHaveProperty('runtime', 'python3');
@@ -47,14 +47,14 @@ it('should ignore minor version in vercel dev', async () => {
   expect(warningMessages).toStrictEqual([]);
 });
 
-it('should select latest version when no Piplock detected', async () => {
+it('should select latest supported installed version when no Piplock detected', () => {
   const result = getSupportedPythonVersion({ pipLockPythonVersion: undefined });
   expect(result).toHaveProperty('runtime');
   expect(result.runtime).toMatch(/^python3\.\d+$/);
   expect(warningMessages).toStrictEqual([]);
 });
 
-it('should select latest version and warn when invalid Piplock detected', async () => {
+it('should select latest supported installed version and warn when invalid Piplock detected', () => {
   const result = getSupportedPythonVersion({ pipLockPythonVersion: '999' });
   expect(result).toHaveProperty('runtime');
   expect(result.runtime).toMatch(/^python3\.\d+$/);
@@ -63,7 +63,7 @@ it('should select latest version and warn when invalid Piplock detected', async 
   ]);
 });
 
-it('should throw if python not found', async () => {
+it('should throw if python not found', () => {
   process.env.PATH = '.';
   expect(() =>
     getSupportedPythonVersion({ pipLockPythonVersion: '3.6' })
@@ -71,7 +71,7 @@ it('should throw if python not found', async () => {
   expect(warningMessages).toStrictEqual([]);
 });
 
-it('should throw for discontinued versions', async () => {
+it('should throw for discontinued versions', () => {
   global.Date.now = () => new Date('2022-07-31').getTime();
   makeMockPython('3.6');
 
@@ -83,7 +83,7 @@ it('should throw for discontinued versions', async () => {
   expect(warningMessages).toStrictEqual([]);
 });
 
-it('should warn for deprecated versions, soon to be discontinued', async () => {
+it('should warn for deprecated versions, soon to be discontinued', () => {
   global.Date.now = () => new Date('2021-07-01').getTime();
   makeMockPython('3.6');
 
