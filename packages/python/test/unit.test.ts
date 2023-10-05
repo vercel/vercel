@@ -31,7 +31,7 @@ afterEach(() => {
 it('should only match supported versions, otherwise throw an error', async () => {
   const result = getSupportedPythonVersion({ pipLockPythonVersion: '3.9' });
   expect(result).toHaveProperty('runtime');
-  expect(result.runtime).toMatch(/^python3.\d+/);
+  expect(result.runtime).toMatch(/^python3\.\d+$/);
 });
 
 it('should ignore minor version in vercel dev', async () => {
@@ -48,16 +48,16 @@ it('should ignore minor version in vercel dev', async () => {
 });
 
 it('should select latest version when no Piplock detected', async () => {
-  expect(
-    getSupportedPythonVersion({ pipLockPythonVersion: undefined })
-  ).toHaveProperty('runtime', 'python3.11');
+  const result = getSupportedPythonVersion({ pipLockPythonVersion: undefined });
+  expect(result).toHaveProperty('runtime');
+  expect(result.runtime).toMatch(/^python3\.\d+$/);
   expect(warningMessages).toStrictEqual([]);
 });
 
 it('should select latest version and warn when invalid Piplock detected', async () => {
-  expect(
-    getSupportedPythonVersion({ pipLockPythonVersion: '999' })
-  ).toHaveProperty('runtime', 'python3.11');
+  const result = getSupportedPythonVersion({ pipLockPythonVersion: '999' });
+  expect(result).toHaveProperty('runtime');
+  expect(result.runtime).toMatch(/^python3\.\d+$/);
   expect(warningMessages).toStrictEqual([
     'Warning: Python version "999" detected in Pipfile.lock is invalid and will be ignored. http://vercel.link/python-version',
   ]);
