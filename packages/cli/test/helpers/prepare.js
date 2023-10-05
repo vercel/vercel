@@ -433,6 +433,24 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
         },
       }),
     },
+    'vc-build-web-analytics': {
+      '.vercel/project.json': JSON.stringify({
+        orgId: '.',
+        projectId: '.',
+        settings: {
+          framework: null,
+          installCommand: 'echo "skipping install"',
+        },
+      }),
+      'package.json': JSON.stringify({
+        scripts: {
+          build: 'mkdir -p public && echo hi > public/index.txt',
+        },
+        dependencies: {
+          '@vercel/analytics': '1.0.0',
+        },
+      }),
+    },
     'vc-build-static-build': {
       '.vercel/project.json': JSON.stringify({
         orgId: '.',
