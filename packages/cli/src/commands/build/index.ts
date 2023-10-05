@@ -106,6 +106,7 @@ export interface BuildsManifest {
   argv: string[];
   error?: any;
   builds?: SerializedBuilder[];
+  features?: { speedInsightsVersion: string; webAnalyticsVersion: string };
 }
 
 export default async function main(client: Client): Promise<number> {
@@ -249,7 +250,7 @@ export default async function main(client: Client): Promise<number> {
       output.debug(`Loaded environment variables from "${envPath}"`);
     }
 
-    // For Vercel Speed Insights support
+    // For Vercel Legacy speed Insights support
     if (project.settings.analyticsId) {
       envToUnset.add('VERCEL_ANALYTICS_ID');
       process.env.VERCEL_ANALYTICS_ID = project.settings.analyticsId;
@@ -428,21 +429,27 @@ async function doBuild(
 
   const ops: Promise<Error | void>[] = [];
 
-  const dependencies = [
-    ...Object.keys(pkg?.dependencies ?? {}),
-    ...Object.keys(pkg?.devDependencies ?? {}),
-  ];
+  const dependencyMap = makeDepencyMap(pkg);
+  const speedInsighsVersion = dependencyMap.get('@vercel/speed-insights');
+  if (speedInsighsVersion) {
+    if (process.env.VERCEL_ANALYTICS_ID) {
+      output.warn(
+        `The \`VERCEL_ANALYTICS_ID\` environment variable is deprecated and will be removed in a future release. Please remove it from your environment variables`
+      );
 
-  const isUsingSpeedInsights = dependencies.some(
-    d => d === '@vercel/speed-insights'
-  );
-
-  if (isUsingSpeedInsights && process.env.VERCEL_ANALYTICS_ID) {
-    output.warn(
-      `The \`VERCEL_ANALYTICS_ID\` environment variable is deprecated and will be removed in a future release. Please remove it from your environment variables`
-    );
-
-    delete process.env.VERCEL_ANALYTICS_ID;
+      delete process.env.VERCEL_ANALYTICS_ID;
+    }
+    buildsJson.features = {
+      ...(buildsJson.features ?? {}),
+      speedInsightsVersion: speedInsighsVersion,
+    };
+  }
+  const webAnalyticsVersion = dependencyMap.get('@vercel/analytics');
+  if (webAnalyticsVersion) {
+    buildsJson.features = {
+      ...(buildsJson.features ?? {}),
+      webAnalyticsVersion: webAnalyticsVersion,
+    };
   }
 
   // Write the `detectedBuilders` result to output dir
@@ -806,4 +813,11 @@ function mergeFlags(
 
     return [];
   });
+}
+
+function makeDepencyMap(pkg: PackageJson | null): Map<string, string> {
+  return new Map([
+    ...Object.entries(pkg?.devDependencies ?? {}),
+    ...Object.entries(pkg?.dependencies ?? {}),
+  ]);
 }
