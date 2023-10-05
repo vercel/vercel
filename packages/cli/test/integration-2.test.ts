@@ -1165,9 +1165,23 @@ test('[vc build] should build project with `@vercel/speed-insights`', async () =
     expect(output.stderr).toContain(
       'The `VERCEL_ANALYTICS_ID` environment variable is deprecated and will be removed in a future release. Please remove it from your environment variables'
     );
+    const builds = await fs.readJSON(
+      path.join(directory, '.vercel/output/builds.json')
+    );
+    expect(builds?.features?.speedInsightsVersion).toEqual('0.0.1');
   } finally {
     delete process.env.VERCEL_ANALYTICS_ID;
   }
+});
+
+test('[vc build] should build project with `@vercel/analytics`', async () => {
+  const directory = await setupE2EFixture('vc-build-web-analytics');
+  const output = await execCli(binaryPath, ['build'], { cwd: directory });
+  expect(output.exitCode, formatOutput(output)).toBe(0);
+  const builds = await fs.readJSON(
+    path.join(directory, '.vercel/output/builds.json')
+  );
+  expect(builds?.features?.webAnalyticsVersion).toEqual('1.0.0');
 });
 
 test('[vc build] should not include .vercel when distDir is "."', async () => {
