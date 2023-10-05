@@ -5,8 +5,7 @@
     "moduleResolution": "nodenext",
     "noImplicitReturns": false,
     "noUnusedParameters": false,
-    "outDir": "dist",
-    "target": "ES2021"
+    "outDir": "dist"
   },
   "extends": "../../tsconfig.base.json",
   "include": ["src/**/*"]

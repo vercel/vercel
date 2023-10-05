@@ -1,10 +1,7 @@
 {
   "compilerOptions": {
-    "lib": ["ES2021"],
-    "module": "commonjs",
     "noImplicitReturns": false,
-    "outDir": "dist",
-    "target": "ES2021"
+    "outDir": "dist"
   },
   "extends": "../../tsconfig.base.json",
   "include": ["src/**/*"],

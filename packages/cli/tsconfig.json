@@ -1,15 +1,11 @@
 {
   "compilerOptions": {
     "allowJs": true,
-    "lib": ["ES2021"],
-    "module": "commonjs",
-    "moduleResolution": "node",
     "noImplicitReturns": false,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "outDir": "./dist",
     "resolveJsonModule": true,
-    "target": "ES2021",
     "typeRoots": ["./types", "./node_modules/@types"]
   },
   "extends": "../../tsconfig.base.json",
