@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "outDir": "dist",
+    "outDir": "./dist",
     "typeRoots": ["./@types", "./node_modules/@types"]
   },
   "extends": "../../tsconfig.base.json",
