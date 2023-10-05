@@ -1318,7 +1318,12 @@ export default class DevServer {
       return true;
     }
 
-    if (!match && !routeResult.found && status && phase !== 'miss') {
+    if (!match && status && phase !== 'miss') {
+      if (routeResult.userDest) {
+        // If it's a user defined route then we continue routing
+        return false;
+      }
+
       this.output.debug(`Route found with with status code ${status}`);
       await this.sendError(req, res, requestId, '', status, headers);
       return true;

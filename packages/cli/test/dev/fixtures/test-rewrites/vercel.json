@@ -15,9 +15,9 @@
       "destination": "index.html"
     },
     {
-      "source": "/status-rewrite-404",
+      "source": "/status-rewrite-425",
       "destination": "index.html",
-      "status": 404
+      "statusCode": 425
     }
   ]
 }
