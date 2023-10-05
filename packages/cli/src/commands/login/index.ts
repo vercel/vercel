@@ -24,6 +24,9 @@ import { updateCurrentTeamAfterLogin } from '../../util/login/update-current-tea
 export default async function login(client: Client): Promise<number> {
   const { output } = client;
 
+  // user is not currently authenticated on this machine
+  const isInitialLogin = !client.authConfig.token;
+
   const argv = getArgs(client.argv.slice(2), {
     '--oob': Boolean,
     '--github': Boolean,
@@ -68,14 +71,22 @@ export default async function login(client: Client): Promise<number> {
     return result;
   }
 
-  const isNewLogin = !client.authConfig.token;
-
   // Save the user's authentication token to the configuration file.
   client.authConfig.token = result.token;
 
-  // If we have a new login, update `currentTeam`
-  if (isNewLogin) {
-    await updateCurrentTeamAfterLogin(client, output, result.teamId);
+  if (result.teamId) {
+    client.config.currentTeam = result.teamId;
+  } else {
+    delete client.config.currentTeam;
+  }
+
+  // If we have a brand new login, update `currentTeam`
+  if (isInitialLogin) {
+    await updateCurrentTeamAfterLogin(
+      client,
+      output,
+      client.config.currentTeam
+    );
   }
 
   writeToAuthConfigFile(client.authConfig);

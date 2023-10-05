@@ -2572,6 +2572,11 @@ export function normalizeEdgeFunctionPath(
       shortPath = 'index';
     }
   }
+
+  if (shortPath.startsWith('pages/')) {
+    shortPath = shortPath.replace(/^pages\//, '');
+  }
+
   return shortPath;
 }
 

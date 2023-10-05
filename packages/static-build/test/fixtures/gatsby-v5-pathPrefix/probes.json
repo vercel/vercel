@@ -1,17 +1,17 @@
 {
   "probes": [
-    { "path": "/foo/", "mustContain": "you just made a Gatsby site! 🎉🎉🎉" },
+    { "path": "/foo/", "mustContain": "<h1>Gatsby - Index</h1>" },
     {
       "path": "/foo/ssr/",
-      "mustContain": "This page is <b>rendered server-side</b>"
+      "mustContain": "<h1>This page is <!-- -->rendered server side</h1>"
     },
     {
       "path": "/foo/dsg/",
-      "mustContain": "This page is <b>DSG</b>"
+      "mustContain": "<h1>This page is DSG</h1>"
     },
     {
       "path": "/foo/x/y/z",
-      "mustContain": "This is a custom 404 page"
+      "mustContain": "<h1>Page not found</h1>"
     }
   ]
 }
