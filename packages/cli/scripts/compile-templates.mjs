@@ -32,26 +32,12 @@ export async function compileDevTemplates() {
     const contents = `import encodeHTML from 'escape-html';
 
 ${def}
-export default ${
-  fn
-    .toString()
-    .replace(
-      /var encodeHTML.+\(\)\);/s,
-      ''
-    )
-    .replace(
-      /\bvar\b/g,
-      'let'
-    )
-    .replace(
-      /\(it\s*\)/s,
-      `(it: ${interfaceName}): string`
-    )
-}`;
+export default ${fn
+      .toString()
+      .replace(/var encodeHTML.+\(\)\);/s, '')
+      .replace(/\bvar\b/g, 'let')
+      .replace(/\(it\s*\)/s, `(it: ${interfaceName}): string`)}`;
 
-    await Promise.all([
-      writeFile(new URL(tsPath), contents),
-      unlink(fnPath),
-    ]);
+    await Promise.all([writeFile(new URL(tsPath), contents), unlink(fnPath)]);
   }
 }
