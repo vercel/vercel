@@ -106,7 +106,7 @@ export interface BuildsManifest {
   argv: string[];
   error?: any;
   builds?: SerializedBuilder[];
-  features?: { speedInsights: boolean; webAnalytics: boolean };
+  features?: { speedInsightsVersion: string; webAnalyticsVersion: string };
 }
 
 export default async function main(client: Client): Promise<number> {
@@ -429,7 +429,9 @@ async function doBuild(
 
   const ops: Promise<Error | void>[] = [];
 
-  if (isUsingSpeedInsights(pkg)) {
+  const dependencyMap = makeDepencyMap(pkg);
+  const speedInsighsVersion = dependencyMap.get('@vercel/speed-insights');
+  if (speedInsighsVersion) {
     if (process.env.VERCEL_ANALYTICS_ID) {
       output.warn(
         `The \`VERCEL_ANALYTICS_ID\` environment variable is deprecated and will be removed in a future release. Please remove it from your environment variables`
@@ -439,13 +441,14 @@ async function doBuild(
     }
     buildsJson.features = {
       ...(buildsJson.features ?? {}),
-      speedInsights: true,
+      speedInsightsVersion: speedInsighsVersion,
     };
   }
-  if (isUsingWebAnaytics(pkg)) {
+  const webAnalyticsVersion = dependencyMap.get('@vercel/analytics');
+  if (webAnalyticsVersion) {
     buildsJson.features = {
       ...(buildsJson.features ?? {}),
-      webAnalytics: true,
+      webAnalyticsVersion: webAnalyticsVersion,
     };
   }
 
@@ -812,19 +815,9 @@ function mergeFlags(
   });
 }
 
-function isPackageInstalled(name: string, pkg: PackageJson | null): boolean {
-  const dependencies = [
-    ...Object.keys(pkg?.dependencies ?? {}),
-    ...Object.keys(pkg?.devDependencies ?? {}),
-  ];
-
-  return dependencies.some(d => d === name);
-}
-
-function isUsingSpeedInsights(pkg: PackageJson | null): boolean {
-  return isPackageInstalled('@vercel/speed-insights', pkg);
-}
-
-function isUsingWebAnaytics(pkg: PackageJson | null): boolean {
-  return isPackageInstalled('@vercel/analytics', pkg);
+function makeDepencyMap(pkg: PackageJson | null): Map<string, string> {
+  return new Map([
+    ...Object.entries(pkg?.devDependencies ?? {}),
+    ...Object.entries(pkg?.dependencies ?? {}),
+  ]);
 }

@@ -447,7 +447,7 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
           build: 'mkdir -p public && echo hi > public/index.txt',
         },
         dependencies: {
-          '@vercel/analytics': '0.0.1',
+          '@vercel/analytics': '1.0.0',
         },
       }),
     },

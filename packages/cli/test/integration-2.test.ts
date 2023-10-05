@@ -1168,7 +1168,7 @@ test('[vc build] should build project with `@vercel/speed-insights`', async () =
     const builds = await fs.readJSON(
       path.join(directory, '.vercel/output/builds.json')
     );
-    expect(builds?.features?.speedInsights).toEqual(true);
+    expect(builds?.features?.speedInsightsVersion).toEqual('0.0.1');
   } finally {
     delete process.env.VERCEL_ANALYTICS_ID;
   }
@@ -1181,7 +1181,7 @@ test('[vc build] should build project with `@vercel/analytics`', async () => {
   const builds = await fs.readJSON(
     path.join(directory, '.vercel/output/builds.json')
   );
-  expect(builds?.features?.webAnalytics).toEqual(true);
+  expect(builds?.features?.webAnalyticsVersion).toEqual('1.0.0');
 });
 
 test('[vc build] should not include .vercel when distDir is "."', async () => {
