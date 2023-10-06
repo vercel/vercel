@@ -2,32 +2,21 @@
   "probes": [
     {
       "path": "/",
-      "mustContain": "Vite App"
+      "mustContain": "Welcome to Your Vue.js App"
     },
     {
-      "path": "/js/app.js",
+      "path": "/assets/index-abd83a22.js",
       "headers": {
-        "cache-control": "max-age=31536000, immutable"
+        "cache-control": "public, max-age=0, must-revalidate"
       },
       "mustContain": "function"
     },
     {
-      "path": "/css/app.css",
+      "path": "/assets/index-a0eacae6.css",
       "headers": {
-        "cache-control": "max-age=31536000, immutable"
+        "cache-control": "public, max-age=0, must-revalidate"
       },
       "mustContain": "font-family"
-    },
-    {
-      "path": "/robots.txt",
-      "headers": {
-        "cache-control": "max-age=300"
-      },
-      "mustContain": "Disallow"
-    },
-    {
-      "path": "/923h3223329ddas",
-      "mustContain": "Vite App"
     }
   ]
 }
