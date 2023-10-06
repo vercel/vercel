@@ -5,14 +5,14 @@
       "mustContain": "Welcome to Your Vue.js App"
     },
     {
-      "path": "/assets/index-abd83a22.js",
+      "path": "/assets/index.js",
       "headers": {
         "cache-control": "public, max-age=0, must-revalidate"
       },
       "mustContain": "function"
     },
     {
-      "path": "/assets/index-a0eacae6.css",
+      "path": "/assets/index.css",
       "headers": {
         "cache-control": "public, max-age=0, must-revalidate"
       },
