@@ -2,7 +2,7 @@
   "probes": [
     {
       "path": "/",
-      "mustContain": "Welcome to Your Vue.js App"
+      "mustContain": "Vue 3 on Vercel"
     },
     {
       "path": "/assets/index.js",
