@@ -1,0 +1,11 @@
+{
+  "name": "parcel-v2",
+  "source": "src/index.html",
+  "scripts": {
+    "start": "parcel",
+    "build": "parcel build"
+  },
+  "dependencies": {
+    "parcel": "^2.9.3"
+  }
+}
