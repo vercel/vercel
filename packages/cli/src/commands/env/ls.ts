@@ -14,6 +14,7 @@ import stamp from '../../util/output/stamp';
 import param from '../../util/output/param';
 import { getCommandName } from '../../util/pkg-name';
 import ellipsis from '../../util/output/ellipsis';
+import formatEnvComment from '../../util/env/format-env-comment';
 
 type Options = {
   '--debug': boolean;
@@ -82,8 +83,8 @@ function getTable(records: ProjectEnvVariable[]) {
     ? 'environments (git branch)'
     : 'environments';
   return formatTable(
-    ['name', 'value', label, 'created'],
-    ['l', 'l', 'l', 'l', 'l'],
+    ['name', 'value', label, 'comment', 'created'],
+    ['l', 'l', 'l', 'l', 'l', 'l'],
     [
       {
         name: '',
@@ -112,6 +113,7 @@ function getRow(env: ProjectEnvVariable) {
     chalk.bold(env.key),
     value,
     formatEnvTarget(env),
+    formatEnvComment(env),
     env.createdAt ? `${ms(now - env.createdAt)} ago` : '',
   ];
 }
