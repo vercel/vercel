@@ -16,7 +16,8 @@
     "build": "node ../../utils/build-builder.mjs",
     "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --bail --runInBand",
     "test-unit": "pnpm test test/build.test.ts test/gatsby.test.ts test/prepare-cache.test.ts",
-    "test-e2e": "pnpm test test/integration-*.test.js"
+    "test-e2e": "pnpm test test/integration-*.test.js",
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "@vercel/gatsby-plugin-vercel-analytics": "1.0.11",

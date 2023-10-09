@@ -15,7 +15,8 @@
   "scripts": {
     "build": "node ../../utils/build.mjs",
     "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --runInBand --bail",
-    "test-unit": "pnpm test"
+    "test-unit": "pnpm test",
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "@iarna/toml": "2.2.3",
