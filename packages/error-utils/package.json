@@ -15,7 +15,8 @@
   "scripts": {
     "build": "node ../../utils/build.mjs",
     "test": "jest --reporters=default --reporters=jest-junit --coverage --env node --verbose",
-    "test-unit": "pnpm test"
+    "test-unit": "pnpm test",
+    "type-check": "tsc --noEmit"
   },
   "license": "Apache-2.0",
   "devDependencies": {

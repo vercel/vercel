@@ -17,7 +17,8 @@
     "build": "node ../../utils/build.mjs",
     "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --runInBand --bail",
     "test-unit": "pnpm test test/unit.*test.*",
-    "test-e2e": "pnpm test test/integration.test.ts"
+    "test-e2e": "pnpm test test/integration.test.ts",
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "@vercel/error-utils": "2.0.1",
