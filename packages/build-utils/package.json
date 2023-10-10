@@ -14,7 +14,8 @@
     "build": "node build.mjs",
     "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --runInBand --bail",
     "test-unit": "pnpm test test/unit.*test.*",
-    "test-e2e": "pnpm test test/integration.test.ts"
+    "test-e2e": "pnpm test test/integration.test.ts",
+    "type-check": "tsc --noEmit"
   },
   "devDependencies": {
     "@iarna/toml": "2.2.3",

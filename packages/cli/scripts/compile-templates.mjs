@@ -28,36 +28,16 @@ export async function compileDevTemplates() {
     const interfaceName = def.match(/interface (\w+)/)[1];
 
     const { default: fn } = await import(fnPath);
-    const lines = fn.toString().split('\n');
-    let errorHtmlStart = -1;
-    let errorHtmlEnd = -1;
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      if (errorHtmlStart === -1 && line.includes('encodeHTML')) {
-        errorHtmlStart = i;
-      } else if (errorHtmlEnd === -1 && line.includes(')();')) {
-        errorHtmlEnd = i;
-      }
-      if (/\bvar\b/.test(line)) {
-        lines[i] = line.replace(/\bvar\b/g, 'let');
-      }
-    }
-    lines.splice(errorHtmlStart, errorHtmlEnd);
 
-    lines[0] = `export default ${lines[0].replace(
-      '(it)',
-      `(it: ${interfaceName}): string`
-    )}`;
+    const contents = `import encodeHTML from 'escape-html';
 
-    lines.unshift(
-      "import encodeHTML from 'escape-html';",
-      '',
-      ...def.split('\n')
-    );
+${def}
+export default ${fn
+      .toString()
+      .replace(/var encodeHTML.+\(\)\);/s, '')
+      .replace(/\bvar\b/g, 'let')
+      .replace(/\(it\s*\)/s, `(it: ${interfaceName}): string`)}`;
 
-    await Promise.all([
-      writeFile(new URL(tsPath), lines.join('\n')),
-      unlink(fnPath),
-    ]);
+    await Promise.all([writeFile(new URL(tsPath), contents), unlink(fnPath)]);
   }
 }
