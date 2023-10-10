@@ -25,6 +25,7 @@ import {
 import { isErrnoException } from '@vercel/error-utils';
 import { addToGitIgnore } from '../../util/link/add-to-gitignore';
 import JSONparse from 'json-parse-better-errors';
+import { mapToEnvValueWithComment } from '../../util/env/map-to-comment';
 
 const CONTENTS_PREFIX = '# Created by Vercel CLI\n';
 
@@ -128,7 +129,7 @@ export default async function pull(
       // but `records` is already in the form of a JSON object that doesn't filter
       // double quotes.
       const newEnv = JSONparse(JSON.stringify(records).replace(/\\"/g, ''));
-      deltaString = buildDeltaString(oldEnv, newEnv);
+      deltaString = buildDeltaString(mapToEnvValueWithComment(oldEnv), newEnv);
     }
   }
 
