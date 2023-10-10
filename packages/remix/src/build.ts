@@ -428,14 +428,12 @@ module.exports = config;`;
       : null,
   ]);
 
-  const staticDir = join(
-    remixConfig.assetsBuildDirectory,
-    ...remixConfig.publicPath
-      .replace(/^\/|\/$/g, '')
-      .split('/')
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      .map(_ => '..')
-  );
+  let { assetsBuildDirectory: staticDir, publicPath } = remixConfig;
+  while (basename(staticDir) === basename(publicPath)) {
+    staticDir = dirname(staticDir);
+    publicPath = dirname(publicPath);
+  }
+
   const [staticFiles, ...functions] = await Promise.all([
     glob('**', staticDir),
     ...serverBundles.map(bundle => {
