@@ -17,6 +17,8 @@ jobs:
           fetch-depth: 0
       - name: Setup node
         uses: actions/setup-node@v3
+        with:
+          node-version: 16
       - name: Enable corepack
         run: corepack enable pnpm
       - name: Update @remix-run/dev
