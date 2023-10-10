@@ -10,7 +10,7 @@ export async function initCorepack({
 }: {
   repoRootPath: string;
 }): Promise<string | null> {
-  console.log('[debug] called initCorepack')
+  console.log('[debug] called initCorepack()')
   if (process.env.ENABLE_EXPERIMENTAL_COREPACK !== '1') {
     // Since corepack is experimental, we need to exit early
     // unless the user explicitly enables it with the env var.
@@ -65,6 +65,7 @@ export async function initCorepack({
 }
 
 export function cleanupCorepack(corepackShimDir: string) {
+  console.log('[debug] called cleanupCorepack()')
   if (process.env.COREPACK_HOME) {
     delete process.env.COREPACK_HOME;
   }
