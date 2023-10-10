@@ -10,9 +10,11 @@ export async function initCorepack({
 }: {
   repoRootPath: string;
 }): Promise<string | null> {
+  console.log('[debug] called initCorepack')
   if (process.env.ENABLE_EXPERIMENTAL_COREPACK !== '1') {
     // Since corepack is experimental, we need to exit early
     // unless the user explicitly enables it with the env var.
+    console.log('[debug] missing env ENABLE_EXPERIMENTAL_COREPACK')
     return null;
   }
   const pkg = await readJSONFile<PackageJson>(
@@ -34,8 +36,11 @@ export async function initCorepack({
     const corepackRootDir = join(repoRootPath, VERCEL_DIR, 'cache', 'corepack');
     const corepackHomeDir = join(corepackRootDir, 'home');
     const corepackShimDir = join(corepackRootDir, 'shim');
+    console.log({corepackRootDir, corepackHomeDir, corepackShimDir})
     await fs.mkdirp(corepackHomeDir);
+    console.log('[debug] created corepack home')
     await fs.mkdirp(corepackShimDir);
+    console.log('[debug] created corepack shim')
     process.env.COREPACK_HOME = corepackHomeDir;
     process.env.PATH = `${corepackShimDir}${delimiter}${process.env.PATH}`;
     const pkgManagerName = pkg.packageManager.split('@')[0];
@@ -53,6 +58,7 @@ export async function initCorepack({
         prettyCommand: `corepack enable ${pkgManagerName}`,
       }
     );
+    console.log('[debug] spawn corepack was successful')
     return corepackShimDir;
   }
   return null;
