@@ -1,5 +1,4 @@
 ---
-'@vercel-internals/types': minor
 'vercel': minor
 ---
 
