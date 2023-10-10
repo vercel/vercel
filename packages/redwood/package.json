@@ -16,7 +16,8 @@
     "build": "node ../../utils/build-builder.mjs",
     "test-e2e": "pnpm test test/test.js",
     "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --bail --runInBand",
-    "test-unit": "pnpm test test/prepare-cache.test.js"
+    "test-unit": "pnpm test test/prepare-cache.test.js",
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "@vercel/nft": "0.24.2",
