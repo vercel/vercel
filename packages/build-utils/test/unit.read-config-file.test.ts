@@ -29,7 +29,7 @@ describe('Test `readConfigFile()`', () => {
   it('should return parsed object when file exists', async () => {
     expect(await readConfigFile(tsconfig)).toMatchObject({
       compilerOptions: {
-        strict: true,
+        outDir: './dist',
       },
     });
     expect(logMessages).toEqual([]);
@@ -39,7 +39,7 @@ describe('Test `readConfigFile()`', () => {
     const files = [doesnotexist, tsconfig];
     expect(await readConfigFile(files)).toMatchObject({
       compilerOptions: {
-        strict: true,
+        outDir: './dist',
       },
     });
     expect(logMessages).toEqual([]);
@@ -63,7 +63,7 @@ describe('Test `readConfigFile()`', () => {
       await writeFile(invalid, 'borked');
       expect(await readConfigFile([invalid, tsconfig])).toMatchObject({
         compilerOptions: {
-          strict: true,
+          outDir: './dist',
         },
       });
     } finally {

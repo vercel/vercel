@@ -2,39 +2,21 @@
   "probes": [
     {
       "path": "/",
-      "mustContain": "13-vue"
+      "mustContain": "Vue 3 on Vercel"
     },
     {
-      "path": "/js/app.js",
+      "path": "/assets/index.js",
       "headers": {
-        "cache-control": "max-age=31536000, immutable"
+        "cache-control": "public, max-age=0, must-revalidate"
       },
       "mustContain": "function"
     },
     {
-      "path": "/css/app.css",
+      "path": "/assets/index.css",
       "headers": {
-        "cache-control": "max-age=31536000, immutable"
+        "cache-control": "public, max-age=0, must-revalidate"
       },
       "mustContain": "font-family"
-    },
-    {
-      "path": "/robots.txt",
-      "headers": {
-        "cache-control": "max-age=300"
-      },
-      "mustContain": "Disallow"
-    },
-    {
-      "path": "/manifest.json",
-      "headers": {
-        "cache-control": "max-age=300"
-      },
-      "mustContain": "13-vue-manifest"
-    },
-    {
-      "path": "/923h3223329ddas",
-      "mustContain": "13-vue"
     }
   ]
 }
