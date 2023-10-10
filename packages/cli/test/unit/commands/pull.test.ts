@@ -178,6 +178,82 @@ describe('pull', () => {
     expect(previewFileHasPreviewEnv2).toBeTruthy();
   });
 
+  it.each<'development' | 'preview' | 'production'>([
+    'development',
+    'preview',
+    'production',
+  ])(`should handle %s env vars with comments`, async envName => {
+    const cwd = setupUnitFixture('vercel-pull-next');
+    useUser();
+    useTeams('team_dummy');
+    useProject(
+      {
+        ...defaultProject,
+        id: 'vercel-pull-next',
+        name: 'vercel-pull-next',
+      },
+      [
+        {
+          type: 'encrypted',
+          id: '781dt89g8r2h789g',
+          key: 'REDIS_CONNECTION_STRING',
+          value: 'redis://abc123@redis.example.com:6379',
+          target: [envName],
+          gitBranch: undefined,
+          configurationId: null,
+          updatedAt: 1557241361455,
+          createdAt: 1557241361455,
+          comment:
+            'Connects to the Redis database that stores sessions for fast retrieval. This can be accessed on Vercel KV.',
+        },
+        {
+          type: 'encrypted',
+          id: '781dt89g8r2h789c',
+          key: 'ANOTHER_ENV_STRING',
+          value: 'A VALUE GOES HERE',
+          target: [envName],
+          gitBranch: undefined,
+          configurationId: null,
+          updatedAt: 1557241361455,
+          createdAt: 1557241361455,
+          comment: '',
+        },
+        {
+          type: 'encrypted',
+          id: '781dt89g8r2h789b',
+          key: 'ANOTHER_ENV_STRING_2',
+          value: 'A VALUE GOES HERE_2',
+          target: [envName],
+          gitBranch: undefined,
+          configurationId: null,
+          updatedAt: 1557241361455,
+          createdAt: 1557241361455,
+        },
+        {
+          type: 'encrypted',
+          id: '781dt89g8r2h789a',
+          key: 'DATABASE_URL',
+          value: 'example.com',
+          target: [envName],
+          gitBranch: undefined,
+          configurationId: null,
+          updatedAt: 1557241361455,
+          createdAt: 1557241361455,
+          comment: 'This connects to postgres on vercel',
+        },
+      ]
+    );
+    client.setArgv('pull', `--environment=${envName}`, cwd);
+    const exitCodePromise = pull(client);
+    await expect(exitCodePromise).resolves.toEqual(0);
+
+    const rawEnv = await fs.readFile(
+      path.join(cwd, '.vercel', `.env.${envName}.local`)
+    );
+
+    expect(rawEnv.toString()).toMatchSnapshot();
+  });
+
   it('should work with repo link', async () => {
     const cwd = setupUnitFixture('monorepo-link');
     useUser();

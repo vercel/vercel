@@ -174,7 +174,16 @@ export default class DevServer {
     this.repoRoot = options.repoRoot ?? cwd;
     this.output = options.output;
     this.envConfigs = { buildEnv: {}, runEnv: {}, allEnv: {} };
-    this.envValues = options.envValues || {};
+    this.envValues =
+      options.envValues !== undefined
+        ? Object.keys(options.envValues).reduce(
+            (acc: Record<string, string>, key: string) => {
+              if (options.envValues) acc[key] = options.envValues[key].value;
+              return acc;
+            },
+            {}
+          )
+        : {};
     this.files = {};
     this.originalProjectSettings = options.projectSettings;
     this.projectSettings = options.projectSettings;

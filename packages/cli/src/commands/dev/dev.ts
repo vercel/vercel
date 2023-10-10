@@ -10,7 +10,10 @@ import setupAndLink from '../../util/link/setup-and-link';
 import { getCommandName } from '../../util/pkg-name';
 import param from '../../util/output/param';
 import { OUTPUT_DIR } from '../../util/build/write-build-result';
-import { pullEnvRecords } from '../../util/env/get-env-records';
+import {
+  PullEnvRecordsResponse,
+  pullEnvRecords,
+} from '../../util/env/get-env-records';
 
 type Options = {
   '--listen': string;
@@ -56,7 +59,7 @@ export default async function dev(
   }
 
   let projectSettings: ProjectSettings | undefined;
-  let envValues: Record<string, string> = {};
+  let envValues: PullEnvRecordsResponse = {};
   let repoRoot: string | undefined;
   if (link.status === 'linked') {
     const { project, org } = link;

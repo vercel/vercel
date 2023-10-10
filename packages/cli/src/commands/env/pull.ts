@@ -112,12 +112,11 @@ export default async function pull(
   const pullStamp = stamp();
   output.spinner('Downloading');
 
-  const records = (
-    await pullEnvRecords(output, client, project.id, source, {
-      target: environment || 'development',
-      gitBranch,
-    })
-  ).env;
+  const response = await pullEnvRecords(output, client, project.id, source, {
+    target: environment || 'development',
+    gitBranch,
+  });
+  const records = response.env;
 
   let deltaString = '';
   let oldEnv;
@@ -138,7 +137,13 @@ export default async function pull(
     Object.keys(records)
       .sort()
       .filter(key => !VARIABLES_TO_IGNORE.includes(key))
-      .map(key => `${key}="${escapeValue(records[key])}"`)
+      .map(key => {
+        const hasComment =
+          records[key].comment !== undefined && records[key].comment !== '';
+        return `${
+          hasComment ? `# ${escapeValue(records[key].comment)}\n` : ''
+        }${key}="${escapeValue(records[key].value)}"`;
+      })
       .join('\n') +
     '\n';
 
