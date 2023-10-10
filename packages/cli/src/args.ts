@@ -40,6 +40,7 @@ export const help = () => `
       projects                         Manages your Projects
       rm | remove          [id]        Removes a deployment
       secrets              [name]      Manages your global Secrets, for use in Environment Variables
+      stores                           Manages your Stores
       teams                            Manages your teams
       whoami                           Shows the username of the currently logged in user
 

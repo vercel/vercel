@@ -38,4 +38,5 @@ export default new Map([
   ['team', 'teams'],
   ['teams', 'teams'],
   ['whoami', 'whoami'],
+  ['stores', 'stores'],
 ]);
