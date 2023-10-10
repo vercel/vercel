@@ -11,6 +11,7 @@
     "@typescript-eslint/eslint-plugin": "5.21.0",
     "@typescript-eslint/parser": "5.21.0",
     "@vercel/build-utils": "*",
+    "@vercel/style-guide": "4.0.2",
     "async-retry": "1.2.3",
     "buffer-replace": "1.0.0",
     "create-svelte": "2.0.1",
@@ -32,7 +33,7 @@
     "source-map-support": "0.5.12",
     "ts-eager": "2.0.2",
     "ts-jest": "29.1.0",
-    "turbo": "1.10.14",
+    "turbo": "1.10.15",
     "typescript": "4.9.5"
   },
   "scripts": {
@@ -49,7 +50,8 @@
     "prepare": "husky install",
     "pack": "cd utils && node -r ts-eager/register ./pack.ts",
     "ci:version": "changeset version && pnpm install --no-frozen-lockfile",
-    "ci:publish": "pnpm publish -r && node utils/update-canary-tags.mjs && changeset tag"
+    "ci:publish": "pnpm publish -r && node utils/update-canary-tags.mjs && changeset tag",
+    "type-check": "turbo type-check --concurrency=12 --output-logs=errors-only --summarize --continue"
   },
   "lint-staged": {
     "./{*,{api,packages,test,utils}/**/*}.{js,ts}": [

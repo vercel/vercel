@@ -59,7 +59,7 @@ export async function tsc() {
   const rootNodeModulesBin = fileURLToPath(
     new URL('../node_modules/.bin', import.meta.url)
   );
-  await execa('tsc', {
+  await execa('tsc', ['--declaration', '--emitDeclarationOnly'], {
     stdio: 'inherit',
     env: {
       ...process.env,

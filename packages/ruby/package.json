@@ -17,7 +17,8 @@
   "scripts": {
     "build": "node ../../utils/build-builder.mjs",
     "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --runInBand --bail",
-    "test-e2e": "pnpm test"
+    "test-e2e": "pnpm test",
+    "type-check": "tsc --noEmit"
   },
   "devDependencies": {
     "@types/fs-extra": "8.0.0",
