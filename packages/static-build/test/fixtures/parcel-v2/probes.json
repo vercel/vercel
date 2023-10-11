@@ -1,0 +1,5 @@
+{
+  "probes": [
+    { "path": "/", "mustContain": "My Parcel v2 App" }
+  ]
+}

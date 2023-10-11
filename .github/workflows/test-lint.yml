@@ -49,3 +49,5 @@ jobs:
       - run: pnpm install
       - run: pnpm run lint
       - run: pnpm run prettier-check
+      - run: pnpm run build
+      - run: pnpm run type-check
