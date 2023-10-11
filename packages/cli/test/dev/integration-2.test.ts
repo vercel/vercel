@@ -78,12 +78,6 @@ test(
   '[vercel dev] test rewrites serve correct content',
   testFixtureStdio('test-rewrites', async (testPath: any) => {
     await testPath(200, '/hello', 'Hello World');
-  })
-);
-
-test(
-  '[vercel dev] test rewrites can change status code',
-  testFixtureStdio('test-rewrites', async (testPath: any) => {
     await testPath(425, '/status-rewrite-425', 'Hello World');
   })
 );
