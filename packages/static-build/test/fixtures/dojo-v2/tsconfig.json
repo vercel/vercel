@@ -1,0 +1,23 @@
+{
+	"compilerOptions": {
+		"declaration": false,
+		"emitDecoratorMetadata": true,
+		"experimentalDecorators": true,
+		"jsx": "react",
+		"jsxFactory": "tsx",
+		"module": "commonjs",
+		"moduleResolution": "node",
+		"downlevelIteration": true,
+		"baseUrl": "./",
+		"removeComments": false,
+		"sourceMap": true,
+		"outDir": "dist",
+		"strict": true,
+		"target": "es5",
+		"types": [ "intern" ]
+	},
+	"include": [
+		"./src/**/*.ts",
+		"./src/**/*.tsx"
+	]
+}

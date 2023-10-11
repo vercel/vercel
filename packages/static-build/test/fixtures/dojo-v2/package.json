@@ -1,0 +1,35 @@
+{
+	"name": "dojo-v2",
+	"version": "1.0.0",
+	"scripts": {
+		"dev": "dojo build app -m dev -w -s",
+		"build": "npm-run-all -s clean build:**",
+		"build:prepare": "shx mkdir .temp-dist",
+		"build:ce": "dojo build widget && shx cp -r output/dist .temp-dist/",
+		"build:lib": "dojo build widget -t lib && shx cp -r output/dist/** .temp-dist",
+		"build:lib:legacy": "dojo build widget -t lib -l && shx cp -r output/dist/** .temp-dist",
+		"build:themes": "dojo build theme && shx cp -r output/theme/* .temp-dist/theme",
+		"build:meta": "shx cp package.json .temp-dist && shx cp README.md .temp-dist",
+		"build:finalize": "shx rm -rf output/dist && shx mv .temp-dist/ output/dist",
+		"clean": "shx rm -rf .temp-dist",
+		"docs": "dojo build app -f docs=true",
+		"test": "dojo test",
+		"test:headless": "dojo build widget -m unit && dojo test -u -c headless"
+	},
+	"dependencies": {
+		"@dojo/framework": "~8.0.0",
+		"tslib": "~1.9.1"
+	},
+	"devDependencies": {
+		"@dojo/cli": "~8.0.0",
+		"@dojo/cli-build-app": "~8.0.0",
+		"@dojo/cli-build-theme": "~8.0.0",
+		"@dojo/cli-build-widget": "~8.0.0",
+		"@dojo/cli-test-intern": "~8.0.0",
+		"@dojo/parade": "~2.0.0",
+		"@types/node": "~9.6.5",
+		"npm-run-all": "4.1.3",
+		"typescript": "~3.5.3",
+		"shx": "0.2.2"
+	}
+}
