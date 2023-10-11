@@ -1,5 +1,5 @@
 {
   "probes": [
-    { "path": "/", "mustContain": "Angular v16" }
+    { "path": "/", "mustContain": "Angular V16" }
   ]
 }
