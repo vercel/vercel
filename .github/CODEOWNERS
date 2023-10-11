@@ -7,13 +7,11 @@
 /packages/fs-detectors                   @TooTallNate @EndangeredMassa @styfle @cb1kenobi @Ethan-Arrowood @trek @agadzik @chloetedder
 /packages/next                           @TooTallNate @EndangeredMassa @styfle @cb1kenobi @Ethan-Arrowood @trek @ijjk @ztanner
 /packages/routing-utils                  @TooTallNate @EndangeredMassa @styfle @cb1kenobi @Ethan-Arrowood @trek @ijjk
+/packages/static-build                   @TooTallNate @EndangeredMassa @cb1kenobi @Ethan-Arrowood @trek
 /packages/edge                           @vercel/compute
 /examples                                @leerob
 /examples/create-react-app               @Timer
 /examples/nextjs                         @timneutkens @ijjk @styfle @ztanner @huozhi
-/examples/hugo                           @styfle
-/examples/jekyll                         @styfle
-/examples/zola                           @styfle
 /packages/node                           @TooTallNate @EndangeredMassa @styfle @cb1kenobi @Ethan-Arrowood @trek @Kikobeats
 
 # Unrestricted Paths
