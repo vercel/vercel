@@ -790,11 +790,10 @@ export default class DevServer {
 
     const merged: Env = { ...env, ...localEnv };
 
-    // Validate that the env var name matches what AWS Lambda allows:
-    //   - https://docs.aws.amazon.com/lambda/latest/dg/env_variables.html
+    // Validate that the env var name satisfies what Vercel's platform accepts.
     let hasInvalidName = false;
     for (const key of Object.keys(merged)) {
-      if (!/^[a-zA-Z][a-zA-Z0-9_]*$/.test(key)) {
+      if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(key)) {
         this.output.warn(
           `Ignoring ${type
             .split('.')
@@ -808,7 +807,7 @@ export default class DevServer {
     }
     if (hasInvalidName) {
       this.output.log(
-        'Env var names must start with letters, and can only contain alphanumeric characters and underscores'
+        'The name contains invalid characters. Only letters, digits, and underscores are allowed. Furthermore, the name should not start with a digit'
       );
     }
 
