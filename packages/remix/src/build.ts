@@ -428,11 +428,15 @@ module.exports = config;`;
       : null,
   ]);
 
+  // The `publicPath` is a URL prefix used at runtime. We can only strip path
+  // segments that match the `assetsBuildDirectory`.
   let { assetsBuildDirectory: staticDir, publicPath } = remixConfig;
   while (basename(staticDir) === basename(publicPath)) {
     staticDir = dirname(staticDir);
     publicPath = dirname(publicPath);
   }
+
+  debug(`Scanning "${staticDir}" for static files`);
 
   const [staticFiles, ...functions] = await Promise.all([
     glob('**', staticDir),

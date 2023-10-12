@@ -2,4 +2,4 @@
 '@vercel/remix-builder': patch
 ---
 
-Resolve static path using non-relative publicPath segments
+Resolve static path using non-parent publicPath segments
