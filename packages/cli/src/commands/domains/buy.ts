@@ -85,7 +85,7 @@ export default async function buy(
 
   let autoRenew;
   if (forceYes) {
-    autoRenew = true;
+    autoRenew = Promise.resolve(true);
   } else {
     if (
       !(await promptBool(
