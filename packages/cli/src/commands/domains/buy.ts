@@ -63,6 +63,7 @@ export default async function buy(
     return 1;
   }
 
+  output.log('Just making a change to check a thing');
   if (!(await getDomainStatus(client, domainName)).available) {
     output.error(
       `The domain ${param(domainName)} is ${chalk.underline(
