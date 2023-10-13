@@ -85,6 +85,7 @@ export default async function buy(
 
   let autoRenew;
   if (forceYes) {
+    output.log('Forcing domain purchase with --yes');
     autoRenew = Promise.resolve(true);
   } else {
     if (
