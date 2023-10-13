@@ -422,8 +422,7 @@ test('domains inspect', async () => {
   }
 });
 
-// eslint-disable-next-line jest/no-disabled-tests
-test.skip('try to purchase a domain', async () => {
+test('try to purchase a domain', async () => {
   if (process.env.VERCEL_TOKEN || process.env.NOW_TOKEN) {
     console.log(
       'Skipping test `try to purchase a domain` because a personal VERCEL_TOKEN was provided.'
@@ -453,10 +452,8 @@ test.skip('try to purchase a domain', async () => {
     }
   );
 
-  expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
-  expect(stderr).toMatch(
-    /Error: Could not purchase domain\. Please add a payment method using/
-  );
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
+  expect(stderr).toMatch(/is available to buy under/);
 });
 
 test('try to transfer-in a domain with "--code" option', async () => {
