@@ -422,8 +422,7 @@ test('domains inspect', async () => {
   }
 });
 
-// eslint-disable-next-line jest/no-disabled-tests
-test.skip('try to purchase a domain', async () => {
+test('try to purchase a domain', async () => {
   if (process.env.VERCEL_TOKEN || process.env.NOW_TOKEN) {
     console.log(
       'Skipping test `try to purchase a domain` because a personal VERCEL_TOKEN was provided.'
