@@ -2690,13 +2690,14 @@ async function getServerlessPages(params: {
   outputDirectory: string;
   appPathRoutesManifest?: Record<string, string>;
 }) {
+  const appDir = path.join(params.pagesDir, '../app');
   const [pages, appPaths, middlewareManifest] = await Promise.all([
     glob('**/!(_middleware).js', params.pagesDir),
     params.appPathRoutesManifest
       ? Promise.all([
-          glob('**/page.js', path.join(params.pagesDir, '../app')),
-          glob('**/route.js', path.join(params.pagesDir, '../app')),
-          glob('**/_not-found.js', path.join(params.pagesDir, '../app')),
+          glob('**/page.js', appDir),
+          glob('**/route.js', appDir),
+          glob('**/_not-found.js', appDir),
         ]).then(items => Object.assign(...items))
       : Promise.resolve({}),
     getMiddlewareManifest(params.entryPath, params.outputDirectory),
@@ -2712,7 +2713,7 @@ async function getServerlessPages(params: {
         '.',
         normalizedEntry === '/' ? '/index' : normalizedEntry
       )}.js`;
-      const globPath = `${path.join('.', entry)}.js`;
+      const globPath = `${path.posix.join('.', entry)}.js`;
 
       if (appPaths[globPath]) {
         normalizedAppPaths[normalizedPath] = appPaths[globPath];
