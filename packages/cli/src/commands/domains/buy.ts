@@ -13,7 +13,9 @@ import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
 import { errorToString } from '@vercel/error-utils';
 
-type Options = {};
+type Options = {
+  '--yes': Boolean;
+};
 
 export default async function buy(
   client: Client,
@@ -22,6 +24,8 @@ export default async function buy(
 ) {
   const { output } = client;
   const { contextName } = await getScope(client);
+
+  const forceYes = process.env.CI ? opts['--yes'] : false;
 
   const [domainName] = args;
   if (!domainName) {
@@ -78,25 +82,31 @@ export default async function buy(
       'available'
     )} to buy under ${chalk.bold(contextName)}! ${availableStamp()}`
   );
-  if (
-    !(await promptBool(
-      `Buy now for ${chalk.bold(`$${price}`)} (${`${period}yr${
-        period > 1 ? 's' : ''
-      }`})?`,
-      client
-    ))
-  ) {
-    return 0;
-  }
 
-  const autoRenew = await promptBool(
-    renewalPrice.period === 1
-      ? `Auto renew yearly for ${chalk.bold(`$${price}`)}?`
-      : `Auto renew every ${renewalPrice.period} years for ${chalk.bold(
-          `$${price}`
-        )}?`,
-    { ...client, defaultValue: true }
-  );
+  let autoRenew;
+  if (forceYes) {
+    autoRenew = true;
+  } else {
+    if (
+      !(await promptBool(
+        `Buy now for ${chalk.bold(`$${price}`)} (${`${period}yr${
+          period > 1 ? 's' : ''
+        }`})?`,
+        client
+      ))
+    ) {
+      return 0;
+    }
+
+    autoRenew = await promptBool(
+      renewalPrice.period === 1
+        ? `Auto renew yearly for ${chalk.bold(`$${price}`)}?`
+        : `Auto renew every ${renewalPrice.period} years for ${chalk.bold(
+            `$${price}`
+          )}?`,
+      { ...client, defaultValue: true }
+    );
+  }
 
   let buyResult;
   const purchaseStamp = stamp();
