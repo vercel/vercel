@@ -92,6 +92,7 @@ export interface Rewrite {
   destination: string;
   has?: HasField;
   missing?: HasField;
+  statusCode?: number;
 }
 
 export interface Redirect {
