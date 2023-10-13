@@ -195,6 +195,7 @@ export async function createEdgeEventHandler(
     const body: Buffer | string | undefined = await serializeBody(request);
     if (body !== undefined) {
       headers.set('content-length', String(body.length));
+      // Transfer-Encoding is a hop-to-hop header and should not be proxied. It is also not valid when Content-Length is set.
       headers.delete('transfer-encoding');
     }
 
