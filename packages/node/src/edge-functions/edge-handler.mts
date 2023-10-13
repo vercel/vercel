@@ -193,7 +193,10 @@ export async function createEdgeEventHandler(
 
     const headers = new Headers(request.headers as HeadersInit);
     const body: Buffer | string | undefined = await serializeBody(request);
-    if (body !== undefined) headers.set('content-length', String(body.length));
+    if (body !== undefined) {
+      headers.set('content-length', String(body.length));
+      headers.delete('transfer-encoding');
+    }
 
     const url = new URL(request.url ?? '/', server.url);
     const response = await fetch(url, {
