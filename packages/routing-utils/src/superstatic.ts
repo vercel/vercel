@@ -109,6 +109,9 @@ export function convertRewrites(
       if (r.missing) {
         route.missing = r.missing;
       }
+      if (r.statusCode) {
+        route.status = r.statusCode;
+      }
       return route;
     } catch (e) {
       throw new Error(`Failed to parse rewrite: ${JSON.stringify(r)}`);
