@@ -1,5 +1,6 @@
 import { createRequire } from 'module';
 import { relative, basename, dirname } from 'path';
+import { register as tsconfigPathsRegister } from 'tsconfig-paths';
 import { NowBuildError } from '@vercel/build-utils';
 import type _ts from 'typescript';
 
@@ -167,6 +168,13 @@ export function register(opts: Options = {}): Register {
     getCurrentDirectory: () => cwd,
     getCanonicalFileName: path => path,
   };
+
+  if (options.compilerOptions?.baseUrl && options.compilerOptions?.paths) {
+    tsconfigPathsRegister({
+      baseUrl: options.compilerOptions.baseUrl,
+      paths: options.compilerOptions.paths,
+    });
+  }
 
   function reportTSError(
     diagnostics: _ts.Diagnostic[],

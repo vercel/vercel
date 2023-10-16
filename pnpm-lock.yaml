@@ -1247,6 +1247,9 @@ importers:
       ts-node:
         specifier: 10.9.1
         version: 10.9.1(@swc/core@1.2.218)(@types/node@14.18.33)(typescript@4.9.5)
+      tsconfig-paths:
+        specifier: 4.2.0
+        version: 4.2.0
       typescript:
         specifier: 4.9.5
         version: 4.9.5
@@ -5521,7 +5524,7 @@ packages:
       remark-mdx-frontmatter: 1.1.1
       semver: 7.5.2
       tar-fs: 2.1.1
-      tsconfig-paths: 4.1.2
+      tsconfig-paths: 4.2.0
       typescript: 4.9.5
       ws: 7.4.6
     transitivePeerDependencies:
@@ -14327,7 +14330,6 @@ packages:
   /strip-bom@3.0.0:
     resolution: {integrity: sha512-vavAMRXOgBVNF6nyEEmL3DBK19iRpDcoIwW+swQ+CbGiu7lju6t+JklA1MHweoWtadgt4ISVUsXLyDq34ddcwA==}
     engines: {node: '>=4'}
-    dev: true
 
   /strip-bom@4.0.0:
     resolution: {integrity: sha512-3xurFv5tEgii33Zi8Jtp55wEIILR9eh34FAW00PZf+JnSsTmV/ioewSgQl97JHvgjoRGwPShsWm+IdrxB35d0w==}
@@ -14844,14 +14846,13 @@ packages:
       strip-bom: 3.0.0
     dev: true
 
-  /tsconfig-paths@4.1.2:
-    resolution: {integrity: sha512-uhxiMgnXQp1IR622dUXI+9Ehnws7i/y6xvpZB9IbUVOPy0muvdvgXeZOn88UcGPiT98Vp3rJPTa8bFoalZ3Qhw==}
+  /tsconfig-paths@4.2.0:
+    resolution: {integrity: sha512-NoZ4roiN7LnbKn9QqE1amc9DJfzvZXxF4xDavcOWt1BPkdx+m+0gJuPM+S0vCe7zTJMYUP0R8pO2XMr+Y8oLIg==}
     engines: {node: '>=6'}
     dependencies:
       json5: 2.2.2
       minimist: 1.2.7
       strip-bom: 3.0.0
-    dev: true
 
   /tslib@1.14.1:
     resolution: {integrity: sha512-Xni35NKzjgMrwevysHTCArtLDpPvye8zV/0E4EyYn43P7/7qvQwPh9BGkHewbMulVntbigmcT7rdX3BNo9wRJg==}
