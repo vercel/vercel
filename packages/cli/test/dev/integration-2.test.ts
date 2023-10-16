@@ -45,10 +45,7 @@ test('[vercel dev] validate env var names', async () => {
         if (
           stderr.includes('Ignoring env var "1" because name is invalid') &&
           stderr.includes(
-            'Ignoring build env var "_a" because name is invalid'
-          ) &&
-          stderr.includes(
-            'Env var names must start with letters, and can only contain alphanumeric characters and underscores'
+            'The name contains invalid characters. Only letters, digits, and underscores are allowed. Furthermore, the name should not start with a digit'
           )
         ) {
           resolve();
@@ -78,6 +75,7 @@ test(
   '[vercel dev] test rewrites serve correct content',
   testFixtureStdio('test-rewrites', async (testPath: any) => {
     await testPath(200, '/hello', 'Hello World');
+    await testPath(425, '/status-rewrite-425', 'Hello World');
   })
 );
 
