@@ -28,6 +28,8 @@ test/lib/deployment/failed-page.txt
 /public
 __pycache__
 .vercel
+packages/static-build/test/fixtures/**/*/.vercel/output
+!packages/static-build/test/fixtures/**/*/.vercel/project.json
 .turbo
 .eslintcache
 turbo-cache-key.json

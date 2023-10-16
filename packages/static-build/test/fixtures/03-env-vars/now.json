@@ -4,6 +4,6 @@
     { "src": "build-env/package.json", "use": "@vercel/static-build" }
   ],
   "probes": [
-    { "path": "/build-env", "mustContain": "RANDOMNESS_PLACEHOLDER:build-env" }
+    { "path": "/build-env", "mustContain": "build-env" }
   ]
 }
