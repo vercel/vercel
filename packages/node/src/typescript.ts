@@ -169,7 +169,7 @@ export function register(opts: Options = {}): Register {
     getCanonicalFileName: path => path,
   };
 
-  if (options.compilerOptions?.baseUrl && options.compilerOptions?.paths) {
+  if (options.compilerOptions?.baseUrl && options.compilerOptions.paths) {
     tsconfigPathsRegister({
       baseUrl: options.compilerOptions.baseUrl,
       paths: options.compilerOptions.paths,
