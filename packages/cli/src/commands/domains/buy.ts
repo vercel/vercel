@@ -13,9 +13,7 @@ import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
 import { errorToString } from '@vercel/error-utils';
 
-type Options = {
-  '--yes': boolean;
-};
+type Options = {};
 
 export default async function buy(
   client: Client,
@@ -25,7 +23,7 @@ export default async function buy(
   const { output } = client;
   const { contextName } = await getScope(client);
 
-  const skipConfirmation = process.env.CI ? opts['--yes'] : false;
+  const skipConfirmation = !!process.env.CI;
 
   const [domainName] = args;
   if (!domainName) {

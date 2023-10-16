@@ -436,7 +436,7 @@ test('try to purchase a domain', async () => {
 
   const { stderr, stdout, exitCode } = await execCli(
     binaryPath,
-    ['domains', 'buy', `${session}-test.com`, '--yes'],
+    ['domains', 'buy', `${session}-test.com`],
     {
       input: stream,
       env: {
