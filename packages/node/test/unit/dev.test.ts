@@ -309,6 +309,7 @@ test('allow setting multiple cookies with same name', async () => {
 });
 
 test('dev server should remove transfer encoding header', async () => {
+  expect.assertions(2);
   const child = testForkDevServer('./edge-echo.js');
   try {
     const result = await readMessage(child);
