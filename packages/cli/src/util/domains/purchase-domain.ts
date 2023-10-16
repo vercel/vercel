@@ -21,9 +21,6 @@ export default async function purchaseDomain(
       method: 'POST',
     });
   } catch (err: unknown) {
-    console.error('Domain Buy Error');
-    console.error(err['code']);
-    console.error(err['message']);
     if (ERRORS.isAPIError(err)) {
       if (err.code === 'invalid_domain') {
         return new ERRORS.InvalidDomain(name);

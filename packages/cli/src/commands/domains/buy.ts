@@ -14,18 +14,18 @@ import { getCommandName } from '../../util/pkg-name';
 import { errorToString } from '@vercel/error-utils';
 
 type Options = {
-  '--yes': Boolean;
+  '--yes': boolean;
 };
 
 export default async function buy(
   client: Client,
-  opts: Options,
+  opts: Partial<Options>,
   args: string[]
 ) {
   const { output } = client;
   const { contextName } = await getScope(client);
 
-  const forceYes = process.env.CI ? opts['--yes'] : false;
+  const skipConfirmation = process.env.CI ? opts['--yes'] : false;
 
   const [domainName] = args;
   if (!domainName) {
@@ -84,7 +84,7 @@ export default async function buy(
   );
 
   let autoRenew;
-  if (forceYes) {
+  if (skipConfirmation) {
     autoRenew = true;
   } else {
     if (
