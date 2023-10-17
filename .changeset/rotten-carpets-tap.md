@@ -2,4 +2,4 @@
 '@vercel/node': patch
 ---
 
-feat: support import alias
+Support import alias
