@@ -5,7 +5,7 @@
     { "src": "subdirectory/package.json", "use": "@vercel/static-build" }
   ],
   "probes": [
-    { "path": "/", "mustContain": "cow" },
-    { "path": "/subdirectory/", "mustContain": "yoda" }
+    { "path": "/", "mustContain": "cow:RANDOMNESS_PLACEHOLDER" },
+    { "path": "/subdirectory/", "mustContain": "yoda:RANDOMNESS_PLACEHOLDER" }
   ]
 }
