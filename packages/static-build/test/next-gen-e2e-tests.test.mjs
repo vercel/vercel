@@ -97,7 +97,7 @@ describe('Assert builds', () => {
   const cli = path.resolve(__dirname, '../../cli/scripts/start.js');
   expect(fs.existsSync(cli), 'cli path exists');
 
-  for(const fixture of fs.readdirSync(fixtures).slice(42, 46)) {
+  for(const fixture of fs.readdirSync(fixtures)) {
     test.concurrent(`Fixture: ${fixture}`, async () => {
       const fixturePath = path.join(fixtures, fixture);
       expect(fs.existsSync(fixturePath), 'fixture path exists').toBe(true);
@@ -106,7 +106,7 @@ describe('Assert builds', () => {
       try {
         const paths = [ 'now.json', 'vercel.json', 'probes.json' ];
         const buildEnv = await Promise.any(paths.map(p => readBuildEnv(path.join(fixturePath, p)))).catch(() => null);
-        const { stderr } = await exec(`${cli} build --yes --debug`, { cwd: tmpdir, env: { ...process.env, TZ: 'UTC', ...buildEnv } });
+        const { stderr } = await exec(`${cli} build --yes --debug`, { cwd: tmpdir, env: { ...process.env, VERCEL_ENV: 'production', VERCEL_URL: 'https://fake-vercel-url.com', TZ: 'UTC', ...buildEnv } });
         expect(stderr).to.contain('Build Completed in .vercel/output');
         await assertProbes(tmpdir);
       } catch (err) {
