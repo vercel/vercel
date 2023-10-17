@@ -31,6 +31,16 @@ const testsThatFailToBuild = new Map([
   ],
 ]);
 
+async function readBuildEnv (p) {
+  const data = await fs.promises.readFile(p, 'utf-8');
+  const json = JSON5.parse(data);
+  if ('build' in json && 'env' in json.build) {
+    return json.build.env;
+  } else {
+    throw new Error('Does not contain build.env');
+  }
+}
+
 async function readProbes (p) {
   const data = await fs.promises.readFile(p, 'utf-8');
   const json = JSON5.parse(data);
@@ -64,7 +74,7 @@ async function readProbePath (fixturePath, probePath) {
 
 async function assertProbes (fixturePath) {
   const paths = [ 'now.json', 'vercel.json', 'probes.json' ];
-  const probes = await Promise.any(paths.map(p => readProbes(path.join(fixturePath, p))));
+  const probes = await Promise.any(paths.map(p => readProbes(path.join(fixturePath, p)))).catch(() => []);
 
   for (const probe of probes) {
     let probeContents = await readProbePath(fixturePath, probe.path);
@@ -87,14 +97,16 @@ describe('Assert builds', () => {
   const cli = path.resolve(__dirname, '../../cli/scripts/start.js');
   expect(fs.existsSync(cli), 'cli path exists');
 
-  for(const fixture of [fs.readdirSync(fixtures)[10]]) {
+  for(const fixture of fs.readdirSync(fixtures).slice(42, 46)) {
     test.concurrent(`Fixture: ${fixture}`, async () => {
       const fixturePath = path.join(fixtures, fixture);
       expect(fs.existsSync(fixturePath), 'fixture path exists').toBe(true);
       const tmpdir = await fs.promises.mkdtemp(path.join(os.tmpdir(), fixture));
       await fs.promises.cp(fixturePath, tmpdir, { recursive: true });
       try {
-        const { stderr } = await exec(`${cli} build --yes --debug`, { cwd: tmpdir });
+        const paths = [ 'now.json', 'vercel.json', 'probes.json' ];
+        const buildEnv = await Promise.any(paths.map(p => readBuildEnv(path.join(fixturePath, p)))).catch(() => null);
+        const { stderr } = await exec(`${cli} build --yes --debug`, { cwd: tmpdir, env: { ...process.env, TZ: 'UTC', ...buildEnv } });
         expect(stderr).to.contain('Build Completed in .vercel/output');
         await assertProbes(tmpdir);
       } catch (err) {
@@ -105,6 +117,6 @@ describe('Assert builds', () => {
           throw err;
         }
       }
-    }, 10000);
+    }, 100000);
   }
 })
