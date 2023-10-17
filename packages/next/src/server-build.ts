@@ -981,6 +981,14 @@ export async function serverBuild({
     );
 
     for (const group of combinedGroups) {
+      // Skip group that only has an _error page
+      if (
+        group.pages &&
+        group.pages.length === 1 &&
+        group.pages[0] === '_error.js'
+      ) {
+        continue;
+      }
       const groupPageFiles: { [key: string]: PseudoFile } = {};
 
       for (const page of [...group.pages, ...internalPages]) {
