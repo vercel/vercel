@@ -8,7 +8,7 @@
 /packages/next                           @TooTallNate @EndangeredMassa @styfle @cb1kenobi @Ethan-Arrowood @trek @ijjk @ztanner
 /packages/routing-utils                  @TooTallNate @EndangeredMassa @styfle @cb1kenobi @Ethan-Arrowood @trek @ijjk
 /packages/static-build                   @TooTallNate @EndangeredMassa @cb1kenobi @Ethan-Arrowood @trek
-/packages/edge                           @vercel/compute
+/packages/edge                           @vercel/compute @TooTallNate @EndangeredMassa @cb1kenobi @Ethan-Arrowood @trek
 /examples                                @leerob
 /examples/create-react-app               @Timer
 /examples/nextjs                         @timneutkens @ijjk @styfle @ztanner @huozhi
