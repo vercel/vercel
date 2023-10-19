@@ -602,3 +602,26 @@ it('should handle edge functions in app with basePath', async () => {
   expect(lambdas.size).toBe(1);
   expect(edgeFunctions.size).toBe(4);
 });
+
+it('should not generate lambdas that conflict with static index route in app with basePath', async () => {
+  const {
+    buildResult: { output },
+  } = await runBuildLambda(path.join(__dirname, 'app-router-basepath'));
+
+  expect(output['test']).not.toBeDefined();
+  expect(output['test.rsc']).not.toBeDefined();
+  expect(output['test/index'].type).toBe('Prerender');
+  expect(output['test/index.rsc'].type).toBe('Prerender');
+
+  expect(output['test/_not-found']).toBeDefined();
+  expect(output['test/_not-found'].type).toBe('Lambda');
+
+  const lambdas = new Set();
+
+  for (const item of Object.values(output)) {
+    if (item.type === 'Lambda') {
+      lambdas.add(item);
+    }
+  }
+  expect(lambdas.size).toBe(1);
+});
