@@ -1,5 +1,13 @@
 # @vercel/next
 
+## 4.0.11
+
+### Patch Changes
+
+- fix `build` in appDir on Windows ([#10708](https://github.com/vercel/vercel/pull/10708))
+
+- Fix RSC prefetch for index route with catch-all ([#10734](https://github.com/vercel/vercel/pull/10734))
+
 ## 4.0.10
 
 ### Patch Changes

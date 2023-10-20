@@ -193,6 +193,14 @@ export async function serverBuild({
     const rscContentTypeHeader =
       routesManifest?.rsc?.contentTypeHeader || RSC_CONTENT_TYPE;
 
+    // index.{ext} outputs get mapped to `/` which we don't want to override
+    // dynamic routes that aren't pregenerated like the prefetch rsc payload
+    if (appRscPrefetches['index.prefetch.rsc']) {
+      appRscPrefetches['__index.prefetch.rsc'] =
+        appRscPrefetches['index.prefetch.rsc'];
+      delete appRscPrefetches['index.prefetch.rsc'];
+    }
+
     // ensure all appRscPrefetches have a contentType since this is used by Next.js
     // to determine if it's a valid response
     for (const value of Object.values(appRscPrefetches)) {
@@ -1621,7 +1629,7 @@ export async function serverBuild({
                     dest: path.posix.join(
                       '/',
                       entryDirectory,
-                      `/index${RSC_PREFETCH_SUFFIX}`
+                      `/__index${RSC_PREFETCH_SUFFIX}`
                     ),
                     headers: { vary: rscVaryHeader },
                     continue: true,
@@ -1721,7 +1729,7 @@ export async function serverBuild({
               src: path.posix.join(
                 '/',
                 entryDirectory,
-                `/index${RSC_PREFETCH_SUFFIX}`
+                `/__index${RSC_PREFETCH_SUFFIX}`
               ),
               dest: path.posix.join('/', entryDirectory, '/index.rsc'),
               has: [

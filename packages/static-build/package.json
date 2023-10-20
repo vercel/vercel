@@ -1,6 +1,6 @@
 {
   "name": "@vercel/static-build",
-  "version": "2.0.8",
+  "version": "2.0.9",
   "license": "Apache-2.0",
   "main": "./dist/index",
   "homepage": "https://vercel.com/docs/build-step",
@@ -21,7 +21,7 @@
   },
   "dependencies": {
     "@vercel/gatsby-plugin-vercel-analytics": "1.0.11",
-    "@vercel/gatsby-plugin-vercel-builder": "2.0.7",
+    "@vercel/gatsby-plugin-vercel-builder": "2.0.8",
     "@vercel/static-config": "3.0.0",
     "ts-morph": "12.0.0"
   },
@@ -38,8 +38,8 @@
     "@vercel/build-utils": "7.2.2",
     "@vercel/error-utils": "2.0.1",
     "@vercel/frameworks": "2.0.2",
-    "@vercel/fs-detectors": "5.1.1",
-    "@vercel/routing-utils": "3.0.0",
+    "@vercel/fs-detectors": "5.1.2",
+    "@vercel/routing-utils": "3.1.0",
     "execa": "3.2.0",
     "fs-extra": "10.0.0",
     "get-port": "5.0.0",

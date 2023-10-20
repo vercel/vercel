@@ -1,5 +1,22 @@
 # vercel
 
+## 32.5.0
+
+### Minor Changes
+
+- Indicates whether @vercel/speed-insights or @vercel/analytics are used ([#10623](https://github.com/vercel/vercel/pull/10623))
+
+- [cli] update env var validation rule to allow name start with underscore ([#10697](https://github.com/vercel/vercel/pull/10697))
+
+### Patch Changes
+
+- Updated dependencies [[`da300030c`](https://github.com/vercel/vercel/commit/da300030c999b3555c608a321c9d0a4d36923a5a), [`de84743e1`](https://github.com/vercel/vercel/commit/de84743e10d4c9701d409355c0fe057f35e6e435), [`913608de4`](https://github.com/vercel/vercel/commit/913608de4dd4e37557533d732ca8449a5737d4a6), [`7fa08088e`](https://github.com/vercel/vercel/commit/7fa08088ea0d5df6955ea4af7f08513cf4027bb3)]:
+  - @vercel/next@4.0.11
+  - @vercel/python@4.1.0
+  - @vercel/remix-builder@2.0.10
+  - @vercel/redwood@2.0.5
+  - @vercel/static-build@2.0.9
+
 ## 32.4.1
 
 ### Patch Changes
