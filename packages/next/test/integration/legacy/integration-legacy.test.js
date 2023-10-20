@@ -13,7 +13,7 @@ jest.setTimeout(360000);
 
 it('Should build the 404-getstaticprops example', async () => {
   const { buildResult } = await runBuildLambda(
-    path.join(__dirname, '404-getstaticprops')
+    path.join(__dirname, '..', '404-getstaticprops')
   );
   const { output } = buildResult;
 
@@ -36,7 +36,7 @@ it('should build initial beforeFiles rewrites', async () => {
   const {
     buildResult: { output, routes },
   } = await runBuildLambda(
-    path.join(__dirname, 'initial-before-files-rewrite')
+    path.join(__dirname, '..', 'initial-before-files-rewrite')
   );
 
   expect(output['index']).toBeDefined();
@@ -61,7 +61,9 @@ it('should build initial beforeFiles rewrites', async () => {
 it('Should build the legacy custom dependency test', async () => {
   const {
     buildResult: { output },
-  } = await runBuildLambda(path.join(__dirname, 'legacy-custom-dependency'));
+  } = await runBuildLambda(
+    path.join(__dirname, '..', 'legacy-custom-dependency')
+  );
   expect(output.index).toBeDefined();
 });
 
@@ -69,7 +71,9 @@ it('should show error from basePath with legacy monorepo build', async () => {
   let error;
 
   try {
-    await runBuildLambda(path.join(__dirname, 'legacy-monorepo-basepath'));
+    await runBuildLambda(
+      path.join(__dirname, '..', 'legacy-monorepo-basepath')
+    );
   } catch (err) {
     error = err;
   }
@@ -83,7 +87,7 @@ it('should show error from basePath with legacy monorepo build', async () => {
 it('Should build the legacy standard example', async () => {
   const {
     buildResult: { output },
-  } = await runBuildLambda(path.join(__dirname, 'legacy-standard'));
+  } = await runBuildLambda(path.join(__dirname, '..', 'legacy-standard'));
   expect(output.index).toBeDefined();
   const filePaths = Object.keys(output);
   const hasUnderScoreAppStaticFile = filePaths.some(filePath =>
@@ -99,14 +103,14 @@ it('Should build the legacy standard example', async () => {
 it('Should build the static-files test on legacy', async () => {
   const {
     buildResult: { output },
-  } = await runBuildLambda(path.join(__dirname, 'legacy-static-files'));
+  } = await runBuildLambda(path.join(__dirname, '..', 'legacy-static-files'));
   expect(output['static/test.txt']).toBeDefined();
 });
 
 it('Should build the monorepo example', async () => {
   const {
     buildResult: { output },
-  } = await runBuildLambda(path.join(__dirname, 'monorepo'));
+  } = await runBuildLambda(path.join(__dirname, '..', 'monorepo'));
 
   expect(output['www/index']).not.toBeDefined();
   expect(output['www/__NEXT_PAGE_LAMBDA_0']).toBeDefined();
@@ -126,7 +130,7 @@ it('Should build the monorepo example', async () => {
 it('Should build the public-files test', async () => {
   const {
     buildResult: { output },
-  } = await runBuildLambda(path.join(__dirname, 'public-files'));
+  } = await runBuildLambda(path.join(__dirname, '..', 'public-files'));
   expect(output['robots.txt']).toBeDefined();
   expect(output['generated.txt']).toBeDefined();
 });
@@ -135,7 +139,7 @@ it('Should build the serverless-config example', async () => {
   const {
     workPath,
     buildResult: { output },
-  } = await runBuildLambda(path.join(__dirname, 'serverless-config'));
+  } = await runBuildLambda(path.join(__dirname, '..', 'serverless-config'));
 
   expect(output.index).not.toBeDefined();
   expect(output.goodbye).not.toBeDefined();
@@ -167,7 +171,7 @@ it('Should build the serverless-config-monorepo-missing example', async () => {
     workPath,
     buildResult: { output },
   } = await runBuildLambda(
-    path.join(__dirname, 'serverless-config-monorepo-missing')
+    path.join(__dirname, '..', 'serverless-config-monorepo-missing')
   );
 
   expect(output['nested/index']).not.toBeDefined();
@@ -195,7 +199,7 @@ it('Should build the serverless-config-monorepo-present example', async () => {
     workPath,
     buildResult: { output },
   } = await runBuildLambda(
-    path.join(__dirname, 'serverless-config-monorepo-present')
+    path.join(__dirname, '..', 'serverless-config-monorepo-present')
   );
 
   expect(output['nested/index']).not.toBeDefined();
@@ -227,7 +231,7 @@ it('Should opt-out of shared lambdas when routes are detected', async () => {
   const {
     buildResult: { output },
   } = await runBuildLambda(
-    path.join(__dirname, '../fixtures/26-mono-repo-404-lambda')
+    path.join(__dirname, '..', '../fixtures/26-mono-repo-404-lambda')
   );
   expect(output['packages/webapp/404']).toBeDefined();
   expect(output['packages/webapp/index']).toBeDefined();
@@ -247,7 +251,7 @@ it('Should build the serverless-config-async example', async () => {
   let error = null;
 
   try {
-    await runBuildLambda(path.join(__dirname, 'serverless-config-async'));
+    await runBuildLambda(path.join(__dirname, '..', 'serverless-config-async'));
   } catch (err) {
     error = err;
   }
@@ -267,7 +271,7 @@ it('Should provide lambda info when limit is hit (shared lambdas)', async () => 
 
   try {
     await runBuildLambda(
-      path.join(__dirname, 'test-limit-exceeded-shared-lambdas')
+      path.join(__dirname, '..', 'test-limit-exceeded-shared-lambdas')
     );
   } catch (err) {
     console.error(err);
@@ -293,6 +297,6 @@ it('Should provide lambda info when limit is hit (shared lambdas)', async () => 
 it('Should build the static-files test', async () => {
   const {
     buildResult: { output },
-  } = await runBuildLambda(path.join(__dirname, 'static-files'));
+  } = await runBuildLambda(path.join(__dirname, '..', 'static-files'));
   expect(output['static/test.txt']).toBeDefined();
 });
