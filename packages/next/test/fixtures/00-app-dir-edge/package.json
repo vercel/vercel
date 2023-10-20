@@ -1,7 +1,4 @@
 {
-  "engines": {
-    "node": "16.x"
-  },
   "dependencies": {
     "next": "canary",
     "react": "experimental",
