@@ -64,7 +64,7 @@ jobs:
           fetch-depth: 2
       - uses: actions/setup-node@v3
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version: ${{ matrix.nodeVersion || env.NODE_VERSION }}
 
       - name: Install Hugo
         if: matrix.runner == 'macos-latest'
