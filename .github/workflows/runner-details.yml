@@ -1,0 +1,26 @@
+name: Get runner details
+on: [push]
+jobs:
+  show-runner-version:
+    runs-on: windows-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - name: Get OS version
+        id: get-os-version
+        shell: pwsh
+        run: |
+          $os_version = [System.Environment]::OSVersion.VersionString
+          $image_version = Get-Content "C:\ImageVersion.txt" -Raw
+          echo "OS version: $os_version"
+          echo "Image Version: $image_version"
+          echo "OS_VERSION=$os_version" | Out-File -FilePath $env:GITHUB_ENV -Append
+          echo "IMAGE_VERSION=$image_version" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Show OS and Image version
+        shell: pwsh
+        run: |
+          echo "Runner OS: ${{ runner.os }}"
+          echo "Image: $env:OS_VERSION"
+          echo "Image version: $env:IMAGE_VERSION"
