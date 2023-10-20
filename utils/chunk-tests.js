@@ -16,6 +16,10 @@ const runnersMap = new Map([
     'test-next-local',
     { min: 1, max: 5, runners: ['ubuntu-latest'], nodeVersion: '18' },
   ],
+  [
+    'test-next-local-legacy',
+    { min: 1, max: 5, runners: ['ubuntu-latest'], nodeVersion: '16' },
+  ],
   ['test-dev', { min: 1, max: 7, runners: ['ubuntu-latest', 'macos-latest'] }],
 ]);
 
