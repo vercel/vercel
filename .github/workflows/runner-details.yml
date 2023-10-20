@@ -7,6 +7,11 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v2
 
+      - name: Print all environment variables
+        shell: pwsh
+        run: |
+          Get-ChildItem env: | Out-String
+
       - name: Get OS version
         id: get-os-version
         shell: pwsh
