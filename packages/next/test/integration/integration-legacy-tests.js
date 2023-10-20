@@ -289,3 +289,10 @@ it('Should provide lambda info when limit is hit (shared lambdas)', async () => 
   );
   expect(logs).toMatch(/node_modules\/@firebase\/firestore.*?\d{1}.*?MB/);
 });
+
+it('Should build the static-files test', async () => {
+  const {
+    buildResult: { output },
+  } = await runBuildLambda(path.join(__dirname, 'static-files'));
+  expect(output['static/test.txt']).toBeDefined();
+});

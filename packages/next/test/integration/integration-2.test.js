@@ -11,13 +11,6 @@ const runBuildLambda = createRunBuildLambda(builder);
 
 jest.setTimeout(360000);
 
-it('Should build the static-files test', async () => {
-  const {
-    buildResult: { output },
-  } = await runBuildLambda(path.join(__dirname, 'static-files'));
-  expect(output['static/test.txt']).toBeDefined();
-});
-
 it('Should build the serverless-config-promise example', async () => {
   let error = null;
 
