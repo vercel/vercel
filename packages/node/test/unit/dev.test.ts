@@ -307,3 +307,30 @@ test('allow setting multiple cookies with same name', async () => {
     child.kill(9);
   }
 });
+
+test('allow setting multiple cookies with same name on edge runtime', async () => {
+  const child = testForkDevServer('./edge-multiple-cookies.js');
+
+  try {
+    const result = await readMessage(child);
+    if (result.state !== 'message') {
+      throw new Error(`Exited. error: ${JSON.stringify(result.value)}`);
+    }
+
+    const { address, port } = result.value;
+    const response = await fetch(
+      `http://${address}:${port}/api/edge-multiple-cookies`
+    );
+    expect({
+      status: response.status,
+      text: await response.text(),
+    }).toEqual({
+      status: 200,
+      text: 'Hello, world!',
+    });
+
+    expect(response.headers.getSetCookie()).toEqual(['a=x', 'b=y', 'c=z']);
+  } finally {
+    child.kill(9);
+  }
+});
