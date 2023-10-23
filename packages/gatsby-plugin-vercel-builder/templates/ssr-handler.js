@@ -1,3 +1,7 @@
+// Gets passed in via esbuild `define`
+const pathPrefix = global.vercel_pathPrefix;
+delete global.vercel_pathPrefix;
+
 import os from 'os';
 import etag from 'etag';
 import { join } from 'path';
@@ -25,7 +29,7 @@ async function getPageSSRHelpers() {
 }
 
 export default async function handler(req, res) {
-  const { pathName, isPageData } = getPageName(req.url);
+  const { pathName, isPageData } = getPageName(req.url, pathPrefix);
 
   const [graphqlEngine, { getData, renderHTML, renderPageData }] =
     await Promise.all([getGraphQLEngine(), getPageSSRHelpers()]);

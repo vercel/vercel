@@ -27,10 +27,36 @@ describe('getPageName()', () => {
       pageName: 'foo/bar/ssr',
       isPageData: true,
     },
+
+    { input: '/foo/', pathPrefix: '/foo', pageName: '/', isPageData: false },
+    {
+      input: '/foo/index.html',
+      pathPrefix: '/foo',
+      pageName: '/',
+      isPageData: false,
+    },
+    {
+      input: '/foo/bar/ssr',
+      pathPrefix: '/foo/',
+      pageName: 'bar/ssr',
+      isPageData: false,
+    },
+    {
+      input: '/foo/page-data/index/page-data.json',
+      pathPrefix: '/foo',
+      pageName: '/',
+      isPageData: true,
+    },
+    {
+      input: '/foo/page-data/bar/ssr/page-data.json',
+      pathPrefix: '/foo',
+      pageName: 'bar/ssr',
+      isPageData: true,
+    },
   ])(
     'Should return "$pageName" for "$input"',
-    ({ input, pageName, isPageData }) => {
-      const actual = getPageName(input);
+    ({ input, pathPrefix, pageName, isPageData }) => {
+      const actual = getPageName(input, pathPrefix);
       expect(actual.pathName).toEqual(pageName);
       expect(actual.isPageData).toEqual(isPageData);
     }

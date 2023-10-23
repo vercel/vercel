@@ -1,8 +1,8 @@
 import { parse } from 'url';
 import { basename, dirname } from 'path';
 
-export function getPageName(url: string) {
-  let pathName = parse(url).pathname || '/';
+export function getPageName(url: string, pathPrefix = '') {
+  let pathName = (parse(url).pathname || '/').slice(pathPrefix.length);
   const isPageData = pathName.startsWith('/page-data/');
   if (isPageData) {
     // "/page-data/index/page-data.json" -> "/"
