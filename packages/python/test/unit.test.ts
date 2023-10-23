@@ -48,6 +48,7 @@ it('should ignore minor version in vercel dev', () => {
 });
 
 it('should select latest supported installed version when no Piplock detected', () => {
+  makeMockPython('3.10');
   const result = getSupportedPythonVersion({ pipLockPythonVersion: undefined });
   expect(result).toHaveProperty('runtime');
   expect(result.runtime).toMatch(/^python3\.\d+$/);
@@ -55,6 +56,7 @@ it('should select latest supported installed version when no Piplock detected', 
 });
 
 it('should select latest supported installed version and warn when invalid Piplock detected', () => {
+  makeMockPython('3.10');
   const result = getSupportedPythonVersion({ pipLockPythonVersion: '999' });
   expect(result).toHaveProperty('runtime');
   expect(result.runtime).toMatch(/^python3\.\d+$/);
