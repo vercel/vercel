@@ -1,8 +1,8 @@
 import os from 'os';
 import etag from 'etag';
-import { parse } from 'url';
+import { join } from 'path';
 import { copySync, existsSync } from 'fs-extra';
-import { join, dirname, basename } from 'path';
+import { getPageName } from './utils';
 
 const TMP_DATA_PATH = join(os.tmpdir(), 'data/datastore');
 const CUR_DATA_PATH = join(__dirname, '.cache/data/datastore');
@@ -25,29 +25,7 @@ async function getPageSSRHelpers() {
 }
 
 export default async function handler(req, res) {
-  let pathName = parse(req.url).pathname || '/';
-  const isPageData = pathName.startsWith('/page-data/');
-  if (isPageData) {
-    // "/page-data/index/page-data.json" -> "/"
-    // "/page-data/using-ssr/page-data.json" -> "using-ssr"
-    // "/page-data/foo/bar/ssr/page-data.json" -> "foo/bar/ssr"
-    pathName = pathName.split('/').slice(2, -1).join('/');
-    if (pathName === 'index') {
-      pathName = '/';
-    }
-  } else {
-    // "/using-ssr" -> "using-ssr"
-    // "/using-ssr/" -> "using-ssr"
-    // "/using-ssr/index.html" -> "using-ssr"
-    // "/foo/bar/ssr" -> "foo/bar/ssr"
-    if (basename(pathName) === 'index.html') {
-      pathName = dirname(pathName);
-    }
-    if (pathName !== '/') {
-      // Remove leading and trailing "/"
-      pathName = pathName.replace(/(^\/|\/$)/g, '');
-    }
-  }
+  const { pathName, isPageData } = getPageName(req.url);
 
   const [graphqlEngine, { getData, renderHTML, renderPageData }] =
     await Promise.all([getGraphQLEngine(), getPageSSRHelpers()]);
