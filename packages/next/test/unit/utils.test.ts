@@ -411,7 +411,7 @@ describe('getServerlessPages', () => {
 });
 
 describe('normalizeIndexPrefetches', () => {
-  it('should properly re-map index.prefetch.rsc', async () => {
+  it('should properly prefix prefetches with `__`', async () => {
     const dummyFile = new FileFsRef({ fsPath: __dirname });
 
     const appRscPrefetches = {

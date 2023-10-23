@@ -3126,15 +3126,10 @@ export async function getServerlessPages(params: {
 export function normalizePrefetches(prefetches: Record<string, FileFsRef>) {
   const updatedPrefetches: Record<string, FileFsRef> = {};
 
-  Object.keys(prefetches).forEach(key => {
+  for (const key in prefetches) {
     const newKey = key.replace(/([^/]+\.prefetch\.rsc)$/, '__$1');
-
-    if (newKey !== key) {
-      updatedPrefetches[newKey] = prefetches[key];
-    } else {
-      updatedPrefetches[key] = prefetches[key];
-    }
-  });
+    updatedPrefetches[newKey] = prefetches[key];
+  }
 
   return updatedPrefetches;
 }
