@@ -1,5 +1,4 @@
 import { deployExample } from '../test-utils';
-it('should deploy', async () => {
+it('[examples] should deploy ', async () => {
   await deployExample(__filename);
 });
-  
