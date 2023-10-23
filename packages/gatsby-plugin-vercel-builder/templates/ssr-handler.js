@@ -25,26 +25,27 @@ async function getPageSSRHelpers() {
 }
 
 export default async function handler(req, res) {
-  let pageName;
-  const pathname = parse(req.url).pathname || '/';
-  const isPageData = pathname.startsWith('/page-data/');
+  let pathName = parse(req.url).pathname || '/';
+  const isPageData = pathName.startsWith('/page-data/');
   if (isPageData) {
-    // /page-data/index/page-data.json
-    // /page-data/using-ssr/page-data.json
-    pageName = basename(dirname(pathname));
-    if (pageName === 'index') {
-      pageName = '/';
+    // "/page-data/index/page-data.json" -> "/"
+    // "/page-data/using-ssr/page-data.json" -> "using-ssr"
+    // "/page-data/foo/bar/ssr/page-data.json" -> "foo/bar/ssr"
+    pathName = pathName.split('/').slice(2, -1).join('/');
+    if (pathName === 'index') {
+      pathName = '/';
     }
   } else {
-    // /using-ssr
-    // /using-ssr/
-    // /using-ssr/index.html
-    pageName = basename(pathname);
-    if (pageName === 'index.html') {
-      pageName = basename(dirname(pathname));
+    // "/using-ssr" -> "using-ssr"
+    // "/using-ssr/" -> "using-ssr"
+    // "/using-ssr/index.html" -> "using-ssr"
+    // "/foo/bar/ssr" -> "foo/bar/ssr"
+    if (basename(pathName) === 'index.html') {
+      pathName = dirname(pathName);
     }
-    if (!pageName) {
-      pageName = '/';
+    if (pathName !== '/') {
+      // Remove leading and trailing "/"
+      pathName = pathName.replace(/(^\/|\/$)/g, '');
     }
   }
 
@@ -52,7 +53,7 @@ export default async function handler(req, res) {
     await Promise.all([getGraphQLEngine(), getPageSSRHelpers()]);
 
   const data = await getData({
-    pathName: pageName,
+    pathName,
     graphqlEngine,
     req,
   });
