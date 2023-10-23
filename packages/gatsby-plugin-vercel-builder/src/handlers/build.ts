@@ -37,7 +37,7 @@ export const writeHandler = async ({
       minify: true,
       define: {
         'process.env.NODE_ENV': "'production'",
-        vercel_pathPrefix: prefix,
+        vercel_pathPrefix: JSON.stringify(prefix),
       },
     });
   } catch (e: any) {
