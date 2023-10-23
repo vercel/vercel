@@ -34,8 +34,6 @@ const nextServer = new NextServer({
   customServer: false,
 });
 
-const requestHandler = nextServer.getRequestHandler();
-
 // Returns a wrapped handler that will crash the lambda if an error isn't
 // caught.
 const serve =
@@ -52,7 +50,8 @@ const serve =
     }
   };
 
-module.exports = serve(requestHandler);
+// The default handler method should be exported as a function on the module.
+module.exports = serve(nextServer.getRequestHandler());
 
 // If available, add `getRequestHandlerWithMetadata` to the export if it's
 // required by the configuration.
