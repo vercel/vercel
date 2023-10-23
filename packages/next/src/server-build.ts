@@ -1737,7 +1737,7 @@ export async function serverBuild({
               src: `^${path.posix.join(
                 '/',
                 entryDirectory,
-                `/(.+?)${RSC_PREFETCH_SUFFIX}(?:/)?$`
+                `/__(.+?)${RSC_PREFETCH_SUFFIX}(?:/)?$`
               )}`,
               dest: path.posix.join('/', entryDirectory, '/$1.rsc'),
               has: [
