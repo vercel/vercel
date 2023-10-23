@@ -1,9 +1,9 @@
 {
   "scripts": {
-    "build": "next build"
+    "build": "next build && next export"
   },
   "dependencies": {
-    "next": "canary",
+    "next": "13.5.6",
     "react": "latest",
     "react-dom": "latest"
   },
