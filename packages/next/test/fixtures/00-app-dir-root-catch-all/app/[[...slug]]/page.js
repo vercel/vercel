@@ -10,6 +10,9 @@ export function generateStaticParams() {
       slug: ['']
     },
     {
+      slug: ['index']
+    },
+    {
       slug: ['first']
     }
   ]

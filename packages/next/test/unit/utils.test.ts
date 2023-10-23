@@ -7,8 +7,9 @@ import {
   getImagesConfig,
   getNextConfig,
   getServerlessPages,
+  normalizeIndexPrefetches,
 } from '../../src/utils';
-import { FileRef } from '@vercel/build-utils';
+import { FileFsRef, FileRef } from '@vercel/build-utils';
 import { genDir } from '../utils';
 
 describe('getNextConfig', () => {
@@ -406,5 +407,27 @@ describe('getServerlessPages', () => {
 
     expect(Object.keys(pages)).toEqual(['_app.js', '_error.js']);
     expect(Object.keys(appPaths)).toEqual(['favicon.ico.js', 'index.js']);
+  });
+});
+
+describe('normalizeIndexPrefetches', () => {
+  it('should properly re-map index.prefetch.rsc', async () => {
+    const dummyFile = new FileFsRef({ fsPath: __dirname });
+
+    const appRscPrefetches = {
+      'index.prefetch.rsc': dummyFile,
+      'index/index.prefetch.rsc': dummyFile,
+      'foo.prefetch.rsc': dummyFile,
+      'foo/index.prefetch.rsc': dummyFile,
+    };
+
+    normalizeIndexPrefetches(appRscPrefetches);
+
+    expect(Object.keys(appRscPrefetches)).toEqual([
+      'foo.prefetch.rsc',
+      'foo/index.prefetch.rsc',
+      '__index.prefetch.rsc',
+      'index/__index.prefetch.rsc',
+    ]);
   });
 });
