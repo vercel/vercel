@@ -4,8 +4,8 @@ export default function Page(props) {
   return (
     <div>
     <p>catch-all {JSON.stringify(props.params || {})}</p>
-    <Link href="/">Link to /</Link>
-    <Link href="/index">Link to /index</Link>
+    <Link href="/nested">Link to /</Link>
+    <Link href="/nested/index">Link to /index</Link>
     </div>
   )
 }

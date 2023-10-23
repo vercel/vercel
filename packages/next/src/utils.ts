@@ -3121,16 +3121,20 @@ export async function getServerlessPages(params: {
   return { pages, appPaths: normalizedAppPaths };
 }
 
-// index.{ext} outputs get mapped to `/` which we don't want to override
-// dynamic routes that aren't pregenerated like the prefetch rsc payload
-export function normalizeIndexPrefetches(
-  prefetches: Record<string, FileFsRef>
-) {
+// to avoid any conflict with route matching/resolving, we prefix all prefetches
+// this is to ensure that prefetches are never matched for things like a greedy match on `index.{ext}`
+export function normalizePrefetches(prefetches: Record<string, FileFsRef>) {
+  const updatedPrefetches: Record<string, FileFsRef> = {};
+
   Object.keys(prefetches).forEach(key => {
-    if (key === 'index.prefetch.rsc' || key === 'index/index.prefetch.rsc') {
-      const newKey = key.replace('index.prefetch.rsc', '__index.prefetch.rsc');
-      prefetches[newKey] = prefetches[key];
-      delete prefetches[key];
+    const newKey = key.replace(/([^/]+\.prefetch\.rsc)$/, '__$1');
+
+    if (newKey !== key) {
+      updatedPrefetches[newKey] = prefetches[key];
+    } else {
+      updatedPrefetches[key] = prefetches[key];
     }
   });
+
+  return updatedPrefetches;
 }

@@ -7,7 +7,7 @@ import {
   getImagesConfig,
   getNextConfig,
   getServerlessPages,
-  normalizeIndexPrefetches,
+  normalizePrefetches,
 } from '../../src/utils';
 import { FileFsRef, FileRef } from '@vercel/build-utils';
 import { genDir } from '../utils';
@@ -421,13 +421,13 @@ describe('normalizeIndexPrefetches', () => {
       'foo/index.prefetch.rsc': dummyFile,
     };
 
-    normalizeIndexPrefetches(appRscPrefetches);
+    const updatedPrefetches = normalizePrefetches(appRscPrefetches);
 
-    expect(Object.keys(appRscPrefetches)).toEqual([
-      'foo.prefetch.rsc',
-      'foo/index.prefetch.rsc',
+    expect(Object.keys(updatedPrefetches)).toEqual([
       '__index.prefetch.rsc',
       'index/__index.prefetch.rsc',
+      '__foo.prefetch.rsc',
+      'foo/__index.prefetch.rsc',
     ]);
   });
 });
