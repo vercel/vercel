@@ -1,6 +1,6 @@
 {
   "scripts": {
-    "now-build": "next build && next export"
+    "now-build": "next build"
   },
   "dependencies": {
     "next": "canary",
