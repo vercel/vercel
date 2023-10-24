@@ -410,7 +410,7 @@ describe('getServerlessPages', () => {
   });
 });
 
-describe('normalizeIndexPrefetches', () => {
+describe('normalizePrefetches', () => {
   it('should properly prefix prefetches with `__`', async () => {
     const dummyFile = new FileFsRef({ fsPath: __dirname });
 
@@ -419,6 +419,7 @@ describe('normalizeIndexPrefetches', () => {
       'index/index.prefetch.rsc': dummyFile,
       'foo.prefetch.rsc': dummyFile,
       'foo/index.prefetch.rsc': dummyFile,
+      'foo/bar/baz.prefetch.rsc': dummyFile,
     };
 
     const updatedPrefetches = normalizePrefetches(appRscPrefetches);
@@ -428,6 +429,7 @@ describe('normalizeIndexPrefetches', () => {
       'index/__index.prefetch.rsc',
       '__foo.prefetch.rsc',
       'foo/__index.prefetch.rsc',
+      'foo/bar/__baz.prefetch.rsc',
     ]);
   });
 });

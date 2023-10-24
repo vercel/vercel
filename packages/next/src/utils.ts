@@ -3121,7 +3121,7 @@ export async function getServerlessPages(params: {
   return { pages, appPaths: normalizedAppPaths };
 }
 
-// to avoid any conflict with route matching/resolving, we prefix all prefetches
+// to avoid any conflict with route matching/resolving, we prefix all prefetches (ie, __index.prefetch.rsc)
 // this is to ensure that prefetches are never matched for things like a greedy match on `index.{ext}`
 export function normalizePrefetches(prefetches: Record<string, FileFsRef>) {
   const updatedPrefetches: Record<string, FileFsRef> = {};
