@@ -1,5 +1,5 @@
 ---
-'@vercel/node': major
+'@vercel/node': patch
 ---
 
 Fix for undici pkg threat
