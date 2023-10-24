@@ -1,3 +1,0 @@
-{
-  "probes": [{ "path": "/", "mustContain": "Welcome to your new Gatsby site" }]
-}
