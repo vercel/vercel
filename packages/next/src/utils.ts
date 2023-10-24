@@ -778,7 +778,8 @@ export async function createPseudoLayer(files: {
   return { pseudoLayer, pseudoLayerBytes };
 }
 
-interface CreateLambdaFromPseudoLayersOptions extends LambdaOptionsWithFiles {
+export interface CreateLambdaFromPseudoLayersOptions
+  extends LambdaOptionsWithFiles {
   layers: PseudoLayer[];
   isStreaming?: boolean;
   nextVersion?: string;
@@ -1831,6 +1832,7 @@ type OnPrerenderRouteArgs = {
   isServerMode: boolean;
   canUsePreviewMode: boolean;
   lambdas: { [key: string]: Lambda };
+  experimentalStreamingLambdaPaths: Map<string, string>;
   prerenders: { [key: string]: Prerender | FileFsRef };
   pageLambdaMap: { [key: string]: string };
   routesManifest?: RoutesManifest;
@@ -1866,6 +1868,7 @@ export const onPrerenderRoute =
       isServerMode,
       canUsePreviewMode,
       lambdas,
+      experimentalStreamingLambdaPaths,
       prerenders,
       pageLambdaMap,
       routesManifest,
@@ -2205,6 +2208,8 @@ export const onPrerenderRoute =
         initialStatus,
         initialHeaders,
         sourcePath,
+        experimentalStreamingLambdaPath:
+          experimentalStreamingLambdaPaths.get(outputPathPage),
 
         ...(isNotFound
           ? {
@@ -2231,6 +2236,8 @@ export const onPrerenderRoute =
           group: prerenderGroup,
           bypassToken: prerenderManifest.bypassToken,
           experimentalBypassFor,
+          experimentalStreamingLambdaPath:
+            experimentalStreamingLambdaPaths.get(outputPathData),
 
           ...(isNotFound
             ? {

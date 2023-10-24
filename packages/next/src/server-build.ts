@@ -14,6 +14,7 @@ import {
   Files,
   Flag,
   BuildResultV2Typical as BuildResult,
+  NodejsLambda,
 } from '@vercel/build-utils';
 import { Route, RouteWithHandle } from '@vercel/routing-utils';
 import { MAX_AGE_ONE_YEAR } from '.';
@@ -50,6 +51,7 @@ import {
   RSC_CONTENT_TYPE,
   RSC_PREFETCH_SUFFIX,
   normalizePrefetches,
+  CreateLambdaFromPseudoLayersOptions,
 } from './utils';
 import {
   nodeFileTrace,
@@ -304,6 +306,8 @@ export async function serverBuild({
       return staticRoute.srcRoute || route;
     }),
   ]);
+
+  const experimentalStreamingLambdaPaths = new Map<string, string>();
 
   if (hasLambdas) {
     const initialTracingLabel = 'Traced Next.js server files in';
@@ -1025,7 +1029,7 @@ export async function serverBuild({
       };
       const operationType = getOperationType({ group, prerenderManifest });
 
-      const lambda = await createLambdaFromPseudoLayers({
+      const options: CreateLambdaFromPseudoLayersOptions = {
         files: {
           ...launcherFiles,
           ...updatedManifestFiles,
@@ -1041,7 +1045,32 @@ export async function serverBuild({
         maxDuration: group.maxDuration,
         isStreaming: group.isStreaming,
         nextVersion,
-      });
+      };
+
+      const lambda = await createLambdaFromPseudoLayers(options);
+
+      // This is a PPR lambda if it's an App Page with the PPR experimental flag
+      // enabled.
+      const isPPR =
+        requiredServerFilesManifest.config.experimental?.ppr &&
+        group.isAppRouter &&
+        !group.isAppRouteHandler;
+
+      // If PPR is enabled and this is an App Page, create the non-streaming
+      // lambda for the page for revalidation.
+      let revalidate: NodejsLambda | undefined;
+      if (isPPR) {
+        if (isPPR && !options.isStreaming) {
+          throw new Error("Invariant: PPR lambda isn't streaming");
+        }
+
+        // Create the non-streaming version of the same Lambda, this will be
+        // used for revalidation.
+        revalidate = await createLambdaFromPseudoLayers({
+          ...options,
+          isStreaming: false,
+        });
+      }
 
       for (const page of group.pages) {
         const pageNoExt = page.replace(/\.js$/, '');
@@ -1057,10 +1086,34 @@ export async function serverBuild({
           });
         }
 
-        const outputName = normalizeIndexOutput(
+        let outputName = normalizeIndexOutput(
           path.posix.join(entryDirectory, pageNoExt),
           true
         );
+
+        // If this is a PPR page, then we should prefix the output name.
+        if (isPPR) {
+          if (!revalidate) {
+            throw new Error("Invariant: PPR lambda isn't set");
+          }
+
+          // Get the get the base path prefixed route, without the index
+          // normalization.
+          outputName = path.posix.join(entryDirectory, pageNoExt);
+          lambdas[outputName] = revalidate;
+
+          const pprOutputName = path.posix.join(
+            entryDirectory,
+            `/_next/postponed${pageNoExt}`
+          );
+          lambdas[pprOutputName] = lambda;
+
+          // We want to add the `experimentalStreamingLambdaPath` to this
+          // output.
+          experimentalStreamingLambdaPaths.set(outputName, pprOutputName);
+
+          continue;
+        }
 
         // we add locale prefixed outputs for SSR pages,
         // this is handled in onPrerenderRoute for SSG pages
@@ -1096,6 +1149,7 @@ export async function serverBuild({
     pagesDir,
     pageLambdaMap: {},
     lambdas,
+    experimentalStreamingLambdaPaths,
     prerenders,
     entryDirectory,
     routesManifest,
@@ -1329,22 +1383,46 @@ export async function serverBuild({
     // __rsc__ header is present
     const edgeFunctions = middleware.edgeFunctions;
 
-    for (let route of Object.values(appPathRoutesManifest)) {
+    for (const route of Object.values(appPathRoutesManifest)) {
       const ogRoute = inversedAppPathManifest[route];
 
       if (ogRoute.endsWith('/route')) {
         continue;
       }
-      route = normalizeIndexOutput(
+
+      const pathname = normalizeIndexOutput(
         path.posix.join('./', entryDirectory, route === '/' ? '/index' : route),
         true
       );
 
-      if (lambdas[route]) {
-        lambdas[`${route}.rsc`] = lambdas[route];
+      // If the request is for a page that is a PPR page, then we should
+      // create a PPR page for the .rsc variant.
+      let pprPathname: string | undefined;
+      if (experimentalStreamingLambdaPaths.has(pathname)) {
+        pprPathname = normalizeIndexOutput(
+          path.posix.join(
+            './',
+            entryDirectory,
+            '/_next/postponed',
+            route === '/' ? '/index' : route
+          ),
+          true
+        );
+        experimentalStreamingLambdaPaths.set(pathname, pprPathname);
       }
-      if (edgeFunctions[route]) {
-        edgeFunctions[`${route}.rsc`] = edgeFunctions[route];
+
+      if (lambdas[pathname]) {
+        lambdas[`${pathname}.rsc`] = lambdas[pathname];
+        if (pprPathname) {
+          lambdas[`${pprPathname}.rsc`] = lambdas[pathname];
+        }
+      }
+
+      if (edgeFunctions[pathname]) {
+        edgeFunctions[`${pathname}.rsc`] = edgeFunctions[pathname];
+        if (pprPathname) {
+          edgeFunctions[`${pprPathname}.rsc`] = edgeFunctions[pathname];
+        }
       }
     }
   }
