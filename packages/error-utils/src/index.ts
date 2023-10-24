@@ -1,3 +1,5 @@
+import util from 'node:util';
+
 export interface SpawnError extends NodeJS.ErrnoException {
   spawnargs: string[];
 }
@@ -13,22 +15,9 @@ export const isObject = (obj: unknown): obj is Record<string, unknown> =>
 /**
  * A type guard for `try...catch` errors.
  *
- * This function is based on:
- * https://github.com/stdlib-js/assert-is-error
  */
 export const isError = (error: unknown): error is Error => {
-  if (!isObject(error)) return false;
-
-  // Check for `Error` objects instantiated within the current global context.
-  if (error instanceof Error) return true;
-
-  // Walk the prototype tree until we find a matching object.
-  while (error) {
-    if (Object.prototype.toString.call(error) === '[object Error]') return true;
-    error = Object.getPrototypeOf(error);
-  }
-
-  return false;
+  return util.types.isNativeError(error);
 };
 
 export const isErrnoException = (
