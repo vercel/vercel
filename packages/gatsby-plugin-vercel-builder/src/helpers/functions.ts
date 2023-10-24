@@ -37,7 +37,7 @@ export async function createServerlessFunctions(
         await ensureDir(functionDir);
 
         await Promise.all([
-          writeHandler({ outDir: functionDir, handlerFile }),
+          writeHandler({ outDir: functionDir, handlerFile, prefix }),
           copyFunctionLibs({ functionDir }),
           copyHTMLFiles({ functionDir }),
           writeVCConfig({ functionDir }),
