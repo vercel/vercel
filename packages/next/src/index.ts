@@ -2108,6 +2108,7 @@ export const build: BuildV2 = async ({
       static404Page,
       pageLambdaMap,
       lambdas,
+      experimentalStreamingLambdaPaths: undefined,
       isServerMode,
       prerenders,
       entryDirectory,

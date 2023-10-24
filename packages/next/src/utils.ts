@@ -1832,7 +1832,7 @@ type OnPrerenderRouteArgs = {
   isServerMode: boolean;
   canUsePreviewMode: boolean;
   lambdas: { [key: string]: Lambda };
-  experimentalStreamingLambdaPaths: Map<string, string>;
+  experimentalStreamingLambdaPaths: Map<string, string> | undefined;
   prerenders: { [key: string]: Prerender | FileFsRef };
   pageLambdaMap: { [key: string]: string };
   routesManifest?: RoutesManifest;
@@ -2209,7 +2209,7 @@ export const onPrerenderRoute =
         initialHeaders,
         sourcePath,
         experimentalStreamingLambdaPath:
-          experimentalStreamingLambdaPaths.get(outputPathPage),
+          experimentalStreamingLambdaPaths?.get(outputPathPage),
 
         ...(isNotFound
           ? {
@@ -2237,7 +2237,7 @@ export const onPrerenderRoute =
           bypassToken: prerenderManifest.bypassToken,
           experimentalBypassFor,
           experimentalStreamingLambdaPath:
-            experimentalStreamingLambdaPaths.get(outputPathData),
+            experimentalStreamingLambdaPaths?.get(outputPathData),
 
           ...(isNotFound
             ? {
