@@ -2,7 +2,7 @@ import { addHelpers } from './helpers.js';
 import { createServer } from 'http';
 import { serializeBody } from '../utils.js';
 import exitHook from 'exit-hook';
-import { Headers, fetch } from 'undici';
+import { Headers, request as undiciRequest } from 'undici';
 import { listen } from 'async-listen';
 import { isAbsolute } from 'path';
 import { pathToFileURL } from 'url';
@@ -10,6 +10,7 @@ import zlib from 'zlib';
 import type { ServerResponse, IncomingMessage } from 'http';
 import type { VercelProxyResponse } from '../types.js';
 import type { VercelRequest, VercelResponse } from './helpers.js';
+import type { Readable } from 'stream';
 
 type ServerlessServerOptions = {
   shouldAddHelpers: boolean;
@@ -103,31 +104,32 @@ export async function createServerlessEventHandler(
 
   return async function (request: IncomingMessage) {
     const url = new URL(request.url ?? '/', server.url);
-    const response = await fetch(url, {
+    const response = await undiciRequest(url, {
       body: await serializeBody(request),
       compress: !isStreaming,
-      // @ts-expect-error
       headers: {
         ...request.headers,
         host: request.headers['x-forwarded-host'],
       },
-      method: request.method,
+      // @ts-expect-error Default to 'GET', and undici types use a strict method check which is technically incorrect too
+      method: request.method || 'GET',
       redirect: 'manual',
     });
 
-    let body: Buffer | null = null;
-    let headers: Headers = response.headers;
+    let body: Readable | Buffer | null = null;
+    // @ts-expect-error https://github.com/nodejs/undici/pull/2373
+    let headers = new Headers(response.headers);
 
     if (isStreaming) {
       body = response.body;
     } else {
-      body = Buffer.from(await response.arrayBuffer());
+      body = Buffer.from(await response.body.arrayBuffer());
 
-      const contentEncoding = response.headers.get('content-encoding');
-      if (contentEncoding) {
+      const contentEncoding = headers.get('content-encoding');
+      if (contentEncoding && typeof contentEncoding === 'string') {
         body = compress(body, contentEncoding);
         const clonedHeaders = [];
-        for (const [key, value] of response.headers.entries()) {
+        for (const [key, value] of headers) {
           if (key !== 'transfer-encoding') {
             // transfer-encoding is only for streaming response
             clonedHeaders.push([key, value]);
@@ -139,7 +141,7 @@ export async function createServerlessEventHandler(
     }
 
     return {
-      status: response.status,
+      status: response.statusCode,
       headers,
       body,
       encoding: 'utf8',
