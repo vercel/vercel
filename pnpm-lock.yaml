@@ -969,6 +969,9 @@ importers:
       '@types/fs-extra':
         specifier: 11.0.1
         version: 11.0.1
+      '@types/jest':
+        specifier: 27.5.1
+        version: 27.5.1
       '@types/node':
         specifier: 14.18.33
         version: 14.18.33
