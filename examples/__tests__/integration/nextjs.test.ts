@@ -1,4 +1,4 @@
 import { deployExample } from '../test-utils';
-it('[examples] should deploy ', async () => {
-  await deployExample(__filename);
+it('[examples] should deploy nextjs', async () => {
+  await deployExample('nextjs');
 });
