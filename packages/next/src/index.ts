@@ -1605,6 +1605,7 @@ export const build: BuildV2 = async ({
         // internal pages are already referenced in traces for serverless
         // like builds
         internalPages: [],
+        experimentalPPRRoutes: undefined,
       });
 
       const initialApiLambdaGroups = await getPageLambdaGroups({
@@ -1620,6 +1621,7 @@ export const build: BuildV2 = async ({
         initialPseudoLayerUncompressed: 0,
         lambdaCompressedByteLimit,
         internalPages: [],
+        experimentalPPRRoutes: undefined,
       });
 
       for (const group of initialApiLambdaGroups) {

@@ -297,6 +297,18 @@ export async function serverBuild({
     internalPages.push('404.js');
   }
 
+  const experimentalPPRRoutes = new Set<string>();
+
+  for (const [route, { experimentalPPR }] of [
+    ...Object.entries(prerenderManifest.staticRoutes),
+    ...Object.entries(prerenderManifest.blockingFallbackRoutes),
+    ...Object.entries(prerenderManifest.fallbackRoutes),
+  ]) {
+    if (!experimentalPPR) continue;
+
+    experimentalPPRRoutes.add(route);
+  }
+
   const prerenderRoutes = new Set<string>([
     ...(canUsePreviewMode ? omittedPrerenderRoutes : []),
     ...Object.keys(prerenderManifest.blockingFallbackRoutes),
@@ -827,6 +839,7 @@ export async function serverBuild({
       prerenderRoutes,
       pageTraces,
       compressedPages,
+      experimentalPPRRoutes: undefined,
       tracedPseudoLayer: tracedPseudoLayer.pseudoLayer,
       initialPseudoLayer,
       lambdaCompressedByteLimit,
@@ -847,6 +860,7 @@ export async function serverBuild({
       prerenderRoutes,
       pageTraces,
       compressedPages,
+      experimentalPPRRoutes,
       tracedPseudoLayer: tracedPseudoLayer.pseudoLayer,
       initialPseudoLayer,
       lambdaCompressedByteLimit,
@@ -863,6 +877,7 @@ export async function serverBuild({
       prerenderRoutes,
       pageTraces,
       compressedPages,
+      experimentalPPRRoutes: undefined,
       tracedPseudoLayer: tracedPseudoLayer.pseudoLayer,
       initialPseudoLayer,
       lambdaCompressedByteLimit,
@@ -872,7 +887,7 @@ export async function serverBuild({
     });
 
     for (const group of appRouterLambdaGroups) {
-      if (!group.isPrerenders) {
+      if (!group.isPrerenders || group.isExperimentalPPR) {
         group.isStreaming = true;
       }
       group.isAppRouter = true;
@@ -894,6 +909,7 @@ export async function serverBuild({
       prerenderRoutes,
       pageTraces,
       compressedPages,
+      experimentalPPRRoutes: undefined,
       tracedPseudoLayer: tracedPseudoLayer.pseudoLayer,
       initialPseudoLayer,
       initialPseudoLayerUncompressed: uncompressedInitialSize,
@@ -1104,14 +1120,14 @@ export async function serverBuild({
 
           const pprOutputName = path.posix.join(
             entryDirectory,
-            `/_next/postponed${pageNoExt}`
+            '/_next/postponed',
+            pageNoExt
           );
           lambdas[pprOutputName] = lambda;
 
           // We want to add the `experimentalStreamingLambdaPath` to this
           // output.
           experimentalStreamingLambdaPaths.set(outputName, pprOutputName);
-
           continue;
         }
 
@@ -1165,21 +1181,26 @@ export async function serverBuild({
     isEmptyAllowQueryForPrendered,
   });
 
+  const promises: Promise<void>[] = [];
+
   Object.keys(prerenderManifest.staticRoutes).forEach(route =>
-    prerenderRoute(route, {})
+    promises.push(prerenderRoute(route, {}))
   );
   Object.keys(prerenderManifest.fallbackRoutes).forEach(route =>
-    prerenderRoute(route, { isFallback: true })
+    promises.push(prerenderRoute(route, { isFallback: true }))
   );
   Object.keys(prerenderManifest.blockingFallbackRoutes).forEach(route =>
-    prerenderRoute(route, { isBlocking: true })
+    promises.push(prerenderRoute(route, { isBlocking: true }))
   );
 
   if (static404Page && canUsePreviewMode) {
     omittedPrerenderRoutes.forEach(route => {
-      prerenderRoute(route, { isOmitted: true });
+      promises.push(prerenderRoute(route, { isOmitted: true }));
     });
   }
+
+  // Wait for all prerenders to finish.
+  await Promise.all(promises);
 
   prerenderRoutes.forEach(route => {
     if (routesManifest?.i18n) {

@@ -15,6 +15,7 @@ import {
   NodejsLambda,
   EdgeFunction,
   Images,
+  File,
 } from '@vercel/build-utils';
 import { NodeFileTraceReasons } from '@vercel/nft';
 import type {
@@ -244,6 +245,7 @@ type RoutesManifestOld = {
     header: string;
     varyHeader: string;
     prefetchHeader?: string;
+    didPostponeHeader?: string;
     contentTypeHeader: string;
   };
   skipMiddlewareUrlNormalize?: boolean;
@@ -863,6 +865,7 @@ export type NextPrerenderedRoutes = {
       initialStatus?: number;
       initialHeaders?: Record<string, string>;
       experimentalBypassFor?: HasField;
+      experimentalPPR?: boolean;
     };
   };
 
@@ -872,6 +875,7 @@ export type NextPrerenderedRoutes = {
       dataRoute: string | null;
       dataRouteRegex: string | null;
       experimentalBypassFor?: HasField;
+      experimentalPPR?: boolean;
     };
   };
 
@@ -882,6 +886,7 @@ export type NextPrerenderedRoutes = {
       dataRoute: string | null;
       dataRouteRegex: string | null;
       experimentalBypassFor?: HasField;
+      experimentalPPR?: boolean;
     };
   };
 
@@ -891,6 +896,7 @@ export type NextPrerenderedRoutes = {
       dataRoute: string | null;
       dataRouteRegex: string | null;
       experimentalBypassFor?: HasField;
+      experimentalPPR?: boolean;
     };
   };
 
@@ -1095,6 +1101,7 @@ export async function getPrerenderManifest(
             initialStatus?: number;
             initialHeaders?: Record<string, string>;
             experimentalBypassFor?: HasField;
+            experimentalPPR?: boolean;
           };
         };
         dynamicRoutes: {
@@ -1104,6 +1111,7 @@ export async function getPrerenderManifest(
             dataRoute: string | null;
             dataRouteRegex: string | null;
             experimentalBypassFor?: HasField;
+            experimentalPPR?: boolean;
           };
         };
         preview: {
@@ -1190,11 +1198,13 @@ export async function getPrerenderManifest(
         let initialStatus: undefined | number;
         let initialHeaders: undefined | Record<string, string>;
         let experimentalBypassFor: undefined | HasField;
+        let experimentalPPR: undefined | boolean;
 
         if (manifest.version === 4) {
           initialStatus = manifest.routes[route].initialStatus;
           initialHeaders = manifest.routes[route].initialHeaders;
           experimentalBypassFor = manifest.routes[route].experimentalBypassFor;
+          experimentalPPR = manifest.routes[route].experimentalPPR;
         }
 
         ret.staticRoutes[route] = {
@@ -1207,6 +1217,7 @@ export async function getPrerenderManifest(
           initialStatus,
           initialHeaders,
           experimentalBypassFor,
+          experimentalPPR,
         };
       });
 
@@ -1214,15 +1225,18 @@ export async function getPrerenderManifest(
         const { routeRegex, fallback, dataRoute, dataRouteRegex } =
           manifest.dynamicRoutes[lazyRoute];
         let experimentalBypassFor: undefined | HasField;
+        let experimentalPPR: undefined | boolean;
 
         if (manifest.version === 4) {
           experimentalBypassFor =
             manifest.dynamicRoutes[lazyRoute].experimentalBypassFor;
+          experimentalPPR = manifest.dynamicRoutes[lazyRoute].experimentalPPR;
         }
 
         if (typeof fallback === 'string') {
           ret.fallbackRoutes[lazyRoute] = {
             experimentalBypassFor,
+            experimentalPPR,
             routeRegex,
             fallback,
             dataRoute,
@@ -1231,6 +1245,7 @@ export async function getPrerenderManifest(
         } else if (fallback === null) {
           ret.blockingFallbackRoutes[lazyRoute] = {
             experimentalBypassFor,
+            experimentalPPR,
             routeRegex,
             dataRoute,
             dataRouteRegex,
@@ -1240,6 +1255,7 @@ export async function getPrerenderManifest(
           // in the top-level `routes` key (`staticRoutes`).
           ret.omittedRoutes[lazyRoute] = {
             experimentalBypassFor,
+            experimentalPPR,
             routeRegex,
             dataRoute,
             dataRouteRegex,
@@ -1418,6 +1434,7 @@ export type LambdaGroup = {
   isAppRouteHandler?: boolean;
   isStreaming?: boolean;
   isPrerenders?: boolean;
+  isExperimentalPPR?: boolean;
   isPages?: boolean;
   isApiLambda: boolean;
   pseudoLayer: PseudoLayer;
@@ -1431,6 +1448,7 @@ export async function getPageLambdaGroups({
   functionsConfigManifest,
   pages,
   prerenderRoutes,
+  experimentalPPRRoutes,
   pageTraces,
   compressedPages,
   tracedPseudoLayer,
@@ -1445,6 +1463,7 @@ export async function getPageLambdaGroups({
   functionsConfigManifest?: FunctionsConfigManifestV1;
   pages: string[];
   prerenderRoutes: Set<string>;
+  experimentalPPRRoutes: Set<string> | undefined;
   pageTraces: {
     [page: string]: {
       [key: string]: FileFsRef;
@@ -1466,6 +1485,7 @@ export async function getPageLambdaGroups({
     const newPages = [...internalPages, page];
     const routeName = normalizePage(page.replace(/\.js$/, ''));
     const isPrerenderRoute = prerenderRoutes.has(routeName);
+    const isExperimentalPPR = experimentalPPRRoutes?.has(routeName) ?? false;
 
     let opts: { memory?: number; maxDuration?: number } = {};
 
@@ -1495,7 +1515,8 @@ export async function getPageLambdaGroups({
       const matches =
         group.maxDuration === opts.maxDuration &&
         group.memory === opts.memory &&
-        group.isPrerenders === isPrerenderRoute;
+        group.isPrerenders === isPrerenderRoute &&
+        group.isExperimentalPPR === isExperimentalPPR;
 
       if (matches) {
         let newTracedFilesSize = group.pseudoLayerBytes;
@@ -1534,6 +1555,7 @@ export async function getPageLambdaGroups({
         pages: [page],
         ...opts,
         isPrerenders: isPrerenderRoute,
+        isExperimentalPPR,
         isApiLambda: !!isApiPage(page),
         pseudoLayerBytes: initialPseudoLayer.pseudoLayerBytes,
         pseudoLayerUncompressedBytes: initialPseudoLayerUncompressed,
@@ -1833,7 +1855,7 @@ type OnPrerenderRouteArgs = {
   canUsePreviewMode: boolean;
   lambdas: { [key: string]: Lambda };
   experimentalStreamingLambdaPaths: Map<string, string> | undefined;
-  prerenders: { [key: string]: Prerender | FileFsRef };
+  prerenders: { [key: string]: Prerender | File };
   pageLambdaMap: { [key: string]: string };
   routesManifest?: RoutesManifest;
   isCorrectNotFoundRoutes?: boolean;
@@ -1843,7 +1865,7 @@ let prerenderGroup = 1;
 
 export const onPrerenderRoute =
   (prerenderRouteArgs: OnPrerenderRouteArgs) =>
-  (
+  async (
     routeKey: string,
     {
       isBlocking,
@@ -1932,6 +1954,7 @@ export const onPrerenderRoute =
     let initialStatus: number | undefined;
     let initialHeaders: Record<string, string> | undefined;
     let experimentalBypassFor: HasField | undefined;
+    let experimentalPPR: boolean | undefined;
 
     if (isFallback || isBlocking) {
       const pr = isFallback
@@ -1949,12 +1972,15 @@ export const onPrerenderRoute =
       srcRoute = null;
       dataRoute = pr.dataRoute;
       experimentalBypassFor = pr.experimentalBypassFor;
+      experimentalPPR = pr.experimentalPPR;
     } else if (isOmitted) {
       initialRevalidate = false;
       srcRoute = routeKey;
       dataRoute = prerenderManifest.omittedRoutes[routeKey].dataRoute;
       experimentalBypassFor =
         prerenderManifest.omittedRoutes[routeKey].experimentalBypassFor;
+      experimentalPPR =
+        prerenderManifest.omittedRoutes[routeKey].experimentalPPR;
     } else {
       const pr = prerenderManifest.staticRoutes[routeKey];
       ({
@@ -1964,19 +1990,58 @@ export const onPrerenderRoute =
         initialHeaders,
         initialStatus,
         experimentalBypassFor,
+        experimentalPPR,
       } = pr);
     }
 
     let isAppPathRoute = false;
+
     // TODO: leverage manifest to determine app paths more accurately
     if (appDir && srcRoute && (!dataRoute || dataRoute?.endsWith('.rsc'))) {
       isAppPathRoute = true;
     }
 
     const isOmittedOrNotFound = isOmitted || isNotFound;
-    let htmlFsRef: FileFsRef | null;
+    let htmlFsRef: File | null;
 
-    if (appDir && !dataRoute && isAppPathRoute && !(isBlocking || isFallback)) {
+    // If enabled, try to get the postponed route information from the file
+    // system and use it to assemble the prerender.
+    let prerender: string | undefined;
+    if (experimentalPPR && appDir) {
+      const htmlPath = path.join(appDir, `${routeFileNoExt}.html`);
+      const metaPath = path.join(appDir, `${routeFileNoExt}.meta`);
+      if (fs.existsSync(htmlPath) && fs.existsSync(metaPath)) {
+        const meta = JSON.parse(await fs.readFile(metaPath, 'utf8'));
+        if ('postponed' in meta && typeof meta.postponed === 'string') {
+          prerender = meta.postponed;
+
+          // Assign the headers Content-Type header to the prerendered type.
+          initialHeaders ??= {};
+          initialHeaders[
+            'content-type'
+          ] = `application/x-nextjs-pre-render; state-length=${meta.postponed.length}`;
+
+          // Read the HTML file and append it to the prerendered content.
+          const html = await fs.readFileSync(htmlPath, 'utf8');
+          prerender += html;
+        }
+      }
+    }
+
+    if (prerender) {
+      const contentType = initialHeaders?.['content-type'];
+      if (!contentType) {
+        throw new Error("Invariant: contentType can't be undefined");
+      }
+
+      // Assemble the prerendered file.
+      htmlFsRef = new FileBlob({ contentType, data: prerender });
+    } else if (
+      appDir &&
+      !dataRoute &&
+      isAppPathRoute &&
+      !(isBlocking || isFallback)
+    ) {
       const contentType = initialHeaders?.['content-type'];
       htmlFsRef = new FileFsRef({
         fsPath: path.join(appDir, `${routeFileNoExt}.body`),
@@ -2191,11 +2256,31 @@ export const onPrerenderRoute =
         'RSC, Next-Router-State-Tree, Next-Router-Prefetch';
       const rscContentTypeHeader =
         routesManifest?.rsc?.contentTypeHeader || RSC_CONTENT_TYPE;
+      const rscDidPostponeHeader = routesManifest?.rsc?.didPostponeHeader;
 
       let sourcePath: string | undefined;
       if (`/${outputPathPage}` !== srcRoute && srcRoute) {
         sourcePath = srcRoute;
       }
+
+      // The `experimentalStreamingLambdaPaths` stores the page without the
+      // leading `/` and with the `/` rewritten to be `index`. We should
+      // normalize the key so that it matches that key in the map.
+      let key = srcRoute || routeKey;
+      if (key === '/') {
+        key = 'index';
+      } else {
+        if (!key.startsWith('/')) {
+          throw new Error("Invariant: key doesn't start with /");
+        }
+
+        key = key.substring(1);
+      }
+
+      key = path.posix.join(entryDirectory, key);
+
+      let experimentalStreamingLambdaPath =
+        experimentalStreamingLambdaPaths?.get(key);
 
       prerenders[outputPathPage] = new Prerender({
         expiration: initialRevalidate,
@@ -2208,8 +2293,7 @@ export const onPrerenderRoute =
         initialStatus,
         initialHeaders,
         sourcePath,
-        experimentalStreamingLambdaPath:
-          experimentalStreamingLambdaPaths?.get(outputPathPage),
+        experimentalStreamingLambdaPath,
 
         ...(isNotFound
           ? {
@@ -2228,6 +2312,11 @@ export const onPrerenderRoute =
       });
 
       if (outputPathData) {
+        if (experimentalStreamingLambdaPath) {
+          experimentalStreamingLambdaPath =
+            experimentalStreamingLambdaPath + '.rsc';
+        }
+
         prerenders[outputPathData] = new Prerender({
           expiration: initialRevalidate,
           lambda,
@@ -2236,8 +2325,7 @@ export const onPrerenderRoute =
           group: prerenderGroup,
           bypassToken: prerenderManifest.bypassToken,
           experimentalBypassFor,
-          experimentalStreamingLambdaPath:
-            experimentalStreamingLambdaPaths?.get(outputPathData),
+          experimentalStreamingLambdaPath,
 
           ...(isNotFound
             ? {
@@ -2250,6 +2338,9 @@ export const onPrerenderRoute =
                 initialHeaders: {
                   'content-type': rscContentTypeHeader,
                   vary: rscVaryHeader,
+                  ...(prerender && rscDidPostponeHeader
+                    ? { [rscDidPostponeHeader]: '1' }
+                    : {}),
                 },
               }
             : {}),
