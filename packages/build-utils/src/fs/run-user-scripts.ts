@@ -299,9 +299,13 @@ export async function scanParentDirs(
   let lockfileVersion: number | undefined;
   let cliType: CliType = 'yarn';
 
-  const [hasYarnLock, packageLockJson, pnpmLockYaml, bunLockBin] =
+  const hasYarnLock = Boolean(yarnLockPath);
+
+  const [yarnLockYaml, packageLockJson, pnpmLockYaml, bunLockBin] =
     await Promise.all([
-      Boolean(yarnLockPath),
+      yarnLockPath
+        ? readConfigFile<{ __metadata: { version: number } }>(yarnLockPath)
+        : null,
       npmLockPath
         ? readConfigFile<{ lockfileVersion: number }>(npmLockPath)
         : null,
@@ -320,6 +324,7 @@ export async function scanParentDirs(
   } else if (hasYarnLock) {
     cliType = 'yarn';
     lockfilePath = yarnLockPath;
+    lockfileVersion = Number(yarnLockYaml.__metadata.version);
   } else if (pnpmLockYaml) {
     cliType = 'pnpm';
     lockfilePath = pnpmLockPath;

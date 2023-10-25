@@ -30,7 +30,9 @@ export async function readConfigFile<T>(
     if (data) {
       const str = data.toString('utf8');
       try {
-        if (name.endsWith('.json')) {
+        if (name === 'yarn.lock') {
+          return yaml.safeLoad(str, { filename: name }) as T;
+        } else if (name.endsWith('.json')) {
           return JSON.parse(str) as T;
         } else if (name.endsWith('.toml')) {
           return toml.parse(str) as unknown as T;
