@@ -2256,7 +2256,6 @@ export const onPrerenderRoute =
         'RSC, Next-Router-State-Tree, Next-Router-Prefetch';
       const rscContentTypeHeader =
         routesManifest?.rsc?.contentTypeHeader || RSC_CONTENT_TYPE;
-      const rscDidPostponeHeader = routesManifest?.rsc?.didPostponeHeader;
 
       let sourcePath: string | undefined;
       if (`/${outputPathPage}` !== srcRoute && srcRoute) {
@@ -2279,7 +2278,7 @@ export const onPrerenderRoute =
 
       key = path.posix.join(entryDirectory, key);
 
-      let experimentalStreamingLambdaPath =
+      const experimentalStreamingLambdaPath =
         experimentalStreamingLambdaPaths?.get(key);
 
       prerenders[outputPathPage] = new Prerender({
@@ -2312,12 +2311,16 @@ export const onPrerenderRoute =
       });
 
       if (outputPathData) {
-        if (experimentalStreamingLambdaPath) {
-          experimentalStreamingLambdaPath =
-            experimentalStreamingLambdaPath + '.rsc';
+        let opd = outputPathData;
+        if (experimentalPPR) {
+          opd = opd.replace(/\.rsc$/, RSC_PREFETCH_SUFFIX);
         }
-
-        prerenders[outputPathData] = new Prerender({
+        if (!(opd in prerenders)) {
+          throw new Error(
+            `invariant: unable to locate prefetch for ${outputPathData}`
+          );
+        }
+        prerenders[opd] = new Prerender({
           expiration: initialRevalidate,
           lambda,
           allowQuery,
@@ -2325,7 +2328,6 @@ export const onPrerenderRoute =
           group: prerenderGroup,
           bypassToken: prerenderManifest.bypassToken,
           experimentalBypassFor,
-          experimentalStreamingLambdaPath,
 
           ...(isNotFound
             ? {
@@ -2338,9 +2340,6 @@ export const onPrerenderRoute =
                 initialHeaders: {
                   'content-type': rscContentTypeHeader,
                   vary: rscVaryHeader,
-                  ...(prerender && rscDidPostponeHeader
-                    ? { [rscDidPostponeHeader]: '1' }
-                    : {}),
                 },
               }
             : {}),
