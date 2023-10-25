@@ -2256,6 +2256,7 @@ export const onPrerenderRoute =
         'RSC, Next-Router-State-Tree, Next-Router-Prefetch';
       const rscContentTypeHeader =
         routesManifest?.rsc?.contentTypeHeader || RSC_CONTENT_TYPE;
+      const rscDidPostponeHeader = routesManifest?.rsc?.didPostponeHeader;
 
       let sourcePath: string | undefined;
       if (`/${outputPathPage}` !== srcRoute && srcRoute) {
@@ -2340,6 +2341,9 @@ export const onPrerenderRoute =
                 initialHeaders: {
                   'content-type': rscContentTypeHeader,
                   vary: rscVaryHeader,
+                  ...(experimentalPPR && rscDidPostponeHeader
+                    ? { [rscDidPostponeHeader]: '1' }
+                    : {}),
                 },
               }
             : {}),
