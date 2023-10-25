@@ -319,6 +319,10 @@ export async function serverBuild({
     }),
   ]);
 
+  const experimental = {
+    ppr: requiredServerFilesManifest.config.experimental?.ppr === true,
+  };
+
   const experimentalStreamingLambdaPaths = new Map<string, string>();
 
   if (hasLambdas) {
@@ -1068,9 +1072,7 @@ export async function serverBuild({
       // This is a PPR lambda if it's an App Page with the PPR experimental flag
       // enabled.
       const isPPR =
-        requiredServerFilesManifest.config.experimental?.ppr &&
-        group.isAppRouter &&
-        !group.isAppRouteHandler;
+        experimental.ppr && group.isAppRouter && !group.isAppRouteHandler;
 
       // If PPR is enabled and this is an App Page, create the non-streaming
       // lambda for the page for revalidation.
@@ -1420,14 +1422,11 @@ export async function serverBuild({
       // create a PPR page for the .rsc variant.
       let pprPathname: string | undefined;
       if (experimentalStreamingLambdaPaths.has(pathname)) {
-        pprPathname = normalizeIndexOutput(
-          path.posix.join(
-            './',
-            entryDirectory,
-            '/_next/postponed',
-            route === '/' ? '/index' : route
-          ),
-          true
+        pprPathname = path.posix.join(
+          './',
+          entryDirectory,
+          '/_next/postponed',
+          route === '/' ? '/index' : route
         );
         experimentalStreamingLambdaPaths.set(pathname, pprPathname);
       }
@@ -1462,6 +1461,10 @@ export async function serverBuild({
         metadata: value.metadata ?? {},
       }))
     : [];
+
+  if (experimental.ppr && !rscPrefetchHeader) {
+    throw new Error("Invariant: cannot use PPR without 'rsc.prefetchHeader'");
+  }
 
   return {
     wildcard: wildcardConfig,
