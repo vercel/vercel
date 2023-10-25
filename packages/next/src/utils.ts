@@ -2314,12 +2314,12 @@ export const onPrerenderRoute =
       if (outputPathData) {
         let opd = outputPathData;
         if (experimentalPPR) {
+          if (!opd.endsWith('.rsc')) {
+            throw new Error(
+              `invariant: unexpected output path for ${outputPathData} and PPR`
+            );
+          }
           opd = opd.replace(/\.rsc$/, RSC_PREFETCH_SUFFIX);
-        }
-        if (!(opd in prerenders)) {
-          throw new Error(
-            `invariant: unable to locate prefetch for ${outputPathData}`
-          );
         }
         prerenders[opd] = new Prerender({
           expiration: initialRevalidate,
