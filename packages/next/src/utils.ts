@@ -3301,12 +3301,9 @@ export function normalizePrefetches(prefetches: Record<string, FileFsRef>) {
   const updatedPrefetches: Record<string, FileFsRef> = {};
 
   for (const key in prefetches) {
-    if (key === 'index.prefetch.rsc') {
-      const newKey = key.replace(/([^/]+\.prefetch\.rsc)$/, '__$1');
-      updatedPrefetches[newKey] = prefetches[key];
-    } else {
-      updatedPrefetches[key] = prefetches[key];
-    }
+    const newKey = key.replace(/([^/]+\.prefetch\.rsc)$/, '__$1');
+    updatedPrefetches[newKey] = prefetches[key];
+    delete prefetches[key];
   }
 
   return updatedPrefetches;
