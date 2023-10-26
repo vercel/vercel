@@ -1424,31 +1424,12 @@ export async function serverBuild({
         true
       );
 
-      // If the request is for a page that is a PPR page, then we should
-      // create a PPR page for the .rsc variant.
-      let pprPathname: string | undefined;
-      if (experimentalStreamingLambdaPaths.has(pathname)) {
-        pprPathname = path.posix.join(
-          './',
-          entryDirectory,
-          '/_next/postponed',
-          route === '/' ? '/index' : route
-        );
-        experimentalStreamingLambdaPaths.set(pathname, pprPathname);
-      }
-
       if (lambdas[pathname]) {
         lambdas[`${pathname}.rsc`] = lambdas[pathname];
-        if (pprPathname) {
-          lambdas[`${pprPathname}.rsc`] = lambdas[pathname];
-        }
       }
 
       if (edgeFunctions[pathname]) {
         edgeFunctions[`${pathname}.rsc`] = edgeFunctions[pathname];
-        if (pprPathname) {
-          edgeFunctions[`${pprPathname}.rsc`] = edgeFunctions[pathname];
-        }
       }
     }
   }
