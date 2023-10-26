@@ -2053,31 +2053,14 @@ export async function serverBuild({
       ...(rscPrefetchHeader && experimental.ppr
         ? [
             {
-              src: path.posix.join(
-                '/',
-                entryDirectory,
-                `/__index${RSC_PREFETCH_SUFFIX}`
-              ),
-              headers: {
-                'x-matched-path': '/index.prefetch.rsc',
-              },
-              has: [
-                {
-                  type: 'header',
-                  key: rscPrefetchHeader,
-                },
-              ],
-              continue: true,
-              override: true,
-            },
-            {
               src: `^${path.posix.join(
                 '/',
                 entryDirectory,
+                `/((?:.+?/)*)__([^/]+${RSC_PREFETCH_SUFFIX}(?:/)?)$`,
                 `/__(.+?)${RSC_PREFETCH_SUFFIX}(?:/)?$`
               )}`,
               headers: {
-                'x-matched-path': '/$1.prefetch.rsc',
+                'x-matched-path': '/$1$2',
               },
               has: [
                 {
