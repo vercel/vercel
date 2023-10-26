@@ -314,7 +314,8 @@ export async function getDynamicRoutes(
   canUsePreviewMode?: boolean,
   bypassToken?: string,
   isServerMode?: boolean,
-  dynamicMiddlewareRouteMap?: Map<string, RouteWithSrc>
+  dynamicMiddlewareRouteMap?: Map<string, RouteWithSrc>,
+  experimentalPPR?: boolean
 ): Promise<RouteWithSrc[]> {
   if (routesManifest) {
     switch (routesManifest.version) {
@@ -387,6 +388,18 @@ export async function getDynamicRoutes(
               },
             ];
           }
+
+          if (experimentalPPR) {
+            routes.push({
+              ...route,
+              src: route.src.replace(
+                new RegExp(escapeStringRegexp('(?:/)?$')),
+                '(?:\\.prefetch\\.rsc)(?:/)?$'
+              ),
+              dest: route.dest?.replace(/($|\?)/, '.prefetch.rsc$1'),
+            });
+          }
+
           routes.push({
             ...route,
             src: route.src.replace(
@@ -397,8 +410,8 @@ export async function getDynamicRoutes(
           });
 
           routes.push(route);
-          continue;
         }
+
         return routes;
       }
       default: {
@@ -861,6 +874,7 @@ export type NextPrerenderedRoutes = {
     [route: string]: {
       initialRevalidate: number | false;
       dataRoute: string | null;
+      prefetchDataRoute?: string | null;
       srcRoute: string | null;
       initialStatus?: number;
       initialHeaders?: Record<string, string>;
@@ -874,6 +888,8 @@ export type NextPrerenderedRoutes = {
       routeRegex: string;
       dataRoute: string | null;
       dataRouteRegex: string | null;
+      prefetchDataRoute?: string | null;
+      prefetchDataRouteRegex?: string | null;
       experimentalBypassFor?: HasField;
       experimentalPPR?: boolean;
     };
@@ -885,6 +901,8 @@ export type NextPrerenderedRoutes = {
       routeRegex: string;
       dataRoute: string | null;
       dataRouteRegex: string | null;
+      prefetchDataRoute?: string | null;
+      prefetchDataRouteRegex?: string | null;
       experimentalBypassFor?: HasField;
       experimentalPPR?: boolean;
     };
@@ -895,6 +913,8 @@ export type NextPrerenderedRoutes = {
       routeRegex: string;
       dataRoute: string | null;
       dataRouteRegex: string | null;
+      prefetchDataRoute: string | null | undefined;
+      prefetchDataRouteRegex: string | null | undefined;
       experimentalBypassFor?: HasField;
       experimentalPPR?: boolean;
     };
@@ -1098,6 +1118,7 @@ export async function getPrerenderManifest(
             initialRevalidateSeconds: number | false;
             srcRoute: string | null;
             dataRoute: string | null;
+            prefetchDataRoute: string | null | undefined;
             initialStatus?: number;
             initialHeaders?: Record<string, string>;
             experimentalBypassFor?: HasField;
@@ -1110,6 +1131,8 @@ export async function getPrerenderManifest(
             fallback: string | false;
             dataRoute: string | null;
             dataRouteRegex: string | null;
+            prefetchDataRoute: string | null | undefined;
+            prefetchDataRouteRegex: string | null | undefined;
             experimentalBypassFor?: HasField;
             experimentalPPR?: boolean;
           };
@@ -1199,12 +1222,14 @@ export async function getPrerenderManifest(
         let initialHeaders: undefined | Record<string, string>;
         let experimentalBypassFor: undefined | HasField;
         let experimentalPPR: undefined | boolean;
+        let prefetchDataRoute: undefined | string | null;
 
         if (manifest.version === 4) {
           initialStatus = manifest.routes[route].initialStatus;
           initialHeaders = manifest.routes[route].initialHeaders;
           experimentalBypassFor = manifest.routes[route].experimentalBypassFor;
           experimentalPPR = manifest.routes[route].experimentalPPR;
+          prefetchDataRoute = manifest.routes[route].prefetchDataRoute;
         }
 
         ret.staticRoutes[route] = {
@@ -1213,6 +1238,7 @@ export async function getPrerenderManifest(
               ? false
               : Math.max(1, initialRevalidateSeconds),
           dataRoute,
+          prefetchDataRoute,
           srcRoute,
           initialStatus,
           initialHeaders,
@@ -1226,11 +1252,17 @@ export async function getPrerenderManifest(
           manifest.dynamicRoutes[lazyRoute];
         let experimentalBypassFor: undefined | HasField;
         let experimentalPPR: undefined | boolean;
+        let prefetchDataRoute: undefined | string | null;
+        let prefetchDataRouteRegex: undefined | string | null;
 
         if (manifest.version === 4) {
           experimentalBypassFor =
             manifest.dynamicRoutes[lazyRoute].experimentalBypassFor;
           experimentalPPR = manifest.dynamicRoutes[lazyRoute].experimentalPPR;
+          prefetchDataRoute =
+            manifest.dynamicRoutes[lazyRoute].prefetchDataRoute;
+          prefetchDataRouteRegex =
+            manifest.dynamicRoutes[lazyRoute].prefetchDataRouteRegex;
         }
 
         if (typeof fallback === 'string') {
@@ -1241,6 +1273,8 @@ export async function getPrerenderManifest(
             fallback,
             dataRoute,
             dataRouteRegex,
+            prefetchDataRoute,
+            prefetchDataRouteRegex,
           };
         } else if (fallback === null) {
           ret.blockingFallbackRoutes[lazyRoute] = {
@@ -1249,6 +1283,8 @@ export async function getPrerenderManifest(
             routeRegex,
             dataRoute,
             dataRouteRegex,
+            prefetchDataRoute,
+            prefetchDataRouteRegex,
           };
         } else {
           // Fallback behavior is disabled, all routes would've been provided
@@ -1259,6 +1295,8 @@ export async function getPrerenderManifest(
             routeRegex,
             dataRoute,
             dataRouteRegex,
+            prefetchDataRoute,
+            prefetchDataRouteRegex,
           };
         }
       });
@@ -1951,6 +1989,7 @@ export const onPrerenderRoute =
     let initialRevalidate: false | number;
     let srcRoute: string | null;
     let dataRoute: string | null;
+    let prefetchDataRoute: string | null | undefined;
     let initialStatus: number | undefined;
     let initialHeaders: Record<string, string> | undefined;
     let experimentalBypassFor: HasField | undefined;
@@ -1973,6 +2012,7 @@ export const onPrerenderRoute =
       dataRoute = pr.dataRoute;
       experimentalBypassFor = pr.experimentalBypassFor;
       experimentalPPR = pr.experimentalPPR;
+      prefetchDataRoute = pr.prefetchDataRoute;
     } else if (isOmitted) {
       initialRevalidate = false;
       srcRoute = routeKey;
@@ -1981,6 +2021,8 @@ export const onPrerenderRoute =
         prerenderManifest.omittedRoutes[routeKey].experimentalBypassFor;
       experimentalPPR =
         prerenderManifest.omittedRoutes[routeKey].experimentalPPR;
+      prefetchDataRoute =
+        prerenderManifest.omittedRoutes[routeKey].prefetchDataRoute;
     } else {
       const pr = prerenderManifest.staticRoutes[routeKey];
       ({
@@ -1991,6 +2033,7 @@ export const onPrerenderRoute =
         initialStatus,
         experimentalBypassFor,
         experimentalPPR,
+        prefetchDataRoute,
       } = pr);
     }
 
@@ -2025,6 +2068,18 @@ export const onPrerenderRoute =
           const html = await fs.readFileSync(htmlPath, 'utf8');
           prerender += html;
         }
+      }
+
+      if (!dataRoute?.endsWith('.rsc')) {
+        throw new Error(
+          `Invariant: unexpected output path for ${dataRoute} and PPR`
+        );
+      }
+
+      if (!prefetchDataRoute?.endsWith('.prefetch.rsc')) {
+        throw new Error(
+          `Invariant: unexpected output path for ${prefetchDataRoute} and PPR`
+        );
       }
     }
 
@@ -2091,7 +2146,7 @@ export const onPrerenderRoute =
                     ? addLocaleOrDefault('/404.html', routesManifest, locale)
                     : '/404.html'
                   : isAppPathRoute
-                  ? dataRoute
+                  ? prefetchDataRoute || dataRoute
                   : routeFileNoExt + '.json'
               }`
             ),
@@ -2122,13 +2177,12 @@ export const onPrerenderRoute =
     );
 
     let lambda: undefined | Lambda;
-    let outputPathData: null | string = null;
 
-    if (dataRoute) {
-      outputPathData = path.posix.join(entryDirectory, dataRoute);
+    function normalizeDataRoute(route: string) {
+      let normalized = path.posix.join(entryDirectory, route);
 
       if (nonDynamicSsg || isFallback || isOmitted) {
-        outputPathData = outputPathData.replace(
+        normalized = normalized.replace(
           new RegExp(`${escapeStringRegexp(origRouteFileNoExt)}.json$`),
           // ensure we escape "$" correctly while replacing as "$" is a special
           // character, we need to do double escaping as first is for the initial
@@ -2136,7 +2190,31 @@ export const onPrerenderRoute =
           `${routeFileNoExt.replace(/\$/g, '$$$$')}.json`
         );
       }
+
+      return normalized;
     }
+
+    let outputPathData: null | string = null;
+    if (dataRoute) {
+      outputPathData = normalizeDataRoute(dataRoute);
+    }
+
+    let outputPathPrefetchData: null | string = null;
+    if (prefetchDataRoute) {
+      if (!experimentalPPR) {
+        throw new Error(
+          "Invariant: prefetchDataRoute can't be set without PPR"
+        );
+      }
+
+      outputPathPrefetchData = normalizeDataRoute(prefetchDataRoute);
+    } else if (experimentalPPR) {
+      throw new Error('Invariant: expected to find prefetch data route PPR');
+    }
+
+    // When the prefetch data path is available, use it for the prerender,
+    // otherwise use the data path.
+    const outputPrerenderPathData = outputPathPrefetchData || outputPathData;
 
     if (isSharedLambdas) {
       const outputSrcPathPage = normalizeIndexOutput(
@@ -2185,8 +2263,8 @@ export const onPrerenderRoute =
         htmlFsRef.contentType = htmlContentType;
         prerenders[outputPathPage] = htmlFsRef;
 
-        if (outputPathData) {
-          prerenders[outputPathData] = jsonFsRef;
+        if (outputPrerenderPathData) {
+          prerenders[outputPrerenderPathData] = jsonFsRef;
         }
       }
     }
@@ -2311,17 +2389,8 @@ export const onPrerenderRoute =
           : {}),
       });
 
-      if (outputPathData) {
-        let opd = outputPathData;
-        if (experimentalPPR) {
-          if (!opd.endsWith('.rsc')) {
-            throw new Error(
-              `invariant: unexpected output path for ${outputPathData} and PPR`
-            );
-          }
-          opd = opd.replace(/\.rsc$/, RSC_PREFETCH_SUFFIX);
-        }
-        prerenders[opd] = new Prerender({
+      if (outputPrerenderPathData) {
+        prerenders[outputPrerenderPathData] = new Prerender({
           expiration: initialRevalidate,
           lambda,
           allowQuery,
@@ -2348,6 +2417,10 @@ export const onPrerenderRoute =
               }
             : {}),
         });
+      }
+
+      if (outputPathPrefetchData) {
+        lambdas[outputPathPrefetchData] = lambda;
       }
 
       ++prerenderGroup;

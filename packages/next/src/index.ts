@@ -2144,20 +2144,41 @@ export const build: BuildV2 = async ({
       [
         ...Object.entries(prerenderManifest.fallbackRoutes),
         ...Object.entries(prerenderManifest.blockingFallbackRoutes),
-      ].forEach(([, { dataRouteRegex, dataRoute }]) => {
-        if (!dataRoute || !dataRouteRegex) return;
+      ].forEach(
+        ([
+          ,
+          {
+            dataRouteRegex,
+            dataRoute,
+            prefetchDataRouteRegex,
+            prefetchDataRoute,
+          },
+        ]) => {
+          if (!dataRoute || !dataRouteRegex) return;
 
-        dataRoutes.push({
-          // Next.js provided data route regex
-          src: dataRouteRegex.replace(
-            /^\^/,
-            `^${appMountPrefixNoTrailingSlash}`
-          ),
-          // Location of lambda in builder output
-          dest: path.posix.join(entryDirectory, dataRoute),
-          check: true,
-        });
-      });
+          dataRoutes.push({
+            // Next.js provided data route regex
+            src: dataRouteRegex.replace(
+              /^\^/,
+              `^${appMountPrefixNoTrailingSlash}`
+            ),
+            // Location of lambda in builder output
+            dest: path.posix.join(entryDirectory, dataRoute),
+            check: true,
+          });
+
+          if (!prefetchDataRoute || !prefetchDataRouteRegex) return;
+
+          dataRoutes.push({
+            src: prefetchDataRouteRegex.replace(
+              /^\^/,
+              `^${appMountPrefixNoTrailingSlash}`
+            ),
+            dest: path.posix.join(entryDirectory, prefetchDataRoute),
+            check: true,
+          });
+        }
+      );
     }
   }
 
