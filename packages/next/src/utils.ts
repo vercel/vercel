@@ -2429,10 +2429,6 @@ export const onPrerenderRoute =
         });
       }
 
-      if (outputPathPrefetchData) {
-        lambdas[outputPathPrefetchData] = lambda;
-      }
-
       ++prerenderGroup;
 
       if (routesManifest?.i18n && isBlocking) {
