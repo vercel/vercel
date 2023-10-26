@@ -396,7 +396,9 @@ export async function getDynamicRoutes(
                 new RegExp(escapeStringRegexp('(?:/)?$')),
                 '(?:\\.prefetch\\.rsc)(?:/)?$'
               ),
-              dest: route.dest?.replace(/($|\?)/, '.prefetch.rsc$1'),
+              dest: route.dest
+                ?.replace(/($|\?)/, '.prefetch.rsc$1')
+                .replace(/([^/]+\.prefetch\.rsc(\?.*|$))/, '__$1'),
             });
           }
 
