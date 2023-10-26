@@ -2056,8 +2056,7 @@ export async function serverBuild({
               src: `^${path.posix.join(
                 '/',
                 entryDirectory,
-                `/((?:.+?/)*)__([^/]+${RSC_PREFETCH_SUFFIX}(?:/)?)$`,
-                `/__(.+?)${RSC_PREFETCH_SUFFIX}(?:/)?$`
+                `/((?:.+?/)*)__([^/]+${RSC_PREFETCH_SUFFIX}(?:/)?)$`
               )}`,
               headers: {
                 'x-matched-path': '/$1$2',
