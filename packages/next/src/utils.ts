@@ -2393,7 +2393,11 @@ export const onPrerenderRoute =
         let normalizedPathData = outputPrerenderPathData;
 
         if (outputPrerenderPathData.endsWith(RSC_PREFETCH_SUFFIX)) {
-          normalizedPathData = `__${normalizedPathData}`;
+          delete lambdas[normalizedPathData];
+          normalizedPathData = normalizedPathData.replace(
+            /([^/]+\.prefetch\.rsc)$/,
+            '__$1'
+          );
         }
 
         prerenders[normalizedPathData] = new Prerender({
@@ -3307,7 +3311,8 @@ export function normalizePrefetches(prefetches: Record<string, FileFsRef>) {
   const updatedPrefetches: Record<string, FileFsRef> = {};
 
   for (const key in prefetches) {
-    updatedPrefetches[`__${key}`] = prefetches[key];
+    const newKey = key.replace(/([^/]+\.prefetch\.rsc)$/, '__$1');
+    updatedPrefetches[newKey] = prefetches[key];
   }
   return updatedPrefetches;
 }
