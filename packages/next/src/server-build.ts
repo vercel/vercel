@@ -1700,7 +1700,7 @@ export async function serverBuild({
 
       ...(appDir
         ? [
-            ...(rscPrefetchHeader && !experimental.ppr
+            ...(rscPrefetchHeader
               ? [
                   {
                     src: `^${path.posix.join('/', entryDirectory, '/')}`,
@@ -1807,7 +1807,7 @@ export async function serverBuild({
           ]
         : []),
 
-      ...(rscPrefetchHeader
+      ...(rscPrefetchHeader && !experimental.ppr
         ? [
             {
               src: path.posix.join(
