@@ -184,6 +184,10 @@ export async function serverBuild({
     }
   }
 
+  const experimental = {
+    ppr: requiredServerFilesManifest.config.experimental?.ppr === true,
+  };
+
   let appRscPrefetches: UnwrapPromise<ReturnType<typeof glob>> = {};
   let appBuildTraces: UnwrapPromise<ReturnType<typeof glob>> = {};
   let appDir: string | null = null;
@@ -193,7 +197,9 @@ export async function serverBuild({
     appBuildTraces = await glob('**/*.js.nft.json', appDir);
 
     // TODO: maybe?
-    appRscPrefetches = await glob(`**/*${RSC_PREFETCH_SUFFIX}`, appDir);
+    appRscPrefetches = experimental.ppr
+      ? {}
+      : await glob(`**/*${RSC_PREFETCH_SUFFIX}`, appDir);
 
     const rscContentTypeHeader =
       routesManifest?.rsc?.contentTypeHeader || RSC_CONTENT_TYPE;
@@ -320,10 +326,6 @@ export async function serverBuild({
       return staticRoute.srcRoute || route;
     }),
   ]);
-
-  const experimental = {
-    ppr: requiredServerFilesManifest.config.experimental?.ppr === true,
-  };
 
   const experimentalStreamingLambdaPaths = new Map<string, string>();
 
