@@ -2050,11 +2050,58 @@ export async function serverBuild({
 
       // TODO: remove below workaround when `/` is allowed to be output
       // different than `/index`
+      ...(rscPrefetchHeader && experimental.ppr
+        ? [
+            {
+              src: path.posix.join(
+                '/',
+                entryDirectory,
+                `/__index${RSC_PREFETCH_SUFFIX}`
+              ),
+              headers: {
+                'x-matched-path': '/index.prefetch.rsc',
+              },
+              has: [
+                {
+                  type: 'header',
+                  key: rscPrefetchHeader,
+                },
+              ],
+              continue: true,
+              override: true,
+            },
+            {
+              src: `^${path.posix.join(
+                '/',
+                entryDirectory,
+                `/__(.+?)${RSC_PREFETCH_SUFFIX}(?:/)?$`
+              )}`,
+              headers: {
+                'x-matched-path': '/$1.prefetch.rsc',
+              },
+              has: [
+                {
+                  type: 'header',
+                  key: rscPrefetchHeader,
+                },
+              ],
+              continue: true,
+              override: true,
+            },
+          ]
+        : []),
+
       {
         src: path.posix.join('/', entryDirectory, '/index'),
         headers: {
           'x-matched-path': '/',
         },
+        missing: [
+          {
+            type: 'header',
+            key: 'Next-Router-Prefetch',
+          },
+        ],
         continue: true,
         important: true,
       },
@@ -2063,6 +2110,12 @@ export async function serverBuild({
         headers: {
           'x-matched-path': '/$1',
         },
+        missing: [
+          {
+            type: 'header',
+            key: 'Next-Router-Prefetch',
+          },
+        ],
         continue: true,
         important: true,
       },
