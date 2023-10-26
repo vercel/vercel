@@ -49,6 +49,7 @@ import {
   VariantsManifest,
   RSC_CONTENT_TYPE,
   RSC_PREFETCH_SUFFIX,
+  normalizePrefetches,
 } from './utils';
 import {
   nodeFileTrace,
@@ -192,6 +193,8 @@ export async function serverBuild({
 
     const rscContentTypeHeader =
       routesManifest?.rsc?.contentTypeHeader || RSC_CONTENT_TYPE;
+
+    appRscPrefetches = normalizePrefetches(appRscPrefetches);
 
     // ensure all appRscPrefetches have a contentType since this is used by Next.js
     // to determine if it's a valid response
@@ -1618,7 +1621,7 @@ export async function serverBuild({
                     dest: path.posix.join(
                       '/',
                       entryDirectory,
-                      `/index${RSC_PREFETCH_SUFFIX}`
+                      `/__index${RSC_PREFETCH_SUFFIX}`
                     ),
                     headers: { vary: rscVaryHeader },
                     continue: true,
@@ -1639,7 +1642,7 @@ export async function serverBuild({
                     dest: path.posix.join(
                       '/',
                       entryDirectory,
-                      `/$1${RSC_PREFETCH_SUFFIX}`
+                      `/__$1${RSC_PREFETCH_SUFFIX}`
                     ),
                     headers: { vary: rscVaryHeader },
                     continue: true,
@@ -1718,7 +1721,7 @@ export async function serverBuild({
               src: path.posix.join(
                 '/',
                 entryDirectory,
-                `/index${RSC_PREFETCH_SUFFIX}`
+                `/__index${RSC_PREFETCH_SUFFIX}`
               ),
               dest: path.posix.join('/', entryDirectory, '/index.rsc'),
               has: [
@@ -1734,7 +1737,7 @@ export async function serverBuild({
               src: `^${path.posix.join(
                 '/',
                 entryDirectory,
-                `/(.+?)${RSC_PREFETCH_SUFFIX}(?:/)?$`
+                `/__(.+?)${RSC_PREFETCH_SUFFIX}(?:/)?$`
               )}`,
               dest: path.posix.join('/', entryDirectory, '/$1.rsc'),
               has: [
