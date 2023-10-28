@@ -15,9 +15,10 @@ export function generateStaticParams() {
     {
       slug: [''],
     },
-    {
-      slug: ['index'],
-    },
+    // not supported
+    // {
+    //   slug: ['index'],
+    // },
     {
       slug: ['first'],
     },
