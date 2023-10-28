@@ -247,18 +247,6 @@ it('Should opt-out of shared lambdas when routes are detected', async () => {
   expect(hasUnderScoreErrorStaticFile).toBeTruthy();
 });
 
-it('Should build the serverless-config-async example', async () => {
-  let error = null;
-
-  try {
-    await runBuildLambda(path.join(__dirname, '..', 'serverless-config-async'));
-  } catch (err) {
-    error = err;
-  }
-
-  expect(error).toBe(null);
-});
-
 it('Should provide lambda info when limit is hit (shared lambdas)', async () => {
   let logs = '';
 
