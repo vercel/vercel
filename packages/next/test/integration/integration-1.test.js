@@ -452,15 +452,7 @@ it('Should throw when package.json or next.config.js is not the "src"', async ()
 });
 
 it('Should build the serverless-config-async example', async () => {
-  let error = null;
-
-  try {
-    await runBuildLambda(path.join(__dirname, '..', 'serverless-config-async'));
-  } catch (err) {
-    error = err;
-  }
-
-  expect(error).toBe(null);
+  await runBuildLambda(path.join(__dirname, 'serverless-config-async'));
 });
 
 describe('Middleware simple project', () => {
