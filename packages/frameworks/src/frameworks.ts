@@ -1,5 +1,5 @@
 import { join } from 'path';
-import { promises } from 'fs';
+import { existsSync, promises } from 'fs';
 
 import { Framework } from './types';
 import { readConfigFile } from './read-config-file';
@@ -867,7 +867,11 @@ export const frameworks = [
 
         // If there is only one file in it that is a dir we'll use it as dist dir
         if (content.length === 1 && content[0].isDirectory()) {
-          return join(base, content[0].name);
+          const potentialOutDir = join(base, content[0].name);
+          const potentialOutDirWithBrowser = join(potentialOutDir, 'browser');
+          return existsSync(potentialOutDirWithBrowser)
+            ? potentialOutDirWithBrowser
+            : potentialOutDir;
         }
       } catch (error) {
         console.error(`Error detecting output directory: `, error);
