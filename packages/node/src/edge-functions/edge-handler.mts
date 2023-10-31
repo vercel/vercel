@@ -195,7 +195,8 @@ export async function createEdgeEventHandler(
     }
 
     const body: Buffer | string | undefined = await serializeBody(request);
-    if (body !== undefined) request.headers['content-length'] = String(body.length);
+    if (body !== undefined)
+      request.headers['content-length'] = String(body.length);
 
     const url = new URL(request.url ?? '/', server.url);
     const response = await undiciRequest(url, {
@@ -205,8 +206,7 @@ export async function createEdgeEventHandler(
     });
 
     const resHeaders = toHeaders(response.headers) as Headers;
-    const isUserError =
-      resHeaders.get('x-vercel-failed') === 'edge-wrapper';
+    const isUserError = resHeaders.get('x-vercel-failed') === 'edge-wrapper';
 
     if (isUserError && response.statusCode >= 500) {
       const body = await response.body.text();
