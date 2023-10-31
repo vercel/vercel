@@ -2,15 +2,19 @@ import { addHelpers } from './helpers.js';
 import { createServer } from 'http';
 import { serializeBody } from '../utils.js';
 import exitHook from 'exit-hook';
-import { Headers, request as undiciRequest } from 'undici';
+import { type Dispatcher, Headers, request as undiciRequest } from 'undici';
 import { listen } from 'async-listen';
 import { isAbsolute } from 'path';
 import { pathToFileURL } from 'url';
 import zlib from 'zlib';
+import { buildToHeaders } from '@edge-runtime/node-utils';
 import type { ServerResponse, IncomingMessage } from 'http';
 import type { VercelProxyResponse } from '../types.js';
 import type { VercelRequest, VercelResponse } from './helpers.js';
 import type { Readable } from 'stream';
+
+// @ts-expect-error
+const toHeaders = buildToHeaders({ Headers });
 
 type ServerlessServerOptions = {
   shouldAddHelpers: boolean;
@@ -106,19 +110,15 @@ export async function createServerlessEventHandler(
     const url = new URL(request.url ?? '/', server.url);
     const response = await undiciRequest(url, {
       body: await serializeBody(request),
-      compress: !isStreaming,
       headers: {
         ...request.headers,
         host: request.headers['x-forwarded-host'],
       },
-      // @ts-expect-error Default to 'GET', and undici types use a strict method check which is technically incorrect too
-      method: request.method || 'GET',
-      redirect: 'manual',
+      method: (request.method || 'GET') as Dispatcher.HttpMethod,
     });
 
     let body: Readable | Buffer | null = null;
-    // @ts-expect-error https://github.com/nodejs/undici/pull/2373
-    let headers = new Headers(response.headers);
+    let headers = toHeaders(response.headers) as Headers;
 
     if (isStreaming) {
       body = response.body;

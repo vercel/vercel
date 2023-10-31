@@ -4,13 +4,13 @@ import {
   NodeCompatBindings,
 } from './edge-node-compat-plugin.mjs';
 import { EdgeRuntime, runServer } from 'edge-runtime';
-import { fetch, Headers } from 'undici';
+import { type Dispatcher, Headers, request as undiciRequest } from 'undici';
 import { isError } from '@vercel/error-utils';
 import { readFileSync } from 'fs';
 import { serializeBody, entrypointToOutputPath, logError } from '../utils.js';
 import esbuild from 'esbuild';
 import exitHook from 'exit-hook';
-import type { HeadersInit } from 'undici';
+import { buildToHeaders } from '@edge-runtime/node-utils';
 import type { VercelProxyResponse } from '../types.js';
 import type { IncomingMessage } from 'http';
 import { fileURLToPath } from 'url';
@@ -22,6 +22,9 @@ if (!NODE_VERSION_MAJOR) {
     `Unable to determine current node version: process.version=${process.version}`
   );
 }
+
+// @ts-expect-error
+const toHeaders = buildToHeaders({ Headers });
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const edgeHandlerTemplate = readFileSync(
@@ -191,23 +194,22 @@ export async function createEdgeEventHandler(
       process.exit(1);
     }
 
-    const headers = new Headers(request.headers as HeadersInit);
     const body: Buffer | string | undefined = await serializeBody(request);
-    if (body !== undefined) headers.set('content-length', String(body.length));
+    if (body !== undefined) request.headers['content-length'] = String(body.length);
 
     const url = new URL(request.url ?? '/', server.url);
-    const response = await fetch(url, {
+    const response = await undiciRequest(url, {
       body,
-      headers,
-      method: request.method,
-      redirect: 'manual',
+      headers: request.headers,
+      method: (request.method || 'GET') as Dispatcher.HttpMethod,
     });
 
+    const resHeaders = toHeaders(response.headers) as Headers;
     const isUserError =
-      response.headers.get('x-vercel-failed') === 'edge-wrapper';
+      resHeaders.get('x-vercel-failed') === 'edge-wrapper';
 
-    if (isUserError && response.status >= 500) {
-      const body = await response.text();
+    if (isUserError && response.statusCode >= 500) {
+      const body = await response.body.text();
       // We can't currently get a real stack trace from the Edge Function error,
       // but we can fake a basic one that is still usefult to the user.
       const fakeStackTrace = `    at (${entrypointRelativePath})`;
@@ -226,8 +228,8 @@ export async function createEdgeEventHandler(
     }
 
     return {
-      status: response.status,
-      headers: response.headers,
+      status: response.statusCode,
+      headers: resHeaders,
       body: response.body,
       encoding: 'utf8',
     };
