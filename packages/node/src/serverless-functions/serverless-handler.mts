@@ -124,20 +124,20 @@ export async function createServerlessEventHandler(
       body = response.body;
     } else {
       body = Buffer.from(await response.body.arrayBuffer());
-
-      const contentEncoding = headers.get('content-encoding');
-      if (contentEncoding && typeof contentEncoding === 'string') {
-        body = compress(body, contentEncoding);
-        const clonedHeaders = [];
-        for (const [key, value] of headers) {
-          if (key !== 'transfer-encoding') {
-            // transfer-encoding is only for streaming response
-            clonedHeaders.push([key, value]);
-          }
-        }
-        clonedHeaders.push(['content-length', String(Buffer.byteLength(body))]);
-        headers = new Headers(clonedHeaders);
-      }
+      // console.log('body', body.toString('utf-8'));
+      // const contentEncoding = headers.get('content-encoding');
+      // if (contentEncoding && typeof contentEncoding === 'string') {
+      //   body = compress(body, contentEncoding);
+      //   const clonedHeaders = [];
+      //   for (const [key, value] of headers) {
+      //     if (key !== 'transfer-encoding') {
+      //       // transfer-encoding is only for streaming response
+      //       clonedHeaders.push([key, value]);
+      //     }
+      //   }
+      //   clonedHeaders.push(['content-length', String(Buffer.byteLength(body))]);
+      //   headers = new Headers(clonedHeaders);
+      // }
     }
 
     return {
