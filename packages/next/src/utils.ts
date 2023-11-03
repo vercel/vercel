@@ -2396,7 +2396,20 @@ export const onPrerenderRoute =
       });
 
       if (outputPrerenderPathData) {
-        prerenders[outputPrerenderPathData] = new Prerender({
+        let normalizedPathData = outputPrerenderPathData;
+
+        if (
+          (page === '/' || page == '/index') &&
+          outputPrerenderPathData.endsWith(RSC_PREFETCH_SUFFIX)
+        ) {
+          delete lambdas[normalizedPathData];
+          normalizedPathData = normalizedPathData.replace(
+            /([^/]+\.prefetch\.rsc)$/,
+            '__$1'
+          );
+        }
+
+        prerenders[normalizedPathData] = new Prerender({
           expiration: initialRevalidate,
           lambda,
           allowQuery,
