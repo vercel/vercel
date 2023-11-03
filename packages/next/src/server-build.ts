@@ -2053,12 +2053,6 @@ export async function serverBuild({
         headers: {
           'x-matched-path': '/',
         },
-        missing: [
-          {
-            type: 'header',
-            key: 'Next-Router-Prefetch',
-          },
-        ],
         continue: true,
         important: true,
       },
@@ -2067,12 +2061,6 @@ export async function serverBuild({
         headers: {
           'x-matched-path': '/$1',
         },
-        missing: [
-          {
-            type: 'header',
-            key: 'Next-Router-Prefetch',
-          },
-        ],
         continue: true,
         important: true,
       },
