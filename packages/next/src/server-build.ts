@@ -1126,7 +1126,7 @@ export async function serverBuild({
 
           const pprOutputName = path.posix.join(
             entryDirectory,
-            '/_next/postponed',
+            '/_next/postponed/resume',
             pageNoExt
           );
           lambdas[pprOutputName] = lambda;
