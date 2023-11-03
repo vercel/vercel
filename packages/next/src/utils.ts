@@ -396,9 +396,7 @@ export async function getDynamicRoutes(
                 new RegExp(escapeStringRegexp('(?:/)?$')),
                 '(?:\\.prefetch\\.rsc)(?:/)?$'
               ),
-              dest: route.dest
-                ?.replace(/($|\?)/, '.prefetch.rsc$1')
-                .replace(/([^/]+\.prefetch\.rsc(\?.*|$))/, '__$1'),
+              dest: route.dest?.replace(/($|\?)/, '.prefetch.rsc$1'),
             });
           }
 
@@ -2392,17 +2390,7 @@ export const onPrerenderRoute =
       });
 
       if (outputPrerenderPathData) {
-        let normalizedPathData = outputPrerenderPathData;
-
-        if (outputPrerenderPathData.endsWith(RSC_PREFETCH_SUFFIX)) {
-          delete lambdas[normalizedPathData];
-          normalizedPathData = normalizedPathData.replace(
-            /([^/]+\.prefetch\.rsc)$/,
-            '__$1'
-          );
-        }
-
-        prerenders[normalizedPathData] = new Prerender({
+        prerenders[outputPrerenderPathData] = new Prerender({
           expiration: initialRevalidate,
           lambda,
           allowQuery,

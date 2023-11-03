@@ -2048,31 +2048,6 @@ export async function serverBuild({
         important: true,
       },
 
-      // TODO: remove below workaround when `/` is allowed to be output
-      // different than `/index`
-      ...(rscPrefetchHeader && experimental.ppr
-        ? [
-            {
-              src: `^${path.posix.join(
-                '/',
-                entryDirectory,
-                `/((?:.+?/)*)__([^/]+${RSC_PREFETCH_SUFFIX}(?:/)?)$`
-              )}`,
-              headers: {
-                'x-matched-path': '/$1$2',
-              },
-              has: [
-                {
-                  type: 'header',
-                  key: rscPrefetchHeader,
-                },
-              ],
-              continue: true,
-              override: true,
-            },
-          ]
-        : []),
-
       {
         src: path.posix.join('/', entryDirectory, '/index'),
         headers: {
