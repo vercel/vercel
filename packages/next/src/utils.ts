@@ -2399,7 +2399,7 @@ export const onPrerenderRoute =
         let normalizedPathData = outputPrerenderPathData;
 
         if (
-          (page === '/' || page == '/index') &&
+          (srcRoute === '/' || srcRoute == '/index') &&
           outputPrerenderPathData.endsWith(RSC_PREFETCH_SUFFIX)
         ) {
           delete lambdas[normalizedPathData];
