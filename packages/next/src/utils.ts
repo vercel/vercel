@@ -390,13 +390,19 @@ export async function getDynamicRoutes(
           }
 
           if (experimentalPPR) {
+            let dest = route.dest?.replace(/($|\?)/, '.prefetch.rsc$1');
+
+            if (page === '/' || page === '/index') {
+              dest = dest?.replace(/([^/]+\.prefetch\.rsc(\?.*|$))/, '__$1');
+            }
+
             routes.push({
               ...route,
               src: route.src.replace(
                 new RegExp(escapeStringRegexp('(?:/)?$')),
                 '(?:\\.prefetch\\.rsc)(?:/)?$'
               ),
-              dest: route.dest?.replace(/($|\?)/, '.prefetch.rsc$1'),
+              dest,
             });
           }
 
