@@ -103,12 +103,15 @@ async function nowDeploy(projectName, bodies, randomness, uploadNowJson, opts) {
   }
 
   const settingRes = await fetchWithAuth(
-    `https://vercel.com/api/v5/projects/${encodeURIComponent(
-      projectId
-    )}/protection-bypass`,
+    `https://vercel.com/api/v5/projects/${encodeURIComponent(projectId)}`,
     {
       method: 'PATCH',
-      body: JSON.stringify({}),
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        ssoProtection: null,
+      }),
     }
   );
 
@@ -281,9 +284,11 @@ async function fetchTokenWithRetry(retries = 5) {
 }
 
 async function fetchApi(url, opts = {}) {
-  const apiHost = process.env.API_HOST || 'api.vercel.com';
-  const urlWithHost = `https://${apiHost}${url}`;
   const { method = 'GET', body } = opts;
+  const apiHost = process.env.API_HOST || 'api.vercel.com';
+  const urlWithHost = url.startsWith('https://')
+    ? url
+    : `https://${apiHost}${url}`;
 
   if (process.env.VERBOSE) {
     logWithinTest('fetch', method, url);
