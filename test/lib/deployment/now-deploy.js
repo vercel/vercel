@@ -66,6 +66,7 @@ async function nowDeploy(projectName, bodies, randomness, uploadNowJson, opts) {
 
   let deploymentId;
   let deploymentUrl;
+  let projectId;
 
   {
     const json = await deploymentPost(nowDeployPayload, opts);
@@ -73,6 +74,7 @@ async function nowDeploy(projectName, bodies, randomness, uploadNowJson, opts) {
       throw new Error('Missing files');
     deploymentId = json.id;
     deploymentUrl = json.url;
+    projectId = json.projectId;
   }
 
   logWithinTest('id', deploymentId);
@@ -98,6 +100,23 @@ async function nowDeploy(projectName, bodies, randomness, uploadNowJson, opts) {
       );
     }
     await new Promise(r => setTimeout(r, 1000));
+  }
+
+  const settingRes = await fetchWithAuth(
+    `https://vercel.com/api/v5/projects/${encodeURIComponent(
+      projectId
+    )}/protection-bypass`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify({}),
+    }
+  );
+
+  if (settingRes.ok) {
+    console.log(`Disabled deployment protection for project: ${projectId}`);
+  } else {
+    console.error(settingRes.status, await settingRes.text());
+    throw new Error(`Failed to disable deployment protection`);
   }
 
   return { deploymentId, deploymentUrl };

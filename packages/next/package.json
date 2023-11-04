@@ -12,8 +12,7 @@
     "test-next-local-legacy": "pnpm test test/integration/legacy/*.test.js",
     "test-next-local:middleware": "pnpm test test/integration/middleware.test.ts",
     "test-e2e": "rm -f test/builder-info.json; pnpm test test/fixtures/**/*.test.js",
-    "type-check": "tsc --noEmit",
-    "bump": "1"
+    "type-check": "tsc --noEmit"
   },
   "repository": {
     "type": "git",
