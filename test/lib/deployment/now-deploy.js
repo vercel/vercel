@@ -106,6 +106,10 @@ async function nowDeploy(projectName, bodies, randomness, uploadNowJson, opts) {
 }
 
 async function disableSSO(deploymentId) {
+  if (deploymentId.startsWith('https://')) {
+    deploymentId = new URL(deploymentId).hostname;
+  }
+
   const deployRes = await fetchWithAuth(
     `https://vercel.com/api/v13/deployments/${encodeURIComponent(
       deploymentId

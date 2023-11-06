@@ -396,6 +396,8 @@ test('default command should work with --cwd option', async () => {
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   const url = stdout;
+  await disableSSO(url);
+
   const deploymentResult = await fetch(`${url}/README.md`);
   const body = await deploymentResult.text();
   expect(body).toEqual(
@@ -424,6 +426,8 @@ test('should allow deploying a directory that was built with a target environmen
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   const url = stdout;
+  await disableSSO(url);
+
   const deploymentResult = await fetch(`${url}/README.md`);
   const body = await deploymentResult.text();
   expect(body).toEqual(
@@ -450,6 +454,8 @@ test('should allow deploying a directory that was prebuilt, but has no builds.js
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   const url = stdout;
+  await disableSSO(url);
+
   const deploymentResult = await fetch(`${url}/README.md`);
   const body = await deploymentResult.text();
   expect(body).toEqual('readme contents for build-output-api-raw');
@@ -804,7 +810,6 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
     });
     expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
     const { host } = new URL(stdout);
-
     await disableSSO(host);
 
     const apiUrl = `https://${host}/api/get-env`;

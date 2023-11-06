@@ -14,7 +14,10 @@ import { logo } from '../src/util/pkg-name';
 import sleep from '../src/util/sleep';
 import humanizePath from '../src/util/humanize-path';
 import pkg from '../package.json';
-import { fetchTokenWithRetry } from '../../../test/lib/deployment/now-deploy';
+import {
+  disableSSO,
+  fetchTokenWithRetry,
+} from '../../../test/lib/deployment/now-deploy';
 import waitForPrompt from './helpers/wait-for-prompt';
 import { getNewTmpDir, listTmpDirs } from './helpers/get-tmp-dir';
 import getGlobalDir from './helpers/get-global-dir';
@@ -1014,6 +1017,7 @@ test('try to revert a deployment and assign the automatic aliases', async () => 
 
     expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
+    await disableSSO(deploymentUrl);
     await waitForDeployment(deploymentUrl);
     await sleep(20000);
 
@@ -1028,6 +1032,7 @@ test('try to revert a deployment and assign the automatic aliases', async () => 
       '--yes',
     ]);
     const deploymentUrl = stdout;
+    await disableSSO(deploymentUrl);
 
     expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
@@ -1047,6 +1052,7 @@ test('try to revert a deployment and assign the automatic aliases', async () => 
       '--yes',
     ]);
     const deploymentUrl = stdout;
+    await disableSSO(deploymentUrl);
 
     expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
@@ -1382,6 +1388,7 @@ test('deploy a Lambda with a specific runtime', async () => {
   expect(output.exitCode, formatOutput(output)).toBe(0);
 
   const url = new URL(output.stdout);
+  await disableSSO(url);
   const res = await fetch(`${url}/api/test`);
   const text = await res.text();
   expect(text).toBe('Hello from PHP');
@@ -1412,6 +1419,7 @@ test('use build-env', async () => {
   // Test if the output is really a URL
   const deploymentUrl = pickUrl(stdout);
   const { href } = new URL(deploymentUrl);
+  await disableSSO(deploymentUrl);
 
   await waitForDeployment(href);
 
