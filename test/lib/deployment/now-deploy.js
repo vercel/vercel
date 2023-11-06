@@ -102,6 +102,24 @@ async function nowDeploy(projectName, bodies, randomness, uploadNowJson, opts) {
     await new Promise(r => setTimeout(r, 1000));
   }
 
+  await disableSSO({ projectId });
+
+  return { deploymentId, deploymentUrl };
+}
+
+async function disableSSO(deploymentId) {
+  const deployRes = await fetchWithAuth(
+    `https://vercel.com/api/v13/deployments/${encodeURIComponent(
+      deploymentId
+    )}`,
+    {
+      method: 'GET',
+    }
+  );
+
+  const deploymentInfo = await deployRes.json();
+  const { projectId } = deploymentInfo;
+
   const settingRes = await fetchWithAuth(
     `https://vercel.com/api/v5/projects/${encodeURIComponent(projectId)}`,
     {
@@ -116,13 +134,15 @@ async function nowDeploy(projectName, bodies, randomness, uploadNowJson, opts) {
   );
 
   if (settingRes.ok) {
-    console.log(`Disabled deployment protection for project: ${projectId}`);
+    console.log(
+      `Disabled deployment protection for deploymentId: ${deploymentId} projectId: ${projectId}`
+    );
   } else {
-    console.error(settingRes.status, await settingRes.text());
-    throw new Error(`Failed to disable deployment protection`);
+    console.error(settingRes.status, await settingRes.text(), deploymentInfo);
+    throw new Error(
+      `Failed to disable deployment protection projectId: ${projectId} deploymentId ${deploymentId}`
+    );
   }
-
-  return { deploymentId, deploymentUrl };
 }
 
 function digestOfFile(body) {
@@ -317,4 +337,5 @@ module.exports = {
   fetchTokenWithRetry,
   fetchCachedToken,
   fileModeSymbol,
+  disableSSO,
 };
