@@ -313,6 +313,23 @@ it('should warn for deprecated versions, soon to be discontinued', async () => {
   global.Date.now = realDateNow;
 });
 
+it('should only allow nodejs20.x when env var is set', async () => {
+  try {
+    expect(getLatestNodeVersion()).toHaveProperty('major', 18);
+    await expect(getSupportedNodeVersion('20.x')).rejects.toThrow();
+
+    process.env.VERCEL_ALLOW_NODEJS20 = '1';
+
+    expect(getLatestNodeVersion()).toHaveProperty('major', 20);
+    expect(await getSupportedNodeVersion('20.x')).toHaveProperty('major', 20);
+    expect(await getSupportedNodeVersion('20')).toHaveProperty('major', 20);
+    expect(await getSupportedNodeVersion('20.1.0')).toHaveProperty('major', 20);
+    expect(await getSupportedNodeVersion('>=16')).toHaveProperty('major', 20);
+  } finally {
+    delete process.env.VERCEL_ALLOW_NODEJS18;
+  }
+});
+
 it('should support initialHeaders and initialStatus correctly', async () => {
   new Prerender({
     expiration: 1,
