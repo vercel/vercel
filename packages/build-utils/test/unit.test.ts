@@ -326,7 +326,7 @@ it('should only allow nodejs20.x when env var is set', async () => {
     expect(await getSupportedNodeVersion('20.1.0')).toHaveProperty('major', 20);
     expect(await getSupportedNodeVersion('>=16')).toHaveProperty('major', 20);
   } finally {
-    delete process.env.VERCEL_ALLOW_NODEJS18;
+    delete process.env.VERCEL_ALLOW_NODEJS20;
   }
 });
 
