@@ -11,7 +11,10 @@ import fs, {
   mkdir,
 } from 'fs-extra';
 import sleep from '../src/util/sleep';
-import { fetchTokenWithRetry } from '../../../test/lib/deployment/now-deploy';
+import {
+  disableSSO,
+  fetchTokenWithRetry,
+} from '../../../test/lib/deployment/now-deploy';
 import waitForPrompt from './helpers/wait-for-prompt';
 import { execCli } from './helpers/exec';
 import getGlobalDir from './helpers/get-global-dir';
@@ -821,14 +824,16 @@ test('deploy pnpm twice using pnp and symlink=false', async () => {
 
   await remove(path.join(directory, '.vercel'));
 
-  function deploy() {
-    return execCli(binaryPath, [
+  async function deploy() {
+    const res = await execCli(binaryPath, [
       directory,
       '--name',
       session,
       '--public',
       '--yes',
     ]);
+    await disableSSO(res.stdout, false);
+    return res;
   }
 
   let { exitCode, stdout, stderr } = await deploy();
@@ -1243,6 +1248,8 @@ test('vercel.json configuration overrides in a new project prompt user and merge
   const deployment = await vc;
   expect(deployment.exitCode, formatOutput(deployment)).toBe(0);
   // assert the command were executed
+  await disableSSO(deployment.stdout, false);
+
   let page = await fetch(deployment.stdout);
   let text = await page.text();
   expect(text).toBe('1\n');

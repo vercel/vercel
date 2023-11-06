@@ -810,7 +810,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
     });
     expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
     const { host } = new URL(stdout);
-    await disableSSO(host, true);
+    await disableSSO(host, false);
 
     const apiUrl = `https://${host}/api/get-env`;
     const apiRes = await fetch(apiUrl);
