@@ -133,7 +133,7 @@ async function disableSSO(deploymentId) {
 
   if (settingRes.ok) {
     for (let i = 0; i < 5; i++) {
-      const res = await fetch(deploymentUrl);
+      const res = await fetch(`https://${deploymentUrl}`);
       if (res.status !== 401) {
         break;
       }
