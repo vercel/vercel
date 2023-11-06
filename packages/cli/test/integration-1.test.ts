@@ -5,7 +5,10 @@ import fetch, { RequestInit } from 'node-fetch';
 import retry from 'async-retry';
 import fs from 'fs-extra';
 import sleep from '../src/util/sleep';
-import { fetchTokenWithRetry } from '../../../test/lib/deployment/now-deploy';
+import {
+  disableSSO,
+  fetchTokenWithRetry,
+} from '../../../test/lib/deployment/now-deploy';
 import waitForPrompt from './helpers/wait-for-prompt';
 import { listTmpDirs } from './helpers/get-tmp-dir';
 import getGlobalDir from './helpers/get-global-dir';
@@ -801,6 +804,8 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
     });
     expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
     const { host } = new URL(stdout);
+
+    await disableSSO(host);
 
     const apiUrl = `https://${host}/api/get-env`;
     const apiRes = await fetch(apiUrl);

@@ -116,7 +116,7 @@ async function disableSSO(deploymentId) {
   );
 
   const deploymentInfo = await deployRes.json();
-  const { projectId } = deploymentInfo;
+  const { projectId, url: deploymentUrl } = deploymentInfo;
 
   const settingRes = await fetchWithAuth(
     `https://vercel.com/api/v5/projects/${encodeURIComponent(projectId)}`,
@@ -132,6 +132,13 @@ async function disableSSO(deploymentId) {
   );
 
   if (settingRes.ok) {
+    for (let i = 0; i < 5; i++) {
+      const res = await fetch(deploymentUrl);
+      if (res.status !== 401) {
+        break;
+      }
+      await new Promise(resolve => setTimeout(resolve, 5 * 1000));
+    }
     console.log(
       `Disabled deployment protection for deploymentId: ${deploymentId} projectId: ${projectId}`
     );
