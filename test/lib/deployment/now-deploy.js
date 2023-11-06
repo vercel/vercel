@@ -105,7 +105,7 @@ async function nowDeploy(projectName, bodies, randomness, uploadNowJson, opts) {
   return { deploymentId, deploymentUrl };
 }
 
-async function disableSSO(deploymentId) {
+async function disableSSO(deploymentId, useTeam = true) {
   if (deploymentId.startsWith('https://')) {
     deploymentId = new URL(deploymentId).hostname;
   }
@@ -132,6 +132,11 @@ async function disableSSO(deploymentId) {
       body: JSON.stringify({
         ssoProtection: null,
       }),
+      ...(useTeam
+        ? {}
+        : {
+            skipTeam: true,
+          }),
     }
   );
 
@@ -234,10 +239,14 @@ async function fetchWithAuth(url, opts = {}) {
     opts.headers.Authorization = `Bearer ${await fetchCachedToken()}`;
   }
 
-  const { VERCEL_TEAM_ID } = process.env;
+  if (opts.skipTeam) {
+    delete opts.skipTeam;
+  } else {
+    const { VERCEL_TEAM_ID } = process.env;
 
-  if (VERCEL_TEAM_ID) {
-    url += `${url.includes('?') ? '&' : '?'}teamId=${VERCEL_TEAM_ID}`;
+    if (VERCEL_TEAM_ID) {
+      url += `${url.includes('?') ? '&' : '?'}teamId=${VERCEL_TEAM_ID}`;
+    }
   }
   return await fetchApi(url, opts);
 }
