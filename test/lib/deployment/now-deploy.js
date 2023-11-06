@@ -66,7 +66,6 @@ async function nowDeploy(projectName, bodies, randomness, uploadNowJson, opts) {
 
   let deploymentId;
   let deploymentUrl;
-  let projectId;
 
   {
     const json = await deploymentPost(nowDeployPayload, opts);
@@ -74,7 +73,6 @@ async function nowDeploy(projectName, bodies, randomness, uploadNowJson, opts) {
       throw new Error('Missing files');
     deploymentId = json.id;
     deploymentUrl = json.url;
-    projectId = json.projectId;
   }
 
   logWithinTest('id', deploymentId);
@@ -102,7 +100,7 @@ async function nowDeploy(projectName, bodies, randomness, uploadNowJson, opts) {
     await new Promise(r => setTimeout(r, 1000));
   }
 
-  await disableSSO({ projectId });
+  await disableSSO(deploymentId);
 
   return { deploymentId, deploymentUrl };
 }
