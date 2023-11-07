@@ -1,6 +1,6 @@
 {
   "name": "@vercel/frameworks",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "main": "./dist/frameworks.js",
   "types": "./dist/frameworks.d.ts",
   "files": [
@@ -21,7 +21,7 @@
   "dependencies": {
     "@iarna/toml": "2.2.3",
     "js-yaml": "3.13.1",
-    "@vercel/error-utils": "2.0.1"
+    "@vercel/error-utils": "2.0.2"
   },
   "devDependencies": {
     "@types/jest": "27.4.1",

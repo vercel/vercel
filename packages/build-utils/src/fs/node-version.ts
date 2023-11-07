@@ -37,6 +37,12 @@ function getOptions() {
       discontinueDate: new Date('2020-01-06'),
     },
   ] as const;
+  if (process.env.VERCEL_ALLOW_NODEJS20 === '1') {
+    return [
+      { major: 20, range: '20.x', runtime: 'nodejs20.x' },
+      ...options,
+    ] as const;
+  }
   return options;
 }
 
