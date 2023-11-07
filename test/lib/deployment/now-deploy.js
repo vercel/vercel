@@ -266,8 +266,7 @@ async function fetchWithAuth(url, opts = {}) {
  */
 async function fetchCachedToken() {
   if (!token || tokenCreated < Date.now() - MAX_TOKEN_AGE) {
-    tokenCreated = Date.now();
-    token = await fetchTokenWithRetry();
+    return fetchTokenWithRetry();
   }
   return token;
 }
@@ -319,6 +318,11 @@ async function fetchTokenWithRetry(retries = 5) {
       const text = JSON.stringify(data);
       throw new Error(`Unexpected response from registration: ${text}`);
     }
+
+    // Cache the token to be returned via `fetchCachedToken`
+    token = data.token;
+    tokenCreated = Date.now();
+
     return data.token;
   } catch (error) {
     logWithinTest(
@@ -366,6 +370,7 @@ module.exports = {
   fetchWithAuth,
   nowDeploy,
   fetchCachedToken,
+  fetchTokenWithRetry,
   fileModeSymbol,
   disableSSO,
 };

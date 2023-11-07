@@ -7,7 +7,7 @@ import fs from 'fs-extra';
 import sleep from '../src/util/sleep';
 import {
   disableSSO,
-  fetchCachedToken,
+  fetchTokenWithRetry,
 } from '../../../test/lib/deployment/now-deploy';
 import waitForPrompt from './helpers/wait-for-prompt';
 import { listTmpDirs } from './helpers/get-tmp-dir';
@@ -137,7 +137,7 @@ const apiFetch = (url: string, { headers, ...options }: RequestInit = {}) => {
 const createUser = async () => {
   await retry(
     async () => {
-      token = await fetchCachedToken();
+      token = await fetchTokenWithRetry();
 
       await fs.writeJSON(getConfigAuthPath(), { token });
 
@@ -518,6 +518,7 @@ test('deploy using only now.json with `redirects` defined', async () => {
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   const url = stdout;
+  await disableSSO(url, false);
   const res = await fetch(`${url}/foo/bar`, { redirect: 'manual' });
   const location = res.headers.get('location');
   expect(location).toBe('https://example.com/foo/bar');
@@ -539,6 +540,7 @@ test('deploy using --local-config flag v2', async () => {
 
   const { host } = new URL(stdout);
   expect(host).toMatch(/secondary/gm);
+  await disableSSO(host, false);
 
   const testRes = await fetch(`https://${host}/test-${contextName}.html`);
   const testText = await testRes.text();
@@ -589,6 +591,7 @@ test('deploy using --local-config flag above target', async () => {
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   const { host } = new URL(stdout);
+  await disableSSO(host, false);
 
   const testRes = await fetch(`https://${host}/index.html`);
   const testText = await testRes.text();
