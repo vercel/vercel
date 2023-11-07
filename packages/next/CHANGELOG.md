@@ -1,5 +1,21 @@
 # @vercel/next
 
+## 4.0.13
+
+### Patch Changes
+
+- Added `getRequestHandlerWithMetadata` export ([#10753](https://github.com/vercel/vercel/pull/10753))
+
+## 4.0.12
+
+### Patch Changes
+
+- fix re-mapping logic for index prefetches ([#10750](https://github.com/vercel/vercel/pull/10750))
+
+- Fixes a case where using `basePath` along with static generation would output a lambda that conflicts with the root route. ([#10738](https://github.com/vercel/vercel/pull/10738))
+
+- Rework prefetch route handling ([#10779](https://github.com/vercel/vercel/pull/10779))
+
 ## 4.0.11
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @vercel/error-utils
 
+## 2.0.2
+
+### Patch Changes
+
+- use Node.js `util.types.isNativeError` for `isError` method ([#10764](https://github.com/vercel/vercel/pull/10764))
+
 ## 2.0.1
 
 ### Patch Changes
