@@ -16,7 +16,7 @@ import humanizePath from '../src/util/humanize-path';
 import pkg from '../package.json';
 import {
   disableSSO,
-  fetchTokenWithRetry,
+  fetchCachedToken,
 } from '../../../test/lib/deployment/now-deploy';
 import waitForPrompt from './helpers/wait-for-prompt';
 import { getNewTmpDir, listTmpDirs } from './helpers/get-tmp-dir';
@@ -154,7 +154,7 @@ const apiFetch = (url: string, { headers, ...options }: RequestInit = {}) => {
 const createUser = async () => {
   await retry(
     async () => {
-      token = await fetchTokenWithRetry();
+      token = await fetchCachedToken();
 
       await fs.writeJSON(getConfigAuthPath(), { token });
 

@@ -261,6 +261,9 @@ async function fetchWithAuth(url, opts = {}) {
   return await fetchApi(url, opts);
 }
 
+/**
+ * @returns { Promise<String> }
+ */
 async function fetchCachedToken() {
   if (!token || tokenCreated < Date.now() - MAX_TOKEN_AGE) {
     tokenCreated = Date.now();
@@ -362,7 +365,6 @@ module.exports = {
   fetchApi,
   fetchWithAuth,
   nowDeploy,
-  fetchTokenWithRetry,
   fetchCachedToken,
   fileModeSymbol,
   disableSSO,
