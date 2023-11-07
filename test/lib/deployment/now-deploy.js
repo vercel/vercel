@@ -109,6 +109,7 @@ async function disableSSO(deploymentId, useTeam = true) {
   if (deploymentId.startsWith('https://')) {
     deploymentId = new URL(deploymentId).hostname;
   }
+  console.log({ deploymentId, useTeam });
 
   const deployRes = await fetchWithAuth(
     `https://vercel.com/api/v13/deployments/${encodeURIComponent(
@@ -118,6 +119,14 @@ async function disableSSO(deploymentId, useTeam = true) {
       method: 'GET',
     }
   );
+
+  if (!deployRes.ok) {
+    throw new Error(
+      `Failed to get deployment info (status: ${
+        deployRes.status
+      }, body: ${await deployRes.text()})`
+    );
+  }
 
   const deploymentInfo = await deployRes.json();
   const { projectId, url: deploymentUrl } = deploymentInfo;
