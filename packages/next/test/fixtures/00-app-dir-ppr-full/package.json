@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "next": "https://s3.us-west-001.backblazeb2.com/wyattjoh-vercel/next-14.0.2-canary.18.tgz?ts=1699399191",
+    "react": "experimental",
+    "react-dom": "experimental"
+  },
+  "ignoreNextjsUpdates": true
+}
