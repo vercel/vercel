@@ -357,7 +357,7 @@ export function useProject(
       pagination: null,
     });
   });
-  client.scenario.post(`/projects`, (req, res) => {
+  client.scenario.post(`/v1/projects`, (req, res) => {
     const { name } = req.body;
     if (name === project.name) {
       res.json(project);
