@@ -482,6 +482,20 @@ export async function runNpmInstall(
       commandArgs.push('--production');
     }
 
+    debug(
+      JSON.stringify(
+        {
+          cliType,
+          commandArgs,
+          opts,
+          cwd: process.cwd(),
+          node: process.versions.node,
+        },
+        null,
+        2
+      )
+    );
+
     try {
       await spawnAsync(cliType, commandArgs, opts);
     } catch (err: unknown) {
