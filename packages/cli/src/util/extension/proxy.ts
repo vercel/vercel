@@ -24,11 +24,7 @@ export function createProxy(client: Client): Server {
         json: false,
       });
       res.statusCode = fetchRes.status;
-      mergeIntoServerResponse(
-        // @ts-expect-error - `node-fetch` Headers is missing `getAll()`
-        toOutgoingHeaders(fetchRes.headers),
-        res
-      );
+      mergeIntoServerResponse(toOutgoingHeaders(fetchRes.headers), res);
       fetchRes.body.pipe(res);
     } catch (err: unknown) {
       client.output.prettyError(err);

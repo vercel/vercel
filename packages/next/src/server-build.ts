@@ -1132,7 +1132,10 @@ export async function serverBuild({
       route = normalizeLocalePath(route, routesManifest.i18n.locales).pathname;
     }
     delete lambdas[
-      path.posix.join('.', entryDirectory, route === '/' ? 'index' : route)
+      normalizeIndexOutput(
+        path.posix.join('./', entryDirectory, route === '/' ? '/index' : route),
+        true
+      )
     ];
   });
 

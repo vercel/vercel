@@ -226,6 +226,12 @@ export const fetch = async (
   url = `${opts.apiUrl || 'https://api.vercel.com'}${url}`;
   delete opts.apiUrl;
 
+  const { VERCEL_TEAM_ID } = process.env;
+
+  if (VERCEL_TEAM_ID) {
+    url += `${url.includes('?') ? '&' : '?'}teamId=${VERCEL_TEAM_ID}`;
+  }
+
   if (opts.teamId) {
     const parsedUrl = new URL(url);
     parsedUrl.searchParams.set('teamId', opts.teamId);

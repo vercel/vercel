@@ -7,6 +7,7 @@ const { satisfies } = require('semver');
 const stripAnsi = require('strip-ansi');
 const {
   fetchCachedToken,
+  disableSSO,
 } = require('../../../../test/lib/deployment/now-deploy');
 const { spawnSync, execFileSync } = require('child_process');
 
@@ -398,6 +399,9 @@ function testFixtureStdio(
         // Expect the deploy succeeded with exit of 0;
         expect(deployResult.exitCode).toBe(0);
         deploymentUrl = new URL(deployResult.stdout).host;
+
+        // Disable the Project SSO Protection
+        await disableSSO(deployResult.stdout, true);
       } finally {
         if (!hasGitignore) {
           await fs.remove(gitignore);
