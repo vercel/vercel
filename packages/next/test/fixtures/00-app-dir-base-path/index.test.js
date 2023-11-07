@@ -11,7 +11,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
   afterAll(() => fs.remove(fixtureDir));
 
   it('should deploy and pass probe checks', async () => {
-    await fs.copy(path.join(__dirname, '../00-app-dir'), fixtureDir);
+    await fs.copy(path.join(__dirname, '../00-app-dir-no-ppr'), fixtureDir);
     const nextConfigPath = path.join(fixtureDir, 'next.config.js');
 
     await fs.writeFile(

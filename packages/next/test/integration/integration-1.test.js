@@ -54,7 +54,7 @@ async function hashAllFiles(files) {
 if (parseInt(process.versions.node.split('.')[0], 10) >= 16) {
   it('should build with app-dir correctly', async () => {
     const { buildResult } = await runBuildLambda(
-      path.join(__dirname, '../fixtures/00-app-dir')
+      path.join(__dirname, '../fixtures/00-app-dir-no-ppr')
     );
 
     const lambdas = new Set();
