@@ -396,7 +396,7 @@ test('default command should work with --cwd option', async () => {
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   const url = stdout;
-  await disableSSO(url, true);
+  await disableSSO(url, false);
 
   const deploymentResult = await fetch(`${url}/README.md`);
   const body = await deploymentResult.text();
@@ -426,7 +426,7 @@ test('should allow deploying a directory that was built with a target environmen
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   const url = stdout;
-  await disableSSO(url, true);
+  await disableSSO(url, false);
 
   const deploymentResult = await fetch(`${url}/README.md`);
   const body = await deploymentResult.text();
@@ -454,7 +454,7 @@ test('should allow deploying a directory that was prebuilt, but has no builds.js
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   const url = stdout;
-  await disableSSO(url, true);
+  await disableSSO(url, false);
 
   const deploymentResult = await fetch(`${url}/README.md`);
   const body = await deploymentResult.text();
