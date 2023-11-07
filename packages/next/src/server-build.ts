@@ -1187,26 +1187,29 @@ export async function serverBuild({
     isEmptyAllowQueryForPrendered,
   });
 
-  const promises: Promise<void>[] = [];
-
-  Object.keys(prerenderManifest.staticRoutes).forEach(route =>
-    promises.push(prerenderRoute(route, {}))
+  await Promise.all(
+    Object.keys(prerenderManifest.staticRoutes).map(route =>
+      prerenderRoute(route, {})
+    )
   );
-  Object.keys(prerenderManifest.fallbackRoutes).forEach(route =>
-    promises.push(prerenderRoute(route, { isFallback: true }))
+  await Promise.all(
+    Object.keys(prerenderManifest.fallbackRoutes).map(route =>
+      prerenderRoute(route, { isFallback: true })
+    )
   );
-  Object.keys(prerenderManifest.blockingFallbackRoutes).forEach(route =>
-    promises.push(prerenderRoute(route, { isBlocking: true }))
+  await Promise.all(
+    Object.keys(prerenderManifest.blockingFallbackRoutes).map(route =>
+      prerenderRoute(route, { isBlocking: true })
+    )
   );
 
   if (static404Page && canUsePreviewMode) {
-    omittedPrerenderRoutes.forEach(route => {
-      promises.push(prerenderRoute(route, { isOmitted: true }));
-    });
+    await Promise.all(
+      [...omittedPrerenderRoutes].map(route => {
+        return prerenderRoute(route, { isOmitted: true });
+      })
+    );
   }
-
-  // Wait for all prerenders to finish.
-  await Promise.all(promises);
 
   prerenderRoutes.forEach(route => {
     if (experimentalPPRRoutes.has(route)) return;
