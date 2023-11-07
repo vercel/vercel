@@ -6,7 +6,6 @@ import { type Dispatcher, Headers, request as undiciRequest } from 'undici';
 import { listen } from 'async-listen';
 import { isAbsolute } from 'path';
 import { pathToFileURL } from 'url';
-import zlib from 'zlib';
 import { buildToHeaders } from '@edge-runtime/node-utils';
 import type { ServerResponse, IncomingMessage } from 'http';
 import type { VercelProxyResponse } from '../types.js';
@@ -38,27 +37,6 @@ const HTTP_METHODS = [
   'DELETE',
   'PATCH',
 ];
-
-function compress(body: Buffer, encoding: string): Buffer {
-  switch (encoding) {
-    case 'br':
-      return zlib.brotliCompressSync(body, {
-        params: {
-          [zlib.constants.BROTLI_PARAM_QUALITY]: 0,
-        },
-      });
-    case 'gzip':
-      return zlib.gzipSync(body, {
-        level: zlib.constants.Z_BEST_SPEED,
-      });
-    case 'deflate':
-      return zlib.deflateSync(body, {
-        level: zlib.constants.Z_BEST_SPEED,
-      });
-    default:
-      throw new Error(`encoding '${encoding}' not supported`);
-  }
-}
 
 async function createServerlessServer(userCode: ServerlessFunctionSignature) {
   const server = createServer(userCode);
