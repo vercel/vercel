@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "next": "canary",
+    "next": "https://files-mdfhubg0n-vtest314-ijjk-testing.vercel.app",
     "next-offline": "4.0.6",
     "react": "latest",
     "react-dom": "latest"

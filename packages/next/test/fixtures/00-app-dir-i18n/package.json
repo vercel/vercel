@@ -6,7 +6,7 @@
     "start": "next start"
   },
   "dependencies": {
-    "next": "canary",
+    "next": "https://files-mdfhubg0n-vtest314-ijjk-testing.vercel.app",
     "react": "experimental",
     "react-dom": "experimental"
   },
