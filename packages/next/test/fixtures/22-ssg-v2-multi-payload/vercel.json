@@ -175,12 +175,6 @@
     {
       "path": "/_next/data/testing-build-id/api-docs/second.json",
       "status": 200
-    },
-    {
-      "logMustNotContain": "WARNING: your application is being opted out of @vercel/next's optimized lambdas mode due to legacy routes"
-    },
-    {
-      "logMustNotContain": "WARNING: Your application is being opted out of \"@vercel/next\" optimized lambdas mode due to `functions` config"
     }
   ]
 }

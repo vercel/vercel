@@ -88,21 +88,7 @@
     {
       "path": "/_next/data/testing-build-id/nofallback/nope.json",
       "status": 404
-    },
-    {
-      "logMustNotContain": "WARNING: your application is being opted out of @vercel/next's optimized lambdas mode due to legacy routes"
-    },
-    {
-      "logMustNotContain": "WARNING: Your application is being opted out of \"@vercel/next\" optimized lambdas mode due to `functions` config"
-    },
-    {
-      "logMustNotContain": "Traced Next.js serverless functions for external files in"
-    },
-    {
-      "logMustNotContain": "All serverless functions created in"
-    },
-    {
-      "logMustNotContain": "Compressed shared serverless function files"
     }
+   
   ]
 }

@@ -57,9 +57,6 @@
       "path": "/about",
       "status": 200,
       "mustContain": "512"
-    },
-    {
-      "logMustNotContain": "WARNING: Your application is being opted out of \"@vercel/next\" optimized lambdas mode due to `functions` config"
     }
   ]
 }

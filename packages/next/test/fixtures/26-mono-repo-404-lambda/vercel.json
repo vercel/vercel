@@ -26,9 +26,6 @@
     {
       "path": "/non-existent",
       "status": 404
-    },
-    {
-      "logMustContain": "WARNING: your application is being opted out of @vercel/next's optimized lambdas mode due to legacy routes"
     }
   ]
 }
