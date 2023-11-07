@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 7.2.3
+
+### Patch Changes
+
+- Add experimental flag to allow Node.js v20 ([#10802](https://github.com/vercel/vercel/pull/10802))
+
 ## 7.2.2
 
 ### Patch Changes
