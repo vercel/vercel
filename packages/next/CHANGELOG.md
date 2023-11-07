@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.0.13
+
+### Patch Changes
+
+- Added `getRequestHandlerWithMetadata` export ([#10753](https://github.com/vercel/vercel/pull/10753))
+
 ## 4.0.12
 
 ### Patch Changes

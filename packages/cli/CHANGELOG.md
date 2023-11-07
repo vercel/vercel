@@ -1,5 +1,12 @@
 # vercel
 
+## 32.5.2
+
+### Patch Changes
+
+- Updated dependencies [[`c94a082f6`](https://github.com/vercel/vercel/commit/c94a082f6bb1b84eaf420ac47ea83640dc83668e)]:
+  - @vercel/next@4.0.13
+
 ## 32.5.1
 
 ### Patch Changes
