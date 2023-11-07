@@ -263,6 +263,10 @@ export default async function setupAndLink(
 
     return { status: 'linked', org, project };
   } catch (err) {
+    if (isAPIError(err) && err.code === 'too_many_projects') {
+      output.prettyError(err);
+      return { status: 'error', exitCode: 1, reason: 'TOO_MANY_PROJECTS' };
+    }
     handleError(err);
 
     return { status: 'error', exitCode: 1 };
