@@ -257,6 +257,7 @@ async function fetchWithAuth(url, opts = {}) {
       url += `${url.includes('?') ? '&' : '?'}teamId=${VERCEL_TEAM_ID}`;
     }
   }
+  console.log({ url });
   return await fetchApi(url, opts);
 }
 
