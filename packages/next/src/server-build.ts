@@ -49,6 +49,7 @@ import {
   VariantsManifest,
   RSC_CONTENT_TYPE,
   RSC_PREFETCH_SUFFIX,
+  normalizePrefetches,
 } from './utils';
 import {
   nodeFileTrace,
@@ -193,13 +194,7 @@ export async function serverBuild({
     const rscContentTypeHeader =
       routesManifest?.rsc?.contentTypeHeader || RSC_CONTENT_TYPE;
 
-    // index.{ext} outputs get mapped to `/` which we don't want to override
-    // dynamic routes that aren't pregenerated like the prefetch rsc payload
-    if (appRscPrefetches['index.prefetch.rsc']) {
-      appRscPrefetches['__index.prefetch.rsc'] =
-        appRscPrefetches['index.prefetch.rsc'];
-      delete appRscPrefetches['index.prefetch.rsc'];
-    }
+    appRscPrefetches = normalizePrefetches(appRscPrefetches);
 
     // ensure all appRscPrefetches have a contentType since this is used by Next.js
     // to determine if it's a valid response
@@ -1137,7 +1132,10 @@ export async function serverBuild({
       route = normalizeLocalePath(route, routesManifest.i18n.locales).pathname;
     }
     delete lambdas[
-      path.posix.join('.', entryDirectory, route === '/' ? 'index' : route)
+      normalizeIndexOutput(
+        path.posix.join('./', entryDirectory, route === '/' ? '/index' : route),
+        true
+      )
     ];
   });
 
