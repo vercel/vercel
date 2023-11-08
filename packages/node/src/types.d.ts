@@ -1,5 +1,6 @@
 import type { ServerResponse, IncomingMessage } from 'http';
 import type { Headers } from 'undici';
+import type { Readable } from 'stream';
 
 export type VercelRequestCookies = { [key: string]: string };
 export type VercelRequestQuery = { [key: string]: string | string[] };
@@ -44,6 +45,6 @@ export type NowApiHandler = VercelApiHandler;
 export interface VercelProxyResponse {
   status: number;
   headers: Headers;
-  body: ReadableStream<Uint8Array> | Buffer | null;
+  body: Readable | Buffer | null;
   encoding: BufferEncoding;
 }

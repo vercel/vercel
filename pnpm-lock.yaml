@@ -1254,8 +1254,8 @@ importers:
         specifier: 4.9.5
         version: 4.9.5
       undici:
-        specifier: 5.23.0
-        version: 5.23.0
+        specifier: 5.26.5
+        version: 5.26.5
     devDependencies:
       '@babel/core':
         specifier: 7.5.0
@@ -3109,6 +3109,10 @@ packages:
     resolution: {integrity: sha512-6SWlXpWU5AvId8Ac7zjzmIOqMOba/JWY8XZ4A7q7Gn1Vlfg/SFFIlrtHXt9nPn4op9ZPAkl91Jao+QQv3r/ukw==}
     engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0}
     dev: true
+
+  /@fastify/busboy@2.0.0:
+    resolution: {integrity: sha512-JUFJad5lv7jxj926GPgymrWQxxjPYuJNiNjNMzqT+HiuP6Vl3dk5xzG+8sTX96np0ZAluvaMzPsjhHZ5rNuNQQ==}
+    engines: {node: '>=14'}
 
   /@humanwhocodes/config-array@0.11.10:
     resolution: {integrity: sha512-KVVjQmNUepDVGXNuoRRdmmEjruj0KfiGSbS8LVc12LMsWDQzRXJ0qdhN8L8uUigKpfEHRhlaQFY0ib1tnUbNeQ==}
@@ -5616,7 +5620,7 @@ packages:
       tar-fs: 2.1.1
       tsconfig-paths: 4.1.2
       typescript: 4.9.5
-      undici: 5.23.0
+      undici: 5.26.5
       ws: 7.4.6
     transitivePeerDependencies:
       - '@types/node'
@@ -15280,10 +15284,11 @@ packages:
       which-boxed-primitive: 1.0.2
     dev: true
 
-  /undici@5.23.0:
-    resolution: {integrity: sha512-1D7w+fvRsqlQ9GscLBwcAJinqcZGHUKjbOmXdlE/v8BvEGXjeWAax+341q44EuTcHXXnfyKNbKRq4Lg7OzhMmg==}
+  /undici@5.26.5:
+    resolution: {integrity: sha512-cSb4bPFd5qgR7qr2jYAi0hlX9n5YKK2ONKkLFkxl+v/9BvC0sOpZjBHDBSXc5lWAf5ty9oZdRXytBIHzgUcerw==}
     engines: {node: '>=14.0'}
     dependencies:
+      '@fastify/busboy': 2.0.0
       busboy: 1.6.0
 
   /unified@10.1.2:

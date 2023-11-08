@@ -13,7 +13,6 @@ import { createEdgeEventHandler } from './edge-functions/edge-handler.mjs';
 import { createServer, IncomingMessage, ServerResponse } from 'http';
 import { createServerlessEventHandler } from './serverless-functions/serverless-handler.mjs';
 import { isEdgeRuntime, logError, validateConfiguredRuntime } from './utils.js';
-import { toToReadable } from '@edge-runtime/node-utils';
 import { getConfig } from '@vercel/static-config';
 import { Project } from 'ts-morph';
 import { listen } from 'async-listen';
@@ -118,7 +117,7 @@ async function onDevRequest(
     } else if (body instanceof Buffer) {
       res.end(body);
     } else {
-      toToReadable(body).pipe(res);
+      body.pipe(res);
     }
   } catch (error: any) {
     res.statusCode = 500;

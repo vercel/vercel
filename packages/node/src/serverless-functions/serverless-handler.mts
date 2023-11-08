@@ -2,14 +2,18 @@ import { addHelpers } from './helpers.js';
 import { createServer } from 'http';
 import { serializeBody } from '../utils.js';
 import exitHook from 'exit-hook';
-import { Headers, fetch } from 'undici';
+import { type Dispatcher, Headers, request as undiciRequest } from 'undici';
 import { listen } from 'async-listen';
 import { isAbsolute } from 'path';
 import { pathToFileURL } from 'url';
-import zlib from 'zlib';
+import { buildToHeaders } from '@edge-runtime/node-utils';
 import type { ServerResponse, IncomingMessage } from 'http';
 import type { VercelProxyResponse } from '../types.js';
 import type { VercelRequest, VercelResponse } from './helpers.js';
+import type { Readable } from 'stream';
+
+// @ts-expect-error
+const toHeaders = buildToHeaders({ Headers });
 
 type ServerlessServerOptions = {
   shouldAddHelpers: boolean;
@@ -33,27 +37,6 @@ const HTTP_METHODS = [
   'DELETE',
   'PATCH',
 ];
-
-function compress(body: Buffer, encoding: string): Buffer {
-  switch (encoding) {
-    case 'br':
-      return zlib.brotliCompressSync(body, {
-        params: {
-          [zlib.constants.BROTLI_PARAM_QUALITY]: 0,
-        },
-      });
-    case 'gzip':
-      return zlib.gzipSync(body, {
-        level: zlib.constants.Z_BEST_SPEED,
-      });
-    case 'deflate':
-      return zlib.deflateSync(body, {
-        level: zlib.constants.Z_BEST_SPEED,
-      });
-    default:
-      throw new Error(`encoding '${encoding}' not supported`);
-  }
-}
 
 async function createServerlessServer(userCode: ServerlessFunctionSignature) {
   const server = createServer(userCode);
@@ -103,43 +86,26 @@ export async function createServerlessEventHandler(
 
   return async function (request: IncomingMessage) {
     const url = new URL(request.url ?? '/', server.url);
-    const response = await fetch(url, {
+    const response = await undiciRequest(url, {
       body: await serializeBody(request),
-      compress: !isStreaming,
-      // @ts-expect-error
       headers: {
         ...request.headers,
         host: request.headers['x-forwarded-host'],
       },
-      method: request.method,
-      redirect: 'manual',
+      method: (request.method || 'GET') as Dispatcher.HttpMethod,
     });
 
-    let body: Buffer | null = null;
-    let headers: Headers = response.headers;
+    let body: Readable | Buffer | null = null;
+    let headers = toHeaders(response.headers) as Headers;
 
     if (isStreaming) {
       body = response.body;
     } else {
-      body = Buffer.from(await response.arrayBuffer());
-
-      const contentEncoding = response.headers.get('content-encoding');
-      if (contentEncoding) {
-        body = compress(body, contentEncoding);
-        const clonedHeaders = [];
-        for (const [key, value] of response.headers.entries()) {
-          if (key !== 'transfer-encoding') {
-            // transfer-encoding is only for streaming response
-            clonedHeaders.push([key, value]);
-          }
-        }
-        clonedHeaders.push(['content-length', String(Buffer.byteLength(body))]);
-        headers = new Headers(clonedHeaders);
-      }
+      body = Buffer.from(await response.body.arrayBuffer());
     }
 
     return {
-      status: response.status,
+      status: response.statusCode,
       headers,
       body,
       encoding: 'utf8',
