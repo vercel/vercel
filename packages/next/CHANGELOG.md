@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.0.14
+
+### Patch Changes
+
+- Fixed headers for static routes when PPR is enabled ([#10808](https://github.com/vercel/vercel/pull/10808))
+
 ## 4.0.13
 
 ### Patch Changes
