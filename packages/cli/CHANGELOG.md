@@ -1,5 +1,15 @@
 # vercel
 
+## 32.5.3
+
+### Patch Changes
+
+- Handle `TooManyProjects` error in places where projects are created ([#10807](https://github.com/vercel/vercel/pull/10807))
+
+- Updated dependencies [[`89c1e0323`](https://github.com/vercel/vercel/commit/89c1e032335d9ec0fcfc84fe499cf004fe73fafc), [`fd29b966d`](https://github.com/vercel/vercel/commit/fd29b966d39776318b0e11a53909edb43d1fc5f2)]:
+  - @vercel/node@3.0.9
+  - @vercel/next@4.0.14
+
 ## 32.5.2
 
 ### Patch Changes

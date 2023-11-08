@@ -1,5 +1,11 @@
 # @vercel/node
 
+## 3.0.9
+
+### Patch Changes
+
+- Replace usage of `fetch` with `undici.request` ([#10767](https://github.com/vercel/vercel/pull/10767))
+
 ## 3.0.8
 
 ### Patch Changes
