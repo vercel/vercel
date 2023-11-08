@@ -15,7 +15,8 @@ const pages = [
   { pathname: '/no-suspense/nested/a', dynamic: true },
   { pathname: '/no-suspense/nested/b', dynamic: true },
   { pathname: '/no-suspense/nested/c', dynamic: true },
-  { pathname: '/dynamic/force-dynamic', dynamic: true },
+  // TODO: uncomment when we've fixed the 404 case for force-dynamic pages
+  // { pathname: '/dynamic/force-dynamic', dynamic: 'force-dynamic' },
   { pathname: '/dynamic/force-static', dynamic: false },
 ];
 

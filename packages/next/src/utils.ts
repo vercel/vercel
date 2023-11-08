@@ -2429,7 +2429,8 @@ export const onPrerenderRoute =
                 initialHeaders: {
                   'content-type': rscContentTypeHeader,
                   vary: rscVaryHeader,
-                  ...(experimentalPPR && rscDidPostponeHeader
+                  // If it contains a pre-render, then it was postponed.
+                  ...(prerender && rscDidPostponeHeader
                     ? { [rscDidPostponeHeader]: '1' }
                     : {}),
                 },
