@@ -23,7 +23,7 @@ if (!NODE_VERSION_MAJOR) {
   );
 }
 
-// @ts-expect-error
+// @ts-expect-error - depends on https://github.com/nodejs/undici/pull/2373
 const toHeaders = buildToHeaders({ Headers });
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
