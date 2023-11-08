@@ -21,6 +21,7 @@ import createProject from '../projects/create-project';
 import { detectProjects } from '../projects/detect-projects';
 import { repoInfoToUrl } from '../git/repo-info-to-url';
 import { connectGitProvider, parseRepoUrl } from '../git/connect-git-provider';
+import { isAPIError } from '../errors-ts';
 
 const home = homedir();
 
@@ -283,24 +284,31 @@ export async function ensureRepoLink(
       output.spinner(`Creating new Project: ${orgAndName}`);
       delete selection.newProject;
       if (!selection.rootDirectory) delete selection.rootDirectory;
-      const project = (selected[i] = await createProject(client, {
-        ...selection,
-        framework: selection.framework.slug,
-      }));
-      await connectGitProvider(
-        client,
-        org,
-        project.id,
-        parsedRepoUrl.provider,
-        `${parsedRepoUrl.org}/${parsedRepoUrl.repo}`
-      );
-      output.log(
-        `Created new Project: ${output.link(
-          orgAndName,
-          `https://vercel.com/${orgAndName}`,
-          { fallback: false }
-        )}`
-      );
+      try {
+        const project = (selected[i] = await createProject(client, {
+          ...selection,
+          framework: selection.framework.slug,
+        }));
+        await connectGitProvider(
+          client,
+          org,
+          project.id,
+          parsedRepoUrl.provider,
+          `${parsedRepoUrl.org}/${parsedRepoUrl.repo}`
+        );
+        output.log(
+          `Created new Project: ${output.link(
+            orgAndName,
+            `https://vercel.com/${orgAndName}`,
+            { fallback: false }
+          )}`
+        );
+      } catch (err) {
+        if (isAPIError(err) && err.code === 'too_many_projects') {
+          output.prettyError(err);
+          return;
+        }
+      }
     }
 
     repoConfig = {
