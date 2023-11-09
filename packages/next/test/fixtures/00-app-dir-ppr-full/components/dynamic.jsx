@@ -3,7 +3,6 @@ import { headers } from 'next/headers'
 
 export const Dynamic = ({ pathname, fallback }) => {
   if (fallback) {
-    return <div>Loading...</div>;
     return <div>Loading...</div>
   }
 
