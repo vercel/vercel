@@ -6,16 +6,16 @@ export const Dynamic = ({ pathname, fallback }) => {
     return <div>Loading...</div>
   }
 
-  const messages = []
-  const names = ['x-test-input', 'user-agent']
-  const list = headers()
+  const messages = [];
+  const names = ['x-test-input', 'user-agent'];
+  const list = headers();
 
   for (const name of names) {
-    messages.push({ name, value: list.get(name) })
+    messages.push({ name, value: list.get(name) });
   }
 
   return (
-    <div>
+    <div id="needle">
       <dl>
         {pathname && (
           <>
@@ -33,5 +33,5 @@ export const Dynamic = ({ pathname, fallback }) => {
         ))}
       </dl>
     </div>
-  )
-}
+  );
+};
