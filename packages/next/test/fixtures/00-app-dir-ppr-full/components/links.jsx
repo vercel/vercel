@@ -12,15 +12,6 @@ const links = [
   { href: '/loading/a', tag: 'loading.jsx, pre-generated' },
   { href: '/loading/b', tag: 'loading.jsx, on-demand' },
   { href: '/loading/c', tag: 'loading.jsx, on-demand' },
-  { href: '/loading/no-store', tag: 'loading.jsx, pre-generated, no-store' },
-  {
-    href: '/loading/no-store/delay',
-    tag: 'loading.jsx, pre-generated, no-store, delay',
-  },
-  {
-    href: '/loading/no-store/delay/custom',
-    tag: 'loading.jsx, pre-generated, no-store, delay, custom',
-  },
   { href: '/static', tag: 'static' },
   { href: '/no-suspense', tag: 'no suspense' },
   { href: '/no-suspense/nested/a', tag: 'no suspense, pre-generated' },
