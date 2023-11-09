@@ -544,7 +544,9 @@ export async function runNpmInstall(
     debug(JSON.stringify(results, null, 2));
 
     try {
-      await spawnAsync(cliType, ['cache', 'clean'], opts);
+      if (cliType === 'yarn') {
+        await spawnAsync(cliType, ['cache', 'clean'], opts);
+      }
       await spawnAsync(cliType, commandArgs, opts);
     } catch (err: unknown) {
       const potentialErrorPath = path.join(
