@@ -482,6 +482,67 @@ export async function runNpmInstall(
       commandArgs.push('--production');
     }
 
+    debug(
+      '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'
+    );
+    debug(
+      JSON.stringify(
+        {
+          cliType,
+          commandArgs,
+          opts,
+          cwd: process.cwd(),
+          node: process.versions.node,
+        },
+        null,
+        2
+      )
+    );
+
+    const paths = (process.env.PATH || '').split(path.delimiter);
+    paths.unshift(
+      path.join(
+        path.dirname(process.execPath),
+        'node_modules',
+        'npm',
+        'bin',
+        'node-gyp-bin'
+      )
+    );
+    paths.unshift(
+      path.join(
+        path.dirname(process.execPath),
+        '..',
+        'lib',
+        'node_modules',
+        'npm',
+        'bin',
+        'node-gyp-bin'
+      )
+    );
+    paths.unshift(
+      path.join(
+        path.dirname(process.execPath),
+        '..',
+        'libexec',
+        'lib',
+        'node_modules',
+        'npm',
+        'bin',
+        'node-gyp-bin'
+      )
+    );
+    paths.unshift(
+      path.join(process.env.HOME || '/', '.config/yarn/link/node_modules/.bin')
+    );
+    paths.unshift(...getNodeBinPaths({ start: process.cwd() }));
+    const results = paths.reduce((p: Record<string, boolean>, c: string) => {
+      const bin = path.join(c, 'node-gyp');
+      p[bin] = fs.existsSync(bin);
+      return p;
+    }, {});
+    debug(JSON.stringify(results, null, 2));
+
     try {
       await spawnAsync(cliType, commandArgs, opts);
     } catch (err: unknown) {
