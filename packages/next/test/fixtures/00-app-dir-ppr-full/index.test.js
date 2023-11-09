@@ -11,6 +11,9 @@ const pages = [
   { pathname: '/on-demand/a', dynamic: true },
   { pathname: '/on-demand/b', dynamic: true },
   { pathname: '/on-demand/c', dynamic: true },
+  { pathname: '/loading/a', dynamic: true },
+  { pathname: '/loading/b', dynamic: true },
+  { pathname: '/loading/c', dynamic: true },
   { pathname: '/static', dynamic: false },
   { pathname: '/no-suspense', dynamic: true },
   { pathname: '/no-suspense/nested/a', dynamic: true },
@@ -18,7 +21,7 @@ const pages = [
   { pathname: '/no-suspense/nested/c', dynamic: true },
   // TODO: uncomment when we've fixed the 404 case for force-dynamic pages
   // { pathname: '/dynamic/force-dynamic', dynamic: 'force-dynamic' },
-  { pathname: '/dynamic/force-static', dynamic: false },
+  { pathname: '/dynamic/force-static', dynamic: 'force-static' },
 ];
 
 const ctx = {};
@@ -30,7 +33,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
   });
 
   describe('dynamic pages should resume', () => {
-    it.each(pages.filter(p => p.dynamic))(
+    it.each(pages.filter(p => p.dynamic === true))(
       'should resume $pathname',
       async ({ pathname }) => {
         const expected = `${Date.now()}:${Math.random()}`;
@@ -62,19 +65,27 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
         });
         expect(res.status).toEqual(200);
         expect(res.headers.get('content-type')).toEqual('text/x-component');
-        console.log(
-          'X-NextJS-Postponed-Reason',
-          res.headers.get('X-NextJS-Postponed-Reason')
-        );
-        if (dynamic) {
-          expect(res.headers.get('X-NextJS-Postponed')).toEqual('1');
-        } else {
-          expect(res.headers.has('X-NextJS-Postponed')).toEqual(false);
-        }
+
+        const cache = res.headers.get('cache-control');
+        expect(cache).toContain('public');
+        expect(cache).toContain('must-revalidate');
 
         // Expect that static RSC prefetches do not contain the dynamic text.
         const text = await res.text();
         expect(text).not.toContain(unexpected);
+
+        if (dynamic === true) {
+          // The dynamic component will contain the text "needle" if it was
+          // rendered using dynamic content.
+          expect(text).not.toContain('needle');
+          expect(res.headers.get('X-NextJS-Postponed')).toEqual('1');
+        } else {
+          if (dynamic !== false) {
+            expect(text).toContain('needle');
+          }
+
+          expect(res.headers.has('X-NextJS-Postponed')).toEqual(false);
+        }
       }
     );
   });
@@ -89,8 +100,20 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
       expect(res.headers.get('content-type')).toEqual('text/x-component');
       expect(res.headers.has('X-NextJS-Postponed')).toEqual(false);
 
+      const cache = res.headers.get('cache-control');
+      expect(cache).toContain('private');
+      expect(cache).toContain('no-store');
+      expect(cache).toContain('no-cache');
+      expect(cache).toContain('max-age=0');
+      expect(cache).toContain('must-revalidate');
+
       const text = await res.text();
-      if (dynamic) {
+
+      if (dynamic !== false) {
+        expect(text).toContain('needle');
+      }
+
+      if (dynamic === true) {
         // Expect that dynamic RSC prefetches do contain the dynamic text.
         expect(text).toContain(expected);
       } else {
