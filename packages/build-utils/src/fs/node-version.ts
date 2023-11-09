@@ -4,6 +4,8 @@ import { NodeVersion } from '../types';
 import { NowBuildError } from '../errors';
 import debug from '../debug';
 
+export type NodeVersionMajor = ReturnType<typeof getOptions>[number]['major'];
+
 function getOptions() {
   const options = [
     { major: 18, range: '18.x', runtime: 'nodejs18.x' },
@@ -56,8 +58,10 @@ function isNodeVersionAvailable(version: NodeVersion): boolean {
   return false;
 }
 
-export function getAvailableOptions() {
-  return getOptions().filter(isNodeVersionAvailable);
+export function getAvailableNodeVersions(): NodeVersionMajor[] {
+  return getOptions()
+    .filter(isNodeVersionAvailable)
+    .map(n => n.major);
 }
 
 function getHint(isAuto = false) {
@@ -67,12 +71,22 @@ function getHint(isAuto = false) {
     : `Please set "engines": { "node": "${range}" } in your \`package.json\` file to use Node.js ${major}.`;
 }
 
-export function getLatestNodeVersion() {
+export function getLatestNodeVersion(availableVersions?: NodeVersionMajor[]) {
   const all = getOptions();
-  // Return the first node version that is definitely available
-  // in the build-container. As a fallback for local `vc build`
-  // and the tests, return the first node version if none is found.
-  return all.find(isNodeVersionAvailable) ?? all[0];
+  if (availableVersions) {
+    // Return the first node version that is definitely
+    // available in the build-container.
+    for (const version of all) {
+      for (const major of availableVersions) {
+        if (version.major === major) {
+          return version;
+        }
+      }
+    }
+  }
+  // As a fallback for local `vc build` and the tests,
+  // return the first node version if none is found.
+  return all[0];
 }
 
 export function getDiscontinuedNodeVersions(): NodeVersion[] {
@@ -81,9 +95,9 @@ export function getDiscontinuedNodeVersions(): NodeVersion[] {
 
 export async function getSupportedNodeVersion(
   engineRange: string | undefined,
-  isAuto = false
+  isAuto = false,
+  availableVersions?: NodeVersionMajor[]
 ): Promise<NodeVersion> {
-  const availableNodeVersions = getAvailableOptions();
   let selection: NodeVersion | undefined;
 
   if (engineRange) {
@@ -95,7 +109,9 @@ export async function getSupportedNodeVersion(
         selection = o;
         return (
           intersects(o.range, engineRange) &&
-          (availableNodeVersions.length > 0 ? isNodeVersionAvailable(o) : true)
+          (availableVersions?.length
+            ? availableVersions.includes(o.major)
+            : true)
         );
       });
     if (!found) {
@@ -110,7 +126,7 @@ export async function getSupportedNodeVersion(
   }
 
   if (!selection) {
-    selection = getLatestNodeVersion();
+    selection = getLatestNodeVersion(availableVersions);
   }
 
   if (isDiscontinued(selection)) {

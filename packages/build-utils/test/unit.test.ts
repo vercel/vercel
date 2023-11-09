@@ -127,6 +127,27 @@ it('should allow nodejs18.x', async () => {
   expect(await getSupportedNodeVersion('>=16')).toHaveProperty('major', 18);
 });
 
+it('should not allow nodejs20.x when not available', async () => {
+  // Simulates AL2 build-container
+  await expect(
+    getSupportedNodeVersion('20.x', true, [14, 16, 18])
+  ).rejects.toThrow(
+    'Found invalid Node.js Version: "20.x". Please set Node.js Version to 18.x in your Project Settings to use Node.js 18.'
+  );
+});
+
+it('should not allow nodejs18.x when not available', async () => {
+  // Simulates AL2023 build-container
+  try {
+    process.env.VERCEL_ALLOW_NODEJS20 = '1';
+    await expect(getSupportedNodeVersion('18.x', true, [20])).rejects.toThrow(
+      'Found invalid Node.js Version: "18.x". Please set Node.js Version to 20.x in your Project Settings to use Node.js 20.'
+    );
+  } finally {
+    delete process.env.VERCEL_ALLOW_NODEJS20;
+  }
+});
+
 it('should ignore node version in vercel dev getNodeVersion()', async () => {
   expect(
     await getNodeVersion(
@@ -233,6 +254,21 @@ it('should not warn when package.json engines matches project setting from confi
 
 it('should get latest node version', async () => {
   expect(getLatestNodeVersion()).toHaveProperty('major', 18);
+});
+
+it('should get latest node version with Node 18.x in build-container', async () => {
+  // Simulates AL2 build-container
+  expect(getLatestNodeVersion([14, 16, 18])).toHaveProperty('major', 18);
+});
+
+it('should get latest node version with Node 20.x in build-container', async () => {
+  // Simulates AL2023 build-container
+  try {
+    process.env.VERCEL_ALLOW_NODEJS20 = '1';
+    expect(getLatestNodeVersion([20])).toHaveProperty('major', 20);
+  } finally {
+    delete process.env.VERCEL_ALLOW_NODEJS20;
+  }
 });
 
 it('should throw for discontinued versions', async () => {

@@ -9,7 +9,11 @@ import { deprecate } from 'util';
 import debug from '../debug';
 import { NowBuildError } from '../errors';
 import { Meta, PackageJson, NodeVersion, Config } from '../types';
-import { getSupportedNodeVersion, getLatestNodeVersion } from './node-version';
+import {
+  getSupportedNodeVersion,
+  getLatestNodeVersion,
+  getAvailableNodeVersions,
+} from './node-version';
 import { readConfigFile } from './read-config-file';
 import { cloneEnv } from '../clone-env';
 
@@ -238,9 +242,10 @@ export async function getNodeVersion(
   destPath: string,
   nodeVersionFallback = process.env.VERCEL_PROJECT_SETTINGS_NODE_VERSION,
   config: Config = {},
-  meta: Meta = {}
+  meta: Meta = {},
+  availableVersions = getAvailableNodeVersions()
 ): Promise<NodeVersion> {
-  const latest = getLatestNodeVersion();
+  const latest = getLatestNodeVersion(availableVersions);
   if (meta.isDev) {
     // Use the system-installed version of `node` in PATH for `vercel dev`
     return { ...latest, runtime: 'nodejs' };
@@ -266,7 +271,7 @@ export async function getNodeVersion(
     nodeVersion = node;
     isAuto = false;
   }
-  return getSupportedNodeVersion(nodeVersion, isAuto);
+  return getSupportedNodeVersion(nodeVersion, isAuto, availableVersions);
 }
 
 export async function scanParentDirs(
