@@ -1,3 +1,4 @@
+import { statSync } from 'fs';
 import { intersects, validRange } from 'semver';
 import { NodeVersion } from '../types';
 import { NowBuildError } from '../errors';
@@ -46,6 +47,19 @@ function getOptions() {
   return options;
 }
 
+function isNodeVersionAvailable(version: NodeVersion): boolean {
+  try {
+    return statSync(`/node${version.major}`).isDirectory();
+  } catch {
+    // ENOENT, or any other error, we don't care about
+  }
+  return false;
+}
+
+export function getAvailableOptions() {
+  return getOptions().filter(isNodeVersionAvailable);
+}
+
 function getHint(isAuto = false) {
   const { major, range } = getLatestNodeVersion();
   return isAuto
@@ -54,7 +68,11 @@ function getHint(isAuto = false) {
 }
 
 export function getLatestNodeVersion() {
-  return getOptions()[0];
+  const all = getOptions();
+  // Return the first node version that is definitely available
+  // in the build-container. As a fallback for local `vc build`
+  // and the tests, return the first node version if none is found.
+  return all.find(isNodeVersionAvailable) ?? all[0];
 }
 
 export function getDiscontinuedNodeVersions(): NodeVersion[] {
@@ -65,7 +83,8 @@ export async function getSupportedNodeVersion(
   engineRange: string | undefined,
   isAuto = false
 ): Promise<NodeVersion> {
-  let selection: NodeVersion = getLatestNodeVersion();
+  const availableNodeVersions = getAvailableOptions();
+  let selection: NodeVersion | undefined;
 
   if (engineRange) {
     const found =
@@ -74,7 +93,10 @@ export async function getSupportedNodeVersion(
         // the array is already in order so return the first
         // match which will be the newest version of node
         selection = o;
-        return intersects(o.range, engineRange);
+        return (
+          intersects(o.range, engineRange) &&
+          (availableNodeVersions.length > 0 ? isNodeVersionAvailable(o) : true)
+        );
       });
     if (!found) {
       throw new NowBuildError({
@@ -85,6 +107,10 @@ export async function getSupportedNodeVersion(
         )}`,
       });
     }
+  }
+
+  if (!selection) {
+    selection = getLatestNodeVersion();
   }
 
   if (isDiscontinued(selection)) {
