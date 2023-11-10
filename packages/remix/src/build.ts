@@ -225,6 +225,7 @@ export const build: BuildV2 = async ({
     // Remove the env vars that will cause pnpm to consider
     // as CI, which enables `--frozen-lockfile` enforcement
     const nonCiEnv = { ...spawnOpts.env };
+    console.log(nonCiEnv);
     delete nonCiEnv.VERCEL;
     delete nonCiEnv.NOW_BUILDER;
 
