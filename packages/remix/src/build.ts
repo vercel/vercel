@@ -222,13 +222,22 @@ export const build: BuildV2 = async ({
   if (depsModified) {
     await fs.writeFile(packageJsonPath, JSON.stringify(pkg, null, 2) + '\n');
 
+    // Remove the env vars that will cause pnpm to consider
+    // as CI, which enables `--frozen-lockfile` enforcement
+    const nonCiEnv = { ...spawnOpts.env };
+    delete nonCiEnv.VERCEL;
+    delete nonCiEnv.NOW_BUILDER;
+
     // Purposefully not passing `meta` here to avoid
     // the optimization that prevents `npm install`
     // from running a second time
     await runNpmInstall(
       entrypointFsDirname,
       [],
-      spawnOpts,
+      {
+        ...spawnOpts,
+        env: nonCiEnv,
+      },
       undefined,
       nodeVersion
     );
