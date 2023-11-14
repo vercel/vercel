@@ -1,5 +1,37 @@
 # vercel
 
+## 32.5.3
+
+### Patch Changes
+
+- Handle `TooManyProjects` error in places where projects are created ([#10807](https://github.com/vercel/vercel/pull/10807))
+
+- Updated dependencies [[`89c1e0323`](https://github.com/vercel/vercel/commit/89c1e032335d9ec0fcfc84fe499cf004fe73fafc), [`fd29b966d`](https://github.com/vercel/vercel/commit/fd29b966d39776318b0e11a53909edb43d1fc5f2)]:
+  - @vercel/node@3.0.9
+  - @vercel/next@4.0.14
+
+## 32.5.2
+
+### Patch Changes
+
+- Updated dependencies [[`c94a082f6`](https://github.com/vercel/vercel/commit/c94a082f6bb1b84eaf420ac47ea83640dc83668e)]:
+  - @vercel/next@4.0.13
+
+## 32.5.1
+
+### Patch Changes
+
+- Debug log load user exceptions ([#10773](https://github.com/vercel/vercel/pull/10773))
+
+- bump: edge-runtime ([#10712](https://github.com/vercel/vercel/pull/10712))
+
+- Updated dependencies [[`fc90a3dc0`](https://github.com/vercel/vercel/commit/fc90a3dc0bd998453f6527c03d211c35bb0d5770), [`644b8a52c`](https://github.com/vercel/vercel/commit/644b8a52cb2cc8f05e215e2230f95f902cdf8ae8), [`0861dc8fb`](https://github.com/vercel/vercel/commit/0861dc8fbcea1037626b00664a4b6c22f1b0a7ed), [`33cc8e0ac`](https://github.com/vercel/vercel/commit/33cc8e0acf1b3466d50d45b2e5bbe66b89a87c14), [`f5296c3c0`](https://github.com/vercel/vercel/commit/f5296c3c06e620a39c5f88287ac94e58703bdaac), [`d9065c210`](https://github.com/vercel/vercel/commit/d9065c2102223e9cdb5b22df14db41c363cf7828)]:
+  - @vercel/next@4.0.12
+  - @vercel/node@3.0.8
+  - @vercel/build-utils@7.2.3
+  - @vercel/remix-builder@2.0.11
+  - @vercel/static-build@2.0.10
+
 ## 32.5.0
 
 ### Minor Changes

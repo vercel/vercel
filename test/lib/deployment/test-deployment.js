@@ -283,7 +283,9 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
       }
     });
     hadTest = true;
-  } else if (probe.notResponseHeaders) {
+  }
+
+  if (probe.notResponseHeaders) {
     Object.keys(probe.notResponseHeaders).forEach(header => {
       const headerValue = resp.headers.get(header);
       const expected = probe.notResponseHeaders[header];

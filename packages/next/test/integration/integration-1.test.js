@@ -54,7 +54,7 @@ async function hashAllFiles(files) {
 if (parseInt(process.versions.node.split('.')[0], 10) >= 16) {
   it('should build with app-dir correctly', async () => {
     const { buildResult } = await runBuildLambda(
-      path.join(__dirname, '../fixtures/00-app-dir')
+      path.join(__dirname, '../fixtures/00-app-dir-no-ppr')
     );
 
     const lambdas = new Set();
@@ -449,6 +449,10 @@ it('Should throw when package.json or next.config.js is not the "src"', async ()
   } catch (err) {
     expect(err.message).toMatch(/package\.json/);
   }
+});
+
+it('Should build the serverless-config-async example', async () => {
+  await runBuildLambda(path.join(__dirname, 'serverless-config-async'));
 });
 
 describe('Middleware simple project', () => {

@@ -426,6 +426,10 @@ const main = async () => {
     try {
       user = await getUser(client);
     } catch (err: unknown) {
+      if (err instanceof Error) {
+        output.debug(err.stack || err.toString());
+      }
+
       if (isErrnoException(err) && err.code === 'NOT_AUTHORIZED') {
         output.prettyError({
           message: `You do not have access to the specified account`,

@@ -5,7 +5,10 @@ import fetch, { RequestInit } from 'node-fetch';
 import retry from 'async-retry';
 import fs from 'fs-extra';
 import sleep from '../src/util/sleep';
-import { fetchTokenWithRetry } from '../../../test/lib/deployment/now-deploy';
+import {
+  disableSSO,
+  fetchTokenWithRetry,
+} from '../../../test/lib/deployment/now-deploy';
 import waitForPrompt from './helpers/wait-for-prompt';
 import { listTmpDirs } from './helpers/get-tmp-dir';
 import getGlobalDir from './helpers/get-global-dir';
@@ -393,6 +396,8 @@ test('default command should work with --cwd option', async () => {
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   const url = stdout;
+  await disableSSO(url, false);
+
   const deploymentResult = await fetch(`${url}/README.md`);
   const body = await deploymentResult.text();
   expect(body).toEqual(
@@ -421,6 +426,8 @@ test('should allow deploying a directory that was built with a target environmen
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   const url = stdout;
+  await disableSSO(url, false);
+
   const deploymentResult = await fetch(`${url}/README.md`);
   const body = await deploymentResult.text();
   expect(body).toEqual(
@@ -447,6 +454,8 @@ test('should allow deploying a directory that was prebuilt, but has no builds.js
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   const url = stdout;
+  await disableSSO(url, false);
+
   const deploymentResult = await fetch(`${url}/README.md`);
   const body = await deploymentResult.text();
   expect(body).toEqual('readme contents for build-output-api-raw');
@@ -509,6 +518,7 @@ test('deploy using only now.json with `redirects` defined', async () => {
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   const url = stdout;
+  await disableSSO(url, false);
   const res = await fetch(`${url}/foo/bar`, { redirect: 'manual' });
   const location = res.headers.get('location');
   expect(location).toBe('https://example.com/foo/bar');
@@ -530,6 +540,7 @@ test('deploy using --local-config flag v2', async () => {
 
   const { host } = new URL(stdout);
   expect(host).toMatch(/secondary/gm);
+  await disableSSO(host, false);
 
   const testRes = await fetch(`https://${host}/test-${contextName}.html`);
   const testText = await testRes.text();
@@ -580,6 +591,7 @@ test('deploy using --local-config flag above target', async () => {
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   const { host } = new URL(stdout);
+  await disableSSO(host, false);
 
   const testRes = await fetch(`https://${host}/index.html`);
   const testText = await testRes.text();
@@ -801,6 +813,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
     });
     expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
     const { host } = new URL(stdout);
+    await disableSSO(host, false);
 
     const apiUrl = `https://${host}/api/get-env`;
     const apiRes = await fetch(apiUrl);

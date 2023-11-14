@@ -426,10 +426,10 @@ describe('normalizePrefetches', () => {
 
     expect(Object.keys(updatedPrefetches)).toEqual([
       '__index.prefetch.rsc',
-      'index/__index.prefetch.rsc',
-      '__foo.prefetch.rsc',
-      'foo/__index.prefetch.rsc',
-      'foo/bar/__baz.prefetch.rsc',
+      'index/index.prefetch.rsc',
+      'foo.prefetch.rsc',
+      'foo/index.prefetch.rsc',
+      'foo/bar/baz.prefetch.rsc',
     ]);
   });
 });
