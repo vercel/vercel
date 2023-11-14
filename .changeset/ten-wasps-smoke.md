@@ -2,4 +2,4 @@
 '@vercel/remix-builder': patch
 ---
 
-Resolve static path using non-parent publicPath segments
+Simplify static directory resolution and apply `publicPath` to routes.

@@ -2,6 +2,8 @@
   "probes": [
     { "path": "/", "mustContain": "Welcome to Remix" },
     { "path": "/edge", "mustContain": "Welcome to Remix@Edge" },
-    { "path": "/remix.svg", "status": 404 }
+    { "path": "/blog/foo", "mustContain": "Blog Page" },
+    { "path": "/common/hello.txt", "mustContain": "Hello World!" },
+    { "path": "/private.txt", "status": 404 }
   ]
 }
