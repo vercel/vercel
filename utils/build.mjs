@@ -1,7 +1,7 @@
 import execa from 'execa';
 import ts from 'typescript';
 import path from 'node:path';
-import { build } from 'esbuild';
+import { build, context } from 'esbuild';
 import { fileURLToPath } from 'node:url';
 
 function parseTsConfig(tsconfigPath) {
@@ -44,7 +44,7 @@ export async function esbuild(opts = {}, cwd = process.cwd()) {
 
   let outdir = opts.outfile ? undefined : tsconfig.options.outDir;
 
-  await build({
+  const buildOptions = {
     entryPoints,
     format: 'cjs',
     outdir,
@@ -52,7 +52,14 @@ export async function esbuild(opts = {}, cwd = process.cwd()) {
     target: ts.ScriptTarget[tsconfig.options.target],
     sourcemap: tsconfig.options.sourceMap,
     ...opts,
-  });
+  };
+
+  if (process.argv.includes('--watch')) {
+    const buildContext = await context({ logLevel: 'info', ...buildOptions });
+    await buildContext.watch();
+  } else {
+    await build(buildOptions);
+  }
 }
 
 export async function tsc() {

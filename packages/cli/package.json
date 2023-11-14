@@ -17,6 +17,7 @@
     "test-dev": "pnpm test test/dev/",
     "coverage": "codecov",
     "build": "node scripts/build.mjs",
+    "watch": "node scripts/build.mjs --watch",
     "dev": "ts-node ./src/index.ts",
     "type-check": "tsc --noEmit"
   },
