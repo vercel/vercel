@@ -1,7 +1,6 @@
 node_modules
-
-/.cache
-/build
-/public/build
+site/.cache
+site/build
+site/asset-pub
 .env
 .vercel
