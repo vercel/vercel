@@ -1,6 +1,6 @@
 import { Project } from 'ts-morph';
 import { readFileSync, promises as fs } from 'fs';
-import { basename, dirname, extname, join, relative, sep } from 'path';
+import { basename, dirname, extname, join, posix, relative, sep } from 'path';
 import {
   debug,
   download,
@@ -13,6 +13,7 @@ import {
   glob,
   EdgeFunction,
   NodejsLambda,
+  rename,
   runNpmInstall,
   runPackageJsonScript,
   scanParentDirs,
@@ -428,18 +429,11 @@ module.exports = config;`;
       : null,
   ]);
 
-  // The `publicPath` is a URL prefix used at runtime. We can only strip path
-  // segments that match the `assetsBuildDirectory`.
-  let { assetsBuildDirectory: staticDir, publicPath } = remixConfig;
-  while (basename(staticDir) === basename(publicPath)) {
-    staticDir = dirname(staticDir);
-    publicPath = dirname(publicPath);
-  }
+  const staticDir = join(entrypointFsDirname, 'public');
 
-  debug(`Scanning "${staticDir}" for static files`);
-
-  const [staticFiles, ...functions] = await Promise.all([
+  const [staticFiles, buildAssets, ...functions] = await Promise.all([
     glob('**', staticDir),
+    glob('**', remixConfig.assetsBuildDirectory),
     ...serverBundles.map(bundle => {
       const firstRoute = remixConfig.routes[bundle.routes[0]];
       const config = resolvedConfigsMap.get(firstRoute) ?? {
@@ -469,10 +463,18 @@ module.exports = config;`;
     }),
   ]);
 
-  const output: BuildResultV2Typical['output'] = staticFiles;
+  const publicPath = remixConfig.publicPath.replace(/^\/|\/$/g, '');
+  const transformedBuildAssets = rename(buildAssets, name => {
+    return posix.join(publicPath, name);
+  });
+
+  const output: BuildResultV2Typical['output'] = {
+    ...staticFiles,
+    ...transformedBuildAssets,
+  };
   const routes: any[] = [
     {
-      src: '^/build/(.*)$',
+      src: `^/${publicPath}/(.*)$`,
       headers: { 'cache-control': 'public, max-age=31536000, immutable' },
       continue: true,
     },
@@ -485,13 +487,16 @@ module.exports = config;`;
     // Layout routes don't get a function / route added
     if (isLayoutRoute(route.id, remixRoutes)) continue;
 
-    const { path, rePath } = getPathFromRoute(route, remixConfig.routes);
+    let { path, rePath } = getPathFromRoute(route, remixConfig.routes);
 
     // If the route is a pathless layout route (at the root level)
     // and doesn't have any sub-routes, then a function should not be created.
     if (!path) {
       continue;
     }
+
+    path = posix.join(publicPath, path);
+    rePath = `/${posix.join(publicPath, rePath)}`;
 
     const funcIndex = serverBundles.findIndex(bundle => {
       return bundle.routes.includes(route.id);
