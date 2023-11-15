@@ -517,7 +517,7 @@ module.exports = config;`;
         : func;
 
     // If this is a dynamic route then add a Vercel route
-    const re = getRegExpFromPath(`/${posix.join(publicPath, rePath)}`);
+    const re = getRegExpFromPath(rePath);
     if (re) {
       routes.push({
         src: re.source,
