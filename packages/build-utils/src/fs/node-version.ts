@@ -8,6 +8,7 @@ export type NodeVersionMajor = ReturnType<typeof getOptions>[number]['major'];
 
 function getOptions() {
   const options = [
+    { major: 20, range: '20.x', runtime: 'nodejs20.x' },
     { major: 18, range: '18.x', runtime: 'nodejs18.x' },
     {
       major: 16,
@@ -40,12 +41,6 @@ function getOptions() {
       discontinueDate: new Date('2020-01-06'),
     },
   ] as const;
-  if (process.env.VERCEL_ALLOW_NODEJS20 === '1') {
-    return [
-      { major: 20, range: '20.x', runtime: 'nodejs20.x' },
-      ...options,
-    ] as const;
-  }
   return options;
 }
 
@@ -64,8 +59,8 @@ export function getAvailableNodeVersions(): NodeVersionMajor[] {
     .map(n => n.major);
 }
 
-function getHint(isAuto = false) {
-  const { major, range } = getLatestNodeVersion();
+function getHint(isAuto = false, availableVersions?: NodeVersionMajor[]) {
+  const { major, range } = getLatestNodeVersion(availableVersions);
   return isAuto
     ? `Please set Node.js Version to ${range} in your Project Settings to use Node.js ${major}.`
     : `Please set "engines": { "node": "${range}" } in your \`package.json\` file to use Node.js ${major}.`;
@@ -119,7 +114,8 @@ export async function getSupportedNodeVersion(
         code: 'BUILD_UTILS_NODE_VERSION_INVALID',
         link: 'http://vercel.link/node-version',
         message: `Found invalid Node.js Version: "${engineRange}". ${getHint(
-          isAuto
+          isAuto,
+          availableVersions
         )}`,
       });
     }
