@@ -1,5 +1,17 @@
 # @vercel/build-utils
 
+## 7.2.5
+
+### Patch Changes
+
+- Remove Node.js v20 env var check ([#10834](https://github.com/vercel/vercel/pull/10834))
+
+## 7.2.4
+
+### Patch Changes
+
+- Select Node.js version based on what's available in build-container ([#10822](https://github.com/vercel/vercel/pull/10822))
+
 ## 7.2.3
 
 ### Patch Changes
