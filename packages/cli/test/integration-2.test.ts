@@ -1181,10 +1181,21 @@ test('[vc build] should build project with `@vercel/speed-insights`', async () =
     const builds = await fs.readJSON(
       path.join(directory, '.vercel/output/builds.json')
     );
-    expect(builds?.features?.speedInsightsVersion).toEqual('0.0.1');
+    expect(builds?.features?.speedInsightsVersion).toEqual('0.0.4');
   } finally {
     delete process.env.VERCEL_ANALYTICS_ID;
   }
+});
+
+test('[vc build] should build project with `@vercel/web-analytics globally installed`', async () => {
+  const directory = await setupE2EFixture('vc-build-global-web-analytics');
+  const output = await execCli(binaryPath, ['build'], { cwd: directory });
+  expect(output.exitCode, formatOutput(output)).toBe(0);
+  expect(output.stderr).toContain('Build Completed in .vercel/output');
+  const builds = await fs.readJSON(
+    path.join(directory, '.vercel/output/builds.json')
+  );
+  expect(builds?.features?.webAnalyticsVersion).toEqual('1.1.1');
 });
 
 test('[vc build] should build project with `@vercel/analytics`', async () => {
