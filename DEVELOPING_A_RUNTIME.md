@@ -385,6 +385,7 @@ This is a [class](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refere
 
 This is an abstract enumeration type that is implemented by one of the following possible `String` values:
 
+- `nodejs20.x`
 - `nodejs18.x`
 - `nodejs16.x`
 - `go1.x`
