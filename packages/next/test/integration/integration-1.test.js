@@ -91,6 +91,8 @@ if (parseInt(process.versions.node.split('.')[0], 10) >= 16) {
       'api/hello',
       // app dir route handler
       'api/hello-again',
+      // app dir route handler inside of a group
+      'api/hello-again/with-group',
       // server component inside of a group
       'dynamic-group/[slug]',
       'dynamic-group/[slug].rsc',
