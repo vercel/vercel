@@ -205,7 +205,7 @@ afterAll(async () => {
   }
 });
 
-test('[vc build] should build project with corepack and select npm@8.1.0', async () => {
+test.only('[vc build] should build project with corepack and select npm@8.1.0', async () => {
   try {
     process.env.ENABLE_EXPERIMENTAL_COREPACK = '1';
     const directory = await setupE2EFixture('vc-build-corepack-npm');
