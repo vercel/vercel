@@ -586,7 +586,7 @@ async function doBuild(
 
   let needBuildsJsonOverride = false;
   const { speedInsightsVersion, webAnalyticsVersion } =
-    await readPackageVersions();
+    await readPackageVersions(pkg);
   if (speedInsightsVersion) {
     if (process.env.VERCEL_ANALYTICS_ID) {
       output.warn(
@@ -822,32 +822,51 @@ function mergeFlags(
   });
 }
 
+function makeDepencyMap(pkg: PackageJson | null): Map<string, string> {
+  return new Map([
+    ...Object.entries(pkg?.devDependencies ?? {}),
+    ...Object.entries(pkg?.dependencies ?? {}),
+  ]);
+}
+
 async function writeBuildJson(buildsJson: BuildsManifest, outputDir: string) {
   await fs.writeJSON(join(outputDir, 'builds.json'), buildsJson, { spaces: 2 });
 }
 
-async function readPackageVersions(): Promise<{
+async function readPackageVersions(descriptor: PackageJson | null): Promise<{
   speedInsightsVersion?: string;
   webAnalyticsVersion?: string;
 }> {
+  const referencedDependencies = makeDepencyMap(descriptor);
   const [speedInsightsVersion, webAnalyticsVersion] = await Promise.all([
-    readPackageVersion('@vercel/speed-insights'),
-    readPackageVersion('@vercel/analytics'),
+    readPackageVersion('@vercel/speed-insights', referencedDependencies),
+    readPackageVersion('@vercel/analytics', referencedDependencies),
   ]);
   return { webAnalyticsVersion, speedInsightsVersion };
 }
 
 async function readPackageVersion(
-  pkgName: string
+  pkgName: string,
+  dependencies: Map<string, string>
 ): Promise<string | undefined> {
+  let version = undefined;
   try {
     const descriptorPath = require.resolve(`${pkgName}/package.json`, {
       paths: [cwd()],
     });
     const descriptor = await readJSONFile<PackageJson>(descriptorPath);
     if (descriptor instanceof CantParseJSONFile) throw descriptor;
-    return descriptor?.version;
+    version = descriptor?.version;
   } catch {
     // ignore errors: the package is simply not installed.
   }
+  // we don't support monorepos, where package could be required, but is not referenced in the app's package.json.
+  if (version && !dependencies.has(pkgName)) {
+    throw new NowBuildError({
+      code: 'INVALID_CONFIGURATION',
+      message: `Package \`${pkgName}\` is globally installed, which is not supported. Please move the dependency to your deployed application's package.json`,
+      link: 'https://vercel.link/global-observability-package',
+    });
+  }
+  return version;
 }

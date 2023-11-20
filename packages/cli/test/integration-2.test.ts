@@ -1187,15 +1187,17 @@ test('[vc build] should build project with `@vercel/speed-insights`', async () =
   }
 });
 
-test('[vc build] should build project with `@vercel/web-analytics globally installed`', async () => {
+test('[vc build] should not build project with `@vercel/web-analytics globally installed`', async () => {
   const directory = await setupE2EFixture('vc-build-global-web-analytics');
   const output = await execCli(binaryPath, ['build'], { cwd: directory });
-  expect(output.exitCode, formatOutput(output)).toBe(0);
-  expect(output.stderr).toContain('Build Completed in .vercel/output');
-  const builds = await fs.readJSON(
-    path.join(directory, '.vercel/output/builds.json')
+  expect(output.exitCode, formatOutput(output)).toBe(1);
+  expect(output.stderr).not.toContain('Build Completed in .vercel/output');
+  expect(output.stderr).toContain(
+    "Package `@vercel/analytics` is globally installed, which is not supported. Please move the dependency to your deployed application's package.json"
   );
-  expect(builds?.features?.webAnalyticsVersion).toEqual('1.1.1');
+  expect(output.stderr).toContain(
+    'Learn More: https://vercel.link/global-observability-package'
+  );
 });
 
 test('[vc build] should build project with `@vercel/analytics`', async () => {
