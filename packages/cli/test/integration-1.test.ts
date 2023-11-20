@@ -208,6 +208,7 @@ afterAll(async () => {
 test.only('[vc build] should build project with corepack and select npm@8.1.0', async () => {
   try {
     process.env.ENABLE_EXPERIMENTAL_COREPACK = '1';
+    process.env.SKIP_YARN_COREPACK_CHECK = '1';
     const directory = await setupE2EFixture('vc-build-corepack-npm');
     const before = await exec(directory, 'npm', ['--version']);
     const output = await execCli(binaryPath, ['build'], { cwd: directory });
@@ -231,6 +232,7 @@ test.only('[vc build] should build project with corepack and select npm@8.1.0', 
     expect(contents).toEqual(['home', 'shim']);
   } finally {
     delete process.env.ENABLE_EXPERIMENTAL_COREPACK;
+    delete process.env.SKIP_YARN_COREPACK_CHECK;
   }
 });
 
