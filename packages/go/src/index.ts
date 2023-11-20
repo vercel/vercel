@@ -50,7 +50,7 @@ export { shouldServe };
 // we need our `main.go` to be called something else
 const MAIN_GO_FILENAME = 'main__vc__go__.go';
 
-const HANDLER_FILENAME = `handler${OUT_EXTENSION}`;
+const HANDLER_FILENAME = `bootstrap${OUT_EXTENSION}`;
 
 interface PortInfo {
   port: number;
