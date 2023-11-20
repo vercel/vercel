@@ -1187,7 +1187,7 @@ test('[vc build] should build project with `@vercel/speed-insights`', async () =
   }
 });
 
-test('[vc build] should not build project with `@vercel/web-analytics globally installed`', async () => {
+test('[vc build] should not build project with `@vercel/analytics globally installed`', async () => {
   const directory = await setupE2EFixture('vc-build-global-web-analytics');
   const output = await execCli(binaryPath, ['build'], { cwd: directory });
   expect(output.exitCode, formatOutput(output)).toBe(1);
