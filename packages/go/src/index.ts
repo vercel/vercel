@@ -252,7 +252,7 @@ export async function build({
     const lambda = new Lambda({
       files: { ...(await glob('**', outDir)), ...includedFiles },
       handler: HANDLER_FILENAME,
-      runtime: 'go1.x',
+      runtime: 'provided.al2',
       supportsWrapper: true,
       environment: {},
     });
