@@ -61,6 +61,9 @@ async function bundleInstall(
     );
   }
 
+  await execa('ls', ['-l', dirname(bundlePath)], { stdio: 'inherit' });
+  await execa('ls', ['-l', '/ruby32'], { stdio: 'inherit' });
+
   //await execa('bundler', ['add', 'webrick'], {
   await execa('gem', ['install', 'webrick'], {
     stdio: 'pipe',
