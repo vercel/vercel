@@ -47,6 +47,7 @@ async function bundleInstall(
   gemfilePath: string
 ) {
   debug(`running "bundle install --deployment"...`);
+  console.log({ bundlePath, bundleDir, gemfilePath });
   const bundleAppConfig = await getWriteableDirectory();
   const gemfileContent = await readFile(gemfilePath, 'utf8');
   if (gemfileContent.includes('ruby "~> 2.7.x"')) {
@@ -106,6 +107,18 @@ export async function build({
   const hasRootVendorDir = await pathExists(vendorDir);
   const hasRelativeVendorDir = await pathExists(relativeVendorDir);
   const hasVendorDir = hasRootVendorDir || hasRelativeVendorDir;
+  console.log({
+    gemHome,
+    bundlerPath,
+    vendorPath,
+    runtime,
+    vendorDir,
+    bundleDir,
+    relativeVendorDir,
+    hasRootVendorDir,
+    hasRelativeVendorDir,
+    hasVendorDir,
+  });
 
   if (hasRelativeVendorDir) {
     if (hasRootVendorDir) {
