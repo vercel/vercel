@@ -30,7 +30,7 @@ export default async function rm(
   output: Output
 ) {
   // improve the way we show inquirer prompts
-  await import('../../util/input/patch-inquirer');
+  await import('../../util/input/patch-inquirer.js');
 
   if (args.length > 3) {
     output.error(

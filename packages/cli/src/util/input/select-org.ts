@@ -10,7 +10,7 @@ export default async function selectOrg(
   question: string,
   autoConfirm?: boolean
 ): Promise<Org> {
-  await import('./patch-inquirer');
+  await import('./patch-inquirer.js');
   const {
     output,
     config: { currentTeam },

@@ -54,7 +54,7 @@ export default async function list(
     eraseFinalAnswer = false, // If true, the line with the final answer that inquirer prints will be erased before returning
   }: ListOptions
 ): Promise<string> {
-  await import('./patch-inquirer');
+  await import('./patch-inquirer.js');
 
   let biggestLength = 0;
   let selected: string | undefined;
