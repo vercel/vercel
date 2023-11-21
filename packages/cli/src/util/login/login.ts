@@ -21,7 +21,7 @@ export default async function login(
         );
       }
 
-      if (err.code === 'invalid_email' && /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email)) {
+      if (err.code === 'invalid_email' || /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email)) {
         throw new InvalidEmail(email, err.message);
       }
     }
