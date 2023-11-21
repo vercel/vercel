@@ -1,5 +1,11 @@
 # @vercel/ruby
 
+## 2.0.3
+
+### Patch Changes
+
+- Enable `ruby3.2` runtime ([#10859](https://github.com/vercel/vercel/pull/10859))
+
 ## 2.0.2
 
 ### Patch Changes
