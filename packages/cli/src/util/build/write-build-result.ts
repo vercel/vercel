@@ -8,7 +8,7 @@ import {
   relative,
   resolve,
   posix,
-} from 'path';
+} from 'node:path';
 import {
   Builder,
   BuildResultV2,
@@ -28,9 +28,9 @@ import {
   normalizePath,
 } from '@vercel/build-utils';
 import pipe from 'promisepipe';
-import { merge } from './merge';
-import { unzip } from './unzip';
-import { VERCEL_DIR } from '../projects/link';
+import { merge } from './merge.js';
+import { unzip } from './unzip.js';
+import { VERCEL_DIR } from '../projects/link.js';
 import { fileNameSymbol, VercelConfig } from '@vercel/client';
 
 const { normalize } = posix;

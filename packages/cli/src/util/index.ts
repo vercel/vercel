@@ -1,22 +1,21 @@
-import EventEmitter from 'events';
+import EventEmitter from 'node:events';
 import qs from 'querystring';
-import { parse as parseUrl } from 'url';
+import { parse as parseUrl, URLSearchParams } from 'node:url';
 import retry from 'async-retry';
 import ms from 'ms';
 import fetch, { Headers } from 'node-fetch';
-import { URLSearchParams } from 'url';
 import bytes from 'bytes';
 import chalk from 'chalk';
-import ua from './ua';
-import processDeployment from './deploy/process-deployment';
-import highlight from './output/highlight';
-import { responseError } from './error';
-import stamp from './output/stamp';
-import { APIError, BuildError } from './errors-ts';
-import printIndications from './print-indications';
+import ua from './ua.js';
+import processDeployment from './deploy/process-deployment.js';
+import highlight from './output/highlight.js';
+import { responseError } from './error.js';
+import stamp from './output/stamp.js';
+import { APIError, BuildError } from './errors-ts.js';
+import printIndications from './print-indications.js';
 import { GitMetadata, Org } from '@vercel-internals/types';
-import { VercelConfig } from './dev/types';
-import Client, { FetchOptions, isJSONObject } from './client';
+import { VercelConfig } from './dev/types.js';
+import Client, { FetchOptions, isJSONObject } from './client.js';
 import { ArchiveFormat, Dictionary } from '@vercel/client';
 
 export interface NowOptions {

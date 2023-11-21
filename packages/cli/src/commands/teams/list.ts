@@ -1,12 +1,12 @@
-import chars from '../../util/output/chars';
-import table from '../../util/output/table';
-import getUser from '../../util/get-user';
-import getTeams from '../../util/teams/get-teams';
-import { packageName } from '../../util/pkg-name';
-import getCommandFlags from '../../util/get-command-flags';
-import cmd from '../../util/output/cmd';
-import Client from '../../util/client';
-import getArgs from '../../util/get-args';
+import chars from '../../util/output/chars.js';
+import table from '../../util/output/table.js';
+import getUser from '../../util/get-user.js';
+import getTeams from '../../util/teams/get-teams.js';
+import { packageName } from '../../util/pkg-name.js';
+import getCommandFlags from '../../util/get-command-flags.js';
+import cmd from '../../util/output/cmd.js';
+import Client from '../../util/client.js';
+import getArgs from '../../util/get-args.js';
 
 export default async function list(client: Client): Promise<number> {
   const { config, output } = client;

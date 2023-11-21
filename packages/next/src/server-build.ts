@@ -1,4 +1,4 @@
-import path from 'path';
+import path from 'node:path';
 import semver from 'semver';
 import { Sema } from 'async-sema';
 import {
@@ -17,8 +17,8 @@ import {
   NodejsLambda,
 } from '@vercel/build-utils';
 import { Route, RouteWithHandle } from '@vercel/routing-utils';
-import { MAX_AGE_ONE_YEAR } from '.';
-import { MAX_UNCOMPRESSED_LAMBDA_SIZE } from './constants';
+import { MAX_AGE_ONE_YEAR } from './index.js';
+import { MAX_UNCOMPRESSED_LAMBDA_SIZE } from './constants.js';
 import {
   NextRequiredServerFilesManifest,
   NextImagesManifest,
@@ -52,16 +52,17 @@ import {
   RSC_PREFETCH_SUFFIX,
   normalizePrefetches,
   CreateLambdaFromPseudoLayersOptions,
-} from './utils';
+} from './utils.js';
 import {
   nodeFileTrace,
   NodeFileTraceReasons,
   NodeFileTraceResult,
 } from '@vercel/nft';
 import resolveFrom from 'resolve-from';
-import fs, { lstat } from 'fs-extra';
+import fs from 'fs-extra';
 import escapeStringRegexp from 'escape-string-regexp';
 import prettyBytes from 'pretty-bytes';
+import type { lstat } from 'node:fs/promises';
 
 // related PR: https://github.com/vercel/next.js/pull/30046
 const CORRECT_NOT_FOUND_ROUTES_VERSION = 'v12.0.1';

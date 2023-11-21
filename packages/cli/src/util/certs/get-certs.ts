@@ -1,4 +1,4 @@
-import Client from '../client';
+import Client from '../client.js';
 import { Cert, PaginationOptions } from '@vercel-internals/types';
 
 type Response = {

@@ -1,6 +1,6 @@
-import assert from 'assert';
+import assert from 'node:assert';
 import intoStream from 'into-stream';
-import { FileBase } from './types';
+import { FileBase } from './types.js';
 
 interface FileBlobOptions {
   mode?: number;

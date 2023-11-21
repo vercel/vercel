@@ -1,5 +1,5 @@
-import path from 'path';
-import { pathExists, readJson, appendFile } from 'fs-extra';
+import path from 'node:path';
+import fs from 'fs-extra';
 import { Route } from '@vercel/routing-utils';
 import {
   Files,
@@ -9,11 +9,12 @@ import {
   EdgeFunction,
   BuildResultV2,
 } from '@vercel/build-utils';
-import { isObjectEmpty } from './_shared';
+import { isObjectEmpty } from './_shared.js';
 import { Project } from 'ts-morph';
 import { getConfig } from '@vercel/static-config';
 import { isErrnoException } from '@vercel/error-utils';
 
+const { pathExists, readJson, appendFile } = fs;
 const BUILD_OUTPUT_DIR = '.output';
 const BRIDGE_MIDDLEWARE_V2_TO_V3 = `
 

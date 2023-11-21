@@ -2,14 +2,8 @@ import path from 'path';
 import { URL, parse as parseUrl } from 'url';
 import fetch, { RequestInit } from 'node-fetch';
 import retry from 'async-retry';
-import fs, {
-  writeFile,
-  readFile,
-  remove,
-  copy,
-  ensureDir,
-  mkdir,
-} from 'fs-extra';
+import fs, { remove, copy, ensureDir } from 'fs-extra';
+import { writeFile, readFile, mkdir } from 'node:fs/promises';
 import sleep from '../src/util/sleep';
 import {
   disableSSO,

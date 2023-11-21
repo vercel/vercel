@@ -1,5 +1,5 @@
-import { join } from 'path';
-import { promises as fs } from 'fs';
+import { join } from 'node:path';
+import { promises as fs } from 'node:fs';
 import { BuildResultV2, Meta } from '@vercel/build-utils';
 import { Framework } from '@vercel/frameworks';
 

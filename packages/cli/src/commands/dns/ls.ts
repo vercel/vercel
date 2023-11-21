@@ -1,21 +1,21 @@
 import chalk from 'chalk';
 import ms from 'ms';
-import { DomainNotFound } from '../../util/errors-ts';
+import { DomainNotFound } from '../../util/errors-ts.js';
 import type { DNSRecord } from '@vercel-internals/types';
-import Client from '../../util/client';
-import formatTable from '../../util/format-table';
+import Client from '../../util/client.js';
+import formatTable from '../../util/format-table.js';
 import getDNSRecords, {
   DomainRecordsItem,
-} from '../../util/dns/get-dns-records';
-import getDomainDNSRecords from '../../util/dns/get-domain-dns-records';
-import getScope from '../../util/get-scope';
+} from '../../util/dns/get-dns-records.js';
+import getDomainDNSRecords from '../../util/dns/get-domain-dns-records.js';
+import getScope from '../../util/get-scope.js';
 import {
   PaginationOptions,
   getPaginationOpts,
-} from '../../util/get-pagination-opts';
-import stamp from '../../util/output/stamp';
-import getCommandFlags from '../../util/get-command-flags';
-import { getCommandName } from '../../util/pkg-name';
+} from '../../util/get-pagination-opts.js';
+import stamp from '../../util/output/stamp.js';
+import getCommandFlags from '../../util/get-command-flags.js';
+import { getCommandName } from '../../util/pkg-name.js';
 
 export default async function ls(
   client: Client,

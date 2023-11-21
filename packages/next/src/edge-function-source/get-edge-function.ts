@@ -1,6 +1,6 @@
 /// <reference lib="DOM" />
 
-import { toPlainHeaders } from './to-plain-headers';
+import { toPlainHeaders } from './to-plain-headers.js';
 
 export interface NextjsParams {
   /**

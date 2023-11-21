@@ -1,9 +1,9 @@
-import { URL } from 'url';
-import Client from '../client';
+import { URL } from 'node:url';
+import Client from '../client.js';
 import chalk from 'chalk';
-import link from '../output/link';
-import { isAPIError } from '../errors-ts';
-import { Output } from '../output';
+import link from '../output/link.js';
+import { isAPIError } from '../errors-ts.js';
+import { Output } from '../output/index.js';
 import { Dictionary } from '@vercel/client';
 import type { Org } from '@vercel-internals/types';
 

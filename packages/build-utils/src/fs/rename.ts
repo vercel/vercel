@@ -1,4 +1,4 @@
-import { Files } from '../types';
+import { Files } from '../types.js';
 type Delegate = (name: string) => string;
 
 /**

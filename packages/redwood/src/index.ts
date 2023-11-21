@@ -5,8 +5,8 @@ import {
   parse as parsePath,
   sep,
   basename as pathBasename,
-} from 'path';
-import { readFileSync, lstatSync, existsSync } from 'fs';
+} from 'node:path';
+import { readFileSync, lstatSync, existsSync } from 'node:fs';
 import { intersects, validRange } from 'semver';
 import {
   Lambda,

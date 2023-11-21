@@ -1,10 +1,10 @@
-import { join } from 'path';
-import { existsSync, promises } from 'fs';
+import { join } from 'node:path';
+import { existsSync, promises } from 'node:fs';
 
-import { Framework } from './types';
-import { readConfigFile } from './read-config-file';
+import { Framework } from './types.js';
+import { readConfigFile } from './read-config-file.js';
 
-export * from './types';
+export * from './types.js';
 
 const { readdir, readFile, unlink } = promises;
 

@@ -37,21 +37,15 @@ import { Sema } from 'async-sema';
 // escape-string-regexp version must match Next.js version
 import escapeStringRegexp from 'escape-string-regexp';
 import findUp from 'find-up';
-import {
-  lstat,
-  pathExists,
-  readFile,
-  readJSON,
-  remove,
-  writeFile,
-} from 'fs-extra';
-import path from 'path';
+import { pathExists, readJSON, remove } from 'fs-extra';
+import { lstat, readFile, writeFile } from 'node:fs/promises';
+import path from 'node:path';
 import semver from 'semver';
-import url from 'url';
-import createServerlessConfig from './create-serverless-config';
-import nextLegacyVersions from './legacy-versions';
-import { serverBuild } from './server-build';
-import { MIB } from './constants';
+import url from 'node:url';
+import createServerlessConfig from './create-serverless-config.js';
+import nextLegacyVersions from './legacy-versions.js';
+import { serverBuild } from './server-build.js';
+import { MIB } from './constants.js';
 import {
   collectTracedFiles,
   createLambdaFromPseudoLayers,
@@ -92,7 +86,7 @@ import {
   getFunctionsConfigManifest,
   require_,
   getServerlessPages,
-} from './utils';
+} from './utils.js';
 
 export const version = 2;
 export const htmlContentType = 'text/html; charset=utf-8';

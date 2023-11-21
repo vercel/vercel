@@ -1,4 +1,4 @@
-import Client from '../client';
+import Client from '../client.js';
 
 type Response = {
   deployments: Array<{

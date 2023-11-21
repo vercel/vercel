@@ -1,10 +1,10 @@
 import which from 'which';
 import execa from 'execa';
-import { dirname } from 'path';
+import { dirname } from 'node:path';
 import { listen } from 'async-listen';
 import { scanParentDirs, walkParentDirs } from '@vercel/build-utils';
-import { createProxy } from './proxy';
-import type Client from '../client';
+import { createProxy } from './proxy.js';
+import type Client from '../client.js';
 
 /**
  * Attempts to execute a Vercel CLI Extension.

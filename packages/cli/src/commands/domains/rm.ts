@@ -1,22 +1,25 @@
 import chalk from 'chalk';
 import plural from 'pluralize';
 
-import { DomainNotFound, DomainPermissionDenied } from '../../util/errors-ts';
+import {
+  DomainNotFound,
+  DomainPermissionDenied,
+} from '../../util/errors-ts.js';
 import type { Domain } from '@vercel-internals/types';
-import { Output } from '../../util/output';
-import Client from '../../util/client';
-import deleteCertById from '../../util/certs/delete-cert-by-id';
-import getDomainByName from '../../util/domains/get-domain-by-name';
-import getScope from '../../util/get-scope';
-import removeAliasById from '../../util/alias/remove-alias-by-id';
-import removeDomainByName from '../../util/domains/remove-domain-by-name';
-import stamp from '../../util/output/stamp';
-import * as ERRORS from '../../util/errors-ts';
-import param from '../../util/output/param';
-import promptBool from '../../util/input/prompt-bool';
-import setCustomSuffix from '../../util/domains/set-custom-suffix';
-import { findProjectsForDomain } from '../../util/projects/find-projects-for-domain';
-import { getCommandName } from '../../util/pkg-name';
+import { Output } from '../../util/output/index.js';
+import Client from '../../util/client.js';
+import deleteCertById from '../../util/certs/delete-cert-by-id.js';
+import getDomainByName from '../../util/domains/get-domain-by-name.js';
+import getScope from '../../util/get-scope.js';
+import removeAliasById from '../../util/alias/remove-alias-by-id.js';
+import removeDomainByName from '../../util/domains/remove-domain-by-name.js';
+import stamp from '../../util/output/stamp.js';
+import * as ERRORS from '../../util/errors-ts.js';
+import param from '../../util/output/param.js';
+import promptBool from '../../util/input/prompt-bool.js';
+import setCustomSuffix from '../../util/domains/set-custom-suffix.js';
+import { findProjectsForDomain } from '../../util/projects/find-projects-for-domain.js';
+import { getCommandName } from '../../util/pkg-name.js';
 
 type Options = {
   '--yes': boolean;

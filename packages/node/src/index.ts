@@ -1,14 +1,14 @@
 import { isErrnoException } from '@vercel/error-utils';
-import url from 'url';
-import { spawn } from 'child_process';
-import { createRequire } from 'module';
+import url from 'node:url';
+import { spawn } from 'node:child_process';
+import { createRequire } from 'node:module';
 import {
   readFileSync,
   lstatSync,
   readlinkSync,
   statSync,
   promises as fsp,
-} from 'fs';
+} from 'node:fs';
 import {
   basename,
   dirname,
@@ -18,11 +18,11 @@ import {
   resolve,
   sep,
   parse as parsePath,
-} from 'path';
+} from 'node:path';
 import { Project } from 'ts-morph';
 import once from '@tootallnate/once';
 import { nodeFileTrace } from '@vercel/nft';
-import nftResolveDependency from '@vercel/nft/out/resolve-dependency';
+import nftResolveDependency from '@vercel/nft/out/resolve-dependency.js';
 import {
   glob,
   download,
@@ -53,17 +53,17 @@ import type {
 } from '@vercel/build-utils';
 import { getConfig } from '@vercel/static-config';
 
-import { fixConfig, Register, register } from './typescript';
+import { fixConfig, Register, register } from './typescript.js';
 import {
   validateConfiguredRuntime,
   entrypointToOutputPath,
   getRegExpFromMatchers,
   isEdgeRuntime,
-} from './utils';
+} from './utils.js';
 import {
   forkDevServer,
   readMessage as readDevServerMessage,
-} from './fork-dev-server';
+} from './fork-dev-server.js';
 
 export { shouldServe };
 
@@ -190,7 +190,7 @@ async function compile(
       conditions,
       resolve(id, parent, job, cjsResolve) {
         const normalizedWasmImports = id.replace(/\.wasm\?module$/i, '.wasm');
-        return nftResolveDependency(
+        return nftResolveDependency.default(
           normalizedWasmImports,
           parent,
           job,

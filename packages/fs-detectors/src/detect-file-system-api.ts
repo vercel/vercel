@@ -1,5 +1,5 @@
 import semver from 'semver';
-import { isOfficialRuntime } from './';
+import { isOfficialRuntime } from './index.js';
 import type {
   Builder,
   BuilderFunctions,

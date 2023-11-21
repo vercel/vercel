@@ -1,4 +1,4 @@
-import { HandleValue } from './index';
+import { HandleValue } from './index.js';
 
 export type RouteApiError = {
   name: string;

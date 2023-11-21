@@ -2,7 +2,7 @@ import { basename, join, dirname } from 'path';
 import { getNextjsEdgeFunctionSource } from '../../src/edge-function-source/get-edge-function-source';
 import { nanoid } from 'nanoid';
 import { tmpdir } from 'os';
-import { writeFile } from 'fs-extra';
+import { writeFile } from 'node:fs/promises';
 import { randomBytes } from 'crypto';
 
 it('should throw an error when exceeds the script size limit', async () => {

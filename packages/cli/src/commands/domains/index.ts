@@ -1,16 +1,16 @@
-import Client from '../../util/client';
-import getArgs from '../../util/get-args';
-import getSubcommand from '../../util/get-subcommand';
-import handleError from '../../util/handle-error';
-import add from './add';
-import buy from './buy';
-import transferIn from './transfer-in';
-import inspect from './inspect';
-import ls from './ls';
-import rm from './rm';
-import move from './move';
-import { domainsCommand } from './command';
-import { help } from '../help';
+import Client from '../../util/client.js';
+import getArgs from '../../util/get-args.js';
+import getSubcommand from '../../util/get-subcommand.js';
+import handleError from '../../util/handle-error.js';
+import add from './add.js';
+import buy from './buy.js';
+import transferIn from './transfer-in.js';
+import inspect from './inspect.js';
+import ls from './ls.js';
+import rm from './rm.js';
+import move from './move.js';
+import { domainsCommand } from './command.js';
+import { help } from '../help.js';
 
 const COMMAND_CONFIG = {
   add: ['add'],

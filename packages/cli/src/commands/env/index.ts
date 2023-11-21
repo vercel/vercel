@@ -1,22 +1,22 @@
 import chalk from 'chalk';
-import Client from '../../util/client';
+import Client from '../../util/client.js';
 import {
   getEnvTargetPlaceholder,
   isValidEnvTarget,
-} from '../../util/env/env-target';
-import getArgs from '../../util/get-args';
-import getInvalidSubcommand from '../../util/get-invalid-subcommand';
-import getSubcommand from '../../util/get-subcommand';
-import handleError from '../../util/handle-error';
-import { help } from '../help';
-import { getCommandName } from '../../util/pkg-name';
-import { getLinkedProject } from '../../util/projects/link';
+} from '../../util/env/env-target.js';
+import getArgs from '../../util/get-args.js';
+import getInvalidSubcommand from '../../util/get-invalid-subcommand.js';
+import getSubcommand from '../../util/get-subcommand.js';
+import handleError from '../../util/handle-error.js';
+import { help } from '../help.js';
+import { getCommandName } from '../../util/pkg-name.js';
+import { getLinkedProject } from '../../util/projects/link.js';
 
-import add from './add';
-import ls from './ls';
-import pull from './pull';
-import rm from './rm';
-import { envCommand } from './command';
+import add from './add.js';
+import ls from './ls.js';
+import pull from './pull.js';
+import rm from './rm.js';
+import { envCommand } from './command.js';
 
 const COMMAND_CONFIG = {
   ls: ['ls', 'list'],

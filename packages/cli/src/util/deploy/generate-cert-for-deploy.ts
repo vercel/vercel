@@ -1,9 +1,9 @@
 import psl from 'psl';
-import { NowError } from '../now-error';
-import Client from '../client';
-import createCertForCns from '../certs/create-cert-for-cns';
-import setupDomain from '../domains/setup-domain';
-import { InvalidDomain } from '../errors-ts';
+import { NowError } from '../now-error.js';
+import Client from '../client.js';
+import createCertForCns from '../certs/create-cert-for-cns.js';
+import setupDomain from '../domains/setup-domain.js';
+import { InvalidDomain } from '../errors-ts.js';
 
 export default async function generateCertForDeploy(
   client: Client,

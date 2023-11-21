@@ -1,11 +1,11 @@
-import getArgs from '../../util/get-args';
-import getSubcommand from '../../util/get-subcommand';
-import Client from '../../util/client';
-import handleError from '../../util/handle-error';
-import init from './init';
+import getArgs from '../../util/get-args.js';
+import getSubcommand from '../../util/get-subcommand.js';
+import Client from '../../util/client.js';
+import handleError from '../../util/handle-error.js';
+import init from './init.js';
 import { isError } from '@vercel/error-utils';
-import { help } from '../help';
-import { initCommand } from './command';
+import { help } from '../help.js';
+import { initCommand } from './command.js';
 
 const COMMAND_CONFIG = {
   init: ['init'],

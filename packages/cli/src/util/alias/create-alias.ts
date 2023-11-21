@@ -1,8 +1,8 @@
 import type { Deployment } from '@vercel-internals/types';
-import { Output } from '../output';
-import * as ERRORS from '../errors-ts';
-import Client from '../client';
-import createCertForAlias from '../certs/create-cert-for-alias';
+import { Output } from '../output/index.js';
+import * as ERRORS from '../errors-ts.js';
+import Client from '../client.js';
+import createCertForAlias from '../certs/create-cert-for-alias.js';
 
 export type AliasRecord = {
   uid: string;

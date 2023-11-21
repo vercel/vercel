@@ -1,6 +1,7 @@
 {
   "name": "@vercel/remix-builder",
   "version": "2.0.11",
+  "type": "module",
   "license": "Apache-2.0",
   "main": "./dist/index.js",
   "homepage": "https://vercel.com/docs",
@@ -10,7 +11,7 @@
     "directory": "packages/remix"
   },
   "scripts": {
-    "build": "node ../../utils/build-builder.mjs",
+    "build": "node ../../utils/build-builder.js",
     "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --bail --runInBand",
     "test-unit": "pnpm test test/unit.*test.*",
     "test-e2e": "pnpm test test/integration.test.ts",

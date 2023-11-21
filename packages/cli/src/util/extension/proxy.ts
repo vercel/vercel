@@ -1,12 +1,12 @@
-import { createServer } from 'http';
+import { createServer } from 'node:http';
 import { Headers } from 'node-fetch';
 import {
   toOutgoingHeaders,
   mergeIntoServerResponse,
   buildToHeaders,
 } from '@edge-runtime/node-utils';
-import type { Server } from 'http';
-import type Client from '../client';
+import type { Server } from 'node:http';
+import type Client from '../client.js';
 
 const toHeaders = buildToHeaders({ Headers });
 

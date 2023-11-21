@@ -1,4 +1,4 @@
-import type { Files, FunctionFramework } from './types';
+import type { Files, FunctionFramework } from './types.js';
 
 /**
  * An Edge Functions output

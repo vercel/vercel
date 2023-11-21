@@ -1,8 +1,12 @@
 import chalk from 'chalk';
 import retry from 'async-retry';
-import { DomainAlreadyExists, InvalidDomain, isAPIError } from '../errors-ts';
+import {
+  DomainAlreadyExists,
+  InvalidDomain,
+  isAPIError,
+} from '../errors-ts.js';
 import type { Domain } from '@vercel-internals/types';
-import Client from '../client';
+import Client from '../client.js';
 
 type Response = {
   domain: Domain;

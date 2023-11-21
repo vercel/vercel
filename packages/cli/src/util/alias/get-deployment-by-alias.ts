@@ -1,11 +1,11 @@
-import path from 'path';
+import path from 'node:path';
 import chalk from 'chalk';
-import Client from '../client';
-import { Output } from '../output';
+import Client from '../client.js';
+import { Output } from '../output/index.js';
 import type { User } from '@vercel-internals/types';
-import { VercelConfig } from '../dev/types';
-import getDeploymentsByAppName from '../deploy/get-deployments-by-appname';
-import getDeployment from '../get-deployment';
+import { VercelConfig } from '../dev/types.js';
+import getDeploymentsByAppName from '../deploy/get-deployments-by-appname.js';
+import getDeployment from '../get-deployment.js';
 
 async function getAppLastDeployment(
   output: Output,

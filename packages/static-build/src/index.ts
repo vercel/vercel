@@ -1,12 +1,12 @@
 import ms from 'ms';
-import path from 'path';
+import path from 'node:path';
 import fetch from 'node-fetch';
 import getPort from 'get-port';
 import isPortReachable from 'is-port-reachable';
 import frameworks, { Framework } from '@vercel/frameworks';
-import type { ChildProcess, SpawnOptions } from 'child_process';
-import { existsSync, readFileSync, statSync, readdirSync } from 'fs';
-import { cpus } from 'os';
+import type { ChildProcess, SpawnOptions } from 'node:child_process';
+import { existsSync, readFileSync, statSync, readdirSync } from 'node:fs';
+import { cpus } from 'node:os';
 import {
   BuildV2,
   Files,
@@ -34,12 +34,12 @@ import {
   cloneEnv,
 } from '@vercel/build-utils';
 import type { Route, RouteWithSrc } from '@vercel/routing-utils';
-import * as BuildOutputV1 from './utils/build-output-v1';
-import * as BuildOutputV2 from './utils/build-output-v2';
-import * as BuildOutputV3 from './utils/build-output-v3';
-import * as GatsbyUtils from './utils/gatsby';
-import * as NuxtUtils from './utils/nuxt';
-import type { ImagesConfig, BuildConfig } from './utils/_shared';
+import * as BuildOutputV1 from './utils/build-output-v1.js';
+import * as BuildOutputV2 from './utils/build-output-v2.js';
+import * as BuildOutputV3 from './utils/build-output-v3.js';
+import * as GatsbyUtils from './utils/gatsby.js';
+import * as NuxtUtils from './utils/nuxt.js';
+import type { ImagesConfig, BuildConfig } from './utils/_shared.js';
 import treeKill from 'tree-kill';
 import {
   detectFrameworkRecord,

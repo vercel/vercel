@@ -1,6 +1,7 @@
 {
   "name": "@vercel/client",
   "version": "13.0.9",
+  "type": "module",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "homepage": "https://vercel.com",
@@ -14,7 +15,7 @@
     "directory": "packages/client"
   },
   "scripts": {
-    "build": "node ../../utils/build.mjs",
+    "build": "node ../../utils/build.js",
     "test-e2e": "pnpm test tests/create-deployment.test.ts tests/create-legacy-deployment.test.ts tests/paths.test.ts",
     "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --runInBand --bail",
     "test-unit": "pnpm test tests/unit.*test.*",

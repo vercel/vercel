@@ -9,8 +9,8 @@
     "typeRoots": ["./types", "./node_modules/@types"]
   },
   "extends": "../../tsconfig.base.json",
-  "include": ["./types", "src/**/*"],
-  "exclude": ["templates/*"],
+  "include": ["src/**/*"],
+  "exclude": ["templates/*", "node_modules"],
   "ts-node": {
     "swc": true // https://typestrong.org/ts-node/docs/swc/
   }

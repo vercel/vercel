@@ -1,5 +1,5 @@
 import { Response } from 'node-fetch';
-import { APIError } from './errors-ts';
+import { APIError } from './errors-ts.js';
 
 export default async function responseError(
   res: Response,

@@ -1,13 +1,13 @@
-import type Client from '../../util/client';
-import getArgs from '../../util/get-args';
-import getProjectByCwdOrLink from '../../util/projects/get-project-by-cwd-or-link';
-import handleError from '../../util/handle-error';
+import type Client from '../../util/client.js';
+import getArgs from '../../util/get-args.js';
+import getProjectByCwdOrLink from '../../util/projects/get-project-by-cwd-or-link.js';
+import handleError from '../../util/handle-error.js';
 import { isErrnoException } from '@vercel/error-utils';
 import ms from 'ms';
-import requestPromote from './request-promote';
-import promoteStatus from './status';
-import { promoteCommand } from './command';
-import { help } from '../help';
+import requestPromote from './request-promote.js';
+import promoteStatus from './status.js';
+import { promoteCommand } from './command.js';
+import { help } from '../help.js';
 
 /**
  * `vc promote` command

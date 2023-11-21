@@ -1,11 +1,11 @@
 import chalk from 'chalk';
 import * as ansiEscapes from 'ansi-escapes';
 import { supportsHyperlink as detectSupportsHyperlink } from 'supports-hyperlinks';
-import renderLink from './link';
-import wait, { StopSpinner } from './wait';
+import renderLink from './link.js';
+import wait, { StopSpinner } from './wait.js';
 import { errorToString } from '@vercel/error-utils';
-import { removeEmoji } from '../emoji';
-import type * as tty from 'tty';
+import { removeEmoji } from '../emoji.js';
+import type * as tty from 'node:tty';
 
 const IS_TEST = process.env.NODE_ENV === 'test';
 

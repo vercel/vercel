@@ -28,8 +28,8 @@ THE SOFTWARE.
     - use `lstat` instead of `stat` so that symlinks are not followed
 */
 
-import fs from 'fs';
-import p from 'path';
+import fs from 'node:fs';
+import p from 'node:path';
 import minimatch from 'minimatch';
 
 function patternMatcher(pattern: string) {

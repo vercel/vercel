@@ -1,5 +1,5 @@
 import { contentType } from 'mime-types';
-import path from 'path';
+import path from 'node:path';
 
 export default function getMimeType(fileName: string) {
   const extension = path.extname(fileName);

@@ -1,9 +1,7 @@
 import yaml from 'js-yaml';
 import toml from '@iarna/toml';
-import { promises } from 'fs';
+import { readFile } from 'node:fs/promises';
 import { isErrnoException } from '@vercel/error-utils';
-
-const { readFile } = promises;
 
 async function readFileOrNull(file: string) {
   try {

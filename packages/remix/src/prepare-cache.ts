@@ -1,6 +1,6 @@
 import { glob } from '@vercel/build-utils';
-import { dirname, join, relative } from 'path';
-import { require_, chdirAndReadConfig } from './utils';
+import { dirname, join, relative } from 'node:path';
+import { require_, chdirAndReadConfig } from './utils.js';
 import type { PrepareCache } from '@vercel/build-utils';
 
 export const prepareCache: PrepareCache = async ({

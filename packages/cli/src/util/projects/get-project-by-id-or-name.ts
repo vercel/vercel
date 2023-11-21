@@ -1,6 +1,6 @@
-import Client from '../client';
+import Client from '../client.js';
 import type { Project } from '@vercel-internals/types';
-import { isAPIError, ProjectNotFound } from '../errors-ts';
+import { isAPIError, ProjectNotFound } from '../errors-ts.js';
 
 export default async function getProjectByNameOrId(
   client: Client,

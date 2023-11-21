@@ -1,5 +1,5 @@
-import * as ERRORS from '../errors-ts';
-import Client from '../client';
+import * as ERRORS from '../errors-ts.js';
+import Client from '../client.js';
 
 export default async function removeDomainByName(
   now: Client,

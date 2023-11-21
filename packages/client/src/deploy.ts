@@ -1,19 +1,19 @@
-import { FilesMap } from './utils/hashes';
-import { generateQueryString } from './utils/query-string';
-import { isReady, isAliasAssigned } from './utils/ready-state';
-import { checkDeploymentStatus } from './check-deployment-status';
+import { FilesMap } from './utils/hashes.js';
+import { generateQueryString } from './utils/query-string.js';
+import { isReady, isAliasAssigned } from './utils/ready-state.js';
+import { checkDeploymentStatus } from './check-deployment-status.js';
 import {
   fetch,
   prepareFiles,
   createDebug,
   getApiDeploymentsUrl,
-} from './utils';
+} from './utils/index.js';
 import {
   Deployment,
   DeploymentOptions,
   VercelClientOptions,
   DeploymentEventType,
-} from './types';
+} from './types.js';
 
 async function* postDeployment(
   files: FilesMap,

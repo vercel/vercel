@@ -1,9 +1,9 @@
 import once from '@tootallnate/once';
 import { cloneEnv } from '@vercel/build-utils';
 import type { Config, Meta } from '@vercel/build-utils';
-import { ChildProcess, fork, ForkOptions } from 'child_process';
-import { pathToFileURL } from 'url';
-import { join } from 'path';
+import { ChildProcess, fork, ForkOptions } from 'node:child_process';
+import { pathToFileURL } from 'node:url';
+import { join } from 'node:path';
 
 export function forkDevServer(options: {
   tsConfig: any;

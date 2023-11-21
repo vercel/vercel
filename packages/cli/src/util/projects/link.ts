@@ -1,29 +1,30 @@
-import fs from 'fs';
+import fs from 'node:fs';
 import AJV from 'ajv';
 import chalk from 'chalk';
-import { join, relative } from 'path';
+import { join, relative } from 'node:path';
 import { ensureDir } from 'fs-extra';
-import { promisify } from 'util';
+import { promisify } from 'node:util';
 
-import getProjectByIdOrName from '../projects/get-project-by-id-or-name';
-import Client from '../client';
-import { InvalidToken, isAPIError, ProjectNotFound } from '../errors-ts';
-import getUser from '../get-user';
-import getTeamById from '../teams/get-team-by-id';
+import getProjectByIdOrName from '../projects/get-project-by-id-or-name.js';
+import Client from '../client.js';
+import { InvalidToken, isAPIError, ProjectNotFound } from '../errors-ts.js';
+import getUser from '../get-user.js';
+import getTeamById from '../teams/get-team-by-id.js';
 import type {
   Project,
   ProjectLinkResult,
   Org,
   ProjectLink,
 } from '@vercel-internals/types';
-import { prependEmoji, emoji, EmojiLabel } from '../emoji';
-import { isDirectory } from '../config/global-path';
+import { prependEmoji, emoji, EmojiLabel } from '../emoji.js';
+import { isDirectory } from '../config/global-path.js';
 import { NowBuildError, getPlatformEnv } from '@vercel/build-utils';
-import outputCode from '../output/code';
+import outputCode from '../output/code.js';
 import { isErrnoException, isError } from '@vercel/error-utils';
-import { findProjectsFromPath, getRepoLink } from '../link/repo';
-import { addToGitIgnore } from '../link/add-to-gitignore';
-import type { RepoProjectConfig } from '../link/repo';
+import { findProjectsFromPath, getRepoLink } from '../link/repo.js';
+import { addToGitIgnore } from '../link/add-to-gitignore.js';
+import type { RepoProjectConfig } from '../link/repo.js';
+import { fileURLToPath } from 'node:url';
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
@@ -289,6 +290,7 @@ export async function getLinkedProject(
 }
 
 export async function writeReadme(path: string) {
+  const __dirname = fileURLToPath(new URL('.', import.meta.url));
   await writeFile(
     join(path, VERCEL_DIR, VERCEL_DIR_README),
     await readFile(join(__dirname, 'VERCEL_DIR_README.txt'), 'utf8')

@@ -2,18 +2,18 @@ import chalk from 'chalk';
 import plural from 'pluralize';
 
 import { User, Team } from '@vercel-internals/types';
-import * as ERRORS from '../../util/errors-ts';
-import Client from '../../util/client';
-import getScope from '../../util/get-scope';
-import moveOutDomain from '../../util/domains/move-out-domain';
-import isRootDomain from '../../util/is-root-domain';
-import textInput from '../../util/input/text';
-import param from '../../util/output/param';
-import getDomainAliases from '../../util/alias/get-domain-aliases';
-import getDomainByName from '../../util/domains/get-domain-by-name';
-import promptBool from '../../util/input/prompt-bool';
-import getTeams from '../../util/teams/get-teams';
-import { getCommandName } from '../../util/pkg-name';
+import * as ERRORS from '../../util/errors-ts.js';
+import Client from '../../util/client.js';
+import getScope from '../../util/get-scope.js';
+import moveOutDomain from '../../util/domains/move-out-domain.js';
+import isRootDomain from '../../util/is-root-domain.js';
+import textInput from '../../util/input/text.js';
+import param from '../../util/output/param.js';
+import getDomainAliases from '../../util/alias/get-domain-aliases.js';
+import getDomainByName from '../../util/domains/get-domain-by-name.js';
+import promptBool from '../../util/input/prompt-bool.js';
+import getTeams from '../../util/teams/get-teams.js';
+import { getCommandName } from '../../util/pkg-name.js';
 
 type Options = {
   '--yes': boolean;

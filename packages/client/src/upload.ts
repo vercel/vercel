@@ -1,15 +1,15 @@
-import http from 'http';
-import https from 'https';
-import { Readable } from 'stream';
-import { EventEmitter } from 'events';
+import http from 'node:http';
+import https from 'node:https';
+import { Readable } from 'node:stream';
+import { EventEmitter } from 'node:events';
 import retry from 'async-retry';
 import { Sema } from 'async-sema';
 
-import { DeploymentFile, FilesMap } from './utils/hashes';
-import { fetch, API_FILES, createDebug } from './utils';
-import { DeploymentError } from './errors';
-import { deploy } from './deploy';
-import { VercelClientOptions, DeploymentOptions } from './types';
+import { DeploymentFile, FilesMap } from './utils/hashes.js';
+import { fetch, API_FILES, createDebug } from './utils/index.js';
+import { DeploymentError } from './errors.js';
+import { deploy } from './deploy.js';
+import { VercelClientOptions, DeploymentOptions } from './types.js';
 
 const isClientNetworkError = (err: Error) => {
   if (err.message) {

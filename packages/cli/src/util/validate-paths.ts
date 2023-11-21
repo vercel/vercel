@@ -1,10 +1,10 @@
-import { lstat } from 'fs-extra';
-import { Output } from './output';
+import { lstat } from 'node:fs/promises';
+import { Output } from './output/index.js';
 import chalk from 'chalk';
-import { homedir } from 'os';
-import confirm from './input/confirm';
-import toHumanPath from './humanize-path';
-import Client from './client';
+import { homedir } from 'node:os';
+import confirm from './input/confirm.js';
+import toHumanPath from './humanize-path.js';
+import Client from './client.js';
 
 /**
  * A helper function to validate the `rootDirectory` input.

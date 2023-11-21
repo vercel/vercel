@@ -1,5 +1,6 @@
-import path, { join, normalize, sep } from 'path';
-import { ensureDir, symlinkSync } from 'fs-extra';
+import path, { join, normalize, sep } from 'node:path';
+import { ensureDir } from 'fs-extra';
+import { symlinkSync } from 'node:fs';
 
 const removeTrailingSlash = (str: string) => str.replace(/\/$/, '');
 

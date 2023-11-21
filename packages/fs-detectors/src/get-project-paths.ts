@@ -1,5 +1,5 @@
-import { detectFramework } from './detect-framework';
-import { DetectorFilesystem } from './detectors/filesystem';
+import { detectFramework } from './detect-framework.js';
+import { DetectorFilesystem } from './detectors/filesystem.js';
 import frameworks from '@vercel/frameworks';
 
 const MAX_DEPTH_TRAVERSE = 3;

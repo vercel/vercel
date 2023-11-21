@@ -1,5 +1,5 @@
-import { homedir } from 'os';
-import { resolve } from 'path';
+import { homedir } from 'node:os';
+import { resolve } from 'node:path';
 
 export default function humanizePath(path: string) {
   const resolved = resolve(path);

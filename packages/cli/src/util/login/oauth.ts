@@ -1,15 +1,15 @@
-import http from 'http';
+import http from 'node:http';
 import open from 'open';
-import { URL } from 'url';
+import { URL } from 'node:url';
 import { listen } from 'async-listen';
 import isDocker from 'is-docker';
-import Client from '../client';
-import prompt, { readInput } from './prompt';
-import verify from './verify';
-import highlight from '../output/highlight';
-import link from '../output/link';
-import eraseLines from '../output/erase-lines';
-import { LoginResult } from './types';
+import Client from '../client.js';
+import prompt, { readInput } from './prompt.js';
+import verify from './verify.js';
+import highlight from '../output/highlight.js';
+import link from '../output/link.js';
+import eraseLines from '../output/erase-lines.js';
+import { LoginResult } from './types.js';
 
 export default async function doOauthLogin(
   client: Client,

@@ -1,17 +1,17 @@
-import { bold } from 'chalk';
+import chalk from 'chalk';
 import inquirer from 'inquirer';
-import { EventEmitter } from 'events';
-import { URL } from 'url';
+import { EventEmitter } from 'node:events';
+import { URL } from 'node:url';
 import { VercelConfig } from '@vercel/client';
 import retry, { RetryFunction, Options as RetryOptions } from 'async-retry';
 import fetch, { BodyInit, Headers, RequestInit, Response } from 'node-fetch';
-import ua from './ua';
-import { Output } from './output/create-output';
-import responseError from './response-error';
-import printIndications from './print-indications';
-import reauthenticate from './login/reauthenticate';
-import { SAMLError } from './login/types';
-import { writeToAuthConfigFile } from './config/files';
+import ua from './ua.js';
+import { Output } from './output/create-output.js';
+import responseError from './response-error.js';
+import printIndications from './print-indications.js';
+import reauthenticate from './login/reauthenticate.js';
+import { SAMLError } from './login/types.js';
+import { writeToAuthConfigFile } from './config/files.js';
 import type {
   AuthConfig,
   GlobalConfig,
@@ -20,12 +20,14 @@ import type {
   ReadableTTY,
   PaginationOptions,
 } from '@vercel-internals/types';
-import { sharedPromise } from './promise';
-import { APIError } from './errors-ts';
+import { sharedPromise } from './promise.js';
+import { APIError } from './errors-ts.js';
 import { normalizeError } from '@vercel/error-utils';
-import type { Agent } from 'http';
-import sleep from './sleep';
-import type * as tty from 'tty';
+import type { Agent } from 'node:http';
+import sleep from './sleep.js';
+import type * as tty from 'node:tty';
+
+const { bold } = chalk;
 
 const isSAMLError = (v: any): v is SAMLError => {
   return v && v.saml;

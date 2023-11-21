@@ -1,6 +1,6 @@
 import fs from 'fs-extra';
-import { join } from 'path';
-import { BuildsManifest } from '../../commands/build';
+import { join } from 'node:path';
+import { BuildsManifest } from '../../commands/build/index.js';
 
 export default async function getPrebuiltJson(
   directory: string

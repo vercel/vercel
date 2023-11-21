@@ -1,19 +1,19 @@
 import chalk from 'chalk';
 import ms from 'ms';
-import { Output } from '../../util/output';
+import { Output } from '../../util/output/index.js';
 import type { Project, ProjectEnvVariable } from '@vercel-internals/types';
-import Client from '../../util/client';
-import formatTable from '../../util/format-table';
-import getEnvRecords from '../../util/env/get-env-records';
-import formatEnvTarget from '../../util/env/format-env-target';
+import Client from '../../util/client.js';
+import formatTable from '../../util/format-table.js';
+import getEnvRecords from '../../util/env/get-env-records.js';
+import formatEnvTarget from '../../util/env/format-env-target.js';
 import {
   isValidEnvTarget,
   getEnvTargetPlaceholder,
-} from '../../util/env/env-target';
-import stamp from '../../util/output/stamp';
-import param from '../../util/output/param';
-import { getCommandName } from '../../util/pkg-name';
-import ellipsis from '../../util/output/ellipsis';
+} from '../../util/env/env-target.js';
+import stamp from '../../util/output/stamp.js';
+import param from '../../util/output/param.js';
+import { getCommandName } from '../../util/pkg-name.js';
+import ellipsis from '../../util/output/ellipsis.js';
 
 type Options = {
   '--debug': boolean;

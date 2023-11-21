@@ -1,9 +1,9 @@
 import chalk from 'chalk';
-import type Client from '../../util/client';
-import { getCommandName } from '../../util/pkg-name';
-import getProjectByDeployment from '../../util/projects/get-project-by-deployment';
+import type Client from '../../util/client.js';
+import { getCommandName } from '../../util/pkg-name.js';
+import getProjectByDeployment from '../../util/projects/get-project-by-deployment.js';
 import ms from 'ms';
-import rollbackStatus from './status';
+import rollbackStatus from './status.js';
 
 /**
  * Requests a rollback and waits for it complete.

@@ -2,6 +2,7 @@
   "name": "@vercel/python",
   "version": "4.1.0",
   "main": "./dist/index.js",
+  "type": "module",
   "license": "Apache-2.0",
   "homepage": "https://vercel.com/docs/runtimes#official-runtimes/python",
   "files": [
@@ -14,7 +15,7 @@
     "directory": "packages/python"
   },
   "scripts": {
-    "build": "node ../../utils/build-builder.mjs",
+    "build": "node ../../utils/build-builder.js",
     "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --runInBand --bail",
     "test-unit": "pnpm test test/unit.test.ts",
     "test-e2e": "pnpm test test/integration-*",

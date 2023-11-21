@@ -1,6 +1,6 @@
-import fs from 'fs/promises';
-import { join, relative } from 'path';
-import { DetectorFilesystem, DetectorFilesystemStat } from './filesystem';
+import fs from 'node:fs/promises';
+import { join, relative } from 'node:path';
+import { DetectorFilesystem, DetectorFilesystemStat } from './filesystem.js';
 import { isErrnoException } from '@vercel/error-utils';
 
 export class LocalFileSystemDetector extends DetectorFilesystem {

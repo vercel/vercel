@@ -1,4 +1,4 @@
-import elapsed from './elapsed';
+import elapsed from './elapsed.js';
 
 /**
  * Starts a timer and return a function that when called returns a string

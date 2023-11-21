@@ -1,16 +1,16 @@
 import chalk from 'chalk';
 import psl from 'psl';
 
-import * as ERRORS from '../../util/errors-ts';
-import Client from '../../util/client';
-import getDomainPrice from '../../util/domains/get-domain-price';
-import getDomainStatus from '../../util/domains/get-domain-status';
-import getScope from '../../util/get-scope';
-import param from '../../util/output/param';
-import promptBool from '../../util/input/prompt-bool';
-import purchaseDomain from '../../util/domains/purchase-domain';
-import stamp from '../../util/output/stamp';
-import { getCommandName } from '../../util/pkg-name';
+import * as ERRORS from '../../util/errors-ts.js';
+import Client from '../../util/client.js';
+import getDomainPrice from '../../util/domains/get-domain-price.js';
+import getDomainStatus from '../../util/domains/get-domain-status.js';
+import getScope from '../../util/get-scope.js';
+import param from '../../util/output/param.js';
+import promptBool from '../../util/input/prompt-bool.js';
+import purchaseDomain from '../../util/domains/purchase-domain.js';
+import stamp from '../../util/output/stamp.js';
+import { getCommandName } from '../../util/pkg-name.js';
 import { errorToString } from '@vercel/error-utils';
 
 type Options = {};

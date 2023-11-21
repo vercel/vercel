@@ -1,21 +1,21 @@
 import chalk from 'chalk';
 import type { Project } from '@vercel-internals/types';
-import { Output } from '../../util/output';
-import confirm from '../../util/input/confirm';
-import removeEnvRecord from '../../util/env/remove-env-record';
-import getEnvRecords from '../../util/env/get-env-records';
-import formatEnvTarget from '../../util/env/format-env-target';
+import { Output } from '../../util/output/index.js';
+import confirm from '../../util/input/confirm.js';
+import removeEnvRecord from '../../util/env/remove-env-record.js';
+import getEnvRecords from '../../util/env/get-env-records.js';
+import formatEnvTarget from '../../util/env/format-env-target.js';
 import {
   isValidEnvTarget,
   getEnvTargetPlaceholder,
-} from '../../util/env/env-target';
-import Client from '../../util/client';
-import stamp from '../../util/output/stamp';
-import param from '../../util/output/param';
-import { emoji, prependEmoji } from '../../util/emoji';
-import { isKnownError } from '../../util/env/known-error';
-import { getCommandName } from '../../util/pkg-name';
-import { isAPIError } from '../../util/errors-ts';
+} from '../../util/env/env-target.js';
+import Client from '../../util/client.js';
+import stamp from '../../util/output/stamp.js';
+import param from '../../util/output/param.js';
+import { emoji, prependEmoji } from '../../util/emoji.js';
+import { isKnownError } from '../../util/env/known-error.js';
+import { getCommandName } from '../../util/pkg-name.js';
+import { isAPIError } from '../../util/errors-ts.js';
 
 type Options = {
   '--debug': boolean;
@@ -30,7 +30,7 @@ export default async function rm(
   output: Output
 ) {
   // improve the way we show inquirer prompts
-  require('../../util/input/patch-inquirer');
+  await import('../../util/input/patch-inquirer');
 
   if (args.length > 3) {
     output.error(

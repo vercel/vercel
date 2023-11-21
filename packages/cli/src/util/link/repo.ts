@@ -1,28 +1,32 @@
 import chalk from 'chalk';
 import inquirer from 'inquirer';
 import pluralize from 'pluralize';
-import { homedir } from 'os';
+import { homedir } from 'node:os';
 import slugify from '@sindresorhus/slugify';
-import { basename, join, normalize } from 'path';
+import { basename, join, normalize } from 'node:path';
 import { normalizePath, traverseUpDirectories } from '@vercel/build-utils';
-import { lstat, readJSON, outputJSON } from 'fs-extra';
-import confirm from '../input/confirm';
-import toHumanPath from '../humanize-path';
-import { VERCEL_DIR, VERCEL_DIR_REPO, writeReadme } from '../projects/link';
-import { getRemoteUrls } from '../create-git-meta';
-import link from '../output/link';
-import { emoji, prependEmoji } from '../emoji';
-import selectOrg from '../input/select-org';
-import { addToGitIgnore } from './add-to-gitignore';
-import type Client from '../client';
+import fs from 'fs-extra';
+import confirm from '../input/confirm.js';
+import toHumanPath from '../humanize-path.js';
+import { VERCEL_DIR, VERCEL_DIR_REPO, writeReadme } from '../projects/link.js';
+import { getRemoteUrls } from '../create-git-meta.js';
+import link from '../output/link.js';
+import { emoji, prependEmoji } from '../emoji.js';
+import selectOrg from '../input/select-org.js';
+import { addToGitIgnore } from './add-to-gitignore.js';
+import type Client from '../client.js';
 import type { Framework } from '@vercel/frameworks';
 import type { Project } from '@vercel-internals/types';
-import createProject from '../projects/create-project';
-import { detectProjects } from '../projects/detect-projects';
-import { repoInfoToUrl } from '../git/repo-info-to-url';
-import { connectGitProvider, parseRepoUrl } from '../git/connect-git-provider';
-import { isAPIError } from '../errors-ts';
+import createProject from '../projects/create-project.js';
+import { detectProjects } from '../projects/detect-projects.js';
+import { repoInfoToUrl } from '../git/repo-info-to-url.js';
+import {
+  connectGitProvider,
+  parseRepoUrl,
+} from '../git/connect-git-provider.js';
+import { isAPIError } from '../errors-ts.js';
 
+const { lstat, readJSON, outputJSON } = fs;
 const home = homedir();
 
 export interface RepoProjectConfig {

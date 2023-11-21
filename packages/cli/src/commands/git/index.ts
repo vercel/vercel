@@ -1,12 +1,12 @@
-import Client from '../../util/client';
-import { ensureLink } from '../../util/link/ensure-link';
-import getArgs from '../../util/get-args';
-import getInvalidSubcommand from '../../util/get-invalid-subcommand';
-import handleError from '../../util/handle-error';
-import connect from './connect';
-import disconnect from './disconnect';
-import { help } from '../help';
-import { gitCommand } from './command';
+import Client from '../../util/client.js';
+import { ensureLink } from '../../util/link/ensure-link.js';
+import getArgs from '../../util/get-args.js';
+import getInvalidSubcommand from '../../util/get-invalid-subcommand.js';
+import handleError from '../../util/handle-error.js';
+import connect from './connect.js';
+import disconnect from './disconnect.js';
+import { help } from '../help.js';
+import { gitCommand } from './command.js';
 
 const COMMAND_CONFIG = {
   connect: ['connect'],

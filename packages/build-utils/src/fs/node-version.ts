@@ -1,8 +1,8 @@
-import { statSync } from 'fs';
+import { statSync } from 'node:fs';
 import { intersects, validRange } from 'semver';
-import { NodeVersion } from '../types';
-import { NowBuildError } from '../errors';
-import debug from '../debug';
+import { NodeVersion } from '../types.js';
+import { NowBuildError } from '../errors.js';
+import debug from '../debug.js';
 
 export type NodeVersionMajor = ReturnType<typeof getOptions>[number]['major'];
 

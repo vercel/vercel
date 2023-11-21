@@ -5,13 +5,13 @@ if (!entrypoint) {
   throw new Error('`VERCEL_DEV_ENTRYPOINT` must be defined');
 }
 
-import { join } from 'path';
+import { join } from 'node:path';
 import type { Headers } from 'undici';
 import type { VercelProxyResponse } from './types.js';
 import { Config } from '@vercel/build-utils';
-import { createEdgeEventHandler } from './edge-functions/edge-handler.mjs';
-import { createServer, IncomingMessage, ServerResponse } from 'http';
-import { createServerlessEventHandler } from './serverless-functions/serverless-handler.mjs';
+import { createEdgeEventHandler } from './edge-functions/edge-handler.js';
+import { createServer, IncomingMessage, ServerResponse } from 'node:http';
+import { createServerlessEventHandler } from './serverless-functions/serverless-handler.js';
 import { isEdgeRuntime, logError, validateConfiguredRuntime } from './utils.js';
 import { getConfig } from '@vercel/static-config';
 import { Project } from 'ts-morph';

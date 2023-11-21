@@ -1,17 +1,17 @@
 import chalk from 'chalk';
 import ms from 'ms';
 import table from 'text-table';
-import Client from '../../util/client';
-import getAliases from '../../util/alias/get-aliases';
-import getScope from '../../util/get-scope';
+import Client from '../../util/client.js';
+import getAliases from '../../util/alias/get-aliases.js';
+import getScope from '../../util/get-scope.js';
 import {
   PaginationOptions,
   getPaginationOpts,
-} from '../../util/get-pagination-opts';
-import stamp from '../../util/output/stamp';
-import strlen from '../../util/strlen';
-import getCommandFlags from '../../util/get-command-flags';
-import { getCommandName } from '../../util/pkg-name';
+} from '../../util/get-pagination-opts.js';
+import stamp from '../../util/output/stamp.js';
+import strlen from '../../util/strlen.js';
+import getCommandFlags from '../../util/get-command-flags.js';
+import { getCommandName } from '../../util/pkg-name.js';
 import type { Alias } from '@vercel-internals/types';
 
 export default async function ls(

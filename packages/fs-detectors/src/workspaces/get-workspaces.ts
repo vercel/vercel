@@ -1,7 +1,7 @@
-import path from 'path';
-import { DetectorFilesystem } from '../detectors/filesystem';
-import { workspaceManagers } from './workspace-managers';
-import { detectFramework as detectWorkspaceManagers } from '../detect-framework';
+import path from 'node:path';
+import { DetectorFilesystem } from '../detectors/filesystem.js';
+import { workspaceManagers } from './workspace-managers.js';
+import { detectFramework as detectWorkspaceManagers } from '../detect-framework.js';
 
 const MAX_DEPTH_TRAVERSE = 3;
 const posixPath = path.posix;

@@ -2,8 +2,8 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import ms from 'ms';
 import bytes from 'bytes';
-import { delimiter, dirname, join } from 'path';
-import { fork, ChildProcess } from 'child_process';
+import { delimiter, dirname, join } from 'node:path';
+import { fork, ChildProcess } from 'node:child_process';
 import { createFunction } from '@vercel/fun';
 import {
   Builder,
@@ -19,13 +19,13 @@ import { isStaticRuntime } from '@vercel/fs-detectors';
 import plural from 'pluralize';
 import minimatch from 'minimatch';
 
-import { Output } from '../output';
-import highlight from '../output/highlight';
-import { treeKill } from '../tree-kill';
-import { relative } from '../path-helpers';
-import { LambdaSizeExceededError } from '../errors-ts';
+import { Output } from '../output/index.js';
+import highlight from '../output/highlight.js';
+import { treeKill } from '../tree-kill.js';
+import { relative } from '../path-helpers.js';
+import { LambdaSizeExceededError } from '../errors-ts.js';
 
-import DevServer from './server';
+import DevServer from './server.js';
 import {
   VercelConfig,
   BuildMatch,
@@ -36,11 +36,12 @@ import {
   BuilderOutputs,
   EnvConfigs,
   BuiltLambda,
-} from './types';
+} from './types.js';
 import { normalizeRoutes } from '@vercel/routing-utils';
-import getUpdateCommand from '../get-update-command';
-import { getTitleName } from '../pkg-name';
-import { importBuilders } from '../build/import-builders';
+import getUpdateCommand from '../get-update-command.js';
+import { getTitleName } from '../pkg-name.js';
+import { importBuilders } from '../build/import-builders.js';
+import { fileURLToPath } from 'node:url';
 
 interface BuildMessage {
   type: string;
@@ -60,7 +61,9 @@ async function createBuildProcess(
 ): Promise<ChildProcess> {
   output.debug(`Creating build process for "${match.entrypoint}"`);
 
-  const builderWorkerPath = join(__dirname, 'builder-worker.js');
+  const builderWorkerPath = fileURLToPath(
+    new URL('./builder-worker.js', import.meta.url)
+  );
 
   // Ensure that `node` is in the builder's `PATH`
   let PATH = `${dirname(process.execPath)}${delimiter}${process.env.PATH}`;

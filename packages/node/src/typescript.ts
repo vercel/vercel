@@ -1,5 +1,5 @@
-import { createRequire } from 'module';
-import { relative, basename, dirname } from 'path';
+import { createRequire } from 'node:module';
+import { relative, basename, dirname } from 'node:path';
 import { NowBuildError } from '@vercel/build-utils';
 import type _ts from 'typescript';
 

@@ -1,9 +1,9 @@
-import type FileRef from './file-ref';
-import type FileFsRef from './file-fs-ref';
-import type FileBlob from './file-blob';
-import type { Lambda } from './lambda';
-import type { Prerender } from './prerender';
-import type { EdgeFunction } from './edge-function';
+import type FileRef from './file-ref.js';
+import type FileFsRef from './file-fs-ref.js';
+import type FileBlob from './file-blob.js';
+import type { Lambda } from './lambda.js';
+import type { Prerender } from './prerender.js';
+import type { EdgeFunction } from './edge-function.js';
 
 export interface Env {
   [name: string]: string | undefined;

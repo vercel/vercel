@@ -1,6 +1,6 @@
 import type { Expression, Module } from '@swc/core';
 import { FromSchema, JSONSchema } from 'json-schema-to-ts';
-import { validate } from './validation';
+import { validate } from './validation.js';
 
 export type Value =
   | undefined

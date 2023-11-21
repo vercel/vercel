@@ -46,7 +46,7 @@ export async function esbuild(opts = {}, cwd = process.cwd()) {
 
   await build({
     entryPoints,
-    format: 'cjs',
+    format: 'esm',
     outdir,
     platform: 'node',
     target: ts.ScriptTarget[tsconfig.options.target],

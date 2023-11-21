@@ -1,9 +1,9 @@
-import Client from '../client';
-import setupAndLink from '../link/setup-and-link';
-import param from '../output/param';
-import { getCommandName } from '../pkg-name';
-import { getLinkedProject } from '../projects/link';
-import type { SetupAndLinkOptions } from '../link/setup-and-link';
+import Client from '../client.js';
+import setupAndLink from '../link/setup-and-link.js';
+import param from '../output/param.js';
+import { getCommandName } from '../pkg-name.js';
+import { getLinkedProject } from '../projects/link.js';
+import type { SetupAndLinkOptions } from '../link/setup-and-link.js';
 import type { ProjectLinked } from '@vercel-internals/types';
 
 /**

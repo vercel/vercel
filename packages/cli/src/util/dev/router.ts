@@ -1,12 +1,12 @@
-import url from 'url';
+import url from 'node:url';
 import PCRE from 'pcre-to-regexp';
 
-import isURL from './is-url';
-import DevServer from './server';
+import isURL from './is-url.js';
+import DevServer from './server.js';
 
-import { VercelConfig, HttpHeadersConfig, RouteResult } from './types';
+import { VercelConfig, HttpHeadersConfig, RouteResult } from './types.js';
 import { isHandler, Route, HandleValue } from '@vercel/routing-utils';
-import { parseQueryString } from './parse-query-string';
+import { parseQueryString } from './parse-query-string.js';
 
 export function resolveRouteParameters(
   str: string,

@@ -1,4 +1,4 @@
-import Client from '../client';
+import Client from '../client.js';
 import type { Team } from '@vercel-internals/types';
 
 const teamCache = new Map<string, Team>();

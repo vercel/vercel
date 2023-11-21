@@ -1,4 +1,4 @@
-import { relative as nativeRelative } from 'path';
+import { relative as nativeRelative } from 'node:path';
 import { normalizePath } from '@vercel/build-utils';
 
 export function relative(a: string, b: string): string {

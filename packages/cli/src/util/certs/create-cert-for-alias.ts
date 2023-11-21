@@ -1,10 +1,10 @@
-import { NowError } from '../now-error';
-import { Output } from '../output';
-import Client from '../client';
-import createCertForCns from './create-cert-for-cns';
-import getWildcardCnsForAlias from './get-wildcard-cns-for-alias';
-import joinWords from '../output/join-words';
-import stamp from '../output/stamp';
+import { NowError } from '../now-error.js';
+import { Output } from '../output/index.js';
+import Client from '../client.js';
+import createCertForCns from './create-cert-for-cns.js';
+import getWildcardCnsForAlias from './get-wildcard-cns-for-alias.js';
+import joinWords from '../output/join-words.js';
+import stamp from '../output/stamp.js';
 
 export default async function createCertificateForAlias(
   output: Output,

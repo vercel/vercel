@@ -1,6 +1,7 @@
 {
   "name": "@vercel/static-config",
   "version": "3.0.0",
+  "type": "module",
   "license": "Apache-2.0",
   "main": "./dist/index",
   "repository": {
@@ -9,7 +10,7 @@
     "directory": "packages/static-config"
   },
   "scripts": {
-    "build": "node ../../utils/build.mjs",
+    "build": "node ../../utils/build.js",
     "test-unit": "pnpm test",
     "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --runInBand --bail",
     "type-check": "tsc --noEmit"

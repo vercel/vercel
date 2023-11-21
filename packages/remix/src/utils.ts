@@ -1,11 +1,11 @@
 import semver from 'semver';
-import { execSync } from 'child_process';
-import { existsSync, promises as fs } from 'fs';
-import { basename, dirname, join, relative, resolve, sep } from 'path';
+import { execSync } from 'node:child_process';
+import { existsSync, promises as fs } from 'node:fs';
+import { basename, dirname, join, relative, resolve, sep } from 'node:path';
 import { pathToRegexp, Key } from 'path-to-regexp';
 import { debug, spawnAsync } from '@vercel/build-utils';
 import { walkParentDirs } from '@vercel/build-utils';
-import { createRequire } from 'module';
+import { createRequire } from 'node:module';
 import type {
   ConfigRoute,
   RouteManifest,

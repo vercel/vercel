@@ -1,4 +1,4 @@
-import { basename } from 'path';
+import { basename } from 'node:path';
 import { Node, Project, SyntaxKind } from 'ts-morph';
 
 /**

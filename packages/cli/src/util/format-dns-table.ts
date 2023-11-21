@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import table from 'text-table';
-import strlen from './strlen';
+import strlen from './strlen.js';
 
 const HEADER = ['name', 'type', 'value'].map(v => chalk.gray(v));
 

@@ -1,5 +1,5 @@
-import http from 'http';
-import { ChildProcess } from 'child_process';
+import http from 'node:http';
+import { ChildProcess } from 'node:child_process';
 import { Lambda as FunLambda } from '@vercel/fun';
 import {
   Builder as BuildConfig,
@@ -15,9 +15,9 @@ import {
 } from '@vercel/build-utils';
 import { VercelConfig } from '@vercel/client';
 import { HandleValue, Route } from '@vercel/routing-utils';
-import { Output } from '../output';
+import { Output } from '../output/index.js';
 import type { ProjectSettings } from '@vercel-internals/types';
-import { BuilderWithPkg } from '../build/import-builders';
+import { BuilderWithPkg } from '../build/import-builders.js';
 
 export { VercelConfig };
 

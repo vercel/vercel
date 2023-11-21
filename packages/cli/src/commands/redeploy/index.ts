@@ -1,20 +1,20 @@
 import chalk from 'chalk';
 import { checkDeploymentStatus } from '@vercel/client';
-import type Client from '../../util/client';
-import { emoji, prependEmoji } from '../../util/emoji';
-import getArgs from '../../util/get-args';
-import { getCommandName } from '../../util/pkg-name';
-import { getDeploymentByIdOrURL } from '../../util/deploy/get-deployment-by-id-or-url';
-import getScope from '../../util/get-scope';
-import handleError from '../../util/handle-error';
+import type Client from '../../util/client.js';
+import { emoji, prependEmoji } from '../../util/emoji.js';
+import getArgs from '../../util/get-args.js';
+import { getCommandName } from '../../util/pkg-name.js';
+import { getDeploymentByIdOrURL } from '../../util/deploy/get-deployment-by-id-or-url.js';
+import getScope from '../../util/get-scope.js';
+import handleError from '../../util/handle-error.js';
 import { isErrnoException } from '@vercel/error-utils';
-import Now from '../../util';
-import { printDeploymentStatus } from '../../util/deploy/print-deployment-status';
-import stamp from '../../util/output/stamp';
-import ua from '../../util/ua';
+import Now from '../../util/index.js';
+import { printDeploymentStatus } from '../../util/deploy/print-deployment-status.js';
+import stamp from '../../util/output/stamp.js';
+import ua from '../../util/ua.js';
 import type { VercelClientOptions } from '@vercel/client';
-import { help } from '../help';
-import { redeployCommand } from './command';
+import { help } from '../help.js';
+import { redeployCommand } from './command.js';
 
 /**
  * `vc redeploy` command

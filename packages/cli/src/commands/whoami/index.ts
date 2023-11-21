@@ -1,9 +1,9 @@
-import { help } from '../help';
-import { whoamiCommand } from './command';
+import { help } from '../help.js';
+import { whoamiCommand } from './command.js';
 
-import getScope from '../../util/get-scope';
-import getArgs from '../../util/get-args';
-import Client from '../../util/client';
+import getScope from '../../util/get-scope.js';
+import getArgs from '../../util/get-args.js';
+import Client from '../../util/client.js';
 
 export default async function whoami(client: Client): Promise<number> {
   const { output } = client;

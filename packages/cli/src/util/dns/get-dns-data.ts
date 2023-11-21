@@ -1,8 +1,8 @@
 import chalk from 'chalk';
 import type { DNSRecordData } from '@vercel-internals/types';
-import textInput from '../input/text';
-import promptBool from '../input/prompt-bool';
-import Client from '../client';
+import textInput from '../input/text.js';
+import promptBool from '../input/prompt-bool.js';
+import Client from '../client.js';
 
 const RECORD_TYPES = ['A', 'AAAA', 'ALIAS', 'CAA', 'CNAME', 'MX', 'SRV', 'TXT'];
 

@@ -1,6 +1,6 @@
-import { constants, PathLike, promises as fs } from 'fs';
+import { constants, PathLike, promises as fs } from 'node:fs';
 import { PackageJson } from '@vercel/build-utils';
-import path from 'path';
+import path from 'node:path';
 
 export type ImagesConfig = {
   domains: string[];

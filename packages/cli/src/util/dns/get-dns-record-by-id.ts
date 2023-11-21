@@ -1,5 +1,5 @@
 import type { DNSRecord } from '@vercel-internals/types';
-import Client from '../client';
+import Client from '../client.js';
 
 export default async function getDNSRecordById(
   client: Client,

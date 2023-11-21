@@ -1,4 +1,4 @@
-import { parse as parseUrl } from 'url';
+import { parse as parseUrl } from 'node:url';
 import {
   collectHasSegments,
   convertCleanUrls,
@@ -7,7 +7,7 @@ import {
   convertRewrites,
   convertTrailingSlash,
   sourceToRegex,
-} from './superstatic';
+} from './superstatic.js';
 import {
   GetRoutesProps,
   HasField,
@@ -16,12 +16,12 @@ import {
   Route,
   RouteApiError,
   RouteWithHandle,
-} from './types';
-export { appendRoutesToPhase } from './append';
-export { mergeRoutes } from './merge';
-export * from './schemas';
-export { getCleanUrls } from './superstatic';
-export * from './types';
+} from './types.js';
+export { appendRoutesToPhase } from './append.js';
+export { mergeRoutes } from './merge.js';
+export * from './schemas.js';
+export { getCleanUrls } from './superstatic.js';
+export * from './types.js';
 
 const VALID_HANDLE_VALUES = [
   'filesystem',

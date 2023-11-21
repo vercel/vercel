@@ -1,6 +1,6 @@
 import { Project } from 'ts-morph';
-import { readFileSync, promises as fs } from 'fs';
-import { basename, dirname, extname, join, relative, sep } from 'path';
+import { readFileSync, promises as fs } from 'node:fs';
+import { basename, dirname, extname, join, relative, sep } from 'node:path';
 import {
   debug,
   download,
@@ -44,8 +44,8 @@ import {
   resolveSemverMinMax,
   ensureResolvable,
   isESM,
-} from './utils';
-import { patchHydrogenServer } from './hydrogen';
+} from './utils.js';
+import { patchHydrogenServer } from './hydrogen.js';
 
 interface ServerBundle {
   serverBuildPath: string;

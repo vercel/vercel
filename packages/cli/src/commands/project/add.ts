@@ -1,9 +1,9 @@
 import chalk from 'chalk';
 import ms from 'ms';
-import Client from '../../util/client';
-import { isAPIError } from '../../util/errors-ts';
-import { getCommandName } from '../../util/pkg-name';
-import createProject from '../../util/projects/create-project';
+import Client from '../../util/client.js';
+import { isAPIError } from '../../util/errors-ts.js';
+import { getCommandName } from '../../util/pkg-name.js';
+import createProject from '../../util/projects/create-project.js';
 
 export default async function add(
   client: Client,

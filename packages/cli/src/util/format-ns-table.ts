@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import table from 'text-table';
-import strlen from './strlen';
-import chars from './output/chars';
+import strlen from './strlen.js';
+import chars from './output/chars.js';
 
 export default function formatNSTable(
   intendedNameservers: string[],

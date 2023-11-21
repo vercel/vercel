@@ -1,9 +1,9 @@
 import type { DNSRecord } from '@vercel-internals/types';
-import { DomainNotFound } from '../errors-ts';
-import { Output } from '../output';
-import Client from '../client';
-import getDomainDNSRecords from './get-domain-dns-records';
-import getDomains from '../domains/get-domains';
+import { DomainNotFound } from '../errors-ts.js';
+import { Output } from '../output/index.js';
+import Client from '../client.js';
+import getDomainDNSRecords from './get-domain-dns-records.js';
+import getDomains from '../domains/get-domains.js';
 import chalk from 'chalk';
 
 export type DomainRecordsItem = {

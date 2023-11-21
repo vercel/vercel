@@ -1,4 +1,4 @@
-import { Command } from '../help';
+import { Command } from '../help.js';
 
 export const deployCommand: Command = {
   name: 'deploy',

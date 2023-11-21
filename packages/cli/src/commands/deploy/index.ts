@@ -2,26 +2,26 @@ import ms from 'ms';
 import fs from 'fs-extra';
 import bytes from 'bytes';
 import chalk from 'chalk';
-import { join, resolve } from 'path';
+import { join, resolve } from 'node:path';
 import {
   fileNameSymbol,
   VALID_ARCHIVE_FORMATS,
   VercelConfig,
 } from '@vercel/client';
-import code from '../../util/output/code';
-import highlight from '../../util/output/highlight';
-import { readLocalConfig } from '../../util/config/files';
-import getArgs from '../../util/get-args';
-import { handleError } from '../../util/error';
-import Client from '../../util/client';
+import code from '../../util/output/code.js';
+import highlight from '../../util/output/highlight.js';
+import { readLocalConfig } from '../../util/config/files.js';
+import getArgs from '../../util/get-args.js';
+import { handleError } from '../../util/error.js';
+import Client from '../../util/client.js';
 import { getPrettyError } from '@vercel/build-utils';
-import toHumanPath from '../../util/humanize-path';
-import Now, { CreateOptions } from '../../util';
-import stamp from '../../util/output/stamp';
-import createDeploy from '../../util/deploy/create-deploy';
-import getDeployment from '../../util/get-deployment';
-import parseMeta from '../../util/parse-meta';
-import param from '../../util/output/param';
+import toHumanPath from '../../util/humanize-path.js';
+import Now, { CreateOptions } from '../../util/index.js';
+import stamp from '../../util/output/stamp.js';
+import createDeploy from '../../util/deploy/create-deploy.js';
+import getDeployment from '../../util/get-deployment.js';
+import parseMeta from '../../util/parse-meta.js';
+import param from '../../util/output/param.js';
 import {
   BuildsRateLimited,
   DeploymentNotFound,
@@ -40,36 +40,36 @@ import {
   BuildError,
   NotDomainOwner,
   isAPIError,
-} from '../../util/errors-ts';
-import { SchemaValidationFailed } from '../../util/errors';
-import purchaseDomainIfAvailable from '../../util/domains/purchase-domain-if-available';
-import confirm from '../../util/input/confirm';
-import editProjectSettings from '../../util/input/edit-project-settings';
+} from '../../util/errors-ts.js';
+import { SchemaValidationFailed } from '../../util/errors.js';
+import purchaseDomainIfAvailable from '../../util/domains/purchase-domain-if-available.js';
+import confirm from '../../util/input/confirm.js';
+import editProjectSettings from '../../util/input/edit-project-settings.js';
 import {
   getLinkedProject,
   linkFolderToProject,
-} from '../../util/projects/link';
-import getProjectName from '../../util/get-project-name';
-import selectOrg from '../../util/input/select-org';
-import inputProject from '../../util/input/input-project';
-import { prependEmoji, emoji } from '../../util/emoji';
-import { inputRootDirectory } from '../../util/input/input-root-directory';
+} from '../../util/projects/link.js';
+import getProjectName from '../../util/get-project-name.js';
+import selectOrg from '../../util/input/select-org.js';
+import inputProject from '../../util/input/input-project.js';
+import { prependEmoji, emoji } from '../../util/emoji.js';
+import { inputRootDirectory } from '../../util/input/input-root-directory.js';
 import validatePaths, {
   validateRootDirectory,
-} from '../../util/validate-paths';
-import { getCommandName } from '../../util/pkg-name';
-import { Output } from '../../util/output';
-import { getDeploymentChecks } from '../../util/deploy/get-deployment-checks';
-import parseTarget from '../../util/deploy/parse-target';
-import getPrebuiltJson from '../../util/deploy/get-prebuilt-json';
-import { createGitMeta } from '../../util/create-git-meta';
-import { isValidArchive } from '../../util/deploy/validate-archive-format';
-import { parseEnv } from '../../util/parse-env';
+} from '../../util/validate-paths.js';
+import { getCommandName } from '../../util/pkg-name.js';
+import { Output } from '../../util/output/index.js';
+import { getDeploymentChecks } from '../../util/deploy/get-deployment-checks.js';
+import parseTarget from '../../util/deploy/parse-target.js';
+import getPrebuiltJson from '../../util/deploy/get-prebuilt-json.js';
+import { createGitMeta } from '../../util/create-git-meta.js';
+import { isValidArchive } from '../../util/deploy/validate-archive-format.js';
+import { parseEnv } from '../../util/parse-env.js';
 import { errorToString, isErrnoException, isError } from '@vercel/error-utils';
-import { pickOverrides } from '../../util/projects/project-settings';
-import { printDeploymentStatus } from '../../util/deploy/print-deployment-status';
-import { help } from '../help';
-import { deployCommand } from './command';
+import { pickOverrides } from '../../util/projects/project-settings.js';
+import { printDeploymentStatus } from '../../util/deploy/print-deployment-status.js';
+import { help } from '../help.js';
+import { deployCommand } from './command.js';
 
 export default async (client: Client): Promise<number> => {
   const { output } = client;

@@ -1,6 +1,7 @@
 {
   "name": "@vercel/static-build",
   "version": "2.0.12",
+  "type": "module",
   "license": "Apache-2.0",
   "main": "./dist/index",
   "homepage": "https://vercel.com/docs/build-step",
@@ -13,7 +14,7 @@
     "directory": "packages/static-build"
   },
   "scripts": {
-    "build": "node ../../utils/build-builder.mjs",
+    "build": "node ../../utils/build-builder.js",
     "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --bail --runInBand",
     "test-unit": "pnpm test test/build.test.ts test/gatsby.test.ts test/prepare-cache.test.ts",
     "test-e2e": "pnpm test test/integration-*.test.js",

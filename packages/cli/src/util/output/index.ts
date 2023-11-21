@@ -1,2 +1,2 @@
-export { Output } from './create-output';
-export { StopSpinner } from './wait';
+export { Output } from './create-output.js';
+export { default as StopSpinner } from './wait.js';

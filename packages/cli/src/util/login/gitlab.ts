@@ -1,6 +1,6 @@
-import { URL } from 'url';
-import Client from '../client';
-import doOauthLogin from './oauth';
+import { URL } from 'node:url';
+import Client from '../client.js';
+import doOauthLogin from './oauth.js';
 
 export default function doGitlabLogin(
   client: Client,

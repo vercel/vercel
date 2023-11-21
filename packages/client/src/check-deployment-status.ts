@@ -1,20 +1,19 @@
 import sleep from 'sleep-promise';
-import { fetch, getApiDeploymentsUrl } from './utils';
-import { getPollingDelay } from './utils/get-polling-delay';
+import { createDebug, fetch, getApiDeploymentsUrl } from './utils/index.js';
+import { getPollingDelay } from './utils/get-polling-delay.js';
 import {
   isDone,
   isReady,
   isFailed,
   isAliasAssigned,
   isAliasError,
-} from './utils/ready-state';
-import { createDebug } from './utils';
+} from './utils/ready-state.js';
 import {
   Deployment,
   VercelClientOptions,
   DeploymentBuild,
   DeploymentEventType,
-} from './types';
+} from './types.js';
 
 interface DeploymentStatus {
   type: DeploymentEventType;

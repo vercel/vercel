@@ -1,7 +1,7 @@
-import type Client from '../client';
-import { ProjectNotFound } from '../errors-ts';
-import { ensureLink } from '../link/ensure-link';
-import getProjectByNameOrId from './get-project-by-id-or-name';
+import type Client from '../client.js';
+import { ProjectNotFound } from '../errors-ts.js';
+import { ensureLink } from '../link/ensure-link.js';
+import getProjectByNameOrId from './get-project-by-id-or-name.js';
 import type { Project } from '@vercel-internals/types';
 
 export default async function getProjectByCwdOrLink({

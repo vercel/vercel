@@ -1,4 +1,4 @@
-import { Deployment, DeploymentBuild } from '../types';
+import { Deployment, DeploymentBuild } from '../types.js';
 
 export const isReady = ({
   readyState,

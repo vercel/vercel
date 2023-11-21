@@ -1,7 +1,7 @@
-import { join } from 'node:path';
-import { copyFileSync, readFileSync, writeFileSync } from 'node:fs';
-import { esbuild } from '../../../utils/build.mjs';
-import { compileDevTemplates } from './compile-templates.mjs';
+// import { join } from 'node:path';
+import { copyFileSync, /*readFileSync,*/ writeFileSync } from 'node:fs';
+import { esbuild } from '../../../utils/build.js';
+import { compileDevTemplates } from './compile-templates.js';
 
 const repoRoot = new URL('../', import.meta.url);
 
@@ -30,12 +30,12 @@ createConstants();
 // Compile the `doT.js` template files for `vercel dev`
 await compileDevTemplates();
 
-const pkgPath = join(process.cwd(), 'package.json');
-const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
-const externals = Object.keys(pkg.dependencies || {});
+// const pkgPath = join(process.cwd(), 'package.json');
+// const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
+// const externals = Object.keys(pkg.dependencies || {});
 await esbuild({
-  bundle: true,
-  external: externals,
+  // bundle: true,
+  // external: externals,
 });
 
 // Copy a few static files into `dist`

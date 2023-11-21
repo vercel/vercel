@@ -1,19 +1,19 @@
-import { createEdgeWasmPlugin, WasmAssets } from './edge-wasm-plugin.mjs';
+import { createEdgeWasmPlugin, WasmAssets } from './edge-wasm-plugin.js';
 import {
   createNodeCompatPlugin,
   NodeCompatBindings,
-} from './edge-node-compat-plugin.mjs';
+} from './edge-node-compat-plugin.js';
 import { EdgeRuntime, runServer } from 'edge-runtime';
 import { type Dispatcher, Headers, request as undiciRequest } from 'undici';
 import { isError } from '@vercel/error-utils';
-import { readFileSync } from 'fs';
+import { readFileSync } from 'node:fs';
 import { serializeBody, entrypointToOutputPath, logError } from '../utils.js';
 import esbuild from 'esbuild';
 import exitHook from 'exit-hook';
 import { buildToHeaders } from '@edge-runtime/node-utils';
 import type { VercelProxyResponse } from '../types.js';
-import type { IncomingMessage } from 'http';
-import { fileURLToPath } from 'url';
+import type { IncomingMessage } from 'node:http';
+import { fileURLToPath } from 'node:url';
 
 const NODE_VERSION_MAJOR = process.version.match(/^v(\d+)\.\d+/)?.[1];
 const NODE_VERSION_IDENTIFIER = `node${NODE_VERSION_MAJOR}`;

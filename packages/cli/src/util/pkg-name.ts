@@ -1,6 +1,6 @@
 import title from 'title';
-import pkg from './pkg';
-import cmd from './output/cmd';
+import pkg from './pkg.js';
+import cmd from './output/cmd.js';
 
 /**
  * The package name defined in the CLI's `package.json` file (`vercel`).

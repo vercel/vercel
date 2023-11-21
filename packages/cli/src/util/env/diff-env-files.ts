@@ -1,7 +1,7 @@
-import { Output } from '../output';
+import { Output } from '../output/index.js';
 import { Dictionary } from '@vercel/client';
-import { readFile } from 'fs-extra';
-import { parseEnv } from '../parse-env';
+import { readFile } from 'node:fs/promises';
+import { parseEnv } from '../parse-env.js';
 import chalk from 'chalk';
 
 export async function createEnvObject(

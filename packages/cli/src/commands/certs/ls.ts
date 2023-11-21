@@ -1,18 +1,18 @@
 import chalk from 'chalk';
 import ms from 'ms';
 import table from 'text-table';
-import Client from '../../util/client';
-import getScope from '../../util/get-scope';
+import Client from '../../util/client.js';
+import getScope from '../../util/get-scope.js';
 import {
   PaginationOptions,
   getPaginationOpts,
-} from '../../util/get-pagination-opts';
-import stamp from '../../util/output/stamp';
-import getCerts from '../../util/certs/get-certs';
-import strlen from '../../util/strlen';
+} from '../../util/get-pagination-opts.js';
+import stamp from '../../util/output/stamp.js';
+import getCerts from '../../util/certs/get-certs.js';
+import strlen from '../../util/strlen.js';
 import type { Cert } from '@vercel-internals/types';
-import getCommandFlags from '../../util/get-command-flags';
-import { getCommandName } from '../../util/pkg-name';
+import getCommandFlags from '../../util/get-command-flags.js';
+import { getCommandName } from '../../util/pkg-name.js';
 
 async function ls(
   client: Client,

@@ -7,7 +7,7 @@
  */
 import { join } from 'node:path';
 import { readFileSync } from 'node:fs';
-import { esbuild } from './build.mjs';
+import { esbuild } from './build.js';
 
 const pkgPath = join(process.cwd(), 'package.json');
 const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));

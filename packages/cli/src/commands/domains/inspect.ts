@@ -1,19 +1,22 @@
 import chalk from 'chalk';
-import { DomainNotFound, DomainPermissionDenied } from '../../util/errors-ts';
-import { Output } from '../../util/output';
-import Client from '../../util/client';
-import stamp from '../../util/output/stamp';
-import formatDate from '../../util/format-date';
-import formatNSTable from '../../util/format-ns-table';
-import getDomainByName from '../../util/domains/get-domain-by-name';
-import getScope from '../../util/get-scope';
-import formatTable from '../../util/format-table';
-import { findProjectsForDomain } from '../../util/projects/find-projects-for-domain';
-import getDomainPrice from '../../util/domains/get-domain-price';
-import { getCommandName } from '../../util/pkg-name';
-import { getDomainConfig } from '../../util/domains/get-domain-config';
-import code from '../../util/output/code';
-import { getDomainRegistrar } from '../../util/domains/get-domain-registrar';
+import {
+  DomainNotFound,
+  DomainPermissionDenied,
+} from '../../util/errors-ts.js';
+import { Output } from '../../util/output/index.js';
+import Client from '../../util/client.js';
+import stamp from '../../util/output/stamp.js';
+import formatDate from '../../util/format-date.js';
+import formatNSTable from '../../util/format-ns-table.js';
+import getDomainByName from '../../util/domains/get-domain-by-name.js';
+import getScope from '../../util/get-scope.js';
+import formatTable from '../../util/format-table.js';
+import { findProjectsForDomain } from '../../util/projects/find-projects-for-domain.js';
+import getDomainPrice from '../../util/domains/get-domain-price.js';
+import { getCommandName } from '../../util/pkg-name.js';
+import { getDomainConfig } from '../../util/domains/get-domain-config.js';
+import code from '../../util/output/code.js';
+import { getDomainRegistrar } from '../../util/domains/get-domain-registrar.js';
 
 type Options = {};
 

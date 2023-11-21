@@ -1,9 +1,9 @@
-import { delimiter, join } from 'path';
+import { delimiter, join } from 'node:path';
 import { PackageJson, spawnAsync } from '@vercel/build-utils';
 import fs from 'fs-extra';
-import { CantParseJSONFile } from '../errors-ts';
-import { VERCEL_DIR } from '../projects/link';
-import readJSONFile from '../read-json-file';
+import { CantParseJSONFile } from '../errors-ts.js';
+import { VERCEL_DIR } from '../projects/link.js';
+import readJSONFile from '../read-json-file.js';
 
 export async function initCorepack({
   repoRootPath,

@@ -1,10 +1,10 @@
 import chalk from 'chalk';
-import type Client from '../client';
+import type Client from '../client.js';
 import type { Deployment } from '@vercel-internals/types';
 
-import { isDeploying } from '../../util/deploy/is-deploying';
-import linkStyle from '../output/link';
-import { prependEmoji, emoji } from '../../util/emoji';
+import { isDeploying } from '../../util/deploy/is-deploying.js';
+import linkStyle from '../output/link.js';
+import { prependEmoji, emoji } from '../../util/emoji.js';
 
 /**
  * Prints (to `client.output`) warnings and errors, if any.

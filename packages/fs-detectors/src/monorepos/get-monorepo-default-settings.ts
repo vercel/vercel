@@ -1,8 +1,8 @@
-import { join } from 'path';
-import { monorepoManagers } from './monorepo-managers';
-import { packageManagers } from '../package-managers/package-managers';
-import { DetectorFilesystem } from '../detectors/filesystem';
-import { detectFramework } from '../detect-framework';
+import { join } from 'node:path';
+import { monorepoManagers } from './monorepo-managers.js';
+import { packageManagers } from '../package-managers/package-managers.js';
+import { DetectorFilesystem } from '../detectors/filesystem.js';
+import { detectFramework } from '../detect-framework.js';
 import JSON5 from 'json5';
 import semver from 'semver';
 

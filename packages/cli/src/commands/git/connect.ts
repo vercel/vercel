@@ -1,13 +1,13 @@
 import { Dictionary } from '@vercel/client';
 import chalk from 'chalk';
-import { join } from 'path';
+import { join } from 'node:path';
 import { Org, Project, ProjectLinkData } from '@vercel-internals/types';
-import Client from '../../util/client';
-import { parseGitConfig, pluckRemoteUrls } from '../../util/create-git-meta';
-import confirm from '../../util/input/confirm';
-import list, { ListChoice } from '../../util/input/list';
-import link from '../../util/output/link';
-import { getCommandName } from '../../util/pkg-name';
+import Client from '../../util/client.js';
+import { parseGitConfig, pluckRemoteUrls } from '../../util/create-git-meta.js';
+import confirm from '../../util/input/confirm.js';
+import list, { ListChoice } from '../../util/input/list.js';
+import link from '../../util/output/link.js';
+import { getCommandName } from '../../util/pkg-name.js';
 import {
   connectGitProvider,
   disconnectGitProvider,
@@ -15,7 +15,7 @@ import {
   RepoInfo,
   parseRepoUrl,
   printRemoteUrls,
-} from '../../util/git/connect-git-provider';
+} from '../../util/git/connect-git-provider.js';
 
 interface GitRepoCheckParams {
   client: Client;

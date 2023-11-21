@@ -4,11 +4,11 @@
  * This script generates a cache key before invoking turbo
  * so that we never accidentally use the wrong cache.
  */
-const { writeFileSync } = require('fs');
-const { join } = require('path');
+import { writeFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 const { versions, platform, arch } = process;
-const file = join(__dirname, '..', 'turbo-cache-key.json');
+const file = fileURLToPath(new URL('../turbo-cache-key.json', import.meta.url));
 const node = versions.node.split('.')[0];
 const str = JSON.stringify({ node, platform, arch });
 console.log(`Generating cache key: ${str}`);

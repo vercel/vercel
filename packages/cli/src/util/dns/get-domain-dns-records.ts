@@ -1,7 +1,7 @@
 import { DNSRecord, PaginationOptions } from '@vercel-internals/types';
-import { DomainNotFound, isAPIError } from '../errors-ts';
-import { Output } from '../output';
-import Client from '../client';
+import { DomainNotFound, isAPIError } from '../errors-ts.js';
+import { Output } from '../output/index.js';
+import Client from '../client.js';
 
 type Response = {
   records: DNSRecord[];

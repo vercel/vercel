@@ -1,5 +1,5 @@
-import url, { URL } from 'url';
-import http from 'http';
+import url, { URL } from 'node:url';
+import http from 'node:http';
 import fs from 'fs-extra';
 import chalk from 'chalk';
 import fetch from 'node-fetch';
@@ -8,18 +8,18 @@ import rawBody from 'raw-body';
 import { listen } from 'async-listen';
 import minimatch from 'minimatch';
 import httpProxy from 'http-proxy';
-import { randomBytes } from 'crypto';
+import { randomBytes } from 'node:crypto';
 import serveHandler from 'serve-handler';
 import { watch, FSWatcher } from 'chokidar';
 import { parse as parseDotenv } from 'dotenv';
-import path, { isAbsolute, basename, dirname, extname, join } from 'path';
+import path, { isAbsolute, basename, dirname, extname, join } from 'node:path';
 import once from '@tootallnate/once';
 import directoryTemplate from 'serve-handler/src/directory';
 import getPort from 'get-port';
 import isPortReachable from 'is-port-reachable';
 import deepEqual from 'fast-deep-equal';
 import npa from 'npm-package-arg';
-import type { ChildProcess } from 'child_process';
+import type { ChildProcess } from 'node:child_process';
 import JSONparse from 'json-parse-better-errors';
 
 import { getVercelIgnore, fileNameSymbol } from '@vercel/client';
@@ -47,27 +47,30 @@ import {
 } from '@vercel/fs-detectors';
 import frameworkList from '@vercel/frameworks';
 
-import cmd from '../output/cmd';
-import link from '../output/link';
-import sleep from '../sleep';
-import { Output } from '../output';
-import { relative } from '../path-helpers';
-import getVercelConfigPath from '../config/local-path';
-import { MissingDotenvVarsError } from '../errors-ts';
-import { getVercelDirectory } from '../projects/link';
-import { staticFiles as getFiles } from '../get-files';
-import { validateConfig } from '../validate-config';
-import { devRouter, getRoutesTypes } from './router';
-import getMimeType from './mime-type';
-import { executeBuild, getBuildMatches, shutdownBuilder } from './builder';
-import { generateErrorMessage, generateHttpStatusDescription } from './errors';
+import cmd from '../output/cmd.js';
+import link from '../output/link.js';
+import sleep from '../sleep.js';
+import { Output } from '../output/index.js';
+import { relative } from '../path-helpers.js';
+import getVercelConfigPath from '../config/local-path.js';
+import { MissingDotenvVarsError } from '../errors-ts.js';
+import { getVercelDirectory } from '../projects/link.js';
+import { staticFiles as getFiles } from '../get-files.js';
+import { validateConfig } from '../validate-config.js';
+import { devRouter, getRoutesTypes } from './router.js';
+import getMimeType from './mime-type.js';
+import { executeBuild, getBuildMatches, shutdownBuilder } from './builder.js';
+import {
+  generateErrorMessage,
+  generateHttpStatusDescription,
+} from './errors.js';
 
 // HTML templates
-import errorTemplate from './templates/error';
-import errorTemplateBase from './templates/error_base';
-import errorTemplate404 from './templates/error_404';
-import errorTemplate502 from './templates/error_502';
-import redirectTemplate from './templates/redirect';
+import errorTemplate from './templates/error.js';
+import errorTemplateBase from './templates/error_base.js';
+import errorTemplate404 from './templates/error_404.js';
+import errorTemplate502 from './templates/error_502.js';
+import redirectTemplate from './templates/redirect.js';
 
 import {
   VercelConfig,
@@ -83,20 +86,23 @@ import {
   RouteResult,
   HttpHeadersConfig,
   EnvConfigs,
-} from './types';
+} from './types.js';
 import type { ProjectSettings } from '@vercel-internals/types';
-import { treeKill } from '../tree-kill';
-import { applyOverriddenHeaders, nodeHeadersToFetchHeaders } from './headers';
-import { formatQueryString, parseQueryString } from './parse-query-string';
+import { treeKill } from '../tree-kill.js';
+import {
+  applyOverriddenHeaders,
+  nodeHeadersToFetchHeaders,
+} from './headers.js';
+import { formatQueryString, parseQueryString } from './parse-query-string.js';
 import {
   errorToString,
   isErrnoException,
   isError,
   isSpawnError,
 } from '@vercel/error-utils';
-import isURL from './is-url';
-import { pickOverrides } from '../projects/project-settings';
-import { replaceLocalhost } from './parse-listen';
+import isURL from './is-url.js';
+import { pickOverrides } from '../projects/project-settings.js';
+import { replaceLocalhost } from './parse-listen.js';
 
 const frontendRuntimeSet = new Set(
   frameworkList.map(f => f.useRuntime?.use || '@vercel/static-build')

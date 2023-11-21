@@ -1,5 +1,5 @@
 import fs from 'fs-extra';
-import { CantParseJSONFile } from './errors-ts';
+import { CantParseJSONFile } from './errors-ts.js';
 import JSONparse from 'json-parse-better-errors';
 import { errorToString } from '@vercel/error-utils';
 

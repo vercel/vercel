@@ -1,14 +1,14 @@
-import { join, basename } from 'path';
+import { join, basename } from 'node:path';
 import loadJSON from 'load-json-file';
 import writeJSON from 'write-json-file';
-import { existsSync } from 'fs';
+import { existsSync } from 'node:fs';
 import { fileNameSymbol } from '@vercel/client';
-import getGlobalPathConfig from './global-path';
-import getLocalPathConfig from './local-path';
-import { NowError } from '../now-error';
-import error from '../output/error';
-import highlight from '../output/highlight';
-import { VercelConfig } from '../dev/types';
+import getGlobalPathConfig from './global-path.js';
+import getLocalPathConfig from './local-path.js';
+import { NowError } from '../now-error.js';
+import error from '../output/error.js';
+import highlight from '../output/highlight.js';
+import { VercelConfig } from '../dev/types.js';
 import { AuthConfig, GlobalConfig } from '@vercel-internals/types';
 import { isErrnoException, isError } from '@vercel/error-utils';
 

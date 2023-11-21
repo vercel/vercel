@@ -1,22 +1,22 @@
 import chalk from 'chalk';
 import { SetDifference } from 'utility-types';
-import { AliasRecord } from '../../util/alias/create-alias';
+import { AliasRecord } from '../../util/alias/create-alias.js';
 import type { Domain } from '@vercel-internals/types';
-import { Output } from '../../util/output';
-import * as ERRORS from '../../util/errors-ts';
-import assignAlias from '../../util/alias/assign-alias';
-import Client from '../../util/client';
-import getDeployment from '../../util/get-deployment';
-import { getDeploymentForAlias } from '../../util/alias/get-deployment-by-alias';
-import getScope from '../../util/get-scope';
-import setupDomain from '../../util/domains/setup-domain';
-import stamp from '../../util/output/stamp';
-import { isValidName } from '../../util/is-valid-name';
-import handleCertError from '../../util/certs/handle-cert-error';
-import isWildcardAlias from '../../util/alias/is-wildcard-alias';
-import link from '../../util/output/link';
-import { getCommandName } from '../../util/pkg-name';
-import toHost from '../../util/to-host';
+import { Output } from '../../util/output/index.js';
+import * as ERRORS from '../../util/errors-ts.js';
+import assignAlias from '../../util/alias/assign-alias.js';
+import Client from '../../util/client.js';
+import getDeployment from '../../util/get-deployment.js';
+import { getDeploymentForAlias } from '../../util/alias/get-deployment-by-alias.js';
+import getScope from '../../util/get-scope.js';
+import setupDomain from '../../util/domains/setup-domain.js';
+import stamp from '../../util/output/stamp.js';
+import { isValidName } from '../../util/is-valid-name.js';
+import handleCertError from '../../util/certs/handle-cert-error.js';
+import isWildcardAlias from '../../util/alias/is-wildcard-alias.js';
+import link from '../../util/output/link.js';
+import { getCommandName } from '../../util/pkg-name.js';
+import toHost from '../../util/to-host.js';
 import type { VercelConfig } from '@vercel/client';
 
 type Options = {

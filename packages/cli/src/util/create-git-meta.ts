@@ -1,10 +1,10 @@
 import fs from 'fs-extra';
-import { join } from 'path';
+import { join } from 'node:path';
 import ini from 'ini';
 import git from 'git-last-commit';
-import { exec } from 'child_process';
+import { exec } from 'node:child_process';
 import { GitMetadata, Project } from '@vercel-internals/types';
-import { Output } from './output';
+import { Output } from './output/index.js';
 import { errorToString, normalizeError } from '@vercel/error-utils';
 
 export async function createGitMeta(

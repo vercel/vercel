@@ -1,17 +1,17 @@
 import chalk from 'chalk';
-import Client from '../../util/client';
-import cmd from '../../util/output/cmd';
-import stamp from '../../util/output/stamp';
-import param from '../../util/output/param';
-import chars from '../../util/output/chars';
-import textInput from '../../util/input/text';
-import eraseLines from '../../util/output/erase-lines';
-import getUser from '../../util/get-user';
-import { getCommandName } from '../../util/pkg-name';
-import { email as regexEmail } from '../../util/input/regexes';
-import getTeams from '../../util/teams/get-teams';
-import inviteUserToTeam from '../../util/teams/invite-user-to-team';
-import { isAPIError } from '../../util/errors-ts';
+import Client from '../../util/client.js';
+import cmd from '../../util/output/cmd.js';
+import stamp from '../../util/output/stamp.js';
+import param from '../../util/output/param.js';
+import chars from '../../util/output/chars.js';
+import textInput from '../../util/input/text.js';
+import eraseLines from '../../util/output/erase-lines.js';
+import getUser from '../../util/get-user.js';
+import { getCommandName } from '../../util/pkg-name.js';
+import { email as regexEmail } from '../../util/input/regexes.js';
+import getTeams from '../../util/teams/get-teams.js';
+import inviteUserToTeam from '../../util/teams/invite-user-to-team.js';
+import { isAPIError } from '../../util/errors-ts.js';
 import { errorToString, isError } from '@vercel/error-utils';
 
 const validateEmail = (data: string) =>

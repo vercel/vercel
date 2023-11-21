@@ -1,8 +1,8 @@
-import Client from '../client';
-import confirm from './confirm';
-import getProjectByIdOrName from '../projects/get-project-by-id-or-name';
+import Client from '../client.js';
+import confirm from './confirm.js';
+import getProjectByIdOrName from '../projects/get-project-by-id-or-name.js';
 import chalk from 'chalk';
-import { ProjectNotFound } from '../../util/errors-ts';
+import { ProjectNotFound } from '../../util/errors-ts.js';
 import { Project, Org } from '@vercel-internals/types';
 import slugify from '@sindresorhus/slugify';
 

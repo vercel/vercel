@@ -1,6 +1,7 @@
 import { tmpdir } from 'os';
 import { join } from 'path';
-import { writeFile, readdir, mkdirp, stat, remove, readFile } from 'fs-extra';
+import { mkdirp, remove } from 'fs-extra';
+import { writeFile, readdir, stat, readFile } from 'node:fs/promises';
 import { merge } from '../../../../src/util/build/merge';
 import { isErrnoException } from '@vercel/error-utils';
 

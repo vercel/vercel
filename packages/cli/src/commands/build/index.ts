@@ -3,7 +3,7 @@ import chalk from 'chalk';
 import dotenv from 'dotenv';
 import semver from 'semver';
 import minimatch from 'minimatch';
-import { join, normalize, relative, resolve, sep } from 'path';
+import { join, normalize, relative, resolve, sep } from 'node:path';
 import frameworks from '@vercel/frameworks';
 import {
   getDiscontinuedNodeVersions,
@@ -39,38 +39,38 @@ import {
 import { fileNameSymbol } from '@vercel/client';
 import type { VercelConfig } from '@vercel/client';
 
-import pull from '../pull';
-import { staticFiles as getFiles } from '../../util/get-files';
-import Client from '../../util/client';
-import getArgs from '../../util/get-args';
-import cmd from '../../util/output/cmd';
-import * as cli from '../../util/pkg-name';
-import cliPkg from '../../util/pkg';
-import readJSONFile from '../../util/read-json-file';
-import { CantParseJSONFile } from '../../util/errors-ts';
+import pull from '../pull/index.js';
+import { staticFiles as getFiles } from '../../util/get-files.js';
+import Client from '../../util/client.js';
+import getArgs from '../../util/get-args.js';
+import cmd from '../../util/output/cmd.js';
+import * as cli from '../../util/pkg-name.js';
+import cliPkg from '../../util/pkg.js';
+import readJSONFile from '../../util/read-json-file.js';
+import { CantParseJSONFile } from '../../util/errors-ts.js';
 import {
   pickOverrides,
   ProjectLinkAndSettings,
   readProjectSettings,
-} from '../../util/projects/project-settings';
-import { getProjectLink, VERCEL_DIR } from '../../util/projects/link';
-import confirm from '../../util/input/confirm';
-import { emoji, prependEmoji } from '../../util/emoji';
-import stamp from '../../util/output/stamp';
+} from '../../util/projects/project-settings.js';
+import { getProjectLink, VERCEL_DIR } from '../../util/projects/link.js';
+import confirm from '../../util/input/confirm.js';
+import { emoji, prependEmoji } from '../../util/emoji.js';
+import stamp from '../../util/output/stamp.js';
 import {
   OUTPUT_DIR,
   PathOverride,
   writeBuildResult,
-} from '../../util/build/write-build-result';
-import { importBuilders } from '../../util/build/import-builders';
-import { initCorepack, cleanupCorepack } from '../../util/build/corepack';
-import { sortBuilders } from '../../util/build/sort-builders';
-import { toEnumerableError } from '../../util/error';
-import { validateConfig } from '../../util/validate-config';
-import { setMonorepoDefaultSettings } from '../../util/build/monorepo';
-import { help } from '../help';
-import { buildCommand } from './command';
-import { scrubArgv } from '../../util/build/scrub-argv';
+} from '../../util/build/write-build-result.js';
+import { importBuilders } from '../../util/build/import-builders.js';
+import { initCorepack, cleanupCorepack } from '../../util/build/corepack.js';
+import { sortBuilders } from '../../util/build/sort-builders.js';
+import { toEnumerableError } from '../../util/error.js';
+import { validateConfig } from '../../util/validate-config.js';
+import { setMonorepoDefaultSettings } from '../../util/build/monorepo.js';
+import { help } from '../help.js';
+import { buildCommand } from './command.js';
+import { scrubArgv } from '../../util/build/scrub-argv.js';
 
 type BuildResult = BuildResultV2 | BuildResultV3;
 

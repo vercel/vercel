@@ -1,25 +1,25 @@
 import { validate as validateEmail } from 'email-validator';
 import chalk from 'chalk';
-import hp from '../../util/humanize-path';
-import getArgs from '../../util/get-args';
-import prompt from '../../util/login/prompt';
-import doSamlLogin from '../../util/login/saml';
-import doEmailLogin from '../../util/login/email';
-import doGithubLogin from '../../util/login/github';
-import doGitlabLogin from '../../util/login/gitlab';
-import doBitbucketLogin from '../../util/login/bitbucket';
-import { prependEmoji, emoji } from '../../util/emoji';
-import { getCommandName } from '../../util/pkg-name';
-import getGlobalPathConfig from '../../util/config/global-path';
+import hp from '../../util/humanize-path.js';
+import getArgs from '../../util/get-args.js';
+import prompt from '../../util/login/prompt.js';
+import doSamlLogin from '../../util/login/saml.js';
+import doEmailLogin from '../../util/login/email.js';
+import doGithubLogin from '../../util/login/github.js';
+import doGitlabLogin from '../../util/login/gitlab.js';
+import doBitbucketLogin from '../../util/login/bitbucket.js';
+import { prependEmoji, emoji } from '../../util/emoji.js';
+import { getCommandName } from '../../util/pkg-name.js';
+import getGlobalPathConfig from '../../util/config/global-path.js';
 import {
   writeToAuthConfigFile,
   writeToConfigFile,
-} from '../../util/config/files';
-import Client from '../../util/client';
-import { LoginResult } from '../../util/login/types';
-import { help } from '../help';
-import { loginCommand } from './command';
-import { updateCurrentTeamAfterLogin } from '../../util/login/update-current-team-after-login';
+} from '../../util/config/files.js';
+import Client from '../../util/client.js';
+import { LoginResult } from '../../util/login/types.js';
+import { help } from '../help.js';
+import { loginCommand } from './command.js';
+import { updateCurrentTeamAfterLogin } from '../../util/login/update-current-team-after-login.js';
 
 export default async function login(client: Client): Promise<number> {
   const { output } = client;

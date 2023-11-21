@@ -1,8 +1,8 @@
-import BufferImplementation from 'buffer';
-import EventsImplementation from 'events';
-import AsyncHooksImplementation from 'async_hooks';
-import AssertImplementation from 'assert';
-import UtilImplementation from 'util';
+import BufferImplementation from 'node:buffer';
+import EventsImplementation from 'node:events';
+import AsyncHooksImplementation from 'node:async_hooks';
+import AssertImplementation from 'node:assert';
+import UtilImplementation from 'node:util';
 import type { Plugin } from 'esbuild';
 
 const SUPPORTED_NODE_MODULES = [

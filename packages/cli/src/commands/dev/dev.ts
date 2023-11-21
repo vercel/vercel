@@ -1,16 +1,16 @@
-import { resolve, join } from 'path';
+import { resolve, join } from 'node:path';
 import fs from 'fs-extra';
 
-import DevServer from '../../util/dev/server';
-import { parseListen } from '../../util/dev/parse-listen';
-import Client from '../../util/client';
-import { getLinkedProject } from '../../util/projects/link';
+import DevServer from '../../util/dev/server.js';
+import { parseListen } from '../../util/dev/parse-listen.js';
+import Client from '../../util/client.js';
+import { getLinkedProject } from '../../util/projects/link.js';
 import type { ProjectSettings } from '@vercel-internals/types';
-import setupAndLink from '../../util/link/setup-and-link';
-import { getCommandName } from '../../util/pkg-name';
-import param from '../../util/output/param';
-import { OUTPUT_DIR } from '../../util/build/write-build-result';
-import { pullEnvRecords } from '../../util/env/get-env-records';
+import setupAndLink from '../../util/link/setup-and-link.js';
+import { getCommandName } from '../../util/pkg-name.js';
+import param from '../../util/output/param.js';
+import { OUTPUT_DIR } from '../../util/build/write-build-result.js';
+import { pullEnvRecords } from '../../util/env/get-env-records.js';
 
 type Options = {
   '--listen': string;

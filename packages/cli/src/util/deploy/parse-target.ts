@@ -1,6 +1,6 @@
-import { Output } from '../../util/output';
-import param from '../../util/output/param';
-import code from '../../util/output/code';
+import { Output } from '../../util/output/index.js';
+import param from '../../util/output/param.js';
+import code from '../../util/output/code.js';
 
 /**
  * Parses the environment target from the `--target` and `--prod` flags.

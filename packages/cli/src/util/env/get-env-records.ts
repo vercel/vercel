@@ -1,10 +1,10 @@
-import { Output } from '../output';
-import Client from '../client';
+import { Output } from '../output/index.js';
+import Client from '../client.js';
 import type {
   ProjectEnvVariable,
   ProjectEnvTarget,
 } from '@vercel-internals/types';
-import { URLSearchParams } from 'url';
+import { URLSearchParams } from 'node:url';
 
 /** The CLI command that was used that needs the environment variables. */
 export type EnvRecordsSource =

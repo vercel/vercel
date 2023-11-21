@@ -1,8 +1,8 @@
 // Source: https://github.com/pnpm/pnpm/blob/b38d711f3892a473e20e69dd32ca7e1b439efaec/fs/hard-link-dir/src/index.ts#L4
 // LICENSE (MIT): https://github.com/pnpm/pnpm/blob/b38d711f3892a473e20e69dd32ca7e1b439efaec/LICENSE
 
-import path from 'path';
-import { promises as fs } from 'fs';
+import path from 'node:path';
+import { promises as fs } from 'node:fs';
 
 export async function hardLinkDir(src: string, destDirs: string[]) {
   if (destDirs.length === 0) return;

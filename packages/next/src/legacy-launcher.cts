@@ -1,6 +1,6 @@
-import { IncomingMessage, ServerResponse } from 'http';
+import { IncomingMessage, ServerResponse } from 'node:http';
 import next from 'next-server';
-import url from 'url';
+import url from 'node:url';
 
 if (!process.env.NODE_ENV) {
   const region = process.env.VERCEL_REGION || process.env.NOW_REGION;

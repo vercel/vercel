@@ -1,9 +1,11 @@
-import { bold } from 'chalk';
-import doSamlLogin from './saml';
-import showLoginPrompt from './prompt';
-import { LoginResult, SAMLError } from './types';
-import confirm from '../input/confirm';
-import Client from '../client';
+import chalk from 'chalk';
+import doSamlLogin from './saml.js';
+import showLoginPrompt from './prompt.js';
+import { LoginResult, SAMLError } from './types.js';
+import confirm from '../input/confirm.js';
+import Client from '../client.js';
+
+const { bold } = chalk;
 
 export default async function reauthenticate(
   client: Client,

@@ -1,6 +1,6 @@
 import { stringify } from 'querystring';
-import { isAPIError, UnsupportedTLD } from '../errors-ts';
-import Client from '../client';
+import { isAPIError, UnsupportedTLD } from '../errors-ts.js';
+import Client from '../client.js';
 
 type Response = {
   price: number;

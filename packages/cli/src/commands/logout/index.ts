@@ -1,15 +1,15 @@
-import { handleError } from '../../util/error';
+import { handleError } from '../../util/error.js';
 import {
   writeToConfigFile,
   writeToAuthConfigFile,
-} from '../../util/config/files';
-import getArgs from '../../util/get-args';
-import Client from '../../util/client';
-import { getCommandName } from '../../util/pkg-name';
-import { isAPIError } from '../../util/errors-ts';
+} from '../../util/config/files.js';
+import getArgs from '../../util/get-args.js';
+import Client from '../../util/client.js';
+import { getCommandName } from '../../util/pkg-name.js';
+import { isAPIError } from '../../util/errors-ts.js';
 import { errorToString } from '@vercel/error-utils';
-import { help } from '../help';
-import { logoutCommand } from './command';
+import { help } from '../help.js';
+import { logoutCommand } from './command.js';
 
 export default async function main(client: Client): Promise<number> {
   let argv;

@@ -1,17 +1,17 @@
-import isErrnoException from '@vercel/error-utils';
+import { isErrnoException } from '@vercel/error-utils';
 import chalk from 'chalk';
 import table from 'text-table';
 import ms from 'ms';
-import strlen from '../../util/strlen';
-import { handleError, error } from '../../util/error';
-import NowSecrets from '../../util/secrets';
-import getScope from '../../util/get-scope';
-import confirm from '../../util/input/confirm';
-import getCommandFlags from '../../util/get-command-flags';
-import { getCommandName } from '../../util/pkg-name';
-import getArgs from '../../util/get-args';
-import { help } from '../help';
-import { secretsCommand } from './command';
+import strlen from '../../util/strlen.js';
+import { handleError, error } from '../../util/error.js';
+import NowSecrets from '../../util/secrets.js';
+import getScope from '../../util/get-scope.js';
+import confirm from '../../util/input/confirm.js';
+import getCommandFlags from '../../util/get-command-flags.js';
+import { getCommandName } from '../../util/pkg-name.js';
+import getArgs from '../../util/get-args.js';
+import { help } from '../help.js';
+import { secretsCommand } from './command.js';
 
 // Options
 let argv;

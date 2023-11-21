@@ -1,11 +1,7 @@
-const babel = require('@babel/core'); // eslint-disable-line @typescript-eslint/no-var-requires
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const pluginTransformModulesCommonJs = require('@babel/plugin-transform-modules-commonjs');
+import babel from '@babel/core';
+// import pluginTransformModulesCommonJs from '@babel/plugin-transform-modules-commonjs';
 
-export function compile(
-  filename: string,
-  source: string
-): { code: string; map: any } {
+export function compile(filename: string, source: string) {
   return babel.transform(source, {
     filename,
     configFile: false,
@@ -27,6 +23,6 @@ export function compile(
         'importMeta',
       ],
     },
-    plugins: [pluginTransformModulesCommonJs],
+    // plugins: [pluginTransformModulesCommonJs],
   });
 }

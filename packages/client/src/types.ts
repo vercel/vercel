@@ -1,4 +1,4 @@
-import type { Agent } from 'http';
+import type { Agent } from 'node:http';
 import type {
   Builder,
   BuilderFunctions,
@@ -8,7 +8,7 @@ import type {
 } from '@vercel/build-utils';
 import type { Header, Route, Redirect, Rewrite } from '@vercel/routing-utils';
 
-export { DeploymentEventType } from './utils';
+export type { DeploymentEventType } from './utils/index.js';
 
 export interface Dictionary<T> {
   [key: string]: T;

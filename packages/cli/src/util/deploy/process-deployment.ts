@@ -6,14 +6,14 @@ import {
   DeploymentOptions,
   VercelClientOptions,
 } from '@vercel/client';
-import { Output } from '../output';
-import { progress } from '../output/progress';
-import Now from '../../util';
+import { Output } from '../output/index.js';
+import { progress } from '../output/progress.js';
+import Now from '../../util/index.js';
 import type { Deployment, Org } from '@vercel-internals/types';
-import ua from '../ua';
-import { linkFolderToProject } from '../projects/link';
-import { prependEmoji, emoji } from '../emoji';
-import type { Agent } from 'http';
+import ua from '../ua.js';
+import { linkFolderToProject } from '../projects/link.js';
+import { prependEmoji, emoji } from '../emoji.js';
+import type { Agent } from 'node:http';
 
 function printInspectUrl(
   output: Output,

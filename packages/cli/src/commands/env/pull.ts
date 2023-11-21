@@ -1,29 +1,29 @@
 import chalk from 'chalk';
 import { outputFile } from 'fs-extra';
-import { closeSync, openSync, readSync } from 'fs';
-import { resolve } from 'path';
+import { closeSync, openSync, readSync } from 'node:fs';
+import { resolve } from 'node:path';
 import type {
   Project,
   ProjectEnvTarget,
   ProjectLinked,
 } from '@vercel-internals/types';
-import Client from '../../util/client';
-import { emoji, prependEmoji } from '../../util/emoji';
-import confirm from '../../util/input/confirm';
-import { Output } from '../../util/output';
-import param from '../../util/output/param';
-import stamp from '../../util/output/stamp';
-import { getCommandName } from '../../util/pkg-name';
+import Client from '../../util/client.js';
+import { emoji, prependEmoji } from '../../util/emoji.js';
+import confirm from '../../util/input/confirm.js';
+import { Output } from '../../util/output/index.js';
+import param from '../../util/output/param.js';
+import stamp from '../../util/output/stamp.js';
+import { getCommandName } from '../../util/pkg-name.js';
 import {
   EnvRecordsSource,
   pullEnvRecords,
-} from '../../util/env/get-env-records';
+} from '../../util/env/get-env-records.js';
 import {
   buildDeltaString,
   createEnvObject,
-} from '../../util/env/diff-env-files';
+} from '../../util/env/diff-env-files.js';
 import { isErrnoException } from '@vercel/error-utils';
-import { addToGitIgnore } from '../../util/link/add-to-gitignore';
+import { addToGitIgnore } from '../../util/link/add-to-gitignore.js';
 import JSONparse from 'json-parse-better-errors';
 
 const CONTENTS_PREFIX = '# Created by Vercel CLI\n';

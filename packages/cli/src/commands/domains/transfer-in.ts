@@ -1,17 +1,17 @@
 import chalk from 'chalk';
 
-import * as ERRORS from '../../util/errors-ts';
-import Client from '../../util/client';
-import getScope from '../../util/get-scope';
-import param from '../../util/output/param';
-import transferInDomain from '../../util/domains/transfer-in-domain';
-import stamp from '../../util/output/stamp';
-import getAuthCode from '../../util/domains/get-auth-code';
-import getDomainPrice from '../../util/domains/get-domain-price';
-import checkTransfer from '../../util/domains/check-transfer';
-import promptBool from '../../util/input/prompt-bool';
-import isRootDomain from '../../util/is-root-domain';
-import { getCommandName } from '../../util/pkg-name';
+import * as ERRORS from '../../util/errors-ts.js';
+import Client from '../../util/client.js';
+import getScope from '../../util/get-scope.js';
+import param from '../../util/output/param.js';
+import transferInDomain from '../../util/domains/transfer-in-domain.js';
+import stamp from '../../util/output/stamp.js';
+import getAuthCode from '../../util/domains/get-auth-code.js';
+import getDomainPrice from '../../util/domains/get-domain-price.js';
+import checkTransfer from '../../util/domains/check-transfer.js';
+import promptBool from '../../util/input/prompt-bool.js';
+import isRootDomain from '../../util/is-root-domain.js';
+import { getCommandName } from '../../util/pkg-name.js';
 
 type Options = {
   '--code': string;

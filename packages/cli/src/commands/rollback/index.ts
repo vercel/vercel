@@ -1,13 +1,13 @@
-import type Client from '../../util/client';
-import getArgs from '../../util/get-args';
-import getProjectByCwdOrLink from '../../util/projects/get-project-by-cwd-or-link';
-import handleError from '../../util/handle-error';
+import type Client from '../../util/client.js';
+import getArgs from '../../util/get-args.js';
+import getProjectByCwdOrLink from '../../util/projects/get-project-by-cwd-or-link.js';
+import handleError from '../../util/handle-error.js';
 import { isErrnoException } from '@vercel/error-utils';
 import ms from 'ms';
-import requestRollback from './request-rollback';
-import rollbackStatus from './status';
-import { help } from '../help';
-import { rollbackCommand } from './command';
+import requestRollback from './request-rollback.js';
+import rollbackStatus from './status.js';
+import { help } from '../help.js';
+import { rollbackCommand } from './command.js';
 
 /**
  * `vc rollback` command

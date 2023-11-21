@@ -1,8 +1,8 @@
-import path from 'path';
-import { existsSync } from 'fs';
-import { InvalidLocalConfig } from '../errors';
-import { ConflictingConfigFiles } from '../errors-ts';
-import getArgs from '../../util/get-args';
+import path from 'node:path';
+import { existsSync } from 'node:fs';
+import { InvalidLocalConfig } from '../errors.js';
+import { ConflictingConfigFiles } from '../errors-ts.js';
+import getArgs from '../../util/get-args.js';
 
 export default function getLocalPathConfig(prefix: string) {
   let customPath: string | undefined;

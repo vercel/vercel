@@ -1,13 +1,7 @@
-import { join, dirname, relative } from 'path';
+import { join, dirname, relative } from 'node:path';
 import execa from 'execa';
-import {
-  ensureDir,
-  move,
-  remove,
-  pathExists,
-  readFile,
-  writeFile,
-} from 'fs-extra';
+import { ensureDir, move, remove, pathExists } from 'fs-extra';
+import { readFile, writeFile } from 'node:fs/promises';
 import {
   BuildOptions,
   download,
@@ -18,7 +12,7 @@ import {
   walkParentDirs,
   cloneEnv,
 } from '@vercel/build-utils';
-import { installBundler } from './install-ruby';
+import { installBundler } from './install-ruby.js';
 
 async function matchPaths(
   configPatterns: string | string[] | undefined,

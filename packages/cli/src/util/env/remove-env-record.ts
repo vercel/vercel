@@ -1,5 +1,5 @@
-import { Output } from '../output';
-import Client from '../client';
+import { Output } from '../output/index.js';
+import Client from '../client.js';
 import type { ProjectEnvVariable } from '@vercel-internals/types';
 
 export default async function removeEnvRecord(

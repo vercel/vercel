@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import Client from '../client';
+import Client from '../client.js';
 
 export type CertificateChallenge = {
   type: 'dns-01';

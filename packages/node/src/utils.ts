@@ -1,7 +1,7 @@
 import { debug, streamToBuffer } from '@vercel/build-utils';
 import { pathToRegexp } from 'path-to-regexp';
-import type { IncomingMessage } from 'http';
-import { extname } from 'path';
+import type { IncomingMessage } from 'node:http';
+import { extname } from 'node:path';
 
 export function getRegExpFromMatchers(matcherOrMatchers: unknown): string {
   if (!matcherOrMatchers) {

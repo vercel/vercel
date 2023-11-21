@@ -1,15 +1,15 @@
-import type { NextjsParams } from './get-edge-function';
-import { readFile } from 'fs-extra';
+import type { NextjsParams } from './get-edge-function.js';
+import { readFile } from 'node:fs/promises';
 import { ConcatSource, Source } from 'webpack-sources';
-import { fileToSource, raw, sourcemapped } from '../sourcemapped';
-import { join } from 'path';
-import { EDGE_FUNCTION_SIZE_LIMIT } from '../constants';
-import zlib from 'zlib';
-import { promisify } from 'util';
-import { prettyBytes } from '../pretty-bytes';
+import { fileToSource, raw, sourcemapped } from '../sourcemapped.js';
+import { join } from 'node:path';
+import { EDGE_FUNCTION_SIZE_LIMIT } from '../constants.js';
+import zlib from 'node:zlib';
+import { promisify } from 'node:util';
+import { prettyBytes } from '../pretty-bytes.js';
 
 // @ts-ignore this is a prebuilt file, based on `../../scripts/build-edge-function-template.js`
-import template from '../../dist/___get-nextjs-edge-function.js';
+import template from '../../dist/___get-nextjs-edge-function.cjs';
 
 const gzip = promisify<zlib.InputType, Buffer>(zlib.gzip);
 

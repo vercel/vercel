@@ -1,17 +1,17 @@
-import { lstatSync } from 'fs-extra';
-import { isAbsolute, join, relative } from 'path';
-import { hash, hashes, mapToObject } from './utils/hashes';
-import { upload } from './upload';
-import { buildFileTree, createDebug } from './utils';
-import { DeploymentError } from './errors';
+import { lstatSync } from 'node:fs';
+import { isAbsolute, join, relative } from 'node:path';
+import { hash, hashes, mapToObject } from './utils/hashes.js';
+import { upload } from './upload.js';
+import { buildFileTree, createDebug } from './utils/index.js';
+import { DeploymentError } from './errors.js';
 import {
   VercelClientOptions,
   DeploymentOptions,
   DeploymentEventType,
-} from './types';
+} from './types.js';
 import { streamToBuffer } from '@vercel/build-utils';
 import tar from 'tar-fs';
-import { createGzip } from 'zlib';
+import { createGzip } from 'node:zlib';
 
 export default function buildCreateDeployment() {
   return async function* createDeployment(

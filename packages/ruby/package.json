@@ -2,6 +2,7 @@
   "name": "@vercel/ruby",
   "author": "Nathan Cahill <nathan@nathancahill.com>",
   "version": "2.0.2",
+  "type": "module",
   "license": "Apache-2.0",
   "main": "./dist/index",
   "homepage": "https://vercel.com/docs/runtimes#official-runtimes/ruby",
@@ -15,7 +16,7 @@
     "directory": "packages/ruby"
   },
   "scripts": {
-    "build": "node ../../utils/build-builder.mjs",
+    "build": "node ../../utils/build-builder.js",
     "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --runInBand --bail",
     "test-e2e": "pnpm test",
     "type-check": "tsc --noEmit"

@@ -1,7 +1,7 @@
-import Client from '../client';
+import Client from '../client.js';
 import type { Project } from '@vercel-internals/types';
-import { URLSearchParams } from 'url';
-import { isAPIError } from '../errors-ts';
+import { URLSearchParams } from 'node:url';
+import { isAPIError } from '../errors-ts.js';
 
 export async function findProjectsForDomain(
   client: Client,

@@ -1,7 +1,7 @@
-import { join, dirname, basename } from 'path';
+import { join, dirname, basename } from 'node:path';
 import execa from 'execa';
-import fs from 'fs';
-import { promisify } from 'util';
+import fs from 'node:fs';
+import { promisify } from 'node:util';
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
 import {
@@ -15,8 +15,11 @@ import {
   debug,
   NowBuildError,
 } from '@vercel/build-utils';
-import { installRequirement, installRequirementsFile } from './install';
-import { getLatestPythonVersion, getSupportedPythonVersion } from './version';
+import { installRequirement, installRequirementsFile } from './install.js';
+import {
+  getLatestPythonVersion,
+  getSupportedPythonVersion,
+} from './version.js';
 
 async function pipenvConvert(cmd: string, srcDir: string) {
   debug('Running pipfile2req...');

@@ -1,5 +1,5 @@
-import { promises as fs } from 'fs';
-import { dirname, join, relative } from 'path';
+import { promises as fs } from 'node:fs';
+import { dirname, join, relative } from 'node:path';
 import {
   debug,
   download,

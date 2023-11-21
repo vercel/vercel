@@ -27,27 +27,28 @@ import type {
 } from '@vercel/routing-utils';
 import { Sema } from 'async-sema';
 import crc32 from 'buffer-crc32';
-import fs, { lstat, stat } from 'fs-extra';
-import path from 'path';
+import fs from 'fs-extra';
+import { lstat, stat } from 'node:fs/promises';
+import path from 'node:path';
 import semver from 'semver';
-import zlib from 'zlib';
-import url from 'url';
-import { createRequire } from 'module';
+import zlib from 'node:zlib';
+import url from 'node:url';
+import { createRequire } from 'node:module';
 import escapeStringRegexp from 'escape-string-regexp';
-import { htmlContentType } from '.';
+import { htmlContentType } from './index.js';
 import textTable from 'text-table';
-import { getNextjsEdgeFunctionSource } from './edge-function-source/get-edge-function-source';
+import { getNextjsEdgeFunctionSource } from './edge-function-source/get-edge-function-source.js';
 import type { LambdaOptionsWithFiles } from '@vercel/build-utils/dist/lambda';
-import { stringifySourceMap } from './sourcemapped';
+import { stringifySourceMap } from './sourcemapped.js';
 import type { RawSourceMap } from 'source-map';
-import { prettyBytes } from './pretty-bytes';
+import { prettyBytes } from './pretty-bytes.js';
 import {
   MIB,
   KIB,
   MAX_UNCOMPRESSED_LAMBDA_SIZE,
   LAMBDA_RESERVED_COMPRESSED_SIZE,
   LAMBDA_RESERVED_UNCOMPRESSED_SIZE,
-} from './constants';
+} from './constants.js';
 
 type stringMap = { [key: string]: string };
 

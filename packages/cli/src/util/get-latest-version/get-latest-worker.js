@@ -14,11 +14,11 @@
  * never be available.
  */
 
-const https = require('https');
-const { mkdirSync, writeFileSync } = require('fs');
-const { access, mkdir, readFile, unlink, writeFile } = require('fs/promises');
-const path = require('path');
-const { format, inspect } = require('util');
+import https from 'node:https';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { access, mkdir, readFile, unlink, writeFile } from 'node:fs/promises';
+import path from 'node:path';
+import { format, inspect } from 'node:util';
 
 /**
  * An simple output helper which accumulates error and debug log messages in

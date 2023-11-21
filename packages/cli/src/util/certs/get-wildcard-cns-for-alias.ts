@@ -1,7 +1,7 @@
 import psl from 'psl';
-import { InvalidDomain } from '../errors-ts';
-import isWildcardAlias from '../alias/is-wildcard-alias';
-import extractDomain from '../alias/extract-domain';
+import { InvalidDomain } from '../errors-ts.js';
+import isWildcardAlias from '../alias/is-wildcard-alias.js';
+import extractDomain from '../alias/extract-domain.js';
 
 export default function getWildcardCNSForAlias(alias: string) {
   if (isWildcardAlias(alias)) {

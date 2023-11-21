@@ -1,15 +1,15 @@
 import chalk from 'chalk';
 import plural from 'pluralize';
 
-import { Output } from '../output';
-import Client from '../client';
-import eraseLines from '../output/erase-lines';
-import getDomainPrice from './get-domain-price';
-import getDomainStatus from './get-domain-status';
-import promptBool from '../input/prompt-bool';
-import purchaseDomain from './purchase-domain';
-import stamp from '../output/stamp';
-import * as ERRORS from '../errors-ts';
+import { Output } from '../output/index.js';
+import Client from '../client.js';
+import eraseLines from '../output/erase-lines.js';
+import getDomainPrice from './get-domain-price.js';
+import getDomainStatus from './get-domain-status.js';
+import promptBool from '../input/prompt-bool.js';
+import purchaseDomain from './purchase-domain.js';
+import stamp from '../output/stamp.js';
+import * as ERRORS from '../errors-ts.js';
 
 const isTTY = process.stdout.isTTY;
 

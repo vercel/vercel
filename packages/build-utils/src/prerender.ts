@@ -1,5 +1,5 @@
-import type { File, HasField } from './types';
-import { Lambda } from './lambda';
+import type { File, HasField } from './types.js';
+import { Lambda } from './lambda.js';
 
 interface PrerenderOptions {
   expiration: number | false;

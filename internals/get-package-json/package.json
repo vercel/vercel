@@ -2,13 +2,14 @@
   "private": true,
   "name": "@vercel-internals/get-package-json",
   "version": "1.0.0",
+  "type": "module",
   "types": "dist/index.d.ts",
   "main": "dist/index.js",
   "files": [
     "dist"
   ],
   "scripts": {
-    "build": "node ../../utils/build.mjs",
+    "build": "node ../../utils/build.js",
     "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --runInBand --bail",
     "test-unit": "pnpm test tests/unit"
   },

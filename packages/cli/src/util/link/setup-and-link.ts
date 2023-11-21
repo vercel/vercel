@@ -1,4 +1,4 @@
-import { join, basename } from 'path';
+import { join, basename } from 'node:path';
 import chalk from 'chalk';
 import { remove } from 'fs-extra';
 import { ProjectLinkResult, ProjectSettings } from '@vercel-internals/types';
@@ -8,25 +8,25 @@ import {
   getVercelDirectory,
   VERCEL_DIR_README,
   VERCEL_DIR_PROJECT,
-} from '../projects/link';
-import createProject from '../projects/create-project';
-import Client from '../client';
-import handleError from '../handle-error';
-import confirm from '../input/confirm';
-import toHumanPath from '../humanize-path';
-import { isDirectory } from '../config/global-path';
-import selectOrg from '../input/select-org';
-import inputProject from '../input/input-project';
-import { validateRootDirectory } from '../validate-paths';
-import { inputRootDirectory } from '../input/input-root-directory';
+} from '../projects/link.js';
+import createProject from '../projects/create-project.js';
+import Client from '../client.js';
+import handleError from '../handle-error.js';
+import confirm from '../input/confirm.js';
+import toHumanPath from '../humanize-path.js';
+import { isDirectory } from '../config/global-path.js';
+import selectOrg from '../input/select-org.js';
+import inputProject from '../input/input-project.js';
+import { validateRootDirectory } from '../validate-paths.js';
+import { inputRootDirectory } from '../input/input-root-directory.js';
 import editProjectSettings, {
   PartialProjectSettings,
-} from '../input/edit-project-settings';
-import stamp from '../output/stamp';
-import { EmojiLabel } from '../emoji';
-import createDeploy from '../deploy/create-deploy';
-import Now, { CreateOptions } from '../index';
-import { isAPIError } from '../errors-ts';
+} from '../input/edit-project-settings.js';
+import stamp from '../output/stamp.js';
+import { EmojiLabel } from '../emoji.js';
+import createDeploy from '../deploy/create-deploy.js';
+import Now, { CreateOptions } from '../index.js';
+import { isAPIError } from '../errors-ts.js';
 
 export interface SetupAndLinkOptions {
   autoConfirm?: boolean;

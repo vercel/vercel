@@ -1,4 +1,4 @@
-import { packageName, getCommandName } from '../../util/pkg-name';
+import { packageName, getCommandName } from '../../util/pkg-name.js';
 
 export const secretsCommand = {
   name: 'secrets',

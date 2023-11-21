@@ -2,13 +2,13 @@
 import chalk from 'chalk';
 
 // Utilities
-import Client from '../../util/client';
-import { emoji } from '../../util/emoji';
-import getUser from '../../util/get-user';
-import getTeams from '../../util/teams/get-teams';
-import listInput from '../../util/input/list';
+import Client from '../../util/client.js';
+import { emoji } from '../../util/emoji.js';
+import getUser from '../../util/get-user.js';
+import getTeams from '../../util/teams/get-teams.js';
+import listInput from '../../util/input/list.js';
 import { Team, GlobalConfig } from '@vercel-internals/types';
-import { writeToConfigFile } from '../../util/config/files';
+import { writeToConfigFile } from '../../util/config/files.js';
 
 const updateCurrentTeam = (config: GlobalConfig, team?: Team) => {
   if (team) {

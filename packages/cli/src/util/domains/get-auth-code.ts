@@ -1,4 +1,4 @@
-import textInput from '../input/text';
+import textInput from '../input/text.js';
 
 export default async function getAuthCode(code?: string) {
   if (isValidAuthCode(code)) {

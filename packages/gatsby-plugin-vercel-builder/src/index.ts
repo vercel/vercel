@@ -1,13 +1,13 @@
 import { getTransformedRoutes } from '@vercel/routing-utils';
 import { writeJson } from 'fs-extra';
-import { validateGatsbyState } from './schemas';
+import { validateGatsbyState } from './schemas.js';
 import {
   createServerlessFunctions,
   createAPIRoutes,
-} from './helpers/functions';
-import { createStaticDir } from './helpers/static';
-import { join } from 'path';
-import type { Config } from './types';
+} from './helpers/functions.js';
+import { createStaticDir } from './helpers/static.js';
+import { join } from 'node:path';
+import type { Config } from './types.js';
 
 export interface GenerateVercelBuildOutputAPI3OutputOptions {
   gatsbyStoreState: {

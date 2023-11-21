@@ -1,10 +1,13 @@
 import semver from 'semver';
 import XDGAppPaths from 'xdg-app-paths';
-import { dirname, parse as parsePath, resolve as resolvePath } from 'path';
-import type { Output } from '../output';
-import { existsSync, outputJSONSync, readJSONSync } from 'fs-extra';
+import { dirname, parse as parsePath, resolve as resolvePath } from 'node:path';
+import type { Output } from '../output/index.js';
+import fs from 'fs-extra';
 import type { PackageJson } from '@vercel/build-utils';
-import { spawn } from 'child_process';
+import { spawn } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+
+const { existsSync, outputJSONSync, readJSONSync } = fs;
 
 interface GetLatestVersionOptions {
   cacheDir?: string;
@@ -107,7 +110,7 @@ function spawnWorker(
 ) {
   // we need to find the update worker script since the location is
   // different based on production vs tests
-  let dir = dirname(__filename);
+  let dir = dirname(fileURLToPath(import.meta.url));
   let script = resolvePath(dir, 'dist', 'get-latest-worker.js');
   const { root } = parsePath(dir);
   while (!existsSync(script)) {

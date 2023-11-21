@@ -1,9 +1,9 @@
 import chalk from 'chalk';
 import { Org, Project } from '@vercel-internals/types';
-import Client from '../../util/client';
-import confirm from '../../util/input/confirm';
-import { getCommandName } from '../../util/pkg-name';
-import { disconnectGitProvider } from '../../util/git/connect-git-provider';
+import Client from '../../util/client.js';
+import confirm from '../../util/input/confirm.js';
+import { getCommandName } from '../../util/pkg-name.js';
+import { disconnectGitProvider } from '../../util/git/connect-git-provider.js';
 
 export default async function disconnect(
   client: Client,

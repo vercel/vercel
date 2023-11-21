@@ -1,26 +1,26 @@
 import chalk from 'chalk';
-import { join } from 'path';
-import Client from '../../util/client';
+import { join } from 'node:path';
+import Client from '../../util/client.js';
 import type {
   Project,
   ProjectEnvTarget,
   ProjectLinked,
 } from '@vercel-internals/types';
-import { emoji, prependEmoji } from '../../util/emoji';
-import getArgs from '../../util/get-args';
-import stamp from '../../util/output/stamp';
-import { VERCEL_DIR, VERCEL_DIR_PROJECT } from '../../util/projects/link';
-import { writeProjectSettings } from '../../util/projects/project-settings';
-import envPull from '../env/pull';
+import { emoji, prependEmoji } from '../../util/emoji.js';
+import getArgs from '../../util/get-args.js';
+import stamp from '../../util/output/stamp.js';
+import { VERCEL_DIR, VERCEL_DIR_PROJECT } from '../../util/projects/link.js';
+import { writeProjectSettings } from '../../util/projects/project-settings.js';
+import envPull from '../env/pull.js';
 import {
   isValidEnvTarget,
   getEnvTargetPlaceholder,
-} from '../../util/env/env-target';
-import { ensureLink } from '../../util/link/ensure-link';
-import humanizePath from '../../util/humanize-path';
+} from '../../util/env/env-target.js';
+import { ensureLink } from '../../util/link/ensure-link.js';
+import humanizePath from '../../util/humanize-path.js';
 
-import { help } from '../help';
-import { pullCommand } from './command';
+import { help } from '../help.js';
+import { pullCommand } from './command.js';
 
 function processArgs(client: Client) {
   return getArgs(client.argv.slice(2), {

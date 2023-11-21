@@ -1,7 +1,9 @@
-import { join } from 'path';
+import { join } from 'node:path';
 import { isErrnoException } from '@vercel/error-utils';
-import { stat, move, remove, rmdir, readdir } from 'fs-extra';
+import fs from 'fs-extra';
 import type { Stats } from 'fs-extra';
+
+const { stat, move, remove, rmdir, readdir } = fs;
 
 /**
  * Merge a directory into another directory. A `move` file operation is preferred,

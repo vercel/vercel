@@ -1,7 +1,7 @@
 import inquirer from 'inquirer';
 import stripAnsi from 'strip-ansi';
-import Client from '../client';
-import eraseLines from '../output/erase-lines';
+import Client from '../client.js';
+import eraseLines from '../output/erase-lines.js';
 
 interface ListEntry {
   name: string;
@@ -54,7 +54,7 @@ export default async function list(
     eraseFinalAnswer = false, // If true, the line with the final answer that inquirer prints will be erased before returning
   }: ListOptions
 ): Promise<string> {
-  require('./patch-inquirer');
+  await import('./patch-inquirer');
 
   let biggestLength = 0;
   let selected: string | undefined;

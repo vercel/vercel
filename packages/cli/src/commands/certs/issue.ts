@@ -1,19 +1,19 @@
 import { parse } from 'psl';
 import chalk from 'chalk';
 
-import { Output } from '../../util/output';
-import * as ERRORS from '../../util/errors-ts';
-import Client from '../../util/client';
-import createCertForCns from '../../util/certs/create-cert-for-cns';
-import createCertFromFile from '../../util/certs/create-cert-from-file';
-import dnsTable from '../../util/format-dns-table';
-import finishCertOrder from '../../util/certs/finish-cert-order';
-import getCnsFromArgs from '../../util/certs/get-cns-from-args';
-import getScope from '../../util/get-scope';
-import stamp from '../../util/output/stamp';
-import startCertOrder from '../../util/certs/start-cert-order';
-import handleCertError from '../../util/certs/handle-cert-error';
-import { getCommandName } from '../../util/pkg-name';
+import { Output } from '../../util/output/index.js';
+import * as ERRORS from '../../util/errors-ts.js';
+import Client from '../../util/client.js';
+import createCertForCns from '../../util/certs/create-cert-for-cns.js';
+import createCertFromFile from '../../util/certs/create-cert-from-file.js';
+import dnsTable from '../../util/format-dns-table.js';
+import finishCertOrder from '../../util/certs/finish-cert-order.js';
+import getCnsFromArgs from '../../util/certs/get-cns-from-args.js';
+import getScope from '../../util/get-scope.js';
+import stamp from '../../util/output/stamp.js';
+import startCertOrder from '../../util/certs/start-cert-order.js';
+import handleCertError from '../../util/certs/handle-cert-error.js';
+import { getCommandName } from '../../util/pkg-name.js';
 
 type Options = {
   '--ca': string;

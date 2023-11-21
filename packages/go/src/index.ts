@@ -1,24 +1,11 @@
 import execa from 'execa';
 import retry from 'async-retry';
-import { homedir, tmpdir } from 'os';
-import { spawn } from 'child_process';
-import { Readable } from 'stream';
+import { homedir, tmpdir } from 'node:os';
+import { spawn } from 'node:child_process';
+import { Readable } from 'node:stream';
 import once from '@tootallnate/once';
-import { basename, dirname, join, normalize, posix, relative } from 'path';
-import {
-  readFile,
-  writeFile,
-  lstat,
-  pathExists,
-  mkdirp,
-  move,
-  readlink,
-  remove,
-  rmdir,
-  readdir,
-  unlink,
-  copy,
-} from 'fs-extra';
+import { basename, dirname, join, normalize, posix, relative } from 'node:path';
+import fs from 'fs-extra';
 import {
   BuildOptions,
   Files,
@@ -34,6 +21,20 @@ import {
   cloneEnv,
 } from '@vercel/build-utils';
 
+const {
+  readFile,
+  writeFile,
+  lstat,
+  pathExists,
+  mkdirp,
+  move,
+  readlink,
+  remove,
+  rmdir,
+  readdir,
+  unlink,
+  copy,
+} = fs;
 const TMP = tmpdir();
 
 import {

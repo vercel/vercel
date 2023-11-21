@@ -1,6 +1,6 @@
-import { Command } from '../help';
-import { packageName } from '../../util/pkg-name';
-import { getEnvTargetPlaceholder } from '../../util/env/env-target';
+import { Command } from '../help.js';
+import { packageName } from '../../util/pkg-name.js';
+import { getEnvTargetPlaceholder } from '../../util/env/env-target.js';
 
 const targetPlaceholder = getEnvTargetPlaceholder();
 

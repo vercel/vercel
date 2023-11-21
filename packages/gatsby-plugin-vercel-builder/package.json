@@ -1,6 +1,7 @@
 {
   "name": "@vercel/gatsby-plugin-vercel-builder",
   "version": "2.0.11",
+  "type": "module",
   "main": "dist/index.js",
   "files": [
     "dist",
@@ -13,7 +14,7 @@
     "directory": "packages/gatsby-plugin-vercel-builder"
   },
   "scripts": {
-    "build": "node ../../utils/build-builder.mjs",
+    "build": "node ../../utils/build-builder.js",
     "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --bail --runInBand",
     "test-unit": "pnpm test test/unit.*test.*",
     "type-check": "tsc --noEmit"

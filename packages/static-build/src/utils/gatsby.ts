@@ -1,9 +1,9 @@
 import { isErrnoException } from '@vercel/error-utils';
 import fs from 'fs-extra';
-import * as path from 'path';
+import * as path from 'node:path';
 import semver from 'semver';
-import { createRequire } from 'module';
-import { fileExists } from './_shared';
+import { createRequire } from 'node:module';
+import { fileExists } from './_shared.js';
 
 const PLUGINS = [
   '@vercel/gatsby-plugin-vercel-analytics',

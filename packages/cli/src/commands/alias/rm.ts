@@ -1,17 +1,17 @@
 import chalk from 'chalk';
 import ms from 'ms';
 import table from 'text-table';
-import Client from '../../util/client';
-import getScope from '../../util/get-scope';
-import removeAliasById from '../../util/alias/remove-alias-by-id';
-import stamp from '../../util/output/stamp';
-import strlen from '../../util/strlen';
-import confirm from '../../util/input/confirm';
-import findAliasByAliasOrId from '../../util/alias/find-alias-by-alias-or-id';
+import Client from '../../util/client.js';
+import getScope from '../../util/get-scope.js';
+import removeAliasById from '../../util/alias/remove-alias-by-id.js';
+import stamp from '../../util/output/stamp.js';
+import strlen from '../../util/strlen.js';
+import confirm from '../../util/input/confirm.js';
+import findAliasByAliasOrId from '../../util/alias/find-alias-by-alias-or-id.js';
 
 import type { Alias } from '@vercel-internals/types';
-import { isValidName } from '../../util/is-valid-name';
-import { getCommandName } from '../../util/pkg-name';
+import { isValidName } from '../../util/is-valid-name.js';
+import { getCommandName } from '../../util/pkg-name.js';
 
 type Options = {
   '--yes': boolean;

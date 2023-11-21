@@ -1,10 +1,10 @@
 import chalk from 'chalk';
-import type Client from '../../util/client';
-import { getCommandName } from '../../util/pkg-name';
-import getProjectByDeployment from '../../util/projects/get-project-by-deployment';
+import type Client from '../../util/client.js';
+import { getCommandName } from '../../util/pkg-name.js';
+import getProjectByDeployment from '../../util/projects/get-project-by-deployment.js';
 import ms from 'ms';
-import promoteStatus from './status';
-import confirm from '../../util/input/confirm';
+import promoteStatus from './status.js';
+import confirm from '../../util/input/confirm.js';
 
 /**
  * Requests a promotion and waits for it complete.

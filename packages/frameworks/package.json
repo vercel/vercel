@@ -2,6 +2,7 @@
   "name": "@vercel/frameworks",
   "version": "2.0.3",
   "main": "./dist/frameworks.js",
+  "type": "module",
   "types": "./dist/frameworks.d.ts",
   "files": [
     "dist"
@@ -13,7 +14,7 @@
   },
   "license": "Apache-2.0",
   "scripts": {
-    "build": "node ../../utils/build.mjs",
+    "build": "node ../../utils/build.js",
     "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --runInBand --bail",
     "test-unit": "pnpm test",
     "type-check": "tsc --noEmit"

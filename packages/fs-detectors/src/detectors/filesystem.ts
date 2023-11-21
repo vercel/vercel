@@ -1,4 +1,4 @@
-import { posix as posixPath } from 'path';
+import { posix as posixPath } from 'node:path';
 
 export interface DetectorFilesystemStat {
   name: string;

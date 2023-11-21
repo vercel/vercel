@@ -1,9 +1,9 @@
 import inquirer from 'inquirer';
-import confirm from './confirm';
+import confirm from './confirm.js';
 import chalk from 'chalk';
 import frameworkList, { Framework } from '@vercel/frameworks';
-import Client from '../client';
-import { isSettingValue } from '../is-setting-value';
+import Client from '../client.js';
+import { isSettingValue } from '../is-setting-value.js';
 import type { ProjectSettings } from '@vercel-internals/types';
 
 const settingMap = {

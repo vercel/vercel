@@ -1,5 +1,5 @@
-import fs from 'fs';
-import { DetectorFilesystem } from '../detectors/filesystem';
+import fs from 'node:fs';
+import { DetectorFilesystem } from '../detectors/filesystem.js';
 
 type GlobFs = typeof fs;
 

@@ -1,15 +1,19 @@
-import { FilesMap } from './hashes';
+import { FilesMap } from './hashes.js';
 import { FetchOptions } from '@zeit/fetch';
-import { nodeFetch, zeitFetch } from './fetch';
-import { join, sep, relative } from 'path';
-import { URL } from 'url';
+import { nodeFetch, zeitFetch } from './fetch.js';
+import { join, sep, relative } from 'node:path';
+import { URL } from 'node:url';
 import ignore from 'ignore';
-import { pkgVersion } from '../pkg';
+import { pkgVersion } from '../pkg.js';
 import { NowBuildError } from '@vercel/build-utils';
-import { VercelClientOptions, DeploymentOptions, VercelConfig } from '../types';
+import {
+  VercelClientOptions,
+  DeploymentOptions,
+  VercelConfig,
+} from '../types.js';
 import { Sema } from 'async-sema';
-import { readFile } from 'fs-extra';
-import readdir from './readdir-recursive';
+import { readFile } from 'node:fs/promises';
+import readdir from './readdir-recursive.js';
 
 type Ignore = ReturnType<typeof ignore>;
 

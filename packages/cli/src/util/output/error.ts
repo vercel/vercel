@@ -1,7 +1,7 @@
 import chalk from 'chalk';
-import { metrics, shouldCollectMetrics } from '../metrics';
-import { APIError } from '../errors-ts';
-import renderLink from './link';
+import { metrics, shouldCollectMetrics } from '../metrics.js';
+import { APIError } from '../errors-ts.js';
+import renderLink from './link.js';
 
 let metric: ReturnType<typeof metrics>;
 

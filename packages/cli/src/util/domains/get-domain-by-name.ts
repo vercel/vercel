@@ -1,11 +1,11 @@
 import chalk from 'chalk';
-import Client from '../client';
+import Client from '../client.js';
 import type { Domain } from '@vercel-internals/types';
 import {
   DomainPermissionDenied,
   DomainNotFound,
   isAPIError,
-} from '../errors-ts';
+} from '../errors-ts.js';
 
 type Response = {
   domain: Domain;

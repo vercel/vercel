@@ -2,8 +2,8 @@
 // https://github.com/vercel/runtimes/blob/c076db9e3ce5635f7c2690396e3d9f791a0fd808/packages/edge-functions-bridge/src/get-edge-function-source.ts#L282-L317
 
 import type { Plugin } from 'esbuild';
-import { createHash } from 'crypto';
-import { promises as fs } from 'fs';
+import { createHash } from 'node:crypto';
+import fs from 'node:fs/promises';
 
 export class WasmAssets {
   private readonly assets = new Map<string, string>();

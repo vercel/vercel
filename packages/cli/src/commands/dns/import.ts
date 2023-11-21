@@ -1,10 +1,10 @@
 import chalk from 'chalk';
-import Client from '../../util/client';
-import getScope from '../../util/get-scope';
-import { DomainNotFound, InvalidDomain } from '../../util/errors-ts';
-import stamp from '../../util/output/stamp';
-import importZonefile from '../../util/dns/import-zonefile';
-import { getCommandName } from '../../util/pkg-name';
+import Client from '../../util/client.js';
+import getScope from '../../util/get-scope.js';
+import { DomainNotFound, InvalidDomain } from '../../util/errors-ts.js';
+import stamp from '../../util/output/stamp.js';
+import importZonefile from '../../util/dns/import-zonefile.js';
+import { getCommandName } from '../../util/pkg-name.js';
 
 type Options = {};
 

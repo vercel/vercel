@@ -1,6 +1,6 @@
 import minimatch from 'minimatch';
 import { valid as validSemver } from 'semver';
-import { parse as parsePath, extname } from 'path';
+import { parse as parsePath, extname } from 'node:path';
 import type { Route, RouteWithSrc } from '@vercel/routing-utils';
 import frameworkList, { Framework } from '@vercel/frameworks';
 import type {
@@ -10,7 +10,8 @@ import type {
   BuilderFunctions,
   ProjectSettings,
 } from '@vercel/build-utils';
-import { isOfficialRuntime } from './is-official-runtime';
+import { isOfficialRuntime } from './is-official-runtime.js';
+
 const slugToFramework = new Map<string | null, Framework>(
   frameworkList.map(f => [f.slug, f])
 );

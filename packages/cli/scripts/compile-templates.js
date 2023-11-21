@@ -1,6 +1,6 @@
 import execa from 'execa';
 import { fileURLToPath } from 'node:url';
-import { readFile, writeFile, readdir, unlink } from 'node:fs/promises';
+import { readFile, writeFile, readdir, unlink, rename } from 'node:fs/promises';
 
 export async function compileDevTemplates() {
   const dirRoot = new URL('../', import.meta.url);
@@ -20,6 +20,7 @@ export async function compileDevTemplates() {
 
   for (const file of compiledFiles) {
     const fnPath = new URL(file, templatesDir);
+    const cjsPath = fileURLToPath(fnPath.href.replace(/\.js$/, '.cjs'));
     const tsPath = fnPath.href.replace(/\.js$/, '.ts');
     const def = await readFile(
       new URL(fnPath.href.replace(/\.js$/, '.tsdef')),
@@ -27,7 +28,8 @@ export async function compileDevTemplates() {
     );
     const interfaceName = def.match(/interface (\w+)/)[1];
 
-    const { default: fn } = await import(fnPath);
+    await rename(fileURLToPath(fnPath), cjsPath);
+    const { default: fn } = await import(cjsPath);
 
     const contents = `import encodeHTML from 'escape-html';
 
@@ -38,6 +40,6 @@ export default ${fn
       .replace(/\bvar\b/g, 'let')
       .replace(/\(it\s*\)/s, `(it: ${interfaceName}): string`)}`;
 
-    await Promise.all([writeFile(new URL(tsPath), contents), unlink(fnPath)]);
+    await Promise.all([writeFile(new URL(tsPath), contents), unlink(cjsPath)]);
   }
 }

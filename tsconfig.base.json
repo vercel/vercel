@@ -3,7 +3,7 @@
   "extends": "@vercel/style-guide/typescript",
   "compilerOptions": {
     "lib": ["ES2021"],
-    "module": "commonjs",
+    "module": "esnext",
     "moduleResolution": "node",
     "noEmitOnError": true,
     "noImplicitReturns": true,

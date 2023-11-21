@@ -1,4 +1,4 @@
-import sleep from './sleep';
+import sleep from './sleep.js';
 
 export default function createPollingFn<R>(
   future: (...args: any[]) => Promise<R>,

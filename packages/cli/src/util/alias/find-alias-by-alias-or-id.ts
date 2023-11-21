@@ -1,7 +1,7 @@
-import { Output } from '../output';
+import { Output } from '../output/index.js';
 import type { Alias } from '@vercel-internals/types';
 
-import Client from '../client';
+import Client from '../client.js';
 
 export default async function findAliasByAliasOrId(
   output: Output,

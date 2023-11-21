@@ -1,10 +1,10 @@
-import Client from '../../util/client';
-import getArgs from '../../util/get-args';
-import cmd from '../../util/output/cmd';
-import { ensureLink } from '../../util/link/ensure-link';
-import { ensureRepoLink } from '../../util/link/repo';
-import { help } from '../help';
-import { linkCommand } from './command';
+import Client from '../../util/client.js';
+import getArgs from '../../util/get-args.js';
+import cmd from '../../util/output/cmd.js';
+import { ensureLink } from '../../util/link/ensure-link.js';
+import { ensureRepoLink } from '../../util/link/repo.js';
+import { help } from '../help.js';
+import { linkCommand } from './command.js';
 
 export default async function link(client: Client) {
   const argv = getArgs(client.argv.slice(2), {

@@ -1,4 +1,4 @@
-import Client from '../client';
+import Client from '../client.js';
 import type { Project, ProjectSettings } from '@vercel-internals/types';
 
 export default async function updateProject(

@@ -3,16 +3,16 @@ import ms from 'ms';
 import plural from 'pluralize';
 import table from 'text-table';
 import type { Cert } from '@vercel-internals/types';
-import * as ERRORS from '../../util/errors-ts';
-import { Output } from '../../util/output';
-import deleteCertById from '../../util/certs/delete-cert-by-id';
-import getCertById from '../../util/certs/get-cert-by-id';
-import { getCustomCertsForDomain } from '../../util/certs/get-custom-certs-for-domain';
-import Client from '../../util/client';
-import getScope from '../../util/get-scope';
-import stamp from '../../util/output/stamp';
-import param from '../../util/output/param';
-import { getCommandName } from '../../util/pkg-name';
+import * as ERRORS from '../../util/errors-ts.js';
+import { Output } from '../../util/output/index.js';
+import deleteCertById from '../../util/certs/delete-cert-by-id.js';
+import getCertById from '../../util/certs/get-cert-by-id.js';
+import { getCustomCertsForDomain } from '../../util/certs/get-custom-certs-for-domain.js';
+import Client from '../../util/client.js';
+import getScope from '../../util/get-scope.js';
+import stamp from '../../util/output/stamp.js';
+import param from '../../util/output/param.js';
+import { getCommandName } from '../../util/pkg-name.js';
 
 type Options = {};
 

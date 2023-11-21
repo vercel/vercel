@@ -1,13 +1,13 @@
 import psl from 'psl';
-import { NowError } from '../now-error';
+import { NowError } from '../now-error.js';
 import type { Domain } from '@vercel-internals/types';
-import { Output } from '../output';
-import * as ERRORS from '../errors-ts';
-import addDomain from './add-domain';
-import Client from '../client';
-import maybeGetDomainByName from './maybe-get-domain-by-name';
-import purchaseDomainIfAvailable from './purchase-domain-if-available';
-import extractDomain from '../alias/extract-domain';
+import { Output } from '../output/index.js';
+import * as ERRORS from '../errors-ts.js';
+import addDomain from './add-domain.js';
+import Client from '../client.js';
+import maybeGetDomainByName from './maybe-get-domain-by-name.js';
+import purchaseDomainIfAvailable from './purchase-domain-if-available.js';
+import extractDomain from '../alias/extract-domain.js';
 
 export default async function setupDomain(
   output: Output,

@@ -1,16 +1,16 @@
 import { addHelpers } from './helpers.js';
-import { createServer } from 'http';
+import { createServer } from 'node:http';
 import { serializeBody } from '../utils.js';
 import exitHook from 'exit-hook';
 import { type Dispatcher, Headers, request as undiciRequest } from 'undici';
 import { listen } from 'async-listen';
-import { isAbsolute } from 'path';
-import { pathToFileURL } from 'url';
+import { isAbsolute } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { buildToHeaders } from '@edge-runtime/node-utils';
-import type { ServerResponse, IncomingMessage } from 'http';
+import type { ServerResponse, IncomingMessage } from 'node:http';
 import type { VercelProxyResponse } from '../types.js';
 import type { VercelRequest, VercelResponse } from './helpers.js';
-import type { Readable } from 'stream';
+import type { Readable } from 'node:stream';
 
 // @ts-expect-error
 const toHeaders = buildToHeaders({ Headers });
@@ -96,7 +96,7 @@ export async function createServerlessEventHandler(
     });
 
     let body: Readable | Buffer | null = null;
-    let headers = toHeaders(response.headers) as Headers;
+    const headers = toHeaders(response.headers) as Headers;
 
     if (isStreaming) {
       body = response.body;

@@ -1,9 +1,9 @@
-import assert from 'assert';
+import assert from 'node:assert';
 import fetch from 'node-fetch';
 import multiStream from 'multistream';
 import retry from 'async-retry';
 import Sema from 'async-sema';
-import { FileBase } from './types';
+import { FileBase } from './types.js';
 
 interface FileRefOptions {
   mode?: number;

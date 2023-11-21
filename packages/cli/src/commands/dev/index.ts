@@ -1,22 +1,22 @@
-import path from 'path';
+import path from 'node:path';
 import chalk from 'chalk';
 import { PackageJson } from '@vercel/build-utils';
 
-import getArgs from '../../util/get-args';
-import getSubcommand from '../../util/get-subcommand';
-import Client from '../../util/client';
-import { NowError } from '../../util/now-error';
-import handleError from '../../util/handle-error';
-import cmd from '../../util/output/cmd';
-import highlight from '../../util/output/highlight';
-import dev from './dev';
-import readConfig from '../../util/config/read-config';
-import readJSONFile from '../../util/read-json-file';
-import { packageName, getCommandName } from '../../util/pkg-name';
-import { CantParseJSONFile } from '../../util/errors-ts';
+import getArgs from '../../util/get-args.js';
+import getSubcommand from '../../util/get-subcommand.js';
+import Client from '../../util/client.js';
+import { NowError } from '../../util/now-error.js';
+import handleError from '../../util/handle-error.js';
+import cmd from '../../util/output/cmd.js';
+import highlight from '../../util/output/highlight.js';
+import dev from './dev.js';
+import readConfig from '../../util/config/read-config.js';
+import readJSONFile from '../../util/read-json-file.js';
+import { packageName, getCommandName } from '../../util/pkg-name.js';
+import { CantParseJSONFile } from '../../util/errors-ts.js';
 import { isErrnoException } from '@vercel/error-utils';
-import { help } from '../help';
-import { devCommand } from './command';
+import { help } from '../help.js';
+import { devCommand } from './command.js';
 
 const COMMAND_CONFIG = {
   dev: ['dev'],

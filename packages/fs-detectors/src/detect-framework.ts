@@ -1,6 +1,6 @@
 import type { Framework, FrameworkDetectionItem } from '@vercel/frameworks';
-import { spawnSync } from 'child_process';
-import { DetectorFilesystem } from './detectors/filesystem';
+import { spawnSync } from 'node:child_process';
+import { DetectorFilesystem } from './detectors/filesystem.js';
 
 interface BaseFramework {
   slug: Framework['slug'];

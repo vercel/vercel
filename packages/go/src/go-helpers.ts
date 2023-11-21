@@ -1,20 +1,15 @@
 import tar from 'tar';
 import execa from 'execa';
 import fetch from 'node-fetch';
-import {
-  createWriteStream,
-  mkdirp,
-  pathExists,
-  readFile,
-  remove,
-  symlink,
-} from 'fs-extra';
-import { delimiter, dirname, join } from 'path';
+import { createWriteStream } from 'node:fs';
+import { readFile, symlink } from 'node:fs/promises';
+import { mkdirp, pathExists, remove } from 'fs-extra';
+import { delimiter, dirname, join } from 'node:path';
 import stringArgv from 'string-argv';
 import { cloneEnv, debug } from '@vercel/build-utils';
-import { pipeline } from 'stream';
-import { promisify } from 'util';
-import { tmpdir } from 'os';
+import { pipeline } from 'node:stream';
+import { promisify } from 'node:util';
+import { tmpdir } from 'node:os';
 import yauzl from 'yauzl-promise';
 import XDGAppPaths from 'xdg-app-paths';
 import type { Env } from '@vercel/build-utils';

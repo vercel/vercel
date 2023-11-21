@@ -1,11 +1,11 @@
-import assert from 'assert';
+import assert from 'node:assert';
 import Sema from 'async-sema';
 import { ZipFile } from 'yazl';
 import minimatch from 'minimatch';
-import { readlink } from 'fs-extra';
-import { isSymbolicLink, isDirectory } from './fs/download';
-import streamToBuffer from './fs/stream-to-buffer';
-import type { Files, Config, FunctionFramework } from './types';
+import fs from 'fs-extra';
+import { isSymbolicLink, isDirectory } from './fs/download.js';
+import streamToBuffer from './fs/stream-to-buffer.js';
+import type { Files, Config, FunctionFramework } from './types.js';
 
 interface Environment {
   [key: string]: string;
@@ -234,7 +234,7 @@ export async function createZip(files: Files): Promise<Buffer> {
   for (const name of names) {
     const file = files[name];
     if (file.mode && isSymbolicLink(file.mode) && file.type === 'FileFsRef') {
-      const symlinkTarget = await readlink(file.fsPath);
+      const symlinkTarget = await fs.readlink(file.fsPath);
       symlinkTargets.set(name, symlinkTarget);
     }
   }

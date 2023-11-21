@@ -1,10 +1,10 @@
 import chalk from 'chalk';
-import Client from '../../util/client';
-import getScope from '../../util/get-scope';
-import stamp from '../../util/output/stamp';
-import createCertFromFile from '../../util/certs/create-cert-from-file';
-import createCertForCns from '../../util/certs/create-cert-for-cns';
-import { getCommandName } from '../../util/pkg-name';
+import Client from '../../util/client.js';
+import getScope from '../../util/get-scope.js';
+import stamp from '../../util/output/stamp.js';
+import createCertFromFile from '../../util/certs/create-cert-from-file.js';
+import createCertForCns from '../../util/certs/create-cert-for-cns.js';
+import { getCommandName } from '../../util/pkg-name.js';
 import type { Cert } from '@vercel-internals/types';
 
 interface Options {

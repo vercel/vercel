@@ -1,13 +1,13 @@
 import chalk from 'chalk';
-import elapsed from '../../util/output/elapsed';
-import { maybeURL, normalizeURL } from '../../util/url';
-import printEvents, { DeploymentEvent } from '../../util/events';
-import getScope from '../../util/get-scope';
-import getArgs from '../../util/get-args';
-import Client from '../../util/client';
-import getDeployment from '../../util/get-deployment';
-import { help } from '../help';
-import { logsCommand } from './command';
+import elapsed from '../../util/output/elapsed.js';
+import { maybeURL, normalizeURL } from '../../util/url.js';
+import printEvents, { DeploymentEvent } from '../../util/events.js';
+import getScope from '../../util/get-scope.js';
+import getArgs from '../../util/get-args.js';
+import Client from '../../util/client.js';
+import getDeployment from '../../util/get-deployment.js';
+import { help } from '../help.js';
+import { logsCommand } from './command.js';
 
 export default async function logs(client: Client) {
   let head;

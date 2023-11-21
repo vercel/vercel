@@ -1,21 +1,21 @@
 import open from 'open';
 import execa from 'execa';
 import plural from 'pluralize';
-import { resolve } from 'path';
-import chalk, { Chalk } from 'chalk';
-import { URLSearchParams, parse } from 'url';
+import { resolve } from 'node:path';
+import chalk, { ChalkInstance } from 'chalk';
+import { URLSearchParams, parse } from 'node:url';
 
-import box from '../../util/output/box';
-import formatDate from '../../util/format-date';
-import link from '../../util/output/link';
-import getArgs from '../../util/get-args';
-import Client from '../../util/client';
+import box from '../../util/output/box.js';
+import formatDate from '../../util/format-date.js';
+import link from '../../util/output/link.js';
+import getArgs from '../../util/get-args.js';
+import Client from '../../util/client.js';
 import { Deployment } from '@vercel-internals/types';
-import { normalizeURL } from '../../util/bisect/normalize-url';
-import getScope from '../../util/get-scope';
-import getDeployment from '../../util/get-deployment';
-import { help } from '../help';
-import { bisectCommand } from './command';
+import { normalizeURL } from '../../util/bisect/normalize-url.js';
+import getScope from '../../util/get-scope.js';
+import getDeployment from '../../util/get-deployment.js';
+import { help } from '../help.js';
+import { bisectCommand } from './command.js';
 
 interface Deployments {
   deployments: Deployment[];
@@ -255,7 +255,7 @@ export default async function bisect(client: Client): Promise<number> {
         return 1;
       }
       const { exitCode } = proc;
-      let color: Chalk;
+      let color: ChalkInstance;
       if (exitCode === 0) {
         color = chalk.green;
         action = 'good';

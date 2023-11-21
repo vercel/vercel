@@ -1,8 +1,8 @@
 import chalk from 'chalk';
-import getDeployment from '../get-deployment';
-import getTeamById from '../teams/get-team-by-id';
-import { isValidName } from '../is-valid-name';
-import type Client from '../client';
+import getDeployment from '../get-deployment.js';
+import getTeamById from '../teams/get-team-by-id.js';
+import { isValidName } from '../is-valid-name.js';
+import type Client from '../client.js';
 import type { Deployment, Team } from '@vercel-internals/types';
 
 /**

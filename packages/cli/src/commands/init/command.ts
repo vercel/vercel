@@ -1,5 +1,5 @@
-import { Command } from '../help';
-import { packageName } from '../../util/pkg-name';
+import { Command } from '../help.js';
+import { packageName } from '../../util/pkg-name.js';
 
 export const initCommand: Command = {
   name: 'init',

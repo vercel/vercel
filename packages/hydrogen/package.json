@@ -1,6 +1,7 @@
 {
   "name": "@vercel/hydrogen",
   "version": "1.0.1",
+  "type": "module",
   "license": "Apache-2.0",
   "main": "./dist/index.js",
   "homepage": "https://vercel.com/docs",
@@ -10,7 +11,7 @@
     "directory": "packages/hydrogen"
   },
   "scripts": {
-    "build": "node ../../utils/build-builder.mjs",
+    "build": "node ../../utils/build-builder.js",
     "test-e2e": "pnpm test test/test.js",
     "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --bail --runInBand",
     "type-check": "tsc --noEmit"

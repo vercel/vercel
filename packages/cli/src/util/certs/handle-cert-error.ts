@@ -1,10 +1,10 @@
 import ms from 'ms';
 import { parse } from 'psl';
 import chalk from 'chalk';
-import * as ERRORS from '../errors-ts';
-import { Output } from '../output';
-import dnsTable from '../format-dns-table';
-import { getCommandName } from '../pkg-name';
+import * as ERRORS from '../errors-ts.js';
+import { Output } from '../output/index.js';
+import dnsTable from '../format-dns-table.js';
+import { getCommandName } from '../pkg-name.js';
 
 export default function handleCertError<T>(
   output: Output,

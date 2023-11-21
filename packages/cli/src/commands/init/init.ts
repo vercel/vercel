@@ -1,18 +1,18 @@
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 import tar from 'tar-fs';
 import chalk from 'chalk';
 
 // @ts-ignore
-import listInput from '../../util/input/list';
-import listItem from '../../util/output/list-item';
-import promptBool from '../../util/input/prompt-bool';
-import toHumanPath from '../../util/humanize-path';
-import Client from '../../util/client';
-import info from '../../util/output/info';
-import cmd from '../../util/output/cmd';
-import didYouMean from '../../util/init/did-you-mean';
-import { getCommandName } from '../../util/pkg-name';
+import listInput from '../../util/input/list.js';
+import listItem from '../../util/output/list-item.js';
+import promptBool from '../../util/input/prompt-bool.js';
+import toHumanPath from '../../util/humanize-path.js';
+import Client from '../../util/client.js';
+import info from '../../util/output/info.js';
+import cmd from '../../util/output/cmd.js';
+import didYouMean from '../../util/init/did-you-mean.js';
+import { getCommandName } from '../../util/pkg-name.js';
 
 type Options = {
   '--debug': boolean;

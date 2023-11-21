@@ -1,8 +1,8 @@
 import fs from 'fs-extra';
-import { resolve } from 'path';
+import { resolve } from 'node:path';
 import { getVercelIgnore } from '@vercel/client';
-import uniqueStrings from './unique-strings';
-import { Output } from './output/create-output';
+import uniqueStrings from './unique-strings.js';
+import { Output } from './output/create-output.js';
 
 type NullableString = string | null;
 

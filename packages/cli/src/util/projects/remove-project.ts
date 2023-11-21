@@ -1,5 +1,5 @@
-import Client from '../client';
-import { isAPIError, ProjectNotFound } from '../errors-ts';
+import Client from '../client.js';
+import { isAPIError, ProjectNotFound } from '../errors-ts.js';
 
 export default async function removeProject(
   client: Client,

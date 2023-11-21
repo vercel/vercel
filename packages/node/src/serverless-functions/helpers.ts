@@ -1,7 +1,7 @@
-import type { ServerResponse, IncomingMessage } from 'http';
-import { serializeBody } from '../utils';
-import { PassThrough } from 'stream';
-import { parse as parseURL } from 'url';
+import type { ServerResponse, IncomingMessage } from 'node:http';
+import { serializeBody } from '../utils.js';
+import { PassThrough } from 'node:stream';
+import { parse as parseURL } from 'node:url';
 import { parse as parseContentType } from 'content-type';
 import { parse as parseQS } from 'querystring';
 import etag from 'etag';

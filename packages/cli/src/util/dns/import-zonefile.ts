@@ -1,9 +1,9 @@
 import chalk from 'chalk';
-import { readFileSync } from 'fs';
-import { resolve } from 'path';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { Response } from 'node-fetch';
-import { DomainNotFound, InvalidDomain, isAPIError } from '../errors-ts';
-import Client from '../client';
+import { DomainNotFound, InvalidDomain, isAPIError } from '../errors-ts.js';
+import Client from '../client.js';
 
 type JSONResponse = {
   recordIds: string[];

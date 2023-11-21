@@ -1,4 +1,4 @@
-import Client from '../client';
+import Client from '../client.js';
 
 export default async function deleteDNSRecordById(
   client: Client,

@@ -1,5 +1,5 @@
-import Client from '../client';
-import { Output } from '../output';
+import Client from '../client.js';
+import { Output } from '../output/index.js';
 
 export default async function deleteCertById(
   output: Output,

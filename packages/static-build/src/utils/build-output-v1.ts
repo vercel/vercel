@@ -1,5 +1,5 @@
-import path from 'path';
-import { promises as fs } from 'fs';
+import path from 'node:path';
+import { promises as fs } from 'node:fs';
 import { Route } from '@vercel/routing-utils';
 import {
   Files,
@@ -9,7 +9,7 @@ import {
   debug,
   glob,
 } from '@vercel/build-utils';
-import { BuildConfig, ImagesConfig, isObjectEmpty } from './_shared';
+import { BuildConfig, ImagesConfig, isObjectEmpty } from './_shared.js';
 
 const VERCEL_BUILD_OUTPUT = '.vercel_build_output';
 

@@ -1,4 +1,4 @@
-import * as ERRORS from '../errors-ts';
+import * as ERRORS from '../errors-ts.js';
 
 export default function mapCertError(error: ERRORS.APIError, cns?: string[]) {
   const errorCode: string = error.code;

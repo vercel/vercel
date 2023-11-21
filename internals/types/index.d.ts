@@ -1,6 +1,6 @@
 import type { BuilderFunctions } from '@vercel/build-utils';
-import type { Readable, Writable } from 'stream';
-import type * as tty from 'tty';
+import type { Readable, Writable } from 'node:stream';
+import type * as tty from 'node:tty';
 import type { Route } from '@vercel/routing-utils';
 import { PROJECT_ENV_TARGET } from '@vercel-internals/constants';
 

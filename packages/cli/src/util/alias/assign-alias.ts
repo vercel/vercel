@@ -1,9 +1,9 @@
 import type { Deployment } from '@vercel-internals/types';
-import { Output } from '../output';
-import Client from '../client';
-import createAlias from './create-alias';
-import isDomainExternal from '../domains/is-domain-external';
-import setupDomain from '../domains/setup-domain';
+import { Output } from '../output/index.js';
+import Client from '../client.js';
+import createAlias from './create-alias.js';
+import isDomainExternal from '../domains/is-domain-external.js';
+import setupDomain from '../domains/setup-domain.js';
 
 export default async function assignAlias(
   output: Output,

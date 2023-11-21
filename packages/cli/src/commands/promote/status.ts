@@ -1,21 +1,21 @@
 import chalk from 'chalk';
-import type Client from '../../util/client';
+import type Client from '../../util/client.js';
 import type {
   Deployment,
   LastAliasRequest,
   PaginationOptions,
   Project,
 } from '@vercel-internals/types';
-import elapsed from '../../util/output/elapsed';
-import formatDate from '../../util/format-date';
-import getDeployment from '../../util/get-deployment';
-import { packageName } from '../../util/pkg-name';
-import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
-import getScope from '../../util/get-scope';
+import elapsed from '../../util/output/elapsed.js';
+import formatDate from '../../util/format-date.js';
+import getDeployment from '../../util/get-deployment.js';
+import { packageName } from '../../util/pkg-name.js';
+import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name.js';
+import getScope from '../../util/get-scope.js';
 import ms from 'ms';
-import { ProjectNotFound } from '../../util/errors-ts';
-import renderAliasStatus from '../../util/alias/render-alias-status';
-import sleep from '../../util/sleep';
+import { ProjectNotFound } from '../../util/errors-ts.js';
+import renderAliasStatus from '../../util/alias/render-alias-status.js';
+import sleep from '../../util/sleep.js';
 
 interface DeploymentAlias {
   alias: {

@@ -1,6 +1,6 @@
-const { build } = require('esbuild');
-const assert = require('assert');
-const { outputFile } = require('fs-extra');
+import { build } from 'esbuild';
+import assert from 'node:assert';
+import fs from 'fs-extra';
 
 /**
  * @param {Pick<import('esbuild').BuildOptions, 'outfile' | 'format' | 'entryPoints' | 'write'>} options
@@ -25,22 +25,25 @@ async function buildTemplate(options) {
 async function buildNextjsWrapper() {
   const { outputFiles } = await buildTemplate({
     entryPoints: ['./src/edge-function-source/get-edge-function'],
-    outfile: 'dist/___get-nextjs-edge-function.js',
-    format: 'cjs', // https://esbuild.github.io/api/#format
+    outfile: 'dist/___get-nextjs-edge-function.cjs',
+    format: 'esm', // https://esbuild.github.io/api/#format
     write: false,
   });
 
   assert(outputFiles);
   const [src] = outputFiles;
 
-  return outputFile(src.path, `module.exports = ${JSON.stringify(src.text)}`);
+  return fs.outputFile(
+    src.path,
+    `module.exports = ${JSON.stringify(src.text)}`
+  );
 }
 
-module.exports = buildNextjsWrapper;
+export default buildNextjsWrapper;
 
-if (!module.parent) {
-  buildNextjsWrapper().catch(err => {
-    console.error(err);
-    process.exit(1);
-  });
-}
+// if (!module.parent) {
+//   buildNextjsWrapper().catch(err => {
+//     console.error(err);
+//     process.exit(1);
+//   });
+// }

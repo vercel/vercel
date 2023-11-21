@@ -1,6 +1,6 @@
-import type Client from '../client';
-import type { Output } from '../output';
-import getUser from '../get-user';
+import type Client from '../client.js';
+import type { Output } from '../output/index.js';
+import getUser from '../get-user.js';
 
 // NOTE: `client.authConfig.token` must be set before calling this
 export async function updateCurrentTeamAfterLogin(

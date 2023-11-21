@@ -1,16 +1,16 @@
 import chalk from 'chalk';
-import stamp from '../../util/output/stamp';
-import info from '../../util/output/info';
-import eraseLines from '../../util/output/erase-lines';
-import chars from '../../util/output/chars';
-import note from '../../util/output/note';
-import textInput from '../../util/input/text';
-import invite from './invite';
-import { writeToConfigFile } from '../../util/config/files';
-import { packageName, getCommandName } from '../../util/pkg-name';
-import Client from '../../util/client';
-import createTeam from '../../util/teams/create-team';
-import patchTeam from '../../util/teams/patch-team';
+import stamp from '../../util/output/stamp.js';
+import info from '../../util/output/info.js';
+import eraseLines from '../../util/output/erase-lines.js';
+import chars from '../../util/output/chars.js';
+import note from '../../util/output/note.js';
+import textInput from '../../util/input/text.js';
+import invite from './invite.js';
+import { writeToConfigFile } from '../../util/config/files.js';
+import { packageName, getCommandName } from '../../util/pkg-name.js';
+import Client from '../../util/client.js';
+import createTeam from '../../util/teams/create-team.js';
+import patchTeam from '../../util/teams/patch-team.js';
 import { errorToString, isError } from '@vercel/error-utils';
 
 const validateSlugKeypress = (data: string, value: string) =>

@@ -1,4 +1,4 @@
-import { createHash } from 'crypto';
+import { createHash } from 'node:crypto';
 import fs from 'fs-extra';
 import { Sema } from 'async-sema';
 

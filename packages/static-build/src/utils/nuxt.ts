@@ -1,7 +1,7 @@
-import { join } from 'path';
+import { join } from 'node:path';
 import { update } from 'rc9';
 import { PackageJson } from '@vercel/build-utils';
-import { DeepWriteable, readPackageJson, writePackageJson } from './_shared';
+import { DeepWriteable, readPackageJson, writePackageJson } from './_shared.js';
 
 // https://github.com/nuxt-modules/web-vitals
 const ANALYTICS_PLUGIN_PACKAGE = '@nuxtjs/web-vitals';

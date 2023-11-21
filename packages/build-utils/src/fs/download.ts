@@ -1,9 +1,11 @@
-import path from 'path';
-import debug from '../debug';
-import FileFsRef from '../file-fs-ref';
-import { File, Files, Meta } from '../types';
-import { remove, mkdirp, readlink, symlink, chmod } from 'fs-extra';
-import streamToBuffer from './stream-to-buffer';
+import path from 'node:path';
+import debug from '../debug.js';
+import FileFsRef from '../file-fs-ref.js';
+import { File, Files, Meta } from '../types.js';
+import fs from 'fs-extra';
+import streamToBuffer from './stream-to-buffer.js';
+
+const { remove, mkdirp, readlink, symlink, chmod } = fs;
 
 export interface DownloadedFiles {
   [filePath: string]: FileFsRef;

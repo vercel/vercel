@@ -1,4 +1,4 @@
-import { join } from 'path';
+import { join } from 'node:path';
 import { intersects } from 'semver';
 import execa from 'execa';
 import { Meta, NodeVersion, debug, NowBuildError } from '@vercel/build-utils';

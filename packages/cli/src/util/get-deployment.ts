@@ -1,13 +1,13 @@
-import type Client from './client';
+import type Client from './client.js';
 import {
   DeploymentNotFound,
   DeploymentPermissionDenied,
   InvalidDeploymentId,
   isAPIError,
-} from './errors-ts';
+} from './errors-ts.js';
 import type { Deployment } from '@vercel-internals/types';
-import mapCertError from './certs/map-cert-error';
-import toHost from './to-host';
+import mapCertError from './certs/map-cert-error.js';
+import toHost from './to-host.js';
 
 /**
  * Retrieves a deployment by id or URL.

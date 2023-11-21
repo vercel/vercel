@@ -2,21 +2,21 @@ import ms from 'ms';
 import chalk from 'chalk';
 import plural from 'pluralize';
 
-import Client from '../../util/client';
-import getDomains from '../../util/domains/get-domains';
-import getScope from '../../util/get-scope';
-import stamp from '../../util/output/stamp';
-import formatTable from '../../util/format-table';
-import { formatDateWithoutTime } from '../../util/format-date';
+import Client from '../../util/client.js';
+import getDomains from '../../util/domains/get-domains.js';
+import getScope from '../../util/get-scope.js';
+import stamp from '../../util/output/stamp.js';
+import formatTable from '../../util/format-table.js';
+import { formatDateWithoutTime } from '../../util/format-date.js';
 import type { Domain } from '@vercel-internals/types';
-import getCommandFlags from '../../util/get-command-flags';
+import getCommandFlags from '../../util/get-command-flags.js';
 import {
   PaginationOptions,
   getPaginationOpts,
-} from '../../util/get-pagination-opts';
-import { getCommandName } from '../../util/pkg-name';
-import isDomainExternal from '../../util/domains/is-domain-external';
-import { getDomainRegistrar } from '../../util/domains/get-domain-registrar';
+} from '../../util/get-pagination-opts.js';
+import { getCommandName } from '../../util/pkg-name.js';
+import isDomainExternal from '../../util/domains/is-domain-external.js';
+import { getDomainRegistrar } from '../../util/domains/get-domain-registrar.js';
 
 export default async function ls(
   client: Client,

@@ -2,9 +2,9 @@
  * This converts Superstatic configuration to vercel.json Routes
  * See https://github.com/firebase/superstatic#configuration
  */
-import { parse as parseUrl, format as formatUrl } from 'url';
+import { parse as parseUrl, format as formatUrl } from 'node:url';
 import { pathToRegexp, compile, Key } from 'path-to-regexp';
-import { Route, Redirect, Rewrite, HasField, Header } from './types';
+import { Route, Redirect, Rewrite, HasField, Header } from './types.js';
 
 const UN_NAMED_SEGMENT = '__UN_NAMED_SEGMENT__';
 

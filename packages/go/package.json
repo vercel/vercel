@@ -3,6 +3,7 @@
   "version": "3.0.3",
   "license": "Apache-2.0",
   "main": "./dist/index",
+  "type": "module",
   "homepage": "https://vercel.com/docs/runtimes#official-runtimes/go",
   "repository": {
     "type": "git",
@@ -10,7 +11,7 @@
     "directory": "packages/go"
   },
   "scripts": {
-    "build": "node ../../utils/build-builder.mjs",
+    "build": "node ../../utils/build-builder.js",
     "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --runInBand --bail",
     "test-e2e": "pnpm test",
     "type-check": "tsc --noEmit"

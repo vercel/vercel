@@ -1,14 +1,14 @@
-import { join } from 'path';
+import { join } from 'node:path';
 import { ensureDir } from 'fs-extra';
-import { createSymlink } from '../utils/symlink';
+import { createSymlink } from '../utils/symlink.js';
 import {
   writeHandler,
   writeVCConfig,
   copyFunctionLibs,
   copyHTMLFiles,
   writePrerenderConfig,
-} from '../handlers/build';
-import type { GatsbyFunction, GatsbyPage } from '../schemas';
+} from '../handlers/build.js';
+import type { GatsbyFunction, GatsbyPage } from '../schemas.js';
 
 /**
  * Gatsby SSR/DSG on Vercel is enabled through Vercel Serverless Functions.

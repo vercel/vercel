@@ -1,10 +1,8 @@
 import chalk from 'chalk';
 import ansiEscapes from 'ansi-escapes';
-// @ts-ignore
 import ansiRegex from 'ansi-regex';
-// @ts-ignore
 import stripAnsi from 'strip-ansi';
-import eraseLines from '../output/erase-lines';
+import eraseLines from '../output/erase-lines.js';
 
 const ESCAPES = {
   LEFT: '\u001B[D',

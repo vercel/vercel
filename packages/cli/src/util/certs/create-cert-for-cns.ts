@@ -1,9 +1,9 @@
 import chalk from 'chalk';
 
-import * as ERRORS from '../errors-ts';
-import Client from '../client';
-import issueCert from './issue-cert';
-import mapCertError from './map-cert-error';
+import * as ERRORS from '../errors-ts.js';
+import Client from '../client.js';
+import issueCert from './issue-cert.js';
+import mapCertError from './map-cert-error.js';
 
 export default async function createCertForCns(
   client: Client,

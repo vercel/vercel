@@ -1,12 +1,12 @@
-import error from '../../util/output/error';
-import list from './list';
-import add from './add';
-import change from './switch';
-import invite from './invite';
-import getArgs from '../../util/get-args';
-import Client from '../../util/client';
-import { teamsCommand } from './command';
-import { help } from '../help';
+import error from '../../util/output/error.js';
+import list from './list.js';
+import add from './add.js';
+import change from './switch.js';
+import invite from './invite.js';
+import getArgs from '../../util/get-args.js';
+import Client from '../../util/client.js';
+import { teamsCommand } from './command.js';
+import { help } from '../help.js';
 
 export default async (client: Client) => {
   let subcommand;

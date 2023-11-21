@@ -1,5 +1,5 @@
 import type { Team } from '@vercel-internals/types';
-import Client from '../client';
+import Client from '../client.js';
 
 export default async function patchTeam(
   client: Client,

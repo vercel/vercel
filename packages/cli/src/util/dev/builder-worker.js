@@ -4,7 +4,7 @@
  * modules from npm that would not be available in that directory (so basically,
  * only Vercel Runtimes and `@vercel/build-utils`.
  */
-const { FileFsRef } = require('@vercel/build-utils');
+import { FileFsRef } from '@vercel/build-utils';
 
 process.on('unhandledRejection', err => {
   console.error('Exiting builder due to build error:');
@@ -25,7 +25,7 @@ function onMessage(message) {
 
 async function processMessage(message) {
   const { requirePath, buildOptions } = message;
-  const builder = require(requirePath);
+  const { default: builder } = await import(requirePath);
 
   // Convert the `files` to back into `FileFsRef` instances
   for (const name of Object.keys(buildOptions.files)) {

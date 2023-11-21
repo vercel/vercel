@@ -4,7 +4,7 @@
  * BSD-2 Copyright (c) 2014 Max Ogden and other contributors
  */
 
-import path from 'path';
+import path from 'node:path';
 import pipe from 'promisepipe';
 import * as fs from 'fs-extra';
 import { streamToBuffer } from '@vercel/build-utils';

@@ -1,6 +1,6 @@
-import { parse } from 'path';
-import type FileFsRef from './file-fs-ref';
-import type { ShouldServe } from './types';
+import { parse } from 'node:path';
+import type FileFsRef from './file-fs-ref.js';
+import type { ShouldServe } from './types.js';
 
 export const shouldServe: ShouldServe = ({
   entrypoint,

@@ -8,7 +8,7 @@ import {
   ArrayLiteralExpression,
 } from 'ts-morph';
 import { FromSchema, JSONSchema } from 'json-schema-to-ts';
-import { validate } from './validation';
+import { validate } from './validation.js';
 
 export const BaseFunctionConfigSchema = {
   type: 'object',

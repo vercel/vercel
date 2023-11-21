@@ -1,4 +1,4 @@
-import { NowBuildError } from './errors';
+import { NowBuildError } from './errors.js';
 
 /**
  * Helper function to support both `VERCEL_` and legacy `NOW_` env vars.

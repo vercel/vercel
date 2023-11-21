@@ -1,10 +1,11 @@
-import path from 'path';
-import assert from 'assert';
+import path from 'node:path';
+import assert from 'node:assert';
 import vanillaGlob_ from 'glob';
-import { promisify } from 'util';
-import { lstat, readlink, Stats } from 'fs-extra';
-import { normalizePath } from './normalize-path';
-import FileFsRef from '../file-fs-ref';
+import { promisify } from 'node:util';
+import { lstat, readlink } from 'node:fs/promises';
+import { normalizePath } from './normalize-path.js';
+import FileFsRef from '../file-fs-ref.js';
+import type { Stats } from 'node:fs';
 
 export interface GlobOptions extends vanillaGlob_.IOptions {
   includeDirectories?: boolean;

@@ -1,4 +1,4 @@
-import Client from '../client';
+import Client from '../client.js';
 import {
   DomainNotFound,
   DNSPermissionDenied,
@@ -6,7 +6,7 @@ import {
   DNSInvalidType,
   DNSConflictingRecord,
   isAPIError,
-} from '../errors-ts';
+} from '../errors-ts.js';
 import type { DNSRecordData } from '@vercel-internals/types';
 
 type Response = {

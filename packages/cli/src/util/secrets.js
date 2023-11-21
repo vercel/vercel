@@ -1,4 +1,4 @@
-import Now from '.';
+import Now from './index.js';
 
 export default class Secrets extends Now {
   ls(next, testWarningFlag) {

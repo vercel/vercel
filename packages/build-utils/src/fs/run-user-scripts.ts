@@ -1,21 +1,21 @@
-import assert from 'assert';
+import assert from 'node:assert';
 import fs from 'fs-extra';
-import path from 'path';
+import path from 'node:path';
 import Sema from 'async-sema';
 import spawn from 'cross-spawn';
 import { coerce, intersects, validRange } from 'semver';
-import { SpawnOptions } from 'child_process';
-import { deprecate } from 'util';
-import debug from '../debug';
-import { NowBuildError } from '../errors';
-import { Meta, PackageJson, NodeVersion, Config } from '../types';
+import { SpawnOptions } from 'node:child_process';
+import { deprecate } from 'node:util';
+import debug from '../debug.js';
+import { NowBuildError } from '../errors.js';
+import { Meta, PackageJson, NodeVersion, Config } from '../types.js';
 import {
   getSupportedNodeVersion,
   getLatestNodeVersion,
   getAvailableNodeVersions,
-} from './node-version';
-import { readConfigFile } from './read-config-file';
-import { cloneEnv } from '../clone-env';
+} from './node-version.js';
+import { readConfigFile } from './read-config-file.js';
+import { cloneEnv } from '../clone-env.js';
 
 // Only allow one `runNpmInstall()` invocation to run concurrently
 const runNpmInstallSema = new Sema(1);

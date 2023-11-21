@@ -1,14 +1,14 @@
 // Native
-import { URLSearchParams } from 'url';
+import { URLSearchParams } from 'node:url';
 
 // Packages
 import retry from 'async-retry';
 import jsonlines from 'jsonlines';
 import { eraseLines } from 'ansi-escapes';
 
-import Client from './client';
-import getDeployment from './get-deployment';
-import getScope from './get-scope';
+import Client from './client.js';
+import getDeployment from './get-deployment.js';
+import getScope from './get-scope.js';
 
 export interface FindOpts {
   direction: 'forward' | 'backward';

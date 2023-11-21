@@ -1,22 +1,24 @@
-import { URL } from 'url';
+import { URL, fileURLToPath } from 'node:url';
 import plural from 'pluralize';
 import npa from 'npm-package-arg';
 import { satisfies } from 'semver';
-import { dirname, join } from 'path';
-import { createRequire } from 'module';
-import { mkdirp, outputJSON, readJSON, symlink } from 'fs-extra';
+import { dirname, join } from 'node:path';
+import { createRequire } from 'node:module';
+import fs from 'fs-extra';
 import { isStaticRuntime } from '@vercel/fs-detectors';
 import { BuilderV2, BuilderV3, PackageJson } from '@vercel/build-utils';
 import execa from 'execa';
-import * as staticBuilder from './static-builder';
-import { VERCEL_DIR } from '../projects/link';
-import { Output } from '../output';
-import readJSONFile from '../read-json-file';
-import { CantParseJSONFile } from '../errors-ts';
+import * as staticBuilder from './static-builder.js';
+import { VERCEL_DIR } from '../projects/link.js';
+import { Output } from '../output/index.js';
+import readJSONFile from '../read-json-file.js';
+import { CantParseJSONFile } from '../errors-ts.js';
 import { isErrnoException, isError } from '@vercel/error-utils';
-import cmd from '../output/cmd';
-import code from '../output/code';
-import type { Writable } from 'stream';
+import cmd from '../output/cmd.js';
+import code from '../output/code.js';
+import type { Writable } from 'node:stream';
+
+const { mkdirp, outputJSON, readJSON, symlink } = fs;
 
 export interface BuilderWithPkg {
   path: string;
@@ -29,8 +31,10 @@ type ResolveBuildersResult =
   | { buildersToAdd: Set<string> }
   | { builders: Map<string, BuilderWithPkg> };
 
+const __dirname = fileURLToPath(new URL('.', import.meta.url));
+
 // Get a real `require()` reference that esbuild won't mutate
-const require_ = createRequire(__filename);
+const require_ = createRequire(import.meta.url);
 
 /**
  * Imports the specified Vercel Builders, installing any missing ones

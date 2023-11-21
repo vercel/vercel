@@ -1,4 +1,4 @@
-import { platform, release } from 'os';
+import { platform, release } from 'node:os';
 
 const getOSVersion = () => {
   if (platform() === 'win32') {

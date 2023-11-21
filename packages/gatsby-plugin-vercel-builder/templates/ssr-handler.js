@@ -1,15 +1,15 @@
 import os from 'os';
 import etag from 'etag';
 import { join } from 'path';
-import { copySync, existsSync } from 'fs-extra';
+import fs from 'fs-extra';
 import { getPageName } from './utils';
 
 const TMP_DATA_PATH = join(os.tmpdir(), 'data/datastore');
 const CUR_DATA_PATH = join(__dirname, '.cache/data/datastore');
 
-if (!existsSync(TMP_DATA_PATH)) {
+if (!fs.existsSync(TMP_DATA_PATH)) {
   // Copies executable `data` files to the writable /tmp directory.
-  copySync(CUR_DATA_PATH, TMP_DATA_PATH);
+  fs.copySync(CUR_DATA_PATH, TMP_DATA_PATH);
 }
 
 async function getGraphQLEngine() {

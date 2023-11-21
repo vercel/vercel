@@ -1,5 +1,5 @@
 import path from 'path';
-import fs, { readlink } from 'fs-extra';
+import fs from 'fs-extra';
 import { strict as assert, strictEqual } from 'assert';
 import { download, glob, FileBlob } from '../src';
 
@@ -41,8 +41,8 @@ describe('download()', () => {
     assert(aStat.isFile());
 
     const [linkDirContents, linkTextContents] = await Promise.all([
-      readlink(path.join(outDir, 'link-dir')),
-      readlink(path.join(outDir, 'link.txt')),
+      fs.readlink(path.join(outDir, 'link-dir')),
+      fs.readlink(path.join(outDir, 'link.txt')),
     ]);
 
     strictEqual(linkDirContents, 'dir');
@@ -99,8 +99,8 @@ describe('download()', () => {
     assert(dirStat.isDirectory());
 
     const [linkDirContents, linkTextContents] = await Promise.all([
-      readlink(path.join(outDir, 'link-dir')),
-      readlink(path.join(outDir, 'link.txt')),
+      fs.readlink(path.join(outDir, 'link-dir')),
+      fs.readlink(path.join(outDir, 'link.txt')),
     ]);
 
     strictEqual(linkDirContents, 'dir');

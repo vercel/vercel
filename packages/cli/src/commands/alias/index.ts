@@ -1,12 +1,12 @@
-import { handleError } from '../../util/error';
-import Client from '../../util/client';
-import getArgs from '../../util/get-args';
-import getSubcommand from '../../util/get-subcommand';
-import { help } from '../help';
-import ls from './ls';
-import rm from './rm';
-import set from './set';
-import { aliasCommand } from './command';
+import { handleError } from '../../util/error.js';
+import Client from '../../util/client.js';
+import getArgs from '../../util/get-args.js';
+import getSubcommand from '../../util/get-subcommand.js';
+import { help } from '../help.js';
+import ls from './ls.js';
+import rm from './rm.js';
+import set from './set.js';
+import { aliasCommand } from './command.js';
 
 const COMMAND_CONFIG = {
   default: ['set'],

@@ -1,5 +1,5 @@
-import { join } from 'path';
-import { tmpdir } from 'os';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 import { mkdirp } from 'fs-extra';
 
 export default async function getWritableDirectory() {

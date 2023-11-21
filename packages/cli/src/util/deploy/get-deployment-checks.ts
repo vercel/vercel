@@ -1,4 +1,4 @@
-import Client from '../client';
+import Client from '../client.js';
 
 type CheckStatus = 'registered' | 'running' | 'completed';
 type CheckConclusion =

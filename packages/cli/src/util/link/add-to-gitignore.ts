@@ -1,7 +1,7 @@
-import os from 'os';
-import { join } from 'path';
-import { readFile, writeFile } from 'fs-extra';
-import { VERCEL_DIR } from '../projects/link';
+import os from 'node:os';
+import { join } from 'node:path';
+import { readFile, writeFile } from 'node:fs/promises';
+import { VERCEL_DIR } from '../projects/link.js';
 
 export async function addToGitIgnore(path: string, ignore = VERCEL_DIR) {
   let isGitIgnoreUpdated = false;

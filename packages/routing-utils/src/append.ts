@@ -1,5 +1,5 @@
-import { AppendRoutesToPhaseProps } from './types';
-import { isHandler } from './index';
+import { AppendRoutesToPhaseProps } from './types.js';
+import { isHandler } from './index.js';
 
 export function appendRoutesToPhase({
   routes: prevRoutes,

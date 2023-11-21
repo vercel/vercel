@@ -1,18 +1,14 @@
-import { join } from 'path';
+import { join } from 'node:path';
 import { getNodeVersion } from '@vercel/build-utils';
 import { build } from 'esbuild';
-import {
-  copy,
-  copyFile,
-  pathExists,
-  writeJson,
-  writeFileSync,
-  ensureFileSync,
-} from 'fs-extra';
+import fs from 'fs-extra';
 import type {
   NodejsServerlessFunctionConfig,
   PrerenderFunctionConfig,
-} from './../types';
+} from './../types.js';
+
+const { copy, copyFile, pathExists, writeJson, writeFileSync, ensureFileSync } =
+  fs;
 
 export const writeHandler = async ({
   outDir,

@@ -1,13 +1,13 @@
-import Client from '../../util/client';
-import getArgs from '../../util/get-args';
-import getInvalidSubcommand from '../../util/get-invalid-subcommand';
-import getScope from '../../util/get-scope';
-import handleError from '../../util/handle-error';
-import { help } from '../help';
-import add from './add';
-import list from './list';
-import rm from './rm';
-import { projectCommand } from './command';
+import Client from '../../util/client.js';
+import getArgs from '../../util/get-args.js';
+import getInvalidSubcommand from '../../util/get-invalid-subcommand.js';
+import getScope from '../../util/get-scope.js';
+import handleError from '../../util/handle-error.js';
+import { help } from '../help.js';
+import add from './add.js';
+import list from './list.js';
+import rm from './rm.js';
+import { projectCommand } from './command.js';
 
 const COMMAND_CONFIG = {
   ls: ['ls', 'list'],

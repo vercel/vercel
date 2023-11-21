@@ -1,9 +1,9 @@
-import { readFileSync } from 'fs';
-import { resolve } from 'path';
-import Client from '../client';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import Client from '../client.js';
 import type { Cert } from '@vercel-internals/types';
 import { isErrnoException } from '@vercel/error-utils';
-import { isAPIError } from '../errors-ts';
+import { isAPIError } from '../errors-ts.js';
 
 export default async function createCertFromFile(
   client: Client,

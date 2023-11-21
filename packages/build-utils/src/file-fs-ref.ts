@@ -1,14 +1,14 @@
-import assert from 'assert';
+import assert from 'node:assert';
 import fs from 'fs-extra';
 import multiStream from 'multistream';
-import path from 'path';
+import path from 'node:path';
 import Sema from 'async-sema';
-import { FileBase } from './types';
+import { FileBase } from './types.js';
 
 const semaToPreventEMFILE = new Sema(20);
 
 interface FileFsRefOptions {
-  mode?: number;
+  mode?: number | bigint;
   contentType?: string;
   fsPath: string;
 }

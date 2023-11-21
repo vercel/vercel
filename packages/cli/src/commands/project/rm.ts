@@ -1,10 +1,10 @@
 import chalk from 'chalk';
 import ms from 'ms';
-import Client from '../../util/client';
-import { emoji, prependEmoji } from '../../util/emoji';
-import { isAPIError } from '../../util/errors-ts';
-import confirm from '../../util/input/confirm';
-import { getCommandName } from '../../util/pkg-name';
+import Client from '../../util/client.js';
+import { emoji, prependEmoji } from '../../util/emoji.js';
+import { isAPIError } from '../../util/errors-ts.js';
+import confirm from '../../util/input/confirm.js';
+import { getCommandName } from '../../util/pkg-name.js';
 
 const e = encodeURIComponent;
 

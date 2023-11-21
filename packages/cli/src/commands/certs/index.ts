@@ -1,16 +1,15 @@
-// @ts-ignore
-import { handleError } from '../../util/error';
+import { handleError } from '../../util/error.js';
 
-import getArgs from '../../util/get-args';
-import getSubcommand from '../../util/get-subcommand';
+import getArgs from '../../util/get-args.js';
+import getSubcommand from '../../util/get-subcommand.js';
 
-import add from './add';
-import issue from './issue';
-import ls from './ls';
-import rm from './rm';
-import { certsCommand } from './command';
-import { help } from '../help';
-import Client from '../../util/client';
+import add from './add.js';
+import issue from './issue.js';
+import ls from './ls.js';
+import rm from './rm.js';
+import { certsCommand } from './command.js';
+import { help } from '../help.js';
+import Client from '../../util/client.js';
 
 const COMMAND_CONFIG = {
   add: ['add'],

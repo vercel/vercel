@@ -1,9 +1,9 @@
 import bytes from 'bytes';
 import { Response } from 'node-fetch';
 import { NowBuildError } from '@vercel/build-utils';
-import { NowError } from './now-error';
-import code from './output/code';
-import { getCommandName } from './pkg-name';
+import { NowError } from './now-error.js';
+import code from './output/code.js';
+import { getCommandName } from './pkg-name.js';
 import chalk from 'chalk';
 import { isError } from '@vercel/error-utils';
 

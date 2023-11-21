@@ -1,6 +1,6 @@
 import { stringify } from 'querystring';
 import type { Cert } from '@vercel-internals/types';
-import Client from '../client';
+import Client from '../client.js';
 
 /**
  * Returns certs that contain @param cn.

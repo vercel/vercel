@@ -1,7 +1,7 @@
-import Client from '../client';
-import { InvalidEmail, AccountNotFound, isAPIError } from '../errors-ts';
+import Client from '../client.js';
+import { InvalidEmail, AccountNotFound, isAPIError } from '../errors-ts.js';
 import { errorToString } from '@vercel/error-utils';
-import { LoginData } from './types';
+import { LoginData } from './types.js';
 
 export default async function login(
   client: Client,

@@ -1,5 +1,5 @@
-import { Route, MergeRoutesProps, Build } from './types';
-import { isHandler, HandleValue } from './index';
+import { Route, MergeRoutesProps, Build } from './types.js';
+import { isHandler, HandleValue } from './index.js';
 
 interface BuilderToRoute {
   [use: string]: Route[];

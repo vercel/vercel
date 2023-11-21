@@ -1,21 +1,21 @@
 import chalk from 'chalk';
 import type { Project, ProjectEnvTarget } from '@vercel-internals/types';
-import { Output } from '../../util/output';
-import Client from '../../util/client';
-import stamp from '../../util/output/stamp';
-import addEnvRecord from '../../util/env/add-env-record';
-import getEnvRecords from '../../util/env/get-env-records';
+import { Output } from '../../util/output/index.js';
+import Client from '../../util/client.js';
+import stamp from '../../util/output/stamp.js';
+import addEnvRecord from '../../util/env/add-env-record.js';
+import getEnvRecords from '../../util/env/get-env-records.js';
 import {
   isValidEnvTarget,
   getEnvTargetPlaceholder,
   envTargetChoices,
-} from '../../util/env/env-target';
-import readStandardInput from '../../util/input/read-standard-input';
-import param from '../../util/output/param';
-import { emoji, prependEmoji } from '../../util/emoji';
-import { isKnownError } from '../../util/env/known-error';
-import { getCommandName } from '../../util/pkg-name';
-import { isAPIError } from '../../util/errors-ts';
+} from '../../util/env/env-target.js';
+import readStandardInput from '../../util/input/read-standard-input.js';
+import param from '../../util/output/param.js';
+import { emoji, prependEmoji } from '../../util/emoji.js';
+import { isKnownError } from '../../util/env/known-error.js';
+import { getCommandName } from '../../util/pkg-name.js';
+import { isAPIError } from '../../util/errors-ts.js';
 
 type Options = {
   '--debug': boolean;
@@ -29,7 +29,7 @@ export default async function add(
   output: Output
 ) {
   // improve the way we show inquirer prompts
-  require('../../util/input/patch-inquirer');
+  await import('../../util/input/patch-inquirer');
 
   const stdInput = await readStandardInput(client.stdin);
   let [envName, envTargetArg, envGitBranch] = args;

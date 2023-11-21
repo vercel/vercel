@@ -1,7 +1,8 @@
-import { readFile, realpath } from 'fs-extra';
-import { sep, dirname, join, resolve } from 'path';
+import { readFile, realpath } from 'node:fs/promises';
+import { sep, dirname, join, resolve } from 'node:path';
 import { scanParentDirs } from '@vercel/build-utils';
-import { packageName } from './pkg-name';
+import { packageName } from './pkg-name.js';
+import { fileURLToPath } from 'node:url';
 
 async function getConfigPrefix() {
   const paths = [
@@ -45,6 +46,7 @@ async function isGlobal() {
     const isWindows = process.platform === 'win32';
     const defaultPath = isWindows ? process.env.APPDATA : '/usr/local/lib';
 
+    const __dirname = fileURLToPath(new URL('.', import.meta.url));
     const installPath = await realpath(resolve(__dirname));
 
     if (

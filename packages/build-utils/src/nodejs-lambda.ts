@@ -1,4 +1,4 @@
-import { Lambda, LambdaOptionsWithFiles } from './lambda';
+import { Lambda, LambdaOptionsWithFiles } from './lambda.js';
 
 interface NodejsLambdaOptions extends LambdaOptionsWithFiles {
   shouldAddHelpers: boolean;

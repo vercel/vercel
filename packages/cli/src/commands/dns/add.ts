@@ -4,14 +4,14 @@ import {
   DNSPermissionDenied,
   DNSInvalidPort,
   DNSInvalidType,
-} from '../../util/errors-ts';
-import addDNSRecord from '../../util/dns/add-dns-record';
-import Client from '../../util/client';
-import getScope from '../../util/get-scope';
-import parseAddDNSRecordArgs from '../../util/dns/parse-add-dns-record-args';
-import stamp from '../../util/output/stamp';
-import getDNSData from '../../util/dns/get-dns-data';
-import { getCommandName } from '../../util/pkg-name';
+} from '../../util/errors-ts.js';
+import addDNSRecord from '../../util/dns/add-dns-record.js';
+import Client from '../../util/client.js';
+import getScope from '../../util/get-scope.js';
+import parseAddDNSRecordArgs from '../../util/dns/parse-add-dns-record-args.js';
+import stamp from '../../util/output/stamp.js';
+import getDNSData from '../../util/dns/get-dns-data.js';
+import { getCommandName } from '../../util/pkg-name.js';
 
 type Options = {};
 

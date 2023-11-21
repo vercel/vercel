@@ -1,15 +1,15 @@
-import path from 'path';
+import path from 'node:path';
 import { fileNameSymbol } from '@vercel/client';
 import {
   CantParseJSONFile,
   CantFindConfig,
   ConflictingConfigFiles,
   WorkingDirectoryDoesNotExist,
-} from './errors-ts';
-import humanizePath from './humanize-path';
-import readJSONFile from './read-json-file';
-import { VercelConfig } from './dev/types';
-import { Output } from './output';
+} from './errors-ts.js';
+import humanizePath from './humanize-path.js';
+import readJSONFile from './read-json-file.js';
+import { VercelConfig } from './dev/types.js';
+import { Output } from './output/index.js';
 import { isErrnoException } from '@vercel/error-utils';
 
 let config: VercelConfig;

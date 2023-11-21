@@ -12,50 +12,50 @@ try {
   }
 }
 
-import { join } from 'path';
-import { existsSync } from 'fs';
+import { join } from 'node:path';
+import { existsSync } from 'node:fs';
 import { mkdirp } from 'fs-extra';
 import chalk from 'chalk';
 import epipebomb from 'epipebomb';
-import getLatestVersion from './util/get-latest-version';
-import { URL } from 'url';
+import getLatestVersion from './util/get-latest-version/index.js';
+import { URL } from 'node:url';
 import * as Sentry from '@sentry/node';
-import hp from './util/humanize-path';
-import commands from './commands';
-import pkg from './util/pkg';
-import { Output } from './util/output';
-import cmd from './util/output/cmd';
-import info from './util/output/info';
-import error from './util/output/error';
-import param from './util/output/param';
-import highlight from './util/output/highlight';
-import getArgs from './util/get-args';
-import getUser from './util/get-user';
-import getTeams from './util/teams/get-teams';
-import Client from './util/client';
-import { handleError } from './util/error';
-import reportError from './util/report-error';
-import getConfig from './util/get-config';
-import * as configFiles from './util/config/files';
-import getGlobalPathConfig from './util/config/global-path';
+import hp from './util/humanize-path.js';
+import commands from './commands/index.js';
+import pkg from './util/pkg.js';
+import { Output } from './util/output/index.js';
+import cmd from './util/output/cmd.js';
+import info from './util/output/info.js';
+import error from './util/output/error.js';
+import param from './util/output/param.js';
+import highlight from './util/output/highlight.js';
+import getArgs from './util/get-args.js';
+import getUser from './util/get-user.js';
+import getTeams from './util/teams/get-teams.js';
+import Client from './util/client.js';
+import { handleError } from './util/error.js';
+import reportError from './util/report-error.js';
+import getConfig from './util/get-config.js';
+import * as configFiles from './util/config/files.js';
+import getGlobalPathConfig from './util/config/global-path.js';
 import {
   defaultAuthConfig,
   defaultGlobalConfig,
-} from './util/config/get-default';
-import * as ERRORS from './util/errors-ts';
-import { APIError } from './util/errors-ts';
-import { SENTRY_DSN } from './util/constants';
-import getUpdateCommand from './util/get-update-command';
-import { metrics, shouldCollectMetrics } from './util/metrics';
-import { getCommandName, getTitleName } from './util/pkg-name';
-import doLoginPrompt from './util/login/prompt';
+} from './util/config/get-default.js';
+import * as ERRORS from './util/errors-ts.js';
+import { APIError } from './util/errors-ts.js';
+import { SENTRY_DSN } from './util/constants.js';
+import getUpdateCommand from './util/get-update-command.js';
+import { metrics, shouldCollectMetrics } from './util/metrics.js';
+import { getCommandName, getTitleName } from './util/pkg-name.js';
+import doLoginPrompt from './util/login/prompt.js';
 import type { AuthConfig, GlobalConfig } from '@vercel-internals/types';
 import { VercelConfig } from '@vercel/client';
 import { ProxyAgent } from 'proxy-agent';
-import box from './util/output/box';
-import { execExtension } from './util/extension/exec';
-import { help } from './args';
-import { updateCurrentTeamAfterLogin } from './util/login/update-current-team-after-login';
+import box from './util/output/box.js';
+import { execExtension } from './util/extension/exec.js';
+import { help } from './args.js';
+import { updateCurrentTeamAfterLogin } from './util/login/update-current-team-after-login.js';
 
 const VERCEL_DIR = getGlobalPathConfig();
 const VERCEL_CONFIG_PATH = configFiles.getConfigFilePath();
@@ -520,82 +520,82 @@ const main = async () => {
       let func: any;
       switch (targetCommand) {
         case 'alias':
-          func = require('./commands/alias').default;
+          func = await import('./commands/alias/index.js');
           break;
         case 'bisect':
-          func = require('./commands/bisect').default;
+          func = await import('./commands/bisect/index.js');
           break;
         case 'build':
-          func = require('./commands/build').default;
+          func = await import('./commands/build/index.js');
           break;
         case 'certs':
-          func = require('./commands/certs').default;
+          func = await import('./commands/certs/index.js');
           break;
         case 'deploy':
-          func = require('./commands/deploy').default;
+          func = await import('./commands/deploy/index.js');
           break;
         case 'dev':
-          func = require('./commands/dev').default;
+          func = await import('./commands/dev/index.js');
           break;
         case 'dns':
-          func = require('./commands/dns').default;
+          func = await import('./commands/dns/index.js');
           break;
         case 'domains':
-          func = require('./commands/domains').default;
+          func = await import('./commands/domains/index.js');
           break;
         case 'env':
-          func = require('./commands/env').default;
+          func = await import('./commands/env/index.js');
           break;
         case 'git':
-          func = require('./commands/git').default;
+          func = await import('./commands/git/index.js');
           break;
         case 'init':
-          func = require('./commands/init').default;
+          func = await import('./commands/init/index.js');
           break;
         case 'inspect':
-          func = require('./commands/inspect').default;
+          func = await import('./commands/inspect/index.js');
           break;
         case 'link':
-          func = require('./commands/link').default;
+          func = await import('./commands/link/index.js');
           break;
         case 'list':
-          func = require('./commands/list').default;
+          func = await import('./commands/list/index.js');
           break;
         case 'logs':
-          func = require('./commands/logs').default;
+          func = await import('./commands/logs/index.js');
           break;
         case 'login':
-          func = require('./commands/login').default;
+          func = await import('./commands/login/index.js');
           break;
         case 'logout':
-          func = require('./commands/logout').default;
+          func = await import('./commands/logout/index.js');
           break;
         case 'project':
-          func = require('./commands/project').default;
+          func = await import('./commands/project/index.js');
           break;
         case 'promote':
-          func = require('./commands/promote').default;
+          func = await import('./commands/promote/index.js');
           break;
         case 'pull':
-          func = require('./commands/pull').default;
+          func = await import('./commands/pull/index.js');
           break;
         case 'redeploy':
-          func = require('./commands/redeploy').default;
+          func = await import('./commands/redeploy/index.js');
           break;
         case 'remove':
-          func = require('./commands/remove').default;
+          func = await import('./commands/remove/index.js');
           break;
         case 'rollback':
-          func = require('./commands/rollback').default;
+          func = await import('./commands/rollback/index.js');
           break;
         case 'secrets':
-          func = require('./commands/secrets').default;
+          func = await import('./commands/secrets/index.js');
           break;
         case 'teams':
-          func = require('./commands/teams').default;
+          func = await import('./commands/teams/index.js');
           break;
         case 'whoami':
-          func = require('./commands/whoami').default;
+          func = await import('./commands/whoami/index.js');
           break;
         default:
           func = null;

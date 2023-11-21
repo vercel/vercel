@@ -1,8 +1,8 @@
 import fs from 'fs-extra';
-import path from 'path';
+import path from 'node:path';
 import semver from 'semver';
 
-import { ExperimentalTraceVersion } from './utils';
+import { ExperimentalTraceVersion } from './utils.js';
 
 function getCustomData(importName: string, target: string) {
   return `

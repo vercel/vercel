@@ -1,7 +1,7 @@
 import retry from 'async-retry';
 import type { Cert } from '@vercel-internals/types';
-import Client from '../client';
-import { isAPIError } from '../errors-ts';
+import Client from '../client.js';
+import { isAPIError } from '../errors-ts.js';
 import { isError } from '@vercel/error-utils';
 
 // When it's a configuration error we should retry because of the DNS propagation
