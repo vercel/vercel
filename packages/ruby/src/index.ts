@@ -50,6 +50,7 @@ async function bundleInstall(
   debug(`running "bundle install --deployment"...`);
   const bundleAppConfig = await getWriteableDirectory();
   const gemfileContent = await readFile(gemfilePath, 'utf8');
+
   if (gemfileContent.includes('ruby "~> 2.7.x"')) {
     // Gemfile contains "2.7.x" which will cause an error message:
     // "Your Ruby patchlevel is 0, but your Gemfile specified -1"
@@ -59,15 +60,15 @@ async function bundleInstall(
       gemfilePath,
       gemfileContent.replace('ruby "~> 2.7.x"', 'ruby "~> 2.7.0"')
     );
-    //} else if (gemfileContent.includes('ruby "~> 3.2.x"')) {
-    //  // Gemfile contains "3.2.x" which will cause an error message:
-    //  // "Your Ruby patchlevel is 0, but your Gemfile specified -1"
-    //  // See https://github.com/rubygems/bundler/blob/3f0638c6c8d340c2f2405ecb84eb3b39c433e36e/lib/bundler/errors.rb#L49
-    //  // We must correct to the actual version in the build container.
-    //  await writeFile(
-    //    gemfilePath,
-    //    gemfileContent.replace('ruby "~> 3.2.x"', 'ruby "~> 3.2.0"')
-    //  );
+  } else if (gemfileContent.includes('ruby "~> 3.2.x"')) {
+    // Gemfile contains "3.2.x" which will cause an error message:
+    // "Your Ruby patchlevel is 0, but your Gemfile specified -1"
+    // See https://github.com/rubygems/bundler/blob/3f0638c6c8d340c2f2405ecb84eb3b39c433e36e/lib/bundler/errors.rb#L49
+    // We must correct to the actual version in the build container.
+    await writeFile(
+      gemfilePath,
+      gemfileContent.replace('ruby "~> 3.2.x"', 'ruby "~> 3.2.0"')
+    );
   }
 
   const bundlerEnv = cloneEnv(process.env, {
