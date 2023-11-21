@@ -388,13 +388,13 @@ This is an abstract enumeration type that is implemented by one of the following
 - `nodejs20.x`
 - `nodejs18.x`
 - `nodejs16.x`
+- `go1.x`
 - `java11`
 - `python3.9`
 - `dotnet6`
 - `dotnetcore3.1`
 - `ruby2.7`
 - `provided.al2`
-- `provided.al2023`
 
 ## `@vercel/build-utils` Helper Functions
 
