@@ -44,10 +44,10 @@ async function matchPaths(
 async function bundleInstall(
   bundlePath: string,
   bundleDir: string,
-  gemfilePath: string
+  gemfilePath: string,
+  runtime: string
 ) {
   debug(`running "bundle install --deployment"...`);
-  console.log({ bundlePath, bundleDir, gemfilePath });
   const bundleAppConfig = await getWriteableDirectory();
   const gemfileContent = await readFile(gemfilePath, 'utf8');
   if (gemfileContent.includes('ruby "~> 2.7.x"')) {
@@ -61,31 +61,29 @@ async function bundleInstall(
     );
   }
 
-  await execa('ls', ['-l', dirname(bundlePath)], { stdio: 'inherit' });
-  await execa('ls', ['-l', '/ruby32'], { stdio: 'inherit' });
-  await execa('ls', ['-l', gemfilePath], { stdio: 'inherit' });
-  await execa('ls', ['-l', bundleDir], { stdio: 'inherit' });
-
-  await execa('bundler', ['add', 'webrick'], {
-    stdio: 'inherit',
-    env: cloneEnv(process.env, {
-      BUNDLE_SILENCE_ROOT_WARNING: '1',
-      BUNDLE_APP_CONFIG: bundleAppConfig,
-      BUNDLE_JOBS: '4',
-    }),
+  const bundlerEnv = cloneEnv(process.env, {
+    // Ensure the correct version of `ruby` is in front of the $PATH
+    PATH: `${dirname(bundlePath)}:${process.env.PATH}`,
+    BUNDLE_SILENCE_ROOT_WARNING: '1',
+    BUNDLE_APP_CONFIG: bundleAppConfig,
+    BUNDLE_JOBS: '4',
   });
+
+  // Lambda "ruby3.2" runtime does not include "webrick",
+  // which is needed for the `vc_init.rb` entrypoint file
+  if (runtime === 'ruby3.2') {
+    await execa('bundler', ['add', 'webrick'], {
+      stdio: 'inherit',
+      env: bundlerEnv,
+    });
+  }
 
   await execa(
     bundlePath,
     ['install', '--deployment', '--gemfile', gemfilePath, '--path', bundleDir],
     {
       stdio: 'inherit',
-      env: cloneEnv(process.env, {
-        PATH: `${dirname(bundlePath)}:${process.env.PATH}`,
-        BUNDLE_SILENCE_ROOT_WARNING: '1',
-        BUNDLE_APP_CONFIG: bundleAppConfig,
-        BUNDLE_JOBS: '4',
-      }),
+      env: bundlerEnv,
     }
   );
 }
@@ -123,18 +121,6 @@ export async function build({
   const hasRootVendorDir = await pathExists(vendorDir);
   const hasRelativeVendorDir = await pathExists(relativeVendorDir);
   const hasVendorDir = hasRootVendorDir || hasRelativeVendorDir;
-  console.log({
-    gemHome,
-    bundlerPath,
-    vendorPath,
-    runtime,
-    vendorDir,
-    bundleDir,
-    relativeVendorDir,
-    hasRootVendorDir,
-    hasRelativeVendorDir,
-    hasVendorDir,
-  });
 
   if (hasRelativeVendorDir) {
     if (hasRootVendorDir) {
@@ -170,7 +156,7 @@ export async function build({
       } else {
         // try installing. this won't work if native extesions are required.
         // if that's the case, gems should be vendored locally before deploying.
-        await bundleInstall(bundlerPath, bundleDir, gemfilePath);
+        await bundleInstall(bundlerPath, bundleDir, gemfilePath, runtime);
       }
     }
   } else {
