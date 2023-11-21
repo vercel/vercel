@@ -50,7 +50,7 @@ export { shouldServe };
 // we need our `main.go` to be called something else
 const MAIN_GO_FILENAME = 'main__vc__go__.go';
 
-const HANDLER_FILENAME = `handler${OUT_EXTENSION}`;
+const HANDLER_FILENAME = `bootstrap${OUT_EXTENSION}`;
 
 interface PortInfo {
   port: number;
@@ -252,7 +252,7 @@ export async function build({
     const lambda = new Lambda({
       files: { ...(await glob('**', outDir)), ...includedFiles },
       handler: HANDLER_FILENAME,
-      runtime: 'go1.x',
+      runtime: 'provided.al2',
       supportsWrapper: true,
       environment: {},
     });
