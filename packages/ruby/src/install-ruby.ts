@@ -7,19 +7,34 @@ interface RubyVersion extends NodeVersion {
   minor: number;
 }
 
-const allOptions: RubyVersion[] = [
-  { major: 2, minor: 7, range: '2.7.x', runtime: 'ruby2.7' },
-  {
-    major: 2,
-    minor: 5,
-    range: '2.5.x',
-    runtime: 'ruby2.5',
-    discontinueDate: new Date('2021-11-30'),
-  },
-];
+function getOptions() {
+  const options = [
+    {
+      major: 2,
+      minor: 7,
+      range: '2.7.x',
+      runtime: 'ruby2.7',
+      discontinueDate: new Date('2021-12-07'),
+    },
+    {
+      major: 2,
+      minor: 5,
+      range: '2.5.x',
+      runtime: 'ruby2.5',
+      discontinueDate: new Date('2021-11-30'),
+    },
+  ] as const;
+  if (process.env.VERCEL_ALLOW_RUBY32 === '1') {
+    return [
+      { major: 3, minor: 2, range: '3.2.x', runtime: 'ruby3.2' },
+      ...options,
+    ] as const;
+  }
+  return options;
+}
 
 function getLatestRubyVersion(): RubyVersion {
-  return allOptions[0];
+  return getOptions()[0];
 }
 
 function isDiscontinued({ discontinueDate }: RubyVersion): boolean {
@@ -39,7 +54,7 @@ function getRubyPath(meta: Meta, gemfileContents: string) {
       .find(line => line.startsWith('ruby'));
     if (line) {
       const strVersion = line.slice(4).trim().slice(1, -1).replace('~>', '');
-      const found = allOptions.some(o => {
+      const found = getOptions().some(o => {
         // The array is already in order so return the first
         // match which will be the newest version.
         selection = o;
