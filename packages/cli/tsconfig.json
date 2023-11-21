@@ -10,7 +10,7 @@
   },
   "extends": "../../tsconfig.base.json",
   "include": ["src/**/*"],
-  "exclude": ["templates/*", "node_modules"],
+  "exclude": ["templates/*"],
   "ts-node": {
     "swc": true // https://typestrong.org/ts-node/docs/swc/
   }

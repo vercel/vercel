@@ -1,6 +1,7 @@
 import { build } from 'esbuild';
 import assert from 'node:assert';
 import fs from 'fs-extra';
+import { fileURLToPath } from 'node:url';
 
 /**
  * @param {Pick<import('esbuild').BuildOptions, 'outfile' | 'format' | 'entryPoints' | 'write'>} options
@@ -41,9 +42,9 @@ async function buildNextjsWrapper() {
 
 export default buildNextjsWrapper;
 
-// if (!module.parent) {
-//   buildNextjsWrapper().catch(err => {
-//     console.error(err);
-//     process.exit(1);
-//   });
-// }
+if (fileURLToPath(import.meta.url) === process.argv[1]) {
+  buildNextjsWrapper().catch(err => {
+    console.error(err);
+    process.exit(1);
+  });
+}
