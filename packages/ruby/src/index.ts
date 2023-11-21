@@ -66,15 +66,14 @@ async function bundleInstall(
   await execa('ls', ['-l', gemfilePath], { stdio: 'inherit' });
   await execa('ls', ['-l', bundleDir], { stdio: 'inherit' });
 
-  //await execa('bundler', ['add', 'webrick'], {
-  //await execa('gem', ['install', 'webrick'], {
-  //  stdio: 'inherit',
-  //  env: cloneEnv(process.env, {
-  //    BUNDLE_SILENCE_ROOT_WARNING: '1',
-  //    BUNDLE_APP_CONFIG: bundleAppConfig,
-  //    BUNDLE_JOBS: '4',
-  //  }),
-  //});
+  await execa('bundler', ['add', 'webrick'], {
+    stdio: 'inherit',
+    env: cloneEnv(process.env, {
+      BUNDLE_SILENCE_ROOT_WARNING: '1',
+      BUNDLE_APP_CONFIG: bundleAppConfig,
+      BUNDLE_JOBS: '4',
+    }),
+  });
 
   await execa(
     bundlePath,
