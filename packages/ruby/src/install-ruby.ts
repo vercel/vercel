@@ -14,7 +14,7 @@ function getOptions() {
       minor: 7,
       range: '2.7.x',
       runtime: 'ruby2.7',
-      discontinueDate: new Date('2021-12-07'),
+      discontinueDate: new Date('2023-12-07'),
     },
     {
       major: 2,
