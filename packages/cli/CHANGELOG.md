@@ -1,5 +1,13 @@
 # vercel
 
+## 32.5.6
+
+### Patch Changes
+
+- Updated dependencies [[`ffd2f34c6`](https://github.com/vercel/vercel/commit/ffd2f34c6c3d53bbb673aa3241845abc50e67c5e), [`4636ae54c`](https://github.com/vercel/vercel/commit/4636ae54c6c17709c1a058169cdca19c3df73ddb)]:
+  - @vercel/next@4.0.15
+  - @vercel/ruby@2.0.3
+
 ## 32.5.5
 
 ### Patch Changes

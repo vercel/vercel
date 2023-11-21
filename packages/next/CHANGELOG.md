@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.0.15
+
+### Patch Changes
+
+- ensure function configs work for paths inside of route groups ([#10855](https://github.com/vercel/vercel/pull/10855))
+
 ## 4.0.14
 
 ### Patch Changes
