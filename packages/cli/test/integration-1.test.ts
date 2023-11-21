@@ -211,7 +211,6 @@ afterAll(async () => {
 test('[vc build] should build project with corepack and select npm@8.1.0', async () => {
   try {
     process.env.ENABLE_EXPERIMENTAL_COREPACK = '1';
-    process.env.SKIP_YARN_COREPACK_CHECK = '1';
     const directory = await setupE2EFixture('vc-build-corepack-npm');
     const before = await exec(directory, 'npm', ['--version']);
     const output = await execCli(binaryPath, ['build'], { cwd: directory });
@@ -235,14 +234,12 @@ test('[vc build] should build project with corepack and select npm@8.1.0', async
     expect(contents).toEqual(['home', 'shim']);
   } finally {
     delete process.env.ENABLE_EXPERIMENTAL_COREPACK;
-    delete process.env.SKIP_YARN_COREPACK_CHECK;
   }
 });
 
 test('[vc build] should build project with corepack and select pnpm@7.1.0', async () => {
   try {
     process.env.ENABLE_EXPERIMENTAL_COREPACK = '1';
-    process.env.SKIP_YARN_COREPACK_CHECK = '1';
     const directory = await setupE2EFixture('vc-build-corepack-pnpm');
     const before = await exec(directory, 'pnpm', ['--version']);
     const output = await execCli(binaryPath, ['build'], { cwd: directory });
@@ -265,14 +262,12 @@ test('[vc build] should build project with corepack and select pnpm@7.1.0', asyn
     expect(contents).toEqual(['home', 'shim']);
   } finally {
     delete process.env.ENABLE_EXPERIMENTAL_COREPACK;
-    delete process.env.SKIP_YARN_COREPACK_CHECK;
   }
 });
 
 test('[vc build] should build project with corepack and select yarn@2.4.3', async () => {
   try {
     process.env.ENABLE_EXPERIMENTAL_COREPACK = '1';
-    process.env.SKIP_YARN_COREPACK_CHECK = '1';
     const directory = await setupE2EFixture('vc-build-corepack-yarn');
     const before = await exec(directory, 'yarn', ['--version']);
     const output = await execCli(binaryPath, ['build'], { cwd: directory });
@@ -295,7 +290,6 @@ test('[vc build] should build project with corepack and select yarn@2.4.3', asyn
     expect(contents).toEqual(['home', 'shim']);
   } finally {
     delete process.env.ENABLE_EXPERIMENTAL_COREPACK;
-    delete process.env.SKIP_YARN_COREPACK_CHECK;
   }
 });
 

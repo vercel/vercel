@@ -85,15 +85,27 @@ if (parseInt(process.versions.node.split('.')[0], 10) >= 16) {
     expect(buildResult.output['dashboard/changelog']).toBeDefined();
     expect(buildResult.output['dashboard/deployments/[id]']).toBeDefined();
 
-    expect(buildResult.output['api/hello']).toBeDefined();
-    expect(buildResult.output['api/hello'].type).toBe('Lambda');
-    expect(buildResult.output['api/hello'].memory).toBe(512);
-    expect(buildResult.output['api/hello'].maxDuration).toBe(5);
+    // ensure that function configs are properly applied across pages & app dir outputs
+    [
+      // pages dir route handler
+      'api/hello',
+      // app dir route handler
+      'api/hello-again',
+      // app dir route handler inside of a group
+      'api/hello-again/with-group',
+      // server component inside of a group
+      'dynamic-group/[slug]',
+      'dynamic-group/[slug].rsc',
+      // server component
+      'dynamic/[category]/[id]',
+      'dynamic/[category]/[id].rsc',
+    ].forEach(fnKey => {
+      expect(buildResult.output[fnKey]).toBeDefined();
+      expect(buildResult.output[fnKey].type).toBe('Lambda');
+      expect(buildResult.output[fnKey].memory).toBe(512);
+      expect(buildResult.output[fnKey].maxDuration).toBe(5);
+    });
 
-    expect(buildResult.output['api/hello-again']).toBeDefined();
-    expect(buildResult.output['api/hello-again'].type).toBe('Lambda');
-    expect(buildResult.output['api/hello-again'].memory).toBe(512);
-    expect(buildResult.output['api/hello-again'].maxDuration).toBe(5);
     expect(
       buildResult.output['api/hello-again'].supportsResponseStreaming
     ).toBe(true);
