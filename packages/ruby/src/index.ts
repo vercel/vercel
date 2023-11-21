@@ -59,6 +59,15 @@ async function bundleInstall(
       gemfilePath,
       gemfileContent.replace('ruby "~> 2.7.x"', 'ruby "~> 2.7.0"')
     );
+    //} else if (gemfileContent.includes('ruby "~> 3.2.x"')) {
+    //  // Gemfile contains "3.2.x" which will cause an error message:
+    //  // "Your Ruby patchlevel is 0, but your Gemfile specified -1"
+    //  // See https://github.com/rubygems/bundler/blob/3f0638c6c8d340c2f2405ecb84eb3b39c433e36e/lib/bundler/errors.rb#L49
+    //  // We must correct to the actual version in the build container.
+    //  await writeFile(
+    //    gemfilePath,
+    //    gemfileContent.replace('ruby "~> 3.2.x"', 'ruby "~> 3.2.0"')
+    //  );
   }
 
   const bundlerEnv = cloneEnv(process.env, {
@@ -72,20 +81,32 @@ async function bundleInstall(
   // Lambda "ruby3.2" runtime does not include "webrick",
   // which is needed for the `vc_init.rb` entrypoint file
   if (runtime === 'ruby3.2') {
-    await execa('bundler', ['add', 'webrick'], {
+    const result = await execa('bundler', ['add', 'webrick'], {
       stdio: 'pipe',
       env: bundlerEnv,
+      reject: false,
     });
+    if (result.exitCode !== 0) {
+      console.log(result.stdout);
+      console.error(result.stderr);
+      throw result;
+    }
   }
 
-  await execa(
+  const result = await execa(
     bundlePath,
     ['install', '--deployment', '--gemfile', gemfilePath, '--path', bundleDir],
     {
       stdio: 'pipe',
       env: bundlerEnv,
+      reject: false,
     }
   );
+  if (result.exitCode !== 0) {
+    console.log(result.stdout);
+    console.error(result.stderr);
+    throw result;
+  }
 }
 
 export const version = 3;
