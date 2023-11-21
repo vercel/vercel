@@ -82,7 +82,7 @@ async function bundleInstall(
     {
       stdio: 'inherit',
       env: cloneEnv(process.env, {
-        //PATH: `${dirname(bundlePath)}:${process.env.PATH}`,
+        PATH: `${dirname(bundlePath)}:${process.env.PATH}`,
         BUNDLE_SILENCE_ROOT_WARNING: '1',
         BUNDLE_APP_CONFIG: bundleAppConfig,
         BUNDLE_JOBS: '4',
