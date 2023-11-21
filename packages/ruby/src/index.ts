@@ -60,12 +60,24 @@ async function bundleInstall(
       gemfileContent.replace('ruby "~> 2.7.x"', 'ruby "~> 2.7.0"')
     );
   }
+
+  //await execa('bundler', ['add', 'webrick'], {
+  await execa('gem', ['install', 'webrick'], {
+    stdio: 'pipe',
+    env: cloneEnv(process.env, {
+      BUNDLE_SILENCE_ROOT_WARNING: '1',
+      BUNDLE_APP_CONFIG: bundleAppConfig,
+      BUNDLE_JOBS: '4',
+    }),
+  });
+
   await execa(
     bundlePath,
     ['install', '--deployment', '--gemfile', gemfilePath, '--path', bundleDir],
     {
       stdio: 'pipe',
       env: cloneEnv(process.env, {
+        PATH: `${dirname(bundlePath)}:${process.env.PATH}`,
         BUNDLE_SILENCE_ROOT_WARNING: '1',
         BUNDLE_APP_CONFIG: bundleAppConfig,
         BUNDLE_JOBS: '4',
