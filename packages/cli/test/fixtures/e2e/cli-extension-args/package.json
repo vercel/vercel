@@ -1,0 +1,6 @@
+{
+  "name": "cli-extension-args",
+  "bin": {
+    "vercel-myargs": "bin.js"
+  }
+}

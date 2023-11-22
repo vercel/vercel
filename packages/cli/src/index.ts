@@ -501,7 +501,7 @@ const main = async () => {
         exitCode = await execExtension(
           client,
           targetCommand,
-          argv._.slice(3),
+          process.argv.slice(3),
           cwd
         );
       } catch (err: unknown) {
