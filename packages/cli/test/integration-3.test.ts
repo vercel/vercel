@@ -1470,13 +1470,13 @@ test('should passthrough args to CLI extension', async () => {
     { cwd: fixture }
   );
   const formatted = formatOutput(output);
-  expect(output.stdout, formatted).toContain('Received 4 arguments');
-  expect(output.stdout, formatted).toContain('Arg 1 = --version');
-  expect(output.stdout, formatted).toContain('Arg 2 = --custom-option');
-  expect(output.stdout, formatted).toContain('Arg 3 = some-arg');
-  expect(output.stdout, formatted).toContain('Arg 4 = --debug');
-  expect(output.stdout, formatted).toContain('Arg 5 = --help');
-  expect(output.stdout, formatted).toContain('Arg 6 = --cwd=/some/path');
+  expect(output.stdout, formatted).toContain('Received 8 arguments');
+  expect(output.stdout, formatted).toContain('Arg 2 = --version');
+  expect(output.stdout, formatted).toContain('Arg 3 = --custom-option');
+  expect(output.stdout, formatted).toContain('Arg 4 = some-arg');
+  expect(output.stdout, formatted).toContain('Arg 5 = --debug');
+  expect(output.stdout, formatted).toContain('Arg 6 = --help');
+  expect(output.stdout, formatted).toContain('Arg 7 = --cwd=.');
 });
 
 // NOTE: Order matters here. This must be the last test in the file.

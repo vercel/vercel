@@ -510,7 +510,12 @@ const main = async () => {
 
       // Try to execute as an extension
       try {
-        exitCode = await execExtension(client, targetCommand, extArgv._, cwd);
+        exitCode = await execExtension(
+          client,
+          targetCommand,
+          extArgv._.slice(1),
+          cwd
+        );
       } catch (err: unknown) {
         if (isErrnoException(err) && err.code === 'ENOENT') {
           // Fall back to `vc deploy <dir>`
