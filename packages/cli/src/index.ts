@@ -56,6 +56,7 @@ import box from './util/output/box';
 import { execExtension } from './util/extension/exec';
 import { help } from './args';
 import { updateCurrentTeamAfterLogin } from './util/login/update-current-team-after-login';
+import arg from 'arg';
 
 const VERCEL_DIR = getGlobalPathConfig();
 const VERCEL_CONFIG_PATH = configFiles.getConfigFilePath();
@@ -496,14 +497,20 @@ const main = async () => {
       // Set this for the metrics to record it at the end
       targetCommand = argv._[2];
 
+      // re-parse
+      const extArgv = arg(
+        {
+          '--token': String,
+          '-t': '--token',
+        },
+        {
+          permissive: true,
+        }
+      );
+
       // Try to execute as an extension
       try {
-        exitCode = await execExtension(
-          client,
-          targetCommand,
-          process.argv.slice(3),
-          cwd
-        );
+        exitCode = await execExtension(client, targetCommand, extArgv._, cwd);
       } catch (err: unknown) {
         if (isErrnoException(err) && err.code === 'ENOENT') {
           // Fall back to `vc deploy <dir>`

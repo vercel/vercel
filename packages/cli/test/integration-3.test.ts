@@ -1456,14 +1456,27 @@ test('should passthrough args to CLI extension', async () => {
 
   const output = await execCli(
     binaryPath,
-    ['myargs', '--version', '--custom-option', 'some-arg'],
+    [
+      'myargs',
+      '--version',
+      '--custom-option',
+      'some-arg',
+      '--debug',
+      '--help',
+      '--token',
+      'secret',
+      '--cwd=.',
+    ],
     { cwd: fixture }
   );
   const formatted = formatOutput(output);
   expect(output.stdout, formatted).toContain('Received 4 arguments');
   expect(output.stdout, formatted).toContain('Arg 1 = --version');
   expect(output.stdout, formatted).toContain('Arg 2 = --custom-option');
-  expect(output.stdout, formatted).toContain('Arg 3 = --some-arg');
+  expect(output.stdout, formatted).toContain('Arg 3 = some-arg');
+  expect(output.stdout, formatted).toContain('Arg 4 = --debug');
+  expect(output.stdout, formatted).toContain('Arg 5 = --help');
+  expect(output.stdout, formatted).toContain('Arg 6 = --cwd=/some/path');
 });
 
 // NOTE: Order matters here. This must be the last test in the file.
