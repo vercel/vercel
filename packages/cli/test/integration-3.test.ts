@@ -1449,7 +1449,10 @@ test('should invoke CLI extension', async () => {
 });
 
 test('should passthrough args to CLI extension', async () => {
-  const fixture = path.join(__dirname, 'fixtures/e2e/cli-extension-args');
+  const fixture = path.join(
+    __dirname,
+    'fixtures/e2e/cli-extension-args-bootstrap'
+  );
 
   // Ensure the `.bin` is populated in the fixture
   await runNpmInstall(fixture);
