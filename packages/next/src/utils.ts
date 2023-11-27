@@ -1502,6 +1502,7 @@ export async function getPageLambdaGroups({
   lambdaCompressedByteLimit,
   internalPages,
   pageExtensions,
+  inversedAppPathManifest,
 }: {
   entryPath: string;
   config: Config;
@@ -1523,6 +1524,7 @@ export async function getPageLambdaGroups({
   lambdaCompressedByteLimit: number;
   internalPages: string[];
   pageExtensions?: string[];
+  inversedAppPathManifest?: Record<string, string>;
 }) {
   const groups: Array<LambdaGroup> = [];
 
@@ -1542,9 +1544,15 @@ export async function getPageLambdaGroups({
     }
 
     if (config && config.functions) {
+      // `pages` are normalized without route groups (e.g., /app/(group)/page.js).
+      // we keep track of that mapping in `inversedAppPathManifest`
+      // `getSourceFilePathFromPage` needs to use the path from source to properly match the config
+      const pageFromManifest = inversedAppPathManifest?.[routeName];
       const sourceFile = await getSourceFilePathFromPage({
         workPath: entryPath,
-        page,
+        // since this function is used by both `pages` and `app`, the manifest might not be provided
+        // so fallback to normal behavior of just checking the `page`.
+        page: pageFromManifest ?? page,
         pageExtensions,
       });
 
