@@ -1456,8 +1456,8 @@ export const frameworks = [
           '`yarn install`, `pnpm install`, `npm install`, or `bun install`',
       },
       buildCommand: {
-        placeholder: '`npm run build` or `nuxt generate`',
-        value: 'nuxt generate',
+        placeholder: '`npm run build` or `nuxt build`',
+        value: 'nuxt build',
       },
       devCommand: {
         value: 'nuxt',
