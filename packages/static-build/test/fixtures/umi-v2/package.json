@@ -45,6 +45,9 @@
     ]
   },
   "engines": {
-    "node": "18.x"
+    "node": "16.x"
+  },
+  "resolutions": {
+    "**/jsdom": "22.1.0"
   }
 }
