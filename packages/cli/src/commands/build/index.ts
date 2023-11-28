@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import semver from 'semver';
 import minimatch from 'minimatch';
 import { join, normalize, relative, resolve, sep } from 'path';
+import { cwd } from 'process';
 import frameworks from '@vercel/frameworks';
 import {
   getDiscontinuedNodeVersions,
@@ -432,29 +433,6 @@ async function doBuild(
 
   const ops: Promise<Error | void>[] = [];
 
-  const dependencyMap = makeDepencyMap(pkg);
-  const speedInsighsVersion = dependencyMap.get('@vercel/speed-insights');
-  if (speedInsighsVersion) {
-    if (process.env.VERCEL_ANALYTICS_ID) {
-      output.warn(
-        `The \`VERCEL_ANALYTICS_ID\` environment variable is deprecated and will be removed in a future release. Please remove it from your environment variables`
-      );
-
-      delete process.env.VERCEL_ANALYTICS_ID;
-    }
-    buildsJson.features = {
-      ...(buildsJson.features ?? {}),
-      speedInsightsVersion: speedInsighsVersion,
-    };
-  }
-  const webAnalyticsVersion = dependencyMap.get('@vercel/analytics');
-  if (webAnalyticsVersion) {
-    buildsJson.features = {
-      ...(buildsJson.features ?? {}),
-      webAnalyticsVersion: webAnalyticsVersion,
-    };
-  }
-
   // Write the `detectedBuilders` result to output dir
   const buildsJsonBuilds = new Map<Builder, SerializedBuilder>(
     builds.map(build => {
@@ -475,9 +453,7 @@ async function doBuild(
     })
   );
   buildsJson.builds = Array.from(buildsJsonBuilds.values());
-  await fs.writeJSON(join(outputDir, 'builds.json'), buildsJson, {
-    spaces: 2,
-  });
+  await writeBuildJson(buildsJson, outputDir);
 
   // The `meta` config property is re-used for each Builder
   // invocation so that Builders can share state between
@@ -606,6 +582,34 @@ async function doBuild(
     if (error) {
       throw error;
     }
+  }
+
+  let needBuildsJsonOverride = false;
+  const { speedInsightsVersion, webAnalyticsVersion } =
+    await readPackageVersions(pkg);
+  if (speedInsightsVersion) {
+    if (process.env.VERCEL_ANALYTICS_ID) {
+      output.warn(
+        `The \`VERCEL_ANALYTICS_ID\` environment variable is deprecated and will be removed in a future release. Please remove it from your environment variables`
+      );
+
+      delete process.env.VERCEL_ANALYTICS_ID;
+    }
+    buildsJson.features = {
+      ...(buildsJson.features ?? {}),
+      speedInsightsVersion,
+    };
+    needBuildsJsonOverride = true;
+  }
+  if (webAnalyticsVersion) {
+    buildsJson.features = {
+      ...(buildsJson.features ?? {}),
+      webAnalyticsVersion,
+    };
+    needBuildsJsonOverride = true;
+  }
+  if (needBuildsJsonOverride) {
+    await writeBuildJson(buildsJson, outputDir);
   }
 
   // Merge existing `config.json` file into the one that will be produced
@@ -823,4 +827,46 @@ function makeDepencyMap(pkg: PackageJson | null): Map<string, string> {
     ...Object.entries(pkg?.devDependencies ?? {}),
     ...Object.entries(pkg?.dependencies ?? {}),
   ]);
+}
+
+async function writeBuildJson(buildsJson: BuildsManifest, outputDir: string) {
+  await fs.writeJSON(join(outputDir, 'builds.json'), buildsJson, { spaces: 2 });
+}
+
+async function readPackageVersions(descriptor: PackageJson | null): Promise<{
+  speedInsightsVersion?: string;
+  webAnalyticsVersion?: string;
+}> {
+  const referencedDependencies = makeDepencyMap(descriptor);
+  const [speedInsightsVersion, webAnalyticsVersion] = await Promise.all([
+    readPackageVersion('@vercel/speed-insights', referencedDependencies),
+    readPackageVersion('@vercel/analytics', referencedDependencies),
+  ]);
+  return { webAnalyticsVersion, speedInsightsVersion };
+}
+
+async function readPackageVersion(
+  pkgName: string,
+  dependencies: Map<string, string>
+): Promise<string | undefined> {
+  let version = undefined;
+  try {
+    const descriptorPath = require.resolve(`${pkgName}/package.json`, {
+      paths: [cwd()],
+    });
+    const descriptor = await readJSONFile<PackageJson>(descriptorPath);
+    if (descriptor instanceof CantParseJSONFile) throw descriptor;
+    version = descriptor?.version;
+  } catch {
+    // ignore errors: the package is simply not installed.
+  }
+  // we don't support monorepos, where package could be required, but is not referenced in the app's package.json.
+  if (version && !dependencies.has(pkgName)) {
+    throw new NowBuildError({
+      code: 'INVALID_CONFIGURATION',
+      message: `Package \`${pkgName}\` is globally installed, which is not supported. Please move the dependency to your deployed application's package.json`,
+      link: 'https://vercel.link/global-observability-package',
+    });
+  }
+  return version;
 }
