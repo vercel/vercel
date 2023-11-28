@@ -1,6 +1,6 @@
 import { Project } from 'ts-morph';
 import { readFileSync, promises as fs } from 'fs';
-import { basename, dirname, extname, join, relative, sep } from 'path';
+import { basename, dirname, extname, join, posix, relative, sep } from 'path';
 import {
   debug,
   download,
@@ -13,6 +13,7 @@ import {
   glob,
   EdgeFunction,
   NodejsLambda,
+  rename,
   runNpmInstall,
   runPackageJsonScript,
   scanParentDirs,
@@ -452,16 +453,11 @@ module.exports = config;`;
       : null,
   ]);
 
-  const staticDir = join(
-    remixConfig.assetsBuildDirectory,
-    ...remixConfig.publicPath
-      .replace(/^\/|\/$/g, '')
-      .split('/')
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      .map(_ => '..')
-  );
-  const [staticFiles, ...functions] = await Promise.all([
+  const staticDir = join(entrypointFsDirname, 'public');
+
+  const [staticFiles, buildAssets, ...functions] = await Promise.all([
     glob('**', staticDir),
+    glob('**', remixConfig.assetsBuildDirectory),
     ...serverBundles.map(bundle => {
       const firstRoute = remixConfig.routes[bundle.routes[0]];
       const config = resolvedConfigsMap.get(firstRoute) ?? {
@@ -491,10 +487,17 @@ module.exports = config;`;
     }),
   ]);
 
-  const output: BuildResultV2Typical['output'] = staticFiles;
+  const transformedBuildAssets = rename(buildAssets, name => {
+    return posix.join('./', remixConfig.publicPath, name);
+  });
+
+  const output: BuildResultV2Typical['output'] = {
+    ...staticFiles,
+    ...transformedBuildAssets,
+  };
   const routes: any[] = [
     {
-      src: '^/build/(.*)$',
+      src: `^/${remixConfig.publicPath.replace(/^\/|\/$/g, '')}/(.*)$`,
       headers: { 'cache-control': 'public, max-age=31536000, immutable' },
       continue: true,
     },
