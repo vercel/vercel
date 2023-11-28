@@ -463,9 +463,8 @@ module.exports = config;`;
     }),
   ]);
 
-  const publicPath = remixConfig.publicPath.replace(/^\/|\/$/g, '');
   const transformedBuildAssets = rename(buildAssets, name => {
-    return posix.join(publicPath, name);
+    return posix.join('./', remixConfig.publicPath, name);
   });
 
   const output: BuildResultV2Typical['output'] = {
@@ -474,7 +473,7 @@ module.exports = config;`;
   };
   const routes: any[] = [
     {
-      src: `^/${publicPath}/(.*)$`,
+      src: `^/${remixConfig.publicPath.replace(/^\/|\/$/g, '')}/(.*)$`,
       headers: { 'cache-control': 'public, max-age=31536000, immutable' },
       continue: true,
     },
