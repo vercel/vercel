@@ -40,7 +40,6 @@ import {
   ResolvedEdgeRouteConfig,
   findEntry,
   chdirAndReadConfig,
-  addDependencies,
   resolveSemverMinMax,
   ensureResolvable,
   isESM,
@@ -166,7 +165,7 @@ export const build: BuildV2 = async ({
   const { serverEntryPoint, appDirectory } = remixConfig;
   const remixRoutes = Object.values(remixConfig.routes);
 
-  const depsToAdd: string[] = [];
+  let depsModified = false;
 
   const remixRunDevPkgVersion: string | undefined =
     pkg.dependencies?.['@remix-run/dev'] ||
@@ -184,9 +183,15 @@ export const build: BuildV2 = async ({
       REMIX_RUN_DEV_MAX_VERSION,
       remixVersion
     );
-    depsToAdd.push(
-      `@remix-run/dev@npm:@vercel/remix-run-dev@${remixDevForkVersion}`
-    );
+    // Remove `@remix-run/dev`, add `@vercel/remix-run-dev`
+    if (pkg.devDependencies['@remix-run/dev']) {
+      delete pkg.devDependencies['@remix-run/dev'];
+      pkg.devDependencies['@vercel/remix-run-dev'] = remixDevForkVersion;
+    } else {
+      delete pkg.dependencies['@remix-run/dev'];
+      pkg.dependencies['@vercel/remix-run-dev'] = remixDevForkVersion;
+    }
+    depsModified = true;
   }
 
   // `app/entry.server.tsx` and `app/entry.client.tsx` are optional in Remix,
@@ -209,15 +214,34 @@ export const build: BuildV2 = async ({
         REMIX_RUN_DEV_MAX_VERSION,
         remixVersion
       );
-      depsToAdd.push(`@vercel/remix@${vercelRemixVersion}`);
+      pkg.dependencies['@vercel/remix'] = vercelRemixVersion;
+      depsModified = true;
     }
   }
 
-  if (depsToAdd.length) {
-    await addDependencies(cliType, depsToAdd, {
-      ...spawnOpts,
-      cwd: entrypointFsDirname,
-    });
+  if (depsModified) {
+    await fs.writeFile(packageJsonPath, JSON.stringify(pkg, null, 2) + '\n');
+
+    // Bypass `--frozen-lockfile` enforcement by removing
+    // env vars that are considered to be CI
+    const nonCiEnv = { ...spawnOpts.env };
+    delete nonCiEnv.CI;
+    delete nonCiEnv.VERCEL;
+    delete nonCiEnv.NOW_BUILDER;
+
+    // Purposefully not passing `meta` here to avoid
+    // the optimization that prevents `npm install`
+    // from running a second time
+    await runNpmInstall(
+      entrypointFsDirname,
+      [],
+      {
+        ...spawnOpts,
+        env: nonCiEnv,
+      },
+      undefined,
+      nodeVersion
+    );
   }
 
   const userEntryClientFile = findEntry(

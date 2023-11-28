@@ -1,9 +1,8 @@
 import semver from 'semver';
-import { execSync } from 'child_process';
 import { existsSync, promises as fs } from 'fs';
 import { basename, dirname, join, relative, resolve, sep } from 'path';
 import { pathToRegexp, Key } from 'path-to-regexp';
-import { debug, spawnAsync } from '@vercel/build-utils';
+import { debug } from '@vercel/build-utils';
 import { walkParentDirs } from '@vercel/build-utils';
 import { createRequire } from 'module';
 import type {
@@ -12,10 +11,6 @@ import type {
 } from '@remix-run/dev/dist/config/routes';
 import type { RemixConfig } from '@remix-run/dev/dist/config';
 import type { BaseFunctionConfig } from '@vercel/static-config';
-import type {
-  CliType,
-  SpawnOptionsExtended,
-} from '@vercel/build-utils/dist/fs/run-user-scripts';
 
 export const require_ = createRequire(__filename);
 
@@ -258,65 +253,6 @@ export async function chdirAndReadConfig(
   }
 
   return remixConfig;
-}
-
-export interface AddDependenciesOptions extends SpawnOptionsExtended {
-  saveDev?: boolean;
-}
-
-/**
- * Runs `npm i ${name}` / `pnpm i ${name}` / `yarn add ${name}`.
- */
-export function addDependencies(
-  cliType: CliType,
-  names: string[],
-  opts: AddDependenciesOptions = {}
-) {
-  debug('Installing additional dependencies:');
-  for (const name of names) {
-    debug(` - ${name}`);
-  }
-  const args: string[] = [];
-
-  switch (cliType) {
-    case 'npm':
-    case 'pnpm':
-      args.push('install');
-      if (opts.saveDev) {
-        args.push('--save-dev');
-      }
-
-      // Don't fail if pnpm is being run at the workspace root
-      if (cliType === 'pnpm' && opts.cwd) {
-        if (existsSync(join(opts.cwd, 'pnpm-workspace.yaml'))) {
-          args.push('--workspace-root');
-        }
-      }
-      break;
-
-    case 'bun':
-    case 'yarn':
-      args.push('add');
-      if (opts.saveDev) {
-        args.push('--dev');
-      }
-      if (cliType === 'yarn') {
-        const yarnVersion = execSync('yarn -v', { encoding: 'utf8' }).trim();
-        const isYarnV1 = semver.satisfies(yarnVersion, '1');
-        if (isYarnV1) {
-          // Ignoring workspace check is only needed on Yarn v1
-          args.push('--ignore-workspace-root-check');
-        }
-      }
-      break;
-
-    default: {
-      const n: never = cliType;
-      throw new Error(`Unexpected package manager: ${n}`);
-    }
-  }
-
-  return spawnAsync(cliType, args.concat(names), opts);
 }
 
 export function resolveSemverMinMax(
