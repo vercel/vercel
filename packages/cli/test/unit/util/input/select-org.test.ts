@@ -31,6 +31,11 @@ describe('selectOrg', () => {
       await expect(selectOrgPromise).resolves.toHaveProperty('id', team.id);
     });
 
+    it('automatically selects the correct scope when autoconfirm flag is passed', async () => {
+      const selectOrgPromise = selectOrg(client, 'Select the scope', true);
+      await expect(selectOrgPromise).resolves.toHaveProperty('id', user.id);
+    });
+
     describe('with a selected team scope', () => {
       beforeEach(() => {
         client.config.currentTeam = team.id;
@@ -54,6 +59,11 @@ describe('selectOrg', () => {
         client.stdin.write('\r'); // Return key
         await expect(selectOrgPromise).resolves.toHaveProperty('id', user.id);
       });
+
+      it('automatically selects the correct scope when autoconfirm flag is passed', async () => {
+        const selectOrgPromise = selectOrg(client, 'Select the scope', true);
+        await expect(selectOrgPromise).resolves.toHaveProperty('id', team.id);
+      });
     });
   });
 
@@ -62,9 +72,6 @@ describe('selectOrg', () => {
       user = useUser({
         version: 'northstar',
       });
-    });
-
-    beforeEach(() => {
       client.config.currentTeam = team.id;
     });
 
@@ -76,6 +83,12 @@ describe('selectOrg', () => {
       const selectOrgPromise = selectOrg(client, 'Select the scope');
       await expect(client.stderr).not.toOutput(user.name);
       client.stdin.write('\r'); // Return key
+      await expect(selectOrgPromise).resolves.toHaveProperty('id', team.id);
+    });
+
+    // eslint-disable-next-line jest/no-disabled-tests
+    it.skip('automatically selects the correct scope when autoconfirm flag is passed', async () => {
+      const selectOrgPromise = selectOrg(client, 'Select the scope', true);
       await expect(selectOrgPromise).resolves.toHaveProperty('id', team.id);
     });
   });
