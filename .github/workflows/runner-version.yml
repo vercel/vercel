@@ -5,6 +5,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - run: ls workflow
       - name: Dump GitHub context
         id: github_context_step
         run: echo '${{ toJSON(github) }}'
