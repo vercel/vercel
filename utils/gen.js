@@ -14,6 +14,7 @@ const str = JSON.stringify({
   node,
   platform,
   arch,
+  // the GitHub runner image version (example: "20231126.1.1")
   imageVersion: env.ImageVersion ?? 'local',
 });
 console.log(`Generating cache key: ${str}`);
