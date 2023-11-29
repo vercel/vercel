@@ -8,4 +8,5 @@ jobs:
       - run: ls -la ~
       - run: ls -laR ~/.config
       - run: ls -laR ~/runners
+      - run: echo $PATH
 
