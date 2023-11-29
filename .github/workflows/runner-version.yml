@@ -5,4 +5,5 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: ./run.sh --version
+      - run: ls -al
+      - run: ./config.sh --version
