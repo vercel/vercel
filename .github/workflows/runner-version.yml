@@ -5,10 +5,5 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: ls -la ~
-      - run: ls -la /
-      - run: ls -laR ~/.config
-      - run: ls -laR ~/runners
-      - run: echo $PATH
-      - run: ls -laR /usr
+      - run: echo $ImageVersion
 
