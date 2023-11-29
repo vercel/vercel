@@ -86,8 +86,7 @@ describe('selectOrg', () => {
       await expect(selectOrgPromise).resolves.toHaveProperty('id', team.id);
     });
 
-    // eslint-disable-next-line jest/no-disabled-tests
-    it.skip('automatically selects the correct scope when autoconfirm flag is passed', async () => {
+    it('automatically selects the correct scope when autoconfirm flag is passed', async () => {
       const selectOrgPromise = selectOrg(client, 'Select the scope', true);
       await expect(selectOrgPromise).resolves.toHaveProperty('id', team.id);
     });
