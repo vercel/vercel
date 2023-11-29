@@ -1,5 +1,20 @@
 # vercel
 
+## 32.6.0
+
+### Minor Changes
+
+- forbids globally installed @vercel/speed-insights and @vercel/analytics ([#10848](https://github.com/vercel/vercel/pull/10848))
+
+### Patch Changes
+
+- [cli] Fix behavior for combination of northstar user + team scope provided to cli as an argument. ([#10884](https://github.com/vercel/vercel/pull/10884))
+
+- Updated dependencies [[`4edfcd74b`](https://github.com/vercel/vercel/commit/4edfcd74b6dfd8e9cbc05a71d47578051a2a7d63), [`0e9bb30fd`](https://github.com/vercel/vercel/commit/0e9bb30fd285492beadc365bece2ab1df67b387b), [`ca2cbf06f`](https://github.com/vercel/vercel/commit/ca2cbf06fbf252e23aff6e007d0df5ffc243b56e), [`c52bdf775`](https://github.com/vercel/vercel/commit/c52bdf77585dfa41b25cabe2f9403827d0964169)]:
+  - @vercel/remix-builder@2.0.12
+  - @vercel/static-build@2.0.13
+  - @vercel/go@3.0.4
+
 ## 32.5.6
 
 ### Patch Changes

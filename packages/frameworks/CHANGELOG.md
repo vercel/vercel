@@ -1,5 +1,11 @@
 # @vercel/frameworks
 
+## 2.0.4
+
+### Patch Changes
+
+- Update placeholder for Nuxt to be correct command. ([#10873](https://github.com/vercel/vercel/pull/10873))
+
 ## 2.0.3
 
 ### Patch Changes
