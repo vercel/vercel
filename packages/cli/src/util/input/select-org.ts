@@ -43,7 +43,7 @@ export default async function selectOrg(
     })),
   ];
 
-  let defaultChoiceIndex = Math.max(
+  const defaultChoiceIndex = Math.max(
     choices.findIndex(choice => choice.value.id === currentTeam),
     0
   );
