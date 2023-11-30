@@ -37,5 +37,6 @@ export default new Map([
   ['switch', 'teams'],
   ['team', 'teams'],
   ['teams', 'teams'],
+  ['upgrade', 'upgrade'],
   ['whoami', 'whoami'],
 ]);

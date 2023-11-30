@@ -594,6 +594,9 @@ const main = async () => {
         case 'teams':
           func = require('./commands/teams').default;
           break;
+        case 'upgrade':
+          func = require('./commands/upgrade').default;
+          break;
         case 'whoami':
           func = require('./commands/whoami').default;
           break;
