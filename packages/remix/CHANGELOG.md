@@ -1,5 +1,13 @@
 # @vercel/remix-builder
 
+## 2.0.12
+
+### Patch Changes
+
+- Fix issue where `npm install` was not properly injecting forked compiler ([#10819](https://github.com/vercel/vercel/pull/10819))
+
+- Simplify static directory resolution and apply `publicPath` to routes. ([#10685](https://github.com/vercel/vercel/pull/10685))
+
 ## 2.0.11
 
 ### Patch Changes
