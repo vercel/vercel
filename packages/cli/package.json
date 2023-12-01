@@ -31,11 +31,11 @@
     "node": ">= 16"
   },
   "dependencies": {
-    "@vercel/build-utils": "7.2.5",
+    "@vercel/build-utils": "https://vercel-p8mv5cw2s.vercel.sh/tarballs/@vercel/build-utils.tgz",
     "@vercel/fun": "1.1.0",
     "@vercel/go": "3.0.4",
     "@vercel/hydrogen": "1.0.1",
-    "@vercel/next": "4.0.15",
+    "@vercel/next": "https://vercel-p8mv5cw2s.vercel.sh/tarballs/@vercel/next.tgz",
     "@vercel/node": "3.0.11",
     "@vercel/python": "4.1.0",
     "@vercel/redwood": "2.0.5",

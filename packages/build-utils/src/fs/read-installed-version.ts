@@ -9,6 +9,9 @@ export async function readInstalledVersion(
       paths: [cwd()],
     });
     const descriptor = await readJSON(descriptorPath);
+    if (descriptor) {
+      console.log(`>>> Found dependency to ${pkgName}@${descriptor.version}`);
+    }
     return descriptor?.version;
   } catch {
     // ignore errors: the package is simply not installed.
