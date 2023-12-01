@@ -356,12 +356,6 @@ export const build: BuildV2 = async ({
     });
   }
 
-  // a dependency on speed-insights package must disable the legacy auto-injection by removing VERCEL_ANALYTICS_ID env variable.
-  if (await readInstalledVersion('@vercel/speed-insights')) {
-    console.log('>> disabling legacy speed-insights auto-injection');
-    process.env.VERCEL_ANALYTICS_ID = '';
-  }
-
   let isServerMode =
     !(config.framework === 'blitzjs') &&
     semver.gte(nextVersion, SERVER_BUILD_MINIMUM_NEXT_VERSION);
@@ -431,6 +425,12 @@ export const build: BuildV2 = async ({
   // and caches may not have the correct trace root so we
   // need to ensure this included in the cache key
   env.NEXT_PRIVATE_OUTPUT_TRACE_ROOT = baseDir;
+
+  // a dependency on speed-insights package must disable the legacy auto-injection by removing VERCEL_ANALYTICS_ID env variable.
+  if (await readInstalledVersion('@vercel/speed-insights')) {
+    console.log('>> disabling legacy speed-insights auto-injection');
+    env.VERCEL_ANALYTICS_ID = '';
+  }
 
   if (isServerMode) {
     // when testing with jest NODE_ENV will be set to test so ensure
