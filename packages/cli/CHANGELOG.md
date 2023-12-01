@@ -1,5 +1,11 @@
 # vercel
 
+## 32.6.1
+
+### Patch Changes
+
+- Revert "forbids globally installed @vercel/speed-insights and @vercel/analytics (#10848)" ([#10895](https://github.com/vercel/vercel/pull/10895))
+
 ## 32.6.0
 
 ### Minor Changes
