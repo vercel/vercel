@@ -358,7 +358,8 @@ export const build: BuildV2 = async ({
 
   // a dependency on speed-insights package must disable the legacy auto-injection by removing VERCEL_ANALYTICS_ID env variable.
   if (await readInstalledVersion('@vercel/speed-insights')) {
-    delete process.env['VERCEL_ANALYTICS_ID'];
+    console.log('>> disabling legacy speed-insights auto-injection');
+    process.env.VERCEL_ANALYTICS_ID = '';
   }
 
   let isServerMode =
