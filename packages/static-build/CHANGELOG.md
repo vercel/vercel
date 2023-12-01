@@ -1,5 +1,11 @@
 # @vercel/static-build
 
+## 2.0.13
+
+### Patch Changes
+
+- [tests] Update Gatsby fixture versions ([#10875](https://github.com/vercel/vercel/pull/10875))
+
 ## 2.0.12
 
 ### Patch Changes
