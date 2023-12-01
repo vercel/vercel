@@ -4,7 +4,7 @@ import path from 'path';
 import Sema from 'async-sema';
 import spawn from 'cross-spawn';
 import { coerce, intersects, validRange } from 'semver';
-import { SpawnOptions } from 'child_process';
+import { SpawnOptions, execFileSync } from 'child_process';
 import { deprecate } from 'util';
 import debug from '../debug';
 import { NowBuildError } from '../errors';
@@ -654,6 +654,17 @@ export async function runPackageJsonScript(
     opts.prettyCommand = `bun run ${scriptName}`;
   } else {
     opts.prettyCommand = `yarn run ${scriptName}`;
+  }
+
+  try {
+    console.log(
+      `Global node-gyp version: ${execFileSync('node-gyp', ['-v'])
+        .toString()
+        .trim()}!`
+    );
+  } catch (e) {
+    console.log('node-gyp not found!');
+    console.log(e);
   }
 
   console.log(`Running "${opts.prettyCommand}"`);
