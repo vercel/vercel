@@ -99,6 +99,7 @@ export {
 export { EdgeFunction } from './edge-function';
 export { readConfigFile } from './fs/read-config-file';
 export { normalizePath } from './fs/normalize-path';
+export { readInstalledVersion } from './fs/read-installed-version';
 
 export * from './should-serve';
 export * from './schemas';

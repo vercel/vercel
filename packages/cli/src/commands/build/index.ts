@@ -4,7 +4,6 @@ import dotenv from 'dotenv';
 import semver from 'semver';
 import minimatch from 'minimatch';
 import { join, normalize, relative, resolve, sep } from 'path';
-import { cwd } from 'process';
 import frameworks from '@vercel/frameworks';
 import {
   getDiscontinuedNodeVersions,
@@ -23,6 +22,7 @@ import {
   Cron,
   validateNpmrc,
   Flag,
+  readInstalledVersion,
 } from '@vercel/build-utils';
 import {
   detectBuilders,
@@ -826,23 +826,8 @@ async function readPackageVersions(): Promise<{
   webAnalyticsVersion?: string;
 }> {
   const [speedInsightsVersion, webAnalyticsVersion] = await Promise.all([
-    readPackageVersion('@vercel/speed-insights'),
-    readPackageVersion('@vercel/analytics'),
+    readInstalledVersion('@vercel/speed-insights'),
+    readInstalledVersion('@vercel/analytics'),
   ]);
   return { webAnalyticsVersion, speedInsightsVersion };
-}
-
-async function readPackageVersion(
-  pkgName: string
-): Promise<string | undefined> {
-  try {
-    const descriptorPath = require.resolve(`${pkgName}/package.json`, {
-      paths: [cwd()],
-    });
-    const descriptor = await readJSONFile<PackageJson>(descriptorPath);
-    if (descriptor instanceof CantParseJSONFile) throw descriptor;
-    return descriptor?.version;
-  } catch {
-    // ignore errors: the package is simply not installed.
-  }
 }

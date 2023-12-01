@@ -25,6 +25,7 @@ import {
   NodejsLambda,
   BuildResultV2Typical as BuildResult,
   BuildResultBuildOutput,
+  readInstalledVersion,
 } from '@vercel/build-utils';
 import { Route, RouteWithHandle, RouteWithSrc } from '@vercel/routing-utils';
 import {
@@ -353,6 +354,11 @@ export const build: BuildV2 = async ({
       message:
         'No Next.js version could be detected in your project. Make sure `"next"` is installed in "dependencies" or "devDependencies"',
     });
+  }
+
+  // a dependency on speed-insights package must disable the legacy auto-injection by removing VERCEL_ANALYTICS_ID env variable.
+  if (await readInstalledVersion('@vercel/speed-insights')) {
+    delete process.env['VERCEL_ANALYTICS_ID'];
   }
 
   let isServerMode =
