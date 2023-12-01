@@ -490,6 +490,9 @@ export async function runNpmInstall(
     try {
       console.log(`PATH=${process.env.PATH}`);
       console.log(
+        execFileSync('ls', ['-la', '/vercel/.yarn/bin']).toString().trim()
+      );
+      console.log(
         `Global node-gyp version: ${execFileSync('node-gyp', ['-v'])
           .toString()
           .trim()}!`
