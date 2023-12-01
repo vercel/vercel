@@ -590,13 +590,6 @@ async function doBuild(
   const { speedInsightsVersion, webAnalyticsVersion } =
     await readPackageVersions();
   if (speedInsightsVersion) {
-    if (process.env.VERCEL_ANALYTICS_ID) {
-      output.warn(
-        `The \`VERCEL_ANALYTICS_ID\` environment variable is deprecated and will be removed in a future release. Please remove it from your environment variables`
-      );
-
-      delete process.env.VERCEL_ANALYTICS_ID;
-    }
     buildsJson.features = {
       ...(buildsJson.features ?? {}),
       speedInsightsVersion,
