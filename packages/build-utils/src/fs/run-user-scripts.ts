@@ -488,6 +488,17 @@ export async function runNpmInstall(
     }
 
     try {
+      console.log(
+        `Global node-gyp version: ${execFileSync('node-gyp', ['-v'])
+          .toString()
+          .trim()}!`
+      );
+    } catch (e) {
+      console.log('node-gyp not found!');
+      console.log(e);
+    }
+
+    try {
       await spawnAsync(cliType, commandArgs, opts);
     } catch (err: unknown) {
       const potentialErrorPath = path.join(
@@ -654,17 +665,6 @@ export async function runPackageJsonScript(
     opts.prettyCommand = `bun run ${scriptName}`;
   } else {
     opts.prettyCommand = `yarn run ${scriptName}`;
-  }
-
-  try {
-    console.log(
-      `Global node-gyp version: ${execFileSync('node-gyp', ['-v'])
-        .toString()
-        .trim()}!`
-    );
-  } catch (e) {
-    console.log('node-gyp not found!');
-    console.log(e);
   }
 
   console.log(`Running "${opts.prettyCommand}"`);
