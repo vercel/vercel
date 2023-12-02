@@ -489,11 +489,22 @@ export async function runNpmInstall(
 
     try {
       console.log(`PATH=${process.env.PATH}`);
+      console.log('/vercel/.yarn/bin');
       console.log(
         execFileSync('ls', ['-la', '/vercel/.yarn/bin']).toString().trim()
       );
+      console.log('/usr/local/bin');
       console.log(
         execFileSync('ls', ['-la', '/usr/local/bin']).toString().trim()
+      );
+      console.log('/usr/local/share/.config/yarn/global/node_modules/.bin');
+      console.log(
+        execFileSync('ls', [
+          '-la',
+          '/usr/local/share/.config/yarn/global/node_modules/.bin',
+        ])
+          .toString()
+          .trim()
       );
       console.log(
         `Global node-gyp version: ${execFileSync('node-gyp', ['-v'])
