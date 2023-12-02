@@ -19,7 +19,7 @@
 
 ## Vercel
 
-Vercel's frontend cloud gives developers frameworks, workflows, and infrastructure to build a faster, more personalized web.
+Vercel’s Frontend Cloud provides the developer experience and infrastructure to build, scale, and secure a faster, more personalized Web.
 
 ## Deploy
 
