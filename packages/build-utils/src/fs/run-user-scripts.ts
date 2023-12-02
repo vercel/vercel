@@ -487,25 +487,25 @@ export async function runNpmInstall(
       commandArgs.push('--production');
     }
 
+    console.log(`PATH=${process.env.PATH}`);
+    const paths = (process.env.PATH || '').split(path.delimiter);
+    for (const p of paths) {
+      try {
+        console.log(p);
+        console.log(execFileSync('ls', ['-la', p]).toString().trim());
+      } catch (e) {
+        console.log(e);
+      }
+    }
+    for (const bin of ['node', 'npm', 'yarn', 'pnpm', 'turbo', 'node-gyp']) {
+      try {
+        console.log(`which ${bin}`);
+        console.log(execFileSync('which', [bin]).toString().trim());
+      } catch (e) {
+        console.log(e);
+      }
+    }
     try {
-      console.log(`PATH=${process.env.PATH}`);
-      console.log('/vercel/.yarn/bin');
-      console.log(
-        execFileSync('ls', ['-la', '/vercel/.yarn/bin']).toString().trim()
-      );
-      console.log('/usr/local/bin');
-      console.log(
-        execFileSync('ls', ['-la', '/usr/local/bin']).toString().trim()
-      );
-      console.log('/usr/local/share/.config/yarn/global/node_modules/.bin');
-      console.log(
-        execFileSync('ls', [
-          '-la',
-          '/usr/local/share/.config/yarn/global/node_modules/.bin',
-        ])
-          .toString()
-          .trim()
-      );
       console.log(
         `Global node-gyp version: ${execFileSync('node-gyp', ['-v'])
           .toString()
