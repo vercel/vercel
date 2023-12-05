@@ -433,6 +433,14 @@ async function doBuild(
 
   const ops: Promise<Error | void>[] = [];
 
+  if (
+    process.env.VERCEL_ANALYTICS_ID &&
+    makeDepencyMap(pkg).has('@vercel/speed-insights')
+  ) {
+    // Remove legagy injection (must happen before build)
+    delete process.env.VERCEL_ANALYTICS_ID;
+  }
+
   // Write the `detectedBuilders` result to output dir
   const buildsJsonBuilds = new Map<Builder, SerializedBuilder>(
     builds.map(build => {
@@ -452,10 +460,9 @@ async function doBuild(
       ];
     })
   );
+
   buildsJson.builds = Array.from(buildsJsonBuilds.values());
-  await fs.writeJSON(join(outputDir, 'builds.json'), buildsJson, {
-    spaces: 2,
-  });
+  await writeBuildJson(buildsJson, outputDir);
 
   // The `meta` config property is re-used for each Builder
   // invocation so that Builders can share state between
@@ -587,8 +594,9 @@ async function doBuild(
   }
 
   let needBuildsJsonOverride = false;
-  const { speedInsightsVersion, webAnalyticsVersion } =
-    await readPackageVersions();
+  const speedInsightsVersion = await readInstalledVersion(
+    '@vercel/speed-insights'
+  );
   if (speedInsightsVersion) {
     buildsJson.features = {
       ...(buildsJson.features ?? {}),
@@ -596,6 +604,7 @@ async function doBuild(
     };
     needBuildsJsonOverride = true;
   }
+  const webAnalyticsVersion = await readInstalledVersion('@vercel/analytics');
   if (webAnalyticsVersion) {
     buildsJson.features = {
       ...(buildsJson.features ?? {}),
@@ -817,17 +826,13 @@ function mergeFlags(
   });
 }
 
-async function writeBuildJson(buildsJson: BuildsManifest, outputDir: string) {
-  await fs.writeJSON(join(outputDir, 'builds.json'), buildsJson, { spaces: 2 });
+function makeDepencyMap(pkg: PackageJson | null): Map<string, string> {
+  return new Map([
+    ...Object.entries(pkg?.devDependencies ?? {}),
+    ...Object.entries(pkg?.dependencies ?? {}),
+  ]);
 }
 
-async function readPackageVersions(): Promise<{
-  speedInsightsVersion?: string;
-  webAnalyticsVersion?: string;
-}> {
-  const [speedInsightsVersion, webAnalyticsVersion] = await Promise.all([
-    readInstalledVersion('@vercel/speed-insights'),
-    readInstalledVersion('@vercel/analytics'),
-  ]);
-  return { webAnalyticsVersion, speedInsightsVersion };
+async function writeBuildJson(buildsJson: BuildsManifest, outputDir: string) {
+  await fs.writeJSON(join(outputDir, 'builds.json'), buildsJson, { spaces: 2 });
 }
