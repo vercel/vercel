@@ -433,14 +433,6 @@ async function doBuild(
 
   const ops: Promise<Error | void>[] = [];
 
-  if (
-    process.env.VERCEL_ANALYTICS_ID &&
-    makeDepencyMap(pkg).has('@vercel/speed-insights')
-  ) {
-    // Remove legagy injection (must happen before build)
-    delete process.env.VERCEL_ANALYTICS_ID;
-  }
-
   // Write the `detectedBuilders` result to output dir
   const buildsJsonBuilds = new Map<Builder, SerializedBuilder>(
     builds.map(build => {
@@ -824,13 +816,6 @@ function mergeFlags(
 
     return [];
   });
-}
-
-function makeDepencyMap(pkg: PackageJson | null): Map<string, string> {
-  return new Map([
-    ...Object.entries(pkg?.devDependencies ?? {}),
-    ...Object.entries(pkg?.dependencies ?? {}),
-  ]);
 }
 
 async function writeBuildJson(buildsJson: BuildsManifest, outputDir: string) {
