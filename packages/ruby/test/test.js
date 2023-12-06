@@ -41,11 +41,6 @@ for (const fixture of fs.readdirSync(fixturesPath)) {
     continue; //eslint-disable-line
   }
 
-  // TODO: remove
-  if (fixture !== '11-version-2-5-error') {
-    continue;
-  }
-
   // eslint-disable-next-line no-loop-func
   it(`should build ${fixture}`, async () => {
     await expect(
