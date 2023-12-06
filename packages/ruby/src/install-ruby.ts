@@ -74,7 +74,7 @@ function getRubyPath(meta: Meta, gemfileContents: string) {
         throw new NowBuildError({
           code: 'RUBY_DISCONTINUED_VERSION',
           link: 'http://vercel.link/ruby-version',
-          message: `${intro} ${hint}`,
+          message: `${intro} ${hint} --- ${selection}`,
         });
       }
     }
