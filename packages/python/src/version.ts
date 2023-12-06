@@ -34,7 +34,7 @@ const allOptions: PythonVersion[] = [
     pipPath: 'pip3.6',
     pythonPath: 'python3.6',
     runtime: 'python3.6',
-    discontinueDate: new Date('2022-07-18'),
+    discontinueDate: new Date('2022-07-18T00:00:00Z'),
   },
 ];
 

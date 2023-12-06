@@ -14,31 +14,31 @@ function getOptions() {
       major: 16,
       range: '16.x',
       runtime: 'nodejs16.x',
-      discontinueDate: new Date('2024-02-06'),
+      discontinueDate: new Date('2024-02-06T00:00:00Z'),
     },
     {
       major: 14,
       range: '14.x',
       runtime: 'nodejs14.x',
-      discontinueDate: new Date('2023-08-15'),
+      discontinueDate: new Date('2023-08-15T00:00:00Z'),
     },
     {
       major: 12,
       range: '12.x',
       runtime: 'nodejs12.x',
-      discontinueDate: new Date('2022-10-03'),
+      discontinueDate: new Date('2022-10-03T00:00:00Z'),
     },
     {
       major: 10,
       range: '10.x',
       runtime: 'nodejs10.x',
-      discontinueDate: new Date('2021-04-20'),
+      discontinueDate: new Date('2021-04-20T00:00:00Z'),
     },
     {
       major: 8,
       range: '8.10.x',
       runtime: 'nodejs8.10',
-      discontinueDate: new Date('2020-01-06'),
+      discontinueDate: new Date('2020-01-06T00:00:00Z'),
     },
   ] as const;
   return options;
