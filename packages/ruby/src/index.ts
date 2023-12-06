@@ -83,6 +83,7 @@ async function bundleInstall(
   // which is needed for the `vc_init.rb` entrypoint file
   if (runtime === 'ruby3.2') {
     const result = await execa('bundler', ['add', 'webrick'], {
+      cwd: dirname(gemfilePath),
       stdio: 'pipe',
       env: bundlerEnv,
       reject: false,
