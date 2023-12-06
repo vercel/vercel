@@ -1,9 +1,4 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "index.rb",
-      "use": "@vercel/ruby"
-    }
-  ]
+  "builds": [{ "src": "index.rb", "use": "@vercel/ruby" }]
 }
