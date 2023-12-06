@@ -40,7 +40,6 @@ for (const fixture of fs.readdirSync(fixturesPath)) {
     });
     continue; //eslint-disable-line
   }
-
   // eslint-disable-next-line no-loop-func
   it(`should build ${fixture}`, async () => {
     await expect(
