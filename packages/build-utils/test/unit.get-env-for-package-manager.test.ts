@@ -229,7 +229,7 @@ describe('Test `getEnvForPackageManager()`', () => {
       );
     });
 
-    it('should surpress logs when showLogs is false', () => {
+    it('should suppress logs when showLogs is false', () => {
       getEnvForPackageManager({
         cliType: 'pnpm',
         lockfileVersion: 5.4,
