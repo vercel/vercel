@@ -32,6 +32,8 @@ interface Options {
   featHandleMiss?: boolean;
 }
 
+const REGEX_MIDDLEWARE = 'middleware\\.(?:j|t|mj|mt)s';
+
 // We need to sort the file paths by alphabet to make
 // sure the routes stay in the same order e.g. for deduping
 export function sortFiles(fileA: string, fileB: string) {
@@ -279,7 +281,7 @@ export async function detectBuilders(
       // and package.json can be served as static files
       frontendBuilder = {
         use: '@vercel/static',
-        src: '!{api/**,package.json,middleware.[jt]s}',
+        src: `!{api/**,package.json,${REGEX_MIDDLEWARE}}`,
         config: {
           zeroConfig: true,
         },
@@ -371,8 +373,7 @@ function maybeGetApiBuilder(
   apiMatches: Builder[],
   options: Options
 ) {
-  const middleware =
-    fileName === 'middleware.js' || fileName === 'middleware.ts';
+  const middleware = fileName.match(new RegExp(REGEX_MIDDLEWARE, 'g'));
 
   // Root-level Middleware file is handled by `@vercel/next`, so don't
   // schedule a separate Builder when "nextjs" framework is selected
@@ -458,11 +459,11 @@ function getApiMatches(): Builder[] {
 
   return [
     {
-      src: 'middleware.[jt]s',
+      src: REGEX_MIDDLEWARE,
       use: `@vercel/node`,
       config: { ...config, middleware: true },
     },
-    { src: 'api/**/*.+(js|mjs|ts|tsx)', use: `@vercel/node`, config },
+    { src: 'api/**/*.+(js|mjs|ts|mts|tsx)', use: `@vercel/node`, config },
     { src: 'api/**/!(*_test).go', use: `@vercel/go`, config },
     { src: 'api/**/*.py', use: `@vercel/python`, config },
     { src: 'api/**/*.rb', use: `@vercel/ruby`, config },
