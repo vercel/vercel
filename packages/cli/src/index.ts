@@ -534,9 +534,6 @@ const main = async () => {
         case 'deploy':
           func = require('./commands/deploy').default;
           break;
-        case 'deprecated':
-          func = require('./commands/deprecated').default;
-          break;
         case 'dev':
           func = require('./commands/dev').default;
           break;
