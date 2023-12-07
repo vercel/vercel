@@ -165,27 +165,33 @@ async function createEdgeRuntimeServer(params?: {
 
     // Wait for the Edge Runtime server to finish all its work, especially
     // waitUntil promises before exiting this process.
-    const WAIT_UNTIL_TIMEOUT = 10 * 1000;
-    asyncExitHook(async () => {
-      const waitUntil = server.close();
-      return new Promise<void>((resolve, reject) => {
-        const timeout = setTimeout(() => {
-          console.warn(
-            `Edge Runtime server is still running after ${WAIT_UNTIL_TIMEOUT} ms`
-            + ` (hint: do you have a long-running waitUntil() promise?)`
-          );
-          resolve();
-        }, WAIT_UNTIL_TIMEOUT);
+    const WAIT_UNTIL_TIMEOUT = 1 * 1000;
+    asyncExitHook(
+      async () => {
+        const waitUntil = server.close();
+        return new Promise<void>((resolve, reject) => {
+          const timeout = setTimeout(() => {
+            console.warn(
+              `Edge Runtime server is still running after ${WAIT_UNTIL_TIMEOUT} ms` +
+                ` (hint: do you have a long-running waitUntil() promise?)`
+            );
+            resolve();
+          }, WAIT_UNTIL_TIMEOUT);
 
-        waitUntil.then(() => resolve()).catch(reject).finally(() => {
-          clearTimeout(timeout);
+          waitUntil
+            .then(() => resolve())
+            .catch(reject)
+            .finally(() => {
+              clearTimeout(timeout);
+            });
         });
-      });
-    }, {
-      // Give the server a little extra time (1000 ms) to print a user-friendly
-      // error message before exiting.
-      wait: WAIT_UNTIL_TIMEOUT + 1000
-    });
+      },
+      {
+        // Give the server a little extra time (1000 ms) to print a user-friendly
+        // error message before exiting.
+        wait: WAIT_UNTIL_TIMEOUT + 1000,
+      }
+    );
 
     return server;
   } catch (error: any) {
