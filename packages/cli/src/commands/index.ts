@@ -6,6 +6,7 @@ export default new Map([
   ['cert', 'certs'],
   ['certs', 'certs'],
   ['deploy', 'deploy'],
+  ['deprecated', 'deprecated'],
   ['dev', 'dev'],
   ['develop', 'dev'],
   ['dns', 'dns'],
