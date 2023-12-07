@@ -9,7 +9,7 @@ import { isError } from '@vercel/error-utils';
 import { readFileSync } from 'fs';
 import { serializeBody, entrypointToOutputPath, logError } from '../utils.js';
 import esbuild from 'esbuild';
-import { asyncExitHook } from 'exit-hook';
+import { asyncExitHook, gracefulExit } from 'exit-hook';
 import { buildToHeaders } from '@edge-runtime/node-utils';
 import type { VercelProxyResponse } from '../types.js';
 import type { IncomingMessage } from 'http';
@@ -161,8 +161,6 @@ async function createEdgeRuntimeServer(params?: {
       },
     });
 
-    console.log('>>> runServer');
-
     const server = await runServer({ runtime });
 
     // Wait for the Edge Runtime server to finish all its work, especially
@@ -217,7 +215,7 @@ export async function createEdgeEventHandler(
       // this error state is already logged, but we have to wait until here to exit the process
       // this matches the serverless function bridge launcher's behavior when
       // an error is thrown in the function
-      process.exit(1);
+      gracefulExit(1);
     }
 
     const body: Buffer | string | undefined = await serializeBody(request);
@@ -250,7 +248,7 @@ export async function createEdgeEventHandler(
 
       // this matches the serverless function bridge launcher's behavior when
       // an error is thrown in the function
-      process.exit(1);
+      gracefulExit(1);
     }
 
     return {
