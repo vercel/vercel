@@ -165,7 +165,10 @@ async function createEdgeRuntimeServer(params?: {
 
     // Wait for the Edge Runtime server to finish all its work, especially
     // waitUntil promises before exiting this process.
-    const WAIT_UNTIL_TIMEOUT = 1 * 1000;
+    //
+    // Here we use a short timeout (10 seconds) to let the user know that
+    // it has a long-running waitUntil promise.
+    const WAIT_UNTIL_TIMEOUT = 10 * 1000;
     asyncExitHook(
       async () => {
         const waitUntil = server.close();
