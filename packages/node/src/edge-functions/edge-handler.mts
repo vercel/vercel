@@ -9,7 +9,7 @@ import { isError } from '@vercel/error-utils';
 import { readFileSync } from 'fs';
 import { serializeBody, entrypointToOutputPath, logError } from '../utils.js';
 import esbuild from 'esbuild';
-import exitHook from 'exit-hook';
+import { asyncExitHook } from 'exit-hook';
 import { buildToHeaders } from '@edge-runtime/node-utils';
 import type { VercelProxyResponse } from '../types.js';
 import type { IncomingMessage } from 'http';
@@ -161,8 +161,34 @@ async function createEdgeRuntimeServer(params?: {
       },
     });
 
+    console.log('>>> runServer');
+
     const server = await runServer({ runtime });
-    exitHook(() => server.close());
+
+    // Wait for the Edge Runtime server to finish all its work, especially
+    // waitUntil promises before exiting this process.
+    const WAIT_UNTIL_TIMEOUT = 10 * 1000;
+    asyncExitHook(async () => {
+      const waitUntil = server.close();
+      return new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          console.warn(
+            `Edge Runtime server is still running after ${WAIT_UNTIL_TIMEOUT} ms`
+            + ` (hint: do you have a long-running waitUntil() promise?)`
+          );
+          resolve();
+        }, WAIT_UNTIL_TIMEOUT);
+
+        waitUntil.then(() => resolve()).catch(reject).finally(() => {
+          clearTimeout(timeout);
+        });
+      });
+    }, {
+      // Give the server a little extra time (1000 ms) to print a user-friendly
+      // error message before exiting.
+      wait: WAIT_UNTIL_TIMEOUT + 1000
+    });
+
     return server;
   } catch (error: any) {
     // We can't easily show a meaningful stack trace from esbuild -> edge-runtime.
