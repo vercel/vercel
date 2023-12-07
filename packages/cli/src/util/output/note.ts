@@ -1,3 +1,3 @@
-import { yellow } from 'chalk';
+import chalk from 'chalk';
 
-export default (msg: string) => `${yellow('> NOTE:')} ${msg}`;
+export default (msg: string) => `${chalk.yellow('> NOTE:')} ${msg}`;

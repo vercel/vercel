@@ -1,4 +1,4 @@
-import { bold } from 'chalk';
+import chalk from 'chalk';
 import doSamlLogin from './saml';
 import showLoginPrompt from './prompt';
 import { LoginResult, SAMLError } from './types';
@@ -12,7 +12,9 @@ export default async function reauthenticate(
   if (error.teamId && error.enforced) {
     // If team has SAML enforced then trigger the SSO login directly
     client.output.log(
-      `You must re-authenticate with SAML to use ${bold(error.scope)} scope.`
+      `You must re-authenticate with SAML to use ${chalk.bold(
+        error.scope
+      )} scope.`
     );
     if (await confirm(client, `Log in with SAML?`, true)) {
       return doSamlLogin(client, error.teamId);
@@ -20,7 +22,7 @@ export default async function reauthenticate(
   } else {
     // Personal account, or team that does not have SAML enforced
     client.output.log(
-      `You must re-authenticate to use ${bold(error.scope)} scope.`
+      `You must re-authenticate to use ${chalk.bold(error.scope)} scope.`
     );
     return showLoginPrompt(client, error);
   }

@@ -1,4 +1,4 @@
-import { bold } from 'chalk';
+import chalk from 'chalk';
 import inquirer from 'inquirer';
 import { EventEmitter } from 'events';
 import { URL } from 'url';
@@ -215,7 +215,7 @@ export default class Client extends EventEmitter implements Stdio {
         this.output.prettyError(error);
       } else {
         this.output.error(
-          `Failed to re-authenticate for ${bold(error.scope)} scope`
+          `Failed to re-authenticate for ${chalk.bold(error.scope)} scope`
         );
       }
       throw error;
