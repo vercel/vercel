@@ -423,9 +423,7 @@ module.exports = config;`;
       cleanupOps.push(
         fs
           .rename(renamedRemixConfigPath, remixConfigPath)
-          .then(() =>
-            debug(`Restored original "${basename(remixConfigPath)}" file`)
-          )
+          .then(() => debug(`Restored original "${remixConfigPath}" file`))
       );
     }
     // Restore original server entrypoint if it was modified (for Hydrogen v2)
@@ -433,9 +431,15 @@ module.exports = config;`;
       cleanupOps.push(
         fs
           .writeFile(serverEntryPointAbs, originalServerEntryPoint)
-          .then(() =>
-            debug(`Restored original "${basename(serverEntryPointAbs!)}" file`)
-          )
+          .then(() => debug(`Restored original "${serverEntryPointAbs}" file`))
+      );
+    }
+    // Restore original `package.json` file
+    if (depsModified) {
+      cleanupOps.push(
+        fs
+          .writeFile(packageJsonPath, pkgRaw)
+          .then(() => debug(`Restored original "${packageJsonPath}" file`))
       );
     }
     await Promise.all(cleanupOps);
