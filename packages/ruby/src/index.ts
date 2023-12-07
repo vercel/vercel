@@ -1,3 +1,4 @@
+import { EOL } from 'os';
 import { join, dirname, relative } from 'path';
 import execa from 'execa';
 import {
@@ -133,7 +134,7 @@ export async function build({
   // Ensure a `Gemfile` exists so that webrick can be installed for Ruby 3.2
   if (!gemfilePath) {
     gemfilePath = join(entrypointFsDirname, gemfileName);
-    await writeFile(gemfilePath, '');
+    await writeFile(gemfilePath, `source "https://rubygems.org"${EOL}`);
   }
 
   const gemfileContents = gemfilePath
