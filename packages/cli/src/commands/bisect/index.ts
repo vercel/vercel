@@ -2,7 +2,7 @@ import open from 'open';
 import execa from 'execa';
 import plural from 'pluralize';
 import { resolve } from 'path';
-import chalk, { Chalk } from 'chalk';
+import chalk, { ChalkInstance } from 'chalk';
 import { URLSearchParams, parse } from 'url';
 
 import box from '../../util/output/box';
@@ -255,7 +255,7 @@ export default async function bisect(client: Client): Promise<number> {
         return 1;
       }
       const { exitCode } = proc;
-      let color: Chalk;
+      let color: ChalkInstance;
       if (exitCode === 0) {
         color = chalk.green;
         action = 'good';

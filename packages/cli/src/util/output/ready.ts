@@ -1,3 +1,3 @@
-import { cyan } from 'chalk';
+import chalk from 'chalk';
 
-export default (msg: string) => `${cyan('> Ready!')} ${msg}`;
+export default (msg: string) => `${chalk.cyan('> Ready!')} ${msg}`;
