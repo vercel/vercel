@@ -3,11 +3,11 @@ import { delimiter } from 'path';
 import { getEnvForPackageManager } from '../src';
 
 describe('Test `getEnvForPackageManager()`', () => {
-  const cases: Array<{
+  test.each<{
     name: string;
     args: Parameters<typeof getEnvForPackageManager>[0];
     want: unknown;
-  }> = [
+  }>([
     {
       name: 'should do nothing to env for npm < 6 and node < 16',
       args: {
@@ -195,19 +195,15 @@ describe('Test `getEnvForPackageManager()`', () => {
         FOO: 'bar',
       },
     },
-  ];
-
-  for (const { name, want, args } of cases) {
-    it(name, () => {
-      assert.deepStrictEqual(
-        getEnvForPackageManager({
-          cliType: args.cliType,
-          lockfileVersion: args.lockfileVersion,
-          nodeVersion: args.nodeVersion,
-          env: args.env,
-        }),
-        want
-      );
-    });
-  }
+  ])('$name', ({ args, want }) => {
+    assert.deepStrictEqual(
+      getEnvForPackageManager({
+        cliType: args.cliType,
+        lockfileVersion: args.lockfileVersion,
+        nodeVersion: args.nodeVersion,
+        env: args.env,
+      }),
+      want
+    );
+  });
 });
