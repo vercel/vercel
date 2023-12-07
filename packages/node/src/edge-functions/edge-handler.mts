@@ -225,6 +225,9 @@ export async function createEdgeEventHandler(
       // this matches the serverless function bridge launcher's behavior when
       // an error is thrown in the function
       gracefulExit(1);
+
+      // Here should be unreachable but TypeScript doesn't know that.
+      return;
     }
 
     const body: Buffer | string | undefined = await serializeBody(request);
