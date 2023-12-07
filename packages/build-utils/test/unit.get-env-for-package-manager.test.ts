@@ -1,4 +1,3 @@
-import assert from 'assert';
 import { delimiter } from 'path';
 import { getEnvForPackageManager } from '../src';
 
@@ -196,14 +195,13 @@ describe('Test `getEnvForPackageManager()`', () => {
       },
     },
   ])('$name', ({ args, want }) => {
-    assert.deepStrictEqual(
+    expect(
       getEnvForPackageManager({
         cliType: args.cliType,
         lockfileVersion: args.lockfileVersion,
         nodeVersion: args.nodeVersion,
         env: args.env,
-      }),
-      want
-    );
+      })
+    ).toStrictEqual(want);
   });
 });
