@@ -9,7 +9,7 @@ import { isError } from '@vercel/error-utils';
 import { readFileSync } from 'fs';
 import { serializeBody, entrypointToOutputPath, logError } from '../utils.js';
 import esbuild from 'esbuild';
-import { asyncExitHook, gracefulExit } from 'exit-hook';
+import { asyncExitHook } from 'exit-hook';
 import { buildToHeaders } from '@edge-runtime/node-utils';
 import type { VercelProxyResponse } from '../types.js';
 import type { IncomingMessage } from 'http';
@@ -224,10 +224,7 @@ export async function createEdgeEventHandler(
       // this error state is already logged, but we have to wait until here to exit the process
       // this matches the serverless function bridge launcher's behavior when
       // an error is thrown in the function
-      gracefulExit(1);
-
-      // Here should be unreachable but TypeScript doesn't know that.
-      return;
+      process.exit(1);
     }
 
     const body: Buffer | string | undefined = await serializeBody(request);
@@ -260,7 +257,7 @@ export async function createEdgeEventHandler(
 
       // this matches the serverless function bridge launcher's behavior when
       // an error is thrown in the function
-      gracefulExit(1);
+      process.exit(1);
     }
 
     return {
