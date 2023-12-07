@@ -124,11 +124,18 @@ export async function build({
   const entrypointFsDirname = join(workPath, dirname(entrypoint));
   const gemfileName = 'Gemfile';
 
-  const gemfilePath = await walkParentDirs({
+  let gemfilePath = await walkParentDirs({
     base: workPath,
     start: entrypointFsDirname,
     filename: gemfileName,
   });
+
+  // Ensure a `Gemfile` exists so that webrick can be installed for Ruby 3.2
+  if (!gemfilePath) {
+    gemfilePath = join(entrypointFsDirname, gemfileName);
+    await writeFile(gemfilePath, '');
+  }
+
   const gemfileContents = gemfilePath
     ? await readFile(gemfilePath, 'utf8')
     : '';
