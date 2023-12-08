@@ -276,7 +276,8 @@ export async function getNodeVersion(
 
 export async function scanParentDirs(
   destPath: string,
-  readPackageJson = false
+  readPackageJson = false,
+  preferredInstallCommand?: string
 ): Promise<ScanParentDirsResult> {
   assert(path.isAbsolute(destPath));
 
@@ -302,8 +303,7 @@ export async function scanParentDirs(
     });
   let lockfilePath: string | undefined;
   let lockfileVersion: number | undefined;
-  let cliType: CliType = 'yarn';
-
+  let cliType: CliType = (preferredInstallCommand as CliType) ?? 'yarn';
   const [hasYarnLock, packageLockJson, pnpmLockYaml, bunLockBin] =
     await Promise.all([
       Boolean(yarnLockPath),
@@ -410,8 +410,13 @@ export async function runNpmInstall(
 
   try {
     await runNpmInstallSema.acquire();
+    const preferredInstallCommand =
+      spawnOpts?.env?.VERCEL_PROJECT_SETTINGS_INSTALL_COMMAND?.split(' ')[0];
+
     const { cliType, packageJsonPath, lockfileVersion } = await scanParentDirs(
-      destPath
+      destPath,
+      false,
+      preferredInstallCommand
     );
 
     // Only allow `runNpmInstall()` to run once per `package.json`
