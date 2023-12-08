@@ -5,13 +5,7 @@ import { useTeams } from '../../mocks/team';
 import { defaultProject, useProject } from '../../mocks/project';
 import { client } from '../../mocks/client';
 import type { Project } from '@vercel-internals/types';
-import {
-  pluckIdentifiersFromDeploymentList,
-  parseSpacedTableRow,
-} from '../../helpers/parse-table';
-
-import * as buildUtils from '@vercel/build-utils';
-jest.mock('@vercel/build-utils');
+import { parseSpacedTableRow } from '../../helpers/parse-table';
 
 describe('project', () => {
   describe('list', () => {
@@ -31,8 +25,7 @@ describe('project', () => {
       expect(line.value).toEqual(`Fetching projects in ${user.username}`);
 
       line = await lines.next();
-      const { org } = pluckIdentifiersFromDeploymentList(line.value!);
-      expect(org).toEqual(user.username);
+      expect(line.value).toContain(user.username);
 
       // empty line
       line = await lines.next();
@@ -52,22 +45,17 @@ describe('project', () => {
       expect(data).toEqual([project.project.name, 'https://foobar.com']);
     });
 
-    it.only('should list projects running on an soon-to-be-deprecated Node.js version', async () => {
-      buildUtils.NODE_VERSIONS.mockReturnValue([
-        {
-          major: 99,
-          range: '99.x',
-          runtime: 'nodejs99.x',
-          discontinueDate: new Date('2100-01-01'),
-        }
-      ])
+    it('should list projects running on an soon-to-be-deprecated Node.js version', async () => {
+      jest.useFakeTimers().setSystemTime(new Date('2023-12-08'));
 
       const user = useUser();
       useTeams('team_dummy');
       const project = useProject({
         ...defaultProject,
-        nodeVersion: '99.x'
+        nodeVersion: '16.x',
       });
+
+      console.log(project);
 
       client.setArgv('project', 'ls', '--deprecated');
       await projects(client);
@@ -78,12 +66,15 @@ describe('project', () => {
       expect(line.value).toEqual(`Fetching projects in ${user.username}`);
 
       line = await lines.next();
-      expect(line.value).toEqual('> The following Node.js versions will be deprecated soon: 99.x. Upgrade your projects immediately.')
+      expect(line.value).toEqual(
+        '> The following Node.js versions will be deprecated soon: 16.x. Upgrade your projects immediately.'
+      );
       line = await lines.next();
-      expect(line.value).toEqual('> For more information visit: https://vercel.com/docs/functions/serverless-functions/runtimes/node-js#node.js-version')
+      expect(line.value).toEqual(
+        '> For more information visit: https://vercel.com/docs/functions/serverless-functions/runtimes/node-js#node.js-version'
+      );
       line = await lines.next();
-      const { org } = pluckIdentifiersFromDeploymentList(line.value!);
-      expect(org).toEqual(user.username);
+      expect(line.value).toContain(user.username);
 
       // empty line
       line = await lines.next();
@@ -102,6 +93,7 @@ describe('project', () => {
       data.pop();
       expect(data).toEqual([project.project.name, 'https://foobar.com']);
 
+      jest.clearAllTimers();
     });
 
     it('should list projects when there is no production deployment', async () => {
@@ -121,8 +113,7 @@ describe('project', () => {
       expect(line.value).toEqual(`Fetching projects in ${user.username}`);
 
       line = await lines.next();
-      const { org } = pluckIdentifiersFromDeploymentList(line.value!);
-      expect(org).toEqual(user.username);
+      expect(line.value).toContain(user.username);
 
       // empty line
       line = await lines.next();

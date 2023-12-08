@@ -60,6 +60,7 @@ export default async function list(
     const upcomingDeprecationVersionsList = upcomingDeprecationVersions.map(
       nodeVersion => nodeVersion.range
     );
+    console.log(projectList);
     projectList = projectList.filter(
       project =>
         project.nodeVersion &&
