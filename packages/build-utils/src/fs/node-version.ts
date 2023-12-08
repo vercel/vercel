@@ -6,42 +6,43 @@ import debug from '../debug';
 
 export type NodeVersionMajor = ReturnType<typeof getOptions>[number]['major'];
 
+export const NODE_VERSIONS: NodeVersion[] = [
+  { major: 20, range: '20.x', runtime: 'nodejs20.x' },
+  { major: 18, range: '18.x', runtime: 'nodejs18.x' },
+  {
+    major: 16,
+    range: '16.x',
+    runtime: 'nodejs16.x',
+    discontinueDate: new Date('2024-02-06'),
+  },
+  {
+    major: 14,
+    range: '14.x',
+    runtime: 'nodejs14.x',
+    discontinueDate: new Date('2023-08-15'),
+  },
+  {
+    major: 12,
+    range: '12.x',
+    runtime: 'nodejs12.x',
+    discontinueDate: new Date('2022-10-03'),
+  },
+  {
+    major: 10,
+    range: '10.x',
+    runtime: 'nodejs10.x',
+    discontinueDate: new Date('2021-04-20'),
+  },
+  {
+    major: 8,
+    range: '8.10.x',
+    runtime: 'nodejs8.10',
+    discontinueDate: new Date('2020-01-06'),
+  },
+];
+
 function getOptions() {
-  const options = [
-    { major: 20, range: '20.x', runtime: 'nodejs20.x' },
-    { major: 18, range: '18.x', runtime: 'nodejs18.x' },
-    {
-      major: 16,
-      range: '16.x',
-      runtime: 'nodejs16.x',
-      discontinueDate: new Date('2024-02-06'),
-    },
-    {
-      major: 14,
-      range: '14.x',
-      runtime: 'nodejs14.x',
-      discontinueDate: new Date('2023-08-15'),
-    },
-    {
-      major: 12,
-      range: '12.x',
-      runtime: 'nodejs12.x',
-      discontinueDate: new Date('2022-10-03'),
-    },
-    {
-      major: 10,
-      range: '10.x',
-      runtime: 'nodejs10.x',
-      discontinueDate: new Date('2021-04-20'),
-    },
-    {
-      major: 8,
-      range: '8.10.x',
-      runtime: 'nodejs8.10',
-      discontinueDate: new Date('2020-01-06'),
-    },
-  ] as const;
-  return options;
+  return NODE_VERSIONS;
 }
 
 function isNodeVersionAvailable(version: NodeVersion): boolean {
