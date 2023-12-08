@@ -60,14 +60,13 @@ export default async function list(
     const upcomingDeprecationVersionsList = upcomingDeprecationVersions.map(
       nodeVersion => nodeVersion.range
     );
-    console.log(projectList);
     projectList = projectList.filter(
       project =>
         project.nodeVersion &&
         upcomingDeprecationVersionsList.includes(project.nodeVersion)
     );
 
-    output.log(
+    output.warn(
       `The following Node.js versions will be deprecated soon: ${upcomingDeprecationVersionsList.join(
         ', '
       )}. Upgrade your projects immediately.`
