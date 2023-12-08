@@ -320,7 +320,6 @@ export interface NodeVersion {
   runtime: string;
   /** date beyond which this version is discontinued: 2023-08-17T19:05:45.951Z */
   discontinueDate?: Date;
-  deprecationChangelog?: string;
 }
 
 export interface Builder {

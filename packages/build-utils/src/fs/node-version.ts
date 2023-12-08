@@ -14,16 +14,12 @@ export const NODE_VERSIONS: NodeVersion[] = [
     range: '16.x',
     runtime: 'nodejs16.x',
     discontinueDate: new Date('2024-02-06'),
-    deprecationChangelog:
-      'https://vercel.com/changelog/node-js-14-and-16-are-being-deprecated ',
   },
   {
     major: 14,
     range: '14.x',
     runtime: 'nodejs14.x',
     discontinueDate: new Date('2023-08-15'),
-    deprecationChangelog:
-      'https://vercel.com/changelog/node-js-14-and-16-are-being-deprecated ',
   },
   {
     major: 12,
