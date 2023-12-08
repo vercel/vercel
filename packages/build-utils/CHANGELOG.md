@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 7.3.0
+
+### Minor Changes
+
+- [cli] add `--deprecated` option to `vc project ls` command ([#10919](https://github.com/vercel/vercel/pull/10919))
+
 ## 7.2.5
 
 ### Patch Changes
