@@ -30,7 +30,10 @@ export const prepareCache: PrepareCache = async ({
   await runNpmInstall(
     entrypointFsDirname,
     [],
-    spawnOpts,
+    {
+      ...spawnOpts,
+      stdio: 'ignore',
+    },
     undefined,
     nodeVersion
   );
