@@ -1533,7 +1533,7 @@ export async function getPageLambdaGroups({
       .filter(filename => filename.includes('.next/server/chunks/'))
       .sort()
       .join(',');
-    console.log('Page', page, chunks);
+    console.log('Page', page, chunks.length);
     const newPages = [...internalPages, page];
     const routeName = normalizePage(page.replace(/\.js$/, ''));
     const isPrerenderRoute = prerenderRoutes.has(routeName);
@@ -1621,7 +1621,7 @@ export async function getPageLambdaGroups({
         pseudoLayer: Object.assign({}, initialPseudoLayer.pseudoLayer),
         chunks,
       };
-      console.log('Created new lambda group for page', page, chunks);
+      console.log('Created new lambda group for page', page, chunks.length);
       groups.push(newGroup);
       matchingGroup = newGroup;
     }
