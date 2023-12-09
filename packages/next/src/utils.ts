@@ -1530,7 +1530,7 @@ export async function getPageLambdaGroups({
 
   for (const page of pages) {
     const chunks = Object.keys(pageTraces[page])
-      .filter(filename => filename.startsWith('.next/server/chunks/'))
+      .filter(filename => filename.includes('.next/server/chunks/'))
       .sort()
       .join(',');
     console.log('Chunks', page, chunks, pageTraces[page]);
