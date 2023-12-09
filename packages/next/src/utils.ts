@@ -1528,6 +1528,7 @@ export async function getPageLambdaGroups({
   const groups: Array<LambdaGroup> = [];
 
   for (const page of pages) {
+    console.log(`Grouping page: ${page}`, pageTraces[page]);
     const newPages = [...internalPages, page];
     const routeName = normalizePage(page.replace(/\.js$/, ''));
     const isPrerenderRoute = prerenderRoutes.has(routeName);
