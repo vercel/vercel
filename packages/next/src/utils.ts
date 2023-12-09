@@ -1484,6 +1484,7 @@ export type LambdaGroup = {
   pseudoLayer: PseudoLayer;
   pseudoLayerBytes: number;
   pseudoLayerUncompressedBytes: number;
+  chunks: string;
 };
 
 export async function getPageLambdaGroups({
@@ -1528,7 +1529,10 @@ export async function getPageLambdaGroups({
   const groups: Array<LambdaGroup> = [];
 
   for (const page of pages) {
-    console.log(`Grouping page: ${page}`, pageTraces[page]);
+    const chunks = Object.keys(pageTraces[page])
+      .filter(filename => filename.startsWith('.next/server/chunks/'))
+      .sort()
+      .join(',');
     const newPages = [...internalPages, page];
     const routeName = normalizePage(page.replace(/\.js$/, ''));
     const isPrerenderRoute = prerenderRoutes.has(routeName);
@@ -1569,7 +1573,8 @@ export async function getPageLambdaGroups({
         group.maxDuration === opts.maxDuration &&
         group.memory === opts.memory &&
         group.isPrerenders === isPrerenderRoute &&
-        group.isExperimentalPPR === isExperimentalPPR;
+        group.isExperimentalPPR === isExperimentalPPR &&
+        group.chunks === chunks;
 
       if (matches) {
         let newTracedFilesSize = group.pseudoLayerBytes;
@@ -1613,6 +1618,7 @@ export async function getPageLambdaGroups({
         pseudoLayerBytes: initialPseudoLayer.pseudoLayerBytes,
         pseudoLayerUncompressedBytes: initialPseudoLayerUncompressed,
         pseudoLayer: Object.assign({}, initialPseudoLayer.pseudoLayer),
+        chunks,
       };
       groups.push(newGroup);
       matchingGroup = newGroup;
