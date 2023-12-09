@@ -1533,7 +1533,7 @@ export async function getPageLambdaGroups({
       .filter(filename => filename.startsWith('.next/server/chunks/'))
       .sort()
       .join(',');
-    console.log('Chunks', page, chunks);
+    console.log('Chunks', page, chunks, pageTraces[page]);
     const newPages = [...internalPages, page];
     const routeName = normalizePage(page.replace(/\.js$/, ''));
     const isPrerenderRoute = prerenderRoutes.has(routeName);
