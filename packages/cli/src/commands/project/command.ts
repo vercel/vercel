@@ -15,7 +15,17 @@ export const projectCommand: Command = {
       name: 'ls',
       description: 'Show all projects in the selected scope',
       arguments: [],
-      options: [],
+      options: [
+        {
+          name: 'deprecated',
+          description: 'A list of projects affected by a deprecation',
+          argument: 'deprecated',
+          shorthand: null,
+          type: 'boolean',
+          deprecated: false,
+          multi: false,
+        },
+      ],
       examples: [],
     },
     {
