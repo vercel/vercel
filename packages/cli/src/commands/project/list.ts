@@ -30,6 +30,8 @@ export default async function list(
 
   const deprecated = argv['--deprecated'] || false;
 
+  // use a larger limit when `--deprecated`
+  // because client-side filtering produces fewer results
   let projectsUrl = `/v4/projects/?limit=${deprecated ? 40 : 20}`;
 
   const next = argv['--next'] || false;
