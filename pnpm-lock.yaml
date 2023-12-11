@@ -132,7 +132,7 @@ importers:
         specifier: 27.4.1
         version: 27.4.1
       '@vercel/frameworks':
-        specifier: 2.0.4
+        specifier: 2.0.5
         version: link:../packages/frameworks
 
   internals/constants:
@@ -186,7 +186,7 @@ importers:
         specifier: 1.0.4
         version: link:../constants
       '@vercel/build-utils':
-        specifier: 7.2.5
+        specifier: 7.3.0
         version: link:../../packages/build-utils
       '@vercel/routing-utils':
         specifier: 3.1.0
@@ -310,7 +310,7 @@ importers:
   packages/cli:
     dependencies:
       '@vercel/build-utils':
-        specifier: 7.2.5
+        specifier: 7.3.0
         version: link:../build-utils
       '@vercel/fun':
         specifier: 1.1.0
@@ -325,7 +325,7 @@ importers:
         specifier: 4.0.15
         version: link:../next
       '@vercel/node':
-        specifier: 3.0.11
+        specifier: 3.0.12
         version: link:../node
       '@vercel/python':
         specifier: 4.1.0
@@ -334,13 +334,13 @@ importers:
         specifier: 2.0.5
         version: link:../redwood
       '@vercel/remix-builder':
-        specifier: 2.0.12
+        specifier: 2.0.13
         version: link:../remix
       '@vercel/ruby':
-        specifier: 2.0.3
+        specifier: 2.0.4
         version: link:../ruby
       '@vercel/static-build':
-        specifier: 2.0.13
+        specifier: 2.0.14
         version: link:../static-build
       chokidar:
         specifier: 3.3.1
@@ -476,19 +476,19 @@ importers:
         specifier: 1.0.0
         version: link:../../internals/get-package-json
       '@vercel-internals/types':
-        specifier: 1.0.16
+        specifier: 1.0.17
         version: link:../../internals/types
       '@vercel/client':
-        specifier: 13.0.9
+        specifier: 13.0.10
         version: link:../client
       '@vercel/error-utils':
         specifier: 2.0.2
         version: link:../error-utils
       '@vercel/frameworks':
-        specifier: 2.0.4
+        specifier: 2.0.5
         version: link:../frameworks
       '@vercel/fs-detectors':
-        specifier: 5.1.4
+        specifier: 5.1.5
         version: link:../fs-detectors
       '@vercel/routing-utils':
         specifier: 3.1.0
@@ -722,7 +722,7 @@ importers:
   packages/client:
     dependencies:
       '@vercel/build-utils':
-        specifier: 7.2.5
+        specifier: 7.3.0
         version: link:../build-utils
       '@vercel/routing-utils':
         specifier: 3.1.0
@@ -883,7 +883,7 @@ importers:
         specifier: 2.0.2
         version: link:../error-utils
       '@vercel/frameworks':
-        specifier: 2.0.4
+        specifier: 2.0.5
         version: link:../frameworks
       '@vercel/routing-utils':
         specifier: 3.1.0
@@ -923,7 +923,7 @@ importers:
         specifier: 7.3.10
         version: 7.3.10
       '@vercel/build-utils':
-        specifier: 7.2.5
+        specifier: 7.3.0
         version: link:../build-utils
       jest-junit:
         specifier: 16.0.0
@@ -948,7 +948,7 @@ importers:
         specifier: 0.25.24
         version: 0.25.24
       '@vercel/build-utils':
-        specifier: 7.2.5
+        specifier: 7.3.0
         version: link:../build-utils
       '@vercel/routing-utils':
         specifier: 3.1.0
@@ -1015,7 +1015,7 @@ importers:
         specifier: 2.1.0
         version: 2.1.0
       '@vercel/build-utils':
-        specifier: 7.2.5
+        specifier: 7.3.0
         version: link:../build-utils
       async-retry:
         specifier: 1.3.3
@@ -1064,7 +1064,7 @@ importers:
         specifier: 14.18.33
         version: 14.18.33
       '@vercel/build-utils':
-        specifier: 7.2.5
+        specifier: 7.3.0
         version: link:../build-utils
       execa:
         specifier: 3.2.0
@@ -1125,7 +1125,7 @@ importers:
         specifier: 3.2.0
         version: 3.2.0
       '@vercel/build-utils':
-        specifier: 7.2.5
+        specifier: 7.3.0
         version: link:../build-utils
       '@vercel/routing-utils':
         specifier: 3.1.0
@@ -1212,7 +1212,7 @@ importers:
         specifier: 14.18.33
         version: 14.18.33
       '@vercel/build-utils':
-        specifier: 7.2.5
+        specifier: 7.3.0
         version: link:../build-utils
       '@vercel/error-utils':
         specifier: 2.0.2
@@ -1321,7 +1321,7 @@ importers:
         specifier: 3.0.0
         version: 3.0.0
       '@vercel/build-utils':
-        specifier: 7.2.5
+        specifier: 7.3.0
         version: link:../build-utils
       execa:
         specifier: ^1.0.0
@@ -1358,7 +1358,7 @@ importers:
         specifier: 6.0.0
         version: 6.0.0
       '@vercel/build-utils':
-        specifier: 7.2.5
+        specifier: 7.3.0
         version: link:../build-utils
       execa:
         specifier: 3.2.0
@@ -1383,8 +1383,8 @@ importers:
         version: 12.0.0
     devDependencies:
       '@remix-run/dev':
-        specifier: npm:@vercel/remix-run-dev@2.2.0
-        version: /@vercel/remix-run-dev@2.2.0(@types/node@14.18.33)(typescript@4.9.5)
+        specifier: npm:@vercel/remix-run-dev@2.3.1
+        version: /@vercel/remix-run-dev@2.3.1(@types/node@14.18.33)(typescript@4.9.5)
       '@types/jest':
         specifier: 27.5.1
         version: 27.5.1
@@ -1395,7 +1395,7 @@ importers:
         specifier: 7.3.13
         version: 7.3.13
       '@vercel/build-utils':
-        specifier: 7.2.5
+        specifier: 7.3.0
         version: link:../build-utils
       jest-junit:
         specifier: 16.0.0
@@ -1439,7 +1439,7 @@ importers:
         specifier: 6.0.0
         version: 6.0.0
       '@vercel/build-utils':
-        specifier: 7.2.5
+        specifier: 7.3.0
         version: link:../build-utils
       execa:
         specifier: 2.0.4
@@ -1460,7 +1460,7 @@ importers:
         specifier: 1.0.11
         version: link:../gatsby-plugin-vercel-analytics
       '@vercel/gatsby-plugin-vercel-builder':
-        specifier: 2.0.11
+        specifier: 2.0.12
         version: link:../gatsby-plugin-vercel-builder
       '@vercel/static-config':
         specifier: 3.0.0
@@ -1497,16 +1497,16 @@ importers:
         specifier: 7.3.13
         version: 7.3.13
       '@vercel/build-utils':
-        specifier: 7.2.5
+        specifier: 7.3.0
         version: link:../build-utils
       '@vercel/error-utils':
         specifier: 2.0.2
         version: link:../error-utils
       '@vercel/frameworks':
-        specifier: 2.0.4
+        specifier: 2.0.5
         version: link:../frameworks
       '@vercel/fs-detectors':
-        specifier: 5.1.4
+        specifier: 5.1.5
         version: link:../fs-detectors
       '@vercel/routing-utils':
         specifier: 3.1.0
@@ -3612,8 +3612,8 @@ packages:
       tslib: 2.5.0
     dev: true
 
-  /@remix-run/node@2.2.0(typescript@4.9.5):
-    resolution: {integrity: sha512-QZBdsQE2bZXAMFdPtB64L9icRiduUDRj1lXMzJJXgg+tnIYEF1A3FsDwI+VKaRY+Z4h+bLEftSO0yM0RijP/Ow==}
+  /@remix-run/node@2.3.1(typescript@4.9.5):
+    resolution: {integrity: sha512-dXoNrmLrPblUM8UjgPzq3YBLXEGzm3HwtIt0iob1SlgKx0I5ii40JG0IXHDTI9f+fN9f/Ufx7Cjp0MGcUVXWVw==}
     engines: {node: '>=18.0.0'}
     peerDependencies:
       typescript: ^5.1.0
@@ -3621,7 +3621,7 @@ packages:
       typescript:
         optional: true
     dependencies:
-      '@remix-run/server-runtime': 2.2.0(typescript@4.9.5)
+      '@remix-run/server-runtime': 2.3.1(typescript@4.9.5)
       '@remix-run/web-fetch': 4.4.1
       '@remix-run/web-file': 3.1.0
       '@remix-run/web-stream': 1.1.0
@@ -3632,13 +3632,13 @@ packages:
       typescript: 4.9.5
     dev: true
 
-  /@remix-run/router@1.11.0:
-    resolution: {integrity: sha512-BHdhcWgeiudl91HvVa2wxqZjSHbheSgIiDvxrF1VjFzBzpTtuDPkOdOi3Iqvc08kXtFkLjhbS+ML9aM8mJS+wQ==}
+  /@remix-run/router@1.13.0:
+    resolution: {integrity: sha512-5dMOnVnefRsl4uRnAdoWjtVTdh8e6aZqgM4puy9nmEADH72ck+uXwzpJLEKE9Q6F8ZljNewLgmTfkxUrBdv4WA==}
     engines: {node: '>=14.0.0'}
     dev: true
 
-  /@remix-run/server-runtime@2.2.0(typescript@4.9.5):
-    resolution: {integrity: sha512-+FiQy/Y6yqakkP2dRMhyf47fEvO2Pbu5aHCknUC9GKuzvDSbR5z65lB/rlRYUg1f8OBY46b7AMVG46qM+tRxeQ==}
+  /@remix-run/server-runtime@2.3.1(typescript@4.9.5):
+    resolution: {integrity: sha512-ym1nfuYJKn5Vd4bqGIJbZMR1wh/A/qXSzOwqCrZxjdsAmb4YLUBnUAJFIoCRBrvcge92kXq/lXjGOFYf+qidZg==}
     engines: {node: '>=18.0.0'}
     peerDependencies:
       typescript: ^5.1.0
@@ -3646,10 +3646,10 @@ packages:
       typescript:
         optional: true
     dependencies:
-      '@remix-run/router': 1.11.0
-      '@types/cookie': 0.4.1
+      '@remix-run/router': 1.13.0
+      '@types/cookie': 0.5.4
       '@web3-storage/multipart-parser': 1.0.0
-      cookie: 0.4.2
+      cookie: 0.5.0
       set-cookie-parser: 2.6.0
       source-map: 0.7.3
       typescript: 4.9.5
@@ -4322,8 +4322,8 @@ packages:
     resolution: {integrity: sha512-LKVP3cgXBT9RYj+t+9FDKwS5tdI+rPBXaNSkma7hvqy35lc7mAokC2zsqWJH0LaqIt3B962nuYI77hsJoT1gow==}
     dev: true
 
-  /@types/cookie@0.4.1:
-    resolution: {integrity: sha512-XW/Aa8APYr6jSVVA1y/DEIZX0/GMKLEVekNG727R8cs56ahETkRAy/3DR7+fJyh7oUgGwNQaRfXCun0+KbWY7Q==}
+  /@types/cookie@0.5.4:
+    resolution: {integrity: sha512-7z/eR6O859gyWIAjuvBWFzNURmf2oPBmJlfVWkwehU5nzIyjwBsTh7WMmEEV4JFnHuQ3ex4oyTvfKzcyJVDBNA==}
     dev: true
 
   /@types/cross-spawn@6.0.0:
@@ -5549,14 +5549,14 @@ packages:
       - supports-color
     dev: false
 
-  /@vercel/remix-run-dev@2.2.0(@types/node@14.18.33)(typescript@4.9.5):
-    resolution: {integrity: sha512-DNpuSnj50bW70/Vh0E3kPRT57RS6RVj54Vg5wTABy6dJE8Bdbgy3dFlO65A+199E9rQ71bult+Y6t4V0/2oP2A==}
+  /@vercel/remix-run-dev@2.3.1(@types/node@14.18.33)(typescript@4.9.5):
+    resolution: {integrity: sha512-q7hB3I4fXPz9a76CJSf4AH9ozwUefmh/Ykk+yjisBST9Tr7AeDE8hM/2ltZBkqMYdKlB7jYD5dffKzlr55xzVQ==}
     engines: {node: '>=18.0.0'}
     hasBin: true
     peerDependencies:
-      '@remix-run/serve': ^2.2.0
+      '@remix-run/serve': ^2.3.1
       typescript: ^5.1.0
-      vite: ^4.4.9
+      vite: ^4.4.9 || ^5.0.0
     peerDependenciesMeta:
       '@remix-run/serve':
         optional: true
@@ -5575,9 +5575,9 @@ packages:
       '@babel/types': 7.23.0
       '@mdx-js/mdx': 2.3.0
       '@npmcli/package-json': 4.0.1
-      '@remix-run/node': 2.2.0(typescript@4.9.5)
-      '@remix-run/router': 1.11.0
-      '@remix-run/server-runtime': 2.2.0(typescript@4.9.5)
+      '@remix-run/node': 2.3.1(typescript@4.9.5)
+      '@remix-run/router': 1.13.0
+      '@remix-run/server-runtime': 2.3.1(typescript@4.9.5)
       '@types/mdx': 2.0.7
       '@vanilla-extract/integration': 6.2.1(@types/node@14.18.33)
       arg: 5.0.2
@@ -7099,8 +7099,8 @@ packages:
     engines: {node: '>= 0.6'}
     dev: true
 
-  /cookie@0.4.2:
-    resolution: {integrity: sha512-aSWTXFzaKWkvHO1Ny/s+ePFpvKsPnjc551iI41v3ny/ow6tBG5Vd+FuqGNhh1LxOmVzOlGUriIlOaokOvhaStA==}
+  /cookie@0.5.0:
+    resolution: {integrity: sha512-YZ3GUyn/o8gfKJlnlX7g7xq4gyO6OSuhGPKaaGssGB2qgDUS0gPgtTvoyZLTt9Ab6dC4hfc9dV5arkvc/OCmrw==}
     engines: {node: '>= 0.6'}
     dev: true
 

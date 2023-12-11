@@ -9,6 +9,7 @@ interface RubyVersion extends NodeVersion {
 
 function getOptions() {
   const options = [
+    { major: 3, minor: 2, range: '3.2.x', runtime: 'ruby3.2' },
     {
       major: 2,
       minor: 7,
@@ -24,12 +25,6 @@ function getOptions() {
       discontinueDate: new Date('2021-11-30T00:00:00Z'),
     },
   ] as const;
-  if (process.env.VERCEL_ALLOW_RUBY32 === '1') {
-    return [
-      { major: 3, minor: 2, range: '3.2.x', runtime: 'ruby3.2' },
-      ...options,
-    ] as const;
-  }
   return options;
 }
 
