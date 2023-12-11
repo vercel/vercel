@@ -1575,7 +1575,7 @@ export async function getPageLambdaGroups({
         group.memory === opts.memory &&
         group.isPrerenders === isPrerenderRoute &&
         group.isExperimentalPPR === isExperimentalPPR &&
-        group.chunks === chunks;
+        (group.isPrerenders || group.chunks === chunks);
 
       if (matches) {
         let newTracedFilesSize = group.pseudoLayerBytes;
