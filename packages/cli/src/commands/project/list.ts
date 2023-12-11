@@ -28,14 +28,14 @@ export default async function list(
 
   output.spinner(`Fetching projects in ${chalk.bold(contextName)}`);
 
-  let projectsUrl = '/v4/projects/?limit=20';
+  const deprecated = argv['--deprecated'] || false;
+
+  let projectsUrl = `/v4/projects/?limit=${deprecated ? 40 : 20}`;
 
   const next = argv['--next'] || false;
   if (next) {
     projectsUrl += `&until=${next}`;
   }
-
-  const deprecated = argv['--deprecated'] || false;
 
   let {
     projects: projectList,
