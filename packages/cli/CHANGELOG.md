@@ -1,5 +1,31 @@
 # vercel
 
+## 32.7.1
+
+### Patch Changes
+
+- [cli] double page limit for vc project ls --deprecated ([#10932](https://github.com/vercel/vercel/pull/10932))
+
+- Updated dependencies [[`d09dd1794`](https://github.com/vercel/vercel/commit/d09dd1794b5ffa28c15d3ad2880b90db2f4c06f0)]:
+  - @vercel/remix-builder@2.0.14
+
+## 32.7.0
+
+### Minor Changes
+
+- [cli] add `--deprecated` option to `vc project ls` command ([#10919](https://github.com/vercel/vercel/pull/10919))
+
+### Patch Changes
+
+- Remove some debug statements and make log into warning ([#10926](https://github.com/vercel/vercel/pull/10926))
+
+- Updated dependencies [[`3cede43ca`](https://github.com/vercel/vercel/commit/3cede43ca7ea3aec3ff33864b7d33da57891ddb2), [`dfe47f6e6`](https://github.com/vercel/vercel/commit/dfe47f6e6c1d395ae24d802f4b7c98e39b9f90f4), [`1dbb22bb6`](https://github.com/vercel/vercel/commit/1dbb22bb6d33657faa78376f527fe350188c5257), [`204c3592c`](https://github.com/vercel/vercel/commit/204c3592c78fc544e62f0210b0e7e1e4cd382a0c)]:
+  - @vercel/ruby@2.0.4
+  - @vercel/build-utils@7.3.0
+  - @vercel/remix-builder@2.0.13
+  - @vercel/node@3.0.12
+  - @vercel/static-build@2.0.14
+
 ## 32.6.1
 
 ### Patch Changes

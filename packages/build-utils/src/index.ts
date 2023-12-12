@@ -104,3 +104,5 @@ export * from './should-serve';
 export * from './schemas';
 export * from './types';
 export * from './errors';
+
+export { NODE_VERSIONS } from './fs/node-version';
