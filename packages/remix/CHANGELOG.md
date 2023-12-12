@@ -1,5 +1,11 @@
 # @vercel/remix-builder
 
+## 2.0.14
+
+### Patch Changes
+
+- Reinstall dependencies during `prepareCache()` ([#10922](https://github.com/vercel/vercel/pull/10922))
+
 ## 2.0.13
 
 ### Patch Changes

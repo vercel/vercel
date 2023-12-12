@@ -1,5 +1,14 @@
 # vercel
 
+## 32.7.1
+
+### Patch Changes
+
+- [cli] double page limit for vc project ls --deprecated ([#10932](https://github.com/vercel/vercel/pull/10932))
+
+- Updated dependencies [[`d09dd1794`](https://github.com/vercel/vercel/commit/d09dd1794b5ffa28c15d3ad2880b90db2f4c06f0)]:
+  - @vercel/remix-builder@2.0.14
+
 ## 32.7.0
 
 ### Minor Changes
