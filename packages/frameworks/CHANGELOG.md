@@ -1,5 +1,11 @@
 # @vercel/frameworks
 
+## 2.0.5
+
+### Patch Changes
+
+- This new screenshot matches the template. It removes the version number so this screenshot will not go stale. ([#10921](https://github.com/vercel/vercel/pull/10921))
+
 ## 2.0.4
 
 ### Patch Changes

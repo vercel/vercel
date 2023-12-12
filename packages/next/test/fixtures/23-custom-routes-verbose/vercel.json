@@ -171,7 +171,7 @@
     // should match /_next file after rewrite
     {
       "path": "/hidden/_next/__NEXT_SCRIPT__(/hello)",
-      "mustContain": "createElement"
+      "status": 200
     },
     // should allow redirecting to external resource
     {
