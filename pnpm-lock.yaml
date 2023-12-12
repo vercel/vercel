@@ -334,7 +334,7 @@ importers:
         specifier: 2.0.5
         version: link:../redwood
       '@vercel/remix-builder':
-        specifier: 2.0.13
+        specifier: 2.0.14
         version: link:../remix
       '@vercel/ruby':
         specifier: 2.0.4
