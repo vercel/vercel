@@ -603,7 +603,7 @@ export function getEnvForPackageManagerV2({
   env: { [x: string]: string | undefined };
 }): {
   /**
-   * Which lockfile was detected
+   * Which lockfile was detected.
    */
   detectedLockfile: string | undefined;
   /**
@@ -611,7 +611,7 @@ export function getEnvForPackageManagerV2({
    */
   detectedPackageManager: string | undefined;
   /**
-   * Value for PATH that includes the binaries for the detected package manager.
+   * Value of $PATH that includes the binaries for the detected package manager.
    */
   path: string;
   /**
@@ -638,8 +638,8 @@ export function getEnvForPackageManagerV2({
       !oldPath.includes(npm7) &&
       !corepackEnabled
     ) {
-      // Ensure that npm 7 is at the beginning of the `$PATH`
-      pathValue = `${npm7}${path.delimiter}${oldPath}`;
+      // npm 7
+      pathValue = npm7;
       detectedLockfile = 'package-lock.json';
       detectedPackageManager = 'npm 7+';
     }
@@ -650,8 +650,8 @@ export function getEnvForPackageManagerV2({
       !oldPath.includes(pnpm7) &&
       !corepackEnabled
     ) {
-      // Ensure that pnpm 7 is at the beginning of the `$PATH`
-      pathValue = `${pnpm7}${path.delimiter}${oldPath}`;
+      // pnpm 7
+      pathValue = pnpm7;
       detectedLockfile = 'pnpm-lock.yaml';
       detectedPackageManager = 'pnpm 7';
     } else if (
@@ -660,15 +660,15 @@ export function getEnvForPackageManagerV2({
       !oldPath.includes(pnpm8) &&
       !corepackEnabled
     ) {
-      // Ensure that pnpm 8 is at the beginning of the `$PATH`
-      pathValue = `${pnpm8}${path.delimiter}${oldPath}`;
+      // pnpm 8
+      pathValue = pnpm8;
       detectedLockfile = 'pnpm-lock.yaml';
       detectedPackageManager = 'pnpm 8';
     }
   } else if (cliType === 'bun') {
     if (!oldPath.includes(bun1) && !corepackEnabled) {
-      // Ensure that Bun 1 is at the beginning of the `$PATH`
-      pathValue = `${bun1}${path.delimiter}${oldPath}`;
+      // Bun 1
+      pathValue = bun1;
       detectedLockfile = 'bun.lockb';
       detectedPackageManager = 'Bun';
     }
