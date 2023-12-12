@@ -80,7 +80,6 @@ jobs:
     name: Summary
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    if: always()
     needs:
       - release
     steps:
