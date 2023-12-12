@@ -543,13 +543,16 @@ export function getEnvForPackageManager({
     env,
   });
 
-  const oldPath = env.PATH + '';
   const newEnv: { [x: string]: string | undefined } = {
     ...env,
+  };
+
+  if (newPath) {
     // Ensure that the binaries of the detected package manager are at the
     // beginning of the `$PATH`.
-    PATH: `${newPath}${path.delimiter}${oldPath}`,
-  };
+    const oldPath = env.PATH + '';
+    newEnv.PATH = `${newPath}${path.delimiter}${oldPath}`;
+  }
 
   if (yarnNodeLinker) {
     newEnv.YARN_NODE_LINKER = yarnNodeLinker;
@@ -570,6 +573,7 @@ export function getEnvForPackageManager({
 
 /**
  * Helper to get the binary paths that link to the used package manager.
+ * Note: Make sure it doesn't contain any `console.log` calls.
  */
 export function getPathForPackageManager({
   cliType,
@@ -592,8 +596,9 @@ export function getPathForPackageManager({
   detectedPackageManager: string | undefined;
   /**
    * Value of $PATH that includes the binaries for the detected package manager.
+   * Undefined if no $PATH are necessary.
    */
-  path: string;
+  path: string | undefined;
   /**
    * Set if yarn was identified as package manager and `YARN_NODE_LINKER`
    * environment variable was not found on the input environment.
@@ -602,7 +607,7 @@ export function getPathForPackageManager({
 } {
   let detectedLockfile: string | undefined;
   let detectedPackageManager: string | undefined;
-  let pathValue = '';
+  let pathValue: string | undefined;
   let yarnNodeLinker: string | undefined;
   const oldPath = env.PATH + '';
   const npm7 = '/node16/bin-npm7';
