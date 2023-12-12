@@ -536,7 +536,7 @@ export function getEnvForPackageManager({
     detectedPackageManager,
     path: newPath,
     yarnNodeLinker,
-  } = getEnvForPackageManagerV2({
+  } = getPathForPackageManager({
     cliType,
     lockfileVersion,
     nodeVersion,
@@ -571,7 +571,7 @@ export function getEnvForPackageManager({
 /**
  * Helper to get the binary paths that link to the used package manager.
  */
-export function getEnvForPackageManagerV2({
+export function getPathForPackageManager({
   cliType,
   lockfileVersion,
   nodeVersion,
