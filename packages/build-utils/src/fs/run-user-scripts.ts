@@ -588,6 +588,104 @@ export function getEnvForPackageManager({
   return newEnv;
 }
 
+/**
+ * Helper to get the binary paths that link to the used package manager.
+ */
+export function getEnvForPackageManagerV2({
+  cliType,
+  lockfileVersion,
+  nodeVersion,
+  env,
+}: {
+  cliType: CliType;
+  lockfileVersion: number | undefined;
+  nodeVersion: NodeVersion | undefined;
+  env: { [x: string]: string | undefined };
+}): {
+  /**
+   * Which lockfile was detected
+   */
+  detectedLockfile: string | undefined;
+  /**
+   * Detected package manager that generated the found lockfile.
+   */
+  detectedPackageManager: string | undefined;
+  /**
+   * Value for PATH that includes the binaries for the detected package manager.
+   */
+  path: string;
+  /**
+   * Set if yarn was identified as package manager and `YARN_NODE_LINKER`
+   * environment variable was not found on the input environment.
+   */
+  yarnNodeLinker: string | undefined;
+} {
+  let detectedLockfile: string | undefined;
+  let detectedPackageManager: string | undefined;
+  let pathValue = '';
+  let yarnNodeLinker: string | undefined;
+  const oldPath = env.PATH + '';
+  const npm7 = '/node16/bin-npm7';
+  const pnpm7 = '/pnpm7/node_modules/.bin';
+  const pnpm8 = '/pnpm8/node_modules/.bin';
+  const bun1 = '/bun1';
+  const corepackEnabled = env.ENABLE_EXPERIMENTAL_COREPACK === '1';
+  if (cliType === 'npm') {
+    if (
+      typeof lockfileVersion === 'number' &&
+      lockfileVersion >= 2 &&
+      (nodeVersion?.major || 0) < 16 &&
+      !oldPath.includes(npm7) &&
+      !corepackEnabled
+    ) {
+      // Ensure that npm 7 is at the beginning of the `$PATH`
+      pathValue = `${npm7}${path.delimiter}${oldPath}`;
+      detectedLockfile = 'package-lock.json';
+      detectedPackageManager = 'npm 7+';
+    }
+  } else if (cliType === 'pnpm') {
+    if (
+      typeof lockfileVersion === 'number' &&
+      lockfileVersion === 5.4 &&
+      !oldPath.includes(pnpm7) &&
+      !corepackEnabled
+    ) {
+      // Ensure that pnpm 7 is at the beginning of the `$PATH`
+      pathValue = `${pnpm7}${path.delimiter}${oldPath}`;
+      detectedLockfile = 'pnpm-lock.yaml';
+      detectedPackageManager = 'pnpm 7';
+    } else if (
+      typeof lockfileVersion === 'number' &&
+      lockfileVersion >= 6 &&
+      !oldPath.includes(pnpm8) &&
+      !corepackEnabled
+    ) {
+      // Ensure that pnpm 8 is at the beginning of the `$PATH`
+      pathValue = `${pnpm8}${path.delimiter}${oldPath}`;
+      detectedLockfile = 'pnpm-lock.yaml';
+      detectedPackageManager = 'pnpm 8';
+    }
+  } else if (cliType === 'bun') {
+    if (!oldPath.includes(bun1) && !corepackEnabled) {
+      // Ensure that Bun 1 is at the beginning of the `$PATH`
+      pathValue = `${bun1}${path.delimiter}${oldPath}`;
+      detectedLockfile = 'bun.lockb';
+      detectedPackageManager = 'Bun';
+    }
+  } else {
+    // Yarn v2 PnP mode may be activated, so force "node-modules" linker style
+    if (!env.YARN_NODE_LINKER) {
+      yarnNodeLinker = 'node-modules';
+    }
+  }
+  return {
+    detectedLockfile,
+    detectedPackageManager,
+    path: pathValue,
+    yarnNodeLinker,
+  };
+}
+
 export async function runCustomInstallCommand({
   destPath,
   installCommand,
