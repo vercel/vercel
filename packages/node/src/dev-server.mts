@@ -24,7 +24,7 @@ async function createEventHandler(
   entrypoint: string,
   config: Config,
   options: { shouldAddHelpers: boolean }
-): Promise<(request: IncomingMessage) => Promise<VercelProxyResponse>> {
+): Promise<{ handler: (request: IncomingMessage) => Promise<VercelProxyResponse>; onExit: () => Promise<void>; }> {
   const entrypointPath = join(process.cwd(), entrypoint!);
   const staticConfig = parseConfig(entrypointPath);
 
@@ -51,6 +51,7 @@ async function createEventHandler(
 
 let handleEvent: (request: IncomingMessage) => Promise<VercelProxyResponse>;
 let handlerEventError: Error;
+let onExit: (() => Promise<void>) | undefined;
 
 async function main() {
   const config = JSON.parse(process.env.VERCEL_DEV_CONFIG || '{}');
@@ -67,9 +68,11 @@ async function main() {
   await listen(proxyServer, { host: '127.0.0.1', port: 0 });
 
   try {
-    handleEvent = await createEventHandler(entrypoint!, config, {
+    const result = await createEventHandler(entrypoint!, config, {
       shouldAddHelpers,
     });
+    handleEvent = result.handler;
+    onExit = result.onExit;
   } catch (error: any) {
     logError(error);
     handlerEventError = error;
@@ -128,4 +131,10 @@ async function onDevRequest(
 main().catch(err => {
   logError(err);
   process.exit(1);
+});
+
+process.on('SIGTERM', async () => {
+  if (onExit) {
+    await onExit();
+  }
 });

@@ -9,7 +9,6 @@ import { isError } from '@vercel/error-utils';
 import { readFileSync } from 'fs';
 import { serializeBody, entrypointToOutputPath, logError } from '../utils.js';
 import esbuild from 'esbuild';
-import { asyncExitHook } from 'exit-hook';
 import { buildToHeaders } from '@edge-runtime/node-utils';
 import type { VercelProxyResponse } from '../types.js';
 import type { IncomingMessage } from 'http';
@@ -38,10 +37,10 @@ async function compileUserCode(
 ): Promise<
   | undefined
   | {
-      userCode: string;
-      wasmAssets: WasmAssets;
-      nodeCompatBindings: NodeCompatBindings;
-    }
+    userCode: string;
+    wasmAssets: WasmAssets;
+    nodeCompatBindings: NodeCompatBindings;
+  }
 > {
   const { wasmAssets, plugin: edgeWasmPlugin } = createEdgeWasmPlugin();
   const nodeCompatPlugin = createNodeCompatPlugin();
@@ -127,7 +126,7 @@ async function createEdgeRuntimeServer(params?: {
   userCode: string;
   wasmAssets: WasmAssets;
   nodeCompatBindings: NodeCompatBindings;
-}) {
+}): Promise<{ server: EdgeRuntime; onExit: () => Promise<void>; }> {
   try {
     if (!params) {
       return undefined;
@@ -163,20 +162,20 @@ async function createEdgeRuntimeServer(params?: {
 
     const server = await runServer({ runtime });
 
-    // Wait for the Edge Runtime server to finish all its work, especially
-    // waitUntil promises before exiting this process.
-    //
-    // Here we use a short timeout (10 seconds) to let the user know that
-    // it has a long-running waitUntil promise.
-    const WAIT_UNTIL_TIMEOUT = 10 * 1000;
-    asyncExitHook(
+    const onExit =
       async () => {
+        // When exiting this process, wait for the Edge Runtime server to finish
+        // all its work, especially waitUntil promises before exiting this process.
+        //
+        // Here we use a short timeout (10 seconds) to let the user know that
+        // it has a long-running waitUntil promise.
+        const WAIT_UNTIL_TIMEOUT = 10 * 1000;
         const waitUntil = server.close();
         return new Promise<void>((resolve, reject) => {
           const timeout = setTimeout(() => {
             console.warn(
               `Edge Runtime server is still running after ${WAIT_UNTIL_TIMEOUT} ms` +
-                ` (hint: do you have a long-running waitUntil() promise?)`
+              ` (hint: do you have a long-running waitUntil() promise?)`
             );
             resolve();
           }, WAIT_UNTIL_TIMEOUT);
@@ -188,15 +187,9 @@ async function createEdgeRuntimeServer(params?: {
               clearTimeout(timeout);
             });
         });
-      },
-      {
-        // Give the server a little extra time (1000 ms) to print a user-friendly
-        // error message before exiting.
-        wait: WAIT_UNTIL_TIMEOUT + 1000,
-      }
-    );
+      };
 
-    return server;
+    return { server, onExit };
   } catch (error: any) {
     // We can't easily show a meaningful stack trace from esbuild -> edge-runtime.
     // So, stick with just the message for now.
@@ -211,15 +204,15 @@ export async function createEdgeEventHandler(
   entrypointRelativePath: string,
   isMiddleware: boolean,
   isZeroConfig?: boolean
-): Promise<(request: IncomingMessage) => Promise<VercelProxyResponse>> {
+): Promise<{ handler: (request: IncomingMessage) => Promise<VercelProxyResponse>, onExit: () => Promise<void> }> {
   const userCode = await compileUserCode(
     entrypointFullPath,
     entrypointRelativePath,
     isMiddleware
   );
-  const server = await createEdgeRuntimeServer(userCode);
+  const { server, onExit } = await createEdgeRuntimeServer(userCode);
 
-  return async function (request: IncomingMessage) {
+  const handler = async function (request: IncomingMessage): Promise<VercelProxyResponse> {
     if (!server) {
       // this error state is already logged, but we have to wait until here to exit the process
       // this matches the serverless function bridge launcher's behavior when
@@ -267,6 +260,11 @@ export async function createEdgeEventHandler(
       encoding: 'utf8',
     };
   };
+
+  return {
+    handler,
+    onExit,
+  }
 }
 
 function entrypointToRequestPath(
