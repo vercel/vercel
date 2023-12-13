@@ -1,5 +1,11 @@
 # vercel
 
+## 32.7.2
+
+### Patch Changes
+
+- [cli] Use new `deprecated` query param in projects api for `vc project ls --deprecated` ([#10938](https://github.com/vercel/vercel/pull/10938))
+
 ## 32.7.1
 
 ### Patch Changes
