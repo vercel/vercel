@@ -28,14 +28,17 @@ export default async function list(
 
   output.spinner(`Fetching projects in ${chalk.bold(contextName)}`);
 
-  let projectsUrl = '/v4/projects/?limit=20';
+  let projectsUrl = `/v4/projects/?limit=20`;
+
+  const deprecated = argv['--deprecated'] || false;
+  if (deprecated) {
+    projectsUrl += `&deprecated=${deprecated}`;
+  }
 
   const next = argv['--next'] || false;
   if (next) {
     projectsUrl += `&until=${next}`;
   }
-
-  const deprecated = argv['--deprecated'] || false;
 
   let {
     projects: projectList,
@@ -52,19 +55,16 @@ export default async function list(
   const elapsed = ms(Date.now() - start);
 
   if (deprecated) {
-    const upcomingDeprecationVersions = NODE_VERSIONS.filter(
-      nodeVersion =>
+    const upcomingDeprecationVersionsList = [];
+
+    for (const nodeVersion of NODE_VERSIONS) {
+      if (
         nodeVersion.discontinueDate &&
         nodeVersion.discontinueDate.valueOf() > Date.now()
-    );
-    const upcomingDeprecationVersionsList = upcomingDeprecationVersions.map(
-      nodeVersion => nodeVersion.range
-    );
-    projectList = projectList.filter(
-      project =>
-        project.nodeVersion &&
-        upcomingDeprecationVersionsList.includes(project.nodeVersion)
-    );
+      ) {
+        upcomingDeprecationVersionsList.push(nodeVersion.range);
+      }
+    }
 
     output.warn(
       `The following Node.js versions will be deprecated soon: ${upcomingDeprecationVersionsList.join(
