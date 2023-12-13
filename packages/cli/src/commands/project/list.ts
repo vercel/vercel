@@ -55,19 +55,16 @@ export default async function list(
   const elapsed = ms(Date.now() - start);
 
   if (deprecated) {
-    const upcomingDeprecationVersions = NODE_VERSIONS.filter(
-      nodeVersion =>
+    const upcomingDeprecationVersionsList = [];
+
+    for (const nodeVersion of NODE_VERSIONS) {
+      if (
         nodeVersion.discontinueDate &&
         nodeVersion.discontinueDate.valueOf() > Date.now()
-    );
-    const upcomingDeprecationVersionsList = upcomingDeprecationVersions.map(
-      nodeVersion => nodeVersion.range
-    );
-    projectList = projectList.filter(
-      project =>
-        project.nodeVersion &&
-        upcomingDeprecationVersionsList.includes(project.nodeVersion)
-    );
+      ) {
+        upcomingDeprecationVersionsList.push(nodeVersion.range);
+      }
+    }
 
     output.warn(
       `The following Node.js versions will be deprecated soon: ${upcomingDeprecationVersionsList.join(
