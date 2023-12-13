@@ -28,11 +28,12 @@ export default async function list(
 
   output.spinner(`Fetching projects in ${chalk.bold(contextName)}`);
 
-  const deprecated = argv['--deprecated'] || false;
+  let projectsUrl = `/v4/projects/?limit=20`;
 
-  // use a larger limit when `--deprecated`
-  // because client-side filtering produces fewer results
-  let projectsUrl = `/v4/projects/?limit=${deprecated ? 40 : 20}`;
+  const deprecated = argv['--deprecated'] || false;
+  if (deprecated) {
+    projectsUrl += `&deprecated=${deprecated}`;
+  }
 
   const next = argv['--next'] || false;
   if (next) {
