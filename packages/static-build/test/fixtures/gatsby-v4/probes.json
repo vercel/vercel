@@ -28,10 +28,7 @@
     {
       "fetchOptions": { "redirect": "manual" },
       "path": "/redirect",
-      "status": 307,
-      "responseHeaders": {
-        "location": "/using-ssr"
-      }
+      "status": 307
     },
     {
       "path": "/rewrite",
