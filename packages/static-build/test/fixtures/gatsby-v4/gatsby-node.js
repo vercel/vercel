@@ -1,7 +1,13 @@
 const fs = require('fs');
 
 exports.createPages = async ({ actions }) => {
-  const { createPage } = actions;
+  const { createPage, createRedirect } = actions;
+        console.log('createPages');
+
+    createRedirect({
+        fromPath: `/blog`,
+        toPath: `/using-ssr`,
+    });
   createPage({
     path: '/using-dsg',
     component: require.resolve('./src/templates/using-dsg.js'),
