@@ -26,11 +26,11 @@
       "mustContain": "{\"message\":\"A ok!\"}"
     },
     {
-      "path": "/redirect/",
+      "path": "/redirect",
       "status": "307"
     },
     {
-      "path": "/rewrite/",
+      "path": "/rewrite",
       "mustContain": "Vercel"
     }
   ]
