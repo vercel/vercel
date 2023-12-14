@@ -37,11 +37,15 @@ const HTTP_METHODS = [
   'PATCH',
 ];
 
-async function createServerlessServer(userCode: ServerlessFunctionSignature): Promise<{ url: URL, onExit: () => Promise<void> }> {
+async function createServerlessServer(
+  userCode: ServerlessFunctionSignature
+): Promise<{ url: URL; onExit: () => Promise<void> }> {
   const server = createServer(userCode);
   return {
     url: await listen(server),
-    onExit: async () => { server.close(); },
+    onExit: async () => {
+      server.close();
+    },
   };
 }
 
@@ -80,12 +84,17 @@ async function compileUserCode(
 export async function createServerlessEventHandler(
   entrypointPath: string,
   options: ServerlessServerOptions
-): Promise<{ handler: (request: IncomingMessage) => Promise<VercelProxyResponse>, onExit: () => Promise<void> }> {
+): Promise<{
+  handler: (request: IncomingMessage) => Promise<VercelProxyResponse>;
+  onExit: () => Promise<void>;
+}> {
   const userCode = await compileUserCode(entrypointPath, options);
   const server = await createServerlessServer(userCode);
   const isStreaming = options.mode === 'streaming';
 
-  const handler = async function (request: IncomingMessage): Promise<VercelProxyResponse> {
+  const handler = async function (
+    request: IncomingMessage
+  ): Promise<VercelProxyResponse> {
     const url = new URL(request.url ?? '/', server.url);
     const response = await undiciRequest(url, {
       body: await serializeBody(request),
@@ -116,5 +125,5 @@ export async function createServerlessEventHandler(
   return {
     handler,
     onExit,
-  }
+  };
 }
