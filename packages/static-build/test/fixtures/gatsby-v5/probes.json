@@ -22,8 +22,12 @@
       "mustContain": "<h1>Page not found</h1>"
     },
     {
+      "fetchOptions": { "redirect": "manual" },
       "path": "/redirect/",
-      "status": "307"
+      "status": "307",
+      "responseHeaders": {
+        "location": "/using-ssr"
+      }
     },
     {
       "path": "/rewrite/",

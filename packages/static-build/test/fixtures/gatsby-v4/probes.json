@@ -26,8 +26,12 @@
       "mustContain": "{\"message\":\"A ok!\"}"
     },
     {
+      "fetchOptions": { "redirect": "manual" },
       "path": "/redirect",
-      "status": "307"
+      "status": "307",
+      "responseHeaders": {
+        "location": "/using-ssr"
+      }
     },
     {
       "path": "/rewrite",
