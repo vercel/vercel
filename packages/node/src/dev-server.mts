@@ -136,10 +136,16 @@ main().catch(err => {
   process.exit(1);
 });
 
-process.on('SIGTERM', async () => {
-  if (onExit) {
-    await onExit();
-  }
+process.on('message', async m => {
+  switch (m) {
+    case 'shutdown':
+      if (onExit) {
+        await onExit();
+      }
 
-  process.exit(0);
+      process.exit(0);
+    default:
+      console.error(`unknown IPC message from parent:`, m);
+      break;
+  }
 });

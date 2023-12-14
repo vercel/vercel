@@ -653,7 +653,11 @@ export const startDevServer: StartDevServer = async opts => {
       });
     }
 
-    return { port: message.value.port, pid };
+    const shutdown = async () => {
+      child.send('shutdown');
+    };
+
+    return { port: message.value.port, pid, shutdown };
   } else {
     // Got "exit" event from child process
     const [exitCode, signal] = message.value;

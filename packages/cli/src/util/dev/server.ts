@@ -158,7 +158,10 @@ export default class DevServer {
   private podId: string;
   private devProcess?: ChildProcess;
   private devProcessOrigin?: string;
-  private devServerPids: Set<number>;
+  private shutdownCallbacks: Map<
+    number /* PID */,
+    undefined | (() => Promise<void>)
+  >;
   private originalProjectSettings?: ProjectSettings;
   private projectSettings?: ProjectSettings;
 
@@ -211,7 +214,7 @@ export default class DevServer {
     this.filter = path => Boolean(path);
     this.podId = Math.random().toString(32).slice(-5);
 
-    this.devServerPids = new Set();
+    this.shutdownCallbacks = new Map();
   }
 
   async exit(code = 1) {
@@ -1006,7 +1009,7 @@ export default class DevServer {
       ops.push(this.watcher.close());
     }
 
-    for (const pid of this.devServerPids) {
+    for (const pid of this.shutdownCallbacks.keys()) {
       ops.push(this.killBuilderDevServer(pid));
     }
 
@@ -1024,7 +1027,15 @@ export default class DevServer {
   async killBuilderDevServer(pid: number) {
     const { debug } = this.output;
     debug(`Killing builder dev server with PID ${pid}`);
-    this.devServerPids.delete(pid);
+    const shutdownCb = this.shutdownCallbacks.get(pid);
+    if (shutdownCb) {
+      debug(`Running shutdown callback for PID ${pid}`);
+      await shutdownCb();
+      return;
+    }
+
+    this.shutdownCallbacks.delete(pid);
+
     try {
       await treeKill(pid);
       debug(`Killed builder dev server with PID ${pid}`);
@@ -1432,9 +1443,9 @@ export default class DevServer {
         }
 
         if (startMiddlewareResult) {
-          const { port, pid } = startMiddlewareResult;
+          const { port, pid, shutdown } = startMiddlewareResult;
           middlewarePid = pid;
-          this.devServerPids.add(pid);
+          this.shutdownCallbacks.set(pid, shutdown);
 
           const middlewareReqHeaders = nodeHeadersToFetchHeaders(req.headers);
 
@@ -1899,8 +1910,8 @@ export default class DevServer {
         // is also included in the request ID. So use the same `dev1` fake region.
         requestId = generateRequestId(this.podId, true);
 
-        const { port, pid } = devServerResult;
-        this.devServerPids.add(pid);
+        const { port, pid, shutdown } = devServerResult;
+        this.shutdownCallbacks.set(pid, shutdown);
 
         res.once('close', () => {
           this.killBuilderDevServer(pid);
