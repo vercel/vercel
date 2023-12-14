@@ -17,7 +17,7 @@
 		"@neoconfetti/svelte": "^1.0.0",
 		"@playwright/test": "^1.40.1",
 		"@sveltejs/adapter-vercel": "^3.1.0",
-		"@sveltejs/kit": "^1.30.2",
+		"@sveltejs/kit": "^1.30.3",
 		"@types/cookie": "^0.5.4",
 		"eslint": "^8.55.0",
 		"eslint-config-prettier": "^8.10.0",
