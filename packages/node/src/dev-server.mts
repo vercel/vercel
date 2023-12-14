@@ -137,4 +137,6 @@ process.on('SIGTERM', async () => {
   if (onExit) {
     await onExit();
   }
+
+  process.exit(0);
 });

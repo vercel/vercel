@@ -307,3 +307,69 @@ test('allow setting multiple cookies with same name', async () => {
     child.kill(9);
   }
 });
+
+test('dev server waits for waitUntil promises to resolve', async () => {
+  async function startPingServer() {
+    let resolve;
+    const promise = new Promise<void>(resolve_ => {
+      resolve = resolve_;
+    });
+
+    const pingServer = createServer((req, res) => {
+      res.end('pong');
+      resolve('got a fetch from waitUntil');
+    });
+
+    const pingUrl = (await listen(pingServer)).toString();
+    return {
+      pingUrl,
+      pingServer,
+      promise,
+    };
+  }
+
+  const { promise, pingServer, pingUrl } = await startPingServer();
+  const child = testForkDevServer('./edge-waituntil.js');
+  try {
+    const result = await readMessage(child);
+    if (result.state !== 'message') {
+      throw new Error('Exited. error: ' + JSON.stringify(result.value));
+    }
+
+    const { address, port } = result.value;
+    const response = await fetch(
+      `http://${address}:${port}/api/edge-waituntil`,
+      {
+        headers: {
+          'x-ping-url': pingUrl,
+        },
+      }
+    );
+
+    expect({
+      status: response.status,
+      body: await response.text(),
+    }).toEqual({
+      status: 200,
+      body: 'running waitUntil promises asynchronously...',
+    });
+
+    // Dev server should keep running until waitUntil promise resolves...
+    child.kill('SIGTERM');
+
+    // Wait for waitUntil promise to resolve...
+    const settled = await Promise.race([
+      new Promise(resolve =>
+        setTimeout(
+          () => resolve('ping server promise was not resolved in 3 seconds'),
+          3000
+        )
+      ),
+      promise,
+    ]);
+    expect(settled).toBe('got a fetch from waitUntil');
+  } finally {
+    child.kill(9);
+    pingServer.close();
+  }
+});
