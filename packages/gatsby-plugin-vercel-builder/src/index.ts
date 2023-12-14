@@ -74,7 +74,7 @@ export async function generateVercelBuildOutputAPI3Output({
       statusCode,
     } of state.redirects) {
       if (statusCode === 200) {
-        // A statusCode of 200 on createRedirect creates a rewrite (i.e. a reverse proxy)
+        // A `statusCode` of 200 on `createRedirect()` creates a rewrite (i.e. a reverse proxy)
         // https://www.gatsbyjs.com/docs/how-to/cloud/working-with-redirects-and-rewrites/#rewrites-and-reverse-proxies
         rewrites.push({
           source: fromPath,

@@ -24,6 +24,14 @@
     {
       "path": "/api/hello",
       "mustContain": "{\"message\":\"A ok!\"}"
+    },
+    {
+      "path": "/redirect/",
+      "status": "307"
+    },
+    {
+      "path": "/rewrite/",
+      "mustContain": "Vercel"
     }
   ]
 }
