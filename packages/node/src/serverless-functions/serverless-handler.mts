@@ -124,6 +124,6 @@ export async function createServerlessEventHandler(
 
   return {
     handler,
-    onExit,
+    onExit: server.onExit,
   };
 }

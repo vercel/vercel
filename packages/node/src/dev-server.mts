@@ -26,7 +26,7 @@ async function createEventHandler(
   options: { shouldAddHelpers: boolean }
 ): Promise<{
   handler: (request: IncomingMessage) => Promise<VercelProxyResponse>;
-  onExit: () => Promise<void>;
+  onExit: (() => Promise<void>) | undefined;
 }> {
   const entrypointPath = join(process.cwd(), entrypoint!);
   const staticConfig = parseConfig(entrypointPath);

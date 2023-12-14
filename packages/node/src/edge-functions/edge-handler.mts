@@ -13,6 +13,7 @@ import { buildToHeaders } from '@edge-runtime/node-utils';
 import type { VercelProxyResponse } from '../types.js';
 import type { IncomingMessage } from 'http';
 import { fileURLToPath } from 'url';
+import { EdgeRuntimeServer } from 'edge-runtime/dist/server/run-server.js';
 
 const NODE_VERSION_MAJOR = process.version.match(/^v(\d+)\.\d+/)?.[1];
 const NODE_VERSION_IDENTIFIER = `node${NODE_VERSION_MAJOR}`;
@@ -126,7 +127,9 @@ async function createEdgeRuntimeServer(params?: {
   userCode: string;
   wasmAssets: WasmAssets;
   nodeCompatBindings: NodeCompatBindings;
-}): Promise<{ server: EdgeRuntime; onExit: () => Promise<void> }> {
+}): Promise<
+  { server: EdgeRuntimeServer; onExit: () => Promise<void> } | undefined
+> {
   try {
     if (!params) {
       return undefined;
@@ -205,14 +208,16 @@ export async function createEdgeEventHandler(
   isZeroConfig?: boolean
 ): Promise<{
   handler: (request: IncomingMessage) => Promise<VercelProxyResponse>;
-  onExit: () => Promise<void>;
+  onExit: (() => Promise<void>) | undefined;
 }> {
   const userCode = await compileUserCode(
     entrypointFullPath,
     entrypointRelativePath,
     isMiddleware
   );
-  const { server, onExit } = await createEdgeRuntimeServer(userCode);
+  const result = await createEdgeRuntimeServer(userCode);
+  const server = result?.server;
+  const onExit = result?.onExit;
 
   const handler = async function (
     request: IncomingMessage
