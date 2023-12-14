@@ -32,7 +32,7 @@
   },
   "dependencies": {
     "@vercel/build-utils": "7.3.0",
-    "@vercel/fun": "1.1.0",
+    "@vercel/fun": "1.1.1",
     "@vercel/go": "3.0.4",
     "@vercel/hydrogen": "1.0.1",
     "@vercel/next": "4.0.15",
