@@ -1,4 +1,8 @@
-import { getTransformedRoutes } from '@vercel/routing-utils';
+import {
+  getTransformedRoutes,
+  type Redirect,
+  type Rewrite,
+} from '@vercel/routing-utils';
 import { writeJson } from 'fs-extra';
 import { validateGatsbyState } from './schemas';
 import {
@@ -31,7 +35,7 @@ export async function generateVercelBuildOutputAPI3Output({
   if (validateGatsbyState.Check(state)) {
     console.log('▲ Creating Vercel build output');
 
-    const { pages, redirects, functions, config: gatsbyConfig } = state;
+    const { pages, functions, config: gatsbyConfig } = state;
     const { pathPrefix = '' } = gatsbyConfig;
 
     const ssrRoutes = pages
@@ -60,14 +64,36 @@ export async function generateVercelBuildOutputAPI3Output({
       trailingSlash = false;
     }
 
-    const routes =
-      getTransformedRoutes({
-        trailingSlash,
-        redirects: redirects.map(({ fromPath, toPath, isPermanent }) => ({
+    const redirects: Redirect[] = [];
+    const rewrites: Rewrite[] = [];
+
+    for (const {
+      fromPath,
+      toPath,
+      isPermanent,
+      statusCode,
+    } of state.redirects) {
+      if (statusCode === 200) {
+        // A `statusCode` of 200 on `createRedirect()` creates a rewrite (i.e. a reverse proxy)
+        // https://www.gatsbyjs.com/docs/how-to/cloud/working-with-redirects-and-rewrites/#rewrites-and-reverse-proxies
+        rewrites.push({
+          source: fromPath,
+          destination: toPath,
+        });
+      } else {
+        redirects.push({
           source: fromPath,
           destination: toPath,
           permanent: isPermanent,
-        })),
+        });
+      }
+    }
+
+    const routes =
+      getTransformedRoutes({
+        trailingSlash,
+        redirects,
+        rewrites,
       }).routes || [];
 
     routes.push({
