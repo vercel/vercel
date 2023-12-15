@@ -188,15 +188,18 @@ export default async function bisect(client: Client): Promise<number> {
     let newDeployments = chunk.deployments;
 
     // If we have the "good" deployment in this chunk, then we're done
+    let hasGood = false;
     for (let i = 0; i < newDeployments.length; i++) {
       if (newDeployments[i].url === good) {
         // grab all deployments up until the good one
         newDeployments = newDeployments.slice(0, i);
+        hasGood = true;
         break;
       }
     }
 
     deployments = deployments.concat(newDeployments);
+    if (hasGood) break;
   }
 
   if (!deployments.length) {
