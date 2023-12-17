@@ -1,5 +1,163 @@
 # vercel
 
+## 32.7.2
+
+### Patch Changes
+
+- [cli] Use new `deprecated` query param in projects api for `vc project ls --deprecated` ([#10938](https://github.com/vercel/vercel/pull/10938))
+
+## 32.7.1
+
+### Patch Changes
+
+- [cli] double page limit for vc project ls --deprecated ([#10932](https://github.com/vercel/vercel/pull/10932))
+
+- Updated dependencies [[`d09dd1794`](https://github.com/vercel/vercel/commit/d09dd1794b5ffa28c15d3ad2880b90db2f4c06f0)]:
+  - @vercel/remix-builder@2.0.14
+
+## 32.7.0
+
+### Minor Changes
+
+- [cli] add `--deprecated` option to `vc project ls` command ([#10919](https://github.com/vercel/vercel/pull/10919))
+
+### Patch Changes
+
+- Remove some debug statements and make log into warning ([#10926](https://github.com/vercel/vercel/pull/10926))
+
+- Updated dependencies [[`3cede43ca`](https://github.com/vercel/vercel/commit/3cede43ca7ea3aec3ff33864b7d33da57891ddb2), [`dfe47f6e6`](https://github.com/vercel/vercel/commit/dfe47f6e6c1d395ae24d802f4b7c98e39b9f90f4), [`1dbb22bb6`](https://github.com/vercel/vercel/commit/1dbb22bb6d33657faa78376f527fe350188c5257), [`204c3592c`](https://github.com/vercel/vercel/commit/204c3592c78fc544e62f0210b0e7e1e4cd382a0c)]:
+  - @vercel/ruby@2.0.4
+  - @vercel/build-utils@7.3.0
+  - @vercel/remix-builder@2.0.13
+  - @vercel/node@3.0.12
+  - @vercel/static-build@2.0.14
+
+## 32.6.1
+
+### Patch Changes
+
+- Revert "forbids globally installed @vercel/speed-insights and @vercel/analytics (#10848)" ([#10895](https://github.com/vercel/vercel/pull/10895))
+
+## 32.6.0
+
+### Minor Changes
+
+- forbids globally installed @vercel/speed-insights and @vercel/analytics ([#10848](https://github.com/vercel/vercel/pull/10848))
+
+### Patch Changes
+
+- [cli] Fix behavior for combination of northstar user + team scope provided to cli as an argument. ([#10884](https://github.com/vercel/vercel/pull/10884))
+
+- Updated dependencies [[`4edfcd74b`](https://github.com/vercel/vercel/commit/4edfcd74b6dfd8e9cbc05a71d47578051a2a7d63), [`0e9bb30fd`](https://github.com/vercel/vercel/commit/0e9bb30fd285492beadc365bece2ab1df67b387b), [`ca2cbf06f`](https://github.com/vercel/vercel/commit/ca2cbf06fbf252e23aff6e007d0df5ffc243b56e), [`c52bdf775`](https://github.com/vercel/vercel/commit/c52bdf77585dfa41b25cabe2f9403827d0964169)]:
+  - @vercel/remix-builder@2.0.12
+  - @vercel/static-build@2.0.13
+  - @vercel/go@3.0.4
+
+## 32.5.6
+
+### Patch Changes
+
+- Updated dependencies [[`ffd2f34c6`](https://github.com/vercel/vercel/commit/ffd2f34c6c3d53bbb673aa3241845abc50e67c5e), [`4636ae54c`](https://github.com/vercel/vercel/commit/4636ae54c6c17709c1a058169cdca19c3df73ddb)]:
+  - @vercel/next@4.0.15
+  - @vercel/ruby@2.0.3
+
+## 32.5.5
+
+### Patch Changes
+
+- Updated dependencies [[`88da7463c`](https://github.com/vercel/vercel/commit/88da7463ce12df91d49fbde85cb617030d55f558)]:
+  - @vercel/build-utils@7.2.5
+  - @vercel/node@3.0.11
+  - @vercel/static-build@2.0.12
+
+## 32.5.4
+
+### Patch Changes
+
+- Updated dependencies [[`65dec5b7e`](https://github.com/vercel/vercel/commit/65dec5b7e752f4da8fe0ffdb25215170453f6f8b)]:
+  - @vercel/build-utils@7.2.4
+  - @vercel/node@3.0.10
+  - @vercel/static-build@2.0.11
+
+## 32.5.3
+
+### Patch Changes
+
+- Handle `TooManyProjects` error in places where projects are created ([#10807](https://github.com/vercel/vercel/pull/10807))
+
+- Updated dependencies [[`89c1e0323`](https://github.com/vercel/vercel/commit/89c1e032335d9ec0fcfc84fe499cf004fe73fafc), [`fd29b966d`](https://github.com/vercel/vercel/commit/fd29b966d39776318b0e11a53909edb43d1fc5f2)]:
+  - @vercel/node@3.0.9
+  - @vercel/next@4.0.14
+
+## 32.5.2
+
+### Patch Changes
+
+- Updated dependencies [[`c94a082f6`](https://github.com/vercel/vercel/commit/c94a082f6bb1b84eaf420ac47ea83640dc83668e)]:
+  - @vercel/next@4.0.13
+
+## 32.5.1
+
+### Patch Changes
+
+- Debug log load user exceptions ([#10773](https://github.com/vercel/vercel/pull/10773))
+
+- bump: edge-runtime ([#10712](https://github.com/vercel/vercel/pull/10712))
+
+- Updated dependencies [[`fc90a3dc0`](https://github.com/vercel/vercel/commit/fc90a3dc0bd998453f6527c03d211c35bb0d5770), [`644b8a52c`](https://github.com/vercel/vercel/commit/644b8a52cb2cc8f05e215e2230f95f902cdf8ae8), [`0861dc8fb`](https://github.com/vercel/vercel/commit/0861dc8fbcea1037626b00664a4b6c22f1b0a7ed), [`33cc8e0ac`](https://github.com/vercel/vercel/commit/33cc8e0acf1b3466d50d45b2e5bbe66b89a87c14), [`f5296c3c0`](https://github.com/vercel/vercel/commit/f5296c3c06e620a39c5f88287ac94e58703bdaac), [`d9065c210`](https://github.com/vercel/vercel/commit/d9065c2102223e9cdb5b22df14db41c363cf7828)]:
+  - @vercel/next@4.0.12
+  - @vercel/node@3.0.8
+  - @vercel/build-utils@7.2.3
+  - @vercel/remix-builder@2.0.11
+  - @vercel/static-build@2.0.10
+
+## 32.5.0
+
+### Minor Changes
+
+- Indicates whether @vercel/speed-insights or @vercel/analytics are used ([#10623](https://github.com/vercel/vercel/pull/10623))
+
+- [cli] update env var validation rule to allow name start with underscore ([#10697](https://github.com/vercel/vercel/pull/10697))
+
+### Patch Changes
+
+- Updated dependencies [[`da300030c`](https://github.com/vercel/vercel/commit/da300030c999b3555c608a321c9d0a4d36923a5a), [`de84743e1`](https://github.com/vercel/vercel/commit/de84743e10d4c9701d409355c0fe057f35e6e435), [`913608de4`](https://github.com/vercel/vercel/commit/913608de4dd4e37557533d732ca8449a5737d4a6), [`7fa08088e`](https://github.com/vercel/vercel/commit/7fa08088ea0d5df6955ea4af7f08513cf4027bb3)]:
+  - @vercel/next@4.0.11
+  - @vercel/python@4.1.0
+  - @vercel/remix-builder@2.0.10
+  - @vercel/redwood@2.0.5
+  - @vercel/static-build@2.0.9
+
+## 32.4.1
+
+### Patch Changes
+
+- Updated dependencies [[`c523a755f`](https://github.com/vercel/vercel/commit/c523a755f8e4bc41f7c353ebc0b939c21703df00), [`58215906f`](https://github.com/vercel/vercel/commit/58215906f9ee28da3a7f2f3f4aeb862ab53bf55e)]:
+  - @vercel/next@4.0.10
+
+## 32.4.0
+
+### Minor Changes
+
+- Restore unsetting teamId for non-team accounts ([#10612](https://github.com/vercel/vercel/pull/10612))
+
+### Patch Changes
+
+- remove unused source map pkg ([#10577](https://github.com/vercel/vercel/pull/10577))
+
+- disable source map for prod build ([#10575](https://github.com/vercel/vercel/pull/10575))
+
+- Better rendering upon authentication error in `vc cert ls` ([#10551](https://github.com/vercel/vercel/pull/10551))
+
+- Updated dependencies [[`e9026c7a6`](https://github.com/vercel/vercel/commit/e9026c7a692937122e60e73b91100cf7009e022d), [`ea5bc8806`](https://github.com/vercel/vercel/commit/ea5bc8806276abf5ba14bdb4a966267497e5d14d), [`a4996e1c5`](https://github.com/vercel/vercel/commit/a4996e1c5a7e6986d5410b662014dc584c0f7c54), [`a18ed98f2`](https://github.com/vercel/vercel/commit/a18ed98f2df78fe1256410ea8676686564ed9b35), [`2f5b0aeeb`](https://github.com/vercel/vercel/commit/2f5b0aeeb183ed3ea8cbc68cb3bc3c949c486ada), [`09f1bbfa4`](https://github.com/vercel/vercel/commit/09f1bbfa41a87cf0063a3fb3022b7531d03862b5), [`ce7e82fa7`](https://github.com/vercel/vercel/commit/ce7e82fa7aa6cec5f5d7b4953353b297b7ad1694)]:
+  - @vercel/next@4.0.9
+  - @vercel/go@3.0.3
+  - @vercel/build-utils@7.2.2
+  - @vercel/node@3.0.7
+  - @vercel/redwood@2.0.4
+  - @vercel/remix-builder@2.0.9
+  - @vercel/static-build@2.0.8
+
 ## 32.3.1
 
 ### Patch Changes

@@ -1,5 +1,63 @@
 # @vercel/next
 
+## 4.0.15
+
+### Patch Changes
+
+- ensure function configs work for paths inside of route groups ([#10855](https://github.com/vercel/vercel/pull/10855))
+
+## 4.0.14
+
+### Patch Changes
+
+- Fixed headers for static routes when PPR is enabled ([#10808](https://github.com/vercel/vercel/pull/10808))
+
+## 4.0.13
+
+### Patch Changes
+
+- Added `getRequestHandlerWithMetadata` export ([#10753](https://github.com/vercel/vercel/pull/10753))
+
+## 4.0.12
+
+### Patch Changes
+
+- fix re-mapping logic for index prefetches ([#10750](https://github.com/vercel/vercel/pull/10750))
+
+- Fixes a case where using `basePath` along with static generation would output a lambda that conflicts with the root route. ([#10738](https://github.com/vercel/vercel/pull/10738))
+
+- Rework prefetch route handling ([#10779](https://github.com/vercel/vercel/pull/10779))
+
+## 4.0.11
+
+### Patch Changes
+
+- fix `build` in appDir on Windows ([#10708](https://github.com/vercel/vercel/pull/10708))
+
+- Fix RSC prefetch for index route with catch-all ([#10734](https://github.com/vercel/vercel/pull/10734))
+
+## 4.0.10
+
+### Patch Changes
+
+- Revert "[next] Correct output file tracing and limit calculation (#10631)" ([#10651](https://github.com/vercel/vercel/pull/10651))
+
+- next: bump minimal version for bundled server usage ([#10646](https://github.com/vercel/vercel/pull/10646))
+
+## 4.0.9
+
+### Patch Changes
+
+- Correct output file tracing and limit calculation ([#10631](https://github.com/vercel/vercel/pull/10631))
+
+- Fix the instrumentation hook on Next.js Edge Functions ([#10608](https://github.com/vercel/vercel/pull/10608))
+
+- [next] fix lambda creation for i18n edge pages ([#10630](https://github.com/vercel/vercel/pull/10630))
+
+- Revert "[next][node][redwood][remix] Update @vercel/nft (#10540)" ([#10633](https://github.com/vercel/vercel/pull/10633))
+
+- Update `@vercel/nft` to 0.24.2 ([#10644](https://github.com/vercel/vercel/pull/10644))
+
 ## 4.0.8
 
 ### Patch Changes

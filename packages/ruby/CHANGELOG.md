@@ -1,5 +1,19 @@
 # @vercel/ruby
 
+## 2.0.4
+
+### Patch Changes
+
+- Remove `VERCEL_ALLOW_RUBY32` env var check ([#10910](https://github.com/vercel/vercel/pull/10910))
+
+- Use Ruby 3.2 in test fixtures ([#10909](https://github.com/vercel/vercel/pull/10909))
+
+## 2.0.3
+
+### Patch Changes
+
+- Enable `ruby3.2` runtime ([#10859](https://github.com/vercel/vercel/pull/10859))
+
 ## 2.0.2
 
 ### Patch Changes

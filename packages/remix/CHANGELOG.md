@@ -1,5 +1,45 @@
 # @vercel/remix-builder
 
+## 2.0.14
+
+### Patch Changes
+
+- Reinstall dependencies during `prepareCache()` ([#10922](https://github.com/vercel/vercel/pull/10922))
+
+## 2.0.13
+
+### Patch Changes
+
+- Update `@remix-run/dev` fork to v2.3.1 ([#10908](https://github.com/vercel/vercel/pull/10908))
+
+## 2.0.12
+
+### Patch Changes
+
+- Fix issue where `npm install` was not properly injecting forked compiler ([#10819](https://github.com/vercel/vercel/pull/10819))
+
+- Simplify static directory resolution and apply `publicPath` to routes. ([#10685](https://github.com/vercel/vercel/pull/10685))
+
+## 2.0.11
+
+### Patch Changes
+
+- Update `@remix-run/dev` fork to v2.2.0 ([#10788](https://github.com/vercel/vercel/pull/10788))
+
+## 2.0.10
+
+### Patch Changes
+
+- Update `@remix-run/dev` fork to v2.1.0 ([#10732](https://github.com/vercel/vercel/pull/10732))
+
+## 2.0.9
+
+### Patch Changes
+
+- Revert "[next][node][redwood][remix] Update @vercel/nft (#10540)" ([#10633](https://github.com/vercel/vercel/pull/10633))
+
+- Update `@vercel/nft` to 0.24.2 ([#10644](https://github.com/vercel/vercel/pull/10644))
+
 ## 2.0.8
 
 ### Patch Changes

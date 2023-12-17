@@ -1,5 +1,17 @@
 # @vercel/go
 
+## 3.0.4
+
+### Patch Changes
+
+- Set Lambda runtime to "provided.al2" ([#10880](https://github.com/vercel/vercel/pull/10880))
+
+## 3.0.3
+
+### Patch Changes
+
+- Update broken documentation link ([#10579](https://github.com/vercel/vercel/pull/10579))
+
 ## 3.0.2
 
 ### Patch Changes

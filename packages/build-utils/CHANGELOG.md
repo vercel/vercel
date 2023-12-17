@@ -1,5 +1,35 @@
 # @vercel/build-utils
 
+## 7.3.0
+
+### Minor Changes
+
+- [cli] add `--deprecated` option to `vc project ls` command ([#10919](https://github.com/vercel/vercel/pull/10919))
+
+## 7.2.5
+
+### Patch Changes
+
+- Remove Node.js v20 env var check ([#10834](https://github.com/vercel/vercel/pull/10834))
+
+## 7.2.4
+
+### Patch Changes
+
+- Select Node.js version based on what's available in build-container ([#10822](https://github.com/vercel/vercel/pull/10822))
+
+## 7.2.3
+
+### Patch Changes
+
+- Add experimental flag to allow Node.js v20 ([#10802](https://github.com/vercel/vercel/pull/10802))
+
+## 7.2.2
+
+### Patch Changes
+
+- [cli] Update bun detection and add tests for projects with both bunlock binary and yarn.lock text files ([#10583](https://github.com/vercel/vercel/pull/10583))
+
 ## 7.2.1
 
 ### Patch Changes

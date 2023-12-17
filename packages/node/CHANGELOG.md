@@ -1,5 +1,53 @@
 # @vercel/node
 
+## 3.0.12
+
+### Patch Changes
+
+- Updated dependencies [[`dfe47f6e6`](https://github.com/vercel/vercel/commit/dfe47f6e6c1d395ae24d802f4b7c98e39b9f90f4)]:
+  - @vercel/build-utils@7.3.0
+
+## 3.0.11
+
+### Patch Changes
+
+- Updated dependencies [[`88da7463c`](https://github.com/vercel/vercel/commit/88da7463ce12df91d49fbde85cb617030d55f558)]:
+  - @vercel/build-utils@7.2.5
+
+## 3.0.10
+
+### Patch Changes
+
+- Updated dependencies [[`65dec5b7e`](https://github.com/vercel/vercel/commit/65dec5b7e752f4da8fe0ffdb25215170453f6f8b)]:
+  - @vercel/build-utils@7.2.4
+
+## 3.0.9
+
+### Patch Changes
+
+- Replace usage of `fetch` with `undici.request` ([#10767](https://github.com/vercel/vercel/pull/10767))
+
+## 3.0.8
+
+### Patch Changes
+
+- bump: edge-runtime ([#10712](https://github.com/vercel/vercel/pull/10712))
+
+- Updated dependencies [[`0861dc8fb`](https://github.com/vercel/vercel/commit/0861dc8fbcea1037626b00664a4b6c22f1b0a7ed), [`34dd9c091`](https://github.com/vercel/vercel/commit/34dd9c0918585cf6d3b04bddd9158978b0b4192f)]:
+  - @vercel/build-utils@7.2.3
+  - @vercel/error-utils@2.0.2
+
+## 3.0.7
+
+### Patch Changes
+
+- Revert "[next][node][redwood][remix] Update @vercel/nft (#10540)" ([#10633](https://github.com/vercel/vercel/pull/10633))
+
+- Update `@vercel/nft` to 0.24.2 ([#10644](https://github.com/vercel/vercel/pull/10644))
+
+- Updated dependencies [[`2f5b0aeeb`](https://github.com/vercel/vercel/commit/2f5b0aeeb183ed3ea8cbc68cb3bc3c949c486ada)]:
+  - @vercel/build-utils@7.2.2
+
 ## 3.0.6
 
 ### Patch Changes

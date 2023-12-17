@@ -1,5 +1,20 @@
 # @vercel/redwood
 
+## 2.0.5
+
+### Patch Changes
+
+- Updated dependencies [[`9e9fac019`](https://github.com/vercel/vercel/commit/9e9fac0191cb1428ac9e5479c3d5c8afd7b7d357)]:
+  - @vercel/routing-utils@3.1.0
+
+## 2.0.4
+
+### Patch Changes
+
+- Revert "[next][node][redwood][remix] Update @vercel/nft (#10540)" ([#10633](https://github.com/vercel/vercel/pull/10633))
+
+- Update `@vercel/nft` to 0.24.2 ([#10644](https://github.com/vercel/vercel/pull/10644))
+
 ## 2.0.3
 
 ### Patch Changes

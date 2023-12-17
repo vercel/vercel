@@ -1,15 +1,12 @@
 {
   "compilerOptions": {
-    "strict": true,
-    "esModuleInterop": true,
     "lib": ["ES2021", "DOM"],
-    "target": "ES2021",
     "module": "nodenext",
-    "outDir": "dist",
-    "sourceMap": false,
-    "declaration": false,
-    "skipLibCheck": true,
-    "moduleResolution": "nodenext"
+    "moduleResolution": "nodenext",
+    "noImplicitReturns": false,
+    "noUnusedParameters": false,
+    "outDir": "./dist"
   },
+  "extends": "../../tsconfig.base.json",
   "include": ["src/**/*"]
 }

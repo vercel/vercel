@@ -1,5 +1,47 @@
 # @vercel/client
 
+## 13.0.10
+
+### Patch Changes
+
+- Updated dependencies [[`dfe47f6e6`](https://github.com/vercel/vercel/commit/dfe47f6e6c1d395ae24d802f4b7c98e39b9f90f4)]:
+  - @vercel/build-utils@7.3.0
+
+## 13.0.9
+
+### Patch Changes
+
+- Updated dependencies [[`88da7463c`](https://github.com/vercel/vercel/commit/88da7463ce12df91d49fbde85cb617030d55f558)]:
+  - @vercel/build-utils@7.2.5
+
+## 13.0.8
+
+### Patch Changes
+
+- Updated dependencies [[`65dec5b7e`](https://github.com/vercel/vercel/commit/65dec5b7e752f4da8fe0ffdb25215170453f6f8b)]:
+  - @vercel/build-utils@7.2.4
+
+## 13.0.7
+
+### Patch Changes
+
+- Updated dependencies [[`0861dc8fb`](https://github.com/vercel/vercel/commit/0861dc8fbcea1037626b00664a4b6c22f1b0a7ed)]:
+  - @vercel/build-utils@7.2.3
+
+## 13.0.6
+
+### Patch Changes
+
+- Updated dependencies [[`9e9fac019`](https://github.com/vercel/vercel/commit/9e9fac0191cb1428ac9e5479c3d5c8afd7b7d357)]:
+  - @vercel/routing-utils@3.1.0
+
+## 13.0.5
+
+### Patch Changes
+
+- Updated dependencies [[`2f5b0aeeb`](https://github.com/vercel/vercel/commit/2f5b0aeeb183ed3ea8cbc68cb3bc3c949c486ada)]:
+  - @vercel/build-utils@7.2.2
+
 ## 13.0.4
 
 ### Patch Changes

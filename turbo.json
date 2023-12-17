@@ -32,9 +32,14 @@
       "dependsOn": ["build"],
       "outputMode": "new-only"
     },
+    "test-next-local-legacy": {
+      "dependsOn": ["build"],
+      "outputMode": "new-only"
+    },
     "test": {
       "dependsOn": ["build"],
       "outputMode": "new-only"
-    }
+    },
+    "type-check": {}
   }
 }

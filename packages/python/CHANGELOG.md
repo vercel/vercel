@@ -1,5 +1,11 @@
 # @vercel/python
 
+## 4.1.0
+
+### Minor Changes
+
+- Add support for pip3.10 and pip3.11 ([#10648](https://github.com/vercel/vercel/pull/10648))
+
 ## 4.0.2
 
 ### Patch Changes

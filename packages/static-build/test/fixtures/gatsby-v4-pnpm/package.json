@@ -2,12 +2,7 @@
   "private": true,
   "dependencies": {
     "gatsby": "4.25.4",
-    "gatsby-plugin-image": "^2.21.0",
-    "gatsby-plugin-manifest": "^4.21.0",
-    "gatsby-plugin-pnpm": "1.2.10",
-    "gatsby-plugin-sharp": "^4.21.0",
-    "gatsby-source-filesystem": "^4.21.1",
-    "gatsby-transformer-sharp": "^4.21.0",
+    "gatsby-plugin-pnpm": "^1.2.10",
     "prop-types": "^15.8.1",
     "react": "^18.1.0",
     "react-dom": "^18.1.0"

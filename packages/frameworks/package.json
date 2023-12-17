@@ -1,6 +1,6 @@
 {
   "name": "@vercel/frameworks",
-  "version": "2.0.2",
+  "version": "2.0.5",
   "main": "./dist/frameworks.js",
   "types": "./dist/frameworks.d.ts",
   "files": [
@@ -15,19 +15,20 @@
   "scripts": {
     "build": "node ../../utils/build.mjs",
     "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --runInBand --bail",
-    "test-unit": "pnpm test"
+    "test-unit": "pnpm test",
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "@iarna/toml": "2.2.3",
     "js-yaml": "3.13.1",
-    "@vercel/error-utils": "2.0.1"
+    "@vercel/error-utils": "2.0.2"
   },
   "devDependencies": {
     "@types/jest": "27.4.1",
     "@types/js-yaml": "3.12.1",
     "@types/node": "14.18.33",
     "@types/node-fetch": "2.5.8",
-    "@vercel/routing-utils": "3.0.0",
+    "@vercel/routing-utils": "3.1.0",
     "ajv": "6.12.2",
     "jest-junit": "16.0.0",
     "typescript": "4.9.5"

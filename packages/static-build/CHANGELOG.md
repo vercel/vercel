@@ -1,5 +1,53 @@
 # @vercel/static-build
 
+## 2.0.14
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.12
+
+## 2.0.13
+
+### Patch Changes
+
+- [tests] Update Gatsby fixture versions ([#10875](https://github.com/vercel/vercel/pull/10875))
+
+## 2.0.12
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.11
+
+## 2.0.11
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.10
+
+## 2.0.10
+
+### Patch Changes
+
+- Updated dependencies [[`efd3cc05d`](https://github.com/vercel/vercel/commit/efd3cc05dcf3993a68eb2ac41f39d42ed905b036)]:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.9
+
+## 2.0.9
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.8
+
+## 2.0.8
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.7
+
 ## 2.0.7
 
 ### Patch Changes

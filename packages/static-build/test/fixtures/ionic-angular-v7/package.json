@@ -1,0 +1,37 @@
+{
+  "name": "52-ionic-angular",
+  "version": "0.0.1",
+  "author": "Ionic Framework",
+  "homepage": "https://ionicframework.com/",
+  "scripts": {
+    "ng": "ng",
+    "start": "ng serve",
+    "build": "ng build",
+    "watch": "ng build --watch --configuration development"
+  },
+  "private": true,
+  "dependencies": {
+    "@angular/animations": "^16.0.0",
+    "@angular/common": "^16.0.0",
+    "@angular/compiler": "^16.0.0",
+    "@angular/core": "^16.0.0",
+    "@angular/platform-browser": "^16.0.0",
+    "@angular/platform-browser-dynamic": "^16.0.0",
+    "@ionic/angular": "^7.0.0",
+    "rxjs": "~7.8.0",
+    "tslib": "^2.3.0",
+    "zone.js": "~0.13.0"
+  },
+  "devDependencies": {
+    "@angular-devkit/build-angular": "^16.0.0",
+    "@angular-eslint/builder": "^16.0.0",
+    "@angular/cli": "^16.0.0",
+    "@angular/compiler-cli": "^16.0.0",
+    "@angular/language-service": "^16.0.0",
+    "@ionic/angular-toolkit": "^9.0.0",
+    "@types/node": "^12.11.1",
+    "ts-node": "^8.3.0",
+    "typescript": "~5.0.2"
+  },
+  "description": "An Ionic project"
+}

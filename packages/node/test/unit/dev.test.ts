@@ -148,7 +148,7 @@ function testForkDevServer(entrypoint: string) {
   }
 );
 
-test("user code doesn't interfer with runtime", async () => {
+test("user code doesn't interfere with runtime", async () => {
   const child = testForkDevServer('./edge-self.js');
   try {
     const result = await readMessage(child);

@@ -14,6 +14,7 @@ import {
   Files,
   Flag,
   BuildResultV2Typical as BuildResult,
+  NodejsLambda,
 } from '@vercel/build-utils';
 import { Route, RouteWithHandle } from '@vercel/routing-utils';
 import { MAX_AGE_ONE_YEAR } from '.';
@@ -49,6 +50,8 @@ import {
   VariantsManifest,
   RSC_CONTENT_TYPE,
   RSC_PREFETCH_SUFFIX,
+  normalizePrefetches,
+  CreateLambdaFromPseudoLayersOptions,
 } from './utils';
 import {
   nodeFileTrace,
@@ -68,7 +71,8 @@ const EMPTY_ALLOW_QUERY_FOR_PRERENDERED_VERSION = 'v12.2.0';
 const CORRECTED_MANIFESTS_VERSION = 'v12.2.0';
 
 // related PR: https://github.com/vercel/next.js/pull/52997
-const BUNDLED_SERVER_NEXT_VERSION = '13.4.20-canary.26';
+// and https://github.com/vercel/next.js/pull/56318
+const BUNDLED_SERVER_NEXT_VERSION = 'v13.5.4';
 
 const BUNDLED_SERVER_NEXT_PATH =
   'next/dist/compiled/next-server/server.runtime.prod.js';
@@ -180,6 +184,10 @@ export async function serverBuild({
     }
   }
 
+  const experimental = {
+    ppr: requiredServerFilesManifest.config.experimental?.ppr === true,
+  };
+
   let appRscPrefetches: UnwrapPromise<ReturnType<typeof glob>> = {};
   let appBuildTraces: UnwrapPromise<ReturnType<typeof glob>> = {};
   let appDir: string | null = null;
@@ -187,10 +195,16 @@ export async function serverBuild({
   if (appPathRoutesManifest) {
     appDir = path.join(pagesDir, '../app');
     appBuildTraces = await glob('**/*.js.nft.json', appDir);
-    appRscPrefetches = await glob(`**/*${RSC_PREFETCH_SUFFIX}`, appDir);
+
+    // TODO: maybe?
+    appRscPrefetches = experimental.ppr
+      ? {}
+      : await glob(`**/*${RSC_PREFETCH_SUFFIX}`, appDir);
 
     const rscContentTypeHeader =
       routesManifest?.rsc?.contentTypeHeader || RSC_CONTENT_TYPE;
+
+    appRscPrefetches = normalizePrefetches(appRscPrefetches);
 
     // ensure all appRscPrefetches have a contentType since this is used by Next.js
     // to determine if it's a valid response
@@ -291,6 +305,18 @@ export async function serverBuild({
     internalPages.push('404.js');
   }
 
+  const experimentalPPRRoutes = new Set<string>();
+
+  for (const [route, { experimentalPPR }] of [
+    ...Object.entries(prerenderManifest.staticRoutes),
+    ...Object.entries(prerenderManifest.blockingFallbackRoutes),
+    ...Object.entries(prerenderManifest.fallbackRoutes),
+  ]) {
+    if (!experimentalPPR) continue;
+
+    experimentalPPRRoutes.add(route);
+  }
+
   const prerenderRoutes = new Set<string>([
     ...(canUsePreviewMode ? omittedPrerenderRoutes : []),
     ...Object.keys(prerenderManifest.blockingFallbackRoutes),
@@ -300,6 +326,8 @@ export async function serverBuild({
       return staticRoute.srcRoute || route;
     }),
   ]);
+
+  const experimentalStreamingLambdaPaths = new Map<string, string>();
 
   if (hasLambdas) {
     const initialTracingLabel = 'Traced Next.js server files in';
@@ -615,8 +643,8 @@ export async function serverBuild({
     );
     let launcher = launcherData
       .replace(
-        'conf: __NEXT_CONFIG__',
-        `conf: ${JSON.stringify({
+        'const conf = __NEXT_CONFIG__',
+        `const conf = ${JSON.stringify({
           ...requiredServerFilesManifest.config,
           distDir: path.relative(
             projectDir,
@@ -819,6 +847,7 @@ export async function serverBuild({
       prerenderRoutes,
       pageTraces,
       compressedPages,
+      experimentalPPRRoutes: undefined,
       tracedPseudoLayer: tracedPseudoLayer.pseudoLayer,
       initialPseudoLayer,
       lambdaCompressedByteLimit,
@@ -839,12 +868,14 @@ export async function serverBuild({
       prerenderRoutes,
       pageTraces,
       compressedPages,
+      experimentalPPRRoutes,
       tracedPseudoLayer: tracedPseudoLayer.pseudoLayer,
       initialPseudoLayer,
       lambdaCompressedByteLimit,
       initialPseudoLayerUncompressed: uncompressedInitialSize,
       internalPages,
       pageExtensions,
+      inversedAppPathManifest,
     });
 
     const appRouteHandlersLambdaGroups = await getPageLambdaGroups({
@@ -855,16 +886,18 @@ export async function serverBuild({
       prerenderRoutes,
       pageTraces,
       compressedPages,
+      experimentalPPRRoutes: undefined,
       tracedPseudoLayer: tracedPseudoLayer.pseudoLayer,
       initialPseudoLayer,
       lambdaCompressedByteLimit,
       initialPseudoLayerUncompressed: uncompressedInitialSize,
       internalPages,
       pageExtensions,
+      inversedAppPathManifest,
     });
 
     for (const group of appRouterLambdaGroups) {
-      if (!group.isPrerenders) {
+      if (!group.isPrerenders || group.isExperimentalPPR) {
         group.isStreaming = true;
       }
       group.isAppRouter = true;
@@ -886,6 +919,7 @@ export async function serverBuild({
       prerenderRoutes,
       pageTraces,
       compressedPages,
+      experimentalPPRRoutes: undefined,
       tracedPseudoLayer: tracedPseudoLayer.pseudoLayer,
       initialPseudoLayer,
       initialPseudoLayerUncompressed: uncompressedInitialSize,
@@ -1021,7 +1055,7 @@ export async function serverBuild({
       };
       const operationType = getOperationType({ group, prerenderManifest });
 
-      const lambda = await createLambdaFromPseudoLayers({
+      const options: CreateLambdaFromPseudoLayersOptions = {
         files: {
           ...launcherFiles,
           ...updatedManifestFiles,
@@ -1037,7 +1071,30 @@ export async function serverBuild({
         maxDuration: group.maxDuration,
         isStreaming: group.isStreaming,
         nextVersion,
-      });
+      };
+
+      const lambda = await createLambdaFromPseudoLayers(options);
+
+      // This is a PPR lambda if it's an App Page with the PPR experimental flag
+      // enabled.
+      const isPPR =
+        experimental.ppr && group.isAppRouter && !group.isAppRouteHandler;
+
+      // If PPR is enabled and this is an App Page, create the non-streaming
+      // lambda for the page for revalidation.
+      let revalidate: NodejsLambda | undefined;
+      if (isPPR) {
+        if (isPPR && !options.isStreaming) {
+          throw new Error("Invariant: PPR lambda isn't streaming");
+        }
+
+        // Create the non-streaming version of the same Lambda, this will be
+        // used for revalidation.
+        revalidate = await createLambdaFromPseudoLayers({
+          ...options,
+          isStreaming: false,
+        });
+      }
 
       for (const page of group.pages) {
         const pageNoExt = page.replace(/\.js$/, '');
@@ -1053,10 +1110,34 @@ export async function serverBuild({
           });
         }
 
-        const outputName = normalizeIndexOutput(
+        let outputName = normalizeIndexOutput(
           path.posix.join(entryDirectory, pageNoExt),
           true
         );
+
+        // If this is a PPR page, then we should prefix the output name.
+        if (isPPR) {
+          if (!revalidate) {
+            throw new Error("Invariant: PPR lambda isn't set");
+          }
+
+          // Get the get the base path prefixed route, without the index
+          // normalization.
+          outputName = path.posix.join(entryDirectory, pageNoExt);
+          lambdas[outputName] = revalidate;
+
+          const pprOutputName = path.posix.join(
+            entryDirectory,
+            '/_next/postponed/resume',
+            pageNoExt
+          );
+          lambdas[pprOutputName] = lambda;
+
+          // We want to add the `experimentalStreamingLambdaPath` to this
+          // output.
+          experimentalStreamingLambdaPaths.set(outputName, pprOutputName);
+          continue;
+        }
 
         // we add locale prefixed outputs for SSR pages,
         // this is handled in onPrerenderRoute for SSG pages
@@ -1092,6 +1173,7 @@ export async function serverBuild({
     pagesDir,
     pageLambdaMap: {},
     lambdas,
+    experimentalStreamingLambdaPaths,
     prerenders,
     entryDirectory,
     routesManifest,
@@ -1107,28 +1189,40 @@ export async function serverBuild({
     isEmptyAllowQueryForPrendered,
   });
 
-  Object.keys(prerenderManifest.staticRoutes).forEach(route =>
-    prerenderRoute(route, {})
+  await Promise.all(
+    Object.keys(prerenderManifest.staticRoutes).map(route =>
+      prerenderRoute(route, {})
+    )
   );
-  Object.keys(prerenderManifest.fallbackRoutes).forEach(route =>
-    prerenderRoute(route, { isFallback: true })
+  await Promise.all(
+    Object.keys(prerenderManifest.fallbackRoutes).map(route =>
+      prerenderRoute(route, { isFallback: true })
+    )
   );
-  Object.keys(prerenderManifest.blockingFallbackRoutes).forEach(route =>
-    prerenderRoute(route, { isBlocking: true })
+  await Promise.all(
+    Object.keys(prerenderManifest.blockingFallbackRoutes).map(route =>
+      prerenderRoute(route, { isBlocking: true })
+    )
   );
 
   if (static404Page && canUsePreviewMode) {
-    omittedPrerenderRoutes.forEach(route => {
-      prerenderRoute(route, { isOmitted: true });
-    });
+    await Promise.all(
+      [...omittedPrerenderRoutes].map(route => {
+        return prerenderRoute(route, { isOmitted: true });
+      })
+    );
   }
 
   prerenderRoutes.forEach(route => {
+    if (experimentalPPRRoutes.has(route)) return;
     if (routesManifest?.i18n) {
       route = normalizeLocalePath(route, routesManifest.i18n.locales).pathname;
     }
     delete lambdas[
-      path.posix.join('.', entryDirectory, route === '/' ? 'index' : route)
+      normalizeIndexOutput(
+        path.posix.join('./', entryDirectory, route === '/' ? '/index' : route),
+        true
+      )
     ];
   });
 
@@ -1157,7 +1251,8 @@ export async function serverBuild({
     canUsePreviewMode,
     prerenderManifest.bypassToken || '',
     true,
-    middleware.dynamicRouteMap
+    middleware.dynamicRouteMap,
+    experimental.ppr
   ).then(arr =>
     localizeDynamicRoutes(
       arr,
@@ -1322,22 +1417,24 @@ export async function serverBuild({
     // __rsc__ header is present
     const edgeFunctions = middleware.edgeFunctions;
 
-    for (let route of Object.values(appPathRoutesManifest)) {
+    for (const route of Object.values(appPathRoutesManifest)) {
       const ogRoute = inversedAppPathManifest[route];
 
       if (ogRoute.endsWith('/route')) {
         continue;
       }
-      route = normalizeIndexOutput(
+
+      const pathname = normalizeIndexOutput(
         path.posix.join('./', entryDirectory, route === '/' ? '/index' : route),
         true
       );
 
-      if (lambdas[route]) {
-        lambdas[`${route}.rsc`] = lambdas[route];
+      if (lambdas[pathname]) {
+        lambdas[`${pathname}.rsc`] = lambdas[pathname];
       }
-      if (edgeFunctions[route]) {
-        edgeFunctions[`${route}.rsc`] = edgeFunctions[route];
+
+      if (edgeFunctions[pathname]) {
+        edgeFunctions[`${pathname}.rsc`] = edgeFunctions[pathname];
       }
     }
   }
@@ -1356,6 +1453,10 @@ export async function serverBuild({
         metadata: value.metadata ?? {},
       }))
     : [];
+
+  if (experimental.ppr && !rscPrefetchHeader) {
+    throw new Error("Invariant: cannot use PPR without 'rsc.prefetchHeader'");
+  }
 
   return {
     wildcard: wildcardConfig,
@@ -1617,7 +1718,7 @@ export async function serverBuild({
                     dest: path.posix.join(
                       '/',
                       entryDirectory,
-                      `/index${RSC_PREFETCH_SUFFIX}`
+                      `/__index${RSC_PREFETCH_SUFFIX}`
                     ),
                     headers: { vary: rscVaryHeader },
                     continue: true,
@@ -1711,13 +1812,13 @@ export async function serverBuild({
           ]
         : []),
 
-      ...(rscPrefetchHeader
+      ...(rscPrefetchHeader && !experimental.ppr
         ? [
             {
               src: path.posix.join(
                 '/',
                 entryDirectory,
-                `/index${RSC_PREFETCH_SUFFIX}`
+                `/__index${RSC_PREFETCH_SUFFIX}`
               ),
               dest: path.posix.join('/', entryDirectory, '/index.rsc'),
               has: [
@@ -1735,7 +1836,11 @@ export async function serverBuild({
                 entryDirectory,
                 `/(.+?)${RSC_PREFETCH_SUFFIX}(?:/)?$`
               )}`,
-              dest: path.posix.join('/', entryDirectory, '/$1.rsc'),
+              dest: path.posix.join(
+                '/',
+                entryDirectory,
+                `/$1${experimental.ppr ? RSC_PREFETCH_SUFFIX : '.rsc'}`
+              ),
               has: [
                 {
                   type: 'header',
@@ -1948,8 +2053,6 @@ export async function serverBuild({
         important: true,
       },
 
-      // TODO: remove below workaround when `/` is allowed to be output
-      // different than `/index`
       {
         src: path.posix.join('/', entryDirectory, '/index'),
         headers: {

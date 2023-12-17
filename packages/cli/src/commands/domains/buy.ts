@@ -17,11 +17,13 @@ type Options = {};
 
 export default async function buy(
   client: Client,
-  opts: Options,
+  opts: Partial<Options>,
   args: string[]
 ) {
   const { output } = client;
   const { contextName } = await getScope(client);
+
+  const skipConfirmation = !!process.env.CI;
 
   const [domainName] = args;
   if (!domainName) {
@@ -78,25 +80,31 @@ export default async function buy(
       'available'
     )} to buy under ${chalk.bold(contextName)}! ${availableStamp()}`
   );
-  if (
-    !(await promptBool(
-      `Buy now for ${chalk.bold(`$${price}`)} (${`${period}yr${
-        period > 1 ? 's' : ''
-      }`})?`,
-      client
-    ))
-  ) {
-    return 0;
-  }
 
-  const autoRenew = await promptBool(
-    renewalPrice.period === 1
-      ? `Auto renew yearly for ${chalk.bold(`$${price}`)}?`
-      : `Auto renew every ${renewalPrice.period} years for ${chalk.bold(
-          `$${price}`
-        )}?`,
-    { ...client, defaultValue: true }
-  );
+  let autoRenew;
+  if (skipConfirmation) {
+    autoRenew = true;
+  } else {
+    if (
+      !(await promptBool(
+        `Buy now for ${chalk.bold(`$${price}`)} (${`${period}yr${
+          period > 1 ? 's' : ''
+        }`})?`,
+        client
+      ))
+    ) {
+      return 0;
+    }
+
+    autoRenew = await promptBool(
+      renewalPrice.period === 1
+        ? `Auto renew yearly for ${chalk.bold(`$${price}`)}?`
+        : `Auto renew every ${renewalPrice.period} years for ${chalk.bold(
+            `$${price}`
+          )}?`,
+      { ...client, defaultValue: true }
+    );
+  }
 
   let buyResult;
   const purchaseStamp = stamp();

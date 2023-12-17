@@ -66,7 +66,6 @@ import {
   getFilesMapFromReasons,
   getImagesConfig,
   getImagesManifest,
-  getMiddlewareManifest,
   getNextConfig,
   getPageLambdaGroups,
   getPrerenderManifest,
@@ -91,8 +90,8 @@ import {
   getOperationType,
   isApiPage,
   getFunctionsConfigManifest,
-  normalizeEdgeFunctionPath,
   require_,
+  getServerlessPages,
 } from './utils';
 
 export const version = 2;
@@ -1606,6 +1605,7 @@ export const build: BuildV2 = async ({
         // internal pages are already referenced in traces for serverless
         // like builds
         internalPages: [],
+        experimentalPPRRoutes: undefined,
       });
 
       const initialApiLambdaGroups = await getPageLambdaGroups({
@@ -1621,6 +1621,7 @@ export const build: BuildV2 = async ({
         initialPseudoLayerUncompressed: 0,
         lambdaCompressedByteLimit,
         internalPages: [],
+        experimentalPPRRoutes: undefined,
       });
 
       for (const group of initialApiLambdaGroups) {
@@ -2109,6 +2110,7 @@ export const build: BuildV2 = async ({
       static404Page,
       pageLambdaMap,
       lambdas,
+      experimentalStreamingLambdaPaths: undefined,
       isServerMode,
       prerenders,
       entryDirectory,
@@ -2142,20 +2144,41 @@ export const build: BuildV2 = async ({
       [
         ...Object.entries(prerenderManifest.fallbackRoutes),
         ...Object.entries(prerenderManifest.blockingFallbackRoutes),
-      ].forEach(([, { dataRouteRegex, dataRoute }]) => {
-        if (!dataRoute || !dataRouteRegex) return;
+      ].forEach(
+        ([
+          ,
+          {
+            dataRouteRegex,
+            dataRoute,
+            prefetchDataRouteRegex,
+            prefetchDataRoute,
+          },
+        ]) => {
+          if (!dataRoute || !dataRouteRegex) return;
 
-        dataRoutes.push({
-          // Next.js provided data route regex
-          src: dataRouteRegex.replace(
-            /^\^/,
-            `^${appMountPrefixNoTrailingSlash}`
-          ),
-          // Location of lambda in builder output
-          dest: path.posix.join(entryDirectory, dataRoute),
-          check: true,
-        });
-      });
+          dataRoutes.push({
+            // Next.js provided data route regex
+            src: dataRouteRegex.replace(
+              /^\^/,
+              `^${appMountPrefixNoTrailingSlash}`
+            ),
+            // Location of lambda in builder output
+            dest: path.posix.join(entryDirectory, dataRoute),
+            check: true,
+          });
+
+          if (!prefetchDataRoute || !prefetchDataRouteRegex) return;
+
+          dataRoutes.push({
+            src: prefetchDataRouteRegex.replace(
+              /^\^/,
+              `^${appMountPrefixNoTrailingSlash}`
+            ),
+            dest: path.posix.join(entryDirectory, prefetchDataRoute),
+            check: true,
+          });
+        }
+      );
     }
   }
 
@@ -2683,59 +2706,3 @@ export const prepareCache: PrepareCache = async ({
   debug('Cache file manifest produced');
   return cache;
 };
-
-async function getServerlessPages(params: {
-  pagesDir: string;
-  entryPath: string;
-  outputDirectory: string;
-  appPathRoutesManifest?: Record<string, string>;
-}) {
-  const [pages, appPaths, middlewareManifest] = await Promise.all([
-    glob('**/!(_middleware).js', params.pagesDir),
-    params.appPathRoutesManifest
-      ? Promise.all([
-          glob('**/page.js', path.join(params.pagesDir, '../app')),
-          glob('**/route.js', path.join(params.pagesDir, '../app')),
-          glob('**/_not-found.js', path.join(params.pagesDir, '../app')),
-        ]).then(items => Object.assign(...items))
-      : Promise.resolve({}),
-    getMiddlewareManifest(params.entryPath, params.outputDirectory),
-  ]);
-
-  const normalizedAppPaths: typeof appPaths = {};
-
-  if (params.appPathRoutesManifest) {
-    for (const [entry, normalizedEntry] of Object.entries(
-      params.appPathRoutesManifest
-    )) {
-      const normalizedPath = `${path.join(
-        '.',
-        normalizedEntry === '/' ? '/index' : normalizedEntry
-      )}.js`;
-      const globPath = `${path.join('.', entry)}.js`;
-
-      if (appPaths[globPath]) {
-        normalizedAppPaths[normalizedPath] = appPaths[globPath];
-      }
-    }
-  }
-
-  // Edge Functions do not consider as Serverless Functions
-  for (const edgeFunctionFile of Object.keys(
-    middlewareManifest?.functions ?? {}
-  )) {
-    let edgePath =
-      middlewareManifest?.functions?.[edgeFunctionFile].name ||
-      edgeFunctionFile;
-
-    edgePath = normalizeEdgeFunctionPath(
-      edgePath,
-      params.appPathRoutesManifest || {}
-    );
-    edgePath = (edgePath || 'index') + '.js';
-    delete normalizedAppPaths[edgePath];
-    delete pages[edgePath];
-  }
-
-  return { pages, appPaths: normalizedAppPaths };
-}

@@ -1,5 +1,40 @@
 # @vercel/fs-detectors
 
+## 5.1.5
+
+### Patch Changes
+
+- Updated dependencies [[`e6aaf79d0`](https://github.com/vercel/vercel/commit/e6aaf79d04fafd032d9a28143b02d28766add415)]:
+  - @vercel/frameworks@2.0.5
+
+## 5.1.4
+
+### Patch Changes
+
+- Updated dependencies [[`a8934da62`](https://github.com/vercel/vercel/commit/a8934da6232b66a98e9ce43ebf5342eac664d40d)]:
+  - @vercel/frameworks@2.0.4
+
+## 5.1.3
+
+### Patch Changes
+
+- Updated dependencies [[`306f653da`](https://github.com/vercel/vercel/commit/306f653da9de96ddf583cce35603229aa55c4e53), [`34dd9c091`](https://github.com/vercel/vercel/commit/34dd9c0918585cf6d3b04bddd9158978b0b4192f)]:
+  - @vercel/frameworks@2.0.3
+  - @vercel/error-utils@2.0.2
+
+## 5.1.2
+
+### Patch Changes
+
+- Updated dependencies [[`9e9fac019`](https://github.com/vercel/vercel/commit/9e9fac0191cb1428ac9e5479c3d5c8afd7b7d357)]:
+  - @vercel/routing-utils@3.1.0
+
+## 5.1.1
+
+### Patch Changes
+
+- [cli] Update bun detection and add tests for projects with both bunlock binary and yarn.lock text files ([#10583](https://github.com/vercel/vercel/pull/10583))
+
 ## 5.1.0
 
 ### Minor Changes

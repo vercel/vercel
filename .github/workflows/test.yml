@@ -64,11 +64,16 @@ jobs:
           fetch-depth: 2
       - uses: actions/setup-node@v3
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version: ${{ matrix.nodeVersion || env.NODE_VERSION }}
 
       - name: Install Hugo
         if: matrix.runner == 'macos-latest'
         run: curl -L -O https://github.com/gohugoio/hugo/releases/download/v0.56.0/hugo_0.56.0_macOS-64bit.tar.gz && tar -xzf hugo_0.56.0_macOS-64bit.tar.gz && mv ./hugo packages/cli/test/dev/fixtures/08-hugo/
+
+      # yarn 1.22.21 introduced a Corepack bug when running tests.
+      # this can be removed once https://github.com/yarnpkg/yarn/issues/9015 is resolved
+      - name: install yarn@1.22.19
+        run: npm i -g yarn@1.22.19
 
       - name: install pnpm@8.3.1
         run: npm i -g pnpm@8.3.1
@@ -91,7 +96,8 @@ jobs:
           VERCEL_TEST_TOKEN: ${{ secrets.VERCEL_TEST_TOKEN }}
           VERCEL_TEST_REGISTRATION_URL: ${{ secrets.VERCEL_TEST_REGISTRATION_URL }}
           FORCE_COLOR: '1'
-      - name: 'Determing Turbo HIT or MISS'
+      - name: 'Determine Turbo HIT or MISS'
+        if: ${{ !cancelled() }}
         id: turbo-summary
         shell: bash
         run: |
@@ -102,7 +108,7 @@ jobs:
         if: matrix.runner != 'windows-latest'
         run: echo | openssl s_client -showcerts -servername 'api.vercel.com' -connect 76.76.21.21:443
       - name: 'Upload Test Report to Datadog'
-        if: ${{ steps['turbo-summary'].outputs.misses != '0' }}
+        if: ${{ steps['turbo-summary'].outputs.misses != '0' && !cancelled() }}
         run: 'npx @datadog/datadog-ci@2.18.1 junit upload --service vercel-cli .junit-reports'
         env:
           DATADOG_API_KEY: ${{secrets.DATADOG_API_KEY_CLI}}

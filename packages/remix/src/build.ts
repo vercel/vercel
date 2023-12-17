@@ -1,6 +1,6 @@
 import { Project } from 'ts-morph';
 import { readFileSync, promises as fs } from 'fs';
-import { basename, dirname, extname, join, relative, sep } from 'path';
+import { basename, dirname, extname, join, posix, relative, sep } from 'path';
 import {
   debug,
   download,
@@ -13,6 +13,7 @@ import {
   glob,
   EdgeFunction,
   NodejsLambda,
+  rename,
   runNpmInstall,
   runPackageJsonScript,
   scanParentDirs,
@@ -40,7 +41,6 @@ import {
   ResolvedEdgeRouteConfig,
   findEntry,
   chdirAndReadConfig,
-  addDependencies,
   resolveSemverMinMax,
   ensureResolvable,
   isESM,
@@ -104,15 +104,17 @@ export const build: BuildV2 = async ({
     meta
   );
 
-  const { cliType, packageJsonPath, lockfileVersion } = await scanParentDirs(
-    entrypointFsDirname
-  );
+  const { cliType, packageJsonPath, lockfileVersion, lockfilePath } =
+    await scanParentDirs(entrypointFsDirname);
 
   if (!packageJsonPath) {
     throw new Error('Failed to locate `package.json` file in your project');
   }
 
-  const pkgRaw = await fs.readFile(packageJsonPath, 'utf8');
+  const [lockfileRaw, pkgRaw] = await Promise.all([
+    lockfilePath ? fs.readFile(lockfilePath) : null,
+    fs.readFile(packageJsonPath, 'utf8'),
+  ]);
   const pkg = JSON.parse(pkgRaw);
 
   const spawnOpts = getSpawnOptions(meta, nodeVersion);
@@ -166,7 +168,7 @@ export const build: BuildV2 = async ({
   const { serverEntryPoint, appDirectory } = remixConfig;
   const remixRoutes = Object.values(remixConfig.routes);
 
-  const depsToAdd: string[] = [];
+  let depsModified = false;
 
   const remixRunDevPkgVersion: string | undefined =
     pkg.dependencies?.['@remix-run/dev'] ||
@@ -184,9 +186,15 @@ export const build: BuildV2 = async ({
       REMIX_RUN_DEV_MAX_VERSION,
       remixVersion
     );
-    depsToAdd.push(
-      `@remix-run/dev@npm:@vercel/remix-run-dev@${remixDevForkVersion}`
-    );
+    // Remove `@remix-run/dev`, add `@vercel/remix-run-dev`
+    if (pkg.devDependencies['@remix-run/dev']) {
+      delete pkg.devDependencies['@remix-run/dev'];
+      pkg.devDependencies['@vercel/remix-run-dev'] = remixDevForkVersion;
+    } else {
+      delete pkg.dependencies['@remix-run/dev'];
+      pkg.dependencies['@vercel/remix-run-dev'] = remixDevForkVersion;
+    }
+    depsModified = true;
   }
 
   // `app/entry.server.tsx` and `app/entry.client.tsx` are optional in Remix,
@@ -209,15 +217,34 @@ export const build: BuildV2 = async ({
         REMIX_RUN_DEV_MAX_VERSION,
         remixVersion
       );
-      depsToAdd.push(`@vercel/remix@${vercelRemixVersion}`);
+      pkg.dependencies['@vercel/remix'] = vercelRemixVersion;
+      depsModified = true;
     }
   }
 
-  if (depsToAdd.length) {
-    await addDependencies(cliType, depsToAdd, {
-      ...spawnOpts,
-      cwd: entrypointFsDirname,
-    });
+  if (depsModified) {
+    await fs.writeFile(packageJsonPath, JSON.stringify(pkg, null, 2) + '\n');
+
+    // Bypass `--frozen-lockfile` enforcement by removing
+    // env vars that are considered to be CI
+    const nonCiEnv = { ...spawnOpts.env };
+    delete nonCiEnv.CI;
+    delete nonCiEnv.VERCEL;
+    delete nonCiEnv.NOW_BUILDER;
+
+    // Purposefully not passing `meta` here to avoid
+    // the optimization that prevents `npm install`
+    // from running a second time
+    await runNpmInstall(
+      entrypointFsDirname,
+      [],
+      {
+        ...spawnOpts,
+        env: nonCiEnv,
+      },
+      undefined,
+      nodeVersion
+    );
   }
 
   const userEntryClientFile = findEntry(
@@ -398,9 +425,7 @@ module.exports = config;`;
       cleanupOps.push(
         fs
           .rename(renamedRemixConfigPath, remixConfigPath)
-          .then(() =>
-            debug(`Restored original "${basename(remixConfigPath)}" file`)
-          )
+          .then(() => debug(`Restored original "${remixConfigPath}" file`))
       );
     }
     // Restore original server entrypoint if it was modified (for Hydrogen v2)
@@ -408,10 +433,23 @@ module.exports = config;`;
       cleanupOps.push(
         fs
           .writeFile(serverEntryPointAbs, originalServerEntryPoint)
-          .then(() =>
-            debug(`Restored original "${basename(serverEntryPointAbs!)}" file`)
-          )
+          .then(() => debug(`Restored original "${serverEntryPointAbs}" file`))
       );
+    }
+    // Restore original `package.json` file and lockfile
+    if (depsModified) {
+      cleanupOps.push(
+        fs
+          .writeFile(packageJsonPath, pkgRaw)
+          .then(() => debug(`Restored original "${packageJsonPath}" file`))
+      );
+      if (lockfilePath && lockfileRaw) {
+        cleanupOps.push(
+          fs
+            .writeFile(lockfilePath, lockfileRaw)
+            .then(() => debug(`Restored original "${lockfilePath}" file`))
+        );
+      }
     }
     await Promise.all(cleanupOps);
   }
@@ -428,16 +466,11 @@ module.exports = config;`;
       : null,
   ]);
 
-  const staticDir = join(
-    remixConfig.assetsBuildDirectory,
-    ...remixConfig.publicPath
-      .replace(/^\/|\/$/g, '')
-      .split('/')
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      .map(_ => '..')
-  );
-  const [staticFiles, ...functions] = await Promise.all([
+  const staticDir = join(entrypointFsDirname, 'public');
+
+  const [staticFiles, buildAssets, ...functions] = await Promise.all([
     glob('**', staticDir),
+    glob('**', remixConfig.assetsBuildDirectory),
     ...serverBundles.map(bundle => {
       const firstRoute = remixConfig.routes[bundle.routes[0]];
       const config = resolvedConfigsMap.get(firstRoute) ?? {
@@ -467,10 +500,17 @@ module.exports = config;`;
     }),
   ]);
 
-  const output: BuildResultV2Typical['output'] = staticFiles;
+  const transformedBuildAssets = rename(buildAssets, name => {
+    return posix.join('./', remixConfig.publicPath, name);
+  });
+
+  const output: BuildResultV2Typical['output'] = {
+    ...staticFiles,
+    ...transformedBuildAssets,
+  };
   const routes: any[] = [
     {
-      src: '^/build/(.*)$',
+      src: `^/${remixConfig.publicPath.replace(/^\/|\/$/g, '')}/(.*)$`,
       headers: { 'cache-control': 'public, max-age=31536000, immutable' },
       continue: true,
     },

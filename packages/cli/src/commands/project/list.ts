@@ -6,6 +6,7 @@ import Client from '../../util/client';
 import getCommandFlags from '../../util/get-command-flags';
 import { getCommandName } from '../../util/pkg-name';
 import strlen from '../../util/strlen';
+import { NODE_VERSIONS } from '@vercel/build-utils';
 
 export default async function list(
   client: Client,
@@ -27,14 +28,19 @@ export default async function list(
 
   output.spinner(`Fetching projects in ${chalk.bold(contextName)}`);
 
-  let projectsUrl = '/v4/projects/?limit=20';
+  let projectsUrl = `/v4/projects/?limit=20`;
+
+  const deprecated = argv['--deprecated'] || false;
+  if (deprecated) {
+    projectsUrl += `&deprecated=${deprecated}`;
+  }
 
   const next = argv['--next'] || false;
   if (next) {
     projectsUrl += `&until=${next}`;
   }
 
-  const {
+  let {
     projects: projectList,
     pagination,
   }: {
@@ -48,10 +54,34 @@ export default async function list(
 
   const elapsed = ms(Date.now() - start);
 
+  if (deprecated) {
+    const upcomingDeprecationVersionsList = [];
+
+    for (const nodeVersion of NODE_VERSIONS) {
+      if (
+        nodeVersion.discontinueDate &&
+        nodeVersion.discontinueDate.valueOf() > Date.now()
+      ) {
+        upcomingDeprecationVersionsList.push(nodeVersion.range);
+      }
+    }
+
+    output.warn(
+      `The following Node.js versions will be deprecated soon: ${upcomingDeprecationVersionsList.join(
+        ', '
+      )}. Upgrade your projects immediately.`
+    );
+    output.log(
+      `For more information visit: https://vercel.com/docs/functions/serverless-functions/runtimes/node-js#node.js-version`
+    );
+  }
+
   output.log(
     `${
       projectList.length > 0 ? 'Projects' : 'No projects'
-    } found under ${chalk.bold(contextName)} ${chalk.gray(`[${elapsed}]`)}`
+    } found under ${chalk.bold(contextName)} ${
+      deprecated ? 'that are using a deprecated Node.js version' : '\b'
+    } ${chalk.gray(`[${elapsed}]`)}`
   );
 
   if (projectList.length > 0) {

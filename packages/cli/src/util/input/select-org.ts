@@ -43,10 +43,13 @@ export default async function selectOrg(
     })),
   ];
 
-  const defaultOrgIndex = teams.findIndex(team => team.id === currentTeam) + 1;
+  const defaultChoiceIndex = Math.max(
+    choices.findIndex(choice => choice.value.id === currentTeam),
+    0
+  );
 
   if (autoConfirm) {
-    return choices[defaultOrgIndex].value;
+    return choices[defaultChoiceIndex].value;
   }
 
   const answers = await client.prompt({
@@ -54,7 +57,7 @@ export default async function selectOrg(
     name: 'org',
     message: question,
     choices,
-    default: defaultOrgIndex,
+    default: defaultChoiceIndex,
   });
 
   const org = answers.org;
