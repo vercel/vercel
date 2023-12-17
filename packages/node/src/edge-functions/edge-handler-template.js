@@ -1,49 +1,29 @@
 // provided by the edge runtime:
 /* global addEventListener */
 
-function buildUrl(requestDetails) {
-  const host = requestDetails.headers['x-forwarded-host'] || '127.0.0.1';
-  const path = requestDetails.url || '/';
-
-  const allProtocols = requestDetails.headers['x-forwarded-proto'];
-  let proto;
-  if (allProtocols) {
-    // handle multi-protocol like: https,http://...
-    proto = allProtocols.split(/\b/).shift();
-  } else {
-    proto = 'http';
-  }
-
-  return `${proto}://${host}${path}`;
+function getUrl(url, headers) {
+  const urlObj = new URL(url);
+  const protocol = headers.get('x-forwarded-proto');
+  if (protocol) urlObj.protocol = protocol.split(/\b/).shift();
+  urlObj.host = headers.get('x-forwarded-host');
+  urlObj.port = headers.get('x-forwarded-port');
+  return urlObj.toString();
 }
 
-async function respond(
-  userEdgeHandler,
-  requestDetails,
-  event,
-  options,
-  dependencies
-) {
+async function respond(handler, event, options, dependencies) {
   const { Request, Response } = dependencies;
   const { isMiddleware } = options;
-
-  let body;
-
-  if (requestDetails.method !== 'GET' && requestDetails.method !== 'HEAD') {
-    if (requestDetails.body) {
-      body = Uint8Array.from(atob(requestDetails.body), c => c.charCodeAt(0));
-    }
-  }
-
-  const request = new Request(buildUrl(requestDetails), {
-    headers: requestDetails.headers,
-    method: requestDetails.method,
-    body: body,
-  });
-
-  event.request = request;
-
-  let response = await userEdgeHandler(event.request, event);
+  event.request.headers.set(
+    'host',
+    event.request.headers.get('x-forwarded-host')
+  );
+  let response = await handler(
+    new Request(
+      getUrl(event.request.url, event.request.headers),
+      event.request
+    ),
+    event
+  );
 
   if (!response) {
     if (isMiddleware) {
@@ -82,29 +62,44 @@ async function parseRequestEvent(event) {
 
 // This will be invoked by logic using this template
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-function registerFetchListener(userEdgeHandler, options, dependencies) {
+function registerFetchListener(module, options, dependencies) {
+  let handler;
+
   addEventListener('fetch', async event => {
     try {
-      const requestDetails = await parseRequestEvent(event);
-      const response = await respond(
-        userEdgeHandler,
-        requestDetails,
-        event,
-        options,
-        dependencies
-      );
-      return event.respondWith(response);
+      if (typeof module.default === 'function') {
+        handler = module.default;
+      } else {
+        if (
+          ['GET', 'HEAD', 'OPTIONS', 'POST', 'PUT', 'DELETE', 'PATCH'].some(
+            method => typeof module[method] === 'function'
+          )
+        ) {
+          const method = event.request.method ?? 'GET';
+          handler =
+            typeof module[method] === 'function'
+              ? module[method]
+              : () => new dependencies.Response(null, { status: 405 });
+        }
+      }
+      if (!handler) {
+        const url = getUrl(event.request.url, event.request.headers);
+        throw new Error(
+          `No default or HTTP-named export was found at ${url}. Add one to handle requests. Learn more: https://vercel.link/creating-edge-middleware`
+        );
+      }
+      const response = await respond(handler, event, options, dependencies);
+      event.respondWith(response);
     } catch (error) {
       event.respondWith(toResponseError(error, dependencies.Response));
     }
   });
 }
 
-// for testing:
 module.exports = {
-  buildUrl,
-  respond,
-  toResponseError,
+  getUrl,
   parseRequestEvent,
   registerFetchListener,
+  respond,
+  toResponseError,
 };

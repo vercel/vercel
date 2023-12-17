@@ -3,6 +3,7 @@ import plural from 'pluralize';
 import npa from 'npm-package-arg';
 import { satisfies } from 'semver';
 import { dirname, join } from 'path';
+import { createRequire } from 'module';
 import { mkdirp, outputJSON, readJSON, symlink } from 'fs-extra';
 import { isStaticRuntime } from '@vercel/fs-detectors';
 import { BuilderV2, BuilderV3, PackageJson } from '@vercel/build-utils';
@@ -15,6 +16,7 @@ import { CantParseJSONFile } from '../errors-ts';
 import { isErrnoException, isError } from '@vercel/error-utils';
 import cmd from '../output/cmd';
 import code from '../output/code';
+import type { Writable } from 'stream';
 
 export interface BuilderWithPkg {
   path: string;
@@ -26,6 +28,9 @@ export interface BuilderWithPkg {
 type ResolveBuildersResult =
   | { buildersToAdd: Set<string> }
   | { builders: Map<string, BuilderWithPkg> };
+
+// Get a real `require()` reference that esbuild won't mutate
+const require_ = createRequire(__filename);
 
 /**
  * Imports the specified Vercel Builders, installing any missing ones
@@ -103,15 +108,20 @@ export async function resolveBuilders(
         // at the top-level of `node_modules` since CLI is installing those directly.
         pkgPath = join(buildersDir, 'node_modules', name, 'package.json');
         builderPkg = await readJSON(pkgPath);
-      } catch (err: any) {
-        if (err?.code !== 'ENOENT') throw err;
+      } catch (error: unknown) {
+        if (!isErrnoException(error)) {
+          throw error;
+        }
+        if (error.code !== 'ENOENT') {
+          throw error;
+        }
+
         // If `pkgPath` wasn't found in `.vercel/builders` then try as a CLI local
         // dependency. `require.resolve()` will throw if the Builder is not a CLI
         // dep, in which case we'll install it into `.vercel/builders`.
-        // NOTE: `eval('require')` is necessary to avoid bad transpilation to `__webpack_require__`
-        pkgPath = eval('require').resolve(`${name}/package.json`, {
+        pkgPath = require_.resolve(`${name}/package.json`, {
           paths: [__dirname],
-        }) as string;
+        });
         builderPkg = await readJSON(pkgPath);
       }
 
@@ -152,8 +162,7 @@ export async function resolveBuilders(
 
       const path = join(dirname(pkgPath), builderPkg.main || 'index.js');
 
-      // NOTE: `eval('require')` is necessary to avoid bad transpilation to `__webpack_require__`
-      const builder = eval('require')(path);
+      const builder = require_(path);
 
       builders.set(spec, {
         builder,
@@ -227,10 +236,7 @@ async function installBuilders(
   } catch (err: unknown) {
     if (isError(err)) {
       const execaMessage = err.message;
-      let message =
-        err && 'stderr' in err && typeof err.stderr === 'string'
-          ? err.stderr
-          : execaMessage;
+      let message = getErrorMessage(err, execaMessage);
       if (execaMessage.startsWith('Command failed with ENOENT')) {
         // `npm` is not installed
         message = `Please install ${cmd('npm')} before continuing`;
@@ -283,4 +289,20 @@ async function installBuilders(
   }
 
   return { resolvedSpecs };
+}
+
+type BonusError = Error & {
+  stderr?: string | Writable;
+};
+
+function getErrorMessage(err: BonusError, execaMessage: string) {
+  if (!err || !('stderr' in err)) {
+    return execaMessage;
+  }
+
+  if (typeof err.stderr === 'string') {
+    return err.stderr;
+  }
+
+  return execaMessage;
 }

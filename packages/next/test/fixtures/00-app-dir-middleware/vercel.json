@@ -22,7 +22,7 @@
         "redirect": "manual"
       },
       "responseHeaders": {
-        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch"
+        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Url"
       },
       "headers": {
         "RSC": "1"
@@ -46,7 +46,7 @@
         "redirect": "manual"
       },
       "responseHeaders": {
-        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch"
+        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Url"
       },
       "headers": {
         "RSC": "1"
@@ -70,7 +70,7 @@
         "redirect": "manual"
       },
       "responseHeaders": {
-        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch"
+        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Url"
       },
       "headers": {
         "RSC": "1"

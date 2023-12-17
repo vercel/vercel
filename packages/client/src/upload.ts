@@ -79,7 +79,7 @@ export async function* upload(
   debug('Building an upload list...');
 
   const semaphore = new Sema(50, { capacity: 50 });
-  const agent = apiUrl?.startsWith('https://')
+  const defaultAgent = apiUrl?.startsWith('https://')
     ? new https.Agent({ keepAlive: true })
     : new http.Agent({ keepAlive: true });
 
@@ -132,7 +132,7 @@ export async function* upload(
             API_FILES,
             token,
             {
-              agent,
+              agent: clientOptions.agent || defaultAgent,
               method: 'POST',
               headers: {
                 'Content-Type': 'application/octet-stream',

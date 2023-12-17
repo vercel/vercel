@@ -1,18 +1,18 @@
+import semver from 'semver';
 import { existsSync, promises as fs } from 'fs';
-import { join, relative, resolve } from 'path';
+import { basename, dirname, join, relative, resolve, sep } from 'path';
 import { pathToRegexp, Key } from 'path-to-regexp';
-import { spawnAsync } from '@vercel/build-utils';
-import { readConfig } from '@remix-run/dev/dist/config';
+import { debug } from '@vercel/build-utils';
+import { walkParentDirs } from '@vercel/build-utils';
+import { createRequire } from 'module';
 import type {
   ConfigRoute,
   RouteManifest,
 } from '@remix-run/dev/dist/config/routes';
 import type { RemixConfig } from '@remix-run/dev/dist/config';
 import type { BaseFunctionConfig } from '@vercel/static-config';
-import type {
-  CliType,
-  SpawnOptionsExtended,
-} from '@vercel/build-utils/dist/fs/run-user-scripts';
+
+export const require_ = createRequire(__filename);
 
 export interface ResolvedNodeRouteConfig {
   runtime: 'nodejs';
@@ -20,6 +20,7 @@ export interface ResolvedNodeRouteConfig {
   maxDuration?: number;
   memory?: number;
 }
+
 export interface ResolvedEdgeRouteConfig {
   runtime: 'edge';
   regions?: BaseFunctionConfig['regions'];
@@ -42,7 +43,7 @@ export interface ResolvedRoutePaths {
   rePath: string;
 }
 
-const SPLAT_PATH = '/:params+';
+const SPLAT_PATH = '/:params*';
 
 const entryExts = ['.js', '.jsx', '.ts', '.tsx'];
 
@@ -74,7 +75,8 @@ function isEdgeRuntime(runtime: string): boolean {
 export function getResolvedRouteConfig(
   route: ConfigRoute,
   routes: RouteManifest,
-  configs: Map<ConfigRoute, BaseFunctionConfig | null>
+  configs: Map<ConfigRoute, BaseFunctionConfig | null>,
+  isHydrogen2: boolean
 ): ResolvedRouteConfig {
   let runtime: ResolvedRouteConfig['runtime'] | undefined;
   let regions: ResolvedRouteConfig['regions'];
@@ -103,8 +105,8 @@ export function getResolvedRouteConfig(
     regions = Array.from(new Set(regions)).sort();
   }
 
-  if (runtime === 'edge') {
-    return { runtime, regions };
+  if (isHydrogen2 || runtime === 'edge') {
+    return { runtime: 'edge', regions };
   }
 
   if (regions && !Array.isArray(regions)) {
@@ -209,7 +211,14 @@ export function syncEnv(source: NodeJS.ProcessEnv, dest: NodeJS.ProcessEnv) {
   return () => syncEnv(originalDest, dest);
 }
 
-export async function chdirAndReadConfig(dir: string, packageJsonPath: string) {
+export async function chdirAndReadConfig(
+  remixRunDevPath: string,
+  dir: string,
+  packageJsonPath: string
+) {
+  const { readConfig }: typeof import('@remix-run/dev/dist/config') =
+    await import(join(remixRunDevPath, 'dist/config.js'));
+
   const originalCwd = process.cwd();
 
   // As of Remix v1.14.0, reading the config may trigger adding
@@ -225,11 +234,18 @@ export async function chdirAndReadConfig(dir: string, packageJsonPath: string) {
     modifiedPackageJson = true;
   }
 
+  // Suppress any warnings emitted from `readConfig()` to avoid
+  // printing them > 1 time. They will already be printed during
+  // `remix build` when invoking the Build Command.
+  const warn = console.warn;
+  console.warn = debug;
+
   let remixConfig: RemixConfig;
   try {
     process.chdir(dir);
     remixConfig = await readConfig(dir);
   } finally {
+    console.warn = warn;
     process.chdir(originalCwd);
     if (modifiedPackageJson) {
       await fs.writeFile(packageJsonPath, pkgRaw);
@@ -239,30 +255,115 @@ export async function chdirAndReadConfig(dir: string, packageJsonPath: string) {
   return remixConfig;
 }
 
-export interface AddDependencyOptions extends SpawnOptionsExtended {
-  saveDev?: boolean;
+export function resolveSemverMinMax(
+  min: string,
+  max: string,
+  version: string
+): string {
+  const floored = semver.intersects(version, `>= ${min}`) ? version : min;
+  return semver.intersects(floored, `<= ${max}`) ? floored : max;
 }
 
-/**
- * Runs `npm i ${name}` / `pnpm i ${name}` / `yarn add ${name}`.
- */
-export function addDependency(
-  cliType: CliType,
-  names: string[],
-  opts: AddDependencyOptions = {}
-) {
-  const args: string[] = [];
-  if (cliType === 'npm' || cliType === 'pnpm') {
-    args.push('install');
-    if (opts.saveDev) {
-      args.push('--save-dev');
+export async function ensureResolvable(
+  start: string,
+  base: string,
+  pkgName: string
+): Promise<string> {
+  try {
+    const resolvedPkgPath = require_.resolve(`${pkgName}/package.json`, {
+      paths: [start],
+    });
+    const resolvedPath = dirname(resolvedPkgPath);
+    if (!relative(base, resolvedPath).startsWith(`..${sep}`)) {
+      // Resolved path is within the root of the project, so all good
+      debug(`"${pkgName}" resolved to '${resolvedPath}'`);
+      return resolvedPath;
     }
-  } else {
-    // 'yarn'
-    args.push('add');
-    if (opts.saveDev) {
-      args.push('--dev');
+  } catch (err: any) {
+    if (err.code !== 'MODULE_NOT_FOUND') {
+      throw err;
     }
   }
-  return spawnAsync(cliType, args.concat(names), opts);
+
+  // If we got to here then `pkgName` was not resolvable up to the root
+  // of the project. Try a couple symlink tricks, otherwise we'll bail.
+
+  // Attempt to find the package in `node_modules/.pnpm` (pnpm)
+  const pnpmDir = await walkParentDirs({
+    base,
+    start,
+    filename: 'node_modules/.pnpm',
+  });
+  if (pnpmDir) {
+    const prefix = `${pkgName.replace('/', '+')}@`;
+    const packages = await fs.readdir(pnpmDir);
+    const match = packages.find(p => p.startsWith(prefix));
+    if (match) {
+      const pkgDir = join(pnpmDir, match, 'node_modules', pkgName);
+      await ensureSymlink(pkgDir, join(start, 'node_modules'), pkgName);
+      return pkgDir;
+    }
+  }
+
+  // Attempt to find the package in `node_modules/.store` (npm 9+ linked mode)
+  const npmDir = await walkParentDirs({
+    base,
+    start,
+    filename: 'node_modules/.store',
+  });
+  if (npmDir) {
+    const prefix = `${basename(pkgName)}@`;
+    const prefixDir = join(npmDir, dirname(pkgName));
+    const packages = await fs.readdir(prefixDir);
+    const match = packages.find(p => p.startsWith(prefix));
+    if (match) {
+      const pkgDir = join(prefixDir, match, 'node_modules', pkgName);
+      await ensureSymlink(pkgDir, join(start, 'node_modules'), pkgName);
+      return pkgDir;
+    }
+  }
+
+  throw new Error(
+    `Failed to resolve "${pkgName}". To fix this error, add "${pkgName}" to "dependencies" in your \`package.json\` file.`
+  );
+}
+
+async function ensureSymlink(
+  target: string,
+  nodeModulesDir: string,
+  pkgName: string
+) {
+  const symlinkPath = join(nodeModulesDir, pkgName);
+  const symlinkDir = dirname(symlinkPath);
+  const relativeTarget = relative(symlinkDir, target);
+
+  try {
+    const existingTarget = await fs.readlink(symlinkPath);
+    if (existingTarget === relativeTarget) {
+      // Symlink is already the expected value, so do nothing
+      return;
+    } else {
+      // If a symlink already exists then delete it if the target doesn't match
+      await fs.unlink(symlinkPath);
+    }
+  } catch (err: any) {
+    // Ignore when path does not exist or is not a symlink
+    if (err.code !== 'ENOENT' && err.code !== 'EINVAL') {
+      throw err;
+    }
+  }
+
+  await fs.symlink(relativeTarget, symlinkPath);
+  debug(`Created symlink for "${pkgName}"`);
+}
+
+export function isESM(path: string): boolean {
+  // Figure out if the `remix.config` file is using ESM syntax
+  let isESM = false;
+  try {
+    require_(path);
+  } catch (err: any) {
+    isESM = err.code === 'ERR_REQUIRE_ESM';
+  }
+  return isESM;
 }

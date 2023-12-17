@@ -1,7 +1,7 @@
 import path from 'path';
+import { LocalFileSystemDetector } from '../src';
 import { detectFramework } from '../src/detect-framework';
 import monorepoManagers from '../src/monorepos/monorepo-managers';
-import { FixtureFilesystem } from './utils/fixture-filesystem';
 
 describe('monorepo-managers', () => {
   describe.each([
@@ -17,7 +17,7 @@ describe('monorepo-managers', () => {
 
     it(testName, async () => {
       const fixture = path.join(__dirname, 'fixtures', fixturePath);
-      const fs = new FixtureFilesystem(fixture);
+      const fs = new LocalFileSystemDetector(fixture);
 
       const result = await detectFramework({
         fs,

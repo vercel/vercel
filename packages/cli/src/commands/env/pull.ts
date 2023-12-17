@@ -2,7 +2,11 @@ import chalk from 'chalk';
 import { outputFile } from 'fs-extra';
 import { closeSync, openSync, readSync } from 'fs';
 import { resolve } from 'path';
-import { Project, ProjectEnvTarget } from '@vercel-internals/types';
+import type {
+  Project,
+  ProjectEnvTarget,
+  ProjectLinked,
+} from '@vercel-internals/types';
 import Client from '../../util/client';
 import { emoji, prependEmoji } from '../../util/emoji';
 import confirm from '../../util/input/confirm';
@@ -19,6 +23,8 @@ import {
   createEnvObject,
 } from '../../util/env/diff-env-files';
 import { isErrnoException } from '@vercel/error-utils';
+import { addToGitIgnore } from '../../util/link/add-to-gitignore';
+import JSONparse from 'json-parse-better-errors';
 
 const CONTENTS_PREFIX = '# Created by Vercel CLI\n';
 
@@ -49,8 +55,15 @@ function tryReadHeadSync(path: string, length: number) {
   }
 }
 
+const VARIABLES_TO_IGNORE = [
+  'VERCEL_ANALYTICS_ID',
+  'VERCEL_SPEED_INSIGHTS_ID',
+  'VERCEL_WEB_ANALYTICS_ID',
+];
+
 export default async function pull(
   client: Client,
+  link: ProjectLinked,
   project: Project,
   environment: ProjectEnvTarget,
   opts: Partial<Options>,
@@ -67,7 +80,7 @@ export default async function pull(
   }
 
   // handle relative or absolute filename
-  const [filename = '.env'] = args;
+  const [filename = '.env.local'] = args;
   const fullPath = resolve(cwd, filename);
   const skipConfirmation = opts['--yes'];
   const gitBranch = opts['--git-branch'];
@@ -101,7 +114,7 @@ export default async function pull(
 
   const records = (
     await pullEnvRecords(output, client, project.id, source, {
-      target: environment || ProjectEnvTarget.Development,
+      target: environment || 'development',
       gitBranch,
     })
   ).env;
@@ -115,15 +128,17 @@ export default async function pull(
       // We need this because double quotes are stripped from the local .env file,
       // but `records` is already in the form of a JSON object that doesn't filter
       // double quotes.
-      const newEnv = JSON.parse(JSON.stringify(records).replace(/\\"/g, ''));
+      const newEnv = JSONparse(JSON.stringify(records).replace(/\\"/g, ''));
       deltaString = buildDeltaString(oldEnv, newEnv);
     }
   }
 
   const contents =
     CONTENTS_PREFIX +
-    Object.entries(records)
-      .map(([key, value]) => `${key}="${escapeValue(value)}"`)
+    Object.keys(records)
+      .sort()
+      .filter(key => !VARIABLES_TO_IGNORE.includes(key))
+      .map(key => `${key}="${escapeValue(records[key])}"`)
       .join('\n') +
     '\n';
 
@@ -135,11 +150,22 @@ export default async function pull(
     output.log('No changes found.');
   }
 
+  let isGitIgnoreUpdated = false;
+  if (filename === '.env.local') {
+    // When the file is `.env.local`, we also add it to `.gitignore`
+    // to avoid accidentally committing it to git.
+    // We use '.env*.local' to match the default .gitignore from
+    // create-next-app template. See:
+    // https://github.com/vercel/next.js/blob/06abd634899095b6cc28e6e8315b1e8b9c8df939/packages/create-next-app/templates/app/js/gitignore#L28
+    const rootPath = link.repoRoot ?? cwd;
+    isGitIgnoreUpdated = await addToGitIgnore(rootPath, '.env*.local');
+  }
+
   output.print(
     `${prependEmoji(
-      `${exists ? 'Updated' : 'Created'} ${chalk.bold(
-        filename
-      )} file ${chalk.gray(pullStamp())}`,
+      `${exists ? 'Updated' : 'Created'} ${chalk.bold(filename)} file ${
+        isGitIgnoreUpdated ? 'and added it to .gitignore' : ''
+      } ${chalk.gray(pullStamp())}`,
       emoji('success')
     )}\n`
   );

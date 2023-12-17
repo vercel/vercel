@@ -13,11 +13,11 @@ describe('getRegExpFromPath()', () => {
 
   describe.each([
     {
-      path: '/:params+',
+      path: '/:params*',
       urls: [
         {
           url: '/',
-          expected: false,
+          expected: true,
         },
         {
           url: '/foo',
@@ -38,7 +38,7 @@ describe('getRegExpFromPath()', () => {
       ],
     },
     {
-      path: '/projects/:params+',
+      path: '/projects/:params*',
       urls: [
         {
           url: '/',
@@ -49,11 +49,19 @@ describe('getRegExpFromPath()', () => {
           expected: false,
         },
         {
+          url: '/projects',
+          expected: true,
+        },
+        {
+          url: '/projects/',
+          expected: true,
+        },
+        {
           url: '/projects/foo',
           expected: true,
         },
         {
-          url: '/projects/another',
+          url: '/projects/foo/another',
           expected: true,
         },
       ],

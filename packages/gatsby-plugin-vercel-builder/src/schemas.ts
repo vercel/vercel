@@ -31,6 +31,7 @@ const GatsbyRedirectSchema = Type.Object({
   fromPath: Type.String(),
   toPath: Type.String(),
   isPermanent: Type.Optional(Type.Boolean()),
+  statusCode: Type.Optional(Type.Number()),
 });
 export type GatsbyRedirect = Static<typeof GatsbyRedirectSchema>;
 
@@ -38,6 +39,7 @@ const GatsbyConfigSchema = Type.Object({
   trailingSlash: Type.Optional(
     StringEnum(['always', 'never', 'ignore', 'legacy'])
   ),
+  pathPrefix: Type.Optional(Type.String()),
 });
 export type GatsbyConfig = Static<typeof GatsbyConfigSchema>;
 

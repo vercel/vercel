@@ -1,5 +1,6 @@
 {
   "name": "force-module-commonjs",
+  "version": "0.0.0",
   "private": true,
   "scripts": {
     "dev": "next",
@@ -15,5 +16,6 @@
     "@types/node": "18.x",
     "@types/react": "18.0.25",
     "typescript": "4.9.3"
-  }
+  },
+  "ignoreNextjsUpdates": true
 }

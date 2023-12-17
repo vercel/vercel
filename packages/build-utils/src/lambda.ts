@@ -13,9 +13,12 @@ interface Environment {
 
 export type LambdaOptions = LambdaOptionsWithFiles | LambdaOptionsWithZipBuffer;
 
+export type LambdaArchitecture = 'x86_64' | 'arm64';
+
 export interface LambdaOptionsBase {
   handler: string;
   runtime: string;
+  architecture?: LambdaArchitecture;
   memory?: number;
   maxDuration?: number;
   environment?: Environment;
@@ -23,6 +26,10 @@ export interface LambdaOptionsBase {
   regions?: string[];
   supportsMultiPayloads?: boolean;
   supportsWrapper?: boolean;
+  supportsResponseStreaming?: boolean;
+  /**
+   * @deprecated Use the `supportsResponseStreaming` property instead.
+   */
   experimentalResponseStreaming?: boolean;
   operationType?: string;
   framework?: FunctionFramework;
@@ -58,6 +65,7 @@ export class Lambda {
   files?: Files;
   handler: string;
   runtime: string;
+  architecture?: LambdaArchitecture;
   memory?: number;
   maxDuration?: number;
   environment: Environment;
@@ -69,7 +77,7 @@ export class Lambda {
   zipBuffer?: Buffer;
   supportsMultiPayloads?: boolean;
   supportsWrapper?: boolean;
-  experimentalResponseStreaming?: boolean;
+  supportsResponseStreaming?: boolean;
   framework?: FunctionFramework;
 
   constructor(opts: LambdaOptions) {
@@ -77,12 +85,14 @@ export class Lambda {
       handler,
       runtime,
       maxDuration,
+      architecture,
       memory,
       environment = {},
       allowQuery,
       regions,
       supportsMultiPayloads,
       supportsWrapper,
+      supportsResponseStreaming,
       experimentalResponseStreaming,
       operationType,
       framework,
@@ -96,6 +106,13 @@ export class Lambda {
     assert(typeof handler === 'string', '"handler" is not a string');
     assert(typeof runtime === 'string', '"runtime" is not a string');
     assert(typeof environment === 'object', '"environment" is not an object');
+
+    if (architecture !== undefined) {
+      assert(
+        architecture === 'x86_64' || architecture === 'arm64',
+        '"architecture" must be either "x86_64" or "arm64"'
+      );
+    }
 
     if (memory !== undefined) {
       assert(typeof memory === 'number', '"memory" is not a number');
@@ -154,6 +171,7 @@ export class Lambda {
     this.files = 'files' in opts ? opts.files : undefined;
     this.handler = handler;
     this.runtime = runtime;
+    this.architecture = architecture;
     this.memory = memory;
     this.maxDuration = maxDuration;
     this.environment = environment;
@@ -162,7 +180,8 @@ export class Lambda {
     this.zipBuffer = 'zipBuffer' in opts ? opts.zipBuffer : undefined;
     this.supportsMultiPayloads = supportsMultiPayloads;
     this.supportsWrapper = supportsWrapper;
-    this.experimentalResponseStreaming = experimentalResponseStreaming;
+    this.supportsResponseStreaming =
+      supportsResponseStreaming ?? experimentalResponseStreaming;
     this.framework = framework;
   }
 
@@ -180,6 +199,16 @@ export class Lambda {
       }
     }
     return zipBuffer;
+  }
+
+  /**
+   * @deprecated Use the `supportsResponseStreaming` property instead.
+   */
+  get experimentalResponseStreaming(): boolean | undefined {
+    return this.supportsResponseStreaming;
+  }
+  set experimentalResponseStreaming(v: boolean | undefined) {
+    this.supportsResponseStreaming = v;
   }
 }
 

@@ -8,7 +8,7 @@ const fetch = require('../../../../../test/lib/deployment/fetch-retry');
 describe(`${__dirname.split(path.sep).pop()}`, () => {
   const ctx = {};
 
-  it('should deploy and pass probe checks', async () => {
+  beforeAll(async () => {
     const res = await deployAndTest(__dirname);
     Object.assign(ctx, res);
   });
@@ -40,7 +40,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
   });
 
   it('should render the page on-demand with preview mode enabled', async () => {
-    for (locale of ['fr', 'en-US', 'fr-FR', 'nl', 'nl-NL', 'de']) {
+    for (const locale of ['fr', 'en-US', 'fr-FR', 'nl', 'nl-NL', 'de']) {
       const dataRes = await fetch(
         `${ctx.deploymentUrl}/_next/data/testing-build-id/${locale}/preview-only-not-found.json`
       );

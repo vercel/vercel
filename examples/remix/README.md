@@ -2,6 +2,12 @@
 
 This directory is a brief example of a [Remix](https://remix.run/docs) site that can be deployed to Vercel with zero configuration.
 
+To get started, run the Remix cli with this template
+
+```sh
+npx create-remix@latest --template vercel/vercel/examples/remix
+```
+
 ## Deploy Your Own
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vercel/vercel/tree/main/examples/remix&template=remix)

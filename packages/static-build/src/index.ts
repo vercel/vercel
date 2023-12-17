@@ -21,7 +21,7 @@ import {
   runNpmInstall,
   getEnvForPackageManager,
   getPrefixedEnvVars,
-  getNodeBinPath,
+  getNodeBinPaths,
   runBundleInstall,
   runPipInstall,
   runPackageJsonScript,
@@ -137,7 +137,11 @@ function getCommand(
     return propValue;
   }
 
-  if (pkg) {
+  const ignorePackageJsonScript =
+    name === 'build' &&
+    framework?.settings.buildCommand.ignorePackageJsonScript;
+
+  if (pkg && !ignorePackageJsonScript) {
     const scriptName = getScriptName(pkg, name, config);
 
     if (hasScript(scriptName, pkg)) {
@@ -305,6 +309,7 @@ export const build: BuildV2 = async ({
   files,
   entrypoint,
   workPath,
+  repoRootPath,
   config,
   meta = {},
 }) => {
@@ -403,7 +408,7 @@ export const build: BuildV2 = async ({
             break;
           default:
             debug(
-              `No analytics plugin injected for framework ${framework.slug}`
+              `No Web Vitals plugin injected for framework ${framework.slug}`
             );
             break;
         }
@@ -519,10 +524,15 @@ export const build: BuildV2 = async ({
     const pathList = [];
 
     if (isNpmInstall || (pkg && (buildCommand || devCommand))) {
-      const nodeBinPath = await getNodeBinPath({ cwd: entrypointDir });
-      pathList.push(nodeBinPath); // Add `./node_modules/.bin`
+      const nodeBinPaths = getNodeBinPaths({
+        start: entrypointDir,
+        base: repoRootPath,
+      });
+      pathList.push(...nodeBinPaths); // Add `./node_modules/.bin`
       debug(
-        `Added "${nodeBinPath}" to PATH env because a package.json file was found`
+        `Added "${nodeBinPaths.join(
+          path.delimiter
+        )}" to PATH env because a package.json file was found`
       );
     }
 
@@ -655,7 +665,7 @@ export const build: BuildV2 = async ({
         }
       } finally {
         if (framework?.slug === 'gatsby') {
-          await GatsbyUtils.cleanupGatsbyFiles(entrypointDir);
+          GatsbyUtils.cleanupGatsbyFiles(entrypointDir);
         }
       }
 

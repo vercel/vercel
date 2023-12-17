@@ -1,0 +1,29 @@
+{
+  "private": true,
+  "name": "@vercel-internals/get-package-json",
+  "version": "1.0.0",
+  "types": "dist/index.d.ts",
+  "main": "dist/index.js",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "node ../../utils/build.mjs",
+    "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --runInBand --bail",
+    "test-unit": "pnpm test tests/unit"
+  },
+  "devDependencies": {
+    "@types/jest": "29.5.0",
+    "@types/node": "14.14.31",
+    "@vercel-internals/tsconfig": "1.0.0",
+    "@vercel/style-guide": "4.0.2",
+    "jest": "29.5.0",
+    "ts-jest": "29.1.0",
+    "typescript": "4.9.4"
+  },
+  "jest": {
+    "verbose": true,
+    "preset": "ts-jest",
+    "testEnvironment": "node"
+  }
+}

@@ -36,7 +36,7 @@ export interface CreateOptions {
   project?: string;
   wantsPublic: boolean;
   prebuilt?: boolean;
-  rootDirectory?: string;
+  rootDirectory?: string | null;
   meta: Dictionary<string>;
   gitMetadata?: GitMetadata;
   regions?: string[];
@@ -49,6 +49,8 @@ export interface CreateOptions {
   deployStamp: () => string;
   projectSettings?: any;
   skipAutoDetectionConfirmation?: boolean;
+  noWait?: boolean;
+  autoAssignCustomDomains?: boolean;
 }
 
 export interface RemoveOptions {
@@ -59,6 +61,7 @@ export interface ListOptions {
   version?: number;
   meta?: Dictionary<string>;
   nextTimestamp?: number;
+  target?: string;
 }
 
 export default class Now extends EventEmitter {
@@ -105,7 +108,7 @@ export default class Now extends EventEmitter {
   }
 
   async create(
-    paths: string[],
+    path: string,
     {
       // Legacy
       nowConfig: nowConfig = {},
@@ -128,11 +131,13 @@ export default class Now extends EventEmitter {
       deployStamp,
       projectSettings,
       skipAutoDetectionConfirmation,
+      noWait,
+      autoAssignCustomDomains,
     }: CreateOptions,
     org: Org,
     isSettingUpProject: boolean,
-    archive?: ArchiveFormat,
-    cwd?: string
+    cwd: string,
+    archive?: ArchiveFormat
   ) {
     let hashes: any = {};
     const uploadStamp = stamp();
@@ -150,6 +155,7 @@ export default class Now extends EventEmitter {
       target: target || undefined,
       projectSettings,
       source: 'cli',
+      autoAssignCustomDomains,
     };
 
     // Ignore specific items from vercel.json
@@ -158,8 +164,8 @@ export default class Now extends EventEmitter {
 
     const deployment = await processDeployment({
       now: this,
-      output: this._output,
-      paths,
+      agent: this._client.agent,
+      path,
       requestBody,
       uploadStamp,
       deployStamp,
@@ -174,6 +180,7 @@ export default class Now extends EventEmitter {
       cwd,
       prebuilt,
       rootDirectory,
+      noWait,
     });
 
     if (deployment && deployment.warnings) {
@@ -291,7 +298,7 @@ export default class Now extends EventEmitter {
     if (
       error.errorCode === 'BUILD_FAILED' ||
       error.errorCode === 'UNEXPECTED_ERROR' ||
-      error.errorCode.includes('BUILD_UTILS_SPAWN_')
+      error.errorCode?.includes('BUILD_UTILS_SPAWN_')
     ) {
       return new BuildError({
         message: error.errorMessage,
@@ -333,7 +340,7 @@ export default class Now extends EventEmitter {
 
   async list(
     app?: string,
-    { version = 4, meta = {}, nextTimestamp }: ListOptions = {},
+    { version = 4, meta = {}, nextTimestamp, target }: ListOptions = {},
     prod?: boolean
   ) {
     const fetchRetry = async (url: string, options: FetchOptions = {}) => {
@@ -399,6 +406,8 @@ export default class Now extends EventEmitter {
     }
     if (prod) {
       query.set('target', 'production');
+    } else if (target) {
+      query.set('target', target);
     }
 
     const response = await fetchRetry(`/v${version}/now/deployments?${query}`);

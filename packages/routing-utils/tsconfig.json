@@ -1,15 +1,9 @@
 {
   "compilerOptions": {
-    "strict": true,
-    "esModuleInterop": true,
-    "lib": ["ES2020"],
-    "target": "ES2020",
-    "module": "commonjs",
-    "outDir": "dist",
-    "sourceMap": false,
-    "declaration": true,
+    "outDir": "./dist",
     "typeRoots": ["./@types", "./node_modules/@types"]
   },
+  "extends": "../../tsconfig.base.json",
   "include": ["src/**/*"],
   "exclude": ["node_modules"]
 }

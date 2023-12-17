@@ -144,14 +144,14 @@ describe('getPathFromRoute()', () => {
     },
     {
       id: 'routes/projects/$',
-      expected: { path: 'projects/*', rePath: '/projects/:params+' },
+      expected: { path: 'projects/*', rePath: '/projects/:params*' },
     },
     {
       id: 'routes/$foo.$bar.$baz',
       expected: { path: ':foo/:bar/:baz', rePath: '/:foo/:bar/:baz' },
     },
     { id: 'routes/node', expected: { path: 'node', rePath: '/node' } },
-    { id: 'routes/$', expected: { path: '*', rePath: '/:params+' } },
+    { id: 'routes/$', expected: { path: '*', rePath: '/:params*' } },
     {
       id: 'routes/($lang)/index',
       expected: { path: '(:lang)', rePath: '/:lang?' },

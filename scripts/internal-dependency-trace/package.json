@@ -1,0 +1,12 @@
+{
+  "private": true,
+  "name": "internal-dependency-trace",
+  "description": "A utility for generating a directed graph of local file dependencies.",
+  "main": "index.js",
+  "scripts": {
+    "generate": "node src/index.js && mmdc --input output/trace.mmd --output output/trace.svg --configFile mermaid-config.json"
+  },
+  "dependencies": {
+    "@mermaid-js/mermaid-cli": "10.0.2"
+  }
+}

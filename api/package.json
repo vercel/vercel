@@ -1,7 +1,7 @@
 {
   "name": "api",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "API for the vercel/vercel repo",
   "main": "index.js",
   "scripts": {},
@@ -16,7 +16,6 @@
   "devDependencies": {
     "@types/node": "16.18.11",
     "@types/node-fetch": "2.5.4",
-    "@vercel/node": "*",
-    "typescript": "4.3.4"
+    "@vercel/node": "*"
   }
 }

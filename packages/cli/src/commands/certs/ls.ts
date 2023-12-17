@@ -10,7 +10,7 @@ import {
 import stamp from '../../util/output/stamp';
 import getCerts from '../../util/certs/get-certs';
 import strlen from '../../util/strlen';
-import { Cert } from '@vercel-internals/types';
+import type { Cert } from '@vercel-internals/types';
 import getCommandFlags from '../../util/get-command-flags';
 import { getCommandName } from '../../util/pkg-name';
 
@@ -43,10 +43,7 @@ async function ls(
   }
 
   // Get the list of certificates
-  const { certs, pagination } = await getCerts(
-    client,
-    ...paginationOptions
-  ).catch(err => err);
+  const { certs, pagination } = await getCerts(client, ...paginationOptions);
 
   output.log(
     `${

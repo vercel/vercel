@@ -1,4 +1,4 @@
-import { Build } from '@vercel-internals/types';
+import type { Build } from '@vercel-internals/types';
 
 export const isReady = ({ readyState }: Pick<Build, 'readyState'>) =>
   readyState === 'READY';

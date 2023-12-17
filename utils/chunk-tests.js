@@ -11,10 +11,39 @@ const runnersMap = new Map([
       runners: ['ubuntu-latest', 'macos-latest', 'windows-latest'],
     },
   ],
-  ['test-e2e', { min: 1, max: 5, runners: ['ubuntu-latest'] }],
-  ['test-next-local', { min: 1, max: 5, runners: ['ubuntu-latest'] }],
-  ['test-dev', { min: 1, max: 5, runners: ['ubuntu-latest', 'macos-latest'] }],
+  ['test-e2e', { min: 1, max: 7, runners: ['ubuntu-latest'] }],
+  [
+    'test-next-local',
+    { min: 1, max: 5, runners: ['ubuntu-latest'], nodeVersion: '18' },
+  ],
+  [
+    'test-next-local-legacy',
+    { min: 1, max: 5, runners: ['ubuntu-latest'], nodeVersion: '16' },
+  ],
+  ['test-dev', { min: 1, max: 7, runners: ['ubuntu-latest', 'macos-latest'] }],
 ]);
+
+const packageOptionsOverrides = {
+  // 'some-package': { min: 1, max: 1 },
+};
+
+function getRunnerOptions(scriptName, packageName) {
+  let runnerOptions = runnersMap.get(scriptName);
+  if (packageOptionsOverrides[packageName]) {
+    runnerOptions = Object.assign(
+      {},
+      runnerOptions,
+      packageOptionsOverrides[packageName]
+    );
+  }
+  return (
+    runnerOptions || {
+      min: 1,
+      max: 1,
+      runners: ['ubuntu-latest'],
+    }
+  );
+}
 
 async function getChunkedTests() {
   const scripts = [...runnersMap.keys()];
@@ -26,6 +55,7 @@ async function getChunkedTests() {
       ...scripts,
       `--cache-dir=.turbo`,
       '--output-logs=full',
+      '--log-order=stream',
       '--',
       '--', // need two of these due to pnpm arg parsing
       '--listTests',
@@ -67,11 +97,9 @@ async function getChunkedTests() {
     ([packagePathAndName, scriptNames]) => {
       const [packagePath, packageName] = packagePathAndName.split(',');
       return Object.entries(scriptNames).flatMap(([scriptName, testPaths]) => {
-        const {
-          runners = ['ubuntu-latest'],
-          min = 1,
-          max = 1,
-        } = runnersMap.get(scriptName) || {};
+        const runnerOptions = getRunnerOptions(scriptName, packageName);
+        const { runners, min, max, nodeVersion } = runnerOptions;
+
         const sortedTestPaths = testPaths.sort((a, b) => a.localeCompare(b));
         return intoChunks(min, max, sortedTestPaths).flatMap(
           (chunk, chunkNumber, allChunks) => {
@@ -81,6 +109,7 @@ async function getChunkedTests() {
                 packagePath,
                 packageName,
                 scriptName,
+                nodeVersion,
                 testPaths: chunk.map(testFile =>
                   path.relative(
                     path.join(__dirname, '../', packagePath),
@@ -163,6 +192,7 @@ async function main() {
   }
 }
 
+// @ts-ignore
 if (module === require.main || !module.parent) {
   main();
 }

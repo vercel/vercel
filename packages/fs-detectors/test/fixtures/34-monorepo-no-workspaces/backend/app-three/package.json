@@ -11,5 +11,6 @@
   "license": "ISC",
   "dependencies": {
     "next": "^4.3.2"
-  }
+  },
+  "ignoreNextjsUpdates": true
 }

@@ -1,10 +1,11 @@
 {
   "scripts": {
-    "build": "next build && next export"
+    "build": "next build"
   },
   "dependencies": {
     "next": "canary",
     "react": "latest",
     "react-dom": "latest"
-  }
+  },
+  "ignoreNextjsUpdates": true
 }

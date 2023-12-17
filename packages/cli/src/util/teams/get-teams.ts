@@ -1,6 +1,6 @@
 import { URLSearchParams } from 'url';
 import Client from '../client';
-import { Team } from '@vercel-internals/types';
+import type { Team } from '@vercel-internals/types';
 import { APIError, InvalidToken } from '../errors-ts';
 
 export interface GetTeamsV1Options {

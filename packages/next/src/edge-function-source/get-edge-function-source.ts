@@ -3,12 +3,12 @@ import { readFile } from 'fs-extra';
 import { ConcatSource, Source } from 'webpack-sources';
 import { fileToSource, raw, sourcemapped } from '../sourcemapped';
 import { join } from 'path';
-import { EDGE_FUNCTION_SIZE_LIMIT } from './constants';
+import { EDGE_FUNCTION_SIZE_LIMIT } from '../constants';
 import zlib from 'zlib';
 import { promisify } from 'util';
-import { prettyBytes } from '../utils';
+import { prettyBytes } from '../pretty-bytes';
 
-// @ts-expect-error this is a prebuilt file, based on `../../scripts/build-edge-function-template.js`
+// @ts-ignore this is a prebuilt file, based on `../../scripts/build-edge-function-template.js`
 import template from '../../dist/___get-nextjs-edge-function.js';
 
 const gzip = promisify<zlib.InputType, Buffer>(zlib.gzip);
@@ -30,7 +30,7 @@ export async function getNextjsEdgeFunctionSource(
   outputDir: string,
   wasm?: { filePath: string; name: string }[]
 ): Promise<Source> {
-  const chunks = new ConcatSource(raw(`let _ENTRIES = {};`));
+  const chunks = new ConcatSource(raw(`globalThis._ENTRIES = {};`));
   for (const filePath of filePaths) {
     const fullFilePath = join(outputDir, filePath);
     const content = await readFile(fullFilePath, 'utf8');

@@ -1,6 +1,9 @@
 import path from 'path';
-import { packageManagers, detectFramework } from '../src';
-import { FixtureFilesystem } from './utils/fixture-filesystem';
+import {
+  packageManagers,
+  detectFramework,
+  LocalFileSystemDetector,
+} from '../src';
 
 describe('package-managers', () => {
   describe.each([
@@ -11,12 +14,15 @@ describe('package-managers', () => {
     ['54-yarn-with-corepack', 'yarn'],
     ['55-pnpm-with-lockfile', 'pnpm'],
     ['56-pnpm-with-corepack', 'pnpm'],
+    ['57-bun-with-lockfile', 'bun'],
+    ['58-bun-with-corepack', 'bun'],
+    ['59-bun-with-binary-and-readable-lockfile', 'bun'],
   ])('with detectFramework', (fixturePath, frameworkSlug) => {
     const testName = `should detect package manager '${frameworkSlug}' for ${fixturePath}`;
 
     it(testName, async () => {
       const fixture = path.join(__dirname, 'fixtures', fixturePath);
-      const fs = new FixtureFilesystem(fixture);
+      const fs = new LocalFileSystemDetector(fixture);
 
       const result = await detectFramework({
         fs,

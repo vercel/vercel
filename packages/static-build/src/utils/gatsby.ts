@@ -1,6 +1,8 @@
+import { isErrnoException } from '@vercel/error-utils';
 import fs from 'fs-extra';
 import * as path from 'path';
 import semver from 'semver';
+import { createRequire } from 'module';
 import { fileExists } from './_shared';
 
 const PLUGINS = [
@@ -12,16 +14,18 @@ type PluginName = typeof PLUGINS[number];
 const GATSBY_CONFIG_FILE = 'gatsby-config';
 const GATSBY_NODE_FILE = 'gatsby-node';
 
+const require_ = createRequire(__filename);
+
 const PLUGIN_PATHS: Record<PluginName, string> = {
   '@vercel/gatsby-plugin-vercel-analytics': path.dirname(
-    eval('require').resolve(
-      `@vercel/gatsby-plugin-vercel-analytics/package.json`
-    )
+    require_.resolve(`@vercel/gatsby-plugin-vercel-analytics/package.json`)
   ),
   '@vercel/gatsby-plugin-vercel-builder': path.dirname(
-    eval('require').resolve(`@vercel/gatsby-plugin-vercel-builder/package.json`)
+    require_.resolve(`@vercel/gatsby-plugin-vercel-builder/package.json`)
   ),
 };
+
+let GLOBAL_EXIT_HANDLER: undefined | (() => void);
 
 export async function injectPlugins(
   detectedVersion: string | null,
@@ -29,10 +33,17 @@ export async function injectPlugins(
 ) {
   const plugins = new Set<PluginName>();
 
-  if (process.env.VERCEL_GATSBY_BUILDER_PLUGIN === '1' && detectedVersion) {
+  if (detectedVersion) {
     const version = semver.coerce(detectedVersion);
     if (version && semver.satisfies(version, '>=4.0.0')) {
       plugins.add('@vercel/gatsby-plugin-vercel-builder');
+
+      if (!GLOBAL_EXIT_HANDLER) {
+        GLOBAL_EXIT_HANDLER = () => {
+          cleanupGatsbyFiles(dir);
+        };
+        process.on('exit', GLOBAL_EXIT_HANDLER);
+      }
     }
   }
 
@@ -311,32 +322,39 @@ module.exports = gatsbyNode;
   );
 }
 
-export async function cleanupGatsbyFiles(dir: string) {
-  const backup = '.__vercel_builder_backup__';
-  const fileEndings = ['.js', '.ts', '.mjs'];
+// must remain sync because it's called in an exit handler
+export function cleanupGatsbyFiles(dir: string) {
+  try {
+    const backup = '.__vercel_builder_backup__';
+    const fileEndings = ['.js', '.ts', '.mjs'];
 
-  for (const fileName of [GATSBY_CONFIG_FILE, GATSBY_NODE_FILE]) {
-    for (const fileEnding of fileEndings) {
-      const baseFile = `${fileName}${fileEnding}`;
-      const baseFilePath = path.join(dir, baseFile);
-      const backupFile = `${baseFile}${backup}${fileEnding}`;
-      const backupFilePath = path.join(dir, backupFile);
+    for (const fileName of [GATSBY_CONFIG_FILE, GATSBY_NODE_FILE]) {
+      for (const fileEnding of fileEndings) {
+        const baseFile = `${fileName}${fileEnding}`;
+        const baseFilePath = path.join(dir, baseFile);
+        const backupFile = `${baseFile}${backup}${fileEnding}`;
+        const backupFilePath = path.join(dir, backupFile);
 
-      const [baseFileContent, backupFileContent] = await Promise.all([
-        fs.readFile(baseFilePath, 'utf-8').catch(() => null),
-        fs.readFile(backupFilePath, 'utf-8').catch(() => null),
-      ]);
+        const baseFileContent = tryReadFileSync(baseFilePath);
+        const backupFileContent = tryReadFileSync(backupFilePath);
 
-      if (
-        baseFileContent &&
-        baseFileContent.startsWith(GENERATED_FILE_COMMENT)
-      ) {
-        await fs.rm(baseFilePath);
+        if (
+          baseFileContent &&
+          baseFileContent.startsWith(GENERATED_FILE_COMMENT)
+        ) {
+          fs.rmSync(baseFilePath);
+        }
+
+        if (backupFileContent) {
+          fs.renameSync(backupFilePath, baseFilePath);
+        }
       }
+    }
+  } catch (error) {
+    console.error(error);
 
-      if (backupFileContent) {
-        await fs.rename(backupFilePath, baseFilePath);
-      }
+    if (GLOBAL_EXIT_HANDLER) {
+      process.off('exit', GLOBAL_EXIT_HANDLER);
     }
   }
 }
@@ -352,4 +370,20 @@ export async function createPluginSymlinks(dir: string) {
       fs.symlink(PLUGIN_PATHS[name], path.join(nodeModulesDir, name))
     )
   );
+}
+
+function tryReadFileSync(filePath: string) {
+  try {
+    return fs.readFileSync(filePath, 'utf-8');
+  } catch (error: unknown) {
+    if (isErrnoException(error)) {
+      if (error.code !== 'ENOENT') {
+        console.error(error);
+      }
+    } else {
+      console.error(error);
+    }
+
+    return undefined;
+  }
 }

@@ -1,8 +1,8 @@
 {
-  "name": "gatsby-v5",
+  "name": "gatsby-v5-pathprefix",
   "version": "1.0.0",
   "private": true,
-  "description": "gatsby-v5",
+  "description": "gatsby-v5-pathPrefix",
   "author": "Ethan Arrowood",
   "keywords": [
     "gatsby"
@@ -15,7 +15,7 @@
     "clean": "gatsby clean"
   },
   "dependencies": {
-    "gatsby": "5.7.0",
+    "gatsby": "5.12.12",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   }

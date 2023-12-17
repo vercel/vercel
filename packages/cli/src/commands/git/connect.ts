@@ -16,7 +16,6 @@ import {
   parseRepoUrl,
   printRemoteUrls,
 } from '../../util/git/connect-git-provider';
-import validatePaths from '../../util/validate-paths';
 
 interface GitRepoCheckParams {
   client: Client;
@@ -56,7 +55,7 @@ export default async function connect(
   project: Project | undefined,
   org: Org | undefined
 ) {
-  const { output } = client;
+  const { cwd, output } = client;
   const confirm = Boolean(argv['--yes']);
   const repoArg = argv._[1];
 
@@ -77,19 +76,11 @@ export default async function connect(
     return 1;
   }
 
-  let paths = [process.cwd()];
-
-  const validate = await validatePaths(client, paths);
-  if (!validate.valid) {
-    return validate.exitCode;
-  }
-  const { path } = validate;
-
   const gitProviderLink = project.link;
   client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
   // get project from .git
-  const gitConfigPath = join(path, '.git/config');
+  const gitConfigPath = join(cwd, '.git/config');
   const gitConfig = await parseGitConfig(gitConfigPath, output);
 
   if (repoArg) {
@@ -116,7 +107,7 @@ export default async function connect(
       confirm,
       org,
       project,
-      repoInfo: repoArg,
+      repoInfo: parsedUrlArg,
     });
   }
 
@@ -178,6 +169,7 @@ export default async function connect(
     gitOrg,
     repo,
   });
+
   if (typeof checkAndConnect === 'number') {
     return checkAndConnect;
   }

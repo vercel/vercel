@@ -32,8 +32,8 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: ${{ env.NODE_VERSION }}
-      - name: install pnpm@7.24.2
-        run: npm i -g pnpm@7.24.2
+      - name: install pnpm@8.3.1
+        run: npm i -g pnpm@8.3.1
       - run: pnpm install
       - id: set-tests
         run: |
@@ -41,13 +41,12 @@ jobs:
           echo "Files to test:"
           echo "$TESTS_ARRAY"
           echo "tests=$TESTS_ARRAY" >> $GITHUB_OUTPUT
-      - uses: patrickedqvist/wait-for-vercel-preview@ae34b392ef30297f2b672f9afb3c329bde9bd487
+      - uses: patrickedqvist/wait-for-vercel-preview@bfdff514ff78a669f2536e9f4dd4ef5813a704a2
         id: waitForTarball
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           max_timeout: 360
           check_interval: 5
-
   test:
     timeout-minutes: 120
     runs-on: ${{ matrix.runner }}
@@ -65,35 +64,71 @@ jobs:
           fetch-depth: 2
       - uses: actions/setup-node@v3
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version: ${{ matrix.nodeVersion || env.NODE_VERSION }}
 
       - name: Install Hugo
         if: matrix.runner == 'macos-latest'
         run: curl -L -O https://github.com/gohugoio/hugo/releases/download/v0.56.0/hugo_0.56.0_macOS-64bit.tar.gz && tar -xzf hugo_0.56.0_macOS-64bit.tar.gz && mv ./hugo packages/cli/test/dev/fixtures/08-hugo/
 
-      - name: install pnpm@7.24.2
-        run: npm i -g pnpm@7.24.2
+      # yarn 1.22.21 introduced a Corepack bug when running tests.
+      # this can be removed once https://github.com/yarnpkg/yarn/issues/9015 is resolved
+      - name: install yarn@1.22.19
+        run: npm i -g yarn@1.22.19
+
+      - name: install pnpm@8.3.1
+        run: npm i -g pnpm@8.3.1
 
       - run: pnpm install
+      - name: fetch ssl certificate before build (linux, os x)
+        if: matrix.runner != 'windows-latest'
+        run: echo | openssl s_client -showcerts -servername 'api.vercel.com' -connect 76.76.21.21:443
 
       - name: Build ${{matrix.packageName}} and all its dependencies
-        run: node utils/gen.js && node_modules/.bin/turbo run build --cache-dir=".turbo" --scope=${{matrix.packageName}} --include-dependencies --no-deps
+        run: node utils/gen.js && node_modules/.bin/turbo run build --cache-dir=".turbo" --log-order=stream --scope=${{matrix.packageName}} --include-dependencies --no-deps
         env:
           FORCE_COLOR: '1'
       - name: Test ${{matrix.packageName}}
-        run: node utils/gen.js && node_modules/.bin/turbo run test --cache-dir=".turbo" --scope=${{matrix.packageName}} --no-deps -- ${{ join(matrix.testPaths, ' ') }}
+        run: node utils/gen.js && node_modules/.bin/turbo run test --summarize --cache-dir=".turbo" --log-order=stream --scope=${{matrix.packageName}} --no-deps -- ${{ join(matrix.testPaths, ' ') }}
         shell: bash
         env:
+          JEST_JUNIT_OUTPUT_FILE: ${{github.workspace}}/.junit-reports/${{matrix.scriptName}}-${{matrix.packageName}}-${{matrix.chunkNumber}}-${{ matrix.runner }}.xml
           VERCEL_CLI_VERSION: ${{ needs.setup.outputs.dplUrl }}/tarballs/vercel.tgz
           VERCEL_TEST_TOKEN: ${{ secrets.VERCEL_TEST_TOKEN }}
           VERCEL_TEST_REGISTRATION_URL: ${{ secrets.VERCEL_TEST_REGISTRATION_URL }}
           FORCE_COLOR: '1'
+      - name: 'Determine Turbo HIT or MISS'
+        if: ${{ !cancelled() }}
+        id: turbo-summary
+        shell: bash
+        run: |
+          TURBO_MISS_COUNT=`node utils/determine-turbo-hit-or-miss.js`
+          echo "MISS COUNT: $TURBO_MISS_COUNT"
+          echo "misses=$TURBO_MISS_COUNT" >> $GITHUB_OUTPUT
+      - name: fetch ssl certificate after tests (linux, os x)
+        if: matrix.runner != 'windows-latest'
+        run: echo | openssl s_client -showcerts -servername 'api.vercel.com' -connect 76.76.21.21:443
+      - name: 'Upload Test Report to Datadog'
+        if: ${{ steps['turbo-summary'].outputs.misses != '0' && !cancelled() }}
+        run: 'npx @datadog/datadog-ci@2.18.1 junit upload --service vercel-cli .junit-reports'
+        env:
+          DATADOG_API_KEY: ${{secrets.DATADOG_API_KEY_CLI}}
+          DD_ENV: ci
 
-  conclusion:
+  summary:
+    name: Summary
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: always()
     needs:
       - test
-    runs-on: ubuntu-latest
-    name: E2E
     steps:
-      - name: Done
-        run: echo "Done."
+      - name: Check All
+        run: |-
+          for status in ${{ join(needs.*.result, ' ') }}
+          do
+            if [ "$status" != "success" ] && [ "$status" != "skipped" ]
+            then
+              echo "Some checks failed"
+              exit 1
+            fi
+          done
