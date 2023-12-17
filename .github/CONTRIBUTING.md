@@ -16,6 +16,7 @@ cd vercel
 corepack enable
 pnpm install
 pnpm build
+pnpm lint
 ```
 
 To run the e2e tests, you'll need a `VERCEL_TOKEN`. To get that token, login to https://vercel.com, go to Settings, Tokens, then create a "Full Account" token to use for this purpose.
@@ -41,12 +42,21 @@ See [CLI Local Development](../packages/cli#local-development) for more details.
 
 ## Verifying your change
 
-Once you are done with your changes (we even suggest doing it along the way), make sure the relevant tests still pass by running them. Example:
+Once you are done with your changes (we even suggest doing it along the way), make sure the relevant tests still pass by running them.
+
+Example of running a single file:
 
 ```
 # from root of this project
 cd packages/cli
 pnpm test test/integration-1.test.ts
+```
+
+Example of running all tests for changed packages:
+
+```
+# from root of this project
+turbo test
 ```
 
 If any test fails, make sure to fix it along with your changes. See [Interpreting test errors](#Interpreting-test-errors) for more information about how the tests are executed, especially the integration tests.
