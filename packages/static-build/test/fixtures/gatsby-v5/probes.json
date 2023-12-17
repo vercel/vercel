@@ -22,8 +22,13 @@
       "mustContain": "<h1>Page not found</h1>"
     },
     {
-      "path": "/foo/bar/ssr/",
-      "mustContain": "<h1>This page is <!-- -->rendered server side (nested)</h1>"
+      "fetchOptions": { "redirect": "manual" },
+      "path": "/redirect/",
+      "status": 307
+    },
+    {
+      "path": "/rewrite/",
+      "mustContain": "Vercel"
     }
   ]
 }
