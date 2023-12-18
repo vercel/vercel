@@ -355,7 +355,7 @@ test('dev server waits for waitUntil promises to resolve', async () => {
     });
 
     // Dev server should keep running until waitUntil promise resolves...
-    child.kill('SIGTERM');
+    child.send('shutdown');
 
     // Wait for waitUntil promise to resolve...
     const settled = await Promise.race([
