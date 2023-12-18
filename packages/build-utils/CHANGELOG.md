@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 7.4.0
+
+### Minor Changes
+
+- Adds new helper `getPathForPackageManager()` ([#10918](https://github.com/vercel/vercel/pull/10918))
+
 ## 7.3.0
 
 ### Minor Changes

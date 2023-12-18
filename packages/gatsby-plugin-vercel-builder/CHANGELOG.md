@@ -1,5 +1,14 @@
 # @vercel/gatsby-plugin-vercel-builder
 
+## 2.0.13
+
+### Patch Changes
+
+- Add support for "rewrites" ([#10954](https://github.com/vercel/vercel/pull/10954))
+
+- Updated dependencies [[`4d63d9e95`](https://github.com/vercel/vercel/commit/4d63d9e954549d811063d259250d1865b7de2ba1)]:
+  - @vercel/build-utils@7.4.0
+
 ## 2.0.12
 
 ### Patch Changes
