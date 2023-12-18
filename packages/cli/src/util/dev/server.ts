@@ -1028,13 +1028,13 @@ export default class DevServer {
     const { debug } = this.output;
     debug(`Killing builder dev server with PID ${pid}`);
     const shutdownCb = this.shutdownCallbacks.get(pid);
+    this.shutdownCallbacks.delete(pid);
+
     if (shutdownCb) {
       debug(`Running shutdown callback for PID ${pid}`);
       await shutdownCb();
       return;
     }
-
-    this.shutdownCallbacks.delete(pid);
 
     try {
       await treeKill(pid);
