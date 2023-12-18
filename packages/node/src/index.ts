@@ -653,7 +653,11 @@ export const startDevServer: StartDevServer = async opts => {
       });
     }
 
+    // An optional callback for graceful shutdown.
     const shutdown = async () => {
+      // Send a "shutdown" message to the child process. Ideally we'd use a signal
+      // (SIGTERM) here, but that doesn't work on Windows. This is a portable way
+      // to tell the child process to exit gracefully.
       child.send('shutdown');
     };
 
