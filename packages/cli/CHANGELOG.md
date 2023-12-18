@@ -1,5 +1,21 @@
 # vercel
 
+## 33.0.0
+
+### Major Changes
+
+- [cli] replace `--deprecated` with `--update-required` in `vc project ls` ([#10965](https://github.com/vercel/vercel/pull/10965))
+
+### Patch Changes
+
+- Fix `vercel bisect` selecting too many deployments ([#10956](https://github.com/vercel/vercel/pull/10956))
+
+- Updated dependencies [[`6a9002f22`](https://github.com/vercel/vercel/commit/6a9002f2296c5ccce4522c0fa9a8938c3d7a4849), [`4d63d9e95`](https://github.com/vercel/vercel/commit/4d63d9e954549d811063d259250d1865b7de2ba1)]:
+  - @vercel/remix-builder@2.0.15
+  - @vercel/build-utils@7.4.0
+  - @vercel/static-build@2.0.15
+  - @vercel/node@3.0.13
+
 ## 32.7.2
 
 ### Patch Changes
