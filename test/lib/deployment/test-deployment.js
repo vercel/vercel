@@ -2,7 +2,7 @@ const assert = require('assert');
 const bufferReplace = require('buffer-replace');
 const fs = require('fs');
 const json5 = require('json5');
-const glob = require('util').promisify(require('glob'));
+const { glob } = require('glob');
 const path = require('path');
 const { spawn } = require('child_process');
 const fetch = require('./fetch-retry.js');
@@ -220,6 +220,16 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
     hadTest = true;
   }
 
+  if (probe.bodyMustBe) {
+    if (text !== probe.bodyMustBe) {
+      throw new Error(
+        `Fetched page ${probeUrl} does not have an exact body match of ${probe.bodyMustBe}. Content: ${text}`
+      );
+    }
+
+    hadTest = true;
+  }
+
   /**
    * @type Record<string, string[]>
    */
@@ -273,7 +283,9 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
       }
     });
     hadTest = true;
-  } else if (probe.notResponseHeaders) {
+  }
+
+  if (probe.notResponseHeaders) {
     Object.keys(probe.notResponseHeaders).forEach(header => {
       const headerValue = resp.headers.get(header);
       const expected = probe.notResponseHeaders[header];

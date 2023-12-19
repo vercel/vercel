@@ -14,7 +14,6 @@ try {
 
 import { join } from 'path';
 import { existsSync } from 'fs';
-import sourceMap from '@zeit/source-map-support';
 import { mkdirp } from 'fs-extra';
 import chalk from 'chalk';
 import epipebomb from 'epipebomb';
@@ -56,6 +55,7 @@ import { ProxyAgent } from 'proxy-agent';
 import box from './util/output/box';
 import { execExtension } from './util/extension/exec';
 import { help } from './args';
+import { updateCurrentTeamAfterLogin } from './util/login/update-current-team-after-login';
 
 const VERCEL_DIR = getGlobalPathConfig();
 const VERCEL_CONFIG_PATH = configFiles.getConfigFilePath();
@@ -64,8 +64,6 @@ const VERCEL_AUTH_CONFIG_PATH = configFiles.getAuthConfigFilePath();
 const GLOBAL_COMMANDS = new Set(['help']);
 
 epipebomb();
-
-sourceMap.install();
 
 // Configure the error reporting system
 Sentry.init({
@@ -143,12 +141,6 @@ const main = async () => {
     output.prettyError(localConfig);
     return 1;
   }
-
-  let cwd = argv['--cwd'];
-  if (cwd) {
-    process.chdir(cwd);
-  }
-  cwd = process.cwd();
 
   // The second argument to the command can be:
   //
@@ -277,6 +269,12 @@ const main = async () => {
     argv: process.argv,
   });
 
+  // The `--cwd` flag is respected for all sub-commands
+  if (argv['--cwd']) {
+    client.cwd = argv['--cwd'];
+  }
+  const { cwd } = client;
+
   // Gets populated to the subcommand name when a built-in is
   // provided, otherwise it remains undefined for an extension
   let subcommand: string | undefined = undefined;
@@ -337,16 +335,11 @@ const main = async () => {
         return result;
       }
 
-      if (result.teamId) {
-        // SSO login, so set the current scope to the appropriate Team
-        client.config.currentTeam = result.teamId;
-      } else {
-        delete client.config.currentTeam;
-      }
-
       // When `result` is a string it's the user's authentication token.
       // It needs to be saved to the configuration file.
       client.authConfig.token = result.token;
+
+      await updateCurrentTeamAfterLogin(client, output, result.teamId);
 
       configFiles.writeToAuthConfigFile(client.authConfig);
       configFiles.writeToConfigFile(client.config);
@@ -433,6 +426,10 @@ const main = async () => {
     try {
       user = await getUser(client);
     } catch (err: unknown) {
+      if (err instanceof Error) {
+        output.debug(err.stack || err.toString());
+      }
+
       if (isErrnoException(err) && err.code === 'NOT_AUTHORIZED') {
         output.prettyError({
           message: `You do not have access to the specified account`,
@@ -447,6 +444,11 @@ const main = async () => {
     }
 
     if (user.id === scope || user.email === scope || user.username === scope) {
+      if (user.version === 'northstar') {
+        output.error('You cannot set your Personal Account as the scope.');
+        return 1;
+      }
+
       delete client.config.currentTeam;
     } else {
       let teams = [];
@@ -571,8 +573,14 @@ const main = async () => {
         case 'project':
           func = require('./commands/project').default;
           break;
+        case 'promote':
+          func = require('./commands/promote').default;
+          break;
         case 'pull':
           func = require('./commands/pull').default;
+          break;
+        case 'redeploy':
+          func = require('./commands/redeploy').default;
           break;
         case 'remove':
           func = require('./commands/remove').default;

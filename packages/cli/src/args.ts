@@ -1,9 +1,8 @@
 import chalk from 'chalk';
-import logo from './util/output/logo';
-import { getPkgName } from './util/pkg-name';
+import { packageName, logo } from './util/pkg-name';
 
 export const help = () => `
-  ${chalk.bold(`${logo} ${getPkgName()}`)} [options] <command | path>
+  ${chalk.bold(`${logo} ${packageName}`)} [options] <command | path>
 
   ${chalk.dim('For deploy command help, run `vercel deploy --help`')}
 
@@ -24,9 +23,11 @@ export const help = () => `
       ls | list            [app]       Lists deployments
       login                [email]     Logs into your account or creates a new one
       logout                           Logs out of your account
+      promote              [url|id]    Promote an existing deployment to current
       pull                 [path]      Pull your Project Settings from the cloud
+      redeploy             [url|id]    Rebuild and deploy a previous deployment.
       rollback             [url|id]    Quickly revert back to a previous deployment
-      switch               [scope]     Switches between teams and your personal account
+      switch               [scope]     Switches between different scopes
 
     ${chalk.dim('Advanced')}
 
@@ -64,19 +65,19 @@ export const help = () => `
 
   ${chalk.gray('–')} Deploy the current directory
 
-    ${chalk.cyan(`$ ${getPkgName()}`)}
+    ${chalk.cyan(`$ ${packageName}`)}
 
   ${chalk.gray('–')} Deploy a custom path
 
-    ${chalk.cyan(`$ ${getPkgName()} /usr/src/project`)}
+    ${chalk.cyan(`$ ${packageName} /usr/src/project`)}
 
   ${chalk.gray('–')} Deploy with Environment Variables
 
-    ${chalk.cyan(`$ ${getPkgName()} -e NODE_ENV=production`)}
+    ${chalk.cyan(`$ ${packageName} -e NODE_ENV=production`)}
 
   ${chalk.gray('–')} Show the usage information for the sub command ${chalk.dim(
   '`list`'
 )}
 
-    ${chalk.cyan(`$ ${getPkgName()} help list`)}
+    ${chalk.cyan(`$ ${packageName} help list`)}
 `;

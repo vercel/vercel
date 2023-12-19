@@ -45,10 +45,7 @@ test('[vercel dev] validate env var names', async () => {
         if (
           stderr.includes('Ignoring env var "1" because name is invalid') &&
           stderr.includes(
-            'Ignoring build env var "_a" because name is invalid'
-          ) &&
-          stderr.includes(
-            'Env var names must start with letters, and can only contain alphanumeric characters and underscores'
+            'The name contains invalid characters. Only letters, digits, and underscores are allowed. Furthermore, the name should not start with a digit'
           )
         ) {
           resolve();
@@ -78,6 +75,7 @@ test(
   '[vercel dev] test rewrites serve correct content',
   testFixtureStdio('test-rewrites', async (testPath: any) => {
     await testPath(200, '/hello', 'Hello World');
+    await testPath(425, '/status-rewrite-425', 'Hello World');
   })
 );
 
@@ -88,10 +86,10 @@ test(
     async (testPath: any) => {
       const vcRobots = `https://vercel.com/robots.txt`;
       await testPath(200, '/rewrite', /User-Agent: \*/m);
-      await testPath(308, '/redirect', `Redirecting to ${vcRobots} (308)`, {
+      await testPath(308, '/redirect', `Redirecting...`, {
         Location: vcRobots,
       });
-      await testPath(307, '/tempRedirect', `Redirecting to ${vcRobots} (307)`, {
+      await testPath(307, '/tempRedirect', `Redirecting...`, {
         Location: vcRobots,
       });
     }
@@ -103,10 +101,10 @@ test(
   testFixtureStdio('test-routing-case-sensitive', async (testPath: any) => {
     await testPath(200, '/Path', 'UPPERCASE');
     await testPath(200, '/path', 'lowercase');
-    await testPath(308, '/GoTo', 'Redirecting to /upper.html (308)', {
+    await testPath(308, '/GoTo', 'Redirecting...', {
       Location: '/upper.html',
     });
-    await testPath(308, '/goto', 'Redirecting to /lower.html (308)', {
+    await testPath(308, '/goto', 'Redirecting...', {
       Location: '/lower.html',
     });
   })

@@ -9,7 +9,7 @@ import {
 import { Output } from '../output';
 import { progress } from '../output/progress';
 import Now from '../../util';
-import type { Org } from '@vercel-internals/types';
+import type { Deployment, Org } from '@vercel-internals/types';
 import ua from '../ua';
 import { linkFolderToProject } from '../projects/link';
 import { prependEmoji, emoji } from '../emoji';
@@ -17,9 +17,13 @@ import type { Agent } from 'http';
 
 function printInspectUrl(
   output: Output,
-  inspectorUrl: string,
+  inspectorUrl: string | null | undefined,
   deployStamp: () => string
 ) {
+  if (!inspectorUrl) {
+    return;
+  }
+
   output.print(
     prependEmoji(
       `Inspect: ${chalk.bold(inspectorUrl)} ${deployStamp()}`,
@@ -40,8 +44,7 @@ export default async function processDeployment({
   ...args
 }: {
   now: Now;
-  output: Output;
-  paths: string[];
+  path: string;
   requestBody: DeploymentOptions;
   uploadStamp: () => string;
   deployStamp: () => string;
@@ -54,15 +57,14 @@ export default async function processDeployment({
   isSettingUpProject: boolean;
   archive?: ArchiveFormat;
   skipAutoDetectionConfirmation?: boolean;
-  cwd?: string;
+  cwd: string;
   rootDirectory?: string | null;
   noWait?: boolean;
   agent?: Agent;
 }) {
   let {
     now,
-    output,
-    paths,
+    path,
     requestBody,
     deployStamp,
     force,
@@ -72,10 +74,9 @@ export default async function processDeployment({
     rootDirectory,
   } = args;
 
-  const { debug } = output;
-
+  const client = now._client;
+  const { output } = client;
   const { env = {} } = requestBody;
-
   const token = now._token;
   if (!token) {
     throw new Error('Missing authentication token');
@@ -87,7 +88,7 @@ export default async function processDeployment({
     token,
     debug: now._debug,
     userAgent: ua,
-    path: paths[0],
+    path,
     force,
     withCache,
     prebuilt,
@@ -114,7 +115,7 @@ export default async function processDeployment({
 
       if (event.type === 'file-count') {
         const { total, missing, uploads } = event.payload;
-        debug(`Total files ${total.size}, ${missing.length} changed`);
+        output.debug(`Total files ${total.size}, ${missing.length} changed`);
 
         const missingSize = missing
           .map((sha: string) => total.get(sha).data.length)
@@ -157,7 +158,7 @@ export default async function processDeployment({
       }
 
       if (event.type === 'file-uploaded') {
-        debug(
+        output.debug(
           `Uploaded: ${event.payload.file.names.join(' ')} (${bytes(
             event.payload.file.data.length
           )})`
@@ -165,33 +166,47 @@ export default async function processDeployment({
       }
 
       if (event.type === 'created') {
+        const deployment: Deployment = event.payload;
+
         await linkFolderToProject(
-          output,
-          cwd || paths[0],
+          client,
+          cwd,
           {
             orgId: org.id,
-            projectId: event.payload.projectId,
+            projectId: deployment.projectId!,
           },
           projectName,
           org.slug
         );
 
-        now.url = event.payload.url;
+        now.url = deployment.url;
 
         output.stopSpinner();
 
-        printInspectUrl(output, event.payload.inspectorUrl, deployStamp);
+        printInspectUrl(output, deployment.inspectorUrl, deployStamp);
+
+        const isProdDeployment = requestBody.target === 'production';
+        const previewUrl = `https://${deployment.url}`;
+
+        output.print(
+          prependEmoji(
+            `${isProdDeployment ? 'Production' : 'Preview'}: ${chalk.bold(
+              previewUrl
+            )} ${deployStamp()}`,
+            emoji('success')
+          ) + `\n`
+        );
 
         if (quiet) {
           process.stdout.write(`https://${event.payload.url}`);
         }
 
         if (noWait) {
-          return event.payload;
+          return deployment;
         }
 
         output.spinner(
-          event.payload.readyState === 'QUEUED' ? 'Queued' : 'Building',
+          deployment.readyState === 'QUEUED' ? 'Queued' : 'Building',
           0
         );
       }
@@ -237,11 +252,16 @@ export default async function processDeployment({
           return error;
         }
 
+        if (error.code === 'forbidden') {
+          return error;
+        }
+
         throw error;
       }
 
       // Handle alias-assigned event
       if (event.type === 'alias-assigned') {
+        output.stopSpinner();
         event.payload.indications = indications;
         return event.payload;
       }

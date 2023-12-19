@@ -12,21 +12,21 @@ export default async function createDeploy(
   client: Client,
   now: Now,
   contextName: string,
-  paths: string[],
+  path: string,
   createArgs: CreateOptions,
   org: Org,
   isSettingUpProject: boolean,
-  cwd?: string,
+  cwd: string,
   archive?: ArchiveFormat
 ): Promise<any | DeploymentError> {
   try {
     return await now.create(
-      paths,
+      path,
       createArgs,
       org,
       isSettingUpProject,
-      archive,
-      cwd
+      cwd,
+      archive
     );
   } catch (err: unknown) {
     if (ERRORS_TS.isAPIError(err)) {
@@ -109,10 +109,11 @@ export default async function createDeploy(
           client,
           now,
           contextName,
-          paths,
+          path,
           createArgs,
           org,
-          isSettingUpProject
+          isSettingUpProject,
+          cwd
         );
       }
 

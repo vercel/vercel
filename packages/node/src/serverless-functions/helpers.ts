@@ -1,6 +1,10 @@
 import type { ServerResponse, IncomingMessage } from 'http';
 import { serializeBody } from '../utils';
 import { PassThrough } from 'stream';
+import { parse as parseURL } from 'url';
+import { parse as parseContentType } from 'content-type';
+import { parse as parseQS } from 'querystring';
+import etag from 'etag';
 
 type VercelRequestCookies = { [key: string]: string };
 type VercelRequestQuery = { [key: string]: string | string[] };
@@ -27,10 +31,18 @@ class ApiError extends Error {
   }
 }
 
-function getBodyParser(body: Buffer, contentType: string | undefined) {
+function normalizeContentType(contentType: string | undefined) {
+  if (!contentType) {
+    return 'text/plain';
+  }
+
+  const { type } = parseContentType(contentType);
+  return type;
+}
+
+export function getBodyParser(body: Buffer, contentType: string | undefined) {
   return function parseBody(): VercelRequestBody {
-    const { parse: parseContentType } = require('content-type');
-    const { type } = parseContentType(contentType);
+    const type = normalizeContentType(contentType);
 
     if (type === 'application/json') {
       try {
@@ -44,7 +56,6 @@ function getBodyParser(body: Buffer, contentType: string | undefined) {
     if (type === 'application/octet-stream') return body;
 
     if (type === 'application/x-www-form-urlencoded') {
-      const { parse: parseQS } = require('querystring');
       // note: querystring.parse does not produce an iterable object
       // https://nodejs.org/api/querystring.html#querystring_querystring_parse_str_sep_eq_options
       return parseQS(body.toString());
@@ -58,8 +69,7 @@ function getBodyParser(body: Buffer, contentType: string | undefined) {
 
 function getQueryParser({ url = '/' }: IncomingMessage) {
   return function parseQuery(): VercelRequestQuery {
-    const { parse: parseURL } = require('url');
-    return parseURL(url, true).query;
+    return parseURL(url, true).query as VercelRequestQuery;
   };
 }
 
@@ -121,7 +131,6 @@ function setLazyProp<T>(req: IncomingMessage, prop: string, getter: () => T) {
 }
 
 function createETag(body: any, encoding: 'utf8' | undefined) {
-  const etag = require('etag');
   const buf = !Buffer.isBuffer(body) ? Buffer.from(body, encoding) : body;
   return etag(buf, { weak: true });
 }

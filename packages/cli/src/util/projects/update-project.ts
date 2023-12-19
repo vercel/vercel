@@ -1,26 +1,16 @@
 import Client from '../client';
-import type { JSONObject, ProjectSettings } from '@vercel-internals/types';
-
-interface ProjectSettingsResponse extends ProjectSettings {
-  id: string;
-  name: string;
-  updatedAt: number;
-  createdAt: number;
-}
+import type { Project, ProjectSettings } from '@vercel-internals/types';
 
 export default async function updateProject(
   client: Client,
   prjNameOrId: string,
   settings: ProjectSettings
 ) {
-  // `ProjectSettings` is technically compatible with JSONObject
-  const body = settings as JSONObject;
-
-  const res = await client.fetch<ProjectSettingsResponse>(
+  const res = await client.fetch<Project>(
     `/v2/projects/${encodeURIComponent(prjNameOrId)}`,
     {
       method: 'PATCH',
-      body,
+      body: { ...settings },
     }
   );
   return res;

@@ -11,7 +11,10 @@ import fs, {
   mkdir,
 } from 'fs-extra';
 import sleep from '../src/util/sleep';
-import { fetchTokenWithRetry } from '../../../test/lib/deployment/now-deploy';
+import {
+  disableSSO,
+  fetchTokenWithRetry,
+} from '../../../test/lib/deployment/now-deploy';
 import waitForPrompt from './helpers/wait-for-prompt';
 import { execCli } from './helpers/exec';
 import getGlobalDir from './helpers/get-global-dir';
@@ -43,7 +46,9 @@ function fetchTokenInformation(token: string, retries = 3) {
 
       if (!res.ok) {
         throw new Error(
-          `Failed to fetch ${url}, received status ${res.status}`
+          `Failed to fetch "${url}", status: ${
+            res.status
+          }, id: ${res.headers.get('x-vercel-id')}`
         );
       }
 
@@ -77,6 +82,8 @@ function mockLoginApi(req: http.IncomingMessage, res: http.ServerResponse) {
     query.email === email
   ) {
     res.end(JSON.stringify({ token }));
+  } else if (method === 'GET' && pathname === '/v2/user') {
+    res.end(JSON.stringify({ user: { email } }));
   } else {
     res.statusCode = 405;
     res.end(JSON.stringify({ code: 'method_not_allowed' }));
@@ -323,8 +330,11 @@ test('should show prompts to set up project during first deploy', async () => {
     'README.txt'
   ).toBe(true);
 
+  const { host, href } = new URL(output.stdout);
+  await disableSSO(host, false);
+
   // Send a test request to the deployment
-  const response = await fetch(new URL(output.stdout));
+  const response = await fetch(href);
   const text = await response.text();
   expect(text).toContain('<h1>custom hello</h1>');
 
@@ -636,7 +646,10 @@ test('use `rootDirectory` from project when deploying', async () => {
   const secondResult = await execCli(binaryPath, [directory, '--public']);
   expect(secondResult.exitCode, formatOutput(secondResult)).toBe(0);
 
-  const pageResponse1 = await fetch(secondResult.stdout);
+  const { host, href } = new URL(secondResult.stdout);
+  await disableSSO(host, false);
+
+  const pageResponse1 = await fetch(href);
   expect(pageResponse1.status).toBe(200);
   expect(await pageResponse1.text()).toMatch(/I am a website/gm);
 
@@ -718,6 +731,7 @@ test('deploys with only now.json and README.md', async () => {
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
   const { host } = new URL(stdout);
+  await disableSSO(host, false);
   const res = await fetch(`https://${host}/README.md`);
   const text = await res.text();
   expect(text).toMatch(/readme contents/);
@@ -733,7 +747,14 @@ test('deploys with only vercel.json and README.md', async () => {
   });
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
+
+  // assert timing order of showing URLs vs status updates
+  expect(stderr).toMatch(
+    /Inspect.*\nPreview.*\nQueued.*\nBuilding.*\nCompleting/
+  );
+
   const { host } = new URL(stdout);
+  await disableSSO(host, false);
   const res = await fetch(`https://${host}/README.md`);
   const text = await res.text();
   expect(text).toMatch(/readme contents/);
@@ -811,14 +832,16 @@ test('deploy pnpm twice using pnp and symlink=false', async () => {
 
   await remove(path.join(directory, '.vercel'));
 
-  function deploy() {
-    return execCli(binaryPath, [
+  async function deploy() {
+    const res = await execCli(binaryPath, [
       directory,
       '--name',
       session,
       '--public',
       '--yes',
     ]);
+    await disableSSO(res.stdout, false);
+    return res;
   }
 
   let { exitCode, stdout, stderr } = await deploy();
@@ -1144,6 +1167,36 @@ test('[vc build] should build project with `@vercel/static-build`', async () => 
   expect(builds.builds[0].use).toBe('@vercel/static-build');
 });
 
+test('[vc build] should build project with `@vercel/speed-insights`', async () => {
+  try {
+    process.env.VERCEL_ANALYTICS_ID = '123';
+
+    const directory = await setupE2EFixture('vc-build-speed-insights');
+    const output = await execCli(binaryPath, ['build'], { cwd: directory });
+    expect(output.exitCode, formatOutput(output)).toBe(0);
+    expect(output.stderr).toContain('Build Completed in .vercel/output');
+    expect(output.stderr).toContain(
+      'The `VERCEL_ANALYTICS_ID` environment variable is deprecated and will be removed in a future release. Please remove it from your environment variables'
+    );
+    const builds = await fs.readJSON(
+      path.join(directory, '.vercel/output/builds.json')
+    );
+    expect(builds?.features?.speedInsightsVersion).toEqual('0.0.1');
+  } finally {
+    delete process.env.VERCEL_ANALYTICS_ID;
+  }
+});
+
+test('[vc build] should build project with `@vercel/analytics`', async () => {
+  const directory = await setupE2EFixture('vc-build-web-analytics');
+  const output = await execCli(binaryPath, ['build'], { cwd: directory });
+  expect(output.exitCode, formatOutput(output)).toBe(0);
+  const builds = await fs.readJSON(
+    path.join(directory, '.vercel/output/builds.json')
+  );
+  expect(builds?.features?.webAnalyticsVersion).toEqual('1.0.0');
+});
+
 test('[vc build] should not include .vercel when distDir is "."', async () => {
   const directory = await setupE2EFixture('static-build-dist-dir');
   const output = await execCli(binaryPath, ['build'], { cwd: directory });
@@ -1203,6 +1256,8 @@ test('vercel.json configuration overrides in a new project prompt user and merge
   const deployment = await vc;
   expect(deployment.exitCode, formatOutput(deployment)).toBe(0);
   // assert the command were executed
+  await disableSSO(deployment.stdout, false);
+
   let page = await fetch(deployment.stdout);
   let text = await page.text();
   expect(text).toBe('1\n');
@@ -1233,7 +1288,9 @@ test('vercel.json configuration overrides in an existing project do not prompt u
   // auto-confirm this deployment
   let deployment = await deploy(true);
 
-  let page = await fetch(deployment.stdout);
+  const { host, href } = new URL(deployment.stdout);
+  await disableSSO(host, false);
+  let page = await fetch(href);
   let text = await page.text();
   expect(text).toBe('0');
 

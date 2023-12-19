@@ -17,5 +17,6 @@
   },
   "resolutions": {
     "@babel/compat-data": "7.21.4"
-  }
+  },
+  "ignoreNextjsUpdates": true
 }

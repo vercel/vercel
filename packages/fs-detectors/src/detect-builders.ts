@@ -339,7 +339,7 @@ export async function detectBuilders(
       warnings.push({
         code: 'conflicting_files',
         message:
-          'When using Next.js, it is recommended to place Node.js Serverless Functions inside of the `pages/api` (provided by Next.js) directory instead of `api` (provided by Vercel).',
+          'When using Next.js, it is recommended to place JavaScript Functions inside of the `pages/api` (provided by Next.js) directory instead of `api` (provided by Vercel). Other languages (Python, Go, etc) should still go in the `api` directory.',
         link: 'https://nextjs.org/docs/api-routes/introduction',
         action: 'Learn More',
       });
@@ -992,6 +992,7 @@ function getRouteResult(
   const rewriteRoutes: Route[] = [];
   const errorRoutes: Route[] = [];
   const framework = frontendBuilder?.config?.framework || '';
+  const isGatsby = framework === 'gatsby';
   const isNextjs =
     framework === 'nextjs' || isOfficialRuntime('next', frontendBuilder?.use);
   const ignoreRuntimes = slugToFramework.get(framework)?.ignoreRuntimes;
@@ -1071,8 +1072,8 @@ function getRouteResult(
     });
   }
 
-  if (options.featHandleMiss && !isNextjs) {
-    // Exclude Next.js to avoid overriding custom error page
+  if (options.featHandleMiss && !isNextjs && !isGatsby) {
+    // Exclude Next.js (and Gatsby) to avoid overriding custom error page
     // https://nextjs.org/docs/advanced-features/custom-error-page
     errorRoutes.push({
       status: 404,

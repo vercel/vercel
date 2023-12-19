@@ -23,6 +23,9 @@ jobs:
       - name: Checkout Repo
         uses: actions/checkout@v3
 
+      - name: Fetch git tags
+        run: git fetch origin 'refs/tags/*:refs/tags/*'
+
       - name: Setup Node
         uses: actions/setup-node@v3
         with:
@@ -47,23 +50,14 @@ jobs:
         id: changesets
         uses: changesets/action@v1
         with:
-          version: pnpm version:prepare
-          publish: pnpm release
+          version: pnpm ci:version
+          publish: pnpm ci:publish
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN_PULL_REQUESTS }}
           NPM_CONFIG_PROVENANCE: 'true'
           NPM_TOKEN: ${{ secrets.NPM_TOKEN_ELEVATED }}
           GA_TRACKING_ID: ${{ secrets.GA_TRACKING_ID }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
-
-      - name: Set latest Release to `vercel` (if a Publish Happened)
-        if: steps.changesets.outputs.published == 'true'
-        uses: actions/github-script@v6
-        with:
-          github-token: ${{ secrets.GH_TOKEN_PULL_REQUESTS }}
-          script: |
-            const script = require('./utils/update-latest-release.js')
-            await script({ github, context })
 
       - name: Trigger Update (if a Publish Happened)
         if: steps.changesets.outputs.published == 'true'
@@ -73,3 +67,21 @@ jobs:
           script: |
             const script = require('./utils/trigger-update-workflow.js')
             await script({ github, context })
+
+      - name: Set latest Release to `vercel` (if a Publish Happened)
+        if: steps.changesets.outputs.published == 'true'
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GH_TOKEN_PULL_REQUESTS }}
+          script: |
+            const script = require('./utils/update-latest-release.js')
+            await script({ github, context })
+  summary:
+    name: Summary
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs:
+      - release
+    steps:
+      - name: Check All
+        run: echo OK

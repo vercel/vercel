@@ -25,10 +25,6 @@ const ARG_COMMON = {
   '--api': String,
 
   '--cwd': String,
-
-  // Deprecated
-  '--platform-version': Number,
-  '-V': '--platform-version',
 };
 
 export default () => ARG_COMMON;

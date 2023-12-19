@@ -1,15 +1,19 @@
 import { addHelpers } from './helpers.js';
 import { createServer } from 'http';
 import { serializeBody } from '../utils.js';
-import { streamToBuffer } from '@vercel/build-utils';
 import exitHook from 'exit-hook';
-import fetch from 'node-fetch';
+import { type Dispatcher, Headers, request as undiciRequest } from 'undici';
 import { listen } from 'async-listen';
 import { isAbsolute } from 'path';
 import { pathToFileURL } from 'url';
+import { buildToHeaders } from '@edge-runtime/node-utils';
 import type { ServerResponse, IncomingMessage } from 'http';
 import type { VercelProxyResponse } from '../types.js';
 import type { VercelRequest, VercelResponse } from './helpers.js';
+import type { Readable } from 'stream';
+
+// @ts-expect-error
+const toHeaders = buildToHeaders({ Headers });
 
 type ServerlessServerOptions = {
   shouldAddHelpers: boolean;
@@ -21,66 +25,88 @@ type ServerlessFunctionSignature = (
   res: ServerResponse | VercelResponse
 ) => void;
 
-async function createServerlessServer(
-  userCode: ServerlessFunctionSignature,
-  options: ServerlessServerOptions
-) {
-  const server = createServer(async (req, res) => {
-    if (options.shouldAddHelpers) await addHelpers(req, res);
-    return userCode(req, res);
-  });
+const [NODE_MAJOR] = process.versions.node.split('.').map(v => Number(v));
+
+/* https://nextjs.org/docs/app/building-your-application/routing/router-handlers#supported-http-methods */
+const HTTP_METHODS = [
+  'GET',
+  'HEAD',
+  'OPTIONS',
+  'POST',
+  'PUT',
+  'DELETE',
+  'PATCH',
+];
+
+async function createServerlessServer(userCode: ServerlessFunctionSignature) {
+  const server = createServer(userCode);
   exitHook(() => server.close());
   return { url: await listen(server) };
 }
 
-async function compileUserCode(entrypointPath: string) {
+async function compileUserCode(
+  entrypointPath: string,
+  options: ServerlessServerOptions
+) {
   const id = isAbsolute(entrypointPath)
     ? pathToFileURL(entrypointPath).href
     : entrypointPath;
-  let fn = await import(id);
+  let listener = await import(id);
 
   /**
    * In some cases we might have nested default props due to TS => JS
    */
   for (let i = 0; i < 5; i++) {
-    if (fn.default) fn = fn.default;
+    if (listener.default) listener = listener.default;
   }
 
-  return fn;
+  if (HTTP_METHODS.some(method => typeof listener[method] === 'function')) {
+    if (NODE_MAJOR < 18) {
+      throw new Error(
+        'Node.js v18 or above is required to use HTTP method exports in your functions.'
+      );
+    }
+    const { getWebExportsHandler } = await import('./helpers-web.js');
+    return getWebExportsHandler(listener, HTTP_METHODS);
+  }
+
+  return async (req: IncomingMessage, res: ServerResponse) => {
+    if (options.shouldAddHelpers) await addHelpers(req, res);
+    return listener(req, res);
+  };
 }
 
 export async function createServerlessEventHandler(
   entrypointPath: string,
   options: ServerlessServerOptions
 ): Promise<(request: IncomingMessage) => Promise<VercelProxyResponse>> {
-  const userCode = await compileUserCode(entrypointPath);
-  const server = await createServerlessServer(userCode, options);
+  const userCode = await compileUserCode(entrypointPath, options);
+  const server = await createServerlessServer(userCode);
+  const isStreaming = options.mode === 'streaming';
 
   return async function (request: IncomingMessage) {
     const url = new URL(request.url ?? '/', server.url);
-    // @ts-expect-error
-    const response = await fetch(url, {
+    const response = await undiciRequest(url, {
       body: await serializeBody(request),
       headers: {
         ...request.headers,
         host: request.headers['x-forwarded-host'],
       },
-      method: request.method,
-      redirect: 'manual',
+      method: (request.method || 'GET') as Dispatcher.HttpMethod,
     });
 
-    let body;
-    if (options.mode === 'streaming') {
+    let body: Readable | Buffer | null = null;
+    let headers = toHeaders(response.headers) as Headers;
+
+    if (isStreaming) {
       body = response.body;
     } else {
-      body = await streamToBuffer(response.body);
-      response.headers.delete('transfer-encoding');
-      response.headers.set('content-length', body.length);
+      body = Buffer.from(await response.body.arrayBuffer());
     }
 
     return {
-      status: response.status,
-      headers: response.headers,
+      status: response.statusCode,
+      headers,
       body,
       encoding: 'utf8',
     };

@@ -306,10 +306,9 @@ describe('createGitMeta', () => {
     }
   });
   it('uses the repo url for a connected project', async () => {
-    const originalCwd = process.cwd();
     const directory = fixture('connected-repo');
+    client.cwd = directory;
     try {
-      process.chdir(directory);
       await fs.rename(join(directory, 'git'), join(directory, '.git'));
 
       useUser();
@@ -343,7 +342,6 @@ describe('createGitMeta', () => {
       });
     } finally {
       await fs.rename(join(directory, '.git'), join(directory, 'git'));
-      process.chdir(originalCwd);
     }
   });
 });

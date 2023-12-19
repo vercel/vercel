@@ -20,6 +20,7 @@ import isPortReachable from 'is-port-reachable';
 import deepEqual from 'fast-deep-equal';
 import npa from 'npm-package-arg';
 import type { ChildProcess } from 'child_process';
+import JSONparse from 'json-parse-better-errors';
 
 import { getVercelIgnore, fileNameSymbol } from '@vercel/client';
 import {
@@ -32,7 +33,7 @@ import {
   Builder,
   cloneEnv,
   Env,
-  getNodeBinPath,
+  getNodeBinPaths,
   StartDevServerResult,
   FileFsRef,
   PackageJson,
@@ -124,6 +125,7 @@ function sortBuilders(buildA: Builder, buildB: Builder) {
 
 export default class DevServer {
   public cwd: string;
+  public repoRoot: string;
   public output: Output;
   public proxy: httpProxy;
   public envConfigs: EnvConfigs;
@@ -169,6 +171,7 @@ export default class DevServer {
 
   constructor(cwd: string, options: DevServerOptions) {
     this.cwd = cwd;
+    this.repoRoot = options.repoRoot ?? cwd;
     this.output = options.output;
     this.envConfigs = { buildEnv: {}, runEnv: {}, allEnv: {} };
     this.envValues = options.envValues || {};
@@ -724,7 +727,7 @@ export default class DevServer {
 
     try {
       const raw = await fs.readFile(abs, 'utf8');
-      const parsed: WithFileNameSymbol<T> = JSON.parse(raw);
+      const parsed: WithFileNameSymbol<T> = JSONparse(raw);
       parsed[fileNameSymbol] = rel;
       return parsed;
     } catch (err: unknown) {
@@ -787,11 +790,10 @@ export default class DevServer {
 
     const merged: Env = { ...env, ...localEnv };
 
-    // Validate that the env var name matches what AWS Lambda allows:
-    //   - https://docs.aws.amazon.com/lambda/latest/dg/env_variables.html
+    // Validate that the env var name satisfies what Vercel's platform accepts.
     let hasInvalidName = false;
     for (const key of Object.keys(merged)) {
-      if (!/^[a-zA-Z][a-zA-Z0-9_]*$/.test(key)) {
+      if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(key)) {
         this.output.warn(
           `Ignoring ${type
             .split('.')
@@ -805,7 +807,7 @@ export default class DevServer {
     }
     if (hasInvalidName) {
       this.output.log(
-        'Env var names must start with letters, and can only contain alphanumeric characters and underscores'
+        'The name contains invalid characters. Only letters, digits, and underscores are allowed. Furthermore, the name should not start with a digit'
       );
     }
 
@@ -1131,7 +1133,7 @@ export default class DevServer {
       body = redirectTemplate({ location, statusCode });
     } else {
       res.setHeader('content-type', 'text/plain; charset=utf-8');
-      body = `Redirecting to ${location} (${statusCode})\n`;
+      body = `Redirecting...\n`;
     }
     res.end(body);
   }
@@ -1316,6 +1318,11 @@ export default class DevServer {
     }
 
     if (!match && status && phase !== 'miss') {
+      if (routeResult.userDest) {
+        // If it's a user defined route then we continue routing
+        return false;
+      }
+
       this.output.debug(`Route found with with status code ${status}`);
       await this.sendError(req, res, requestId, '', status, headers);
       return true;
@@ -1412,7 +1419,7 @@ export default class DevServer {
             files,
             entrypoint: middleware.entrypoint,
             workPath,
-            repoRootPath: this.cwd,
+            repoRootPath: this.repoRoot,
             config: middleware.config || {},
             meta: {
               isDev: true,
@@ -1849,7 +1856,7 @@ export default class DevServer {
           entrypoint: match.entrypoint,
           workPath,
           config: match.config || {},
-          repoRootPath: this.cwd,
+          repoRootPath: this.repoRoot,
           meta: {
             isDev: true,
             requestPath,
@@ -2237,7 +2244,8 @@ export default class DevServer {
     );
 
     // add the node_modules/.bin directory to the PATH
-    const nodeBinPath = await getNodeBinPath({ cwd });
+    const nodeBinPaths = getNodeBinPaths({ base: this.repoRoot, start: cwd });
+    const nodeBinPath = nodeBinPaths.join(path.delimiter);
     env.PATH = `${nodeBinPath}${path.delimiter}${env.PATH}`;
 
     // This is necesary so that the dev command in the Project

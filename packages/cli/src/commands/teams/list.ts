@@ -2,8 +2,7 @@ import chars from '../../util/output/chars';
 import table from '../../util/output/table';
 import getUser from '../../util/get-user';
 import getTeams from '../../util/teams/get-teams';
-import getPrefixedFlags from '../../util/get-prefixed-flags';
-import { getPkgName } from '../../util/pkg-name';
+import { packageName } from '../../util/pkg-name';
 import getCommandFlags from '../../util/get-command-flags';
 import cmd from '../../util/output/cmd';
 import Client from '../../util/client';
@@ -40,10 +39,11 @@ export default async function list(client: Client): Promise<number> {
     apiVersion: 2,
   });
   let { currentTeam } = config;
-  const accountIsCurrent = !currentTeam;
 
   output.spinner('Fetching user information');
   const user = await getUser(client);
+
+  const accountIsCurrent = !currentTeam && user.version !== 'northstar';
 
   if (accountIsCurrent) {
     currentTeam = user.id;
@@ -56,12 +56,14 @@ export default async function list(client: Client): Promise<number> {
     current: id === currentTeam ? chars.tick : '',
   }));
 
-  teamList.unshift({
-    id: user.id,
-    name: user.email,
-    value: user.username || user.email,
-    current: accountIsCurrent ? chars.tick : '',
-  });
+  if (user.version !== 'northstar') {
+    teamList.unshift({
+      id: user.id,
+      name: user.email,
+      value: user.username || user.email,
+      current: accountIsCurrent ? chars.tick : '',
+    });
+  }
 
   // Bring the current Team to the beginning of the list
   if (!accountIsCurrent) {
@@ -72,21 +74,21 @@ export default async function list(client: Client): Promise<number> {
 
   // Printing
   output.stopSpinner();
-  console.log(); // empty line
+  client.stdout.write('\n'); // empty line
 
   table(
     ['', 'id', 'email / name'],
     teamList.map(team => [team.current, team.value, team.name]),
-    [1, 5]
+    [1, 5],
+    (str: string) => {
+      client.stdout.write(str);
+    }
   );
 
   if (pagination?.count === 20) {
-    const prefixedArgs = getPrefixedFlags(argv);
-    const flags = getCommandFlags(prefixedArgs, ['_', '--next', '-N', '-d']);
-    const nextCmd = `${getPkgName()} teams ls${flags} --next ${
-      pagination.next
-    }`;
-    console.log(); // empty line
+    const flags = getCommandFlags(argv, ['_', '--next', '-N', '-d']);
+    const nextCmd = `${packageName} teams ls${flags} --next ${pagination.next}`;
+    client.stdout.write('\n'); // empty line
     output.log(`To display the next page run ${cmd(nextCmd)}`);
   }
 

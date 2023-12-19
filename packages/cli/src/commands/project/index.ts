@@ -1,47 +1,13 @@
-import chalk from 'chalk';
 import Client from '../../util/client';
 import getArgs from '../../util/get-args';
 import getInvalidSubcommand from '../../util/get-invalid-subcommand';
 import getScope from '../../util/get-scope';
 import handleError from '../../util/handle-error';
-import logo from '../../util/output/logo';
-import { getPkgName } from '../../util/pkg-name';
+import { help } from '../help';
 import add from './add';
 import list from './list';
 import rm from './rm';
-
-const help = () => {
-  console.log(`
-  ${chalk.bold(`${logo} ${getPkgName()} project`)} [options] <command>
-
-  ${chalk.dim('Commands:')}
-
-    ls                               Show all projects in the selected team/user
-    add      [name]                  Add a new project
-    rm       [name]                  Remove a project
-
-  ${chalk.dim('Options:')}
-
-    -h, --help                     Output usage information
-    -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
-    'TOKEN'
-  )}        Login token
-    -S, --scope                    Set a custom scope
-    -N, --next                     Show next page of results
-
-  ${chalk.dim('Examples:')}
-
-  ${chalk.gray('–')} Add a new project
-
-    ${chalk.cyan(`$ ${getPkgName()} project add my-project`)}
-
-  ${chalk.gray('–')} Paginate projects, where ${chalk.dim(
-    '`1584722256178`'
-  )} is the time in milliseconds since the UNIX epoch.
-
-    ${chalk.cyan(`$ ${getPkgName()} project ls --next 1584722256178`)}
-`);
-};
+import { projectCommand } from './command';
 
 const COMMAND_CONFIG = {
   ls: ['ls', 'list'],
@@ -57,6 +23,7 @@ export default async function main(client: Client) {
     argv = getArgs(client.argv.slice(2), {
       '--next': Number,
       '-N': '--next',
+      '--update-required': Boolean,
     });
   } catch (error) {
     handleError(error);
@@ -64,7 +31,9 @@ export default async function main(client: Client) {
   }
 
   if (argv['--help']) {
-    help();
+    client.output.print(
+      help(projectCommand, { columns: client.stderr.columns })
+    );
     return 2;
   }
 
@@ -85,7 +54,9 @@ export default async function main(client: Client) {
       return await rm(client, args);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
-      help();
+      client.output.print(
+        help(projectCommand, { columns: client.stderr.columns })
+      );
       return 2;
   }
 }

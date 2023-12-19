@@ -1,20 +1,20 @@
 import {
-  AbortController as NodeAbortController,
   createRequestHandler as createRemixRequestHandler,
-  Headers as NodeHeaders,
-  Request as NodeRequest,
   writeReadableStreamToWritable,
   installGlobals,
 } from '@remix-run/node';
 
 installGlobals();
 
-import build from '@remix-run/dev/server-build';
+import * as build from '@remix-run/dev/server-build';
 
-const handleRequest = createRemixRequestHandler(build, process.env.NODE_ENV);
+const handleRequest = createRemixRequestHandler(
+  build.default || build,
+  process.env.NODE_ENV
+);
 
 function createRemixHeaders(requestHeaders) {
-  const headers = new NodeHeaders();
+  const headers = new Headers();
 
   for (const key in requestHeaders) {
     const header = requestHeaders[key];
@@ -37,7 +37,7 @@ function createRemixRequest(req, res) {
   const url = new URL(req.url, `${protocol}://${host}`);
 
   // Abort action/loaders once we can no longer write a response
-  const controller = new NodeAbortController();
+  const controller = new AbortController();
   res.on('close', () => controller.abort());
 
   const init = {
@@ -50,7 +50,7 @@ function createRemixRequest(req, res) {
     init.body = req;
   }
 
-  return new NodeRequest(url.href, init);
+  return new Request(url.href, init);
 }
 
 async function sendRemixResponse(res, nodeResponse) {

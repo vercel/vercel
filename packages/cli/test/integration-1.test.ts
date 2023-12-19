@@ -5,7 +5,10 @@ import fetch, { RequestInit } from 'node-fetch';
 import retry from 'async-retry';
 import fs from 'fs-extra';
 import sleep from '../src/util/sleep';
-import { fetchTokenWithRetry } from '../../../test/lib/deployment/now-deploy';
+import {
+  disableSSO,
+  fetchTokenWithRetry,
+} from '../../../test/lib/deployment/now-deploy';
 import waitForPrompt from './helpers/wait-for-prompt';
 import { listTmpDirs } from './helpers/get-tmp-dir';
 import getGlobalDir from './helpers/get-global-dir';
@@ -16,7 +19,6 @@ import {
 import formatOutput from './helpers/format-output';
 import type http from 'http';
 import type { CLIProcess } from './helpers/types';
-import type {} from './helpers/types';
 const TEST_TIMEOUT = 3 * 60 * 1000;
 jest.setTimeout(TEST_TIMEOUT);
 
@@ -32,7 +34,9 @@ function fetchTokenInformation(token: string, retries = 3) {
 
       if (!res.ok) {
         throw new Error(
-          `Failed to fetch ${url}, received status ${res.status}`
+          `Failed to fetch "${url}", status: ${
+            res.status
+          }, id: ${res.headers.get('x-vercel-id')}`
         );
       }
 
@@ -103,6 +107,8 @@ function mockLoginApi(req: http.IncomingMessage, res: http.ServerResponse) {
     query.email === email
   ) {
     res.end(JSON.stringify({ token }));
+  } else if (method === 'GET' && pathname === '/v2/user') {
+    res.end(JSON.stringify({ user: { email } }));
   } else {
     res.statusCode = 405;
     res.end(JSON.stringify({ code: 'method_not_allowed' }));
@@ -232,51 +238,59 @@ test('[vc build] should build project with corepack and select npm@8.1.0', async
 });
 
 test('[vc build] should build project with corepack and select pnpm@7.1.0', async () => {
-  process.env.ENABLE_EXPERIMENTAL_COREPACK = '1';
-  const directory = await setupE2EFixture('vc-build-corepack-pnpm');
-  const before = await exec(directory, 'pnpm', ['--version']);
-  const output = await execCli(binaryPath, ['build'], { cwd: directory });
-  expect(output.exitCode, formatOutput(output)).toBe(0);
-  expect(output.stderr).toMatch(/Build Completed/gm);
-  const after = await exec(directory, 'pnpm', ['--version']);
-  // Ensure global pnpm didn't change
-  expect(before.stdout).toBe(after.stdout);
-  // Ensure version is correct
-  expect(
-    await fs.readFile(
-      path.join(directory, '.vercel/output/static/index.txt'),
-      'utf8'
-    )
-  ).toBe('7.1.0\n');
-  // Ensure corepack will be cached
-  const contents = fs.readdirSync(
-    path.join(directory, '.vercel/cache/corepack')
-  );
-  expect(contents).toEqual(['home', 'shim']);
+  try {
+    process.env.ENABLE_EXPERIMENTAL_COREPACK = '1';
+    const directory = await setupE2EFixture('vc-build-corepack-pnpm');
+    const before = await exec(directory, 'pnpm', ['--version']);
+    const output = await execCli(binaryPath, ['build'], { cwd: directory });
+    expect(output.exitCode, formatOutput(output)).toBe(0);
+    expect(output.stderr).toMatch(/Build Completed/gm);
+    const after = await exec(directory, 'pnpm', ['--version']);
+    // Ensure global pnpm didn't change
+    expect(before.stdout).toBe(after.stdout);
+    // Ensure version is correct
+    expect(
+      await fs.readFile(
+        path.join(directory, '.vercel/output/static/index.txt'),
+        'utf8'
+      )
+    ).toBe('7.1.0\n');
+    // Ensure corepack will be cached
+    const contents = fs.readdirSync(
+      path.join(directory, '.vercel/cache/corepack')
+    );
+    expect(contents).toEqual(['home', 'shim']);
+  } finally {
+    delete process.env.ENABLE_EXPERIMENTAL_COREPACK;
+  }
 });
 
 test('[vc build] should build project with corepack and select yarn@2.4.3', async () => {
-  process.env.ENABLE_EXPERIMENTAL_COREPACK = '1';
-  const directory = await setupE2EFixture('vc-build-corepack-yarn');
-  const before = await exec(directory, 'yarn', ['--version']);
-  const output = await execCli(binaryPath, ['build'], { cwd: directory });
-  expect(output.exitCode, formatOutput(output)).toBe(0);
-  expect(output.stderr).toMatch(/Build Completed/gm);
-  const after = await exec(directory, 'yarn', ['--version']);
-  // Ensure global yarn didn't change
-  expect(before.stdout).toBe(after.stdout);
-  // Ensure version is correct
-  expect(
-    await fs.readFile(
-      path.join(directory, '.vercel/output/static/index.txt'),
-      'utf8'
-    )
-  ).toBe('2.4.3\n');
-  // Ensure corepack will be cached
-  const contents = fs.readdirSync(
-    path.join(directory, '.vercel/cache/corepack')
-  );
-  expect(contents).toEqual(['home', 'shim']);
+  try {
+    process.env.ENABLE_EXPERIMENTAL_COREPACK = '1';
+    const directory = await setupE2EFixture('vc-build-corepack-yarn');
+    const before = await exec(directory, 'yarn', ['--version']);
+    const output = await execCli(binaryPath, ['build'], { cwd: directory });
+    expect(output.exitCode, formatOutput(output)).toBe(0);
+    expect(output.stderr).toMatch(/Build Completed/gm);
+    const after = await exec(directory, 'yarn', ['--version']);
+    // Ensure global yarn didn't change
+    expect(before.stdout).toBe(after.stdout);
+    // Ensure version is correct
+    expect(
+      await fs.readFile(
+        path.join(directory, '.vercel/output/static/index.txt'),
+        'utf8'
+      )
+    ).toBe('2.4.3\n');
+    // Ensure corepack will be cached
+    const contents = fs.readdirSync(
+      path.join(directory, '.vercel/cache/corepack')
+    );
+    expect(contents).toEqual(['home', 'shim']);
+  } finally {
+    delete process.env.ENABLE_EXPERIMENTAL_COREPACK;
+  }
 });
 
 test('[vc dev] should print help from `vc develop --help`', async () => {
@@ -290,7 +304,7 @@ test('[vc dev] should print help from `vc develop --help`', async () => {
   );
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(2);
-  expect(stdout).toMatch(/▲ vercel dev/gm);
+  expect(stderr).toMatch(/▲ vercel dev/gm);
 });
 
 test('default command should deploy directory', async () => {
@@ -390,6 +404,8 @@ test('default command should work with --cwd option', async () => {
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   const url = stdout;
+  await disableSSO(url, false);
+
   const deploymentResult = await fetch(`${url}/README.md`);
   const body = await deploymentResult.text();
   expect(body).toEqual(
@@ -418,6 +434,8 @@ test('should allow deploying a directory that was built with a target environmen
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   const url = stdout;
+  await disableSSO(url, false);
+
   const deploymentResult = await fetch(`${url}/README.md`);
   const body = await deploymentResult.text();
   expect(body).toEqual(
@@ -444,6 +462,8 @@ test('should allow deploying a directory that was prebuilt, but has no builds.js
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   const url = stdout;
+  await disableSSO(url, false);
+
   const deploymentResult = await fetch(`${url}/README.md`);
   const body = await deploymentResult.text();
   expect(body).toEqual('readme contents for build-output-api-raw');
@@ -506,6 +526,7 @@ test('deploy using only now.json with `redirects` defined', async () => {
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   const url = stdout;
+  await disableSSO(url, false);
   const res = await fetch(`${url}/foo/bar`, { redirect: 'manual' });
   const location = res.headers.get('location');
   expect(location).toBe('https://example.com/foo/bar');
@@ -527,6 +548,7 @@ test('deploy using --local-config flag v2', async () => {
 
   const { host } = new URL(stdout);
   expect(host).toMatch(/secondary/gm);
+  await disableSSO(host, false);
 
   const testRes = await fetch(`https://${host}/test-${contextName}.html`);
   const testText = await testRes.text();
@@ -577,6 +599,7 @@ test('deploy using --local-config flag above target', async () => {
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   const { host } = new URL(stdout);
+  await disableSSO(host, false);
 
   const testRes = await fetch(`https://${host}/index.html`);
   const testText = await testRes.text();
@@ -751,9 +774,9 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
     );
 
     expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
-    expect(stderr).toMatch(/Created .env file/gm);
+    expect(stderr).toMatch(/Created .env.local file/gm);
 
-    const contents = fs.readFileSync(path.join(target, '.env'), 'utf8');
+    const contents = fs.readFileSync(path.join(target, '.env.local'), 'utf8');
     expect(contents).toMatch(/^# Created by Vercel CLI\n/);
     expect(contents).toMatch(/MY_NEW_ENV_VAR="my plaintext value"/);
     expect(contents).toMatch(/MY_STDIN_VAR="{"expect":"quotes"}"/);
@@ -771,12 +794,12 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
     );
 
     expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
-    expect(stderr).toMatch(/Overwriting existing .env file/gm);
-    expect(stderr).toMatch(/Updated .env file/gm);
+    expect(stderr).toMatch(/Overwriting existing .env.local file/gm);
+    expect(stderr).toMatch(/Updated .env.local file/gm);
   }
 
   async function vcEnvPullConfirm() {
-    fs.writeFileSync(path.join(target, '.env'), 'hahaha');
+    fs.writeFileSync(path.join(target, '.env.local'), 'hahaha');
 
     const vc = execCli(binaryPath, ['env', 'pull'], {
       cwd: target,
@@ -784,7 +807,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
 
     await waitForPrompt(
       vc,
-      'Found existing file ".env". Do you want to overwrite?'
+      'Found existing file ".env.local". Do you want to overwrite?'
     );
     vc.stdin?.end('y\n');
 
@@ -798,6 +821,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
     });
     expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
     const { host } = new URL(stdout);
+    await disableSSO(host, false);
 
     const apiUrl = `https://${host}/api/get-env`;
     const apiRes = await fetch(apiUrl);
@@ -904,7 +928,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
 
     expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
-    const contents = fs.readFileSync(path.join(target, '.env'), 'utf8');
+    const contents = fs.readFileSync(path.join(target, '.env.local'), 'utf8');
 
     const lines = new Set(contents.split('\n'));
 
@@ -1024,11 +1048,11 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
     await vcEnvPullConfirm();
     await vcDeployWithVar();
     await vcDevWithEnv();
-    fs.unlinkSync(path.join(target, '.env'));
+    fs.unlinkSync(path.join(target, '.env.local'));
     await vcDevAndFetchCloudVars();
     await enableAutoExposeSystemEnvs();
     await vcEnvPullFetchSystemVars();
-    fs.unlinkSync(path.join(target, '.env'));
+    fs.unlinkSync(path.join(target, '.env.local'));
     await vcDevAndFetchSystemVars();
     await vcEnvRemove();
     await vcEnvRemoveWithArgs();

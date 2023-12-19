@@ -1,16 +1,20 @@
 {
   "private": true,
   "name": "@vercel-internals/types",
+  "version": "1.0.18",
   "types": "index.d.ts",
   "main": "index.d.ts",
+  "files": [
+    "*.d.ts"
+  ],
   "dependencies": {
     "@types/node": "14.14.31",
-    "@vercel-internals/constants": "*",
-    "@vercel/build-utils": "6.3.2",
-    "@vercel/routing-utils": "2.1.10"
+    "@vercel-internals/constants": "1.0.4",
+    "@vercel/build-utils": "7.4.0",
+    "@vercel/routing-utils": "3.1.0"
   },
   "devDependencies": {
-    "@vercel-internals/tsconfig": "*",
+    "@vercel-internals/tsconfig": "1.0.0",
     "@vercel/style-guide": "4.0.2",
     "typescript": "4.9.4"
   }

@@ -26,7 +26,7 @@ describe('pull', () => {
       `Created .vercel${path.sep}.env.development.local file`
     );
     await expect(client.stderr).toOutput(
-      `Downloaded project settings to .vercel${path.sep}project.json`
+      `Downloaded project settings to ${cwd}${path.sep}.vercel${path.sep}project.json`
     );
     await expect(exitCodePromise).resolves.toEqual(0);
 
@@ -92,7 +92,7 @@ describe('pull', () => {
         `Created .vercel${path.sep}.env.development.local file`
       );
       await expect(client.stderr).toOutput(
-        `Downloaded project settings to .vercel${path.sep}project.json`
+        `Downloaded project settings to ${cwd}${path.sep}.vercel${path.sep}project.json`
       );
       await expect(exitCodePromise).resolves.toEqual(0);
 
@@ -130,7 +130,7 @@ describe('pull', () => {
       `Created .vercel${path.sep}.env.preview.local file`
     );
     await expect(client.stderr).toOutput(
-      `Downloaded project settings to .vercel${path.sep}project.json`
+      `Downloaded project settings to ${cwd}${path.sep}.vercel${path.sep}project.json`
     );
     await expect(exitCodePromise).resolves.toEqual(0);
 
@@ -161,7 +161,7 @@ describe('pull', () => {
       `Created .vercel${path.sep}.env.production.local file`
     );
     await expect(client.stderr).toOutput(
-      `Downloaded project settings to .vercel${path.sep}project.json`
+      `Downloaded project settings to ${cwd}${path.sep}.vercel${path.sep}project.json`
     );
     await expect(exitCodePromise).resolves.toEqual(0);
 
@@ -176,5 +176,30 @@ describe('pull', () => {
       .toString()
       .includes('SQL_CONNECTION_STRING');
     expect(previewFileHasPreviewEnv2).toBeTruthy();
+  });
+
+  it('should work with repo link', async () => {
+    const cwd = setupUnitFixture('monorepo-link');
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'QmbKpqpiUqbcke',
+      name: 'dashboard',
+      rootDirectory: 'dashboard',
+    });
+    client.cwd = path.join(cwd, 'dashboard');
+    client.setArgv('pull');
+    const exitCodePromise = pull(client);
+    await expect(client.stderr).toOutput(
+      'Downloading `development` Environment Variables for Project dashboard'
+    );
+    await expect(client.stderr).toOutput(
+      `Created .vercel${path.sep}.env.development.local file`
+    );
+    await expect(client.stderr).toOutput(
+      `Downloaded project settings to ${cwd}${path.sep}dashboard${path.sep}.vercel${path.sep}project.json`
+    );
+    await expect(exitCodePromise).resolves.toEqual(0);
   });
 });

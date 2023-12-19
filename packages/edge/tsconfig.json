@@ -1,17 +1,10 @@
 {
   "compilerOptions": {
-    "strict": true,
-    "esModuleInterop": true,
-    "lib": ["ES2020", "DOM", "DOM.Iterable"],
-    "target": "ES2020",
-    "module": "commonjs",
-    "outDir": "dist",
-    "sourceMap": false,
-    "declaration": true,
-    "skipLibCheck": true,
-    "moduleResolution": "node",
+    "lib": ["ES2021", "DOM", "DOM.Iterable"],
+    "outDir": "./dist",
     "typeRoots": ["./@types", "./node_modules/@types"]
   },
+  "extends": "../../tsconfig.base.json",
   "include": ["src/**/*", "test/**/*"],
   "exclude": ["node_modules"]
 }

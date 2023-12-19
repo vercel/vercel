@@ -31,3 +31,4 @@ __pycache__
 .turbo
 .eslintcache
 turbo-cache-key.json
+junit.xml

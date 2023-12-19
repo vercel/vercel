@@ -21,7 +21,7 @@ export async function createServerlessFunctions(
 ) {
   let functionName: string;
   let functionDir: string;
-  const handlerFile = join(__dirname, '../handlers/templates/ssr-handler.js');
+  const handlerFile = join(__dirname, '../templates/ssr-handler.js');
 
   await Promise.all(
     ssrRoutes.map(async (page, index) => {
@@ -37,7 +37,7 @@ export async function createServerlessFunctions(
         await ensureDir(functionDir);
 
         await Promise.all([
-          writeHandler({ outDir: functionDir, handlerFile }),
+          writeHandler({ outDir: functionDir, handlerFile, prefix }),
           copyFunctionLibs({ functionDir }),
           copyHTMLFiles({ functionDir }),
           writeVCConfig({ functionDir }),

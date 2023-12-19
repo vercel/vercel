@@ -1,6 +1,7 @@
 import { isErrnoException } from '@vercel/error-utils';
 import url from 'url';
 import { spawn } from 'child_process';
+import { createRequire } from 'module';
 import {
   readFileSync,
   lstatSync,
@@ -76,7 +77,7 @@ interface DownloadOptions {
   meta: Meta;
 }
 
-const require_ = eval('require');
+const require_ = createRequire(__filename);
 
 const tscPath = resolve(dirname(require_.resolve('typescript')), '../bin/tsc');
 
@@ -376,9 +377,6 @@ function getAWSLambdaHandler(entrypoint: string, config: Config) {
   return '';
 }
 
-// Ensures that everything from `types.ts` is exported in the final `index.d.ts` file.
-export * from './types';
-
 export const version = 3;
 
 export const build: BuildV3 = async ({
@@ -506,6 +504,7 @@ export const build: BuildV3 = async ({
       shouldAddSourcemapSupport,
       awsLambdaHandler,
       supportsResponseStreaming,
+      maxDuration: staticConfig?.maxDuration,
     });
   }
 

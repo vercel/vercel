@@ -1,3 +1,5 @@
+const originalCwd = process.cwd();
+
 // Register Jest matcher extensions for CLI unit tests
 import './matchers';
 
@@ -73,6 +75,8 @@ export class MockClient extends Client {
     });
 
     this.scenario = Router();
+
+    this.reset();
   }
 
   reset() {
@@ -99,11 +103,14 @@ export class MockClient extends Client {
     };
     this.config = {};
     this.localConfig = {};
+    this.localConfigPath = undefined;
 
     this.scenario = Router();
 
     this.agent?.destroy();
     this.agent = undefined;
+
+    this.cwd = originalCwd;
   }
 
   async startMockServer() {
@@ -156,7 +163,7 @@ beforeAll(async () => {
   await client.startMockServer();
 });
 
-beforeEach(() => {
+afterEach(() => {
   client.reset();
 });
 

@@ -2,7 +2,7 @@ import ms from 'ms';
 import fs from 'fs-extra';
 import bytes from 'bytes';
 import chalk from 'chalk';
-import { join, resolve, basename } from 'path';
+import { join, resolve } from 'path';
 import {
   fileNameSymbol,
   VALID_ARCHIVE_FORMATS,
@@ -21,7 +21,6 @@ import stamp from '../../util/output/stamp';
 import createDeploy from '../../util/deploy/create-deploy';
 import getDeployment from '../../util/get-deployment';
 import parseMeta from '../../util/parse-meta';
-import linkStyle from '../../util/output/link';
 import param from '../../util/output/param';
 import {
   BuildsRateLimited,
@@ -59,9 +58,7 @@ import validatePaths, {
   validateRootDirectory,
 } from '../../util/validate-paths';
 import { getCommandName } from '../../util/pkg-name';
-import { getPreferredPreviewURL } from '../../util/deploy/get-preferred-preview-url';
 import { Output } from '../../util/output';
-import { help } from './args';
 import { getDeploymentChecks } from '../../util/deploy/get-deployment-checks';
 import parseTarget from '../../util/deploy/parse-target';
 import getPrebuiltJson from '../../util/deploy/get-prebuilt-json';
@@ -70,45 +67,39 @@ import { isValidArchive } from '../../util/deploy/validate-archive-format';
 import { parseEnv } from '../../util/parse-env';
 import { errorToString, isErrnoException, isError } from '@vercel/error-utils';
 import { pickOverrides } from '../../util/projects/project-settings';
-import { isDeploying } from '../../util/deploy/is-deploying';
-import type { Deployment } from '@vercel-internals/types';
+import { printDeploymentStatus } from '../../util/deploy/print-deployment-status';
+import { help } from '../help';
+import { deployCommand } from './command';
 
 export default async (client: Client): Promise<number> => {
   const { output } = client;
 
   let argv = null;
 
-  try {
-    argv = getArgs(client.argv.slice(2), {
-      '--force': Boolean,
-      '--with-cache': Boolean,
-      '--public': Boolean,
-      '--env': [String],
-      '--build-env': [String],
-      '--meta': [String],
-      // This is not an array in favor of matching
-      // the config property name.
-      '--regions': String,
-      '--prebuilt': Boolean,
-      '--prod': Boolean,
-      '--archive': String,
-      '--no-wait': Boolean,
-      '--yes': Boolean,
-      '-f': '--force',
-      '-p': '--public',
-      '-e': '--env',
-      '-b': '--build-env',
-      '-m': '--meta',
-      '-y': '--yes',
+  const argOptions: {
+    [k: string]:
+      | BooleanConstructor
+      | StringConstructor
+      | string
+      | [StringConstructor];
+  } = {};
+  for (const option of deployCommand.options) {
+    argOptions[`--${option.name}`] =
+      option.type === 'boolean' ? Boolean : String;
+    if (option.shorthand) {
+      argOptions[`-${option.shorthand}`] = `--${option.name}`;
+    }
+    if (
+      option.name === 'env' ||
+      option.name === 'build-env' ||
+      option.name === 'meta'
+    ) {
+      argOptions[`--${option.name}`] = [String];
+    }
+  }
 
-      // deprecated
-      '--name': String,
-      '-n': '--name',
-      '--no-clipboard': Boolean,
-      '--target': String,
-      '--confirm': Boolean,
-      '-c': '--confirm',
-    });
+  try {
+    argv = getArgs(client.argv.slice(2), argOptions);
 
     if ('--confirm' in argv) {
       output.warn('`--confirm` is deprecated, please use `--yes` instead');
@@ -120,7 +111,7 @@ export default async (client: Client): Promise<number> => {
   }
 
   if (argv['--help']) {
-    output.print(help());
+    output.print(help(deployCommand, { columns: client.stderr.columns }));
     return 2;
   }
 
@@ -132,24 +123,19 @@ export default async (client: Client): Promise<number> => {
   if (argv._.length > 0) {
     // If path is relative: resolve
     // if path is absolute: clear up strange `/` etc
-    paths = argv._.map(item => resolve(process.cwd(), item));
+    paths = argv._.map(item => resolve(client.cwd, item));
   } else {
-    paths = [process.cwd()];
+    paths = [client.cwd];
+  }
+
+  // check paths
+  const pathValidation = await validatePaths(client, paths);
+
+  if (!pathValidation.valid) {
+    return pathValidation.exitCode;
   }
 
   let localConfig = client.localConfig || readLocalConfig(paths[0]);
-
-  for (const path of paths) {
-    try {
-      await fs.stat(path);
-    } catch (err) {
-      output.error(
-        `The specified file or directory "${basename(path)}" does not exist.`
-      );
-      return 1;
-    }
-  }
-
   if (localConfig) {
     const { version } = localConfig;
     const file = highlight(localConfig[fileNameSymbol]!);
@@ -178,14 +164,7 @@ export default async (client: Client): Promise<number> => {
 
   const quiet = !client.stdout.isTTY;
 
-  // check paths
-  const pathValidation = await validatePaths(client, paths);
-
-  if (!pathValidation.valid) {
-    return pathValidation.exitCode;
-  }
-
-  const { path } = pathValidation;
+  let { path: cwd } = pathValidation;
   const autoConfirm = argv['--yes'];
 
   // deprecate --name
@@ -217,56 +196,6 @@ export default async (client: Client): Promise<number> => {
     return target;
   }
 
-  // build `--prebuilt`
-  if (argv['--prebuilt']) {
-    const prebuiltExists = await fs.pathExists(join(path, '.vercel/output'));
-    if (!prebuiltExists) {
-      error(
-        `The ${param(
-          '--prebuilt'
-        )} option was used, but no prebuilt output found in ".vercel/output". Run ${getCommandName(
-          'build'
-        )} to generate a local build.`
-      );
-      return 1;
-    }
-
-    const prebuiltBuild = await getPrebuiltJson(path);
-
-    // Ensure that there was not a build error
-    const prebuiltError =
-      prebuiltBuild?.error ||
-      prebuiltBuild?.builds?.find(build => 'error' in build)?.error;
-    if (prebuiltError) {
-      output.log(
-        `Prebuilt deployment cannot be created because ${getCommandName(
-          'build'
-        )} failed with error:\n`
-      );
-      prettyError(prebuiltError);
-      return 1;
-    }
-
-    // Ensure that the deploy target matches the build target
-    const assumedTarget = target || 'preview';
-    if (prebuiltBuild?.target && prebuiltBuild.target !== assumedTarget) {
-      let specifyTarget = '';
-      if (prebuiltBuild.target === 'production') {
-        specifyTarget = ` --prod`;
-      }
-
-      prettyError({
-        message: `The ${param(
-          '--prebuilt'
-        )} option was used with the target environment "${assumedTarget}", but the prebuilt output found in ".vercel/output" was built with target environment "${
-          prebuiltBuild.target
-        }". Please run ${getCommandName(`--prebuilt${specifyTarget}`)}.`,
-        link: 'https://vercel.link/prebuilt-environment-mismatch',
-      });
-      return 1;
-    }
-  }
-
   const archive = argv['--archive'];
   if (typeof archive === 'string' && !isValidArchive(archive)) {
     output.error(`Format must be one of: ${VALID_ARCHIVE_FORMATS.join(', ')}`);
@@ -274,7 +203,7 @@ export default async (client: Client): Promise<number> => {
   }
 
   // retrieve `project` and `org` from .vercel
-  const link = await getLinkedProject(client, path);
+  const link = await getLinkedProject(client, cwd);
 
   if (link.status === 'error') {
     return link.exitCode;
@@ -291,7 +220,7 @@ export default async (client: Client): Promise<number> => {
       autoConfirm ||
       (await confirm(
         client,
-        `Set up and deploy ${chalk.cyan(`“${toHumanPath(path)}”`)}?`,
+        `Set up and deploy ${chalk.cyan(`“${toHumanPath(cwd)}”`)}?`,
         true
       ));
 
@@ -338,7 +267,7 @@ export default async (client: Client): Promise<number> => {
 
     if (typeof projectOrNewProjectName === 'string') {
       newProjectName = projectOrNewProjectName;
-      rootDirectory = await inputRootDirectory(client, path, autoConfirm);
+      rootDirectory = await inputRootDirectory(client, cwd, autoConfirm);
     } else {
       project = projectOrNewProjectName;
       rootDirectory = project.rootDirectory;
@@ -346,8 +275,8 @@ export default async (client: Client): Promise<number> => {
 
       // we can already link the project
       await linkFolderToProject(
-        output,
-        path,
+        client,
+        cwd,
         {
           projectId: project.id,
           orgId: org.id,
@@ -359,9 +288,74 @@ export default async (client: Client): Promise<number> => {
     }
   }
 
+  // For repo-style linking, reset the path to the root of the repository
+  if (link.status === 'linked' && link.repoRoot) {
+    cwd = link.repoRoot;
+  }
+
   // At this point `org` should be populated
   if (!org) {
     throw new Error(`"org" is not defined`);
+  }
+
+  // build `--prebuilt`
+  if (argv['--prebuilt']) {
+    // For repo-style linking, update `cwd` to be the Project
+    // subdirectory when `rootDirectory` setting is defined
+    if (
+      link.status === 'linked' &&
+      link.repoRoot &&
+      link.project.rootDirectory
+    ) {
+      cwd = join(cwd, link.project.rootDirectory);
+    }
+
+    const prebuiltExists = await fs.pathExists(join(cwd, '.vercel/output'));
+    if (!prebuiltExists) {
+      error(
+        `The ${param(
+          '--prebuilt'
+        )} option was used, but no prebuilt output found in ".vercel/output". Run ${getCommandName(
+          'build'
+        )} to generate a local build.`
+      );
+      return 1;
+    }
+
+    const prebuiltBuild = await getPrebuiltJson(cwd);
+
+    // Ensure that there was not a build error
+    const prebuiltError =
+      prebuiltBuild?.error ||
+      prebuiltBuild?.builds?.find(build => 'error' in build)?.error;
+    if (prebuiltError) {
+      output.log(
+        `Prebuilt deployment cannot be created because ${getCommandName(
+          'build'
+        )} failed with error:\n`
+      );
+      prettyError(prebuiltError);
+      return 1;
+    }
+
+    // Ensure that the deploy target matches the build target
+    const assumedTarget = target || 'preview';
+    if (prebuiltBuild?.target && prebuiltBuild.target !== assumedTarget) {
+      let specifyTarget = '';
+      if (prebuiltBuild.target === 'production') {
+        specifyTarget = ` --prod`;
+      }
+
+      prettyError({
+        message: `The ${param(
+          '--prebuilt'
+        )} option was used with the target environment "${assumedTarget}", but the prebuilt output found in ".vercel/output" was built with target environment "${
+          prebuiltBuild.target
+        }". Please run ${getCommandName(`--prebuilt${specifyTarget}`)}.`,
+        link: 'https://vercel.link/prebuilt-environment-mismatch',
+      });
+      return 1;
+    }
   }
 
   // Set the `contextName` and `currentTeam` as specified by the
@@ -373,14 +367,14 @@ export default async (client: Client): Promise<number> => {
   // and upload the entire directory.
   const sourcePath =
     rootDirectory && !sourceFilesOutsideRootDirectory
-      ? join(path, rootDirectory)
-      : path;
+      ? join(cwd, rootDirectory)
+      : cwd;
 
   if (
     rootDirectory &&
     (await validateRootDirectory(
       output,
-      path,
+      cwd,
       sourcePath,
       project
         ? `To change your Project Settings, go to https://vercel.com/${org?.slug}/${project.name}/settings`
@@ -393,7 +387,7 @@ export default async (client: Client): Promise<number> => {
   // If Root Directory is used we'll try to read the config
   // from there instead and use it if it exists.
   if (rootDirectory) {
-    const rootDirectoryConfig = readLocalConfig(join(path, rootDirectory));
+    const rootDirectoryConfig = readLocalConfig(join(cwd, rootDirectory));
 
     if (rootDirectoryConfig) {
       debug(`Read local config from root directory (${rootDirectory})`);
@@ -469,7 +463,7 @@ export default async (client: Client): Promise<number> => {
     parseMeta(argv['--meta'])
   );
 
-  const gitMetadata = await createGitMeta(path, output, project);
+  const gitMetadata = await createGitMeta(cwd, output, project);
 
   // Merge dotenv config, `env` from vercel.json, and `--env` / `-e` arguments
   const deploymentEnv = Object.assign(
@@ -520,6 +514,9 @@ export default async (client: Client): Promise<number> => {
   }
 
   try {
+    // if this flag is not set, use `undefined` to allow the project setting to be used
+    const autoAssignCustomDomains = argv['--skip-domain'] ? false : undefined;
+
     const createArgs: CreateOptions = {
       name,
       env: deploymentEnv,
@@ -543,6 +540,7 @@ export default async (client: Client): Promise<number> => {
       target,
       skipAutoDetectionConfirmation: autoConfirm,
       noWait,
+      autoAssignCustomDomains,
     };
 
     if (!localConfig.builds || localConfig.builds.length === 0) {
@@ -559,11 +557,11 @@ export default async (client: Client): Promise<number> => {
       client,
       now,
       contextName,
-      [sourcePath],
+      sourcePath,
       createArgs,
       org,
       !project,
-      path,
+      cwd,
       archive
     );
 
@@ -595,11 +593,11 @@ export default async (client: Client): Promise<number> => {
         client,
         now,
         contextName,
-        [sourcePath],
+        sourcePath,
         createArgs,
         org,
         false,
-        path
+        cwd
       );
     }
 
@@ -728,7 +726,7 @@ export default async (client: Client): Promise<number> => {
     return 1;
   }
 
-  return printDeploymentStatus(output, client, deployment, deployStamp, noWait);
+  return printDeploymentStatus(client, deployment, deployStamp, noWait);
 };
 
 function handleCreateDeployError(
@@ -834,113 +832,4 @@ const addProcessEnv = async (
       );
     }
   }
-};
-
-const printDeploymentStatus = async (
-  output: Output,
-  client: Client,
-  {
-    readyState,
-    alias: aliasList,
-    aliasError,
-    target,
-    indications,
-    url: deploymentUrl,
-    aliasWarning,
-  }: {
-    readyState: Deployment['readyState'];
-    alias: string[];
-    aliasError: Error;
-    target: string;
-    indications: any;
-    url: string;
-    aliasWarning?: {
-      code: string;
-      message: string;
-      link?: string;
-      action?: string;
-    };
-  },
-  deployStamp: () => string,
-  noWait: boolean
-) => {
-  indications = indications || [];
-  const isProdDeployment = target === 'production';
-
-  let isStillBuilding = false;
-  if (noWait) {
-    if (isDeploying(readyState)) {
-      isStillBuilding = true;
-      output.print(
-        prependEmoji(
-          'Note: Deployment is still processing...',
-          emoji('notice')
-        ) + '\n'
-      );
-    }
-  }
-
-  if (!isStillBuilding && readyState !== 'READY') {
-    output.error(
-      `Your deployment failed. Please retry later. More: https://err.sh/vercel/deployment-error`
-    );
-    return 1;
-  }
-
-  if (aliasError) {
-    output.warn(
-      `Failed to assign aliases${
-        aliasError.message ? `: ${aliasError.message}` : ''
-      }`
-    );
-  } else {
-    // print preview/production url
-    let previewUrl: string;
-    // if `noWait` is true, then use the deployment url, not an alias
-    if (!noWait && Array.isArray(aliasList) && aliasList.length > 0) {
-      const previewUrlInfo = await getPreferredPreviewURL(client, aliasList);
-      if (previewUrlInfo) {
-        previewUrl = previewUrlInfo.previewUrl;
-      } else {
-        previewUrl = `https://${deploymentUrl}`;
-      }
-    } else {
-      // fallback to deployment url
-      previewUrl = `https://${deploymentUrl}`;
-    }
-
-    output.print(
-      prependEmoji(
-        `${isProdDeployment ? 'Production' : 'Preview'}: ${chalk.bold(
-          previewUrl
-        )} ${deployStamp()}`,
-        emoji('success')
-      ) + `\n`
-    );
-  }
-
-  if (aliasWarning?.message) {
-    indications.push({
-      type: 'warning',
-      payload: aliasWarning.message,
-      link: aliasWarning.link,
-      action: aliasWarning.action,
-    });
-  }
-
-  const newline = '\n';
-  for (let indication of indications) {
-    const message =
-      prependEmoji(chalk.dim(indication.payload), emoji(indication.type)) +
-      newline;
-    let link = '';
-    if (indication.link)
-      link =
-        chalk.dim(
-          `${indication.action || 'Learn More'}: ${linkStyle(indication.link)}`
-        ) + newline;
-    output.print(message + link);
-  }
-
-  return 0;
 };

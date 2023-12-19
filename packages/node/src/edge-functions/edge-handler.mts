@@ -4,13 +4,13 @@ import {
   NodeCompatBindings,
 } from './edge-node-compat-plugin.mjs';
 import { EdgeRuntime, runServer } from 'edge-runtime';
-import fetch, { Headers } from 'node-fetch';
+import { type Dispatcher, Headers, request as undiciRequest } from 'undici';
 import { isError } from '@vercel/error-utils';
 import { readFileSync } from 'fs';
 import { serializeBody, entrypointToOutputPath, logError } from '../utils.js';
 import esbuild from 'esbuild';
 import exitHook from 'exit-hook';
-import type { HeadersInit } from 'node-fetch';
+import { buildToHeaders } from '@edge-runtime/node-utils';
 import type { VercelProxyResponse } from '../types.js';
 import type { IncomingMessage } from 'http';
 import { fileURLToPath } from 'url';
@@ -22,6 +22,9 @@ if (!NODE_VERSION_MAJOR) {
     `Unable to determine current node version: process.version=${process.version}`
   );
 }
+
+// @ts-expect-error - depends on https://github.com/nodejs/undici/pull/2373
+const toHeaders = buildToHeaders({ Headers });
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const edgeHandlerTemplate = readFileSync(
@@ -48,6 +51,7 @@ async function compileUserCode(
       // bundling behavior: use globals (like "browser") instead
       // of "require" statements for core libraries (like "node")
       platform: 'browser',
+      conditions: ['edge-light', 'development'],
       // target syntax: only use syntax available on the current
       // version of node
       target: NODE_VERSION_IDENTIFIER,
@@ -88,13 +92,11 @@ async function compileUserCode(
       "use strict";var regeneratorRuntime;
 
       // user code
-      ${compiledFile.text};
-      const userEdgeHandler = module.exports.default;
-      if (!userEdgeHandler) {
-        throw new Error(
-          'No default export was found. Add a default export to handle requests. Learn more: https://vercel.link/creating-edge-middleware'
-        );
-      }
+      (() => {
+        ${compiledFile.text};
+      })();
+
+      const userModule = module.exports;
 
       // request metadata
       const isMiddleware = ${isMiddleware};
@@ -104,7 +106,7 @@ async function compileUserCode(
       ${edgeHandlerTemplate};
       const dependencies = { Request, Response };
       const options = { isMiddleware, entrypointLabel };
-      registerFetchListener(userEdgeHandler, options, dependencies);
+      registerFetchListener(userModule, options, dependencies);
     `;
 
     return {
@@ -113,7 +115,7 @@ async function compileUserCode(
       nodeCompatBindings: nodeCompatPlugin.bindings,
     };
   } catch (error: unknown) {
-    // We can't easily show a meaningful stack trace from ncc -> edge-runtime.
+    // We can't easily show a meaningful stack trace from esbuild -> edge-runtime.
     // So, stick with just the message for now.
     console.error(`Failed to compile user code for edge runtime.`);
     if (isError(error)) logError(error);
@@ -133,8 +135,6 @@ async function createEdgeRuntimeServer(params?: {
 
     const wasmBindings = await params.wasmAssets.getContext();
     const nodeCompatBindings = params.nodeCompatBindings.getContext();
-    // @ts-ignore
-    const WebSocket = (await import('ws')).WebSocket;
 
     const runtime = new EdgeRuntime({
       initialCode: params.userCode,
@@ -142,7 +142,6 @@ async function createEdgeRuntimeServer(params?: {
         Object.assign(context, {
           // This is required for esbuild wrapping logic to resolve
           module: {},
-          WebSocket,
 
           // This is required for environment variable access.
           // In production, env var access is provided by static analysis
@@ -166,7 +165,7 @@ async function createEdgeRuntimeServer(params?: {
     exitHook(() => server.close());
     return server;
   } catch (error: any) {
-    // We can't easily show a meaningful stack trace from ncc -> edge-runtime.
+    // We can't easily show a meaningful stack trace from esbuild -> edge-runtime.
     // So, stick with just the message for now.
     console.error('Failed to instantiate edge runtime.');
     logError(error);
@@ -195,24 +194,22 @@ export async function createEdgeEventHandler(
       process.exit(1);
     }
 
-    const headers = new Headers(request.headers as HeadersInit);
     const body: Buffer | string | undefined = await serializeBody(request);
-    if (body !== undefined) headers.set('content-length', String(body.length));
+    if (body !== undefined)
+      request.headers['content-length'] = String(body.length);
 
     const url = new URL(request.url ?? '/', server.url);
-    // @ts-expect-error
-    const response = await fetch(url, {
+    const response = await undiciRequest(url, {
       body,
-      headers,
-      method: request.method,
-      redirect: 'manual',
+      headers: request.headers,
+      method: (request.method || 'GET') as Dispatcher.HttpMethod,
     });
 
-    const isUserError =
-      response.headers.get('x-vercel-failed') === 'edge-wrapper';
+    const resHeaders = toHeaders(response.headers) as Headers;
+    const isUserError = resHeaders.get('x-vercel-failed') === 'edge-wrapper';
 
-    if (isUserError && response.status >= 500) {
-      const body = await response.text();
+    if (isUserError && response.statusCode >= 500) {
+      const body = await response.body.text();
       // We can't currently get a real stack trace from the Edge Function error,
       // but we can fake a basic one that is still usefult to the user.
       const fakeStackTrace = `    at (${entrypointRelativePath})`;
@@ -231,8 +228,8 @@ export async function createEdgeEventHandler(
     }
 
     return {
-      status: response.status,
-      headers: response.headers,
+      status: response.statusCode,
+      headers: resHeaders,
       body: response.body,
       encoding: 'utf8',
     };

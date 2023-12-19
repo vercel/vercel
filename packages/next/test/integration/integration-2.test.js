@@ -11,132 +11,6 @@ const runBuildLambda = createRunBuildLambda(builder);
 
 jest.setTimeout(360000);
 
-it('Should build the static-files test on legacy', async () => {
-  const {
-    buildResult: { output },
-  } = await runBuildLambda(path.join(__dirname, 'legacy-static-files'));
-  expect(output['static/test.txt']).toBeDefined();
-});
-
-it('Should build the static-files test', async () => {
-  const {
-    buildResult: { output },
-  } = await runBuildLambda(path.join(__dirname, 'static-files'));
-  expect(output['static/test.txt']).toBeDefined();
-});
-
-it('Should build the public-files test', async () => {
-  const {
-    buildResult: { output },
-  } = await runBuildLambda(path.join(__dirname, 'public-files'));
-  expect(output['robots.txt']).toBeDefined();
-  expect(output['generated.txt']).toBeDefined();
-});
-
-it('Should build the serverless-config example', async () => {
-  const {
-    workPath,
-    buildResult: { output },
-  } = await runBuildLambda(path.join(__dirname, 'serverless-config'));
-
-  expect(output.index).not.toBeDefined();
-  expect(output.goodbye).not.toBeDefined();
-  expect(output.__NEXT_PAGE_LAMBDA_0).toBeDefined();
-  const filePaths = Object.keys(output);
-  const serverlessError = filePaths.some(filePath => filePath.match(/_error/));
-  const hasUnderScoreAppStaticFile = filePaths.some(filePath =>
-    filePath.match(/static.*\/pages\/_app\.js$/)
-  );
-  const hasUnderScoreErrorStaticFile = filePaths.some(filePath =>
-    filePath.match(/static.*\/pages\/_error\.js$/)
-  );
-  expect(hasUnderScoreAppStaticFile).toBeTruthy();
-  expect(hasUnderScoreErrorStaticFile).toBeTruthy();
-  expect(serverlessError).toBeTruthy();
-
-  const contents = await fs.readdir(workPath);
-
-  expect(contents.some(name => name === 'next.config.js')).toBeTruthy();
-  expect(
-    contents.some(name =>
-      name.includes('next.config.__vercel_builder_backup__')
-    )
-  ).toBeTruthy();
-});
-
-it('Should build the serverless-config-monorepo-missing example', async () => {
-  const {
-    workPath,
-    buildResult: { output },
-  } = await runBuildLambda(
-    path.join(__dirname, 'serverless-config-monorepo-missing')
-  );
-
-  expect(output['nested/index']).not.toBeDefined();
-  expect(output['nested/goodbye']).not.toBeDefined();
-  expect(output['nested/__NEXT_PAGE_LAMBDA_0']).toBeDefined();
-  const filePaths = Object.keys(output);
-  const serverlessError = filePaths.some(filePath => filePath.match(/_error/));
-  const hasUnderScoreAppStaticFile = filePaths.some(filePath =>
-    filePath.match(/static.*\/pages\/_app\.js$/)
-  );
-  const hasUnderScoreErrorStaticFile = filePaths.some(filePath =>
-    filePath.match(/static.*\/pages\/_error\.js$/)
-  );
-  expect(hasUnderScoreAppStaticFile).toBeTruthy();
-  expect(hasUnderScoreErrorStaticFile).toBeTruthy();
-  expect(serverlessError).toBeTruthy();
-
-  const contents = await fs.readdir(path.join(workPath, 'nested'));
-
-  expect(contents.some(name => name === 'next.config.js')).toBeTruthy();
-});
-
-it('Should build the serverless-config-monorepo-present example', async () => {
-  const {
-    workPath,
-    buildResult: { output },
-  } = await runBuildLambda(
-    path.join(__dirname, 'serverless-config-monorepo-present')
-  );
-
-  expect(output['nested/index']).not.toBeDefined();
-  expect(output['nested/goodbye']).not.toBeDefined();
-  expect(output['nested/__NEXT_PAGE_LAMBDA_0']).toBeDefined();
-  const filePaths = Object.keys(output);
-  const serverlessError = filePaths.some(filePath => filePath.match(/_error/));
-  const hasUnderScoreAppStaticFile = filePaths.some(filePath =>
-    filePath.match(/static.*\/pages\/_app\.js$/)
-  );
-  const hasUnderScoreErrorStaticFile = filePaths.some(filePath =>
-    filePath.match(/static.*\/pages\/_error\.js$/)
-  );
-  expect(hasUnderScoreAppStaticFile).toBeTruthy();
-  expect(hasUnderScoreErrorStaticFile).toBeTruthy();
-  expect(serverlessError).toBeTruthy();
-
-  const contents = await fs.readdir(path.join(workPath, 'nested'));
-
-  expect(contents.some(name => name === 'next.config.js')).toBeTruthy();
-  expect(
-    contents.some(name =>
-      name.includes('next.config.__vercel_builder_backup__')
-    )
-  ).toBeTruthy();
-});
-
-it('Should build the serverless-config-async example', async () => {
-  let error = null;
-
-  try {
-    await runBuildLambda(path.join(__dirname, 'serverless-config-async'));
-  } catch (err) {
-    error = err;
-  }
-
-  expect(error).toBe(null);
-});
-
 it('Should build the serverless-config-promise example', async () => {
   let error = null;
 
@@ -387,41 +261,6 @@ it('Should provide lambda info when limit is hit (server build)', async () => {
   expect(logs).toMatch(/big-image-2/);
 });
 
-it('Should provide lambda info when limit is hit (shared lambdas)', async () => {
-  let logs = '';
-
-  const origLog = console.log;
-
-  console.log = function (...args) {
-    logs += args.join(' ');
-    origLog(...args);
-  };
-
-  try {
-    await runBuildLambda(
-      path.join(__dirname, 'test-limit-exceeded-shared-lambdas')
-    );
-  } catch (err) {
-    console.error(err);
-  }
-  console.log = origLog;
-
-  expect(logs).toContain(
-    'Max serverless function size was exceeded for 1 function'
-  );
-  expect(logs).toContain(
-    'Max serverless function size of 50 MB compressed or 250 MB uncompressed reached'
-  );
-  expect(logs).toContain(`Serverless Function's page: api/both.js`);
-  expect(logs).toMatch(
-    /Large Dependencies.*?Uncompressed size.*?Compressed size/
-  );
-  expect(logs).toMatch(
-    /node_modules\/chrome-aws-lambda\/bin.*?\d{2}.*?MB.*?\d{2}.*?MB/
-  );
-  expect(logs).toMatch(/node_modules\/@firebase\/firestore.*?\d{1}.*?MB/);
-});
-
 it('Should provide lambda info when limit is hit for internal pages (server build)', async () => {
   let logs = '';
 
@@ -552,4 +391,76 @@ it('Should de-dupe correctly when limit is close (uncompressed)', async () => {
   }
   expect(lambdas.size).toBe(2);
   expect(lambdas.size).toBeLessThan(totalLambdas);
+});
+
+it('should handle edge functions in app with basePath', async () => {
+  const {
+    buildResult: { output },
+  } = await runBuildLambda(path.join(__dirname, 'edge-app-dir-basepath'));
+
+  console.error(output);
+
+  expect(output['test']).toBeDefined();
+  expect(output['test']).toBeDefined();
+  expect(output['test'].type).toBe('EdgeFunction');
+  expect(output['test'].type).toBe('EdgeFunction');
+
+  expect(output['test/another']).toBeDefined();
+  expect(output['test/another.rsc']).toBeDefined();
+  expect(output['test/another'].type).toBe('EdgeFunction');
+  expect(output['test/another.rsc'].type).toBe('EdgeFunction');
+
+  expect(output['test/dynamic/[slug]']).toBeDefined();
+  expect(output['test/dynamic/[slug].rsc']).toBeDefined();
+  expect(output['test/dynamic/[slug]'].type).toBe('EdgeFunction');
+  expect(output['test/dynamic/[slug].rsc'].type).toBe('EdgeFunction');
+
+  expect(output['test/dynamic/[slug]']).toBeDefined();
+  expect(output['test/dynamic/[slug].rsc']).toBeDefined();
+  expect(output['test/dynamic/[slug]'].type).toBe('EdgeFunction');
+  expect(output['test/dynamic/[slug].rsc'].type).toBe('EdgeFunction');
+
+  expect(output['test/test']).toBeDefined();
+  expect(output['test/test.rsc']).toBeDefined();
+  expect(output['test/test'].type).toBe('EdgeFunction');
+  expect(output['test/test.rsc'].type).toBe('EdgeFunction');
+
+  expect(output['test/_not-found']).toBeDefined();
+  expect(output['test/_not-found'].type).toBe('Lambda');
+
+  const lambdas = new Set();
+  const edgeFunctions = new Set();
+
+  for (const item of Object.values(output)) {
+    if (item.type === 'Lambda') {
+      lambdas.add(item);
+    } else if (item.type === 'EdgeFunction') {
+      edgeFunctions.add(item);
+    }
+  }
+  expect(lambdas.size).toBe(1);
+  expect(edgeFunctions.size).toBe(4);
+});
+
+it('should not generate lambdas that conflict with static index route in app with basePath', async () => {
+  const {
+    buildResult: { output },
+  } = await runBuildLambda(path.join(__dirname, 'app-router-basepath'));
+
+  expect(output['test']).not.toBeDefined();
+  expect(output['test.rsc']).not.toBeDefined();
+  expect(output['test/index'].type).toBe('Prerender');
+  expect(output['test/index.rsc'].type).toBe('Prerender');
+
+  expect(output['test/_not-found']).toBeDefined();
+  expect(output['test/_not-found'].type).toBe('Lambda');
+
+  const lambdas = new Set();
+
+  for (const item of Object.values(output)) {
+    if (item.type === 'Lambda') {
+      lambdas.add(item);
+    }
+  }
+  expect(lambdas.size).toBe(1);
 });

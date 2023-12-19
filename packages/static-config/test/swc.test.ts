@@ -56,6 +56,7 @@ describe('getConfig for swc', () => {
     const config = getConfig(ast, BaseFunctionConfigSchema);
     expect(config).toMatchInlineSnapshot(`
       {
+        "maxDuration": 60,
         "memory": 1024,
         "runtime": "nodejs",
       }
@@ -73,6 +74,7 @@ describe('getConfig for swc', () => {
     expect(config).toMatchInlineSnapshot(`
       {
         "location": "https://example.com/page",
+        "maxDuration": 60,
         "runtime": "deno",
       }
     `);

@@ -1,13 +1,11 @@
 import * as React from 'react';
-import { Link } from 'gatsby';
 
 const DSGPage = () => {
   return (
     <>
       <h1>
-        This page is <b>DSG</b>
+        This page is DSG
       </h1>
-      <Link to="/">Go back to the homepage</Link>
     </>
   );
 };

@@ -6,7 +6,7 @@ if (!entrypoint) {
 }
 
 import { join } from 'path';
-import type { Headers } from 'node-fetch';
+import type { Headers } from 'undici';
 import type { VercelProxyResponse } from './types.js';
 import { Config } from '@vercel/build-utils';
 import { createEdgeEventHandler } from './edge-functions/edge-handler.mjs';
@@ -104,15 +104,17 @@ async function onDevRequest(
     const { headers, body, status } = await handleEvent(req);
     res.statusCode = status;
 
-    for (const [key, value] of headers as unknown as Headers) {
-      // node-fetch does not support headers.getSetCookie(), so we need to
-      // manually set the raw value which can be an array of strings
-      if (value !== undefined) {
-        res.setHeader(key, key === 'set-cookie' ? headers.raw()[key] : value);
-      }
+    for (const [key, value] of headers as Headers) {
+      if (value !== undefined)
+        res.setHeader(
+          key,
+          key === 'set-cookie' ? headers.getSetCookie() : value
+        );
     }
 
-    if (body instanceof Buffer) {
+    if (body === null) {
+      res.end();
+    } else if (body instanceof Buffer) {
       res.end(body);
     } else {
       body.pipe(res);
