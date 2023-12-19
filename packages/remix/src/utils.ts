@@ -229,7 +229,7 @@ export async function chdirAndReadConfig(
   const pkgRaw = await fs.readFile(packageJsonPath, 'utf8');
   const pkg = JSON.parse(pkgRaw);
   if (!pkg.dependencies?.['isbot']) {
-    pkg.dependencies.isbot = 'latest';
+    pkg.dependencies.isbot = '^4.0.0';
     await fs.writeFile(packageJsonPath, JSON.stringify(pkg));
     modifiedPackageJson = true;
   }
