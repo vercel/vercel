@@ -17,9 +17,9 @@ export const projectCommand: Command = {
       arguments: [],
       options: [
         {
-          name: 'deprecated',
-          description: 'A list of projects affected by a deprecation',
-          argument: 'deprecated',
+          name: 'update-required',
+          description: 'A list of projects affected by an upcoming deprecation',
+          argument: 'update-required',
           shorthand: null,
           type: 'boolean',
           deprecated: false,

@@ -30,7 +30,7 @@ export default async function list(
 
   let projectsUrl = `/v4/projects/?limit=20`;
 
-  const deprecated = argv['--deprecated'] || false;
+  const deprecated = argv['--update-required'] || false;
   if (deprecated) {
     projectsUrl += `&deprecated=${deprecated}`;
   }
@@ -69,7 +69,7 @@ export default async function list(
     output.warn(
       `The following Node.js versions will be deprecated soon: ${upcomingDeprecationVersionsList.join(
         ', '
-      )}. Upgrade your projects immediately.`
+      )}. Please upgrade your projects immediately.`
     );
     output.log(
       `For more information visit: https://vercel.com/docs/functions/serverless-functions/runtimes/node-js#node.js-version`
