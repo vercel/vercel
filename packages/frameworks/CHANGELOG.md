@@ -1,5 +1,11 @@
 # @vercel/frameworks
 
+## 2.0.6
+
+### Patch Changes
+
+- Update nuxt logo ([#10977](https://github.com/vercel/vercel/pull/10977))
+
 ## 2.0.5
 
 ### Patch Changes
