@@ -353,7 +353,7 @@ export function useProject(
   });
   client.scenario.get(`/v4/projects`, (req, res) => {
     res.json({
-      projects: [defaultProject],
+      projects: [project],
       pagination: null,
     });
   });

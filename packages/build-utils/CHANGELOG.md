@@ -1,5 +1,23 @@
 # @vercel/build-utils
 
+## 7.4.1
+
+### Patch Changes
+
+- Extend Node v16 discontinue date to 2024-06-15 ([#10967](https://github.com/vercel/vercel/pull/10967))
+
+## 7.4.0
+
+### Minor Changes
+
+- Adds new helper `getPathForPackageManager()` ([#10918](https://github.com/vercel/vercel/pull/10918))
+
+## 7.3.0
+
+### Minor Changes
+
+- [cli] add `--deprecated` option to `vc project ls` command ([#10919](https://github.com/vercel/vercel/pull/10919))
+
 ## 7.2.5
 
 ### Patch Changes

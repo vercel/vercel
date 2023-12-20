@@ -28,6 +28,7 @@ import {
   runCustomInstallCommand,
   getEnvForPackageManager,
   getNodeVersion,
+  getPathForPackageManager,
   getSpawnOptions,
   getNodeBinPath,
   getNodeBinPaths,
@@ -78,6 +79,7 @@ export {
   runCustomInstallCommand,
   getEnvForPackageManager,
   getNodeVersion,
+  getPathForPackageManager,
   getLatestNodeVersion,
   getDiscontinuedNodeVersions,
   getSpawnOptions,
@@ -104,3 +106,5 @@ export * from './should-serve';
 export * from './schemas';
 export * from './types';
 export * from './errors';
+
+export { NODE_VERSIONS } from './fs/node-version';

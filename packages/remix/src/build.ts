@@ -104,15 +104,17 @@ export const build: BuildV2 = async ({
     meta
   );
 
-  const { cliType, packageJsonPath, lockfileVersion } = await scanParentDirs(
-    entrypointFsDirname
-  );
+  const { cliType, packageJsonPath, lockfileVersion, lockfilePath } =
+    await scanParentDirs(entrypointFsDirname);
 
   if (!packageJsonPath) {
     throw new Error('Failed to locate `package.json` file in your project');
   }
 
-  const pkgRaw = await fs.readFile(packageJsonPath, 'utf8');
+  const [lockfileRaw, pkgRaw] = await Promise.all([
+    lockfilePath ? fs.readFile(lockfilePath) : null,
+    fs.readFile(packageJsonPath, 'utf8'),
+  ]);
   const pkg = JSON.parse(pkgRaw);
 
   const spawnOpts = getSpawnOptions(meta, nodeVersion);
@@ -423,9 +425,7 @@ module.exports = config;`;
       cleanupOps.push(
         fs
           .rename(renamedRemixConfigPath, remixConfigPath)
-          .then(() =>
-            debug(`Restored original "${basename(remixConfigPath)}" file`)
-          )
+          .then(() => debug(`Restored original "${remixConfigPath}" file`))
       );
     }
     // Restore original server entrypoint if it was modified (for Hydrogen v2)
@@ -433,10 +433,23 @@ module.exports = config;`;
       cleanupOps.push(
         fs
           .writeFile(serverEntryPointAbs, originalServerEntryPoint)
-          .then(() =>
-            debug(`Restored original "${basename(serverEntryPointAbs!)}" file`)
-          )
+          .then(() => debug(`Restored original "${serverEntryPointAbs}" file`))
       );
+    }
+    // Restore original `package.json` file and lockfile
+    if (depsModified) {
+      cleanupOps.push(
+        fs
+          .writeFile(packageJsonPath, pkgRaw)
+          .then(() => debug(`Restored original "${packageJsonPath}" file`))
+      );
+      if (lockfilePath && lockfileRaw) {
+        cleanupOps.push(
+          fs
+            .writeFile(lockfilePath, lockfileRaw)
+            .then(() => debug(`Restored original "${lockfilePath}" file`))
+        );
+      }
     }
     await Promise.all(cleanupOps);
   }
