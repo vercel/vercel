@@ -2108,14 +2108,22 @@ export const onPrerenderRoute =
     } else if (
       appDir &&
       !dataRoute &&
+      !prefetchDataRoute &&
       isAppPathRoute &&
       !(isBlocking || isFallback)
     ) {
       const contentType = initialHeaders?.['content-type'];
-      htmlFsRef = new FileFsRef({
-        fsPath: path.join(appDir, `${routeFileNoExt}.body`),
-        contentType: contentType || 'text/html;charset=utf-8',
-      });
+
+      // If the route has a body file, use it as the fallback, otherwise it may
+      // not have an associated fallback. This could be the case for routes that
+      // have dynamic segments.
+      const fsPath = path.join(appDir, `${routeFileNoExt}.body`);
+      if (fs.existsSync(fsPath)) {
+        htmlFsRef = new FileFsRef({
+          fsPath,
+          contentType: contentType || 'text/html;charset=utf-8',
+        });
+      }
     } else {
       htmlFsRef =
         isBlocking || (isNotFound && !static404Page)
