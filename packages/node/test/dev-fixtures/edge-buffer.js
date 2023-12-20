@@ -1,5 +1,3 @@
-/* global Response */
-
 import B from 'node:buffer';
 import { Buffer } from 'buffer';
 
