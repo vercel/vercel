@@ -2059,7 +2059,7 @@ export const onPrerenderRoute =
     }
 
     const isOmittedOrNotFound = isOmitted || isNotFound;
-    let htmlFsRef: File | null;
+    let htmlFsRef: File | null = null;
 
     // If enabled, try to get the postponed route information from the file
     // system and use it to assemble the prerender.

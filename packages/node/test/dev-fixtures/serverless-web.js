@@ -1,5 +1,3 @@
-/* global Response */
-
 const baseUrl = ({ headers }) =>
   `${headers.get('x-forwarded-proto')}://${headers.get('x-forwarded-host')}`;
 
