@@ -1,3 +1,4 @@
+import { EOL } from 'os';
 import { join, dirname, relative } from 'path';
 import execa from 'execa';
 import {
@@ -83,6 +84,7 @@ async function bundleInstall(
   // which is needed for the `vc_init.rb` entrypoint file
   if (runtime === 'ruby3.2') {
     const result = await execa('bundler', ['add', 'webrick'], {
+      cwd: dirname(gemfilePath),
       stdio: 'pipe',
       env: bundlerEnv,
       reject: false,
@@ -123,11 +125,18 @@ export async function build({
   const entrypointFsDirname = join(workPath, dirname(entrypoint));
   const gemfileName = 'Gemfile';
 
-  const gemfilePath = await walkParentDirs({
+  let gemfilePath = await walkParentDirs({
     base: workPath,
     start: entrypointFsDirname,
     filename: gemfileName,
   });
+
+  // Ensure a `Gemfile` exists so that webrick can be installed for Ruby 3.2
+  if (!gemfilePath) {
+    gemfilePath = join(entrypointFsDirname, gemfileName);
+    await writeFile(gemfilePath, `source "https://rubygems.org"${EOL}`);
+  }
+
   const gemfileContents = gemfilePath
     ? await readFile(gemfilePath, 'utf8')
     : '';
