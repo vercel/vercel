@@ -1,4 +1,4 @@
-/*global TextEncoderStream, ReadableStream, Response, WebSocket */
+/*global WebSocket */
 
 export const config = { runtime: 'edge' };
 
