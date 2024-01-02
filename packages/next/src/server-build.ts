@@ -1880,8 +1880,17 @@ export async function serverBuild({
       ...(appPathRoutesManifest
         ? [
             {
-              src: '/((\\.prefetch)?\\.rsc)$',
-              dest: '/index$1',
+              src: path.posix.join('/', entryDirectory, '/\\.prefetch\\.rsc$'),
+              dest: path.posix.join(
+                '/',
+                entryDirectory,
+                `/__index${RSC_PREFETCH_SUFFIX}`
+              ),
+              check: true,
+            },
+            {
+              src: path.posix.join('/', entryDirectory, '/\\.rsc$'),
+              dest: path.posix.join('/', entryDirectory, `/index.rsc`),
               check: true,
             },
           ]
