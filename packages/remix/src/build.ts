@@ -540,17 +540,7 @@ module.exports = config;`;
       throw new Error(`Could not determine server bundle for "${route.id}"`);
     }
 
-    output[path] =
-      func instanceof EdgeFunction
-        ? // `EdgeFunction` currently requires the "name" property to be set.
-          // Ideally this property will be removed, at which point we can
-          // return the same `edgeFunction` instance instead of creating a
-          // new one for each page.
-          new EdgeFunction({
-            ...func,
-            name: path,
-          })
-        : func;
+    output[path] = func;
 
     // If this is a dynamic route then add a Vercel route
     const re = getRegExpFromPath(rePath);
@@ -571,12 +561,9 @@ module.exports = config;`;
         return runtime === 'edge';
       }
     );
-    const func =
-      edgeFunctionIndex !== -1 ? functions[edgeFunctionIndex] : functions[0];
+
     output['404'] =
-      func instanceof EdgeFunction
-        ? new EdgeFunction({ ...func, name: '404' })
-        : func;
+      edgeFunctionIndex !== -1 ? functions[edgeFunctionIndex] : functions[0];
   }
   routes.push({
     src: '/(.*)',
@@ -767,7 +754,6 @@ async function createRenderEdgeFunction(
   const fn = new EdgeFunction({
     files,
     deploymentTarget: 'v8-worker',
-    name: 'render',
     entrypoint: handler,
     regions: config.regions,
     framework: {

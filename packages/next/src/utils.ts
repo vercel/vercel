@@ -2898,7 +2898,6 @@ export async function getMiddlewareBundle({
 
               return new EdgeFunction({
                 deploymentTarget: 'v8-worker',
-                name: edgeFunction.name,
                 files: {
                   'index.js': new FileBlob({
                     data: source,

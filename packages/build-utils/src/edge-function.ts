@@ -7,11 +7,6 @@ export class EdgeFunction {
   type: 'EdgeFunction';
 
   /**
-   * A display name for the edge function.
-   */
-  name: string;
-
-  /**
    * The deployment target.
    * Only v8-worker is currently supported.
    */
@@ -40,7 +35,6 @@ export class EdgeFunction {
 
   constructor(params: Omit<EdgeFunction, 'type'>) {
     this.type = 'EdgeFunction';
-    this.name = params.name;
     this.deploymentTarget = params.deploymentTarget;
     this.entrypoint = params.entrypoint;
     this.files = params.files;
