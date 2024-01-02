@@ -213,6 +213,25 @@ export async function serverBuild({
         value.contentType = rscContentTypeHeader;
       }
     }
+
+    for (const rewrite of afterFilesRewrites) {
+      if (rewrite.src && rewrite.dest) {
+        rewrite.src = rewrite.src.replace(
+          '(?:/)?',
+          '(?<rscsuff>(\\.prefetch)?\\.rsc)?(?:/)?'
+        );
+        let destQueryIndex = rewrite.dest.indexOf('?');
+
+        if (destQueryIndex === -1) {
+          destQueryIndex = rewrite.dest.length;
+        }
+
+        rewrite.dest =
+          rewrite.dest.substring(0, destQueryIndex) +
+          '$rscsuff' +
+          rewrite.dest.substring(destQueryIndex);
+      }
+    }
   }
 
   const isCorrectNotFoundRoutes = semver.gte(
@@ -1856,6 +1875,17 @@ export async function serverBuild({
       // These need to come before handle: miss or else they are grouped
       // with that routing section
       ...afterFilesRewrites,
+
+      // ensure non-normalized /.rsc from rewrites is handled
+      ...(appPathRoutesManifest
+        ? [
+            {
+              src: '/((\\.prefetch)?\\.rsc)$',
+              dest: '/index$1',
+              check: true,
+            },
+          ]
+        : []),
 
       { handle: 'resource' },
 

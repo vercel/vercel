@@ -19,6 +19,30 @@
   ],
   "probes": [
     {
+      "path": "/rewritten-to-dashboard",
+      "status": 200,
+      "mustContain": "html"
+    },
+    {
+      "path": "/rewritten-to-dashboard",
+      "status": 200,
+      "mustContain": ":{",
+      "mustNotContain": "<html",
+      "headers": {
+        "RSC": 1,
+        "Next-Router-Prefetch": 1
+      }
+    },
+    {
+      "path": "/rewritten-to-dashboard",
+      "status": 200,
+      "mustContain": ":{",
+      "mustNotContain": "<html",
+      "headers": {
+        "RSC": 1
+      }
+    },
+    {
       "path": "/catch-all",
       "status": 200,
       "mustContain": "html"
