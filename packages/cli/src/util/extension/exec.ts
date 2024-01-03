@@ -21,7 +21,7 @@ export async function execExtension(
   args: string[],
   cwd: string
 ): Promise<number> {
-  const { debug } = client.output;
+  const { debug, log } = client.output;
   const extensionCommand = `vercel-${name}`;
 
   const { packageJsonPath, lockfilePath } = await scanParentDirs(cwd);
@@ -76,7 +76,7 @@ export async function execExtension(
   proxy.close();
 
   if (result instanceof Error) {
-    debug(`error running extension: ${result.message}`);
+    log(`Error running extension ${extensionCommand}: ${result.message}`);
   }
 
   return result.exitCode;
