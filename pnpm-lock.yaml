@@ -1079,8 +1079,8 @@ importers:
   packages/next:
     dependencies:
       '@vercel/nft':
-        specifier: 0.24.2
-        version: 0.24.2
+        specifier: 0.26.2
+        version: 0.26.2
     devDependencies:
       '@types/aws-lambda':
         specifier: 8.10.19
@@ -1218,8 +1218,8 @@ importers:
         specifier: 2.0.2
         version: link:../error-utils
       '@vercel/nft':
-        specifier: 0.24.2
-        version: 0.24.2
+        specifier: 0.26.2
+        version: 0.26.2
       '@vercel/static-config':
         specifier: 3.0.0
         version: link:../static-config
@@ -1339,8 +1339,8 @@ importers:
   packages/redwood:
     dependencies:
       '@vercel/nft':
-        specifier: 0.24.2
-        version: 0.24.2
+        specifier: 0.26.2
+        version: 0.26.2
       '@vercel/routing-utils':
         specifier: 3.1.0
         version: link:../routing-utils
@@ -1373,8 +1373,8 @@ importers:
   packages/remix:
     dependencies:
       '@vercel/nft':
-        specifier: 0.24.2
-        version: 0.24.2
+        specifier: 0.26.2
+        version: 0.26.2
       '@vercel/static-config':
         specifier: 3.0.0
         version: link:../static-config
@@ -5383,14 +5383,15 @@ packages:
       - supports-color
     dev: false
 
-  /@vercel/nft@0.24.2:
-    resolution: {integrity: sha512-KhY3Ky/lCqE+fHpOXiKOLnXYJ49PZh1dyDSfVtZhmYtmica0NQgyO6kPOAGDNWqD9IOBx8hb65upxxjfnfa1JA==}
+  /@vercel/nft@0.26.2:
+    resolution: {integrity: sha512-bxe2iShmKZi7476xYamyKvhhKwQ6JPEtQ2FSq1AjMUH2buMd8LQMkdoHinTqZYc+1sMTh3G0ARdjzNvV1FEisA==}
     engines: {node: '>=16'}
     hasBin: true
     dependencies:
       '@mapbox/node-pre-gyp': 1.0.10
       '@rollup/pluginutils': 4.2.1
       acorn: 8.8.2
+      acorn-import-attributes: 1.9.2(acorn@8.8.2)
       async-sema: 3.1.1
       bindings: 1.5.0
       estree-walker: 2.0.2
@@ -5656,6 +5657,14 @@ packages:
       mime-types: 2.1.35
       negotiator: 0.6.3
     dev: true
+
+  /acorn-import-attributes@1.9.2(acorn@8.8.2):
+    resolution: {integrity: sha512-O+nfJwNolEA771IYJaiLWK1UAwjNsQmZbTRqqwBYxCgVQTmpFEMvBw6LOIQV0Me339L5UMVYFyRohGnGlQDdIQ==}
+    peerDependencies:
+      acorn: ^8
+    dependencies:
+      acorn: 8.8.2
+    dev: false
 
   /acorn-jsx@5.3.2(acorn@8.8.2):
     resolution: {integrity: sha512-rq9s+JNhf0IChjtDXxllJ7g41oZk5SlXtp0LHwyA5cejwn7vKmKp4pPri6YEePv2PU65sAsegbXtIinmDFDXgQ==}
