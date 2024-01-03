@@ -1,5 +1,12 @@
 # @vercel/next
 
+## 4.0.16
+
+### Patch Changes
+
+- Entries in the `prerender-manifest.json` without a `dataRoute` but with a `prefetchDataRoute` will be treated as an App Page. App Route's that do not have ([#10978](https://github.com/vercel/vercel/pull/10978))
+  a body will not cause a build error.
+
 ## 4.0.15
 
 ### Patch Changes

@@ -1,6 +1,6 @@
 {
   "name": "@vercel/node",
-  "version": "3.0.12",
+  "version": "3.0.14",
   "license": "Apache-2.0",
   "main": "./dist/index",
   "homepage": "https://vercel.com/docs/runtimes#official-runtimes/node-js",
@@ -24,7 +24,7 @@
     "@edge-runtime/primitives": "4.0.5",
     "@edge-runtime/vm": "3.1.7",
     "@types/node": "14.18.33",
-    "@vercel/build-utils": "7.3.0",
+    "@vercel/build-utils": "7.4.1",
     "@vercel/error-utils": "2.0.2",
     "@vercel/nft": "0.24.2",
     "@vercel/static-config": "3.0.0",
@@ -32,7 +32,6 @@
     "edge-runtime": "2.5.7",
     "esbuild": "0.14.47",
     "etag": "1.8.1",
-    "exit-hook": "2.2.1",
     "node-fetch": "2.6.9",
     "path-to-regexp": "6.2.1",
     "ts-morph": "12.0.0",
@@ -55,6 +54,7 @@
     "execa": "3.2.0",
     "fs-extra": "11.1.0",
     "jest-junit": "16.0.0",
-    "source-map-support": "0.5.12"
+    "source-map-support": "0.5.12",
+    "tree-kill": "1.2.2"
   }
 }
