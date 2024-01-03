@@ -1,5 +1,18 @@
 # vercel
 
+## 33.0.2
+
+### Patch Changes
+
+- Log extension execution failures ([#10937](https://github.com/vercel/vercel/pull/10937))
+
+- Updated dependencies [[`fbe08fe57`](https://github.com/vercel/vercel/commit/fbe08fe57eededc0bcd2409692b23d185c70069d), [`77585013d`](https://github.com/vercel/vercel/commit/77585013dec5fc406b8b7ea00918e49fdb8f10ec), [`c536a74bc`](https://github.com/vercel/vercel/commit/c536a74bc9e7188a87b292615fa88d6fc506b105), [`91f8763ed`](https://github.com/vercel/vercel/commit/91f8763edce672a3c05b6096db6084f1e6741384), [`7f8f5f865`](https://github.com/vercel/vercel/commit/7f8f5f86516934acb0c4b936ea601433c8d30c5c)]:
+  - @vercel/next@4.0.17
+  - @vercel/go@3.0.5
+  - @vercel/node@3.0.15
+  - @vercel/redwood@2.0.6
+  - @vercel/remix-builder@2.0.16
+
 ## 33.0.1
 
 ### Patch Changes
