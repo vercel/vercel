@@ -1,5 +1,13 @@
 # @vercel/next
 
+## 4.0.17
+
+### Patch Changes
+
+- Ensure rewrites handle RSC requests ([#11005](https://github.com/vercel/vercel/pull/11005))
+
+- [next][node][redwood][remix] Bump `@vercel/nft@0.26.1` ([#11009](https://github.com/vercel/vercel/pull/11009))
+
 ## 4.0.16
 
 ### Patch Changes
