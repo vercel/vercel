@@ -1,5 +1,13 @@
 # @vercel/remix-builder
 
+## 2.0.16
+
+### Patch Changes
+
+- [next][node][redwood][remix] Bump `@vercel/nft@0.26.1` ([#11009](https://github.com/vercel/vercel/pull/11009))
+
+- Update `@remix-run/dev` fork to v2.4.1 ([#10992](https://github.com/vercel/vercel/pull/10992))
+
 ## 2.0.15
 
 ### Patch Changes
