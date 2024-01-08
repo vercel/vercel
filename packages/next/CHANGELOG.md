@@ -1,5 +1,20 @@
 # @vercel/next
 
+## 4.0.17
+
+### Patch Changes
+
+- Ensure rewrites handle RSC requests ([#11005](https://github.com/vercel/vercel/pull/11005))
+
+- [next][node][redwood][remix] Bump `@vercel/nft@0.26.1` ([#11009](https://github.com/vercel/vercel/pull/11009))
+
+## 4.0.16
+
+### Patch Changes
+
+- Entries in the `prerender-manifest.json` without a `dataRoute` but with a `prefetchDataRoute` will be treated as an App Page. App Route's that do not have ([#10978](https://github.com/vercel/vercel/pull/10978))
+  a body will not cause a build error.
+
 ## 4.0.15
 
 ### Patch Changes

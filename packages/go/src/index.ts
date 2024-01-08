@@ -249,10 +249,7 @@ export async function build({
       await buildHandlerWithGoMod(buildOptions);
     }
 
-    const runtime =
-      process.env.VERCEL_USE_GO_PROVIDED_RUNTIME === '1'
-        ? 'provided.al2'
-        : 'go1.x';
+    const runtime = 'provided.al2';
     const lambda = new Lambda({
       files: { ...(await glob('**', outDir)), ...includedFiles },
       handler: HANDLER_FILENAME,

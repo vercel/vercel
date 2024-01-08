@@ -1,5 +1,20 @@
 # @vercel/node
 
+## 3.0.15
+
+### Patch Changes
+
+- Await waitUntil promises to resolve before exiting ([#10915](https://github.com/vercel/vercel/pull/10915))
+
+- [next][node][redwood][remix] Bump `@vercel/nft@0.26.1` ([#11009](https://github.com/vercel/vercel/pull/11009))
+
+## 3.0.14
+
+### Patch Changes
+
+- Updated dependencies [[`67fa2f3dd`](https://github.com/vercel/vercel/commit/67fa2f3dd6a6d5a3504b7f9081e56deff7b36eab)]:
+  - @vercel/build-utils@7.4.1
+
 ## 3.0.13
 
 ### Patch Changes
