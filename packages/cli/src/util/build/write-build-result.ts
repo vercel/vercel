@@ -129,13 +129,19 @@ async function writeBuildResultV2(
     );
   }
 
-  const lambdas = new Map<Lambda, string>();
+  const existingFunctions = new Map<Lambda | EdgeFunction, string>();
   const overrides: Record<string, PathOverride> = {};
 
   for (const [path, output] of Object.entries(buildResult.output)) {
     const normalizedPath = stripDuplicateSlashes(path);
     if (isLambda(output)) {
-      await writeLambda(outputDir, output, normalizedPath, undefined, lambdas);
+      await writeLambda(
+        outputDir,
+        output,
+        normalizedPath,
+        undefined,
+        existingFunctions
+      );
     } else if (isPrerender(output)) {
       if (!output.lambda) {
         throw new Error(
@@ -148,7 +154,7 @@ async function writeBuildResultV2(
         output.lambda,
         normalizedPath,
         undefined,
-        lambdas
+        existingFunctions
       );
 
       // Write the fallback file alongside the Lambda directory
@@ -203,7 +209,12 @@ async function writeBuildResultV2(
         vercelConfig?.cleanUrls
       );
     } else if (isEdgeFunction(output)) {
-      await writeEdgeFunction(outputDir, output, normalizedPath);
+      await writeEdgeFunction(
+        outputDir,
+        output,
+        normalizedPath,
+        existingFunctions
+      );
     } else {
       throw new Error(
         `Unsupported output type: "${
@@ -316,6 +327,30 @@ async function writeStaticFile(
 }
 
 /**
+ * If the `fn` Lambda or Edge function has already been written to
+ * the filesystem at a different location, then create a symlink
+ * to the previous location instead of copying the files again.
+ */
+async function writeFunctionSymlink(
+  outputDir: string,
+  dest: string,
+  fn: Lambda | EdgeFunction,
+  existingFunctions: Map<Lambda | EdgeFunction, string>
+) {
+  const existingPath = existingFunctions.get(fn);
+
+  // Function has not been written to the filesystem, so bail
+  if (!existingPath) return false;
+
+  const destDir = dirname(dest);
+  const targetDest = join(outputDir, 'functions', `${existingPath}.func`);
+  const target = relative(destDir, targetDest);
+  await fs.mkdirp(destDir);
+  await fs.symlink(target, dest);
+  return true;
+}
+
+/**
  * Serializes the `EdgeFunction` instance to the file system.
  *
  * @param edgeFunction The `EdgeFunction` instance
@@ -324,9 +359,24 @@ async function writeStaticFile(
 async function writeEdgeFunction(
   outputDir: string,
   edgeFunction: EdgeFunction,
-  path: string
+  path: string,
+  existingFunctions?: Map<Lambda | EdgeFunction, string>
 ) {
   const dest = join(outputDir, 'functions', `${path}.func`);
+
+  if (existingFunctions) {
+    if (
+      await writeFunctionSymlink(
+        outputDir,
+        dest,
+        edgeFunction,
+        existingFunctions
+      )
+    ) {
+      return;
+    }
+    existingFunctions.set(edgeFunction, path);
+  }
 
   await fs.mkdirp(dest);
   const ops: Promise<any>[] = [];
@@ -353,34 +403,25 @@ async function writeEdgeFunction(
  *
  * @param lambda The `Lambda` instance
  * @param path The URL path where the `Lambda` can be accessed from
- * @param lambdas (optional) Map of `Lambda` instances that have previously been written
+ * @param existingFunctions (optional) Map of `Lambda` instances that have previously been written
  */
 async function writeLambda(
   outputDir: string,
   lambda: Lambda,
   path: string,
   functionConfiguration?: FunctionConfiguration,
-  lambdas?: Map<Lambda, string>
+  existingFunctions?: Map<Lambda | EdgeFunction, string>
 ) {
   const dest = join(outputDir, 'functions', `${path}.func`);
 
-  // If the `lambda` has already been written to the filesystem at a different
-  // location then create a symlink to the previous location instead of copying
-  // the files again.
-  const existingLambdaPath = lambdas?.get(lambda);
-  if (existingLambdaPath) {
-    const destDir = dirname(dest);
-    const targetDest = join(
-      outputDir,
-      'functions',
-      `${existingLambdaPath}.func`
-    );
-    const target = relative(destDir, targetDest);
-    await fs.mkdirp(destDir);
-    await fs.symlink(target, dest);
-    return;
+  if (existingFunctions) {
+    if (
+      await writeFunctionSymlink(outputDir, dest, lambda, existingFunctions)
+    ) {
+      return;
+    }
+    existingFunctions.set(lambda, path);
   }
-  lambdas?.set(lambda, path);
 
   await fs.mkdirp(dest);
   const ops: Promise<any>[] = [];
