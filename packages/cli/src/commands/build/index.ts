@@ -1,4 +1,4 @@
-import fs from 'fs-extra';
+import fs, { readJSON } from 'fs-extra';
 import chalk from 'chalk';
 import dotenv from 'dotenv';
 import semver from 'semver';
@@ -22,7 +22,6 @@ import {
   Cron,
   validateNpmrc,
   Flag,
-  readInstalledVersion,
 } from '@vercel/build-utils';
 import {
   detectBuilders,
@@ -72,6 +71,7 @@ import { setMonorepoDefaultSettings } from '../../util/build/monorepo';
 import { help } from '../help';
 import { buildCommand } from './command';
 import { scrubArgv } from '../../util/build/scrub-argv';
+import { cwd } from 'process';
 
 type BuildResult = BuildResultV2 | BuildResultV3;
 
@@ -587,6 +587,7 @@ async function doBuild(
 
   let needBuildsJsonOverride = false;
   const speedInsightsVersion = await readInstalledVersion(
+    client,
     '@vercel/speed-insights'
   );
   if (speedInsightsVersion) {
@@ -596,7 +597,10 @@ async function doBuild(
     };
     needBuildsJsonOverride = true;
   }
-  const webAnalyticsVersion = await readInstalledVersion('@vercel/analytics');
+  const webAnalyticsVersion = await readInstalledVersion(
+    client,
+    '@vercel/analytics'
+  );
   if (webAnalyticsVersion) {
     buildsJson.features = {
       ...(buildsJson.features ?? {}),
@@ -820,4 +824,22 @@ function mergeFlags(
 
 async function writeBuildJson(buildsJson: BuildsManifest, outputDir: string) {
   await fs.writeJSON(join(outputDir, 'builds.json'), buildsJson, { spaces: 2 });
+}
+
+export async function readInstalledVersion(
+  { output }: Client,
+  pkgName: string
+): Promise<string | undefined> {
+  try {
+    const descriptorPath = require.resolve(`${pkgName}/package.json`, {
+      paths: [cwd()],
+    });
+    const descriptor = await readJSON(descriptorPath);
+    return descriptor?.version;
+  } catch (err) {
+    output.debug(
+      `Package ${pkgName} is not installed (failed to ready its package.json: ${err})`
+    );
+  }
+  return;
 }

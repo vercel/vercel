@@ -1,5 +1,4 @@
 ---
-'@vercel/build-utils': minor
 '@vercel/next': minor
 'vercel': patch
 ---
