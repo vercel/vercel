@@ -196,6 +196,12 @@ export interface StartDevServerSuccess {
    * shut down the dev server once an HTTP request has been fulfilled.
    */
   pid: number;
+
+  /**
+   * An optional function to shut down the dev server. If not provided, the
+   * dev server will forcefully be killed.
+   */
+  shutdown?: () => Promise<void>;
 }
 
 /**

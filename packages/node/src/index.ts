@@ -64,6 +64,8 @@ import {
   forkDevServer,
   readMessage as readDevServerMessage,
 } from './fork-dev-server';
+import _treeKill from 'tree-kill';
+import { promisify } from 'util';
 
 export { shouldServe };
 
@@ -83,6 +85,8 @@ const tscPath = resolve(dirname(require_.resolve('typescript')), '../bin/tsc');
 
 // eslint-disable-next-line no-useless-escape
 const libPathRegEx = /^node_modules|[\/\\]node_modules[\/\\]/;
+
+const treeKill = promisify(_treeKill);
 
 async function downloadInstallAndBundle({
   files,
@@ -650,7 +654,21 @@ export const startDevServer: StartDevServer = async opts => {
       });
     }
 
-    return { port: message.value.port, pid };
+    // An optional callback for graceful shutdown.
+    const shutdown = async () => {
+      // Send a "shutdown" message to the child process. Ideally we'd use a signal
+      // (SIGTERM) here, but that doesn't work on Windows. This is a portable way
+      // to tell the child process to exit gracefully.
+      child.send('shutdown', async err => {
+        if (err) {
+          // The process might have already exited, for example, if the application
+          // handler threw an error. Try terminating the process to be sure.
+          await treeKill(pid);
+        }
+      });
+    };
+
+    return { port: message.value.port, pid, shutdown };
   } else {
     // Got "exit" event from child process
     const [exitCode, signal] = message.value;

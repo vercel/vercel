@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 7.4.1
+
+### Patch Changes
+
+- Extend Node v16 discontinue date to 2024-06-15 ([#10967](https://github.com/vercel/vercel/pull/10967))
+
 ## 7.4.0
 
 ### Minor Changes
