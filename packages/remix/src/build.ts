@@ -563,10 +563,7 @@ module.exports = config;`;
     );
     const func =
       edgeFunctionIndex !== -1 ? functions[edgeFunctionIndex] : functions[0];
-    output['404'] =
-      func instanceof EdgeFunction
-        ? new EdgeFunction({ ...func, name: '404' })
-        : func;
+    output['404'] = func;
   }
   routes.push({
     src: '/(.*)',
