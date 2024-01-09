@@ -1,5 +1,11 @@
 # @vercel/go
 
+## 3.0.5
+
+### Patch Changes
+
+- Remove `VERCEL_USE_GO_PROVIDED_RUNTIME` env var check ([#10968](https://github.com/vercel/vercel/pull/10968))
+
 ## 3.0.4
 
 ### Patch Changes

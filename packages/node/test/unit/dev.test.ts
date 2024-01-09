@@ -307,3 +307,88 @@ test('allow setting multiple cookies with same name', async () => {
     child.kill(9);
   }
 });
+
+test('dev server waits for waitUntil promises to resolve', async () => {
+  async function startPingServer() {
+    let resolve: (value: any) => void;
+    const promise = new Promise<void>(resolve_ => {
+      resolve = resolve_;
+    });
+
+    const pingServer = createServer((req, res) => {
+      res.end('pong');
+      resolve('got a fetch from waitUntil');
+    });
+
+    const pingUrl = (await listen(pingServer)).toString();
+    return {
+      pingUrl,
+      pingServer,
+      promise,
+    };
+  }
+
+  async function withTimeout(
+    promise: Promise<unknown>,
+    name: string,
+    ms: number
+  ) {
+    return await Promise.race([
+      promise,
+      new Promise(resolve =>
+        setTimeout(
+          () => resolve(`${name} promise was not resolved in ${ms} ms`),
+          ms
+        )
+      ),
+    ]);
+  }
+
+  const { promise: pingPromise, pingServer, pingUrl } = await startPingServer();
+  const child = testForkDevServer('./edge-waituntil.js');
+  const exitPromise = new Promise(resolve => {
+    child.on('exit', code => {
+      resolve(`child has exited with ${code}`);
+    });
+  });
+
+  try {
+    const result = await readMessage(child);
+    if (result.state !== 'message') {
+      throw new Error('Exited. error: ' + JSON.stringify(result.value));
+    }
+
+    const { address, port } = result.value;
+    const response = await fetch(
+      `http://${address}:${port}/api/edge-waituntil`,
+      {
+        headers: {
+          'x-ping-url': pingUrl,
+        },
+      }
+    );
+
+    expect({
+      status: response.status,
+      body: await response.text(),
+    }).toEqual({
+      status: 200,
+      body: 'running waitUntil promises asynchronously...',
+    });
+
+    // Dev server should keep running until waitUntil promise resolves...
+    child.send('shutdown');
+
+    // Wait for waitUntil promise to resolve...
+    expect(await withTimeout(pingPromise, 'ping server', 3000)).toBe(
+      'got a fetch from waitUntil'
+    );
+    // Make sure child process has exited.
+    expect(await withTimeout(exitPromise, 'child exit', 5000)).toBe(
+      'child has exited with 0'
+    );
+  } finally {
+    child.kill(9);
+    pingServer.close();
+  }
+});
