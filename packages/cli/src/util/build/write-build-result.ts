@@ -330,6 +330,11 @@ async function writeStaticFile(
  * If the `fn` Lambda or Edge function has already been written to
  * the filesystem at a different location, then create a symlink
  * to the previous location instead of copying the files again.
+ *
+ * @param outputPath The path of the `.vercel/output` directory
+ * @param dest The path of destination function's `.func` directory
+ * @param fn The Lambda or EdgeFunction instance to create the symlink for
+ * @param existingFunctions Map of `Lambda`/`EdgeFunction` instances that have previously been written
  */
 async function writeFunctionSymlink(
   outputDir: string,
@@ -353,8 +358,10 @@ async function writeFunctionSymlink(
 /**
  * Serializes the `EdgeFunction` instance to the file system.
  *
+ * @param outputPath The path of the `.vercel/output` directory
  * @param edgeFunction The `EdgeFunction` instance
  * @param path The URL path where the `EdgeFunction` can be accessed from
+ * @param existingFunctions (optional) Map of `Lambda`/`EdgeFunction` instances that have previously been written
  */
 async function writeEdgeFunction(
   outputDir: string,
@@ -401,9 +408,11 @@ async function writeEdgeFunction(
 /**
  * Writes the file references from the `Lambda` instance to the file system.
  *
+ * @param outputPath The path of the `.vercel/output` directory
  * @param lambda The `Lambda` instance
  * @param path The URL path where the `Lambda` can be accessed from
- * @param existingFunctions (optional) Map of `Lambda` instances that have previously been written
+ * @param functionConfiguration (optional) Extra configuration to apply to the function's `.vc-config.json` file
+ * @param existingFunctions (optional) Map of `Lambda`/`EdgeFunction` instances that have previously been written
  */
 async function writeLambda(
   outputDir: string,
