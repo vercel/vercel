@@ -166,12 +166,12 @@ describe('removeSupersededFrameworks()', () => {
     const matches = [
       { slug: 'storybook' },
       { slug: 'vite' },
-      { slug: 'hydrogen', supersedes: 'vite' },
+      { slug: 'hydrogen', supersedes: ['vite'] },
     ];
     removeSupersededFrameworks(matches);
     expect(matches).toEqual([
       { slug: 'storybook' },
-      { slug: 'hydrogen', supersedes: 'vite' },
+      { slug: 'hydrogen', supersedes: ['vite'] },
     ]);
   });
 
@@ -179,13 +179,13 @@ describe('removeSupersededFrameworks()', () => {
     const matches = [
       { slug: 'storybook' },
       { slug: 'vite' },
-      { slug: 'hydrogen', supersedes: 'vite' },
-      { slug: 'remix', supersedes: 'hydrogen' },
+      { slug: 'hydrogen', supersedes: ['vite'] },
+      { slug: 'remix', supersedes: ['hydrogen'] },
     ];
     removeSupersededFrameworks(matches);
     expect(matches).toEqual([
       { slug: 'storybook' },
-      { slug: 'remix', supersedes: 'hydrogen' },
+      { slug: 'remix', supersedes: ['hydrogen'] },
     ]);
   });
 });
