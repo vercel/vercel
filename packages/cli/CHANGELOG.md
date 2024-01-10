@@ -1,5 +1,24 @@
 # vercel
 
+## 33.1.0
+
+### Minor Changes
+
+- Serialize duplicate `EdgeFunction` references as symlinks in `vc build` ([#11027](https://github.com/vercel/vercel/pull/11027))
+
+### Patch Changes
+
+- Handle rate limit response when fetching /teams ([#11013](https://github.com/vercel/vercel/pull/11013))
+
+- Display actual deployment's 'target' ([#11025](https://github.com/vercel/vercel/pull/11025))
+
+- Updated dependencies [[`98040ec24`](https://github.com/vercel/vercel/commit/98040ec24e1ee585865d11eb216b6525d39d209e)]:
+  - @vercel/build-utils@7.5.0
+  - @vercel/static-build@2.0.17
+  - @vercel/hydrogen@1.0.2
+  - @vercel/remix-builder@2.0.17
+  - @vercel/node@3.0.16
+
 ## 33.0.2
 
 ### Patch Changes
