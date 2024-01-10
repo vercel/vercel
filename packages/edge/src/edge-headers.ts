@@ -7,7 +7,7 @@ export const CITY_HEADER_NAME = 'x-vercel-ip-city';
  */
 export const COUNTRY_HEADER_NAME = 'x-vercel-ip-country';
 /**
- * Client IP as calcualted by Vercel Proxy.
+ * Client IP as calculated by Vercel Proxy.
  */
 export const IP_HEADER_NAME = 'x-real-ip';
 /**
