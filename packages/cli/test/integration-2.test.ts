@@ -750,7 +750,7 @@ test('deploys with only vercel.json and README.md', async () => {
 
   // assert timing order of showing URLs vs status updates
   expect(stderr).toMatch(
-    /Inspect.*\nPreview.*\nQueued.*\nBuilding.*\nCompleting/
+    /Inspect.*\nProduction.*\nQueued.*\nBuilding.*\nCompleting/
   );
 
   const { host } = new URL(stdout);
