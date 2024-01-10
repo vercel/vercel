@@ -681,6 +681,43 @@ test('vercel env with unknown `VERCEL_ORG_ID` or `VERCEL_PROJECT_ID` should erro
   expect(output.stderr).toContain('Project not found');
 });
 
+test('add a sensitive env var', async () => {
+  const removeEnvCommand = execCli(binaryPath, [
+    'env',
+    'rm',
+    'envVarName',
+    'production',
+  ]);
+
+  await waitForPrompt(
+    removeEnvCommand,
+    /Removing Environment Variable [^?]+\?/
+  );
+  removeEnvCommand.stdin?.write('y\n');
+
+  try {
+    await removeEnvCommand;
+  } catch (error) {}
+
+  const addEnvCommand = execCli(binaryPath, [
+    'env',
+    'add',
+    'envVarName',
+    'production',
+    '--sensitive',
+  ]);
+
+  await waitForPrompt(addEnvCommand, /What’s the value of [^?]+\?/);
+  addEnvCommand.stdin?.write('test\n');
+
+  const output = await addEnvCommand;
+
+  expect(output.exitCode, formatOutput(output)).toBe(0);
+  expect(output.stderr).toContain(
+    'Added Environment Variable envVarName to Project'
+  );
+});
+
 test('whoami with `VERCEL_ORG_ID` should favor `--scope` and should error', async () => {
   if (!token) {
     throw new Error('Shared state "token" not set.');
