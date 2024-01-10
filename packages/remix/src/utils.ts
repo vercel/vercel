@@ -2,7 +2,7 @@ import semver from 'semver';
 import { existsSync, promises as fs } from 'fs';
 import { basename, dirname, join, relative, resolve, sep } from 'path';
 import { pathToRegexp, Key } from 'path-to-regexp';
-import { debug } from '@vercel/build-utils';
+import { debug, type PackageJson } from '@vercel/build-utils';
 import { walkParentDirs } from '@vercel/build-utils';
 import { createRequire } from 'module';
 import type {
@@ -58,8 +58,12 @@ export function findEntry(dir: string, basename: string): string | undefined {
 
 const configExts = ['.js', '.cjs', '.mjs'];
 
-export function findConfig(dir: string, basename: string): string | undefined {
-  for (const ext of configExts) {
+export function findConfig(
+  dir: string,
+  basename: string,
+  exts = configExts
+): string | undefined {
+  for (const ext of exts) {
     const name = basename + ext;
     const file = join(dir, name);
     if (existsSync(file)) return file;
@@ -366,4 +370,9 @@ export function isESM(path: string): boolean {
     isESM = err.code === 'ERR_REQUIRE_ESM';
   }
   return isESM;
+}
+
+export function hasScript(scriptName: string, pkg?: PackageJson) {
+  const scripts = pkg?.scripts || {};
+  return typeof scripts[scriptName] === 'string';
 }
