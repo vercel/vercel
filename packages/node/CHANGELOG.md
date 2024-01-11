@@ -1,5 +1,14 @@
 # @vercel/node
 
+## 3.0.16
+
+### Patch Changes
+
+- Deprecate `EdgeFunction#name` property ([#11010](https://github.com/vercel/vercel/pull/11010))
+
+- Updated dependencies [[`98040ec24`](https://github.com/vercel/vercel/commit/98040ec24e1ee585865d11eb216b6525d39d209e)]:
+  - @vercel/build-utils@7.5.0
+
 ## 3.0.15
 
 ### Patch Changes

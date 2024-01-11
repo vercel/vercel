@@ -8,12 +8,13 @@ export class EdgeFunction {
 
   /**
    * A display name for the edge function.
+   * @deprecated This property should no longer be used. The name is inferred from the URL path of the function.
    */
-  name: string;
+  name?: string;
 
   /**
    * The deployment target.
-   * Only v8-worker is currently supported.
+   * Only `v8-worker` is currently supported.
    */
   deploymentTarget: 'v8-worker';
 
