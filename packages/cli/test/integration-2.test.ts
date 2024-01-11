@@ -682,30 +682,40 @@ test('vercel env with unknown `VERCEL_ORG_ID` or `VERCEL_PROJECT_ID` should erro
 });
 
 test('add a sensitive env var', async () => {
-  const removeEnvCommand = execCli(binaryPath, [
-    'env',
-    'rm',
-    'envVarName',
-    'production',
-  ]);
+  const dir = await setupE2EFixture('project-sensitive-env-vars');
+  const projectName = `project-sensitive-env-vars-${
+    Math.random().toString(36).split('.')[1]
+  }`;
 
-  await waitForPrompt(
-    removeEnvCommand,
-    /Removing Environment Variable [^?]+\?/
+  // remove previously linked project if it exists
+  await remove(path.join(dir, '.vercel'));
+
+  const vc = execCli(binaryPath, ['link'], {
+    cwd: dir,
+    env: {
+      FORCE_TTY: '1',
+    },
+  });
+
+  await setupProject(vc, projectName, {
+    buildCommand: `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html`,
+    outputDirectory: 'o',
+  });
+
+  await vc;
+
+  const link = require(path.join(dir, '.vercel/project.json'));
+
+  const addEnvCommand = execCli(
+    binaryPath,
+    ['env', 'add', 'envVarName', 'production', '--sensitive'],
+    {
+      env: {
+        VERCEL_ORG_ID: link.orgId,
+        VERCEL_PROJECT_ID: link.projectId,
+      },
+    }
   );
-  removeEnvCommand.stdin?.write('y\n');
-
-  try {
-    await removeEnvCommand;
-  } catch (error) {}
-
-  const addEnvCommand = execCli(binaryPath, [
-    'env',
-    'add',
-    'envVarName',
-    'production',
-    '--sensitive',
-  ]);
 
   await waitForPrompt(addEnvCommand, /What’s the value of [^?]+\?/);
   addEnvCommand.stdin?.write('test\n');
