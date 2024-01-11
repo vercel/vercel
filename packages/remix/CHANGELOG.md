@@ -1,5 +1,11 @@
 # @vercel/remix-builder
 
+## 2.0.17
+
+### Patch Changes
+
+- Deprecate `EdgeFunction#name` property ([#11010](https://github.com/vercel/vercel/pull/11010))
+
 ## 2.0.16
 
 ### Patch Changes
