@@ -1168,23 +1168,25 @@ test('[vc build] should build project with `@vercel/static-build`', async () => 
 });
 
 test('[vc build] should build project with `@vercel/speed-insights`', async () => {
-  try {
-    process.env.VERCEL_ANALYTICS_ID = '123';
+  const directory = await setupE2EFixture('vc-build-speed-insights');
+  const output = await execCli(binaryPath, ['build'], { cwd: directory });
+  expect(output.exitCode, formatOutput(output)).toBe(0);
+  expect(output.stderr).toContain('Build Completed in .vercel/output');
+  const builds = await fs.readJSON(
+    path.join(directory, '.vercel/output/builds.json')
+  );
+  expect(builds?.features?.speedInsightsVersion).toEqual('0.0.4');
+});
 
-    const directory = await setupE2EFixture('vc-build-speed-insights');
-    const output = await execCli(binaryPath, ['build'], { cwd: directory });
-    expect(output.exitCode, formatOutput(output)).toBe(0);
-    expect(output.stderr).toContain('Build Completed in .vercel/output');
-    expect(output.stderr).toContain(
-      'The `VERCEL_ANALYTICS_ID` environment variable is deprecated and will be removed in a future release. Please remove it from your environment variables'
-    );
-    const builds = await fs.readJSON(
-      path.join(directory, '.vercel/output/builds.json')
-    );
-    expect(builds?.features?.speedInsightsVersion).toEqual('0.0.1');
-  } finally {
-    delete process.env.VERCEL_ANALYTICS_ID;
-  }
+test('[vc build] should build project with an indirect dependency to `@vercel/analytics`', async () => {
+  const directory = await setupE2EFixture('vc-build-indirect-web-analytics');
+  const output = await execCli(binaryPath, ['build'], { cwd: directory });
+  expect(output.exitCode, formatOutput(output)).toBe(0);
+  expect(output.stderr).toContain('Build Completed in .vercel/output');
+  const builds = await fs.readJSON(
+    path.join(directory, '.vercel/output/builds.json')
+  );
+  expect(builds?.features?.webAnalyticsVersion).toEqual('1.1.1');
 });
 
 test('[vc build] should build project with `@vercel/analytics`', async () => {
