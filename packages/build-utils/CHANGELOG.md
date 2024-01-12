@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 7.5.0
+
+### Minor Changes
+
+- Deprecate `EdgeFunction#name` property ([#11010](https://github.com/vercel/vercel/pull/11010))
+
 ## 7.4.1
 
 ### Patch Changes
