@@ -2,17 +2,17 @@
 # https://help.github.com/en/articles/about-code-owners
 
 # Restricted Paths
-*                                        @TooTallNate @EndangeredMassa @cb1kenobi @Ethan-Arrowood @trek
-/.github/workflows                       @TooTallNate @EndangeredMassa @cb1kenobi @Ethan-Arrowood @trek @ijjk
-/packages/fs-detectors                   @TooTallNate @EndangeredMassa @cb1kenobi @Ethan-Arrowood @trek @agadzik @chloetedder
-/packages/next                           @TooTallNate @EndangeredMassa @cb1kenobi @Ethan-Arrowood @trek @ijjk @ztanner
-/packages/routing-utils                  @TooTallNate @EndangeredMassa @cb1kenobi @Ethan-Arrowood @trek @ijjk
-/packages/static-build                   @TooTallNate @EndangeredMassa @cb1kenobi @Ethan-Arrowood @trek
-/packages/edge                           @vercel/compute @TooTallNate @EndangeredMassa @cb1kenobi @Ethan-Arrowood @trek
+*                                        @TooTallNate @EndangeredMassa @Ethan-Arrowood @trek
+/.github/workflows                       @TooTallNate @EndangeredMassa @Ethan-Arrowood @trek @ijjk
+/packages/fs-detectors                   @TooTallNate @EndangeredMassa @Ethan-Arrowood @trek @agadzik @chloetedder
+/packages/next                           @TooTallNate @EndangeredMassa @Ethan-Arrowood @trek @ijjk @ztanner
+/packages/routing-utils                  @TooTallNate @EndangeredMassa @Ethan-Arrowood @trek @ijjk
+/packages/static-build                   @TooTallNate @EndangeredMassa @Ethan-Arrowood @trek
+/packages/edge                           @vercel/compute @TooTallNate @EndangeredMassa @Ethan-Arrowood @trek
 /examples                                @leerob
 /examples/create-react-app               @Timer
 /examples/nextjs                         @timneutkens @ijjk @ztanner @huozhi
-/packages/node                           @TooTallNate @EndangeredMassa @cb1kenobi @Ethan-Arrowood @trek @Kikobeats
+/packages/node                           @TooTallNate @EndangeredMassa @Ethan-Arrowood @trek @Kikobeats
 
 # Unrestricted Paths
 .changeset/
