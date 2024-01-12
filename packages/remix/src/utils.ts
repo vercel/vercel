@@ -148,7 +148,9 @@ export function getPathFromRoute(
 ): ResolvedRoutePaths {
   if (
     route.id === 'root' ||
-    (route.parentId === 'root' && !route.path && route.index)
+    (route.parentId === 'root' &&
+      (!route.path || route.path === '/') &&
+      route.index)
   ) {
     return { path: 'index', rePath: '/index' };
   }
