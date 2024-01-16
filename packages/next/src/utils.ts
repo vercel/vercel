@@ -2856,6 +2856,7 @@ export async function getMiddlewareBundle({
           return {
             type,
             page: edgeFunction.page,
+            name: edgeFunction.name,
             edgeFunction: (() => {
               const { source, map } = wrappedModuleSource.sourceAndMap();
               const transformedMap = stringifySourceMap(
@@ -2951,8 +2952,7 @@ export async function getMiddlewareBundle({
     };
 
     for (const worker of workerConfigs.values()) {
-      const edgeFile = worker.edgeFunction.name;
-      let shortPath = edgeFile;
+      let shortPath = worker.name;
 
       // Replacing the folder prefix for the page
       //
