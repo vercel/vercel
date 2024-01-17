@@ -33,7 +33,7 @@
     "source-map-support": "0.5.12",
     "ts-eager": "2.0.2",
     "ts-jest": "29.1.0",
-    "turbo": "1.11.2",
+    "turbo": "1.11.3",
     "typescript": "4.9.5"
   },
   "scripts": {
