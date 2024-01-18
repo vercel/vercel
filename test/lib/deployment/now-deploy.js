@@ -71,7 +71,6 @@ async function nowDeploy(projectName, bodies, randomness, uploadNowJson, opts) {
 
   {
     const json = await deploymentPost(nowDeployPayload, opts);
-    console.log(JSON.stringify(json, null, 2));
 
     if (json.error && json.error.code === 'missing_files')
       throw new Error('Missing files');
