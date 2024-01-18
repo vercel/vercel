@@ -30,6 +30,8 @@ async function fetchRetry(url, ...rest) {
                   `Failed to fetch ${url}, received 401 status for over 1 minute`
                 );
               }
+            } else {
+              return res;
             }
             await new Promise(resolve => setTimeout(resolve, 1000));
           } else {
