@@ -8,8 +8,6 @@ const fileModeSymbol = Symbol('fileMode');
 const { logWithinTest } = require('./log');
 const ms = require('ms');
 
-console.error({ fetch });
-
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function nowDeploy(projectName, bodies, randomness, uploadNowJson, opts) {
