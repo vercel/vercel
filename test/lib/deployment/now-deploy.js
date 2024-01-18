@@ -3,10 +3,12 @@ const assert = require('assert');
 const { createHash } = require('crypto');
 const path = require('path');
 const _fetch = require('node-fetch');
-const fetch = require('./fetch-retry.js');
+const fetch = require('./fetch-retry');
 const fileModeSymbol = Symbol('fileMode');
 const { logWithinTest } = require('./log');
 const ms = require('ms');
+
+console.error({ fetch });
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -151,7 +153,7 @@ async function disableSSO(deploymentId, useTeam = true) {
   if (settingRes.ok) {
     for (let i = 0; i < 10; i++) {
       try {
-        const res = await _fetch(`https://${deploymentUrl}`);
+        const res = await fetch(`https://${deploymentUrl}`);
         if (res.status !== 401) {
           break;
         }

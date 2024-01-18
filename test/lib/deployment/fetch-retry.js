@@ -1,5 +1,4 @@
 const fetch = require('node-fetch');
-const { disableSSO } = require('./now-deploy.js');
 const retryBailByDefault = require('./retry-bail-by-default.js');
 
 const ABSOLUTE_URL_PATTERN = /^https?:\/\//i;
@@ -27,11 +26,6 @@ async function fetchRetry(url, ...rest) {
                 `Failed to fetch ${url}, received 401 status for over 1 minute`
               );
             }
-
-            if (i % 10 === 0) {
-              await disableSSO(url);
-            }
-
             await new Promise(resolve => setTimeout(resolve, 1000));
           } else {
             return res;
