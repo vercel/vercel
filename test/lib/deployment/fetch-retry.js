@@ -16,15 +16,20 @@ async function fetchRetry(url, ...rest) {
           const res = await fetch(url, ...rest);
 
           if (res.status === 401) {
-            requestIds.push(res.headers.get('x-vercel-id'));
-            if (i === 0) {
-              console.error(
-                `request ids: `,
-                JSON.stringify(requestIds, null, 2)
-              );
-              throw new Error(
-                `Failed to fetch ${url}, received 401 status for over 1 minute`
-              );
+            const clonedRes = res.clone();
+            const body = await clonedRes.text();
+
+            if (body.includes('https://vercel.com/sso-api')) {
+              requestIds.push(res.headers.get('x-vercel-id'));
+              if (i === 0) {
+                console.error(
+                  `request ids: `,
+                  JSON.stringify(requestIds, null, 2)
+                );
+                throw new Error(
+                  `Failed to fetch ${url}, received 401 status for over 1 minute`
+                );
+              }
             }
             await new Promise(resolve => setTimeout(resolve, 1000));
           } else {
