@@ -595,7 +595,7 @@ function filesWithoutFsRefs(
   for (const [path, file] of Object.entries(files)) {
     if (file.type === 'FileFsRef') {
       if (!fsRefs) fsRefs = {};
-      fsRefs[relative(repoRootPath, file.fsPath)] = path;
+      fsRefs[path] = relative(repoRootPath, file.fsPath);
     } else {
       out[path] = file;
     }
