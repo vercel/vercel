@@ -312,8 +312,8 @@ async function testDeployment(fixturePath, opts) {
       .replace(/(_|\.)/g, '-') +
     '-' +
     Date.now() +
-    '-';
-  Math.round(Math.random() * 1000);
+    '-' +
+    Math.round(Math.random() * 1000);
 
   logWithinTest(`testDeployment "${projectName}"`);
   const globResult = await glob(`${fixturePath}/**`, {
