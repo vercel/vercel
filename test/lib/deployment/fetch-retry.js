@@ -23,7 +23,7 @@ async function fetchRetry(url, ...rest) {
               requestIds.push(res.headers.get('x-vercel-id'));
               if (i === 0) {
                 console.error(
-                  `request ids: `,
+                  `Failed request ids (because of 401s): `,
                   JSON.stringify(requestIds, null, 2)
                 );
                 throw new Error(
