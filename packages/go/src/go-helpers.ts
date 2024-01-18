@@ -432,11 +432,12 @@ async function parseGoModVersion(
 
   try {
     const content = await readFile(file, 'utf8');
-    const matches = /^go (\d+)\.(\d+)\.?$/gm.exec(content) || [];
+    const matches = /^go (\d+)\.(\d+)(?:\.(\d+))?$/gm.exec(content) || [];
     const major = parseInt(matches[1], 10);
     const minor = parseInt(matches[2], 10);
-    const full = versionMap.get(`${major}.${minor}`);
-    if (major === 1 && minor >= GO_MIN_VERSION && full) {
+    const patch = matches[3] && parseInt(matches[3], 10);
+    const full = patch ? `${major}.${minor}.${patch}` : versionMap.get(`${major}.${minor}`);
+    if (major === 1 && minor >= GO_MIN_VERSION && (!patch || patch >= 0) && full) {
       version = full;
     } else if (!isNaN(minor)) {
       const err = new GoError(
