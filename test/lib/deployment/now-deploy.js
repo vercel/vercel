@@ -149,10 +149,14 @@ async function disableSSO(deploymentId, useTeam = true) {
   );
 
   if (settingRes.ok) {
-    for (let i = 0; i < 5; i++) {
-      const res = await fetch(`https://${deploymentUrl}`);
-      if (res.status !== 401) {
-        break;
+    for (let i = 0; i < 10; i++) {
+      try {
+        const res = await _fetch(`https://${deploymentUrl}`);
+        if (res.status !== 401) {
+          break;
+        }
+      } catch (err) {
+        console.error(err);
       }
       await new Promise(resolve => setTimeout(resolve, 5 * 1000));
     }
