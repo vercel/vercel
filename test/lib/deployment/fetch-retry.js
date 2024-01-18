@@ -14,7 +14,7 @@ async function fetchRetry(url, ...rest) {
       try {
         const res = await fetch(url, ...rest);
 
-        if (res.status === 401 && retryIndex < 2) {
+        if (res.status === 401 && retryIndex < 4) {
           const error = new Error('sso error');
           error.type = 'sso-error';
           throw error;
@@ -43,7 +43,7 @@ async function fetchRetry(url, ...rest) {
         throw error;
       }
     },
-    { factor: 2, retries: 3 }
+    { factor: 2, retries: 5 }
   );
 }
 
