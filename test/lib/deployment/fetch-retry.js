@@ -1,4 +1,5 @@
 const fetch = require('node-fetch');
+const { disableSSO } = require('./now-deploy.js');
 const retryBailByDefault = require('./retry-bail-by-default.js');
 
 const ABSOLUTE_URL_PATTERN = /^https?:\/\//i;
@@ -11,15 +12,26 @@ async function fetchRetry(url, ...rest) {
   return await retryBailByDefault(
     async canRetry => {
       try {
+        const requestIds = [];
         for (let i = 60; i >= 0; i--) {
           const res = await fetch(url, ...rest);
 
           if (res.status === 401) {
+            requestIds.push(res.headers.get('x-vercel-id'));
             if (i === 0) {
+              console.error(
+                `request ids: `,
+                JSON.stringify(requestIds, null, 2)
+              );
               throw new Error(
-                `Failed to fetch ${url}, received 401 statu for over 1 minute`
+                `Failed to fetch ${url}, received 401 status for over 1 minute`
               );
             }
+
+            if (i % 10 === 0) {
+              await disableSSO(url);
+            }
+
             await new Promise(resolve => setTimeout(resolve, 1000));
           } else {
             return res;
