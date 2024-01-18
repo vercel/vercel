@@ -59,7 +59,7 @@ async function fetchRetry(url, ...rest) {
         throw error;
       }
     },
-    { factor: 2, retries: 5 }
+    { factor: 2, retries: 3 }
   );
 }
 
