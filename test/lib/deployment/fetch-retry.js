@@ -7,24 +7,27 @@ async function fetchRetry(url, ...rest) {
   if (!ABSOLUTE_URL_PATTERN.test(url)) {
     throw new Error(`fetch url must be absolute: "${url}"`);
   }
-  let retryIndex = 0;
 
   return await retryBailByDefault(
     async canRetry => {
       try {
-        const res = await fetch(url, ...rest);
+        for (let i = 60; i >= 0; i--) {
+          const res = await fetch(url, ...rest);
 
-        if (res.status === 401 && retryIndex < 4) {
-          const error = new Error('sso error');
-          error.type = 'sso-error';
-          throw error;
+          if (res.status === 401) {
+            if (i === 0) {
+              throw new Error(
+                `Failed to fetch ${url}, received 401 statu for over 1 minute`
+              );
+            }
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          } else {
+            return res;
+          }
         }
-        return res;
       } catch (error) {
         if (error.type === 'request-timeout') {
           // FetchError: network timeout at: ...
-          throw canRetry(error);
-        } else if (error.type === 'sso-error') {
           throw canRetry(error);
         } else if (error.code === 'ENOTFOUND') {
           // getaddrinfo ENOTFOUND api.vercel.com like some transient dns issue
