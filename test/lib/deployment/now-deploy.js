@@ -85,7 +85,7 @@ async function nowDeploy(projectName, bodies, randomness, uploadNowJson, opts) {
 
   for (let i = 0; i < 750; i += 1) {
     const deployment = await deploymentGet(deploymentId);
-    const { readyState } = deployment;
+    const { readyState, readySubstate } = deployment;
     if (readyState === 'ERROR') {
       logWithinTest('state is ERROR, throwing');
       const error = new Error(
@@ -94,7 +94,8 @@ async function nowDeploy(projectName, bodies, randomness, uploadNowJson, opts) {
       error.deployment = deployment;
       throw error;
     }
-    if (readyState === 'READY') {
+    // ensure production alias is assigned properly
+    if (readyState === 'READY' && readySubstate === 'PROMOTED') {
       logWithinTest(`State of https://${deploymentUrl} is READY, moving on`);
       break;
     }
