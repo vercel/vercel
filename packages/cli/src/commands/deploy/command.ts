@@ -112,7 +112,8 @@ export const deployCommand: Command = {
       shorthand: null,
       type: 'boolean',
       deprecated: false,
-      description: undefined,
+      description:
+        'Disable the automatic promotion (aliasing) of the relevant domains to a new production deployment. You can use `vc promote` to complete the domain-assignment process later',
       multi: false,
     },
     {
