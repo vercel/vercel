@@ -56,6 +56,8 @@ async function nowDeploy(projectName, bodies, randomness, uploadNowJson, opts) {
         NEXT_TELEMETRY_DISABLED: '1',
       },
     },
+    // we use production deployments to avoid deployment protection issues
+    target: 'production',
   };
 
   logWithinTest(`posting ${files.length} files`);
@@ -69,10 +71,15 @@ async function nowDeploy(projectName, bodies, randomness, uploadNowJson, opts) {
 
   {
     const json = await deploymentPost(nowDeployPayload, opts);
+    console.log(JSON.stringify(json, null, 2));
+
     if (json.error && json.error.code === 'missing_files')
       throw new Error('Missing files');
     deploymentId = json.id;
-    deploymentUrl = json.url;
+    deploymentUrl =
+      // prefer production alias over immutable URL which
+      // has deployment protection by default
+      Array.isArray(json.alias) && json.alias[0] ? json.alias[0] : json.url;
   }
 
   logWithinTest('id', deploymentId);
@@ -99,8 +106,6 @@ async function nowDeploy(projectName, bodies, randomness, uploadNowJson, opts) {
     }
     await new Promise(r => setTimeout(r, 1000));
   }
-
-  await disableSSO(deploymentId);
 
   return { deploymentId, deploymentUrl };
 }
