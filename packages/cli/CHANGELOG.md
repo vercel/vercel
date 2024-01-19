@@ -1,5 +1,24 @@
 # vercel
 
+## 33.2.0
+
+### Minor Changes
+
+- chore: deprecate next/nuxt/gastby Speed Insights injection in favor of @vercel/speed-insights ([#11048](https://github.com/vercel/vercel/pull/11048))
+
+### Patch Changes
+
+- fix error when @vercel/analytics is a transitive dependency of the deployed application ([#10892](https://github.com/vercel/vercel/pull/10892))
+
+- [cli] Add documentation string for `skip-domain` option ([#11051](https://github.com/vercel/vercel/pull/11051))
+
+- Updated dependencies [[`260125784`](https://github.com/vercel/vercel/commit/2601257846fa201fc9efde021a906c706f6191aa), [`cdddb33ad`](https://github.com/vercel/vercel/commit/cdddb33ad49f6080c49f4fff3767e6111acd0bbe), [`72d8604c9`](https://github.com/vercel/vercel/commit/72d8604c9dba108ccca41d6288b765a7ba727295), [`90d0455e1`](https://github.com/vercel/vercel/commit/90d0455e1ff7b5892ff4960226535f57f704ef6f), [`0716130e5`](https://github.com/vercel/vercel/commit/0716130e580a920d92d249d029ed37f92f2ca847), [`b6b151f39`](https://github.com/vercel/vercel/commit/b6b151f3917c5cb47226951446b9dbb96c7d872b), [`b185a7e20`](https://github.com/vercel/vercel/commit/b185a7e207b153c378bd3db2618eece3a3b6a93e)]:
+  - @vercel/static-build@2.1.0
+  - @vercel/build-utils@7.5.1
+  - @vercel/next@4.1.0
+  - @vercel/remix-builder@2.0.18
+  - @vercel/node@3.0.17
+
 ## 33.1.0
 
 ### Minor Changes

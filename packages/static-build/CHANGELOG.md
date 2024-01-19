@@ -1,5 +1,16 @@
 # @vercel/static-build
 
+## 2.1.0
+
+### Minor Changes
+
+- chore: deprecate next/nuxt/gastby Speed Insights injection in favor of @vercel/speed-insights ([#11048](https://github.com/vercel/vercel/pull/11048))
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.16
+
 ## 2.0.17
 
 ### Patch Changes
