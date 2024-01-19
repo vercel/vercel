@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import { readFileSync } from 'node:fs';
+import { copyFileSync, readFileSync } from 'node:fs';
 import { esbuild } from '../../utils/build.mjs';
 import buildEdgeFunctionTemplate from './scripts/build-edge-function-template.js';
 
@@ -12,13 +12,15 @@ await Promise.all([
   esbuild({
     entryPoints: [
       'src/legacy-launcher.ts',
-      'src/server-launcher.ts',
       'src/templated-launcher-shared.ts',
       'src/templated-launcher.ts',
     ],
   }),
   buildEdgeFunctionTemplate(),
 ]);
+
+// Copy the launcher `.mjs` file into the "dist" dir
+copyFileSync('src/server-launcher.mjs', 'dist/server-launcher.mjs');
 
 await esbuild({
   bundle: true,

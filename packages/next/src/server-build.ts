@@ -657,7 +657,7 @@ export async function serverBuild({
     }
 
     const launcherData = await fs.readFile(
-      path.join(__dirname, 'server-launcher.js'),
+      path.join(__dirname, 'server-launcher.mjs'),
       'utf8'
     );
     let launcher = launcherData
