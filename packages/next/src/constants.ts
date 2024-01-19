@@ -14,3 +14,5 @@ export const LAMBDA_RESERVED_UNCOMPRESSED_SIZE = 2.5 * MIB;
 export const LAMBDA_RESERVED_COMPRESSED_SIZE = 250 * KIB;
 
 export const LAUNCHER_FILENAME_LEGACY = '___next_launcher.cjs';
+
+export const LAUNCHER_FILENAME = '___next_launcher.cjs';

@@ -18,7 +18,7 @@ import {
 } from '@vercel/build-utils';
 import { Route, RouteWithHandle } from '@vercel/routing-utils';
 import { MAX_AGE_ONE_YEAR } from '.';
-import { MAX_UNCOMPRESSED_LAMBDA_SIZE } from './constants';
+import { LAUNCHER_FILENAME, MAX_UNCOMPRESSED_LAMBDA_SIZE } from './constants';
 import {
   NextRequiredServerFilesManifest,
   NextImagesManifest,
@@ -1069,7 +1069,7 @@ export async function serverBuild({
       }
 
       const launcherFiles: { [name: string]: FileFsRef | FileBlob } = {
-        [path.join(path.relative(baseDir, projectDir), '___next_launcher.cjs')]:
+        [path.join(path.relative(baseDir, projectDir), LAUNCHER_FILENAME)]:
           new FileBlob({ data: group.isAppRouter ? appLauncher : launcher }),
       };
       const operationType = getOperationType({ group, prerenderManifest });
@@ -1082,7 +1082,7 @@ export async function serverBuild({
         layers: [group.pseudoLayer, groupPageFiles],
         handler: path.join(
           path.relative(baseDir, projectDir),
-          '___next_launcher.cjs'
+          LAUNCHER_FILENAME
         ),
         operationType,
         memory: group.memory,
