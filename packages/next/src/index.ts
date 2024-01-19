@@ -51,7 +51,7 @@ import url from 'url';
 import createServerlessConfig from './create-serverless-config';
 import nextLegacyVersions from './legacy-versions';
 import { serverBuild } from './server-build';
-import { MIB } from './constants';
+import { MIB, LAUNCHER_FILENAME_LEGACY } from './constants';
 import {
   collectTracedFiles,
   createLambdaFromPseudoLayers,
@@ -1100,9 +1100,9 @@ export const build: BuildV2 = async ({
           files: {
             ...nextFiles,
             ...pageFiles,
-            '___next_launcher.cjs': new FileBlob({ data: launcher }),
+            [LAUNCHER_FILENAME_LEGACY]: new FileBlob({ data: launcher }),
           },
-          handler: '___next_launcher.cjs',
+          handler: LAUNCHER_FILENAME_LEGACY,
           runtime: nodeVersion.runtime,
           ...lambdaOptions,
           operationType: 'Page', // always Page because we're in legacy mode
@@ -1811,7 +1811,7 @@ export const build: BuildV2 = async ({
           const launcherFiles: { [name: string]: FileFsRef | FileBlob } = {
             [path.join(
               path.relative(baseDir, entryPath),
-              '___next_launcher.cjs'
+              LAUNCHER_FILENAME_LEGACY
             )]: new FileBlob({ data: launcher }),
           };
           let lambdaOptions: { memory?: number; maxDuration?: number } = {};
@@ -1847,7 +1847,7 @@ export const build: BuildV2 = async ({
               ],
               handler: path.join(
                 path.relative(baseDir, entryPath),
-                '___next_launcher.cjs'
+                LAUNCHER_FILENAME_LEGACY
               ),
               operationType: getOperationType({
                 prerenderManifest,
@@ -1871,7 +1871,7 @@ export const build: BuildV2 = async ({
               ],
               handler: path.join(
                 path.relative(baseDir, entryPath),
-                '___next_launcher.cjs'
+                LAUNCHER_FILENAME_LEGACY
               ),
               operationType: getOperationType({ pageFileName }), // can only be API or Page
               runtime: nodeVersion.runtime,
@@ -2067,7 +2067,7 @@ export const build: BuildV2 = async ({
             const launcherFiles: { [name: string]: FileFsRef | FileBlob } = {
               [path.join(
                 path.relative(baseDir, entryPath),
-                '___next_launcher.cjs'
+                LAUNCHER_FILENAME_LEGACY
               )]: new FileBlob({ data: launcher }),
             };
 
@@ -2089,7 +2089,7 @@ export const build: BuildV2 = async ({
                 layers: [group.pseudoLayer],
                 handler: path.join(
                   path.relative(baseDir, entryPath),
-                  '___next_launcher.cjs'
+                  LAUNCHER_FILENAME_LEGACY
                 ),
                 operationType,
                 runtime: nodeVersion.runtime,
