@@ -27,6 +27,13 @@ const NextServerModule = await import('__NEXT_SERVER_PATH__');
 // eslint-disable-next-line no-undef
 const conf = __NEXT_CONFIG__;
 
+// eslint-disable-next-line no-undef
+const commonChunks = __COMMON_CHUNKS__;
+await Promise.all(commonChunks.map(chunk => import(chunk)));
+
+// eslint-disable-next-line no-undef
+const restChunks = __REST_CHUNKS__;
+
 const nextServer = new NextServerModule.default.default({
   conf,
   dir: '.',
@@ -38,6 +45,12 @@ const nextServer = new NextServerModule.default.default({
 // caught.
 const serve = handler => async (req, res) => {
   try {
+    // eslint-disable-next-line no-undef
+    const ctx = globalThis[Symbol.for('@vercel/request-context')];
+    ctx.get().waitUntil(() => {
+      return Promise.all(restChunks.map(chunk => import(chunk)));
+    });
+
     // @preserve entryDirectory handler
     await handler(req, res);
   } catch (err) {

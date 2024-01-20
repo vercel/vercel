@@ -1001,12 +1001,48 @@ export async function serverBuild({
 
     for (const group of combinedGroups) {
       const groupPageFiles: { [key: string]: PseudoFile } = {};
+      const filesCounter = new Map<string, number>();
+      const filesMap = new Map<string, string>();
 
       for (const page of [...group.pages, ...internalPages]) {
         const pageFileName = path.normalize(
           path.relative(baseDir, lambdaPages[page].fsPath)
         );
         groupPageFiles[pageFileName] = compressedPages[page];
+
+        const traceFileRef = getBuildTraceFile(getOriginalPagePath(page));
+        if (traceFileRef && !internalPages.includes(page)) {
+          const traceFile = await fs.readFile(traceFileRef.fsPath, 'utf8');
+          const { files } = JSON.parse(traceFile) as { files: string[] };
+          const pagePath = path.join(
+            appDir && Boolean(lambdaAppPaths[page]) ? appDir : pagesDir,
+            getOriginalPagePath(page)
+          );
+
+          const pageDir = path.dirname(pagePath);
+
+          filesCounter.set(pagePath, 1);
+          filesMap.set(
+            pagePath,
+            `./${path.relative(path.resolve(baseDir), pagePath)}`
+          );
+
+          files.forEach((file: string) => {
+            const absolutePath = path.join(pageDir, file);
+            const count = filesCounter.get(absolutePath) || 0;
+            filesCounter.set(absolutePath, count + 1);
+            let relPath = path.relative(
+              path.resolve(baseDir),
+              path.resolve(absolutePath)
+            );
+
+            if (!relPath.startsWith('..')) {
+              relPath = './' + relPath;
+            }
+
+            filesMap.set(absolutePath, relPath);
+          });
+        }
       }
 
       const updatedManifestFiles: { [name: string]: FileBlob } = {};
@@ -1068,9 +1104,40 @@ export async function serverBuild({
         }
       }
 
+      const commonFiles = new Set<string>();
+      const restFiles = new Set<string>();
+
+      for (const [file, count] of filesCounter) {
+        const relative = filesMap.get(file)!;
+        if (
+          file.endsWith('.js') ||
+          file.endsWith('.mjs') ||
+          file.endsWith('.cjs')
+        ) {
+          if (count === group.pages.length) {
+            commonFiles.add(relative);
+          } else {
+            restFiles.add(relative);
+          }
+        }
+      }
+
+      let launcherContent = group.isAppRouter ? appLauncher : launcher;
+      launcherContent = launcherContent.replace(
+        'const commonChunks = __COMMON_CHUNKS__',
+        `const commonChunks = ${JSON.stringify(
+          Array.from(commonFiles.values())
+        )};`
+      );
+
+      launcherContent = launcherContent.replace(
+        'const restChunks = __REST_CHUNKS__',
+        `const restChunks = ${JSON.stringify(Array.from(restFiles.values()))};`
+      );
+
       const launcherFiles: { [name: string]: FileFsRef | FileBlob } = {
         [path.join(path.relative(baseDir, projectDir), LAUNCHER_FILENAME)]:
-          new FileBlob({ data: group.isAppRouter ? appLauncher : launcher }),
+          new FileBlob({ data: launcherContent }),
       };
       const operationType = getOperationType({ group, prerenderManifest });
 
