@@ -403,14 +403,18 @@ async function writeEdgeFunction(
 
   await fs.mkdirp(dest);
   const ops: Promise<any>[] = [];
-  const r = filesWithoutFsRefs(edgeFunction.files, repoRootPath);
-  ops.push(download(r.files, dest));
+  const { files, filePathMap } = filesWithoutFsRefs(
+    edgeFunction.files,
+    repoRootPath
+  );
+  ops.push(download(files, dest));
 
   const config = {
     runtime: 'edge',
     ...edgeFunction,
     entrypoint: normalizePath(edgeFunction.entrypoint),
-    files: r.fsRefs,
+    filePathMap,
+    files: undefined,
     type: undefined,
   };
   const configPath = join(dest, '.vc-config.json');
@@ -452,11 +456,11 @@ async function writeLambda(
 
   await fs.mkdirp(dest);
   const ops: Promise<any>[] = [];
-  let fsRefs: Record<string, string> | undefined;
+  let filePathMap: Record<string, string> | undefined;
   if (lambda.files) {
     // `files` is defined
     const f = filesWithoutFsRefs(lambda.files, repoRootPath);
-    fsRefs = f.fsRefs;
+    filePathMap = f.filePathMap;
     ops.push(download(f.files, dest));
   } else if (lambda.zipBuffer) {
     // Builders that use the deprecated `createLambda()` might only have `zipBuffer`
@@ -473,8 +477,9 @@ async function writeLambda(
     handler: normalizePath(lambda.handler),
     memory,
     maxDuration,
-    files: fsRefs,
+    filePathMap,
     type: undefined,
+    files: undefined,
     zipBuffer: undefined,
   };
   const configPath = join(dest, '.vc-config.json');
@@ -589,16 +594,16 @@ export async function* findDirs(
 function filesWithoutFsRefs(
   files: Files,
   repoRootPath: string
-): { files: Files; fsRefs?: Record<string, string> } {
-  let fsRefs: Record<string, string> | undefined;
+): { files: Files; filePathMap?: Record<string, string> } {
+  let filePathMap: Record<string, string> | undefined;
   const out: Files = {};
   for (const [path, file] of Object.entries(files)) {
     if (file.type === 'FileFsRef') {
-      if (!fsRefs) fsRefs = {};
-      fsRefs[path] = relative(repoRootPath, file.fsPath);
+      if (!filePathMap) filePathMap = {};
+      filePathMap[path] = relative(repoRootPath, file.fsPath);
     } else {
       out[path] = file;
     }
   }
-  return { files: out, fsRefs };
+  return { files: out, filePathMap };
 }
