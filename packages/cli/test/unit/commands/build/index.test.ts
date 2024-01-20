@@ -785,7 +785,7 @@ describe('build', () => {
     expect(files.sort()).toEqual(['index.html', 'package.json']);
   });
 
-  it('should set `VERCEL_ANALYTICS_ID` environment variable', async () => {
+  it('should set `VERCEL_ANALYTICS_ID` environment variable and warn users', async () => {
     const cwd = fixture('vercel-analytics');
     const output = join(cwd, '.vercel/output');
     client.cwd = cwd;
@@ -794,6 +794,9 @@ describe('build', () => {
 
     const env = await fs.readJSON(join(output, 'static', 'env.json'));
     expect(Object.keys(env).includes('VERCEL_ANALYTICS_ID')).toEqual(true);
+    await expect(client.stderr).toOutput(
+      'Vercel Speed Insights auto-injection is deprecated in favor of @vercel/speed-insights package. Learn more: https://vercel.link/upgrate-to-speed-insights-package'
+    );
   });
 
   it('should load environment variables from `.vercel/.env.preview.local`', async () => {
