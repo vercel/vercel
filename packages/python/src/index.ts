@@ -1,22 +1,26 @@
-import { join, dirname, basename } from 'path';
-import execa from 'execa';
 import fs from 'fs';
+import execa from 'execa';
 import { promisify } from 'util';
-const readFile = promisify(fs.readFile);
-const writeFile = promisify(fs.writeFile);
+import { join, dirname, basename } from 'path';
 import {
-  GlobOptions,
-  BuildOptions,
   getWriteableDirectory,
   download,
   glob,
-  createLambda,
+  Lambda,
+  FileBlob,
   shouldServe,
   debug,
   NowBuildError,
+  type BuildOptions,
+  type GlobOptions,
+  type BuildV3,
+  type Files,
 } from '@vercel/build-utils';
 import { installRequirement, installRequirementsFile } from './install';
 import { getLatestPythonVersion, getSupportedPythonVersion } from './version';
+
+const readFile = promisify(fs.readFile);
+const writeFile = promisify(fs.writeFile);
 
 async function pipenvConvert(cmd: string, srcDir: string) {
   debug('Running pipfile2req...');
@@ -53,13 +57,13 @@ export async function downloadFilesInWorkPath({
   return workPath;
 }
 
-export const build = async ({
+export const build: BuildV3 = async ({
   workPath,
   files: originalFiles,
   entrypoint,
   meta = {},
   config,
-}: BuildOptions) => {
+}) => {
   let pythonVersion = getLatestPythonVersion(meta);
 
   workPath = await downloadFilesInWorkPath({
@@ -190,12 +194,6 @@ export const build = async ({
     .replace(/__VC_HANDLER_MODULE_NAME/g, moduleName)
     .replace(/__VC_HANDLER_ENTRYPOINT/g, entrypointWithSuffix);
 
-  // in order to allow the user to have `server.py`, we need our `server.py` to be called
-  // somethig else
-  const handlerPyFilename = 'vc__handler__python';
-
-  await writeFile(join(workPath, `${handlerPyFilename}.py`), handlerPyContents);
-
   const globOptions: GlobOptions = {
     cwd: workPath,
     ignore:
@@ -204,14 +202,22 @@ export const build = async ({
         : 'node_modules/**',
   };
 
-  const lambda = await createLambda({
-    files: await glob('**', globOptions),
+  const files: Files = await glob('**', globOptions);
+
+  // in order to allow the user to have `server.py`, we
+  // need our `server.py` to be called something else
+  const handlerPyFilename = 'vc__handler__python';
+
+  files[`${handlerPyFilename}.py`] = new FileBlob({ data: handlerPyContents });
+
+  const output = new Lambda({
+    files,
     handler: `${handlerPyFilename}.vc_handler`,
     runtime: pythonVersion.runtime,
     environment: {},
   });
 
-  return { output: lambda };
+  return { output };
 };
 
 export { shouldServe };
