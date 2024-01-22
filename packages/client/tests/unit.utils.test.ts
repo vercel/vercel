@@ -124,8 +124,12 @@ describe('buildFileTree()', () => {
     );
 
     const expectedFileList = toAbsolutePaths(cwd, [
+      '.vercel/output/functions/api/another.func/.vc-config.json',
+      '.vercel/output/functions/api/example.func/.vc-config.json',
       '.vercel/output/static/baz.txt',
       '.vercel/output/static/sub/qux.txt',
+      'node_modules/another/index.js',
+      'node_modules/example/index.js',
     ]);
     expect(normalizeWindowsPaths(expectedFileList).sort()).toEqual(
       normalizeWindowsPaths(fileList).sort()
