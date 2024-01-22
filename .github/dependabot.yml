@@ -1,0 +1,303 @@
+version: 2
+
+updates:
+  - schedule:
+      interval: 'daily'
+    reviewers:
+      - 'trek'
+      - 'TooTallNate'
+      - 'EndangeredMassa'
+    commit-message:
+      prefix: '[static-build][tests]'
+    package-ecosystem: 'npm'
+    directory: /packages/static-build/test/fixtures/angular-v17
+  - schedule:
+      interval: 'daily'
+    reviewers:
+      - 'trek'
+      - 'TooTallNate'
+      - 'EndangeredMassa'
+    commit-message:
+      prefix: '[static-build][tests]'
+    package-ecosystem: 'npm'
+    directory: /packages/static-build/test/fixtures/astro-v3
+  - schedule:
+      interval: 'daily'
+    reviewers:
+      - 'trek'
+      - 'TooTallNate'
+      - 'EndangeredMassa'
+    commit-message:
+      prefix: '[static-build][tests]'
+    package-ecosystem: 'npm'
+    directory: /packages/static-build/test/fixtures/blitz-v2
+  - schedule:
+      interval: 'daily'
+    reviewers:
+      - 'trek'
+      - 'TooTallNate'
+      - 'EndangeredMassa'
+    commit-message:
+      prefix: '[static-build][tests]'
+    package-ecosystem: 'npm'
+    directory: /packages/static-build/test/fixtures/docusaurus-v1
+  - schedule:
+      interval: 'daily'
+    reviewers:
+      - 'trek'
+      - 'TooTallNate'
+      - 'EndangeredMassa'
+    commit-message:
+      prefix: '[static-build][tests]'
+    package-ecosystem: 'npm'
+    directory: /packages/static-build/test/fixtures/docusaurus-v2
+  - schedule:
+      interval: 'daily'
+    reviewers:
+      - 'trek'
+      - 'TooTallNate'
+      - 'EndangeredMassa'
+    commit-message:
+      prefix: '[static-build][tests]'
+    package-ecosystem: 'npm'
+    directory: /packages/static-build/test/fixtures/eleventy-2
+  - schedule:
+      interval: 'daily'
+    reviewers:
+      - 'trek'
+      - 'TooTallNate'
+      - 'EndangeredMassa'
+    commit-message:
+      prefix: '[static-build][tests]'
+    package-ecosystem: 'npm'
+    directory: /packages/static-build/test/fixtures/eleventy-v0
+  - schedule:
+      interval: 'daily'
+    reviewers:
+      - 'trek'
+      - 'TooTallNate'
+      - 'EndangeredMassa'
+    commit-message:
+      prefix: '[static-build][tests]'
+    package-ecosystem: 'npm'
+    directory: /packages/static-build/test/fixtures/ember-v5
+  - schedule:
+      interval: 'daily'
+    reviewers:
+      - 'trek'
+      - 'TooTallNate'
+      - 'EndangeredMassa'
+    commit-message:
+      prefix: '[static-build][tests]'
+    package-ecosystem: 'npm'
+    directory: /packages/static-build/test/fixtures/gatsby-v5
+  - schedule:
+      interval: 'daily'
+    reviewers:
+      - 'trek'
+      - 'TooTallNate'
+      - 'EndangeredMassa'
+    commit-message:
+      prefix: '[static-build][tests]'
+    package-ecosystem: 'npm'
+    directory: /packages/static-build/test/fixtures/gridsome-v0
+  - schedule:
+      interval: 'daily'
+    reviewers:
+      - 'trek'
+      - 'TooTallNate'
+      - 'EndangeredMassa'
+    commit-message:
+      prefix: '[static-build][tests]'
+    package-ecosystem: 'npm'
+    directory: /packages/static-build/test/fixtures/hexo-v6
+  - schedule:
+      interval: 'daily'
+    reviewers:
+      - 'trek'
+      - 'TooTallNate'
+      - 'EndangeredMassa'
+    commit-message:
+      prefix: '[static-build][tests]'
+    package-ecosystem: 'npm'
+    directory: /packages/static-build/test/fixtures/hugo-v0
+  - schedule:
+      interval: 'daily'
+    reviewers:
+      - 'trek'
+      - 'TooTallNate'
+      - 'EndangeredMassa'
+    commit-message:
+      prefix: '[static-build][tests]'
+    package-ecosystem: 'npm'
+    directory: /packages/static-build/test/fixtures/hydrogen-v2023
+  - schedule:
+      interval: 'daily'
+    reviewers:
+      - 'trek'
+      - 'TooTallNate'
+      - 'EndangeredMassa'
+    commit-message:
+      prefix: '[static-build][tests]'
+    package-ecosystem: 'npm'
+    directory: /packages/static-build/test/fixtures/ionic-angular-v7
+  - schedule:
+      interval: 'daily'
+    reviewers:
+      - 'trek'
+      - 'TooTallNate'
+      - 'EndangeredMassa'
+    commit-message:
+      prefix: '[static-build][tests]'
+    package-ecosystem: 'npm'
+    directory: /packages/static-build/test/fixtures/ionic-react-v7
+  - schedule:
+      interval: 'daily'
+    reviewers:
+      - 'trek'
+      - 'TooTallNate'
+      - 'EndangeredMassa'
+    commit-message:
+      prefix: '[static-build][tests]'
+    package-ecosystem: 'bundler'
+    directory: /packages/static-build/test/fixtures/jekyll-v4
+  - schedule:
+      interval: 'daily'
+    reviewers:
+      - 'trek'
+      - 'TooTallNate'
+      - 'EndangeredMassa'
+    commit-message:
+      prefix: '[static-build][tests]'
+    package-ecosystem: 'bundler'
+    directory: /packages/static-build/test/fixtures/middleman-v4
+  - schedule:
+      interval: 'daily'
+    reviewers:
+      - 'trek'
+      - 'TooTallNate'
+      - 'EndangeredMassa'
+    commit-message:
+      prefix: '[static-build][tests]'
+    package-ecosystem: 'npm'
+    directory: /packages/static-build/test/fixtures/nuxt-v3
+  - schedule:
+      interval: 'daily'
+    reviewers:
+      - 'trek'
+      - 'TooTallNate'
+      - 'EndangeredMassa'
+    commit-message:
+      prefix: '[static-build][tests]'
+    package-ecosystem: 'npm'
+    directory: /packages/static-build/test/fixtures/parcel-v2
+  - schedule:
+      interval: 'daily'
+    reviewers:
+      - 'trek'
+      - 'TooTallNate'
+      - 'EndangeredMassa'
+    commit-message:
+      prefix: '[static-build][tests]'
+    package-ecosystem: 'npm'
+    directory: /packages/static-build/test/fixtures/polymer-v3
+  - schedule:
+      interval: 'daily'
+    reviewers:
+      - 'trek'
+      - 'TooTallNate'
+      - 'EndangeredMassa'
+    commit-message:
+      prefix: '[static-build][tests]'
+    package-ecosystem: 'npm'
+    directory: /packages/static-build/test/fixtures/preact-v10
+  - schedule:
+      interval: 'daily'
+    reviewers:
+      - 'trek'
+      - 'TooTallNate'
+      - 'EndangeredMassa'
+    commit-message:
+      prefix: '[static-build][tests]'
+    package-ecosystem: 'npm'
+    directory: /packages/static-build/test/fixtures/saber-v0
+  - schedule:
+      interval: 'daily'
+    reviewers:
+      - 'trek'
+      - 'TooTallNate'
+      - 'EndangeredMassa'
+    commit-message:
+      prefix: '[static-build][tests]'
+    package-ecosystem: 'npm'
+    directory: /packages/static-build/test/fixtures/sapper-v0
+  - schedule:
+      interval: 'daily'
+    reviewers:
+      - 'trek'
+      - 'TooTallNate'
+      - 'EndangeredMassa'
+    commit-message:
+      prefix: '[static-build][tests]'
+    package-ecosystem: 'npm'
+    directory: /packages/static-build/test/fixtures/scully-v2
+  - schedule:
+      interval: 'daily'
+    reviewers:
+      - 'trek'
+      - 'TooTallNate'
+      - 'EndangeredMassa'
+    commit-message:
+      prefix: '[static-build][tests]'
+    package-ecosystem: 'npm'
+    directory: /packages/static-build/test/fixtures/stencil-v4
+  - schedule:
+      interval: 'daily'
+    reviewers:
+      - 'trek'
+      - 'TooTallNate'
+      - 'EndangeredMassa'
+    commit-message:
+      prefix: '[static-build][tests]'
+    package-ecosystem: 'npm'
+    directory: /packages/static-build/test/fixtures/storybook-v7
+  - schedule:
+      interval: 'daily'
+    reviewers:
+      - 'trek'
+      - 'TooTallNate'
+      - 'EndangeredMassa'
+    commit-message:
+      prefix: '[static-build][tests]'
+    package-ecosystem: 'npm'
+    directory: /packages/static-build/test/fixtures/svelte-v4
+  - schedule:
+      interval: 'daily'
+    reviewers:
+      - 'trek'
+      - 'TooTallNate'
+      - 'EndangeredMassa'
+    commit-message:
+      prefix: '[static-build][tests]'
+    package-ecosystem: 'npm'
+    directory: /packages/static-build/test/fixtures/umi-v4
+  - schedule:
+      interval: 'daily'
+    reviewers:
+      - 'trek'
+      - 'TooTallNate'
+      - 'EndangeredMassa'
+    commit-message:
+      prefix: '[static-build][tests]'
+    package-ecosystem: 'npm'
+    directory: /packages/static-build/test/fixtures/vite-v5
+  - schedule:
+      interval: 'daily'
+    reviewers:
+      - 'trek'
+      - 'TooTallNate'
+      - 'EndangeredMassa'
+    commit-message:
+      prefix: '[static-build][tests]'
+    package-ecosystem: 'npm'
+    directory: /packages/static-build/test/fixtures/vue-v3
