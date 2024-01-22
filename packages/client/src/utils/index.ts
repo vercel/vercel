@@ -1,7 +1,7 @@
 import { FilesMap } from './hashes';
 import { FetchOptions } from '@zeit/fetch';
 import { nodeFetch, zeitFetch } from './fetch';
-import { join, sep, relative } from 'path';
+import { join, sep, relative, basename } from 'path';
 import { URL } from 'url';
 import ignore from 'ignore';
 import { pkgVersion } from '../pkg';
@@ -109,6 +109,29 @@ export async function buildFileTree(
       return ignored;
     };
     fileList = await readdir(path, [ignores]);
+
+    if (prebuilt) {
+      // Traverse over the `.vc-config.json` files and include
+      // the files referenced by the "filePathMap" properties
+      const refs = new Set<string>();
+      const vcConfigFilePaths = fileList.filter(
+        file => basename(file) === '.vc-config.json'
+      );
+      await Promise.all(
+        vcConfigFilePaths.map(async p => {
+          const configJson = await readFile(p, 'utf8');
+          const config = JSON.parse(configJson);
+          if (!config.filePathMap) return;
+          for (const v of Object.values(config.filePathMap) as string[]) {
+            refs.add(join(path, v));
+          }
+        })
+      );
+      if (refs.size > 0) {
+        fileList = fileList.concat(Array.from(refs));
+      }
+    }
+
     debug(`Found ${fileList.length} files in the specified directory`);
   } else if (Array.isArray(path)) {
     // Array of file paths
