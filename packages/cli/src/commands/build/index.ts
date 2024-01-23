@@ -553,6 +553,7 @@ async function doBuild(
       // Start flushing the file outputs to the filesystem asynchronously
       ops.push(
         writeBuildResult(
+          repoRootPath,
           outputDir,
           buildResult,
           build,
