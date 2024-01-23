@@ -10,14 +10,16 @@ import {
   writeFile,
 } from 'fs-extra';
 import {
-  BuildOptions,
   download,
   getWriteableDirectory,
   glob,
-  createLambda,
+  Lambda,
   debug,
   walkParentDirs,
   cloneEnv,
+  FileBlob,
+  type Files,
+  type BuildV3,
 } from '@vercel/build-utils';
 import { installBundler } from './install-ruby';
 
@@ -114,13 +116,13 @@ async function bundleInstall(
 
 export const version = 3;
 
-export async function build({
+export const build: BuildV3 = async ({
   workPath,
   files,
   entrypoint,
   config,
   meta = {},
-}: BuildOptions) {
+}) => {
   await download(files, workPath, meta);
   const entrypointFsDirname = join(workPath, dirname(entrypoint));
   const gemfileName = 'Gemfile';
@@ -217,12 +219,11 @@ export async function build({
   // somethig else
   const handlerRbFilename = 'vc__handler__ruby';
 
-  await writeFile(
-    join(workPath, `${handlerRbFilename}.rb`),
-    nowHandlerRbContents
-  );
+  const outputFiles: Files = await glob('**', workPath);
 
-  const outputFiles = await glob('**', workPath);
+  outputFiles[`${handlerRbFilename}.rb`] = new FileBlob({
+    data: nowHandlerRbContents,
+  });
 
   // static analysis is impossible with ruby.
   // instead, provide `includeFiles` and `excludeFiles` config options to reduce bundle size.
@@ -253,12 +254,12 @@ export async function build({
     }
   }
 
-  const lambda = await createLambda({
+  const output = new Lambda({
     files: outputFiles,
     handler: `${handlerRbFilename}.vc__handler`,
     runtime,
     environment: {},
   });
 
-  return { output: lambda };
-}
+  return { output };
+};

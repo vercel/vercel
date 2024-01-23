@@ -42,6 +42,18 @@ async function processMessage(message) {
   // structure to JSON" errors, so delete the property...
   delete result.childProcesses;
 
+  if (builder.version === 3) {
+    if (result.output.type === 'Lambda') {
+      result.output.zipBuffer = await result.output.createZip();
+    }
+  } else {
+    for (const output of Object.values(result.output)) {
+      if (output.type === 'Lambda') {
+        output.zipBuffer = await output.createZip();
+      }
+    }
+  }
+
   process.send({ type: 'buildResult', result });
 }
 
