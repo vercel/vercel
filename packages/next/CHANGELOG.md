@@ -1,5 +1,15 @@
 # @vercel/next
 
+## 4.1.0
+
+### Minor Changes
+
+- fix error when @vercel/analytics is a transitive dependency of the deployed application ([#10892](https://github.com/vercel/vercel/pull/10892))
+
+### Patch Changes
+
+- Use `worker.name` instead of edge function name to fix type error in `@vercel/next` ([#11050](https://github.com/vercel/vercel/pull/11050))
+
 ## 4.0.17
 
 ### Patch Changes
