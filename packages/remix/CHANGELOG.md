@@ -1,5 +1,67 @@
 # @vercel/remix-builder
 
+## 2.0.18
+
+### Patch Changes
+
+- Fix functions without a output path edge case ([#11038](https://github.com/vercel/vercel/pull/11038))
+
+- Update `@remix-run/dev` fork to v2.5.0 ([#11054](https://github.com/vercel/vercel/pull/11054))
+
+- Update `@remix-run/dev` fork to v2.5.1 ([#11065](https://github.com/vercel/vercel/pull/11065))
+
+## 2.0.17
+
+### Patch Changes
+
+- Deprecate `EdgeFunction#name` property ([#11010](https://github.com/vercel/vercel/pull/11010))
+
+## 2.0.16
+
+### Patch Changes
+
+- [next][node][redwood][remix] Bump `@vercel/nft@0.26.1` ([#11009](https://github.com/vercel/vercel/pull/11009))
+
+- Update `@remix-run/dev` fork to v2.4.1 ([#10992](https://github.com/vercel/vercel/pull/10992))
+
+## 2.0.15
+
+### Patch Changes
+
+- Update `@remix-run/dev` fork to v2.4.0 ([#10943](https://github.com/vercel/vercel/pull/10943))
+
+## 2.0.14
+
+### Patch Changes
+
+- Reinstall dependencies during `prepareCache()` ([#10922](https://github.com/vercel/vercel/pull/10922))
+
+## 2.0.13
+
+### Patch Changes
+
+- Update `@remix-run/dev` fork to v2.3.1 ([#10908](https://github.com/vercel/vercel/pull/10908))
+
+## 2.0.12
+
+### Patch Changes
+
+- Fix issue where `npm install` was not properly injecting forked compiler ([#10819](https://github.com/vercel/vercel/pull/10819))
+
+- Simplify static directory resolution and apply `publicPath` to routes. ([#10685](https://github.com/vercel/vercel/pull/10685))
+
+## 2.0.11
+
+### Patch Changes
+
+- Update `@remix-run/dev` fork to v2.2.0 ([#10788](https://github.com/vercel/vercel/pull/10788))
+
+## 2.0.10
+
+### Patch Changes
+
+- Update `@remix-run/dev` fork to v2.1.0 ([#10732](https://github.com/vercel/vercel/pull/10732))
+
 ## 2.0.9
 
 ### Patch Changes

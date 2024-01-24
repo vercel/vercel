@@ -37,6 +37,7 @@ export interface LambdaOptionsBase {
 
 export interface LambdaOptionsWithFiles extends LambdaOptionsBase {
   files: Files;
+  experimentalAllowBundling?: boolean;
 }
 
 /**
@@ -79,6 +80,7 @@ export class Lambda {
   supportsWrapper?: boolean;
   supportsResponseStreaming?: boolean;
   framework?: FunctionFramework;
+  experimentalAllowBundling?: boolean;
 
   constructor(opts: LambdaOptions) {
     const {
@@ -111,6 +113,16 @@ export class Lambda {
       assert(
         architecture === 'x86_64' || architecture === 'arm64',
         '"architecture" must be either "x86_64" or "arm64"'
+      );
+    }
+
+    if (
+      'experimentalAllowBundling' in opts &&
+      opts.experimentalAllowBundling !== undefined
+    ) {
+      assert(
+        typeof opts.experimentalAllowBundling === 'boolean',
+        '"experimentalAllowBundling" is not a boolean'
       );
     }
 
@@ -183,6 +195,10 @@ export class Lambda {
     this.supportsResponseStreaming =
       supportsResponseStreaming ?? experimentalResponseStreaming;
     this.framework = framework;
+    this.experimentalAllowBundling =
+      'experimentalAllowBundling' in opts
+        ? opts.experimentalAllowBundling
+        : undefined;
   }
 
   async createZip(): Promise<Buffer> {

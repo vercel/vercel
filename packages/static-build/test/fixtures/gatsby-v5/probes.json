@@ -20,6 +20,15 @@
     {
       "path": "/x/y/z",
       "mustContain": "<h1>Page not found</h1>"
+    },
+    {
+      "fetchOptions": { "redirect": "manual" },
+      "path": "/redirect/",
+      "status": 307
+    },
+    {
+      "path": "/rewrite/",
+      "mustContain": "Vercel"
     }
   ]
 }

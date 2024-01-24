@@ -1,5 +1,210 @@
 # vercel
 
+## 33.2.0
+
+### Minor Changes
+
+- chore: deprecate next/nuxt/gastby Speed Insights injection in favor of @vercel/speed-insights ([#11048](https://github.com/vercel/vercel/pull/11048))
+
+### Patch Changes
+
+- fix error when @vercel/analytics is a transitive dependency of the deployed application ([#10892](https://github.com/vercel/vercel/pull/10892))
+
+- [cli] Add documentation string for `skip-domain` option ([#11051](https://github.com/vercel/vercel/pull/11051))
+
+- Updated dependencies [[`260125784`](https://github.com/vercel/vercel/commit/2601257846fa201fc9efde021a906c706f6191aa), [`cdddb33ad`](https://github.com/vercel/vercel/commit/cdddb33ad49f6080c49f4fff3767e6111acd0bbe), [`72d8604c9`](https://github.com/vercel/vercel/commit/72d8604c9dba108ccca41d6288b765a7ba727295), [`90d0455e1`](https://github.com/vercel/vercel/commit/90d0455e1ff7b5892ff4960226535f57f704ef6f), [`0716130e5`](https://github.com/vercel/vercel/commit/0716130e580a920d92d249d029ed37f92f2ca847), [`b6b151f39`](https://github.com/vercel/vercel/commit/b6b151f3917c5cb47226951446b9dbb96c7d872b), [`b185a7e20`](https://github.com/vercel/vercel/commit/b185a7e207b153c378bd3db2618eece3a3b6a93e)]:
+  - @vercel/static-build@2.1.0
+  - @vercel/build-utils@7.5.1
+  - @vercel/next@4.1.0
+  - @vercel/remix-builder@2.0.18
+  - @vercel/node@3.0.17
+
+## 33.1.0
+
+### Minor Changes
+
+- Serialize duplicate `EdgeFunction` references as symlinks in `vc build` ([#11027](https://github.com/vercel/vercel/pull/11027))
+
+### Patch Changes
+
+- Handle rate limit response when fetching /teams ([#11013](https://github.com/vercel/vercel/pull/11013))
+
+- Display actual deployment's 'target' ([#11025](https://github.com/vercel/vercel/pull/11025))
+
+- Updated dependencies [[`98040ec24`](https://github.com/vercel/vercel/commit/98040ec24e1ee585865d11eb216b6525d39d209e)]:
+  - @vercel/build-utils@7.5.0
+  - @vercel/static-build@2.0.17
+  - @vercel/hydrogen@1.0.2
+  - @vercel/remix-builder@2.0.17
+  - @vercel/node@3.0.16
+
+## 33.0.2
+
+### Patch Changes
+
+- Log extension execution failures ([#10937](https://github.com/vercel/vercel/pull/10937))
+
+- Updated dependencies [[`fbe08fe57`](https://github.com/vercel/vercel/commit/fbe08fe57eededc0bcd2409692b23d185c70069d), [`77585013d`](https://github.com/vercel/vercel/commit/77585013dec5fc406b8b7ea00918e49fdb8f10ec), [`c536a74bc`](https://github.com/vercel/vercel/commit/c536a74bc9e7188a87b292615fa88d6fc506b105), [`91f8763ed`](https://github.com/vercel/vercel/commit/91f8763edce672a3c05b6096db6084f1e6741384), [`7f8f5f865`](https://github.com/vercel/vercel/commit/7f8f5f86516934acb0c4b936ea601433c8d30c5c)]:
+  - @vercel/next@4.0.17
+  - @vercel/go@3.0.5
+  - @vercel/node@3.0.15
+  - @vercel/redwood@2.0.6
+  - @vercel/remix-builder@2.0.16
+
+## 33.0.1
+
+### Patch Changes
+
+- Updated dependencies [[`67fa2f3dd`](https://github.com/vercel/vercel/commit/67fa2f3dd6a6d5a3504b7f9081e56deff7b36eab), [`7b0adf371`](https://github.com/vercel/vercel/commit/7b0adf371bae64d33ed0a1b966fc50b1f7c9639b)]:
+  - @vercel/build-utils@7.4.1
+  - @vercel/next@4.0.16
+  - @vercel/static-build@2.0.16
+  - @vercel/node@3.0.14
+
+## 33.0.0
+
+### Major Changes
+
+- [cli] replace `--deprecated` with `--update-required` in `vc project ls` ([#10965](https://github.com/vercel/vercel/pull/10965))
+
+### Patch Changes
+
+- Fix `vercel bisect` selecting too many deployments ([#10956](https://github.com/vercel/vercel/pull/10956))
+
+- Updated dependencies [[`6a9002f22`](https://github.com/vercel/vercel/commit/6a9002f2296c5ccce4522c0fa9a8938c3d7a4849), [`4d63d9e95`](https://github.com/vercel/vercel/commit/4d63d9e954549d811063d259250d1865b7de2ba1)]:
+  - @vercel/remix-builder@2.0.15
+  - @vercel/build-utils@7.4.0
+  - @vercel/static-build@2.0.15
+  - @vercel/node@3.0.13
+
+## 32.7.2
+
+### Patch Changes
+
+- [cli] Use new `deprecated` query param in projects api for `vc project ls --deprecated` ([#10938](https://github.com/vercel/vercel/pull/10938))
+
+## 32.7.1
+
+### Patch Changes
+
+- [cli] double page limit for vc project ls --deprecated ([#10932](https://github.com/vercel/vercel/pull/10932))
+
+- Updated dependencies [[`d09dd1794`](https://github.com/vercel/vercel/commit/d09dd1794b5ffa28c15d3ad2880b90db2f4c06f0)]:
+  - @vercel/remix-builder@2.0.14
+
+## 32.7.0
+
+### Minor Changes
+
+- [cli] add `--deprecated` option to `vc project ls` command ([#10919](https://github.com/vercel/vercel/pull/10919))
+
+### Patch Changes
+
+- Remove some debug statements and make log into warning ([#10926](https://github.com/vercel/vercel/pull/10926))
+
+- Updated dependencies [[`3cede43ca`](https://github.com/vercel/vercel/commit/3cede43ca7ea3aec3ff33864b7d33da57891ddb2), [`dfe47f6e6`](https://github.com/vercel/vercel/commit/dfe47f6e6c1d395ae24d802f4b7c98e39b9f90f4), [`1dbb22bb6`](https://github.com/vercel/vercel/commit/1dbb22bb6d33657faa78376f527fe350188c5257), [`204c3592c`](https://github.com/vercel/vercel/commit/204c3592c78fc544e62f0210b0e7e1e4cd382a0c)]:
+  - @vercel/ruby@2.0.4
+  - @vercel/build-utils@7.3.0
+  - @vercel/remix-builder@2.0.13
+  - @vercel/node@3.0.12
+  - @vercel/static-build@2.0.14
+
+## 32.6.1
+
+### Patch Changes
+
+- Revert "forbids globally installed @vercel/speed-insights and @vercel/analytics (#10848)" ([#10895](https://github.com/vercel/vercel/pull/10895))
+
+## 32.6.0
+
+### Minor Changes
+
+- forbids globally installed @vercel/speed-insights and @vercel/analytics ([#10848](https://github.com/vercel/vercel/pull/10848))
+
+### Patch Changes
+
+- [cli] Fix behavior for combination of northstar user + team scope provided to cli as an argument. ([#10884](https://github.com/vercel/vercel/pull/10884))
+
+- Updated dependencies [[`4edfcd74b`](https://github.com/vercel/vercel/commit/4edfcd74b6dfd8e9cbc05a71d47578051a2a7d63), [`0e9bb30fd`](https://github.com/vercel/vercel/commit/0e9bb30fd285492beadc365bece2ab1df67b387b), [`ca2cbf06f`](https://github.com/vercel/vercel/commit/ca2cbf06fbf252e23aff6e007d0df5ffc243b56e), [`c52bdf775`](https://github.com/vercel/vercel/commit/c52bdf77585dfa41b25cabe2f9403827d0964169)]:
+  - @vercel/remix-builder@2.0.12
+  - @vercel/static-build@2.0.13
+  - @vercel/go@3.0.4
+
+## 32.5.6
+
+### Patch Changes
+
+- Updated dependencies [[`ffd2f34c6`](https://github.com/vercel/vercel/commit/ffd2f34c6c3d53bbb673aa3241845abc50e67c5e), [`4636ae54c`](https://github.com/vercel/vercel/commit/4636ae54c6c17709c1a058169cdca19c3df73ddb)]:
+  - @vercel/next@4.0.15
+  - @vercel/ruby@2.0.3
+
+## 32.5.5
+
+### Patch Changes
+
+- Updated dependencies [[`88da7463c`](https://github.com/vercel/vercel/commit/88da7463ce12df91d49fbde85cb617030d55f558)]:
+  - @vercel/build-utils@7.2.5
+  - @vercel/node@3.0.11
+  - @vercel/static-build@2.0.12
+
+## 32.5.4
+
+### Patch Changes
+
+- Updated dependencies [[`65dec5b7e`](https://github.com/vercel/vercel/commit/65dec5b7e752f4da8fe0ffdb25215170453f6f8b)]:
+  - @vercel/build-utils@7.2.4
+  - @vercel/node@3.0.10
+  - @vercel/static-build@2.0.11
+
+## 32.5.3
+
+### Patch Changes
+
+- Handle `TooManyProjects` error in places where projects are created ([#10807](https://github.com/vercel/vercel/pull/10807))
+
+- Updated dependencies [[`89c1e0323`](https://github.com/vercel/vercel/commit/89c1e032335d9ec0fcfc84fe499cf004fe73fafc), [`fd29b966d`](https://github.com/vercel/vercel/commit/fd29b966d39776318b0e11a53909edb43d1fc5f2)]:
+  - @vercel/node@3.0.9
+  - @vercel/next@4.0.14
+
+## 32.5.2
+
+### Patch Changes
+
+- Updated dependencies [[`c94a082f6`](https://github.com/vercel/vercel/commit/c94a082f6bb1b84eaf420ac47ea83640dc83668e)]:
+  - @vercel/next@4.0.13
+
+## 32.5.1
+
+### Patch Changes
+
+- Debug log load user exceptions ([#10773](https://github.com/vercel/vercel/pull/10773))
+
+- bump: edge-runtime ([#10712](https://github.com/vercel/vercel/pull/10712))
+
+- Updated dependencies [[`fc90a3dc0`](https://github.com/vercel/vercel/commit/fc90a3dc0bd998453f6527c03d211c35bb0d5770), [`644b8a52c`](https://github.com/vercel/vercel/commit/644b8a52cb2cc8f05e215e2230f95f902cdf8ae8), [`0861dc8fb`](https://github.com/vercel/vercel/commit/0861dc8fbcea1037626b00664a4b6c22f1b0a7ed), [`33cc8e0ac`](https://github.com/vercel/vercel/commit/33cc8e0acf1b3466d50d45b2e5bbe66b89a87c14), [`f5296c3c0`](https://github.com/vercel/vercel/commit/f5296c3c06e620a39c5f88287ac94e58703bdaac), [`d9065c210`](https://github.com/vercel/vercel/commit/d9065c2102223e9cdb5b22df14db41c363cf7828)]:
+  - @vercel/next@4.0.12
+  - @vercel/node@3.0.8
+  - @vercel/build-utils@7.2.3
+  - @vercel/remix-builder@2.0.11
+  - @vercel/static-build@2.0.10
+
+## 32.5.0
+
+### Minor Changes
+
+- Indicates whether @vercel/speed-insights or @vercel/analytics are used ([#10623](https://github.com/vercel/vercel/pull/10623))
+
+- [cli] update env var validation rule to allow name start with underscore ([#10697](https://github.com/vercel/vercel/pull/10697))
+
+### Patch Changes
+
+- Updated dependencies [[`da300030c`](https://github.com/vercel/vercel/commit/da300030c999b3555c608a321c9d0a4d36923a5a), [`de84743e1`](https://github.com/vercel/vercel/commit/de84743e10d4c9701d409355c0fe057f35e6e435), [`913608de4`](https://github.com/vercel/vercel/commit/913608de4dd4e37557533d732ca8449a5737d4a6), [`7fa08088e`](https://github.com/vercel/vercel/commit/7fa08088ea0d5df6955ea4af7f08513cf4027bb3)]:
+  - @vercel/next@4.0.11
+  - @vercel/python@4.1.0
+  - @vercel/remix-builder@2.0.10
+  - @vercel/redwood@2.0.5
+  - @vercel/static-build@2.0.9
+
 ## 32.4.1
 
 ### Patch Changes

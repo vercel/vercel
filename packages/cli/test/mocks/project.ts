@@ -353,11 +353,11 @@ export function useProject(
   });
   client.scenario.get(`/v4/projects`, (req, res) => {
     res.json({
-      projects: [defaultProject],
+      projects: [project],
       pagination: null,
     });
   });
-  client.scenario.post(`/projects`, (req, res) => {
+  client.scenario.post(`/v1/projects`, (req, res) => {
     const { name } = req.body;
     if (name === project.name) {
       res.json(project);

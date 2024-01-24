@@ -2,17 +2,17 @@
 # https://help.github.com/en/articles/about-code-owners
 
 # Restricted Paths
-*                                        @TooTallNate @EndangeredMassa @styfle @cb1kenobi @Ethan-Arrowood @trek
-/.github/workflows                       @TooTallNate @EndangeredMassa @styfle @cb1kenobi @Ethan-Arrowood @trek @ijjk
-/packages/fs-detectors                   @TooTallNate @EndangeredMassa @styfle @cb1kenobi @Ethan-Arrowood @trek @agadzik @chloetedder
-/packages/next                           @TooTallNate @EndangeredMassa @styfle @cb1kenobi @Ethan-Arrowood @trek @ijjk @ztanner
-/packages/routing-utils                  @TooTallNate @EndangeredMassa @styfle @cb1kenobi @Ethan-Arrowood @trek @ijjk
-/packages/static-build                   @TooTallNate @EndangeredMassa @cb1kenobi @Ethan-Arrowood @trek
-/packages/edge                           @vercel/compute
+*                                        @TooTallNate @EndangeredMassa @trek
+/.github/workflows                       @TooTallNate @EndangeredMassa @trek @ijjk
+/packages/fs-detectors                   @TooTallNate @EndangeredMassa @trek @agadzik @chloetedder
+/packages/next                           @TooTallNate @EndangeredMassa @Ethan-Arrowood @trek @ijjk @ztanner
+/packages/routing-utils                  @TooTallNate @EndangeredMassa @trek @ijjk
+/packages/static-build                   @TooTallNate @EndangeredMassa @trek
+/packages/edge                           @vercel/compute @TooTallNate @EndangeredMassa @trek
 /examples                                @leerob
 /examples/create-react-app               @Timer
-/examples/nextjs                         @timneutkens @ijjk @styfle @ztanner @huozhi
-/packages/node                           @TooTallNate @EndangeredMassa @styfle @cb1kenobi @Ethan-Arrowood @trek @Kikobeats
+/examples/nextjs                         @timneutkens @ijjk @ztanner @huozhi
+/packages/node                           @TooTallNate @EndangeredMassa @trek @Kikobeats
 
 # Unrestricted Paths
 .changeset/

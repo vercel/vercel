@@ -1,5 +1,5 @@
 import { join } from 'path';
-import { promises } from 'fs';
+import { existsSync, promises } from 'fs';
 
 import { Framework } from './types';
 import { readConfigFile } from './read-config-file';
@@ -66,7 +66,7 @@ export const frameworks = [
     darkModeLogo:
       'https://api-frameworks.vercel.sh/framework-logos/next-dark.svg',
     screenshot:
-      'https://assets.vercel.com/image/upload/v1673027027/front/import/nextjs.png',
+      'https://assets.vercel.com/image/upload/v1701461207/front/import/nextjs.png',
     tagline:
       'Next.js makes you productive with React instantly — whether you want to build static or dynamic sites.',
     description: 'A Next.js app and a Serverless Function API.',
@@ -867,7 +867,11 @@ export const frameworks = [
 
         // If there is only one file in it that is a dir we'll use it as dist dir
         if (content.length === 1 && content[0].isDirectory()) {
-          return join(base, content[0].name);
+          const potentialOutDir = join(base, content[0].name);
+          const potentialOutDirWithBrowser = join(potentialOutDir, 'browser');
+          return existsSync(potentialOutDirWithBrowser)
+            ? potentialOutDirWithBrowser
+            : potentialOutDir;
         }
       } catch (error) {
         console.error(`Error detecting output directory: `, error);
@@ -1452,8 +1456,8 @@ export const frameworks = [
           '`yarn install`, `pnpm install`, `npm install`, or `bun install`',
       },
       buildCommand: {
-        placeholder: '`npm run build` or `nuxt generate`',
-        value: 'nuxt generate',
+        placeholder: '`npm run build` or `nuxt build`',
+        value: 'nuxt build',
       },
       devCommand: {
         value: 'nuxt',

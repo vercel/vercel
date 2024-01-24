@@ -1,5 +1,66 @@
 # @vercel/next
 
+## 4.1.0
+
+### Minor Changes
+
+- fix error when @vercel/analytics is a transitive dependency of the deployed application ([#10892](https://github.com/vercel/vercel/pull/10892))
+
+### Patch Changes
+
+- Use `worker.name` instead of edge function name to fix type error in `@vercel/next` ([#11050](https://github.com/vercel/vercel/pull/11050))
+
+## 4.0.17
+
+### Patch Changes
+
+- Ensure rewrites handle RSC requests ([#11005](https://github.com/vercel/vercel/pull/11005))
+
+- [next][node][redwood][remix] Bump `@vercel/nft@0.26.1` ([#11009](https://github.com/vercel/vercel/pull/11009))
+
+## 4.0.16
+
+### Patch Changes
+
+- Entries in the `prerender-manifest.json` without a `dataRoute` but with a `prefetchDataRoute` will be treated as an App Page. App Route's that do not have ([#10978](https://github.com/vercel/vercel/pull/10978))
+  a body will not cause a build error.
+
+## 4.0.15
+
+### Patch Changes
+
+- ensure function configs work for paths inside of route groups ([#10855](https://github.com/vercel/vercel/pull/10855))
+
+## 4.0.14
+
+### Patch Changes
+
+- Fixed headers for static routes when PPR is enabled ([#10808](https://github.com/vercel/vercel/pull/10808))
+
+## 4.0.13
+
+### Patch Changes
+
+- Added `getRequestHandlerWithMetadata` export ([#10753](https://github.com/vercel/vercel/pull/10753))
+
+## 4.0.12
+
+### Patch Changes
+
+- fix re-mapping logic for index prefetches ([#10750](https://github.com/vercel/vercel/pull/10750))
+
+- Fixes a case where using `basePath` along with static generation would output a lambda that conflicts with the root route. ([#10738](https://github.com/vercel/vercel/pull/10738))
+
+- Rework prefetch route handling ([#10779](https://github.com/vercel/vercel/pull/10779))
+
+## 4.0.11
+
+### Patch Changes
+
+- fix `build` in appDir on Windows ([#10708](https://github.com/vercel/vercel/pull/10708))
+
+- Fix RSC prefetch for index route with catch-all ([#10734](https://github.com/vercel/vercel/pull/10734))
+
 ## 4.0.10
 
 ### Patch Changes

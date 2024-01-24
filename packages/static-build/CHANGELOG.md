@@ -1,5 +1,80 @@
 # @vercel/static-build
 
+## 2.1.0
+
+### Minor Changes
+
+- chore: deprecate next/nuxt/gastby Speed Insights injection in favor of @vercel/speed-insights ([#11048](https://github.com/vercel/vercel/pull/11048))
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.16
+
+## 2.0.17
+
+### Patch Changes
+
+- Deprecate `EdgeFunction#name` property ([#11010](https://github.com/vercel/vercel/pull/11010))
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.15
+
+## 2.0.16
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.14
+
+## 2.0.15
+
+### Patch Changes
+
+- Updated dependencies [[`652a31275`](https://github.com/vercel/vercel/commit/652a3127533974c426ea8e5b1047af1aecddb57e)]:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.13
+
+## 2.0.14
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.12
+
+## 2.0.13
+
+### Patch Changes
+
+- [tests] Update Gatsby fixture versions ([#10875](https://github.com/vercel/vercel/pull/10875))
+
+## 2.0.12
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.11
+
+## 2.0.11
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.10
+
+## 2.0.10
+
+### Patch Changes
+
+- Updated dependencies [[`efd3cc05d`](https://github.com/vercel/vercel/commit/efd3cc05dcf3993a68eb2ac41f39d42ed905b036)]:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.9
+
+## 2.0.9
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.8
+
 ## 2.0.8
 
 ### Patch Changes

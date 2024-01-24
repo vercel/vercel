@@ -1,4 +1,4 @@
-import fs from 'fs-extra';
+import fs, { readJSON } from 'fs-extra';
 import chalk from 'chalk';
 import dotenv from 'dotenv';
 import semver from 'semver';
@@ -71,6 +71,7 @@ import { setMonorepoDefaultSettings } from '../../util/build/monorepo';
 import { help } from '../help';
 import { buildCommand } from './command';
 import { scrubArgv } from '../../util/build/scrub-argv';
+import { cwd } from 'process';
 
 type BuildResult = BuildResultV2 | BuildResultV3;
 
@@ -257,6 +258,9 @@ export default async function main(client: Client): Promise<number> {
     if (project.settings.analyticsId) {
       envToUnset.add('VERCEL_ANALYTICS_ID');
       process.env.VERCEL_ANALYTICS_ID = project.settings.analyticsId;
+      output.warn(
+        'Vercel Speed Insights auto-injection is deprecated in favor of @vercel/speed-insights package. Learn more: https://vercel.link/upgrate-to-speed-insights-package'
+      );
     }
 
     // Some build processes use these env vars to platform detect Vercel
@@ -432,29 +436,6 @@ async function doBuild(
 
   const ops: Promise<Error | void>[] = [];
 
-  const dependencyMap = makeDepencyMap(pkg);
-  const speedInsighsVersion = dependencyMap.get('@vercel/speed-insights');
-  if (speedInsighsVersion) {
-    if (process.env.VERCEL_ANALYTICS_ID) {
-      output.warn(
-        `The \`VERCEL_ANALYTICS_ID\` environment variable is deprecated and will be removed in a future release. Please remove it from your environment variables`
-      );
-
-      delete process.env.VERCEL_ANALYTICS_ID;
-    }
-    buildsJson.features = {
-      ...(buildsJson.features ?? {}),
-      speedInsightsVersion: speedInsighsVersion,
-    };
-  }
-  const webAnalyticsVersion = dependencyMap.get('@vercel/analytics');
-  if (webAnalyticsVersion) {
-    buildsJson.features = {
-      ...(buildsJson.features ?? {}),
-      webAnalyticsVersion: webAnalyticsVersion,
-    };
-  }
-
   // Write the `detectedBuilders` result to output dir
   const buildsJsonBuilds = new Map<Builder, SerializedBuilder>(
     builds.map(build => {
@@ -474,10 +455,9 @@ async function doBuild(
       ];
     })
   );
+
   buildsJson.builds = Array.from(buildsJsonBuilds.values());
-  await fs.writeJSON(join(outputDir, 'builds.json'), buildsJson, {
-    spaces: 2,
-  });
+  await writeBuildJson(buildsJson, outputDir);
 
   // The `meta` config property is re-used for each Builder
   // invocation so that Builders can share state between
@@ -573,6 +553,7 @@ async function doBuild(
       // Start flushing the file outputs to the filesystem asynchronously
       ops.push(
         writeBuildResult(
+          repoRootPath,
           outputDir,
           buildResult,
           build,
@@ -606,6 +587,33 @@ async function doBuild(
     if (error) {
       throw error;
     }
+  }
+
+  let needBuildsJsonOverride = false;
+  const speedInsightsVersion = await readInstalledVersion(
+    client,
+    '@vercel/speed-insights'
+  );
+  if (speedInsightsVersion) {
+    buildsJson.features = {
+      ...(buildsJson.features ?? {}),
+      speedInsightsVersion,
+    };
+    needBuildsJsonOverride = true;
+  }
+  const webAnalyticsVersion = await readInstalledVersion(
+    client,
+    '@vercel/analytics'
+  );
+  if (webAnalyticsVersion) {
+    buildsJson.features = {
+      ...(buildsJson.features ?? {}),
+      webAnalyticsVersion,
+    };
+    needBuildsJsonOverride = true;
+  }
+  if (needBuildsJsonOverride) {
+    await writeBuildJson(buildsJson, outputDir);
   }
 
   // Merge existing `config.json` file into the one that will be produced
@@ -818,9 +826,24 @@ function mergeFlags(
   });
 }
 
-function makeDepencyMap(pkg: PackageJson | null): Map<string, string> {
-  return new Map([
-    ...Object.entries(pkg?.devDependencies ?? {}),
-    ...Object.entries(pkg?.dependencies ?? {}),
-  ]);
+async function writeBuildJson(buildsJson: BuildsManifest, outputDir: string) {
+  await fs.writeJSON(join(outputDir, 'builds.json'), buildsJson, { spaces: 2 });
+}
+
+export async function readInstalledVersion(
+  { output }: Client,
+  pkgName: string
+): Promise<string | undefined> {
+  try {
+    const descriptorPath = require.resolve(`${pkgName}/package.json`, {
+      paths: [cwd()],
+    });
+    const descriptor = await readJSON(descriptorPath);
+    return descriptor?.version;
+  } catch (err) {
+    output.debug(
+      `Package ${pkgName} is not installed (failed to read its package.json: ${err})`
+    );
+  }
+  return;
 }

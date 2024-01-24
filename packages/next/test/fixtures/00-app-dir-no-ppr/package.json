@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "next": "13.5.6",
+    "react": "experimental",
+    "react-dom": "experimental"
+  },
+  "ignoreNextjsUpdates": true
+}

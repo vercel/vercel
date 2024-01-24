@@ -1,3 +1,4 @@
+import { EOL } from 'os';
 import { join, dirname, relative } from 'path';
 import execa from 'execa';
 import {
@@ -9,14 +10,16 @@ import {
   writeFile,
 } from 'fs-extra';
 import {
-  BuildOptions,
   download,
   getWriteableDirectory,
   glob,
-  createLambda,
+  Lambda,
   debug,
   walkParentDirs,
   cloneEnv,
+  FileBlob,
+  type Files,
+  type BuildV3,
 } from '@vercel/build-utils';
 import { installBundler } from './install-ruby';
 
@@ -44,11 +47,13 @@ async function matchPaths(
 async function bundleInstall(
   bundlePath: string,
   bundleDir: string,
-  gemfilePath: string
+  gemfilePath: string,
+  runtime: string
 ) {
   debug(`running "bundle install --deployment"...`);
   const bundleAppConfig = await getWriteableDirectory();
   const gemfileContent = await readFile(gemfilePath, 'utf8');
+
   if (gemfileContent.includes('ruby "~> 2.7.x"')) {
     // Gemfile contains "2.7.x" which will cause an error message:
     // "Your Ruby patchlevel is 0, but your Gemfile specified -1"
@@ -58,39 +63,82 @@ async function bundleInstall(
       gemfilePath,
       gemfileContent.replace('ruby "~> 2.7.x"', 'ruby "~> 2.7.0"')
     );
+  } else if (gemfileContent.includes('ruby "~> 3.2.x"')) {
+    // Gemfile contains "3.2.x" which will cause an error message:
+    // "Your Ruby patchlevel is 0, but your Gemfile specified -1"
+    // See https://github.com/rubygems/bundler/blob/3f0638c6c8d340c2f2405ecb84eb3b39c433e36e/lib/bundler/errors.rb#L49
+    // We must correct to the actual version in the build container.
+    await writeFile(
+      gemfilePath,
+      gemfileContent.replace('ruby "~> 3.2.x"', 'ruby "~> 3.2.0"')
+    );
   }
-  await execa(
+
+  const bundlerEnv = cloneEnv(process.env, {
+    // Ensure the correct version of `ruby` is in front of the $PATH
+    PATH: `${dirname(bundlePath)}:${process.env.PATH}`,
+    BUNDLE_SILENCE_ROOT_WARNING: '1',
+    BUNDLE_APP_CONFIG: bundleAppConfig,
+    BUNDLE_JOBS: '4',
+  });
+
+  // Lambda "ruby3.2" runtime does not include "webrick",
+  // which is needed for the `vc_init.rb` entrypoint file
+  if (runtime === 'ruby3.2') {
+    const result = await execa('bundler', ['add', 'webrick'], {
+      cwd: dirname(gemfilePath),
+      stdio: 'pipe',
+      env: bundlerEnv,
+      reject: false,
+    });
+    if (result.exitCode !== 0) {
+      console.log(result.stdout);
+      console.error(result.stderr);
+      throw result;
+    }
+  }
+
+  const result = await execa(
     bundlePath,
     ['install', '--deployment', '--gemfile', gemfilePath, '--path', bundleDir],
     {
       stdio: 'pipe',
-      env: cloneEnv(process.env, {
-        BUNDLE_SILENCE_ROOT_WARNING: '1',
-        BUNDLE_APP_CONFIG: bundleAppConfig,
-        BUNDLE_JOBS: '4',
-      }),
+      env: bundlerEnv,
+      reject: false,
     }
   );
+  if (result.exitCode !== 0) {
+    console.log(result.stdout);
+    console.error(result.stderr);
+    throw result;
+  }
 }
 
 export const version = 3;
 
-export async function build({
+export const build: BuildV3 = async ({
   workPath,
   files,
   entrypoint,
   config,
   meta = {},
-}: BuildOptions) {
+}) => {
   await download(files, workPath, meta);
   const entrypointFsDirname = join(workPath, dirname(entrypoint));
   const gemfileName = 'Gemfile';
 
-  const gemfilePath = await walkParentDirs({
+  let gemfilePath = await walkParentDirs({
     base: workPath,
     start: entrypointFsDirname,
     filename: gemfileName,
   });
+
+  // Ensure a `Gemfile` exists so that webrick can be installed for Ruby 3.2
+  if (!gemfilePath) {
+    gemfilePath = join(entrypointFsDirname, gemfileName);
+    await writeFile(gemfilePath, `source "https://rubygems.org"${EOL}`);
+  }
+
   const gemfileContents = gemfilePath
     ? await readFile(gemfilePath, 'utf8')
     : '';
@@ -141,7 +189,7 @@ export async function build({
       } else {
         // try installing. this won't work if native extesions are required.
         // if that's the case, gems should be vendored locally before deploying.
-        await bundleInstall(bundlerPath, bundleDir, gemfilePath);
+        await bundleInstall(bundlerPath, bundleDir, gemfilePath, runtime);
       }
     }
   } else {
@@ -171,12 +219,11 @@ export async function build({
   // somethig else
   const handlerRbFilename = 'vc__handler__ruby';
 
-  await writeFile(
-    join(workPath, `${handlerRbFilename}.rb`),
-    nowHandlerRbContents
-  );
+  const outputFiles: Files = await glob('**', workPath);
 
-  const outputFiles = await glob('**', workPath);
+  outputFiles[`${handlerRbFilename}.rb`] = new FileBlob({
+    data: nowHandlerRbContents,
+  });
 
   // static analysis is impossible with ruby.
   // instead, provide `includeFiles` and `excludeFiles` config options to reduce bundle size.
@@ -207,12 +254,12 @@ export async function build({
     }
   }
 
-  const lambda = await createLambda({
+  const output = new Lambda({
     files: outputFiles,
     handler: `${handlerRbFilename}.vc__handler`,
     runtime,
     environment: {},
   });
 
-  return { output: lambda };
-}
+  return { output };
+};

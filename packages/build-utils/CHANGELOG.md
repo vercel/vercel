@@ -1,5 +1,53 @@
 # @vercel/build-utils
 
+## 7.5.1
+
+### Patch Changes
+
+- Add experimental field to Lambda and size to FileFsRef output ([#11059](https://github.com/vercel/vercel/pull/11059))
+
+## 7.5.0
+
+### Minor Changes
+
+- Deprecate `EdgeFunction#name` property ([#11010](https://github.com/vercel/vercel/pull/11010))
+
+## 7.4.1
+
+### Patch Changes
+
+- Extend Node v16 discontinue date to 2024-06-15 ([#10967](https://github.com/vercel/vercel/pull/10967))
+
+## 7.4.0
+
+### Minor Changes
+
+- Adds new helper `getPathForPackageManager()` ([#10918](https://github.com/vercel/vercel/pull/10918))
+
+## 7.3.0
+
+### Minor Changes
+
+- [cli] add `--deprecated` option to `vc project ls` command ([#10919](https://github.com/vercel/vercel/pull/10919))
+
+## 7.2.5
+
+### Patch Changes
+
+- Remove Node.js v20 env var check ([#10834](https://github.com/vercel/vercel/pull/10834))
+
+## 7.2.4
+
+### Patch Changes
+
+- Select Node.js version based on what's available in build-container ([#10822](https://github.com/vercel/vercel/pull/10822))
+
+## 7.2.3
+
+### Patch Changes
+
+- Add experimental flag to allow Node.js v20 ([#10802](https://github.com/vercel/vercel/pull/10802))
+
 ## 7.2.2
 
 ### Patch Changes

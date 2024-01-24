@@ -1,8 +1,8 @@
 import os from 'os';
 import etag from 'etag';
-import { parse } from 'url';
+import { join } from 'path';
 import { copySync, existsSync } from 'fs-extra';
-import { join, dirname, basename } from 'path';
+import { getPageName } from './utils';
 
 const TMP_DATA_PATH = join(os.tmpdir(), 'data/datastore');
 const CUR_DATA_PATH = join(__dirname, '.cache/data/datastore');
@@ -25,34 +25,14 @@ async function getPageSSRHelpers() {
 }
 
 export default async function handler(req, res) {
-  let pageName;
-  const pathname = parse(req.url).pathname || '/';
-  const isPageData = pathname.startsWith('/page-data/');
-  if (isPageData) {
-    // /page-data/index/page-data.json
-    // /page-data/using-ssr/page-data.json
-    pageName = basename(dirname(pathname));
-    if (pageName === 'index') {
-      pageName = '/';
-    }
-  } else {
-    // /using-ssr
-    // /using-ssr/
-    // /using-ssr/index.html
-    pageName = basename(pathname);
-    if (pageName === 'index.html') {
-      pageName = basename(dirname(pathname));
-    }
-    if (!pageName) {
-      pageName = '/';
-    }
-  }
+  // eslint-disable-next-line no-undef
+  const { pathName, isPageData } = getPageName(req.url, vercel_pathPrefix);
 
   const [graphqlEngine, { getData, renderHTML, renderPageData }] =
     await Promise.all([getGraphQLEngine(), getPageSSRHelpers()]);
 
   const data = await getData({
-    pathName: pageName,
+    pathName,
     graphqlEngine,
     req,
   });

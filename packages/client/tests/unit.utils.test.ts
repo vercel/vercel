@@ -109,7 +109,7 @@ describe('buildFileTree()', () => {
       normalizeWindowsPaths(fileList).sort()
     );
 
-    const expectedIgnoreList = ['.vercel'];
+    const expectedIgnoreList = ['.gitignore', '.vercel'];
     expect(normalizeWindowsPaths(expectedIgnoreList).sort()).toEqual(
       normalizeWindowsPaths(ignoreList).sort()
     );
@@ -124,14 +124,18 @@ describe('buildFileTree()', () => {
     );
 
     const expectedFileList = toAbsolutePaths(cwd, [
+      '.vercel/output/functions/api/another.func/.vc-config.json',
+      '.vercel/output/functions/api/example.func/.vc-config.json',
       '.vercel/output/static/baz.txt',
       '.vercel/output/static/sub/qux.txt',
+      'node_modules/another/index.js',
+      'node_modules/example/index.js',
     ]);
     expect(normalizeWindowsPaths(expectedFileList).sort()).toEqual(
       normalizeWindowsPaths(fileList).sort()
     );
 
-    const expectedIgnoreList = ['foo.txt', 'sub'];
+    const expectedIgnoreList = ['.gitignore', 'foo.txt', 'sub'];
     expect(normalizeWindowsPaths(expectedIgnoreList).sort()).toEqual(
       normalizeWindowsPaths(ignoreList).sort()
     );
