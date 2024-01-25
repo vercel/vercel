@@ -1,5 +1,11 @@
 # @vercel/python
 
+## 4.1.1
+
+### Patch Changes
+
+- Remove deprecated `createLambda()` usage ([#11080](https://github.com/vercel/vercel/pull/11080))
+
 ## 4.1.0
 
 ### Minor Changes
