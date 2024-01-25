@@ -53,6 +53,18 @@ const serve =
 // The default handler method should be exported as a function on the module.
 module.exports = serve(nextServer.getRequestHandler());
 
+declare const __COMMON_CHUNKS__: string[];
+const commonChunks = __COMMON_CHUNKS__;
+module.exports.preload = async () => {
+  await Promise.all(commonChunks.map(chunk => import(chunk)));
+};
+
+declare const __REST_CHUNKS__: string[];
+const restChunks = __REST_CHUNKS__;
+module.exports.postload = async () => {
+  await Promise.all(restChunks.map(chunk => import(chunk)));
+};
+
 // If available, add `getRequestHandlerWithMetadata` to the export if it's
 // required by the configuration.
 if (
