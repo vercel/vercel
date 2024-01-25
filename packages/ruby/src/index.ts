@@ -48,6 +48,7 @@ async function bundleInstall(
   bundlePath: string,
   bundleDir: string,
   gemfilePath: string,
+  rubyPath: string,
   runtime: string
 ) {
   debug(`running "bundle install --deployment"...`);
@@ -76,7 +77,7 @@ async function bundleInstall(
 
   const bundlerEnv = cloneEnv(process.env, {
     // Ensure the correct version of `ruby` is in front of the $PATH
-    PATH: `${dirname(bundlePath)}:${process.env.PATH}`,
+    PATH: `${dirname(rubyPath)}:${dirname(bundlePath)}:${process.env.PATH}`,
     BUNDLE_SILENCE_ROOT_WARNING: '1',
     BUNDLE_APP_CONFIG: bundleAppConfig,
     BUNDLE_JOBS: '4',
@@ -142,10 +143,8 @@ export const build: BuildV3 = async ({
   const gemfileContents = gemfilePath
     ? await readFile(gemfilePath, 'utf8')
     : '';
-  const { gemHome, bundlerPath, vendorPath, runtime } = await installBundler(
-    meta,
-    gemfileContents
-  );
+  const { gemHome, bundlerPath, vendorPath, runtime, rubyPath } =
+    await installBundler(meta, gemfileContents);
   process.env.GEM_HOME = gemHome;
   debug(`Checking existing vendor directory at "${vendorPath}"`);
   const vendorDir = join(workPath, vendorPath);
@@ -189,7 +188,13 @@ export const build: BuildV3 = async ({
       } else {
         // try installing. this won't work if native extesions are required.
         // if that's the case, gems should be vendored locally before deploying.
-        await bundleInstall(bundlerPath, bundleDir, gemfilePath, runtime);
+        await bundleInstall(
+          bundlerPath,
+          bundleDir,
+          gemfilePath,
+          rubyPath,
+          runtime
+        );
       }
     }
   } else {
