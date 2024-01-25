@@ -197,6 +197,7 @@ export default async function setupAndLink(
         skipAutoDetectionConfirmation: false,
         projectSettings: {
           ...localConfigurationOverrides,
+          rootDirectory,
           sourceFilesOutsideRootDirectory,
         },
         autoAssignCustomDomains: true,
@@ -238,10 +239,6 @@ export default async function setupAndLink(
         autoConfirm,
         localConfigurationOverrides
       );
-    }
-
-    if (rootDirectory) {
-      settings.rootDirectory = rootDirectory;
     }
 
     const project = await createProject(client, {
