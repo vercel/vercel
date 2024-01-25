@@ -82,7 +82,10 @@ def vc__handler(event:, context:)
   path = payload['path']
   headers = payload['headers']
 
-  puts headers
+  if ENV['VERCEL_DEBUG']
+    puts 'Request Headers: '
+    puts headers
+  end
 
   httpMethod = payload['method']
   encoding = payload['encoding']
