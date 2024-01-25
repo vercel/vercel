@@ -81,6 +81,9 @@ def vc__handler(event:, context:)
   payload = JSON.parse(event['body'])
   path = payload['path']
   headers = payload['headers']
+
+  puts headers
+
   httpMethod = payload['method']
   encoding = payload['encoding']
   body = payload['body']
