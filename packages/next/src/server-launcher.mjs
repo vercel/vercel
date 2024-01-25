@@ -45,12 +45,6 @@ const nextServer = new NextServerModule.default.default({
 // caught.
 const serve = handler => async (req, res) => {
   try {
-    // eslint-disable-next-line no-undef
-    const ctx = globalThis[Symbol.for('@vercel/request-context')];
-    ctx.get().waitUntil(() => {
-      return Promise.all(restChunks.map(chunk => import(chunk)));
-    });
-
     // @preserve entryDirectory handler
     await handler(req, res);
   } catch (err) {
@@ -75,5 +69,9 @@ if (
   defaultExport.getRequestHandlerWithMetadata = metadata =>
     serve(nextServer.getRequestHandlerWithMetadata(metadata));
 }
+
+defaultExport.postload = async () => {
+  await Promise.all(restChunks.map(chunk => import(chunk)));
+};
 
 export default defaultExport;
