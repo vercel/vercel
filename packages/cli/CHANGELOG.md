@@ -1,5 +1,19 @@
 # vercel
 
+## 33.3.0
+
+### Minor Changes
+
+- Emit "filePathMap" in `vc-config.json` for `FileFsRef` instances ([#11060](https://github.com/vercel/vercel/pull/11060))
+
+### Patch Changes
+
+- Update `vc dev` to support `Lambda` instances without `zipBuffer` ([#11080](https://github.com/vercel/vercel/pull/11080))
+
+- Updated dependencies [[`322c88536`](https://github.com/vercel/vercel/commit/322c88536dfa0ba3892eb580858ee54f6b04ed3f), [`62ca2efa7`](https://github.com/vercel/vercel/commit/62ca2efa731c4df46d586b94078b2dcb1c0bb934)]:
+  - @vercel/ruby@2.0.5
+  - @vercel/python@4.1.1
+
 ## 33.2.0
 
 ### Minor Changes
