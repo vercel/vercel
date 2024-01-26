@@ -22,6 +22,7 @@ import {
   Cron,
   validateNpmrc,
   Flag,
+  VariantDefinition,
 } from '@vercel/build-utils';
 import {
   detectBuilders,
@@ -95,7 +96,9 @@ interface BuildOutputConfig {
     version: string;
   };
   crons?: Cron[];
+  /** @deprecated Replaced by Variants. Remove once fully replaced. */
   flags?: Flag[];
+  variants?: Record<string, VariantDefinition>;
 }
 
 /**
@@ -678,9 +681,12 @@ async function doBuild(
     overrides: mergedOverrides,
     framework,
     crons: mergedCrons,
+    /** @deprecated Replaced by Variants. Remove once fully replaced. */
     flags: mergedFlags,
   };
   await fs.writeJSON(join(outputDir, 'config.json'), config, { spaces: 2 });
+
+  await mergeVariants(client, buildResults.values(), outputDir);
 
   const relOutputDir = relative(cwd, outputDir);
   output.print(
@@ -824,6 +830,43 @@ function mergeFlags(
 
     return [];
   });
+}
+
+/**
+ * Takes the build output and writes all the variants into the `variants.json`
+ * file. It'll skip variants that already exist.
+ */
+async function mergeVariants(
+  { output }: Client,
+  buildResults: Iterable<BuildResult | BuildOutputConfig>,
+  outputDir: string
+): Promise<void> {
+  const variantsFilePath = join(outputDir, 'variants.json');
+
+  const variants = (await fs.readJSON(variantsFilePath).catch(error => {
+    if (error.code === 'ENOENT') {
+      return { defintions: {} };
+    }
+
+    throw error;
+  })) as { definitions: Record<string, VariantDefinition> };
+
+  for (const result of buildResults) {
+    if (!('variants' in result) || !result.variants) continue;
+
+    for (const [key, defintion] of Object.entries(result.variants)) {
+      if (result.variants[key]) {
+        output.warn(
+          `The variant "${key}" was found multiple times. Only its first occurrence will be considered.`
+        );
+        continue;
+      }
+
+      result.variants[key] = defintion;
+    }
+  }
+
+  await fs.writeJSON(variantsFilePath, variants, { spaces: 2 });
 }
 
 async function writeBuildJson(buildsJson: BuildsManifest, outputDir: string) {

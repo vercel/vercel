@@ -47,7 +47,7 @@ import {
   UnwrapPromise,
   getOperationType,
   FunctionsConfigManifestV1,
-  VariantsManifest,
+  VariantsManifestLegacy,
   RSC_CONTENT_TYPE,
   RSC_PREFETCH_SUFFIX,
   normalizePrefetches,
@@ -158,7 +158,7 @@ export async function serverBuild({
   imagesManifest?: NextImagesManifest;
   prerenderManifest: NextPrerenderedRoutes;
   requiredServerFilesManifest: NextRequiredServerFilesManifest;
-  variantsManifest: VariantsManifest | null;
+  variantsManifest: VariantsManifestLegacy | null;
 }): Promise<BuildResult> {
   lambdaPages = Object.assign({}, lambdaPages, lambdaAppPaths);
 

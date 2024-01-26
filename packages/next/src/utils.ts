@@ -3238,7 +3238,8 @@ export function isApiPage(page: string | undefined) {
     .match(/(serverless|server)\/pages\/api(\/|\.js$)/);
 }
 
-export type VariantsManifest = Record<
+/** @deprecated */
+export type VariantsManifestLegacy = Record<
   string,
   {
     defaultValue?: unknown;
@@ -3249,7 +3250,7 @@ export type VariantsManifest = Record<
 export async function getVariantsManifest(
   entryPath: string,
   outputDirectory: string
-): Promise<null | VariantsManifest> {
+): Promise<null | VariantsManifestLegacy> {
   const pathVariantsManifest = path.join(
     entryPath,
     outputDirectory,
@@ -3263,7 +3264,7 @@ export async function getVariantsManifest(
 
   if (!hasVariantsManifest) return null;
 
-  const variantsManifest: VariantsManifest = await fs.readJSON(
+  const variantsManifest: VariantsManifestLegacy = await fs.readJSON(
     pathVariantsManifest
   );
 
