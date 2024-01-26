@@ -1024,7 +1024,8 @@ export async function serverBuild({
           filesCounter.set(pagePath, 1);
           filesMap.set(
             pagePath,
-            `./${path.relative(path.resolve(baseDir), pagePath)}`
+            // `./${path.relative(path.resolve(baseDir), pagePath)}`
+            pagePath
           );
 
           files.forEach((file: string) => {
@@ -1040,7 +1041,8 @@ export async function serverBuild({
               relPath = './' + relPath;
             }
 
-            filesMap.set(absolutePath, relPath);
+            // filesMap.set(absolutePath, relPath);
+            filesMap.set(absolutePath, absolutePath);
           });
         }
       }
