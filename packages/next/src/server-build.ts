@@ -1022,11 +1022,12 @@ export async function serverBuild({
           const pageDir = path.dirname(pagePath);
 
           filesCounter.set(pagePath, 1);
-          filesMap.set(
-            pagePath,
-            // `./${path.relative(path.resolve(baseDir), pagePath)}`
-            pagePath
-          );
+          let relPath0 = `./${path.relative(path.resolve(baseDir), pagePath)}`;
+          if (relPath0.startsWith('./apps/vercel-site/')) {
+            relPath0 = relPath0.replace('./apps/vercel-site/', './');
+          }
+          filesMap.set(pagePath, relPath0);
+          // filesMap.set(pagePath, pagePath);
 
           files.forEach((file: string) => {
             const absolutePath = path.join(pageDir, file);
@@ -1040,9 +1041,12 @@ export async function serverBuild({
             if (!relPath.startsWith('..')) {
               relPath = './' + relPath;
             }
+            if (relPath.startsWith('./apps/vercel-site/')) {
+              relPath = relPath.replace('./apps/vercel-site/', './');
+            }
 
-            // filesMap.set(absolutePath, relPath);
-            filesMap.set(absolutePath, absolutePath);
+            filesMap.set(absolutePath, relPath);
+            // filesMap.set(absolutePath, absolutePath);
           });
         }
       }

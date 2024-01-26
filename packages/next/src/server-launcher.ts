@@ -57,18 +57,38 @@ declare const __COMMON_CHUNKS__: string[];
 const commonChunks = __COMMON_CHUNKS__;
 module.exports.preload = async () => {
   const start = performance.now();
-  await Promise.all(commonChunks.map(chunk => require(chunk)));
+  const failed: string[] = [];
+  for (const chunk of commonChunks) {
+    try {
+      require(chunk);
+    } catch (e) {
+      failed.push(e.message);
+    }
+  }
   performance.measure('vc:common-chunks', {
     detail: 'Next.js common chunks',
     end: performance.now(),
     start,
   });
+  if (failed.length > 0) {
+    throw new Error(`Failed to preload chunks: ${failed.length}: ${failed.join(', ')}`);
+  }
 };
 
 declare const __REST_CHUNKS__: string[];
 const restChunks = __REST_CHUNKS__;
 module.exports.postload = async () => {
-  await Promise.all(restChunks.map(chunk => require(chunk)));
+  const failed: string[] = [];
+  for (const chunk of restChunks) {
+    try {
+      require(chunk);
+    } catch (e) {
+      failed.push(e.message);
+    }
+  }
+  if (failed.length > 0) {
+    throw new Error(`Failed to postload chunks: ${failed.length}: ${failed.join(', ')}`);
+  }
 };
 
 // If available, add `getRequestHandlerWithMetadata` to the export if it's
