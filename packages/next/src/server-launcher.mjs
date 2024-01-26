@@ -22,24 +22,30 @@ if (process.env.NODE_ENV !== 'production' && region !== 'dev1') {
 
 // @preserve pre-next-server-target
 
+const serverStart = performance.now();
 const NextServerModule = await import('__NEXT_SERVER_PATH__');
+const serverEnd = performance.now();
 
 // eslint-disable-next-line no-undef
 const conf = __NEXT_CONFIG__;
 
+const commonStart = performance.now();
 // eslint-disable-next-line no-undef
 const commonChunks = __COMMON_CHUNKS__;
 await Promise.all(commonChunks.map(chunk => import(chunk)));
+const commonEnd = performance.now();
 
 // eslint-disable-next-line no-undef
 const restChunks = __REST_CHUNKS__;
 
+const createServerStart = performance.now();
 const nextServer = new NextServerModule.default.default({
   conf,
   dir: '.',
   minimalMode: true,
   customServer: false,
 });
+const createServerEnd = performance.now();
 
 // Returns a wrapped handler that will crash the lambda if an error isn't
 // caught.
@@ -56,8 +62,10 @@ const serve = handler => async (req, res) => {
   }
 };
 
+const createHandlerStart = performance.now();
 // The default handler method should be exported as a function on the module.
 const defaultExport = serve(nextServer.getRequestHandler());
+const createHandlerEnd = performance.now();
 
 // If available, add `getRequestHandlerWithMetadata` to the export if it's
 // required by the configuration.
@@ -73,5 +81,25 @@ if (
 defaultExport.postload = async () => {
   await Promise.all(restChunks.map(chunk => import(chunk)));
 };
+
+performance.measure('vc:import-server', {
+  start: serverStart,
+  end: serverEnd,
+});
+
+performance.measure('vc:import-common', {
+  start: commonStart,
+  end: commonEnd,
+});
+
+performance.measure('vc:create-server', {
+  start: createServerStart,
+  end: createServerEnd,
+});
+
+performance.measure('vc:create-handler', {
+  start: createHandlerStart,
+  end: createHandlerEnd,
+});
 
 export default defaultExport;
