@@ -56,7 +56,13 @@ module.exports = serve(nextServer.getRequestHandler());
 declare const __COMMON_CHUNKS__: string[];
 const commonChunks = __COMMON_CHUNKS__;
 module.exports.preload = async () => {
+  const start = performance.now();
   await Promise.all(commonChunks.map(chunk => require(chunk)));
+  performance.measure('vc:common-chunks', {
+    detail: 'Next.js common chunks',
+    end: performance.now(),
+    start,
+  });
 };
 
 declare const __REST_CHUNKS__: string[];
