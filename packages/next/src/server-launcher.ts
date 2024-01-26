@@ -1,4 +1,4 @@
-import { IncomingMessage, ServerResponse } from 'http';
+import type { IncomingMessage, ServerResponse } from 'http';
 // The Next.js builder can emit the project in a subdirectory depending on how
 // many folder levels of `node_modules` are traced. To ensure `process.cwd()`
 // returns the proper path, we change the directory to the folder with the
@@ -56,13 +56,13 @@ module.exports = serve(nextServer.getRequestHandler());
 declare const __COMMON_CHUNKS__: string[];
 const commonChunks = __COMMON_CHUNKS__;
 module.exports.preload = async () => {
-  await Promise.all(commonChunks.map(chunk => import(chunk)));
+  await Promise.all(commonChunks.map(chunk => require(chunk)));
 };
 
 declare const __REST_CHUNKS__: string[];
 const restChunks = __REST_CHUNKS__;
 module.exports.postload = async () => {
-  await Promise.all(restChunks.map(chunk => import(chunk)));
+  await Promise.all(restChunks.map(chunk => require(chunk)));
 };
 
 // If available, add `getRequestHandlerWithMetadata` to the export if it's
