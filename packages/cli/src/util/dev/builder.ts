@@ -361,8 +361,10 @@ export async function executeBuild(
           await oldAsset.fn.destroy();
         }
 
+        const ZipFile = asset.zipBuffer || (await asset.createZip());
+
         asset.fn = await createFunction({
-          Code: { ZipFile: asset.zipBuffer },
+          Code: { ZipFile },
           Handler: asset.handler,
           Runtime: asset.runtime,
           MemorySize: asset.memory || 3008,

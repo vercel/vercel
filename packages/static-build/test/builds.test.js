@@ -7,9 +7,13 @@ const runBuildLambda = createRunBuildLambda(builder);
 
 const FOUR_MINUTES = 240000;
 
+const warnSpy = jest.spyOn(console, 'warn');
+
 beforeAll(() => {
   process.env.VERCEL_ANALYTICS_ID = 'test';
 });
+
+beforeEach(() => jest.clearAllMocks());
 
 it(
   'Should build Gatsby without any configuration',
@@ -35,6 +39,9 @@ it(
         ],
       }
     `);
+    expect(warnSpy).toHaveBeenCalledWith(
+      'Vercel Speed Insights auto-injection is deprecated in favor of @vercel/speed-insights package. Learn more: https://vercel.link/upgrate-to-speed-insights-package'
+    );
   },
   FOUR_MINUTES
 );
@@ -334,6 +341,10 @@ it(
     // The `package.json` file should have the plugin listed as a dependency
     const pkg = require(path.join(workPath, 'package.json'));
     expect(pkg.dependencies['@nuxtjs/web-vitals']).toBe('latest');
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      'Vercel Speed Insights auto-injection is deprecated in favor of @vercel/speed-insights package. Learn more: https://vercel.link/upgrate-to-speed-insights-package'
+    );
   },
   FOUR_MINUTES
 );
