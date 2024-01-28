@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 7.5.1
+
+### Patch Changes
+
+- Add experimental field to Lambda and size to FileFsRef output ([#11059](https://github.com/vercel/vercel/pull/11059))
+
 ## 7.5.0
 
 ### Minor Changes

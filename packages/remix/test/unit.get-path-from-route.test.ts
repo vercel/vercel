@@ -112,10 +112,19 @@ describe('getPathFromRoute()', () => {
       parentId: 'root',
       file: 'routes/admin.(lol).tsx',
     },
+    manual: {
+      path: '/',
+      index: true,
+      caseSensitive: undefined,
+      id: 'manual',
+      parentId: 'root',
+      file: 'manual.tsx',
+    },
   };
 
   it.each([
     { id: 'root', expected: { path: 'index', rePath: '/index' } },
+    { id: 'manual', expected: { path: 'index', rePath: '/index' } },
     { id: 'routes/__pathless', expected: { path: '', rePath: '/' } },
     { id: 'routes/index', expected: { path: 'index', rePath: '/index' } },
     {

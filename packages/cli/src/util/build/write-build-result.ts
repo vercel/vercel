@@ -14,6 +14,7 @@ import {
   BuildResultV2,
   BuildResultV3,
   File,
+  Files,
   FileFsRef,
   BuilderV2,
   BuilderV3,
@@ -45,6 +46,7 @@ interface FunctionConfiguration {
 }
 
 export async function writeBuildResult(
+  repoRootPath: string,
   outputDir: string,
   buildResult: BuildResultV2 | BuildResultV3,
   build: Builder,
@@ -55,6 +57,7 @@ export async function writeBuildResult(
   const { version } = builder;
   if (typeof version !== 'number' || version === 2) {
     return writeBuildResultV2(
+      repoRootPath,
       outputDir,
       buildResult as BuildResultV2,
       build,
@@ -62,6 +65,7 @@ export async function writeBuildResult(
     );
   } else if (version === 3) {
     return writeBuildResultV3(
+      repoRootPath,
       outputDir,
       buildResult as BuildResultV3,
       build,
@@ -107,6 +111,7 @@ function stripDuplicateSlashes(path: string): string {
  * the filesystem.
  */
 async function writeBuildResultV2(
+  repoRootPath: string,
   outputDir: string,
   buildResult: BuildResultV2,
   build: Builder,
@@ -136,6 +141,7 @@ async function writeBuildResultV2(
     const normalizedPath = stripDuplicateSlashes(path);
     if (isLambda(output)) {
       await writeLambda(
+        repoRootPath,
         outputDir,
         output,
         normalizedPath,
@@ -150,6 +156,7 @@ async function writeBuildResultV2(
       }
 
       await writeLambda(
+        repoRootPath,
         outputDir,
         output.lambda,
         normalizedPath,
@@ -210,6 +217,7 @@ async function writeBuildResultV2(
       );
     } else if (isEdgeFunction(output)) {
       await writeEdgeFunction(
+        repoRootPath,
         outputDir,
         output,
         normalizedPath,
@@ -231,6 +239,7 @@ async function writeBuildResultV2(
  * the filesystem.
  */
 async function writeBuildResultV3(
+  repoRootPath: string,
   outputDir: string,
   buildResult: BuildResultV3,
   build: Builder,
@@ -254,9 +263,15 @@ async function writeBuildResultV3(
     build.config?.zeroConfig ? src.substring(0, src.length - ext.length) : src
   );
   if (isLambda(output)) {
-    await writeLambda(outputDir, output, path, functionConfiguration);
+    await writeLambda(
+      repoRootPath,
+      outputDir,
+      output,
+      path,
+      functionConfiguration
+    );
   } else if (isEdgeFunction(output)) {
-    await writeEdgeFunction(outputDir, output, path);
+    await writeEdgeFunction(repoRootPath, outputDir, output, path);
   } else {
     throw new Error(
       `Unsupported output type: "${(output as any).type}" for ${build.src}`
@@ -364,6 +379,7 @@ async function writeFunctionSymlink(
  * @param existingFunctions (optional) Map of `Lambda`/`EdgeFunction` instances that have previously been written
  */
 async function writeEdgeFunction(
+  repoRootPath: string,
   outputDir: string,
   edgeFunction: EdgeFunction,
   path: string,
@@ -387,12 +403,17 @@ async function writeEdgeFunction(
 
   await fs.mkdirp(dest);
   const ops: Promise<any>[] = [];
-  ops.push(download(edgeFunction.files, dest));
+  const { files, filePathMap } = filesWithoutFsRefs(
+    edgeFunction.files,
+    repoRootPath
+  );
+  ops.push(download(files, dest));
 
   const config = {
     runtime: 'edge',
     ...edgeFunction,
     entrypoint: normalizePath(edgeFunction.entrypoint),
+    filePathMap,
     files: undefined,
     type: undefined,
   };
@@ -415,6 +436,7 @@ async function writeEdgeFunction(
  * @param existingFunctions (optional) Map of `Lambda`/`EdgeFunction` instances that have previously been written
  */
 async function writeLambda(
+  repoRootPath: string,
   outputDir: string,
   lambda: Lambda,
   path: string,
@@ -434,9 +456,12 @@ async function writeLambda(
 
   await fs.mkdirp(dest);
   const ops: Promise<any>[] = [];
+  let filePathMap: Record<string, string> | undefined;
   if (lambda.files) {
     // `files` is defined
-    ops.push(download(lambda.files, dest));
+    const f = filesWithoutFsRefs(lambda.files, repoRootPath);
+    filePathMap = f.filePathMap;
+    ops.push(download(f.files, dest));
   } else if (lambda.zipBuffer) {
     // Builders that use the deprecated `createLambda()` might only have `zipBuffer`
     ops.push(unzip(lambda.zipBuffer, dest));
@@ -452,6 +477,7 @@ async function writeLambda(
     handler: normalizePath(lambda.handler),
     memory,
     maxDuration,
+    filePathMap,
     type: undefined,
     files: undefined,
     zipBuffer: undefined,
@@ -558,4 +584,26 @@ export async function* findDirs(
       }
     }
   }
+}
+
+/**
+ * Removes the `FileFsRef` instances from the `Files` object
+ * and returns them in a JSON serializable map of repo root
+ * relative paths to Lambda destination paths.
+ */
+function filesWithoutFsRefs(
+  files: Files,
+  repoRootPath: string
+): { files: Files; filePathMap?: Record<string, string> } {
+  let filePathMap: Record<string, string> | undefined;
+  const out: Files = {};
+  for (const [path, file] of Object.entries(files)) {
+    if (file.type === 'FileFsRef') {
+      if (!filePathMap) filePathMap = {};
+      filePathMap[path] = relative(repoRootPath, file.fsPath);
+    } else {
+      out[path] = file;
+    }
+  }
+  return { files: out, filePathMap };
 }

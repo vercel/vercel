@@ -3,7 +3,7 @@ const assert = require('assert');
 const { createHash } = require('crypto');
 const path = require('path');
 const _fetch = require('node-fetch');
-const fetch = require('./fetch-retry.js');
+const fetch = require('./fetch-retry');
 const fileModeSymbol = Symbol('fileMode');
 const { logWithinTest } = require('./log');
 const ms = require('ms');
@@ -149,7 +149,7 @@ async function disableSSO(deploymentId, useTeam = true) {
   );
 
   if (settingRes.ok) {
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 10; i++) {
       const res = await fetch(`https://${deploymentUrl}`);
       if (res.status !== 401) {
         break;

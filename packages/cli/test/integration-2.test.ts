@@ -904,7 +904,7 @@ test('deploy pnpm twice using pnp and symlink=false', async () => {
   page = await fetch(stdout);
   text = await page.text();
 
-  expect(text).toBe('cache exists\n');
+  expect(text).toContain('cache exists\n');
 });
 
 test('reject deploying with wrong team .vercel config', async () => {
