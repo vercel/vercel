@@ -5,7 +5,12 @@ import type { Route } from '@vercel/routing-utils';
 import { PROJECT_ENV_TARGET } from '@vercel-internals/constants';
 
 export type ProjectEnvTarget = typeof PROJECT_ENV_TARGET[number];
-export type ProjectEnvType = 'plain' | 'secret' | 'encrypted' | 'system';
+export type ProjectEnvType =
+  | 'plain'
+  | 'secret'
+  | 'encrypted'
+  | 'system'
+  | 'sensitive';
 
 export type ProjectSettings = import('@vercel/build-utils').ProjectSettings;
 

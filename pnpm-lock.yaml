@@ -328,7 +328,7 @@ importers:
         specifier: 3.0.17
         version: link:../node
       '@vercel/python':
-        specifier: 4.1.0
+        specifier: 4.1.1
         version: link:../python
       '@vercel/redwood':
         specifier: 2.0.6
@@ -337,7 +337,7 @@ importers:
         specifier: 2.0.18
         version: link:../remix
       '@vercel/ruby':
-        specifier: 2.0.4
+        specifier: 2.0.5
         version: link:../ruby
       '@vercel/static-build':
         specifier: 2.1.0
@@ -479,7 +479,7 @@ importers:
         specifier: 1.0.21
         version: link:../../internals/types
       '@vercel/client':
-        specifier: 13.0.14
+        specifier: 13.1.0
         version: link:../client
       '@vercel/error-utils':
         specifier: 2.0.2
@@ -724,6 +724,9 @@ importers:
       '@vercel/build-utils':
         specifier: 7.5.1
         version: link:../build-utils
+      '@vercel/error-utils':
+        specifier: 2.0.2
+        version: link:../error-utils
       '@vercel/routing-utils':
         specifier: 3.1.0
         version: link:../routing-utils

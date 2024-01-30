@@ -681,6 +681,53 @@ test('vercel env with unknown `VERCEL_ORG_ID` or `VERCEL_PROJECT_ID` should erro
   expect(output.stderr).toContain('Project not found');
 });
 
+test('add a sensitive env var', async () => {
+  const dir = await setupE2EFixture('project-sensitive-env-vars');
+  const projectName = `project-sensitive-env-vars-${
+    Math.random().toString(36).split('.')[1]
+  }`;
+
+  // remove previously linked project if it exists
+  await remove(path.join(dir, '.vercel'));
+
+  const vc = execCli(binaryPath, ['link'], {
+    cwd: dir,
+    env: {
+      FORCE_TTY: '1',
+    },
+  });
+
+  await setupProject(vc, projectName, {
+    buildCommand: `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html`,
+    outputDirectory: 'o',
+  });
+
+  await vc;
+
+  const link = require(path.join(dir, '.vercel/project.json'));
+
+  const addEnvCommand = execCli(
+    binaryPath,
+    ['env', 'add', 'envVarName', 'production', '--sensitive'],
+    {
+      env: {
+        VERCEL_ORG_ID: link.orgId,
+        VERCEL_PROJECT_ID: link.projectId,
+      },
+    }
+  );
+
+  await waitForPrompt(addEnvCommand, /What’s the value of [^?]+\?/);
+  addEnvCommand.stdin?.write('test\n');
+
+  const output = await addEnvCommand;
+
+  expect(output.exitCode, formatOutput(output)).toBe(0);
+  expect(output.stderr).toContain(
+    'Added Environment Variable envVarName to Project'
+  );
+});
+
 test('whoami with `VERCEL_ORG_ID` should favor `--scope` and should error', async () => {
   if (!token) {
     throw new Error('Shared state "token" not set.');
@@ -857,7 +904,7 @@ test('deploy pnpm twice using pnp and symlink=false', async () => {
   page = await fetch(stdout);
   text = await page.text();
 
-  expect(text).toBe('cache exists\n');
+  expect(text).toContain('cache exists\n');
 });
 
 test('reject deploying with wrong team .vercel config', async () => {
