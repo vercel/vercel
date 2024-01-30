@@ -4,6 +4,7 @@ import { hash, hashes, mapToObject } from './utils/hashes';
 import { upload } from './upload';
 import { buildFileTree, createDebug } from './utils';
 import { DeploymentError } from './errors';
+import { isErrnoException } from '@vercel/error-utils';
 import {
   VercelClientOptions,
   DeploymentOptions,
@@ -113,8 +114,13 @@ export default function buildCreateDeployment() {
       } else {
         files = await hashes(fileList);
       }
-    } catch (err: any) {
-      if (clientOptions.prebuilt && err.code === 'ENOENT') {
+    } catch (err: unknown) {
+      if (
+        clientOptions.prebuilt &&
+        isErrnoException(err) &&
+        err.code === 'ENOENT' &&
+        err.path
+      ) {
         const errPath = relative(workPath, err.path);
         err.message = `File does not exist: "${relative(workPath, errPath)}"`;
         if (errPath.split(sep).includes('node_modules')) {
