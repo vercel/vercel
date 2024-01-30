@@ -862,7 +862,7 @@ async function writeVariantsJson(
         continue;
       }
 
-      result.variants[key] = defintion;
+      variants.definitions[key] = defintion;
     }
   }
 
