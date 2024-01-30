@@ -217,7 +217,7 @@ export async function serverBuild({
     for (const rewrite of afterFilesRewrites) {
       if (rewrite.src && rewrite.dest) {
         rewrite.src = rewrite.src.replace(
-          '(?:/)?',
+          /\/?\(\?:\/\)\?/,
           '(?<rscsuff>(\\.prefetch)?\\.rsc)?(?:/)?'
         );
         let destQueryIndex = rewrite.dest.indexOf('?');

@@ -340,7 +340,7 @@ importers:
         specifier: 2.0.5
         version: link:../ruby
       '@vercel/static-build':
-        specifier: 2.1.0
+        specifier: 2.2.0
         version: link:../static-build
       chokidar:
         specifier: 3.3.1
@@ -479,7 +479,7 @@ importers:
         specifier: 1.0.21
         version: link:../../internals/types
       '@vercel/client':
-        specifier: 13.1.0
+        specifier: 13.1.1
         version: link:../client
       '@vercel/error-utils':
         specifier: 2.0.2
