@@ -2051,7 +2051,7 @@ export const onPrerenderRoute =
       } = pr);
     }
 
-    let isAppPathRoute = false;
+    let isAppPathRoute = !!experimentalPPR;
 
     // TODO: leverage manifest to determine app paths more accurately
     if (appDir && srcRoute && (!dataRoute || dataRoute?.endsWith('.rsc'))) {
@@ -2184,7 +2184,6 @@ export const onPrerenderRoute =
       if (routeKey !== '/index' && routeKey.endsWith('/index')) {
         routeKey = `${routeKey}/index`;
         routeFileNoExt = routeKey;
-        origRouteFileNoExt = routeKey;
       }
     }
 
@@ -2263,7 +2262,7 @@ export const onPrerenderRoute =
               srcRoute === '/' ? '/index' : srcRoute
             );
 
-      if (!isAppPathRoute) {
+      if (!isAppPathRoute && !experimentalPPR) {
         outputSrcPathPage = normalizeIndexOutput(
           outputSrcPathPage,
           isServerMode
