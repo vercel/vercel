@@ -19,6 +19,7 @@ import { isAPIError } from '../../util/errors-ts';
 
 type Options = {
   '--debug': boolean;
+  '--sensitive': boolean;
 };
 
 export default async function add(
@@ -144,6 +145,8 @@ export default async function add(
     envGitBranch = inputValue || '';
   }
 
+  const type = opts['--sensitive'] ? 'sensitive' : 'encrypted';
+
   const addStamp = stamp();
   try {
     output.spinner('Saving');
@@ -151,7 +154,7 @@ export default async function add(
       output,
       client,
       project.id,
-      'encrypted',
+      type,
       envName,
       envValue,
       envTargets,
