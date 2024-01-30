@@ -724,6 +724,9 @@ importers:
       '@vercel/build-utils':
         specifier: 7.5.1
         version: link:../build-utils
+      '@vercel/error-utils':
+        specifier: 2.0.2
+        version: link:../error-utils
       '@vercel/routing-utils':
         specifier: 3.1.0
         version: link:../routing-utils

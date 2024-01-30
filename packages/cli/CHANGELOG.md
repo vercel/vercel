@@ -1,5 +1,11 @@
 # vercel
 
+## 33.4.0
+
+### Minor Changes
+
+- Added a new option to add a sensitive environment variable ([#11033](https://github.com/vercel/vercel/pull/11033))
+
 ## 33.3.0
 
 ### Minor Changes
