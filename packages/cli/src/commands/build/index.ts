@@ -686,7 +686,7 @@ async function doBuild(
   };
   await fs.writeJSON(join(outputDir, 'config.json'), config, { spaces: 2 });
 
-  await mergeVariants(client, buildResults.values(), outputDir);
+  await writeVariantsJson(client, buildResults.values(), outputDir);
 
   const relOutputDir = relative(cwd, outputDir);
   output.print(
@@ -836,7 +836,7 @@ function mergeFlags(
  * Takes the build output and writes all the variants into the `variants.json`
  * file. It'll skip variants that already exist.
  */
-async function mergeVariants(
+async function writeVariantsJson(
   { output }: Client,
   buildResults: Iterable<BuildResult | BuildOutputConfig>,
   outputDir: string
