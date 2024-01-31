@@ -1130,7 +1130,7 @@ export async function serverBuild({
         }
         let outputName = path.posix.join(entryDirectory, pageNoExt);
 
-        if (!(group.isAppRouter || group.isAppRouteHandler)) {
+        if (!group.isAppRouter && !group.isAppRouteHandler) {
           outputName = normalizeIndexOutput(outputName, true);
         }
 
