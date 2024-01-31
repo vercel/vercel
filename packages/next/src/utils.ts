@@ -2051,7 +2051,12 @@ export const onPrerenderRoute =
       } = pr);
     }
 
-    let isAppPathRoute = !!experimentalPPR;
+    let isAppPathRoute = false;
+
+    // experimentalPPR signals app path route
+    if (appDir && experimentalPPR) {
+      isAppPathRoute = true;
+    }
 
     // TODO: leverage manifest to determine app paths more accurately
     if (appDir && srcRoute && (!dataRoute || dataRoute?.endsWith('.rsc'))) {
@@ -2262,7 +2267,7 @@ export const onPrerenderRoute =
               srcRoute === '/' ? '/index' : srcRoute
             );
 
-      if (!isAppPathRoute && !experimentalPPR) {
+      if (!isAppPathRoute) {
         outputSrcPathPage = normalizeIndexOutput(
           outputSrcPathPage,
           isServerMode
