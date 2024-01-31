@@ -843,9 +843,12 @@ async function writeVariantsJson(
 ): Promise<void> {
   const variantsFilePath = join(outputDir, 'variants.json');
 
+  let hasVariants = true;
+
   const variants = (await fs.readJSON(variantsFilePath).catch(error => {
     if (error.code === 'ENOENT') {
-      return { defintions: {} };
+      hasVariants = false;
+      return { definitions: {} };
     }
 
     throw error;
@@ -862,11 +865,16 @@ async function writeVariantsJson(
         continue;
       }
 
+      hasVariants = true;
       variants.definitions[key] = defintion;
     }
   }
 
-  await fs.writeJSON(variantsFilePath, variants, { spaces: 2 });
+  // Only create the file when there are variants to write,
+  // or when the file already exists.
+  if (hasVariants) {
+    await fs.writeJSON(variantsFilePath, variants, { spaces: 2 });
+  }
 }
 
 async function writeBuildJson(buildsJson: BuildsManifest, outputDir: string) {
