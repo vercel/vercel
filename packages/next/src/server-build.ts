@@ -1128,11 +1128,11 @@ export async function serverBuild({
             );
           });
         }
+        let outputName = path.posix.join(entryDirectory, pageNoExt);
 
-        let outputName = normalizeIndexOutput(
-          path.posix.join(entryDirectory, pageNoExt),
-          true
-        );
+        if (!group.isAppRouter && !group.isAppRouteHandler) {
+          outputName = normalizeIndexOutput(outputName, true);
+        }
 
         // If this is a PPR page, then we should prefix the output name.
         if (isPPR) {
@@ -1443,9 +1443,10 @@ export async function serverBuild({
         continue;
       }
 
-      const pathname = normalizeIndexOutput(
-        path.posix.join('./', entryDirectory, route === '/' ? '/index' : route),
-        true
+      const pathname = path.posix.join(
+        './',
+        entryDirectory,
+        route === '/' ? '/index' : route
       );
 
       if (lambdas[pathname]) {
