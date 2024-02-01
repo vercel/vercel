@@ -10,11 +10,7 @@
 
 ## Usage
 
-Vercel is a platform for **static sites and frontend frameworks**, built to integrate with your headless content, commerce, or database.
-
-We provide a **frictionless developer experience** to take care of the hard things: deploy instantly, scale automatically, and serve personalized content around the globe.
-
-We make it easy for frontend teams to **develop, preview, and ship** delightful user experiences, where performance is the default.
+Vercel's frontend cloud gives developers frameworks, workflows, and infrastructure to build a faster, more personalized web.
 
 To install the latest version of Vercel CLI, run this command:
 
@@ -43,8 +39,8 @@ To develop Vercel CLI, first check out the source code, install dependencies, an
 ```bash
 git clone https://github.com/vercel/vercel.git
 cd vercel
-yarn
-yarn build
+pnpm install
+pnpm build
 ```
 
 At this point you can make modifications to the CLI source code and test them out locally. The CLI source code is located in the `packages/cli` directory.
@@ -53,13 +49,15 @@ At this point you can make modifications to the CLI source code and test them ou
 cd packages/cli
 ```
 
-From within the `packages/cli` directory, you can use the `ts-eager` command line tool to quickly excute Vercel CLI from its TypeScript source code directly (without having to manually compile first). For example:
+### `pnpm dev <cli-commands...>`
+
+From within the `packages/cli` directory, you can use the "dev" script to quickly execute Vercel CLI from its TypeScript source code directly (without having to manually compile first). For example:
 
 ```bash
-npx ts-eager src
-npx ts-eager src login
-npx ts-eager src switch --debug
-npx ts-eager src dev
+pnpm dev deploy
+pnpm dev whoami
+pnpm dev login
+pnpm dev switch --debug
 ```
 
 When you are satisfied with your changes, make a commit and create a pull request!

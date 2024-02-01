@@ -1,9 +1,11 @@
 import * as ERRORS from '../errors-ts';
 
-export default function mapCertError(error: any, cns?: string[]) {
+export default function mapCertError(error: ERRORS.APIError, cns?: string[]) {
   const errorCode: string = error.code;
   if (errorCode === 'too_many_requests') {
-    return new ERRORS.TooManyRequests('certificates', error.retryAfter);
+    const retryAfter =
+      typeof error.retryAfter === 'number' ? error.retryAfter : 0;
+    return new ERRORS.TooManyRequests('certificates', retryAfter);
   }
   if (errorCode === 'not_found') {
     return new ERRORS.DomainNotFound(error.domain);

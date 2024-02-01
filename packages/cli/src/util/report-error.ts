@@ -1,12 +1,13 @@
 import Client from './client';
 import getScope from './get-scope';
 import getArgs from './get-args';
-import { Team, User } from '../types';
+import { isError } from '@vercel/error-utils';
+import type { Team, User } from '@vercel-internals/types';
 
 export default async function reportError(
   sentry: typeof import('@sentry/node'),
   client: Client,
-  error: Error
+  error: unknown
 ) {
   if (ignoreError(error)) {
     return;
@@ -17,10 +18,12 @@ export default async function reportError(
 
   try {
     ({ user, team } = await getScope(client));
-  } catch (err) {
+  } catch (err: unknown) {
     // We can safely ignore this, as the error
     // reporting works even without this metadata attached.
-    scopeError = err;
+    if (isError(err)) {
+      scopeError = err;
+    }
   }
 
   sentry.withScope(scope => {
@@ -29,7 +32,7 @@ export default async function reportError(
         email: user.email,
         id: user.id,
         username: user.username,
-        name: (user as any).name,
+        name: user.name,
       };
 
       scope.setUser(spec);
@@ -52,8 +55,10 @@ export default async function reportError(
     let argsError: Error | undefined;
     try {
       args = getArgs(process.argv.slice(2), {});
-    } catch (err) {
-      argsError = err;
+    } catch (err: unknown) {
+      if (isError(err)) {
+        argsError = err;
+      }
     }
 
     if (args) {
@@ -93,6 +98,6 @@ export default async function reportError(
   }
 }
 
-function ignoreError(error: Error | undefined) {
-  return error && error.message && error.message.includes('uv_cwd');
+function ignoreError(error: unknown) {
+  return isError(error) && error.message.includes('uv_cwd');
 }

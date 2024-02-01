@@ -1,0 +1,17 @@
+{
+  "scripts": {
+    "build": "next build"
+  },
+  "engines": {
+    "node": "16.x"
+  },
+  "dependencies": {
+    "next": "8.0.3",
+    "react": "latest",
+    "react-dom": "latest"
+  },
+  "resolutions": {
+    "@babel/compat-data": "7.21.4"
+  },
+  "ignoreNextjsUpdates": true
+}

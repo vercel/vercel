@@ -1,0 +1,6 @@
+{
+  "target": "preview",
+  "error": {
+    "message": "The build failed (top-level)"
+  }
+}

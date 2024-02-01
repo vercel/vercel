@@ -5,8 +5,9 @@ import {
   DNSInvalidPort,
   DNSInvalidType,
   DNSConflictingRecord,
+  isAPIError,
 } from '../errors-ts';
-import { DNSRecordData } from '../../types';
+import type { DNSRecordData } from '@vercel-internals/types';
 
 type Response = {
   uid: string;
@@ -26,32 +27,34 @@ export default async function addDNSRecord(
       }
     );
     return record;
-  } catch (error) {
-    if (error.status === 400 && error.code === 'invalid_type') {
-      return new DNSInvalidType(recordData.type);
+  } catch (err: unknown) {
+    if (isAPIError(err)) {
+      if (err.status === 400 && err.code === 'invalid_type') {
+        return new DNSInvalidType(recordData.type);
+      }
+
+      if (err.status === 400 && err.message.includes('port')) {
+        return new DNSInvalidPort();
+      }
+
+      if (err.status === 400) {
+        return err;
+      }
+
+      if (err.status === 403) {
+        return new DNSPermissionDenied(domain);
+      }
+
+      if (err.status === 404) {
+        return new DomainNotFound(domain);
+      }
+
+      if (err.status === 409) {
+        const { oldId = '' } = err;
+        return new DNSConflictingRecord(oldId);
+      }
     }
 
-    if (error.status === 400 && error.message.includes('port')) {
-      return new DNSInvalidPort();
-    }
-
-    if (error.status === 400) {
-      return error;
-    }
-
-    if (error.status === 403) {
-      return new DNSPermissionDenied(domain);
-    }
-
-    if (error.status === 404) {
-      return new DomainNotFound(domain);
-    }
-
-    if (error.status === 409) {
-      const { oldId = '' } = error;
-      return new DNSConflictingRecord(oldId);
-    }
-
-    throw error;
+    throw err;
   }
 }

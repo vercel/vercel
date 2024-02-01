@@ -1,6 +1,5 @@
 import chalk from 'chalk';
-import inquirer from 'inquirer';
-import { ProjectEnvTarget, Project, ProjectEnvType } from '../../types';
+import type { Project, ProjectEnvTarget } from '@vercel-internals/types';
 import { Output } from '../../util/output';
 import Client from '../../util/client';
 import stamp from '../../util/output/stamp';
@@ -9,16 +8,18 @@ import getEnvRecords from '../../util/env/get-env-records';
 import {
   isValidEnvTarget,
   getEnvTargetPlaceholder,
-  getEnvTargetChoices,
+  envTargetChoices,
 } from '../../util/env/env-target';
 import readStandardInput from '../../util/input/read-standard-input';
 import param from '../../util/output/param';
 import { emoji, prependEmoji } from '../../util/emoji';
 import { isKnownError } from '../../util/env/known-error';
 import { getCommandName } from '../../util/pkg-name';
+import { isAPIError } from '../../util/errors-ts';
 
 type Options = {
   '--debug': boolean;
+  '--sensitive': boolean;
 };
 
 export default async function add(
@@ -31,7 +32,7 @@ export default async function add(
   // improve the way we show inquirer prompts
   require('../../util/input/patch-inquirer');
 
-  const stdInput = await readStandardInput();
+  const stdInput = await readStandardInput(client.stdin);
   let [envName, envTargetArg, envGitBranch] = args;
 
   if (args.length > 3) {
@@ -66,7 +67,7 @@ export default async function add(
   }
 
   while (!envName) {
-    const { inputName } = await inquirer.prompt({
+    const { inputName } = await client.prompt({
       type: 'input',
       name: 'inputName',
       message: `What’s the name of the variable?`,
@@ -88,7 +89,7 @@ export default async function add(
   const existing = new Set(
     envs.filter(r => r.key === envName).map(r => r.target)
   );
-  const choices = getEnvTargetChoices().filter(c => !existing.has(c.value));
+  const choices = envTargetChoices.filter(c => !existing.has(c.value));
 
   if (choices.length === 0) {
     output.error(
@@ -106,7 +107,7 @@ export default async function add(
   if (stdInput) {
     envValue = stdInput;
   } else {
-    const { inputValue } = await inquirer.prompt({
+    const { inputValue } = await client.prompt({
       type: 'input',
       name: 'inputValue',
       message: `What’s the value of ${envName}?`,
@@ -116,7 +117,7 @@ export default async function add(
   }
 
   while (envTargets.length === 0) {
-    const { inputTargets } = await inquirer.prompt({
+    const { inputTargets } = await client.prompt({
       name: 'inputTargets',
       type: 'checkbox',
       message: `Add ${envName} to which Environments (select multiple)?`,
@@ -134,15 +135,17 @@ export default async function add(
     !stdInput &&
     !envGitBranch &&
     envTargets.length === 1 &&
-    envTargets[0] === ProjectEnvTarget.Preview
+    envTargets[0] === 'preview'
   ) {
-    const { inputValue } = await inquirer.prompt({
+    const { inputValue } = await client.prompt({
       type: 'input',
       name: 'inputValue',
       message: `Add ${envName} to which Git branch? (leave empty for all Preview branches)?`,
     });
     envGitBranch = inputValue || '';
   }
+
+  const type = opts['--sensitive'] ? 'sensitive' : 'encrypted';
 
   const addStamp = stamp();
   try {
@@ -151,18 +154,18 @@ export default async function add(
       output,
       client,
       project.id,
-      ProjectEnvType.Encrypted,
+      type,
       envName,
       envValue,
       envTargets,
       envGitBranch
     );
-  } catch (error) {
-    if (isKnownError(error) && error.serverMessage) {
-      output.error(error.serverMessage);
+  } catch (err: unknown) {
+    if (isAPIError(err) && isKnownError(err)) {
+      output.error(err.serverMessage);
       return 1;
     }
-    throw error;
+    throw err;
   }
 
   output.print(

@@ -1,6 +1,5 @@
 import chalk from 'chalk';
-import inquirer from 'inquirer';
-import { Project } from '../../types';
+import type { Project } from '@vercel-internals/types';
 import { Output } from '../../util/output';
 import confirm from '../../util/input/confirm';
 import removeEnvRecord from '../../util/env/remove-env-record';
@@ -16,6 +15,7 @@ import param from '../../util/output/param';
 import { emoji, prependEmoji } from '../../util/emoji';
 import { isKnownError } from '../../util/env/known-error';
 import { getCommandName } from '../../util/pkg-name';
+import { isAPIError } from '../../util/errors-ts';
 
 type Options = {
   '--debug': boolean;
@@ -44,7 +44,7 @@ export default async function rm(
   let [envName, envTarget, envGitBranch] = args;
 
   while (!envName) {
-    const { inputName } = await inquirer.prompt({
+    const { inputName } = await client.prompt({
       type: 'input',
       name: 'inputName',
       message: `What’s the name of the variable?`,
@@ -86,7 +86,7 @@ export default async function rm(
   }
 
   while (envs.length > 1) {
-    const { id } = await inquirer.prompt({
+    const { id } = await client.prompt({
       name: 'id',
       type: 'list',
       message: `Remove ${envName} from which Environments?`,
@@ -104,13 +104,14 @@ export default async function rm(
   if (
     !skipConfirmation &&
     !(await confirm(
+      client,
       `Removing Environment Variable ${param(env.key)} from ${formatEnvTarget(
         env
       )} in Project ${chalk.bold(project.name)}. Are you sure?`,
       false
     ))
   ) {
-    output.log('Aborted');
+    output.log('Canceled');
     return 0;
   }
 
@@ -119,12 +120,12 @@ export default async function rm(
   try {
     output.spinner('Removing');
     await removeEnvRecord(output, client, project.id, env);
-  } catch (error) {
-    if (isKnownError(error) && error.serverMessage) {
-      output.error(error.serverMessage);
+  } catch (err: unknown) {
+    if (isAPIError(err) && isKnownError(err)) {
+      output.error(err.serverMessage);
       return 1;
     }
-    throw error;
+    throw err;
   }
 
   output.print(

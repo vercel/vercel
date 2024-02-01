@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import plural from 'pluralize';
 
-import { User, Team } from '../../types';
+import { User, Team } from '@vercel-internals/types';
 import * as ERRORS from '../../util/errors-ts';
 import Client from '../../util/client';
 import getScope from '../../util/get-scope';
@@ -25,20 +25,7 @@ export default async function move(
   args: string[]
 ) {
   const { output } = client;
-  let contextName = null;
-  let user = null;
-
-  try {
-    ({ contextName, user } = await getScope(client));
-  } catch (err) {
-    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
-      output.error(err.message);
-      return 1;
-    }
-
-    throw err;
-  }
-
+  const { contextName, user } = await getScope(client);
   const { domainName, destination } = await getArgs(args);
   if (!isRootDomain(domainName)) {
     output.error(
@@ -66,6 +53,12 @@ export default async function move(
 
   const teams = await getTeams(client);
   const matchId = await findDestinationMatch(destination, user, teams);
+
+  if (matchId && matchId === user.id && user.version === 'northstar') {
+    output.error(`You may not move your domain to your user account.`);
+    return 1;
+  }
+
   if (!matchId && !opts['--yes']) {
     output.warn(
       `You're not a member of ${param(destination)}. ` +
@@ -77,10 +70,11 @@ export default async function move(
       !(await promptBool(
         `Are you sure you want to move ${param(domainName)} to ${param(
           destination
-        )}?`
+        )}?`,
+        client
       ))
     ) {
-      output.log('Aborted');
+      output.log('Canceled');
       return 0;
     }
   }
@@ -95,10 +89,11 @@ export default async function move(
       );
       if (
         !(await promptBool(
-          `Are you sure you want to move ${param(domainName)}?`
+          `Are you sure you want to move ${param(domainName)}?`,
+          client
         ))
       ) {
-        output.log('Aborted');
+        output.log('Canceled');
         return 0;
       }
     }

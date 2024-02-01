@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import retry from 'async-retry';
-import { DomainAlreadyExists, InvalidDomain } from '../errors-ts';
-import { Domain } from '../../types';
+import { DomainAlreadyExists, InvalidDomain, isAPIError } from '../errors-ts';
+import type { Domain } from '@vercel-internals/types';
 import Client from '../client';
 
 type Response = {
@@ -29,16 +29,18 @@ async function performAddRequest(client: Client, domainName: string) {
           method: 'POST',
         });
         return domain;
-      } catch (error) {
-        if (error.code === 'invalid_name') {
-          return new InvalidDomain(domainName);
+      } catch (err: unknown) {
+        if (isAPIError(err)) {
+          if (err.code === 'invalid_name') {
+            return new InvalidDomain(domainName);
+          }
+
+          if (err.code === 'domain_already_exists') {
+            return new DomainAlreadyExists(domainName);
+          }
         }
 
-        if (error.code === 'domain_already_exists') {
-          return new DomainAlreadyExists(domainName);
-        }
-
-        throw error;
+        throw err;
       }
     },
     { retries: 5, maxTimeout: 8000 }

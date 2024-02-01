@@ -1,8 +1,8 @@
 {
   "name": "@vercel/redwood",
-  "version": "0.8.1",
+  "version": "2.0.6",
   "main": "./dist/index.js",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "homepage": "https://vercel.com/docs",
   "files": [
     "dist"
@@ -13,20 +13,24 @@
     "directory": "packages/redwood"
   },
   "scripts": {
-    "build": "node build.js",
-    "test-integration-once": "jest --env node --verbose --runInBand --bail test/test.js",
-    "test-unit": "jest --env node --verbose --bail test/prepare-cache.test.js",
-    "prepublishOnly": "node build.js"
+    "build": "node ../../utils/build-builder.mjs",
+    "test-e2e": "pnpm test test/test.js",
+    "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --bail --runInBand",
+    "test-unit": "pnpm test test/prepare-cache.test.js",
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@vercel/nft": "0.18.1",
-    "@vercel/routing-utils": "1.13.2",
-    "semver": "6.1.1"
+    "@vercel/nft": "0.26.2",
+    "@vercel/routing-utils": "3.1.0",
+    "semver": "6.3.1"
   },
   "devDependencies": {
     "@types/aws-lambda": "8.10.19",
-    "@types/node": "*",
+    "@types/node": "14.18.33",
     "@types/semver": "6.0.0",
-    "@vercel/build-utils": "3.0.1-canary.0"
+    "@vercel/build-utils": "7.5.1",
+    "execa": "3.2.0",
+    "fs-extra": "11.1.0",
+    "jest-junit": "16.0.0"
   }
 }

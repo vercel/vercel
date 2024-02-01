@@ -1,0 +1,12 @@
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Note**: This category is intended for discussions related to Vercel CLI or Runtimes. 
+
+        If you post in this repository seeking help with other Vercel tools and features, it may be missed by our support team. For help with topics other than the CLI and Runtimes, please visit the [Vercel Community](https://github.com/orgs/vercel/discussions).
+  - type: textarea
+    attributes:
+      label: Question
+    validations:
+      required: true

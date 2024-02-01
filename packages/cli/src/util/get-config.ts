@@ -10,6 +10,7 @@ import humanizePath from './humanize-path';
 import readJSONFile from './read-json-file';
 import { VercelConfig } from './dev/types';
 import { Output } from './output';
+import { isErrnoException } from '@vercel/error-utils';
 
 let config: VercelConfig;
 
@@ -25,8 +26,8 @@ export default async function getConfig(
   let localPath: string;
   try {
     localPath = process.cwd();
-  } catch (err) {
-    if (err.code === 'ENOENT') {
+  } catch (err: unknown) {
+    if (isErrnoException(err) && err.code === 'ENOENT') {
       return new WorkingDirectoryDoesNotExist();
     }
     throw err;

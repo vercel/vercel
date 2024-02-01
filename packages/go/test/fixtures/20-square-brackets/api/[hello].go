@@ -6,5 +6,5 @@ import (
 )
 
 func Handler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "hello:RANDOMNESS_PLACEHOLDER")
+	fmt.Fprintf(w, "Req Path: %s", r.URL.Path)
 }

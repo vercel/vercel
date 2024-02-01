@@ -1,18 +1,7 @@
 {
   "compilerOptions": {
-    "declaration": true,
-    "esModuleInterop": true,
-    "lib": ["esnext"],
-    "module": "commonjs",
-    "moduleResolution": "node",
-    "outDir": "dist",
-    "strictNullChecks": true,
-    "noEmitOnError": true,
-    "noImplicitAny": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "strict": true,
-    "target": "es2019"
+    "outDir": "./dist"
   },
+  "extends": "../../tsconfig.base.json",
   "include": ["./src"]
 }

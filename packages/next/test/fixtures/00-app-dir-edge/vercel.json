@@ -1,0 +1,58 @@
+{
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next"
+    }
+  ],
+  "probes": [
+    {
+      "path": "/edge",
+      "status": 200,
+      "mustContain": "edge"
+    },
+    {
+      "path": "/edge",
+      "status": 200,
+      "headers": {
+        "RSC": "1"
+      },
+      "mustContain": ":{",
+      "mustNotContain": "<html"
+    },
+    {
+      "path": "/edge",
+      "status": 200,
+      "headers": {
+        "RSC": "1"
+      },
+      "responseHeaders": {
+        "content-type": "text/x-component"
+      }
+    },
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "page"
+    },
+    {
+      "path": "/",
+      "status": 200,
+      "headers": {
+        "RSC": "1"
+      },
+      "mustContain": ":{",
+      "mustNotContain": "<html"
+    },
+    {
+      "path": "/",
+      "status": 200,
+      "headers": {
+        "RSC": "1"
+      },
+      "responseHeaders": {
+        "content-type": "text/x-component"
+      }
+    }
+  ]
+}

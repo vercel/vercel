@@ -9,9 +9,13 @@
   },
   "author": "Andy",
   "private": true,
+  "engines": {
+    "node": "16.x"
+  },
   "dependencies": {
     "next": "9.1.5",
     "react": "16.12.0",
     "react-dom": "16.12.0"
-  }
+  },
+  "ignoreNextjsUpdates": true
 }

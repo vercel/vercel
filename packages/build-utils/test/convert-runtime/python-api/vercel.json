@@ -1,7 +1,0 @@
-{
-  "functions": {
-    "api/users/post.py": {
-      "memory": 3008
-    }
-  }
-}

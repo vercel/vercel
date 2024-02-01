@@ -1,0 +1,12 @@
+{
+  "private": true,
+  "dependencies": {
+    "@types/node": "^12.12.56",
+    "@types/react": "^16.9.49",
+    "next": "canary",
+    "react": "latest",
+    "react-dom": "latest",
+    "typescript": "4.9.5"
+  },
+  "ignoreNextjsUpdates": true
+}

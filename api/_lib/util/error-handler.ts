@@ -13,6 +13,8 @@ function initSentry() {
   sentryInitDone = true;
 
   init({
+    // Cannot figure out whats going wrong here. VSCode resolves this fine. But when we build it blows up.
+    // @ts-ignore
     dsn: assertEnv('SENTRY_DSN'),
     environment: process.env.NODE_ENV || 'production',
     release: `${serviceName}`,

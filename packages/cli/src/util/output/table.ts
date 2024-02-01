@@ -9,7 +9,8 @@ const printLine = (data: string[], sizes: number[]) =>
 export default function table(
   fieldNames: string[] = [],
   data: string[][] = [],
-  margins: number[] = []
+  margins: number[] = [],
+  print: (str: string) => void
 ) {
   // Compute size of each column
   const sizes = data
@@ -26,10 +27,12 @@ export default function table(
     .map((size, i) => (i < margins.length && size + margins[i]) || size);
 
   // Print header
-  console.log(chalk.grey(printLine(fieldNames, sizes)));
+  print(chalk.grey(printLine(fieldNames, sizes)));
+  print('\n');
 
   // Print content
   for (const row of data) {
-    console.log(printLine(row, sizes));
+    print(printLine(row, sizes));
+    print('\n');
   }
 }

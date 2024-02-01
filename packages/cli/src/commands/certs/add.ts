@@ -5,6 +5,7 @@ import stamp from '../../util/output/stamp';
 import createCertFromFile from '../../util/certs/create-cert-from-file';
 import createCertForCns from '../../util/certs/create-cert-for-cns';
 import { getCommandName } from '../../util/pkg-name';
+import type { Cert } from '@vercel-internals/types';
 
 interface Options {
   '--overwrite'?: boolean;
@@ -21,7 +22,7 @@ async function add(
   const { output } = client;
   const addStamp = stamp();
 
-  let cert;
+  let cert: Cert | Error;
 
   const {
     '--overwrite': overwite,
@@ -30,18 +31,7 @@ async function add(
     '--ca': caPath,
   } = opts;
 
-  let contextName = null;
-
-  try {
-    ({ contextName } = await getScope(client));
-  } catch (err) {
-    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
-      output.error(err.message);
-      return 1;
-    }
-
-    throw err;
-  }
+  const { contextName } = await getScope(client);
 
   if (overwite) {
     output.error('Overwrite option is deprecated');

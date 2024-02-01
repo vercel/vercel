@@ -9,7 +9,8 @@ import { NowError } from '../now-error';
 import error from '../output/error';
 import highlight from '../output/highlight';
 import { VercelConfig } from '../dev/types';
-import { AuthConfig, GlobalConfig } from '../../types';
+import { AuthConfig, GlobalConfig } from '@vercel-internals/types';
+import { isErrnoException, isError } from '@vercel/error-utils';
 
 const VERCEL_DIR = getGlobalPathConfig();
 const CONFIG_FILE_PATH = join(VERCEL_DIR, 'config.json');
@@ -25,25 +26,27 @@ export const readConfigFile = (): GlobalConfig => {
 export const writeToConfigFile = (stuff: GlobalConfig): void => {
   try {
     return writeJSON.sync(CONFIG_FILE_PATH, stuff, { indent: 2 });
-  } catch (err) {
-    if (err.code === 'EPERM') {
-      console.error(
-        error(
-          `Not able to create ${highlight(
-            CONFIG_FILE_PATH
-          )} (operation not permitted).`
-        )
-      );
-      process.exit(1);
-    } else if (err.code === 'EBADF') {
-      console.error(
-        error(
-          `Not able to create ${highlight(
-            CONFIG_FILE_PATH
-          )} (bad file descriptor).`
-        )
-      );
-      process.exit(1);
+  } catch (err: unknown) {
+    if (isErrnoException(err)) {
+      if (isErrnoException(err) && err.code === 'EPERM') {
+        console.error(
+          error(
+            `Not able to create ${highlight(
+              CONFIG_FILE_PATH
+            )} (operation not permitted).`
+          )
+        );
+        process.exit(1);
+      } else if (err.code === 'EBADF') {
+        console.error(
+          error(
+            `Not able to create ${highlight(
+              CONFIG_FILE_PATH
+            )} (bad file descriptor).`
+          )
+        );
+        process.exit(1);
+      }
     }
 
     throw err;
@@ -65,25 +68,27 @@ export const writeToAuthConfigFile = (authConfig: AuthConfig) => {
       indent: 2,
       mode: 0o600,
     });
-  } catch (err) {
-    if (err.code === 'EPERM') {
-      console.error(
-        error(
-          `Not able to create ${highlight(
-            AUTH_CONFIG_FILE_PATH
-          )} (operation not permitted).`
-        )
-      );
-      process.exit(1);
-    } else if (err.code === 'EBADF') {
-      console.error(
-        error(
-          `Not able to create ${highlight(
-            AUTH_CONFIG_FILE_PATH
-          )} (bad file descriptor).`
-        )
-      );
-      process.exit(1);
+  } catch (err: unknown) {
+    if (isErrnoException(err)) {
+      if (err.code === 'EPERM') {
+        console.error(
+          error(
+            `Not able to create ${highlight(
+              AUTH_CONFIG_FILE_PATH
+            )} (operation not permitted).`
+          )
+        );
+        process.exit(1);
+      } else if (err.code === 'EBADF') {
+        console.error(
+          error(
+            `Not able to create ${highlight(
+              AUTH_CONFIG_FILE_PATH
+            )} (bad file descriptor).`
+          )
+        );
+        process.exit(1);
+      }
     }
 
     throw err;
@@ -123,12 +128,14 @@ export function readLocalConfig(
     if (existsSync(target)) {
       config = loadJSON.sync(target);
     }
-  } catch (err) {
-    if (err.name === 'JSONError') {
+  } catch (err: unknown) {
+    if (isError(err) && err.name === 'JSONError') {
       console.error(error(err.message));
-    } else {
+    } else if (isErrnoException(err)) {
       const code = err.code ? ` (${err.code})` : '';
       console.error(error(`Failed to read config file: ${target}${code}`));
+    } else {
+      console.error(err);
     }
     process.exit(1);
   }

@@ -10,6 +10,9 @@ import {
   BuildResultV2,
 } from '@vercel/build-utils';
 import { isObjectEmpty } from './_shared';
+import { Project } from 'ts-morph';
+import { getConfig } from '@vercel/static-config';
+import { isErrnoException } from '@vercel/error-utils';
 
 const BUILD_OUTPUT_DIR = '.output';
 const BRIDGE_MIDDLEWARE_V2_TO_V3 = `
@@ -22,17 +25,31 @@ export default async (request) => {
 }
 `;
 
+const CONFIG_FILES = [
+  'build-manifest.json',
+  'functions-manifest.json',
+  'images-manifest.json',
+  'prerender-manifest.json',
+  'routes-manifest.json',
+];
+
 /**
- * Returns the path to the Build Output API v2 directory when the
- * `config.json` file was created by the framework / build script,
- * or `undefined` if the framework did not create the v3 output.
+ * Returns the path to the Build Output API v2 directory when any
+ * relevant config file was created by the framework / build script,
+ * or `undefined` if the framework did not create the v2 output.
  */
 export async function getBuildOutputDirectory(
   workingDir: string
 ): Promise<string | undefined> {
   const outputDir = path.join(workingDir, BUILD_OUTPUT_DIR);
-  const outputPathExists = await pathExists(outputDir);
-  if (outputPathExists) {
+
+  // check for one of several config files
+  const finderPromises = CONFIG_FILES.map(configFile => {
+    return pathExists(path.join(outputDir, configFile));
+  });
+
+  const finders = await Promise.all(finderPromises);
+  if (finders.some(found => found)) {
     return outputDir;
   }
   return undefined;
@@ -63,7 +80,15 @@ export async function readBuildOutputDirectory({
       files: {
         '_middleware.js': middleware.file,
       },
-      name: 'middleware',
+      regions: (() => {
+        try {
+          const project = new Project();
+          const config = getConfig(project, middleware.file.fsPath);
+          return config?.regions;
+        } catch (err) {
+          return undefined;
+        }
+      })(),
     });
   }
 
@@ -104,9 +129,13 @@ async function getMiddleware(
     if (manifest.pages['_middleware.js'].runtime !== 'web') {
       return;
     }
-  } catch (error) {
-    if (error.code !== 'ENOENT') throw error;
-    return;
+  } catch (error: unknown) {
+    if (!isErrnoException(error)) {
+      throw error;
+    }
+    if (error.code !== 'ENOENT') {
+      throw error;
+    }
   }
 
   const middlewareRelativePath = path.join(

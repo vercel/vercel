@@ -1,6 +1,6 @@
 # SolidStart
 
-This directory is a brief example of a [SolidStart](https://github.com/ryansolid/solid-startp) site that can be deployed to Vercel with zero configuration.
+This directory is a brief example of a [SolidStart](https://github.com/ryansolid/solid-start) site that can be deployed to Vercel with zero configuration.
 
 ## Deploy Your Own
 

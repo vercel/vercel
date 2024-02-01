@@ -1,7 +1,9 @@
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import Client from '../client';
-import { Cert } from '../../types';
+import type { Cert } from '@vercel-internals/types';
+import { isErrnoException } from '@vercel/error-utils';
+import { isAPIError } from '../errors-ts';
 
 export default async function createCertFromFile(
   client: Client,
@@ -25,15 +27,15 @@ export default async function createCertFromFile(
       },
     });
     return certificate;
-  } catch (error) {
-    if (error.code === 'ENOENT') {
-      return new Error(`The specified file "${error.path}" doesn't exist.`);
+  } catch (err: unknown) {
+    if (isErrnoException(err) && err.code === 'ENOENT') {
+      return new Error(`The specified file "${err.path}" doesn't exist.`);
     }
 
-    if (error.status < 500) {
-      return error;
+    if (isAPIError(err) && err.status < 500) {
+      return err;
     }
 
-    throw error;
+    throw err;
   }
 }

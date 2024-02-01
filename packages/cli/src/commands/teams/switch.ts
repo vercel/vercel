@@ -7,7 +7,7 @@ import { emoji } from '../../util/emoji';
 import getUser from '../../util/get-user';
 import getTeams from '../../util/teams/get-teams';
 import listInput from '../../util/input/list';
-import { Team, GlobalConfig } from '../../types';
+import { Team, GlobalConfig } from '@vercel-internals/types';
 import { writeToConfigFile } from '../../util/config/files';
 
 const updateCurrentTeam = (config: GlobalConfig, team?: Team) => {
@@ -70,20 +70,27 @@ export default async function main(client: Client, desiredSlug?: string) {
       suffix += ` ${emoji('locked')}`;
     }
 
+    const personalAccountChoice =
+      user.version === 'northstar'
+        ? []
+        : [
+            { separator: 'Personal Account' },
+            {
+              name: `${user.name || user.email} (${user.username})${suffix}`,
+              value: user.username,
+              short: user.username,
+              selected: personalScopeSelected,
+            },
+          ];
+
     const choices = [
-      { separator: 'Personal Account' },
-      {
-        name: `${user.name || user.email} (${user.username})${suffix}`,
-        value: user.username,
-        short: user.username,
-        selected: personalScopeSelected,
-      },
+      ...personalAccountChoice,
       { separator: 'Teams' },
       ...teamChoices,
     ];
 
     output.stopSpinner();
-    desiredSlug = await listInput({
+    desiredSlug = await listInput(client, {
       message: 'Switch to:',
       choices,
       eraseFinalAnswer: true,
@@ -97,6 +104,11 @@ export default async function main(client: Client, desiredSlug?: string) {
   }
 
   if (desiredSlug === user.username || desiredSlug === user.email) {
+    if (user.version === 'northstar') {
+      output.error('You cannot set your Personal Account as the scope.');
+      return 1;
+    }
+
     // Switch to user's personal account
     if (personalScopeSelected) {
       output.log('No changes made');

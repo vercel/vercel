@@ -1,20 +1,9 @@
 {
   "compilerOptions": {
-    "declaration": true,
-    "esModuleInterop": true,
-    "lib": ["esnext"],
-    "module": "commonjs",
-    "moduleResolution": "node",
-    "noEmitOnError": true,
-    "noFallthroughCasesInSwitch": true,
-    "noImplicitReturns": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
     "outDir": "./dist",
-    "types": ["node", "jest"],
-    "strict": true,
-    "target": "esnext"
+    "types": ["node", "jest"]
   },
+  "extends": "../../tsconfig.base.json",
   "include": ["src/*.ts"],
   "exclude": ["node_modules"]
 }

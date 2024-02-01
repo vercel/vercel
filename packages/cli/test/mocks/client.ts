@@ -1,7 +1,13 @@
+const originalCwd = process.cwd();
+
+// Register Jest matcher extensions for CLI unit tests
+import './matchers';
+
 import chalk from 'chalk';
+import { PassThrough } from 'stream';
 import { createServer, Server } from 'http';
 import express, { Express, Router } from 'express';
-import listen from 'async-listen';
+import { listen } from 'async-listen';
 import Client from '../../src/util/client';
 import { Output } from '../../src/util/output';
 
@@ -11,23 +17,42 @@ chalk.level = 0;
 
 export type Scenario = Router;
 
+class MockStream extends PassThrough {
+  isTTY: boolean;
+
+  constructor() {
+    super();
+    this.isTTY = true;
+  }
+
+  // These are for the `ora` module
+  clearLine() {}
+  cursorTo() {}
+}
+
 export class MockClient extends Client {
-  mockServer?: Server;
-  mockOutput: jest.Mock<void, Parameters<Output['print']>>;
-  private app: Express;
+  stdin!: MockStream;
+  stdout!: MockStream;
+  stderr!: MockStream;
   scenario: Scenario;
+  mockServer?: Server;
+  private app: Express;
 
   constructor() {
     super({
-      argv: [],
       // Gets populated in `startMockServer()`
       apiUrl: '',
+
+      // Gets re-initialized for every test in `reset()`
+      argv: [],
       authConfig: {},
-      output: new Output(),
       config: {},
       localConfig: {},
+      stdin: new PassThrough(),
+      stdout: new PassThrough(),
+      stderr: new PassThrough(),
+      output: new Output(new PassThrough()),
     });
-    this.mockOutput = jest.fn();
 
     this.app = express();
     this.app.use(express.json());
@@ -50,30 +75,42 @@ export class MockClient extends Client {
     });
 
     this.scenario = Router();
+
+    this.reset();
   }
 
   reset() {
-    this.output = new Output();
-    this.mockOutput = jest.fn();
-    this.output.print = s => {
-      return this.mockOutput(s);
-    };
+    this.stdin = new MockStream();
+
+    this.stdout = new MockStream();
+    this.stdout.setEncoding('utf8');
+    this.stdout.end = () => this.stdout;
+    this.stdout.pause();
+
+    this.stderr = new MockStream();
+    this.stderr.setEncoding('utf8');
+    this.stderr.end = () => this.stderr;
+    this.stderr.pause();
+    this.stderr.isTTY = true;
+
+    this._createPromptModule();
+
+    this.output = new Output(this.stderr);
 
     this.argv = [];
-    this.authConfig = {};
+    this.authConfig = {
+      token: 'token_dummy',
+    };
     this.config = {};
     this.localConfig = {};
-
-    // Just make this one silent
-    this.output.spinner = () => {};
+    this.localConfigPath = undefined;
 
     this.scenario = Router();
 
-    this.output.isTTY = true;
-  }
+    this.agent?.destroy();
+    this.agent = undefined;
 
-  get outputBuffer() {
-    return this.mockOutput.mock.calls.map(c => c[0]).join('');
+    this.cwd = originalCwd;
   }
 
   async startMockServer() {
@@ -105,6 +142,14 @@ export class MockClient extends Client {
 
   setArgv(...argv: string[]) {
     this.argv = [process.execPath, 'cli.js', ...argv];
+    this.output = new Output(this.stderr, {
+      debug: argv.includes('--debug') || argv.includes('-d'),
+      noColor: argv.includes('--no-color'),
+    });
+  }
+
+  resetOutput() {
+    this.output = new Output(this.stderr);
   }
 
   useScenario(scenario: Scenario) {
@@ -118,7 +163,7 @@ beforeAll(async () => {
   await client.startMockServer();
 });
 
-beforeEach(() => {
+afterEach(() => {
   client.reset();
 });
 

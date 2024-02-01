@@ -1,16 +1,25 @@
-import { Header, Rewrite, Route } from '@vercel/routing-utils';
+import { Rewrite, Route } from '@vercel/routing-utils';
 
 export interface FrameworkDetectionItem {
   /**
-   * A file path
-   * @example "package.json"
+   * A file path to detect.
+   * If specified, "matchPackage" cannot be specified.
+   * @example "some-framework.config.json"
    */
-  path: string;
+  path?: string;
   /**
-   * A matcher
+   * A matcher for the entire file.
+   * If specified, "matchPackage" cannot be specified.
    * @example "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"next\":\\s*\".+?\"[^}]*}"
    */
   matchContent?: string;
+  /**
+   * A matcher for a package specifically found in a "package.json" file.
+   * If specified, "path" and "matchContext" cannot be specified.
+   * If specified in multiple detectors, the first one will be used to resolve the framework version.
+   * @example "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"next\":\\s*\".+?\"[^}]*}"
+   */
+  matchPackage?: string;
 }
 
 export interface SettingPlaceholder {
@@ -23,11 +32,24 @@ export interface SettingPlaceholder {
 
 export interface SettingValue {
   /**
-   * A predefined setting for the detected framework
+   * A predefined setting for the detected framework.
    * @example "next dev --port $PORT"
    */
   value: string | null;
+  /**
+   * Placeholder text that may be shown in the UI when
+   * the user is configuring this setting value.
+   * @example "`npm run build` or `next build`"
+   */
   placeholder?: string;
+  /**
+   * When set to `true`, then the builder will not
+   * invoke the equivalent script in `package.json`,
+   * and instead will invoke the command specified in
+   * configuration setting directly. When this
+   * configuration is enabled, `value` must be a string.
+   */
+  ignorePackageJsonScript?: boolean;
 }
 
 export type Setting = SettingValue | SettingPlaceholder;
@@ -35,10 +57,6 @@ export type Setting = SettingValue | SettingPlaceholder;
 export type Redirect = Rewrite & {
   statusCode?: number;
   permanent?: boolean;
-};
-
-type RoutesManifestRegex = {
-  regex: string;
 };
 
 /**
@@ -57,12 +75,12 @@ export interface Framework {
   slug: string | null;
   /**
    * A URL to the logo of the framework
-   * @example "https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/next.svg"
+   * @example "https://api-frameworks.vercel.sh/framework-logos/next.svg"
    */
   logo: string;
   /**
    * An additional URL to the logo of the framework optimized for dark mode
-   * @example "https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/next-dark.svg"
+   * @example "https://api-frameworks.vercel.sh/framework-logos/next-dark.svg"
    */
   darkModeLogo?: string;
   /**
@@ -115,7 +133,16 @@ export interface Framework {
      */
     use: string;
   };
+  /**
+   * Names of runtimes which will not be used for zero-config
+   * matches within the "api" directory.
+   */
   ignoreRuntimes?: string[];
+  /**
+   * If `true`, then root-level middleware will not be enabled
+   * for this framework. Defaults to `false`.
+   */
+  disableRootMiddleware?: boolean;
   /**
    * Detectors used to find out the framework
    */
@@ -172,11 +199,6 @@ export interface Framework {
   dependency?: string;
   /**
    * Function that returns the name of the directory that the framework outputs
-   * its File System API build results to, usually called `.output`.
-   */
-  getFsOutputDir?: (dirPrefix: string) => Promise<string>;
-  /**
-   * Function that returns the name of the directory that the framework outputs
    * its STATIC build results to. In some cases this is read from a configuration file.
    */
   getOutputDirName: (dirPrefix: string) => Promise<string>;
@@ -186,27 +208,6 @@ export interface Framework {
    * @example [{ handle: 'filesystem' }, { src: '.*', status: 404, dest: '404.html' }]
    */
   defaultRoutes?: Route[] | ((dirPrefix: string) => Promise<Route[]>);
-  /**
-   * An array (or a function that returns an array) of default `Header` rules that
-   * the framework uses.
-   */
-  defaultHeaders?:
-    | (Header & RoutesManifestRegex)[]
-    | ((dirPrefix: string) => Promise<(Header & RoutesManifestRegex)[]>);
-  /**
-   * An array (or a function that returns an array) of default `Redirect` rules that
-   * the framework uses.
-   */
-  defaultRedirects?:
-    | (Redirect & RoutesManifestRegex)[]
-    | ((dirPrefix: string) => Promise<(Redirect & RoutesManifestRegex)[]>);
-  /**
-   * An array (or a function that returns an array) of default `Rewrite` rules that
-   * the framework uses.
-   */
-  defaultRewrites?:
-    | (Rewrite & RoutesManifestRegex)[]
-    | ((dirPrefix: string) => Promise<(Rewrite & RoutesManifestRegex)[]>);
   /**
    * A glob string of files to cache for future deployments.
    * @example ".cache/**"
@@ -218,4 +219,8 @@ export interface Framework {
    * @example "0.13.0"
    */
   defaultVersion?: string;
+  /**
+   * Slug of another framework preset in which this framework supersedes.
+   */
+  supersedes?: string;
 }

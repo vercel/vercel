@@ -7,7 +7,7 @@ import (
 )
 
 // Handler function
-func Handler(w http.ResponseWriter, r *http.Request) {
+func HandlerAnother(w http.ResponseWriter, r *http.Request) {
 	bts, err := ioutil.ReadFile("templates/another.txt")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

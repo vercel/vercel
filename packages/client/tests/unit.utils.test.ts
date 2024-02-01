@@ -24,7 +24,11 @@ describe('buildFileTree()', () => {
       noop
     );
 
-    const expectedFileList = toAbsolutePaths(cwd, ['.nowignore', 'index.txt']);
+    const expectedFileList = toAbsolutePaths(cwd, [
+      '.nowignore',
+      'folder',
+      'index.txt',
+    ]);
     expect(normalizeWindowsPaths(expectedFileList).sort()).toEqual(
       normalizeWindowsPaths(fileList).sort()
     );
@@ -41,9 +45,14 @@ describe('buildFileTree()', () => {
 
   it('should include symlinked files and directories', async () => {
     const cwd = fixture('symlinks');
+
+    // Also add an empty directory to make sure it's included
+    await fs.mkdirp(join(cwd, 'empty'));
+
     const { fileList } = await buildFileTree(cwd, { isDirectory: true }, noop);
 
     const expectedFileList = toAbsolutePaths(cwd, [
+      'empty',
       'folder-link',
       'folder/text.txt',
       'index.txt',
@@ -100,7 +109,7 @@ describe('buildFileTree()', () => {
       normalizeWindowsPaths(fileList).sort()
     );
 
-    const expectedIgnoreList = ['.vercel'];
+    const expectedIgnoreList = ['.gitignore', '.vercel'];
     expect(normalizeWindowsPaths(expectedIgnoreList).sort()).toEqual(
       normalizeWindowsPaths(ignoreList).sort()
     );
@@ -115,14 +124,18 @@ describe('buildFileTree()', () => {
     );
 
     const expectedFileList = toAbsolutePaths(cwd, [
+      '.vercel/output/functions/api/another.func/.vc-config.json',
+      '.vercel/output/functions/api/example.func/.vc-config.json',
       '.vercel/output/static/baz.txt',
       '.vercel/output/static/sub/qux.txt',
+      'node_modules/another/index.js',
+      'node_modules/example/index.js',
     ]);
     expect(normalizeWindowsPaths(expectedFileList).sort()).toEqual(
       normalizeWindowsPaths(fileList).sort()
     );
 
-    const expectedIgnoreList = ['foo.txt', 'sub'];
+    const expectedIgnoreList = ['.gitignore', 'foo.txt', 'sub'];
     expect(normalizeWindowsPaths(expectedIgnoreList).sort()).toEqual(
       normalizeWindowsPaths(ignoreList).sort()
     );

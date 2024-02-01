@@ -1,4 +1,5 @@
 import { NowBuildError } from '@vercel/build-utils';
+import which from 'which';
 
 interface PythonVersion {
   version: string;
@@ -10,6 +11,18 @@ interface PythonVersion {
 
 // The order must be most recent first
 const allOptions: PythonVersion[] = [
+  {
+    version: '3.11',
+    pipPath: 'pip3.11',
+    pythonPath: 'python3.11',
+    runtime: 'python3.11',
+  },
+  {
+    version: '3.10',
+    pipPath: 'pip3.10',
+    pythonPath: 'python3.10',
+    runtime: 'python3.10',
+  },
   {
     version: '3.9',
     pipPath: 'pip3.9',
@@ -25,9 +38,6 @@ const allOptions: PythonVersion[] = [
   },
 ];
 
-const upstreamProvider =
-  'This change is the result of a decision made by an upstream infrastructure provider (AWS)';
-
 function getDevPythonVersion(): PythonVersion {
   // Use the system-installed version of `python3` when running `vercel dev`
   return {
@@ -37,6 +47,7 @@ function getDevPythonVersion(): PythonVersion {
     runtime: 'python3',
   };
 }
+
 export function getLatestPythonVersion({
   isDev,
 }: {
@@ -45,7 +56,16 @@ export function getLatestPythonVersion({
   if (isDev) {
     return getDevPythonVersion();
   }
-  return allOptions[0];
+
+  const selection = allOptions.find(isInstalled);
+  if (!selection) {
+    throw new NowBuildError({
+      code: 'PYTHON_NOT_FOUND',
+      link: 'http://vercel.link/python-version',
+      message: `Unable to find any supported Python versions.`,
+    });
+  }
+  return selection;
 }
 
 export function getSupportedPythonVersion({
@@ -58,10 +78,13 @@ export function getSupportedPythonVersion({
   if (isDev) {
     return getDevPythonVersion();
   }
+
   let selection = getLatestPythonVersion({ isDev: false });
 
   if (typeof pipLockPythonVersion === 'string') {
-    const found = allOptions.find(o => o.version === pipLockPythonVersion);
+    const found = allOptions.find(
+      o => o.version === pipLockPythonVersion && isInstalled(o)
+    );
     if (found) {
       selection = found;
     } else {
@@ -75,14 +98,14 @@ export function getSupportedPythonVersion({
     throw new NowBuildError({
       code: 'BUILD_UTILS_PYTHON_VERSION_DISCONTINUED',
       link: 'http://vercel.link/python-version',
-      message: `Python version "${selection.version}" detected in Pipfile.lock is discontinued and must be upgraded. ${upstreamProvider}.`,
+      message: `Python version "${selection.version}" detected in Pipfile.lock is discontinued and must be upgraded.`,
     });
   }
 
   if (selection.discontinueDate) {
     const d = selection.discontinueDate.toISOString().split('T')[0];
     console.warn(
-      `Error: Python version "${selection.version}" detected in Pipfile.lock is deprecated. Deployments created on or after ${d} will fail to build. ${upstreamProvider}. http://vercel.link/python-version`
+      `Error: Python version "${selection.version}" detected in Pipfile.lock has reached End-of-Life. Deployments created on or after ${d} will fail to build. http://vercel.link/python-version`
     );
   }
 
@@ -92,4 +115,11 @@ export function getSupportedPythonVersion({
 function isDiscontinued({ discontinueDate }: PythonVersion): boolean {
   const today = Date.now();
   return discontinueDate !== undefined && discontinueDate.getTime() <= today;
+}
+
+function isInstalled({ pipPath, pythonPath }: PythonVersion): boolean {
+  return (
+    Boolean(which.sync(pipPath, { nothrow: true })) &&
+    Boolean(which.sync(pythonPath, { nothrow: true }))
+  );
 }

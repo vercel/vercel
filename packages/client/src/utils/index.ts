@@ -1,7 +1,7 @@
-import { DeploymentFile } from './hashes';
+import { FilesMap } from './hashes';
 import { FetchOptions } from '@zeit/fetch';
 import { nodeFetch, zeitFetch } from './fetch';
-import { join, sep, relative } from 'path';
+import { join, sep, relative, basename } from 'path';
 import { URL } from 'url';
 import ignore from 'ignore';
 import { pkgVersion } from '../pkg';
@@ -109,6 +109,29 @@ export async function buildFileTree(
       return ignored;
     };
     fileList = await readdir(path, [ignores]);
+
+    if (prebuilt) {
+      // Traverse over the `.vc-config.json` files and include
+      // the files referenced by the "filePathMap" properties
+      const refs = new Set<string>();
+      const vcConfigFilePaths = fileList.filter(
+        file => basename(file) === '.vc-config.json'
+      );
+      await Promise.all(
+        vcConfigFilePaths.map(async p => {
+          const configJson = await readFile(p, 'utf8');
+          const config = JSON.parse(configJson);
+          if (!config.filePathMap) return;
+          for (const v of Object.values(config.filePathMap) as string[]) {
+            refs.add(join(path, v));
+          }
+        })
+      );
+      if (refs.size > 0) {
+        fileList = fileList.concat(Array.from(refs));
+      }
+    }
+
     debug(`Found ${fileList.length} files in the specified directory`);
   } else if (Array.isArray(path)) {
     // Array of file paths
@@ -226,6 +249,12 @@ export const fetch = async (
   url = `${opts.apiUrl || 'https://api.vercel.com'}${url}`;
   delete opts.apiUrl;
 
+  const { VERCEL_TEAM_ID } = process.env;
+
+  if (VERCEL_TEAM_ID) {
+    url += `${url.includes('?') ? '&' : '?'}teamId=${VERCEL_TEAM_ID}`;
+  }
+
   if (opts.teamId) {
     const parsedUrl = new URL(url);
     parsedUrl.searchParams.set('teamId', opts.teamId);
@@ -256,15 +285,15 @@ export const fetch = async (
 
 export interface PreparedFile {
   file: string;
-  sha: string;
-  size: number;
+  sha?: string;
+  size?: number;
   mode: number;
 }
 
 const isWin = process.platform.includes('win');
 
 export const prepareFiles = (
-  files: Map<string, DeploymentFile>,
+  files: FilesMap,
   clientOptions: VercelClientOptions
 ): PreparedFile[] => {
   const preparedFiles: PreparedFile[] = [];
@@ -286,9 +315,9 @@ export const prepareFiles = (
 
       preparedFiles.push({
         file: isWin ? fileName.replace(/\\/g, '/') : fileName,
-        size: file.data.byteLength || file.data.length,
+        size: file.data?.byteLength || file.data?.length,
         mode: file.mode,
-        sha,
+        sha: sha || undefined,
       });
     }
   }

@@ -3,40 +3,34 @@ import ms from 'ms';
 import table from 'text-table';
 import Client from '../../util/client';
 import getScope from '../../util/get-scope';
+import {
+  PaginationOptions,
+  getPaginationOpts,
+} from '../../util/get-pagination-opts';
 import stamp from '../../util/output/stamp';
 import getCerts from '../../util/certs/get-certs';
 import strlen from '../../util/strlen';
-import { Cert } from '../../types';
+import type { Cert } from '@vercel-internals/types';
 import getCommandFlags from '../../util/get-command-flags';
 import { getCommandName } from '../../util/pkg-name';
 
-interface Options {
-  '--next'?: number;
-}
-
 async function ls(
   client: Client,
-  opts: Options,
+  opts: PaginationOptions,
   args: string[]
 ): Promise<number> {
   const { output } = client;
-  const { '--next': nextTimestamp } = opts;
-  let contextName = null;
+  const { contextName } = await getScope(client);
+
+  let paginationOptions;
 
   try {
-    ({ contextName } = await getScope(client));
-  } catch (err) {
-    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
-      output.error(err.message);
-      return 1;
-    }
-
-    throw err;
-  }
-  if (typeof nextTimestamp !== 'undefined' && Number.isNaN(nextTimestamp)) {
-    output.error('Please provide a number for flag --next');
+    paginationOptions = getPaginationOpts(opts);
+  } catch (err: unknown) {
+    output.prettyError(err);
     return 1;
   }
+
   const lsStamp = stamp();
 
   if (args.length !== 0) {
@@ -49,9 +43,7 @@ async function ls(
   }
 
   // Get the list of certificates
-  const { certs, pagination } = await getCerts(client, nextTimestamp).catch(
-    err => err
-  );
+  const { certs, pagination } = await getCerts(client, ...paginationOptions);
 
   output.log(
     `${
@@ -60,7 +52,7 @@ async function ls(
   );
 
   if (certs.length > 0) {
-    console.log(formatCertsTable(certs));
+    client.stdout.write(formatCertsTable(certs));
   }
 
   if (pagination && pagination.count === 20) {

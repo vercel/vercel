@@ -19,11 +19,12 @@ packages/cli/src/util/dev/templates/*.ts
 packages/client/tests/fixtures
 packages/client/lib
 
-# node-bridge
-packages/node-bridge/bridge.js
-packages/node-bridge/launcher.js
-packages/node-bridge/helpers.js
-packages/node-bridge/source-map-support.js
+# hydrogen
+packages/hydrogen/edge-entry.js
+
+# next
+packages/next/test/integration/middleware
+packages/next/test/integration/middleware-eval
 
 # middleware
 packages/middleware/src/entries.js
@@ -35,3 +36,9 @@ packages/static-build/test/cache-fixtures
 
 # redwood
 packages/redwood/test/fixtures
+
+# remix
+packages/remix/test/fixtures
+
+# gatsby-plugin-vercel-analytics
+packages/gatsby-plugin-vercel-analytics

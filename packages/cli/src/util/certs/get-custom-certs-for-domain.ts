@@ -1,5 +1,5 @@
 import { stringify } from 'querystring';
-import { Cert } from '../../types';
+import type { Cert } from '@vercel-internals/types';
 import * as ERRORS from '../errors-ts';
 import Client from '../client';
 
@@ -17,10 +17,10 @@ export async function getCustomCertsForDomain(
       `/v5/now/certs?${stringify({ domain, custom: true })}`
     );
     return certs;
-  } catch (error) {
-    if (error.code === 'forbidden') {
+  } catch (err: unknown) {
+    if (ERRORS.isAPIError(err) && err.code === 'forbidden') {
       return new ERRORS.CertsPermissionDenied(context, domain);
     }
-    throw error;
+    throw err;
   }
 }

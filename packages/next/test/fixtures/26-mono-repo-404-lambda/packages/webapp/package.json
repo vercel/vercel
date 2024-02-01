@@ -1,0 +1,15 @@
+{
+  "name": "26-packages-webapp",
+  "version": "0.0.1",
+  "engines": {
+    "node": "16.x"
+  },
+  "dependencies": {
+    "next": "9.3.4",
+    "react": "^16.8.6",
+    "react-dom": "^16.8.6"
+  },
+  "resolutions": {
+    "@babel/compat-data": "7.21.4"
+  }
+}

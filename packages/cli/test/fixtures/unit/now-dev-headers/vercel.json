@@ -1,8 +1,0 @@
-{
-  "version": 2,
-  "name": "now-dev-headers",
-  "builds": [
-    { "src": "index.js", "use": "@vercel/node" },
-    { "src": "foo.txt", "use": "@vercel/static" }
-  ]
-}

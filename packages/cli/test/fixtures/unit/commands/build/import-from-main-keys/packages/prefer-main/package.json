@@ -1,0 +1,5 @@
+{
+  "name": "only-main",
+  "private": true,
+  "main": "dist-main.js"
+}

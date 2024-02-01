@@ -1,5 +1,6 @@
 import inquirer from 'inquirer';
 import stripAnsi from 'strip-ansi';
+import Client from '../client';
 import eraseLines from '../output/erase-lines';
 
 interface ListEntry {
@@ -13,14 +14,14 @@ interface ListSeparator {
   separator: string;
 }
 
-type ListChoice = ListEntry | ListSeparator | typeof inquirer.Separator;
+export type ListChoice = ListEntry | ListSeparator | typeof inquirer.Separator;
 
 interface ListOptions {
   message: string;
   choices: ListChoice[];
   pageSize?: number;
   separator?: boolean;
-  abort?: 'start' | 'end';
+  cancel?: 'start' | 'end';
   eraseFinalAnswer?: boolean;
 }
 
@@ -35,22 +36,25 @@ function getLength(input: string): number {
   return biggestLength;
 }
 
-export default async function list({
-  message = 'the question',
-  // eslint-disable-line no-unused-vars
-  choices: _choices = [
-    {
-      name: 'something\ndescription\ndetails\netc',
-      value: 'something unique',
-      short: 'generally the first line of `name`',
-    },
-  ],
-  pageSize = 15, // Show 15 lines without scrolling (~4 credit cards)
-  separator = false, // Puts a blank separator between each choice
-  abort = 'end', // Whether the `abort` option will be at the `start` or the `end`,
-  eraseFinalAnswer = false, // If true, the line with the final answer that inquirer prints will be erased before returning
-}: ListOptions): Promise<string> {
-  require('./patch-inquirer-legacy');
+export default async function list(
+  client: Client,
+  {
+    message = 'the question',
+    // eslint-disable-line no-unused-vars
+    choices: _choices = [
+      {
+        name: 'something\ndescription\ndetails\netc',
+        value: 'something unique',
+        short: 'generally the first line of `name`',
+      },
+    ],
+    pageSize = 15, // Show 15 lines without scrolling (~4 credit cards)
+    separator = false, // Puts a blank separator between each choice
+    cancel = 'end', // Whether the `cancel` option will be at the `start` or the `end`,
+    eraseFinalAnswer = false, // If true, the line with the final answer that inquirer prints will be erased before returning
+  }: ListOptions
+): Promise<string> {
+  require('./patch-inquirer');
 
   let biggestLength = 0;
   let selected: string | undefined;
@@ -93,20 +97,20 @@ export default async function list({
     }
   }
 
-  const abortSeparator = new inquirer.Separator('─'.repeat(biggestLength));
-  const _abort = {
-    name: 'Abort',
+  const cancelSeparator = new inquirer.Separator('─'.repeat(biggestLength));
+  const _cancel = {
+    name: 'Cancel',
     value: '',
     short: '',
   };
 
-  if (abort === 'start') {
-    choices.unshift(_abort, abortSeparator);
+  if (cancel === 'start') {
+    choices.unshift(_cancel, cancelSeparator);
   } else {
-    choices.push(abortSeparator, _abort);
+    choices.push(cancelSeparator, _cancel);
   }
 
-  const answer = await inquirer.prompt({
+  const answer = await client.prompt({
     name: 'value',
     type: 'list',
     default: selected,

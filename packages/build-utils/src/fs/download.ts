@@ -2,15 +2,20 @@ import path from 'path';
 import debug from '../debug';
 import FileFsRef from '../file-fs-ref';
 import { File, Files, Meta } from '../types';
-import { remove, mkdirp, readlink, symlink } from 'fs-extra';
+import { remove, mkdirp, readlink, symlink, chmod } from 'fs-extra';
 import streamToBuffer from './stream-to-buffer';
 
 export interface DownloadedFiles {
   [filePath: string]: FileFsRef;
 }
 
-const S_IFMT = 61440; /* 0170000 type of file */
+const S_IFDIR = 16384; /* 0040000 directory */
 const S_IFLNK = 40960; /* 0120000 symbolic link */
+const S_IFMT = 61440; /* 0170000 type of file */
+
+export function isDirectory(mode: number): boolean {
+  return (mode & S_IFMT) === S_IFDIR;
+}
 
 export function isSymbolicLink(mode: number): boolean {
   return (mode & S_IFMT) === S_IFLNK;
@@ -27,9 +32,7 @@ async function prepareSymlinkTarget(
   }
 
   if (file.type === 'FileRef' || file.type === 'FileBlob') {
-    const targetPathBufferPromise = await streamToBuffer(
-      await file.toStreamAsync()
-    );
+    const targetPathBufferPromise = streamToBuffer(await file.toStreamAsync());
     const [targetPathBuffer] = await Promise.all([
       targetPathBufferPromise,
       mkdirPromise,
@@ -42,9 +45,21 @@ async function prepareSymlinkTarget(
   );
 }
 
-async function downloadFile(file: File, fsPath: string): Promise<FileFsRef> {
+export async function downloadFile(
+  file: File,
+  fsPath: string
+): Promise<FileFsRef> {
   const { mode } = file;
 
+  if (isDirectory(mode)) {
+    await mkdirp(fsPath);
+    await chmod(fsPath, mode);
+    return FileFsRef.fromFsPath({ mode, fsPath });
+  }
+
+  // If the source is a symlink, try to create it instead of copying the file.
+  // Note: creating symlinks on Windows requires admin priviliges or symlinks
+  // enabled in the group policy. We may want to improve the error message.
   if (isSymbolicLink(mode)) {
     const target = await prepareSymlinkTarget(file, fsPath);
 
@@ -92,10 +107,26 @@ export default async function download(
         await removeFile(basePath, name);
         return;
       }
-
       // If a file didn't change, do not re-download it.
       if (Array.isArray(filesChanged) && !filesChanged.includes(name)) {
         return;
+      }
+
+      // Some builders resolve symlinks and return both
+      // a file, node_modules/<symlink>/package.json, and
+      // node_modules/<symlink>, a symlink.
+      // Removing the file matches how the yazl lambda zip
+      // behaves so we can use download() with `vercel build`.
+      const parts = name.split('/');
+      for (let i = 1; i < parts.length; i++) {
+        const dir = parts.slice(0, i).join('/');
+        const parent = files[dir];
+        if (parent && isSymbolicLink(parent.mode)) {
+          console.warn(
+            `Warning: file "${name}" is within a symlinked directory "${dir}" and will be ignored`
+          );
+          return;
+        }
       }
 
       const file = files[name];

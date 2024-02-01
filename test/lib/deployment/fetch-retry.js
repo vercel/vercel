@@ -1,13 +1,48 @@
 const fetch = require('node-fetch');
 const retryBailByDefault = require('./retry-bail-by-default.js');
 
-async function fetchRetry(...args) {
+const ABSOLUTE_URL_PATTERN = /^https?:\/\//i;
+
+async function fetchRetry(url, ...rest) {
+  if (!ABSOLUTE_URL_PATTERN.test(url)) {
+    throw new Error(`fetch url must be absolute: "${url}"`);
+  }
+
   return await retryBailByDefault(
     async canRetry => {
       try {
-        return await fetch(...args);
+        const requestIds = [];
+        for (let i = 60; i >= 0; i--) {
+          const res = await fetch(url, ...rest);
+
+          if (res.status === 401) {
+            const clonedRes = res.clone();
+            const body = await clonedRes.text();
+
+            if (body.includes('https://vercel.com/sso-api')) {
+              requestIds.push(res.headers.get('x-vercel-id'));
+              if (i === 0) {
+                console.error(
+                  `Failed request ids (because of 401s): `,
+                  JSON.stringify(requestIds, null, 2)
+                );
+                throw new Error(
+                  `Failed to fetch ${url}, received 401 status for over 1 minute`
+                );
+              }
+            } else {
+              return res;
+            }
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          } else {
+            return res;
+          }
+        }
       } catch (error) {
-        if (error.code === 'ENOTFOUND') {
+        if (error.type === 'request-timeout') {
+          // FetchError: network timeout at: ...
+          throw canRetry(error);
+        } else if (error.code === 'ENOTFOUND') {
           // getaddrinfo ENOTFOUND api.vercel.com like some transient dns issue
           throw canRetry(error);
         } else if (error.code === 'ETIMEDOUT') {
@@ -24,7 +59,7 @@ async function fetchRetry(...args) {
         throw error;
       }
     },
-    { factor: 1, retries: 3 }
+    { factor: 2, retries: 3 }
   );
 }
 

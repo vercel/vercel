@@ -1,4 +1,4 @@
-import { Domain } from '../../types';
+import type { Domain } from '@vercel-internals/types';
 
 export type DomainRegistrar = 'Vercel' | 'Purchase in Process' | 'Third Party';
 

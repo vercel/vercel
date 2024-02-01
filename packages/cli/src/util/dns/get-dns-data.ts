@@ -1,27 +1,30 @@
 import chalk from 'chalk';
-import { DNSRecordData } from '../../types';
+import type { DNSRecordData } from '@vercel-internals/types';
 import textInput from '../input/text';
 import promptBool from '../input/prompt-bool';
-import { Output } from '../output';
+import Client from '../client';
 
 const RECORD_TYPES = ['A', 'AAAA', 'ALIAS', 'CAA', 'CNAME', 'MX', 'SRV', 'TXT'];
 
 export default async function getDNSData(
-  output: Output,
+  client: Client,
   data: null | DNSRecordData
 ): Promise<DNSRecordData | null> {
   if (data) {
     return data;
   }
+  const { output } = client;
 
   try {
     // first ask for type, branch from there
     const possibleTypes = new Set(RECORD_TYPES);
-    const type = (await textInput({
-      label: `- Record type (${RECORD_TYPES.join(', ')}): `,
-      validateValue: (v: string) =>
-        Boolean(v && possibleTypes.has(v.trim().toUpperCase()))
-    }))
+    const type = (
+      await textInput({
+        label: `- Record type (${RECORD_TYPES.join(', ')}): `,
+        validateValue: (v: string) =>
+          Boolean(v && possibleTypes.has(v.trim().toUpperCase())),
+      })
+    )
       .trim()
       .toUpperCase();
 
@@ -39,7 +42,7 @@ export default async function getDNSData(
           target
         )}.`
       );
-      return (await verifyData())
+      return (await verifyData(client))
         ? {
             name,
             type,
@@ -47,8 +50,8 @@ export default async function getDNSData(
               priority,
               weight,
               port,
-              target
-            }
+              target,
+            },
           }
         : null;
     }
@@ -61,23 +64,23 @@ export default async function getDNSData(
           `${mxPriority}`
         )} ${chalk.cyan(value)}`
       );
-      return (await verifyData())
+      return (await verifyData(client))
         ? {
             name,
             type,
             value,
-            mxPriority
+            mxPriority,
           }
         : null;
     }
 
     const value = await getTrimmedString(`- ${type} value: `);
     output.log(`${chalk.cyan(name)} ${chalk.bold(type)} ${chalk.cyan(value)}`);
-    return (await verifyData())
+    return (await verifyData(client))
       ? {
           name,
           type,
-          value
+          value,
         }
       : null;
   } catch (error) {
@@ -85,13 +88,13 @@ export default async function getDNSData(
   }
 }
 
-async function verifyData() {
-  return promptBool('Is this correct?');
+async function verifyData(client: Client) {
+  return promptBool('Is this correct?', client);
 }
 
 async function getRecordName(type: string) {
   const input = await textInput({
-    label: `- ${type} name: `
+    label: `- ${type} name: `,
   });
   return input === '@' ? '' : input;
 }
@@ -100,14 +103,14 @@ async function getNumber(label: string) {
   return Number(
     await textInput({
       label,
-      validateValue: v => Boolean(v && Number(v))
+      validateValue: v => Boolean(v && Number(v)),
     })
   );
 }
 async function getTrimmedString(label: string) {
   const res = await textInput({
     label,
-    validateValue: v => Boolean(v && v.trim().length > 0)
+    validateValue: v => Boolean(v && v.trim().length > 0),
   });
   return res.trim();
 }

@@ -19,7 +19,7 @@ const getRevertAliasConfigFile = () => {
     ],
   });
 };
-module.exports = async function prepare(session, binaryPath) {
+module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
   const spec = {
     'static-single-file': {
       'first.png': getImageFile(session, { size: 30 }),
@@ -76,25 +76,6 @@ module.exports = async function prepare(session, binaryPath) {
         },
       }),
     },
-    'build-env-debug': {
-      'now.json': JSON.stringify({
-        builds: [{ src: 'index.js', use: '@vercel/node' }],
-      }),
-      'package.json': JSON.stringify({
-        scripts: {
-          'now-build': 'node now-build.js',
-        },
-      }),
-      'now-build.js': `
-        const fs = require('fs');
-        fs.writeFileSync(
-          'index.js',
-          fs.readFileSync('index.js', 'utf8')
-          .replace('BUILD_ENV_DEBUG', process.env.NOW_BUILDER_DEBUG ? 'on' : 'off'),
-        );
-      `,
-      'index.js': `module.exports = (req, res) => { res.status(200).send('BUILD_ENV_DEBUG'); }`,
-    },
     'now-revert-alias-1': {
       'index.json': JSON.stringify({ name: 'now-revert-alias-1' }),
       'now.json': getRevertAliasConfigFile(),
@@ -115,7 +96,15 @@ module.exports = async function prepare(session, binaryPath) {
       ),
     },
     'dev-fail-on-recursion-command': {
-      'package.json': '{}',
+      'package.json': JSON.stringify({
+        scripts: {
+          build: 'echo "build script"',
+        },
+      }),
+      'vercel.json': JSON.stringify({
+        version: 2,
+        devCommand: `${binaryPath} dev`,
+      }),
     },
     'build-fail-on-recursion-command': {
       'package.json': '{}',
@@ -195,12 +184,12 @@ module.exports = async function prepare(session, binaryPath) {
     'local-config-v2': {
       [`main-${session}.html`]: '<h1>hello main</h1>',
       [`test-${session}.html`]: '<h1>hello test</h1>',
-      'now.json': JSON.stringify({
+      'vercel.json': JSON.stringify({
         name: 'original',
         builds: [{ src: `main-${session}.html`, use: '@vercel/static' }],
         routes: [{ src: '/another-main', dest: `/main-${session}.html` }],
       }),
-      'now-test.json': JSON.stringify({
+      'vercel-test.json': JSON.stringify({
         name: 'secondary',
         builds: [{ src: `test-${session}.html`, use: '@vercel/static' }],
         routes: [{ src: '/another-test', dest: `/test-${session}.html` }],
@@ -290,7 +279,7 @@ module.exports = async function prepare(session, binaryPath) {
         },
       }),
     },
-    'lambda-with-200-memory': {
+    'lambda-with-123-memory': {
       'api/memory.js': `
         module.exports = (req, res) => {
           res.json({ memory: parseInt(process.env.AWS_LAMBDA_FUNCTION_MEMORY_SIZE) });
@@ -299,7 +288,7 @@ module.exports = async function prepare(session, binaryPath) {
       'now.json': JSON.stringify({
         functions: {
           'api/**/*.js': {
-            memory: 200,
+            memory: 123,
           },
         },
       }),
@@ -342,17 +331,17 @@ module.exports = async function prepare(session, binaryPath) {
     },
     'lambda-with-php-runtime': {
       'api/test.php': `<?php echo 'Hello from PHP'; ?>`,
-      'now.json': JSON.stringify({
+      'vercel.json': JSON.stringify({
         functions: {
           'api/**/*.php': {
-            runtime: 'vercel-php@0.1.0',
+            runtime: 'vercel-php@0.6.0',
           },
         },
       }),
     },
     'lambda-with-invalid-runtime': {
       'api/test.php': `<?php echo 'Hello from PHP'; ?>`,
-      'now.json': JSON.stringify({
+      'vercel.json': JSON.stringify({
         functions: {
           'api/**/*.php': {
             memory: 128,
@@ -393,6 +382,9 @@ module.exports = async function prepare(session, binaryPath) {
       'index.html': 'Hello',
       'vercel.json': '{"builds":[{"src":"*.html","use":"@vercel/static"}]}',
     },
+    'project-sensitive-env-vars': {
+      'package.json': '{}',
+    },
     'dev-proxy-headers-and-env': {
       'package.json': JSON.stringify({}),
       'server.js': `require('http').createServer((req, res) => {
@@ -426,16 +418,186 @@ module.exports = async function prepare(session, binaryPath) {
         projectId: 'QmRoBYhejkkmssotLZr8tWgewPdPcjYucYUNERFbhJrRNi',
       }),
     },
+    'vc-build-speed-insights': {
+      '.vercel/project.json': JSON.stringify({
+        orgId: '.',
+        projectId: '.',
+        settings: {
+          framework: null,
+        },
+      }),
+      'package.json': JSON.stringify({
+        scripts: {
+          build: 'mkdir -p public && echo hi > public/index.txt',
+        },
+        dependencies: {
+          '@vercel/speed-insights': '0.0.4',
+        },
+      }),
+    },
+    'vc-build-indirect-web-analytics': {
+      '.vercel/project.json': JSON.stringify({
+        orgId: '.',
+        projectId: '.',
+        settings: {
+          framework: null,
+          installCommand: 'yarn add @vercel/analytics@1.1.1',
+        },
+      }),
+      'package.json': JSON.stringify({
+        scripts: {
+          build: 'mkdir -p public && echo hi > public/index.txt',
+        },
+      }),
+    },
+    'vc-build-web-analytics': {
+      '.vercel/project.json': JSON.stringify({
+        orgId: '.',
+        projectId: '.',
+        settings: {
+          framework: null,
+        },
+      }),
+      'package.json': JSON.stringify({
+        scripts: {
+          build: 'mkdir -p public && echo hi > public/index.txt',
+        },
+        dependencies: {
+          '@vercel/analytics': '1.0.0',
+        },
+      }),
+    },
+    'vc-build-static-build': {
+      '.vercel/project.json': JSON.stringify({
+        orgId: '.',
+        projectId: '.',
+        settings: {
+          framework: null,
+        },
+      }),
+      'package.json': JSON.stringify({
+        scripts: {
+          build: 'mkdir -p public && echo hi > public/index.txt',
+        },
+      }),
+    },
+    'vercel-json-configuration-overrides': {
+      'vercel.json': '{}',
+      'package.json': '{}',
+    },
+    'vercel-json-configuration-overrides-merging-prompts': {
+      'vercel.json': JSON.stringify({
+        buildCommand: 'mkdir -p output && echo "1" > output/index.txt',
+      }),
+      'package.json': '{}',
+    },
+    'vercel-json-configuration-overrides-link': {
+      'vercel.json': JSON.stringify({
+        buildCommand: 'mkdir public && echo "1" > public/index.txt',
+      }),
+    },
+    'vc-build-corepack-npm': {
+      '.vercel/project.json': JSON.stringify({
+        orgId: '.',
+        projectId: '.',
+        settings: {
+          framework: null,
+        },
+      }),
+      'package.json': JSON.stringify({
+        private: true,
+        packageManager: 'npm@8.1.0',
+        scripts: {
+          build: 'mkdir -p public && npm --version > public/index.txt',
+        },
+      }),
+    },
+    'vc-build-corepack-pnpm': {
+      '.vercel/project.json': JSON.stringify({
+        orgId: '.',
+        projectId: '.',
+        settings: {
+          framework: null,
+        },
+      }),
+      'package.json': JSON.stringify({
+        private: true,
+        packageManager: 'pnpm@7.1.0',
+        scripts: {
+          build: 'mkdir -p public && pnpm --version > public/index.txt',
+        },
+      }),
+    },
+    'vc-build-corepack-yarn': {
+      '.vercel/project.json': JSON.stringify({
+        orgId: '.',
+        projectId: '.',
+        settings: {
+          framework: null,
+        },
+      }),
+      'package.json': JSON.stringify({
+        private: true,
+        packageManager: 'yarn@2.4.3',
+        scripts: {
+          build: 'mkdir -p public && yarn --version > public/index.txt',
+        },
+      }),
+    },
+    'static-build-dist-dir': {
+      '.vercel/project.json': JSON.stringify({
+        orgId: '.',
+        projectId: '.',
+        settings: {
+          framework: null,
+        },
+      }),
+      'vercel.json': JSON.stringify({
+        version: 2,
+        builds: [
+          {
+            src: 'package.json',
+            use: '@vercel/static-build',
+            config: { distDir: '.' },
+          },
+        ],
+      }),
+      'package.json': JSON.stringify({
+        private: true,
+        scripts: {
+          build: 'echo "Hello, World!" >> index.txt',
+        },
+      }),
+    },
+    'static-build-zero-config-output-directory': {
+      '.vercel/project.json': JSON.stringify({
+        orgId: '.',
+        projectId: '.',
+        settings: {
+          framework: null,
+        },
+      }),
+      'vercel.json': JSON.stringify({
+        version: 2,
+        builds: [
+          {
+            src: 'package.json',
+            use: '@vercel/static-build',
+            config: { zeroConfig: true, outputDirectory: '.' },
+          },
+        ],
+      }),
+      'package.json': JSON.stringify({
+        private: true,
+        scripts: {
+          build: 'echo "Hello, World!" >> index.txt',
+        },
+      }),
+    },
   };
 
   for (const [typeName, needed] of Object.entries(spec)) {
-    const directory = join(
-      __dirname,
-      '..',
-      'fixtures',
-      'integration',
-      typeName
-    );
+    const directory = join(tmpFixturesDir, typeName);
 
     await mkdirp(directory);
 

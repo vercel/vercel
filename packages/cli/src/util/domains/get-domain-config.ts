@@ -1,5 +1,6 @@
 import Client from '../client';
-import { DomainConfig } from '../../types';
+import type { DomainConfig } from '@vercel-internals/types';
+import { isAPIError } from '../errors-ts';
 
 export async function getDomainConfig(client: Client, domainName: string) {
   try {
@@ -8,11 +9,11 @@ export async function getDomainConfig(client: Client, domainName: string) {
     );
 
     return config;
-  } catch (error) {
-    if (error.status < 500) {
-      return error;
+  } catch (err: unknown) {
+    if (isAPIError(err) && err.status < 500) {
+      return err;
     }
 
-    throw error;
+    throw err;
   }
 }

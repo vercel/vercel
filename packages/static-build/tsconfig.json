@@ -1,20 +1,9 @@
 {
   "compilerOptions": {
-    "declaration": false,
-    "esModuleInterop": true,
-    "lib": ["esnext"],
-    "module": "commonjs",
-    "moduleResolution": "node",
-    "noEmitOnError": true,
-    "noFallthroughCasesInSwitch": true,
-    "noImplicitReturns": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "outDir": "dist",
-    "types": ["node", "jest"],
-    "strict": true,
-    "target": "es2018"
+    "outDir": "./dist",
+    "types": ["node", "jest"]
   },
+  "extends": "../../tsconfig.base.json",
   "include": ["src/**/*"],
   "exclude": ["test/fixtures"]
 }

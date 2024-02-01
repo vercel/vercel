@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 
-import { Cert } from '../../types';
+import type { Cert } from '@vercel-internals/types';
 import * as ERRORS from '../errors-ts';
 import Client from '../client';
 import mapCertError from './map-cert-error';
@@ -22,16 +22,18 @@ export default async function startCertOrder(
       },
     });
     return cert;
-  } catch (error) {
-    if (error.code === 'cert_order_not_found') {
-      return new ERRORS.CertOrderNotFound(cns);
+  } catch (err: unknown) {
+    if (ERRORS.isAPIError(err)) {
+      if (err.code === 'cert_order_not_found') {
+        return new ERRORS.CertOrderNotFound(cns);
+      }
+
+      const mappedError = mapCertError(err, cns);
+      if (mappedError) {
+        return mappedError;
+      }
     }
 
-    const mappedError = mapCertError(error, cns);
-    if (mappedError) {
-      return mappedError;
-    }
-
-    throw error;
+    throw err;
   }
 }

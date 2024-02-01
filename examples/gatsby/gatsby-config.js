@@ -1,9 +1,10 @@
+/**
+ * @type {import('gatsby').GatsbyConfig}
+ */
 module.exports = {
   siteMetadata: {
-    title: `Gatsby + Node.js API`,
-      siteUrl: `https://gatsby-template.vercel.app`,
+    title: `Gatsby + Vercel`,
+    siteUrl: `https://gatsby-template.vercel.app/`,
   },
-  plugins: [
-
-  ]
-}
+  plugins: [],
+};

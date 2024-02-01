@@ -1,0 +1,24 @@
+name: 🤖 Issue labeler - Support
+on:
+  issues:
+    types:
+      - labeled
+jobs:
+  add-comment:
+    if: github.event.label.name == 'support'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Add comment
+        uses: peter-evans/close-issue@v2
+        with:
+          issue-number: ${{ github.event.issue.number }}
+          comment: |
+            Thank you so much for filing this issue. 
+
+            We do try to keep issues in this repository focused on the vercel command line and related code. 
+
+            At this point we think that this issue is best handled by our friendly Vercel support team. They can be found by contacting them at: https://vercel.com/help#issues
+
+            If you think closing of this is a mistake, then please re-open this issue and we'll take another look :bow:

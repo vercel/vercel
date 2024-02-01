@@ -7,20 +7,25 @@ import {
   Node,
   ArrayLiteralExpression,
 } from 'ts-morph';
-import Ajv from 'ajv';
 import { FromSchema, JSONSchema } from 'json-schema-to-ts';
-
-const ajv = new Ajv();
+import { validate } from './validation';
 
 export const BaseFunctionConfigSchema = {
   type: 'object',
   properties: {
-    use: { type: 'string' },
+    runtime: { type: 'string' },
     memory: { type: 'number' },
     maxDuration: { type: 'number' },
     regions: {
-      type: 'array',
-      items: { type: 'string' },
+      oneOf: [
+        {
+          type: 'array',
+          items: { type: 'string' },
+        },
+        {
+          enum: ['all', 'default', 'auto'],
+        },
+      ],
     },
   },
 } as const;
@@ -36,15 +41,6 @@ export function getConfig<
   const config = getValue(configNode);
   // @ts-ignore
   return validate(schema || BaseFunctionConfigSchema, config);
-}
-
-function validate<T>(schema: T, data: any): FromSchema<T> {
-  const isValid = ajv.compile(schema);
-  if (!isValid(data)) {
-    // TODO: better error message
-    throw new Error('Invalid data');
-  }
-  return data as FromSchema<T>;
 }
 
 function getConfigNode(sourceFile: SourceFile) {

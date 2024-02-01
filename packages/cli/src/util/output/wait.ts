@@ -8,14 +8,19 @@ export interface StopSpinner {
 }
 
 export default function wait(
-  msg: string,
-  delay: number = 300,
-  _ora = ora
+  opts: ora.Options,
+  delay: number = 300
 ): StopSpinner {
-  let spinner: ReturnType<typeof _ora> | null = null;
+  let text = opts.text;
+  let spinner: ora.Ora | null = null;
+
+  if (typeof text !== 'string') {
+    throw new Error(`"text" is required for Ora spinner`);
+  }
 
   const timeout = setTimeout(() => {
-    spinner = _ora(chalk.gray(msg));
+    spinner = ora(opts);
+    spinner.text = chalk.gray(text);
     spinner.color = 'gray';
     spinner.start();
   }, delay);
@@ -29,23 +34,21 @@ export default function wait(
     }
   };
 
-  stop.text = msg;
+  stop.text = text;
 
   // Allow `text` property to update the text while the spinner is in action
   Object.defineProperty(stop, 'text', {
     get() {
-      return msg;
+      return text;
     },
 
     set(v: string) {
-      msg = v;
+      text = v;
       if (spinner) {
         spinner.text = chalk.gray(v);
       }
     },
   });
 
-  // @ts-ignore
-  process.once('nowExit', stop);
   return stop;
 }

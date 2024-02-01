@@ -9,8 +9,7 @@ import strlen from '../../util/strlen';
 import confirm from '../../util/input/confirm';
 import findAliasByAliasOrId from '../../util/alias/find-alias-by-alias-or-id';
 
-import { Alias } from '../../types';
-import { Output } from '../../util/output';
+import type { Alias } from '@vercel-internals/types';
 import { isValidName } from '../../util/is-valid-name';
 import { getCommandName } from '../../util/pkg-name';
 
@@ -24,19 +23,7 @@ export default async function rm(
   args: string[]
 ) {
   const { output } = client;
-
-  let contextName = null;
-
-  try {
-    ({ contextName } = await getScope(client));
-  } catch (err) {
-    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
-      output.error(err.message);
-      return 1;
-    }
-
-    throw err;
-  }
+  const { contextName } = await getScope(client);
 
   const [aliasOrId] = args;
 
@@ -71,8 +58,8 @@ export default async function rm(
   }
 
   const removeStamp = stamp();
-  if (!opts['--yes'] && !(await confirmAliasRemove(output, alias))) {
-    output.log('Aborted');
+  if (!opts['--yes'] && !(await confirmAliasRemove(client, alias))) {
+    output.log('Canceled');
     return 0;
   }
 
@@ -85,7 +72,7 @@ export default async function rm(
   return 0;
 }
 
-async function confirmAliasRemove(output: Output, alias: Alias) {
+async function confirmAliasRemove(client: Client, alias: Alias) {
   const srcUrl = alias.deployment
     ? chalk.underline(alias.deployment.url)
     : null;
@@ -104,7 +91,7 @@ async function confirmAliasRemove(output: Output, alias: Alias) {
     }
   );
 
-  output.log(`The following alias will be removed permanently`);
-  output.print(`  ${tbl}\n`);
-  return confirm(chalk.red('Are you sure?'), false);
+  client.output.log(`The following alias will be removed permanently`);
+  client.output.print(`  ${tbl}\n`);
+  return confirm(client, chalk.red('Are you sure?'), false);
 }

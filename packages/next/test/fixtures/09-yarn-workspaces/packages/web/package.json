@@ -1,0 +1,31 @@
+{
+  "name": "@jimmy/web",
+  "version": "1.0.67",
+  "scripts": {
+    "dev": "next",
+    "build": "next build",
+    "start": "next start",
+    "postinstall": "lerna run build --scope=@jimmy/common"
+  },
+  "engines": {
+    "node": "16.x"
+  },
+  "dependencies": {
+    "@jimmy/common": "^1.0.64",
+    "next": "^9.1.4",
+    "react": "^16.12.0",
+    "react-dom": "^16.12.0"
+  },
+  "resolutions": {
+    "@babel/compat-data": "7.21.4"
+  },
+  "devDependencies": {
+    "@babel/plugin-syntax-class-properties": "^7.7.4",
+    "@types/next": "^9.0.0",
+    "@types/node": "^12.12.14",
+    "@types/react": "^16.9.15",
+    "@types/react-dom": "16.9.4",
+    "typescript": "4.9.5"
+  },
+  "license": "ISC"
+}

@@ -1,0 +1,12 @@
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Note**: This category is intended for discussions related to Vercel CLI or Runtimes. 
+
+        For topics related to other Vercel features, please visit the [Vercel Community](https://github.com/orgs/vercel/discussions).
+  - type: textarea
+    attributes:
+      label: Description
+    validations:
+      required: true

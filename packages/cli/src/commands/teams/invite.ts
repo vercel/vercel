@@ -11,6 +11,8 @@ import { getCommandName } from '../../util/pkg-name';
 import { email as regexEmail } from '../../util/input/regexes';
 import getTeams from '../../util/teams/get-teams';
 import inviteUserToTeam from '../../util/teams/invite-user-to-team';
+import { isAPIError } from '../../util/errors-ts';
+import { errorToString, isError } from '@vercel/error-utils';
 
 const validateEmail = (data: string) =>
   regexEmail.test(data.trim()) || data.length === 0;
@@ -67,17 +69,7 @@ export default async function invite(
   const currentTeam = teams.find(team => team.id === currentTeamId);
 
   output.spinner('Fetching user information');
-  let user;
-  try {
-    user = await getUser(client);
-  } catch (err) {
-    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
-      output.error(err.message);
-      return 1;
-    }
-
-    throw err;
-  }
+  const user = await getUser(client);
 
   domains.push(user.email.split('@')[1]);
 
@@ -107,8 +99,8 @@ export default async function invite(
           // eslint-disable-next-line no-await-in-loop
           const res = await inviteUserToTeam(client, currentTeam.id, email);
           userInfo = res.username;
-        } catch (err) {
-          if (err.code === 'user_not_found') {
+        } catch (err: unknown) {
+          if (isAPIError(err) && err.code === 'user_not_found') {
             output.error(`No user exists with the email address "${email}".`);
             return 1;
           }
@@ -141,8 +133,8 @@ export default async function invite(
         validateValue: validateEmail,
         autoComplete: value => emailAutoComplete(value, currentTeam.slug),
       });
-    } catch (err) {
-      if (err.message !== 'USER_ABORT') {
+    } catch (err: unknown) {
+      if (!isError(err) || err.message !== 'USER_ABORT') {
         throw err;
       }
     }
@@ -174,7 +166,7 @@ export default async function invite(
       } catch (err) {
         output.stopSpinner();
         process.stderr.write(eraseLines(emails.length + 2));
-        output.error(err.message);
+        output.error(errorToString(err));
         hasError = true;
         for (const email of emails) {
           output.log(`${chalk.cyan(chars.tick)} ${sentEmailPrefix}${email}`);

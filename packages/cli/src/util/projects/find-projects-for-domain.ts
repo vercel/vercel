@@ -1,6 +1,7 @@
 import Client from '../client';
-import { Project } from '../../types';
+import type { Project } from '@vercel-internals/types';
 import { URLSearchParams } from 'url';
+import { isAPIError } from '../errors-ts';
 
 export async function findProjectsForDomain(
   client: Client,
@@ -29,8 +30,8 @@ export async function findProjectsForDomain(
     }
 
     return result;
-  } catch (err) {
-    if (err.status < 500) {
+  } catch (err: unknown) {
+    if (isAPIError(err) && err.status < 500) {
       return err;
     }
 

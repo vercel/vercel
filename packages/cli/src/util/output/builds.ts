@@ -1,15 +1,11 @@
 import chalk from 'chalk';
-import title from 'title';
 import bytes from 'bytes';
 import { isReady, isFailed } from '../build-state';
-import { Build, BuildOutput } from '../../types';
+import { Build, BuildOutput } from '@vercel-internals/types';
 
 export interface Times {
   [id: string]: string | null;
 }
-
-// That's how long the word "Initializing" is
-const longestState = 12;
 
 // That's the spacing between the source, state and time
 const padding = 8;
@@ -17,8 +13,6 @@ const padding = 8;
 // That's the max numbers of builds and outputs that will be displayed
 const MAX_BUILD_GROUPS = 5;
 const MAX_OUTPUTS_PER_GROUP = 5;
-
-const prepareState = (state: string) => title(state.replace('_', ' '));
 
 const hasOutput = (b: Build) => Array.isArray(b.output) && b.output.length > 0;
 
@@ -47,24 +41,19 @@ const getCommonPath = (buildGroup: Build[]) => {
 };
 
 const styleBuild = (build: Build, times: Times, longestSource: number) => {
-  const { entrypoint, readyState, id } = build;
-  const state = prepareState(readyState).padEnd(longestState + padding);
+  const { entrypoint, id } = build;
   const time = typeof times[id] === 'string' ? times[id] : '';
 
-  let stateColor = chalk.grey;
   let pathColor = chalk.cyan;
 
-  if (isReady(build)) {
-    stateColor = chalk;
-  } else if (isFailed(build)) {
-    stateColor = chalk.red;
+  if (isFailed(build)) {
     pathColor = chalk.red;
   }
 
   const entry = entrypoint.padEnd(longestSource + padding);
   const prefix = hasOutput(build) ? '┌' : '╶';
 
-  return `${chalk.grey(prefix)} ${pathColor(entry)}${stateColor(state)}${time}`;
+  return `${chalk.grey(prefix)} ${pathColor(entry)}${time}`;
 };
 
 const styleHiddenBuilds = (
@@ -79,43 +68,9 @@ const styleHiddenBuilds = (
   const time = typeof times[id] === 'string' ? times[id] : '';
   const prefix = isHidden === false && buildGroup.some(hasOutput) ? '┌' : '╶';
 
-  // Set the defaults so that they will be sorted
-  const stateMap: { [readyState: string]: number } = {
-    READY: 0,
-    ERROR: 0,
-    BUILDING: 0,
-  };
-
-  for (const { readyState } of buildGroup) {
-    stateMap[readyState]++;
-  }
-
-  let state = Object.keys(stateMap)
-    .map(readyState => {
-      const counter = stateMap[readyState];
-      const name = prepareState(readyState);
-
-      if (!counter) {
-        return null;
-      }
-
-      return `${counter > 9 ? '9+' : counter} ${name}`;
-    })
-    .filter(s => s)
-    .join(', ');
-
-  // Since the longestState might still be shorter
-  // than multiple states we still want to ensure
-  // a space between the states and the time
-  state = `${state} `.padEnd(longestState + padding);
-
   let pathColor = chalk.cyan;
-  let stateColor = chalk.grey;
 
-  if (buildGroup.every(isReady)) {
-    stateColor = chalk;
-  } else if (buildGroup.every(isFailed)) {
-    stateColor = chalk.red;
+  if (buildGroup.every(isFailed)) {
     pathColor = chalk.red;
   }
 
@@ -123,7 +78,7 @@ const styleHiddenBuilds = (
     pathColor = chalk.grey;
   }
 
-  return `${chalk.grey(prefix)} ${pathColor(entry)}${stateColor(state)}${time}`;
+  return `${chalk.grey(prefix)} ${pathColor(entry)}${time}`;
 };
 
 const styleOutput = (

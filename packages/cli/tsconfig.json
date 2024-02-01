@@ -1,18 +1,17 @@
 {
   "compilerOptions": {
-    "strict": true,
-    "noEmitOnError": true,
-    "noFallthroughCasesInSwitch": true,
-    "moduleResolution": "node",
-    "module": "commonjs",
-    "target": "es2019",
-    "esModuleInterop": true,
     "allowJs": true,
-    "lib": ["esnext"],
-    "resolveJsonModule": true,
-    "sourceMap": true,
+    "noImplicitReturns": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
     "outDir": "./dist",
+    "resolveJsonModule": true,
     "typeRoots": ["./types", "./node_modules/@types"]
   },
-  "include": ["./types", "src/**/*"]
+  "extends": "../../tsconfig.base.json",
+  "include": ["./types", "src/**/*"],
+  "exclude": ["templates/*"],
+  "ts-node": {
+    "swc": true // https://typestrong.org/ts-node/docs/swc/
+  }
 }

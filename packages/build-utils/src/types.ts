@@ -41,8 +41,21 @@ export interface Config {
   devCommand?: string;
   framework?: string | null;
   nodeVersion?: string;
+  middleware?: boolean;
   [key: string]: unknown;
 }
+
+export type HasField = Array<
+  | {
+      type: 'host';
+      value: string;
+    }
+  | {
+      type: 'header' | 'cookie' | 'query';
+      key: string;
+      value?: string;
+    }
+>;
 
 export interface Meta {
   isDev?: boolean;
@@ -82,7 +95,7 @@ export interface BuildOptions {
    * is the Git Repository Root. This is only relevant for Monorepos.
    * See https://vercel.com/blog/monorepos
    */
-  repoRootPath?: string;
+  repoRootPath: string;
 
   /**
    * An arbitrary object passed by the user in the build definition defined
@@ -123,7 +136,7 @@ export interface PrepareCacheOptions {
    * is the Git Repository Root. This is only relevant for Monorepos.
    * See https://vercel.com/blog/monorepos
    */
-  repoRootPath?: string;
+  repoRootPath: string;
 
   /**
    * An arbitrary object passed by the user in the build definition defined
@@ -183,6 +196,12 @@ export interface StartDevServerSuccess {
    * shut down the dev server once an HTTP request has been fulfilled.
    */
   pid: number;
+
+  /**
+   * An optional function to shut down the dev server. If not provided, the
+   * dev server will forcefully be killed.
+   */
+  shutdown?: () => Promise<void>;
 }
 
 /**
@@ -295,12 +314,17 @@ export interface PackageJson {
   readonly preferGlobal?: boolean;
   readonly private?: boolean;
   readonly publishConfig?: PackageJson.PublishConfig;
+  readonly packageManager?: string;
 }
 
 export interface NodeVersion {
+  /** major version number: 18 */
   major: number;
+  /** major version range: "18.x" */
   range: string;
+  /** runtime descriptor: "nodejs18.x" */
   runtime: string;
+  /** date beyond which this version is discontinued: 2023-08-17T19:05:45.951Z */
   discontinueDate?: Date;
 }
 
@@ -327,6 +351,7 @@ export interface ProjectSettings {
   buildCommand?: string | null;
   outputDirectory?: string | null;
   rootDirectory?: string | null;
+  nodeVersion?: string;
   createdAt?: number;
   autoExposeSystemEnvs?: boolean;
   sourceFilesOutsideRootDirectory?: boolean;
@@ -339,6 +364,7 @@ export interface BuilderV2 {
   version: 2;
   build: BuildV2;
   prepareCache?: PrepareCache;
+  shouldServe?: ShouldServe;
 }
 
 export interface BuilderV3 {
@@ -351,11 +377,44 @@ export interface BuilderV3 {
 
 type ImageFormat = 'image/avif' | 'image/webp';
 
+type ImageContentDispositionType = 'inline' | 'attachment';
+
+export type RemotePattern = {
+  /**
+   * Must be `http` or `https`.
+   */
+  protocol?: 'http' | 'https';
+
+  /**
+   * Can be literal or wildcard.
+   * Single `*` matches a single subdomain.
+   * Double `**` matches any number of subdomains.
+   */
+  hostname: string;
+
+  /**
+   * Can be literal port such as `8080` or empty string
+   * meaning no port.
+   */
+  port?: string;
+
+  /**
+   * Can be literal or wildcard.
+   * Single `*` matches a single path segment.
+   * Double `**` matches any number of path segments.
+   */
+  pathname?: string;
+};
+
 export interface Images {
   domains: string[];
+  remotePatterns?: RemotePattern[];
   sizes: number[];
   minimumCacheTTL?: number;
   formats?: ImageFormat[];
+  dangerouslyAllowSVG?: boolean;
+  contentSecurityPolicy?: string;
+  contentDispositionType?: ImageContentDispositionType;
 }
 
 /**
@@ -376,6 +435,26 @@ export interface BuildResultBuildOutput {
   buildOutputPath: string;
 }
 
+export interface Cron {
+  path: string;
+  schedule: string;
+}
+
+/**
+ * @deprecated Replaced by Variants. Remove once fully replaced.
+ */
+export interface Flag {
+  key: string;
+  defaultValue?: unknown;
+  metadata: Record<string, unknown>;
+}
+
+/** The framework which created the function */
+export interface FunctionFramework {
+  slug: string;
+  version?: string;
+}
+
 /**
  * When a Builder implements `version: 2`, the `build()` function is expected
  * to return this type.
@@ -391,12 +470,20 @@ export interface BuildResultV2Typical {
     domain: string;
     value: string;
   }>;
+  framework?: {
+    version: string;
+  };
+  /** @deprecated Replaced by Variants. Remove once fully replaced. */
+  flags?: Flag[];
+  variants?: Record<string, VariantDefinition>;
 }
 
 export type BuildResultV2 = BuildResultV2Typical | BuildResultBuildOutput;
 
 export interface BuildResultV3 {
-  output: Lambda;
+  // TODO: use proper `Route` type from `routing-utils` (perhaps move types to a common package)
+  routes?: any[];
+  output: Lambda | EdgeFunction;
 }
 
 export type BuildV2 = (options: BuildOptions) => Promise<BuildResultV2>;
@@ -408,3 +495,28 @@ export type ShouldServe = (
 export type StartDevServer = (
   options: StartDevServerOptions
 ) => Promise<StartDevServerResult>;
+
+/**
+ * TODO: The following types will eventually be exported by a more
+ *       relevant package.
+ */
+type VariantJSONArray = ReadonlyArray<VariantJSONValue>;
+
+type VariantJSONValue =
+  | string
+  | boolean
+  | number
+  | null
+  | VariantJSONArray
+  | { [key: string]: VariantJSONValue };
+
+type VariantOption = {
+  value: VariantJSONValue;
+  label?: string;
+};
+
+export interface VariantDefinition {
+  options?: VariantOption[];
+  origin?: string;
+  description?: string;
+}

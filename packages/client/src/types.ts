@@ -1,15 +1,21 @@
-import {
+import type { Agent } from 'http';
+import type {
   Builder,
   BuilderFunctions,
+  Images,
   ProjectSettings,
+  Cron,
 } from '@vercel/build-utils';
-import { Header, Route, Redirect, Rewrite } from '@vercel/routing-utils';
+import type { Header, Route, Redirect, Rewrite } from '@vercel/routing-utils';
 
 export { DeploymentEventType } from './utils';
 
 export interface Dictionary<T> {
   [key: string]: T;
 }
+
+export const VALID_ARCHIVE_FORMATS = ['tgz'] as const;
+export type ArchiveFormat = typeof VALID_ARCHIVE_FORMATS[number];
 
 export interface VercelClientOptions {
   token: string;
@@ -19,12 +25,14 @@ export interface VercelClientOptions {
   apiUrl?: string;
   force?: boolean;
   prebuilt?: boolean;
-  rootDirectory?: string;
+  rootDirectory?: string | null;
   withCache?: boolean;
   userAgent?: string;
   defaultName?: string;
   isDirectory?: boolean;
   skipAutoDetectionConfirmation?: boolean;
+  archive?: ArchiveFormat;
+  agent?: Agent;
 }
 
 /** @deprecated Use VercelClientOptions instead. */
@@ -37,6 +45,7 @@ export interface Deployment {
   id: string;
   deploymentId?: string;
   url: string;
+  inspectorUrl: string;
   name: string;
   meta: Dictionary<string | number | boolean>;
   version: 2;
@@ -53,6 +62,8 @@ export interface Deployment {
     | 'BUILDING'
     | 'DEPLOYING'
     | 'READY'
+    | 'QUEUED'
+    | 'CANCELED'
     | 'ERROR';
   state?:
     | 'INITIALIZING'
@@ -60,9 +71,19 @@ export interface Deployment {
     | 'BUILDING'
     | 'DEPLOYING'
     | 'READY'
+    | 'QUEUED'
+    | 'CANCELED'
     | 'ERROR';
+  ready?: number;
   createdAt: number;
   createdIn: string;
+  buildingAt?: number;
+  creator?: {
+    uid?: string;
+    email?: string;
+    name?: string;
+    username?: string;
+  };
   env: Dictionary<string>;
   build: {
     env: Dictionary<string>;
@@ -129,6 +150,23 @@ export interface VercelConfig {
   alias?: string | string[];
   regions?: string[];
   projectSettings?: ProjectSettings;
+  buildCommand?: string | null;
+  ignoreCommand?: string | null;
+  devCommand?: string | null;
+  installCommand?: string | null;
+  framework?: string | null;
+  outputDirectory?: string | null;
+  images?: Images;
+  crons?: Cron[];
+}
+
+export interface GitMetadata {
+  commitAuthorName?: string | undefined;
+  commitMessage?: string | undefined;
+  commitRef?: string | undefined;
+  commitSha?: string | undefined;
+  dirty?: boolean | undefined;
+  remoteUrl?: string;
 }
 
 /**
@@ -155,4 +193,6 @@ export interface DeploymentOptions {
   public?: boolean;
   meta?: Dictionary<string>;
   projectSettings?: ProjectSettings;
+  gitMetadata?: GitMetadata;
+  autoAssignCustomDomains?: boolean;
 }

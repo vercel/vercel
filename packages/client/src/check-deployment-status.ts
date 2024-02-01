@@ -1,6 +1,6 @@
 import sleep from 'sleep-promise';
-import ms from 'ms';
 import { fetch, getApiDeploymentsUrl } from './utils';
+import { getPollingDelay } from './utils/get-polling-delay';
 import {
   isDone,
   isReady,
@@ -47,6 +47,7 @@ export async function* checkDeploymentStatus(
   // Build polling
   debug('Waiting for builds and the deployment to complete...');
   const finishedEvents = new Set();
+  const startTime = Date.now();
 
   while (true) {
     // Deployment polling
@@ -55,7 +56,7 @@ export async function* checkDeploymentStatus(
         teamId ? `?teamId=${teamId}` : ''
       }`,
       token,
-      { apiUrl, userAgent }
+      { apiUrl, userAgent, agent: clientOptions.agent }
     );
     const deploymentUpdate = await deploymentData.json();
 
@@ -155,6 +156,8 @@ export async function* checkDeploymentStatus(
       };
     }
 
-    await sleep(ms('1.5s'));
+    const elapsed = Date.now() - startTime;
+    const duration = getPollingDelay(elapsed);
+    await sleep(duration);
   }
 }

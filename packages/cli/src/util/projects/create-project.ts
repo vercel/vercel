@@ -1,13 +1,13 @@
 import Client from '../client';
-import { Project } from '../../types';
+import type { Project, ProjectSettings } from '@vercel-internals/types';
 
 export default async function createProject(
   client: Client,
-  projectName: string
+  settings: ProjectSettings & { name: string }
 ) {
   const project = await client.fetch<Project>('/v1/projects', {
     method: 'POST',
-    body: JSON.stringify({ name: projectName }),
+    body: { ...settings },
   });
   return project;
 }

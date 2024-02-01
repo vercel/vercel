@@ -1,0 +1,12 @@
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Note**: This category is intended for sharing ideas related to Vercel CLI or Runtimes. 
+
+        Please visit the [Vercel Community](https://github.com/orgs/vercel/discussions) to share ideas for other Vercel tools and features.
+  - type: textarea
+    attributes:
+      label: Idea
+    validations:
+      required: true

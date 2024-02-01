@@ -1,0 +1,11 @@
+{
+  "probes": [
+    {
+      "path": "/api",
+      "mustContain": "wsgi:RANDOMNESS_PLACEHOLDER",
+      "responseHeaders": {
+        "content-type": "text/html; charset=utf-8"
+      }
+    }
+  ]
+}

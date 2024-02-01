@@ -1,12 +1,10 @@
-import { lstat as lstatRaw } from 'fs';
-import { promisify } from 'util';
+import { lstat } from 'fs-extra';
 import { Output } from './output';
 import chalk from 'chalk';
 import { homedir } from 'os';
 import confirm from './input/confirm';
 import toHumanPath from './humanize-path';
-
-const stat = promisify(lstatRaw);
+import Client from './client';
 
 /**
  * A helper function to validate the `rootDirectory` input.
@@ -17,32 +15,32 @@ export async function validateRootDirectory(
   path: string,
   errorSuffix: string
 ) {
-  const pathStat = await stat(path).catch(() => null);
+  const pathStat = await lstat(path).catch(() => null);
   const suffix = errorSuffix ? ` ${errorSuffix}` : '';
 
   if (!pathStat) {
-    output.print(
-      `${chalk.red('Error!')} The provided path ${chalk.cyan(
+    output.error(
+      `The provided path ${chalk.cyan(
         `“${toHumanPath(path)}”`
-      )} does not exist.${suffix}\n`
+      )} does not exist.${suffix}`
     );
     return false;
   }
 
   if (!pathStat.isDirectory()) {
-    output.print(
-      `${chalk.red('Error!')} The provided path ${chalk.cyan(
+    output.error(
+      `The provided path ${chalk.cyan(
         `“${toHumanPath(path)}”`
-      )} is a file, but expected a directory.${suffix}\n`
+      )} is a file, but expected a directory.${suffix}`
     );
     return false;
   }
 
   if (!path.startsWith(cwd)) {
-    output.print(
-      `${chalk.red('Error!')} The provided path ${chalk.cyan(
+    output.error(
+      `The provided path ${chalk.cyan(
         `“${toHumanPath(path)}”`
-      )} is outside of the project.${suffix}\n`
+      )} is outside of the project.${suffix}`
     );
     return false;
   }
@@ -51,26 +49,24 @@ export async function validateRootDirectory(
 }
 
 export default async function validatePaths(
-  output: Output,
+  client: Client,
   paths: string[]
 ): Promise<{ valid: true; path: string } | { valid: false; exitCode: number }> {
+  const { output } = client;
+
   // can't deploy more than 1 path
   if (paths.length > 1) {
-    output.print(`${chalk.red('Error!')} Can't deploy more than one path.\n`);
+    output.error(`Can't deploy more than one path.`);
     return { valid: false, exitCode: 1 };
   }
 
   const path = paths[0];
 
   // can only deploy a directory
-  const pathStat = await stat(path).catch(() => null);
+  const pathStat = await lstat(path).catch(() => null);
 
   if (!pathStat) {
-    output.print(
-      `${chalk.red('Error!')} Could not find ${chalk.cyan(
-        `“${toHumanPath(path)}”`
-      )}\n`
-    );
+    output.error(`Could not find ${chalk.cyan(`“${toHumanPath(path)}”`)}`);
     return { valid: false, exitCode: 1 };
   }
 
@@ -85,12 +81,13 @@ export default async function validatePaths(
   // ask confirmation if the directory is home
   if (path === homedir()) {
     const shouldDeployHomeDirectory = await confirm(
+      client,
       `You are deploying your home directory. Do you want to continue?`,
       false
     );
 
     if (!shouldDeployHomeDirectory) {
-      output.print(`Aborted\n`);
+      output.print(`Canceled\n`);
       return { valid: false, exitCode: 0 };
     }
   }

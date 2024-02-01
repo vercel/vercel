@@ -1,0 +1,35 @@
+{
+  "name": "@vercel/edge",
+  "version": "1.1.1",
+  "license": "Apache-2.0",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "homepage": "https://vercel.com/docs/concepts/functions/edge-functions/vercel-edge-package",
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vercel/vercel.git",
+    "directory": "packages/edge"
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --dts --format esm,cjs",
+    "build:docs": "typedoc && node scripts/fix-links.js && prettier --write docs/**/*.md docs/*.md",
+    "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --runInBand --bail",
+    "test-unit": "pnpm test",
+    "type-check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@edge-runtime/jest-environment": "2.3.7",
+    "@types/jest": "27.4.1",
+    "jest-junit": "16.0.0",
+    "ts-node": "8.9.1",
+    "tsup": "6.1.2",
+    "typedoc": "0.24.6",
+    "typedoc-plugin-markdown": "3.15.2",
+    "typedoc-plugin-mdn-links": "3.0.3",
+    "typescript": "4.9.5"
+  }
+}

@@ -7,18 +7,26 @@ import fetch from 'node-fetch';
 import { URL, URLSearchParams } from 'url';
 import frameworkList from '../src/frameworks';
 
+// bump timeout for Windows as network can be slower
+jest.setTimeout(15 * 1000);
+
+const logoPrefix = 'https://api-frameworks.vercel.sh/framework-logos/';
+
 const SchemaFrameworkDetectionItem = {
   type: 'array',
   items: [
     {
       type: 'object',
-      required: ['path'],
+      required: [],
       additionalProperties: false,
       properties: {
         path: {
           type: 'string',
         },
         matchContent: {
+          type: 'string',
+        },
+        matchPackage: {
           type: 'string',
         },
       },
@@ -43,6 +51,22 @@ const SchemaSettings = {
     },
     {
       type: 'object',
+      required: ['value', 'ignorePackageJsonScript'],
+      additionalProperties: false,
+      properties: {
+        value: {
+          type: 'string',
+        },
+        placeholder: {
+          type: 'string',
+        },
+        ignorePackageJsonScript: {
+          type: 'boolean',
+        },
+      },
+    },
+    {
+      type: 'object',
       required: ['placeholder'],
       additionalProperties: false,
       properties: {
@@ -54,16 +78,40 @@ const SchemaSettings = {
   ],
 };
 
+const RouteSchema = {
+  type: 'array',
+  items: {
+    properties: {
+      src: { type: 'string' },
+      dest: { type: 'string' },
+      status: { type: 'number' },
+      handle: { type: 'string' },
+      headers: { type: 'object' },
+      continue: { type: 'boolean' },
+    },
+  },
+};
+
 const Schema = {
   type: 'array',
   items: {
     type: 'object',
-    required: ['name', 'slug', 'logo', 'description', 'settings'],
+    additionalProperties: false,
+    required: [
+      'name',
+      'slug',
+      'logo',
+      'description',
+      'settings',
+      'getOutputDirName',
+    ],
     properties: {
       name: { type: 'string' },
       slug: { type: ['string', 'null'] },
       sort: { type: 'number' },
       logo: { type: 'string' },
+      darkModeLogo: { type: 'string' },
+      screenshot: { type: 'string' },
       demo: { type: 'string' },
       tagline: { type: 'string' },
       website: { type: 'string' },
@@ -108,6 +156,26 @@ const Schema = {
           outputDirectory: SchemaSettings,
         },
       },
+      getOutputDirName: {
+        isFunction: true,
+      },
+      defaultRoutes: {
+        oneOf: [{ isFunction: true }, RouteSchema],
+      },
+      defaulHeaders: {
+        type: 'array',
+        items: {
+          properties: {
+            source: { type: 'string' },
+            regex: { type: 'string' },
+            headers: { type: 'object' },
+            continue: { type: 'boolean' },
+          },
+        },
+      },
+      disableRootMiddleware: {
+        type: 'boolean',
+      },
       recommendedIntegrations: {
         type: 'array',
         items: {
@@ -131,6 +199,7 @@ const Schema = {
       dependency: { type: 'string' },
       cachePattern: { type: 'string' },
       defaultVersion: { type: 'string' },
+      supersedes: { type: 'string' },
     },
   },
 };
@@ -159,7 +228,8 @@ describe('frameworks', () => {
   });
 
   it('ensure schema', async () => {
-    const ajv = new Ajv();
+    const ajv = getValidator();
+
     const result = ajv.validate(Schema, frameworkList);
 
     if (ajv.errors) {
@@ -169,14 +239,33 @@ describe('frameworks', () => {
     expect(result).toBe(true);
   });
 
-  it('ensure logo', async () => {
+  it('ensure logo starts with url prefix', async () => {
+    const invalid = frameworkList
+      .map(f => f.logo)
+      .filter(logo => {
+        return logo && !logo.startsWith(logoPrefix);
+      });
+
+    expect(invalid).toEqual([]);
+  });
+
+  it('ensure darkModeLogo starts with url prefix', async () => {
+    const invalid = frameworkList
+      .map(f => f.darkModeLogo)
+      .filter(darkModeLogo => {
+        return darkModeLogo && !darkModeLogo.startsWith(logoPrefix);
+      });
+
+    expect(invalid).toEqual([]);
+  });
+
+  it('ensure logo file exists in ./packages/frameworks/logos/', async () => {
     const missing = frameworkList
       .map(f => f.logo)
-      .filter(url => {
-        const prefix =
-          'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/';
-        const name = url.replace(prefix, '');
-        return existsSync(join(__dirname, '..', 'logos', name)) === false;
+      .filter(logo => {
+        const filename = logo.slice(logoPrefix.length);
+        const filepath = join(__dirname, '..', 'logos', filename);
+        return existsSync(filepath) === false;
       });
 
     expect(missing).toEqual([]);
@@ -219,3 +308,16 @@ describe('frameworks', () => {
     );
   });
 });
+
+function getValidator() {
+  const ajv = new Ajv();
+
+  ajv.addKeyword('isFunction', {
+    compile: shouldMatch => data => {
+      const matches = typeof data === 'function';
+      return (shouldMatch && matches) || (!shouldMatch && !matches);
+    },
+  });
+
+  return ajv;
+}

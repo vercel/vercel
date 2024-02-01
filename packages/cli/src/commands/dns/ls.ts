@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import ms from 'ms';
 import { DomainNotFound } from '../../util/errors-ts';
-import { DNSRecord } from '../../types';
+import type { DNSRecord } from '@vercel-internals/types';
 import Client from '../../util/client';
 import formatTable from '../../util/format-table';
 import getDNSRecords, {
@@ -9,33 +9,21 @@ import getDNSRecords, {
 } from '../../util/dns/get-dns-records';
 import getDomainDNSRecords from '../../util/dns/get-domain-dns-records';
 import getScope from '../../util/get-scope';
+import {
+  PaginationOptions,
+  getPaginationOpts,
+} from '../../util/get-pagination-opts';
 import stamp from '../../util/output/stamp';
 import getCommandFlags from '../../util/get-command-flags';
 import { getCommandName } from '../../util/pkg-name';
 
-type Options = {
-  '--next'?: number;
-};
-
 export default async function ls(
   client: Client,
-  opts: Options,
+  opts: PaginationOptions,
   args: string[]
 ) {
   const { output } = client;
-  const { '--next': nextTimestamp } = opts;
-  let contextName = null;
-
-  try {
-    ({ contextName } = await getScope(client));
-  } catch (err) {
-    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
-      output.error(err.message);
-      return 1;
-    }
-
-    throw err;
-  }
+  const { contextName } = await getScope(client);
 
   const [domainName] = args;
   const lsStamp = stamp();
@@ -49,8 +37,12 @@ export default async function ls(
     return 1;
   }
 
-  if (typeof nextTimestamp !== 'undefined' && Number.isNaN(nextTimestamp)) {
-    output.error('Please provide a number for flag --next');
+  let paginationOptions;
+
+  try {
+    paginationOptions = getPaginationOpts(opts);
+  } catch (err: unknown) {
+    output.prettyError(err);
     return 1;
   }
 
@@ -59,8 +51,8 @@ export default async function ls(
       output,
       client,
       domainName,
-      nextTimestamp,
-      4
+      4,
+      ...paginationOptions
     );
     if (data instanceof DomainNotFound) {
       output.error(
@@ -78,7 +70,7 @@ export default async function ls(
         records.length > 0 ? 'Records' : 'No records'
       } found under ${chalk.bold(contextName)} ${chalk.gray(lsStamp())}`
     );
-    console.log(getDNSRecordsTable([{ domainName, records }]));
+    client.stdout.write(getDNSRecordsTable([{ domainName, records }]));
 
     if (pagination && pagination.count === 20) {
       const flags = getCommandFlags(opts, ['_', '--next']);
@@ -96,7 +88,7 @@ export default async function ls(
     output,
     client,
     contextName,
-    nextTimestamp
+    ...paginationOptions
   );
   const nRecords = dnsRecords.reduce((p, r) => r.records.length + p, 0);
   output.log(
@@ -104,7 +96,7 @@ export default async function ls(
       contextName
     )} ${chalk.gray(lsStamp())}`
   );
-  console.log(getDNSRecordsTable(dnsRecords));
+  output.log(getDNSRecordsTable(dnsRecords));
   if (pagination && pagination.count === 20) {
     const flags = getCommandFlags(opts, ['_', '--next']);
     output.log(

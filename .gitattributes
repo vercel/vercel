@@ -8,3 +8,7 @@ packages/*/test/* linguist-vendored
 # Go build fails with Windows line endings.
 *.go text eol=lf
 go.mod text eol=lf
+
+# Mark certain files as "binary" -- hide diffs
+**/test/fixtures/**/git/**/* binary
+**/test/fixtures/**/git/**/* linguist-generated

@@ -1,0 +1,48 @@
+{
+  "version": 2,
+  "builds": [{ "src": "package.json", "use": "@vercel/next" }],
+  "probes": [
+    {
+      "path": "/non-existent",
+      "status": 404,
+      "mustContain": "not found page"
+    },
+    {
+      "path": "/non-existent",
+      "status": 404,
+      "mustContain": "lang=\"en\""
+    },
+    {
+      "path": "/fr/non-existent",
+      "status": 404,
+      "mustContain": "not found page"
+    },
+    {
+      "path": "/fr/non-existent",
+      "status": 404,
+      "mustContain": "lang=\"fr\""
+    },
+
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "index page"
+    },
+    {
+      "path": "/fr",
+      "status": 200,
+      "mustContain": "index page"
+    },
+
+    {
+      "path": "/another",
+      "status": 200,
+      "mustContain": "another page"
+    },
+    {
+      "path": "/fr/another",
+      "status": 200,
+      "mustContain": "another page"
+    }
+  ]
+}

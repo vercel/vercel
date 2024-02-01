@@ -1,0 +1,11 @@
+{
+  "scripts": {
+    "build": "next build"
+  },
+  "dependencies": {
+    "next": "latest",
+    "react": "latest",
+    "react-dom": "latest"
+  },
+  "ignoreNextjsUpdates": true
+}

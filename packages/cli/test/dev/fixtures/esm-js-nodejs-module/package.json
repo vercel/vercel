@@ -1,0 +1,8 @@
+{
+  "name": "esm-js-nodejs-module",
+  "dependencies": {
+    "leap-year": "4.0.0"
+  },
+  "private": true,
+  "type": "module"
+}

@@ -1,0 +1,34 @@
+name: Cron Update Gatsby Fixtures
+
+on:
+  # Allow manual runs
+  workflow_dispatch:
+  # Run once a week https://crontab.guru/once-a-week
+  schedule:
+    - cron: '0 0 * * 0'
+
+jobs:
+  update-gatsby-fixtures:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        # 0 means fetch all commits so we can commit and push in the script below
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+      - name: Enable corepack
+        run: corepack enable pnpm
+      - name: Update Gatsby Fixtures
+        uses: actions/github-script@v6
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN_PULL_REQUESTS }}
+        # See https://github.com/actions/github-script#run-a-separate-file-with-an-async-function
+        with:
+          github-token: ${{ secrets.GH_TOKEN_PULL_REQUESTS }}
+          script: |
+            const script = require('./utils/update-gatsby-fixtures.js')
+            await script({ github, context })

@@ -1,7 +1,7 @@
 import http from 'http';
 import open from 'open';
 import { URL } from 'url';
-import listen from 'async-listen';
+import { listen } from 'async-listen';
 import isDocker from 'is-docker';
 import Client from '../client';
 import prompt, { readInput } from './prompt';
@@ -64,8 +64,7 @@ async function getVerificationTokenInBand(
 ) {
   const { output } = client;
   const server = http.createServer();
-  const address = await listen(server, 0, '127.0.0.1');
-  const { port } = new URL(address);
+  const { port } = await listen(server, 0, '127.0.0.1');
   url.searchParams.set('next', `http://localhost:${port}`);
 
   output.log(`Please visit the following URL in your web browser:`);
@@ -176,7 +175,7 @@ async function getVerificationTokenOutOfBand(client: Client, url: URL) {
   output.log(
     `After login is complete, enter the verification code printed in your browser.`
   );
-  const verificationToken = await readInput('Verification code:');
+  const verificationToken = await readInput(client, 'Verification code:');
   output.print(eraseLines(6));
 
   // If the pasted token begins with "saml_", then the `ssoUserId` was returned.

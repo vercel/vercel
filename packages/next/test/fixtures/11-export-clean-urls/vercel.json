@@ -1,0 +1,21 @@
+{
+  "version": 2,
+  "builds": [{ "src": "package.json", "use": "@vercel/next" }],
+  "probes": [
+    {
+      "path": "/",
+      "mustContain": "Hi There"
+    },
+    {
+      "path": "/about",
+      "mustContain": "Hi on About"
+    },
+    {
+      "path": "/",
+      "mustContain": "nextExport\":true"
+    },
+    {
+      "logMustContain": "Notice: detected `next export`, this de-opts some Next.js features"
+    }
+  ]
+}

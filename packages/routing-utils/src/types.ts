@@ -21,7 +21,7 @@ export type HasField = Array<
     }
 >;
 
-export type Source = {
+export type RouteWithSrc = {
   src: string;
   dest?: string;
   headers?: { [name: string]: string };
@@ -44,19 +44,23 @@ export type Source = {
    */
   middlewarePath?: string;
   /**
+   * The original middleware matchers.
+   */
+  middlewareRawSrc?: string[];
+  /**
    * A middleware index in the `middleware` key under the build result
    */
   middleware?: number;
 };
 
-export type Handler = {
+export type RouteWithHandle = {
   handle: HandleValue;
   src?: string;
   dest?: string;
   status?: number;
 };
 
-export type Route = Source | Handler;
+export type Route = RouteWithSrc | RouteWithHandle;
 
 export type NormalizedRoutes = {
   routes: Route[] | null;
@@ -64,7 +68,12 @@ export type NormalizedRoutes = {
 };
 
 export interface GetRoutesProps {
-  nowConfig: VercelConfig;
+  routes?: Route[];
+  cleanUrls?: boolean;
+  rewrites?: Rewrite[];
+  redirects?: Redirect[];
+  headers?: Header[];
+  trailingSlash?: boolean;
 }
 
 export interface MergeRoutesProps {
@@ -78,22 +87,12 @@ export interface Build {
   routes?: Route[];
 }
 
-export interface VercelConfig {
-  name?: string;
-  version?: number;
-  routes?: Route[];
-  cleanUrls?: boolean;
-  rewrites?: Rewrite[];
-  redirects?: Redirect[];
-  headers?: Header[];
-  trailingSlash?: boolean;
-}
-
 export interface Rewrite {
   source: string;
   destination: string;
   has?: HasField;
   missing?: HasField;
+  statusCode?: number;
 }
 
 export interface Redirect {
@@ -128,21 +127,7 @@ export interface AppendRoutesToPhaseProps {
   newRoutes: Route[] | null;
   /**
    * The phase to append the routes such as `filesystem`.
+   * If the phase is `null`, the routes will be appended prior to the first handle being found.
    */
-  phase: HandleValue;
+  phase: HandleValue | null;
 }
-
-/** @deprecated Use VercelConfig instead. */
-export type NowConfig = VercelConfig;
-
-/** @deprecated Use Rewrite instead. */
-export type NowRewrite = Rewrite;
-
-/** @deprecated Use Redirect instead. */
-export type NowRedirect = Redirect;
-
-/** @deprecated Use Header instead. */
-export type NowHeader = Header;
-
-/** @deprecated Use HeaderKeyValue instead. */
-export type NowHeaderKeyValue = HeaderKeyValue;

@@ -1,24 +1,21 @@
 {
   "name": "api",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "API for the vercel/vercel repo",
   "main": "index.js",
-  "scripts": {
-    "vercel-build": "node ../utils/run.js build all"
-  },
+  "scripts": {},
   "dependencies": {
     "@sentry/node": "5.11.1",
     "got": "10.2.1",
-    "node-fetch": "2.6.1",
+    "node-fetch": "2.6.7",
     "parse-github-url": "1.0.2",
     "tar-fs": "2.0.0",
     "unzip-stream": "0.3.0"
   },
   "devDependencies": {
-    "@types/node": "13.1.4",
+    "@types/node": "16.18.11",
     "@types/node-fetch": "2.5.4",
-    "@vercel/node": "1.9.0",
-    "typescript": "3.9.6"
+    "@vercel/node": "*"
   }
 }

@@ -1,14 +1,16 @@
 {
-  "name": "@example/basics",
-  "version": "0.0.1",
   "private": true,
   "scripts": {
     "dev": "astro dev",
     "start": "astro dev",
     "build": "astro build",
-    "preview": "astro preview"
+    "preview": "astro preview",
+    "astro": "astro"
   },
-  "devDependencies": {
-    "astro": "^1.0.0-beta.20"
+  "dependencies": {
+    "@astrojs/vercel": "3.8.2",
+    "astro": "^2.10.14",
+    "react": "18.2.0",
+    "web-vitals": "^3.3.1"
   }
 }

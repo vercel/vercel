@@ -6,6 +6,7 @@ import DevServer from './server';
 
 import { VercelConfig, HttpHeadersConfig, RouteResult } from './types';
 import { isHandler, Route, HandleValue } from '@vercel/routing-utils';
+import { parseQueryString } from './parse-query-string';
 
 export function resolveRouteParameters(
   str: string,
@@ -56,7 +57,9 @@ export async function devRouter(
   phase?: HandleValue | null
 ): Promise<RouteResult> {
   let result: RouteResult | undefined;
-  let { query, pathname: reqPathname = '/' } = url.parse(reqUrl, true);
+  let { pathname: reqPathname, search: reqSearch } = url.parse(reqUrl);
+  reqPathname = reqPathname || '/';
+  const reqQuery = parseQueryString(reqSearch);
   const combinedHeaders: HttpHeadersConfig = { ...previousHeaders };
   let status: number | undefined;
   let isContinue = false;
@@ -128,7 +131,8 @@ export async function devRouter(
           phase !== 'hit' &&
           !isDestUrl
         ) {
-          const { pathname = '/' } = url.parse(destPath);
+          let { pathname } = url.parse(destPath);
+          pathname = pathname || '/';
           const hasDestFile = await devServer.hasFilesystem(
             pathname,
             vercelConfig
@@ -174,7 +178,7 @@ export async function devRouter(
             isDestUrl,
             status: routeConfig.status || status,
             headers: combinedHeaders,
-            uri_args: query,
+            query: reqQuery,
             matched_route: routeConfig,
             matched_route_idx: idx,
             phase,
@@ -184,17 +188,20 @@ export async function devRouter(
           if (!destPath.startsWith('/')) {
             destPath = `/${destPath}`;
           }
-          const destParsed = url.parse(destPath, true);
-          Object.assign(destParsed.query, query);
+          let { pathname: destPathname, search: destSearch } =
+            url.parse(destPath);
+          destPathname = destPathname || '/';
+          const destQuery = parseQueryString(destSearch);
+          Object.assign(destQuery, reqQuery);
           result = {
             found: true,
-            dest: destParsed.pathname || '/',
+            dest: destPathname,
             continue: isContinue,
             userDest: Boolean(routeConfig.dest),
             isDestUrl,
             status: routeConfig.status || status,
             headers: combinedHeaders,
-            uri_args: destParsed.query,
+            query: destQuery,
             matched_route: routeConfig,
             matched_route_idx: idx,
             phase,
@@ -212,7 +219,7 @@ export async function devRouter(
       continue: isContinue,
       status,
       isDestUrl: false,
-      uri_args: query,
+      query: reqQuery,
       headers: combinedHeaders,
       phase,
     };

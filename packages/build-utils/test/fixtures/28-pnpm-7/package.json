@@ -1,9 +1,0 @@
-{
-  "private": "true",
-  "scripts": {
-    "build": "mkdir -p public && (printf \"pnpm version: \" && pnpm -v) > public/index.txt"
-  },
-  "dependencies": {
-    "once": "^1.4.0"
-  }
-}

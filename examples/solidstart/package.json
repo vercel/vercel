@@ -7,14 +7,18 @@
   "type": "module",
   "private": true,
   "devDependencies": {
-    "solid-app-router": "^0.1.14",
-    "solid-js": "^1.2.6",
-    "solid-meta": "^0.27.2",
-    "solid-start": "next",
-    "solid-start-vercel": "next",
-    "vite": "^2.7.1"
+    "solid-start-vercel": "^0.2.26",
+    "typescript": "^5.0.4",
+    "vite": "^4.3.8"
+  },
+  "dependencies": {
+    "@solidjs/meta": "^0.28.5",
+    "@solidjs/router": "^0.8.2",
+    "solid-js": "^1.7.5",
+    "solid-start": "^0.2.26",
+    "undici": "^5.22.1"
   },
   "engines": {
-    "node": ">=14"
+    "node": "18.x"
   }
 }

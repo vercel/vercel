@@ -1,0 +1,22 @@
+{
+  "name": "gatsby-v5-pathprefix",
+  "version": "1.0.0",
+  "private": true,
+  "description": "gatsby-v5-pathPrefix",
+  "author": "Ethan Arrowood",
+  "keywords": [
+    "gatsby"
+  ],
+  "scripts": {
+    "develop": "gatsby develop",
+    "start": "gatsby develop",
+    "build": "gatsby build --prefix-paths",
+    "serve": "gatsby serve",
+    "clean": "gatsby clean"
+  },
+  "dependencies": {
+    "gatsby": "5.13.3",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  }
+}

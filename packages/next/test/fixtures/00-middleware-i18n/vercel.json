@@ -1,0 +1,110 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next"
+    }
+  ],
+  "probes": [
+    {
+      "path": "/_next/data/testing-build-id/en/dynamic/static.json",
+      "status": 200,
+      "headers": {
+        "x-nextjs-data": 1
+      },
+      "responseHeaders": {
+        "x-matched-path": "/en/dynamic/static"
+      }
+    },
+    {
+      "path": "/_next/data/testing-build-id/en/team-1/slug-1.json",
+      "status": 200,
+      "headers": {
+        "x-nextjs-data": 1
+      },
+      "responseHeaders": {
+        "x-matched-path": "/en/[teamId]/[slug]"
+      }
+    },
+    {
+      "path": "/_next/data/testing-build-id/en/dynamic/id-1.json",
+      "status": 200,
+      "headers": {
+        "x-nextjs-data": 1
+      },
+      "responseHeaders": {
+        "x-matched-path": "/en/dynamic/[id]"
+      }
+    },
+    {
+      "path": "/_next/data/testing-build-id/en/rewrite-to-site.json",
+      "status": 200,
+      "headers": {
+        "x-nextjs-data": 1
+      },
+      "mustContain": "site\":\"subdomain-1\"",
+      "mustNotContain": "<html>"
+    },
+    {
+      "path": "/redirect-me",
+      "status": 307,
+      "responseHeaders": {
+        "Location": "/from-next-config/"
+      },
+      "fetchOptions": {
+        "redirect": "manual"
+      }
+    },
+    {
+      "path": "/rewrite-before-files",
+      "status": 404,
+      "fetchOptions": {
+        "redirect": "manual"
+      }
+    },
+    {
+      "path": "/somewhere",
+      "status": 307,
+      "responseHeaders": {
+        "Location": "/from-middleware/"
+      },
+      "fetchOptions": {
+        "redirect": "manual"
+      }
+    },
+    {
+      "path": "/after-file-rewrite",
+      "status": 200,
+      "mustContain": "About Page"
+    },
+    {
+      "path": "/_next/data/testing-build-id/en/after-file-rewrite.json",
+      "status": 200,
+      "headers": {
+        "x-nextjs-data": "1"
+      },
+      "mustContain": "page\":\"about\""
+    },
+    {
+      "path": "/_next/data/testing-build-id/en/after-file-rewrite-auto-static-dynamic.json",
+      "status": 200,
+      "headers": {
+        "x-nextjs-data": "1"
+      },
+      "responseHeaders": {
+        "x-matched-path": "/en/dynamic/[id]"
+      },
+      "mustContain": "{}"
+    },
+    {
+      "path": "/_next/data/testing-build-id/en/_sites/subdomain-1.json",
+      "status": 200,
+      "fetchOptions": {
+        "redirect": "manual"
+      },
+      "mustNotContain": "<html>",
+      "mustContain": "\"site\":\"subdomain-1\""
+    }
+  ]
+}

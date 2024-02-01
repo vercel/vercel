@@ -1,0 +1,217 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next",
+      "config": {
+        "functions": {
+          "pages/index.js": {
+            "memory": 512,
+            "maxDuration": 5
+          },
+          "pages/another.js": {
+            "memory": 512,
+            "maxDuration": 5
+          },
+          "pages/api/index.js": {
+            "memory": 256,
+            "maxDuration": 5
+          },
+          "pages/**/*.js": {
+            "maxDuration": 5
+          }
+        }
+      }
+    }
+  ],
+  "probes": [
+    {
+      "path": "/$$",
+      "status": 200,
+      "mustContain": ">$$<"
+    },
+    {
+      "path": "/_next/data/testing-build-id/$$.json",
+      "status": 200,
+      "mustContain": "\"$$\""
+    },
+    {
+      "path": "/$$b",
+      "status": 200,
+      "mustContain": ">$$b<"
+    },
+    {
+      "path": "/_next/data/testing-build-id/$$b.json",
+      "status": 200,
+      "mustContain": "\"$$b\""
+    },
+    {
+      "path": "/b$$",
+      "status": 200,
+      "mustContain": ">b$$<"
+    },
+    {
+      "path": "/_next/data/testing-build-id/b$$.json",
+      "status": 200,
+      "mustContain": "\"b$$\""
+    },
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "index page"
+    },
+    {
+      "path": "/build-time-not-found/first",
+      "status": 307,
+      "fetchOptions": {
+        "redirect": "manual"
+      },
+      "responseHeaders": {
+        "location": "//somewhere-else/"
+      }
+    },
+    {
+      "path": "/build-time-not-found/second",
+      "status": 307,
+      "fetchOptions": {
+        "redirect": "manual"
+      },
+      "responseHeaders": {
+        "location": "//somewhere-else/"
+      }
+    },
+    {
+      "path": "/static",
+      "status": 200,
+      "mustContain": "static page"
+    },
+    {
+      "path": "/dynamic/first",
+      "status": 200,
+      "mustContain": "dynamic page"
+    },
+    {
+      "path": "/_next/data/testing-build-id/dynamic/first.json",
+      "status": 200,
+      "mustContain": "hello\":\"world\""
+    },
+    {
+      "path": "/_next/data/testing-build-id/dynamic/first.json",
+      "status": 200,
+      "mustContain": "slug\":\"first\""
+    },
+    {
+      "path": "/fallback/first",
+      "status": 200,
+      "mustContain": "fallback page"
+    },
+    {
+      "path": "/fallback/first",
+      "status": 200,
+      "mustContain": "first"
+    },
+    {
+      "path": "/_next/data/testing-build-id/fallback/first.json",
+      "status": 200,
+      "mustContain": "hello\":\"world\""
+    },
+    {
+      "path": "/_next/data/testing-build-id/fallback/first.json",
+      "status": 200,
+      "mustContain": "slug\":\"first\""
+    },
+    {
+      "path": "/_next/data/testing-build-id/fallback/second.json",
+      "status": 200,
+      "mustContain": "hello\":\"world\""
+    },
+    {
+      "path": "/_next/data/testing-build-id/fallback/second.json",
+      "status": 200,
+      "mustContain": "slug\":\"second\""
+    },
+    {
+      "delay": 2000
+    },
+    {
+      "path": "/fallback/second",
+      "status": 200,
+      "mustContain": "second",
+      "retries": 3,
+      "retryDelay": 2000
+    },
+    {
+      "path": "/api",
+      "status": 200,
+      "mustContain": "page\":\"api/index.js\""
+    },
+    {
+      "path": "/api",
+      "status": 200,
+      "mustContain": "memory\":\"256\""
+    },
+    {
+      "path": "/api/another",
+      "status": 200,
+      "mustContain": "page\":\"api/another.js\""
+    },
+    {
+      "path": "/api/blog/first",
+      "status": 200,
+      "mustContain": "page\":\"api/blog/[slug].js\""
+    },
+    {
+      "path": "/api/blog/second",
+      "status": 200,
+      "mustContain": "slug\":\"second\""
+    },
+    {
+      "path": "/api/system-file",
+      "status": 200,
+      "mustContain": "hello\":\"world\""
+    },
+
+    {
+      "path": "/errors/gip?crash=1",
+      "status": 500,
+      "mustContain": "500: Internal Server Error"
+    },
+    {
+      "path": "/errors/gip?crash=1",
+      "status": 500,
+      "mustContain": "<html"
+    },
+    {
+      "path": "/errors/gssp?crash=1",
+      "status": 500,
+      "mustContain": "500: Internal Server Error"
+    },
+    {
+      "path": "/errors/gssp?crash=1",
+      "status": 500,
+      "mustContain": "<html"
+    },
+    {
+      "path": "/_next/data/testing-build-id/errors/gsp/crash.json",
+      "status": 500,
+      "mustContain": "500: Internal Server Error"
+    },
+    {
+      "path": "/_next/data/testing-build-id/errors/gsp/crash.json",
+      "status": 500,
+      "mustContain": "<html"
+    },
+
+    {
+      "path": "/fallback-blocking/idk",
+      "status": 404,
+      "mustContain": "custom 404"
+    },
+    {
+      "path": "/some-non-found",
+      "status": 404,
+      "mustContain": "custom 404"
+    }
+  ]
+}

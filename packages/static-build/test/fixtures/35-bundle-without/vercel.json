@@ -1,0 +1,7 @@
+{
+  "build": {
+    "env": {
+      "BUNDLE_WITHOUT": "development:test"
+    }
+  }
+}

@@ -1,6 +1,7 @@
 import chalk from 'chalk';
 import Client from '../client';
-import { ProjectAliasTarget } from '../../types';
+import type { ProjectAliasTarget } from '@vercel-internals/types';
+import { isAPIError } from '../errors-ts';
 
 export async function addDomainToProject(
   client: Client,
@@ -33,8 +34,8 @@ export async function addDomainToProject(
     }
 
     return aliasTarget;
-  } catch (err) {
-    if (err.status < 500) {
+  } catch (err: unknown) {
+    if (isAPIError(err) && err.status < 500) {
       return err;
     }
 

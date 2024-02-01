@@ -1,4 +1,3 @@
 /dist
 /test/fixtures/**/types.d.ts
-/test/fixtures/11-symlinks/symlink
 !test/cache-fixtures/**

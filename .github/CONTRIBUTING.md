@@ -6,27 +6,39 @@ Please read our [Code of Conduct](CODE_OF_CONDUCT.md) and follow it in all your 
 
 ## Local development
 
-This project is configured in a monorepo, where one repository contains multiple npm packages. Dependencies are installed and managed with `yarn`, not `npm` CLI.
+This project is configured in a monorepo, where one repository contains multiple npm packages. Dependencies are installed and managed with `pnpm`, not `npm` CLI.
 
 To get started, execute the following:
 
 ```
 git clone https://github.com/vercel/vercel
-yarn install
-yarn bootstrap
-yarn build
-yarn lint
-yarn test-unit
+cd vercel
+corepack enable
+pnpm install
+pnpm build
+pnpm lint
+pnpm test-unit
 ```
 
 Make sure all the tests pass before making changes.
 
-## Verifying your change
+### Running Vercel CLI Changes
 
-Once you are done with your changes (we even suggest doing it along the way), make sure all the test still pass by running:
+You can use `pnpm dev` from the `cli` package to invoke Vercel CLI with local changes:
 
 ```
-yarn test-unit
+cd ./packages/cli
+pnpm dev <cli-commands...>
+```
+
+See [CLI Local Development](../packages/cli#local-development) for more details.
+
+## Verifying your change
+
+Once you are done with your changes (we even suggest doing it along the way), make sure all the tests still pass by running:
+
+```
+pnpm test-unit
 ```
 
 from the root of the project.
@@ -64,7 +76,7 @@ Integration tests create deployments to your Vercel account using the `test` pro
       x-now-trace=iad1]
 ```
 
-In such cases you can visit the URL of the failed deployment and append `/_logs` so see the build error. In the case above, that would be https://test-8ashcdlew.vercel.app/_logs
+In such cases, you can visit the URL of the failed deployment and append `/_logs` to see the build error. In the case above, that would be https://test-8ashcdlew.vercel.app/_logs
 
 The logs of this deployment will contain the actual error which may help you to understand what went wrong.
 
@@ -82,14 +94,14 @@ nodeFileTrace(['path/to/entrypoint.js'], {
   .then(e => console.error(e));
 ```
 
-When you run this script, you'll see all imported files. If anything file is missing, the bug is in [@vercel/nft](https://github.com/vercel/nft) and not the Builder.
+When you run this script, you'll see all the imported files. If anything file is missing, the bug is in [@vercel/nft](https://github.com/vercel/nft) and not the Builder.
 
 ## Deploy a Builder with existing project
 
-Sometimes you want to test changes to a Builder against an existing project, maybe with `vercel dev` or an actual deployment. You can avoid publishing every Builder change to npm by uploading the Builder as a tarball.
+Sometimes you want to test changes to a Builder against an existing project, maybe with `vercel dev` or actual deployment. You can avoid publishing every Builder change to npm by uploading the Builder as a tarball.
 
 1. Change directory to the desired Builder `cd ./packages/node`
-2. Run `yarn build` to compile typescript and other build steps
+2. Run `pnpm build` to compile typescript and other build steps
 3. Run `npm pack` to create a tarball file
 4. Run `vercel *.tgz` to upload the tarball file and get a URL
 5. Edit any existing `vercel.json` project and replace `use` with the URL

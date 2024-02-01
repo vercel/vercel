@@ -1,0 +1,8 @@
+{
+  "probes": [
+    {
+      "path": "/api/bad-receiver",
+      "mustContain": "some/path"
+    }
+  ]
+}

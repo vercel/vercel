@@ -4,9 +4,11 @@ import { Sema } from 'async-sema';
 
 export interface DeploymentFile {
   names: string[];
-  data: Buffer;
+  data?: Buffer;
   mode: number;
 }
+
+export type FilesMap = Map<string | undefined, DeploymentFile>;
 
 /**
  * Computes a hash for the given buf.
@@ -14,7 +16,7 @@ export interface DeploymentFile {
  * @param {Buffer} file data
  * @return {String} hex digest
  */
-function hash(buf: Buffer): string {
+export function hash(buf: Buffer): string {
   return createHash('sha1').update(buf).digest('hex');
 }
 
@@ -23,14 +25,12 @@ function hash(buf: Buffer): string {
  * @param map with hashed files
  * @return {object}
  */
-export const mapToObject = (
-  map: Map<string, DeploymentFile>
-): { [key: string]: DeploymentFile } => {
+export const mapToObject = (map: FilesMap): Record<string, DeploymentFile> => {
   const obj: { [key: string]: DeploymentFile } = {};
   for (const [key, value] of map) {
+    if (typeof key === 'undefined') continue;
     obj[key] = value;
   }
-
   return obj;
 };
 
@@ -43,8 +43,8 @@ export const mapToObject = (
  */
 export async function hashes(
   files: string[],
-  map = new Map<string, DeploymentFile>()
-): Promise<Map<string, DeploymentFile>> {
+  map = new Map<string | undefined, DeploymentFile>()
+): Promise<FilesMap> {
   const semaphore = new Sema(100);
 
   await Promise.all(
@@ -54,15 +54,21 @@ export async function hashes(
       const stat = await fs.lstat(name);
       const mode = stat.mode;
 
-      let data: Buffer | null = null;
-      if (stat.isSymbolicLink()) {
-        const link = await fs.readlink(name);
-        data = Buffer.from(link, 'utf8');
-      } else {
-        data = await fs.readFile(name);
+      let data: Buffer | undefined;
+      const isDirectory = stat.isDirectory();
+
+      let h: string | undefined;
+
+      if (!isDirectory) {
+        if (stat.isSymbolicLink()) {
+          const link = await fs.readlink(name);
+          data = Buffer.from(link, 'utf8');
+        } else {
+          data = await fs.readFile(name);
+        }
+        h = hash(data);
       }
 
-      const h = hash(data);
       const entry = map.get(h);
 
       if (entry) {

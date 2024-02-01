@@ -14,7 +14,7 @@ export default async function reauthenticate(
     client.output.log(
       `You must re-authenticate with SAML to use ${bold(error.scope)} scope.`
     );
-    if (await confirm(`Log in with SAML?`, true)) {
+    if (await confirm(client, `Log in with SAML?`, true)) {
       return doSamlLogin(client, error.teamId);
     }
   } else {

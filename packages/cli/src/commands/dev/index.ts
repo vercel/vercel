@@ -7,52 +7,26 @@ import getSubcommand from '../../util/get-subcommand';
 import Client from '../../util/client';
 import { NowError } from '../../util/now-error';
 import handleError from '../../util/handle-error';
-import logo from '../../util/output/logo';
 import cmd from '../../util/output/cmd';
 import highlight from '../../util/output/highlight';
 import dev from './dev';
 import readConfig from '../../util/config/read-config';
 import readJSONFile from '../../util/read-json-file';
-import { getPkgName, getCommandName } from '../../util/pkg-name';
+import { packageName, getCommandName } from '../../util/pkg-name';
 import { CantParseJSONFile } from '../../util/errors-ts';
+import { isErrnoException } from '@vercel/error-utils';
+import { help } from '../help';
+import { devCommand } from './command';
 
 const COMMAND_CONFIG = {
   dev: ['dev'],
-};
-
-const help = () => {
-  console.log(`
-  ${chalk.bold(`${logo} ${getPkgName()} dev`)} [options] <dir>
-
-  Starts the \`${getPkgName()} dev\` server.
-
-  ${chalk.dim('Options:')}
-
-    -h, --help             Output usage information
-    -d, --debug            Debug mode [off]
-    -l, --listen  [uri]    Specify a URI endpoint on which to listen [0.0.0.0:3000]
-    -t, --token   [token]  Specify an Authorization Token
-    --confirm              Skip questions and use defaults when setting up a new project
-
-  ${chalk.dim('Examples:')}
-
-  ${chalk.gray('–')} Start the \`${getPkgName()} dev\` server on port 8080
-
-      ${chalk.cyan(`$ ${getPkgName()} dev --listen 8080`)}
-
-  ${chalk.gray(
-    '–'
-  )} Make the \`vercel dev\` server bind to localhost on port 5000
-
-      ${chalk.cyan(`$ ${getPkgName()} dev --listen 127.0.0.1:5000`)}
-  `);
 };
 
 export default async function main(client: Client) {
   if (process.env.__VERCEL_DEV_RUNNING) {
     client.output.error(
       `${cmd(
-        `${getPkgName()} dev`
+        `${packageName} dev`
       )} must not recursively invoke itself. Check the Development Command in the Project Settings or the ${cmd(
         'dev'
       )} script in ${cmd('package.json')}`
@@ -73,13 +47,21 @@ export default async function main(client: Client) {
     argv = getArgs(client.argv.slice(2), {
       '--listen': String,
       '-l': '--listen',
-      '--confirm': Boolean,
+      '--yes': Boolean,
+      '-y': '--yes',
 
       // Deprecated
       '--port': Number,
       '-p': '--port',
+      '--confirm': Boolean,
+      '-c': '--confirm',
     });
     args = getSubcommand(argv._.slice(1), COMMAND_CONFIG).args;
+
+    if ('--confirm' in argv) {
+      output.warn('`--confirm` is deprecated, please use `--yes` instead');
+      argv['--yes'] = argv['--confirm'];
+    }
 
     if ('--port' in argv) {
       output.warn('`--port` is deprecated, please use `--listen` instead');
@@ -91,7 +73,7 @@ export default async function main(client: Client) {
   }
 
   if (argv['--help']) {
-    help();
+    client.output.print(help(devCommand, { columns: client.stderr.columns }));
     return 2;
   }
 
@@ -109,14 +91,14 @@ export default async function main(client: Client) {
     const pkg = await readJSONFile<PackageJson>(path.join(dir, 'package.json'));
 
     if (pkg instanceof CantParseJSONFile) {
-      client.output.error('Could not parse package.json');
+      client.output.error(pkg.message);
       return 1;
     }
 
     if (/\b(now|vercel)\b\W+\bdev\b/.test(pkg?.scripts?.dev || '')) {
       client.output.error(
         `${cmd(
-          `${getPkgName()} dev`
+          `${packageName} dev`
         )} must not recursively invoke itself. Check the Development Command in the Project Settings or the ${cmd(
           'dev'
         )} script in ${cmd('package.json')}`
@@ -136,7 +118,7 @@ export default async function main(client: Client) {
   try {
     return await dev(client, argv, args);
   } catch (err) {
-    if (err.code === 'ENOTFOUND') {
+    if (isErrnoException(err) && err.code === 'ENOTFOUND') {
       // Error message will look like the following:
       // "request to https://api.vercel.com/v2/user failed, reason: getaddrinfo ENOTFOUND api.vercel.com"
       const matches = /getaddrinfo ENOTFOUND (.*)$/.exec(err.message || '');
@@ -148,7 +130,9 @@ export default async function main(client: Client) {
           )} could not be resolved. Please verify your internet connectivity and DNS configuration.`
         );
       }
-      output.debug(err.stack);
+      if (typeof err.stack === 'string') {
+        output.debug(err.stack);
+      }
       return 1;
     }
     output.prettyError(err);

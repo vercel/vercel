@@ -1,0 +1,16 @@
+{
+  "name": "nextjs-404-issue",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "next": "canary",
+    "react": "latest",
+    "react-dom": "latest"
+  },
+  "ignoreNextjsUpdates": true
+}

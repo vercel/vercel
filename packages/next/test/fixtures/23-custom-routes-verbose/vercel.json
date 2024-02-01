@@ -1,0 +1,247 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next"
+    }
+  ],
+  "probes": [
+    // should handle one-to-one rewrite successfully
+    {
+      "path": "/first",
+      "mustContain": "hello"
+    },
+    // should handle chained rewrites successfully
+    {
+      "path": "/",
+      "mustContain": "multi-rewrites"
+    },
+    // should not match dynamic route immediately after applying header
+    {
+      "path": "/blog/post-321",
+      "mustContain": "with-params"
+    },
+    {
+      "path": "/blog/post-321",
+      "mustNotContain": "post-321"
+    },
+    // should handle chained redirects successfully
+    {
+      "path": "/redir-chain1",
+      "status": 301,
+      "responseHeaders": {
+        "location": "//redir-chain2/"
+      },
+      "fetchOptions": {
+        "redirect": "manual"
+      }
+    },
+    {
+      "path": "/redir-chain2",
+      "status": 302,
+      "responseHeaders": {
+        "location": "//redir-chain3/"
+      },
+      "fetchOptions": {
+        "redirect": "manual"
+      }
+    },
+    {
+      "path": "/redir-chain3",
+      "status": 303,
+      "responseHeaders": {
+        "location": "//$/"
+      },
+      "fetchOptions": {
+        "redirect": "manual"
+      }
+    },
+    // should redirect successfully with permanent: false
+    {
+      "path": "/redirect1",
+      "status": 307,
+      "responseHeaders": {
+        "location": "//$/"
+      },
+      "fetchOptions": {
+        "redirect": "manual"
+      }
+    },
+    // should redirect with params successfully
+    {
+      "path": "/hello/123/another",
+      "status": 307,
+      "responseHeaders": {
+        "location": "//blog/123/"
+      },
+      "fetchOptions": {
+        "redirect": "manual"
+      }
+    },
+    // should redirect with hash successfully
+    {
+      "path": "/docs/router-status/500",
+      "status": 301,
+      "responseHeaders": {
+        "location": "/#500$/"
+      },
+      "fetchOptions": {
+        "redirect": "manual"
+      }
+    },
+    // should redirect successfully with provided statusCode
+    {
+      "path": "/redirect2",
+      "status": 301,
+      "responseHeaders": {
+        "location": "//$/"
+      },
+      "fetchOptions": {
+        "redirect": "manual"
+      }
+    },
+    // should server static files through a rewrite
+    {
+      "path": "/hello-world",
+      "mustContain": "hello world!"
+    },
+    // should rewrite with params successfully
+    {
+      "path": "/test/hello",
+      "mustContain": "Hello"
+    },
+    // should double redirect successfully
+    {
+      "path": "/docs/github",
+      "mustContain": "hi there"
+    },
+    // should allow params in query for rewrite
+    {
+      "path": "/query-rewrite/hello/world?a=b",
+      "mustContain": "\"a\":\"b\""
+    },
+    {
+      "path": "/query-rewrite/hello/world?a=b",
+      "mustContain": "\"section\":\"hello\""
+    },
+    {
+      "path": "/query-rewrite/hello/world?a=b",
+      "mustContain": "\"name\":\"world\""
+    },
+    {
+      "path": "/query-rewrite/hello/world?a=b",
+      "mustContain": "\"first\":\"hello\""
+    },
+    {
+      "path": "/query-rewrite/hello/world?a=b",
+      "mustContain": "\"second\":\"world\""
+    },
+    // should not allow rewrite to override page file
+    {
+      "path": "/nav",
+      "mustContain": "to-hello"
+    },
+    // show allow redirect to override the page
+    {
+      "path": "/redirect-override",
+      "status": 307,
+      "responseHeaders": {
+        "location": "//thank-you-next$/"
+      },
+      "fetchOptions": {
+        "redirect": "manual"
+      }
+    },
+    // should match a page after a rewrite
+    {
+      "path": "/to-hello",
+      "mustContain": "Hello"
+    },
+    // should match dynamic route after rewrite
+    {
+      "path": "/blog/post-1",
+      "mustContain": "post-2"
+    },
+    // should match public file after rewrite
+    {
+      "path": "/blog/data.json",
+      "mustContain": "\"hello\": \"world\""
+    },
+    // should match /_next file after rewrite
+    {
+      "path": "/hidden/_next/__NEXT_SCRIPT__(/hello)",
+      "status": 200
+    },
+    // should allow redirecting to external resource
+    {
+      "path": "/to-external",
+      "status": 307,
+      "responseHeaders": {
+        "location": "/google.com/"
+      },
+      "fetchOptions": {
+        "redirect": "manual"
+      }
+    },
+    // should apply headers for exact match
+    {
+      "path": "/add-header",
+      "responseHeaders": {
+        "x-custom-header": "hello world",
+        "x-another-header": "hello again"
+      }
+    },
+    // should apply headers for multi match
+    {
+      "path": "/my-headers/first",
+      "responseHeaders": {
+        "x-first-header": "first",
+        "x-second-header": "second"
+      }
+    },
+    // should handle basic api rewrite successfully
+    {
+      "path": "/api-hello",
+      "mustContain": "{\"query\":{}}"
+    },
+    // should handle api rewrite with param successfully
+    {
+      "path": "/api-hello-param/hello",
+      "mustContain": "\"name\":\"hello\""
+    },
+    {
+      "path": "/api-hello-param/hello",
+      "mustContain": "\"hello\":\"hello\""
+    },
+    // should handle encoded value in the pathname correctly
+    {
+      "path": "/redirect/me/to-about/%5Cgoogle.com",
+      "status": 307,
+      "responseHeaders": {
+        "location": "/%5Cgoogle.com/about/"
+      },
+      "fetchOptions": {
+        "redirect": "manual"
+      }
+    },
+    // should apply un-named multi-match correctly
+    {
+      "path": "/hello/post-123.html",
+      "status": 200,
+      "mustContain": "123"
+    },
+    // should rewrite to catch-all with dash in segment name
+    {
+      "path": "/catchall-dash/hello/world",
+      "status": 200,
+      "mustContain": "hello/world"
+    },
+    // should rewrite and normalize catch-all rewrite param
+    {
+      "path": "/a/catch-all/hello/world",
+      "status": 200,
+      "mustContain": "hello/world"
+    }
+  ]
+}

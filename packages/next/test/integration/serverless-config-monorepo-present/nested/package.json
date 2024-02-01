@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "next": "8.1.0",
+    "react": "latest",
+    "react-dom": "latest"
+  },
+  "ignoreNextjsUpdates": true
+}

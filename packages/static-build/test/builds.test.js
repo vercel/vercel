@@ -1,12 +1,19 @@
 const path = require('path');
 const fs = require('fs-extra');
-const runBuildLambda = require('../../../test/lib/run-build-lambda');
+const builder = require('../');
+const { createRunBuildLambda } = require('../../../test/lib/run-build-lambda');
+
+const runBuildLambda = createRunBuildLambda(builder);
 
 const FOUR_MINUTES = 240000;
+
+const warnSpy = jest.spyOn(console, 'warn');
 
 beforeAll(() => {
   process.env.VERCEL_ANALYTICS_ID = 'test';
 });
+
+beforeEach(() => jest.clearAllMocks());
 
 it(
   'Should build Gatsby without any configuration',
@@ -28,13 +35,13 @@ it(
       .toMatchInlineSnapshot(`
       Object {
         "plugins": Array [
-          Object {
-            "options": Object {},
-            "resolve": "gatsby-plugin-vercel",
-          },
+          "@vercel/gatsby-plugin-vercel-analytics"
         ],
       }
     `);
+    expect(warnSpy).toHaveBeenCalledWith(
+      'Vercel Speed Insights auto-injection is deprecated in favor of @vercel/speed-insights package. Learn more: https://vercel.link/upgrate-to-speed-insights-package'
+    );
   },
   FOUR_MINUTES
 );
@@ -59,10 +66,7 @@ it(
       .toMatchInlineSnapshot(`
       Object {
         "plugins": Array [
-          Object {
-            "options": Object {},
-            "resolve": "gatsby-plugin-vercel",
-          },
+          "@vercel/gatsby-plugin-vercel-analytics"
         ],
         "siteMetadata": Object {
           "author": "@gatsbyjs",
@@ -96,10 +100,7 @@ it(
       Object {
         "plugins": Array [
           "gatsby-plugin-react-helmet",
-          Object {
-            "options": Object {},
-            "resolve": "gatsby-plugin-vercel",
-          },
+          "@vercel/gatsby-plugin-vercel-analytics"
         ],
         "siteMetadata": Object {
           "author": "@gatsbyjs",
@@ -132,7 +133,7 @@ it(
       .toMatchInlineSnapshot(`
       Object {
         "plugins": Array [
-          "gatsby-plugin-vercel",
+          "@vercel/gatsby-plugin-vercel-analytics",
         ],
         "siteMetadata": Object {
           "author": "@gatsbyjs",
@@ -167,7 +168,7 @@ it(
         "plugins": Array [
           Object {
             "options": Object {},
-            "resolve": "gatsby-plugin-vercel",
+            "resolve": "@vercel/gatsby-plugin-vercel-analytics",
           },
         ],
         "siteMetadata": Object {
@@ -202,10 +203,7 @@ it(
       Object {
         "plugins": Array [
           "gatsby-plugin-react-helmet",
-          Object {
-            "options": Object {},
-            "resolve": "gatsby-plugin-vercel",
-          },
+          "@vercel/gatsby-plugin-vercel-analytics"
         ],
         "siteMetadata": Object {
           "author": "@gatsbyjs",
@@ -241,10 +239,7 @@ it(
             },
             "resolve": "gatsby-plugin-zeit-now",
           },
-          Object {
-            "options": Object {},
-            "resolve": "gatsby-plugin-vercel",
-          },
+          "@vercel/gatsby-plugin-vercel-analytics"
         ],
         "siteMetadata": Object {
           "author": "@gatsbyjs",
@@ -253,6 +248,82 @@ it(
         },
       }
     `);
+  },
+  FOUR_MINUTES
+);
+
+it(
+  'Should build Gatsby with configuration defined in typescript',
+  async () => {
+    const { workPath } = await runBuildLambda(
+      path.join(__dirname, 'build-fixtures/13-gatsby-with-typescript-config')
+    );
+
+    const contents = await fs.readdir(workPath);
+
+    expect(contents.some(name => name === 'gatsby-config.js')).toBeFalsy();
+    expect(contents.some(name => name === 'gatsby-config.ts')).toBeTruthy();
+
+    expect(require(path.join(workPath, 'gatsby-config.ts')))
+      .toMatchInlineSnapshot(`
+      Object {
+        "default": Object {
+          "plugins": Array [
+            "@vercel/gatsby-plugin-vercel-builder",
+            "@vercel/gatsby-plugin-vercel-analytics",
+          ],
+          "siteMetadata": Object {
+            "siteUrl": "https://gatsby-typescript-config.vercel.app",
+            "title": "Gatsby Typescript Config",
+          },
+        },
+      }
+    `);
+  },
+  FOUR_MINUTES
+);
+
+it(
+  'Should build Gatsby with configuration defined in esm',
+  async () => {
+    const { workPath } = await runBuildLambda(
+      path.join(__dirname, 'build-fixtures/14-gatsby-with-esm-config')
+    );
+
+    const contents = await fs.readdir(workPath);
+
+    expect(contents.some(name => name === 'gatsby-config.js')).toBeFalsy();
+    expect(contents.some(name => name === 'gatsby-config.ts')).toBeFalsy();
+    expect(contents.some(name => name === 'gatsby-config.mjs')).toBeTruthy();
+    // using `import` causes a seg fault.
+    expect(await fs.readFile(path.join(workPath, 'gatsby-config.mjs'), 'utf-8'))
+      .toBe(`import userConfig from "./gatsby-config.mjs.__vercel_builder_backup__.mjs";
+
+// https://github.com/gatsbyjs/gatsby/blob/354003fb2908e02ff12109ca3a02978a5a6e608c/packages/gatsby/src/bootstrap/prefer-default.ts
+const preferDefault = (m) => (m && m.default) || m;
+
+const vercelConfig = Object.assign(
+  {},
+  // https://github.com/gatsbyjs/gatsby/blob/a6ecfb2b01d761e8a3612b8ea132c698659923d9/packages/gatsby/src/services/initialize.ts#L113-L117
+  preferDefault(userConfig)
+);
+if (!vercelConfig.plugins) {
+  vercelConfig.plugins = [];
+}
+
+for (const plugin of ["@vercel/gatsby-plugin-vercel-builder","@vercel/gatsby-plugin-vercel-analytics"]) {
+  const hasPlugin = vercelConfig.plugins.find(
+    (p) => p && (p === plugin || p.resolve === plugin)
+  );
+
+  if (!hasPlugin) {
+    vercelConfig.plugins = vercelConfig.plugins.slice();
+    vercelConfig.plugins.push(plugin);
+  }
+}
+
+export default vercelConfig;
+`);
   },
   FOUR_MINUTES
 );
@@ -270,6 +341,10 @@ it(
     // The `package.json` file should have the plugin listed as a dependency
     const pkg = require(path.join(workPath, 'package.json'));
     expect(pkg.dependencies['@nuxtjs/web-vitals']).toBe('latest');
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      'Vercel Speed Insights auto-injection is deprecated in favor of @vercel/speed-insights package. Learn more: https://vercel.link/upgrate-to-speed-insights-package'
+    );
   },
   FOUR_MINUTES
 );

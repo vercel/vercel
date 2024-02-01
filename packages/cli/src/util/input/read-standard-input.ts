@@ -1,13 +1,17 @@
-export default async function readStandardInput(): Promise<string> {
+import type { ReadableTTY } from '@vercel-internals/types';
+
+export default async function readStandardInput(
+  stdin: ReadableTTY
+): Promise<string> {
   return new Promise<string>(resolve => {
     setTimeout(() => resolve(''), 500);
 
-    if (process.stdin.isTTY) {
+    if (stdin.isTTY) {
       // found tty so we know there is nothing piped to stdin
       resolve('');
     } else {
-      process.stdin.setEncoding('utf8');
-      process.stdin.once('data', resolve);
+      stdin.setEncoding('utf8');
+      stdin.once('data', resolve);
     }
   });
 }

@@ -1,6 +1,6 @@
 import * as ERRORS from '../errors-ts';
 import Client from '../client';
-import { Domain } from '../../types';
+import type { Domain } from '@vercel-internals/types';
 
 type Response = {
   domain: Domain;
@@ -17,25 +17,27 @@ export default async function transferInDomain(
       body: { method: 'transfer-in', name, authCode, expectedPrice },
       method: 'POST',
     });
-  } catch (error) {
-    if (error.code === 'invalid_name') {
-      return new ERRORS.InvalidDomain(name);
+  } catch (err: unknown) {
+    if (ERRORS.isAPIError(err)) {
+      if (err.code === 'invalid_name') {
+        return new ERRORS.InvalidDomain(name);
+      }
+      if (err.code === 'domain_already_exists') {
+        return new ERRORS.DomainNotAvailable(name);
+      }
+      if (err.code === 'not_transferable') {
+        return new ERRORS.DomainNotTransferable(name);
+      }
+      if (err.code === 'invalid_auth_code') {
+        return new ERRORS.InvalidTransferAuthCode(name, authCode);
+      }
+      if (err.code === 'source_not_found') {
+        return new ERRORS.SourceNotFound();
+      }
+      if (err.code === 'registration_failed') {
+        return new ERRORS.DomainRegistrationFailed(name, err.message);
+      }
     }
-    if (error.code === 'domain_already_exists') {
-      return new ERRORS.DomainNotAvailable(name);
-    }
-    if (error.code === 'not_transferable') {
-      return new ERRORS.DomainNotTransferable(name);
-    }
-    if (error.code === 'invalid_auth_code') {
-      return new ERRORS.InvalidTransferAuthCode(name, authCode);
-    }
-    if (error.code === 'source_not_found') {
-      return new ERRORS.SourceNotFound();
-    }
-    if (error.code === 'registration_failed') {
-      return new ERRORS.DomainRegistrationFailed(name, error.message);
-    }
-    throw error;
+    throw err;
   }
 }

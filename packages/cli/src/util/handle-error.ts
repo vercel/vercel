@@ -4,10 +4,7 @@ import errorOutput from './output/error';
 import { APIError } from './errors-ts';
 import { getCommandName } from './pkg-name';
 
-export default function handleError(
-  error: string | Error | APIError,
-  { debug = false } = {}
-) {
+export default function handleError(error: unknown, { debug = false } = {}) {
   // Coerce Strings to Error instances
   if (typeof error === 'string') {
     error = new Error(error);
@@ -42,7 +39,7 @@ export default function handleError(
   } else if (status === 500) {
     console.error(errorOutput('Unexpected server error. Please retry.'));
   } else if (code === 'USER_ABORT') {
-    info('Aborted');
+    info('Canceled');
   } else {
     console.error(
       errorOutput(`Unexpected error. Please try again later. (${message})`)

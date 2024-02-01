@@ -1,0 +1,21 @@
+{
+  "probes": [
+    { "path": "/foo/", "mustContain": "<h1>Gatsby - Index</h1>" },
+    {
+      "path": "/foo/ssr/",
+      "mustContain": "<h1>This page is <!-- -->rendered server side</h1>"
+    },
+    {
+      "path": "/foo/dsg/",
+      "mustContain": "<h1>This page is DSG</h1>"
+    },
+    {
+      "path": "/foo/x/y/z",
+      "mustContain": "<h1>Page not found</h1>"
+    },
+    {
+      "path": "/foo/foo/bar/ssr/",
+      "mustContain": "<h1>This page is <!-- -->rendered server side (nested)</h1>"
+    }
+  ]
+}

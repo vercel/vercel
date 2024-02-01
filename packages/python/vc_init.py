@@ -4,6 +4,7 @@ import json
 import inspect
 from importlib import util
 from http.server import BaseHTTPRequestHandler
+import socket
 
 # Import relative path https://docs.python.org/3/library/importlib.html#importing-a-source-file-directly
 __vc_spec = util.spec_from_file_location("__VC_HANDLER_MODULE_NAME", "./__VC_HANDLER_ENTRYPOINT")
@@ -29,7 +30,7 @@ if 'handler' in __vc_variables or 'Handler' in __vc_variables:
     base = __vc_module.handler if ('handler' in __vc_variables) else  __vc_module.Handler
     if not issubclass(base, BaseHTTPRequestHandler):
         print('Handler must inherit from BaseHTTPRequestHandler')
-        print('See the docs https://vercel.com/docs/runtimes#advanced-usage/advanced-python-usage')
+        print('See the docs: https://vercel.com/docs/functions/serverless-functions/runtimes/python')
         exit(1)
 
     print('using HTTP Handler')
@@ -37,7 +38,7 @@ if 'handler' in __vc_variables or 'Handler' in __vc_variables:
     import http
     import _thread
 
-    server = HTTPServer(('', 0), base)
+    server = HTTPServer(('127.0.0.1', 0), base)
     port = server.server_address[1]
 
     def vc_handler(event, context):
@@ -57,8 +58,11 @@ if 'handler' in __vc_variables or 'Handler' in __vc_variables:
             body = base64.b64decode(body)
 
         request_body = body.encode('utf-8') if isinstance(body, str) else body
-        conn = http.client.HTTPConnection('0.0.0.0', port)
-        conn.request(method, path, headers=headers, body=request_body)
+        conn = http.client.HTTPConnection('127.0.0.1', port)
+        try:
+            conn.request(method, path, headers=headers, body=request_body)
+        except (http.client.HTTPException, socket.error) as ex:
+            print ("Request Error: %s" % ex)
         res = conn.getresponse()
 
         return_dict = {
@@ -272,6 +276,14 @@ elif 'app' in __vc_variables:
             query = url.query.encode()
             path = url.path
 
+            headers_encoded = []
+            for k, v in headers.items():
+                # Cope with repeated headers in the encoding.
+                if isinstance(v, list):
+                    headers_encoded.append([k.lower().encode(), [i.encode() for i in v]])
+                else:
+                    headers_encoded.append([k.lower().encode(), v.encode()])
+
             scope = {
                 'server': (headers.get('host', 'lambda'), headers.get('x-forwarded-port', 80)),
                 'client': (headers.get(
@@ -281,7 +293,7 @@ elif 'app' in __vc_variables:
                 'scheme': headers.get('x-forwarded-proto', 'http'),
                 'root_path': '',
                 'query_string': query,
-                'headers': [[k.lower().encode(), v.encode()] for k, v in headers.items()],
+                'headers': headers_encoded,
                 'type': 'http',
                 'http_version': '1.1',
                 'method': payload['method'],
@@ -295,5 +307,5 @@ elif 'app' in __vc_variables:
 
 else:
     print('Missing variable `handler` or `app` in file "__VC_HANDLER_ENTRYPOINT".')
-    print('See the docs https://vercel.com/docs/runtimes#advanced-usage/advanced-python-usage')
+    print('See the docs: https://vercel.com/docs/functions/serverless-functions/runtimes/python')
     exit(1)

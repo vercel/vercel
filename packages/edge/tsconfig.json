@@ -1,0 +1,10 @@
+{
+  "compilerOptions": {
+    "lib": ["ES2021", "DOM", "DOM.Iterable"],
+    "outDir": "./dist",
+    "typeRoots": ["./@types", "./node_modules/@types"]
+  },
+  "extends": "../../tsconfig.base.json",
+  "include": ["src/**/*", "test/**/*"],
+  "exclude": ["node_modules"]
+}

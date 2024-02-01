@@ -1,0 +1,80 @@
+{
+  "version": 2,
+  "builds": [{ "src": "package.json", "use": "@vercel/next" }],
+  "probes": [
+    {
+      "path": "/docs/_next/__NEXT_SCRIPT__(/,/docs)",
+      "responseHeaders": {
+        "cache-control": "public,max-age=31536000,immutable"
+      }
+    },
+    {
+      "path": "/docs/",
+      "mustContain": "hello from index"
+    },
+    {
+      "path": "/docs",
+      "mustContain": "hello from index"
+    },
+    {
+      "path": "/docs/another",
+      "mustContain": "hello from another"
+    },
+    {
+      "path": "/",
+      "mustNotContain": "hello from index"
+    },
+    {
+      "path": "/another",
+      "mustNotContain": "hello from another"
+    },
+    {
+      "path": "/_next/__NEXT_SCRIPT__(/,/docs)",
+      "mustNotContain": "hello from index"
+    },
+    {
+      "path": "/_next/__NEXT_SCRIPT__(/another,/docs)",
+      "mustNotContain": "hello from another"
+    },
+    {
+      "path": "/docs/api/my-slug",
+      "mustContain": "index slug: my-slug"
+    },
+    {
+      "path": "/docs/api/my-slug/another",
+      "mustContain": "another slug: my-slug"
+    },
+    {
+      "path": "/docs/api/hello",
+      "mustContain": "hello from hello"
+    },
+    {
+      "path": "/docs/blog/post-1",
+      "mustContain": "index post: post-1"
+    },
+    {
+      "path": "/docs/blog/post-1/comments",
+      "mustContain": "comments post: post-1"
+    },
+    {
+      "path": "/docs/_next/data/testing-build-id/blog/post-1.json",
+      "status": 200,
+      "mustContain": "\"post\""
+    },
+    {
+      "path": "/docs/_next/data/testing-build-id/blog/post-2/comments.json",
+      "status": 200,
+      "mustContain": "\"post\""
+    },
+    {
+      "path": "/docs/_next/data/testing-build-id/blog-ssg/post-1.json",
+      "status": 200,
+      "mustContain": "\"post\""
+    },
+    {
+      "path": "/docs/_next/data/testing-build-id/blog-ssg/post-2/comments.json",
+      "status": 200,
+      "mustContain": "\"post\""
+    }
+  ]
+}

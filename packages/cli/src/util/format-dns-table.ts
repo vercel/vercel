@@ -11,6 +11,6 @@ export default function formatDNSTable(
   return table([HEADER, ...rows], {
     align: ['l', 'l', 'l'],
     hsep: ' '.repeat(8),
-    stringLength: strlen
+    stringLength: strlen,
   }).replace(/^(.*)/gm, `${extraSpace}$1`);
 }

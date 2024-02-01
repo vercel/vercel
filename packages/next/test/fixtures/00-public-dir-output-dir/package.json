@@ -1,0 +1,11 @@
+{
+  "scripts": {
+    "build": "next build web"
+  },
+  "dependencies": {
+    "next": "canary",
+    "react": "latest",
+    "react-dom": "latest"
+  },
+  "ignoreNextjsUpdates": true
+}

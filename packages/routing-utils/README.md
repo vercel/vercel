@@ -4,7 +4,7 @@ Route validation utilities
 
 ## Usage
 
-`yarn add @vercel/routing-utils`
+`npm add @vercel/routing-utils`
 
 ```ts
 import { normalizeRoutes } from '@vercel/routing-utils';

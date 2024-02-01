@@ -1,16 +1,12 @@
 {
   "compilerOptions": {
-    "strict": true,
-    "esModuleInterop": true,
-    "lib": ["esnext"],
-    "target": "es2018",
-    "module": "commonjs",
-    "outDir": "dist",
-    "sourceMap": false,
-    "declaration": true,
-    "moduleResolution": "node",
-    "typeRoots": ["./@types", "./node_modules/@types"]
+    "lib": ["ES2021", "DOM"],
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "noImplicitReturns": false,
+    "noUnusedParameters": false,
+    "outDir": "./dist"
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules"]
+  "extends": "../../tsconfig.base.json",
+  "include": ["src/**/*"]
 }

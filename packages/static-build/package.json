@@ -1,7 +1,7 @@
 {
   "name": "@vercel/static-build",
-  "version": "0.24.1",
-  "license": "MIT",
+  "version": "2.2.0",
+  "license": "Apache-2.0",
   "main": "./dist/index",
   "homepage": "https://vercel.com/docs/build-step",
   "files": [
@@ -13,20 +13,17 @@
     "directory": "packages/static-build"
   },
   "scripts": {
-    "build": "node build",
-    "test-unit": "jest --env node --verbose --bail test/build.test.ts test/prepare-cache.test.ts",
-    "test-integration-once": "jest --env node --verbose --runInBand --bail test/integration.test.js",
-    "prepublishOnly": "node build"
+    "build": "node ../../utils/build-builder.mjs",
+    "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --bail --runInBand",
+    "test-unit": "pnpm test test/build.test.ts test/gatsby.test.ts test/prepare-cache.test.ts",
+    "test-e2e": "pnpm test test/integration-*.test.js",
+    "type-check": "tsc --noEmit"
   },
-  "jest": {
-    "preset": "ts-jest/presets/default",
-    "testEnvironment": "node",
-    "globals": {
-      "ts-jest": {
-        "diagnostics": true,
-        "isolatedModules": true
-      }
-    }
+  "dependencies": {
+    "@vercel/gatsby-plugin-vercel-analytics": "1.0.11",
+    "@vercel/gatsby-plugin-vercel-builder": "2.0.16",
+    "@vercel/static-config": "3.0.0",
+    "ts-morph": "12.0.0"
   },
   "devDependencies": {
     "@types/aws-lambda": "8.10.64",
@@ -34,17 +31,24 @@
     "@types/fs-extra": "9.0.13",
     "@types/jest": "27.4.1",
     "@types/ms": "0.7.31",
+    "@types/node": "14.18.33",
     "@types/node-fetch": "2.5.4",
     "@types/promise-timeout": "1.3.0",
-    "@vercel/build-utils": "3.0.1-canary.0",
-    "@vercel/frameworks": "0.9.0",
-    "@vercel/ncc": "0.24.0",
+    "@types/semver": "7.3.13",
+    "@vercel/build-utils": "7.5.1",
+    "@vercel/error-utils": "2.0.2",
+    "@vercel/frameworks": "2.0.6",
+    "@vercel/fs-detectors": "5.1.6",
+    "@vercel/routing-utils": "3.1.0",
+    "execa": "3.2.0",
     "fs-extra": "10.0.0",
-    "@vercel/routing-utils": "1.13.2",
     "get-port": "5.0.0",
     "is-port-reachable": "2.0.1",
+    "jest-junit": "16.0.0",
     "ms": "2.1.2",
-    "node-fetch": "2.6.1",
-    "rc9": "1.2.0"
+    "node-fetch": "2.6.7",
+    "rc9": "1.2.0",
+    "semver": "7.5.2",
+    "tree-kill": "1.2.2"
   }
 }

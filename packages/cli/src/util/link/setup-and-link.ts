@@ -1,7 +1,7 @@
 import { join, basename } from 'path';
 import chalk from 'chalk';
 import { remove } from 'fs-extra';
-import { ProjectLinkResult, ProjectSettings } from '../../types';
+import { ProjectLinkResult, ProjectSettings } from '@vercel-internals/types';
 import {
   getLinkedProject,
   linkFolderToProject,
@@ -10,7 +10,6 @@ import {
   VERCEL_DIR_PROJECT,
 } from '../projects/link';
 import createProject from '../projects/create-project';
-import updateProject from '../projects/update-project';
 import Client from '../client';
 import handleError from '../handle-error';
 import confirm from '../input/confirm';
@@ -20,17 +19,21 @@ import selectOrg from '../input/select-org';
 import inputProject from '../input/input-project';
 import { validateRootDirectory } from '../validate-paths';
 import { inputRootDirectory } from '../input/input-root-directory';
-import editProjectSettings from '../input/edit-project-settings';
+import editProjectSettings, {
+  PartialProjectSettings,
+} from '../input/edit-project-settings';
 import stamp from '../output/stamp';
 import { EmojiLabel } from '../emoji';
 import createDeploy from '../deploy/create-deploy';
 import Now, { CreateOptions } from '../index';
+import { isAPIError } from '../errors-ts';
 
 export interface SetupAndLinkOptions {
-  forceDelete?: boolean;
   autoConfirm?: boolean;
-  successEmoji: EmojiLabel;
-  setupMsg: string;
+  forceDelete?: boolean;
+  link?: ProjectLinkResult;
+  successEmoji?: EmojiLabel;
+  setupMsg?: string;
   projectName?: string;
 }
 
@@ -38,10 +41,11 @@ export default async function setupAndLink(
   client: Client,
   path: string,
   {
-    forceDelete = false,
     autoConfirm = false,
-    successEmoji,
-    setupMsg,
+    forceDelete = false,
+    link,
+    successEmoji = 'link',
+    setupMsg = 'Set up',
     projectName,
   }: SetupAndLinkOptions
 ): Promise<ProjectLinkResult> {
@@ -53,8 +57,10 @@ export default async function setupAndLink(
     output.error(`Expected directory but found file: ${path}`);
     return { status: 'error', exitCode: 1, reason: 'PATH_IS_FILE' };
   }
-  const link = await getLinkedProject(client, path);
-  const isTTY = process.stdout.isTTY;
+  if (!link) {
+    link = await getLinkedProject(client, path);
+  }
+  const isTTY = client.stdin.isTTY;
   const quiet = !isTTY;
   let rootDirectory: string | null = null;
   let sourceFilesOutsideRootDirectory = true;
@@ -78,12 +84,13 @@ export default async function setupAndLink(
   const shouldStartSetup =
     autoConfirm ||
     (await confirm(
+      client,
       `${setupMsg} ${chalk.cyan(`“${toHumanPath(path)}”`)}?`,
       true
     ));
 
   if (!shouldStartSetup) {
-    output.print(`Aborted. Project not set up.\n`);
+    output.print(`Canceled. Project not set up.\n`);
     return { status: 'not_linked', org: null, project: null };
   }
 
@@ -93,15 +100,17 @@ export default async function setupAndLink(
       'Which scope should contain your project?',
       autoConfirm
     );
-  } catch (err) {
-    if (err.code === 'NOT_AUTHORIZED') {
-      output.prettyError(err);
-      return { status: 'error', exitCode: 1, reason: 'NOT_AUTHORIZED' };
-    }
+  } catch (err: unknown) {
+    if (isAPIError(err)) {
+      if (err.code === 'NOT_AUTHORIZED') {
+        output.prettyError(err);
+        return { status: 'error', exitCode: 1, reason: 'NOT_AUTHORIZED' };
+      }
 
-    if (err.code === 'TEAM_DELETED') {
-      output.prettyError(err);
-      return { status: 'error', exitCode: 1, reason: 'TEAM_DELETED' };
+      if (err.code === 'TEAM_DELETED') {
+        output.prettyError(err);
+        return { status: 'error', exitCode: 1, reason: 'TEAM_DELETED' };
+      }
     }
 
     throw err;
@@ -118,12 +127,12 @@ export default async function setupAndLink(
 
   if (typeof projectOrNewProjectName === 'string') {
     newProjectName = projectOrNewProjectName;
-    rootDirectory = await inputRootDirectory(path, output, autoConfirm);
+    rootDirectory = await inputRootDirectory(client, path, autoConfirm);
   } else {
     const project = projectOrNewProjectName;
 
     await linkFolderToProject(
-      output,
+      client,
       path,
       {
         projectId: project.id,
@@ -162,6 +171,16 @@ export default async function setupAndLink(
         client,
         currentTeam: config.currentTeam,
       });
+
+      const localConfigurationOverrides: PartialProjectSettings = {
+        buildCommand: localConfig?.buildCommand,
+        devCommand: localConfig?.devCommand,
+        framework: localConfig?.framework,
+        commandForIgnoringBuildStep: localConfig?.ignoreCommand,
+        installCommand: localConfig?.installCommand,
+        outputDirectory: localConfig?.outputDirectory,
+      };
+
       const createArgs: CreateOptions = {
         name: newProjectName,
         env: {},
@@ -176,18 +195,18 @@ export default async function setupAndLink(
         deployStamp: stamp(),
         target: undefined,
         skipAutoDetectionConfirmation: false,
+        projectSettings: {
+          ...localConfigurationOverrides,
+          sourceFilesOutsideRootDirectory,
+        },
+        autoAssignCustomDomains: true,
       };
-
-      if (isZeroConfig) {
-        // Only add projectSettings for zero config deployments
-        createArgs.projectSettings = { sourceFilesOutsideRootDirectory };
-      }
 
       const deployment = await createDeploy(
         client,
         now,
         config.currentTeam || 'current user',
-        [sourcePath],
+        sourcePath,
         createArgs,
         org,
         true,
@@ -213,10 +232,11 @@ export default async function setupAndLink(
       const { projectSettings, framework } = deployment;
 
       settings = await editProjectSettings(
-        output,
+        client,
         projectSettings,
         framework,
-        autoConfirm
+        autoConfirm,
+        localConfigurationOverrides
       );
     }
 
@@ -224,12 +244,13 @@ export default async function setupAndLink(
       settings.rootDirectory = rootDirectory;
     }
 
-    const project = await createProject(client, newProjectName);
-    await updateProject(client, project.id, settings);
-    Object.assign(project, settings);
+    const project = await createProject(client, {
+      ...settings,
+      name: newProjectName,
+    });
 
     await linkFolderToProject(
-      output,
+      client,
       path,
       {
         projectId: project.id,
@@ -242,6 +263,10 @@ export default async function setupAndLink(
 
     return { status: 'linked', org, project };
   } catch (err) {
+    if (isAPIError(err) && err.code === 'too_many_projects') {
+      output.prettyError(err);
+      return { status: 'error', exitCode: 1, reason: 'TOO_MANY_PROJECTS' };
+    }
     handleError(err);
 
     return { status: 'error', exitCode: 1 };

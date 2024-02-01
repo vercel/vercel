@@ -1,25 +1,26 @@
 import chalk from 'chalk';
+import type { ReadableTTY, WritableTTY } from '@vercel-internals/types';
 
 type Options = {
   abortSequences?: Set<string>;
   defaultValue?: boolean;
   noChar?: string;
   resolveChars?: Set<string>;
-  stdin?: NodeJS.ReadStream;
-  stdout?: NodeJS.WriteStream;
+  stdin: ReadableTTY;
+  stdout: WritableTTY;
   trailing?: string;
   yesChar?: string;
 };
 
-export default async function promptBool(label: string, options: Options = {}) {
+export default async function promptBool(label: string, options: Options) {
   const {
+    stdin,
+    stdout,
     defaultValue = false,
     abortSequences = new Set(['\u0003']),
     resolveChars = new Set(['\r']),
     yesChar = 'y',
     noChar = 'n',
-    stdin = process.stdin,
-    stdout = process.stdout,
     trailing = '',
   } = options;
 

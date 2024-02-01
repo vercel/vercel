@@ -1,6 +1,7 @@
-import _ts from 'typescript';
+import { createRequire } from 'module';
+import { relative, basename, dirname } from 'path';
 import { NowBuildError } from '@vercel/build-utils';
-import { relative, basename, resolve, dirname } from 'path';
+import type _ts from 'typescript';
 
 /*
  * Fork of TS-Node - https://github.com/TypeStrong/ts-node
@@ -113,6 +114,13 @@ function cachedLookup<T>(fn: (arg: string) => T): (arg: string) => T {
   };
 }
 
+const require_ = createRequire(__filename);
+
+/**
+ * Maps the config path to a build func
+ */
+const configFileToBuildMap = new Map<string, GetOutputFunction>();
+
 /**
  * Register TypeScript compiler.
  */
@@ -128,22 +136,22 @@ export function register(opts: Options = {}): Register {
 
   // Require the TypeScript compiler and configuration.
   const cwd = options.basePath || process.cwd();
-  const nowNodeBase = resolve(__dirname, '..', '..', '..');
   let compiler: string;
-  const require_ = eval('require');
   try {
     compiler = require_.resolve(options.compiler || 'typescript', {
-      paths: [options.project || cwd, nowNodeBase],
+      paths: [options.project || cwd],
     });
   } catch (e) {
     compiler = 'typescript';
   }
   //eslint-disable-next-line @typescript-eslint/no-var-requires
   const ts: typeof _ts = require_(compiler);
-  if (compiler.startsWith(nowNodeBase)) {
-    console.log('Using TypeScript ' + ts.version + ' (no local tsconfig.json)');
+  if (compiler === 'typescript') {
+    console.log(
+      `Using built-in TypeScript ${ts.version} since "typescript" is missing from "devDependencies"`
+    );
   } else {
-    console.log('Using TypeScript ' + ts.version + ' (local user-provided)');
+    console.log(`Using TypeScript ${ts.version} (local user-provided)`);
   }
   const transformers = options.transformers || undefined;
   const readFile = options.readFile || ts.sys.readFile;
@@ -160,11 +168,6 @@ export function register(opts: Options = {}): Register {
     getCanonicalFileName: path => path,
   };
 
-  function createTSError(diagnostics: ReadonlyArray<_ts.Diagnostic>) {
-    const message = formatDiagnostics(diagnostics, diagnosticHost);
-    return new NowBuildError({ code: 'NODE_TYPESCRIPT_ERROR', message });
-  }
-
   function reportTSError(
     diagnostics: _ts.Diagnostic[],
     shouldExit: boolean | undefined
@@ -172,28 +175,40 @@ export function register(opts: Options = {}): Register {
     if (!diagnostics || diagnostics.length === 0) {
       return;
     }
-    const error = createTSError(diagnostics);
+    const message = formatDiagnostics(diagnostics, diagnosticHost);
 
     if (shouldExit) {
-      throw error;
+      throw new NowBuildError({ code: 'NODE_TYPESCRIPT_ERROR', message });
     } else {
       // Print error in red color and continue execution.
-      console.error('\x1b[31m%s\x1b[0m', error);
+      console.error(message);
     }
   }
 
-  // we create a custom build per tsconfig.json instance
-  const builds = new Map<string, Build>();
-  function getBuild(configFileName = ''): Build {
-    let build = builds.get(configFileName);
-    if (build) return build;
+  function getBuild(
+    configFileName = '',
+    skipTypeCheck?: boolean
+  ): GetOutputFunction {
+    const cachedGetOutput = configFileToBuildMap.get(configFileName);
 
+    if (cachedGetOutput) {
+      return cachedGetOutput;
+    }
+
+    const outFiles = new Map<string, SourceOutput>();
     const config = readConfig(configFileName);
 
     /**
-     * Create the basic required function using transpile mode.
+     * Create the basic function for transpile only (ts-node --transpileOnly)
      */
-    const getOutput = function (code: string, fileName: string): SourceOutput {
+    const getOutputTranspile: GetOutputFunction = (
+      code: string,
+      fileName: string
+    ) => {
+      const outFile = outFiles.get(fileName);
+      if (outFile) {
+        return outFile;
+      }
       const result = ts.transpileModule(code, {
         fileName,
         transformers,
@@ -207,119 +222,125 @@ export function register(opts: Options = {}): Register {
 
       reportTSError(diagnosticList, config.options.noEmitOnError);
 
-      return { code: result.outputText, map: result.sourceMapText as string };
+      const file = {
+        code: result.outputText,
+        map: result.sourceMapText as string,
+      };
+      outFiles.set(fileName, file);
+      return file;
     };
 
-    // Use full language services when the fast option is disabled.
-    let getOutputTypeCheck: (code: string, fileName: string) => SourceOutput;
-    {
-      const memoryCache = new MemoryCache(config.fileNames);
-      const cachedReadFile = cachedLookup(debugFn('readFile', readFile));
+    const memoryCache = new MemoryCache(config.fileNames);
+    const cachedReadFile = cachedLookup(readFile);
 
-      // Create the compiler host for type checking.
-      const serviceHost: _ts.LanguageServiceHost = {
-        getScriptFileNames: () => Array.from(memoryCache.fileVersions.keys()),
-        getScriptVersion: (fileName: string) => {
-          const version = memoryCache.fileVersions.get(fileName);
-          return version === undefined ? '' : version.toString();
-        },
-        getScriptSnapshot(fileName: string) {
-          let contents = memoryCache.fileContents.get(fileName);
+    // Create the compiler host for type checking.
+    const serviceHost: _ts.LanguageServiceHost = {
+      getScriptFileNames: () => Array.from(memoryCache.fileVersions.keys()),
+      getScriptVersion: (fileName: string) => {
+        const version = memoryCache.fileVersions.get(fileName);
+        return version === undefined ? '' : version.toString();
+      },
+      getScriptSnapshot(fileName: string) {
+        let contents = memoryCache.fileContents.get(fileName);
 
-          // Read contents into TypeScript memory cache.
-          if (contents === undefined) {
-            contents = cachedReadFile(fileName);
-            if (contents === undefined) return;
+        // Read contents into TypeScript memory cache.
+        if (contents === undefined) {
+          contents = cachedReadFile(fileName);
+          if (contents === undefined) return;
 
-            memoryCache.fileVersions.set(fileName, 1);
-            memoryCache.fileContents.set(fileName, contents);
-          }
-
-          return ts.ScriptSnapshot.fromString(contents);
-        },
-        readFile: cachedReadFile,
-        readDirectory: cachedLookup(
-          debugFn('readDirectory', ts.sys.readDirectory)
-        ),
-        getDirectories: cachedLookup(
-          debugFn('getDirectories', ts.sys.getDirectories)
-        ),
-        fileExists: cachedLookup(debugFn('fileExists', fileExists)),
-        directoryExists: cachedLookup(
-          debugFn('directoryExists', ts.sys.directoryExists)
-        ),
-        getNewLine: () => ts.sys.newLine,
-        useCaseSensitiveFileNames: () => ts.sys.useCaseSensitiveFileNames,
-        getCurrentDirectory: () => cwd,
-        getCompilationSettings: () => config.options,
-        getDefaultLibFileName: () => ts.getDefaultLibFilePath(config.options),
-        getCustomTransformers: () => transformers,
-      };
-
-      const registry = ts.createDocumentRegistry(
-        ts.sys.useCaseSensitiveFileNames,
-        cwd
-      );
-      const service = ts.createLanguageService(serviceHost, registry);
-
-      // Set the file contents into cache manually.
-      const updateMemoryCache = function (contents: string, fileName: string) {
-        const fileVersion = memoryCache.fileVersions.get(fileName) || 0;
-
-        // Avoid incrementing cache when nothing has changed.
-        if (memoryCache.fileContents.get(fileName) === contents) return;
-
-        memoryCache.fileVersions.set(fileName, fileVersion + 1);
-        memoryCache.fileContents.set(fileName, contents);
-      };
-
-      getOutputTypeCheck = function (code: string, fileName: string) {
-        updateMemoryCache(code, fileName);
-
-        const output = service.getEmitOutput(fileName);
-
-        // Get the relevant diagnostics - this is 3x faster than `getPreEmitDiagnostics`.
-        const diagnostics = service
-          .getSemanticDiagnostics(fileName)
-          .concat(service.getSyntacticDiagnostics(fileName));
-
-        const diagnosticList = filterDiagnostics(
-          diagnostics,
-          ignoreDiagnostics
-        );
-
-        reportTSError(diagnosticList, config.options.noEmitOnError);
-
-        if (output.emitSkipped) {
-          throw new TypeError(`${relative(cwd, fileName)}: Emit skipped`);
+          memoryCache.fileVersions.set(fileName, 1);
+          memoryCache.fileContents.set(fileName, contents);
         }
 
-        // Throw an error when requiring `.d.ts` files.
-        if (output.outputFiles.length === 0) {
-          throw new TypeError(
-            'Unable to require `.d.ts` file.\n' +
-              'This is usually the result of a faulty configuration or import. ' +
-              'Make sure there is a `.js`, `.json` or another executable extension and ' +
-              'loader (attached before `ts-node`) available alongside ' +
-              `\`${basename(fileName)}\`.`
-          );
-        }
+        return ts.ScriptSnapshot.fromString(contents);
+      },
+      readFile: cachedReadFile,
+      readDirectory: cachedLookup(
+        debugFn('readDirectory', ts.sys.readDirectory)
+      ),
+      getDirectories: cachedLookup(
+        debugFn('getDirectories', ts.sys.getDirectories)
+      ),
+      fileExists: cachedLookup(debugFn('fileExists', fileExists)),
+      directoryExists: cachedLookup(
+        debugFn('directoryExists', ts.sys.directoryExists)
+      ),
+      getNewLine: () => ts.sys.newLine,
+      useCaseSensitiveFileNames: () => ts.sys.useCaseSensitiveFileNames,
+      getCurrentDirectory: () => cwd,
+      getCompilationSettings: () => config.options,
+      getDefaultLibFileName: () => ts.getDefaultLibFilePath(config.options),
+      getCustomTransformers: () => transformers,
+    };
 
-        return {
-          code: output.outputFiles[1].text,
-          map: output.outputFiles[0].text,
-        };
-      };
-    }
-
-    builds.set(
-      configFileName,
-      (build = {
-        getOutput,
-        getOutputTypeCheck,
-      })
+    const registry = ts.createDocumentRegistry(
+      ts.sys.useCaseSensitiveFileNames,
+      cwd
     );
-    return build;
+    const service = ts.createLanguageService(serviceHost, registry);
+
+    // Set the file contents into cache manually.
+    const updateMemoryCache = function (contents: string, fileName: string) {
+      const fileVersion = memoryCache.fileVersions.get(fileName) || 0;
+
+      // Avoid incrementing cache when nothing has changed.
+      if (memoryCache.fileContents.get(fileName) === contents) return;
+
+      memoryCache.fileVersions.set(fileName, fileVersion + 1);
+      memoryCache.fileContents.set(fileName, contents);
+    };
+
+    /**
+     * Create complete function with full language services (normal behavior for `tsc`)
+     */
+    const getOutputTypeCheck: GetOutputFunction = (
+      code: string,
+      fileName: string
+    ) => {
+      const outFile = outFiles.get(fileName);
+      if (outFile) {
+        return outFile;
+      }
+      updateMemoryCache(code, fileName);
+
+      const output = service.getEmitOutput(fileName);
+
+      // Get the relevant diagnostics - this is 3x faster than `getPreEmitDiagnostics`.
+      const diagnostics = service
+        .getSemanticDiagnostics(fileName)
+        .concat(service.getSyntacticDiagnostics(fileName));
+
+      const diagnosticList = filterDiagnostics(diagnostics, ignoreDiagnostics);
+
+      reportTSError(diagnosticList, config.options.noEmitOnError);
+
+      if (output.emitSkipped) {
+        throw new TypeError(`${relative(cwd, fileName)}: Emit skipped`);
+      }
+
+      // Throw an error when requiring `.d.ts` files.
+      if (output.outputFiles.length === 0) {
+        throw new TypeError(
+          'Unable to require `.d.ts` file.\n' +
+            'This is usually the result of a faulty configuration or import. ' +
+            'Make sure there is a `.js`, `.json` or another executable extension and ' +
+            'loader (attached before `ts-node`) available alongside ' +
+            `\`${basename(fileName)}\`.`
+        );
+      }
+
+      const file = {
+        code: output.outputFiles[1].text,
+        map: output.outputFiles[0].text,
+      };
+      outFiles.set(fileName, file);
+      return file;
+    };
+
+    const getOutput = skipTypeCheck ? getOutputTranspile : getOutputTypeCheck;
+    configFileToBuildMap.set(configFileName, getOutput);
+
+    return getOutput;
   }
 
   // determine the tsconfig.json path for a given folder
@@ -407,10 +428,8 @@ export function register(opts: Options = {}): Register {
     skipTypeCheck?: boolean
   ): SourceOutput {
     const configFileName = detectConfig();
-    const build = getBuild(configFileName);
-    const { code: value, map: sourceMap } = (
-      skipTypeCheck ? build.getOutput : build.getOutputTypeCheck
-    )(code, fileName);
+    const buildOutput = getBuild(configFileName, skipTypeCheck);
+    const { code: value, map: sourceMap } = buildOutput(code, fileName);
     const output = {
       code: value,
       map: Object.assign(JSON.parse(sourceMap), {
@@ -425,10 +444,7 @@ export function register(opts: Options = {}): Register {
   return compile;
 }
 
-interface Build {
-  getOutput(code: string, fileName: string): SourceOutput;
-  getOutputTypeCheck(code: string, fileName: string): SourceOutput;
-}
+type GetOutputFunction = (code: string, fileName: string) => SourceOutput;
 
 /**
  * Do post-processing on config options to support `ts-node`.
@@ -450,7 +466,6 @@ export function fixConfig(
   delete config.compilerOptions.tsBuildInfoFile;
   delete config.compilerOptions.incremental;
 
-  // Target esnext output by default (instead of ES3).
   // This will prevent TS from polyfill/downlevel emit.
   if (config.compilerOptions.target === undefined) {
     // See https://github.com/tsconfig/bases/tree/main/bases
@@ -471,8 +486,10 @@ export function fixConfig(
     config.compilerOptions.esModuleInterop = true;
   }
 
-  // Target CommonJS, always!
-  config.compilerOptions.module = 'CommonJS';
+  // If not specified, the default Node.js module is CommonJS.
+  if (config.compilerOptions.module === undefined) {
+    config.compilerOptions.module = 'CommonJS';
+  }
 
   return config;
 }

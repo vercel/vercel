@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import { Response } from 'node-fetch';
-import { DomainNotFound, InvalidDomain } from '../errors-ts';
+import { DomainNotFound, InvalidDomain, isAPIError } from '../errors-ts';
 import Client from '../client';
 
 type JSONResponse = {
@@ -33,15 +33,17 @@ export default async function importZonefile(
 
     const { recordIds } = (await res.json()) as JSONResponse;
     return recordIds;
-  } catch (error) {
-    if (error.code === 'not_found') {
-      return new DomainNotFound(domain, contextName);
+  } catch (err: unknown) {
+    if (isAPIError(err)) {
+      if (err.code === 'not_found') {
+        return new DomainNotFound(domain, contextName);
+      }
+
+      if (err.code === 'invalid_domain') {
+        return new InvalidDomain(domain);
+      }
     }
 
-    if (error.code === 'invalid_domain') {
-      return new InvalidDomain(domain);
-    }
-
-    throw error;
+    throw err;
   }
 }

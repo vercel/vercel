@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import ms from 'ms';
 import table from 'text-table';
-import { DNSRecord } from '../../types';
+import type { DNSRecord } from '@vercel-internals/types';
 import { Output } from '../../util/output';
 import Client from '../../util/client';
 import deleteDNSRecordById from '../../util/dns/delete-dns-record-by-id';
@@ -14,21 +14,11 @@ type Options = {};
 
 export default async function rm(
   client: Client,
-  opts: Options,
+  _opts: Options,
   args: string[]
 ) {
   const { output } = client;
-
-  try {
-    await getScope(client);
-  } catch (err) {
-    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
-      output.error(err.message);
-      return 1;
-    }
-
-    throw err;
-  }
+  await getScope(client);
 
   const [recordId] = args;
   if (args.length !== 1) {
@@ -56,7 +46,7 @@ export default async function rm(
   );
 
   if (!yes) {
-    output.error(`User aborted.`);
+    output.error(`User canceled.`);
     return 0;
   }
 
