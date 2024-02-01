@@ -517,6 +517,6 @@ type VariantOption = {
 
 export interface VariantDefinition {
   options?: VariantOption[];
-  url?: string;
+  origin?: string | { url: string; name: string };
   description?: string;
 }
