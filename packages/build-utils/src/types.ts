@@ -440,15 +440,6 @@ export interface Cron {
   schedule: string;
 }
 
-/**
- * @deprecated Replaced by Variants. Remove once fully replaced.
- */
-export interface Flag {
-  key: string;
-  defaultValue?: unknown;
-  metadata: Record<string, unknown>;
-}
-
 /** The framework which created the function */
 export interface FunctionFramework {
   slug: string;
@@ -473,9 +464,7 @@ export interface BuildResultV2Typical {
   framework?: {
     version: string;
   };
-  /** @deprecated Replaced by Variants. Remove once fully replaced. */
-  flags?: Flag[];
-  variants?: Record<string, VariantDefinition>;
+  flags?: Record<string, FlagDefinition>;
 }
 
 export type BuildResultV2 = BuildResultV2Typical | BuildResultBuildOutput;
@@ -500,23 +489,23 @@ export type StartDevServer = (
  * TODO: The following types will eventually be exported by a more
  *       relevant package.
  */
-type VariantJSONArray = ReadonlyArray<VariantJSONValue>;
+type FlagJSONArray = ReadonlyArray<FlagJSONValue>;
 
-type VariantJSONValue =
+type FlagJSONValue =
   | string
   | boolean
   | number
   | null
-  | VariantJSONArray
-  | { [key: string]: VariantJSONValue };
+  | FlagJSONArray
+  | { [key: string]: FlagJSONValue };
 
-type VariantOption = {
-  value: VariantJSONValue;
+type FlagOption = {
+  value: FlagJSONValue;
   label?: string;
 };
 
-export interface VariantDefinition {
-  options?: VariantOption[];
+export interface FlagDefinition {
+  options?: FlagOption[];
   origin?: string;
   description?: string;
 }
