@@ -21,7 +21,7 @@ import {
   NowBuildError,
   Cron,
   validateNpmrc,
-  FlagDefinition,
+  type FlagDefinitions,
 } from '@vercel/build-utils';
 import {
   detectBuilders,
@@ -95,7 +95,6 @@ interface BuildOutputConfig {
     version: string;
   };
   crons?: Cron[];
-  flags?: Record<string, FlagDefinition>;
 }
 
 /**
@@ -834,13 +833,14 @@ async function writeFlagsJSON(
     }
 
     throw error;
-  })) as { definitions: Record<string, FlagDefinition> };
+  })) as { definitions: FlagDefinitions };
 
   for (const result of buildResults) {
-    if (!('flags' in result) || !result.flags) continue;
+    if (!('flags' in result) || !result.flags || !result.flags.definitions)
+      continue;
 
-    for (const [key, defintion] of Object.entries(result.flags)) {
-      if (result.flags[key]) {
+    for (const [key, definition] of Object.entries(result.flags.definitions)) {
+      if (result.flags.definitions[key]) {
         output.warn(
           `The flag "${key}" was found multiple times. Only its first occurrence will be considered.`
         );
@@ -848,7 +848,7 @@ async function writeFlagsJSON(
       }
 
       hasFlags = true;
-      flags.definitions[key] = defintion;
+      flags.definitions[key] = definition;
     }
   }
 
