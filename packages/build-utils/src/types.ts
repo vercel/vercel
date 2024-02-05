@@ -464,7 +464,7 @@ export interface BuildResultV2Typical {
   framework?: {
     version: string;
   };
-  flags?: Record<string, FlagDefinition>;
+  flags?: { definitions: FlagDefinitions };
 }
 
 export type BuildResultV2 = BuildResultV2Typical | BuildResultBuildOutput;
@@ -509,3 +509,5 @@ export interface FlagDefinition {
   origin?: string;
   description?: string;
 }
+
+export type FlagDefinitions = Record<string, FlagDefinition>;
