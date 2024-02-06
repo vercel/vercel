@@ -1094,7 +1094,12 @@ export async function serverBuild({
 
       let launcherData = group.isAppRouter ? appLauncher : launcher;
       let preloadChunks: string[] = [];
+
       if (process.env.VERCEL_NEXT_PRELOAD_COMMON === '1') {
+        const nextPackageDir = path.dirname(
+          resolveFrom(projectDir, 'next/package.json')
+        );
+
         if (group.isPages) {
           preloadChunks = PRELOAD_CHUNKS.PAGES_ROUTER_PAGES;
         } else if (group.isApiLambda) {
@@ -1104,10 +1109,36 @@ export async function serverBuild({
         } else if (group.isAppRouteHandler) {
           preloadChunks = PRELOAD_CHUNKS.APP_ROUTER_HANDLER;
         }
-        launcherData = launcherData.replace(
-          '// @preserve next-server-preload-target',
-          preloadChunks.map(name => `require('${name}');`).join('\n')
-        );
+        const normalizedPreloadChunks: string[] = [];
+
+        for (const preloadChunk of preloadChunks) {
+          const absoluteChunk = preloadChunk.startsWith('.next')
+            ? path.join(projectDir, preloadChunk)
+            : path.join(nextPackageDir, '..', preloadChunk);
+
+          // ensure the chunks are actually in this layer
+          if (
+            group.pseudoLayer[
+              path.join('.', path.relative(baseDir, absoluteChunk))
+            ]
+          ) {
+            normalizedPreloadChunks.push(
+              // relative files need to be prefixed with ./ for require
+              preloadChunk.startsWith('.next')
+                ? `./${preloadChunk}`
+                : preloadChunk
+            );
+          }
+        }
+
+        if (normalizedPreloadChunks.length > 0) {
+          launcherData = launcherData.replace(
+            '// @preserve next-server-preload-target',
+            normalizedPreloadChunks
+              .map(name => `require('${name}');`)
+              .join('\n')
+          );
+        }
       }
 
       const launcherFiles: { [name: string]: FileFsRef | FileBlob } = {
