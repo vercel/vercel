@@ -1,5 +1,17 @@
 # @vercel/client
 
+## 13.1.1
+
+### Patch Changes
+
+- More helpful error message when `vc deploy --prebuilt` has missing files ([#11105](https://github.com/vercel/vercel/pull/11105))
+
+## 13.1.0
+
+### Minor Changes
+
+- Upload files referenced by "filePathMap" during `vc deploy --prebuilt` ([#11077](https://github.com/vercel/vercel/pull/11077))
+
 ## 13.0.14
 
 ### Patch Changes

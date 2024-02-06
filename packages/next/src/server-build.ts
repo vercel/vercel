@@ -47,7 +47,7 @@ import {
   UnwrapPromise,
   getOperationType,
   FunctionsConfigManifestV1,
-  VariantsManifest,
+  VariantsManifestLegacy,
   RSC_CONTENT_TYPE,
   RSC_PREFETCH_SUFFIX,
   normalizePrefetches,
@@ -158,7 +158,7 @@ export async function serverBuild({
   imagesManifest?: NextImagesManifest;
   prerenderManifest: NextPrerenderedRoutes;
   requiredServerFilesManifest: NextRequiredServerFilesManifest;
-  variantsManifest: VariantsManifest | null;
+  variantsManifest: VariantsManifestLegacy | null;
 }): Promise<BuildResult> {
   lambdaPages = Object.assign({}, lambdaPages, lambdaAppPaths);
 
@@ -217,7 +217,7 @@ export async function serverBuild({
     for (const rewrite of afterFilesRewrites) {
       if (rewrite.src && rewrite.dest) {
         rewrite.src = rewrite.src.replace(
-          '(?:/)?',
+          /\/?\(\?:\/\)\?/,
           '(?<rscsuff>(\\.prefetch)?\\.rsc)?(?:/)?'
         );
         let destQueryIndex = rewrite.dest.indexOf('?');
@@ -1128,11 +1128,11 @@ export async function serverBuild({
             );
           });
         }
+        let outputName = path.posix.join(entryDirectory, pageNoExt);
 
-        let outputName = normalizeIndexOutput(
-          path.posix.join(entryDirectory, pageNoExt),
-          true
-        );
+        if (!group.isAppRouter && !group.isAppRouteHandler) {
+          outputName = normalizeIndexOutput(outputName, true);
+        }
 
         // If this is a PPR page, then we should prefix the output name.
         if (isPPR) {
@@ -1443,9 +1443,10 @@ export async function serverBuild({
         continue;
       }
 
-      const pathname = normalizeIndexOutput(
-        path.posix.join('./', entryDirectory, route === '/' ? '/index' : route),
-        true
+      const pathname = path.posix.join(
+        './',
+        entryDirectory,
+        route === '/' ? '/index' : route
       );
 
       if (lambdas[pathname]) {
