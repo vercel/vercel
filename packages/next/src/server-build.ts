@@ -1118,6 +1118,7 @@ export async function serverBuild({
         if (
           file.endsWith('.js') ||
           file.endsWith('.mjs') ||
+          file.endsWith('.json') ||
           file.endsWith('.cjs')
         ) {
           if (count === group.pages.length) {

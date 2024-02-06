@@ -56,38 +56,50 @@ module.exports = serve(nextServer.getRequestHandler());
 declare const __COMMON_CHUNKS__: string[];
 const commonChunks = __COMMON_CHUNKS__;
 module.exports.preload = async () => {
-  const start = performance.now();
-  const failed: string[] = [];
-  for (const chunk of commonChunks) {
-    try {
-      require(chunk);
-    } catch (e) {
-      failed.push(e.message);
-    }
-  }
-  performance.measure('vc:common-chunks', {
-    detail: 'Next.js common chunks',
-    end: performance.now(),
-    start,
-  });
-  if (failed.length > 0) {
-    throw new Error(`Failed to preload chunks: ${failed.length}: ${failed.join(', ')}`);
-  }
+  // const start = performance.now();
+  // const failed: string[] = [];
+  // for (const chunk of commonChunks) {
+  //   try {
+  //     require(chunk);
+  //   } catch (e: any) {
+  //     failed.push(e.message);
+  //   }
+  // }
+  // performance.measure('vc:common-chunks', {
+  //   detail: 'Next.js common chunks',
+  //   end: performance.now(),
+  //   start,
+  // });
+  // if (failed.length > 0) {
+  //   throw new Error(
+  //     `Failed to preload chunks: ${failed.length}: ${failed.join(', ')}`
+  //   );
+  // }
 };
 
 declare const __REST_CHUNKS__: string[];
 const restChunks = __REST_CHUNKS__;
 module.exports.postload = async () => {
+  // @ts-ignore
+  const precompile = globalThis[Symbol.for('@vercel/node-module-precompile')];
+  const files = [...commonChunks, ...restChunks];
   const failed: string[] = [];
-  for (const chunk of restChunks) {
+  const success: string[] = [];
+
+  for (const file of files) {
     try {
-      require(chunk);
-    } catch (e) {
-      failed.push(e.message);
+      precompile(require.resolve(file));
+      success.push(file);
+    } catch (error: any) {
+      failed.push(error.message);
     }
   }
+
+  console.log('Precompiled files:', success.join(', \n'));
   if (failed.length > 0) {
-    throw new Error(`Failed to postload chunks: ${failed.length}: ${failed.join(', ')}`);
+    throw new Error(
+      `Failed to postload chunks: ${failed.length}: ${failed.join(',\n')}`
+    );
   }
 };
 
