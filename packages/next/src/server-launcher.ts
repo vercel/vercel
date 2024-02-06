@@ -1,4 +1,4 @@
-import { IncomingMessage, ServerResponse } from 'http';
+import type { IncomingMessage, ServerResponse } from 'http';
 // The Next.js builder can emit the project in a subdirectory depending on how
 // many folder levels of `node_modules` are traced. To ensure `process.cwd()`
 // returns the proper path, we change the directory to the folder with the
@@ -52,6 +52,56 @@ const serve =
 
 // The default handler method should be exported as a function on the module.
 module.exports = serve(nextServer.getRequestHandler());
+
+declare const __COMMON_CHUNKS__: string[];
+const commonChunks = __COMMON_CHUNKS__;
+module.exports.preload = async () => {
+  // const start = performance.now();
+  // const failed: string[] = [];
+  // for (const chunk of commonChunks) {
+  //   try {
+  //     require(chunk);
+  //   } catch (e: any) {
+  //     failed.push(e.message);
+  //   }
+  // }
+  // performance.measure('vc:common-chunks', {
+  //   detail: 'Next.js common chunks',
+  //   end: performance.now(),
+  //   start,
+  // });
+  // if (failed.length > 0) {
+  //   throw new Error(
+  //     `Failed to preload chunks: ${failed.length}: ${failed.join(', ')}`
+  //   );
+  // }
+};
+
+declare const __REST_CHUNKS__: string[];
+const restChunks = __REST_CHUNKS__;
+module.exports.postload = async () => {
+  // @ts-ignore
+  const precompile = globalThis[Symbol.for('@vercel/node-module-precompile')];
+  const files = [...commonChunks, ...restChunks];
+  const failed: string[] = [];
+  const success: string[] = [];
+
+  for (const file of files) {
+    try {
+      precompile(require.resolve(file));
+      success.push(file);
+    } catch (error: any) {
+      failed.push(error.message);
+    }
+  }
+
+  console.log('Precompiled files:', success.join(', \n'));
+  if (failed.length > 0) {
+    throw new Error(
+      `Failed to postload chunks: ${failed.length}: ${failed.join(',\n')}`
+    );
+  }
+};
 
 // If available, add `getRequestHandlerWithMetadata` to the export if it's
 // required by the configuration.
