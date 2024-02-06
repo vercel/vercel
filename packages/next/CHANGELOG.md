@@ -1,5 +1,19 @@
 # @vercel/next
 
+## 4.1.1
+
+### Patch Changes
+
+- [node][next][redwood][remix] bump `@vercel/nft@0.26.3` ([#11115](https://github.com/vercel/vercel/pull/11115))
+
+- Load common chunks on module initialization ([#11126](https://github.com/vercel/vercel/pull/11126))
+
+- Fix index normalizing for app outputs ([#11099](https://github.com/vercel/vercel/pull/11099))
+
+- Mark `flags` as deprecated and replace them with `variants` ([#11098](https://github.com/vercel/vercel/pull/11098))
+
+- Fix rewrite RSC handling with trailingSlash ([#11107](https://github.com/vercel/vercel/pull/11107))
+
 ## 4.1.0
 
 ### Minor Changes

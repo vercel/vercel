@@ -1,5 +1,14 @@
 # @vercel/gatsby-plugin-vercel-builder
 
+## 2.0.17
+
+### Patch Changes
+
+- [gatsby-plugin-vercel-builder] use --keep-names esbuild flag ([#11117](https://github.com/vercel/vercel/pull/11117))
+
+- Updated dependencies [[`8ba0ce932`](https://github.com/vercel/vercel/commit/8ba0ce932434c6295fedb5307bee59a804b7e6a8), [`abaa700ce`](https://github.com/vercel/vercel/commit/abaa700cea44c723cfc851baa2dfe9e1ae2e8a5c)]:
+  - @vercel/build-utils@7.6.0
+
 ## 2.0.16
 
 ### Patch Changes

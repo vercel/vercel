@@ -1,5 +1,15 @@
 # @vercel/build-utils
 
+## 7.6.0
+
+### Minor Changes
+
+- Mark `flags` as deprecated and replace them with `variants` ([#11098](https://github.com/vercel/vercel/pull/11098))
+
+### Patch Changes
+
+- Update internal type for variants ([#11111](https://github.com/vercel/vercel/pull/11111))
+
 ## 7.5.1
 
 ### Patch Changes
