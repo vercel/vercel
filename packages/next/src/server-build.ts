@@ -12,7 +12,6 @@ import {
   debug,
   glob,
   Files,
-  Flag,
   BuildResultV2Typical as BuildResult,
   NodejsLambda,
 } from '@vercel/build-utils';
@@ -47,7 +46,7 @@ import {
   UnwrapPromise,
   getOperationType,
   FunctionsConfigManifestV1,
-  VariantsManifestLegacy,
+  VariantsManifest,
   RSC_CONTENT_TYPE,
   RSC_PREFETCH_SUFFIX,
   normalizePrefetches,
@@ -182,7 +181,7 @@ export async function serverBuild({
   imagesManifest?: NextImagesManifest;
   prerenderManifest: NextPrerenderedRoutes;
   requiredServerFilesManifest: NextRequiredServerFilesManifest;
-  variantsManifest: VariantsManifestLegacy | null;
+  variantsManifest: VariantsManifest | null;
 }): Promise<BuildResult> {
   lambdaPages = Object.assign({}, lambdaPages, lambdaAppPaths);
 
@@ -1539,14 +1538,6 @@ export async function serverBuild({
     'RSC, Next-Router-State-Tree, Next-Router-Prefetch';
   const appNotFoundPath = path.posix.join('.', entryDirectory, '_not-found');
 
-  const flags: Flag[] = variantsManifest
-    ? Object.entries(variantsManifest).map(([key, value]) => ({
-        key,
-        ...value,
-        metadata: value.metadata ?? {},
-      }))
-    : [];
-
   if (experimental.ppr && !rscPrefetchHeader) {
     throw new Error("Invariant: cannot use PPR without 'rsc.prefetchHeader'");
   }
@@ -2274,6 +2265,6 @@ export async function serverBuild({
           ]),
     ],
     framework: { version: nextVersion },
-    flags,
+    flags: variantsManifest || undefined,
   };
 }
