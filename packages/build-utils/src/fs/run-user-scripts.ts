@@ -414,7 +414,7 @@ export async function runNpmInstall(
 
     if (!packageJsonPath) {
       debug(
-        'Skipping dependency installation because no `package.json` was found'
+        `Skipping dependency installation because no package.json was found for ${destPath}`
       );
       runNpmInstallSema.release();
       return false;
