@@ -316,9 +316,8 @@ export async function scanParentDirs(
       bunLockPath ? fs.readFile(bunLockPath, 'utf8') : null,
     ]);
 
-  // Priority order is bun > yarn > pnpm > npm
-  // If no lockfile is detected, then npm is used.
-  if (bunLockBin) {
+  // Priority order is bun with yarn lock > yarn > pnpm > npm > bun
+  if (bunLockBin && hasYarnLock) {
     cliType = 'bun';
     lockfilePath = bunLockPath;
     // TODO: read "bun-lockfile-format-v0"
@@ -334,6 +333,11 @@ export async function scanParentDirs(
     cliType = 'npm';
     lockfilePath = npmLockPath;
     lockfileVersion = packageLockJson.lockfileVersion;
+  } else if (bunLockBin) {
+    cliType = 'bun';
+    lockfilePath = bunLockPath;
+    // TODO: read "bun-lockfile-format-v0"
+    lockfileVersion = 0;
   } else {
     cliType = 'npm';
   }
