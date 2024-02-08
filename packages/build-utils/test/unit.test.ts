@@ -576,7 +576,7 @@ it(
   ms('1m')
 );
 
-it('should return cliType npm when no lockfile is present', async () => {
+it('should return cliType npm when no lockfile is present and VERCEL_ENABLE_NPM_DEFAULT is set', async () => {
   const originalRepoLockfilePath = path.join(
     __dirname,
     '..',
@@ -587,7 +587,31 @@ it('should return cliType npm when no lockfile is present', async () => {
   const originalRepoLockfileData = await fs.readFile(originalRepoLockfilePath);
   await fs.remove(originalRepoLockfilePath);
   try {
-    const fixture = path.join(__dirname, 'fixtures', '20-npm-no-lockfile');
+    process.env.VERCEL_ENABLE_NPM_DEFAULT = '1';
+    const fixture = path.join(__dirname, 'fixtures', '40-no-lockfile');
+    const result = await scanParentDirs(fixture);
+    expect(result.cliType).toEqual('npm');
+    expect(result.lockfileVersion).toEqual(undefined);
+    expect(result.lockfilePath).toEqual(undefined);
+    expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
+  } finally {
+    delete process.env.VERCEL_ENABLE_NPM_DEFAULT;
+    await fs.writeFile(originalRepoLockfilePath, originalRepoLockfileData);
+  }
+});
+
+it('should return cliType yarn when no lockfile is present and VERCEL_ENABLE_NPM_DEFAULT is not set', async () => {
+  const originalRepoLockfilePath = path.join(
+    __dirname,
+    '..',
+    '..',
+    '..',
+    'pnpm-lock.yaml'
+  );
+  const originalRepoLockfileData = await fs.readFile(originalRepoLockfilePath);
+  await fs.remove(originalRepoLockfilePath);
+  try {
+    const fixture = path.join(__dirname, 'fixtures', '40-no-lockfile');
     const result = await scanParentDirs(fixture);
     expect(result.cliType).toEqual('npm');
     expect(result.lockfileVersion).toEqual(undefined);

@@ -339,7 +339,11 @@ export async function scanParentDirs(
     // TODO: read "bun-lockfile-format-v0"
     lockfileVersion = 0;
   } else {
-    cliType = 'npm';
+    if (process.env.VERCEL_ENABLE_NPM_DEFAULT === '1') {
+      cliType = 'npm';
+    } else {
+      cliType = 'yarn';
+    }
   }
 
   const packageJsonPath = pkgJsonPath || undefined;

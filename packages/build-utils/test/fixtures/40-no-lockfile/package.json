@@ -2,5 +2,8 @@
   "private": true,
   "scripts": {
     "build": "mkdir -p public && (printf \"npm version: \" && npm -v) > public/index.txt"
+  },
+  "dependencies": {
+    "sharp": "0.33.2"
   }
 }
