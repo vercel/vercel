@@ -613,7 +613,7 @@ it('should return cliType yarn when no lockfile is present and VERCEL_ENABLE_NPM
   try {
     const fixture = path.join(__dirname, 'fixtures', '40-no-lockfile');
     const result = await scanParentDirs(fixture);
-    expect(result.cliType).toEqual('npm');
+    expect(result.cliType).toEqual('yarn');
     expect(result.lockfileVersion).toEqual(undefined);
     expect(result.lockfilePath).toEqual(undefined);
     expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
