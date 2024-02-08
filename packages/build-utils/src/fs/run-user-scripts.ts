@@ -412,6 +412,14 @@ export async function runNpmInstall(
       destPath
     );
 
+    if (!packageJsonPath) {
+      debug(
+        'Skipping dependency installation because no `package.json` was found'
+      );
+      runNpmInstallSema.release();
+      return false;
+    }
+
     // Only allow `runNpmInstall()` to run once per `package.json`
     // when doing a default install (no additional args)
     if (meta && packageJsonPath && args.length === 0) {
