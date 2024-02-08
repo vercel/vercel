@@ -302,7 +302,7 @@ export async function scanParentDirs(
     });
   let lockfilePath: string | undefined;
   let lockfileVersion: number | undefined;
-  let cliType: CliType = 'yarn';
+  let cliType: CliType;
 
   const [hasYarnLock, packageLockJson, pnpmLockYaml, bunLockBin] =
     await Promise.all([
@@ -316,8 +316,9 @@ export async function scanParentDirs(
       bunLockPath ? fs.readFile(bunLockPath, 'utf8') : null,
     ]);
 
-  // Priority order is bun with yarn lock > yarn > pnpm > npm > bun
-  if (bunLockBin && hasYarnLock) {
+  // Priority order is bun > yarn > pnpm > npm
+  // If no lockfile is detected, then npm is used.
+  if (bunLockBin) {
     cliType = 'bun';
     lockfilePath = bunLockPath;
     // TODO: read "bun-lockfile-format-v0"
@@ -333,11 +334,8 @@ export async function scanParentDirs(
     cliType = 'npm';
     lockfilePath = npmLockPath;
     lockfileVersion = packageLockJson.lockfileVersion;
-  } else if (bunLockBin) {
-    cliType = 'bun';
-    lockfilePath = bunLockPath;
-    // TODO: read "bun-lockfile-format-v0"
-    lockfileVersion = 0;
+  } else {
+    cliType = 'npm';
   }
 
   const packageJsonPath = pkgJsonPath || undefined;

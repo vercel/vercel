@@ -576,6 +576,28 @@ it(
   ms('1m')
 );
 
+it('should return cliType npm when no lockfile is present', async () => {
+  const originalRepoLockfilePath = path.join(
+    __dirname,
+    '..',
+    '..',
+    '..',
+    'pnpm-lock.yaml'
+  );
+  const originalRepoLockfileData = await fs.readFile(originalRepoLockfilePath);
+  await fs.remove(originalRepoLockfilePath);
+  try {
+    const fixture = path.join(__dirname, 'fixtures', '20-npm-no-lockfile');
+    const result = await scanParentDirs(fixture);
+    expect(result.cliType).toEqual('npm');
+    expect(result.lockfileVersion).toEqual(undefined);
+    expect(result.lockfilePath).toEqual(undefined);
+    expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
+  } finally {
+    await fs.writeFile(originalRepoLockfilePath, originalRepoLockfileData);
+  }
+});
+
 it('should return cliType bun and correct lock file for bun v1', async () => {
   const fixture = path.join(__dirname, 'fixtures', '31-bun-v1-with-yarn-lock');
   const result = await scanParentDirs(fixture);
