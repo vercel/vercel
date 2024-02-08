@@ -8,7 +8,7 @@ const runnersMap = new Map([
     {
       min: 1,
       max: 1,
-      runners: ['ubuntu-latest', 'macos-latest', 'windows-latest'],
+      runners: ['ubuntu-latest', 'macos-14', 'windows-latest'],
     },
   ],
   ['test-e2e', { min: 1, max: 7, runners: ['ubuntu-latest'] }],
@@ -20,7 +20,7 @@ const runnersMap = new Map([
     'test-next-local-legacy',
     { min: 1, max: 5, runners: ['ubuntu-latest'], nodeVersion: '16' },
   ],
-  ['test-dev', { min: 1, max: 7, runners: ['ubuntu-latest', 'macos-latest'] }],
+  ['test-dev', { min: 1, max: 7, runners: ['ubuntu-latest', 'macos-14'] }],
 ]);
 
 const packageOptionsOverrides = {
