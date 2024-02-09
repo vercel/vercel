@@ -1,5 +1,21 @@
 # vercel
 
+## 33.5.0
+
+### Minor Changes
+
+- Mark `flags` as deprecated and replace them with `variants` ([#11098](https://github.com/vercel/vercel/pull/11098))
+
+### Patch Changes
+
+- Updated dependencies [[`c32a909af`](https://github.com/vercel/vercel/commit/c32a909afcedf0ee55777d5dcaecc0c8383dd8c8), [`b6ed28b9b`](https://github.com/vercel/vercel/commit/b6ed28b9b1712f882c93fe053b70d3eb1df21819), [`d21bb9f87`](https://github.com/vercel/vercel/commit/d21bb9f87e1d837666fe8104d4e199b2590725d6), [`4027a1833`](https://github.com/vercel/vercel/commit/4027a1833718a92be74b2b3c5a4df23745d19a36), [`8ba0ce932`](https://github.com/vercel/vercel/commit/8ba0ce932434c6295fedb5307bee59a804b7e6a8), [`0d034b682`](https://github.com/vercel/vercel/commit/0d034b6820c0f3252949c0ffc483048c5aac7f04), [`abaa700ce`](https://github.com/vercel/vercel/commit/abaa700cea44c723cfc851baa2dfe9e1ae2e8a5c), [`3bad73401`](https://github.com/vercel/vercel/commit/3bad73401b4ec1f61e515965732cde8dcc052b17)]:
+  - @vercel/next@4.1.1
+  - @vercel/node@3.0.18
+  - @vercel/redwood@2.0.7
+  - @vercel/remix-builder@2.0.19
+  - @vercel/build-utils@7.6.0
+  - @vercel/static-build@2.3.0
+
 ## 33.4.1
 
 ### Patch Changes
