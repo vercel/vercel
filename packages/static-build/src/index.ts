@@ -46,7 +46,6 @@ import {
   LocalFileSystemDetector,
 } from '@vercel/fs-detectors';
 
-const SUPPORTED_RUBY_VERSION = '3.2.0';
 const sleep = (n: number) => new Promise(resolve => setTimeout(resolve, n));
 
 const DEV_SERVER_PORT_BIND_TIMEOUT = ms('5m');
@@ -542,9 +541,12 @@ export const build: BuildV2 = async ({
       pathList.push(vendorBin); // Add `./vendor/bin`
       debug(`Added "${vendorBin}" to PATH env because a Gemfile was found`);
       const dir = path.join(workPath, 'vendor', 'bundle', 'ruby');
-      const rubyVersion = SUPPORTED_RUBY_VERSION;
+      const rubyVersion =
+        existsSync(dir) && statSync(dir).isDirectory()
+          ? readdirSync(dir)[0]
+          : '';
       if (rubyVersion) {
-        gemHome = path.join(dir, rubyVersion);
+        gemHome = path.join(dir, rubyVersion); // Add `./vendor/bundle/ruby/2.7.0`
         debug(`Set GEM_HOME="${gemHome}" because a Gemfile was found`);
       }
     }
