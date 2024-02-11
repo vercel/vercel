@@ -23,6 +23,8 @@ if (process.env.NODE_ENV !== 'production' && region !== 'dev1') {
 // eslint-disable-next-line
 const NextServer = require('__NEXT_SERVER_PATH__').default;
 
+// @preserve next-server-preload-target
+
 // __NEXT_CONFIG__ value is injected
 declare const __NEXT_CONFIG__: any;
 const conf = __NEXT_CONFIG__;

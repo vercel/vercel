@@ -38,14 +38,8 @@ module.exports = function setupTests(groupIndex) {
     console.log('testing group', groupIndex, fixtures);
   }
 
-  const fixturesToSkip = ['jekyll-v3', 'jekyll-v4', 'middleman-v4'];
-
   // eslint-disable-next-line no-restricted-syntax
   for (const fixture of fixtures) {
-    if (fixturesToSkip.includes(fixture)) {
-      continue;
-    }
-
     const errMsg = testsThatFailToBuild.get(fixture);
     if (errMsg) {
       // eslint-disable-next-line no-loop-func
