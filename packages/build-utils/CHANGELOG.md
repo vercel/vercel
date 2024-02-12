@@ -4,11 +4,7 @@
 
 ### Minor Changes
 
-- Revert "Default ruby to only currently supported version (3.2.0)" ([#11135](https://github.com/vercel/vercel/pull/11135))
-
 - Mark `flags` as deprecated and replace them with `variants` ([#11098](https://github.com/vercel/vercel/pull/11098))
-
-- [build-utils] change default package manager when no lockfile detected from `yarn` to `npm` (gated behind feature flag) ([#11131](https://github.com/vercel/vercel/pull/11131))
 
 ### Patch Changes
 

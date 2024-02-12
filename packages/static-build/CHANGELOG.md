@@ -1,10 +1,6 @@
 # @vercel/static-build
 
-## 2.3.0
-
-### Minor Changes
-
-- Revert "Default ruby to only currently supported version (3.2.0)" ([#11135](https://github.com/vercel/vercel/pull/11135))
+## 2.2.1
 
 ### Patch Changes
 
