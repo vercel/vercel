@@ -1,5 +1,26 @@
 # @vercel/static-build
 
+## 2.3.0
+
+### Minor Changes
+
+- Revert "Default ruby to only currently supported version (3.2.0)" ([#11135](https://github.com/vercel/vercel/pull/11135))
+
+### Patch Changes
+
+- Updated dependencies [[`ab2444466`](https://github.com/vercel/vercel/commit/ab24444660339eaeacdaad7ff74594171a142b1e)]:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.17
+
+## 2.2.0
+
+### Minor Changes
+
+- Default ruby to only currently supported version (3.2.0) ([#11104](https://github.com/vercel/vercel/pull/11104))
+
+### Patch Changes
+
+- [tests] Update Gatsby fixture versions ([#11101](https://github.com/vercel/vercel/pull/11101))
+
 ## 2.1.0
 
 ### Minor Changes

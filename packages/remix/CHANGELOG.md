@@ -1,5 +1,11 @@
 # @vercel/remix-builder
 
+## 2.0.19
+
+### Patch Changes
+
+- [node][next][redwood][remix] bump `@vercel/nft@0.26.3` ([#11115](https://github.com/vercel/vercel/pull/11115))
+
 ## 2.0.18
 
 ### Patch Changes

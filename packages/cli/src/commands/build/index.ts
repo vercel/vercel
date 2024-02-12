@@ -21,7 +21,7 @@ import {
   NowBuildError,
   Cron,
   validateNpmrc,
-  Flag,
+  type FlagDefinitions,
 } from '@vercel/build-utils';
 import {
   detectBuilders,
@@ -95,7 +95,6 @@ interface BuildOutputConfig {
     version: string;
   };
   crons?: Cron[];
-  flags?: Flag[];
 }
 
 /**
@@ -553,6 +552,7 @@ async function doBuild(
       // Start flushing the file outputs to the filesystem asynchronously
       ops.push(
         writeBuildResult(
+          repoRootPath,
           outputDir,
           buildResult,
           build,
@@ -663,7 +663,6 @@ async function doBuild(
   const mergedWildcard = mergeWildcard(buildResults.values());
   const mergedOverrides: Record<string, PathOverride> =
     overrides.length > 0 ? Object.assign({}, ...overrides) : undefined;
-  const mergedFlags = mergeFlags(buildResults.values());
 
   const framework = await getFramework(cwd, buildResults);
 
@@ -677,9 +676,10 @@ async function doBuild(
     overrides: mergedOverrides,
     framework,
     crons: mergedCrons,
-    flags: mergedFlags,
   };
   await fs.writeJSON(join(outputDir, 'config.json'), config, { spaces: 2 });
+
+  await writeFlagsJSON(client, buildResults.values(), outputDir);
 
   const relOutputDir = relative(cwd, outputDir);
   output.print(
@@ -813,16 +813,52 @@ function mergeWildcard(
   return wildcard;
 }
 
-function mergeFlags(
-  buildResults: Iterable<BuildResult | BuildOutputConfig>
-): BuildResultV2Typical['flags'] {
-  return Array.from(buildResults).flatMap(result => {
-    if ('flags' in result) {
-      return result.flags ?? [];
+/**
+ * Takes the build output and writes all the flags into the `flags.json`
+ * file. It'll skip flags that already exist.
+ */
+async function writeFlagsJSON(
+  { output }: Client,
+  buildResults: Iterable<BuildResult | BuildOutputConfig>,
+  outputDir: string
+): Promise<void> {
+  const flagsFilePath = join(outputDir, 'flags.json');
+
+  let hasFlags = true;
+
+  const flags = (await fs.readJSON(flagsFilePath).catch(error => {
+    if (error.code === 'ENOENT') {
+      hasFlags = false;
+      return { definitions: {} };
     }
 
-    return [];
-  });
+    throw error;
+  })) as { definitions: FlagDefinitions };
+
+  for (const result of buildResults) {
+    if (!('flags' in result) || !result.flags || !result.flags.definitions)
+      continue;
+
+    for (const [key, definition] of Object.entries(result.flags.definitions)) {
+      if (result.flags.definitions[key]) {
+        output.warn(
+          `The flag "${key}" was found multiple times. Only its first occurrence will be considered.`
+        );
+        continue;
+      }
+
+      hasFlags = true;
+      flags.definitions[key] = definition;
+    }
+  }
+
+  // Only create the file when there are flags to write,
+  // or when the file already exists.
+  // Checking `definitions` alone won't be enough in case there
+  // are other properties set.
+  if (hasFlags) {
+    await fs.writeJSON(flagsFilePath, flags, { spaces: 2 });
+  }
 }
 
 async function writeBuildJson(buildsJson: BuildsManifest, outputDir: string) {

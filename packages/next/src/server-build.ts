@@ -12,7 +12,6 @@ import {
   debug,
   glob,
   Files,
-  Flag,
   BuildResultV2Typical as BuildResult,
   NodejsLambda,
 } from '@vercel/build-utils';
@@ -69,6 +68,30 @@ const CORRECT_MIDDLEWARE_ORDER_VERSION = 'v12.1.7-canary.29';
 const NEXT_DATA_MIDDLEWARE_RESOLVING_VERSION = 'v12.1.7-canary.33';
 const EMPTY_ALLOW_QUERY_FOR_PRERENDERED_VERSION = 'v12.2.0';
 const CORRECTED_MANIFESTS_VERSION = 'v12.2.0';
+
+// Ideally this should be in a Next.js manifest so we can change it in
+// the future but this also allows us to improve existing versions
+const PRELOAD_CHUNKS = {
+  APP_ROUTER_PAGES: [
+    '.next/server/webpack-runtime.js',
+    'next/dist/client/components/action-async-storage.external.js',
+    'next/dist/client/components/request-async-storage.external.js',
+    'next/dist/client/components/static-generation-async-storage.external.js',
+    'next/dist/compiled/next-server/app-page.runtime.prod.js',
+  ],
+  APP_ROUTER_HANDLER: [
+    '.next/server/webpack-runtime.js',
+    'next/dist/compiled/next-server/app-route.runtime.prod.js',
+  ],
+  PAGES_ROUTER_PAGES: [
+    '.next/server/webpack-runtime.js',
+    'next/dist/compiled/next-server/pages.runtime.prod.js',
+  ],
+  PAGES_ROUTER_API: [
+    '.next/server/webpack-api-runtime.js',
+    'next/dist/compiled/next-server/pages-api.runtime.prod.js',
+  ],
+};
 
 // related PR: https://github.com/vercel/next.js/pull/52997
 // and https://github.com/vercel/next.js/pull/56318
@@ -217,7 +240,7 @@ export async function serverBuild({
     for (const rewrite of afterFilesRewrites) {
       if (rewrite.src && rewrite.dest) {
         rewrite.src = rewrite.src.replace(
-          '(?:/)?',
+          /\/?\(\?:\/\)\?/,
           '(?<rscsuff>(\\.prefetch)?\\.rsc)?(?:/)?'
         );
         let destQueryIndex = rewrite.dest.indexOf('?');
@@ -1068,9 +1091,58 @@ export async function serverBuild({
         }
       }
 
+      let launcherData = group.isAppRouter ? appLauncher : launcher;
+      let preloadChunks: string[] = [];
+
+      if (process.env.VERCEL_NEXT_PRELOAD_COMMON === '1') {
+        const nextPackageDir = path.dirname(
+          resolveFrom(projectDir, 'next/package.json')
+        );
+
+        if (group.isPages) {
+          preloadChunks = PRELOAD_CHUNKS.PAGES_ROUTER_PAGES;
+        } else if (group.isApiLambda) {
+          preloadChunks = PRELOAD_CHUNKS.PAGES_ROUTER_API;
+        } else if (group.isAppRouter && !group.isAppRouteHandler) {
+          preloadChunks = PRELOAD_CHUNKS.APP_ROUTER_PAGES;
+        } else if (group.isAppRouteHandler) {
+          preloadChunks = PRELOAD_CHUNKS.APP_ROUTER_HANDLER;
+        }
+        const normalizedPreloadChunks: string[] = [];
+
+        for (const preloadChunk of preloadChunks) {
+          const absoluteChunk = preloadChunk.startsWith('.next')
+            ? path.join(projectDir, preloadChunk)
+            : path.join(nextPackageDir, '..', preloadChunk);
+
+          // ensure the chunks are actually in this layer
+          if (
+            group.pseudoLayer[
+              path.join('.', path.relative(baseDir, absoluteChunk))
+            ]
+          ) {
+            normalizedPreloadChunks.push(
+              // relative files need to be prefixed with ./ for require
+              preloadChunk.startsWith('.next')
+                ? `./${preloadChunk}`
+                : preloadChunk
+            );
+          }
+        }
+
+        if (normalizedPreloadChunks.length > 0) {
+          launcherData = launcherData.replace(
+            '// @preserve next-server-preload-target',
+            normalizedPreloadChunks
+              .map(name => `require('${name}');`)
+              .join('\n')
+          );
+        }
+      }
+
       const launcherFiles: { [name: string]: FileFsRef | FileBlob } = {
         [path.join(path.relative(baseDir, projectDir), '___next_launcher.cjs')]:
-          new FileBlob({ data: group.isAppRouter ? appLauncher : launcher }),
+          new FileBlob({ data: launcherData }),
       };
       const operationType = getOperationType({ group, prerenderManifest });
 
@@ -1128,11 +1200,11 @@ export async function serverBuild({
             );
           });
         }
+        let outputName = path.posix.join(entryDirectory, pageNoExt);
 
-        let outputName = normalizeIndexOutput(
-          path.posix.join(entryDirectory, pageNoExt),
-          true
-        );
+        if (!group.isAppRouter && !group.isAppRouteHandler) {
+          outputName = normalizeIndexOutput(outputName, true);
+        }
 
         // If this is a PPR page, then we should prefix the output name.
         if (isPPR) {
@@ -1443,9 +1515,10 @@ export async function serverBuild({
         continue;
       }
 
-      const pathname = normalizeIndexOutput(
-        path.posix.join('./', entryDirectory, route === '/' ? '/index' : route),
-        true
+      const pathname = path.posix.join(
+        './',
+        entryDirectory,
+        route === '/' ? '/index' : route
       );
 
       if (lambdas[pathname]) {
@@ -1464,14 +1537,6 @@ export async function serverBuild({
     routesManifest?.rsc?.varyHeader ||
     'RSC, Next-Router-State-Tree, Next-Router-Prefetch';
   const appNotFoundPath = path.posix.join('.', entryDirectory, '_not-found');
-
-  const flags: Flag[] = variantsManifest
-    ? Object.entries(variantsManifest).map(([key, value]) => ({
-        key,
-        ...value,
-        metadata: value.metadata ?? {},
-      }))
-    : [];
 
   if (experimental.ppr && !rscPrefetchHeader) {
     throw new Error("Invariant: cannot use PPR without 'rsc.prefetchHeader'");
@@ -2200,6 +2265,6 @@ export async function serverBuild({
           ]),
     ],
     framework: { version: nextVersion },
-    flags,
+    flags: variantsManifest || undefined,
   };
 }

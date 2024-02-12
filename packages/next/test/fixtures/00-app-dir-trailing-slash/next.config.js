@@ -6,7 +6,11 @@ module.exports = {
   rewrites: async () => {
     return [
       {
-        source: '/rewritten-to-dashboard',
+        source: '/rewritten-to-dashboard/',
+        destination: '/dashboard/',
+      },
+      {
+        source: '/:locale/t/size-chart/:chart/',
         destination: '/dashboard',
       },
     ];

@@ -16,6 +16,7 @@ import {
   EdgeFunction,
   Images,
   File,
+  FlagDefinitions,
 } from '@vercel/build-utils';
 import { NodeFileTraceReasons } from '@vercel/nft';
 import type {
@@ -2053,6 +2054,11 @@ export const onPrerenderRoute =
 
     let isAppPathRoute = false;
 
+    // experimentalPPR signals app path route
+    if (appDir && experimentalPPR) {
+      isAppPathRoute = true;
+    }
+
     // TODO: leverage manifest to determine app paths more accurately
     if (appDir && srcRoute && (!dataRoute || dataRoute?.endsWith('.rsc'))) {
       isAppPathRoute = true;
@@ -2184,7 +2190,6 @@ export const onPrerenderRoute =
       if (routeKey !== '/index' && routeKey.endsWith('/index')) {
         routeKey = `${routeKey}/index`;
         routeFileNoExt = routeKey;
-        origRouteFileNoExt = routeKey;
       }
     }
 
@@ -2255,15 +2260,20 @@ export const onPrerenderRoute =
       const lambdaId = pageLambdaMap[outputSrcPathPage];
       lambda = lambdas[lambdaId];
     } else {
-      const outputSrcPathPage = normalizeIndexOutput(
+      let outputSrcPathPage =
         srcRoute == null
           ? outputPathPageOrig
           : path.posix.join(
               entryDirectory,
               srcRoute === '/' ? '/index' : srcRoute
-            ),
-        isServerMode
-      );
+            );
+
+      if (!isAppPathRoute) {
+        outputSrcPathPage = normalizeIndexOutput(
+          outputSrcPathPage,
+          isServerMode
+        );
+      }
 
       lambda = lambdas[outputSrcPathPage];
     }
@@ -2464,10 +2474,17 @@ export const onPrerenderRoute =
             routesManifest,
             locale
           );
-          const localeOutputPathPage = normalizeIndexOutput(
-            path.posix.join(entryDirectory, localeRouteFileNoExt),
-            isServerMode
+          let localeOutputPathPage = path.posix.join(
+            entryDirectory,
+            localeRouteFileNoExt
           );
+
+          if (!isAppPathRoute) {
+            localeOutputPathPage = normalizeIndexOutput(
+              localeOutputPathPage,
+              isServerMode
+            );
+          }
 
           const origPrerenderPage = prerenders[outputPathPage];
           prerenders[localeOutputPathPage] = {
@@ -2969,14 +2986,17 @@ export async function getMiddlewareBundle({
       }
 
       if (routesManifest?.basePath) {
-        shortPath = normalizeIndexOutput(
-          path.posix.join(
-            './',
-            routesManifest?.basePath,
-            shortPath.replace(/^\//, '')
-          ),
-          true
+        const isAppPathRoute = !!appPathRoutesManifest[shortPath];
+
+        shortPath = path.posix.join(
+          './',
+          routesManifest?.basePath,
+          shortPath.replace(/^\//, '')
         );
+
+        if (!isAppPathRoute) {
+          shortPath = normalizeIndexOutput(shortPath, true);
+        }
       }
 
       worker.edgeFunction.name = shortPath;
@@ -3238,13 +3258,9 @@ export function isApiPage(page: string | undefined) {
     .match(/(serverless|server)\/pages\/api(\/|\.js$)/);
 }
 
-export type VariantsManifest = Record<
-  string,
-  {
-    defaultValue?: unknown;
-    metadata?: Record<string, unknown>;
-  }
->;
+export type VariantsManifest = {
+  definitions: FlagDefinitions;
+};
 
 export async function getVariantsManifest(
   entryPath: string,

@@ -440,13 +440,6 @@ export interface Cron {
   schedule: string;
 }
 
-// TODO: Proper description once complete
-export interface Flag {
-  key: string;
-  defaultValue?: unknown;
-  metadata: Record<string, unknown>;
-}
-
 /** The framework which created the function */
 export interface FunctionFramework {
   slug: string;
@@ -471,7 +464,7 @@ export interface BuildResultV2Typical {
   framework?: {
     version: string;
   };
-  flags?: Flag[];
+  flags?: { definitions: FlagDefinitions };
 }
 
 export type BuildResultV2 = BuildResultV2Typical | BuildResultBuildOutput;
@@ -491,3 +484,30 @@ export type ShouldServe = (
 export type StartDevServer = (
   options: StartDevServerOptions
 ) => Promise<StartDevServerResult>;
+
+/**
+ * TODO: The following types will eventually be exported by a more
+ *       relevant package.
+ */
+type FlagJSONArray = ReadonlyArray<FlagJSONValue>;
+
+type FlagJSONValue =
+  | string
+  | boolean
+  | number
+  | null
+  | FlagJSONArray
+  | { [key: string]: FlagJSONValue };
+
+type FlagOption = {
+  value: FlagJSONValue;
+  label?: string;
+};
+
+export interface FlagDefinition {
+  options?: FlagOption[];
+  origin?: string;
+  description?: string;
+}
+
+export type FlagDefinitions = Record<string, FlagDefinition>;
