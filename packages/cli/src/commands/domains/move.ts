@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import plural from 'pluralize';
 
-import { User, Team } from '../../types';
+import { User, Team } from '@vercel-internals/types';
 import * as ERRORS from '../../util/errors-ts';
 import Client from '../../util/client';
 import getScope from '../../util/get-scope';
@@ -53,6 +53,12 @@ export default async function move(
 
   const teams = await getTeams(client);
   const matchId = await findDestinationMatch(destination, user, teams);
+
+  if (matchId && matchId === user.id && user.version === 'northstar') {
+    output.error(`You may not move your domain to your user account.`);
+    return 1;
+  }
+
   if (!matchId && !opts['--yes']) {
     output.warn(
       `You're not a member of ${param(destination)}. ` +

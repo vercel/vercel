@@ -1,6 +1,6 @@
 {
   "name": "vercel",
-  "version": "28.15.4",
+  "version": "33.5.0",
   "preferGlobal": true,
   "license": "Apache-2.0",
   "description": "The command-line interface for Vercel",
@@ -11,49 +11,42 @@
     "directory": "packages/cli"
   },
   "scripts": {
-    "preinstall": "node ./scripts/preinstall.js",
-    "test": "jest --env node --verbose --bail",
+    "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --bail",
     "test-unit": "pnpm test test/unit/",
-    "test-integration-cli": "rimraf test/fixtures/integration && ava test/integration.js --serial --fail-fast --verbose",
-    "test-integration-dev": "pnpm test test/dev/",
+    "test-e2e": "rimraf test/fixtures/integration && pnpm test test/integration-1.test.ts test/integration-2.test.ts test/integration-3.test.ts",
+    "test-dev": "pnpm test test/dev/",
     "coverage": "codecov",
-    "build": "ts-node ./scripts/build.ts",
-    "dev": "ts-node ./src/index.ts"
+    "build": "node scripts/build.mjs",
+    "dev": "ts-node ./src/index.ts",
+    "type-check": "tsc --noEmit"
   },
   "bin": {
     "vc": "./dist/index.js",
     "vercel": "./dist/index.js"
   },
   "files": [
-    "dist",
-    "scripts/preinstall.js"
+    "dist"
   ],
-  "ava": {
-    "extensions": [
-      "ts"
-    ],
-    "require": [
-      "ts-node/register/transpile-only",
-      "esm"
-    ]
-  },
   "engines": {
-    "node": ">= 14"
+    "node": ">= 16"
   },
   "dependencies": {
-    "@vercel/build-utils": "6.2.2",
-    "@vercel/go": "2.3.4",
-    "@vercel/hydrogen": "0.0.50",
-    "@vercel/next": "3.4.3",
-    "@vercel/node": "2.9.3",
-    "@vercel/python": "3.1.46",
-    "@vercel/redwood": "1.1.2",
-    "@vercel/remix": "1.2.13",
-    "@vercel/ruby": "1.3.62",
-    "@vercel/static-build": "1.3.6"
+    "@vercel/build-utils": "7.6.0",
+    "@vercel/fun": "1.1.0",
+    "@vercel/go": "3.0.5",
+    "@vercel/hydrogen": "1.0.2",
+    "@vercel/next": "4.1.1",
+    "@vercel/node": "3.0.18",
+    "@vercel/python": "4.1.1",
+    "@vercel/redwood": "2.0.7",
+    "@vercel/remix-builder": "2.0.19",
+    "@vercel/ruby": "2.0.5",
+    "@vercel/static-build": "2.3.0",
+    "chokidar": "3.3.1"
   },
   "devDependencies": {
     "@alex_neo/jest-expect-message": "1.0.5",
+    "@edge-runtime/node-utils": "2.2.2",
     "@next/env": "11.1.2",
     "@sentry/node": "5.5.0",
     "@sindresorhus/slugify": "0.11.0",
@@ -73,10 +66,10 @@
     "@types/inquirer": "7.3.1",
     "@types/jest": "27.4.1",
     "@types/jest-expect-message": "1.0.3",
+    "@types/json-parse-better-errors": "1.0.0",
     "@types/load-json-file": "2.0.7",
     "@types/mime-types": "2.1.0",
     "@types/minimatch": "3.0.3",
-    "@types/mri": "1.1.0",
     "@types/ms": "0.7.30",
     "@types/node": "14.18.33",
     "@types/node-fetch": "2.5.10",
@@ -90,32 +83,30 @@
     "@types/title": "3.4.1",
     "@types/universal-analytics": "0.4.2",
     "@types/update-notifier": "5.1.0",
-    "@types/which": "1.3.2",
+    "@types/which": "3.0.0",
     "@types/write-json-file": "2.2.1",
     "@types/yauzl-promise": "2.1.0",
-    "@vercel/client": "12.3.8",
-    "@vercel/error-utils": "1.0.8",
-    "@vercel/frameworks": "1.3.0",
-    "@vercel/fs-detectors": "3.7.11",
-    "@vercel/fun": "1.0.4",
-    "@vercel/ncc": "0.24.0",
-    "@vercel/routing-utils": "2.1.8",
-    "@zeit/source-map-support": "0.6.2",
+    "@vercel-internals/constants": "1.0.4",
+    "@vercel-internals/get-package-json": "1.0.0",
+    "@vercel-internals/types": "1.0.22",
+    "@vercel/client": "13.1.2",
+    "@vercel/error-utils": "2.0.2",
+    "@vercel/frameworks": "2.0.6",
+    "@vercel/fs-detectors": "5.1.6",
+    "@vercel/routing-utils": "3.1.0",
     "ajv": "6.12.2",
     "alpha-sort": "2.0.1",
     "ansi-escapes": "4.3.2",
     "ansi-regex": "5.0.1",
     "arg": "5.0.0",
-    "async-listen": "1.2.0",
+    "async-listen": "3.0.0",
     "async-retry": "1.1.3",
     "async-sema": "2.1.4",
-    "ava": "2.2.0",
     "bytes": "3.0.0",
     "chalk": "4.1.0",
     "chance": "1.1.7",
-    "chokidar": "3.3.1",
+    "cli-table3": "0.6.3",
     "codecov": "3.8.2",
-    "cpy": "7.2.0",
     "date-fns": "1.29.0",
     "debug": "3.1.0",
     "dot": "1.1.3",
@@ -125,6 +116,7 @@
     "escape-html": "1.0.3",
     "esm": "3.1.4",
     "execa": "3.2.0",
+    "expect": "29.5.0",
     "express": "4.17.1",
     "fast-deep-equal": "3.1.3",
     "find-up": "4.1.0",
@@ -139,14 +131,14 @@
     "is-port-reachable": "3.1.0",
     "is-url": "1.2.2",
     "jaro-winkler": "0.2.8",
+    "jest-junit": "16.0.0",
     "jest-matcher-utils": "29.3.1",
-    "json5": "2.2.1",
+    "json-parse-better-errors": "1.0.2",
     "jsonlines": "0.1.1",
     "line-async-iterator": "3.0.0",
     "load-json-file": "3.0.0",
     "mime-types": "2.1.24",
-    "minimatch": "3.0.4",
-    "mri": "1.1.5",
+    "minimatch": "3.1.2",
     "ms": "2.1.2",
     "node-fetch": "2.6.7",
     "npm-package-arg": "6.1.0",
@@ -155,44 +147,27 @@
     "pcre-to-regexp": "1.0.0",
     "pluralize": "7.0.0",
     "promisepipe": "3.0.0",
+    "proxy": "2.0.0",
+    "proxy-agent": "6.3.0",
     "psl": "1.1.31",
     "qr-image": "3.2.0",
     "raw-body": "2.4.1",
     "rimraf": "3.0.2",
-    "semver": "5.5.0",
+    "semver": "5.7.2",
     "serve-handler": "6.1.1",
     "strip-ansi": "6.0.1",
-    "stripe": "5.1.0",
-    "supports-hyperlinks": "2.2.0",
+    "supports-hyperlinks": "3.0.0",
     "tar-fs": "1.16.3",
-    "test-listen": "1.1.0",
     "text-table": "0.2.0",
     "title": "3.4.1",
     "tmp-promise": "1.0.3",
     "tree-kill": "1.2.2",
     "ts-node": "10.9.1",
-    "typescript": "4.9.4",
     "universal-analytics": "0.4.20",
     "utility-types": "2.1.0",
+    "which": "3.0.0",
     "write-json-file": "2.2.0",
     "xdg-app-paths": "5.1.0",
     "yauzl-promise": "2.1.3"
-  },
-  "jest": {
-    "preset": "ts-jest",
-    "globals": {
-      "ts-jest": {
-        "diagnostics": false,
-        "isolatedModules": true
-      }
-    },
-    "setupFilesAfterEnv": [
-      "@alex_neo/jest-expect-message"
-    ],
-    "verbose": false,
-    "testEnvironment": "node",
-    "testMatch": [
-      "<rootDir>/test/**/*.test.ts"
-    ]
   }
 }

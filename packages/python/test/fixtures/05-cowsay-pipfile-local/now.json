@@ -1,5 +1,0 @@
-{
-  "version": 2,
-  "builds": [{ "src": "**/**.py", "use": "@vercel/python" }],
-  "probes": [{ "path": "/local", "mustContain": "pip:RANDOMNESS_PLACEHOLDER" }]
-}

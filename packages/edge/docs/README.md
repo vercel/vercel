@@ -7,11 +7,13 @@
 - [ExtraResponseInit](interfaces/ExtraResponseInit.md)
 - [Geo](interfaces/Geo.md)
 - [ModifiedRequest](interfaces/ModifiedRequest.md)
+- [RequestContext](interfaces/RequestContext.md)
 
 ### Variables
 
 - [CITY_HEADER_NAME](README.md#city_header_name)
 - [COUNTRY_HEADER_NAME](README.md#country_header_name)
+- [EMOJI_FLAG_UNICODE_STARTING_POSITION](README.md#emoji_flag_unicode_starting_position)
 - [IP_HEADER_NAME](README.md#ip_header_name)
 - [LATITUDE_HEADER_NAME](README.md#latitude_header_name)
 - [LONGITUDE_HEADER_NAME](README.md#longitude_header_name)
@@ -52,11 +54,23 @@ Country of the original client IP as calculated by Vercel Proxy.
 
 ---
 
+### EMOJI_FLAG_UNICODE_STARTING_POSITION
+
+• `Const` **EMOJI_FLAG_UNICODE_STARTING_POSITION**: `127397`
+
+Unicode characters for emoji flags start at this number, and run up to 127469.
+
+#### Defined in
+
+[packages/edge/src/edge-headers.ts:34](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L34)
+
+---
+
 ### IP_HEADER_NAME
 
 • `Const` **IP_HEADER_NAME**: `"x-real-ip"`
 
-Client IP as calcualted by Vercel Proxy.
+Client IP as calculated by Vercel Proxy.
 
 #### Defined in
 
@@ -140,7 +154,7 @@ Returns the location information for the incoming request.
 
 #### Defined in
 
-[packages/edge/src/edge-headers.ts:106](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L106)
+[packages/edge/src/edge-headers.ts:128](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L128)
 
 ---
 
@@ -166,13 +180,13 @@ Returns the IP address of the request from the headers.
 
 #### Defined in
 
-[packages/edge/src/edge-headers.ts:77](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L77)
+[packages/edge/src/edge-headers.ts:99](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L99)
 
 ---
 
 ### json
 
-▸ **json**(`data`, `init?`): `Response`
+▸ **json**(`data`, `init?`): [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response)
 
 Builds a response object from a serializable JavaScript object:
 
@@ -205,7 +219,7 @@ const response = json(
 
 #### Returns
 
-`Response`
+[`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response)
 
 #### Defined in
 
@@ -215,7 +229,7 @@ const response = json(
 
 ### next
 
-▸ **next**(`init?`): `Response`
+▸ **next**(`init?`): [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response)
 
 Returns a Response that instructs the system to continue processing the request.
 
@@ -253,7 +267,7 @@ export default function middleware(_req: Request) {
 
 #### Returns
 
-`Response`
+[`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response)
 
 #### Defined in
 
@@ -263,7 +277,7 @@ export default function middleware(_req: Request) {
 
 ### rewrite
 
-▸ **rewrite**(`destination`, `init?`): `Response`
+▸ **rewrite**(`destination`, `init?`): [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response)
 
 Returns a response that rewrites the request to a different URL.
 
@@ -315,7 +329,7 @@ export const config = { matcher: '/api/users/:path*' };
 
 #### Returns
 
-`Response`
+[`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response)
 
 #### Defined in
 

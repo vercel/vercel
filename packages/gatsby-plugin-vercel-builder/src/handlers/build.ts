@@ -17,14 +17,16 @@ import type {
 export const writeHandler = async ({
   outDir,
   handlerFile,
+  prefix = '',
 }: {
   outDir: string;
   handlerFile: string;
+  prefix?: string;
 }) => {
   const { major } = await getNodeVersion(process.cwd());
 
   try {
-    return await build({
+    await build({
       entryPoints: [handlerFile],
       loader: { '.ts': 'ts' },
       outfile: join(outDir, 'index.js'),
@@ -33,8 +35,12 @@ export const writeHandler = async ({
       platform: 'node',
       bundle: true,
       minify: true,
+      // prevents renaming edge cases from causing failures like:
+      // https://github.com/node-fetch/node-fetch/issues/784
+      keepNames: true,
       define: {
         'process.env.NODE_ENV': "'production'",
+        vercel_pathPrefix: JSON.stringify(prefix),
       },
     });
   } catch (e: any) {

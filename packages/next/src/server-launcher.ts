@@ -18,26 +18,50 @@ if (process.env.NODE_ENV !== 'production' && region !== 'dev1') {
   process.env.NODE_ENV = 'production';
 }
 
+// @preserve pre-next-server-target
+
 // eslint-disable-next-line
 const NextServer = require('__NEXT_SERVER_PATH__').default;
+
+// @preserve next-server-preload-target
+
+// __NEXT_CONFIG__ value is injected
+declare const __NEXT_CONFIG__: any;
+const conf = __NEXT_CONFIG__;
+
 const nextServer = new NextServer({
-  // @ts-ignore __NEXT_CONFIG__ value is injected
-  conf: __NEXT_CONFIG__,
+  conf,
   dir: '.',
   minimalMode: true,
   customServer: false,
 });
-const requestHandler = nextServer.getRequestHandler();
 
-module.exports = async (req: IncomingMessage, res: ServerResponse) => {
-  try {
-    // entryDirectory handler
-    await requestHandler(req, res);
-  } catch (err) {
-    console.error(err);
-    // crash the lambda immediately to clean up any bad module state,
-    // this was previously handled in ___vc_bridge on an unhandled rejection
-    // but we can do this quicker by triggering here
-    process.exit(1);
-  }
-};
+// Returns a wrapped handler that will crash the lambda if an error isn't
+// caught.
+const serve =
+  (handler: any) => async (req: IncomingMessage, res: ServerResponse) => {
+    try {
+      // @preserve entryDirectory handler
+      await handler(req, res);
+    } catch (err) {
+      console.error(err);
+      // crash the lambda immediately to clean up any bad module state,
+      // this was previously handled in ___vc_bridge on an unhandled rejection
+      // but we can do this quicker by triggering here
+      process.exit(1);
+    }
+  };
+
+// The default handler method should be exported as a function on the module.
+module.exports = serve(nextServer.getRequestHandler());
+
+// If available, add `getRequestHandlerWithMetadata` to the export if it's
+// required by the configuration.
+if (
+  conf.experimental?.ppr &&
+  'getRequestHandlerWithMetadata' in nextServer &&
+  typeof nextServer.getRequestHandlerWithMetadata === 'function'
+) {
+  module.exports.getRequestHandlerWithMetadata = (metadata: any) =>
+    serve(nextServer.getRequestHandlerWithMetadata(metadata));
+}

@@ -1,7 +1,7 @@
 const execa = require('execa');
 
 module.exports = async function ({ deploymentUrl, fetch }) {
-  const probeUrl = `https://${deploymentUrl}`;
+  const probeUrl = `https://${deploymentUrl}/api`;
   const result = await execa('curl', [
     probeUrl,
     '-s',

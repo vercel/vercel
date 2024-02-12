@@ -1,4 +1,4 @@
-import { DNSRecord, PaginationOptions } from '../../types';
+import { DNSRecord, PaginationOptions } from '@vercel-internals/types';
 import { DomainNotFound, isAPIError } from '../errors-ts';
 import { Output } from '../output';
 import Client from '../client';

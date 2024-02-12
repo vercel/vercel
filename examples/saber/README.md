@@ -2,7 +2,7 @@
 
 # Saber Example
 
-This directory is a brief example of a [Saber](https://saber.land) site that can be deployed to Vercel with zero configuration.
+This directory is a brief example of a [Saber](https://saber.egoist.dev) site that can be deployed to Vercel with zero configuration.
 
 ## Deploy Your Own
 

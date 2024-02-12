@@ -1,8 +1,0 @@
-{
-  "rushVersion": "5.82.1",
-  "npmVersion": "8.19.2",
-  "projects": [
-    { "packageName": "app-1", "projectFolder": "packages/app-1" },
-    { "packageName": "app-2", "projectFolder": "packages/app-2" }
-  ]
-}

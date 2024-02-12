@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import Client from '../client';
-import { ProjectAliasTarget } from '../../types';
+import type { ProjectAliasTarget } from '@vercel-internals/types';
 import { isAPIError } from '../errors-ts';
 
 export async function removeDomainFromProject(

@@ -5,7 +5,7 @@ import minimatch from 'minimatch';
 import { readlink } from 'fs-extra';
 import { isSymbolicLink, isDirectory } from './fs/download';
 import streamToBuffer from './fs/stream-to-buffer';
-import type { Files, Config, Cron } from './types';
+import type { Files, Config, FunctionFramework } from './types';
 
 interface Environment {
   [key: string]: string;
@@ -13,9 +13,12 @@ interface Environment {
 
 export type LambdaOptions = LambdaOptionsWithFiles | LambdaOptionsWithZipBuffer;
 
+export type LambdaArchitecture = 'x86_64' | 'arm64';
+
 export interface LambdaOptionsBase {
   handler: string;
   runtime: string;
+  architecture?: LambdaArchitecture;
   memory?: number;
   maxDuration?: number;
   environment?: Environment;
@@ -23,13 +26,18 @@ export interface LambdaOptionsBase {
   regions?: string[];
   supportsMultiPayloads?: boolean;
   supportsWrapper?: boolean;
+  supportsResponseStreaming?: boolean;
+  /**
+   * @deprecated Use the `supportsResponseStreaming` property instead.
+   */
   experimentalResponseStreaming?: boolean;
   operationType?: string;
-  cron?: Cron;
+  framework?: FunctionFramework;
 }
 
 export interface LambdaOptionsWithFiles extends LambdaOptionsBase {
   files: Files;
+  experimentalAllowBundling?: boolean;
 }
 
 /**
@@ -58,34 +66,38 @@ export class Lambda {
   files?: Files;
   handler: string;
   runtime: string;
+  architecture?: LambdaArchitecture;
   memory?: number;
   maxDuration?: number;
   environment: Environment;
   allowQuery?: string[];
   regions?: string[];
-  cron?: Cron;
   /**
    * @deprecated Use `await lambda.createZip()` instead.
    */
   zipBuffer?: Buffer;
   supportsMultiPayloads?: boolean;
   supportsWrapper?: boolean;
-  experimentalResponseStreaming?: boolean;
+  supportsResponseStreaming?: boolean;
+  framework?: FunctionFramework;
+  experimentalAllowBundling?: boolean;
 
   constructor(opts: LambdaOptions) {
     const {
       handler,
       runtime,
       maxDuration,
+      architecture,
       memory,
       environment = {},
       allowQuery,
       regions,
-      cron,
       supportsMultiPayloads,
       supportsWrapper,
+      supportsResponseStreaming,
       experimentalResponseStreaming,
       operationType,
+      framework,
     } = opts;
     if ('files' in opts) {
       assert(typeof opts.files === 'object', '"files" must be an object');
@@ -96,6 +108,23 @@ export class Lambda {
     assert(typeof handler === 'string', '"handler" is not a string');
     assert(typeof runtime === 'string', '"runtime" is not a string');
     assert(typeof environment === 'object', '"environment" is not an object');
+
+    if (architecture !== undefined) {
+      assert(
+        architecture === 'x86_64' || architecture === 'arm64',
+        '"architecture" must be either "x86_64" or "arm64"'
+      );
+    }
+
+    if (
+      'experimentalAllowBundling' in opts &&
+      opts.experimentalAllowBundling !== undefined
+    ) {
+      assert(
+        typeof opts.experimentalAllowBundling === 'boolean',
+        '"experimentalAllowBundling" is not a boolean'
+      );
+    }
 
     if (memory !== undefined) {
       assert(typeof memory === 'number', '"memory" is not a number');
@@ -135,8 +164,18 @@ export class Lambda {
       );
     }
 
-    if (cron !== undefined) {
-      assert(typeof cron === 'string', '"cron" is not a string');
+    if (framework !== undefined) {
+      assert(typeof framework === 'object', '"framework" is not an object');
+      assert(
+        typeof framework.slug === 'string',
+        '"framework.slug" is not a string'
+      );
+      if (framework.version !== undefined) {
+        assert(
+          typeof framework.version === 'string',
+          '"framework.version" is not a string'
+        );
+      }
     }
 
     this.type = 'Lambda';
@@ -144,16 +183,22 @@ export class Lambda {
     this.files = 'files' in opts ? opts.files : undefined;
     this.handler = handler;
     this.runtime = runtime;
+    this.architecture = architecture;
     this.memory = memory;
     this.maxDuration = maxDuration;
     this.environment = environment;
     this.allowQuery = allowQuery;
     this.regions = regions;
-    this.cron = cron;
     this.zipBuffer = 'zipBuffer' in opts ? opts.zipBuffer : undefined;
     this.supportsMultiPayloads = supportsMultiPayloads;
     this.supportsWrapper = supportsWrapper;
-    this.experimentalResponseStreaming = experimentalResponseStreaming;
+    this.supportsResponseStreaming =
+      supportsResponseStreaming ?? experimentalResponseStreaming;
+    this.framework = framework;
+    this.experimentalAllowBundling =
+      'experimentalAllowBundling' in opts
+        ? opts.experimentalAllowBundling
+        : undefined;
   }
 
   async createZip(): Promise<Buffer> {
@@ -170,6 +215,16 @@ export class Lambda {
       }
     }
     return zipBuffer;
+  }
+
+  /**
+   * @deprecated Use the `supportsResponseStreaming` property instead.
+   */
+  get experimentalResponseStreaming(): boolean | undefined {
+    return this.supportsResponseStreaming;
+  }
+  set experimentalResponseStreaming(v: boolean | undefined) {
+    this.supportsResponseStreaming = v;
   }
 }
 
@@ -228,7 +283,7 @@ export async function getLambdaOptionsFromFunction({
   sourceFile,
   config,
 }: GetLambdaOptionsFromFunctionOptions): Promise<
-  Pick<LambdaOptions, 'memory' | 'maxDuration' | 'cron'>
+  Pick<LambdaOptions, 'memory' | 'maxDuration'>
 > {
   if (config?.functions) {
     for (const [pattern, fn] of Object.entries(config.functions)) {
@@ -236,7 +291,6 @@ export async function getLambdaOptionsFromFunction({
         return {
           memory: fn.memory,
           maxDuration: fn.maxDuration,
-          cron: fn.cron,
         };
       }
     }

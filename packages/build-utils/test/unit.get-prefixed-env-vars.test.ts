@@ -13,12 +13,17 @@ describe('Test `getPrefixedEnvVars()`', () => {
         envs: {
           VERCEL: '1',
           VERCEL_URL: 'example.vercel.sh',
+          VERCEL_ENV: 'production',
+          VERCEL_BRANCH_URL: 'example-git-main-acme.vercel.app',
           USER_ENV_VAR_NOT_VERCEL: 'example.com',
+          VERCEL_ARTIFACTS_TOKEN: 'abc123',
           FOO: 'bar',
         },
       },
       want: {
         NEXT_PUBLIC_VERCEL_URL: 'example.vercel.sh',
+        NEXT_PUBLIC_VERCEL_ENV: 'production',
+        NEXT_PUBLIC_VERCEL_BRANCH_URL: 'example-git-main-acme.vercel.app',
         TURBO_CI_VENDOR_ENV_KEY: 'NEXT_PUBLIC_VERCEL_',
       },
     },
@@ -28,6 +33,7 @@ describe('Test `getPrefixedEnvVars()`', () => {
         envPrefix: 'GATSBY_',
         envs: {
           USER_ENV_VAR_NOT_VERCEL: 'example.com',
+          VERCEL_ARTIFACTS_TOKEN: 'abc123',
           FOO: 'bar',
           VERCEL_URL: 'example.vercel.sh',
           VERCEL_ENV: 'production',
@@ -51,6 +57,7 @@ describe('Test `getPrefixedEnvVars()`', () => {
           USER_ENV_VAR_NOT_VERCEL: 'example.com',
           FOO: 'bar',
           BLARG_VERCEL_THING: 'fake',
+          VERCEL_ARTIFACTS_TOKEN: 'abc123',
         },
       },
       want: {},

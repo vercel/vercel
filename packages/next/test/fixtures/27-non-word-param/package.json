@@ -6,5 +6,9 @@
     "next": "9.4.4",
     "react": "^16.8.6",
     "react-dom": "^16.8.6"
-  }
+  },
+  "resolutions": {
+    "@babel/compat-data": "7.21.4"
+  },
+  "ignoreNextjsUpdates": true
 }

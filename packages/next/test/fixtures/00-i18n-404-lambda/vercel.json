@@ -48,6 +48,26 @@
       "path": "/fr/another",
       "status": 200,
       "mustContain": "lang=\"fr\""
+    },
+    {
+      "path": "/hello.txt",
+      "status": 200,
+      "mustContain": "hello public"
+    },
+    {
+      "path": "/en/hello.txt",
+      "status": 200,
+      "mustContain": "hello public"
+    },
+    {
+      "path": "/fr/hello.txt",
+      "status": 200,
+      "mustContain": "hello public"
+    },
+    {
+      "path": "/fr-BE/hello.txt",
+      "status": 200,
+      "mustContain": "hello public"
     }
   ]
 }

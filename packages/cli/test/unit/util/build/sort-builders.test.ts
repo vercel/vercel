@@ -14,8 +14,8 @@ describe('sortBuilders()', () => {
     },
     {
       name: 'should sort @vercel/remix from end to beginning',
-      input: ['@vercel/python', '@vercel/node', '@vercel/remix'],
-      output: ['@vercel/remix', '@vercel/python', '@vercel/node'],
+      input: ['@vercel/python', '@vercel/node', '@vercel/remix-builder'],
+      output: ['@vercel/remix-builder', '@vercel/python', '@vercel/node'],
     },
     {
       name: 'should sort @vercel/redwood from beginning to beginning',

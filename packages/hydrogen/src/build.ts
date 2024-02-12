@@ -7,6 +7,7 @@ import {
   execCommand,
   getEnvForPackageManager,
   getNodeVersion,
+  getPrefixedEnvVars,
   getSpawnOptions,
   glob,
   readConfigFile,
@@ -28,6 +29,15 @@ export const build: BuildV2 = async ({
   const { installCommand, buildCommand } = config;
 
   await download(files, workPath, meta);
+
+  const prefixedEnvs = getPrefixedEnvVars({
+    envPrefix: 'PUBLIC_',
+    envs: process.env,
+  });
+
+  for (const [key, value] of Object.entries(prefixedEnvs)) {
+    process.env[key] = value;
+  }
 
   const mountpoint = dirname(entrypoint);
   const entrypointDir = join(workPath, mountpoint);
@@ -116,7 +126,6 @@ export const build: BuildV2 = async ({
   ]);
 
   const edgeFunction = new EdgeFunction({
-    name: 'hydrogen',
     deploymentTarget: 'v8-worker',
     entrypoint: 'index.js',
     files: edgeFunctionFiles,

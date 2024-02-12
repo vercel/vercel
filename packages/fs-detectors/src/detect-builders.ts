@@ -130,12 +130,17 @@ export async function detectBuilders(
 
   const { projectSettings = {} } = options;
   const { buildCommand, outputDirectory, framework } = projectSettings;
-  const ignoreRuntimes = new Set(
-    slugToFramework.get(framework || '')?.ignoreRuntimes
-  );
+  const frameworkConfig = slugToFramework.get(framework || '');
+  const ignoreRuntimes = new Set(frameworkConfig?.ignoreRuntimes);
   const withTag = options.tag ? `@${options.tag}` : '';
   const apiMatches = getApiMatches()
-    .filter(b => !ignoreRuntimes.has(b.use))
+    .filter(
+      b =>
+        // Root-level middleware is enabled, unless `disableRootMiddleware: true`
+        (b.config?.middleware && !frameworkConfig?.disableRootMiddleware) ||
+        // "api" dir runtimes are enabled, unless opted-out via `ignoreRuntimes`
+        !ignoreRuntimes.has(b.use)
+    )
     .map(b => {
       b.use = `${b.use}${withTag}`;
       return b;
@@ -334,7 +339,7 @@ export async function detectBuilders(
       warnings.push({
         code: 'conflicting_files',
         message:
-          'When using Next.js, it is recommended to place Node.js Serverless Functions inside of the `pages/api` (provided by Next.js) directory instead of `api` (provided by Vercel).',
+          'When using Next.js, it is recommended to place JavaScript Functions inside of the `pages/api` (provided by Next.js) directory instead of `api` (provided by Vercel). Other languages (Python, Go, etc) should still go in the `api` directory.',
         link: 'https://nextjs.org/docs/api-routes/introduction',
         action: 'Learn More',
       });
@@ -448,11 +453,15 @@ function getFunction(fileName: string, { functions = {} }: Options) {
     : { fnPattern: null, func: null };
 }
 
-function getApiMatches() {
+function getApiMatches(): Builder[] {
   const config = { zeroConfig: true };
 
   return [
-    { src: 'middleware.[jt]s', use: `@vercel/node`, config },
+    {
+      src: 'middleware.[jt]s',
+      use: `@vercel/node`,
+      config: { ...config, middleware: true },
+    },
     { src: 'api/**/*.+(js|mjs|ts|tsx)', use: `@vercel/node`, config },
     { src: 'api/**/!(*_test).go', use: `@vercel/go`, config },
     { src: 'api/**/*.py', use: `@vercel/python`, config },
@@ -503,7 +512,8 @@ function detectFrontBuilder(
 
   if (
     pkg &&
-    (framework === undefined || createdAt < Date.parse('2020-03-01'))
+    (framework === undefined ||
+      (framework !== 'storybook' && createdAt < Date.parse('2020-03-01')))
   ) {
     const deps: PackageJson['dependencies'] = {
       ...pkg.dependencies,
@@ -602,12 +612,11 @@ function validateFunctions({ functions = {} }: Options) {
 
     if (
       func.memory !== undefined &&
-      (func.memory < 128 || func.memory > 3008 || func.memory % 64 !== 0)
+      (func.memory < 128 || func.memory > 3008)
     ) {
       return {
         code: 'invalid_function_memory',
-        message:
-          'Functions must have a memory value between 128 and 3008 in steps of 64.',
+        message: 'Functions must have a memory value between 128 and 3008',
       };
     }
 
@@ -668,7 +677,12 @@ function checkUnusedFunctions(
   // Next.js can use functions only for `src/pages` or `pages`
   if (frontendBuilder && isOfficialRuntime('next', frontendBuilder.use)) {
     for (const fnKey of unusedFunctions.values()) {
-      if (fnKey.startsWith('pages/') || fnKey.startsWith('src/pages')) {
+      if (
+        fnKey.startsWith('pages/') ||
+        fnKey.startsWith('src/pages') ||
+        fnKey.startsWith('app/') ||
+        fnKey.startsWith('src/app/')
+      ) {
         unusedFunctions.delete(fnKey);
       } else {
         return {
@@ -978,6 +992,7 @@ function getRouteResult(
   const rewriteRoutes: Route[] = [];
   const errorRoutes: Route[] = [];
   const framework = frontendBuilder?.config?.framework || '';
+  const isGatsby = framework === 'gatsby';
   const isNextjs =
     framework === 'nextjs' || isOfficialRuntime('next', frontendBuilder?.use);
   const ignoreRuntimes = slugToFramework.get(framework)?.ignoreRuntimes;
@@ -1057,8 +1072,8 @@ function getRouteResult(
     });
   }
 
-  if (options.featHandleMiss && !isNextjs) {
-    // Exclude Next.js to avoid overriding custom error page
+  if (options.featHandleMiss && !isNextjs && !isGatsby) {
+    // Exclude Next.js (and Gatsby) to avoid overriding custom error page
     // https://nextjs.org/docs/advanced-features/custom-error-page
     errorRoutes.push({
       status: 404,

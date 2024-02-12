@@ -1,0 +1,30 @@
+name: Update @remix-run/dev
+
+on:
+  workflow_dispatch:
+    inputs:
+      new-version:
+        type: string
+        description: 'Optional version to update @remix-run/dev to inside of @vercel/remix-builder'
+
+jobs:
+  update-remix-run-dev:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16
+      - name: Enable corepack
+        run: corepack enable pnpm
+      - name: Update @remix-run/dev
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GH_TOKEN_PULL_REQUESTS }}
+          script: |
+            const script = require('./utils/update-remix-run-dev.js')
+            await script({ github, context }, "${{ inputs.new-version }}")

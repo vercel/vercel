@@ -21,19 +21,12 @@ export class MissingBuildTarget extends Error {
   }
 }
 
-type MonorepoDefaultSettings = {
-  buildCommand?: string | null;
-  installCommand?: string | null;
-  commandForIgnoringBuildStep?: string;
-  monorepoManager: string;
-} | null;
-
 export async function getMonorepoDefaultSettings(
   projectName: string,
   projectPath: string,
   relativeToRoot: string,
   detectorFilesystem: DetectorFilesystem
-): Promise<MonorepoDefaultSettings> {
+) {
   const [monorepoManager, packageManager] = await Promise.all([
     detectFramework({
       fs: detectorFilesystem,
@@ -44,6 +37,18 @@ export async function getMonorepoDefaultSettings(
       frameworkList: packageManagers,
     }),
   ]);
+
+  let installCommand = `${packageManager} install`;
+  switch (packageManager) {
+    case 'npm':
+      installCommand = `${packageManager} install --prefix=${relativeToRoot}`;
+      break;
+    case 'pnpm':
+      installCommand = `${packageManager} --filter ${projectName}... install`;
+      break;
+    default:
+      break;
+  }
 
   if (monorepoManager === 'turbo') {
     const [turboJSONBuf, packageJSONBuf] = await Promise.all([
@@ -71,27 +76,11 @@ export async function getMonorepoDefaultSettings(
       throw new MissingBuildPipeline();
     }
 
-    if (projectPath === '/') {
-      return {
-        monorepoManager: 'turbo',
-        buildCommand: 'npx turbo run build',
-        installCommand: packageManager ? `${packageManager} install` : null,
-        commandForIgnoringBuildStep: 'npx turbo-ignore',
-      };
-    }
-
     return {
       monorepoManager: 'turbo',
-      buildCommand: projectPath
-        ? `cd ${relativeToRoot} && npx turbo run build --filter={${projectPath}}...`
-        : null,
-      installCommand:
-        packageManager === 'npm'
-          ? `${packageManager} install --prefix=${relativeToRoot}`
-          : packageManager
-          ? `${packageManager} install`
-          : null,
-      commandForIgnoringBuildStep: 'npx turbo-ignore',
+      buildCommand: `cd ${relativeToRoot} && npx turbo run build --filter={${projectPath}}...`,
+      installCommand,
+      commandForIgnoringBuildStep: `cd ${relativeToRoot} && npx turbo-ignore`,
     };
   } else if (monorepoManager === 'nx') {
     // No ENOENT handling required here since conditional wouldn't be `true` unless `nx.json` was found.
@@ -131,24 +120,10 @@ export async function getMonorepoDefaultSettings(
       }
     }
 
-    if (projectPath === '/') {
-      return {
-        monorepoManager: 'nx',
-        buildCommand: 'npx nx build',
-        installCommand: packageManager ? `${packageManager} install` : null,
-      };
-    }
     return {
       monorepoManager: 'nx',
-      buildCommand: projectName
-        ? `cd ${relativeToRoot} && npx nx build ${projectName}`
-        : null,
-      installCommand:
-        packageManager === 'npm'
-          ? `${packageManager} install --prefix=${relativeToRoot}`
-          : packageManager
-          ? `${packageManager} install`
-          : null,
+      buildCommand: `cd ${relativeToRoot} && npx nx build ${projectName}`,
+      installCommand,
     };
   }
   // TODO (@Ethan-Arrowood) - Revisit rush support when we can test it better

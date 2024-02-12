@@ -28,9 +28,12 @@ import {
   runCustomInstallCommand,
   getEnvForPackageManager,
   getNodeVersion,
+  getPathForPackageManager,
   getSpawnOptions,
   getNodeBinPath,
+  getNodeBinPaths,
   scanParentDirs,
+  traverseUpDirectories,
 } from './fs/run-user-scripts';
 import {
   getLatestNodeVersion,
@@ -42,6 +45,8 @@ import getIgnoreFilter from './get-ignore-filter';
 import { getPlatformEnv } from './get-platform-env';
 import { getPrefixedEnvVars } from './get-prefixed-env-vars';
 import { cloneEnv } from './clone-env';
+import { hardLinkDir } from './hard-link-dir';
+import { validateNpmrc } from './validate-npmrc';
 
 export {
   FileBlob,
@@ -66,6 +71,7 @@ export {
   spawnCommand,
   walkParentDirs,
   getNodeBinPath,
+  getNodeBinPaths,
   runNpmInstall,
   runBundleInstall,
   runPipInstall,
@@ -73,6 +79,7 @@ export {
   runCustomInstallCommand,
   getEnvForPackageManager,
   getNodeVersion,
+  getPathForPackageManager,
   getLatestNodeVersion,
   getDiscontinuedNodeVersions,
   getSpawnOptions,
@@ -86,6 +93,9 @@ export {
   scanParentDirs,
   getIgnoreFilter,
   cloneEnv,
+  hardLinkDir,
+  traverseUpDirectories,
+  validateNpmrc,
 };
 
 export { EdgeFunction } from './edge-function';
@@ -96,3 +106,5 @@ export * from './should-serve';
 export * from './schemas';
 export * from './types';
 export * from './errors';
+
+export { NODE_VERSIONS } from './fs/node-version';

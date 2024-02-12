@@ -96,7 +96,15 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
       ),
     },
     'dev-fail-on-recursion-command': {
-      'package.json': '{}',
+      'package.json': JSON.stringify({
+        scripts: {
+          build: 'echo "build script"',
+        },
+      }),
+      'vercel.json': JSON.stringify({
+        version: 2,
+        devCommand: `${binaryPath} dev`,
+      }),
     },
     'build-fail-on-recursion-command': {
       'package.json': '{}',
@@ -176,12 +184,12 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
     'local-config-v2': {
       [`main-${session}.html`]: '<h1>hello main</h1>',
       [`test-${session}.html`]: '<h1>hello test</h1>',
-      'now.json': JSON.stringify({
+      'vercel.json': JSON.stringify({
         name: 'original',
         builds: [{ src: `main-${session}.html`, use: '@vercel/static' }],
         routes: [{ src: '/another-main', dest: `/main-${session}.html` }],
       }),
-      'now-test.json': JSON.stringify({
+      'vercel-test.json': JSON.stringify({
         name: 'secondary',
         builds: [{ src: `test-${session}.html`, use: '@vercel/static' }],
         routes: [{ src: '/another-test', dest: `/test-${session}.html` }],
@@ -271,7 +279,7 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
         },
       }),
     },
-    'lambda-with-200-memory': {
+    'lambda-with-123-memory': {
       'api/memory.js': `
         module.exports = (req, res) => {
           res.json({ memory: parseInt(process.env.AWS_LAMBDA_FUNCTION_MEMORY_SIZE) });
@@ -280,7 +288,7 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
       'now.json': JSON.stringify({
         functions: {
           'api/**/*.js': {
-            memory: 200,
+            memory: 123,
           },
         },
       }),
@@ -326,7 +334,7 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
       'vercel.json': JSON.stringify({
         functions: {
           'api/**/*.php': {
-            runtime: 'vercel-php@0.5.2',
+            runtime: 'vercel-php@0.6.0',
           },
         },
       }),
@@ -374,6 +382,9 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
       'index.html': 'Hello',
       'vercel.json': '{"builds":[{"src":"*.html","use":"@vercel/static"}]}',
     },
+    'project-sensitive-env-vars': {
+      'package.json': '{}',
+    },
     'dev-proxy-headers-and-env': {
       'package.json': JSON.stringify({}),
       'server.js': `require('http').createServer((req, res) => {
@@ -405,6 +416,55 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
       '.vercel/project.json': JSON.stringify({
         orgId: 'team_JgimPl9u9uauL7E4MjMLt605',
         projectId: 'QmRoBYhejkkmssotLZr8tWgewPdPcjYucYUNERFbhJrRNi',
+      }),
+    },
+    'vc-build-speed-insights': {
+      '.vercel/project.json': JSON.stringify({
+        orgId: '.',
+        projectId: '.',
+        settings: {
+          framework: null,
+        },
+      }),
+      'package.json': JSON.stringify({
+        scripts: {
+          build: 'mkdir -p public && echo hi > public/index.txt',
+        },
+        dependencies: {
+          '@vercel/speed-insights': '0.0.4',
+        },
+      }),
+    },
+    'vc-build-indirect-web-analytics': {
+      '.vercel/project.json': JSON.stringify({
+        orgId: '.',
+        projectId: '.',
+        settings: {
+          framework: null,
+          installCommand: 'yarn add @vercel/analytics@1.1.1',
+        },
+      }),
+      'package.json': JSON.stringify({
+        scripts: {
+          build: 'mkdir -p public && echo hi > public/index.txt',
+        },
+      }),
+    },
+    'vc-build-web-analytics': {
+      '.vercel/project.json': JSON.stringify({
+        orgId: '.',
+        projectId: '.',
+        settings: {
+          framework: null,
+        },
+      }),
+      'package.json': JSON.stringify({
+        scripts: {
+          build: 'mkdir -p public && echo hi > public/index.txt',
+        },
+        dependencies: {
+          '@vercel/analytics': '1.0.0',
+        },
       }),
     },
     'vc-build-static-build': {

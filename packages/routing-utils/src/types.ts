@@ -44,6 +44,10 @@ export type RouteWithSrc = {
    */
   middlewarePath?: string;
   /**
+   * The original middleware matchers.
+   */
+  middlewareRawSrc?: string[];
+  /**
    * A middleware index in the `middleware` key under the build result
    */
   middleware?: number;
@@ -88,6 +92,7 @@ export interface Rewrite {
   destination: string;
   has?: HasField;
   missing?: HasField;
+  statusCode?: number;
 }
 
 export interface Redirect {

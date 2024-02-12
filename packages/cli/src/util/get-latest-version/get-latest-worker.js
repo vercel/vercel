@@ -10,8 +10,8 @@
  * the world, but something to be aware of.
  *
  * IMPORTANT! This file must NOT depend on any 3rd party dependencies. This
- * file is NOT bundled by `ncc` and thus any 3rd party dependencies will never
- * be available.
+ * file is NOT bundled by `esbuild` and thus any 3rd party dependencies will
+ * never be available.
  */
 
 const https = require('https');
@@ -22,7 +22,7 @@ const { format, inspect } = require('util');
 
 /**
  * An simple output helper which accumulates error and debug log messages in
- * memory for potential persistance to disk while immediately outputting errors
+ * memory for potential persistence to disk while immediately outputting errors
  * and debug messages, when the `--debug` flag is set, to `stderr`.
  */
 class WorkerOutput {
@@ -247,6 +247,14 @@ async function fetchDistTags(name) {
         });
         res.on('end', () => {
           try {
+            if (res.statusCode && res.statusCode >= 400) {
+              return reject(
+                new Error(
+                  `Fetch dist-tags failed ${res.statusCode} ${res.statusMessage}`
+                )
+              );
+            }
+
             resolve(JSON.parse(buf));
           } catch (err) {
             reject(err);

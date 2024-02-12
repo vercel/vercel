@@ -79,18 +79,23 @@ project. An example use-case is that `@vercel/node` uses this function to cache
 the `node_modules` directory, making it faster to install npm dependencies for
 future builds.
 
+> Note: Only files within the repo root directory can be cached.
+
 **Example:**
 
 ```typescript
-import { PrepareCacheOptions } from '@vercel/build-utils';
+import { relative } from 'path';
+import { glob, PrepareCache } from '@vercel/build-utils';
 
-export async function prepareCache(options: PrepareCacheOptions) {
+export const prepareCache: PrepareCache = async ({
+  workPath,
+  repoRootPath,
+}) => {
   // Create a mapping of file names and `File` object instances to cache here…
-
-  return {
-    'path-to-file': File,
-  };
-}
+  const rootDirectory = relative(repoRootPath, workPath);
+  const cache = await glob(`${rootDirectory}/some/dir/**`, repoRootPath);
+  return cache;
+};
 ```
 
 ### `shouldServe()`
@@ -380,16 +385,16 @@ This is a [class](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refere
 
 This is an abstract enumeration type that is implemented by one of the following possible `String` values:
 
+- `nodejs20.x`
 - `nodejs18.x`
 - `nodejs16.x`
-- `nodejs14.x`
-- `go1.x`
 - `java11`
 - `python3.9`
 - `dotnet6`
 - `dotnetcore3.1`
 - `ruby2.7`
 - `provided.al2`
+- `provided.al2023`
 
 ## `@vercel/build-utils` Helper Functions
 

@@ -9,14 +9,18 @@ import { deprecate } from 'util';
 import debug from '../debug';
 import { NowBuildError } from '../errors';
 import { Meta, PackageJson, NodeVersion, Config } from '../types';
-import { getSupportedNodeVersion, getLatestNodeVersion } from './node-version';
+import {
+  getSupportedNodeVersion,
+  getLatestNodeVersion,
+  getAvailableNodeVersions,
+} from './node-version';
 import { readConfigFile } from './read-config-file';
 import { cloneEnv } from '../clone-env';
 
 // Only allow one `runNpmInstall()` invocation to run concurrently
 const runNpmInstallSema = new Sema(1);
 
-export type CliType = 'yarn' | 'npm' | 'pnpm';
+export type CliType = 'yarn' | 'npm' | 'pnpm' | 'bun';
 
 export interface ScanParentDirsResult {
   /**
@@ -44,21 +48,31 @@ export interface ScanParentDirsResult {
   lockfileVersion?: number;
 }
 
-export interface WalkParentDirsProps {
+export interface TraverseUpDirectoriesProps {
   /**
-   * The highest directory, typically the workPath root of the project.
-   * If this directory is reached and it doesn't contain the file, null is returned.
-   */
-  base: string;
-  /**
-   * The directory to start searching, typically the same directory of the entrypoint.
-   * If this directory doesn't contain the file, the parent is checked, etc.
+   * The directory to start iterating from, typically the same directory of the entrypoint.
    */
   start: string;
+  /**
+   * The highest directory, typically the workPath root of the project.
+   */
+  base?: string;
+}
+
+export interface WalkParentDirsProps
+  extends Required<TraverseUpDirectoriesProps> {
   /**
    * The name of the file to search for, typically `package.json` or `Gemfile`.
    */
   filename: string;
+}
+
+export interface WalkParentDirsMultiProps
+  extends Required<TraverseUpDirectoriesProps> {
+  /**
+   * The name of the file to search for, typically `package.json` or `Gemfile`.
+   */
+  filenames: string[];
 }
 
 export interface SpawnOptionsExtended extends SpawnOptions {
@@ -131,6 +145,24 @@ export async function execCommand(command: string, options: SpawnOptions = {}) {
   return true;
 }
 
+export function* traverseUpDirectories({
+  start,
+  base,
+}: TraverseUpDirectoriesProps) {
+  let current: string | undefined = path.normalize(start);
+  const normalizedRoot = base ? path.normalize(base) : undefined;
+  while (current) {
+    yield current;
+    if (current === normalizedRoot) break;
+    // Go up one directory
+    const next = path.join(current, '..');
+    current = next === current ? undefined : next;
+  }
+}
+
+/**
+ * @deprecated Use `getNodeBinPaths()` instead.
+ */
 export async function getNodeBinPath({
   cwd,
 }: {
@@ -139,6 +171,15 @@ export async function getNodeBinPath({
   const { lockfilePath } = await scanParentDirs(cwd);
   const dir = path.dirname(lockfilePath || cwd);
   return path.join(dir, 'node_modules', '.bin');
+}
+
+export function getNodeBinPaths({
+  start,
+  base,
+}: TraverseUpDirectoriesProps): string[] {
+  return Array.from(traverseUpDirectories({ start, base })).map(dir =>
+    path.join(dir, 'node_modules/.bin')
+  );
 }
 
 async function chmodPlusX(fsPath: string) {
@@ -201,9 +242,10 @@ export async function getNodeVersion(
   destPath: string,
   nodeVersionFallback = process.env.VERCEL_PROJECT_SETTINGS_NODE_VERSION,
   config: Config = {},
-  meta: Meta = {}
+  meta: Meta = {},
+  availableVersions = getAvailableNodeVersions()
 ): Promise<NodeVersion> {
-  const latest = getLatestNodeVersion();
+  const latest = getLatestNodeVersion(availableVersions);
   if (meta.isDev) {
     // Use the system-installed version of `node` in PATH for `vercel dev`
     return { ...latest, runtime: 'nodejs' };
@@ -229,7 +271,7 @@ export async function getNodeVersion(
     nodeVersion = node;
     isAuto = false;
   }
-  return getSupportedNodeVersion(nodeVersion, isAuto);
+  return getSupportedNodeVersion(nodeVersion, isAuto, availableVersions);
 }
 
 export async function scanParentDirs(
@@ -247,27 +289,40 @@ export async function scanParentDirs(
     readPackageJson && pkgJsonPath
       ? JSON.parse(await fs.readFile(pkgJsonPath, 'utf8'))
       : undefined;
-  const [yarnLockPath, npmLockPath, pnpmLockPath] = await walkParentDirsMulti({
-    base: '/',
-    start: destPath,
-    filenames: ['yarn.lock', 'package-lock.json', 'pnpm-lock.yaml'],
-  });
+  const [yarnLockPath, npmLockPath, pnpmLockPath, bunLockPath] =
+    await walkParentDirsMulti({
+      base: '/',
+      start: destPath,
+      filenames: [
+        'yarn.lock',
+        'package-lock.json',
+        'pnpm-lock.yaml',
+        'bun.lockb',
+      ],
+    });
   let lockfilePath: string | undefined;
   let lockfileVersion: number | undefined;
-  let cliType: CliType = 'yarn';
+  let cliType: CliType;
 
-  const [hasYarnLock, packageLockJson, pnpmLockYaml] = await Promise.all([
-    Boolean(yarnLockPath),
-    npmLockPath
-      ? readConfigFile<{ lockfileVersion: number }>(npmLockPath)
-      : null,
-    pnpmLockPath
-      ? readConfigFile<{ lockfileVersion: number }>(pnpmLockPath)
-      : null,
-  ]);
+  const [hasYarnLock, packageLockJson, pnpmLockYaml, bunLockBin] =
+    await Promise.all([
+      Boolean(yarnLockPath),
+      npmLockPath
+        ? readConfigFile<{ lockfileVersion: number }>(npmLockPath)
+        : null,
+      pnpmLockPath
+        ? readConfigFile<{ lockfileVersion: number }>(pnpmLockPath)
+        : null,
+      bunLockPath ? fs.readFile(bunLockPath, 'utf8') : null,
+    ]);
 
-  // Priority order is Yarn > pnpm > npm
-  if (hasYarnLock) {
+  // Priority order is bun with yarn lock > yarn > pnpm > npm > bun
+  if (bunLockBin && hasYarnLock) {
+    cliType = 'bun';
+    lockfilePath = bunLockPath;
+    // TODO: read "bun-lockfile-format-v0"
+    lockfileVersion = 0;
+  } else if (hasYarnLock) {
     cliType = 'yarn';
     lockfilePath = yarnLockPath;
   } else if (pnpmLockYaml) {
@@ -278,6 +333,17 @@ export async function scanParentDirs(
     cliType = 'npm';
     lockfilePath = npmLockPath;
     lockfileVersion = packageLockJson.lockfileVersion;
+  } else if (bunLockBin) {
+    cliType = 'bun';
+    lockfilePath = bunLockPath;
+    // TODO: read "bun-lockfile-format-v0"
+    lockfileVersion = 0;
+  } else {
+    if (process.env.VERCEL_ENABLE_NPM_DEFAULT === '1') {
+      cliType = 'npm';
+    } else {
+      cliType = 'yarn';
+    }
   }
 
   const packageJsonPath = pkgJsonPath || undefined;
@@ -297,21 +363,13 @@ export async function walkParentDirs({
 }: WalkParentDirsProps): Promise<string | null> {
   assert(path.isAbsolute(base), 'Expected "base" to be absolute path');
   assert(path.isAbsolute(start), 'Expected "start" to be absolute path');
-  let parent = '';
 
-  for (let current = start; base.length <= current.length; current = parent) {
-    const fullPath = path.join(current, filename);
+  for (const dir of traverseUpDirectories({ start, base })) {
+    const fullPath = path.join(dir, filename);
 
     // eslint-disable-next-line no-await-in-loop
     if (await fs.pathExists(fullPath)) {
       return fullPath;
-    }
-
-    parent = path.dirname(current);
-
-    if (parent === current) {
-      // Reached root directory of the filesystem
-      break;
     }
   }
 
@@ -322,14 +380,9 @@ async function walkParentDirsMulti({
   base,
   start,
   filenames,
-}: {
-  base: string;
-  start: string;
-  filenames: string[];
-}): Promise<(string | undefined)[]> {
-  let parent = '';
-  for (let current = start; base.length <= current.length; current = parent) {
-    const fullPaths = filenames.map(f => path.join(current, f));
+}: WalkParentDirsMultiProps): Promise<(string | undefined)[]> {
+  for (const dir of traverseUpDirectories({ start, base })) {
+    const fullPaths = filenames.map(f => path.join(dir, f));
     const existResults = await Promise.all(
       fullPaths.map(f => fs.pathExists(f))
     );
@@ -337,13 +390,6 @@ async function walkParentDirsMulti({
 
     if (foundOneOrMore) {
       return fullPaths.map((f, i) => (existResults[i] ? f : undefined));
-    }
-
-    parent = path.dirname(current);
-
-    if (parent === current) {
-      // Reached root directory of the filesystem
-      break;
     }
   }
 
@@ -373,6 +419,14 @@ export async function runNpmInstall(
     const { cliType, packageJsonPath, lockfileVersion } = await scanParentDirs(
       destPath
     );
+
+    if (!packageJsonPath) {
+      debug(
+        `Skipping dependency installation because no package.json was found for ${destPath}`
+      );
+      runNpmInstallSema.release();
+      return false;
+    }
 
     // Only allow `runNpmInstall()` to run once per `package.json`
     // when doing a default install (no additional args)
@@ -434,6 +488,10 @@ export async function runNpmInstall(
       commandArgs = args
         .filter(a => a !== '--prefer-offline')
         .concat(['install', '--unsafe-perm']);
+    } else if (cliType === 'bun') {
+      // @see options https://bun.sh/docs/cli/install
+      opts.prettyCommand = 'bun install';
+      commandArgs = ['install', ...args];
     } else {
       opts.prettyCommand = 'yarn install';
       commandArgs = ['install', ...args];
@@ -472,6 +530,10 @@ export async function runNpmInstall(
   }
 }
 
+/**
+ * Prepares the input environment based on the used package manager and lockfile
+ * versions.
+ */
 export function getEnvForPackageManager({
   cliType,
   lockfileVersion,
@@ -483,10 +545,95 @@ export function getEnvForPackageManager({
   nodeVersion: NodeVersion | undefined;
   env: { [x: string]: string | undefined };
 }) {
-  const newEnv: { [x: string]: string | undefined } = { ...env };
+  const {
+    detectedLockfile,
+    detectedPackageManager,
+    path: newPath,
+    yarnNodeLinker,
+  } = getPathForPackageManager({
+    cliType,
+    lockfileVersion,
+    nodeVersion,
+    env,
+  });
+
+  const newEnv: { [x: string]: string | undefined } = {
+    ...env,
+  };
+
+  if (newPath) {
+    // Ensure that the binaries of the detected package manager are at the
+    // beginning of the `$PATH`.
+    const oldPath = env.PATH + '';
+    newEnv.PATH = `${newPath}${path.delimiter}${oldPath}`;
+  }
+
+  if (yarnNodeLinker) {
+    newEnv.YARN_NODE_LINKER = yarnNodeLinker;
+  }
+
+  if (detectedLockfile && detectedPackageManager) {
+    // For pnpm we also show the version of the lockfile we found
+    const versionString =
+      cliType === 'pnpm' ? `version ${lockfileVersion} ` : '';
+
+    console.log(
+      `Detected \`${detectedLockfile}\` ${versionString}generated by ${detectedPackageManager}`
+    );
+
+    if (cliType === 'bun') {
+      console.warn(
+        'Warning: Bun is used as a package manager at build time only, not at runtime with Functions'
+      );
+    }
+  }
+
+  return newEnv;
+}
+
+/**
+ * Helper to get the binary paths that link to the used package manager.
+ * Note: Make sure it doesn't contain any `console.log` calls.
+ */
+export function getPathForPackageManager({
+  cliType,
+  lockfileVersion,
+  nodeVersion,
+  env,
+}: {
+  cliType: CliType;
+  lockfileVersion: number | undefined;
+  nodeVersion: NodeVersion | undefined;
+  env: { [x: string]: string | undefined };
+}): {
+  /**
+   * Which lockfile was detected.
+   */
+  detectedLockfile: string | undefined;
+  /**
+   * Detected package manager that generated the found lockfile.
+   */
+  detectedPackageManager: string | undefined;
+  /**
+   * Value of $PATH that includes the binaries for the detected package manager.
+   * Undefined if no $PATH are necessary.
+   */
+  path: string | undefined;
+  /**
+   * Set if yarn was identified as package manager and `YARN_NODE_LINKER`
+   * environment variable was not found on the input environment.
+   */
+  yarnNodeLinker: string | undefined;
+} {
+  let detectedLockfile: string | undefined;
+  let detectedPackageManager: string | undefined;
+  let pathValue: string | undefined;
+  let yarnNodeLinker: string | undefined;
   const oldPath = env.PATH + '';
   const npm7 = '/node16/bin-npm7';
   const pnpm7 = '/pnpm7/node_modules/.bin';
+  const pnpm8 = '/pnpm8/node_modules/.bin';
+  const bun1 = '/bun1';
   const corepackEnabled = env.ENABLE_EXPERIMENTAL_COREPACK === '1';
   if (cliType === 'npm') {
     if (
@@ -496,9 +643,10 @@ export function getEnvForPackageManager({
       !oldPath.includes(npm7) &&
       !corepackEnabled
     ) {
-      // Ensure that npm 7 is at the beginning of the `$PATH`
-      newEnv.PATH = `${npm7}${path.delimiter}${oldPath}`;
-      console.log('Detected `package-lock.json` generated by npm 7+...');
+      // npm 7
+      pathValue = npm7;
+      detectedLockfile = 'package-lock.json';
+      detectedPackageManager = 'npm 7+';
     }
   } else if (cliType === 'pnpm') {
     if (
@@ -507,18 +655,40 @@ export function getEnvForPackageManager({
       !oldPath.includes(pnpm7) &&
       !corepackEnabled
     ) {
-      // Ensure that pnpm 7 is at the beginning of the `$PATH`
-      newEnv.PATH = `${pnpm7}${path.delimiter}${oldPath}`;
-      console.log('Detected `pnpm-lock.yaml` generated by pnpm 7...');
+      // pnpm 7
+      pathValue = pnpm7;
+      detectedLockfile = 'pnpm-lock.yaml';
+      detectedPackageManager = 'pnpm 7';
+    } else if (
+      typeof lockfileVersion === 'number' &&
+      lockfileVersion >= 6 &&
+      !oldPath.includes(pnpm8) &&
+      !corepackEnabled
+    ) {
+      // pnpm 8
+      pathValue = pnpm8;
+      detectedLockfile = 'pnpm-lock.yaml';
+      detectedPackageManager = 'pnpm 8';
+    }
+  } else if (cliType === 'bun') {
+    if (!oldPath.includes(bun1) && !corepackEnabled) {
+      // Bun 1
+      pathValue = bun1;
+      detectedLockfile = 'bun.lockb';
+      detectedPackageManager = 'Bun';
     }
   } else {
     // Yarn v2 PnP mode may be activated, so force "node-modules" linker style
     if (!env.YARN_NODE_LINKER) {
-      newEnv.YARN_NODE_LINKER = 'node-modules';
+      yarnNodeLinker = 'node-modules';
     }
   }
-
-  return newEnv;
+  return {
+    detectedLockfile,
+    detectedPackageManager,
+    path: pathValue,
+    yarnNodeLinker,
+  };
 }
 
 export async function runCustomInstallCommand({
@@ -583,6 +753,8 @@ export async function runPackageJsonScript(
     opts.prettyCommand = `npm run ${scriptName}`;
   } else if (cliType === 'pnpm') {
     opts.prettyCommand = `pnpm run ${scriptName}`;
+  } else if (cliType === 'bun') {
+    opts.prettyCommand = `bun run ${scriptName}`;
   } else {
     opts.prettyCommand = `yarn run ${scriptName}`;
   }

@@ -2,7 +2,7 @@ import os from 'os';
 import url from 'url';
 import fs from 'fs-extra';
 import { join } from 'path';
-import listen from 'async-listen';
+import { listen } from 'async-listen';
 import stripAnsi from 'strip-ansi';
 import { createServer } from 'http';
 
@@ -14,6 +14,22 @@ const {
   testFixtureStdio,
   validateResponseHeaders,
 } = require('./utils.js');
+
+test('[verdel dev] should support serverless functions', async () => {
+  const dir = fixture('serverless-function');
+  const { dev, port, readyResolver } = await testFixture(dir, {});
+
+  try {
+    await readyResolver;
+    let res = await fetch(`http://localhost:${port}/api?foo=bar`);
+    validateResponseHeaders(res);
+    const payload = await res.json();
+    expect(payload).toMatchObject({ url: '/api?foo=bar', method: 'GET' });
+    expect(payload.headers.host).toBe(payload.headers['x-forwarded-host']);
+  } finally {
+    await dev.kill();
+  }
+});
 
 test('[vercel dev] should support edge functions', async () => {
   const dir = fixture('edge-function');
@@ -39,8 +55,9 @@ test('[vercel dev] should support edge functions', async () => {
 
     // support for edge functions has to manually ensure that these properties
     // are set up; so, we test that they are all passed through properly
-    expect(await res.json()).toMatchObject({
-      headerContentType: 'application/json',
+    const payload = await res.json();
+    expect(payload).toMatchObject({
+      headers: { 'content-type': 'application/json' },
       url: `http://localhost:${port}/api/edge-success`,
       method: 'POST',
       body: '{"hello":"world"}',
@@ -49,6 +66,7 @@ test('[vercel dev] should support edge functions', async () => {
       optionalChaining: 'fallback',
       ENV_VAR_IN_EDGE: '1',
     });
+    expect(payload.headers.host).toBe(payload.headers['x-forwarded-host']);
   } finally {
     await dev.kill();
   }
@@ -105,7 +123,7 @@ test('[vercel dev] throws an error when an edge function has no response', async
     expect(await res.status).toBe(500);
     expect(await res.text()).toMatch('FUNCTION_INVOCATION_FAILED');
     expect(stdout).toMatch(
-      /Error from API Route \/api\/edge-no-response: Edge Function "api\/edge-no-response.js" did not return a response./g
+      /Error from API Route \/api\/edge-no-response: Edge Function did not return a response./g
     );
   } finally {
     await dev.kill();
@@ -189,8 +207,8 @@ test('[vercel dev] should handle config errors thrown in edge functions', async 
     expect(await res.text()).toMatch(
       /<strong>500<\/strong>: INTERNAL_SERVER_ERROR/g
     );
-    expect(stderr).toMatch(
-      /Invalid function runtime "invalid-runtime-value" for "api\/edge-error-config.js". Valid runtimes are: \["edge","experimental-edge"\]/g
+    expect(stderr).toContain(
+      'api/edge-error-config.js: unsupported "runtime" value in `config`: "invalid-runtime-value" (must be one of: ["edge","experimental-edge"]). Learn more: https://vercel.link/creating-edge-functions'
     );
   } finally {
     await dev.kill();
@@ -309,9 +327,12 @@ test('[vercel dev] should handle missing handler errors thrown in edge functions
     expect(await res.text()).toMatch(
       /<strong>500<\/strong>: INTERNAL_SERVER_ERROR/g
     );
-    expect(stdout).toMatch(
-      /No default export was found. Add a default export to handle requests./g
-    );
+    const url = `http://localhost:${port}/api/edge-error-no-handler`;
+    expect(stdout).toMatchInlineSnapshot(`
+      "Error from API Route /api/edge-error-no-handler: No default or HTTP-named export was found at ${url}. Add one to handle requests. Learn more: https://vercel.link/creating-edge-middleware
+          at (api/edge-error-no-handler.js)
+      "
+    `);
   } finally {
     await dev.kill();
   }
@@ -364,7 +385,7 @@ test('[vercel dev] should support request body', async () => {
       body: JSON.stringify(body),
     });
     validateResponseHeaders(res);
-    expect(await res.json()).toMatchObject(body);
+    expect(await res.json()).toMatchObject({ body, readBody: body });
 
     // Test that `req` "data" events work in dev
     res = await fetch(`http://localhost:${port}/api/data-events`, {

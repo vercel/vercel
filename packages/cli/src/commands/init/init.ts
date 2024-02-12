@@ -35,7 +35,7 @@ export default async function init(
 ) {
   const { output } = client;
   const [name, dir] = args;
-  const force = opts['-f'] || opts['--force'];
+  const force = opts['--force'];
 
   const examples = await fetchExampleList(client);
 

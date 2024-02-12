@@ -27,7 +27,7 @@
         "RSC": "1"
       },
       "responseHeaders": {
-        "content-type": "application/octet-stream"
+        "content-type": "text/x-component"
       }
     },
     {
@@ -51,7 +51,7 @@
         "RSC": "1"
       },
       "responseHeaders": {
-        "content-type": "application/octet-stream"
+        "content-type": "text/x-component"
       }
     }
   ]

@@ -1,0 +1,30 @@
+{
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next",
+      "config": {
+        "rootDirectory": "apps/web",
+        "buildCommand": "cd ../../ && yarn build",
+        "installCommand": "yarn"
+      }
+    }
+  ],
+  "probes": [
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "index page"
+    },
+    {
+      "path": "/ssg",
+      "status": 200,
+      "mustContain": "ssg page"
+    },
+    {
+      "path": "/ssp",
+      "status": 200,
+      "mustContain": "ssp page"
+    }
+  ]
+}

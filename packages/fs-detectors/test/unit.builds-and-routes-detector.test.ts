@@ -473,7 +473,7 @@ describe('Test `detectBuilders`', () => {
   });
 
   it('invalid function memory', async () => {
-    const functions = { 'pages/index.ts': { memory: 200 } };
+    const functions = { 'pages/index.ts': { memory: 127 } };
     const files = ['pages/index.ts'];
     const { builders, errors } = await detectBuilders(files, null, {
       functions,
@@ -482,6 +482,17 @@ describe('Test `detectBuilders`', () => {
     expect(builders).toBe(null);
     expect(errors!.length).toBe(1);
     expect(errors![0].code).toBe('invalid_function_memory');
+  });
+
+  it('should build with function memory not dividable by 64', async () => {
+    const functions = { 'api/index.ts': { memory: 1000 } };
+    const files = ['api/index.ts'];
+    const { builders, errors } = await detectBuilders(files, null, {
+      functions,
+    });
+
+    expect(builders![0].use).toBe('@vercel/node');
+    expect(errors).toBeNull();
   });
 
   it('missing runtime version', async () => {
@@ -780,6 +791,49 @@ describe('Test `detectBuilders`', () => {
       {
         code: 'unused_function',
         message: `The pattern "server/**/*.ts" defined in \`functions\` doesn't match any Serverless Functions inside the \`api\` directory.`,
+        action: 'Learn More',
+        link: 'https://vercel.link/unmatched-function-pattern',
+      },
+    ]);
+  });
+
+  it('Works with fallback last', async () => {
+    const files = ['api/simple.rs', 'api/complex.rs'];
+    const functions = {
+      'api/simple.rs': {
+        runtime: 'ecklf-tmp-runtime-test@1.0.142',
+        maxDuration: 120,
+      },
+      'api/**/*.rs': {
+        runtime: 'ecklf-tmp-runtime-test@1.0.142',
+        maxDuration: 180,
+      },
+    };
+
+    const { errors } = await detectBuilders(files, null, { functions });
+
+    expect(errors).toBe(null);
+  });
+
+  it('Errors with fallback first', async () => {
+    const files = ['api/simple.rs', 'api/complex.rs'];
+    const functions = {
+      'api/**/*.rs': {
+        runtime: 'ecklf-tmp-runtime-test@1.0.142',
+        maxDuration: 180,
+      },
+      'api/simple.rs': {
+        runtime: 'ecklf-tmp-runtime-test@1.0.142',
+        maxDuration: 120,
+      },
+    };
+
+    const { errors } = await detectBuilders(files, null, { functions });
+
+    expect(errors).toEqual([
+      {
+        code: 'unused_function',
+        message: `The pattern "api/simple.rs" defined in \`functions\` doesn't match any Serverless Functions inside the \`api\` directory.`,
         action: 'Learn More',
         link: 'https://vercel.link/unmatched-function-pattern',
       },
@@ -1720,7 +1774,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
   });
 
   it('invalid function memory', async () => {
-    const functions = { 'pages/index.ts': { memory: 200 } };
+    const functions = { 'pages/index.ts': { memory: 127 } };
     const files = ['pages/index.ts'];
     const { builders, errors } = await detectBuilders(files, null, {
       functions,
@@ -1730,6 +1784,18 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(builders).toBe(null);
     expect(errors!.length).toBe(1);
     expect(errors![0].code).toBe('invalid_function_memory');
+  });
+
+  it('should build with function memory not dividable by 64', async () => {
+    const functions = { 'api/index.ts': { memory: 1000 } };
+    const files = ['api/index.ts'];
+    const { builders, errors } = await detectBuilders(files, null, {
+      functions,
+      featHandleMiss,
+    });
+
+    expect(builders![0].use).toBe('@vercel/node');
+    expect(errors).toBeNull();
   });
 
   it('missing runtime version', async () => {
@@ -2335,6 +2401,56 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
       },
     ]);
   });
+
+  it('should add middleware builder with "remix" framework preset', async () => {
+    const files = ['package.json', 'app/routes/index.ts', 'middleware.ts'];
+    const projectSettings = {
+      framework: 'remix',
+    };
+    const { builders } = await detectBuilders(files, null, {
+      projectSettings,
+      featHandleMiss,
+    });
+    expect(builders).toEqual([
+      {
+        src: 'middleware.ts',
+        use: '@vercel/node',
+        config: {
+          middleware: true,
+          zeroConfig: true,
+        },
+      },
+      {
+        use: '@vercel/remix-builder',
+        src: 'package.json',
+        config: {
+          framework: 'remix',
+          zeroConfig: true,
+        },
+      },
+    ]);
+  });
+
+  it('should ignore middleware with "storybook" framework preset', async () => {
+    const files = ['package.json', 'app/routes/index.ts', 'middleware.ts'];
+    const projectSettings = {
+      framework: 'storybook',
+    };
+    const { builders } = await detectBuilders(files, null, {
+      projectSettings,
+      featHandleMiss,
+    });
+    expect(builders).toEqual([
+      {
+        use: '@vercel/static-build',
+        src: 'package.json',
+        config: {
+          framework: 'storybook',
+          zeroConfig: true,
+        },
+      },
+    ]);
+  });
 });
 
 it('Test `detectRoutes`', async () => {
@@ -2712,7 +2828,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
       {
         code: 'conflicting_files',
         message:
-          'When using Next.js, it is recommended to place Node.js Serverless Functions inside of the `pages/api` (provided by Next.js) directory instead of `api` (provided by Vercel).',
+          'When using Next.js, it is recommended to place JavaScript Functions inside of the `pages/api` (provided by Next.js) directory instead of `api` (provided by Vercel). Other languages (Python, Go, etc) should still go in the `api` directory.',
         link: 'https://nextjs.org/docs/api-routes/introduction',
         action: 'Learn More',
       },
@@ -2747,7 +2863,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
       {
         code: 'conflicting_files',
         message:
-          'When using Next.js, it is recommended to place Node.js Serverless Functions inside of the `pages/api` (provided by Next.js) directory instead of `api` (provided by Vercel).',
+          'When using Next.js, it is recommended to place JavaScript Functions inside of the `pages/api` (provided by Next.js) directory instead of `api` (provided by Vercel). Other languages (Python, Go, etc) should still go in the `api` directory.',
         link: 'https://nextjs.org/docs/api-routes/introduction',
         action: 'Learn More',
       },

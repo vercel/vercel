@@ -3,14 +3,14 @@ const assert = require('assert');
 const { createHash } = require('crypto');
 const path = require('path');
 const _fetch = require('node-fetch');
-const fetch = require('./fetch-retry.js');
+const fetch = require('./fetch-retry');
 const fileModeSymbol = Symbol('fileMode');
 const { logWithinTest } = require('./log');
 const ms = require('ms');
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-async function nowDeploy(projectName, bodies, randomness, uploadNowJson) {
+async function nowDeploy(projectName, bodies, randomness, uploadNowJson, opts) {
   const files = Object.keys(bodies)
     .filter(n =>
       uploadNowJson
@@ -68,7 +68,7 @@ async function nowDeploy(projectName, bodies, randomness, uploadNowJson) {
   let deploymentUrl;
 
   {
-    const json = await deploymentPost(nowDeployPayload);
+    const json = await deploymentPost(nowDeployPayload, opts);
     if (json.error && json.error.code === 'missing_files')
       throw new Error('Missing files');
     deploymentId = json.id;
@@ -100,7 +100,71 @@ async function nowDeploy(projectName, bodies, randomness, uploadNowJson) {
     await new Promise(r => setTimeout(r, 1000));
   }
 
+  await disableSSO(deploymentId);
+
   return { deploymentId, deploymentUrl };
+}
+
+async function disableSSO(deploymentId, useTeam = true) {
+  if (deploymentId.startsWith('https://')) {
+    deploymentId = new URL(deploymentId).hostname;
+  }
+
+  const deployRes = await fetchWithAuth(
+    `https://vercel.com/api/v13/deployments/${encodeURIComponent(
+      deploymentId
+    )}`,
+    {
+      method: 'GET',
+    }
+  );
+
+  if (!deployRes.ok) {
+    throw new Error(
+      `Failed to get deployment info (status: ${
+        deployRes.status
+      }, body: ${await deployRes.text()})`
+    );
+  }
+
+  const deploymentInfo = await deployRes.json();
+  const { projectId, url: deploymentUrl } = deploymentInfo;
+
+  const settingRes = await fetchWithAuth(
+    `https://vercel.com/api/v5/projects/${encodeURIComponent(projectId)}`,
+    {
+      method: 'PATCH',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        ssoProtection: null,
+      }),
+      ...(useTeam
+        ? {}
+        : {
+            skipTeam: true,
+          }),
+    }
+  );
+
+  if (settingRes.ok) {
+    for (let i = 0; i < 10; i++) {
+      const res = await fetch(`https://${deploymentUrl}`);
+      if (res.status !== 401) {
+        break;
+      }
+      await new Promise(resolve => setTimeout(resolve, 5 * 1000));
+    }
+    console.log(
+      `Disabled deployment protection for deploymentId: ${deploymentId} projectId: ${projectId}`
+    );
+  } else {
+    console.error(settingRes.status, await settingRes.text(), deploymentInfo);
+    throw new Error(
+      `Failed to disable deployment protection projectId: ${projectId} deploymentId ${deploymentId}`
+    );
+  }
 }
 
 function digestOfFile(body) {
@@ -137,8 +201,11 @@ async function filePost(body, digest) {
   return json;
 }
 
-async function deploymentPost(payload) {
-  const url = '/v13/deployments?skipAutoDetectionConfirmation=1&forceNew=1';
+async function deploymentPost(payload, opts = {}) {
+  const url = `/v13/deployments?skipAutoDetectionConfirmation=1${
+    // skipForceNew allows turbo cache to be leveraged
+    !opts.skipForceNew ? `&forceNew=1` : ''
+  }`;
   const resp = await fetchWithAuth(url, {
     method: 'POST',
     body: JSON.stringify(payload),
@@ -180,22 +247,31 @@ async function fetchWithAuth(url, opts = {}) {
     opts.headers.Authorization = `Bearer ${await fetchCachedToken()}`;
   }
 
-  const { VERCEL_TEAM_ID } = process.env;
+  if (opts.skipTeam) {
+    delete opts.skipTeam;
+  } else {
+    const { VERCEL_TEAM_ID } = process.env;
 
-  if (VERCEL_TEAM_ID) {
-    url += `${url.includes('?') ? '&' : '?'}teamId=${VERCEL_TEAM_ID}`;
+    if (VERCEL_TEAM_ID) {
+      url += `${url.includes('?') ? '&' : '?'}teamId=${VERCEL_TEAM_ID}`;
+    }
   }
   return await fetchApi(url, opts);
 }
 
+/**
+ * @returns { Promise<String> }
+ */
 async function fetchCachedToken() {
   if (!token || tokenCreated < Date.now() - MAX_TOKEN_AGE) {
-    tokenCreated = Date.now();
-    token = await fetchTokenWithRetry();
+    return fetchTokenWithRetry();
   }
   return token;
 }
 
+/**
+ * @returns { Promise<String> }
+ */
 async function fetchTokenWithRetry(retries = 5) {
   const {
     NOW_TOKEN,
@@ -240,6 +316,11 @@ async function fetchTokenWithRetry(retries = 5) {
       const text = JSON.stringify(data);
       throw new Error(`Unexpected response from registration: ${text}`);
     }
+
+    // Cache the token to be returned via `fetchCachedToken`
+    token = data.token;
+    tokenCreated = Date.now();
+
     return data.token;
   } catch (error) {
     logWithinTest(
@@ -256,9 +337,11 @@ async function fetchTokenWithRetry(retries = 5) {
 }
 
 async function fetchApi(url, opts = {}) {
-  const apiHost = process.env.API_HOST || 'api.vercel.com';
-  const urlWithHost = `https://${apiHost}${url}`;
   const { method = 'GET', body } = opts;
+  const apiHost = process.env.API_HOST || 'api.vercel.com';
+  const urlWithHost = url.startsWith('https://')
+    ? url
+    : `https://${apiHost}${url}`;
 
   if (process.env.VERBOSE) {
     logWithinTest('fetch', method, url);
@@ -284,7 +367,8 @@ module.exports = {
   fetchApi,
   fetchWithAuth,
   nowDeploy,
-  fetchTokenWithRetry,
   fetchCachedToken,
+  fetchTokenWithRetry,
   fileModeSymbol,
+  disableSSO,
 };

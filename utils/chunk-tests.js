@@ -1,13 +1,49 @@
+// @ts-check
 const child_process = require('child_process');
 const path = require('path');
 
-const NUMBER_OF_CHUNKS = 5;
-const MINIMUM_PER_CHUNK = 1;
 const runnersMap = new Map([
-  ['test-integration-once', ['ubuntu-latest']],
-  ['test-next-local', ['ubuntu-latest']],
-  ['test-integration-dev', ['ubuntu-latest', 'macos-latest']],
+  [
+    'test-unit',
+    {
+      min: 1,
+      max: 1,
+      runners: ['ubuntu-latest', 'macos-latest', 'windows-latest'],
+    },
+  ],
+  ['test-e2e', { min: 1, max: 7, runners: ['ubuntu-latest'] }],
+  [
+    'test-next-local',
+    { min: 1, max: 5, runners: ['ubuntu-latest'], nodeVersion: '18' },
+  ],
+  [
+    'test-next-local-legacy',
+    { min: 1, max: 5, runners: ['ubuntu-latest'], nodeVersion: '16' },
+  ],
+  ['test-dev', { min: 1, max: 7, runners: ['ubuntu-latest', 'macos-latest'] }],
 ]);
+
+const packageOptionsOverrides = {
+  // 'some-package': { min: 1, max: 1 },
+};
+
+function getRunnerOptions(scriptName, packageName) {
+  let runnerOptions = runnersMap.get(scriptName);
+  if (packageOptionsOverrides[packageName]) {
+    runnerOptions = Object.assign(
+      {},
+      runnerOptions,
+      packageOptionsOverrides[packageName]
+    );
+  }
+  return (
+    runnerOptions || {
+      min: 1,
+      max: 1,
+      runners: ['ubuntu-latest'],
+    }
+  );
+}
 
 async function getChunkedTests() {
   const scripts = [...runnersMap.keys()];
@@ -19,6 +55,7 @@ async function getChunkedTests() {
       ...scripts,
       `--cache-dir=.turbo`,
       '--output-logs=full',
+      '--log-order=stream',
       '--',
       '--', // need two of these due to pnpm arg parsing
       '--listTests',
@@ -60,17 +97,19 @@ async function getChunkedTests() {
     ([packagePathAndName, scriptNames]) => {
       const [packagePath, packageName] = packagePathAndName.split(',');
       return Object.entries(scriptNames).flatMap(([scriptName, testPaths]) => {
-        const sortedTestPaths = testPaths.sort((a, b) => a.localeCompare(b));
-        return intoChunks(NUMBER_OF_CHUNKS, sortedTestPaths).flatMap(
-          (chunk, chunkNumber, allChunks) => {
-            const runners = runnersMap.get(scriptName) || ['ubuntu-latest'];
+        const runnerOptions = getRunnerOptions(scriptName, packageName);
+        const { runners, min, max, nodeVersion } = runnerOptions;
 
+        const sortedTestPaths = testPaths.sort((a, b) => a.localeCompare(b));
+        return intoChunks(min, max, sortedTestPaths).flatMap(
+          (chunk, chunkNumber, allChunks) => {
             return runners.map(runner => {
               return {
                 runner,
                 packagePath,
                 packageName,
                 scriptName,
+                nodeVersion,
                 testPaths: chunk.map(testFile =>
                   path.relative(
                     path.join(__dirname, '../', packagePath),
@@ -115,7 +154,7 @@ async function turbo(args) {
         if (code !== 0) {
           reject(new Error(`Turbo exited with code ${code}`));
         } else {
-          resolve();
+          resolve(code);
         }
       });
     });
@@ -128,17 +167,15 @@ async function turbo(args) {
 
 /**
  * @template T
- * @param {number} totalChunks maximum number of chunks
- * @param {T[]} values
+ * @param {number} minChunks minimum number of chunks
+ * @param {number} maxChunks maximum number of chunks
+ * @param {T[]} arr
  * @returns {T[][]}
  */
-function intoChunks(totalChunks, arr) {
-  const chunkSize = Math.max(
-    MINIMUM_PER_CHUNK,
-    Math.ceil(arr.length / totalChunks)
-  );
+function intoChunks(minChunks, maxChunks, arr) {
+  const chunkSize = Math.max(minChunks, Math.ceil(arr.length / maxChunks));
   const chunks = [];
-  for (let i = 0; i < totalChunks; i++) {
+  for (let i = 0; i < maxChunks; i++) {
     chunks.push(arr.slice(i * chunkSize, (i + 1) * chunkSize));
   }
   return chunks.filter(x => x.length > 0);
@@ -155,11 +192,11 @@ async function main() {
   }
 }
 
+// @ts-ignore
 if (module === require.main || !module.parent) {
   main();
 }
 
 module.exports = {
   intoChunks,
-  NUMBER_OF_CHUNKS,
 };

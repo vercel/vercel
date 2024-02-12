@@ -1,7 +1,7 @@
 import Client from '../client';
 import getUser from '../get-user';
 import getTeams from '../teams/get-teams';
-import { User, Team, Org } from '../../types';
+import { User, Team, Org } from '@vercel-internals/types';
 
 type Choice = { name: string; value: Org };
 
@@ -25,21 +25,31 @@ export default async function selectOrg(
     output.stopSpinner();
   }
 
+  const personalAccountChoice =
+    user.version === 'northstar'
+      ? []
+      : [
+          {
+            name: user.name || user.username,
+            value: { type: 'user', id: user.id, slug: user.username },
+          } as const,
+        ];
+
   const choices: Choice[] = [
-    {
-      name: user.name || user.username,
-      value: { type: 'user', id: user.id, slug: user.username },
-    },
+    ...personalAccountChoice,
     ...teams.map<Choice>(team => ({
       name: team.name || team.slug,
       value: { type: 'team', id: team.id, slug: team.slug },
     })),
   ];
 
-  const defaultOrgIndex = teams.findIndex(team => team.id === currentTeam) + 1;
+  const defaultChoiceIndex = Math.max(
+    choices.findIndex(choice => choice.value.id === currentTeam),
+    0
+  );
 
   if (autoConfirm) {
-    return choices[defaultOrgIndex].value;
+    return choices[defaultChoiceIndex].value;
   }
 
   const answers = await client.prompt({
@@ -47,7 +57,7 @@ export default async function selectOrg(
     name: 'org',
     message: question,
     choices,
-    default: defaultOrgIndex,
+    default: defaultChoiceIndex,
   });
 
   const org = answers.org;

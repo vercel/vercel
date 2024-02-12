@@ -4,7 +4,6 @@ const {
   fetch,
   sleep,
   fixture,
-  isCanary,
   shouldSkip,
   testFixture,
   fetchWithRetry,
@@ -46,11 +45,7 @@ test('[vercel dev] 02-angular-node', async () => {
 
   await sleep(5000);
 
-  if (isCanary()) {
-    stderr.includes('@now/build-utils@canary');
-  } else {
-    stderr.includes('@now/build-utils@latest');
-  }
+  stderr.includes('@now/build-utils@latest');
 });
 
 test(
@@ -238,7 +233,7 @@ test(
         expect(res.headers.get('location')).toBe(
           `http://localhost:${port}/?foo=bar`
         );
-        expect(body).toBe('Redirecting to /?foo=bar (301)\n');
+        expect(body).toBe('Redirecting...\n');
       }
 
       {

@@ -1,16 +1,18 @@
 # Documentation
 # https://help.github.com/en/articles/about-code-owners
 
-*                                        @TooTallNate @EndangeredMassa @styfle @cb1kenobi @Ethan-Arrowood
-/.github/workflows                       @TooTallNate @EndangeredMassa @styfle @cb1kenobi @Ethan-Arrowood @ijjk
-/packages/fs-detectors                   @TooTallNate @EndangeredMassa @styfle @cb1kenobi @Ethan-Arrowood @agadzik @chloetedder
-/packages/node-bridge                    @TooTallNate @EndangeredMassa @styfle @cb1kenobi @Ethan-Arrowood @ijjk
-/packages/next                           @TooTallNate @EndangeredMassa @styfle @cb1kenobi @Ethan-Arrowood @ijjk
-/packages/routing-utils                  @TooTallNate @EndangeredMassa @styfle @cb1kenobi @Ethan-Arrowood @ijjk
-/packages/edge                           @vercel/edge-compute
+# Restricted Paths
+*                                        @TooTallNate @EndangeredMassa @trek
+/.github/workflows                       @TooTallNate @EndangeredMassa @trek @ijjk
+/packages/fs-detectors                   @TooTallNate @EndangeredMassa @trek @agadzik @chloetedder
+/packages/next                           @TooTallNate @EndangeredMassa @Ethan-Arrowood @trek @ijjk @ztanner
+/packages/routing-utils                  @TooTallNate @EndangeredMassa @trek @ijjk
+/packages/static-build                   @TooTallNate @EndangeredMassa @trek
+/packages/edge                           @vercel/compute @TooTallNate @EndangeredMassa @trek
 /examples                                @leerob
 /examples/create-react-app               @Timer
-/examples/nextjs                         @timneutkens @ijjk @styfle
-/examples/hugo                           @styfle
-/examples/jekyll                         @styfle
-/examples/zola                           @styfle
+/examples/nextjs                         @timneutkens @ijjk @ztanner @huozhi
+/packages/node                           @TooTallNate @EndangeredMassa @trek @Kikobeats
+
+# Unrestricted Paths
+.changeset/

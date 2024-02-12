@@ -1,98 +1,54 @@
-import type {
-  IGatsbyPage,
-  IGatsbyFunction,
-  IRedirect,
-  IGatsbyConfig,
-} from 'gatsby/dist/redux/types';
-import Ajv, { JSONSchemaType } from 'ajv';
+import { Static, Type, Kind } from '@sinclair/typebox';
+import { Custom } from '@sinclair/typebox/custom';
+import { TypeCompiler } from '@sinclair/typebox/compiler';
 
-export type GatsbyPage = Pick<IGatsbyPage, 'mode' | 'path'>;
-const GatsbyPageSchema: JSONSchemaType<GatsbyPage> = {
-  type: 'object',
-  properties: {
-    mode: {
-      type: 'string',
-      enum: ['SSG', 'DSG', 'SSR'],
-    },
-    path: {
-      type: 'string',
-    },
-  },
-  required: ['mode', 'path'],
-} as const;
+Custom.Set<{ enum: string[] }>('StringEnum', (schema, value) => {
+  return schema.enum.includes(value as string);
+});
 
-export interface GatsbyState {
-  pages: Array<[string, GatsbyPage]>;
-  redirects: Array<GatsbyRedirect>;
-  functions: Array<GatsbyFunction>;
-  config: GatsbyConfig;
+function StringEnum<T extends string[]>(values: [...T]) {
+  return Type.Unsafe<T[number]>({
+    [Kind]: 'StringEnum',
+    type: 'string',
+    enum: values,
+  });
 }
 
-export type GatsbyFunction = Pick<
-  IGatsbyFunction,
-  'functionRoute' | 'originalAbsoluteFilePath'
->;
-const GatsbyFunctionSchema: JSONSchemaType<GatsbyFunction> = {
-  type: 'object',
-  properties: {
-    functionRoute: { type: 'string' },
-    originalAbsoluteFilePath: { type: 'string' },
-  },
-  required: ['functionRoute', 'originalAbsoluteFilePath'],
-} as const;
+const GatsbyPageSchema = Type.Object({
+  mode: StringEnum(['SSG', 'DSG', 'SSR']),
+  path: Type.String(),
+});
+export type GatsbyPage = Static<typeof GatsbyPageSchema>;
 
-export type GatsbyRedirect = Pick<
-  IRedirect,
-  'fromPath' | 'toPath' | 'isPermanent'
->;
-const GatsbyRedirectSchema: JSONSchemaType<GatsbyRedirect> = {
-  type: 'object',
-  properties: {
-    fromPath: { type: 'string' },
-    toPath: { type: 'string' },
-    isPermanent: { type: 'boolean', nullable: true },
-  },
-  required: ['fromPath', 'toPath'],
-} as const;
+const GatsbyFunctionSchema = Type.Object({
+  functionRoute: Type.String(),
+  originalAbsoluteFilePath: Type.String(),
+});
+export type GatsbyFunction = Static<typeof GatsbyFunctionSchema>;
+TypeCompiler.Compile(GatsbyFunctionSchema);
 
-export type GatsbyConfig = Pick<IGatsbyConfig, 'trailingSlash'>;
+const GatsbyRedirectSchema = Type.Object({
+  fromPath: Type.String(),
+  toPath: Type.String(),
+  isPermanent: Type.Optional(Type.Boolean()),
+  statusCode: Type.Optional(Type.Number()),
+});
+export type GatsbyRedirect = Static<typeof GatsbyRedirectSchema>;
 
-const GatsbyConfigSchema: JSONSchemaType<GatsbyConfig> = {
-  type: 'object',
-  properties: {
-    trailingSlash: {
-      type: 'string',
-      enum: ['always', 'never', 'ignore', 'legacy'],
-      nullable: true,
-    },
-  },
-} as const;
+const GatsbyConfigSchema = Type.Object({
+  trailingSlash: Type.Optional(
+    StringEnum(['always', 'never', 'ignore', 'legacy'])
+  ),
+  pathPrefix: Type.Optional(Type.String()),
+});
+export type GatsbyConfig = Static<typeof GatsbyConfigSchema>;
 
-const GatsbyStateSchema: JSONSchemaType<GatsbyState> = {
-  type: 'object',
-  properties: {
-    pages: {
-      type: 'array',
-      items: {
-        type: 'array',
-        minItems: 2,
-        maxItems: 2,
-        items: [{ type: 'string' }, GatsbyPageSchema],
-      },
-    },
-    redirects: {
-      type: 'array',
-      items: GatsbyRedirectSchema,
-    },
-    functions: {
-      type: 'array',
-      items: GatsbyFunctionSchema,
-    },
-    config: GatsbyConfigSchema,
-  },
-  required: ['pages', 'redirects', 'functions', 'config'],
-  additionalProperties: true,
-} as const;
+const GatsbyStateSchema = Type.Object({
+  pages: Type.Array(Type.Tuple([Type.String(), GatsbyPageSchema])),
+  redirects: Type.Array(GatsbyRedirectSchema),
+  functions: Type.Array(GatsbyFunctionSchema),
+  config: GatsbyConfigSchema,
+});
+export type GatsbyState = Static<typeof GatsbyStateSchema>;
 
-export const ajv = new Ajv({ allErrors: true });
-export const validateGatsbyState = ajv.compile(GatsbyStateSchema);
+export const validateGatsbyState = TypeCompiler.Compile(GatsbyStateSchema);

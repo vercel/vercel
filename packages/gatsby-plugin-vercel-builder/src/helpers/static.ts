@@ -1,5 +1,5 @@
-import { join, dirname } from 'path';
-import { copy, move, ensureDir } from 'fs-extra';
+import { join } from 'path';
+import { hardLinkDir } from '@vercel/build-utils';
 
 export async function createStaticDir(prefix?: string) {
   const publicDir = join(process.cwd(), 'public');
@@ -10,14 +10,13 @@ export async function createStaticDir(prefix?: string) {
     'static',
     prefix ?? ''
   );
-  await ensureDir(dirname(targetDir));
+
   try {
-    await move(publicDir, targetDir);
+    await hardLinkDir(publicDir, [targetDir]);
   } catch (err: any) {
-    console.error(
-      `Failed to move "public" dir from "${publicDir}" to "${targetDir}". Copying instead.`,
-      err
+    console.error(err);
+    throw new Error(
+      `Failed to hardlink (or copy) "public" dir files from "${publicDir}" to "${targetDir}".`
     );
-    await copy(publicDir, targetDir);
   }
 }

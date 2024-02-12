@@ -54,7 +54,7 @@ module.exports = async ({ github, context }) => {
     body: `This auto-generated PR updates Turbo to version ${newVersion}`,
   });
 
-  github.rest.issues.addLabels({
+  await github.rest.issues.addLabels({
     owner,
     repo,
     issue_number: pr.data.number,

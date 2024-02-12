@@ -1,6 +1,6 @@
 {
   "name": "@vercel/fs-detectors",
-  "version": "3.7.11",
+  "version": "5.1.6",
   "description": "Vercel filesystem detectors",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -12,21 +12,23 @@
     "url": "https://github.com/vercel/vercel.git",
     "directory": "packages/fs-detectors"
   },
-  "license": "MIT",
+  "license": "Apache-2.0",
   "scripts": {
-    "build": "tsc",
-    "test": "jest --env node --verbose --runInBand --bail test/unit.*test.*",
-    "test-unit": "pnpm test"
+    "build": "node ../../utils/build.mjs",
+    "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --runInBand --bail",
+    "test-unit": "pnpm test test/unit.*test.*",
+    "test-e2e": "pnpm test test/integration.test.ts",
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@vercel/error-utils": "1.0.8",
-    "@vercel/frameworks": "1.3.0",
-    "@vercel/routing-utils": "2.1.8",
+    "@vercel/error-utils": "2.0.2",
+    "@vercel/frameworks": "2.0.6",
+    "@vercel/routing-utils": "3.1.0",
     "glob": "8.0.3",
     "js-yaml": "4.1.0",
     "json5": "2.2.2",
-    "minimatch": "3.0.4",
-    "semver": "6.1.1"
+    "minimatch": "3.1.2",
+    "semver": "6.3.1"
   },
   "devDependencies": {
     "@types/glob": "7.2.0",
@@ -35,7 +37,8 @@
     "@types/minimatch": "3.0.5",
     "@types/node": "14.18.33",
     "@types/semver": "7.3.10",
-    "@vercel/build-utils": "6.2.2",
-    "typescript": "4.3.4"
+    "@vercel/build-utils": "7.6.0",
+    "jest-junit": "16.0.0",
+    "typescript": "4.9.5"
   }
 }

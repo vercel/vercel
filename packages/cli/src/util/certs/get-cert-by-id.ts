@@ -1,4 +1,4 @@
-import { Cert } from '../../types';
+import type { Cert } from '@vercel-internals/types';
 import Client from '../client';
 import * as ERRORS from '../errors-ts';
 

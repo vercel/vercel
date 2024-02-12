@@ -1,0 +1,6 @@
+node_modules
+site/.cache
+site/build
+site/asset-pub
+.env
+.vercel

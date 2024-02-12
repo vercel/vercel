@@ -5,26 +5,22 @@ const fetch = require('node-fetch');
 const retry = require('async-retry');
 const { satisfies } = require('semver');
 const stripAnsi = require('strip-ansi');
-const { getDistTag } = require('../../src/util/get-dist-tag');
-const { version: cliVersion } = require('../../package.json');
 const {
   fetchCachedToken,
+  disableSSO,
 } = require('../../../../test/lib/deployment/now-deploy');
-const { spawnSync } = require('child_process');
+const { spawnSync, execFileSync } = require('child_process');
 
-jest.setTimeout(6 * 60 * 1000);
+jest.setTimeout(10 * 60 * 1000);
 
 const isCI = !!process.env.CI;
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
-const isCanary = () => getDistTag(cliVersion) === 'canary';
 
 let port = 3000;
 
 const binaryPath = resolve(__dirname, `../../scripts/start.js`);
 const fixture = name => join('test', 'dev', 'fixtures', name);
 const fixtureAbsolute = name => join(__dirname, 'fixtures', name);
-const exampleAbsolute = name =>
-  join(__dirname, '..', '..', '..', '..', 'examples', name);
 
 let processCounter = 0;
 const processList = new Map();
@@ -47,7 +43,9 @@ function fetchWithRetry(url, opts = {}) {
       if (res.status !== opts.status) {
         const text = await res.text();
         throw new Error(
-          `Failed to fetch ${url} with status ${res.status} (expected ${opts.status}):\n\n${text}\n\n`
+          `Failed to fetch "${url}", received ${res.status}, expected ${
+            opts.status
+          }, id: ${res.headers.get('x-vercel-id')}:\n\n${text}\n\n`
         );
       }
 
@@ -118,6 +116,11 @@ function validateResponseHeaders(res, podId) {
 
 async function exec(directory, args = []) {
   const token = await fetchCachedToken();
+  console.log(
+    `exec() ${binaryPath} dev ${directory} -t ***${
+      process.env.VERCEL_TEAM_ID ? ' --scope ***' : ''
+    } ${args.join(' ')}`
+  );
   return execa(
     binaryPath,
     [
@@ -140,7 +143,13 @@ async function exec(directory, args = []) {
 
 async function runNpmInstall(fixturePath) {
   if (await fs.pathExists(join(fixturePath, 'package.json'))) {
-    await execa('yarn', ['install'], {
+    let command;
+    if (await fs.pathExists(join(fixturePath, 'package-lock.json'))) {
+      command = 'npm';
+    } else {
+      command = 'yarn';
+    }
+    await execa(command, ['install'], {
       cwd: fixturePath,
       shell: true,
       stdio: 'inherit',
@@ -198,6 +207,11 @@ async function testFixture(directory, opts = {}, args = []) {
   await runNpmInstall(directory);
 
   const token = await fetchCachedToken();
+  console.log(
+    `testFixture() ${binaryPath} dev ${directory} -t ***${
+      process.env.VERCEL_TEAM_ID ? ' --scope ***' : ''
+    } -l ${port} ${args.join(' ')}`
+  );
   const dev = execa(
     binaryPath,
     [
@@ -298,23 +312,10 @@ async function testFixture(directory, opts = {}, args = []) {
 function testFixtureStdio(
   directory,
   fn,
-  {
-    expectedCode = 0,
-    skipDeploy,
-    isExample,
-    projectSettings,
-    readyTimeout = 0,
-  } = {}
+  { skipDeploy, projectSettings, readyTimeout = 0 } = {}
 ) {
   return async () => {
-    const nodeMajor = Number(process.versions.node.split('.')[0]);
-    if (isExample && nodeMajor < 12) {
-      console.log(`Skipping ${directory} on Node ${process.version}`);
-      return;
-    }
-    const cwd = isExample
-      ? exampleAbsolute(directory)
-      : fixtureAbsolute(directory);
+    const cwd = fixtureAbsolute(directory);
     const token = await fetchCachedToken();
     let deploymentUrl;
 
@@ -394,10 +395,13 @@ function testFixtureStdio(
           stdout: deployResult.stdout,
           stderr: deployResult.stderr,
         });
-        expect(deployResult.exitCode).toBe(expectedCode);
-        if (expectedCode === 0) {
-          deploymentUrl = new URL(deployResult.stdout).host;
-        }
+
+        // Expect the deploy succeeded with exit of 0;
+        expect(deployResult.exitCode).toBe(0);
+        deploymentUrl = new URL(deployResult.stdout).host;
+
+        // Disable the Project SSO Protection
+        await disableSSO(deployResult.stdout, true);
       } finally {
         if (!hasGitignore) {
           await fs.remove(gitignore);
@@ -430,6 +434,11 @@ function testFixtureStdio(
     try {
       let printedOutput = false;
 
+      console.log(
+        `testFixtureStdio() ${binaryPath} dev -l ${port} -t ***${
+          process.env.VERCEL_TEAM_ID ? ' --scope ***' : ''
+        } --debug`
+      );
       const env = skipDeploy
         ? { ...process.env, __VERCEL_SKIP_DEV_CMD: 1 }
         : process.env;
@@ -522,7 +531,7 @@ async function ps(parentPid, pids = {}) {
       : ['ps', '-o', 'pid', '--no-headers', '--ppid', parentPid];
 
   try {
-    const { stdout: buf } = spawnSync(cmd[0], cmd.slice(1), {
+    const buf = execFileSync(cmd[0], cmd.slice(1), {
       encoding: 'utf-8',
     });
     for (let pid of buf.match(/\d+/g)) {
@@ -607,7 +616,6 @@ afterEach(async () => {
 
 module.exports = {
   sleep,
-  isCanary,
   testPath,
   testFixture,
   testFixtureStdio,

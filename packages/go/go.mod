@@ -1,6 +1,6 @@
 module main
 
-go 1.18
+go 1.20
 
 // This file exists to allow debugging of Go files within this package,
 // such as `util/analyze.go`.

@@ -45,6 +45,18 @@ export interface Config {
   [key: string]: unknown;
 }
 
+export type HasField = Array<
+  | {
+      type: 'host';
+      value: string;
+    }
+  | {
+      type: 'header' | 'cookie' | 'query';
+      key: string;
+      value?: string;
+    }
+>;
+
 export interface Meta {
   isDev?: boolean;
   devCacheDir?: string;
@@ -184,6 +196,12 @@ export interface StartDevServerSuccess {
    * shut down the dev server once an HTTP request has been fulfilled.
    */
   pid: number;
+
+  /**
+   * An optional function to shut down the dev server. If not provided, the
+   * dev server will forcefully be killed.
+   */
+  shutdown?: () => Promise<void>;
 }
 
 /**
@@ -300,9 +318,13 @@ export interface PackageJson {
 }
 
 export interface NodeVersion {
+  /** major version number: 18 */
   major: number;
+  /** major version range: "18.x" */
   range: string;
+  /** runtime descriptor: "nodejs18.x" */
   runtime: string;
+  /** date beyond which this version is discontinued: 2023-08-17T19:05:45.951Z */
   discontinueDate?: Date;
 }
 
@@ -319,7 +341,6 @@ export interface BuilderFunctions {
     runtime?: string;
     includeFiles?: string;
     excludeFiles?: string;
-    cron?: Cron;
   };
 }
 
@@ -356,6 +377,8 @@ export interface BuilderV3 {
 
 type ImageFormat = 'image/avif' | 'image/webp';
 
+type ImageContentDispositionType = 'inline' | 'attachment';
+
 export type RemotePattern = {
   /**
    * Must be `http` or `https`.
@@ -391,6 +414,7 @@ export interface Images {
   formats?: ImageFormat[];
   dangerouslyAllowSVG?: boolean;
   contentSecurityPolicy?: string;
+  contentDispositionType?: ImageContentDispositionType;
 }
 
 /**
@@ -411,7 +435,16 @@ export interface BuildResultBuildOutput {
   buildOutputPath: string;
 }
 
-export type Cron = string;
+export interface Cron {
+  path: string;
+  schedule: string;
+}
+
+/** The framework which created the function */
+export interface FunctionFramework {
+  slug: string;
+  version?: string;
+}
 
 /**
  * When a Builder implements `version: 2`, the `build()` function is expected
@@ -431,6 +464,7 @@ export interface BuildResultV2Typical {
   framework?: {
     version: string;
   };
+  flags?: { definitions: FlagDefinitions };
 }
 
 export type BuildResultV2 = BuildResultV2Typical | BuildResultBuildOutput;
@@ -450,3 +484,30 @@ export type ShouldServe = (
 export type StartDevServer = (
   options: StartDevServerOptions
 ) => Promise<StartDevServerResult>;
+
+/**
+ * TODO: The following types will eventually be exported by a more
+ *       relevant package.
+ */
+type FlagJSONArray = ReadonlyArray<FlagJSONValue>;
+
+type FlagJSONValue =
+  | string
+  | boolean
+  | number
+  | null
+  | FlagJSONArray
+  | { [key: string]: FlagJSONValue };
+
+type FlagOption = {
+  value: FlagJSONValue;
+  label?: string;
+};
+
+export interface FlagDefinition {
+  options?: FlagOption[];
+  origin?: string;
+  description?: string;
+}
+
+export type FlagDefinitions = Record<string, FlagDefinition>;

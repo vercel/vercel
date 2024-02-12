@@ -1,7 +1,7 @@
 {
   "name": "@vercel/static-config",
-  "version": "2.0.12",
-  "license": "MIT",
+  "version": "3.0.0",
+  "license": "Apache-2.0",
   "main": "./dist/index",
   "repository": {
     "type": "git",
@@ -9,9 +9,10 @@
     "directory": "packages/static-config"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "node ../../utils/build.mjs",
     "test-unit": "pnpm test",
-    "test": "jest --env node --verbose --runInBand --bail"
+    "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --runInBand --bail",
+    "type-check": "tsc --noEmit"
   },
   "files": [
     "dist"
@@ -25,20 +26,7 @@
     "@swc/core": "1.2.182",
     "@types/jest": "27.4.1",
     "@types/node": "14.18.33",
-    "typescript": "4.3.4"
-  },
-  "jest": {
-    "preset": "ts-jest",
-    "globals": {
-      "ts-jest": {
-        "diagnostics": false,
-        "isolatedModules": true
-      }
-    },
-    "verbose": false,
-    "testEnvironment": "node",
-    "testMatch": [
-      "<rootDir>/test/**/*.test.ts"
-    ]
+    "jest-junit": "16.0.0",
+    "typescript": "4.9.5"
   }
 }

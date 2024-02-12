@@ -3,6 +3,8 @@ import { emoji } from '../../../src/util/emoji';
 import { client } from '../../mocks/client';
 import { useUser } from '../../mocks/user';
 
+jest.setTimeout(10000);
+
 describe('login', () => {
   it('should not allow the `--token` flag', async () => {
     client.setArgv('login', '--token', 'foo');
@@ -23,12 +25,28 @@ describe('login', () => {
     await expect(exitCodePromise).resolves.toEqual(0);
   });
 
+  describe('northstar', () => {
+    it('should set currentTeam to defaultTeamId', async () => {
+      const user = useUser({
+        version: 'northstar',
+        defaultTeamId: 'northstar-defaultTeamId',
+      });
+      client.authConfig.token = undefined;
+      client.setArgv('login', user.email);
+      const exitCodePromise = login(client);
+      await expect(exitCodePromise).resolves.toEqual(0);
+      await expect(client.config.currentTeam).toEqual(
+        'northstar-defaultTeamId'
+      );
+    });
+  });
+
   describe('interactive', () => {
     it('should allow login via email', async () => {
       const user = useUser();
       client.setArgv('login');
       const exitCodePromise = login(client);
-      await expect(client.stderr).toOutput(`> Log in to Vercel`);
+      await expect(client.stderr).toOutput(`? Log in to Vercel`);
 
       // Move down to "Email" option
       client.stdin.write('\x1B[B'); // Down arrow
@@ -36,7 +54,7 @@ describe('login', () => {
       client.stdin.write('\x1B[B'); // Down arrow
       client.stdin.write('\r'); // Return key
 
-      await expect(client.stderr).toOutput('> Enter your email address:');
+      await expect(client.stderr).toOutput('? Enter your email address:');
 
       client.stdin.write(`${user.email}\n`);
 
@@ -51,7 +69,7 @@ describe('login', () => {
       const user = useUser();
       client.setArgv('login', '--no-color');
       const exitCodePromise = login(client);
-      await expect(client.stderr).toOutput(`> Log in to Vercel`);
+      await expect(client.stderr).toOutput(`? Log in to Vercel`);
 
       // Move down to "Email" option
       client.stdin.write('\x1B[B'); // Down arrow
@@ -59,7 +77,7 @@ describe('login', () => {
       client.stdin.write('\x1B[B'); // Down arrow
       client.stdin.write('\r'); // Return key
 
-      await expect(client.stderr).toOutput('> Enter your email address:');
+      await expect(client.stderr).toOutput('? Enter your email address:');
 
       client.stdin.write(`${user.email}\n`);
 
@@ -93,7 +111,7 @@ describe('login', () => {
         const user = useUser();
         client.setArgv('login');
         const exitCodePromise = login(client);
-        await expect(client.stderr).toOutput(`> Log in to Vercel`);
+        await expect(client.stderr).toOutput(`? Log in to Vercel`);
 
         // Move down to "Email" option
         client.stdin.write('\x1B[B'); // Down arrow
@@ -101,7 +119,7 @@ describe('login', () => {
         client.stdin.write('\x1B[B'); // Down arrow
         client.stdin.write('\r'); // Return key
 
-        await expect(client.stderr).toOutput('> Enter your email address:');
+        await expect(client.stderr).toOutput('? Enter your email address:');
 
         client.stdin.write(`${user.email}\n`);
 
@@ -136,7 +154,7 @@ describe('login', () => {
         const user = useUser();
         client.setArgv('login');
         const exitCodePromise = login(client);
-        await expect(client.stderr).toOutput(`> Log in to Vercel`);
+        await expect(client.stderr).toOutput(`? Log in to Vercel`);
 
         // Move down to "Email" option
         client.stdin.write('\x1B[B'); // Down arrow
@@ -144,7 +162,7 @@ describe('login', () => {
         client.stdin.write('\x1B[B'); // Down arrow
         client.stdin.write('\r'); // Return key
 
-        await expect(client.stderr).toOutput('> Enter your email address:');
+        await expect(client.stderr).toOutput('? Enter your email address:');
 
         client.stdin.write(`${user.email}\n`);
 

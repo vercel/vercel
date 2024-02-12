@@ -1,7 +1,7 @@
 import path from 'path';
 import { getWorkspaces } from '../src/workspaces/get-workspaces';
 import { getWorkspacePackagePaths } from '../src/workspaces/get-workspace-package-paths';
-import { FixtureFilesystem } from './utils/fixture-filesystem';
+import { LocalFileSystemDetector } from '../src';
 
 describe.each<[string, string[]]>([
   ['21-npm-workspaces', ['/a', '/b']],
@@ -32,7 +32,7 @@ describe.each<[string, string[]]>([
 
   it(testName, async () => {
     const fixture = path.join(__dirname, 'fixtures', fixturePath);
-    const fs = new FixtureFilesystem(fixture);
+    const fs = new LocalFileSystemDetector(fixture);
 
     const workspaces = await getWorkspaces({ fs });
     const actualPackagePaths = (

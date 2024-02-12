@@ -6,6 +6,7 @@
     "next": "canary",
     "react": "latest",
     "react-dom": "latest",
-    "typescript": "^4.0.2"
-  }
+    "typescript": "4.9.5"
+  },
+  "ignoreNextjsUpdates": true
 }
