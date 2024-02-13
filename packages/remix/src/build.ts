@@ -174,7 +174,6 @@ export const build: BuildV2 = async ({
     pkg.dependencies?.['@remix-run/dev'] ||
     pkg.devDependencies?.['@remix-run/dev'];
 
-  // These get populated inside the try/catch below
   const serverBundlesMap = new Map<string, ConfigRoute[]>();
   const resolvedConfigsMap = new Map<ConfigRoute, ResolvedRouteConfig>();
 
