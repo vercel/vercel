@@ -208,22 +208,23 @@ function testForkDevServer(entrypoint: string) {
           'x-web-handler': 'Web handler using POST',
         });
       }
-      // {
-      //   const response = await fetch(
-      //     `http://${address}:${port}/api/web-handlers-edge`, { method: 'DELETE' }
-      //   );
-      //   expect({
-      //     status: response.status,
-      //     body: await response.text(),
-      //     transferEncoding: response.headers.get('transfer-encoding'),
-      //     'x-web-handler': response.headers.get('x-web-handler')
-      //   }).toEqual({
-      //     status: 200,
-      //     body: 'Web handler using DELETE',
-      //     transferEncoding: 'chunked',
-      //     'x-web-handler': "Web handler using DELETE",
-      //   });
-      // }
+      {
+        const response = await fetch(
+          `http://${address}:${port}/api/web-handlers-edge`,
+          { method: 'DELETE' }
+        );
+
+        console.log(response);
+        expect({
+          status: response.status,
+          transferEncoding: response.headers.get('transfer-encoding'),
+          'x-web-handler': response.headers.get('x-web-handler'),
+        }).toEqual({
+          status: 200,
+          transferEncoding: 'chunked',
+          'x-web-handler': 'Web handler using DELETE',
+        });
+      }
       {
         const response = await fetch(
           `http://${address}:${port}/api/web-handlers-edge`,
@@ -271,22 +272,23 @@ function testForkDevServer(entrypoint: string) {
           'x-web-handler': 'Web handler using HEAD',
         });
       }
-      // {
-      //   const response = await fetch(
-      //     `http://${address}:${port}/api/web-handlers-edge`, { method: 'OPTIONS' }
-      //   );
-      //   expect({
-      //     status: response.status,
-      //     body: await response.text(),
-      //     transferEncoding: response.headers.get('transfer-encoding'),
-      //     'x-web-handler': response.headers.get('x-web-handler')
-      //   }).toEqual({
-      //     status: 200,
-      //     body: 'Web handler using OPTIONS',
-      //     transferEncoding: 'chunked',
-      //     'x-web-handler': "Web handler using OPTIONS",
-      //   });
-      // }
+      {
+        const response = await fetch(
+          `http://${address}:${port}/api/web-handlers-edge`,
+          { method: 'OPTIONS' }
+        );
+        expect({
+          status: response.status,
+          body: await response.text(),
+          transferEncoding: response.headers.get('transfer-encoding'),
+          'x-web-handler': response.headers.get('x-web-handler'),
+        }).toEqual({
+          status: 200,
+          body: 'Web handler using OPTIONS',
+          transferEncoding: 'chunked',
+          'x-web-handler': 'Web handler using OPTIONS',
+        });
+      }
     } finally {
       child.kill(9);
     }
