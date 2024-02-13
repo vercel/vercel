@@ -237,16 +237,18 @@ export const build: BuildV2 = async ({
     };
   });
 
-  // If the project is not relying on split configuration,
-  // then don't inject the `@vercel/remix-run-dev` fork
+  // If the project is *not* relying on split configurations, then set
+  // the `serverBuildPath` to the default Remix path, since the forked
+  // Remix compiler will not be used
   if (!isHydrogen2 && serverBundles.length === 1) {
     // `serverBuildTarget` and `serverBuildPath` are undefined with
     // our remix config modifications, so use the default build path
     serverBundles[0].serverBuildPath = 'build/index.js';
   }
 
-  // Override the official `@remix-run/dev` package with the
-  // Vercel fork, which supports the `serverBundles` config
+  // If the project is relying on split configurations, then override
+  // the official `@remix-run/dev` package with the Vercel fork,
+  // which supports the `serverBundles` config
   if (
     serverBundles.length > 1 &&
     !isHydrogen2 &&
