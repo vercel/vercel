@@ -2,6 +2,8 @@ name: Inkeep Source Sync
 
 on:
   push:
+    branches:
+      - main
     paths:
       - 'examples/docusaurus/**'
       
