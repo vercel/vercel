@@ -249,7 +249,7 @@ export const build: BuildV2 = async ({
   // Override the official `@remix-run/dev` package with the
   // Vercel fork, which supports the `serverBundles` config
   if (
-    serverBundles.length > 0 &&
+    serverBundles.length > 1 &&
     !isHydrogen2 &&
     remixRunDevPkg.name !== '@vercel/remix-run-dev' &&
     !remixRunDevPkgVersion?.startsWith('https:')
