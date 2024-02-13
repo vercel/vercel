@@ -222,7 +222,7 @@ export const build: BuildV2 = async ({
     routesForHash.push(route);
   }
 
-  const serverBundles: ServerBundle[] = Array.from(
+  let serverBundles: ServerBundle[] = Array.from(
     serverBundlesMap.entries()
   ).map(([hash, routes]) => {
     const runtime = resolvedConfigsMap.get(routes[0])?.runtime ?? 'nodejs';
