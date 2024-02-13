@@ -1,0 +1,9 @@
+node_modules
+
+/build
+/dist
+/public/build
+.env
+
+/postgres-data
+
