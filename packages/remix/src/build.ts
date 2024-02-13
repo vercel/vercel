@@ -240,16 +240,9 @@ export const build: BuildV2 = async ({
   // If the project is not relying on split configuration,
   // then don't inject the `@vercel/remix-run-dev` fork
   if (serverBundles.length === 1) {
-    // The legacy `serverBuildTarget: 'vercel'` config gets wiped away with
-    // out remix config modifications, so use the default path if that's set
-    let serverBuildPath = 'build/index.js';
-    if (!(remixConfig as any).serverBuildTarget) {
-      serverBuildPath = relative(
-        entrypointFsDirname,
-        remixConfig.serverBuildPath
-      );
-    }
-    serverBundles[0].serverBuildPath = serverBuildPath;
+    // `serverBuildTarget` and `serverBuildPath` are undefined with
+    // our remix config modifications, so use the default build path
+    serverBundles[0].serverBuildPath = 'build/index.js';
   }
 
   // Override the official `@remix-run/dev` package with the
