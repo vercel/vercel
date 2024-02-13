@@ -1,5 +1,5 @@
 import { Project } from 'ts-morph';
-import { readFileSync, promises as fs } from 'fs';
+import { readFileSync, promises as fs, existsSync } from 'fs';
 import { basename, dirname, extname, join, posix, relative, sep } from 'path';
 import {
   debug,
@@ -468,6 +468,24 @@ module.exports = config;`;
 
   const staticDir = join(entrypointFsDirname, 'public');
 
+  // Do a sanity check to ensure that the server bundles `serverBuildPath` was actually created.
+  // If it was not, then that usually means the Vercel forked Remix compiler was not used and
+  // thus only a singular server bundle was produced.
+  const serverBundlesRespected = existsSync(
+    join(entrypointFsDirname, serverBundles[0].serverBuildPath)
+  );
+  if (!serverBundlesRespected) {
+    console.warn(
+      'WARN: `serverBundles` configuration failed. Falling back to a singular server bundle.'
+    );
+    serverBundles = [
+      {
+        serverBuildPath: 'build/index.js',
+        routes: serverBundles.flatMap(b => b.routes),
+      },
+    ];
+  }
+
   const [staticFiles, buildAssets, ...functions] = await Promise.all([
     glob('**', staticDir),
     glob('**', remixConfig.assetsBuildDirectory),
@@ -476,12 +494,13 @@ module.exports = config;`;
       const config = resolvedConfigsMap.get(firstRoute) ?? {
         runtime: 'nodejs',
       };
+      const serverBuildPath = join(entrypointFsDirname, bundle.serverBuildPath);
 
       if (config.runtime === 'edge') {
         return createRenderEdgeFunction(
           entrypointFsDirname,
           repoRootPath,
-          join(entrypointFsDirname, bundle.serverBuildPath),
+          serverBuildPath,
           serverEntryPoint,
           remixVersion,
           config
@@ -492,7 +511,7 @@ module.exports = config;`;
         nodeVersion,
         entrypointFsDirname,
         repoRootPath,
-        join(entrypointFsDirname, bundle.serverBuildPath),
+        serverBuildPath,
         serverEntryPoint,
         remixVersion,
         config
