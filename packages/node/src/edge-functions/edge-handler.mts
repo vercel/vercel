@@ -231,12 +231,8 @@ export async function createEdgeEventHandler(
 
     const body: Buffer | string | undefined = await serializeBody(request);
 
-    if (body) {
-      if (body.length !== 0) {
-        request.headers['content-length'] = String(body.length);
-      } else {
-        delete request.headers['content-length'];
-      }
+    if (body !== undefined && body.length) {
+      request.headers['content-length'] = String(body.length);
     }
 
     const url = new URL(request.url ?? '/', server.url);
