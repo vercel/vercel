@@ -11,7 +11,7 @@
       "status": 200,
       "mustContain": "about",
       "responseHeaders": {
-        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Url"
+        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch"
       }
     },
     {
