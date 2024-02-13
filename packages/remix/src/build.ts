@@ -174,9 +174,83 @@ export const build: BuildV2 = async ({
     pkg.dependencies?.['@remix-run/dev'] ||
     pkg.devDependencies?.['@remix-run/dev'];
 
-  // Override the official `@remix-run/dev` package with the
-  // Vercel fork, which supports the `serverBundles` config
+  const serverBundlesMap = new Map<string, ConfigRoute[]>();
+  const resolvedConfigsMap = new Map<ConfigRoute, ResolvedRouteConfig>();
+
+  // Read the `export const config` (if any) for each route
+  const project = new Project();
+  const staticConfigsMap = new Map<ConfigRoute, BaseFunctionConfig | null>();
+  for (const route of remixRoutes) {
+    const routePath = join(remixConfig.appDirectory, route.file);
+    let staticConfig = getConfig(project, routePath);
+    if (staticConfig && isHydrogen2) {
+      console.log(
+        'WARN: `export const config` is currently not supported for Hydrogen v2 apps'
+      );
+      staticConfig = null;
+    }
+    staticConfigsMap.set(route, staticConfig);
+  }
+
+  for (const route of remixRoutes) {
+    const config = getResolvedRouteConfig(
+      route,
+      remixConfig.routes,
+      staticConfigsMap,
+      isHydrogen2
+    );
+    resolvedConfigsMap.set(route, config);
+  }
+
+  // Figure out which routes belong to which server bundles
+  // based on having common static config properties
+  for (const route of remixRoutes) {
+    if (isLayoutRoute(route.id, remixRoutes)) continue;
+
+    const config = resolvedConfigsMap.get(route);
+    if (!config) {
+      throw new Error(`Expected resolved config for "${route.id}"`);
+    }
+    const hash = calculateRouteConfigHash(config);
+
+    let routesForHash = serverBundlesMap.get(hash);
+    if (!Array.isArray(routesForHash)) {
+      routesForHash = [];
+      serverBundlesMap.set(hash, routesForHash);
+    }
+
+    routesForHash.push(route);
+  }
+
+  const serverBundles: ServerBundle[] = Array.from(
+    serverBundlesMap.entries()
+  ).map(([hash, routes]) => {
+    const runtime = resolvedConfigsMap.get(routes[0])?.runtime ?? 'nodejs';
+    return {
+      serverBuildPath: isHydrogen2
+        ? relative(entrypointFsDirname, remixConfig.serverBuildPath)
+        : `${relative(
+            entrypointFsDirname,
+            dirname(remixConfig.serverBuildPath)
+          )}/build-${runtime}-${hash}.js`,
+      routes: routes.map(r => r.id),
+    };
+  });
+
+  // If the project is *not* relying on split configurations, then set
+  // the `serverBuildPath` to the default Remix path, since the forked
+  // Remix compiler will not be used
+  if (!isHydrogen2 && serverBundles.length === 1) {
+    // `serverBuildTarget` and `serverBuildPath` are undefined with
+    // our remix config modifications, so use the default build path
+    serverBundles[0].serverBuildPath = 'build/index.js';
+  }
+
+  // If the project is relying on split configurations, then override
+  // the official `@remix-run/dev` package with the Vercel fork,
+  // which supports the `serverBundles` config
   if (
+    serverBundles.length > 1 &&
     !isHydrogen2 &&
     remixRunDevPkg.name !== '@vercel/remix-run-dev' &&
     !remixRunDevPkgVersion?.startsWith('https:')
@@ -266,72 +340,7 @@ export const build: BuildV2 = async ({
     ? `${remixConfigPath}.original${extname(remixConfigPath)}`
     : undefined;
 
-  // These get populated inside the try/catch below
-  let serverBundles: ServerBundle[];
-  const serverBundlesMap = new Map<string, ConfigRoute[]>();
-  const resolvedConfigsMap = new Map<ConfigRoute, ResolvedRouteConfig>();
-
   try {
-    // Read the `export const config` (if any) for each route
-    const project = new Project();
-    const staticConfigsMap = new Map<ConfigRoute, BaseFunctionConfig | null>();
-    for (const route of remixRoutes) {
-      const routePath = join(remixConfig.appDirectory, route.file);
-      let staticConfig = getConfig(project, routePath);
-      if (staticConfig && isHydrogen2) {
-        console.log(
-          'WARN: `export const config` is currently not supported for Hydrogen v2 apps'
-        );
-        staticConfig = null;
-      }
-      staticConfigsMap.set(route, staticConfig);
-    }
-
-    for (const route of remixRoutes) {
-      const config = getResolvedRouteConfig(
-        route,
-        remixConfig.routes,
-        staticConfigsMap,
-        isHydrogen2
-      );
-      resolvedConfigsMap.set(route, config);
-    }
-
-    // Figure out which routes belong to which server bundles
-    // based on having common static config properties
-    for (const route of remixRoutes) {
-      if (isLayoutRoute(route.id, remixRoutes)) continue;
-
-      const config = resolvedConfigsMap.get(route);
-      if (!config) {
-        throw new Error(`Expected resolved config for "${route.id}"`);
-      }
-      const hash = calculateRouteConfigHash(config);
-
-      let routesForHash = serverBundlesMap.get(hash);
-      if (!Array.isArray(routesForHash)) {
-        routesForHash = [];
-        serverBundlesMap.set(hash, routesForHash);
-      }
-
-      routesForHash.push(route);
-    }
-
-    serverBundles = Array.from(serverBundlesMap.entries()).map(
-      ([hash, routes]) => {
-        const runtime = resolvedConfigsMap.get(routes[0])?.runtime ?? 'nodejs';
-        return {
-          serverBuildPath: isHydrogen2
-            ? relative(entrypointFsDirname, remixConfig.serverBuildPath)
-            : `${relative(
-                entrypointFsDirname,
-                dirname(remixConfig.serverBuildPath)
-              )}/build-${runtime}-${hash}.js`,
-          routes: routes.map(r => r.id),
-        };
-      }
-    );
-
     // We need to patch the `remix.config.js` file to force some values necessary
     // for a build that works on either Node.js or the Edge runtime
     if (!isHydrogen2 && remixConfigPath && renamedRemixConfigPath) {
