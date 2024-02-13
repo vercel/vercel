@@ -25,13 +25,7 @@ const streaming =
       },
     }).pipeThrough(new TextEncoderStream());
 
-    const defer = async () => {
-      // console.log('waitUntil', DATA)
-      await wait(DATA.length * DEFER_MS);
-      // console.log('waitUntil:done', DATA)
-    };
-
-    waitUntil(defer());
+    waitUntil(wait(DATA.length * DEFER_MS));
 
     return new Response(readable, {
       headers: {
