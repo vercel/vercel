@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 7.7.0
+
+### Minor Changes
+
+- Revert "Revert "Default ruby to only currently supported version (3.2.0)"" ([#11137](https://github.com/vercel/vercel/pull/11137))
+
 ## 7.6.0
 
 ### Minor Changes
