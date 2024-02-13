@@ -11,12 +11,20 @@ jobs:
   syncSourceJob:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v2
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Check for changes
+        uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            site:
+              - 'examples/docusaurus/**'
+
 
       # Example for folder1 changes
       - name: Sync Site Source 
-        if: contains(github.event.head_commit.modified, 'examples/docusaurus/')
+        if: steps.changes.outputs.site == 'true'
         uses: inkeep/source-sync-action@v1
         with:
           api-key: ${{ secrets.INKEEP_API_KEY }}
