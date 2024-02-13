@@ -350,8 +350,8 @@ importers:
         specifier: 1.0.5
         version: 1.0.5
       '@edge-runtime/node-utils':
-        specifier: 2.2.2
-        version: 2.2.2
+        specifier: 2.3.0
+        version: 2.3.0
       '@next/env':
         specifier: 11.1.2
         version: 11.1.2
@@ -1203,14 +1203,14 @@ importers:
   packages/node:
     dependencies:
       '@edge-runtime/node-utils':
-        specifier: 2.2.1
-        version: 2.2.1
+        specifier: 2.3.0
+        version: 2.3.0
       '@edge-runtime/primitives':
-        specifier: 4.0.5
-        version: 4.0.5
+        specifier: 4.1.0
+        version: 4.1.0
       '@edge-runtime/vm':
-        specifier: 3.1.7
-        version: 3.1.7
+        specifier: 3.2.0
+        version: 3.2.0
       '@types/node':
         specifier: 14.18.33
         version: 14.18.33
@@ -1229,9 +1229,15 @@ importers:
       async-listen:
         specifier: 3.0.0
         version: 3.0.0
+      cjs-module-lexer:
+        specifier: 1.2.3
+        version: 1.2.3
       edge-runtime:
-        specifier: 2.5.7
-        version: 2.5.7
+        specifier: 2.5.9
+        version: 2.5.9
+      es-module-lexer:
+        specifier: 1.4.1
+        version: 1.4.1
       esbuild:
         specifier: 0.14.47
         version: 0.14.47
@@ -2399,13 +2405,8 @@ packages:
     dependencies:
       '@jridgewell/trace-mapping': 0.3.9
 
-  /@edge-runtime/cookies@3.4.1:
-    resolution: {integrity: sha512-z27BvgPxI73CgSlxU/NAUf1Q/shnqi6cobHEowf6VuLdSjGR3NjI2Y5dZUIBbK2zOJVZbXcHsVzJjz8LklteFQ==}
-    engines: {node: '>=16'}
-    dev: false
-
-  /@edge-runtime/format@2.2.0:
-    resolution: {integrity: sha512-gPrS6AVw/qJJL0vcxMXv4kFXCU3ZTCD1uuJpwX15YxHV8BgU9OG5v9LrkkXcr96PBT/9epypfNJMhlWADuEziw==}
+  /@edge-runtime/format@2.2.1:
+    resolution: {integrity: sha512-JQTRVuiusQLNNLe2W9tnzBlV/GvSVcozLl4XZHk5swnRZ/v6jp8TqR8P7sqmJsQqblDZ3EztcWmLDbhRje/+8g==}
     engines: {node: '>=16'}
     dev: false
 
@@ -2420,32 +2421,38 @@ packages:
       jest-util: 29.5.0
     dev: true
 
-  /@edge-runtime/node-utils@2.2.1:
-    resolution: {integrity: sha512-RUl/439BHKshkhSGFRlZ1kzy68wL4mn8VNKDSZr3p0tciyZ33Mjfpl+vofqnHqXRmDI6nLnZpfJvhY3D88o0pA==}
+  /@edge-runtime/node-utils@2.3.0:
+    resolution: {integrity: sha512-uUtx8BFoO1hNxtHjp3eqVPC/mWImGb2exOfGjMLUoipuWgjej+f4o/VP4bUI8U40gu7Teogd5VTeZUkGvJSPOQ==}
     engines: {node: '>=16'}
-    dependencies:
-      '@edge-runtime/cookies': 3.4.1
-    dev: false
 
-  /@edge-runtime/node-utils@2.2.2:
-    resolution: {integrity: sha512-2fSdYNAo4Pp46JGjV4vQV8N8uHZmww6nBLi80uuwUYHE2+44uE9CUeWGzE8JaV8Za4COLVoxD9AzVgjTb4bfhQ==}
-    engines: {node: '>=16'}
-    dev: true
-
-  /@edge-runtime/ponyfill@2.4.1:
-    resolution: {integrity: sha512-ZbR/EViY3gg2rmEAQTKPa6mXl4aR1/+cFcQe4r1segCjEbTAxT6PWu40odbu/KlZKSysEb2O/BWIC2lJgSJOMQ==}
+  /@edge-runtime/ponyfill@2.4.2:
+    resolution: {integrity: sha512-oN17GjFr69chu6sDLvXxdhg0Qe8EZviGSuqzR9qOiKh4MhFYGdBBcqRNzdmYeAdeRzOW2mM9yil4RftUQ7sUOA==}
     engines: {node: '>=16'}
     dev: false
 
   /@edge-runtime/primitives@4.0.5:
     resolution: {integrity: sha512-t7QiN5d/KpXgCvIfSt6Nm9Hj3WVdNgc5CpOD73jasY+9EvTI7Ngdj5cXvjcHrPcmYWJZMySPgeEeoL/1N/Llag==}
     engines: {node: '>=16'}
+    dev: true
+
+  /@edge-runtime/primitives@4.1.0:
+    resolution: {integrity: sha512-Vw0lbJ2lvRUqc7/soqygUX216Xb8T3WBZ987oywz6aJqRxcwSVWwr9e+Nqo2m9bxobA9mdbWNNoRY6S9eko1EQ==}
+    engines: {node: '>=16'}
+    dev: false
 
   /@edge-runtime/vm@3.1.7:
     resolution: {integrity: sha512-hUMFbDQ/nZN+1TLMi6iMO1QFz9RSV8yGG8S42WFPFma1d7VSNE0eMdJUmwjmtav22/iQkzHMmu6oTSfAvRGS8g==}
     engines: {node: '>=16'}
     dependencies:
       '@edge-runtime/primitives': 4.0.5
+    dev: true
+
+  /@edge-runtime/vm@3.2.0:
+    resolution: {integrity: sha512-0dEVyRLM/lG4gp1R/Ik5bfPl/1wX00xFwd5KcNH602tzBa09oF7pbTKETEhR1GjZ75K6OJnYFu8II2dyMhONMw==}
+    engines: {node: '>=16'}
+    dependencies:
+      '@edge-runtime/primitives': 4.1.0
+    dev: false
 
   /@emotion/hash@0.9.0:
     resolution: {integrity: sha512-14FtKiHhy2QoPIzdTcvh//8OyBlknNs2nXRwIhG904opCby3l+9Xaf/wuPvICBF0rc1ZCNBd3nKe9cd2mecVkQ==}
@@ -5445,7 +5452,7 @@ packages:
       chokidar: 3.5.3
       cross-spawn: 7.0.3
       dotenv: 16.0.3
-      es-module-lexer: 1.3.1
+      es-module-lexer: 1.4.1
       esbuild: 0.17.6
       esbuild-plugins-node-modules-polyfill: 1.6.1(esbuild@0.17.6)
       execa: 5.1.1
@@ -6671,9 +6678,8 @@ packages:
     engines: {node: '>=8'}
     dev: true
 
-  /cjs-module-lexer@1.2.2:
-    resolution: {integrity: sha512-cOU9usZw8/dXIXKtwa8pM0OTJQuJkxMN6w30csNRUerHfeQ5R6U3kkU/FtJeIf3M202OHfY2U8ccInBG7/xogA==}
-    dev: true
+  /cjs-module-lexer@1.2.3:
+    resolution: {integrity: sha512-0TNiGstbQmCFwt4akjjBg5pLRTSyj/PkWQ1ZoO2zntmg9yLqSRxwEa4iCfQLGjqhiqBfOJa7W/E8wfGrTDmlZQ==}
 
   /clean-regexp@1.0.0:
     resolution: {integrity: sha512-GfisEZEJvzKrmGWkvfhgzcz/BllN1USeqD2V6tg14OAOgaCD2Z/PUEuxnAZ/nPvmaHRG7a8y77p1T/IRQ4D1Hw==}
@@ -7411,14 +7417,14 @@ packages:
       safer-buffer: 2.1.2
     dev: true
 
-  /edge-runtime@2.5.7:
-    resolution: {integrity: sha512-gA4qSVP0sNwJlkdQ2nahDPASlSl8twUd17o+JolPa1EtXpLTGzIpOETvodgJwXIxa+zaD8bnAXCdsWrx2PhlVQ==}
+  /edge-runtime@2.5.9:
+    resolution: {integrity: sha512-pk+k0oK0PVXdlT4oRp4lwh+unuKB7Ng4iZ2HB+EZ7QCEQizX360Rp/F4aRpgpRgdP2ufB35N+1KppHmYjqIGSg==}
     engines: {node: '>=16'}
     hasBin: true
     dependencies:
-      '@edge-runtime/format': 2.2.0
-      '@edge-runtime/ponyfill': 2.4.1
-      '@edge-runtime/vm': 3.1.7
+      '@edge-runtime/format': 2.2.1
+      '@edge-runtime/ponyfill': 2.4.2
+      '@edge-runtime/vm': 3.2.0
       async-listen: 3.0.1
       mri: 1.2.0
       picocolors: 1.0.0
@@ -7559,9 +7565,8 @@ packages:
       stop-iteration-iterator: 1.0.0
     dev: true
 
-  /es-module-lexer@1.3.1:
-    resolution: {integrity: sha512-JUFAyicQV9mXc3YRxPnDlrfBKpqt6hUYzz9/boprUJHs4e4KVr3XwOF70doO6gwXUor6EWZJAyWAfKki84t20Q==}
-    dev: true
+  /es-module-lexer@1.4.1:
+    resolution: {integrity: sha512-cXLGjP0c4T3flZJKQSuziYoq7MlT+rnvfZjfp7h+I7K9BNX54kP9nyWvdbwjQ4u1iWbOL4u96fgeZLToQlZC7w==}
 
   /es-set-tostringtag@2.0.1:
     resolution: {integrity: sha512-g3OMbtlwY3QewlqAiMLI47KywjWZoEytKr8pf6iTC8uJq5bIAH52Z9pnQ8pVL6whrCto53JZDuUIsifGeLorTg==}
@@ -10599,7 +10604,7 @@ packages:
       '@jest/types': 29.5.0
       '@types/node': 16.18.11
       chalk: 4.1.0
-      cjs-module-lexer: 1.2.2
+      cjs-module-lexer: 1.2.3
       collect-v8-coverage: 1.0.1
       glob: 7.2.3
       graceful-fs: 4.2.11

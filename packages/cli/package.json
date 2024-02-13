@@ -46,7 +46,7 @@
   },
   "devDependencies": {
     "@alex_neo/jest-expect-message": "1.0.5",
-    "@edge-runtime/node-utils": "2.2.2",
+    "@edge-runtime/node-utils": "2.3.0",
     "@next/env": "11.1.2",
     "@sentry/node": "5.5.0",
     "@sindresorhus/slugify": "0.11.0",
