@@ -16,7 +16,7 @@ jobs:
 
       # Example for folder1 changes
       - name: Sync Site Source 
-        if: contains(github.event.head_commit.modified, 'examples/docusaurus')
+        if: contains(github.event.head_commit.modified, 'examples/docusaurus/')
         uses: inkeep/source-sync-action@v1
         with:
           api-key: ${{ secrets.INKEEP_API_KEY }}
