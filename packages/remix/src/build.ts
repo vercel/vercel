@@ -236,7 +236,6 @@ export const build: BuildV2 = async ({
       routes: routes.map(r => r.id),
     };
   });
-  console.log(remixConfig);
 
   // If the project is not relying on split configuration,
   // then don't inject the `@vercel/remix-run-dev` fork
@@ -246,7 +245,6 @@ export const build: BuildV2 = async ({
       remixConfig.serverBuildPath
     );
   }
-  console.log(serverBundles);
 
   // Override the official `@remix-run/dev` package with the
   // Vercel fork, which supports the `serverBundles` config
