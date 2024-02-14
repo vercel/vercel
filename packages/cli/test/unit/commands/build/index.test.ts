@@ -1250,6 +1250,24 @@ describe('build', () => {
       (await fs.readFile(join(output, 'static/index.txt'), 'utf8')).trim()
     ).toEqual('marketing');
   });
+
+  it('should write to flags.json', async () => {
+    const cwd = fixture('with-flags'); // TODO
+    const output = join(cwd, '.vercel', 'output');
+
+    const exitCode = await build(client);
+    expect(exitCode).toEqual(0);
+
+    // TODO: Check the content of `flags.json`
+    expect(fs.existsSync(join(output, 'flags.json'))).toBe(true);
+    expect(fs.readJSONSync(join(output, 'flags.json'))).toEqual({
+      definitions: {
+        'my-next-flag': {
+          options: [{ value: true }, { value: false }],
+        },
+      },
+    });
+  });
 });
 
 it('should create symlinks for duplicate references to Lambda / EdgeFunction instances', async () => {
