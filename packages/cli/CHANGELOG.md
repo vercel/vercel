@@ -1,5 +1,16 @@
 # vercel
 
+## 33.5.1
+
+### Patch Changes
+
+- build: upgrade edge-runtime ([#11148](https://github.com/vercel/vercel/pull/11148))
+
+- Updated dependencies [[`24c3dd282`](https://github.com/vercel/vercel/commit/24c3dd282d7714cd63d2b94fb94745c45fdc79ab), [`10e200e0b`](https://github.com/vercel/vercel/commit/10e200e0bf8f692b6740e098e0572b4e7de83850), [`678ebbe52`](https://github.com/vercel/vercel/commit/678ebbe5255766656bf2dddc574e86b2999f11c8)]:
+  - @vercel/build-utils@7.7.0
+  - @vercel/static-build@2.4.0
+  - @vercel/node@3.0.19
+
 ## 33.5.0
 
 ### Minor Changes
