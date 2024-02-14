@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - 'examples/docusaurus/**'
+      - 'examples/astro/**'
       
 jobs:
   syncSourceJob:
@@ -20,6 +21,8 @@ jobs:
           filters: |
             site:
               - 'examples/docusaurus/**'
+            docs:
+              - 'examples/astro/**'
 
 
       # Example for folder1 changes
@@ -30,3 +33,9 @@ jobs:
           api-key: ${{ secrets.INKEEP_API_KEY }}
           source-id: 'clohl0lk20000s601g2siksub'
 
+      - name: Sync Docs Source 
+        if: steps.changes.outputs.docs == 'true'
+        uses: inkeep/source-sync-action@v4
+        with:
+          api-key: ${{ secrets.INKEEP_API_KEY }}
+          source-id: 'clohg84p70000s6010tuqnpb9'
