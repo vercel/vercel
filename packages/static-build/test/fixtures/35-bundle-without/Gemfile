@@ -1,6 +1,6 @@
 source "https://rubygems.org"
 
-gem "dimples", "6.5.2"
+gem "dimples", "7.0.5"
 
 group :development do
   gem "jekyll", "3.9.3"
