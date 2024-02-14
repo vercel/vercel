@@ -43,8 +43,8 @@ jobs:
           source-id: 'clohg84p70000s6010tuqnpb9'
           
       - name: Add PR Comment
-        uses: inkeep/pr-commenter-action@v1
-        with:
-          comment: 'Inkeep Sync Job Started'
+        uses: inkeep/pr-commenter-action@v2
+        env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
         
