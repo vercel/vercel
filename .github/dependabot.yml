@@ -20,3 +20,23 @@ updates:
           - '@angular*'
         update-types:
           - 'minor'
+
+  - schedule:
+    interval: 'daily'
+    open-pull-requests-limit: 1
+    reviewers:
+      - 'trek'
+      - 'TooTallNate'
+      - 'EndangeredMassa'
+    commit-message:
+      prefix: '[framework-fixtures]'
+    package-ecosystem: 'npm'
+    directory: /packages/static-build/test/fixtures/astro-v4
+    allow:
+      - dependency-name: 'astro*'
+    groups:
+      core:
+        patterns:
+          - 'astro*'
+        update-types:
+          - 'minor'
