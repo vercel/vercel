@@ -30,14 +30,14 @@ jobs:
 
       - name: Sync Site Source 
         if: steps.changes.outputs.site == 'true'
-        uses: inkeep/pr-commenter-action@v5
+        uses: inkeep/pr-commenter-action@v6
         with:
           api-key: ${{ secrets.INKEEP_API_KEY }}
           source-id: 'clohl0lk20000s601g2siksub'
 
       - name: Sync Docs Source 
         if: steps.changes.outputs.docs == 'true'
-        uses: inkeep/pr-commenter-action@v5
+        uses: inkeep/pr-commenter-action@v6
         with:
           api-key: ${{ secrets.INKEEP_API_KEY }}
           source-id: 'clohg84p70000s6010tuqnpb9'
