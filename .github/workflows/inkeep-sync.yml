@@ -30,21 +30,17 @@ jobs:
 
       - name: Sync Site Source 
         if: steps.changes.outputs.site == 'true'
-        uses: inkeep/source-sync-action@v4
+        uses: inkeep/pr-commenter-action@v5
         with:
           api-key: ${{ secrets.INKEEP_API_KEY }}
           source-id: 'clohl0lk20000s601g2siksub'
 
       - name: Sync Docs Source 
         if: steps.changes.outputs.docs == 'true'
-        uses: inkeep/source-sync-action@v4
+        uses: inkeep/pr-commenter-action@v5
         with:
           api-key: ${{ secrets.INKEEP_API_KEY }}
           source-id: 'clohg84p70000s6010tuqnpb9'
           
-      - name: Add PR Comment
-        uses: inkeep/pr-commenter-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
         
