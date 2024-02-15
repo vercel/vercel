@@ -1,0 +1,22 @@
+version: 2
+
+updates:
+  - schedule:
+      interval: 'daily'
+    open-pull-requests-limit: 1
+    reviewers:
+      - 'trek'
+      - 'TooTallNate'
+      - 'EndangeredMassa'
+    commit-message:
+      prefix: '[framework-fixtures]'
+    package-ecosystem: 'npm'
+    directory: /packages/static-build/test/fixtures/angular-v17
+    allow:
+      - dependency-name: '@angular*'
+    groups:
+      core:
+        patterns:
+          - '@angular*'
+        update-types:
+          - 'minor'
