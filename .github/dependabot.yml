@@ -68,10 +68,12 @@ updates:
     open-pull-requests-limit: 1
     reviewers:
       - 'trek'
+      - 'TooTallNate'
+      - 'EndangeredMassa'
     commit-message:
       prefix: '[framework-fixtures]'
     package-ecosystem: 'npm'
-    directory: /scripts/framework-matrix/framework-fixtures/sveltekit-v2
+    directory: /packages/static-build/test/fixtures/sveltekit-v2
     allow:
       - dependency-name: "svelte"
       - dependency-name: "vite"
