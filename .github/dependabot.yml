@@ -22,7 +22,7 @@ updates:
           - 'minor'
 
   - schedule:
-    interval: 'daily'
+      interval: 'daily'
     open-pull-requests-limit: 1
     reviewers:
       - 'trek'
@@ -60,5 +60,27 @@ updates:
         patterns:
           - '@remix-run*'
           - '@shopify*'
+        update-types:
+          - 'minor'
+
+  - schedule:
+      interval: 'daily'
+    open-pull-requests-limit: 1
+    reviewers:
+      - 'trek'
+      - 'TooTallNate'
+      - 'EndangeredMassa'
+    commit-message:
+      prefix: '[framework-fixtures]'
+    package-ecosystem: 'npm'
+    directory: /packages/static-build/test/fixtures/ionic-angular-v7
+    allow:
+      - dependency-name: '@angular*'
+      - dependency-name: '@ionic*'
+    groups:
+      core:
+        patterns:
+          - '@angular*'
+          - '@ionic*'
         update-types:
           - 'minor'
