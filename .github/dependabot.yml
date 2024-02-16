@@ -75,14 +75,14 @@ updates:
     package-ecosystem: 'npm'
     directory: /packages/static-build/test/fixtures/sveltekit-v2
     allow:
-      - dependency-name: "svelte"
-      - dependency-name: "vite"
-      - dependency-name: "@svelte*"
+      - dependency-name: 'svelte'
+      - dependency-name: 'vite'
+      - dependency-name: '@svelte*'
     groups:
       core:
         patterns:
-          - "svelte"
-          - "vite"
-          - "@svelte*"
+          - 'svelte'
+          - 'vite'
+          - '@svelte*'
         update-types:
-          - "minor"
+          - 'minor'
