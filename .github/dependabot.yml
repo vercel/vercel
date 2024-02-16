@@ -75,10 +75,10 @@ updates:
     package-ecosystem: 'npm'
     directory: /packages/static-build/test/fixtures/stencil-v4
     allow:
-      - dependency-name: "@stencil/core"
+      - dependency-name: '@stencil/core'
     groups:
       core:
         patterns:
-          - "@stencil/core"
+          - '@stencil/core'
         update-types:
-          - "minor"
+          - 'minor'
