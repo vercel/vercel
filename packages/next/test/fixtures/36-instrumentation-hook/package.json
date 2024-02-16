@@ -8,7 +8,7 @@
     "start": "next start"
   },
   "dependencies": {
-    "next": "https://ethan-test-app.vercel.app/next-14.1.1-canary.55.tgz",
+    "next": "https://ethan-test-app.vercel.app/next-14.1.1-canary.57.tgz",
     "react": "latest",
     "react-dom": "latest",
     "is-odd": "3.0.1"
