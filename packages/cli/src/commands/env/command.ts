@@ -34,7 +34,16 @@ export const envCommand: Command = {
           required: false,
         },
       ],
-      options: [],
+      options: [
+        {
+          name: 'sensitive',
+          description: 'Add a sensitive Environment Variable',
+          shorthand: null,
+          type: 'string',
+          deprecated: false,
+          multi: false,
+        },
+      ],
       examples: [],
     },
     {
@@ -116,6 +125,10 @@ export const envCommand: Command = {
         `${packageName} env add <name> ${targetPlaceholder}`,
         `${packageName} env add DB_PASS production`,
       ],
+    },
+    {
+      name: 'Add a sensitive Environment Variable',
+      value: `${packageName} env add API_TOKEN --sensitive`,
     },
     {
       name: 'Add a new variable for a specific Environment and Git Branch',

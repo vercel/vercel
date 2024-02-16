@@ -1,5 +1,27 @@
 # @vercel/remix-builder
 
+## 2.0.19
+
+### Patch Changes
+
+- [node][next][redwood][remix] bump `@vercel/nft@0.26.3` ([#11115](https://github.com/vercel/vercel/pull/11115))
+
+## 2.0.18
+
+### Patch Changes
+
+- Fix functions without a output path edge case ([#11038](https://github.com/vercel/vercel/pull/11038))
+
+- Update `@remix-run/dev` fork to v2.5.0 ([#11054](https://github.com/vercel/vercel/pull/11054))
+
+- Update `@remix-run/dev` fork to v2.5.1 ([#11065](https://github.com/vercel/vercel/pull/11065))
+
+## 2.0.17
+
+### Patch Changes
+
+- Deprecate `EdgeFunction#name` property ([#11010](https://github.com/vercel/vercel/pull/11010))
+
 ## 2.0.16
 
 ### Patch Changes

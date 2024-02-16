@@ -1,5 +1,97 @@
 # vercel
 
+## 33.5.1
+
+### Patch Changes
+
+- build: upgrade edge-runtime ([#11148](https://github.com/vercel/vercel/pull/11148))
+
+- Updated dependencies [[`24c3dd282`](https://github.com/vercel/vercel/commit/24c3dd282d7714cd63d2b94fb94745c45fdc79ab), [`10e200e0b`](https://github.com/vercel/vercel/commit/10e200e0bf8f692b6740e098e0572b4e7de83850), [`678ebbe52`](https://github.com/vercel/vercel/commit/678ebbe5255766656bf2dddc574e86b2999f11c8)]:
+  - @vercel/build-utils@7.7.0
+  - @vercel/static-build@2.4.0
+  - @vercel/node@3.0.19
+
+## 33.5.0
+
+### Minor Changes
+
+- Mark `flags` as deprecated and replace them with `variants` ([#11098](https://github.com/vercel/vercel/pull/11098))
+
+### Patch Changes
+
+- Updated dependencies [[`c32a909af`](https://github.com/vercel/vercel/commit/c32a909afcedf0ee55777d5dcaecc0c8383dd8c8), [`b6ed28b9b`](https://github.com/vercel/vercel/commit/b6ed28b9b1712f882c93fe053b70d3eb1df21819), [`d21bb9f87`](https://github.com/vercel/vercel/commit/d21bb9f87e1d837666fe8104d4e199b2590725d6), [`4027a1833`](https://github.com/vercel/vercel/commit/4027a1833718a92be74b2b3c5a4df23745d19a36), [`8ba0ce932`](https://github.com/vercel/vercel/commit/8ba0ce932434c6295fedb5307bee59a804b7e6a8), [`0d034b682`](https://github.com/vercel/vercel/commit/0d034b6820c0f3252949c0ffc483048c5aac7f04), [`abaa700ce`](https://github.com/vercel/vercel/commit/abaa700cea44c723cfc851baa2dfe9e1ae2e8a5c), [`3bad73401`](https://github.com/vercel/vercel/commit/3bad73401b4ec1f61e515965732cde8dcc052b17)]:
+  - @vercel/next@4.1.1
+  - @vercel/node@3.0.18
+  - @vercel/redwood@2.0.7
+  - @vercel/remix-builder@2.0.19
+  - @vercel/build-utils@7.6.0
+  - @vercel/static-build@2.3.0
+
+## 33.4.1
+
+### Patch Changes
+
+- Updated dependencies [[`d05e41eea`](https://github.com/vercel/vercel/commit/d05e41eeaf97a024157d2bd843782c95c39389be), [`de63e3562`](https://github.com/vercel/vercel/commit/de63e356223467447cda539ddc435a892303afc7)]:
+  - @vercel/static-build@2.2.0
+
+## 33.4.0
+
+### Minor Changes
+
+- Added a new option to add a sensitive environment variable ([#11033](https://github.com/vercel/vercel/pull/11033))
+
+## 33.3.0
+
+### Minor Changes
+
+- Emit "filePathMap" in `vc-config.json` for `FileFsRef` instances ([#11060](https://github.com/vercel/vercel/pull/11060))
+
+### Patch Changes
+
+- Update `vc dev` to support `Lambda` instances without `zipBuffer` ([#11080](https://github.com/vercel/vercel/pull/11080))
+
+- Updated dependencies [[`322c88536`](https://github.com/vercel/vercel/commit/322c88536dfa0ba3892eb580858ee54f6b04ed3f), [`62ca2efa7`](https://github.com/vercel/vercel/commit/62ca2efa731c4df46d586b94078b2dcb1c0bb934)]:
+  - @vercel/ruby@2.0.5
+  - @vercel/python@4.1.1
+
+## 33.2.0
+
+### Minor Changes
+
+- chore: deprecate next/nuxt/gastby Speed Insights injection in favor of @vercel/speed-insights ([#11048](https://github.com/vercel/vercel/pull/11048))
+
+### Patch Changes
+
+- fix error when @vercel/analytics is a transitive dependency of the deployed application ([#10892](https://github.com/vercel/vercel/pull/10892))
+
+- [cli] Add documentation string for `skip-domain` option ([#11051](https://github.com/vercel/vercel/pull/11051))
+
+- Updated dependencies [[`260125784`](https://github.com/vercel/vercel/commit/2601257846fa201fc9efde021a906c706f6191aa), [`cdddb33ad`](https://github.com/vercel/vercel/commit/cdddb33ad49f6080c49f4fff3767e6111acd0bbe), [`72d8604c9`](https://github.com/vercel/vercel/commit/72d8604c9dba108ccca41d6288b765a7ba727295), [`90d0455e1`](https://github.com/vercel/vercel/commit/90d0455e1ff7b5892ff4960226535f57f704ef6f), [`0716130e5`](https://github.com/vercel/vercel/commit/0716130e580a920d92d249d029ed37f92f2ca847), [`b6b151f39`](https://github.com/vercel/vercel/commit/b6b151f3917c5cb47226951446b9dbb96c7d872b), [`b185a7e20`](https://github.com/vercel/vercel/commit/b185a7e207b153c378bd3db2618eece3a3b6a93e)]:
+  - @vercel/static-build@2.1.0
+  - @vercel/build-utils@7.5.1
+  - @vercel/next@4.1.0
+  - @vercel/remix-builder@2.0.18
+  - @vercel/node@3.0.17
+
+## 33.1.0
+
+### Minor Changes
+
+- Serialize duplicate `EdgeFunction` references as symlinks in `vc build` ([#11027](https://github.com/vercel/vercel/pull/11027))
+
+### Patch Changes
+
+- Handle rate limit response when fetching /teams ([#11013](https://github.com/vercel/vercel/pull/11013))
+
+- Display actual deployment's 'target' ([#11025](https://github.com/vercel/vercel/pull/11025))
+
+- Updated dependencies [[`98040ec24`](https://github.com/vercel/vercel/commit/98040ec24e1ee585865d11eb216b6525d39d209e)]:
+  - @vercel/build-utils@7.5.0
+  - @vercel/static-build@2.0.17
+  - @vercel/hydrogen@1.0.2
+  - @vercel/remix-builder@2.0.17
+  - @vercel/node@3.0.16
+
 ## 33.0.2
 
 ### Patch Changes

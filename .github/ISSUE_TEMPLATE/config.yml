@@ -1,8 +1,8 @@
 blank_issues_enabled: true
 contact_links:
   - name: Bug Report
-    url: https://vercel.com/support/request
-    about: Report a bug using the Vercel support form
+    url: https://vercel.com/help
+    about: Reach out to our support team
   - name: Feature Request
     url: https://github.com/orgs/vercel/discussions/new?category=ideas
     about: Share ideas for new features

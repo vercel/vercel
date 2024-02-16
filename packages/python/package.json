@@ -1,6 +1,6 @@
 {
   "name": "@vercel/python",
-  "version": "4.1.0",
+  "version": "4.1.1",
   "main": "./dist/index.js",
   "license": "Apache-2.0",
   "homepage": "https://vercel.com/docs/runtimes#official-runtimes/python",
@@ -26,7 +26,7 @@
     "@types/jest": "27.4.1",
     "@types/node": "14.18.33",
     "@types/which": "3.0.0",
-    "@vercel/build-utils": "7.4.1",
+    "@vercel/build-utils": "7.7.0",
     "execa": "^1.0.0",
     "fs-extra": "11.1.1",
     "jest-junit": "16.0.0",

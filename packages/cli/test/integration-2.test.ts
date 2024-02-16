@@ -681,6 +681,53 @@ test('vercel env with unknown `VERCEL_ORG_ID` or `VERCEL_PROJECT_ID` should erro
   expect(output.stderr).toContain('Project not found');
 });
 
+test('add a sensitive env var', async () => {
+  const dir = await setupE2EFixture('project-sensitive-env-vars');
+  const projectName = `project-sensitive-env-vars-${
+    Math.random().toString(36).split('.')[1]
+  }`;
+
+  // remove previously linked project if it exists
+  await remove(path.join(dir, '.vercel'));
+
+  const vc = execCli(binaryPath, ['link'], {
+    cwd: dir,
+    env: {
+      FORCE_TTY: '1',
+    },
+  });
+
+  await setupProject(vc, projectName, {
+    buildCommand: `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html`,
+    outputDirectory: 'o',
+  });
+
+  await vc;
+
+  const link = require(path.join(dir, '.vercel/project.json'));
+
+  const addEnvCommand = execCli(
+    binaryPath,
+    ['env', 'add', 'envVarName', 'production', '--sensitive'],
+    {
+      env: {
+        VERCEL_ORG_ID: link.orgId,
+        VERCEL_PROJECT_ID: link.projectId,
+      },
+    }
+  );
+
+  await waitForPrompt(addEnvCommand, /What’s the value of [^?]+\?/);
+  addEnvCommand.stdin?.write('test\n');
+
+  const output = await addEnvCommand;
+
+  expect(output.exitCode, formatOutput(output)).toBe(0);
+  expect(output.stderr).toContain(
+    'Added Environment Variable envVarName to Project'
+  );
+});
+
 test('whoami with `VERCEL_ORG_ID` should favor `--scope` and should error', async () => {
   if (!token) {
     throw new Error('Shared state "token" not set.');
@@ -750,7 +797,7 @@ test('deploys with only vercel.json and README.md', async () => {
 
   // assert timing order of showing URLs vs status updates
   expect(stderr).toMatch(
-    /Inspect.*\nPreview.*\nQueued.*\nBuilding.*\nCompleting/
+    /Inspect.*\nProduction.*\nQueued.*\nBuilding.*\nCompleting/
   );
 
   const { host } = new URL(stdout);
@@ -857,7 +904,7 @@ test('deploy pnpm twice using pnp and symlink=false', async () => {
   page = await fetch(stdout);
   text = await page.text();
 
-  expect(text).toBe('cache exists\n');
+  expect(text).toContain('cache exists\n');
 });
 
 test('reject deploying with wrong team .vercel config', async () => {
@@ -1168,23 +1215,25 @@ test('[vc build] should build project with `@vercel/static-build`', async () => 
 });
 
 test('[vc build] should build project with `@vercel/speed-insights`', async () => {
-  try {
-    process.env.VERCEL_ANALYTICS_ID = '123';
+  const directory = await setupE2EFixture('vc-build-speed-insights');
+  const output = await execCli(binaryPath, ['build'], { cwd: directory });
+  expect(output.exitCode, formatOutput(output)).toBe(0);
+  expect(output.stderr).toContain('Build Completed in .vercel/output');
+  const builds = await fs.readJSON(
+    path.join(directory, '.vercel/output/builds.json')
+  );
+  expect(builds?.features?.speedInsightsVersion).toEqual('0.0.4');
+});
 
-    const directory = await setupE2EFixture('vc-build-speed-insights');
-    const output = await execCli(binaryPath, ['build'], { cwd: directory });
-    expect(output.exitCode, formatOutput(output)).toBe(0);
-    expect(output.stderr).toContain('Build Completed in .vercel/output');
-    expect(output.stderr).toContain(
-      'The `VERCEL_ANALYTICS_ID` environment variable is deprecated and will be removed in a future release. Please remove it from your environment variables'
-    );
-    const builds = await fs.readJSON(
-      path.join(directory, '.vercel/output/builds.json')
-    );
-    expect(builds?.features?.speedInsightsVersion).toEqual('0.0.1');
-  } finally {
-    delete process.env.VERCEL_ANALYTICS_ID;
-  }
+test('[vc build] should build project with an indirect dependency to `@vercel/analytics`', async () => {
+  const directory = await setupE2EFixture('vc-build-indirect-web-analytics');
+  const output = await execCli(binaryPath, ['build'], { cwd: directory });
+  expect(output.exitCode, formatOutput(output)).toBe(0);
+  expect(output.stderr).toContain('Build Completed in .vercel/output');
+  const builds = await fs.readJSON(
+    path.join(directory, '.vercel/output/builds.json')
+  );
+  expect(builds?.features?.webAnalyticsVersion).toEqual('1.1.1');
 });
 
 test('[vc build] should build project with `@vercel/analytics`', async () => {

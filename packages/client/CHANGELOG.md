@@ -1,5 +1,45 @@
 # @vercel/client
 
+## 13.1.3
+
+### Patch Changes
+
+- Updated dependencies [[`24c3dd282`](https://github.com/vercel/vercel/commit/24c3dd282d7714cd63d2b94fb94745c45fdc79ab)]:
+  - @vercel/build-utils@7.7.0
+
+## 13.1.2
+
+### Patch Changes
+
+- Updated dependencies [[`b6ed28b9b`](https://github.com/vercel/vercel/commit/b6ed28b9b1712f882c93fe053b70d3eb1df21819), [`8ba0ce932`](https://github.com/vercel/vercel/commit/8ba0ce932434c6295fedb5307bee59a804b7e6a8), [`0d034b682`](https://github.com/vercel/vercel/commit/0d034b6820c0f3252949c0ffc483048c5aac7f04), [`abaa700ce`](https://github.com/vercel/vercel/commit/abaa700cea44c723cfc851baa2dfe9e1ae2e8a5c)]:
+  - @vercel/build-utils@7.6.0
+
+## 13.1.1
+
+### Patch Changes
+
+- More helpful error message when `vc deploy --prebuilt` has missing files ([#11105](https://github.com/vercel/vercel/pull/11105))
+
+## 13.1.0
+
+### Minor Changes
+
+- Upload files referenced by "filePathMap" during `vc deploy --prebuilt` ([#11077](https://github.com/vercel/vercel/pull/11077))
+
+## 13.0.14
+
+### Patch Changes
+
+- Updated dependencies [[`cdddb33ad`](https://github.com/vercel/vercel/commit/cdddb33ad49f6080c49f4fff3767e6111acd0bbe)]:
+  - @vercel/build-utils@7.5.1
+
+## 13.0.13
+
+### Patch Changes
+
+- Updated dependencies [[`98040ec24`](https://github.com/vercel/vercel/commit/98040ec24e1ee585865d11eb216b6525d39d209e)]:
+  - @vercel/build-utils@7.5.0
+
 ## 13.0.12
 
 ### Patch Changes

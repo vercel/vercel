@@ -382,6 +382,9 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
       'index.html': 'Hello',
       'vercel.json': '{"builds":[{"src":"*.html","use":"@vercel/static"}]}',
     },
+    'project-sensitive-env-vars': {
+      'package.json': '{}',
+    },
     'dev-proxy-headers-and-env': {
       'package.json': JSON.stringify({}),
       'server.js': `require('http').createServer((req, res) => {
@@ -421,7 +424,6 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
         projectId: '.',
         settings: {
           framework: null,
-          installCommand: 'echo "skipping install"',
         },
       }),
       'package.json': JSON.stringify({
@@ -429,7 +431,22 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
           build: 'mkdir -p public && echo hi > public/index.txt',
         },
         dependencies: {
-          '@vercel/speed-insights': '0.0.1',
+          '@vercel/speed-insights': '0.0.4',
+        },
+      }),
+    },
+    'vc-build-indirect-web-analytics': {
+      '.vercel/project.json': JSON.stringify({
+        orgId: '.',
+        projectId: '.',
+        settings: {
+          framework: null,
+          installCommand: 'yarn add @vercel/analytics@1.1.1',
+        },
+      }),
+      'package.json': JSON.stringify({
+        scripts: {
+          build: 'mkdir -p public && echo hi > public/index.txt',
         },
       }),
     },
@@ -439,7 +456,6 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
         projectId: '.',
         settings: {
           framework: null,
-          installCommand: 'echo "skipping install"',
         },
       }),
       'package.json': JSON.stringify({

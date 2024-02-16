@@ -230,8 +230,10 @@ export async function createEdgeEventHandler(
     }
 
     const body: Buffer | string | undefined = await serializeBody(request);
-    if (body !== undefined)
+
+    if (body !== undefined && body.length) {
       request.headers['content-length'] = String(body.length);
+    }
 
     const url = new URL(request.url ?? '/', server.url);
     const response = await undiciRequest(url, {
