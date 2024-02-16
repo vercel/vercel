@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "next": "13.5.6",
+    "next": "https://ethan-test-app.vercel.app/next-14.1.1-canary.55.tgz",
     "react": "experimental",
     "react-dom": "experimental"
   },

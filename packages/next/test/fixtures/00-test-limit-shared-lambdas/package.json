@@ -9,7 +9,7 @@
   "dependencies": {
     "chrome-aws-lambda": "8.0.0",
     "firebase": "8.3.0",
-    "next": "10.0.8",
+    "next": "https://ethan-test-app.vercel.app/next-14.1.1-canary.55.tgz",
     "react": "17.0.1",
     "react-dom": "17.0.1"
   },

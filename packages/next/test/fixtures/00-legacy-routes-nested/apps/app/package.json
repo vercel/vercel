@@ -6,7 +6,7 @@
     "node": "16.x"
   },
   "dependencies": {
-    "next": "8.0.3",
+    "next": "https://ethan-test-app.vercel.app/next-14.1.1-canary.55.tgz",
     "react": "latest",
     "react-dom": "latest"
   },
