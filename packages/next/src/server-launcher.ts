@@ -54,6 +54,9 @@ const serve =
 
 // The default handler method should be exported as a function on the module.
 module.exports = serve(nextServer.getRequestHandler());
+module.exports.postload = () => {
+  // @preserve next-server-postload-target
+};
 
 // If available, add `getRequestHandlerWithMetadata` to the export if it's
 // required by the configuration.

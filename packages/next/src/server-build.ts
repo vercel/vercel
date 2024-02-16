@@ -1031,6 +1031,13 @@ export async function serverBuild({
           path.relative(baseDir, lambdaPages[page].fsPath)
         );
         groupPageFiles[pageFileName] = compressedPages[page];
+
+        const pagePath = path.join(
+          appDir && Boolean(lambdaAppPaths[page]) ? appDir : pagesDir,
+          getOriginalPagePath(page)
+        );
+
+        console.log('PAGE PATH', pagePath);
       }
 
       const updatedManifestFiles: { [name: string]: FileBlob } = {};
@@ -1140,6 +1147,21 @@ export async function serverBuild({
           );
         }
       }
+
+      const postloadChunks: string[] = [];
+      for (const page of [...group.pages, ...internalPages]) {
+        postloadChunks.push(
+          path.join(
+            appDir && Boolean(lambdaAppPaths[page]) ? appDir : pagesDir,
+            getOriginalPagePath(page)
+          )
+        );
+      }
+
+      launcherData = launcherData.replace(
+        '// @preserve next-server-postload-target',
+        postloadChunks.map(name => `require('${name}');`).join('\n')
+      );
 
       const launcherFiles: { [name: string]: FileFsRef | FileBlob } = {
         [path.join(path.relative(baseDir, projectDir), '___next_launcher.cjs')]:
