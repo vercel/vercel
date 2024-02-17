@@ -5,6 +5,5 @@ import type { BuildV2 } from '@vercel/build-utils';
 
 export const build: BuildV2 = opts => {
   const isVite = findConfig(opts.workPath, 'vite.config', ['.js', '.ts']);
-  console.log({ isVite });
   return isVite ? buildVite(opts) : buildLegacy(opts);
 };
