@@ -1252,13 +1252,12 @@ describe('build', () => {
   });
 
   it('should write to flags.json', async () => {
-    const cwd = fixture('with-flags'); // TODO
+    const cwd = fixture('with-flags');
     const output = join(cwd, '.vercel', 'output');
 
     const exitCode = await build(client);
     expect(exitCode).toEqual(0);
 
-    // TODO: Check the content of `flags.json`
     expect(fs.existsSync(join(output, 'flags.json'))).toBe(true);
     expect(fs.readJSONSync(join(output, 'flags.json'))).toEqual({
       definitions: {
