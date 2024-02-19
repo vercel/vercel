@@ -9,7 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "next": "https://ethan-test-app.vercel.app/next-14.1.1-canary.61.tgz",
+    "next": "13.4.12",
     "react": "18.2.0",
     "react-dom": "18.2.0"
   }
