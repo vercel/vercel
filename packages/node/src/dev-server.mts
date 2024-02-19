@@ -11,11 +11,17 @@ import type { VercelProxyResponse } from './types.js';
 import { Config } from '@vercel/build-utils';
 import { createEdgeEventHandler } from './edge-functions/edge-handler.mjs';
 import { createServer, IncomingMessage, ServerResponse } from 'http';
-import { createServerlessEventHandler } from './serverless-functions/serverless-handler.mjs';
+import {
+  createServerlessEventHandler,
+  HTTP_METHODS,
+} from './serverless-functions/serverless-handler.mjs';
 import { isEdgeRuntime, logError, validateConfiguredRuntime } from './utils.js';
+import { init, parse as parseEsm } from 'es-module-lexer';
+import { parse as parseCjs } from 'cjs-module-lexer';
 import { getConfig } from '@vercel/static-config';
 import { Project } from 'ts-morph';
 import { listen } from 'async-listen';
+import { readFile } from 'fs/promises';
 
 const parseConfig = (entryPointPath: string) =>
   getConfig(new Project(), entryPointPath);
@@ -46,10 +52,29 @@ async function createEventHandler(
     );
   }
 
+  const content = await readFile(entrypointPath, 'utf8');
+
+  const isStreaming =
+    staticConfig?.supportsResponseStreaming ||
+    (await hasWebHandlers(async () => parseCjs(content).exports)) ||
+    (await hasWebHandlers(async () =>
+      init.then(() => parseEsm(content)[1].map(specifier => specifier.n))
+    ));
+
   return createServerlessEventHandler(entrypointPath, {
-    mode: staticConfig?.supportsResponseStreaming ? 'streaming' : 'buffer',
+    mode: isStreaming ? 'streaming' : 'buffer',
     shouldAddHelpers: options.shouldAddHelpers,
   });
+}
+
+async function hasWebHandlers(getExports: () => Promise<string[]>) {
+  const exports = await getExports().catch(() => []);
+  for (const name of exports) {
+    if (HTTP_METHODS.includes(name)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 let handleEvent: (request: IncomingMessage) => Promise<VercelProxyResponse>;
