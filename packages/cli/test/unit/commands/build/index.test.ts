@@ -1255,6 +1255,9 @@ describe('build', () => {
     const cwd = fixture('with-flags');
     const output = join(cwd, '.vercel', 'output');
 
+    client.cwd = cwd;
+    client.setArgv('build', '--yes');
+
     const exitCode = await build(client);
     expect(exitCode).toEqual(0);
 
