@@ -36,6 +36,32 @@ const nodeServerSrcPromise = fs.readFile(
   'utf-8'
 );
 
+interface RemixBuildResult {
+  buildManifest: {
+    serverBundles?: Record<
+      string,
+      { id: string; file: string; config: Record<string, unknown> }
+    >;
+    routeIdToServerBundleId?: Record<string, string>;
+    routes: Record<
+      string,
+      {
+        id: string;
+        file: string;
+        path?: string;
+        index?: boolean;
+        parentId?: string;
+        config: Record<string, unknown>;
+      }
+    >;
+  };
+  remixConfig: {
+    buildDirectory: string;
+    publicPath: string;
+    ssr: boolean;
+  };
+}
+
 export const build: BuildV2 = async ({
   entrypoint,
   workPath,
@@ -98,39 +124,33 @@ export const build: BuildV2 = async ({
   );
   const remixVersion = remixRunDevPkg.version;
 
-  const cleanupOps: Promise<void>[] = [];
+  // Make `remix build` output production mode
+  spawnOpts.env.NODE_ENV = 'production';
 
-  try {
-    // Make `remix build` output production mode
-    spawnOpts.env.NODE_ENV = 'production';
-
-    // Run "Build Command"
-    if (buildCommand) {
-      debug(`Executing build command "${buildCommand}"`);
-      await execCommand(buildCommand, {
+  // Run "Build Command"
+  if (buildCommand) {
+    debug(`Executing build command "${buildCommand}"`);
+    await execCommand(buildCommand, {
+      ...spawnOpts,
+      cwd: entrypointFsDirname,
+    });
+  } else {
+    if (hasScript('vercel-build', packageJson)) {
+      debug(`Executing "vercel-build" script`);
+      await runPackageJsonScript(
+        entrypointFsDirname,
+        'vercel-build',
+        spawnOpts
+      );
+    } else if (hasScript('build', packageJson)) {
+      debug(`Executing "build" script`);
+      await runPackageJsonScript(entrypointFsDirname, 'build', spawnOpts);
+    } else {
+      await execCommand('remix build', {
         ...spawnOpts,
         cwd: entrypointFsDirname,
       });
-    } else {
-      if (hasScript('vercel-build', packageJson)) {
-        debug(`Executing "vercel-build" script`);
-        await runPackageJsonScript(
-          entrypointFsDirname,
-          'vercel-build',
-          spawnOpts
-        );
-      } else if (hasScript('build', packageJson)) {
-        debug(`Executing "build" script`);
-        await runPackageJsonScript(entrypointFsDirname, 'build', spawnOpts);
-      } else {
-        await execCommand('remix build', {
-          ...spawnOpts,
-          cwd: entrypointFsDirname,
-        });
-      }
     }
-  } finally {
-    await Promise.all(cleanupOps);
   }
 
   // This needs to happen before we run NFT to create the Node/Edge functions
@@ -148,20 +168,9 @@ export const build: BuildV2 = async ({
     entrypointFsDirname,
     '.vercel/remix-build-result.json'
   );
-  const {
-    buildManifest,
-    remixConfig,
-  }: {
-    buildManifest: {
-      serverBundles?: Record<string, { id: string; file: string; config: any }>;
-      routeIdToServerBundleId?: Record<string, string>;
-      routes: Record<string, any>;
-    };
-    remixConfig: {
-      buildDirectory: string;
-      publicPath: string;
-    };
-  } = JSON.parse(readFileSync(remixBuildResultPath, 'utf8'));
+  const { buildManifest, remixConfig }: RemixBuildResult = JSON.parse(
+    readFileSync(remixBuildResultPath, 'utf8')
+  );
 
   const staticDir = join(remixConfig.buildDirectory, 'client');
   const serverBundles = Object.values(buildManifest.serverBundles ?? {});
