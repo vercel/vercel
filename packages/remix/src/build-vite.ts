@@ -162,8 +162,6 @@ export const build: BuildV2 = async ({
       publicPath: string;
     };
   } = JSON.parse(readFileSync(remixBuildResultPath, 'utf8'));
-  console.log(buildManifest);
-  console.log(remixConfig);
 
   const staticDir = join(remixConfig.buildDirectory, 'client');
   const serverBundles = Object.values(buildManifest.serverBundles ?? {});
@@ -199,11 +197,6 @@ export const build: BuildV2 = async ({
   for (let i = 0; i < serverBundles.length; i++) {
     functionsMap.set(serverBundles[i].id, functions[i]);
   }
-  console.log(functionsMap);
-
-  //const transformedBuildAssets = rename(buildAssets, name => {
-  //  return posix.join('./', remixConfig.publicPath, name);
-  //});
 
   const output: BuildResultV2Typical['output'] = staticFiles;
   const routes: any[] = [
@@ -222,7 +215,6 @@ export const build: BuildV2 = async ({
   )) {
     const route = buildManifest.routes[id];
     const { path, rePath } = getPathFromRoute(route, buildManifest.routes);
-    console.log({ id, functionId, path });
 
     // If the route is a pathless layout route (at the root level)
     // and doesn't have any sub-routes, then a function should not be created.
@@ -258,27 +250,12 @@ export const build: BuildV2 = async ({
     }
   }
 
-  // Add a 404 path for not found pages to be server-side rendered by Remix.
-  // Use an edge function bundle if one was generated, otherwise use Node.js.
-  //if (!output['404']) {
-  //  //const edgeFunctionIndex = Array.from(functionsMap.keys()).findIndex(
-  //  //  id => {
-  //  //    const serverBundle = buildManifest.serverBundles[id];
-  //  //    return serverBundle.config.runtime === 'edge';
-  //  //  }
-  //  //);
-  //  //const func =
-  //  //  edgeFunctionIndex !== -1 ? functions[edgeFunctionIndex] : functions[0];
-  //  const func = functions[0];
-  //  output['404'] = func;
-  //}
-
+  // For the 404 case, invoke the Function (or serve the static file
+  // for `ssr: false` mode) at the `/` path. Remix will serve its 404 route.
   routes.push({
     src: '/(.*)',
     dest: '/',
   });
-  console.log(routes);
-  console.log(output);
 
   return { routes, output, framework: { version: remixVersion } };
 };
@@ -396,34 +373,6 @@ async function createRenderEdgeFunction(
       if (basename(fsPath) === 'package.json') {
         // For Edge Functions, patch "main" field to prefer "browser" or "module"
         const pkgJson = JSON.parse(source.toString());
-
-        // When `@remix-run/vercel` is detected, we need to modify the `package.json`
-        // to include the "browser" field so that the proper Edge entrypoint file
-        // is used. This is a temporary stop gap until this PR is merged:
-        // https://github.com/remix-run/remix/pull/5537
-        if (pkgJson.name === '@remix-run/vercel') {
-          pkgJson.browser = 'dist/edge.js';
-          pkgJson.dependencies['@remix-run/server-runtime'] =
-            pkgJson.dependencies['@remix-run/node'];
-
-          if (!remixRunVercelPkgJson) {
-            remixRunVercelPkgJson = JSON.stringify(pkgJson, null, 2) + '\n';
-
-            // Copy in the edge entrypoint so that NFT can properly resolve it
-            const vercelEdgeEntrypointPath = join(
-              DEFAULTS_PATH,
-              'vercel-edge-entrypoint.js'
-            );
-            const vercelEdgeEntrypointDest = join(
-              dirname(fsPath),
-              'dist/edge.js'
-            );
-            await fs.copyFile(
-              vercelEdgeEntrypointPath,
-              vercelEdgeEntrypointDest
-            );
-          }
-        }
 
         for (const prop of ['browser', 'module']) {
           const val = pkgJson[prop];
