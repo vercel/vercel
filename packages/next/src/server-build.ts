@@ -1169,6 +1169,7 @@ export async function serverBuild({
         maxDuration: group.maxDuration,
         isStreaming: group.isStreaming,
         nextVersion,
+        experimentalAllowBundling,
       };
 
       const lambda = await createLambdaFromPseudoLayers(options);
