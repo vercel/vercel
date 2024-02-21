@@ -806,6 +806,7 @@ export interface CreateLambdaFromPseudoLayersOptions
   layers: PseudoLayer[];
   isStreaming?: boolean;
   nextVersion?: string;
+  experimentalAllowBundling?: boolean;
 }
 
 // measured with 1, 2, 5, 10, and `os.cpus().length || 5`
@@ -817,6 +818,7 @@ export async function createLambdaFromPseudoLayers({
   layers,
   isStreaming,
   nextVersion,
+  experimentalAllowBundling,
   ...lambdaOptions
 }: CreateLambdaFromPseudoLayersOptions) {
   await createLambdaSema.acquire();
@@ -864,6 +866,7 @@ export async function createLambdaFromPseudoLayers({
       slug: 'nextjs',
       version: nextVersion,
     },
+    experimentalAllowBundling,
   });
 }
 
@@ -1504,6 +1507,7 @@ export async function getPageLambdaGroups({
   internalPages,
   pageExtensions,
   inversedAppPathManifest,
+  experimentalAllowBundling,
 }: {
   entryPath: string;
   config: Config;
@@ -1526,6 +1530,7 @@ export async function getPageLambdaGroups({
   internalPages: ReadonlyArray<string>;
   pageExtensions?: ReadonlyArray<string>;
   inversedAppPathManifest?: Record<string, string>;
+  experimentalAllowBundling?: boolean;
 }) {
   const groups: Array<LambdaGroup> = [];
 
@@ -1567,6 +1572,7 @@ export async function getPageLambdaGroups({
 
     let matchingGroup = groups.find(group => {
       const matches =
+        !experimentalAllowBundling &&
         group.maxDuration === opts.maxDuration &&
         group.memory === opts.memory &&
         group.isPrerenders === isPrerenderRoute &&

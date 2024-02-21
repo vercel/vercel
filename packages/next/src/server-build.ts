@@ -186,6 +186,10 @@ export async function serverBuild({
 }): Promise<BuildResult> {
   lambdaPages = Object.assign({}, lambdaPages, lambdaAppPaths);
 
+  const experimentalAllowBundling = Boolean(
+    process.env.NEXT_EXPERIMENTAL_FUNCTION_BUNDLING
+  );
+
   const lambdas: { [key: string]: Lambda } = {};
   const prerenders: { [key: string]: Prerender } = {};
   const lambdaPageKeys = Object.keys(lambdaPages);
@@ -883,6 +887,7 @@ export async function serverBuild({
     const pageExtensions = requiredServerFilesManifest.config?.pageExtensions;
 
     const pageLambdaGroups = await getPageLambdaGroups({
+      experimentalAllowBundling,
       entryPath: projectDir,
       config,
       functionsConfigManifest,
@@ -904,6 +909,7 @@ export async function serverBuild({
     }
 
     const appRouterLambdaGroups = await getPageLambdaGroups({
+      experimentalAllowBundling,
       entryPath: projectDir,
       config,
       functionsConfigManifest,
@@ -922,6 +928,7 @@ export async function serverBuild({
     });
 
     const appRouteHandlersLambdaGroups = await getPageLambdaGroups({
+      experimentalAllowBundling,
       entryPath: projectDir,
       config,
       functionsConfigManifest,
@@ -1163,6 +1170,7 @@ export async function serverBuild({
         maxDuration: group.maxDuration,
         isStreaming: group.isStreaming,
         nextVersion,
+        experimentalAllowBundling,
       };
 
       const lambda = await createLambdaFromPseudoLayers(options);
