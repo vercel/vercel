@@ -1,0 +1,10 @@
+{
+  "probes": [
+    { "path": "/", "mustContain": "Welcome to Remix" },
+    {
+      "path": "/does-not-exist",
+      "status": 404,
+      "mustContain": "Not Found"
+    }
+  ]
+}
