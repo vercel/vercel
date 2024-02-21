@@ -280,10 +280,8 @@ export const build: BuildV2 = async ({
   for (const [id, functionId] of Object.entries(
     buildManifest.routeIdToServerBundleId ?? {}
   )) {
-    console.log({ id, functionId });
     const route = buildManifest.routes[id];
     const { path, rePath } = getPathFromRoute(route, buildManifest.routes);
-    console.log({ path, rePath });
 
     // If the route is a pathless layout route (at the root level)
     // and doesn't have any sub-routes, then a function should not be created.
