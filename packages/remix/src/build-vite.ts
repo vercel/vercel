@@ -1,5 +1,6 @@
-import { readFileSync, promises as fs } from 'fs';
+import { readFileSync, promises as fs, statSync, existsSync } from 'fs';
 import { basename, dirname, join, relative, sep } from 'path';
+import { isErrnoException } from '@vercel/error-utils';
 import { nodeFileTrace } from '@vercel/nft';
 import {
   BuildResultV2Typical,
@@ -58,7 +59,6 @@ interface RemixBuildResult {
   remixConfig: {
     buildDirectory: string;
     publicPath: string;
-    ssr: boolean;
   };
 }
 
@@ -168,9 +168,66 @@ export const build: BuildV2 = async ({
     entrypointFsDirname,
     '.vercel/remix-build-result.json'
   );
-  const { buildManifest, remixConfig }: RemixBuildResult = JSON.parse(
-    readFileSync(remixBuildResultPath, 'utf8')
-  );
+  let remixBuildResult: RemixBuildResult | undefined;
+  try {
+    const remixBuildResultContents = readFileSync(remixBuildResultPath, 'utf8');
+    remixBuildResult = JSON.parse(remixBuildResultContents);
+  } catch (err: unknown) {
+    if (isErrnoException(err) && err.code === 'ENOENT') {
+      // The project has not configured the `vercelPreset()`
+      // Preset in the "vite.config" file. Attempt to check
+      // for the default build output directory.
+      const buildDirectory = join(entrypointFsDirname, 'build');
+      if (statSync(buildDirectory).isDirectory()) {
+        console.warn('WARN: The `vercelPreset()` Preset was not detected.');
+        remixBuildResult = {
+          buildManifest: {
+            routes: {
+              root: {
+                path: '',
+                id: 'root',
+                file: 'app/root.tsx',
+                config: {},
+              },
+              'routes/_index': {
+                file: 'app/routes/_index.tsx',
+                id: 'routes/_index',
+                index: true,
+                parentId: 'root',
+                config: {},
+              },
+            },
+          },
+          remixConfig: {
+            buildDirectory,
+            publicPath: '/',
+          },
+        };
+        // Detect if a server build exists (won't be the case when `ssr: false`)
+        const serverPath = 'build/server/index.js';
+        if (existsSync(join(entrypointFsDirname, serverPath))) {
+          remixBuildResult.buildManifest.routeIdToServerBundleId = {
+            'routes/_index': '',
+          };
+          remixBuildResult.buildManifest.serverBundles = {
+            '': {
+              id: '',
+              file: serverPath,
+              config: {},
+            },
+          };
+        }
+      }
+    }
+  }
+
+  if (!remixBuildResult) {
+    throw new Error(
+      'Could not determine build output directory. Please configure the `vercelPreset()` Preset from the `@vercel/remix` npm package'
+    );
+  }
+
+  const { buildManifest, remixConfig } = remixBuildResult;
 
   const staticDir = join(remixConfig.buildDirectory, 'client');
   const serverBundles = Object.values(buildManifest.serverBundles ?? {});
@@ -222,8 +279,10 @@ export const build: BuildV2 = async ({
   for (const [id, functionId] of Object.entries(
     buildManifest.routeIdToServerBundleId ?? {}
   )) {
+    console.log({ id, functionId });
     const route = buildManifest.routes[id];
     const { path, rePath } = getPathFromRoute(route, buildManifest.routes);
+    console.log({ path, rePath });
 
     // If the route is a pathless layout route (at the root level)
     // and doesn't have any sub-routes, then a function should not be created.
