@@ -1570,43 +1570,46 @@ export async function getPageLambdaGroups({
       opts = { ...vercelConfigOpts, ...opts };
     }
 
-    let matchingGroup = groups.find(group => {
-      const matches =
-        !experimentalAllowBundling &&
-        group.maxDuration === opts.maxDuration &&
-        group.memory === opts.memory &&
-        group.isPrerenders === isPrerenderRoute &&
-        group.isExperimentalPPR === isExperimentalPPR;
+    let matchingGroup = experimentalAllowBundling
+      ? undefined
+      : groups.find(group => {
+          const matches =
+            group.maxDuration === opts.maxDuration &&
+            group.memory === opts.memory &&
+            group.isPrerenders === isPrerenderRoute &&
+            group.isExperimentalPPR === isExperimentalPPR;
 
-      if (matches) {
-        let newTracedFilesSize = group.pseudoLayerBytes;
-        let newTracedFilesUncompressedSize = group.pseudoLayerUncompressedBytes;
+          if (matches) {
+            let newTracedFilesSize = group.pseudoLayerBytes;
+            let newTracedFilesUncompressedSize =
+              group.pseudoLayerUncompressedBytes;
 
-        for (const newPage of newPages) {
-          Object.keys(pageTraces[newPage] || {}).map(file => {
-            if (!group.pseudoLayer[file]) {
-              const item = tracedPseudoLayer[file] as PseudoFile;
+            for (const newPage of newPages) {
+              Object.keys(pageTraces[newPage] || {}).map(file => {
+                if (!group.pseudoLayer[file]) {
+                  const item = tracedPseudoLayer[file] as PseudoFile;
 
-              newTracedFilesSize += item.compBuffer?.byteLength || 0;
-              newTracedFilesUncompressedSize += item.uncompressedSize || 0;
+                  newTracedFilesSize += item.compBuffer?.byteLength || 0;
+                  newTracedFilesUncompressedSize += item.uncompressedSize || 0;
+                }
+              });
+              newTracedFilesSize +=
+                compressedPages[newPage].compBuffer.byteLength;
+              newTracedFilesUncompressedSize +=
+                compressedPages[newPage].uncompressedSize;
             }
-          });
-          newTracedFilesSize += compressedPages[newPage].compBuffer.byteLength;
-          newTracedFilesUncompressedSize +=
-            compressedPages[newPage].uncompressedSize;
-        }
 
-        const underUncompressedLimit =
-          newTracedFilesUncompressedSize <
-          MAX_UNCOMPRESSED_LAMBDA_SIZE - LAMBDA_RESERVED_UNCOMPRESSED_SIZE;
-        const underCompressedLimit =
-          newTracedFilesSize <
-          lambdaCompressedByteLimit - LAMBDA_RESERVED_COMPRESSED_SIZE;
+            const underUncompressedLimit =
+              newTracedFilesUncompressedSize <
+              MAX_UNCOMPRESSED_LAMBDA_SIZE - LAMBDA_RESERVED_UNCOMPRESSED_SIZE;
+            const underCompressedLimit =
+              newTracedFilesSize <
+              lambdaCompressedByteLimit - LAMBDA_RESERVED_COMPRESSED_SIZE;
 
-        return underUncompressedLimit && underCompressedLimit;
-      }
-      return false;
-    });
+            return underUncompressedLimit && underCompressedLimit;
+          }
+          return false;
+        });
 
     if (matchingGroup) {
       matchingGroup.pages.push(page);
