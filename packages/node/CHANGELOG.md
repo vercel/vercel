@@ -1,5 +1,11 @@
 # @vercel/node
 
+## 3.0.20
+
+### Patch Changes
+
+- bump `@vercel/nft@0.26.4` ([#11155](https://github.com/vercel/vercel/pull/11155))
+
 ## 3.0.19
 
 ### Patch Changes
