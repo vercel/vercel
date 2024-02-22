@@ -186,9 +186,9 @@ export async function serverBuild({
 }): Promise<BuildResult> {
   lambdaPages = Object.assign({}, lambdaPages, lambdaAppPaths);
 
-  const experimentalAllowBundling = Boolean(
-    process.env.NEXT_EXPERIMENTAL_FUNCTION_BUNDLING
-  );
+  const experimentalAllowBundling =
+    true || Boolean(process.env.NEXT_EXPERIMENTAL_FUNCTION_BUNDLING);
+  console.log({ experimentalAllowBundling });
 
   const lambdas: { [key: string]: Lambda } = {};
   const prerenders: { [key: string]: Prerender } = {};
