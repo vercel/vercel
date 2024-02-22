@@ -511,7 +511,7 @@ export const build: BuildV2 = async ({
     entryPath,
     outputDirectory
   );
-  const omittedPrerenderRoutes = new Set(
+  const omittedPrerenderRoutes: ReadonlySet<string> = new Set(
     Object.keys(prerenderManifest.omittedRoutes)
   );
 

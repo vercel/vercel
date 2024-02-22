@@ -150,7 +150,7 @@ export async function serverBuild({
   pagesDir: string;
   baseDir: string;
   canUsePreviewMode: boolean;
-  omittedPrerenderRoutes: Set<string>;
+  omittedPrerenderRoutes: ReadonlySet<string>;
   localePrefixed404: boolean;
   staticPages: { [key: string]: FileFsRef };
   lambdaAppPaths: { [key: string]: FileFsRef };
@@ -363,7 +363,7 @@ export async function serverBuild({
     experimentalPPRRoutes.add(route);
   }
 
-  const prerenderRoutes = new Set<string>([
+  const prerenderRoutes: ReadonlySet<string> = new Set<string>([
     ...(canUsePreviewMode ? omittedPrerenderRoutes : []),
     ...Object.keys(prerenderManifest.blockingFallbackRoutes),
     ...Object.keys(prerenderManifest.fallbackRoutes),
@@ -771,7 +771,7 @@ export async function serverBuild({
       .filter(Boolean) as string[];
 
     let traceResult: NodeFileTraceResult | undefined;
-    let parentFilesMap: Map<string, Set<string>> | undefined;
+    let parentFilesMap: ReadonlyMap<string, Set<string>> | undefined;
 
     if (pathsToTrace.length > 0) {
       traceResult = await nodeFileTrace(pathsToTrace, {

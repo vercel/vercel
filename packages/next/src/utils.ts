@@ -308,14 +308,14 @@ export async function getRoutesManifest(
 export async function getDynamicRoutes(
   entryPath: string,
   entryDirectory: string,
-  dynamicPages: string[],
+  dynamicPages: ReadonlyArray<string>,
   isDev?: boolean,
   routesManifest?: RoutesManifest,
-  omittedRoutes?: Set<string>,
+  omittedRoutes?: ReadonlySet<string>,
   canUsePreviewMode?: boolean,
   bypassToken?: string,
   isServerMode?: boolean,
-  dynamicMiddlewareRouteMap?: Map<string, RouteWithSrc>,
+  dynamicMiddlewareRouteMap?: ReadonlyMap<string, RouteWithSrc>,
   experimentalPPR?: boolean
 ): Promise<RouteWithSrc[]> {
   if (routesManifest) {
@@ -443,7 +443,9 @@ export async function getDynamicRoutes(
   let getRouteRegex: ((pageName: string) => { re: RegExp }) | undefined =
     undefined;
 
-  let getSortedRoutes: ((normalizedPages: string[]) => string[]) | undefined;
+  let getSortedRoutes:
+    | ((normalizedPages: ReadonlyArray<string>) => string[])
+    | undefined;
 
   try {
     const resolved = require_.resolve('next-server/dist/lib/router/utils', {
@@ -646,10 +648,10 @@ export function filterStaticPages(
 }
 
 export function getFilesMapFromReasons(
-  fileList: Set<string>,
+  fileList: ReadonlySet<string>,
   reasons: NodeFileTraceReasons,
   ignoreFn?: (file: string, parent?: string) => boolean
-) {
+): ReadonlyMap<string, Set<string>> {
   // this uses the reasons tree to collect files specific to a
   // certain parent allowing us to not have to trace each parent
   // separately
@@ -1365,7 +1367,7 @@ async function getSourceFilePathFromPage({
 }: {
   workPath: string;
   page: string;
-  pageExtensions?: string[];
+  pageExtensions?: ReadonlyArray<string>;
 }) {
   const usesSrcDir = await usesSrcDirectory(workPath);
   const extensionsToTry = pageExtensions || ['js', 'jsx', 'ts', 'tsx'];
@@ -1511,9 +1513,9 @@ export async function getPageLambdaGroups({
   entryPath: string;
   config: Config;
   functionsConfigManifest?: FunctionsConfigManifestV1;
-  pages: string[];
-  prerenderRoutes: Set<string>;
-  experimentalPPRRoutes: Set<string> | undefined;
+  pages: ReadonlyArray<string>;
+  prerenderRoutes: ReadonlySet<string>;
+  experimentalPPRRoutes: ReadonlySet<string> | undefined;
   pageTraces: {
     [page: string]: {
       [key: string]: FileFsRef;
@@ -1526,8 +1528,8 @@ export async function getPageLambdaGroups({
   initialPseudoLayer: PseudoLayerResult;
   initialPseudoLayerUncompressed: number;
   lambdaCompressedByteLimit: number;
-  internalPages: string[];
-  pageExtensions?: string[];
+  internalPages: ReadonlyArray<string>;
+  pageExtensions?: ReadonlyArray<string>;
   inversedAppPathManifest?: Record<string, string>;
   experimentalAllowBundling?: boolean;
 }) {
@@ -1913,7 +1915,7 @@ type OnPrerenderRouteArgs = {
   isServerMode: boolean;
   canUsePreviewMode: boolean;
   lambdas: { [key: string]: Lambda };
-  experimentalStreamingLambdaPaths: Map<string, string> | undefined;
+  experimentalStreamingLambdaPaths: ReadonlyMap<string, string> | undefined;
   prerenders: { [key: string]: Prerender | File };
   pageLambdaMap: { [key: string]: string };
   routesManifest?: RoutesManifest;
@@ -2828,7 +2830,7 @@ export async function getMiddlewareBundle({
   appPathRoutesManifest: Record<string, string>;
 }): Promise<{
   staticRoutes: Route[];
-  dynamicRouteMap: Map<string, RouteWithSrc>;
+  dynamicRouteMap: ReadonlyMap<string, RouteWithSrc>;
   edgeFunctions: Record<string, EdgeFunction>;
 }> {
   const middlewareManifest = await getMiddlewareManifest(
@@ -3307,7 +3309,7 @@ export async function getServerlessPages(params: {
           glob('**/route.js', appDir),
           glob('**/_not-found.js', appDir),
         ]).then(items => Object.assign(...items))
-      : Promise.resolve({}),
+      : Promise.resolve({} as Record<string, FileFsRef>),
     getMiddlewareManifest(params.entryPath, params.outputDirectory),
   ]);
 
