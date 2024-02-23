@@ -269,10 +269,11 @@ export async function serverBuild({
     nextVersion,
     CORRECT_MIDDLEWARE_ORDER_VERSION
   );
-  const isCorrectManifests = semver.gte(
-    nextVersion,
-    CORRECTED_MANIFESTS_VERSION
-  );
+  // experimental bundling prevents filtering manifests
+  // as we don't know what to filter by at this stage
+  const isCorrectManifests =
+    !experimentalAllowBundling &&
+    semver.gte(nextVersion, CORRECTED_MANIFESTS_VERSION);
 
   let hasStatic500 = !!staticPages[path.posix.join(entryDirectory, '500')];
 
