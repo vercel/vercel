@@ -58,7 +58,6 @@ interface RemixBuildResult {
   };
   remixConfig: {
     buildDirectory: string;
-    publicPath: string;
   };
 }
 
@@ -202,7 +201,6 @@ export const build: BuildV2 = async ({
         },
         remixConfig: {
           buildDirectory,
-          publicPath: '/',
         },
       };
       // Detect if a server build exists (won't be the case when `ssr: false`)
@@ -268,7 +266,7 @@ export const build: BuildV2 = async ({
   const output: BuildResultV2Typical['output'] = staticFiles;
   const routes: any[] = [
     {
-      src: `^/${remixConfig.publicPath.replace(/^\/|\/$/g, '')}/(.*)$`,
+      src: `^/assets/(.*)$`,
       headers: { 'cache-control': 'public, max-age=31536000, immutable' },
       continue: true,
     },
