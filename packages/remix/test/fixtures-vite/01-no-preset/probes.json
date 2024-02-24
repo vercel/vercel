@@ -1,6 +1,10 @@
 {
   "probes": [
-    { "path": "/", "mustContain": "Welcome to Remix" },
+    {
+      "path": "/",
+      "mustContain": "Welcome to Remix",
+      "logMustContain": "WARN: The `vercelPreset()` Preset was not detected."
+    },
     {
       "path": "/does-not-exist",
       "status": 404,

@@ -1,0 +1,97 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "mustContain": "Home Page"
+    },
+    {
+      "path": "/about",
+      "mustContain": "About Page"
+    },
+    {
+      "path": "/concerts/trending",
+      "mustContain": "ConcertsTrending Page"
+    },
+    {
+      "path": "/concerts/trending",
+      "mustContain": "ConcertsTrending Page"
+    },
+    {
+      "path": "/movies/avatar",
+      "mustContain": "MoviesCommonMoviename Page"
+    },
+    {
+      "path": "/movies/trending",
+      "mustContain": "MoviesTrending Page"
+    },
+    {
+      "path": "/actors",
+      "mustContain": "Actorsindex Page"
+    },
+    {
+      "path": "/actors/morgan-freeman",
+      "mustContain": "ActorsCommonActorname Page"
+    },
+    {
+      "path": "/actors/trending",
+      "mustContain": "ActorsTrending Page"
+    },
+    {
+      "path": "/actors/favourites",
+      "mustContain": "ActorsFavourites Page"
+    },
+    {
+      "path": "/login",
+      "mustContain": "authLogin Page"
+    },
+    {
+      "path": "/register",
+      "mustContain": "authRegister Page"
+    },
+    {
+      "path": "/products/fr",
+      "mustContain": "ProductsPage"
+    },
+    {
+      "path": "/products/en/american-flag-speedo",
+      "mustContain": "ProductPage"
+    },
+    {
+      "path": "/products/fr/categories",
+      "mustContain": "Product Categories Page"
+    },
+    {
+      "path": "/files",
+      "mustContain": "Files Generic Page"
+    },
+    {
+      "path": "/files/12345",
+      "mustContain": "Files Generic Page"
+    },
+    {
+      "path": "/sitemap.xml",
+      "mustContain": "routes/sitemap[.]xml.tsx"
+    },
+    {
+      "path": "/sitemap2.xml",
+      "mustContain": "routes/[sitemap2.xml].tsx"
+    },
+    {
+      "path": "/weird-url/_index",
+      "mustContain": "routes/weird-url.[_index].tsx"
+    },
+    {
+      "path": "/dolla-bills-$",
+      "mustContain": "routes/dolla-bills-[$].tsx"
+    },
+    {
+      "path": "/[so-weird]/",
+      "mustContain": "routes/[[so-weird]].tsx"
+    },
+    {
+      "path": "/does-not-exist",
+      "status": 404,
+      "mustContain": "Not Found"
+    }
+  ]
+}

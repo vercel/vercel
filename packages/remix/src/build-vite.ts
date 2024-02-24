@@ -290,22 +290,11 @@ export const build: BuildV2 = async ({
     }
 
     const func = functionsMap.get(functionId);
-
     if (!func) {
       throw new Error(`Could not determine server bundle for "${id}"`);
     }
 
-    output[path] =
-      func instanceof EdgeFunction
-        ? // `EdgeFunction` currently requires the "name" property to be set.
-          // Ideally this property will be removed, at which point we can
-          // return the same `edgeFunction` instance instead of creating a
-          // new one for each page.
-          new EdgeFunction({
-            ...func,
-            name: path,
-          })
-        : func;
+    output[path] = func;
 
     // If this is a dynamic route then add a Vercel route
     const re = getRegExpFromPath(rePath);
@@ -347,13 +336,12 @@ async function createRenderNodeFunction(
 
     // Copy the `server-node.mjs` file into the "build" directory
     const nodeServerSrc = await nodeServerSrcPromise;
-    await writeEntrypointFile(
+    await fs.writeFile(
       handlerPath,
       nodeServerSrc.replace(
         '@remix-run/dev/server-build',
         `./${baseServerBuildPath}.js`
-      ),
-      rootDir
+      )
     );
   }
 
@@ -410,13 +398,12 @@ async function createRenderEdgeFunction(
 
     // Copy the `server-edge.mjs` file into the "build" directory
     const edgeServerSrc = await edgeServerSrcPromise;
-    await writeEntrypointFile(
+    await fs.writeFile(
       handlerPath,
       edgeServerSrc.replace(
         '@remix-run/dev/server-build',
         `./${baseServerBuildPath}.js`
-      ),
-      rootDir
+      )
     );
   }
 
@@ -484,24 +471,4 @@ async function createRenderEdgeFunction(
   });
 
   return fn;
-}
-
-async function writeEntrypointFile(
-  path: string,
-  data: string,
-  rootDir: string
-) {
-  try {
-    await fs.writeFile(path, data);
-  } catch (err: any) {
-    if (err.code === 'ENOENT') {
-      throw new Error(
-        `The "${relative(
-          rootDir,
-          dirname(path)
-        )}" directory does not exist. Please contact support at https://vercel.com/help.`
-      );
-    }
-    throw err;
-  }
 }
