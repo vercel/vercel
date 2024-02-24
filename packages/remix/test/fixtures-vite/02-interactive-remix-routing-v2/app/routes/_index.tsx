@@ -3,7 +3,7 @@ import generateMeta from "~/utils/generateMeta";
 import type { HandleCustom } from "~/components/Breadcrumbs/Breadcrumbs";
 
 export const config = {
-  name: "routes/_index.tsx"
+  group: "basic"
 };
 
 export const handle: HandleCustom = {

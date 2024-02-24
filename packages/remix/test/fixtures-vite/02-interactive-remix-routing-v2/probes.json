@@ -13,8 +13,8 @@
       "mustContain": "ConcertsTrending Page"
     },
     {
-      "path": "/concerts/trending",
-      "mustContain": "ConcertsTrending Page"
+      "path": "/concerts/salt-lake-city",
+      "mustContain": "ConcertsSaltLakeCity Page"
     },
     {
       "path": "/movies/avatar",

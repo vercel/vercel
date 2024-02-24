@@ -3,7 +3,7 @@ import generateMeta from "~/utils/generateMeta";
 import type { HandleCustom } from "~/components/Breadcrumbs/Breadcrumbs";
 
 export const config = {
-  name: "routes/products.($lang).categories.tsx"
+  group: "products"
 };
 
 export const handle: HandleCustom = {

@@ -3,7 +3,7 @@ import generateMeta from "~/utils/generateMeta";
 import type { HandleCustom } from "~/components/Breadcrumbs/Breadcrumbs";
 
 export const config = {
-  name: "routes/weird-url.[_index].tsx"
+  group: "special"
 };
 
 export const handle: HandleCustom = {

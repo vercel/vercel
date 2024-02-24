@@ -3,7 +3,7 @@ import generateMeta from "~/utils/generateMeta";
 import type { HandleCustom } from "~/components/Breadcrumbs/Breadcrumbs";
 
 export const config = {
-  name: "routes/dolla-bills-[$].tsx"
+  group: "special"
 };
 
 export const handle: HandleCustom = {

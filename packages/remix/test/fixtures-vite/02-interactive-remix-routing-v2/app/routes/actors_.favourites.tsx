@@ -3,7 +3,7 @@ import generateMeta from "~/utils/generateMeta";
 import type { HandleCustom } from "~/components/Breadcrumbs/Breadcrumbs";
 
 export const config = {
-  name: "routes/actors_.favourites.tsx"
+  group: "actors"
 };
 
 export const handle: HandleCustom = {

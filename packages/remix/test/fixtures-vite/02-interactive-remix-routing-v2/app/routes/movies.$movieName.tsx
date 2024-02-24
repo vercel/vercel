@@ -3,7 +3,7 @@ import generateMeta from "~/utils/generateMeta";
 import type { HandleCustom } from "~/components/Breadcrumbs/Breadcrumbs";
 
 export const config = {
-  name: "routes/movies.$movieName.tsx"
+  group: "movies"
 };
 
 export const handle: HandleCustom = {

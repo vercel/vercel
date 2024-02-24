@@ -3,7 +3,7 @@ import generateMeta from "~/utils/generateMeta";
 import type { HandleCustom } from "~/components/Breadcrumbs/Breadcrumbs";
 
 export const config = {
-  name: "routes/_auth.login.tsx"
+  group: "auth"
 };
 
 export const handle: HandleCustom = {
