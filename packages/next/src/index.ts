@@ -2143,6 +2143,7 @@ export const build: BuildV2 = async ({
       appPathRoutesManifest,
       isSharedLambdas,
       canUsePreviewMode,
+      omittedPrerenderRoutes,
     });
 
     Object.keys(prerenderManifest.staticRoutes).forEach(route =>
