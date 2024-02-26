@@ -89,8 +89,8 @@ importers:
         specifier: 29.1.0
         version: 29.1.0(@babel/core@7.5.0)(esbuild@0.19.2)(jest@29.5.0)(typescript@4.9.5)
       turbo:
-        specifier: 1.12.3
-        version: 1.12.3
+        specifier: 1.12.4
+        version: 1.12.4
       typescript:
         specifier: 4.9.5
         version: 4.9.5
@@ -322,19 +322,19 @@ importers:
         specifier: 1.0.2
         version: link:../hydrogen
       '@vercel/next':
-        specifier: 4.1.1
+        specifier: 4.1.2
         version: link:../next
       '@vercel/node':
-        specifier: 3.0.19
+        specifier: 3.0.20
         version: link:../node
       '@vercel/python':
         specifier: 4.1.1
         version: link:../python
       '@vercel/redwood':
-        specifier: 2.0.7
+        specifier: 2.0.8
         version: link:../redwood
       '@vercel/remix-builder':
-        specifier: 2.0.19
+        specifier: 2.0.20
         version: link:../remix
       '@vercel/ruby':
         specifier: 2.0.5
@@ -1082,8 +1082,8 @@ importers:
   packages/next:
     dependencies:
       '@vercel/nft':
-        specifier: 0.26.3
-        version: 0.26.3
+        specifier: 0.26.4
+        version: 0.26.4
     devDependencies:
       '@types/aws-lambda':
         specifier: 8.10.19
@@ -1221,8 +1221,8 @@ importers:
         specifier: 2.0.2
         version: link:../error-utils
       '@vercel/nft':
-        specifier: 0.26.3
-        version: 0.26.3
+        specifier: 0.26.4
+        version: 0.26.4
       '@vercel/static-config':
         specifier: 3.0.0
         version: link:../static-config
@@ -1348,8 +1348,8 @@ importers:
   packages/redwood:
     dependencies:
       '@vercel/nft':
-        specifier: 0.26.3
-        version: 0.26.3
+        specifier: 0.26.4
+        version: 0.26.4
       '@vercel/routing-utils':
         specifier: 3.1.0
         version: link:../routing-utils
@@ -1382,8 +1382,8 @@ importers:
   packages/remix:
     dependencies:
       '@vercel/nft':
-        specifier: 0.26.3
-        version: 0.26.3
+        specifier: 0.26.4
+        version: 0.26.4
       '@vercel/static-config':
         specifier: 3.0.0
         version: link:../static-config
@@ -1392,8 +1392,8 @@ importers:
         version: 12.0.0
     devDependencies:
       '@remix-run/dev':
-        specifier: npm:@vercel/remix-run-dev@2.5.1
-        version: /@vercel/remix-run-dev@2.5.1(@types/node@14.18.33)(typescript@4.9.5)
+        specifier: npm:@vercel/remix-run-dev@2.7.2
+        version: /@vercel/remix-run-dev@2.7.2(@types/node@14.18.33)(typescript@4.9.5)
       '@types/jest':
         specifier: 27.5.1
         version: 27.5.1
@@ -3565,8 +3565,8 @@ packages:
       tslib: 2.5.0
     dev: true
 
-  /@remix-run/node@2.5.1(typescript@4.9.5):
-    resolution: {integrity: sha512-UI442xzHAiokmsfrYOabMQB024+IizmRhZBGcNa42QjJWsNqogy1bNwYhzEpB6oQEB1wF3vwOKK1AD1/iYA/9A==}
+  /@remix-run/node@2.7.2(typescript@4.9.5):
+    resolution: {integrity: sha512-smIWI9kNGDnY361WlDOTwxPfUw/KHcS7PCLjHlM/omx3ETD1Y2dc4Rt82LSJt0qsPSPA72ZOww08NoX+YGBvyQ==}
     engines: {node: '>=18.0.0'}
     peerDependencies:
       typescript: ^5.1.0
@@ -3574,7 +3574,7 @@ packages:
       typescript:
         optional: true
     dependencies:
-      '@remix-run/server-runtime': 2.5.1(typescript@4.9.5)
+      '@remix-run/server-runtime': 2.7.2(typescript@4.9.5)
       '@remix-run/web-fetch': 4.4.2
       '@remix-run/web-file': 3.1.0
       '@remix-run/web-stream': 1.1.0
@@ -3585,13 +3585,13 @@ packages:
       typescript: 4.9.5
     dev: true
 
-  /@remix-run/router@1.14.2:
-    resolution: {integrity: sha512-ACXpdMM9hmKZww21yEqWwiLws/UPLhNKvimN8RrYSqPSvB3ov7sLvAcfvaxePeLvccTQKGdkDIhLYApZVDFuKg==}
+  /@remix-run/router@1.15.1:
+    resolution: {integrity: sha512-zcU0gM3z+3iqj8UX45AmWY810l3oUmXM7uH4dt5xtzvMhRtYVhKGOmgOd1877dOPPepfCjUv57w+syamWIYe7w==}
     engines: {node: '>=14.0.0'}
     dev: true
 
-  /@remix-run/server-runtime@2.5.1(typescript@4.9.5):
-    resolution: {integrity: sha512-bP31jrVbYTJ2eP5sxZfDgT1YyXzDlzsfMxGYVzpaoLCYDJAekq1QpHLLXKGOXhmyb46O9rdhlQKfwD6WpAxr3A==}
+  /@remix-run/server-runtime@2.7.2(typescript@4.9.5):
+    resolution: {integrity: sha512-PGD1SPJttlYI3Nwe8ABk53gHCueWfZ2NOsKx7utD/lKRPFW2BqADpokzQXSzy4WTpk4drAmlagobGVIVH66Tmg==}
     engines: {node: '>=18.0.0'}
     peerDependencies:
       typescript: ^5.1.0
@@ -3599,7 +3599,7 @@ packages:
       typescript:
         optional: true
     dependencies:
-      '@remix-run/router': 1.14.2
+      '@remix-run/router': 1.15.1
       '@types/cookie': 0.6.0
       '@web3-storage/multipart-parser': 1.0.0
       cookie: 0.6.0
@@ -5393,8 +5393,8 @@ packages:
       - supports-color
     dev: false
 
-  /@vercel/nft@0.26.3:
-    resolution: {integrity: sha512-h1z/NN9ppS4YOKwSgBoopJlhm7tS2Qb/9Ld1HXjDpvvTE7mY0xVD8nllXs+RihD9uTGJISOIMzp18Eg0EApaMA==}
+  /@vercel/nft@0.26.4:
+    resolution: {integrity: sha512-j4jCOOXke2t8cHZCIxu1dzKLHLcFmYzC3yqAK6MfZznOL1QIJKd0xcFsXK3zcqzU7ScsE2zWkiMMNHGMHgp+FA==}
     engines: {node: '>=16'}
     hasBin: true
     dependencies:
@@ -5415,20 +5415,23 @@ packages:
       - supports-color
     dev: false
 
-  /@vercel/remix-run-dev@2.5.1(@types/node@14.18.33)(typescript@4.9.5):
-    resolution: {integrity: sha512-1GyE8L+jGOKGRBvyiQi4b0VnwrhTSf6fS+Tcwt/JqIcudW0ZaQgcDP1x3qkXUR68TPLapk4V5cacde7h57ICCA==}
+  /@vercel/remix-run-dev@2.7.2(@types/node@14.18.33)(typescript@4.9.5):
+    resolution: {integrity: sha512-l/iuA8WwHTbcIvVpSikaug1Q0LBENQcg/XE00jjmyWjZQaRyTr+gx+OyJ0y6OH0UifldPXsAlMDZdJApkxCdqQ==}
     engines: {node: '>=18.0.0'}
     hasBin: true
     peerDependencies:
-      '@remix-run/serve': ^2.5.1
+      '@remix-run/serve': ^2.7.2
       typescript: ^5.1.0
-      vite: ^5.0.0
+      vite: ^5.1.0
+      wrangler: ^3.28.2
     peerDependenciesMeta:
       '@remix-run/serve':
         optional: true
       typescript:
         optional: true
       vite:
+        optional: true
+      wrangler:
         optional: true
     dependencies:
       '@babel/core': 7.21.8
@@ -5441,9 +5444,9 @@ packages:
       '@babel/types': 7.23.0
       '@mdx-js/mdx': 2.3.0
       '@npmcli/package-json': 4.0.1
-      '@remix-run/node': 2.5.1(typescript@4.9.5)
-      '@remix-run/router': 1.14.2
-      '@remix-run/server-runtime': 2.5.1(typescript@4.9.5)
+      '@remix-run/node': 2.7.2(typescript@4.9.5)
+      '@remix-run/router': 1.15.1
+      '@remix-run/server-runtime': 2.7.2(typescript@4.9.5)
       '@types/mdx': 2.0.7
       '@vanilla-extract/integration': 6.2.1(@types/node@14.18.33)
       arg: 5.0.2
@@ -14654,64 +14657,64 @@ packages:
       safe-buffer: 5.2.1
     dev: true
 
-  /turbo-darwin-64@1.12.3:
-    resolution: {integrity: sha512-dDglIaux+A4jOnB9CDH69sujmrnuLJLrKw1t3J+if6ySlFuxSwC++gDq9TVuOZo2+S7lFkGh+x5ytn3wp+jE8Q==}
+  /turbo-darwin-64@1.12.4:
+    resolution: {integrity: sha512-dBwFxhp9isTa9RS/fz2gDVk5wWhKQsPQMozYhjM7TT4jTrnYn0ZJMzr7V3B/M/T8QF65TbniW7w1gtgxQgX5Zg==}
     cpu: [x64]
     os: [darwin]
     requiresBuild: true
     dev: true
     optional: true
 
-  /turbo-darwin-arm64@1.12.3:
-    resolution: {integrity: sha512-5TqqeujEyHMoVUWGzSzUl5ERSg7HDCdbU3gBs5ziWTpFRpeJ/+Y15kYyZJcMQcubRIH3Y1hL/yA5IhlGdgXOMA==}
+  /turbo-darwin-arm64@1.12.4:
+    resolution: {integrity: sha512-1Uo5iI6xsJ1j9ObsqxYRsa3W26mEbUe6fnj4rQYV6kDaqYD54oAMJ6hM53q9rB8JvFxwdrUXGp3PwTw9A0qqkA==}
     cpu: [arm64]
     os: [darwin]
     requiresBuild: true
     dev: true
     optional: true
 
-  /turbo-linux-64@1.12.3:
-    resolution: {integrity: sha512-yUreU+/gq4vlBtcdyfjz7slwz4zM1RG8sSXvyHmAS+QXqSrGkegg4qLl2fRbv/c3EyA/XbfcZuD6tcrXkejr6g==}
+  /turbo-linux-64@1.12.4:
+    resolution: {integrity: sha512-ONg2aSqKP7LAQOg7ysmU5WpEQp4DGNxSlAiR7um+LKtbmC/UxogbR5+T+Uuq6zGuQ5kJyKjWJ4NhtvUswOqBsA==}
     cpu: [x64]
     os: [linux]
     requiresBuild: true
     dev: true
     optional: true
 
-  /turbo-linux-arm64@1.12.3:
-    resolution: {integrity: sha512-XRwAsp2eRSqZmaMVNrmHoKqofeJMuD87zmefZLTRAObh38hIwKgyl2QRsJIbteob5RN77yFbv3lAJ36UIY5h7w==}
+  /turbo-linux-arm64@1.12.4:
+    resolution: {integrity: sha512-9FPufkwdgfIKg/9jj87Cdtftw8o36y27/S2vLN7FTR2pp9c0MQiTBOLVYadUr1FlShupddmaMbTkXEhyt9SdrA==}
     cpu: [arm64]
     os: [linux]
     requiresBuild: true
     dev: true
     optional: true
 
-  /turbo-windows-64@1.12.3:
-    resolution: {integrity: sha512-CPnRfnUCtmFeShOtUdMCthySjmyHaoTyh9JueiYFvtCNeO3WfDMj63dpOQstQWHdJFYmIrIGfhAclcds9ePQYA==}
+  /turbo-windows-64@1.12.4:
+    resolution: {integrity: sha512-2mOtxHW5Vjh/5rDVu/aFwsMzI+chs8XcEuJHlY1sYOpEymYTz+u6AXbnzRvwZFMrLKr7J7fQOGl+v96sLKbNdA==}
     cpu: [x64]
     os: [win32]
     requiresBuild: true
     dev: true
     optional: true
 
-  /turbo-windows-arm64@1.12.3:
-    resolution: {integrity: sha512-cYA/wlzvp4vlCNHYJ2AjNS3FLXWwUC/5CJompBkTeKFFB6AviE/iLkbIhFikCVSNXZk/3AGanpMUXIkt3bdlwg==}
+  /turbo-windows-arm64@1.12.4:
+    resolution: {integrity: sha512-nOY5wae9qnxPOpT1fRuYO0ks6dTwpKMPV6++VkDkamFDLFHUDVM/9kmD2UTeh1yyrKnrZksbb9zmShhmfj1wog==}
     cpu: [arm64]
     os: [win32]
     requiresBuild: true
     dev: true
     optional: true
 
-  /turbo@1.12.3:
-    resolution: {integrity: sha512-a6q8I0TK9ohACYbkmxzG/JYPuDC4VCvfmXLTlf321qQ4BIAhoyaOj/O2g+zJ6L1vNYnZ82G4LrbMfgLLngbLsg==}
+  /turbo@1.12.4:
+    resolution: {integrity: sha512-yUJ7elEUSToiGwFZogXpYKJpQ0BvaMbkEuQECIWtkBLcmWzlMOt6bActsIm29oN83mRU0WbzGt4e8H1KHWedhg==}
     hasBin: true
     optionalDependencies:
-      turbo-darwin-64: 1.12.3
-      turbo-darwin-arm64: 1.12.3
-      turbo-linux-64: 1.12.3
-      turbo-linux-arm64: 1.12.3
-      turbo-windows-64: 1.12.3
-      turbo-windows-arm64: 1.12.3
+      turbo-darwin-64: 1.12.4
+      turbo-darwin-arm64: 1.12.4
+      turbo-linux-64: 1.12.4
+      turbo-linux-arm64: 1.12.4
+      turbo-windows-64: 1.12.4
+      turbo-windows-arm64: 1.12.4
     dev: true
 
   /tweetnacl@0.14.5:

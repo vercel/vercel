@@ -151,7 +151,7 @@ export async function serverBuild({
   pagesDir: string;
   baseDir: string;
   canUsePreviewMode: boolean;
-  omittedPrerenderRoutes: Set<string>;
+  omittedPrerenderRoutes: ReadonlySet<string>;
   localePrefixed404: boolean;
   staticPages: { [key: string]: FileFsRef };
   lambdaAppPaths: { [key: string]: FileFsRef };
@@ -185,6 +185,10 @@ export async function serverBuild({
   variantsManifest: VariantsManifestLegacy | null;
 }): Promise<BuildResult> {
   lambdaPages = Object.assign({}, lambdaPages, lambdaAppPaths);
+
+  const experimentalAllowBundling = Boolean(
+    process.env.NEXT_EXPERIMENTAL_FUNCTION_BUNDLING
+  );
 
   const lambdas: { [key: string]: Lambda } = {};
   const prerenders: { [key: string]: Prerender } = {};
@@ -266,10 +270,11 @@ export async function serverBuild({
     nextVersion,
     CORRECT_MIDDLEWARE_ORDER_VERSION
   );
-  const isCorrectManifests = semver.gte(
-    nextVersion,
-    CORRECTED_MANIFESTS_VERSION
-  );
+  // experimental bundling prevents filtering manifests
+  // as we don't know what to filter by at this stage
+  const isCorrectManifests =
+    !experimentalAllowBundling &&
+    semver.gte(nextVersion, CORRECTED_MANIFESTS_VERSION);
 
   let hasStatic500 = !!staticPages[path.posix.join(entryDirectory, '500')];
 
@@ -360,7 +365,7 @@ export async function serverBuild({
     experimentalPPRRoutes.add(route);
   }
 
-  const prerenderRoutes = new Set<string>([
+  const prerenderRoutes: ReadonlySet<string> = new Set<string>([
     ...(canUsePreviewMode ? omittedPrerenderRoutes : []),
     ...Object.keys(prerenderManifest.blockingFallbackRoutes),
     ...Object.keys(prerenderManifest.fallbackRoutes),
@@ -768,7 +773,7 @@ export async function serverBuild({
       .filter(Boolean) as string[];
 
     let traceResult: NodeFileTraceResult | undefined;
-    let parentFilesMap: Map<string, Set<string>> | undefined;
+    let parentFilesMap: ReadonlyMap<string, Set<string>> | undefined;
 
     if (pathsToTrace.length > 0) {
       traceResult = await nodeFileTrace(pathsToTrace, {
@@ -883,6 +888,7 @@ export async function serverBuild({
     const pageExtensions = requiredServerFilesManifest.config?.pageExtensions;
 
     const pageLambdaGroups = await getPageLambdaGroups({
+      experimentalAllowBundling,
       entryPath: projectDir,
       config,
       functionsConfigManifest,
@@ -904,6 +910,7 @@ export async function serverBuild({
     }
 
     const appRouterLambdaGroups = await getPageLambdaGroups({
+      experimentalAllowBundling,
       entryPath: projectDir,
       config,
       functionsConfigManifest,
@@ -922,6 +929,7 @@ export async function serverBuild({
     });
 
     const appRouteHandlersLambdaGroups = await getPageLambdaGroups({
+      experimentalAllowBundling,
       entryPath: projectDir,
       config,
       functionsConfigManifest,
@@ -1163,6 +1171,7 @@ export async function serverBuild({
         maxDuration: group.maxDuration,
         isStreaming: group.isStreaming,
         nextVersion,
+        experimentalAllowBundling,
       };
 
       const lambda = await createLambdaFromPseudoLayers(options);
