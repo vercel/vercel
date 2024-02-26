@@ -59,6 +59,11 @@ interface RemixBuildResult {
   remixConfig: {
     buildDirectory: string;
   };
+  viteConfig?: {
+    build?: {
+      assetsDir: string;
+    };
+  };
 }
 
 export const build: BuildV2 = async ({
@@ -226,14 +231,13 @@ export const build: BuildV2 = async ({
     );
   }
 
-  const { buildManifest, remixConfig } = remixBuildResult;
+  const { buildManifest, remixConfig, viteConfig } = remixBuildResult;
 
   const staticDir = join(remixConfig.buildDirectory, 'client');
   const serverBundles = Object.values(buildManifest.serverBundles ?? {});
 
   const [staticFiles, ...functions] = await Promise.all([
     glob('**', staticDir),
-    //glob('**', remixConfig.assetsBuildDirectory),
     ...serverBundles.map(bundle => {
       if (bundle.config.runtime === 'edge') {
         return createRenderEdgeFunction(
@@ -264,9 +268,10 @@ export const build: BuildV2 = async ({
   }
 
   const output: BuildResultV2Typical['output'] = staticFiles;
+  const assetsDir = viteConfig?.build?.assetsDir || 'assets';
   const routes: any[] = [
     {
-      src: `^/assets/(.*)$`,
+      src: `^/${assetsDir}/(.*)$`,
       headers: { 'cache-control': 'public, max-age=31536000, immutable' },
       continue: true,
     },
