@@ -2407,6 +2407,10 @@ export const onPrerenderRoute =
           );
         }
 
+        // If a source route exists, and it's not listed as an omitted route,
+        // then use the src route as the basis for the experimental streaming
+        // lambda path. If the route doesn't have a source route or it's not
+        // omitted, then use the more specific `routeKey` as the basis.
         if (srcRoute && !omittedPrerenderRoutes.has(srcRoute)) {
           experimentalStreamingLambdaPath =
             experimentalStreamingLambdaPaths.get(
