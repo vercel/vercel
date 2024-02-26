@@ -142,6 +142,7 @@ export async function serverBuild({
   lambdaCompressedByteLimit,
   requiredServerFilesManifest,
   variantsManifest,
+  experimentalPPRRoutes,
 }: {
   appPathRoutesManifest?: Record<string, string>;
   dynamicPages: string[];
@@ -183,6 +184,7 @@ export async function serverBuild({
   prerenderManifest: NextPrerenderedRoutes;
   requiredServerFilesManifest: NextRequiredServerFilesManifest;
   variantsManifest: VariantsManifestLegacy | null;
+  experimentalPPRRoutes: ReadonlySet<string>;
 }): Promise<BuildResult> {
   lambdaPages = Object.assign({}, lambdaPages, lambdaAppPaths);
 
@@ -351,18 +353,6 @@ export async function serverBuild({
 
   if (lambdaPages['404.js']) {
     internalPages.push('404.js');
-  }
-
-  const experimentalPPRRoutes = new Set<string>();
-
-  for (const [route, { experimentalPPR }] of [
-    ...Object.entries(prerenderManifest.staticRoutes),
-    ...Object.entries(prerenderManifest.blockingFallbackRoutes),
-    ...Object.entries(prerenderManifest.fallbackRoutes),
-  ]) {
-    if (!experimentalPPR) continue;
-
-    experimentalPPRRoutes.add(route);
   }
 
   const prerenderRoutes: ReadonlySet<string> = new Set<string>([
@@ -1185,7 +1175,7 @@ export async function serverBuild({
       // lambda for the page for revalidation.
       let revalidate: NodejsLambda | undefined;
       if (isPPR) {
-        if (isPPR && !options.isStreaming) {
+        if (!options.isStreaming) {
           throw new Error("Invariant: PPR lambda isn't streaming");
         }
 
@@ -1342,19 +1332,19 @@ export async function serverBuild({
     middleware.staticRoutes.length > 0 &&
     semver.gte(nextVersion, NEXT_DATA_MIDDLEWARE_RESOLVING_VERSION);
 
-  const dynamicRoutes = await getDynamicRoutes(
+  const dynamicRoutes = await getDynamicRoutes({
     entryPath,
     entryDirectory,
     dynamicPages,
-    false,
+    isDev: false,
     routesManifest,
-    omittedPrerenderRoutes,
+    omittedRoutes: omittedPrerenderRoutes,
     canUsePreviewMode,
-    prerenderManifest.bypassToken || '',
-    true,
-    middleware.dynamicRouteMap,
-    experimental.ppr
-  ).then(arr =>
+    bypassToken: prerenderManifest.bypassToken || '',
+    isServerMode: true,
+    dynamicMiddlewareRouteMap: middleware.dynamicRouteMap,
+    experimentalPPRRoutes,
+  }).then(arr =>
     localizeDynamicRoutes(
       arr,
       dynamicPrefix,
