@@ -4,6 +4,6 @@ import { findConfig } from './utils';
 import type { BuildV2 } from '@vercel/build-utils';
 
 export const build: BuildV2 = opts => {
-  const isVite = findConfig(opts.workPath, 'vite.config', ['.js', '.ts']);
-  return isVite ? buildVite(opts) : buildLegacy(opts);
+  const isLegacy = findConfig(opts.workPath, 'remix.config');
+  return isLegacy ? buildLegacy(opts) : buildVite(opts);
 };
