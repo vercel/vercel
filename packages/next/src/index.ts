@@ -1143,9 +1143,8 @@ export const build: BuildV2 = async ({
     });
 
     /**
-     * Originally, you had to have a `pages/api` route in order to add a preview
-     * mode cookie. This isn't the case with app router, as it can be done
-     * dynamically via a Server Action or a App Route.
+     * This is a detection for preview mode that's required for the pages
+     * router.
      */
     const canUsePreviewMode = Object.keys(pages).some(page =>
       isApiPage(pages[page].fsPath)

@@ -1221,9 +1221,6 @@ export async function serverBuild({
           // perform the initial static shell render.
           lambdas[outputName] = revalidate;
 
-          // If this is an omitted page, them it should be routed to the
-          // specific dynamic route, and not the dynamic one.
-
           // If this isn't an omitted page, then we should add the link from the
           // page to the postpone resume lambda.
           if (!omittedPrerenderRoutes.has(pagePathname)) {
@@ -1321,35 +1318,35 @@ export async function serverBuild({
     omittedPrerenderRoutes,
   });
 
-  const pending: Array<Promise<void>> = [];
+  const prerenderPromises: Array<Promise<void>> = [];
 
-  pending.push(
+  prerenderPromises.push(
     ...Object.keys(prerenderManifest.staticRoutes).map(route =>
       prerenderRoute(route, {})
     )
   );
 
-  pending.push(
+  prerenderPromises.push(
     ...Object.keys(prerenderManifest.fallbackRoutes).map(route =>
       prerenderRoute(route, { isFallback: true })
     )
   );
 
-  pending.push(
+  prerenderPromises.push(
     ...Object.keys(prerenderManifest.blockingFallbackRoutes).map(route =>
       prerenderRoute(route, { isBlocking: true })
     )
   );
 
   if (static404Page && canUsePreviewMode) {
-    pending.push(
+    prerenderPromises.push(
       ...Array.from(omittedPrerenderRoutes).map(route =>
         prerenderRoute(route, { isOmitted: true })
       )
     );
   }
 
-  await Promise.all(pending);
+  await Promise.all(prerenderPromises);
 
   prerenderRoutes.forEach(route => {
     if (experimentalPPRRoutes.has(route)) return;
@@ -1605,7 +1602,7 @@ export async function serverBuild({
     for (const { srcRoute, dataRoute, experimentalPPR } of Object.values(
       prerenderManifest.staticRoutes
     )) {
-      // Only apply this to the routes that are support experimental PPR and
+      // Only apply this to the routes that support experimental PPR and
       // that also have their `dataRoute` and `srcRoute` defined.
       if (!experimentalPPR || !dataRoute || !srcRoute) continue;
 
@@ -1623,7 +1620,7 @@ export async function serverBuild({
       const dataPathnameExists = dataPathname in lambdas;
       if (dataPathnameExists) continue;
 
-      // We requires that the source route has a lambda associated with it. If
+      // We require that the source route has a lambda associated with it. If
       // it doesn't this is an error.
       const srcPathnameExists = srcPathname in lambdas;
       if (!srcPathnameExists) {
