@@ -442,6 +442,20 @@ describe('detectFramework()', () => {
 
     expect(await detectFramework({ fs, frameworkList })).toBe('storybook');
   });
+
+  it('Should detect Remix + Vite as `remix`', async () => {
+    const fs = new VirtualFilesystem({
+      'vite.config.ts': '',
+      'package.json': JSON.stringify({
+        dependencies: {
+          '@remix-run/dev': 'latest',
+          vite: 'latest',
+        },
+      }),
+    });
+
+    expect(await detectFramework({ fs, frameworkList })).toBe('remix');
+  });
 });
 
 describe('detectFrameworks()', () => {
@@ -503,6 +517,7 @@ describe('detectFrameworks()', () => {
       'package.json': JSON.stringify({
         dependencies: {
           '@remix-run/dev': 'latest',
+          vite: 'latest',
         },
       }),
     });
