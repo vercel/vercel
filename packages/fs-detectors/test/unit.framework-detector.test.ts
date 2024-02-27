@@ -497,6 +497,22 @@ describe('detectFrameworks()', () => {
     expect(slugs).toEqual(['nextjs', 'storybook']);
   });
 
+  it('Should detect Remix + Vite as `remix`', async () => {
+    const fs = new VirtualFilesystem({
+      'vite.config.ts': '',
+      'package.json': JSON.stringify({
+        dependencies: {
+          '@remix-run/dev': 'latest',
+        },
+      }),
+    });
+
+    const slugs = (await detectFrameworks({ fs, frameworkList })).map(
+      f => f.slug
+    );
+    expect(slugs).toEqual(['remix']);
+  });
+
   it('Should detect "hydrogen" template as `hydrogen`', async () => {
     const fs = new LocalFileSystemDetector(join(EXAMPLES_DIR, 'hydrogen'));
 
