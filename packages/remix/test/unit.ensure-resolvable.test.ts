@@ -2,7 +2,7 @@ import { join } from 'path';
 import { promises as fs } from 'fs';
 import { ensureResolvable } from '../src/utils';
 
-const FIXTURES_DIR = join(__dirname, 'fixtures');
+const FIXTURES_DIR = join(__dirname, 'fixtures-legacy');
 
 describe('ensureResolvable()', () => {
   it('should create a symlink in the node_modules within `start` with pnpm', async () => {

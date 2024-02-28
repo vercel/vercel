@@ -4,6 +4,7 @@
   "license": "Apache-2.0",
   "main": "./dist/index.js",
   "homepage": "https://vercel.com/docs",
+  "sideEffects": false,
   "repository": {
     "type": "git",
     "url": "https://github.com/vercel/vercel.git",
@@ -13,7 +14,7 @@
     "build": "node ../../utils/build-builder.mjs",
     "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --bail --runInBand",
     "test-unit": "pnpm test test/unit.*test.*",
-    "test-e2e": "pnpm test test/integration.test.ts",
+    "test-e2e": "pnpm test test/integration-*.test.ts",
     "type-check": "tsc --noEmit"
   },
   "files": [
@@ -21,6 +22,7 @@
     "defaults"
   ],
   "dependencies": {
+    "@vercel/error-utils": "2.0.2",
     "@vercel/nft": "0.26.4",
     "@vercel/static-config": "3.0.0",
     "ts-morph": "12.0.0"

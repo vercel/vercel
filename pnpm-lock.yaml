@@ -1381,6 +1381,9 @@ importers:
 
   packages/remix:
     dependencies:
+      '@vercel/error-utils':
+        specifier: 2.0.2
+        version: link:../error-utils
       '@vercel/nft':
         specifier: 0.26.4
         version: 0.26.4
