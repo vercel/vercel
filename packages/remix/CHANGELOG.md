@@ -1,5 +1,11 @@
 # @vercel/remix-builder
 
+## 2.1.0
+
+### Minor Changes
+
+- Remix Vite plugin support ([#11031](https://github.com/vercel/vercel/pull/11031))
+
 ## 2.0.20
 
 ### Patch Changes
