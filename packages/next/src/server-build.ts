@@ -1295,11 +1295,13 @@ export async function serverBuild({
       prerenderRoute(route, {})
     )
   );
+
   await Promise.all(
     Object.keys(prerenderManifest.fallbackRoutes).map(route =>
       prerenderRoute(route, { isFallback: true })
     )
   );
+
   await Promise.all(
     Object.keys(prerenderManifest.blockingFallbackRoutes).map(route =>
       prerenderRoute(route, { isBlocking: true })
