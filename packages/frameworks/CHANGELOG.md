@@ -1,5 +1,11 @@
 # @vercel/frameworks
 
+## 3.0.0
+
+### Major Changes
+
+- Make "remix" framework preset supersede "vite" ([#11031](https://github.com/vercel/vercel/pull/11031))
+
 ## 2.0.6
 
 ### Patch Changes
