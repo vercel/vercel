@@ -27,7 +27,7 @@ type ServerlessFunctionSignature = (
 const [NODE_MAJOR] = process.versions.node.split('.').map(v => Number(v));
 
 /* https://nextjs.org/docs/app/building-your-application/routing/router-handlers#supported-http-methods */
-const HTTP_METHODS = [
+export const HTTP_METHODS = [
   'GET',
   'HEAD',
   'OPTIONS',

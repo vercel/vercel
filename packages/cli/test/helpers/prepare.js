@@ -382,6 +382,9 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
       'index.html': 'Hello',
       'vercel.json': '{"builds":[{"src":"*.html","use":"@vercel/static"}]}',
     },
+    'project-sensitive-env-vars': {
+      'package.json': '{}',
+    },
     'dev-proxy-headers-and-env': {
       'package.json': JSON.stringify({}),
       'server.js': `require('http').createServer((req, res) => {

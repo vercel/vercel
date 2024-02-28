@@ -1,5 +1,33 @@
 # @vercel/remix-builder
 
+## 2.1.0
+
+### Minor Changes
+
+- Remix Vite plugin support ([#11031](https://github.com/vercel/vercel/pull/11031))
+
+## 2.0.20
+
+### Patch Changes
+
+- Don't install Remix fork when not using split configuration ([#11152](https://github.com/vercel/vercel/pull/11152))
+
+- Add `serverBundles` post-build sanity check and fallback ([#11153](https://github.com/vercel/vercel/pull/11153))
+
+- bump `@vercel/nft@0.26.4` ([#11155](https://github.com/vercel/vercel/pull/11155))
+
+- Update `@remix-run/dev` fork to v2.6.0 ([#11162](https://github.com/vercel/vercel/pull/11162))
+
+- Update `@remix-run/dev` fork to v2.7.0 ([#11180](https://github.com/vercel/vercel/pull/11180))
+
+- Update `@remix-run/dev` fork to v2.7.2 ([#11186](https://github.com/vercel/vercel/pull/11186))
+
+## 2.0.19
+
+### Patch Changes
+
+- [node][next][redwood][remix] bump `@vercel/nft@0.26.3` ([#11115](https://github.com/vercel/vercel/pull/11115))
+
 ## 2.0.18
 
 ### Patch Changes

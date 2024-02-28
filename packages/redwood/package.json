@@ -1,6 +1,6 @@
 {
   "name": "@vercel/redwood",
-  "version": "2.0.6",
+  "version": "2.0.8",
   "main": "./dist/index.js",
   "license": "Apache-2.0",
   "homepage": "https://vercel.com/docs",
@@ -20,7 +20,7 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@vercel/nft": "0.26.2",
+    "@vercel/nft": "0.26.4",
     "@vercel/routing-utils": "3.1.0",
     "semver": "6.3.1"
   },
@@ -28,7 +28,7 @@
     "@types/aws-lambda": "8.10.19",
     "@types/node": "14.18.33",
     "@types/semver": "6.0.0",
-    "@vercel/build-utils": "7.5.1",
+    "@vercel/build-utils": "7.7.0",
     "execa": "3.2.0",
     "fs-extra": "11.1.0",
     "jest-junit": "16.0.0"

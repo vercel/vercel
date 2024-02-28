@@ -1,5 +1,37 @@
 # @vercel/next
 
+## 4.1.3
+
+### Patch Changes
+
+- Fix manifest with experimental flag ([#11192](https://github.com/vercel/vercel/pull/11192))
+
+## 4.1.2
+
+### Patch Changes
+
+- Update experimental bundle flag ([#11187](https://github.com/vercel/vercel/pull/11187))
+
+- [next] Add flag for experimental grouping ([#11177](https://github.com/vercel/vercel/pull/11177))
+
+- bump `@vercel/nft@0.26.4` ([#11155](https://github.com/vercel/vercel/pull/11155))
+
+- fix: missing experimental field ([#11184](https://github.com/vercel/vercel/pull/11184))
+
+## 4.1.1
+
+### Patch Changes
+
+- [node][next][redwood][remix] bump `@vercel/nft@0.26.3` ([#11115](https://github.com/vercel/vercel/pull/11115))
+
+- Load common chunks on module initialization ([#11126](https://github.com/vercel/vercel/pull/11126))
+
+- Fix index normalizing for app outputs ([#11099](https://github.com/vercel/vercel/pull/11099))
+
+- Mark `flags` as deprecated and replace them with `variants` ([#11098](https://github.com/vercel/vercel/pull/11098))
+
+- Fix rewrite RSC handling with trailingSlash ([#11107](https://github.com/vercel/vercel/pull/11107))
+
 ## 4.1.0
 
 ### Minor Changes

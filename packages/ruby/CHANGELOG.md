@@ -1,5 +1,13 @@
 # @vercel/ruby
 
+## 2.0.5
+
+### Patch Changes
+
+- add ruby3 to path during build ([#11094](https://github.com/vercel/vercel/pull/11094))
+
+- Remove deprecated `createLambda()` usage ([#11080](https://github.com/vercel/vercel/pull/11080))
+
 ## 2.0.4
 
 ### Patch Changes
