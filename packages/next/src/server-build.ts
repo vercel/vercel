@@ -1318,41 +1318,36 @@ export async function serverBuild({
     omittedPrerenderRoutes,
   });
 
-  const prerenderPromises: Array<Promise<void>> = [];
+  const prerenderParameters: Array<Parameters<typeof prerenderRoute>> = [];
 
-  prerenderPromises.push(
-    ...Object.keys(prerenderManifest.staticRoutes).map(route =>
-      prerenderRoute(route, {})
-    )
-  );
-
-  prerenderPromises.push(
-    ...Object.keys(prerenderManifest.fallbackRoutes).map(route =>
-      prerenderRoute(route, { isFallback: true })
-    )
-  );
-
-  prerenderPromises.push(
-    ...Object.keys(prerenderManifest.blockingFallbackRoutes).map(route =>
-      prerenderRoute(route, { isBlocking: true })
-    )
-  );
-
-  if (static404Page && canUsePreviewMode) {
-    prerenderPromises.push(
-      ...Array.from(omittedPrerenderRoutes).map(route =>
-        prerenderRoute(route, { isOmitted: true })
-      )
-    );
+  for (const route of Object.keys(prerenderManifest.staticRoutes)) {
+    prerenderParameters.push([route, {}]);
   }
 
-  await Promise.all(prerenderPromises);
+  for (const route of Object.keys(prerenderManifest.fallbackRoutes)) {
+    prerenderParameters.push([route, { isFallback: true }]);
+  }
+
+  for (const route of Object.keys(prerenderManifest.blockingFallbackRoutes)) {
+    prerenderParameters.push([route, { isBlocking: true }]);
+  }
+
+  if (static404Page && canUsePreviewMode) {
+    for (const route of Array.from(omittedPrerenderRoutes)) {
+      prerenderParameters.push([route, { isOmitted: true }]);
+    }
+  }
+
+  await Promise.all(
+    prerenderParameters.map(parameters => prerenderRoute(...parameters))
+  );
 
   prerenderRoutes.forEach(route => {
     if (experimentalPPRRoutes.has(route)) return;
     if (routesManifest?.i18n) {
       route = normalizeLocalePath(route, routesManifest.i18n.locales).pathname;
     }
+
     delete lambdas[
       normalizeIndexOutput(
         path.posix.join('./', entryDirectory, route === '/' ? '/index' : route),

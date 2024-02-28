@@ -2145,21 +2145,29 @@ export const build: BuildV2 = async ({
       omittedPrerenderRoutes,
     });
 
-    Object.keys(prerenderManifest.staticRoutes).forEach(route =>
-      prerenderRoute(route, { isBlocking: false, isFallback: false })
-    );
-    Object.keys(prerenderManifest.fallbackRoutes).forEach(route =>
-      prerenderRoute(route, { isBlocking: false, isFallback: true })
-    );
-    Object.keys(prerenderManifest.blockingFallbackRoutes).forEach(route =>
-      prerenderRoute(route, { isBlocking: true, isFallback: false })
-    );
+    const prerenderParameters: Array<Parameters<typeof prerenderRoute>> = [];
+
+    for (const route of Object.keys(prerenderManifest.staticRoutes)) {
+      prerenderParameters.push([route, {}]);
+    }
+
+    for (const route of Object.keys(prerenderManifest.fallbackRoutes)) {
+      prerenderParameters.push([route, { isFallback: true }]);
+    }
+
+    for (const route of Object.keys(prerenderManifest.blockingFallbackRoutes)) {
+      prerenderParameters.push([route, { isBlocking: true }]);
+    }
 
     if (static404Page && canUsePreviewMode) {
-      omittedPrerenderRoutes.forEach(route => {
-        prerenderRoute(route, { isOmitted: true });
-      });
+      for (const route of Array.from(omittedPrerenderRoutes)) {
+        prerenderParameters.push([route, { isOmitted: true }]);
+      }
     }
+
+    await Promise.all(
+      prerenderParameters.map(parameters => prerenderRoute(...parameters))
+    );
 
     // We still need to use lazyRoutes if the dataRoutes field
     // isn't available for backwards compatibility
