@@ -302,7 +302,7 @@ export async function scanParentDirs(
     });
   let lockfilePath: string | undefined;
   let lockfileVersion: number | undefined;
-  let cliType: CliType = 'yarn';
+  let cliType: CliType;
 
   const [hasYarnLock, packageLockJson, pnpmLockYaml, bunLockBin] =
     await Promise.all([
@@ -338,6 +338,12 @@ export async function scanParentDirs(
     lockfilePath = bunLockPath;
     // TODO: read "bun-lockfile-format-v0"
     lockfileVersion = 0;
+  } else {
+    if (process.env.VERCEL_ENABLE_NPM_DEFAULT === '1') {
+      cliType = 'npm';
+    } else {
+      cliType = 'yarn';
+    }
   }
 
   const packageJsonPath = pkgJsonPath || undefined;
@@ -413,6 +419,14 @@ export async function runNpmInstall(
     const { cliType, packageJsonPath, lockfileVersion } = await scanParentDirs(
       destPath
     );
+
+    if (!packageJsonPath) {
+      debug(
+        `Skipping dependency installation because no package.json was found for ${destPath}`
+      );
+      runNpmInstallSema.release();
+      return false;
+    }
 
     // Only allow `runNpmInstall()` to run once per `package.json`
     // when doing a default install (no additional args)

@@ -440,7 +440,9 @@ export interface Cron {
   schedule: string;
 }
 
-// TODO: Proper description once complete
+/**
+ * @deprecated Replaced by Variants. Remove once fully replaced.
+ */
 export interface Flag {
   key: string;
   defaultValue?: unknown;
@@ -471,7 +473,9 @@ export interface BuildResultV2Typical {
   framework?: {
     version: string;
   };
+  /** @deprecated Replaced by Variants. Remove once fully replaced. */
   flags?: Flag[];
+  variants?: Record<string, VariantDefinition>;
 }
 
 export type BuildResultV2 = BuildResultV2Typical | BuildResultBuildOutput;
@@ -491,3 +495,28 @@ export type ShouldServe = (
 export type StartDevServer = (
   options: StartDevServerOptions
 ) => Promise<StartDevServerResult>;
+
+/**
+ * TODO: The following types will eventually be exported by a more
+ *       relevant package.
+ */
+type VariantJSONArray = ReadonlyArray<VariantJSONValue>;
+
+type VariantJSONValue =
+  | string
+  | boolean
+  | number
+  | null
+  | VariantJSONArray
+  | { [key: string]: VariantJSONValue };
+
+type VariantOption = {
+  value: VariantJSONValue;
+  label?: string;
+};
+
+export interface VariantDefinition {
+  options?: VariantOption[];
+  origin?: string;
+  description?: string;
+}

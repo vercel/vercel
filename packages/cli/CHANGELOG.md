@@ -1,5 +1,63 @@
 # vercel
 
+## 33.5.3
+
+### Patch Changes
+
+- Updated dependencies [[`c2d99855e`](https://github.com/vercel/vercel/commit/c2d99855ea6132380434ed29643120680f95fad7), [`1333071a3`](https://github.com/vercel/vercel/commit/1333071a3a2d324679327bfdd4e872f8fd3521c6)]:
+  - @vercel/next@4.1.3
+  - @vercel/remix-builder@2.1.0
+
+## 33.5.2
+
+### Patch Changes
+
+- Updated dependencies [[`e109e3325`](https://github.com/vercel/vercel/commit/e109e3325ab5299da0903034175fabe72d486a4e), [`d17abf463`](https://github.com/vercel/vercel/commit/d17abf463acabf9e1e43b91200f18efd34e91f62), [`644721a90`](https://github.com/vercel/vercel/commit/644721a90da8cf98414d272be9da0a821a2ce217), [`ea0e9aeae`](https://github.com/vercel/vercel/commit/ea0e9aeaec8ddddb5a726be0d252df9cdbd84808), [`e318a0eea`](https://github.com/vercel/vercel/commit/e318a0eea55c9b8536b0874f66cfd03aca6f0adf), [`1fee87e76`](https://github.com/vercel/vercel/commit/1fee87e76f18d2f5e5524247cfce615fa1832e49), [`bfc01fd98`](https://github.com/vercel/vercel/commit/bfc01fd98f760a008d0d2e6c52b5216503b44b75), [`7910f2f30`](https://github.com/vercel/vercel/commit/7910f2f3070ff69742e845e795d4db77d598c181), [`440ef3ba9`](https://github.com/vercel/vercel/commit/440ef3ba98af8f05e7714c86c67c36dbda11e85c)]:
+  - @vercel/remix-builder@2.0.20
+  - @vercel/next@4.1.2
+  - @vercel/node@3.0.20
+  - @vercel/redwood@2.0.8
+
+## 33.5.1
+
+### Patch Changes
+
+- build: upgrade edge-runtime ([#11148](https://github.com/vercel/vercel/pull/11148))
+
+- Updated dependencies [[`24c3dd282`](https://github.com/vercel/vercel/commit/24c3dd282d7714cd63d2b94fb94745c45fdc79ab), [`10e200e0b`](https://github.com/vercel/vercel/commit/10e200e0bf8f692b6740e098e0572b4e7de83850), [`678ebbe52`](https://github.com/vercel/vercel/commit/678ebbe5255766656bf2dddc574e86b2999f11c8)]:
+  - @vercel/build-utils@7.7.0
+  - @vercel/static-build@2.4.0
+  - @vercel/node@3.0.19
+
+## 33.5.0
+
+### Minor Changes
+
+- Mark `flags` as deprecated and replace them with `variants` ([#11098](https://github.com/vercel/vercel/pull/11098))
+
+### Patch Changes
+
+- Updated dependencies [[`c32a909af`](https://github.com/vercel/vercel/commit/c32a909afcedf0ee55777d5dcaecc0c8383dd8c8), [`b6ed28b9b`](https://github.com/vercel/vercel/commit/b6ed28b9b1712f882c93fe053b70d3eb1df21819), [`d21bb9f87`](https://github.com/vercel/vercel/commit/d21bb9f87e1d837666fe8104d4e199b2590725d6), [`4027a1833`](https://github.com/vercel/vercel/commit/4027a1833718a92be74b2b3c5a4df23745d19a36), [`8ba0ce932`](https://github.com/vercel/vercel/commit/8ba0ce932434c6295fedb5307bee59a804b7e6a8), [`0d034b682`](https://github.com/vercel/vercel/commit/0d034b6820c0f3252949c0ffc483048c5aac7f04), [`abaa700ce`](https://github.com/vercel/vercel/commit/abaa700cea44c723cfc851baa2dfe9e1ae2e8a5c), [`3bad73401`](https://github.com/vercel/vercel/commit/3bad73401b4ec1f61e515965732cde8dcc052b17)]:
+  - @vercel/next@4.1.1
+  - @vercel/node@3.0.18
+  - @vercel/redwood@2.0.7
+  - @vercel/remix-builder@2.0.19
+  - @vercel/build-utils@7.6.0
+  - @vercel/static-build@2.3.0
+
+## 33.4.1
+
+### Patch Changes
+
+- Updated dependencies [[`d05e41eea`](https://github.com/vercel/vercel/commit/d05e41eeaf97a024157d2bd843782c95c39389be), [`de63e3562`](https://github.com/vercel/vercel/commit/de63e356223467447cda539ddc435a892303afc7)]:
+  - @vercel/static-build@2.2.0
+
+## 33.4.0
+
+### Minor Changes
+
+- Added a new option to add a sensitive environment variable ([#11033](https://github.com/vercel/vercel/pull/11033))
+
 ## 33.3.0
 
 ### Minor Changes
