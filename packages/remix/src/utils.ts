@@ -194,10 +194,13 @@ export function getPathFromRoute(
   return { path, rePath };
 }
 
-export function getRegExpFromPath(rePath: string): RegExp | false {
+export function getRegExpFromPath(
+  rePath: string
+): { re: RegExp; keys: Key[] } | false {
   const keys: Key[] = [];
   const re = pathToRegexp(rePath, keys);
-  return keys.length > 0 ? re : false;
+  if (!keys.length) return false;
+  return { re, keys };
 }
 
 /**

@@ -197,7 +197,11 @@ describe('getRegExpFromPath()', () => {
       ],
     },
   ])('with path "$path"', ({ path, urls }) => {
-    const re = getRegExpFromPath(path) as RegExp;
+    const result = getRegExpFromPath(path);
+    if (!result) {
+      throw new Error('Expected truthy');
+    }
+    const { re } = result;
 
     it('should return RegExp', () => {
       expect(re).toBeInstanceOf(RegExp);

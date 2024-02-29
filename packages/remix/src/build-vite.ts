@@ -269,16 +269,7 @@ export const build: BuildV2 = async ({
 
   const output: BuildResultV2Typical['output'] = staticFiles;
   const assetsDir = viteConfig?.build?.assetsDir || 'assets';
-  const routes: any[] = [
-    {
-      src: `^/${assetsDir}/(.*)$`,
-      headers: { 'cache-control': 'public, max-age=31536000, immutable' },
-      continue: true,
-    },
-    {
-      handle: 'filesystem',
-    },
-  ];
+  const routePrecedenceMap = new Map<any, number>();
 
   for (const [id, functionId] of Object.entries(
     buildManifest.routeIdToServerBundleId ?? {}
@@ -300,14 +291,23 @@ export const build: BuildV2 = async ({
     output[path] = func;
 
     // If this is a dynamic route then add a Vercel route
-    const re = getRegExpFromPath(rePath);
-    if (re) {
-      routes.push({
-        src: re.source,
+    const result = getRegExpFromPath(rePath);
+    if (result) {
+      const route = {
+        src: result.re.source,
         dest: path,
-      });
+      };
+      routePrecedenceMap.set(route, result.keys.length);
     }
   }
+
+  const routes = Array.from(routePrecedenceMap.entries())
+    .sort(([aRoute, aPrecedence], [bRoute, bPrecedence]) => {
+      const p = aPrecedence - bPrecedence;
+      if (p !== 0) return p;
+      return aRoute.path < bRoute.path ? 1 : -1;
+    })
+    .map(([route]) => route);
 
   // For the 404 case, invoke the Function (or serve the static file
   // for `ssr: false` mode) at the `/` path. Remix will serve its 404 route.
@@ -316,7 +316,21 @@ export const build: BuildV2 = async ({
     dest: '/',
   });
 
-  return { routes, output, framework: { version: remixVersion } };
+  return {
+    routes: [
+      {
+        src: `^/${assetsDir}/(.*)$`,
+        headers: { 'cache-control': 'public, max-age=31536000, immutable' },
+        continue: true,
+      },
+      {
+        handle: 'filesystem',
+      },
+      ...routes,
+    ],
+    output,
+    framework: { version: remixVersion },
+  };
 };
 
 async function createRenderNodeFunction(
