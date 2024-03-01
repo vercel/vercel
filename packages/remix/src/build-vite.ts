@@ -19,9 +19,9 @@ import {
   NodejsLambda,
 } from '@vercel/build-utils';
 import {
-  ensureResolvable,
   getPathFromRoute,
   getRegExpFromPath,
+  getRemixVersion,
   hasScript,
 } from './utils';
 import type { BuildV2, Files, NodeVersion } from '@vercel/build-utils';
@@ -118,15 +118,7 @@ export const build: BuildV2 = async ({
 
   // Determine the version of Remix based on the `@remix-run/dev`
   // package version.
-  const remixRunDevPath = await ensureResolvable(
-    entrypointFsDirname,
-    repoRootPath,
-    '@remix-run/dev'
-  );
-  const remixRunDevPkg = JSON.parse(
-    readFileSync(join(remixRunDevPath, 'package.json'), 'utf8')
-  );
-  const remixVersion = remixRunDevPkg.version;
+  const remixVersion = await getRemixVersion(entrypointFsDirname, repoRootPath);
 
   // Make `remix build` output production mode
   spawnOpts.env.NODE_ENV = 'production';
@@ -156,17 +148,6 @@ export const build: BuildV2 = async ({
       });
     }
   }
-
-  // This needs to happen before we run NFT to create the Node/Edge functions
-  // TODO: maybe remove this?
-  await Promise.all([
-    ensureResolvable(
-      entrypointFsDirname,
-      repoRootPath,
-      '@remix-run/server-runtime'
-    ),
-    ensureResolvable(entrypointFsDirname, repoRootPath, '@remix-run/node'),
-  ]);
 
   const remixBuildResultPath = join(
     entrypointFsDirname,

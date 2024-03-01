@@ -379,3 +379,27 @@ export function hasScript(scriptName: string, pkg?: PackageJson) {
   const scripts = pkg?.scripts || {};
   return typeof scripts[scriptName] === 'string';
 }
+
+export async function getRemixVersion(
+  dir: string,
+  base: string
+): Promise<string> {
+  const resolvedPath = require_.resolve('@remix-run/dev', { paths: [dir] });
+  const pkgPath = await walkParentDirs({
+    base,
+    start: dirname(resolvedPath),
+    filename: 'package.json',
+  });
+  if (!pkgPath) {
+    throw new Error(
+      `Failed to find \`package.json\` file for "@remix-run/dev"`
+    );
+  }
+  const { version } = JSON.parse(
+    await fs.readFile(pkgPath, 'utf8')
+  ) as PackageJson;
+  if (typeof version !== 'string') {
+    throw new Error(`Missing "version" field`);
+  }
+  return version;
+}
