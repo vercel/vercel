@@ -23,6 +23,7 @@ import {
   getRegExpFromPath,
   getRemixVersion,
   hasScript,
+  logNftWarnings,
 } from './utils';
 import type { BuildV2, Files, NodeVersion } from '@vercel/build-utils';
 
@@ -335,9 +336,7 @@ async function createRenderNodeFunction(
     processCwd: entrypointDir,
   });
 
-  for (const warning of trace.warnings) {
-    debug(`Warning from trace: ${warning.message}`);
-  }
+  logNftWarnings(trace.warnings, '@remix-run/node');
 
   for (const file of trace.fileList) {
     files[file] = await FileFsRef.fromFsPath({ fsPath: join(rootDir, file) });
@@ -427,9 +426,7 @@ async function createRenderEdgeFunction(
     },
   });
 
-  for (const warning of trace.warnings) {
-    debug(`Warning from trace: ${warning.message}`);
-  }
+  logNftWarnings(trace.warnings, '@remix-run/server-runtime');
 
   for (const file of trace.fileList) {
     if (

@@ -403,3 +403,20 @@ export async function getRemixVersion(
   }
   return version;
 }
+
+export function logNftWarnings(warnings: Set<Error>, required?: string) {
+  for (const warning of warnings) {
+    const m = warning.message.match(/^Failed to resolve dependency "(.+)"/);
+    if (m) {
+      if (m[1] === required) {
+        throw new Error(
+          `Missing required "${required}" package. Please add it to your \`package.json\` file.`
+        );
+      } else {
+        console.warn(`WARN: ${m[0]}`);
+      }
+    } else {
+      debug(`Warning from trace: ${warning.message}`);
+    }
+  }
+}
