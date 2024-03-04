@@ -7,7 +7,7 @@ const {
 
 jest.setTimeout(12 * 60 * 1000);
 
-const fixturesPath = join(__dirname, 'fixtures');
+const fixturesPath = join(__dirname, 'fixtures-legacy');
 const exampleAbsolute = (name: string) =>
   join(__dirname, '..', '..', '..', 'examples', name);
 
