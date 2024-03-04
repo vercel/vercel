@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.1.3
+
+### Patch Changes
+
+- Fix manifest with experimental flag ([#11192](https://github.com/vercel/vercel/pull/11192))
+
 ## 4.1.2
 
 ### Patch Changes

@@ -305,19 +305,31 @@ export async function getRoutesManifest(
   return routesManifest;
 }
 
-export async function getDynamicRoutes(
-  entryPath: string,
-  entryDirectory: string,
-  dynamicPages: ReadonlyArray<string>,
-  isDev?: boolean,
-  routesManifest?: RoutesManifest,
-  omittedRoutes?: ReadonlySet<string>,
-  canUsePreviewMode?: boolean,
-  bypassToken?: string,
-  isServerMode?: boolean,
-  dynamicMiddlewareRouteMap?: ReadonlyMap<string, RouteWithSrc>,
-  experimentalPPR?: boolean
-): Promise<RouteWithSrc[]> {
+export async function getDynamicRoutes({
+  entryPath,
+  entryDirectory,
+  dynamicPages,
+  isDev,
+  routesManifest,
+  omittedRoutes,
+  canUsePreviewMode,
+  bypassToken,
+  isServerMode,
+  dynamicMiddlewareRouteMap,
+  experimentalPPRRoutes,
+}: {
+  entryPath: string;
+  entryDirectory: string;
+  dynamicPages: string[];
+  isDev?: boolean;
+  routesManifest?: RoutesManifest;
+  omittedRoutes?: ReadonlySet<string>;
+  canUsePreviewMode?: boolean;
+  bypassToken?: string;
+  isServerMode?: boolean;
+  dynamicMiddlewareRouteMap?: ReadonlyMap<string, RouteWithSrc>;
+  experimentalPPRRoutes: ReadonlySet<string>;
+}): Promise<RouteWithSrc[]> {
   if (routesManifest) {
     switch (routesManifest.version) {
       case 1:
@@ -390,7 +402,7 @@ export async function getDynamicRoutes(
             ];
           }
 
-          if (experimentalPPR) {
+          if (experimentalPPRRoutes.has(page)) {
             let dest = route.dest?.replace(/($|\?)/, '.prefetch.rsc$1');
 
             if (page === '/' || page === '/index') {
@@ -920,6 +932,10 @@ export type NextPrerenderedRoutes = {
     };
   };
 
+  /**
+   * Routes that have their fallback behavior is disabled. All routes would've
+   * been provided in the top-level `routes` key (`staticRoutes`).
+   */
   omittedRoutes: {
     [route: string]: {
       routeRegex: string;
@@ -1299,8 +1315,6 @@ export async function getPrerenderManifest(
             prefetchDataRouteRegex,
           };
         } else {
-          // Fallback behavior is disabled, all routes would've been provided
-          // in the top-level `routes` key (`staticRoutes`).
           ret.omittedRoutes[lazyRoute] = {
             experimentalBypassFor,
             experimentalPPR,
@@ -1924,6 +1938,7 @@ type OnPrerenderRouteArgs = {
   routesManifest?: RoutesManifest;
   isCorrectNotFoundRoutes?: boolean;
   isEmptyAllowQueryForPrendered?: boolean;
+  omittedPrerenderRoutes: ReadonlySet<string>;
 };
 let prerenderGroup = 1;
 
@@ -1960,6 +1975,7 @@ export const onPrerenderRoute =
       routesManifest,
       isCorrectNotFoundRoutes,
       isEmptyAllowQueryForPrendered,
+      omittedPrerenderRoutes,
     } = prerenderRouteArgs;
 
     if (isBlocking && isFallback) {
@@ -2384,24 +2400,30 @@ export const onPrerenderRoute =
         sourcePath = srcRoute;
       }
 
-      // The `experimentalStreamingLambdaPaths` stores the page without the
-      // leading `/` and with the `/` rewritten to be `index`. We should
-      // normalize the key so that it matches that key in the map.
-      let key = srcRoute || routeKey;
-      if (key === '/') {
-        key = 'index';
-      } else {
-        if (!key.startsWith('/')) {
-          throw new Error("Invariant: key doesn't start with /");
+      let experimentalStreamingLambdaPath: string | undefined;
+      if (experimentalPPR) {
+        if (!experimentalStreamingLambdaPaths) {
+          throw new Error(
+            "Invariant: experimentalStreamingLambdaPaths doesn't exist"
+          );
         }
 
-        key = key.substring(1);
+        // If a source route exists, and it's not listed as an omitted route,
+        // then use the src route as the basis for the experimental streaming
+        // lambda path. If the route doesn't have a source route or it's not
+        // omitted, then use the more specific `routeKey` as the basis.
+        if (srcRoute && !omittedPrerenderRoutes.has(srcRoute)) {
+          experimentalStreamingLambdaPath =
+            experimentalStreamingLambdaPaths.get(
+              pathnameToOutputName(entryDirectory, srcRoute)
+            );
+        } else {
+          experimentalStreamingLambdaPath =
+            experimentalStreamingLambdaPaths.get(
+              pathnameToOutputName(entryDirectory, routeKey)
+            );
+        }
       }
-
-      key = path.posix.join(entryDirectory, key);
-
-      const experimentalStreamingLambdaPath =
-        experimentalStreamingLambdaPaths?.get(key);
 
       prerenders[outputPathPage] = new Prerender({
         expiration: initialRevalidate,
@@ -2605,6 +2627,10 @@ export async function getStaticFiles(
   };
 }
 
+/**
+ * Strips the trailing `/index` from the output name if it's not the root if
+ * the server mode is enabled.
+ */
 export function normalizeIndexOutput(
   outputName: string,
   isServerMode: boolean
@@ -2623,6 +2649,19 @@ export function getNextServerPath(nextVersion: string) {
   return semver.gte(nextVersion, 'v11.0.2-canary.4')
     ? 'next/dist/server'
     : 'next/dist/next-server/server';
+}
+
+export function pathnameToOutputName(entryDirectory: string, pathname: string) {
+  if (pathname === '/') pathname = '/index';
+  return path.posix.join(entryDirectory, pathname);
+}
+
+export function getPostponeResumePathname(
+  entryDirectory: string,
+  pathname: string
+): string {
+  if (pathname === '/') pathname = '/index';
+  return path.posix.join(entryDirectory, '_next/postponed/resume', pathname);
 }
 
 // update to leverage

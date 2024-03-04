@@ -1,6 +1,6 @@
 {
   "name": "@vercel/fs-detectors",
-  "version": "5.1.6",
+  "version": "5.2.0",
   "description": "Vercel filesystem detectors",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -22,7 +22,7 @@
   },
   "dependencies": {
     "@vercel/error-utils": "2.0.2",
-    "@vercel/frameworks": "2.0.6",
+    "@vercel/frameworks": "3.0.0",
     "@vercel/routing-utils": "3.1.0",
     "glob": "8.0.3",
     "js-yaml": "4.1.0",

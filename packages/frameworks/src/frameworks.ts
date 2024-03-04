@@ -202,11 +202,14 @@ export const frameworks = [
     description: 'A new Remix app — the result of running `npx create-remix`.',
     website: 'https://remix.run',
     sort: 6,
-    supersedes: 'hydrogen',
+    supersedes: ['hydrogen', 'vite'],
     useRuntime: { src: 'package.json', use: '@vercel/remix-builder' },
     ignoreRuntimes: ['@vercel/node'],
     detectors: {
       some: [
+        {
+          matchPackage: '@remix-run/dev',
+        },
         {
           path: 'remix.config.js',
         },
@@ -1734,7 +1737,7 @@ export const frameworks = [
     tagline: 'React framework for headless commerce',
     description: 'React framework for headless commerce',
     website: 'https://hydrogen.shopify.dev',
-    supersedes: 'vite',
+    supersedes: ['vite'],
     useRuntime: { src: 'package.json', use: '@vercel/hydrogen' },
     envPrefix: 'PUBLIC_',
     detectors: {
