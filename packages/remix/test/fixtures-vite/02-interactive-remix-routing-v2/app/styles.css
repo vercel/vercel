@@ -1,0 +1,51 @@
+.vertical-line{
+    position: absolute;
+    left: -9px;
+    top: -10px;
+    bottom: 0px;
+    width: 2px;
+    border-left: 2px solid #51516c;
+}
+.normal{
+    bottom: 0px;
+}
+
+.last-child{
+    height: 20px;
+}
+
+.horizontal-line{
+    position: absolute;
+    top: 0;
+    left: -9px;
+    height: 20px;
+    width: 13px;
+    border-bottom: 2px solid #51516c;
+    border-left: 2px solid #51516c;
+    border-bottom-left-radius: 8px;
+}
+
+
+
+.animated-bg {
+    background-color: #f3f4f6;
+    animation-name: flash;
+    animation-duration: 2s;
+  }
+  
+.dark .animated-bg {
+    background-color: #27272a;
+    animation-name: flash-dark;
+    animation-duration: 2s;
+  }
+  
+  
+  @keyframes flash {
+    0%   {background-color:#3568f5}
+    100% {background-color:#f3f4f6}
+  }
+  @keyframes flash-dark {
+    0%   {background-color:#3568f5}
+    100% {background-color:#27272a}
+  }
+  

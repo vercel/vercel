@@ -1,5 +1,23 @@
 # @vercel/next
 
+## 4.1.3
+
+### Patch Changes
+
+- Fix manifest with experimental flag ([#11192](https://github.com/vercel/vercel/pull/11192))
+
+## 4.1.2
+
+### Patch Changes
+
+- Update experimental bundle flag ([#11187](https://github.com/vercel/vercel/pull/11187))
+
+- [next] Add flag for experimental grouping ([#11177](https://github.com/vercel/vercel/pull/11177))
+
+- bump `@vercel/nft@0.26.4` ([#11155](https://github.com/vercel/vercel/pull/11155))
+
+- fix: missing experimental field ([#11184](https://github.com/vercel/vercel/pull/11184))
+
 ## 4.1.1
 
 ### Patch Changes
