@@ -1,13 +1,20 @@
+import { cssBundleHref } from "@remix-run/css-bundle";
 import {
   Links,
+  LiveReload,
   Meta,
   Outlet,
   Scripts,
   ScrollRestoration,
 } from "@remix-run/react";
 import { Analytics } from "@vercel/analytics/react";
+import type { LinksFunction } from "@vercel/remix";
 
-export function Layout({ children }: { children: React.ReactNode }) {
+export const links: LinksFunction = () => [
+  ...(cssBundleHref ? [{ rel: "stylesheet", href: cssBundleHref }] : []),
+];
+
+export default function App() {
   return (
     <html lang="en">
       <head>
@@ -17,15 +24,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Links />
       </head>
       <body>
-        {children}
+        <Outlet />
         <ScrollRestoration />
         <Scripts />
+        <LiveReload />
         <Analytics />
       </body>
     </html>
   );
-}
-
-export default function App() {
-  return <Outlet />;
 }
