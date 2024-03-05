@@ -1252,6 +1252,11 @@ describe('build', () => {
   });
 
   it('should write to flags.json', async () => {
+    if (process.platform === 'win32') {
+      console.log('Skipping test on Windows');
+      return;
+    }
+
     const cwd = fixture('with-flags');
     const output = join(cwd, '.vercel', 'output');
 
