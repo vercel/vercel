@@ -1270,43 +1270,43 @@ describe('build', () => {
       },
     });
   });
-});
 
-it('should create symlinks for duplicate references to Lambda / EdgeFunction instances', async () => {
-  if (process.platform === 'win32') {
-    console.log('Skipping test on Windows');
-    return;
-  }
-  const cwd = fixture('functions-symlink');
-  const output = join(cwd, '.vercel/output');
-  client.cwd = cwd;
-  const exitCode = await build(client);
-  expect(exitCode).toEqual(0);
+  it('should create symlinks for duplicate references to Lambda / EdgeFunction instances', async () => {
+    if (process.platform === 'win32') {
+      console.log('Skipping test on Windows');
+      return;
+    }
+    const cwd = fixture('functions-symlink');
+    const output = join(cwd, '.vercel/output');
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toEqual(0);
 
-  // "functions" directory has output Functions
-  const functions = await fs.readdir(join(output, 'functions'));
-  expect(functions.sort()).toEqual([
-    'edge.func',
-    'edge2.func',
-    'lambda.func',
-    'lambda2.func',
-  ]);
-  expect(
-    fs.lstatSync(join(output, 'functions/lambda.func')).isDirectory()
-  ).toEqual(true);
-  expect(
-    fs.lstatSync(join(output, 'functions/edge.func')).isDirectory()
-  ).toEqual(true);
-  expect(
-    fs.lstatSync(join(output, 'functions/lambda2.func')).isSymbolicLink()
-  ).toEqual(true);
-  expect(
-    fs.lstatSync(join(output, 'functions/edge2.func')).isSymbolicLink()
-  ).toEqual(true);
-  expect(fs.readlinkSync(join(output, 'functions/lambda2.func'))).toEqual(
-    'lambda.func'
-  );
-  expect(fs.readlinkSync(join(output, 'functions/edge2.func'))).toEqual(
-    'edge.func'
-  );
+    // "functions" directory has output Functions
+    const functions = await fs.readdir(join(output, 'functions'));
+    expect(functions.sort()).toEqual([
+      'edge.func',
+      'edge2.func',
+      'lambda.func',
+      'lambda2.func',
+    ]);
+    expect(
+      fs.lstatSync(join(output, 'functions/lambda.func')).isDirectory()
+    ).toEqual(true);
+    expect(
+      fs.lstatSync(join(output, 'functions/edge.func')).isDirectory()
+    ).toEqual(true);
+    expect(
+      fs.lstatSync(join(output, 'functions/lambda2.func')).isSymbolicLink()
+    ).toEqual(true);
+    expect(
+      fs.lstatSync(join(output, 'functions/edge2.func')).isSymbolicLink()
+    ).toEqual(true);
+    expect(fs.readlinkSync(join(output, 'functions/lambda2.func'))).toEqual(
+      'lambda.func'
+    );
+    expect(fs.readlinkSync(join(output, 'functions/edge2.func'))).toEqual(
+      'edge.func'
+    );
+  });
 });
