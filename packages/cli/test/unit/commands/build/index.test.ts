@@ -1253,6 +1253,7 @@ describe('build', () => {
 
   it('should write to flags.json', async () => {
     if (process.platform === 'win32') {
+      // Skipping the test on windows because the fixture runs a bash script
       console.log('Skipping test on Windows');
       return;
     }
