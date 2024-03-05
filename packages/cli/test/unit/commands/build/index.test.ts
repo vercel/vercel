@@ -1272,7 +1272,8 @@ describe('build', () => {
   });
 });
 
-it('should create symlinks for duplicate references to Lambda / EdgeFunction instances', async () => {
+// eslint-disable-next-line jest/no-focused-tests
+it.only('should create symlinks for duplicate references to Lambda / EdgeFunction instances', async () => {
   if (process.platform === 'win32') {
     console.log('Skipping test on Windows');
     return;

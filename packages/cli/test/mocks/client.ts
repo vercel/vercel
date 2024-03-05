@@ -82,12 +82,12 @@ export class MockClient extends Client {
   reset() {
     this.stdin = new MockStream();
 
-    this.stdout = new MockStream();
+    this.stdout = process.stdout as unknown as MockStream; // new MockStream();
     this.stdout.setEncoding('utf8');
     this.stdout.end = () => this.stdout;
     this.stdout.pause();
 
-    this.stderr = new MockStream();
+    this.stderr = process.stderr as unknown as MockStream; // new MockStream();
     this.stderr.setEncoding('utf8');
     this.stderr.end = () => this.stderr;
     this.stderr.pause();
