@@ -1281,6 +1281,13 @@ it('should create symlinks for duplicate references to Lambda / EdgeFunction ins
   const output = join(cwd, '.vercel/output');
   client.cwd = cwd;
   const exitCode = await build(client);
+
+  if (exitCode !== 0) {
+    console.log(client.stderr, client.stdout);
+
+    await expect(client.stderr).toOutput('Failure');
+  }
+
   expect(exitCode).toEqual(0);
 
   // "functions" directory has output Functions
