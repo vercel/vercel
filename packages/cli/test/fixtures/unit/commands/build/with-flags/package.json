@@ -1,5 +1,5 @@
 {
   "scripts": {
-    "build": "./build.sh"
+    "build": "node build.js"
   }
 }
