@@ -379,3 +379,44 @@ export function hasScript(scriptName: string, pkg?: PackageJson) {
   const scripts = pkg?.scripts || {};
   return typeof scripts[scriptName] === 'string';
 }
+
+export async function getRemixVersion(
+  dir: string,
+  base: string
+): Promise<string> {
+  const resolvedPath = require_.resolve('@remix-run/dev', { paths: [dir] });
+  const pkgPath = await walkParentDirs({
+    base,
+    start: dirname(resolvedPath),
+    filename: 'package.json',
+  });
+  if (!pkgPath) {
+    throw new Error(
+      `Failed to find \`package.json\` file for "@remix-run/dev"`
+    );
+  }
+  const { version } = JSON.parse(
+    await fs.readFile(pkgPath, 'utf8')
+  ) as PackageJson;
+  if (typeof version !== 'string') {
+    throw new Error(`Missing "version" field`);
+  }
+  return version;
+}
+
+export function logNftWarnings(warnings: Set<Error>, required?: string) {
+  for (const warning of warnings) {
+    const m = warning.message.match(/^Failed to resolve dependency "(.+)"/);
+    if (m) {
+      if (m[1] === required) {
+        throw new Error(
+          `Missing required "${required}" package. Please add it to your \`package.json\` file.`
+        );
+      } else {
+        console.warn(`WARN: ${m[0]}`);
+      }
+    } else {
+      debug(`Warning from trace: ${warning.message}`);
+    }
+  }
+}
