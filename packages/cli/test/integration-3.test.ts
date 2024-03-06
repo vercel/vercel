@@ -1175,7 +1175,7 @@ test('render build errors', async () => {
   const output = await execCli(binaryPath, [deploymentPath, '--yes']);
 
   expect(output.exitCode, formatOutput(output)).toBe(1);
-  expect(output.stderr).toMatch(/Command "yarn run build" exited with 1/gm);
+  expect(output.stderr).toMatch(/Command "npm run build" exited with 1/gm);
 });
 
 test('invalid deployment, projects and alias names', async () => {
