@@ -162,8 +162,8 @@ async function setupProject(
       return true;
     }
 
-    const matchFramework = chunk.match(
-      /Auto-detected Project Settings \((.+)\)/g
+    const matchFramework = /Auto-detected Project Settings \((.+)\)/g.exec(
+      chunk
     );
     if (!matchFramework) {
       return false;
