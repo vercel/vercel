@@ -157,6 +157,11 @@ async function setupProject(
 
   let detectedFramework: string | undefined;
   await waitForPrompt(process, chunk => {
+    const matchNothing = chunk.match(/No framework detected/);
+    if (matchNothing) {
+      return true;
+    }
+
     const matchFramework = chunk.match(
       /Auto-detected Project Settings \((.+)\)/g
     );
