@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.1.4
+
+### Patch Changes
+
+- Enable partial prerendering support for pre-generated pages ([#11183](https://github.com/vercel/vercel/pull/11183))
+
 ## 4.1.3
 
 ### Patch Changes
