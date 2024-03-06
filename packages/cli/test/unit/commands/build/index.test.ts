@@ -1259,7 +1259,6 @@ describe('build', () => {
     expect(exitCode).toEqual(0);
 
     const config = await fs.readJSON(join(output, 'config.json'));
-    console.log(config);
     expect(typeof config.framework.version).toEqual('string');
   });
 });
