@@ -1,5 +1,18 @@
 # vercel
 
+## 33.5.4
+
+### Patch Changes
+
+- [build-utils] increase max memory limit ([#11209](https://github.com/vercel/vercel/pull/11209))
+
+- Updated dependencies [[`b1d8b83ab`](https://github.com/vercel/vercel/commit/b1d8b83abbf23a3485aedb490992d0a3bf44573f), [`37b193c84`](https://github.com/vercel/vercel/commit/37b193c845d8b63d93bb0017fbc1a6a35306ef1f), [`20237d4f7`](https://github.com/vercel/vercel/commit/20237d4f7b55b0697b57db15636c11204cb0dc39), [`f8fab639b`](https://github.com/vercel/vercel/commit/f8fab639bf49a60389b8d0b7b265a737c17b4ae1), [`6ed0fe6fb`](https://github.com/vercel/vercel/commit/6ed0fe6fb1e487545a790ff5b9fc691cf625f005)]:
+  - @vercel/next@4.1.4
+  - @vercel/build-utils@7.7.1
+  - @vercel/remix-builder@2.1.1
+  - @vercel/static-build@2.4.1
+  - @vercel/node@3.0.21
+
 ## 33.5.3
 
 ### Patch Changes

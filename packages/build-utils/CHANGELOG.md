@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 7.7.1
+
+### Patch Changes
+
+- [build-utils] increase max memory limit ([#11209](https://github.com/vercel/vercel/pull/11209))
+
 ## 7.7.0
 
 ### Minor Changes
