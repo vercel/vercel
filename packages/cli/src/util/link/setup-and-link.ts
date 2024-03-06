@@ -190,6 +190,7 @@ export default async function setupAndLink(
         quiet,
         wantsPublic: localConfig?.public || false,
         nowConfig: localConfig,
+        rootDirectory,
         regions: undefined,
         meta: {},
         deployStamp: stamp(),

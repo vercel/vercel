@@ -137,7 +137,8 @@ async function setupProject(
     devCommand?: string;
     buildCommand?: string;
     outputDirectory?: string;
-  }
+  } = {},
+  projectRootDirectory: string = ''
 ) {
   await waitForPrompt(process, /Set up [^?]+\?/);
   process.stdin?.write('yes\n');
@@ -152,7 +153,20 @@ async function setupProject(
   process.stdin?.write(`${projectName}\n`);
 
   await waitForPrompt(process, 'In which directory is your code located?');
-  process.stdin?.write('\n');
+  process.stdin?.write(`${projectRootDirectory}\n`);
+
+  let detectedFramework: string | undefined;
+  await waitForPrompt(process, chunk => {
+    const matchFramework = chunk.match(
+      /Auto-detected Project Settings \((.+)\)/g
+    );
+    if (!matchFramework) {
+      return false;
+    }
+
+    detectedFramework = matchFramework[1];
+    return true;
+  });
 
   await waitForPrompt(process, 'Want to modify these settings?');
 
@@ -180,6 +194,10 @@ async function setupProject(
   }
 
   await waitForPrompt(process, 'Linked to');
+
+  return {
+    detectedFramework,
+  };
 }
 
 beforeAll(async () => {
@@ -1004,6 +1022,55 @@ test('[vc link --yes] should not show prompts and autolink', async () => {
     fs.existsSync(path.join(dir, '.vercel', 'README.txt')),
     'README.txt'
   ).toBe(true);
+});
+
+test('[vc link] use `rootDirectory` from user when detecting framework', async () => {
+  const repoRootDir = await setupE2EFixture('project-root-directory');
+  const projectRootDir = path.join(repoRootDir, 'src');
+
+  // remove previously linked project if it exists
+  await remove(path.join(repoRootDir, '.vercel'));
+
+  const vc = execCli(binaryPath, ['link'], {
+    cwd: repoRootDir,
+    env: {
+      FORCE_TTY: '1',
+    },
+  });
+
+  const projectName = `project-link-zeroconf-${
+    Math.random().toString(36).split('.')[1]
+  }`;
+  const { detectedFramework } = await setupProject(
+    vc,
+    projectName,
+    {
+      // buildCommand: `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html`,
+      // outputDirectory: 'o',
+    },
+    projectRootDir
+  );
+
+  const output = await vc;
+
+  // Ensure the exit code is right
+  expect(output.exitCode, formatOutput(output)).toBe(0);
+
+  // Ensure .gitignore is created
+  const gitignore = await readFile(
+    path.join(repoRootDir, '.gitignore'),
+    'utf8'
+  );
+  expect(gitignore).toBe('.vercel\n');
+
+  // Ensure .vercel/project.json and .vercel/README.txt are created
+  expect(
+    fs.existsSync(path.join(repoRootDir, '.vercel', 'project.json')),
+    'project.json'
+  ).toBe(true);
+
+  // Ensure the framework detection was correct
+  expect(detectedFramework).toBe('Remix');
 });
 
 test('[vc link] should not duplicate paths in .gitignore', async () => {
