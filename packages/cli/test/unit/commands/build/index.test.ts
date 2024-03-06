@@ -1250,6 +1250,18 @@ describe('build', () => {
       (await fs.readFile(join(output, 'static/index.txt'), 'utf8')).trim()
     ).toEqual('marketing');
   });
+
+  it('should detect framework version in monorepo app', async () => {
+    const cwd = fixture('monorepo');
+    const output = join(cwd, '.vercel/output');
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toEqual(0);
+
+    const config = await fs.readJSON(join(output, 'config.json'));
+    console.log(config);
+    expect(typeof config.framework.version).toEqual('string');
+  });
 });
 
 it('should create symlinks for duplicate references to Lambda / EdgeFunction instances', async () => {
