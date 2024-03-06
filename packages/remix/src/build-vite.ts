@@ -19,10 +19,11 @@ import {
   NodejsLambda,
 } from '@vercel/build-utils';
 import {
-  ensureResolvable,
   getPathFromRoute,
   getRegExpFromPath,
+  getRemixVersion,
   hasScript,
+  logNftWarnings,
 } from './utils';
 import type { BuildV2, Files, NodeVersion } from '@vercel/build-utils';
 
@@ -118,18 +119,7 @@ export const build: BuildV2 = async ({
 
   // Determine the version of Remix based on the `@remix-run/dev`
   // package version.
-  const remixRunDevPath = await ensureResolvable(
-    entrypointFsDirname,
-    repoRootPath,
-    '@remix-run/dev'
-  );
-  const remixRunDevPkg = JSON.parse(
-    readFileSync(join(remixRunDevPath, 'package.json'), 'utf8')
-  );
-  const remixVersion = remixRunDevPkg.version;
-
-  // Make `remix build` output production mode
-  spawnOpts.env.NODE_ENV = 'production';
+  const remixVersion = await getRemixVersion(entrypointFsDirname, repoRootPath);
 
   // Run "Build Command"
   if (buildCommand) {
@@ -156,17 +146,6 @@ export const build: BuildV2 = async ({
       });
     }
   }
-
-  // This needs to happen before we run NFT to create the Node/Edge functions
-  // TODO: maybe remove this?
-  await Promise.all([
-    ensureResolvable(
-      entrypointFsDirname,
-      repoRootPath,
-      '@remix-run/server-runtime'
-    ),
-    ensureResolvable(entrypointFsDirname, repoRootPath, '@remix-run/node'),
-  ]);
 
   const remixBuildResultPath = join(
     entrypointFsDirname,
@@ -354,9 +333,7 @@ async function createRenderNodeFunction(
     processCwd: entrypointDir,
   });
 
-  for (const warning of trace.warnings) {
-    debug(`Warning from trace: ${warning.message}`);
-  }
+  logNftWarnings(trace.warnings, '@remix-run/node');
 
   for (const file of trace.fileList) {
     files[file] = await FileFsRef.fromFsPath({ fsPath: join(rootDir, file) });
@@ -446,9 +423,7 @@ async function createRenderEdgeFunction(
     },
   });
 
-  for (const warning of trace.warnings) {
-    debug(`Warning from trace: ${warning.message}`);
-  }
+  logNftWarnings(trace.warnings, '@remix-run/server-runtime');
 
   for (const file of trace.fileList) {
     if (
