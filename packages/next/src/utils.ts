@@ -16,6 +16,7 @@ import {
   EdgeFunction,
   Images,
   File,
+  FlagDefinitions,
 } from '@vercel/build-utils';
 import { NodeFileTraceReasons } from '@vercel/nft';
 import type {
@@ -3307,19 +3308,14 @@ export function isApiPage(page: string | undefined) {
     .match(/(serverless|server)\/pages\/api(\/|\.js$)/);
 }
 
-/** @deprecated */
-export type VariantsManifestLegacy = Record<
-  string,
-  {
-    defaultValue?: unknown;
-    metadata?: Record<string, unknown>;
-  }
->;
+export type VariantsManifest = {
+  definitions: FlagDefinitions;
+};
 
 export async function getVariantsManifest(
   entryPath: string,
   outputDirectory: string
-): Promise<null | VariantsManifestLegacy> {
+): Promise<null | VariantsManifest> {
   const pathVariantsManifest = path.join(
     entryPath,
     outputDirectory,
@@ -3333,7 +3329,7 @@ export async function getVariantsManifest(
 
   if (!hasVariantsManifest) return null;
 
-  const variantsManifest: VariantsManifestLegacy = await fs.readJSON(
+  const variantsManifest: VariantsManifest = await fs.readJSON(
     pathVariantsManifest
   );
 
