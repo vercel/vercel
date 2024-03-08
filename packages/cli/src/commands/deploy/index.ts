@@ -547,10 +547,7 @@ export default async (client: Client): Promise<number> => {
       // Only add projectSettings for zero config deployments
       createArgs.projectSettings = {
         sourceFilesOutsideRootDirectory,
-        rootDirectory:
-          sourceFilesOutsideRootDirectory && rootDirectory
-            ? rootDirectory
-            : undefined,
+        rootDirectory,
       };
 
       if (status !== 'not_linked') {
