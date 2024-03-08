@@ -545,12 +545,20 @@ export default async (client: Client): Promise<number> => {
 
     if (!localConfig.builds || localConfig.builds.length === 0) {
       // Only add projectSettings for zero config deployments
-      createArgs.projectSettings =
-        status === 'not_linked'
-          ? {
-              sourceFilesOutsideRootDirectory,
-            }
-          : { ...localConfigurationOverrides, sourceFilesOutsideRootDirectory };
+      createArgs.projectSettings = {
+        sourceFilesOutsideRootDirectory,
+        rootDirectory:
+          sourceFilesOutsideRootDirectory && rootDirectory
+            ? rootDirectory
+            : undefined,
+      };
+
+      if (status !== 'not_linked') {
+        createArgs.projectSettings = {
+          ...createArgs.projectSettings,
+          ...localConfigurationOverrides,
+        };
+      }
     }
 
     deployment = await createDeploy(
