@@ -198,10 +198,7 @@ export default async function setupAndLink(
         projectSettings: {
           ...localConfigurationOverrides,
           sourceFilesOutsideRootDirectory,
-          rootDirectory:
-            sourceFilesOutsideRootDirectory && rootDirectory
-              ? rootDirectory
-              : undefined,
+          rootDirectory,
         },
         autoAssignCustomDomains: true,
       };
