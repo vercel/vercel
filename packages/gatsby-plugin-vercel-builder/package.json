@@ -1,6 +1,6 @@
 {
   "name": "@vercel/gatsby-plugin-vercel-builder",
-  "version": "2.0.19",
+  "version": "2.0.20",
   "main": "dist/index.js",
   "files": [
     "dist",
@@ -20,7 +20,7 @@
   },
   "dependencies": {
     "@sinclair/typebox": "0.25.24",
-    "@vercel/build-utils": "7.7.1",
+    "@vercel/build-utils": "7.8.0",
     "@vercel/routing-utils": "3.1.0",
     "esbuild": "0.14.47",
     "etag": "1.8.1",
