@@ -463,7 +463,11 @@ export default async (client: Client): Promise<number> => {
     parseMeta(argv['--meta'])
   );
 
-  const gitMetadata = await createGitMeta(cwd, output, project);
+  const gitMetadata = await createGitMeta(
+    link.status === 'linked' && link.repoRoot ? link.repoRoot : cwd,
+    output,
+    project
+  );
 
   // Merge dotenv config, `env` from vercel.json, and `--env` / `-e` arguments
   const deploymentEnv = Object.assign(
