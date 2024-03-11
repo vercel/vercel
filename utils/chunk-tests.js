@@ -9,7 +9,7 @@ const runnersMap = new Map([
       min: 1,
       max: 1,
       runners: ['ubuntu-latest', 'macos-latest', 'windows-latest'],
-      nodeVersion: '18',
+      nodeVersion: '16',
     },
   ],
   ['test-e2e', { min: 1, max: 7, runners: ['ubuntu-latest'] }],
