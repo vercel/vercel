@@ -3,12 +3,12 @@
     {
       "path": "/api/app-headers",
       "status": 200,
-      "mustContain": "{\"port\":null}"
+      "mustContain": "{\"port\":443}"
     },
     {
       "path": "/api/pages-headers",
       "status": 200,
-      "mustContain": "{}"
+      "mustContain": "{\"port\":443}"
     }
   ]
 }
