@@ -1,0 +1,14 @@
+{
+  "probes": [
+    {
+      "path": "/api/app-headers",
+      "status": 200,
+      "mustContain": "{\"port\":null}"
+    },
+    {
+      "path": "/api/pages-headers",
+      "status": 200,
+      "mustContain": "{}"
+    }
+  ]
+}
