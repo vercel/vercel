@@ -1,5 +1,17 @@
 # @vercel/next
 
+## 4.1.5
+
+### Patch Changes
+
+- Rename variants to flags and remove legacy flags ([#11121](https://github.com/vercel/vercel/pull/11121))
+
+## 4.1.4
+
+### Patch Changes
+
+- Enable partial prerendering support for pre-generated pages ([#11183](https://github.com/vercel/vercel/pull/11183))
+
 ## 4.1.3
 
 ### Patch Changes

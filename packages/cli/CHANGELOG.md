@@ -1,5 +1,33 @@
 # vercel
 
+## 33.5.5
+
+### Patch Changes
+
+- Rename variants to flags and remove legacy flags ([#11121](https://github.com/vercel/vercel/pull/11121))
+
+- fix vc with root dir issues ([#11243](https://github.com/vercel/vercel/pull/11243))
+
+- Updated dependencies [[`908e7837d`](https://github.com/vercel/vercel/commit/908e7837d55bc02e708f402c700e00208415e954), [`5e3656ec1`](https://github.com/vercel/vercel/commit/5e3656ec1b3f0561091636582715ba09ddd8cb2d), [`a53d1b0d3`](https://github.com/vercel/vercel/commit/a53d1b0d38efa9637f8b8f81a70898add87530e3)]:
+  - @vercel/build-utils@7.8.0
+  - @vercel/next@4.1.5
+  - @vercel/remix-builder@2.1.2
+  - @vercel/node@3.0.22
+  - @vercel/static-build@2.4.2
+
+## 33.5.4
+
+### Patch Changes
+
+- [build-utils] increase max memory limit ([#11209](https://github.com/vercel/vercel/pull/11209))
+
+- Updated dependencies [[`b1d8b83ab`](https://github.com/vercel/vercel/commit/b1d8b83abbf23a3485aedb490992d0a3bf44573f), [`37b193c84`](https://github.com/vercel/vercel/commit/37b193c845d8b63d93bb0017fbc1a6a35306ef1f), [`20237d4f7`](https://github.com/vercel/vercel/commit/20237d4f7b55b0697b57db15636c11204cb0dc39), [`f8fab639b`](https://github.com/vercel/vercel/commit/f8fab639bf49a60389b8d0b7b265a737c17b4ae1), [`6ed0fe6fb`](https://github.com/vercel/vercel/commit/6ed0fe6fb1e487545a790ff5b9fc691cf625f005)]:
+  - @vercel/next@4.1.4
+  - @vercel/build-utils@7.7.1
+  - @vercel/remix-builder@2.1.1
+  - @vercel/static-build@2.4.1
+  - @vercel/node@3.0.21
+
 ## 33.5.3
 
 ### Patch Changes

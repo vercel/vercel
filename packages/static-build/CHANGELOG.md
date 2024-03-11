@@ -1,5 +1,21 @@
 # @vercel/static-build
 
+## 2.4.2
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.20
+
+## 2.4.1
+
+### Patch Changes
+
+- [build-utils] increase max memory limit ([#11209](https://github.com/vercel/vercel/pull/11209))
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.19
+
 ## 2.4.0
 
 ### Minor Changes

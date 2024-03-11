@@ -19,6 +19,7 @@ import {
 import formatOutput from './helpers/format-output';
 import type http from 'http';
 import type { CLIProcess } from './helpers/types';
+
 const TEST_TIMEOUT = 3 * 60 * 1000;
 jest.setTimeout(TEST_TIMEOUT);
 
@@ -582,6 +583,37 @@ test('deploy fails using --local-config flag with non-existent path', async () =
     /Error: Couldn't find a project configuration file at/
   );
   expect(stderr).toMatch(/does-not-exist\.json/);
+});
+
+test('deploy using --local-config flag above target', async () => {
+  const root = await setupE2EFixture('zero-config-next-js-nested');
+  const projectName = `project-link-dev-${
+    Math.random().toString(36).split('.')[1]
+  }`;
+
+  const vc = execCli(binaryPath, ['deploy', `--name=${projectName}`], {
+    cwd: root,
+  });
+
+  await waitForPrompt(vc, /Set up and deploy [^?]+\?/);
+  vc.stdin?.write('yes\n');
+
+  await waitForPrompt(vc, 'Which scope do you want to deploy to?');
+  vc.stdin?.write('\n');
+
+  await waitForPrompt(vc, 'Link to existing project?');
+  vc.stdin?.write('no\n');
+
+  await waitForPrompt(vc, `What’s your project’s name? (${projectName})`);
+  vc.stdin?.write(`\n`);
+
+  await waitForPrompt(vc, 'In which directory is your code located?');
+  vc.stdin?.write('app\n');
+
+  // This means the framework detection worked!
+  await waitForPrompt(vc, 'Auto-detected Project Settings (Next.js)');
+
+  vc.kill();
 });
 
 test('deploy using --local-config flag above target', async () => {
