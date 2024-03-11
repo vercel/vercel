@@ -2,7 +2,7 @@
   "orgId": ".",
   "projectId": ".",
   "settings": {
-    "framework": "remix",
-    "rootDirectory": "apps/remix"
+    "framework": "next",
+    "rootDirectory": "apps/nextjs"
   }
 }
