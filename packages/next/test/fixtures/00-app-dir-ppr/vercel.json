@@ -343,12 +343,12 @@
     {
       "path": "/api/app-headers",
       "status": 200,
-      "mustContain": "{\"port\":443}"
+      "mustContain": "{\"port\":\"80\"}"
     },
     {
       "path": "/api/pages-headers",
       "status": 200,
-      "mustContain": "{\"port\":443}"
+      "mustContain": "{\"port\":\"80\"}"
     }
   ]
 }
