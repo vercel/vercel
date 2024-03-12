@@ -1,0 +1,13 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "mustContain": "<p>Loading...</p>"
+    },
+    {
+      "path": "/does-not-exist",
+      "status": 200,
+      "mustContain": "<p>Loading...</p>"
+    }
+  ]
+}
