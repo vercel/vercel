@@ -2209,12 +2209,19 @@ export const onPrerenderRoute =
       initialStatus = 404;
     }
 
+    /**
+     * If the route key had an `/index` suffix added, we need to note it so we
+     * can remove it from the output path later accurately.
+     */
+    let addedIndexSuffix = false;
+
     if (isAppPathRoute) {
       // for literal index routes we need to append an additional /index
       // due to the proxy's normalizing for /index routes
       if (routeKey !== '/index' && routeKey.endsWith('/index')) {
         routeKey = `${routeKey}/index`;
         routeFileNoExt = routeKey;
+        addedIndexSuffix = true;
       }
     }
 
@@ -2223,6 +2230,7 @@ export const onPrerenderRoute =
     if (!isAppPathRoute) {
       outputPathPage = normalizeIndexOutput(outputPathPage, isServerMode);
     }
+
     const outputPathPageOrig = path.posix.join(
       entryDirectory,
       origRouteFileNoExt
@@ -2410,7 +2418,7 @@ export const onPrerenderRoute =
         // static route first, then try the srcRoute if it doesn't exist. If we
         // can't find it at all, this constitutes an error.
         experimentalStreamingLambdaPath = experimentalStreamingLambdaPaths.get(
-          pathnameToOutputName(entryDirectory, routeKey)
+          pathnameToOutputName(entryDirectory, routeKey, addedIndexSuffix)
         );
         if (!experimentalStreamingLambdaPath && srcRoute) {
           experimentalStreamingLambdaPath =
@@ -2654,8 +2662,20 @@ export function getNextServerPath(nextVersion: string) {
     : 'next/dist/next-server/server';
 }
 
-export function pathnameToOutputName(entryDirectory: string, pathname: string) {
-  if (pathname === '/') pathname = '/index';
+function pathnameToOutputName(
+  entryDirectory: string,
+  pathname: string,
+  addedIndexSuffix = false
+) {
+  if (pathname === '/') {
+    pathname = '/index';
+  }
+  // If the `/index` was added for a route that ended in `/index` we need to
+  // strip the second one off before joining it with the entryDirectory.
+  else if (addedIndexSuffix) {
+    pathname = pathname.replace(/\/index$/, '');
+  }
+
   return path.posix.join(entryDirectory, pathname);
 }
 
