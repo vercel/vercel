@@ -59,6 +59,9 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
         const html = await res.text();
         expect(html).toContain(expected);
         expect(html).toContain('</html>');
+
+        // Validate that the loaded URL is correct.
+        expect(html).toContain(`data-pathname=${pathname}`);
       }
     );
 

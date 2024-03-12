@@ -1938,7 +1938,6 @@ type OnPrerenderRouteArgs = {
   routesManifest?: RoutesManifest;
   isCorrectNotFoundRoutes?: boolean;
   isEmptyAllowQueryForPrendered?: boolean;
-  omittedPrerenderRoutes: ReadonlySet<string>;
 };
 let prerenderGroup = 1;
 
@@ -1975,7 +1974,6 @@ export const onPrerenderRoute =
       routesManifest,
       isCorrectNotFoundRoutes,
       isEmptyAllowQueryForPrendered,
-      omittedPrerenderRoutes,
     } = prerenderRouteArgs;
 
     if (isBlocking && isFallback) {
@@ -2408,20 +2406,25 @@ export const onPrerenderRoute =
           );
         }
 
-        // If a source route exists, and it's not listed as an omitted route,
-        // then use the src route as the basis for the experimental streaming
-        // lambda path. If the route doesn't have a source route or it's not
-        // omitted, then use the more specific `routeKey` as the basis.
-        if (srcRoute && !omittedPrerenderRoutes.has(srcRoute)) {
+        // Try to get the experimental streaming lambda path for the specific
+        // static route first, then try the srcRoute if it doesn't exist. If we
+        // can't find it at all, this constitutes an error.
+        experimentalStreamingLambdaPath = experimentalStreamingLambdaPaths.get(
+          pathnameToOutputName(entryDirectory, routeKey)
+        );
+        if (!experimentalStreamingLambdaPath && srcRoute) {
           experimentalStreamingLambdaPath =
             experimentalStreamingLambdaPaths.get(
               pathnameToOutputName(entryDirectory, srcRoute)
             );
-        } else {
-          experimentalStreamingLambdaPath =
-            experimentalStreamingLambdaPaths.get(
-              pathnameToOutputName(entryDirectory, routeKey)
-            );
+        }
+
+        if (!experimentalStreamingLambdaPath) {
+          throw new Error(
+            `Invariant: experimentalStreamingLambdaPath is undefined for routeKey=${routeKey} and srcRoute=${
+              srcRoute ?? 'null'
+            }`
+          );
         }
       }
 
