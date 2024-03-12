@@ -14,7 +14,7 @@ import { readLocalConfig } from '../../util/config/files';
 import getArgs from '../../util/get-args';
 import { handleError } from '../../util/error';
 import Client from '../../util/client';
-import { getPrettyError } from '@vercel/build-utils';
+import { getPrettyError, scanParentDirs } from '@vercel/build-utils';
 import toHumanPath from '../../util/humanize-path';
 import Now, { CreateOptions } from '../../util';
 import stamp from '../../util/output/stamp';
@@ -513,6 +513,9 @@ export default async (client: Client): Promise<number> => {
     );
   }
 
+  const { packageJson } = await scanParentDirs(cwd, true);
+  const nodeVersion = packageJson?.engines?.node;
+
   try {
     // if this flag is not set, use `undefined` to allow the project setting to be used
     const autoAssignCustomDomains = argv['--skip-domain'] ? false : undefined;
@@ -548,6 +551,7 @@ export default async (client: Client): Promise<number> => {
       createArgs.projectSettings = {
         sourceFilesOutsideRootDirectory,
         rootDirectory,
+        nodeVersion,
       };
 
       if (status !== 'not_linked') {
