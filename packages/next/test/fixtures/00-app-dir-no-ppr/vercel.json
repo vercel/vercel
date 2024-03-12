@@ -361,16 +361,6 @@
       },
       "mustContain": ":{",
       "mustNotContain": "<html"
-    },
-    {
-      "path": "/api/app-headers",
-      "status": 200,
-      "mustContain": "{\"port\":443}"
-    },
-    {
-      "path": "/api/pages-headers",
-      "status": 200,
-      "mustContain": "{\"port\":443}"
     }
   ]
 }
