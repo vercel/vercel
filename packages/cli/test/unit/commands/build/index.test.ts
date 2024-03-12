@@ -1271,6 +1271,17 @@ describe('build', () => {
     });
   });
 
+  it('should detect framework version in monorepo app', async () => {
+    const cwd = fixture('monorepo');
+    const output = join(cwd, '.vercel/output');
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toEqual(0);
+
+    const config = await fs.readJSON(join(output, 'config.json'));
+    expect(typeof config.framework.version).toEqual('string');
+  });
+
   it('should create symlinks for duplicate references to Lambda / EdgeFunction instances', async () => {
     if (process.platform === 'win32') {
       console.log('Skipping test on Windows');
