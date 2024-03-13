@@ -2,17 +2,17 @@
 # https://help.github.com/en/articles/about-code-owners
 
 # Restricted Paths
-*                                        @TooTallNate @EndangeredMassa @trek
-/.github/workflows                       @TooTallNate @EndangeredMassa @trek @ijjk
-/packages/fs-detectors                   @TooTallNate @EndangeredMassa @trek @agadzik @chloetedder
-/packages/next                           @TooTallNate @EndangeredMassa @trek @timneutkens @ijjk @ztanner @huozhi @Ethan-Arrowood @styfle
-/packages/routing-utils                  @TooTallNate @EndangeredMassa @trek @ijjk
-/packages/static-build                   @TooTallNate @EndangeredMassa @trek
-/packages/edge                           @TooTallNate @EndangeredMassa @trek @vercel/compute
-/examples                                @TooTallNate @EndangeredMassa @trek @leerob
-/examples/create-react-app               @TooTallNate @EndangeredMassa @trek @Timer
-/examples/nextjs                         @TooTallNate @EndangeredMassa @trek @timneutkens @ijjk @ztanner @huozhi @Ethan-Arrowood @styfle
-/packages/node                           @TooTallNate @EndangeredMassa @trek @Kikobeats
+*                                        @TooTallNate @EndangeredMassa @trek @onsclom
+/.github/workflows                       @TooTallNate @EndangeredMassa @trek @onsclom @ijjk
+/packages/fs-detectors                   @TooTallNate @EndangeredMassa @trek @onsclom @agadzik @chloetedder
+/packages/next                           @TooTallNate @EndangeredMassa @trek @onsclom @timneutkens @ijjk @ztanner @huozhi @Ethan-Arrowood @styfle
+/packages/routing-utils                  @TooTallNate @EndangeredMassa @trek @onsclom @ijjk
+/packages/static-build                   @TooTallNate @EndangeredMassa @trek @onsclom
+/packages/edge                           @TooTallNate @EndangeredMassa @trek @onsclom @vercel/compute
+/examples                                @TooTallNate @EndangeredMassa @trek @onsclom @leerob
+/examples/create-react-app               @TooTallNate @EndangeredMassa @trek @onsclom @Timer
+/examples/nextjs                         @TooTallNate @EndangeredMassa @trek @onsclom @timneutkens @ijjk @ztanner @huozhi @Ethan-Arrowood @styfle
+/packages/node                           @TooTallNate @EndangeredMassa @trek @onsclom @Kikobeats
 
 # Unrestricted Paths
 .changeset/
