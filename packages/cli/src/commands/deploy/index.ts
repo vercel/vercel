@@ -2,6 +2,7 @@ import ms from 'ms';
 import fs from 'fs-extra';
 import bytes from 'bytes';
 import chalk from 'chalk';
+import semver from 'semver';
 import { join, resolve } from 'path';
 import {
   fileNameSymbol,
@@ -518,7 +519,13 @@ export default async (client: Client): Promise<number> => {
     true,
     cwd
   );
-  const nodeVersion = packageJson?.engines?.node;
+  let nodeVersion: string | undefined;
+  if (packageJson?.engines?.node) {
+    const parsedNodeVersion = semver.coerce(packageJson.engines.node);
+    if (parsedNodeVersion) {
+      nodeVersion = `${parsedNodeVersion.major}.x`;
+    }
+  }
 
   try {
     // if this flag is not set, use `undefined` to allow the project setting to be used
