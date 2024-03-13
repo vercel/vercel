@@ -5,13 +5,13 @@
 *                                        @TooTallNate @EndangeredMassa @trek
 /.github/workflows                       @TooTallNate @EndangeredMassa @trek @ijjk
 /packages/fs-detectors                   @TooTallNate @EndangeredMassa @trek @agadzik @chloetedder
-/packages/next                           @TooTallNate @EndangeredMassa @trek @Ethan-Arrowood @ijjk @ztanner
+/packages/next                           @TooTallNate @EndangeredMassa @trek @timneutkens @ijjk @ztanner @huozhi @Ethan-Arrowood
 /packages/routing-utils                  @TooTallNate @EndangeredMassa @trek @ijjk
 /packages/static-build                   @TooTallNate @EndangeredMassa @trek
 /packages/edge                           @TooTallNate @EndangeredMassa @trek @vercel/compute
 /examples                                @TooTallNate @EndangeredMassa @trek @leerob
 /examples/create-react-app               @TooTallNate @EndangeredMassa @trek @Timer
-/examples/nextjs                         @TooTallNate @EndangeredMassa @trek @timneutkens @ijjk @ztanner @huozhi
+/examples/nextjs                         @TooTallNate @EndangeredMassa @trek @timneutkens @ijjk @ztanner @huozhi @Ethan-Arrowood
 /packages/node                           @TooTallNate @EndangeredMassa @trek @Kikobeats
 
 # Unrestricted Paths
