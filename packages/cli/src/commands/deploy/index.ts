@@ -513,7 +513,11 @@ export default async (client: Client): Promise<number> => {
     );
   }
 
-  const { packageJson } = await scanParentDirs(cwd, true);
+  const { packageJson } = await scanParentDirs(
+    join(cwd, project?.rootDirectory ?? ''),
+    true,
+    cwd
+  );
   const nodeVersion = packageJson?.engines?.node;
 
   try {
