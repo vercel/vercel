@@ -1,7 +1,7 @@
 import inquirer from 'inquirer';
 import confirm from './confirm';
 import chalk from 'chalk';
-import frameworkList, { Framework } from '@vercel/frameworks';
+import { Framework, frameworks as frameworkList } from '@vercel/frameworks';
 import Client from '../client';
 import { isSettingValue } from '../is-setting-value';
 import type { ProjectSettings } from '@vercel-internals/types';

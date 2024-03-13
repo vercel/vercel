@@ -3,10 +3,11 @@ import sleep from '../../../src/util/sleep';
 import tmp from 'tmp-promise';
 import getLatestVersion from '../../../src/util/get-latest-version';
 import { join } from 'path';
+import { vi } from 'vitest';
 
 tmp.setGracefulCleanup();
 
-jest.setTimeout(25000);
+vi.setConfig({ testTimeout: 25000 });
 
 const cacheDir = tmp.tmpNameSync({
   prefix: 'test-vercel-cli-get-latest-version-',

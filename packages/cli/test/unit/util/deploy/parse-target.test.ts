@@ -1,13 +1,14 @@
 import parseTarget from '../../../../src/util/deploy/parse-target';
 import { Output } from '../../../../src/util/output';
+import { Mock, vi } from 'vitest';
 
 describe('parseTarget', () => {
   let output: Output;
 
   beforeEach(() => {
     output = new Output();
-    output.warn = jest.fn();
-    output.error = jest.fn();
+    output.warn = vi.fn();
+    output.error = vi.fn();
   });
 
   it('defaults to `undefined`', () => {
@@ -19,7 +20,7 @@ describe('parseTarget', () => {
     const result = parseTarget(output, 'not-a-real-environment');
     expect(result).toEqual(1);
 
-    const errorMock = (output.error as jest.Mock<any, any>).mock;
+    const errorMock = (output.error as Mock<any, any>).mock;
     expect(errorMock.calls[0][0]).toMatch(
       /not-a-real-environment.+is not valid/g
     );

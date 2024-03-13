@@ -2,8 +2,9 @@ import login from '../../../src/commands/login';
 import { emoji } from '../../../src/util/emoji';
 import { client } from '../../mocks/client';
 import { useUser } from '../../mocks/user';
+import { vi } from 'vitest';
 
-jest.setTimeout(10000);
+vi.setConfig({ testTimeout: 10000 });
 
 describe('login', () => {
   it('should not allow the `--token` flag', async () => {

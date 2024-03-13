@@ -7,8 +7,9 @@ import { defaultProject, useProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
 import { execSync } from 'child_process';
+import { vi } from 'vitest';
 
-jest.setTimeout(6 * 60 * 1000);
+vi.setConfig({ testTimeout: 6 * 60 * 1000 });
 
 const fixture = (name: string) =>
   join(__dirname, '../../../fixtures/unit/commands/build', name);
@@ -935,7 +936,7 @@ describe('build', () => {
       name: 'Error',
       message:
         'Invalid vercel.json - `rewrites[2]` should NOT have additional property `src`. Did you mean `source`?',
-      stack: expect.stringContaining('at validateConfig'),
+      stack: expect.stringContaining('at Module.validateConfig'),
       hideStackTrace: true,
       code: 'INVALID_VERCEL_CONFIG',
       link: 'https://vercel.com/docs/concepts/projects/project-configuration#rewrites',

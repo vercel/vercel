@@ -6,6 +6,7 @@ import { defaultProject, useProject } from '../../mocks/project';
 import { client } from '../../mocks/client';
 import type { Project } from '@vercel-internals/types';
 import { parseSpacedTableRow } from '../../helpers/parse-table';
+import { vi } from 'vitest';
 
 describe('project', () => {
   describe('list', () => {
@@ -46,7 +47,7 @@ describe('project', () => {
     });
 
     it('should list projects running on an soon-to-be-deprecated Node.js version', async () => {
-      jest.useFakeTimers().setSystemTime(new Date('2023-12-08'));
+      vi.useFakeTimers().setSystemTime(new Date('2023-12-08'));
 
       const user = useUser();
       useTeams('team_dummy');
@@ -91,7 +92,7 @@ describe('project', () => {
       data.pop();
       expect(data).toEqual([project.project.name, 'https://foobar.com']);
 
-      jest.clearAllTimers();
+      vi.clearAllTimers();
     });
 
     it('should list projects when there is no production deployment', async () => {

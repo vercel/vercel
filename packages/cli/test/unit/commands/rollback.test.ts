@@ -9,8 +9,9 @@ import { useDeployment } from '../../mocks/deployment';
 import { useTeams } from '../../mocks/team';
 import { useUser } from '../../mocks/user';
 import sleep from '../../../src/util/sleep';
+import { vi } from 'vitest';
 
-jest.setTimeout(60000);
+vi.setConfig({ testTimeout: 60000 });
 
 describe('rollback', () => {
   it('should error if timeout is invalid', async () => {
