@@ -14,7 +14,7 @@ npx create-remix@latest --template vercel/vercel/examples/remix
 
 _Live Example: https://remix-run-template.vercel.app_
 
-You can also deploy using the [Vercel CLI](https://vercel.com/cli):
+You can also deploy using the [Vercel CLI](https://vercel.com/docs/cli):
 
 ```sh
 npm i -g vercel
