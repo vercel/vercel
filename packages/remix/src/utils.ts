@@ -1,5 +1,5 @@
 import semver from 'semver';
-import { existsSync, promises as fs } from 'fs';
+import { existsSync, readFileSync, promises as fs } from 'fs';
 import { basename, dirname, join, relative, resolve, sep } from 'path';
 import { pathToRegexp, Key } from 'path-to-regexp';
 import { debug, type PackageJson } from '@vercel/build-utils';
@@ -419,4 +419,31 @@ export function logNftWarnings(warnings: Set<Error>, required?: string) {
       debug(`Warning from trace: ${warning.message}`);
     }
   }
+}
+
+export function isVite(dir: string): boolean {
+  const viteConfig = findConfig(dir, 'vite.config', ['.js', '.ts']);
+  if (!viteConfig) return false;
+
+  const remixConfig = findConfig(dir, 'remix.config');
+  if (!remixConfig) return true;
+
+  // `remix.config` and `vite.config` exist, so check a couple other ways
+
+  // Is `vite:build` found in the `package.json` "build" script?
+  const pkg: PackageJson = JSON.parse(
+    readFileSync(join(dir, 'package.json'), 'utf8')
+  );
+  if (pkg.scripts?.build && /\bvite:build\b/.test(pkg.scripts.build)) {
+    return true;
+  }
+
+  // Is `@remix-run/dev` package found in `vite.config`?
+  const viteConfigContents = readFileSync(viteConfig, 'utf8');
+  if (/['"]@remix-run\/dev['"]/.test(viteConfigContents)) {
+    return true;
+  }
+
+  // If none of those conditions matched, then treat it as a legacy project and print a warning
+  return false;
 }

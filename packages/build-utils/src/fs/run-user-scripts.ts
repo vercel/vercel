@@ -276,12 +276,13 @@ export async function getNodeVersion(
 
 export async function scanParentDirs(
   destPath: string,
-  readPackageJson = false
+  readPackageJson = false,
+  base = '/'
 ): Promise<ScanParentDirsResult> {
   assert(path.isAbsolute(destPath));
 
   const pkgJsonPath = await walkParentDirs({
-    base: '/',
+    base,
     start: destPath,
     filename: 'package.json',
   });
@@ -291,7 +292,7 @@ export async function scanParentDirs(
       : undefined;
   const [yarnLockPath, npmLockPath, pnpmLockPath, bunLockPath] =
     await walkParentDirsMulti({
-      base: '/',
+      base,
       start: destPath,
       filenames: [
         'yarn.lock',

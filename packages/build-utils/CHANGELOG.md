@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 7.9.0
+
+### Minor Changes
+
+- Add `base` parameter to `scanParentDirs()` ([#11261](https://github.com/vercel/vercel/pull/11261))
+
 ## 7.8.0
 
 ### Minor Changes
