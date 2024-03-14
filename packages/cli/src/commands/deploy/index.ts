@@ -523,7 +523,7 @@ export default async (client: Client): Promise<number> => {
   if (packageJson?.engines?.node) {
     try {
       const { range } = await getSupportedNodeVersion(
-        packageJson?.engines?.node
+        packageJson.engines.node
       );
       nodeVersion = range;
     } catch (error) {
