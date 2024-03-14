@@ -12,7 +12,6 @@ import {
   debug,
   glob,
   Files,
-  Flag,
   BuildResultV2Typical as BuildResult,
   NodejsLambda,
 } from '@vercel/build-utils';
@@ -47,7 +46,7 @@ import {
   UnwrapPromise,
   getOperationType,
   FunctionsConfigManifestV1,
-  VariantsManifestLegacy,
+  VariantsManifest,
   RSC_CONTENT_TYPE,
   RSC_PREFETCH_SUFFIX,
   normalizePrefetches,
@@ -184,7 +183,7 @@ export async function serverBuild({
   imagesManifest?: NextImagesManifest;
   prerenderManifest: NextPrerenderedRoutes;
   requiredServerFilesManifest: NextRequiredServerFilesManifest;
-  variantsManifest: VariantsManifestLegacy | null;
+  variantsManifest: VariantsManifest | null;
   experimentalPPRRoutes: ReadonlySet<string>;
 }): Promise<BuildResult> {
   lambdaPages = Object.assign({}, lambdaPages, lambdaAppPaths);
@@ -1230,34 +1229,31 @@ export async function serverBuild({
             // We want to add the `experimentalStreamingLambdaPath` to this
             // output.
             experimentalStreamingLambdaPaths.set(outputName, key);
-          } else {
-            // As this is an omitted page, we should generate the experimental
-            // partial prerendering resume route for each of these routes that
-            // support partial prerendering. This is because the routes that
-            // haven't been omitted will have rewrite rules in place to rewrite
-            // the original request `/blog/my-slug` to the dynamic path
-            // `/blog/[slug]?nxtPslug=my-slug`.
-            for (const [
-              routePathname,
-              { srcRoute, experimentalPPR },
-            ] of Object.entries(prerenderManifest.staticRoutes)) {
-              // If the srcRoute doesn't match or this doesn't support
-              // experimental partial prerendering, then we can skip this route.
-              if (srcRoute !== pagePathname || !experimentalPPR) continue;
+          }
 
-              // If this route is the same as the page route, then we can skip
-              // it, because we've already added the lambda to the output.
-              if (routePathname === pagePathname) continue;
+          // For each static route that was generated, we should generate a
+          // specific partial prerendering resume route. This is because any
+          // static route that is matched will not hit the rewrite rules.
+          for (const [
+            routePathname,
+            { srcRoute, experimentalPPR },
+          ] of Object.entries(prerenderManifest.staticRoutes)) {
+            // If the srcRoute doesn't match or this doesn't support
+            // experimental partial prerendering, then we can skip this route.
+            if (srcRoute !== pagePathname || !experimentalPPR) continue;
 
-              const key = getPostponeResumePathname(
-                entryDirectory,
-                routePathname
-              );
-              lambdas[key] = lambda;
+            // If this route is the same as the page route, then we can skip
+            // it, because we've already added the lambda to the output.
+            if (routePathname === pagePathname) continue;
 
-              outputName = path.posix.join(entryDirectory, routePathname);
-              experimentalStreamingLambdaPaths.set(outputName, key);
-            }
+            const key = getPostponeResumePathname(
+              entryDirectory,
+              routePathname
+            );
+            lambdas[key] = lambda;
+
+            outputName = path.posix.join(entryDirectory, routePathname);
+            experimentalStreamingLambdaPaths.set(outputName, key);
           }
 
           continue;
@@ -1315,7 +1311,6 @@ export async function serverBuild({
     hasPages404: routesManifest.pages404,
     isCorrectNotFoundRoutes,
     isEmptyAllowQueryForPrendered,
-    omittedPrerenderRoutes,
   });
 
   await Promise.all(
@@ -1578,14 +1573,6 @@ export async function serverBuild({
     routesManifest?.rsc?.varyHeader ||
     'RSC, Next-Router-State-Tree, Next-Router-Prefetch';
   const appNotFoundPath = path.posix.join('.', entryDirectory, '_not-found');
-
-  const flags: Flag[] = variantsManifest
-    ? Object.entries(variantsManifest).map(([key, value]) => ({
-        key,
-        ...value,
-        metadata: value.metadata ?? {},
-      }))
-    : [];
 
   if (experimental.ppr && !rscPrefetchHeader) {
     throw new Error("Invariant: cannot use PPR without 'rsc.prefetchHeader'");
@@ -2354,6 +2341,6 @@ export async function serverBuild({
           ]),
     ],
     framework: { version: nextVersion },
-    flags,
+    flags: variantsManifest || undefined,
   };
 }

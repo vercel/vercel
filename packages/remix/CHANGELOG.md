@@ -1,5 +1,17 @@
 # @vercel/remix-builder
 
+## 2.1.3
+
+### Patch Changes
+
+- Improve hueristics for detecting Remix + Vite ([#11256](https://github.com/vercel/vercel/pull/11256))
+
+## 2.1.2
+
+### Patch Changes
+
+- Update `@remix-run/dev` fork to v2.8.1 ([#11241](https://github.com/vercel/vercel/pull/11241))
+
 ## 2.1.1
 
 ### Patch Changes
