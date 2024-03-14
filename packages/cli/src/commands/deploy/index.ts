@@ -2,7 +2,6 @@ import ms from 'ms';
 import fs from 'fs-extra';
 import bytes from 'bytes';
 import chalk from 'chalk';
-import semver from 'semver';
 import { join, resolve } from 'path';
 import {
   fileNameSymbol,
@@ -71,6 +70,7 @@ import { pickOverrides } from '../../util/projects/project-settings';
 import { printDeploymentStatus } from '../../util/deploy/print-deployment-status';
 import { help } from '../help';
 import { deployCommand } from './command';
+import { getSupportedNodeVersion } from '@vercel/build-utils/dist/fs/node-version';
 
 export default async (client: Client): Promise<number> => {
   const { output } = client;
@@ -521,9 +521,15 @@ export default async (client: Client): Promise<number> => {
   );
   let nodeVersion: string | undefined;
   if (packageJson?.engines?.node) {
-    const parsedNodeVersion = semver.coerce(packageJson.engines.node);
-    if (parsedNodeVersion) {
-      nodeVersion = `${parsedNodeVersion.major}.x`;
+    try {
+      const { range } = await getSupportedNodeVersion(
+        packageJson?.engines?.node
+      );
+      nodeVersion = range;
+    } catch (error) {
+      if (error instanceof Error) {
+        output.warn(error.message);
+      }
     }
   }
 
