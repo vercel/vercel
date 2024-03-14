@@ -70,7 +70,7 @@ import { pickOverrides } from '../../util/projects/project-settings';
 import { printDeploymentStatus } from '../../util/deploy/print-deployment-status';
 import { help } from '../help';
 import { deployCommand } from './command';
-import { getSupportedNodeVersion } from '@vercel/build-utils/dist/fs/node-version';
+import { getSupportedNodeVersion } from '@vercel/build-utils';
 
 export default async (client: Client): Promise<number> => {
   const { output } = client;
