@@ -6,7 +6,7 @@ import chalk from 'chalk';
 // @ts-ignore
 import listInput from '../../util/input/list';
 import listItem from '../../util/output/list-item';
-import promptBool from '../../util/input/prompt-bool';
+import confirm from '../../util/input/confirm';
 import toHumanPath from '../../util/humanize-path';
 import Client from '../../util/client';
 import info from '../../util/output/info';
@@ -216,7 +216,7 @@ async function guess(client: Client, exampleList: string[], name: string) {
   const found = didYouMean(name, exampleList, 0.7);
 
   if (typeof found === 'string') {
-    if (await promptBool(`Did you mean ${chalk.bold(found)}?`, client)) {
+    if (await confirm(client, `Did you mean ${chalk.bold(found)}?`, false)) {
       return found;
     }
   } else {
