@@ -257,9 +257,6 @@ export default async function main(client: Client): Promise<number> {
     if (project.settings.analyticsId) {
       envToUnset.add('VERCEL_ANALYTICS_ID');
       process.env.VERCEL_ANALYTICS_ID = project.settings.analyticsId;
-      output.warn(
-        'Vercel Speed Insights auto-injection is deprecated in favor of @vercel/speed-insights package. Learn more: https://vercel.link/upgrate-to-speed-insights-package'
-      );
     }
 
     // Some build processes use these env vars to platform detect Vercel
