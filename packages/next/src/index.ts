@@ -2142,7 +2142,6 @@ export const build: BuildV2 = async ({
       appPathRoutesManifest,
       isSharedLambdas,
       canUsePreviewMode,
-      omittedPrerenderRoutes,
     });
 
     await Promise.all(
