@@ -1,76 +1,79 @@
-import ms from 'ms';
-import fs from 'fs-extra';
-import bytes from 'bytes';
-import chalk from 'chalk';
-import { join, resolve } from 'path';
+import {
+  getPrettyError,
+  getSupportedNodeVersion,
+  scanParentDirs,
+} from '@vercel/build-utils';
 import {
   fileNameSymbol,
   VALID_ARCHIVE_FORMATS,
   VercelConfig,
 } from '@vercel/client';
-import code from '../../util/output/code';
-import highlight from '../../util/output/highlight';
-import { readLocalConfig } from '../../util/config/files';
-import getArgs from '../../util/get-args';
-import { handleError } from '../../util/error';
-import Client from '../../util/client';
-import { getPrettyError, scanParentDirs } from '@vercel/build-utils';
-import toHumanPath from '../../util/humanize-path';
+import { errorToString, isErrnoException, isError } from '@vercel/error-utils';
+import bytes from 'bytes';
+import chalk from 'chalk';
+import fs from 'fs-extra';
+import ms from 'ms';
+import { join, resolve } from 'path';
 import Now, { CreateOptions } from '../../util';
-import stamp from '../../util/output/stamp';
+import Client from '../../util/client';
+import { readLocalConfig } from '../../util/config/files';
+import { createGitMeta } from '../../util/create-git-meta';
 import createDeploy from '../../util/deploy/create-deploy';
-import getDeployment from '../../util/get-deployment';
-import parseMeta from '../../util/parse-meta';
-import param from '../../util/output/param';
+import { getDeploymentChecks } from '../../util/deploy/get-deployment-checks';
+import getPrebuiltJson from '../../util/deploy/get-prebuilt-json';
+import parseTarget from '../../util/deploy/parse-target';
+import { printDeploymentStatus } from '../../util/deploy/print-deployment-status';
+import { isValidArchive } from '../../util/deploy/validate-archive-format';
+import purchaseDomainIfAvailable from '../../util/domains/purchase-domain-if-available';
+import { emoji, prependEmoji } from '../../util/emoji';
+import { handleError } from '../../util/error';
+import { SchemaValidationFailed } from '../../util/errors';
 import {
+  AliasDomainConfigured,
+  BuildError,
   BuildsRateLimited,
+  ConflictingFilePath,
+  ConflictingPathSegment,
   DeploymentNotFound,
+  DeploymentsRateLimited,
   DomainNotFound,
   DomainNotVerified,
   DomainPermissionDenied,
   DomainVerificationFailed,
   InvalidDomain,
+  isAPIError,
+  MissingBuildScript,
+  NotDomainOwner,
   TooManyRequests,
   UserAborted,
-  DeploymentsRateLimited,
-  AliasDomainConfigured,
-  MissingBuildScript,
-  ConflictingFilePath,
-  ConflictingPathSegment,
-  BuildError,
-  NotDomainOwner,
-  isAPIError,
 } from '../../util/errors-ts';
-import { SchemaValidationFailed } from '../../util/errors';
-import purchaseDomainIfAvailable from '../../util/domains/purchase-domain-if-available';
+import getArgs from '../../util/get-args';
+import getDeployment from '../../util/get-deployment';
+import getProjectName from '../../util/get-project-name';
+import toHumanPath from '../../util/humanize-path';
 import confirm from '../../util/input/confirm';
 import editProjectSettings from '../../util/input/edit-project-settings';
+import inputProject from '../../util/input/input-project';
+import { inputRootDirectory } from '../../util/input/input-root-directory';
+import selectOrg from '../../util/input/select-org';
+import { Output } from '../../util/output';
+import code from '../../util/output/code';
+import highlight from '../../util/output/highlight';
+import param from '../../util/output/param';
+import stamp from '../../util/output/stamp';
+import { parseEnv } from '../../util/parse-env';
+import parseMeta from '../../util/parse-meta';
+import { getCommandName } from '../../util/pkg-name';
 import {
   getLinkedProject,
   linkFolderToProject,
 } from '../../util/projects/link';
-import getProjectName from '../../util/get-project-name';
-import selectOrg from '../../util/input/select-org';
-import inputProject from '../../util/input/input-project';
-import { prependEmoji, emoji } from '../../util/emoji';
-import { inputRootDirectory } from '../../util/input/input-root-directory';
+import { pickOverrides } from '../../util/projects/project-settings';
 import validatePaths, {
   validateRootDirectory,
 } from '../../util/validate-paths';
-import { getCommandName } from '../../util/pkg-name';
-import { Output } from '../../util/output';
-import { getDeploymentChecks } from '../../util/deploy/get-deployment-checks';
-import parseTarget from '../../util/deploy/parse-target';
-import getPrebuiltJson from '../../util/deploy/get-prebuilt-json';
-import { createGitMeta } from '../../util/create-git-meta';
-import { isValidArchive } from '../../util/deploy/validate-archive-format';
-import { parseEnv } from '../../util/parse-env';
-import { errorToString, isErrnoException, isError } from '@vercel/error-utils';
-import { pickOverrides } from '../../util/projects/project-settings';
-import { printDeploymentStatus } from '../../util/deploy/print-deployment-status';
 import { help } from '../help';
 import { deployCommand } from './command';
-import { getSupportedNodeVersion } from '@vercel/build-utils/dist/fs/node-version';
 
 export default async (client: Client): Promise<number> => {
   const { output } = client;
