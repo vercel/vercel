@@ -1,5 +1,23 @@
 # vercel
 
+## 33.6.0
+
+### Minor Changes
+
+- Set `projectSettings.nodeVersion` in `vc deploy` based on "engines.node" field ([#11261](https://github.com/vercel/vercel/pull/11261))
+
+### Patch Changes
+
+- Stops warning about legacy Speed Insights for Next.js apps ([#11268](https://github.com/vercel/vercel/pull/11268))
+
+- Fix framework version detection in monorepos ([#11212](https://github.com/vercel/vercel/pull/11212))
+
+- Updated dependencies [[`8ea93839c`](https://github.com/vercel/vercel/commit/8ea93839ccc70816f3ece9d7cfdb857aa7a4b015), [`58ef91bfe`](https://github.com/vercel/vercel/commit/58ef91bfe8c2e7176e8783cc4eb91ee8580c70dc)]:
+  - @vercel/build-utils@7.9.0
+  - @vercel/remix-builder@2.1.3
+  - @vercel/node@3.0.23
+  - @vercel/static-build@2.4.3
+
 ## 33.5.5
 
 ### Patch Changes
