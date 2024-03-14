@@ -70,7 +70,7 @@ import { pickOverrides } from '../../util/projects/project-settings';
 import { printDeploymentStatus } from '../../util/deploy/print-deployment-status';
 import { help } from '../help';
 import { deployCommand } from './command';
-import { getSupportedNodeVersion } from '@vercel/build-utils';
+import { getSupportedNodeVersion } from '@vercel/build-utils/dist/fs/node-version';
 
 export default async (client: Client): Promise<number> => {
   const { output } = client;
@@ -522,9 +522,7 @@ export default async (client: Client): Promise<number> => {
   let nodeVersion: string | undefined;
   if (packageJson?.engines?.node) {
     try {
-      const { range } = await getSupportedNodeVersion(
-        packageJson.engines.node
-      );
+      const { range } = await getSupportedNodeVersion(packageJson.engines.node);
       nodeVersion = range;
     } catch (error) {
       if (error instanceof Error) {
