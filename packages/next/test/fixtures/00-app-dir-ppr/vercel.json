@@ -19,6 +19,69 @@
   ],
   "probes": [
     {
+      "path": "/dynamic-index/hello/index",
+      "status": 200,
+      "mustContain": "dynamic-index"
+    },
+    {
+      "path": "/dynamic-index/hello/index",
+      "status": 200,
+      "mustContain": ":",
+      "mustNotContain": "<html",
+      "headers": {
+        "RSC": 1,
+        "Next-Router-Prefetch": 1
+      }
+    },
+    {
+      "path": "/rewritten-to-dashboard",
+      "status": 200,
+      "mustContain": "html"
+    },
+    {
+      "path": "/rewritten-to-dashboard",
+      "status": 200,
+      "mustContain": ":",
+      "mustNotContain": "<html",
+      "headers": {
+        "RSC": 1,
+        "Next-Router-Prefetch": 1
+      }
+    },
+    {
+      "path": "/rewritten-to-dashboard",
+      "status": 200,
+      "mustContain": ":",
+      "mustNotContain": "<html",
+      "headers": {
+        "RSC": 1
+      }
+    },
+    {
+      "path": "/rewritten-to-index",
+      "status": 200,
+      "mustContain": "html"
+    },
+    {
+      "path": "/rewritten-to-index",
+      "status": 200,
+      "mustContain": ":",
+      "mustNotContain": "<html",
+      "headers": {
+        "RSC": 1,
+        "Next-Router-Prefetch": 1
+      }
+    },
+    {
+      "path": "/rewritten-to-index",
+      "status": 200,
+      "mustContain": ":",
+      "mustNotContain": "<html",
+      "headers": {
+        "RSC": 1
+      }
+    },
+    {
       "path": "/catch-all",
       "status": 200,
       "mustContain": "html"
@@ -84,7 +147,7 @@
       "status": 200,
       "mustContain": "hello from /ssg",
       "responseHeaders": {
-        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Url"
+        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch"
       }
     },
     {
@@ -100,7 +163,7 @@
       "path": "/ssg",
       "status": 200,
       "responseHeaders": {
-        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Url"
+        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch"
       },
       "headers": {
         "RSC": "1"
@@ -112,7 +175,7 @@
       "path": "/ssg",
       "status": 200,
       "responseHeaders": {
-        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Url",
+        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch",
         "content-type": "text/x-component"
       },
       "headers": {
@@ -147,14 +210,14 @@
       "status": 200,
       "mustContain": "hello from app/dashboard/deployments/[id]/settings",
       "responseHeaders": {
-        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Url"
+        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch"
       }
     },
     {
       "path": "/dashboard/deployments/123/settings",
       "status": 200,
       "responseHeaders": {
-        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Url"
+        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch"
       },
       "headers": {
         "RSC": "1"
@@ -167,14 +230,14 @@
       "status": 200,
       "mustContain": "catchall",
       "responseHeaders": {
-        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Url"
+        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch"
       }
     },
     {
       "path": "/dashboard/deployments/catchall/something",
       "status": 200,
       "responseHeaders": {
-        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Url"
+        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch"
       },
       "headers": {
         "RSC": "1"
@@ -187,7 +250,7 @@
       "status": 200,
       "mustContain": "hello from app/dashboard",
       "responseHeaders": {
-        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Url"
+        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch"
       }
     },
     {
@@ -207,7 +270,7 @@
       },
       "responseHeaders": {
         "content-type": "text/x-component",
-        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Url"
+        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch"
       }
     },
     {

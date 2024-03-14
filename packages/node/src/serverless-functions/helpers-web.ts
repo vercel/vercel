@@ -1,26 +1,7 @@
 import type { ServerResponse, IncomingMessage } from 'http';
 import type { NodeHandler } from '@edge-runtime/node-utils';
 import { buildToNodeHandler } from '@edge-runtime/node-utils';
-
-class FetchEvent {
-  public request: Request;
-  public awaiting: Set<Promise<void>>;
-  public response: Response | null;
-
-  constructor(request: Request) {
-    this.request = request;
-    this.response = null;
-    this.awaiting = new Set();
-  }
-
-  respondWith(response: Response) {
-    this.response = response;
-  }
-
-  waitUntil() {
-    throw new Error('waitUntil is not implemented yet for Node.js');
-  }
-}
+import Edge from '@edge-runtime/primitives';
 
 const webHandlerToNodeHandler = buildToNodeHandler(
   {
@@ -32,8 +13,8 @@ const webHandlerToNodeHandler = buildToNodeHandler(
         super(input, addDuplexToInit(init));
       }
     },
-    Uint8Array: Uint8Array,
-    FetchEvent: FetchEvent,
+    Uint8Array,
+    FetchEvent: Edge.FetchEvent,
   },
   { defaultOrigin: 'https://vercel.com' }
 );

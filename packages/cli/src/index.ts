@@ -465,6 +465,15 @@ const main = async () => {
           return 1;
         }
 
+        if (isErrnoException(err) && err.code === 'rate_limited') {
+          output.prettyError({
+            message:
+              'Rate limited. Too many requests to the same endpoint: /teams',
+          });
+
+          return 1;
+        }
+
         console.error(error('Not able to load teams'));
         return 1;
       }

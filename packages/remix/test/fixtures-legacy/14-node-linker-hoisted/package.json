@@ -1,0 +1,30 @@
+{
+  "name": "@ramble/root",
+  "private": true,
+  "dependencies": {
+    "turbo": "1.12.3"
+  },
+  "type": "commonjs",
+  "devDependencies": {
+    "prettier": "3.2.5",
+    "typescript": "5.3.3"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "ci": "turbo run typecheck lint prettier",
+    "lint": "turbo run lint",
+    "fix": "turbo run lint:fix prettier:fix",
+    "prettier": "turbo run prettier",
+    "prettier:fix": "turbo run prettier:fix",
+    "lint:fix": "turbo run lint:fix",
+    "format": "turbo run lint:fix && turbo run prettier:fix",
+    "typecheck": "turbo run typecheck",
+    "db:generate": "turbo run db:generate"
+  },
+  "packageManager": "pnpm@8.12.0",
+  "engines": {
+    "node": ">=18",
+    "pnpm": ">=8"
+  }
+}

@@ -185,7 +185,7 @@ export default async function processDeployment({
 
         printInspectUrl(output, deployment.inspectorUrl, deployStamp);
 
-        const isProdDeployment = requestBody.target === 'production';
+        const isProdDeployment = deployment.target === 'production';
         const previewUrl = `https://${deployment.url}`;
 
         output.print(

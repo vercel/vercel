@@ -126,7 +126,6 @@ export const build: BuildV2 = async ({
   ]);
 
   const edgeFunction = new EdgeFunction({
-    name: 'hydrogen',
     deploymentTarget: 'v8-worker',
     entrypoint: 'index.js',
     files: edgeFunctionFiles,

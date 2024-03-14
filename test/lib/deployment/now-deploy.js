@@ -3,7 +3,7 @@ const assert = require('assert');
 const { createHash } = require('crypto');
 const path = require('path');
 const _fetch = require('node-fetch');
-const fetch = require('./fetch-retry.js');
+const fetch = require('./fetch-retry');
 const fileModeSymbol = Symbol('fileMode');
 const { logWithinTest } = require('./log');
 const ms = require('ms');
@@ -119,16 +119,28 @@ async function disableSSO(deploymentId, useTeam = true) {
     }
   );
 
+  const text = await deployRes.text();
+
   if (!deployRes.ok) {
     throw new Error(
-      `Failed to get deployment info (status: ${
-        deployRes.status
-      }, body: ${await deployRes.text()})`
+      `Failed to get deployment info (status: ${deployRes.status}, body: ${text})`
     );
   }
 
-  const deploymentInfo = await deployRes.json();
-  const { projectId, url: deploymentUrl } = deploymentInfo;
+  let info;
+  try {
+    info = JSON.parse(text);
+  } catch (err) {
+    throw new Error('Failed to parse deployment info JSON', { cause: err });
+  }
+
+  const { projectId, url: deploymentUrl } = info;
+
+  if (!deploymentUrl || typeof deploymentUrl !== 'string') {
+    throw new Error(
+      `Failed to get deployment URL (status: ${deployRes.status}, body: ${text})`
+    );
+  }
 
   const settingRes = await fetchWithAuth(
     `https://vercel.com/api/v5/projects/${encodeURIComponent(projectId)}`,
@@ -149,7 +161,7 @@ async function disableSSO(deploymentId, useTeam = true) {
   );
 
   if (settingRes.ok) {
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 10; i++) {
       const res = await fetch(`https://${deploymentUrl}`);
       if (res.status !== 401) {
         break;
@@ -160,7 +172,7 @@ async function disableSSO(deploymentId, useTeam = true) {
       `Disabled deployment protection for deploymentId: ${deploymentId} projectId: ${projectId}`
     );
   } else {
-    console.error(settingRes.status, await settingRes.text(), deploymentInfo);
+    console.error(settingRes.status, await settingRes.text(), text);
     throw new Error(
       `Failed to disable deployment protection projectId: ${projectId} deploymentId ${deploymentId}`
     );

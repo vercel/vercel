@@ -1,5 +1,29 @@
 # @vercel/fs-detectors
 
+## 5.2.1
+
+### Patch Changes
+
+- [build-utils] increase max memory limit ([#11209](https://github.com/vercel/vercel/pull/11209))
+
+## 5.2.0
+
+### Minor Changes
+
+- Make "remix" framework preset supersede "vite" ([#11031](https://github.com/vercel/vercel/pull/11031))
+
+### Patch Changes
+
+- Updated dependencies [[`1333071a3`](https://github.com/vercel/vercel/commit/1333071a3a2d324679327bfdd4e872f8fd3521c6)]:
+  - @vercel/frameworks@3.0.0
+
+## 5.1.6
+
+### Patch Changes
+
+- Updated dependencies [[`471bdd5b4`](https://github.com/vercel/vercel/commit/471bdd5b4506f1410afd7bca6efae3bc696cd939)]:
+  - @vercel/frameworks@2.0.6
+
 ## 5.1.5
 
 ### Patch Changes

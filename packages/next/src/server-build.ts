@@ -12,7 +12,6 @@ import {
   debug,
   glob,
   Files,
-  Flag,
   BuildResultV2Typical as BuildResult,
   NodejsLambda,
 } from '@vercel/build-utils';
@@ -52,6 +51,7 @@ import {
   RSC_PREFETCH_SUFFIX,
   normalizePrefetches,
   CreateLambdaFromPseudoLayersOptions,
+  getPostponeResumePathname,
 } from './utils';
 import {
   nodeFileTrace,
@@ -69,6 +69,30 @@ const CORRECT_MIDDLEWARE_ORDER_VERSION = 'v12.1.7-canary.29';
 const NEXT_DATA_MIDDLEWARE_RESOLVING_VERSION = 'v12.1.7-canary.33';
 const EMPTY_ALLOW_QUERY_FOR_PRERENDERED_VERSION = 'v12.2.0';
 const CORRECTED_MANIFESTS_VERSION = 'v12.2.0';
+
+// Ideally this should be in a Next.js manifest so we can change it in
+// the future but this also allows us to improve existing versions
+const PRELOAD_CHUNKS = {
+  APP_ROUTER_PAGES: [
+    '.next/server/webpack-runtime.js',
+    'next/dist/client/components/action-async-storage.external.js',
+    'next/dist/client/components/request-async-storage.external.js',
+    'next/dist/client/components/static-generation-async-storage.external.js',
+    'next/dist/compiled/next-server/app-page.runtime.prod.js',
+  ],
+  APP_ROUTER_HANDLER: [
+    '.next/server/webpack-runtime.js',
+    'next/dist/compiled/next-server/app-route.runtime.prod.js',
+  ],
+  PAGES_ROUTER_PAGES: [
+    '.next/server/webpack-runtime.js',
+    'next/dist/compiled/next-server/pages.runtime.prod.js',
+  ],
+  PAGES_ROUTER_API: [
+    '.next/server/webpack-api-runtime.js',
+    'next/dist/compiled/next-server/pages-api.runtime.prod.js',
+  ],
+};
 
 // related PR: https://github.com/vercel/next.js/pull/52997
 // and https://github.com/vercel/next.js/pull/56318
@@ -118,6 +142,7 @@ export async function serverBuild({
   lambdaCompressedByteLimit,
   requiredServerFilesManifest,
   variantsManifest,
+  experimentalPPRRoutes,
 }: {
   appPathRoutesManifest?: Record<string, string>;
   dynamicPages: string[];
@@ -127,7 +152,7 @@ export async function serverBuild({
   pagesDir: string;
   baseDir: string;
   canUsePreviewMode: boolean;
-  omittedPrerenderRoutes: Set<string>;
+  omittedPrerenderRoutes: ReadonlySet<string>;
   localePrefixed404: boolean;
   staticPages: { [key: string]: FileFsRef };
   lambdaAppPaths: { [key: string]: FileFsRef };
@@ -159,8 +184,13 @@ export async function serverBuild({
   prerenderManifest: NextPrerenderedRoutes;
   requiredServerFilesManifest: NextRequiredServerFilesManifest;
   variantsManifest: VariantsManifest | null;
+  experimentalPPRRoutes: ReadonlySet<string>;
 }): Promise<BuildResult> {
   lambdaPages = Object.assign({}, lambdaPages, lambdaAppPaths);
+
+  const experimentalAllowBundling = Boolean(
+    process.env.NEXT_EXPERIMENTAL_FUNCTION_BUNDLING
+  );
 
   const lambdas: { [key: string]: Lambda } = {};
   const prerenders: { [key: string]: Prerender } = {};
@@ -213,6 +243,25 @@ export async function serverBuild({
         value.contentType = rscContentTypeHeader;
       }
     }
+
+    for (const rewrite of afterFilesRewrites) {
+      if (rewrite.src && rewrite.dest) {
+        rewrite.src = rewrite.src.replace(
+          /\/?\(\?:\/\)\?/,
+          '(?<rscsuff>(\\.prefetch)?\\.rsc)?(?:/)?'
+        );
+        let destQueryIndex = rewrite.dest.indexOf('?');
+
+        if (destQueryIndex === -1) {
+          destQueryIndex = rewrite.dest.length;
+        }
+
+        rewrite.dest =
+          rewrite.dest.substring(0, destQueryIndex) +
+          '$rscsuff' +
+          rewrite.dest.substring(destQueryIndex);
+      }
+    }
   }
 
   const isCorrectNotFoundRoutes = semver.gte(
@@ -223,10 +272,11 @@ export async function serverBuild({
     nextVersion,
     CORRECT_MIDDLEWARE_ORDER_VERSION
   );
-  const isCorrectManifests = semver.gte(
-    nextVersion,
-    CORRECTED_MANIFESTS_VERSION
-  );
+  // experimental bundling prevents filtering manifests
+  // as we don't know what to filter by at this stage
+  const isCorrectManifests =
+    !experimentalAllowBundling &&
+    semver.gte(nextVersion, CORRECTED_MANIFESTS_VERSION);
 
   let hasStatic500 = !!staticPages[path.posix.join(entryDirectory, '500')];
 
@@ -305,19 +355,7 @@ export async function serverBuild({
     internalPages.push('404.js');
   }
 
-  const experimentalPPRRoutes = new Set<string>();
-
-  for (const [route, { experimentalPPR }] of [
-    ...Object.entries(prerenderManifest.staticRoutes),
-    ...Object.entries(prerenderManifest.blockingFallbackRoutes),
-    ...Object.entries(prerenderManifest.fallbackRoutes),
-  ]) {
-    if (!experimentalPPR) continue;
-
-    experimentalPPRRoutes.add(route);
-  }
-
-  const prerenderRoutes = new Set<string>([
+  const prerenderRoutes: ReadonlySet<string> = new Set<string>([
     ...(canUsePreviewMode ? omittedPrerenderRoutes : []),
     ...Object.keys(prerenderManifest.blockingFallbackRoutes),
     ...Object.keys(prerenderManifest.fallbackRoutes),
@@ -725,7 +763,7 @@ export async function serverBuild({
       .filter(Boolean) as string[];
 
     let traceResult: NodeFileTraceResult | undefined;
-    let parentFilesMap: Map<string, Set<string>> | undefined;
+    let parentFilesMap: ReadonlyMap<string, Set<string>> | undefined;
 
     if (pathsToTrace.length > 0) {
       traceResult = await nodeFileTrace(pathsToTrace, {
@@ -840,6 +878,7 @@ export async function serverBuild({
     const pageExtensions = requiredServerFilesManifest.config?.pageExtensions;
 
     const pageLambdaGroups = await getPageLambdaGroups({
+      experimentalAllowBundling,
       entryPath: projectDir,
       config,
       functionsConfigManifest,
@@ -861,6 +900,7 @@ export async function serverBuild({
     }
 
     const appRouterLambdaGroups = await getPageLambdaGroups({
+      experimentalAllowBundling,
       entryPath: projectDir,
       config,
       functionsConfigManifest,
@@ -879,6 +919,7 @@ export async function serverBuild({
     });
 
     const appRouteHandlersLambdaGroups = await getPageLambdaGroups({
+      experimentalAllowBundling,
       entryPath: projectDir,
       config,
       functionsConfigManifest,
@@ -1049,9 +1090,58 @@ export async function serverBuild({
         }
       }
 
+      let launcherData = group.isAppRouter ? appLauncher : launcher;
+      let preloadChunks: string[] = [];
+
+      if (process.env.VERCEL_NEXT_PRELOAD_COMMON === '1') {
+        const nextPackageDir = path.dirname(
+          resolveFrom(projectDir, 'next/package.json')
+        );
+
+        if (group.isPages) {
+          preloadChunks = PRELOAD_CHUNKS.PAGES_ROUTER_PAGES;
+        } else if (group.isApiLambda) {
+          preloadChunks = PRELOAD_CHUNKS.PAGES_ROUTER_API;
+        } else if (group.isAppRouter && !group.isAppRouteHandler) {
+          preloadChunks = PRELOAD_CHUNKS.APP_ROUTER_PAGES;
+        } else if (group.isAppRouteHandler) {
+          preloadChunks = PRELOAD_CHUNKS.APP_ROUTER_HANDLER;
+        }
+        const normalizedPreloadChunks: string[] = [];
+
+        for (const preloadChunk of preloadChunks) {
+          const absoluteChunk = preloadChunk.startsWith('.next')
+            ? path.join(projectDir, preloadChunk)
+            : path.join(nextPackageDir, '..', preloadChunk);
+
+          // ensure the chunks are actually in this layer
+          if (
+            group.pseudoLayer[
+              path.join('.', path.relative(baseDir, absoluteChunk))
+            ]
+          ) {
+            normalizedPreloadChunks.push(
+              // relative files need to be prefixed with ./ for require
+              preloadChunk.startsWith('.next')
+                ? `./${preloadChunk}`
+                : preloadChunk
+            );
+          }
+        }
+
+        if (normalizedPreloadChunks.length > 0) {
+          launcherData = launcherData.replace(
+            '// @preserve next-server-preload-target',
+            normalizedPreloadChunks
+              .map(name => `require('${name}');`)
+              .join('\n')
+          );
+        }
+      }
+
       const launcherFiles: { [name: string]: FileFsRef | FileBlob } = {
         [path.join(path.relative(baseDir, projectDir), '___next_launcher.cjs')]:
-          new FileBlob({ data: group.isAppRouter ? appLauncher : launcher }),
+          new FileBlob({ data: launcherData }),
       };
       const operationType = getOperationType({ group, prerenderManifest });
 
@@ -1071,6 +1161,7 @@ export async function serverBuild({
         maxDuration: group.maxDuration,
         isStreaming: group.isStreaming,
         nextVersion,
+        experimentalAllowBundling,
       };
 
       const lambda = await createLambdaFromPseudoLayers(options);
@@ -1084,7 +1175,7 @@ export async function serverBuild({
       // lambda for the page for revalidation.
       let revalidate: NodejsLambda | undefined;
       if (isPPR) {
-        if (isPPR && !options.isStreaming) {
+        if (!options.isStreaming) {
           throw new Error("Invariant: PPR lambda isn't streaming");
         }
 
@@ -1096,24 +1187,28 @@ export async function serverBuild({
         });
       }
 
-      for (const page of group.pages) {
-        const pageNoExt = page.replace(/\.js$/, '');
-        let isPrerender = prerenderRoutes.has(
-          path.join('/', pageNoExt === 'index' ? '' : pageNoExt)
-        );
+      for (const pageFilename of group.pages) {
+        // This is the name of the page, where the root is `index`.
+        const pageName = pageFilename.replace(/\.js$/, '');
+
+        // This is the name of the page prefixed with a `/`, where the root is
+        // `/index`.
+        const pagePath = path.posix.join('/', pageName);
+
+        // This is the routable pathname for the page, where the root is `/`.
+        const pagePathname = pagePath === '/index' ? '/' : pagePath;
+
+        let isPrerender = prerenderRoutes.has(pagePathname);
 
         if (!isPrerender && routesManifest?.i18n) {
           isPrerender = routesManifest.i18n.locales.some(locale => {
             return prerenderRoutes.has(
-              path.join('/', locale, pageNoExt === 'index' ? '' : pageNoExt)
+              path.join('/', locale, pageName === 'index' ? '' : pageName)
             );
           });
         }
 
-        let outputName = normalizeIndexOutput(
-          path.posix.join(entryDirectory, pageNoExt),
-          true
-        );
+        let outputName = path.posix.join(entryDirectory, pageName);
 
         // If this is a PPR page, then we should prefix the output name.
         if (isPPR) {
@@ -1121,22 +1216,54 @@ export async function serverBuild({
             throw new Error("Invariant: PPR lambda isn't set");
           }
 
-          // Get the get the base path prefixed route, without the index
-          // normalization.
-          outputName = path.posix.join(entryDirectory, pageNoExt);
+          // Assign the revalidate lambda to the output name. That's used to
+          // perform the initial static shell render.
           lambdas[outputName] = revalidate;
 
-          const pprOutputName = path.posix.join(
-            entryDirectory,
-            '/_next/postponed/resume',
-            pageNoExt
-          );
-          lambdas[pprOutputName] = lambda;
+          // If this isn't an omitted page, then we should add the link from the
+          // page to the postpone resume lambda.
+          if (!omittedPrerenderRoutes.has(pagePathname)) {
+            const key = getPostponeResumePathname(entryDirectory, pageName);
+            lambdas[key] = lambda;
 
-          // We want to add the `experimentalStreamingLambdaPath` to this
-          // output.
-          experimentalStreamingLambdaPaths.set(outputName, pprOutputName);
+            // We want to add the `experimentalStreamingLambdaPath` to this
+            // output.
+            experimentalStreamingLambdaPaths.set(outputName, key);
+          } else {
+            // As this is an omitted page, we should generate the experimental
+            // partial prerendering resume route for each of these routes that
+            // support partial prerendering. This is because the routes that
+            // haven't been omitted will have rewrite rules in place to rewrite
+            // the original request `/blog/my-slug` to the dynamic path
+            // `/blog/[slug]?nxtPslug=my-slug`.
+            for (const [
+              routePathname,
+              { srcRoute, experimentalPPR },
+            ] of Object.entries(prerenderManifest.staticRoutes)) {
+              // If the srcRoute doesn't match or this doesn't support
+              // experimental partial prerendering, then we can skip this route.
+              if (srcRoute !== pagePathname || !experimentalPPR) continue;
+
+              // If this route is the same as the page route, then we can skip
+              // it, because we've already added the lambda to the output.
+              if (routePathname === pagePathname) continue;
+
+              const key = getPostponeResumePathname(
+                entryDirectory,
+                routePathname
+              );
+              lambdas[key] = lambda;
+
+              outputName = path.posix.join(entryDirectory, routePathname);
+              experimentalStreamingLambdaPaths.set(outputName, key);
+            }
+          }
+
           continue;
+        }
+
+        if (!group.isAppRouter && !group.isAppRouteHandler) {
+          outputName = normalizeIndexOutput(outputName, true);
         }
 
         // we add locale prefixed outputs for SSR pages,
@@ -1146,7 +1273,7 @@ export async function serverBuild({
           !isPrerender &&
           !group.isAppRouter &&
           (!isCorrectLocaleAPIRoutes ||
-            !(pageNoExt === 'api' || pageNoExt.startsWith('api/')))
+            !(pageName === 'api' || pageName.startsWith('api/')))
         ) {
           for (const locale of i18n.locales) {
             lambdas[
@@ -1154,7 +1281,7 @@ export async function serverBuild({
                 path.posix.join(
                   entryDirectory,
                   locale,
-                  pageNoExt === 'index' ? '' : pageNoExt
+                  pageName === 'index' ? '' : pageName
                 ),
                 true
               )
@@ -1187,6 +1314,7 @@ export async function serverBuild({
     hasPages404: routesManifest.pages404,
     isCorrectNotFoundRoutes,
     isEmptyAllowQueryForPrendered,
+    omittedPrerenderRoutes,
   });
 
   await Promise.all(
@@ -1194,11 +1322,13 @@ export async function serverBuild({
       prerenderRoute(route, {})
     )
   );
+
   await Promise.all(
     Object.keys(prerenderManifest.fallbackRoutes).map(route =>
       prerenderRoute(route, { isFallback: true })
     )
   );
+
   await Promise.all(
     Object.keys(prerenderManifest.blockingFallbackRoutes).map(route =>
       prerenderRoute(route, { isBlocking: true })
@@ -1207,9 +1337,9 @@ export async function serverBuild({
 
   if (static404Page && canUsePreviewMode) {
     await Promise.all(
-      [...omittedPrerenderRoutes].map(route => {
-        return prerenderRoute(route, { isOmitted: true });
-      })
+      Array.from(omittedPrerenderRoutes).map(route =>
+        prerenderRoute(route, { isOmitted: true })
+      )
     );
   }
 
@@ -1218,6 +1348,7 @@ export async function serverBuild({
     if (routesManifest?.i18n) {
       route = normalizeLocalePath(route, routesManifest.i18n.locales).pathname;
     }
+
     delete lambdas[
       normalizeIndexOutput(
         path.posix.join('./', entryDirectory, route === '/' ? '/index' : route),
@@ -1241,19 +1372,19 @@ export async function serverBuild({
     middleware.staticRoutes.length > 0 &&
     semver.gte(nextVersion, NEXT_DATA_MIDDLEWARE_RESOLVING_VERSION);
 
-  const dynamicRoutes = await getDynamicRoutes(
+  const dynamicRoutes = await getDynamicRoutes({
     entryPath,
     entryDirectory,
     dynamicPages,
-    false,
+    isDev: false,
     routesManifest,
-    omittedPrerenderRoutes,
+    omittedRoutes: omittedPrerenderRoutes,
     canUsePreviewMode,
-    prerenderManifest.bypassToken || '',
-    true,
-    middleware.dynamicRouteMap,
-    experimental.ppr
-  ).then(arr =>
+    bypassToken: prerenderManifest.bypassToken || '',
+    isServerMode: true,
+    dynamicMiddlewareRouteMap: middleware.dynamicRouteMap,
+    experimentalPPRRoutes,
+  }).then(arr =>
     localizeDynamicRoutes(
       arr,
       dynamicPrefix,
@@ -1424,9 +1555,10 @@ export async function serverBuild({
         continue;
       }
 
-      const pathname = normalizeIndexOutput(
-        path.posix.join('./', entryDirectory, route === '/' ? '/index' : route),
-        true
+      const pathname = path.posix.join(
+        './',
+        entryDirectory,
+        route === '/' ? '/index' : route
       );
 
       if (lambdas[pathname]) {
@@ -1446,16 +1578,48 @@ export async function serverBuild({
     'RSC, Next-Router-State-Tree, Next-Router-Prefetch';
   const appNotFoundPath = path.posix.join('.', entryDirectory, '_not-found');
 
-  const flags: Flag[] = variantsManifest
-    ? Object.entries(variantsManifest).map(([key, value]) => ({
-        key,
-        ...value,
-        metadata: value.metadata ?? {},
-      }))
-    : [];
-
   if (experimental.ppr && !rscPrefetchHeader) {
     throw new Error("Invariant: cannot use PPR without 'rsc.prefetchHeader'");
+  }
+
+  // If we're using the Experimental Partial Prerendering, we should ensure that
+  // all the routes that support it (and are listed) have configured lambdas.
+  // This only applies to routes that do not have fallbacks enabled (these are
+  // routes that have `dynamicParams =  false` defined.
+  if (experimental.ppr) {
+    for (const { srcRoute, dataRoute, experimentalPPR } of Object.values(
+      prerenderManifest.staticRoutes
+    )) {
+      // Only apply this to the routes that support experimental PPR and
+      // that also have their `dataRoute` and `srcRoute` defined.
+      if (!experimentalPPR || !dataRoute || !srcRoute) continue;
+
+      // If the srcRoute is not omitted, then we don't need to do anything. This
+      // is the indicator that a route should only have it's prerender defined
+      // and not a lambda.
+      if (!omittedPrerenderRoutes.has(srcRoute)) continue;
+
+      // The lambda paths have their leading `/` stripped.
+      const srcPathname = srcRoute.substring(1);
+      const dataPathname = dataRoute.substring(1);
+
+      // If we already have an associated lambda for the `.rsc` route, then
+      // we can skip this.
+      const dataPathnameExists = dataPathname in lambdas;
+      if (dataPathnameExists) continue;
+
+      // We require that the source route has a lambda associated with it. If
+      // it doesn't this is an error.
+      const srcPathnameExists = srcPathname in lambdas;
+      if (!srcPathnameExists) {
+        throw new Error(
+          `Invariant: Expected to have a lambda for the source route: ${srcPathname}`
+        );
+      }
+
+      // Associate the data pathname with the source pathname's lambda.
+      lambdas[dataPathname] = lambdas[srcPathname];
+    }
   }
 
   return {
@@ -1857,6 +2021,26 @@ export async function serverBuild({
       // with that routing section
       ...afterFilesRewrites,
 
+      // ensure non-normalized /.rsc from rewrites is handled
+      ...(appPathRoutesManifest
+        ? [
+            {
+              src: path.posix.join('/', entryDirectory, '/\\.prefetch\\.rsc$'),
+              dest: path.posix.join(
+                '/',
+                entryDirectory,
+                `/__index${RSC_PREFETCH_SUFFIX}`
+              ),
+              check: true,
+            },
+            {
+              src: path.posix.join('/', entryDirectory, '/\\.rsc$'),
+              dest: path.posix.join('/', entryDirectory, `/index.rsc`),
+              check: true,
+            },
+          ]
+        : []),
+
       { handle: 'resource' },
 
       ...fallbackRewrites,
@@ -2161,6 +2345,6 @@ export async function serverBuild({
           ]),
     ],
     framework: { version: nextVersion },
-    flags,
+    flags: variantsManifest || undefined,
   };
 }

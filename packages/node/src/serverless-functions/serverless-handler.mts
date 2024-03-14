@@ -1,7 +1,6 @@
 import { addHelpers } from './helpers.js';
 import { createServer } from 'http';
 import { serializeBody } from '../utils.js';
-import exitHook from 'exit-hook';
 import { type Dispatcher, Headers, request as undiciRequest } from 'undici';
 import { listen } from 'async-listen';
 import { isAbsolute } from 'path';
@@ -28,7 +27,7 @@ type ServerlessFunctionSignature = (
 const [NODE_MAJOR] = process.versions.node.split('.').map(v => Number(v));
 
 /* https://nextjs.org/docs/app/building-your-application/routing/router-handlers#supported-http-methods */
-const HTTP_METHODS = [
+export const HTTP_METHODS = [
   'GET',
   'HEAD',
   'OPTIONS',
@@ -38,10 +37,16 @@ const HTTP_METHODS = [
   'PATCH',
 ];
 
-async function createServerlessServer(userCode: ServerlessFunctionSignature) {
+async function createServerlessServer(
+  userCode: ServerlessFunctionSignature
+): Promise<{ url: URL; onExit: () => Promise<void> }> {
   const server = createServer(userCode);
-  exitHook(() => server.close());
-  return { url: await listen(server) };
+  return {
+    url: await listen(server),
+    onExit: async () => {
+      server.close();
+    },
+  };
 }
 
 async function compileUserCode(
@@ -79,12 +84,17 @@ async function compileUserCode(
 export async function createServerlessEventHandler(
   entrypointPath: string,
   options: ServerlessServerOptions
-): Promise<(request: IncomingMessage) => Promise<VercelProxyResponse>> {
+): Promise<{
+  handler: (request: IncomingMessage) => Promise<VercelProxyResponse>;
+  onExit: () => Promise<void>;
+}> {
   const userCode = await compileUserCode(entrypointPath, options);
   const server = await createServerlessServer(userCode);
   const isStreaming = options.mode === 'streaming';
 
-  return async function (request: IncomingMessage) {
+  const handler = async function (
+    request: IncomingMessage
+  ): Promise<VercelProxyResponse> {
     const url = new URL(request.url ?? '/', server.url);
     const response = await undiciRequest(url, {
       body: await serializeBody(request),
@@ -110,5 +120,10 @@ export async function createServerlessEventHandler(
       body,
       encoding: 'utf8',
     };
+  };
+
+  return {
+    handler,
+    onExit: server.onExit,
   };
 }

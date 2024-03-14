@@ -1247,4 +1247,74 @@ describe('build', () => {
       (await fs.readFile(join(output, 'static/index.txt'), 'utf8')).trim()
     ).toEqual('marketing');
   });
+
+  it('should write to flags.json', async () => {
+    const cwd = fixture('with-flags');
+    const output = join(cwd, '.vercel', 'output');
+
+    client.cwd = cwd;
+    client.setArgv('build', '--yes');
+
+    const exitCode = await build(client);
+    expect(exitCode).toEqual(0);
+
+    expect(fs.existsSync(join(output, 'flags.json'))).toBe(true);
+    expect(fs.readJSONSync(join(output, 'flags.json'))).toEqual({
+      definitions: {
+        'my-next-flag': {
+          options: [{ value: true }, { value: false }],
+        },
+      },
+    });
+  });
+
+  it('should detect framework version in monorepo app', async () => {
+    const cwd = fixture('monorepo');
+    const output = join(cwd, '.vercel/output');
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toEqual(0);
+
+    const config = await fs.readJSON(join(output, 'config.json'));
+    expect(typeof config.framework.version).toEqual('string');
+  });
+
+  it('should create symlinks for duplicate references to Lambda / EdgeFunction instances', async () => {
+    if (process.platform === 'win32') {
+      console.log('Skipping test on Windows');
+      return;
+    }
+    const cwd = fixture('functions-symlink');
+    const output = join(cwd, '.vercel/output');
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toEqual(0);
+
+    // "functions" directory has output Functions
+    const functions = await fs.readdir(join(output, 'functions'));
+    expect(functions.sort()).toEqual([
+      'edge.func',
+      'edge2.func',
+      'lambda.func',
+      'lambda2.func',
+    ]);
+    expect(
+      fs.lstatSync(join(output, 'functions/lambda.func')).isDirectory()
+    ).toEqual(true);
+    expect(
+      fs.lstatSync(join(output, 'functions/edge.func')).isDirectory()
+    ).toEqual(true);
+    expect(
+      fs.lstatSync(join(output, 'functions/lambda2.func')).isSymbolicLink()
+    ).toEqual(true);
+    expect(
+      fs.lstatSync(join(output, 'functions/edge2.func')).isSymbolicLink()
+    ).toEqual(true);
+    expect(fs.readlinkSync(join(output, 'functions/lambda2.func'))).toEqual(
+      'lambda.func'
+    );
+    expect(fs.readlinkSync(join(output, 'functions/edge2.func'))).toEqual(
+      'edge.func'
+    );
+  });
 });

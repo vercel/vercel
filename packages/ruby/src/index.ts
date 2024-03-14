@@ -10,14 +10,16 @@ import {
   writeFile,
 } from 'fs-extra';
 import {
-  BuildOptions,
   download,
   getWriteableDirectory,
   glob,
-  createLambda,
+  Lambda,
   debug,
   walkParentDirs,
   cloneEnv,
+  FileBlob,
+  type Files,
+  type BuildV3,
 } from '@vercel/build-utils';
 import { installBundler } from './install-ruby';
 
@@ -46,6 +48,7 @@ async function bundleInstall(
   bundlePath: string,
   bundleDir: string,
   gemfilePath: string,
+  rubyPath: string,
   runtime: string
 ) {
   debug(`running "bundle install --deployment"...`);
@@ -74,7 +77,7 @@ async function bundleInstall(
 
   const bundlerEnv = cloneEnv(process.env, {
     // Ensure the correct version of `ruby` is in front of the $PATH
-    PATH: `${dirname(bundlePath)}:${process.env.PATH}`,
+    PATH: `${dirname(rubyPath)}:${dirname(bundlePath)}:${process.env.PATH}`,
     BUNDLE_SILENCE_ROOT_WARNING: '1',
     BUNDLE_APP_CONFIG: bundleAppConfig,
     BUNDLE_JOBS: '4',
@@ -114,13 +117,13 @@ async function bundleInstall(
 
 export const version = 3;
 
-export async function build({
+export const build: BuildV3 = async ({
   workPath,
   files,
   entrypoint,
   config,
   meta = {},
-}: BuildOptions) {
+}) => {
   await download(files, workPath, meta);
   const entrypointFsDirname = join(workPath, dirname(entrypoint));
   const gemfileName = 'Gemfile';
@@ -140,10 +143,8 @@ export async function build({
   const gemfileContents = gemfilePath
     ? await readFile(gemfilePath, 'utf8')
     : '';
-  const { gemHome, bundlerPath, vendorPath, runtime } = await installBundler(
-    meta,
-    gemfileContents
-  );
+  const { gemHome, bundlerPath, vendorPath, runtime, rubyPath } =
+    await installBundler(meta, gemfileContents);
   process.env.GEM_HOME = gemHome;
   debug(`Checking existing vendor directory at "${vendorPath}"`);
   const vendorDir = join(workPath, vendorPath);
@@ -187,7 +188,13 @@ export async function build({
       } else {
         // try installing. this won't work if native extesions are required.
         // if that's the case, gems should be vendored locally before deploying.
-        await bundleInstall(bundlerPath, bundleDir, gemfilePath, runtime);
+        await bundleInstall(
+          bundlerPath,
+          bundleDir,
+          gemfilePath,
+          rubyPath,
+          runtime
+        );
       }
     }
   } else {
@@ -217,12 +224,11 @@ export async function build({
   // somethig else
   const handlerRbFilename = 'vc__handler__ruby';
 
-  await writeFile(
-    join(workPath, `${handlerRbFilename}.rb`),
-    nowHandlerRbContents
-  );
+  const outputFiles: Files = await glob('**', workPath);
 
-  const outputFiles = await glob('**', workPath);
+  outputFiles[`${handlerRbFilename}.rb`] = new FileBlob({
+    data: nowHandlerRbContents,
+  });
 
   // static analysis is impossible with ruby.
   // instead, provide `includeFiles` and `excludeFiles` config options to reduce bundle size.
@@ -253,12 +259,12 @@ export async function build({
     }
   }
 
-  const lambda = await createLambda({
+  const output = new Lambda({
     files: outputFiles,
     handler: `${handlerRbFilename}.vc__handler`,
     runtime,
     environment: {},
   });
 
-  return { output: lambda };
-}
+  return { output };
+};

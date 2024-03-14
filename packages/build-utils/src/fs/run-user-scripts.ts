@@ -276,12 +276,13 @@ export async function getNodeVersion(
 
 export async function scanParentDirs(
   destPath: string,
-  readPackageJson = false
+  readPackageJson = false,
+  base = '/'
 ): Promise<ScanParentDirsResult> {
   assert(path.isAbsolute(destPath));
 
   const pkgJsonPath = await walkParentDirs({
-    base: '/',
+    base,
     start: destPath,
     filename: 'package.json',
   });
@@ -291,7 +292,7 @@ export async function scanParentDirs(
       : undefined;
   const [yarnLockPath, npmLockPath, pnpmLockPath, bunLockPath] =
     await walkParentDirsMulti({
-      base: '/',
+      base,
       start: destPath,
       filenames: [
         'yarn.lock',
@@ -302,7 +303,7 @@ export async function scanParentDirs(
     });
   let lockfilePath: string | undefined;
   let lockfileVersion: number | undefined;
-  let cliType: CliType = 'yarn';
+  let cliType: CliType;
 
   const [hasYarnLock, packageLockJson, pnpmLockYaml, bunLockBin] =
     await Promise.all([
@@ -338,6 +339,8 @@ export async function scanParentDirs(
     lockfilePath = bunLockPath;
     // TODO: read "bun-lockfile-format-v0"
     lockfileVersion = 0;
+  } else {
+    cliType = 'npm';
   }
 
   const packageJsonPath = pkgJsonPath || undefined;
@@ -413,6 +416,14 @@ export async function runNpmInstall(
     const { cliType, packageJsonPath, lockfileVersion } = await scanParentDirs(
       destPath
     );
+
+    if (!packageJsonPath) {
+      debug(
+        `Skipping dependency installation because no package.json was found for ${destPath}`
+      );
+      runNpmInstallSema.release();
+      return false;
+    }
 
     // Only allow `runNpmInstall()` to run once per `package.json`
     // when doing a default install (no additional args)

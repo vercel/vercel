@@ -9,11 +9,11 @@ import { isError } from '@vercel/error-utils';
 import { readFileSync } from 'fs';
 import { serializeBody, entrypointToOutputPath, logError } from '../utils.js';
 import esbuild from 'esbuild';
-import exitHook from 'exit-hook';
 import { buildToHeaders } from '@edge-runtime/node-utils';
 import type { VercelProxyResponse } from '../types.js';
 import type { IncomingMessage } from 'http';
 import { fileURLToPath } from 'url';
+import { EdgeRuntimeServer } from 'edge-runtime/dist/server/run-server.js';
 
 const NODE_VERSION_MAJOR = process.version.match(/^v(\d+)\.\d+/)?.[1];
 const NODE_VERSION_IDENTIFIER = `node${NODE_VERSION_MAJOR}`;
@@ -127,7 +127,9 @@ async function createEdgeRuntimeServer(params?: {
   userCode: string;
   wasmAssets: WasmAssets;
   nodeCompatBindings: NodeCompatBindings;
-}) {
+}): Promise<
+  { server: EdgeRuntimeServer; onExit: () => Promise<void> } | undefined
+> {
   try {
     if (!params) {
       return undefined;
@@ -162,8 +164,34 @@ async function createEdgeRuntimeServer(params?: {
     });
 
     const server = await runServer({ runtime });
-    exitHook(() => server.close());
-    return server;
+
+    const onExit = async () => {
+      // When exiting this process, wait for the Edge Runtime server to finish
+      // all its work, especially waitUntil promises before exiting this process.
+      //
+      // Here we use a short timeout (10 seconds) to let the user know that
+      // it has a long-running waitUntil promise.
+      const WAIT_UNTIL_TIMEOUT = 10 * 1000;
+      const waitUntil = server.close();
+      return new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          console.warn(
+            `Edge Runtime server is still running after ${WAIT_UNTIL_TIMEOUT} ms` +
+              ` (hint: do you have a long-running waitUntil() promise?)`
+          );
+          resolve();
+        }, WAIT_UNTIL_TIMEOUT);
+
+        waitUntil
+          .then(() => resolve())
+          .catch(reject)
+          .finally(() => {
+            clearTimeout(timeout);
+          });
+      });
+    };
+
+    return { server, onExit };
   } catch (error: any) {
     // We can't easily show a meaningful stack trace from esbuild -> edge-runtime.
     // So, stick with just the message for now.
@@ -178,15 +206,22 @@ export async function createEdgeEventHandler(
   entrypointRelativePath: string,
   isMiddleware: boolean,
   isZeroConfig?: boolean
-): Promise<(request: IncomingMessage) => Promise<VercelProxyResponse>> {
+): Promise<{
+  handler: (request: IncomingMessage) => Promise<VercelProxyResponse>;
+  onExit: (() => Promise<void>) | undefined;
+}> {
   const userCode = await compileUserCode(
     entrypointFullPath,
     entrypointRelativePath,
     isMiddleware
   );
-  const server = await createEdgeRuntimeServer(userCode);
+  const result = await createEdgeRuntimeServer(userCode);
+  const server = result?.server;
+  const onExit = result?.onExit;
 
-  return async function (request: IncomingMessage) {
+  const handler = async function (
+    request: IncomingMessage
+  ): Promise<VercelProxyResponse> {
     if (!server) {
       // this error state is already logged, but we have to wait until here to exit the process
       // this matches the serverless function bridge launcher's behavior when
@@ -195,8 +230,10 @@ export async function createEdgeEventHandler(
     }
 
     const body: Buffer | string | undefined = await serializeBody(request);
-    if (body !== undefined)
+
+    if (body !== undefined && body.length) {
       request.headers['content-length'] = String(body.length);
+    }
 
     const url = new URL(request.url ?? '/', server.url);
     const response = await undiciRequest(url, {
@@ -233,6 +270,11 @@ export async function createEdgeEventHandler(
       body: response.body,
       encoding: 'utf8',
     };
+  };
+
+  return {
+    handler,
+    onExit,
   };
 }
 

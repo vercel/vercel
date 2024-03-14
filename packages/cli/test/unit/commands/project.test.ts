@@ -55,7 +55,7 @@ describe('project', () => {
         nodeVersion: '16.x',
       });
 
-      client.setArgv('project', 'ls', '--deprecated');
+      client.setArgv('project', 'ls', '--update-required');
       await projects(client);
 
       const lines = createLineIterator(client.stderr);
@@ -65,7 +65,7 @@ describe('project', () => {
 
       line = await lines.next();
       expect(line.value).toEqual(
-        'WARN! The following Node.js versions will be deprecated soon: 16.x. Upgrade your projects immediately.'
+        'WARN! The following Node.js versions will be deprecated soon: 16.x. Please upgrade your projects immediately.'
       );
       line = await lines.next();
       expect(line.value).toEqual(

@@ -268,81 +268,85 @@ it('should get latest node version with Node 20.x in build-container', async () 
 });
 
 it('should throw for discontinued versions', async () => {
-  // Mock a future date so that Node 8 and 10 become discontinued
-  const realDateNow = Date.now.bind(global.Date);
-  global.Date.now = () => new Date('2024-02-13').getTime();
+  // Mock a future date so that Node 16 becomes discontinued
+  const realDateNow = Date.now;
+  try {
+    global.Date.now = () => new Date('2024-07-16').getTime();
 
-  expect(getSupportedNodeVersion('8.10.x', false)).rejects.toThrow();
-  expect(getSupportedNodeVersion('8.10.x', true)).rejects.toThrow();
-  expect(getSupportedNodeVersion('10.x', false)).rejects.toThrow();
-  expect(getSupportedNodeVersion('10.x', true)).rejects.toThrow();
-  expect(getSupportedNodeVersion('12.x', false)).rejects.toThrow();
-  expect(getSupportedNodeVersion('12.x', true)).rejects.toThrow();
-  expect(getSupportedNodeVersion('14.x', false)).rejects.toThrow();
-  expect(getSupportedNodeVersion('14.x', true)).rejects.toThrow();
-  expect(getSupportedNodeVersion('16.x', false)).rejects.toThrow();
-  expect(getSupportedNodeVersion('16.x', true)).rejects.toThrow();
+    expect(getSupportedNodeVersion('8.10.x', false)).rejects.toThrow();
+    expect(getSupportedNodeVersion('8.10.x', true)).rejects.toThrow();
+    expect(getSupportedNodeVersion('10.x', false)).rejects.toThrow();
+    expect(getSupportedNodeVersion('10.x', true)).rejects.toThrow();
+    expect(getSupportedNodeVersion('12.x', false)).rejects.toThrow();
+    expect(getSupportedNodeVersion('12.x', true)).rejects.toThrow();
+    expect(getSupportedNodeVersion('14.x', false)).rejects.toThrow();
+    expect(getSupportedNodeVersion('14.x', true)).rejects.toThrow();
+    expect(getSupportedNodeVersion('16.x', false)).rejects.toThrow();
+    expect(getSupportedNodeVersion('16.x', true)).rejects.toThrow();
 
-  const discontinued = getDiscontinuedNodeVersions();
-  expect(discontinued.length).toBe(5);
-  expect(discontinued[0]).toHaveProperty('range', '16.x');
-  expect(discontinued[1]).toHaveProperty('range', '14.x');
-  expect(discontinued[2]).toHaveProperty('range', '12.x');
-  expect(discontinued[3]).toHaveProperty('range', '10.x');
-  expect(discontinued[4]).toHaveProperty('range', '8.10.x');
-
-  global.Date.now = realDateNow;
+    const discontinued = getDiscontinuedNodeVersions();
+    expect(discontinued.length).toBe(5);
+    expect(discontinued[0]).toHaveProperty('range', '16.x');
+    expect(discontinued[1]).toHaveProperty('range', '14.x');
+    expect(discontinued[2]).toHaveProperty('range', '12.x');
+    expect(discontinued[3]).toHaveProperty('range', '10.x');
+    expect(discontinued[4]).toHaveProperty('range', '8.10.x');
+  } finally {
+    global.Date.now = realDateNow;
+  }
 });
 
 it('should warn for deprecated versions, soon to be discontinued', async () => {
-  // Mock a future date so that Node 10 warns
-  const realDateNow = Date.now.bind(global.Date);
-  global.Date.now = () => new Date('2021-02-23').getTime();
+  // Mock a future date so that Node 16 warns
+  const realDateNow = Date.now;
+  try {
+    global.Date.now = () => new Date('2021-02-23').getTime();
 
-  expect(await getSupportedNodeVersion('10.x', false)).toHaveProperty(
-    'major',
-    10
-  );
-  expect(await getSupportedNodeVersion('10.x', true)).toHaveProperty(
-    'major',
-    10
-  );
-  expect(await getSupportedNodeVersion('12.x', false)).toHaveProperty(
-    'major',
-    12
-  );
-  expect(await getSupportedNodeVersion('12.x', true)).toHaveProperty(
-    'major',
-    12
-  );
-  expect(await getSupportedNodeVersion('14.x', false)).toHaveProperty(
-    'major',
-    14
-  );
-  expect(await getSupportedNodeVersion('14.x', true)).toHaveProperty(
-    'major',
-    14
-  );
-  expect(await getSupportedNodeVersion('16.x', false)).toHaveProperty(
-    'major',
-    16
-  );
-  expect(await getSupportedNodeVersion('16.x', true)).toHaveProperty(
-    'major',
-    16
-  );
-  expect(warningMessages).toStrictEqual([
-    'Error: Node.js version 10.x has reached End-of-Life. Deployments created on or after 2021-04-20 will fail to build. Please set "engines": { "node": "20.x" } in your `package.json` file to use Node.js 20.',
-    'Error: Node.js version 10.x has reached End-of-Life. Deployments created on or after 2021-04-20 will fail to build. Please set Node.js Version to 20.x in your Project Settings to use Node.js 20.',
-    'Error: Node.js version 12.x has reached End-of-Life. Deployments created on or after 2022-10-03 will fail to build. Please set "engines": { "node": "20.x" } in your `package.json` file to use Node.js 20.',
-    'Error: Node.js version 12.x has reached End-of-Life. Deployments created on or after 2022-10-03 will fail to build. Please set Node.js Version to 20.x in your Project Settings to use Node.js 20.',
-    'Error: Node.js version 14.x has reached End-of-Life. Deployments created on or after 2023-08-15 will fail to build. Please set "engines": { "node": "20.x" } in your `package.json` file to use Node.js 20.',
-    'Error: Node.js version 14.x has reached End-of-Life. Deployments created on or after 2023-08-15 will fail to build. Please set Node.js Version to 20.x in your Project Settings to use Node.js 20.',
-    'Error: Node.js version 16.x has reached End-of-Life. Deployments created on or after 2024-02-06 will fail to build. Please set "engines": { "node": "20.x" } in your `package.json` file to use Node.js 20.',
-    'Error: Node.js version 16.x has reached End-of-Life. Deployments created on or after 2024-02-06 will fail to build. Please set Node.js Version to 20.x in your Project Settings to use Node.js 20.',
-  ]);
-
-  global.Date.now = realDateNow;
+    expect(await getSupportedNodeVersion('10.x', false)).toHaveProperty(
+      'major',
+      10
+    );
+    expect(await getSupportedNodeVersion('10.x', true)).toHaveProperty(
+      'major',
+      10
+    );
+    expect(await getSupportedNodeVersion('12.x', false)).toHaveProperty(
+      'major',
+      12
+    );
+    expect(await getSupportedNodeVersion('12.x', true)).toHaveProperty(
+      'major',
+      12
+    );
+    expect(await getSupportedNodeVersion('14.x', false)).toHaveProperty(
+      'major',
+      14
+    );
+    expect(await getSupportedNodeVersion('14.x', true)).toHaveProperty(
+      'major',
+      14
+    );
+    expect(await getSupportedNodeVersion('16.x', false)).toHaveProperty(
+      'major',
+      16
+    );
+    expect(await getSupportedNodeVersion('16.x', true)).toHaveProperty(
+      'major',
+      16
+    );
+    expect(warningMessages).toStrictEqual([
+      'Error: Node.js version 10.x has reached End-of-Life. Deployments created on or after 2021-04-20 will fail to build. Please set "engines": { "node": "20.x" } in your `package.json` file to use Node.js 20.',
+      'Error: Node.js version 10.x has reached End-of-Life. Deployments created on or after 2021-04-20 will fail to build. Please set Node.js Version to 20.x in your Project Settings to use Node.js 20.',
+      'Error: Node.js version 12.x has reached End-of-Life. Deployments created on or after 2022-10-03 will fail to build. Please set "engines": { "node": "20.x" } in your `package.json` file to use Node.js 20.',
+      'Error: Node.js version 12.x has reached End-of-Life. Deployments created on or after 2022-10-03 will fail to build. Please set Node.js Version to 20.x in your Project Settings to use Node.js 20.',
+      'Error: Node.js version 14.x has reached End-of-Life. Deployments created on or after 2023-08-15 will fail to build. Please set "engines": { "node": "20.x" } in your `package.json` file to use Node.js 20.',
+      'Error: Node.js version 14.x has reached End-of-Life. Deployments created on or after 2023-08-15 will fail to build. Please set Node.js Version to 20.x in your Project Settings to use Node.js 20.',
+      'Error: Node.js version 16.x has reached End-of-Life. Deployments created on or after 2024-06-15 will fail to build. Please set "engines": { "node": "20.x" } in your `package.json` file to use Node.js 20.',
+      'Error: Node.js version 16.x has reached End-of-Life. Deployments created on or after 2024-06-15 will fail to build. Please set Node.js Version to 20.x in your Project Settings to use Node.js 20.',
+    ]);
+  } finally {
+    global.Date.now = realDateNow;
+  }
 });
 
 it('should support initialHeaders and initialStatus correctly', async () => {
@@ -571,6 +575,28 @@ it(
   },
   ms('1m')
 );
+
+it('should return cliType "npm" when no lockfile is present', async () => {
+  const originalRepoLockfilePath = path.join(
+    __dirname,
+    '..',
+    '..',
+    '..',
+    'pnpm-lock.yaml'
+  );
+  const originalRepoLockfileData = await fs.readFile(originalRepoLockfilePath);
+  await fs.remove(originalRepoLockfilePath);
+  try {
+    const fixture = path.join(__dirname, 'fixtures', '40-no-lockfile');
+    const result = await scanParentDirs(fixture);
+    expect(result.cliType).toEqual('npm');
+    expect(result.lockfileVersion).toEqual(undefined);
+    expect(result.lockfilePath).toEqual(undefined);
+    expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
+  } finally {
+    await fs.writeFile(originalRepoLockfilePath, originalRepoLockfileData);
+  }
+});
 
 it('should return cliType bun and correct lock file for bun v1', async () => {
   const fixture = path.join(__dirname, 'fixtures', '31-bun-v1-with-yarn-lock');
