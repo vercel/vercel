@@ -77,3 +77,25 @@ updates:
           - '@shopify*'
         update-types:
           - 'minor'
+
+  - directory: /packages/static-build/test/fixtures/ionic-angular-v7
+    schedule:
+      interval: 'daily'
+    open-pull-requests-limit: 1
+    reviewers:
+      - 'trek'
+      - 'TooTallNate'
+      - 'EndangeredMassa'
+    commit-message:
+      prefix: '[framework-fixtures]'
+    package-ecosystem: 'npm'
+    allow:
+      - dependency-name: '@angular*'
+      - dependency-name: '@ionic*'
+    groups:
+      core:
+        patterns:
+          - '@angular*'
+          - '@ionic*'
+        update-types:
+          - 'minor'
