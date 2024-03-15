@@ -9,6 +9,15 @@ import { join } from 'path';
 // The without setting this, the client.stderr output is undefined
 process.stdout.isTTY = true;
 
+// path to mock tar
+const mockPath = join(
+  process.cwd(),
+  'test',
+  'mocks',
+  'example-list-tars',
+  'astro.tar.gz'
+);
+
 let mock: jest.SpyInstance<
   Promise<unknown>,
   [url: string, opts?: FetchOptions | undefined]
@@ -24,14 +33,9 @@ beforeEach(() => {
       ]);
     }
     if (url2.pathname === '/v2/download/astro.tar.gz') {
-      return new Response(
-        fs.createReadStream(
-          '/Users/jeffsee/code/vercel/packages/cli/test/mocks/example-list-tars/astro.tar.gz'
-        ),
-        {
-          status: 200,
-        }
-      );
+      return new Response(fs.createReadStream(mockPath), {
+        status: 200,
+      });
     }
     throw new Error(`Unexpected fetch request for url ${url}`);
   });
