@@ -1,7 +1,8 @@
 version: 2
 
 updates:
-  - schedule:
+  - directory: /packages/static-build/test/fixtures/angular-v17
+    schedule:
       interval: 'daily'
     open-pull-requests-limit: 1
     reviewers:
@@ -11,9 +12,12 @@ updates:
     commit-message:
       prefix: '[framework-fixtures]'
     package-ecosystem: 'npm'
-    directory: /packages/static-build/test/fixtures/angular-v17
     allow:
       - dependency-name: '@angular*'
+    ignore:
+      - dependency-name: '@angular*'
+        update-types:
+          ['version-update:semver-major', 'version-update:semver-patch']
     groups:
       core:
         patterns:
@@ -21,7 +25,8 @@ updates:
         update-types:
           - 'minor'
 
-  - schedule:
+  - directory: /packages/static-build/test/fixtures/astro-v4
+    schedule:
       interval: 'daily'
     open-pull-requests-limit: 1
     reviewers:
@@ -31,9 +36,12 @@ updates:
     commit-message:
       prefix: '[framework-fixtures]'
     package-ecosystem: 'npm'
-    directory: /packages/static-build/test/fixtures/astro-v4
     allow:
       - dependency-name: 'astro*'
+    ignore:
+      - dependency-name: 'astro*'
+        update-types:
+          ['version-update:semver-major', 'version-update:semver-patch']
     groups:
       core:
         patterns:
@@ -41,7 +49,8 @@ updates:
         update-types:
           - 'minor'
 
-  - schedule:
+  - directory: /packages/static-build/test/fixtures/hydrogen-v2023
+    schedule:
       interval: 'daily'
     open-pull-requests-limit: 1
     reviewers:
@@ -51,10 +60,16 @@ updates:
     commit-message:
       prefix: '[framework-fixtures]'
     package-ecosystem: 'npm'
-    directory: /packages/static-build/test/fixtures/hydrogen-v2023
     allow:
       - dependency-name: '@remix-run*'
       - dependency-name: '@shopify*'
+    ignore:
+      - dependency-name: '@remix-run*'
+        update-types:
+          ['version-update:semver-major', 'version-update:semver-patch']
+      - dependency-name: '@shopify*'
+        update-types:
+          ['version-update:semver-major', 'version-update:semver-patch']
     groups:
       core:
         patterns:
@@ -63,7 +78,8 @@ updates:
         update-types:
           - 'minor'
 
-  - schedule:
+  - directory: /packages/static-build/test/fixtures/ionic-angular-v7
+    schedule:
       interval: 'daily'
     open-pull-requests-limit: 1
     reviewers:
@@ -73,7 +89,6 @@ updates:
     commit-message:
       prefix: '[framework-fixtures]'
     package-ecosystem: 'npm'
-    directory: /packages/static-build/test/fixtures/ionic-angular-v7
     allow:
       - dependency-name: '@angular*'
       - dependency-name: '@ionic*'
