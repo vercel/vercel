@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 7.9.1
+
+### Patch Changes
+
+- Export `getSupportedNodeVersion` ([#11277](https://github.com/vercel/vercel/pull/11277))
+
 ## 7.9.0
 
 ### Minor Changes

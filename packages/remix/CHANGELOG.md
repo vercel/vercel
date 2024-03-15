@@ -1,5 +1,11 @@
 # @vercel/remix-builder
 
+## 2.1.4
+
+### Patch Changes
+
+- Disable `prepareCache()` npm install for Remix + Vite ([#11281](https://github.com/vercel/vercel/pull/11281))
+
 ## 2.1.3
 
 ### Patch Changes
