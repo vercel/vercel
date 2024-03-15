@@ -202,7 +202,7 @@ export function getRegExpFromPath(rePath: string): RegExp | false {
 
 /**
  * Updates the `dest` process.env object to match the `source` one.
- * A function is returned to restore the the `dest` env back to how
+ * A function is returned to restore the `dest` env back to how
  * it was originally.
  */
 export function syncEnv(source: NodeJS.ProcessEnv, dest: NodeJS.ProcessEnv) {
