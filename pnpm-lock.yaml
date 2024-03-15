@@ -186,7 +186,7 @@ importers:
         specifier: 1.0.4
         version: link:../constants
       '@vercel/build-utils':
-        specifier: 7.9.0
+        specifier: 7.9.1
         version: link:../../packages/build-utils
       '@vercel/routing-utils':
         specifier: 3.1.0
@@ -310,7 +310,7 @@ importers:
   packages/cli:
     dependencies:
       '@vercel/build-utils':
-        specifier: 7.9.0
+        specifier: 7.9.1
         version: link:../build-utils
       '@vercel/fun':
         specifier: 1.1.0
@@ -322,10 +322,10 @@ importers:
         specifier: 1.0.2
         version: link:../hydrogen
       '@vercel/next':
-        specifier: 4.1.5
+        specifier: 4.1.6
         version: link:../next
       '@vercel/node':
-        specifier: 3.0.23
+        specifier: 3.0.24
         version: link:../node
       '@vercel/python':
         specifier: 4.1.1
@@ -334,13 +334,13 @@ importers:
         specifier: 2.0.8
         version: link:../redwood
       '@vercel/remix-builder':
-        specifier: 2.1.3
+        specifier: 2.1.4
         version: link:../remix
       '@vercel/ruby':
         specifier: 2.0.5
         version: link:../ruby
       '@vercel/static-build':
-        specifier: 2.4.3
+        specifier: 2.4.4
         version: link:../static-build
       chokidar:
         specifier: 3.3.1
@@ -476,10 +476,10 @@ importers:
         specifier: 1.0.0
         version: link:../../internals/get-package-json
       '@vercel-internals/types':
-        specifier: 1.0.26
+        specifier: 1.0.27
         version: link:../../internals/types
       '@vercel/client':
-        specifier: 13.1.6
+        specifier: 13.1.7
         version: link:../client
       '@vercel/error-utils':
         specifier: 2.0.2
@@ -722,7 +722,7 @@ importers:
   packages/client:
     dependencies:
       '@vercel/build-utils':
-        specifier: 7.9.0
+        specifier: 7.9.1
         version: link:../build-utils
       '@vercel/error-utils':
         specifier: 2.0.2
@@ -926,7 +926,7 @@ importers:
         specifier: 7.3.10
         version: 7.3.10
       '@vercel/build-utils':
-        specifier: 7.9.0
+        specifier: 7.9.1
         version: link:../build-utils
       jest-junit:
         specifier: 16.0.0
@@ -951,7 +951,7 @@ importers:
         specifier: 0.25.24
         version: 0.25.24
       '@vercel/build-utils':
-        specifier: 7.9.0
+        specifier: 7.9.1
         version: link:../build-utils
       '@vercel/routing-utils':
         specifier: 3.1.0
@@ -1018,7 +1018,7 @@ importers:
         specifier: 2.1.0
         version: 2.1.0
       '@vercel/build-utils':
-        specifier: 7.9.0
+        specifier: 7.9.1
         version: link:../build-utils
       async-retry:
         specifier: 1.3.3
@@ -1067,7 +1067,7 @@ importers:
         specifier: 14.18.33
         version: 14.18.33
       '@vercel/build-utils':
-        specifier: 7.9.0
+        specifier: 7.9.1
         version: link:../build-utils
       execa:
         specifier: 3.2.0
@@ -1128,7 +1128,7 @@ importers:
         specifier: 3.2.0
         version: 3.2.0
       '@vercel/build-utils':
-        specifier: 7.9.0
+        specifier: 7.9.1
         version: link:../build-utils
       '@vercel/routing-utils':
         specifier: 3.1.0
@@ -1215,7 +1215,7 @@ importers:
         specifier: 14.18.33
         version: 14.18.33
       '@vercel/build-utils':
-        specifier: 7.9.0
+        specifier: 7.9.1
         version: link:../build-utils
       '@vercel/error-utils':
         specifier: 2.0.2
@@ -1330,7 +1330,7 @@ importers:
         specifier: 3.0.0
         version: 3.0.0
       '@vercel/build-utils':
-        specifier: 7.9.0
+        specifier: 7.9.1
         version: link:../build-utils
       execa:
         specifier: ^1.0.0
@@ -1367,7 +1367,7 @@ importers:
         specifier: 6.0.0
         version: 6.0.0
       '@vercel/build-utils':
-        specifier: 7.9.0
+        specifier: 7.9.1
         version: link:../build-utils
       execa:
         specifier: 3.2.0
@@ -1407,7 +1407,7 @@ importers:
         specifier: 7.3.13
         version: 7.3.13
       '@vercel/build-utils':
-        specifier: 7.9.0
+        specifier: 7.9.1
         version: link:../build-utils
       jest-junit:
         specifier: 16.0.0
@@ -1451,7 +1451,7 @@ importers:
         specifier: 6.0.0
         version: 6.0.0
       '@vercel/build-utils':
-        specifier: 7.9.0
+        specifier: 7.9.1
         version: link:../build-utils
       execa:
         specifier: 2.0.4
@@ -1472,7 +1472,7 @@ importers:
         specifier: 1.0.11
         version: link:../gatsby-plugin-vercel-analytics
       '@vercel/gatsby-plugin-vercel-builder':
-        specifier: 2.0.21
+        specifier: 2.0.22
         version: link:../gatsby-plugin-vercel-builder
       '@vercel/static-config':
         specifier: 3.0.0
@@ -1509,7 +1509,7 @@ importers:
         specifier: 7.3.13
         version: 7.3.13
       '@vercel/build-utils':
-        specifier: 7.9.0
+        specifier: 7.9.1
         version: link:../build-utils
       '@vercel/error-utils':
         specifier: 2.0.2
