@@ -22,6 +22,7 @@ import { detectProjects } from '../projects/detect-projects';
 import { repoInfoToUrl } from '../git/repo-info-to-url';
 import { connectGitProvider, parseRepoUrl } from '../git/connect-git-provider';
 import { isAPIError } from '../errors-ts';
+import { isGitSubmodule, isGitWorktree } from '../git-helpers';
 
 const home = homedir();
 
@@ -365,7 +366,14 @@ export async function findRepoRoot(
 ): Promise<string | undefined> {
   const { debug } = client.output;
   const REPO_JSON_PATH = join(VERCEL_DIR, VERCEL_DIR_REPO);
-  const GIT_CONFIG_PATH = normalize('.git/config');
+  /**
+   * If the current repo is a git submodule or git worktree '.git' is a file
+   * with a pointer to the "parent" git repository instead of a directory.
+   */
+  const GIT_PATH =
+    isGitWorktree() || isGitSubmodule()
+      ? normalize('.git')
+      : normalize('.git/config');
 
   for (const current of traverseUpDirectories({ start })) {
     if (current === home) {
@@ -389,12 +397,12 @@ export async function findRepoRoot(
 
     // if `.git/config` exists (unlinked),
     // then consider this the repo root
-    const gitConfigPath = join(current, GIT_CONFIG_PATH);
+    const gitConfigPath = join(current, GIT_PATH);
     stat = await lstat(gitConfigPath).catch(err => {
       if (err.code !== 'ENOENT') throw err;
     });
     if (stat) {
-      debug(`Found "${GIT_CONFIG_PATH}" - detected "${current}" as repo root`);
+      debug(`Found "${GIT_PATH}" - detected "${current}" as repo root`);
       return current;
     }
   }
