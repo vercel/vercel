@@ -8,7 +8,7 @@ fs.writeFileSync(
   JSON.stringify(
     {
       about: {
-        memory: 3008,
+        memory: 3009,
       },
     },
     null,

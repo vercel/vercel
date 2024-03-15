@@ -1,5 +1,57 @@
 # @vercel/remix-builder
 
+## 2.1.4
+
+### Patch Changes
+
+- Disable `prepareCache()` npm install for Remix + Vite ([#11281](https://github.com/vercel/vercel/pull/11281))
+
+## 2.1.3
+
+### Patch Changes
+
+- Improve hueristics for detecting Remix + Vite ([#11256](https://github.com/vercel/vercel/pull/11256))
+
+## 2.1.2
+
+### Patch Changes
+
+- Update `@remix-run/dev` fork to v2.8.1 ([#11241](https://github.com/vercel/vercel/pull/11241))
+
+## 2.1.1
+
+### Patch Changes
+
+- [build-utils] increase max memory limit ([#11209](https://github.com/vercel/vercel/pull/11209))
+
+- Remove usage of `ensureResolvable()` in Vite builds ([#11213](https://github.com/vercel/vercel/pull/11213))
+
+- Update `@remix-run/dev` fork to v2.8.0 ([#11206](https://github.com/vercel/vercel/pull/11206))
+
+- Ensure the symlink directory exists in `ensureSymlink()` ([#11205](https://github.com/vercel/vercel/pull/11205))
+
+## 2.1.0
+
+### Minor Changes
+
+- Remix Vite plugin support ([#11031](https://github.com/vercel/vercel/pull/11031))
+
+## 2.0.20
+
+### Patch Changes
+
+- Don't install Remix fork when not using split configuration ([#11152](https://github.com/vercel/vercel/pull/11152))
+
+- Add `serverBundles` post-build sanity check and fallback ([#11153](https://github.com/vercel/vercel/pull/11153))
+
+- bump `@vercel/nft@0.26.4` ([#11155](https://github.com/vercel/vercel/pull/11155))
+
+- Update `@remix-run/dev` fork to v2.6.0 ([#11162](https://github.com/vercel/vercel/pull/11162))
+
+- Update `@remix-run/dev` fork to v2.7.0 ([#11180](https://github.com/vercel/vercel/pull/11180))
+
+- Update `@remix-run/dev` fork to v2.7.2 ([#11186](https://github.com/vercel/vercel/pull/11186))
+
 ## 2.0.19
 
 ### Patch Changes
