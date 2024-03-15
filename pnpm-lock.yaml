@@ -1395,8 +1395,8 @@ importers:
         version: 12.0.0
     devDependencies:
       '@remix-run/dev':
-        specifier: npm:@vercel/remix-run-dev@2.8.1
-        version: /@vercel/remix-run-dev@2.8.1(@types/node@14.18.33)(typescript@4.9.5)
+        specifier: npm:@vercel/remix-run-dev@2.8.1-patch.2
+        version: /@vercel/remix-run-dev@2.8.1-patch.2(@types/node@14.18.33)(typescript@4.9.5)
       '@types/jest':
         specifier: 27.5.1
         version: 27.5.1
@@ -5423,8 +5423,8 @@ packages:
       - supports-color
     dev: false
 
-  /@vercel/remix-run-dev@2.8.1(@types/node@14.18.33)(typescript@4.9.5):
-    resolution: {integrity: sha512-9EDL0UOr6WKhC80YM4QNvAMudcWfAeVKwwqz1VyRE2odgAlsxy6DoWbUW8rswgY6URLE7AEUkbyUQR4TdCx1uQ==}
+  /@vercel/remix-run-dev@2.8.1-patch.2(@types/node@14.18.33)(typescript@4.9.5):
+    resolution: {integrity: sha512-Qp7ZFBwn9PTWSN+aaqQaZZj4FD0jqFfDMG8fiUOb4jFhAnbQEYykoQA75pXkDeQdn74xxhHJ7lmormaWHYm+ew==}
     engines: {node: '>=18.0.0'}
     hasBin: true
     peerDependencies:
@@ -8018,7 +8018,7 @@ packages:
       eslint-import-resolver-webpack:
         optional: true
     dependencies:
-      '@typescript-eslint/parser': 5.54.1(eslint@8.24.0)(typescript@4.9.4)
+      '@typescript-eslint/parser': 5.54.1(eslint@8.24.0)(typescript@4.9.5)
       debug: 3.2.7
       eslint: 8.24.0
       eslint-import-resolver-node: 0.3.7
@@ -8048,7 +8048,7 @@ packages:
       '@typescript-eslint/parser':
         optional: true
     dependencies:
-      '@typescript-eslint/parser': 5.54.1(eslint@8.24.0)(typescript@4.9.4)
+      '@typescript-eslint/parser': 5.54.1(eslint@8.24.0)(typescript@4.9.5)
       array-includes: 3.1.6
       array.prototype.flat: 1.3.1
       array.prototype.flatmap: 1.3.1
@@ -8172,7 +8172,7 @@ packages:
         optional: true
     dependencies:
       eslint: 8.24.0
-      eslint-plugin-jest: 27.2.1(@typescript-eslint/eslint-plugin@5.54.1)(eslint@8.24.0)(jest@29.5.0)(typescript@4.9.4)
+      eslint-plugin-jest: 27.2.1(@typescript-eslint/eslint-plugin@5.54.1)(eslint@8.24.0)(jest@29.5.0)(typescript@4.9.5)
     dev: true
 
   /eslint-plugin-react-hooks@4.6.0(eslint@8.24.0):
