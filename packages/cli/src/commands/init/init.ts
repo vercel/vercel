@@ -122,7 +122,7 @@ async function extractExample(
   ver: string = 'v2'
 ) {
   const { output } = client;
-  const folder = prepareFolder(process.cwd(), dir || name, force);
+  const folder = prepareFolder(client.cwd, dir || name, force);
   output.spinner(`Fetching ${name}`);
 
   const url = `${EXAMPLE_API}/${ver}/download/${name}.tar.gz`;
@@ -147,7 +147,7 @@ async function extractExample(
       const successLog = `Initialized "${chalk.bold(
         name
       )}" example in ${chalk.bold(toHumanPath(folder))}.`;
-      const folderRel = path.relative(process.cwd(), folder);
+      const folderRel = path.relative(client.cwd, folder);
       const deployHint =
         folderRel === ''
           ? listItem(`To deploy, run ${getCommandName()}.`)
