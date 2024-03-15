@@ -77,3 +77,23 @@ updates:
           - '@shopify*'
         update-types:
           - 'minor'
+
+  - schedule:
+      interval: 'daily'
+    open-pull-requests-limit: 1
+    reviewers:
+      - 'trek'
+      - 'TooTallNate'
+      - 'EndangeredMassa'
+    commit-message:
+      prefix: '[framework-fixtures]'
+    package-ecosystem: 'npm'
+    directory:  /packages/static-build/test/fixtures/vite-5
+    allow:
+      - dependency-name: 'vite'
+    groups:
+      core:
+        patterns:
+          - 'vite'
+        update-types:
+          - 'minor'
