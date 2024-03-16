@@ -16,6 +16,7 @@ import {
   EdgeFunction,
   Images,
   File,
+  FlagDefinitions,
 } from '@vercel/build-utils';
 import { NodeFileTraceReasons } from '@vercel/nft';
 import type {
@@ -304,19 +305,31 @@ export async function getRoutesManifest(
   return routesManifest;
 }
 
-export async function getDynamicRoutes(
-  entryPath: string,
-  entryDirectory: string,
-  dynamicPages: ReadonlyArray<string>,
-  isDev?: boolean,
-  routesManifest?: RoutesManifest,
-  omittedRoutes?: ReadonlySet<string>,
-  canUsePreviewMode?: boolean,
-  bypassToken?: string,
-  isServerMode?: boolean,
-  dynamicMiddlewareRouteMap?: ReadonlyMap<string, RouteWithSrc>,
-  experimentalPPR?: boolean
-): Promise<RouteWithSrc[]> {
+export async function getDynamicRoutes({
+  entryPath,
+  entryDirectory,
+  dynamicPages,
+  isDev,
+  routesManifest,
+  omittedRoutes,
+  canUsePreviewMode,
+  bypassToken,
+  isServerMode,
+  dynamicMiddlewareRouteMap,
+  experimentalPPRRoutes,
+}: {
+  entryPath: string;
+  entryDirectory: string;
+  dynamicPages: string[];
+  isDev?: boolean;
+  routesManifest?: RoutesManifest;
+  omittedRoutes?: ReadonlySet<string>;
+  canUsePreviewMode?: boolean;
+  bypassToken?: string;
+  isServerMode?: boolean;
+  dynamicMiddlewareRouteMap?: ReadonlyMap<string, RouteWithSrc>;
+  experimentalPPRRoutes: ReadonlySet<string>;
+}): Promise<RouteWithSrc[]> {
   if (routesManifest) {
     switch (routesManifest.version) {
       case 1:
@@ -389,7 +402,7 @@ export async function getDynamicRoutes(
             ];
           }
 
-          if (experimentalPPR) {
+          if (experimentalPPRRoutes.has(page)) {
             let dest = route.dest?.replace(/($|\?)/, '.prefetch.rsc$1');
 
             if (page === '/' || page === '/index') {
@@ -919,6 +932,10 @@ export type NextPrerenderedRoutes = {
     };
   };
 
+  /**
+   * Routes that have their fallback behavior is disabled. All routes would've
+   * been provided in the top-level `routes` key (`staticRoutes`).
+   */
   omittedRoutes: {
     [route: string]: {
       routeRegex: string;
@@ -1298,8 +1315,6 @@ export async function getPrerenderManifest(
             prefetchDataRouteRegex,
           };
         } else {
-          // Fallback behavior is disabled, all routes would've been provided
-          // in the top-level `routes` key (`staticRoutes`).
           ret.omittedRoutes[lazyRoute] = {
             experimentalBypassFor,
             experimentalPPR,
@@ -2194,12 +2209,19 @@ export const onPrerenderRoute =
       initialStatus = 404;
     }
 
+    /**
+     * If the route key had an `/index` suffix added, we need to note it so we
+     * can remove it from the output path later accurately.
+     */
+    let addedIndexSuffix = false;
+
     if (isAppPathRoute) {
       // for literal index routes we need to append an additional /index
       // due to the proxy's normalizing for /index routes
       if (routeKey !== '/index' && routeKey.endsWith('/index')) {
         routeKey = `${routeKey}/index`;
         routeFileNoExt = routeKey;
+        addedIndexSuffix = true;
       }
     }
 
@@ -2208,6 +2230,7 @@ export const onPrerenderRoute =
     if (!isAppPathRoute) {
       outputPathPage = normalizeIndexOutput(outputPathPage, isServerMode);
     }
+
     const outputPathPageOrig = path.posix.join(
       entryDirectory,
       origRouteFileNoExt
@@ -2383,24 +2406,35 @@ export const onPrerenderRoute =
         sourcePath = srcRoute;
       }
 
-      // The `experimentalStreamingLambdaPaths` stores the page without the
-      // leading `/` and with the `/` rewritten to be `index`. We should
-      // normalize the key so that it matches that key in the map.
-      let key = srcRoute || routeKey;
-      if (key === '/') {
-        key = 'index';
-      } else {
-        if (!key.startsWith('/')) {
-          throw new Error("Invariant: key doesn't start with /");
+      let experimentalStreamingLambdaPath: string | undefined;
+      if (experimentalPPR) {
+        if (!experimentalStreamingLambdaPaths) {
+          throw new Error(
+            "Invariant: experimentalStreamingLambdaPaths doesn't exist"
+          );
         }
 
-        key = key.substring(1);
+        // Try to get the experimental streaming lambda path for the specific
+        // static route first, then try the srcRoute if it doesn't exist. If we
+        // can't find it at all, this constitutes an error.
+        experimentalStreamingLambdaPath = experimentalStreamingLambdaPaths.get(
+          pathnameToOutputName(entryDirectory, routeKey, addedIndexSuffix)
+        );
+        if (!experimentalStreamingLambdaPath && srcRoute) {
+          experimentalStreamingLambdaPath =
+            experimentalStreamingLambdaPaths.get(
+              pathnameToOutputName(entryDirectory, srcRoute)
+            );
+        }
+
+        if (!experimentalStreamingLambdaPath) {
+          throw new Error(
+            `Invariant: experimentalStreamingLambdaPath is undefined for routeKey=${routeKey} and srcRoute=${
+              srcRoute ?? 'null'
+            }`
+          );
+        }
       }
-
-      key = path.posix.join(entryDirectory, key);
-
-      const experimentalStreamingLambdaPath =
-        experimentalStreamingLambdaPaths?.get(key);
 
       prerenders[outputPathPage] = new Prerender({
         expiration: initialRevalidate,
@@ -2604,6 +2638,10 @@ export async function getStaticFiles(
   };
 }
 
+/**
+ * Strips the trailing `/index` from the output name if it's not the root if
+ * the server mode is enabled.
+ */
 export function normalizeIndexOutput(
   outputName: string,
   isServerMode: boolean
@@ -2622,6 +2660,31 @@ export function getNextServerPath(nextVersion: string) {
   return semver.gte(nextVersion, 'v11.0.2-canary.4')
     ? 'next/dist/server'
     : 'next/dist/next-server/server';
+}
+
+function pathnameToOutputName(
+  entryDirectory: string,
+  pathname: string,
+  addedIndexSuffix = false
+) {
+  if (pathname === '/') {
+    pathname = '/index';
+  }
+  // If the `/index` was added for a route that ended in `/index` we need to
+  // strip the second one off before joining it with the entryDirectory.
+  else if (addedIndexSuffix) {
+    pathname = pathname.replace(/\/index$/, '');
+  }
+
+  return path.posix.join(entryDirectory, pathname);
+}
+
+export function getPostponeResumePathname(
+  entryDirectory: string,
+  pathname: string
+): string {
+  if (pathname === '/') pathname = '/index';
+  return path.posix.join(entryDirectory, '_next/postponed/resume', pathname);
 }
 
 // update to leverage
@@ -3268,19 +3331,14 @@ export function isApiPage(page: string | undefined) {
     .match(/(serverless|server)\/pages\/api(\/|\.js$)/);
 }
 
-/** @deprecated */
-export type VariantsManifestLegacy = Record<
-  string,
-  {
-    defaultValue?: unknown;
-    metadata?: Record<string, unknown>;
-  }
->;
+export type VariantsManifest = {
+  definitions: FlagDefinitions;
+};
 
 export async function getVariantsManifest(
   entryPath: string,
   outputDirectory: string
-): Promise<null | VariantsManifestLegacy> {
+): Promise<null | VariantsManifest> {
   const pathVariantsManifest = path.join(
     entryPath,
     outputDirectory,
@@ -3294,7 +3352,7 @@ export async function getVariantsManifest(
 
   if (!hasVariantsManifest) return null;
 
-  const variantsManifest: VariantsManifestLegacy = await fs.readJSON(
+  const variantsManifest: VariantsManifest = await fs.readJSON(
     pathVariantsManifest
   );
 

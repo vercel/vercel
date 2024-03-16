@@ -416,4 +416,152 @@ describe('deploy', () => {
       version: 2,
     });
   });
+
+  it('should send `projectSettings.nodeVersion` based on `engines.node` package.json field', async () => {
+    const user = useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      name: 'node',
+      id: 'QmbKpqpiUqbcke',
+    });
+
+    let body: any;
+    client.scenario.post(`/v13/deployments`, (req, res) => {
+      body = req.body;
+      res.json({
+        creator: {
+          uid: user.id,
+          username: user.username,
+        },
+        id: 'dpl_',
+      });
+    });
+    client.scenario.get(`/v13/deployments/dpl_`, (req, res) => {
+      res.json({
+        creator: {
+          uid: user.id,
+          username: user.username,
+        },
+        id: 'dpl_',
+        readyState: 'READY',
+        aliasAssigned: true,
+        alias: [],
+      });
+    });
+
+    const repoRoot = setupUnitFixture('commands/deploy/node');
+    client.cwd = repoRoot;
+    client.setArgv('deploy');
+    const exitCode = await deploy(client);
+    expect(exitCode).toEqual(0);
+    expect(body).toMatchObject({
+      source: 'cli',
+      version: 2,
+      projectSettings: {
+        nodeVersion: '20.x',
+        sourceFilesOutsideRootDirectory: true,
+      },
+    });
+  });
+
+  it('should send latest supported node version when given a >low-node-version based on `engines.node` package.json field', async () => {
+    const user = useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      name: 'node-low-starting-range',
+      id: 'QmbKpqpiUqbcke',
+    });
+
+    let body: any;
+    client.scenario.post(`/v13/deployments`, (req, res) => {
+      body = req.body;
+      res.json({
+        creator: {
+          uid: user.id,
+          username: user.username,
+        },
+        id: 'dpl_',
+      });
+    });
+    client.scenario.get(`/v13/deployments/dpl_`, (req, res) => {
+      res.json({
+        creator: {
+          uid: user.id,
+          username: user.username,
+        },
+        id: 'dpl_',
+        readyState: 'READY',
+        aliasAssigned: true,
+        alias: [],
+      });
+    });
+
+    const repoRoot = setupUnitFixture(
+      'commands/deploy/node-low-starting-range'
+    );
+    client.cwd = repoRoot;
+    client.setArgv('deploy');
+    const exitCode = await deploy(client);
+    expect(exitCode).toEqual(0);
+    expect(body).toMatchObject({
+      source: 'cli',
+      version: 2,
+      projectSettings: {
+        nodeVersion: '20.x',
+        sourceFilesOutsideRootDirectory: true,
+      },
+    });
+  });
+
+  it('should send no version when `engines.node` package.json field is fixed to an outdated version', async () => {
+    const user = useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      name: 'node-low-version',
+      id: 'QmbKpqpiUqbcke',
+    });
+
+    let body: any;
+    client.scenario.post(`/v13/deployments`, (req, res) => {
+      body = req.body;
+      res.json({
+        creator: {
+          uid: user.id,
+          username: user.username,
+        },
+        id: 'dpl_',
+      });
+    });
+    client.scenario.get(`/v13/deployments/dpl_`, (req, res) => {
+      res.json({
+        creator: {
+          uid: user.id,
+          username: user.username,
+        },
+        id: 'dpl_',
+        readyState: 'READY',
+        aliasAssigned: true,
+        alias: [],
+      });
+    });
+
+    const repoRoot = setupUnitFixture('commands/deploy/node-low-version');
+    client.cwd = repoRoot;
+    client.setArgv('deploy');
+    const exitCodePromise = deploy(client);
+    await expect(client.stderr).toOutput(
+      'WARN! Node.js Version "10.x" is discontinued and must be upgraded. Please set "engines": { "node": "20.x" } in your `package.json` file to use Node.js 20.'
+    );
+    await expect(exitCodePromise).resolves.toEqual(0);
+    expect(body).toMatchObject({
+      source: 'cli',
+      version: 2,
+      projectSettings: {
+        sourceFilesOutsideRootDirectory: true,
+      },
+    });
+  });
 });

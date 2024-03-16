@@ -19,10 +19,22 @@ const pages = [
   { pathname: '/no-suspense/nested/a', dynamic: true },
   { pathname: '/no-suspense/nested/b', dynamic: true },
   { pathname: '/no-suspense/nested/c', dynamic: true },
+  { pathname: '/no-fallback/a', dynamic: true },
+  { pathname: '/no-fallback/b', dynamic: true },
+  { pathname: '/no-fallback/c', dynamic: true },
   // TODO: uncomment when we've fixed the 404 case for force-dynamic pages
   // { pathname: '/dynamic/force-dynamic', dynamic: 'force-dynamic' },
   { pathname: '/dynamic/force-static', dynamic: 'force-static' },
 ];
+
+const cases = {
+  404: [
+    // For routes that do not support fallback (they had `dynamicParams` set to
+    // `false`), we shouldn't see any fallback behavior for routes not defined
+    // in `getStaticParams`.
+    { pathname: '/no-fallback/non-existent' },
+  ],
+};
 
 const ctx = {};
 
@@ -47,6 +59,17 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
         const html = await res.text();
         expect(html).toContain(expected);
         expect(html).toContain('</html>');
+
+        // Validate that the loaded URL is correct.
+        expect(html).toContain(`data-pathname=${pathname}`);
+      }
+    );
+
+    it.each(cases[404])(
+      'should return 404 for $pathname',
+      async ({ pathname }) => {
+        const res = await fetch(`${ctx.deploymentUrl}${pathname}`);
+        expect(res.status).toEqual(404);
       }
     );
   });
@@ -88,6 +111,16 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
         }
       }
     );
+
+    it.each(cases[404])(
+      'should return 404 for $pathname',
+      async ({ pathname }) => {
+        const res = await fetch(`${ctx.deploymentUrl}${pathname}`, {
+          headers: { RSC: 1, 'Next-Router-Prefetch': '1' },
+        });
+        expect(res.status).toEqual(404);
+      }
+    );
   });
 
   describe('dynamic RSC payloads should return', () => {
@@ -122,5 +155,15 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
         expect(text).not.toContain(expected);
       }
     });
+
+    it.each(cases[404])(
+      'should return 404 for $pathname',
+      async ({ pathname }) => {
+        const res = await fetch(`${ctx.deploymentUrl}${pathname}`, {
+          headers: { RSC: 1 },
+        });
+        expect(res.status).toEqual(404);
+      }
+    );
   });
 });

@@ -13,7 +13,7 @@
   <a href="https://vercel.com/docs"><strong>Documentation</strong></a> ·
   <a href="https://vercel.com/changelog"><strong>Changelog</strong></a> ·
   <a href="https://vercel.com/templates"><strong>Templates</strong></a> ·
-  <a href="https://vercel.com/cli"><strong>CLI</strong></a>
+  <a href="https://vercel.com/docs/cli"><strong>CLI</strong></a>
 </p>
 <br/>
 
@@ -23,7 +23,7 @@ Vercel’s Frontend Cloud provides the developer experience and infrastructure t
 
 ## Deploy
 
-Get started by [importing a project](https://vercel.com/new) or using the [Vercel CLI](https://vercel.com/cli). Then, `git push` to deploy.
+Get started by [importing a project](https://vercel.com/new) or using the [Vercel CLI](https://vercel.com/docs/cli). Then, `git push` to deploy.
 
 ## Documentation
 

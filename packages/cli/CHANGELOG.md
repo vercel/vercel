@@ -1,5 +1,72 @@
 # vercel
 
+## 33.6.1
+
+### Patch Changes
+
+- Don't send `projectSettings.nodeVersion` for unsupported versions ([#11277](https://github.com/vercel/vercel/pull/11277))
+
+- Updated dependencies [[`4bca0c6d0`](https://github.com/vercel/vercel/commit/4bca0c6d0bc25052b95bd02b12a0b891c86c4b49), [`a67ad4b5a`](https://github.com/vercel/vercel/commit/a67ad4b5a130bf0e56e18111b3f9ddad69cec0e1), [`11218a179`](https://github.com/vercel/vercel/commit/11218a179870a5420c5a6ff720cd4aec4f7e1c5e), [`64b97bf4b`](https://github.com/vercel/vercel/commit/64b97bf4b5203ecf9a95f63ce26a5c3360208966)]:
+  - @vercel/next@4.1.6
+  - @vercel/remix-builder@2.1.4
+  - @vercel/build-utils@7.9.1
+  - @vercel/static-build@2.4.4
+  - @vercel/node@3.0.24
+
+## 33.6.0
+
+### Minor Changes
+
+- Set `projectSettings.nodeVersion` in `vc deploy` based on "engines.node" field ([#11261](https://github.com/vercel/vercel/pull/11261))
+
+### Patch Changes
+
+- Stops warning about legacy Speed Insights for Next.js apps ([#11268](https://github.com/vercel/vercel/pull/11268))
+
+- Fix framework version detection in monorepos ([#11212](https://github.com/vercel/vercel/pull/11212))
+
+- Updated dependencies [[`8ea93839c`](https://github.com/vercel/vercel/commit/8ea93839ccc70816f3ece9d7cfdb857aa7a4b015), [`58ef91bfe`](https://github.com/vercel/vercel/commit/58ef91bfe8c2e7176e8783cc4eb91ee8580c70dc)]:
+  - @vercel/build-utils@7.9.0
+  - @vercel/remix-builder@2.1.3
+  - @vercel/node@3.0.23
+  - @vercel/static-build@2.4.3
+
+## 33.5.5
+
+### Patch Changes
+
+- Rename variants to flags and remove legacy flags ([#11121](https://github.com/vercel/vercel/pull/11121))
+
+- fix vc with root dir issues ([#11243](https://github.com/vercel/vercel/pull/11243))
+
+- Updated dependencies [[`908e7837d`](https://github.com/vercel/vercel/commit/908e7837d55bc02e708f402c700e00208415e954), [`5e3656ec1`](https://github.com/vercel/vercel/commit/5e3656ec1b3f0561091636582715ba09ddd8cb2d), [`a53d1b0d3`](https://github.com/vercel/vercel/commit/a53d1b0d38efa9637f8b8f81a70898add87530e3)]:
+  - @vercel/build-utils@7.8.0
+  - @vercel/next@4.1.5
+  - @vercel/remix-builder@2.1.2
+  - @vercel/node@3.0.22
+  - @vercel/static-build@2.4.2
+
+## 33.5.4
+
+### Patch Changes
+
+- [build-utils] increase max memory limit ([#11209](https://github.com/vercel/vercel/pull/11209))
+
+- Updated dependencies [[`b1d8b83ab`](https://github.com/vercel/vercel/commit/b1d8b83abbf23a3485aedb490992d0a3bf44573f), [`37b193c84`](https://github.com/vercel/vercel/commit/37b193c845d8b63d93bb0017fbc1a6a35306ef1f), [`20237d4f7`](https://github.com/vercel/vercel/commit/20237d4f7b55b0697b57db15636c11204cb0dc39), [`f8fab639b`](https://github.com/vercel/vercel/commit/f8fab639bf49a60389b8d0b7b265a737c17b4ae1), [`6ed0fe6fb`](https://github.com/vercel/vercel/commit/6ed0fe6fb1e487545a790ff5b9fc691cf625f005)]:
+  - @vercel/next@4.1.4
+  - @vercel/build-utils@7.7.1
+  - @vercel/remix-builder@2.1.1
+  - @vercel/static-build@2.4.1
+  - @vercel/node@3.0.21
+
+## 33.5.3
+
+### Patch Changes
+
+- Updated dependencies [[`c2d99855e`](https://github.com/vercel/vercel/commit/c2d99855ea6132380434ed29643120680f95fad7), [`1333071a3`](https://github.com/vercel/vercel/commit/1333071a3a2d324679327bfdd4e872f8fd3521c6)]:
+  - @vercel/next@4.1.3
+  - @vercel/remix-builder@2.1.0
+
 ## 33.5.2
 
 ### Patch Changes
