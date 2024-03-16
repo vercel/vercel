@@ -1,0 +1,14 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "mustContain": "<p>Loading...</p>",
+      "logMustContain": "WARN: The `vercelPreset()` Preset was not detected."
+    },
+    {
+      "path": "/does-not-exist",
+      "status": 200,
+      "mustContain": "<p>Loading...</p>"
+    }
+  ]
+}

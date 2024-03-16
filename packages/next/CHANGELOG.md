@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.1.6
+
+### Patch Changes
+
+- Ensure that static PPR pages have static streaming lambda paths. ([#11259](https://github.com/vercel/vercel/pull/11259))
+
 ## 4.1.5
 
 ### Patch Changes
