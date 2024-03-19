@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest';
 import confirm from '../../../src/util/input/confirm';
 import { client } from '../../mocks/client';
 

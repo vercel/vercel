@@ -1,3 +1,4 @@
+import { describe, beforeEach, it, expect } from 'vitest';
 import parseTarget from '../../../../src/util/deploy/parse-target';
 import { Output } from '../../../../src/util/output';
 import { Mock, vi } from 'vitest';

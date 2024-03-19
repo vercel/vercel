@@ -1,3 +1,4 @@
+import { describe, it, expect, afterEach } from 'vitest';
 import fs from 'fs-extra';
 import sleep from '../../../src/util/sleep';
 import tmp from 'tmp-promise';

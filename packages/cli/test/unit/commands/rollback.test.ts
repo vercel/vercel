@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest';
 import chalk from 'chalk';
 import { client } from '../../mocks/client';
 import { defaultProject, useProject } from '../../mocks/project';

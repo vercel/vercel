@@ -94,6 +94,7 @@
     "@vercel/frameworks": "3.0.0",
     "@vercel/fs-detectors": "5.2.1",
     "@vercel/routing-utils": "3.1.0",
+    "@vitest/expect": "1.4.0",
     "ajv": "6.12.2",
     "alpha-sort": "2.0.1",
     "ansi-escapes": "4.3.2",

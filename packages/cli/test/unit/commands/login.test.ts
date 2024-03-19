@@ -1,3 +1,4 @@
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import login from '../../../src/commands/login';
 import { emoji } from '../../../src/util/emoji';
 import { client } from '../../mocks/client';

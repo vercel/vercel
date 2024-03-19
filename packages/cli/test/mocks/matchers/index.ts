@@ -53,8 +53,10 @@ declare global {
       > {}
   }
 }
+import { expect } from 'vitest';
 
-const jestExpect = (global as any).expect;
+// const jestExpect = (global as any).expect;
+const jestExpect = expect;
 
 if (jestExpect !== undefined) {
   jestExpect.extend(matchers);

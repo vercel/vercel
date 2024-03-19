@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest';
 import getUpdateCommand from '../../../src/util/get-update-command';
 
 describe('getUpdateCommand', () => {

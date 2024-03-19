@@ -1,3 +1,4 @@
+import { describe, it, expect } from 'vitest';
 import { join } from 'path';
 import { remove } from 'fs-extra';
 import { getWriteableDirectory } from '@vercel/build-utils';
