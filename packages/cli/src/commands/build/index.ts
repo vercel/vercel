@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 import semver from 'semver';
 import minimatch from 'minimatch';
 import { join, normalize, relative, resolve, sep } from 'path';
-import frameworks from '@vercel/frameworks';
+import { frameworks } from '@vercel/frameworks';
 import {
   getDiscontinuedNodeVersions,
   normalizePath,
@@ -179,6 +179,7 @@ export default async function main(client: Client): Promise<number> {
             'pull --yes'
           )} to retrieve them.`
         );
+        console.log('istty');
         return 1;
       }
 
@@ -280,6 +281,7 @@ export default async function main(client: Client): Promise<number> {
     });
     await fs.writeJSON(configJsonPath, { version: 3 }, { spaces: 2 });
 
+    console.log(err);
     return 1;
   } finally {
     // Unset environment variables that were added by dotenv
