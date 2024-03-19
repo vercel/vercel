@@ -2037,6 +2037,12 @@ export const frameworks = [
     },
     getOutputDirName: async () => 'public',
   },
+  {
+    name: 'Remotion',
+    slug: 'remotion',
+    demo: 'https://remotion-helloworld.vercel.app/',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/remotion.svg',
+  },
 ] as const;
 
 const def = frameworks as readonly Framework[];
