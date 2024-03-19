@@ -12,7 +12,7 @@
   },
   "scripts": {
     "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --bail",
-    "test-unit": "pnpm test test/unit/",
+    "test-unit": "pnpm vitest test/unit/",
     "test-e2e": "rimraf test/fixtures/integration && pnpm test test/integration-1.test.ts test/integration-2.test.ts test/integration-3.test.ts",
     "test-dev": "pnpm test test/dev/",
     "coverage": "codecov",

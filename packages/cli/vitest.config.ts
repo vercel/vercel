@@ -3,6 +3,8 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
   test: {
+    // Use of process.chdir prohibits usage of the default "threads". https://vitest.dev/config/#forks
+    pool: 'forks',
     exclude: [
       // default
       '**/node_modules/**',
