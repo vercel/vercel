@@ -2042,7 +2042,7 @@ export const frameworks = [
     slug: 'remotion',
     demo: 'https://remotion-helloworld.vercel.app/',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/remotion.svg',
-    tagline: 'Make videos programmatically using React.',
+    tagline: 'Remotion allows you to create videos programmatically in React.',
     description: 'A Remotion Studio project, created with `npm init video`.',
     website: 'https://www.remotion.dev',
     detectors: {
