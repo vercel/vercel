@@ -1211,9 +1211,6 @@ importers:
       '@edge-runtime/vm':
         specifier: 3.2.0
         version: 3.2.0
-      '@types/node':
-        specifier: 14.18.33
-        version: 14.18.33
       '@vercel/build-utils':
         specifier: 7.9.1
         version: link:../build-utils
@@ -1287,6 +1284,9 @@ importers:
       '@types/jest':
         specifier: 29.5.0
         version: 29.5.0
+      '@types/node':
+        specifier: 14.18.33
+        version: 14.18.33
       content-type:
         specifier: 1.0.5
         version: 1.0.5
