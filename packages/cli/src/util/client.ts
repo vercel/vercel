@@ -1,5 +1,6 @@
 import { bold } from 'chalk';
 import inquirer from 'inquirer';
+import { input } from '@inquirer/prompts';
 import { EventEmitter } from 'events';
 import { URL } from 'url';
 import { VercelConfig } from '@vercel/client';
@@ -67,6 +68,7 @@ export default class Client extends EventEmitter implements Stdio {
   localConfig?: VercelConfig;
   localConfigPath?: string;
   prompt!: inquirer.PromptModule;
+  input: typeof input;
   requestIdCounter: number;
 
   constructor(opts: ClientOptions) {
@@ -84,6 +86,7 @@ export default class Client extends EventEmitter implements Stdio {
     this.localConfigPath = opts.localConfigPath;
     this.requestIdCounter = 1;
     this._createPromptModule();
+    this.input = input;
   }
 
   retry<T>(fn: RetryFunction<T>, { retries = 3, maxTimeout = Infinity } = {}) {

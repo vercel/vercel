@@ -342,11 +342,7 @@ function getCommit(deployment: Deployment) {
 async function prompt(client: Client, message: string): Promise<string> {
   // eslint-disable-next-line no-constant-condition
   while (true) {
-    const { val } = await client.prompt({
-      type: 'input',
-      name: 'val',
-      message,
-    });
+    const val = await client.input({ message });
     if (val) {
       return val;
     } else {

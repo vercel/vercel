@@ -67,9 +67,7 @@ export default async function add(
   }
 
   while (!envName) {
-    const { inputName } = await client.prompt({
-      type: 'input',
-      name: 'inputName',
+    const inputName = await client.input({
       message: `What’s the name of the variable?`,
     });
 
@@ -107,9 +105,7 @@ export default async function add(
   if (stdInput) {
     envValue = stdInput;
   } else {
-    const { inputValue } = await client.prompt({
-      type: 'input',
-      name: 'inputValue',
+    const inputValue = await client.input({
       message: `What’s the value of ${envName}?`,
     });
 
@@ -137,9 +133,7 @@ export default async function add(
     envTargets.length === 1 &&
     envTargets[0] === 'preview'
   ) {
-    const { inputValue } = await client.prompt({
-      type: 'input',
-      name: 'inputValue',
+    const inputValue = await client.input({
       message: `Add ${envName} to which Git branch? (leave empty for all Preview branches)?`,
     });
     envGitBranch = inputValue || '';
