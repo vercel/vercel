@@ -554,7 +554,7 @@ export const frameworks = [
     logo: 'https://api-frameworks.vercel.sh/framework-logos/solid.svg',
     tagline: 'Simple and performant reactivity for building user interfaces.',
     description: 'A Solid app, created with SolidStart.',
-    website: 'https://solidjs.com',
+    website: 'https://start.solidjs.com',
     envPrefix: 'VITE_',
     detectors: {
       every: [
@@ -562,7 +562,7 @@ export const frameworks = [
           matchPackage: 'solid-js',
         },
         {
-          matchPackage: 'solid-start',
+          matchPackage: '@solidjs/start',
         },
       ],
     },
@@ -572,11 +572,11 @@ export const frameworks = [
           '`yarn install`, `pnpm install`, `npm install`, or `bun install`',
       },
       buildCommand: {
-        placeholder: '`npm run build` or `solid-start build`',
-        value: 'solid-start build',
+        placeholder: '`npm run build` or `vinxi build`',
+        value: 'vinxi build',
       },
       devCommand: {
-        value: 'solid-start dev',
+        value: 'vinxi dev',
       },
       outputDirectory: {
         value: '.output',
