@@ -179,7 +179,6 @@ export default async function main(client: Client): Promise<number> {
             'pull --yes'
           )} to retrieve them.`
         );
-        console.log('istty');
         return 1;
       }
 
@@ -278,7 +277,6 @@ export default async function main(client: Client): Promise<number> {
     });
     await fs.writeJSON(configJsonPath, { version: 3 }, { spaces: 2 });
 
-    console.log(err);
     return 1;
   } finally {
     // Unset environment variables that were added by dotenv
@@ -697,7 +695,7 @@ async function getFramework(
 ): Promise<{ version: string } | undefined> {
   const detectedFramework = await detectFrameworkRecord({
     fs: new LocalFileSystemDetector(cwd),
-    frameworkList: frameworkList,
+    frameworkList,
   });
 
   if (!detectedFramework) {
