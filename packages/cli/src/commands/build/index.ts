@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 import semver from 'semver';
 import minimatch from 'minimatch';
 import { join, normalize, relative, resolve, sep } from 'path';
-import { frameworks } from '@vercel/frameworks';
+import { frameworkList } from '@vercel/frameworks';
 import {
   getDiscontinuedNodeVersions,
   normalizePath,
@@ -697,7 +697,7 @@ async function getFramework(
 ): Promise<{ version: string } | undefined> {
   const detectedFramework = await detectFrameworkRecord({
     fs: new LocalFileSystemDetector(cwd),
-    frameworkList: frameworks,
+    frameworkList: frameworkList,
   });
 
   if (!detectedFramework) {
