@@ -258,9 +258,6 @@ export default async function main(client: Client): Promise<number> {
     if (project.settings.analyticsId) {
       envToUnset.add('VERCEL_ANALYTICS_ID');
       process.env.VERCEL_ANALYTICS_ID = project.settings.analyticsId;
-      output.warn(
-        'Vercel Speed Insights auto-injection is deprecated in favor of @vercel/speed-insights package. Learn more: https://vercel.link/upgrate-to-speed-insights-package'
-      );
     }
 
     // Some build processes use these env vars to platform detect Vercel
@@ -666,7 +663,7 @@ async function doBuild(
   const mergedOverrides: Record<string, PathOverride> =
     overrides.length > 0 ? Object.assign({}, ...overrides) : undefined;
 
-  const framework = await getFramework(cwd, buildResults);
+  const framework = await getFramework(workPath, buildResults);
 
   // Write out the final `config.json` file based on the
   // user configuration and Builder build results
