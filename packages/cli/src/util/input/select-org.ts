@@ -52,14 +52,9 @@ export default async function selectOrg(
     return choices[defaultChoiceIndex].value;
   }
 
-  const answers = await client.prompt({
-    type: 'list',
-    name: 'org',
+  const org = await client.select({
     message: question,
     choices,
-    default: defaultChoiceIndex,
   });
-
-  const org = answers.org;
   return org;
 }

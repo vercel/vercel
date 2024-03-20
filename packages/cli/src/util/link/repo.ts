@@ -144,16 +144,13 @@ export async function ensureRepoLink(
       if (yes) {
         remoteName = defaultRemote;
       } else {
-        const answer = await client.prompt({
-          type: 'list',
-          name: 'value',
+        remoteName = await client.select({
           message: 'Which Git remote should be used?',
           choices: remoteNames.map(name => {
             return { name: name, value: name };
           }),
           default: defaultRemote,
         });
-        remoteName = answer.value;
       }
     }
     const repoUrl = remoteUrls[remoteName];

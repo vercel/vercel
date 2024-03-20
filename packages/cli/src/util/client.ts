@@ -1,6 +1,6 @@
 import { bold } from 'chalk';
 import inquirer from 'inquirer';
-import { checkbox, confirm, expand, input } from '@inquirer/prompts';
+import { checkbox, confirm, expand, input, select } from '@inquirer/prompts';
 import { EventEmitter } from 'events';
 import { URL } from 'url';
 import { VercelConfig } from '@vercel/client';
@@ -72,6 +72,7 @@ export default class Client extends EventEmitter implements Stdio {
   confirm: typeof confirm;
   input: typeof input;
   expand: typeof expand;
+  select: typeof select;
   requestIdCounter: number;
 
   constructor(opts: ClientOptions) {
@@ -93,6 +94,7 @@ export default class Client extends EventEmitter implements Stdio {
     this.confirm = confirm;
     this.expand = expand;
     this.input = input;
+    this.select = select;
   }
 
   retry<T>(fn: RetryFunction<T>, { retries = 3, maxTimeout = Infinity } = {}) {
