@@ -278,9 +278,7 @@ export default async function bisect(client: Client): Promise<number> {
       if (openEnabled) {
         await open(testUrl);
       }
-      const answer = await client.prompt({
-        type: 'expand',
-        name: 'action',
+      action = await client.expand({
         message: 'Select an action:',
         choices: [
           { key: 'g', name: 'Good', value: 'good' },
@@ -288,7 +286,6 @@ export default async function bisect(client: Client): Promise<number> {
           { key: 's', name: 'Skip', value: 'skip' },
         ],
       });
-      action = answer.action;
     }
 
     if (action === 'good') {

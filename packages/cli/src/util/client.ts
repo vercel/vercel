@@ -1,6 +1,6 @@
 import { bold } from 'chalk';
 import inquirer from 'inquirer';
-import { input, checkbox } from '@inquirer/prompts';
+import { input, checkbox, expand } from '@inquirer/prompts';
 import { EventEmitter } from 'events';
 import { URL } from 'url';
 import { VercelConfig } from '@vercel/client';
@@ -70,6 +70,7 @@ export default class Client extends EventEmitter implements Stdio {
   prompt!: inquirer.PromptModule;
   checkbox: typeof checkbox;
   input: typeof input;
+  expand: typeof expand;
   requestIdCounter: number;
 
   constructor(opts: ClientOptions) {
@@ -88,6 +89,7 @@ export default class Client extends EventEmitter implements Stdio {
     this.requestIdCounter = 1;
     this._createPromptModule();
     this.checkbox = checkbox;
+    this.expand = expand;
     this.input = input;
   }
 
