@@ -1,4 +1,4 @@
-import { frameworks as frameworkList } from '@vercel/frameworks';
+import { frameworkList } from '@vercel/frameworks';
 
 export function sortBuilders<B extends { use: string }>(builds: B[]): B[] {
   const frontendRuntimeSet = new Set(
