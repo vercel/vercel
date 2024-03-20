@@ -10,9 +10,8 @@ const {
   disableSSO,
 } = require('../../../../test/lib/deployment/now-deploy');
 const { spawnSync, execFileSync } = require('child_process');
-const vitest = require('vitest');
 
-vitest.vi.setConfig({ testTimeout: 10 * 60 * 1000 });
+jest.setTimeout(10 * 60 * 1000);
 
 const isCI = !!process.env.CI;
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
