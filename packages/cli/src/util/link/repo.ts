@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import inquirer from 'inquirer';
+import { Separator } from '@inquirer/prompts';
 import pluralize from 'pluralize';
 import { homedir } from 'os';
 import slugify from '@sindresorhus/slugify';
@@ -222,15 +222,14 @@ export async function ensureRepoLink(
       selected = projects;
     } else {
       const addSeparators = projects.length > 0 && detectedProjectsCount > 0;
-      const answer = await client.prompt({
-        type: 'checkbox',
-        name: 'selected',
+      selected = await client.checkbox({
         message: `Which Projects should be ${
           projects.length ? 'linked to' : 'created'
         }?`,
+        // TODO: figure out this type error
         choices: [
           ...(addSeparators
-            ? [new inquirer.Separator('----- Existing Projects -----')]
+            ? [new Separator('----- Existing Projects -----')]
             : []),
           ...projects.map(project => {
             return {
@@ -240,7 +239,7 @@ export async function ensureRepoLink(
             };
           }),
           ...(addSeparators
-            ? [new inquirer.Separator('----- New Projects to be created -----')]
+            ? [new Separator('----- New Projects to be created -----')]
             : []),
           ...Array.from(detectedProjects.entries()).flatMap(
             ([rootDirectory, frameworks]) =>
@@ -269,7 +268,6 @@ export async function ensureRepoLink(
           ),
         ],
       });
-      selected = answer.selected;
     }
 
     if (selected.length === 0) {

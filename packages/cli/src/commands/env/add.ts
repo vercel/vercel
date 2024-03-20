@@ -113,16 +113,12 @@ export default async function add(
   }
 
   while (envTargets.length === 0) {
-    const { inputTargets } = await client.prompt({
-      name: 'inputTargets',
-      type: 'checkbox',
+    envTargets = await client.checkbox({
       message: `Add ${envName} to which Environments (select multiple)?`,
       choices,
     });
 
-    envTargets = inputTargets;
-
-    if (inputTargets.length === 0) {
+    if (envTargets) {
       output.error('Please select at least one Environment');
     }
   }
