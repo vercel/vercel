@@ -35,4 +35,4 @@ Afterwards, start the Remix development server like so:
 npm run dev
 ```
 
-Open up [http://localhost:3000](http://localhost:3000) and you should be ready to go!
+Open up [http://localhost:5173](http://localhost:5173) and you should be ready to go!
