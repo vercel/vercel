@@ -119,7 +119,11 @@ describe('buildFileTree()', () => {
     const cwd = fixture('file-system-api');
     const { fileList, ignoreList } = await buildFileTree(
       cwd,
-      { isDirectory: true, prebuilt: true },
+      {
+        isDirectory: true,
+        prebuilt: true,
+        vercelOutputDir: join(cwd, '.vercel/output'),
+      },
       noop
     );
 
