@@ -253,10 +253,19 @@ export default async function main(client: Client): Promise<number> {
       output.debug(`Loaded environment variables from "${envPath}"`);
     }
 
-    // For Vercel Legacy speed Insights support
+    // For Vercel legacy Speed Insights support
     if (project.settings.analyticsId) {
-      envToUnset.add('VERCEL_ANALYTICS_ID');
-      process.env.VERCEL_ANALYTICS_ID = project.settings.analyticsId;
+      const hasSpeedInsightsPackageInstalled = await readInstalledVersion(
+        client,
+        '@vercel/speed-insights'
+      );
+
+      if (hasSpeedInsightsPackageInstalled !== undefined) {
+        // we don't want to set VERCEL_ANALYTICS_ID to prevent the automatic instrumentation
+        // which is not needed when the package is installed
+        envToUnset.add('VERCEL_ANALYTICS_ID');
+        process.env.VERCEL_ANALYTICS_ID = project.settings.analyticsId;
+      }
     }
 
     // Some build processes use these env vars to platform detect Vercel

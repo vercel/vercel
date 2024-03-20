@@ -1,0 +1,8 @@
+{
+  "scripts": {
+    "build": "node env.js"
+  },
+  "dependencies": {
+    "@vercel/analytics": "1.0.0"
+  }
+}

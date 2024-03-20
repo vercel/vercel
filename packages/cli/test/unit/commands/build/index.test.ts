@@ -796,6 +796,17 @@ describe('build', () => {
     expect(Object.keys(env).includes('VERCEL_ANALYTICS_ID')).toEqual(true);
   });
 
+  it('should not set `VERCEL_ANALYTICS_ID` if new @vercel/speed-insights package is present', async () => {
+    const cwd = fixture('vercel-speed-insights');
+    const output = join(cwd, '.vercel/output');
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toEqual(0);
+
+    const env = await fs.readJSON(join(output, 'static', 'env.json'));
+    expect(Object.keys(env).includes('VERCEL_ANALYTICS_ID')).toEqual(false);
+  });
+
   it('should load environment variables from `.vercel/.env.preview.local`', async () => {
     const cwd = fixture('env-from-vc-pull');
     const output = join(cwd, '.vercel/output');
