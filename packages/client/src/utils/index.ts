@@ -169,7 +169,7 @@ export async function getVercelIgnore(
       const level = parts.slice(0, i + 1).join('/');
       ignores.push(`!${level}`);
     });
-    ignores.push(`!${relOutputDir}/**`);
+    ignores.push(`!${parts.join('/')}/**`);
     ig.add(ignores.join('\n'));
   } else {
     ignores = [
