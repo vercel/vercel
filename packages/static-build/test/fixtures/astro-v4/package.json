@@ -10,6 +10,6 @@
     "start": "astro dev"
   },
   "dependencies": {
-    "astro": "^4.2.0"
+    "astro": "^4.5.8"
   }
 }
