@@ -164,7 +164,7 @@ export async function getVercelIgnore(
     }
     const relOutputDir = relative(cwd, vercelOutputDir);
     ignores = ['*'];
-    const parts = relOutputDir.split('/');
+    const parts = relOutputDir.split(sep);
     parts.forEach((_, i) => {
       const level = parts.slice(0, i + 1).join('/');
       ignores.push(`!${level}`);
