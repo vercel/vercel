@@ -1,5 +1,33 @@
 # @vercel/build-utils
 
+## 7.9.1
+
+### Patch Changes
+
+- Export `getSupportedNodeVersion` ([#11277](https://github.com/vercel/vercel/pull/11277))
+
+## 7.9.0
+
+### Minor Changes
+
+- Add `base` parameter to `scanParentDirs()` ([#11261](https://github.com/vercel/vercel/pull/11261))
+
+## 7.8.0
+
+### Minor Changes
+
+- Remove `VERCEL_ENABLE_NPM_DEFAULT` env var check ([#11242](https://github.com/vercel/vercel/pull/11242))
+
+### Patch Changes
+
+- Rename variants to flags and remove legacy flags ([#11121](https://github.com/vercel/vercel/pull/11121))
+
+## 7.7.1
+
+### Patch Changes
+
+- [build-utils] increase max memory limit ([#11209](https://github.com/vercel/vercel/pull/11209))
+
 ## 7.7.0
 
 ### Minor Changes

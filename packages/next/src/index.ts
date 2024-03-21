@@ -1142,6 +1142,10 @@ export const build: BuildV2 = async ({
       appPathRoutesManifest,
     });
 
+    /**
+     * This is a detection for preview mode that's required for the pages
+     * router.
+     */
     const canUsePreviewMode = Object.keys(pages).some(page =>
       isApiPage(pages[page].fsPath)
     );
@@ -1316,6 +1320,22 @@ export const build: BuildV2 = async ({
       }
     }
 
+    /**
+     * All of the routes that have `experimentalPPR` enabled.
+     */
+    const experimentalPPRRoutes = new Set<string>();
+
+    for (const [route, { experimentalPPR }] of [
+      ...Object.entries(prerenderManifest.staticRoutes),
+      ...Object.entries(prerenderManifest.blockingFallbackRoutes),
+      ...Object.entries(prerenderManifest.fallbackRoutes),
+      ...Object.entries(prerenderManifest.omittedRoutes),
+    ]) {
+      if (!experimentalPPR) continue;
+
+      experimentalPPRRoutes.add(route);
+    }
+
     if (requiredServerFilesManifest) {
       if (!routesManifest) {
         throw new Error(
@@ -1371,6 +1391,7 @@ export const build: BuildV2 = async ({
         hasIsr404Page,
         hasIsr500Page,
         variantsManifest,
+        experimentalPPRRoutes,
       });
     }
 
@@ -1883,17 +1904,18 @@ export const build: BuildV2 = async ({
       );
     }
 
-    dynamicRoutes = await getDynamicRoutes(
+    dynamicRoutes = await getDynamicRoutes({
       entryPath,
       entryDirectory,
       dynamicPages,
-      false,
+      isDev: false,
       routesManifest,
-      omittedPrerenderRoutes,
+      omittedRoutes: omittedPrerenderRoutes,
       canUsePreviewMode,
-      prerenderManifest.bypassToken || '',
-      isServerMode
-    ).then(arr =>
+      bypassToken: prerenderManifest.bypassToken || '',
+      isServerMode,
+      experimentalPPRRoutes,
+    }).then(arr =>
       localizeDynamicRoutes(
         arr,
         dynamicPrefix,
@@ -1912,17 +1934,18 @@ export const build: BuildV2 = async ({
 
       // we need to include the prerenderManifest.omittedRoutes here
       // for the page to be able to be matched in the lambda for preview mode
-      const completeDynamicRoutes = await getDynamicRoutes(
+      const completeDynamicRoutes = await getDynamicRoutes({
         entryPath,
         entryDirectory,
         dynamicPages,
-        false,
+        isDev: false,
         routesManifest,
-        undefined,
+        omittedRoutes: undefined,
         canUsePreviewMode,
-        prerenderManifest.bypassToken || '',
-        isServerMode
-      ).then(arr =>
+        bypassToken: prerenderManifest.bypassToken || '',
+        isServerMode,
+        experimentalPPRRoutes,
+      }).then(arr =>
         arr.map(route => {
           route.src = route.src.replace('^', `^${dynamicPrefix}`);
           return route;
@@ -2121,20 +2144,30 @@ export const build: BuildV2 = async ({
       canUsePreviewMode,
     });
 
-    Object.keys(prerenderManifest.staticRoutes).forEach(route =>
-      prerenderRoute(route, { isBlocking: false, isFallback: false })
+    await Promise.all(
+      Object.keys(prerenderManifest.staticRoutes).map(route =>
+        prerenderRoute(route, {})
+      )
     );
-    Object.keys(prerenderManifest.fallbackRoutes).forEach(route =>
-      prerenderRoute(route, { isBlocking: false, isFallback: true })
+
+    await Promise.all(
+      Object.keys(prerenderManifest.fallbackRoutes).map(route =>
+        prerenderRoute(route, { isFallback: true })
+      )
     );
-    Object.keys(prerenderManifest.blockingFallbackRoutes).forEach(route =>
-      prerenderRoute(route, { isBlocking: true, isFallback: false })
+
+    await Promise.all(
+      Object.keys(prerenderManifest.blockingFallbackRoutes).map(route =>
+        prerenderRoute(route, { isBlocking: true })
+      )
     );
 
     if (static404Page && canUsePreviewMode) {
-      omittedPrerenderRoutes.forEach(route => {
-        prerenderRoute(route, { isOmitted: true });
-      });
+      await Promise.all(
+        Array.from(omittedPrerenderRoutes).map(route =>
+          prerenderRoute(route, { isOmitted: true })
+        )
+      );
     }
 
     // We still need to use lazyRoutes if the dataRoutes field

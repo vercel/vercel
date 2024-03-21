@@ -1006,6 +1006,45 @@ test('[vc link --yes] should not show prompts and autolink', async () => {
   ).toBe(true);
 });
 
+test('[vc link] should detect frameworks in project rootDirectory', async () => {
+  const dir = await setupE2EFixture('zero-config-next-js-nested');
+  const projectRootDir = 'app';
+
+  const projectName = `project-link-dev-${
+    Math.random().toString(36).split('.')[1]
+  }`;
+
+  // remove previously linked project if it exists
+  await remove(path.join(dir, '.vercel'));
+
+  const vc = execCli(binaryPath, ['link', `--project=${projectName}`], {
+    cwd: dir,
+    env: {
+      FORCE_TTY: '1',
+    },
+  });
+
+  await waitForPrompt(vc, /Set up [^?]+\?/);
+  vc.stdin?.write('yes\n');
+
+  await waitForPrompt(vc, 'Which scope should contain your project?');
+  vc.stdin?.write('\n');
+
+  await waitForPrompt(vc, 'Link to existing project?');
+  vc.stdin?.write('no\n');
+
+  await waitForPrompt(vc, 'What’s your project’s name?');
+  vc.stdin?.write(`${projectName}\n`);
+
+  await waitForPrompt(vc, 'In which directory is your code located?');
+  vc.stdin?.write(`${projectRootDir}\n`);
+
+  // This means the framework detection worked!
+  await waitForPrompt(vc, 'Auto-detected Project Settings (Next.js)');
+
+  vc.kill();
+});
+
 test('[vc link] should not duplicate paths in .gitignore', async () => {
   const dir = await setupE2EFixture('project-link-gitignore');
 

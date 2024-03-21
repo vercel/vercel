@@ -38,6 +38,7 @@ import {
 import {
   getLatestNodeVersion,
   getDiscontinuedNodeVersions,
+  getSupportedNodeVersion,
 } from './fs/node-version';
 import streamToBuffer from './fs/stream-to-buffer';
 import debug from './debug';
@@ -72,6 +73,7 @@ export {
   walkParentDirs,
   getNodeBinPath,
   getNodeBinPaths,
+  getSupportedNodeVersion,
   runNpmInstall,
   runBundleInstall,
   runPipInstall,
