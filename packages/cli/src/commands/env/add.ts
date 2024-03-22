@@ -67,15 +67,11 @@ export default async function add(
   }
 
   while (!envName) {
-    const { inputName } = await client.prompt({
-      type: 'input',
-      name: 'inputName',
+    envName = await client.input({
       message: `What’s the name of the variable?`,
     });
 
-    envName = inputName;
-
-    if (!inputName) {
+    if (!envName) {
       output.error('Name cannot be empty');
     }
   }
@@ -107,9 +103,7 @@ export default async function add(
   if (stdInput) {
     envValue = stdInput;
   } else {
-    const { inputValue } = await client.prompt({
-      type: 'input',
-      name: 'inputValue',
+    const inputValue = await client.input({
       message: `What’s the value of ${envName}?`,
     });
 
@@ -117,16 +111,12 @@ export default async function add(
   }
 
   while (envTargets.length === 0) {
-    const { inputTargets } = await client.prompt({
-      name: 'inputTargets',
-      type: 'checkbox',
+    envTargets = await client.checkbox({
       message: `Add ${envName} to which Environments (select multiple)?`,
       choices,
     });
 
-    envTargets = inputTargets;
-
-    if (inputTargets.length === 0) {
+    if (envTargets.length === 0) {
       output.error('Please select at least one Environment');
     }
   }
@@ -137,9 +127,7 @@ export default async function add(
     envTargets.length === 1 &&
     envTargets[0] === 'preview'
   ) {
-    const { inputValue } = await client.prompt({
-      type: 'input',
-      name: 'inputValue',
+    const inputValue = await client.input({
       message: `Add ${envName} to which Git branch? (leave empty for all Preview branches)?`,
     });
     envGitBranch = inputValue || '';

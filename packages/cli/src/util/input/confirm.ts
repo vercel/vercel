@@ -7,12 +7,8 @@ export default async function confirm(
 ): Promise<boolean> {
   await import('./patch-inquirer');
 
-  const answers = await client.prompt({
-    type: 'confirm',
-    name: 'value',
+  return client.confirm({
     message,
     default: preferred,
   });
-
-  return answers.value;
 }
