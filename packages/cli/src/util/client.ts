@@ -1,5 +1,4 @@
 import { bold } from 'chalk';
-import inquirer from 'inquirer';
 import { checkbox, confirm, expand, input, select } from '@inquirer/prompts';
 import { EventEmitter } from 'events';
 import { URL } from 'url';
@@ -67,7 +66,6 @@ export default class Client extends EventEmitter implements Stdio {
   agent?: Agent;
   localConfig?: VercelConfig;
   localConfigPath?: string;
-  prompt!: inquirer.PromptModule;
   requestIdCounter: number;
 
   input;
@@ -90,7 +88,6 @@ export default class Client extends EventEmitter implements Stdio {
     this.localConfig = opts.localConfig;
     this.localConfigPath = opts.localConfigPath;
     this.requestIdCounter = 1;
-    this._createPromptModule();
     this.input = (opts: Parameters<typeof input>[0]) => {
       return input(opts, { input: this.stdin, output: this.stderr });
     };
@@ -250,13 +247,6 @@ export default class Client extends EventEmitter implements Stdio {
   _onRetry = (error: Error) => {
     this.output.debug(`Retrying: ${error}\n${error.stack}`);
   };
-
-  _createPromptModule() {
-    this.prompt = inquirer.createPromptModule({
-      input: this.stdin as NodeJS.ReadStream,
-      output: this.stderr as NodeJS.WriteStream,
-    });
-  }
 
   get cwd(): string {
     return process.cwd();

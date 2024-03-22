@@ -29,9 +29,6 @@ export default async function add(
   args: string[],
   output: Output
 ) {
-  // improve the way we show inquirer prompts
-  await import('../../util/input/patch-inquirer');
-
   const stdInput = await readStandardInput(client.stdin);
   let [envName, envTargetArg, envGitBranch] = args;
 
