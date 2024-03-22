@@ -1,5 +1,6 @@
 import { bold } from 'chalk';
 import inquirer from 'inquirer';
+import { checkbox, confirm, expand, input, select } from '@inquirer/prompts';
 import { EventEmitter } from 'events';
 import { URL } from 'url';
 import { VercelConfig } from '@vercel/client';
@@ -69,6 +70,12 @@ export default class Client extends EventEmitter implements Stdio {
   prompt!: inquirer.PromptModule;
   requestIdCounter: number;
 
+  input;
+  checkbox;
+  expand;
+  confirm;
+  select;
+
   constructor(opts: ClientOptions) {
     super();
     this.agent = opts.agent;
@@ -84,6 +91,21 @@ export default class Client extends EventEmitter implements Stdio {
     this.localConfigPath = opts.localConfigPath;
     this.requestIdCounter = 1;
     this._createPromptModule();
+    this.input = (opts: Parameters<typeof input>[0]) => {
+      return input(opts, { input: this.stdin, output: this.stderr });
+    };
+    this.checkbox = <T>(opts: Parameters<typeof checkbox<T>>[0]) => {
+      return checkbox<T>(opts, { input: this.stdin, output: this.stderr });
+    };
+    this.expand = (opts: Parameters<typeof expand>[0]) => {
+      return expand(opts, { input: this.stdin, output: this.stderr });
+    };
+    this.confirm = (opts: Parameters<typeof confirm>[0]) => {
+      return confirm(opts, { input: this.stdin, output: this.stderr });
+    };
+    this.select = <T>(opts: Parameters<typeof select<T>>[0]) => {
+      return select<T>(opts, { input: this.stdin, output: this.stderr });
+    };
   }
 
   retry<T>(fn: RetryFunction<T>, { retries = 3, maxTimeout = Infinity } = {}) {
