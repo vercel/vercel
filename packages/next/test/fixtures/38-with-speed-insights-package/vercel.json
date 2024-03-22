@@ -1,0 +1,15 @@
+{
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next"
+    }
+  ],
+  "probes": [
+    {
+      "path": "/api/env",
+      "status": 200,
+      "mustContain": "VERCEL_ANALYTICS_ID is not set"
+    }
+  ]
+}

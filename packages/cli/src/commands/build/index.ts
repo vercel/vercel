@@ -255,20 +255,8 @@ export default async function main(client: Client): Promise<number> {
 
     // For Vercel legacy Speed Insights support
     if (project.settings.analyticsId) {
-      const speedInsightsVersion = await readInstalledVersion(
-        client,
-        '@vercel/speed-insights'
-      );
-
-      const hasSpeedInsightsPackageInstalled =
-        speedInsightsVersion !== undefined;
-
-      if (!hasSpeedInsightsPackageInstalled) {
-        // we don't want to set VERCEL_ANALYTICS_ID to prevent the automatic instrumentation
-        // which is not needed when the package is installed
-        envToUnset.add('VERCEL_ANALYTICS_ID');
-        process.env.VERCEL_ANALYTICS_ID = project.settings.analyticsId;
-      }
+      envToUnset.add('VERCEL_ANALYTICS_ID');
+      process.env.VERCEL_ANALYTICS_ID = project.settings.analyticsId;
     }
 
     // Some build processes use these env vars to platform detect Vercel
