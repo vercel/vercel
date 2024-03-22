@@ -5,8 +5,6 @@ export default async function confirm(
   message: string,
   preferred: boolean
 ): Promise<boolean> {
-  require('./patch-inquirer');
-
   return client.confirm({
     message,
     default: preferred,

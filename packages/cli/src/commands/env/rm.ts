@@ -29,9 +29,6 @@ export default async function rm(
   args: string[],
   output: Output
 ) {
-  // improve the way we show inquirer prompts
-  require('../../util/input/patch-inquirer');
-
   if (args.length > 3) {
     output.error(
       `Invalid number of arguments. Usage: ${getCommandName(
