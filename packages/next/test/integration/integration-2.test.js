@@ -471,7 +471,9 @@ it.only('should not have VERCEL_ANALYTICS_ID if @vercel/speed-insights is instal
     buildResult: { output },
   } = await runBuildLambda(path.join(__dirname, 'with-speed-insights-package'));
 
-  console.log(output);
+  const env = await fs.readFile(output['env.json'].fsPath);
 
-  expect(true).toBe(true);
+  console.log(env.toString());
+
+  expect(JSON.parse(env).VERCEL_ANALYTICS_ID).toBeUndefined();
 });
