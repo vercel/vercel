@@ -1,4 +1,3 @@
-import inquirer from 'inquirer';
 import confirm from './confirm';
 import chalk from 'chalk';
 import frameworkList, { Framework } from '@vercel/frameworks';
@@ -140,33 +139,16 @@ export default async function editProjectSettings(
     []
   );
 
-  const { settingFields } = await inquirer.prompt<{
-    settingFields: Array<
-      Exclude<
-        ConfigKeys,
-        'framework' | 'commandForIgnoringBuildStep' | 'installCommand'
-      >
-    >;
-  }>({
-    name: 'settingFields',
-    type: 'checkbox',
+  const settingFields = (await client.checkbox({
     message: 'Which settings would you like to overwrite (select multiple)?',
     choices,
-  });
+  })) as ConfigKeys[];
 
   for (let setting of settingFields) {
     const field = settingMap[setting];
-    const answers = await inquirer.prompt<{
-      [k in Exclude<
-        ConfigKeys,
-        'framework' | 'commandForIgnoringBuildStep' | 'installCommand'
-      >]: string;
-    }>({
-      type: 'input',
-      name: setting,
+    settings[setting] = await client.input({
       message: `What's your ${chalk.bold(field)}?`,
     });
-    settings[setting] = answers[setting];
   }
   return settings;
 }
