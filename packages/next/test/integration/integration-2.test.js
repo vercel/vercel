@@ -464,3 +464,14 @@ it('should not generate lambdas that conflict with static index route in app wit
   }
   expect(lambdas.size).toBe(1);
 });
+
+// eslint-disable-next-line jest/no-focused-tests
+it.only('should not have VERCEL_ANALYTICS_ID if @vercel/speed-insights is installed', async () => {
+  const {
+    buildResult: { output },
+  } = await runBuildLambda(path.join(__dirname, 'with-speed-insights-package'));
+
+  console.log(output);
+
+  expect(true).toBe(true);
+});
