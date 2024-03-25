@@ -2,17 +2,17 @@
 # https://help.github.com/en/articles/about-code-owners
 
 # Restricted Paths
-*                                        @TooTallNate @EndangeredMassa @trek
-/.github/workflows                       @TooTallNate @EndangeredMassa @trek @ijjk
-/packages/fs-detectors                   @TooTallNate @EndangeredMassa @trek @agadzik @chloetedder
-/packages/next                           @TooTallNate @EndangeredMassa @Ethan-Arrowood @trek @ijjk @ztanner
-/packages/routing-utils                  @TooTallNate @EndangeredMassa @trek @ijjk
-/packages/static-build                   @TooTallNate @EndangeredMassa @trek
-/packages/edge                           @vercel/compute @TooTallNate @EndangeredMassa @trek
-/examples                                @leerob
-/examples/create-react-app               @Timer
-/examples/nextjs                         @timneutkens @ijjk @ztanner @huozhi
-/packages/node                           @TooTallNate @EndangeredMassa @trek @Kikobeats
+*                                        @TooTallNate @EndangeredMassa @trek @onsclom @jeffsee55
+/.github/workflows                       @TooTallNate @EndangeredMassa @trek @onsclom @jeffsee55 @ijjk
+/packages/fs-detectors                   @TooTallNate @EndangeredMassa @trek @onsclom @jeffsee55 @agadzik @chloetedder
+/packages/next                           @TooTallNate @EndangeredMassa @trek @onsclom @jeffsee55 @timneutkens @ijjk @ztanner @huozhi @Ethan-Arrowood @styfle
+/packages/routing-utils                  @TooTallNate @EndangeredMassa @trek @onsclom @jeffsee55 @ijjk
+/packages/static-build                   @TooTallNate @EndangeredMassa @trek @onsclom @jeffsee55
+/packages/edge                           @TooTallNate @EndangeredMassa @trek @onsclom @jeffsee55 @vercel/compute
+/examples                                @TooTallNate @EndangeredMassa @trek @onsclom @jeffsee55 @leerob
+/examples/create-react-app               @TooTallNate @EndangeredMassa @trek @onsclom @jeffsee55 @Timer
+/examples/nextjs                         @TooTallNate @EndangeredMassa @trek @onsclom @jeffsee55 @timneutkens @ijjk @ztanner @huozhi @Ethan-Arrowood @styfle
+/packages/node                           @TooTallNate @EndangeredMassa @trek @onsclom @jeffsee55 @Kikobeats
 
 # Unrestricted Paths
 .changeset/

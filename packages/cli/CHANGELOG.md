@@ -1,5 +1,36 @@
 # vercel
 
+## 33.6.1
+
+### Patch Changes
+
+- Don't send `projectSettings.nodeVersion` for unsupported versions ([#11277](https://github.com/vercel/vercel/pull/11277))
+
+- Updated dependencies [[`4bca0c6d0`](https://github.com/vercel/vercel/commit/4bca0c6d0bc25052b95bd02b12a0b891c86c4b49), [`a67ad4b5a`](https://github.com/vercel/vercel/commit/a67ad4b5a130bf0e56e18111b3f9ddad69cec0e1), [`11218a179`](https://github.com/vercel/vercel/commit/11218a179870a5420c5a6ff720cd4aec4f7e1c5e), [`64b97bf4b`](https://github.com/vercel/vercel/commit/64b97bf4b5203ecf9a95f63ce26a5c3360208966)]:
+  - @vercel/next@4.1.6
+  - @vercel/remix-builder@2.1.4
+  - @vercel/build-utils@7.9.1
+  - @vercel/static-build@2.4.4
+  - @vercel/node@3.0.24
+
+## 33.6.0
+
+### Minor Changes
+
+- Set `projectSettings.nodeVersion` in `vc deploy` based on "engines.node" field ([#11261](https://github.com/vercel/vercel/pull/11261))
+
+### Patch Changes
+
+- Stops warning about legacy Speed Insights for Next.js apps ([#11268](https://github.com/vercel/vercel/pull/11268))
+
+- Fix framework version detection in monorepos ([#11212](https://github.com/vercel/vercel/pull/11212))
+
+- Updated dependencies [[`8ea93839c`](https://github.com/vercel/vercel/commit/8ea93839ccc70816f3ece9d7cfdb857aa7a4b015), [`58ef91bfe`](https://github.com/vercel/vercel/commit/58ef91bfe8c2e7176e8783cc4eb91ee8580c70dc)]:
+  - @vercel/build-utils@7.9.0
+  - @vercel/remix-builder@2.1.3
+  - @vercel/node@3.0.23
+  - @vercel/static-build@2.4.3
+
 ## 33.5.5
 
 ### Patch Changes
