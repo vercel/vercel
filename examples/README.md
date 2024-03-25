@@ -1,6 +1,6 @@
 # Vercel Examples
 
-To get started using any of these examples as your own project, [install Vercel](https://vercel.com/cli) and use either of the following commands in your terminal:
+To get started using any of these examples as your own project, [install Vercel](https://vercel.com/docs/cli) and use either of the following commands in your terminal:
 
 ```sh
 vercel init                    # Pick an example in the CLI
