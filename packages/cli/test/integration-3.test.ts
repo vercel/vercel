@@ -617,7 +617,7 @@ test('ensure we render a prompt when deploying home directory', async () => {
     binaryPath,
     [directory, '--public', '--name', session, '--force'],
     {
-      input: 'N',
+      input: 'N\n',
     }
   );
 
