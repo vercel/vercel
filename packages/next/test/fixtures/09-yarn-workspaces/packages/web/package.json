@@ -7,9 +7,6 @@
     "start": "next start",
     "postinstall": "lerna run build --scope=@jimmy/common"
   },
-  "engines": {
-    "node": "16.x"
-  },
   "dependencies": {
     "@jimmy/common": "^1.0.64",
     "next": "^9.1.4",

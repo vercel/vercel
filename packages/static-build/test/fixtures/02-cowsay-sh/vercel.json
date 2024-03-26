@@ -1,4 +1,7 @@
 {
+  "projectSettings": {
+    "nodeVersion": "18.x"
+  },
   "version": 2,
   "builds": [
     { "src": "some-build.sh", "use": "@vercel/static-build" },

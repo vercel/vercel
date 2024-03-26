@@ -30,5 +30,8 @@
       "status": 200,
       "mustContain": "env\":\"production\""
     }
-  ]
+  ],
+  "projectSettings": {
+    "nodeVersion": "18.x"
+  }
 }
