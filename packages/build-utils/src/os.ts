@@ -12,7 +12,10 @@ export async function getOsRelease(): Promise<Record<string, string>> {
     //   VERSION="2023"
     //   ID="amzn"
     //   ID_LIKE="fedora"
-    const data = await readFile('/etc/os-release', 'utf8');
+    const data = await readFile('/etc/os-release', 'utf8').catch(err => {
+      if (err.code !== 'ENOENT') throw err;
+    });
+    if (!data) return cache;
     for (const line of data.trim().split('\n')) {
       const m = /(?<key>.*)="(?<value>.*)"/.exec(line);
       if (!m?.groups)
