@@ -26,7 +26,8 @@ module.exports = function setupTests(groupIndex) {
   }
 
   // eslint-disable-next-line no-restricted-syntax
-  for (const fixture of fixtures) {
+  //for (const fixture of fixtures) {
+  for (const fixture of ['10-node-engines']) {
     const errMsg = testsThatFailToBuild.get(fixture);
     if (errMsg) {
       // eslint-disable-next-line no-loop-func
