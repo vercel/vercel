@@ -2,9 +2,14 @@ import { packageName, getCommandName } from '../../util/pkg-name';
 
 export const secretsCommand = {
   name: 'secrets',
-  description: `NOTE: The ${getCommandName(
-    'env'
-  )} command is recommended instead of ${getCommandName('secrets')}`,
+  description:
+    'WARNING: On May 1st, 2024 secrets will be automatically converted to sensitive Environment Variables for Preview and Production environments. Secrets attached to Development environments will not be migrated.\n' +
+    `The ${getCommandName(
+      'secrets'
+    )} command will be deprecated at this time, please use the ${getCommandName(
+      'env'
+    )} command instead.\n` +
+    'See https://vercel.com/changelog/legacy-environment-variable-secrets-are-being-sunset for more information.',
   arguments: [
     {
       name: 'command',
