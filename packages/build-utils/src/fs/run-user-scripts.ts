@@ -246,13 +246,14 @@ export async function getNodeVersion(
   availableVersions = getAvailableNodeVersions()
 ): Promise<NodeVersion> {
   const latest = getLatestNodeVersion(availableVersions);
-  console.log({ availableVersions, latest });
+  console.log({ availableVersions, latest, nodeVersionFallback, config });
   if (meta.isDev) {
     // Use the system-installed version of `node` in PATH for `vercel dev`
     return { ...latest, runtime: 'nodejs' };
   }
   const { packageJson } = await scanParentDirs(destPath, true);
   let nodeVersion = config.nodeVersion || nodeVersionFallback;
+  console.log({ nodeVersion });
   let isAuto = true;
   if (packageJson?.engines?.node) {
     const { node } = packageJson.engines;
@@ -272,7 +273,9 @@ export async function getNodeVersion(
     nodeVersion = node;
     isAuto = false;
   }
-  return getSupportedNodeVersion(nodeVersion, isAuto, availableVersions);
+  const v = getSupportedNodeVersion(nodeVersion, isAuto, availableVersions);
+  console.log({ v });
+  return v;
 }
 
 export async function scanParentDirs(

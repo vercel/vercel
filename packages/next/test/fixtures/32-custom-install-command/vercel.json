@@ -16,5 +16,8 @@
       "status": 200,
       "mustContain": "installCommand"
     }
-  ]
+  ],
+  "projectSettings": {
+    "nodeVersion": "16.x"
+  }
 }
