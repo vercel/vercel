@@ -10,5 +10,8 @@
         "outputDirectory": "custom-output"
       }
     }
-  ]
+  ],
+  "projectSettings": {
+    "node": "16.x"
+  }
 }
