@@ -246,6 +246,7 @@ export async function getNodeVersion(
   availableVersions = getAvailableNodeVersions()
 ): Promise<NodeVersion> {
   const latest = getLatestNodeVersion(availableVersions);
+  console.log({ availableVersions, latest });
   if (meta.isDev) {
     // Use the system-installed version of `node` in PATH for `vercel dev`
     return { ...latest, runtime: 'nodejs' };
