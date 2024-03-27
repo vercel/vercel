@@ -1,5 +1,6 @@
 import { bold } from 'chalk';
-import { checkbox, confirm, expand, input, select } from '@inquirer/prompts';
+import { checkbox, confirm, expand, select } from '@inquirer/prompts';
+import input from './custom-input/input';
 import { EventEmitter } from 'events';
 import { URL } from 'url';
 import { VercelConfig } from '@vercel/client';
