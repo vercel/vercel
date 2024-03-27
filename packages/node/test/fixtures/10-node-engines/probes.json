@@ -1,0 +1,8 @@
+{
+  "probes": [
+    { "path": "/empty", "mustContain": "RANDOMNESS_PLACEHOLDER:20" },
+    { "path": "/greater", "mustContain": "RANDOMNESS_PLACEHOLDER:20" },
+    { "path": "/major", "mustContain": "RANDOMNESS_PLACEHOLDER:20" },
+    { "path": "/range", "mustContain": "RANDOMNESS_PLACEHOLDER:20" }
+  ]
+}

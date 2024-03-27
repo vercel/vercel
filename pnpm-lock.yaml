@@ -135,6 +135,9 @@ importers:
       '@types/jest':
         specifier: 27.4.1
         version: 27.4.1
+      '@vercel/build-utils':
+        specifier: 7.9.1
+        version: link:../packages/build-utils
       '@vercel/frameworks':
         specifier: 3.0.0
         version: link:../packages/frameworks
