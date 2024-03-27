@@ -2,8 +2,5 @@
   "version": 2,
   "env": {
     "RANDOMNESS": "RANDOMNESS_PLACEHOLDER"
-  },
-  "projectSettings": {
-    "nodeVersion": "18.x"
   }
 }

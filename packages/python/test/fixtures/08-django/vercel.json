@@ -5,8 +5,5 @@
       "src": "index.py",
       "use": "@vercel/python"
     }
-  ],
-  "projectSettings": {
-    "nodeVersion": "18.x"
-  }
+  ]
 }

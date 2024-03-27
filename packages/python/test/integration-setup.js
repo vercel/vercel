@@ -45,7 +45,12 @@ module.exports = function setupTests(groupIndex) {
     // eslint-disable-next-line no-loop-func
     it(`should build ${fixture}`, async () => {
       await expect(
-        testDeployment(path.join(fixturesPath, fixture))
+        testDeployment(path.join(fixturesPath, fixture), {
+          projectSettings: {
+            // Python endpoints require the AL2 build image
+            nodeVersion: '18.x',
+          },
+        })
       ).resolves.toBeDefined();
     });
   }
