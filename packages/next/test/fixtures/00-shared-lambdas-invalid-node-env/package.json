@@ -4,6 +4,9 @@
     "react": "latest",
     "react-dom": "latest"
   },
+  "engines": {
+    "node": "18.x"
+  },
   "resolutions": {
     "@babel/compat-data": "7.21.4"
   },
