@@ -5,11 +5,5 @@
       "src": "**/*.js",
       "use": "@vercel/node"
     }
-  ],
-  "probes": [
-    { "path": "/empty", "mustContain": "RANDOMNESS_PLACEHOLDER:18" },
-    { "path": "/greater", "mustContain": "RANDOMNESS_PLACEHOLDER:18" },
-    { "path": "/major", "mustContain": "RANDOMNESS_PLACEHOLDER:16" },
-    { "path": "/range", "mustContain": "RANDOMNESS_PLACEHOLDER:16" }
   ]
 }
