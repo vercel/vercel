@@ -277,7 +277,7 @@ function readConfirmation(
     }
 
     output.print(
-      `${chalk.bold.red('> Are you sure?')} ${chalk.gray('[y/N] ')}`
+      `${chalk.bold.red('> Are you sure?')} ${chalk.gray('(y/N) ')}`
     );
 
     process.stdin

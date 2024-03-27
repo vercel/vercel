@@ -1,3 +1,4 @@
+import stripAnsi from 'strip-ansi';
 import type { CLIProcess } from './types';
 
 function getPromptErrorDetails(
@@ -54,7 +55,7 @@ export default async function waitForPrompt(
     };
 
     const onData = (rawChunk: Buffer) => {
-      const chunk = rawChunk.toString();
+      const chunk = stripAnsi(rawChunk.toString());
 
       mostRecentChunk = chunk;
       console.log('> ' + chunk);

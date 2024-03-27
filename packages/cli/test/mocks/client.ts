@@ -93,8 +93,6 @@ export class MockClient extends Client {
     this.stderr.pause();
     this.stderr.isTTY = true;
 
-    this._createPromptModule();
-
     this.output = new Output(this.stderr);
 
     this.argv = [];

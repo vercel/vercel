@@ -1,5 +1,5 @@
 import { bold } from 'chalk';
-import inquirer from 'inquirer';
+import { checkbox, confirm, expand, input, select } from '@inquirer/prompts';
 import { EventEmitter } from 'events';
 import { URL } from 'url';
 import { VercelConfig } from '@vercel/client';
@@ -66,8 +66,13 @@ export default class Client extends EventEmitter implements Stdio {
   agent?: Agent;
   localConfig?: VercelConfig;
   localConfigPath?: string;
-  prompt!: inquirer.PromptModule;
   requestIdCounter: number;
+
+  input;
+  checkbox;
+  expand;
+  confirm;
+  select;
 
   constructor(opts: ClientOptions) {
     super();
@@ -83,7 +88,21 @@ export default class Client extends EventEmitter implements Stdio {
     this.localConfig = opts.localConfig;
     this.localConfigPath = opts.localConfigPath;
     this.requestIdCounter = 1;
-    this._createPromptModule();
+    this.input = (opts: Parameters<typeof input>[0]) => {
+      return input(opts, { input: this.stdin, output: this.stderr });
+    };
+    this.checkbox = <T>(opts: Parameters<typeof checkbox<T>>[0]) => {
+      return checkbox<T>(opts, { input: this.stdin, output: this.stderr });
+    };
+    this.expand = (opts: Parameters<typeof expand>[0]) => {
+      return expand(opts, { input: this.stdin, output: this.stderr });
+    };
+    this.confirm = (opts: Parameters<typeof confirm>[0]) => {
+      return confirm(opts, { input: this.stdin, output: this.stderr });
+    };
+    this.select = <T>(opts: Parameters<typeof select<T>>[0]) => {
+      return select<T>(opts, { input: this.stdin, output: this.stderr });
+    };
   }
 
   retry<T>(fn: RetryFunction<T>, { retries = 3, maxTimeout = Infinity } = {}) {
@@ -228,13 +247,6 @@ export default class Client extends EventEmitter implements Stdio {
   _onRetry = (error: Error) => {
     this.output.debug(`Retrying: ${error}\n${error.stack}`);
   };
-
-  _createPromptModule() {
-    this.prompt = inquirer.createPromptModule({
-      input: this.stdin as NodeJS.ReadStream,
-      output: this.stderr as NodeJS.WriteStream,
-    });
-  }
 
   get cwd(): string {
     return process.cwd();

@@ -526,7 +526,7 @@ describe('git', () => {
           `Found a repository in your local Git Config: https://github.com/user/repo`
         );
         await expect(client.stderr).toOutput(
-          `Do you still want to connect https://github.com/user2/repo2? [y/N]`
+          `Do you still want to connect https://github.com/user2/repo2? (y/N)`
         );
         client.stdin.write('y\n');
         await expect(client.stderr).toOutput(
@@ -574,7 +574,7 @@ describe('git', () => {
           `Found multiple Git repositories in your local Git config:\n  • origin: https://github.com/user/repo.git\n  • secondary: https://github.com/user/repo2.git`
         );
         await expect(client.stderr).toOutput(
-          `Do you still want to connect https://github.com/user3/repo3? [y/N]`
+          `Do you still want to connect https://github.com/user3/repo3? (y/N)`
         );
         client.stdin.write('y\n');
 
