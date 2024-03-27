@@ -37,8 +37,5 @@
       "path": "/api/memory",
       "mustContain": "Memory is: 128"
     }
-  ],
-  "projectSettings": {
-    "nodeVersion": "16.x"
-  }
+  ]
 }

@@ -3,8 +3,5 @@
     "env": {
       "BUNDLE_WITHOUT": "development:test"
     }
-  },
-  "projectSettings": {
-    "nodeVersion": "18.x"
   }
 }

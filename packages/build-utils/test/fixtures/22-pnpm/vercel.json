@@ -7,8 +7,5 @@
       "mustContain": "pnpm version: 6",
       "logMustContain": "pnpm run build"
     }
-  ],
-  "projectSettings": {
-    "nodeVersion": "16.x"
-  }
+  ]
 }

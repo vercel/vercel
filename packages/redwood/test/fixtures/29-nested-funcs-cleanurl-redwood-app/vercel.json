@@ -1,8 +1,5 @@
 {
   "version": 2,
   "builds": [{ "src": "package.json", "use": "@vercel/redwood" }],
-  "probes": [],
-  "projectSettings": {
-    "nodeVersion": "16.x"
-  }
+  "probes": []
 }

@@ -7,8 +7,5 @@
   "probes": [
     { "path": "/", "mustContain": "Svelte app" },
     { "path": "/api", "mustContain": "camelCaseModuleIsWorking" }
-  ],
-  "projectSettings": {
-    "nodeVersion": "16.x"
-  }
+  ]
 }

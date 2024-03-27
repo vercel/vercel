@@ -8,7 +8,7 @@
     "react-scripts": "^3.0.1"
   },
   "engines": {
-    "node": "18.x"
+    "node": "16.x"
   },
   "scripts": {
     "start": "react-scripts start",

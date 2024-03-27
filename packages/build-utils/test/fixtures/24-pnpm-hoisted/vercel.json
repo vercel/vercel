@@ -16,8 +16,5 @@
       "path": "/",
       "logMustContain": "wrappy"
     }
-  ],
-  "projectSettings": {
-    "nodeVersion": "16.x"
-  }
+  ]
 }

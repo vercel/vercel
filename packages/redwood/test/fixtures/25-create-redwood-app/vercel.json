@@ -11,8 +11,5 @@
       "body": { "query": "{ redwood { version } }" },
       "mustContain": "0.25.0"
     }
-  ],
-  "projectSettings": {
-    "nodeVersion": "16.x"
-  }
+  ]
 }

@@ -49,8 +49,5 @@
       "status": 404,
       "mustContain": "This page could not be found"
     }
-  ],
-  "projectSettings": {
-    "nodeVersion": "16.x"
-  }
+  ]
 }

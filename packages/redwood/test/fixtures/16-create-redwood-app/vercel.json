@@ -25,8 +25,5 @@
       "mustContain": "0.16.0"
     },
     { "path": "/install.txt", "mustContain": "installCommand." }
-  ],
-  "projectSettings": {
-    "nodeVersion": "16.x"
-  }
+  ]
 }

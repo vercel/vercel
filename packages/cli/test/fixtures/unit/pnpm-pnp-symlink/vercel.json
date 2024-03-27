@@ -3,8 +3,5 @@
     "env": {
       "FORCE_RUNTIME_TAG": "canary"
     }
-  },
-  "projectSettings": {
-    "nodeVersion": "18.x"
   }
 }
