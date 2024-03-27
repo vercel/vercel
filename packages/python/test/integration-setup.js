@@ -28,12 +28,18 @@ module.exports = function setupTests(groupIndex) {
 
   // eslint-disable-next-line no-restricted-syntax
   for (const fixture of chunkedFixtures) {
+    // Python endpoints require the AL2 build image
+    const projectSettings = {
+      nodeVersion: '18.x',
+    };
     const errMsg = testsThatFailToBuild.get(fixture);
     if (errMsg) {
       // eslint-disable-next-line no-loop-func
       it(`should fail to build ${fixture}`, async () => {
         try {
-          await testDeployment(path.join(fixturesPath, fixture));
+          await testDeployment(path.join(fixturesPath, fixture), {
+            projectSettings,
+          });
         } catch (err) {
           expect(err).toBeTruthy();
           expect(err.deployment).toBeTruthy();
@@ -46,10 +52,7 @@ module.exports = function setupTests(groupIndex) {
     it(`should build ${fixture}`, async () => {
       await expect(
         testDeployment(path.join(fixturesPath, fixture), {
-          projectSettings: {
-            // Python endpoints require the AL2 build image
-            nodeVersion: '18.x',
-          },
+          projectSettings,
         })
       ).resolves.toBeDefined();
     });
