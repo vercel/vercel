@@ -32,6 +32,6 @@
     }
   ],
   "projectSettings": {
-    "nodeVersion": "18.x"
+    "nodeVersion": "16.x"
   }
 }
