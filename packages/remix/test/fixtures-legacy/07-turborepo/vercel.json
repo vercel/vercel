@@ -2,7 +2,6 @@
   "projectSettings": {
     "framework": "remix",
     "rootDirectory": "apps/remix-app",
-    "sourceFilesOutsideRootDirectory": true,
-    "nodeVersion": "18.x"
+    "sourceFilesOutsideRootDirectory": true
   }
 }

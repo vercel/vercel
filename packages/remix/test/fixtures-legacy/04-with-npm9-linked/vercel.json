@@ -4,8 +4,5 @@
     "env": {
       "ENABLE_EXPERIMENTAL_COREPACK": "1"
     }
-  },
-  "projectSettings": {
-    "nodeVersion": "18.x"
   }
 }

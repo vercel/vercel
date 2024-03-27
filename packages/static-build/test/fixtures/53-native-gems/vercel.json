@@ -9,6 +9,6 @@
     { "path": "/ruby-vips.html", "mustContain": "2.0.17" }
   ],
   "projectSettings": {
-    "node": "18.x"
+    "nodeVersion": "18.x"
   }
 }
