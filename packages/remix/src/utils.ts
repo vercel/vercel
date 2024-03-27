@@ -422,7 +422,12 @@ export function logNftWarnings(warnings: Set<Error>, required?: string) {
 }
 
 export function isVite(dir: string): boolean {
-  const viteConfig = findConfig(dir, 'vite.config', ['.js', '.ts']);
+  const viteConfig = findConfig(dir, 'vite.config', [
+    '.js',
+    '.ts',
+    '.mjs',
+    '.mts',
+  ]);
   if (!viteConfig) return false;
 
   const remixConfig = findConfig(dir, 'remix.config');
