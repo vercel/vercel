@@ -26,6 +26,7 @@ for (const fixture of fs.readdirSync(fixturesPath)) {
     continue;
   }
 
+  // Ruby endpoints currently require the AL2 build image
   const projectSettings = {
     nodeVersion: '18.x',
   };

@@ -32,7 +32,6 @@ import {
   shouldServe,
   debug,
   cloneEnv,
-  getOsRelease,
 } from '@vercel/build-utils';
 
 const TMP = tmpdir();
@@ -250,9 +249,7 @@ export async function build({
       await buildHandlerWithGoMod(buildOptions);
     }
 
-    const osRelease = await getOsRelease();
-    const alVersion = osRelease.VERSION === '2' ? '2' : '2023';
-    const runtime = `provided.al${alVersion}`;
+    const runtime = 'provided.al2';
     const lambda = new Lambda({
       files: { ...(await glob('**', outDir)), ...includedFiles },
       handler: HANDLER_FILENAME,

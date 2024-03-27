@@ -28,10 +28,11 @@ module.exports = function setupTests(groupIndex) {
 
   // eslint-disable-next-line no-restricted-syntax
   for (const fixture of chunkedFixtures) {
-    // Python endpoints require the AL2 build image
+    // Python endpoints currently require the AL2 build image
     const projectSettings = {
       nodeVersion: '18.x',
     };
+
     const errMsg = testsThatFailToBuild.get(fixture);
     if (errMsg) {
       // eslint-disable-next-line no-loop-func
