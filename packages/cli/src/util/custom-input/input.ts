@@ -9,9 +9,9 @@ import {
 } from '@inquirer/core';
 
 import type { PartialDeep } from '@inquirer/type';
-import process from 'node:process';
 import chalk from 'chalk';
 import ansiEscapes from 'ansi-escapes';
+import isUnicodeSupported from './util/is-unicode-supported';
 
 const unicode = isUnicodeSupported();
 const s = (c: string, fallback: string) => (unicode ? c : fallback);
@@ -47,9 +47,9 @@ export default createPrompt<string, InputConfig>((config, done) => {
   const { validate = () => true } = config;
   const theme = makeTheme(config.theme);
   const [status, setStatus] = useState<Status>('pending');
-  const [cursorIndex, setCursorIndex] = useState<number | undefined>(0);
-  const [defaultValue = '', setDefaultValue] = useState<string | undefined>(
-    config.default
+  const [cursorIndex, setCursorIndex] = useState<number>(0);
+  const [defaultValue = '', setDefaultValue] = useState<string>(
+    config.default || ''
   );
   const [errorMsg, setError] = useState<string | undefined>(undefined);
   const [value, setValue] = useState<string>('');
@@ -76,9 +76,9 @@ export default createPrompt<string, InputConfig>((config, done) => {
         setStatus('pending');
       }
     } else if (isBackspaceKey(key) && !value) {
-      setDefaultValue(undefined);
+      setDefaultValue('');
     } else if (key.name === 'tab' && !value) {
-      setDefaultValue(undefined);
+      setDefaultValue('');
       rl.clearLine(0); // Remove the tab character.
       rl.write(defaultValue);
       setValue(defaultValue);
@@ -107,7 +107,9 @@ export default createPrompt<string, InputConfig>((config, done) => {
   } else {
     const s1 = value.slice(0, cursorIndex);
     const s2 = value.slice(cursorIndex);
-    valueWithCursor = `${s1}${chalk.inverse(s2[0])}${s2.slice(1)}`;
+    if (s2.length !== 0)
+      valueWithCursor = `${s1}${chalk.inverse(s2[0])}${s2.slice(1)}`;
+    else valueWithCursor = `${s1}${chalk.inverse(' ')}`;
   }
 
   const title = `${chalk.gray(S_BAR)}\n${symbol(status)}  ${message}\n`;
@@ -125,20 +127,3 @@ export default createPrompt<string, InputConfig>((config, done) => {
 
   return [output(status), error];
 });
-
-function isUnicodeSupported() {
-  if (process.platform !== 'win32') {
-    return process.env.TERM !== 'linux'; // Linux console (kernel)
-  }
-
-  return (
-    Boolean(process.env.WT_SESSION) || // Windows Terminal
-    Boolean(process.env.TERMINUS_SUBLIME) || // Terminus (<0.2.27)
-    process.env.ConEmuTask === '{cmd::Cmder}' || // ConEmu and cmder
-    process.env.TERM_PROGRAM === 'Terminus-Sublime' ||
-    process.env.TERM_PROGRAM === 'vscode' ||
-    process.env.TERM === 'xterm-256color' ||
-    process.env.TERM === 'alacritty' ||
-    process.env.TERMINAL_EMULATOR === 'JetBrains-JediTerm'
-  );
-}
