@@ -6,7 +6,7 @@
   "homepage": "https://vercel.com/docs/runtimes#official-runtimes/next-js",
   "scripts": {
     "build": "node build.mjs",
-    "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --runInBand --testTimeout=360000",
+    "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --bail --runInBand --testTimeout=360000",
     "test-unit": "pnpm test test/unit/",
     "test-next-local": "pnpm test test/integration/*.test.js test/integration/*.test.ts",
     "test-next-local-legacy": "pnpm test test/integration/legacy/*.test.js",

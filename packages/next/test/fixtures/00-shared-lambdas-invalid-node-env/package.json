@@ -1,11 +1,11 @@
 {
+  "engines": {
+    "node": "16.x"
+  },
   "dependencies": {
     "next": "10.0.8",
     "react": "latest",
     "react-dom": "latest"
-  },
-  "engines": {
-    "node": "16.x"
   },
   "resolutions": {
     "@babel/compat-data": "7.21.4"
