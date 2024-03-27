@@ -958,12 +958,5 @@
       "status": 200,
       "mustContain": "no\":\"revalidate"
     }
-  ],
-  "build": {
-    "env": {
-      "FORCE_BUILD_IN_REGION": "lhr1",
-      "VERCEL_BUILD_CONTAINER_VERSION": "pr-26786-5805b2cce3119e6c82f60de703ee2b5ca52e9d37",
-      "VERCEL_HIVE_MULTI_CONTAINER": "1"
-    }
-  }
+  ]
 }
