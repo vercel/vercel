@@ -46,6 +46,10 @@ export default async function init(
   const exampleList = examples.filter(x => x.visible).map(x => x.name);
 
   if (!name) {
+    if (client.stdin.isTTY !== true) {
+      client.output.print(`No framework provided`);
+      return 0;
+    }
     const chosen = await chooseFromDropdown(
       client,
       'Select example:',
@@ -209,7 +213,7 @@ async function guess(client: Client, exampleList: string[], name: string) {
     )} to see the list of available examples.`
   );
 
-  if (process.stdout.isTTY !== true) {
+  if (client.stdin.isTTY !== true) {
     throw GuessError;
   }
 
