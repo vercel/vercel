@@ -913,7 +913,7 @@ export async function serverBuild({
       initialPseudoLayer,
       lambdaCompressedByteLimit,
       initialPseudoLayerUncompressed: uncompressedInitialSize,
-      internalPages,
+      internalPages: [],
       pageExtensions,
       inversedAppPathManifest,
     });
@@ -932,7 +932,7 @@ export async function serverBuild({
       initialPseudoLayer,
       lambdaCompressedByteLimit,
       initialPseudoLayerUncompressed: uncompressedInitialSize,
-      internalPages,
+      internalPages: [],
       pageExtensions,
       inversedAppPathManifest,
     });
@@ -965,7 +965,7 @@ export async function serverBuild({
       initialPseudoLayer,
       initialPseudoLayerUncompressed: uncompressedInitialSize,
       lambdaCompressedByteLimit,
-      internalPages,
+      internalPages: [],
       pageExtensions,
     });
 
