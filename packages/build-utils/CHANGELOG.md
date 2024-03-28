@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 7.10.0
+
+### Minor Changes
+
+- Allow environment variables to be specified for `EdgeFunction` ([#11029](https://github.com/vercel/vercel/pull/11029))
+
 ## 7.9.1
 
 ### Patch Changes
