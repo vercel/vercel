@@ -81,7 +81,7 @@ export default async function rm(
   }
 
   while (envs.length > 1) {
-    const id = await client.select({
+    const id = await client.input.select({
       message: `Remove ${envName} from which Environments?`,
       choices: envs.map(env => ({ value: env.id, name: formatEnvTarget(env) })),
     });
