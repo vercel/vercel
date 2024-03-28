@@ -45,7 +45,7 @@ import {
   detectApiExtensions,
   isOfficialRuntime,
 } from '@vercel/fs-detectors';
-import frameworkList from '@vercel/frameworks';
+import { frameworkList } from '@vercel/frameworks';
 
 import cmd from '../output/cmd';
 import link from '../output/link';

@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest';
 import { tmpdir } from 'node:os';
 import { join, sep } from 'node:path';
 import {

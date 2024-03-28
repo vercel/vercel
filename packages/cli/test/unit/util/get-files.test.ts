@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest';
 import { join, sep } from 'path';
 // @ts-ignore - Missing types for "alpha-sort"
 import { asc as alpha } from 'alpha-sort';

@@ -45,6 +45,10 @@ async function nowDeploy(projectName, bodies, randomness, uploadNowJson, opts) {
     files,
     meta: {},
     ...nowJson,
+    projectSettings: {
+      ...nowJson.projectSettings,
+      ...opts.projectSettings,
+    },
     env: { ...nowJson.env, RANDOMNESS_ENV_VAR: randomness },
     build: {
       env: {
