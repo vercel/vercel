@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "builds": [{ "src": "package.json", "use": "@vercel/next" }],
+  "probes": [
+    {
+      "path": "/_next/data/testing-build-id/index.json",
+      "status": 200,
+      "headers": { "x-nextjs-data": 1 },
+      "responseHeaders": { "x-foo": "bar" }
+    }
+  ]
+}
