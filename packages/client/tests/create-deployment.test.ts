@@ -83,6 +83,7 @@ describe('create v2 deployment', () => {
       },
       {
         name: 'now-client-tests-v2',
+        target: 'production',
       }
     )) {
       if (event.type === 'ready') {
@@ -105,6 +106,7 @@ describe('create v2 deployment', () => {
       },
       {
         name: 'now-client-tests-v2',
+        target: 'production',
         projectSettings: {
           buildCommand: null,
           devCommand: null,
@@ -145,6 +147,7 @@ describe('create v2 deployment', () => {
       },
       {
         name: 'now-client-tests-v2',
+        target: 'production',
         projectSettings: {
           buildCommand: null,
           devCommand: null,
