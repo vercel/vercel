@@ -5,6 +5,8 @@ import { FetchOptions } from '../../../src/util/client';
 import fs from 'fs-extra';
 import { Response } from 'node-fetch';
 import { join } from 'path';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
+import type { MockInstance } from 'vitest';
 
 // The without setting this, the client.stderr output is undefined
 process.stdout.isTTY = true;
@@ -18,13 +20,13 @@ const mockPath = join(
   'astro.tar.gz'
 );
 
-let mock: jest.SpyInstance<
-  Promise<unknown>,
-  [url: string, opts?: FetchOptions | undefined]
+let mock: MockInstance<
+  [url: string, opts?: FetchOptions | undefined],
+  Promise<unknown>
 >;
 beforeEach(() => {
   // The examples list endpoint comes from an API that we don't typically mock
-  mock = jest.spyOn(client, 'fetch').mockImplementation(async url => {
+  mock = vi.spyOn(client, 'fetch').mockImplementation(async url => {
     const url2 = new URL(url);
     if (url2.pathname === '/v2/list.json') {
       return Promise.resolve([
