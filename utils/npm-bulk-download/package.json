@@ -1,0 +1,20 @@
+{
+  "name": "@vercel/npm-bulk-downlaod",
+  "version": "1.0.0",
+  "description": "Downloads and extracts multiple npm tarballs into separate directories",
+  "bin": {
+    "npm-bulk-download": "./index.js"
+  },
+  "type": "module",
+  "scripts": {},
+  "keywords": [],
+  "author": "Chris Barber",
+  "license": "",
+  "dependencies": {
+    "fs-extra": "^11.1.0",
+    "listr2": "^5.0.7",
+    "node-fetch": "^3.3.0",
+    "progress": "^2.0.3",
+    "tar": "^6.1.13"
+  }
+}
