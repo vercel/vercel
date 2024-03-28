@@ -262,6 +262,7 @@ test('deploy with metadata containing "=" in the value', async () => {
     '--yes',
     '--meta',
     'someKey==',
+    '--prod',
   ]);
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
@@ -308,7 +309,7 @@ test('should add secret with hyphen prefix', async () => {
 
   expect(secretCall.exitCode, formatOutput(secretCall)).toBe(0);
 
-  let targetCall = await execCli(binaryPath, ['--yes'], {
+  let targetCall = await execCli(binaryPath, ['--yes', '--prod'], {
     cwd: target,
   });
 
@@ -337,7 +338,7 @@ test('login with unregistered user', async () => {
 test('ignore files specified in .nowignore', async () => {
   const directory = await setupE2EFixture('nowignore');
 
-  const args = ['--debug', '--public', '--name', session, '--yes'];
+  const args = ['--debug', '--public', '--name', session, '--yes', '--prod'];
   const targetCall = await execCli(binaryPath, args, {
     cwd: directory,
   });
@@ -354,7 +355,7 @@ test('ignore files specified in .nowignore', async () => {
 test('ignore files specified in .nowignore via allowlist', async () => {
   const directory = await setupE2EFixture('nowignore-allowlist');
 
-  const args = ['--debug', '--public', '--name', session, '--yes'];
+  const args = ['--debug', '--public', '--name', session, '--yes', '--prod'];
   const targetCall = await execCli(binaryPath, args, {
     cwd: directory,
   });
@@ -484,54 +485,6 @@ test('try to move an invalid domain', async () => {
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
 });
 
-/*
- * Disabled 2 tests because these temp users don't have certs
-test('create wildcard alias for deployment', async t => {
-  const hosts = {
-    deployment: context.deployment,
-    alias: `*.${contextName}.now.sh`,
-  };
-  const { stdout, stderr, exitCode } = await execCli(
-    binaryPath,
-    ['alias', hosts.deployment, hosts.alias],
-  );
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-  const goal = `> Success! ${hosts.alias} now points to https://${hosts.deployment}`;
-  t.is(exitCode, 0);
-  t.true(stdout.startsWith(goal));
-  // Send a test request to the alias
-  // Retries to make sure we consider the time it takes to update
-  const response = await retry(
-    async () => {
-      const response = await fetch(`https://test.${contextName}.now.sh`);
-      if (response.ok) {
-        return response;
-      }
-      throw new Error(`Error: Returned code ${response.status}`);
-    },
-    { retries: 3 }
-  );
-  const content = await response.text();
-  t.true(response.ok);
-  t.true(content.includes(contextName));
-  context.wildcardAlias = hosts.alias;
-});
-test('remove the wildcard alias', async t => {
-  const goal = `> Success! Alias ${context.wildcardAlias} removed`;
-  const { stdout, stderr, exitCode } = await execCli(
-    binaryPath,
-    ['alias', 'rm', context.wildcardAlias, '--yes'],
-  );
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-  t.is(exitCode, 0);
-  t.true(stdout.startsWith(goal));
-});
-*/
-
 test('ensure we render a warning for deployments with no files', async () => {
   const directory = await setupE2EFixture('empty-directory');
 
@@ -542,6 +495,7 @@ test('ensure we render a warning for deployments with no files', async () => {
     session,
     '--yes',
     '--force',
+    '--prod',
   ]);
 
   // Ensure the warning is printed
@@ -615,7 +569,7 @@ test('ensure we render a prompt when deploying home directory', async () => {
 
   const { stderr, stdout, exitCode } = await execCli(
     binaryPath,
-    [directory, '--public', '--name', session, '--force'],
+    [directory, '--public', '--name', session, '--force', '--prod'],
     {
       input: 'N',
     }
@@ -640,6 +594,7 @@ test('ensure the `scope` property works with email', async () => {
     session,
     '--force',
     '--yes',
+    '--prod',
   ]);
 
   // Ensure we're deploying under the right scope
@@ -669,6 +624,7 @@ test('ensure the `scope` property works with username', async () => {
     session,
     '--force',
     '--yes',
+    '--prod',
   ]);
 
   // Ensure we're deploying under the right scope
@@ -755,6 +711,7 @@ test('create a builds deployments with no actual builds', async () => {
     session,
     '--force',
     '--yes',
+    '--prod',
   ]);
 
   // Ensure the exit code is right
@@ -1016,6 +973,7 @@ test('try to revert a deployment and assign the automatic aliases', async () => 
     const { exitCode, stdout, stderr } = await execCli(binaryPath, [
       firstDeployment,
       '--yes',
+      '--prod',
     ]);
     const deploymentUrl = stdout;
 
@@ -1034,6 +992,7 @@ test('try to revert a deployment and assign the automatic aliases', async () => 
     const { exitCode, stdout, stderr } = await execCli(binaryPath, [
       secondDeployment,
       '--yes',
+      '--prod',
     ]);
     const deploymentUrl = stdout;
     await disableSSO(deploymentUrl, false);
@@ -1054,6 +1013,7 @@ test('try to revert a deployment and assign the automatic aliases', async () => 
     const { exitCode, stdout, stderr } = await execCli(binaryPath, [
       firstDeployment,
       '--yes',
+      '--prod',
     ]);
     const deploymentUrl = stdout;
     await disableSSO(deploymentUrl, false);
@@ -1119,6 +1079,7 @@ test('`vercel rm` removes a deployment', async () => {
       session,
       '--force',
       '--yes',
+      '--prod',
     ]);
     expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
     host = new URL(stdout).host;
@@ -1227,6 +1188,7 @@ test('create zero-config deployment', async () => {
     '--force',
     '--public',
     '--yes',
+    '--prod',
   ]);
 
   expect(output.exitCode, formatOutput(output)).toBe(0);
@@ -1257,6 +1219,7 @@ test('next unsupported functions config shows warning link', async () => {
     '--force',
     '--public',
     '--yes',
+    '--prod',
   ]);
 
   expect(output.exitCode, formatOutput(output)).toBe(0);
@@ -1323,7 +1286,7 @@ test('vercel secret rm', async () => {
 
 test('deploy a Lambda with 128MB of memory', async () => {
   const directory = await setupE2EFixture('lambda-with-128-memory');
-  const output = await execCli(binaryPath, [directory, '--yes']);
+  const output = await execCli(binaryPath, [directory, '--yes', '--prod']);
 
   expect(output.exitCode, formatOutput(output)).toBe(0);
 
@@ -1341,7 +1304,7 @@ test('deploy a Lambda with 128MB of memory', async () => {
 
 test('fail to deploy a Lambda with an incorrect value for of memory', async () => {
   const directory = await setupE2EFixture('lambda-with-123-memory');
-  const output = await execCli(binaryPath, [directory, '--yes']);
+  const output = await execCli(binaryPath, [directory, '--yes', '--prod']);
 
   expect(output.exitCode, formatOutput(output)).toBe(1);
   expect(output.stderr).toMatch(/Serverless Functions.+memory/gm);
@@ -1350,7 +1313,7 @@ test('fail to deploy a Lambda with an incorrect value for of memory', async () =
 
 test('deploy a Lambda with 3 seconds of maxDuration', async () => {
   const directory = await setupE2EFixture('lambda-with-3-second-timeout');
-  const output = await execCli(binaryPath, [directory, '--yes']);
+  const output = await execCli(binaryPath, [directory, '--yes', '--prod']);
 
   expect(output.exitCode, formatOutput(output)).toBe(0);
 
@@ -1389,7 +1352,12 @@ test('invalid `--token`', async () => {
 
 test('deploy a Lambda with a specific runtime', async () => {
   const directory = await setupE2EFixture('lambda-with-php-runtime');
-  const output = await execCli(binaryPath, [directory, '--public', '--yes']);
+  const output = await execCli(binaryPath, [
+    directory,
+    '--public',
+    '--yes',
+    '--prod',
+  ]);
 
   expect(output.exitCode, formatOutput(output)).toBe(0);
 
@@ -1417,6 +1385,7 @@ test('use build-env', async () => {
     directory,
     '--public',
     '--yes',
+    '--prod',
   ]);
 
   // Ensure the exit code is right

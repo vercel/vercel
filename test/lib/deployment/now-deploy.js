@@ -44,6 +44,7 @@ async function nowDeploy(projectName, bodies, randomness, uploadNowJson, opts) {
     name: projectName,
     files,
     meta: {},
+    target: 'production',
     ...nowJson,
     projectSettings: {
       ...nowJson.projectSettings,

@@ -319,6 +319,7 @@ test('default command should deploy directory', async () => {
     [
       // omit the default "deploy" command
       target,
+      '--prod',
     ],
     {
       cwd: projectDir,
@@ -396,6 +397,7 @@ test('default command should work with --cwd option', async () => {
       // omit the default "deploy" command
       '--cwd',
       target,
+      '--prod',
     ],
     {
       cwd: projectDir,
@@ -426,6 +428,7 @@ test('should allow deploying a directory that was built with a target environmen
     [
       // omit the default "deploy" command
       '--prebuilt',
+      '--prod',
     ],
     {
       cwd: projectDir,
@@ -454,6 +457,7 @@ test('should allow deploying a directory that was prebuilt, but has no builds.js
     [
       // omit the default "deploy" command
       '--prebuilt',
+      '--prod',
     ],
     {
       cwd: projectDir,
@@ -480,6 +484,7 @@ test('should deploy and not wait for completion', async () => {
     [
       // omit the default "deploy" command
       '--no-wait',
+      '--prod',
     ],
     {
       cwd: projectDir,
@@ -543,6 +548,7 @@ test('deploy using --local-config flag v2', async () => {
     '--local-config',
     configPath,
     '--yes',
+    '--prod',
   ]);
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
@@ -575,6 +581,7 @@ test('deploy fails using --local-config flag with non-existent path', async () =
     '--local-config',
     'does-not-exist.json',
     '--yes',
+    '--prod',
   ]);
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
@@ -622,7 +629,7 @@ test('deploy using --local-config flag above target', async () => {
 
   const { exitCode, stdout, stderr } = await execCli(
     binaryPath,
-    ['deploy', target, '--local-config', './now-root.json', '--yes'],
+    ['deploy', target, '--local-config', './now-root.json', '--yes', '--prod'],
     {
       cwd: root,
     }
@@ -848,7 +855,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
   }
 
   async function vcDeployWithVar() {
-    const { exitCode, stdout, stderr } = await execCli(binaryPath, [], {
+    const { exitCode, stdout, stderr } = await execCli(binaryPath, ['--prod'], {
       cwd: target,
     });
     expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);

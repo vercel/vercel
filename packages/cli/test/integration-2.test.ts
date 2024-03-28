@@ -264,6 +264,7 @@ test('assign a domain to a project', async () => {
     directory,
     '--public',
     '--yes',
+    '--prod',
   ]);
   expect(deploymentOutput.exitCode, formatOutput(deploymentOutput)).toBe(0);
 
@@ -290,7 +291,7 @@ test('assign a domain to a project', async () => {
 
 test('ensure `github` and `scope` are not sent to the API', async () => {
   const directory = await setupE2EFixture('github-and-scope-config');
-  const output = await execCli(binaryPath, [directory, '--yes']);
+  const output = await execCli(binaryPath, [directory, '--yes', '--prod']);
 
   expect(output.exitCode, formatOutput(output)).toBe(0);
 });
@@ -304,7 +305,7 @@ test('should show prompts to set up project during first deploy', async () => {
   // remove previously linked project if it exists
   await remove(path.join(dir, '.vercel'));
 
-  const now = execCli(binaryPath, [dir]);
+  const now = execCli(binaryPath, [dir, '--prod']);
 
   await setupProject(now, projectName, {
     buildCommand: `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html`,
@@ -381,7 +382,7 @@ test('should prefill "project name" prompt with folder name', async () => {
   const directory = path.join(src, '../', projectName);
   await copy(src, directory);
 
-  const now = execCli(binaryPath, [directory], {
+  const now = execCli(binaryPath, [directory, '--prod'], {
     env: {
       FORCE_TTY: '1',
     },
@@ -418,11 +419,15 @@ test('should prefill "project name" prompt with --name', async () => {
   // remove previously linked project if it exists
   await remove(path.join(directory, '.vercel'));
 
-  const now = execCli(binaryPath, [directory, '--name', projectName], {
-    env: {
-      FORCE_TTY: '1',
-    },
-  });
+  const now = execCli(
+    binaryPath,
+    [directory, '--name', projectName, '--prod'],
+    {
+      env: {
+        FORCE_TTY: '1',
+      },
+    }
+  );
 
   let isDeprecated = false;
 
@@ -471,7 +476,7 @@ test('should prefill "project name" prompt with now.json `name`', async () => {
     })
   );
 
-  const now = execCli(binaryPath, [directory], {
+  const now = execCli(binaryPath, [directory, '--prod'], {
     env: {
       FORCE_TTY: '1',
     },
@@ -524,7 +529,7 @@ test('deploy with unknown `VERCEL_PROJECT_ID` should fail', async () => {
   const directory = await setupE2EFixture('static-deployment');
   const user = await fetchTokenInformation(token);
 
-  const output = await execCli(binaryPath, [directory], {
+  const output = await execCli(binaryPath, [directory, '--prod'], {
     env: {
       VERCEL_ORG_ID: user.id,
       VERCEL_PROJECT_ID: 'asdf',
@@ -543,7 +548,7 @@ test('deploy with `VERCEL_ORG_ID` but without `VERCEL_PROJECT_ID` should fail', 
   const directory = await setupE2EFixture('static-deployment');
   const user = await fetchTokenInformation(token);
 
-  const output = await execCli(binaryPath, [directory], {
+  const output = await execCli(binaryPath, [directory, '--prod'], {
     env: { VERCEL_ORG_ID: user.id },
   });
 
@@ -570,12 +575,12 @@ test('deploy with `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID`', async () => {
   const directory = await setupE2EFixture('static-deployment');
 
   // generate `.vercel`
-  await execCli(binaryPath, [directory, '--yes']);
+  await execCli(binaryPath, [directory, '--yes', '--prod']);
 
   const link = require(path.join(directory, '.vercel/project.json'));
   await remove(path.join(directory, '.vercel'));
 
-  const output = await execCli(binaryPath, [directory], {
+  const output = await execCli(binaryPath, [directory, '--prod'], {
     env: {
       VERCEL_ORG_ID: link.orgId,
       VERCEL_PROJECT_ID: link.projectId,
@@ -599,7 +604,7 @@ test('deploy shows notice when project in `.vercel` does not exists', async () =
     })
   );
 
-  const now = execCli(binaryPath, [directory]);
+  const now = execCli(binaryPath, [directory, '--prod']);
 
   let detectedNotice = false;
 
@@ -625,6 +630,7 @@ test('use `rootDirectory` from project when deploying', async () => {
     directory,
     '--yes',
     '--public',
+    '--prod',
   ]);
   expect(firstResult.exitCode, formatOutput(firstResult)).toBe(0);
 
@@ -643,7 +649,11 @@ test('use `rootDirectory` from project when deploying', async () => {
 
   expect(projectResponse.status, await projectResponse.text()).toBe(200);
 
-  const secondResult = await execCli(binaryPath, [directory, '--public']);
+  const secondResult = await execCli(binaryPath, [
+    directory,
+    '--public',
+    '--prod',
+  ]);
   expect(secondResult.exitCode, formatOutput(secondResult)).toBe(0);
 
   const { host, href } = new URL(secondResult.stdout);
@@ -772,9 +782,13 @@ test('whoami with local .vercel scope', async () => {
 test('deploys with only now.json and README.md', async () => {
   const directory = await setupE2EFixture('deploy-with-only-readme-now-json');
 
-  const { exitCode, stdout, stderr } = await execCli(binaryPath, ['--yes'], {
-    cwd: directory,
-  });
+  const { exitCode, stdout, stderr } = await execCli(
+    binaryPath,
+    ['--yes', '--prod'],
+    {
+      cwd: directory,
+    }
+  );
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
   const { host } = new URL(stdout);
@@ -789,9 +803,13 @@ test('deploys with only vercel.json and README.md', async () => {
     'deploy-with-only-readme-vercel-json'
   );
 
-  const { exitCode, stdout, stderr } = await execCli(binaryPath, ['--yes'], {
-    cwd: directory,
-  });
+  const { exitCode, stdout, stderr } = await execCli(
+    binaryPath,
+    ['--yes', '--prod'],
+    {
+      cwd: directory,
+    }
+  );
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
@@ -845,7 +863,7 @@ test(
     async function tryDeploy(cwd: string) {
       const { exitCode, stdout, stderr } = await execCli(
         binaryPath,
-        ['--public', '--yes'],
+        ['--public', '--yes', '--prod'],
         {
           cwd,
           stdio: 'inherit',
@@ -886,6 +904,7 @@ test('deploy pnpm twice using pnp and symlink=false', async () => {
       session,
       '--public',
       '--yes',
+      '--prod',
     ]);
     await disableSSO(res.stdout, false);
     return res;
@@ -1315,7 +1334,7 @@ test('vercel.json configuration overrides in a new project prompt user and merge
   // remove previously linked project if it exists
   await remove(path.join(directory, '.vercel'));
 
-  const vc = execCli(binaryPath, [directory]);
+  const vc = execCli(binaryPath, [directory, '--prod']);
 
   await waitForPrompt(vc, 'Set up and deploy');
   vc.stdin?.write('y\n');
@@ -1361,7 +1380,7 @@ test('vercel.json configuration overrides in an existing project do not prompt u
   async function deploy(autoConfirm = false) {
     const deployment = await execCli(
       binaryPath,
-      [directory, '--public'].concat(autoConfirm ? ['--yes'] : [])
+      [directory, '--public', '--prod'].concat(autoConfirm ? ['--yes'] : [])
     );
     expect(deployment.exitCode, formatOutput(deployment)).toBe(0);
     return deployment;
