@@ -1,5 +1,11 @@
 # @vercel/remix-builder
 
+## 2.1.5
+
+### Patch Changes
+
+- Add `mjs` and `mts` extensions to vite detection ([#11307](https://github.com/vercel/vercel/pull/11307))
+
 ## 2.1.4
 
 ### Patch Changes

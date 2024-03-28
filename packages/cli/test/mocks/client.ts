@@ -1,4 +1,5 @@
 const originalCwd = process.cwd();
+import { afterAll, beforeAll, afterEach } from 'vitest';
 
 // Register Jest matcher extensions for CLI unit tests
 import './matchers';

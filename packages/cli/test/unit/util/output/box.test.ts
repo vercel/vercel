@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest';
 import box from '../../../../src/util/output/box';
 import chalk from 'chalk';
 import stripAnsi from 'strip-ansi';

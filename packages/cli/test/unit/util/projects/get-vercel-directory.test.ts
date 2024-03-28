@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest';
 import { basename, join } from 'path';
 import { getVercelDirectory } from '../../../../src/util/projects/link';
 
