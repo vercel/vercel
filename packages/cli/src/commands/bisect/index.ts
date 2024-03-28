@@ -278,7 +278,7 @@ export default async function bisect(client: Client): Promise<number> {
       if (openEnabled) {
         await open(testUrl);
       }
-      action = await client.expand({
+      action = await client.input.expand({
         message: 'Select an action:',
         choices: [
           { key: 'g', name: 'Good', value: 'good' },
@@ -339,7 +339,7 @@ function getCommit(deployment: Deployment) {
 async function prompt(client: Client, message: string): Promise<string> {
   // eslint-disable-next-line no-constant-condition
   while (true) {
-    const val = await client.input({ message });
+    const val = await client.input.text({ message });
     if (val) {
       return val;
     } else {
