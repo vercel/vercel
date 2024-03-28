@@ -22,7 +22,7 @@ import { detectProjects } from '../projects/detect-projects';
 import { repoInfoToUrl } from '../git/repo-info-to-url';
 import { connectGitProvider, parseRepoUrl } from '../git/connect-git-provider';
 import { isAPIError } from '../errors-ts';
-// import { isGitWorktreeOrSubmodule } from '../git-helpers';
+import { isGitWorktreeOrSubmodule } from '../git-helpers';
 
 const home = homedir();
 
@@ -370,12 +370,9 @@ export async function findRepoRoot(
    * If the current repo is a git submodule or git worktree '.git' is a file
    * with a pointer to the "parent" git repository instead of a directory.
    */
-  const GIT_PATH = normalize('.git/config');
-
-  // TODO
-  /* isGitWorktreeOrSubmodule()
+  const GIT_PATH = isGitWorktreeOrSubmodule({ cwd: client.cwd })
     ? normalize('.git')
-    : normalize('.git/config'); */
+    : normalize('.git/config');
 
   for (const current of traverseUpDirectories({ start })) {
     if (current === home) {

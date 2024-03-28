@@ -7,14 +7,13 @@ export type GitExecOptions = Readonly<{
    * it is set to false, meaning errors are caught and handled gracefully.*/
   unsafe?: boolean;
   /** Specifies the current working directory
-   * from which the Git command should be executed. If not specified, it
-   * defaults to the current working directory of the process.*/
-  cwd?: string;
+   * from which the Git command should be executed.
+   */
+  cwd: string;
 }>;
 
 const DEFAULT_GIT_EXEC_OPTS = {
   unsafe: false,
-  cwd: process.cwd(),
 } as const;
 
 /**
@@ -31,7 +30,7 @@ const DEFAULT_GIT_EXEC_OPTS = {
  *
  * @throws {Error} Can throw an error if `opts.unsafe` is set to `true`
  */
-export function getGitDirectory(opts: GitExecOptions = {}): string | null {
+export function getGitDirectory(opts: GitExecOptions): string | null {
   const { cwd, unsafe } = { ...DEFAULT_GIT_EXEC_OPTS, ...opts };
 
   try {
@@ -73,7 +72,7 @@ export function getGitDirectory(opts: GitExecOptions = {}): string | null {
  *
  * @throws {Error} Can throw an error if `opts.unsafe` is set to `true`
  */
-export function isGitWorktreeOrSubmodule(opts: GitExecOptions = {}): boolean {
+export function isGitWorktreeOrSubmodule(opts: GitExecOptions): boolean {
   const gitDir = getGitDirectory(opts);
 
   if (gitDir === null) {
