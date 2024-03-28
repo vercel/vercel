@@ -219,7 +219,7 @@ export async function ensureRepoLink(
       selected = projects;
     } else {
       const addSeparators = projects.length > 0 && detectedProjectsCount > 0;
-      selected = await client.checkbox({
+      selected = await client.input.checkbox({
         message: `Which Projects should be ${
           projects.length ? 'linked to' : 'created'
         }?`,

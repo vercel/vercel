@@ -139,7 +139,7 @@ export default async function editProjectSettings(
     []
   );
 
-  const settingFields = (await client.checkbox({
+  const settingFields = (await client.input.checkbox({
     message: 'Which settings would you like to overwrite (select multiple)?',
     choices,
   })) as ConfigKeys[];

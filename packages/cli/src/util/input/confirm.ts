@@ -5,7 +5,7 @@ export default async function confirm(
   message: string,
   preferred: boolean
 ): Promise<boolean> {
-  return client.confirm({
+  return client.input.confirm({
     message,
     default: preferred,
   });
