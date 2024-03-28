@@ -71,12 +71,7 @@ export default class Client extends EventEmitter implements Stdio {
   localConfig?: VercelConfig;
   localConfigPath?: string;
   requestIdCounter: number;
-
   input;
-  checkbox;
-  expand;
-  confirm;
-  select;
 
   constructor(opts: ClientOptions) {
     super();
@@ -92,20 +87,17 @@ export default class Client extends EventEmitter implements Stdio {
     this.localConfig = opts.localConfig;
     this.localConfigPath = opts.localConfigPath;
     this.requestIdCounter = 1;
-    this.input = (opts: Parameters<typeof input>[0]) => {
-      return input(opts, { input: this.stdin, output: this.stderr });
-    };
-    this.checkbox = <T>(opts: Parameters<typeof checkbox<T>>[0]) => {
-      return checkbox<T>(opts, { input: this.stdin, output: this.stderr });
-    };
-    this.expand = (opts: Parameters<typeof expand>[0]) => {
-      return expand(opts, { input: this.stdin, output: this.stderr });
-    };
-    this.confirm = (opts: Parameters<typeof confirm>[0]) => {
-      return confirm(opts, { input: this.stdin, output: this.stderr });
-    };
-    this.select = <T>(opts: Parameters<typeof select<T>>[0]) => {
-      return select<T>(opts, { input: this.stdin, output: this.stderr });
+    this.input = {
+      text: (opts: Parameters<typeof input>[0]) =>
+        input(opts, { input: this.stdin, output: this.stderr }),
+      checkbox: <T>(opts: Parameters<typeof checkbox<T>>[0]) =>
+        checkbox<T>(opts, { input: this.stdin, output: this.stderr }),
+      expand: (opts: Parameters<typeof expand>[0]) =>
+        expand(opts, { input: this.stdin, output: this.stderr }),
+      confirm: (opts: Parameters<typeof confirm>[0]) =>
+        confirm(opts, { input: this.stdin, output: this.stderr }),
+      select: <T>(opts: Parameters<typeof select<T>>[0]) =>
+        select<T>(opts, { input: this.stdin, output: this.stderr }),
     };
   }
 
