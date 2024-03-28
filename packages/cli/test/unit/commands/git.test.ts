@@ -79,7 +79,7 @@ describe('git', () => {
         const gitPromise = git(client);
 
         await expect(client.stderr).toOutput('Set up');
-        client.stdin.write('y\n');
+        client.stdin.write('\n');
 
         await expect(client.stderr).toOutput(
           'Which scope should contain your project?'
@@ -87,12 +87,12 @@ describe('git', () => {
         client.stdin.write('\r');
 
         await expect(client.stderr).toOutput('Found project');
-        client.stdin.write('y\n');
+        client.stdin.write('\n');
 
         await expect(client.stderr).toOutput(
           `Do you still want to connect https://github.com/user2/repo2?`
         );
-        client.stdin.write('y\n');
+        client.stdin.write('h\n'); // vim left to switch from default no
 
         await expect(client.stderr).toOutput(
           `Connecting Git remote: https://github.com/user2/repo2`
@@ -425,7 +425,7 @@ describe('git', () => {
         await expect(client.stderr).toOutput(
           `Are you sure you want to disconnect user/repo from your project?`
         );
-        client.stdin.write('y\n');
+        client.stdin.write('h\n'); // vim left to switch from default no
         await expect(client.stderr).toOutput('Disconnected user/repo.');
 
         const newProjectData: Project = await client.fetch(
@@ -526,9 +526,9 @@ describe('git', () => {
           `Found a repository in your local Git Config: https://github.com/user/repo`
         );
         await expect(client.stderr).toOutput(
-          `Do you still want to connect https://github.com/user2/repo2? (y/N)`
+          `Do you still want to connect https://github.com/user2/repo2?`
         );
-        client.stdin.write('y\n');
+        client.stdin.write('h\n'); // vim left to switch from default no
         await expect(client.stderr).toOutput(
           `Connecting Git remote: https://github.com/user2/repo2`
         );
@@ -574,9 +574,9 @@ describe('git', () => {
           `Found multiple Git repositories in your local Git config:\n  • origin: https://github.com/user/repo.git\n  • secondary: https://github.com/user/repo2.git`
         );
         await expect(client.stderr).toOutput(
-          `Do you still want to connect https://github.com/user3/repo3? (y/N)`
+          `Do you still want to connect https://github.com/user3/repo3?`
         );
-        client.stdin.write('y\n');
+        client.stdin.write('h\n'); // vim left to switch away from default no
 
         await expect(client.stderr).toOutput(
           `Connecting Git remote: https://github.com/user3/repo3`

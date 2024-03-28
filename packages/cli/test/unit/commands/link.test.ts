@@ -26,16 +26,17 @@ describe('link', () => {
     client.cwd = cwd;
     const exitCodePromise = link(client);
 
+    client.stderr.pipe(process.stderr);
     await expect(client.stderr).toOutput('Set up');
-    client.stdin.write('y\n');
+    client.stdin.write('\n');
 
     await expect(client.stderr).toOutput(
       'Which scope should contain your project?'
     );
-    client.stdin.write('y\n');
+    client.stdin.write('\n');
 
     await expect(client.stderr).toOutput('Link to it?');
-    client.stdin.write('y\n');
+    client.stdin.write('\n');
 
     await expect(client.stderr).toOutput(
       `Linked to ${user.username}/${project.name} (created .vercel and added it to .gitignore)`

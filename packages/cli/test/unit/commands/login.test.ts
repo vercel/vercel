@@ -54,7 +54,7 @@ describe('login', () => {
       client.stdin.write('\x1B[B'); // Down arrow
       client.stdin.write('\r'); // Return key
 
-      await expect(client.stderr).toOutput('? Enter your email address:');
+      await expect(client.stderr).toOutput('Enter your email address:');
 
       client.stdin.write(`${user.email}\n`);
 
@@ -77,7 +77,7 @@ describe('login', () => {
       client.stdin.write('\x1B[B'); // Down arrow
       client.stdin.write('\r'); // Return key
 
-      await expect(client.stderr).toOutput('? Enter your email address:');
+      await expect(client.stderr).toOutput('Enter your email address:');
 
       client.stdin.write(`${user.email}\n`);
 
@@ -119,7 +119,7 @@ describe('login', () => {
         client.stdin.write('\x1B[B'); // Down arrow
         client.stdin.write('\r'); // Return key
 
-        await expect(client.stderr).toOutput('? Enter your email address:');
+        await expect(client.stderr).toOutput('Enter your email address:');
 
         client.stdin.write(`${user.email}\n`);
 
@@ -162,7 +162,7 @@ describe('login', () => {
         client.stdin.write('\x1B[B'); // Down arrow
         client.stdin.write('\r'); // Return key
 
-        await expect(client.stderr).toOutput('? Enter your email address:');
+        await expect(client.stderr).toOutput('Enter your email address:');
 
         client.stdin.write(`${user.email}\n`);
 

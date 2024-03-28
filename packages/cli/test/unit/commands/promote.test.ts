@@ -113,7 +113,7 @@ describe('promote', () => {
       `Fetching deployment "${previousDeployment.url}" in ${previousDeployment.creator?.username}`
     );
     await expect(client.stderr).toOutput(
-      '? This deployment does not target production, therefore promotion will not apply\n production environment variables. Are you sure you want to continue?'
+      'This deployment does not target production, therefore promotion will not \napply production environment variables. Are you sure you want to continue?'
     );
 
     // say "no" to the prompt
@@ -136,7 +136,7 @@ describe('promote', () => {
       `Fetching deployment "${previousDeployment.url}" in ${previousDeployment.creator?.username}`
     );
     await expect(client.stderr).toOutput(
-      '? This deployment does not target production, therefore promotion will not apply\n production environment variables. Are you sure you want to continue?'
+      'This deployment does not target production, therefore promotion will not \napply production environment variables. Are you sure you want to continue?'
     );
 
     // say "yes" to the prompt
