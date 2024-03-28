@@ -58,6 +58,11 @@ interface PullEnvOptions {
   gitBranch?: string;
 }
 
+export type PullEnvRecordsResponse = Record<
+  string,
+  { value: string; comment?: string }
+>;
+
 export async function pullEnvRecords(
   output: Output,
   client: Client,
@@ -70,7 +75,7 @@ export async function pullEnvRecords(
   );
   const query = new URLSearchParams();
 
-  let url = `/v1/env/pull/${projectId}`;
+  let url = `/v2/env/pull/${projectId}`;
 
   if (target) {
     url += `/${encodeURIComponent(target)}`;
@@ -88,7 +93,7 @@ export async function pullEnvRecords(
   }
 
   return client.fetch<{
-    env: Record<string, string>;
-    buildEnv: Record<string, string>;
+    env: PullEnvRecordsResponse;
+    buildEnv: PullEnvRecordsResponse;
   }>(url);
 }

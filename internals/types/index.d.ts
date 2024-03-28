@@ -325,6 +325,7 @@ export interface ProjectEnvVariable {
   target?: ProjectEnvTarget | ProjectEnvTarget[];
   system?: boolean;
   gitBranch?: string;
+  comment?: string;
 }
 
 export interface DeployHook {

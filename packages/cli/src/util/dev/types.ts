@@ -18,13 +18,14 @@ import { HandleValue, Route } from '@vercel/routing-utils';
 import { Output } from '../output';
 import type { ProjectSettings } from '@vercel-internals/types';
 import { BuilderWithPkg } from '../build/import-builders';
+import { PullEnvRecordsResponse } from '../env/get-env-records';
 
 export { VercelConfig };
 
 export interface DevServerOptions {
   output: Output;
   projectSettings?: ProjectSettings;
-  envValues?: Record<string, string>;
+  envValues?: PullEnvRecordsResponse;
   repoRoot?: string;
 }
 

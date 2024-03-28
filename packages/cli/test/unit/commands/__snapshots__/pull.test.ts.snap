@@ -1,0 +1,34 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`pull should handle development env vars with comments 1`] = `
+"# Created by Vercel CLI
+ANOTHER_ENV_STRING="A VALUE GOES HERE"
+ANOTHER_ENV_STRING_2="A VALUE GOES HERE_2"
+# This connects to postgres on vercel
+DATABASE_URL="example.com"
+# Connects to the Redis database that stores sessions for fast retrieval. This can be accessed on Vercel KV.
+REDIS_CONNECTION_STRING="redis://abc123@redis.example.com:6379"
+"
+`;
+
+exports[`pull should handle preview env vars with comments 1`] = `
+"# Created by Vercel CLI
+ANOTHER_ENV_STRING="A VALUE GOES HERE"
+ANOTHER_ENV_STRING_2="A VALUE GOES HERE_2"
+# This connects to postgres on vercel
+DATABASE_URL="example.com"
+# Connects to the Redis database that stores sessions for fast retrieval. This can be accessed on Vercel KV.
+REDIS_CONNECTION_STRING="redis://abc123@redis.example.com:6379"
+"
+`;
+
+exports[`pull should handle production env vars with comments 1`] = `
+"# Created by Vercel CLI
+ANOTHER_ENV_STRING="A VALUE GOES HERE"
+ANOTHER_ENV_STRING_2="A VALUE GOES HERE_2"
+# This connects to postgres on vercel
+DATABASE_URL="example.com"
+# Connects to the Redis database that stores sessions for fast retrieval. This can be accessed on Vercel KV.
+REDIS_CONNECTION_STRING="redis://abc123@redis.example.com:6379"
+"
+`;

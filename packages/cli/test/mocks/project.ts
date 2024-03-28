@@ -7,6 +7,7 @@ import type {
 import { formatProvider } from '../../src/util/git/connect-git-provider';
 import { parseEnvironment } from '../../src/commands/pull';
 import type { Env } from '@vercel/build-utils';
+import { PullEnvRecordsResponse } from '../../src/util/env/get-env-records';
 
 export const envs: ProjectEnvVariable[] = [
   {
@@ -19,6 +20,8 @@ export const envs: ProjectEnvVariable[] = [
     configurationId: null,
     updatedAt: 1557241361455,
     createdAt: 1557241361455,
+    comment:
+      'Connects to the Redis database that stores sessions for fast retrieval. This can be accessed on Vercel KV.',
   },
   {
     type: 'encrypted',
@@ -30,6 +33,7 @@ export const envs: ProjectEnvVariable[] = [
     configurationId: null,
     updatedAt: 1557241361455,
     createdAt: 1557241361455,
+    comment: 'This branch env var does some pretty cool things',
   },
   {
     type: 'encrypted',
@@ -40,6 +44,7 @@ export const envs: ProjectEnvVariable[] = [
     configurationId: null,
     updatedAt: 1557241361455,
     createdAt: 1557241361455,
+    comment: '',
   },
   {
     type: 'encrypted',
@@ -216,7 +221,7 @@ export function useProject(
     res.json(project);
   });
   client.scenario.get(
-    `/v1/env/pull/${project.id}/:target?/:gitBranch?`,
+    `/v2/env/pull/${project.id}/:target?/:gitBranch?`,
     (req, res) => {
       const target =
         typeof req.params.target === 'string'
@@ -246,10 +251,10 @@ export function useProject(
         )
       );
 
-      const env: Record<string, string> = {};
+      const env: PullEnvRecordsResponse = {};
 
-      allEnvs.forEach(([k, v]) => {
-        env[k] = v ?? '';
+      allEnvs.forEach(([k, { value, comment }]) => {
+        env[k] = { value: value ?? '', comment };
       });
       res.json({ env: env });
     }
@@ -391,19 +396,22 @@ function exposeSystemEnvs(
   const envs: Env = {};
 
   if (autoExposeSystemEnvs) {
-    envs['VERCEL'] = '1';
-    envs['VERCEL_ENV'] = target || 'development';
+    envs['VERCEL'] = { value: '1' };
+    envs['VERCEL_ENV'] = { value: target || 'development' };
 
     for (const key of systemEnvValues) {
-      envs[key] = getSystemEnvValue(key, { vercelUrl });
+      envs[key] = { value: getSystemEnvValue(key, { vercelUrl }) };
     }
   }
 
   for (let env of projectEnvs) {
     if (env.type === 'system') {
-      envs[env.key] = getSystemEnvValue(env.value, { vercelUrl });
+      envs[env.key] = {
+        value: getSystemEnvValue(env.value, { vercelUrl }),
+        comment: env.comment,
+      };
     } else {
-      envs[env.key] = env.value;
+      envs[env.key] = { value: env.value, comment: env.comment };
     }
   }
 

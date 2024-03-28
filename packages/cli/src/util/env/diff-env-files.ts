@@ -29,8 +29,8 @@ export async function createEnvObject(
 }
 
 function findChanges(
-  oldEnv: Dictionary<string | undefined>,
-  newEnv: Dictionary<string | undefined>
+  oldEnv: Dictionary<{ value: string; comment?: string }>,
+  newEnv: Dictionary<{ value: string; comment?: string }>
 ): {
   added: string[];
   changed: string[];
@@ -40,9 +40,9 @@ function findChanges(
   const changed = [];
 
   for (const key of Object.keys(newEnv)) {
-    if (oldEnv[key] === undefined) {
+    if (oldEnv[key]?.value === undefined) {
       added.push(key);
-    } else if (oldEnv[key] !== newEnv[key]) {
+    } else if (oldEnv[key].value !== newEnv[key].value) {
       changed.push(key);
     }
     delete oldEnv[key];
@@ -57,8 +57,8 @@ function findChanges(
 }
 
 export function buildDeltaString(
-  oldEnv: Dictionary<string | undefined>,
-  newEnv: Dictionary<string | undefined>
+  oldEnv: Dictionary<{ value: string; comment?: string }>,
+  newEnv: Dictionary<{ value: string; comment?: string }>
 ): string {
   const { added, changed, removed } = findChanges(oldEnv, newEnv);
 
