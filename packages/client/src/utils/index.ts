@@ -6,7 +6,7 @@ import { URL } from 'url';
 import ignore from 'ignore';
 import { pkgVersion } from '../pkg';
 import { NowBuildError } from '@vercel/build-utils';
-import { VercelClientOptions, VercelConfig } from '../types';
+import { VercelClientOptions, DeploymentOptions, VercelConfig } from '../types';
 import { Sema } from 'async-sema';
 import { readFile } from 'fs-extra';
 import readdir from './readdir-recursive';
@@ -46,7 +46,13 @@ const EVENTS_ARRAY = [
 export type DeploymentEventType = typeof EVENTS_ARRAY[number];
 export const EVENTS = new Set(EVENTS_ARRAY);
 
-export function getApiDeploymentsUrl() {
+export function getApiDeploymentsUrl(
+  metadata?: Pick<DeploymentOptions, 'builds' | 'functions'>
+) {
+  if (metadata && metadata.builds && !metadata.functions) {
+    return '/v10/deployments';
+  }
+
   return '/v13/deployments';
 }
 

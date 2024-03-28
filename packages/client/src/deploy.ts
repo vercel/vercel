@@ -27,9 +27,9 @@ async function* postDeployment(
 }> {
   const debug = createDebug(clientOptions.debug);
   const preparedFiles = prepareFiles(files, clientOptions);
-  const apiDeployments = getApiDeploymentsUrl();
+  const apiDeployments = getApiDeploymentsUrl(deploymentOptions);
 
-  debug(`Sending deployment creation API request: ${apiDeployments}`);
+  debug('Sending deployment creation API request');
   try {
     const response = await fetch(
       `${apiDeployments}${generateQueryString(clientOptions)}`,

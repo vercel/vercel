@@ -28,10 +28,16 @@ export async function* checkDeploymentStatus(
 ): AsyncIterableIterator<DeploymentStatus> {
   const { token, teamId, apiUrl, userAgent } = clientOptions;
   const debug = createDebug(clientOptions.debug);
-  const apiDeployments = getApiDeploymentsUrl();
+
+  let deploymentState = deployment;
+
+  const apiDeployments = getApiDeploymentsUrl({
+    builds: deployment.builds,
+    functions: deployment.functions,
+  });
 
   // If the deployment is ready, we don't want any of this to run
-  if (isDone(deployment) && isAliasAssigned(deployment)) {
+  if (isDone(deploymentState) && isAliasAssigned(deploymentState)) {
     debug(
       `Deployment is already READY and aliases are assigned. Not running status checks`
     );
