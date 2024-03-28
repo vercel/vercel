@@ -108,7 +108,7 @@ export default async function list(
     choices.push(cancelSeparator, _cancel);
   }
 
-  const answer = await client.select({
+  const answer = await client.input.select({
     message,
     choices,
     pageSize,

@@ -144,7 +144,7 @@ export async function ensureRepoLink(
       if (yes) {
         remoteName = defaultRemote;
       } else {
-        remoteName = await client.select({
+        remoteName = await client.input.select({
           message: 'Which Git remote should be used?',
           choices: remoteNames.map(name => {
             return { name: name, value: name };

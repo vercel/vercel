@@ -51,7 +51,7 @@ export default async function selectOrg(
     return choices[defaultChoiceIndex].value;
   }
 
-  return await client.select({
+  return await client.input.select({
     message: question,
     choices,
     default: choices[defaultChoiceIndex].value,
