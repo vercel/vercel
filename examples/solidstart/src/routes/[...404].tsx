@@ -1,12 +1,12 @@
 import { Title } from "@solidjs/meta";
-import Counter from "~/components/Counter";
+import { HttpStatusCode } from "@solidjs/start";
 
-export default function Home() {
+export default function NotFound() {
   return (
     <main>
-      <Title>Hello World</Title>
-      <h1>Hello world!</h1>
-      <Counter />
+      <Title>Not Found</Title>
+      <HttpStatusCode code={404} />
+      <h1>Page Not Found</h1>
       <p>
         Visit{" "}
         <a href="https://start.solidjs.com" target="_blank">
