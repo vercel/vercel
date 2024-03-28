@@ -1,4 +1,5 @@
 import { isZeroConfigBuild } from '../../../src/util/is-zero-config-build';
+import { describe, expect, it } from 'vitest';
 
 describe('isZeroConfigBuild', () => {
   it(`should return true when builds is undefined`, () => {
