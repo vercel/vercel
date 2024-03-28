@@ -5,7 +5,7 @@ import {
   printReceived,
 } from 'jest-matcher-utils';
 import type { Readable } from 'stream';
-import type { MatcherState } from 'expect';
+import type { MatcherState } from '@vitest/expect';
 import type { MatcherHintOptions } from 'jest-matcher-utils';
 
 export async function toOutput(
@@ -13,7 +13,10 @@ export async function toOutput(
   stream: Readable,
   test: string,
   timeout = 3000
-) {
+): Promise<{
+  pass: boolean;
+  message: () => string;
+}> {
   const { isNot } = this;
   const matcherName = 'toOutput';
   const matcherHintOptions: MatcherHintOptions = {

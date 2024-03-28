@@ -1,5 +1,11 @@
 # @vercel/frameworks
 
+## 3.0.1
+
+### Patch Changes
+
+- Swap jest for vitest in CLI unit tests ([#11302](https://github.com/vercel/vercel/pull/11302))
+
 ## 3.0.0
 
 ### Major Changes
