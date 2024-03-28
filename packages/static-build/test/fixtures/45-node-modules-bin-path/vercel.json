@@ -10,5 +10,8 @@
       }
     }
   ],
-  "probes": [{ "path": "/", "mustContain": "hello world" }]
+  "probes": [{ "path": "/", "mustContain": "hello world" }],
+  "projectSettings": {
+    "nodeVersion": "16.x"
+  }
 }
