@@ -87,7 +87,43 @@ describe('init', () => {
     });
   });
   describe('providing the framework argument', () => {
-    it('should fail when a file matching the framework already exists in that location', async () => {
+    it('should succeed', async () => {
+      const cwd = setupTmpDir();
+      client.cwd = cwd;
+
+      client.setArgv('init', 'astro');
+      const exitCodePromise = init(client);
+
+      await expect(client.stderr).toOutput(`Fetching astro`);
+      expect(mock).toHaveBeenCalled();
+
+      const promiseResult = await exitCodePromise;
+      expect(promiseResult).toEqual(0);
+
+      const contents = await fs.readdirSync(join(cwd, 'astro'));
+      expect(contents).toContain('package.json');
+      expect(contents).toContain('astro.config.mjs');
+    });
+    it('should succeed when specifying a target directory', async () => {
+      const cwd = setupTmpDir();
+      client.cwd = cwd;
+
+      const targetDirectory = 'my-astro';
+
+      client.setArgv('init', 'astro', targetDirectory);
+      const exitCodePromise = init(client);
+
+      await expect(client.stderr).toOutput(`Fetching astro`);
+      expect(mock).toHaveBeenCalled();
+
+      const promiseResult = await exitCodePromise;
+      expect(promiseResult).toEqual(0);
+
+      const contents = await fs.readdirSync(join(cwd, targetDirectory));
+      expect(contents).toContain('package.json');
+      expect(contents).toContain('astro.config.mjs');
+    });
+    it('should fail when a file matching the framework already exists in the target location', async () => {
       const cwd = setupTmpDir();
       client.cwd = cwd;
 
@@ -106,7 +142,7 @@ describe('init', () => {
       expect(mock).toHaveBeenCalled();
       await expect(exitCodePromise).resolves.toEqual(1);
     });
-    it('should fail when a non-empty folder matching the framework already exists in that location', async () => {
+    it('should fail when a non-empty folder matching the framework already exists in the target location', async () => {
       const cwd = setupTmpDir();
       client.cwd = cwd;
 
@@ -125,7 +161,7 @@ describe('init', () => {
       expect(mock).toHaveBeenCalled();
       await expect(exitCodePromise).resolves.toEqual(1);
     });
-    it('should succeed when an empty folder matching the framework already exists in that location', async () => {
+    it('should succeed when an empty folder matching the framework already exists in the target location', async () => {
       const cwd = setupTmpDir();
       client.cwd = cwd;
 
@@ -157,7 +193,7 @@ describe('init', () => {
       await expect(exitCodePromise).resolves.toEqual(1);
     });
     describe('using --force', () => {
-      it('should fail when a file matching the framework already exists in that location', async () => {
+      it('should fail when a file matching the framework already exists in the target location', async () => {
         const cwd = setupTmpDir();
         client.cwd = cwd;
 
@@ -176,7 +212,7 @@ describe('init', () => {
         expect(mock).toHaveBeenCalled();
         await expect(exitCodePromise).resolves.toEqual(1);
       });
-      it('should succeed when a non-empty folder matching the framework already exists in that location', async () => {
+      it('should succeed when a non-empty folder matching the framework already exists in the target location', async () => {
         const cwd = setupTmpDir();
         client.cwd = cwd;
 
