@@ -46,7 +46,7 @@ async function prepareSymlinkTarget(
 }
 
 export async function downloadFile(
-  file: File,
+  file: File | FileFsRef,
   fsPath: string
 ): Promise<FileFsRef> {
   const { mode } = file;
@@ -67,7 +67,7 @@ export async function downloadFile(
     return FileFsRef.fromFsPath({ mode, fsPath });
   }
 
-  const stream = file.toStream();
+  const stream = file instanceof FileFsRef ? await file.toStreamAsync() : file.toStream();
   return FileFsRef.fromStream({ mode, stream, fsPath });
 }
 
