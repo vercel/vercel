@@ -1,6 +1,6 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`help command help output snapshots column width 40 1`] = `
+exports[`help command > help output snapshots > column width 40 1`] = `
 "
   ▲ [1mvercel[22m [1mdeploy[22m [project-path] [options]
 
@@ -186,7 +186,7 @@ exports[`help command help output snapshots column width 40 1`] = `
 "
 `;
 
-exports[`help command help output snapshots column width 80 1`] = `
+exports[`help command > help output snapshots > column width 80 1`] = `
 "
   ▲ [1mvercel[22m [1mdeploy[22m [project-path] [options]
 
@@ -260,7 +260,7 @@ exports[`help command help output snapshots column width 80 1`] = `
 "
 `;
 
-exports[`help command help output snapshots column width 120 1`] = `
+exports[`help command > help output snapshots > column width 120 1`] = `
 "
   ▲ [1mvercel[22m [1mdeploy[22m [project-path] [options]
 
