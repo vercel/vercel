@@ -30,7 +30,7 @@ const getGlobalPathConfig = (): string => {
   ];
 
   // The customPath flag is the preferred location,
-  // followed by the the vercel directory,
+  // followed by the vercel directory,
   // followed by the now directory.
   // If none of those exist, use the vercel directory.
   return (
