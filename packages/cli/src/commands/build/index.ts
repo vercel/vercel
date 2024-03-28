@@ -253,7 +253,7 @@ export default async function main(client: Client): Promise<number> {
       output.debug(`Loaded environment variables from "${envPath}"`);
     }
 
-    // For Vercel Legacy speed Insights support
+    // For Vercel legacy Speed Insights support
     if (project.settings.analyticsId) {
       envToUnset.add('VERCEL_ANALYTICS_ID');
       process.env.VERCEL_ANALYTICS_ID = project.settings.analyticsId;
