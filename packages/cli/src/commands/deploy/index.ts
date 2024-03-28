@@ -2,8 +2,8 @@ import {
   getPrettyError,
   getSupportedNodeVersion,
   scanParentDirs,
+  isZeroConfigBuild,
 } from '@vercel/build-utils';
-import { isZeroConfigBuild } from '../../util/is-zero-config-build';
 import {
   fileNameSymbol,
   VALID_ARCHIVE_FORMATS,
@@ -518,23 +518,6 @@ export default async (client: Client): Promise<number> => {
     );
   }
 
-  const { packageJson } = await scanParentDirs(
-    join(cwd, project?.rootDirectory ?? ''),
-    true,
-    cwd
-  );
-  let nodeVersion: string | undefined;
-  if (packageJson?.engines?.node) {
-    try {
-      const { range } = await getSupportedNodeVersion(packageJson.engines.node);
-      nodeVersion = range;
-    } catch (error) {
-      if (error instanceof Error) {
-        output.warn(error.message);
-      }
-    }
-  }
-
   try {
     // if this flag is not set, use `undefined` to allow the project setting to be used
     const autoAssignCustomDomains = argv['--skip-domain'] ? false : undefined;
@@ -567,6 +550,26 @@ export default async (client: Client): Promise<number> => {
 
     if (isZeroConfigBuild(localConfig.builds)) {
       // Only add projectSettings for zero config deployments
+
+      const { packageJson } = await scanParentDirs(
+        join(cwd, project?.rootDirectory ?? ''),
+        true,
+        cwd
+      );
+      let nodeVersion: string | undefined;
+      if (packageJson?.engines?.node) {
+        try {
+          const { range } = await getSupportedNodeVersion(
+            packageJson.engines.node
+          );
+          nodeVersion = range;
+        } catch (error) {
+          if (error instanceof Error) {
+            output.warn(error.message);
+          }
+        }
+      }
+
       createArgs.projectSettings = {
         sourceFilesOutsideRootDirectory,
         rootDirectory,

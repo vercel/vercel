@@ -1,4 +1,4 @@
-import { Builder } from '@vercel/build-utils';
+import type { Builder } from './types';
 
 export function isZeroConfigBuild(builds?: Builder[]): boolean {
   return (

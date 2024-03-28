@@ -5,7 +5,7 @@ import { join, sep, relative, basename } from 'path';
 import { URL } from 'url';
 import ignore from 'ignore';
 import { pkgVersion } from '../pkg';
-import { NowBuildError } from '@vercel/build-utils';
+import { NowBuildError, isZeroConfigBuild } from '@vercel/build-utils';
 import { VercelClientOptions, DeploymentOptions, VercelConfig } from '../types';
 import { Sema } from 'async-sema';
 import { readFile } from 'fs-extra';
@@ -49,11 +49,8 @@ export const EVENTS = new Set(EVENTS_ARRAY);
 export function getApiDeploymentsUrl(
   metadata?: Pick<DeploymentOptions, 'builds' | 'functions'>
 ) {
-  if (metadata && metadata.builds && !metadata.functions) {
-    return '/v10/deployments';
-  }
-
-  return '/v13/deployments';
+  const apiVersion = isZeroConfigBuild(metadata?.builds) ? 13 : 10;
+  return `/v${apiVersion}/deployments`;
 }
 
 export async function parseVercelConfig(

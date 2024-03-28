@@ -108,5 +108,6 @@ export * from './should-serve';
 export * from './schemas';
 export * from './types';
 export * from './errors';
+export * from './is-zero-config-build';
 
 export { NODE_VERSIONS } from './fs/node-version';

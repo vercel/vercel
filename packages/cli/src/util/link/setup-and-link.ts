@@ -2,7 +2,6 @@ import { join, basename } from 'path';
 import chalk from 'chalk';
 import { remove } from 'fs-extra';
 import { ProjectLinkResult, ProjectSettings } from '@vercel-internals/types';
-import { isZeroConfigBuild } from '../is-zero-config-build';
 import {
   getLinkedProject,
   linkFolderToProject,
@@ -28,6 +27,7 @@ import { EmojiLabel } from '../emoji';
 import createDeploy from '../deploy/create-deploy';
 import Now, { CreateOptions } from '../index';
 import { isAPIError } from '../errors-ts';
+import { isZeroConfigBuild } from '@vercel/build-utils';
 
 export interface SetupAndLinkOptions {
   autoConfirm?: boolean;
@@ -161,7 +161,7 @@ export default async function setupAndLink(
   }
 
   config.currentTeam = org.type === 'team' ? org.id : undefined;
-  const isZeroConfig = !localConfig || isZeroConfigBuild(localConfig.builds);
+  const isZeroConfig = isZeroConfigBuild(localConfig?.builds);
 
   try {
     let settings: ProjectSettings = {};
