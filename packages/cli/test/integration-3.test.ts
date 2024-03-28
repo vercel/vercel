@@ -1448,6 +1448,40 @@ test('should invoke CLI extension', async () => {
   expect(output.stdout, formatted).toContain(`Username: ${contextName}`);
 });
 
+test('should passthrough args to CLI extension', async () => {
+  const fixture = path.join(
+    __dirname,
+    'fixtures/e2e/cli-extension-args-bootstrap'
+  );
+
+  // Ensure the `.bin` is populated in the fixture
+  await runNpmInstall(fixture);
+
+  const output = await execCli(
+    binaryPath,
+    [
+      'myargs',
+      '--version',
+      '--custom-option',
+      'some-arg',
+      '--debug',
+      '--help',
+      '--token',
+      'secret',
+      '--cwd=.',
+    ],
+    { cwd: fixture }
+  );
+  const formatted = formatOutput(output);
+  expect(output.stdout, formatted).toContain('Received 8 arguments');
+  expect(output.stdout, formatted).toContain('Arg 2 = --version');
+  expect(output.stdout, formatted).toContain('Arg 3 = --custom-option');
+  expect(output.stdout, formatted).toContain('Arg 4 = some-arg');
+  expect(output.stdout, formatted).toContain('Arg 5 = --debug');
+  expect(output.stdout, formatted).toContain('Arg 6 = --help');
+  expect(output.stdout, formatted).toContain('Arg 7 = --cwd=.');
+});
+
 // NOTE: Order matters here. This must be the last test in the file.
 test('default command should prompt login with empty auth.json', async () => {
   await clearAuthConfig();
