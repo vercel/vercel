@@ -157,7 +157,7 @@ export async function getVercelIgnore(
 
   if (prebuilt) {
     if (typeof vercelOutputDir !== 'string') {
-      throw new Error(`Missing required \`vercelOutputDir\` parameter`);
+      throw new Error(`Missing required \`vercelOutputDir\` parameter when "prebuilt" is true);
     }
     if (typeof cwd !== 'string') {
       throw new Error(`\`cwd\` must be a "string"`);
