@@ -14,7 +14,7 @@ export type GitExecOptions = Readonly<{
 
 const DEFAULT_GIT_EXEC_OPTS = {
   unsafe: false,
-} as const;
+};
 
 /**
  * Attempts to retrieve the Git directory for the specified working directory.
