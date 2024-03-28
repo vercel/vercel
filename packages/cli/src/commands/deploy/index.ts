@@ -573,7 +573,7 @@ export default async (client: Client): Promise<number> => {
         nodeVersion,
       };
 
-      if (status !== 'not_linked') {
+      if (status === 'linked') {
         createArgs.projectSettings = {
           ...createArgs.projectSettings,
           ...localConfigurationOverrides,
