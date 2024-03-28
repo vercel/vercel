@@ -13,7 +13,7 @@ import removeDomainByName from '../../util/domains/remove-domain-by-name';
 import stamp from '../../util/output/stamp';
 import * as ERRORS from '../../util/errors-ts';
 import param from '../../util/output/param';
-import promptBool from '../../util/input/prompt-bool';
+import confirm from '../../util/input/confirm';
 import setCustomSuffix from '../../util/domains/set-custom-suffix';
 import { findProjectsForDomain } from '../../util/projects/find-projects-for-domain';
 import { getCommandName } from '../../util/pkg-name';
@@ -81,9 +81,10 @@ export default async function rm(
   const skipConfirmation = opts['--yes'] || false;
   if (
     !skipConfirmation &&
-    !(await promptBool(
+    !(await confirm(
+      client,
       `Are you sure you want to remove ${param(domainName)}?`,
-      client
+      false
     ))
   ) {
     output.log('Canceled');
@@ -222,7 +223,11 @@ async function removeDomain(
 
     if (
       !skipConfirmation &&
-      !(await promptBool(`Remove conflicts associated with domain?`, client))
+      !(await confirm(
+        client,
+        `Remove conflicts associated with domain?`,
+        false
+      ))
     ) {
       output.log('Canceled');
       return 0;
