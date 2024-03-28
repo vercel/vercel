@@ -6,6 +6,8 @@ This error is often caused by a misconfigured "Build Command" or "Output Directo
 
 #### Possible Ways to Fix It
 
+In your Next.js project, check your `package.json` file to make sure your build command (`scripts.build`) is correct. This error can be thrown if you make a typo in the build command, e.g. `prisma db push next build` (missing `&&`).
+
 In the Vercel dashboard, open your "Project Settings" and draw attention to "Build & Development Settings":
 
 1. Ensure that the "Build Command" setting is not overridden, or that it calls `next build`. If this command is not overridden but you are seeing this error, double check that your `build` script in `package.json` calls `next build`. If `buildCommand` exists in `vercel.json`, make sure it calls `next build`.
