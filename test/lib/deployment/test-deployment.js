@@ -8,6 +8,10 @@ const { spawn } = require('child_process');
 const fetch = require('./fetch-retry.js');
 const { nowDeploy, fileModeSymbol, fetchWithAuth } = require('./now-deploy.js');
 const { logWithinTest } = require('./log');
+const {
+  scanParentDirs,
+  getSupportedNodeVersion,
+} = require('@vercel/build-utils');
 
 async function packAndDeploy(builderPath, shouldUnlink = true) {
   await spawnAsync('npm', ['--loglevel', 'warn', 'pack'], {
@@ -304,7 +308,7 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
   assert(hadTest, 'probe must have a test condition');
 }
 
-async function testDeployment(fixturePath, opts) {
+async function testDeployment(fixturePath, opts = {}) {
   const projectName = path
     .basename(fixturePath)
     .toLowerCase()
@@ -347,6 +351,34 @@ async function testDeployment(fixturePath, opts) {
   const nowJson = json5.parse(bodies[configName] || '{}');
   const uploadNowJson = nowJson.uploadNowJson;
   delete nowJson.uploadNowJson;
+
+  // Set `projectSettings.nodeVersion` based on the "engines.node" field of
+  // the `package.json`. This ensures the correct build-container version is used.
+  let rootDirectory = path.join(
+    fixturePath,
+    nowJson.builds?.length
+      ? path.dirname(nowJson.builds[0].src)
+      : nowJson.projectSettings?.rootDirectory ?? ''
+  );
+  const { packageJson } = await scanParentDirs(
+    rootDirectory,
+    true,
+    fixturePath
+  );
+  let nodeVersion;
+  if (packageJson?.engines?.node) {
+    try {
+      const { range } = await getSupportedNodeVersion(packageJson.engines.node);
+      nodeVersion = range;
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  if (nodeVersion) {
+    if (!opts.projectSettings) opts.projectSettings = {};
+    opts.projectSettings.nodeVersion = nodeVersion;
+  }
 
   const probePath = path.resolve(fixturePath, 'probe.js');
   let probes = [];
