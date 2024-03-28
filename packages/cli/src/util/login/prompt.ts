@@ -62,7 +62,7 @@ export async function readInput(
 
   while (!input) {
     try {
-      input = await client.input({ message });
+      input = await client.input.text({ message });
     } catch (err: any) {
       console.log(); // \n
 

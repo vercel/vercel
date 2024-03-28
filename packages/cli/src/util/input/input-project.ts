@@ -78,7 +78,7 @@ export default async function inputProject(
     let project: Project | ProjectNotFound | null = null;
 
     while (!project || project instanceof ProjectNotFound) {
-      const projectName = await client.input({
+      const projectName = await client.input.text({
         message: 'What’s the name of your existing project?',
       });
 
@@ -106,7 +106,7 @@ export default async function inputProject(
   let newProjectName: string | null = null;
 
   while (!newProjectName) {
-    newProjectName = await client.input({
+    newProjectName = await client.input.text({
       message: `What’s your project’s name?`,
       default: !detectedProject ? slugifiedName : undefined,
     });

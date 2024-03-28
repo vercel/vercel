@@ -146,7 +146,7 @@ export default async function editProjectSettings(
 
   for (let setting of settingFields) {
     const field = settingMap[setting];
-    settings[setting] = await client.input({
+    settings[setting] = await client.input.text({
       message: `What's your ${chalk.bold(field)}?`,
     });
   }

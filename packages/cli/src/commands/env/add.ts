@@ -64,7 +64,7 @@ export default async function add(
   }
 
   while (!envName) {
-    envName = await client.input({
+    envName = await client.input.text({
       message: `What’s the name of the variable?`,
     });
 

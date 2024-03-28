@@ -41,7 +41,7 @@ export default async function rm(
   let [envName, envTarget, envGitBranch] = args;
 
   while (!envName) {
-    const inputName = await client.input({
+    const inputName = await client.input.text({
       message: `What’s the name of the variable?`,
     });
 
