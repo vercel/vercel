@@ -428,7 +428,6 @@ test('should allow deploying a directory that was built with a target environmen
     [
       // omit the default "deploy" command
       '--prebuilt',
-      '--prod',
     ],
     {
       cwd: projectDir,
