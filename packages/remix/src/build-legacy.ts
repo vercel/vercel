@@ -571,10 +571,10 @@ module.exports = config;`;
     output[path] = func;
 
     // If this is a dynamic route then add a Vercel route
-    const re = getRegExpFromPath(rePath);
-    if (re) {
+    const result = getRegExpFromPath(rePath);
+    if (result) {
       routes.push({
-        src: re.source,
+        src: result.re.source,
         dest: path,
       });
     }
