@@ -53,6 +53,20 @@ export interface ClientOptions extends Stdio {
 export const isJSONObject = (v: any): v is JSONObject => {
   return v && typeof v == 'object' && v.constructor === Object;
 };
+export function createInput(stdin: ReadableTTY, stderr: tty.WriteStream) {
+  return {
+    text: (opts: Parameters<typeof input>[0]) =>
+      input(opts, { input: stdin, output: stderr }),
+    checkbox: <T>(opts: Parameters<typeof checkbox<T>>[0]) =>
+      checkbox<T>(opts, { input: stdin, output: stderr }),
+    expand: (opts: Parameters<typeof expand>[0]) =>
+      expand(opts, { input: stdin, output: stderr }),
+    confirm: (opts: Parameters<typeof confirm>[0]) =>
+      confirm(opts, { input: stdin, output: stderr }),
+    select: <T>(opts: Parameters<typeof select<T>>[0]) =>
+      select<T>(opts, { input: stdin, output: stderr }),
+  };
+}
 
 export default class Client extends EventEmitter implements Stdio {
   argv: string[];
@@ -83,18 +97,19 @@ export default class Client extends EventEmitter implements Stdio {
     this.localConfig = opts.localConfig;
     this.localConfigPath = opts.localConfigPath;
     this.requestIdCounter = 1;
-    this.input = {
-      text: (opts: Parameters<typeof input>[0]) =>
-        input(opts, { input: this.stdin, output: this.stderr }),
-      checkbox: <T>(opts: Parameters<typeof checkbox<T>>[0]) =>
-        checkbox<T>(opts, { input: this.stdin, output: this.stderr }),
-      expand: (opts: Parameters<typeof expand>[0]) =>
-        expand(opts, { input: this.stdin, output: this.stderr }),
-      confirm: (opts: Parameters<typeof confirm>[0]) =>
-        confirm(opts, { input: this.stdin, output: this.stderr }),
-      select: <T>(opts: Parameters<typeof select<T>>[0]) =>
-        select<T>(opts, { input: this.stdin, output: this.stderr }),
-    };
+    // this.input = {
+    //   text: (opts: Parameters<typeof input>[0]) =>
+    //     input(opts, { input: this.stdin, output: this.stderr }),
+    //   checkbox: <T>(opts: Parameters<typeof checkbox<T>>[0]) =>
+    //     checkbox<T>(opts, { input: this.stdin, output: this.stderr }),
+    //   expand: (opts: Parameters<typeof expand>[0]) =>
+    //     expand(opts, { input: this.stdin, output: this.stderr }),
+    //   confirm: (opts: Parameters<typeof confirm>[0]) =>
+    //     confirm(opts, { input: this.stdin, output: this.stderr }),
+    //   select: <T>(opts: Parameters<typeof select<T>>[0]) =>
+    //     select<T>(opts, { input: this.stdin, output: this.stderr }),
+    // };
+    this.input = createInput(this.stdin, this.stderr);
   }
 
   retry<T>(fn: RetryFunction<T>, { retries = 3, maxTimeout = Infinity } = {}) {

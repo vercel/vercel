@@ -9,7 +9,7 @@ import { PassThrough } from 'stream';
 import { createServer, Server } from 'http';
 import express, { Express, Router } from 'express';
 import { listen } from 'async-listen';
-import Client from '../../src/util/client';
+import Client, { createInput } from '../../src/util/client';
 import { Output } from '../../src/util/output';
 
 // Disable colors in `chalk` so that tests don't need
@@ -94,6 +94,7 @@ export class MockClient extends Client {
     this.stderr.pause();
     this.stderr.isTTY = true;
 
+    this.input = createInput(this.stdin, this.stderr);
     this.output = new Output(this.stderr);
 
     this.argv = [];
