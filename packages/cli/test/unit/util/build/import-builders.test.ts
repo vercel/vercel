@@ -1,3 +1,4 @@
+import { describe, it, expect } from 'vitest';
 import { join } from 'path';
 import { remove } from 'fs-extra';
 import { getWriteableDirectory } from '@vercel/build-utils';
@@ -8,9 +9,10 @@ import {
 } from '../../../../src/util/build/import-builders';
 import vercelNextPkg from '@vercel/next/package.json';
 import vercelNodePkg from '@vercel/node/package.json';
+import { vi } from 'vitest';
 
 // these tests can take upwards of 190s on macos-latest
-jest.setTimeout(4 * 60 * 1000);
+vi.setConfig({ testTimeout: 4 * 60 * 1000 });
 
 const repoRoot = join(__dirname, '../../../../../..');
 

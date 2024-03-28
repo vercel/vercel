@@ -2,6 +2,7 @@ import { join, basename } from 'path';
 import chalk from 'chalk';
 import { remove } from 'fs-extra';
 import { ProjectLinkResult, ProjectSettings } from '@vercel-internals/types';
+import { isZeroConfigBuild } from '../is-zero-config-build';
 import {
   getLinkedProject,
   linkFolderToProject,
@@ -160,8 +161,7 @@ export default async function setupAndLink(
   }
 
   config.currentTeam = org.type === 'team' ? org.id : undefined;
-  const isZeroConfig =
-    !localConfig || !localConfig.builds || localConfig.builds.length === 0;
+  const isZeroConfig = !localConfig || isZeroConfigBuild(localConfig.builds);
 
   try {
     let settings: ProjectSettings = {};

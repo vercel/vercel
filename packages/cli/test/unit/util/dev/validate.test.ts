@@ -1,3 +1,4 @@
+import { describe, it, expect } from 'vitest';
 import { validateConfig } from '../../../../src/util/validate-config';
 
 describe('validateConfig', () => {
