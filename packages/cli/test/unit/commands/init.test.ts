@@ -8,9 +8,6 @@ import { join } from 'path';
 import { beforeEach, describe, it, expect, vi } from 'vitest';
 import type { MockInstance } from 'vitest';
 
-// The without setting this, the client.stderr output is undefined
-process.stdout.isTTY = true;
-
 // path to mock tar
 const mockPath = join(
   process.cwd(),
