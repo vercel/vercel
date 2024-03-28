@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest';
 import { client } from '../../mocks/client';
 import { defaultProject, useProject } from '../../mocks/project';
 import redeploy from '../../../src/commands/redeploy';

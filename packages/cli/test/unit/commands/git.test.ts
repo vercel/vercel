@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest';
 import { join } from 'path';
 import fs from 'fs-extra';
 import { useUser } from '../../mocks/user';
