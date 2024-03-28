@@ -304,7 +304,10 @@ export default async (client: Client): Promise<number> => {
   }
 
   // build `--prebuilt`
+  let vercelOutputDir: string | undefined;
   if (argv['--prebuilt']) {
+    vercelOutputDir = join(cwd, '.vercel/output');
+
     // For repo-style linking, update `cwd` to be the Project
     // subdirectory when `rootDirectory` setting is defined
     if (
@@ -312,10 +315,10 @@ export default async (client: Client): Promise<number> => {
       link.repoRoot &&
       link.project.rootDirectory
     ) {
-      cwd = join(cwd, link.project.rootDirectory);
+      vercelOutputDir = join(cwd, link.project.rootDirectory, '.vercel/output');
     }
 
-    const prebuiltExists = await fs.pathExists(join(cwd, '.vercel/output'));
+    const prebuiltExists = await fs.pathExists(vercelOutputDir);
     if (!prebuiltExists) {
       error(
         `The ${param(
@@ -327,7 +330,7 @@ export default async (client: Client): Promise<number> => {
       return 1;
     }
 
-    const prebuiltBuild = await getPrebuiltJson(cwd);
+    const prebuiltBuild = await getPrebuiltJson(vercelOutputDir);
 
     // Ensure that there was not a build error
     const prebuiltError =
@@ -546,6 +549,7 @@ export default async (client: Client): Promise<number> => {
       forceNew: argv['--force'],
       withCache: argv['--with-cache'],
       prebuilt: argv['--prebuilt'],
+      vercelOutputDir,
       rootDirectory,
       quiet,
       wantsPublic: Boolean(argv['--public'] || localConfig.public),
