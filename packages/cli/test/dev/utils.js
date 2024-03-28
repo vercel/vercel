@@ -387,6 +387,7 @@ function testFixtureStdio(
               : []),
             '--public',
             '--debug',
+            '--prod',
           ],
           { cwd, stdio: 'pipe', reject: false }
         );
