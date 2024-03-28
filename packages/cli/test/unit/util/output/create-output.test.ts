@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest';
 import stripAnsi from 'strip-ansi';
 import { client } from '../../../mocks/client';
 

@@ -1,3 +1,4 @@
+import { describe, it, expect } from 'vitest';
 import createLineIterator from 'line-async-iterator';
 import { client } from '../../mocks/client';
 import { useUser } from '../../mocks/user';

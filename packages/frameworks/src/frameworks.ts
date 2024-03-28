@@ -2039,5 +2039,5 @@ export const frameworks = [
   },
 ] as const;
 
-const def = frameworks as readonly Framework[];
-export default def;
+export const frameworkList = frameworks as readonly Framework[];
+export default frameworkList;

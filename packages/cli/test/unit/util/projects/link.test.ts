@@ -1,3 +1,4 @@
+import { describe, it, expect } from 'vitest';
 import { join } from 'path';
 import { getLinkedProject } from '../../../../src/util/projects/link';
 import { client } from '../../../mocks/client';
