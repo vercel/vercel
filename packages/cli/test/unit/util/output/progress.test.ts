@@ -1,3 +1,4 @@
+import { describe, expect, test } from 'vitest';
 import { progress } from '../../../../src/util/output/progress';
 
 describe('progress()', () => {
