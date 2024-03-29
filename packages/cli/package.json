@@ -50,7 +50,7 @@
     "@inquirer/checkbox": "2.2.0",
     "@inquirer/confirm": "3.1.0",
     "@inquirer/expand": "2.1.0",
-    "@inquirer/input": "2.1.0",
+    "@inquirer/input": "2.1.1",
     "@inquirer/select": "2.2.0",
     "@next/env": "11.1.2",
     "@sentry/node": "5.5.0",
