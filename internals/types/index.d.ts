@@ -640,6 +640,6 @@ export interface WritableTTY extends Writable {
 
 export interface Stdio {
   stdin: ReadableTTY;
-  stdout: WritableTTY;
-  stderr: WritableTTY;
+  stdout: tty.WriteStream;
+  stderr: tty.WriteStream;
 }
