@@ -3,7 +3,6 @@ import {
   getSupportedNodeVersion,
   scanParentDirs,
 } from '@vercel/build-utils';
-import { isZeroConfigBuild } from '../../util/is-zero-config-build';
 import {
   fileNameSymbol,
   VALID_ARCHIVE_FORMATS,
@@ -569,7 +568,7 @@ export default async (client: Client): Promise<number> => {
       autoAssignCustomDomains,
     };
 
-    if (isZeroConfigBuild(localConfig.builds)) {
+    if (!localConfig.builds || localConfig.builds.length === 0) {
       // Only add projectSettings for zero config deployments
       createArgs.projectSettings = {
         sourceFilesOutsideRootDirectory,
