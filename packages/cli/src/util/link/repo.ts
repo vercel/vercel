@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import { Separator } from '@inquirer/prompts';
+import { Separator } from '@inquirer/checkbox';
 import pluralize from 'pluralize';
 import { homedir } from 'os';
 import slugify from '@sindresorhus/slugify';

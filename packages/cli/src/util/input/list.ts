@@ -1,4 +1,4 @@
-import { Separator } from '@inquirer/prompts';
+import { Separator } from '@inquirer/select';
 import stripAnsi from 'strip-ansi';
 import Client from '../client';
 import eraseLines from '../output/erase-lines';
