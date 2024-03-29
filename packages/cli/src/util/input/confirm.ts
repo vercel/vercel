@@ -5,7 +5,7 @@ export default async function confirm(
   message: string,
   preferred: boolean
 ): Promise<boolean> {
-  require('./patch-inquirer');
+  await import('./patch-inquirer');
 
   const answers = await client.prompt({
     type: 'confirm',
