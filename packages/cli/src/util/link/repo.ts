@@ -219,7 +219,7 @@ export async function ensureRepoLink(
       selected = projects;
     } else {
       const addSeparators = projects.length > 0 && detectedProjectsCount > 0;
-      selected = await client.input.checkbox({
+      selected = await client.input.checkbox<Project | NewProject>({
         message: `Which Projects should be ${
           projects.length ? 'linked to' : 'created'
         }?`,
@@ -259,18 +259,10 @@ export async function ensureRepoLink(
                   },
                   // Checked by default when there are no other existing Projects
                   checked: projects.length === 0,
-                };
+                } as const;
               })
           ),
-        ] as (
-          | Separator
-          | {
-              newProject?: boolean;
-              name: string;
-              value: Project | NewProject;
-              checked: boolean;
-            }
-        )[],
+        ],
       });
     }
 
