@@ -1,4 +1,4 @@
-import { bold } from 'chalk';
+import { bold, gray } from 'chalk';
 import { checkbox, confirm, expand, input, select } from '@inquirer/prompts';
 import { EventEmitter } from 'events';
 import { URL } from 'url';
@@ -83,17 +83,28 @@ export default class Client extends EventEmitter implements Stdio {
     this.localConfig = opts.localConfig;
     this.localConfigPath = opts.localConfigPath;
     this.requestIdCounter = 1;
+
+    const theme = {
+      prefix: gray('?'),
+      style: { answer: gray },
+    };
     this.input = {
       text: (opts: Parameters<typeof input>[0]) =>
-        input(opts, { input: this.stdin, output: this.stderr }),
+        input({ theme, ...opts }, { input: this.stdin, output: this.stderr }),
       checkbox: <T>(opts: Parameters<typeof checkbox<T>>[0]) =>
-        checkbox<T>(opts, { input: this.stdin, output: this.stderr }),
+        checkbox<T>(
+          { theme, ...opts },
+          { input: this.stdin, output: this.stderr }
+        ),
       expand: (opts: Parameters<typeof expand>[0]) =>
-        expand(opts, { input: this.stdin, output: this.stderr }),
+        expand({ theme, ...opts }, { input: this.stdin, output: this.stderr }),
       confirm: (opts: Parameters<typeof confirm>[0]) =>
-        confirm(opts, { input: this.stdin, output: this.stderr }),
+        confirm({ theme, ...opts }, { input: this.stdin, output: this.stderr }),
       select: <T>(opts: Parameters<typeof select<T>>[0]) =>
-        select<T>(opts, { input: this.stdin, output: this.stderr }),
+        select<T>(
+          { theme, ...opts },
+          { input: this.stdin, output: this.stderr }
+        ),
     };
   }
 
