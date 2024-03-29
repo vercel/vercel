@@ -3,10 +3,7 @@
   "builds": [
     {
       "src": "index.html",
-      "use": "@vercel/static",
-      "config": {
-        "zeroConfig": true
-      }
+      "use": "@vercel/static"
     }
   ],
   "rewrites": [
