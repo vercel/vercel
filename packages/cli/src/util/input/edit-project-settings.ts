@@ -124,25 +124,20 @@ export default async function editProjectSettings(
     return settings;
   }
 
-  const choices = settingKeys.reduce<Array<{ name: string; value: string }>>(
-    (acc, setting) => {
-      const skip =
-        setting === 'framework' ||
-        setting === 'commandForIgnoringBuildStep' ||
-        setting === 'installCommand' ||
-        localConfigurationOverrides?.[setting];
-      if (!skip) {
-        acc.push({ name: settingMap[setting], value: setting });
-      }
-      return acc;
-    },
-    []
-  );
+  const choices = settingKeys.reduce((acc, setting) => {
+    const skip =
+      setting === 'framework' ||
+      setting === 'commandForIgnoringBuildStep' ||
+      setting === 'installCommand' ||
+      localConfigurationOverrides?.[setting];
+    if (skip) return acc;
+    return [...acc, { name: settingMap[setting], value: setting }];
+  }, [] as { name: string; value: ConfigKeys }[]);
 
-  const settingFields = (await client.input.checkbox({
+  const settingFields = await client.input.checkbox({
     message: 'Which settings would you like to overwrite (select multiple)?',
     choices,
-  })) as ConfigKeys[];
+  });
 
   for (let setting of settingFields) {
     const field = settingMap[setting];
