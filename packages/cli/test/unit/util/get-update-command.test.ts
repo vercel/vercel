@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest';
 import getUpdateCommand, {
   isGlobal,
 } from '../../../src/util/get-update-command';

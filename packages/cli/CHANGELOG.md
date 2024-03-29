@@ -1,5 +1,19 @@
 # vercel
 
+## 33.6.2
+
+### Patch Changes
+
+- Added sunset warning to secrets command. ([#11333](https://github.com/vercel/vercel/pull/11333))
+
+- Swap jest for vitest in CLI unit tests ([#11302](https://github.com/vercel/vercel/pull/11302))
+
+- Updated dependencies [[`988f7b75a`](https://github.com/vercel/vercel/commit/988f7b75a27387e84fce541b844f984d2c151980), [`1825b58df`](https://github.com/vercel/vercel/commit/1825b58df8d783e79f0addf262618f422246f4b3)]:
+  - @vercel/remix-builder@2.1.5
+  - @vercel/build-utils@7.10.0
+  - @vercel/node@3.0.25
+  - @vercel/static-build@2.4.5
+
 ## 33.6.1
 
 ### Patch Changes

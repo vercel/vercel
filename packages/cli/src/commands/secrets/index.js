@@ -78,6 +78,12 @@ async function run({ output, contextName, currentTeam, client }) {
 
   const commandName = getCommandName('secret ' + subcommand);
 
+  output.warn(
+    'On May 1st, 2024 secrets will be automatically converted to sensitive Environment Variables for Preview and Production environments.\n' +
+      'Secrets attached to Development environments will not be migrated.' +
+      'See https://vercel.com/changelog/legacy-environment-variable-secrets-are-being-sunset for more information.'
+  );
+
   if (subcommand === 'ls' || subcommand === 'list') {
     output.note(
       `The ${getCommandName(
