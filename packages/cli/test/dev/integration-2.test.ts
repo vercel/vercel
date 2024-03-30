@@ -119,7 +119,6 @@ test(
     await testPath(200, `/api/date`, new RegExp(`Current date is ${year}`));
     await testPath(200, `/api/date.py`, new RegExp(`Current date is ${year}`));
     await testPath(200, `/api/headers`, (body: any, res: any) => {
-      // @ts-ignore
       const { host } = new URL(res.url);
       expect(body).toBe(host);
     });
@@ -198,7 +197,6 @@ test(
     );
 
     await testPath(200, `/api/dump`, (body: any, res: any, isDev: any) => {
-      // @ts-ignore
       const { host } = new URL(res.url);
       const { env, headers } = JSON.parse(body);
 

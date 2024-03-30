@@ -265,6 +265,23 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
         },
       }),
     },
+    'zero-config-next-js-nested': {
+      'app/pages/index.js':
+        'export default () => <div><h1>Now CLI test</h1><p>Zero-config + Next.js</p></div>',
+      'app/package.json': JSON.stringify({
+        name: 'zero-config-next-js-test',
+        scripts: {
+          dev: 'next',
+          start: 'next start',
+          build: 'next build',
+        },
+        dependencies: {
+          next: 'latest',
+          react: 'latest',
+          'react-dom': 'latest',
+        },
+      }),
+    },
     'lambda-with-128-memory': {
       'api/memory.js': `
         module.exports = (req, res) => {
@@ -331,6 +348,9 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
     },
     'lambda-with-php-runtime': {
       'api/test.php': `<?php echo 'Hello from PHP'; ?>`,
+      'package.json': JSON.stringify({
+        engines: { node: '18.x' },
+      }),
       'vercel.json': JSON.stringify({
         functions: {
           'api/**/*.php': {

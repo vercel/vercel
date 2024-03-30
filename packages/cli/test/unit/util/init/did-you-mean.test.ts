@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest';
 import didYouMean from '../../../../src/util/init/did-you-mean';
 
 describe('didYouMean', () => {
