@@ -42,7 +42,7 @@ async function createServerlessServer(
 ): Promise<{ url: URL; onExit: () => Promise<void> }> {
   const server = createServer(userCode);
   return {
-    url: await listen(server, {host: '127.0.0.1', port: 0}),
+    url: await listen(server, { host: '127.0.0.1', port: 0 }),
     onExit: async () => {
       server.close();
     },
