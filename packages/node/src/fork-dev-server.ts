@@ -32,7 +32,6 @@ export function forkDevServer(options: {
   const devServerPath =
     options.devServerPath || join(__dirname, 'dev-server.mjs');
 
-  console.log(options);
   if (options.maybeTranspile) {
     if (options.isTypeScript) {
       nodeOptions = `--import ${esmLoader} ${nodeOptions || ''}`;
@@ -44,7 +43,6 @@ export function forkDevServer(options: {
       }
     }
   }
-  console.log({ nodeOptions });
 
   const forkOptions: ForkOptions = {
     cwd: options.workPath,
@@ -61,7 +59,6 @@ export function forkDevServer(options: {
     }),
   };
 
-  console.log({ forkOptions });
   const child = fork(devServerPath, [], forkOptions);
 
   checkForPid(devServerPath, child);
