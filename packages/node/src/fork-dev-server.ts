@@ -6,7 +6,7 @@ import { pathToFileURL } from 'url';
 import { join } from 'path';
 
 export function forkDevServer(options: {
-  tsConfig: any;
+  pathToTsConfig: string | null;
   config: Config;
   maybeTranspile: boolean;
   workPath: string | undefined;
@@ -26,20 +26,18 @@ export function forkDevServer(options: {
   if (!nodeOptions.includes('--no-warnings')) {
     nodeOptions += ' --no-warnings';
   }
-  const tsNodePath = options.require_.resolve('ts-node');
   const esmLoader = pathToFileURL(options.require_.resolve('tsx'));
-  const cjsLoader = join(tsNodePath, '..', '..', 'register', 'index.js');
   const devServerPath =
     options.devServerPath || join(__dirname, 'dev-server.mjs');
 
   if (options.maybeTranspile) {
     if (options.isTypeScript) {
-      nodeOptions = `--import ${esmLoader} ${nodeOptions || ''}`;
+      nodeOptions = `--loader ${esmLoader} ${nodeOptions || ''}`;
     } else {
       if (options.isEsm) {
         // no transform needed because Node.js supports ESM natively
       } else {
-        nodeOptions = `--require ${cjsLoader} ${nodeOptions || ''}`;
+        nodeOptions = `--loader ${esmLoader} ${nodeOptions || ''}`;
       }
     }
   }
@@ -51,13 +49,13 @@ export function forkDevServer(options: {
       VERCEL_DEV_ENTRYPOINT: options.entrypoint,
       VERCEL_DEV_CONFIG: JSON.stringify(options.config),
       VERCEL_DEV_BUILD_ENV: JSON.stringify(options.meta.buildEnv || {}),
-      TS_NODE_TRANSPILE_ONLY: '1',
-      TS_NODE_COMPILER_OPTIONS: options.tsConfig?.compilerOptions
-        ? JSON.stringify(options.tsConfig.compilerOptions)
-        : undefined,
       NODE_OPTIONS: nodeOptions,
     }),
   };
+
+  if (options.pathToTsConfig) {
+    forkOptions.env!.TSX_TSCONFIG_PATH = options.pathToTsConfig;
+  }
 
   const child = fork(devServerPath, [], forkOptions);
 

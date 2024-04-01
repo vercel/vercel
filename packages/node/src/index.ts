@@ -53,7 +53,7 @@ import type {
 } from '@vercel/build-utils';
 import { getConfig } from '@vercel/static-config';
 
-import { fixConfig, Register, register } from './typescript';
+import { Register, register } from './typescript';
 import {
   validateConfiguredRuntime,
   entrypointToOutputPath,
@@ -68,8 +68,6 @@ import _treeKill from 'tree-kill';
 import { promisify } from 'util';
 
 export { shouldServe };
-
-type TypescriptModule = typeof import('typescript');
 
 interface DownloadOptions {
   files: Files;
@@ -561,74 +559,6 @@ export const startDevServer: StartDevServer = async opts => {
     ext === '.mts' ||
     (pkg.type === 'module' && ['.js', '.ts', '.tsx'].includes(ext));
 
-  let tsConfig: any = {};
-
-  if (maybeTranspile) {
-    const resolveTypescript = (p: string): string => {
-      try {
-        return require_.resolve('typescript', {
-          paths: [p],
-        });
-      } catch (_) {
-        return '';
-      }
-    };
-
-    const requireTypescript = (p: string): TypescriptModule => require_(p);
-
-    let ts: TypescriptModule | null = null;
-
-    // Use the project's version of Typescript if available and supports `target`
-    let compiler = resolveTypescript(process.cwd());
-    if (compiler) {
-      ts = requireTypescript(compiler);
-    }
-
-    // Otherwise fall back to using the copy that `@vercel/node` uses
-    if (!ts) {
-      compiler = resolveTypescript(join(__dirname, '..'));
-      ts = requireTypescript(compiler);
-    }
-
-    if (pathToTsConfig) {
-      try {
-        tsConfig = ts.readConfigFile(pathToTsConfig, ts.sys.readFile).config;
-      } catch (error: unknown) {
-        if (isErrnoException(error) && error.code !== 'ENOENT') {
-          console.error(`Error while parsing "${pathToTsConfig}"`);
-          throw error;
-        }
-      }
-    }
-
-    // if we're using ESM, we need to tell TypeScript to use `nodenext` to
-    // preserve the `import` semantics
-    if (isEsm) {
-      if (!tsConfig.compilerOptions) {
-        tsConfig.compilerOptions = {};
-      }
-      if (tsConfig.compilerOptions.module === undefined) {
-        tsConfig.compilerOptions.module = 'nodenext';
-      }
-      if (tsConfig.compilerOptions.moduleResolution === undefined) {
-        tsConfig.compilerOptions.moduleResolution = 'nodenext';
-      }
-    }
-
-    const nodeVersionMajor = Number(process.versions.node.split('.')[0]);
-    fixConfig(tsConfig, nodeVersionMajor);
-
-    // In prod, `.ts` inputs use TypeScript and
-    // `.js` inputs use Babel to convert ESM to CJS.
-    // In dev, both `.ts` and `.js` inputs use ts-node
-    // without Babel so we must enable `allowJs`.
-    tsConfig.compilerOptions.allowJs = true;
-
-    // In prod, we emit outputs to the filesystem.
-    // In dev, we don't emit because we use ts-node.
-    tsConfig.compilerOptions.noEmit = true;
-  }
-
   const child = forkDevServer({
     workPath,
     config,
@@ -638,7 +568,7 @@ export const startDevServer: StartDevServer = async opts => {
     isTypeScript,
     maybeTranspile,
     meta,
-    tsConfig,
+    pathToTsConfig,
   });
 
   const { pid } = child;
