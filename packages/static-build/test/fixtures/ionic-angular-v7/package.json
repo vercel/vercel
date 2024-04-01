@@ -13,7 +13,7 @@
   "dependencies": {
     "@angular/animations": "^16.0.0",
     "@angular/common": "^16.0.0",
-    "@angular/compiler": "^16.0.0",
+    "@angular/compiler": "^17.3.2",
     "@angular/core": "^16.0.0",
     "@angular/platform-browser": "^16.0.0",
     "@angular/platform-browser-dynamic": "^16.2.12",
