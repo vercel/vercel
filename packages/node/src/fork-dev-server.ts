@@ -27,14 +27,15 @@ export function forkDevServer(options: {
     nodeOptions += ' --no-warnings';
   }
   const tsNodePath = options.require_.resolve('ts-node');
-  const esmLoader = pathToFileURL(join(tsNodePath, '..', '..', 'esm.mjs'));
+  const esmLoader = pathToFileURL(options.require_.resolve('tsx'));
   const cjsLoader = join(tsNodePath, '..', '..', 'register', 'index.js');
   const devServerPath =
     options.devServerPath || join(__dirname, 'dev-server.mjs');
 
+  console.log(options);
   if (options.maybeTranspile) {
     if (options.isTypeScript) {
-      nodeOptions = `--loader ${esmLoader} ${nodeOptions || ''}`;
+      nodeOptions = `--import ${esmLoader} ${nodeOptions || ''}`;
     } else {
       if (options.isEsm) {
         // no transform needed because Node.js supports ESM natively
@@ -43,6 +44,7 @@ export function forkDevServer(options: {
       }
     }
   }
+  console.log({ nodeOptions });
 
   const forkOptions: ForkOptions = {
     cwd: options.workPath,
@@ -58,6 +60,8 @@ export function forkDevServer(options: {
       NODE_OPTIONS: nodeOptions,
     }),
   };
+
+  console.log({ forkOptions });
   const child = fork(devServerPath, [], forkOptions);
 
   checkForPid(devServerPath, child);

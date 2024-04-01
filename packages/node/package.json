@@ -38,6 +38,7 @@
     "path-to-regexp": "6.2.1",
     "ts-morph": "12.0.0",
     "ts-node": "10.9.1",
+    "tsx": "4.7.1",
     "typescript": "4.9.5",
     "undici": "5.26.5"
   },
