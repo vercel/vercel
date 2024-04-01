@@ -386,9 +386,7 @@ async function doBuild(
     }
 
     for (const w of detectedBuilders.warnings) {
-      console.log(
-        `Warning: ${w.message} ${w.action || 'Learn More'}: ${w.link}`
-      );
+      output.warn(w.message, null, w.link, w.action || 'Learn More');
     }
 
     if (detectedBuilders.builders) {

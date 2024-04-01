@@ -214,11 +214,13 @@ export default async function remove(client: Client) {
   );
 
   deployments.forEach(depl => {
-    console.log(`${chalk.gray('-')} ${chalk.bold(depl.url)}`);
+    // consider changing to `output.log`
+    output.print(`${chalk.gray('-')} ${chalk.bold(depl.url)}\n`);
   });
 
   projects.forEach((project: Project) => {
-    console.log(`${chalk.gray('-')} ${chalk.bold(project.name)}`);
+    // consider changing to `output.log`
+    output.print(`${chalk.gray('-')} ${chalk.bold(project.name)}\n`);
   });
 
   return 0;
@@ -260,7 +262,7 @@ function readConfirmation(
     }
 
     if (projects.length > 0) {
-      console.log(
+      output.print(
         `The following ${plural(
           'project',
           projects.length,
@@ -268,11 +270,12 @@ function readConfirmation(
         )} will be permanently removed, ` +
           `including all ${
             projects.length > 1 ? 'their' : 'its'
-          } deployments and aliases:`
+          } deployments and aliases:\n`
       );
 
       for (const project of projects) {
-        console.log(`${chalk.gray('-')} ${chalk.bold(project.name)}`);
+        // consider changing to `output.log`
+        output.print(`${chalk.gray('-')} ${chalk.bold(project.name)}\n`);
       }
     }
 

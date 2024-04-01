@@ -164,10 +164,8 @@ export default async function buy(
   }
 
   if (buyResult.pending) {
-    console.log(
-      `${chalk.cyan('> Success!')} Domain ${param(
-        domainName
-      )} order was submitted ${purchaseStamp()}`
+    output.success(
+      `Domain ${param(domainName)} order was submitted ${purchaseStamp()}`
     );
     output.note(
       `Your domain is processing and will be available once the order is completed.`
@@ -176,11 +174,7 @@ export default async function buy(
       `  An email will be sent upon completion for you to start using your new domain.\n`
     );
   } else {
-    console.log(
-      `${chalk.cyan('> Success!')} Domain ${param(
-        domainName
-      )} purchased ${purchaseStamp()}`
-    );
+    output.success(`Domain ${param(domainName)} purchased ${purchaseStamp()}`);
     if (!buyResult.verified) {
       output.note(
         `Your domain is not fully configured yet so it may appear as not verified.`
