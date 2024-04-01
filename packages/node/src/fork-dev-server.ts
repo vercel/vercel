@@ -4,6 +4,7 @@ import type { Config, Meta } from '@vercel/build-utils';
 import { ChildProcess, fork, ForkOptions } from 'child_process';
 import { pathToFileURL } from 'url';
 import { join } from 'path';
+import { satisfies } from 'semver';
 
 export function forkDevServer(options: {
   pathToTsConfig: string | null;
@@ -26,18 +27,30 @@ export function forkDevServer(options: {
   if (!nodeOptions.includes('--no-warnings')) {
     nodeOptions += ' --no-warnings';
   }
-  const esmLoader = pathToFileURL(options.require_.resolve('tsx'));
+  const tsxLoader = pathToFileURL(options.require_.resolve('tsx'));
+
+  // On newer Node.js versions, `--import` must be used,
+  // otherwise the following error is thrown:
+  //  > tsx must be loaded with --import instead of --loader
+  //  > The --loader flag was deprecated in Node v20.6.0 and v18.19.0
+  const loaderFlag = satisfies(
+    process.versions.node,
+    '^18.19.0 || ^20.6.0 || >= 21'
+  )
+    ? '--import'
+    : '--loader';
+
   const devServerPath =
     options.devServerPath || join(__dirname, 'dev-server.mjs');
 
   if (options.maybeTranspile) {
     if (options.isTypeScript) {
-      nodeOptions = `--loader ${esmLoader} ${nodeOptions || ''}`;
+      nodeOptions = `${loaderFlag} ${tsxLoader} ${nodeOptions || ''}`;
     } else {
       if (options.isEsm) {
         // no transform needed because Node.js supports ESM natively
       } else {
-        nodeOptions = `--loader ${esmLoader} ${nodeOptions || ''}`;
+        nodeOptions = `${loaderFlag} ${tsxLoader} ${nodeOptions || ''}`;
       }
     }
   }
