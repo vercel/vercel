@@ -2,17 +2,17 @@
 # https://help.github.com/en/articles/about-code-owners
 
 # Restricted Paths
-*                                        @TooTallNate @EndangeredMassa @trek @onsclom @jeffsee55
-/.github/workflows                       @TooTallNate @EndangeredMassa @trek @onsclom @jeffsee55 @ijjk
-/packages/fs-detectors                   @TooTallNate @EndangeredMassa @trek @onsclom @jeffsee55 @agadzik @chloetedder
-/packages/next                           @TooTallNate @EndangeredMassa @trek @onsclom @jeffsee55 @timneutkens @ijjk @ztanner @huozhi @Ethan-Arrowood @styfle
-/packages/routing-utils                  @TooTallNate @EndangeredMassa @trek @onsclom @jeffsee55 @ijjk
-/packages/static-build                   @TooTallNate @EndangeredMassa @trek @onsclom @jeffsee55
-/packages/edge                           @TooTallNate @EndangeredMassa @trek @onsclom @jeffsee55 @vercel/compute
-/examples                                @TooTallNate @EndangeredMassa @trek @onsclom @jeffsee55 @leerob
-/examples/create-react-app               @TooTallNate @EndangeredMassa @trek @onsclom @jeffsee55 @Timer
-/examples/nextjs                         @TooTallNate @EndangeredMassa @trek @onsclom @jeffsee55 @timneutkens @ijjk @ztanner @huozhi @Ethan-Arrowood @styfle
-/packages/node                           @TooTallNate @EndangeredMassa @trek @onsclom @jeffsee55 @Kikobeats
+*                                        @TooTallNate @EndangeredMassa @trek @onsclom @jeffsee55 @erikareads
+/.github/workflows                       @TooTallNate @EndangeredMassa @trek @onsclom @jeffsee55 @erikareads @ijjk
+/packages/fs-detectors                   @TooTallNate @EndangeredMassa @trek @onsclom @jeffsee55 @erikareads @agadzik @chloetedder
+/packages/next                           @TooTallNate @EndangeredMassa @trek @onsclom @jeffsee55 @erikareads @timneutkens @ijjk @ztanner @huozhi @Ethan-Arrowood @styfle
+/packages/routing-utils                  @TooTallNate @EndangeredMassa @trek @onsclom @jeffsee55 @erikareads @ijjk
+/packages/static-build                   @TooTallNate @EndangeredMassa @trek @onsclom @jeffsee55 @erikareads
+/packages/edge                           @TooTallNate @EndangeredMassa @trek @onsclom @jeffsee55 @erikareads @vercel/compute
+/examples                                @TooTallNate @EndangeredMassa @trek @onsclom @jeffsee55 @erikareads @leerob
+/examples/create-react-app               @TooTallNate @EndangeredMassa @trek @onsclom @jeffsee55 @erikareads @Timer
+/examples/nextjs                         @TooTallNate @EndangeredMassa @trek @onsclom @jeffsee55 @erikareads @timneutkens @ijjk @ztanner @huozhi @Ethan-Arrowood @styfle
+/packages/node                           @TooTallNate @EndangeredMassa @trek @onsclom @jeffsee55 @erikareads @Kikobeats
 
 # Unrestricted Paths
 .changeset/
