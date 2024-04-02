@@ -11,6 +11,10 @@ import express, { Express, Router } from 'express';
 import { listen } from 'async-listen';
 import Client from '../../src/util/client';
 import { Output } from '../../src/util/output';
+import stripAnsi from 'strip-ansi';
+import ansiEscapes from 'ansi-escapes';
+
+const ignoredAnsi = new Set([ansiEscapes.cursorHide, ansiEscapes.cursorShow]);
 import { ReadableTTY, WritableTTY } from '@vercel-internals/types';
 
 // Disable colors in `chalk` so that tests don't need
