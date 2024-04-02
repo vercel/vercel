@@ -3,4 +3,4 @@
 'vercel': patch
 ---
 
-Revert type changes to internal Client stdio properties
+Update stdio types for cli client

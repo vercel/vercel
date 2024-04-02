@@ -11,10 +11,7 @@ import express, { Express, Router } from 'express';
 import { listen } from 'async-listen';
 import Client from '../../src/util/client';
 import { Output } from '../../src/util/output';
-import stripAnsi from 'strip-ansi';
-import ansiEscapes from 'ansi-escapes';
-
-const ignoredAnsi = new Set([ansiEscapes.cursorHide, ansiEscapes.cursorShow]);
+import { ReadableTTY, WritableTTY } from '@vercel-internals/types';
 
 // Disable colors in `chalk` so that tests don't need
 // to worry about ANSI codes
@@ -73,9 +70,6 @@ class MockStream extends PassThrough {
 }
 
 export class MockClient extends Client {
-  stdin!: PassThrough;
-  stdout!: MockStream;
-  stderr!: MockStream;
   scenario: Scenario;
   mockServer?: Server;
   private app: Express;
@@ -90,10 +84,10 @@ export class MockClient extends Client {
       authConfig: {},
       config: {},
       localConfig: {},
-      stdin: new PassThrough(),
-      stdout: new PassThrough(),
-      stderr: new PassThrough(),
-      output: new Output(new PassThrough()),
+      stdin: new PassThrough() as unknown as ReadableTTY,
+      stdout: new PassThrough() as unknown as WritableTTY,
+      stderr: new PassThrough() as unknown as WritableTTY,
+      output: new Output(new PassThrough() as unknown as WritableTTY),
     });
 
     this.app = express();
@@ -122,14 +116,14 @@ export class MockClient extends Client {
   }
 
   reset() {
-    this.stdin = new MockStream();
+    this.stdin = new MockStream() as unknown as WritableTTY;
 
-    this.stdout = new MockStream();
+    this.stdout = new MockStream() as unknown as WritableTTY;
     this.stdout.setEncoding('utf8');
     this.stdout.end = () => this.stdout;
     this.stdout.pause();
 
-    this.stderr = new MockStream();
+    this.stderr = new MockStream() as unknown as WritableTTY;
     this.stderr.setEncoding('utf8');
     this.stderr.end = () => this.stderr;
     this.stderr.pause();

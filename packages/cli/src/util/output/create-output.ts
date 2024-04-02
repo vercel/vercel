@@ -5,7 +5,7 @@ import renderLink from './link';
 import wait, { StopSpinner } from './wait';
 import { errorToString } from '@vercel/error-utils';
 import { removeEmoji } from '../emoji';
-import { WritableTTY } from '@vercel-internals/types';
+import type * as tty from 'tty';
 
 const IS_TEST = process.env.NODE_ENV === 'test';
 
@@ -24,7 +24,7 @@ interface LinkOptions {
 }
 
 export class Output {
-  stream: WritableTTY;
+  stream: tty.WriteStream;
   debugEnabled: boolean;
   supportsHyperlink: boolean;
   colorDisabled: boolean;
@@ -32,7 +32,7 @@ export class Output {
   private _spinner: StopSpinner | null;
 
   constructor(
-    stream: WritableTTY,
+    stream: tty.WriteStream,
     {
       debug: debugEnabled = false,
       supportsHyperlink = detectSupportsHyperlink(stream),
