@@ -246,7 +246,7 @@ describe('init', () => {
       client.setArgv('init', 'astroz');
       const exitCodePromise = init(client);
 
-      await expect(client.stderr).toOutput('? Did you mean astro? [y/N] ');
+      await expect(client.stderr).toOutput('? Did you mean astro? (y/N)');
       client.stdin.write('y');
       client.stdin.write('\r'); // Return key
 
@@ -266,7 +266,7 @@ describe('init', () => {
       client.setArgv('init', 'astroz');
       const exitCodePromise = init(client);
 
-      await expect(client.stderr).toOutput('? Did you mean astro? [y/N] ');
+      await expect(client.stderr).toOutput('? Did you mean astro? (y/N)');
 
       client.stdin.write('\r'); // Return key
       await expect(client.stderr).toOutput(`> No changes made`);
