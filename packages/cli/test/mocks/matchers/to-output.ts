@@ -7,6 +7,7 @@ import {
 import type { Readable } from 'stream';
 import type { MatcherState } from '@vitest/expect';
 import type { MatcherHintOptions } from 'jest-matcher-utils';
+import stripAnsi from 'strip-ansi';
 
 export async function toOutput(
   this: MatcherState,
@@ -30,7 +31,7 @@ export async function toOutput(
       matcherHint(matcherName, 'stream', 'test', matcherHintOptions) + '\n\n';
 
     function onData(data: string) {
-      output += data;
+      output += stripAnsi(data);
       if (output.includes(test)) {
         cleanup();
         resolve({
