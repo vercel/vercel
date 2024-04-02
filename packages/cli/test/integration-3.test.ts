@@ -615,7 +615,7 @@ test('ensure we render a prompt when deploying home directory', async () => {
     binaryPath,
     [directory, '--public', '--name', session, '--force'],
     {
-      input: 'N',
+      input: 'N\n',
     }
   );
 
@@ -623,7 +623,7 @@ test('ensure we render a prompt when deploying home directory', async () => {
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   expect(stderr).toContain(
-    'You are deploying your home directory. Do you want to continue? [y/N]'
+    'You are deploying your home directory. Do you want to continue?'
   );
   expect(stderr).toContain('Canceled');
 });
