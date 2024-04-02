@@ -34,7 +34,9 @@ export function forkDevServer(options: {
 
   if (options.maybeTranspile) {
     if (options.isTypeScript) {
-      nodeOptions = `--loader ${esmLoader} ${nodeOptions || ''}`;
+      nodeOptions = `--require ${cjsLoader} --loader ${esmLoader} ${
+        nodeOptions || ''
+      }`;
     } else {
       if (options.isEsm) {
         // no transform needed because Node.js supports ESM natively
