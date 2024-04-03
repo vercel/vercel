@@ -8,7 +8,7 @@ This directory is a brief example of a [Hydrogen v2](https://shopify.dev/custom-
 
 _Live Example: https://hydrogen-v2-template.vercel.app_
 
-You can also deploy using the [Vercel CLI](https://vercel.com/cli):
+You can also deploy using the [Vercel CLI](https://vercel.com/docs/cli):
 
 ```sh
 npm i -g vercel

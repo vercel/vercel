@@ -14,7 +14,7 @@ npx create-remix@latest --template vercel/vercel/examples/remix
 
 _Live Example: https://remix-run-template.vercel.app_
 
-You can also deploy using the [Vercel CLI](https://vercel.com/cli):
+You can also deploy using the [Vercel CLI](https://vercel.com/docs/cli):
 
 ```sh
 npm i -g vercel
@@ -35,4 +35,4 @@ Afterwards, start the Remix development server like so:
 npm run dev
 ```
 
-Open up [http://localhost:3000](http://localhost:3000) and you should be ready to go!
+Open up [http://localhost:5173](http://localhost:5173) and you should be ready to go!

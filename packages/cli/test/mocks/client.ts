@@ -1,4 +1,5 @@
 const originalCwd = process.cwd();
+import { afterAll, beforeAll, afterEach } from 'vitest';
 
 // Register Jest matcher extensions for CLI unit tests
 import './matchers';
@@ -92,8 +93,6 @@ export class MockClient extends Client {
     this.stderr.end = () => this.stderr;
     this.stderr.pause();
     this.stderr.isTTY = true;
-
-    this._createPromptModule();
 
     this.output = new Output(this.stderr);
 

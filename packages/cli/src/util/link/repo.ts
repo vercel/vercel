@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import inquirer from 'inquirer';
+import { Separator } from '@inquirer/checkbox';
 import pluralize from 'pluralize';
 import { homedir } from 'os';
 import slugify from '@sindresorhus/slugify';
@@ -144,16 +144,13 @@ export async function ensureRepoLink(
       if (yes) {
         remoteName = defaultRemote;
       } else {
-        const answer = await client.prompt({
-          type: 'list',
-          name: 'value',
+        remoteName = await client.input.select({
           message: 'Which Git remote should be used?',
           choices: remoteNames.map(name => {
             return { name: name, value: name };
           }),
           default: defaultRemote,
         });
-        remoteName = answer.value;
       }
     }
     const repoUrl = remoteUrls[remoteName];
@@ -222,15 +219,13 @@ export async function ensureRepoLink(
       selected = projects;
     } else {
       const addSeparators = projects.length > 0 && detectedProjectsCount > 0;
-      const answer = await client.prompt({
-        type: 'checkbox',
-        name: 'selected',
+      selected = await client.input.checkbox<Project | NewProject>({
         message: `Which Projects should be ${
           projects.length ? 'linked to' : 'created'
         }?`,
         choices: [
           ...(addSeparators
-            ? [new inquirer.Separator('----- Existing Projects -----')]
+            ? [new Separator('----- Existing Projects -----')]
             : []),
           ...projects.map(project => {
             return {
@@ -240,7 +235,7 @@ export async function ensureRepoLink(
             };
           }),
           ...(addSeparators
-            ? [new inquirer.Separator('----- New Projects to be created -----')]
+            ? [new Separator('----- New Projects to be created -----')]
             : []),
           ...Array.from(detectedProjects.entries()).flatMap(
             ([rootDirectory, frameworks]) =>
@@ -264,12 +259,11 @@ export async function ensureRepoLink(
                   },
                   // Checked by default when there are no other existing Projects
                   checked: projects.length === 0,
-                };
+                } as const;
               })
           ),
         ],
       });
-      selected = answer.selected;
     }
 
     if (selected.length === 0) {

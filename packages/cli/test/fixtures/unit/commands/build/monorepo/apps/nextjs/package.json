@@ -1,0 +1,11 @@
+{
+  "name": "nextjs-monorepo-test",
+  "scripts": {
+    "build": "next build"
+  },
+  "dependencies": {
+    "react": "^18",
+    "react-dom": "^18",
+    "next": "^12"
+  }
+}

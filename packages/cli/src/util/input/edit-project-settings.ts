@@ -1,7 +1,6 @@
-import inquirer from 'inquirer';
 import confirm from './confirm';
 import chalk from 'chalk';
-import frameworkList, { Framework } from '@vercel/frameworks';
+import { frameworkList, Framework } from '@vercel/frameworks';
 import Client from '../client';
 import { isSettingValue } from '../is-setting-value';
 import type { ProjectSettings } from '@vercel-internals/types';
@@ -125,48 +124,26 @@ export default async function editProjectSettings(
     return settings;
   }
 
-  const choices = settingKeys.reduce<Array<{ name: string; value: string }>>(
-    (acc, setting) => {
-      const skip =
-        setting === 'framework' ||
-        setting === 'commandForIgnoringBuildStep' ||
-        setting === 'installCommand' ||
-        localConfigurationOverrides?.[setting];
-      if (!skip) {
-        acc.push({ name: settingMap[setting], value: setting });
-      }
-      return acc;
-    },
-    []
-  );
+  const choices = settingKeys.reduce((acc, setting) => {
+    const skip =
+      setting === 'framework' ||
+      setting === 'commandForIgnoringBuildStep' ||
+      setting === 'installCommand' ||
+      localConfigurationOverrides?.[setting];
+    if (skip) return acc;
+    return [...acc, { name: settingMap[setting], value: setting }];
+  }, [] as { name: string; value: ConfigKeys }[]);
 
-  const { settingFields } = await inquirer.prompt<{
-    settingFields: Array<
-      Exclude<
-        ConfigKeys,
-        'framework' | 'commandForIgnoringBuildStep' | 'installCommand'
-      >
-    >;
-  }>({
-    name: 'settingFields',
-    type: 'checkbox',
+  const settingFields = await client.input.checkbox({
     message: 'Which settings would you like to overwrite (select multiple)?',
     choices,
   });
 
   for (let setting of settingFields) {
     const field = settingMap[setting];
-    const answers = await inquirer.prompt<{
-      [k in Exclude<
-        ConfigKeys,
-        'framework' | 'commandForIgnoringBuildStep' | 'installCommand'
-      >]: string;
-    }>({
-      type: 'input',
-      name: setting,
+    settings[setting] = await client.input.text({
       message: `What's your ${chalk.bold(field)}?`,
     });
-    settings[setting] = answers[setting];
   }
   return settings;
 }
