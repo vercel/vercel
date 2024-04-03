@@ -129,9 +129,8 @@ describe('login', () => {
           `Success! Email authentication complete for ${user.email}`
         );
 
-        await expect(client.stderr).not.toOutput(emoji('tip'));
-
         await expect(exitCodePromise).resolves.toEqual(0);
+        await expect(client.stderr).not.toOutput(emoji('tip'));
       });
     });
 
