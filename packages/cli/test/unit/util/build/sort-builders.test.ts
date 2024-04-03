@@ -1,3 +1,4 @@
+import { describe, expect, test } from 'vitest';
 import { sortBuilders } from '../../../../src/util/build/sort-builders';
 
 describe('sortBuilders()', () => {

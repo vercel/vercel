@@ -7,13 +7,23 @@
  */
 import { join } from 'node:path';
 import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { esbuild } from './build.mjs';
 
-const pkgPath = join(process.cwd(), 'package.json');
-const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
-const externals = Object.keys(pkg.dependencies || {});
+export async function buildBuilder(opts, cwd = process.cwd()) {
+  const pkgPath = join(cwd, 'package.json');
+  const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
+  const externals = Object.keys(pkg.dependencies || {});
 
-await esbuild({
-  bundle: true,
-  external: ['@vercel/build-utils', ...externals],
-});
+  await esbuild({
+    bundle: true,
+    external: ['@vercel/build-utils', ...externals],
+    ...opts,
+  });
+}
+
+// If the script is invoked directly, do the
+// common case of esbuild + tsc for types
+if (fileURLToPath(import.meta.url) === process.argv[1]) {
+  await buildBuilder();
+}

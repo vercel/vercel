@@ -78,12 +78,9 @@ export default async function inputProject(
     let project: Project | ProjectNotFound | null = null;
 
     while (!project || project instanceof ProjectNotFound) {
-      const answers = await client.prompt({
-        type: 'input',
-        name: 'existingProjectName',
-        message: `What’s the name of your existing project?`,
+      const projectName = await client.input.text({
+        message: 'What’s the name of your existing project?',
       });
-      const projectName = answers.existingProjectName as string;
 
       if (!projectName) {
         output.error(`Project name cannot be empty`);
@@ -109,13 +106,10 @@ export default async function inputProject(
   let newProjectName: string | null = null;
 
   while (!newProjectName) {
-    const answers = await client.prompt({
-      type: 'input',
-      name: 'newProjectName',
+    newProjectName = await client.input.text({
       message: `What’s your project’s name?`,
       default: !detectedProject ? slugifiedName : undefined,
     });
-    newProjectName = answers.newProjectName as string;
 
     if (!newProjectName) {
       output.error(`Project name cannot be empty`);

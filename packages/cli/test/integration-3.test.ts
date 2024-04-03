@@ -617,7 +617,7 @@ test('ensure we render a prompt when deploying home directory', async () => {
     binaryPath,
     [directory, '--public', '--name', session, '--force'],
     {
-      input: 'N',
+      input: 'N\n',
     }
   );
 
@@ -625,7 +625,7 @@ test('ensure we render a prompt when deploying home directory', async () => {
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   expect(stderr).toContain(
-    'You are deploying your home directory. Do you want to continue? [y/N]'
+    'You are deploying your home directory. Do you want to continue?'
   );
   expect(stderr).toContain('Canceled');
 });
@@ -1175,7 +1175,7 @@ test('render build errors', async () => {
   const output = await execCli(binaryPath, [deploymentPath, '--yes']);
 
   expect(output.exitCode, formatOutput(output)).toBe(1);
-  expect(output.stderr).toMatch(/Command "yarn run build" exited with 1/gm);
+  expect(output.stderr).toMatch(/Command "npm run build" exited with 1/gm);
 });
 
 test('invalid deployment, projects and alias names', async () => {

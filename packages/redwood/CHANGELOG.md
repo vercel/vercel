@@ -1,5 +1,11 @@
 # @vercel/redwood
 
+## 2.0.8
+
+### Patch Changes
+
+- bump `@vercel/nft@0.26.4` ([#11155](https://github.com/vercel/vercel/pull/11155))
+
 ## 2.0.7
 
 ### Patch Changes

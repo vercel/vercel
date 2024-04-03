@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest';
 import { client } from '../../../mocks/client';
 import { useUser } from '../../../mocks/user';
 import { updateCurrentTeamAfterLogin } from '../../../../src/util/login/update-current-team-after-login';
