@@ -1,0 +1,9 @@
+{
+  "version": 2,
+  "builds": [
+    { "src": "index.go", "use": "@vercel/go" }
+  ],
+  "projectSettings": {
+    "nodeVersion": "18.x"
+  }
+}
