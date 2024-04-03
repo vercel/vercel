@@ -11,6 +11,10 @@ import express, { Express, Router } from 'express';
 import { listen } from 'async-listen';
 import Client from '../../src/util/client';
 import { Output } from '../../src/util/output';
+import stripAnsi from 'strip-ansi';
+import ansiEscapes from 'ansi-escapes';
+
+const ignoredAnsi = new Set([ansiEscapes.cursorHide, ansiEscapes.cursorShow]);
 
 // Disable colors in `chalk` so that tests don't need
 // to worry about ANSI codes
@@ -20,6 +24,9 @@ export type Scenario = Router;
 
 class MockStream extends PassThrough {
   isTTY: boolean;
+  #_fullOutput: string = '';
+  #_chunks: Array<string> = [];
+  #_rawChunks: Array<string> = [];
 
   constructor() {
     super();
@@ -29,6 +36,40 @@ class MockStream extends PassThrough {
   // These are for the `ora` module
   clearLine() {}
   cursorTo() {}
+
+  override _write(
+    chunk: any,
+    encoding: BufferEncoding,
+    callback: (error?: Error | null | undefined) => void
+  ): void {
+    const str = chunk.toString();
+
+    this.#_fullOutput += str;
+
+    // There's some ANSI Inquirer just send to keep state of the terminal clear; we'll ignore those since they're
+    // unlikely to be used by end users or part of prompt code.
+    if (!ignoredAnsi.has(str)) {
+      this.#_rawChunks.push(str);
+    }
+
+    // Stripping the ANSI codes here because Inquirer will push commands ANSI (like cursor move.)
+    // This is probably fine since we don't care about those for testing; but this could become
+    // an issue if we ever want to test for those.
+    if (stripAnsi(str).trim().length > 0) {
+      this.#_chunks.push(str);
+    }
+    super._write(chunk, encoding, callback);
+  }
+
+  getLastChunk({ raw }: { raw?: boolean }): string {
+    const chunks = raw ? this.#_rawChunks : this.#_chunks;
+    const lastChunk = chunks[chunks.length - 1];
+    return lastChunk ?? '';
+  }
+
+  getFullOutput(): string {
+    return this.#_fullOutput;
+  }
 }
 
 export class MockClient extends Client {
@@ -110,6 +151,41 @@ export class MockClient extends Client {
     this.agent = undefined;
 
     this.cwd = originalCwd;
+  }
+
+  events = {
+    keypress(
+      key:
+        | string
+        | {
+            name?: string | undefined;
+            ctrl?: boolean | undefined;
+            meta?: boolean | undefined;
+            shift?: boolean | undefined;
+          }
+    ) {
+      if (typeof key === 'string') {
+        client.stdin.emit('keypress', null, { name: key });
+      } else {
+        client.stdin.emit('keypress', null, key);
+      }
+    },
+    type(text: string) {
+      client.stdin.write(text);
+      for (const char of text) {
+        client.stdin.emit('keypress', null, { name: char });
+      }
+    },
+  };
+
+  getScreen({ raw }: { raw?: boolean } = {}): string {
+    const stderr = client.stderr as any as MockStream;
+    const lastScreen = stderr.getLastChunk({ raw });
+    return raw ? lastScreen : stripAnsi(lastScreen).trim();
+  }
+  getFullOutput(): string {
+    const stderr = client.stderr as any as MockStream;
+    return stderr.getFullOutput();
   }
 
   async startMockServer() {
