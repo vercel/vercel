@@ -151,6 +151,41 @@ export class MockClient extends Client {
     this.cwd = originalCwd;
   }
 
+  events = {
+    keypress(
+      key:
+        | string
+        | {
+            name?: string | undefined;
+            ctrl?: boolean | undefined;
+            meta?: boolean | undefined;
+            shift?: boolean | undefined;
+          }
+    ) {
+      if (typeof key === 'string') {
+        client.stdin.emit('keypress', null, { name: key });
+      } else {
+        client.stdin.emit('keypress', null, key);
+      }
+    },
+    type(text: string) {
+      client.stdin.write(text);
+      for (const char of text) {
+        client.stdin.emit('keypress', null, { name: char });
+      }
+    },
+  };
+
+  getScreen({ raw }: { raw?: boolean } = {}): string {
+    const stderr = client.stderr as any as MockStream;
+    const lastScreen = stderr.getLastChunk({ raw });
+    return raw ? lastScreen : stripAnsi(lastScreen).trim();
+  }
+  getFullOutput(): string {
+    const stderr = client.stderr as any as MockStream;
+    return stderr.getFullOutput();
+  }
+
   async startMockServer() {
     this.mockServer = createServer(this.app);
     await listen(this.mockServer, 0);

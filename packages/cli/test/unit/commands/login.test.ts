@@ -51,10 +51,10 @@ describe('login', () => {
       await expect(client.stderr).toOutput(`? Log in to Vercel`);
 
       // Move down to "Email" option
-      client.stdin.write('\x1B[B'); // Down arrow
-      client.stdin.write('\x1B[B'); // Down arrow
-      client.stdin.write('\x1B[B'); // Down arrow
-      client.stdin.write('\r'); // Return key
+      client.events.keypress('down');
+      client.events.keypress('down');
+      client.events.keypress('down');
+      client.events.keypress('enter');
 
       await expect(client.stderr).toOutput('? Enter your email address:');
 
