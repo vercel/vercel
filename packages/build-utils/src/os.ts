@@ -32,7 +32,11 @@ export async function parseOsRelease(data: string) {
 
 export async function getProvidedRuntime() {
   const os = await getOsRelease();
-  return os?.PRETTY_NAME === 'Amazon Linux 2'
+  if (!os) {
+    return 'provided.al2023';
+  }
+
+  return os.PRETTY_NAME === 'Amazon Linux 2'
     ? 'provided.al2'
     : 'provided.al2023';
 }
