@@ -88,6 +88,7 @@ describe('login', () => {
       );
 
       await expect(exitCodePromise).resolves.toEqual(0);
+
       await expect(client.getFullOutput()).not.toContain(emoji('tip'));
     });
 
@@ -127,6 +128,7 @@ describe('login', () => {
         await expect(client.stderr).toOutput(
           `Success! Email authentication complete for ${user.email}`
         );
+
         await expect(client.stderr).not.toOutput(emoji('tip'));
 
         await expect(exitCodePromise).resolves.toEqual(0);
