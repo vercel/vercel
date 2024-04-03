@@ -87,9 +87,8 @@ describe('login', () => {
         `Success! Email authentication complete for ${user.email}`
       );
 
-      await expect(client.getFullOutput()).not.toContain(emoji('tip'));
-
       await expect(exitCodePromise).resolves.toEqual(0);
+      await expect(client.getFullOutput()).not.toContain(emoji('tip'));
     });
 
     describe('with NO_COLOR="1" env var', () => {
@@ -128,9 +127,9 @@ describe('login', () => {
         await expect(client.stderr).toOutput(
           `Success! Email authentication complete for ${user.email}`
         );
+        await expect(client.stderr).not.toOutput(emoji('tip'));
 
         await expect(exitCodePromise).resolves.toEqual(0);
-        await expect(client.stderr).not.toOutput(emoji('tip'));
       });
     });
 
