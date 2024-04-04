@@ -1,7 +1,7 @@
 import { join } from 'path';
 import { findConfig } from '../src/utils';
 
-const fixture = (name: string) => join(__dirname, 'fixtures', name);
+const fixture = (name: string) => join(__dirname, 'fixtures-legacy', name);
 
 describe('findConfig()', () => {
   it.each([

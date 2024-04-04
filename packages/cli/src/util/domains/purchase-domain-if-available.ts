@@ -6,7 +6,7 @@ import Client from '../client';
 import eraseLines from '../output/erase-lines';
 import getDomainPrice from './get-domain-price';
 import getDomainStatus from './get-domain-status';
-import promptBool from '../input/prompt-bool';
+import confirm from '../input/confirm';
 import purchaseDomain from './purchase-domain';
 import stamp from '../output/stamp';
 import * as ERRORS from '../errors-ts';
@@ -51,11 +51,12 @@ export default async function purchaseDomainIfAvailable(
     );
 
     if (
-      !(await promptBool(
+      !(await confirm(
+        client,
         `Buy ${chalk.underline(domain)} for ${chalk.bold(
           `$${price}`
         )} (${plural('yr', period, true)})?`,
-        client
+        false
       ))
     ) {
       output.print(eraseLines(1));

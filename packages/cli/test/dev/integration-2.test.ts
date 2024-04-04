@@ -119,7 +119,6 @@ test(
     await testPath(200, `/api/date`, new RegExp(`Current date is ${year}`));
     await testPath(200, `/api/date.py`, new RegExp(`Current date is ${year}`));
     await testPath(200, `/api/headers`, (body: any, res: any) => {
-      // @ts-ignore
       const { host } = new URL(res.url);
       expect(body).toBe(host);
     });
@@ -183,7 +182,7 @@ test(
 test(
   '[vercel dev] Should support `*.go` API serverless functions with `go.work` and lib',
   testFixtureStdio('go-work-with-shared', async (testPath: any) => {
-    await testPath(200, `/api`, 'hello:go1.20.2');
+    await testPath(200, `/api`, 'hello:go1.20.14');
   })
 );
 
@@ -198,7 +197,6 @@ test(
     );
 
     await testPath(200, `/api/dump`, (body: any, res: any, isDev: any) => {
-      // @ts-ignore
       const { host } = new URL(res.url);
       const { env, headers } = JSON.parse(body);
 

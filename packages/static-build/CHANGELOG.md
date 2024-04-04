@@ -1,5 +1,51 @@
 # @vercel/static-build
 
+## 2.4.6
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.24
+
+## 2.4.5
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.23
+
+## 2.4.4
+
+### Patch Changes
+
+- [framework-fixtures]: Bump the core group in /packages/static-build/test/fixtures/angular-v17 with 15 updates ([#11274](https://github.com/vercel/vercel/pull/11274))
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.22
+
+## 2.4.3
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.21
+
+## 2.4.2
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.20
+
+## 2.4.1
+
+### Patch Changes
+
+- [build-utils] increase max memory limit ([#11209](https://github.com/vercel/vercel/pull/11209))
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.19
+
 ## 2.4.0
 
 ### Minor Changes

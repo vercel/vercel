@@ -1,0 +1,224 @@
+version: 2
+
+updates:
+  - directory: /packages/static-build/test/fixtures/angular-v17
+    schedule:
+      interval: 'daily'
+    open-pull-requests-limit: 1
+    reviewers:
+      - 'trek'
+      - 'TooTallNate'
+      - 'EndangeredMassa'
+    commit-message:
+      prefix: '[framework-fixtures]'
+    package-ecosystem: 'npm'
+    allow:
+      - dependency-name: '@angular*'
+    ignore:
+      - dependency-name: '@angular*'
+        update-types:
+          ['version-update:semver-major', 'version-update:semver-patch']
+    groups:
+      core:
+        patterns:
+          - '@angular*'
+        update-types:
+          - 'minor'
+
+  - directory: /packages/static-build/test/fixtures/astro-v4
+    schedule:
+      interval: 'daily'
+    open-pull-requests-limit: 1
+    reviewers:
+      - 'trek'
+      - 'TooTallNate'
+      - 'EndangeredMassa'
+    commit-message:
+      prefix: '[framework-fixtures]'
+    package-ecosystem: 'npm'
+    allow:
+      - dependency-name: 'astro*'
+    ignore:
+      - dependency-name: 'astro*'
+        update-types:
+          ['version-update:semver-major', 'version-update:semver-patch']
+    groups:
+      core:
+        patterns:
+          - 'astro*'
+        update-types:
+          - 'minor'
+
+  - directory: /packages/static-build/test/fixtures/hydrogen-v2023
+    schedule:
+      interval: 'daily'
+    open-pull-requests-limit: 1
+    reviewers:
+      - 'trek'
+      - 'TooTallNate'
+      - 'EndangeredMassa'
+    commit-message:
+      prefix: '[framework-fixtures]'
+    package-ecosystem: 'npm'
+    allow:
+      - dependency-name: '@remix-run*'
+      - dependency-name: '@shopify*'
+    ignore:
+      - dependency-name: '@remix-run*'
+        update-types:
+          ['version-update:semver-major', 'version-update:semver-patch']
+      - dependency-name: '@shopify*'
+        update-types:
+          ['version-update:semver-major', 'version-update:semver-patch']
+    groups:
+      core:
+        patterns:
+          - '@remix-run*'
+          - '@shopify*'
+        update-types:
+          - 'minor'
+
+  - directory: /packages/static-build/test/fixtures/ionic-angular-v7
+    schedule:
+      interval: 'daily'
+    open-pull-requests-limit: 1
+    reviewers:
+      - 'trek'
+      - 'TooTallNate'
+      - 'EndangeredMassa'
+    commit-message:
+      prefix: '[framework-fixtures]'
+    package-ecosystem: 'npm'
+    allow:
+      - dependency-name: '@ionic*'
+      - dependency-name: '@angular*'
+    ignore:
+      - dependency-name: '@ionic*'
+        update-types:
+          ['version-update:semver-major', 'version-update:semver-patch']
+      - dependency-name: '@angular*'
+        update-types:
+          ['version-update:semver-major', 'version-update:semver-patch']
+    groups:
+      core:
+        patterns:
+          - '@angular*'
+          - '@ionic*'
+        update-types:
+          - 'minor'
+
+  - directory: /packages/static-build/test/fixtures/ionic-react-v7
+    schedule:
+      interval: 'daily'
+    open-pull-requests-limit: 1
+    reviewers:
+      - 'trek'
+      - 'TooTallNate'
+      - 'EndangeredMassa'
+    commit-message:
+      prefix: '[framework-fixtures]'
+    package-ecosystem: 'npm'
+    allow:
+      - dependency-name: '@ionic*'
+      - dependency-name: 'react*'
+    ignore:
+      - dependency-name: '@ionic*'
+        update-types:
+          ['version-update:semver-major', 'version-update:semver-patch']
+      - dependency-name: 'react*'
+        update-types:
+          ['version-update:semver-major', 'version-update:semver-patch']
+    groups:
+      core:
+        patterns:
+          - '@ionic*'
+          - 'react*'
+        update-types:
+          - 'minor'
+
+  - directory: /packages/static-build/test/fixtures/nuxt-v3
+    schedule:
+      interval: 'daily'
+    open-pull-requests-limit: 1
+    reviewers:
+      - 'trek'
+      - 'TooTallNate'
+      - 'EndangeredMassa'
+    commit-message:
+      prefix: '[framework-fixtures]'
+    package-ecosystem: 'npm'
+    allow:
+      - dependency-name: 'nuxt'
+      - dependency-name: 'vue'
+      - dependency-name: 'vue-router'
+      - dependency-name: '@nuxt-devtools'
+    ignore:
+      - dependency-name: 'nuxt'
+        update-types:
+          ['version-update:semver-major', 'version-update:semver-patch']
+      - dependency-name: 'vue'
+        update-types:
+          ['version-update:semver-major', 'version-update:semver-patch']
+      - dependency-name: 'vue-router'
+        update-types:
+          ['version-update:semver-major', 'version-update:semver-patch']
+      - dependency-name: '@nuxt-devtools'
+        update-types:
+          ['version-update:semver-major', 'version-update:semver-patch']
+    groups:
+      core:
+        patterns:
+          - 'nuxt'
+          - 'vue'
+          - 'vue-router'
+          - '@nuxt-devtools'
+        update-types:
+          - 'minor'
+
+  - directory: /packages/static-build/test/fixtures/preact-v10
+    schedule:
+      interval: 'daily'
+    open-pull-requests-limit: 1
+    reviewers:
+      - 'trek'
+      - 'TooTallNate'
+      - 'EndangeredMassa'
+    commit-message:
+      prefix: '[framework-fixtures]'
+    package-ecosystem: 'npm'
+    allow:
+      - dependency-name: 'preact*'
+    ignore:
+      - dependency-name: 'preact*'
+        update-types:
+          ['version-update:semver-major', 'version-update:semver-patch']
+    groups:
+      core:
+        patterns:
+          - 'preact*'
+        update-types:
+          - 'minor'
+
+  - directory: /packages/static-build/test/fixtures/stencil-v4
+    schedule:
+      interval: 'daily'
+    open-pull-requests-limit: 1
+    reviewers:
+      - 'trek'
+      - 'TooTallNate'
+      - 'EndangeredMassa'
+    commit-message:
+      prefix: '[framework-fixtures]'
+    package-ecosystem: 'npm'
+    allow:
+      - dependency-name: '@stencil/core'
+    ignore:
+      - dependency-name: '@stencil/core'
+        update-types:
+          ['version-update:semver-major', 'version-update:semver-patch']
+    groups:
+      core:
+        patterns:
+          - '@stencil/core'
+        update-types:
+          - 'minor'

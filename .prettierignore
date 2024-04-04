@@ -29,6 +29,7 @@ turbo-cache-key.json
 packages/*/dist
 packages/*/node_modules
 packages/**/test/fixtures
+packages/**/test/fixtures-*
 packages/**/test/dev/fixtures
 packages/**/test/build-fixtures
 packages/**/test/cache-fixtures

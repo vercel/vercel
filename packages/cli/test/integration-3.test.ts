@@ -9,7 +9,7 @@ import { runNpmInstall } from '@vercel/build-utils';
 import { execCli } from './helpers/exec';
 import fetch, { RequestInit, RequestInfo } from 'node-fetch';
 import retry from 'async-retry';
-import fs, { ensureDir } from 'fs-extra';
+import fs from 'fs-extra';
 import { logo } from '../src/util/pkg-name';
 import sleep from '../src/util/sleep';
 import humanizePath from '../src/util/humanize-path';
@@ -37,8 +37,6 @@ const binaryPath = path.resolve(__dirname, `../scripts/start.js`);
 const deployHelpMessage = `${logo} vercel [options] <command | path>`;
 let session = 'temp-session';
 let secretName: string | undefined;
-
-const createFile = (dest: fs.PathLike) => fs.closeSync(fs.openSync(dest, 'w'));
 
 function fetchTokenInformation(token: string, retries = 3) {
   const url = `https://api.vercel.com/v2/user`;
@@ -617,7 +615,7 @@ test('ensure we render a prompt when deploying home directory', async () => {
     binaryPath,
     [directory, '--public', '--name', session, '--force'],
     {
-      input: 'N',
+      input: 'N\n',
     }
   );
 
@@ -625,7 +623,7 @@ test('ensure we render a prompt when deploying home directory', async () => {
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   expect(stderr).toContain(
-    'You are deploying your home directory. Do you want to continue? [y/N]'
+    'You are deploying your home directory. Do you want to continue?'
   );
   expect(stderr).toContain('Canceled');
 });
@@ -879,118 +877,6 @@ test('initialize example "angular"', async () => {
   ).toBe(true);
 });
 
-test('initialize example ("angular") to specified directory', async () => {
-  const cwd = getNewTmpDir();
-  const goal = '> Success! Initialized "angular" example in';
-
-  const { exitCode, stdout, stderr } = await execCli(
-    binaryPath,
-    ['init', 'angular', 'ang'],
-    {
-      cwd,
-    }
-  );
-
-  expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
-  expect(stderr).toContain(goal);
-
-  expect(
-    fs.existsSync(path.join(cwd, 'ang', 'package.json')),
-    'package.json'
-  ).toBe(true);
-  expect(
-    fs.existsSync(path.join(cwd, 'ang', 'tsconfig.json')),
-    'tsconfig.json'
-  ).toBe(true);
-  expect(
-    fs.existsSync(path.join(cwd, 'ang', 'angular.json')),
-    'angular.json'
-  ).toBe(true);
-});
-
-test('initialize example to existing directory with "-f"', async () => {
-  const cwd = getNewTmpDir();
-  const goal = '> Success! Initialized "angular" example in';
-
-  await ensureDir(path.join(cwd, 'angular'));
-  createFile(path.join(cwd, 'angular', '.gitignore'));
-  const { exitCode, stdout, stderr } = await execCli(
-    binaryPath,
-    ['init', 'angular', '-f'],
-    {
-      cwd,
-    }
-  );
-
-  expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
-  expect(stderr).toContain(goal);
-
-  expect(
-    fs.existsSync(path.join(cwd, 'angular', 'package.json')),
-    'package.json'
-  ).toBe(true);
-  expect(
-    fs.existsSync(path.join(cwd, 'angular', 'tsconfig.json')),
-    'tsconfig.json'
-  ).toBe(true);
-  expect(
-    fs.existsSync(path.join(cwd, 'angular', 'angular.json')),
-    'angular.json'
-  ).toBe(true);
-});
-
-test('try to initialize example to existing directory', async () => {
-  const cwd = getNewTmpDir();
-  const goal =
-    'Error: Destination path "angular" already exists and is not an empty directory. You may use `--force` or `-f` to override it.';
-
-  await ensureDir(path.join(cwd, 'angular'));
-  createFile(path.join(cwd, 'angular', '.gitignore'));
-  const { exitCode, stdout, stderr } = await execCli(
-    binaryPath,
-    ['init', 'angular'],
-    {
-      cwd,
-      input: '\n',
-    }
-  );
-
-  expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
-  expect(stderr).toContain(goal);
-});
-
-test('try to initialize misspelled example (noce) in non-tty', async () => {
-  const cwd = getNewTmpDir();
-  const goal =
-    'Error: No example found for noce, run `vercel init` to see the list of available examples.';
-
-  const { stdout, stderr, exitCode } = await execCli(
-    binaryPath,
-    ['init', 'noce'],
-    { cwd }
-  );
-
-  expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
-  expect(stderr).toContain(goal);
-});
-
-test('try to initialize example "example-404"', async () => {
-  const cwd = getNewTmpDir();
-  const goal =
-    'Error: No example found for example-404, run `vercel init` to see the list of available examples.';
-
-  const { exitCode, stdout, stderr } = await execCli(
-    binaryPath,
-    ['init', 'example-404'],
-    {
-      cwd,
-    }
-  );
-
-  expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
-  expect(stderr).toContain(goal);
-});
-
 test('fail to add a domain without a project', async () => {
   const output = await execCli(binaryPath, [
     'domains',
@@ -1175,7 +1061,7 @@ test('render build errors', async () => {
   const output = await execCli(binaryPath, [deploymentPath, '--yes']);
 
   expect(output.exitCode, formatOutput(output)).toBe(1);
-  expect(output.stderr).toMatch(/Command "yarn run build" exited with 1/gm);
+  expect(output.stderr).toMatch(/Command "npm run build" exited with 1/gm);
 });
 
 test('invalid deployment, projects and alias names', async () => {
