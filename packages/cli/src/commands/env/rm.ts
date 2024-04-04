@@ -40,17 +40,11 @@ export default async function rm(
 
   let [envName, envTarget, envGitBranch] = args;
 
-  while (!envName) {
-    const inputName = await client.input.text({
+  if (!envName) {
+    envName = await client.input.text({
       message: `What’s the name of the variable?`,
+      validate: val => (val ? true : 'Name cannot be empty'),
     });
-
-    if (!inputName) {
-      output.error(`Name cannot be empty`);
-      continue;
-    }
-
-    envName = inputName;
   }
 
   if (!isValidEnvTarget(envTarget)) {

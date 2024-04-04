@@ -63,14 +63,11 @@ export default async function add(
     envTargets.push(envTargetArg);
   }
 
-  while (!envName) {
+  if (!envName) {
     envName = await client.input.text({
       message: `What’s the name of the variable?`,
+      validate: val => (val ? true : 'Name cannot be empty'),
     });
-
-    if (!envName) {
-      output.error('Name cannot be empty');
-    }
   }
 
   const { envs } = await getEnvRecords(
