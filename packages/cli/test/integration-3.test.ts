@@ -14,10 +14,7 @@ import { logo } from '../src/util/pkg-name';
 import sleep from '../src/util/sleep';
 import humanizePath from '../src/util/humanize-path';
 import pkg from '../package.json';
-import {
-  disableSSO,
-  fetchTokenWithRetry,
-} from '../../../test/lib/deployment/now-deploy';
+import { fetchTokenWithRetry } from '../../../test/lib/deployment/now-deploy';
 import waitForPrompt from './helpers/wait-for-prompt';
 import { getNewTmpDir, listTmpDirs } from './helpers/get-tmp-dir';
 import getGlobalDir from './helpers/get-global-dir';
@@ -314,7 +311,6 @@ test('should add secret with hyphen prefix', async () => {
 
   expect(targetCall.exitCode, formatOutput(targetCall)).toBe(0);
   const { host } = new URL(targetCall.stdout);
-  await disableSSO(host, false);
   const response = await fetch(`https://${host}`);
   expect(response.status).toBe(200);
   expect(await response.text()).toBe(`${value}\n`);
@@ -343,7 +339,6 @@ test('ignore files specified in .nowignore', async () => {
   });
 
   const { host } = new URL(targetCall.stdout);
-  await disableSSO(host, false);
   const ignoredFile = await fetch(`https://${host}/ignored.txt`);
   expect(ignoredFile.status).toBe(404);
 
@@ -360,7 +355,6 @@ test('ignore files specified in .nowignore via allowlist', async () => {
   });
 
   const { host } = new URL(targetCall.stdout);
-  await disableSSO(host, false);
   const ignoredFile = await fetch(`https://${host}/ignored.txt`);
   expect(ignoredFile.status).toBe(404);
 
@@ -557,7 +551,6 @@ test('ensure we render a warning for deployments with no files', async () => {
 
   // Ensure the exit code is right
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
-  await disableSSO(host, false);
 
   // Send a test request to the deployment
   const res = await fetch(href);
@@ -1021,7 +1014,6 @@ test('try to revert a deployment and assign the automatic aliases', async () => 
 
     expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
-    await disableSSO(deploymentUrl, false);
     await waitForDeployment(deploymentUrl);
     await sleep(20000);
 
@@ -1036,7 +1028,6 @@ test('try to revert a deployment and assign the automatic aliases', async () => 
       '--yes',
     ]);
     const deploymentUrl = stdout;
-    await disableSSO(deploymentUrl, false);
 
     expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
@@ -1056,7 +1047,6 @@ test('try to revert a deployment and assign the automatic aliases', async () => 
       '--yes',
     ]);
     const deploymentUrl = stdout;
-    await disableSSO(deploymentUrl, false);
 
     expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
@@ -1328,7 +1318,6 @@ test('deploy a Lambda with 128MB of memory', async () => {
   expect(output.exitCode, formatOutput(output)).toBe(0);
 
   const { host: url } = new URL(output.stdout);
-  await disableSSO(url, false);
   const response = await fetch('https://' + url + '/api/memory');
 
   expect(response.status).toBe(200);
@@ -1355,7 +1344,6 @@ test('deploy a Lambda with 3 seconds of maxDuration', async () => {
   expect(output.exitCode, formatOutput(output)).toBe(0);
 
   const url = new URL(output.stdout);
-  await disableSSO(url.host, false);
 
   // Should time out
   url.pathname = '/api/wait-for/5';
@@ -1394,7 +1382,6 @@ test('deploy a Lambda with a specific runtime', async () => {
   expect(output.exitCode, formatOutput(output)).toBe(0);
 
   const url = new URL(output.stdout);
-  await disableSSO(url.host, false);
   const res = await fetch(`${url}/api/test`);
   const text = await res.text();
   expect(text).toBe('Hello from PHP');
@@ -1425,7 +1412,6 @@ test('use build-env', async () => {
   // Test if the output is really a URL
   const deploymentUrl = pickUrl(stdout);
   const { href } = new URL(deploymentUrl);
-  await disableSSO(deploymentUrl, false);
 
   await waitForDeployment(href);
 
