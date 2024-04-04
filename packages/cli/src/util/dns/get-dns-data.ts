@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import type { DNSRecordData } from '@vercel-internals/types';
 import textInput from '../input/text';
-import promptBool from '../input/prompt-bool';
+import confirm from '../input/confirm';
 import Client from '../client';
 
 const RECORD_TYPES = ['A', 'AAAA', 'ALIAS', 'CAA', 'CNAME', 'MX', 'SRV', 'TXT'];
@@ -89,7 +89,7 @@ export default async function getDNSData(
 }
 
 async function verifyData(client: Client) {
-  return promptBool('Is this correct?', client);
+  return confirm(client, 'Is this correct?', false);
 }
 
 async function getRecordName(type: string) {
