@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 7.11.0
+
+### Minor Changes
+
+- Add `getOsRelease()` and `getProvidedRuntime()` functions ([#11370](https://github.com/vercel/vercel/pull/11370))
+
 ## 7.10.0
 
 ### Minor Changes
