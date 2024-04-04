@@ -166,17 +166,21 @@ async function disableSSO(deploymentId, useTeam = true) {
 
   if (settingRes.ok) {
     let i = 0;
+    const url = `https://${deploymentUrl}`;
     // eslint-disable-next-line no-constant-condition
     while (true) {
-      const res = await fetch(`https://${deploymentUrl}`);
+      const res = await fetch(url);
+      console.log(
+        `Got ${res.status} response from ${url} (${res.headers.get(
+          'x-vercel-id'
+        )})`
+      );
       if (res.status !== 401) {
         break;
       }
       await new Promise(resolve => setTimeout(resolve, 5 * 1000));
       if (i++ > 10) {
-        throw new Error(
-          `Timed out waiting for non-401 response from https://${deploymentUrl}`
-        );
+        throw new Error(`Timed out waiting for non-401 response from ${url}`);
       }
     }
     console.log(
