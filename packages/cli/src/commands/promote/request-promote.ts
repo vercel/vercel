@@ -32,12 +32,6 @@ export default async function requestPromote({
     output: client.output,
   });
 
-  if (deployment.target !== 'production') {
-    output.warn(
-      'Promoting a preview deployment to production is deprecated and will be removed in the next major release. This behavior will be removed entirely on 2024-05-03.'
-    );
-  }
-
   if (deployment.target !== 'production' && !yes) {
     const question =
       'This deployment is not a production deployment and cannot be directly promoted. A new deployment will be built using your production environment. Are you sure you want to continue?';
