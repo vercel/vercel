@@ -1,5 +1,11 @@
 # @vercel/go
 
+## 3.1.0
+
+### Minor Changes
+
+- Use `provided.al2023` runtime when using AL2023 build image ([#11370](https://github.com/vercel/vercel/pull/11370))
+
 ## 3.0.5
 
 ### Patch Changes
