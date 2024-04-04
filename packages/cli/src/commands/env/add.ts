@@ -97,11 +97,9 @@ export default async function add(
   if (stdInput) {
     envValue = stdInput;
   } else {
-    const inputValue = await client.input.text({
+    envValue = await client.input.text({
       message: `What’s the value of ${envName}?`,
     });
-
-    envValue = inputValue || '';
   }
 
   while (envTargets.length === 0) {
@@ -121,10 +119,9 @@ export default async function add(
     envTargets.length === 1 &&
     envTargets[0] === 'preview'
   ) {
-    const inputValue = await client.input.text({
+    envGitBranch = await client.input.text({
       message: `Add ${envName} to which Git branch? (leave empty for all Preview branches)?`,
     });
-    envGitBranch = inputValue || '';
   }
 
   const type = opts['--sensitive'] ? 'sensitive' : 'encrypted';
