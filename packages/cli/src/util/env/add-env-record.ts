@@ -29,8 +29,7 @@ export default async function addEnvRecord(
     gitBranch: gitBranch || undefined,
   };
   const args = upsert ? `?upsert=${upsert}` : '';
-  const version = upsert ? 'v10' : 'v8';
-  const url = `/${version}/projects/${projectId}/env${args}`;
+  const url = `/v10/projects/${projectId}/env${args}`;
   await client.fetch(url, {
     method: 'POST',
     body,
