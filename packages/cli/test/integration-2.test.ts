@@ -779,7 +779,7 @@ test('override an existing env var', async () => {
   // 2. Override
   const overrideEnvCommand = execCli(
     binaryPath,
-    ['env', 'add', 'envVarName', 'production', '--yes'],
+    ['env', 'add', 'envVarName', 'production', '--force'],
     options
   );
 

@@ -128,7 +128,7 @@ export const envCommand: Command = {
     },
     {
       name: 'Override an existing Environment Variable',
-      value: `${packageName} env add API_TOKEN --yes`,
+      value: `${packageName} env add API_TOKEN --force`,
     },
     {
       name: 'Add a sensitive Environment Variable',

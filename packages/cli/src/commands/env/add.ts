@@ -20,7 +20,7 @@ import { isAPIError } from '../../util/errors-ts';
 type Options = {
   '--debug': boolean;
   '--sensitive': boolean;
-  '--yes': boolean;
+  '--force': boolean;
 };
 
 export default async function add(
@@ -92,7 +92,7 @@ export default async function add(
   );
   const choices = envTargetChoices.filter(c => !existing.has(c.value));
 
-  if (choices.length === 0 && !opts['--yes']) {
+  if (choices.length === 0 && !opts['--force']) {
     output.error(
       `The variable ${param(
         envName
@@ -147,7 +147,7 @@ export default async function add(
   }
 
   const type = opts['--sensitive'] ? 'sensitive' : 'encrypted';
-  const upsert = opts['--yes'] ? 'true' : '';
+  const upsert = opts['--force'] ? 'true' : '';
 
   const addStamp = stamp();
   try {
@@ -174,7 +174,7 @@ export default async function add(
   output.print(
     `${prependEmoji(
       `${
-        opts['--yes'] ? 'Overrode' : 'Added'
+        opts['--force'] ? 'Overrode' : 'Added'
       } Environment Variable ${chalk.bold(envName)} to Project ${chalk.bold(
         project.name
       )} ${chalk.gray(addStamp())}`,
