@@ -1,4 +1,4 @@
-/* global Response */
+/* eslint-disable */
 
 import B from 'node:buffer';
 import { Buffer } from 'buffer';
