@@ -343,38 +343,38 @@ export const build: BuildV2 = async ({
     await runNpmInstall(entryPath, [], spawnOpts, meta, nodeVersion);
   }
 
-  // async function readInstalledVersion(
-  //   packageName: string
-  // ): Promise<string | undefined> {
-  //   try {
-  //     const resolved = require_.resolve(`${packageName}/package.json`, {
-  //       paths: [entryPath],
-  //     });
+  async function readInstalledVersion(
+    packageName: string
+  ): Promise<string | undefined> {
+    try {
+      const resolved = require_.resolve(`${packageName}/package.json`, {
+        paths: [entryPath],
+      });
 
-  //     const version: string = require_(resolved).version;
+      const version: string = require_(resolved).version;
 
-  //     return version;
-  //   } catch (err) {
-  //     return undefined;
-  //   }
-  // }
+      return version;
+    } catch (err) {
+      return undefined;
+    }
+  }
 
-  // if (process.env.VERCEL_ANALYTICS_ID) {
-  //   debug('Found VERCEL_ANALYTICS_ID in build environment');
+  if (spawnOpts.env.VERCEL_ANALYTICS_ID) {
+    debug('Found VERCEL_ANALYTICS_ID in build environment');
 
-  //   const version = await readInstalledVersion('@vercel/speed-insights');
+    const version = await readInstalledVersion('@vercel/speed-insights');
 
-  //   if (version) {
-  //     // Next.js has a built-in integration with Vercel Analytics
-  //     // with the new @vercel/speed-insights package this is no longer needed
-  //     // and can be removed to avoid duplicate analytics events
-  //     delete process.env.VERCEL_ANALYTICS_ID;
+    if (version) {
+      // Next.js has a built-in integration with Vercel Analytics
+      // with the new @vercel/speed-insights package this is no longer needed
+      // and can be removed to avoid duplicate analytics events
+      delete spawnOpts.env.VERCEL_ANALYTICS_ID;
 
-  //     debug(
-  //       '@vercel/speed-insights is installed, removing VERCEL_ANALYTICS_ID'
-  //     );
-  //   }
-  // }
+      debug(
+        '@vercel/speed-insights is installed, removing VERCEL_ANALYTICS_ID'
+      );
+    }
+  }
 
   // Refetch Next version now that dependencies are installed.
   // This will now resolve the actual installed Next version,

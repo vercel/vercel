@@ -5,5 +5,8 @@
     "react-dom": "latest",
     "@vercel/speed-insights": "latest"
   },
-  "ignoreNextjsUpdates": true
+  "ignoreNextjsUpdates": true,
+  "scripts": {
+    "vercel-build": "next build"
+  }
 }

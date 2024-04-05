@@ -2,7 +2,6 @@
   "orgId": ".",
   "projectId": ".",
   "settings": {
-    "analyticsId": "12345",
-    "framework": "nextjs"
+    "analyticsId": "12345"
   }
 }

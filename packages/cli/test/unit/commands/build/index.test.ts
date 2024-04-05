@@ -1319,4 +1319,16 @@ describe('build', () => {
       'edge.func'
     );
   });
+
+  it('should build with speed insights in next.js project', async () => {
+    const cwd = fixture('vercel-analytics-nextjs');
+    const output = join(cwd, '.vercel/output');
+
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toEqual(0);
+
+    const env = await fs.readJSON(join(output, 'static', 'env.json'));
+    expect(Object.keys(env).includes('VERCEL_ANALYTICS_ID')).toEqual(false);
+  });
 });

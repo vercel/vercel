@@ -464,16 +464,3 @@ it('should not generate lambdas that conflict with static index route in app wit
   }
   expect(lambdas.size).toBe(1);
 });
-
-// eslint-disable-next-line jest/no-focused-tests
-it.only('should not have VERCEL_ANALYTICS_ID if @vercel/speed-insights is installed', async () => {
-  const {
-    buildResult: { output },
-  } = await runBuildLambda(path.join(__dirname, 'with-speed-insights-package'));
-
-  const env = await fs.readFile(output['env.json'].fsPath);
-
-  console.log(env.toString());
-
-  expect(JSON.parse(env).VERCEL_ANALYTICS_ID).toBeUndefined();
-});
