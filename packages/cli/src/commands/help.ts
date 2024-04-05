@@ -5,15 +5,18 @@ import Table, { CellOptions } from 'cli-table3';
 const INDENT = ' '.repeat(2);
 const NEWLINE = '\n';
 
+export type PrimitiveConstructor =
+  | typeof String
+  | typeof Boolean
+  | typeof Number;
+
 export interface CommandOption {
   name: string;
   shorthand: string | null;
-  type: 'boolean' | 'string';
+  type: PrimitiveConstructor | [PrimitiveConstructor];
   argument?: string;
   deprecated: boolean;
   description?: string;
-  /** supports multiple entries */
-  multi: boolean;
 }
 export interface CommandArgument {
   name: string;
@@ -66,79 +69,70 @@ const globalCommandOptions: CommandOption[] = [
   {
     name: 'help',
     shorthand: 'h',
-    type: 'string',
+    type: String,
     description: 'Output usage information',
     deprecated: false,
-    multi: false,
   },
   {
     name: 'version',
     shorthand: 'v',
-    type: 'string',
+    type: String,
     description: 'Output the version number',
     deprecated: false,
-    multi: false,
   },
   {
     name: 'cwd',
     shorthand: null,
-    type: 'string',
+    type: String,
     argument: 'DIR',
     description:
       'Sets the current working directory for a single run of a command',
     deprecated: false,
-    multi: false,
   },
   {
     name: 'local-config',
     shorthand: 'A',
-    type: 'string',
+    type: String,
     argument: 'FILE',
     description: 'Path to the local `vercel.json` file',
     deprecated: false,
-    multi: false,
   },
   {
     name: 'global-config',
     shorthand: 'Q',
-    type: 'string',
+    type: String,
     argument: 'DIR',
     description: 'Path to the global `.vercel` directory',
     deprecated: false,
-    multi: false,
   },
   {
     name: 'debug',
     shorthand: 'd',
-    type: 'string',
+    type: String,
     description: 'Debug mode (default off)',
     deprecated: false,
-    multi: false,
   },
   {
     name: 'no-color',
     shorthand: null,
-    type: 'string',
+    type: String,
     description: 'No color mode (default off)',
     deprecated: false,
-    multi: false,
   },
   {
     name: 'scope',
     shorthand: 'S',
-    type: 'string',
+    type: String,
     description: 'Set a custom scope',
     deprecated: false,
-    multi: false,
   },
   {
     name: 'token',
     shorthand: 't',
-    type: 'string',
+    type: String,
     argument: 'TOKEN',
     description: 'Login token',
     deprecated: false,
-    multi: false,
   },
 ];
 
