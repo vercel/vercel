@@ -585,7 +585,7 @@ test('deploy fails using --local-config flag with non-existent path', async () =
   expect(stderr).toMatch(/does-not-exist\.json/);
 });
 
-test('deploy using --local-config flag above target', async () => {
+test('deploy from a nested directory', async () => {
   const root = await setupE2EFixture('zero-config-next-js-nested');
   const projectName = `project-link-dev-${
     Math.random().toString(36).split('.')[1]
