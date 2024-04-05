@@ -102,7 +102,7 @@ function readConfirmation(output: Output, msg: string, certs: Cert[]) {
       }).replace(/^(.*)/gm, '  $1')}\n`
     );
     output.print(
-      `${chalk.bold.red('> Are you sure?')} ${chalk.gray('[y/N] ')}`
+      `${chalk.bold.red('> Are you sure?')} ${chalk.gray('(y/N) ')}`
     );
     process.stdin
       .on('data', d => {

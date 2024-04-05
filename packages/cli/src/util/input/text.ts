@@ -77,7 +77,7 @@ export default function text({
   // Tab
   // Right arrow
   autoCompleteChars = new Set(['\t', '\x1b[C']),
-  // If true, converts everything the user types to to lowercase
+  // If true, converts everything the user types to lowercase
   forceLowerCase = false,
 }: TextParams = {}): Promise<string> {
   return new Promise((resolve, reject) => {

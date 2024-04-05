@@ -79,9 +79,6 @@ jobs:
         run: npm i -g pnpm@8.3.1
 
       - run: pnpm install
-      - name: fetch ssl certificate before build (linux, os x)
-        if: matrix.runner != 'windows-latest'
-        run: echo | openssl s_client -showcerts -servername 'api.vercel.com' -connect 76.76.21.21:443
 
       - name: Build ${{matrix.packageName}} and all its dependencies
         run: node utils/gen.js && node_modules/.bin/turbo run build --cache-dir=".turbo" --log-order=stream --scope=${{matrix.packageName}} --include-dependencies --no-deps
@@ -104,9 +101,6 @@ jobs:
           TURBO_MISS_COUNT=`node utils/determine-turbo-hit-or-miss.js`
           echo "MISS COUNT: $TURBO_MISS_COUNT"
           echo "misses=$TURBO_MISS_COUNT" >> $GITHUB_OUTPUT
-      - name: fetch ssl certificate after tests (linux, os x)
-        if: matrix.runner != 'windows-latest'
-        run: echo | openssl s_client -showcerts -servername 'api.vercel.com' -connect 76.76.21.21:443
       - name: 'Upload Test Report to Datadog'
         if: ${{ steps['turbo-summary'].outputs.misses != '0' && !cancelled() }}
         run: 'npx @datadog/datadog-ci@2.18.1 junit upload --service vercel-cli .junit-reports'

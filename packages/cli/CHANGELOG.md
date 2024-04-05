@@ -1,5 +1,54 @@
 # vercel
 
+## 33.7.0
+
+### Minor Changes
+
+- improve UX for text input validation ([#11388](https://github.com/vercel/vercel/pull/11388))
+
+- Replace the implementation of the yes/no prompt in several areas to be consistent with the rest of the CLI. ([#11279](https://github.com/vercel/vercel/pull/11279))
+
+### Patch Changes
+
+- [cli] Fix how we determine the GIT_CONFIG_PATH to support git worktrees and git submodules ([#11283](https://github.com/vercel/vercel/pull/11283))
+
+- avoid printing errors when user does ctrl+c ([#11377](https://github.com/vercel/vercel/pull/11377))
+
+- Warn that promoting preview deploys is deprecated ([#11376](https://github.com/vercel/vercel/pull/11376))
+
+- Updated dependencies [[`a3fb7e6ab`](https://github.com/vercel/vercel/commit/a3fb7e6abe9bb619a653850decd739728b1af225)]:
+  - @vercel/go@3.1.1
+
+## 33.6.3
+
+### Patch Changes
+
+- Handle `--repo` linked in `vc deploy --prebuilt` ([#11309](https://github.com/vercel/vercel/pull/11309))
+
+- Revert "[cli] extract `isZeroConfigBuild` into utility function (#11316)" ([#11350](https://github.com/vercel/vercel/pull/11350))
+
+- Replace `inquirer` with `@inquirer/prompts` ([#11321](https://github.com/vercel/vercel/pull/11321))
+
+- Updated dependencies [[`73b112b1f`](https://github.com/vercel/vercel/commit/73b112b1f74480e1bb941e1b754105fc7dace401), [`346e665bb`](https://github.com/vercel/vercel/commit/346e665bb021e6034bc70c82ef336485622595fe), [`73b112b1f`](https://github.com/vercel/vercel/commit/73b112b1f74480e1bb941e1b754105fc7dace401), [`548afd371`](https://github.com/vercel/vercel/commit/548afd371aa7a9dd3a7f4c60f7f94a7084d8023e)]:
+  - @vercel/go@3.1.0
+  - @vercel/node@3.0.26
+  - @vercel/build-utils@7.11.0
+  - @vercel/static-build@2.4.6
+
+## 33.6.2
+
+### Patch Changes
+
+- Added sunset warning to secrets command. ([#11333](https://github.com/vercel/vercel/pull/11333))
+
+- Swap jest for vitest in CLI unit tests ([#11302](https://github.com/vercel/vercel/pull/11302))
+
+- Updated dependencies [[`988f7b75a`](https://github.com/vercel/vercel/commit/988f7b75a27387e84fce541b844f984d2c151980), [`1825b58df`](https://github.com/vercel/vercel/commit/1825b58df8d783e79f0addf262618f422246f4b3)]:
+  - @vercel/remix-builder@2.1.5
+  - @vercel/build-utils@7.10.0
+  - @vercel/node@3.0.25
+  - @vercel/static-build@2.4.5
+
 ## 33.6.1
 
 ### Patch Changes
