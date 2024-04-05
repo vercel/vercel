@@ -47,7 +47,7 @@ import {
   TooManyRequests,
   UserAborted,
 } from '../../util/errors-ts';
-import getArgs from '../../util/get-args';
+import parseArguments from '../../util/parse-arguments';
 import getDeployment from '../../util/get-deployment';
 import getProjectName from '../../util/get-project-name';
 import toHumanPath from '../../util/humanize-path';
@@ -78,7 +78,7 @@ import { deployCommand } from './command';
 export default async (client: Client): Promise<number> => {
   const { output } = client;
 
-  let argv = null;
+  let parsedArguments = null;
 
   const argOptions: {
     [k: string]:
@@ -103,31 +103,31 @@ export default async (client: Client): Promise<number> => {
   }
 
   try {
-    argv = getArgs(client.argv.slice(2), argOptions);
+    parsedArguments = parseArguments(client.argv.slice(2), argOptions);
 
-    if ('--confirm' in argv) {
+    if ('--confirm' in parsedArguments.flags) {
       output.warn('`--confirm` is deprecated, please use `--yes` instead');
-      argv['--yes'] = argv['--confirm'];
+      parsedArguments.flags['--yes'] = parsedArguments.flags['--confirm'];
     }
   } catch (error) {
     handleError(error);
     return 1;
   }
 
-  if (argv['--help']) {
+  if (parsedArguments.flags['--help']) {
     output.print(help(deployCommand, { columns: client.stderr.columns }));
     return 2;
   }
 
-  if (argv._[0] === 'deploy') {
-    argv._.shift();
+  if (parsedArguments.positional[0] === 'deploy') {
+    parsedArguments.positional.shift();
   }
 
   let paths;
-  if (argv._.length > 0) {
+  if (parsedArguments.positional.length > 0) {
     // If path is relative: resolve
     // if path is absolute: clear up strange `/` etc
-    paths = argv._.map(item => resolve(client.cwd, item));
+    paths = parsedArguments.positional.map(item => resolve(client.cwd, item));
   } else {
     paths = [client.cwd];
   }
@@ -169,10 +169,10 @@ export default async (client: Client): Promise<number> => {
   const quiet = !client.stdout.isTTY;
 
   let { path: cwd } = pathValidation;
-  const autoConfirm = argv['--yes'];
+  const autoConfirm = parsedArguments.flags['--yes'];
 
   // deprecate --name
-  if (argv['--name']) {
+  if (parsedArguments.flags['--name']) {
     output.print(
       `${prependEmoji(
         `The ${param(
@@ -183,7 +183,7 @@ export default async (client: Client): Promise<number> => {
     );
   }
 
-  if (argv['--no-clipboard']) {
+  if (parsedArguments.flags['--no-clipboard']) {
     output.print(
       `${prependEmoji(
         `The ${param(
@@ -195,12 +195,16 @@ export default async (client: Client): Promise<number> => {
   }
 
   // build `target`
-  const target = parseTarget(output, argv['--target'], argv['--prod']);
+  const target = parseTarget(
+    output,
+    parsedArguments.flags['--target'],
+    parsedArguments.flags['--prod']
+  );
   if (typeof target === 'number') {
     return target;
   }
 
-  const archive = argv['--archive'];
+  const archive = parsedArguments.flags['--archive'];
   if (typeof archive === 'string' && !isValidArchive(archive)) {
     output.error(`Format must be one of: ${VALID_ARCHIVE_FORMATS.join(', ')}`);
     return 1;
@@ -257,7 +261,7 @@ export default async (client: Client): Promise<number> => {
     // will be deprecated and can be replaced with
     // user input.
     const detectedProjectName = getProjectName({
-      argv,
+      argv: parsedArguments.flags,
       nowConfig: localConfig,
       paths,
     });
@@ -304,7 +308,7 @@ export default async (client: Client): Promise<number> => {
 
   // build `--prebuilt`
   let vercelOutputDir: string | undefined;
-  if (argv['--prebuilt']) {
+  if (parsedArguments.flags['--prebuilt']) {
     vercelOutputDir = join(cwd, '.vercel/output');
 
     // For repo-style linking, update `cwd` to be the Project
@@ -467,7 +471,7 @@ export default async (client: Client): Promise<number> => {
   const meta = Object.assign(
     {},
     parseMeta(localConfig.meta),
-    parseMeta(argv['--meta'])
+    parseMeta(parsedArguments.flags['--meta'])
   );
 
   const gitMetadata = await createGitMeta(cwd, output, project);
@@ -476,14 +480,14 @@ export default async (client: Client): Promise<number> => {
   const deploymentEnv = Object.assign(
     {},
     parseEnv(localConfig.env),
-    parseEnv(argv['--env'])
+    parseEnv(parsedArguments.flags['--env'])
   );
 
   // Merge build env out of  `build.env` from vercel.json, and `--build-env` args
   const deploymentBuildEnv = Object.assign(
     {},
     parseEnv(localConfig.build && localConfig.build.env),
-    parseEnv(argv['--build-env'])
+    parseEnv(parsedArguments.flags['--build-env'])
   );
 
   // If there's any undefined values, then inherit them from this process
@@ -496,7 +500,7 @@ export default async (client: Client): Promise<number> => {
   }
 
   // build `regions`
-  const regionFlag = (argv['--regions'] || '')
+  const regionFlag = (parsedArguments.flags['--regions'] || '')
     .split(',')
     .map((s: string) => s.trim())
     .filter(Boolean);
@@ -509,7 +513,7 @@ export default async (client: Client): Promise<number> => {
   });
   let deployStamp = stamp();
   let deployment = null;
-  const noWait = !!argv['--no-wait'];
+  const noWait = !!parsedArguments.flags['--no-wait'];
 
   const localConfigurationOverrides = pickOverrides(localConfig);
 
@@ -539,19 +543,23 @@ export default async (client: Client): Promise<number> => {
 
   try {
     // if this flag is not set, use `undefined` to allow the project setting to be used
-    const autoAssignCustomDomains = argv['--skip-domain'] ? false : undefined;
+    const autoAssignCustomDomains = parsedArguments.flags['--skip-domain']
+      ? false
+      : undefined;
 
     const createArgs: CreateOptions = {
       name,
       env: deploymentEnv,
       build: { env: deploymentBuildEnv },
-      forceNew: argv['--force'],
-      withCache: argv['--with-cache'],
-      prebuilt: argv['--prebuilt'],
+      forceNew: parsedArguments.flags['--force'],
+      withCache: parsedArguments.flags['--with-cache'],
+      prebuilt: parsedArguments.flags['--prebuilt'],
       vercelOutputDir,
       rootDirectory,
       quiet,
-      wantsPublic: Boolean(argv['--public'] || localConfig.public),
+      wantsPublic: Boolean(
+        parsedArguments.flags['--public'] || localConfig.public
+      ),
       nowConfig: {
         ...localConfig,
         // `images` is allowed in "vercel.json" and processed
