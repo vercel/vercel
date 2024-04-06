@@ -1,5 +1,11 @@
 # @vercel/go
 
+## 3.1.1
+
+### Patch Changes
+
+- Add support for `1.22` and update Go minor versions `1.19`, `1.20` and `1.21` ([#11156](https://github.com/vercel/vercel/pull/11156))
+
 ## 3.1.0
 
 ### Minor Changes
