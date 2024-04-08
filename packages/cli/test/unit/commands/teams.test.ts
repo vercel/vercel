@@ -11,7 +11,7 @@ describe('teams', () => {
         const user = useUser();
         useTeams(undefined, { apiVersion: 2 });
         const exitCodePromise = teamsList(client);
-        await expect(client.stdout).toOutput(user.username);
+        await expect(client.stderr).toOutput(user.username);
         await expect(exitCodePromise).resolves.toEqual(0);
       });
     });
