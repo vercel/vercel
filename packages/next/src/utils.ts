@@ -2999,12 +2999,6 @@ export async function getMiddlewareBundle({
                 {}
               );
 
-              console.log(
-                `[MY_DBG} Creating edge function with environment ${JSON.stringify(
-                  edgeFunction.environments ?? {}
-                )}`
-              );
-
               return new EdgeFunction({
                 deploymentTarget: 'v8-worker',
                 name: edgeFunction.name,
