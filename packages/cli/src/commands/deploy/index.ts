@@ -119,15 +119,15 @@ export default async (client: Client): Promise<number> => {
     return 2;
   }
 
-  if (parsedArguments.positional[0] === 'deploy') {
-    parsedArguments.positional.shift();
+  if (parsedArguments.args[0] === 'deploy') {
+    parsedArguments.args.shift();
   }
 
   let paths;
-  if (parsedArguments.positional.length > 0) {
+  if (parsedArguments.args.length > 0) {
     // If path is relative: resolve
     // if path is absolute: clear up strange `/` etc
-    paths = parsedArguments.positional.map(item => resolve(client.cwd, item));
+    paths = parsedArguments.args.map(item => resolve(client.cwd, item));
   } else {
     paths = [client.cwd];
   }

@@ -23,5 +23,5 @@ export default function parseArguments<T extends Spec>(
       argv: args,
     }
   );
-  return { positional: positional, flags: rest };
+  return { args: positional, flags: rest };
 }
