@@ -169,7 +169,7 @@ export default async function remove(client: Client) {
         `or projects matching ` +
         `${ids
           .map(id => chalk.bold(`"${id}"`))
-          .join(', ')}. Run ${getCommandName('ls')} to list.`
+          .join(', ')}. Run ${getCommandName('projects ls')} to list.`
     );
     return 1;
   }
