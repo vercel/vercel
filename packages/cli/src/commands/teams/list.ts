@@ -84,7 +84,7 @@ export default async function list(client: Client): Promise<number> {
     ],
     { hsep: 5 }
   );
-  client.stdout.write(
+  client.stderr.write(
     currentTeam
       ? teamTable
           .split('\n')
@@ -92,7 +92,7 @@ export default async function list(client: Client): Promise<number> {
           .join('\n')
       : teamTable
   );
-  client.stdout.write('\n');
+  client.stderr.write('\n');
 
   if (pagination?.count === 20) {
     const flags = getCommandFlags(argv, ['_', '--next', '-N', '-d']);
