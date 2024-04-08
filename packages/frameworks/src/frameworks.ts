@@ -548,8 +548,45 @@ export const frameworks = [
     ],
   },
   {
-    name: 'SolidStart',
+    name: 'SolidStart (v0)',
     slug: 'solidstart',
+    demo: 'https://solid-start-template.vercel.app',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/solid.svg',
+    tagline: 'Simple and performant reactivity for building user interfaces.',
+    description: 'A Solid app, created with SolidStart.',
+    website: 'https://solidjs.com',
+    envPrefix: 'VITE_',
+    detectors: {
+      every: [
+        {
+          matchPackage: 'solid-js',
+        },
+        {
+          matchPackage: 'solid-start',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder:
+          '`yarn install`, `pnpm install`, `npm install`, or `bun install`',
+      },
+      buildCommand: {
+        placeholder: '`npm run build` or `solid-start build`',
+        value: 'solid-start build',
+      },
+      devCommand: {
+        value: 'solid-start dev',
+      },
+      outputDirectory: {
+        value: '.output',
+      },
+    },
+    getOutputDirName: async () => '.output',
+  },
+  {
+    name: 'SolidStart (v1)',
+    slug: 'solidstart-1',
     demo: 'https://solid-start-template.vercel.app',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/solid.svg',
     tagline: 'Simple and performant reactivity for building user interfaces.',

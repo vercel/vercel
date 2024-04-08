@@ -2,6 +2,7 @@ dist
 worker
 .solid
 .vercel
+.vinxi
 .output
 
 # dependencies

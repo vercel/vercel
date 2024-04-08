@@ -1,20 +1,24 @@
 {
   "scripts": {
-    "dev": "vinxi dev",
-    "build": "vinxi build",
-    "start": "vinxi start",
-    "version": "vinxi version"
+    "dev": "solid-start dev",
+    "build": "solid-start build",
+    "start": "solid-start start"
   },
   "type": "module",
   "private": true,
+  "devDependencies": {
+    "solid-start-vercel": "^0.2.26",
+    "typescript": "^5.0.4",
+    "vite": "^4.3.8"
+  },
   "dependencies": {
-    "@solidjs/meta": "^0.29.2",
-    "@solidjs/router": "^0.13.1",
-    "@solidjs/start": "^1.0.0-rc.0",
-    "solid-js": "^1.8.16",
-    "vinxi": "^0.3.10"
+    "@solidjs/meta": "^0.28.5",
+    "@solidjs/router": "^0.8.2",
+    "solid-js": "^1.7.5",
+    "solid-start": "^0.2.26",
+    "undici": "^5.22.1"
   },
   "engines": {
-    "node": ">=18"
+    "node": "18.x"
   }
 }
