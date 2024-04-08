@@ -1,6 +1,6 @@
 {
   "name": "vercel",
-  "version": "33.6.3",
+  "version": "33.7.0",
   "preferGlobal": true,
   "license": "Apache-2.0",
   "description": "The command-line interface for Vercel",
@@ -33,7 +33,7 @@
   "dependencies": {
     "@vercel/build-utils": "7.11.0",
     "@vercel/fun": "1.1.0",
-    "@vercel/go": "3.1.0",
+    "@vercel/go": "3.1.1",
     "@vercel/hydrogen": "1.0.2",
     "@vercel/next": "4.1.6",
     "@vercel/node": "3.0.26",
@@ -47,11 +47,11 @@
   "devDependencies": {
     "@alex_neo/jest-expect-message": "1.0.5",
     "@edge-runtime/node-utils": "2.3.0",
-    "@inquirer/checkbox": "2.2.0",
-    "@inquirer/confirm": "3.1.0",
-    "@inquirer/expand": "2.1.0",
-    "@inquirer/input": "2.1.1",
-    "@inquirer/select": "2.2.0",
+    "@inquirer/checkbox": "2.2.2",
+    "@inquirer/confirm": "3.1.2",
+    "@inquirer/expand": "2.1.2",
+    "@inquirer/input": "2.1.2",
+    "@inquirer/select": "2.2.2",
     "@next/env": "11.1.2",
     "@sentry/node": "5.5.0",
     "@sindresorhus/slugify": "0.11.0",
