@@ -2753,7 +2753,10 @@ export type FunctionsConfigManifestV1 = {
   >;
 };
 
-type MiddlewareManifest = MiddlewareManifestV1 | MiddlewareManifestV2;
+type MiddlewareManifest =
+  | MiddlewareManifestV1
+  | MiddlewareManifestV2
+  | MiddlewareManifestV3;
 
 interface MiddlewareManifestV1 {
   version: 1;
