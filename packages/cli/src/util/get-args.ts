@@ -11,6 +11,9 @@ interface Spec {
   [key: string]: string | Handler | [Handler];
 }
 
+/**
+ * @deprecated
+ */
 export default function getArgs<T extends Spec>(
   argv: string[],
   argsOptions?: T,
