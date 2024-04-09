@@ -13,11 +13,11 @@ interface Spec {
 
 export default function parseArguments<T extends Spec>(
   args: string[],
-  flags?: T,
+  flagsSpecification?: T,
   parserOptions: ParserOptions = {}
 ) {
   const { _: positional, ...rest } = arg(
-    Object.assign({}, getCommonArgs(), flags),
+    Object.assign({}, getCommonArgs(), flagsSpecification),
     {
       ...parserOptions,
       argv: args,
