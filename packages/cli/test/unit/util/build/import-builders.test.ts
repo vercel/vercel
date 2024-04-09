@@ -123,7 +123,7 @@ describe('importBuilders()', () => {
     const cwd = await getWriteableDirectory();
     try {
       const spec = 'vercel-deno@2.0.1';
-      const tarballSpec = 'https://test2020-h5hdll5dz-tootallnate.vercel.app';
+      const tarballSpec = 'https://files-njlxk3l0r-curated-tests.vercel.app';
       const specs = new Set([spec, tarballSpec]);
       const builders = await importBuilders(specs, cwd, client.output);
       expect(builders.size).toEqual(2);
@@ -142,7 +142,7 @@ describe('importBuilders()', () => {
         'function'
       );
       await expect(client.stderr).toOutput(
-        '> Installing Builders: vercel-deno@2.0.1, https://test2020-h5hdll5dz-tootallnate.vercel.app'
+        '> Installing Builders: vercel-deno@2.0.1, https://files-njlxk3l0r-curated-tests.vercel.app'
       );
     } finally {
       await remove(cwd);
