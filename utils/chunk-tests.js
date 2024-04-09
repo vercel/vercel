@@ -4,11 +4,11 @@ const path = require('path');
 
 const runnersMap = new Map([
   [
-    'vitest-unit',
+    'vitest--unit',
     {
       min: 1,
       max: 1,
-      testScript: 'vitest-unit',
+      testScript: 'vitest-unit-run',
       runners: ['ubuntu-latest', 'macos-latest', 'windows-latest'],
     },
   ],
