@@ -1,12 +1,11 @@
 import chalk from 'chalk';
 import ms from 'ms';
-import table from 'text-table';
+import table from '../../util/output/table';
 import title from 'title';
 import Now from '../../util';
 import getArgs from '../../util/get-args';
 import { handleError } from '../../util/error';
 import elapsed from '../../util/output/elapsed';
-import strlen from '../../util/strlen';
 import toHost from '../../util/to-host';
 import parseMeta from '../../util/parse-meta';
 import { isValidName } from '../../util/is-valid-name';
@@ -275,11 +274,7 @@ export default async function list(client: Client) {
             app === null ? filterUniqueApps() : () => true
           ),
       ],
-      {
-        align: ['l', 'l', 'l', 'l', 'l'],
-        hsep: ' '.repeat(5),
-        stringLength: strlen,
-      }
+      { hsep: 5 }
     ).replace(/^/gm, '  ')}\n\n`
   );
 
