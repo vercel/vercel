@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import ms from 'ms';
-import table from 'text-table';
+import table from '../../util/output/table';
 import Client from '../../util/client';
 import getScope from '../../util/get-scope';
 import {
@@ -9,7 +9,6 @@ import {
 } from '../../util/get-pagination-opts';
 import stamp from '../../util/output/stamp';
 import getCerts from '../../util/certs/get-certs';
-import strlen from '../../util/strlen';
 import type { Cert } from '@vercel-internals/types';
 import getCommandFlags from '../../util/get-command-flags';
 import { getCommandName } from '../../util/pkg-name';
@@ -70,11 +69,7 @@ async function ls(
 function formatCertsTable(certsList: Cert[]) {
   return `${table(
     [formatCertsTableHead(), ...formatCertsTableBody(certsList)],
-    {
-      align: ['l', 'l', 'r', 'c', 'r'],
-      hsep: ' '.repeat(2),
-      stringLength: strlen,
-    }
+    { align: ['l', 'l', 'r', 'c', 'r'], hsep: 2 }
   ).replace(/^(.*)/gm, '  $1')}\n`;
 }
 
