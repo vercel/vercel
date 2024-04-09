@@ -29,9 +29,6 @@ export default async function add(
   args: string[],
   output: Output
 ) {
-  // improve the way we show inquirer prompts
-  await import('../../util/input/patch-inquirer');
-
   const stdInput = await readStandardInput(client.stdin);
   let [envName, envTargetArg, envGitBranch] = args;
 
@@ -66,18 +63,11 @@ export default async function add(
     envTargets.push(envTargetArg);
   }
 
-  while (!envName) {
-    const { inputName } = await client.prompt({
-      type: 'input',
-      name: 'inputName',
+  if (!envName) {
+    envName = await client.input.text({
       message: `What’s the name of the variable?`,
+      validate: val => (val ? true : 'Name cannot be empty'),
     });
-
-    envName = inputName;
-
-    if (!inputName) {
-      output.error('Name cannot be empty');
-    }
   }
 
   const { envs } = await getEnvRecords(
@@ -107,26 +97,18 @@ export default async function add(
   if (stdInput) {
     envValue = stdInput;
   } else {
-    const { inputValue } = await client.prompt({
-      type: 'input',
-      name: 'inputValue',
+    envValue = await client.input.text({
       message: `What’s the value of ${envName}?`,
     });
-
-    envValue = inputValue || '';
   }
 
   while (envTargets.length === 0) {
-    const { inputTargets } = await client.prompt({
-      name: 'inputTargets',
-      type: 'checkbox',
+    envTargets = await client.input.checkbox({
       message: `Add ${envName} to which Environments (select multiple)?`,
       choices,
     });
 
-    envTargets = inputTargets;
-
-    if (inputTargets.length === 0) {
+    if (envTargets.length === 0) {
       output.error('Please select at least one Environment');
     }
   }
@@ -137,12 +119,9 @@ export default async function add(
     envTargets.length === 1 &&
     envTargets[0] === 'preview'
   ) {
-    const { inputValue } = await client.prompt({
-      type: 'input',
-      name: 'inputValue',
+    envGitBranch = await client.input.text({
       message: `Add ${envName} to which Git branch? (leave empty for all Preview branches)?`,
     });
-    envGitBranch = inputValue || '';
   }
 
   const type = opts['--sensitive'] ? 'sensitive' : 'encrypted';
