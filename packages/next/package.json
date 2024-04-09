@@ -8,8 +8,11 @@
     "build": "node build.mjs",
     "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --bail --runInBand --testTimeout=360000",
     "test-unit": "pnpm test test/unit/",
+    "list-unit": "pnpm test-unit -- --listTests",
     "test-next-local": "pnpm test test/integration/*.test.js test/integration/*.test.ts",
+    "list-next-local": "pnpm test-next-local -- --listTests",
     "test-next-local-legacy": "pnpm test test/integration/legacy/*.test.js",
+    "list-next-local-legacy": "pnpm test-next-local-legacy -- --listTests",
     "test-next-local:middleware": "pnpm test test/integration/middleware.test.ts",
     "test-e2e": "rm -f test/builder-info.json; pnpm test test/fixtures/**/*.test.js",
     "type-check": "tsc --noEmit"

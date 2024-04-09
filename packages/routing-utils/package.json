@@ -17,6 +17,7 @@
     "build": "node ../../utils/build.mjs",
     "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --runInBand --bail",
     "test-unit": "pnpm test",
+    "list-unit": "pnpm test-unit -- --listTests",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {

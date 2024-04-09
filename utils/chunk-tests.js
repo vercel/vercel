@@ -4,23 +4,40 @@ const path = require('path');
 
 const runnersMap = new Map([
   [
-    'test-unit',
+    'list-unit',
     {
       min: 1,
       max: 1,
       runners: ['ubuntu-latest', 'macos-latest', 'windows-latest'],
     },
   ],
-  ['test-e2e', { min: 1, max: 7, runners: ['ubuntu-latest'] }],
+  ['list-e2e', { min: 1, max: 7, runners: ['ubuntu-latest'] }],
   [
-    'test-next-local',
-    { min: 1, max: 5, runners: ['ubuntu-latest'], nodeVersion: '18' },
+    'list-next-local',
+    {
+      min: 1,
+      max: 5,
+      runners: ['ubuntu-latest'],
+      nodeVersion: '18',
+    },
   ],
   [
-    'test-next-local-legacy',
-    { min: 1, max: 5, runners: ['ubuntu-latest'], nodeVersion: '16' },
+    'list-next-local-legacy',
+    {
+      min: 1,
+      max: 5,
+      runners: ['ubuntu-latest'],
+      nodeVersion: '16',
+    },
   ],
-  ['test-dev', { min: 1, max: 7, runners: ['ubuntu-latest', 'macos-latest'] }],
+  [
+    'list-dev',
+    {
+      min: 1,
+      max: 7,
+      runners: ['ubuntu-latest', 'macos-latest'],
+    },
+  ],
 ]);
 
 const packageOptionsOverrides = {
@@ -56,9 +73,6 @@ async function getChunkedTests() {
       `--cache-dir=.turbo`,
       '--output-logs=full',
       '--log-order=stream',
-      '--',
-      '--', // need two of these due to pnpm arg parsing
-      '--listTests',
     ])
   ).toString('utf8');
 

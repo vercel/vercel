@@ -16,6 +16,7 @@
     "build": "node ../../utils/build.mjs",
     "test": "jest --reporters=default --reporters=jest-junit --coverage --env node --verbose",
     "test-unit": "pnpm test",
+    "list-unit": "pnpm test-unit -- --listTests",
     "type-check": "tsc --noEmit"
   },
   "license": "Apache-2.0",

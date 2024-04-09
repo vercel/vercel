@@ -15,8 +15,10 @@
   "scripts": {
     "build": "node ../../utils/build-builder.mjs",
     "test-e2e": "pnpm test test/test.js",
+    "list-e2e": "pnpm test-e2e -- --listTests",
     "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --bail --runInBand",
     "test-unit": "pnpm test test/prepare-cache.test.js",
+    "list-unit": "pnpm test-unit -- --listTests",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {

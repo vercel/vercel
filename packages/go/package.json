@@ -13,6 +13,7 @@
     "build": "node ../../utils/build-builder.mjs",
     "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --runInBand --bail",
     "test-e2e": "pnpm test",
+    "list-e2e": "pnpm test-e2e -- --listTests",
     "type-check": "tsc --noEmit"
   },
   "files": [
