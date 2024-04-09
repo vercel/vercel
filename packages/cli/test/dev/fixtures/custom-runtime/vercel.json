@@ -1,7 +1,7 @@
 {
   "functions": {
     "api/user.sh": {
-      "runtime": "vercel-bash@3.0.8"
+      "runtime": "vercel-bash@4.1.0"
     }
   }
 }
