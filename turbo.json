@@ -12,6 +12,10 @@
       "outputMode": "new-only",
       "outputs": ["dist/**"]
     },
+    "vitest-unit": {
+      "dependsOn": ["build"],
+      "outputMode": "new-only"
+    },
     "test-unit": {
       "dependsOn": ["build"],
       "outputMode": "new-only"
