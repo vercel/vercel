@@ -21,3 +21,24 @@ export default function getArgs<T extends Spec>(
     argv,
   });
 }
+
+type ParserOptions = {
+  permissive?: boolean;
+};
+
+export function parseArguments<T extends Spec>(
+  args: string[],
+  flagsSpecification?: T,
+  parserOptions: ParserOptions = {}
+) {
+  // currently parseArgument (and arg as a whole) will hang
+  // if there are cycles in the flagsSpecification
+  const { _: positional, ...rest } = arg(
+    Object.assign({}, getCommonArgs(), flagsSpecification),
+    {
+      ...parserOptions,
+      argv: args,
+    }
+  );
+  return { args: positional, flags: rest };
+}

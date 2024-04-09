@@ -47,7 +47,7 @@ import {
   TooManyRequests,
   UserAborted,
 } from '../../util/errors-ts';
-import parseArguments from '../../util/parse-arguments';
+import { parseArguments } from '../../util/get-args';
 import getDeployment from '../../util/get-deployment';
 import getProjectName from '../../util/get-project-name';
 import toHumanPath from '../../util/humanize-path';

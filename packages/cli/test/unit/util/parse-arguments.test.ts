@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import parseArguments from '../../../src/util/parse-arguments';
+import { parseArguments } from '../../../src/util/get-args';
 
 describe('parseArguments', () => {
   it('handles no input', () => {
