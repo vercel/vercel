@@ -13,9 +13,9 @@
     "build": "node build.mjs",
     "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --env node --verbose --bail --runInBand",
     "test-unit": "pnpm test test/unit",
-    "list-unit": "npm test-unit -- --listTests",
+    "list-unit": "pnpm test-unit -- --listTests",
     "test-e2e": "pnpm test test/integration",
-    "list-e2e": "npm test-e2e -- --listTests",
+    "list-e2e": "pnpm test-e2e -- --listTests",
     "type-check": "tsc --noEmit"
   },
   "files": [
