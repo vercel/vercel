@@ -1,5 +1,9 @@
 lockfileVersion: '6.0'
 
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
 importers:
 
   .:
@@ -463,9 +467,6 @@ importers:
       '@types/tar-fs':
         specifier: 1.16.1
         version: 1.16.1
-      '@types/text-table':
-        specifier: 0.2.0
-        version: 0.2.0
       '@types/title':
         specifier: 3.4.1
         version: 3.4.1
@@ -700,9 +701,6 @@ importers:
       tar-fs:
         specifier: 1.16.3
         version: 1.16.3
-      text-table:
-        specifier: 0.2.0
-        version: 0.2.0
       title:
         specifier: 3.4.1
         version: 3.4.1
@@ -5269,10 +5267,6 @@ packages:
     dependencies:
       '@types/node': 16.18.11
       minipass: 4.2.8
-    dev: true
-
-  /@types/text-table@0.2.0:
-    resolution: {integrity: sha512-om4hNWnI01IKUFCjGQG33JqFcnmt0W5C3WX0G1FVBaucr7oRnL29aAz2hnxpbZnE2t9f8/BR5VOtgcOtsonpLA==}
     dev: true
 
   /@types/text-table@0.2.1:
@@ -16448,7 +16442,3 @@ packages:
   /zwitch@2.0.4:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
     dev: true
-
-settings:
-  autoInstallPeers: true
-  excludeLinksFromLockfile: false
