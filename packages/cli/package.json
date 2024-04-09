@@ -12,7 +12,7 @@
   },
   "scripts": {
     "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --bail",
-    "test-unit": "pnpm test test/unit/",
+    "test-unit": "pnpm vitest test/unit/",
     "list-unit": "pnpm jest test/unit/ --listTests",
     "test-e2e": "rimraf test/fixtures/integration && pnpm test test/integration-1.test.ts test/integration-2.test.ts test/integration-3.test.ts",
     "list-e2e": "pnpm test-e2e -- --listTests",
