@@ -69,7 +69,7 @@ export async function readInput(
       });
       input = val;
     } catch (err: any) {
-      console.log(); // \n
+      client.output.print('\n'); // \n
 
       if (err.isTtyError) {
         throw new Error(
