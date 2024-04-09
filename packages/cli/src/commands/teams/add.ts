@@ -2,16 +2,15 @@ import chalk from 'chalk';
 import stamp from '../../util/output/stamp';
 import eraseLines from '../../util/output/erase-lines';
 import chars from '../../util/output/chars';
-import note from '../../util/output/note';
+
 import textInput from '../../util/input/text';
 import invite from './invite';
 import { writeToConfigFile } from '../../util/config/files';
-import { packageName, getCommandName } from '../../util/pkg-name';
+import { getCommandName } from '../../util/pkg-name';
 import Client from '../../util/client';
 import createTeam from '../../util/teams/create-team';
 import patchTeam from '../../util/teams/patch-team';
 import { errorToString, isError } from '@vercel/error-utils';
-import { Output } from '../../util/output';
 
 const validateSlugKeypress = (data: string, value: string) =>
   // TODO: the `value` here should contain the current value + the keypress
@@ -22,16 +21,6 @@ const validateNameKeypress = (data: string, value: string) =>
   // TODO: the `value` here should contain the current value + the keypress
   // should be fixed on utils/input/text.js
   /^[ a-zA-Z0-9_-]+$/.test(value + data);
-
-const gracefulExit = (output: Output) => {
-  output.print('\n'); // Blank line
-  note(
-    `Your team is now active for all ${packageName} commands!\n  Run ${getCommandName(
-      `switch`
-    )} to change it in the future.`
-  );
-  return 0;
-};
 
 const teamUrlPrefix = 'Team URL'.padEnd(14) + chalk.gray('vercel.com/');
 const teamNamePrefix = 'Team Name'.padEnd(14);
@@ -96,7 +85,7 @@ export default async function add(client: Client): Promise<number> {
   } catch (err: unknown) {
     if (isError(err) && err.message === 'USER_ABORT') {
       output.log('No name specified');
-      return gracefulExit(output);
+      return 2;
     }
 
     throw err;
@@ -139,5 +128,5 @@ export default async function add(client: Client): Promise<number> {
     )}`,
   });
 
-  return gracefulExit(output);
+  return 0;
 }
