@@ -544,4 +544,18 @@ describe('[vercel dev] ESM serverless functions', () => {
       { skipDeploy: true }
     )
   );
+
+  test(
+    '[vercel dev] TypeScript importing another TS file, type=commonjs',
+    testFixtureStdio(
+      'vercel-ts-test',
+      async (_testPath: any, port: number) => {
+        const res = await fetch(`http://localhost:${port}/api/test`);
+        validateResponseHeaders(res);
+        const text = await res.text();
+        expect(text).toEqual('Hello, Batman!');
+      },
+      { skipDeploy: true }
+    )
+  );
 });
