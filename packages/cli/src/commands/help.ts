@@ -1,6 +1,7 @@
 import chalk from 'chalk';
 import { LOGO, NAME } from '@vercel-internals/constants';
 import Table, { CellOptions } from 'cli-table3';
+import { noBorderChars } from '../util/output/table';
 
 const INDENT = ' '.repeat(2);
 const NEWLINE = '\n';
@@ -39,23 +40,7 @@ type _CellOptions = CellOptions & {
 };
 
 const tableOptions = {
-  chars: {
-    top: '',
-    'top-mid': '',
-    'top-left': '',
-    'top-right': '',
-    bottom: '',
-    'bottom-mid': '',
-    'bottom-left': '',
-    'bottom-right': '',
-    left: '',
-    'left-mid': '',
-    mid: '',
-    'mid-mid': '',
-    right: '',
-    'right-mid': '',
-    middle: '',
-  },
+  chars: noBorderChars,
   style: {
     'padding-left': 0,
     'padding-right': 0,
