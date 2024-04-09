@@ -16,6 +16,8 @@ export default function parseArguments<T extends Spec>(
   flagsSpecification?: T,
   parserOptions: ParserOptions = {}
 ) {
+  // currently parseArgument (and arg as a whole) will hang
+  // if there are cycles in the flagsSpecification
   const { _: positional, ...rest } = arg(
     Object.assign({}, getCommonArgs(), flagsSpecification),
     {
