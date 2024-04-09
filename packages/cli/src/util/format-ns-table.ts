@@ -1,6 +1,5 @@
 import chalk from 'chalk';
-import table from 'text-table';
-import strlen from './strlen';
+import table from './output/table';
 import chars from './output/chars';
 
 export default function formatNSTable(
@@ -35,10 +34,6 @@ export default function formatNSTable(
       ],
       ...rows,
     ],
-    {
-      align: ['l', 'l', 'l', 'l'],
-      hsep: ' '.repeat(4),
-      stringLength: strlen,
-    }
+    { hsep: 4 }
   ).replace(/^(.*)/gm, `${extraSpace}$1`);
 }

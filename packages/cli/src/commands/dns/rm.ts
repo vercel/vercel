@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import ms from 'ms';
-import table from 'text-table';
+import table from '../../util/output/table';
 import type { DNSRecord } from '@vercel-internals/types';
 import { Output } from '../../util/output';
 import Client from '../../util/client';
@@ -71,7 +71,7 @@ function readConfirmation(
     output.print(
       `${table([getDeleteTableRow(domainName, record)], {
         align: ['l', 'r', 'l'],
-        hsep: ' '.repeat(6),
+        hsep: 6,
       }).replace(/^(.*)/gm, '  $1')}\n`
     );
     output.print(
