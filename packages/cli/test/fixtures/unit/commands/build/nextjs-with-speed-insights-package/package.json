@@ -1,8 +1,6 @@
 {
   "dependencies": {
-    "next": "canary",
-    "react": "latest",
-    "react-dom": "latest",
+    "next": "13",
     "@vercel/speed-insights": "latest"
   },
   "ignoreNextjsUpdates": true,
