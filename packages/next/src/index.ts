@@ -357,6 +357,7 @@ export const build: BuildV2 = async ({
       // with the new @vercel/speed-insights package this is no longer needed
       // and can be removed to avoid duplicate events
       delete spawnOpts.env.VERCEL_ANALYTICS_ID;
+      delete process.env.VERCEL_ANALYTICS_ID;
 
       debug(
         '@vercel/speed-insights is installed, removing VERCEL_ANALYTICS_ID from environment'
