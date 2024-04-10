@@ -179,12 +179,12 @@ export class MockClient extends Client {
   };
 
   getScreen({ raw }: { raw?: boolean } = {}): string {
-    const stderr = client.stderr as any as MockStream;
+    const stderr = client.stderr;
     const lastScreen = stderr.getLastChunk({ raw });
     return raw ? lastScreen : stripAnsi(lastScreen).trim();
   }
   getFullOutput(): string {
-    const stderr = client.stderr as any as MockStream;
+    const stderr = client.stderr;
     return stderr.getFullOutput();
   }
 
