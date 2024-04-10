@@ -1,8 +1,7 @@
 import isErrnoException from '@vercel/error-utils';
 import chalk from 'chalk';
-import table from 'text-table';
+import table from '../../util/output/table';
 import ms from 'ms';
-import strlen from '../../util/strlen';
 import { handleError, error } from '../../util/error';
 import NowSecrets from '../../util/secrets';
 import getScope from '../../util/get-scope';
@@ -124,11 +123,7 @@ async function run({ output, contextName, currentTeam, client }) {
             chalk.gray(`${ms(cur - new Date(secret.created))} ago`),
           ])
         ),
-        {
-          align: ['l', 'l', 'l'],
-          hsep: ' '.repeat(2),
-          stringLength: strlen,
-        }
+        { hsep: 2 }
       );
 
       if (out) {
@@ -285,7 +280,7 @@ async function readConfirmation(client, output, secret, contextName) {
   const time = chalk.gray(`${ms(new Date() - new Date(secret.created))} ago`);
   const tbl = table([[chalk.bold(secret.name), time]], {
     align: ['r', 'l'],
-    hsep: ' '.repeat(6),
+    hsep: 6,
   });
 
   output.print(
