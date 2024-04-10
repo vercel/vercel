@@ -7,7 +7,7 @@
   "scripts": {},
   "dependencies": {
     "@sentry/node": "5.11.1",
-    "got": "10.2.1",
+    "got": "14.2.1",
     "node-fetch": "2.6.7",
     "parse-github-url": "1.0.2",
     "tar-fs": "2.0.0",
