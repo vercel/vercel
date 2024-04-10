@@ -1342,7 +1342,7 @@ describe('build', () => {
       expect(exitCode).toEqual(0);
 
       const env = await fs.readJSON(join(output, 'static', 'env.json'));
-      expect(Object.keys(env).includes('VERCEL_ANALYTICS_ID')).toEqual(false);
+      expect(Object.keys(env).includes('VERCEL_ANALYTICS_ID')).toEqual(true);
     });
   });
 });
