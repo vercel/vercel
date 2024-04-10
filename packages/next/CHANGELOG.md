@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.2.0
+
+### Minor Changes
+
+- Add support for edge function environment variables ([#11390](https://github.com/vercel/vercel/pull/11390))
+
 ## 4.1.6
 
 ### Patch Changes
