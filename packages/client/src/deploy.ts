@@ -27,7 +27,11 @@ async function* postDeployment(
 }> {
   const debug = createDebug(clientOptions.debug);
   const preparedFiles = prepareFiles(files, clientOptions);
-  const apiDeployments = getApiDeploymentsUrl(deploymentOptions);
+  const apiDeployments = getApiDeploymentsUrl();
+
+  if (deploymentOptions?.builds && !deploymentOptions.functions) {
+    clientOptions.skipAutoDetectionConfirmation = true;
+  }
 
   debug('Sending deployment creation API request');
   try {
