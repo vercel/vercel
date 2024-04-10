@@ -787,8 +787,8 @@ describe('build', () => {
     expect(files.sort()).toEqual(['index.html', 'package.json']);
   });
 
-  it('should set `VERCEL_ANALYTICS_ID` environment variable', async () => {
-    const cwd = fixture('vercel-analytics');
+  it('should set `VERCEL_ANALYTICS_ID` environment variable if Vercel Speed Insights is enabled', async () => {
+    const cwd = fixture('vercel-analytics-id');
     const output = join(cwd, '.vercel/output');
     client.cwd = cwd;
     const exitCode = await build(client);
