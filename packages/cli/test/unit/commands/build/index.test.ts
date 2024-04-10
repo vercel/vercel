@@ -1320,15 +1320,29 @@ describe('build', () => {
     );
   });
 
-  it('should build with speed insights in next.js project', async () => {
-    const cwd = fixture('vercel-analytics-nextjs');
-    const output = join(cwd, '.vercel/output');
+  describe('with Vercel Speed Insights', () => {
+    it('should not include VERCEL_ANALYTICS_ID if @vercel/speed-insights is present', async () => {
+      const cwd = fixture('nextjs-with-speed-insights-package');
+      const output = join(cwd, '.vercel/output');
 
-    client.cwd = cwd;
-    const exitCode = await build(client);
-    expect(exitCode).toEqual(0);
+      client.cwd = cwd;
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
 
-    const env = await fs.readJSON(join(output, 'static', 'env.json'));
-    expect(Object.keys(env).includes('VERCEL_ANALYTICS_ID')).toEqual(false);
+      const env = await fs.readJSON(join(output, 'static', 'env.json'));
+      expect(Object.keys(env).includes('VERCEL_ANALYTICS_ID')).toEqual(false);
+    });
+
+    it('should include VERCEL_ANALYTICS_ID if @vercel/speed-insights is not present', async () => {
+      const cwd = fixture('nextjs-without-speed-insights-package');
+      const output = join(cwd, '.vercel/output');
+
+      client.cwd = cwd;
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      const env = await fs.readJSON(join(output, 'static', 'env.json'));
+      expect(Object.keys(env).includes('VERCEL_ANALYTICS_ID')).toEqual(false);
+    });
   });
 });

@@ -32,6 +32,7 @@ import {
   NowBuildError,
   scanParentDirs,
   cloneEnv,
+  getInstalledPackageVersion,
 } from '@vercel/build-utils';
 import type { Route, RouteWithSrc } from '@vercel/routing-utils';
 import * as BuildOutputV1 from './utils/build-output-v1';
@@ -392,6 +393,20 @@ export const build: BuildV2 = async ({
 
       for (const [key, value] of Object.entries(prefixedEnvs)) {
         process.env[key] = value;
+      }
+
+      const speedInsightsVersion = getInstalledPackageVersion(
+        '@vercel/speed-insights'
+      );
+
+      const isSpeedInsightsInstalled = Boolean(speedInsightsVersion);
+
+      if (
+        isSpeedInsightsInstalled &&
+        process.env.VERCEL_ANALYTICS_ID &&
+        ['next', 'nuxtjs'].includes(framework.slug || '')
+      ) {
+        delete process.env.VERCEL_ANALYTICS_ID;
       }
 
       if (framework.slug === 'gatsby') {
