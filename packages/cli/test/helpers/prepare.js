@@ -405,6 +405,9 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
     'project-sensitive-env-vars': {
       'package.json': '{}',
     },
+    'project-override-env-vars': {
+      'package.json': '{}',
+    },
     'dev-proxy-headers-and-env': {
       'package.json': JSON.stringify({}),
       'server.js': `require('http').createServer((req, res) => {
