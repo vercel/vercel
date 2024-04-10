@@ -2753,7 +2753,10 @@ export type FunctionsConfigManifestV1 = {
   >;
 };
 
-type MiddlewareManifest = MiddlewareManifestV1 | MiddlewareManifestV2;
+type MiddlewareManifest =
+  | MiddlewareManifestV1
+  | MiddlewareManifestV2
+  | MiddlewareManifestV3;
 
 interface MiddlewareManifestV1 {
   version: 1;
@@ -2767,6 +2770,13 @@ interface MiddlewareManifestV2 {
   sortedMiddleware: string[];
   middleware: { [page: string]: EdgeFunctionInfoV2 };
   functions?: { [page: string]: EdgeFunctionInfoV2 };
+}
+
+interface MiddlewareManifestV3 {
+  version: 3;
+  sortedMiddleware: string[];
+  middleware: { [page: string]: EdgeFunctionInfoV3 };
+  functions?: { [page: string]: EdgeFunctionInfoV3 };
 }
 
 type Regions = 'home' | 'global' | 'auto' | string[] | 'all' | 'default';
@@ -2786,6 +2796,11 @@ interface EdgeFunctionInfoV1 extends BaseEdgeFunctionInfo {
 
 interface EdgeFunctionInfoV2 extends BaseEdgeFunctionInfo {
   matchers: EdgeFunctionMatcher[];
+}
+
+interface EdgeFunctionInfoV3 extends BaseEdgeFunctionInfo {
+  matchers: EdgeFunctionMatcher[];
+  environments: Record<string, string>;
 }
 
 interface EdgeFunctionMatcher {
@@ -3020,6 +3035,7 @@ export async function getMiddlewareBundle({
                   slug: 'nextjs',
                   version: nextVersion,
                 },
+                environment: edgeFunction.environments,
               });
             })(),
             routeMatchers: getRouteMatchers(edgeFunction, routesManifest),
@@ -3160,7 +3176,7 @@ export async function getFunctionsConfigManifest(
 export async function getMiddlewareManifest(
   entryPath: string,
   outputDirectory: string
-): Promise<MiddlewareManifestV2 | undefined> {
+): Promise<MiddlewareManifestV3 | undefined> {
   const middlewareManifestPath = path.join(
     entryPath,
     outputDirectory,
@@ -3179,19 +3195,27 @@ export async function getMiddlewareManifest(
   const manifest = (await fs.readJSON(
     middlewareManifestPath
   )) as MiddlewareManifest;
-  return manifest.version === 1
-    ? upgradeMiddlewareManifest(manifest)
-    : manifest;
+
+  if (manifest.version === 1) {
+    return upgradeMiddlewareManifestV1(manifest);
+  }
+
+  if (manifest.version === 2) {
+    return upgradeMiddlewareManifestV2(manifest);
+  }
+
+  return manifest;
 }
 
-export function upgradeMiddlewareManifest(
+export function upgradeMiddlewareManifestV1(
   v1: MiddlewareManifestV1
-): MiddlewareManifestV2 {
-  function updateInfo(v1Info: EdgeFunctionInfoV1): EdgeFunctionInfoV2 {
+): MiddlewareManifestV3 {
+  function updateInfo(v1Info: EdgeFunctionInfoV1): EdgeFunctionInfoV3 {
     const { regexp, ...rest } = v1Info;
     return {
       ...rest,
       matchers: [{ regexp }],
+      environments: {},
     };
   }
 
@@ -3206,7 +3230,35 @@ export function upgradeMiddlewareManifest(
 
   return {
     ...v1,
-    version: 2,
+    version: 3,
+    middleware,
+    functions,
+  };
+}
+
+export function upgradeMiddlewareManifestV2(
+  v2: MiddlewareManifestV2
+): MiddlewareManifestV3 {
+  function updateInfo(v2Info: EdgeFunctionInfoV2): EdgeFunctionInfoV3 {
+    const { ...rest } = v2Info;
+    return {
+      ...rest,
+      environments: {},
+    };
+  }
+
+  const middleware = Object.fromEntries(
+    Object.entries(v2.middleware).map(([p, info]) => [p, updateInfo(info)])
+  );
+  const functions = v2.functions
+    ? Object.fromEntries(
+        Object.entries(v2.functions).map(([p, info]) => [p, updateInfo(info)])
+      )
+    : undefined;
+
+  return {
+    ...v2,
+    version: 3,
     middleware,
     functions,
   };
