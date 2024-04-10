@@ -19,6 +19,10 @@ export default function handleError(error: unknown, { debug = false } = {}) {
     console.error(`> [debug] handling error: ${stack}`);
   }
 
+  if (message === 'User force closed the prompt with 0 null') {
+    return;
+  }
+
   if (status === 403) {
     console.error(
       errorOutput(

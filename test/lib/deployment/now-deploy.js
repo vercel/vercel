@@ -104,83 +104,7 @@ async function nowDeploy(projectName, bodies, randomness, uploadNowJson, opts) {
     await new Promise(r => setTimeout(r, 1000));
   }
 
-  await disableSSO(deploymentId);
-
   return { deploymentId, deploymentUrl };
-}
-
-async function disableSSO(deploymentId, useTeam = true) {
-  if (deploymentId.startsWith('https://')) {
-    deploymentId = new URL(deploymentId).hostname;
-  }
-
-  const deployRes = await fetchWithAuth(
-    `https://vercel.com/api/v13/deployments/${encodeURIComponent(
-      deploymentId
-    )}`,
-    {
-      method: 'GET',
-    }
-  );
-
-  const text = await deployRes.text();
-
-  if (!deployRes.ok) {
-    throw new Error(
-      `Failed to get deployment info (status: ${deployRes.status}, body: ${text})`
-    );
-  }
-
-  let info;
-  try {
-    info = JSON.parse(text);
-  } catch (err) {
-    throw new Error('Failed to parse deployment info JSON', { cause: err });
-  }
-
-  const { projectId, url: deploymentUrl } = info;
-
-  if (!deploymentUrl || typeof deploymentUrl !== 'string') {
-    throw new Error(
-      `Failed to get deployment URL (status: ${deployRes.status}, body: ${text})`
-    );
-  }
-
-  const settingRes = await fetchWithAuth(
-    `https://vercel.com/api/v5/projects/${encodeURIComponent(projectId)}`,
-    {
-      method: 'PATCH',
-      headers: {
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        ssoProtection: null,
-      }),
-      ...(useTeam
-        ? {}
-        : {
-            skipTeam: true,
-          }),
-    }
-  );
-
-  if (settingRes.ok) {
-    for (let i = 0; i < 10; i++) {
-      const res = await fetch(`https://${deploymentUrl}`);
-      if (res.status !== 401) {
-        break;
-      }
-      await new Promise(resolve => setTimeout(resolve, 5 * 1000));
-    }
-    console.log(
-      `Disabled deployment protection for deploymentId: ${deploymentId} projectId: ${projectId}`
-    );
-  } else {
-    console.error(settingRes.status, await settingRes.text(), text);
-    throw new Error(
-      `Failed to disable deployment protection projectId: ${projectId} deploymentId ${deploymentId}`
-    );
-  }
 }
 
 function digestOfFile(body) {
@@ -386,5 +310,4 @@ module.exports = {
   fetchCachedToken,
   fetchTokenWithRetry,
   fileModeSymbol,
-  disableSSO,
 };

@@ -62,12 +62,7 @@ export async function readInput(
 
   while (!input) {
     try {
-      const { val } = await client.prompt({
-        type: 'input',
-        name: 'val',
-        message,
-      });
-      input = val;
+      input = await client.input.text({ message });
     } catch (err: any) {
       client.output.print('\n'); // \n
 
