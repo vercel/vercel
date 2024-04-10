@@ -11,10 +11,7 @@ import fs, {
   mkdir,
 } from 'fs-extra';
 import sleep from '../src/util/sleep';
-import {
-  disableSSO,
-  fetchTokenWithRetry,
-} from '../../../test/lib/deployment/now-deploy';
+import { fetchTokenWithRetry } from '../../../test/lib/deployment/now-deploy';
 import waitForPrompt from './helpers/wait-for-prompt';
 import { execCli } from './helpers/exec';
 import getGlobalDir from './helpers/get-global-dir';
@@ -330,8 +327,7 @@ test('should show prompts to set up project during first deploy', async () => {
     'README.txt'
   ).toBe(true);
 
-  const { host, href } = new URL(output.stdout);
-  await disableSSO(host, false);
+  const { href } = new URL(output.stdout);
 
   // Send a test request to the deployment
   const response = await fetch(href);
@@ -646,8 +642,7 @@ test('use `rootDirectory` from project when deploying', async () => {
   const secondResult = await execCli(binaryPath, [directory, '--public']);
   expect(secondResult.exitCode, formatOutput(secondResult)).toBe(0);
 
-  const { host, href } = new URL(secondResult.stdout);
-  await disableSSO(host, false);
+  const { href } = new URL(secondResult.stdout);
 
   const pageResponse1 = await fetch(href);
   expect(pageResponse1.status).toBe(200);
@@ -778,7 +773,6 @@ test('deploys with only now.json and README.md', async () => {
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
   const { host } = new URL(stdout);
-  await disableSSO(host, false);
   const res = await fetch(`https://${host}/README.md`);
   const text = await res.text();
   expect(text).toMatch(/readme contents/);
@@ -801,7 +795,6 @@ test('deploys with only vercel.json and README.md', async () => {
   );
 
   const { host } = new URL(stdout);
-  await disableSSO(host, false);
   const res = await fetch(`https://${host}/README.md`);
   const text = await res.text();
   expect(text).toMatch(/readme contents/);
@@ -887,7 +880,6 @@ test('deploy pnpm twice using pnp and symlink=false', async () => {
       '--public',
       '--yes',
     ]);
-    await disableSSO(res.stdout, false);
     return res;
   }
 
@@ -1344,8 +1336,6 @@ test('vercel.json configuration overrides in a new project prompt user and merge
   const deployment = await vc;
   expect(deployment.exitCode, formatOutput(deployment)).toBe(0);
   // assert the command were executed
-  await disableSSO(deployment.stdout, false);
-
   let page = await fetch(deployment.stdout);
   let text = await page.text();
   expect(text).toBe('1\n');
@@ -1376,8 +1366,7 @@ test('vercel.json configuration overrides in an existing project do not prompt u
   // auto-confirm this deployment
   let deployment = await deploy(true);
 
-  const { host, href } = new URL(deployment.stdout);
-  await disableSSO(host, false);
+  const { href } = new URL(deployment.stdout);
   let page = await fetch(href);
   let text = await page.text();
   expect(text).toBe('0');
