@@ -131,6 +131,7 @@ test('[vercel dev] Use custom runtime from the "functions" property', async () =
   try {
     // "deno" needs to be installed for this test
     await execa('curl -fsSL https://deno.land/install.sh | sh', {
+      stdio: 'inherit',
       shell: true,
     });
     process.env.PATH = `${process.env.HOME}/.deno/bin:${origPATH}`;
