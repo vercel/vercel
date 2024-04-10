@@ -135,10 +135,11 @@ test('[vercel dev] Use custom runtime from the "functions" property', async () =
       shell: true,
     });
     process.env.PATH = `${process.env.HOME}/.deno/bin:${origPATH}`;
-    await testFixtureStdio('custom-runtime', async (testPath: any) => {
+    const tester = testFixtureStdio('custom-runtime', async (testPath: any) => {
       await testPath(200, `/api/user`, /Hello, from Deno!/m);
       await testPath(200, `/api/user.ts`, /Hello, from Deno!/m);
     });
+    await tester();
   } finally {
     process.env.PATH = origPATH;
   }
