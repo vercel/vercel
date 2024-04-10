@@ -1,4 +1,4 @@
-import inquirer from 'inquirer';
+import { Separator } from '@inquirer/select';
 import stripAnsi from 'strip-ansi';
 import Client from '../client';
 import eraseLines from '../output/erase-lines';
@@ -14,7 +14,7 @@ interface ListSeparator {
   separator: string;
 }
 
-export type ListChoice = ListEntry | ListSeparator | typeof inquirer.Separator;
+export type ListChoice = ListEntry | ListSeparator | typeof Separator;
 
 interface ListOptions {
   message: string;
@@ -54,8 +54,6 @@ export default async function list(
     eraseFinalAnswer = false, // If true, the line with the final answer that inquirer prints will be erased before returning
   }: ListOptions
 ): Promise<string> {
-  await import('./patch-inquirer');
-
   let biggestLength = 0;
   let selected: string | undefined;
 
@@ -70,14 +68,14 @@ export default async function list(
   }
 
   const choices = _choices.map(choice => {
-    if (choice instanceof inquirer.Separator) {
+    if (choice instanceof Separator) {
       return choice;
     }
 
     if ('separator' in choice) {
       const prefix = `── ${choice.separator} `;
       const suffix = '─'.repeat(biggestLength - getLength(prefix));
-      return new inquirer.Separator(`${prefix}${suffix}`);
+      return new Separator(`${prefix}${suffix}`);
     }
 
     if ('short' in choice) {
@@ -93,11 +91,11 @@ export default async function list(
 
   if (separator) {
     for (let i = 0; i < choices.length; i += 2) {
-      choices.splice(i, 0, new inquirer.Separator(' '));
+      choices.splice(i, 0, new Separator(' '));
     }
   }
 
-  const cancelSeparator = new inquirer.Separator('─'.repeat(biggestLength));
+  const cancelSeparator = new Separator('─'.repeat(biggestLength));
   const _cancel = {
     name: 'Cancel',
     value: '',
@@ -110,18 +108,16 @@ export default async function list(
     choices.push(cancelSeparator, _cancel);
   }
 
-  const answer = await client.prompt({
-    name: 'value',
-    type: 'list',
-    default: selected,
+  const answer = await client.input.select({
     message,
     choices,
     pageSize,
+    default: selected,
   });
 
   if (eraseFinalAnswer === true) {
     process.stdout.write(eraseLines(2));
   }
 
-  return answer.value;
+  return answer;
 }

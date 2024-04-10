@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import ms from 'ms';
 import plural from 'pluralize';
-import table from 'text-table';
+import table from '../../util/output/table';
 import Now from '../../util';
 import getAliases from '../../util/alias/get-aliases';
 import elapsed from '../../util/output/elapsed';
@@ -169,7 +169,7 @@ export default async function remove(client: Client) {
         `or projects matching ` +
         `${ids
           .map(id => chalk.bold(`"${id}"`))
-          .join(', ')}. Run ${getCommandName('ls')} to list.`
+          .join(', ')}. Run ${getCommandName('projects ls')} to list.`
     );
     return 1;
   }
@@ -245,7 +245,7 @@ function readConfirmation(
           const url = depl.url ? chalk.underline(`https://${depl.url}`) : '';
           return [`  ${depl.id}`, url, time];
         }),
-        { align: ['l', 'r', 'l'], hsep: ' '.repeat(6) }
+        { align: ['l', 'r', 'l'], hsep: 6 }
       );
       output.print(`${deploymentTable}\n`);
     }
@@ -277,7 +277,7 @@ function readConfirmation(
     }
 
     output.print(
-      `${chalk.bold.red('> Are you sure?')} ${chalk.gray('[y/N] ')}`
+      `${chalk.bold.red('> Are you sure?')} ${chalk.gray('(y/N) ')}`
     );
 
     process.stdin

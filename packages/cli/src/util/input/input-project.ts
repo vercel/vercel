@@ -75,70 +75,37 @@ export default async function inputProject(
 
   if (shouldLinkProject) {
     // user wants to link a project
-    let project: Project | ProjectNotFound | null = null;
-
-    while (!project || project instanceof ProjectNotFound) {
-      const answers = await client.prompt({
-        type: 'input',
-        name: 'existingProjectName',
-        message: `What’s the name of your existing project?`,
-      });
-      const projectName = answers.existingProjectName as string;
-
-      if (!projectName) {
-        output.error(`Project name cannot be empty`);
-        continue;
-      }
-
-      output.spinner('Verifying project name…', 1000);
-      try {
-        project = await getProjectByIdOrName(client, projectName, org.id);
-      } finally {
-        output.stopSpinner();
-      }
-
-      if (project instanceof ProjectNotFound) {
-        output.error(`Project not found`);
-      }
-    }
-
-    return project;
+    let toLink: Project;
+    await client.input.text({
+      message: 'What’s the name of your existing project?',
+      validate: async val => {
+        if (!val) {
+          return 'Project name cannot be empty';
+        }
+        const project = await getProjectByIdOrName(client, val, org.id);
+        if (project instanceof ProjectNotFound) {
+          return 'Project not found';
+        }
+        toLink = project;
+        return true;
+      },
+    });
+    return toLink!;
   }
 
   // user wants to create a new project
-  let newProjectName: string | null = null;
-
-  while (!newProjectName) {
-    const answers = await client.prompt({
-      type: 'input',
-      name: 'newProjectName',
-      message: `What’s your project’s name?`,
-      default: !detectedProject ? slugifiedName : undefined,
-    });
-    newProjectName = answers.newProjectName as string;
-
-    if (!newProjectName) {
-      output.error(`Project name cannot be empty`);
-      continue;
-    }
-
-    output.spinner('Verifying project name…', 1000);
-    let existingProject: Project | ProjectNotFound;
-    try {
-      existingProject = await getProjectByIdOrName(
-        client,
-        newProjectName,
-        org.id
-      );
-    } finally {
-      output.stopSpinner();
-    }
-
-    if (existingProject && !(existingProject instanceof ProjectNotFound)) {
-      output.print(`Project already exists`);
-      newProjectName = null;
-    }
-  }
-
-  return newProjectName;
+  return await client.input.text({
+    message: `What’s your project’s name?`,
+    default: !detectedProject ? slugifiedName : undefined,
+    validate: async val => {
+      if (!val) {
+        return 'Project name cannot be empty';
+      }
+      const project = await getProjectByIdOrName(client, val, org.id);
+      if (!(project instanceof ProjectNotFound)) {
+        return 'Project already exists';
+      }
+      return true;
+    },
+  });
 }
