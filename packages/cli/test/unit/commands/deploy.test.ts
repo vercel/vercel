@@ -466,6 +466,54 @@ describe('deploy', () => {
     });
   });
 
+  it('should send `projectSettings.nodeVersion` based on `engines.node` package.json field with `builds` in `vercel.json`', async () => {
+    const user = useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      name: 'legacy-builds',
+      id: 'QmbKpqpiUqbcke',
+    });
+
+    let body: any;
+    client.scenario.post(`/v13/deployments`, (req, res) => {
+      body = req.body;
+      res.json({
+        creator: {
+          uid: user.id,
+          username: user.username,
+        },
+        id: 'dpl_',
+      });
+    });
+    client.scenario.get(`/v13/deployments/dpl_`, (req, res) => {
+      res.json({
+        creator: {
+          uid: user.id,
+          username: user.username,
+        },
+        id: 'dpl_',
+        readyState: 'READY',
+        aliasAssigned: true,
+        alias: [],
+      });
+    });
+
+    const repoRoot = setupUnitFixture('commands/deploy/legacy-builds');
+    client.cwd = repoRoot;
+    client.setArgv('deploy');
+    const exitCode = await deploy(client);
+    expect(exitCode).toEqual(0);
+    expect(body).toMatchObject({
+      source: 'cli',
+      version: 2,
+      projectSettings: {
+        nodeVersion: '18.x',
+        sourceFilesOutsideRootDirectory: true,
+      },
+    });
+  });
+
   it('should send latest supported node version when given a >low-node-version based on `engines.node` package.json field', async () => {
     const user = useUser();
     useTeams('team_dummy');
