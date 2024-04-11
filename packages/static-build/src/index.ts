@@ -404,9 +404,12 @@ export const build: BuildV2 = async ({
       if (
         isSpeedInsightsInstalled &&
         process.env.VERCEL_ANALYTICS_ID &&
-        ['next', 'nuxtjs'].includes(framework.slug || '')
+        ['next', 'nuxtjs', 'gatsby'].includes(framework.slug || '')
       ) {
         delete process.env.VERCEL_ANALYTICS_ID;
+        debug(
+          `Removed VERCEL_ANALYTICS_ID from the environment because we detected the @vercel/speed-insights package`
+        );
       }
 
       if (framework.slug === 'gatsby') {
