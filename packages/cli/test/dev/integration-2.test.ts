@@ -1,3 +1,4 @@
+import execa from 'execa';
 import { isIP } from 'net';
 const { exec, fixture, testFixture, testFixtureStdio } = require('./utils.js');
 
@@ -125,13 +126,24 @@ test(
   })
 );
 
-test(
-  '[vercel dev] Use custom runtime from the "functions" property',
-  testFixtureStdio('custom-runtime', async (testPath: any) => {
-    await testPath(200, `/api/user`, /Hello, from Bash!/m);
-    await testPath(200, `/api/user.sh`, /Hello, from Bash!/m);
-  })
-);
+test('[vercel dev] Use custom runtime from the "functions" property', async () => {
+  const origPATH = process.env.PATH;
+  try {
+    // "deno" needs to be installed for this test
+    await execa('curl -fsSL https://deno.land/install.sh | sh', {
+      stdio: 'inherit',
+      shell: true,
+    });
+    process.env.PATH = `${process.env.HOME}/.deno/bin:${origPATH}`;
+    const tester = testFixtureStdio('custom-runtime', async (testPath: any) => {
+      await testPath(200, `/api/user`, /Hello, from Deno!/m);
+      await testPath(200, `/api/user.ts`, /Hello, from Deno!/m);
+    });
+    await tester();
+  } finally {
+    process.env.PATH = origPATH;
+  }
+});
 
 test(
   '[vercel dev] Should work with nested `tsconfig.json` files',
