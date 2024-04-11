@@ -1,6 +1,6 @@
 {
   "name": "vercel",
-  "version": "33.7.1",
+  "version": "34.0.0",
   "preferGlobal": true,
   "license": "Apache-2.0",
   "description": "The command-line interface for Vercel",
@@ -93,7 +93,7 @@
     "@vercel-internals/constants": "1.0.4",
     "@vercel-internals/get-package-json": "1.0.0",
     "@vercel-internals/types": "1.0.29",
-    "@vercel/client": "13.1.9",
+    "@vercel/client": "13.2.0",
     "@vercel/error-utils": "2.0.2",
     "@vercel/frameworks": "3.0.1",
     "@vercel/fs-detectors": "5.2.2",
