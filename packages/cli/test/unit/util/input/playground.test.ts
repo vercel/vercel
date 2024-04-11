@@ -1,10 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import { client } from '../../../mocks/client';
+import isUnicodeSupported from 'is-unicode-supported';
 
 const theme = {
   // Override spinner with a single frame
   spinner: { frames: ['O'] },
 };
+
+console.log({ isUnicodeSupported });
 
 describe('client.input', () => {
   describe('text', () => {
