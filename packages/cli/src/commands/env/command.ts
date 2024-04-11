@@ -43,6 +43,14 @@ export const envCommand: Command = {
           deprecated: false,
           multi: false,
         },
+        {
+          name: 'force',
+          description: 'Force overwrites when a command would normally fail',
+          shorthand: null,
+          type: 'boolean',
+          deprecated: false,
+          multi: false,
+        },
       ],
       examples: [],
     },
@@ -125,6 +133,10 @@ export const envCommand: Command = {
         `${packageName} env add <name> ${targetPlaceholder}`,
         `${packageName} env add DB_PASS production`,
       ],
+    },
+    {
+      name: 'Override an existing Environment Variable of same target (production, preview, deployment)',
+      value: `${packageName} env add API_TOKEN --force`,
     },
     {
       name: 'Add a sensitive Environment Variable',

@@ -48,7 +48,7 @@ export default async function getEnvRecords(
     query.set('source', source);
   }
 
-  const url = `/v8/projects/${projectId}/env?${query}`;
+  const url = `/v10/projects/${projectId}/env?${query}`;
 
   return client.fetch<{ envs: ProjectEnvVariable[] }>(url);
 }
