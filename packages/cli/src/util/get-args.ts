@@ -12,7 +12,7 @@ interface Spec {
 }
 
 /**
- * @deprecated
+ * @deprecated use `parseArguments` instead
  */
 export default function getArgs<T extends Spec>(
   argv: string[],
