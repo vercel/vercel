@@ -491,7 +491,7 @@ importers:
         specifier: 1.0.29
         version: link:../../internals/types
       '@vercel/client':
-        specifier: 13.1.9
+        specifier: 13.2.0
         version: link:../client
       '@vercel/error-utils':
         specifier: 2.0.2
