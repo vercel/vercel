@@ -9,7 +9,7 @@ const runnersMap = new Map([
       min: 1,
       max: 1,
       testScript: 'vitest-unit-run',
-      runners: ['ubuntu-latest', 'macos-latest', 'windows-latest'],
+      runners: ['ubuntu-latest', 'macos-14', 'windows-latest'],
     },
   ],
   [
@@ -18,7 +18,7 @@ const runnersMap = new Map([
       min: 1,
       max: 1,
       testScript: 'test',
-      runners: ['ubuntu-latest', 'macos-latest', 'windows-latest'],
+      runners: ['ubuntu-latest', 'macos-14', 'windows-latest'],
     },
   ],
   [
@@ -52,7 +52,7 @@ const runnersMap = new Map([
       min: 1,
       max: 7,
       testScript: 'test',
-      runners: ['ubuntu-latest', 'macos-latest'],
+      runners: ['ubuntu-latest', 'macos-14'],
     },
   ],
 ]);
