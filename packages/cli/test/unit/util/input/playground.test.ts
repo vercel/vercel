@@ -1,13 +1,16 @@
 import { describe, it, expect } from 'vitest';
 import { client } from '../../../mocks/client';
+import { isWindows } from '../../../helpers/is-windows';
 
 const theme = {
   // Override spinner with a single frame
   spinner: { frames: ['O'] },
 };
 
-const isWindows = process.platform === 'win32';
-
+// Inquirer's unicode detection is outdated, for windows in CI
+// it incorrectly detects that unicode is not supported,
+// and thus prints ascii characters, which breaks these tests.
+// https://github.com/SBoudrias/Inquirer.js/issues/1386
 describe.skipIf(isWindows)('client.input', () => {
   describe('text', () => {
     it('should match the snapshot', async () => {
