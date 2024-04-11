@@ -67,7 +67,7 @@ jobs:
           node-version: ${{ matrix.nodeVersion || env.NODE_VERSION }}
 
       - name: Install Hugo
-        if: matrix.runner == 'macos-latest'
+        if: matrix.runner == 'macos-14'
         run: curl -L -O https://github.com/gohugoio/hugo/releases/download/v0.56.0/hugo_0.56.0_macOS-64bit.tar.gz && tar -xzf hugo_0.56.0_macOS-64bit.tar.gz && mv ./hugo packages/cli/test/dev/fixtures/08-hugo/
 
       # yarn 1.22.21 introduced a Corepack bug when running tests.
@@ -85,7 +85,7 @@ jobs:
         env:
           FORCE_COLOR: '1'
       - name: Test ${{matrix.packageName}}
-        run: node utils/gen.js && node_modules/.bin/turbo run test --summarize --cache-dir=".turbo" --log-order=stream --scope=${{matrix.packageName}} --no-deps -- ${{ join(matrix.testPaths, ' ') }}
+        run: node utils/gen.js && node_modules/.bin/turbo run ${{matrix.testScript}} --summarize --cache-dir=".turbo" --log-order=stream --scope=${{matrix.packageName}} --no-deps -- ${{ join(matrix.testPaths, ' ') }}
         shell: bash
         env:
           JEST_JUNIT_OUTPUT_FILE: ${{github.workspace}}/.junit-reports/${{matrix.scriptName}}-${{matrix.packageName}}-${{matrix.chunkNumber}}-${{ matrix.runner }}.xml
