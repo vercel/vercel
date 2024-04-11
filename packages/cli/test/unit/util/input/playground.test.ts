@@ -7,7 +7,7 @@ const theme = {
   spinner: { frames: ['O'] },
 };
 
-console.log({ isUnicodeSupported });
+console.log({ isUnicodeSupported: isUnicodeSupported() });
 
 describe('client.input', () => {
   describe('text', () => {
