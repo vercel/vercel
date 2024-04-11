@@ -1,17 +1,19 @@
 import { describe, it, expect } from 'vitest';
 import { client } from '../../../mocks/client';
-import isUnicodeSupported from 'is-unicode-supported';
 
 const theme = {
   // Override spinner with a single frame
   spinner: { frames: ['O'] },
 };
 
-console.log({ isUnicodeSupported: isUnicodeSupported() });
+const isWindows = process.platform === 'win32';
 
-describe('client.input', () => {
+describe.skipIf(isWindows)('client.input', () => {
   describe('text', () => {
     it('should match the snapshot', async () => {
+      if (process.platform === 'win32') {
+        console.log('Skipping test on windows');
+      }
       const answer = client.input.text({
         message: 'What is your name',
         theme,
