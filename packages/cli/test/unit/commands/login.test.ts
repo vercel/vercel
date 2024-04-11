@@ -51,10 +51,10 @@ describe('login', () => {
       await expect(client.stderr).toOutput(`? Log in to Vercel`);
 
       // Move down to "Email" option
-      client.stdin.write('\x1B[B'); // Down arrow
-      client.stdin.write('\x1B[B'); // Down arrow
-      client.stdin.write('\x1B[B'); // Down arrow
-      client.stdin.write('\r'); // Return key
+      client.events.keypress('down');
+      client.events.keypress('down');
+      client.events.keypress('down');
+      client.events.keypress('enter');
 
       await expect(client.stderr).toOutput('? Enter your email address:');
 
@@ -74,10 +74,10 @@ describe('login', () => {
       await expect(client.stderr).toOutput(`? Log in to Vercel`);
 
       // Move down to "Email" option
-      client.stdin.write('\x1B[B'); // Down arrow
-      client.stdin.write('\x1B[B'); // Down arrow
-      client.stdin.write('\x1B[B'); // Down arrow
-      client.stdin.write('\r'); // Return key
+      client.events.keypress('down');
+      client.events.keypress('down');
+      client.events.keypress('down');
+      client.events.keypress('enter');
 
       await expect(client.stderr).toOutput('? Enter your email address:');
 
@@ -87,9 +87,9 @@ describe('login', () => {
         `Success! Email authentication complete for ${user.email}`
       );
 
-      await expect(client.stderr).not.toOutput(emoji('tip'));
-
       await expect(exitCodePromise).resolves.toEqual(0);
+
+      await expect(client.getFullOutput()).not.toContain(emoji('tip'));
     });
 
     describe('with NO_COLOR="1" env var', () => {
