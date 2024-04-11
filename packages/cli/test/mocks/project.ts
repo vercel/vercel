@@ -270,7 +270,7 @@ export function useProject(
       });
     }
   );
-  client.scenario.get(`/v8/projects/${project.id}/env`, (req, res) => {
+  client.scenario.get(`/v10/projects/${project.id}/env`, (req, res) => {
     const target: ProjectEnvTarget | undefined =
       typeof req.query.target === 'string'
         ? parseEnvironment(req.query.target)
@@ -291,14 +291,14 @@ export function useProject(
 
     res.json({ envs: targetEnvs });
   });
-  client.scenario.post(`/v8/projects/${project.id}/env`, (req, res) => {
+  client.scenario.post(`/v10/projects/${project.id}/env`, (req, res) => {
     const envObj = req.body;
     envObj.id = envObj.key;
     envs.push(envObj);
     res.json({ envs });
   });
   client.scenario.delete(
-    `/v8/projects/${project.id}/env/:envId`,
+    `/v10/projects/${project.id}/env/:envId`,
     (req, res) => {
       const envId = req.params.envId;
       for (const [i, env] of envs.entries()) {

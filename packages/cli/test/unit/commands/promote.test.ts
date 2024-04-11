@@ -115,7 +115,9 @@ describe('promote', () => {
       `Fetching deployment "${previousDeployment.url}" in ${previousDeployment.creator?.username}`
     );
     await expect(client.stderr).toOutput(
-      '? This deployment does not target production, therefore promotion will not apply\n production environment variables. Are you sure you want to continue?'
+      '? This deployment is not a production deployment and cannot be directly \n' +
+        'promoted. A new deployment will be built using your production environment. Are \n' +
+        'you sure you want to continue? (y/N)'
     );
 
     // say "no" to the prompt
@@ -138,7 +140,9 @@ describe('promote', () => {
       `Fetching deployment "${previousDeployment.url}" in ${previousDeployment.creator?.username}`
     );
     await expect(client.stderr).toOutput(
-      '? This deployment does not target production, therefore promotion will not apply\n production environment variables. Are you sure you want to continue?'
+      '? This deployment is not a production deployment and cannot be directly \n' +
+        'promoted. A new deployment will be built using your production environment. Are \n' +
+        'you sure you want to continue? (y/N)'
     );
 
     // say "yes" to the prompt

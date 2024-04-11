@@ -1,9 +1,5 @@
 lockfileVersion: '6.0'
 
-settings:
-  autoInstallPeers: true
-  excludeLinksFromLockfile: false
-
 importers:
 
   .:
@@ -329,7 +325,7 @@ importers:
         specifier: 1.0.2
         version: link:../hydrogen
       '@vercel/next':
-        specifier: 4.1.6
+        specifier: 4.2.0
         version: link:../next
       '@vercel/node':
         specifier: 3.0.26
@@ -495,7 +491,7 @@ importers:
         specifier: 1.0.29
         version: link:../../internals/types
       '@vercel/client':
-        specifier: 13.1.9
+        specifier: 13.2.0
         version: link:../client
       '@vercel/error-utils':
         specifier: 2.0.2
@@ -16442,3 +16438,7 @@ packages:
   /zwitch@2.0.4:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
     dev: true
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
