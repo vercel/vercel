@@ -152,12 +152,12 @@ const main = async () => {
   // If empty, leave this code here for easy adding of beta commands later
   const betaCommands: string[] = [];
   if (betaCommands.includes(targetOrSubcommand)) {
-    console.log(
+    output.print(
       `${chalk.grey(
         `${getTitleName()} CLI ${
           pkg.version
         } ${targetOrSubcommand} (beta) — https://vercel.com/feedback`
-      )}`
+      )}\n`
     );
   } else {
     output.print(`${chalk.grey(`${getTitleName()} CLI ${pkg.version}`)}\n`);

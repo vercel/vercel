@@ -63,11 +63,7 @@ export default async function rm(
   }
 
   await removeAliasById(client, alias.uid);
-  console.log(
-    `${chalk.cyan('> Success!')} Alias ${chalk.bold(
-      alias.alias
-    )} removed ${removeStamp()}`
-  );
+  output.success(`Alias ${chalk.bold(alias.alias)} removed ${removeStamp()}`);
   return 0;
 }
 
