@@ -15,9 +15,8 @@ export const redeployCommand: Command = {
       name: 'no-wait',
       shorthand: null,
       description: "Don't wait for the redeploy to finish",
-      type: 'boolean',
+      type: Boolean,
       deprecated: false,
-      multi: false,
     },
   ],
   examples: [
