@@ -1,0 +1,95 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 0, 0, 0;
+  --background-start-rgb: 214, 219, 220;
+  --background-end-rgb: 255, 255, 255;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --foreground-rgb: 255, 255, 255;
+    --background-start-rgb: 0, 0, 0;
+    --background-end-rgb: 0, 0, 0;
+  }
+}
+@media (prefers-color-scheme: light) {
+  :root {
+    --foreground-rgb: 255, 255, 255;
+    --background-start-rgb: 0, 0, 0;
+    --background-end-rgb: 0, 0, 0;
+  }
+}
+
+html {
+  height: 100%;
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: linear-gradient(
+      to bottom,
+      transparent,
+      rgb(var(--background-end-rgb))
+    )
+    rgb(var(--background-start-rgb));
+}
+
+@layer utilities {
+  .text-balance { 
+    text-wrap: balance;
+  }
+}
+
+.messages {
+  margin-top: 3%; 
+  padding-left: 10%;
+  padding-right: 10%;
+  display: block;
+  overflow: auto;
+}
+
+.chat-window {
+  float: inline-end;
+  position: absolute;
+  bottom: 0;
+  margin-bottom: 5%;
+  width: 100%;
+  padding-left: 10%;
+  padding-right: 10%;
+}
+
+.overview-text {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  padding: 8%;
+  line-height: 2;
+  justify-content: space-evenly;
+}
+
+h3 {
+  margin-left: 8vh;
+}
+
+li {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+}
+
+.loading {
+  padding-left: 10%;
+}
+
+/* .loading img {
+  width: 50px;
+  height: 50px;
+} */
+
+.active {
+  font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+  font-style: italic;
+}
+
+.overview-text ul li:before {
+  content: "• ";
+}
