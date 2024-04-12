@@ -52,12 +52,10 @@ export default async function add(
     return 1;
   }
 
-  console.log(
-    `${chalk.cyan('> Success!')} ${
-      recordIds.length
-    } DNS records for domain ${chalk.bold(domain)} created under ${chalk.bold(
-      contextName
-    )} ${chalk.gray(addStamp())}`
+  output.success(
+    `${recordIds.length} DNS records for domain ${chalk.bold(
+      domain
+    )} created under ${chalk.bold(contextName)} ${chalk.gray(addStamp())}`
   );
   return 0;
 }
