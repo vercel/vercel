@@ -39,9 +39,8 @@ export const envCommand: Command = {
           name: 'sensitive',
           description: 'Add a sensitive Environment Variable',
           shorthand: null,
-          type: 'string',
+          type: String,
           deprecated: false,
-          multi: false,
         },
         {
           name: 'force',
@@ -90,26 +89,23 @@ export const envCommand: Command = {
       description:
         'Set the Environment (development, preview, production) when pulling Environment Variables',
       shorthand: null,
-      type: 'boolean',
+      type: Boolean,
       deprecated: false,
-      multi: false,
     },
     {
       name: 'git-branch',
       description:
         'Specify the Git branch to pull specific Environment Variables for',
       shorthand: null,
-      type: 'string',
+      type: String,
       deprecated: false,
-      multi: false,
     },
     {
       name: 'yes',
       description: 'Skip the confirmation prompt when removing an alias',
       shorthand: 'y',
-      type: 'boolean',
+      type: Boolean,
       deprecated: false,
-      multi: false,
     },
   ],
   examples: [

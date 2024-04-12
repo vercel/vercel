@@ -72,7 +72,7 @@ import { pickOverrides } from '../../util/projects/project-settings';
 import validatePaths, {
   validateRootDirectory,
 } from '../../util/validate-paths';
-import { help } from '../help';
+import { help, PrimitiveConstructor } from '../help';
 import { deployCommand } from './command';
 
 export default async (client: Client): Promise<number> => {
@@ -81,24 +81,12 @@ export default async (client: Client): Promise<number> => {
   let argv = null;
 
   const argOptions: {
-    [k: string]:
-      | BooleanConstructor
-      | StringConstructor
-      | string
-      | [StringConstructor];
+    [k: string]: PrimitiveConstructor | [PrimitiveConstructor] | string;
   } = {};
   for (const option of deployCommand.options) {
-    argOptions[`--${option.name}`] =
-      option.type === 'boolean' ? Boolean : String;
+    argOptions[`--${option.name}`] = option.type;
     if (option.shorthand) {
       argOptions[`-${option.shorthand}`] = `--${option.name}`;
-    }
-    if (
-      option.name === 'env' ||
-      option.name === 'build-env' ||
-      option.name === 'meta'
-    ) {
-      argOptions[`--${option.name}`] = [String];
     }
   }
 
