@@ -16,22 +16,26 @@
     "@angular/compiler": "^16.0.0",
     "@angular/core": "^16.0.0",
     "@angular/platform-browser": "^16.0.0",
-    "@angular/platform-browser-dynamic": "^16.0.0",
-    "@ionic/angular": "^7.0.0",
+    "@angular/platform-browser-dynamic": "^16.2.12",
+    "@ionic/angular": "^7.8.0",
     "rxjs": "~7.8.0",
-    "tslib": "^2.3.0",
-    "zone.js": "~0.13.0"
+    "tslib": "^2.6.2",
+    "zone.js": "^0.13.3"
   },
   "devDependencies": {
-    "@angular-devkit/build-angular": "^16.0.0",
-    "@angular-eslint/builder": "^16.0.0",
-    "@angular/cli": "^16.0.0",
-    "@angular/compiler-cli": "^16.0.0",
-    "@angular/language-service": "^16.0.0",
+    "@angular-devkit/build-angular": "^16.2.10",
+    "@angular-eslint/builder": "^16.3.1",
+    "@angular/cli": "^16.2.10",
+    "@angular/compiler-cli": "^16.2.12",
+    "@angular/language-service": "^16.2.12",
     "@ionic/angular-toolkit": "^9.0.0",
-    "@types/node": "^12.11.1",
-    "ts-node": "^8.3.0",
+    "@types/node": "^12.20.55",
+    "ts-node": "^8.10.2",
     "typescript": "~5.0.2"
+  },
+  "overrides": {
+    "@angular/forms@": "^16.0.0",
+    "@angular/router": "^16.0.0"
   },
   "description": "An Ionic project"
 }

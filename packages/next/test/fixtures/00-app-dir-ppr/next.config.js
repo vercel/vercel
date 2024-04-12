@@ -10,6 +10,10 @@ module.exports = {
         source: '/rewritten-to-dashboard',
         destination: '/dashboard',
       },
+      {
+        source: '/rewritten-to-index',
+        destination: '/?fromRewrite=1',
+      },
     ];
   },
 };

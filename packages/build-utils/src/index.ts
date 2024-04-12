@@ -28,6 +28,7 @@ import {
   runCustomInstallCommand,
   getEnvForPackageManager,
   getNodeVersion,
+  getPathForPackageManager,
   getSpawnOptions,
   getNodeBinPath,
   getNodeBinPaths,
@@ -37,6 +38,7 @@ import {
 import {
   getLatestNodeVersion,
   getDiscontinuedNodeVersions,
+  getSupportedNodeVersion,
 } from './fs/node-version';
 import streamToBuffer from './fs/stream-to-buffer';
 import debug from './debug';
@@ -71,6 +73,7 @@ export {
   walkParentDirs,
   getNodeBinPath,
   getNodeBinPaths,
+  getSupportedNodeVersion,
   runNpmInstall,
   runBundleInstall,
   runPipInstall,
@@ -78,6 +81,7 @@ export {
   runCustomInstallCommand,
   getEnvForPackageManager,
   getNodeVersion,
+  getPathForPackageManager,
   getLatestNodeVersion,
   getDiscontinuedNodeVersions,
   getSpawnOptions,
@@ -99,6 +103,7 @@ export {
 export { EdgeFunction } from './edge-function';
 export { readConfigFile } from './fs/read-config-file';
 export { normalizePath } from './fs/normalize-path';
+export { getOsRelease, getProvidedRuntime } from './os';
 
 export * from './should-serve';
 export * from './schemas';

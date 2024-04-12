@@ -9,7 +9,7 @@ import stamp from '../../util/output/stamp';
 import getAuthCode from '../../util/domains/get-auth-code';
 import getDomainPrice from '../../util/domains/get-domain-price';
 import checkTransfer from '../../util/domains/check-transfer';
-import promptBool from '../../util/input/prompt-bool';
+import confirm from '../../util/input/confirm';
 import isRootDomain from '../../util/is-root-domain';
 import { getCommandName } from '../../util/pkg-name';
 
@@ -67,11 +67,12 @@ export default async function transferIn(
 
   const authCode = await getAuthCode(opts['--code']);
 
-  const shouldTransfer = await promptBool(
+  const shouldTransfer = await confirm(
+    client,
     transferPolicy === 'no-change'
       ? `Transfer now for ${chalk.bold(`$${price}`)}?`
       : `Transfer now with 1yr renewal for ${chalk.bold(`$${price}`)}?`,
-    client
+    false
   );
   if (!shouldTransfer) {
     return 0;
@@ -121,10 +122,8 @@ export default async function transferIn(
     return 1;
   }
 
-  console.log(
-    `${chalk.cyan('> Success!')} Domain ${param(
-      domainName
-    )} transfer started ${transferStamp()}`
+  output.success(
+    `Domain ${param(domainName)} transfer started ${transferStamp()}`
   );
   output.print(
     `  To finalize the transfer, we are waiting for approval from your current registrar.\n`

@@ -1,3 +1,4 @@
+import { describe, it, expect } from 'vitest';
 import { validateConfig } from '../../../../src/util/validate-config';
 
 describe('validateConfig', () => {
@@ -253,12 +254,12 @@ describe('validateConfig', () => {
     const error = validateConfig({
       functions: {
         'api/test.js': {
-          memory: 3009,
+          memory: 3010,
         },
       },
     });
     expect(error!.message).toEqual(
-      "Invalid vercel.json - `functions['api/test.js'].memory` should be <= 3008."
+      "Invalid vercel.json - `functions['api/test.js'].memory` should be <= 3009."
     );
     expect(error!.link).toEqual(
       'https://vercel.com/docs/concepts/projects/project-configuration#functions'

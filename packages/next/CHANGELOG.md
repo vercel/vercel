@@ -1,5 +1,86 @@
 # @vercel/next
 
+## 4.2.0
+
+### Minor Changes
+
+- Add support for edge function environment variables ([#11390](https://github.com/vercel/vercel/pull/11390))
+
+## 4.1.6
+
+### Patch Changes
+
+- Ensure that static PPR pages have static streaming lambda paths. ([#11259](https://github.com/vercel/vercel/pull/11259))
+
+## 4.1.5
+
+### Patch Changes
+
+- Rename variants to flags and remove legacy flags ([#11121](https://github.com/vercel/vercel/pull/11121))
+
+## 4.1.4
+
+### Patch Changes
+
+- Enable partial prerendering support for pre-generated pages ([#11183](https://github.com/vercel/vercel/pull/11183))
+
+## 4.1.3
+
+### Patch Changes
+
+- Fix manifest with experimental flag ([#11192](https://github.com/vercel/vercel/pull/11192))
+
+## 4.1.2
+
+### Patch Changes
+
+- Update experimental bundle flag ([#11187](https://github.com/vercel/vercel/pull/11187))
+
+- [next] Add flag for experimental grouping ([#11177](https://github.com/vercel/vercel/pull/11177))
+
+- bump `@vercel/nft@0.26.4` ([#11155](https://github.com/vercel/vercel/pull/11155))
+
+- fix: missing experimental field ([#11184](https://github.com/vercel/vercel/pull/11184))
+
+## 4.1.1
+
+### Patch Changes
+
+- [node][next][redwood][remix] bump `@vercel/nft@0.26.3` ([#11115](https://github.com/vercel/vercel/pull/11115))
+
+- Load common chunks on module initialization ([#11126](https://github.com/vercel/vercel/pull/11126))
+
+- Fix index normalizing for app outputs ([#11099](https://github.com/vercel/vercel/pull/11099))
+
+- Mark `flags` as deprecated and replace them with `variants` ([#11098](https://github.com/vercel/vercel/pull/11098))
+
+- Fix rewrite RSC handling with trailingSlash ([#11107](https://github.com/vercel/vercel/pull/11107))
+
+## 4.1.0
+
+### Minor Changes
+
+- fix error when @vercel/analytics is a transitive dependency of the deployed application ([#10892](https://github.com/vercel/vercel/pull/10892))
+
+### Patch Changes
+
+- Use `worker.name` instead of edge function name to fix type error in `@vercel/next` ([#11050](https://github.com/vercel/vercel/pull/11050))
+
+## 4.0.17
+
+### Patch Changes
+
+- Ensure rewrites handle RSC requests ([#11005](https://github.com/vercel/vercel/pull/11005))
+
+- [next][node][redwood][remix] Bump `@vercel/nft@0.26.1` ([#11009](https://github.com/vercel/vercel/pull/11009))
+
+## 4.0.16
+
+### Patch Changes
+
+- Entries in the `prerender-manifest.json` without a `dataRoute` but with a `prefetchDataRoute` will be treated as an App Page. App Route's that do not have ([#10978](https://github.com/vercel/vercel/pull/10978))
+  a body will not cause a build error.
+
 ## 4.0.15
 
 ### Patch Changes

@@ -1,11 +1,10 @@
 import chalk from 'chalk';
 import ms from 'ms';
-import table from 'text-table';
+import table from '../../util/output/table';
 import type { Project } from '@vercel-internals/types';
 import Client from '../../util/client';
 import getCommandFlags from '../../util/get-command-flags';
 import { getCommandName } from '../../util/pkg-name';
-import strlen from '../../util/strlen';
 import { NODE_VERSIONS } from '@vercel/build-utils';
 
 export default async function list(
@@ -28,11 +27,12 @@ export default async function list(
 
   output.spinner(`Fetching projects in ${chalk.bold(contextName)}`);
 
-  const deprecated = argv['--deprecated'] || false;
+  let projectsUrl = `/v4/projects/?limit=20`;
 
-  // use a larger limit when `--deprecated`
-  // because client-side filtering produces fewer results
-  let projectsUrl = `/v4/projects/?limit=${deprecated ? 40 : 20}`;
+  const deprecated = argv['--update-required'] || false;
+  if (deprecated) {
+    projectsUrl += `&deprecated=${deprecated}`;
+  }
 
   const next = argv['--next'] || false;
   if (next) {
@@ -54,24 +54,21 @@ export default async function list(
   const elapsed = ms(Date.now() - start);
 
   if (deprecated) {
-    const upcomingDeprecationVersions = NODE_VERSIONS.filter(
-      nodeVersion =>
+    const upcomingDeprecationVersionsList = [];
+
+    for (const nodeVersion of NODE_VERSIONS) {
+      if (
         nodeVersion.discontinueDate &&
         nodeVersion.discontinueDate.valueOf() > Date.now()
-    );
-    const upcomingDeprecationVersionsList = upcomingDeprecationVersions.map(
-      nodeVersion => nodeVersion.range
-    );
-    projectList = projectList.filter(
-      project =>
-        project.nodeVersion &&
-        upcomingDeprecationVersionsList.includes(project.nodeVersion)
-    );
+      ) {
+        upcomingDeprecationVersionsList.push(nodeVersion.range);
+      }
+    }
 
     output.warn(
       `The following Node.js versions will be deprecated soon: ${upcomingDeprecationVersionsList.join(
         ', '
-      )}. Upgrade your projects immediately.`
+      )}. Please upgrade your projects immediately.`
     );
     output.log(
       `For more information visit: https://vercel.com/docs/functions/serverless-functions/runtimes/node-js#node.js-version`
@@ -102,11 +99,7 @@ export default async function list(
           ])
           .flat(),
       ],
-      {
-        align: ['l', 'l', 'l'],
-        hsep: ' '.repeat(3),
-        stringLength: strlen,
-      }
+      { hsep: 3 }
     ).replace(/^/gm, '  ');
     output.print(`\n${tablePrint}\n\n`);
 

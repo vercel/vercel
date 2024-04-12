@@ -1,5 +1,115 @@
 # @vercel/node
 
+## 3.0.26
+
+### Patch Changes
+
+- Fix issue with serverless function on docker ([#11226](https://github.com/vercel/vercel/pull/11226))
+
+- Add import and require ts-node files for TypeScript in `vc dev` ([#11371](https://github.com/vercel/vercel/pull/11371))
+
+- Updated dependencies [[`73b112b1f`](https://github.com/vercel/vercel/commit/73b112b1f74480e1bb941e1b754105fc7dace401)]:
+  - @vercel/build-utils@7.11.0
+
+## 3.0.25
+
+### Patch Changes
+
+- Updated dependencies [[`1825b58df`](https://github.com/vercel/vercel/commit/1825b58df8d783e79f0addf262618f422246f4b3)]:
+  - @vercel/build-utils@7.10.0
+
+## 3.0.24
+
+### Patch Changes
+
+- Updated dependencies [[`11218a179`](https://github.com/vercel/vercel/commit/11218a179870a5420c5a6ff720cd4aec4f7e1c5e)]:
+  - @vercel/build-utils@7.9.1
+
+## 3.0.23
+
+### Patch Changes
+
+- Updated dependencies [[`8ea93839c`](https://github.com/vercel/vercel/commit/8ea93839ccc70816f3ece9d7cfdb857aa7a4b015)]:
+  - @vercel/build-utils@7.9.0
+
+## 3.0.22
+
+### Patch Changes
+
+- Updated dependencies [[`908e7837d`](https://github.com/vercel/vercel/commit/908e7837d55bc02e708f402c700e00208415e954), [`5e3656ec1`](https://github.com/vercel/vercel/commit/5e3656ec1b3f0561091636582715ba09ddd8cb2d)]:
+  - @vercel/build-utils@7.8.0
+
+## 3.0.21
+
+### Patch Changes
+
+- Updated dependencies [[`37b193c84`](https://github.com/vercel/vercel/commit/37b193c845d8b63d93bb0017fbc1a6a35306ef1f)]:
+  - @vercel/build-utils@7.7.1
+
+## 3.0.20
+
+### Patch Changes
+
+- bump `@vercel/nft@0.26.4` ([#11155](https://github.com/vercel/vercel/pull/11155))
+
+## 3.0.19
+
+### Patch Changes
+
+- build: upgrade edge-runtime ([#11148](https://github.com/vercel/vercel/pull/11148))
+
+- refactor: simplify content-length check ([#11150](https://github.com/vercel/vercel/pull/11150))
+
+- Updated dependencies [[`24c3dd282`](https://github.com/vercel/vercel/commit/24c3dd282d7714cd63d2b94fb94745c45fdc79ab)]:
+  - @vercel/build-utils@7.7.0
+
+## 3.0.18
+
+### Patch Changes
+
+- [node][next][redwood][remix] bump `@vercel/nft@0.26.3` ([#11115](https://github.com/vercel/vercel/pull/11115))
+
+- Updated dependencies [[`b6ed28b9b`](https://github.com/vercel/vercel/commit/b6ed28b9b1712f882c93fe053b70d3eb1df21819), [`8ba0ce932`](https://github.com/vercel/vercel/commit/8ba0ce932434c6295fedb5307bee59a804b7e6a8), [`0d034b682`](https://github.com/vercel/vercel/commit/0d034b6820c0f3252949c0ffc483048c5aac7f04), [`abaa700ce`](https://github.com/vercel/vercel/commit/abaa700cea44c723cfc851baa2dfe9e1ae2e8a5c)]:
+  - @vercel/build-utils@7.6.0
+
+## 3.0.17
+
+### Patch Changes
+
+- Updated dependencies [[`cdddb33ad`](https://github.com/vercel/vercel/commit/cdddb33ad49f6080c49f4fff3767e6111acd0bbe)]:
+  - @vercel/build-utils@7.5.1
+
+## 3.0.16
+
+### Patch Changes
+
+- Deprecate `EdgeFunction#name` property ([#11010](https://github.com/vercel/vercel/pull/11010))
+
+- Updated dependencies [[`98040ec24`](https://github.com/vercel/vercel/commit/98040ec24e1ee585865d11eb216b6525d39d209e)]:
+  - @vercel/build-utils@7.5.0
+
+## 3.0.15
+
+### Patch Changes
+
+- Await waitUntil promises to resolve before exiting ([#10915](https://github.com/vercel/vercel/pull/10915))
+
+- [next][node][redwood][remix] Bump `@vercel/nft@0.26.1` ([#11009](https://github.com/vercel/vercel/pull/11009))
+
+## 3.0.14
+
+### Patch Changes
+
+- Updated dependencies [[`67fa2f3dd`](https://github.com/vercel/vercel/commit/67fa2f3dd6a6d5a3504b7f9081e56deff7b36eab)]:
+  - @vercel/build-utils@7.4.1
+
+## 3.0.13
+
+### Patch Changes
+
+- Updated dependencies [[`4d63d9e95`](https://github.com/vercel/vercel/commit/4d63d9e954549d811063d259250d1865b7de2ba1)]:
+  - @vercel/build-utils@7.4.0
+
 ## 3.0.12
 
 ### Patch Changes

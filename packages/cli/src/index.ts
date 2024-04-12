@@ -152,12 +152,12 @@ const main = async () => {
   // If empty, leave this code here for easy adding of beta commands later
   const betaCommands: string[] = [];
   if (betaCommands.includes(targetOrSubcommand)) {
-    console.log(
+    output.print(
       `${chalk.grey(
         `${getTitleName()} CLI ${
           pkg.version
         } ${targetOrSubcommand} (beta) — https://vercel.com/feedback`
-      )}`
+      )}\n`
     );
   } else {
     output.print(`${chalk.grey(`${getTitleName()} CLI ${pkg.version}`)}\n`);
@@ -460,6 +460,15 @@ const main = async () => {
           output.prettyError({
             message: `You do not have access to the specified team`,
             link: 'https://err.sh/vercel/scope-not-accessible',
+          });
+
+          return 1;
+        }
+
+        if (isErrnoException(err) && err.code === 'rate_limited') {
+          output.prettyError({
+            message:
+              'Rate limited. Too many requests to the same endpoint: /teams',
           });
 
           return 1;

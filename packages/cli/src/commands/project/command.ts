@@ -17,13 +17,12 @@ export const projectCommand: Command = {
       arguments: [],
       options: [
         {
-          name: 'deprecated',
-          description: 'A list of projects affected by a deprecation',
-          argument: 'deprecated',
+          name: 'update-required',
+          description: 'A list of projects affected by an upcoming deprecation',
+          argument: 'update-required',
           shorthand: null,
-          type: 'boolean',
+          type: Boolean,
           deprecated: false,
-          multi: false,
         },
       ],
       examples: [],
@@ -59,9 +58,8 @@ export const projectCommand: Command = {
       description: 'Show next page of results',
       argument: 'MS',
       shorthand: 'N',
-      type: 'string',
+      type: String,
       deprecated: false,
-      multi: false,
     },
   ],
   examples: [

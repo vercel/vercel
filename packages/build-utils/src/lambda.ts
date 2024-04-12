@@ -5,11 +5,7 @@ import minimatch from 'minimatch';
 import { readlink } from 'fs-extra';
 import { isSymbolicLink, isDirectory } from './fs/download';
 import streamToBuffer from './fs/stream-to-buffer';
-import type { Files, Config, FunctionFramework } from './types';
-
-interface Environment {
-  [key: string]: string;
-}
+import type { Config, Env, Files, FunctionFramework } from './types';
 
 export type LambdaOptions = LambdaOptionsWithFiles | LambdaOptionsWithZipBuffer;
 
@@ -21,7 +17,7 @@ export interface LambdaOptionsBase {
   architecture?: LambdaArchitecture;
   memory?: number;
   maxDuration?: number;
-  environment?: Environment;
+  environment?: Env;
   allowQuery?: string[];
   regions?: string[];
   supportsMultiPayloads?: boolean;
@@ -37,6 +33,7 @@ export interface LambdaOptionsBase {
 
 export interface LambdaOptionsWithFiles extends LambdaOptionsBase {
   files: Files;
+  experimentalAllowBundling?: boolean;
 }
 
 /**
@@ -68,7 +65,7 @@ export class Lambda {
   architecture?: LambdaArchitecture;
   memory?: number;
   maxDuration?: number;
-  environment: Environment;
+  environment: Env;
   allowQuery?: string[];
   regions?: string[];
   /**
@@ -79,6 +76,7 @@ export class Lambda {
   supportsWrapper?: boolean;
   supportsResponseStreaming?: boolean;
   framework?: FunctionFramework;
+  experimentalAllowBundling?: boolean;
 
   constructor(opts: LambdaOptions) {
     const {
@@ -111,6 +109,16 @@ export class Lambda {
       assert(
         architecture === 'x86_64' || architecture === 'arm64',
         '"architecture" must be either "x86_64" or "arm64"'
+      );
+    }
+
+    if (
+      'experimentalAllowBundling' in opts &&
+      opts.experimentalAllowBundling !== undefined
+    ) {
+      assert(
+        typeof opts.experimentalAllowBundling === 'boolean',
+        '"experimentalAllowBundling" is not a boolean'
       );
     }
 
@@ -183,6 +191,10 @@ export class Lambda {
     this.supportsResponseStreaming =
       supportsResponseStreaming ?? experimentalResponseStreaming;
     this.framework = framework;
+    this.experimentalAllowBundling =
+      'experimentalAllowBundling' in opts
+        ? opts.experimentalAllowBundling
+        : undefined;
   }
 
   async createZip(): Promise<Buffer> {

@@ -67,7 +67,7 @@ jobs:
           node-version: ${{ matrix.nodeVersion || env.NODE_VERSION }}
 
       - name: Install Hugo
-        if: matrix.runner == 'macos-latest'
+        if: matrix.runner == 'macos-14'
         run: curl -L -O https://github.com/gohugoio/hugo/releases/download/v0.56.0/hugo_0.56.0_macOS-64bit.tar.gz && tar -xzf hugo_0.56.0_macOS-64bit.tar.gz && mv ./hugo packages/cli/test/dev/fixtures/08-hugo/
 
       # yarn 1.22.21 introduced a Corepack bug when running tests.
@@ -79,16 +79,13 @@ jobs:
         run: npm i -g pnpm@8.3.1
 
       - run: pnpm install
-      - name: fetch ssl certificate before build (linux, os x)
-        if: matrix.runner != 'windows-latest'
-        run: echo | openssl s_client -showcerts -servername 'api.vercel.com' -connect 76.76.21.21:443
 
       - name: Build ${{matrix.packageName}} and all its dependencies
         run: node utils/gen.js && node_modules/.bin/turbo run build --cache-dir=".turbo" --log-order=stream --scope=${{matrix.packageName}} --include-dependencies --no-deps
         env:
           FORCE_COLOR: '1'
       - name: Test ${{matrix.packageName}}
-        run: node utils/gen.js && node_modules/.bin/turbo run test --summarize --cache-dir=".turbo" --log-order=stream --scope=${{matrix.packageName}} --no-deps -- ${{ join(matrix.testPaths, ' ') }}
+        run: node utils/gen.js && node_modules/.bin/turbo run ${{matrix.testScript}} --summarize --cache-dir=".turbo" --log-order=stream --scope=${{matrix.packageName}} --no-deps -- ${{ join(matrix.testPaths, ' ') }}
         shell: bash
         env:
           JEST_JUNIT_OUTPUT_FILE: ${{github.workspace}}/.junit-reports/${{matrix.scriptName}}-${{matrix.packageName}}-${{matrix.chunkNumber}}-${{ matrix.runner }}.xml
@@ -104,9 +101,6 @@ jobs:
           TURBO_MISS_COUNT=`node utils/determine-turbo-hit-or-miss.js`
           echo "MISS COUNT: $TURBO_MISS_COUNT"
           echo "misses=$TURBO_MISS_COUNT" >> $GITHUB_OUTPUT
-      - name: fetch ssl certificate after tests (linux, os x)
-        if: matrix.runner != 'windows-latest'
-        run: echo | openssl s_client -showcerts -servername 'api.vercel.com' -connect 76.76.21.21:443
       - name: 'Upload Test Report to Datadog'
         if: ${{ steps['turbo-summary'].outputs.misses != '0' && !cancelled() }}
         run: 'npx @datadog/datadog-ci@2.18.1 junit upload --service vercel-cli .junit-reports'

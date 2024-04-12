@@ -1,4 +1,4 @@
-import type { Files, FunctionFramework } from './types';
+import type { Env, Files, FunctionFramework } from './types';
 
 /**
  * An Edge Functions output
@@ -8,12 +8,13 @@ export class EdgeFunction {
 
   /**
    * A display name for the edge function.
+   * @deprecated This property should no longer be used. The name is inferred from the URL path of the function.
    */
-  name: string;
+  name?: string;
 
   /**
    * The deployment target.
-   * Only v8-worker is currently supported.
+   * Only `v8-worker` is currently supported.
    */
   deploymentTarget: 'v8-worker';
 
@@ -21,6 +22,11 @@ export class EdgeFunction {
    * The entrypoint for the edge function.
    */
   entrypoint: string;
+
+  /**
+   * Environment variables for the edge function to use at runtime.
+   */
+  environment?: Env;
 
   /**
    * The list of files to be included in the edge function bundle.
@@ -47,5 +53,6 @@ export class EdgeFunction {
     this.assets = params.assets;
     this.regions = params.regions;
     this.framework = params.framework;
+    this.environment = params.environment;
   }
 }

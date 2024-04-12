@@ -1,5 +1,117 @@
 # @vercel/static-build
 
+## 2.4.6
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.24
+
+## 2.4.5
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.23
+
+## 2.4.4
+
+### Patch Changes
+
+- [framework-fixtures]: Bump the core group in /packages/static-build/test/fixtures/angular-v17 with 15 updates ([#11274](https://github.com/vercel/vercel/pull/11274))
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.22
+
+## 2.4.3
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.21
+
+## 2.4.2
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.20
+
+## 2.4.1
+
+### Patch Changes
+
+- [build-utils] increase max memory limit ([#11209](https://github.com/vercel/vercel/pull/11209))
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.19
+
+## 2.4.0
+
+### Minor Changes
+
+- Revert "Revert "Default ruby to only currently supported version (3.2.0)"" ([#11137](https://github.com/vercel/vercel/pull/11137))
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.18
+
+## 2.3.0
+
+### Minor Changes
+
+- Revert "Default ruby to only currently supported version (3.2.0)" ([#11135](https://github.com/vercel/vercel/pull/11135))
+
+### Patch Changes
+
+- Updated dependencies [[`ab2444466`](https://github.com/vercel/vercel/commit/ab24444660339eaeacdaad7ff74594171a142b1e)]:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.17
+
+## 2.2.0
+
+### Minor Changes
+
+- Default ruby to only currently supported version (3.2.0) ([#11104](https://github.com/vercel/vercel/pull/11104))
+
+### Patch Changes
+
+- [tests] Update Gatsby fixture versions ([#11101](https://github.com/vercel/vercel/pull/11101))
+
+## 2.1.0
+
+### Minor Changes
+
+- chore: deprecate next/nuxt/gastby Speed Insights injection in favor of @vercel/speed-insights ([#11048](https://github.com/vercel/vercel/pull/11048))
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.16
+
+## 2.0.17
+
+### Patch Changes
+
+- Deprecate `EdgeFunction#name` property ([#11010](https://github.com/vercel/vercel/pull/11010))
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.15
+
+## 2.0.16
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.14
+
+## 2.0.15
+
+### Patch Changes
+
+- Updated dependencies [[`652a31275`](https://github.com/vercel/vercel/commit/652a3127533974c426ea8e5b1047af1aecddb57e)]:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.13
+
 ## 2.0.14
 
 ### Patch Changes

@@ -1,8 +1,7 @@
 import isErrnoException from '@vercel/error-utils';
 import chalk from 'chalk';
-import table from 'text-table';
+import table from '../../util/output/table';
 import ms from 'ms';
-import strlen from '../../util/strlen';
 import { handleError, error } from '../../util/error';
 import NowSecrets from '../../util/secrets';
 import getScope from '../../util/get-scope';
@@ -78,6 +77,12 @@ async function run({ output, contextName, currentTeam, client }) {
 
   const commandName = getCommandName('secret ' + subcommand);
 
+  output.warn(
+    'On May 1st, 2024 secrets will be automatically converted to sensitive Environment Variables for Preview and Production environments.\n' +
+      'Secrets attached to Development environments will not be migrated.' +
+      'See https://vercel.com/changelog/legacy-environment-variable-secrets-are-being-sunset for more information.'
+  );
+
   if (subcommand === 'ls' || subcommand === 'list') {
     output.note(
       `The ${getCommandName(
@@ -85,6 +90,7 @@ async function run({ output, contextName, currentTeam, client }) {
       )} command is recommended instead of ${commandName}\n`
     );
     if (args.length > 1) {
+      // consider replacing with `output.error`
       console.error(
         error(
           `Invalid number of arguments. Usage: ${chalk.cyan(
@@ -101,10 +107,10 @@ async function run({ output, contextName, currentTeam, client }) {
     );
     const elapsed = ms(Date.now() - start);
 
-    console.log(
+    output.print(
       `${list.length > 0 ? 'Secrets' : 'No secrets'} found under ${chalk.bold(
         contextName
-      )} ${chalk.gray(`[${elapsed}]`)}`
+      )} ${chalk.gray(`[${elapsed}]`)}\n`
     );
 
     if (list.length > 0) {
@@ -118,11 +124,7 @@ async function run({ output, contextName, currentTeam, client }) {
             chalk.gray(`${ms(cur - new Date(secret.created))} ago`),
           ])
         ),
-        {
-          align: ['l', 'l', 'l'],
-          hsep: ' '.repeat(2),
-          stringLength: strlen,
-        }
+        { hsep: 2 }
       );
 
       if (out) {
@@ -145,6 +147,7 @@ async function run({ output, contextName, currentTeam, client }) {
       )} command is recommended instead of ${commandName}\n`
     );
     if (args.length !== 1) {
+      // consider replacing with `output.error`
       console.error(
         error(
           `Invalid number of arguments. Usage: ${chalk.cyan(
@@ -166,6 +169,7 @@ async function run({ output, contextName, currentTeam, client }) {
         return 0;
       }
     } else {
+      // consider replacing with `output.error`
       console.error(
         error(
           `No secret found by name "${args[0]}" under ${chalk.bold(
@@ -178,10 +182,10 @@ async function run({ output, contextName, currentTeam, client }) {
 
     const secret = await secrets.rm(args[0]);
     const elapsed = ms(new Date() - start);
-    console.log(
-      `${chalk.cyan('Success!')} Secret ${chalk.bold(
-        secret.name
-      )} under ${chalk.bold(contextName)} removed ${chalk.gray(`[${elapsed}]`)}`
+    output.success(
+      `Secret ${chalk.bold(secret.name)} under ${chalk.bold(
+        contextName
+      )} removed ${chalk.gray(`[${elapsed}]`)}`
     );
     return secrets.close();
   }
@@ -193,6 +197,7 @@ async function run({ output, contextName, currentTeam, client }) {
       )} commands are recommended instead of ${commandName}\n`
     );
     if (args.length !== 2) {
+      // consider replacing with `output.error`
       console.error(
         error(
           `Invalid number of arguments. Usage: ${chalk.cyan(
@@ -204,12 +209,10 @@ async function run({ output, contextName, currentTeam, client }) {
     }
     const secret = await secrets.rename(args[0], args[1]);
     const elapsed = ms(new Date() - start);
-    console.log(
-      `${chalk.cyan('Success!')} Secret ${chalk.bold(
-        secret.oldName
-      )} renamed to ${chalk.bold(args[1])} under ${chalk.bold(
-        contextName
-      )} ${chalk.gray(`[${elapsed}]`)}`
+    output.success(
+      `Secret ${chalk.bold(secret.oldName)} renamed to ${chalk.bold(
+        args[1]
+      )} under ${chalk.bold(contextName)} ${chalk.gray(`[${elapsed}]`)}`
     );
     return secrets.close();
   }
@@ -221,6 +224,7 @@ async function run({ output, contextName, currentTeam, client }) {
       )} command is recommended instead of ${commandName}\n`
     );
     if (args.length !== 2) {
+      // consider replacing with `output.error`
       console.error(
         error(
           `Invalid number of arguments. Usage: ${chalk.cyan(
@@ -233,7 +237,7 @@ async function run({ output, contextName, currentTeam, client }) {
         const example = chalk.cyan(
           `$ ${getCommandName('secret add -- "${args[0]}"')}`
         );
-        console.log(
+        output.log(
           `If your secret has spaces or starts with '-', make sure to terminate command options with double dash and wrap it in quotes. Example: \n  ${example} `
         );
       }
@@ -247,7 +251,7 @@ async function run({ output, contextName, currentTeam, client }) {
       const example = chalk.cyan(
         `$ ${getCommandName('secret add -- "${name}"')}`
       );
-      console.log(
+      output.log(
         `If your secret starts with '-', make sure to terminate command options with double dash and wrap it in quotes. Example: \n  ${example} `
       );
       return 1;
@@ -260,14 +264,15 @@ async function run({ output, contextName, currentTeam, client }) {
       output.warn(`Your secret name was converted to lower-case`);
     }
 
-    console.log(
-      `${chalk.cyan('Success!')} Secret ${chalk.bold(
-        name.toLowerCase()
-      )} added under ${chalk.bold(contextName)} ${chalk.gray(`[${elapsed}]`)}`
+    output.success(
+      `Secret ${chalk.bold(name.toLowerCase())} added under ${chalk.bold(
+        contextName
+      )} ${chalk.gray(`[${elapsed}]`)}`
     );
     return secrets.close();
   }
 
+  // consider replacing with `output.error`
   console.error(
     error('Please specify a valid subcommand: ls | add | rename | rm')
   );
@@ -279,7 +284,7 @@ async function readConfirmation(client, output, secret, contextName) {
   const time = chalk.gray(`${ms(new Date() - new Date(secret.created))} ago`);
   const tbl = table([[chalk.bold(secret.name), time]], {
     align: ['r', 'l'],
-    hsep: ' '.repeat(6),
+    hsep: 6,
   });
 
   output.print(

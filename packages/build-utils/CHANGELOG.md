@@ -1,5 +1,89 @@
 # @vercel/build-utils
 
+## 7.11.0
+
+### Minor Changes
+
+- Add `getOsRelease()` and `getProvidedRuntime()` functions ([#11370](https://github.com/vercel/vercel/pull/11370))
+
+## 7.10.0
+
+### Minor Changes
+
+- Allow environment variables to be specified for `EdgeFunction` ([#11029](https://github.com/vercel/vercel/pull/11029))
+
+## 7.9.1
+
+### Patch Changes
+
+- Export `getSupportedNodeVersion` ([#11277](https://github.com/vercel/vercel/pull/11277))
+
+## 7.9.0
+
+### Minor Changes
+
+- Add `base` parameter to `scanParentDirs()` ([#11261](https://github.com/vercel/vercel/pull/11261))
+
+## 7.8.0
+
+### Minor Changes
+
+- Remove `VERCEL_ENABLE_NPM_DEFAULT` env var check ([#11242](https://github.com/vercel/vercel/pull/11242))
+
+### Patch Changes
+
+- Rename variants to flags and remove legacy flags ([#11121](https://github.com/vercel/vercel/pull/11121))
+
+## 7.7.1
+
+### Patch Changes
+
+- [build-utils] increase max memory limit ([#11209](https://github.com/vercel/vercel/pull/11209))
+
+## 7.7.0
+
+### Minor Changes
+
+- Revert "Revert "Default ruby to only currently supported version (3.2.0)"" ([#11137](https://github.com/vercel/vercel/pull/11137))
+
+## 7.6.0
+
+### Minor Changes
+
+- Revert "Default ruby to only currently supported version (3.2.0)" ([#11135](https://github.com/vercel/vercel/pull/11135))
+
+- Mark `flags` as deprecated and replace them with `variants` ([#11098](https://github.com/vercel/vercel/pull/11098))
+
+- [build-utils] change default package manager when no lockfile detected from `yarn` to `npm` (gated behind feature flag) ([#11131](https://github.com/vercel/vercel/pull/11131))
+
+### Patch Changes
+
+- Update internal type for variants ([#11111](https://github.com/vercel/vercel/pull/11111))
+
+## 7.5.1
+
+### Patch Changes
+
+- Add experimental field to Lambda and size to FileFsRef output ([#11059](https://github.com/vercel/vercel/pull/11059))
+
+## 7.5.0
+
+### Minor Changes
+
+- Deprecate `EdgeFunction#name` property ([#11010](https://github.com/vercel/vercel/pull/11010))
+
+## 7.4.1
+
+### Patch Changes
+
+- Extend Node v16 discontinue date to 2024-06-15 ([#10967](https://github.com/vercel/vercel/pull/10967))
+
+## 7.4.0
+
+### Minor Changes
+
+- Adds new helper `getPathForPackageManager()` ([#10918](https://github.com/vercel/vercel/pull/10918))
+
 ## 7.3.0
 
 ### Minor Changes

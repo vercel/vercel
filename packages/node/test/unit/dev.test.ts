@@ -30,9 +30,9 @@ function testForkDevServer(entrypoint: string) {
 }
 
 (NODE_MAJOR < 18 ? test.skip : test)(
-  'runs an serverless function that exports GET',
+  'web handlers for node runtime',
   async () => {
-    const child = testForkDevServer('./serverless-response.js');
+    const child = testForkDevServer('./web-handlers-node.js');
     try {
       const result = await readMessage(child);
       if (result.state !== 'message') {
@@ -43,20 +43,251 @@ function testForkDevServer(entrypoint: string) {
 
       {
         const response = await fetch(
-          `http://${address}:${port}/api/serverless-response?name=Vercel`
+          `http://${address}:${port}/api/web-handlers-node`,
+          { method: 'GET' }
         );
         expect({
           status: response.status,
           body: await response.text(),
-        }).toEqual({ status: 200, body: 'Greetings, Vercel' });
+          transferEncoding: response.headers.get('transfer-encoding'),
+          'x-web-handler': response.headers.get('x-web-handler'),
+        }).toEqual({
+          status: 200,
+          body: 'Web handler using GET',
+          transferEncoding: 'chunked',
+          'x-web-handler': 'Web handler using GET',
+        });
       }
+      {
+        const response = await fetch(
+          `http://${address}:${port}/api/web-handlers-node`,
+          { method: 'POST' }
+        );
+        expect({
+          status: response.status,
+          body: await response.text(),
+          transferEncoding: response.headers.get('transfer-encoding'),
+          'x-web-handler': response.headers.get('x-web-handler'),
+        }).toEqual({
+          status: 200,
+          body: 'Web handler using POST',
+          transferEncoding: 'chunked',
+          'x-web-handler': 'Web handler using POST',
+        });
+      }
+      {
+        const response = await fetch(
+          `http://${address}:${port}/api/web-handlers-node`,
+          { method: 'DELETE' }
+        );
+        expect({
+          status: response.status,
+          body: await response.text(),
+          transferEncoding: response.headers.get('transfer-encoding'),
+          'x-web-handler': response.headers.get('x-web-handler'),
+        }).toEqual({
+          status: 200,
+          body: 'Web handler using DELETE',
+          transferEncoding: 'chunked',
+          'x-web-handler': 'Web handler using DELETE',
+        });
+      }
+      {
+        const response = await fetch(
+          `http://${address}:${port}/api/web-handlers-node`,
+          { method: 'PUT' }
+        );
+        expect({
+          status: response.status,
+          body: await response.text(),
+          transferEncoding: response.headers.get('transfer-encoding'),
+          'x-web-handler': response.headers.get('x-web-handler'),
+        }).toEqual({
+          status: 200,
+          body: 'Web handler using PUT',
+          transferEncoding: 'chunked',
+          'x-web-handler': 'Web handler using PUT',
+        });
+      }
+      {
+        const response = await fetch(
+          `http://${address}:${port}/api/web-handlers-node`,
+          { method: 'PATCH' }
+        );
+        expect({
+          status: response.status,
+          body: await response.text(),
+          transferEncoding: response.headers.get('transfer-encoding'),
+          'x-web-handler': response.headers.get('x-web-handler'),
+        }).toEqual({
+          status: 200,
+          body: 'Web handler using PATCH',
+          transferEncoding: 'chunked',
+          'x-web-handler': 'Web handler using PATCH',
+        });
+      }
+      {
+        const response = await fetch(
+          `http://${address}:${port}/api/web-handlers-node`,
+          { method: 'HEAD' }
+        );
+        expect({
+          status: response.status,
+          'x-web-handler': response.headers.get('x-web-handler'),
+        }).toEqual({
+          status: 200,
+          'x-web-handler': 'Web handler using HEAD',
+        });
+      }
+      {
+        const response = await fetch(
+          `http://${address}:${port}/api/web-handlers-node`,
+          { method: 'OPTIONS' }
+        );
+        expect({
+          status: response.status,
+          body: await response.text(),
+          transferEncoding: response.headers.get('transfer-encoding'),
+          'x-web-handler': response.headers.get('x-web-handler'),
+        }).toEqual({
+          status: 200,
+          body: 'Web handler using OPTIONS',
+          transferEncoding: 'chunked',
+          'x-web-handler': 'Web handler using OPTIONS',
+        });
+      }
+    } finally {
+      child.kill(9);
+    }
+  }
+);
+
+(NODE_MAJOR < 18 ? test.skip : test)(
+  'web handlers for edge runtime',
+  async () => {
+    const child = testForkDevServer('./web-handlers-edge.js');
+    try {
+      const result = await readMessage(child);
+      if (result.state !== 'message') {
+        throw new Error('Exited. error: ' + JSON.stringify(result.value));
+      }
+
+      const { address, port } = result.value;
 
       {
         const response = await fetch(
-          `http://${address}:${port}/api/serverless-response?name=Vercel`,
+          `http://${address}:${port}/api/web-handlers-edge`,
+          { method: 'GET' }
+        );
+        expect({
+          status: response.status,
+          body: await response.text(),
+          transferEncoding: response.headers.get('transfer-encoding'),
+          'x-web-handler': response.headers.get('x-web-handler'),
+        }).toEqual({
+          status: 200,
+          body: 'Web handler using GET',
+          transferEncoding: 'chunked',
+          'x-web-handler': 'Web handler using GET',
+        });
+      }
+      {
+        const response = await fetch(
+          `http://${address}:${port}/api/web-handlers-edge`,
+          { method: 'POST' }
+        );
+        expect({
+          status: response.status,
+          body: await response.text(),
+          transferEncoding: response.headers.get('transfer-encoding'),
+          'x-web-handler': response.headers.get('x-web-handler'),
+        }).toEqual({
+          status: 200,
+          body: 'Web handler using POST',
+          transferEncoding: 'chunked',
+          'x-web-handler': 'Web handler using POST',
+        });
+      }
+      {
+        const response = await fetch(
+          `http://${address}:${port}/api/web-handlers-edge`,
+          { method: 'DELETE' }
+        );
+
+        console.log(response);
+        expect({
+          status: response.status,
+          transferEncoding: response.headers.get('transfer-encoding'),
+          'x-web-handler': response.headers.get('x-web-handler'),
+        }).toEqual({
+          status: 200,
+          transferEncoding: 'chunked',
+          'x-web-handler': 'Web handler using DELETE',
+        });
+      }
+      {
+        const response = await fetch(
+          `http://${address}:${port}/api/web-handlers-edge`,
+          { method: 'PUT' }
+        );
+        expect({
+          status: response.status,
+          body: await response.text(),
+          transferEncoding: response.headers.get('transfer-encoding'),
+          'x-web-handler': response.headers.get('x-web-handler'),
+        }).toEqual({
+          status: 200,
+          body: 'Web handler using PUT',
+          transferEncoding: 'chunked',
+          'x-web-handler': 'Web handler using PUT',
+        });
+      }
+      {
+        const response = await fetch(
+          `http://${address}:${port}/api/web-handlers-edge`,
+          { method: 'PATCH' }
+        );
+        expect({
+          status: response.status,
+          body: await response.text(),
+          transferEncoding: response.headers.get('transfer-encoding'),
+          'x-web-handler': response.headers.get('x-web-handler'),
+        }).toEqual({
+          status: 200,
+          body: 'Web handler using PATCH',
+          transferEncoding: 'chunked',
+          'x-web-handler': 'Web handler using PATCH',
+        });
+      }
+      {
+        const response = await fetch(
+          `http://${address}:${port}/api/web-handlers-edge`,
           { method: 'HEAD' }
         );
-        expect({ status: response.status }).toEqual({ status: 405 });
+        expect({
+          status: response.status,
+          'x-web-handler': response.headers.get('x-web-handler'),
+        }).toEqual({
+          status: 200,
+          'x-web-handler': 'Web handler using HEAD',
+        });
+      }
+      {
+        const response = await fetch(
+          `http://${address}:${port}/api/web-handlers-edge`,
+          { method: 'OPTIONS' }
+        );
+        expect({
+          status: response.status,
+          body: await response.text(),
+          transferEncoding: response.headers.get('transfer-encoding'),
+          'x-web-handler': response.headers.get('x-web-handler'),
+        }).toEqual({
+          status: 200,
+          body: 'Web handler using OPTIONS',
+          transferEncoding: 'chunked',
+          'x-web-handler': 'Web handler using OPTIONS',
+        });
       }
     } finally {
       child.kill(9);
@@ -305,5 +536,90 @@ test('allow setting multiple cookies with same name', async () => {
     expect(response.headers.getSetCookie()).toEqual(['a=x', 'b=y', 'c=z']);
   } finally {
     child.kill(9);
+  }
+});
+
+test('dev server waits for waitUntil promises to resolve', async () => {
+  async function startPingServer() {
+    let resolve: (value: any) => void;
+    const promise = new Promise<void>(resolve_ => {
+      resolve = resolve_;
+    });
+
+    const pingServer = createServer((req, res) => {
+      res.end('pong');
+      resolve('got a fetch from waitUntil');
+    });
+
+    const pingUrl = (await listen(pingServer)).toString();
+    return {
+      pingUrl,
+      pingServer,
+      promise,
+    };
+  }
+
+  async function withTimeout(
+    promise: Promise<unknown>,
+    name: string,
+    ms: number
+  ) {
+    return await Promise.race([
+      promise,
+      new Promise(resolve =>
+        setTimeout(
+          () => resolve(`${name} promise was not resolved in ${ms} ms`),
+          ms
+        )
+      ),
+    ]);
+  }
+
+  const { promise: pingPromise, pingServer, pingUrl } = await startPingServer();
+  const child = testForkDevServer('./edge-waituntil.js');
+  const exitPromise = new Promise(resolve => {
+    child.on('exit', code => {
+      resolve(`child has exited with ${code}`);
+    });
+  });
+
+  try {
+    const result = await readMessage(child);
+    if (result.state !== 'message') {
+      throw new Error('Exited. error: ' + JSON.stringify(result.value));
+    }
+
+    const { address, port } = result.value;
+    const response = await fetch(
+      `http://${address}:${port}/api/edge-waituntil`,
+      {
+        headers: {
+          'x-ping-url': pingUrl,
+        },
+      }
+    );
+
+    expect({
+      status: response.status,
+      body: await response.text(),
+    }).toEqual({
+      status: 200,
+      body: 'running waitUntil promises asynchronously...',
+    });
+
+    // Dev server should keep running until waitUntil promise resolves...
+    child.send('shutdown');
+
+    // Wait for waitUntil promise to resolve...
+    expect(await withTimeout(pingPromise, 'ping server', 3000)).toBe(
+      'got a fetch from waitUntil'
+    );
+    // Make sure child process has exited.
+    expect(await withTimeout(exitPromise, 'child exit', 5000)).toBe(
+      'child has exited with 0'
+    );
+  } finally {
+    child.kill(9);
+    pingServer.close();
   }
 });

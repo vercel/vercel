@@ -45,10 +45,16 @@ export default async function bisect(client: Client): Promise<number> {
 
   let bad =
     argv['--bad'] ||
-    (await prompt(client, `Specify a URL where the bug occurs:`));
+    (await client.input.text({
+      message: `Specify a URL where the bug occurs:`,
+      validate: val => (val ? true : 'A URL must be provided'),
+    }));
   let good =
     argv['--good'] ||
-    (await prompt(client, `Specify a URL where the bug does not occur:`));
+    (await client.input.text({
+      message: `Specify a URL where the bug does not occur:`,
+      validate: val => (val ? true : 'A URL must be provided'),
+    }));
   let subpath = argv['--path'] || '';
   let run = argv['--run'] || '';
   const openEnabled = argv['--open'] || false;
@@ -97,10 +103,10 @@ export default async function bisect(client: Client): Promise<number> {
   }
 
   if (!subpath) {
-    subpath = await prompt(
-      client,
-      `Specify the URL subpath where the bug occurs:`
-    );
+    subpath = await client.input.text({
+      message: `Specify the URL subpath where the bug occurs:`,
+      validate: val => (val ? true : 'A subpath must be provided'),
+    });
   }
 
   output.spinner('Retrieving deployments…');
@@ -188,15 +194,18 @@ export default async function bisect(client: Client): Promise<number> {
     let newDeployments = chunk.deployments;
 
     // If we have the "good" deployment in this chunk, then we're done
+    let hasGood = false;
     for (let i = 0; i < newDeployments.length; i++) {
       if (newDeployments[i].url === good) {
         // grab all deployments up until the good one
         newDeployments = newDeployments.slice(0, i);
+        hasGood = true;
         break;
       }
     }
 
     deployments = deployments.concat(newDeployments);
+    if (hasGood) break;
   }
 
   if (!deployments.length) {
@@ -275,9 +284,7 @@ export default async function bisect(client: Client): Promise<number> {
       if (openEnabled) {
         await open(testUrl);
       }
-      const answer = await client.prompt({
-        type: 'expand',
-        name: 'action',
+      action = await client.input.expand({
         message: 'Select an action:',
         choices: [
           { key: 'g', name: 'Good', value: 'good' },
@@ -285,7 +292,6 @@ export default async function bisect(client: Client): Promise<number> {
           { key: 's', name: 'Skip', value: 'skip' },
         ],
       });
-      action = answer.action;
     }
 
     if (action === 'good') {
@@ -334,20 +340,4 @@ function getCommit(deployment: Deployment) {
     deployment.meta?.gitlabCommitMessage ||
     deployment.meta?.bitbucketCommitMessage;
   return { sha, message };
-}
-
-async function prompt(client: Client, message: string): Promise<string> {
-  // eslint-disable-next-line no-constant-condition
-  while (true) {
-    const { val } = await client.prompt({
-      type: 'input',
-      name: 'val',
-      message,
-    });
-    if (val) {
-      return val;
-    } else {
-      client.output.error('A value must be specified');
-    }
-  }
 }

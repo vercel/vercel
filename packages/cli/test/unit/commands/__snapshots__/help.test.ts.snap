@@ -1,6 +1,6 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`help command help output snapshots column width 40 1`] = `
+exports[`help command > help output snapshots > column width 40 1`] = `
 "
   ▲ [1mvercel[22m [1mdeploy[22m [project-path] [options]
 
@@ -88,6 +88,26 @@ exports[`help command help output snapshots column width 40 1`] = `
                                 the     
                                 deploym…
                                 on      
+       --skip-domain            Disable 
+                                the     
+                                automat…
+                                promoti…
+                                (aliasi…
+                                of the  
+                                relevant
+                                domains 
+                                to a new
+                                product…
+                                deploym…
+                                You can 
+                                use \`vc 
+                                promote\`
+                                to      
+                                complete
+                                the     
+                                domain-…
+                                process 
+                                later   
        --with-cache             Retain  
                                 build   
                                 cache   
@@ -166,7 +186,7 @@ exports[`help command help output snapshots column width 40 1`] = `
 "
 `;
 
-exports[`help command help output snapshots column width 80 1`] = `
+exports[`help command > help output snapshots > column width 80 1`] = `
 "
   ▲ [1mvercel[22m [1mdeploy[22m [project-path] [options]
 
@@ -192,6 +212,10 @@ exports[`help command help output snapshots column width 80 1`] = `
        --prod                   Create a production deployment                  
   -p,  --public                 Deployment is public (\`/_src\`) is exposed)      
        --regions                Set default regions to enable the deployment on 
+       --skip-domain            Disable the automatic promotion (aliasing) of   
+                                the relevant domains to a new production        
+                                deployment. You can use \`vc promote\` to complete
+                                the domain-assignment process later             
        --with-cache             Retain build cache when using "--force"         
   -y,  --yes                    Use default options to skip all prompts         
 
@@ -236,7 +260,7 @@ exports[`help command help output snapshots column width 80 1`] = `
 "
 `;
 
-exports[`help command help output snapshots column width 120 1`] = `
+exports[`help command > help output snapshots > column width 120 1`] = `
 "
   ▲ [1mvercel[22m [1mdeploy[22m [project-path] [options]
 
@@ -255,6 +279,8 @@ exports[`help command help output snapshots column width 120 1`] = `
        --prod                   Create a production deployment                                                          
   -p,  --public                 Deployment is public (\`/_src\`) is exposed)                                              
        --regions                Set default regions to enable the deployment on                                         
+       --skip-domain            Disable the automatic promotion (aliasing) of the relevant domains to a new production  
+                                deployment. You can use \`vc promote\` to complete the domain-assignment process later    
        --with-cache             Retain build cache when using "--force"                                                 
   -y,  --yes                    Use default options to skip all prompts                                                 
 

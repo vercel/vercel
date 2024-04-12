@@ -11,10 +11,7 @@ import fs, {
   mkdir,
 } from 'fs-extra';
 import sleep from '../src/util/sleep';
-import {
-  disableSSO,
-  fetchTokenWithRetry,
-} from '../../../test/lib/deployment/now-deploy';
+import { fetchTokenWithRetry } from '../../../test/lib/deployment/now-deploy';
 import waitForPrompt from './helpers/wait-for-prompt';
 import { execCli } from './helpers/exec';
 import getGlobalDir from './helpers/get-global-dir';
@@ -330,8 +327,7 @@ test('should show prompts to set up project during first deploy', async () => {
     'README.txt'
   ).toBe(true);
 
-  const { host, href } = new URL(output.stdout);
-  await disableSSO(host, false);
+  const { href } = new URL(output.stdout);
 
   // Send a test request to the deployment
   const response = await fetch(href);
@@ -646,8 +642,7 @@ test('use `rootDirectory` from project when deploying', async () => {
   const secondResult = await execCli(binaryPath, [directory, '--public']);
   expect(secondResult.exitCode, formatOutput(secondResult)).toBe(0);
 
-  const { host, href } = new URL(secondResult.stdout);
-  await disableSSO(host, false);
+  const { href } = new URL(secondResult.stdout);
 
   const pageResponse1 = await fetch(href);
   expect(pageResponse1.status).toBe(200);
@@ -679,6 +674,119 @@ test('vercel env with unknown `VERCEL_ORG_ID` or `VERCEL_PROJECT_ID` should erro
 
   expect(output.exitCode, formatOutput(output)).toBe(1);
   expect(output.stderr).toContain('Project not found');
+});
+
+test('add a sensitive env var', async () => {
+  const dir = await setupE2EFixture('project-sensitive-env-vars');
+  const projectName = `project-sensitive-env-vars-${
+    Math.random().toString(36).split('.')[1]
+  }`;
+
+  // remove previously linked project if it exists
+  await remove(path.join(dir, '.vercel'));
+
+  const vc = execCli(binaryPath, ['link'], {
+    cwd: dir,
+    env: {
+      FORCE_TTY: '1',
+    },
+  });
+
+  await setupProject(vc, projectName, {
+    buildCommand: `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html`,
+    outputDirectory: 'o',
+  });
+
+  await vc;
+
+  const link = require(path.join(dir, '.vercel/project.json'));
+
+  const addEnvCommand = execCli(
+    binaryPath,
+    ['env', 'add', 'envVarName', 'production', '--sensitive'],
+    {
+      env: {
+        VERCEL_ORG_ID: link.orgId,
+        VERCEL_PROJECT_ID: link.projectId,
+      },
+    }
+  );
+
+  await waitForPrompt(addEnvCommand, /What’s the value of [^?]+\?/);
+  addEnvCommand.stdin?.write('test\n');
+
+  const output = await addEnvCommand;
+
+  expect(output.exitCode, formatOutput(output)).toBe(0);
+  expect(output.stderr).toContain(
+    'Added Environment Variable envVarName to Project'
+  );
+});
+
+test('override an existing env var', async () => {
+  const dir = await setupE2EFixture('project-override-env-vars');
+  const projectName = `project-override-env-vars-${
+    Math.random().toString(36).split('.')[1]
+  }`;
+
+  // remove previously linked project if it exists
+  await remove(path.join(dir, '.vercel'));
+
+  const vc = execCli(binaryPath, ['link'], {
+    cwd: dir,
+    env: {
+      FORCE_TTY: '1',
+    },
+  });
+
+  await setupProject(vc, projectName, {
+    buildCommand: `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html`,
+    outputDirectory: 'o',
+  });
+
+  await vc;
+
+  const link = require(path.join(dir, '.vercel/project.json'));
+  const options = {
+    env: {
+      VERCEL_ORG_ID: link.orgId,
+      VERCEL_PROJECT_ID: link.projectId,
+    },
+  };
+
+  // 1. Initial add
+  const addEnvCommand = execCli(
+    binaryPath,
+    ['env', 'add', 'envVarName', 'production'],
+    options
+  );
+
+  await waitForPrompt(addEnvCommand, /What’s the value of [^?]+\?/);
+  addEnvCommand.stdin?.write('test\n');
+
+  const output = await addEnvCommand;
+
+  expect(output.exitCode, formatOutput(output)).toBe(0);
+  expect(output.stderr).toContain(
+    'Added Environment Variable envVarName to Project'
+  );
+
+  // 2. Override
+  const overrideEnvCommand = execCli(
+    binaryPath,
+    ['env', 'add', 'envVarName', 'production', '--force'],
+    options
+  );
+
+  await waitForPrompt(overrideEnvCommand, /What’s the value of [^?]+\?/);
+  overrideEnvCommand.stdin?.write('test\n');
+
+  const outputOverride = await overrideEnvCommand;
+
+  expect(outputOverride.exitCode, formatOutput(outputOverride)).toBe(0);
+  expect(outputOverride.stderr).toContain(
+    'Overrode Environment Variable envVarName to Project'
+  );
 });
 
 test('whoami with `VERCEL_ORG_ID` should favor `--scope` and should error', async () => {
@@ -731,7 +839,6 @@ test('deploys with only now.json and README.md', async () => {
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
   const { host } = new URL(stdout);
-  await disableSSO(host, false);
   const res = await fetch(`https://${host}/README.md`);
   const text = await res.text();
   expect(text).toMatch(/readme contents/);
@@ -750,11 +857,10 @@ test('deploys with only vercel.json and README.md', async () => {
 
   // assert timing order of showing URLs vs status updates
   expect(stderr).toMatch(
-    /Inspect.*\nPreview.*\nQueued.*\nBuilding.*\nCompleting/
+    /Inspect.*\nProduction.*\nQueued.*\nBuilding.*\nCompleting/
   );
 
   const { host } = new URL(stdout);
-  await disableSSO(host, false);
   const res = await fetch(`https://${host}/README.md`);
   const text = await res.text();
   expect(text).toMatch(/readme contents/);
@@ -840,7 +946,6 @@ test('deploy pnpm twice using pnp and symlink=false', async () => {
       '--public',
       '--yes',
     ]);
-    await disableSSO(res.stdout, false);
     return res;
   }
 
@@ -857,7 +962,7 @@ test('deploy pnpm twice using pnp and symlink=false', async () => {
   page = await fetch(stdout);
   text = await page.text();
 
-  expect(text).toBe('cache exists\n');
+  expect(text).toContain('cache exists\n');
 });
 
 test('reject deploying with wrong team .vercel config', async () => {
@@ -957,6 +1062,45 @@ test('[vc link --yes] should not show prompts and autolink', async () => {
     fs.existsSync(path.join(dir, '.vercel', 'README.txt')),
     'README.txt'
   ).toBe(true);
+});
+
+test('[vc link] should detect frameworks in project rootDirectory', async () => {
+  const dir = await setupE2EFixture('zero-config-next-js-nested');
+  const projectRootDir = 'app';
+
+  const projectName = `project-link-dev-${
+    Math.random().toString(36).split('.')[1]
+  }`;
+
+  // remove previously linked project if it exists
+  await remove(path.join(dir, '.vercel'));
+
+  const vc = execCli(binaryPath, ['link', `--project=${projectName}`], {
+    cwd: dir,
+    env: {
+      FORCE_TTY: '1',
+    },
+  });
+
+  await waitForPrompt(vc, /Set up [^?]+\?/);
+  vc.stdin?.write('yes\n');
+
+  await waitForPrompt(vc, 'Which scope should contain your project?');
+  vc.stdin?.write('\n');
+
+  await waitForPrompt(vc, 'Link to existing project?');
+  vc.stdin?.write('no\n');
+
+  await waitForPrompt(vc, 'What’s your project’s name?');
+  vc.stdin?.write(`${projectName}\n`);
+
+  await waitForPrompt(vc, 'In which directory is your code located?');
+  vc.stdin?.write(`${projectRootDir}\n`);
+
+  // This means the framework detection worked!
+  await waitForPrompt(vc, 'Auto-detected Project Settings (Next.js)');
+
+  vc.kill();
 });
 
 test('[vc link] should not duplicate paths in .gitignore', async () => {
@@ -1168,23 +1312,25 @@ test('[vc build] should build project with `@vercel/static-build`', async () => 
 });
 
 test('[vc build] should build project with `@vercel/speed-insights`', async () => {
-  try {
-    process.env.VERCEL_ANALYTICS_ID = '123';
+  const directory = await setupE2EFixture('vc-build-speed-insights');
+  const output = await execCli(binaryPath, ['build'], { cwd: directory });
+  expect(output.exitCode, formatOutput(output)).toBe(0);
+  expect(output.stderr).toContain('Build Completed in .vercel/output');
+  const builds = await fs.readJSON(
+    path.join(directory, '.vercel/output/builds.json')
+  );
+  expect(builds?.features?.speedInsightsVersion).toEqual('0.0.4');
+});
 
-    const directory = await setupE2EFixture('vc-build-speed-insights');
-    const output = await execCli(binaryPath, ['build'], { cwd: directory });
-    expect(output.exitCode, formatOutput(output)).toBe(0);
-    expect(output.stderr).toContain('Build Completed in .vercel/output');
-    expect(output.stderr).toContain(
-      'The `VERCEL_ANALYTICS_ID` environment variable is deprecated and will be removed in a future release. Please remove it from your environment variables'
-    );
-    const builds = await fs.readJSON(
-      path.join(directory, '.vercel/output/builds.json')
-    );
-    expect(builds?.features?.speedInsightsVersion).toEqual('0.0.1');
-  } finally {
-    delete process.env.VERCEL_ANALYTICS_ID;
-  }
+test('[vc build] should build project with an indirect dependency to `@vercel/analytics`', async () => {
+  const directory = await setupE2EFixture('vc-build-indirect-web-analytics');
+  const output = await execCli(binaryPath, ['build'], { cwd: directory });
+  expect(output.exitCode, formatOutput(output)).toBe(0);
+  expect(output.stderr).toContain('Build Completed in .vercel/output');
+  const builds = await fs.readJSON(
+    path.join(directory, '.vercel/output/builds.json')
+  );
+  expect(builds?.features?.webAnalyticsVersion).toEqual('1.1.1');
 });
 
 test('[vc build] should build project with `@vercel/analytics`', async () => {
@@ -1256,8 +1402,6 @@ test('vercel.json configuration overrides in a new project prompt user and merge
   const deployment = await vc;
   expect(deployment.exitCode, formatOutput(deployment)).toBe(0);
   // assert the command were executed
-  await disableSSO(deployment.stdout, false);
-
   let page = await fetch(deployment.stdout);
   let text = await page.text();
   expect(text).toBe('1\n');
@@ -1288,8 +1432,7 @@ test('vercel.json configuration overrides in an existing project do not prompt u
   // auto-confirm this deployment
   let deployment = await deploy(true);
 
-  const { host, href } = new URL(deployment.stdout);
-  await disableSSO(host, false);
+  const { href } = new URL(deployment.stdout);
   let page = await fetch(href);
   let text = await page.text();
   expect(text).toBe('0');

@@ -32,6 +32,7 @@ import {
   shouldServe,
   debug,
   cloneEnv,
+  getProvidedRuntime,
 } from '@vercel/build-utils';
 
 const TMP = tmpdir();
@@ -249,10 +250,7 @@ export async function build({
       await buildHandlerWithGoMod(buildOptions);
     }
 
-    const runtime =
-      process.env.VERCEL_USE_GO_PROVIDED_RUNTIME === '1'
-        ? 'provided.al2'
-        : 'go1.x';
+    const runtime = await getProvidedRuntime();
     const lambda = new Lambda({
       files: { ...(await glob('**', outDir)), ...includedFiles },
       handler: HANDLER_FILENAME,
