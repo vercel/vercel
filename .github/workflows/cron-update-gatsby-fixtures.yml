@@ -12,17 +12,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         # 0 means fetch all commits so we can commit and push in the script below
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@v4
         with:
-          node-version: 16
+          node-version: 20
       - name: Enable corepack
         run: corepack enable pnpm
       - name: Update Gatsby Fixtures
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN_PULL_REQUESTS }}
