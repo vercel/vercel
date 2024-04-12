@@ -39,7 +39,7 @@ If everything is deployed correctly, your document should start uploading to you
 
 Your data should now start appearing as below in the collection.
 
-![image](https://github.com/utsavMongoDB/MongoDB-RAG-NextJS/assets/114057324/316af753-8f7b-492f-b51a-c23c109a3fac)
+![image](https://github.com/utsavMongoDB/vercel/assets/114057324/fbe76a2a-1a63-46bd-9964-8f26f2fb0a60)
 
 
 
@@ -49,23 +49,24 @@ Now for the RAG (QnA) to work, you need to create a Vector Search Index on Atlas
 Create a search index as below.
 
 - Let’s head over to our MongoDB Atlas user interface to create our Vector Search Index. First, click on the “Search” tab and then on “Create Search Index.” You’ll be taken to this page (shown below). Please click on “JSON Editor.”
- ![image](https://github.com/utsavMongoDB/MongoDB-RAG-NextJS/assets/114057324/b41a09a8-9875-4e5d-9549-e62652389d33)
+ ![image](https://github.com/utsavMongoDB/vercel/assets/114057324/b676e95f-3586-460a-8835-cbc468d5334b)
 
 - Next input the values as shown in the below image and create the Vector.
-  ![image](https://github.com/utsavMongoDB/MongoDB-RAG-NextJS/assets/114057324/ea1c8fa9-d391-40e6-b838-7a49fdf6bbd7)
+  ![image](https://github.com/utsavMongoDB/vercel/assets/114057324/b082129d-da4b-4085-b263-f3fb13062a1f)
 
 - You should start seeing a vector index getting created. You should get an email once index creation is completed.
-  ![image](https://github.com/utsavMongoDB/MongoDB-RAG-NextJS/assets/114057324/c1842069-4080-4251-8269-08d9398e09aa)
+  ![image](https://github.com/utsavMongoDB/vercel/assets/114057324/fc8e466b-b051-4ba2-91fb-5571d8ff28b4)
 
 - Once completed, head to the QnA section to start asking questions based on your trained data, and you should get the desired response.
 
-  ![image](https://github.com/utsavMongoDB/MongoDB-RAG-NextJS/assets/114057324/c76c8c19-e18a-46b1-834a-9a6bda7fec99)
+  ![image](https://github.com/utsavMongoDB/vercel/assets/114057324/8d5b4513-e23a-407f-afb6-d1db3193296f)
 
 
 
 ## Reference Architechture 
 
-![Ref. Arch (1)](https://github.com/utsavMongoDB/MongoDB-RAG-NextJS/assets/114057324/35caff96-0d7a-447c-95a7-b96910528b48)
+![image](https://github.com/utsavMongoDB/vercel/assets/114057324/ef57d050-1996-48cd-ab32-5130cc228e29)
+
 
 
 This architecture depicts a Retrieval-Augmented Generation (RAG) chatbot system built with LangChain, OpenAI, and MongoDB Atlas Vector Search. Let's break down its key players:
