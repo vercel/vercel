@@ -386,9 +386,7 @@ async function doBuild(
     }
 
     for (const w of detectedBuilders.warnings) {
-      console.log(
-        `Warning: ${w.message} ${w.action || 'Learn More'}: ${w.link}`
-      );
+      output.warn(w.message, null, w.link, w.action || 'Learn More');
     }
 
     if (detectedBuilders.builders) {
@@ -469,7 +467,7 @@ async function doBuild(
   const buildResults: Map<Builder, BuildResult | BuildOutputConfig> = new Map();
   const overrides: PathOverride[] = [];
   const repoRootPath = cwd;
-  const corepackShimDir = await initCorepack({ repoRootPath });
+  const corepackShimDir = await initCorepack({ repoRootPath }, output);
 
   for (const build of sortedBuilders) {
     if (typeof build.src !== 'string') continue;

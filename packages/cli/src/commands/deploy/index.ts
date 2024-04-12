@@ -508,23 +508,6 @@ export default async (client: Client): Promise<number> => {
     );
   }
 
-  const { packageJson } = await scanParentDirs(
-    join(cwd, project?.rootDirectory ?? ''),
-    true,
-    cwd
-  );
-  let nodeVersion: string | undefined;
-  if (packageJson?.engines?.node) {
-    try {
-      const { range } = await getSupportedNodeVersion(packageJson.engines.node);
-      nodeVersion = range;
-    } catch (error) {
-      if (error instanceof Error) {
-        output.warn(error.message);
-      }
-    }
-  }
-
   try {
     // if this flag is not set, use `undefined` to allow the project setting to be used
     const autoAssignCustomDomains = argv['--skip-domain'] ? false : undefined;
@@ -561,7 +544,6 @@ export default async (client: Client): Promise<number> => {
       createArgs.projectSettings = {
         sourceFilesOutsideRootDirectory,
         rootDirectory,
-        nodeVersion,
       };
 
       if (status === 'linked') {
@@ -571,6 +553,30 @@ export default async (client: Client): Promise<number> => {
         };
       }
     }
+
+    // Read the `engines.node` field from `package.json` and send as a
+    // `projectSettings` property as an optimization (so that the API
+    // does not need to retrieve the file to do this check).
+    const { packageJson } = await scanParentDirs(
+      join(cwd, project?.rootDirectory ?? ''),
+      true,
+      cwd
+    );
+    let nodeVersion: string | undefined;
+    if (packageJson?.engines?.node) {
+      try {
+        const { range } = await getSupportedNodeVersion(
+          packageJson.engines.node
+        );
+        nodeVersion = range;
+      } catch (error) {
+        if (error instanceof Error) {
+          output.warn(error.message);
+        }
+      }
+    }
+    if (!createArgs.projectSettings) createArgs.projectSettings = {};
+    createArgs.projectSettings.nodeVersion = nodeVersion;
 
     deployment = await createDeploy(
       client,
