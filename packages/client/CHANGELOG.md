@@ -1,5 +1,11 @@
 # @vercel/client
 
+## 13.2.0
+
+### Minor Changes
+
+- Always use v13 of create deployment API endpoint ([#11351](https://github.com/vercel/vercel/pull/11351))
+
 ## 13.1.9
 
 ### Patch Changes

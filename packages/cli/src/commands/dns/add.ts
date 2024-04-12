@@ -85,12 +85,10 @@ export default async function add(
     return 1;
   }
 
-  console.log(
-    `${chalk.cyan('> Success!')} DNS record for domain ${chalk.bold(
-      domain
-    )} ${chalk.gray(`(${record.uid})`)} created under ${chalk.bold(
-      contextName
-    )} ${chalk.gray(addStamp())}`
+  output.success(
+    `DNS record for domain ${chalk.bold(domain)} ${chalk.gray(
+      `(${record.uid})`
+    )} created under ${chalk.bold(contextName)} ${chalk.gray(addStamp())}`
   );
 
   return 0;

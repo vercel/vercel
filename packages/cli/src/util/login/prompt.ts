@@ -64,7 +64,7 @@ export async function readInput(
     try {
       input = await client.input.text({ message });
     } catch (err: any) {
-      console.log(); // \n
+      client.output.print('\n'); // \n
 
       if (err.isTtyError) {
         throw new Error(
