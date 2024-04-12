@@ -18,9 +18,8 @@ export const pullCommand: Command = {
       description: 'Deployment environment [development]',
       argument: 'environment',
       shorthand: null,
-      type: 'string',
+      type: String,
       deprecated: false,
-      multi: false,
     },
     {
       name: 'git-branch',
@@ -28,18 +27,16 @@ export const pullCommand: Command = {
         'Specify the Git branch to pull specific Environment Variables for',
       argument: 'branch',
       shorthand: null,
-      type: 'string',
+      type: String,
       deprecated: false,
-      multi: false,
     },
     {
       name: 'yes',
       description:
         'Skip questions when setting up new project using default scope and settings',
       shorthand: 'y',
-      type: 'string',
+      type: String,
       deprecated: false,
-      multi: false,
     },
   ],
   examples: [

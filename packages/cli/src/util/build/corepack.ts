@@ -4,12 +4,16 @@ import fs from 'fs-extra';
 import { CantParseJSONFile } from '../errors-ts';
 import { VERCEL_DIR } from '../projects/link';
 import readJSONFile from '../read-json-file';
+import { Output } from '../output';
 
-export async function initCorepack({
-  repoRootPath,
-}: {
-  repoRootPath: string;
-}): Promise<string | null> {
+export async function initCorepack(
+  {
+    repoRootPath,
+  }: {
+    repoRootPath: string;
+  },
+  output: Output
+): Promise<string | null> {
   if (process.env.ENABLE_EXPERIMENTAL_COREPACK !== '1') {
     // Since corepack is experimental, we need to exit early
     // unless the user explicitly enables it with the env var.
@@ -19,16 +23,16 @@ export async function initCorepack({
     join(repoRootPath, 'package.json')
   );
   if (pkg instanceof CantParseJSONFile) {
-    console.warn(
+    output.warn(
       'Warning: Could not enable corepack because package.json is invalid JSON',
       pkg.meta.parseErrorLocation
     );
   } else if (!pkg?.packageManager) {
-    console.warn(
+    output.warn(
       'Warning: Could not enable corepack because package.json is missing "packageManager" property'
     );
   } else {
-    console.log(
+    output.log(
       `Detected ENABLE_EXPERIMENTAL_COREPACK=1 and "${pkg.packageManager}" in package.json`
     );
     const corepackRootDir = join(repoRootPath, VERCEL_DIR, 'cache', 'corepack');

@@ -122,10 +122,8 @@ export default async function transferIn(
     return 1;
   }
 
-  console.log(
-    `${chalk.cyan('> Success!')} Domain ${param(
-      domainName
-    )} transfer started ${transferStamp()}`
+  output.success(
+    `Domain ${param(domainName)} transfer started ${transferStamp()}`
   );
   output.print(
     `  To finalize the transfer, we are waiting for approval from your current registrar.\n`

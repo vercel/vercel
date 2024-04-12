@@ -35,6 +35,7 @@ export default async function main(client: Client) {
       '--environment': String,
       '--git-branch': String,
       '--sensitive': Boolean,
+      '--force': Boolean,
     });
   } catch (error) {
     handleError(error);
