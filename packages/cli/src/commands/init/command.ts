@@ -21,9 +21,8 @@ export const initCommand: Command = {
       description: 'Overwrite destination directory if exists [off]',
       argument: undefined,
       shorthand: 'f',
-      type: 'boolean',
+      type: Boolean,
       deprecated: false,
-      multi: false,
     },
   ],
   examples: [

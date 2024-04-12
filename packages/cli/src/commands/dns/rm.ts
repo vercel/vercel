@@ -52,10 +52,8 @@ export default async function rm(
 
   const rmStamp = stamp();
   await deleteDNSRecordById(client, domainName, record.id);
-  console.log(
-    `${chalk.cyan('> Success!')} Record ${chalk.gray(
-      `${record.id}`
-    )} removed ${chalk.gray(rmStamp())}`
+  output.success(
+    `Record ${chalk.gray(`${record.id}`)} removed ${chalk.gray(rmStamp())}`
   );
   return 0;
 }
