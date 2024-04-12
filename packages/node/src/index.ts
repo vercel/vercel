@@ -84,7 +84,7 @@ const require_ = createRequire(__filename);
 const tscPath = resolve(dirname(require_.resolve('typescript')), '../bin/tsc');
 
 // eslint-disable-next-line no-useless-escape
-const libPathRegEx = /^node_modules|[\/\\]node_modules[\/\\]/;
+const NODE_MODULE_PATH_REGEX = /^node_modules|[\/\\]node_modules[\/\\]/;
 
 const treeKill = promisify(_treeKill);
 
@@ -312,7 +312,8 @@ async function compile(
       !file.endsWith('.ts') &&
       !file.endsWith('.tsx') &&
       !file.endsWith('.mjs') &&
-      !file.match(libPathRegEx)
+      !file.endsWith('.mts') &&
+      !file.match(NODE_MODULE_PATH_REGEX)
   );
   const babelCompileEnabled =
     !isEdgeFunction || process.env.VERCEL_EDGE_NO_BABEL !== '1';
