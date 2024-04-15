@@ -1,5 +1,28 @@
 # vercel
 
+## 34.0.0
+
+### Major Changes
+
+- Disables promotion of preview deployments ([#11411](https://github.com/vercel/vercel/pull/11411))
+
+### Patch Changes
+
+- Always set `projectSettings.nodeVersion` in `vc deploy` ([#11351](https://github.com/vercel/vercel/pull/11351))
+
+- [cli] optional override of existing environment variables with --force ([#11348](https://github.com/vercel/vercel/pull/11348))
+
+## 33.7.1
+
+### Patch Changes
+
+- fix flickering during interactive UI rerendering ([#11392](https://github.com/vercel/vercel/pull/11392))
+
+- fix `vc ls` message to be `vc projects ls` ([#11400](https://github.com/vercel/vercel/pull/11400))
+
+- Updated dependencies [[`2461b571a`](https://github.com/vercel/vercel/commit/2461b571af037fbfdf92299a272010a5a8f4898b)]:
+  - @vercel/next@4.2.0
+
 ## 33.7.0
 
 ### Minor Changes

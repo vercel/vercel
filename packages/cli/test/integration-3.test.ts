@@ -369,7 +369,7 @@ test('list the scopes', async () => {
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   const include = new RegExp(`✔ ${contextName}\\s+${email}`);
-  expect(stdout).toMatch(include);
+  expect(stderr).toMatch(include);
 });
 
 test('domains inspect', async () => {
@@ -1007,7 +1007,7 @@ test('`vercel rm` removes a deployment', async () => {
       '--yes',
     ]);
 
-    expect(stdout).toContain(host);
+    expect(stderr).toContain(host);
     expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
   }
 });
@@ -1160,7 +1160,7 @@ test('vercel secret add', async () => {
 test('vercel secret ls', async () => {
   const output = await execCli(binaryPath, ['secret', 'ls']);
   expect(output.exitCode, formatOutput(output)).toBe(0);
-  expect(output.stdout).toMatch(/Secrets found under/gm);
+  expect(output.stderr).toMatch(/Secrets found under/gm);
 });
 
 test('vercel secret ls --test-warning', async () => {
@@ -1168,7 +1168,7 @@ test('vercel secret ls --test-warning', async () => {
   expect(output.exitCode, formatOutput(output)).toBe(0);
   expect(output.stderr).toMatch(/Test warning message./gm);
   expect(output.stderr).toMatch(/Learn more: https:\/\/vercel.com/gm);
-  expect(output.stdout).toMatch(/No secrets found under/gm);
+  expect(output.stderr).toMatch(/No secrets found under/gm);
 });
 
 test('vercel secret rename', async () => {

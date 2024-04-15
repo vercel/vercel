@@ -123,8 +123,8 @@ export default async function set(
         return 1;
       }
 
-      console.log(
-        `${chalk.cyan('> Success!')} ${chalk.bold(
+      output.success(
+        `${chalk.bold(
           `${isWildcardAlias(target) ? '' : 'https://'}${handleResult.alias}`
         )} now points to https://${deployment.url} ${setStamp()}`
       );
@@ -170,10 +170,10 @@ export default async function set(
 
   const prefix = isWildcard ? '' : 'https://';
 
-  console.log(
-    `${chalk.cyan('> Success!')} ${chalk.bold(
-      `${prefix}${handleResult.alias}`
-    )} now points to https://${deployment.url} ${setStamp()}`
+  output.success(
+    `${chalk.bold(`${prefix}${handleResult.alias}`)} now points to https://${
+      deployment.url
+    } ${setStamp()}`
   );
 
   return 0;

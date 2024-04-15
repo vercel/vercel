@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import ms from 'ms';
-import table from 'text-table';
+import table from '../../util/output/table';
 import type { DNSRecord } from '@vercel-internals/types';
 import { Output } from '../../util/output';
 import Client from '../../util/client';
@@ -52,10 +52,8 @@ export default async function rm(
 
   const rmStamp = stamp();
   await deleteDNSRecordById(client, domainName, record.id);
-  console.log(
-    `${chalk.cyan('> Success!')} Record ${chalk.gray(
-      `${record.id}`
-    )} removed ${chalk.gray(rmStamp())}`
+  output.success(
+    `Record ${chalk.gray(`${record.id}`)} removed ${chalk.gray(rmStamp())}`
   );
   return 0;
 }
@@ -71,7 +69,7 @@ function readConfirmation(
     output.print(
       `${table([getDeleteTableRow(domainName, record)], {
         align: ['l', 'r', 'l'],
-        hsep: ' '.repeat(6),
+        hsep: 6,
       }).replace(/^(.*)/gm, '  $1')}\n`
     );
     output.print(
