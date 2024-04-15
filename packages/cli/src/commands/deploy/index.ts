@@ -81,10 +81,10 @@ export default async (client: Client): Promise<number> => {
 
   let parsedArguments = null;
 
-  const argOptions = getFlagsSpecification(deployCommand.options);
+  const flagsSpecification = getFlagsSpecification(deployCommand.options);
 
   try {
-    parsedArguments = parseArguments(client.argv.slice(2), argOptions);
+    parsedArguments = parseArguments(client.argv.slice(2), flagsSpecification);
 
     if ('--confirm' in parsedArguments.flags) {
       output.warn('`--confirm` is deprecated, please use `--yes` instead');
