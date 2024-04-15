@@ -21,13 +21,13 @@ jobs:
       id-token: write
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Fetch git tags
         run: git fetch origin 'refs/tags/*:refs/tags/*'
 
       - name: Setup Node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 16
 
@@ -61,7 +61,7 @@ jobs:
 
       - name: Trigger Update (if a Publish Happened)
         if: steps.changesets.outputs.published == 'true'
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GH_TOKEN_PULL_REQUESTS }}
           script: |
@@ -70,7 +70,7 @@ jobs:
 
       - name: Set latest Release to `vercel` (if a Publish Happened)
         if: steps.changesets.outputs.published == 'true'
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GH_TOKEN_PULL_REQUESTS }}
           script: |
