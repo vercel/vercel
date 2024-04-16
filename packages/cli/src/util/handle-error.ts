@@ -13,8 +13,10 @@ export default function handleError(error: unknown, { debug = false } = {}) {
   const apiError = error as APIError;
   const { message, stack, status, code, sizeLimit } = apiError;
 
+  // consider changing API of handleError to include `client.output`
+  // to use `output.debug`
   if (debug) {
-    console.log(`> [debug] handling error: ${stack}`);
+    console.error(`> [debug] handling error: ${stack}`);
   }
 
   if (message === 'User force closed the prompt with 0 null') {

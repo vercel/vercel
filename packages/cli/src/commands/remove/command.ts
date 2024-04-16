@@ -14,18 +14,16 @@ export const removeCommand: Command = {
     {
       name: 'yes',
       shorthand: 'y',
-      type: 'boolean',
+      type: Boolean,
       deprecated: false,
       description: 'Skip confirmation',
-      multi: false,
     },
     {
       name: 'safe',
       shorthand: 's',
-      type: 'boolean',
+      type: Boolean,
       deprecated: false,
       description: 'Skip deployments with an active alias',
-      multi: false,
     },
   ],
   examples: [
