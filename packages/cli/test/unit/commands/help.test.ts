@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test, it } from 'vitest';
 import {
   help,
   lineToString,
@@ -62,128 +62,254 @@ describe('help command', () => {
   });
 
   describe('deploy help output snapshots', () => {
-    test.each([40, 80, 120])('deploy help column width %i', width => {
-      expect(help(deployCommand, { columns: width })).toMatchSnapshot();
+    it('deploy help column width 40', () => {
+      expect(help(deployCommand, { columns: 40 })).toMatchSnapshot();
+    });
+    it('deploy help column width 80', () => {
+      expect(help(deployCommand, { columns: 80 })).toMatchSnapshot();
+    });
+    it('deploy help column width 120', () => {
+      expect(help(deployCommand, { columns: 120 })).toMatchSnapshot();
     });
   });
 
   describe('alias help output snapshots', () => {
-    test.each([40, 80, 120])('alias help column width %i', width => {
-      expect(help(aliasCommand, { columns: width })).toMatchSnapshot();
+    it('alias help column width 40', () => {
+      expect(help(aliasCommand, { columns: 40 })).toMatchSnapshot();
+    });
+    it('alias help column width 80', () => {
+      expect(help(aliasCommand, { columns: 80 })).toMatchSnapshot();
+    });
+    it('alias help column width 120', () => {
+      expect(help(aliasCommand, { columns: 120 })).toMatchSnapshot();
     });
   });
 
   describe('bisect help output snapshots', () => {
-    test.each([40, 80, 120])('bisect help column width %i', width => {
-      expect(help(bisectCommand, { columns: width })).toMatchSnapshot();
+    it('bisect help column width 40', () => {
+      expect(help(bisectCommand, { columns: 40 })).toMatchSnapshot();
+    });
+    it('bisect help column width 80', () => {
+      expect(help(bisectCommand, { columns: 80 })).toMatchSnapshot();
+    });
+    it('bisect help column width 120', () => {
+      expect(help(bisectCommand, { columns: 120 })).toMatchSnapshot();
     });
   });
 
   describe('certs help output snapshots', () => {
-    test.each([40, 80, 120])('certs help column width %i', width => {
-      expect(help(certsCommand, { columns: width })).toMatchSnapshot();
+    it('certs help column width 40', () => {
+      expect(help(certsCommand, { columns: 40 })).toMatchSnapshot();
+    });
+    it('certs help column width 80', () => {
+      expect(help(certsCommand, { columns: 80 })).toMatchSnapshot();
+    });
+    it('certs help column width 120', () => {
+      expect(help(certsCommand, { columns: 120 })).toMatchSnapshot();
     });
   });
 
   describe('dns help output snapshots', () => {
-    test.each([40, 80, 120])('dns help column width %i', width => {
-      expect(help(dnsCommand, { columns: width })).toMatchSnapshot();
+    it('dns help column width 40', () => {
+      expect(help(dnsCommand, { columns: 40 })).toMatchSnapshot();
+    });
+    it('dns help column width 80', () => {
+      expect(help(dnsCommand, { columns: 80 })).toMatchSnapshot();
+    });
+    it('dns help column width 120', () => {
+      expect(help(dnsCommand, { columns: 120 })).toMatchSnapshot();
     });
   });
 
   describe('domains help output snapshots', () => {
-    test.each([40, 80, 120])('domains help column width %i', width => {
-      expect(help(domainsCommand, { columns: width })).toMatchSnapshot();
+    it('domains help column width 40', () => {
+      expect(help(domainsCommand, { columns: 40 })).toMatchSnapshot();
+    });
+    it('domains help column width 80', () => {
+      expect(help(domainsCommand, { columns: 80 })).toMatchSnapshot();
+    });
+    it('domains help column width 120', () => {
+      expect(help(domainsCommand, { columns: 120 })).toMatchSnapshot();
     });
   });
 
   describe('env help output snapshots', () => {
-    test.each([40, 80, 120])('env help column width %i', width => {
-      expect(help(envCommand, { columns: width })).toMatchSnapshot();
+    it('env help column width 40', () => {
+      expect(help(envCommand, { columns: 40 })).toMatchSnapshot();
+    });
+    it('env help column width 80', () => {
+      expect(help(envCommand, { columns: 80 })).toMatchSnapshot();
+    });
+    it('env help column width 120', () => {
+      expect(help(envCommand, { columns: 120 })).toMatchSnapshot();
     });
   });
 
   describe('git help output snapshots', () => {
-    test.each([40, 80, 120])('git help column width %i', width => {
-      expect(help(gitCommand, { columns: width })).toMatchSnapshot();
+    it('git help column width 40', () => {
+      expect(help(gitCommand, { columns: 40 })).toMatchSnapshot();
+    });
+    it('git help column width 80', () => {
+      expect(help(gitCommand, { columns: 80 })).toMatchSnapshot();
+    });
+    it('git help column width 120', () => {
+      expect(help(gitCommand, { columns: 120 })).toMatchSnapshot();
     });
   });
 
   describe('init help output snapshots', () => {
-    test.each([40, 80, 120])('init help column width %i', width => {
-      expect(help(initCommand, { columns: width })).toMatchSnapshot();
+    it('init help column width 40', () => {
+      expect(help(initCommand, { columns: 40 })).toMatchSnapshot();
+    });
+    it('init help column width 80', () => {
+      expect(help(initCommand, { columns: 80 })).toMatchSnapshot();
+    });
+    it('init help column width 120', () => {
+      expect(help(initCommand, { columns: 120 })).toMatchSnapshot();
     });
   });
 
   describe('inspect help output snapshots', () => {
-    test.each([40, 80, 120])('inspect help column width %i', width => {
-      expect(help(inspectCommand, { columns: width })).toMatchSnapshot();
+    it('inspect help column width 40', () => {
+      expect(help(inspectCommand, { columns: 40 })).toMatchSnapshot();
+    });
+    it('inspect help column width 80', () => {
+      expect(help(inspectCommand, { columns: 80 })).toMatchSnapshot();
+    });
+    it('inspect help column width 120', () => {
+      expect(help(inspectCommand, { columns: 120 })).toMatchSnapshot();
     });
   });
 
   describe('link help output snapshots', () => {
-    test.each([40, 80, 120])('link help column width %i', width => {
-      expect(help(linkCommand, { columns: width })).toMatchSnapshot();
+    it('link help column width 40', () => {
+      expect(help(linkCommand, { columns: 40 })).toMatchSnapshot();
+    });
+    it('link help column width 80', () => {
+      expect(help(linkCommand, { columns: 80 })).toMatchSnapshot();
+    });
+    it('link help column width 120', () => {
+      expect(help(linkCommand, { columns: 120 })).toMatchSnapshot();
     });
   });
 
   describe('list help output snapshots', () => {
-    test.each([40, 80, 120])('list help column width %i', width => {
-      expect(help(listCommand, { columns: width })).toMatchSnapshot();
+    it('list help column width 40', () => {
+      expect(help(listCommand, { columns: 40 })).toMatchSnapshot();
+    });
+    it('list help column width 80', () => {
+      expect(help(listCommand, { columns: 80 })).toMatchSnapshot();
+    });
+    it('list help column width 120', () => {
+      expect(help(listCommand, { columns: 120 })).toMatchSnapshot();
     });
   });
 
   describe('login help output snapshots', () => {
-    test.each([40, 80, 120])('login help column width %i', width => {
-      expect(help(loginCommand, { columns: width })).toMatchSnapshot();
+    it('login help column width 40', () => {
+      expect(help(loginCommand, { columns: 40 })).toMatchSnapshot();
+    });
+    it('login help column width 80', () => {
+      expect(help(loginCommand, { columns: 80 })).toMatchSnapshot();
+    });
+    it('login help column width 120', () => {
+      expect(help(loginCommand, { columns: 120 })).toMatchSnapshot();
     });
   });
 
   describe('project help output snapshots', () => {
-    test.each([40, 80, 120])('project help column width %i', width => {
-      expect(help(projectCommand, { columns: width })).toMatchSnapshot();
+    it('project help column width 40', () => {
+      expect(help(projectCommand, { columns: 40 })).toMatchSnapshot();
+    });
+    it('project help column width 80', () => {
+      expect(help(projectCommand, { columns: 80 })).toMatchSnapshot();
+    });
+    it('project help column width 120', () => {
+      expect(help(projectCommand, { columns: 120 })).toMatchSnapshot();
     });
   });
 
   describe('promote help output snapshots', () => {
-    test.each([40, 80, 120])('promote help column width %i', width => {
-      expect(help(promoteCommand, { columns: width })).toMatchSnapshot();
+    it('promote help column width 40', () => {
+      expect(help(promoteCommand, { columns: 40 })).toMatchSnapshot();
+    });
+    it('promote help column width 80', () => {
+      expect(help(promoteCommand, { columns: 80 })).toMatchSnapshot();
+    });
+    it('promote help column width 120', () => {
+      expect(help(promoteCommand, { columns: 120 })).toMatchSnapshot();
     });
   });
 
   describe('pull help output snapshots', () => {
-    test.each([40, 80, 120])('pull help column width %i', width => {
-      expect(help(pullCommand, { columns: width })).toMatchSnapshot();
+    it('pull help column width 40', () => {
+      expect(help(pullCommand, { columns: 40 })).toMatchSnapshot();
+    });
+    it('pull help column width 80', () => {
+      expect(help(pullCommand, { columns: 80 })).toMatchSnapshot();
+    });
+    it('pull help column width 120', () => {
+      expect(help(pullCommand, { columns: 120 })).toMatchSnapshot();
     });
   });
 
   describe('redeploy help output snapshots', () => {
-    test.each([40, 80, 120])('redeploy help column width %i', width => {
-      expect(help(redeployCommand, { columns: width })).toMatchSnapshot();
+    it('redeploy help column width 40', () => {
+      expect(help(redeployCommand, { columns: 40 })).toMatchSnapshot();
+    });
+    it('redeploy help column width 80', () => {
+      expect(help(redeployCommand, { columns: 80 })).toMatchSnapshot();
+    });
+    it('redeploy help column width 120', () => {
+      expect(help(redeployCommand, { columns: 120 })).toMatchSnapshot();
     });
   });
 
   describe('remove help output snapshots', () => {
-    test.each([40, 80, 120])('remove help column width %i', width => {
-      expect(help(removeCommand, { columns: width })).toMatchSnapshot();
+    it('remove help column width 40', () => {
+      expect(help(removeCommand, { columns: 40 })).toMatchSnapshot();
+    });
+    it('remove help column width 80', () => {
+      expect(help(removeCommand, { columns: 80 })).toMatchSnapshot();
+    });
+    it('remove help column width 120', () => {
+      expect(help(removeCommand, { columns: 120 })).toMatchSnapshot();
     });
   });
 
   describe('rollback help output snapshots', () => {
-    test.each([40, 80, 120])('rollback help column width %i', width => {
-      expect(help(rollbackCommand, { columns: width })).toMatchSnapshot();
+    it('rollback help column width 40', () => {
+      expect(help(rollbackCommand, { columns: 40 })).toMatchSnapshot();
+    });
+    it('rollback help column width 80', () => {
+      expect(help(rollbackCommand, { columns: 80 })).toMatchSnapshot();
+    });
+    it('rollback help column width 120', () => {
+      expect(help(rollbackCommand, { columns: 120 })).toMatchSnapshot();
     });
   });
 
   describe('teams help output snapshots', () => {
-    test.each([40, 80, 120])('teams help column width %i', width => {
-      expect(help(teamsCommand, { columns: width })).toMatchSnapshot();
+    it('teams help column width 40', () => {
+      expect(help(teamsCommand, { columns: 40 })).toMatchSnapshot();
+    });
+    it('teams help column width 80', () => {
+      expect(help(teamsCommand, { columns: 80 })).toMatchSnapshot();
+    });
+    it('teams help column width 120', () => {
+      expect(help(teamsCommand, { columns: 120 })).toMatchSnapshot();
     });
   });
 
   describe('whoami help output snapshots', () => {
-    test.each([40, 80, 120])('whoami help column width %i', width => {
-      expect(help(whoamiCommand, { columns: width })).toMatchSnapshot();
+    it('whoami help column width 40', () => {
+      expect(help(whoamiCommand, { columns: 40 })).toMatchSnapshot();
+    });
+    it('whoami help column width 80', () => {
+      expect(help(whoamiCommand, { columns: 80 })).toMatchSnapshot();
+    });
+    it('whoami help column width 120', () => {
+      expect(help(whoamiCommand, { columns: 120 })).toMatchSnapshot();
     });
   });
 });
