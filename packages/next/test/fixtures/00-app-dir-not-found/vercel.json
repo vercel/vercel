@@ -1,0 +1,25 @@
+{
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next"
+    }
+  ],
+  "probes": [
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "Page"
+    },
+    {
+      "path": "/demo",
+      "status": 200,
+      "mustContain": "demo"
+    },
+    {
+      "path": "/_next/data/hash/data.json",
+      "status": 404,
+      "mustContain": "404"
+    }
+  ]
+}
