@@ -49,6 +49,7 @@ import {
 } from '../../util/errors-ts';
 import { parseArguments } from '../../util/get-args';
 import getDeployment from '../../util/get-deployment';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
 import getProjectName from '../../util/get-project-name';
 import toHumanPath from '../../util/humanize-path';
 import confirm from '../../util/input/confirm';
@@ -72,7 +73,7 @@ import { pickOverrides } from '../../util/projects/project-settings';
 import validatePaths, {
   validateRootDirectory,
 } from '../../util/validate-paths';
-import { help, PrimitiveConstructor } from '../help';
+import { help } from '../help';
 import { deployCommand } from './command';
 
 export default async (client: Client): Promise<number> => {
@@ -80,18 +81,10 @@ export default async (client: Client): Promise<number> => {
 
   let parsedArguments = null;
 
-  const argOptions: {
-    [k: string]: PrimitiveConstructor | [PrimitiveConstructor] | string;
-  } = {};
-  for (const option of deployCommand.options) {
-    argOptions[`--${option.name}`] = option.type;
-    if (option.shorthand) {
-      argOptions[`-${option.shorthand}`] = `--${option.name}`;
-    }
-  }
+  const flagsSpecification = getFlagsSpecification(deployCommand.options);
 
   try {
-    parsedArguments = parseArguments(client.argv.slice(2), argOptions);
+    parsedArguments = parseArguments(client.argv.slice(2), flagsSpecification);
 
     if ('--confirm' in parsedArguments.flags) {
       output.warn('`--confirm` is deprecated, please use `--yes` instead');
