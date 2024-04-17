@@ -1,11 +1,16 @@
 import { join } from 'node:path';
-import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { readFileSync, promises as fsPromises } from 'node:fs';
 import { esbuild } from '../../utils/build.mjs';
 import buildEdgeFunctionTemplate from './scripts/build-edge-function-template.js';
+
+const { copyFile, mkdir } = fsPromises;
 
 const pkgPath = join(process.cwd(), 'package.json');
 const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
 const externals = Object.keys(pkg.dependencies || {});
+
+await mkdir(join(process.cwd(), 'dist'));
 
 await Promise.all([
   // Compile all launcher `.ts` files into the "dist" dir
@@ -18,6 +23,11 @@ await Promise.all([
     ],
   }),
   buildEdgeFunctionTemplate(),
+  // The bundled version of source-map looks for the wasm mappings file as a sibling.
+  copyFile(
+    fileURLToPath(import.meta.resolve('source-map/lib/mappings.wasm')),
+    join(process.cwd(), 'dist/mappings.wasm')
+  ),
 ]);
 
 await esbuild({
