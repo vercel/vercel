@@ -36,10 +36,12 @@ export default async function selectOrg(
 
   const choices: Choice[] = [
     ...personalAccountChoice,
-    ...teams.map<Choice>(team => ({
-      name: team.name || team.slug,
-      value: { type: 'team', id: team.id, slug: team.slug },
-    })),
+    ...teams
+      .toSorted(a => (a.id === user.defaultTeamId ? -1 : 1))
+      .map<Choice>(team => ({
+        name: team.name || team.slug,
+        value: { type: 'team', id: team.id, slug: team.slug },
+      })),
   ];
 
   const defaultChoiceIndex = Math.max(
