@@ -52,12 +52,13 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
 
     const actionId = findActionId(data, 'app/other/page');
 
-    const formData = new FormData();
-    formData.append(`1_$ACTION_ID_${actionId}`, '');
-
     const res = await fetch(`${ctx.deploymentUrl}/other`, {
       method: 'POST',
-      body: formData,
+      body: `------WebKitFormBoundary8xC9UKOVzHBaGYkR\r\nContent-Disposition: form-data; name=\"1_$ACTION_ID_${actionId}\"\r\n\r\n\r\n------WebKitFormBoundary8xC9UKOVzHBaGYkR\r\nContent-Disposition: form-data; name=\"0\"\r\n\r\n[\"$K1\"]\r\n------WebKitFormBoundary8xC9UKOVzHBaGYkR--\r\n`,
+      headers: {
+        'Content-Type':
+          'multipart/form-data; boundary=----WebKitFormBoundary8xC9UKOVzHBaGYkR',
+      },
     });
 
     expect(res.status).toEqual(200);
