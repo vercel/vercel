@@ -90,6 +90,7 @@ export interface Team {
       state: string;
     };
   };
+  createdDirectToHobby?: boolean;
 }
 
 export type Domain = {

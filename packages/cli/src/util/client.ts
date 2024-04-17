@@ -54,6 +54,11 @@ export interface ClientOptions extends Stdio {
   agent?: Agent;
 }
 
+export interface AuthContext {
+  isCanonicalHobbyTeam?: boolean;
+  enableFallbackDomainsAccess?: boolean;
+}
+
 export const isJSONObject = (v: any): v is JSONObject => {
   return v && typeof v == 'object' && v.constructor === Object;
 };
@@ -72,6 +77,7 @@ export default class Client extends EventEmitter implements Stdio {
   localConfigPath?: string;
   requestIdCounter: number;
   input;
+  authContext: AuthContext = {};
 
   constructor(opts: ClientOptions) {
     super();
