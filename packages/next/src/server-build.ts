@@ -52,6 +52,7 @@ import {
   normalizePrefetches,
   CreateLambdaFromPseudoLayersOptions,
   getPostponeResumePathname,
+  LambdaGroup,
 } from './utils';
 import {
   nodeFileTrace,
@@ -937,7 +938,18 @@ export async function serverBuild({
       inversedAppPathManifest,
     });
 
+    const appRouterStreamingPrerenderLambdaGroups: LambdaGroup[] = [];
+
     for (const group of appRouterLambdaGroups) {
+      // We create a streaming variant of the Prerender lambda group
+      // to support actions that are part of a Prerender
+      if (group.isPrerenders && !group.isStreaming) {
+        appRouterStreamingPrerenderLambdaGroups.push({
+          ...group,
+          isStreaming: true,
+        });
+      }
+
       if (!group.isPrerenders || group.isExperimentalPPR) {
         group.isStreaming = true;
       }
@@ -994,6 +1006,13 @@ export async function serverBuild({
             pseudoLayerBytes: group.pseudoLayerBytes,
             uncompressedLayerBytes: group.pseudoLayerUncompressedBytes,
           })),
+          appRouterStreamingPrerenderLambdaGroups:
+            appRouterStreamingPrerenderLambdaGroups.map(group => ({
+              pages: group.pages,
+              isPrerender: group.isPrerenders,
+              pseudoLayerBytes: group.pseudoLayerBytes,
+              uncompressedLayerBytes: group.pseudoLayerUncompressedBytes,
+            })),
           appRouteHandlersLambdaGroups: appRouteHandlersLambdaGroups.map(
             group => ({
               pages: group.pages,
@@ -1011,6 +1030,7 @@ export async function serverBuild({
     const combinedGroups = [
       ...pageLambdaGroups,
       ...appRouterLambdaGroups,
+      ...appRouterStreamingPrerenderLambdaGroups,
       ...apiLambdaGroups,
       ...appRouteHandlersLambdaGroups,
     ];
@@ -1209,6 +1229,11 @@ export async function serverBuild({
         }
 
         let outputName = path.posix.join(entryDirectory, pageName);
+
+        if (options.isStreaming && group.isPrerenders) {
+          // give the streaming prerenders a .action suffix
+          outputName = `${outputName}.action`;
+        }
 
         // If this is a PPR page, then we should prefix the output name.
         if (isPPR) {
@@ -1908,6 +1933,68 @@ export async function serverBuild({
                 ]
               : []),
 
+            // Create rewrites for streaming prerenders (.action routes)
+            // This contains separate rewrites for each possible "has" (action header, or content-type)
+            // Also includes separate handling for index routes which should match to /index.action.
+            // This follows the same pattern as the rewrites for .rsc files.
+            {
+              src: `^${path.posix.join('/', entryDirectory, '/')}`,
+              dest: path.posix.join('/', entryDirectory, '/index.action'),
+              has: [
+                {
+                  type: 'header',
+                  key: 'next-action',
+                },
+              ],
+              continue: true,
+              override: true,
+            },
+            {
+              src: `^${path.posix.join('/', entryDirectory, '/')}`,
+              dest: path.posix.join('/', entryDirectory, '/index.action'),
+              has: [
+                {
+                  type: 'header',
+                  key: 'content-type',
+                  value: 'multipart/form-data;.*',
+                },
+              ],
+              continue: true,
+              override: true,
+            },
+            {
+              src: `^${path.posix.join(
+                '/',
+                entryDirectory,
+                '/((?!.+\\.action).+?)(?:/)?$'
+              )}`,
+              dest: path.posix.join('/', entryDirectory, '/$1.action'),
+              has: [
+                {
+                  type: 'header',
+                  key: 'next-action',
+                },
+              ],
+              continue: true,
+              override: true,
+            },
+            {
+              src: `^${path.posix.join(
+                '/',
+                entryDirectory,
+                '/((?!.+\\.action).+?)(?:/)?$'
+              )}`,
+              dest: path.posix.join('/', entryDirectory, '/$1.action'),
+              has: [
+                {
+                  type: 'header',
+                  key: 'content-type',
+                  value: 'multipart/form-data;.*',
+                },
+              ],
+              continue: true,
+              override: true,
+            },
             {
               src: `^${path.posix.join('/', entryDirectory, '/')}`,
               has: [
