@@ -35,7 +35,7 @@ export default async function getScope(
    * A user may have multiple Hobby teams (e.g., Pro Trial downgrade), but can have only one canonical Hobby team.
    */
   const isCanonicalHobbyTeam =
-    (team?.billing.plan === 'hobby' &&
+    (team?.billing?.plan === 'hobby' &&
       team.createdDirectToHobby &&
       team.creatorId === user.id) ??
     false;
