@@ -4,7 +4,7 @@
   "probes": [
     {
       "path": "/",
-      "mustContain": "pnpm version: 6",
+      "mustContain": "pnpm version: 7",
       "logMustContain": "pnpm run build"
     }
   ]
