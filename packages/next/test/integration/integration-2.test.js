@@ -251,9 +251,7 @@ it('Should provide lambda info when limit is hit (server build)', async () => {
   );
   expect(logs).toContain(`Serverless Function's page: api/both.js`);
   expect(logs).toMatch(/Large Dependencies.*?Uncompressed size/);
-  expect(logs).toMatch(
-    /node_modules\/chrome-aws-lambda\/bin.*?\d{2}.*?MB.*?\d{2}.*?MB/
-  );
+  expect(logs).toMatch(/node_modules\/chrome-aws-lambda\/bin.*?\d{2}.*?MB/);
   expect(logs).toMatch(/node_modules\/@firebase\/firestore.*?\d{1}.*?MB/);
   expect(logs).toMatch(/big-image-1/);
   expect(logs).toMatch(/big-image-2/);
@@ -285,9 +283,7 @@ it('Should provide lambda info when limit is hit for internal pages (server buil
   expect(logs).toContain(`Serverless Function's page: api/chrome.js`);
   expect(logs).toContain(`Serverless Function's page: api/both.js`);
   expect(logs).toMatch(/Large Dependencies.*?Uncompressed size/);
-  expect(logs).toMatch(
-    /node_modules\/chrome-aws-lambda\/bin.*?\d{2}.*?MB.*?\d{2}.*?MB/
-  );
+  expect(logs).toMatch(/node_modules\/chrome-aws-lambda\/bin.*?\d{2}.*?MB/);
   expect(logs).toMatch(/node_modules\/@firebase\/firestore.*?\d{1}.*?MB/);
   expect(logs).toMatch(/public\/big-image-1\.jpg/);
   expect(logs).toMatch(/public\/big-image-2\.jpg/);

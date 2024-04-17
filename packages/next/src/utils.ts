@@ -1658,7 +1658,7 @@ export const outputFunctionFileSizeInfo = (
       ', '
     )}`
   );
-  exceededLimitOutput.push(['Large Dependencies', 'Compressed size']);
+  exceededLimitOutput.push(['Large Dependencies', 'Uncompressed size']);
 
   const dependencies: {
     [key: string]: {
