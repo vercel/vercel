@@ -930,19 +930,24 @@ export async function serverBuild({
     const appRouterStreamingPrerenderLambdaGroups: LambdaGroup[] = [];
 
     for (const group of appRouterLambdaGroups) {
-      // We create a streaming variant of the Prerender lambda group
-      // to support actions that are part of a Prerender
-      if (group.isPrerenders && !group.isStreaming) {
-        appRouterStreamingPrerenderLambdaGroups.push({
-          ...group,
-          isStreaming: true,
-        });
-      }
-
       if (!group.isPrerenders || group.isExperimentalPPR) {
         group.isStreaming = true;
       }
       group.isAppRouter = true;
+
+      // We create a streaming variant of the Prerender lambda group
+      // to support actions that are part of a Prerender
+      if (
+        group.isPrerenders &&
+        !group.isStreaming &&
+        !group.isExperimentalPPR
+      ) {
+        appRouterStreamingPrerenderLambdaGroups.push({
+          ...group,
+          isActionPrerender: true,
+          isStreaming: true,
+        });
+      }
     }
 
     for (const group of appRouteHandlersLambdaGroups) {
@@ -1228,7 +1233,7 @@ export async function serverBuild({
 
         let outputName = path.posix.join(entryDirectory, pageName);
 
-        if (options.isStreaming && group.isPrerenders) {
+        if (group.isActionPrerender) {
           // give the streaming prerenders a .action suffix
           outputName = `${outputName}.action`;
         }
