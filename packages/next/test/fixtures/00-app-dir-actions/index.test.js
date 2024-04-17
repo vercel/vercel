@@ -1,6 +1,7 @@
 /* eslint-env jest */
 const path = require('path');
 const { deployAndTest } = require('../../utils');
+const fetch = require('../../../../../test/lib/deployment/fetch-retry');
 
 const ctx = {};
 
