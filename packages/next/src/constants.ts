@@ -7,8 +7,8 @@ export const MIB = 1024 * KIB;
  */
 export const EDGE_FUNCTION_SIZE_LIMIT = 4 * MIB;
 
-export const MAX_UNCOMPRESSED_LAMBDA_SIZE = 250 * MIB;
+export const DEFAULT_MAX_UNCOMPRESSED_LAMBDA_SIZE = 250 * MIB;
 
-export const LAMBDA_RESERVED_UNCOMPRESSED_SIZE = 2.5 * MIB;
-
-export const LAMBDA_RESERVED_COMPRESSED_SIZE = 250 * KIB;
+// we need to leave wiggle room as other files are added
+// post build so we don't want to completely pack the function
+export const LAMBDA_RESERVED_UNCOMPRESSED_SIZE = 25 * MIB;

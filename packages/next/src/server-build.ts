@@ -17,7 +17,6 @@ import {
 } from '@vercel/build-utils';
 import { Route, RouteWithHandle } from '@vercel/routing-utils';
 import { MAX_AGE_ONE_YEAR } from '.';
-import { MAX_UNCOMPRESSED_LAMBDA_SIZE } from './constants';
 import {
   NextRequiredServerFilesManifest,
   NextImagesManifest,
@@ -52,6 +51,7 @@ import {
   normalizePrefetches,
   CreateLambdaFromPseudoLayersOptions,
   getPostponeResumePathname,
+  MAX_UNCOMPRESSED_LAMBDA_SIZE,
 } from './utils';
 import {
   nodeFileTrace,
@@ -139,7 +139,6 @@ export async function serverBuild({
   omittedPrerenderRoutes,
   trailingSlashRedirects,
   isCorrectLocaleAPIRoutes,
-  lambdaCompressedByteLimit,
   requiredServerFilesManifest,
   variantsManifest,
   experimentalPPRRoutes,
@@ -178,7 +177,6 @@ export async function serverBuild({
   hasIsr500Page: boolean;
   trailingSlashRedirects: Route[];
   routesManifest: RoutesManifest;
-  lambdaCompressedByteLimit: number;
   isCorrectLocaleAPIRoutes: boolean;
   imagesManifest?: NextImagesManifest;
   prerenderManifest: NextPrerenderedRoutes;
@@ -648,14 +646,9 @@ export async function serverBuild({
       )
     );
 
-    if (
-      initialPseudoLayer.pseudoLayerBytes > lambdaCompressedByteLimit ||
-      uncompressedInitialSize > MAX_UNCOMPRESSED_LAMBDA_SIZE
-    ) {
+    if (uncompressedInitialSize > MAX_UNCOMPRESSED_LAMBDA_SIZE) {
       console.log(
         `Warning: Max serverless function size of ${prettyBytes(
-          lambdaCompressedByteLimit
-        )} compressed or ${prettyBytes(
           MAX_UNCOMPRESSED_LAMBDA_SIZE
         )} uncompressed reached`
       );
@@ -663,13 +656,12 @@ export async function serverBuild({
       outputFunctionFileSizeInfo(
         [],
         initialPseudoLayer.pseudoLayer,
-        initialPseudoLayer.pseudoLayerBytes,
         uncompressedInitialSize,
         {}
       );
 
       throw new NowBuildError({
-        message: `Required files read using Node.js fs library and node_modules exceed max lambda size of ${lambdaCompressedByteLimit} bytes`,
+        message: `Required files read using Node.js fs library and node_modules exceed max lambda size of ${MAX_UNCOMPRESSED_LAMBDA_SIZE} bytes`,
         code: 'NEXT_REQUIRED_FILES_LIMIT',
         link: 'https://vercel.com/docs/platform/limits#serverless-function-size',
       });
@@ -889,7 +881,6 @@ export async function serverBuild({
       experimentalPPRRoutes: undefined,
       tracedPseudoLayer: tracedPseudoLayer.pseudoLayer,
       initialPseudoLayer,
-      lambdaCompressedByteLimit,
       initialPseudoLayerUncompressed: uncompressedInitialSize,
       internalPages,
       pageExtensions,
@@ -911,7 +902,6 @@ export async function serverBuild({
       experimentalPPRRoutes,
       tracedPseudoLayer: tracedPseudoLayer.pseudoLayer,
       initialPseudoLayer,
-      lambdaCompressedByteLimit,
       initialPseudoLayerUncompressed: uncompressedInitialSize,
       internalPages,
       pageExtensions,
@@ -930,7 +920,6 @@ export async function serverBuild({
       experimentalPPRRoutes: undefined,
       tracedPseudoLayer: tracedPseudoLayer.pseudoLayer,
       initialPseudoLayer,
-      lambdaCompressedByteLimit,
       initialPseudoLayerUncompressed: uncompressedInitialSize,
       internalPages,
       pageExtensions,
@@ -964,7 +953,6 @@ export async function serverBuild({
       tracedPseudoLayer: tracedPseudoLayer.pseudoLayer,
       initialPseudoLayer,
       initialPseudoLayerUncompressed: uncompressedInitialSize,
-      lambdaCompressedByteLimit,
       internalPages,
       pageExtensions,
     });
@@ -1015,16 +1003,20 @@ export async function serverBuild({
       ...appRouteHandlersLambdaGroups,
     ];
 
-    await detectLambdaLimitExceeding(
-      combinedGroups,
-      lambdaCompressedByteLimit,
-      compressedPages
-    );
+    await detectLambdaLimitExceeding(combinedGroups, compressedPages);
+
+    const appNotFoundTraces = pageTraces['_not-found.js'];
+    const appNotFoundPsuedoLayer =
+      appNotFoundTraces && (await createPseudoLayer(appNotFoundTraces));
 
     for (const group of combinedGroups) {
       const groupPageFiles: { [key: string]: PseudoFile } = {};
 
-      for (const page of [...group.pages, ...internalPages]) {
+      for (const page of [
+        ...group.pages,
+        ...internalPages,
+        ...(group.isAppRouter && appNotFoundTraces ? ['_not-found.js'] : []),
+      ]) {
         const pageFileName = path.normalize(
           path.relative(baseDir, lambdaPages[page].fsPath)
         );
@@ -1163,6 +1155,12 @@ export async function serverBuild({
         nextVersion,
         experimentalAllowBundling,
       };
+
+      // the app _not-found output should always be included
+      // if it was created otherwise notFound() handling could fail
+      if (group.isAppRouter && appNotFoundPsuedoLayer) {
+        options.layers.push(appNotFoundPsuedoLayer.pseudoLayer);
+      }
 
       const lambda = await createLambdaFromPseudoLayers(options);
 
