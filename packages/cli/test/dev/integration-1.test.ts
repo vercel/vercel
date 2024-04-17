@@ -967,6 +967,7 @@ test(
   testFixtureStdio('handle-miss-querystring', async (testPath: any) => {
     await testPath(200, '/', 'Index Page');
     if (process.env.CI && process.platform === 'darwin') {
+      // eslint-disable-next-line no-console
       console.log('Skipping since GH Actions hangs for some reason');
     } else {
       await testPath(200, '/echo/first/second', 'a=first,b=second');
