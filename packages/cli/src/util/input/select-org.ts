@@ -37,7 +37,7 @@ export default async function selectOrg(
   const choices: Choice[] = [
     ...personalAccountChoice,
     ...teams
-      .toSorted(a => (a.id === user.defaultTeamId ? -1 : 1))
+      .sort(a => (a.id === user.defaultTeamId ? -1 : 1))
       .map<Choice>(team => ({
         name: team.name || team.slug,
         value: { type: 'team', id: team.id, slug: team.slug },
