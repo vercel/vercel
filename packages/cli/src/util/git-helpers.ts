@@ -37,7 +37,7 @@ export function getGitDirectory(opts: GitExecOptions): string | null {
     const gitConfigPath = execSync('git rev-parse --git-dir', {
       cwd,
       encoding: 'utf8',
-      stdio: ['pipe', 'pipe', 'ignore'],
+      stdio: ['ignore', 'pipe', 'ignore'],
     });
 
     return gitConfigPath;
