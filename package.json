@@ -36,11 +36,6 @@
     "turbo": "1.13.2",
     "typescript": "4.9.5"
   },
-  "pnpm": {
-    "overrides": {
-      "source-map": "0.7.4"
-    }
-  },
   "scripts": {
     "build": "node utils/gen.js && turbo --no-update-notifier run build",
     "vercel-build": "pnpm build && pnpm run pack && cd api && node -r ts-eager/register ./_lib/script/build.ts",
