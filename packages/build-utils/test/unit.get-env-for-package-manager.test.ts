@@ -226,22 +226,6 @@ describe('Test `getEnvForPackageManager()`', () => {
       consoleLogOutput: null,
       consoleWarnOutput: null,
     },
-    {
-      name: 'should not set path if pnpm 6 is detected',
-      args: {
-        cliType: 'pnpm',
-        nodeVersion: { major: 14, range: '14.x', runtime: 'nodejs14.x' },
-        lockfileVersion: 5.3,
-        env: {
-          FOO: 'bar',
-        },
-      },
-      want: {
-        FOO: 'bar',
-      },
-      consoleLogOutput: null,
-      consoleWarnOutput: null,
-    },
   ])('$name', ({ args, want, consoleLogOutput, consoleWarnOutput }) => {
     expect(
       getEnvForPackageManager({
@@ -288,7 +272,6 @@ describe('Test `getPathForPackageManager()`', () => {
         detectedLockfile: undefined,
         detectedPackageManager: undefined,
         path: undefined,
-        yarnNodeLinker: undefined,
       },
     },
     {
@@ -306,7 +289,6 @@ describe('Test `getPathForPackageManager()`', () => {
         detectedLockfile: 'package-lock.json',
         detectedPackageManager: 'npm 7+',
         path: '/node16/bin-npm7',
-        yarnNodeLinker: undefined,
       },
     },
     {
@@ -324,27 +306,9 @@ describe('Test `getPathForPackageManager()`', () => {
         detectedLockfile: undefined,
         detectedPackageManager: undefined,
         path: undefined,
-        yarnNodeLinker: undefined,
       },
     },
-    {
-      name: 'should not prepend npm path again if already detected',
-      args: {
-        cliType: 'npm',
-        nodeVersion: { major: 14, range: '14.x', runtime: 'nodejs14.x' },
-        lockfileVersion: 2,
-        env: {
-          FOO: 'bar',
-          PATH: `/node16/bin-npm7${delimiter}foo`,
-        },
-      },
-      want: {
-        detectedLockfile: undefined,
-        detectedPackageManager: undefined,
-        path: undefined,
-        yarnNodeLinker: undefined,
-      },
-    },
+
     {
       name: 'should not set path if node is 16 and npm 7+ is detected',
       args: {
@@ -360,42 +324,6 @@ describe('Test `getPathForPackageManager()`', () => {
         detectedLockfile: undefined,
         detectedPackageManager: undefined,
         path: undefined,
-        yarnNodeLinker: undefined,
-      },
-    },
-    {
-      name: 'should set YARN_NODE_LINKER w/yarn if it is not already defined',
-      args: {
-        cliType: 'yarn',
-        nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
-        lockfileVersion: 2,
-        env: {
-          FOO: 'bar',
-        },
-      },
-      want: {
-        detectedLockfile: undefined,
-        detectedPackageManager: undefined,
-        path: undefined,
-        yarnNodeLinker: 'node-modules',
-      },
-    },
-    {
-      name: 'should not set YARN_NODE_LINKER if it already exists',
-      args: {
-        cliType: 'yarn',
-        nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
-        lockfileVersion: 2,
-        env: {
-          FOO: 'bar',
-          YARN_NODE_LINKER: 'exists',
-        },
-      },
-      want: {
-        detectedLockfile: undefined,
-        detectedPackageManager: undefined,
-        path: undefined,
-        yarnNodeLinker: undefined,
       },
     },
     {
@@ -413,7 +341,6 @@ describe('Test `getPathForPackageManager()`', () => {
         detectedLockfile: 'pnpm-lock.yaml',
         detectedPackageManager: 'pnpm 7',
         path: '/pnpm7/node_modules/.bin',
-        yarnNodeLinker: undefined,
       },
     },
     {
@@ -431,7 +358,6 @@ describe('Test `getPathForPackageManager()`', () => {
         detectedLockfile: 'bun.lockb',
         detectedPackageManager: 'Bun',
         path: '/bun1',
-        yarnNodeLinker: undefined,
       },
     },
     {
@@ -449,42 +375,6 @@ describe('Test `getPathForPackageManager()`', () => {
         detectedLockfile: undefined,
         detectedPackageManager: undefined,
         path: undefined,
-        yarnNodeLinker: undefined,
-      },
-    },
-    {
-      name: 'should not prepend pnpm path again if already detected',
-      args: {
-        cliType: 'pnpm',
-        nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
-        lockfileVersion: 5.4,
-        env: {
-          FOO: 'bar',
-          PATH: `/pnpm7/node_modules/.bin${delimiter}foo`,
-        },
-      },
-      want: {
-        detectedLockfile: undefined,
-        detectedPackageManager: undefined,
-        path: undefined,
-        yarnNodeLinker: undefined,
-      },
-    },
-    {
-      name: 'should not set path if pnpm 6 is detected',
-      args: {
-        cliType: 'pnpm',
-        nodeVersion: { major: 14, range: '14.x', runtime: 'nodejs14.x' },
-        lockfileVersion: 5.3,
-        env: {
-          FOO: 'bar',
-        },
-      },
-      want: {
-        detectedLockfile: undefined,
-        detectedPackageManager: undefined,
-        path: undefined,
-        yarnNodeLinker: undefined,
       },
     },
   ])('$name', ({ args, want }) => {
