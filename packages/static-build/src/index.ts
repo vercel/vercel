@@ -45,6 +45,7 @@ import {
   detectFrameworkRecord,
   LocalFileSystemDetector,
 } from '@vercel/fs-detectors';
+import { getHugoUrl } from './utils/hugo';
 
 const SUPPORTED_RUBY_VERSION = '3.2.0';
 const sleep = (n: number) => new Promise(resolve => setTimeout(resolve, n));
@@ -349,14 +350,15 @@ export const build: BuildV2 = async ({
     const routes: Route[] = [];
 
     if (config.zeroConfig) {
-      const { HUGO_VERSION, ZOLA_VERSION, GUTENBERG_VERSION } = process.env;
+      const {
+        HUGO_VERSION = '0.58.2',
+        ZOLA_VERSION,
+        GUTENBERG_VERSION,
+      } = process.env;
 
-      if (HUGO_VERSION && !meta.isDev) {
+      if (framework?.slug === 'hugo' && !meta.isDev) {
         console.log('Installing Hugo version ' + HUGO_VERSION);
-        const [major, minor] = HUGO_VERSION.split('.').map(Number);
-        const isOldVersion = major === 0 && minor < 43;
-        const prefix = isOldVersion ? `hugo_` : `hugo_extended_`;
-        const url = `https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/${prefix}${HUGO_VERSION}_Linux-64bit.tar.gz`;
+        const url = await getHugoUrl(HUGO_VERSION);
         await fetchBinary(url, 'Hugo', HUGO_VERSION);
       }
 
