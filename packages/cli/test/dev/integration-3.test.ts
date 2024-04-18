@@ -107,9 +107,7 @@ test('[vercel dev] 08-hugo', async () => {
         shell: true,
       }
     );
-    process.env.PATH = `${resolve(fixture('08-hugo'))}${delimiter}${
-      process.env.PATH
-    }`;
+    process.env.PATH = `${hugoFixture}${delimiter}${process.env.PATH}`;
 
     // 3. Rerun the test now that Hugo is in the PATH
     tester = testFixtureStdio(
