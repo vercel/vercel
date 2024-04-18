@@ -51,7 +51,6 @@ import url from 'url';
 import createServerlessConfig from './create-serverless-config';
 import nextLegacyVersions from './legacy-versions';
 import { serverBuild } from './server-build';
-import { MIB } from './constants';
 import {
   collectTracedFiles,
   createLambdaFromPseudoLayers,
@@ -204,10 +203,6 @@ export const build: BuildV2 = async ({
   meta = {},
 }) => {
   validateEntrypoint(entrypoint);
-
-  // Limit for max size each lambda can be, 50 MB if no custom limit
-  const lambdaCompressedByteLimit = (config.maxLambdaSize ||
-    50 * MIB) as number;
 
   let entryDirectory = path.dirname(entrypoint);
   let entryPath = path.join(workPath, entryDirectory);
@@ -1385,7 +1380,6 @@ export const build: BuildV2 = async ({
         escapedBuildId,
         outputDirectory,
         trailingSlashRedirects,
-        lambdaCompressedByteLimit,
         requiredServerFilesManifest,
         privateOutputs,
         hasIsr404Page,
@@ -1622,7 +1616,6 @@ export const build: BuildV2 = async ({
         tracedPseudoLayer: tracedPseudoLayer?.pseudoLayer || {},
         initialPseudoLayer: { pseudoLayer: {}, pseudoLayerBytes: 0 },
         initialPseudoLayerUncompressed: 0,
-        lambdaCompressedByteLimit,
         // internal pages are already referenced in traces for serverless
         // like builds
         internalPages: [],
@@ -1640,7 +1633,6 @@ export const build: BuildV2 = async ({
         tracedPseudoLayer: tracedPseudoLayer?.pseudoLayer || {},
         initialPseudoLayer: { pseudoLayer: {}, pseudoLayerBytes: 0 },
         initialPseudoLayerUncompressed: 0,
-        lambdaCompressedByteLimit,
         internalPages: [],
         experimentalPPRRoutes: undefined,
       });
@@ -1674,7 +1666,6 @@ export const build: BuildV2 = async ({
       ];
       await detectLambdaLimitExceeding(
         combinedInitialLambdaGroups,
-        lambdaCompressedByteLimit,
         compressedPages
       );
 
