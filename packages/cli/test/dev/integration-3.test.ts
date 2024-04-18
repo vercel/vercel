@@ -119,6 +119,7 @@ test('[vercel dev] 08-hugo', async () => {
     );
     await tester();
   } else {
+    // eslint-disable-next-line no-console
     console.log(`Skipping 08-hugo on platform ${process.platform}`);
   }
 });
