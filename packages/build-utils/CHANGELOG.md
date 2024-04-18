@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 7.12.0
+
+### Minor Changes
+
+- Trigger release ([#11465](https://github.com/vercel/vercel/pull/11465))
+
 ## 7.11.0
 
 ### Minor Changes
