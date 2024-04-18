@@ -101,7 +101,7 @@ test('[vercel dev] 08-hugo', async () => {
     // 2. Download `hugo` and update PATH
     const hugoFixture = resolve(fixture('08-hugo'));
     await spawnAsync(
-      `curl -sSL https://github.com/gohugoio/hugo/releases/download/v0.56.0/hugo_0.56.0_macOS-64bit.tar.gz && tar -xz -C "${hugoFixture}"`,
+      `curl -sSL https://github.com/gohugoio/hugo/releases/download/v0.56.0/hugo_0.56.0_macOS-64bit.tar.gz | tar -xz -C "${hugoFixture}"`,
       [],
       {
         shell: true,
