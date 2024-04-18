@@ -31,7 +31,6 @@ import crc32 from 'buffer-crc32';
 import fs, { lstat, stat } from 'fs-extra';
 import path from 'path';
 import semver from 'semver';
-import zlib from 'zlib';
 import url from 'url';
 import { createRequire } from 'module';
 import escapeStringRegexp from 'escape-string-regexp';
@@ -45,9 +44,8 @@ import { prettyBytes } from './pretty-bytes';
 import {
   MIB,
   KIB,
-  MAX_UNCOMPRESSED_LAMBDA_SIZE,
-  LAMBDA_RESERVED_COMPRESSED_SIZE,
   LAMBDA_RESERVED_UNCOMPRESSED_SIZE,
+  DEFAULT_MAX_UNCOMPRESSED_LAMBDA_SIZE,
 } from './constants';
 
 type stringMap = { [key: string]: string };
@@ -56,6 +54,12 @@ export const require_ = createRequire(__filename);
 
 export const RSC_CONTENT_TYPE = 'x-component';
 export const RSC_PREFETCH_SUFFIX = '.prefetch.rsc';
+
+export const MAX_UNCOMPRESSED_LAMBDA_SIZE = !isNaN(
+  Number(process.env.MAX_UNCOMPRESSED_LAMBDA_SIZE)
+)
+  ? Number(process.env.MAX_UNCOMPRESSED_LAMBDA_SIZE)
+  : DEFAULT_MAX_UNCOMPRESSED_LAMBDA_SIZE;
 
 // Identify /[param]/ in route string
 // eslint-disable-next-line no-useless-escape
@@ -428,6 +432,15 @@ export async function getDynamicRoutes({
             dest: route.dest?.replace(/($|\?)/, '.rsc$1'),
           });
 
+          routes.push({
+            ...route,
+            src: route.src.replace(
+              new RegExp(escapeStringRegexp('(?:/)?$')),
+              '(?:\\.action)(?:/)?$'
+            ),
+            dest: route.dest?.replace(/($|\?)/, '.action$1'),
+          });
+
           routes.push(route);
         }
 
@@ -753,7 +766,6 @@ export type PseudoFile = {
   file: FileFsRef;
   isSymlink: false;
   crc32: number;
-  compBuffer: Buffer;
   uncompressedSize: number;
 };
 
@@ -761,19 +773,6 @@ export type PseudoSymbolicLink = {
   file: FileFsRef;
   isSymlink: true;
   symlinkTarget: string;
-};
-
-const compressBuffer = (buf: Buffer): Promise<Buffer> => {
-  return new Promise((resolve, reject) => {
-    zlib.deflateRaw(
-      buf,
-      { level: zlib.constants.Z_BEST_COMPRESSION },
-      (err, compBuf) => {
-        if (err) return reject(err);
-        resolve(compBuf);
-      }
-    );
-  });
 };
 
 export type PseudoLayerResult = {
@@ -799,11 +798,9 @@ export async function createPseudoLayer(files: {
       };
     } else {
       const origBuffer = await streamToBuffer(file.toStream());
-      const compBuffer = await compressBuffer(origBuffer);
-      pseudoLayerBytes += compBuffer.byteLength;
+      pseudoLayerBytes += origBuffer.byteLength;
       pseudoLayer[fileName] = {
         file,
-        compBuffer,
         isSymlink: false,
         crc32: crc32.unsigned(origBuffer),
         uncompressedSize: origBuffer.byteLength,
@@ -1499,6 +1496,7 @@ export type LambdaGroup = {
   isStreaming?: boolean;
   isPrerenders?: boolean;
   isExperimentalPPR?: boolean;
+  isActionPrerender?: boolean;
   isPages?: boolean;
   isApiLambda: boolean;
   pseudoLayer: PseudoLayer;
@@ -1518,7 +1516,6 @@ export async function getPageLambdaGroups({
   tracedPseudoLayer,
   initialPseudoLayer,
   initialPseudoLayerUncompressed,
-  lambdaCompressedByteLimit,
   internalPages,
   pageExtensions,
   inversedAppPathManifest,
@@ -1541,7 +1538,6 @@ export async function getPageLambdaGroups({
   tracedPseudoLayer: PseudoLayer;
   initialPseudoLayer: PseudoLayerResult;
   initialPseudoLayerUncompressed: number;
-  lambdaCompressedByteLimit: number;
   internalPages: ReadonlyArray<string>;
   pageExtensions?: ReadonlyArray<string>;
   inversedAppPathManifest?: Record<string, string>;
@@ -1595,7 +1591,6 @@ export async function getPageLambdaGroups({
             group.isExperimentalPPR === isExperimentalPPR;
 
           if (matches) {
-            let newTracedFilesSize = group.pseudoLayerBytes;
             let newTracedFilesUncompressedSize =
               group.pseudoLayerUncompressedBytes;
 
@@ -1604,12 +1599,9 @@ export async function getPageLambdaGroups({
                 if (!group.pseudoLayer[file]) {
                   const item = tracedPseudoLayer[file] as PseudoFile;
 
-                  newTracedFilesSize += item.compBuffer?.byteLength || 0;
                   newTracedFilesUncompressedSize += item.uncompressedSize || 0;
                 }
               });
-              newTracedFilesSize +=
-                compressedPages[newPage].compBuffer.byteLength;
               newTracedFilesUncompressedSize +=
                 compressedPages[newPage].uncompressedSize;
             }
@@ -1617,11 +1609,8 @@ export async function getPageLambdaGroups({
             const underUncompressedLimit =
               newTracedFilesUncompressedSize <
               MAX_UNCOMPRESSED_LAMBDA_SIZE - LAMBDA_RESERVED_UNCOMPRESSED_SIZE;
-            const underCompressedLimit =
-              newTracedFilesSize <
-              lambdaCompressedByteLimit - LAMBDA_RESERVED_COMPRESSED_SIZE;
 
-            return underUncompressedLimit && underCompressedLimit;
+            return underUncompressedLimit;
           }
           return false;
         });
@@ -1646,11 +1635,9 @@ export async function getPageLambdaGroups({
     for (const newPage of newPages) {
       Object.keys(pageTraces[newPage] || {}).map(file => {
         const pseudoItem = tracedPseudoLayer[file] as PseudoFile;
-        const compressedSize = pseudoItem?.compBuffer?.byteLength || 0;
 
         if (!matchingGroup!.pseudoLayer[file]) {
           matchingGroup!.pseudoLayer[file] = pseudoItem;
-          matchingGroup!.pseudoLayerBytes += compressedSize;
           matchingGroup!.pseudoLayerUncompressedBytes +=
             pseudoItem.uncompressedSize || 0;
         }
@@ -1658,8 +1645,6 @@ export async function getPageLambdaGroups({
 
       // ensure the page file itself is accounted for when grouping as
       // large pages can be created that can push the group over the limit
-      matchingGroup!.pseudoLayerBytes +=
-        compressedPages[newPage].compBuffer.byteLength;
       matchingGroup!.pseudoLayerUncompressedBytes +=
         compressedPages[newPage].uncompressedSize;
     }
@@ -1671,7 +1656,6 @@ export async function getPageLambdaGroups({
 export const outputFunctionFileSizeInfo = (
   pages: string[],
   pseudoLayer: PseudoLayer,
-  pseudoLayerBytes: number,
   pseudoLayerUncompressedBytes: number,
   compressedPages: {
     [page: string]: PseudoFile;
@@ -1684,15 +1668,10 @@ export const outputFunctionFileSizeInfo = (
       ', '
     )}`
   );
-  exceededLimitOutput.push([
-    'Large Dependencies',
-    'Uncompressed size',
-    'Compressed size',
-  ]);
+  exceededLimitOutput.push(['Large Dependencies', 'Uncompressed size']);
 
   const dependencies: {
     [key: string]: {
-      compressed: number;
       uncompressed: number;
     };
   } = {};
@@ -1704,19 +1683,16 @@ export const outputFunctionFileSizeInfo = (
 
       if (!dependencies[depKey]) {
         dependencies[depKey] = {
-          compressed: 0,
           uncompressed: 0,
         };
       }
 
-      dependencies[depKey].compressed += fileItem.compBuffer.byteLength;
       dependencies[depKey].uncompressed += fileItem.uncompressedSize;
     }
   }
 
   for (const page of pages) {
     dependencies[`pages/${page}`] = {
-      compressed: compressedPages[page].compBuffer.byteLength,
       uncompressed: compressedPages[page].uncompressedSize,
     };
   }
@@ -1728,10 +1704,10 @@ export const outputFunctionFileSizeInfo = (
       const aDep = dependencies[a];
       const bDep = dependencies[b];
 
-      if (aDep.compressed > bDep.compressed) {
+      if (aDep.uncompressed > bDep.uncompressed) {
         return -1;
       }
-      if (aDep.compressed < bDep.compressed) {
+      if (aDep.uncompressed < bDep.uncompressed) {
         return 1;
       }
       return 0;
@@ -1739,21 +1715,17 @@ export const outputFunctionFileSizeInfo = (
     .forEach(depKey => {
       const dep = dependencies[depKey];
 
-      if (dep.compressed < 100 * KIB && dep.uncompressed < 500 * KIB) {
+      if (dep.uncompressed < 500 * KIB) {
         // ignore smaller dependencies to reduce noise
         return;
       }
-      exceededLimitOutput.push([
-        depKey,
-        prettyBytes(dep.uncompressed),
-        prettyBytes(dep.compressed),
-      ]);
+      exceededLimitOutput.push([depKey, prettyBytes(dep.uncompressed)]);
       numLargeDependencies += 1;
     });
 
   if (numLargeDependencies === 0) {
     exceededLimitOutput.push([
-      'No large dependencies found (> 100KB compressed)',
+      'No large dependencies found (> 500KB compressed)',
     ]);
   }
 
@@ -1761,25 +1733,22 @@ export const outputFunctionFileSizeInfo = (
   exceededLimitOutput.push([
     'All dependencies',
     prettyBytes(pseudoLayerUncompressedBytes),
-    prettyBytes(pseudoLayerBytes),
   ]);
 
   console.log(
     textTable(exceededLimitOutput, {
-      align: ['l', 'r', 'r'],
+      align: ['l', 'r'],
     })
   );
 };
 
 export const detectLambdaLimitExceeding = async (
   lambdaGroups: LambdaGroup[],
-  compressedSizeLimit: number,
   compressedPages: {
     [page: string]: PseudoFile;
   }
 ) => {
   // show debug info if within 5 MB of exceeding the limit
-  const COMPRESSED_SIZE_LIMIT_CLOSE = compressedSizeLimit - 5 * MIB;
   const UNCOMPRESSED_SIZE_LIMIT_CLOSE = MAX_UNCOMPRESSED_LAMBDA_SIZE - 5 * MIB;
 
   let numExceededLimit = 0;
@@ -1790,11 +1759,9 @@ export const detectLambdaLimitExceeding = async (
   // or only get close so our first log line can be correct
   const filteredGroups = lambdaGroups.filter(group => {
     const exceededLimit =
-      group.pseudoLayerBytes > compressedSizeLimit ||
       group.pseudoLayerUncompressedBytes > MAX_UNCOMPRESSED_LAMBDA_SIZE;
 
     const closeToLimit =
-      group.pseudoLayerBytes > COMPRESSED_SIZE_LIMIT_CLOSE ||
       group.pseudoLayerUncompressedBytes > UNCOMPRESSED_SIZE_LIMIT_CLOSE;
 
     if (
@@ -1818,8 +1785,6 @@ export const detectLambdaLimitExceeding = async (
       if (numExceededLimit || numCloseToLimit) {
         console.log(
           `Warning: Max serverless function size of ${prettyBytes(
-            compressedSizeLimit
-          )} compressed or ${prettyBytes(
             MAX_UNCOMPRESSED_LAMBDA_SIZE
           )} uncompressed${numExceededLimit ? '' : ' almost'} reached`
         );
@@ -1832,7 +1797,6 @@ export const detectLambdaLimitExceeding = async (
     outputFunctionFileSizeInfo(
       group.pages,
       group.pseudoLayer,
-      group.pseudoLayerBytes,
       group.pseudoLayerUncompressedBytes,
       compressedPages
     );
