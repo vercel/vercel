@@ -557,9 +557,9 @@ export function getEnvForPackageManager({
     ...env,
   };
 
-  const alreadyInPath = (path: string) => {
+  const alreadyInPath = (newPath: string) => {
     const oldPath = env.PATH ?? '';
-    return oldPath.includes(path);
+    return oldPath.split(path.delimiter).includes(newPath);
   };
 
   if (newPath && !alreadyInPath(newPath)) {
