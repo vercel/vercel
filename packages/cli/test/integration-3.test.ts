@@ -72,6 +72,7 @@ let contextName: string | undefined;
 function mockLoginApi(req: http.IncomingMessage, res: http.ServerResponse) {
   const { url = '/', method } = req;
   let { pathname = '/', query = {} } = parseUrl(url, true);
+  // eslint-disable-next-line no-console
   console.log(`[mock-login-server] ${method} ${pathname}`);
   const securityCode = 'Bears Beets Battlestar Galactica';
   res.setHeader('content-type', 'application/json');
@@ -101,6 +102,7 @@ const pickUrl = (stdout: string) => {
 };
 
 const waitForDeployment = async (href: RequestInfo) => {
+  // eslint-disable-next-line no-console
   console.log(`waiting for ${href} to become ready...`);
   const start = Date.now();
   const max = ms('4m');
@@ -133,6 +135,7 @@ const loginApiServer = require('http')
   .listen(0, () => {
     const { port } = loginApiServer.address();
     loginApiUrl = `http://localhost:${port}`;
+    // eslint-disable-next-line no-console
     console.log(`[mock-login-server] Listening on ${loginApiUrl}`);
   });
 
@@ -193,7 +196,9 @@ beforeAll(async () => {
     const auth = await fs.readJSON(getConfigAuthPath());
     expect(auth.token).toBe(token);
   } catch (err) {
+    // eslint-disable-next-line no-console
     console.log('Failed test suite `beforeAll`');
+    // eslint-disable-next-line no-console
     console.log(err);
 
     // force test suite to actually stop
@@ -216,6 +221,7 @@ afterAll(async () => {
 
   const allTmpDirs = listTmpDirs();
   for (const tmpDir of allTmpDirs) {
+    // eslint-disable-next-line no-console
     console.log('Removing temp dir: ', tmpDir.name);
     tmpDir.removeCallback();
   }
@@ -423,6 +429,7 @@ test('domains inspect', async () => {
 // eslint-disable-next-line jest/no-disabled-tests
 test('try to purchase a domain', async () => {
   if (process.env.VERCEL_TOKEN || process.env.NOW_TOKEN) {
+    // eslint-disable-next-line no-console
     console.log(
       'Skipping test `try to purchase a domain` because a personal VERCEL_TOKEN was provided.'
     );
