@@ -7,6 +7,7 @@ try {
   process.cwd();
 } catch (err: unknown) {
   if (isError(err) && err.message.includes('uv_cwd')) {
+    // eslint-disable-next-line no-console
     console.error('Error: The current working directory does not exist.');
     process.exit(1);
   }
@@ -165,6 +166,7 @@ const main = async () => {
 
   // Handle `--version` directly
   if (!targetOrSubcommand && argv['--version']) {
+    // eslint-disable-next-line no-console
     console.log(pkg.version);
     return 0;
   }
@@ -439,6 +441,7 @@ const main = async () => {
         return 1;
       }
 
+      // eslint-disable-next-line no-console
       console.error(error('Not able to load user'));
       return 1;
     }
@@ -474,6 +477,7 @@ const main = async () => {
           return 1;
         }
 
+        // eslint-disable-next-line no-console
         console.error(error('Not able to load teams'));
         return 1;
       }
@@ -725,10 +729,12 @@ const handleRejection = async (err: any) => {
     if (err instanceof Error) {
       await handleUnexpected(err);
     } else {
+      // eslint-disable-next-line no-console
       console.error(error(`An unexpected rejection occurred\n  ${err}`));
       await reportError(Sentry, client, err);
     }
   } else {
+    // eslint-disable-next-line no-console
     console.error(error('An unexpected empty rejection occurred'));
   }
 
@@ -744,6 +750,7 @@ const handleUnexpected = async (err: Error) => {
     return;
   }
 
+  // eslint-disable-next-line no-console
   console.error(error(`An unexpected error occurred!\n${err.stack}`));
   await reportError(Sentry, client, err);
 

@@ -17,7 +17,6 @@ import {
 } from '@vercel/build-utils';
 import { Route, RouteWithHandle } from '@vercel/routing-utils';
 import { MAX_AGE_ONE_YEAR } from '.';
-import { MAX_UNCOMPRESSED_LAMBDA_SIZE } from './constants';
 import {
   NextRequiredServerFilesManifest,
   NextImagesManifest,
@@ -52,6 +51,8 @@ import {
   normalizePrefetches,
   CreateLambdaFromPseudoLayersOptions,
   getPostponeResumePathname,
+  LambdaGroup,
+  MAX_UNCOMPRESSED_LAMBDA_SIZE,
 } from './utils';
 import {
   nodeFileTrace,
@@ -68,6 +69,7 @@ const CORRECT_NOT_FOUND_ROUTES_VERSION = 'v12.0.1';
 const CORRECT_MIDDLEWARE_ORDER_VERSION = 'v12.1.7-canary.29';
 const NEXT_DATA_MIDDLEWARE_RESOLVING_VERSION = 'v12.1.7-canary.33';
 const EMPTY_ALLOW_QUERY_FOR_PRERENDERED_VERSION = 'v12.2.0';
+const ACTION_OUTPUT_SUPPORT_VERSION = 'v14.2.2';
 const CORRECTED_MANIFESTS_VERSION = 'v12.2.0';
 
 // Ideally this should be in a Next.js manifest so we can change it in
@@ -139,7 +141,6 @@ export async function serverBuild({
   omittedPrerenderRoutes,
   trailingSlashRedirects,
   isCorrectLocaleAPIRoutes,
-  lambdaCompressedByteLimit,
   requiredServerFilesManifest,
   variantsManifest,
   experimentalPPRRoutes,
@@ -178,7 +179,6 @@ export async function serverBuild({
   hasIsr500Page: boolean;
   trailingSlashRedirects: Route[];
   routesManifest: RoutesManifest;
-  lambdaCompressedByteLimit: number;
   isCorrectLocaleAPIRoutes: boolean;
   imagesManifest?: NextImagesManifest;
   prerenderManifest: NextPrerenderedRoutes;
@@ -200,6 +200,10 @@ export async function serverBuild({
   const isEmptyAllowQueryForPrendered = semver.gte(
     nextVersion,
     EMPTY_ALLOW_QUERY_FOR_PRERENDERED_VERSION
+  );
+  const hasActionOutputSupport = semver.gte(
+    nextVersion,
+    ACTION_OUTPUT_SUPPORT_VERSION
   );
   const projectDir = requiredServerFilesManifest.relativeAppDir
     ? path.join(baseDir, requiredServerFilesManifest.relativeAppDir)
@@ -648,14 +652,9 @@ export async function serverBuild({
       )
     );
 
-    if (
-      initialPseudoLayer.pseudoLayerBytes > lambdaCompressedByteLimit ||
-      uncompressedInitialSize > MAX_UNCOMPRESSED_LAMBDA_SIZE
-    ) {
+    if (uncompressedInitialSize > MAX_UNCOMPRESSED_LAMBDA_SIZE) {
       console.log(
         `Warning: Max serverless function size of ${prettyBytes(
-          lambdaCompressedByteLimit
-        )} compressed or ${prettyBytes(
           MAX_UNCOMPRESSED_LAMBDA_SIZE
         )} uncompressed reached`
       );
@@ -663,13 +662,12 @@ export async function serverBuild({
       outputFunctionFileSizeInfo(
         [],
         initialPseudoLayer.pseudoLayer,
-        initialPseudoLayer.pseudoLayerBytes,
         uncompressedInitialSize,
         {}
       );
 
       throw new NowBuildError({
-        message: `Required files read using Node.js fs library and node_modules exceed max lambda size of ${lambdaCompressedByteLimit} bytes`,
+        message: `Required files read using Node.js fs library and node_modules exceed max lambda size of ${MAX_UNCOMPRESSED_LAMBDA_SIZE} bytes`,
         code: 'NEXT_REQUIRED_FILES_LIMIT',
         link: 'https://vercel.com/docs/platform/limits#serverless-function-size',
       });
@@ -889,7 +887,6 @@ export async function serverBuild({
       experimentalPPRRoutes: undefined,
       tracedPseudoLayer: tracedPseudoLayer.pseudoLayer,
       initialPseudoLayer,
-      lambdaCompressedByteLimit,
       initialPseudoLayerUncompressed: uncompressedInitialSize,
       internalPages,
       pageExtensions,
@@ -911,7 +908,6 @@ export async function serverBuild({
       experimentalPPRRoutes,
       tracedPseudoLayer: tracedPseudoLayer.pseudoLayer,
       initialPseudoLayer,
-      lambdaCompressedByteLimit,
       initialPseudoLayerUncompressed: uncompressedInitialSize,
       internalPages,
       pageExtensions,
@@ -930,18 +926,34 @@ export async function serverBuild({
       experimentalPPRRoutes: undefined,
       tracedPseudoLayer: tracedPseudoLayer.pseudoLayer,
       initialPseudoLayer,
-      lambdaCompressedByteLimit,
       initialPseudoLayerUncompressed: uncompressedInitialSize,
       internalPages,
       pageExtensions,
       inversedAppPathManifest,
     });
 
+    const appRouterStreamingPrerenderLambdaGroups: LambdaGroup[] = [];
+
     for (const group of appRouterLambdaGroups) {
       if (!group.isPrerenders || group.isExperimentalPPR) {
         group.isStreaming = true;
       }
       group.isAppRouter = true;
+
+      // We create a streaming variant of the Prerender lambda group
+      // to support actions that are part of a Prerender
+      if (
+        hasActionOutputSupport &&
+        group.isPrerenders &&
+        !group.isStreaming &&
+        !group.isExperimentalPPR
+      ) {
+        appRouterStreamingPrerenderLambdaGroups.push({
+          ...group,
+          isActionPrerender: true,
+          isStreaming: true,
+        });
+      }
     }
 
     for (const group of appRouteHandlersLambdaGroups) {
@@ -964,7 +976,6 @@ export async function serverBuild({
       tracedPseudoLayer: tracedPseudoLayer.pseudoLayer,
       initialPseudoLayer,
       initialPseudoLayerUncompressed: uncompressedInitialSize,
-      lambdaCompressedByteLimit,
       internalPages,
       pageExtensions,
     });
@@ -994,6 +1005,13 @@ export async function serverBuild({
             pseudoLayerBytes: group.pseudoLayerBytes,
             uncompressedLayerBytes: group.pseudoLayerUncompressedBytes,
           })),
+          appRouterStreamingPrerenderLambdaGroups:
+            appRouterStreamingPrerenderLambdaGroups.map(group => ({
+              pages: group.pages,
+              isPrerender: group.isPrerenders,
+              pseudoLayerBytes: group.pseudoLayerBytes,
+              uncompressedLayerBytes: group.pseudoLayerUncompressedBytes,
+            })),
           appRouteHandlersLambdaGroups: appRouteHandlersLambdaGroups.map(
             group => ({
               pages: group.pages,
@@ -1011,20 +1029,25 @@ export async function serverBuild({
     const combinedGroups = [
       ...pageLambdaGroups,
       ...appRouterLambdaGroups,
+      ...appRouterStreamingPrerenderLambdaGroups,
       ...apiLambdaGroups,
       ...appRouteHandlersLambdaGroups,
     ];
 
-    await detectLambdaLimitExceeding(
-      combinedGroups,
-      lambdaCompressedByteLimit,
-      compressedPages
-    );
+    await detectLambdaLimitExceeding(combinedGroups, compressedPages);
+
+    const appNotFoundTraces = pageTraces['_not-found.js'];
+    const appNotFoundPsuedoLayer =
+      appNotFoundTraces && (await createPseudoLayer(appNotFoundTraces));
 
     for (const group of combinedGroups) {
       const groupPageFiles: { [key: string]: PseudoFile } = {};
 
-      for (const page of [...group.pages, ...internalPages]) {
+      for (const page of [
+        ...group.pages,
+        ...internalPages,
+        ...(group.isAppRouter && appNotFoundTraces ? ['_not-found.js'] : []),
+      ]) {
         const pageFileName = path.normalize(
           path.relative(baseDir, lambdaPages[page].fsPath)
         );
@@ -1164,6 +1187,12 @@ export async function serverBuild({
         experimentalAllowBundling,
       };
 
+      // the app _not-found output should always be included
+      // if it was created otherwise notFound() handling could fail
+      if (group.isAppRouter && appNotFoundPsuedoLayer) {
+        options.layers.push(appNotFoundPsuedoLayer.pseudoLayer);
+      }
+
       const lambda = await createLambdaFromPseudoLayers(options);
 
       // This is a PPR lambda if it's an App Page with the PPR experimental flag
@@ -1209,6 +1238,11 @@ export async function serverBuild({
         }
 
         let outputName = path.posix.join(entryDirectory, pageName);
+
+        if (group.isActionPrerender) {
+          // give the streaming prerenders a .action suffix
+          outputName = `${outputName}.action`;
+        }
 
         // If this is a PPR page, then we should prefix the output name.
         if (isPPR) {
@@ -1907,7 +1941,72 @@ export async function serverBuild({
                   },
                 ]
               : []),
-
+            ...(hasActionOutputSupport
+              ? [
+                  // Create rewrites for streaming prerenders (.action routes)
+                  // This contains separate rewrites for each possible "has" (action header, or content-type)
+                  // Also includes separate handling for index routes which should match to /index.action.
+                  // This follows the same pattern as the rewrites for .rsc files.
+                  {
+                    src: `^${path.posix.join('/', entryDirectory, '/')}`,
+                    dest: path.posix.join('/', entryDirectory, '/index.action'),
+                    has: [
+                      {
+                        type: 'header',
+                        key: 'next-action',
+                      },
+                    ],
+                    continue: true,
+                    override: true,
+                  },
+                  {
+                    src: `^${path.posix.join('/', entryDirectory, '/')}`,
+                    dest: path.posix.join('/', entryDirectory, '/index.action'),
+                    has: [
+                      {
+                        type: 'header',
+                        key: 'content-type',
+                        value: 'multipart/form-data;.*',
+                      },
+                    ],
+                    continue: true,
+                    override: true,
+                  },
+                  {
+                    src: `^${path.posix.join(
+                      '/',
+                      entryDirectory,
+                      '/((?!.+\\.action).+?)(?:/)?$'
+                    )}`,
+                    dest: path.posix.join('/', entryDirectory, '/$1.action'),
+                    has: [
+                      {
+                        type: 'header',
+                        key: 'next-action',
+                      },
+                    ],
+                    continue: true,
+                    override: true,
+                  },
+                  {
+                    src: `^${path.posix.join(
+                      '/',
+                      entryDirectory,
+                      '/((?!.+\\.action).+?)(?:/)?$'
+                    )}`,
+                    dest: path.posix.join('/', entryDirectory, '/$1.action'),
+                    has: [
+                      {
+                        type: 'header',
+                        key: 'content-type',
+                        value: 'multipart/form-data;.*',
+                      },
+                    ],
+                    continue: true,
+                    override: true,
+                  },
+                ]
+              : []),
             {
               src: `^${path.posix.join('/', entryDirectory, '/')}`,
               has: [
