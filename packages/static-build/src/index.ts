@@ -361,7 +361,7 @@ export const build: BuildV2 = async ({
         GUTENBERG_VERSION,
       } = process.env;
 
-      if (framework?.slug === 'hugo' && !meta.isDev) {
+      if ((HUGO_VERSION || framework?.slug === 'hugo') && !meta.isDev) {
         const hugoDir = path.join(
           workPath,
           `.vercel/cache/hugo-v${HUGO_VERSION}-${process.platform}-${process.arch}`
