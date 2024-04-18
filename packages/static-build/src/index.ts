@@ -4,7 +4,7 @@ import fetch from 'node-fetch';
 import getPort from 'get-port';
 import isPortReachable from 'is-port-reachable';
 import frameworks, { Framework } from '@vercel/frameworks';
-import type { ChildProcess, SpawnOptions } from 'child_process';
+import { spawn, type ChildProcess, type SpawnOptions } from 'child_process';
 import { existsSync, readFileSync, statSync, readdirSync, mkdirSync } from 'fs';
 import { cpus } from 'os';
 import {
@@ -15,7 +15,6 @@ import {
   PrepareCache,
   glob,
   download,
-  spawnAsync,
   execCommand,
   spawnCommand,
   runNpmInstall,
@@ -46,6 +45,7 @@ import {
   LocalFileSystemDetector,
 } from '@vercel/fs-detectors';
 import { getHugoUrl } from './utils/hugo';
+import { once } from 'events';
 
 const SUPPORTED_RUBY_VERSION = '3.2.0';
 const sleep = (n: number) => new Promise(resolve => setTimeout(resolve, n));
@@ -276,9 +276,16 @@ async function fetchBinary(
       link: 'https://vercel.link/framework-versioning',
     });
   }
-  await spawnAsync(`curl -sSL ${url} | tar -zx -C "${dest}"`, [], {
-    shell: true,
+  const cp = spawn('tar', ['-zx', '-C', dest], {
+    stdio: ['pipe', 'ignore', 'ignore'],
   });
+  res.body.pipe(cp.stdin);
+  const [exitCode] = await once(cp, 'exit');
+  if (exitCode !== 0) {
+    throw new Error(
+      `Extraction of ${framework} failed (exit code ${exitCode})`
+    );
+  }
 }
 
 async function getUpdatedDistPath(

@@ -1,4 +1,5 @@
 import fetch from 'node-fetch';
+import { NowBuildError } from '@vercel/build-utils';
 
 export async function getHugoUrl(
   version: string,
@@ -34,6 +35,13 @@ export async function getHugoUrl(
 
   const checksumsUrl = `https://github.com/gohugoio/hugo/releases/download/v${version}/hugo_${version}_checksums.txt`;
   const checksumsRes = await fetch(checksumsUrl);
+  if (checksumsRes.status === 404) {
+    throw new NowBuildError({
+      code: 'STATIC_BUILD_BINARY_NOT_FOUND',
+      message: `Version ${version} of Hugo does not exist. Please specify a different one.`,
+      link: 'https://vercel.link/framework-versioning',
+    });
+  }
   const checksumsBody = await checksumsRes.text();
   const checksums = new Map<string, string>();
   for (const line of checksumsBody.trim().split('\n')) {
