@@ -11,6 +11,9 @@ describe('getConfig()', () => {
       {
         "maxDuration": 60,
         "memory": 1024,
+        "regions": [
+          "fra1",
+        ],
         "runtime": "nodejs",
       }
     `);
@@ -44,12 +47,12 @@ describe('getConfig()', () => {
   it('should throw an error upon schema validation failure', () => {
     const project = new Project();
     const sourcePath = join(__dirname, 'fixtures/invalid-schema.js');
-    let err;
+    let err: Error | undefined;
     try {
       getConfig(project, sourcePath);
     } catch (_err) {
-      err = _err;
+      err = _err as unknown as Error;
     }
-    expect(err.message).toEqual('Invalid data');
+    expect(err?.message).toEqual('Invalid data');
   });
 });

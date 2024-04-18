@@ -58,6 +58,9 @@ describe('getConfig for swc', () => {
       {
         "maxDuration": 60,
         "memory": 1024,
+        "regions": [
+          "fra1",
+        ],
         "runtime": "nodejs",
       }
     `);
