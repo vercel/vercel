@@ -1,8 +1,11 @@
-import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { readFileSync, promises as fsPromises } from 'node:fs';
+import { createRequire } from 'node:module';
+import { join } from 'node:path';
+
 import { esbuild } from '../../utils/build.mjs';
 import buildEdgeFunctionTemplate from './scripts/build-edge-function-template.js';
+
+const require = createRequire(import.meta.url);
 
 const { copyFile } = fsPromises;
 
@@ -25,7 +28,7 @@ await Promise.all([
 
 // The bundled version of source-map looks for the wasm mappings file as a sibling.
 await copyFile(
-  fileURLToPath(import.meta.resolve('source-map/lib/mappings.wasm')),
+  require.resolve('source-map/lib/mappings.wasm'),
   join(process.cwd(), 'dist/mappings.wasm')
 );
 
