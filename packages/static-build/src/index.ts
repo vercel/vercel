@@ -362,22 +362,19 @@ export const build: BuildV2 = async ({
     const routes: Route[] = [];
 
     if (config.zeroConfig) {
-      const {
-        HUGO_VERSION = '0.58.2',
-        ZOLA_VERSION,
-        GUTENBERG_VERSION,
-      } = process.env;
+      const { HUGO_VERSION, ZOLA_VERSION, GUTENBERG_VERSION } = process.env;
 
       if ((HUGO_VERSION || framework?.slug === 'hugo') && !meta.isDev) {
+        const hugoVersion = HUGO_VERSION || '0.58.2';
         const hugoDir = path.join(
           workPath,
-          `.vercel/cache/hugo-v${HUGO_VERSION}-${process.platform}-${process.arch}`
+          `.vercel/cache/hugo-v${hugoVersion}-${process.platform}-${process.arch}`
         );
         if (!existsSync(hugoDir)) {
-          console.log('Installing Hugo version ' + HUGO_VERSION);
-          const url = await getHugoUrl(HUGO_VERSION);
+          console.log('Installing Hugo version ' + hugoVersion);
+          const url = await getHugoUrl(hugoVersion);
           mkdirSync(hugoDir, { recursive: true });
-          await fetchBinary(url, 'Hugo', HUGO_VERSION, hugoDir);
+          await fetchBinary(url, 'Hugo', hugoVersion, hugoDir);
         }
         process.env.PATH = `${hugoDir}${path.delimiter}${process.env.PATH}`;
       }
