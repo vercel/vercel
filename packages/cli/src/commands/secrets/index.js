@@ -91,6 +91,7 @@ async function run({ output, contextName, currentTeam, client }) {
     );
     if (args.length > 1) {
       // consider replacing with `output.error`
+      // eslint-disable-next-line no-console
       console.error(
         error(
           `Invalid number of arguments. Usage: ${chalk.cyan(
@@ -148,6 +149,8 @@ async function run({ output, contextName, currentTeam, client }) {
     );
     if (args.length !== 1) {
       // consider replacing with `output.error`
+
+      // eslint-disable-next-line no-console
       console.error(
         error(
           `Invalid number of arguments. Usage: ${chalk.cyan(
@@ -170,6 +173,8 @@ async function run({ output, contextName, currentTeam, client }) {
       }
     } else {
       // consider replacing with `output.error`
+
+      // eslint-disable-next-line no-console
       console.error(
         error(
           `No secret found by name "${args[0]}" under ${chalk.bold(
@@ -198,6 +203,8 @@ async function run({ output, contextName, currentTeam, client }) {
     );
     if (args.length !== 2) {
       // consider replacing with `output.error`
+
+      // eslint-disable-next-line no-console
       console.error(
         error(
           `Invalid number of arguments. Usage: ${chalk.cyan(
@@ -225,6 +232,8 @@ async function run({ output, contextName, currentTeam, client }) {
     );
     if (args.length !== 2) {
       // consider replacing with `output.error`
+
+      // eslint-disable-next-line no-console
       console.error(
         error(
           `Invalid number of arguments. Usage: ${chalk.cyan(
@@ -273,6 +282,8 @@ async function run({ output, contextName, currentTeam, client }) {
   }
 
   // consider replacing with `output.error`
+
+  // eslint-disable-next-line no-console
   console.error(
     error('Please specify a valid subcommand: ls | add | rename | rm')
   );

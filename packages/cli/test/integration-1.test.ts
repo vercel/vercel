@@ -90,6 +90,7 @@ let contextName: string | undefined;
 function mockLoginApi(req: http.IncomingMessage, res: http.ServerResponse) {
   const { url = '/', method } = req;
   let { pathname = '/', query = {} } = parseUrl(url, true);
+  // eslint-disable-next-line no-console
   console.log(`[mock-login-server] ${method} ${pathname}`);
   const securityCode = 'Bears Beets Battlestar Galactica';
   res.setHeader('content-type', 'application/json');
@@ -119,6 +120,7 @@ const loginApiServer = require('http')
   .listen(0, () => {
     const { port } = loginApiServer.address();
     loginApiUrl = `http://localhost:${port}`;
+    // eslint-disable-next-line no-console
     console.log(`[mock-login-server] Listening on ${loginApiUrl}`);
   });
 
@@ -178,7 +180,9 @@ beforeAll(async () => {
     const auth = await fs.readJSON(getConfigAuthPath());
     expect(auth.token).toBe(token);
   } catch (err) {
+    // eslint-disable-next-line no-console
     console.log('Failed test suite `beforeAll`');
+    // eslint-disable-next-line no-console
     console.log(err);
 
     // force test suite to actually stop
@@ -201,6 +205,7 @@ afterAll(async () => {
 
   const allTmpDirs = listTmpDirs();
   for (const tmpDir of allTmpDirs) {
+    // eslint-disable-next-line no-console
     console.log('Removing temp dir: ', tmpDir.name);
     tmpDir.removeCallback();
   }
@@ -755,6 +760,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
   // we create a "legacy" env variable that contains a decryptable secret
   // to check that vc env pull and vc dev work correctly with decryptable secrets
   async function createEnvWithDecryptableSecret() {
+    // eslint-disable-next-line no-console
     console.log('creating an env variable with a decryptable secret');
 
     const name = `my-secret${Math.floor(Math.random() * 10000)}`;
@@ -933,6 +939,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
 
     expect(res.status).toBe(200);
     if (res.status === 200) {
+      // eslint-disable-next-line no-console
       console.log(
         `Set autoExposeSystemEnvs=true for project ${link.projectId}`
       );

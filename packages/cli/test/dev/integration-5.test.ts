@@ -24,6 +24,7 @@ test(
       const firstResponse = await fetch(`http://localhost:${port}`);
       validateResponseHeaders(firstResponse);
       const body = await firstResponse.text();
+      // eslint-disable-next-line no-console
       console.log(body);
       expect(firstResponse.status).toBe(404);
 
@@ -168,6 +169,7 @@ test('[vercel dev] do not rebuild for changes in the output directory', async ()
       await sleep(ms('3s'));
 
       if (Date.now() - start > ms('30s')) {
+        // eslint-disable-next-line no-console
         console.log('stderr:', stderr.join(''));
         break;
       }
