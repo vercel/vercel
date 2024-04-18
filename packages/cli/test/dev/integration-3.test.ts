@@ -1,3 +1,4 @@
+import { spawnAsync } from '@vercel/build-utils';
 import { resolve, delimiter } from 'path';
 
 const {
@@ -97,10 +98,16 @@ test('[vercel dev] 08-hugo', async () => {
       new Error('Dev server timed out while waiting to be ready')
     );
 
-    // 2. Update PATH to find the Hugo executable installed via GH Actions
-    process.env.PATH = `${resolve(fixture('08-hugo'))}${delimiter}${
-      process.env.PATH
-    }`;
+    // 2. Download `hugo` and update PATH
+    const hugoFixture = resolve(fixture('08-hugo'));
+    await spawnAsync(
+      `curl -sSL https://github.com/gohugoio/hugo/releases/download/v0.56.0/hugo_0.56.0_macOS-64bit.tar.gz | tar -xz -C "${hugoFixture}"`,
+      [],
+      {
+        shell: true,
+      }
+    );
+    process.env.PATH = `${hugoFixture}${delimiter}${process.env.PATH}`;
 
     // 3. Rerun the test now that Hugo is in the PATH
     tester = testFixtureStdio(
