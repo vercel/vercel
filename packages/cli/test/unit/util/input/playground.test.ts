@@ -6,10 +6,6 @@ const theme = {
   spinner: { frames: ['O'] },
 };
 
-// Inquirer's unicode detection is outdated, for windows in CI
-// it incorrectly detects that unicode is not supported,
-// and thus prints ascii characters, which breaks these tests.
-// https://github.com/SBoudrias/Inquirer.js/issues/1386
 describe('client.input', () => {
   describe('text', () => {
     it('should match the snapshot', async () => {
