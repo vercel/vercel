@@ -1,5 +1,16 @@
 # @vercel/static-build
 
+## 2.5.0
+
+### Minor Changes
+
+- Don't rely on `hugo` binary existing in build-container ([#11455](https://github.com/vercel/vercel/pull/11455))
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.25
+
 ## 2.4.6
 
 ### Patch Changes
