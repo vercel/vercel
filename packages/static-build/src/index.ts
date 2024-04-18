@@ -5,7 +5,7 @@ import getPort from 'get-port';
 import isPortReachable from 'is-port-reachable';
 import frameworks, { Framework } from '@vercel/frameworks';
 import type { ChildProcess, SpawnOptions } from 'child_process';
-import { existsSync, readFileSync, statSync, readdirSync } from 'fs';
+import { existsSync, readFileSync, statSync, readdirSync, mkdirSync } from 'fs';
 import { cpus } from 'os';
 import {
   BuildV2,
@@ -262,7 +262,12 @@ function getFramework(
   return framework;
 }
 
-async function fetchBinary(url: string, framework: string, version: string) {
+async function fetchBinary(
+  url: string,
+  framework: string,
+  version: string,
+  dest = '/usr/local/bin'
+) {
   const res = await fetch(url);
   if (res.status === 404) {
     throw new NowBuildError({
@@ -271,7 +276,7 @@ async function fetchBinary(url: string, framework: string, version: string) {
       link: 'https://vercel.link/framework-versioning',
     });
   }
-  await spawnAsync(`curl -sSL ${url} | tar -zx -C /usr/local/bin`, [], {
+  await spawnAsync(`curl -sSL ${url} | tar -zx -C "${dest}"`, [], {
     shell: true,
   });
 }
@@ -357,9 +362,17 @@ export const build: BuildV2 = async ({
       } = process.env;
 
       if (framework?.slug === 'hugo' && !meta.isDev) {
-        console.log('Installing Hugo version ' + HUGO_VERSION);
-        const url = await getHugoUrl(HUGO_VERSION);
-        await fetchBinary(url, 'Hugo', HUGO_VERSION);
+        const hugoDir = path.join(
+          workPath,
+          `.vercel/cache/hugo-v${HUGO_VERSION}-${process.platform}-${process.arch}`
+        );
+        if (!existsSync(hugoDir)) {
+          console.log('Installing Hugo version ' + HUGO_VERSION);
+          const url = await getHugoUrl(HUGO_VERSION);
+          mkdirSync(hugoDir, { recursive: true });
+          await fetchBinary(url, 'Hugo', HUGO_VERSION, hugoDir);
+        }
+        process.env.PATH = `${hugoDir}${path.delimiter}${process.env.PATH}`;
       }
 
       if (ZOLA_VERSION && !meta.isDev) {
