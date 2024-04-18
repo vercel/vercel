@@ -432,6 +432,15 @@ export async function getDynamicRoutes({
             dest: route.dest?.replace(/($|\?)/, '.rsc$1'),
           });
 
+          routes.push({
+            ...route,
+            src: route.src.replace(
+              new RegExp(escapeStringRegexp('(?:/)?$')),
+              '(?:\\.action)(?:/)?$'
+            ),
+            dest: route.dest?.replace(/($|\?)/, '.action$1'),
+          });
+
           routes.push(route);
         }
 
