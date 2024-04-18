@@ -1,4 +1,4 @@
-import fs, { readJSON } from 'fs-extra';
+import fs from 'fs-extra';
 import chalk from 'chalk';
 import dotenv from 'dotenv';
 import semver from 'semver';
@@ -22,6 +22,7 @@ import {
   Cron,
   validateNpmrc,
   type FlagDefinitions,
+  getInstalledPackageVersion,
 } from '@vercel/build-utils';
 import {
   detectBuilders,
@@ -71,7 +72,6 @@ import { setMonorepoDefaultSettings } from '../../util/build/monorepo';
 import { help } from '../help';
 import { buildCommand } from './command';
 import { scrubArgv } from '../../util/build/scrub-argv';
-import { cwd } from 'process';
 
 type BuildResult = BuildResultV2 | BuildResultV3;
 
@@ -253,8 +253,11 @@ export default async function main(client: Client): Promise<number> {
       output.debug(`Loaded environment variables from "${envPath}"`);
     }
 
-    // For Vercel Legacy speed Insights support
+    // For legacy Speed Insights
     if (project.settings.analyticsId) {
+      // we pass the env down to the builder
+      // inside the builder we decide if we want to keep it or not
+
       envToUnset.add('VERCEL_ANALYTICS_ID');
       process.env.VERCEL_ANALYTICS_ID = project.settings.analyticsId;
     }
@@ -584,8 +587,7 @@ async function doBuild(
   }
 
   let needBuildsJsonOverride = false;
-  const speedInsightsVersion = await readInstalledVersion(
-    client,
+  const speedInsightsVersion = await getInstalledPackageVersion(
     '@vercel/speed-insights'
   );
   if (speedInsightsVersion) {
@@ -595,8 +597,7 @@ async function doBuild(
     };
     needBuildsJsonOverride = true;
   }
-  const webAnalyticsVersion = await readInstalledVersion(
-    client,
+  const webAnalyticsVersion = await getInstalledPackageVersion(
     '@vercel/analytics'
   );
   if (webAnalyticsVersion) {
@@ -858,22 +859,4 @@ async function writeFlagsJSON(
 
 async function writeBuildJson(buildsJson: BuildsManifest, outputDir: string) {
   await fs.writeJSON(join(outputDir, 'builds.json'), buildsJson, { spaces: 2 });
-}
-
-export async function readInstalledVersion(
-  { output }: Client,
-  pkgName: string
-): Promise<string | undefined> {
-  try {
-    const descriptorPath = require.resolve(`${pkgName}/package.json`, {
-      paths: [cwd()],
-    });
-    const descriptor = await readJSON(descriptorPath);
-    return descriptor?.version;
-  } catch (err) {
-    output.debug(
-      `Package ${pkgName} is not installed (failed to read its package.json: ${err})`
-    );
-  }
-  return;
 }
