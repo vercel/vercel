@@ -186,7 +186,7 @@ export const build: BuildV3 = async ({
       if (meta.avoidTopLevelInstall && fileAtRoot) {
         debug('Skipping `bundle install` — already handled by Install Command');
       } else {
-        // try installing. this won't work if native extesions are required.
+        // try installing. this won't work if native extensions are required.
         // if that's the case, gems should be vendored locally before deploying.
         await bundleInstall(
           bundlerPath,
@@ -221,7 +221,7 @@ export const build: BuildV3 = async ({
   );
 
   // in order to allow the user to have `server.rb`, we need our `server.rb` to be called
-  // somethig else
+  // something else
   const handlerRbFilename = 'vc__handler__ruby';
 
   const outputFiles: Files = await glob('**', workPath);

@@ -787,8 +787,8 @@ describe('build', () => {
     expect(files.sort()).toEqual(['index.html', 'package.json']);
   });
 
-  it('should set `VERCEL_ANALYTICS_ID` environment variable', async () => {
-    const cwd = fixture('vercel-analytics');
+  it('should set `VERCEL_ANALYTICS_ID` environment variable if Vercel Speed Insights is enabled', async () => {
+    const cwd = fixture('vercel-analytics-id');
     const output = join(cwd, '.vercel/output');
     client.cwd = cwd;
     const exitCode = await build(client);
@@ -1318,5 +1318,31 @@ describe('build', () => {
     expect(fs.readlinkSync(join(output, 'functions/edge2.func'))).toEqual(
       'edge.func'
     );
+  });
+
+  describe('with Vercel Speed Insights', () => {
+    it('should not include VERCEL_ANALYTICS_ID if @vercel/speed-insights is present', async () => {
+      const cwd = fixture('nextjs-with-speed-insights-package');
+      const output = join(cwd, '.vercel/output');
+
+      client.cwd = cwd;
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      const env = await fs.readJSON(join(output, 'static', 'env.json'));
+      expect(Object.keys(env).includes('VERCEL_ANALYTICS_ID')).toEqual(false);
+    });
+
+    it('should include VERCEL_ANALYTICS_ID if @vercel/speed-insights is not present', async () => {
+      const cwd = fixture('nextjs-without-speed-insights-package');
+      const output = join(cwd, '.vercel/output');
+
+      client.cwd = cwd;
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      const env = await fs.readJSON(join(output, 'static', 'env.json'));
+      expect(Object.keys(env).includes('VERCEL_ANALYTICS_ID')).toEqual(true);
+    });
   });
 });
