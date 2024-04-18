@@ -25,6 +25,7 @@ import {
   NodejsLambda,
   BuildResultV2Typical as BuildResult,
   BuildResultBuildOutput,
+  getInstalledPackageVersion,
 } from '@vercel/build-utils';
 import { Route, RouteWithHandle, RouteWithSrc } from '@vercel/routing-utils';
 import {
@@ -336,6 +337,27 @@ export const build: BuildV2 = async ({
     }
   } else {
     await runNpmInstall(entryPath, [], spawnOpts, meta, nodeVersion);
+  }
+
+  if (spawnOpts.env.VERCEL_ANALYTICS_ID) {
+    debug('Found VERCEL_ANALYTICS_ID in environment');
+
+    const version = await getInstalledPackageVersion(
+      '@vercel/speed-insights',
+      entryPath
+    );
+
+    if (version) {
+      // Next.js has a built-in integration with Vercel Speed Insights
+      // with the new @vercel/speed-insights package this is no longer needed
+      // and can be removed to avoid duplicate events
+      delete spawnOpts.env.VERCEL_ANALYTICS_ID;
+      delete process.env.VERCEL_ANALYTICS_ID;
+
+      debug(
+        '@vercel/speed-insights is installed, removing VERCEL_ANALYTICS_ID from environment'
+      );
+    }
   }
 
   // Refetch Next version now that dependencies are installed.
