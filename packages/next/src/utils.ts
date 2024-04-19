@@ -1487,7 +1487,6 @@ export type LambdaGroup = {
   isStreaming?: boolean;
   isPrerenders?: boolean;
   isExperimentalPPR?: boolean;
-  isActionPrerender?: boolean;
   isPages?: boolean;
   isApiLambda: boolean;
   pseudoLayer: PseudoLayer;
