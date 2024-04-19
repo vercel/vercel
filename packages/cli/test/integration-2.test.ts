@@ -64,6 +64,7 @@ let contextName: string | undefined;
 function mockLoginApi(req: http.IncomingMessage, res: http.ServerResponse) {
   const { url = '/', method } = req;
   let { pathname = '/', query = {} } = parseUrl(url, true);
+  // eslint-disable-next-line no-console
   console.log(`[mock-login-server] ${method} ${pathname}`);
   const securityCode = 'Bears Beets Battlestar Galactica';
   res.setHeader('content-type', 'application/json');
@@ -93,6 +94,7 @@ const loginApiServer = require('http')
   .listen(0, () => {
     const { port } = loginApiServer.address();
     loginApiUrl = `http://localhost:${port}`;
+    // eslint-disable-next-line no-console
     console.log(`[mock-login-server] Listening on ${loginApiUrl}`);
   });
 
@@ -189,7 +191,9 @@ beforeAll(async () => {
 
     await prepareE2EFixtures(contextName, binaryPath);
   } catch (err) {
+    // eslint-disable-next-line no-console
     console.log('Failed test suite `beforeAll`');
+    // eslint-disable-next-line no-console
     console.log(err);
 
     // force test suite to actually stop

@@ -132,10 +132,10 @@ importers:
         specifier: 27.4.1
         version: 27.4.1
       '@vercel/build-utils':
-        specifier: 7.11.0
+        specifier: 7.12.0
         version: link:../packages/build-utils
       '@vercel/frameworks':
-        specifier: 3.0.1
+        specifier: 3.0.2
         version: link:../packages/frameworks
 
   internals/constants:
@@ -189,7 +189,7 @@ importers:
         specifier: 1.0.4
         version: link:../constants
       '@vercel/build-utils':
-        specifier: 7.11.0
+        specifier: 7.12.0
         version: link:../../packages/build-utils
       '@vercel/routing-utils':
         specifier: 3.1.0
@@ -313,7 +313,7 @@ importers:
   packages/cli:
     dependencies:
       '@vercel/build-utils':
-        specifier: 7.11.0
+        specifier: 7.12.0
         version: link:../build-utils
       '@vercel/fun':
         specifier: 1.1.0
@@ -325,10 +325,10 @@ importers:
         specifier: 1.0.2
         version: link:../hydrogen
       '@vercel/next':
-        specifier: 4.2.0
+        specifier: 4.2.1
         version: link:../next
       '@vercel/node':
-        specifier: 3.0.26
+        specifier: 3.0.27
         version: link:../node
       '@vercel/python':
         specifier: 4.1.1
@@ -343,7 +343,7 @@ importers:
         specifier: 2.0.5
         version: link:../ruby
       '@vercel/static-build':
-        specifier: 2.4.6
+        specifier: 2.5.0
         version: link:../static-build
       chokidar:
         specifier: 3.3.1
@@ -488,19 +488,19 @@ importers:
         specifier: 1.0.0
         version: link:../../internals/get-package-json
       '@vercel-internals/types':
-        specifier: 1.0.29
+        specifier: 1.0.30
         version: link:../../internals/types
       '@vercel/client':
-        specifier: 13.2.0
+        specifier: 13.2.1
         version: link:../client
       '@vercel/error-utils':
         specifier: 2.0.2
         version: link:../error-utils
       '@vercel/frameworks':
-        specifier: 3.0.1
+        specifier: 3.0.2
         version: link:../frameworks
       '@vercel/fs-detectors':
-        specifier: 5.2.2
+        specifier: 5.2.3
         version: link:../fs-detectors
       '@vercel/routing-utils':
         specifier: 3.1.0
@@ -737,7 +737,7 @@ importers:
   packages/client:
     dependencies:
       '@vercel/build-utils':
-        specifier: 7.11.0
+        specifier: 7.12.0
         version: link:../build-utils
       '@vercel/error-utils':
         specifier: 2.0.2
@@ -901,7 +901,7 @@ importers:
         specifier: 2.0.2
         version: link:../error-utils
       '@vercel/frameworks':
-        specifier: 3.0.1
+        specifier: 3.0.2
         version: link:../frameworks
       '@vercel/routing-utils':
         specifier: 3.1.0
@@ -941,7 +941,7 @@ importers:
         specifier: 7.3.10
         version: 7.3.10
       '@vercel/build-utils':
-        specifier: 7.11.0
+        specifier: 7.12.0
         version: link:../build-utils
       jest-junit:
         specifier: 16.0.0
@@ -966,7 +966,7 @@ importers:
         specifier: 0.25.24
         version: 0.25.24
       '@vercel/build-utils':
-        specifier: 7.11.0
+        specifier: 7.12.0
         version: link:../build-utils
       '@vercel/routing-utils':
         specifier: 3.1.0
@@ -1033,7 +1033,7 @@ importers:
         specifier: 2.1.0
         version: 2.1.0
       '@vercel/build-utils':
-        specifier: 7.11.0
+        specifier: 7.12.0
         version: link:../build-utils
       async-retry:
         specifier: 1.3.3
@@ -1082,7 +1082,7 @@ importers:
         specifier: 14.18.33
         version: 14.18.33
       '@vercel/build-utils':
-        specifier: 7.11.0
+        specifier: 7.12.0
         version: link:../build-utils
       execa:
         specifier: 3.2.0
@@ -1143,7 +1143,7 @@ importers:
         specifier: 3.2.0
         version: 3.2.0
       '@vercel/build-utils':
-        specifier: 7.11.0
+        specifier: 7.12.0
         version: link:../build-utils
       '@vercel/routing-utils':
         specifier: 3.1.0
@@ -1230,7 +1230,7 @@ importers:
         specifier: 14.18.33
         version: 14.18.33
       '@vercel/build-utils':
-        specifier: 7.11.0
+        specifier: 7.12.0
         version: link:../build-utils
       '@vercel/error-utils':
         specifier: 2.0.2
@@ -1345,7 +1345,7 @@ importers:
         specifier: 3.0.0
         version: 3.0.0
       '@vercel/build-utils':
-        specifier: 7.11.0
+        specifier: 7.12.0
         version: link:../build-utils
       execa:
         specifier: ^1.0.0
@@ -1382,7 +1382,7 @@ importers:
         specifier: 6.0.0
         version: 6.0.0
       '@vercel/build-utils':
-        specifier: 7.11.0
+        specifier: 7.12.0
         version: link:../build-utils
       execa:
         specifier: 3.2.0
@@ -1422,7 +1422,7 @@ importers:
         specifier: 7.3.13
         version: 7.3.13
       '@vercel/build-utils':
-        specifier: 7.11.0
+        specifier: 7.12.0
         version: link:../build-utils
       jest-junit:
         specifier: 16.0.0
@@ -1466,7 +1466,7 @@ importers:
         specifier: 6.0.0
         version: 6.0.0
       '@vercel/build-utils':
-        specifier: 7.11.0
+        specifier: 7.12.0
         version: link:../build-utils
       execa:
         specifier: 2.0.4
@@ -1487,7 +1487,7 @@ importers:
         specifier: 1.0.11
         version: link:../gatsby-plugin-vercel-analytics
       '@vercel/gatsby-plugin-vercel-builder':
-        specifier: 2.0.24
+        specifier: 2.0.25
         version: link:../gatsby-plugin-vercel-builder
       '@vercel/static-config':
         specifier: 3.0.0
@@ -1524,16 +1524,16 @@ importers:
         specifier: 7.3.13
         version: 7.3.13
       '@vercel/build-utils':
-        specifier: 7.11.0
+        specifier: 7.12.0
         version: link:../build-utils
       '@vercel/error-utils':
         specifier: 2.0.2
         version: link:../error-utils
       '@vercel/frameworks':
-        specifier: 3.0.1
+        specifier: 3.0.2
         version: link:../frameworks
       '@vercel/fs-detectors':
-        specifier: 5.2.2
+        specifier: 5.2.3
         version: link:../fs-detectors
       '@vercel/routing-utils':
         specifier: 3.1.0
@@ -3361,7 +3361,7 @@ packages:
   /@manypkg/find-root@1.1.0:
     resolution: {integrity: sha512-mki5uBvhHzO8kYYix/WRy2WX8S3B5wdVSc9D6KcU5lQNglP2yt58/VfLuAK49glRXChosY8ap2oJ1qgma3GUVA==}
     dependencies:
-      '@babel/runtime': 7.20.7
+      '@babel/runtime': 7.24.4
       '@types/node': 12.20.55
       find-up: 4.1.0
       fs-extra: 8.1.0
@@ -7400,11 +7400,6 @@ packages:
     resolution: {integrity: sha512-Rn+RuwkmkDwCi2/oXOFS9Gsr5lJZu/yTGpK7wAaAIE75CC+LCGEZHpY6VQJa/RoJcrmaA/docWJZvYohlNkWPA==}
     dev: true
 
-  /deepmerge@4.2.2:
-    resolution: {integrity: sha512-FJ3UgI4gIl+PHZm53knsuSFpE+nESMr7M4v9QcgB7S63Kj/6WqMiFQJpBBYz1Pt+66bZpP3Q7Lye0Oo9MPKEdg==}
-    engines: {node: '>=0.10.0'}
-    dev: true
-
   /deepmerge@4.3.1:
     resolution: {integrity: sha512-3sUqbMEc77XqpdNO7FRyRog+eW3ph+GYCbj+rK+uYyRMuwsVy0rMiVtPn+QJlKFvWP/1PYpapqYn0Me2knFn+A==}
     engines: {node: '>=0.10.0'}
@@ -8203,7 +8198,7 @@ packages:
     resolution: {integrity: sha512-gozW2blMLJCeFpBwugLTGyvVjNoeo1knonXAcatC6bjPBZitotxdWf7Gimr25N4c0AAOo4eOUfaG82IJPDpqCA==}
     dependencies:
       debug: 3.2.7
-      is-core-module: 2.11.0
+      is-core-module: 2.13.1
       resolve: 1.22.2
     transitivePeerDependencies:
       - supports-color
@@ -10524,7 +10519,7 @@ packages:
       babel-jest: 29.5.0(@babel/core@7.24.4)
       chalk: 4.1.0
       ci-info: 3.7.1
-      deepmerge: 4.2.2
+      deepmerge: 4.3.1
       glob: 7.2.3
       graceful-fs: 4.2.11
       jest-circus: 29.5.0
@@ -10563,7 +10558,7 @@ packages:
       babel-jest: 29.5.0(@babel/core@7.24.4)
       chalk: 4.1.0
       ci-info: 3.7.1
-      deepmerge: 4.2.2
+      deepmerge: 4.3.1
       glob: 7.2.3
       graceful-fs: 4.2.11
       jest-circus: 29.5.0
@@ -10602,7 +10597,7 @@ packages:
       babel-jest: 29.5.0(@babel/core@7.24.4)
       chalk: 4.1.0
       ci-info: 3.7.1
-      deepmerge: 4.2.2
+      deepmerge: 4.3.1
       glob: 7.2.3
       graceful-fs: 4.2.11
       jest-circus: 29.5.0
@@ -13780,7 +13775,7 @@ packages:
     resolution: {integrity: sha512-Sb+mjNHOULsBv818T40qSPeRiuWLyaGMa5ewydRLFimneixmVy2zdivRl+AF6jaYPC8ERxGDmFSiqui6SfPd+g==}
     hasBin: true
     dependencies:
-      is-core-module: 2.11.0
+      is-core-module: 2.13.1
       path-parse: 1.0.7
       supports-preserve-symlinks-flag: 1.0.0
     dev: true
@@ -13789,7 +13784,7 @@ packages:
     resolution: {integrity: sha512-iMDbmAWtfU+MHpxt/I5iWI7cY6YVEZUQ3MBgPQ++XD1PELuJHIl82xBmObyP2KyQmkNB2dsqF7seoQQiAn5yDQ==}
     hasBin: true
     dependencies:
-      is-core-module: 2.11.0
+      is-core-module: 2.13.1
       path-parse: 1.0.7
       supports-preserve-symlinks-flag: 1.0.0
     dev: true
@@ -15014,7 +15009,7 @@ packages:
     dependencies:
       '@types/json5': 0.0.29
       json5: 1.0.2
-      minimist: 1.2.7
+      minimist: 1.2.8
       strip-bom: 3.0.0
     dev: true
 

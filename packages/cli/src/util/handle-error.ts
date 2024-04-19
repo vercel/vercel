@@ -16,6 +16,7 @@ export default function handleError(error: unknown, { debug = false } = {}) {
   // consider changing API of handleError to include `client.output`
   // to use `output.debug`
   if (debug) {
+    // eslint-disable-next-line no-console
     console.error(`> [debug] handling error: ${stack}`);
   }
 
@@ -24,6 +25,7 @@ export default function handleError(error: unknown, { debug = false } = {}) {
   }
 
   if (status === 403) {
+    // eslint-disable-next-line no-console
     console.error(
       errorOutput(
         message ||
@@ -35,18 +37,23 @@ export default function handleError(error: unknown, { debug = false } = {}) {
   } else if (status === 429) {
     // Rate limited: display the message from the server-side,
     // which contains more details
+    // eslint-disable-next-line no-console
     console.error(errorOutput(message));
   } else if (code === 'size_limit_exceeded') {
+    // eslint-disable-next-line no-console
     console.error(
       errorOutput(`File size limit exceeded (${bytes(sizeLimit)})`)
     );
   } else if (message) {
+    // eslint-disable-next-line no-console
     console.error(errorOutput(apiError));
   } else if (status === 500) {
+    // eslint-disable-next-line no-console
     console.error(errorOutput('Unexpected server error. Please retry.'));
   } else if (code === 'USER_ABORT') {
     info('Canceled');
   } else {
+    // eslint-disable-next-line no-console
     console.error(
       errorOutput(`Unexpected error. Please try again later. (${message})`)
     );

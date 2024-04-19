@@ -8,6 +8,7 @@ export default class Secrets extends Now {
   getSecretByNameOrId(nameOrId) {
     return this.retry(async (bail, attempt) => {
       if (this._debug) {
+        // eslint-disable-next-line no-console
         console.time(`> [debug] #${attempt} GET /secrets/${nameOrId}`);
       }
       const res = await this._fetch(`/now/secrets/${nameOrId}`, {
@@ -15,6 +16,7 @@ export default class Secrets extends Now {
       });
 
       if (this._debug) {
+        // eslint-disable-next-line no-console
         console.timeEnd(`> [debug] #${attempt} GET /secrets/${nameOrId}`);
       }
 
@@ -43,6 +45,7 @@ export default class Secrets extends Now {
   rm(nameOrId) {
     return this.retry(async (bail, attempt) => {
       if (this._debug) {
+        // eslint-disable-next-line no-console
         console.time(`> [debug] #${attempt} DELETE /secrets/${nameOrId}`);
       }
 
@@ -51,6 +54,7 @@ export default class Secrets extends Now {
       });
 
       if (this._debug) {
+        // eslint-disable-next-line no-console
         console.timeEnd(`> [debug] #${attempt} DELETE /secrets/${nameOrId}`);
       }
 
@@ -71,6 +75,7 @@ export default class Secrets extends Now {
   add(name, value) {
     return this.retry(async (bail, attempt) => {
       if (this._debug) {
+        // eslint-disable-next-line no-console
         console.time(`> [debug] #${attempt} POST /secrets`);
       }
 
@@ -83,6 +88,7 @@ export default class Secrets extends Now {
       });
 
       if (this._debug) {
+        // eslint-disable-next-line no-console
         console.timeEnd(`> [debug] #${attempt} POST /secrets`);
       }
 
@@ -103,6 +109,7 @@ export default class Secrets extends Now {
   rename(nameOrId, newName) {
     return this.retry(async (bail, attempt) => {
       if (this._debug) {
+        // eslint-disable-next-line no-console
         console.time(`> [debug] #${attempt} PATCH /secrets/${nameOrId}`);
       }
 
@@ -114,6 +121,7 @@ export default class Secrets extends Now {
       });
 
       if (this._debug) {
+        // eslint-disable-next-line no-console
         console.timeEnd(`> [debug] #${attempt} PATCH /secrets/${nameOrId}`);
       }
 

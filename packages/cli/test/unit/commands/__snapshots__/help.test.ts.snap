@@ -1,6 +1,569 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`help command > help output snapshots > column width 40 1`] = `
+exports[`help command > alias help output snapshots > alias help column width 40 1`] = `
+"
+  ▲ [1mvercel[22m [1malias[22m [command] [options]
+
+  Interact with deployment aliases.     
+
+  [2mCommands[22m:
+
+  ls                     Show   
+                         all    
+                         aliase…
+  set  deployment alias  Create 
+                         a new  
+                         alias  
+  rm   alias             Remove 
+                         an     
+                         alias  
+                         using  
+                         its    
+                         hostna…
+
+
+  [2mOptions[22m:
+
+  -n,  --limit <NUMBER>  Number of      
+                         results to     
+                         return per page
+                         (default: 20,  
+                         max: 100)      
+  -n,  --next <MS>       Show next page 
+                         of results     
+  -y,  --yes             Skip the       
+                         confirmation   
+                         prompt when    
+                         removing an    
+                         alias          
+
+
+  [2mGlobal Options[22m:
+
+       --cwd <DIR>            Sets the  
+                              current   
+                              working   
+                              directory 
+                              for a     
+                              single run
+                              of a      
+                              command   
+  -d,  --debug                Debug mode
+                              (default  
+                              off)      
+  -Q,  --global-config <DIR>  Path to   
+                              the global
+                              \`.vercel\` 
+                              directory 
+  -h,  --help                 Output    
+                              usage     
+                              informati…
+  -A,  --local-config <FILE>  Path to   
+                              the local 
+                              \`vercel.j…
+                              file      
+       --no-color             No color  
+                              mode      
+                              (default  
+                              off)      
+  -S,  --scope                Set a     
+                              custom    
+                              scope     
+  -t,  --token <TOKEN>        Login     
+                              token     
+  -v,  --version              Output the
+                              version   
+                              number    
+
+
+  [2mExamples:[22m
+
+  [90m-[39m Add a new alias to \`my-api.vercel.app\`
+
+    [36m$ vercel alias set api-ownv3nc9f8.vercel.app my-api.vercel.app[39m
+
+  [90m-[39m Custom domains work as alias targets
+
+    [36m$ vercel alias set api-ownv3nc9f8.vercel.app my-api.com[39m
+
+  [90m-[39m The subcommand \`set\` is the default and can be skipped. Protocols in the URLs are unneeded and ignored
+
+    [36m$ vercel alias api-ownv3nc9f8.vercel.app my-api.com[39m
+
+"
+`;
+
+exports[`help command > alias help output snapshots > alias help column width 80 1`] = `
+"
+  ▲ [1mvercel[22m [1malias[22m [command] [options]
+
+  Interact with deployment aliases.                                             
+
+  [2mCommands[22m:
+
+  ls                     Show all aliases.                              
+  set  deployment alias  Create a new alias                             
+  rm   alias             Remove an alias using its hostname.            
+
+
+  [2mOptions[22m:
+
+  -n,  --limit <NUMBER>  Number of results to return per page (default: 20, max:
+                         100)                                                   
+  -n,  --next <MS>       Show next page of results                              
+  -y,  --yes             Skip the confirmation prompt when removing an alias    
+
+
+  [2mGlobal Options[22m:
+
+       --cwd <DIR>            Sets the current working directory for a single   
+                              run of a command                                  
+  -d,  --debug                Debug mode (default off)                          
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory            
+  -h,  --help                 Output usage information                          
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file              
+       --no-color             No color mode (default off)                       
+  -S,  --scope                Set a custom scope                                
+  -t,  --token <TOKEN>        Login token                                       
+  -v,  --version              Output the version number                         
+
+
+  [2mExamples:[22m
+
+  [90m-[39m Add a new alias to \`my-api.vercel.app\`
+
+    [36m$ vercel alias set api-ownv3nc9f8.vercel.app my-api.vercel.app[39m
+
+  [90m-[39m Custom domains work as alias targets
+
+    [36m$ vercel alias set api-ownv3nc9f8.vercel.app my-api.com[39m
+
+  [90m-[39m The subcommand \`set\` is the default and can be skipped. Protocols in the URLs are unneeded and ignored
+
+    [36m$ vercel alias api-ownv3nc9f8.vercel.app my-api.com[39m
+
+"
+`;
+
+exports[`help command > alias help output snapshots > alias help column width 120 1`] = `
+"
+  ▲ [1mvercel[22m [1malias[22m [command] [options]
+
+  Interact with deployment aliases.                                                                                     
+
+  [2mCommands[22m:
+
+  ls                     Show all aliases.                                                                      
+  set  deployment alias  Create a new alias                                                                     
+  rm   alias             Remove an alias using its hostname.                                                    
+
+
+  [2mOptions[22m:
+
+  -n,  --limit <NUMBER>  Number of results to return per page (default: 20, max: 100)                                   
+  -n,  --next <MS>       Show next page of results                                                                      
+  -y,  --yes             Skip the confirmation prompt when removing an alias                                            
+
+
+  [2mGlobal Options[22m:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  [2mExamples:[22m
+
+  [90m-[39m Add a new alias to \`my-api.vercel.app\`
+
+    [36m$ vercel alias set api-ownv3nc9f8.vercel.app my-api.vercel.app[39m
+
+  [90m-[39m Custom domains work as alias targets
+
+    [36m$ vercel alias set api-ownv3nc9f8.vercel.app my-api.com[39m
+
+  [90m-[39m The subcommand \`set\` is the default and can be skipped. Protocols in the URLs are unneeded and ignored
+
+    [36m$ vercel alias api-ownv3nc9f8.vercel.app my-api.com[39m
+
+"
+`;
+
+exports[`help command > bisect help output snapshots > bisect help column width 40 1`] = `
+"
+  ▲ [1mvercel[22m [1mbisect[22m [options]
+
+  Bisect the current project            
+  interactively.                        
+
+  [2mOptions[22m:
+
+  -b,  --bad <URL>   Known bad URL      
+  -g,  --good <URL>  Known good URL     
+  -o,  --open <URL>  Automatically open 
+                     each URL in the    
+                     browser            
+  -p,  --path <URL>  Subpath of the     
+                     deployment URL to  
+                     test               
+  -r,  --run <URL>   Test script to run 
+                     for each deployment
+
+
+  [2mGlobal Options[22m:
+
+       --cwd <DIR>            Sets the  
+                              current   
+                              working   
+                              directory 
+                              for a     
+                              single run
+                              of a      
+                              command   
+  -d,  --debug                Debug mode
+                              (default  
+                              off)      
+  -Q,  --global-config <DIR>  Path to   
+                              the global
+                              \`.vercel\` 
+                              directory 
+  -h,  --help                 Output    
+                              usage     
+                              informati…
+  -A,  --local-config <FILE>  Path to   
+                              the local 
+                              \`vercel.j…
+                              file      
+       --no-color             No color  
+                              mode      
+                              (default  
+                              off)      
+  -S,  --scope                Set a     
+                              custom    
+                              scope     
+  -t,  --token <TOKEN>        Login     
+                              token     
+  -v,  --version              Output the
+                              version   
+                              number    
+
+
+  [2mExamples:[22m
+
+  [90m-[39m Bisect the current project interactively
+
+    [36m$ vercel bisect[39m
+
+  [90m-[39m Bisect with a known bad deployment
+
+    [36m$ vercel bisect --bad example-310pce9i0.vercel.app[39m
+
+  [90m-[39m Automated bisect with a run script
+
+    [36m$ vercel bisect --run ./test.sh[39m
+
+"
+`;
+
+exports[`help command > bisect help output snapshots > bisect help column width 80 1`] = `
+"
+  ▲ [1mvercel[22m [1mbisect[22m [options]
+
+  Bisect the current project interactively.                                     
+
+  [2mOptions[22m:
+
+  -b,  --bad <URL>   Known bad URL                                              
+  -g,  --good <URL>  Known good URL                                             
+  -o,  --open <URL>  Automatically open each URL in the browser                 
+  -p,  --path <URL>  Subpath of the deployment URL to test                      
+  -r,  --run <URL>   Test script to run for each deployment                     
+
+
+  [2mGlobal Options[22m:
+
+       --cwd <DIR>            Sets the current working directory for a single   
+                              run of a command                                  
+  -d,  --debug                Debug mode (default off)                          
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory            
+  -h,  --help                 Output usage information                          
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file              
+       --no-color             No color mode (default off)                       
+  -S,  --scope                Set a custom scope                                
+  -t,  --token <TOKEN>        Login token                                       
+  -v,  --version              Output the version number                         
+
+
+  [2mExamples:[22m
+
+  [90m-[39m Bisect the current project interactively
+
+    [36m$ vercel bisect[39m
+
+  [90m-[39m Bisect with a known bad deployment
+
+    [36m$ vercel bisect --bad example-310pce9i0.vercel.app[39m
+
+  [90m-[39m Automated bisect with a run script
+
+    [36m$ vercel bisect --run ./test.sh[39m
+
+"
+`;
+
+exports[`help command > bisect help output snapshots > bisect help column width 120 1`] = `
+"
+  ▲ [1mvercel[22m [1mbisect[22m [options]
+
+  Bisect the current project interactively.                                                                             
+
+  [2mOptions[22m:
+
+  -b,  --bad <URL>   Known bad URL                                                                                      
+  -g,  --good <URL>  Known good URL                                                                                     
+  -o,  --open <URL>  Automatically open each URL in the browser                                                         
+  -p,  --path <URL>  Subpath of the deployment URL to test                                                              
+  -r,  --run <URL>   Test script to run for each deployment                                                             
+
+
+  [2mGlobal Options[22m:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  [2mExamples:[22m
+
+  [90m-[39m Bisect the current project interactively
+
+    [36m$ vercel bisect[39m
+
+  [90m-[39m Bisect with a known bad deployment
+
+    [36m$ vercel bisect --bad example-310pce9i0.vercel.app[39m
+
+  [90m-[39m Automated bisect with a run script
+
+    [36m$ vercel bisect --run ./test.sh[39m
+
+"
+`;
+
+exports[`help command > certs help output snapshots > certs help column width 40 1`] = `
+"
+  ▲ [1mvercel[22m [1mcerts[22m [command] [options]
+
+  Interact with SSL certificates. This  
+  command is intended for advanced use  
+  only. By default, Vercel manages your 
+  certificates automatically.           
+
+  [2mCommands[22m:
+
+  ls         Show all available 
+             certificates       
+  issue  cn   Issue a new       
+             certificate for a  
+             domain             
+  rm     id  Remove a           
+             certificate by id  
+
+
+  [2mOptions[22m:
+
+       --ca <FILE>       CA certificate chain
+                         file                
+       --challenge-only  Only show challenges
+                         needed to issue a   
+                         cert                
+       --crt <FILE>      Certificate file    
+       --key <FILE>      Certificate key file
+       --limit <VALUE>   Number of results to
+                         return per page     
+                         (default: 20, max:  
+                         100)                
+  -n,  --next            Show next page of   
+                         results             
+
+
+  [2mGlobal Options[22m:
+
+       --cwd <DIR>            Sets the  
+                              current   
+                              working   
+                              directory 
+                              for a     
+                              single run
+                              of a      
+                              command   
+  -d,  --debug                Debug mode
+                              (default  
+                              off)      
+  -Q,  --global-config <DIR>  Path to   
+                              the global
+                              \`.vercel\` 
+                              directory 
+  -h,  --help                 Output    
+                              usage     
+                              informati…
+  -A,  --local-config <FILE>  Path to   
+                              the local 
+                              \`vercel.j…
+                              file      
+       --no-color             No color  
+                              mode      
+                              (default  
+                              off)      
+  -S,  --scope                Set a     
+                              custom    
+                              scope     
+  -t,  --token <TOKEN>        Login     
+                              token     
+  -v,  --version              Output the
+                              version   
+                              number    
+
+
+  [2mExamples:[22m
+
+  [90m-[39m Generate a certificate with the cnames "acme.com" and "www.acme.com"\`
+
+    [36m$ vercel certs issue acme.com www.acme.com[39m
+
+  [90m-[39m Remove a certificate
+
+    [36m$ vercel certs rm id[39m
+
+  [90m-[39m Paginate results, where \`1584722256178\` is the time in milliseconds since the UNIX epoch.
+
+    [36m$ vercel certs ls --next 1584722256178[39m
+
+"
+`;
+
+exports[`help command > certs help output snapshots > certs help column width 80 1`] = `
+"
+  ▲ [1mvercel[22m [1mcerts[22m [command] [options]
+
+  Interact with SSL certificates. This command is intended for advanced use     
+  only. By default, Vercel manages your certificates automatically.             
+
+  [2mCommands[22m:
+
+  ls         Show all available certificates                            
+  issue  cn   Issue a new certificate for a domain                      
+  rm     id  Remove a certificate by id                                 
+
+
+  [2mOptions[22m:
+
+       --ca <FILE>       CA certificate chain file                                   
+       --challenge-only  Only show challenges needed to issue a cert                 
+       --crt <FILE>      Certificate file                                            
+       --key <FILE>      Certificate key file                                        
+       --limit <VALUE>   Number of results to return per page (default: 20, max: 100)
+  -n,  --next            Show next page of results                                   
+
+
+  [2mGlobal Options[22m:
+
+       --cwd <DIR>            Sets the current working directory for a single   
+                              run of a command                                  
+  -d,  --debug                Debug mode (default off)                          
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory            
+  -h,  --help                 Output usage information                          
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file              
+       --no-color             No color mode (default off)                       
+  -S,  --scope                Set a custom scope                                
+  -t,  --token <TOKEN>        Login token                                       
+  -v,  --version              Output the version number                         
+
+
+  [2mExamples:[22m
+
+  [90m-[39m Generate a certificate with the cnames "acme.com" and "www.acme.com"\`
+
+    [36m$ vercel certs issue acme.com www.acme.com[39m
+
+  [90m-[39m Remove a certificate
+
+    [36m$ vercel certs rm id[39m
+
+  [90m-[39m Paginate results, where \`1584722256178\` is the time in milliseconds since the UNIX epoch.
+
+    [36m$ vercel certs ls --next 1584722256178[39m
+
+"
+`;
+
+exports[`help command > certs help output snapshots > certs help column width 120 1`] = `
+"
+  ▲ [1mvercel[22m [1mcerts[22m [command] [options]
+
+  Interact with SSL certificates. This command is intended for advanced use only. By default, Vercel manages your       
+  certificates automatically.                                                                                           
+
+  [2mCommands[22m:
+
+  ls         Show all available certificates                                                                    
+  issue  cn   Issue a new certificate for a domain                                                              
+  rm     id  Remove a certificate by id                                                                         
+
+
+  [2mOptions[22m:
+
+       --ca <FILE>       CA certificate chain file                                                                           
+       --challenge-only  Only show challenges needed to issue a cert                                                         
+       --crt <FILE>      Certificate file                                                                                    
+       --key <FILE>      Certificate key file                                                                                
+       --limit <VALUE>   Number of results to return per page (default: 20, max: 100)                                        
+  -n,  --next            Show next page of results                                                                           
+
+
+  [2mGlobal Options[22m:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  [2mExamples:[22m
+
+  [90m-[39m Generate a certificate with the cnames "acme.com" and "www.acme.com"\`
+
+    [36m$ vercel certs issue acme.com www.acme.com[39m
+
+  [90m-[39m Remove a certificate
+
+    [36m$ vercel certs rm id[39m
+
+  [90m-[39m Paginate results, where \`1584722256178\` is the time in milliseconds since the UNIX epoch.
+
+    [36m$ vercel certs ls --next 1584722256178[39m
+
+"
+`;
+
+exports[`help command > deploy help output snapshots > deploy help column width 40 1`] = `
 "
   ▲ [1mvercel[22m [1mdeploy[22m [project-path] [options]
 
@@ -186,7 +749,7 @@ exports[`help command > help output snapshots > column width 40 1`] = `
 "
 `;
 
-exports[`help command > help output snapshots > column width 80 1`] = `
+exports[`help command > deploy help output snapshots > deploy help column width 80 1`] = `
 "
   ▲ [1mvercel[22m [1mdeploy[22m [project-path] [options]
 
@@ -260,7 +823,7 @@ exports[`help command > help output snapshots > column width 80 1`] = `
 "
 `;
 
-exports[`help command > help output snapshots > column width 120 1`] = `
+exports[`help command > deploy help output snapshots > deploy help column width 120 1`] = `
 "
   ▲ [1mvercel[22m [1mdeploy[22m [project-path] [options]
 
@@ -320,6 +883,3155 @@ exports[`help command > help output snapshots > column width 120 1`] = `
   [90m-[39m Write Deployment URL to a file
 
     [36m$ vercel > deployment-url.txt[39m
+
+"
+`;
+
+exports[`help command > dns help output snapshots > dns help column width 40 1`] = `
+"
+  ▲ [1mvercel[22m [1mdns[22m command [options]
+
+  Interact with DNS entries for a       
+  project.                              
+
+  [2mCommands[22m:
+
+  import  domain zonefile  Impo…
+                           a DNS
+                           zone 
+                           file 
+                           (see 
+                           below
+                           for  
+                           exam…
+  ls      domain           List 
+                           all  
+                           DNS  
+                           entr…
+                           for a
+                           doma…
+  add     details alias    Add a
+                           new  
+                           DNS  
+                           entry
+                           (see 
+                           below
+                           for  
+                           exam…
+  rm      id               Remo…
+                           a DNS
+                           entry
+                           using
+                           its  
+                           ID   
+
+
+  [2mOptions[22m:
+
+  -n,  --limit <NUMBER>  Number of      
+                         results to     
+                         return per page
+                         (default: 20,  
+                         max: 100)      
+  -n,  --next <MS>       Show next page 
+                         of results     
+
+
+  [2mGlobal Options[22m:
+
+       --cwd <DIR>            Sets the  
+                              current   
+                              working   
+                              directory 
+                              for a     
+                              single run
+                              of a      
+                              command   
+  -d,  --debug                Debug mode
+                              (default  
+                              off)      
+  -Q,  --global-config <DIR>  Path to   
+                              the global
+                              \`.vercel\` 
+                              directory 
+  -h,  --help                 Output    
+                              usage     
+                              informati…
+  -A,  --local-config <FILE>  Path to   
+                              the local 
+                              \`vercel.j…
+                              file      
+       --no-color             No color  
+                              mode      
+                              (default  
+                              off)      
+  -S,  --scope                Set a     
+                              custom    
+                              scope     
+  -t,  --token <TOKEN>        Login     
+                              token     
+  -v,  --version              Output the
+                              version   
+                              number    
+
+
+  [2mExamples:[22m
+
+  [90m-[39m Add an A record for a subdomain
+
+    [36m$ vercel dns add <DOMAIN> <SUBDOMAIN> <A | AAAA | ALIAS | CNAME | TXT>  <VALUE>[39m
+    [36m$ vercel dns add zeit.rocks api A 198.51.100.100[39m
+
+  [90m-[39m Add an MX record (@ as a name refers to the domain)
+
+    [36m$ vercel dns add <DOMAIN> '@' MX <RECORD VALUE> <PRIORITY>[39m
+    [36m$ vercel dns add zeit.rocks '@' MX mail.zeit.rocks 10[39m
+
+  [90m-[39m Add an SRV record
+
+    [36m$ vercel dns add <DOMAIN> <NAME> SRV <PRIORITY> <WEIGHT> <PORT> <TARGET>[39m
+    [36m$ vercel dns add zeit.rocks '@' SRV 10 0 389 zeit.party[39m
+
+  [90m-[39m Add a CAA record
+
+    [36m$ vercel dns add <DOMAIN> <NAME> CAA '<FLAGS> <TAG> "<VALUE>"'[39m
+    [36m$ vercel dns add zeit.rocks '@' CAA '0 issue "example.com"'[39m
+
+  [90m-[39m Import a Zone file
+
+    [36m$ vercel dns import <DOMAIN> <FILE>[39m
+    [36m$ vercel dns import zeit.rocks ./zonefile.txt[39m
+
+  [90m-[39m Paginate results, where \`1584722256178\` is the time in milliseconds since the UNIX epoch.
+
+    [36m$ vercel dns ls --next 1584722256178[39m
+    [36m$ vercel dns ls zeit.rocks --next 1584722256178[39m
+
+"
+`;
+
+exports[`help command > dns help output snapshots > dns help column width 80 1`] = `
+"
+  ▲ [1mvercel[22m [1mdns[22m command [options]
+
+  Interact with DNS entries for a project.                                      
+
+  [2mCommands[22m:
+
+  import  domain zonefile  Import a DNS zone file (see below for        
+                           examples)                                    
+  ls      domain           List all DNS entries for a domain            
+  add     details alias    Add a new DNS entry (see below for examples) 
+  rm      id               Remove a DNS entry using its ID              
+
+
+  [2mOptions[22m:
+
+  -n,  --limit <NUMBER>  Number of results to return per page (default: 20, max:
+                         100)                                                   
+  -n,  --next <MS>       Show next page of results                              
+
+
+  [2mGlobal Options[22m:
+
+       --cwd <DIR>            Sets the current working directory for a single   
+                              run of a command                                  
+  -d,  --debug                Debug mode (default off)                          
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory            
+  -h,  --help                 Output usage information                          
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file              
+       --no-color             No color mode (default off)                       
+  -S,  --scope                Set a custom scope                                
+  -t,  --token <TOKEN>        Login token                                       
+  -v,  --version              Output the version number                         
+
+
+  [2mExamples:[22m
+
+  [90m-[39m Add an A record for a subdomain
+
+    [36m$ vercel dns add <DOMAIN> <SUBDOMAIN> <A | AAAA | ALIAS | CNAME | TXT>  <VALUE>[39m
+    [36m$ vercel dns add zeit.rocks api A 198.51.100.100[39m
+
+  [90m-[39m Add an MX record (@ as a name refers to the domain)
+
+    [36m$ vercel dns add <DOMAIN> '@' MX <RECORD VALUE> <PRIORITY>[39m
+    [36m$ vercel dns add zeit.rocks '@' MX mail.zeit.rocks 10[39m
+
+  [90m-[39m Add an SRV record
+
+    [36m$ vercel dns add <DOMAIN> <NAME> SRV <PRIORITY> <WEIGHT> <PORT> <TARGET>[39m
+    [36m$ vercel dns add zeit.rocks '@' SRV 10 0 389 zeit.party[39m
+
+  [90m-[39m Add a CAA record
+
+    [36m$ vercel dns add <DOMAIN> <NAME> CAA '<FLAGS> <TAG> "<VALUE>"'[39m
+    [36m$ vercel dns add zeit.rocks '@' CAA '0 issue "example.com"'[39m
+
+  [90m-[39m Import a Zone file
+
+    [36m$ vercel dns import <DOMAIN> <FILE>[39m
+    [36m$ vercel dns import zeit.rocks ./zonefile.txt[39m
+
+  [90m-[39m Paginate results, where \`1584722256178\` is the time in milliseconds since the UNIX epoch.
+
+    [36m$ vercel dns ls --next 1584722256178[39m
+    [36m$ vercel dns ls zeit.rocks --next 1584722256178[39m
+
+"
+`;
+
+exports[`help command > dns help output snapshots > dns help column width 120 1`] = `
+"
+  ▲ [1mvercel[22m [1mdns[22m command [options]
+
+  Interact with DNS entries for a project.                                                                              
+
+  [2mCommands[22m:
+
+  import  domain zonefile  Import a DNS zone file (see below for examples)                                      
+  ls      domain           List all DNS entries for a domain                                                    
+  add     details alias    Add a new DNS entry (see below for examples)                                         
+  rm      id               Remove a DNS entry using its ID                                                      
+
+
+  [2mOptions[22m:
+
+  -n,  --limit <NUMBER>  Number of results to return per page (default: 20, max: 100)                                   
+  -n,  --next <MS>       Show next page of results                                                                      
+
+
+  [2mGlobal Options[22m:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  [2mExamples:[22m
+
+  [90m-[39m Add an A record for a subdomain
+
+    [36m$ vercel dns add <DOMAIN> <SUBDOMAIN> <A | AAAA | ALIAS | CNAME | TXT>  <VALUE>[39m
+    [36m$ vercel dns add zeit.rocks api A 198.51.100.100[39m
+
+  [90m-[39m Add an MX record (@ as a name refers to the domain)
+
+    [36m$ vercel dns add <DOMAIN> '@' MX <RECORD VALUE> <PRIORITY>[39m
+    [36m$ vercel dns add zeit.rocks '@' MX mail.zeit.rocks 10[39m
+
+  [90m-[39m Add an SRV record
+
+    [36m$ vercel dns add <DOMAIN> <NAME> SRV <PRIORITY> <WEIGHT> <PORT> <TARGET>[39m
+    [36m$ vercel dns add zeit.rocks '@' SRV 10 0 389 zeit.party[39m
+
+  [90m-[39m Add a CAA record
+
+    [36m$ vercel dns add <DOMAIN> <NAME> CAA '<FLAGS> <TAG> "<VALUE>"'[39m
+    [36m$ vercel dns add zeit.rocks '@' CAA '0 issue "example.com"'[39m
+
+  [90m-[39m Import a Zone file
+
+    [36m$ vercel dns import <DOMAIN> <FILE>[39m
+    [36m$ vercel dns import zeit.rocks ./zonefile.txt[39m
+
+  [90m-[39m Paginate results, where \`1584722256178\` is the time in milliseconds since the UNIX epoch.
+
+    [36m$ vercel dns ls --next 1584722256178[39m
+    [36m$ vercel dns ls zeit.rocks --next 1584722256178[39m
+
+"
+`;
+
+exports[`help command > domains help output snapshots > domains help column width 40 1`] = `
+"
+  ▲ [1mvercel[22m [1mdomains[22m command [options]
+
+  Manage domains                        
+
+  [2mCommands[22m:
+
+  ls                             Show  
+                                 all   
+                                 domai…
+                                 in a  
+                                 list  
+  inspect      name              Displ…
+                                 infor…
+                                 relat…
+                                 to a  
+                                 domain
+  add          name project      Add a 
+                                 new   
+                                 domain
+                                 that  
+                                 you   
+                                 alrea…
+                                 own   
+  rm           name              Remove
+                                 a     
+                                 domain
+  buy          name              Buy a 
+                                 domain
+                                 that  
+                                 you   
+                                 don't 
+                                 yet   
+                                 own   
+  move         name destination  Move a
+                                 domain
+                                 to    
+                                 anoth…
+                                 scope 
+  transfer-in  name              Trans…
+                                 in a  
+                                 domain
+                                 to    
+                                 Vercel
+
+
+  [2mOptions[22m:
+
+  -f,  --force           Force a domain 
+                         on a project   
+                         and remove it  
+                         from an        
+                         existing one   
+  -n,  --limit <NUMBER>  Number of      
+                         results to     
+                         return per page
+                         (default: 20,  
+                         max: 100)      
+  -N,  --next            Show next page 
+                         of results     
+  -y,  --yes             Skip the       
+                         confirmation   
+                         prompt when    
+                         removing a     
+                         domain         
+
+
+  [2mGlobal Options[22m:
+
+       --cwd <DIR>            Sets the  
+                              current   
+                              working   
+                              directory 
+                              for a     
+                              single run
+                              of a      
+                              command   
+  -d,  --debug                Debug mode
+                              (default  
+                              off)      
+  -Q,  --global-config <DIR>  Path to   
+                              the global
+                              \`.vercel\` 
+                              directory 
+  -h,  --help                 Output    
+                              usage     
+                              informati…
+  -A,  --local-config <FILE>  Path to   
+                              the local 
+                              \`vercel.j…
+                              file      
+       --no-color             No color  
+                              mode      
+                              (default  
+                              off)      
+  -S,  --scope                Set a     
+                              custom    
+                              scope     
+  -t,  --token <TOKEN>        Login     
+                              token     
+  -v,  --version              Output the
+                              version   
+                              number    
+
+
+  [2mExamples:[22m
+
+  [90m-[39m Add a domain that you already own
+
+    [36m$ vercel domains add domain-name.com[39m
+    [36m$ Make sure the domain's DNS nameservers are at least 2 of the ones listed on https://vercel.com/edge-network[39m
+    [36m$ NOTE: Running vercel alias will automatically register your domain if it's configured with these nameservers (no need to 'domains add')[39m
+
+  [90m-[39m Paginate results, where \`1584722256178\` is the time in milliseconds since the UNIX epoch
+
+    [36m$ vercel domains ls--next 1584722256178[39m
+
+"
+`;
+
+exports[`help command > domains help output snapshots > domains help column width 80 1`] = `
+"
+  ▲ [1mvercel[22m [1mdomains[22m command [options]
+
+  Manage domains                                                                
+
+  [2mCommands[22m:
+
+  ls                             Show all domains in a list                    
+  inspect      name              Displays information related to a domain      
+  add          name project      Add a new domain that you already own         
+  rm           name              Remove a domain                               
+  buy          name              Buy a domain that you don't yet own           
+  move         name destination  Move a domain to another scope                
+  transfer-in  name              Transfer in a domain to Vercel                
+
+
+  [2mOptions[22m:
+
+  -f,  --force           Force a domain on a project and remove it from an      
+                         existing one                                           
+  -n,  --limit <NUMBER>  Number of results to return per page (default: 20, max:
+                         100)                                                   
+  -N,  --next            Show next page of results                              
+  -y,  --yes             Skip the confirmation prompt when removing a domain    
+
+
+  [2mGlobal Options[22m:
+
+       --cwd <DIR>            Sets the current working directory for a single   
+                              run of a command                                  
+  -d,  --debug                Debug mode (default off)                          
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory            
+  -h,  --help                 Output usage information                          
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file              
+       --no-color             No color mode (default off)                       
+  -S,  --scope                Set a custom scope                                
+  -t,  --token <TOKEN>        Login token                                       
+  -v,  --version              Output the version number                         
+
+
+  [2mExamples:[22m
+
+  [90m-[39m Add a domain that you already own
+
+    [36m$ vercel domains add domain-name.com[39m
+    [36m$ Make sure the domain's DNS nameservers are at least 2 of the ones listed on https://vercel.com/edge-network[39m
+    [36m$ NOTE: Running vercel alias will automatically register your domain if it's configured with these nameservers (no need to 'domains add')[39m
+
+  [90m-[39m Paginate results, where \`1584722256178\` is the time in milliseconds since the UNIX epoch
+
+    [36m$ vercel domains ls--next 1584722256178[39m
+
+"
+`;
+
+exports[`help command > domains help output snapshots > domains help column width 120 1`] = `
+"
+  ▲ [1mvercel[22m [1mdomains[22m command [options]
+
+  Manage domains                                                                                                        
+
+  [2mCommands[22m:
+
+  ls                             Show all domains in a list                                                            
+  inspect      name              Displays information related to a domain                                              
+  add          name project      Add a new domain that you already own                                                 
+  rm           name              Remove a domain                                                                       
+  buy          name              Buy a domain that you don't yet own                                                   
+  move         name destination  Move a domain to another scope                                                        
+  transfer-in  name              Transfer in a domain to Vercel                                                        
+
+
+  [2mOptions[22m:
+
+  -f,  --force           Force a domain on a project and remove it from an existing one                                 
+  -n,  --limit <NUMBER>  Number of results to return per page (default: 20, max: 100)                                   
+  -N,  --next            Show next page of results                                                                      
+  -y,  --yes             Skip the confirmation prompt when removing a domain                                            
+
+
+  [2mGlobal Options[22m:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  [2mExamples:[22m
+
+  [90m-[39m Add a domain that you already own
+
+    [36m$ vercel domains add domain-name.com[39m
+    [36m$ Make sure the domain's DNS nameservers are at least 2 of the ones listed on https://vercel.com/edge-network[39m
+    [36m$ NOTE: Running vercel alias will automatically register your domain if it's configured with these nameservers (no need to 'domains add')[39m
+
+  [90m-[39m Paginate results, where \`1584722256178\` is the time in milliseconds since the UNIX epoch
+
+    [36m$ vercel domains ls--next 1584722256178[39m
+
+"
+`;
+
+exports[`help command > env help output snapshots > env help column width 40 1`] = `
+"
+  ▲ [1mvercel[22m [1menv[22m [command] [options]
+
+  Interact with environment variables.  
+
+  [2mCommands[22m:
+
+  ls                        List 
+                            all  
+                            vari…
+                            for  
+                            the  
+                            spec…
+                            Envi…
+  add   name [environment]  Add  
+                            an   
+                            Envi…
+                            Vari…
+                            (see 
+                            exam…
+                            belo…
+  rm    name [environment]  Remo…
+                            an   
+                            Envi…
+                            Vari…
+                            (see 
+                            exam…
+                            belo…
+  pull  [filename]          Pull 
+                            all  
+                            Deve…
+                            Envi…
+                            Vari…
+                            from 
+                            the  
+                            cloud
+                            and  
+                            write
+                            to a 
+                            file 
+                            [.en…
+
+
+  [2mOptions[22m:
+
+       --environment  Set the Environment    
+                      (development, preview, 
+                      production) when       
+                      pulling Environment    
+                      Variables              
+       --git-branch   Specify the Git branch 
+                      to pull specific       
+                      Environment Variables  
+                      for                    
+  -y,  --yes          Skip the confirmation  
+                      prompt when removing an
+                      alias                  
+
+
+  [2mGlobal Options[22m:
+
+       --cwd <DIR>            Sets the  
+                              current   
+                              working   
+                              directory 
+                              for a     
+                              single run
+                              of a      
+                              command   
+  -d,  --debug                Debug mode
+                              (default  
+                              off)      
+  -Q,  --global-config <DIR>  Path to   
+                              the global
+                              \`.vercel\` 
+                              directory 
+  -h,  --help                 Output    
+                              usage     
+                              informati…
+  -A,  --local-config <FILE>  Path to   
+                              the local 
+                              \`vercel.j…
+                              file      
+       --no-color             No color  
+                              mode      
+                              (default  
+                              off)      
+  -S,  --scope                Set a     
+                              custom    
+                              scope     
+  -t,  --token <TOKEN>        Login     
+                              token     
+  -v,  --version              Output the
+                              version   
+                              number    
+
+
+  [2mExamples:[22m
+
+  [90m-[39m Pull all Development Environment Variables down from the cloud
+
+    [36m$ vercel env pull <file>[39m
+    [36m$ vercel env pull .env.development.local[39m
+
+  [90m-[39m Add a new variable to multiple Environments
+
+    [36m$ vercel env add <name>[39m
+    [36m$ vercel env add API_TOKEN[39m
+
+  [90m-[39m Add a new variable for a specific Environment
+
+    [36m$ vercel env add <name> <production | preview | development>[39m
+    [36m$ vercel env add DB_PASS production[39m
+
+  [90m-[39m Override an existing Environment Variable of same target (production, preview, deployment)
+
+    [36m$ vercel env add API_TOKEN --force[39m
+
+  [90m-[39m Add a sensitive Environment Variable
+
+    [36m$ vercel env add API_TOKEN --sensitive[39m
+
+  [90m-[39m Add a new variable for a specific Environment and Git Branch
+
+    [36m$ vercel env add <name> <production | preview | development> <gitbranch>[39m
+    [36m$ vercel env add DB_PASS preview feat1[39m
+
+  [90m-[39m Add a new Environment Variable from stdin
+
+    [36m$ cat <file> | vercel env add <name> <production | preview | development>[39m
+    [36m$ cat ~/.npmrc | vercel env add NPM_RC preview[39m
+    [36m$ vercel env add API_URL production < url.txt[39m
+
+  [90m-[39m Remove a variable from multiple Environments
+
+    [36m$ vercel env rm <name>[39m
+    [36m$ vercel env rm API_TOKEN[39m
+
+  [90m-[39m Remove a variable from a specific Environment
+
+    [36m$ vercel env rm <name> <production | preview | development>[39m
+    [36m$ vercel env rm NPM_RC preview[39m
+
+  [90m-[39m Remove a variable from a specific Environment and Git Branch
+
+    [36m$ vercel env rm <name> <production | preview | development> <gitbranch>[39m
+    [36m$ vercel env rm NPM_RC preview feat1[39m
+
+"
+`;
+
+exports[`help command > env help output snapshots > env help column width 80 1`] = `
+"
+  ▲ [1mvercel[22m [1menv[22m [command] [options]
+
+  Interact with environment variables.                                          
+
+  [2mCommands[22m:
+
+  ls                        List all variables for the specified         
+                            Environment                                  
+  add   name [environment]  Add an Environment Variable (see examples    
+                            below)                                       
+  rm    name [environment]  Remove an Environment Variable (see examples 
+                            below)                                       
+  pull  [filename]          Pull all Development Environment Variables   
+                            from the cloud and write to a file           
+                            [.env.local]                                 
+
+
+  [2mOptions[22m:
+
+       --environment  Set the Environment (development, preview, production) when    
+                      pulling Environment Variables                                  
+       --git-branch   Specify the Git branch to pull specific Environment Variables  
+                      for                                                            
+  -y,  --yes          Skip the confirmation prompt when removing an alias            
+
+
+  [2mGlobal Options[22m:
+
+       --cwd <DIR>            Sets the current working directory for a single   
+                              run of a command                                  
+  -d,  --debug                Debug mode (default off)                          
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory            
+  -h,  --help                 Output usage information                          
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file              
+       --no-color             No color mode (default off)                       
+  -S,  --scope                Set a custom scope                                
+  -t,  --token <TOKEN>        Login token                                       
+  -v,  --version              Output the version number                         
+
+
+  [2mExamples:[22m
+
+  [90m-[39m Pull all Development Environment Variables down from the cloud
+
+    [36m$ vercel env pull <file>[39m
+    [36m$ vercel env pull .env.development.local[39m
+
+  [90m-[39m Add a new variable to multiple Environments
+
+    [36m$ vercel env add <name>[39m
+    [36m$ vercel env add API_TOKEN[39m
+
+  [90m-[39m Add a new variable for a specific Environment
+
+    [36m$ vercel env add <name> <production | preview | development>[39m
+    [36m$ vercel env add DB_PASS production[39m
+
+  [90m-[39m Override an existing Environment Variable of same target (production, preview, deployment)
+
+    [36m$ vercel env add API_TOKEN --force[39m
+
+  [90m-[39m Add a sensitive Environment Variable
+
+    [36m$ vercel env add API_TOKEN --sensitive[39m
+
+  [90m-[39m Add a new variable for a specific Environment and Git Branch
+
+    [36m$ vercel env add <name> <production | preview | development> <gitbranch>[39m
+    [36m$ vercel env add DB_PASS preview feat1[39m
+
+  [90m-[39m Add a new Environment Variable from stdin
+
+    [36m$ cat <file> | vercel env add <name> <production | preview | development>[39m
+    [36m$ cat ~/.npmrc | vercel env add NPM_RC preview[39m
+    [36m$ vercel env add API_URL production < url.txt[39m
+
+  [90m-[39m Remove a variable from multiple Environments
+
+    [36m$ vercel env rm <name>[39m
+    [36m$ vercel env rm API_TOKEN[39m
+
+  [90m-[39m Remove a variable from a specific Environment
+
+    [36m$ vercel env rm <name> <production | preview | development>[39m
+    [36m$ vercel env rm NPM_RC preview[39m
+
+  [90m-[39m Remove a variable from a specific Environment and Git Branch
+
+    [36m$ vercel env rm <name> <production | preview | development> <gitbranch>[39m
+    [36m$ vercel env rm NPM_RC preview feat1[39m
+
+"
+`;
+
+exports[`help command > env help output snapshots > env help column width 120 1`] = `
+"
+  ▲ [1mvercel[22m [1menv[22m [command] [options]
+
+  Interact with environment variables.                                                                                  
+
+  [2mCommands[22m:
+
+  ls                        List all variables for the specified Environment                                     
+  add   name [environment]  Add an Environment Variable (see examples below)                                     
+  rm    name [environment]  Remove an Environment Variable (see examples below)                                  
+  pull  [filename]          Pull all Development Environment Variables from the cloud and write to a file        
+                            [.env.local]                                                                         
+
+
+  [2mOptions[22m:
+
+       --environment  Set the Environment (development, preview, production) when pulling Environment Variables              
+       --git-branch   Specify the Git branch to pull specific Environment Variables for                                      
+  -y,  --yes          Skip the confirmation prompt when removing an alias                                                    
+
+
+  [2mGlobal Options[22m:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  [2mExamples:[22m
+
+  [90m-[39m Pull all Development Environment Variables down from the cloud
+
+    [36m$ vercel env pull <file>[39m
+    [36m$ vercel env pull .env.development.local[39m
+
+  [90m-[39m Add a new variable to multiple Environments
+
+    [36m$ vercel env add <name>[39m
+    [36m$ vercel env add API_TOKEN[39m
+
+  [90m-[39m Add a new variable for a specific Environment
+
+    [36m$ vercel env add <name> <production | preview | development>[39m
+    [36m$ vercel env add DB_PASS production[39m
+
+  [90m-[39m Override an existing Environment Variable of same target (production, preview, deployment)
+
+    [36m$ vercel env add API_TOKEN --force[39m
+
+  [90m-[39m Add a sensitive Environment Variable
+
+    [36m$ vercel env add API_TOKEN --sensitive[39m
+
+  [90m-[39m Add a new variable for a specific Environment and Git Branch
+
+    [36m$ vercel env add <name> <production | preview | development> <gitbranch>[39m
+    [36m$ vercel env add DB_PASS preview feat1[39m
+
+  [90m-[39m Add a new Environment Variable from stdin
+
+    [36m$ cat <file> | vercel env add <name> <production | preview | development>[39m
+    [36m$ cat ~/.npmrc | vercel env add NPM_RC preview[39m
+    [36m$ vercel env add API_URL production < url.txt[39m
+
+  [90m-[39m Remove a variable from multiple Environments
+
+    [36m$ vercel env rm <name>[39m
+    [36m$ vercel env rm API_TOKEN[39m
+
+  [90m-[39m Remove a variable from a specific Environment
+
+    [36m$ vercel env rm <name> <production | preview | development>[39m
+    [36m$ vercel env rm NPM_RC preview[39m
+
+  [90m-[39m Remove a variable from a specific Environment and Git Branch
+
+    [36m$ vercel env rm <name> <production | preview | development> <gitbranch>[39m
+    [36m$ vercel env rm NPM_RC preview feat1[39m
+
+"
+`;
+
+exports[`help command > git help output snapshots > git help column width 40 1`] = `
+"
+  ▲ [1mvercel[22m [1mgit[22m command
+
+  Manage your Git provider connections. 
+
+  [2mCommands[22m:
+
+  connect     [git url]  Connect   
+                         your      
+                         Vercel    
+                         Project to
+                         your Git  
+                         repository
+                         or provide
+                         the remote
+                         URL to    
+                         your Git  
+                         repository
+  disconnect             Disconnect
+                         the Git   
+                         provider  
+                         repository
+                         from your 
+                         project   
+
+
+  [2mGlobal Options[22m:
+
+       --cwd <DIR>            Sets the  
+                              current   
+                              working   
+                              directory 
+                              for a     
+                              single run
+                              of a      
+                              command   
+  -d,  --debug                Debug mode
+                              (default  
+                              off)      
+  -Q,  --global-config <DIR>  Path to   
+                              the global
+                              \`.vercel\` 
+                              directory 
+  -h,  --help                 Output    
+                              usage     
+                              informati…
+  -A,  --local-config <FILE>  Path to   
+                              the local 
+                              \`vercel.j…
+                              file      
+       --no-color             No color  
+                              mode      
+                              (default  
+                              off)      
+  -S,  --scope                Set a     
+                              custom    
+                              scope     
+  -t,  --token <TOKEN>        Login     
+                              token     
+  -v,  --version              Output the
+                              version   
+                              number    
+
+
+  [2mExamples:[22m
+
+  [90m-[39m Connect your Vercel Project to your Git repository defined in your local .git config
+
+    [36m$ vercel git connect[39m
+
+  [90m-[39m Connect your Vercel Project to a Git repository using the remote URL
+
+    [36m$ vercel git connect https://github.com/user/repo.git[39m
+
+  [90m-[39m Disconnect the Git provider repository
+
+    [36m$ vercel git disconnect[39m
+
+"
+`;
+
+exports[`help command > git help output snapshots > git help column width 80 1`] = `
+"
+  ▲ [1mvercel[22m [1mgit[22m command
+
+  Manage your Git provider connections.                                         
+
+  [2mCommands[22m:
+
+  connect     [git url]  Connect your Vercel Project to your Git repository
+                         or provide the remote URL to your Git repository  
+  disconnect             Disconnect the Git provider repository from your  
+                         project                                           
+
+
+  [2mGlobal Options[22m:
+
+       --cwd <DIR>            Sets the current working directory for a single   
+                              run of a command                                  
+  -d,  --debug                Debug mode (default off)                          
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory            
+  -h,  --help                 Output usage information                          
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file              
+       --no-color             No color mode (default off)                       
+  -S,  --scope                Set a custom scope                                
+  -t,  --token <TOKEN>        Login token                                       
+  -v,  --version              Output the version number                         
+
+
+  [2mExamples:[22m
+
+  [90m-[39m Connect your Vercel Project to your Git repository defined in your local .git config
+
+    [36m$ vercel git connect[39m
+
+  [90m-[39m Connect your Vercel Project to a Git repository using the remote URL
+
+    [36m$ vercel git connect https://github.com/user/repo.git[39m
+
+  [90m-[39m Disconnect the Git provider repository
+
+    [36m$ vercel git disconnect[39m
+
+"
+`;
+
+exports[`help command > git help output snapshots > git help column width 120 1`] = `
+"
+  ▲ [1mvercel[22m [1mgit[22m command
+
+  Manage your Git provider connections.                                                                                 
+
+  [2mCommands[22m:
+
+  connect     [git url]  Connect your Vercel Project to your Git repository or provide the remote URL to your Git  
+                         repository                                                                                
+  disconnect             Disconnect the Git provider repository from your project                                  
+
+
+  [2mGlobal Options[22m:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  [2mExamples:[22m
+
+  [90m-[39m Connect your Vercel Project to your Git repository defined in your local .git config
+
+    [36m$ vercel git connect[39m
+
+  [90m-[39m Connect your Vercel Project to a Git repository using the remote URL
+
+    [36m$ vercel git connect https://github.com/user/repo.git[39m
+
+  [90m-[39m Disconnect the Git provider repository
+
+    [36m$ vercel git disconnect[39m
+
+"
+`;
+
+exports[`help command > init help output snapshots > init help column width 40 1`] = `
+"
+  ▲ [1mvercel[22m [1minit[22m [example] [dir] [options]
+
+  Initialize example Vercel Projects    
+
+  [2mOptions[22m:
+
+  -f,  --force  Overwrite destination   
+                directory if exists     
+                [off]                   
+
+
+  [2mGlobal Options[22m:
+
+       --cwd <DIR>            Sets the  
+                              current   
+                              working   
+                              directory 
+                              for a     
+                              single run
+                              of a      
+                              command   
+  -d,  --debug                Debug mode
+                              (default  
+                              off)      
+  -Q,  --global-config <DIR>  Path to   
+                              the global
+                              \`.vercel\` 
+                              directory 
+  -h,  --help                 Output    
+                              usage     
+                              informati…
+  -A,  --local-config <FILE>  Path to   
+                              the local 
+                              \`vercel.j…
+                              file      
+       --no-color             No color  
+                              mode      
+                              (default  
+                              off)      
+  -S,  --scope                Set a     
+                              custom    
+                              scope     
+  -t,  --token <TOKEN>        Login     
+                              token     
+  -v,  --version              Output the
+                              version   
+                              number    
+
+
+  [2mExamples:[22m
+
+  [90m-[39m Choose from all available examples
+
+    [36m$ vercel init[39m
+
+  [90m-[39m Initialize example project into a new directory
+
+    [36m$ vercel init <example>[39m
+
+  [90m-[39m Initialize example project into specified directory
+
+    [36m$ vercel <example> <dir>[39m
+
+  [90m-[39m Initialize example project without checking
+
+    [36m$ vercel init <example> --force[39m
+
+"
+`;
+
+exports[`help command > init help output snapshots > init help column width 80 1`] = `
+"
+  ▲ [1mvercel[22m [1minit[22m [example] [dir] [options]
+
+  Initialize example Vercel Projects                                            
+
+  [2mOptions[22m:
+
+  -f,  --force  Overwrite destination directory if exists [off]                 
+
+
+  [2mGlobal Options[22m:
+
+       --cwd <DIR>            Sets the current working directory for a single   
+                              run of a command                                  
+  -d,  --debug                Debug mode (default off)                          
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory            
+  -h,  --help                 Output usage information                          
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file              
+       --no-color             No color mode (default off)                       
+  -S,  --scope                Set a custom scope                                
+  -t,  --token <TOKEN>        Login token                                       
+  -v,  --version              Output the version number                         
+
+
+  [2mExamples:[22m
+
+  [90m-[39m Choose from all available examples
+
+    [36m$ vercel init[39m
+
+  [90m-[39m Initialize example project into a new directory
+
+    [36m$ vercel init <example>[39m
+
+  [90m-[39m Initialize example project into specified directory
+
+    [36m$ vercel <example> <dir>[39m
+
+  [90m-[39m Initialize example project without checking
+
+    [36m$ vercel init <example> --force[39m
+
+"
+`;
+
+exports[`help command > init help output snapshots > init help column width 120 1`] = `
+"
+  ▲ [1mvercel[22m [1minit[22m [example] [dir] [options]
+
+  Initialize example Vercel Projects                                                                                    
+
+  [2mOptions[22m:
+
+  -f,  --force  Overwrite destination directory if exists [off]                                                         
+
+
+  [2mGlobal Options[22m:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  [2mExamples:[22m
+
+  [90m-[39m Choose from all available examples
+
+    [36m$ vercel init[39m
+
+  [90m-[39m Initialize example project into a new directory
+
+    [36m$ vercel init <example>[39m
+
+  [90m-[39m Initialize example project into specified directory
+
+    [36m$ vercel <example> <dir>[39m
+
+  [90m-[39m Initialize example project without checking
+
+    [36m$ vercel init <example> --force[39m
+
+"
+`;
+
+exports[`help command > inspect help output snapshots > inspect help column width 40 1`] = `
+"
+  ▲ [1mvercel[22m [1minspect[22m url [options]
+
+  Show information about a deployment.  
+
+  [2mOptions[22m:
+
+   --timeout <TIME>  Time to wait for    
+                     deployment          
+                     completion [3m]     
+   --wait            Blocks until        
+                     deployment completes
+
+
+  [2mGlobal Options[22m:
+
+       --cwd <DIR>            Sets the  
+                              current   
+                              working   
+                              directory 
+                              for a     
+                              single run
+                              of a      
+                              command   
+  -d,  --debug                Debug mode
+                              (default  
+                              off)      
+  -Q,  --global-config <DIR>  Path to   
+                              the global
+                              \`.vercel\` 
+                              directory 
+  -h,  --help                 Output    
+                              usage     
+                              informati…
+  -A,  --local-config <FILE>  Path to   
+                              the local 
+                              \`vercel.j…
+                              file      
+       --no-color             No color  
+                              mode      
+                              (default  
+                              off)      
+  -S,  --scope                Set a     
+                              custom    
+                              scope     
+  -t,  --token <TOKEN>        Login     
+                              token     
+  -v,  --version              Output the
+                              version   
+                              number    
+
+
+  [2mExamples:[22m
+
+  [90m-[39m Get information about a deployment by its unique URL
+
+    [36m$ vercel inspect my-deployment-ji2fjij2.vercel.app[39m
+
+  [90m-[39m Get information about the deployment an alias points to
+
+    [36m$ vercel inspect my-deployment.vercel.app[39m
+
+  [90m-[39m Get information about a deployment by piping in the URL
+
+    [36m$ echo my-deployment.vercel.app | vercel inspect[39m
+
+  [90m-[39m Wait up to 90 seconds for deployment to complete
+
+    [36m$ vercel inspect my-deployment.vercel.app --wait --timeout 90s[39m
+
+"
+`;
+
+exports[`help command > inspect help output snapshots > inspect help column width 80 1`] = `
+"
+  ▲ [1mvercel[22m [1minspect[22m url [options]
+
+  Show information about a deployment.                                          
+
+  [2mOptions[22m:
+
+   --timeout <TIME>  Time to wait for deployment completion [3m]                 
+   --wait            Blocks until deployment completes                           
+
+
+  [2mGlobal Options[22m:
+
+       --cwd <DIR>            Sets the current working directory for a single   
+                              run of a command                                  
+  -d,  --debug                Debug mode (default off)                          
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory            
+  -h,  --help                 Output usage information                          
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file              
+       --no-color             No color mode (default off)                       
+  -S,  --scope                Set a custom scope                                
+  -t,  --token <TOKEN>        Login token                                       
+  -v,  --version              Output the version number                         
+
+
+  [2mExamples:[22m
+
+  [90m-[39m Get information about a deployment by its unique URL
+
+    [36m$ vercel inspect my-deployment-ji2fjij2.vercel.app[39m
+
+  [90m-[39m Get information about the deployment an alias points to
+
+    [36m$ vercel inspect my-deployment.vercel.app[39m
+
+  [90m-[39m Get information about a deployment by piping in the URL
+
+    [36m$ echo my-deployment.vercel.app | vercel inspect[39m
+
+  [90m-[39m Wait up to 90 seconds for deployment to complete
+
+    [36m$ vercel inspect my-deployment.vercel.app --wait --timeout 90s[39m
+
+"
+`;
+
+exports[`help command > inspect help output snapshots > inspect help column width 120 1`] = `
+"
+  ▲ [1mvercel[22m [1minspect[22m url [options]
+
+  Show information about a deployment.                                                                                  
+
+  [2mOptions[22m:
+
+   --timeout <TIME>  Time to wait for deployment completion [3m]                                                         
+   --wait            Blocks until deployment completes                                                                   
+
+
+  [2mGlobal Options[22m:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  [2mExamples:[22m
+
+  [90m-[39m Get information about a deployment by its unique URL
+
+    [36m$ vercel inspect my-deployment-ji2fjij2.vercel.app[39m
+
+  [90m-[39m Get information about the deployment an alias points to
+
+    [36m$ vercel inspect my-deployment.vercel.app[39m
+
+  [90m-[39m Get information about a deployment by piping in the URL
+
+    [36m$ echo my-deployment.vercel.app | vercel inspect[39m
+
+  [90m-[39m Wait up to 90 seconds for deployment to complete
+
+    [36m$ vercel inspect my-deployment.vercel.app --wait --timeout 90s[39m
+
+"
+`;
+
+exports[`help command > link help output snapshots > link help column width 40 1`] = `
+"
+  ▲ [1mvercel[22m [1mlink[22m [options]
+
+  Link a local directory to a Vercel    
+  Project.                              
+
+  [2mOptions[22m:
+
+  -p,  --project <NAME>  Specify a      
+                         project name   
+  -r,  --repo            Link multiple  
+                         projects based 
+                         on Git         
+                         repository     
+                         (alpha)        
+  -y,  --yes             Skip questions 
+                         when setting up
+                         new project    
+                         using default  
+                         scope and      
+                         settings       
+
+
+  [2mGlobal Options[22m:
+
+       --cwd <DIR>            Sets the  
+                              current   
+                              working   
+                              directory 
+                              for a     
+                              single run
+                              of a      
+                              command   
+  -d,  --debug                Debug mode
+                              (default  
+                              off)      
+  -Q,  --global-config <DIR>  Path to   
+                              the global
+                              \`.vercel\` 
+                              directory 
+  -h,  --help                 Output    
+                              usage     
+                              informati…
+  -A,  --local-config <FILE>  Path to   
+                              the local 
+                              \`vercel.j…
+                              file      
+       --no-color             No color  
+                              mode      
+                              (default  
+                              off)      
+  -S,  --scope                Set a     
+                              custom    
+                              scope     
+  -t,  --token <TOKEN>        Login     
+                              token     
+  -v,  --version              Output the
+                              version   
+                              number    
+
+
+  [2mExamples:[22m
+
+  [90m-[39m Link current directory to a Vercel Project
+
+    [36m$ vercel link[39m
+
+  [90m-[39m Link current directory with default options and skip questions
+
+    [36m$ vercel link --yes[39m
+
+  [90m-[39m Link a specific directory to a Vercel Project
+
+    [36m$ vercel link --cwd /path/to/project[39m
+
+  [90m-[39m Link to the current Git repository, allowing for multiple Vercel Projects to be linked simultaneously (useful for monorepos)
+
+    [36m$ vercel link --repo[39m
+
+"
+`;
+
+exports[`help command > link help output snapshots > link help column width 80 1`] = `
+"
+  ▲ [1mvercel[22m [1mlink[22m [options]
+
+  Link a local directory to a Vercel Project.                                   
+
+  [2mOptions[22m:
+
+  -p,  --project <NAME>  Specify a project name                                 
+  -r,  --repo            Link multiple projects based on Git repository (alpha) 
+  -y,  --yes             Skip questions when setting up new project using       
+                         default scope and settings                             
+
+
+  [2mGlobal Options[22m:
+
+       --cwd <DIR>            Sets the current working directory for a single   
+                              run of a command                                  
+  -d,  --debug                Debug mode (default off)                          
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory            
+  -h,  --help                 Output usage information                          
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file              
+       --no-color             No color mode (default off)                       
+  -S,  --scope                Set a custom scope                                
+  -t,  --token <TOKEN>        Login token                                       
+  -v,  --version              Output the version number                         
+
+
+  [2mExamples:[22m
+
+  [90m-[39m Link current directory to a Vercel Project
+
+    [36m$ vercel link[39m
+
+  [90m-[39m Link current directory with default options and skip questions
+
+    [36m$ vercel link --yes[39m
+
+  [90m-[39m Link a specific directory to a Vercel Project
+
+    [36m$ vercel link --cwd /path/to/project[39m
+
+  [90m-[39m Link to the current Git repository, allowing for multiple Vercel Projects to be linked simultaneously (useful for monorepos)
+
+    [36m$ vercel link --repo[39m
+
+"
+`;
+
+exports[`help command > link help output snapshots > link help column width 120 1`] = `
+"
+  ▲ [1mvercel[22m [1mlink[22m [options]
+
+  Link a local directory to a Vercel Project.                                                                           
+
+  [2mOptions[22m:
+
+  -p,  --project <NAME>  Specify a project name                                                                         
+  -r,  --repo            Link multiple projects based on Git repository (alpha)                                         
+  -y,  --yes             Skip questions when setting up new project using default scope and settings                    
+
+
+  [2mGlobal Options[22m:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  [2mExamples:[22m
+
+  [90m-[39m Link current directory to a Vercel Project
+
+    [36m$ vercel link[39m
+
+  [90m-[39m Link current directory with default options and skip questions
+
+    [36m$ vercel link --yes[39m
+
+  [90m-[39m Link a specific directory to a Vercel Project
+
+    [36m$ vercel link --cwd /path/to/project[39m
+
+  [90m-[39m Link to the current Git repository, allowing for multiple Vercel Projects to be linked simultaneously (useful for monorepos)
+
+    [36m$ vercel link --repo[39m
+
+"
+`;
+
+exports[`help command > list help output snapshots > list help column width 40 1`] = `
+"
+  ▲ [1mvercel[22m [1mlist[22m [app] [options]
+
+  List app deployments for an app.      
+
+  [2mOptions[22m:
+
+       --environment <production|preview>    
+       --meta <KEY=value>                  F…
+                                           d…
+                                           by
+                                           m…
+                                           (…
+                                           \`…
+                                           K…
+                                           C…
+                                           a…
+                                           m…
+                                           t…
+  -n,  --next <MS>                         S…
+                                           n…
+                                           p…
+                                           of
+                                           r…
+
+
+  [2mGlobal Options[22m:
+
+       --cwd <DIR>            Sets the  
+                              current   
+                              working   
+                              directory 
+                              for a     
+                              single run
+                              of a      
+                              command   
+  -d,  --debug                Debug mode
+                              (default  
+                              off)      
+  -Q,  --global-config <DIR>  Path to   
+                              the global
+                              \`.vercel\` 
+                              directory 
+  -h,  --help                 Output    
+                              usage     
+                              informati…
+  -A,  --local-config <FILE>  Path to   
+                              the local 
+                              \`vercel.j…
+                              file      
+       --no-color             No color  
+                              mode      
+                              (default  
+                              off)      
+  -S,  --scope                Set a     
+                              custom    
+                              scope     
+  -t,  --token <TOKEN>        Login     
+                              token     
+  -v,  --version              Output the
+                              version   
+                              number    
+
+
+  [2mExamples:[22m
+
+  [90m-[39m List all deployments for the currently linked project
+
+    [36m$ vercel list[39m
+
+  [90m-[39m List all deployments for the project \`my-app\` in the team of the currently linked project
+
+    [36m$ vercel list my-app[39m
+
+  [90m-[39m Filter deployments by metadata
+
+    [36m$ vercel list -m key1=value1 -m key2=value2[39m
+
+  [90m-[39m Paginate deployments for a project, where \`1584722256178\` is the time in milliseconds since the UNIX epoch
+
+    [36m$ vercel list my-app --next 1584722256178[39m
+
+"
+`;
+
+exports[`help command > list help output snapshots > list help column width 80 1`] = `
+"
+  ▲ [1mvercel[22m [1mlist[22m [app] [options]
+
+  List app deployments for an app.                                              
+
+  [2mOptions[22m:
+
+       --environment <production|preview>                                            
+       --meta <KEY=value>                  Filter deployments by metadata (e.g.: \`-m 
+                                           KEY=value\`). Can appear many times.       
+  -n,  --next <MS>                         Show next page of results                 
+
+
+  [2mGlobal Options[22m:
+
+       --cwd <DIR>            Sets the current working directory for a single   
+                              run of a command                                  
+  -d,  --debug                Debug mode (default off)                          
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory            
+  -h,  --help                 Output usage information                          
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file              
+       --no-color             No color mode (default off)                       
+  -S,  --scope                Set a custom scope                                
+  -t,  --token <TOKEN>        Login token                                       
+  -v,  --version              Output the version number                         
+
+
+  [2mExamples:[22m
+
+  [90m-[39m List all deployments for the currently linked project
+
+    [36m$ vercel list[39m
+
+  [90m-[39m List all deployments for the project \`my-app\` in the team of the currently linked project
+
+    [36m$ vercel list my-app[39m
+
+  [90m-[39m Filter deployments by metadata
+
+    [36m$ vercel list -m key1=value1 -m key2=value2[39m
+
+  [90m-[39m Paginate deployments for a project, where \`1584722256178\` is the time in milliseconds since the UNIX epoch
+
+    [36m$ vercel list my-app --next 1584722256178[39m
+
+"
+`;
+
+exports[`help command > list help output snapshots > list help column width 120 1`] = `
+"
+  ▲ [1mvercel[22m [1mlist[22m [app] [options]
+
+  List app deployments for an app.                                                                                      
+
+  [2mOptions[22m:
+
+       --environment <production|preview>                                                                                    
+       --meta <KEY=value>                  Filter deployments by metadata (e.g.: \`-m KEY=value\`). Can appear many times.     
+  -n,  --next <MS>                         Show next page of results                                                         
+
+
+  [2mGlobal Options[22m:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  [2mExamples:[22m
+
+  [90m-[39m List all deployments for the currently linked project
+
+    [36m$ vercel list[39m
+
+  [90m-[39m List all deployments for the project \`my-app\` in the team of the currently linked project
+
+    [36m$ vercel list my-app[39m
+
+  [90m-[39m Filter deployments by metadata
+
+    [36m$ vercel list -m key1=value1 -m key2=value2[39m
+
+  [90m-[39m Paginate deployments for a project, where \`1584722256178\` is the time in milliseconds since the UNIX epoch
+
+    [36m$ vercel list my-app --next 1584722256178[39m
+
+"
+`;
+
+exports[`help command > login help output snapshots > login help column width 40 1`] = `
+"
+  ▲ [1mvercel[22m [1mlogin[22m [email or team id] [options]
+
+  Authenticate using your email or team 
+  id.                                   
+
+  [2mOptions[22m:
+
+   --github  Log in with GitHub          
+   --oob     Log in with "out of band"   
+             authentication              
+
+
+  [2mGlobal Options[22m:
+
+       --cwd <DIR>            Sets the  
+                              current   
+                              working   
+                              directory 
+                              for a     
+                              single run
+                              of a      
+                              command   
+  -d,  --debug                Debug mode
+                              (default  
+                              off)      
+  -Q,  --global-config <DIR>  Path to   
+                              the global
+                              \`.vercel\` 
+                              directory 
+  -h,  --help                 Output    
+                              usage     
+                              informati…
+  -A,  --local-config <FILE>  Path to   
+                              the local 
+                              \`vercel.j…
+                              file      
+       --no-color             No color  
+                              mode      
+                              (default  
+                              off)      
+  -S,  --scope                Set a     
+                              custom    
+                              scope     
+  -t,  --token <TOKEN>        Login     
+                              token     
+  -v,  --version              Output the
+                              version   
+                              number    
+
+
+  [2mExamples:[22m
+
+  [90m-[39m Log into the Vercel platform
+
+    [36m$ vercel login[39m
+
+  [90m-[39m Log in using a specific email address
+
+    [36m$ vercel login username@example.com[39m
+
+  [90m-[39m Log in using a specific team "slug" for SAML Single Sign-On
+
+    [36m$ vercel login acme[39m
+
+  [90m-[39m Log in using GitHub in "out-of-band" mode
+
+    [36m$ vercel login --github --oob[39m
+
+"
+`;
+
+exports[`help command > login help output snapshots > login help column width 80 1`] = `
+"
+  ▲ [1mvercel[22m [1mlogin[22m [email or team id] [options]
+
+  Authenticate using your email or team id.                                     
+
+  [2mOptions[22m:
+
+   --github  Log in with GitHub                                                  
+   --oob     Log in with "out of band" authentication                            
+
+
+  [2mGlobal Options[22m:
+
+       --cwd <DIR>            Sets the current working directory for a single   
+                              run of a command                                  
+  -d,  --debug                Debug mode (default off)                          
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory            
+  -h,  --help                 Output usage information                          
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file              
+       --no-color             No color mode (default off)                       
+  -S,  --scope                Set a custom scope                                
+  -t,  --token <TOKEN>        Login token                                       
+  -v,  --version              Output the version number                         
+
+
+  [2mExamples:[22m
+
+  [90m-[39m Log into the Vercel platform
+
+    [36m$ vercel login[39m
+
+  [90m-[39m Log in using a specific email address
+
+    [36m$ vercel login username@example.com[39m
+
+  [90m-[39m Log in using a specific team "slug" for SAML Single Sign-On
+
+    [36m$ vercel login acme[39m
+
+  [90m-[39m Log in using GitHub in "out-of-band" mode
+
+    [36m$ vercel login --github --oob[39m
+
+"
+`;
+
+exports[`help command > login help output snapshots > login help column width 120 1`] = `
+"
+  ▲ [1mvercel[22m [1mlogin[22m [email or team id] [options]
+
+  Authenticate using your email or team id.                                                                             
+
+  [2mOptions[22m:
+
+   --github  Log in with GitHub                                                                                          
+   --oob     Log in with "out of band" authentication                                                                    
+
+
+  [2mGlobal Options[22m:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  [2mExamples:[22m
+
+  [90m-[39m Log into the Vercel platform
+
+    [36m$ vercel login[39m
+
+  [90m-[39m Log in using a specific email address
+
+    [36m$ vercel login username@example.com[39m
+
+  [90m-[39m Log in using a specific team "slug" for SAML Single Sign-On
+
+    [36m$ vercel login acme[39m
+
+  [90m-[39m Log in using GitHub in "out-of-band" mode
+
+    [36m$ vercel login --github --oob[39m
+
+"
+`;
+
+exports[`help command > project help output snapshots > project help column width 40 1`] = `
+"
+  ▲ [1mvercel[22m [1mproject[22m command [options]
+
+  Manage your Vercel Projects.          
+
+  [2mCommands[22m:
+
+  ls         Show all projects  
+             in the selected    
+             scope              
+  add  name  Add a new project  
+  rm   name  Remove a project   
+
+
+  [2mOptions[22m:
+
+  -N,  --next <MS>  Show next page of   
+                    results             
+
+
+  [2mGlobal Options[22m:
+
+       --cwd <DIR>            Sets the  
+                              current   
+                              working   
+                              directory 
+                              for a     
+                              single run
+                              of a      
+                              command   
+  -d,  --debug                Debug mode
+                              (default  
+                              off)      
+  -Q,  --global-config <DIR>  Path to   
+                              the global
+                              \`.vercel\` 
+                              directory 
+  -h,  --help                 Output    
+                              usage     
+                              informati…
+  -A,  --local-config <FILE>  Path to   
+                              the local 
+                              \`vercel.j…
+                              file      
+       --no-color             No color  
+                              mode      
+                              (default  
+                              off)      
+  -S,  --scope                Set a     
+                              custom    
+                              scope     
+  -t,  --token <TOKEN>        Login     
+                              token     
+  -v,  --version              Output the
+                              version   
+                              number    
+
+
+  [2mExamples:[22m
+
+  [90m-[39m Add a new project
+
+    [36m$ vercel project add my-project[39m
+
+  [90m-[39m Paginate projects, where \`1584722256178\` is the time in milliseconds since the UNIX epoch
+
+    [36m$ vercel project ls --next 1584722256178[39m
+
+"
+`;
+
+exports[`help command > project help output snapshots > project help column width 80 1`] = `
+"
+  ▲ [1mvercel[22m [1mproject[22m command [options]
+
+  Manage your Vercel Projects.                                                  
+
+  [2mCommands[22m:
+
+  ls         Show all projects in the selected scope                    
+  add  name  Add a new project                                          
+  rm   name  Remove a project                                           
+
+
+  [2mOptions[22m:
+
+  -N,  --next <MS>  Show next page of results                                   
+
+
+  [2mGlobal Options[22m:
+
+       --cwd <DIR>            Sets the current working directory for a single   
+                              run of a command                                  
+  -d,  --debug                Debug mode (default off)                          
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory            
+  -h,  --help                 Output usage information                          
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file              
+       --no-color             No color mode (default off)                       
+  -S,  --scope                Set a custom scope                                
+  -t,  --token <TOKEN>        Login token                                       
+  -v,  --version              Output the version number                         
+
+
+  [2mExamples:[22m
+
+  [90m-[39m Add a new project
+
+    [36m$ vercel project add my-project[39m
+
+  [90m-[39m Paginate projects, where \`1584722256178\` is the time in milliseconds since the UNIX epoch
+
+    [36m$ vercel project ls --next 1584722256178[39m
+
+"
+`;
+
+exports[`help command > project help output snapshots > project help column width 120 1`] = `
+"
+  ▲ [1mvercel[22m [1mproject[22m command [options]
+
+  Manage your Vercel Projects.                                                                                          
+
+  [2mCommands[22m:
+
+  ls         Show all projects in the selected scope                                                            
+  add  name  Add a new project                                                                                  
+  rm   name  Remove a project                                                                                   
+
+
+  [2mOptions[22m:
+
+  -N,  --next <MS>  Show next page of results                                                                           
+
+
+  [2mGlobal Options[22m:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  [2mExamples:[22m
+
+  [90m-[39m Add a new project
+
+    [36m$ vercel project add my-project[39m
+
+  [90m-[39m Paginate projects, where \`1584722256178\` is the time in milliseconds since the UNIX epoch
+
+    [36m$ vercel project ls --next 1584722256178[39m
+
+"
+`;
+
+exports[`help command > promote help output snapshots > promote help column width 40 1`] = `
+"
+  ▲ [1mvercel[22m [1mpromote[22m deployment id/url [options]
+
+  Promote an existing deployment to     
+  current.                              
+
+  [2mCommands[22m:
+
+  status  [project]  Show the   
+                     status of  
+                     any current
+                     pending    
+                     promotions 
+
+
+  [2mOptions[22m:
+
+   --timeout <timeout>  Time to wait for 
+                        promotion        
+                        completion [3m]  
+
+
+  [2mGlobal Options[22m:
+
+       --cwd <DIR>            Sets the  
+                              current   
+                              working   
+                              directory 
+                              for a     
+                              single run
+                              of a      
+                              command   
+  -d,  --debug                Debug mode
+                              (default  
+                              off)      
+  -Q,  --global-config <DIR>  Path to   
+                              the global
+                              \`.vercel\` 
+                              directory 
+  -h,  --help                 Output    
+                              usage     
+                              informati…
+  -A,  --local-config <FILE>  Path to   
+                              the local 
+                              \`vercel.j…
+                              file      
+       --no-color             No color  
+                              mode      
+                              (default  
+                              off)      
+  -S,  --scope                Set a     
+                              custom    
+                              scope     
+  -t,  --token <TOKEN>        Login     
+                              token     
+  -v,  --version              Output the
+                              version   
+                              number    
+
+
+  [2mExamples:[22m
+
+  [90m-[39m Show the status of any current pending promotions
+
+    [36m$ vercel promote[39m
+    [36m$ vercel promote status[39m
+    [36m$ vercel promote status <project>[39m
+    [36m$ vercel promote status --timeout 30s[39m
+
+  [90m-[39m Promote a deployment using id or url
+
+    [36m$ vercel promote <deployment id/url>[39m
+
+"
+`;
+
+exports[`help command > promote help output snapshots > promote help column width 80 1`] = `
+"
+  ▲ [1mvercel[22m [1mpromote[22m deployment id/url [options]
+
+  Promote an existing deployment to current.                                    
+
+  [2mCommands[22m:
+
+  status  [project]  Show the status of any current pending promotions  
+
+
+  [2mOptions[22m:
+
+   --timeout <timeout>  Time to wait for promotion completion [3m]               
+
+
+  [2mGlobal Options[22m:
+
+       --cwd <DIR>            Sets the current working directory for a single   
+                              run of a command                                  
+  -d,  --debug                Debug mode (default off)                          
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory            
+  -h,  --help                 Output usage information                          
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file              
+       --no-color             No color mode (default off)                       
+  -S,  --scope                Set a custom scope                                
+  -t,  --token <TOKEN>        Login token                                       
+  -v,  --version              Output the version number                         
+
+
+  [2mExamples:[22m
+
+  [90m-[39m Show the status of any current pending promotions
+
+    [36m$ vercel promote[39m
+    [36m$ vercel promote status[39m
+    [36m$ vercel promote status <project>[39m
+    [36m$ vercel promote status --timeout 30s[39m
+
+  [90m-[39m Promote a deployment using id or url
+
+    [36m$ vercel promote <deployment id/url>[39m
+
+"
+`;
+
+exports[`help command > promote help output snapshots > promote help column width 120 1`] = `
+"
+  ▲ [1mvercel[22m [1mpromote[22m deployment id/url [options]
+
+  Promote an existing deployment to current.                                                                            
+
+  [2mCommands[22m:
+
+  status  [project]  Show the status of any current pending promotions                                          
+
+
+  [2mOptions[22m:
+
+   --timeout <timeout>  Time to wait for promotion completion [3m]                                                       
+
+
+  [2mGlobal Options[22m:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  [2mExamples:[22m
+
+  [90m-[39m Show the status of any current pending promotions
+
+    [36m$ vercel promote[39m
+    [36m$ vercel promote status[39m
+    [36m$ vercel promote status <project>[39m
+    [36m$ vercel promote status --timeout 30s[39m
+
+  [90m-[39m Promote a deployment using id or url
+
+    [36m$ vercel promote <deployment id/url>[39m
+
+"
+`;
+
+exports[`help command > pull help output snapshots > pull help column width 40 1`] = `
+"
+  ▲ [1mvercel[22m [1mpull[22m [project-path] [options]
+
+  Pull latest environment variables and 
+  project settings from Vercel.         
+
+  [2mOptions[22m:
+
+       --environment <environment>  Deployme…
+                                    environm…
+                                    [develop…
+       --git-branch <branch>        Specify  
+                                    the Git  
+                                    branch to
+                                    pull     
+                                    specific 
+                                    Environm…
+                                    Variables
+                                    for      
+  -y,  --yes                        Skip     
+                                    questions
+                                    when     
+                                    setting  
+                                    up new   
+                                    project  
+                                    using    
+                                    default  
+                                    scope and
+                                    settings 
+
+
+  [2mGlobal Options[22m:
+
+       --cwd <DIR>            Sets the  
+                              current   
+                              working   
+                              directory 
+                              for a     
+                              single run
+                              of a      
+                              command   
+  -d,  --debug                Debug mode
+                              (default  
+                              off)      
+  -Q,  --global-config <DIR>  Path to   
+                              the global
+                              \`.vercel\` 
+                              directory 
+  -h,  --help                 Output    
+                              usage     
+                              informati…
+  -A,  --local-config <FILE>  Path to   
+                              the local 
+                              \`vercel.j…
+                              file      
+       --no-color             No color  
+                              mode      
+                              (default  
+                              off)      
+  -S,  --scope                Set a     
+                              custom    
+                              scope     
+  -t,  --token <TOKEN>        Login     
+                              token     
+  -v,  --version              Output the
+                              version   
+                              number    
+
+
+  [2mExamples:[22m
+
+  [90m-[39m Pull the latest Environment Variables and Project Settings from the cloud
+
+    [36m$ vercel pull[39m
+
+  [90m-[39m Pull the latest Environment Variables and Project Settings from the cloud targeting a directory
+
+    [36m$ vercel pull ./path-to-project[39m
+
+  [90m-[39m Pull for a specific environment
+
+    [36m$ vercel pull --environment=<production | preview | development>[39m
+
+  [90m-[39m Pull for a preview feature branch
+
+    [36m$ vercel pull --environment=preview --git-branch=feature-branch[39m
+
+  [90m-[39m If you want to download environment variables to a specific file, use \`vercel env pull\` instead
+
+    [36m$ vercel env pull[39m
+
+"
+`;
+
+exports[`help command > pull help output snapshots > pull help column width 80 1`] = `
+"
+  ▲ [1mvercel[22m [1mpull[22m [project-path] [options]
+
+  Pull latest environment variables and project settings from Vercel.           
+
+  [2mOptions[22m:
+
+       --environment <environment>  Deployment environment [development]             
+       --git-branch <branch>        Specify the Git branch to pull specific          
+                                    Environment Variables for                        
+  -y,  --yes                        Skip questions when setting up new project using 
+                                    default scope and settings                       
+
+
+  [2mGlobal Options[22m:
+
+       --cwd <DIR>            Sets the current working directory for a single   
+                              run of a command                                  
+  -d,  --debug                Debug mode (default off)                          
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory            
+  -h,  --help                 Output usage information                          
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file              
+       --no-color             No color mode (default off)                       
+  -S,  --scope                Set a custom scope                                
+  -t,  --token <TOKEN>        Login token                                       
+  -v,  --version              Output the version number                         
+
+
+  [2mExamples:[22m
+
+  [90m-[39m Pull the latest Environment Variables and Project Settings from the cloud
+
+    [36m$ vercel pull[39m
+
+  [90m-[39m Pull the latest Environment Variables and Project Settings from the cloud targeting a directory
+
+    [36m$ vercel pull ./path-to-project[39m
+
+  [90m-[39m Pull for a specific environment
+
+    [36m$ vercel pull --environment=<production | preview | development>[39m
+
+  [90m-[39m Pull for a preview feature branch
+
+    [36m$ vercel pull --environment=preview --git-branch=feature-branch[39m
+
+  [90m-[39m If you want to download environment variables to a specific file, use \`vercel env pull\` instead
+
+    [36m$ vercel env pull[39m
+
+"
+`;
+
+exports[`help command > pull help output snapshots > pull help column width 120 1`] = `
+"
+  ▲ [1mvercel[22m [1mpull[22m [project-path] [options]
+
+  Pull latest environment variables and project settings from Vercel.                                                   
+
+  [2mOptions[22m:
+
+       --environment <environment>  Deployment environment [development]                                                     
+       --git-branch <branch>        Specify the Git branch to pull specific Environment Variables for                        
+  -y,  --yes                        Skip questions when setting up new project using default scope and settings              
+
+
+  [2mGlobal Options[22m:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  [2mExamples:[22m
+
+  [90m-[39m Pull the latest Environment Variables and Project Settings from the cloud
+
+    [36m$ vercel pull[39m
+
+  [90m-[39m Pull the latest Environment Variables and Project Settings from the cloud targeting a directory
+
+    [36m$ vercel pull ./path-to-project[39m
+
+  [90m-[39m Pull for a specific environment
+
+    [36m$ vercel pull --environment=<production | preview | development>[39m
+
+  [90m-[39m Pull for a preview feature branch
+
+    [36m$ vercel pull --environment=preview --git-branch=feature-branch[39m
+
+  [90m-[39m If you want to download environment variables to a specific file, use \`vercel env pull\` instead
+
+    [36m$ vercel env pull[39m
+
+"
+`;
+
+exports[`help command > redeploy help output snapshots > redeploy help column width 40 1`] = `
+"
+  ▲ [1mvercel[22m [1mredeploy[22m [deploymentId|deploymentName] [options]
+
+  Rebuild and deploy a previous         
+  deployment.                           
+
+  [2mOptions[22m:
+
+   --no-wait  Don't wait for the redeploy
+              to finish                  
+
+
+  [2mGlobal Options[22m:
+
+       --cwd <DIR>            Sets the  
+                              current   
+                              working   
+                              directory 
+                              for a     
+                              single run
+                              of a      
+                              command   
+  -d,  --debug                Debug mode
+                              (default  
+                              off)      
+  -Q,  --global-config <DIR>  Path to   
+                              the global
+                              \`.vercel\` 
+                              directory 
+  -h,  --help                 Output    
+                              usage     
+                              informati…
+  -A,  --local-config <FILE>  Path to   
+                              the local 
+                              \`vercel.j…
+                              file      
+       --no-color             No color  
+                              mode      
+                              (default  
+                              off)      
+  -S,  --scope                Set a     
+                              custom    
+                              scope     
+  -t,  --token <TOKEN>        Login     
+                              token     
+  -v,  --version              Output the
+                              version   
+                              number    
+
+
+  [2mExamples:[22m
+
+  [90m-[39m Rebuild and deploy an existing deployment using id or url
+
+    [36m$ vercel redeploy my-deployment.vercel.app[39m
+
+  [90m-[39m Write Deployment URL to a file
+
+    [36m$ vercel redeploy my-deployment.vercel.app > deployment-url.txt[39m
+
+"
+`;
+
+exports[`help command > redeploy help output snapshots > redeploy help column width 80 1`] = `
+"
+  ▲ [1mvercel[22m [1mredeploy[22m [deploymentId|deploymentName] [options]
+
+  Rebuild and deploy a previous deployment.                                     
+
+  [2mOptions[22m:
+
+   --no-wait  Don't wait for the redeploy to finish                              
+
+
+  [2mGlobal Options[22m:
+
+       --cwd <DIR>            Sets the current working directory for a single   
+                              run of a command                                  
+  -d,  --debug                Debug mode (default off)                          
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory            
+  -h,  --help                 Output usage information                          
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file              
+       --no-color             No color mode (default off)                       
+  -S,  --scope                Set a custom scope                                
+  -t,  --token <TOKEN>        Login token                                       
+  -v,  --version              Output the version number                         
+
+
+  [2mExamples:[22m
+
+  [90m-[39m Rebuild and deploy an existing deployment using id or url
+
+    [36m$ vercel redeploy my-deployment.vercel.app[39m
+
+  [90m-[39m Write Deployment URL to a file
+
+    [36m$ vercel redeploy my-deployment.vercel.app > deployment-url.txt[39m
+
+"
+`;
+
+exports[`help command > redeploy help output snapshots > redeploy help column width 120 1`] = `
+"
+  ▲ [1mvercel[22m [1mredeploy[22m [deploymentId|deploymentName] [options]
+
+  Rebuild and deploy a previous deployment.                                                                             
+
+  [2mOptions[22m:
+
+   --no-wait  Don't wait for the redeploy to finish                                                                      
+
+
+  [2mGlobal Options[22m:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  [2mExamples:[22m
+
+  [90m-[39m Rebuild and deploy an existing deployment using id or url
+
+    [36m$ vercel redeploy my-deployment.vercel.app[39m
+
+  [90m-[39m Write Deployment URL to a file
+
+    [36m$ vercel redeploy my-deployment.vercel.app > deployment-url.txt[39m
+
+"
+`;
+
+exports[`help command > remove help output snapshots > remove help column width 40 1`] = `
+"
+  ▲ [1mvercel[22m [1mremove[22m ...deploymentId|deploymentName [options]
+
+  Remove a deployment by name or id.    
+
+  [2mOptions[22m:
+
+  -s,  --safe  Skip deployments with an 
+               active alias             
+  -y,  --yes   Skip confirmation        
+
+
+  [2mGlobal Options[22m:
+
+       --cwd <DIR>            Sets the  
+                              current   
+                              working   
+                              directory 
+                              for a     
+                              single run
+                              of a      
+                              command   
+  -d,  --debug                Debug mode
+                              (default  
+                              off)      
+  -Q,  --global-config <DIR>  Path to   
+                              the global
+                              \`.vercel\` 
+                              directory 
+  -h,  --help                 Output    
+                              usage     
+                              informati…
+  -A,  --local-config <FILE>  Path to   
+                              the local 
+                              \`vercel.j…
+                              file      
+       --no-color             No color  
+                              mode      
+                              (default  
+                              off)      
+  -S,  --scope                Set a     
+                              custom    
+                              scope     
+  -t,  --token <TOKEN>        Login     
+                              token     
+  -v,  --version              Output the
+                              version   
+                              number    
+
+
+  [2mExamples:[22m
+
+  [90m-[39m Remove a deployment identified by \`deploymentId\`
+
+    [36m$ vercel remove my-app[39m
+
+  [90m-[39m Remove all deployments with name \`my-app\`
+
+    [36m$ vercel remove deploymentId[39m
+
+  [90m-[39m Remove two deployments with IDs \`eyWt6zuSdeus\` and \`uWHoA9RQ1d1o\`
+
+    [36m$ vercel remove eyWt6zuSdeus uWHoA9RQ1d1o[39m
+
+"
+`;
+
+exports[`help command > remove help output snapshots > remove help column width 80 1`] = `
+"
+  ▲ [1mvercel[22m [1mremove[22m ...deploymentId|deploymentName [options]
+
+  Remove a deployment by name or id.                                            
+
+  [2mOptions[22m:
+
+  -s,  --safe  Skip deployments with an active alias                            
+  -y,  --yes   Skip confirmation                                                
+
+
+  [2mGlobal Options[22m:
+
+       --cwd <DIR>            Sets the current working directory for a single   
+                              run of a command                                  
+  -d,  --debug                Debug mode (default off)                          
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory            
+  -h,  --help                 Output usage information                          
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file              
+       --no-color             No color mode (default off)                       
+  -S,  --scope                Set a custom scope                                
+  -t,  --token <TOKEN>        Login token                                       
+  -v,  --version              Output the version number                         
+
+
+  [2mExamples:[22m
+
+  [90m-[39m Remove a deployment identified by \`deploymentId\`
+
+    [36m$ vercel remove my-app[39m
+
+  [90m-[39m Remove all deployments with name \`my-app\`
+
+    [36m$ vercel remove deploymentId[39m
+
+  [90m-[39m Remove two deployments with IDs \`eyWt6zuSdeus\` and \`uWHoA9RQ1d1o\`
+
+    [36m$ vercel remove eyWt6zuSdeus uWHoA9RQ1d1o[39m
+
+"
+`;
+
+exports[`help command > remove help output snapshots > remove help column width 120 1`] = `
+"
+  ▲ [1mvercel[22m [1mremove[22m ...deploymentId|deploymentName [options]
+
+  Remove a deployment by name or id.                                                                                    
+
+  [2mOptions[22m:
+
+  -s,  --safe  Skip deployments with an active alias                                                                    
+  -y,  --yes   Skip confirmation                                                                                        
+
+
+  [2mGlobal Options[22m:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  [2mExamples:[22m
+
+  [90m-[39m Remove a deployment identified by \`deploymentId\`
+
+    [36m$ vercel remove my-app[39m
+
+  [90m-[39m Remove all deployments with name \`my-app\`
+
+    [36m$ vercel remove deploymentId[39m
+
+  [90m-[39m Remove two deployments with IDs \`eyWt6zuSdeus\` and \`uWHoA9RQ1d1o\`
+
+    [36m$ vercel remove eyWt6zuSdeus uWHoA9RQ1d1o[39m
+
+"
+`;
+
+exports[`help command > rollback help output snapshots > rollback help column width 40 1`] = `
+"
+  ▲ [1mvercel[22m [1mrollback[22m deployment id/url [options]
+
+  Quickly revert back to a previous     
+  deployment.                           
+
+  [2mCommands[22m:
+
+  status  [project]  Show the   
+                     status of  
+                     any current
+                     pending    
+                     rollbacks  
+
+
+  [2mOptions[22m:
+
+   --timeout <timeout>  Time to wait for 
+                        rollback         
+                        completion [3m]  
+
+
+  [2mGlobal Options[22m:
+
+       --cwd <DIR>            Sets the  
+                              current   
+                              working   
+                              directory 
+                              for a     
+                              single run
+                              of a      
+                              command   
+  -d,  --debug                Debug mode
+                              (default  
+                              off)      
+  -Q,  --global-config <DIR>  Path to   
+                              the global
+                              \`.vercel\` 
+                              directory 
+  -h,  --help                 Output    
+                              usage     
+                              informati…
+  -A,  --local-config <FILE>  Path to   
+                              the local 
+                              \`vercel.j…
+                              file      
+       --no-color             No color  
+                              mode      
+                              (default  
+                              off)      
+  -S,  --scope                Set a     
+                              custom    
+                              scope     
+  -t,  --token <TOKEN>        Login     
+                              token     
+  -v,  --version              Output the
+                              version   
+                              number    
+
+
+  [2mExamples:[22m
+
+  [90m-[39m Show the status of any current pending rollbacks
+
+    [36m$ vercel rollback[39m
+    [36m$ vercel rollback status[39m
+    [36m$ vercel rollback status <project>[39m
+    [36m$ vercel rollback status --timeout 30s[39m
+
+  [90m-[39m Rollback a deployment using id or url
+
+    [36m$ vercel rollback <deployment id/url>[39m
+
+"
+`;
+
+exports[`help command > rollback help output snapshots > rollback help column width 80 1`] = `
+"
+  ▲ [1mvercel[22m [1mrollback[22m deployment id/url [options]
+
+  Quickly revert back to a previous deployment.                                 
+
+  [2mCommands[22m:
+
+  status  [project]  Show the status of any current pending rollbacks   
+
+
+  [2mOptions[22m:
+
+   --timeout <timeout>  Time to wait for rollback completion [3m]                
+
+
+  [2mGlobal Options[22m:
+
+       --cwd <DIR>            Sets the current working directory for a single   
+                              run of a command                                  
+  -d,  --debug                Debug mode (default off)                          
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory            
+  -h,  --help                 Output usage information                          
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file              
+       --no-color             No color mode (default off)                       
+  -S,  --scope                Set a custom scope                                
+  -t,  --token <TOKEN>        Login token                                       
+  -v,  --version              Output the version number                         
+
+
+  [2mExamples:[22m
+
+  [90m-[39m Show the status of any current pending rollbacks
+
+    [36m$ vercel rollback[39m
+    [36m$ vercel rollback status[39m
+    [36m$ vercel rollback status <project>[39m
+    [36m$ vercel rollback status --timeout 30s[39m
+
+  [90m-[39m Rollback a deployment using id or url
+
+    [36m$ vercel rollback <deployment id/url>[39m
+
+"
+`;
+
+exports[`help command > rollback help output snapshots > rollback help column width 120 1`] = `
+"
+  ▲ [1mvercel[22m [1mrollback[22m deployment id/url [options]
+
+  Quickly revert back to a previous deployment.                                                                         
+
+  [2mCommands[22m:
+
+  status  [project]  Show the status of any current pending rollbacks                                           
+
+
+  [2mOptions[22m:
+
+   --timeout <timeout>  Time to wait for rollback completion [3m]                                                        
+
+
+  [2mGlobal Options[22m:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  [2mExamples:[22m
+
+  [90m-[39m Show the status of any current pending rollbacks
+
+    [36m$ vercel rollback[39m
+    [36m$ vercel rollback status[39m
+    [36m$ vercel rollback status <project>[39m
+    [36m$ vercel rollback status --timeout 30s[39m
+
+  [90m-[39m Rollback a deployment using id or url
+
+    [36m$ vercel rollback <deployment id/url>[39m
+
+"
+`;
+
+exports[`help command > teams help output snapshots > teams help column width 40 1`] = `
+"
+  ▲ [1mvercel[22m [1mteams[22m [options]
+
+  Manage teams under your Vercel        
+  account                               
+
+  [2mCommands[22m:
+
+  add             Create a new  
+                  team          
+  ls              Show all teams
+                  you're a part 
+                  of            
+  switch  [name]  Switch to a   
+                  different team
+  invite  emails  Invite a new  
+                  member to a   
+                  team          
+
+
+  [2mOptions[22m:
+
+  -N,  --next <MS>  Show next page of   
+                    results             
+
+
+  [2mGlobal Options[22m:
+
+       --cwd <DIR>            Sets the  
+                              current   
+                              working   
+                              directory 
+                              for a     
+                              single run
+                              of a      
+                              command   
+  -d,  --debug                Debug mode
+                              (default  
+                              off)      
+  -Q,  --global-config <DIR>  Path to   
+                              the global
+                              \`.vercel\` 
+                              directory 
+  -h,  --help                 Output    
+                              usage     
+                              informati…
+  -A,  --local-config <FILE>  Path to   
+                              the local 
+                              \`vercel.j…
+                              file      
+       --no-color             No color  
+                              mode      
+                              (default  
+                              off)      
+  -S,  --scope                Set a     
+                              custom    
+                              scope     
+  -t,  --token <TOKEN>        Login     
+                              token     
+  -v,  --version              Output the
+                              version   
+                              number    
+
+
+  [2mExamples:[22m
+
+  [90m-[39m Switch to a team. If your team's url is 'vercel.com/name', then 'name' is the slug. If the slug is omitted, you can choose interactively.
+
+    [36m$ vercel teams switch <slug>[39m
+
+  [90m-[39m Invite new members (interactively)
+
+    [36m$ vercel teams invite[39m
+
+  [90m-[39m Invite multiple members simultaneously
+
+    [36m$ vercel teams invite abc@vercel.com xyz@vercel.com[39m
+
+  [90m-[39m Paginate results, where \`1584722256178\` is the time in milliseconds since the UNIX epoch.
+
+    [36m$ vercel teams ls --next 1584722256178[39m
+
+"
+`;
+
+exports[`help command > teams help output snapshots > teams help column width 80 1`] = `
+"
+  ▲ [1mvercel[22m [1mteams[22m [options]
+
+  Manage teams under your Vercel account                                        
+
+  [2mCommands[22m:
+
+  add             Create a new team                                     
+  ls              Show all teams you're a part of                       
+  switch  [name]  Switch to a different team                            
+  invite  emails  Invite a new member to a team                         
+
+
+  [2mOptions[22m:
+
+  -N,  --next <MS>  Show next page of results                                   
+
+
+  [2mGlobal Options[22m:
+
+       --cwd <DIR>            Sets the current working directory for a single   
+                              run of a command                                  
+  -d,  --debug                Debug mode (default off)                          
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory            
+  -h,  --help                 Output usage information                          
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file              
+       --no-color             No color mode (default off)                       
+  -S,  --scope                Set a custom scope                                
+  -t,  --token <TOKEN>        Login token                                       
+  -v,  --version              Output the version number                         
+
+
+  [2mExamples:[22m
+
+  [90m-[39m Switch to a team. If your team's url is 'vercel.com/name', then 'name' is the slug. If the slug is omitted, you can choose interactively.
+
+    [36m$ vercel teams switch <slug>[39m
+
+  [90m-[39m Invite new members (interactively)
+
+    [36m$ vercel teams invite[39m
+
+  [90m-[39m Invite multiple members simultaneously
+
+    [36m$ vercel teams invite abc@vercel.com xyz@vercel.com[39m
+
+  [90m-[39m Paginate results, where \`1584722256178\` is the time in milliseconds since the UNIX epoch.
+
+    [36m$ vercel teams ls --next 1584722256178[39m
+
+"
+`;
+
+exports[`help command > teams help output snapshots > teams help column width 120 1`] = `
+"
+  ▲ [1mvercel[22m [1mteams[22m [options]
+
+  Manage teams under your Vercel account                                                                                
+
+  [2mCommands[22m:
+
+  add             Create a new team                                                                             
+  ls              Show all teams you're a part of                                                               
+  switch  [name]  Switch to a different team                                                                    
+  invite  emails  Invite a new member to a team                                                                 
+
+
+  [2mOptions[22m:
+
+  -N,  --next <MS>  Show next page of results                                                                           
+
+
+  [2mGlobal Options[22m:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  [2mExamples:[22m
+
+  [90m-[39m Switch to a team. If your team's url is 'vercel.com/name', then 'name' is the slug. If the slug is omitted, you can choose interactively.
+
+    [36m$ vercel teams switch <slug>[39m
+
+  [90m-[39m Invite new members (interactively)
+
+    [36m$ vercel teams invite[39m
+
+  [90m-[39m Invite multiple members simultaneously
+
+    [36m$ vercel teams invite abc@vercel.com xyz@vercel.com[39m
+
+  [90m-[39m Paginate results, where \`1584722256178\` is the time in milliseconds since the UNIX epoch.
+
+    [36m$ vercel teams ls --next 1584722256178[39m
+
+"
+`;
+
+exports[`help command > whoami help output snapshots > whoami help column width 40 1`] = `
+"
+  ▲ [1mvercel[22m [1mwhoami[22m
+
+  Shows the username of the currently   
+  logged in user.                       
+
+  [2mGlobal Options[22m:
+
+       --cwd <DIR>            Sets the  
+                              current   
+                              working   
+                              directory 
+                              for a     
+                              single run
+                              of a      
+                              command   
+  -d,  --debug                Debug mode
+                              (default  
+                              off)      
+  -Q,  --global-config <DIR>  Path to   
+                              the global
+                              \`.vercel\` 
+                              directory 
+  -h,  --help                 Output    
+                              usage     
+                              informati…
+  -A,  --local-config <FILE>  Path to   
+                              the local 
+                              \`vercel.j…
+                              file      
+       --no-color             No color  
+                              mode      
+                              (default  
+                              off)      
+  -S,  --scope                Set a     
+                              custom    
+                              scope     
+  -t,  --token <TOKEN>        Login     
+                              token     
+  -v,  --version              Output the
+                              version   
+                              number    
+
+
+  [2mExamples:[22m
+
+  [90m-[39m Shows the username of the currently logged in user
+
+    [36m$ vercel whoami[39m
+
+"
+`;
+
+exports[`help command > whoami help output snapshots > whoami help column width 80 1`] = `
+"
+  ▲ [1mvercel[22m [1mwhoami[22m
+
+  Shows the username of the currently logged in user.                           
+
+  [2mGlobal Options[22m:
+
+       --cwd <DIR>            Sets the current working directory for a single   
+                              run of a command                                  
+  -d,  --debug                Debug mode (default off)                          
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory            
+  -h,  --help                 Output usage information                          
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file              
+       --no-color             No color mode (default off)                       
+  -S,  --scope                Set a custom scope                                
+  -t,  --token <TOKEN>        Login token                                       
+  -v,  --version              Output the version number                         
+
+
+  [2mExamples:[22m
+
+  [90m-[39m Shows the username of the currently logged in user
+
+    [36m$ vercel whoami[39m
+
+"
+`;
+
+exports[`help command > whoami help output snapshots > whoami help column width 120 1`] = `
+"
+  ▲ [1mvercel[22m [1mwhoami[22m
+
+  Shows the username of the currently logged in user.                                                                   
+
+  [2mGlobal Options[22m:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  [2mExamples:[22m
+
+  [90m-[39m Shows the username of the currently logged in user
+
+    [36m$ vercel whoami[39m
 
 "
 `;
