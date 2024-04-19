@@ -178,7 +178,29 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
     fetchOpts.headers['content-type'] = 'application/json';
     fetchOpts.body = JSON.stringify(probe.body);
   }
-  const { text, resp } = await fetchDeploymentUrl(probeUrl, fetchOpts);
+  let result = await fetchDeploymentUrl(probeUrl, fetchOpts);
+
+  // If we recieve the preview page from Vercel, the real page should appear momentarily,
+  // retry a few times before running the probe checks
+  const checkForPreviewPage = text => {
+    return text.includes('This page will update once the build completes');
+  };
+  let isShowingBuildPreviewPage = checkForPreviewPage(result.text);
+  for (let retryCount = 0; retryCount < 10; retryCount++) {
+    if (!isShowingBuildPreviewPage) {
+      break;
+    } else {
+      result = await fetchDeploymentUrl(probeUrl, fetchOpts);
+      isShowingBuildPreviewPage = checkForPreviewPage(result.text);
+    }
+    await new Promise(r => setTimeout(r, 1000));
+  }
+  if (isShowingBuildPreviewPage) {
+    throw new Error(`Timed out while waiting for preview page to be replaced`);
+  }
+
+  const { text, resp } = result;
+
   logWithinTest('finished testing', JSON.stringify(probe));
 
   let hadTest = false;
