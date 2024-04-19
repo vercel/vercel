@@ -315,8 +315,10 @@ export async function getDynamicRoutes({
   dynamicPages,
   isDev,
   routesManifest,
+  prerenderManifest,
   omittedRoutes,
   canUsePreviewMode,
+  canUseActionRewrite,
   bypassToken,
   isServerMode,
   dynamicMiddlewareRouteMap,
@@ -327,8 +329,10 @@ export async function getDynamicRoutes({
   dynamicPages: string[];
   isDev?: boolean;
   routesManifest?: RoutesManifest;
+  prerenderManifest?: NextPrerenderedRoutes;
   omittedRoutes?: ReadonlySet<string>;
   canUsePreviewMode?: boolean;
+  canUseActionRewrite?: boolean;
   bypassToken?: string;
   isServerMode?: boolean;
   dynamicMiddlewareRouteMap?: ReadonlyMap<string, RouteWithSrc>;
@@ -432,14 +436,21 @@ export async function getDynamicRoutes({
             dest: route.dest?.replace(/($|\?)/, '.rsc$1'),
           });
 
-          routes.push({
-            ...route,
-            src: route.src.replace(
-              new RegExp(escapeStringRegexp('(?:/)?$')),
-              '(?:\\.action)(?:/)?$'
-            ),
-            dest: route.dest?.replace(/($|\?)/, '.action$1'),
-          });
+          // push .action rewrites for dynamic routes if support is available
+          // and the dynamic route is in the prerender manifest
+          if (
+            canUseActionRewrite &&
+            prerenderManifest?.blockingFallbackRoutes[page]
+          ) {
+            routes.push({
+              ...route,
+              src: route.src.replace(
+                new RegExp(escapeStringRegexp('(?:/)?$')),
+                '(?:\\.action)(?:/)?$'
+              ),
+              dest: route.dest?.replace(/($|\?)/, '.action$1'),
+            });
+          }
 
           routes.push(route);
         }

@@ -1409,7 +1409,9 @@ export async function serverBuild({
     isDev: false,
     routesManifest,
     omittedRoutes: omittedPrerenderRoutes,
+    prerenderManifest,
     canUsePreviewMode,
+    canUseActionRewrite: hasActionOutputSupport,
     bypassToken: prerenderManifest.bypassToken || '',
     isServerMode: true,
     dynamicMiddlewareRouteMap: middleware.dynamicRouteMap,
@@ -2204,7 +2206,10 @@ export async function serverBuild({
           // all dynamic routes including non-SSG/SSP so that the priority
           // is correct
           dynamicRoutes
-            .filter(route => !route.src.includes('.rsc'))
+            .filter(
+              route =>
+                !route.src.includes('.rsc') && !route.src.includes('.action')
+            )
             .map(route => {
               route = Object.assign({}, route);
               let normalizedSrc = route.src;
