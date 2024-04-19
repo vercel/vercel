@@ -1,12 +1,14 @@
 {
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "docs:dev": "vitepress dev docs",
-    "docs:build": "vitepress build docs",
-    "docs:serve": "vitepress serve docs"
-  },
+  "name": "vitepress-template",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
   "devDependencies": {
-    "vitepress": "latest"
+    "vitepress": "1.1.3"
+  },
+  "scripts": {
+    "dev": "vitepress dev docs",
+    "build": "vitepress build docs",
+    "serve": "vitepress serve docs"
   }
 }
