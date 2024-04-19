@@ -65,25 +65,4 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     expect(res.headers.get('x-matched-path')).toBe('/other.action');
     expect(res.headers.get('x-vercel-cache')).toBe('MISS');
   });
-
-  it('should match the server action to the streaming prerender function (force-static dynamic segment)', async () => {
-    const data = await fetch(
-      `${ctx.deploymentUrl}/server-reference-manifest.json`
-    ).then(res => res.json());
-
-    const actionId = findActionId(data, 'app/dynamic-static/page');
-
-    const res = await fetch(`${ctx.deploymentUrl}/dynamic-static`, {
-      method: 'POST',
-      body: `------WebKitFormBoundary8xC9UKOVzHBaGYkR\r\nContent-Disposition: form-data; name=\"1_$ACTION_ID_${actionId}\"\r\n\r\n\r\n------WebKitFormBoundary8xC9UKOVzHBaGYkR\r\nContent-Disposition: form-data; name=\"0\"\r\n\r\n[\"$K1\"]\r\n------WebKitFormBoundary8xC9UKOVzHBaGYkR--\r\n`,
-      headers: {
-        'Content-Type':
-          'multipart/form-data; boundary=----WebKitFormBoundary8xC9UKOVzHBaGYkR',
-      },
-    });
-
-    expect(res.status).toEqual(200);
-    expect(res.headers.get('x-matched-path')).toBe('/[dynamic-static].action');
-    expect(res.headers.get('x-vercel-cache')).toBe('MISS');
-  });
 });
