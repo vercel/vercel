@@ -180,7 +180,7 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
   }
   let result = await fetchDeploymentUrl(probeUrl, fetchOpts);
 
-  // If we recieve the preview page from Vercel, the real page should appear momentarily,
+  // If we receive the preview page from Vercel, the real page should appear momentarily,
   // retry a few times before running the probe checks
   const checkForPreviewPage = text => {
     return text.includes('This page will update once the build completes');
