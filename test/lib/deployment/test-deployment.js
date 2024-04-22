@@ -192,6 +192,9 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
     } else {
       result = await fetchDeploymentUrl(probeUrl, fetchOpts);
       isShowingBuildPreviewPage = checkForPreviewPage(result.text);
+      if (!isShowingBuildPreviewPage) {
+        break;
+      }
     }
     await new Promise(r => setTimeout(r, 1000));
   }
