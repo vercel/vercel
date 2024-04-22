@@ -452,5 +452,5 @@ it('should not generate lambdas that conflict with static index route in app wit
       lambdas.add(item);
     }
   }
-  expect(lambdas.size).toBe(2);
+  expect(lambdas.size).toBe(1);
 });
