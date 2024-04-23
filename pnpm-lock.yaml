@@ -1203,8 +1203,8 @@ importers:
         specifier: 2.4.6
         version: 2.4.6
       source-map:
-        specifier: 0.7.3
-        version: 0.7.3
+        specifier: 0.7.4
+        version: 0.7.4
       test-listen:
         specifier: 1.1.0
         version: 1.1.0
@@ -3569,7 +3569,7 @@ packages:
       '@web3-storage/multipart-parser': 1.0.0
       cookie: 0.6.0
       set-cookie-parser: 2.6.0
-      source-map: 0.7.3
+      source-map: 0.7.4
       typescript: 4.9.5
     dev: true
 
@@ -4915,7 +4915,7 @@ packages:
     dependencies:
       '@types/node': 16.18.11
       '@types/source-list-map': 0.1.2
-      source-map: 0.7.3
+      source-map: 0.7.4
     dev: true
 
   /@types/webpack@4.41.33:
@@ -8645,7 +8645,7 @@ packages:
     dependencies:
       '@types/estree-jsx': 1.0.5
       astring: 1.8.6
-      source-map: 0.7.3
+      source-map: 0.7.4
     dev: true
 
   /estree-util-value-to-estree@1.3.0:
@@ -14189,11 +14189,10 @@ packages:
   /source-map@0.6.1:
     resolution: {integrity: sha512-UjgapumWlbMhkBgzT7Ykc5YXUT46F0iKu8SGXq0bcwP5dz/h0Plj6enJqjz1Zbq2l5WaqYnrVbwWOWMyF3F47g==}
     engines: {node: '>=0.10.0'}
-    requiresBuild: true
     dev: true
 
-  /source-map@0.7.3:
-    resolution: {integrity: sha512-CkCj6giN3S+n9qrYiBTX5gystlENnRW5jZeNLHpe6aue+SrHcG5VYwujhW9s4dY31mEGsxBDrHR6oI69fTXsaQ==}
+  /source-map@0.7.4:
+    resolution: {integrity: sha512-l3BikUxvPOcn5E74dZiq5BGsTb5yEwhaTSzccU6t4sDOH8NWJCstKO5QT2CvtFoK6F0saL7p9xHAqHOlCPJygA==}
     engines: {node: '>= 8'}
     dev: true
 
