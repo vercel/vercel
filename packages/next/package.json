@@ -40,7 +40,7 @@
     "@types/semver": "6.0.0",
     "@types/text-table": "0.2.1",
     "@types/webpack-sources": "3.2.0",
-    "@vercel/build-utils": "7.11.0",
+    "@vercel/build-utils": "7.12.0",
     "@vercel/routing-utils": "3.1.0",
     "async-sema": "3.0.1",
     "buffer-crc32": "0.2.13",
@@ -60,7 +60,7 @@
     "resolve-from": "5.0.0",
     "semver": "6.3.1",
     "set-cookie-parser": "2.4.6",
-    "source-map": "0.7.3",
+    "source-map": "0.7.4",
     "test-listen": "1.1.0",
     "text-table": "0.2.0",
     "webpack-sources": "3.2.3"
