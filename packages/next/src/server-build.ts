@@ -1409,6 +1409,7 @@ export async function serverBuild({
     isServerMode: true,
     dynamicMiddlewareRouteMap: middleware.dynamicRouteMap,
     experimentalPPRRoutes,
+    hasActionOutputSupport,
   }).then(arr =>
     localizeDynamicRoutes(
       arr,
