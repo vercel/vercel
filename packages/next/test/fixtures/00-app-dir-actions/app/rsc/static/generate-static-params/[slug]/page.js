@@ -13,3 +13,7 @@ export default async function Page() {
     </form>
   );
 }
+
+export function generateStaticParams() {
+  return [{ slug: 'pre-generated' }];
+}

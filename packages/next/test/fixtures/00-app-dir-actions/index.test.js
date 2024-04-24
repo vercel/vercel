@@ -13,7 +13,7 @@ function findActionId(page) {
       return actionId;
     }
   }
-  return null; 
+  return null;
 }
 
 describe(`${__dirname.split(path.sep).pop()}`, () => {
@@ -66,7 +66,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
       const body = await res.text();
       expect(body).toContain('1338');
       expect(res.headers.get('x-matched-path')).toBe(path);
-      expect(res.headers.get('x-vercel-cache')).toBe('MISS');
+      expect(res.headers.get('x-vercel-cache')).toBe('BYPASS');
     });
 
     it('should properly invoke the action on a dynamic page', async () => {
@@ -149,6 +149,54 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
       expect(res.headers.get('x-matched-path')).toBe(path);
       expect(res.headers.get('content-type')).toBe('text/x-component');
       expect(res.headers.get('x-vercel-cache')).toBe('MISS');
+    });
+
+    describe('generateStaticParams', () => {
+      it('should bypass the static cache for a server action when pre-generated', async () => {
+        const path = '/rsc/static/generate-static-params/pre-generated';
+        const actionId = findActionId('/rsc/static/generate-static-params/[slug]');
+
+        const res = await fetch(
+          `${ctx.deploymentUrl}${path}`,
+          {
+            method: 'POST',
+            body: `------WebKitFormBoundaryHcVuFa30AN0QV3uZ\r\nContent-Disposition: form-data; name=\"1_$ACTION_ID_${actionId}\"\r\n\r\n\r\n------WebKitFormBoundaryHcVuFa30AN0QV3uZ\r\nContent-Disposition: form-data; name=\"0\"\r\n\r\n[\"$K1\"]\r\n------WebKitFormBoundaryHcVuFa30AN0QV3uZ--\r\n`,
+            headers: {
+              'Content-Type':
+                'multipart/form-data; boundary=----WebKitFormBoundaryHcVuFa30AN0QV3uZ',
+              'Next-Action': actionId,
+            },
+          }
+        );
+
+        expect(res.status).toEqual(200);
+        expect(res.headers.get('x-matched-path')).toBe(path);
+        expect(res.headers.get('content-type')).toBe('text/x-component');
+        expect(res.headers.get('x-vercel-cache')).toBe('BYPASS');
+      });
+
+      it('should bypass the static cache for a server action when not pre-generated', async () => {
+        const page = '/rsc/static/generate-static-params/[slug]';
+        const actionId = findActionId(page);
+
+        const res = await fetch(
+          `${ctx.deploymentUrl}/rsc/static/generate-static-params/not-pre-generated`,
+          {
+            method: 'POST',
+            body: `------WebKitFormBoundaryHcVuFa30AN0QV3uZ\r\nContent-Disposition: form-data; name=\"1_$ACTION_ID_${actionId}\"\r\n\r\n\r\n------WebKitFormBoundaryHcVuFa30AN0QV3uZ\r\nContent-Disposition: form-data; name=\"0\"\r\n\r\n[\"$K1\"]\r\n------WebKitFormBoundaryHcVuFa30AN0QV3uZ--\r\n`,
+            headers: {
+              'Content-Type':
+                'multipart/form-data; boundary=----WebKitFormBoundaryHcVuFa30AN0QV3uZ',
+              'Next-Action': actionId,
+            },
+          }
+        );
+
+        expect(res.status).toEqual(200);
+        expect(res.headers.get('x-matched-path')).toBe(page);
+        expect(res.headers.get('content-type')).toBe('text/x-component');
+        expect(res.headers.get('x-vercel-cache')).toBe('BYPASS');
+      });
     });
   });
 });
