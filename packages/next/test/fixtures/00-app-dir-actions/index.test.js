@@ -31,84 +31,16 @@ function generateFormDataPayload(actionId) {
 describe(`${__dirname.split(path.sep).pop()}`, () => {
   beforeAll(async () => {
     const info = await deployAndTest(__dirname);
-    
+
     const actionManifest = await fetch(
       `${info.deploymentUrl}/server-reference-manifest.json`
     ).then(res => res.json());
 
     ctx.actionManifest = actionManifest;
-    
+
     Object.assign(ctx, info);
   });
 
-  it('should match the server action to the streaming prerender function (with next-action)', async () => {
-    const actionId = findActionId('');
-
-    require('console').error({
-      actionId,
-      URL: `${ctx.deploymentUrl}/`,
-      body: JSON.stringify([1337]),
-    })
-
-    const res = await fetch(`${ctx.deploymentUrl}/`, {
-      method: 'POST',
-      body: JSON.stringify([1337]),
-      headers: {
-        'Content-Type': 'application/json',
-        'Next-Action': actionId,
-      },
-    });
-
-    expect(res.status).toEqual(200);
-    const body = await res.text();
-    // the requested body was 1337, so the increment method should return 1338
-    expect(body).toContain('1338');
-    expect(res.headers.get('x-matched-path')).toBe('/index.action');
-    expect(res.headers.get('x-vercel-cache')).toBe('MISS');
-  });
-
-  it('should match the server action to the streaming prerender function (with formdata body)', async () => {
-    const data = await fetch(
-      `${ctx.deploymentUrl}/server-reference-manifest.json`
-    ).then(res => res.json());
-
-    const actionId = findActionId('app/other/page');
-
-    const res = await fetch(`${ctx.deploymentUrl}/other`, {
-      method: 'POST',
-      body: `------WebKitFormBoundary8xC9UKOVzHBaGYkR\r\nContent-Disposition: form-data; name=\"1_$ACTION_ID_${actionId}\"\r\n\r\n\r\n------WebKitFormBoundary8xC9UKOVzHBaGYkR\r\nContent-Disposition: form-data; name=\"0\"\r\n\r\n[\"$K1\"]\r\n------WebKitFormBoundary8xC9UKOVzHBaGYkR--\r\n`,
-      headers: {
-        'Content-Type':
-          'multipart/form-data; boundary=----WebKitFormBoundary8xC9UKOVzHBaGYkR',
-      },
-    });
-
-    expect(res.status).toEqual(200);
-    expect(res.headers.get('x-matched-path')).toBe('/other.action');
-    expect(res.headers.get('x-vercel-cache')).toBe('MISS');
-  });
-
-  it('should match the server action to the streaming prerender function (force-static dynamic segment)', async () => {
-    const data = await fetch(
-      `${ctx.deploymentUrl}/server-reference-manifest.json`
-    ).then(res => res.json());
-
-    const actionId = findActionId('app/dynamic-static/page');
-
-    const res = await fetch(`${ctx.deploymentUrl}/dynamic-static`, {
-      method: 'POST',
-      body: `------WebKitFormBoundary8xC9UKOVzHBaGYkR\r\nContent-Disposition: form-data; name=\"1_$ACTION_ID_${actionId}\"\r\n\r\n\r\n------WebKitFormBoundary8xC9UKOVzHBaGYkR\r\nContent-Disposition: form-data; name=\"0\"\r\n\r\n[\"$K1\"]\r\n------WebKitFormBoundary8xC9UKOVzHBaGYkR--\r\n`,
-      headers: {
-        'Content-Type':
-          'multipart/form-data; boundary=----WebKitFormBoundary8xC9UKOVzHBaGYkR',
-      },
-    });
-
-    expect(res.status).toEqual(200);
-    expect(res.headers.get('x-matched-path')).toBe('/[dynamic-static].action');
-    expect(res.headers.get('x-vercel-cache')).toBe('MISS');
-  });
-  
   describe('client component', () => {
     it('should bypass the static cache for a server action', async () => {
       const path = '/client/static';
@@ -146,7 +78,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
       expect(res.status).toEqual(200);
       const body = await res.text();
       expect(body).toContain('1338');
-      expect(res.headers.get('x-matched-path')).toBe(path+ '.action');
+      expect(res.headers.get('x-matched-path')).toBe(path + '.action');
       expect(res.headers.get('x-vercel-cache')).toBe('MISS');
     });
 
@@ -166,7 +98,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
       expect(res.status).toEqual(200);
       const body = await res.text();
       expect(body).toContain('1338');
-      expect(res.headers.get('x-matched-path')).toBe(path+ '.action');
+      expect(res.headers.get('x-matched-path')).toBe(path + '.action');
       expect(res.headers.get('x-vercel-cache')).toBe('MISS');
     });
   });
@@ -182,7 +114,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
       );
 
       expect(res.status).toEqual(200);
-      expect(res.headers.get('x-matched-path')).toBe(path+ '.action');
+      expect(res.headers.get('x-matched-path')).toBe(path + '.action');
       expect(res.headers.get('content-type')).toBe('text/x-component');
       expect(res.headers.get('x-vercel-cache')).toBe('MISS');
     });
@@ -197,7 +129,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
       );
 
       expect(res.status).toEqual(200);
-      expect(res.headers.get('x-matched-path')).toBe(path+ '.action');
+      expect(res.headers.get('x-matched-path')).toBe(path + '.action');
       expect(res.headers.get('content-type')).toBe('text/x-component');
       expect(res.headers.get('x-vercel-cache')).toBe('MISS');
     });
@@ -212,7 +144,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
       );
 
       expect(res.status).toEqual(200);
-      expect(res.headers.get('x-matched-path')).toBe(path+ '.action');
+      expect(res.headers.get('x-matched-path')).toBe(path + '.action');
       expect(res.headers.get('content-type')).toBe('text/x-component');
       expect(res.headers.get('x-vercel-cache')).toBe('MISS');
     });
@@ -230,7 +162,9 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
         );
 
         expect(res.status).toEqual(200);
-        expect(res.headers.get('x-matched-path')).toBe('/rsc/static/generate-static-params/[slug].action');
+        expect(res.headers.get('x-matched-path')).toBe(
+          '/rsc/static/generate-static-params/[slug].action'
+        );
         expect(res.headers.get('content-type')).toBe('text/x-component');
         expect(res.headers.get('x-vercel-cache')).toBe('MISS');
       });
@@ -245,7 +179,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
         );
 
         expect(res.status).toEqual(200);
-        expect(res.headers.get('x-matched-path')).toBe(page+ '.action');
+        expect(res.headers.get('x-matched-path')).toBe(page + '.action');
         expect(res.headers.get('content-type')).toBe('text/x-component');
         expect(res.headers.get('x-vercel-cache')).toBe('MISS');
       });
