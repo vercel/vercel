@@ -16,6 +16,18 @@ function findActionId(page) {
   return null;
 }
 
+function generateFormDataPayload(actionId) {
+  return {
+    method: 'POST',
+    body: `------WebKitFormBoundaryHcVuFa30AN0QV3uZ\r\nContent-Disposition: form-data; name=\"1_$ACTION_ID_${actionId}\"\r\n\r\n\r\n------WebKitFormBoundaryHcVuFa30AN0QV3uZ\r\nContent-Disposition: form-data; name=\"0\"\r\n\r\n[\"$K1\"]\r\n------WebKitFormBoundaryHcVuFa30AN0QV3uZ--\r\n`,
+    headers: {
+      'Content-Type':
+        'multipart/form-data; boundary=----WebKitFormBoundaryHcVuFa30AN0QV3uZ',
+      'Next-Action': actionId,
+    },
+  };
+}
+
 describe(`${__dirname.split(path.sep).pop()}`, () => {
   beforeAll(async () => {
     const info = await deployAndTest(__dirname);
@@ -95,15 +107,10 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
       const path = '/rsc/static';
       const actionId = findActionId(path);
 
-      const res = await fetch(`${ctx.deploymentUrl}${path}`, {
-        method: 'POST',
-        body: `------WebKitFormBoundaryHcVuFa30AN0QV3uZ\r\nContent-Disposition: form-data; name=\"1_$ACTION_ID_${actionId}\"\r\n\r\n\r\n------WebKitFormBoundaryHcVuFa30AN0QV3uZ\r\nContent-Disposition: form-data; name=\"0\"\r\n\r\n[\"$K1\"]\r\n------WebKitFormBoundaryHcVuFa30AN0QV3uZ--\r\n`,
-        headers: {
-          'Content-Type':
-            'multipart/form-data; boundary=----WebKitFormBoundaryHcVuFa30AN0QV3uZ',
-          'Next-Action': actionId,
-        },
-      });
+      const res = await fetch(
+        `${ctx.deploymentUrl}${path}`,
+        generateFormDataPayload(actionId)
+      );
 
       expect(res.status).toEqual(200);
       expect(res.headers.get('x-matched-path')).toBe(path);
@@ -115,15 +122,10 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
       const path = '/rsc/static/[dynamic-static]';
       const actionId = findActionId(path);
 
-      const res = await fetch(`${ctx.deploymentUrl}${path}`, {
-        method: 'POST',
-        body: `------WebKitFormBoundaryHcVuFa30AN0QV3uZ\r\nContent-Disposition: form-data; name=\"1_$ACTION_ID_${actionId}\"\r\n\r\n\r\n------WebKitFormBoundaryHcVuFa30AN0QV3uZ\r\nContent-Disposition: form-data; name=\"0\"\r\n\r\n[\"$K1\"]\r\n------WebKitFormBoundaryHcVuFa30AN0QV3uZ--\r\n`,
-        headers: {
-          'Content-Type':
-            'multipart/form-data; boundary=----WebKitFormBoundaryHcVuFa30AN0QV3uZ',
-          'Next-Action': actionId,
-        },
-      });
+      const res = await fetch(
+        `${ctx.deploymentUrl}${path}`,
+        generateFormDataPayload(actionId)
+      );
 
       expect(res.status).toEqual(200);
       expect(res.headers.get('x-matched-path')).toBe(path);
@@ -135,15 +137,10 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
       const path = '/rsc/dynamic';
       const actionId = findActionId(path);
 
-      const res = await fetch(`${ctx.deploymentUrl}${path}`, {
-        method: 'POST',
-        body: `------WebKitFormBoundaryHcVuFa30AN0QV3uZ\r\nContent-Disposition: form-data; name=\"1_$ACTION_ID_${actionId}\"\r\n\r\n\r\n------WebKitFormBoundaryHcVuFa30AN0QV3uZ\r\nContent-Disposition: form-data; name=\"0\"\r\n\r\n[\"$K1\"]\r\n------WebKitFormBoundaryHcVuFa30AN0QV3uZ--\r\n`,
-        headers: {
-          'Content-Type':
-            'multipart/form-data; boundary=----WebKitFormBoundaryHcVuFa30AN0QV3uZ',
-          'Next-Action': actionId,
-        },
-      });
+      const res = await fetch(
+        `${ctx.deploymentUrl}${path}`,
+        generateFormDataPayload(actionId)
+      );
 
       expect(res.status).toEqual(200);
       expect(res.headers.get('x-matched-path')).toBe(path);
@@ -154,19 +151,13 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     describe('generateStaticParams', () => {
       it('should bypass the static cache for a server action when pre-generated', async () => {
         const path = '/rsc/static/generate-static-params/pre-generated';
-        const actionId = findActionId('/rsc/static/generate-static-params/[slug]');
+        const actionId = findActionId(
+          '/rsc/static/generate-static-params/[slug]'
+        );
 
         const res = await fetch(
           `${ctx.deploymentUrl}${path}`,
-          {
-            method: 'POST',
-            body: `------WebKitFormBoundaryHcVuFa30AN0QV3uZ\r\nContent-Disposition: form-data; name=\"1_$ACTION_ID_${actionId}\"\r\n\r\n\r\n------WebKitFormBoundaryHcVuFa30AN0QV3uZ\r\nContent-Disposition: form-data; name=\"0\"\r\n\r\n[\"$K1\"]\r\n------WebKitFormBoundaryHcVuFa30AN0QV3uZ--\r\n`,
-            headers: {
-              'Content-Type':
-                'multipart/form-data; boundary=----WebKitFormBoundaryHcVuFa30AN0QV3uZ',
-              'Next-Action': actionId,
-            },
-          }
+          generateFormDataPayload(actionId)
         );
 
         expect(res.status).toEqual(200);
@@ -181,15 +172,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
 
         const res = await fetch(
           `${ctx.deploymentUrl}/rsc/static/generate-static-params/not-pre-generated`,
-          {
-            method: 'POST',
-            body: `------WebKitFormBoundaryHcVuFa30AN0QV3uZ\r\nContent-Disposition: form-data; name=\"1_$ACTION_ID_${actionId}\"\r\n\r\n\r\n------WebKitFormBoundaryHcVuFa30AN0QV3uZ\r\nContent-Disposition: form-data; name=\"0\"\r\n\r\n[\"$K1\"]\r\n------WebKitFormBoundaryHcVuFa30AN0QV3uZ--\r\n`,
-            headers: {
-              'Content-Type':
-                'multipart/form-data; boundary=----WebKitFormBoundaryHcVuFa30AN0QV3uZ',
-              'Next-Action': actionId,
-            },
-          }
+          generateFormDataPayload(actionId)
         );
 
         expect(res.status).toEqual(200);
