@@ -932,7 +932,7 @@ export async function serverBuild({
       inversedAppPathManifest,
     });
 
-    const appRouterStreamingPrerenderLambdaGroups: LambdaGroup[] = [];
+    const appRouterStreamingActionLambdaGroups: LambdaGroup[] = [];
 
     for (const group of appRouterLambdaGroups) {
       if (!group.isPrerenders || group.isExperimentalPPR) {
@@ -942,15 +942,10 @@ export async function serverBuild({
 
       // We create a streaming variant of the Prerender lambda group
       // to support actions that are part of a Prerender
-      if (
-        hasActionOutputSupport &&
-        group.isPrerenders &&
-        !group.isStreaming &&
-        !group.isExperimentalPPR
-      ) {
-        appRouterStreamingPrerenderLambdaGroups.push({
+      if (hasActionOutputSupport) {
+        appRouterStreamingActionLambdaGroups.push({
           ...group,
-          isActionPrerender: true,
+          isActionLambda: true,
           isStreaming: true,
         });
       }
@@ -1006,7 +1001,7 @@ export async function serverBuild({
             uncompressedLayerBytes: group.pseudoLayerUncompressedBytes,
           })),
           appRouterStreamingPrerenderLambdaGroups:
-            appRouterStreamingPrerenderLambdaGroups.map(group => ({
+            appRouterStreamingActionLambdaGroups.map(group => ({
               pages: group.pages,
               isPrerender: group.isPrerenders,
               pseudoLayerBytes: group.pseudoLayerBytes,
@@ -1029,7 +1024,7 @@ export async function serverBuild({
     const combinedGroups = [
       ...pageLambdaGroups,
       ...appRouterLambdaGroups,
-      ...appRouterStreamingPrerenderLambdaGroups,
+      ...appRouterStreamingActionLambdaGroups,
       ...apiLambdaGroups,
       ...appRouteHandlersLambdaGroups,
     ];
@@ -1239,7 +1234,7 @@ export async function serverBuild({
 
         let outputName = path.posix.join(entryDirectory, pageName);
 
-        if (group.isActionPrerender) {
+        if (group.isActionLambda) {
           // give the streaming prerenders a .action suffix
           outputName = `${outputName}.action`;
         }
