@@ -1,8 +1,6 @@
 {
   "dependencies": {
-    "next": "canary",
-    "react": "experimental",
-    "react-dom": "experimental"
+    "next": "canary"
   },
   "scripts": {
     "build": "next build && cp .next/server/server-reference-manifest.json public/"
