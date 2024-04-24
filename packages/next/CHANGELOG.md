@@ -1,5 +1,13 @@
 # @vercel/next
 
+## 4.2.2
+
+### Patch Changes
+
+- [next] revert .action rewrites ([#11470](https://github.com/vercel/vercel/pull/11470))
+
+- Next.js builds: support sectioned source maps ([#11453](https://github.com/vercel/vercel/pull/11453))
+
 ## 4.2.1
 
 ### Patch Changes
