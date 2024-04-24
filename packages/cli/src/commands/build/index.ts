@@ -43,7 +43,7 @@ import type { VercelConfig } from '@vercel/client';
 import pull from '../pull';
 import { staticFiles as getFiles } from '../../util/get-files';
 import Client from '../../util/client';
-import getArgs from '../../util/get-args';
+import { parseArguments } from '../../util/get-args';
 import cmd from '../../util/output/cmd';
 import * as cli from '../../util/pkg-name';
 import cliPkg from '../../util/pkg';
@@ -66,12 +66,13 @@ import {
 import { importBuilders } from '../../util/build/import-builders';
 import { initCorepack, cleanupCorepack } from '../../util/build/corepack';
 import { sortBuilders } from '../../util/build/sort-builders';
-import { toEnumerableError } from '../../util/error';
+import { handleError, toEnumerableError } from '../../util/error';
 import { validateConfig } from '../../util/validate-config';
 import { setMonorepoDefaultSettings } from '../../util/build/monorepo';
 import { help } from '../help';
 import { buildCommand } from './command';
 import { scrubArgv } from '../../util/build/scrub-argv';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
 
 type BuildResult = BuildResultV2 | BuildResultV3;
 
@@ -133,22 +134,26 @@ export default async function main(client: Client): Promise<number> {
     process.env.__VERCEL_BUILD_RUNNING = '1';
   }
 
-  // Parse CLI args
-  const argv = getArgs(client.argv.slice(2), {
-    '--output': String,
-    '--prod': Boolean,
-    '--yes': Boolean,
-    '-y': '--yes',
-  });
+  let parsedArgs = null;
 
-  if (argv['--help']) {
+  const flagsSpecification = getFlagsSpecification(buildCommand.options);
+
+  // Parse CLI args
+  try {
+    parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
+  } catch (error) {
+    handleError(error);
+    return 1;
+  }
+
+  if (parsedArgs.flags['--help']) {
     output.print(help(buildCommand, { columns: client.stderr.columns }));
     return 2;
   }
 
   // Build `target` influences which environment variables will be used
-  const target = argv['--prod'] ? 'production' : 'preview';
-  const yes = Boolean(argv['--yes']);
+  const target = parsedArgs.flags['--prod'] ? 'production' : 'preview';
+  const yes = Boolean(parsedArgs.flags['--yes']);
 
   try {
     await validateNpmrc(cwd);
@@ -213,8 +218,8 @@ export default async function main(client: Client): Promise<number> {
 
   // Delete output directory from potential previous build
   const defaultOutputDir = join(cwd, projectRootDirectory, OUTPUT_DIR);
-  const outputDir = argv['--output']
-    ? resolve(argv['--output'])
+  const outputDir = parsedArgs.flags['--output']
+    ? resolve(parsedArgs.flags['--output'])
     : defaultOutputDir;
   await Promise.all([
     fs.remove(outputDir),
