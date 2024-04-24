@@ -107,7 +107,7 @@ updates:
         update-types:
           - 'minor'
 
-  - directory: /packages/static-build/test/fixtures/ionic-react-v7
+  - directory: /packages/static-build/test/fixtures/ionic-react-v8
     schedule:
       interval: 'daily'
     open-pull-requests-limit: 1
