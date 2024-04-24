@@ -49,7 +49,7 @@ export const certsCommand: Command = {
       name: 'challenge-only',
       description: 'Only show challenges needed to issue a cert',
       shorthand: null,
-      type: String,
+      type: Boolean,
       deprecated: false,
     },
     {
@@ -82,16 +82,18 @@ export const certsCommand: Command = {
         'Number of results to return per page (default: 20, max: 100)',
       argument: 'VALUE',
       shorthand: null,
-      type: String,
+      type: Number,
       deprecated: false,
     },
     {
       name: 'next',
       description: 'Show next page of results',
-      shorthand: 'n',
-      type: String,
+      shorthand: 'N',
+      type: Number,
       deprecated: false,
     },
+    { name: 'overwrite', shorthand: null, type: Boolean, deprecated: false },
+    { name: 'output', shorthand: null, type: String, deprecated: false },
   ],
   examples: [
     {
