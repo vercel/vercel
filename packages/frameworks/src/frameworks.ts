@@ -1106,7 +1106,7 @@ export const frameworks = [
       },
       devCommand: {
         placeholder: 'vite dev',
-        value: 'vite dev --port $PORT',
+        value: 'vite dev',
       },
       outputDirectory: {
         value: 'public',
