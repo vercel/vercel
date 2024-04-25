@@ -696,6 +696,13 @@ export function getPathOverrideForPackageManager({
             detectedLockfile: 'pnpm-lock.yaml',
             detectedPackageManager: 'pnpm 8',
           };
+        case 'pnpm 9':
+          // pnpm 9
+          return {
+            path: '/pnpm9/node_modules/.bin',
+            detectedLockfile: 'pnpm-lock.yaml',
+            detectedPackageManager: 'pnpm 9',
+          };
         default:
           return no_override;
       }
