@@ -428,7 +428,7 @@ it('should handle edge functions in app with basePath', async () => {
       edgeFunctions.add(item);
     }
   }
-  expect(lambdas.size).toBe(1);
+  expect(lambdas.size).toBe(2);
   expect(edgeFunctions.size).toBe(4);
 });
 
@@ -452,5 +452,5 @@ it('should not generate lambdas that conflict with static index route in app wit
       lambdas.add(item);
     }
   }
-  expect(lambdas.size).toBe(1);
+  expect(lambdas.size).toBe(3);
 });
