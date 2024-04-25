@@ -1,5 +1,46 @@
 # vercel
 
+## 34.1.3
+
+### Patch Changes
+
+- Updated dependencies [[`5758838d0`](https://github.com/vercel/vercel/commit/5758838d090b9789ca6821e1122781352021109f)]:
+  - @vercel/next@4.2.3
+
+## 34.1.2
+
+### Patch Changes
+
+- Updated dependencies [[`64bd6dd05`](https://github.com/vercel/vercel/commit/64bd6dd0578d82f210b942b88baaa0673218d8b0), [`532885148`](https://github.com/vercel/vercel/commit/532885148b583700df5a120350c620af6ad34cd7), [`adcfc365a`](https://github.com/vercel/vercel/commit/adcfc365a7d375d7a70d434669e4472031693489)]:
+  - @vercel/next@4.2.2
+  - @vercel/python@4.2.0
+
+## 34.1.1
+
+### Patch Changes
+
+- Updated dependencies [[`f4c181a2c`](https://github.com/vercel/vercel/commit/f4c181a2c26b11afadf78e68baf1246a27240755), [`2826563ff`](https://github.com/vercel/vercel/commit/2826563ffab7ab01d3c85def2cad8c4041cd88b1)]:
+  - @vercel/static-build@2.5.0
+  - @vercel/build-utils@7.12.0
+  - @vercel/node@3.0.27
+
+## 34.1.0
+
+### Minor Changes
+
+- Don't propagate legacy env VERCEL_ANALYTICS_ID if @vercel/speed-insights package is detected ([#11305](https://github.com/vercel/vercel/pull/11305))
+
+### Patch Changes
+
+- Replace console.log that communicates to user with client.output methods ([#11353](https://github.com/vercel/vercel/pull/11353))
+
+- [cli] Do not pipe git stderr to user during successful `vc dev` run ([#11450](https://github.com/vercel/vercel/pull/11450))
+
+- fix: Sort default team to the top of the selection list ([#11451](https://github.com/vercel/vercel/pull/11451))
+
+- Updated dependencies [[`993a60ef7`](https://github.com/vercel/vercel/commit/993a60ef71d137955052255066bfc096e53630a1), [`949d84ad1`](https://github.com/vercel/vercel/commit/949d84ad1cdcd4f9ea44f8a165a193a488cb1a31), [`5bb96ea07`](https://github.com/vercel/vercel/commit/5bb96ea07289e7db66d28d08b372cf949f3d7e88), [`fd8031874`](https://github.com/vercel/vercel/commit/fd8031874300552b877329ec3f0798ec6706b630)]:
+  - @vercel/next@4.2.1
+
 ## 34.0.0
 
 ### Major Changes

@@ -247,15 +247,11 @@ it('Should provide lambda info when limit is hit (server build)', async () => {
     'Max serverless function size was exceeded for 2 functions'
   );
   expect(logs).toContain(
-    'Max serverless function size of 50 MB compressed or 250 MB uncompressed reached'
+    'Max serverless function size of 250 MB uncompressed reached'
   );
   expect(logs).toContain(`Serverless Function's page: api/both.js`);
-  expect(logs).toMatch(
-    /Large Dependencies.*?Uncompressed size.*?Compressed size/
-  );
-  expect(logs).toMatch(
-    /node_modules\/chrome-aws-lambda\/bin.*?\d{2}.*?MB.*?\d{2}.*?MB/
-  );
+  expect(logs).toMatch(/Large Dependencies.*?Uncompressed size/);
+  expect(logs).toMatch(/node_modules\/chrome-aws-lambda\/bin.*?\d{2}.*?MB/);
   expect(logs).toMatch(/node_modules\/@firebase\/firestore.*?\d{1}.*?MB/);
   expect(logs).toMatch(/big-image-1/);
   expect(logs).toMatch(/big-image-2/);
@@ -281,17 +277,13 @@ it('Should provide lambda info when limit is hit for internal pages (server buil
   console.log = origLog;
 
   expect(logs).toContain(
-    'Max serverless function size of 50 MB compressed or 250 MB uncompressed reached'
+    'Max serverless function size of 250 MB uncompressed reached'
   );
   // expect(logs).toContain(`Serverless Function's page: api/firebase.js`);
   expect(logs).toContain(`Serverless Function's page: api/chrome.js`);
   expect(logs).toContain(`Serverless Function's page: api/both.js`);
-  expect(logs).toMatch(
-    /Large Dependencies.*?Uncompressed size.*?Compressed size/
-  );
-  expect(logs).toMatch(
-    /node_modules\/chrome-aws-lambda\/bin.*?\d{2}.*?MB.*?\d{2}.*?MB/
-  );
+  expect(logs).toMatch(/Large Dependencies.*?Uncompressed size/);
+  expect(logs).toMatch(/node_modules\/chrome-aws-lambda\/bin.*?\d{2}.*?MB/);
   expect(logs).toMatch(/node_modules\/@firebase\/firestore.*?\d{1}.*?MB/);
   expect(logs).toMatch(/public\/big-image-1\.jpg/);
   expect(logs).toMatch(/public\/big-image-2\.jpg/);
@@ -320,12 +312,10 @@ it('Should provide lambda info when limit is hit (uncompressed)', async () => {
     'Max serverless function size was exceeded for 1 function'
   );
   expect(logs).toContain(
-    'Max serverless function size of 50 MB compressed or 250 MB uncompressed reached'
+    'Max serverless function size of 250 MB uncompressed reached'
   );
   expect(logs).toContain(`Serverless Function's page: api/hello.js`);
-  expect(logs).toMatch(
-    /Large Dependencies.*?Uncompressed size.*?Compressed size/
-  );
+  expect(logs).toMatch(/Large Dependencies.*?Uncompressed size/);
   expect(logs).toMatch(/data\.txt/);
   expect(logs).toMatch(/\.next\/server\/pages/);
 });
@@ -438,7 +428,7 @@ it('should handle edge functions in app with basePath', async () => {
       edgeFunctions.add(item);
     }
   }
-  expect(lambdas.size).toBe(1);
+  expect(lambdas.size).toBe(2);
   expect(edgeFunctions.size).toBe(4);
 });
 
@@ -462,5 +452,5 @@ it('should not generate lambdas that conflict with static index route in app wit
       lambdas.add(item);
     }
   }
-  expect(lambdas.size).toBe(1);
+  expect(lambdas.size).toBe(3);
 });

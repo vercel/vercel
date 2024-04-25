@@ -29,6 +29,7 @@ export const writeToConfigFile = (stuff: GlobalConfig): void => {
   } catch (err: unknown) {
     if (isErrnoException(err)) {
       if (isErrnoException(err) && err.code === 'EPERM') {
+        // eslint-disable-next-line no-console
         console.error(
           error(
             `Not able to create ${highlight(
@@ -38,6 +39,7 @@ export const writeToConfigFile = (stuff: GlobalConfig): void => {
         );
         process.exit(1);
       } else if (err.code === 'EBADF') {
+        // eslint-disable-next-line no-console
         console.error(
           error(
             `Not able to create ${highlight(
@@ -71,6 +73,7 @@ export const writeToAuthConfigFile = (authConfig: AuthConfig) => {
   } catch (err: unknown) {
     if (isErrnoException(err)) {
       if (err.code === 'EPERM') {
+        // eslint-disable-next-line no-console
         console.error(
           error(
             `Not able to create ${highlight(
@@ -80,6 +83,7 @@ export const writeToAuthConfigFile = (authConfig: AuthConfig) => {
         );
         process.exit(1);
       } else if (err.code === 'EBADF') {
+        // eslint-disable-next-line no-console
         console.error(
           error(
             `Not able to create ${highlight(
@@ -113,6 +117,7 @@ export function readLocalConfig(
     target = getLocalPathConfig(prefix);
   } catch (err) {
     if (err instanceof NowError) {
+      // eslint-disable-next-line no-console
       console.error(error(err.message));
       process.exit(1);
     } else {
@@ -130,11 +135,14 @@ export function readLocalConfig(
     }
   } catch (err: unknown) {
     if (isError(err) && err.name === 'JSONError') {
+      // eslint-disable-next-line no-console
       console.error(error(err.message));
     } else if (isErrnoException(err)) {
       const code = err.code ? ` (${err.code})` : '';
+      // eslint-disable-next-line no-console
       console.error(error(`Failed to read config file: ${target}${code}`));
     } else {
+      // eslint-disable-next-line no-console
       console.error(err);
     }
     process.exit(1);

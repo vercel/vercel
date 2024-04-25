@@ -111,3 +111,5 @@ export * from './types';
 export * from './errors';
 
 export { NODE_VERSIONS } from './fs/node-version';
+
+export { getInstalledPackageVersion } from './get-installed-package-version';

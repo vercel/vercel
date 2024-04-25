@@ -1,5 +1,31 @@
 # @vercel/next
 
+## 4.2.3
+
+### Patch Changes
+
+- [next] Reland add .action handling for dynamic routes ([#11487](https://github.com/vercel/vercel/pull/11487))
+
+## 4.2.2
+
+### Patch Changes
+
+- [next] revert .action rewrites ([#11470](https://github.com/vercel/vercel/pull/11470))
+
+- Next.js builds: support sectioned source maps ([#11453](https://github.com/vercel/vercel/pull/11453))
+
+## 4.2.1
+
+### Patch Changes
+
+- [next] add streaming prerender group for actions ([#11454](https://github.com/vercel/vercel/pull/11454))
+
+- [next] Ensure \_not-found is included properly in app router functions ([#11441](https://github.com/vercel/vercel/pull/11441))
+
+- [next] add .action handling for dynamic routes ([#11461](https://github.com/vercel/vercel/pull/11461))
+
+- [next] Remove un-necessary compressed function size calc/constraint ([#11442](https://github.com/vercel/vercel/pull/11442))
+
 ## 4.2.0
 
 ### Minor Changes

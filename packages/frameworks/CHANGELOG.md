@@ -1,5 +1,11 @@
 # @vercel/frameworks
 
+## 3.0.2
+
+### Patch Changes
+
+- Update framework detection to support SolidStart v1 ([#11308](https://github.com/vercel/vercel/pull/11308))
+
 ## 3.0.1
 
 ### Patch Changes
