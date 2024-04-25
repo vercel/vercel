@@ -24,18 +24,16 @@ exports[`help command > alias help output snapshots > alias help column width 40
 
   [2mOptions[22m:
 
-  -n,  --limit <NUMBER>  Number of      
-                         results to     
-                         return per page
-                         (default: 20,  
-                         max: 100)      
-  -n,  --next <MS>       Show next page 
-                         of results     
-  -y,  --yes             Skip the       
-                         confirmation   
-                         prompt when    
-                         removing an    
-                         alias          
+       --limit <NUMBER>  Number of results to
+                         return per page     
+                         (default: 20, max:  
+                         100)                
+  -N,  --next <MS>       Show next page of   
+                         results             
+  -y,  --yes             Skip the            
+                         confirmation prompt 
+                         when removing an    
+                         alias               
 
 
   [2mGlobal Options[22m:
@@ -108,10 +106,9 @@ exports[`help command > alias help output snapshots > alias help column width 80
 
   [2mOptions[22m:
 
-  -n,  --limit <NUMBER>  Number of results to return per page (default: 20, max:
-                         100)                                                   
-  -n,  --next <MS>       Show next page of results                              
-  -y,  --yes             Skip the confirmation prompt when removing an alias    
+       --limit <NUMBER>  Number of results to return per page (default: 20, max: 100)
+  -N,  --next <MS>       Show next page of results                                   
+  -y,  --yes             Skip the confirmation prompt when removing an alias         
 
 
   [2mGlobal Options[22m:
@@ -160,9 +157,9 @@ exports[`help command > alias help output snapshots > alias help column width 12
 
   [2mOptions[22m:
 
-  -n,  --limit <NUMBER>  Number of results to return per page (default: 20, max: 100)                                   
-  -n,  --next <MS>       Show next page of results                                                                      
-  -y,  --yes             Skip the confirmation prompt when removing an alias                                            
+       --limit <NUMBER>  Number of results to return per page (default: 20, max: 100)                                        
+  -N,  --next <MS>       Show next page of results                                                                           
+  -y,  --yes             Skip the confirmation prompt when removing an alias                                                 
 
 
   [2mGlobal Options[22m:
