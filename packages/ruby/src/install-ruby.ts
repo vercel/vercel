@@ -9,6 +9,7 @@ interface RubyVersion extends NodeVersion {
 
 function getOptions() {
   const options = [
+    { major: 3, minor: 3, range: '3.3.x', runtime: 'ruby3.3' },
     { major: 3, minor: 2, range: '3.2.x', runtime: 'ruby3.2' },
     {
       major: 2,
