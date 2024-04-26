@@ -183,6 +183,9 @@ updates:
       - 'trek'
       - 'TooTallNate'
       - 'EndangeredMassa'
+      - 'erikareads'
+      - 'jeffsee55'
+      - 'onsclom'
     commit-message:
       prefix: '[framework-fixtures]'
     package-ecosystem: 'npm'
