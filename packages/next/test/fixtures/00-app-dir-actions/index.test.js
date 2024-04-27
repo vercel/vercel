@@ -82,6 +82,25 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
       expect(res.headers.get('x-vercel-cache')).toBe('MISS');
     });
 
+    it('should bypass the static cache for a multipart request (no action header)', async () => {
+      const path = '/client/static';
+      const actionId = findActionId(path);
+
+      const res = await fetch(`${ctx.deploymentUrl}${path}`, {
+        method: 'POST',
+        body: `------WebKitFormBoundaryHcVuFa30AN0QV3uZ\r\nContent-Disposition: form-data; name=\"1_$ACTION_ID_${actionId}\"\r\n\r\n\r\n------WebKitFormBoundaryHcVuFa30AN0QV3uZ\r\nContent-Disposition: form-data; name=\"0\"\r\n\r\n[\"$K1\"]\r\n------WebKitFormBoundaryHcVuFa30AN0QV3uZ--\r\n`,
+        headers: {
+          'Content-Type':
+            'multipart/form-data; boundary=----WebKitFormBoundaryHcVuFa30AN0QV3uZ',
+        },
+      });
+
+      expect(res.status).toEqual(200);
+      expect(res.headers.get('content-type')).toBe('text/html; charset=utf-8');
+      expect(res.headers.get('x-vercel-cache')).toBe('BYPASS');
+      expect(res.headers.get('x-matched-path')).toBe(path);
+    });
+
     it('should properly invoke the action on a dynamic page', async () => {
       const path = '/client/dynamic/[id]';
       const actionId = findActionId(path);
