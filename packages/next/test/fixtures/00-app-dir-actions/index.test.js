@@ -185,4 +185,31 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
       });
     });
   });
+
+  describe('pages', () => {
+    it('should not attempt to rewrite the action path for a server action (POST)', async () => {
+      const res = await fetch(`${ctx.deploymentUrl}/api/test`, {
+        method: 'POST',
+        headers: {
+          'Content-Type':
+            'multipart/form-data; boundary=----WebKitFormBoundaryHcVuFa30AN0QV3uZ',
+        },
+      });
+
+      expect(res.status).toEqual(200);
+      expect(res.headers.get('x-matched-path')).toBe('/api/test');
+      expect(res.headers.get('x-vercel-cache')).toBe('MISS');
+      const body = await res.json();
+      expect(body).toEqual({ message: 'Hello from Next.js!' });
+    });
+
+    it('should not attempt to rewrite the action path for a server action (GET)', async () => {
+      const res = await fetch(`${ctx.deploymentUrl}/api/test`);
+
+      expect(res.status).toEqual(200);
+      expect(res.headers.get('x-matched-path')).toBe('/api/test');
+      const body = await res.json();
+      expect(body).toEqual({ message: 'Hello from Next.js!' });
+    });
+  });
 });

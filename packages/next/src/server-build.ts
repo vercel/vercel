@@ -1956,19 +1956,6 @@ export async function serverBuild({
                     override: true,
                   },
                   {
-                    src: `^${path.posix.join('/', entryDirectory, '/')}`,
-                    dest: path.posix.join('/', entryDirectory, '/index.action'),
-                    has: [
-                      {
-                        type: 'header',
-                        key: 'content-type',
-                        value: 'multipart/form-data;.*',
-                      },
-                    ],
-                    continue: true,
-                    override: true,
-                  },
-                  {
                     src: `^${path.posix.join(
                       '/',
                       entryDirectory,
@@ -1979,23 +1966,6 @@ export async function serverBuild({
                       {
                         type: 'header',
                         key: 'next-action',
-                      },
-                    ],
-                    continue: true,
-                    override: true,
-                  },
-                  {
-                    src: `^${path.posix.join(
-                      '/',
-                      entryDirectory,
-                      '/((?!.+\\.action).+?)(?:/)?$'
-                    )}`,
-                    dest: path.posix.join('/', entryDirectory, '/$1.action'),
-                    has: [
-                      {
-                        type: 'header',
-                        key: 'content-type',
-                        value: 'multipart/form-data;.*',
                       },
                     ],
                     continue: true,
