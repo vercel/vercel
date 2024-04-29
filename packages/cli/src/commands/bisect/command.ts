@@ -27,7 +27,7 @@ export const bisectCommand: Command = {
       description: 'Automatically open each URL in the browser',
       argument: 'URL',
       shorthand: 'o',
-      type: String,
+      type: Boolean,
       deprecated: false,
     },
     {
