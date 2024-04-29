@@ -51,6 +51,7 @@ import {
   normalizePrefetches,
   CreateLambdaFromPseudoLayersOptions,
   getPostponeResumePathname,
+  LambdaGroup,
   MAX_UNCOMPRESSED_LAMBDA_SIZE,
 } from './utils';
 import {
@@ -68,6 +69,7 @@ const CORRECT_NOT_FOUND_ROUTES_VERSION = 'v12.0.1';
 const CORRECT_MIDDLEWARE_ORDER_VERSION = 'v12.1.7-canary.29';
 const NEXT_DATA_MIDDLEWARE_RESOLVING_VERSION = 'v12.1.7-canary.33';
 const EMPTY_ALLOW_QUERY_FOR_PRERENDERED_VERSION = 'v12.2.0';
+const ACTION_OUTPUT_SUPPORT_VERSION = 'v14.2.2';
 const CORRECTED_MANIFESTS_VERSION = 'v12.2.0';
 
 // Ideally this should be in a Next.js manifest so we can change it in
@@ -198,6 +200,10 @@ export async function serverBuild({
   const isEmptyAllowQueryForPrendered = semver.gte(
     nextVersion,
     EMPTY_ALLOW_QUERY_FOR_PRERENDERED_VERSION
+  );
+  const hasActionOutputSupport = semver.gte(
+    nextVersion,
+    ACTION_OUTPUT_SUPPORT_VERSION
   );
   const projectDir = requiredServerFilesManifest.relativeAppDir
     ? path.join(baseDir, requiredServerFilesManifest.relativeAppDir)
@@ -926,11 +932,23 @@ export async function serverBuild({
       inversedAppPathManifest,
     });
 
+    const appRouterStreamingActionLambdaGroups: LambdaGroup[] = [];
+
     for (const group of appRouterLambdaGroups) {
       if (!group.isPrerenders || group.isExperimentalPPR) {
         group.isStreaming = true;
       }
       group.isAppRouter = true;
+
+      // We create a streaming variant of the Prerender lambda group
+      // to support actions that are part of a Prerender
+      if (hasActionOutputSupport) {
+        appRouterStreamingActionLambdaGroups.push({
+          ...group,
+          isActionLambda: true,
+          isStreaming: true,
+        });
+      }
     }
 
     for (const group of appRouteHandlersLambdaGroups) {
@@ -982,6 +1000,13 @@ export async function serverBuild({
             pseudoLayerBytes: group.pseudoLayerBytes,
             uncompressedLayerBytes: group.pseudoLayerUncompressedBytes,
           })),
+          appRouterStreamingPrerenderLambdaGroups:
+            appRouterStreamingActionLambdaGroups.map(group => ({
+              pages: group.pages,
+              isPrerender: group.isPrerenders,
+              pseudoLayerBytes: group.pseudoLayerBytes,
+              uncompressedLayerBytes: group.pseudoLayerUncompressedBytes,
+            })),
           appRouteHandlersLambdaGroups: appRouteHandlersLambdaGroups.map(
             group => ({
               pages: group.pages,
@@ -999,6 +1024,7 @@ export async function serverBuild({
     const combinedGroups = [
       ...pageLambdaGroups,
       ...appRouterLambdaGroups,
+      ...appRouterStreamingActionLambdaGroups,
       ...apiLambdaGroups,
       ...appRouteHandlersLambdaGroups,
     ];
@@ -1208,6 +1234,11 @@ export async function serverBuild({
 
         let outputName = path.posix.join(entryDirectory, pageName);
 
+        if (group.isActionLambda) {
+          // give the streaming prerenders a .action suffix
+          outputName = `${outputName}.action`;
+        }
+
         // If this is a PPR page, then we should prefix the output name.
         if (isPPR) {
           if (!revalidate) {
@@ -1378,6 +1409,7 @@ export async function serverBuild({
     isServerMode: true,
     dynamicMiddlewareRouteMap: middleware.dynamicRouteMap,
     experimentalPPRRoutes,
+    hasActionOutputSupport,
   }).then(arr =>
     localizeDynamicRoutes(
       arr,
@@ -1900,6 +1932,72 @@ export async function serverBuild({
                       `/$1${RSC_PREFETCH_SUFFIX}`
                     ),
                     headers: { vary: rscVaryHeader },
+                    continue: true,
+                    override: true,
+                  },
+                ]
+              : []),
+            ...(hasActionOutputSupport
+              ? [
+                  // Create rewrites for streaming prerenders (.action routes)
+                  // This contains separate rewrites for each possible "has" (action header, or content-type)
+                  // Also includes separate handling for index routes which should match to /index.action.
+                  // This follows the same pattern as the rewrites for .rsc files.
+                  {
+                    src: `^${path.posix.join('/', entryDirectory, '/')}`,
+                    dest: path.posix.join('/', entryDirectory, '/index.action'),
+                    has: [
+                      {
+                        type: 'header',
+                        key: 'next-action',
+                      },
+                    ],
+                    continue: true,
+                    override: true,
+                  },
+                  {
+                    src: `^${path.posix.join('/', entryDirectory, '/')}`,
+                    dest: path.posix.join('/', entryDirectory, '/index.action'),
+                    has: [
+                      {
+                        type: 'header',
+                        key: 'content-type',
+                        value: 'multipart/form-data;.*',
+                      },
+                    ],
+                    continue: true,
+                    override: true,
+                  },
+                  {
+                    src: `^${path.posix.join(
+                      '/',
+                      entryDirectory,
+                      '/((?!.+\\.action).+?)(?:/)?$'
+                    )}`,
+                    dest: path.posix.join('/', entryDirectory, '/$1.action'),
+                    has: [
+                      {
+                        type: 'header',
+                        key: 'next-action',
+                      },
+                    ],
+                    continue: true,
+                    override: true,
+                  },
+                  {
+                    src: `^${path.posix.join(
+                      '/',
+                      entryDirectory,
+                      '/((?!.+\\.action).+?)(?:/)?$'
+                    )}`,
+                    dest: path.posix.join('/', entryDirectory, '/$1.action'),
+                    has: [
+                      {
+                        type: 'header',
+                        key: 'content-type',
+                        value: 'multipart/form-data;.*',
+                      },
+                    ],
                     continue: true,
                     override: true,
                   },

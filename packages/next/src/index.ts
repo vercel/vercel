@@ -1928,6 +1928,7 @@ export const build: BuildV2 = async ({
       bypassToken: prerenderManifest.bypassToken || '',
       isServerMode,
       experimentalPPRRoutes,
+      hasActionOutputSupport: false,
     }).then(arr =>
       localizeDynamicRoutes(
         arr,
@@ -1958,6 +1959,7 @@ export const build: BuildV2 = async ({
         bypassToken: prerenderManifest.bypassToken || '',
         isServerMode,
         experimentalPPRRoutes,
+        hasActionOutputSupport: false,
       }).then(arr =>
         arr.map(route => {
           route.src = route.src.replace('^', `^${dynamicPrefix}`);
