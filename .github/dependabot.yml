@@ -223,6 +223,30 @@ updates:
         update-types:
           - 'minor'
 
+  - directory: /packages/static-build/test/fixtures/vite-v5
+    schedule:
+      interval: 'daily'
+    open-pull-requests-limit: 1
+    reviewers:
+      - 'trek'
+      - 'TooTallNate'
+      - 'EndangeredMassa'
+    commit-message:
+      prefix: '[framework-fixtures]'
+    package-ecosystem: 'npm'
+    allow:
+      - dependency-name: 'vite'
+    ignore:
+      - dependency-name: 'vite'
+        update-types:
+          ['version-update:semver-major', 'version-update:semver-patch']
+    groups:
+      core:
+        patterns:
+          - 'vite'
+        update-types:
+          - 'minor'
+
   - directory: /packages/static-build/test/fixtures/vitepress
     schedule:
       interval: 'daily'

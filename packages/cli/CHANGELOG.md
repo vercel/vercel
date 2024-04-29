@@ -1,5 +1,20 @@
 # vercel
 
+## 34.1.3
+
+### Patch Changes
+
+- Updated dependencies [[`5758838d0`](https://github.com/vercel/vercel/commit/5758838d090b9789ca6821e1122781352021109f)]:
+  - @vercel/next@4.2.3
+
+## 34.1.2
+
+### Patch Changes
+
+- Updated dependencies [[`64bd6dd05`](https://github.com/vercel/vercel/commit/64bd6dd0578d82f210b942b88baaa0673218d8b0), [`532885148`](https://github.com/vercel/vercel/commit/532885148b583700df5a120350c620af6ad34cd7), [`adcfc365a`](https://github.com/vercel/vercel/commit/adcfc365a7d375d7a70d434669e4472031693489)]:
+  - @vercel/next@4.2.2
+  - @vercel/python@4.2.0
+
 ## 34.1.1
 
 ### Patch Changes
