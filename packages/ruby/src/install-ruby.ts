@@ -31,7 +31,7 @@ function getLatestRubyVersion(): RubyVersion {
   const selection = allOptions.find(isInstalled);
   if (!selection) {
     throw new NowBuildError({
-      code: 'RUBY_NOT_FOUND',
+      code: 'RUBY_INVALID_VERSION',
       link: 'http://vercel.link/ruby-version',
       message: `Unable to find any supported Ruby versions.`,
     });
@@ -60,7 +60,7 @@ function getRubyPath(meta: Meta, gemfileContents: string) {
         // The array is already in order so return the first
         // match which will be the newest version.
         selection = o;
-        return intersects(o.range, strVersion) && isInstalled(o);
+        return intersects(o.range, strVersion);
       });
       if (!found) {
         throw new NowBuildError({
@@ -69,12 +69,17 @@ function getRubyPath(meta: Meta, gemfileContents: string) {
           link: 'http://vercel.link/ruby-version',
         });
       }
-      if (isDiscontinued(selection)) {
+      const discontinued = isDiscontinued(selection);
+      if (discontinued || !isInstalled(selection)) {
         const latest = getLatestRubyVersion();
-        const intro = `Found \`Gemfile\` with discontinued Ruby version: \`${line}.\``;
+        const intro = `Found \`Gemfile\` with ${
+          discontinued ? 'discontinued' : 'invalid'
+        } Ruby version: \`${line}.\``;
         const hint = `Please set \`ruby "~> ${latest.range}"\` in your \`Gemfile\` to use Ruby ${latest.range}.`;
         throw new NowBuildError({
-          code: 'RUBY_DISCONTINUED_VERSION',
+          code: discontinued
+            ? 'RUBY_DISCONTINUED_VERSION'
+            : 'RUBY_INVALID_VERSION',
           link: 'http://vercel.link/ruby-version',
           message: `${intro} ${hint}`,
         });
