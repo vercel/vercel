@@ -49,7 +49,7 @@ async function bundleInstall(
   bundleDir: string,
   gemfilePath: string,
   rubyPath: string,
-  runtime: string
+  major: number
 ) {
   debug(`running "bundle install --deployment"...`);
   const bundleAppConfig = await getWriteableDirectory();
@@ -92,9 +92,9 @@ async function bundleInstall(
     BUNDLE_JOBS: '4',
   });
 
-  // Lambda "ruby3.2" runtime does not include "webrick",
-  // which is needed for the `vc_init.rb` entrypoint file
-  if (runtime === 'ruby3.2') {
+  // "webrick" needs to be installed for Ruby 3+ to fix runtime error:
+  // webrick is not part of the default gems since Ruby 3.0.0. Install webrick from RubyGems.
+  if (major >= 3) {
     const result = await execa('bundler', ['add', 'webrick'], {
       cwd: dirname(gemfilePath),
       stdio: 'pipe',
@@ -152,7 +152,7 @@ export const build: BuildV3 = async ({
   const gemfileContents = gemfilePath
     ? await readFile(gemfilePath, 'utf8')
     : '';
-  const { gemHome, bundlerPath, vendorPath, runtime, rubyPath } =
+  const { gemHome, bundlerPath, vendorPath, runtime, rubyPath, major } =
     await installBundler(meta, gemfileContents);
   process.env.GEM_HOME = gemHome;
   debug(`Checking existing vendor directory at "${vendorPath}"`);
@@ -202,7 +202,7 @@ export const build: BuildV3 = async ({
           bundleDir,
           gemfilePath,
           rubyPath,
-          runtime
+          major
         );
       }
     }

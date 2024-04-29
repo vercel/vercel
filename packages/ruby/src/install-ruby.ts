@@ -79,6 +79,7 @@ function getRubyPath(meta: Meta, gemfileContents: string) {
   const { major, minor, runtime } = selection;
   const gemHome = '/ruby' + major + minor;
   const result = {
+    major,
     gemHome,
     runtime,
     rubyPath: join(gemHome, 'bin', 'ruby'),
@@ -93,10 +94,8 @@ function getRubyPath(meta: Meta, gemfileContents: string) {
 // process.env.GEM_HOME), and returns
 // the absolute path to it
 export async function installBundler(meta: Meta, gemfileContents: string) {
-  const { gemHome, rubyPath, gemPath, vendorPath, runtime } = getRubyPath(
-    meta,
-    gemfileContents
-  );
+  const { gemHome, rubyPath, gemPath, vendorPath, runtime, major } =
+    getRubyPath(meta, gemfileContents);
 
   // If the new File System API is used (`avoidTopLevelInstall`), the Install Command
   // will have already installed the dependencies, so we don't need to do it again.
@@ -106,6 +105,7 @@ export async function installBundler(meta: Meta, gemfileContents: string) {
     );
 
     return {
+      major,
       gemHome,
       rubyPath,
       gemPath,
@@ -124,6 +124,7 @@ export async function installBundler(meta: Meta, gemfileContents: string) {
   });
 
   return {
+    major,
     gemHome,
     rubyPath,
     gemPath,
