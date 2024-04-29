@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.2.4
+
+### Patch Changes
+
+- [next]: Revert .action handling for dynamic routes ([#11509](https://github.com/vercel/vercel/pull/11509))
+
 ## 4.2.3
 
 ### Patch Changes
