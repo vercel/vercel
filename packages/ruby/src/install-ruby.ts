@@ -97,23 +97,6 @@ export async function installBundler(meta: Meta, gemfileContents: string) {
     gemfileContents
   );
 
-  // If the new File System API is used (`avoidTopLevelInstall`), the Install Command
-  // will have already installed the dependencies, so we don't need to do it again.
-  if (meta.avoidTopLevelInstall) {
-    debug(
-      `Skipping bundler installation, already installed by Install Command`
-    );
-
-    return {
-      gemHome,
-      rubyPath,
-      gemPath,
-      vendorPath,
-      runtime,
-      bundlerPath: join(gemHome, 'bin', 'bundler'),
-    };
-  }
-
   debug('installing bundler...');
   await execa(gemPath, ['install', 'bundler', '--no-document'], {
     stdio: 'pipe',

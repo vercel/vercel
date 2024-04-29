@@ -1,5 +1,5 @@
 import { EOL } from 'os';
-import { join, dirname, relative } from 'path';
+import { join, dirname } from 'path';
 import execa from 'execa';
 import {
   ensureDir,
@@ -178,24 +178,15 @@ export const build: BuildV3 = async ({
         'did not find a vendor directory but found a Gemfile, bundling gems...'
       );
 
-      const fileAtRoot = relative(workPath, gemfilePath) === gemfileName;
-
-      // If the `Gemfile` is located in the Root Directory of the project and
-      // the new File System API is used (`avoidTopLevelInstall`), the Install Command
-      // will have already installed its dependencies, so we don't need to do it again.
-      if (meta.avoidTopLevelInstall && fileAtRoot) {
-        debug('Skipping `bundle install` — already handled by Install Command');
-      } else {
-        // try installing. this won't work if native extensions are required.
-        // if that's the case, gems should be vendored locally before deploying.
-        await bundleInstall(
-          bundlerPath,
-          bundleDir,
-          gemfilePath,
-          rubyPath,
-          runtime
-        );
-      }
+      // try installing. this won't work if native extensions are required.
+      // if that's the case, gems should be vendored locally before deploying.
+      await bundleInstall(
+        bundlerPath,
+        bundleDir,
+        gemfilePath,
+        rubyPath,
+        runtime
+      );
     }
   } else {
     debug('found vendor directory, skipping "bundle install"...');
