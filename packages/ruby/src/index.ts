@@ -95,7 +95,6 @@ async function bundleInstall(
   // "webrick" needs to be installed for Ruby 3+ to fix runtime error:
   // webrick is not part of the default gems since Ruby 3.0.0. Install webrick from RubyGems.
   if (major >= 3) {
-    console.log('installing webrick');
     const result = await execa('bundler', ['add', 'webrick'], {
       cwd: dirname(gemfilePath),
       stdio: 'pipe',
@@ -155,7 +154,6 @@ export const build: BuildV3 = async ({
     : '';
   const { gemHome, bundlerPath, vendorPath, runtime, rubyPath, major } =
     await installBundler(meta, gemfileContents);
-  console.log({ gemHome, bundlerPath, vendorPath, runtime, rubyPath, major });
   process.env.GEM_HOME = gemHome;
   debug(`Checking existing vendor directory at "${vendorPath}"`);
   const vendorDir = join(workPath, vendorPath);
