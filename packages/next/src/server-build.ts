@@ -201,10 +201,9 @@ export async function serverBuild({
     nextVersion,
     EMPTY_ALLOW_QUERY_FOR_PRERENDERED_VERSION
   );
-  const hasActionOutputSupport = semver.gte(
-    nextVersion,
-    ACTION_OUTPUT_SUPPORT_VERSION
-  );
+  const hasActionOutputSupport =
+    semver.gte(nextVersion, ACTION_OUTPUT_SUPPORT_VERSION) &&
+    Boolean(process.env.NEXT_EXPERIMENTAL_STREAMING_ACTIONS);
   const projectDir = requiredServerFilesManifest.relativeAppDir
     ? path.join(baseDir, requiredServerFilesManifest.relativeAppDir)
     : requiredServerFilesManifest.appDir || entryPath;
