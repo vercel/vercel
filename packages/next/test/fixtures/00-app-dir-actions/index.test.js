@@ -37,7 +37,6 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     ).then(res => res.json());
 
     ctx.actionManifest = actionManifest;
-
     Object.assign(ctx, info);
   });
 
@@ -58,8 +57,8 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
       expect(res.status).toEqual(200);
       const body = await res.text();
       expect(body).toContain('1338');
-      expect(res.headers.get('x-matched-path')).toBe(path + '.action');
-      expect(res.headers.get('x-vercel-cache')).toBe('MISS');
+      expect(res.headers.get('x-matched-path')).toBe(path);
+      expect(res.headers.get('x-vercel-cache')).toBe('BYPASS');
     });
 
     it('should bypass the static cache for a server action on a page with dynamic params', async () => {
@@ -78,8 +77,8 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
       expect(res.status).toEqual(200);
       const body = await res.text();
       expect(body).toContain('1338');
-      expect(res.headers.get('x-matched-path')).toBe(path + '.action');
-      expect(res.headers.get('x-vercel-cache')).toBe('MISS');
+      expect(res.headers.get('x-matched-path')).toBe(path);
+      expect(res.headers.get('x-vercel-cache')).toBe('BYPASS');
     });
 
     it('should bypass the static cache for a multipart request (no action header)', async () => {
@@ -117,7 +116,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
       expect(res.status).toEqual(200);
       const body = await res.text();
       expect(body).toContain('1338');
-      expect(res.headers.get('x-matched-path')).toBe(path + '.action');
+      expect(res.headers.get('x-matched-path')).toBe(path);
       expect(res.headers.get('x-vercel-cache')).toBe('MISS');
     });
   });
@@ -133,9 +132,9 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
       );
 
       expect(res.status).toEqual(200);
-      expect(res.headers.get('x-matched-path')).toBe(path + '.action');
+      expect(res.headers.get('x-matched-path')).toBe(path);
       expect(res.headers.get('content-type')).toBe('text/x-component');
-      expect(res.headers.get('x-vercel-cache')).toBe('MISS');
+      expect(res.headers.get('x-vercel-cache')).toBe('BYPASS');
     });
 
     it('should bypass the static cache for a server action on a page with dynamic params', async () => {
@@ -148,9 +147,9 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
       );
 
       expect(res.status).toEqual(200);
-      expect(res.headers.get('x-matched-path')).toBe(path + '.action');
+      expect(res.headers.get('x-matched-path')).toBe(path);
       expect(res.headers.get('content-type')).toBe('text/x-component');
-      expect(res.headers.get('x-vercel-cache')).toBe('MISS');
+      expect(res.headers.get('x-vercel-cache')).toBe('BYPASS');
     });
 
     it('should properly invoke the action on a dynamic page', async () => {
@@ -163,7 +162,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
       );
 
       expect(res.status).toEqual(200);
-      expect(res.headers.get('x-matched-path')).toBe(path + '.action');
+      expect(res.headers.get('x-matched-path')).toBe(path);
       expect(res.headers.get('content-type')).toBe('text/x-component');
       expect(res.headers.get('x-vercel-cache')).toBe('MISS');
     });
@@ -181,11 +180,9 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
         );
 
         expect(res.status).toEqual(200);
-        expect(res.headers.get('x-matched-path')).toBe(
-          '/rsc/static/generate-static-params/[slug].action'
-        );
+        expect(res.headers.get('x-matched-path')).toBe(path);
         expect(res.headers.get('content-type')).toBe('text/x-component');
-        expect(res.headers.get('x-vercel-cache')).toBe('MISS');
+        expect(res.headers.get('x-vercel-cache')).toBe('BYPASS');
       });
 
       it('should bypass the static cache for a server action when not pre-generated', async () => {
@@ -198,9 +195,9 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
         );
 
         expect(res.status).toEqual(200);
-        expect(res.headers.get('x-matched-path')).toBe(page + '.action');
+        expect(res.headers.get('x-matched-path')).toBe(page);
         expect(res.headers.get('content-type')).toBe('text/x-component');
-        expect(res.headers.get('x-vercel-cache')).toBe('MISS');
+        expect(res.headers.get('x-vercel-cache')).toBe('BYPASS');
       });
     });
   });
