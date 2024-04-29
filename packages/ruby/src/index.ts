@@ -155,6 +155,7 @@ export const build: BuildV3 = async ({
     : '';
   const { gemHome, bundlerPath, vendorPath, runtime, rubyPath, major } =
     await installBundler(meta, gemfileContents);
+  console.log({ gemHome, bundlerPath, vendorPath, runtime, rubyPath, major });
   process.env.GEM_HOME = gemHome;
   debug(`Checking existing vendor directory at "${vendorPath}"`);
   const vendorDir = join(workPath, vendorPath);

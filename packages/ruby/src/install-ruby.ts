@@ -1,36 +1,42 @@
+import execa from 'execa';
+import which from 'which';
 import { join } from 'path';
 import { intersects } from 'semver';
-import execa from 'execa';
 import { Meta, NodeVersion, debug, NowBuildError } from '@vercel/build-utils';
 
 interface RubyVersion extends NodeVersion {
   minor: number;
 }
 
-function getOptions() {
-  const options = [
-    { major: 3, minor: 3, range: '3.3.x', runtime: 'ruby3.3' },
-    { major: 3, minor: 2, range: '3.2.x', runtime: 'ruby3.2' },
-    {
-      major: 2,
-      minor: 7,
-      range: '2.7.x',
-      runtime: 'ruby2.7',
-      discontinueDate: new Date('2023-12-07'),
-    },
-    {
-      major: 2,
-      minor: 5,
-      range: '2.5.x',
-      runtime: 'ruby2.5',
-      discontinueDate: new Date('2021-11-30'),
-    },
-  ] as const;
-  return options;
-}
+const allOptions: RubyVersion[] = [
+  { major: 3, minor: 3, range: '3.3.x', runtime: 'ruby3.3' },
+  { major: 3, minor: 2, range: '3.2.x', runtime: 'ruby3.2' },
+  {
+    major: 2,
+    minor: 7,
+    range: '2.7.x',
+    runtime: 'ruby2.7',
+    discontinueDate: new Date('2023-12-07'),
+  },
+  {
+    major: 2,
+    minor: 5,
+    range: '2.5.x',
+    runtime: 'ruby2.5',
+    discontinueDate: new Date('2021-11-30'),
+  },
+];
 
 function getLatestRubyVersion(): RubyVersion {
-  return getOptions()[0];
+  const selection = allOptions.find(isInstalled);
+  if (!selection) {
+    throw new NowBuildError({
+      code: 'RUBY_NOT_FOUND',
+      link: 'http://vercel.link/ruby-version',
+      message: `Unable to find any supported Ruby versions.`,
+    });
+  }
+  return selection;
 }
 
 function isDiscontinued({ discontinueDate }: RubyVersion): boolean {
@@ -50,11 +56,11 @@ function getRubyPath(meta: Meta, gemfileContents: string) {
       .find(line => line.startsWith('ruby'));
     if (line) {
       const strVersion = line.slice(4).trim().slice(1, -1).replace('~>', '');
-      const found = getOptions().some(o => {
+      const found = allOptions.some(o => {
         // The array is already in order so return the first
         // match which will be the newest version.
         selection = o;
-        return intersects(o.range, strVersion);
+        return intersects(o.range, strVersion) && isInstalled(o);
       });
       if (!found) {
         throw new NowBuildError({
@@ -132,4 +138,12 @@ export async function installBundler(meta: Meta, gemfileContents: string) {
     runtime,
     bundlerPath: join(gemHome, 'bin', 'bundler'),
   };
+}
+
+function isInstalled({ major, minor }: RubyVersion): boolean {
+  const gemHome = '/ruby' + major + minor;
+  return (
+    Boolean(which.sync(join(gemHome, 'bin/ruby'), { nothrow: true })) &&
+    Boolean(which.sync(join(gemHome, 'bin/gem'), { nothrow: true }))
+  );
 }
