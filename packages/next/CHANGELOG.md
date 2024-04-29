@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.2.3
+
+### Patch Changes
+
+- [next] Reland add .action handling for dynamic routes ([#11487](https://github.com/vercel/vercel/pull/11487))
+
 ## 4.2.2
 
 ### Patch Changes
