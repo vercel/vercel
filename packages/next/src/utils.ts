@@ -321,6 +321,7 @@ export async function getDynamicRoutes({
   isServerMode,
   dynamicMiddlewareRouteMap,
   experimentalPPRRoutes,
+  hasActionOutputSupport,
 }: {
   entryPath: string;
   entryDirectory: string;
@@ -333,6 +334,7 @@ export async function getDynamicRoutes({
   isServerMode?: boolean;
   dynamicMiddlewareRouteMap?: ReadonlyMap<string, RouteWithSrc>;
   experimentalPPRRoutes: ReadonlySet<string>;
+  hasActionOutputSupport: boolean;
 }): Promise<RouteWithSrc[]> {
   if (routesManifest) {
     switch (routesManifest.version) {
@@ -423,14 +425,25 @@ export async function getDynamicRoutes({
             });
           }
 
-          routes.push({
-            ...route,
-            src: route.src.replace(
-              new RegExp(escapeStringRegexp('(?:/)?$')),
-              '(?:\\.rsc)(?:/)?$'
-            ),
-            dest: route.dest?.replace(/($|\?)/, '.rsc$1'),
-          });
+          if (hasActionOutputSupport) {
+            routes.push({
+              ...route,
+              src: route.src.replace(
+                new RegExp(escapeStringRegexp('(?:/)?$')),
+                '(?<nxtsuffix>(?:\\.action|\\.rsc))(?:/)?$'
+              ),
+              dest: route.dest?.replace(/($|\?)/, '$nxtsuffix$1'),
+            });
+          } else {
+            routes.push({
+              ...route,
+              src: route.src.replace(
+                new RegExp(escapeStringRegexp('(?:/)?$')),
+                '(?:\\.rsc)(?:/)?$'
+              ),
+              dest: route.dest?.replace(/($|\?)/, '.rsc$1'),
+            });
+          }
 
           routes.push(route);
         }
@@ -1487,6 +1500,7 @@ export type LambdaGroup = {
   isStreaming?: boolean;
   isPrerenders?: boolean;
   isExperimentalPPR?: boolean;
+  isActionLambda?: boolean;
   isPages?: boolean;
   isApiLambda: boolean;
   pseudoLayer: PseudoLayer;
