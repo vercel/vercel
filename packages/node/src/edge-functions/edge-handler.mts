@@ -176,7 +176,7 @@ async function createEdgeRuntimeServer(params?: {
       return new Promise<void>((resolve, reject) => {
         const timeout = setTimeout(() => {
           console.warn(
-            `Edge Runtime server is still running after ${WAIT_UNTIL_TIMEOUT} ms` +
+            `edge runtime is still running after ${WAIT_UNTIL_TIMEOUT} ms` +
               ` (hint: do you have a long-running waitUntil() promise?)`
           );
           resolve();

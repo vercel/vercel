@@ -139,9 +139,29 @@ export async function createServerlessEventHandler(
     };
   };
 
+  const onExit = async () => {
+    const WAIT_UNTIL_TIMEOUT = 10 * 1000;
+    const waitUntil = Promise.all([FetchEvent.waitUntil(), server.onExit()]);
+    return new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        console.warn(
+          `serverless runtime is still running after ${WAIT_UNTIL_TIMEOUT} ms` +
+            ` (hint: do you have a long-running waitUntil() promise?)`
+        );
+        resolve();
+      }, WAIT_UNTIL_TIMEOUT);
+
+      waitUntil
+        .then(() => resolve())
+        .catch(reject)
+        .finally(() => {
+          clearTimeout(timeout);
+        });
+    });
+  };
+
   return {
     handler,
-    onExit: () =>
-      Promise.all([FetchEvent.waitUntil(), server.onExit()]).then(() => void 0),
+    onExit,
   };
 }
