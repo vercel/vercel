@@ -78,7 +78,7 @@ updates:
         update-types:
           - 'minor'
 
-  - directory: /packages/static-build/test/fixtures/ionic-angular-v7
+  - directory: /packages/static-build/test/fixtures/ionic-angular-v8
     schedule:
       interval: 'daily'
     open-pull-requests-limit: 1
@@ -172,6 +172,33 @@ updates:
           - 'vue'
           - 'vue-router'
           - '@nuxt-devtools'
+        update-types:
+          - 'minor'
+
+  - directory: /packages/static-build/test/fixtures/parcel-v2
+    schedule:
+      interval: 'daily'
+    open-pull-requests-limit: 1
+    reviewers:
+      - 'trek'
+      - 'TooTallNate'
+      - 'EndangeredMassa'
+      - 'erikareads'
+      - 'jeffsee55'
+      - 'onsclom'
+    commit-message:
+      prefix: '[framework-fixtures]'
+    package-ecosystem: 'npm'
+    allow:
+      - dependency-name: 'parcel'
+    ignore:
+      - dependency-name: 'parcel'
+        update-types:
+          ['version-update:semver-major', 'version-update:semver-patch']
+    groups:
+      core:
+        patterns:
+          - 'parcel'
         update-types:
           - 'minor'
 
