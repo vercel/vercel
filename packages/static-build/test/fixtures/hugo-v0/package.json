@@ -2,8 +2,5 @@
   "private": true,
   "scripts": {
     "build": "hugo"
-  },
-  "engines": {
-    "node": "18.x"
   }
 }
