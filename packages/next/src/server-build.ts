@@ -201,10 +201,9 @@ export async function serverBuild({
     nextVersion,
     EMPTY_ALLOW_QUERY_FOR_PRERENDERED_VERSION
   );
-  const hasActionOutputSupport = semver.gte(
-    nextVersion,
-    ACTION_OUTPUT_SUPPORT_VERSION
-  );
+  const hasActionOutputSupport =
+    semver.gte(nextVersion, ACTION_OUTPUT_SUPPORT_VERSION) &&
+    Boolean(process.env.NEXT_EXPERIMENTAL_STREAMING_ACTIONS);
   const projectDir = requiredServerFilesManifest.relativeAppDir
     ? path.join(baseDir, requiredServerFilesManifest.relativeAppDir)
     : requiredServerFilesManifest.appDir || entryPath;
@@ -1956,19 +1955,6 @@ export async function serverBuild({
                     override: true,
                   },
                   {
-                    src: `^${path.posix.join('/', entryDirectory, '/')}`,
-                    dest: path.posix.join('/', entryDirectory, '/index.action'),
-                    has: [
-                      {
-                        type: 'header',
-                        key: 'content-type',
-                        value: 'multipart/form-data;.*',
-                      },
-                    ],
-                    continue: true,
-                    override: true,
-                  },
-                  {
                     src: `^${path.posix.join(
                       '/',
                       entryDirectory,
@@ -1979,23 +1965,6 @@ export async function serverBuild({
                       {
                         type: 'header',
                         key: 'next-action',
-                      },
-                    ],
-                    continue: true,
-                    override: true,
-                  },
-                  {
-                    src: `^${path.posix.join(
-                      '/',
-                      entryDirectory,
-                      '/((?!.+\\.action).+?)(?:/)?$'
-                    )}`,
-                    dest: path.posix.join('/', entryDirectory, '/$1.action'),
-                    has: [
-                      {
-                        type: 'header',
-                        key: 'content-type',
-                        value: 'multipart/form-data;.*',
                       },
                     ],
                     continue: true,
