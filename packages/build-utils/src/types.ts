@@ -66,7 +66,6 @@ export interface Meta {
   filesRemoved?: string[];
   env?: Env;
   buildEnv?: Env;
-  avoidTopLevelInstall?: boolean;
   [key: string]: unknown;
 }
 
