@@ -1465,6 +1465,9 @@ importers:
       '@types/semver':
         specifier: 6.0.0
         version: 6.0.0
+      '@types/which':
+        specifier: 3.0.0
+        version: 3.0.0
       '@vercel/build-utils':
         specifier: 7.12.0
         version: link:../build-utils
@@ -1480,6 +1483,9 @@ importers:
       semver:
         specifier: 6.3.1
         version: 6.3.1
+      which:
+        specifier: 3.0.0
+        version: 3.0.0
 
   packages/static-build:
     dependencies:
