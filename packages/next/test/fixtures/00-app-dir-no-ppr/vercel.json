@@ -29,7 +29,7 @@
       "mustContain": "{}",
       "mustNotContain": ":",
       "responseHeaders": {
-        "x-matched-path": "/nested/blog-fallback-false/first.rsc"
+        "x-matched-path": "/nested/blog-fallback-false/first.prefetch.rsc"
       },
       "headers": {
         "RSC": 1,

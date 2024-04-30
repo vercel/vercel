@@ -1616,49 +1616,27 @@ export async function serverBuild({
     }
   }
 
-  const output: BuildResult['output'] = {
-    ...publicDirectoryFiles,
-    ...lambdas,
-    ...appRscPrefetches,
-    ...pagesPlaceholderRscEntries,
-    // Prerenders may override Lambdas -- this is an intentional behavior.
-    ...prerenders,
-    ...staticPages,
-    ...staticFiles,
-    ...staticDirectoryFiles,
-    ...privateOutputs.files,
-    ...middleware.edgeFunctions,
-    ...(isNextDataServerResolving
-      ? {
-          __next_data_catchall: nextDataCatchallOutput,
-        }
-      : {}),
-  };
-
-  // we need to ensure all prerenders have a matching .rsc output
-  // otherwise routing could fall through unexpectedly for the
-  // fallback: false case as it doesn't have a dynamic route
-  // to catch the `.rsc` request for app -> pages routing
-  // TODO: move this inside of onPrerenderRoute instead?
-  if (appPathRoutesManifest) {
-    const dummyOutput = new FileBlob({
-      data: '{}',
-      contentType: 'application/json',
-    });
-
-    for (const key of Object.keys(prerenders)) {
-      if (!key.includes('.rsc')) {
-        if (!output[`${key}.rsc`]) {
-          output[`${key}.rsc`] = dummyOutput;
-        }
-      }
-    }
-  }
-
   return {
     wildcard: wildcardConfig,
     images: getImagesConfig(imagesManifest),
-    output,
+    output: {
+      ...publicDirectoryFiles,
+      ...lambdas,
+      ...appRscPrefetches,
+      ...pagesPlaceholderRscEntries,
+      // Prerenders may override Lambdas -- this is an intentional behavior.
+      ...prerenders,
+      ...staticPages,
+      ...staticFiles,
+      ...staticDirectoryFiles,
+      ...privateOutputs.files,
+      ...middleware.edgeFunctions,
+      ...(isNextDataServerResolving
+        ? {
+            __next_data_catchall: nextDataCatchallOutput,
+          }
+        : {}),
+    },
     routes: [
       /*
         Desired routes order
