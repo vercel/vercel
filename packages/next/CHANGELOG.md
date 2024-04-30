@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.2.6
+
+### Patch Changes
+
+- [next] Update test fixture version ([#11514](https://github.com/vercel/vercel/pull/11514))
+
 ## 4.2.5
 
 ### Patch Changes
