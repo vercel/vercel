@@ -78,7 +78,7 @@ updates:
         update-types:
           - 'minor'
 
-  - directory: /packages/static-build/test/fixtures/ionic-angular-v7
+  - directory: /packages/static-build/test/fixtures/ionic-angular-v8
     schedule:
       interval: 'daily'
     open-pull-requests-limit: 1
