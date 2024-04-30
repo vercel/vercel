@@ -1,5 +1,15 @@
 # @vercel/build-utils
 
+## 8.0.0
+
+### Major Changes
+
+- Remove legacy `avoidTopLevelInstall` logic ([#11513](https://github.com/vercel/vercel/pull/11513))
+
+### Patch Changes
+
+- [build-utils] Add `VERCEL_PROJECT_PRODUCTION_URL` framework env var prefix ([#11506](https://github.com/vercel/vercel/pull/11506))
+
 ## 7.12.0
 
 ### Minor Changes

@@ -1,7 +1,7 @@
 {
   "name": "@vercel/ruby",
   "author": "Nathan Cahill <nathan@nathancahill.com>",
-  "version": "2.0.5",
+  "version": "2.1.0",
   "license": "Apache-2.0",
   "main": "./dist/index",
   "homepage": "https://vercel.com/docs/runtimes#official-runtimes/ruby",
@@ -24,7 +24,7 @@
     "@types/fs-extra": "8.0.0",
     "@types/semver": "6.0.0",
     "@types/which": "3.0.0",
-    "@vercel/build-utils": "7.12.0",
+    "@vercel/build-utils": "8.0.0",
     "execa": "2.0.4",
     "fs-extra": "^7.0.1",
     "jest-junit": "16.0.0",
