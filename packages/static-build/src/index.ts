@@ -48,7 +48,7 @@ import {
 import { getHugoUrl } from './utils/hugo';
 import { once } from 'events';
 
-const SUPPORTED_RUBY_VERSION = '3.3.0';
+const SUPPORTED_RUBY_VERSION = '3.2.0';
 const sleep = (n: number) => new Promise(resolve => setTimeout(resolve, n));
 
 const DEV_SERVER_PORT_BIND_TIMEOUT = ms('5m');
