@@ -6,6 +6,8 @@ import { listen } from 'async-listen';
 import { isAbsolute } from 'path';
 import { pathToFileURL } from 'url';
 import { buildToHeaders } from '@edge-runtime/node-utils';
+import { promisify } from 'util';
+import Edge from '@edge-runtime/primitives';
 import type { ServerResponse, IncomingMessage } from 'http';
 import type { VercelProxyResponse } from '../types.js';
 import type { VercelRequest, VercelResponse } from './helpers.js';
@@ -13,6 +15,21 @@ import type { Readable } from 'stream';
 
 // @ts-expect-error
 const toHeaders = buildToHeaders({ Headers });
+
+class FetchEvent extends Edge.FetchEvent {
+  private static awaiting: Promise<any>[] = [];
+  constructor(request: Request) {
+    super(request);
+    const originalWaitUntil = this.waitUntil;
+    this.waitUntil = (promise: Promise<any>) => {
+      FetchEvent.awaiting.push(promise);
+      originalWaitUntil.call(this, promise);
+    };
+  }
+  static waitUntil() {
+    return Promise.all(FetchEvent.awaiting);
+  }
+}
 
 type ServerlessServerOptions = {
   shouldAddHelpers: boolean;
@@ -43,14 +60,13 @@ async function createServerlessServer(
   const server = createServer(userCode);
   return {
     url: await listen(server, { host: '127.0.0.1', port: 0 }),
-    onExit: async () => {
-      server.close();
-    },
+    onExit: promisify(server.close.bind(server)),
   };
 }
 
 async function compileUserCode(
   entrypointPath: string,
+  FetchEvent: typeof Edge.FetchEvent,
   options: ServerlessServerOptions
 ) {
   const id = isAbsolute(entrypointPath)
@@ -71,8 +87,9 @@ async function compileUserCode(
         'Node.js v18 or above is required to use HTTP method exports in your functions.'
       );
     }
-    const { getWebExportsHandler } = await import('./helpers-web.js');
-    return getWebExportsHandler(listener, HTTP_METHODS);
+    const { createWebExportsHandler } = await import('./helpers-web.js');
+    const getWebExportsHandler = createWebExportsHandler(FetchEvent);
+    return getWebExportsHandler(listener, HTTP_METHODS)
   }
 
   return async (req: IncomingMessage, res: ServerResponse) => {
@@ -88,12 +105,12 @@ export async function createServerlessEventHandler(
   handler: (request: IncomingMessage) => Promise<VercelProxyResponse>;
   onExit: () => Promise<void>;
 }> {
-  const userCode = await compileUserCode(entrypointPath, options);
+  const userCode = await compileUserCode(entrypointPath, FetchEvent, options);
   const server = await createServerlessServer(userCode);
   const isStreaming = options.mode === 'streaming';
 
   const handler = async function (
-    request: IncomingMessage
+    request: IncomingMessage,
   ): Promise<VercelProxyResponse> {
     const url = new URL(request.url ?? '/', server.url);
     const response = await undiciRequest(url, {
@@ -124,6 +141,6 @@ export async function createServerlessEventHandler(
 
   return {
     handler,
-    onExit: server.onExit,
+    onExit: () => Promise.all([FetchEvent.waitUntil(), server.onExit()]).then(() => void 0)
   };
 }
