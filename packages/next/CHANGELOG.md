@@ -1,5 +1,17 @@
 # @vercel/next
 
+## 4.2.6
+
+### Patch Changes
+
+- [next] Update test fixture version ([#11514](https://github.com/vercel/vercel/pull/11514))
+
+## 4.2.5
+
+### Patch Changes
+
+- Only rewrite next-action requests to `.action` handlers ([#11504](https://github.com/vercel/vercel/pull/11504))
+
 ## 4.2.4
 
 ### Patch Changes
