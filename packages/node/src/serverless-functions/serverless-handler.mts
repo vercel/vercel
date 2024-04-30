@@ -89,7 +89,7 @@ async function compileUserCode(
     }
     const { createWebExportsHandler } = await import('./helpers-web.js');
     const getWebExportsHandler = createWebExportsHandler(FetchEvent);
-    return getWebExportsHandler(listener, HTTP_METHODS)
+    return getWebExportsHandler(listener, HTTP_METHODS);
   }
 
   return async (req: IncomingMessage, res: ServerResponse) => {
@@ -110,7 +110,7 @@ export async function createServerlessEventHandler(
   const isStreaming = options.mode === 'streaming';
 
   const handler = async function (
-    request: IncomingMessage,
+    request: IncomingMessage
   ): Promise<VercelProxyResponse> {
     const url = new URL(request.url ?? '/', server.url);
     const response = await undiciRequest(url, {
@@ -141,6 +141,7 @@ export async function createServerlessEventHandler(
 
   return {
     handler,
-    onExit: () => Promise.all([FetchEvent.waitUntil(), server.onExit()]).then(() => void 0)
+    onExit: () =>
+      Promise.all([FetchEvent.waitUntil(), server.onExit()]).then(() => void 0),
   };
 }
