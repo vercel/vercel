@@ -2193,7 +2193,13 @@ export const onPrerenderRoute =
       }
     }
 
-    let outputPathPage = path.posix.join(entryDirectory, routeFileNoExt);
+    let outputPathPage = path.posix.join(
+      entryDirectory,
+      // if we have a basePath don't include `/index` suffix
+      routeFileNoExt === '/index' && entryDirectory !== '.'
+        ? ''
+        : routeFileNoExt
+    );
 
     if (!isAppPathRoute) {
       outputPathPage = normalizeIndexOutput(outputPathPage, isServerMode);
@@ -2207,7 +2213,11 @@ export const onPrerenderRoute =
     let lambda: undefined | Lambda;
 
     function normalizeDataRoute(route: string) {
-      let normalized = path.posix.join(entryDirectory, route);
+      let normalized =
+        // if we have a basePath don't include `/index` suffix
+        route === '/index.rsc' && entryDirectory !== '.'
+          ? `${entryDirectory}.rsc`
+          : path.posix.join(entryDirectory, route);
 
       if (nonDynamicSsg || isFallback || isOmitted) {
         normalized = normalized.replace(
