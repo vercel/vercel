@@ -205,10 +205,17 @@ describe('env', () => {
       });
       const cwd = setupUnitFixture('vercel-env-pull');
       client.cwd = cwd;
-      client.setArgv('env', 'pull', 'other.env', '--yes');
+      client.setArgv(
+        'env',
+        'pull',
+        'other.env',
+        '--yes',
+        '--environment',
+        'production'
+      );
       const exitCodePromise = env(client);
       await expect(client.stderr).toOutput(
-        'Downloading `development` Environment Variables for Project vercel-env-pull'
+        'Downloading `production` Environment Variables for Project vercel-env-pull'
       );
       await expect(client.stderr).toOutput('Created other.env file');
       await expect(client.stderr).not.toOutput('and added it to .gitignore');
@@ -218,7 +225,7 @@ describe('env', () => {
 
       const productionFileHasVercelEnv = rawDevEnv
         .toString()
-        .includes('VERCEL_ENV="development"');
+        .includes('VERCEL_ENV="production"');
       expect(productionFileHasVercelEnv).toBeTruthy();
     });
 
