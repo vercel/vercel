@@ -45,6 +45,45 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
   });
 
   describe('dynamic pages should resume', () => {
+    it('should handle interception route properly', async () => {
+      const res = await fetch(`${ctx.deploymentUrl}/cart`)
+      expect(res.status).toBe(200)
+      expect(await res.text()).toContain('normal cart page')
+      
+      const res2 = await fetch(`${ctx.deploymentUrl}/cart`, {
+        headers: {
+          RSC: '1'
+        }
+      })
+      const res2Body = await res2.text()
+      expect(res2.status).toBe(200)
+      expect(res2Body).toContain(':')
+      expect(res2Body).not.toContain('<html')
+      
+      const res3 = await fetch(`${ctx.deploymentUrl}/cart`, {
+        headers: {
+          RSC: '1',
+          'Next-Url': '/cart',
+          'Next-Router-Prefetch': '1'
+        }
+      })
+      const res3Body = await res3.text()
+      expect(res3.status).toBe(200)
+      expect(res3Body).toContain(':')
+      expect(res3Body).not.toContain('<html')
+      
+      const res4 = await fetch(`${ctx.deploymentUrl}/cart`, {
+        headers: {
+          RSC: '1',
+          'Next-Url': '/cart',
+        }
+      })
+      const res4Body = await res4.text()
+      expect(res4.status).toBe(200)
+      expect(res4Body).toContain(':')
+      expect(res4Body).not.toContain('<html')
+    })
+    
     it.each(pages.filter(p => p.dynamic === true))(
       'should resume $pathname',
       async ({ pathname }) => {
