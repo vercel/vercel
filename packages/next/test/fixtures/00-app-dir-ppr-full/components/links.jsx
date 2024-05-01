@@ -19,14 +19,6 @@ const links = [
   { href: '/no-suspense/nested/c', tag: 'no suspense, on-demand' },
   { href: '/dynamic/force-dynamic', tag: "dynamic = 'force-dynamic'" },
   { href: '/dynamic/force-static', tag: "dynamic = 'force-static'" },
-  { href: '/edge/suspense', tag: 'edge, pre-generated' },
-  { href: '/edge/suspense/a', tag: 'edge, pre-generated' },
-  { href: '/edge/suspense/b', tag: 'edge, on-demand' },
-  { href: '/edge/suspense/c', tag: 'edge, on-demand' },
-  { href: '/edge/no-suspense', tag: 'edge, no suspense, pre-generated' },
-  { href: '/edge/no-suspense/a', tag: 'edge, no suspense, pre-generated' },
-  { href: '/edge/no-suspense/b', tag: 'edge, no suspense, on-demand' },
-  { href: '/edge/no-suspense/c', tag: 'edge, no suspense, on-demand' },
 ];
 
 export const Links = () => {
