@@ -917,9 +917,9 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
     expect(homeJson['MY_STDIN_VAR']).toBe('{"expect":"quotes"}');
     expect(homeJson['MY_DECRYPTABLE_SECRET_ENV']).toBe('decryptable value');
 
-    // system env vars are automatically exposed
-    expect(apiJson['VERCEL']).toBe('1');
-    expect(homeJson['VERCEL']).toBe('1');
+    // system env vars are hidden in dev
+    expect(apiJson['VERCEL']).toBeUndefined();
+    expect(homeJson['VERCEL']).toBeUndefined();
 
     // sleep before kill, otherwise the dev process doesn't clean up and exit properly
     await sleep(100);
@@ -949,7 +949,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
   async function vcEnvPullFetchSystemVars() {
     const { exitCode, stdout, stderr } = await execCli(
       binaryPath,
-      ['env', 'pull', '-y'],
+      ['env', 'pull', '-y', '--environment', 'production'],
       {
         cwd: target,
       }
@@ -963,7 +963,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
 
     expect(lines).toContain('VERCEL="1"');
     expect(lines).toContain('VERCEL_URL=""');
-    expect(lines).toContain('VERCEL_ENV="development"');
+    expect(lines).toContain('VERCEL_ENV="production"');
     expect(lines).toContain('VERCEL_GIT_PROVIDER=""');
     expect(lines).toContain('VERCEL_GIT_REPO_SLUG=""');
   }
