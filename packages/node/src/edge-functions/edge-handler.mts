@@ -7,7 +7,13 @@ import { EdgeRuntime, runServer } from 'edge-runtime';
 import { type Dispatcher, Headers, request as undiciRequest } from 'undici';
 import { isError } from '@vercel/error-utils';
 import { readFileSync } from 'fs';
-import { serializeBody, entrypointToOutputPath, logError, WAIT_UNTIL_WARNING, WAIT_UNTIL_TIMEOUT_MS } from '../utils.js';
+import {
+  serializeBody,
+  entrypointToOutputPath,
+  logError,
+  WAIT_UNTIL_WARNING,
+  WAIT_UNTIL_TIMEOUT_MS,
+} from '../utils.js';
 import esbuild from 'esbuild';
 import { buildToHeaders } from '@edge-runtime/node-utils';
 import type { VercelProxyResponse } from '../types.js';
@@ -168,13 +174,15 @@ async function createEdgeRuntimeServer(params?: {
 
     const server = await runServer({ runtime });
 
-    const onExit = async () => new Promise<void>((resolve, reject) => {
+    const onExit = async () =>
+      new Promise<void>((resolve, reject) => {
         const timeout = setTimeout(() => {
           console.warn(WAIT_UNTIL_WARNING(params.entrypointPath));
           resolve();
         }, WAIT_UNTIL_TIMEOUT_MS);
 
-        server.close()
+        server
+          .close()
           .then(() => resolve())
           .catch(reject)
           .finally(() => clearTimeout(timeout));

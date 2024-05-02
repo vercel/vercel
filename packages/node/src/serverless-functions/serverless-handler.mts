@@ -1,6 +1,10 @@
 import { addHelpers } from './helpers.js';
 import { createServer } from 'http';
-import { WAIT_UNTIL_TIMEOUT_MS, WAIT_UNTIL_WARNING, serializeBody } from '../utils.js';
+import {
+  WAIT_UNTIL_TIMEOUT_MS,
+  WAIT_UNTIL_WARNING,
+  serializeBody,
+} from '../utils.js';
 import { type Dispatcher, Headers, request as undiciRequest } from 'undici';
 import { listen } from 'async-listen';
 import { isAbsolute } from 'path';
@@ -139,7 +143,8 @@ export async function createServerlessEventHandler(
     };
   };
 
-  const onExit = () => new Promise<void>((resolve, reject) => {
+  const onExit = () =>
+    new Promise<void>((resolve, reject) => {
       const timeout = setTimeout(() => {
         console.warn(WAIT_UNTIL_WARNING(entrypointPath));
         resolve();
