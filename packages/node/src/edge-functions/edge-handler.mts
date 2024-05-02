@@ -11,7 +11,7 @@ import {
   serializeBody,
   entrypointToOutputPath,
   logError,
-  WAIT_UNTIL_WARNING,
+  waitUntilWarning,
   WAIT_UNTIL_TIMEOUT_MS,
 } from '../utils.js';
 import esbuild from 'esbuild';
@@ -177,7 +177,7 @@ async function createEdgeRuntimeServer(params?: {
     const onExit = async () =>
       new Promise<void>((resolve, reject) => {
         const timeout = setTimeout(() => {
-          console.warn(WAIT_UNTIL_WARNING(params.entrypointPath));
+          console.warn(waitUntilWarning(params.entrypointPath));
           resolve();
         }, WAIT_UNTIL_TIMEOUT_MS);
 

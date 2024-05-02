@@ -11,7 +11,7 @@ import { extname } from 'path';
 const WAIT_UNTIL_TIMEOUT = 10;
 export const WAIT_UNTIL_TIMEOUT_MS = 10 * 1000;
 
-export const WAIT_UNTIL_WARNING = (entrypointPath: string) =>
+export const waitUntilWarning = (entrypointPath: string) =>
   `
 The function \`${entrypointPath
     .split('/')

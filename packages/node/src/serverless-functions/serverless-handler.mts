@@ -2,7 +2,7 @@ import { addHelpers } from './helpers.js';
 import { createServer } from 'http';
 import {
   WAIT_UNTIL_TIMEOUT_MS,
-  WAIT_UNTIL_WARNING,
+  waitUntilWarning,
   serializeBody,
 } from '../utils.js';
 import { type Dispatcher, Headers, request as undiciRequest } from 'undici';
@@ -146,7 +146,7 @@ export async function createServerlessEventHandler(
   const onExit = () =>
     new Promise<void>((resolve, reject) => {
       const timeout = setTimeout(() => {
-        console.warn(WAIT_UNTIL_WARNING(entrypointPath));
+        console.warn(waitUntilWarning(entrypointPath));
         resolve();
       }, WAIT_UNTIL_TIMEOUT_MS);
 
