@@ -1982,7 +1982,7 @@ export async function serverBuild({
                 ]
               : []),
             {
-              src: `^${path.posix.join('/', entryDirectory, '/')}`,
+              src: `^${path.posix.join('/', entryDirectory, '/?')}`,
               has: [
                 {
                   type: 'header',
