@@ -145,7 +145,7 @@ export async function createServerlessEventHandler(
     return new Promise<void>((resolve, reject) => {
       const timeout = setTimeout(() => {
         console.warn(
-          `serverless runtime is still running after ${WAIT_UNTIL_TIMEOUT} ms` +
+          `The function is still running after ${WAIT_UNTIL_TIMEOUT} ms` +
             ` (hint: do you have a long-running waitUntil() promise?)`
         );
         resolve();
