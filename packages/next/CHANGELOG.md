@@ -1,5 +1,15 @@
 # @vercel/next
 
+## 4.2.7
+
+### Patch Changes
+
+- Fix missing .rsc outputs for pages prerenders ([#11503](https://github.com/vercel/vercel/pull/11503))
+
+- Fix base path app index RSC handling ([#11528](https://github.com/vercel/vercel/pull/11528))
+
+- Fix interception routes PPR route handling ([#11527](https://github.com/vercel/vercel/pull/11527))
+
 ## 4.2.6
 
 ### Patch Changes

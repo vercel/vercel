@@ -1,5 +1,11 @@
 # @vercel/static-build
 
+## 2.5.3
+
+### Patch Changes
+
+- Support Ruby and Python static site generators in AL2023 build image ([#11529](https://github.com/vercel/vercel/pull/11529))
+
 ## 2.5.2
 
 ### Patch Changes
