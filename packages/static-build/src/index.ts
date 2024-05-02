@@ -6,9 +6,9 @@ import isPortReachable from 'is-port-reachable';
 import frameworks, { Framework } from '@vercel/frameworks';
 import {
   spawn,
+  spawnSync,
   type ChildProcess,
   type SpawnOptions,
-  spawnSync,
 } from 'child_process';
 import { existsSync, readFileSync, statSync, readdirSync, mkdirSync } from 'fs';
 import { cpus } from 'os';
