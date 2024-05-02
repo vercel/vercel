@@ -1,6 +1,6 @@
 import { addHelpers } from './helpers.js';
 import { createServer } from 'http';
-import { serializeBody } from '../utils.js';
+import { WAIT_UNTIL_TIMEOUT_MS, WAIT_UNTIL_WARNING, serializeBody } from '../utils.js';
 import { type Dispatcher, Headers, request as undiciRequest } from 'undici';
 import { listen } from 'async-listen';
 import { isAbsolute } from 'path';
@@ -139,26 +139,17 @@ export async function createServerlessEventHandler(
     };
   };
 
-  const onExit = async () => {
-    const WAIT_UNTIL_TIMEOUT = 10 * 1000;
-    const waitUntil = Promise.all([FetchEvent.waitUntil(), server.onExit()]);
-    return new Promise<void>((resolve, reject) => {
+  const onExit = () => new Promise<void>((resolve, reject) => {
       const timeout = setTimeout(() => {
-        console.warn(
-          `The function is still running after ${WAIT_UNTIL_TIMEOUT} ms` +
-            ` (hint: do you have a long-running waitUntil() promise?)`
-        );
+        console.warn(WAIT_UNTIL_WARNING(entrypointPath));
         resolve();
-      }, WAIT_UNTIL_TIMEOUT);
+      }, WAIT_UNTIL_TIMEOUT_MS);
 
-      waitUntil
+      Promise.all([FetchEvent.waitUntil(), server.onExit()])
         .then(() => resolve())
         .catch(reject)
-        .finally(() => {
-          clearTimeout(timeout);
-        });
+        .finally(() => clearTimeout(timeout));
     });
-  };
 
   return {
     handler,
