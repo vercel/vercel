@@ -9,7 +9,7 @@ on:
   pull_request:
 
 env:
-  NODE_VERSION: '16'
+  NODE_VERSION: '18'
   TURBO_REMOTE_ONLY: 'true'
   TURBO_TEAM: 'vercel'
   TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
