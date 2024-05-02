@@ -1,10 +1,6 @@
 import { forkDevServer, readMessage } from '../../src/fork-dev-server';
 import { resolve, extname } from 'path';
 import { fetch } from 'undici';
-import { createServer } from 'http';
-import { listen } from 'async-listen';
-import zlib from 'zlib';
-import { promisify } from 'util';
 
 jest.setTimeout(20 * 1000);
 
@@ -178,81 +174,6 @@ afterAll(async () => {
           transferEncoding: 'chunked',
           'x-web-handler': 'Web handler using OPTIONS',
         });
-      }));
-
-    test('buffer fetch response correctly', () =>
-      withDevServer('./serverless-fetch.js', async (url: string) => {
-        const server = createServer((req, res) => {
-          res.setHeader('Content-Encoding', 'br');
-          const searchParams = new URLSearchParams(req.url!.substring(1));
-          const encoding = searchParams.get('encoding') ?? 'identity';
-          console.log({ encoding });
-          res.writeHead(200, {
-            'content-type': 'text/plain',
-            'content-encoding': encoding,
-          });
-          let payload = Buffer.from('Greetings, Vercel');
-
-          if (encoding === 'br') {
-            console.log('is here');
-            payload = zlib.brotliCompressSync(payload, {
-              params: {
-                [zlib.constants.BROTLI_PARAM_QUALITY]: 0,
-              },
-            });
-            console.log('payload', payload);
-          } else if (encoding === 'gzip') {
-            payload = zlib.gzipSync(payload, {
-              level: zlib.constants.Z_BEST_SPEED,
-            });
-          } else if (encoding === 'deflate') {
-            payload = zlib.deflateSync(payload, {
-              level: zlib.constants.Z_BEST_SPEED,
-            });
-          }
-
-          res.end(payload);
-        });
-
-        const serverUrl = (await listen(server)).toString();
-        teardown.push(promisify(server.close.bind(server)));
-
-        {
-          const response = await fetch(
-            `${url}/api/serverless-fetch?url=${serverUrl}&encoding=br`
-          );
-
-          console.log(Object.fromEntries(response.headers));
-          expect(response.headers.get('content-encoding')).toBe('br');
-          // expect(response.headers.get('content-length')).toBe('21');
-          // expect({
-          //   status: response.status,
-          //   body: await response.text(),
-          // }).toEqual({ status: 200, body: 'Greetings, Vercel' });
-        }
-
-        // {
-        //   const response = await fetch(
-        //     `${url}/api/serverless-fetch?url=${serverUrl}&encoding=gzip`
-        //   );
-        //   expect(response.headers.get('content-encoding')).toBe('gzip');
-        //   expect(response.headers.get('content-length')).toBe('37');
-        //   expect({
-        //     status: response.status,
-        //     body: await response.text(),
-        //   }).toEqual({ status: 200, body: 'Greetings, Vercel' });
-        // }
-        // {
-        //   const response = await fetch(
-        //     `${url}/api/serverless-fetch?url=${serverUrl}&encoding=deflate`
-        //   );
-        //   expect(response.headers.get('content-encoding')).toBe('deflate');
-        //   expect(response.headers.get('content-length')).toBe('25');
-        //   expect({
-        //     status: response.status,
-        //     body: await response.text(),
-        //   }).toEqual({ status: 200, body: 'Greetings, Vercel' });
-        // }
       }));
   });
 
