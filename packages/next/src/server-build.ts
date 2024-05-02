@@ -1982,17 +1982,14 @@ export async function serverBuild({
                 ]
               : []),
             {
-              src: `^${path.posix.join('/', entryDirectory, '/?')}`,
+              src: `^${path.posix.join('/', entryDirectory, '/')}`,
               has: [
                 {
                   type: 'header',
                   key: rscHeader,
                 },
               ],
-              dest:
-                entryDirectory !== '.'
-                  ? path.posix.join('/', `${entryDirectory}.rsc`)
-                  : path.posix.join('/', entryDirectory, '/index.rsc'),
+              dest: path.posix.join('/', entryDirectory, '/index.rsc'),
               headers: { vary: rscVaryHeader },
               continue: true,
               override: true,
