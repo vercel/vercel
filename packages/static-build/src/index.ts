@@ -4,7 +4,12 @@ import fetch from 'node-fetch';
 import getPort from 'get-port';
 import isPortReachable from 'is-port-reachable';
 import frameworks, { Framework } from '@vercel/frameworks';
-import { spawn, type ChildProcess, type SpawnOptions } from 'child_process';
+import {
+  spawn,
+  type ChildProcess,
+  type SpawnOptions,
+  spawnSync,
+} from 'child_process';
 import { existsSync, readFileSync, statSync, readdirSync, mkdirSync } from 'fs';
 import { cpus } from 'os';
 import {
@@ -48,7 +53,6 @@ import {
 import { getHugoUrl } from './utils/hugo';
 import { once } from 'events';
 
-const SUPPORTED_RUBY_VERSION = '3.2.0';
 const sleep = (n: number) => new Promise(resolve => setTimeout(resolve, n));
 
 const DEV_SERVER_PORT_BIND_TIMEOUT = ms('5m');
@@ -579,9 +583,14 @@ export const build: BuildV2 = async ({
       pathList.push(vendorBin); // Add `./vendor/bin`
       debug(`Added "${vendorBin}" to PATH env because a Gemfile was found`);
       const dir = path.join(workPath, 'vendor', 'bundle', 'ruby');
-      const rubyVersion = SUPPORTED_RUBY_VERSION;
+      const rubyVersion = spawnSync(
+        'ruby',
+        ['-e', 'print "#{ RUBY_VERSION }"'],
+        { encoding: 'utf8' }
+      );
+      console.log(rubyVersion);
       if (rubyVersion) {
-        gemHome = path.join(dir, rubyVersion);
+        gemHome = path.join(dir, rubyVersion.stdout.trim());
         debug(`Set GEM_HOME="${gemHome}" because a Gemfile was found`);
       }
     }
