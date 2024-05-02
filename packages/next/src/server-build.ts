@@ -1588,10 +1588,19 @@ export async function serverBuild({
 
       if (lambdas[pathname]) {
         lambdas[`${pathname}.rsc`] = lambdas[pathname];
+
+        if (experimental.ppr) {
+          lambdas[`${pathname}${RSC_PREFETCH_SUFFIX}`] = lambdas[pathname];
+        }
       }
 
       if (edgeFunctions[pathname]) {
         edgeFunctions[`${pathname}.rsc`] = edgeFunctions[pathname];
+
+        if (experimental.ppr) {
+          edgeFunctions[`${pathname}${RSC_PREFETCH_SUFFIX}`] =
+            edgeFunctions[pathname];
+        }
       }
     }
   }
