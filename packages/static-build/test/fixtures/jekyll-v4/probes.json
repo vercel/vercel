@@ -3,7 +3,7 @@
     { "path": "/", "mustContain": "Your awesome title" },
     { "path": "/about/", "mustContain": "You can find out more info" },
     {
-      "path": "/jekyll/update/2024/05/01/welcome-to-jekyll.html",
+      "path": "/jekyll/update/2024/05/02/welcome-to-jekyll.html",
       "mustContain": "Go ahead and edit it"
     }
   ]
