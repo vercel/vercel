@@ -13,6 +13,10 @@ module.exports = {
         source: '/rewritten-to-index',
         destination: '/?fromRewrite=1',
       },
+      {
+        source: '/to-product/:productId.html',
+        destination: '/products/:productId',
+      },
     ];
   },
 };

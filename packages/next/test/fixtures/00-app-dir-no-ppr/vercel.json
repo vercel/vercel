@@ -19,6 +19,30 @@
   ],
   "probes": [
     {
+      "path": "/to-product/product-id.html",
+      "status": 200,
+      "mustContain": "<html"
+    },
+    {
+      "path": "/to-product/product-id.html",
+      "status": 200,
+      "mustNotContain": "<html",
+      "mustContain": ":",
+      "headers": {
+        "RSC": 1
+      }
+    },
+    {
+      "path": "/to-product/product-id.html",
+      "status": 200,
+      "mustNotContain": ".prefetch",
+      "mustContain": ":",
+      "headers": {
+        "RSC": 1,
+        "Next-Router-Prefetch": 1
+      }
+    },
+    {
       "path": "/nested/blog-fallback-false/first",
       "status": 200,
       "mustContain": "hello from /nested/blog-fallback-false"
