@@ -925,13 +925,12 @@ exports[`help command > dns help output snapshots > dns help column width 40 1`]
 
   [2mOptions[22m:
 
-  -n,  --limit <NUMBER>  Number of      
-                         results to     
-                         return per page
-                         (default: 20,  
-                         max: 100)      
-  -n,  --next <MS>       Show next page 
-                         of results     
+       --limit <NUMBER>  Number of results to
+                         return per page     
+                         (default: 20, max:  
+                         100)                
+  -n,  --next <MS>       Show next page of   
+                         results             
 
 
   [2mGlobal Options[22m:
@@ -1024,9 +1023,8 @@ exports[`help command > dns help output snapshots > dns help column width 80 1`]
 
   [2mOptions[22m:
 
-  -n,  --limit <NUMBER>  Number of results to return per page (default: 20, max:
-                         100)                                                   
-  -n,  --next <MS>       Show next page of results                              
+       --limit <NUMBER>  Number of results to return per page (default: 20, max: 100)
+  -n,  --next <MS>       Show next page of results                                   
 
 
   [2mGlobal Options[22m:
@@ -1094,8 +1092,8 @@ exports[`help command > dns help output snapshots > dns help column width 120 1`
 
   [2mOptions[22m:
 
-  -n,  --limit <NUMBER>  Number of results to return per page (default: 20, max: 100)                                   
-  -n,  --next <MS>       Show next page of results                                                                      
+       --limit <NUMBER>  Number of results to return per page (default: 20, max: 100)                                        
+  -n,  --next <MS>       Show next page of results                                                                           
 
 
   [2mGlobal Options[22m:
