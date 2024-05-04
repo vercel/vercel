@@ -53,7 +53,7 @@
       "mustContain": "{}",
       "mustNotContain": ":",
       "responseHeaders": {
-        "x-matched-path": "/nested/blog-fallback-false/first.prefetch.rsc"
+        "x-matched-path": "/nested/blog-fallback-false/first.rsc"
       },
       "headers": {
         "RSC": 1,
