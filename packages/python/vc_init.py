@@ -175,6 +175,7 @@ elif 'app' in __vc_variables:
         # https://github.com/erm/mangum/blob/b4d21c8f5e304a3e17b88bc9fa345106acc50ad7/LICENSE
         import asyncio
         import enum
+        import inspect
         from urllib.parse import urlparse
         from werkzeug.datastructures import Headers
 
@@ -191,6 +192,7 @@ elif 'app' in __vc_variables:
                 self.state = ASGICycleState.REQUEST
                 self.app_queue = None
                 self.response = {}
+                self._legacy_asyncio = "loop" in inspect.signature(asyncio.Queue).parameters
 
             def __call__(self, app, body):
                 """
@@ -198,16 +200,25 @@ elif 'app' in __vc_variables:
                 ASGI instance using the connection scope.
                 Runs until the response is completely read from the application.
                 """
-                loop = asyncio.new_event_loop()
-                self.app_queue = asyncio.Queue(loop=loop)
+                if self._legacy_asyncio:
+                    loop = asyncio.new_event_loop()
+                    self.app_queue = asyncio.Queue(loop=loop)
+                else:
+                    self.app_queue = asyncio.Queue()
                 self.put_message({'type': 'http.request', 'body': body, 'more_body': False})
 
                 asgi_instance = app(self.scope, self.receive, self.send)
 
-                asgi_task = loop.create_task(asgi_instance)
-                loop.run_until_complete(asgi_task)
+                if self._legacy_asyncio:
+                    asgi_task = loop.create_task(asgi_instance)
+                    loop.run_until_complete(asgi_task)
+                else:
+                    asyncio.run(self.run_asgi_instance(asgi_instance))
                 return self.response
 
+            async def run_asgi(self, asgi_instance):
+                await asgi_instance
+                
             def put_message(self, message):
                 self.app_queue.put_nowait(message)
 
