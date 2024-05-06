@@ -2784,7 +2784,7 @@ interface EdgeFunctionInfoV2 extends BaseEdgeFunctionInfo {
 
 interface EdgeFunctionInfoV3 extends BaseEdgeFunctionInfo {
   matchers: EdgeFunctionMatcher[];
-  environments: Record<string, string>;
+  env: Record<string, string>;
 }
 
 interface EdgeFunctionMatcher {
@@ -3019,7 +3019,7 @@ export async function getMiddlewareBundle({
                   slug: 'nextjs',
                   version: nextVersion,
                 },
-                environment: edgeFunction.environments,
+                environment: edgeFunction.env,
               });
             })(),
             routeMatchers: getRouteMatchers(edgeFunction, routesManifest),
@@ -3199,7 +3199,7 @@ export function upgradeMiddlewareManifestV1(
     return {
       ...rest,
       matchers: [{ regexp }],
-      environments: {},
+      env: {},
     };
   }
 
@@ -3227,7 +3227,7 @@ export function upgradeMiddlewareManifestV2(
     const { ...rest } = v2Info;
     return {
       ...rest,
-      environments: {},
+      env: {},
     };
   }
 
