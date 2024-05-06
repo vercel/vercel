@@ -168,22 +168,18 @@ async function createEdgeRuntimeServer(params?: {
 
     const server = await runServer({ runtime });
 
-    const onExit = async () => {
-      const waitUntil = server.close();
-      return new Promise<void>((resolve, reject) => {
+    const onExit = async () =>
+      new Promise<void>((resolve, reject) => {
         const timeout = setTimeout(() => {
           console.warn(waitUntilWarning(params.entrypointPath));
           resolve();
         }, WAIT_UNTIL_TIMEOUT_MS);
 
-        waitUntil
+        Promise.all([params.awaiter.awaiting(), server.close()])
           .then(() => resolve())
           .catch(reject)
-          .finally(() => {
-            clearTimeout(timeout);
-          });
+          .finally(() => clearTimeout(timeout));
       });
-    };
 
     return { server, onExit };
   } catch (error: any) {
