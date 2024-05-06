@@ -1,15 +1,21 @@
 import { addHelpers } from './helpers.js';
 import { createServer } from 'http';
-import { serializeBody } from '../utils.js';
+import {
+  WAIT_UNTIL_TIMEOUT_MS,
+  waitUntilWarning,
+  serializeBody,
+} from '../utils.js';
 import { type Dispatcher, Headers, request as undiciRequest } from 'undici';
 import { listen } from 'async-listen';
 import { isAbsolute } from 'path';
 import { pathToFileURL } from 'url';
 import { buildToHeaders } from '@edge-runtime/node-utils';
+import { promisify } from 'util';
 import type { ServerResponse, IncomingMessage } from 'http';
 import type { VercelProxyResponse } from '../types.js';
 import type { VercelRequest, VercelResponse } from './helpers.js';
 import type { Readable } from 'stream';
+import { Awaiter } from '../awaiter.js';
 
 // @ts-expect-error
 const toHeaders = buildToHeaders({ Headers });
@@ -43,14 +49,13 @@ async function createServerlessServer(
   const server = createServer(userCode);
   return {
     url: await listen(server, { host: '127.0.0.1', port: 0 }),
-    onExit: async () => {
-      server.close();
-    },
+    onExit: promisify(server.close.bind(server)),
   };
 }
 
 async function compileUserCode(
   entrypointPath: string,
+  awaiter: Awaiter,
   options: ServerlessServerOptions
 ) {
   const id = isAbsolute(entrypointPath)
@@ -71,7 +76,8 @@ async function compileUserCode(
         'Node.js v18 or above is required to use HTTP method exports in your functions.'
       );
     }
-    const { getWebExportsHandler } = await import('./helpers-web.js');
+    const { createWebExportsHandler } = await import('./helpers-web.js');
+    const getWebExportsHandler = createWebExportsHandler(awaiter);
     return getWebExportsHandler(listener, HTTP_METHODS);
   }
 
@@ -88,7 +94,8 @@ export async function createServerlessEventHandler(
   handler: (request: IncomingMessage) => Promise<VercelProxyResponse>;
   onExit: () => Promise<void>;
 }> {
-  const userCode = await compileUserCode(entrypointPath, options);
+  const awaiter = new Awaiter();
+  const userCode = await compileUserCode(entrypointPath, awaiter, options);
   const server = await createServerlessServer(userCode);
   const isStreaming = options.mode === 'streaming';
 
@@ -122,8 +129,21 @@ export async function createServerlessEventHandler(
     };
   };
 
+  const onExit = () =>
+    new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        console.warn(waitUntilWarning(entrypointPath));
+        resolve();
+      }, WAIT_UNTIL_TIMEOUT_MS);
+
+      Promise.all([awaiter.awaiting(), server.onExit()])
+        .then(() => resolve())
+        .catch(reject)
+        .finally(() => clearTimeout(timeout));
+    });
+
   return {
     handler,
-    onExit: server.onExit,
+    onExit,
   };
 }
