@@ -7,7 +7,7 @@ import { EdgeRuntime, runServer } from 'edge-runtime';
 import { type Dispatcher, Headers, request as undiciRequest } from 'undici';
 import { isError } from '@vercel/error-utils';
 import { readFileSync } from 'fs';
-import { serializeBody, entrypointToOutputPath, logError } from '../utils.js';
+import { serializeBody, entrypointToOutputPath, logError, waitUntilWarning, WAIT_UNTIL_TIMEOUT_MS, } from '../utils.js';
 import esbuild from 'esbuild';
 import { buildToHeaders } from '@edge-runtime/node-utils';
 import type { VercelProxyResponse } from '../types.js';
@@ -41,6 +41,7 @@ async function compileUserCode(
       userCode: string;
       wasmAssets: WasmAssets;
       nodeCompatBindings: NodeCompatBindings;
+      entrypointPath: string;
     }
 > {
   const { wasmAssets, plugin: edgeWasmPlugin } = createEdgeWasmPlugin();
@@ -110,6 +111,7 @@ async function compileUserCode(
     `;
 
     return {
+      entrypointPath: entrypointFullPath,
       userCode,
       wasmAssets,
       nodeCompatBindings: nodeCompatPlugin.bindings,
@@ -127,6 +129,7 @@ async function createEdgeRuntimeServer(params?: {
   userCode: string;
   wasmAssets: WasmAssets;
   nodeCompatBindings: NodeCompatBindings;
+  entrypointPath: string;
 }): Promise<
   { server: EdgeRuntimeServer; onExit: () => Promise<void> } | undefined
 > {
@@ -166,21 +169,12 @@ async function createEdgeRuntimeServer(params?: {
     const server = await runServer({ runtime });
 
     const onExit = async () => {
-      // When exiting this process, wait for the Edge Runtime server to finish
-      // all its work, especially waitUntil promises before exiting this process.
-      //
-      // Here we use a short timeout (10 seconds) to let the user know that
-      // it has a long-running waitUntil promise.
-      const WAIT_UNTIL_TIMEOUT = 10 * 1000;
       const waitUntil = server.close();
       return new Promise<void>((resolve, reject) => {
         const timeout = setTimeout(() => {
-          console.warn(
-            `Edge Runtime server is still running after ${WAIT_UNTIL_TIMEOUT} ms` +
-              ` (hint: do you have a long-running waitUntil() promise?)`
-          );
+          console.warn(waitUntilWarning(params.entrypointPath));
           resolve();
-        }, WAIT_UNTIL_TIMEOUT);
+        }, WAIT_UNTIL_TIMEOUT_MS);
 
         waitUntil
           .then(() => resolve())
