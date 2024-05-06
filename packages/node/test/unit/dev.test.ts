@@ -57,14 +57,14 @@ async function withDevServer(
 
   const start = Date.now();
 
-  return fn(url).finally(async () => {
+  try {
+    return await fn(url);
+  } finally {
     const elapsed = Date.now() - start;
     if (runningTimeout) await setTimeout(runningTimeout - elapsed);
-    child.send('shutdown', err => {
-      if (err) child.kill(9);
-    });
-    await once(child, 'exit');
-  });
+    child.send('shutdown', error => error && child.kill(9));
+    if (child.exitCode === null) await once(child, 'exit');
+  }
 }
 
 (NODE_MAJOR < 18 ? describe.skip : describe)('web handlers', () => {
@@ -102,6 +102,19 @@ async function withDevServer(
           expect(isWaitUntilCalled).toBe(true);
         },
         { runningTimeout: 300 }
+      ));
+
+    test('with `waitUntil` from context rejecting a promise ', () =>
+      withDevServer(
+        './wait-until-ctx-node-rejected.js',
+        async (url: string) => {
+          const response = await fetch(
+            `${url}/api/wait-until-ctx-node-rejected`
+          );
+          await setTimeout(100); // wait a bit for waitUntil resolution
+          expect(response.status).toBe(200);
+        },
+        { runningTimeout: 100 }
       ));
 
     test('exporting GET', () =>
