@@ -1,3 +1,6 @@
+/**
+ * The Awaiter class is used to manage and await multiple promises.
+ */
 export class Awaiter {
   private waitFunctions: Set<() => Promise<unknown>> = new Set();
   private onError: ((error: Error) => void) | undefined;

@@ -14,6 +14,7 @@ import type { VercelProxyResponse } from '../types.js';
 import type { IncomingMessage } from 'http';
 import { fileURLToPath } from 'url';
 import { EdgeRuntimeServer } from 'edge-runtime/dist/server/run-server.js';
+import { Awaiter } from '../awaiter.js';
 
 const NODE_VERSION_MAJOR = process.version.match(/^v(\d+)\.\d+/)?.[1];
 const NODE_VERSION_IDENTIFIER = `node${NODE_VERSION_MAJOR}`;
@@ -42,6 +43,7 @@ async function compileUserCode(
       wasmAssets: WasmAssets;
       nodeCompatBindings: NodeCompatBindings;
       entrypointPath: string;
+      awaiter: Awaiter;
     }
 > {
   const { wasmAssets, plugin: edgeWasmPlugin } = createEdgeWasmPlugin();
@@ -115,6 +117,7 @@ async function compileUserCode(
       userCode,
       wasmAssets,
       nodeCompatBindings: nodeCompatPlugin.bindings,
+      awaiter: new Awaiter()
     };
   } catch (error: unknown) {
     // We can't easily show a meaningful stack trace from esbuild -> edge-runtime.
@@ -130,6 +133,7 @@ async function createEdgeRuntimeServer(params?: {
   wasmAssets: WasmAssets;
   nodeCompatBindings: NodeCompatBindings;
   entrypointPath: string;
+  awaiter: Awaiter;
 }): Promise<
   { server: EdgeRuntimeServer; onExit: () => Promise<void> } | undefined
 > {
@@ -160,6 +164,12 @@ async function createEdgeRuntimeServer(params?: {
 
           // These are the global bindings for WebAssembly module
           ...wasmBindings,
+
+          FetchEvent: class extends context.FetchEvent {
+            waitUntil = (promise: any) => {
+              params!.awaiter.waitUntil(promise);
+            }
+          }
         });
 
         return context;
