@@ -9,7 +9,10 @@ jest.setTimeout(20 * 1000);
 
 const [NODE_MAJOR] = process.versions.node.split('.').map(v => Number(v));
 
-function testForkDevServer(entrypoint: string) {
+function testForkDevServer(
+  entrypoint: string,
+  options: { printLogs?: boolean } = {}
+) {
   const ext = extname(entrypoint);
   const isTypeScript = ext === '.ts';
   const isEsm = ext === '.mjs';
@@ -26,6 +29,7 @@ function testForkDevServer(entrypoint: string) {
     workPath: resolve(__dirname, '../dev-fixtures'),
     entrypoint,
     devServerPath: resolve(__dirname, '../../dist/dev-server.mjs'),
+    printLogs: options.printLogs,
   });
 }
 
