@@ -7,7 +7,13 @@ import { EdgeRuntime, runServer } from 'edge-runtime';
 import { type Dispatcher, Headers, request as undiciRequest } from 'undici';
 import { isError } from '@vercel/error-utils';
 import { readFileSync } from 'fs';
-import { serializeBody, entrypointToOutputPath, logError, waitUntilWarning, WAIT_UNTIL_TIMEOUT_MS, } from '../utils.js';
+import {
+  serializeBody,
+  entrypointToOutputPath,
+  logError,
+  waitUntilWarning,
+  WAIT_UNTIL_TIMEOUT_MS,
+} from '../utils.js';
 import esbuild from 'esbuild';
 import { buildToHeaders } from '@edge-runtime/node-utils';
 import type { VercelProxyResponse } from '../types.js';
@@ -117,7 +123,7 @@ async function compileUserCode(
       userCode,
       wasmAssets,
       nodeCompatBindings: nodeCompatPlugin.bindings,
-      awaiter: new Awaiter()
+      awaiter: new Awaiter(),
     };
   } catch (error: unknown) {
     // We can't easily show a meaningful stack trace from esbuild -> edge-runtime.
@@ -168,8 +174,8 @@ async function createEdgeRuntimeServer(params?: {
           FetchEvent: class extends context.FetchEvent {
             waitUntil = (promise: any) => {
               params!.awaiter.waitUntil(promise);
-            }
-          }
+            };
+          },
         });
 
         return context;
@@ -178,7 +184,14 @@ async function createEdgeRuntimeServer(params?: {
 
     const server = await runServer({ runtime });
 
-    const onExit = async () =>
+    // @ts-expect-error
+    runtime.context.globalThis[Symbol.for('@vercel/request-context')] = {
+      get: () => ({
+        waitUntil: params.awaiter.waitUntil.bind(params.awaiter),
+      }),
+    };
+
+    const onExit = () =>
       new Promise<void>((resolve, reject) => {
         const timeout = setTimeout(() => {
           console.warn(waitUntilWarning(params.entrypointPath));
