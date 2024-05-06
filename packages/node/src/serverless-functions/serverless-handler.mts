@@ -95,6 +95,17 @@ export async function createServerlessEventHandler(
   onExit: () => Promise<void>;
 }> {
   const awaiter = new Awaiter();
+
+  Object.defineProperty(globalThis, Symbol.for('@vercel/request-context'), {
+    enumerable: false,
+    configurable: true,
+    value: {
+      get: () => ({
+        waitUntil: awaiter.waitUntil.bind(awaiter),
+      }),
+    },
+  });
+
   const userCode = await compileUserCode(entrypointPath, awaiter, options);
   const server = await createServerlessServer(userCode);
   const isStreaming = options.mode === 'streaming';
