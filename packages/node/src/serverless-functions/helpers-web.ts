@@ -17,7 +17,7 @@ export const createWebExportsHandler = (awaiter: Awaiter) => {
       Uint8Array,
       // @ts-expect-error Property 'waitUntil' is missing in type 'FetchEvent'
       FetchEvent: class {
-        waitUntil = (promise: Promise<any>) => awaiter.waitUntil(promise);
+        waitUntil = (promise: Promise<unknown>) => awaiter.waitUntil(promise);
       },
     },
     { defaultOrigin: 'https://vercel.com' }

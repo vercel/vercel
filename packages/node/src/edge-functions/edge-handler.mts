@@ -172,7 +172,7 @@ async function createEdgeRuntimeServer(params?: {
           ...wasmBindings,
 
           FetchEvent: class extends context.FetchEvent {
-            waitUntil = (promise: any) => {
+            waitUntil = (promise: Promise<unknown>) => {
               params!.awaiter.waitUntil(promise);
             };
           },
