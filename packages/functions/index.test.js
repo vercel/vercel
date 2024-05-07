@@ -23,14 +23,11 @@ test.each([
 });
 
 test.each([null, undefined, {}])(
-  'waitUntil throws when context is %s',
+  'waitUntil does not throw an error when context is %s',
   input => {
     const promise = Promise.resolve();
     globalThis[Symbol.for('@vercel/request-context')] = input;
-    expect(() => waitUntil(promise)).toThrow(Error);
-    expect(() => waitUntil(promise)).toThrow(
-      'failed to get waitUntil function for this request context'
-    );
+    expect(() => waitUntil(promise)).not.toThrow();
   }
 );
 

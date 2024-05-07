@@ -13,12 +13,5 @@ export const waitUntil = promise => {
   }
 
   const ctx = globalThis[Symbol.for('@vercel/request-context')]?.get?.() ?? {};
-
-  if (!ctx.waitUntil) {
-    throw new Error(
-      'failed to get waitUntil function for this request context'
-    );
-  }
-
-  ctx.waitUntil(promise);
+  ctx.waitUntil?.(promise);
 };
