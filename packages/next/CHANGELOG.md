@@ -1,5 +1,15 @@
 # @vercel/next
 
+## 4.2.8
+
+### Patch Changes
+
+- Fix missing initial RSC headers ([#11552](https://github.com/vercel/vercel/pull/11552))
+
+- Remove .prefetch.rsc rewrites for non-PPR ([#11540](https://github.com/vercel/vercel/pull/11540))
+
+- [next] rename middleware manifest env ([#11549](https://github.com/vercel/vercel/pull/11549))
+
 ## 4.2.7
 
 ### Patch Changes

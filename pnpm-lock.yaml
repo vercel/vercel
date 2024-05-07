@@ -325,10 +325,10 @@ importers:
         specifier: 1.0.2
         version: link:../hydrogen
       '@vercel/next':
-        specifier: 4.2.7
+        specifier: 4.2.8
         version: link:../next
       '@vercel/node':
-        specifier: 3.0.28
+        specifier: 3.1.0
         version: link:../node
       '@vercel/python':
         specifier: 4.2.0

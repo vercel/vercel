@@ -2,7 +2,7 @@
   "name": "@vercel/functions",
   "description": "Runtime functions to be used with your Vercel Functions",
   "homepage": "https://vercel.com",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "types": "index.d.ts",
   "main": "index.js",
   "repository": {
