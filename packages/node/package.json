@@ -50,6 +50,7 @@
     "@types/cookie": "0.3.3",
     "@types/etag": "1.8.0",
     "@types/jest": "29.5.0",
+    "@vercel/functions": "workspace:*",
     "content-type": "1.0.5",
     "cookie": "0.4.0",
     "cross-env": "7.0.3",
