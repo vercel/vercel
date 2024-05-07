@@ -325,10 +325,10 @@ importers:
         specifier: 1.0.2
         version: link:../hydrogen
       '@vercel/next':
-        specifier: 4.2.7
+        specifier: 4.2.8
         version: link:../next
       '@vercel/node':
-        specifier: 3.0.28
+        specifier: 3.1.0
         version: link:../node
       '@vercel/python':
         specifier: 4.2.0
@@ -950,6 +950,12 @@ importers:
         specifier: 4.9.5
         version: 4.9.5
 
+  packages/functions:
+    devDependencies:
+      vitest:
+        specifier: 1.3.1
+        version: 1.3.1(@types/node@14.18.33)
+
   packages/gatsby-plugin-vercel-analytics:
     dependencies:
       web-vitals:
@@ -1227,8 +1233,8 @@ importers:
         specifier: 3.2.0
         version: 3.2.0
       '@types/node':
-        specifier: 14.18.33
-        version: 14.18.33
+        specifier: 16.18.11
+        version: 16.18.11
       '@vercel/build-utils':
         specifier: 8.0.0
         version: link:../build-utils
@@ -1302,6 +1308,9 @@ importers:
       '@types/jest':
         specifier: 29.5.0
         version: 29.5.0
+      '@vercel/functions':
+        specifier: workspace:*
+        version: link:../functions
       content-type:
         specifier: 1.0.5
         version: 1.0.5
@@ -10417,7 +10426,7 @@ packages:
       jest-snapshot: 29.5.0
       jest-util: 29.5.0
       p-limit: 3.1.0
-      pretty-format: 29.5.0
+      pretty-format: 29.7.0
       pure-rand: 6.0.1
       slash: 3.0.0
       stack-utils: 2.0.6
@@ -10513,7 +10522,7 @@ packages:
       jest-validate: 29.5.0
       micromatch: 4.0.5
       parse-json: 5.2.0
-      pretty-format: 29.5.0
+      pretty-format: 29.7.0
       slash: 3.0.0
       strip-json-comments: 3.1.1
     transitivePeerDependencies:
@@ -10552,7 +10561,7 @@ packages:
       jest-validate: 29.5.0
       micromatch: 4.0.5
       parse-json: 5.2.0
-      pretty-format: 29.5.0
+      pretty-format: 29.7.0
       slash: 3.0.0
       strip-json-comments: 3.1.1
     transitivePeerDependencies:
@@ -10591,7 +10600,7 @@ packages:
       jest-validate: 29.5.0
       micromatch: 4.0.5
       parse-json: 5.2.0
-      pretty-format: 29.5.0
+      pretty-format: 29.7.0
       slash: 3.0.0
       strip-json-comments: 3.1.1
     transitivePeerDependencies:
@@ -10633,9 +10642,9 @@ packages:
     engines: {node: ^14.15.0 || ^16.10.0 || >=18.0.0}
     dependencies:
       chalk: 4.1.0
-      diff-sequences: 29.4.3
+      diff-sequences: 29.6.3
       jest-get-type: 29.4.3
-      pretty-format: 29.5.0
+      pretty-format: 29.7.0
     dev: true
 
   /jest-docblock@29.4.3:
@@ -10653,7 +10662,7 @@ packages:
       chalk: 4.1.0
       jest-get-type: 29.4.3
       jest-util: 29.5.0
-      pretty-format: 29.5.0
+      pretty-format: 29.7.0
     dev: true
 
   /jest-environment-node@29.5.0:
@@ -10722,7 +10731,7 @@ packages:
     engines: {node: ^14.15.0 || ^16.10.0 || >=18.0.0}
     dependencies:
       jest-get-type: 29.4.3
-      pretty-format: 29.5.0
+      pretty-format: 29.7.0
     dev: true
 
   /jest-matcher-utils@27.5.1:
@@ -10915,7 +10924,7 @@ packages:
       jest-message-util: 29.5.0
       jest-util: 29.5.0
       natural-compare: 1.4.0
-      pretty-format: 29.5.0
+      pretty-format: 29.7.0
       semver: 7.5.2
     transitivePeerDependencies:
       - supports-color
@@ -10954,7 +10963,7 @@ packages:
       chalk: 4.1.0
       jest-get-type: 29.4.3
       leven: 3.1.0
-      pretty-format: 29.5.0
+      pretty-format: 29.7.0
     dev: true
 
   /jest-watcher@29.5.0:
