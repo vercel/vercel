@@ -2,7 +2,6 @@
 
 export const waitUntil = promise => {
   if (
-    promise instanceof Promise === false ||
     promise === null ||
     typeof promise !== 'object' ||
     typeof promise.then !== 'function'
