@@ -604,6 +604,9 @@ const main = async () => {
         case 'secrets':
           func = require('./commands/secrets').default;
           break;
+        case 'target':
+          func = require('./commands/target').default;
+          break;
         case 'teams':
           func = require('./commands/teams').default;
           break;
