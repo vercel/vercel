@@ -1,5 +1,11 @@
 # @vercel/node
 
+## 3.1.0
+
+### Minor Changes
+
+- Make waitUntil consistent for Node.js & Edge ([#11553](https://github.com/vercel/vercel/pull/11553))
+
 ## 3.0.28
 
 ### Patch Changes

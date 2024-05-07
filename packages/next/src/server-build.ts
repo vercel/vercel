@@ -251,7 +251,7 @@ export async function serverBuild({
       if (rewrite.src && rewrite.dest) {
         rewrite.src = rewrite.src.replace(
           /\/?\(\?:\/\)\?/,
-          '(?<rscsuff>(\\.prefetch)?\\.rsc)?(?:/)?'
+          `(?<rscsuff>${experimental.ppr ? '(\\.prefetch)?' : ''}\\.rsc)?(?:/)?`
         );
         let destQueryIndex = rewrite.dest.indexOf('?');
 
@@ -1903,7 +1903,7 @@ export async function serverBuild({
 
       ...(appDir
         ? [
-            ...(rscPrefetchHeader
+            ...(rscPrefetchHeader && experimental.ppr
               ? [
                   {
                     src: `^${path.posix.join('/', entryDirectory, '/')}`,
@@ -2041,47 +2041,6 @@ export async function serverBuild({
               src: path.posix.join('/', entryDirectory, '_next/data/(.*)'),
               dest: path.posix.join('/', entryDirectory, '_next/data/$1'),
               check: true,
-            },
-          ]
-        : []),
-
-      ...(rscPrefetchHeader && !experimental.ppr
-        ? [
-            {
-              src: path.posix.join(
-                '/',
-                entryDirectory,
-                `/__index${RSC_PREFETCH_SUFFIX}`
-              ),
-              dest: path.posix.join('/', entryDirectory, '/index.rsc'),
-              has: [
-                {
-                  type: 'header',
-                  key: rscPrefetchHeader,
-                },
-              ],
-              continue: true,
-              override: true,
-            },
-            {
-              src: `^${path.posix.join(
-                '/',
-                entryDirectory,
-                `/(.+?)${RSC_PREFETCH_SUFFIX}(?:/)?$`
-              )}`,
-              dest: path.posix.join(
-                '/',
-                entryDirectory,
-                `/$1${experimental.ppr ? RSC_PREFETCH_SUFFIX : '.rsc'}`
-              ),
-              has: [
-                {
-                  type: 'header',
-                  key: rscPrefetchHeader,
-                },
-              ],
-              continue: true,
-              override: true,
             },
           ]
         : []),
