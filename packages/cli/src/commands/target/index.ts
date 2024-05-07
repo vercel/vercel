@@ -1,7 +1,6 @@
 import Client from '../../util/client';
 import getArgs from '../../util/get-args';
 import getInvalidSubcommand from '../../util/get-invalid-subcommand';
-import getScope from '../../util/get-scope';
 import handleError from '../../util/handle-error';
 import { help } from '../help';
 import list from './list';
@@ -37,7 +36,6 @@ export default async function main(client: Client) {
   subcommand = argv._[0] || 'list';
   const args = argv._.slice(1);
   const { cwd, output } = client;
-  const { contextName } = await getScope(client);
   const link = await getLinkedProject(client, cwd);
 
   if (link.status === 'error') {
@@ -53,7 +51,7 @@ export default async function main(client: Client) {
   switch (subcommand) {
     case 'ls':
     case 'list':
-      return await list(client, argv, args, contextName, link);
+      return await list(client, argv, args, link);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
       client.output.print(

@@ -10,7 +10,6 @@ export default async function list(
   client: Client,
   argv: any,
   args: string[],
-  contextName: string,
   link: ProjectLinked
 ) {
   const { output } = client;
@@ -26,10 +25,10 @@ export default async function list(
   const start = Date.now();
   const projectUrl = `https://vercel.com/${link.org.slug}/${link.project.name}`;
   const projectSlugLink = output.link(
-    chalk.bold(`${contextName}/${link.project.name}`),
+    chalk.bold(`${link.org.slug}/${link.project.name}`),
     projectUrl,
     {
-      fallback: () => chalk.bold(`${contextName}/${link.project.name}`),
+      fallback: () => chalk.bold(`${link.org.slug}/${link.project.name}`),
       color: false,
     }
   );
