@@ -2465,6 +2465,7 @@ export const onPrerenderRoute =
           ...(rscEnabled
             ? {
                 initialHeaders: {
+                  ...initialHeaders,
                   'content-type': rscContentTypeHeader,
                   vary: rscVaryHeader,
                   // If it contains a pre-render, then it was postponed.
