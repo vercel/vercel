@@ -114,7 +114,6 @@ export default async function list(
                 target.slug,
                 target.id,
                 target.type === 'production' ? 'Production' : 'Preview',
-
                 chalk.gray(
                   target.updatedAt > 0 ? ms(Date.now() - target.updatedAt) : '-'
                 ),
