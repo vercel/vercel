@@ -218,7 +218,9 @@ export async function serverBuild({
   }
 
   const experimental = {
-    ppr: requiredServerFilesManifest.config.experimental?.ppr === true,
+    ppr:
+      requiredServerFilesManifest.config.experimental?.ppr === true ||
+      requiredServerFilesManifest.config.experimental?.ppr === 'incremental',
   };
 
   let appRscPrefetches: UnwrapPromise<ReturnType<typeof glob>> = {};
@@ -228,8 +230,6 @@ export async function serverBuild({
   if (appPathRoutesManifest) {
     appDir = path.join(pagesDir, '../app');
     appBuildTraces = await glob('**/*.js.nft.json', appDir);
-
-    // TODO: maybe?
     appRscPrefetches = experimental.ppr
       ? {}
       : await glob(`**/*${RSC_PREFETCH_SUFFIX}`, appDir);
