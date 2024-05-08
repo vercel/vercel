@@ -53,6 +53,40 @@ export default async function list(
 
   const elapsed = ms(Date.now() - start);
 
+  result.unshift(
+    {
+      id: 'production',
+      slug: 'production',
+      createdAt: 0,
+      updatedAt: 0,
+      type: 'production',
+      description: '',
+      name: 'Production',
+      domains: [],
+    },
+    {
+      id: 'preview',
+      slug: 'preview',
+      createdAt: 0,
+      updatedAt: 0,
+      type: 'preview',
+      description: '',
+      name: 'Preview',
+      domains: [],
+    }
+  );
+
+  result.push({
+    id: 'development',
+    slug: 'development',
+    createdAt: 0,
+    updatedAt: 0,
+    type: 'development',
+    description: '',
+    name: 'Development',
+    domains: [],
+  });
+
   output.log(
     `${
       result.length > 0
@@ -64,8 +98,8 @@ export default async function list(
   if (result.length > 0) {
     const tablePrint = table(
       [
-        ['Target Name', 'Target Slug', 'Type', 'Updated'].map(header =>
-          chalk.bold(chalk.cyan(header))
+        ['Target Name', 'Target Slug', 'Target ID', 'Type', 'Updated'].map(
+          header => chalk.bold(chalk.cyan(header))
         ),
         ...result
           .map(target => {
@@ -78,8 +112,12 @@ export default async function list(
                   { fallback: () => boldName, color: false }
                 ),
                 target.slug,
-                target.type,
-                chalk.gray(ms(Date.now() - target.updatedAt)),
+                target.id,
+                target.type === 'production' ? 'Production' : 'Preview',
+
+                chalk.gray(
+                  target.updatedAt > 0 ? ms(Date.now() - target.updatedAt) : '-'
+                ),
               ],
             ];
           })
