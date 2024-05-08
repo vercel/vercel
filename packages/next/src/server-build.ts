@@ -1601,6 +1601,10 @@ export async function serverBuild({
           edgeFunctions[`${pathname}${RSC_PREFETCH_SUFFIX}`] =
             edgeFunctions[pathname];
         }
+
+        if (hasActionOutputSupport) {
+          edgeFunctions[`${pathname}.action`] = edgeFunctions[pathname];
+        }
       }
     }
   }
