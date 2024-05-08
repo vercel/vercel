@@ -256,7 +256,7 @@ export async function getNodeVersion(
   const pkgJsonNodeVersion = packageJson?.engines?.node;
   const nodeVersionToUse = await getSupportedNodeVersion(
     pkgJsonNodeVersion || nodeVersion,
-    pkgJsonNodeVersion ? false : true,
+    !pkgJsonNodeVersion,
     availableVersions
   );
 
