@@ -5,10 +5,5 @@
       "use": "@vercel/next"
     }
   ],
-  "build": {
-    "env": {
-      "NEXT_EXPERIMENTAL_STREAMING_ACTIONS": false
-    }
-  },
   "probes": []
 }
