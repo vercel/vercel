@@ -588,7 +588,7 @@ export const build: BuildV2 = async ({
         ['-e', 'print "#{ RUBY_VERSION }"'],
         { encoding: 'utf8' }
       );
-      if (rubyVersion) {
+      if (rubyVersion.status === 0 && typeof rubyVersion.stdout === 'string') {
         gemHome = path.join(dir, rubyVersion.stdout.trim());
         debug(`Set GEM_HOME="${gemHome}" because a Gemfile was found`);
       }
