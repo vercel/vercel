@@ -196,4 +196,5 @@ export interface DeploymentOptions {
   projectSettings?: ProjectSettings;
   gitMetadata?: GitMetadata;
   autoAssignCustomDomains?: boolean;
+  customEnvironmentSlugOrId?: string;
 }

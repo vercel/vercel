@@ -79,7 +79,8 @@ export const deployCommand: Command = {
       shorthand: null,
       type: Boolean,
       deprecated: false,
-      description: 'Create a production deployment',
+      description:
+        'Create a production deployment (shorthand for `--target=production`)',
     },
     {
       name: 'archive',
@@ -129,7 +130,7 @@ export const deployCommand: Command = {
       name: 'target',
       shorthand: null,
       type: String,
-      deprecated: true,
+      deprecated: false,
       description: 'Specify the target deployment environment',
     },
     {

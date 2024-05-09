@@ -33,6 +33,16 @@ async function* postDeployment(
     clientOptions.skipAutoDetectionConfirmation = true;
   }
 
+  // Built-in environments need to use `target`,
+  // otherwise use `customEnvironmentSlugOrId` for a Custom Environment
+  if (
+    deploymentOptions.target &&
+    !['production', 'staging', 'preview'].includes(deploymentOptions.target)
+  ) {
+    deploymentOptions.customEnvironmentSlugOrId = deploymentOptions.target;
+    deploymentOptions.target = undefined;
+  }
+
   debug('Sending deployment creation API request');
   try {
     const response = await fetch(
