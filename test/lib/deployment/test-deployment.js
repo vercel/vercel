@@ -42,6 +42,8 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
   }
 
   if (probe.logMustContain || probe.logMustNotContain) {
+    let found = false;
+
     const shouldContain = !!probe.logMustContain;
     const toCheck = probe.logMustContain || probe.logMustNotContain;
 
@@ -71,11 +73,23 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
             Array.isArray(ctx.deploymentLogs) &&
             ctx.deploymentLogs.length > 2
           ) {
-            break;
+            found = probeLogsMustContain(
+              ctx.deploymentLogs,
+              toCheck,
+              shouldContain,
+              found,
+              deploymentId
+            );
+            if (found) {
+              // only exit loop if found
+              // because logs are not all available immediately after the deployment is ready
+              break;
+            }
           }
         } catch (err) {
           lastErr = err;
         }
+
         ctx.deploymentLogs = null;
         logWithinTest(
           'Retrying to fetch logs for',
@@ -85,8 +99,10 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
             ? ctx.deploymentLogs.length
             : typeof ctx.deploymentLogs
         );
+
         await new Promise(resolve => setTimeout(resolve, 2000));
       }
+
       if (
         !Array.isArray(ctx.deploymentLogs) ||
         ctx.deploymentLogs.length === 0
@@ -99,31 +115,15 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
       }
     }
 
-    let found = false;
-    const deploymentLogs = ctx.deploymentLogs;
-
-    for (const log of deploymentLogs) {
-      if (log.text && log.text.includes(toCheck)) {
-        if (shouldContain) {
-          found = true;
-          break;
-        } else {
-          throw new Error(
-            `Expected deployment logs of ${deploymentId} not to contain ${toCheck}, but found ${log.text}`
-          );
-        }
-      }
-    }
-
     if (!found && shouldContain) {
       logWithinTest({
         deploymentId,
         deploymentUrl,
-        deploymentLogs,
-        logLength: deploymentLogs?.length,
+        deploymentLogs: ctx.deploymentLogs,
+        logLength: ctx.deploymentLogs?.length,
       });
       throw new Error(
-        `Expected deployment logs of ${deploymentId} to contain ${toCheck}, it was not found`
+        `Expected deployment logs of ${deploymentId} to contain "${toCheck}", it was not found`
       );
     } else {
       logWithinTest('finished testing', JSON.stringify(probe));
@@ -331,6 +331,28 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
   }
 
   assert(hadTest, 'probe must have a test condition');
+}
+
+function probeLogsMustContain(
+  deploymentLogs,
+  toCheck,
+  shouldContain,
+  found,
+  deploymentId
+) {
+  for (const log of deploymentLogs) {
+    if (log.text && log.text.includes(toCheck)) {
+      if (shouldContain) {
+        found = true;
+        break;
+      } else {
+        throw new Error(
+          `Expected deployment logs of ${deploymentId} not to contain ${toCheck}, but found ${log.text}`
+        );
+      }
+    }
+  }
+  return found;
 }
 
 async function testDeployment(fixturePath, opts = {}) {
