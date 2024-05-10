@@ -1564,16 +1564,15 @@ export async function getPageLambdaGroups({
       opts = functionsConfigManifest.functions[routeName];
     }
 
-    if (config && config.functions) {
-      // `pages` are normalized without route groups (e.g., /app/(group)/page.js).
-      // we keep track of that mapping in `inversedAppPathManifest`
-      // `getSourceFilePathFromPage` needs to use the path from source to properly match the config
-      const pageFromManifest = inversedAppPathManifest?.[routeName];
+    // /_not-found isn't a real route, so there won't be a source for it.
+    if (config && config.functions && routeName !== '/_not-found') {
       const sourceFile = await getSourceFilePathFromPage({
         workPath: entryPath,
-        // since this function is used by both `pages` and `app`, the manifest might not be provided
-        // so fallback to normal behavior of just checking the `page`.
-        page: pageFromManifest ?? page,
+        page: normalizeSourceFilePageFromManifest(
+          routeName,
+          page,
+          inversedAppPathManifest
+        ),
         pageExtensions,
       });
 
@@ -1655,6 +1654,33 @@ export async function getPageLambdaGroups({
   }
 
   return groups;
+}
+
+// `pages` are normalized without route groups (e.g., /app/(group)/page.js).
+// we keep track of that mapping in `inversedAppPathManifest`
+// `getSourceFilePathFromPage` needs to use the path from source to properly match the config
+function normalizeSourceFilePageFromManifest(
+  routeName: string,
+  page: string,
+  inversedAppPathManifest?: Record<string, string>
+) {
+  const pageFromManifest = inversedAppPathManifest?.[routeName];
+  if (!pageFromManifest) {
+    // since this function is used by both `pages` and `app`, the manifest might not be provided
+    // so fallback to normal behavior of just checking the `page`.
+    return page;
+  }
+
+  if (
+    ['/favicon.ico', '/opengraph-image.', '/twitter-image.'].some(specialPath =>
+      routeName.includes(specialPath)
+    )
+  ) {
+    // the source files for these will not contain `/route` or `/page` suffix, so return the routeName as-is.
+    return routeName;
+  }
+
+  return pageFromManifest;
 }
 
 export const outputFunctionFileSizeInfo = (

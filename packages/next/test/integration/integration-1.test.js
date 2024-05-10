@@ -53,9 +53,25 @@ async function hashAllFiles(files) {
 // experimental appDir currently requires Node.js >= 16
 if (parseInt(process.versions.node.split('.')[0], 10) >= 16) {
   it('should build with app-dir correctly', async () => {
+    const origLog = console.log;
+    const origError = console.error;
+    const caughtLogs = [];
+
+    console.log = function (...args) {
+      caughtLogs.push(args.join(' '));
+      origLog.apply(this, args);
+    };
+    console.error = function (...args) {
+      caughtLogs.push(args.join(' '));
+      origError.apply(this, args);
+    };
+
     const { buildResult } = await runBuildLambda(
       path.join(__dirname, '../fixtures/00-app-dir-no-ppr')
     );
+
+    console.log = origLog;
+    console.error = origError;
 
     const lambdas = new Set();
 
@@ -123,6 +139,12 @@ if (parseInt(process.versions.node.split('.')[0], 10) >= 16) {
     expect(buildResult.output['dashboard.rsc'].fallback.fsPath).toMatch(
       /server\/app\/dashboard\.rsc$/
     );
+
+    expect(
+      caughtLogs.some(log =>
+        log.includes('WARNING: Unable to find source file for page')
+      )
+    ).toBeFalsy();
     // TODO: re-enable after index/index handling is corrected
     // expect(buildResult.output['dashboard/index/index'].type).toBe('Prerender');
     // expect(buildResult.output['dashboard/index/index'].fallback.fsPath).toMatch(
