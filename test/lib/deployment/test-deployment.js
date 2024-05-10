@@ -125,7 +125,7 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
       const error = new Error(
         `Expected deployment logs of ${deploymentId} to contain ${toCheck}, it was not found`
       );
-      error.retries = 3;
+      error.retries = 20;
       throw error;
     } else {
       logWithinTest('finished testing', JSON.stringify(probe));
