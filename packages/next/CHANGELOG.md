@@ -1,5 +1,53 @@
 # @vercel/next
 
+## 4.2.9
+
+### Patch Changes
+
+- Support incremental partial prerendering ([#11560](https://github.com/vercel/vercel/pull/11560))
+
+- ensure `.action` outputs are created for edge functions ([#11568](https://github.com/vercel/vercel/pull/11568))
+
+- ([#11566](https://github.com/vercel/vercel/pull/11566))
+
+## 4.2.8
+
+### Patch Changes
+
+- Fix missing initial RSC headers ([#11552](https://github.com/vercel/vercel/pull/11552))
+
+- Remove .prefetch.rsc rewrites for non-PPR ([#11540](https://github.com/vercel/vercel/pull/11540))
+
+- [next] rename middleware manifest env ([#11549](https://github.com/vercel/vercel/pull/11549))
+
+## 4.2.7
+
+### Patch Changes
+
+- Fix missing .rsc outputs for pages prerenders ([#11503](https://github.com/vercel/vercel/pull/11503))
+
+- Fix base path app index RSC handling ([#11528](https://github.com/vercel/vercel/pull/11528))
+
+- Fix interception routes PPR route handling ([#11527](https://github.com/vercel/vercel/pull/11527))
+
+## 4.2.6
+
+### Patch Changes
+
+- [next] Update test fixture version ([#11514](https://github.com/vercel/vercel/pull/11514))
+
+## 4.2.5
+
+### Patch Changes
+
+- Only rewrite next-action requests to `.action` handlers ([#11504](https://github.com/vercel/vercel/pull/11504))
+
+## 4.2.4
+
+### Patch Changes
+
+- [next]: Revert .action handling for dynamic routes ([#11509](https://github.com/vercel/vercel/pull/11509))
+
 ## 4.2.3
 
 ### Patch Changes

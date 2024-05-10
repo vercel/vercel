@@ -201,10 +201,9 @@ export async function serverBuild({
     nextVersion,
     EMPTY_ALLOW_QUERY_FOR_PRERENDERED_VERSION
   );
-  const hasActionOutputSupport = semver.gte(
-    nextVersion,
-    ACTION_OUTPUT_SUPPORT_VERSION
-  );
+  const hasActionOutputSupport =
+    semver.gte(nextVersion, ACTION_OUTPUT_SUPPORT_VERSION) &&
+    Boolean(process.env.NEXT_EXPERIMENTAL_STREAMING_ACTIONS);
   const projectDir = requiredServerFilesManifest.relativeAppDir
     ? path.join(baseDir, requiredServerFilesManifest.relativeAppDir)
     : requiredServerFilesManifest.appDir || entryPath;
@@ -219,7 +218,9 @@ export async function serverBuild({
   }
 
   const experimental = {
-    ppr: requiredServerFilesManifest.config.experimental?.ppr === true,
+    ppr:
+      requiredServerFilesManifest.config.experimental?.ppr === true ||
+      requiredServerFilesManifest.config.experimental?.ppr === 'incremental',
   };
 
   let appRscPrefetches: UnwrapPromise<ReturnType<typeof glob>> = {};
@@ -229,8 +230,6 @@ export async function serverBuild({
   if (appPathRoutesManifest) {
     appDir = path.join(pagesDir, '../app');
     appBuildTraces = await glob('**/*.js.nft.json', appDir);
-
-    // TODO: maybe?
     appRscPrefetches = experimental.ppr
       ? {}
       : await glob(`**/*${RSC_PREFETCH_SUFFIX}`, appDir);
@@ -252,7 +251,7 @@ export async function serverBuild({
       if (rewrite.src && rewrite.dest) {
         rewrite.src = rewrite.src.replace(
           /\/?\(\?:\/\)\?/,
-          '(?<rscsuff>(\\.prefetch)?\\.rsc)?(?:/)?'
+          `(?<rscsuff>${experimental.ppr ? '(\\.prefetch)?' : ''}\\.rsc)?(?:/)?`
         );
         let destQueryIndex = rewrite.dest.indexOf('?');
 
@@ -1589,10 +1588,23 @@ export async function serverBuild({
 
       if (lambdas[pathname]) {
         lambdas[`${pathname}.rsc`] = lambdas[pathname];
+
+        if (experimental.ppr) {
+          lambdas[`${pathname}${RSC_PREFETCH_SUFFIX}`] = lambdas[pathname];
+        }
       }
 
       if (edgeFunctions[pathname]) {
         edgeFunctions[`${pathname}.rsc`] = edgeFunctions[pathname];
+
+        if (experimental.ppr) {
+          edgeFunctions[`${pathname}${RSC_PREFETCH_SUFFIX}`] =
+            edgeFunctions[pathname];
+        }
+
+        if (hasActionOutputSupport) {
+          edgeFunctions[`${pathname}.action`] = edgeFunctions[pathname];
+        }
       }
     }
   }
@@ -1895,7 +1907,7 @@ export async function serverBuild({
 
       ...(appDir
         ? [
-            ...(rscPrefetchHeader
+            ...(rscPrefetchHeader && experimental.ppr
               ? [
                   {
                     src: `^${path.posix.join('/', entryDirectory, '/')}`,
@@ -1956,19 +1968,6 @@ export async function serverBuild({
                     override: true,
                   },
                   {
-                    src: `^${path.posix.join('/', entryDirectory, '/')}`,
-                    dest: path.posix.join('/', entryDirectory, '/index.action'),
-                    has: [
-                      {
-                        type: 'header',
-                        key: 'content-type',
-                        value: 'multipart/form-data;.*',
-                      },
-                    ],
-                    continue: true,
-                    override: true,
-                  },
-                  {
                     src: `^${path.posix.join(
                       '/',
                       entryDirectory,
@@ -1984,27 +1983,10 @@ export async function serverBuild({
                     continue: true,
                     override: true,
                   },
-                  {
-                    src: `^${path.posix.join(
-                      '/',
-                      entryDirectory,
-                      '/((?!.+\\.action).+?)(?:/)?$'
-                    )}`,
-                    dest: path.posix.join('/', entryDirectory, '/$1.action'),
-                    has: [
-                      {
-                        type: 'header',
-                        key: 'content-type',
-                        value: 'multipart/form-data;.*',
-                      },
-                    ],
-                    continue: true,
-                    override: true,
-                  },
                 ]
               : []),
             {
-              src: `^${path.posix.join('/', entryDirectory, '/')}`,
+              src: `^${path.posix.join('/', entryDirectory, '/?')}`,
               has: [
                 {
                   type: 'header',
@@ -2063,47 +2045,6 @@ export async function serverBuild({
               src: path.posix.join('/', entryDirectory, '_next/data/(.*)'),
               dest: path.posix.join('/', entryDirectory, '_next/data/$1'),
               check: true,
-            },
-          ]
-        : []),
-
-      ...(rscPrefetchHeader && !experimental.ppr
-        ? [
-            {
-              src: path.posix.join(
-                '/',
-                entryDirectory,
-                `/__index${RSC_PREFETCH_SUFFIX}`
-              ),
-              dest: path.posix.join('/', entryDirectory, '/index.rsc'),
-              has: [
-                {
-                  type: 'header',
-                  key: rscPrefetchHeader,
-                },
-              ],
-              continue: true,
-              override: true,
-            },
-            {
-              src: `^${path.posix.join(
-                '/',
-                entryDirectory,
-                `/(.+?)${RSC_PREFETCH_SUFFIX}(?:/)?$`
-              )}`,
-              dest: path.posix.join(
-                '/',
-                entryDirectory,
-                `/$1${experimental.ppr ? RSC_PREFETCH_SUFFIX : '.rsc'}`
-              ),
-              has: [
-                {
-                  type: 'header',
-                  key: rscPrefetchHeader,
-                },
-              ],
-              continue: true,
-              override: true,
             },
           ]
         : []),

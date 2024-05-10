@@ -2465,6 +2465,7 @@ export const onPrerenderRoute =
           ...(rscEnabled
             ? {
                 initialHeaders: {
+                  ...initialHeaders,
                   'content-type': rscContentTypeHeader,
                   vary: rscVaryHeader,
                   // If it contains a pre-render, then it was postponed.
@@ -2475,6 +2476,22 @@ export const onPrerenderRoute =
               }
             : {}),
         });
+      }
+
+      // we need to ensure all prerenders have a matching .rsc output
+      // otherwise routing could fall through unexpectedly for the
+      // fallback: false case as it doesn't have a dynamic route
+      // to catch the `.rsc` request for app -> pages routing
+      if (outputPrerenderPathData?.endsWith('.json') && appDir) {
+        const dummyOutput = new FileBlob({
+          data: '{}',
+          contentType: 'application/json',
+        });
+        const rscKey = `${outputPathPage}.rsc`;
+        const prefetchRscKey = `${outputPathPage}${RSC_PREFETCH_SUFFIX}`;
+
+        prerenders[rscKey] = dummyOutput;
+        prerenders[prefetchRscKey] = dummyOutput;
       }
 
       ++prerenderGroup;
@@ -2768,7 +2785,7 @@ interface EdgeFunctionInfoV2 extends BaseEdgeFunctionInfo {
 
 interface EdgeFunctionInfoV3 extends BaseEdgeFunctionInfo {
   matchers: EdgeFunctionMatcher[];
-  environments: Record<string, string>;
+  env: Record<string, string>;
 }
 
 interface EdgeFunctionMatcher {
@@ -3003,7 +3020,7 @@ export async function getMiddlewareBundle({
                   slug: 'nextjs',
                   version: nextVersion,
                 },
-                environment: edgeFunction.environments,
+                environment: edgeFunction.env,
               });
             })(),
             routeMatchers: getRouteMatchers(edgeFunction, routesManifest),
@@ -3183,7 +3200,7 @@ export function upgradeMiddlewareManifestV1(
     return {
       ...rest,
       matchers: [{ regexp }],
-      environments: {},
+      env: {},
     };
   }
 
@@ -3211,7 +3228,7 @@ export function upgradeMiddlewareManifestV2(
     const { ...rest } = v2Info;
     return {
       ...rest,
-      environments: {},
+      env: {},
     };
   }
 

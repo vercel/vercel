@@ -1,5 +1,30 @@
 # @vercel/static-build
 
+## 2.5.4
+
+### Patch Changes
+
+- Fix `Cannot read properties of null` error ([#11559](https://github.com/vercel/vercel/pull/11559))
+
+## 2.5.3
+
+### Patch Changes
+
+- Support Ruby and Python static site generators in AL2023 build image ([#11529](https://github.com/vercel/vercel/pull/11529))
+
+## 2.5.2
+
+### Patch Changes
+
+- Revert `SUPPORTED_RUBY_VERSION` change to fix Ruby site generators on AL2 build image ([#11522](https://github.com/vercel/vercel/pull/11522))
+
+## 2.5.1
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.26
+
 ## 2.5.0
 
 ### Minor Changes
