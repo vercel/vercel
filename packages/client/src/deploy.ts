@@ -33,11 +33,16 @@ async function* postDeployment(
     clientOptions.skipAutoDetectionConfirmation = true;
   }
 
+  // Preview deployments are the default - no need to set `target`
+  if (deploymentOptions.target === 'preview') {
+    deploymentOptions.target = undefined;
+  }
+
   // Built-in environments need to use `target`,
   // otherwise use `customEnvironmentSlugOrId` for a Custom Environment
   if (
     deploymentOptions.target &&
-    !['production', 'staging', 'preview'].includes(deploymentOptions.target)
+    !['production', 'staging'].includes(deploymentOptions.target)
   ) {
     deploymentOptions.customEnvironmentSlugOrId = deploymentOptions.target;
     deploymentOptions.target = undefined;
