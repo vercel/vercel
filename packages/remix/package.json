@@ -23,7 +23,7 @@
   ],
   "dependencies": {
     "@vercel/error-utils": "2.0.2",
-    "@vercel/nft": "0.26.4",
+    "@vercel/nft": "0.27.0",
     "@vercel/static-config": "3.0.0",
     "ts-morph": "12.0.0"
   },

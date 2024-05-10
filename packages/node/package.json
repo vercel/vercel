@@ -26,7 +26,7 @@
     "@types/node": "16.18.11",
     "@vercel/build-utils": "8.0.0",
     "@vercel/error-utils": "2.0.2",
-    "@vercel/nft": "0.26.4",
+    "@vercel/nft": "0.27.0",
     "@vercel/static-config": "3.0.0",
     "async-listen": "3.0.0",
     "cjs-module-lexer": "1.2.3",

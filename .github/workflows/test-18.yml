@@ -1,4 +1,4 @@
-name: Tests Node.js v16
+name: Tests Node.js v18
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
   pull_request:
 
 env:
-  NODE_VERSION: '16'
+  NODE_VERSION: '18'
   TURBO_REMOTE_ONLY: 'true'
   TURBO_TEAM: 'vercel'
   TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
@@ -37,7 +37,7 @@ jobs:
       - run: pnpm install
       - id: set-tests
         run: |
-          TESTS_ARRAY=$(node utils/chunk-tests.js $SCRIPT_NAME)
+          TESTS_ARRAY=$(node utils/chunk-tests-18.js $SCRIPT_NAME)
           echo "Files to test:"
           echo "$TESTS_ARRAY"
           echo "tests=$TESTS_ARRAY" >> $GITHUB_OUTPUT
