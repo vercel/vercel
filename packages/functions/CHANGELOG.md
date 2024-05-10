@@ -1,5 +1,11 @@
 # @vercel/functions
 
+## 1.0.2
+
+### Patch Changes
+
+- Convert package to CommonJS ([#11569](https://github.com/vercel/vercel/pull/11569))
+
 ## 1.0.1
 
 ### Patch Changes
