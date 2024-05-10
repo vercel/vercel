@@ -1677,12 +1677,22 @@ function normalizeSourceFilePageFromManifest(
     return page;
   }
 
-  if (
-    ['/favicon.ico', '/opengraph-image.', '/twitter-image.'].some(specialPath =>
-      routeName.includes(specialPath)
-    )
-  ) {
-    // the source files for these will not contain `/route` or `/page` suffix, so return the routeName as-is.
+  const metadataConventions = [
+    '/favicon.',
+    '/icon.',
+    '/apple-icon.',
+    '/opengraph-image.',
+    '/twitter-image.',
+    '/sitemap.',
+    '/robots.',
+  ];
+
+  // these special metadata files for will not contain `/route` or `/page` suffix, so return the routeName as-is.
+  const isSpecialFile = metadataConventions.some(convention =>
+    routeName.startsWith(convention)
+  );
+
+  if (isSpecialFile) {
     return routeName;
   }
 
