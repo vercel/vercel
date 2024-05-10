@@ -14,4 +14,4 @@
  * }
  * ```
  */
-export const waitUntil: (promise: Promise<unknown>) => void;
+export function waitUntil(promise: Promise<unknown>): void;
