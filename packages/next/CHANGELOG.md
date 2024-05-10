@@ -1,5 +1,15 @@
 # @vercel/next
 
+## 4.2.9
+
+### Patch Changes
+
+- Support incremental partial prerendering ([#11560](https://github.com/vercel/vercel/pull/11560))
+
+- ensure `.action` outputs are created for edge functions ([#11568](https://github.com/vercel/vercel/pull/11568))
+
+- ([#11566](https://github.com/vercel/vercel/pull/11566))
+
 ## 4.2.8
 
 ### Patch Changes

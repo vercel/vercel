@@ -1,5 +1,11 @@
 # @vercel/static-build
 
+## 2.5.4
+
+### Patch Changes
+
+- Fix `Cannot read properties of null` error ([#11559](https://github.com/vercel/vercel/pull/11559))
+
 ## 2.5.3
 
 ### Patch Changes

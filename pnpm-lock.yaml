@@ -325,7 +325,7 @@ importers:
         specifier: 1.0.2
         version: link:../hydrogen
       '@vercel/next':
-        specifier: 4.2.8
+        specifier: 4.2.9
         version: link:../next
       '@vercel/node':
         specifier: 3.1.0
@@ -343,7 +343,7 @@ importers:
         specifier: 2.1.0
         version: link:../ruby
       '@vercel/static-build':
-        specifier: 2.5.3
+        specifier: 2.5.4
         version: link:../static-build
       chokidar:
         specifier: 3.3.1

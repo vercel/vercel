@@ -218,7 +218,9 @@ export async function serverBuild({
   }
 
   const experimental = {
-    ppr: requiredServerFilesManifest.config.experimental?.ppr === true,
+    ppr:
+      requiredServerFilesManifest.config.experimental?.ppr === true ||
+      requiredServerFilesManifest.config.experimental?.ppr === 'incremental',
   };
 
   let appRscPrefetches: UnwrapPromise<ReturnType<typeof glob>> = {};
@@ -228,8 +230,6 @@ export async function serverBuild({
   if (appPathRoutesManifest) {
     appDir = path.join(pagesDir, '../app');
     appBuildTraces = await glob('**/*.js.nft.json', appDir);
-
-    // TODO: maybe?
     appRscPrefetches = experimental.ppr
       ? {}
       : await glob(`**/*${RSC_PREFETCH_SUFFIX}`, appDir);
@@ -1601,6 +1601,10 @@ export async function serverBuild({
           edgeFunctions[`${pathname}${RSC_PREFETCH_SUFFIX}`] =
             edgeFunctions[pathname];
         }
+
+        if (hasActionOutputSupport) {
+          edgeFunctions[`${pathname}.action`] = edgeFunctions[pathname];
+        }
       }
     }
   }
@@ -1952,12 +1956,18 @@ export async function serverBuild({
                   // Also includes separate handling for index routes which should match to /index.action.
                   // This follows the same pattern as the rewrites for .rsc files.
                   {
-                    src: `^${path.posix.join('/', entryDirectory, '/')}`,
+                    src: `^${path.posix.join('/', entryDirectory, '/?')}`,
                     dest: path.posix.join('/', entryDirectory, '/index.action'),
                     has: [
                       {
                         type: 'header',
                         key: 'next-action',
+                      },
+                    ],
+                    missing: [
+                      {
+                        type: 'header',
+                        key: rscHeader,
                       },
                     ],
                     continue: true,
@@ -1974,6 +1984,12 @@ export async function serverBuild({
                       {
                         type: 'header',
                         key: 'next-action',
+                      },
+                    ],
+                    missing: [
+                      {
+                        type: 'header',
+                        key: rscHeader,
                       },
                     ],
                     continue: true,

@@ -1,4 +1,4 @@
-name: Tests
+name: Tests Node.js v16
 
 on:
   push:
