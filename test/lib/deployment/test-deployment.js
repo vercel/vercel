@@ -85,6 +85,9 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
               // because logs are not all available immediately after the deployment is ready
               break;
             }
+            logWithinTest(
+              'Retrying check of logs in case logs are not fully ready yet.'
+            );
           }
         } catch (err) {
           lastErr = err;
