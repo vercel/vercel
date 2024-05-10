@@ -1255,7 +1255,7 @@ test('fail to deploy a Lambda with an incorrect value for maxDuration', async ()
 
   expect(output.exitCode, formatOutput(output)).toBe(1);
   expect(output.stderr).toMatch(
-    /maxDuration must be between 1 second and 10 seconds/gm
+    /maxDuration must be between 1 second and 60 seconds/gm
   );
 });
 
