@@ -249,6 +249,30 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
         });
       });
     });
+
+    it('should not match to an action output when the RSC header is present', async () => {
+      const canonicalPath = `${basePath}/client/dynamic/1`;
+      const pagePath = `${basePath}/client/dynamic/[id]`;
+      const actionId = findActionId(pagePath, runtime);
+
+      const res = await fetch(`${ctx.deploymentUrl}${canonicalPath}`, {
+        method: 'POST',
+        body: JSON.stringify([1337]),
+        headers: {
+          'Content-Type': 'text/plain;charset=UTF-8',
+          'Next-Action': actionId,
+          'Next-Response': 'rsc',
+          RSC: '1',
+        },
+      });
+
+      expect(res.status).toEqual(200);
+      expect(res.headers.get('x-matched-path')).toBe(pagePath + '.rsc');
+      expect(res.headers.get('content-type')).toBe('text/x-component');
+      const body = await res.text();
+      expect(body).toContain(JSON.stringify(['id', '1', 'd']));
+      expect(body).not.toContain(JSON.stringify(['id', '1.action', 'd']));
+    });
   });
 
   describe('pages', () => {
