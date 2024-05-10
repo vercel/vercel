@@ -1439,6 +1439,13 @@ async function getSourceFilePathFromPage({
     }
   }
 
+  // if we got here, and didn't find a source not-found file, then it was the one injected
+  // by Next.js. There's no need to warn or return a source file in this case, as it won't have
+  // any configuration applied to it.
+  if (page === '/_not-found/page') {
+    return '';
+  }
+
   console.log(
     `WARNING: Unable to find source file for page ${page} with extensions: ${extensionsToTry.join(
       ', '
@@ -1564,8 +1571,7 @@ export async function getPageLambdaGroups({
       opts = functionsConfigManifest.functions[routeName];
     }
 
-    // /_not-found isn't a real route, so there won't be a source for it.
-    if (config && config.functions && routeName !== '/_not-found') {
+    if (config && config.functions) {
       const sourceFile = await getSourceFilePathFromPage({
         workPath: entryPath,
         page: normalizeSourceFilePageFromManifest(
