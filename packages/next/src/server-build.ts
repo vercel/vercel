@@ -1956,12 +1956,18 @@ export async function serverBuild({
                   // Also includes separate handling for index routes which should match to /index.action.
                   // This follows the same pattern as the rewrites for .rsc files.
                   {
-                    src: `^${path.posix.join('/', entryDirectory, '/')}`,
+                    src: `^${path.posix.join('/', entryDirectory, '/?')}`,
                     dest: path.posix.join('/', entryDirectory, '/index.action'),
                     has: [
                       {
                         type: 'header',
                         key: 'next-action',
+                      },
+                    ],
+                    missing: [
+                      {
+                        type: 'header',
+                        key: rscHeader,
                       },
                     ],
                     continue: true,
@@ -1978,6 +1984,12 @@ export async function serverBuild({
                       {
                         type: 'header',
                         key: 'next-action',
+                      },
+                    ],
+                    missing: [
+                      {
+                        type: 'header',
+                        key: rscHeader,
                       },
                     ],
                     continue: true,
