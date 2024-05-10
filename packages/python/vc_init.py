@@ -175,7 +175,6 @@ elif 'app' in __vc_variables:
         # https://github.com/erm/mangum/blob/b4d21c8f5e304a3e17b88bc9fa345106acc50ad7/LICENSE
         import asyncio
         import enum
-        import inspect
         from urllib.parse import urlparse
         from werkzeug.datastructures import Headers
 
@@ -192,7 +191,7 @@ elif 'app' in __vc_variables:
                 self.state = ASGICycleState.REQUEST
                 self.app_queue = None
                 self.response = {}
-                self._legacy_asyncio = "loop" in inspect.signature(asyncio.Queue).parameters
+                self._legacy_asyncio = sys.version_info < (3, 10)
 
             def __call__(self, app, body):
                 """
