@@ -1,5 +1,12 @@
 # @vercel/build-utils
 
+## 8.1.0
+
+### Minor Changes
+
+- Update pnpm version detection logic ([#11445](https://github.com/vercel/vercel/pull/11445))
+  Add support for pnpm 9
+
 ## 8.0.0
 
 ### Major Changes

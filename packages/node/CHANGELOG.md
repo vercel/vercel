@@ -1,5 +1,14 @@
 # @vercel/node
 
+## 3.1.1
+
+### Patch Changes
+
+- Bump `@vercel/nft@0.27.0` ([#11580](https://github.com/vercel/vercel/pull/11580))
+
+- Updated dependencies [[`5014b1e82`](https://github.com/vercel/vercel/commit/5014b1e82a46181baeb727ffe6d14000b6a4b1d7)]:
+  - @vercel/build-utils@8.1.0
+
 ## 3.1.0
 
 ### Minor Changes
