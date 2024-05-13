@@ -768,10 +768,12 @@ export function getPathForPackageManager({
     env,
   });
 
-  console.log(
-    `[vc] found based on lockfileVersion ${lockfileVersion} (${typeof lockfileVersion}): ${JSON.stringify(
-      overrides
-    )}`
+  debug(
+    `Detected ${
+      overrides.detectedPackageManager
+    } with lockfileVersion ${lockfileVersion} (${typeof lockfileVersion}): ${
+      overrides.path
+    }`
   );
 
   const alreadyInPath = (newPath: string) => {
