@@ -36,6 +36,14 @@
     "turbo": "1.13.3",
     "typescript": "4.9.5"
   },
+  "resolutions": {
+    "@vercel/error-utils": "https://vercel-fn651ovm5.vercel.sh/tarballs/%40vercel/error-utils.tgz",
+    "@vercel/build-utils": "https://vercel-fn651ovm5.vercel.sh/tarballs/%40vercel/build-utils.tgz",
+    "@vercel/routing-utils": "https://vercel-fn651ovm5.vercel.sh/tarballs/%40vercel/routing-utils.tgz",
+    "vercel": "https://vercel-fn651ovm5.vercel.sh/tarballs/vercel.tgz",
+    "@vercel/fs-detectors": "https://vercel-fn651ovm5.vercel.sh/tarballs/%40vercel/fs-detectors.tgz",
+    "@vercel/frameworks": "https://vercel-fn651ovm5.vercel.sh/tarballs/%40vercel/frameworks.tgz"
+  },
   "scripts": {
     "build": "node utils/gen.js && turbo --no-update-notifier run build",
     "vercel-build": "pnpm build && pnpm run pack && cd api && node -r ts-eager/register ./_lib/script/build.ts",
