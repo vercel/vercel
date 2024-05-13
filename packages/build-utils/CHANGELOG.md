@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 8.1.2
+
+### Patch Changes
+
+- add log to package manager version detection ([#11592](https://github.com/vercel/vercel/pull/11592))
+
 ## 8.1.1
 
 ### Patch Changes
