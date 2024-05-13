@@ -594,6 +594,7 @@ export function getEnvForPackageManager({
 
 type DetectedPnpmVersion =
   | 'not found'
+  | 'pnpm 6'
   | 'pnpm 7'
   | 'pnpm 8'
   | 'pnpm 9'
@@ -608,7 +609,9 @@ function detectPnpmVersion(
       return 'corepack_enabled';
     case lockfileVersion === undefined:
       return 'not found';
-    case lockfileVersion === 5.3 || lockfileVersion === 5.4:
+    case lockfileVersion === 5.3:
+      return 'pnpm 6';
+    case lockfileVersion === 5.4:
       return 'pnpm 7';
     case lockfileVersion === 6.0 || lockfileVersion === 6.1:
       return 'pnpm 8';
@@ -703,6 +706,7 @@ export function getPathOverrideForPackageManager({
             detectedLockfile: 'pnpm-lock.yaml',
             detectedPackageManager: 'pnpm 9',
           };
+        case 'pnpm 6':
         default:
           return no_override;
       }
@@ -763,6 +767,14 @@ export function getPathForPackageManager({
     nodeVersion,
     env,
   });
+
+  debug(
+    `Detected ${
+      overrides.detectedPackageManager
+    } with lockfileVersion ${lockfileVersion} (${typeof lockfileVersion}): ${
+      overrides.path
+    }`
+  );
 
   const alreadyInPath = (newPath: string) => {
     const oldPath = env.PATH ?? '';
