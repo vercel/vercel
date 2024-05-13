@@ -1439,6 +1439,13 @@ async function getSourceFilePathFromPage({
     }
   }
 
+  // if we got here, and didn't find a source not-found file, then it was the one injected
+  // by Next.js. There's no need to warn or return a source file in this case, as it won't have
+  // any configuration applied to it.
+  if (page === '/_not-found/page') {
+    return '';
+  }
+
   console.log(
     `WARNING: Unable to find source file for page ${page} with extensions: ${extensionsToTry.join(
       ', '
@@ -1565,15 +1572,13 @@ export async function getPageLambdaGroups({
     }
 
     if (config && config.functions) {
-      // `pages` are normalized without route groups (e.g., /app/(group)/page.js).
-      // we keep track of that mapping in `inversedAppPathManifest`
-      // `getSourceFilePathFromPage` needs to use the path from source to properly match the config
-      const pageFromManifest = inversedAppPathManifest?.[routeName];
       const sourceFile = await getSourceFilePathFromPage({
         workPath: entryPath,
-        // since this function is used by both `pages` and `app`, the manifest might not be provided
-        // so fallback to normal behavior of just checking the `page`.
-        page: pageFromManifest ?? page,
+        page: normalizeSourceFilePageFromManifest(
+          routeName,
+          page,
+          inversedAppPathManifest
+        ),
         pageExtensions,
       });
 
@@ -1655,6 +1660,43 @@ export async function getPageLambdaGroups({
   }
 
   return groups;
+}
+
+// `pages` are normalized without route groups (e.g., /app/(group)/page.js).
+// we keep track of that mapping in `inversedAppPathManifest`
+// `getSourceFilePathFromPage` needs to use the path from source to properly match the config
+function normalizeSourceFilePageFromManifest(
+  routeName: string,
+  page: string,
+  inversedAppPathManifest?: Record<string, string>
+) {
+  const pageFromManifest = inversedAppPathManifest?.[routeName];
+  if (!pageFromManifest) {
+    // since this function is used by both `pages` and `app`, the manifest might not be provided
+    // so fallback to normal behavior of just checking the `page`.
+    return page;
+  }
+
+  const metadataConventions = [
+    '/favicon.',
+    '/icon.',
+    '/apple-icon.',
+    '/opengraph-image.',
+    '/twitter-image.',
+    '/sitemap.',
+    '/robots.',
+  ];
+
+  // these special metadata files for will not contain `/route` or `/page` suffix, so return the routeName as-is.
+  const isSpecialFile = metadataConventions.some(convention =>
+    routeName.startsWith(convention)
+  );
+
+  if (isSpecialFile) {
+    return routeName;
+  }
+
+  return pageFromManifest;
 }
 
 export const outputFunctionFileSizeInfo = (
