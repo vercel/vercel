@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 8.1.1
+
+### Patch Changes
+
+- [build-utils] pnpm lockfile testing and fixing ([#11591](https://github.com/vercel/vercel/pull/11591))
+
 ## 8.1.0
 
 ### Minor Changes

@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.2.11
+
+### Patch Changes
+
+- normalize source file locations for special metadata files ([#11579](https://github.com/vercel/vercel/pull/11579))
+
 ## 4.2.10
 
 ### Patch Changes
