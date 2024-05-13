@@ -553,6 +553,10 @@ export function getEnvForPackageManager({
     env,
   });
 
+  debug(
+    `Detected ${detectedPackageManager} with lockfileVersion ${lockfileVersion} (${typeof lockfileVersion}): ${newPath}`
+  );
+
   const newEnv: { [x: string]: string | undefined } = {
     ...env,
   };
