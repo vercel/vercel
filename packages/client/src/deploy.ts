@@ -38,12 +38,9 @@ async function* postDeployment(
     deploymentOptions.target = undefined;
   }
 
-  // Built-in environments need to use `target`,
+  // "production" environment need to use `target`,
   // otherwise use `customEnvironmentSlugOrId` for a Custom Environment
-  if (
-    deploymentOptions.target &&
-    !['production', 'staging'].includes(deploymentOptions.target)
-  ) {
+  if (deploymentOptions.target && deploymentOptions.target !== 'production') {
     deploymentOptions.customEnvironmentSlugOrId = deploymentOptions.target;
     deploymentOptions.target = undefined;
   }
