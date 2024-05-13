@@ -1,5 +1,24 @@
 # @vercel/build-utils
 
+## 8.1.2
+
+### Patch Changes
+
+- add log to package manager version detection ([#11592](https://github.com/vercel/vercel/pull/11592))
+
+## 8.1.1
+
+### Patch Changes
+
+- [build-utils] pnpm lockfile testing and fixing ([#11591](https://github.com/vercel/vercel/pull/11591))
+
+## 8.1.0
+
+### Minor Changes
+
+- Update pnpm version detection logic ([#11445](https://github.com/vercel/vercel/pull/11445))
+  Add support for pnpm 9
+
 ## 8.0.0
 
 ### Major Changes

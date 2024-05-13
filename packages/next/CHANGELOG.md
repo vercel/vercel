@@ -1,5 +1,19 @@
 # @vercel/next
 
+## 4.2.11
+
+### Patch Changes
+
+- normalize source file locations for special metadata files ([#11579](https://github.com/vercel/vercel/pull/11579))
+
+## 4.2.10
+
+### Patch Changes
+
+- skip action rewrites for RSC requests ([#11576](https://github.com/vercel/vercel/pull/11576))
+
+- Bump `@vercel/nft@0.27.0` ([#11580](https://github.com/vercel/vercel/pull/11580))
+
 ## 4.2.9
 
 ### Patch Changes
