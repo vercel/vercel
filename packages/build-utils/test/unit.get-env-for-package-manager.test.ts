@@ -366,6 +366,23 @@ describe('Test `getPathOverrideForPackageManager()`', () => {
       },
     },
     {
+      name: 'should not set path if pnpm 6 is detected',
+      args: {
+        cliType: 'pnpm',
+        nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
+        lockfileVersion: 5.3, // detects as pnpm@6, which is the default
+        env: {
+          FOO: 'bar',
+          PATH: 'foo',
+        },
+      },
+      want: {
+        detectedLockfile: undefined,
+        detectedPackageManager: undefined,
+        path: undefined,
+      },
+    },
+    {
       name: 'should set path if pnpm 7+ is detected',
       args: {
         cliType: 'pnpm',
