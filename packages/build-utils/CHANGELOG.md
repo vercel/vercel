@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 8.1.3
+
+### Patch Changes
+
+- [build-utils] log more around package manager detection ([#11594](https://github.com/vercel/vercel/pull/11594))
+
 ## 8.1.2
 
 ### Patch Changes
