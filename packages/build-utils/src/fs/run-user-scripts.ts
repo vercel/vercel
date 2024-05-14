@@ -413,9 +413,8 @@ export async function runNpmInstall(
 
   try {
     await runNpmInstallSema.acquire();
-    const { cliType, packageJsonPath, lockfileVersion } = await scanParentDirs(
-      destPath
-    );
+    const { cliType, packageJsonPath, packageJson, lockfileVersion } =
+      await scanParentDirs(destPath, true);
 
     if (!packageJsonPath) {
       debug(
@@ -450,6 +449,7 @@ export async function runNpmInstall(
     opts.env = getEnvForPackageManager({
       cliType,
       lockfileVersion,
+      packageJsonPackageManager: packageJson?.packageManager,
       nodeVersion,
       env,
     });
@@ -534,11 +534,13 @@ export async function runNpmInstall(
 export function getEnvForPackageManager({
   cliType,
   lockfileVersion,
+  packageJsonPackageManager,
   nodeVersion,
   env,
 }: {
   cliType: CliType;
   lockfileVersion: number | undefined;
+  packageJsonPackageManager: string | undefined;
   nodeVersion: NodeVersion | undefined;
   env: { [x: string]: string | undefined };
 }) {
@@ -553,10 +555,18 @@ export function getEnvForPackageManager({
     env,
   });
 
-  const corepackEnabled = env.ENABLE_EXPERIMENTAL_COREPACK === '1';
-  debug(
-    `Detected ${detectedPackageManager} given lockfileVersion "${lockfileVersion}", package manager cli "${cliType}", and corepack enabled? ${corepackEnabled}: ${newPath}`
-  );
+  const corepackFlagged = env.ENABLE_EXPERIMENTAL_COREPACK === '1';
+  const corepackEnabled = corepackFlagged && packageJsonPackageManager;
+
+  if (corepackEnabled) {
+    debug(
+      `Detected corepack use for "${packageJsonPackageManager}". Not overriding package manager version.`
+    );
+  } else {
+    debug(
+      `Detected ${detectedPackageManager}. Added "${newPath}" to path. Based on assumed package manager "${cliType}", lockfile "${detectedLockfile}", and lockfileVersion "${lockfileVersion}"`
+    );
+  }
 
   const newEnv: { [x: string]: string | undefined } = {
     ...env,
@@ -805,10 +815,14 @@ export async function runCustomInstallCommand({
   spawnOpts?: SpawnOptions;
 }) {
   console.log(`Running "install" command: \`${installCommand}\`...`);
-  const { cliType, lockfileVersion } = await scanParentDirs(destPath);
+  const { cliType, lockfileVersion, packageJson } = await scanParentDirs(
+    destPath,
+    true
+  );
   const env = getEnvForPackageManager({
     cliType,
     lockfileVersion,
+    packageJsonPackageManager: packageJson?.packageManager,
     nodeVersion,
     env: spawnOpts?.env || {},
   });
@@ -846,6 +860,7 @@ export async function runPackageJsonScript(
     env: getEnvForPackageManager({
       cliType,
       lockfileVersion,
+      packageJsonPackageManager: packageJson?.packageManager,
       nodeVersion: undefined,
       env: cloneEnv(process.env, spawnOpts?.env),
     }),
