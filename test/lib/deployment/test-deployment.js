@@ -108,6 +108,7 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
           found = true;
           break;
         } else {
+          ctx.deploymentLogs = null;
           throw new Error(
             `Expected deployment logs of ${deploymentId} not to contain ${toCheck}, but found ${log.text}`
           );
@@ -122,10 +123,12 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
         deploymentLogs,
         logLength: deploymentLogs?.length,
       });
+      ctx.deploymentLogs = null;
       const error = new Error(
         `Expected deployment logs of ${deploymentId} to contain ${toCheck}, it was not found`
       );
       error.retries = 20;
+      error.retryDelay = 5000; // ms
       throw error;
     } else {
       logWithinTest('finished testing', JSON.stringify(probe));
@@ -449,6 +452,8 @@ async function testDeployment(fixturePath, opts = {}) {
         throw err;
       }
 
+      const retryDelay = Math.max(probe.retryDelay || 0, err.retryDelay || 0);
+
       for (let i = 0; i < retries; i++) {
         logWithinTest(`re-trying ${i + 1}/${retries}:`, stringifiedProbe);
 
@@ -460,9 +465,9 @@ async function testDeployment(fixturePath, opts = {}) {
             throw err;
           }
 
-          if (probe.retryDelay) {
-            logWithinTest(`Waiting ${probe.retryDelay}ms before retrying`);
-            await new Promise(resolve => setTimeout(resolve, probe.retryDelay));
+          if (retryDelay) {
+            logWithinTest(`Waiting ${retryDelay}ms before retrying`);
+            await new Promise(resolve => setTimeout(resolve, retryDelay));
           }
         }
       }
