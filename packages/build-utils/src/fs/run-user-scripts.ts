@@ -544,6 +544,9 @@ export function getEnvForPackageManager({
   nodeVersion: NodeVersion | undefined;
   env: { [x: string]: string | undefined };
 }) {
+  const corepackFlagged = env.ENABLE_EXPERIMENTAL_COREPACK === '1';
+  const corepackEnabled = corepackFlagged && Boolean(packageJsonPackageManager);
+
   const {
     detectedLockfile,
     detectedPackageManager,
@@ -551,12 +554,9 @@ export function getEnvForPackageManager({
   } = getPathOverrideForPackageManager({
     cliType,
     lockfileVersion,
+    corepackEnabled,
     nodeVersion,
-    env,
   });
-
-  const corepackFlagged = env.ENABLE_EXPERIMENTAL_COREPACK === '1';
-  const corepackEnabled = corepackFlagged && packageJsonPackageManager;
 
   if (corepackEnabled) {
     debug(
@@ -652,13 +652,13 @@ function shouldUseNpm7(
 export function getPathOverrideForPackageManager({
   cliType,
   lockfileVersion,
+  corepackEnabled,
   nodeVersion,
-  env,
 }: {
   cliType: CliType;
   lockfileVersion: number | undefined;
+  corepackEnabled: boolean;
   nodeVersion: NodeVersion | undefined;
-  env: { [x: string]: string | undefined };
 }): {
   /**
    * Which lockfile was detected.
@@ -679,8 +679,6 @@ export function getPathOverrideForPackageManager({
     detectedPackageManager: undefined,
     path: undefined,
   };
-
-  const corepackEnabled = env.ENABLE_EXPERIMENTAL_COREPACK === '1';
 
   switch (cliType) {
     case 'npm':
@@ -749,11 +747,13 @@ export function getPathOverrideForPackageManager({
 export function getPathForPackageManager({
   cliType,
   lockfileVersion,
+  corepackEnabled,
   nodeVersion,
   env,
 }: {
   cliType: CliType;
   lockfileVersion: number | undefined;
+  corepackEnabled: boolean;
   nodeVersion: NodeVersion | undefined;
   env: { [x: string]: string | undefined };
 }): {
@@ -779,8 +779,8 @@ export function getPathForPackageManager({
   const overrides = getPathOverrideForPackageManager({
     cliType,
     lockfileVersion,
+    corepackEnabled,
     nodeVersion,
-    env,
   });
 
   const alreadyInPath = (newPath: string) => {
