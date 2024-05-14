@@ -108,6 +108,7 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
           found = true;
           break;
         } else {
+          ctx.deploymentLogs = null;
           throw new Error(
             `Expected deployment logs of ${deploymentId} not to contain ${toCheck}, but found ${log.text}`
           );
@@ -122,6 +123,7 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
         deploymentLogs,
         logLength: deploymentLogs?.length,
       });
+      ctx.deploymentLogs = null;
       const error = new Error(
         `Expected deployment logs of ${deploymentId} to contain ${toCheck}, it was not found`
       );
