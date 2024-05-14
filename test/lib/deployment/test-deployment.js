@@ -126,7 +126,7 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
         `Expected deployment logs of ${deploymentId} to contain ${toCheck}, it was not found`
       );
       error.retries = 20;
-      error.retryDelay = 2000; // ms
+      error.retryDelay = 5000; // ms
       throw error;
     } else {
       logWithinTest('finished testing', JSON.stringify(probe));
