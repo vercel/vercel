@@ -560,8 +560,9 @@ export function getEnvForPackageManager({
     env,
   });
 
+  const corepackEnabled = env.ENABLE_EXPERIMENTAL_COREPACK === '1';
   debug(
-    `Detected ${detectedPackageManager} with lockfileVersion ${lockfileVersion} (${typeof lockfileVersion}): ${newPath}`
+    `Detected ${detectedPackageManager} given lockfileVersion "${lockfileVersion}", package manager cli "${cliType}", and corepack enabled? ${corepackEnabled}: ${newPath}`
   );
 
   const newEnv: { [x: string]: string | undefined } = {
@@ -778,14 +779,6 @@ export function getPathForPackageManager({
     nodeVersion,
     env,
   });
-
-  debug(
-    `Detected ${
-      overrides.detectedPackageManager
-    } with lockfileVersion ${lockfileVersion} (${typeof lockfileVersion}): ${
-      overrides.path
-    }`
-  );
 
   const alreadyInPath = (newPath: string) => {
     const oldPath = env.PATH ?? '';
