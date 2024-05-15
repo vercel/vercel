@@ -1,0 +1,6 @@
+{
+  "name": "cli-extension-fail",
+  "bin": {
+    "vercel-fail": "bin.js"
+  }
+}
