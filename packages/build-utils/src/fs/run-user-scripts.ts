@@ -20,6 +20,12 @@ import { cloneEnv } from '../clone-env';
 // Only allow one `runNpmInstall()` invocation to run concurrently
 const runNpmInstallSema = new Sema(1);
 
+const NO_OVERRIDE = {
+  detectedLockfile: undefined,
+  detectedPackageManager: undefined,
+  path: undefined,
+};
+
 export type CliType = 'yarn' | 'npm' | 'pnpm' | 'bun';
 
 export interface ScanParentDirsResult {
@@ -557,9 +563,6 @@ export function getEnvForPackageManager({
   nodeVersion: NodeVersion | undefined;
   env: { [x: string]: string | undefined };
 }) {
-  const corepackFlagged = env.ENABLE_EXPERIMENTAL_COREPACK === '1';
-  const corepackEnabled = corepackFlagged && Boolean(packageJsonPackageManager);
-
   const {
     detectedLockfile,
     detectedPackageManager,
@@ -567,10 +570,12 @@ export function getEnvForPackageManager({
   } = getPathOverrideForPackageManager({
     cliType,
     lockfileVersion,
-    corepackEnabled,
+    corepackPackageManager: packageJsonPackageManager,
     nodeVersion,
   });
 
+  const corepackFlagged = env.ENABLE_EXPERIMENTAL_COREPACK === '1';
+  const corepackEnabled = corepackFlagged && Boolean(packageJsonPackageManager);
   if (corepackEnabled) {
     debug(
       `Detected corepack use for "${packageJsonPackageManager}". Not overriding package manager version.`
@@ -629,12 +634,9 @@ type DetectedPnpmVersion =
   | 'corepack_enabled';
 
 function detectPnpmVersion(
-  lockfileVersion: number | undefined,
-  corepackEnabled: boolean
+  lockfileVersion: number | undefined
 ): DetectedPnpmVersion {
   switch (true) {
-    case corepackEnabled:
-      return 'corepack_enabled';
     case lockfileVersion === undefined:
       return 'not found';
     case lockfileVersion === 5.3:
@@ -665,12 +667,12 @@ function shouldUseNpm7(
 export function getPathOverrideForPackageManager({
   cliType,
   lockfileVersion,
-  corepackEnabled,
+  corepackPackageManager,
   nodeVersion,
 }: {
   cliType: CliType;
   lockfileVersion: number | undefined;
-  corepackEnabled: boolean;
+  corepackPackageManager: string | undefined;
   nodeVersion: NodeVersion | undefined;
 }): {
   /**
@@ -687,69 +689,160 @@ export function getPathOverrideForPackageManager({
    */
   path: string | undefined;
 } {
-  const no_override = {
-    detectedLockfile: undefined,
-    detectedPackageManager: undefined,
-    path: undefined,
-  };
+  const detectedPackageManger = detectPackageManager(
+    cliType,
+    lockfileVersion,
+    nodeVersion
+  );
+  if (!detectedPackageManger) {
+    return NO_OVERRIDE;
+  }
 
+  if (!corepackPackageManager) {
+    return detectedPackageManger;
+  }
+
+  if (
+    validateVersionOverlap(
+      detectedPackageManger.detectedPackageManager,
+      corepackPackageManager
+    )
+  ) {
+    // corepack is going to take care of it; do nothing special
+    return NO_OVERRIDE;
+  }
+
+  throw new Error(
+    `Detected package manager (by lockfile) "${detectedPackageManger.detectedLockfile}" does not match intended corepack package manager "${corepackPackageManager}". Update your lockfile or "package.json#packageManager" values to match.`
+  );
+}
+
+function validateVersionOverlap(
+  detectedPackageManger: string,
+  corepackPackageManager: string
+) {
+  const validatedDetectedPackageManger = validateVersionSpecifier(
+    detectedPackageManger
+  );
+  if (!validatedDetectedPackageManger) {
+    throw new Error(
+      `Detected package manager "${detectedPackageManger}" is not a valid semver value.`
+    );
+  }
+
+  const validatedCorepackPackageManager = validateVersionSpecifier(
+    corepackPackageManager
+  );
+  if (!validatedCorepackPackageManager) {
+    throw new Error(
+      `Intended corepack defined package manager "${corepackPackageManager}" is not a valid semver value.`
+    );
+  }
+
+  if (
+    validatedDetectedPackageManger.packageName !==
+    validatedCorepackPackageManager.packageName
+  ) {
+    throw new Error(
+      `Detected package manager "${validatedDetectedPackageManger.packageName}" does not match intended corepack defined package manager "${validatedCorepackPackageManager.packageName}". Change your lockfile or "package.json#packageManager" value to match.`
+    );
+  }
+
+  return intersects(
+    validatedDetectedPackageManger.packageVersionRange,
+    validatedCorepackPackageManager.packageVersionRange
+  );
+}
+
+function validateVersionSpecifier(version: string) {
+  if (!version) {
+    return undefined;
+  }
+
+  const [before, after, ...extra] = version.split('@');
+
+  if (extra.length) {
+    // should not have more than one `@`
+    return undefined;
+  }
+
+  if (!before) {
+    // should have a package before the `@`
+    return undefined;
+  }
+
+  if (!after) {
+    // should have a version after the `@`
+    return undefined;
+  }
+
+  if (!validRange(after)) {
+    // the version after the `@` should be a valid semver value
+    return undefined;
+  }
+
+  return {
+    packageName: before,
+    packageVersionRange: after,
+  };
+}
+
+function detectPackageManager(
+  cliType: CliType,
+  lockfileVersion: number | undefined,
+  nodeVersion: NodeVersion | undefined
+) {
   switch (cliType) {
     case 'npm':
       switch (true) {
-        case corepackEnabled:
-          return no_override;
         case shouldUseNpm7(lockfileVersion, nodeVersion):
           return {
             path: '/node16/bin-npm7',
             detectedLockfile: 'package-lock.json',
-            detectedPackageManager: 'npm 7+',
+            detectedPackageManager: 'npm@7.x',
           };
         default:
-          return no_override;
+          return undefined;
       }
     case 'pnpm':
-      switch (detectPnpmVersion(lockfileVersion, corepackEnabled)) {
-        case 'corepack_enabled':
-          return no_override;
+      switch (detectPnpmVersion(lockfileVersion)) {
         case 'pnpm 7':
           // pnpm 7
           return {
             path: '/pnpm7/node_modules/.bin',
             detectedLockfile: 'pnpm-lock.yaml',
-            detectedPackageManager: 'pnpm 7',
+            detectedPackageManager: 'pnpm@7.x',
           };
         case 'pnpm 8':
           // pnpm 8
           return {
             path: '/pnpm8/node_modules/.bin',
             detectedLockfile: 'pnpm-lock.yaml',
-            detectedPackageManager: 'pnpm 8',
+            detectedPackageManager: 'pnpm@8.x',
           };
         case 'pnpm 9':
           // pnpm 9
           return {
             path: '/pnpm9/node_modules/.bin',
             detectedLockfile: 'pnpm-lock.yaml',
-            detectedPackageManager: 'pnpm 9',
+            detectedPackageManager: 'pnpm@9.x',
           };
         case 'pnpm 6':
         default:
-          return no_override;
+          return undefined;
       }
     case 'bun':
       switch (true) {
-        case corepackEnabled:
-          return no_override;
         default:
           // Bun 1
           return {
             path: '/bun1',
             detectedLockfile: 'bun.lockb',
-            detectedPackageManager: 'Bun',
+            detectedPackageManager: 'bun@1.x',
           };
       }
     case 'yarn':
-      return no_override;
+      return undefined;
   }
 }
 
@@ -793,12 +886,18 @@ export function getPathForPackageManager({
   // broken behavior.
   const corepackEnabled = env.ENABLE_EXPERIMENTAL_COREPACK === '1';
 
-  const overrides = getPathOverrideForPackageManager({
+  let overrides = getPathOverrideForPackageManager({
     cliType,
     lockfileVersion,
-    corepackEnabled,
+    corepackPackageManager: undefined,
     nodeVersion,
   });
+
+  if (corepackEnabled) {
+    // this is essentially always overriding the value of `override`, but that's what was happening
+    // in this deprecated function before
+    overrides = NO_OVERRIDE;
+  }
 
   const alreadyInPath = (newPath: string) => {
     const oldPath = env.PATH ?? '';
