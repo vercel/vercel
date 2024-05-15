@@ -216,7 +216,7 @@ export function useProject(
     res.json(project);
   });
   client.scenario.get(
-    `/v1/env/pull/${project.id}/:target?/:gitBranch?`,
+    `/v2/env/pull/${project.id}/:target?/:gitBranch?`,
     (req, res) => {
       const target =
         typeof req.params.target === 'string'
@@ -390,7 +390,7 @@ function exposeSystemEnvs(
 ) {
   const envs: Env = {};
 
-  if (autoExposeSystemEnvs) {
+  if (autoExposeSystemEnvs && target !== 'development') {
     envs['VERCEL'] = '1';
     envs['VERCEL_ENV'] = target || 'development';
 

@@ -917,9 +917,9 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
     expect(homeJson['MY_STDIN_VAR']).toBe('{"expect":"quotes"}');
     expect(homeJson['MY_DECRYPTABLE_SECRET_ENV']).toBe('decryptable value');
 
-    // system env vars are automatically exposed
-    expect(apiJson['VERCEL']).toBe('1');
-    expect(homeJson['VERCEL']).toBe('1');
+    // system env vars are hidden in dev
+    expect(apiJson['VERCEL']).toBeUndefined();
+    expect(homeJson['VERCEL']).toBeUndefined();
 
     // sleep before kill, otherwise the dev process doesn't clean up and exit properly
     await sleep(100);
@@ -949,7 +949,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
   async function vcEnvPullFetchSystemVars() {
     const { exitCode, stdout, stderr } = await execCli(
       binaryPath,
-      ['env', 'pull', '-y'],
+      ['env', 'pull', '-y', '--environment', 'production'],
       {
         cwd: target,
       }
@@ -963,7 +963,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
 
     expect(lines).toContain('VERCEL="1"');
     expect(lines).toContain('VERCEL_URL=""');
-    expect(lines).toContain('VERCEL_ENV="development"');
+    expect(lines).toContain('VERCEL_ENV="production"');
     expect(lines).toContain('VERCEL_GIT_PROVIDER=""');
     expect(lines).toContain('VERCEL_GIT_REPO_SLUG=""');
   }
@@ -980,22 +980,24 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
     const localhostNoProtocol = localhost[0].slice('http://'.length);
 
     const apiJson = await apiRes.json();
-    expect(apiJson['VERCEL']).toBe('1');
+    // environment variables are not set in dev
+    expect(apiJson['VERCEL']).toBeUndefined();
+    expect(apiJson['VERCEL_ENV']).toBeUndefined();
+    expect(apiJson['VERCEL_GIT_PROVIDER']).toBeUndefined();
+    expect(apiJson['VERCEL_GIT_REPO_SLUG']).toBeUndefined();
+    // except for these because vc dev
     expect(apiJson['VERCEL_URL']).toBe(localhostNoProtocol);
-    expect(apiJson['VERCEL_ENV']).toBe('development');
     expect(apiJson['VERCEL_REGION']).toBe('dev1');
-    expect(apiJson['VERCEL_GIT_PROVIDER']).toBe('');
-    expect(apiJson['VERCEL_GIT_REPO_SLUG']).toBe('');
 
     const homeUrl = localhost[0];
     const homeRes = await fetch(homeUrl);
     const homeJson = await homeRes.json();
-    expect(homeJson['VERCEL']).toBe('1');
+    expect(homeJson['VERCEL']).toBeUndefined();
     expect(homeJson['VERCEL_URL']).toBe(localhostNoProtocol);
-    expect(homeJson['VERCEL_ENV']).toBe('development');
-    expect(homeJson['VERCEL_REGION']).toBe(undefined);
-    expect(homeJson['VERCEL_GIT_PROVIDER']).toBe('');
-    expect(homeJson['VERCEL_GIT_REPO_SLUG']).toBe('');
+    expect(homeJson['VERCEL_ENV']).toBeUndefined();
+    expect(homeJson['VERCEL_REGION']).toBeUndefined();
+    expect(homeJson['VERCEL_GIT_PROVIDER']).toBeUndefined();
+    expect(homeJson['VERCEL_GIT_REPO_SLUG']).toBeUndefined();
 
     // sleep before kill, otherwise the dev process doesn't clean up and exit properly
     await sleep(100);
