@@ -540,7 +540,7 @@ export function getEnvForPackageManager({
 }: {
   cliType: CliType;
   lockfileVersion: number | undefined;
-  packageJsonPackageManager: string | undefined;
+  packageJsonPackageManager?: string | undefined;
   nodeVersion: NodeVersion | undefined;
   env: { [x: string]: string | undefined };
 }) {
@@ -743,11 +743,11 @@ export function getPathOverrideForPackageManager({
 /**
  * Helper to get the binary paths that link to the used package manager.
  * Note: Make sure it doesn't contain any `console.log` calls.
+ * @deprecated use `getPathOverrideForPackageManager` instead
  */
 export function getPathForPackageManager({
   cliType,
   lockfileVersion,
-  corepackEnabled,
   nodeVersion,
   env,
 }: {
@@ -779,7 +779,7 @@ export function getPathForPackageManager({
   const overrides = getPathOverrideForPackageManager({
     cliType,
     lockfileVersion,
-    corepackEnabled,
+    corepackEnabled: false,
     nodeVersion,
   });
 
