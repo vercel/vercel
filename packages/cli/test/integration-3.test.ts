@@ -1327,6 +1327,19 @@ test('should invoke CLI extension', async () => {
   expect(output.stdout, formatted).toContain(`Username: ${contextName}`);
 });
 
+test('should pass through exit code for CLI extension', async () => {
+  const fixture = path.join(__dirname, 'fixtures/e2e/cli-extension-exit-code');
+
+  // Ensure the `.bin` is populated in the fixture
+  await runNpmInstall(fixture);
+
+  const output = await execCli(binaryPath, ['fail'], {
+    cwd: fixture,
+    reject: false,
+  });
+  expect(output.exitCode).toEqual(6);
+});
+
 // NOTE: Order matters here. This must be the last test in the file.
 test('default command should prompt login with empty auth.json', async () => {
   await clearAuthConfig();
