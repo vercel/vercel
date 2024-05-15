@@ -713,7 +713,7 @@ export function getPathOverrideForPackageManager({
   }
 
   throw new Error(
-    `Detected package manager (by lockfile) "${detectedPackageManger.detectedLockfile}" does not match intended corepack package manager "${corepackPackageManager}". Update your lockfile or "package.json#packageManager" values to match.`
+    `Detected package manager (by lockfile) "${detectedPackageManger.detectedPackageManager}" does not match intended corepack package manager "${corepackPackageManager}". Update your lockfile or "package.json#packageManager" values to match.`
   );
 }
 
