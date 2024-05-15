@@ -240,31 +240,34 @@ export function getSpawnOptions(
 
 export async function getNodeVersion(
   destPath: string,
-  nodeVersionFallback = process.env.VERCEL_PROJECT_SETTINGS_NODE_VERSION,
+  fallbackVersion = process.env.VERCEL_PROJECT_SETTINGS_NODE_VERSION,
   config: Config = {},
   meta: Meta = {},
   availableVersions = getAvailableNodeVersions()
 ): Promise<NodeVersion> {
-  const latest = getLatestNodeVersion(availableVersions);
+  const latestVersion = getLatestNodeVersion(availableVersions);
   if (meta.isDev) {
     // Use the system-installed version of `node` in PATH for `vercel dev`
-    return { ...latest, runtime: 'nodejs' };
+    return { ...latestVersion, runtime: 'nodejs' };
   }
   const { packageJson } = await scanParentDirs(destPath, true);
-  const nodeVersion = config.nodeVersion || nodeVersionFallback;
+  const configuredVersion = config.nodeVersion || fallbackVersion;
 
-  const pkgJsonNodeVersion = packageJson?.engines?.node;
-  const nodeVersionToUse = await getSupportedNodeVersion(
-    pkgJsonNodeVersion || nodeVersion,
-    !pkgJsonNodeVersion,
+  const packageJsonVersion = packageJson?.engines?.node;
+  const supportedNodeVersion = await getSupportedNodeVersion(
+    packageJsonVersion || configuredVersion,
+    !packageJsonVersion,
     availableVersions
   );
 
   if (packageJson?.engines?.node) {
     const { node } = packageJson.engines;
-    if (nodeVersion && !intersects(nodeVersion, nodeVersionToUse.range)) {
+    if (
+      configuredVersion &&
+      !intersects(configuredVersion, supportedNodeVersion.range)
+    ) {
       console.warn(
-        `Warning: Due to "engines": { "node": "${node}" } in your \`package.json\` file, the Node.js Version defined in your Project Settings ("${nodeVersion}") will not apply. Learn More: http://vercel.link/node-version`
+        `Warning: Due to "engines": { "node": "${node}" } in your \`package.json\` file, the Node.js Version defined in your Project Settings ("${configuredVersion}") will not apply. Learn More: http://vercel.link/node-version`
       );
     }
 
@@ -272,13 +275,16 @@ export async function getNodeVersion(
       console.warn(
         `Warning: Detected "engines": { "node": "${node}" } in your \`package.json\` with major.minor.patch, but only major Node.js Version can be selected. Learn More: http://vercel.link/node-version`
       );
-    } else if (validRange(node) && intersects(`${latest.major + 1}.x`, node)) {
+    } else if (
+      validRange(node) &&
+      intersects(`${latestVersion.major + 1}.x`, node)
+    ) {
       console.warn(
         `Warning: Detected "engines": { "node": "${node}" } in your \`package.json\` that will automatically upgrade when a new major Node.js Version is released. Learn More: http://vercel.link/node-version`
       );
     }
   }
-  return nodeVersionToUse;
+  return supportedNodeVersion;
 }
 
 export async function scanParentDirs(
@@ -420,9 +426,8 @@ export async function runNpmInstall(
 
   try {
     await runNpmInstallSema.acquire();
-    const { cliType, packageJsonPath, lockfileVersion } = await scanParentDirs(
-      destPath
-    );
+    const { cliType, packageJsonPath, packageJson, lockfileVersion } =
+      await scanParentDirs(destPath, true);
 
     if (!packageJsonPath) {
       debug(
@@ -457,6 +462,7 @@ export async function runNpmInstall(
     opts.env = getEnvForPackageManager({
       cliType,
       lockfileVersion,
+      packageJsonPackageManager: packageJson?.packageManager,
       nodeVersion,
       env,
     });
@@ -541,14 +547,19 @@ export async function runNpmInstall(
 export function getEnvForPackageManager({
   cliType,
   lockfileVersion,
+  packageJsonPackageManager,
   nodeVersion,
   env,
 }: {
   cliType: CliType;
   lockfileVersion: number | undefined;
+  packageJsonPackageManager?: string | undefined;
   nodeVersion: NodeVersion | undefined;
   env: { [x: string]: string | undefined };
 }) {
+  const corepackFlagged = env.ENABLE_EXPERIMENTAL_COREPACK === '1';
+  const corepackEnabled = corepackFlagged && Boolean(packageJsonPackageManager);
+
   const {
     detectedLockfile,
     detectedPackageManager,
@@ -556,14 +567,19 @@ export function getEnvForPackageManager({
   } = getPathOverrideForPackageManager({
     cliType,
     lockfileVersion,
+    corepackEnabled,
     nodeVersion,
-    env,
   });
 
-  const corepackEnabled = env.ENABLE_EXPERIMENTAL_COREPACK === '1';
-  debug(
-    `Detected ${detectedPackageManager} given lockfileVersion "${lockfileVersion}", package manager cli "${cliType}", and corepack enabled? ${corepackEnabled}: ${newPath}`
-  );
+  if (corepackEnabled) {
+    debug(
+      `Detected corepack use for "${packageJsonPackageManager}". Not overriding package manager version.`
+    );
+  } else {
+    debug(
+      `Detected ${detectedPackageManager}. Added "${newPath}" to path. Based on assumed package manager "${cliType}", lockfile "${detectedLockfile}", and lockfileVersion "${lockfileVersion}"`
+    );
+  }
 
   const newEnv: { [x: string]: string | undefined } = {
     ...env,
@@ -649,13 +665,13 @@ function shouldUseNpm7(
 export function getPathOverrideForPackageManager({
   cliType,
   lockfileVersion,
+  corepackEnabled,
   nodeVersion,
-  env,
 }: {
   cliType: CliType;
   lockfileVersion: number | undefined;
+  corepackEnabled: boolean;
   nodeVersion: NodeVersion | undefined;
-  env: { [x: string]: string | undefined };
 }): {
   /**
    * Which lockfile was detected.
@@ -676,8 +692,6 @@ export function getPathOverrideForPackageManager({
     detectedPackageManager: undefined,
     path: undefined,
   };
-
-  const corepackEnabled = env.ENABLE_EXPERIMENTAL_COREPACK === '1';
 
   switch (cliType) {
     case 'npm':
@@ -742,6 +756,7 @@ export function getPathOverrideForPackageManager({
 /**
  * Helper to get the binary paths that link to the used package manager.
  * Note: Make sure it doesn't contain any `console.log` calls.
+ * @deprecated use `getEnvForPackageManager` instead
  */
 export function getPathForPackageManager({
   cliType,
@@ -773,11 +788,16 @@ export function getPathForPackageManager({
    */
   yarnNodeLinker: string | undefined;
 } {
+  // This is not the correct check for whether or not corepack is being used. For that, you'd have to check
+  // the package.json's `packageManager` property. However, this deprecated function is keeping it's old,
+  // broken behavior.
+  const corepackEnabled = env.ENABLE_EXPERIMENTAL_COREPACK === '1';
+
   const overrides = getPathOverrideForPackageManager({
     cliType,
     lockfileVersion,
+    corepackEnabled,
     nodeVersion,
-    env,
   });
 
   const alreadyInPath = (newPath: string) => {
@@ -812,10 +832,14 @@ export async function runCustomInstallCommand({
   spawnOpts?: SpawnOptions;
 }) {
   console.log(`Running "install" command: \`${installCommand}\`...`);
-  const { cliType, lockfileVersion } = await scanParentDirs(destPath);
+  const { cliType, lockfileVersion, packageJson } = await scanParentDirs(
+    destPath,
+    true
+  );
   const env = getEnvForPackageManager({
     cliType,
     lockfileVersion,
+    packageJsonPackageManager: packageJson?.packageManager,
     nodeVersion,
     env: spawnOpts?.env || {},
   });
@@ -853,6 +877,7 @@ export async function runPackageJsonScript(
     env: getEnvForPackageManager({
       cliType,
       lockfileVersion,
+      packageJsonPackageManager: packageJson?.packageManager,
       nodeVersion: undefined,
       env: cloneEnv(process.env, spawnOpts?.env),
     }),
