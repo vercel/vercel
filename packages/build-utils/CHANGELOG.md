@@ -1,5 +1,15 @@
 # @vercel/build-utils
 
+## 8.2.0
+
+### Minor Changes
+
+- fix corepack detection for package manager version determination ([#11596](https://github.com/vercel/vercel/pull/11596))
+
+### Patch Changes
+
+- Fix triggering of ignored project settings node version warning ([#11550](https://github.com/vercel/vercel/pull/11550))
+
 ## 8.1.3
 
 ### Patch Changes
