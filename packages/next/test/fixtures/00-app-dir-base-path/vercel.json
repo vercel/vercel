@@ -19,6 +19,31 @@
   ],
   "probes": [
     {
+      "path": "/hello/world",
+      "status": 200,
+      "mustContain": "index app page"
+    },
+    {
+      "path": "/hello/world",
+      "status": 200,
+      "mustContain": "index app page",
+      "mustNotContain": "<html",
+      "headers": {
+        "RSC": 1
+      }
+    },
+    {
+      "path": "/hello/world",
+      "status": 200,
+      "mustContain": ":",
+      "mustNotContain": "<html",
+      "headers": {
+        "RSC": 1,
+        "Next-Router-Prefetch": 1
+      }
+    },
+    
+    {
       "path": "/hello/world/dashboard/hello",
       "status": 200,
       "mustContain": "hello from app/dashboard/rootonly/hello"

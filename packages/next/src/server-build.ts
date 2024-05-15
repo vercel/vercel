@@ -218,7 +218,9 @@ export async function serverBuild({
   }
 
   const experimental = {
-    ppr: requiredServerFilesManifest.config.experimental?.ppr === true,
+    ppr:
+      requiredServerFilesManifest.config.experimental?.ppr === true ||
+      requiredServerFilesManifest.config.experimental?.ppr === 'incremental',
   };
 
   let appRscPrefetches: UnwrapPromise<ReturnType<typeof glob>> = {};
@@ -228,8 +230,6 @@ export async function serverBuild({
   if (appPathRoutesManifest) {
     appDir = path.join(pagesDir, '../app');
     appBuildTraces = await glob('**/*.js.nft.json', appDir);
-
-    // TODO: maybe?
     appRscPrefetches = experimental.ppr
       ? {}
       : await glob(`**/*${RSC_PREFETCH_SUFFIX}`, appDir);
@@ -251,7 +251,7 @@ export async function serverBuild({
       if (rewrite.src && rewrite.dest) {
         rewrite.src = rewrite.src.replace(
           /\/?\(\?:\/\)\?/,
-          '(?<rscsuff>(\\.prefetch)?\\.rsc)?(?:/)?'
+          `(?<rscsuff>${experimental.ppr ? '(\\.prefetch)?' : ''}\\.rsc)?(?:/)?`
         );
         let destQueryIndex = rewrite.dest.indexOf('?');
 
@@ -1601,6 +1601,10 @@ export async function serverBuild({
           edgeFunctions[`${pathname}${RSC_PREFETCH_SUFFIX}`] =
             edgeFunctions[pathname];
         }
+
+        if (hasActionOutputSupport) {
+          edgeFunctions[`${pathname}.action`] = edgeFunctions[pathname];
+        }
       }
     }
   }
@@ -1903,7 +1907,7 @@ export async function serverBuild({
 
       ...(appDir
         ? [
-            ...(rscPrefetchHeader
+            ...(rscPrefetchHeader && experimental.ppr
               ? [
                   {
                     src: `^${path.posix.join('/', entryDirectory, '/')}`,
@@ -1952,12 +1956,18 @@ export async function serverBuild({
                   // Also includes separate handling for index routes which should match to /index.action.
                   // This follows the same pattern as the rewrites for .rsc files.
                   {
-                    src: `^${path.posix.join('/', entryDirectory, '/')}`,
+                    src: `^${path.posix.join('/', entryDirectory, '/?')}`,
                     dest: path.posix.join('/', entryDirectory, '/index.action'),
                     has: [
                       {
                         type: 'header',
                         key: 'next-action',
+                      },
+                    ],
+                    missing: [
+                      {
+                        type: 'header',
+                        key: rscHeader,
                       },
                     ],
                     continue: true,
@@ -1976,13 +1986,19 @@ export async function serverBuild({
                         key: 'next-action',
                       },
                     ],
+                    missing: [
+                      {
+                        type: 'header',
+                        key: rscHeader,
+                      },
+                    ],
                     continue: true,
                     override: true,
                   },
                 ]
               : []),
             {
-              src: `^${path.posix.join('/', entryDirectory, '/')}`,
+              src: `^${path.posix.join('/', entryDirectory, '/?')}`,
               has: [
                 {
                   type: 'header',
@@ -2041,47 +2057,6 @@ export async function serverBuild({
               src: path.posix.join('/', entryDirectory, '_next/data/(.*)'),
               dest: path.posix.join('/', entryDirectory, '_next/data/$1'),
               check: true,
-            },
-          ]
-        : []),
-
-      ...(rscPrefetchHeader && !experimental.ppr
-        ? [
-            {
-              src: path.posix.join(
-                '/',
-                entryDirectory,
-                `/__index${RSC_PREFETCH_SUFFIX}`
-              ),
-              dest: path.posix.join('/', entryDirectory, '/index.rsc'),
-              has: [
-                {
-                  type: 'header',
-                  key: rscPrefetchHeader,
-                },
-              ],
-              continue: true,
-              override: true,
-            },
-            {
-              src: `^${path.posix.join(
-                '/',
-                entryDirectory,
-                `/(.+?)${RSC_PREFETCH_SUFFIX}(?:/)?$`
-              )}`,
-              dest: path.posix.join(
-                '/',
-                entryDirectory,
-                `/$1${experimental.ppr ? RSC_PREFETCH_SUFFIX : '.rsc'}`
-              ),
-              has: [
-                {
-                  type: 'header',
-                  key: rscPrefetchHeader,
-                },
-              ],
-              continue: true,
-              override: true,
             },
           ]
         : []),

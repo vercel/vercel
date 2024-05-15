@@ -1,3 +1,7 @@
+export const metadata = {
+  metadataBase: new URL(process.env.VERCEL_PROJECT_PRODUCTION_URL ?? 'http://localhost:3000'),
+};
+
 export default function Root({ children }) {
   return (
     <html className="this-is-the-document-html">
