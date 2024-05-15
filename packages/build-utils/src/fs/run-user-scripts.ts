@@ -756,7 +756,7 @@ export function getPathOverrideForPackageManager({
 /**
  * Helper to get the binary paths that link to the used package manager.
  * Note: Make sure it doesn't contain any `console.log` calls.
- * @deprecated use `getPathOverrideForPackageManager` instead
+ * @deprecated use `getEnvForPackageManager` instead
  */
 export function getPathForPackageManager({
   cliType,
@@ -766,7 +766,6 @@ export function getPathForPackageManager({
 }: {
   cliType: CliType;
   lockfileVersion: number | undefined;
-  corepackEnabled: boolean;
   nodeVersion: NodeVersion | undefined;
   env: { [x: string]: string | undefined };
 }): {
@@ -789,10 +788,15 @@ export function getPathForPackageManager({
    */
   yarnNodeLinker: string | undefined;
 } {
+  // This is not the correct check for whether or not corepack is being used. For that, you'd have to check
+  // the package.json's `packageManager` property. However, this deprecated function is keeping it's old,
+  // broken behavior.
+  const corepackEnabled = env.ENABLE_EXPERIMENTAL_COREPACK === '1';
+
   const overrides = getPathOverrideForPackageManager({
     cliType,
     lockfileVersion,
-    corepackEnabled: false,
+    corepackEnabled,
     nodeVersion,
   });
 

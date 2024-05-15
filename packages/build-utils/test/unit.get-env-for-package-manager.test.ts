@@ -515,7 +515,6 @@ describe('Test `getPathForPackageManager()`', () => {
       args: {
         cliType: 'npm',
         nodeVersion: { major: 14, range: '14.x', runtime: 'nodejs14.x' },
-        corepackEnabled: false,
         lockfileVersion: 1,
         env: {
           FOO: 'bar',
@@ -533,7 +532,6 @@ describe('Test `getPathForPackageManager()`', () => {
       args: {
         cliType: 'npm',
         nodeVersion: { major: 14, range: '14.x', runtime: 'nodejs14.x' },
-        corepackEnabled: false,
         lockfileVersion: 2,
         env: {
           FOO: 'bar',
@@ -552,7 +550,6 @@ describe('Test `getPathForPackageManager()`', () => {
       args: {
         cliType: 'npm',
         nodeVersion: { major: 14, range: '14.x', runtime: 'nodejs14.x' },
-        corepackEnabled: true,
         lockfileVersion: 2,
         env: {
           FOO: 'bar',
@@ -571,7 +568,6 @@ describe('Test `getPathForPackageManager()`', () => {
       args: {
         cliType: 'npm',
         nodeVersion: { major: 14, range: '14.x', runtime: 'nodejs14.x' },
-        corepackEnabled: false,
         lockfileVersion: 2,
         env: {
           FOO: 'bar',
@@ -590,7 +586,6 @@ describe('Test `getPathForPackageManager()`', () => {
       args: {
         cliType: 'npm',
         nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
-        corepackEnabled: false,
         lockfileVersion: 2,
         env: {
           FOO: 'bar',
@@ -609,7 +604,6 @@ describe('Test `getPathForPackageManager()`', () => {
       args: {
         cliType: 'yarn',
         nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
-        corepackEnabled: false,
         lockfileVersion: 2,
         env: {
           FOO: 'bar',
@@ -627,7 +621,6 @@ describe('Test `getPathForPackageManager()`', () => {
       args: {
         cliType: 'yarn',
         nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
-        corepackEnabled: false,
         lockfileVersion: 2,
         env: {
           FOO: 'bar',
@@ -646,7 +639,6 @@ describe('Test `getPathForPackageManager()`', () => {
       args: {
         cliType: 'pnpm',
         nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
-        corepackEnabled: false,
         lockfileVersion: 5.4,
         env: {
           FOO: 'bar',
@@ -665,7 +657,6 @@ describe('Test `getPathForPackageManager()`', () => {
       args: {
         cliType: 'bun',
         nodeVersion: { major: 18, range: '18.x', runtime: 'nodejs18.x' },
-        corepackEnabled: false,
         lockfileVersion: 0,
         env: {
           FOO: 'bar',
@@ -684,7 +675,6 @@ describe('Test `getPathForPackageManager()`', () => {
       args: {
         cliType: 'pnpm',
         nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
-        corepackEnabled: true,
         lockfileVersion: 5.4,
         env: {
           FOO: 'bar',
@@ -703,7 +693,6 @@ describe('Test `getPathForPackageManager()`', () => {
       args: {
         cliType: 'pnpm',
         nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
-        corepackEnabled: false,
         lockfileVersion: 5.4,
         env: {
           FOO: 'bar',
@@ -722,7 +711,6 @@ describe('Test `getPathForPackageManager()`', () => {
       getPathForPackageManager({
         cliType: args.cliType,
         lockfileVersion: args.lockfileVersion,
-        corepackEnabled: args.corepackEnabled,
         nodeVersion: args.nodeVersion,
         env: args.env,
       })
