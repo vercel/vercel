@@ -240,38 +240,51 @@ export function getSpawnOptions(
 
 export async function getNodeVersion(
   destPath: string,
-  nodeVersionFallback = process.env.VERCEL_PROJECT_SETTINGS_NODE_VERSION,
+  fallbackVersion = process.env.VERCEL_PROJECT_SETTINGS_NODE_VERSION,
   config: Config = {},
   meta: Meta = {},
   availableVersions = getAvailableNodeVersions()
 ): Promise<NodeVersion> {
-  const latest = getLatestNodeVersion(availableVersions);
+  const latestVersion = getLatestNodeVersion(availableVersions);
   if (meta.isDev) {
     // Use the system-installed version of `node` in PATH for `vercel dev`
-    return { ...latest, runtime: 'nodejs' };
+    return { ...latestVersion, runtime: 'nodejs' };
   }
   const { packageJson } = await scanParentDirs(destPath, true);
-  let nodeVersion = config.nodeVersion || nodeVersionFallback;
-  let isAuto = true;
+  const configuredVersion = config.nodeVersion || fallbackVersion;
+
+  const packageJsonVersion = packageJson?.engines?.node;
+  const supportedNodeVersion = await getSupportedNodeVersion(
+    packageJsonVersion || configuredVersion,
+    !packageJsonVersion,
+    availableVersions
+  );
+
   if (packageJson?.engines?.node) {
     const { node } = packageJson.engines;
-    if (nodeVersion && validRange(node) && !intersects(nodeVersion, node)) {
+    if (
+      configuredVersion &&
+      !intersects(configuredVersion, supportedNodeVersion.range)
+    ) {
       console.warn(
-        `Warning: Due to "engines": { "node": "${node}" } in your \`package.json\` file, the Node.js Version defined in your Project Settings ("${nodeVersion}") will not apply. Learn More: http://vercel.link/node-version`
+        `Warning: Due to "engines": { "node": "${node}" } in your \`package.json\` file, the Node.js Version defined in your Project Settings ("${configuredVersion}") will not apply. Learn More: http://vercel.link/node-version`
       );
-    } else if (coerce(node)?.raw === node) {
+    }
+
+    if (coerce(node)?.raw === node) {
       console.warn(
         `Warning: Detected "engines": { "node": "${node}" } in your \`package.json\` with major.minor.patch, but only major Node.js Version can be selected. Learn More: http://vercel.link/node-version`
       );
-    } else if (validRange(node) && intersects(`${latest.major + 1}.x`, node)) {
+    } else if (
+      validRange(node) &&
+      intersects(`${latestVersion.major + 1}.x`, node)
+    ) {
       console.warn(
         `Warning: Detected "engines": { "node": "${node}" } in your \`package.json\` that will automatically upgrade when a new major Node.js Version is released. Learn More: http://vercel.link/node-version`
       );
     }
-    nodeVersion = node;
-    isAuto = false;
   }
-  return getSupportedNodeVersion(nodeVersion, isAuto, availableVersions);
+  return supportedNodeVersion;
 }
 
 export async function scanParentDirs(
