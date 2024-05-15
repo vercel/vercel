@@ -426,9 +426,8 @@ export async function runNpmInstall(
 
   try {
     await runNpmInstallSema.acquire();
-    const { cliType, packageJsonPath, lockfileVersion } = await scanParentDirs(
-      destPath
-    );
+    const { cliType, packageJsonPath, packageJson, lockfileVersion } =
+      await scanParentDirs(destPath, true);
 
     if (!packageJsonPath) {
       debug(
@@ -463,6 +462,7 @@ export async function runNpmInstall(
     opts.env = getEnvForPackageManager({
       cliType,
       lockfileVersion,
+      packageJsonPackageManager: packageJson?.packageManager,
       nodeVersion,
       env,
     });
@@ -547,14 +547,19 @@ export async function runNpmInstall(
 export function getEnvForPackageManager({
   cliType,
   lockfileVersion,
+  packageJsonPackageManager,
   nodeVersion,
   env,
 }: {
   cliType: CliType;
   lockfileVersion: number | undefined;
+  packageJsonPackageManager?: string | undefined;
   nodeVersion: NodeVersion | undefined;
   env: { [x: string]: string | undefined };
 }) {
+  const corepackFlagged = env.ENABLE_EXPERIMENTAL_COREPACK === '1';
+  const corepackEnabled = corepackFlagged && Boolean(packageJsonPackageManager);
+
   const {
     detectedLockfile,
     detectedPackageManager,
@@ -562,14 +567,19 @@ export function getEnvForPackageManager({
   } = getPathOverrideForPackageManager({
     cliType,
     lockfileVersion,
+    corepackEnabled,
     nodeVersion,
-    env,
   });
 
-  const corepackEnabled = env.ENABLE_EXPERIMENTAL_COREPACK === '1';
-  debug(
-    `Detected ${detectedPackageManager} given lockfileVersion "${lockfileVersion}", package manager cli "${cliType}", and corepack enabled? ${corepackEnabled}: ${newPath}`
-  );
+  if (corepackEnabled) {
+    debug(
+      `Detected corepack use for "${packageJsonPackageManager}". Not overriding package manager version.`
+    );
+  } else {
+    debug(
+      `Detected ${detectedPackageManager}. Added "${newPath}" to path. Based on assumed package manager "${cliType}", lockfile "${detectedLockfile}", and lockfileVersion "${lockfileVersion}"`
+    );
+  }
 
   const newEnv: { [x: string]: string | undefined } = {
     ...env,
@@ -655,13 +665,13 @@ function shouldUseNpm7(
 export function getPathOverrideForPackageManager({
   cliType,
   lockfileVersion,
+  corepackEnabled,
   nodeVersion,
-  env,
 }: {
   cliType: CliType;
   lockfileVersion: number | undefined;
+  corepackEnabled: boolean;
   nodeVersion: NodeVersion | undefined;
-  env: { [x: string]: string | undefined };
 }): {
   /**
    * Which lockfile was detected.
@@ -682,8 +692,6 @@ export function getPathOverrideForPackageManager({
     detectedPackageManager: undefined,
     path: undefined,
   };
-
-  const corepackEnabled = env.ENABLE_EXPERIMENTAL_COREPACK === '1';
 
   switch (cliType) {
     case 'npm':
@@ -748,6 +756,7 @@ export function getPathOverrideForPackageManager({
 /**
  * Helper to get the binary paths that link to the used package manager.
  * Note: Make sure it doesn't contain any `console.log` calls.
+ * @deprecated use `getEnvForPackageManager` instead
  */
 export function getPathForPackageManager({
   cliType,
@@ -779,11 +788,16 @@ export function getPathForPackageManager({
    */
   yarnNodeLinker: string | undefined;
 } {
+  // This is not the correct check for whether or not corepack is being used. For that, you'd have to check
+  // the package.json's `packageManager` property. However, this deprecated function is keeping it's old,
+  // broken behavior.
+  const corepackEnabled = env.ENABLE_EXPERIMENTAL_COREPACK === '1';
+
   const overrides = getPathOverrideForPackageManager({
     cliType,
     lockfileVersion,
+    corepackEnabled,
     nodeVersion,
-    env,
   });
 
   const alreadyInPath = (newPath: string) => {
@@ -818,10 +832,14 @@ export async function runCustomInstallCommand({
   spawnOpts?: SpawnOptions;
 }) {
   console.log(`Running "install" command: \`${installCommand}\`...`);
-  const { cliType, lockfileVersion } = await scanParentDirs(destPath);
+  const { cliType, lockfileVersion, packageJson } = await scanParentDirs(
+    destPath,
+    true
+  );
   const env = getEnvForPackageManager({
     cliType,
     lockfileVersion,
+    packageJsonPackageManager: packageJson?.packageManager,
     nodeVersion,
     env: spawnOpts?.env || {},
   });
@@ -859,6 +877,7 @@ export async function runPackageJsonScript(
     env: getEnvForPackageManager({
       cliType,
       lockfileVersion,
+      packageJsonPackageManager: packageJson?.packageManager,
       nodeVersion: undefined,
       env: cloneEnv(process.env, spawnOpts?.env),
     }),
