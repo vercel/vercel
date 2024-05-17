@@ -63,8 +63,12 @@ updates:
     allow:
       - dependency-name: '@remix-run*'
       - dependency-name: '@shopify*'
+      - dependency-name: 'remix*'
     ignore:
       - dependency-name: '@remix-run*'
+        update-types:
+          ['version-update:semver-major', 'version-update:semver-patch']
+      - dependency-name: 'remix*'
         update-types:
           ['version-update:semver-major', 'version-update:semver-patch']
       - dependency-name: '@shopify*'
@@ -73,6 +77,7 @@ updates:
     groups:
       core:
         patterns:
+          - 'remix*'
           - '@remix-run*'
           - '@shopify*'
         update-types:
