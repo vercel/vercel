@@ -214,6 +214,7 @@ export async function detectBuilders(
 
     if (
       !hasNextApiFiles &&
+      options.projectSettings?.framework === 'nextjs' &&
       (fileName.startsWith('pages/api/') ||
         fileName.startsWith('src/pages/api/'))
     ) {
