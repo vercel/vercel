@@ -12,9 +12,10 @@
   "scripts": {
     "build": "node build.mjs",
     "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --env node --verbose --bail --runInBand",
-    "test-unit": "pnpm test test/unit",
     "test-e2e": "pnpm test test/integration",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "vitest-unit-run": "vitest",
+    "vitest-unit": "jest test/unit/ --listTests"
   },
   "files": [
     "dist"
@@ -51,6 +52,7 @@
     "@types/etag": "1.8.0",
     "@types/jest": "29.5.0",
     "@vercel/functions": "workspace:*",
+    "@vitest/expect": "1.4.0",
     "content-type": "1.0.5",
     "cookie": "0.4.0",
     "cross-env": "7.0.3",
@@ -58,6 +60,8 @@
     "fs-extra": "11.1.0",
     "jest-junit": "16.0.0",
     "source-map-support": "0.5.12",
-    "tree-kill": "1.2.2"
+    "tree-kill": "1.2.2",
+    "vite": "5.1.6",
+    "vitest": "1.3.1"
   }
 }
