@@ -1506,7 +1506,7 @@ export type LambdaGroup = {
   isAppRouteHandler?: boolean;
   isStreaming?: boolean;
   isPrerenders?: boolean;
-  isExperimentalPPR?: boolean;
+  isExperimentalPPR: boolean;
   isActionLambda?: boolean;
   isPages?: boolean;
   isApiLambda: boolean;
@@ -1599,29 +1599,28 @@ export async function getPageLambdaGroups({
             group.isPrerenders === isPrerenderRoute &&
             group.isExperimentalPPR === isExperimentalPPR;
 
-          if (matches) {
-            let newTracedFilesUncompressedSize =
-              group.pseudoLayerUncompressedBytes;
+          if (!matches) return false;
 
-            for (const newPage of newPages) {
-              Object.keys(pageTraces[newPage] || {}).map(file => {
-                if (!group.pseudoLayer[file]) {
-                  const item = tracedPseudoLayer[file] as PseudoFile;
+          let newTracedFilesUncompressedSize =
+            group.pseudoLayerUncompressedBytes;
 
-                  newTracedFilesUncompressedSize += item.uncompressedSize || 0;
-                }
-              });
-              newTracedFilesUncompressedSize +=
-                compressedPages[newPage].uncompressedSize;
-            }
+          for (const newPage of newPages) {
+            Object.keys(pageTraces[newPage] || {}).map(file => {
+              if (!group.pseudoLayer[file]) {
+                const item = tracedPseudoLayer[file] as PseudoFile;
 
-            const underUncompressedLimit =
-              newTracedFilesUncompressedSize <
-              MAX_UNCOMPRESSED_LAMBDA_SIZE - LAMBDA_RESERVED_UNCOMPRESSED_SIZE;
-
-            return underUncompressedLimit;
+                newTracedFilesUncompressedSize += item.uncompressedSize || 0;
+              }
+            });
+            newTracedFilesUncompressedSize +=
+              compressedPages[newPage].uncompressedSize;
           }
-          return false;
+
+          const underUncompressedLimit =
+            newTracedFilesUncompressedSize <
+            MAX_UNCOMPRESSED_LAMBDA_SIZE - LAMBDA_RESERVED_UNCOMPRESSED_SIZE;
+
+          return underUncompressedLimit;
         });
 
     if (matchingGroup) {

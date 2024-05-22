@@ -984,18 +984,24 @@ export async function serverBuild({
           apiLambdaGroups: apiLambdaGroups.map(group => ({
             pages: group.pages,
             isPrerender: group.isPrerenders,
+            isStreaming: group.isStreaming,
+            isExperimentalPPR: group.isExperimentalPPR,
             pseudoLayerBytes: group.pseudoLayerBytes,
             uncompressedLayerBytes: group.pseudoLayerUncompressedBytes,
           })),
           pageLambdaGroups: pageLambdaGroups.map(group => ({
             pages: group.pages,
             isPrerender: group.isPrerenders,
+            isStreaming: group.isStreaming,
+            isExperimentalPPR: group.isExperimentalPPR,
             pseudoLayerBytes: group.pseudoLayerBytes,
             uncompressedLayerBytes: group.pseudoLayerUncompressedBytes,
           })),
           appRouterLambdaGroups: appRouterLambdaGroups.map(group => ({
             pages: group.pages,
             isPrerender: group.isPrerenders,
+            isStreaming: group.isStreaming,
+            isExperimentalPPR: group.isExperimentalPPR,
             pseudoLayerBytes: group.pseudoLayerBytes,
             uncompressedLayerBytes: group.pseudoLayerUncompressedBytes,
           })),
@@ -1003,6 +1009,8 @@ export async function serverBuild({
             appRouterStreamingActionLambdaGroups.map(group => ({
               pages: group.pages,
               isPrerender: group.isPrerenders,
+              isStreaming: group.isStreaming,
+              isExperimentalPPR: group.isExperimentalPPR,
               pseudoLayerBytes: group.pseudoLayerBytes,
               uncompressedLayerBytes: group.pseudoLayerUncompressedBytes,
             })),
@@ -1010,6 +1018,8 @@ export async function serverBuild({
             group => ({
               pages: group.pages,
               isPrerender: group.isPrerenders,
+              isStreaming: group.isStreaming,
+              isExperimentalPPR: group.isExperimentalPPR,
               pseudoLayerBytes: group.pseudoLayerBytes,
               uncompressedLayerBytes: group.pseudoLayerUncompressedBytes,
             })
@@ -1192,7 +1202,10 @@ export async function serverBuild({
       // This is a PPR lambda if it's an App Page with the PPR experimental flag
       // enabled.
       const isPPR =
-        experimental.ppr && group.isAppRouter && !group.isAppRouteHandler;
+        experimental.ppr &&
+        group.isAppRouter &&
+        !group.isAppRouteHandler &&
+        group.isExperimentalPPR;
 
       // If PPR is enabled and this is an App Page, create the non-streaming
       // lambda for the page for revalidation.
