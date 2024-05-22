@@ -317,7 +317,7 @@ async function compile(
   const babelCompileEnabled =
     !isEdgeFunction || process.env.VERCEL_EDGE_NO_BABEL !== '1';
   if (babelCompileEnabled && esmPaths.length) {
-    const babelCompile = (await import('./babel')).compile;
+    const babelCompile = (await import('./babel.js')).compile;
     for (const path of esmPaths) {
       const pathDir = join(workPath, dirname(path));
       if (!pkgCache.has(pathDir)) {
