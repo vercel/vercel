@@ -3,8 +3,7 @@ import { Headers, Response, Request } from 'node-fetch';
 import {
   getUrl,
   respond,
-  // @ts-ignore - this is a special patch file to allow importing from the template
-} from '../../../src/edge-functions/edge-handler-template.mjs';
+} from '../../../src/edge-functions/edge-handler-template.js';
 
 describe('edge-handler-template', () => {
   describe('getUrl()', () => {
