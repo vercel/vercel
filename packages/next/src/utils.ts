@@ -1599,28 +1599,29 @@ export async function getPageLambdaGroups({
             group.isPrerenders === isPrerenderRoute &&
             group.isExperimentalPPR === isExperimentalPPR;
 
-          if (!matches) return false;
+          if (matches) {
+            let newTracedFilesUncompressedSize =
+              group.pseudoLayerUncompressedBytes;
 
-          let newTracedFilesUncompressedSize =
-            group.pseudoLayerUncompressedBytes;
+            for (const newPage of newPages) {
+              Object.keys(pageTraces[newPage] || {}).map(file => {
+                if (!group.pseudoLayer[file]) {
+                  const item = tracedPseudoLayer[file] as PseudoFile;
 
-          for (const newPage of newPages) {
-            Object.keys(pageTraces[newPage] || {}).map(file => {
-              if (!group.pseudoLayer[file]) {
-                const item = tracedPseudoLayer[file] as PseudoFile;
+                  newTracedFilesUncompressedSize += item.uncompressedSize || 0;
+                }
+              });
+              newTracedFilesUncompressedSize +=
+                compressedPages[newPage].uncompressedSize;
+            }
 
-                newTracedFilesUncompressedSize += item.uncompressedSize || 0;
-              }
-            });
-            newTracedFilesUncompressedSize +=
-              compressedPages[newPage].uncompressedSize;
+            const underUncompressedLimit =
+              newTracedFilesUncompressedSize <
+              MAX_UNCOMPRESSED_LAMBDA_SIZE - LAMBDA_RESERVED_UNCOMPRESSED_SIZE;
+
+            return underUncompressedLimit;
           }
-
-          const underUncompressedLimit =
-            newTracedFilesUncompressedSize <
-            MAX_UNCOMPRESSED_LAMBDA_SIZE - LAMBDA_RESERVED_UNCOMPRESSED_SIZE;
-
-          return underUncompressedLimit;
+          return false;
         });
 
     if (matchingGroup) {
