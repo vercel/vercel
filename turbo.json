@@ -36,6 +36,10 @@
       "dependsOn": ["build"],
       "outputMode": "new-only"
     },
+    "vitest-e2e": {
+      "dependsOn": ["build"],
+      "outputMode": "new-only"
+    },
     "test-next-local": {
       "dependsOn": ["build"],
       "outputMode": "new-only"
