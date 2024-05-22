@@ -348,7 +348,7 @@ async function compile(
         );
       }
       console.log(`Compiling "${filename}" from ESM to CommonJS...`);
-      const { code, map } = babelCompile(filename, source);
+      const { code, map } = babelCompile(filename, String(source));
       shouldAddSourcemapSupport = true;
       preparedFiles[path] = new FileBlob({
         data: `${code}\n//# sourceMappingURL=${filename}.map`,
