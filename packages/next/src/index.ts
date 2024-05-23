@@ -1358,6 +1358,11 @@ export const build: BuildV2 = async ({
       experimentalPPRRoutes.add(route);
     }
 
+    const isAppPPREnabled = requiredServerFilesManifest
+      ? requiredServerFilesManifest.config.experimental?.ppr === true ||
+        requiredServerFilesManifest.config.experimental?.ppr === 'incremental'
+      : false;
+
     if (requiredServerFilesManifest) {
       if (!routesManifest) {
         throw new Error(
@@ -1413,6 +1418,7 @@ export const build: BuildV2 = async ({
         hasIsr500Page,
         variantsManifest,
         experimentalPPRRoutes,
+        isAppPPREnabled,
       });
     }
 
@@ -1932,7 +1938,7 @@ export const build: BuildV2 = async ({
       canUsePreviewMode,
       bypassToken: prerenderManifest.bypassToken || '',
       isServerMode,
-      experimentalPPRRoutes,
+      isAppPPREnabled: false,
       hasActionOutputSupport: false,
     }).then(arr =>
       localizeDynamicRoutes(
@@ -1963,7 +1969,7 @@ export const build: BuildV2 = async ({
         canUsePreviewMode,
         bypassToken: prerenderManifest.bypassToken || '',
         isServerMode,
-        experimentalPPRRoutes,
+        isAppPPREnabled: false,
         hasActionOutputSupport: false,
       }).then(arr =>
         arr.map(route => {
