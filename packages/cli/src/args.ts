@@ -39,7 +39,6 @@ export const help = () => `
       logs                 [url]       Displays the logs for a deployment
       projects                         Manages your Projects
       rm | remove          [id]        Removes a deployment
-      secrets              [name]      Manages your global Secrets, for use in Environment Variables
       teams                            Manages your teams
       whoami                           Shows the username of the currently logged in user
 
