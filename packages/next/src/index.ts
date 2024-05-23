@@ -1,4 +1,5 @@
 import {
+  Diagnostics,
   FileBlob,
   FileFsRef,
   Files,
@@ -2722,6 +2723,12 @@ export const build: BuildV2 = async ({
           ]),
     ],
     framework: { version: nextVersion },
+  };
+};
+
+export const diagnostics: Diagnostics = async () => {
+  return {
+    'test.txt': new FileBlob({ data: Buffer.from('hello') }),
   };
 };
 
