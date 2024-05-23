@@ -13,7 +13,7 @@ const runnersMap = new Map([
     },
   ],
   [
-    'vitest-unit',
+    'vitest-e2e',
     {
       min: 1,
       max: 1,
