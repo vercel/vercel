@@ -53,8 +53,8 @@ module.exports = function setupTests(groupIndex) {
         try {
           await testDeployment(path.join(fixturesPath, fixture));
         } catch (err) {
-          expect(err).toBeTruthy();
           expect(err.deployment).toBeTruthy();
+          expect(err).toBeTruthy();
           expect(err.deployment.errorMessage).toBe(errMsg);
         }
       });
