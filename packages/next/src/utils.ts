@@ -1954,6 +1954,7 @@ type OnPrerenderRouteArgs = {
   routesManifest?: RoutesManifest;
   isCorrectNotFoundRoutes?: boolean;
   isEmptyAllowQueryForPrendered?: boolean;
+  isAppPPREnabled: boolean;
 };
 let prerenderGroup = 1;
 
@@ -1990,6 +1991,7 @@ export const onPrerenderRoute =
       routesManifest,
       isCorrectNotFoundRoutes,
       isEmptyAllowQueryForPrendered,
+      isAppPPREnabled,
     } = prerenderRouteArgs;
 
     if (isBlocking && isFallback) {
@@ -2261,14 +2263,14 @@ export const onPrerenderRoute =
 
     let outputPathPrefetchData: null | string = null;
     if (prefetchDataRoute) {
-      if (!experimentalPPR) {
+      if (!isAppPPREnabled) {
         throw new Error(
           "Invariant: prefetchDataRoute can't be set without PPR"
         );
       }
 
       outputPathPrefetchData = normalizeDataRoute(prefetchDataRoute);
-    } else if (experimentalPPR) {
+    } else if (isAppPPREnabled) {
       throw new Error('Invariant: expected to find prefetch data route PPR');
     }
 
