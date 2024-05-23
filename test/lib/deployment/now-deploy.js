@@ -10,6 +10,7 @@ const ms = require('ms');
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
+// ?. Will probably need an extra arg to use a specific team/project id?
 async function nowDeploy(projectName, bodies, randomness, uploadNowJson, opts) {
   const files = Object.keys(bodies)
     .filter(n =>
@@ -40,6 +41,7 @@ async function nowDeploy(projectName, bodies, randomness, uploadNowJson, opts) {
 
   const nowDeployPayload = {
     version: 2,
+    // this will need to be configurable
     public: true,
     name: projectName,
     files,
@@ -191,7 +193,7 @@ async function fetchWithAuth(url, opts = {}) {
     delete opts.skipTeam;
   } else {
     const { VERCEL_TEAM_ID } = process.env;
-
+    console.log('Hey, Listen', VERCEL_TEAM_ID);
     if (VERCEL_TEAM_ID) {
       url += `${url.includes('?') ? '&' : '?'}teamId=${VERCEL_TEAM_ID}`;
     }

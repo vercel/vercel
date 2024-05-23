@@ -61,6 +61,7 @@ module.exports = function setupTests(groupIndex) {
       continue; //eslint-disable-line
     }
     it(`should build ${fixture}`, async () => {
+      // ?
       await expect(
         testDeployment(path.join(fixturesPath, fixture))
       ).resolves.toBeDefined();
