@@ -13,9 +13,9 @@
   "scripts": {
     "build": "node ../../utils/build-builder.mjs",
     "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --bail --runInBand",
-    "vitest-unit-run": "vitest",
+    "vitest-run": "vitest",
     "vitest-unit": "glob --absolute 'test/unit/**/*.test.ts'",
-    "vitest-e2e": "pnpm vitest test/integration-*.test.ts",
+    "vitest-e2e": "glob --absolute test/integration-*.test.ts",
     "type-check": "tsc --noEmit"
   },
   "files": [

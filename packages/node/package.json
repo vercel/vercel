@@ -14,7 +14,7 @@
     "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --env node --verbose --bail --runInBand",
     "test-e2e": "pnpm test test/integration",
     "type-check": "tsc --noEmit",
-    "vitest-unit-run": "vitest",
+    "vitest-run": "vitest",
     "vitest-unit": "glob --absolute 'test/unit/**/*.test.ts' 'test/unit/**/*.test.mts'"
   },
   "files": [
