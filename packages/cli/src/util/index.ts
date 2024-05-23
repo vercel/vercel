@@ -312,35 +312,6 @@ export default class Now extends EventEmitter {
     return new Error(error.message || error.errorMessage);
   }
 
-  async listSecrets(next?: number, testWarningFlag?: boolean) {
-    const payload = await this.retry(async bail => {
-      let secretsUrl = '/v3/now/secrets?limit=20';
-
-      if (next) {
-        secretsUrl += `&until=${next}`;
-      }
-
-      if (testWarningFlag) {
-        secretsUrl += '&testWarning=1';
-      }
-
-      const res = await this._fetch(secretsUrl);
-
-      if (res.status === 200) {
-        // What we want
-        return res.json();
-      }
-      if (res.status > 200 && res.status < 500) {
-        // If something is wrong with our request, we don't retry
-        return bail(await responseError(res, 'Failed to list secrets'));
-      }
-      // If something is wrong with the server, we retry
-      throw await responseError(res, 'Failed to list secrets');
-    });
-
-    return payload;
-  }
-
   async list(
     app?: string,
     { version = 4, meta = {}, nextTimestamp, target }: ListOptions = {},
