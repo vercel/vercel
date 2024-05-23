@@ -1,5 +1,14 @@
 # vercel
 
+## 34.2.1
+
+### Patch Changes
+
+- Support incremental PPR for large applications ([#11625](https://github.com/vercel/vercel/pull/11625))
+
+- Updated dependencies [[`73e558913`](https://github.com/vercel/vercel/commit/73e558913ab30ba097d7536a12fa8a7c967479f0)]:
+  - @vercel/next@4.2.12
+
 ## 34.2.0
 
 ### Minor Changes

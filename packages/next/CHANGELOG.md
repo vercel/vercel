@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.2.12
+
+### Patch Changes
+
+- Support incremental PPR for large applications ([#11625](https://github.com/vercel/vercel/pull/11625))
+
 ## 4.2.11
 
 ### Patch Changes
