@@ -1,5 +1,19 @@
 # @vercel/next
 
+## 4.2.13
+
+### Patch Changes
+
+- Fix static case for detecting when a page supports PPR ([#11635](https://github.com/vercel/vercel/pull/11635))
+
+- Fix related to erroring when a prefetch route is not provided but the route is PPR enabled ([#11638](https://github.com/vercel/vercel/pull/11638))
+
+## 4.2.12
+
+### Patch Changes
+
+- Support incremental PPR for large applications ([#11625](https://github.com/vercel/vercel/pull/11625))
+
 ## 4.2.11
 
 ### Patch Changes
