@@ -2270,7 +2270,7 @@ export const onPrerenderRoute =
       }
 
       outputPathPrefetchData = normalizeDataRoute(prefetchDataRoute);
-    } else if (isAppPPREnabled) {
+    } else if (experimentalPPR) {
       throw new Error('Invariant: expected to find prefetch data route PPR');
     }
 
