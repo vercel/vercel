@@ -35,6 +35,9 @@ import {
   scanParentDirs,
   traverseUpDirectories,
 } from './fs/run-user-scripts';
+
+console.log('ignore this, testing....');
+
 import {
   getLatestNodeVersion,
   getDiscontinuedNodeVersions,
