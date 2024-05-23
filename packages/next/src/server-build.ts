@@ -252,9 +252,19 @@ export async function serverBuild({
 
     for (const rewrite of afterFilesRewrites) {
       if (rewrite.src && rewrite.dest) {
+        // ensures that userland rewrites are still correctly matched to their special outputs
+        // PPR should match .prefetch.rsc, .rsc, and .action
+        // non-PPR should match .rsc and .action
+        // we only add `.action` handling to the regex if flagged on in the build
+        const rscSuffix = isAppPPREnabled
+          ? `(\\.prefetch)?\\.rsc${hasActionOutputSupport ? '|\\.action' : ''}`
+          : hasActionOutputSupport
+          ? '(\\.action|\\.rsc)'
+          : '\\.rsc';
+
         rewrite.src = rewrite.src.replace(
           /\/?\(\?:\/\)\?/,
-          `(?<rscsuff>${isAppPPREnabled ? '(\\.prefetch)?' : ''}\\.rsc)?(?:/)?`
+          `(?<rscsuff>${rscSuffix})?(?:/)?`
         );
         let destQueryIndex = rewrite.dest.indexOf('?');
 
