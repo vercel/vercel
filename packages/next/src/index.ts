@@ -2168,6 +2168,7 @@ export const build: BuildV2 = async ({
       appPathRoutesManifest,
       isSharedLambdas,
       canUsePreviewMode,
+      isAppPPREnabled: false,
     });
 
     await Promise.all(

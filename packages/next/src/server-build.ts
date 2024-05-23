@@ -1345,6 +1345,7 @@ export async function serverBuild({
     hasPages404: routesManifest.pages404,
     isCorrectNotFoundRoutes,
     isEmptyAllowQueryForPrendered,
+    isAppPPREnabled,
   });
 
   await Promise.all(
