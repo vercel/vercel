@@ -303,17 +303,6 @@ export interface ProjectAliasTarget {
   deployment?: Deployment | undefined;
 }
 
-export interface Secret {
-  uid: string;
-  name: string;
-  value: string;
-  teamId?: string;
-  userId?: string;
-  projectId?: string;
-  created: string;
-  createdAt: number;
-}
-
 export interface ProjectEnvVariable {
   id: string;
   key: string;
