@@ -7,7 +7,6 @@ import { PROJECT_ENV_TARGET } from '@vercel-internals/constants';
 export type ProjectEnvTarget = typeof PROJECT_ENV_TARGET[number];
 export type ProjectEnvType =
   | 'plain'
-  | 'secret'
   | 'encrypted'
   | 'system'
   | 'sensitive';
