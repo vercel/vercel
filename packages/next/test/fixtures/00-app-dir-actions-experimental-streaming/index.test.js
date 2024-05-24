@@ -273,6 +273,26 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
       expect(body).toContain(JSON.stringify(['id', '1', 'd']));
       expect(body).not.toContain(JSON.stringify(['id', '1.action', 'd']));
     });
+
+    it('should work when a rewrite targets an action', async () => {
+      const targetPath = `${basePath}/rsc/static`;
+      const canonicalPath = `/rewrite/${basePath}/rsc/static`;
+      const actionId = findActionId(targetPath, runtime);
+
+      const res = await fetch(
+        `${ctx.deploymentUrl}${canonicalPath}`,
+        generateFormDataPayload(actionId)
+      );
+
+      expect(res.status).toEqual(200);
+      expect(res.headers.get('x-matched-path')).toBe(targetPath + '.action');
+      expect(res.headers.get('content-type')).toBe('text/x-component');
+      if (runtime === 'node') {
+        expect(res.headers.get('x-vercel-cache')).toBe('MISS');
+      } else {
+        expect(res.headers.get('x-edge-runtime')).toBe('1');
+      }
+    });
   });
 
   describe('pages', () => {
