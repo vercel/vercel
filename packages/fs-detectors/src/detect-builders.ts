@@ -95,8 +95,6 @@ export async function detectBuilders(
   rewriteRoutes: Route[] | null;
   errorRoutes: Route[] | null;
 }> {
-  console.log('detectBuilders111111');
-
   const errors: ErrorResponse[] = [];
   const warnings: ErrorResponse[] = [];
 
