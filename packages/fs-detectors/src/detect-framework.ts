@@ -176,6 +176,7 @@ export async function detectFramework({
       return null;
     })
   );
+
   removeSupersededFrameworks(result);
   return result.find(res => res !== null)?.slug ?? null;
 }

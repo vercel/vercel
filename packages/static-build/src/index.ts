@@ -71,6 +71,7 @@ async function checkForPort(
 }
 
 function validateDistDir(distDir: string) {
+  console.log('distDir', distDir);
   const distDirName = path.basename(distDir);
   const exists = () => existsSync(distDir);
   const isDirectory = () => statSync(distDir).isDirectory();
