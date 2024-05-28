@@ -13,8 +13,6 @@ sys.modules["__VC_HANDLER_MODULE_NAME"] = __vc_module
 __vc_spec.loader.exec_module(__vc_module)
 __vc_variables = dir(__vc_module)
 
-_use_legacy_asyncio = sys.version_info < (3, 10)
-
 def format_headers(headers, decode=False):
     keyToList = {}
     for key, value in headers.items():
@@ -172,104 +170,121 @@ elif 'app' in __vc_variables:
     else:
         print('using Asynchronous Server Gateway Interface (ASGI)')
         # Originally authored by Jordan Eremieff and included under MIT license:
-        # https://github.com/erm/mangum/blob/b4d21c8f5e304a3e17b88bc9fa345106acc50ad7/mangum/__init__.py
-        # https://github.com/erm/mangum/blob/b4d21c8f5e304a3e17b88bc9fa345106acc50ad7/LICENSE
+        # https://github.com/jordaneremieff/mangum/blob/6086c268f32571c01f18e20875430db14a0570bc/mangum/protocols/http.py
+        # https://github.com/jordaneremieff/mangum/blob/6086c268f32571c01f18e20875430db14a0570bc/mangum/types.py
+        # https://github.com/jordaneremieff/mangum/blob/6086c268f32571c01f18e20875430db14a0570bc/mangum/exceptions.py
+        # https://github.com/jordaneremieff/mangum/blob/6086c268f32571c01f18e20875430db14a0570bc/LICENSE
         import asyncio
         import enum
         from urllib.parse import urlparse
         from werkzeug.datastructures import Headers
+        from io import BytesIO
+        from typing import Any, Awaitable, Callable, MutableMapping, Protocol, TypedDict
 
+        Message = MutableMapping[str, Any]
+        Scope = MutableMapping[str, Any]
+        Receive = Callable[[], Awaitable[Message]]
+        Send = Callable[[Message], Awaitable[None]]
 
-        class ASGICycleState(enum.Enum):
+        class UnexpectedMessage(Exception):
+            """Raise when an unexpected message type is received during an ASGI cycle."""
+
+        class ASGI(Protocol):
+            async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+                ...
+
+        class Response(TypedDict):
+            status: int
+            headers: Headers
+            body: bytes
+
+        class HTTPCycleState(enum.Enum):
             REQUEST = enum.auto()
             RESPONSE = enum.auto()
+            COMPLETE = enum.auto()
 
-
-        class ASGICycle:
-            def __init__(self, scope):
+        class HTTPCycle:
+            def __init__(self, scope: Scope, body: bytes) -> None:
                 self.scope = scope
-                self.body = b''
-                self.state = ASGICycleState.REQUEST
-                self.app_queue = None
-                self.response = {}
+                self.buffer = BytesIO()
+                self.state = HTTPCycleState.REQUEST
+                self.app_queue: asyncio.Queue[Message] = asyncio.Queue()
+                self.app_queue.put_nowait(
+                    {
+                        "type": "http.request",
+                        "body": body,
+                        "more_body": False,
+                    }
+                )
 
-            def __call__(self, app, body):
-                """
-                Receives the application and any body included in the request, then builds the
-                ASGI instance using the connection scope.
-                Runs until the response is completely read from the application.
-                """
-                if _use_legacy_asyncio:
-                    loop = asyncio.new_event_loop()
-                    self.app_queue = asyncio.Queue(loop=loop)
-                else:
-                    self.app_queue = asyncio.Queue()
-                self.put_message({'type': 'http.request', 'body': body, 'more_body': False})
+            def __call__(self, app: ASGI) -> Response:
+                asgi_instance = self.run(app)
+                loop = asyncio.get_event_loop()
+                asgi_task = loop.create_task(asgi_instance)
+                loop.run_until_complete(asgi_task)
 
-                asgi_instance = app(self.scope, self.receive, self.send)
+                return {
+                    "status": self.status,
+                    "headers": self.headers,
+                    "body": self.body,
+                }
 
-                if _use_legacy_asyncio:
-                    asgi_task = loop.create_task(asgi_instance)
-                    loop.run_until_complete(asgi_task)
-                else:
-                    asyncio.run(self.run_asgi_instance(asgi_instance))
-                return self.response
-
-            async def run_asgi_instance(self, asgi_instance):
-                await asgi_instance
-
-            def put_message(self, message):
-                self.app_queue.put_nowait(message)
-
-            async def receive(self):
-                """
-                Awaited by the application to receive messages in the queue.
-                """
-                message = await self.app_queue.get()
-                return message
-
-            async def send(self, message):
-                """
-                Awaited by the application to send messages to the current cycle instance.
-                """
-                message_type = message['type']
-
-                if self.state is ASGICycleState.REQUEST:
-                    if message_type != 'http.response.start':
-                        raise RuntimeError(
-                            f"Expected 'http.response.start', received: {message_type}"
+            async def run(self, app: ASGI) -> None:
+                try:
+                    await app(self.scope, self.receive, self.send)
+                except BaseException:
+                    print("Exception: An error occurred running the ASGI application.")
+                    if self.state is HTTPCycleState.REQUEST:
+                        await self.send(
+                            {
+                                "type": "http.response.start",
+                                "status": 500,
+                                "headers": [[b"content-type", b"text/plain; charset=utf-8"]],
+                            }
                         )
-
-                    status_code = message['status']
-                    headers = Headers(message.get('headers', []))
-
-                    self.on_request(headers, status_code)
-                    self.state = ASGICycleState.RESPONSE
-
-                elif self.state is ASGICycleState.RESPONSE:
-                    if message_type != 'http.response.body':
-                        raise RuntimeError(
-                            f"Expected 'http.response.body', received: {message_type}"
+                        await self.send(
+                            {
+                                "type": "http.response.body",
+                                "body": b"Internal Server Error",
+                                "more_body": False,
+                            }
                         )
+                    elif self.state is not HTTPCycleState.COMPLETE:
+                        self.status = 500
+                        self.body = b"Internal Server Error"
+                        self.headers = [[b"content-type", b"text/plain; charset=utf-8"]]
 
-                    body = message.get('body', b'')
-                    more_body = message.get('more_body', False)
+            async def receive(self) -> Message:
+                return await self.app_queue.get()  # pragma: no cover
 
-                    # The body must be completely read before returning the response.
-                    self.body += body
-
+            async def send(self, message: Message) -> None:
+                if (
+                    self.state is HTTPCycleState.REQUEST
+                    and message["type"] == "http.response.start"
+                ):
+                    self.status = message["status"]
+                    self.headers = message.get("headers", [])
+                    self.state = HTTPCycleState.RESPONSE
+                elif (
+                    self.state is HTTPCycleState.RESPONSE
+                    and message["type"] == "http.response.body"
+                ):
+                    body = message.get("body", b"")
+                    more_body = message.get("more_body", False)
+                    self.buffer.write(body)
                     if not more_body:
-                        self.on_response()
-                        self.put_message({'type': 'http.disconnect'})
+                        self.body = self.buffer.getvalue()
+                        self.buffer.close()
 
-            def on_request(self, headers, status_code):
-                self.response['statusCode'] = status_code
-                self.response['headers'] = format_headers(headers, decode=True)
+                        self.state = HTTPCycleState.COMPLETE
+                        await self.app_queue.put({"type": "http.disconnect"})
 
-            def on_response(self):
-                if self.body:
-                    self.response['body'] = base64.b64encode(self.body).decode('utf-8')
-                    self.response['encoding'] = 'base64'
+                        print(
+                            "%s %s %s"
+                            % (self.scope["method"], self.scope["path"], self.status)
+                        )
+                else:
+                    raise UnexpectedMessage(f"Unexpected {message['type']}")
 
         def vc_handler(event, context):
             payload = json.loads(event['body'])
@@ -311,8 +326,9 @@ elif 'app' in __vc_variables:
                 'raw_path': path.encode(),
             }
 
-            asgi_cycle = ASGICycle(scope)
-            response = asgi_cycle(__vc_module.app, body)
+            http_cycle = HTTPCycle(scope, body)
+            response = http_cycle(__vc_module.app)
+
             return response
 
 else:
