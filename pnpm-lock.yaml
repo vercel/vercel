@@ -1445,6 +1445,9 @@ importers:
       '@vercel/build-utils':
         specifier: 8.2.0
         version: link:../build-utils
+      glob:
+        specifier: 10.3.16
+        version: 10.3.16
       jest-junit:
         specifier: 16.0.0
         version: 16.0.0
@@ -1454,6 +1457,9 @@ importers:
       semver:
         specifier: 7.5.2
         version: 7.5.2
+      vitest:
+        specifier: 1.3.1
+        version: 1.3.1(@edge-runtime/vm@3.2.0)(@types/node@16.18.11)
 
   packages/routing-utils:
     dependencies:
@@ -7560,11 +7566,6 @@ packages:
     engines: {node: ^12.13.0 || ^14.15.0 || ^16.10.0 || >=17.0.0}
     dev: true
 
-  /diff-sequences@29.4.3:
-    resolution: {integrity: sha512-ofrBgwpPhCD85kMKtE9RYFFq6OC1A89oW2vvgWZNCwxrUpRUILopY7lsYyMDSjc8g6U6aiO0Qubg6r4Wgt5ZnA==}
-    engines: {node: ^14.15.0 || ^16.10.0 || >=18.0.0}
-    dev: true
-
   /diff-sequences@29.6.3:
     resolution: {integrity: sha512-EjePK1srD3P08o2j4f0ExnylqRs5B9tJjcp9t1krH2qRi8CCdsYfwe9JgSLurFBWwq4uOlipzfk5fHNvwFKr8Q==}
     engines: {node: ^14.15.0 || ^16.10.0 || >=18.0.0}
@@ -10674,9 +10675,9 @@ packages:
     engines: {node: ^14.15.0 || ^16.10.0 || >=18.0.0}
     dependencies:
       chalk: 4.1.0
-      diff-sequences: 29.4.3
+      diff-sequences: 29.6.3
       jest-get-type: 29.4.3
-      pretty-format: 29.5.0
+      pretty-format: 29.7.0
     dev: true
 
   /jest-diff@29.5.0:
@@ -10813,7 +10814,7 @@ packages:
       chalk: 4.1.0
       jest-diff: 29.5.0
       jest-get-type: 29.4.3
-      pretty-format: 29.5.0
+      pretty-format: 29.7.0
     dev: true
 
   /jest-message-util@29.5.0:
@@ -10826,7 +10827,7 @@ packages:
       chalk: 4.1.0
       graceful-fs: 4.2.11
       micromatch: 4.0.5
-      pretty-format: 29.5.0
+      pretty-format: 29.7.0
       slash: 3.0.0
       stack-utils: 2.0.6
     dev: true
@@ -13327,7 +13328,7 @@ packages:
     resolution: {integrity: sha512-V2mGkI31qdttvTFX7Mt4efOqHXqJWMu4/r66Xh3Z3BwZaPfPJgp6/gbwoujRpPUtfEF6AUUWx3Jim3GCw5g/Qw==}
     engines: {node: ^14.15.0 || ^16.10.0 || >=18.0.0}
     dependencies:
-      '@jest/schemas': 29.4.3
+      '@jest/schemas': 29.6.3
       ansi-styles: 5.2.0
       react-is: 18.2.0
     dev: true
