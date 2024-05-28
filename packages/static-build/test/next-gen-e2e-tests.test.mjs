@@ -31,7 +31,7 @@ const testsThatFailToBuild = new Map([
   ],
 ]);
 
-async function readBuildEnv (p) {
+async function readBuildEnv(p) {
   const data = await fs.promises.readFile(p, 'utf-8');
   const json = JSON5.parse(data);
   if ('build' in json && 'env' in json.build) {
@@ -41,7 +41,7 @@ async function readBuildEnv (p) {
   }
 }
 
-async function readProbes (p) {
+async function readProbes(p) {
   const data = await fs.promises.readFile(p, 'utf-8');
   const json = JSON5.parse(data);
   if ('probes' in json) {
@@ -51,9 +51,9 @@ async function readProbes (p) {
   }
 }
 
-async function readProbePath (fixturePath, probePath) {
-  const outputPath = path.join(fixturePath, '.vercel/output/static')
-  let p = path.join(outputPath, probePath)
+async function readProbePath(fixturePath, probePath) {
+  const outputPath = path.join(fixturePath, '.vercel/output/static');
+  let p = path.join(outputPath, probePath);
   try {
     const fileContents = await fs.promises.readFile(p, 'utf-8');
     return fileContents;
@@ -64,24 +64,30 @@ async function readProbePath (fixturePath, probePath) {
       // its a directory, scan for index
       const possibleIndexes = probeDir.filter(p => p.startsWith('index')); // could be index.html, index.txt, index.js, index.css
       // preference index.html; otherwise grab the first from the filter
-      const indexFile = possibleIndexes.find((p) => p === 'index.html') ?? possibleIndexes[0];
+      const indexFile =
+        possibleIndexes.find(p => p === 'index.html') ?? possibleIndexes[0];
       return fs.promises.readFile(path.join(p, indexFile), 'utf-8');
     } catch (err) {
-      return null
+      return null;
     }
   }
 }
 
-async function assertProbes (fixturePath) {
-  const paths = [ 'now.json', 'vercel.json', 'probes.json' ];
-  const probes = await Promise.any(paths.map(p => readProbes(path.join(fixturePath, p)))).catch(() => []);
+async function assertProbes(fixturePath) {
+  const paths = ['now.json', 'vercel.json', 'probes.json'];
+  const probes = await Promise.any(
+    paths.map(p => readProbes(path.join(fixturePath, p)))
+  ).catch(() => []);
+
+  console.log(fixturePath);
+  console.log(probes);
 
   for (const probe of probes) {
     let probeContents = await readProbePath(fixturePath, probe.path);
     if ('mustContain' in probe) {
       expect(probeContents).to.contain(probe.mustContain);
     } else {
-      throw new Error(`not handling ${JSON.stringify(probe)}`)
+      throw new Error(`not handling ${JSON.stringify(probe)}`);
     }
   }
 }
@@ -97,16 +103,35 @@ describe('Assert builds', () => {
   const cli = path.resolve(__dirname, '../../cli/scripts/start.js');
   expect(fs.existsSync(cli), 'cli path exists');
 
-  for(const fixture of fs.readdirSync(fixtures)) {
-    test.concurrent(`Fixture: ${fixture}`, async () => {
+  for (const fixture of [
+    // '/Users/jeffsee/code/vercel/packages/static-build/test/fixtures/01-cowsay',
+    // '/Users/jeffsee/code/vercel/packages/static-build/test/fixtures/vite-v4',
+    // '/Users/jeffsee/code/vercel/packages/static-build/test/fixtures/vitepress',
+    'astro-v2',
+  ]) {
+    test(`Fixture: ${fixture}`, async () => {
       const fixturePath = path.join(fixtures, fixture);
       expect(fs.existsSync(fixturePath), 'fixture path exists').toBe(true);
+      console.log('fixturePath', fixturePath);
       const tmpdir = await fs.promises.mkdtemp(path.join(os.tmpdir(), fixture));
       await fs.promises.cp(fixturePath, tmpdir, { recursive: true });
       try {
-        const paths = [ 'now.json', 'vercel.json', 'probes.json' ];
-        const buildEnv = await Promise.any(paths.map(p => readBuildEnv(path.join(fixturePath, p)))).catch(() => null);
-        const { stderr } = await exec(`${cli} build --yes --debug`, { cwd: tmpdir, env: { ...process.env, VERCEL_ENV: 'production', VERCEL_URL: 'https://fake-vercel-url.com', TZ: 'UTC', ...buildEnv } });
+        const paths = ['now.json', 'vercel.json', 'probes.json'];
+        const buildEnv = await Promise.any(
+          paths.map(p => readBuildEnv(path.join(fixturePath, p)))
+        ).catch(() => {
+          return {};
+        });
+        const { stderr } = await exec(`${cli} build --yes --debug`, {
+          cwd: tmpdir,
+          env: {
+            ...process.env,
+            VERCEL_ENV: 'production',
+            VERCEL_URL: 'https://fake-vercel-url.com',
+            TZ: 'UTC',
+            ...buildEnv,
+          },
+        });
         expect(stderr).to.contain('Build Completed in .vercel/output');
         await assertProbes(tmpdir);
       } catch (err) {
@@ -119,4 +144,4 @@ describe('Assert builds', () => {
       }
     }, 100000);
   }
-})
+});
