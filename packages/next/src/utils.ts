@@ -1508,7 +1508,7 @@ export type LambdaGroup = {
   maxDuration?: number;
   isAppRouter?: boolean;
   isAppRouteHandler?: boolean;
-  readonly isStreaming: boolean;
+  isStreaming?: boolean;
   readonly isPrerenders: boolean;
   readonly isExperimentalPPR: boolean;
   isActionLambda?: boolean;
@@ -1565,7 +1565,6 @@ export async function getPageLambdaGroups({
     const routeName = normalizePage(page.replace(/\.js$/, ''));
     const isPrerenderRoute = prerenderRoutes.has(routeName);
     const isExperimentalPPR = experimentalPPRRoutes?.has(routeName) ?? false;
-    const isStreaming = !isPrerenderRoute || isExperimentalPPR;
 
     let opts: { memory?: number; maxDuration?: number } = {};
 
@@ -1637,7 +1636,6 @@ export async function getPageLambdaGroups({
         ...opts,
         isPrerenders: isPrerenderRoute,
         isExperimentalPPR,
-        isStreaming,
         isApiLambda: !!isApiPage(page),
         pseudoLayerBytes: initialPseudoLayer.pseudoLayerBytes,
         pseudoLayerUncompressedBytes: initialPseudoLayerUncompressed,
