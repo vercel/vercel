@@ -1,3 +1,4 @@
+import { it, expect, describe, beforeEach, afterEach } from 'vitest';
 import { delimiter } from 'path';
 import { getSpawnOptions } from '../src';
 

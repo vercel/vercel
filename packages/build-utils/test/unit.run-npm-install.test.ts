@@ -1,7 +1,9 @@
+import { it, expect, vi, afterEach } from 'vitest';
+
 let spawnExitCode = 0;
 
-const spawnMock = jest.fn();
-jest.mock('cross-spawn', () => {
+const spawnMock = vi.fn();
+vi.mock('cross-spawn', () => {
   const spawn = (...args: any) => {
     spawnMock(...args);
     const child = {
@@ -13,7 +15,9 @@ jest.mock('cross-spawn', () => {
     };
     return child;
   };
-  return spawn;
+  return {
+    default: spawn,
+  };
 });
 
 afterEach(() => {

@@ -1,3 +1,4 @@
+import { describe, expect, beforeEach, afterEach, test, vi } from 'vitest';
 import { delimiter } from 'path';
 import { getEnvForPackageManager, getPathForPackageManager } from '../src';
 import { getPathOverrideForPackageManager } from '../src/fs/run-user-scripts';
@@ -7,12 +8,12 @@ describe('Test `getEnvForPackageManager()`', () => {
   let consoleWarnSpy: jest.SpyInstance;
 
   beforeEach(() => {
-    consoleLogSpy = jest.spyOn(console, 'log');
-    consoleWarnSpy = jest.spyOn(console, 'warn');
+    consoleLogSpy = vi.spyOn(console, 'log');
+    consoleWarnSpy = vi.spyOn(console, 'warn');
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   test.each<{

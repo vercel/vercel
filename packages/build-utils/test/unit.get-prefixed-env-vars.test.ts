@@ -1,3 +1,4 @@
+import { it, expect, describe } from 'vitest';
 import { getPrefixedEnvVars } from '../src';
 
 describe('Test `getPrefixedEnvVars()`', () => {
