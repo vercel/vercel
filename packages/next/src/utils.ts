@@ -192,8 +192,12 @@ function normalizePage(page: string): string {
   if (!page.startsWith('/')) {
     page = `/${page}`;
   }
-  // remove '/index' from the end
-  page = page.replace(/\/index$/, '/');
+
+  // Replace the `/index` with `/`
+  if (page === '/index') {
+    page = '/';
+  }
+
   return page;
 }
 
@@ -320,8 +324,8 @@ export async function getDynamicRoutes({
   bypassToken,
   isServerMode,
   dynamicMiddlewareRouteMap,
-  experimentalPPRRoutes,
   hasActionOutputSupport,
+  isAppPPREnabled,
 }: {
   entryPath: string;
   entryDirectory: string;
@@ -333,8 +337,8 @@ export async function getDynamicRoutes({
   bypassToken?: string;
   isServerMode?: boolean;
   dynamicMiddlewareRouteMap?: ReadonlyMap<string, RouteWithSrc>;
-  experimentalPPRRoutes: ReadonlySet<string>;
   hasActionOutputSupport: boolean;
+  isAppPPREnabled: boolean;
 }): Promise<RouteWithSrc[]> {
   if (routesManifest) {
     switch (routesManifest.version) {
@@ -408,7 +412,7 @@ export async function getDynamicRoutes({
             ];
           }
 
-          if (experimentalPPRRoutes.has(page)) {
+          if (isAppPPREnabled) {
             let dest = route.dest?.replace(/($|\?)/, '.prefetch.rsc$1');
 
             if (page === '/' || page === '/index') {
@@ -1505,8 +1509,8 @@ export type LambdaGroup = {
   isAppRouter?: boolean;
   isAppRouteHandler?: boolean;
   isStreaming?: boolean;
-  isPrerenders?: boolean;
-  isExperimentalPPR?: boolean;
+  readonly isPrerenders: boolean;
+  readonly isExperimentalPPR: boolean;
   isActionLambda?: boolean;
   isPages?: boolean;
   isApiLambda: boolean;
@@ -1948,6 +1952,7 @@ type OnPrerenderRouteArgs = {
   routesManifest?: RoutesManifest;
   isCorrectNotFoundRoutes?: boolean;
   isEmptyAllowQueryForPrendered?: boolean;
+  isAppPPREnabled: boolean;
 };
 let prerenderGroup = 1;
 
@@ -1984,6 +1989,7 @@ export const onPrerenderRoute =
       routesManifest,
       isCorrectNotFoundRoutes,
       isEmptyAllowQueryForPrendered,
+      isAppPPREnabled,
     } = prerenderRouteArgs;
 
     if (isBlocking && isFallback) {
@@ -2219,22 +2225,6 @@ export const onPrerenderRoute =
       initialStatus = 404;
     }
 
-    /**
-     * If the route key had an `/index` suffix added, we need to note it so we
-     * can remove it from the output path later accurately.
-     */
-    let addedIndexSuffix = false;
-
-    if (isAppPathRoute) {
-      // for literal index routes we need to append an additional /index
-      // due to the proxy's normalizing for /index routes
-      if (routeKey !== '/index' && routeKey.endsWith('/index')) {
-        routeKey = `${routeKey}/index`;
-        routeFileNoExt = routeKey;
-        addedIndexSuffix = true;
-      }
-    }
-
     let outputPathPage = path.posix.join(entryDirectory, routeFileNoExt);
 
     if (!isAppPathRoute) {
@@ -2271,7 +2261,7 @@ export const onPrerenderRoute =
 
     let outputPathPrefetchData: null | string = null;
     if (prefetchDataRoute) {
-      if (!experimentalPPR) {
+      if (!isAppPPREnabled) {
         throw new Error(
           "Invariant: prefetchDataRoute can't be set without PPR"
         );
@@ -2428,7 +2418,7 @@ export const onPrerenderRoute =
         // static route first, then try the srcRoute if it doesn't exist. If we
         // can't find it at all, this constitutes an error.
         experimentalStreamingLambdaPath = experimentalStreamingLambdaPaths.get(
-          pathnameToOutputName(entryDirectory, routeKey, addedIndexSuffix)
+          pathnameToOutputName(entryDirectory, routeKey)
         );
         if (!experimentalStreamingLambdaPath && srcRoute) {
           experimentalStreamingLambdaPath =
@@ -2689,18 +2679,9 @@ export function getNextServerPath(nextVersion: string) {
     : 'next/dist/next-server/server';
 }
 
-function pathnameToOutputName(
-  entryDirectory: string,
-  pathname: string,
-  addedIndexSuffix = false
-) {
+function pathnameToOutputName(entryDirectory: string, pathname: string) {
   if (pathname === '/') {
     pathname = '/index';
-  }
-  // If the `/index` was added for a route that ended in `/index` we need to
-  // strip the second one off before joining it with the entryDirectory.
-  else if (addedIndexSuffix) {
-    pathname = pathname.replace(/\/index$/, '');
   }
 
   return path.posix.join(entryDirectory, pathname);

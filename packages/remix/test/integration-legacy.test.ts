@@ -1,11 +1,12 @@
 const fs = require('fs');
 const { join } = require('path');
+import { vi, it, expect } from 'vitest';
 
 const {
   testDeployment,
 } = require('../../../test/lib/deployment/test-deployment.js');
 
-jest.setTimeout(12 * 60 * 1000);
+vi.setConfig({ testTimeout: 12 * 60 * 1000 });
 
 const fixturesPath = join(__dirname, 'fixtures-legacy');
 

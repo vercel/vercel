@@ -1,5 +1,32 @@
 # vercel
 
+## 34.2.3
+
+### Patch Changes
+
+- Don't create streaming lambdas for pages router routes ([#11660](https://github.com/vercel/vercel/pull/11660))
+
+- Updated dependencies [[`c9d53d4e3`](https://github.com/vercel/vercel/commit/c9d53d4e3e4591b9b6bde86100564c9ee4c6d1d4), [`5f561f8cf`](https://github.com/vercel/vercel/commit/5f561f8cfa4720801a5cf4598f193ab34539abb9)]:
+  - @vercel/next@4.2.14
+
+## 34.2.2
+
+### Patch Changes
+
+- Fix related to erroring when a prefetch route is not provided but the route is PPR enabled ([#11638](https://github.com/vercel/vercel/pull/11638))
+
+- Updated dependencies [[`8e44ef5b9`](https://github.com/vercel/vercel/commit/8e44ef5b9d2cdbe743c7f1e3534f182465fed9bf), [`61e6af374`](https://github.com/vercel/vercel/commit/61e6af3740296c11015d0c3da84ee205020b0ea6)]:
+  - @vercel/next@4.2.13
+
+## 34.2.1
+
+### Patch Changes
+
+- Support incremental PPR for large applications ([#11625](https://github.com/vercel/vercel/pull/11625))
+
+- Updated dependencies [[`73e558913`](https://github.com/vercel/vercel/commit/73e558913ab30ba097d7536a12fa8a7c967479f0)]:
+  - @vercel/next@4.2.12
+
 ## 34.2.0
 
 ### Minor Changes

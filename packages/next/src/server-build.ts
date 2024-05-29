@@ -144,6 +144,7 @@ export async function serverBuild({
   requiredServerFilesManifest,
   variantsManifest,
   experimentalPPRRoutes,
+  isAppPPREnabled,
 }: {
   appPathRoutesManifest?: Record<string, string>;
   dynamicPages: string[];
@@ -185,7 +186,15 @@ export async function serverBuild({
   requiredServerFilesManifest: NextRequiredServerFilesManifest;
   variantsManifest: VariantsManifest | null;
   experimentalPPRRoutes: ReadonlySet<string>;
+  isAppPPREnabled: boolean;
 }): Promise<BuildResult> {
+  if (isAppPPREnabled) {
+    debug(
+      'experimentalPPRRoutes',
+      JSON.stringify(Array.from(experimentalPPRRoutes))
+    );
+  }
+
   lambdaPages = Object.assign({}, lambdaPages, lambdaAppPaths);
 
   const experimentalAllowBundling = Boolean(
@@ -217,12 +226,6 @@ export async function serverBuild({
     }
   }
 
-  const experimental = {
-    ppr:
-      requiredServerFilesManifest.config.experimental?.ppr === true ||
-      requiredServerFilesManifest.config.experimental?.ppr === 'incremental',
-  };
-
   let appRscPrefetches: UnwrapPromise<ReturnType<typeof glob>> = {};
   let appBuildTraces: UnwrapPromise<ReturnType<typeof glob>> = {};
   let appDir: string | null = null;
@@ -230,7 +233,7 @@ export async function serverBuild({
   if (appPathRoutesManifest) {
     appDir = path.join(pagesDir, '../app');
     appBuildTraces = await glob('**/*.js.nft.json', appDir);
-    appRscPrefetches = experimental.ppr
+    appRscPrefetches = isAppPPREnabled
       ? {}
       : await glob(`**/*${RSC_PREFETCH_SUFFIX}`, appDir);
 
@@ -249,9 +252,19 @@ export async function serverBuild({
 
     for (const rewrite of afterFilesRewrites) {
       if (rewrite.src && rewrite.dest) {
+        // ensures that userland rewrites are still correctly matched to their special outputs
+        // PPR should match .prefetch.rsc, .rsc, and .action
+        // non-PPR should match .rsc and .action
+        // we only add `.action` handling to the regex if flagged on in the build
+        const rscSuffix = isAppPPREnabled
+          ? `(\\.prefetch)?\\.rsc${hasActionOutputSupport ? '|\\.action' : ''}`
+          : hasActionOutputSupport
+          ? '(\\.action|\\.rsc)'
+          : '\\.rsc';
+
         rewrite.src = rewrite.src.replace(
           /\/?\(\?:\/\)\?/,
-          `(?<rscsuff>${experimental.ppr ? '(\\.prefetch)?' : ''}\\.rsc)?(?:/)?`
+          `(?<rscsuff>${rscSuffix})?(?:/)?`
         );
         let destQueryIndex = rewrite.dest.indexOf('?');
 
@@ -937,6 +950,7 @@ export async function serverBuild({
       if (!group.isPrerenders || group.isExperimentalPPR) {
         group.isStreaming = true;
       }
+
       group.isAppRouter = true;
 
       // We create a streaming variant of the Prerender lambda group
@@ -984,18 +998,24 @@ export async function serverBuild({
           apiLambdaGroups: apiLambdaGroups.map(group => ({
             pages: group.pages,
             isPrerender: group.isPrerenders,
+            isStreaming: group.isStreaming,
+            isExperimentalPPR: group.isExperimentalPPR,
             pseudoLayerBytes: group.pseudoLayerBytes,
             uncompressedLayerBytes: group.pseudoLayerUncompressedBytes,
           })),
           pageLambdaGroups: pageLambdaGroups.map(group => ({
             pages: group.pages,
             isPrerender: group.isPrerenders,
+            isStreaming: group.isStreaming,
+            isExperimentalPPR: group.isExperimentalPPR,
             pseudoLayerBytes: group.pseudoLayerBytes,
             uncompressedLayerBytes: group.pseudoLayerUncompressedBytes,
           })),
           appRouterLambdaGroups: appRouterLambdaGroups.map(group => ({
             pages: group.pages,
             isPrerender: group.isPrerenders,
+            isStreaming: group.isStreaming,
+            isExperimentalPPR: group.isExperimentalPPR,
             pseudoLayerBytes: group.pseudoLayerBytes,
             uncompressedLayerBytes: group.pseudoLayerUncompressedBytes,
           })),
@@ -1003,6 +1023,8 @@ export async function serverBuild({
             appRouterStreamingActionLambdaGroups.map(group => ({
               pages: group.pages,
               isPrerender: group.isPrerenders,
+              isStreaming: group.isStreaming,
+              isExperimentalPPR: group.isExperimentalPPR,
               pseudoLayerBytes: group.pseudoLayerBytes,
               uncompressedLayerBytes: group.pseudoLayerUncompressedBytes,
             })),
@@ -1010,6 +1032,8 @@ export async function serverBuild({
             group => ({
               pages: group.pages,
               isPrerender: group.isPrerenders,
+              isStreaming: group.isStreaming,
+              isExperimentalPPR: group.isExperimentalPPR,
               pseudoLayerBytes: group.pseudoLayerBytes,
               uncompressedLayerBytes: group.pseudoLayerUncompressedBytes,
             })
@@ -1189,15 +1213,10 @@ export async function serverBuild({
 
       const lambda = await createLambdaFromPseudoLayers(options);
 
-      // This is a PPR lambda if it's an App Page with the PPR experimental flag
-      // enabled.
-      const isPPR =
-        experimental.ppr && group.isAppRouter && !group.isAppRouteHandler;
-
       // If PPR is enabled and this is an App Page, create the non-streaming
       // lambda for the page for revalidation.
       let revalidate: NodejsLambda | undefined;
-      if (isPPR) {
+      if (group.isExperimentalPPR) {
         if (!options.isStreaming) {
           throw new Error("Invariant: PPR lambda isn't streaming");
         }
@@ -1214,14 +1233,11 @@ export async function serverBuild({
         // This is the name of the page, where the root is `index`.
         const pageName = pageFilename.replace(/\.js$/, '');
 
-        // This is the name of the page prefixed with a `/`, where the root is
-        // `/index`.
-        const pagePath = path.posix.join('/', pageName);
-
         // This is the routable pathname for the page, where the root is `/`.
-        const pagePathname = pagePath === '/index' ? '/' : pagePath;
+        const pagePathname = normalizePage(pageName);
 
         let isPrerender = prerenderRoutes.has(pagePathname);
+        const isRoutePPREnabled = experimentalPPRRoutes.has(pagePathname);
 
         if (!isPrerender && routesManifest?.i18n) {
           isPrerender = routesManifest.i18n.locales.some(locale => {
@@ -1239,7 +1255,7 @@ export async function serverBuild({
         }
 
         // If this is a PPR page, then we should prefix the output name.
-        if (isPPR) {
+        if (isRoutePPREnabled) {
           if (!revalidate) {
             throw new Error("Invariant: PPR lambda isn't set");
           }
@@ -1320,6 +1336,13 @@ export async function serverBuild({
     console.timeEnd(lambdaCreationLabel);
   }
 
+  if (isAppPPREnabled) {
+    debug(
+      'experimentalStreamingLambdaPaths',
+      JSON.stringify(Array.from(experimentalStreamingLambdaPaths))
+    );
+  }
+
   const prerenderRoute = onPrerenderRoute({
     appDir,
     pagesDir,
@@ -1339,6 +1362,7 @@ export async function serverBuild({
     hasPages404: routesManifest.pages404,
     isCorrectNotFoundRoutes,
     isEmptyAllowQueryForPrendered,
+    isAppPPREnabled,
   });
 
   await Promise.all(
@@ -1407,7 +1431,7 @@ export async function serverBuild({
     bypassToken: prerenderManifest.bypassToken || '',
     isServerMode: true,
     dynamicMiddlewareRouteMap: middleware.dynamicRouteMap,
-    experimentalPPRRoutes,
+    isAppPPREnabled,
     hasActionOutputSupport,
   }).then(arr =>
     localizeDynamicRoutes(
@@ -1589,7 +1613,7 @@ export async function serverBuild({
       if (lambdas[pathname]) {
         lambdas[`${pathname}.rsc`] = lambdas[pathname];
 
-        if (experimental.ppr) {
+        if (isAppPPREnabled) {
           lambdas[`${pathname}${RSC_PREFETCH_SUFFIX}`] = lambdas[pathname];
         }
       }
@@ -1597,7 +1621,7 @@ export async function serverBuild({
       if (edgeFunctions[pathname]) {
         edgeFunctions[`${pathname}.rsc`] = edgeFunctions[pathname];
 
-        if (experimental.ppr) {
+        if (isAppPPREnabled) {
           edgeFunctions[`${pathname}${RSC_PREFETCH_SUFFIX}`] =
             edgeFunctions[pathname];
         }
@@ -1616,7 +1640,7 @@ export async function serverBuild({
     'RSC, Next-Router-State-Tree, Next-Router-Prefetch';
   const appNotFoundPath = path.posix.join('.', entryDirectory, '_not-found');
 
-  if (experimental.ppr && !rscPrefetchHeader) {
+  if (isAppPPREnabled && !rscPrefetchHeader) {
     throw new Error("Invariant: cannot use PPR without 'rsc.prefetchHeader'");
   }
 
@@ -1624,7 +1648,7 @@ export async function serverBuild({
   // all the routes that support it (and are listed) have configured lambdas.
   // This only applies to routes that do not have fallbacks enabled (these are
   // routes that have `dynamicParams =  false` defined.
-  if (experimental.ppr) {
+  if (isAppPPREnabled) {
     for (const { srcRoute, dataRoute, experimentalPPR } of Object.values(
       prerenderManifest.staticRoutes
     )) {
@@ -1907,7 +1931,7 @@ export async function serverBuild({
 
       ...(appDir
         ? [
-            ...(rscPrefetchHeader && experimental.ppr
+            ...(rscPrefetchHeader && isAppPPREnabled
               ? [
                   {
                     src: `^${path.posix.join('/', entryDirectory, '/')}`,

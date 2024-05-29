@@ -1,3 +1,4 @@
+import { afterAll, describe, expect, test, vi } from 'vitest';
 import { forkDevServer, readMessage } from '../../src/fork-dev-server';
 import { resolve, extname } from 'path';
 import { createServer } from 'http';
@@ -7,7 +8,7 @@ import { fetch } from 'undici';
 import { promisify } from 'util';
 import { setTimeout } from 'timers/promises';
 
-jest.setTimeout(20 * 1000);
+vi.setConfig({ testTimeout: 20 * 1000 });
 
 const [NODE_MAJOR] = process.versions.node.split('.').map(v => Number(v));
 
