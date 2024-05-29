@@ -286,7 +286,7 @@ it('should throw for discontinued versions', async () => {
   // Mock a future date so that Node 16 becomes discontinued
   const realDateNow = Date.now;
   try {
-    global.Date.now = () => new Date('2024-07-16').getTime();
+    global.Date.now = () => new Date('2025-03-01').getTime();
 
     expect(getSupportedNodeVersion('8.10.x', false)).rejects.toThrow();
     expect(getSupportedNodeVersion('8.10.x', true)).rejects.toThrow();
