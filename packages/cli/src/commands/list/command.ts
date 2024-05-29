@@ -36,6 +36,16 @@ export const listCommand: Command = {
       type: String,
       deprecated: false,
     },
+    {
+      name: 'policy',
+      description:
+        'Preview deployments by retention policy (e.g.: `-p preview=1w`). Can appear many times.',
+      argument:
+        '[canceled|errored|preview|production]=[1d|1w|1m|2m|3m|1y|unlimited]',
+      shorthand: null,
+      type: [String],
+      deprecated: false,
+    },
   ],
   examples: [
     {
@@ -53,6 +63,10 @@ export const listCommand: Command = {
     {
       name: 'Paginate deployments for a project, where `1584722256178` is the time in milliseconds since the UNIX epoch',
       value: `${packageName} list my-app --next 1584722256178`,
+    },
+    {
+      name: 'Preview deployments affected by deployment retention policies',
+      value: `${packageName} list -policy canceled=1d -policy errored=1w -policy preview=1m -policy production=1y`,
     },
   ],
 };
