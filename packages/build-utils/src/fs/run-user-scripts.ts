@@ -652,14 +652,6 @@ function detectPnpmVersion(
   }
 }
 
-function shouldUseNpm7(
-  lockfileVersion: number | undefined,
-  nodeVersion: NodeVersion | undefined
-): boolean {
-  if (lockfileVersion === undefined) return false;
-  return lockfileVersion >= 2 && (nodeVersion?.major || 0) < 16;
-}
-
 /**
  * Helper to get the binary paths that link to the used package manager.
  * Note: Make sure it doesn't contain any `console.log` calls.
@@ -790,20 +782,12 @@ function validateVersionSpecifier(version: string) {
 function detectPackageManager(
   cliType: CliType,
   lockfileVersion: number | undefined,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   nodeVersion: NodeVersion | undefined
 ) {
   switch (cliType) {
     case 'npm':
-      switch (true) {
-        case shouldUseNpm7(lockfileVersion, nodeVersion):
-          return {
-            path: '/node16/bin-npm7',
-            detectedLockfile: 'package-lock.json',
-            detectedPackageManager: 'npm@7.x',
-          };
-        default:
-          return undefined;
-      }
+      return undefined;
     case 'pnpm':
       switch (detectPnpmVersion(lockfileVersion)) {
         case 'pnpm 7':
