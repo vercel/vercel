@@ -685,7 +685,7 @@ export function getPathOverrideForPackageManager({
   detectedPackageManager: string | undefined;
   /**
    * Value of $PATH that includes the binaries for the detected package manager.
-   * Undefined if no $PATH are necessary.
+   * `undefined` if no $PATH are necessary.
    */
   path: string | undefined;
 } {
