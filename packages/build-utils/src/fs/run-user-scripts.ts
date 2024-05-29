@@ -660,7 +660,6 @@ export function getPathOverrideForPackageManager({
   cliType,
   lockfileVersion,
   corepackPackageManager,
-  nodeVersion,
 }: {
   cliType: CliType;
   lockfileVersion: number | undefined;
@@ -681,11 +680,7 @@ export function getPathOverrideForPackageManager({
    */
   path: string | undefined;
 } {
-  const detectedPackageManger = detectPackageManager(
-    cliType,
-    lockfileVersion,
-    nodeVersion
-  );
+  const detectedPackageManger = detectPackageManager(cliType, lockfileVersion);
   if (!detectedPackageManger) {
     return NO_OVERRIDE;
   }
@@ -781,9 +776,7 @@ function validateVersionSpecifier(version: string) {
 
 function detectPackageManager(
   cliType: CliType,
-  lockfileVersion: number | undefined,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  nodeVersion: NodeVersion | undefined
+  lockfileVersion: number | undefined
 ) {
   switch (cliType) {
     case 'npm':
