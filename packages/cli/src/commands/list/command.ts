@@ -66,7 +66,7 @@ export const listCommand: Command = {
     },
     {
       name: 'Preview deployments affected by deployment retention policies',
-      value: `${packageName} list -policy canceled=1d -policy errored=1w -policy preview=1m -policy production=1y`,
+      value: `${packageName} list -p canceled=1d -p errored=1w -p preview=1m -p production=1y`,
     },
   ],
 };
