@@ -13,6 +13,7 @@ sys.modules["__VC_HANDLER_MODULE_NAME"] = __vc_module
 __vc_spec.loader.exec_module(__vc_module)
 __vc_variables = dir(__vc_module)
 
+_use_legacy_asyncio = sys.version_info < (3, 10)
 
 def format_headers(headers, decode=False):
     keyToList = {}
@@ -191,7 +192,6 @@ elif 'app' in __vc_variables:
                 self.state = ASGICycleState.REQUEST
                 self.app_queue = None
                 self.response = {}
-                self._legacy_asyncio = sys.version_info < (3, 10)
 
             def __call__(self, app, body):
                 """
@@ -199,7 +199,7 @@ elif 'app' in __vc_variables:
                 ASGI instance using the connection scope.
                 Runs until the response is completely read from the application.
                 """
-                if self._legacy_asyncio:
+                if _use_legacy_asyncio:
                     loop = asyncio.new_event_loop()
                     self.app_queue = asyncio.Queue(loop=loop)
                 else:
@@ -208,7 +208,7 @@ elif 'app' in __vc_variables:
 
                 asgi_instance = app(self.scope, self.receive, self.send)
 
-                if self._legacy_asyncio:
+                if _use_legacy_asyncio:
                     asgi_task = loop.create_task(asgi_instance)
                     loop.run_until_complete(asgi_task)
                 else:
@@ -217,7 +217,7 @@ elif 'app' in __vc_variables:
 
             async def run_asgi(self, asgi_instance):
                 await asgi_instance
-                
+
             def put_message(self, message):
                 self.app_queue.put_nowait(message)
 
