@@ -1,5 +1,85 @@
 # vercel
 
+## 34.2.3
+
+### Patch Changes
+
+- Don't create streaming lambdas for pages router routes ([#11660](https://github.com/vercel/vercel/pull/11660))
+
+- Updated dependencies [[`c9d53d4e3`](https://github.com/vercel/vercel/commit/c9d53d4e3e4591b9b6bde86100564c9ee4c6d1d4), [`5f561f8cf`](https://github.com/vercel/vercel/commit/5f561f8cfa4720801a5cf4598f193ab34539abb9)]:
+  - @vercel/next@4.2.14
+
+## 34.2.2
+
+### Patch Changes
+
+- Fix related to erroring when a prefetch route is not provided but the route is PPR enabled ([#11638](https://github.com/vercel/vercel/pull/11638))
+
+- Updated dependencies [[`8e44ef5b9`](https://github.com/vercel/vercel/commit/8e44ef5b9d2cdbe743c7f1e3534f182465fed9bf), [`61e6af374`](https://github.com/vercel/vercel/commit/61e6af3740296c11015d0c3da84ee205020b0ea6)]:
+  - @vercel/next@4.2.13
+
+## 34.2.1
+
+### Patch Changes
+
+- Support incremental PPR for large applications ([#11625](https://github.com/vercel/vercel/pull/11625))
+
+- Updated dependencies [[`73e558913`](https://github.com/vercel/vercel/commit/73e558913ab30ba097d7536a12fa8a7c967479f0)]:
+  - @vercel/next@4.2.12
+
+## 34.2.0
+
+### Minor Changes
+
+- Stop sending system environment variables in dev ([#11526](https://github.com/vercel/vercel/pull/11526))
+
+### Patch Changes
+
+- Updated dependencies [[`d3c1267e2`](https://github.com/vercel/vercel/commit/d3c1267e24082789ea6382cf6af81dd40df288ff), [`ccd7eb1fb`](https://github.com/vercel/vercel/commit/ccd7eb1fb78f7ac9effdbe1935de3bda82c97fe3)]:
+  - @vercel/build-utils@8.2.0
+  - @vercel/node@3.1.5
+  - @vercel/static-build@2.5.9
+
+## 34.1.14
+
+### Patch Changes
+
+- Updated dependencies [[`ad6945435`](https://github.com/vercel/vercel/commit/ad69454352b519b2b0ed326f245c779530554bf2)]:
+  - @vercel/build-utils@8.1.3
+  - @vercel/node@3.1.4
+  - @vercel/static-build@2.5.8
+
+## 34.1.13
+
+### Patch Changes
+
+- Updated dependencies [[`1682ad43d`](https://github.com/vercel/vercel/commit/1682ad43d0064b22b1248a7e946746b838f00076)]:
+  - @vercel/build-utils@8.1.2
+  - @vercel/node@3.1.3
+  - @vercel/static-build@2.5.7
+
+## 34.1.12
+
+### Patch Changes
+
+- Updated dependencies [[`67afc2608`](https://github.com/vercel/vercel/commit/67afc26085e2ebdaa33a8cbce112afec4cb1c4f5), [`2f7a6ed5f`](https://github.com/vercel/vercel/commit/2f7a6ed5f92d454000f92247d3b6548e2064f4e6)]:
+  - @vercel/next@4.2.11
+  - @vercel/build-utils@8.1.1
+  - @vercel/node@3.1.2
+  - @vercel/static-build@2.5.6
+
+## 34.1.11
+
+### Patch Changes
+
+- Updated dependencies [[`5014b1e82`](https://github.com/vercel/vercel/commit/5014b1e82a46181baeb727ffe6d14000b6a4b1d7), [`18d1703d5`](https://github.com/vercel/vercel/commit/18d1703d5b4f2adc61fd56011f874c393fa57d0d), [`e87d4c14d`](https://github.com/vercel/vercel/commit/e87d4c14d0e718281f9ba91c9ec1cc6e142d383d), [`bc5fd4115`](https://github.com/vercel/vercel/commit/bc5fd41158ec9f36e5db1fe749589adcbaec6950)]:
+  - @vercel/build-utils@8.1.0
+  - @vercel/next@4.2.10
+  - @vercel/redwood@2.0.9
+  - @vercel/remix-builder@2.1.6
+  - @vercel/node@3.1.1
+  - @vercel/static-build@2.5.5
+
 ## 34.1.10
 
 ### Patch Changes

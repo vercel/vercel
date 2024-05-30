@@ -57,6 +57,11 @@
       "mustContain": "sentinel:dynamic"
     },
     {
+      "path": "/static",
+      "status": 200,
+      "mustContain": "sentinel:static"
+    },
+    {
       "path": "/disabled",
       "headers": {
         "RSC": "1",

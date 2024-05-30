@@ -192,8 +192,12 @@ function normalizePage(page: string): string {
   if (!page.startsWith('/')) {
     page = `/${page}`;
   }
-  // remove '/index' from the end
-  page = page.replace(/\/index$/, '/');
+
+  // Replace the `/index` with `/`
+  if (page === '/index') {
+    page = '/';
+  }
+
   return page;
 }
 
@@ -320,8 +324,8 @@ export async function getDynamicRoutes({
   bypassToken,
   isServerMode,
   dynamicMiddlewareRouteMap,
-  experimentalPPRRoutes,
   hasActionOutputSupport,
+  isAppPPREnabled,
 }: {
   entryPath: string;
   entryDirectory: string;
@@ -333,8 +337,8 @@ export async function getDynamicRoutes({
   bypassToken?: string;
   isServerMode?: boolean;
   dynamicMiddlewareRouteMap?: ReadonlyMap<string, RouteWithSrc>;
-  experimentalPPRRoutes: ReadonlySet<string>;
   hasActionOutputSupport: boolean;
+  isAppPPREnabled: boolean;
 }): Promise<RouteWithSrc[]> {
   if (routesManifest) {
     switch (routesManifest.version) {
@@ -408,7 +412,7 @@ export async function getDynamicRoutes({
             ];
           }
 
-          if (experimentalPPRRoutes.has(page)) {
+          if (isAppPPREnabled) {
             let dest = route.dest?.replace(/($|\?)/, '.prefetch.rsc$1');
 
             if (page === '/' || page === '/index') {
@@ -1439,6 +1443,13 @@ async function getSourceFilePathFromPage({
     }
   }
 
+  // if we got here, and didn't find a source not-found file, then it was the one injected
+  // by Next.js. There's no need to warn or return a source file in this case, as it won't have
+  // any configuration applied to it.
+  if (page === '/_not-found/page') {
+    return '';
+  }
+
   console.log(
     `WARNING: Unable to find source file for page ${page} with extensions: ${extensionsToTry.join(
       ', '
@@ -1498,8 +1509,8 @@ export type LambdaGroup = {
   isAppRouter?: boolean;
   isAppRouteHandler?: boolean;
   isStreaming?: boolean;
-  isPrerenders?: boolean;
-  isExperimentalPPR?: boolean;
+  readonly isPrerenders: boolean;
+  readonly isExperimentalPPR: boolean;
   isActionLambda?: boolean;
   isPages?: boolean;
   isApiLambda: boolean;
@@ -1565,15 +1576,13 @@ export async function getPageLambdaGroups({
     }
 
     if (config && config.functions) {
-      // `pages` are normalized without route groups (e.g., /app/(group)/page.js).
-      // we keep track of that mapping in `inversedAppPathManifest`
-      // `getSourceFilePathFromPage` needs to use the path from source to properly match the config
-      const pageFromManifest = inversedAppPathManifest?.[routeName];
       const sourceFile = await getSourceFilePathFromPage({
         workPath: entryPath,
-        // since this function is used by both `pages` and `app`, the manifest might not be provided
-        // so fallback to normal behavior of just checking the `page`.
-        page: pageFromManifest ?? page,
+        page: normalizeSourceFilePageFromManifest(
+          routeName,
+          page,
+          inversedAppPathManifest
+        ),
         pageExtensions,
       });
 
@@ -1655,6 +1664,43 @@ export async function getPageLambdaGroups({
   }
 
   return groups;
+}
+
+// `pages` are normalized without route groups (e.g., /app/(group)/page.js).
+// we keep track of that mapping in `inversedAppPathManifest`
+// `getSourceFilePathFromPage` needs to use the path from source to properly match the config
+function normalizeSourceFilePageFromManifest(
+  routeName: string,
+  page: string,
+  inversedAppPathManifest?: Record<string, string>
+) {
+  const pageFromManifest = inversedAppPathManifest?.[routeName];
+  if (!pageFromManifest) {
+    // since this function is used by both `pages` and `app`, the manifest might not be provided
+    // so fallback to normal behavior of just checking the `page`.
+    return page;
+  }
+
+  const metadataConventions = [
+    '/favicon.',
+    '/icon.',
+    '/apple-icon.',
+    '/opengraph-image.',
+    '/twitter-image.',
+    '/sitemap.',
+    '/robots.',
+  ];
+
+  // these special metadata files for will not contain `/route` or `/page` suffix, so return the routeName as-is.
+  const isSpecialFile = metadataConventions.some(convention =>
+    routeName.startsWith(convention)
+  );
+
+  if (isSpecialFile) {
+    return routeName;
+  }
+
+  return pageFromManifest;
 }
 
 export const outputFunctionFileSizeInfo = (
@@ -1906,6 +1952,7 @@ type OnPrerenderRouteArgs = {
   routesManifest?: RoutesManifest;
   isCorrectNotFoundRoutes?: boolean;
   isEmptyAllowQueryForPrendered?: boolean;
+  isAppPPREnabled: boolean;
 };
 let prerenderGroup = 1;
 
@@ -1942,6 +1989,7 @@ export const onPrerenderRoute =
       routesManifest,
       isCorrectNotFoundRoutes,
       isEmptyAllowQueryForPrendered,
+      isAppPPREnabled,
     } = prerenderRouteArgs;
 
     if (isBlocking && isFallback) {
@@ -2177,22 +2225,6 @@ export const onPrerenderRoute =
       initialStatus = 404;
     }
 
-    /**
-     * If the route key had an `/index` suffix added, we need to note it so we
-     * can remove it from the output path later accurately.
-     */
-    let addedIndexSuffix = false;
-
-    if (isAppPathRoute) {
-      // for literal index routes we need to append an additional /index
-      // due to the proxy's normalizing for /index routes
-      if (routeKey !== '/index' && routeKey.endsWith('/index')) {
-        routeKey = `${routeKey}/index`;
-        routeFileNoExt = routeKey;
-        addedIndexSuffix = true;
-      }
-    }
-
     let outputPathPage = path.posix.join(entryDirectory, routeFileNoExt);
 
     if (!isAppPathRoute) {
@@ -2229,7 +2261,7 @@ export const onPrerenderRoute =
 
     let outputPathPrefetchData: null | string = null;
     if (prefetchDataRoute) {
-      if (!experimentalPPR) {
+      if (!isAppPPREnabled) {
         throw new Error(
           "Invariant: prefetchDataRoute can't be set without PPR"
         );
@@ -2386,7 +2418,7 @@ export const onPrerenderRoute =
         // static route first, then try the srcRoute if it doesn't exist. If we
         // can't find it at all, this constitutes an error.
         experimentalStreamingLambdaPath = experimentalStreamingLambdaPaths.get(
-          pathnameToOutputName(entryDirectory, routeKey, addedIndexSuffix)
+          pathnameToOutputName(entryDirectory, routeKey)
         );
         if (!experimentalStreamingLambdaPath && srcRoute) {
           experimentalStreamingLambdaPath =
@@ -2647,18 +2679,9 @@ export function getNextServerPath(nextVersion: string) {
     : 'next/dist/next-server/server';
 }
 
-function pathnameToOutputName(
-  entryDirectory: string,
-  pathname: string,
-  addedIndexSuffix = false
-) {
+function pathnameToOutputName(entryDirectory: string, pathname: string) {
   if (pathname === '/') {
     pathname = '/index';
-  }
-  // If the `/index` was added for a route that ended in `/index` we need to
-  // strip the second one off before joining it with the entryDirectory.
-  else if (addedIndexSuffix) {
-    pathname = pathname.replace(/\/index$/, '');
   }
 
   return path.posix.join(entryDirectory, pathname);
