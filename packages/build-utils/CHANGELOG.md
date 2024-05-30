@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 8.2.1
+
+### Patch Changes
+
+- [node] update node@16 deprecation day ([#11671](https://github.com/vercel/vercel/pull/11671))
+
 ## 8.2.0
 
 ### Minor Changes
