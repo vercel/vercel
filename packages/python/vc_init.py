@@ -215,7 +215,7 @@ elif 'app' in __vc_variables:
                     asyncio.run(self.run_asgi_instance(asgi_instance))
                 return self.response
 
-            async def run_asgi(self, asgi_instance):
+            async def run_asgi_instance(self, asgi_instance):
                 await asgi_instance
 
             def put_message(self, message):
