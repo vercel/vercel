@@ -146,7 +146,7 @@ function compareEvents(d1: DeploymentEvent, d2: DeploymentEvent) {
   return d1.created - d2.created; // if date are equal and no serial
 }
 
-function printLogShort(log: any) {
+export function printLogShort(log: any) {
   if (!log.created) return; // keepalive
 
   let data: string;

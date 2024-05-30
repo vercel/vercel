@@ -10,10 +10,13 @@ import { Output } from '../output';
 import { progress } from '../output/progress';
 import Now from '../../util';
 import type { Deployment, Org } from '@vercel-internals/types';
+import Client from '../client';
 import ua from '../ua';
 import { linkFolderToProject } from '../projects/link';
 import { prependEmoji, emoji } from '../emoji';
+import printEvents from '../events';
 import type { Agent } from 'http';
+import { printLogShort } from '../../commands/logs';
 
 function printInspectUrl(
   output: Output,
@@ -40,6 +43,7 @@ export default async function processDeployment({
   archive,
   skipAutoDetectionConfirmation,
   noWait,
+  withLogs,
   agent,
   ...args
 }: {
@@ -61,6 +65,7 @@ export default async function processDeployment({
   cwd: string;
   rootDirectory?: string | null;
   noWait?: boolean;
+  withLogs?: boolean;
   agent?: Agent;
 }) {
   let {
@@ -109,6 +114,13 @@ export default async function processDeployment({
   // collect indications to show the user once
   // the deployment is done
   const indications = [];
+
+  let abortController: AbortController | undefined;
+
+  function stopSpinner(): void {
+    abortController?.abort();
+    output.stopSpinner();
+  }
 
   try {
     for await (const event of createDeployment(clientOptions, requestBody)) {
@@ -184,7 +196,7 @@ export default async function processDeployment({
 
         now.url = deployment.url;
 
-        output.stopSpinner();
+        stopSpinner();
 
         printInspectUrl(output, deployment.inspectorUrl, deployStamp);
 
@@ -208,18 +220,21 @@ export default async function processDeployment({
           return deployment;
         }
 
+        if (withLogs) {
+          abortController = displayBuildLogs(client, deployment);
+        }
         output.spinner(
           deployment.readyState === 'QUEUED' ? 'Queued' : 'Building',
           0
         );
       }
 
-      if (event.type === 'building') {
+      if (event.type === 'building' && !withLogs) {
         output.spinner('Building', 0);
       }
 
       if (event.type === 'canceled') {
-        output.stopSpinner();
+        stopSpinner();
         return event.payload;
       }
 
@@ -229,23 +244,24 @@ export default async function processDeployment({
         event.type === 'ready' &&
         (event.payload.checksState
           ? event.payload.checksState === 'completed'
-          : true)
+          : true) &&
+        !withLogs
       ) {
         output.spinner('Completing', 0);
       }
 
-      if (event.type === 'checks-running') {
+      if (event.type === 'checks-running' && !withLogs) {
         output.spinner('Running Checks', 0);
       }
 
       if (event.type === 'checks-conclusion-failed') {
-        output.stopSpinner();
+        stopSpinner();
         return event.payload;
       }
 
       // Handle error events
       if (event.type === 'error') {
-        output.stopSpinner();
+        stopSpinner();
 
         const error = await now.handleDeploymentError(event.payload, {
           env,
@@ -264,13 +280,46 @@ export default async function processDeployment({
 
       // Handle alias-assigned event
       if (event.type === 'alias-assigned') {
-        output.stopSpinner();
+        stopSpinner();
         event.payload.indications = indications;
         return event.payload;
       }
     }
   } catch (err) {
-    output.stopSpinner();
+    stopSpinner();
     throw err;
   }
+}
+
+export function displayBuildLogs(
+  client: Client,
+  deployment: Deployment,
+  follow?: true
+): AbortController;
+export function displayBuildLogs(
+  client: Client,
+  deployment: Deployment,
+  follow: false
+): Promise<void>;
+export function displayBuildLogs(
+  client: Client,
+  deployment: Deployment,
+  follow: boolean = true
+) {
+  const abortController = new AbortController();
+  const promise = printEvents(
+    client,
+    deployment.id,
+    {
+      mode: 'logs',
+      onEvent: (event: any) => {
+        client.output.stopSpinner();
+        printLogShort(event);
+      },
+      quiet: false,
+      findOpts: { direction: 'forward', follow },
+    },
+    abortController
+  );
+  return follow ? abortController : promise;
 }

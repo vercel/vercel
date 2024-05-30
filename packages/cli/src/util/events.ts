@@ -9,6 +9,7 @@ import { eraseLines } from 'ansi-escapes';
 import Client from './client';
 import getDeployment from './get-deployment';
 import getScope from './get-scope';
+import { error } from 'console';
 
 export interface FindOpts {
   direction: 'forward' | 'backward';
@@ -19,7 +20,7 @@ export interface FindOpts {
 }
 
 export interface PrintEventsOptions {
-  mode: string;
+  mode: 'deploy' | string;
   onEvent: (event: DeploymentEvent) => void;
   quiet?: boolean;
   findOpts: FindOpts;
@@ -35,7 +36,8 @@ export interface DeploymentEvent {
 async function printEvents(
   client: Client,
   deploymentIdOrURL: string,
-  { mode, onEvent, quiet, findOpts }: PrintEventsOptions
+  { mode, onEvent, quiet, findOpts }: PrintEventsOptions,
+  abortController?: AbortController
 ) {
   const { log, debug } = client.output;
   const { contextName } = await getScope(client);
@@ -60,112 +62,126 @@ async function printEvents(
       if (findOpts.until) query.set('until', String(findOpts.until));
 
       const eventsUrl = `/v1/now/deployments/${deploymentIdOrURL}/events?${query}`;
-      const eventsRes = await client.fetch(eventsUrl, { json: false });
+      try {
+        const eventsRes = await client.fetch(eventsUrl, {
+          json: false,
+          signal: abortController?.signal,
+        });
 
-      if (eventsRes.ok) {
-        const readable = eventsRes.body;
+        if (eventsRes.ok) {
+          const readable = eventsRes.body;
 
-        // handle the event stream and make the promise get rejected
-        // if errors occur so we can retry
-        return new Promise<void>((resolve, reject) => {
-          const stream = readable.pipe(jsonlines.parse());
+          // handle the event stream and make the promise get rejected
+          // if errors occur so we can retry
+          return new Promise<void>((resolve, reject) => {
+            const stream = readable.pipe(jsonlines.parse());
 
-          let poller: ReturnType<typeof setTimeout>;
+            let poller: ReturnType<typeof setTimeout>;
 
-          if (mode === 'deploy') {
-            poller = (function startPoller() {
-              return setTimeout(async () => {
-                try {
-                  const json = await getDeployment(
-                    client,
-                    contextName,
-                    deploymentIdOrURL
-                  );
-                  if (json.readyState === 'READY') {
+            if (mode === 'deploy') {
+              poller = (function startPoller() {
+                return setTimeout(async () => {
+                  try {
+                    const json = await getDeployment(
+                      client,
+                      contextName,
+                      deploymentIdOrURL
+                    );
+                    if (json.readyState === 'READY') {
+                      stream.end();
+                      finish();
+                      return;
+                    }
+                    poller = startPoller();
+                  } catch (err: unknown) {
                     stream.end();
-                    finish();
-                    return;
+                    finish(err);
                   }
-                  poller = startPoller();
-                } catch (err: unknown) {
-                  stream.end();
-                  finish(err);
-                }
-              }, 5000);
-            })();
-          }
-
-          let finishCalled = false;
-          function finish(err?: unknown) {
-            if (finishCalled) return;
-            finishCalled = true;
-            clearTimeout(poller);
-            if (err) {
-              reject(err);
-            } else {
-              resolve();
+                }, 5000);
+              })();
             }
-          }
 
-          let latestLogDate = 0;
-
-          const onData = (data: any) => {
-            const { event, payload, date } = data;
-            if (event === 'state' && payload.value === 'READY') {
-              if (mode === 'deploy') {
-                stream.end();
-                finish();
+            let finishCalled = false;
+            function finish(err?: unknown) {
+              if (finishCalled) return;
+              finishCalled = true;
+              clearTimeout(poller);
+              if (err) {
+                reject(err);
+              } else {
+                resolve();
               }
-            } else {
-              latestLogDate = Math.max(latestLogDate, date);
-              onEvent(data);
-            }
-          };
-
-          let onErrorCalled = false;
-          const onError = (err: Error) => {
-            if (finishCalled || onErrorCalled) return;
-            onErrorCalled = true;
-            o++;
-
-            const errorMessage = `Deployment event stream error: ${err.message}`;
-            if (!findOpts.follow) {
-              log(errorMessage);
-              return;
             }
 
-            debug(errorMessage);
-            clearTimeout(poller);
-            stream.destroy(err);
+            let latestLogDate = 0;
 
-            const retryFindOpts = {
-              ...findOpts,
-              since: latestLogDate,
+            const onData = (data: any) => {
+              const { event, payload, date } = data;
+              if (event === 'state' && payload.value === 'READY') {
+                if (mode === 'deploy') {
+                  stream.end();
+                  finish();
+                }
+              } else {
+                latestLogDate = Math.max(latestLogDate, date);
+                onEvent(data);
+              }
             };
 
-            setTimeout(() => {
-              // retry without maximum amount nor clear past logs etc
-              printEvents(client, deploymentIdOrURL, {
-                mode,
-                onEvent,
-                quiet,
-                findOpts: retryFindOpts,
-              }).then(resolve, reject);
-            }, 2000);
-          };
+            let onErrorCalled = false;
+            const onError = (err: Error) => {
+              if (finishCalled || onErrorCalled) return;
+              if (err.name === 'AbortError') {
+                finish();
+                return;
+              }
+              onErrorCalled = true;
+              o++;
 
-          stream.on('end', finish);
-          stream.on('data', onData);
-          stream.on('error', onError);
-          readable.on('error', onError);
-        });
-      }
-      const err = new Error(`Deployment events status ${eventsRes.status}`);
+              const errorMessage = `Deployment event stream error: ${err.message}`;
+              if (!findOpts.follow) {
+                log(errorMessage);
+                return;
+              }
 
-      if (eventsRes.status < 500) {
-        bail(err);
-      } else {
-        throw err;
+              debug(errorMessage);
+              clearTimeout(poller);
+              stream.destroy(err);
+
+              const retryFindOpts = {
+                ...findOpts,
+                since: latestLogDate,
+              };
+
+              setTimeout(() => {
+                // retry without maximum amount nor clear past logs etc
+                printEvents(client, deploymentIdOrURL, {
+                  mode,
+                  onEvent,
+                  quiet,
+                  findOpts: retryFindOpts,
+                }).then(resolve, reject);
+              }, 2000);
+            };
+
+            stream.on('end', finish);
+            stream.on('data', onData);
+            stream.on('error', onError);
+            readable.on('error', onError);
+          });
+        }
+        const err = new Error(`Deployment events status ${eventsRes.status}`);
+
+        if (eventsRes.status < 500) {
+          bail(err);
+        } else {
+          throw err;
+        }
+      } catch (err) {
+        if (err instanceof Error && err.name === 'AbortError') {
+          return;
+        }
+        throw error;
       }
     },
     {
@@ -178,7 +194,7 @@ async function printEvents(
           o = 0;
         }
 
-        log(`Deployment state polling error: ${err.message}`);
+        log(`Deployment events polling error: ${err.message}`);
       },
     }
   );

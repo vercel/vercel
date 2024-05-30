@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import getArgs from '../../util/get-args';
+import { parseArguments } from '../../util/get-args';
 import buildsList from '../../util/output/builds';
 import routesList from '../../util/output/routes';
 import indent from '../../util/output/indent';
@@ -17,32 +17,38 @@ import readStandardInput from '../../util/input/read-standard-input';
 import sleep from '../../util/sleep';
 import ms from 'ms';
 import { isDeploying } from '../../util/deploy/is-deploying';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { help } from '../help';
 import { inspectCommand } from './command';
+import { displayBuildLogs } from '../../util/deploy/process-deployment';
+import { isFailed, isReady } from '../../util/build-state';
 
 export default async function inspect(client: Client) {
   const { output } = client;
-  let argv;
+  let parsedArguments;
+
+  const flagsSpecification = getFlagsSpecification(inspectCommand.options);
 
   try {
-    argv = getArgs(client.argv.slice(2), {
-      '--timeout': String,
-      '--wait': Boolean,
-    });
+    parsedArguments = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (err) {
     handleError(err);
     return 1;
   }
 
-  if (argv['--help']) {
+  if (parsedArguments.flags['--help']) {
     output.print(help(inspectCommand, { columns: client.stderr.columns }));
     return 2;
   }
 
   const { print, log, error } = client.output;
 
+  if (parsedArguments.args[0] === inspectCommand.name) {
+    parsedArguments.args.shift();
+  }
+
   // extract the first parameter
-  let [, deploymentIdOrHost] = argv._;
+  let [deploymentIdOrHost] = parsedArguments.args;
 
   if (!deploymentIdOrHost) {
     // if the URL is not passed in, check stdin
@@ -60,9 +66,9 @@ export default async function inspect(client: Client) {
   }
 
   // validate the timeout
-  const timeout = ms(argv['--timeout'] ?? '3m');
+  const timeout = ms(parsedArguments.flags['--timeout'] ?? '3m');
   if (timeout === undefined) {
-    error(`Invalid timeout "${argv['--timeout']}"`);
+    error(`Invalid timeout "${parsedArguments.flags['--timeout']}"`);
     return 1;
   }
 
@@ -92,13 +98,24 @@ export default async function inspect(client: Client) {
   );
 
   const until = Date.now() + timeout;
-  const wait = argv['--wait'];
+  const wait = parsedArguments.flags['--wait'] ?? false;
+  const withLogs = parsedArguments.flags['--logs'];
 
   // resolve the deployment, since we might have been given an alias
   let deployment = await getDeployment(client, contextName, deploymentIdOrHost);
 
+  let abortController: AbortController | undefined;
+  if (withLogs) {
+    if (wait) {
+      abortController = displayBuildLogs(client, deployment, true);
+    } else {
+      await displayBuildLogs(client, deployment, false);
+      return;
+    }
+  }
+
   while (Date.now() < until) {
-    if (!wait || !isDeploying(deployment.readyState)) {
+    if (!wait) {
       break;
     }
 
@@ -106,6 +123,21 @@ export default async function inspect(client: Client) {
 
     // check the deployment state again
     deployment = await getDeployment(client, contextName, deploymentIdOrHost);
+    if (!isDeploying(deployment.readyState)) {
+      abortController?.abort();
+      if (!isReady(deployment) && !isFailed(deployment)) {
+        print(
+          chalk.bold(
+            `\n\nstop waiting for logs after ${timeout}s. Deployment is ${deployment.readyState}.\n`
+          )
+        );
+      }
+      if (withLogs) {
+        return;
+      } else {
+        break;
+      }
+    }
   }
 
   const {
