@@ -3,7 +3,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import Sema from 'async-sema';
 import spawn from 'cross-spawn';
-import { coerce, intersects, major, validRange } from 'semver';
+import { coerce, intersects, validRange } from 'semver';
 import { SpawnOptions } from 'child_process';
 import { deprecate } from 'util';
 import debug from '../debug';
@@ -707,21 +707,9 @@ export function getPathOverrideForPackageManager({
   path: string | undefined;
 } {
   const detectedPackageManger = detectPackageManager(cliType, lockfileVersion);
-  if (!detectedPackageManger) {
-    return NO_OVERRIDE;
-  }
 
   if (!corepackPackageManager) {
-    return detectedPackageManger;
-  }
-
-  const validatedCorepackPackageManager = validateVersionSpecifier(
-    corepackPackageManager
-  );
-  if (!validatedCorepackPackageManager) {
-    throw new Error(
-      `Intended corepack defined package manager "${corepackPackageManager}" is not a valid semver value.`
-    );
+    return detectedPackageManger ? detectedPackageManger : NO_OVERRIDE;
   }
 
   if (lockfileVersion === undefined) {
@@ -729,10 +717,10 @@ export function getPathOverrideForPackageManager({
   }
 
   if (
-    validLockfileForPackageManager(
+    validateCorepackPackageManager(
       cliType,
       lockfileVersion,
-      major(validatedCorepackPackageManager.packageVersionRange)
+      corepackPackageManager
     )
   ) {
     // corepack is going to take care of it; do nothing special
@@ -742,6 +730,43 @@ export function getPathOverrideForPackageManager({
   throw new Error(
     `Detected lockfile "${lockfileVersion}" which is not compatible with the intended corepack package manager "${corepackPackageManager}". Update your lockfile or change to a compatible corepack version.`
   );
+}
+
+function validateCorepackPackageManager(
+  cliType: CliType,
+  lockfileVersion: number,
+  corepackPackageManager: string
+) {
+  const validatedCorepackPackageManager = validateVersionSpecifier(
+    corepackPackageManager
+  );
+  if (!validatedCorepackPackageManager) {
+    throw new Error(
+      `Intended corepack defined package manager "${corepackPackageManager}" is not a valid semver value.`
+    );
+  }
+
+  if (cliType !== validatedCorepackPackageManager.packageName) {
+    throw new Error(
+      `Detected package manager "${cliType}" does not match intended corepack defined package manager "${validatedCorepackPackageManager.packageName}". Change your lockfile or "package.json#packageManager" value to match.`
+    );
+  }
+
+  const corepackPackageManagerVersion = coerce(
+    validatedCorepackPackageManager.packageVersionRange
+  );
+
+  console.error(lockfileVersion);
+
+  if (corepackPackageManagerVersion === null) {
+    return true;
+  } else {
+    return validLockfileForPackageManager(
+      cliType,
+      lockfileVersion,
+      corepackPackageManagerVersion.major
+    );
+  }
 }
 
 function validateVersionSpecifier(version: string) {
