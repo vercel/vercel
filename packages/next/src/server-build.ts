@@ -2102,8 +2102,26 @@ export async function serverBuild({
               check: true,
             },
             {
+              src: path.posix.join(
+                '/',
+                entryDirectory,
+                '(.+)/\\.prefetch\\.rsc$'
+              ),
+              dest: path.posix.join(
+                '/',
+                entryDirectory,
+                `$1${RSC_PREFETCH_SUFFIX}`
+              ),
+              check: true,
+            },
+            {
               src: path.posix.join('/', entryDirectory, '/\\.rsc$'),
               dest: path.posix.join('/', entryDirectory, `/index.rsc`),
+              check: true,
+            },
+            {
+              src: path.posix.join('/', entryDirectory, '(.+)/\\.rsc$'),
+              dest: path.posix.join('/', entryDirectory, '$1.rsc'),
               check: true,
             },
           ]
