@@ -3,7 +3,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import Sema from 'async-sema';
 import spawn from 'cross-spawn';
-import { coerce, intersects, validRange } from 'semver';
+import { coerce, intersects, major, validRange } from 'semver';
 import { SpawnOptions } from 'child_process';
 import { deprecate } from 'util';
 import debug from '../debug';
@@ -652,6 +652,32 @@ function detectPnpmVersion(
   }
 }
 
+function validLockfileForPackageManager(
+  cliType: CliType,
+  lockfileVersion: number,
+  packageManagerMajorVersion: number
+) {
+  switch (cliType) {
+    case 'npm':
+    case 'bun':
+    case 'yarn':
+      return true;
+    case 'pnpm':
+      switch (packageManagerMajorVersion) {
+        case 9:
+          return [6.0, 7.0, 9.0].includes(lockfileVersion);
+        case 8:
+          return [6.0, 6.1].includes(lockfileVersion);
+        case 7:
+          return [5.3, 5.4].includes(lockfileVersion);
+        case 6:
+          return [5.3, 5.4].includes(lockfileVersion);
+        default:
+          return false;
+      }
+  }
+}
+
 /**
  * Helper to get the binary paths that link to the used package manager.
  * Note: Make sure it doesn't contain any `console.log` calls.
@@ -689,34 +715,6 @@ export function getPathOverrideForPackageManager({
     return detectedPackageManger;
   }
 
-  if (
-    validateVersionOverlap(
-      detectedPackageManger.detectedPackageManager,
-      corepackPackageManager
-    )
-  ) {
-    // corepack is going to take care of it; do nothing special
-    return NO_OVERRIDE;
-  }
-
-  throw new Error(
-    `Detected package manager (by lockfile) "${detectedPackageManger.detectedPackageManager}" does not match intended corepack package manager "${corepackPackageManager}". Update your lockfile or "package.json#packageManager" values to match.`
-  );
-}
-
-function validateVersionOverlap(
-  detectedPackageManger: string,
-  corepackPackageManager: string
-) {
-  const validatedDetectedPackageManger = validateVersionSpecifier(
-    detectedPackageManger
-  );
-  if (!validatedDetectedPackageManger) {
-    throw new Error(
-      `Detected package manager "${detectedPackageManger}" is not a valid semver value.`
-    );
-  }
-
   const validatedCorepackPackageManager = validateVersionSpecifier(
     corepackPackageManager
   );
@@ -726,18 +724,23 @@ function validateVersionOverlap(
     );
   }
 
-  if (
-    validatedDetectedPackageManger.packageName !==
-    validatedCorepackPackageManager.packageName
-  ) {
-    throw new Error(
-      `Detected package manager "${validatedDetectedPackageManger.packageName}" does not match intended corepack defined package manager "${validatedCorepackPackageManager.packageName}". Change your lockfile or "package.json#packageManager" value to match.`
-    );
+  if (lockfileVersion === undefined) {
+    return NO_OVERRIDE;
   }
 
-  return intersects(
-    validatedDetectedPackageManger.packageVersionRange,
-    validatedCorepackPackageManager.packageVersionRange
+  if (
+    validLockfileForPackageManager(
+      cliType,
+      lockfileVersion,
+      major(validatedCorepackPackageManager.packageVersionRange)
+    )
+  ) {
+    // corepack is going to take care of it; do nothing special
+    return NO_OVERRIDE;
+  }
+
+  throw new Error(
+    `Detected lockfile "${lockfileVersion}" which is not compatible with the intended corepack package manager "${corepackPackageManager}". Update your lockfile or change to a compatible corepack version.`
   );
 }
 
