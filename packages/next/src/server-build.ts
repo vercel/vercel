@@ -2091,9 +2091,15 @@ export async function serverBuild({
 
       // Ensure that after we normalize `afterFilesRewrites`, unmatched actions are routed to the correct handler
       // e.g. /foo/.action -> /foo.action. This should only ever match in cases where we're routing to an action handler
-      // and the rewrite normalization led to something like /foo/$1$rscsuff, and $1 had no match
+      // and the rewrite normalization led to something like /foo/$1$rscsuff, and $1 had no match.
+      // This is meant to have parity with the .rsc handling below.
       ...(hasActionOutputSupport
         ? [
+            {
+              src: `${path.posix.join('/', entryDirectory, '/\\.action$')}`,
+              dest: `${path.posix.join('/', entryDirectory, '/index.action')}`,
+              check: true,
+            },
             {
               src: `${path.posix.join('/', entryDirectory, '(.+)/\\.action$')}`,
               dest: `${path.posix.join('/', entryDirectory, '$1.action')}`,

@@ -16,7 +16,11 @@ module.exports = {
       {
         source: '/greedy-rewrite/edge/static/:path*',
         destination: '/edge/static/:path*',
-      }
+      },
+      {
+        source: '/rewritten-to-index',
+        destination: '/?fromRewrite=1',
+      },
     ];
   },
 };
