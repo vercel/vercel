@@ -454,6 +454,24 @@ describe('Test `getPathOverrideForPackageManager()`', () => {
         path: undefined,
       },
     },
+    {
+      name: 'should not set pnpm path if corepack is enabled, pnpm 9 and valid lockfile version',
+      args: {
+        cliType: 'pnpm',
+        nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
+        packageJsonPackageManager: 'pnpm@9.*',
+        lockfileVersion: 7.0,
+        env: {
+          FOO: 'bar',
+          ENABLE_EXPERIMENTAL_COREPACK: '1',
+        },
+      },
+      want: {
+        detectedLockfile: undefined,
+        detectedPackageManager: undefined,
+        path: undefined,
+      },
+    },
   ])('$name', ({ args, want }) => {
     expect(
       getPathOverrideForPackageManager({
@@ -463,6 +481,27 @@ describe('Test `getPathOverrideForPackageManager()`', () => {
         nodeVersion: args.nodeVersion,
       })
     ).toStrictEqual(want);
+  });
+
+  test('should throw error if corepack is enabled, pnpm 9 is set, and invalid lockfile version is used', () => {
+    expect(() => {
+      getPathOverrideForPackageManager({
+        cliType: 'pnpm',
+        lockfileVersion: 5.0,
+        corepackPackageManager: 'pnpm@9.*',
+        nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
+      });
+    }).toThrow();
+  });
+  test('should throw error if corepack is enabled, pnpm 8 is set, and invalid lockfile version is used', () => {
+    expect(() => {
+      getPathOverrideForPackageManager({
+        cliType: 'pnpm',
+        lockfileVersion: 5.1,
+        corepackPackageManager: 'pnpm@8.*',
+        nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
+      });
+    }).toThrow();
   });
 });
 
