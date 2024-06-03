@@ -85,7 +85,7 @@
         "Next-Router-Prefetch": "1"
       },
       "status": 200,
-      "mustContain": "sentinel:dynamic"
+      "mustNotContain": "sentinel:dynamic"
     },
     {
       "path": "/disabled",
