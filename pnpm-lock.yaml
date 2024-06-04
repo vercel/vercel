@@ -325,7 +325,7 @@ importers:
         specifier: 1.0.2
         version: link:../hydrogen
       '@vercel/next':
-        specifier: 4.2.14
+        specifier: 4.2.15
         version: link:../next
       '@vercel/node':
         specifier: 3.1.6
@@ -500,7 +500,7 @@ importers:
         specifier: 3.0.2
         version: link:../frameworks
       '@vercel/fs-detectors':
-        specifier: 5.2.3
+        specifier: 5.2.4
         version: link:../fs-detectors
       '@vercel/routing-utils':
         specifier: 3.1.0
@@ -1566,7 +1566,7 @@ importers:
         specifier: 3.0.2
         version: link:../frameworks
       '@vercel/fs-detectors':
-        specifier: 5.2.3
+        specifier: 5.2.4
         version: link:../fs-detectors
       '@vercel/routing-utils':
         specifier: 3.1.0
