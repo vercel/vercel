@@ -353,7 +353,28 @@ export async function scanParentDirs(
     // TODO: read "bun-lockfile-format-v0"
     lockfileVersion = 0;
   } else {
-    cliType = 'npm';
+    const packageJsonPackageManager = packageJson?.packageManager;
+    if (
+      packageJsonPackageManager &&
+      usingCorepack(process.env, packageJsonPackageManager)
+    ) {
+      const corepackPackageManager = validateVersionSpecifier(
+        packageJsonPackageManager
+      );
+      switch (corepackPackageManager?.packageName) {
+        case 'npm':
+        case 'pnpm':
+        case 'yarn':
+        case 'bun':
+          cliType = corepackPackageManager?.packageName;
+          break;
+        default:
+          cliType = 'npm';
+          break;
+      }
+    } else {
+      cliType = 'npm';
+    }
   }
 
   const packageJsonPath = pkgJsonPath || undefined;
@@ -364,6 +385,14 @@ export async function scanParentDirs(
     lockfileVersion,
     packageJsonPath,
   };
+}
+
+function usingCorepack(
+  env: { [x: string]: string | undefined },
+  packageJsonPackageManager: string | undefined
+) {
+  const corepackFlagged = env.ENABLE_EXPERIMENTAL_COREPACK === '1';
+  return corepackFlagged && Boolean(packageJsonPackageManager);
 }
 
 export async function walkParentDirs({
@@ -557,8 +586,7 @@ export function getEnvForPackageManager({
   nodeVersion: NodeVersion | undefined;
   env: { [x: string]: string | undefined };
 }) {
-  const corepackFlagged = env.ENABLE_EXPERIMENTAL_COREPACK === '1';
-  const corepackEnabled = corepackFlagged && Boolean(packageJsonPackageManager);
+  const corepackEnabled = usingCorepack(env, packageJsonPackageManager);
 
   const {
     detectedLockfile,
@@ -751,6 +779,39 @@ export function getPathOverrideForPackageManager({
     case 'yarn':
       return no_override;
   }
+}
+
+function validateVersionSpecifier(version: string) {
+  if (!version) {
+    return undefined;
+  }
+
+  const [before, after, ...extra] = version.split('@');
+
+  if (extra.length) {
+    // should not have more than one `@`
+    return undefined;
+  }
+
+  if (!before) {
+    // should have a package before the `@`
+    return undefined;
+  }
+
+  if (!after) {
+    // should have a version after the `@`
+    return undefined;
+  }
+
+  if (!validRange(after)) {
+    // the version after the `@` should be a valid semver value
+    return undefined;
+  }
+
+  return {
+    packageName: before,
+    packageVersionRange: after,
+  };
 }
 
 /**
