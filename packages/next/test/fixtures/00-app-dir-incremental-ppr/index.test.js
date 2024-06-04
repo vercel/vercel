@@ -4,8 +4,7 @@ const { deployAndTest } = require('../../utils');
 
 const ctx = {};
 
-// TODO: investigate invariant 
-describe.skip(`${__dirname.split(path.sep).pop()}`, () => {
+describe(`${__dirname.split(path.sep).pop()}`, () => {
   it('should deploy and pass probe checks', async () => {
     const info = await deployAndTest(__dirname);
     Object.assign(ctx, info);
