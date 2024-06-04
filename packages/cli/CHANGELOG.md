@@ -1,5 +1,14 @@
 # vercel
 
+## 34.2.5
+
+### Patch Changes
+
+- Adds a route for the `.rsc` pathname as well when app has ppr enabled but not all routes. ([#11681](https://github.com/vercel/vercel/pull/11681))
+
+- Updated dependencies [[`7457767a7`](https://github.com/vercel/vercel/commit/7457767a77b03662c103a658273a46cf78359068), [`4337ea065`](https://github.com/vercel/vercel/commit/4337ea0654c4ee2c91c4464540f879d43da6696f)]:
+  - @vercel/next@4.2.15
+
 ## 34.2.4
 
 ### Patch Changes
