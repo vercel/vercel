@@ -366,7 +366,7 @@ export async function scanParentDirs(
         case 'pnpm':
         case 'yarn':
         case 'bun':
-          cliType = corepackPackageManager?.packageName;
+          cliType = corepackPackageManager.packageName;
           break;
         default:
           cliType = 'npm';
