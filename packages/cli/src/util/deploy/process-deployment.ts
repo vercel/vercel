@@ -53,6 +53,7 @@ export default async function processDeployment({
   withCache?: boolean;
   org: Org;
   prebuilt: boolean;
+  vercelOutputDir?: string;
   projectName: string;
   isSettingUpProject: boolean;
   archive?: ArchiveFormat;
@@ -71,6 +72,7 @@ export default async function processDeployment({
     withCache,
     quiet,
     prebuilt,
+    vercelOutputDir,
     rootDirectory,
   } = args;
 
@@ -92,6 +94,7 @@ export default async function processDeployment({
     force,
     withCache,
     prebuilt,
+    vercelOutputDir,
     rootDirectory,
     skipAutoDetectionConfirmation,
     archive,

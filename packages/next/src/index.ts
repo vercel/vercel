@@ -25,6 +25,7 @@ import {
   NodejsLambda,
   BuildResultV2Typical as BuildResult,
   BuildResultBuildOutput,
+  getInstalledPackageVersion,
 } from '@vercel/build-utils';
 import { Route, RouteWithHandle, RouteWithSrc } from '@vercel/routing-utils';
 import {
@@ -51,7 +52,6 @@ import url from 'url';
 import createServerlessConfig from './create-serverless-config';
 import nextLegacyVersions from './legacy-versions';
 import { serverBuild } from './server-build';
-import { MIB } from './constants';
 import {
   collectTracedFiles,
   createLambdaFromPseudoLayers,
@@ -205,10 +205,6 @@ export const build: BuildV2 = async ({
 }) => {
   validateEntrypoint(entrypoint);
 
-  // Limit for max size each lambda can be, 50 MB if no custom limit
-  const lambdaCompressedByteLimit = (config.maxLambdaSize ||
-    50 * MIB) as number;
-
   let entryDirectory = path.dirname(entrypoint);
   let entryPath = path.join(workPath, entryDirectory);
 
@@ -261,10 +257,15 @@ export const build: BuildV2 = async ({
   const nextVersionRange = await getNextVersionRange(entryPath);
   const nodeVersion = await getNodeVersion(entryPath, undefined, config, meta);
   const spawnOpts = getSpawnOptions(meta, nodeVersion);
-  const { cliType, lockfileVersion } = await scanParentDirs(entryPath);
+  const { cliType, lockfileVersion, packageJson } = await scanParentDirs(
+    entryPath,
+    true
+  );
+
   spawnOpts.env = getEnvForPackageManager({
     cliType,
     lockfileVersion,
+    packageJsonPackageManager: packageJson?.packageManager,
     nodeVersion,
     env: spawnOpts.env || {},
   });
@@ -341,6 +342,27 @@ export const build: BuildV2 = async ({
     }
   } else {
     await runNpmInstall(entryPath, [], spawnOpts, meta, nodeVersion);
+  }
+
+  if (spawnOpts.env.VERCEL_ANALYTICS_ID) {
+    debug('Found VERCEL_ANALYTICS_ID in environment');
+
+    const version = await getInstalledPackageVersion(
+      '@vercel/speed-insights',
+      entryPath
+    );
+
+    if (version) {
+      // Next.js has a built-in integration with Vercel Speed Insights
+      // with the new @vercel/speed-insights package this is no longer needed
+      // and can be removed to avoid duplicate events
+      delete spawnOpts.env.VERCEL_ANALYTICS_ID;
+      delete process.env.VERCEL_ANALYTICS_ID;
+
+      debug(
+        '@vercel/speed-insights is installed, removing VERCEL_ANALYTICS_ID from environment'
+      );
+    }
   }
 
   // Refetch Next version now that dependencies are installed.
@@ -1336,6 +1358,11 @@ export const build: BuildV2 = async ({
       experimentalPPRRoutes.add(route);
     }
 
+    const isAppPPREnabled = requiredServerFilesManifest
+      ? requiredServerFilesManifest.config.experimental?.ppr === true ||
+        requiredServerFilesManifest.config.experimental?.ppr === 'incremental'
+      : false;
+
     if (requiredServerFilesManifest) {
       if (!routesManifest) {
         throw new Error(
@@ -1385,13 +1412,13 @@ export const build: BuildV2 = async ({
         escapedBuildId,
         outputDirectory,
         trailingSlashRedirects,
-        lambdaCompressedByteLimit,
         requiredServerFilesManifest,
         privateOutputs,
         hasIsr404Page,
         hasIsr500Page,
         variantsManifest,
         experimentalPPRRoutes,
+        isAppPPREnabled,
       });
     }
 
@@ -1622,7 +1649,6 @@ export const build: BuildV2 = async ({
         tracedPseudoLayer: tracedPseudoLayer?.pseudoLayer || {},
         initialPseudoLayer: { pseudoLayer: {}, pseudoLayerBytes: 0 },
         initialPseudoLayerUncompressed: 0,
-        lambdaCompressedByteLimit,
         // internal pages are already referenced in traces for serverless
         // like builds
         internalPages: [],
@@ -1640,7 +1666,6 @@ export const build: BuildV2 = async ({
         tracedPseudoLayer: tracedPseudoLayer?.pseudoLayer || {},
         initialPseudoLayer: { pseudoLayer: {}, pseudoLayerBytes: 0 },
         initialPseudoLayerUncompressed: 0,
-        lambdaCompressedByteLimit,
         internalPages: [],
         experimentalPPRRoutes: undefined,
       });
@@ -1674,7 +1699,6 @@ export const build: BuildV2 = async ({
       ];
       await detectLambdaLimitExceeding(
         combinedInitialLambdaGroups,
-        lambdaCompressedByteLimit,
         compressedPages
       );
 
@@ -1914,7 +1938,8 @@ export const build: BuildV2 = async ({
       canUsePreviewMode,
       bypassToken: prerenderManifest.bypassToken || '',
       isServerMode,
-      experimentalPPRRoutes,
+      isAppPPREnabled: false,
+      hasActionOutputSupport: false,
     }).then(arr =>
       localizeDynamicRoutes(
         arr,
@@ -1944,7 +1969,8 @@ export const build: BuildV2 = async ({
         canUsePreviewMode,
         bypassToken: prerenderManifest.bypassToken || '',
         isServerMode,
-        experimentalPPRRoutes,
+        isAppPPREnabled: false,
+        hasActionOutputSupport: false,
       }).then(arr =>
         arr.map(route => {
           route.src = route.src.replace('^', `^${dynamicPrefix}`);
@@ -2142,7 +2168,7 @@ export const build: BuildV2 = async ({
       appPathRoutesManifest,
       isSharedLambdas,
       canUsePreviewMode,
-      omittedPrerenderRoutes,
+      isAppPPREnabled: false,
     });
 
     await Promise.all(

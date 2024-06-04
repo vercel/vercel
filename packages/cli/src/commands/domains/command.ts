@@ -104,17 +104,15 @@ export const domainsCommand: Command = {
       name: 'next',
       description: 'Show next page of results',
       shorthand: 'N',
-      type: 'string',
+      type: String,
       deprecated: false,
-      multi: false,
     },
     {
       name: 'yes',
       description: 'Skip the confirmation prompt when removing a domain',
       shorthand: 'y',
-      type: 'boolean',
+      type: Boolean,
       deprecated: false,
-      multi: false,
     },
     {
       name: 'limit',
@@ -122,18 +120,16 @@ export const domainsCommand: Command = {
       description:
         'Number of results to return per page (default: 20, max: 100)',
       argument: 'NUMBER',
-      type: 'string',
+      type: String,
       deprecated: false,
-      multi: false,
     },
     {
       name: 'force',
       shorthand: 'f',
-      type: 'boolean',
+      type: Boolean,
       deprecated: false,
       description:
         'Force a domain on a project and remove it from an existing one',
-      multi: false,
     },
   ],
   examples: [

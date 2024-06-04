@@ -1,5 +1,113 @@
 # @vercel/static-build
 
+## 2.5.10
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.32
+
+## 2.5.9
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.31
+
+## 2.5.8
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.30
+
+## 2.5.7
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.29
+
+## 2.5.6
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.28
+
+## 2.5.5
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.27
+
+## 2.5.4
+
+### Patch Changes
+
+- Fix `Cannot read properties of null` error ([#11559](https://github.com/vercel/vercel/pull/11559))
+
+## 2.5.3
+
+### Patch Changes
+
+- Support Ruby and Python static site generators in AL2023 build image ([#11529](https://github.com/vercel/vercel/pull/11529))
+
+## 2.5.2
+
+### Patch Changes
+
+- Revert `SUPPORTED_RUBY_VERSION` change to fix Ruby site generators on AL2 build image ([#11522](https://github.com/vercel/vercel/pull/11522))
+
+## 2.5.1
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.26
+
+## 2.5.0
+
+### Minor Changes
+
+- Don't rely on `hugo` binary existing in build-container ([#11455](https://github.com/vercel/vercel/pull/11455))
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.25
+
+## 2.4.6
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.24
+
+## 2.4.5
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.23
+
+## 2.4.4
+
+### Patch Changes
+
+- [framework-fixtures]: Bump the core group in /packages/static-build/test/fixtures/angular-v17 with 15 updates ([#11274](https://github.com/vercel/vercel/pull/11274))
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.22
+
+## 2.4.3
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.21
+
 ## 2.4.2
 
 ### Patch Changes

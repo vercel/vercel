@@ -1,3 +1,4 @@
+import { describe, it, expect } from 'vitest';
 import createLineIterator from 'line-async-iterator';
 import projects from '../../../src/commands/project';
 import { useUser } from '../../mocks/user';
@@ -43,55 +44,6 @@ describe('project', () => {
       const data = parseSpacedTableRow(line.value!);
       data.pop();
       expect(data).toEqual([project.project.name, 'https://foobar.com']);
-    });
-
-    it('should list projects running on an soon-to-be-deprecated Node.js version', async () => {
-      jest.useFakeTimers().setSystemTime(new Date('2023-12-08'));
-
-      const user = useUser();
-      useTeams('team_dummy');
-      const project = useProject({
-        ...defaultProject,
-        nodeVersion: '16.x',
-      });
-
-      client.setArgv('project', 'ls', '--update-required');
-      await projects(client);
-
-      const lines = createLineIterator(client.stderr);
-
-      let line = await lines.next();
-      expect(line.value).toEqual(`Fetching projects in ${user.username}`);
-
-      line = await lines.next();
-      expect(line.value).toEqual(
-        'WARN! The following Node.js versions will be deprecated soon: 16.x. Please upgrade your projects immediately.'
-      );
-      line = await lines.next();
-      expect(line.value).toEqual(
-        '> For more information visit: https://vercel.com/docs/functions/serverless-functions/runtimes/node-js#node.js-version'
-      );
-      line = await lines.next();
-      expect(line.value).toContain(user.username);
-
-      // empty line
-      line = await lines.next();
-      expect(line.value).toEqual('');
-
-      line = await lines.next();
-      const header = parseSpacedTableRow(line.value!);
-      expect(header).toEqual([
-        'Project Name',
-        'Latest Production URL',
-        'Updated',
-      ]);
-
-      line = await lines.next();
-      const data = parseSpacedTableRow(line.value!);
-      data.pop();
-      expect(data).toEqual([project.project.name, 'https://foobar.com']);
-
-      jest.clearAllTimers();
     });
 
     it('should list projects when there is no production deployment', async () => {

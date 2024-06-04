@@ -14,6 +14,7 @@ function getGlobalArgs() {
 
   if (globalArgs.length === 0) {
     globalArgs = ['-Q', getGlobalDir()];
+    // eslint-disable-next-line no-console
     console.log(
       'No CI detected, adding defaultArgs to avoid polluting user settings',
       globalArgs
@@ -31,6 +32,7 @@ export function execCli(
   args: string[] = [],
   options?: execa.Options<string>
 ): execa.ExecaChildProcess<string> {
+  // eslint-disable-next-line no-console
   console.log(`$ vercel ${args.join(' ')}`);
 
   const globalArgs = getGlobalArgs();

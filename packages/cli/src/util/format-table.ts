@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import table from 'text-table';
+import table from './output/table';
 import strlen from './strlen';
 
 // header:
@@ -19,9 +19,8 @@ import strlen from './strlen';
 // ]
 export default function formatTable(
   header: string[],
-  align: Array<'l' | 'r' | 'c' | '.'>,
-  blocks: { name?: string; rows: string[][] }[],
-  hsep = '    '
+  align: Array<'l' | 'r' | 'c'>,
+  blocks: { name?: string; rows: string[][] }[]
 ) {
   const nrCols = header.length;
   const padding = [];
@@ -57,7 +56,7 @@ export default function formatTable(
           rows[i][j] = al === 'l' ? col + pad : pad + col;
         }
       }
-      out += table(rows, { align, hsep, stringLength: strlen });
+      out += table(rows, { align, hsep: 4 });
     }
     out += '\n\n';
   }

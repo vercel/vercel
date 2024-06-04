@@ -11,10 +11,7 @@ import fs, {
   mkdir,
 } from 'fs-extra';
 import sleep from '../src/util/sleep';
-import {
-  disableSSO,
-  fetchTokenWithRetry,
-} from '../../../test/lib/deployment/now-deploy';
+import { fetchTokenWithRetry } from '../../../test/lib/deployment/now-deploy';
 import waitForPrompt from './helpers/wait-for-prompt';
 import { execCli } from './helpers/exec';
 import getGlobalDir from './helpers/get-global-dir';
@@ -67,6 +64,7 @@ let contextName: string | undefined;
 function mockLoginApi(req: http.IncomingMessage, res: http.ServerResponse) {
   const { url = '/', method } = req;
   let { pathname = '/', query = {} } = parseUrl(url, true);
+  // eslint-disable-next-line no-console
   console.log(`[mock-login-server] ${method} ${pathname}`);
   const securityCode = 'Bears Beets Battlestar Galactica';
   res.setHeader('content-type', 'application/json');
@@ -96,6 +94,7 @@ const loginApiServer = require('http')
   .listen(0, () => {
     const { port } = loginApiServer.address();
     loginApiUrl = `http://localhost:${port}`;
+    // eslint-disable-next-line no-console
     console.log(`[mock-login-server] Listening on ${loginApiUrl}`);
   });
 
@@ -192,7 +191,9 @@ beforeAll(async () => {
 
     await prepareE2EFixtures(contextName, binaryPath);
   } catch (err) {
+    // eslint-disable-next-line no-console
     console.log('Failed test suite `beforeAll`');
+    // eslint-disable-next-line no-console
     console.log(err);
 
     // force test suite to actually stop
@@ -330,8 +331,7 @@ test('should show prompts to set up project during first deploy', async () => {
     'README.txt'
   ).toBe(true);
 
-  const { host, href } = new URL(output.stdout);
-  await disableSSO(host, false);
+  const { href } = new URL(output.stdout);
 
   // Send a test request to the deployment
   const response = await fetch(href);
@@ -646,8 +646,7 @@ test('use `rootDirectory` from project when deploying', async () => {
   const secondResult = await execCli(binaryPath, [directory, '--public']);
   expect(secondResult.exitCode, formatOutput(secondResult)).toBe(0);
 
-  const { host, href } = new URL(secondResult.stdout);
-  await disableSSO(host, false);
+  const { href } = new URL(secondResult.stdout);
 
   const pageResponse1 = await fetch(href);
   expect(pageResponse1.status).toBe(200);
@@ -728,6 +727,72 @@ test('add a sensitive env var', async () => {
   );
 });
 
+test('override an existing env var', async () => {
+  const dir = await setupE2EFixture('project-override-env-vars');
+  const projectName = `project-override-env-vars-${
+    Math.random().toString(36).split('.')[1]
+  }`;
+
+  // remove previously linked project if it exists
+  await remove(path.join(dir, '.vercel'));
+
+  const vc = execCli(binaryPath, ['link'], {
+    cwd: dir,
+    env: {
+      FORCE_TTY: '1',
+    },
+  });
+
+  await setupProject(vc, projectName, {
+    buildCommand: `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html`,
+    outputDirectory: 'o',
+  });
+
+  await vc;
+
+  const link = require(path.join(dir, '.vercel/project.json'));
+  const options = {
+    env: {
+      VERCEL_ORG_ID: link.orgId,
+      VERCEL_PROJECT_ID: link.projectId,
+    },
+  };
+
+  // 1. Initial add
+  const addEnvCommand = execCli(
+    binaryPath,
+    ['env', 'add', 'envVarName', 'production'],
+    options
+  );
+
+  await waitForPrompt(addEnvCommand, /What’s the value of [^?]+\?/);
+  addEnvCommand.stdin?.write('test\n');
+
+  const output = await addEnvCommand;
+
+  expect(output.exitCode, formatOutput(output)).toBe(0);
+  expect(output.stderr).toContain(
+    'Added Environment Variable envVarName to Project'
+  );
+
+  // 2. Override
+  const overrideEnvCommand = execCli(
+    binaryPath,
+    ['env', 'add', 'envVarName', 'production', '--force'],
+    options
+  );
+
+  await waitForPrompt(overrideEnvCommand, /What’s the value of [^?]+\?/);
+  overrideEnvCommand.stdin?.write('test\n');
+
+  const outputOverride = await overrideEnvCommand;
+
+  expect(outputOverride.exitCode, formatOutput(outputOverride)).toBe(0);
+  expect(outputOverride.stderr).toContain(
+    'Overrode Environment Variable envVarName to Project'
+  );
+});
+
 test('whoami with `VERCEL_ORG_ID` should favor `--scope` and should error', async () => {
   if (!token) {
     throw new Error('Shared state "token" not set.');
@@ -778,7 +843,6 @@ test('deploys with only now.json and README.md', async () => {
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
   const { host } = new URL(stdout);
-  await disableSSO(host, false);
   const res = await fetch(`https://${host}/README.md`);
   const text = await res.text();
   expect(text).toMatch(/readme contents/);
@@ -801,7 +865,6 @@ test('deploys with only vercel.json and README.md', async () => {
   );
 
   const { host } = new URL(stdout);
-  await disableSSO(host, false);
   const res = await fetch(`https://${host}/README.md`);
   const text = await res.text();
   expect(text).toMatch(/readme contents/);
@@ -887,7 +950,6 @@ test('deploy pnpm twice using pnp and symlink=false', async () => {
       '--public',
       '--yes',
     ]);
-    await disableSSO(res.stdout, false);
     return res;
   }
 
@@ -1344,8 +1406,6 @@ test('vercel.json configuration overrides in a new project prompt user and merge
   const deployment = await vc;
   expect(deployment.exitCode, formatOutput(deployment)).toBe(0);
   // assert the command were executed
-  await disableSSO(deployment.stdout, false);
-
   let page = await fetch(deployment.stdout);
   let text = await page.text();
   expect(text).toBe('1\n');
@@ -1376,8 +1436,7 @@ test('vercel.json configuration overrides in an existing project do not prompt u
   // auto-confirm this deployment
   let deployment = await deploy(true);
 
-  const { host, href } = new URL(deployment.stdout);
-  await disableSSO(host, false);
+  const { href } = new URL(deployment.stdout);
   let page = await fetch(href);
   let text = await page.text();
   expect(text).toBe('0');

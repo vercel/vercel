@@ -10,7 +10,6 @@ export default async function selectOrg(
   question: string,
   autoConfirm?: boolean
 ): Promise<Org> {
-  require('./patch-inquirer');
   const {
     output,
     config: { currentTeam },
@@ -37,10 +36,12 @@ export default async function selectOrg(
 
   const choices: Choice[] = [
     ...personalAccountChoice,
-    ...teams.map<Choice>(team => ({
-      name: team.name || team.slug,
-      value: { type: 'team', id: team.id, slug: team.slug },
-    })),
+    ...teams
+      .sort(a => (a.id === user.defaultTeamId ? -1 : 1))
+      .map<Choice>(team => ({
+        name: team.name || team.slug,
+        value: { type: 'team', id: team.id, slug: team.slug },
+      })),
   ];
 
   const defaultChoiceIndex = Math.max(
@@ -52,14 +53,9 @@ export default async function selectOrg(
     return choices[defaultChoiceIndex].value;
   }
 
-  const answers = await client.prompt({
-    type: 'list',
-    name: 'org',
+  return await client.input.select({
     message: question,
     choices,
-    default: defaultChoiceIndex,
+    default: choices[defaultChoiceIndex].value,
   });
-
-  const org = answers.org;
-  return org;
 }

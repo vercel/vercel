@@ -1,11 +1,10 @@
 import chalk from 'chalk';
 import ms from 'ms';
-import table from 'text-table';
+import table from '../../util/output/table';
 import type { Project } from '@vercel-internals/types';
 import Client from '../../util/client';
 import getCommandFlags from '../../util/get-command-flags';
 import { getCommandName } from '../../util/pkg-name';
-import strlen from '../../util/strlen';
 import { NODE_VERSIONS } from '@vercel/build-utils';
 
 export default async function list(
@@ -100,11 +99,7 @@ export default async function list(
           ])
           .flat(),
       ],
-      {
-        align: ['l', 'l', 'l'],
-        hsep: ' '.repeat(3),
-        stringLength: strlen,
-      }
+      { hsep: 3 }
     ).replace(/^/gm, '  ');
     output.print(`\n${tablePrint}\n\n`);
 

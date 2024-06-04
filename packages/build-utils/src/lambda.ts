@@ -5,11 +5,7 @@ import minimatch from 'minimatch';
 import { readlink } from 'fs-extra';
 import { isSymbolicLink, isDirectory } from './fs/download';
 import streamToBuffer from './fs/stream-to-buffer';
-import type { Files, Config, FunctionFramework } from './types';
-
-interface Environment {
-  [key: string]: string;
-}
+import type { Config, Env, Files, FunctionFramework } from './types';
 
 export type LambdaOptions = LambdaOptionsWithFiles | LambdaOptionsWithZipBuffer;
 
@@ -21,7 +17,7 @@ export interface LambdaOptionsBase {
   architecture?: LambdaArchitecture;
   memory?: number;
   maxDuration?: number;
-  environment?: Environment;
+  environment?: Env;
   allowQuery?: string[];
   regions?: string[];
   supportsMultiPayloads?: boolean;
@@ -69,7 +65,7 @@ export class Lambda {
   architecture?: LambdaArchitecture;
   memory?: number;
   maxDuration?: number;
-  environment: Environment;
+  environment: Env;
   allowQuery?: string[];
   regions?: string[];
   /**

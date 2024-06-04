@@ -5,10 +5,7 @@ import fetch, { RequestInit } from 'node-fetch';
 import retry from 'async-retry';
 import fs from 'fs-extra';
 import sleep from '../src/util/sleep';
-import {
-  disableSSO,
-  fetchTokenWithRetry,
-} from '../../../test/lib/deployment/now-deploy';
+import { fetchTokenWithRetry } from '../../../test/lib/deployment/now-deploy';
 import waitForPrompt from './helpers/wait-for-prompt';
 import { listTmpDirs } from './helpers/get-tmp-dir';
 import getGlobalDir from './helpers/get-global-dir';
@@ -93,6 +90,7 @@ let contextName: string | undefined;
 function mockLoginApi(req: http.IncomingMessage, res: http.ServerResponse) {
   const { url = '/', method } = req;
   let { pathname = '/', query = {} } = parseUrl(url, true);
+  // eslint-disable-next-line no-console
   console.log(`[mock-login-server] ${method} ${pathname}`);
   const securityCode = 'Bears Beets Battlestar Galactica';
   res.setHeader('content-type', 'application/json');
@@ -122,6 +120,7 @@ const loginApiServer = require('http')
   .listen(0, () => {
     const { port } = loginApiServer.address();
     loginApiUrl = `http://localhost:${port}`;
+    // eslint-disable-next-line no-console
     console.log(`[mock-login-server] Listening on ${loginApiUrl}`);
   });
 
@@ -181,7 +180,9 @@ beforeAll(async () => {
     const auth = await fs.readJSON(getConfigAuthPath());
     expect(auth.token).toBe(token);
   } catch (err) {
+    // eslint-disable-next-line no-console
     console.log('Failed test suite `beforeAll`');
+    // eslint-disable-next-line no-console
     console.log(err);
 
     // force test suite to actually stop
@@ -204,6 +205,7 @@ afterAll(async () => {
 
   const allTmpDirs = listTmpDirs();
   for (const tmpDir of allTmpDirs) {
+    // eslint-disable-next-line no-console
     console.log('Removing temp dir: ', tmpDir.name);
     tmpDir.removeCallback();
   }
@@ -405,7 +407,6 @@ test('default command should work with --cwd option', async () => {
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   const url = stdout;
-  await disableSSO(url, false);
 
   const deploymentResult = await fetch(`${url}/README.md`);
   const body = await deploymentResult.text();
@@ -435,7 +436,6 @@ test('should allow deploying a directory that was built with a target environmen
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   const url = stdout;
-  await disableSSO(url, false);
 
   const deploymentResult = await fetch(`${url}/README.md`);
   const body = await deploymentResult.text();
@@ -463,7 +463,6 @@ test('should allow deploying a directory that was prebuilt, but has no builds.js
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   const url = stdout;
-  await disableSSO(url, false);
 
   const deploymentResult = await fetch(`${url}/README.md`);
   const body = await deploymentResult.text();
@@ -527,7 +526,6 @@ test('deploy using only now.json with `redirects` defined', async () => {
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   const url = stdout;
-  await disableSSO(url, false);
   const res = await fetch(`${url}/foo/bar`, { redirect: 'manual' });
   const location = res.headers.get('location');
   expect(location).toBe('https://example.com/foo/bar');
@@ -549,7 +547,6 @@ test('deploy using --local-config flag v2', async () => {
 
   const { host } = new URL(stdout);
   expect(host).toMatch(/secondary/gm);
-  await disableSSO(host, false);
 
   const testRes = await fetch(`https://${host}/test-${contextName}.html`);
   const testText = await testRes.text();
@@ -585,7 +582,7 @@ test('deploy fails using --local-config flag with non-existent path', async () =
   expect(stderr).toMatch(/does-not-exist\.json/);
 });
 
-test('deploy using --local-config flag above target', async () => {
+test('deploy from a nested directory', async () => {
   const root = await setupE2EFixture('zero-config-next-js-nested');
   const projectName = `project-link-dev-${
     Math.random().toString(36).split('.')[1]
@@ -631,7 +628,6 @@ test('deploy using --local-config flag above target', async () => {
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   const { host } = new URL(stdout);
-  await disableSSO(host, false);
 
   const testRes = await fetch(`https://${host}/index.html`);
   const testText = await testRes.text();
@@ -764,6 +760,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
   // we create a "legacy" env variable that contains a decryptable secret
   // to check that vc env pull and vc dev work correctly with decryptable secrets
   async function createEnvWithDecryptableSecret() {
+    // eslint-disable-next-line no-console
     console.log('creating an env variable with a decryptable secret');
 
     const name = `my-secret${Math.floor(Math.random() * 10000)}`;
@@ -853,7 +850,6 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
     });
     expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
     const { host } = new URL(stdout);
-    await disableSSO(host, false);
 
     const apiUrl = `https://${host}/api/get-env`;
     const apiRes = await fetch(apiUrl);
@@ -921,9 +917,9 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
     expect(homeJson['MY_STDIN_VAR']).toBe('{"expect":"quotes"}');
     expect(homeJson['MY_DECRYPTABLE_SECRET_ENV']).toBe('decryptable value');
 
-    // system env vars are automatically exposed
-    expect(apiJson['VERCEL']).toBe('1');
-    expect(homeJson['VERCEL']).toBe('1');
+    // system env vars are hidden in dev
+    expect(apiJson['VERCEL']).toBeUndefined();
+    expect(homeJson['VERCEL']).toBeUndefined();
 
     // sleep before kill, otherwise the dev process doesn't clean up and exit properly
     await sleep(100);
@@ -943,6 +939,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
 
     expect(res.status).toBe(200);
     if (res.status === 200) {
+      // eslint-disable-next-line no-console
       console.log(
         `Set autoExposeSystemEnvs=true for project ${link.projectId}`
       );
@@ -952,7 +949,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
   async function vcEnvPullFetchSystemVars() {
     const { exitCode, stdout, stderr } = await execCli(
       binaryPath,
-      ['env', 'pull', '-y'],
+      ['env', 'pull', '-y', '--environment', 'production'],
       {
         cwd: target,
       }
@@ -966,7 +963,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
 
     expect(lines).toContain('VERCEL="1"');
     expect(lines).toContain('VERCEL_URL=""');
-    expect(lines).toContain('VERCEL_ENV="development"');
+    expect(lines).toContain('VERCEL_ENV="production"');
     expect(lines).toContain('VERCEL_GIT_PROVIDER=""');
     expect(lines).toContain('VERCEL_GIT_REPO_SLUG=""');
   }
@@ -983,22 +980,24 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
     const localhostNoProtocol = localhost[0].slice('http://'.length);
 
     const apiJson = await apiRes.json();
-    expect(apiJson['VERCEL']).toBe('1');
+    // environment variables are not set in dev
+    expect(apiJson['VERCEL']).toBeUndefined();
+    expect(apiJson['VERCEL_ENV']).toBeUndefined();
+    expect(apiJson['VERCEL_GIT_PROVIDER']).toBeUndefined();
+    expect(apiJson['VERCEL_GIT_REPO_SLUG']).toBeUndefined();
+    // except for these because vc dev
     expect(apiJson['VERCEL_URL']).toBe(localhostNoProtocol);
-    expect(apiJson['VERCEL_ENV']).toBe('development');
     expect(apiJson['VERCEL_REGION']).toBe('dev1');
-    expect(apiJson['VERCEL_GIT_PROVIDER']).toBe('');
-    expect(apiJson['VERCEL_GIT_REPO_SLUG']).toBe('');
 
     const homeUrl = localhost[0];
     const homeRes = await fetch(homeUrl);
     const homeJson = await homeRes.json();
-    expect(homeJson['VERCEL']).toBe('1');
+    expect(homeJson['VERCEL']).toBeUndefined();
     expect(homeJson['VERCEL_URL']).toBe(localhostNoProtocol);
-    expect(homeJson['VERCEL_ENV']).toBe('development');
-    expect(homeJson['VERCEL_REGION']).toBe(undefined);
-    expect(homeJson['VERCEL_GIT_PROVIDER']).toBe('');
-    expect(homeJson['VERCEL_GIT_REPO_SLUG']).toBe('');
+    expect(homeJson['VERCEL_ENV']).toBeUndefined();
+    expect(homeJson['VERCEL_REGION']).toBeUndefined();
+    expect(homeJson['VERCEL_GIT_PROVIDER']).toBeUndefined();
+    expect(homeJson['VERCEL_GIT_REPO_SLUG']).toBeUndefined();
 
     // sleep before kill, otherwise the dev process doesn't clean up and exit properly
     await sleep(100);

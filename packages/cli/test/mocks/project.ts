@@ -216,7 +216,7 @@ export function useProject(
     res.json(project);
   });
   client.scenario.get(
-    `/v1/env/pull/${project.id}/:target?/:gitBranch?`,
+    `/v2/env/pull/${project.id}/:target?/:gitBranch?`,
     (req, res) => {
       const target =
         typeof req.params.target === 'string'
@@ -270,7 +270,7 @@ export function useProject(
       });
     }
   );
-  client.scenario.get(`/v8/projects/${project.id}/env`, (req, res) => {
+  client.scenario.get(`/v10/projects/${project.id}/env`, (req, res) => {
     const target: ProjectEnvTarget | undefined =
       typeof req.query.target === 'string'
         ? parseEnvironment(req.query.target)
@@ -291,14 +291,14 @@ export function useProject(
 
     res.json({ envs: targetEnvs });
   });
-  client.scenario.post(`/v8/projects/${project.id}/env`, (req, res) => {
+  client.scenario.post(`/v10/projects/${project.id}/env`, (req, res) => {
     const envObj = req.body;
     envObj.id = envObj.key;
     envs.push(envObj);
     res.json({ envs });
   });
   client.scenario.delete(
-    `/v8/projects/${project.id}/env/:envId`,
+    `/v10/projects/${project.id}/env/:envId`,
     (req, res) => {
       const envId = req.params.envId;
       for (const [i, env] of envs.entries()) {
@@ -390,7 +390,7 @@ function exposeSystemEnvs(
 ) {
   const envs: Env = {};
 
-  if (autoExposeSystemEnvs) {
+  if (autoExposeSystemEnvs && target !== 'development') {
     envs['VERCEL'] = '1';
     envs['VERCEL_ENV'] = target || 'development';
 

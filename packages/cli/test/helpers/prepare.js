@@ -348,6 +348,9 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
     },
     'lambda-with-php-runtime': {
       'api/test.php': `<?php echo 'Hello from PHP'; ?>`,
+      'package.json': JSON.stringify({
+        engines: { node: '18.x' },
+      }),
       'vercel.json': JSON.stringify({
         functions: {
           'api/**/*.php': {
@@ -400,6 +403,9 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
       'vercel.json': '{"builds":[{"src":"*.html","use":"@vercel/static"}]}',
     },
     'project-sensitive-env-vars': {
+      'package.json': '{}',
+    },
+    'project-override-env-vars': {
       'package.json': '{}',
     },
     'dev-proxy-headers-and-env': {

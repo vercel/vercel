@@ -4,8 +4,6 @@ import { generateNewToken } from './common';
 import { fetch, getApiDeploymentsUrl } from '../src/utils';
 import { Deployment } from './types';
 import { createDeployment } from '../src/index';
-// @ts-expect-error non-TS
-import { disableSSO } from '../../../test/lib/deployment/now-deploy';
 
 describe('create v2 deployment', () => {
   let deployment: Deployment;
@@ -45,7 +43,6 @@ describe('create v2 deployment', () => {
 
       if (event.type === 'ready') {
         deployment = event.payload;
-        await disableSSO(deployment.id);
         break;
       }
     }
@@ -68,7 +65,6 @@ describe('create v2 deployment', () => {
 
       if (event.type === 'ready') {
         deployment = event.payload;
-        await disableSSO(deployment.id);
         break;
       }
     }
@@ -87,7 +83,6 @@ describe('create v2 deployment', () => {
     )) {
       if (event.type === 'ready') {
         deployment = event.payload;
-        await disableSSO(deployment.id);
         expect(deployment.readyState).toEqual('READY');
         break;
       }
@@ -114,7 +109,6 @@ describe('create v2 deployment', () => {
     )) {
       if (event.type === 'ready') {
         deployment = event.payload;
-        await disableSSO(deployment.id);
         break;
       } else if (event.type === 'error') {
         error = event.payload;
@@ -154,7 +148,6 @@ describe('create v2 deployment', () => {
     )) {
       if (event.type === 'ready') {
         deployment = event.payload;
-        await disableSSO(deployment.id);
         break;
       } else if (event.type === 'error') {
         error = event.payload;

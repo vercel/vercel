@@ -5,14 +5,8 @@ export default async function confirm(
   message: string,
   preferred: boolean
 ): Promise<boolean> {
-  require('./patch-inquirer');
-
-  const answers = await client.prompt({
-    type: 'confirm',
-    name: 'value',
+  return client.input.confirm({
     message,
     default: preferred,
   });
-
-  return answers.value;
 }

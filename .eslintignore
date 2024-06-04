@@ -10,6 +10,7 @@ packages/*/test/fixtures
 packages/cli/@types
 packages/cli/download
 packages/cli/dist
+packages/cli/test/fixtures
 packages/cli/test/dev/fixtures
 packages/cli/bin
 packages/cli/link

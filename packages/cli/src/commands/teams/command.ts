@@ -49,10 +49,9 @@ export const teamsCommand: Command = {
     {
       name: 'next',
       shorthand: 'N',
-      type: 'string',
+      type: String,
       argument: 'MS',
       deprecated: false,
-      multi: false,
       description: 'Show next page of results',
     },
   ],

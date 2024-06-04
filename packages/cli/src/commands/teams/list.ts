@@ -1,5 +1,6 @@
 import chars from '../../util/output/chars';
 import table from '../../util/output/table';
+import { gray } from 'chalk';
 import getUser from '../../util/get-user';
 import getTeams from '../../util/teams/get-teams';
 import { packageName } from '../../util/pkg-name';
@@ -53,7 +54,7 @@ export default async function list(client: Client): Promise<number> {
     id,
     name,
     value: slug,
-    current: id === currentTeam ? chars.tick : '',
+    prefix: id === currentTeam ? chars.tick : ' ',
   }));
 
   if (user.version !== 'northstar') {
@@ -61,7 +62,7 @@ export default async function list(client: Client): Promise<number> {
       id: user.id,
       name: user.email,
       value: user.username || user.email,
-      current: accountIsCurrent ? chars.tick : '',
+      prefix: accountIsCurrent ? chars.tick : ' ',
     });
   }
 
@@ -76,14 +77,22 @@ export default async function list(client: Client): Promise<number> {
   output.stopSpinner();
   client.stdout.write('\n'); // empty line
 
-  table(
-    ['', 'id', 'email / name'],
-    teamList.map(team => [team.current, team.value, team.name]),
-    [1, 5],
-    (str: string) => {
-      client.stdout.write(str);
-    }
+  const teamTable = table(
+    [
+      ['id', 'email / name'].map(str => gray(str)),
+      ...teamList.map(team => [team.value, team.name]),
+    ],
+    { hsep: 5 }
   );
+  client.stderr.write(
+    currentTeam
+      ? teamTable
+          .split('\n')
+          .map((line, i) => `${i > 0 ? teamList[i - 1].prefix : ' '} ${line}`)
+          .join('\n')
+      : teamTable
+  );
+  client.stderr.write('\n');
 
   if (pagination?.count === 20) {
     const flags = getCommandFlags(argv, ['_', '--next', '-N', '-d']);

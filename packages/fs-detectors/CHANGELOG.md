@@ -1,5 +1,25 @@
 # @vercel/fs-detectors
 
+## 5.2.4
+
+### Patch Changes
+
+- Add support for detecting Turborepo 2 ([#11680](https://github.com/vercel/vercel/pull/11680))
+
+## 5.2.3
+
+### Patch Changes
+
+- Updated dependencies [[`5f72dc436`](https://github.com/vercel/vercel/commit/5f72dc4360f6ec090a4d2ac3837f9a80d7b396e9)]:
+  - @vercel/frameworks@3.0.2
+
+## 5.2.2
+
+### Patch Changes
+
+- Updated dependencies [[`9ed967034`](https://github.com/vercel/vercel/commit/9ed967034d61b6a5b1e4bb32449c9193c50615c0)]:
+  - @vercel/frameworks@3.0.1
+
 ## 5.2.1
 
 ### Patch Changes

@@ -1,5 +1,17 @@
 # @vercel/python
 
+## 4.3.0
+
+### Minor Changes
+
+- support newer python versions ([#11675](https://github.com/vercel/vercel/pull/11675))
+
+## 4.2.0
+
+### Minor Changes
+
+- Add support for Python 3.12 ([#11478](https://github.com/vercel/vercel/pull/11478))
+
 ## 4.1.1
 
 ### Patch Changes

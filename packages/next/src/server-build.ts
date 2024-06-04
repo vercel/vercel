@@ -17,7 +17,6 @@ import {
 } from '@vercel/build-utils';
 import { Route, RouteWithHandle } from '@vercel/routing-utils';
 import { MAX_AGE_ONE_YEAR } from '.';
-import { MAX_UNCOMPRESSED_LAMBDA_SIZE } from './constants';
 import {
   NextRequiredServerFilesManifest,
   NextImagesManifest,
@@ -52,6 +51,8 @@ import {
   normalizePrefetches,
   CreateLambdaFromPseudoLayersOptions,
   getPostponeResumePathname,
+  LambdaGroup,
+  MAX_UNCOMPRESSED_LAMBDA_SIZE,
 } from './utils';
 import {
   nodeFileTrace,
@@ -68,6 +69,7 @@ const CORRECT_NOT_FOUND_ROUTES_VERSION = 'v12.0.1';
 const CORRECT_MIDDLEWARE_ORDER_VERSION = 'v12.1.7-canary.29';
 const NEXT_DATA_MIDDLEWARE_RESOLVING_VERSION = 'v12.1.7-canary.33';
 const EMPTY_ALLOW_QUERY_FOR_PRERENDERED_VERSION = 'v12.2.0';
+const ACTION_OUTPUT_SUPPORT_VERSION = 'v14.2.2';
 const CORRECTED_MANIFESTS_VERSION = 'v12.2.0';
 
 // Ideally this should be in a Next.js manifest so we can change it in
@@ -139,10 +141,10 @@ export async function serverBuild({
   omittedPrerenderRoutes,
   trailingSlashRedirects,
   isCorrectLocaleAPIRoutes,
-  lambdaCompressedByteLimit,
   requiredServerFilesManifest,
   variantsManifest,
   experimentalPPRRoutes,
+  isAppPPREnabled,
 }: {
   appPathRoutesManifest?: Record<string, string>;
   dynamicPages: string[];
@@ -178,14 +180,21 @@ export async function serverBuild({
   hasIsr500Page: boolean;
   trailingSlashRedirects: Route[];
   routesManifest: RoutesManifest;
-  lambdaCompressedByteLimit: number;
   isCorrectLocaleAPIRoutes: boolean;
   imagesManifest?: NextImagesManifest;
   prerenderManifest: NextPrerenderedRoutes;
   requiredServerFilesManifest: NextRequiredServerFilesManifest;
   variantsManifest: VariantsManifest | null;
   experimentalPPRRoutes: ReadonlySet<string>;
+  isAppPPREnabled: boolean;
 }): Promise<BuildResult> {
+  if (isAppPPREnabled) {
+    debug(
+      'experimentalPPRRoutes',
+      JSON.stringify(Array.from(experimentalPPRRoutes))
+    );
+  }
+
   lambdaPages = Object.assign({}, lambdaPages, lambdaAppPaths);
 
   const experimentalAllowBundling = Boolean(
@@ -201,6 +210,9 @@ export async function serverBuild({
     nextVersion,
     EMPTY_ALLOW_QUERY_FOR_PRERENDERED_VERSION
   );
+  const hasActionOutputSupport =
+    semver.gte(nextVersion, ACTION_OUTPUT_SUPPORT_VERSION) &&
+    Boolean(process.env.NEXT_EXPERIMENTAL_STREAMING_ACTIONS);
   const projectDir = requiredServerFilesManifest.relativeAppDir
     ? path.join(baseDir, requiredServerFilesManifest.relativeAppDir)
     : requiredServerFilesManifest.appDir || entryPath;
@@ -214,10 +226,6 @@ export async function serverBuild({
     }
   }
 
-  const experimental = {
-    ppr: requiredServerFilesManifest.config.experimental?.ppr === true,
-  };
-
   let appRscPrefetches: UnwrapPromise<ReturnType<typeof glob>> = {};
   let appBuildTraces: UnwrapPromise<ReturnType<typeof glob>> = {};
   let appDir: string | null = null;
@@ -225,9 +233,7 @@ export async function serverBuild({
   if (appPathRoutesManifest) {
     appDir = path.join(pagesDir, '../app');
     appBuildTraces = await glob('**/*.js.nft.json', appDir);
-
-    // TODO: maybe?
-    appRscPrefetches = experimental.ppr
+    appRscPrefetches = isAppPPREnabled
       ? {}
       : await glob(`**/*${RSC_PREFETCH_SUFFIX}`, appDir);
 
@@ -246,9 +252,19 @@ export async function serverBuild({
 
     for (const rewrite of afterFilesRewrites) {
       if (rewrite.src && rewrite.dest) {
+        // ensures that userland rewrites are still correctly matched to their special outputs
+        // PPR should match .prefetch.rsc, .rsc, and .action
+        // non-PPR should match .rsc and .action
+        // we only add `.action` handling to the regex if flagged on in the build
+        const rscSuffix = isAppPPREnabled
+          ? `(\\.prefetch)?\\.rsc${hasActionOutputSupport ? '|\\.action' : ''}`
+          : hasActionOutputSupport
+          ? '(\\.action|\\.rsc)'
+          : '\\.rsc';
+
         rewrite.src = rewrite.src.replace(
           /\/?\(\?:\/\)\?/,
-          '(?<rscsuff>(\\.prefetch)?\\.rsc)?(?:/)?'
+          `(?<rscsuff>${rscSuffix})?(?:/)?`
         );
         let destQueryIndex = rewrite.dest.indexOf('?');
 
@@ -648,14 +664,9 @@ export async function serverBuild({
       )
     );
 
-    if (
-      initialPseudoLayer.pseudoLayerBytes > lambdaCompressedByteLimit ||
-      uncompressedInitialSize > MAX_UNCOMPRESSED_LAMBDA_SIZE
-    ) {
+    if (uncompressedInitialSize > MAX_UNCOMPRESSED_LAMBDA_SIZE) {
       console.log(
         `Warning: Max serverless function size of ${prettyBytes(
-          lambdaCompressedByteLimit
-        )} compressed or ${prettyBytes(
           MAX_UNCOMPRESSED_LAMBDA_SIZE
         )} uncompressed reached`
       );
@@ -663,13 +674,12 @@ export async function serverBuild({
       outputFunctionFileSizeInfo(
         [],
         initialPseudoLayer.pseudoLayer,
-        initialPseudoLayer.pseudoLayerBytes,
         uncompressedInitialSize,
         {}
       );
 
       throw new NowBuildError({
-        message: `Required files read using Node.js fs library and node_modules exceed max lambda size of ${lambdaCompressedByteLimit} bytes`,
+        message: `Required files read using Node.js fs library and node_modules exceed max lambda size of ${MAX_UNCOMPRESSED_LAMBDA_SIZE} bytes`,
         code: 'NEXT_REQUIRED_FILES_LIMIT',
         link: 'https://vercel.com/docs/platform/limits#serverless-function-size',
       });
@@ -889,7 +899,6 @@ export async function serverBuild({
       experimentalPPRRoutes: undefined,
       tracedPseudoLayer: tracedPseudoLayer.pseudoLayer,
       initialPseudoLayer,
-      lambdaCompressedByteLimit,
       initialPseudoLayerUncompressed: uncompressedInitialSize,
       internalPages,
       pageExtensions,
@@ -911,7 +920,6 @@ export async function serverBuild({
       experimentalPPRRoutes,
       tracedPseudoLayer: tracedPseudoLayer.pseudoLayer,
       initialPseudoLayer,
-      lambdaCompressedByteLimit,
       initialPseudoLayerUncompressed: uncompressedInitialSize,
       internalPages,
       pageExtensions,
@@ -930,18 +938,30 @@ export async function serverBuild({
       experimentalPPRRoutes: undefined,
       tracedPseudoLayer: tracedPseudoLayer.pseudoLayer,
       initialPseudoLayer,
-      lambdaCompressedByteLimit,
       initialPseudoLayerUncompressed: uncompressedInitialSize,
       internalPages,
       pageExtensions,
       inversedAppPathManifest,
     });
 
+    const appRouterStreamingActionLambdaGroups: LambdaGroup[] = [];
+
     for (const group of appRouterLambdaGroups) {
       if (!group.isPrerenders || group.isExperimentalPPR) {
         group.isStreaming = true;
       }
+
       group.isAppRouter = true;
+
+      // We create a streaming variant of the Prerender lambda group
+      // to support actions that are part of a Prerender
+      if (hasActionOutputSupport) {
+        appRouterStreamingActionLambdaGroups.push({
+          ...group,
+          isActionLambda: true,
+          isStreaming: true,
+        });
+      }
     }
 
     for (const group of appRouteHandlersLambdaGroups) {
@@ -964,7 +984,6 @@ export async function serverBuild({
       tracedPseudoLayer: tracedPseudoLayer.pseudoLayer,
       initialPseudoLayer,
       initialPseudoLayerUncompressed: uncompressedInitialSize,
-      lambdaCompressedByteLimit,
       internalPages,
       pageExtensions,
     });
@@ -979,25 +998,42 @@ export async function serverBuild({
           apiLambdaGroups: apiLambdaGroups.map(group => ({
             pages: group.pages,
             isPrerender: group.isPrerenders,
+            isStreaming: group.isStreaming,
+            isExperimentalPPR: group.isExperimentalPPR,
             pseudoLayerBytes: group.pseudoLayerBytes,
             uncompressedLayerBytes: group.pseudoLayerUncompressedBytes,
           })),
           pageLambdaGroups: pageLambdaGroups.map(group => ({
             pages: group.pages,
             isPrerender: group.isPrerenders,
+            isStreaming: group.isStreaming,
+            isExperimentalPPR: group.isExperimentalPPR,
             pseudoLayerBytes: group.pseudoLayerBytes,
             uncompressedLayerBytes: group.pseudoLayerUncompressedBytes,
           })),
           appRouterLambdaGroups: appRouterLambdaGroups.map(group => ({
             pages: group.pages,
             isPrerender: group.isPrerenders,
+            isStreaming: group.isStreaming,
+            isExperimentalPPR: group.isExperimentalPPR,
             pseudoLayerBytes: group.pseudoLayerBytes,
             uncompressedLayerBytes: group.pseudoLayerUncompressedBytes,
           })),
+          appRouterStreamingPrerenderLambdaGroups:
+            appRouterStreamingActionLambdaGroups.map(group => ({
+              pages: group.pages,
+              isPrerender: group.isPrerenders,
+              isStreaming: group.isStreaming,
+              isExperimentalPPR: group.isExperimentalPPR,
+              pseudoLayerBytes: group.pseudoLayerBytes,
+              uncompressedLayerBytes: group.pseudoLayerUncompressedBytes,
+            })),
           appRouteHandlersLambdaGroups: appRouteHandlersLambdaGroups.map(
             group => ({
               pages: group.pages,
               isPrerender: group.isPrerenders,
+              isStreaming: group.isStreaming,
+              isExperimentalPPR: group.isExperimentalPPR,
               pseudoLayerBytes: group.pseudoLayerBytes,
               uncompressedLayerBytes: group.pseudoLayerUncompressedBytes,
             })
@@ -1011,20 +1047,25 @@ export async function serverBuild({
     const combinedGroups = [
       ...pageLambdaGroups,
       ...appRouterLambdaGroups,
+      ...appRouterStreamingActionLambdaGroups,
       ...apiLambdaGroups,
       ...appRouteHandlersLambdaGroups,
     ];
 
-    await detectLambdaLimitExceeding(
-      combinedGroups,
-      lambdaCompressedByteLimit,
-      compressedPages
-    );
+    await detectLambdaLimitExceeding(combinedGroups, compressedPages);
+
+    const appNotFoundTraces = pageTraces['_not-found.js'];
+    const appNotFoundPsuedoLayer =
+      appNotFoundTraces && (await createPseudoLayer(appNotFoundTraces));
 
     for (const group of combinedGroups) {
       const groupPageFiles: { [key: string]: PseudoFile } = {};
 
-      for (const page of [...group.pages, ...internalPages]) {
+      for (const page of [
+        ...group.pages,
+        ...internalPages,
+        ...(group.isAppRouter && appNotFoundTraces ? ['_not-found.js'] : []),
+      ]) {
         const pageFileName = path.normalize(
           path.relative(baseDir, lambdaPages[page].fsPath)
         );
@@ -1164,17 +1205,18 @@ export async function serverBuild({
         experimentalAllowBundling,
       };
 
-      const lambda = await createLambdaFromPseudoLayers(options);
+      // the app _not-found output should always be included
+      // if it was created otherwise notFound() handling could fail
+      if (group.isAppRouter && appNotFoundPsuedoLayer) {
+        options.layers.push(appNotFoundPsuedoLayer.pseudoLayer);
+      }
 
-      // This is a PPR lambda if it's an App Page with the PPR experimental flag
-      // enabled.
-      const isPPR =
-        experimental.ppr && group.isAppRouter && !group.isAppRouteHandler;
+      const lambda = await createLambdaFromPseudoLayers(options);
 
       // If PPR is enabled and this is an App Page, create the non-streaming
       // lambda for the page for revalidation.
       let revalidate: NodejsLambda | undefined;
-      if (isPPR) {
+      if (group.isExperimentalPPR) {
         if (!options.isStreaming) {
           throw new Error("Invariant: PPR lambda isn't streaming");
         }
@@ -1191,14 +1233,11 @@ export async function serverBuild({
         // This is the name of the page, where the root is `index`.
         const pageName = pageFilename.replace(/\.js$/, '');
 
-        // This is the name of the page prefixed with a `/`, where the root is
-        // `/index`.
-        const pagePath = path.posix.join('/', pageName);
-
         // This is the routable pathname for the page, where the root is `/`.
-        const pagePathname = pagePath === '/index' ? '/' : pagePath;
+        const pagePathname = normalizePage(pageName);
 
         let isPrerender = prerenderRoutes.has(pagePathname);
+        const isRoutePPREnabled = experimentalPPRRoutes.has(pagePathname);
 
         if (!isPrerender && routesManifest?.i18n) {
           isPrerender = routesManifest.i18n.locales.some(locale => {
@@ -1210,8 +1249,13 @@ export async function serverBuild({
 
         let outputName = path.posix.join(entryDirectory, pageName);
 
+        if (group.isActionLambda) {
+          // give the streaming prerenders a .action suffix
+          outputName = `${outputName}.action`;
+        }
+
         // If this is a PPR page, then we should prefix the output name.
-        if (isPPR) {
+        if (isRoutePPREnabled) {
           if (!revalidate) {
             throw new Error("Invariant: PPR lambda isn't set");
           }
@@ -1229,34 +1273,31 @@ export async function serverBuild({
             // We want to add the `experimentalStreamingLambdaPath` to this
             // output.
             experimentalStreamingLambdaPaths.set(outputName, key);
-          } else {
-            // As this is an omitted page, we should generate the experimental
-            // partial prerendering resume route for each of these routes that
-            // support partial prerendering. This is because the routes that
-            // haven't been omitted will have rewrite rules in place to rewrite
-            // the original request `/blog/my-slug` to the dynamic path
-            // `/blog/[slug]?nxtPslug=my-slug`.
-            for (const [
-              routePathname,
-              { srcRoute, experimentalPPR },
-            ] of Object.entries(prerenderManifest.staticRoutes)) {
-              // If the srcRoute doesn't match or this doesn't support
-              // experimental partial prerendering, then we can skip this route.
-              if (srcRoute !== pagePathname || !experimentalPPR) continue;
+          }
 
-              // If this route is the same as the page route, then we can skip
-              // it, because we've already added the lambda to the output.
-              if (routePathname === pagePathname) continue;
+          // For each static route that was generated, we should generate a
+          // specific partial prerendering resume route. This is because any
+          // static route that is matched will not hit the rewrite rules.
+          for (const [
+            routePathname,
+            { srcRoute, experimentalPPR },
+          ] of Object.entries(prerenderManifest.staticRoutes)) {
+            // If the srcRoute doesn't match or this doesn't support
+            // experimental partial prerendering, then we can skip this route.
+            if (srcRoute !== pagePathname || !experimentalPPR) continue;
 
-              const key = getPostponeResumePathname(
-                entryDirectory,
-                routePathname
-              );
-              lambdas[key] = lambda;
+            // If this route is the same as the page route, then we can skip
+            // it, because we've already added the lambda to the output.
+            if (routePathname === pagePathname) continue;
 
-              outputName = path.posix.join(entryDirectory, routePathname);
-              experimentalStreamingLambdaPaths.set(outputName, key);
-            }
+            const key = getPostponeResumePathname(
+              entryDirectory,
+              routePathname
+            );
+            lambdas[key] = lambda;
+
+            outputName = path.posix.join(entryDirectory, routePathname);
+            experimentalStreamingLambdaPaths.set(outputName, key);
           }
 
           continue;
@@ -1295,6 +1336,13 @@ export async function serverBuild({
     console.timeEnd(lambdaCreationLabel);
   }
 
+  if (isAppPPREnabled) {
+    debug(
+      'experimentalStreamingLambdaPaths',
+      JSON.stringify(Array.from(experimentalStreamingLambdaPaths))
+    );
+  }
+
   const prerenderRoute = onPrerenderRoute({
     appDir,
     pagesDir,
@@ -1314,7 +1362,7 @@ export async function serverBuild({
     hasPages404: routesManifest.pages404,
     isCorrectNotFoundRoutes,
     isEmptyAllowQueryForPrendered,
-    omittedPrerenderRoutes,
+    isAppPPREnabled,
   });
 
   await Promise.all(
@@ -1383,7 +1431,8 @@ export async function serverBuild({
     bypassToken: prerenderManifest.bypassToken || '',
     isServerMode: true,
     dynamicMiddlewareRouteMap: middleware.dynamicRouteMap,
-    experimentalPPRRoutes,
+    isAppPPREnabled,
+    hasActionOutputSupport,
   }).then(arr =>
     localizeDynamicRoutes(
       arr,
@@ -1563,10 +1612,23 @@ export async function serverBuild({
 
       if (lambdas[pathname]) {
         lambdas[`${pathname}.rsc`] = lambdas[pathname];
+
+        if (isAppPPREnabled) {
+          lambdas[`${pathname}${RSC_PREFETCH_SUFFIX}`] = lambdas[pathname];
+        }
       }
 
       if (edgeFunctions[pathname]) {
         edgeFunctions[`${pathname}.rsc`] = edgeFunctions[pathname];
+
+        if (isAppPPREnabled) {
+          edgeFunctions[`${pathname}${RSC_PREFETCH_SUFFIX}`] =
+            edgeFunctions[pathname];
+        }
+
+        if (hasActionOutputSupport) {
+          edgeFunctions[`${pathname}.action`] = edgeFunctions[pathname];
+        }
       }
     }
   }
@@ -1578,7 +1640,7 @@ export async function serverBuild({
     'RSC, Next-Router-State-Tree, Next-Router-Prefetch';
   const appNotFoundPath = path.posix.join('.', entryDirectory, '_not-found');
 
-  if (experimental.ppr && !rscPrefetchHeader) {
+  if (isAppPPREnabled && !rscPrefetchHeader) {
     throw new Error("Invariant: cannot use PPR without 'rsc.prefetchHeader'");
   }
 
@@ -1586,7 +1648,7 @@ export async function serverBuild({
   // all the routes that support it (and are listed) have configured lambdas.
   // This only applies to routes that do not have fallbacks enabled (these are
   // routes that have `dynamicParams =  false` defined.
-  if (experimental.ppr) {
+  if (isAppPPREnabled) {
     for (const { srcRoute, dataRoute, experimentalPPR } of Object.values(
       prerenderManifest.staticRoutes
     )) {
@@ -1869,7 +1931,7 @@ export async function serverBuild({
 
       ...(appDir
         ? [
-            ...(rscPrefetchHeader
+            ...(rscPrefetchHeader && isAppPPREnabled
               ? [
                   {
                     src: `^${path.posix.join('/', entryDirectory, '/')}`,
@@ -1911,9 +1973,56 @@ export async function serverBuild({
                   },
                 ]
               : []),
-
+            ...(hasActionOutputSupport
+              ? [
+                  // Create rewrites for streaming prerenders (.action routes)
+                  // This contains separate rewrites for each possible "has" (action header, or content-type)
+                  // Also includes separate handling for index routes which should match to /index.action.
+                  // This follows the same pattern as the rewrites for .rsc files.
+                  {
+                    src: `^${path.posix.join('/', entryDirectory, '/?')}`,
+                    dest: path.posix.join('/', entryDirectory, '/index.action'),
+                    has: [
+                      {
+                        type: 'header',
+                        key: 'next-action',
+                      },
+                    ],
+                    missing: [
+                      {
+                        type: 'header',
+                        key: rscHeader,
+                      },
+                    ],
+                    continue: true,
+                    override: true,
+                  },
+                  {
+                    src: `^${path.posix.join(
+                      '/',
+                      entryDirectory,
+                      '/((?!.+\\.action).+?)(?:/)?$'
+                    )}`,
+                    dest: path.posix.join('/', entryDirectory, '/$1.action'),
+                    has: [
+                      {
+                        type: 'header',
+                        key: 'next-action',
+                      },
+                    ],
+                    missing: [
+                      {
+                        type: 'header',
+                        key: rscHeader,
+                      },
+                    ],
+                    continue: true,
+                    override: true,
+                  },
+                ]
+              : []),
             {
-              src: `^${path.posix.join('/', entryDirectory, '/')}`,
+              src: `^${path.posix.join('/', entryDirectory, '/?')}`,
               has: [
                 {
                   type: 'header',
@@ -1976,50 +2085,28 @@ export async function serverBuild({
           ]
         : []),
 
-      ...(rscPrefetchHeader && !experimental.ppr
-        ? [
-            {
-              src: path.posix.join(
-                '/',
-                entryDirectory,
-                `/__index${RSC_PREFETCH_SUFFIX}`
-              ),
-              dest: path.posix.join('/', entryDirectory, '/index.rsc'),
-              has: [
-                {
-                  type: 'header',
-                  key: rscPrefetchHeader,
-                },
-              ],
-              continue: true,
-              override: true,
-            },
-            {
-              src: `^${path.posix.join(
-                '/',
-                entryDirectory,
-                `/(.+?)${RSC_PREFETCH_SUFFIX}(?:/)?$`
-              )}`,
-              dest: path.posix.join(
-                '/',
-                entryDirectory,
-                `/$1${experimental.ppr ? RSC_PREFETCH_SUFFIX : '.rsc'}`
-              ),
-              has: [
-                {
-                  type: 'header',
-                  key: rscPrefetchHeader,
-                },
-              ],
-              continue: true,
-              override: true,
-            },
-          ]
-        : []),
-
       // These need to come before handle: miss or else they are grouped
       // with that routing section
       ...afterFilesRewrites,
+
+      // Ensure that after we normalize `afterFilesRewrites`, unmatched actions are routed to the correct handler
+      // e.g. /foo/.action -> /foo.action. This should only ever match in cases where we're routing to an action handler
+      // and the rewrite normalization led to something like /foo/$1$rscsuff, and $1 had no match.
+      // This is meant to have parity with the .rsc handling below.
+      ...(hasActionOutputSupport
+        ? [
+            {
+              src: `${path.posix.join('/', entryDirectory, '/\\.action$')}`,
+              dest: `${path.posix.join('/', entryDirectory, '/index.action')}`,
+              check: true,
+            },
+            {
+              src: `${path.posix.join('/', entryDirectory, '(.+)/\\.action$')}`,
+              dest: `${path.posix.join('/', entryDirectory, '$1.action')}`,
+              check: true,
+            },
+          ]
+        : []),
 
       // ensure non-normalized /.rsc from rewrites is handled
       ...(appPathRoutesManifest
@@ -2034,8 +2121,26 @@ export async function serverBuild({
               check: true,
             },
             {
+              src: path.posix.join(
+                '/',
+                entryDirectory,
+                '(.+)/\\.prefetch\\.rsc$'
+              ),
+              dest: path.posix.join(
+                '/',
+                entryDirectory,
+                `$1${RSC_PREFETCH_SUFFIX}`
+              ),
+              check: true,
+            },
+            {
               src: path.posix.join('/', entryDirectory, '/\\.rsc$'),
               dest: path.posix.join('/', entryDirectory, `/index.rsc`),
+              check: true,
+            },
+            {
+              src: path.posix.join('/', entryDirectory, '(.+)/\\.rsc$'),
+              dest: path.posix.join('/', entryDirectory, '$1.rsc'),
               check: true,
             },
           ]
