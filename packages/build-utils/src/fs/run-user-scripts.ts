@@ -354,12 +354,9 @@ export async function scanParentDirs(
     lockfileVersion = 0;
   } else {
     const packageJsonPackageManager = packageJson?.packageManager;
-    if (
-      packageJsonPackageManager &&
-      usingCorepack(process.env, packageJsonPackageManager)
-    ) {
+    if (usingCorepack(process.env, packageJsonPackageManager)) {
       const corepackPackageManager = validateVersionSpecifier(
-        packageJsonPackageManager
+        packageJsonPackageManager as string
       );
       switch (corepackPackageManager?.packageName) {
         case 'npm':
@@ -368,9 +365,13 @@ export async function scanParentDirs(
         case 'bun':
           cliType = corepackPackageManager.packageName;
           break;
-        default:
+        case undefined:
           cliType = 'npm';
           break;
+        default:
+          throw new Error(
+            `Unknown package manager "${corepackPackageManager?.packageName}". Change your package.json "packageManager" field to a known package manager.`
+          );
       }
     } else {
       cliType = 'npm';
