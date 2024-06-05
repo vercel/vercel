@@ -353,29 +353,9 @@ export async function scanParentDirs(
     // TODO: read "bun-lockfile-format-v0"
     lockfileVersion = 0;
   } else {
-    const packageJsonPackageManager = packageJson?.packageManager;
-    if (usingCorepack(process.env, packageJsonPackageManager)) {
-      const corepackPackageManager = validateVersionSpecifier(
-        packageJsonPackageManager as string
-      );
-      switch (corepackPackageManager?.packageName) {
-        case 'npm':
-        case 'pnpm':
-        case 'yarn':
-        case 'bun':
-          cliType = corepackPackageManager.packageName;
-          break;
-        case undefined:
-          cliType = 'npm';
-          break;
-        default:
-          throw new Error(
-            `Unknown package manager "${corepackPackageManager?.packageName}". Change your package.json "packageManager" field to a known package manager.`
-          );
-      }
-    } else {
-      cliType = 'npm';
-    }
+    cliType = packageJson
+      ? detectPackageManagerNameWithoutLockfile(packageJson)
+      : 'npm';
   }
 
   const packageJsonPath = pkgJsonPath || undefined;
@@ -386,6 +366,29 @@ export async function scanParentDirs(
     lockfileVersion,
     packageJsonPath,
   };
+}
+
+function detectPackageManagerNameWithoutLockfile(packageJson: PackageJson) {
+  const packageJsonPackageManager = packageJson.packageManager;
+  if (usingCorepack(process.env, packageJsonPackageManager)) {
+    const corepackPackageManager = validateVersionSpecifier(
+      packageJsonPackageManager as string
+    );
+    switch (corepackPackageManager?.packageName) {
+      case 'npm':
+      case 'pnpm':
+      case 'yarn':
+      case 'bun':
+        return corepackPackageManager.packageName;
+      case undefined:
+        return 'npm';
+      default:
+        throw new Error(
+          `Unknown package manager "${corepackPackageManager?.packageName}". Change your package.json "packageManager" field to a known package manager.`
+        );
+    }
+  }
+  return 'npm';
 }
 
 function usingCorepack(
