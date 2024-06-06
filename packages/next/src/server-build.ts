@@ -212,7 +212,8 @@ export async function serverBuild({
   );
   const hasActionOutputSupport =
     semver.gte(nextVersion, ACTION_OUTPUT_SUPPORT_VERSION) &&
-    Boolean(process.env.NEXT_EXPERIMENTAL_STREAMING_ACTIONS);
+    Boolean(process.env.NEXT_EXPERIMENTAL_STREAMING_ACTIONS) &&
+    !routesManifest.i18n;
   const projectDir = requiredServerFilesManifest.relativeAppDir
     ? path.join(baseDir, requiredServerFilesManifest.relativeAppDir)
     : requiredServerFilesManifest.appDir || entryPath;
