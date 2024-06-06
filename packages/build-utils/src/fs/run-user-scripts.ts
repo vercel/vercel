@@ -884,39 +884,6 @@ function detectPackageManager(
   }
 }
 
-function validateVersionSpecifier(version: string) {
-  if (!version) {
-    return undefined;
-  }
-
-  const [before, after, ...extra] = version.split('@');
-
-  if (extra.length) {
-    // should not have more than one `@`
-    return undefined;
-  }
-
-  if (!before) {
-    // should have a package before the `@`
-    return undefined;
-  }
-
-  if (!after) {
-    // should have a version after the `@`
-    return undefined;
-  }
-
-  if (!validRange(after)) {
-    // the version after the `@` should be a valid semver value
-    return undefined;
-  }
-
-  return {
-    packageName: before,
-    packageVersionRange: after,
-  };
-}
-
 /**
  * Helper to get the binary paths that link to the used package manager.
  * Note: Make sure it doesn't contain any `console.log` calls.
