@@ -20,8 +20,8 @@ describe('when loading from the request context', () => {
   const token = randomUUID();
 
   beforeEach(() => {
-    // @ts-ignore
     globalThis[
+      // @ts-ignore
       Symbol.for(
         '@vercel/request-context'
       ) as unknown as keyof typeof globalThis
@@ -45,7 +45,7 @@ describe('when loading from the request context', () => {
 
 describe('when neither the environment variables or the request context is present', () => {
   it('throws an error', () => {
-    expect(() => getVercelOidcToken()).toThrowError(
+    expect(() => getVercelOidcToken()).toThrow(
       /The 'x-vercel-oidc-token' header is missing from the request/
     );
   });

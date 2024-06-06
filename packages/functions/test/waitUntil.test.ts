@@ -22,8 +22,8 @@ test.each([null, undefined, {}])(
   'waitUntil does not throw an error when context is %s',
   input => {
     const promise = Promise.resolve();
-    // @ts-ignore
     globalThis[
+      // @ts-ignore
       Symbol.for(
         '@vercel/request-context'
       ) as unknown as keyof typeof globalThis
@@ -35,8 +35,8 @@ test.each([null, undefined, {}])(
 test('waitUntil calls ctx.waitUntil when available', async () => {
   const promise = Promise.resolve();
   const waitUntilMock = jest.fn().mockReturnValue(promise);
-  // @ts-ignore
   globalThis[
+    // @ts-ignore
     Symbol.for('@vercel/request-context') as unknown as keyof typeof globalThis
   ] = {
     get: () => ({ waitUntil: waitUntilMock }),
