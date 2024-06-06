@@ -212,7 +212,8 @@ export async function serverBuild({
   );
   const hasActionOutputSupport =
     semver.gte(nextVersion, ACTION_OUTPUT_SUPPORT_VERSION) &&
-    Boolean(process.env.NEXT_EXPERIMENTAL_STREAMING_ACTIONS);
+    Boolean(process.env.NEXT_EXPERIMENTAL_STREAMING_ACTIONS) &&
+    !routesManifest.i18n;
   const projectDir = requiredServerFilesManifest.relativeAppDir
     ? path.join(baseDir, requiredServerFilesManifest.relativeAppDir)
     : requiredServerFilesManifest.appDir || entryPath;
@@ -2081,6 +2082,22 @@ export async function serverBuild({
               src: path.posix.join('/', entryDirectory, '_next/data/(.*)'),
               dest: path.posix.join('/', entryDirectory, '_next/data/$1'),
               check: true,
+            },
+          ]
+        : []),
+
+      // before processing rewrites, remove any special `/index` routes that were added
+      // as these won't be properly normalized by `afterFilesRewrites` / `dynamicRoutes`
+      ...(appPathRoutesManifest
+        ? [
+            {
+              src: path.posix.join(
+                '/',
+                entryDirectory,
+                '/index(\\.action|\\.rsc)'
+              ),
+              dest: path.posix.join('/', entryDirectory),
+              continue: true,
             },
           ]
         : []),
