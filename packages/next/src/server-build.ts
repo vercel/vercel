@@ -2090,7 +2090,7 @@ export async function serverBuild({
       ...(afterFilesRewrites.length > 0
         ? [
             {
-              src: path.posix.join('/', entryDirectory, '/index(.action|.rsc)'),
+              src: path.posix.join('/', entryDirectory, '/index(\\.action|\\.rsc)'),
               dest: path.posix.join('/', entryDirectory),
               continue: true,
             },
