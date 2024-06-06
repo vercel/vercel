@@ -1,15 +1,16 @@
+import { expect, it, vi } from 'vitest';
 import { awsCredentialsProvider } from '../src';
 
-const getVercelOidcTokenMock = jest.fn().mockReturnValue('token');
-jest.mock('../src/getVercelOidcToken', () => {
+const getVercelOidcTokenMock = vi.fn().mockReturnValue('token');
+vi.mock('../src/getVercelOidcToken', () => {
   return {
     getVercelOidcToken: () => getVercelOidcTokenMock(),
   };
 });
 
-const fromWebTokenExectionMock = jest.fn();
-const fromWebTokenMock = jest.fn().mockReturnValue(fromWebTokenExectionMock);
-jest.mock('@aws-sdk/credential-provider-web-identity', () => {
+const fromWebTokenExectionMock = vi.fn();
+const fromWebTokenMock = vi.fn().mockReturnValue(fromWebTokenExectionMock);
+vi.mock('@aws-sdk/credential-provider-web-identity', () => {
   return {
     fromWebToken: (...args: any[]) => fromWebTokenMock(...args),
   };

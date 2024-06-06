@@ -1,3 +1,4 @@
+import { describe, expect, it, beforeEach, afterEach } from 'vitest';
 import { getVercelOidcToken } from '../src';
 import { randomUUID } from 'crypto';
 

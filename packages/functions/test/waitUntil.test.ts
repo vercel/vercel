@@ -1,3 +1,5 @@
+import { expect, test, vi } from 'vitest';
+
 import { waitUntil } from '../src';
 
 test.each([
@@ -34,7 +36,7 @@ test.each([null, undefined, {}])(
 
 test('waitUntil calls ctx.waitUntil when available', async () => {
   const promise = Promise.resolve();
-  const waitUntilMock = jest.fn().mockReturnValue(promise);
+  const waitUntilMock = vi.fn().mockReturnValue(promise);
   globalThis[
     // @ts-ignore
     Symbol.for('@vercel/request-context') as unknown as keyof typeof globalThis
