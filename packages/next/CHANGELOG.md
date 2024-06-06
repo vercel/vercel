@@ -1,5 +1,13 @@
 # @vercel/next
 
+## 4.2.15
+
+### Patch Changes
+
+- ensure unmatched action rewrites are routed to correct handler ([#11686](https://github.com/vercel/vercel/pull/11686))
+
+- Adds a route for the `.rsc` pathname as well when app has ppr enabled but not all routes. ([#11681](https://github.com/vercel/vercel/pull/11681))
+
 ## 4.2.14
 
 ### Patch Changes
