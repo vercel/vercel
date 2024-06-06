@@ -2085,6 +2085,18 @@ export async function serverBuild({
           ]
         : []),
 
+      // before processing rewrites, remove any special `/index` routes that were added
+      // as these won't be properly normalized by `afterFilesRewrites`
+      ...(afterFilesRewrites.length > 0
+        ? [
+            {
+              src: path.posix.join('/', entryDirectory, '/index(.action|.rsc)'),
+              dest: path.posix.join('/', entryDirectory),
+              continue: true,
+            },
+          ]
+        : []),
+
       // These need to come before handle: miss or else they are grouped
       // with that routing section
       ...afterFilesRewrites,
