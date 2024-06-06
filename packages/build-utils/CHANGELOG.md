@@ -1,5 +1,15 @@
 # @vercel/build-utils
 
+## 8.2.2
+
+### Patch Changes
+
+- Change node 16.x EOL for Vercel ([#11704](https://github.com/vercel/vercel/pull/11704))
+
+- Improve error message and refactor ([#11706](https://github.com/vercel/vercel/pull/11706))
+
+- [built-utils] Handle case of not having lockfile when corepack is enabled ([#11697](https://github.com/vercel/vercel/pull/11697))
+
 ## 8.2.1
 
 ### Patch Changes
