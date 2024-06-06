@@ -359,7 +359,9 @@ export async function scanParentDirs(
     // TODO: read "bun-lockfile-format-v0"
     lockfileVersion = 0;
   } else {
-    cliType = 'npm';
+    cliType = packageJson
+      ? detectPackageManagerNameWithoutLockfile(packageJson)
+      : 'npm';
   }
 
   const packageJsonPath = pkgJsonPath || undefined;
@@ -370,6 +372,37 @@ export async function scanParentDirs(
     lockfileVersion,
     packageJsonPath,
   };
+}
+
+function detectPackageManagerNameWithoutLockfile(packageJson: PackageJson) {
+  const packageJsonPackageManager = packageJson.packageManager;
+  if (usingCorepack(process.env, packageJsonPackageManager)) {
+    const corepackPackageManager = validateVersionSpecifier(
+      packageJsonPackageManager as string
+    );
+    switch (corepackPackageManager?.packageName) {
+      case 'npm':
+      case 'pnpm':
+      case 'yarn':
+      case 'bun':
+        return corepackPackageManager.packageName;
+      case undefined:
+        return 'npm';
+      default:
+        throw new Error(
+          `Unknown package manager "${corepackPackageManager?.packageName}". Change your package.json "packageManager" field to a known package manager.`
+        );
+    }
+  }
+  return 'npm';
+}
+
+function usingCorepack(
+  env: { [x: string]: string | undefined },
+  packageJsonPackageManager: string | undefined
+) {
+  const corepackFlagged = env.ENABLE_EXPERIMENTAL_COREPACK === '1';
+  return corepackFlagged && Boolean(packageJsonPackageManager);
 }
 
 export async function walkParentDirs({
@@ -563,6 +596,8 @@ export function getEnvForPackageManager({
   nodeVersion: NodeVersion | undefined;
   env: { [x: string]: string | undefined };
 }) {
+  const corepackEnabled = usingCorepack(env, packageJsonPackageManager);
+
   const {
     detectedLockfile,
     detectedPackageManager,
@@ -574,8 +609,6 @@ export function getEnvForPackageManager({
     nodeVersion,
   });
 
-  const corepackFlagged = env.ENABLE_EXPERIMENTAL_COREPACK === '1';
-  const corepackEnabled = corepackFlagged && Boolean(packageJsonPackageManager);
   if (corepackEnabled) {
     debug(
       `Detected corepack use for "${packageJsonPackageManager}". Not overriding package manager version.`
@@ -849,6 +882,39 @@ function detectPackageManager(
     case 'yarn':
       return undefined;
   }
+}
+
+function validateVersionSpecifier(version: string) {
+  if (!version) {
+    return undefined;
+  }
+
+  const [before, after, ...extra] = version.split('@');
+
+  if (extra.length) {
+    // should not have more than one `@`
+    return undefined;
+  }
+
+  if (!before) {
+    // should have a package before the `@`
+    return undefined;
+  }
+
+  if (!after) {
+    // should have a version after the `@`
+    return undefined;
+  }
+
+  if (!validRange(after)) {
+    // the version after the `@` should be a valid semver value
+    return undefined;
+  }
+
+  return {
+    packageName: before,
+    packageVersionRange: after,
+  };
 }
 
 /**

@@ -429,6 +429,31 @@
       },
       "mustContain": ":{",
       "mustNotContain": "<html"
+    },
+    {
+      "path": "/greedy-rewrite/test-page",
+      "status": 200,
+      "mustContain": ":{",
+      "mustNotContain": "<html",
+      "responseHeaders": {
+        "x-matched-path": "/test-page.rsc"
+      },
+      "headers": {
+        "RSC": "1"
+      }
+    },
+    {
+      "path": "/greedy-rewrite/test-page",
+      "status": 200,
+      "mustContain": ":{",
+      "mustNotContain": "<html",
+      "responseHeaders": {
+        "x-matched-path": "/test-page.rsc"
+      },
+      "headers": {
+        "RSC": "1",
+        "Next-Router-Prefetch": "1"
+      }
     }
   ]
 }

@@ -293,6 +293,43 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
         expect(res.headers.get('x-edge-runtime')).toBe('1');
       }
     });
+
+    it('should work when a rewrite greedy matches an action rewrite', async () => {
+      const targetPath = `${basePath}/static`;
+      const canonicalPath = `/greedy-rewrite/${basePath}/static`;
+      const actionId = findActionId(targetPath, runtime);
+
+      const res = await fetch(
+        `${ctx.deploymentUrl}${canonicalPath}`,
+        generateFormDataPayload(actionId)
+      );
+
+      expect(res.status).toEqual(200);
+      expect(res.headers.get('x-matched-path')).toBe(targetPath + '.action');
+      expect(res.headers.get('content-type')).toBe('text/x-component');
+      if (runtime === 'node') {
+        expect(res.headers.get('x-vercel-cache')).toBe('MISS');
+      } else {
+        expect(res.headers.get('x-edge-runtime')).toBe('1');
+      }
+    });
+  });
+
+  describe('rewrite to index', () => {
+    it('should work when user has a rewrite to the index route', async () => {
+      const canonicalPath = '/rewritten-to-index';
+      const actionId = findActionId('', 'node');
+
+      const res = await fetch(
+        `${ctx.deploymentUrl}${canonicalPath}`,
+        generateFormDataPayload(actionId)
+      );
+
+      expect(res.status).toEqual(200);
+      expect(res.headers.get('x-matched-path')).toBe('/index.action');
+      expect(res.headers.get('content-type')).toBe('text/x-component');
+      expect(res.headers.get('x-vercel-cache')).toBe('MISS');
+    });
   });
 
   describe('pages', () => {
