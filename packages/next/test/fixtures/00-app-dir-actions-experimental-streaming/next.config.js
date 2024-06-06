@@ -21,6 +21,16 @@ module.exports = {
         source: '/rewritten-to-index',
         destination: '/?fromRewrite=1',
       },
+      {
+        source: '/:path*',
+        destination: '/static/:path*',
+        has: [
+          {
+            type: 'header',
+            key: 'x-rewrite-me',
+          },
+        ],
+      },
     ];
   },
 };
