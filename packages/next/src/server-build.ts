@@ -2088,7 +2088,7 @@ export async function serverBuild({
 
       // before processing rewrites, remove any special `/index` routes that were added
       // as these won't be properly normalized by `afterFilesRewrites`
-      ...(afterFilesRewrites.length > 0
+      ...(appPathRoutesManifest && afterFilesRewrites.length > 0
         ? [
             {
               src: path.posix.join(
