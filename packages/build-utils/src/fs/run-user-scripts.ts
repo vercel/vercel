@@ -372,7 +372,7 @@ function detectPackageManagerNameWithoutLockfile(packageJson: PackageJson) {
   const packageJsonPackageManager = packageJson.packageManager;
   if (usingCorepack(process.env, packageJsonPackageManager)) {
     const corepackPackageManager = validateVersionSpecifier(
-      packageJsonPackageManager as string
+      packageJsonPackageManager
     );
     switch (corepackPackageManager?.packageName) {
       case 'npm':
@@ -785,7 +785,7 @@ export function getPathOverrideForPackageManager({
   }
 }
 
-function validateVersionSpecifier(version: string) {
+function validateVersionSpecifier(version?: string) {
   if (!version) {
     return undefined;
   }
