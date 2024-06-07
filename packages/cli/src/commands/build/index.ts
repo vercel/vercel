@@ -585,8 +585,11 @@ async function doBuild(
       }
       throw err;
     } finally {
+      // todo: can this ever throw and fail?
+      // (should be fine because we were already using it in the hot path)
       framework = await getFramework(workPath, buildResults);
 
+      // todo: extract in a separate function
       diagnostics['framework.json'] = new FileBlob({
         data: Buffer.from(
           JSON.stringify({
