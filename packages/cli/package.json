@@ -1,6 +1,6 @@
 {
   "name": "vercel",
-  "version": "34.2.5",
+  "version": "34.2.6",
   "preferGlobal": true,
   "license": "Apache-2.0",
   "description": "The command-line interface for Vercel",
@@ -32,17 +32,17 @@
     "node": ">= 16"
   },
   "dependencies": {
-    "@vercel/build-utils": "8.2.1",
+    "@vercel/build-utils": "8.2.2",
     "@vercel/fun": "1.1.0",
     "@vercel/go": "3.1.1",
     "@vercel/hydrogen": "1.0.2",
-    "@vercel/next": "4.2.15",
-    "@vercel/node": "3.1.6",
+    "@vercel/next": "4.2.16",
+    "@vercel/node": "3.1.7",
     "@vercel/python": "4.3.0",
-    "@vercel/redwood": "2.0.9",
-    "@vercel/remix-builder": "2.1.6",
+    "@vercel/redwood": "2.0.10",
+    "@vercel/remix-builder": "2.1.7",
     "@vercel/ruby": "2.1.0",
-    "@vercel/static-build": "2.5.10",
+    "@vercel/static-build": "2.5.11",
     "chokidar": "3.3.1"
   },
   "devDependencies": {
@@ -92,8 +92,8 @@
     "@types/yauzl-promise": "2.1.0",
     "@vercel-internals/constants": "1.0.4",
     "@vercel-internals/get-package-json": "1.0.0",
-    "@vercel-internals/types": "1.0.37",
-    "@vercel/client": "13.2.8",
+    "@vercel-internals/types": "1.0.38",
+    "@vercel/client": "13.2.9",
     "@vercel/error-utils": "2.0.2",
     "@vercel/frameworks": "3.0.2",
     "@vercel/fs-detectors": "5.2.4",
