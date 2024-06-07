@@ -263,6 +263,7 @@ test('[vc build] should build project with corepack and select pnpm@7.1.0', asyn
       path.join(directory, '.vercel/cache/corepack')
     );
     expect(contents).toEqual(['home', 'shim']);
+    expect(output.stdout).toMatch(/Running "pnpm run build"/gm);
   } finally {
     delete process.env.ENABLE_EXPERIMENTAL_COREPACK;
   }
@@ -291,6 +292,7 @@ test('[vc build] should build project with corepack and select yarn@2.4.3', asyn
       path.join(directory, '.vercel/cache/corepack')
     );
     expect(contents).toEqual(['home', 'shim']);
+    expect(output.stdout).toMatch(/Running "yarn run build"/gm);
   } finally {
     delete process.env.ENABLE_EXPERIMENTAL_COREPACK;
   }

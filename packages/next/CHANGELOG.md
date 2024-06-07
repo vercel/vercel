@@ -1,5 +1,23 @@
 # @vercel/next
 
+## 4.2.16
+
+### Patch Changes
+
+- prevent /index from being incorrectly normalized in rewrites ([#11707](https://github.com/vercel/vercel/pull/11707))
+
+- Upgrade to @vercel/nft 0.27.2 with browser remapping support ([#11700](https://github.com/vercel/vercel/pull/11700))
+
+- ensure unmatched rsc rewrites are routed to correct handler ([#11688](https://github.com/vercel/vercel/pull/11688))
+
+## 4.2.15
+
+### Patch Changes
+
+- ensure unmatched action rewrites are routed to correct handler ([#11686](https://github.com/vercel/vercel/pull/11686))
+
+- Adds a route for the `.rsc` pathname as well when app has ppr enabled but not all routes. ([#11681](https://github.com/vercel/vercel/pull/11681))
+
 ## 4.2.14
 
 ### Patch Changes

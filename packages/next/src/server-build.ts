@@ -212,7 +212,8 @@ export async function serverBuild({
   );
   const hasActionOutputSupport =
     semver.gte(nextVersion, ACTION_OUTPUT_SUPPORT_VERSION) &&
-    Boolean(process.env.NEXT_EXPERIMENTAL_STREAMING_ACTIONS);
+    Boolean(process.env.NEXT_EXPERIMENTAL_STREAMING_ACTIONS) &&
+    !routesManifest.i18n;
   const projectDir = requiredServerFilesManifest.relativeAppDir
     ? path.join(baseDir, requiredServerFilesManifest.relativeAppDir)
     : requiredServerFilesManifest.appDir || entryPath;
@@ -2085,9 +2086,44 @@ export async function serverBuild({
           ]
         : []),
 
+      // before processing rewrites, remove any special `/index` routes that were added
+      // as these won't be properly normalized by `afterFilesRewrites` / `dynamicRoutes`
+      ...(appPathRoutesManifest
+        ? [
+            {
+              src: path.posix.join(
+                '/',
+                entryDirectory,
+                '/index(\\.action|\\.rsc)'
+              ),
+              dest: path.posix.join('/', entryDirectory),
+              continue: true,
+            },
+          ]
+        : []),
+
       // These need to come before handle: miss or else they are grouped
       // with that routing section
       ...afterFilesRewrites,
+
+      // Ensure that after we normalize `afterFilesRewrites`, unmatched actions are routed to the correct handler
+      // e.g. /foo/.action -> /foo.action. This should only ever match in cases where we're routing to an action handler
+      // and the rewrite normalization led to something like /foo/$1$rscsuff, and $1 had no match.
+      // This is meant to have parity with the .rsc handling below.
+      ...(hasActionOutputSupport
+        ? [
+            {
+              src: `${path.posix.join('/', entryDirectory, '/\\.action$')}`,
+              dest: `${path.posix.join('/', entryDirectory, '/index.action')}`,
+              check: true,
+            },
+            {
+              src: `${path.posix.join('/', entryDirectory, '(.+)/\\.action$')}`,
+              dest: `${path.posix.join('/', entryDirectory, '$1.action')}`,
+              check: true,
+            },
+          ]
+        : []),
 
       // ensure non-normalized /.rsc from rewrites is handled
       ...(appPathRoutesManifest
@@ -2102,8 +2138,26 @@ export async function serverBuild({
               check: true,
             },
             {
+              src: path.posix.join(
+                '/',
+                entryDirectory,
+                '(.+)/\\.prefetch\\.rsc$'
+              ),
+              dest: path.posix.join(
+                '/',
+                entryDirectory,
+                `$1${RSC_PREFETCH_SUFFIX}`
+              ),
+              check: true,
+            },
+            {
               src: path.posix.join('/', entryDirectory, '/\\.rsc$'),
               dest: path.posix.join('/', entryDirectory, `/index.rsc`),
+              check: true,
+            },
+            {
+              src: path.posix.join('/', entryDirectory, '(.+)/\\.rsc$'),
+              dest: path.posix.join('/', entryDirectory, '$1.rsc'),
               check: true,
             },
           ]
