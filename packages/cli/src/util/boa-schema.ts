@@ -17,7 +17,9 @@ export const buildsSchema = z.object({
       //   // const exists = await fs.existsSync(x);
       //   return true;
       // }),
-      apiVersion: z.union([z.literal(2), z.literal(3)]),
+      apiVersion: z
+        .union([z.literal(0), z.literal(1), z.literal(2), z.literal(3)])
+        .nullish(), // not sure what numbers are permitted, need to fix union error message
       use: z.string(), // eg. @vercel/node
       src: z.string(),
       config: z.object({ zeroConfig: z.boolean() }).nullish(),
@@ -46,7 +48,7 @@ export const configSchema = z.object({
         z.object({
           src: z.string().nullish(),
           status: z.number().nullish(),
-          headers: z.object({ Location: z.string() }).nullish(),
+          headers: z.record(z.string(), z.string()).nullish(),
           dest: z.string().nullish(),
           continue: z.boolean().nullish(),
           check: z.boolean().nullish(),
@@ -68,13 +70,15 @@ export const configSchema = z.object({
       domains: z.array(z.string()),
       minimumCacheTTL: z.number(),
       formats: z.array(z.string()),
-      remotePatterns: z.array(
-        z.object({
-          protocol: z.string(),
-          hostname: z.string(),
-          pathname: z.string(),
-        })
-      ),
+      remotePatterns: z
+        .array(
+          z.object({
+            protocol: z.string(),
+            hostname: z.string(),
+            pathname: z.string(),
+          })
+        )
+        .nullish(),
     })
     .nullish(),
   wildcard: z
@@ -97,8 +101,8 @@ export const configSchema = z.object({
 
 export const vcServerlessSchema = z.object({
   operationType: z.enum(['ISR']).nullish(),
-  handler: z.string(), // this is a file that should be present '___next_launcher.cjs',
-  runtime: z.enum(['nodejs20.x']), // not sure if this value is standardized
+  handler: z.string().nullish(), // this is a file that should be present '___next_launcher.cjs',
+  runtime: z.enum(['provided', 'nodejs18.x', 'nodejs20.x', 'edge']), // not sure if this value is standardized
   environment: z.record(z.string(), z.string()), // docs say this is an array
   supportsMultiPayloads: z.boolean().nullish(), // not documented
   framework: z
@@ -108,21 +112,25 @@ export const vcServerlessSchema = z.object({
     })
     .nullish(),
   experimentalAllowBundling: z.boolean().nullish(),
-  launcherType: z.literal('Nodejs'), // currently only supports Nodejs
-  shouldAddHelpers: z.boolean(),
-  shouldAddSourcemapSupport: z.boolean(),
+  launcherType: z.literal('Nodejs').nullish(), // currently only supports Nodejs
+  shouldAddHelpers: z.boolean().nullish(),
+  shouldAddSourcemapSupport: z.boolean().nullish(),
 });
 
 export const vcEdgeFunctionsSchema = z.object({
   runtime: z.literal('edge'),
-  deploymentTarget: z.enum(['v8-worker']),
+  deploymentTarget: z.enum(['v8-worker']).nullish(),
   entrypoint: z.string(), // this is afile that should be checked. Also ensure it's ['.js', '.json', '.wasm']
-  envVarsInUse: z.array(z.string()),
-  framework: z.object({
-    slug: z.enum(['remix']),
-    version: z.string(),
-  }),
-  regions: z.union([z.literal('all'), z.string(), z.array(z.string())]),
+  envVarsInUse: z.array(z.string()).nullish(),
+  framework: z
+    .object({
+      slug: z.enum(['remix']),
+      version: z.string(),
+    })
+    .nullish(),
+  regions: z
+    .union([z.literal('all'), z.string(), z.array(z.string())])
+    .nullish(),
 });
 
 export const prerenderFunctionsSchema = z.object({
@@ -183,6 +191,8 @@ export const validateBOA = async (dir: string) => {
   const buildsResult = await buildsSchema.safeParseAsync(builds);
   if (buildsResult.error) {
     // eslint-disable-next-line no-console
+    console.log(`Error in builds.json file: ${dir}/build.json`);
+    // eslint-disable-next-line no-console
     console.log(buildsResult.error);
     throw buildsResult.error;
   }
@@ -191,6 +201,8 @@ export const validateBOA = async (dir: string) => {
   const config = await fs.readJSON(`${dir}/config.json`);
   const configResult = await configSchema.safeParseAsync(config);
   if (configResult.error) {
+    // eslint-disable-next-line no-console
+    console.log(`Error in config.json file: ${dir}/config.json`);
     // eslint-disable-next-line no-console
     console.log(configResult.error);
     throw configResult.error;
@@ -205,6 +217,8 @@ export const validateBOA = async (dir: string) => {
       {}
     );
     if (vcConfigResult.error) {
+      // eslint-disable-next-line no-console
+      console.log(`Error in ${vcConfig}`);
       // eslint-disable-next-line no-console
       console.log(vcConfigResult.error);
       throw vcConfigResult.error;
@@ -222,6 +236,8 @@ export const validateBOA = async (dir: string) => {
       {}
     );
     if (prerenderResult.error) {
+      // eslint-disable-next-line no-console
+      console.log(`Error in ${prerenderConfig}`);
       // eslint-disable-next-line no-console
       console.log(prerenderResult.error);
       throw prerenderResult.error;
