@@ -2727,6 +2727,8 @@ export const build: BuildV2 = async ({
 };
 
 export const diagnostics: Diagnostics = async () => {
+  // todo: remove the lines below
+  // instead, we want to read the content of `.next/diagnostics` and put it in diagnostics
   return {
     'test.txt': new FileBlob({ data: Buffer.from('hello') }),
   };

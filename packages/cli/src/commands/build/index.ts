@@ -535,6 +535,7 @@ async function doBuild(
       try {
         buildResult = await builder.build(buildOptions);
       } finally {
+        // todo: maybe wrap with try/catch, so when it fails, we don't fail the build (we can just log internally)
         Object.assign(diagnostics, await builder.diagnostics?.(buildOptions));
       }
 
@@ -593,6 +594,7 @@ async function doBuild(
       diagnostics['framework.json'] = new FileBlob({
         data: Buffer.from(
           JSON.stringify({
+            // todo: is this the right way to report the framework?
             slug: projectSettings.framework,
             version: framework?.version,
           })
