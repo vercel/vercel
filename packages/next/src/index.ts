@@ -2746,11 +2746,11 @@ export const diagnostics: Diagnostics = async ({
   return {
     ...(await glob(
       path.join(diagnosticsEntrypoint, outputDirectory, 'diagnostics/*'),
-      basePath
+      path.join(diagnosticsEntrypoint, outputDirectory, 'diagnostics')
     )),
     ...(await glob(
       path.join(diagnosticsEntrypoint, outputDirectory, 'trace'),
-      basePath
+      path.join(diagnosticsEntrypoint, outputDirectory, 'diagnostics')
     )),
   };
 };
