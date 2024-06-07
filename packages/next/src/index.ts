@@ -2726,11 +2726,22 @@ export const build: BuildV2 = async ({
   };
 };
 
-export const diagnostics: Diagnostics = async () => {
-  // todo: remove the lines below
-  // instead, we want to read the content of `.next/diagnostics` and put it in diagnostics
+export const diagnostics: Diagnostics = async ({
+  config,
+  entrypoint,
+  workPath,
+  repoRootPath,
+}) => {
+  const entryDirectory = path.dirname(entrypoint);
+  const entryPath = path.join(workPath, entryDirectory);
+  const outputDirectory = path.join('./', config.outputDirectory || '.next');
+  const basePath = repoRootPath || workPath;
+
   return {
-    'test.txt': new FileBlob({ data: Buffer.from('hello') }),
+    ...(await glob(
+      path.join(entryPath, outputDirectory, 'diagnostics/*'),
+      basePath
+    )),
   };
 };
 
