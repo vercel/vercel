@@ -479,6 +479,7 @@ async function doBuild(
   const repoRootPath = cwd;
   const corepackShimDir = await initCorepack({ repoRootPath }, output);
   const diagnostics: Files = {};
+  let framework: { version: string } | undefined = undefined;
 
   for (const build of sortedBuilders) {
     if (typeof build.src !== 'string') continue;
@@ -583,30 +584,30 @@ async function doBuild(
         buildJsonBuild.error = toEnumerableError(err);
       }
       throw err;
+    } finally {
+      framework = await getFramework(workPath, buildResults);
+
+      diagnostics['framework.json'] = new FileBlob({
+        data: Buffer.from(
+          JSON.stringify({
+            slug: projectSettings.framework,
+            version: framework?.version,
+          })
+        ),
+      });
+
+      ops.push(
+        download(diagnostics, join(outputDir, 'diagnostics')).then(
+          () => undefined,
+          err => err
+        )
+      );
     }
   }
 
   if (corepackShimDir) {
     cleanupCorepack(corepackShimDir);
   }
-
-  const framework = await getFramework(workPath, buildResults);
-
-  diagnostics['framework.json'] = new FileBlob({
-    data: Buffer.from(
-      JSON.stringify({
-        slug: projectSettings.framework,
-        version: framework?.version,
-      })
-    ),
-  });
-
-  ops.push(
-    download(diagnostics, join(outputDir, 'diagnostics')).then(
-      () => undefined,
-      err => err
-    )
-  );
 
   // Wait for filesystem operations to complete
   // TODO render progress bar?
