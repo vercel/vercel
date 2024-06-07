@@ -180,17 +180,35 @@ export const vcConfigSchema = z.union([
 export const validateBOA = async (dir: string) => {
   // find the builds.json file and validate it
   const builds = await fs.readJSON(`${dir}/builds.json`);
-  await buildsSchema.parseAsync(builds);
+  const buildsResult = await buildsSchema.safeParseAsync(builds);
+  if (buildsResult.error) {
+    // eslint-disable-next-line no-console
+    console.log(buildsResult.error);
+    throw buildsResult.error;
+  }
 
   // find the config.json file and validate it
   const config = await fs.readJSON(`${dir}/config.json`);
-  await configSchema.parseAsync(config);
+  const configResult = await configSchema.safeParseAsync(config);
+  if (configResult.error) {
+    // eslint-disable-next-line no-console
+    console.log(configResult.error);
+    throw configResult.error;
+  }
 
   // find all `.vc-config.json` files and validate them
   const vcConfigs = findAllFilesRecursively(dir, '.vc-config.json');
   for await (const vcConfig of vcConfigs) {
     const vcConfigJson = await fs.readJSON(vcConfig);
-    await vcConfigSchema.parseAsync(vcConfigJson, {});
+    const vcConfigResult = await vcConfigSchema.safeParseAsync(
+      vcConfigJson,
+      {}
+    );
+    if (vcConfigResult.error) {
+      // eslint-disable-next-line no-console
+      console.log(vcConfigResult.error);
+      throw vcConfigResult.error;
+    }
   }
 
   // find all `*.prerender-config.json` functions and validate them
@@ -199,6 +217,14 @@ export const validateBOA = async (dir: string) => {
   );
   for await (const prerenderConfig of prerenderConfigs) {
     const prerenderConfigJson = await fs.readJSON(prerenderConfig);
-    await prerenderFunctionsSchema.parseAsync(prerenderConfigJson, {});
+    const prerenderResult = await prerenderFunctionsSchema.safeParseAsync(
+      prerenderConfigJson,
+      {}
+    );
+    if (prerenderResult.error) {
+      // eslint-disable-next-line no-console
+      console.log(prerenderResult.error);
+      throw prerenderResult.error;
+    }
   }
 };
