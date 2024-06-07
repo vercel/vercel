@@ -2737,6 +2737,10 @@ export const diagnostics: Diagnostics = async ({
   const outputDirectory = path.join('./', config.outputDirectory || '.next');
   const basePath = repoRootPath || workPath;
 
+  debug(
+    `Reading diagnostics file in entryPath=${entryPath} outputDirectory=${outputDirectory}`
+  );
+
   return {
     ...(await glob(
       path.join(entryPath, outputDirectory, 'diagnostics/*'),
