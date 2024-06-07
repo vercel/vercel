@@ -17,10 +17,10 @@ export const buildsSchema = z.object({
       //   // const exists = await fs.existsSync(x);
       //   return true;
       // }),
-      apiVersion: z.literal(3),
+      apiVersion: z.union([z.literal('2'), z.literal('3')]),
       use: z.string(), // eg. @vercel/node
       src: z.string(),
-      config: z.object({ zeroConfig: z.boolean() }),
+      config: z.object({ zeroConfig: z.boolean() }).nullish(),
     })
   ),
 });
