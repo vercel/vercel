@@ -2736,17 +2736,21 @@ export const diagnostics: Diagnostics = async ({
   const entryPath = path.join(workPath, entryDirectory);
   const outputDirectory = path.join('./', config.outputDirectory || '.next');
   const basePath = repoRootPath || workPath;
+  const diagnosticsEntrypoint = path.relative(basePath, entryPath);
 
   debug(
-    `Reading diagnostics file in entryPath=${entryPath} outputDirectory=${outputDirectory}`
+    `Reading diagnostics file in diagnosticsEntrypoint=${diagnosticsEntrypoint}`
   );
 
   return {
     ...(await glob(
-      path.join(entryPath, outputDirectory, 'diagnostics/*'),
+      path.join(diagnosticsEntrypoint, outputDirectory, 'diagnostics/*'),
       basePath
     )),
-    ...(await glob(path.join(entryPath, outputDirectory, 'trace'), basePath)),
+    ...(await glob(
+      path.join(diagnosticsEntrypoint, outputDirectory, 'trace'),
+      basePath
+    )),
   };
 };
 
