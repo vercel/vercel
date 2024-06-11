@@ -1,0 +1,27 @@
+{
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next"
+    }
+  ],
+  "probes": [
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "\"page-param-\",\"\"",
+      "mustNotContain": "\"page-param-\",\"index\"",
+      "headers": {
+        "RSC": "1"
+      }
+    },
+    {
+      "path": "/foo",
+      "status": 200,
+      "mustContain": "\"page-param-\",\"foo\"",
+      "headers": {
+        "RSC": "1"
+      }
+    }
+  ]
+}
