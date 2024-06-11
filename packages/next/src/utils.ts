@@ -2477,8 +2477,9 @@ export const onPrerenderRoute =
       });
 
       if (hasActionOutputSupport) {
-        if (srcRoute !== routeKey && lambdas[`${srcRoute}.action`]) {
-          lambdas[`${routeKey}.action`] = lambdas[`${srcRoute}.action`];
+        const actionOutputKey = `${path.join('./', srcRoute || '')}.action`;
+        if (srcRoute !== routeKey && lambdas[actionOutputKey]) {
+          lambdas[`${routeKey}.action`] = lambdas[actionOutputKey];
         }
       }
 
