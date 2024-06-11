@@ -1953,6 +1953,7 @@ type OnPrerenderRouteArgs = {
   isCorrectNotFoundRoutes?: boolean;
   isEmptyAllowQueryForPrendered?: boolean;
   isAppPPREnabled: boolean;
+  hasActionOutputSupport?: boolean;
 };
 let prerenderGroup = 1;
 
@@ -1990,6 +1991,7 @@ export const onPrerenderRoute =
       isCorrectNotFoundRoutes,
       isEmptyAllowQueryForPrendered,
       isAppPPREnabled,
+      hasActionOutputSupport,
     } = prerenderRouteArgs;
 
     if (isBlocking && isFallback) {
@@ -2473,6 +2475,12 @@ export const onPrerenderRoute =
             }
           : {}),
       });
+
+      if (hasActionOutputSupport) {
+        if (srcRoute !== routeKey && lambdas[`${srcRoute}.action`]) {
+          lambdas[`${routeKey}.action`] = lambdas[`${srcRoute}.action`];
+        }
+      }
 
       const normalizePathData = (pathData: string) => {
         if (
