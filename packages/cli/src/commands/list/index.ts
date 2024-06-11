@@ -265,7 +265,8 @@ export default async function list(client: Client) {
 
   const headers = ['Age', 'Deployment', 'Status', 'Environment', 'Duration'];
   if (showUsername) headers.push('Username');
-  if (policy) headers.push(...['Expiration', 'Proposed Expiration']);
+  if (Object.keys(policy).length > 0)
+    headers.push(...['Expiration', 'Proposed Expiration']);
   const urls: string[] = [];
 
   client.output.print(
@@ -283,8 +284,10 @@ export default async function list(client: Client) {
               dep.target === 'production' ? 'Production' : 'Preview',
               chalk.gray(getDeploymentDuration(dep)),
               showUsername ? chalk.gray(dep.creator?.username) : '',
-              policy && dep.expiration ? ToDate(dep.expiration) : '',
-              policy && dep.proposedExpiration
+              Object.keys(policy).length > 0 && dep.expiration
+                ? ToDate(dep.expiration)
+                : '',
+              Object.keys(policy).length > 0 && dep.proposedExpiration
                 ? ToDate(dep.proposedExpiration)
                 : '',
             ];
