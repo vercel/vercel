@@ -1364,6 +1364,7 @@ export async function serverBuild({
     isCorrectNotFoundRoutes,
     isEmptyAllowQueryForPrendered,
     isAppPPREnabled,
+    hasActionOutputSupport,
   });
 
   await Promise.all(

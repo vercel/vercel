@@ -1953,6 +1953,7 @@ type OnPrerenderRouteArgs = {
   isCorrectNotFoundRoutes?: boolean;
   isEmptyAllowQueryForPrendered?: boolean;
   isAppPPREnabled: boolean;
+  hasActionOutputSupport?: boolean;
 };
 let prerenderGroup = 1;
 
@@ -1990,6 +1991,7 @@ export const onPrerenderRoute =
       isCorrectNotFoundRoutes,
       isEmptyAllowQueryForPrendered,
       isAppPPREnabled,
+      hasActionOutputSupport,
     } = prerenderRouteArgs;
 
     if (isBlocking && isFallback) {
@@ -2473,6 +2475,13 @@ export const onPrerenderRoute =
             }
           : {}),
       });
+
+      if (hasActionOutputSupport) {
+        const actionOutputKey = `${path.join('./', srcRoute || '')}.action`;
+        if (srcRoute !== routeKey && lambdas[actionOutputKey]) {
+          lambdas[`${routeKey}.action`] = lambdas[actionOutputKey];
+        }
+      }
 
       const normalizePathData = (pathData: string) => {
         if (
