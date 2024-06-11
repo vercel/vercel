@@ -221,7 +221,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
 
             expect(res.status).toEqual(200);
             expect(res.headers.get('x-matched-path')).toBe(
-              (basePath ? dynamic : path) + '.action'
+              (basePath ? dynamicPath : path) + '.action'
             );
             expect(res.headers.get('content-type')).toBe('text/x-component');
             if (runtime === 'node') {
