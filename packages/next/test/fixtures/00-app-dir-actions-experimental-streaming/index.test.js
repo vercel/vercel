@@ -221,7 +221,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
 
             expect(res.status).toEqual(200);
             expect(res.headers.get('x-matched-path')).toBe(
-              dynamicPath + '.action'
+              (basePath ? dynamic : path) + '.action'
             );
             expect(res.headers.get('content-type')).toBe('text/x-component');
             if (runtime === 'node') {
@@ -231,24 +231,28 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
             }
           });
 
-          it('should bypass the static cache for a server action when not pre-generated', async () => {
-            const page = `${basePath}/rsc/static/generate-static-params/${fallbackPath}/[slug]`;
-            const actionId = findActionId(page, runtime);
+          // if it's dynamicParams = false we have nothing to
+          // bypass to
+          if (fallbackPath !== 'no-fallback') {
+            it('should bypass the static cache for a server action when not pre-generated', async () => {
+              const page = `${basePath}/rsc/static/generate-static-params/${fallbackPath}/[slug]`;
+              const actionId = findActionId(page, runtime);
 
-            const res = await fetch(
-              `${ctx.deploymentUrl}/${basePath}/rsc/static/generate-static-params/${fallbackPath}/not-pre-generated`,
-              generateFormDataPayload(actionId)
-            );
+              const res = await fetch(
+                `${ctx.deploymentUrl}/${basePath}/rsc/static/generate-static-params/${fallbackPath}/not-pre-generated`,
+                generateFormDataPayload(actionId)
+              );
 
-            expect(res.status).toEqual(200);
-            expect(res.headers.get('x-matched-path')).toBe(page + '.action');
-            expect(res.headers.get('content-type')).toBe('text/x-component');
-            if (runtime === 'node') {
-              expect(res.headers.get('x-vercel-cache')).toBe('MISS');
-            } else {
-              expect(res.headers.get('x-edge-runtime')).toBe('1');
-            }
-          });
+              expect(res.status).toEqual(200);
+              expect(res.headers.get('x-matched-path')).toBe(page + '.action');
+              expect(res.headers.get('content-type')).toBe('text/x-component');
+              if (runtime === 'node') {
+                expect(res.headers.get('x-vercel-cache')).toBe('MISS');
+              } else {
+                expect(res.headers.get('x-edge-runtime')).toBe('1');
+              }
+            });
+          }
         });
       });
     });
