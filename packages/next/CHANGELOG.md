@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.2.17
+
+### Patch Changes
+
+- Ensure all prerenders have matching .action output ([#11719](https://github.com/vercel/vercel/pull/11719))
+
 ## 4.2.16
 
 ### Patch Changes
