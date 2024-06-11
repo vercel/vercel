@@ -64,9 +64,5 @@ export const listCommand: Command = {
       name: 'Paginate deployments for a project, where `1584722256178` is the time in milliseconds since the UNIX epoch',
       value: `${packageName} list my-app --next 1584722256178`,
     },
-    {
-      name: 'Preview deployments affected by deployment retention policies',
-      value: `${packageName} list -p canceled=1d -p errored=1w -p preview=1m -p production=1y`,
-    },
   ],
 };
