@@ -1,10 +1,10 @@
 import { expect, it, vi } from 'vitest';
-import { awsCredentialsProvider } from '../src';
+import { awsCredentialsProvider } from '../../src/oidc';
 
-const getVercelOidcTokenMock = vi.fn().mockReturnValue('token');
-vi.mock('../src/getVercelOidcToken', () => {
+const getVercelOidcTokenMock = vi.fn().mockResolvedValue('token');
+vi.mock('../../src/oidc/getVercelOidcToken', () => {
   return {
-    getVercelOidcToken: () => getVercelOidcTokenMock(),
+    getVercelOidcToken: async () => getVercelOidcTokenMock(),
   };
 });
 
@@ -32,7 +32,7 @@ it('calls fromWebToken with the correct arguments', async () => {
 
   expect(fromWebTokenMock).toHaveBeenCalledWith({
     ...init,
-    webIdentityToken: getVercelOidcTokenMock(),
+    webIdentityToken: await getVercelOidcTokenMock(),
   });
 });
 

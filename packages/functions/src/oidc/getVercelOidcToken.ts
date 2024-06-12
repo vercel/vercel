@@ -1,7 +1,7 @@
 /**
  * Returns the OIDC token from the request context or the environment variable.
  */
-export function getVercelOidcToken(): string {
+export async function getVercelOidcToken(): Promise<string> {
   if (process.env.VERCEL_OIDC_TOKEN) {
     return process.env.VERCEL_OIDC_TOKEN;
   }

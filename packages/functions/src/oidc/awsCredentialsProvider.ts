@@ -16,7 +16,7 @@ export type AwsCredentialsProviderInit = Omit<
  *
  * ```javascript
  * import * as s3 from '@aws-sdk/client-s3';
- * import { awsCredentialsProvider } from '@vercel/functions';
+ * import { awsCredentialsProvider } from '@vercel/functions/oidc';
  *
  * const s3Client = new s3.S3Client({
  *   credentials: awsCredentialsProvider({
@@ -53,7 +53,7 @@ export function awsCredentialsProvider(
     );
     return fromWebToken({
       ...init,
-      webIdentityToken: getVercelOidcToken(),
+      webIdentityToken: await getVercelOidcToken(),
     })();
   };
 }

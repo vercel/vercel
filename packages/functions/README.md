@@ -8,15 +8,13 @@
 
 [![Join the community on GitHub Discussions](https://badgen.net/badge/join%20the%20discussion/on%20github/black?icon=github)](https://github.com/vercel/vercel/discussions)
 
-# @vercel/functions
-
-## Usage
+## OIDC Support Functions
 
 ### AWS S3 Example
 
 ```ts
 import * as s3 from '@aws-sdk/client-s3';
-import { awsCredentialsProvider } from '@vercel/functions';
+import { awsCredentialsProvider } from '@vercel/functions/oidc';
 
 const s3Client = new s3.S3Client({
   credentials: awsCredentialsProvider({
@@ -39,12 +37,12 @@ export const GET = () => {
 ```ts
 import { ClientAssertionCredential } from '@azure/identity';
 import { CosmosClient } from '@azure/cosmos';
-import { getVercelOidcToken } from '@vercel/functions';
+import { getVercelOidcToken } from '@vercel/functions/oidc';
 
 const credentialsProvider = new ClientAssertionCredential(
   process.env.AZURE_TENANT_ID,
   process.env.AZURE_CLIENT_ID,
-  async () => getVercelOidcToken()
+  getVercelOidcToken
 );
 
 const cosmosClient = new CosmosClient({
