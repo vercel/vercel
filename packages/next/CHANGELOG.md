@@ -1,5 +1,21 @@
 # @vercel/next
 
+## 4.2.17
+
+### Patch Changes
+
+- Ensure all prerenders have matching .action output ([#11719](https://github.com/vercel/vercel/pull/11719))
+
+## 4.2.16
+
+### Patch Changes
+
+- prevent /index from being incorrectly normalized in rewrites ([#11707](https://github.com/vercel/vercel/pull/11707))
+
+- Upgrade to @vercel/nft 0.27.2 with browser remapping support ([#11700](https://github.com/vercel/vercel/pull/11700))
+
+- ensure unmatched rsc rewrites are routed to correct handler ([#11688](https://github.com/vercel/vercel/pull/11688))
+
 ## 4.2.15
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @vercel/remix-builder
 
+## 2.1.7
+
+### Patch Changes
+
+- Upgrade to @vercel/nft 0.27.2 with browser remapping support ([#11700](https://github.com/vercel/vercel/pull/11700))
+
 ## 2.1.6
 
 ### Patch Changes

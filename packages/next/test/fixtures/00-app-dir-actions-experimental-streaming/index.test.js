@@ -208,44 +208,50 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
       });
 
       describe('generateStaticParams', () => {
-        it('should bypass the static cache for a server action when pre-generated', async () => {
-          const path = `${basePath}/rsc/static/generate-static-params/pre-generated`;
-          const dynamicPath = `${basePath}/rsc/static/generate-static-params/[slug]`;
-          const actionId = findActionId(dynamicPath, runtime);
+        describe.each(['no-fallback', 'fallback'])('%s', fallbackPath => {
+          it('should bypass the static cache for a server action when pre-generated', async () => {
+            const path = `${basePath}/rsc/static/generate-static-params/${fallbackPath}/pre-generated`;
+            const dynamicPath = `${basePath}/rsc/static/generate-static-params/${fallbackPath}/[slug]`;
+            const actionId = findActionId(dynamicPath, runtime);
 
-          const res = await fetch(
-            `${ctx.deploymentUrl}${path}`,
-            generateFormDataPayload(actionId)
-          );
+            const res = await fetch(
+              `${ctx.deploymentUrl}${path}`,
+              generateFormDataPayload(actionId)
+            );
 
-          expect(res.status).toEqual(200);
-          expect(res.headers.get('x-matched-path')).toBe(
-            dynamicPath + '.action'
-          );
-          expect(res.headers.get('content-type')).toBe('text/x-component');
-          if (runtime === 'node') {
-            expect(res.headers.get('x-vercel-cache')).toBe('MISS');
-          } else {
-            expect(res.headers.get('x-edge-runtime')).toBe('1');
-          }
-        });
+            expect(res.status).toEqual(200);
+            expect(res.headers.get('x-matched-path')).toBe(
+              (basePath ? dynamicPath : path) + '.action'
+            );
+            expect(res.headers.get('content-type')).toBe('text/x-component');
+            if (runtime === 'node') {
+              expect(res.headers.get('x-vercel-cache')).toBe('MISS');
+            } else {
+              expect(res.headers.get('x-edge-runtime')).toBe('1');
+            }
+          });
 
-        it('should bypass the static cache for a server action when not pre-generated', async () => {
-          const page = `${basePath}/rsc/static/generate-static-params/[slug]`;
-          const actionId = findActionId(page, runtime);
+          // if it's dynamicParams = false we have nothing to
+          // bypass to
+          if (fallbackPath !== 'no-fallback') {
+            it('should bypass the static cache for a server action when not pre-generated', async () => {
+              const page = `${basePath}/rsc/static/generate-static-params/${fallbackPath}/[slug]`;
+              const actionId = findActionId(page, runtime);
 
-          const res = await fetch(
-            `${ctx.deploymentUrl}/${basePath}/rsc/static/generate-static-params/not-pre-generated`,
-            generateFormDataPayload(actionId)
-          );
+              const res = await fetch(
+                `${ctx.deploymentUrl}/${basePath}/rsc/static/generate-static-params/${fallbackPath}/not-pre-generated`,
+                generateFormDataPayload(actionId)
+              );
 
-          expect(res.status).toEqual(200);
-          expect(res.headers.get('x-matched-path')).toBe(page + '.action');
-          expect(res.headers.get('content-type')).toBe('text/x-component');
-          if (runtime === 'node') {
-            expect(res.headers.get('x-vercel-cache')).toBe('MISS');
-          } else {
-            expect(res.headers.get('x-edge-runtime')).toBe('1');
+              expect(res.status).toEqual(200);
+              expect(res.headers.get('x-matched-path')).toBe(page + '.action');
+              expect(res.headers.get('content-type')).toBe('text/x-component');
+              if (runtime === 'node') {
+                expect(res.headers.get('x-vercel-cache')).toBe('MISS');
+              } else {
+                expect(res.headers.get('x-edge-runtime')).toBe('1');
+              }
+            });
           }
         });
       });
