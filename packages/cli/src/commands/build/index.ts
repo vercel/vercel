@@ -535,8 +535,13 @@ async function doBuild(
       try {
         buildResult = await builder.build(buildOptions);
       } finally {
-        // todo: maybe wrap with try/catch, so when it fails, we don't fail the build (we can just log internally)
-        Object.assign(diagnostics, await builder.diagnostics?.(buildOptions));
+        // Make sure we don't fail the build
+        try {
+          Object.assign(diagnostics, await builder.diagnostics?.(buildOptions));
+        } catch (error) {
+          output.error('Collecting diagnostics failed');
+          output.debug(error);
+        }
       }
 
       if (
