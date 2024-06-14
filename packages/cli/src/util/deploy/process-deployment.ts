@@ -312,10 +312,7 @@ export function displayBuildLogs(
     deployment.id,
     {
       mode: 'logs',
-      onEvent: (event: any) => {
-        client.output.stopSpinner();
-        printLogShort(event);
-      },
+      onEvent: (event: any) => printLogShort(event, client),
       quiet: false,
       findOpts: { direction: 'forward', follow },
     },

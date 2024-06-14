@@ -110,7 +110,7 @@ export default async function inspect(client: Client) {
       abortController = displayBuildLogs(client, deployment, true);
     } else {
       await displayBuildLogs(client, deployment, false);
-      return;
+      return 0;
     }
   }
 
@@ -133,7 +133,7 @@ export default async function inspect(client: Client) {
         );
       }
       if (withLogs) {
-        return;
+        return 0;
       } else {
         break;
       }

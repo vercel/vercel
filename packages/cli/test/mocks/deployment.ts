@@ -115,6 +115,24 @@ export function useDeploymentMissingProjectSettings() {
   });
 }
 
+export function useBuildLogs({
+  deployment,
+  logProducer,
+}: {
+  deployment: Deployment;
+  logProducer: () => AsyncGenerator<object, void, unknown>;
+}) {
+  client.scenario.get(
+    `/v1/now/deployments/${deployment.id}/events`,
+    async (req, res) => {
+      for await (const log of logProducer()) {
+        res.write(JSON.stringify(log) + '\n');
+      }
+      res.end();
+    }
+  );
+}
+
 beforeEach(() => {
   deployments = new Map();
   deploymentBuilds = new Map();
