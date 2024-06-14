@@ -9,7 +9,7 @@
     "start": "next start"
   },
   "dependencies": {
-    "next": "canary",
+    "next": "https://files-j1ytzz969-vtest314-ijjk-testing.vercel.app/next-15.0.0-canary.31.tgz",
     "react": "19.0.0-rc.0",
     "react-dom": "19.0.0-rc.0"
   },
