@@ -18,6 +18,7 @@ export const help = () => `
       git                              Manage Git provider repository for your current Project
       help                 [cmd]       Displays complete help for [cmd]
       init                 [example]   Initialize an example project
+      install              [name]      Installs a Vercel integration
       inspect              [id]        Displays information related to a deployment
       link                 [path]      Link local directory to a Vercel Project
       ls | list            [app]       Lists deployments

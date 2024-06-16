@@ -15,6 +15,7 @@ export default new Map([
   ['git', 'git'],
   ['help', 'help'],
   ['init', 'init'],
+  ['install', 'install'],
   ['inspect', 'inspect'],
   ['link', 'link'],
   ['list', 'list'],

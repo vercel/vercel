@@ -610,6 +610,9 @@ const main = async () => {
         case 'whoami':
           func = require('./commands/whoami').default;
           break;
+        case 'install':
+          func = require('./commands/install').default;
+          break;
         default:
           func = null;
           break;
