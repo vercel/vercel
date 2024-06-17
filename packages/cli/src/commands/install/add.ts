@@ -11,8 +11,8 @@ import addEnvRecord from '../../util/env/add-env-record';
 import { Separator } from '@inquirer/checkbox';
 import { envTargetChoices } from '../../util/env/env-target';
 import fs from 'fs/promises';
-import path from 'path';
 import { promisify } from 'util';
+import path from 'path';
 
 const exec = promisify(execCallback); // Convert exec to a promise-based function
 
@@ -101,7 +101,17 @@ export default async function add(
   );
 
   await installNeededLibraries(output, integration);
-  await setupIntegrationCode(output, integrationName, integration.content);
+
+  await Promise.all(
+    integration.code.map(async code => {
+      await setupIntegrationCode(
+        output,
+        integrationName,
+        code.path,
+        code.content
+      );
+    })
+  );
 
   await exec(`vercel env pull`);
 }
@@ -132,28 +142,25 @@ async function installNeededLibraries(
 async function setupIntegrationCode(
   output: Output,
   integrationName: string,
+  codePath: string,
   content: string
 ) {
-  const libDir = path.join(__dirname, 'lib');
-  const filePath = path.join(libDir, `${integrationName}.ts`);
-
   try {
-    // Try to access the directory, if it does not exist, create it
-    try {
-      await fs.access(libDir);
-    } catch (err) {
-      await fs.mkdir(libDir, { recursive: true }); // Ensures that the directory is created if it does not exist
-    }
+    // Resolve the directory path
+    const dirPath = path.dirname(codePath);
 
-    // Write the content to the file, overwriting any existing file
-    await fs.writeFile(filePath, content);
+    // Ensure the directory exists, create it if not
+    await fs.mkdir(dirPath, { recursive: true });
+
+    // Write the file, if the file doesn't exist, it will be created
+    await fs.writeFile(codePath, content);
 
     // Output success message
     output.print(
-      prependEmoji(
-        `Successfully added ${integrationName} integration code to ./lib/${integrationName}.ts`,
+      `${prependEmoji(
+        `Successfully added ${integrationName} integration code to ${codePath}`,
         emoji('success')
-      )
+      )}\n`
     );
   } catch (err) {
     // Output error message
