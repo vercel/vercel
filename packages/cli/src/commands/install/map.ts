@@ -7,7 +7,10 @@ import { Output } from '../../util/output';
 export type IntegrationMapItem = {
   variables: string[];
   oAuthUrl: string;
-  content: string;
+  code: {
+    content: string;
+    path: string;
+  }[];
   packages: string[];
   setup: (
     client: Client,
@@ -31,20 +34,45 @@ const integrationMap = new Map<string, IntegrationMapItem>([
         'CONTENTFUL_SPACE_ID',
       ],
       oAuthUrl: 'https://app.contentful.com/spaces',
-      content: `
-        import { createClient } from 'contentful-management';
+      code: [
+        {
+          path: './lib/contentful.ts',
+          content: `
+          import { createClient } from 'contentful-management';
 
-        const accessToken = process.env.CONTENTFUL_ACCESS_TOKEN;
+          const accessToken = process.env.CONTENTFUL_ACCESS_TOKEN;
 
-        if (!accessToken) {
-          throw new Error('CONTENTFUL_ACCESS_TOKEN is not set');
-        }
+          if (!accessToken) {
+            throw new Error('CONTENTFUL_ACCESS_TOKEN is not set');
+          }
 
-        export const client = createClient({
+          export const client = createClient({
             accessToken
-        });
-      `,
-      packages: ['contentful-management'],
+          });
+        `,
+        },
+        {
+          path: './api/draft/route.ts',
+          content: `export { enableDraftHandler as GET } from "@contentful/vercel-nextjs-toolkit/app-router"`,
+        },
+        {
+          path: './api/disable-draft/route.ts',
+          content: `
+          import { draftMode } from 'next/headers'
+ 
+          export async function GET() {
+          draftMode().disable()
+          return new Response('Draft mode is disabled')
+        }
+          `,
+        },
+      ],
+
+      packages: [
+        'contentful-management',
+        '@contentful/vercel-nextjs-toolkit',
+        'next',
+      ],
       setup: async (client: Client, output: Output) => {
         // Constants for the OAuth configuration
         const APP_ID = '3kEj9zHcCLfuFwHOoYv-3WDlyHRYpenuDyl0sqFFg2w';
