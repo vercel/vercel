@@ -568,6 +568,9 @@ const main = async () => {
         case 'inspect':
           func = require('./commands/inspect').default;
           break;
+        case 'install':
+          func = require('./commands/install').default;
+          break;
         case 'link':
           func = require('./commands/link').default;
           break;
@@ -610,9 +613,7 @@ const main = async () => {
         case 'whoami':
           func = require('./commands/whoami').default;
           break;
-        case 'install':
-          func = require('./commands/install').default;
-          break;
+
         default:
           func = null;
           break;
