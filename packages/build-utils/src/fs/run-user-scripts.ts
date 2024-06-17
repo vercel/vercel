@@ -789,8 +789,6 @@ function validateCorepackPackageManager(
     validatedCorepackPackageManager.packageVersionRange
   );
 
-  console.error(lockfileVersion);
-
   if (corepackPackageManagerVersion === null) {
     return true;
   } else {
