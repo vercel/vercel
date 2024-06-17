@@ -1,5 +1,11 @@
 # @vercel/redwood
 
+## 2.0.10
+
+### Patch Changes
+
+- Upgrade to @vercel/nft 0.27.2 with browser remapping support ([#11700](https://github.com/vercel/vercel/pull/11700))
+
 ## 2.0.9
 
 ### Patch Changes
