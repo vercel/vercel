@@ -6,7 +6,13 @@ import { Output } from '../../util/output';
 
 export type IntegrationMapItem = {
   variables: string[];
-  oAuthUrl: string;
+  supportedFrameworks: string[];
+  frameworkSpecificCode: {
+    [key: string]: {
+      content: string;
+      path: string;
+    }[];
+  };
   code: {
     content: string;
     path: string;
@@ -33,7 +39,26 @@ const integrationMap = new Map<string, IntegrationMapItem>([
         'CONTENTFUL_PREVIEW_ACCESS_TOKEN',
         'CONTENTFUL_SPACE_ID',
       ],
-      oAuthUrl: 'https://app.contentful.com/spaces',
+      supportedFrameworks: ['nextjs'],
+      frameworkSpecificCode: {
+        nextjs: [
+          {
+            path: './api/draft/route.ts',
+            content: `export { enableDraftHandler as GET } from "@contentful/vercel-nextjs-toolkit/app-router"`,
+          },
+          {
+            path: './api/disable-draft/route.ts',
+            content: `
+            import { draftMode } from 'next/headers'
+   
+            export async function GET() {
+            draftMode().disable()
+            return new Response('Draft mode is disabled')
+          }
+            `,
+          },
+        ],
+      },
       code: [
         {
           path: './lib/contentful.ts',
@@ -50,21 +75,6 @@ const integrationMap = new Map<string, IntegrationMapItem>([
             accessToken
           });
         `,
-        },
-        {
-          path: './api/draft/route.ts',
-          content: `export { enableDraftHandler as GET } from "@contentful/vercel-nextjs-toolkit/app-router"`,
-        },
-        {
-          path: './api/disable-draft/route.ts',
-          content: `
-          import { draftMode } from 'next/headers'
- 
-          export async function GET() {
-          draftMode().disable()
-          return new Response('Draft mode is disabled')
-        }
-          `,
         },
       ],
 

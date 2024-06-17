@@ -113,6 +113,35 @@ export default async function add(
     })
   );
 
+  const framework = project.framework;
+
+  if (!framework) {
+    output.error(
+      `No framework detected in the project. Please specify a framework in the vercel.json file.`
+    );
+    return 1;
+  }
+
+  const isFrameworkSupported = integration.frameworkSpecificCode[framework];
+
+  if (!isFrameworkSupported) {
+    output.error(
+      `${integrationName} integration does not support the ${framework} framework`
+    );
+    return 1;
+  }
+
+  await Promise.all(
+    integration.frameworkSpecificCode[framework].map(async code => {
+      await setupIntegrationCode(
+        output,
+        integrationName,
+        code.path,
+        code.content
+      );
+    })
+  );
+
   await exec(`vercel env pull`);
 }
 
