@@ -4,7 +4,7 @@
 
 The [waitUntil](https://vercel.com/docs/functions/functions-api-reference#waituntil) method allows you to enqueue asynchronous tasks to be performed during the lifecycle of the request, and these tasks can continue to resolve even after the response has been written.
 
-This is possible because `waitUntil` takes advantage of the [streaming functions](https://vercel.com/docs/functions/streaming#streaming-functions).
+This is possible because `waitUntil` takes advantage of [streaming functions](https://vercel.com/docs/functions/streaming#streaming-functions).
 
 When `waitUntil` is used in a non-streaming function, the behavior is limited and the response is delayed to be written after the enqueued asynchronous tasks have been resolved.
 
