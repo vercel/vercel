@@ -259,7 +259,6 @@ export async function getNodeVersion(
     !packageJsonVersion,
     availableVersions
   );
-  console.log({ supportedNodeVersion });
 
   if (packageJson?.engines?.node) {
     const { node } = packageJson.engines;
