@@ -10,7 +10,7 @@ When `waitUntil` is used in a non-streaming function, the behavior is limited an
 
 ## How to Fix It
 
-To take advantage of waitUntil without compromise, all you have to do is explicitly opt-in your functions to be streaming functions:
+To take advantage of waitUntil without compromise, all you have to do is explicitly opt-in your functions to support streaming:
 
 ```js
 export const config = {
