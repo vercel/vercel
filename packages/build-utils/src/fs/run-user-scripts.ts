@@ -259,6 +259,7 @@ export async function getNodeVersion(
     !packageJsonVersion,
     availableVersions
   );
+  console.log({ supportedNodeVersion });
 
   if (packageJson?.engines?.node) {
     const { node } = packageJson.engines;
@@ -267,7 +268,7 @@ export async function getNodeVersion(
       !intersects(configuredVersion, supportedNodeVersion.range)
     ) {
       console.warn(
-        `Warning: Due to "engines": { "node": "${node}" } in your \`package.json\` file, the Node.js Version defined in your Project Settings ("${configuredVersion}") does not intersect with the supported range ("${supportedNodeVersion.range}") and will not apply. Learn More: http://vercel.link/node-version`
+        `Warning: Due to "engines": { "node": "${node}" } in your \`package.json\` file, the Node.js Version defined in your Project Settings ("${configuredVersion}") will not apply, Node.js Version "${supportedNodeVersion.range}" will be used instead. Learn More: http://vercel.link/node-version`
       );
     }
 
