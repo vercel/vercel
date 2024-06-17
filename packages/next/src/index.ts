@@ -2742,15 +2742,16 @@ export const diagnostics: Diagnostics = async ({
     `Reading diagnostics file in diagnosticsEntrypoint=${diagnosticsEntrypoint}`
   );
 
-  // todo: this doesn't seem to work yet, need some tweaks
   return {
+    // Collect output in `.next/diagnostics`
     ...(await glob(
-      path.join(diagnosticsEntrypoint, outputDirectory, 'diagnostics/*'),
+      'diagnostics/*',
       path.join(basePath, diagnosticsEntrypoint, outputDirectory, 'diagnostics')
     )),
+    // Collect `.next/trace` file
     ...(await glob(
-      path.join(diagnosticsEntrypoint, outputDirectory, 'trace'),
-      path.join(basePath, diagnosticsEntrypoint, outputDirectory, 'diagnostics')
+      'trace',
+      path.join(basePath, diagnosticsEntrypoint, outputDirectory)
     )),
   };
 };
