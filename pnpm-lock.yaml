@@ -1,5 +1,9 @@
 lockfileVersion: '6.0'
 
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
 importers:
 
   .:
@@ -316,8 +320,8 @@ importers:
         specifier: 8.2.2
         version: link:../build-utils
       '@vercel/fun':
-        specifier: 1.1.0
-        version: 1.1.0
+        specifier: 1.1.1
+        version: 1.1.1
       '@vercel/go':
         specifier: 3.1.1
         version: link:../go
@@ -720,7 +724,7 @@ importers:
         version: 5.1.6(@types/node@14.18.33)
       vitest:
         specifier: 1.3.1
-        version: 1.3.1(@edge-runtime/vm@3.2.0)(@types/node@16.18.11)
+        version: 1.3.1(@types/node@14.18.33)
       which:
         specifier: 3.0.0
         version: 3.0.0
@@ -954,7 +958,7 @@ importers:
     devDependencies:
       vitest:
         specifier: 1.3.1
-        version: 1.3.1(@edge-runtime/vm@3.2.0)(@types/node@16.18.11)
+        version: 1.3.1(@types/node@14.18.33)
 
   packages/gatsby-plugin-vercel-analytics:
     dependencies:
@@ -1276,7 +1280,7 @@ importers:
         version: 12.0.0
       ts-node:
         specifier: 10.9.1
-        version: 10.9.1(@swc/core@1.2.218)(@types/node@14.18.33)(typescript@4.9.5)
+        version: 10.9.1(@types/node@16.18.11)(typescript@4.9.5)
       typescript:
         specifier: 4.9.5
         version: 4.9.5
@@ -1459,7 +1463,7 @@ importers:
         version: 7.5.2
       vitest:
         specifier: 1.3.1
-        version: 1.3.1(@edge-runtime/vm@3.2.0)(@types/node@16.18.11)
+        version: 1.3.1(@types/node@14.18.33)
 
   packages/routing-utils:
     dependencies:
@@ -4017,6 +4021,7 @@ packages:
     cpu: [arm]
     os: [android]
     requiresBuild: true
+    dev: true
     optional: true
 
   /@swc/core-android-arm64@1.2.182:
@@ -4034,6 +4039,7 @@ packages:
     cpu: [arm64]
     os: [android]
     requiresBuild: true
+    dev: true
     optional: true
 
   /@swc/core-darwin-arm64@1.2.182:
@@ -4051,6 +4057,7 @@ packages:
     cpu: [arm64]
     os: [darwin]
     requiresBuild: true
+    dev: true
     optional: true
 
   /@swc/core-darwin-x64@1.2.182:
@@ -4068,6 +4075,7 @@ packages:
     cpu: [x64]
     os: [darwin]
     requiresBuild: true
+    dev: true
     optional: true
 
   /@swc/core-freebsd-x64@1.2.182:
@@ -4085,6 +4093,7 @@ packages:
     cpu: [x64]
     os: [freebsd]
     requiresBuild: true
+    dev: true
     optional: true
 
   /@swc/core-linux-arm-gnueabihf@1.2.182:
@@ -4102,6 +4111,7 @@ packages:
     cpu: [arm]
     os: [linux]
     requiresBuild: true
+    dev: true
     optional: true
 
   /@swc/core-linux-arm64-gnu@1.2.182:
@@ -4119,6 +4129,7 @@ packages:
     cpu: [arm64]
     os: [linux]
     requiresBuild: true
+    dev: true
     optional: true
 
   /@swc/core-linux-arm64-musl@1.2.182:
@@ -4136,6 +4147,7 @@ packages:
     cpu: [arm64]
     os: [linux]
     requiresBuild: true
+    dev: true
     optional: true
 
   /@swc/core-linux-x64-gnu@1.2.182:
@@ -4153,6 +4165,7 @@ packages:
     cpu: [x64]
     os: [linux]
     requiresBuild: true
+    dev: true
     optional: true
 
   /@swc/core-linux-x64-musl@1.2.182:
@@ -4170,6 +4183,7 @@ packages:
     cpu: [x64]
     os: [linux]
     requiresBuild: true
+    dev: true
     optional: true
 
   /@swc/core-win32-arm64-msvc@1.2.182:
@@ -4187,6 +4201,7 @@ packages:
     cpu: [arm64]
     os: [win32]
     requiresBuild: true
+    dev: true
     optional: true
 
   /@swc/core-win32-ia32-msvc@1.2.182:
@@ -4204,6 +4219,7 @@ packages:
     cpu: [ia32]
     os: [win32]
     requiresBuild: true
+    dev: true
     optional: true
 
   /@swc/core-win32-x64-msvc@1.2.182:
@@ -4221,6 +4237,7 @@ packages:
     cpu: [x64]
     os: [win32]
     requiresBuild: true
+    dev: true
     optional: true
 
   /@swc/core@1.2.182:
@@ -4260,6 +4277,7 @@ packages:
       '@swc/core-win32-arm64-msvc': 1.2.218
       '@swc/core-win32-ia32-msvc': 1.2.218
       '@swc/core-win32-x64-msvc': 1.2.218
+    dev: true
 
   /@szmarczak/http-timer@4.0.6:
     resolution: {integrity: sha512-4BAffykYOgO+5nzBWYwE3W90sBgLJoUPRWWcL8wlyiM8IB8ipJz3UMJ9KXQd1RKQXpKp8Tutn80HZtWsu2u76w==}
@@ -4793,6 +4811,7 @@ packages:
 
   /@types/node@14.18.33:
     resolution: {integrity: sha512-qelS/Ra6sacc4loe/3MSjXNL1dNQ/GjxNHVzuChwMfmk7HuycRLVQN2qNY3XahK+fZc5E2szqQSKUyAF0E+2bg==}
+    dev: true
 
   /@types/node@16.18.11:
     resolution: {integrity: sha512-3oJbGBUWuS6ahSnEq1eN2XrCyf4YsWI8OyCvo7c64zQJNplk3mO84t53o8lfTk+2ji59g5ycfc6qQ3fdHliHuA==}
@@ -5500,13 +5519,13 @@ packages:
     resolution: {integrity: sha512-8FGD6AejeC/nXcblgNCM5rnZb9KXa4WNkR03HCWtdJBpANjTgjHEglNLFnhuvdQ78tC6afaxBPI+g7F2NX3tgg==}
     dev: true
 
-  /@vercel/fun@1.1.0:
-    resolution: {integrity: sha512-SpuPAo+MlAYMtcMcC0plx7Tv4Mp7SQhJJj1iIENlOnABL24kxHpL09XLQMGzZIzIW7upR8c3edwgfpRtp+dhVw==}
+  /@vercel/fun@1.1.1:
+    resolution: {integrity: sha512-S+D+jYDsw1JheUGDweTQxMRicby8++cEb685DFKWNKDGwzB6EjYsPI6C7N8yErxbcfeC9QvSP7B5HgflGXoJxQ==}
     engines: {node: '>= 10'}
     dependencies:
       '@tootallnate/once': 2.0.0
       async-listen: 1.2.0
-      debug: 4.1.1
+      debug: 4.3.4
       execa: 3.2.0
       fs-extra: 8.1.0
       generic-pool: 3.4.2
@@ -5515,7 +5534,7 @@ packages:
       node-fetch: 2.6.7
       path-match: 1.2.4
       promisepipe: 3.0.0
-      semver: 7.3.5
+      semver: 7.5.4
       stat-mode: 0.3.0
       stream-to-promise: 2.2.0
       tar: 4.4.18
@@ -5669,7 +5688,7 @@ packages:
       eslint-import-resolver-alias: 1.1.2(eslint-plugin-import@2.27.5)
       eslint-import-resolver-typescript: 3.5.3(eslint-plugin-import@2.27.5)(eslint@8.24.0)
       eslint-plugin-eslint-comments: 3.2.0(eslint@8.24.0)
-      eslint-plugin-import: 2.27.5(@typescript-eslint/parser@5.54.1)(eslint-import-resolver-typescript@3.5.3)(eslint@8.24.0)
+      eslint-plugin-import: 2.27.5(@typescript-eslint/parser@5.54.1)(eslint@8.24.0)
       eslint-plugin-jest: 27.2.1(@typescript-eslint/eslint-plugin@5.54.1)(eslint@8.24.0)(jest@29.5.0)(typescript@4.9.4)
       eslint-plugin-jsx-a11y: 6.7.1(eslint@8.24.0)
       eslint-plugin-playwright: 0.11.2(eslint-plugin-jest@27.2.1)(eslint@8.24.0)
@@ -5715,7 +5734,7 @@ packages:
       eslint-import-resolver-alias: 1.1.2(eslint-plugin-import@2.27.5)
       eslint-import-resolver-typescript: 3.5.3(eslint-plugin-import@2.27.5)(eslint@8.24.0)
       eslint-plugin-eslint-comments: 3.2.0(eslint@8.24.0)
-      eslint-plugin-import: 2.27.5(@typescript-eslint/parser@5.54.1)(eslint-import-resolver-typescript@3.5.3)(eslint@8.24.0)
+      eslint-plugin-import: 2.27.5(@typescript-eslint/parser@5.54.1)(eslint@8.24.0)
       eslint-plugin-jest: 27.2.1(@typescript-eslint/eslint-plugin@5.54.1)(eslint@8.24.0)(jest@29.5.0)(typescript@4.9.5)
       eslint-plugin-jsx-a11y: 6.7.1(eslint@8.24.0)
       eslint-plugin-playwright: 0.11.2(eslint-plugin-jest@27.2.1)(eslint@8.24.0)
@@ -7346,18 +7365,6 @@ packages:
       ms: 2.1.2
     dev: true
 
-  /debug@4.1.1:
-    resolution: {integrity: sha512-pYAIzeRo8J6KPEaJ0VWOh5Pzkbw/RetuzehGM7QRRX5he4fPHx2rdKMB256ehJCkX+XRQm16eZLqLNS8RSZXZw==}
-    deprecated: Debug versions >=3.2.0 <3.2.7 || >=4 <4.3.1 have a low-severity ReDos regression when used in a Node.js environment. It is recommended you upgrade to 3.2.7 or 4.3.1. (https://github.com/visionmedia/debug/issues/797)
-    peerDependencies:
-      supports-color: '*'
-    peerDependenciesMeta:
-      supports-color:
-        optional: true
-    dependencies:
-      ms: 2.1.2
-    dev: false
-
   /debug@4.3.4:
     resolution: {integrity: sha512-PRWFHuSU3eDtQJPvnNY7Jcket1j0t5OuOsFzPPzsekD52Zl8qUfFIPEiswXqIvHWGVHOgX+7G/vCNNhehwxfkQ==}
     engines: {node: '>=6.0'}
@@ -8222,7 +8229,7 @@ packages:
     peerDependencies:
       eslint-plugin-import: '>=1.4.0'
     dependencies:
-      eslint-plugin-import: 2.27.5(@typescript-eslint/parser@5.54.1)(eslint-import-resolver-typescript@3.5.3)(eslint@8.24.0)
+      eslint-plugin-import: 2.27.5(@typescript-eslint/parser@5.54.1)(eslint@8.24.0)
     dev: true
 
   /eslint-import-resolver-node@0.3.7:
@@ -8245,7 +8252,7 @@ packages:
       debug: 4.3.4
       enhanced-resolve: 5.12.0
       eslint: 8.24.0
-      eslint-plugin-import: 2.27.5(@typescript-eslint/parser@5.54.1)(eslint-import-resolver-typescript@3.5.3)(eslint@8.24.0)
+      eslint-plugin-import: 2.27.5(@typescript-eslint/parser@5.54.1)(eslint@8.24.0)
       get-tsconfig: 4.4.0
       globby: 13.1.3
       is-core-module: 2.13.1
@@ -8255,7 +8262,7 @@ packages:
       - supports-color
     dev: true
 
-  /eslint-module-utils@2.7.4(@typescript-eslint/parser@5.54.1)(eslint-import-resolver-node@0.3.7)(eslint-import-resolver-typescript@3.5.3)(eslint@8.24.0):
+  /eslint-module-utils@2.7.4(@typescript-eslint/parser@5.54.1)(eslint-import-resolver-node@0.3.7)(eslint@8.24.0):
     resolution: {integrity: sha512-j4GT+rqzCoRKHwURX7pddtIPGySnX9Si/cgMI5ztrcqOPtk5dDEeZ34CQVPphnqkJytlc97Vuk05Um2mJ3gEQA==}
     engines: {node: '>=4'}
     peerDependencies:
@@ -8280,7 +8287,6 @@ packages:
       debug: 3.2.7
       eslint: 8.24.0
       eslint-import-resolver-node: 0.3.7
-      eslint-import-resolver-typescript: 3.5.3(eslint-plugin-import@2.27.5)(eslint@8.24.0)
     transitivePeerDependencies:
       - supports-color
     dev: true
@@ -8296,7 +8302,7 @@ packages:
       ignore: 5.2.4
     dev: true
 
-  /eslint-plugin-import@2.27.5(@typescript-eslint/parser@5.54.1)(eslint-import-resolver-typescript@3.5.3)(eslint@8.24.0):
+  /eslint-plugin-import@2.27.5(@typescript-eslint/parser@5.54.1)(eslint@8.24.0):
     resolution: {integrity: sha512-LmEt3GVofgiGuiE+ORpnvP+kAm3h6MLZJ4Q5HCyHADofsb4VzXFsRiWj3c0OFiV+3DWFh0qg3v9gcPlfc3zRow==}
     engines: {node: '>=4'}
     peerDependencies:
@@ -8314,7 +8320,7 @@ packages:
       doctrine: 2.1.0
       eslint: 8.24.0
       eslint-import-resolver-node: 0.3.7
-      eslint-module-utils: 2.7.4(@typescript-eslint/parser@5.54.1)(eslint-import-resolver-node@0.3.7)(eslint-import-resolver-typescript@3.5.3)(eslint@8.24.0)
+      eslint-module-utils: 2.7.4(@typescript-eslint/parser@5.54.1)(eslint-import-resolver-node@0.3.7)(eslint@8.24.0)
       has: 1.0.3
       is-core-module: 2.13.1
       is-glob: 4.0.3
@@ -14015,14 +14021,6 @@ packages:
     resolution: {integrity: sha512-BR7VvDCVHO+q2xBEWskxS6DJE1qRnb7DxzUrogb71CWoSficBxYsiAGd+Kl0mmq/MprG9yArRkyrQxTO6XjMzA==}
     hasBin: true
 
-  /semver@7.3.5:
-    resolution: {integrity: sha512-PoeGJYh8HK4BTO/a9Tf6ZG3veo/A7ZVsYrSA6J8ny9nb3B1VrpkuN+z9OE5wfE5p6H4LchYZsegiQgbJD94ZFQ==}
-    engines: {node: '>=10'}
-    hasBin: true
-    dependencies:
-      lru-cache: 6.0.0
-    dev: false
-
   /semver@7.3.8:
     resolution: {integrity: sha512-NB1ctGL5rlHrPJtFDVIVzTyQylMLu9N9VICA6HSFJo8MCGVTMW6gfpicwKmmK/dAjTOrqu5l63JJOpDSrAis3A==}
     engines: {node: '>=10'}
@@ -14036,6 +14034,14 @@ packages:
     hasBin: true
     dependencies:
       lru-cache: 6.0.0
+
+  /semver@7.5.4:
+    resolution: {integrity: sha512-1bCSESV6Pv+i21Hvpxp3Dx+pSD8lIPt8uVjRrxAUt/nbswYc+tK6Y2btiULjd4+fnq15PX+nqQDC7Oft7WkwcA==}
+    engines: {node: '>=10'}
+    hasBin: true
+    dependencies:
+      lru-cache: 6.0.0
+    dev: false
 
   /semver@7.6.0:
     resolution: {integrity: sha512-EnwXhrlwXMk9gKu5/flx5sv/an57AkRplG3hTK68W7FRDN+k+OWBj65M7719OkA82XLBxrcX0KSHj+X5COhOVg==}
@@ -15080,6 +15086,38 @@ packages:
       typescript: 4.9.5
       v8-compile-cache-lib: 3.0.1
       yn: 3.1.1
+    dev: true
+
+  /ts-node@10.9.1(@types/node@16.18.11)(typescript@4.9.5):
+    resolution: {integrity: sha512-NtVysVPkxxrwFGUUxGYhfux8k78pQB3JqYBXlLRZgdGUqTO5wU/UyHop5p70iEbGhB7q5KmiZiU0Y3KlJrScEw==}
+    hasBin: true
+    peerDependencies:
+      '@swc/core': '>=1.2.50'
+      '@swc/wasm': '>=1.2.50'
+      '@types/node': '*'
+      typescript: '>=2.7'
+    peerDependenciesMeta:
+      '@swc/core':
+        optional: true
+      '@swc/wasm':
+        optional: true
+    dependencies:
+      '@cspotcode/source-map-support': 0.8.1
+      '@tsconfig/node10': 1.0.9
+      '@tsconfig/node12': 1.0.11
+      '@tsconfig/node14': 1.0.3
+      '@tsconfig/node16': 1.0.3
+      '@types/node': 16.18.11
+      acorn: 8.8.1
+      acorn-walk: 8.2.0
+      arg: 4.1.3
+      create-require: 1.1.1
+      diff: 4.0.2
+      make-error: 1.3.6
+      typescript: 4.9.5
+      v8-compile-cache-lib: 3.0.1
+      yn: 3.1.1
+    dev: false
 
   /ts-node@8.9.1(typescript@4.9.5):
     resolution: {integrity: sha512-yrq6ODsxEFTLz0R3BX2myf0WBCSQh9A+py8PBo1dCzWIOcvisbyH6akNKqDHMgXePF2kir5mm5JXJTH3OUJYOQ==}
@@ -15664,6 +15702,27 @@ packages:
       vfile-message: 3.1.4
     dev: true
 
+  /vite-node@1.3.1(@types/node@14.18.33):
+    resolution: {integrity: sha512-azbRrqRxlWTJEVbzInZCTchx0X69M/XPTCz4H+TLvlTcR/xH/3hkRqhOakT41fMJCMzXTu4UvegkZiEoJAWvng==}
+    engines: {node: ^18.0.0 || >=20.0.0}
+    hasBin: true
+    dependencies:
+      cac: 6.7.14
+      debug: 4.3.4
+      pathe: 1.1.2
+      picocolors: 1.0.0
+      vite: 5.1.6(@types/node@14.18.33)
+    transitivePeerDependencies:
+      - '@types/node'
+      - less
+      - lightningcss
+      - sass
+      - stylus
+      - sugarss
+      - supports-color
+      - terser
+    dev: true
+
   /vite-node@1.3.1(@types/node@16.18.11):
     resolution: {integrity: sha512-azbRrqRxlWTJEVbzInZCTchx0X69M/XPTCz4H+TLvlTcR/xH/3hkRqhOakT41fMJCMzXTu4UvegkZiEoJAWvng==}
     engines: {node: ^18.0.0 || >=20.0.0}
@@ -15824,6 +15883,62 @@ packages:
       tinypool: 0.8.3
       vite: 5.1.6(@types/node@16.18.11)
       vite-node: 1.3.1(@types/node@16.18.11)
+      why-is-node-running: 2.2.2
+    transitivePeerDependencies:
+      - less
+      - lightningcss
+      - sass
+      - stylus
+      - sugarss
+      - supports-color
+      - terser
+    dev: true
+
+  /vitest@1.3.1(@types/node@14.18.33):
+    resolution: {integrity: sha512-/1QJqXs8YbCrfv/GPQ05wAZf2eakUPLPa18vkJAKE7RXOKfVHqMZZ1WlTjiwl6Gcn65M5vpNUB6EFLnEdRdEXQ==}
+    engines: {node: ^18.0.0 || >=20.0.0}
+    hasBin: true
+    peerDependencies:
+      '@edge-runtime/vm': '*'
+      '@types/node': ^18.0.0 || >=20.0.0
+      '@vitest/browser': 1.3.1
+      '@vitest/ui': 1.3.1
+      happy-dom: '*'
+      jsdom: '*'
+    peerDependenciesMeta:
+      '@edge-runtime/vm':
+        optional: true
+      '@types/node':
+        optional: true
+      '@vitest/browser':
+        optional: true
+      '@vitest/ui':
+        optional: true
+      happy-dom:
+        optional: true
+      jsdom:
+        optional: true
+    dependencies:
+      '@types/node': 14.18.33
+      '@vitest/expect': 1.3.1
+      '@vitest/runner': 1.3.1
+      '@vitest/snapshot': 1.3.1
+      '@vitest/spy': 1.3.1
+      '@vitest/utils': 1.3.1
+      acorn-walk: 8.3.2
+      chai: 4.4.1
+      debug: 4.3.4
+      execa: 8.0.1
+      local-pkg: 0.5.0
+      magic-string: 0.30.8
+      pathe: 1.1.2
+      picocolors: 1.0.0
+      std-env: 3.7.0
+      strip-literal: 2.0.0
+      tinybench: 2.6.0
+      tinypool: 0.8.3
+      vite: 5.1.6(@types/node@14.18.33)
+      vite-node: 1.3.1(@types/node@14.18.33)
       why-is-node-running: 2.2.2
     transitivePeerDependencies:
       - less
@@ -16220,7 +16335,3 @@ packages:
   /zwitch@2.0.4:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
     dev: true
-
-settings:
-  autoInstallPeers: true
-  excludeLinksFromLockfile: false
