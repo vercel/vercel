@@ -189,7 +189,7 @@ it('should prefer package.json engines over project setting from config and warn
     )
   ).toHaveProperty('range', '18.x');
   expect(warningMessages).toStrictEqual([
-    'Warning: Due to "engines": { "node": "18.x" } in your `package.json` file, the Node.js Version defined in your Project Settings ("12.x") will not apply. Learn More: http://vercel.link/node-version',
+    'Warning: Due to "engines": { "node": "18.x" } in your `package.json` file, the Node.js Version defined in your Project Settings ("12.x") will not apply, Node.js Version "18.x" will be used instead. Learn More: http://vercel.link/node-version',
   ]);
 });
 
@@ -231,7 +231,7 @@ it('should warn when project settings gets overrided', async () => {
     )
   ).toHaveProperty('range', '20.x');
   expect(warningMessages).toStrictEqual([
-    'Warning: Due to "engines": { "node": ">=16" } in your `package.json` file, the Node.js Version defined in your Project Settings ("16.x") will not apply. Learn More: http://vercel.link/node-version',
+    'Warning: Due to "engines": { "node": ">=16" } in your `package.json` file, the Node.js Version defined in your Project Settings ("16.x") will not apply, Node.js Version "20.x" will be used instead. Learn More: http://vercel.link/node-version',
     'Warning: Detected "engines": { "node": ">=16" } in your `package.json` that will automatically upgrade when a new major Node.js Version is released. Learn More: http://vercel.link/node-version',
   ]);
 });

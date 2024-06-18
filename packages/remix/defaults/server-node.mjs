@@ -4,7 +4,7 @@ import {
   installGlobals,
 } from '@remix-run/node';
 
-installGlobals();
+// installGlobals();
 
 import * as build from '@remix-run/dev/server-build';
 
