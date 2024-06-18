@@ -66,7 +66,7 @@ async function sendRemixResponse(res, nodeResponse) {
   res.writeHead(
     nodeResponse.status,
     nodeResponse.statusText,
-    toNodeHeaders(nodeResponse.headers),
+    toNodeHeaders(nodeResponse.headers)
   );
 
   if (nodeResponse.body) {
