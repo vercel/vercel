@@ -356,8 +356,8 @@ it('should warn for deprecated versions, soon to be discontinued', async () => {
       'Error: Node.js version 12.x has reached End-of-Life. Deployments created on or after 2022-10-03 will fail to build. Please set Node.js Version to 20.x in your Project Settings to use Node.js 20.',
       'Error: Node.js version 14.x has reached End-of-Life. Deployments created on or after 2023-08-15 will fail to build. Please set "engines": { "node": "20.x" } in your `package.json` file to use Node.js 20.',
       'Error: Node.js version 14.x has reached End-of-Life. Deployments created on or after 2023-08-15 will fail to build. Please set Node.js Version to 20.x in your Project Settings to use Node.js 20.',
-      'Error: Node.js version 16.x has reached End-of-Life. Deployments created on or after 2025-02-28 will fail to build. Please set "engines": { "node": "20.x" } in your `package.json` file to use Node.js 20.',
-      'Error: Node.js version 16.x has reached End-of-Life. Deployments created on or after 2025-02-28 will fail to build. Please set Node.js Version to 20.x in your Project Settings to use Node.js 20.',
+      'Error: Node.js version 16.x has reached End-of-Life. Deployments created on or after 2025-01-31 will fail to build. Please set "engines": { "node": "20.x" } in your `package.json` file to use Node.js 20.',
+      'Error: Node.js version 16.x has reached End-of-Life. Deployments created on or after 2025-01-31 will fail to build. Please set Node.js Version to 20.x in your Project Settings to use Node.js 20.',
     ]);
   } finally {
     global.Date.now = realDateNow;
