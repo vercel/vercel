@@ -4,7 +4,9 @@ import {
   installGlobals,
 } from '@remix-run/node';
 
-installGlobals();
+installGlobals({
+  nativeFetch: parseInt(process.versions.node, 10) >= 20 && process.env.VERCEL_REMIX_NATIVE_FETCH === '1',
+});
 
 import * as build from '@remix-run/dev/server-build';
 
