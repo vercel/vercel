@@ -95,7 +95,6 @@ export default async function add(
     )}\n`
   );
 
-  // install the contentful-management npm package to the project
   output.log(
     `Installing ${integrationName} integration to Project ${project.name}`
   );
