@@ -4,7 +4,11 @@ import {
   installGlobals,
 } from '@remix-run/node';
 
-installGlobals();
+installGlobals({
+  nativeFetch:
+    parseInt(process.versions.node, 10) >= 20 &&
+    process.env.VERCEL_REMIX_NATIVE_FETCH === '1',
+});
 
 import * as build from '@remix-run/dev/server-build';
 
@@ -13,11 +17,11 @@ const handleRequest = createRemixRequestHandler(
   process.env.NODE_ENV
 );
 
-function createRemixHeaders(requestHeaders) {
+function toWebHeaders(nodeHeaders) {
   const headers = new Headers();
 
-  for (const key in requestHeaders) {
-    const header = requestHeaders[key];
+  for (const key in nodeHeaders) {
+    const header = nodeHeaders[key];
     // set-cookie is an array (maybe others)
     if (Array.isArray(header)) {
       for (const value of header) {
@@ -31,8 +35,12 @@ function createRemixHeaders(requestHeaders) {
   return headers;
 }
 
+function toNodeHeaders(webHeaders) {
+  return webHeaders.raw?.() || [...webHeaders].flat();
+}
+
 function createRemixRequest(req, res) {
-  const host = req.headers['x-forwarded-host'] || req.headers['host'];
+  const host = req.headers['x-forwarded-host'] || req.headers.host;
   const protocol = req.headers['x-forwarded-proto'] || 'https';
   const url = new URL(req.url, `${protocol}://${host}`);
 
@@ -42,7 +50,7 @@ function createRemixRequest(req, res) {
 
   const init = {
     method: req.method,
-    headers: createRemixHeaders(req.headers),
+    headers: toWebHeaders(req.headers),
     signal: controller.signal,
   };
 
@@ -55,11 +63,10 @@ function createRemixRequest(req, res) {
 
 async function sendRemixResponse(res, nodeResponse) {
   res.statusMessage = nodeResponse.statusText;
-  let multiValueHeaders = nodeResponse.headers.raw();
   res.writeHead(
     nodeResponse.status,
     nodeResponse.statusText,
-    multiValueHeaders
+    toNodeHeaders(nodeResponse.headers)
   );
 
   if (nodeResponse.body) {
