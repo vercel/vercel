@@ -2,7 +2,6 @@ import type { Project, ProjectEnvTarget } from '@vercel-internals/types';
 import { Output } from '../../util/output';
 import Client from '../../util/client';
 import IntegrationNameMap, { IntegrationMapItem } from './map';
-import chalk from 'chalk';
 import { prependEmoji, emoji } from '../../util/emoji';
 import { exec as execCallback } from 'child_process';
 import addEnvRecord from '../../util/env/add-env-record';
@@ -29,10 +28,10 @@ export default async function add(
     return 1;
   }
 
-  const apiKeysToAdd = await integration.setup(client, output);
+  const apiKeysToAdd = await integration.setup(client);
 
   if (apiKeysToAdd === 1) {
-    output.error('Failed to setup integration');
+    output.error(`Failed to setup ${integrationName} integration`);
     return 1;
   }
 
@@ -48,8 +47,6 @@ export default async function add(
       output.error('Please select at least one Environment');
     }
   }
-
-  output.log(`project: ${project.id}`);
 
   await Promise.all(
     apiKeysToAdd.map(async apiKey => {
@@ -67,24 +64,20 @@ export default async function add(
     })
   );
 
-  output.print(
-    `${prependEmoji(
-      `${'Added'} Environment Variable(s) ${chalk.bold(
-        apiKeysToAdd.map(apiKey => apiKey.key).join(', ')
-      )} to Project ${chalk.bold(project.name)}`,
-      emoji('success')
-    )}\n`
-  );
-
   output.log(
     `Installing ${integrationName} integration to Project ${project.name}`
   );
 
-  await installNeededLibraries(output, integration);
+  const libraryResponse = await installNeededLibraries(output, integration);
 
-  await Promise.all(
+  if (libraryResponse === 1) {
+    output.error(`Failed to install required libraries for ${integrationName}`);
+    return 1;
+  }
+
+  const projectCodeResponse = await Promise.all(
     integration.code.map(async code => {
-      await setupIntegrationCode(
+      return await setupIntegrationCode(
         output,
         integrationName,
         code.path,
@@ -92,6 +85,13 @@ export default async function add(
       );
     })
   );
+
+  if (projectCodeResponse.includes(1)) {
+    output.error(
+      `Failed to setup ${integrationName} integration code for Project ${project.name}`
+    );
+    return 1;
+  }
 
   const framework = project.framework;
 
@@ -111,9 +111,9 @@ export default async function add(
     return 1;
   }
 
-  await Promise.all(
+  const setupResponse = await Promise.all(
     integration.frameworkSpecificCode[framework].map(async code => {
-      await setupIntegrationCode(
+      return setupIntegrationCode(
         output,
         integrationName,
         code.path,
@@ -122,31 +122,35 @@ export default async function add(
     })
   );
 
+  if (setupResponse.includes(1)) {
+    output.error(
+      `Failed to setup ${integrationName} integration code for ${framework} framework`
+    );
+    return 1;
+  }
+
   await exec(`vercel env pull`);
+
+  output.print(
+    `${prependEmoji(
+      `Successfully added ${integrationName} integration code to ${project.name}`,
+      emoji('success')
+    )}\n`
+  );
   return 0;
 }
 
 async function installNeededLibraries(
   output: Output,
   integration: IntegrationMapItem
-) {
-  output.log('Installing necessary npm packages for integration');
-
+): Promise<number> {
   await exec(`pnpm install ${integration.packages.join(' ')}`).catch(
     (error: any) => {
       output.error(`exec error: ${error}`);
       return 1;
     }
   );
-
-  output.print(
-    `${prependEmoji(
-      `Installed ${chalk.bold(
-        integration.packages.join(', ')
-      )} npm package to Project`,
-      emoji('success')
-    )}\n`
-  );
+  return 0;
 }
 
 async function setupIntegrationCode(
@@ -154,7 +158,7 @@ async function setupIntegrationCode(
   integrationName: string,
   codePath: string,
   content: string
-) {
+): Promise<number> {
   try {
     // Resolve the directory path
     const dirPath = path.dirname(codePath);
@@ -165,15 +169,9 @@ async function setupIntegrationCode(
     // Write the file, if the file doesn't exist, it will be created
     await fs.writeFile(codePath, content);
 
-    // Output success message
-    output.print(
-      `${prependEmoji(
-        `Successfully added ${integrationName} integration code to ${codePath}`,
-        emoji('success')
-      )}\n`
-    );
+    return 0;
   } catch (err) {
     // Output error message
-    output.error(`Error when setting up integration code: ${err}`);
+    return 1;
   }
 }

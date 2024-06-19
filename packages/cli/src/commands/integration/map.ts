@@ -2,7 +2,6 @@ import { createClient } from 'contentful-management';
 import Client from '../../util/client';
 import open from 'open';
 import fetch from 'node-fetch';
-import { Output } from '../../util/output';
 
 export type IntegrationMapItem = {
   variables: string[];
@@ -18,10 +17,7 @@ export type IntegrationMapItem = {
     path: string;
   }[];
   packages: string[];
-  setup: (
-    client: Client,
-    output: Output
-  ) => Promise<
+  setup: (client: Client) => Promise<
     | {
         key: string;
         value: string;
@@ -83,7 +79,7 @@ const integrationMap = new Map<string, IntegrationMapItem>([
         '@contentful/vercel-nextjs-toolkit',
         'next',
       ],
-      setup: async (client: Client, output: Output) => {
+      setup: async (client: Client) => {
         // Constants for the OAuth configuration
         const APP_ID = '3kEj9zHcCLfuFwHOoYv-3WDlyHRYpenuDyl0sqFFg2w';
         const REDIRECT_URI =
@@ -98,7 +94,6 @@ const integrationMap = new Map<string, IntegrationMapItem>([
 
           // Open the default browser to initiate OAuth login
           await open(contentfulAuthUrl);
-          output.log('Please complete the login in your browser.');
 
           // Prompt the user to enter the token received after login
           const tokenInput = await client.input.text({
@@ -111,7 +106,6 @@ const integrationMap = new Map<string, IntegrationMapItem>([
 
           token = tokenInput;
         } catch (error) {
-          output.error(`Failed to login to Contentful: ${error}`);
           return 1;
         }
 
@@ -138,7 +132,6 @@ const integrationMap = new Map<string, IntegrationMapItem>([
           });
 
           if (!spaceId) {
-            output.error('Failed to retrieve Contentful space');
             return 1;
           }
 
@@ -230,7 +223,6 @@ const integrationMap = new Map<string, IntegrationMapItem>([
         }
 
         if (!deliveryApiKey || !previewApiKey || !spaceId) {
-          output.error('Failed to retrieve Contentful Delivery API Key');
           return 1;
         }
 
