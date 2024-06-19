@@ -62,9 +62,7 @@ export default async function integration(client: Client): Promise<number> {
   if (parsedArguments.args.includes('add')) {
     subCommand = 'add';
     integrationName = parseIntegrationName(parsedArguments.args, 'add', output);
-  }
-
-  if (parsedArguments.args.includes('i')) {
+  } else if (parsedArguments.args.includes('i')) {
     subCommand = 'add';
     integrationName = parseIntegrationName(parsedArguments.args, 'i', output);
   }
