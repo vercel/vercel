@@ -113,6 +113,5 @@ function parseIntegrationName(args: string[], command: string, output: Output) {
     return null;
   }
 
-  output.log(`args[index + 1]: ${args[index + 1]}`);
   return args[index + 1];
 }
