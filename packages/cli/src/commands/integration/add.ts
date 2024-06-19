@@ -19,7 +19,6 @@ export default async function add(
   output: Output
 ): Promise<number> {
   const integration = IntegrationNameMap?.get(integrationName);
-  output.log(`Project: ${project}`);
 
   if (!integration) {
     output.error(
@@ -133,7 +132,7 @@ export default async function add(
 
   output.print(
     `${prependEmoji(
-      `Successfully added ${integrationName} integration code to ${project.name}`,
+      `Successfully added ${integrationName} integration to ${project.name}`,
       emoji('success')
     )}\n`
   );
