@@ -97,7 +97,7 @@ const integrationMap = new Map<string, IntegrationMapItem>([
 
           // Prompt the user to enter the token received after login
           const tokenInput = await client.input.text({
-            message: 'Paste the access token here:',
+            message: 'Paste the Contentful access token here:',
           });
 
           if (!tokenInput) {
