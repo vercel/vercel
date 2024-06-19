@@ -67,9 +67,5 @@ if (
 }
 
 if (process.env.NEXT_PRIVATE_PRELOAD_ENTRIES) {
-  console.log(
-    'exporting unstable_preloadEntries',
-    typeof nextServer.unstable_preloadEntries
-  );
   module.exports.preload = nextServer.unstable_preloadEntries;
 }
