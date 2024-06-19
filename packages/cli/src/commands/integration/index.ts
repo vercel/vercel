@@ -60,13 +60,11 @@ export default async function integration(client: Client): Promise<number> {
   }
 
   if (parsedArguments.args.includes('add')) {
-    output.log('add');
     subCommand = 'add';
     integrationName = parseIntegrationName(parsedArguments.args, 'add', output);
   }
 
   if (parsedArguments.args.includes('i')) {
-    output.log('i');
     subCommand = 'add';
     integrationName = parseIntegrationName(parsedArguments.args, 'i', output);
   }
@@ -103,8 +101,6 @@ export default async function integration(client: Client): Promise<number> {
 
 function parseIntegrationName(args: string[], command: string, output: Output) {
   const index = args.indexOf(command);
-  output.log(`args: ${args}`);
-  output.log(`index: ${index}`);
 
   if (index === -1) return null;
 
