@@ -6,7 +6,7 @@ import { Output } from '../../util/output';
 
 export type IntegrationMapItem = {
   variables: string[];
-  supportedFrameworks: string[];
+  supportedFrameworks: Map<string, string>;
   frameworkSpecificCode: {
     [key: string]: {
       content: string;
@@ -39,7 +39,7 @@ const integrationMap = new Map<string, IntegrationMapItem>([
         'CONTENTFUL_PREVIEW_ACCESS_TOKEN',
         'CONTENTFUL_SPACE_ID',
       ],
-      supportedFrameworks: ['nextjs'],
+      supportedFrameworks: new Map([['nextjs', 'next.js']]),
       frameworkSpecificCode: {
         nextjs: [
           {

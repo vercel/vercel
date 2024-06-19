@@ -568,8 +568,8 @@ const main = async () => {
         case 'inspect':
           func = require('./commands/inspect').default;
           break;
-        case 'install':
-          func = require('./commands/install').default;
+        case 'integration':
+          func = require('./commands/integration').default;
           break;
         case 'link':
           func = require('./commands/link').default;

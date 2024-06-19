@@ -2,13 +2,10 @@ import type { Project, ProjectEnvTarget } from '@vercel-internals/types';
 import { Output } from '../../util/output';
 import Client from '../../util/client';
 import IntegrationNameMap, { IntegrationMapItem } from './map';
-import readStandardInput from '../../util/input/read-standard-input';
-import { getCommandName } from '../../util/pkg-name';
 import chalk from 'chalk';
 import { prependEmoji, emoji } from '../../util/emoji';
 import { exec as execCallback } from 'child_process';
 import addEnvRecord from '../../util/env/add-env-record';
-import { Separator } from '@inquirer/checkbox';
 import { envTargetChoices } from '../../util/env/env-target';
 import fs from 'fs/promises';
 import { promisify } from 'util';
@@ -19,29 +16,11 @@ const exec = promisify(execCallback); // Convert exec to a promise-based functio
 export default async function add(
   client: Client,
   project: Project,
-  args: string[],
+  integrationName: string,
   output: Output
-) {
-  const stdInput = await readStandardInput(client.stdin);
-  let [integrationName] = args;
-
-  if (args.length > 1) {
-    output.error(
-      `Invalid number of arguments. Usage: ${getCommandName(`install <name>`)}`
-    );
-    return 1;
-  }
-
-  if (stdInput && !integrationName) {
-    output.error(
-      `Invalid number of arguments. Usage: ${getCommandName(
-        `env add <name> <target> <gitbranch> < <file>`
-      )}`
-    );
-    return 1;
-  }
-
+): Promise<number> {
   const integration = IntegrationNameMap?.get(integrationName);
+  output.log(`Project: ${project}`);
 
   if (!integration) {
     output.error(
@@ -62,13 +41,15 @@ export default async function add(
   while (envTargets.length === 0) {
     envTargets = await client.input.checkbox({
       message: `Add ${integrationName} to which Environments (select multiple)?`,
-      choices: [new Separator(' = Environment = '), ...envTargetChoices],
+      choices: envTargetChoices,
     });
 
     if (envTargets.length === 0) {
       output.error('Please select at least one Environment');
     }
   }
+
+  output.log(`project: ${project.id}`);
 
   await Promise.all(
     apiKeysToAdd.map(async apiKey => {
@@ -121,7 +102,7 @@ export default async function add(
     return 1;
   }
 
-  const isFrameworkSupported = integration.supportedFrameworks[framework];
+  const isFrameworkSupported = integration.supportedFrameworks.has(framework);
 
   if (!isFrameworkSupported) {
     output.error(
@@ -142,6 +123,7 @@ export default async function add(
   );
 
   await exec(`vercel env pull`);
+  return 0;
 }
 
 async function installNeededLibraries(
