@@ -121,7 +121,7 @@ export default async function add(
     return 1;
   }
 
-  const isFrameworkSupported = integration.frameworkSpecificCode[framework];
+  const isFrameworkSupported = integration.supportedFrameworks[framework];
 
   if (!isFrameworkSupported) {
     output.error(
