@@ -868,6 +868,11 @@ function detectPackageManager(
             detectedPackageManager: 'pnpm@9.x',
           };
         case 'pnpm 6':
+          return {
+            path: undefined,
+            detectedLockfile: 'pnpm-lock.yaml',
+            detectedPackageManager: 'pnpm 6',
+          };
         default:
           return undefined;
       }
@@ -882,7 +887,11 @@ function detectPackageManager(
           };
       }
     case 'yarn':
-      return undefined;
+      return {
+        path: undefined,
+        detectedLockfile: 'yarn.lock',
+        detectedPackageManager: 'yarn',
+      };
   }
 }
 
