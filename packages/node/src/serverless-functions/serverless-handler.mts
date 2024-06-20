@@ -82,7 +82,11 @@ async function compileUserCode(
   }
 
   return async (req: IncomingMessage, res: ServerResponse) => {
-    if (options.shouldAddHelpers) await addHelpers(req, res);
+    // Only add helpers if the listener isn't an express server
+    if (options.shouldAddHelpers && typeof listener.listen !== 'function') {
+      await addHelpers(req, res);
+    }
+
     return listener(req, res);
   };
 }
