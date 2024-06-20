@@ -23,8 +23,6 @@ import {
   type BuildResultV3,
   type Cron,
   type FlagDefinitions,
-  FileBlob,
-  download,
 } from '@vercel/build-utils';
 import {
   detectBuilders,
@@ -479,7 +477,6 @@ async function doBuild(
   const repoRootPath = cwd;
   const corepackShimDir = await initCorepack({ repoRootPath }, output);
   const diagnostics: Files = {};
-  let framework: { version: string } | undefined = undefined;
 
   for (const build of sortedBuilders) {
     if (typeof build.src !== 'string') continue;
@@ -590,28 +587,6 @@ async function doBuild(
         buildJsonBuild.error = toEnumerableError(err);
       }
       throw err;
-    } finally {
-      // todo: can this ever throw and fail?
-      // (should be fine because we were already using it in the hot path)
-      framework = await getFramework(workPath, buildResults);
-
-      // todo: extract in a separate function
-      diagnostics['framework.json'] = new FileBlob({
-        data: Buffer.from(
-          JSON.stringify({
-            // todo: is this the right way to report the framework?
-            slug: projectSettings.framework,
-            version: framework?.version,
-          })
-        ),
-      });
-
-      ops.push(
-        download(diagnostics, join(outputDir, 'diagnostics')).then(
-          () => undefined,
-          err => err
-        )
-      );
     }
   }
 
@@ -701,6 +676,8 @@ async function doBuild(
   const mergedWildcard = mergeWildcard(buildResults.values());
   const mergedOverrides: Record<string, PathOverride> =
     overrides.length > 0 ? Object.assign({}, ...overrides) : undefined;
+
+  const framework = await getFramework(workPath, buildResults);
 
   // Write out the final `config.json` file based on the
   // user configuration and Builder build results
