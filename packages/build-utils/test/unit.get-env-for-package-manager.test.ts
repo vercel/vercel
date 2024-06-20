@@ -359,8 +359,8 @@ describe('Test `getPathOverrideForPackageManager()`', () => {
         },
       },
       want: {
-        detectedLockfile: undefined,
-        detectedPackageManager: undefined,
+        detectedLockfile: 'pnpm-lock.yaml',
+        detectedPackageManager: 'pnpm 6',
         path: undefined,
       },
     },
@@ -615,8 +615,8 @@ describe('Test `getPathForPackageManager()`', () => {
         },
       },
       want: {
-        detectedLockfile: undefined,
-        detectedPackageManager: undefined,
+        detectedLockfile: 'yarn.lock',
+        detectedPackageManager: 'yarn',
         path: undefined,
         yarnNodeLinker: 'node-modules',
       },
