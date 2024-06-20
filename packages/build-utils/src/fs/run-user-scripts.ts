@@ -706,7 +706,7 @@ function validLockfileForPackageManager(
         case 6:
           return [5.3, 5.4].includes(lockfileVersion);
         default:
-          return false;
+          return true;
       }
   }
 }
