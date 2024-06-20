@@ -839,6 +839,10 @@ function detectPackageManager(
 ) {
   switch (cliType) {
     case 'npm':
+      // npm will be used, but we're going to let the version of Node.js
+      // that's installed manage which version of npm will be used. So,
+      // from this function's perspective, we're not specifying a version
+      // of npm that will be used.
       return undefined;
     case 'pnpm':
       switch (detectPnpmVersion(lockfileVersion)) {
