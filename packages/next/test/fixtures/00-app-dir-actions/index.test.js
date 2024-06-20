@@ -58,8 +58,8 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
       expect(res.status).toEqual(200);
       const body = await res.text();
       expect(body).toContain('1338');
-      expect(res.headers.get('x-matched-path')).toBe(path + '.action');
-      expect(res.headers.get('x-vercel-cache')).toBe('MISS');
+      expect(res.headers.get('x-matched-path')).toBe(path);
+      expect(res.headers.get('x-vercel-cache')).toBe('BYPASS');
     });
 
     it('should bypass the static cache for a server action on a page with dynamic params', async () => {
@@ -78,8 +78,27 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
       expect(res.status).toEqual(200);
       const body = await res.text();
       expect(body).toContain('1338');
-      expect(res.headers.get('x-matched-path')).toBe(path + '.action');
-      expect(res.headers.get('x-vercel-cache')).toBe('MISS');
+      expect(res.headers.get('x-matched-path')).toBe(path);
+      expect(res.headers.get('x-vercel-cache')).toBe('BYPASS');
+    });
+
+    it('should bypass the static cache for a multipart request (no action header)', async () => {
+      const path = '/client/static';
+      const actionId = findActionId(path);
+
+      const res = await fetch(`${ctx.deploymentUrl}${path}`, {
+        method: 'POST',
+        body: `------WebKitFormBoundaryHcVuFa30AN0QV3uZ\r\nContent-Disposition: form-data; name=\"1_$ACTION_ID_${actionId}\"\r\n\r\n\r\n------WebKitFormBoundaryHcVuFa30AN0QV3uZ\r\nContent-Disposition: form-data; name=\"0\"\r\n\r\n[\"$K1\"]\r\n------WebKitFormBoundaryHcVuFa30AN0QV3uZ--\r\n`,
+        headers: {
+          'Content-Type':
+            'multipart/form-data; boundary=----WebKitFormBoundaryHcVuFa30AN0QV3uZ',
+        },
+      });
+
+      expect(res.status).toEqual(200);
+      expect(res.headers.get('content-type')).toBe('text/html; charset=utf-8');
+      expect(res.headers.get('x-vercel-cache')).toBe('BYPASS');
+      expect(res.headers.get('x-matched-path')).toBe(path);
     });
 
     it('should properly invoke the action on a dynamic page', async () => {
@@ -98,7 +117,8 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
       expect(res.status).toEqual(200);
       const body = await res.text();
       expect(body).toContain('1338');
-      expect(res.headers.get('x-matched-path')).toBe(path + '.action');
+      expect(res.headers.get('x-matched-path')).toBe(path);
+      // This isn't a "BYPASS" because the action wasn't part of a static prerender
       expect(res.headers.get('x-vercel-cache')).toBe('MISS');
     });
   });
@@ -114,9 +134,9 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
       );
 
       expect(res.status).toEqual(200);
-      expect(res.headers.get('x-matched-path')).toBe(path + '.action');
+      expect(res.headers.get('x-matched-path')).toBe(path);
       expect(res.headers.get('content-type')).toBe('text/x-component');
-      expect(res.headers.get('x-vercel-cache')).toBe('MISS');
+      expect(res.headers.get('x-vercel-cache')).toBe('BYPASS');
     });
 
     it('should bypass the static cache for a server action on a page with dynamic params', async () => {
@@ -129,9 +149,9 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
       );
 
       expect(res.status).toEqual(200);
-      expect(res.headers.get('x-matched-path')).toBe(path + '.action');
+      expect(res.headers.get('x-matched-path')).toBe(path);
       expect(res.headers.get('content-type')).toBe('text/x-component');
-      expect(res.headers.get('x-vercel-cache')).toBe('MISS');
+      expect(res.headers.get('x-vercel-cache')).toBe('BYPASS');
     });
 
     it('should properly invoke the action on a dynamic page', async () => {
@@ -144,8 +164,9 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
       );
 
       expect(res.status).toEqual(200);
-      expect(res.headers.get('x-matched-path')).toBe(path + '.action');
+      expect(res.headers.get('x-matched-path')).toBe(path);
       expect(res.headers.get('content-type')).toBe('text/x-component');
+      // This isn't a "BYPASS" because the action wasn't part of a static prerender
       expect(res.headers.get('x-vercel-cache')).toBe('MISS');
     });
 
@@ -163,10 +184,10 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
 
         expect(res.status).toEqual(200);
         expect(res.headers.get('x-matched-path')).toBe(
-          '/rsc/static/generate-static-params/[slug].action'
+          '/rsc/static/generate-static-params/pre-generated'
         );
         expect(res.headers.get('content-type')).toBe('text/x-component');
-        expect(res.headers.get('x-vercel-cache')).toBe('MISS');
+        expect(res.headers.get('x-vercel-cache')).toBe('BYPASS');
       });
 
       it('should bypass the static cache for a server action when not pre-generated', async () => {
@@ -179,10 +200,38 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
         );
 
         expect(res.status).toEqual(200);
-        expect(res.headers.get('x-matched-path')).toBe(page + '.action');
+        expect(res.headers.get('x-matched-path')).toBe(page);
         expect(res.headers.get('content-type')).toBe('text/x-component');
-        expect(res.headers.get('x-vercel-cache')).toBe('MISS');
+        // This isn't a "BYPASS" because the action wasn't part of a static prerender
+        expect(res.headers.get('x-vercel-cache')).toBe('BYPASS');
       });
+    });
+  });
+
+  describe('pages', () => {
+    it('should not attempt to rewrite the action path for a server action (POST)', async () => {
+      const res = await fetch(`${ctx.deploymentUrl}/api/test`, {
+        method: 'POST',
+        headers: {
+          'Content-Type':
+            'multipart/form-data; boundary=----WebKitFormBoundaryHcVuFa30AN0QV3uZ',
+        },
+      });
+
+      expect(res.status).toEqual(200);
+      expect(res.headers.get('x-matched-path')).toBe('/api/test');
+      expect(res.headers.get('x-vercel-cache')).toBe('MISS');
+      const body = await res.json();
+      expect(body).toEqual({ message: 'Hello from Next.js!' });
+    });
+
+    it('should not attempt to rewrite the action path for a server action (GET)', async () => {
+      const res = await fetch(`${ctx.deploymentUrl}/api/test`);
+
+      expect(res.status).toEqual(200);
+      expect(res.headers.get('x-matched-path')).toBe('/api/test');
+      const body = await res.json();
+      expect(body).toEqual({ message: 'Hello from Next.js!' });
     });
   });
 });

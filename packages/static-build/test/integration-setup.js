@@ -40,9 +40,8 @@ module.exports = function setupTests(groupIndex) {
 
   const fixturesToSkip = [];
 
-  // console.log(fixtures);
   // eslint-disable-next-line no-restricted-syntax
-  for (const fixture of ['vitepress-2']) {
+  for (const fixture of fixtures) {
     if (fixturesToSkip.includes(fixture)) {
       continue;
     }

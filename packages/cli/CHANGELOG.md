@@ -1,5 +1,188 @@
 # vercel
 
+## 34.2.7
+
+### Patch Changes
+
+- Updated dependencies [[`84b744541`](https://github.com/vercel/vercel/commit/84b744541b58524bd91e3b3f0628b675e772660f)]:
+  - @vercel/next@4.2.17
+
+## 34.2.6
+
+### Patch Changes
+
+- [built-utils] Handle case of not having lockfile when corepack is enabled ([#11697](https://github.com/vercel/vercel/pull/11697))
+
+- Updated dependencies [[`5c12ed695`](https://github.com/vercel/vercel/commit/5c12ed69500ceff6a9dc544eab0acd7af64c044a), [`21444a38e`](https://github.com/vercel/vercel/commit/21444a38e50ed680c91b0e3955f15e378eeda64b), [`fa9789a93`](https://github.com/vercel/vercel/commit/fa9789a93ebe64c4246f441590cb695d296af336), [`c925dc4a1`](https://github.com/vercel/vercel/commit/c925dc4a1bf3a47b684b5f7fd788ddd24ba1ed1e), [`06d2d860e`](https://github.com/vercel/vercel/commit/06d2d860e47aed792247bf929805b180ed6e2dab), [`b735f37fd`](https://github.com/vercel/vercel/commit/b735f37fd92c707040e72084b0fdb4f8fd01dd51)]:
+  - @vercel/build-utils@8.2.2
+  - @vercel/next@4.2.16
+  - @vercel/redwood@2.0.10
+  - @vercel/remix-builder@2.1.7
+  - @vercel/node@3.1.7
+  - @vercel/static-build@2.5.11
+
+## 34.2.5
+
+### Patch Changes
+
+- Adds a route for the `.rsc` pathname as well when app has ppr enabled but not all routes. ([#11681](https://github.com/vercel/vercel/pull/11681))
+
+- Updated dependencies [[`7457767a7`](https://github.com/vercel/vercel/commit/7457767a77b03662c103a658273a46cf78359068), [`4337ea065`](https://github.com/vercel/vercel/commit/4337ea0654c4ee2c91c4464540f879d43da6696f)]:
+  - @vercel/next@4.2.15
+
+## 34.2.4
+
+### Patch Changes
+
+- Updated dependencies [[`3eb9d8c89`](https://github.com/vercel/vercel/commit/3eb9d8c8929592960d88e0395e2a2443f7304d6b), [`83741a0eb`](https://github.com/vercel/vercel/commit/83741a0eb9e44457b083e8790a11eb89984e6357)]:
+  - @vercel/python@4.3.0
+  - @vercel/build-utils@8.2.1
+  - @vercel/node@3.1.6
+  - @vercel/static-build@2.5.10
+
+## 34.2.3
+
+### Patch Changes
+
+- Don't create streaming lambdas for pages router routes ([#11660](https://github.com/vercel/vercel/pull/11660))
+
+- Updated dependencies [[`c9d53d4e3`](https://github.com/vercel/vercel/commit/c9d53d4e3e4591b9b6bde86100564c9ee4c6d1d4), [`5f561f8cf`](https://github.com/vercel/vercel/commit/5f561f8cfa4720801a5cf4598f193ab34539abb9)]:
+  - @vercel/next@4.2.14
+
+## 34.2.2
+
+### Patch Changes
+
+- Fix related to erroring when a prefetch route is not provided but the route is PPR enabled ([#11638](https://github.com/vercel/vercel/pull/11638))
+
+- Updated dependencies [[`8e44ef5b9`](https://github.com/vercel/vercel/commit/8e44ef5b9d2cdbe743c7f1e3534f182465fed9bf), [`61e6af374`](https://github.com/vercel/vercel/commit/61e6af3740296c11015d0c3da84ee205020b0ea6)]:
+  - @vercel/next@4.2.13
+
+## 34.2.1
+
+### Patch Changes
+
+- Support incremental PPR for large applications ([#11625](https://github.com/vercel/vercel/pull/11625))
+
+- Updated dependencies [[`73e558913`](https://github.com/vercel/vercel/commit/73e558913ab30ba097d7536a12fa8a7c967479f0)]:
+  - @vercel/next@4.2.12
+
+## 34.2.0
+
+### Minor Changes
+
+- Stop sending system environment variables in dev ([#11526](https://github.com/vercel/vercel/pull/11526))
+
+### Patch Changes
+
+- Updated dependencies [[`d3c1267e2`](https://github.com/vercel/vercel/commit/d3c1267e24082789ea6382cf6af81dd40df288ff), [`ccd7eb1fb`](https://github.com/vercel/vercel/commit/ccd7eb1fb78f7ac9effdbe1935de3bda82c97fe3)]:
+  - @vercel/build-utils@8.2.0
+  - @vercel/node@3.1.5
+  - @vercel/static-build@2.5.9
+
+## 34.1.14
+
+### Patch Changes
+
+- Updated dependencies [[`ad6945435`](https://github.com/vercel/vercel/commit/ad69454352b519b2b0ed326f245c779530554bf2)]:
+  - @vercel/build-utils@8.1.3
+  - @vercel/node@3.1.4
+  - @vercel/static-build@2.5.8
+
+## 34.1.13
+
+### Patch Changes
+
+- Updated dependencies [[`1682ad43d`](https://github.com/vercel/vercel/commit/1682ad43d0064b22b1248a7e946746b838f00076)]:
+  - @vercel/build-utils@8.1.2
+  - @vercel/node@3.1.3
+  - @vercel/static-build@2.5.7
+
+## 34.1.12
+
+### Patch Changes
+
+- Updated dependencies [[`67afc2608`](https://github.com/vercel/vercel/commit/67afc26085e2ebdaa33a8cbce112afec4cb1c4f5), [`2f7a6ed5f`](https://github.com/vercel/vercel/commit/2f7a6ed5f92d454000f92247d3b6548e2064f4e6)]:
+  - @vercel/next@4.2.11
+  - @vercel/build-utils@8.1.1
+  - @vercel/node@3.1.2
+  - @vercel/static-build@2.5.6
+
+## 34.1.11
+
+### Patch Changes
+
+- Updated dependencies [[`5014b1e82`](https://github.com/vercel/vercel/commit/5014b1e82a46181baeb727ffe6d14000b6a4b1d7), [`18d1703d5`](https://github.com/vercel/vercel/commit/18d1703d5b4f2adc61fd56011f874c393fa57d0d), [`e87d4c14d`](https://github.com/vercel/vercel/commit/e87d4c14d0e718281f9ba91c9ec1cc6e142d383d), [`bc5fd4115`](https://github.com/vercel/vercel/commit/bc5fd41158ec9f36e5db1fe749589adcbaec6950)]:
+  - @vercel/build-utils@8.1.0
+  - @vercel/next@4.2.10
+  - @vercel/redwood@2.0.9
+  - @vercel/remix-builder@2.1.6
+  - @vercel/node@3.1.1
+  - @vercel/static-build@2.5.5
+
+## 34.1.10
+
+### Patch Changes
+
+- Updated dependencies [[`119f80e96`](https://github.com/vercel/vercel/commit/119f80e9611a7a5a755aa689502dcdab323194aa), [`11584b0e9`](https://github.com/vercel/vercel/commit/11584b0e9b55f312f34d0d6467ab498e472ac9df), [`3023122d4`](https://github.com/vercel/vercel/commit/3023122d4e0dd292340d9e9e61ef232baf6e610d), [`0e774b6be`](https://github.com/vercel/vercel/commit/0e774b6be0c832213a64124e1f4fc6d150e87d9f)]:
+  - @vercel/next@4.2.9
+  - @vercel/static-build@2.5.4
+
+## 34.1.9
+
+### Patch Changes
+
+- Updated dependencies [[`5a532a5b9`](https://github.com/vercel/vercel/commit/5a532a5b948994ba04783ac560357eed9f94a3f3), [`50fc27ba5`](https://github.com/vercel/vercel/commit/50fc27ba5773870956300bbbaffbe387d549bc12), [`c1d852295`](https://github.com/vercel/vercel/commit/c1d85229509dd319a1f11beb940a759113564d33), [`a5ea04154`](https://github.com/vercel/vercel/commit/a5ea04154ba26ee4e635d8953aa4f0d9d82d3a96)]:
+  - @vercel/next@4.2.8
+  - @vercel/node@3.1.0
+
+## 34.1.8
+
+### Patch Changes
+
+- Updated dependencies [[`52e435aa5`](https://github.com/vercel/vercel/commit/52e435aa5d7b4014d19477969ad5cbfbe94aa76f), [`124846a3e`](https://github.com/vercel/vercel/commit/124846a3e65a3bf1ae82327fd4ba2b132674fb39), [`dc974b679`](https://github.com/vercel/vercel/commit/dc974b6797de0b6e90373c92e1f2bbdafcfc6687), [`58c6755e0`](https://github.com/vercel/vercel/commit/58c6755e0c12cae2ce55978b7bf8722133151196)]:
+  - @vercel/next@4.2.7
+  - @vercel/static-build@2.5.3
+
+## 34.1.7
+
+### Patch Changes
+
+- Updated dependencies [[`3420ba015`](https://github.com/vercel/vercel/commit/3420ba0153dcabffef7114ba2361fb0f3c43a7b3)]:
+  - @vercel/next@4.2.6
+
+## 34.1.6
+
+### Patch Changes
+
+- Updated dependencies [[`b1adaf76e`](https://github.com/vercel/vercel/commit/b1adaf76ec17d1bbfe30a2bf65405bd886fa9bcf), [`3fb97d1d2`](https://github.com/vercel/vercel/commit/3fb97d1d270e835ce34a687bd234ea53dfe446a2)]:
+  - @vercel/next@4.2.5
+  - @vercel/static-build@2.5.2
+
+## 34.1.5
+
+### Patch Changes
+
+- Updated dependencies [[`763a6d107`](https://github.com/vercel/vercel/commit/763a6d10709ca40405634d41863c2e524917ebe1), [`15475c8a2`](https://github.com/vercel/vercel/commit/15475c8a2c303a1dd189ba24044fac750280dd2e), [`21f5e7375`](https://github.com/vercel/vercel/commit/21f5e7375e4cb4ceed98ab56486d09a85fa3894d)]:
+  - @vercel/ruby@2.1.0
+  - @vercel/build-utils@8.0.0
+  - @vercel/node@3.0.28
+  - @vercel/static-build@2.5.1
+
+## 34.1.4
+
+### Patch Changes
+
+- Updated dependencies [[`5b7960337`](https://github.com/vercel/vercel/commit/5b79603378a50fd04d5be1c3a3e5cd605b61478f)]:
+  - @vercel/next@4.2.4
+
+## 34.1.3
+
+### Patch Changes
+
+- Updated dependencies [[`5758838d0`](https://github.com/vercel/vercel/commit/5758838d090b9789ca6821e1122781352021109f)]:
+  - @vercel/next@4.2.3
+
 ## 34.1.2
 
 ### Patch Changes

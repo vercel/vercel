@@ -1,5 +1,119 @@
 # @vercel/next
 
+## 4.2.17
+
+### Patch Changes
+
+- Ensure all prerenders have matching .action output ([#11719](https://github.com/vercel/vercel/pull/11719))
+
+## 4.2.16
+
+### Patch Changes
+
+- prevent /index from being incorrectly normalized in rewrites ([#11707](https://github.com/vercel/vercel/pull/11707))
+
+- Upgrade to @vercel/nft 0.27.2 with browser remapping support ([#11700](https://github.com/vercel/vercel/pull/11700))
+
+- ensure unmatched rsc rewrites are routed to correct handler ([#11688](https://github.com/vercel/vercel/pull/11688))
+
+## 4.2.15
+
+### Patch Changes
+
+- ensure unmatched action rewrites are routed to correct handler ([#11686](https://github.com/vercel/vercel/pull/11686))
+
+- Adds a route for the `.rsc` pathname as well when app has ppr enabled but not all routes. ([#11681](https://github.com/vercel/vercel/pull/11681))
+
+## 4.2.14
+
+### Patch Changes
+
+- Don't create streaming lambdas for pages router routes ([#11660](https://github.com/vercel/vercel/pull/11660))
+
+- Ensure user rewrites still match to action outputs ([#11628](https://github.com/vercel/vercel/pull/11628))
+
+## 4.2.13
+
+### Patch Changes
+
+- Fix static case for detecting when a page supports PPR ([#11635](https://github.com/vercel/vercel/pull/11635))
+
+- Fix related to erroring when a prefetch route is not provided but the route is PPR enabled ([#11638](https://github.com/vercel/vercel/pull/11638))
+
+## 4.2.12
+
+### Patch Changes
+
+- Support incremental PPR for large applications ([#11625](https://github.com/vercel/vercel/pull/11625))
+
+## 4.2.11
+
+### Patch Changes
+
+- normalize source file locations for special metadata files ([#11579](https://github.com/vercel/vercel/pull/11579))
+
+## 4.2.10
+
+### Patch Changes
+
+- skip action rewrites for RSC requests ([#11576](https://github.com/vercel/vercel/pull/11576))
+
+- Bump `@vercel/nft@0.27.0` ([#11580](https://github.com/vercel/vercel/pull/11580))
+
+## 4.2.9
+
+### Patch Changes
+
+- Support incremental partial prerendering ([#11560](https://github.com/vercel/vercel/pull/11560))
+
+- ensure `.action` outputs are created for edge functions ([#11568](https://github.com/vercel/vercel/pull/11568))
+
+- ([#11566](https://github.com/vercel/vercel/pull/11566))
+
+## 4.2.8
+
+### Patch Changes
+
+- Fix missing initial RSC headers ([#11552](https://github.com/vercel/vercel/pull/11552))
+
+- Remove .prefetch.rsc rewrites for non-PPR ([#11540](https://github.com/vercel/vercel/pull/11540))
+
+- [next] rename middleware manifest env ([#11549](https://github.com/vercel/vercel/pull/11549))
+
+## 4.2.7
+
+### Patch Changes
+
+- Fix missing .rsc outputs for pages prerenders ([#11503](https://github.com/vercel/vercel/pull/11503))
+
+- Fix base path app index RSC handling ([#11528](https://github.com/vercel/vercel/pull/11528))
+
+- Fix interception routes PPR route handling ([#11527](https://github.com/vercel/vercel/pull/11527))
+
+## 4.2.6
+
+### Patch Changes
+
+- [next] Update test fixture version ([#11514](https://github.com/vercel/vercel/pull/11514))
+
+## 4.2.5
+
+### Patch Changes
+
+- Only rewrite next-action requests to `.action` handlers ([#11504](https://github.com/vercel/vercel/pull/11504))
+
+## 4.2.4
+
+### Patch Changes
+
+- [next]: Revert .action handling for dynamic routes ([#11509](https://github.com/vercel/vercel/pull/11509))
+
+## 4.2.3
+
+### Patch Changes
+
+- [next] Reland add .action handling for dynamic routes ([#11487](https://github.com/vercel/vercel/pull/11487))
+
 ## 4.2.2
 
 ### Patch Changes

@@ -1,0 +1,6 @@
+{
+  "private": true,
+  "dependencies": {
+    "cli-extension-fail": "file:../cli-extension-fail"
+  }
+}

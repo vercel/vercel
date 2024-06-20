@@ -70,7 +70,7 @@ export async function pullEnvRecords(
   );
   const query = new URLSearchParams();
 
-  let url = `/v1/env/pull/${projectId}`;
+  let url = `/v2/env/pull/${projectId}`;
 
   if (target) {
     url += `/${encodeURIComponent(target)}`;
