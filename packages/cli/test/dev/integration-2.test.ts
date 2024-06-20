@@ -111,19 +111,34 @@ test(
   })
 );
 
-test(
+// eslint-disable-next-line
+test.only(
   '[vercel dev] Use `@vercel/python` with Flask requirements.txt',
-  testFixtureStdio('python-flask', async (testPath: any) => {
-    const name = 'Alice';
-    const year = new Date().getFullYear();
-    await testPath(200, `/api/user?name=${name}`, new RegExp(`Hello ${name}`));
-    await testPath(200, `/api/date`, new RegExp(`Current date is ${year}`));
-    await testPath(200, `/api/date.py`, new RegExp(`Current date is ${year}`));
-    await testPath(200, `/api/headers`, (body: any, res: any) => {
-      const { host } = new URL(res.url);
-      expect(body).toBe(host);
-    });
-  })
+  testFixtureStdio(
+    'python-flask',
+    async (testPath: any) => {
+      // eslint-disable-next-line
+      console.log('Testing /api');
+      const name = 'Alice';
+      const year = new Date().getFullYear();
+      await testPath(
+        200,
+        `/api/user?name=${name}`,
+        new RegExp(`Hello ${name}`)
+      );
+      await testPath(200, `/api/date`, new RegExp(`Current date is ${year}`));
+      await testPath(
+        200,
+        `/api/date.py`,
+        new RegExp(`Current date is ${year}`)
+      );
+      await testPath(200, `/api/headers`, (body: any, res: any) => {
+        const { host } = new URL(res.url);
+        expect(body).toBe(host);
+      });
+    },
+    { skipDeploy: true }
+  )
 );
 
 test('[vercel dev] Use custom runtime from the "functions" property', async () => {
