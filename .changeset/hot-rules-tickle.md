@@ -1,6 +1,8 @@
 ---
 '@vercel/build-utils': minor
+'@vercel/next': minor
 'vercel': minor
 ---
 
-Output "diagnostics" directory during `vc build`
+Adds the ability for builders to define a `diagnostics` step that is called after the build operation is done.
+Implements the diagnostics step in the `next` builder.
