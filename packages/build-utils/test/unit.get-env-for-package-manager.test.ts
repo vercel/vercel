@@ -525,6 +525,17 @@ describe('Test `getPathOverrideForPackageManager()`', () => {
       });
     }).toThrow();
   });
+
+  test('should throw error with pnpm 9.0.0 on lockfile version 6.0', () => {
+    expect(() => {
+      getPathOverrideForPackageManager({
+        cliType: 'pnpm',
+        lockfileVersion: 6.0,
+        corepackPackageManager: 'pnpm@9.0.0',
+        nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
+      });
+    }).toThrow();
+  });
 });
 
 describe('Test `getPathForPackageManager()`', () => {
