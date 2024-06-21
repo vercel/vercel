@@ -3,7 +3,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import Sema from 'async-sema';
 import spawn from 'cross-spawn';
-import { coerce, intersects, validRange } from 'semver';
+import { coerce, intersects, SemVer, validRange } from 'semver';
 import { SpawnOptions } from 'child_process';
 import { deprecate } from 'util';
 import debug from '../debug';
@@ -688,8 +688,9 @@ function detectPnpmVersion(
 function validLockfileForPackageManager(
   cliType: CliType,
   lockfileVersion: number,
-  packageManagerMajorVersion: number
+  packageManagerVersion: SemVer
 ) {
+  const packageManagerMajorVersion = packageManagerVersion.major;
   switch (cliType) {
     case 'npm':
     case 'bun':
@@ -698,6 +699,13 @@ function validLockfileForPackageManager(
     case 'pnpm':
       switch (packageManagerMajorVersion) {
         case 9:
+          // bug in pnpm 9.0.0 causes incompatibility with lockfile version 6.0
+          if (
+            '9.0.0' === packageManagerVersion.version &&
+            lockfileVersion === 6.0
+          ) {
+            return false;
+          }
           return [6.0, 7.0, 9.0].includes(lockfileVersion);
         case 8:
           return [6.0, 6.1].includes(lockfileVersion);
@@ -795,7 +803,7 @@ function validateCorepackPackageManager(
     return validLockfileForPackageManager(
       cliType,
       lockfileVersion,
-      corepackPackageManagerVersion.major
+      corepackPackageManagerVersion
     );
   }
 }
