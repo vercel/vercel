@@ -1,3 +1,5 @@
+// force test rerun
+
 import assert from 'assert';
 import fs from 'fs-extra';
 import path from 'path';
