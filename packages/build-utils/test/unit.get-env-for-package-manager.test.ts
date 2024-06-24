@@ -472,6 +472,74 @@ describe('Test `getPathOverrideForPackageManager()`', () => {
         path: undefined,
       },
     },
+    {
+      name: 'should allow lockfile 5.3 with pnpm 6.x',
+      args: {
+        cliType: 'pnpm',
+        nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
+        packageJsonPackageManager: 'pnpm@6.x',
+        lockfileVersion: 5.3,
+        env: {
+          FOO: 'bar',
+        },
+      },
+      want: {
+        detectedLockfile: undefined,
+        detectedPackageManager: undefined,
+        path: undefined,
+      },
+    },
+    {
+      name: 'should allow lockfile 5.3 with pnpm 7.x',
+      args: {
+        cliType: 'pnpm',
+        nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
+        packageJsonPackageManager: 'pnpm@7.x',
+        lockfileVersion: 5.3,
+        env: {
+          FOO: 'bar',
+        },
+      },
+      want: {
+        detectedLockfile: undefined,
+        detectedPackageManager: undefined,
+        path: undefined,
+      },
+    },
+    {
+      name: 'should allow lockfile 5.4 with pnpm 6.x',
+      args: {
+        cliType: 'pnpm',
+        nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
+        packageJsonPackageManager: 'pnpm@6.x',
+        lockfileVersion: 5.4,
+        env: {
+          FOO: 'bar',
+        },
+      },
+      want: {
+        detectedLockfile: undefined,
+        detectedPackageManager: undefined,
+        path: undefined,
+      },
+    },
+    {
+      name: 'should allow lockfile 5.4 with pnpm 7.x',
+      args: {
+        cliType: 'pnpm',
+        nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
+        packageJsonPackageManager: 'pnpm@7.x',
+        lockfileVersion: 5.4,
+        env: {
+          FOO: 'bar',
+        },
+      },
+      want: {
+        detectedLockfile: undefined,
+        detectedPackageManager: undefined,
+        path: undefined,
+      },
+    },
   ])('$name', ({ args, want }) => {
     expect(
       getPathOverrideForPackageManager({
