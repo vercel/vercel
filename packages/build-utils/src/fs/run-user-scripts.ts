@@ -378,7 +378,7 @@ function detectPackageManagerNameWithoutLockfile(packageJson: PackageJson) {
   const packageJsonPackageManager = packageJson.packageManager;
   if (usingCorepack(process.env, packageJsonPackageManager)) {
     const corepackPackageManager = validateVersionSpecifier(
-      packageJsonPackageManager as string
+      packageJsonPackageManager
     );
     switch (corepackPackageManager?.packageName) {
       case 'npm':
@@ -390,7 +390,7 @@ function detectPackageManagerNameWithoutLockfile(packageJson: PackageJson) {
         return 'npm';
       default:
         throw new Error(
-          `Unknown package manager "${corepackPackageManager?.packageName}". Change your package.json "packageManager" field to a known package manager.`
+          `Unknown package manager "${corepackPackageManager?.packageName}". Change your package.json "packageManager" field to a known package manager: npm, pnpm, yarn, bun.`
         );
     }
   }
@@ -808,7 +808,7 @@ function validateCorepackPackageManager(
   }
 }
 
-function validateVersionSpecifier(version: string) {
+function validateVersionSpecifier(version?: string) {
   if (!version) {
     return undefined;
   }
