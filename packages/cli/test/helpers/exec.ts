@@ -9,7 +9,7 @@ let globalArgs: string[] = [];
 
 function getGlobalArgs() {
   if (process.env.CI) {
-    return [];
+    return ['--scope', process.env.VERCEL_TEAM_ID];
   }
 
   if (globalArgs.length === 0) {
