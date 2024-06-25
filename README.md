@@ -122,7 +122,7 @@ While running the full integration suite locally is not recommended, it's someti
 1. Create an access token. Follow the insructions here https://vercel.com/docs/rest-api#creating-an-access-token. Ensure the token scope is for your personal
    account.
 2. Grab the team ID from the Vercel dashboard at `https://vercel.com/<MY-TEAM>/~/settings`.
-3. Source these into your shell rc file: `echo 'export VERCEL_TOKEN=<MY-TOKEN> VERCEL_TEAM_ID=<MY-TEAM-ID>' >> ~/.zshrc`
+3. Source these into your shell rc file: `echo 'export VERCEL_VTEST_TOKEN=<MY-TOKEN> VERCEL_VTEST_TEAM_ID=<MY-TEAM-ID>' >> ~/.zshrc`
 
 From there, you should be able to trigger an integration test. Choose one
 that's already isolated to check that things work:

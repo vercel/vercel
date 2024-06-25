@@ -253,10 +253,10 @@ export const fetch = async (
   url = `${opts.apiUrl || 'https://api.vercel.com'}${url}`;
   delete opts.apiUrl;
 
-  const { VERCEL_TEAM_ID } = process.env;
+  const { VERCEL_VTEST_TEAM_ID } = process.env;
 
-  if (VERCEL_TEAM_ID) {
-    url += `${url.includes('?') ? '&' : '?'}teamId=${VERCEL_TEAM_ID}`;
+  if (VERCEL_VTEST_TEAM_ID) {
+    url += `${url.includes('?') ? '&' : '?'}teamId=${VERCEL_VTEST_TEAM_ID}`;
   }
 
   if (opts.teamId) {

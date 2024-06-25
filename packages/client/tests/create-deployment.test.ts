@@ -30,7 +30,7 @@ describe('create v2 deployment', () => {
     for await (const event of createDeployment(
       {
         token,
-        teamId: process.env.VERCEL_TEAM_ID,
+        teamId: process.env.VERCEL_VTEST_TEAM_ID,
         path: path.resolve(__dirname, 'fixtures', 'v2'),
       },
       {
@@ -52,7 +52,7 @@ describe('create v2 deployment', () => {
     for await (const event of createDeployment(
       {
         token,
-        teamId: process.env.VERCEL_TEAM_ID,
+        teamId: process.env.VERCEL_VTEST_TEAM_ID,
         path: path.resolve(__dirname, 'fixtures', 'v2'),
       },
       {
@@ -74,7 +74,7 @@ describe('create v2 deployment', () => {
     for await (const event of createDeployment(
       {
         token,
-        teamId: process.env.VERCEL_TEAM_ID,
+        teamId: process.env.VERCEL_VTEST_TEAM_ID,
         path: path.resolve(__dirname, 'fixtures', 'v2'),
       },
       {
@@ -94,7 +94,7 @@ describe('create v2 deployment', () => {
     for await (const event of createDeployment(
       {
         token,
-        teamId: process.env.VERCEL_TEAM_ID,
+        teamId: process.env.VERCEL_VTEST_TEAM_ID,
         path: path.resolve(__dirname, 'fixtures', 'v2-file-permissions'),
         skipAutoDetectionConfirmation: true,
       },
@@ -133,7 +133,7 @@ describe('create v2 deployment', () => {
     for await (const event of createDeployment(
       {
         token,
-        teamId: process.env.VERCEL_TEAM_ID,
+        teamId: process.env.VERCEL_VTEST_TEAM_ID,
         path: path.resolve(__dirname, 'fixtures', 'nowignore'),
         skipAutoDetectionConfirmation: true,
       },

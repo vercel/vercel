@@ -187,10 +187,10 @@ async function fetchWithAuth(url, opts = {}) {
     opts.headers.Authorization = `Bearer ${await fetchCachedToken()}`;
   }
 
-  const { VERCEL_TEAM_ID } = process.env;
+  const { VERCEL_VTEST_TEAM_ID } = process.env;
 
-  if (VERCEL_TEAM_ID) {
-    url += `${url.includes('?') ? '&' : '?'}teamId=${VERCEL_TEAM_ID}`;
+  if (VERCEL_VTEST_TEAM_ID) {
+    url += `${url.includes('?') ? '&' : '?'}teamId=${VERCEL_VTEST_TEAM_ID}`;
   }
 
   return await fetchApi(url, opts);
@@ -213,23 +213,23 @@ async function fetchTokenWithRetry(retries = 5) {
   const {
     NOW_TOKEN,
     TEMP_TOKEN,
-    VERCEL_TOKEN,
+    VERCEL_VTEST_TOKEN,
     VERCEL_TEST_TOKEN,
     VERCEL_TEST_REGISTRATION_URL,
   } = process.env;
-  if (VERCEL_TOKEN || NOW_TOKEN || TEMP_TOKEN) {
+  if (VERCEL_VTEST_TOKEN || NOW_TOKEN || TEMP_TOKEN) {
     if (!TEMP_TOKEN) {
       logWithinTest(
         'Your personal token will be used to make test deployments.'
       );
     }
-    return VERCEL_TOKEN || NOW_TOKEN || TEMP_TOKEN;
+    return VERCEL_VTEST_TOKEN || NOW_TOKEN || TEMP_TOKEN;
   }
   if (!VERCEL_TEST_TOKEN || !VERCEL_TEST_REGISTRATION_URL) {
     throw new Error(
       process.env.CI
         ? 'Failed to create test deployment. This is expected for 3rd-party Pull Requests. Please run tests locally.'
-        : 'Failed to create test deployment. Please set `VERCEL_TOKEN` environment variable and run again.'
+        : 'Failed to create test deployment. Please set `VERCEL_VTEST_TOKEN` environment variable and run again.'
     );
   }
   try {

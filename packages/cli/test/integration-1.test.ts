@@ -199,7 +199,7 @@ afterAll(async () => {
   }
 
   // Make sure the token gets revoked unless it's passed in via environment
-  if (!process.env.VERCEL_TOKEN) {
+  if (!process.env.VERCEL_VTEST_TOKEN) {
     await execCli(binaryPath, ['logout']);
   }
 

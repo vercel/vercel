@@ -121,7 +121,7 @@ async function exec(directory, args = []) {
   // eslint-disable-next-line no-console
   console.log(
     `exec() ${binaryPath} dev ${directory} -t ***${
-      process.env.VERCEL_TEAM_ID ? ' --scope ***' : ''
+      process.env.VERCEL_VTEST_TEAM_ID ? ' --scope ***' : ''
     } ${args.join(' ')}`
   );
   return execa(
@@ -131,8 +131,8 @@ async function exec(directory, args = []) {
       directory,
       '-t',
       token,
-      ...(process.env.VERCEL_TEAM_ID
-        ? ['--scope', process.env.VERCEL_TEAM_ID]
+      ...(process.env.VERCEL_VTEST_TEAM_ID
+        ? ['--scope', process.env.VERCEL_VTEST_TEAM_ID]
         : []),
       ...args,
     ],
@@ -216,7 +216,7 @@ async function testFixture(directory, opts = {}, args = []) {
   // eslint-disable-next-line no-console
   console.log(
     `testFixture() ${binaryPath} dev ${directory} -t ***${
-      process.env.VERCEL_TEAM_ID ? ' --scope ***' : ''
+      process.env.VERCEL_VTEST_TEAM_ID ? ' --scope ***' : ''
     } -l ${port} ${args.join(' ')}`
   );
   const dev = execa(
@@ -226,8 +226,8 @@ async function testFixture(directory, opts = {}, args = []) {
       directory,
       '-t',
       token,
-      ...(process.env.VERCEL_TEAM_ID
-        ? ['--scope', process.env.VERCEL_TEAM_ID]
+      ...(process.env.VERCEL_VTEST_TEAM_ID
+        ? ['--scope', process.env.VERCEL_VTEST_TEAM_ID]
         : []),
       '-l',
       String(port),
@@ -342,8 +342,8 @@ function testFixtureStdio(
           [
             '-t',
             token,
-            ...(process.env.VERCEL_TEAM_ID
-              ? ['--scope', process.env.VERCEL_TEAM_ID]
+            ...(process.env.VERCEL_VTEST_TEAM_ID
+              ? ['--scope', process.env.VERCEL_VTEST_TEAM_ID]
               : []),
             'link',
             '--yes',
@@ -363,8 +363,8 @@ function testFixtureStdio(
           const { projectId } = await fs.readJson(projectJsonPath);
           const res = await fetchWithRetry(
             `https://api.vercel.com/v2/projects/${projectId}${
-              process.env.VERCEL_TEAM_ID
-                ? `?teamId=${process.env.VERCEL_TEAM_ID}`
+              process.env.VERCEL_VTEST_TEAM_ID
+                ? `?teamId=${process.env.VERCEL_VTEST_TEAM_ID}`
                 : ''
             }`,
             {
@@ -386,8 +386,8 @@ function testFixtureStdio(
           [
             '-t',
             token,
-            ...(process.env.VERCEL_TEAM_ID
-              ? ['--scope', process.env.VERCEL_TEAM_ID]
+            ...(process.env.VERCEL_VTEST_TEAM_ID
+              ? ['--scope', process.env.VERCEL_VTEST_TEAM_ID]
               : []),
             'deploy',
             ...(process.env.VERCEL_CLI_VERSION
@@ -447,7 +447,7 @@ function testFixtureStdio(
       // eslint-disable-next-line no-console
       console.log(
         `testFixtureStdio() ${binaryPath} dev -l ${port} -t ***${
-          process.env.VERCEL_TEAM_ID ? ' --scope ***' : ''
+          process.env.VERCEL_VTEST_TEAM_ID ? ' --scope ***' : ''
         } --debug`
       );
       const env = skipDeploy
@@ -461,8 +461,8 @@ function testFixtureStdio(
           port,
           '-t',
           token,
-          ...(process.env.VERCEL_TEAM_ID
-            ? ['--scope', process.env.VERCEL_TEAM_ID]
+          ...(process.env.VERCEL_VTEST_TEAM_ID
+            ? ['--scope', process.env.VERCEL_VTEST_TEAM_ID]
             : []),
           '--debug',
         ],
