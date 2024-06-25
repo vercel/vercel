@@ -1,5 +1,13 @@
 # @vercel/next
 
+## 4.2.18
+
+### Patch Changes
+
+- Allow app router prerender functions to use streaming ([#11745](https://github.com/vercel/vercel/pull/11745))
+
+- Add experimental preload flag ([#11753](https://github.com/vercel/vercel/pull/11753))
+
 ## 4.2.17
 
 ### Patch Changes
