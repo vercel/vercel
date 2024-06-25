@@ -217,6 +217,7 @@ async function fetchTokenWithRetry(retries = 5) {
     VERCEL_TEST_TOKEN,
     VERCEL_TEST_REGISTRATION_URL,
   } = process.env;
+  console.log(`vtesttoken exists`, !!VERCEL_VTEST_TOKEN);
   if (VERCEL_VTEST_TOKEN || NOW_TOKEN || TEMP_TOKEN) {
     if (!TEMP_TOKEN) {
       logWithinTest(
