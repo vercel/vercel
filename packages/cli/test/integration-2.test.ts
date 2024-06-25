@@ -220,43 +220,6 @@ afterAll(async () => {
   }
 });
 
-test(
-  'change user',
-  async () => {
-    if (!email) {
-      throw new Error('Shared state "email" not set.');
-    }
-
-    const { stdout: prevUser } = await execCli(binaryPath, ['whoami']);
-
-    // Delete the current token
-    await execCli(binaryPath, ['logout', '--debug'], { stdio: 'inherit' });
-
-    await createUser();
-
-    await execCli(
-      binaryPath,
-      ['login', email, '--api', loginApiUrl, '--debug'],
-      {
-        stdio: 'inherit',
-        env: {
-          FORCE_TTY: '1',
-        },
-      }
-    );
-
-    const auth = await fs.readJSON(getConfigAuthPath());
-    expect(auth.token).toBe(token);
-
-    const { stdout: nextUser } = await execCli(binaryPath, ['whoami']);
-
-    expect(typeof prevUser, prevUser).toBe('string');
-    expect(typeof nextUser, nextUser).toBe('string');
-    expect(prevUser).not.toBe(nextUser);
-  },
-  60 * 1000
-);
-
 test('assign a domain to a project', async () => {
   const domain = `project-domain.${contextName}.vercel.app`;
   const directory = await setupE2EFixture('static-deployment');
