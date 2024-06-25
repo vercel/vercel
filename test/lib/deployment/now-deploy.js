@@ -192,7 +192,6 @@ async function fetchWithAuth(url, opts = {}) {
   if (VERCEL_TEAM_ID) {
     url += `${url.includes('?') ? '&' : '?'}teamId=${VERCEL_TEAM_ID}`;
   }
-  console.log('fetchWithAuth', url, opts);
 
   return await fetchApi(url, opts);
 }

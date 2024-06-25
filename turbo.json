@@ -14,52 +14,42 @@
     },
     "vitest-unit": {
       "dependsOn": ["build"],
-      "cache": false,
       "outputMode": "new-only"
     },
     "vitest-run": {
       "dependsOn": ["build"],
-      "cache": false,
       "outputMode": "new-only"
     },
     "vitest-e2e": {
       "dependsOn": ["build"],
-      "cache": false,
       "outputMode": "new-only"
     },
     "test-unit": {
       "dependsOn": ["build"],
-      "cache": false,
       "outputMode": "new-only"
     },
     "test-dev": {
       "dependsOn": ["build"],
-      "cache": false,
       "outputMode": "new-only"
     },
     "test-cli": {
       "dependsOn": ["build"],
-      "cache": false,
       "outputMode": "new-only"
     },
     "test-e2e": {
       "dependsOn": ["build"],
-      "cache": false,
       "outputMode": "new-only"
     },
     "test-next-local": {
       "dependsOn": ["build"],
-      "cache": false,
       "outputMode": "new-only"
     },
     "test-next-local-legacy": {
       "dependsOn": ["build"],
-      "cache": false,
       "outputMode": "new-only"
     },
     "test": {
       "dependsOn": ["build"],
-      "cache": false,
       "outputMode": "new-only"
     },
     "type-check": {}
