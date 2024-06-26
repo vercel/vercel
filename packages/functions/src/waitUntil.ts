@@ -14,7 +14,7 @@
  * }
  * ```
  */
-export const waitUntil = (promise: Promise<any>) => {
+export const waitUntil = (promise: Promise<unknown>) => {
   if (
     promise === null ||
     typeof promise !== 'object' ||
