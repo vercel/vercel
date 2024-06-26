@@ -1,7 +1,8 @@
 import path from 'path';
 import { URL, parse as parseUrl } from 'url';
 import { exec, execCli } from './helpers/exec';
-import fetch, { RequestInit } from 'node-fetch';
+import fetch from 'node-fetch';
+import { apiFetch } from './helpers/api-fetch';
 import retry from 'async-retry';
 import fs from 'fs-extra';
 import sleep from '../src/util/sleep';
@@ -123,20 +124,6 @@ const loginApiServer = require('http')
     // eslint-disable-next-line no-console
     console.log(`[mock-login-server] Listening on ${loginApiUrl}`);
   });
-
-const apiFetch = (path: string, { headers, ...options }: RequestInit = {}) => {
-  const url = new URL(path, 'https://api.vercel.com');
-  if (process.env.VERCEL_TEAM_ID) {
-    url.searchParams.set('teamId', process.env.VERCEL_TEAM_ID);
-  }
-  return fetch(url, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      ...(headers || {}),
-    },
-    ...options,
-  });
-};
 
 const createUser = async () => {
   await retry(

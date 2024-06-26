@@ -1,6 +1,7 @@
 import path from 'path';
 import { URL } from 'url';
-import fetch, { RequestInit } from 'node-fetch';
+import fetch from 'node-fetch';
+import { apiFetch } from './helpers/api-fetch';
 import retry from 'async-retry';
 import fs, {
   writeFile,
@@ -11,7 +12,6 @@ import fs, {
   mkdir,
 } from 'fs-extra';
 import sleep from '../src/util/sleep';
-import { fetchTokenWithRetry } from '../../../test/lib/deployment/now-deploy';
 import waitForPrompt from './helpers/wait-for-prompt';
 import { execCli } from './helpers/exec';
 import getGlobalDir from './helpers/get-global-dir';
@@ -32,13 +32,12 @@ const example = (name: string) =>
   path.join(__dirname, '..', '..', '..', 'examples', name);
 let session = 'temp-session';
 
-function fetchTokenInformation(token: string, retries = 3) {
-  const url = `https://api.vercel.com/v2/teams/${process.env.VERCEL_TEAM_ID}`;
-  const headers = { Authorization: `Bearer ${token}` };
+function getTeamInfo(retries = 3) {
+  const url = `/v2/teams/${process.env.VERCEL_TEAM_ID}`;
 
   return retry(
     async () => {
-      const res = await fetch(url, { headers });
+      const res = await apiFetch(url);
 
       if (!res.ok) {
         throw new Error(
@@ -56,28 +55,17 @@ function fetchTokenInformation(token: string, retries = 3) {
   );
 }
 
-let token: string | undefined;
 let contextName: string | undefined;
 let teamId: string | undefined;
 
-const apiFetch = (url: string, { headers, ...options }: RequestInit = {}) => {
-  return fetch(`https://api.vercel.com${url}`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      ...(headers || {}),
-    },
-    ...options,
-  });
-};
-
-const createUser = async () => {
+const setupTeam = async () => {
   await retry(
     async () => {
-      token = await fetchTokenWithRetry();
+      const token = process.env.VERCEL_TOKEN!;
 
       await fs.writeJSON(getConfigAuthPath(), { token });
 
-      const team = await fetchTokenInformation(token);
+      const team = await getTeamInfo();
 
       contextName = team.slug;
       teamId = team.id;
@@ -145,7 +133,7 @@ async function setupProject(
 
 beforeAll(async () => {
   try {
-    await createUser();
+    await setupTeam();
 
     if (!contextName) {
       throw new Error('Shared state "contextName" not set.');
@@ -437,16 +425,11 @@ test('should prefill "project name" prompt with now.json `name`', async () => {
 });
 
 test('deploy with unknown `VERCEL_PROJECT_ID` should fail', async () => {
-  if (!token) {
-    throw new Error('Shared state "token" not set.');
-  }
-
   const directory = await setupE2EFixture('static-deployment');
-  const user = await fetchTokenInformation(token);
 
   const output = await execCli(binaryPath, [directory], {
     env: {
-      VERCEL_ORG_ID: user.id,
+      VERCEL_ORG_ID: process.env.VERCEL_TEAM_ID,
       VERCEL_PROJECT_ID: 'asdf',
     },
   });
@@ -456,15 +439,10 @@ test('deploy with unknown `VERCEL_PROJECT_ID` should fail', async () => {
 });
 
 test('deploy with `VERCEL_ORG_ID` but without `VERCEL_PROJECT_ID` should fail', async () => {
-  if (!token) {
-    throw new Error('Shared state "token" not set.');
-  }
-
   const directory = await setupE2EFixture('static-deployment');
-  const user = await fetchTokenInformation(token);
 
   const output = await execCli(binaryPath, [directory], {
-    env: { VERCEL_ORG_ID: user.id },
+    env: { VERCEL_ORG_ID: process.env.VERCEL_TEAM_ID },
   });
 
   expect(output.exitCode, formatOutput(output)).toBe(1);
@@ -584,7 +562,7 @@ test('use `rootDirectory` from project when deploying', async () => {
 
 test('vercel deploy with unknown `VERCEL_ORG_ID` or `VERCEL_PROJECT_ID` should error', async () => {
   const output = await execCli(binaryPath, ['deploy'], {
-    env: { VERCEL_ORG_ID: 'asdf', VERCEL_PROJECT_ID: 'asdf' },
+    env: { VERCEL_ORG_ID: teamId, VERCEL_PROJECT_ID: 'asdf' },
   });
 
   expect(output.exitCode, formatOutput(output)).toBe(1);
@@ -593,7 +571,7 @@ test('vercel deploy with unknown `VERCEL_ORG_ID` or `VERCEL_PROJECT_ID` should e
 
 test('vercel env with unknown `VERCEL_ORG_ID` or `VERCEL_PROJECT_ID` should error', async () => {
   const output = await execCli(binaryPath, ['env'], {
-    env: { VERCEL_ORG_ID: 'asdf', VERCEL_PROJECT_ID: 'asdf' },
+    env: { VERCEL_ORG_ID: teamId, VERCEL_PROJECT_ID: 'asdf' },
   });
 
   expect(output.exitCode, formatOutput(output)).toBe(1);
@@ -714,14 +692,8 @@ test('override an existing env var', async () => {
 });
 
 test('whoami with `VERCEL_ORG_ID` should favor `--scope` and should error', async () => {
-  if (!token) {
-    throw new Error('Shared state "token" not set.');
-  }
-
-  const user = await fetchTokenInformation(token);
-
   const output = await execCli(binaryPath, ['whoami', '--scope', 'asdf'], {
-    env: { VERCEL_ORG_ID: user.id },
+    env: { VERCEL_ORG_ID: process.env.VERCEL_TEAM_ID },
   });
 
   expect(output.exitCode, formatOutput(output)).toBe(1);
@@ -729,18 +701,13 @@ test('whoami with `VERCEL_ORG_ID` should favor `--scope` and should error', asyn
 });
 
 test('whoami with local .vercel scope', async () => {
-  if (!token) {
-    throw new Error('Shared state "token" not set.');
-  }
-
   const directory = await setupE2EFixture('static-deployment');
-  const user = await fetchTokenInformation(token);
 
   // create local .vercel
   await ensureDir(path.join(directory, '.vercel'));
   await fs.writeFile(
     path.join(directory, '.vercel', 'project.json'),
-    JSON.stringify({ orgId: user.id, projectId: 'xxx' })
+    JSON.stringify({ orgId: process.env.VERCEL_TEAM_ID, projectId: 'xxx' })
   );
 
   const output = await execCli(binaryPath, ['whoami'], {
@@ -1193,20 +1160,16 @@ test('[vc dev] should send the platform proxy request headers to frontend dev se
 });
 
 test('[vc link] should support the `--project` flag', async () => {
-  if (!token) {
-    throw new Error('Shared state "token" not set.');
-  }
-
   const projectName = 'link-project-flag';
   const directory = await setupE2EFixture('static-deployment');
 
-  const [user, output] = await Promise.all([
-    fetchTokenInformation(token),
+  const [team, output] = await Promise.all([
+    getTeamInfo(),
     execCli(binaryPath, ['link', '--yes', '--project', projectName, directory]),
   ]);
 
   expect(output.exitCode, formatOutput(output)).toBe(0);
-  expect(output.stderr).toContain(`Linked to ${user.username}/${projectName}`);
+  expect(output.stderr).toContain(`Linked to ${team.slug}/${projectName}`);
 });
 
 test('[vc build] should build project with `@vercel/static-build`', async () => {
