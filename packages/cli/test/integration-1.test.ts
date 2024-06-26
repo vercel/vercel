@@ -13,6 +13,7 @@ import {
 } from './helpers/setup-e2e-fixture';
 import formatOutput from './helpers/format-output';
 import type { CLIProcess } from './helpers/types';
+import type { Team } from '@vercel-internals/types';
 
 const TEST_TIMEOUT = 3 * 60 * 1000;
 jest.setTimeout(TEST_TIMEOUT);
@@ -56,9 +57,11 @@ async function getLocalhost(vc: CLIProcess): Promise<RegExpExecArray> {
   return localhost;
 }
 
+let team: Team;
+
 beforeAll(async () => {
   try {
-    const team = await getTeamInfo();
+    team = await getTeamInfo();
     await prepareE2EFixtures(team.slug, binaryPath);
   } catch (err) {
     // eslint-disable-next-line no-console
@@ -431,8 +434,6 @@ test('deploy using --local-config flag v2', async () => {
 
   const { host } = new URL(stdout);
   expect(host).toMatch(/secondary/gm);
-
-  const team = await getTeamInfo();
 
   const testRes = await fetch(`https://${host}/test-${team.slug}.html`);
   const testText = await testRes.text();
