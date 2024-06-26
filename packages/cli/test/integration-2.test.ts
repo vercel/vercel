@@ -2,7 +2,6 @@ import path from 'path';
 import { URL } from 'url';
 import fetch from 'node-fetch';
 import { apiFetch } from './helpers/api-fetch';
-import retry from 'async-retry';
 import fs, {
   writeFile,
   readFile,
@@ -14,9 +13,8 @@ import fs, {
 import sleep from '../src/util/sleep';
 import waitForPrompt from './helpers/wait-for-prompt';
 import { execCli } from './helpers/exec';
-import getGlobalDir from './helpers/get-global-dir';
 import { listTmpDirs } from './helpers/get-tmp-dir';
-import { getTeamInfo } from './helpers/get-team';
+import { teamPromise, userPromise } from './helpers/get-account';
 import {
   setupE2EFixture,
   prepareE2EFixtures,
@@ -32,56 +30,6 @@ const binaryPath = path.resolve(__dirname, `../scripts/start.js`);
 const example = (name: string) =>
   path.join(__dirname, '..', '..', '..', 'examples', name);
 let session = 'temp-session';
-
-function getUserInfo(retries = 3) {
-  const url = `/v2/user`;
-
-  return retry(
-    async () => {
-      const res = await apiFetch(url);
-
-      if (!res.ok) {
-        throw new Error(
-          `Failed to fetch "${url}", status: ${
-            res.status
-          }, id: ${res.headers.get('x-vercel-id')}`
-        );
-      }
-
-      const data = await res.json();
-
-      return data;
-    },
-    { retries, factor: 1 }
-  );
-}
-
-let contextName: string | undefined;
-let teamId: string | undefined;
-let username: string | undefined;
-
-const setupTeam = async () => {
-  await retry(
-    async () => {
-      const token = process.env.VERCEL_TOKEN!;
-
-      await fs.writeJSON(getConfigAuthPath(), { token });
-
-      const team = await getTeamInfo();
-      const userInfo = await getUserInfo();
-      username = userInfo.user.username;
-
-      contextName = team.slug;
-      teamId = team.id;
-      session = Math.random().toString(36).split('.')[1];
-    },
-    { retries: 3, factor: 1 }
-  );
-};
-
-function getConfigAuthPath() {
-  return path.join(getGlobalDir(), 'auth.json');
-}
 
 async function setupProject(
   process: CLIProcess,
@@ -137,13 +85,8 @@ async function setupProject(
 
 beforeAll(async () => {
   try {
-    await setupTeam();
-
-    if (!contextName) {
-      throw new Error('Shared state "contextName" not set.');
-    }
-
-    await prepareE2EFixtures(contextName, binaryPath);
+    const team = await teamPromise;
+    await prepareE2EFixtures(team.slug, binaryPath);
   } catch (err) {
     // eslint-disable-next-line no-console
     console.log('Failed test suite `beforeAll`');
@@ -170,7 +113,8 @@ afterAll(async () => {
 });
 
 test('assign a domain to a project', async () => {
-  const domain = `project-domain.${contextName}.vercel.app`;
+  const team = await teamPromise;
+  const domain = `project-domain.${team.slug}.vercel.app`;
   const directory = await setupE2EFixture('static-deployment');
 
   const deploymentOutput = await execCli(binaryPath, [
@@ -489,6 +433,7 @@ test('deploy with `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID`', async () => {
 });
 
 test('deploy shows notice when project in `.vercel` does not exists', async () => {
+  const team = await teamPromise;
   const directory = await setupE2EFixture('static-deployment');
 
   // overwrite .vercel with unexisting project
@@ -496,7 +441,7 @@ test('deploy shows notice when project in `.vercel` does not exists', async () =
   await writeFile(
     path.join(directory, '.vercel/project.json'),
     JSON.stringify({
-      orgId: teamId,
+      orgId: team.id,
       projectId: 'asdf',
     })
   );
@@ -565,8 +510,9 @@ test('use `rootDirectory` from project when deploying', async () => {
 });
 
 test('vercel deploy with unknown `VERCEL_ORG_ID` or `VERCEL_PROJECT_ID` should error', async () => {
+  const team = await teamPromise;
   const output = await execCli(binaryPath, ['deploy'], {
-    env: { VERCEL_ORG_ID: teamId, VERCEL_PROJECT_ID: 'asdf' },
+    env: { VERCEL_ORG_ID: team.id, VERCEL_PROJECT_ID: 'asdf' },
   });
 
   expect(output.exitCode, formatOutput(output)).toBe(1);
@@ -574,8 +520,9 @@ test('vercel deploy with unknown `VERCEL_ORG_ID` or `VERCEL_PROJECT_ID` should e
 });
 
 test('vercel env with unknown `VERCEL_ORG_ID` or `VERCEL_PROJECT_ID` should error', async () => {
+  const team = await teamPromise;
   const output = await execCli(binaryPath, ['env'], {
-    env: { VERCEL_ORG_ID: teamId, VERCEL_PROJECT_ID: 'asdf' },
+    env: { VERCEL_ORG_ID: team.id, VERCEL_PROJECT_ID: 'asdf' },
   });
 
   expect(output.exitCode, formatOutput(output)).toBe(1);
@@ -719,7 +666,9 @@ test('whoami with local .vercel scope', async () => {
   });
 
   expect(output.exitCode, formatOutput(output)).toBe(0);
-  expect(output.stdout).toContain(username);
+
+  const user = await userPromise;
+  expect(output.stdout).toContain(user.username);
 
   // clean up
   await remove(path.join(directory, '.vercel'));
@@ -1166,7 +1115,7 @@ test('[vc link] should support the `--project` flag', async () => {
   const directory = await setupE2EFixture('static-deployment');
 
   const [team, output] = await Promise.all([
-    getTeamInfo(),
+    teamPromise,
     execCli(binaryPath, ['link', '--yes', '--project', projectName, directory]),
   ]);
 

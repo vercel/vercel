@@ -21,9 +21,8 @@ import {
 } from './helpers/setup-e2e-fixture';
 import formatOutput from './helpers/format-output';
 import type { NowJson, DeploymentLike } from './helpers/types';
-import { getTeamInfo } from './helpers/get-team';
+import { teamPromise, userPromise } from './helpers/get-account';
 import { apiFetch } from './helpers/api-fetch';
-import type { Team } from '@vercel-internals/types';
 
 const TEST_TIMEOUT = 3 * 60 * 1000;
 jest.setTimeout(TEST_TIMEOUT);
@@ -38,8 +37,6 @@ const context: {
 } = {
   deployment: undefined,
 };
-
-let team: Team;
 
 const pickUrl = (stdout: string) => {
   const lines = stdout.split('\n');
@@ -75,7 +72,7 @@ const waitForDeployment = async (href: RequestInfo) => {
 
 beforeAll(async () => {
   try {
-    team = await getTeamInfo();
+    const team = await teamPromise;
     await prepareE2EFixtures(team.slug, binaryPath);
   } catch (err) {
     console.log('Failed test suite `beforeAll`');
@@ -153,10 +150,11 @@ test('output the version', async () => {
 });
 
 test('login with unregistered user', async () => {
-  const { stdout, stderr, exitCode } = await execCli(binaryPath, [
-    'login',
-    `${session}@${session}.com`,
-  ]);
+  const { stdout, stderr, exitCode } = await execCli(
+    binaryPath,
+    ['login', `${session}@${session}.com`],
+    { token: false }
+  );
 
   const goal = `Error: Please sign up: https://vercel.com/signup`;
   const lines = stderr.trim().split('\n');
@@ -199,6 +197,7 @@ test('ignore files specified in .nowignore via allowlist', async () => {
 });
 
 test('list the scopes', async () => {
+  const team = await teamPromise;
   const { stdout, stderr, exitCode } = await execCli(binaryPath, [
     'teams',
     'ls',
@@ -211,6 +210,7 @@ test('list the scopes', async () => {
 });
 
 test('domains inspect', async () => {
+  const team = await teamPromise;
   const domainName = `inspect-${team.slug}-${Math.random()
     .toString()
     .slice(2, 8)}.org`;
@@ -239,11 +239,11 @@ test('domains inspect', async () => {
     expect(result.exitCode, formatOutput(result)).toBe(0);
   }
 
-  const { exitCode, stdout, stderr } = await execCli(binaryPath, [
-    'domains',
-    'inspect',
-    domainName,
-  ]);
+  const { exitCode, stdout, stderr } = await execCli(
+    binaryPath,
+    ['domains', 'inspect', domainName, '--debug'],
+    { stdio: 'inherit' }
+  );
 
   expect(stderr).toContain(`Renewal Price`);
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
@@ -412,6 +412,7 @@ test('ensure the `scope` property works with email', async () => {
 });
 
 test('ensure the `scope` property works with username', async () => {
+  const team = await teamPromise;
   const directory = await setupE2EFixture('config-scope-property-username');
 
   const { stderr, stdout, exitCode } = await execCli(binaryPath, [
@@ -1015,14 +1016,13 @@ test('should invoke CLI extension', async () => {
   // Ensure the `.bin` is populated in the fixture
   await runNpmInstall(fixture);
 
-  const [userRes, output] = await Promise.all([
-    apiFetch('/v2/user'),
+  const [user, output] = await Promise.all([
+    userPromise,
     execCli(binaryPath, ['mywhoami'], { cwd: fixture }),
   ]);
   const formatted = formatOutput(output);
   expect(output.stdout, formatted).toContain('Hello from a CLI extension!');
   expect(output.stdout, formatted).toContain('VERCEL_API: http://127.0.0.1:');
-  const user = (await userRes.json()).user;
   expect(output.stdout, formatted).toContain(`Username: ${user.username}`);
 });
 

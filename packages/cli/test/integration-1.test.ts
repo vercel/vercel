@@ -6,14 +6,13 @@ import fs from 'fs-extra';
 import sleep from '../src/util/sleep';
 import waitForPrompt from './helpers/wait-for-prompt';
 import { listTmpDirs } from './helpers/get-tmp-dir';
-import { getTeamInfo } from './helpers/get-team';
+import { teamPromise } from './helpers/get-account';
 import {
   setupE2EFixture,
   prepareE2EFixtures,
 } from './helpers/setup-e2e-fixture';
 import formatOutput from './helpers/format-output';
 import type { CLIProcess } from './helpers/types';
-import type { Team } from '@vercel-internals/types';
 
 const TEST_TIMEOUT = 3 * 60 * 1000;
 jest.setTimeout(TEST_TIMEOUT);
@@ -57,11 +56,9 @@ async function getLocalhost(vc: CLIProcess): Promise<RegExpExecArray> {
   return localhost;
 }
 
-let team: Team;
-
 beforeAll(async () => {
   try {
-    team = await getTeamInfo();
+    const team = await teamPromise;
     await prepareE2EFixtures(team.slug, binaryPath);
   } catch (err) {
     // eslint-disable-next-line no-console
@@ -414,6 +411,7 @@ test('deploy using only now.json with `redirects` defined', async () => {
 });
 
 test('deploy using --local-config flag v2', async () => {
+  const team = await teamPromise;
   const target = await setupE2EFixture('local-config-v2');
   const configPath = path.join(target, 'vercel-test.json');
 

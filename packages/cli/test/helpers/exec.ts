@@ -10,13 +10,16 @@ const defaultOptions = {
 export function execCli(
   file: string,
   args: string[] = [],
-  options?: execa.Options<string>
+  opts: execa.Options<string> & { token?: string | boolean } = {}
 ): execa.ExecaChildProcess<string> {
   // eslint-disable-next-line no-console
   console.log(`$ vercel ${args.join(' ')}`);
 
-  if (!args.includes('--token')) {
-    args.push('--token', process.env.VERCEL_TOKEN!);
+  if (!args.includes('--token') && opts.token !== false) {
+    args.push(
+      '--token',
+      typeof opts.token === 'string' ? opts.token : process.env.VERCEL_TOKEN!
+    );
   }
 
   if (!args.includes('--scope')) {
@@ -25,7 +28,7 @@ export function execCli(
 
   const combinedOptions: execa.Options<string> = {
     ...defaultOptions,
-    ...options,
+    ...opts,
   };
   // @ts-ignore - allow overwriting readonly property "env"
   combinedOptions.env = combinedOptions.env ?? {};
