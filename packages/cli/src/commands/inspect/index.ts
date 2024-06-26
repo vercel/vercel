@@ -1,27 +1,28 @@
-import chalk from 'chalk';
-import { parseArguments } from '../../util/get-args';
-import buildsList from '../../util/output/builds';
-import routesList from '../../util/output/routes';
-import indent from '../../util/output/indent';
-import elapsed from '../../util/output/elapsed';
-import { handleError } from '../../util/error';
-import getScope from '../../util/get-scope';
-import { getCommandName } from '../../util/pkg-name';
-import Client from '../../util/client';
-import getDeployment from '../../util/get-deployment';
 import type { Build, Deployment } from '@vercel-internals/types';
-import title from 'title';
 import { isErrnoException } from '@vercel/error-utils';
-import { URL } from 'url';
-import readStandardInput from '../../util/input/read-standard-input';
-import sleep from '../../util/sleep';
+import chalk from 'chalk';
 import ms from 'ms';
+import title from 'title';
+import { URL } from 'url';
+import { isFailed, isReady } from '../../util/build-state';
+import Client from '../../util/client';
 import { isDeploying } from '../../util/deploy/is-deploying';
+import { displayBuildLogs } from '../../util/deploy/process-deployment';
+import { handleError } from '../../util/error';
+import { parseArguments } from '../../util/get-args';
+import getDeployment from '../../util/get-deployment';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
+import getScope from '../../util/get-scope';
+import readStandardInput from '../../util/input/read-standard-input';
+import type { Output } from '../../util/output';
+import buildsList from '../../util/output/builds';
+import elapsed from '../../util/output/elapsed';
+import indent from '../../util/output/indent';
+import routesList from '../../util/output/routes';
+import { getCommandName } from '../../util/pkg-name';
+import sleep from '../../util/sleep';
 import { help } from '../help';
 import { inspectCommand } from './command';
-import { displayBuildLogs } from '../../util/deploy/process-deployment';
-import { isFailed, isReady } from '../../util/build-state';
 
 export default async function inspect(client: Client) {
   const { output } = client;
@@ -110,7 +111,7 @@ export default async function inspect(client: Client) {
       abortController = displayBuildLogs(client, deployment, true);
     } else {
       await displayBuildLogs(client, deployment, false);
-      return 0;
+      return exitCode(deployment.readyState, print);
     }
   }
 
@@ -133,7 +134,7 @@ export default async function inspect(client: Client) {
         );
       }
       if (withLogs) {
-        return 0;
+        return exitCode(deployment.readyState, print);
       } else {
         break;
       }
@@ -207,7 +208,7 @@ export default async function inspect(client: Client) {
     print(`\n\n`);
   }
 
-  return 0;
+  return exitCode(deployment.readyState);
 }
 
 function stateString(s: Deployment['readyState']) {
@@ -228,4 +229,12 @@ function stateString(s: Deployment['readyState']) {
     default:
       return chalk.gray('UNKNOWN');
   }
+}
+
+function exitCode(state: Deployment['readyState'], print?: Output['print']) {
+  print?.(`${chalk.cyan('status')}\t${stateString(state)}\n`);
+  if (state === 'ERROR' || state === 'CANCELED') {
+    return 3;
+  }
+  return 0;
 }

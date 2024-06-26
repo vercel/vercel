@@ -88,9 +88,30 @@ describe('inspect', () => {
     expect(delta).toBeGreaterThan(1234);
   });
 
-  it('should print build logs', async () => {
+  it('should print no build logs for a queued deployment', async () => {
     const user = useUser();
-    const deployment = useDeployment({ creator: user });
+    const deployment = useDeployment({ creator: user, state: 'QUEUED' });
+    useBuildLogs({
+      deployment,
+      logProducer: async function* () {},
+    });
+
+    client.setArgv('inspect', deployment.url, '--logs');
+    const exitCode = await inspect(client);
+    await expect(client.stderr).toOutput(
+      `Fetching deployment "${deployment.url}" in ${user.username}`
+    );
+    expect(client.getFullOutput().split('\n').slice(1).join('\n'))
+      .toMatchInlineSnapshot(`
+        "status	● Queued
+        "
+      `);
+    expect(exitCode).toEqual(0);
+  });
+
+  it('should print build logs of a failed deployment', async () => {
+    const user = useUser();
+    const deployment = useDeployment({ creator: user, state: 'ERROR' });
     useBuildLogs({
       deployment,
       logProducer: async function* () {
@@ -106,14 +127,15 @@ describe('inspect', () => {
     );
     expect(client.getFullOutput().split('\n').slice(1).join('\n'))
       .toMatchInlineSnapshot(`
-      "2024-06-03T15:01:10.339Z  Hello, world!
-      2024-06-03T15:01:10.340Z  Bye...
-      "
-    `);
-    expect(exitCode).toEqual(0);
+        "2024-06-03T15:01:10.339Z  Hello, world!
+        2024-06-03T15:01:10.340Z  Bye...
+        status	● Error
+        "
+      `);
+    expect(exitCode).toEqual(3);
   });
 
-  it('should print build logs while waiting for a finished deployement', async () => {
+  it('should print build logs while waiting for a finished deployment', async () => {
     let exitCode: number | null = null;
     const user = useUser();
     const deployment = useDeployment({ creator: user, state: 'BUILDING' });
@@ -153,6 +175,7 @@ describe('inspect', () => {
         2024-06-03T15:01:10.340Z  building...
         2024-06-03T15:01:11.000Z  build complete
         2024-06-03T15:01:11.235Z  Bye...
+        status	● Ready
         "
       `);
   });
