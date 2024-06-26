@@ -77,11 +77,6 @@ beforeAll(async () => {
 afterAll(async () => {
   delete process.env.ENABLE_EXPERIMENTAL_COREPACK;
 
-  // Make sure the token gets revoked unless it's passed in via environment
-  if (!process.env.VERCEL_TOKEN) {
-    await execCli(binaryPath, ['logout']);
-  }
-
   const allTmpDirs = listTmpDirs();
   for (const tmpDir of allTmpDirs) {
     // eslint-disable-next-line no-console

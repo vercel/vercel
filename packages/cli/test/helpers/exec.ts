@@ -15,6 +15,10 @@ export function execCli(
   // eslint-disable-next-line no-console
   console.log(`$ vercel ${args.join(' ')}`);
 
+  if (!args.includes('--token')) {
+    args.push('--token', process.env.VERCEL_TOKEN!);
+  }
+
   if (!args.includes('--scope')) {
     args.push('--scope', process.env.VERCEL_TEAM_ID!);
   }
