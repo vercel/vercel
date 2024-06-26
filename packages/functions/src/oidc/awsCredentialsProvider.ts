@@ -12,7 +12,9 @@ export type AwsCredentialsProviderInit = Omit<
 
 /**
  * Obtains the Vercel OIDC token and creates an AWS credential provider function
- * that gets AWS credentials calling STS AssumeRoleWithWebIdentity API.
+ * that gets AWS credentials by calling STS AssumeRoleWithWebIdentity API.
+ *
+ * @example
  *
  * ```javascript
  * import * as s3 from '@aws-sdk/client-s3';
