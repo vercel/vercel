@@ -4,10 +4,6 @@ const defaultOptions = {
   reject: false,
 };
 
-function getGlobalArgs() {
-  return ['--scope', process.env.VERCEL_TEAM_ID];
-}
-
 /**
  * Execute Vercel CLI subcommands.
  */
@@ -19,7 +15,9 @@ export function execCli(
   // eslint-disable-next-line no-console
   console.log(`$ vercel ${args.join(' ')}`);
 
-  const globalArgs = getGlobalArgs();
+  if (!args.includes('--scope')) {
+    args.push('--scope', process.env.VERCEL_TEAM_ID!);
+  }
 
   const combinedOptions: execa.Options<string> = {
     ...defaultOptions,
@@ -29,7 +27,7 @@ export function execCli(
   combinedOptions.env = combinedOptions.env ?? {};
   combinedOptions.env['NO_COLOR'] = combinedOptions.env['NO_COLOR'] ?? '1';
 
-  return execa(file, [...args, ...globalArgs], combinedOptions);
+  return execa(file, args, combinedOptions);
 }
 
 /**
