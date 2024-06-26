@@ -99,6 +99,7 @@ export const build: BuildV2 = async ({
   spawnOpts.env = getEnvForPackageManager({
     cliType,
     lockfileVersion,
+    packageJsonPackageManager: packageJson?.packageManager,
     nodeVersion,
     env: spawnOpts.env,
   });

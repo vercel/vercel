@@ -1,4 +1,5 @@
 import { resolveSemverMinMax } from '../src/utils';
+import { describe, it, expect } from 'vitest';
 
 describe('resolveSemverMinMax()', () => {
   it.each([

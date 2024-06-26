@@ -187,15 +187,12 @@ async function fetchWithAuth(url, opts = {}) {
     opts.headers.Authorization = `Bearer ${await fetchCachedToken()}`;
   }
 
-  if (opts.skipTeam) {
-    delete opts.skipTeam;
-  } else {
-    const { VERCEL_TEAM_ID } = process.env;
+  const { VERCEL_TEAM_ID } = process.env;
 
-    if (VERCEL_TEAM_ID) {
-      url += `${url.includes('?') ? '&' : '?'}teamId=${VERCEL_TEAM_ID}`;
-    }
+  if (VERCEL_TEAM_ID) {
+    url += `${url.includes('?') ? '&' : '?'}teamId=${VERCEL_TEAM_ID}`;
   }
+
   return await fetchApi(url, opts);
 }
 

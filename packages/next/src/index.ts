@@ -257,10 +257,15 @@ export const build: BuildV2 = async ({
   const nextVersionRange = await getNextVersionRange(entryPath);
   const nodeVersion = await getNodeVersion(entryPath, undefined, config, meta);
   const spawnOpts = getSpawnOptions(meta, nodeVersion);
-  const { cliType, lockfileVersion } = await scanParentDirs(entryPath);
+  const { cliType, lockfileVersion, packageJson } = await scanParentDirs(
+    entryPath,
+    true
+  );
+
   spawnOpts.env = getEnvForPackageManager({
     cliType,
     lockfileVersion,
+    packageJsonPackageManager: packageJson?.packageManager,
     nodeVersion,
     env: spawnOpts.env || {},
   });
@@ -1353,6 +1358,11 @@ export const build: BuildV2 = async ({
       experimentalPPRRoutes.add(route);
     }
 
+    const isAppPPREnabled = requiredServerFilesManifest
+      ? requiredServerFilesManifest.config.experimental?.ppr === true ||
+        requiredServerFilesManifest.config.experimental?.ppr === 'incremental'
+      : false;
+
     if (requiredServerFilesManifest) {
       if (!routesManifest) {
         throw new Error(
@@ -1408,6 +1418,7 @@ export const build: BuildV2 = async ({
         hasIsr500Page,
         variantsManifest,
         experimentalPPRRoutes,
+        isAppPPREnabled,
       });
     }
 
@@ -1927,7 +1938,7 @@ export const build: BuildV2 = async ({
       canUsePreviewMode,
       bypassToken: prerenderManifest.bypassToken || '',
       isServerMode,
-      experimentalPPRRoutes,
+      isAppPPREnabled: false,
       hasActionOutputSupport: false,
     }).then(arr =>
       localizeDynamicRoutes(
@@ -1958,7 +1969,7 @@ export const build: BuildV2 = async ({
         canUsePreviewMode,
         bypassToken: prerenderManifest.bypassToken || '',
         isServerMode,
-        experimentalPPRRoutes,
+        isAppPPREnabled: false,
         hasActionOutputSupport: false,
       }).then(arr =>
         arr.map(route => {
@@ -2157,6 +2168,7 @@ export const build: BuildV2 = async ({
       appPathRoutesManifest,
       isSharedLambdas,
       canUsePreviewMode,
+      isAppPPREnabled: false,
     });
 
     await Promise.all(

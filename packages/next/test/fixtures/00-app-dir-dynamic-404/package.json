@@ -1,8 +1,8 @@
 {
   "dependencies": {
     "next": "canary",
-    "react": "experimental",
-    "react-dom": "experimental"
+    "react": "19.0.0-rc.0",
+    "react-dom": "19.0.0-rc.0"
   },
   "ignoreNextjsUpdates": true,
   "scripts": {

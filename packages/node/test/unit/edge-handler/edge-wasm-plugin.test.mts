@@ -1,4 +1,5 @@
-import { createEdgeWasmPlugin } from '../../../dist/edge-functions/edge-wasm-plugin.mjs';
+import { test, expect } from 'vitest';
+import { createEdgeWasmPlugin } from '../../../src/edge-functions/edge-wasm-plugin.mjs';
 import { prepareFilesystem } from '../test-utils';
 import { build } from 'esbuild';
 import { join } from 'path';

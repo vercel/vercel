@@ -7,13 +7,20 @@ import { EdgeRuntime, runServer } from 'edge-runtime';
 import { type Dispatcher, Headers, request as undiciRequest } from 'undici';
 import { isError } from '@vercel/error-utils';
 import { readFileSync } from 'fs';
-import { serializeBody, entrypointToOutputPath, logError } from '../utils.js';
+import {
+  serializeBody,
+  entrypointToOutputPath,
+  logError,
+  waitUntilWarning,
+  WAIT_UNTIL_TIMEOUT_MS,
+} from '../utils.js';
 import esbuild from 'esbuild';
 import { buildToHeaders } from '@edge-runtime/node-utils';
 import type { VercelProxyResponse } from '../types.js';
 import type { IncomingMessage } from 'http';
 import { fileURLToPath } from 'url';
 import { EdgeRuntimeServer } from 'edge-runtime/dist/server/run-server.js';
+import { Awaiter } from '../awaiter.js';
 
 const NODE_VERSION_MAJOR = process.version.match(/^v(\d+)\.\d+/)?.[1];
 const NODE_VERSION_IDENTIFIER = `node${NODE_VERSION_MAJOR}`;
@@ -41,6 +48,8 @@ async function compileUserCode(
       userCode: string;
       wasmAssets: WasmAssets;
       nodeCompatBindings: NodeCompatBindings;
+      entrypointPath: string;
+      awaiter: Awaiter;
     }
 > {
   const { wasmAssets, plugin: edgeWasmPlugin } = createEdgeWasmPlugin();
@@ -110,9 +119,11 @@ async function compileUserCode(
     `;
 
     return {
+      entrypointPath: entrypointFullPath,
       userCode,
       wasmAssets,
       nodeCompatBindings: nodeCompatPlugin.bindings,
+      awaiter: new Awaiter(),
     };
   } catch (error: unknown) {
     // We can't easily show a meaningful stack trace from esbuild -> edge-runtime.
@@ -127,6 +138,8 @@ async function createEdgeRuntimeServer(params?: {
   userCode: string;
   wasmAssets: WasmAssets;
   nodeCompatBindings: NodeCompatBindings;
+  entrypointPath: string;
+  awaiter: Awaiter;
 }): Promise<
   { server: EdgeRuntimeServer; onExit: () => Promise<void> } | undefined
 > {
@@ -157,6 +170,12 @@ async function createEdgeRuntimeServer(params?: {
 
           // These are the global bindings for WebAssembly module
           ...wasmBindings,
+
+          FetchEvent: class extends context.FetchEvent {
+            waitUntil = (promise: Promise<unknown>) => {
+              params!.awaiter.waitUntil(promise);
+            };
+          },
         });
 
         return context;
@@ -165,31 +184,25 @@ async function createEdgeRuntimeServer(params?: {
 
     const server = await runServer({ runtime });
 
-    const onExit = async () => {
-      // When exiting this process, wait for the Edge Runtime server to finish
-      // all its work, especially waitUntil promises before exiting this process.
-      //
-      // Here we use a short timeout (10 seconds) to let the user know that
-      // it has a long-running waitUntil promise.
-      const WAIT_UNTIL_TIMEOUT = 10 * 1000;
-      const waitUntil = server.close();
-      return new Promise<void>((resolve, reject) => {
-        const timeout = setTimeout(() => {
-          console.warn(
-            `Edge Runtime server is still running after ${WAIT_UNTIL_TIMEOUT} ms` +
-              ` (hint: do you have a long-running waitUntil() promise?)`
-          );
-          resolve();
-        }, WAIT_UNTIL_TIMEOUT);
+    // @ts-expect-error
+    runtime.context.globalThis[Symbol.for('@vercel/request-context')] = {
+      get: () => ({
+        waitUntil: params.awaiter.waitUntil.bind(params.awaiter),
+      }),
+    };
 
-        waitUntil
+    const onExit = () =>
+      new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          console.warn(waitUntilWarning(params.entrypointPath));
+          resolve();
+        }, WAIT_UNTIL_TIMEOUT_MS);
+
+        Promise.all([params.awaiter.awaiting(), server.close()])
           .then(() => resolve())
           .catch(reject)
-          .finally(() => {
-            clearTimeout(timeout);
-          });
+          .finally(() => clearTimeout(timeout));
       });
-    };
 
     return { server, onExit };
   } catch (error: any) {
