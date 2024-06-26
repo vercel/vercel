@@ -824,7 +824,7 @@ test('deploys with only vercel.json and README.md', async () => {
 
   // assert timing order of showing URLs vs status updates
   expect(stderr).toMatch(
-    /Inspect.*\nProduction.*\nQueued.*\nBuilding.*\nCompleting/
+    /Inspect.*\nPreviw.*\nQueued.*\nBuilding.*\nCompleting/
   );
 
   const { host } = new URL(stdout);
@@ -1344,8 +1344,6 @@ test('vercel.json configuration overrides in a new project prompt user and merge
 
   await waitForPrompt(vc, 'Set up and deploy');
   vc.stdin?.write('y\n');
-  await waitForPrompt(vc, 'Which scope do you want to deploy to?');
-  vc.stdin?.write('\n');
   await waitForPrompt(vc, 'Link to existing project?');
   vc.stdin?.write('n\n');
   await waitForPrompt(vc, 'What’s your project’s name?');
