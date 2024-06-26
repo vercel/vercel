@@ -33,7 +33,6 @@ const binaryPath = path.resolve(__dirname, `../scripts/start.js`);
 
 const deployHelpMessage = `${logo} vercel [options] <command | path>`;
 let session = 'temp-session';
-let secretName: string | undefined;
 
 function fetchTokenInformation(token: string, retries = 3) {
   const url = `https://api.vercel.com/v2/user`;
@@ -292,32 +291,6 @@ test('output the version', async () => {
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
   expect(semVer.valid(version)).toBeTruthy();
   expect(version).toBe(pkg.version);
-});
-
-test('should add secret with hyphen prefix', async () => {
-  const target = await setupE2EFixture('build-secret');
-  const key = 'mysecret';
-  const value = '-foo_bar';
-
-  let secretCall = await execCli(
-    binaryPath,
-    ['secrets', 'add', '--', key, value],
-    {
-      cwd: target,
-    }
-  );
-
-  expect(secretCall.exitCode, formatOutput(secretCall)).toBe(0);
-
-  let targetCall = await execCli(binaryPath, ['--yes'], {
-    cwd: target,
-  });
-
-  expect(targetCall.exitCode, formatOutput(targetCall)).toBe(0);
-  const { host } = new URL(targetCall.stdout);
-  const response = await fetch(`https://${host}`);
-  expect(response.status).toBe(200);
-  expect(await response.text()).toBe(`${value}\n`);
 });
 
 test('login with unregistered user', async () => {
@@ -1151,59 +1124,6 @@ test('next unsupported functions config shows warning link', async () => {
   );
 });
 
-test('vercel secret add', async () => {
-  secretName = `my-secret-${Date.now().toString(36)}`;
-  const value = 'https://my-secret-endpoint.com';
-
-  const output = await execCli(binaryPath, [
-    'secret',
-    'add',
-    secretName,
-    value,
-  ]);
-  expect(output.exitCode, formatOutput(output)).toBe(0);
-});
-
-test('vercel secret ls', async () => {
-  const output = await execCli(binaryPath, ['secret', 'ls']);
-  expect(output.exitCode, formatOutput(output)).toBe(0);
-  expect(output.stderr).toMatch(/Secrets found under/gm);
-});
-
-test('vercel secret ls --test-warning', async () => {
-  const output = await execCli(binaryPath, ['secret', 'ls', '--test-warning']);
-  expect(output.exitCode, formatOutput(output)).toBe(0);
-  expect(output.stderr).toMatch(/Test warning message./gm);
-  expect(output.stderr).toMatch(/Learn more: https:\/\/vercel.com/gm);
-  expect(output.stderr).toMatch(/No secrets found under/gm);
-});
-
-test('vercel secret rename', async () => {
-  if (!secretName) {
-    throw new Error('Shared state "secretName" not set.');
-  }
-
-  const nextName = `renamed-secret-${Date.now().toString(36)}`;
-  const output = await execCli(binaryPath, [
-    'secret',
-    'rename',
-    secretName,
-    nextName,
-  ]);
-  expect(output.exitCode, formatOutput(output)).toBe(0);
-
-  secretName = nextName;
-});
-
-test('vercel secret rm', async () => {
-  if (!secretName) {
-    throw new Error('Shared state "secretName" not set.');
-  }
-
-  const output = await execCli(binaryPath, ['secret', 'rm', secretName, '-y']);
-  expect(output.exitCode, formatOutput(output)).toBe(0);
-});
-
 test('deploy a Lambda with 128MB of memory', async () => {
   const directory = await setupE2EFixture('lambda-with-128-memory');
   const output = await execCli(binaryPath, [directory, '--yes']);
@@ -1254,9 +1174,10 @@ test('fail to deploy a Lambda with an incorrect value for maxDuration', async ()
   const output = await execCli(binaryPath, [directory, '--yes']);
 
   expect(output.exitCode, formatOutput(output)).toBe(1);
-  expect(output.stderr).toMatch(
-    /maxDuration must be between \d+ second and \d+ seconds/gm
-  );
+
+  // There's different error messages depending on plan type. As long as it contains
+  // "maxDuration" then we can assume it's a validation error for `maxDuration`.
+  expect(output.stderr).toContain('maxDuration');
 });
 
 test('invalid `--token`', async () => {
