@@ -1,5 +1,5 @@
 import path from 'path';
-import { URL, parse as parseUrl } from 'url';
+import { URL } from 'url';
 import fetch, { RequestInit } from 'node-fetch';
 import retry from 'async-retry';
 import fs, {
@@ -22,7 +22,6 @@ import {
 } from './helpers/setup-e2e-fixture';
 import formatOutput from './helpers/format-output';
 import type { PackageJson } from '@vercel/build-utils';
-import type http from 'http';
 import { CLIProcess } from './helpers/types';
 
 const TEST_TIMEOUT = 3 * 60 * 1000;
@@ -34,7 +33,7 @@ const example = (name: string) =>
 let session = 'temp-session';
 
 function fetchTokenInformation(token: string, retries = 3) {
-  const url = `https://api.vercel.com/v2/user`;
+  const url = `https://api.vercel.com/v2/teams/${process.env.VERCEL_TEAM_ID}`;
   const headers = { Authorization: `Bearer ${token}` };
 
   return retry(
@@ -51,52 +50,15 @@ function fetchTokenInformation(token: string, retries = 3) {
 
       const data = await res.json();
 
-      return data.user;
+      return data;
     },
     { retries, factor: 1 }
   );
 }
 
 let token: string | undefined;
-let email: string | undefined;
 let contextName: string | undefined;
-
-function mockLoginApi(req: http.IncomingMessage, res: http.ServerResponse) {
-  const { url = '/', method } = req;
-  let { pathname = '/', query = {} } = parseUrl(url, true);
-  // eslint-disable-next-line no-console
-  console.log(`[mock-login-server] ${method} ${pathname}`);
-  const securityCode = 'Bears Beets Battlestar Galactica';
-  res.setHeader('content-type', 'application/json');
-  if (
-    method === 'POST' &&
-    pathname === '/registration' &&
-    query.mode === 'login'
-  ) {
-    res.end(JSON.stringify({ token, securityCode }));
-  } else if (
-    method === 'GET' &&
-    pathname === '/registration/verify' &&
-    query.email === email
-  ) {
-    res.end(JSON.stringify({ token }));
-  } else if (method === 'GET' && pathname === '/v2/user') {
-    res.end(JSON.stringify({ user: { email } }));
-  } else {
-    res.statusCode = 405;
-    res.end(JSON.stringify({ code: 'method_not_allowed' }));
-  }
-}
-
-let loginApiUrl = '';
-const loginApiServer = require('http')
-  .createServer(mockLoginApi)
-  .listen(0, () => {
-    const { port } = loginApiServer.address();
-    loginApiUrl = `http://localhost:${port}`;
-    // eslint-disable-next-line no-console
-    console.log(`[mock-login-server] Listening on ${loginApiUrl}`);
-  });
+let teamId: string | undefined;
 
 const apiFetch = (url: string, { headers, ...options }: RequestInit = {}) => {
   return fetch(`https://api.vercel.com${url}`, {
@@ -115,10 +77,10 @@ const createUser = async () => {
 
       await fs.writeJSON(getConfigAuthPath(), { token });
 
-      const user = await fetchTokenInformation(token);
+      const team = await fetchTokenInformation(token);
 
-      email = user.email;
-      contextName = user.username;
+      contextName = team.slug;
+      teamId = team.id;
       session = Math.random().toString(36).split('.')[1];
     },
     { retries: 3, factor: 1 }
@@ -203,11 +165,6 @@ beforeAll(async () => {
 
 afterAll(async () => {
   delete process.env.ENABLE_EXPERIMENTAL_COREPACK;
-
-  if (loginApiServer) {
-    // Stop mock server
-    loginApiServer.close();
-  }
 
   // Make sure the token gets revoked unless it's passed in via environment
   if (!process.env.VERCEL_TOKEN) {
@@ -557,7 +514,7 @@ test('deploy shows notice when project in `.vercel` does not exists', async () =
   await writeFile(
     path.join(directory, '.vercel/project.json'),
     JSON.stringify({
-      orgId: 'asdf',
+      orgId: teamId,
       projectId: 'asdf',
     })
   );

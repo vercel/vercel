@@ -1,27 +1,11 @@
 import execa from 'execa';
-import getGlobalDir from './get-global-dir';
 
 const defaultOptions = {
   reject: false,
 };
 
-let globalArgs: string[] = [];
-
 function getGlobalArgs() {
-  if (process.env.CI) {
-    return ['--scope', process.env.VERCEL_TEAM_ID];
-  }
-
-  if (globalArgs.length === 0) {
-    globalArgs = ['-Q', getGlobalDir()];
-    // eslint-disable-next-line no-console
-    console.log(
-      'No CI detected, adding defaultArgs to avoid polluting user settings',
-      globalArgs
-    );
-  }
-
-  return globalArgs;
+  return ['--scope', process.env.VERCEL_TEAM_ID];
 }
 
 /**
