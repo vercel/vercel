@@ -3,6 +3,7 @@
   "description": "Runtime functions to be used with your Vercel Functions",
   "homepage": "https://vercel.com",
   "version": "1.0.2",
+  "types": "./dist/index.d.ts",
   "main": "./dist/index.js",
   "files": [
     "dist"
