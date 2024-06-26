@@ -16,13 +16,14 @@ import waitForPrompt from './helpers/wait-for-prompt';
 import { execCli } from './helpers/exec';
 import getGlobalDir from './helpers/get-global-dir';
 import { listTmpDirs } from './helpers/get-tmp-dir';
+import { getTeamInfo } from './helpers/get-team';
 import {
   setupE2EFixture,
   prepareE2EFixtures,
 } from './helpers/setup-e2e-fixture';
 import formatOutput from './helpers/format-output';
 import type { PackageJson } from '@vercel/build-utils';
-import { CLIProcess } from './helpers/types';
+import type { CLIProcess } from './helpers/types';
 
 const TEST_TIMEOUT = 3 * 60 * 1000;
 jest.setTimeout(TEST_TIMEOUT);
@@ -31,29 +32,6 @@ const binaryPath = path.resolve(__dirname, `../scripts/start.js`);
 const example = (name: string) =>
   path.join(__dirname, '..', '..', '..', 'examples', name);
 let session = 'temp-session';
-
-function getTeamInfo(retries = 3) {
-  const url = `/v2/teams/${process.env.VERCEL_TEAM_ID}`;
-
-  return retry(
-    async () => {
-      const res = await apiFetch(url);
-
-      if (!res.ok) {
-        throw new Error(
-          `Failed to fetch "${url}", status: ${
-            res.status
-          }, id: ${res.headers.get('x-vercel-id')}`
-        );
-      }
-
-      const data = await res.json();
-
-      return data;
-    },
-    { retries, factor: 1 }
-  );
-}
 
 let contextName: string | undefined;
 let teamId: string | undefined;
