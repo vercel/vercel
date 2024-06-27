@@ -133,10 +133,10 @@ export type Cert = {
 type RouteOrMiddleware =
   | Route
   | {
-    src: string;
-    continue: boolean;
-    middleware: 0;
-  };
+      src: string;
+      continue: boolean;
+      middleware: 0;
+    };
 
 export type Deployment = {
   alias?: string[];
@@ -204,22 +204,22 @@ export type Deployment = {
   public: boolean;
   ready?: number;
   readyState:
-  | 'BUILDING'
-  | 'ERROR'
-  | 'INITIALIZING'
-  | 'QUEUED'
-  | 'READY'
-  | 'CANCELED';
+    | 'BUILDING'
+    | 'ERROR'
+    | 'INITIALIZING'
+    | 'QUEUED'
+    | 'READY'
+    | 'CANCELED';
   regions: string[];
   routes?: RouteOrMiddleware[] | null;
   source?: 'cli' | 'git' | 'import' | 'import/repo' | 'clone/repo';
   status:
-  | 'BUILDING'
-  | 'ERROR'
-  | 'INITIALIZING'
-  | 'QUEUED'
-  | 'READY'
-  | 'CANCELED';
+    | 'BUILDING'
+    | 'ERROR'
+    | 'INITIALIZING'
+    | 'QUEUED'
+    | 'READY'
+    | 'CANCELED';
   target?: 'staging' | 'production' | null;
   team?: {
     id: string;
@@ -285,10 +285,10 @@ type MXRecordData = {
 
 export type DNSRecordData =
   | {
-    name: string;
-    type: string;
-    value: string;
-  }
+      name: string;
+      type: string;
+      value: string;
+    }
   | SRVRecordData
   | MXRecordData;
 
@@ -365,7 +365,7 @@ export interface Project extends ProjectSettings {
   lastAliasRequest?: LastAliasRequest | null;
   targets?: {
     production?: Deployment;
-  }
+  };
 }
 
 export interface Org {
@@ -430,13 +430,13 @@ export type ProjectLinkedError = {
   status: 'error';
   exitCode: number;
   reason?:
-  | 'HEADLESS'
-  | 'NOT_AUTHORIZED'
-  | 'TEAM_DELETED'
-  | 'PATH_IS_FILE'
-  | 'INVALID_ROOT_DIRECTORY'
-  | 'MISSING_PROJECT_SETTINGS'
-  | 'TOO_MANY_PROJECTS';
+    | 'HEADLESS'
+    | 'NOT_AUTHORIZED'
+    | 'TEAM_DELETED'
+    | 'PATH_IS_FILE'
+    | 'INVALID_ROOT_DIRECTORY'
+    | 'MISSING_PROJECT_SETTINGS'
+    | 'TOO_MANY_PROJECTS';
 };
 
 export type ProjectLinkResult =
@@ -520,15 +520,15 @@ export interface Build {
    * @example "READY"
    */
   readyState:
-  | 'INITIALIZING'
-  | 'BUILDING'
-  | 'UPLOADING'
-  | 'DEPLOYING'
-  | 'READY'
-  | 'ARCHIVED'
-  | 'ERROR'
-  | 'QUEUED'
-  | 'CANCELED';
+    | 'INITIALIZING'
+    | 'BUILDING'
+    | 'UPLOADING'
+    | 'DEPLOYING'
+    | 'READY'
+    | 'ARCHIVED'
+    | 'ERROR'
+    | 'QUEUED'
+    | 'CANCELED';
 
   /**
    * The time at which the Build state was last modified
