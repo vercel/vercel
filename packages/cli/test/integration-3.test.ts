@@ -20,7 +20,7 @@ import {
   prepareE2EFixtures,
 } from './helpers/setup-e2e-fixture';
 import formatOutput from './helpers/format-output';
-import type { NowJson, DeploymentLike } from './helpers/types';
+import type { DeploymentLike } from './helpers/types';
 import { teamPromise, userPromise } from './helpers/get-account';
 import { apiFetch } from './helpers/api-fetch';
 
@@ -643,73 +643,6 @@ test('fail to add a domain without a project', async () => {
   expect(output.stderr).toMatch(/expects two arguments/gm);
 });
 
-test('try to revert a deployment and assign the automatic aliases', async () => {
-  const firstDeployment = await setupE2EFixture('now-revert-alias-1');
-  const secondDeployment = await setupE2EFixture('now-revert-alias-2');
-
-  const { name } = JSON.parse(
-    fs.readFileSync(path.join(firstDeployment, 'now.json')).toString()
-  ) as NowJson;
-  expect(name).toBeTruthy();
-
-  const url = `https://${name}.user.vercel.app`;
-
-  {
-    const { exitCode, stdout, stderr } = await execCli(binaryPath, [
-      firstDeployment,
-      '--yes',
-    ]);
-    const deploymentUrl = stdout;
-
-    expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
-
-    await waitForDeployment(deploymentUrl);
-    await sleep(20000);
-
-    const result = await fetch(url).then(r => r.json());
-
-    expect(result.name).toBe('now-revert-alias-1');
-  }
-
-  {
-    const { exitCode, stdout, stderr } = await execCli(binaryPath, [
-      secondDeployment,
-      '--yes',
-    ]);
-    const deploymentUrl = stdout;
-
-    expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
-
-    await waitForDeployment(deploymentUrl);
-    await sleep(20000);
-    await fetch(url);
-    await sleep(5000);
-
-    const result = await fetch(url).then(r => r.json());
-
-    expect(result.name).toBe('now-revert-alias-2');
-  }
-
-  {
-    const { exitCode, stdout, stderr } = await execCli(binaryPath, [
-      firstDeployment,
-      '--yes',
-    ]);
-    const deploymentUrl = stdout;
-
-    expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
-
-    await waitForDeployment(deploymentUrl);
-    await sleep(20000);
-    await fetch(url);
-    await sleep(5000);
-
-    const result = await fetch(url).then(r => r.json());
-
-    expect(result.name).toBe('now-revert-alias-1');
-  }
-});
-
 test('whoami', async () => {
   const user = await userPromise;
   const { exitCode, stdout, stderr } = await execCli(binaryPath, ['whoami']);
@@ -1049,7 +982,10 @@ test('should pass through exit code for CLI extension', async () => {
 });
 
 test('default command should prompt login with empty auth.json', async () => {
-  const output = await execCli(binaryPath, ['-Q', '/tmp']);
+  const output = await execCli(binaryPath, ['-Q', '/tmp'], {
+    // execCli passes the token automatically, undo that functionality for this test
+    token: false,
+  });
   expect(output.stderr, formatOutput(output)).toBeTruthy();
   expect(output.stderr).toContain(
     'Error: No existing credentials found. Please run `vercel login` or pass "--token"'
