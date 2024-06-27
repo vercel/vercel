@@ -239,11 +239,11 @@ test('domains inspect', async () => {
     expect(result.exitCode, formatOutput(result)).toBe(0);
   }
 
-  const { exitCode, stdout, stderr } = await execCli(
-    binaryPath,
-    ['domains', 'inspect', domainName, '--debug'],
-    { stdio: 'inherit' }
-  );
+  const { exitCode, stdout, stderr } = await execCli(binaryPath, [
+    'domains',
+    'inspect',
+    domainName,
+  ]);
 
   expect(stderr).toContain(`Renewal Price`);
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
@@ -707,6 +707,14 @@ test('try to revert a deployment and assign the automatic aliases', async () => 
 
     expect(result.name).toBe('now-revert-alias-1');
   }
+});
+
+test('whoami', async () => {
+  const user = await userPromise;
+  const { exitCode, stdout, stderr } = await execCli(binaryPath, ['whoami']);
+
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
+  expect(stdout).toBe(user.username);
 });
 
 test('[vercel dev] fails when dev script calls vercel dev recursively', async () => {

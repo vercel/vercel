@@ -13,9 +13,11 @@ export async function findProjectsForDomain(
       '/v9/projects'
     )) {
       for (const project of chunk.projects) {
-        const prodTarget = project.targets?.production;
-        if (!prodTarget) continue;
-        if (prodTarget.alias?.some(alias => alias.endsWith(domainName))) {
+        if (
+          project.targets?.production?.alias?.some(alias =>
+            alias.endsWith(domainName)
+          )
+        ) {
           result.push(project);
         }
       }
