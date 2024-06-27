@@ -74,6 +74,7 @@ beforeAll(async () => {
   try {
     const team = await teamPromise;
     await prepareE2EFixtures(team.slug, binaryPath);
+    session = Math.random().toString(36).split('.')[1];
   } catch (err) {
     console.log('Failed test suite `beforeAll`');
     console.log(err);
