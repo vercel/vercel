@@ -29,7 +29,7 @@ jest.setTimeout(TEST_TIMEOUT);
 const binaryPath = path.resolve(__dirname, `../scripts/start.js`);
 const example = (name: string) =>
   path.join(__dirname, '..', '..', '..', 'examples', name);
-let session = 'temp-session';
+const session = Math.random().toString(36).split('.')[1];
 
 async function setupProject(
   process: CLIProcess,
@@ -805,6 +805,12 @@ test('deploy pnpm twice using pnp and symlink=false', async () => {
   text = await page.text();
 
   expect(text).toContain('cache exists\n');
+
+  // Since this test asserts that we can create a new project based on the folder name, delete it after the test
+  // to avoid polluting the project list.
+  await apiFetch(`/projects/${session}`, {
+    method: 'DELETE',
+  });
 });
 
 test('reject deploying with wrong team .vercel config', async () => {

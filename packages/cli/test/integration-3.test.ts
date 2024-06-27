@@ -30,7 +30,7 @@ jest.setTimeout(TEST_TIMEOUT);
 const binaryPath = path.resolve(__dirname, `../scripts/start.js`);
 
 const deployHelpMessage = `${logo} vercel [options] <command | path>`;
-let session = 'temp-session';
+const session = Math.random().toString(36).split('.')[1];
 
 const context: {
   deployment: string | undefined;
@@ -74,7 +74,6 @@ beforeAll(async () => {
   try {
     const team = await teamPromise;
     await prepareE2EFixtures(team.slug, binaryPath);
-    session = Math.random().toString(36).split('.')[1];
   } catch (err) {
     console.log('Failed test suite `beforeAll`');
     console.log(err);
