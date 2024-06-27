@@ -1,5 +1,56 @@
 # @vercel/build-utils
 
+## 8.2.2
+
+### Patch Changes
+
+- Change node 16.x EOL for Vercel ([#11704](https://github.com/vercel/vercel/pull/11704))
+
+- Improve error message and refactor ([#11706](https://github.com/vercel/vercel/pull/11706))
+
+- [built-utils] Handle case of not having lockfile when corepack is enabled ([#11697](https://github.com/vercel/vercel/pull/11697))
+
+## 8.2.1
+
+### Patch Changes
+
+- [node] update node@16 deprecation day ([#11671](https://github.com/vercel/vercel/pull/11671))
+
+## 8.2.0
+
+### Minor Changes
+
+- fix corepack detection for package manager version determination ([#11596](https://github.com/vercel/vercel/pull/11596))
+
+### Patch Changes
+
+- Fix triggering of ignored project settings node version warning ([#11550](https://github.com/vercel/vercel/pull/11550))
+
+## 8.1.3
+
+### Patch Changes
+
+- [build-utils] log more around package manager detection ([#11594](https://github.com/vercel/vercel/pull/11594))
+
+## 8.1.2
+
+### Patch Changes
+
+- add log to package manager version detection ([#11592](https://github.com/vercel/vercel/pull/11592))
+
+## 8.1.1
+
+### Patch Changes
+
+- [build-utils] pnpm lockfile testing and fixing ([#11591](https://github.com/vercel/vercel/pull/11591))
+
+## 8.1.0
+
+### Minor Changes
+
+- Update pnpm version detection logic ([#11445](https://github.com/vercel/vercel/pull/11445))
+  Add support for pnpm 9
+
 ## 8.0.0
 
 ### Major Changes

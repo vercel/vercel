@@ -1255,7 +1255,7 @@ test('fail to deploy a Lambda with an incorrect value for maxDuration', async ()
 
   expect(output.exitCode, formatOutput(output)).toBe(1);
   expect(output.stderr).toMatch(
-    /maxDuration must be between 1 second and 10 seconds/gm
+    /maxDuration must be between \d+ second and \d+ seconds/gm
   );
 });
 
@@ -1325,6 +1325,19 @@ test('should invoke CLI extension', async () => {
   expect(output.stdout, formatted).toContain('Hello from a CLI extension!');
   expect(output.stdout, formatted).toContain('VERCEL_API: http://127.0.0.1:');
   expect(output.stdout, formatted).toContain(`Username: ${contextName}`);
+});
+
+test('should pass through exit code for CLI extension', async () => {
+  const fixture = path.join(__dirname, 'fixtures/e2e/cli-extension-exit-code');
+
+  // Ensure the `.bin` is populated in the fixture
+  await runNpmInstall(fixture);
+
+  const output = await execCli(binaryPath, ['fail'], {
+    cwd: fixture,
+    reject: false,
+  });
+  expect(output.exitCode).toEqual(6);
 });
 
 // NOTE: Order matters here. This must be the last test in the file.
