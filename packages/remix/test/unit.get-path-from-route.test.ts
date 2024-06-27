@@ -1,5 +1,6 @@
 import { getPathFromRoute } from '../src/utils';
 import type { RouteManifest } from '@remix-run/dev/dist/config/routes';
+import { describe, it, expect } from 'vitest';
 
 describe('getPathFromRoute()', () => {
   const routes: RouteManifest = {
