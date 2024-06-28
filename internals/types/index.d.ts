@@ -361,9 +361,11 @@ export interface Project extends ProjectSettings {
   updatedAt: number;
   createdAt: number;
   link?: ProjectLinkData;
-  alias?: ProjectAliasTarget[];
   latestDeployments?: Partial<Deployment>[];
   lastAliasRequest?: LastAliasRequest | null;
+  targets?: {
+    production?: Deployment;
+  };
 }
 
 export interface Org {
