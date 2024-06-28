@@ -49,9 +49,14 @@ describe('project', () => {
     it('should list projects when there is no production deployment', async () => {
       const user = useUser();
       useTeams('team_dummy');
-      defaultProject.alias = [];
       const project = useProject({
         ...defaultProject,
+        targets: {
+          production: {
+            ...defaultProject!.targets!.production,
+            alias: [],
+          },
+        },
       });
 
       client.setArgv('project', 'ls');
