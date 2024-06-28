@@ -17,10 +17,16 @@ describe('getMonorepoDefaultSettings', () => {
     );
   });
   test('MissingBuildPipeline is an error', () => {
-    const missingBuildPipeline = new MissingBuildPipeline();
+    const missingBuildPipeline = new MissingBuildPipeline(false);
     expect(missingBuildPipeline).toBeInstanceOf(Error);
     expect(missingBuildPipeline.message).toBe(
       'Missing required `build` pipeline in turbo.json or package.json Turbo configuration.'
+    );
+
+    const missingBuildTask = new MissingBuildPipeline(true);
+    expect(missingBuildTask).toBeInstanceOf(Error);
+    expect(missingBuildTask.message).toBe(
+      'Missing required `build` task in turbo.json.'
     );
   });
 
@@ -31,6 +37,7 @@ describe('getMonorepoDefaultSettings', () => {
     ['turbo-npm', 'turbo', true, 'app-15', false, false],
     ['turbo-npm-root-proj', 'turbo', true, 'app-root-proj', true, false],
     ['turbo-latest', 'turbo', false, 'app-14', false, false],
+    ['turbo-2', 'turbo', false, 'app-14', false, false],
     ['nx', 'nx', false, 'app-12', false, false],
     ['nx-package-config', 'nx', false, 'app-11', false, false],
     ['nx-project-and-package-config-1', 'nx', false, 'app-10', false, false],

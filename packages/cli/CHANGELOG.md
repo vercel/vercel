@@ -1,5 +1,63 @@
 # vercel
 
+## 34.2.8
+
+### Patch Changes
+
+- Updated dependencies [[`fd069f184`](https://github.com/vercel/vercel/commit/fd069f184d94a41cfcc427e8249418e122a4bf71), [`8ae40d096`](https://github.com/vercel/vercel/commit/8ae40d096eac5667a9d6b75fbb3f34565c841f90), [`f0d6acaa0`](https://github.com/vercel/vercel/commit/f0d6acaa03f20b47dbaf9ff501d009e02901db86), [`e33756494`](https://github.com/vercel/vercel/commit/e337564941a13ea9d2b3a1646e9f5a570ab0c7c5), [`dcb7fa5f9`](https://github.com/vercel/vercel/commit/dcb7fa5f9ca7f2acc913f5cc2c775425f2d7a580)]:
+  - @vercel/node@3.2.0
+  - @vercel/next@4.2.18
+  - @vercel/remix-builder@2.1.8
+
+## 34.2.7
+
+### Patch Changes
+
+- Updated dependencies [[`84b744541`](https://github.com/vercel/vercel/commit/84b744541b58524bd91e3b3f0628b675e772660f)]:
+  - @vercel/next@4.2.17
+
+## 34.2.6
+
+### Patch Changes
+
+- [built-utils] Handle case of not having lockfile when corepack is enabled ([#11697](https://github.com/vercel/vercel/pull/11697))
+
+- Updated dependencies [[`5c12ed695`](https://github.com/vercel/vercel/commit/5c12ed69500ceff6a9dc544eab0acd7af64c044a), [`21444a38e`](https://github.com/vercel/vercel/commit/21444a38e50ed680c91b0e3955f15e378eeda64b), [`fa9789a93`](https://github.com/vercel/vercel/commit/fa9789a93ebe64c4246f441590cb695d296af336), [`c925dc4a1`](https://github.com/vercel/vercel/commit/c925dc4a1bf3a47b684b5f7fd788ddd24ba1ed1e), [`06d2d860e`](https://github.com/vercel/vercel/commit/06d2d860e47aed792247bf929805b180ed6e2dab), [`b735f37fd`](https://github.com/vercel/vercel/commit/b735f37fd92c707040e72084b0fdb4f8fd01dd51)]:
+  - @vercel/build-utils@8.2.2
+  - @vercel/next@4.2.16
+  - @vercel/redwood@2.0.10
+  - @vercel/remix-builder@2.1.7
+  - @vercel/node@3.1.7
+  - @vercel/static-build@2.5.11
+
+## 34.2.5
+
+### Patch Changes
+
+- Adds a route for the `.rsc` pathname as well when app has ppr enabled but not all routes. ([#11681](https://github.com/vercel/vercel/pull/11681))
+
+- Updated dependencies [[`7457767a7`](https://github.com/vercel/vercel/commit/7457767a77b03662c103a658273a46cf78359068), [`4337ea065`](https://github.com/vercel/vercel/commit/4337ea0654c4ee2c91c4464540f879d43da6696f)]:
+  - @vercel/next@4.2.15
+
+## 34.2.4
+
+### Patch Changes
+
+- Updated dependencies [[`3eb9d8c89`](https://github.com/vercel/vercel/commit/3eb9d8c8929592960d88e0395e2a2443f7304d6b), [`83741a0eb`](https://github.com/vercel/vercel/commit/83741a0eb9e44457b083e8790a11eb89984e6357)]:
+  - @vercel/python@4.3.0
+  - @vercel/build-utils@8.2.1
+  - @vercel/node@3.1.6
+  - @vercel/static-build@2.5.10
+
+## 34.2.3
+
+### Patch Changes
+
+- Don't create streaming lambdas for pages router routes ([#11660](https://github.com/vercel/vercel/pull/11660))
+
+- Updated dependencies [[`c9d53d4e3`](https://github.com/vercel/vercel/commit/c9d53d4e3e4591b9b6bde86100564c9ee4c6d1d4), [`5f561f8cf`](https://github.com/vercel/vercel/commit/5f561f8cfa4720801a5cf4598f193ab34539abb9)]:
+  - @vercel/next@4.2.14
+
 ## 34.2.2
 
 ### Patch Changes

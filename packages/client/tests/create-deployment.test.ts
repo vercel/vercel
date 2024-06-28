@@ -1,7 +1,6 @@
 import path from 'path';
 import fetch_ from 'node-fetch';
 import { generateNewToken } from './common';
-import { fetch, getApiDeploymentsUrl } from '../src/utils';
 import { Deployment } from './types';
 import { createDeployment } from '../src/index';
 
@@ -11,19 +10,6 @@ describe('create v2 deployment', () => {
 
   beforeEach(async () => {
     token = await generateNewToken();
-  });
-
-  afterEach(async () => {
-    if (deployment) {
-      const response = await fetch(
-        `${getApiDeploymentsUrl()}/${deployment.id}`,
-        token,
-        {
-          method: 'DELETE',
-        }
-      );
-      expect(response.status).toEqual(200);
-    }
   });
 
   it('will display an empty deployment warning', async () => {
