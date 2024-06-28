@@ -123,7 +123,7 @@ export function useBuildLogs({
   logProducer: () => AsyncGenerator<object, void, unknown>;
 }) {
   client.scenario.get(
-    `/v1/now/deployments/${deployment.id}/events`,
+    `/v3/now/deployments/${deployment.id}/events`,
     async (req, res) => {
       for await (const log of logProducer()) {
         res.write(JSON.stringify(log) + '\n');

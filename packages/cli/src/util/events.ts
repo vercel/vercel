@@ -61,7 +61,7 @@ async function printEvents(
       if (findOpts.since) query.set('since', String(findOpts.since));
       if (findOpts.until) query.set('until', String(findOpts.until));
 
-      const eventsUrl = `/v1/now/deployments/${deploymentIdOrURL}/events?${query}`;
+      const eventsUrl = `/v3/now/deployments/${deploymentIdOrURL}/events?${query}`;
       try {
         const eventsRes = await client.fetch(eventsUrl, {
           json: false,
