@@ -27,7 +27,7 @@ export default async function list(
 
   output.spinner(`Fetching projects in ${chalk.bold(contextName)}`);
 
-  let projectsUrl = `/v4/projects/?limit=20`;
+  let projectsUrl = `/v9/projects?limit=20`;
 
   const deprecated = argv['--update-required'] || false;
   if (deprecated) {
@@ -113,9 +113,7 @@ export default async function list(
 }
 
 function getLatestProdUrl(project: Project): string {
-  const alias =
-    project.alias?.filter(al => al.deployment)?.[0]?.domain ||
-    project.alias?.[0]?.domain;
+  const alias = project.targets?.production?.alias?.[0];
   if (alias) return 'https://' + alias;
   return '--';
 }

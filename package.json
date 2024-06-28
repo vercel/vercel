@@ -54,7 +54,7 @@
     "type-check": "turbo type-check --concurrency=12 --output-logs=errors-only --summarize --continue"
   },
   "lint-staged": {
-    "./{*,{api,packages,test,utils}/**/*}.{js,ts}": [
+    "./{*,{api,internals,packages,test,utils}/**/*}.{js,ts}": [
       "prettier --write",
       "eslint",
       "git add"
