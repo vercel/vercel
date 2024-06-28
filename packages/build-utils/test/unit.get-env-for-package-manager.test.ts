@@ -458,7 +458,7 @@ describe('Test `getPathOverrideForPackageManager()`', () => {
       name: 'should not set pnpm path if corepack is enabled, pnpm 9 and valid lockfile version',
       args: {
         cliType: 'pnpm',
-        nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
+        nodeVersion: { major: 18, range: '18.x', runtime: 'nodejs18.x' },
         packageJsonPackageManager: 'pnpm@9.*',
         lockfileVersion: 7.0,
         env: {
