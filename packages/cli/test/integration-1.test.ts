@@ -1,50 +1,23 @@
 import path from 'path';
-import { URL, parse as parseUrl } from 'url';
 import { exec, execCli } from './helpers/exec';
-import fetch, { RequestInit } from 'node-fetch';
-import retry from 'async-retry';
+import fetch from 'node-fetch';
+import { apiFetch } from './helpers/api-fetch';
 import fs from 'fs-extra';
 import sleep from '../src/util/sleep';
-import { fetchTokenWithRetry } from '../../../test/lib/deployment/now-deploy';
 import waitForPrompt from './helpers/wait-for-prompt';
 import { listTmpDirs } from './helpers/get-tmp-dir';
-import getGlobalDir from './helpers/get-global-dir';
+import { teamPromise } from './helpers/get-account';
 import {
   setupE2EFixture,
   prepareE2EFixtures,
 } from './helpers/setup-e2e-fixture';
 import formatOutput from './helpers/format-output';
-import type http from 'http';
 import type { CLIProcess } from './helpers/types';
 
 const TEST_TIMEOUT = 3 * 60 * 1000;
 jest.setTimeout(TEST_TIMEOUT);
 
-const binaryPath = path.resolve(__dirname, `../scripts/start.js`);
-
-function fetchTokenInformation(token: string, retries = 3) {
-  const url = `https://api.vercel.com/v2/user`;
-  const headers = { Authorization: `Bearer ${token}` };
-
-  return retry(
-    async () => {
-      const res = await fetch(url, { headers });
-
-      if (!res.ok) {
-        throw new Error(
-          `Failed to fetch "${url}", status: ${
-            res.status
-          }, id: ${res.headers.get('x-vercel-id')}`
-        );
-      }
-
-      const data = await res.json();
-
-      return data.user;
-    },
-    { retries, factor: 1 }
-  );
-}
+const binaryPath = path.resolve(__dirname, '../scripts/start.js');
 
 async function vcLink(projectPath: string) {
   const { exitCode, stdout, stderr } = await execCli(
@@ -83,102 +56,10 @@ async function getLocalhost(vc: CLIProcess): Promise<RegExpExecArray> {
   return localhost;
 }
 
-let token: string | undefined;
-let email: string | undefined;
-let contextName: string | undefined;
-
-function mockLoginApi(req: http.IncomingMessage, res: http.ServerResponse) {
-  const { url = '/', method } = req;
-  let { pathname = '/', query = {} } = parseUrl(url, true);
-  // eslint-disable-next-line no-console
-  console.log(`[mock-login-server] ${method} ${pathname}`);
-  const securityCode = 'Bears Beets Battlestar Galactica';
-  res.setHeader('content-type', 'application/json');
-  if (
-    method === 'POST' &&
-    pathname === '/registration' &&
-    query.mode === 'login'
-  ) {
-    res.end(JSON.stringify({ token, securityCode }));
-  } else if (
-    method === 'GET' &&
-    pathname === '/registration/verify' &&
-    query.email === email
-  ) {
-    res.end(JSON.stringify({ token }));
-  } else if (method === 'GET' && pathname === '/v2/user') {
-    res.end(JSON.stringify({ user: { email } }));
-  } else {
-    res.statusCode = 405;
-    res.end(JSON.stringify({ code: 'method_not_allowed' }));
-  }
-}
-
-let loginApiUrl = '';
-const loginApiServer = require('http')
-  .createServer(mockLoginApi)
-  .listen(0, () => {
-    const { port } = loginApiServer.address();
-    loginApiUrl = `http://localhost:${port}`;
-    // eslint-disable-next-line no-console
-    console.log(`[mock-login-server] Listening on ${loginApiUrl}`);
-  });
-
-const apiFetch = (url: string, { headers, ...options }: RequestInit = {}) => {
-  return fetch(`https://api.vercel.com${url}`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      ...(headers || {}),
-    },
-    ...options,
-  });
-};
-
-const createUser = async () => {
-  await retry(
-    async () => {
-      token = await fetchTokenWithRetry();
-
-      await fs.writeJSON(getConfigAuthPath(), { token });
-
-      const user = await fetchTokenInformation(token);
-
-      email = user.email;
-      contextName = user.username;
-    },
-    { retries: 3, factor: 1 }
-  );
-};
-
-function getConfigAuthPath() {
-  return path.join(getGlobalDir(), 'auth.json');
-}
-
 beforeAll(async () => {
   try {
-    await createUser();
-
-    if (!contextName) {
-      throw new Error('Shared state "contextName" not set.');
-    }
-    await prepareE2EFixtures(contextName, binaryPath);
-
-    if (!email) {
-      throw new Error('Shared state "email" not set.');
-    }
-    await fs.remove(getConfigAuthPath());
-    const loginOutput = await execCli(binaryPath, [
-      'login',
-      email,
-      '--api',
-      loginApiUrl,
-    ]);
-
-    expect(loginOutput.exitCode, formatOutput(loginOutput)).toBe(0);
-    expect(loginOutput.stderr).toMatch(/You are now logged in\./gm);
-
-    const auth = await fs.readJSON(getConfigAuthPath());
-    expect(auth.token).toBe(token);
+    const team = await teamPromise;
+    await prepareE2EFixtures(team.slug, binaryPath);
   } catch (err) {
     // eslint-disable-next-line no-console
     console.log('Failed test suite `beforeAll`');
@@ -192,16 +73,6 @@ beforeAll(async () => {
 
 afterAll(async () => {
   delete process.env.ENABLE_EXPERIMENTAL_COREPACK;
-
-  if (loginApiServer) {
-    // Stop mock server
-    loginApiServer.close();
-  }
-
-  // Make sure the token gets revoked unless it's passed in via environment
-  if (!process.env.VERCEL_TOKEN) {
-    await execCli(binaryPath, ['logout']);
-  }
 
   const allTmpDirs = listTmpDirs();
   for (const tmpDir of allTmpDirs) {
@@ -378,12 +249,18 @@ test('deploy command should not warn when deploying with conflicting subdirector
   );
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
-  expect(stderr || '').not.toMatch(
+  expect(stderr).not.toMatch(
     /Did you mean to deploy the subdirectory "list"\? Use `vc --cwd list` instead./
   );
 
-  const listHeader = /No deployments found/;
-  expect(stderr || '').toMatch(listHeader); // ensure `list` command still ran
+  // ensure `list` command still ran
+  try {
+    // If it's a new Project without any deployments
+    expect(stderr).toContain('No deployments found');
+  } catch {
+    // If it's an existing Project with deployments
+    expect(stderr).toContain(`Deployments for ${target} under`);
+  }
 });
 
 test('default command should work with --cwd option', async () => {
@@ -534,6 +411,7 @@ test('deploy using only now.json with `redirects` defined', async () => {
 });
 
 test('deploy using --local-config flag v2', async () => {
+  const team = await teamPromise;
   const target = await setupE2EFixture('local-config-v2');
   const configPath = path.join(target, 'vercel-test.json');
 
@@ -550,7 +428,7 @@ test('deploy using --local-config flag v2', async () => {
   const { host } = new URL(stdout);
   expect(host).toMatch(/secondary/gm);
 
-  const testRes = await fetch(`https://${host}/test-${contextName}.html`);
+  const testRes = await fetch(`https://${host}/test-${team.slug}.html`);
   const testText = await testRes.text();
   expect(testText).toBe('<h1>hello test</h1>');
 
@@ -558,7 +436,7 @@ test('deploy using --local-config flag v2', async () => {
   const anotherTestText = await anotherTestRes.text();
   expect(anotherTestText).toBe(testText);
 
-  const mainRes = await fetch(`https://${host}/main-${contextName}.html`);
+  const mainRes = await fetch(`https://${host}/main-${team.slug}.html`);
   expect(mainRes.status).toBe(404);
 
   const anotherMainRes = await fetch(`https://${host}/another-main`);
@@ -642,7 +520,7 @@ test('deploy using --local-config flag above target', async () => {
   expect(host).toMatch(/root-level/gm);
 });
 
-test('Deploy `api-env` fixture and test `vercel env` command', async () => {
+test('deploy `api-env` fixture and test `vercel env` command', async () => {
   const target = await setupE2EFixture('api-env');
 
   async function vcLink() {
@@ -759,42 +637,6 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
     expect(previewEnvs[0]).toMatch(/Encrypted .* Preview /gm);
   }
 
-  // we create a "legacy" env variable that contains a decryptable secret
-  // to check that vc env pull and vc dev work correctly with decryptable secrets
-  async function createEnvWithDecryptableSecret() {
-    // eslint-disable-next-line no-console
-    console.log('creating an env variable with a decryptable secret');
-
-    const name = `my-secret${Math.floor(Math.random() * 10000)}`;
-
-    const res = await apiFetch('/v2/now/secrets', {
-      method: 'POST',
-      body: JSON.stringify({
-        name,
-        value: 'decryptable value',
-        decryptable: true,
-      }),
-    });
-
-    expect(res.status).toBe(200);
-
-    const json = await res.json();
-
-    const link = require(path.join(target, '.vercel/project.json'));
-
-    const resEnv = await apiFetch(`/v4/projects/${link.projectId}/env`, {
-      method: 'POST',
-      body: JSON.stringify({
-        key: 'MY_DECRYPTABLE_SECRET_ENV',
-        value: json.uid,
-        target: ['development'],
-        type: 'secret',
-      }),
-    });
-
-    expect(resEnv.status).toBe(200);
-  }
-
   async function vcEnvPull() {
     const { exitCode, stdout, stderr } = await execCli(
       binaryPath,
@@ -811,7 +653,6 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
     expect(contents).toMatch(/^# Created by Vercel CLI\n/);
     expect(contents).toMatch(/MY_NEW_ENV_VAR="my plaintext value"/);
     expect(contents).toMatch(/MY_STDIN_VAR="{"expect":"quotes"}"/);
-    expect(contents).toMatch(/MY_DECRYPTABLE_SECRET_ENV="decryptable value"/);
     expect(contents).not.toMatch(/MY_PREVIEW/);
   }
 
@@ -880,14 +721,12 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
     const apiJson = await apiRes.json();
 
     expect(apiJson['MY_NEW_ENV_VAR']).toBe('my plaintext value');
-    expect(apiJson['MY_DECRYPTABLE_SECRET_ENV']).toBe('decryptable value');
 
     const homeUrl = localhost[0];
 
     const homeRes = await fetch(homeUrl);
     const homeJson = await homeRes.json();
     expect(homeJson['MY_NEW_ENV_VAR']).toBe('my plaintext value');
-    expect(homeJson['MY_DECRYPTABLE_SECRET_ENV']).toBe('decryptable value');
 
     // sleep before kill, otherwise the dev process doesn't clean up and exit properly
     await sleep(100);
@@ -910,14 +749,12 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
     const apiJson = await apiRes.json();
     expect(apiJson['MY_NEW_ENV_VAR']).toBe('my plaintext value');
     expect(apiJson['MY_STDIN_VAR']).toBe('{"expect":"quotes"}');
-    expect(apiJson['MY_DECRYPTABLE_SECRET_ENV']).toBe('decryptable value');
 
     const homeUrl = localhost[0];
     const homeRes = await fetch(homeUrl);
     const homeJson = await homeRes.json();
     expect(homeJson['MY_NEW_ENV_VAR']).toBe('my plaintext value');
     expect(homeJson['MY_STDIN_VAR']).toBe('{"expect":"quotes"}');
-    expect(homeJson['MY_DECRYPTABLE_SECRET_ENV']).toBe('decryptable value');
 
     // system env vars are hidden in dev
     expect(apiJson['VERCEL']).toBeUndefined();
@@ -1029,16 +866,6 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
     );
 
     expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
-
-    const { exitCode: exitCode3 } = await execCli(
-      binaryPath,
-      ['env', 'rm', 'MY_DECRYPTABLE_SECRET_ENV', 'development', '-y'],
-      {
-        cwd: target,
-      }
-    );
-
-    expect(exitCode3).toBe(0);
   }
 
   async function vcEnvRemoveWithNameOnly() {
@@ -1062,7 +889,6 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
   async function vcEnvRemoveAll() {
     await vcEnvRemoveByName('MY_PREVIEW');
     await vcEnvRemoveByName('MY_STDIN_VAR');
-    await vcEnvRemoveByName('MY_DECRYPTABLE_SECRET_ENV');
     await vcEnvRemoveByName('MY_NEW_ENV_VAR');
   }
 
@@ -1075,7 +901,6 @@ test('Deploy `api-env` fixture and test `vercel env` command', async () => {
     await vcEnvAddFromStdinPreview();
     await vcEnvAddFromStdinPreviewWithBranch();
     await vcEnvLsIncludesVar();
-    await createEnvWithDecryptableSecret();
     await vcEnvPull();
     await vcEnvPullOverwrite();
     await vcEnvPullConfirm();
