@@ -4,7 +4,6 @@ import {
   relative,
   parse as parsePath,
   sep,
-  basename as pathBasename,
   basename,
 } from 'path';
 import { Project } from 'ts-morph';
@@ -170,7 +169,7 @@ export const build: BuildV2 = async ({
       // No need to transform non-html files
       staticOutputs[fileName] = fileFsRef;
     } else {
-      const fileNameWithoutExtension = pathBasename(fileName, '.html');
+      const fileNameWithoutExtension = basename(fileName, '.html');
 
       const pathWithoutHtmlExtension = join(
         parsedPath.dir,
