@@ -15,10 +15,13 @@ export const devCommand: Command = {
       name: 'listen',
       description: 'Specify a URI endpoint on which to listen [0.0.0.0:3000]',
       argument: 'uri',
-      shorthand: null,
+      shorthand: 'l',
       type: String,
       deprecated: false,
     },
+    { name: 'yes', shorthand: 'y', type: Boolean, deprecated: false },
+    { name: 'port', shorthand: 'p', type: Number, deprecated: true },
+    { name: 'confirm', shorthand: 'c', type: Boolean, deprecated: true },
   ],
   examples: [
     {

@@ -2,7 +2,7 @@ import path from 'path';
 import chalk from 'chalk';
 import { PackageJson } from '@vercel/build-utils';
 
-import getArgs from '../../util/get-args';
+import { parseArguments } from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 import Client from '../../util/client';
 import { NowError } from '../../util/now-error';
@@ -17,6 +17,7 @@ import { CantParseJSONFile } from '../../util/errors-ts';
 import { isErrnoException } from '@vercel/error-utils';
 import { help } from '../help';
 import { devCommand } from './command';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
 
 const COMMAND_CONFIG = {
   dev: ['dev'],
@@ -39,40 +40,33 @@ export default async function main(client: Client) {
     process.env.__VERCEL_DEV_RUNNING = '1';
   }
 
-  let argv;
   let args;
   const { output } = client;
 
+  let parsedArgs;
+
+  const flagsSpecification = getFlagsSpecification(devCommand.options);
+
   try {
-    argv = getArgs(client.argv.slice(2), {
-      '--listen': String,
-      '-l': '--listen',
-      '--yes': Boolean,
-      '-y': '--yes',
+    parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
 
-      // Deprecated
-      '--port': Number,
-      '-p': '--port',
-      '--confirm': Boolean,
-      '-c': '--confirm',
-    });
-    args = getSubcommand(argv._.slice(1), COMMAND_CONFIG).args;
+    args = getSubcommand(parsedArgs.args.slice(1), COMMAND_CONFIG).args;
 
-    if ('--confirm' in argv) {
+    if ('--confirm' in parsedArgs.flags) {
       output.warn('`--confirm` is deprecated, please use `--yes` instead');
-      argv['--yes'] = argv['--confirm'];
+      parsedArgs.flags['--yes'] = parsedArgs.flags['--confirm'];
     }
 
-    if ('--port' in argv) {
+    if ('--port' in parsedArgs.flags) {
       output.warn('`--port` is deprecated, please use `--listen` instead');
-      argv['--listen'] = String(argv['--port']);
+      parsedArgs.flags['--listen'] = String(parsedArgs.flags['--port']);
     }
   } catch (err) {
     handleError(err);
     return 1;
   }
 
-  if (argv['--help']) {
+  if (parsedArgs.flags['--help']) {
     client.output.print(help(devCommand, { columns: client.stderr.columns }));
     return 2;
   }
@@ -110,13 +104,13 @@ export default async function main(client: Client) {
     }
   }
 
-  if (argv._.length > 2) {
+  if (parsedArgs.args.length > 2) {
     output.error(`${getCommandName(`dev [dir]`)} accepts at most one argument`);
     return 1;
   }
 
   try {
-    return await dev(client, argv, args);
+    return await dev(client, parsedArgs.flags, args);
   } catch (err) {
     if (isErrnoException(err) && err.code === 'ENOTFOUND') {
       // Error message will look like the following:
