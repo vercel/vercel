@@ -330,7 +330,7 @@ test('output logs with "short" output', async () => {
 
   // "short" format includes timestamps
   expect(
-    stdout.match(
+    stderr.match(
       /\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d\.\d+([+-][0-2]\d:[0-5]\d|Z)/
     )
   ).toBeTruthy();
@@ -351,6 +351,8 @@ test('output logs with "raw" output', async () => {
   ]);
 
   expect(stderr).toContain(`Fetched deployment "${context.deployment}"`);
+
+  console.log(stderr, '\n---------\n', stdout);
 
   // "raw" format does not include timestamps
   expect(null).toBe(
