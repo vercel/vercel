@@ -93,6 +93,8 @@ export interface Deployment {
   alias: string[];
   aliasAssigned: boolean;
   aliasError: string | null;
+  expiration?: number;
+  proposedExpiration?: number;
 }
 
 export interface DeploymentBuild {
