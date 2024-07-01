@@ -316,8 +316,8 @@ importers:
         specifier: 8.2.2
         version: link:../build-utils
       '@vercel/fun':
-        specifier: 1.1.0
-        version: 1.1.0
+        specifier: 1.1.1
+        version: 1.1.1
       '@vercel/go':
         specifier: 3.1.1
         version: link:../go
@@ -5506,8 +5506,8 @@ packages:
     resolution: {integrity: sha512-8FGD6AejeC/nXcblgNCM5rnZb9KXa4WNkR03HCWtdJBpANjTgjHEglNLFnhuvdQ78tC6afaxBPI+g7F2NX3tgg==}
     dev: true
 
-  /@vercel/fun@1.1.0:
-    resolution: {integrity: sha512-SpuPAo+MlAYMtcMcC0plx7Tv4Mp7SQhJJj1iIENlOnABL24kxHpL09XLQMGzZIzIW7upR8c3edwgfpRtp+dhVw==}
+  /@vercel/fun@1.1.1:
+    resolution: {integrity: sha512-S+D+jYDsw1JheUGDweTQxMRicby8++cEb685DFKWNKDGwzB6EjYsPI6C7N8yErxbcfeC9QvSP7B5HgflGXoJxQ==}
     engines: {node: '>= 10'}
     dependencies:
       '@tootallnate/once': 2.0.0
