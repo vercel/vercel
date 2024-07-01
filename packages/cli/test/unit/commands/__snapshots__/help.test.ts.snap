@@ -392,7 +392,7 @@ exports[`help command > certs help output snapshots > certs help column width 40
                          return per page     
                          (default: 20, max:  
                          100)                
-  -n,  --next            Show next page of   
+  -N,  --next            Show next page of   
                          results             
 
 
@@ -472,7 +472,7 @@ exports[`help command > certs help output snapshots > certs help column width 80
        --crt <FILE>      Certificate file                                            
        --key <FILE>      Certificate key file                                        
        --limit <VALUE>   Number of results to return per page (default: 20, max: 100)
-  -n,  --next            Show next page of results                                   
+  -N,  --next            Show next page of results                                   
 
 
   [2mGlobal Options[22m:
@@ -527,7 +527,7 @@ exports[`help command > certs help output snapshots > certs help column width 12
        --crt <FILE>      Certificate file                                                                                    
        --key <FILE>      Certificate key file                                                                                
        --limit <VALUE>   Number of results to return per page (default: 20, max: 100)                                        
-  -n,  --next            Show next page of results                                                                           
+  -N,  --next            Show next page of results                                                                           
 
 
   [2mGlobal Options[22m:
