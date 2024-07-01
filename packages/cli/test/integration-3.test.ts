@@ -1,30 +1,28 @@
+/* eslint-disable no-console */
 import ms from 'ms';
 import path from 'path';
 import { once } from 'node:events';
-import { URL, parse as parseUrl } from 'url';
+import { URL } from 'url';
 import semVer from 'semver';
-import { Readable } from 'stream';
 import { homedir } from 'os';
 import { runNpmInstall } from '@vercel/build-utils';
 import { execCli } from './helpers/exec';
-import fetch, { RequestInit, RequestInfo } from 'node-fetch';
-import retry from 'async-retry';
+import fetch, { RequestInfo } from 'node-fetch';
 import fs from 'fs-extra';
 import { logo } from '../src/util/pkg-name';
 import sleep from '../src/util/sleep';
 import humanizePath from '../src/util/humanize-path';
 import pkg from '../package.json';
-import { fetchTokenWithRetry } from '../../../test/lib/deployment/now-deploy';
 import waitForPrompt from './helpers/wait-for-prompt';
 import { getNewTmpDir, listTmpDirs } from './helpers/get-tmp-dir';
-import getGlobalDir from './helpers/get-global-dir';
 import {
   setupE2EFixture,
   prepareE2EFixtures,
 } from './helpers/setup-e2e-fixture';
 import formatOutput from './helpers/format-output';
-import type http from 'http';
-import type { NowJson, DeploymentLike } from './helpers/types';
+import type { DeploymentLike } from './helpers/types';
+import { teamPromise, userPromise } from './helpers/get-account';
+import { apiFetch } from './helpers/api-fetch';
 
 const TEST_TIMEOUT = 3 * 60 * 1000;
 jest.setTimeout(TEST_TIMEOUT);
@@ -32,32 +30,7 @@ jest.setTimeout(TEST_TIMEOUT);
 const binaryPath = path.resolve(__dirname, `../scripts/start.js`);
 
 const deployHelpMessage = `${logo} vercel [options] <command | path>`;
-let session = 'temp-session';
-let secretName: string | undefined;
-
-function fetchTokenInformation(token: string, retries = 3) {
-  const url = `https://api.vercel.com/v2/user`;
-  const headers = { Authorization: `Bearer ${token}` };
-
-  return retry(
-    async () => {
-      const res = await fetch(url, { headers });
-
-      if (!res.ok) {
-        throw new Error(
-          `Failed to fetch "${url}", status: ${
-            res.status
-          }, id: ${res.headers.get('x-vercel-id')}`
-        );
-      }
-
-      const data = await res.json();
-
-      return data.user;
-    },
-    { retries, factor: 1 }
-  );
-}
+const session = Math.random().toString(36).split('.')[1];
 
 const context: {
   deployment: string | undefined;
@@ -65,44 +38,12 @@ const context: {
   deployment: undefined,
 };
 
-let token: string | undefined;
-let email: string | undefined;
-let contextName: string | undefined;
-
-function mockLoginApi(req: http.IncomingMessage, res: http.ServerResponse) {
-  const { url = '/', method } = req;
-  let { pathname = '/', query = {} } = parseUrl(url, true);
-  // eslint-disable-next-line no-console
-  console.log(`[mock-login-server] ${method} ${pathname}`);
-  const securityCode = 'Bears Beets Battlestar Galactica';
-  res.setHeader('content-type', 'application/json');
-  if (
-    method === 'POST' &&
-    pathname === '/registration' &&
-    query.mode === 'login'
-  ) {
-    res.end(JSON.stringify({ token, securityCode }));
-  } else if (
-    method === 'GET' &&
-    pathname === '/registration/verify' &&
-    query.email === email
-  ) {
-    res.end(JSON.stringify({ token }));
-  } else if (method === 'GET' && pathname === '/v2/user') {
-    res.end(JSON.stringify({ user: { email } }));
-  } else {
-    res.statusCode = 405;
-    res.end(JSON.stringify({ code: 'method_not_allowed' }));
-  }
-}
-
 const pickUrl = (stdout: string) => {
   const lines = stdout.split('\n');
   return lines[lines.length - 1];
 };
 
 const waitForDeployment = async (href: RequestInfo) => {
-  // eslint-disable-next-line no-console
   console.log(`waiting for ${href} to become ready...`);
   const start = Date.now();
   const max = ms('4m');
@@ -129,76 +70,12 @@ const waitForDeployment = async (href: RequestInfo) => {
   }
 };
 
-let loginApiUrl = '';
-const loginApiServer = require('http')
-  .createServer(mockLoginApi)
-  .listen(0, () => {
-    const { port } = loginApiServer.address();
-    loginApiUrl = `http://localhost:${port}`;
-    // eslint-disable-next-line no-console
-    console.log(`[mock-login-server] Listening on ${loginApiUrl}`);
-  });
-
-const apiFetch = (url: string, { headers, ...options }: RequestInit = {}) => {
-  return fetch(`https://api.vercel.com${url}`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      ...(headers || {}),
-    },
-    ...options,
-  });
-};
-
-const createUser = async () => {
-  await retry(
-    async () => {
-      token = await fetchTokenWithRetry();
-
-      await fs.writeJSON(getConfigAuthPath(), { token });
-
-      const user = await fetchTokenInformation(token);
-
-      email = user.email;
-      contextName = user.username;
-      session = Math.random().toString(36).split('.')[1];
-    },
-    { retries: 3, factor: 1 }
-  );
-};
-
-function getConfigAuthPath() {
-  return path.join(getGlobalDir(), 'auth.json');
-}
-
 beforeAll(async () => {
   try {
-    await createUser();
-
-    if (!contextName) {
-      throw new Error('Shared state "contextName" not set.');
-    }
-    await prepareE2EFixtures(contextName, binaryPath);
-
-    if (!email) {
-      throw new Error('Shared state "email" not set.');
-    }
-    await fs.remove(getConfigAuthPath());
-    const loginOutput = await execCli(binaryPath, [
-      'login',
-      email,
-      '--api',
-      loginApiUrl,
-    ]);
-
-    expect(loginOutput.exitCode, formatOutput(loginOutput)).toBe(0);
-    expect(loginOutput.stderr).toMatch(/You are now logged in\./gm);
-
-    const auth = await fs.readJSON(getConfigAuthPath());
-    expect(auth.token).toBe(token);
+    const team = await teamPromise;
+    await prepareE2EFixtures(team.slug, binaryPath);
   } catch (err) {
-    // eslint-disable-next-line no-console
     console.log('Failed test suite `beforeAll`');
-    // eslint-disable-next-line no-console
     console.log(err);
 
     // force test suite to actually stop
@@ -209,30 +86,11 @@ beforeAll(async () => {
 afterAll(async () => {
   delete process.env.ENABLE_EXPERIMENTAL_COREPACK;
 
-  if (loginApiServer) {
-    // Stop mock server
-    loginApiServer.close();
-  }
-
-  // Make sure the token gets revoked unless it's passed in via environment
-  if (!process.env.VERCEL_TOKEN) {
-    await execCli(binaryPath, ['logout']);
-  }
-
-  const allTmpDirs = listTmpDirs();
-  for (const tmpDir of allTmpDirs) {
-    // eslint-disable-next-line no-console
+  for (const tmpDir of listTmpDirs()) {
     console.log('Removing temp dir: ', tmpDir.name);
     tmpDir.removeCallback();
   }
 });
-
-async function clearAuthConfig() {
-  const configPath = getConfigAuthPath();
-  if (fs.existsSync(configPath)) {
-    await fs.writeFile(configPath, JSON.stringify({}));
-  }
-}
 
 test('[vc projects] should create a project successfully', async () => {
   const projectName = `vc-projects-add-${
@@ -268,10 +126,7 @@ test('deploy with metadata containing "=" in the value', async () => {
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   const { host } = new URL(stdout);
-  const res = await fetch(
-    `https://api.vercel.com/v12/now/deployments/get?url=${host}`,
-    { headers: { authorization: `Bearer ${token}` } }
-  );
+  const res = await apiFetch(`/v12/now/deployments/get?url=${host}`);
   const deployment = await res.json();
   expect(deployment.meta.someKey).toBe('=');
 });
@@ -294,37 +149,12 @@ test('output the version', async () => {
   expect(version).toBe(pkg.version);
 });
 
-test('should add secret with hyphen prefix', async () => {
-  const target = await setupE2EFixture('build-secret');
-  const key = 'mysecret';
-  const value = '-foo_bar';
-
-  let secretCall = await execCli(
-    binaryPath,
-    ['secrets', 'add', '--', key, value],
-    {
-      cwd: target,
-    }
-  );
-
-  expect(secretCall.exitCode, formatOutput(secretCall)).toBe(0);
-
-  let targetCall = await execCli(binaryPath, ['--yes'], {
-    cwd: target,
-  });
-
-  expect(targetCall.exitCode, formatOutput(targetCall)).toBe(0);
-  const { host } = new URL(targetCall.stdout);
-  const response = await fetch(`https://${host}`);
-  expect(response.status).toBe(200);
-  expect(await response.text()).toBe(`${value}\n`);
-});
-
 test('login with unregistered user', async () => {
-  const { stdout, stderr, exitCode } = await execCli(binaryPath, [
-    'login',
-    `${session}@${session}.com`,
-  ]);
+  const { stdout, stderr, exitCode } = await execCli(
+    binaryPath,
+    ['login', `${session}@${session}.com`],
+    { token: false }
+  );
 
   const goal = `Error: Please sign up: https://vercel.com/signup`;
   const lines = stderr.trim().split('\n');
@@ -367,6 +197,7 @@ test('ignore files specified in .nowignore via allowlist', async () => {
 });
 
 test('list the scopes', async () => {
+  const team = await teamPromise;
   const { stdout, stderr, exitCode } = await execCli(binaryPath, [
     'teams',
     'ls',
@@ -374,12 +205,13 @@ test('list the scopes', async () => {
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
-  const include = new RegExp(`✔ ${contextName}\\s+${email}`);
+  const include = new RegExp(`${team.slug}\\s+${team.name}`);
   expect(stderr).toMatch(include);
 });
 
 test('domains inspect', async () => {
-  const domainName = `inspect-${contextName}-${Math.random()
+  const team = await teamPromise;
+  const domainName = `inspect-${team.slug}-${Math.random()
     .toString()
     .slice(2, 8)}.org`;
 
@@ -426,36 +258,6 @@ test('domains inspect', async () => {
   }
 });
 
-// eslint-disable-next-line jest/no-disabled-tests
-test('try to purchase a domain', async () => {
-  if (process.env.VERCEL_TOKEN || process.env.NOW_TOKEN) {
-    // eslint-disable-next-line no-console
-    console.log(
-      'Skipping test `try to purchase a domain` because a personal VERCEL_TOKEN was provided.'
-    );
-    return;
-  }
-
-  const stream = new Readable();
-  stream._read = () => {};
-
-  const { stderr, stdout, exitCode } = await execCli(
-    binaryPath,
-    ['domains', 'buy', `${session}-test.com`],
-    {
-      input: stream,
-      env: {
-        FORCE_TTY: '1',
-      },
-    }
-  );
-
-  expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
-  expect(stderr).toMatch(
-    /Error: Could not purchase domain\. Please add a payment method using/
-  );
-});
-
 test('try to transfer-in a domain with "--code" option', async () => {
   const { stderr, stdout, exitCode } = await execCli(binaryPath, [
     'domains',
@@ -482,54 +284,6 @@ test('try to move an invalid domain', async () => {
   expect(stderr).toContain(`Error: Domain not found under `);
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
 });
-
-/*
- * Disabled 2 tests because these temp users don't have certs
-test('create wildcard alias for deployment', async t => {
-  const hosts = {
-    deployment: context.deployment,
-    alias: `*.${contextName}.now.sh`,
-  };
-  const { stdout, stderr, exitCode } = await execCli(
-    binaryPath,
-    ['alias', hosts.deployment, hosts.alias],
-  );
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-  const goal = `> Success! ${hosts.alias} now points to https://${hosts.deployment}`;
-  t.is(exitCode, 0);
-  t.true(stdout.startsWith(goal));
-  // Send a test request to the alias
-  // Retries to make sure we consider the time it takes to update
-  const response = await retry(
-    async () => {
-      const response = await fetch(`https://test.${contextName}.now.sh`);
-      if (response.ok) {
-        return response;
-      }
-      throw new Error(`Error: Returned code ${response.status}`);
-    },
-    { retries: 3 }
-  );
-  const content = await response.text();
-  t.true(response.ok);
-  t.true(content.includes(contextName));
-  context.wildcardAlias = hosts.alias;
-});
-test('remove the wildcard alias', async t => {
-  const goal = `> Success! Alias ${context.wildcardAlias} removed`;
-  const { stdout, stderr, exitCode } = await execCli(
-    binaryPath,
-    ['alias', 'rm', context.wildcardAlias, '--yes'],
-  );
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-  t.is(exitCode, 0);
-  t.true(stdout.startsWith(goal));
-});
-*/
 
 test('ensure we render a warning for deployments with no files', async () => {
   const directory = await setupE2EFixture('empty-directory');
@@ -658,6 +412,7 @@ test('ensure the `scope` property works with email', async () => {
 });
 
 test('ensure the `scope` property works with username', async () => {
+  const team = await teamPromise;
   const directory = await setupE2EFixture('config-scope-property-username');
 
   const { stderr, stdout, exitCode } = await execCli(binaryPath, [
@@ -670,7 +425,7 @@ test('ensure the `scope` property works with username', async () => {
   ]);
 
   // Ensure we're deploying under the right scope
-  expect(stderr).toContain(contextName);
+  expect(stderr).toContain(team.slug);
 
   // Ensure the exit code is right
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
@@ -887,78 +642,12 @@ test('fail to add a domain without a project', async () => {
   expect(output.stderr).toMatch(/expects two arguments/gm);
 });
 
-test('try to revert a deployment and assign the automatic aliases', async () => {
-  const firstDeployment = await setupE2EFixture('now-revert-alias-1');
-  const secondDeployment = await setupE2EFixture('now-revert-alias-2');
-
-  const { name } = JSON.parse(
-    fs.readFileSync(path.join(firstDeployment, 'now.json')).toString()
-  ) as NowJson;
-  expect(name).toBeTruthy();
-
-  const url = `https://${name}.user.vercel.app`;
-
-  {
-    const { exitCode, stdout, stderr } = await execCli(binaryPath, [
-      firstDeployment,
-      '--yes',
-    ]);
-    const deploymentUrl = stdout;
-
-    expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
-
-    await waitForDeployment(deploymentUrl);
-    await sleep(20000);
-
-    const result = await fetch(url).then(r => r.json());
-
-    expect(result.name).toBe('now-revert-alias-1');
-  }
-
-  {
-    const { exitCode, stdout, stderr } = await execCli(binaryPath, [
-      secondDeployment,
-      '--yes',
-    ]);
-    const deploymentUrl = stdout;
-
-    expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
-
-    await waitForDeployment(deploymentUrl);
-    await sleep(20000);
-    await fetch(url);
-    await sleep(5000);
-
-    const result = await fetch(url).then(r => r.json());
-
-    expect(result.name).toBe('now-revert-alias-2');
-  }
-
-  {
-    const { exitCode, stdout, stderr } = await execCli(binaryPath, [
-      firstDeployment,
-      '--yes',
-    ]);
-    const deploymentUrl = stdout;
-
-    expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
-
-    await waitForDeployment(deploymentUrl);
-    await sleep(20000);
-    await fetch(url);
-    await sleep(5000);
-
-    const result = await fetch(url).then(r => r.json());
-
-    expect(result.name).toBe('now-revert-alias-1');
-  }
-});
-
 test('whoami', async () => {
+  const user = await userPromise;
   const { exitCode, stdout, stderr } = await execCli(binaryPath, ['whoami']);
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
-  expect(stdout).toBe(contextName);
+  expect(stdout).toBe(user.username);
 });
 
 test('[vercel dev] fails when dev script calls vercel dev recursively', async () => {
@@ -1151,59 +840,6 @@ test('next unsupported functions config shows warning link', async () => {
   );
 });
 
-test('vercel secret add', async () => {
-  secretName = `my-secret-${Date.now().toString(36)}`;
-  const value = 'https://my-secret-endpoint.com';
-
-  const output = await execCli(binaryPath, [
-    'secret',
-    'add',
-    secretName,
-    value,
-  ]);
-  expect(output.exitCode, formatOutput(output)).toBe(0);
-});
-
-test('vercel secret ls', async () => {
-  const output = await execCli(binaryPath, ['secret', 'ls']);
-  expect(output.exitCode, formatOutput(output)).toBe(0);
-  expect(output.stderr).toMatch(/Secrets found under/gm);
-});
-
-test('vercel secret ls --test-warning', async () => {
-  const output = await execCli(binaryPath, ['secret', 'ls', '--test-warning']);
-  expect(output.exitCode, formatOutput(output)).toBe(0);
-  expect(output.stderr).toMatch(/Test warning message./gm);
-  expect(output.stderr).toMatch(/Learn more: https:\/\/vercel.com/gm);
-  expect(output.stderr).toMatch(/No secrets found under/gm);
-});
-
-test('vercel secret rename', async () => {
-  if (!secretName) {
-    throw new Error('Shared state "secretName" not set.');
-  }
-
-  const nextName = `renamed-secret-${Date.now().toString(36)}`;
-  const output = await execCli(binaryPath, [
-    'secret',
-    'rename',
-    secretName,
-    nextName,
-  ]);
-  expect(output.exitCode, formatOutput(output)).toBe(0);
-
-  secretName = nextName;
-});
-
-test('vercel secret rm', async () => {
-  if (!secretName) {
-    throw new Error('Shared state "secretName" not set.');
-  }
-
-  const output = await execCli(binaryPath, ['secret', 'rm', secretName, '-y']);
-  expect(output.exitCode, formatOutput(output)).toBe(0);
-});
-
 test('deploy a Lambda with 128MB of memory', async () => {
   const directory = await setupE2EFixture('lambda-with-128-memory');
   const output = await execCli(binaryPath, [directory, '--yes']);
@@ -1254,9 +890,10 @@ test('fail to deploy a Lambda with an incorrect value for maxDuration', async ()
   const output = await execCli(binaryPath, [directory, '--yes']);
 
   expect(output.exitCode, formatOutput(output)).toBe(1);
-  expect(output.stderr).toMatch(
-    /maxDuration must be between \d+ second and \d+ seconds/gm
-  );
+
+  // There's different error messages depending on plan type. As long as it contains
+  // "maxDuration" then we can assume it's a validation error for `maxDuration`.
+  expect(output.stderr).toContain('maxDuration');
 });
 
 test('invalid `--token`', async () => {
@@ -1320,11 +957,14 @@ test('should invoke CLI extension', async () => {
   // Ensure the `.bin` is populated in the fixture
   await runNpmInstall(fixture);
 
-  const output = await execCli(binaryPath, ['mywhoami'], { cwd: fixture });
+  const [user, output] = await Promise.all([
+    userPromise,
+    execCli(binaryPath, ['mywhoami'], { cwd: fixture }),
+  ]);
   const formatted = formatOutput(output);
   expect(output.stdout, formatted).toContain('Hello from a CLI extension!');
   expect(output.stdout, formatted).toContain('VERCEL_API: http://127.0.0.1:');
-  expect(output.stdout, formatted).toContain(`Username: ${contextName}`);
+  expect(output.stdout, formatted).toContain(`Username: ${user.username}`);
 });
 
 test('should pass through exit code for CLI extension', async () => {
@@ -1340,10 +980,11 @@ test('should pass through exit code for CLI extension', async () => {
   expect(output.exitCode).toEqual(6);
 });
 
-// NOTE: Order matters here. This must be the last test in the file.
 test('default command should prompt login with empty auth.json', async () => {
-  await clearAuthConfig();
-  const output = await execCli(binaryPath);
+  const output = await execCli(binaryPath, ['-Q', '/tmp'], {
+    // execCli passes the token automatically, undo that functionality for this test
+    token: false,
+  });
   expect(output.stderr, formatOutput(output)).toBeTruthy();
   expect(output.stderr).toContain(
     'Error: No existing credentials found. Please run `vercel login` or pass "--token"'

@@ -103,7 +103,7 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
       }),
       'vercel.json': JSON.stringify({
         version: 2,
-        devCommand: `${binaryPath} dev`,
+        devCommand: `${binaryPath} dev --token ${process.env.VERCEL_TOKEN} --scope ${process.env.VERCEL_TEAM_ID}`,
       }),
     },
     'build-fail-on-recursion-command': {
