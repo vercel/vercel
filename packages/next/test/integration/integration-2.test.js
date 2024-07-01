@@ -119,8 +119,7 @@ it('Should invoke build command with serverless-no-config', async () => {
   ).toBeFalsy();
 });
 
-// eslint-disable-next-line jest/no-disabled-tests
-it.skip('Should not exceed function limit for large dependencies (server build)', async () => {
+it('Should not exceed function limit for large dependencies (server build)', async () => {
   let logs = '';
 
   const origLog = console.log;
@@ -173,8 +172,7 @@ it.skip('Should not exceed function limit for large dependencies (server build)'
   expect(logs).toContain('node_modules/chrome-aws-lambda/bin');
 });
 
-// eslint-disable-next-line jest/no-disabled-tests
-it.skip('Should not exceed function limit for large dependencies (shared lambda)', async () => {
+it('Should not exceed function limit for large dependencies (shared lambda)', async () => {
   let logs = '';
 
   const origLog = console.log;
