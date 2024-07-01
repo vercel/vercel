@@ -116,7 +116,7 @@ export const domainsCommand: Command = {
     },
     {
       name: 'limit',
-      shorthand: 'n',
+      shorthand: null,
       description:
         'Number of results to return per page (default: 20, max: 100)',
       argument: 'NUMBER',
@@ -125,12 +125,13 @@ export const domainsCommand: Command = {
     },
     {
       name: 'force',
-      shorthand: 'f',
+      shorthand: null,
       type: Boolean,
       deprecated: false,
       description:
         'Force a domain on a project and remove it from an existing one',
     },
+    { name: 'code', shorthand: null, type: String, deprecated: false },
   ],
   examples: [
     {

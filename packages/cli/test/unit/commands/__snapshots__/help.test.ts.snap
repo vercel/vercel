@@ -1195,23 +1195,20 @@ exports[`help command > domains help output snapshots > domains help column widt
 
   [2mOptions[22m:
 
-  -f,  --force           Force a domain 
-                         on a project   
-                         and remove it  
-                         from an        
-                         existing one   
-  -n,  --limit <NUMBER>  Number of      
-                         results to     
-                         return per page
-                         (default: 20,  
-                         max: 100)      
-  -N,  --next            Show next page 
-                         of results     
-  -y,  --yes             Skip the       
-                         confirmation   
-                         prompt when    
-                         removing a     
-                         domain         
+       --force           Force a domain on a 
+                         project and remove  
+                         it from an existing 
+                         one                 
+       --limit <NUMBER>  Number of results to
+                         return per page     
+                         (default: 20, max:  
+                         100)                
+  -N,  --next            Show next page of   
+                         results             
+  -y,  --yes             Skip the            
+                         confirmation prompt 
+                         when removing a     
+                         domain              
 
 
   [2mGlobal Options[22m:
@@ -1286,12 +1283,11 @@ exports[`help command > domains help output snapshots > domains help column widt
 
   [2mOptions[22m:
 
-  -f,  --force           Force a domain on a project and remove it from an      
-                         existing one                                           
-  -n,  --limit <NUMBER>  Number of results to return per page (default: 20, max:
-                         100)                                                   
-  -N,  --next            Show next page of results                              
-  -y,  --yes             Skip the confirmation prompt when removing a domain    
+       --force           Force a domain on a project and remove it from an existing  
+                         one                                                         
+       --limit <NUMBER>  Number of results to return per page (default: 20, max: 100)
+  -N,  --next            Show next page of results                                   
+  -y,  --yes             Skip the confirmation prompt when removing a domain         
 
 
   [2mGlobal Options[22m:
@@ -1342,10 +1338,10 @@ exports[`help command > domains help output snapshots > domains help column widt
 
   [2mOptions[22m:
 
-  -f,  --force           Force a domain on a project and remove it from an existing one                                 
-  -n,  --limit <NUMBER>  Number of results to return per page (default: 20, max: 100)                                   
-  -N,  --next            Show next page of results                                                                      
-  -y,  --yes             Skip the confirmation prompt when removing a domain                                            
+       --force           Force a domain on a project and remove it from an existing one                                      
+       --limit <NUMBER>  Number of results to return per page (default: 20, max: 100)                                        
+  -N,  --next            Show next page of results                                                                           
+  -y,  --yes             Skip the confirmation prompt when removing a domain                                                 
 
 
   [2mGlobal Options[22m:
