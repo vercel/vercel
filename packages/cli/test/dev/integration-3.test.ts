@@ -1,16 +1,15 @@
 import { spawnAsync } from '@vercel/build-utils';
 import { resolve, delimiter } from 'path';
-
-const {
-  fetch,
+import {
   sleep,
-  fixture,
   shouldSkip,
-  testFixture,
   fetchWithRetry,
+  fetch,
+  fixture,
+  testFixture,
   testFixtureStdio,
   validateResponseHeaders,
-} = require('./utils.js');
+} from './utils';
 
 // Angular has `engines: { node: "10.x" }` in its `package.json`
 test('[vercel dev] 02-angular-node', async () => {
