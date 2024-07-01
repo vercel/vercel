@@ -1,5 +1,59 @@
 # @vercel/next
 
+## 4.2.18
+
+### Patch Changes
+
+- Allow app router prerender functions to use streaming ([#11745](https://github.com/vercel/vercel/pull/11745))
+
+- Add experimental preload flag ([#11753](https://github.com/vercel/vercel/pull/11753))
+
+## 4.2.17
+
+### Patch Changes
+
+- Ensure all prerenders have matching .action output ([#11719](https://github.com/vercel/vercel/pull/11719))
+
+## 4.2.16
+
+### Patch Changes
+
+- prevent /index from being incorrectly normalized in rewrites ([#11707](https://github.com/vercel/vercel/pull/11707))
+
+- Upgrade to @vercel/nft 0.27.2 with browser remapping support ([#11700](https://github.com/vercel/vercel/pull/11700))
+
+- ensure unmatched rsc rewrites are routed to correct handler ([#11688](https://github.com/vercel/vercel/pull/11688))
+
+## 4.2.15
+
+### Patch Changes
+
+- ensure unmatched action rewrites are routed to correct handler ([#11686](https://github.com/vercel/vercel/pull/11686))
+
+- Adds a route for the `.rsc` pathname as well when app has ppr enabled but not all routes. ([#11681](https://github.com/vercel/vercel/pull/11681))
+
+## 4.2.14
+
+### Patch Changes
+
+- Don't create streaming lambdas for pages router routes ([#11660](https://github.com/vercel/vercel/pull/11660))
+
+- Ensure user rewrites still match to action outputs ([#11628](https://github.com/vercel/vercel/pull/11628))
+
+## 4.2.13
+
+### Patch Changes
+
+- Fix static case for detecting when a page supports PPR ([#11635](https://github.com/vercel/vercel/pull/11635))
+
+- Fix related to erroring when a prefetch route is not provided but the route is PPR enabled ([#11638](https://github.com/vercel/vercel/pull/11638))
+
+## 4.2.12
+
+### Patch Changes
+
+- Support incremental PPR for large applications ([#11625](https://github.com/vercel/vercel/pull/11625))
+
 ## 4.2.11
 
 ### Patch Changes

@@ -1,0 +1,2 @@
+// TEST COMMENT TO VERIFY JSON5 SUPPORT
+{ "tasks": { "build": { "dependsOn": ["^build"], "outputs": ["dist/**"] } } }

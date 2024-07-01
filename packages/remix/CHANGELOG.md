@@ -1,5 +1,17 @@
 # @vercel/remix-builder
 
+## 2.1.8
+
+### Patch Changes
+
+- Add opt-in env var to use native Fetch polyfills ([#11748](https://github.com/vercel/vercel/pull/11748))
+
+## 2.1.7
+
+### Patch Changes
+
+- Upgrade to @vercel/nft 0.27.2 with browser remapping support ([#11700](https://github.com/vercel/vercel/pull/11700))
+
 ## 2.1.6
 
 ### Patch Changes

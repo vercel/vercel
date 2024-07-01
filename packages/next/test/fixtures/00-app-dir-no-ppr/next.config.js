@@ -17,6 +17,10 @@ module.exports = {
         source: '/to-product/:productId.html',
         destination: '/products/:productId',
       },
+      {
+        source: '/greedy-rewrite/test-page/:path*',
+        destination: '/test-page/:path*',
+      }
     ];
   },
 };
