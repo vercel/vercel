@@ -1,15 +1,14 @@
 import { join } from 'path';
 import ms from 'ms';
 import fs, { mkdirp } from 'fs-extra';
-
-const {
+import {
+  sleep,
   fetch,
   fixture,
-  sleep,
   testFixture,
   testFixtureStdio,
   validateResponseHeaders,
-} = require('./utils.js');
+} from './utils';
 
 test(
   '[vercel dev] temporary directory listing',
