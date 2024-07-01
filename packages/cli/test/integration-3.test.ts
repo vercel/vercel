@@ -352,8 +352,6 @@ test('output logs with "raw" output', async () => {
 
   expect(stderr).toContain(`Fetched deployment "${context.deployment}"`);
 
-  console.log(stderr, '\n---------\n', stdout);
-
   // "raw" format does not include timestamps
   expect(null).toBe(
     stdout.match(
