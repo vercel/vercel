@@ -1,5 +1,15 @@
 # @vercel/node
 
+## 3.2.0
+
+### Minor Changes
+
+- Ignore `shouldAddHelpers` when exporting a server to match production ([#11738](https://github.com/vercel/vercel/pull/11738))
+
+### Patch Changes
+
+- Update undici dep to address vulnerabilities ([#11749](https://github.com/vercel/vercel/pull/11749))
+
 ## 3.1.7
 
 ### Patch Changes
