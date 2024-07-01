@@ -2075,6 +2075,55 @@ export const frameworks = [
     },
     getOutputDirName: async () => 'public',
   },
+  {
+    name: 'Remotion',
+    slug: 'remotion',
+    demo: 'https://remotion-helloworld.vercel.app/',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/remotion.svg',
+    tagline: 'Remotion allows you to create videos programmatically in React.',
+    description: 'A Remotion Studio project, created with `npm init video`.',
+    website: 'https://www.remotion.dev',
+    detectors: {
+      some: [
+        {
+          matchPackage: '@remotion/cli',
+        },
+        {
+          path: 'remotion.config.js',
+        },
+        {
+          path: 'remotion.config.ts',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder:
+          '`yarn install`, `pnpm install`, `npm install`, or `bun install`',
+      },
+      buildCommand: {
+        placeholder: 'remotion bundle',
+      },
+      devCommand: {
+        value: 'remotion studio',
+      },
+      outputDirectory: {
+        value: 'build',
+      },
+    },
+    envPrefix: 'REMOTION_',
+    dependency: '@remotion/cli',
+    getOutputDirName: async () => 'build',
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/index.html',
+      },
+    ],
+  },
 ] as const;
 
 export const frameworkList = frameworks as readonly Framework[];
