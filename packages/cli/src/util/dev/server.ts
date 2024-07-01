@@ -38,6 +38,7 @@ import {
   FileFsRef,
   PackageJson,
   spawnCommand,
+  getPrefixedEnvVars,
 } from '@vercel/build-utils';
 import {
   detectBuilders,
@@ -496,7 +497,6 @@ export default class DevServer {
       const dotenv = await fs.readFile(filePath, 'utf8');
       this.output.debug(`Using local env: ${filePath}`);
       env = parseDotenv(dotenv);
-      env = this.injectSystemValuesInDotenv(env);
     } catch (err: unknown) {
       if (!isErrnoException(err) || err.code !== 'ENOENT') {
         throw err;
@@ -682,29 +682,52 @@ export default class DevServer {
       this.getLocalEnv('.env.build', vercelConfig.build?.env),
     ]);
 
-    let allEnv = { ...buildEnv, ...runEnv };
-
     // If no .env/.build.env is present, use cloud environment variables
-    if (Object.keys(allEnv).length === 0) {
+    if (Object.keys(runEnv).length + Object.keys(buildEnv).length === 0) {
       const envValues = { ...this.envValues };
-      if (this.address.host) {
-        envValues['VERCEL_URL'] = this.address.host;
-      }
-      allEnv = { ...envValues };
       runEnv = { ...envValues };
       buildEnv = { ...envValues };
     }
 
+    let allEnv = { ...buildEnv, ...runEnv };
     // legacy NOW_REGION env variable
     runEnv['NOW_REGION'] = 'dev1';
     buildEnv['NOW_REGION'] = 'dev1';
     allEnv['NOW_REGION'] = 'dev1';
 
-    // mirror how VERCEL_REGION is injected in prod/preview
-    // only inject in `runEnvs`, because `allEnvs` is exposed to dev command
-    // and should not contain VERCEL_REGION
     if (this.projectSettings?.autoExposeSystemEnvs) {
+      // mirror how VERCEL_REGION is injected in prod/preview
+      // only inject in `runEnvs`, because `allEnvs` is exposed to dev command
+      // and should not contain VERCEL_REGION
       runEnv['VERCEL_REGION'] = 'dev1';
+
+      // expose VERCEL_ENV and VERCEL_URL to dev command
+      runEnv['VERCEL_ENV'] = 'development';
+      buildEnv['VERCEL_ENV'] = 'development';
+      if (this.address.host) {
+        runEnv['VERCEL_URL'] = this.address.host;
+        buildEnv['VERCEL_URL'] = this.address.host;
+      }
+
+      // automaticaly expose VERCEL_URL, VERCEL_ENV
+      // as prefixed (framework) env vars
+      if (this.projectSettings?.framework) {
+        const frameworkSlug = this.projectSettings.framework;
+        const framework = frameworkList.find(f => f.slug === frameworkSlug);
+        const envPrefix = framework?.envPrefix;
+
+        if (envPrefix) {
+          const prefixedEnvs = getPrefixedEnvVars({
+            envPrefix,
+            envs: buildEnv,
+          });
+          for (const [key, value] of Object.entries(prefixedEnvs)) {
+            buildEnv[key] = value;
+          }
+        }
+      }
+
+      allEnv = { ...allEnv, ...buildEnv };
     }
 
     this.envConfigs = { buildEnv, runEnv, allEnv };
@@ -816,18 +839,6 @@ export default class DevServer {
     }
 
     return merged;
-  }
-
-  injectSystemValuesInDotenv(env: Env): Env {
-    for (const name of Object.keys(env)) {
-      if (name === 'VERCEL_URL') {
-        env['VERCEL_URL'] = this.address.host;
-      } else if (name === 'VERCEL_REGION') {
-        env['VERCEL_REGION'] = 'dev1';
-      }
-    }
-
-    return env;
   }
 
   /**
