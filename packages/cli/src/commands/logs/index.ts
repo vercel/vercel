@@ -111,7 +111,7 @@ export default async function logs(client: Client) {
   const printEvent = (event: DeploymentEvent) => {
     if (printedEventIds.has(event.id)) return 0;
     printedEventIds.add(event.id);
-    return logPrinter(event);
+    return logPrinter(event, client);
   };
   storage.sort(compareEvents).forEach(printEvent);
 
@@ -146,7 +146,7 @@ function compareEvents(d1: DeploymentEvent, d2: DeploymentEvent) {
   return d1.created - d2.created; // if date are equal and no serial
 }
 
-export function printLogShort(log: any, client?: Client) {
+export function printLogShort(log: any, client: Client) {
   if (!log.created) return; // keepalive
 
   let data: string;
@@ -181,10 +181,6 @@ export function printLogShort(log: any, client?: Client) {
 
   const date = new Date(log.created).toISOString();
 
-  const print = client
-    ? (str: string) => client?.output.print(str + '\n')
-    : // eslint-disable-next-line no-console
-      console.log.bind(console);
   data.split('\n').forEach(line => {
     if (
       line.includes('START RequestId:') ||
@@ -202,7 +198,9 @@ export function printLogShort(log: any, client?: Client) {
       }
     }
 
-    print(`${chalk.dim(date)}  ${line.replace('[now-builder-debug] ', '')}`);
+    client.output.print(
+      `${chalk.dim(date)}  ${line.replace('[now-builder-debug] ', '')}\n`
+    );
   });
 
   return 0;

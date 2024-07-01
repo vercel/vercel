@@ -1,22 +1,20 @@
-import bytes from 'bytes';
-import chalk from 'chalk';
+import type { Deployment, Org } from '@vercel-internals/types';
 import {
   ArchiveFormat,
-  createDeployment,
   DeploymentOptions,
   VercelClientOptions,
+  createDeployment,
 } from '@vercel/client';
+import bytes from 'bytes';
+import chalk from 'chalk';
+import type { Agent } from 'http';
+import Now from '../../util';
+import { emoji, prependEmoji } from '../emoji';
+import { displayBuildLogs } from '../logs';
 import { Output } from '../output';
 import { progress } from '../output/progress';
-import Now from '../../util';
-import type { Deployment, Org } from '@vercel-internals/types';
-import Client from '../client';
-import ua from '../ua';
 import { linkFolderToProject } from '../projects/link';
-import { prependEmoji, emoji } from '../emoji';
-import printEvents from '../events';
-import type { Agent } from 'http';
-import { printLogShort } from '../../commands/logs';
+import ua from '../ua';
 
 function printInspectUrl(
   output: Output,
@@ -221,7 +219,15 @@ export default async function processDeployment({
         }
 
         if (withLogs) {
-          abortController = displayBuildLogs(client, deployment);
+          let promise: Promise<void>;
+          ({ abortController, promise } = displayBuildLogs(
+            client,
+            deployment,
+            true
+          ));
+          promise.catch(error =>
+            output.warn(`Failed to read build logs: ${error}`)
+          );
         }
         output.spinner(
           deployment.readyState === 'QUEUED' ? 'Queued' : 'Building',
@@ -289,34 +295,4 @@ export default async function processDeployment({
     stopSpinner();
     throw err;
   }
-}
-
-export function displayBuildLogs(
-  client: Client,
-  deployment: Deployment,
-  follow?: true
-): AbortController;
-export function displayBuildLogs(
-  client: Client,
-  deployment: Deployment,
-  follow: false
-): Promise<void>;
-export function displayBuildLogs(
-  client: Client,
-  deployment: Deployment,
-  follow: boolean = true
-) {
-  const abortController = new AbortController();
-  const promise = printEvents(
-    client,
-    deployment.id,
-    {
-      mode: 'logs',
-      onEvent: (event: any) => printLogShort(event, client),
-      quiet: false,
-      findOpts: { direction: 'forward', follow },
-    },
-    abortController
-  );
-  return follow ? abortController : promise;
 }

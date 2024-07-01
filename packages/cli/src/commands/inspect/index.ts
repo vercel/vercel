@@ -4,17 +4,15 @@ import chalk from 'chalk';
 import ms from 'ms';
 import title from 'title';
 import { URL } from 'url';
-import { isFailed, isReady } from '../../util/build-state';
 import Client from '../../util/client';
 import { isDeploying } from '../../util/deploy/is-deploying';
-import { displayBuildLogs } from '../../util/deploy/process-deployment';
+import { displayBuildLogs } from '../../util/logs';
 import { handleError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
 import getDeployment from '../../util/get-deployment';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import getScope from '../../util/get-scope';
 import readStandardInput from '../../util/input/read-standard-input';
-import type { Output } from '../../util/output';
 import buildsList from '../../util/output/builds';
 import elapsed from '../../util/output/elapsed';
 import indent from '../../util/output/indent';
@@ -25,7 +23,7 @@ import { help } from '../help';
 import { inspectCommand } from './command';
 
 export default async function inspect(client: Client) {
-  const { output } = client;
+  const { print, error, warn } = client.output;
   let parsedArguments;
 
   const flagsSpecification = getFlagsSpecification(inspectCommand.options);
@@ -38,11 +36,9 @@ export default async function inspect(client: Client) {
   }
 
   if (parsedArguments.flags['--help']) {
-    output.print(help(inspectCommand, { columns: client.stderr.columns }));
+    print(help(inspectCommand, { columns: client.stderr.columns }));
     return 2;
   }
-
-  const { print, log, error } = client.output;
 
   if (parsedArguments.args[0] === inspectCommand.name) {
     parsedArguments.args.shift();
@@ -62,7 +58,7 @@ export default async function inspect(client: Client) {
 
   if (!deploymentIdOrHost) {
     error(`${getCommandName('inspect <url>')} expects exactly one argument`);
-    output.print(help(inspectCommand, { columns: client.stderr.columns }));
+    print(help(inspectCommand, { columns: client.stderr.columns }));
     return 1;
   }
 
@@ -89,7 +85,10 @@ export default async function inspect(client: Client) {
     throw err;
   }
 
-  const depFetchStart = Date.now();
+  const until = Date.now() + timeout;
+  const wait = parsedArguments.flags['--wait'] ?? false;
+  const withLogs = parsedArguments.flags['--logs'];
+  const startTimestamp = Date.now();
 
   try {
     deploymentIdOrHost = new URL(deploymentIdOrHost).hostname;
@@ -98,48 +97,79 @@ export default async function inspect(client: Client) {
     `Fetching deployment "${deploymentIdOrHost}" in ${chalk.bold(contextName)}`
   );
 
-  const until = Date.now() + timeout;
-  const wait = parsedArguments.flags['--wait'] ?? false;
-  const withLogs = parsedArguments.flags['--logs'];
-
   // resolve the deployment, since we might have been given an alias
   let deployment = await getDeployment(client, contextName, deploymentIdOrHost);
 
   let abortController: AbortController | undefined;
   if (withLogs) {
+    let promise: Promise<void>;
+    ({ abortController, promise } = displayBuildLogs(client, deployment, wait));
     if (wait) {
-      abortController = displayBuildLogs(client, deployment, true);
+      // when waiting for the deployment's end, we don't wait for the logs to finish
+      promise.catch(error => warn(`Failed to read build logs: ${error}`));
     } else {
-      await displayBuildLogs(client, deployment, false);
-      return exitCode(deployment.readyState, print);
+      await promise;
     }
   }
-
-  while (Date.now() < until) {
-    if (!wait) {
-      break;
-    }
-
+  while (wait) {
     await sleep(250);
-
     // check the deployment state again
     deployment = await getDeployment(client, contextName, deploymentIdOrHost);
     if (!isDeploying(deployment.readyState)) {
       abortController?.abort();
-      if (!isReady(deployment) && !isFailed(deployment)) {
-        print(
-          chalk.bold(
-            `\n\nstop waiting for logs after ${timeout}s. Deployment is ${deployment.readyState}.\n`
-          )
-        );
-      }
-      if (withLogs) {
-        return exitCode(deployment.readyState, print);
-      } else {
-        break;
-      }
+      break;
+    }
+    if (Date.now() > until) {
+      warn(`stopped waiting after ${ms(timeout, { long: true })}`);
+      abortController?.abort();
+      break;
     }
   }
+  if (withLogs) {
+    print(`${chalk.cyan('status')}\t${stateString(deployment.readyState)}\n`);
+  } else {
+    await printDetails({ deployment, contextName, client, startTimestamp });
+  }
+
+  return exitCode(deployment.readyState);
+}
+
+function stateString(s: Deployment['readyState']) {
+  const CIRCLE = '● ';
+  const sTitle = s && title(s);
+  switch (s) {
+    case 'INITIALIZING':
+    case 'BUILDING':
+      return chalk.yellow(CIRCLE) + sTitle;
+    case 'ERROR':
+      return chalk.red(CIRCLE) + sTitle;
+    case 'READY':
+      return chalk.green(CIRCLE) + sTitle;
+    case 'QUEUED':
+      return chalk.gray(CIRCLE) + sTitle;
+    case 'CANCELED':
+      return chalk.gray(CIRCLE) + sTitle;
+    default:
+      return chalk.gray('UNKNOWN');
+  }
+}
+
+async function printDetails({
+  deployment,
+  contextName,
+  client,
+  startTimestamp,
+}: {
+  deployment: Deployment;
+  contextName: string | null;
+  client: Client;
+  startTimestamp: number;
+}): Promise<void> {
+  client.output.log(
+    `Fetched deployment "${chalk.bold(deployment.url)}" in ${chalk.bold(
+      contextName
+    )} ${elapsed(Date.now() - startTimestamp)}`
+  );
 
   const {
     id,
@@ -151,16 +181,12 @@ export default async function inspect(client: Client) {
     alias: aliases,
   } = deployment;
 
+  const { print } = client.output;
+
   const { builds } =
     deployment.version === 2
       ? await client.fetch<{ builds: Build[] }>(`/v11/deployments/${id}/builds`)
       : { builds: [] };
-
-  log(
-    `Fetched deployment "${chalk.bold(url)}" in ${chalk.bold(
-      contextName
-    )} ${elapsed(Date.now() - depFetchStart)}`
-  );
 
   print('\n');
   print(chalk.bold('  General\n\n'));
@@ -207,32 +233,9 @@ export default async function inspect(client: Client) {
     print(indent(routesList(routes), 4));
     print(`\n\n`);
   }
-
-  return exitCode(deployment.readyState);
 }
 
-function stateString(s: Deployment['readyState']) {
-  const CIRCLE = '● ';
-  const sTitle = s && title(s);
-  switch (s) {
-    case 'INITIALIZING':
-    case 'BUILDING':
-      return chalk.yellow(CIRCLE) + sTitle;
-    case 'ERROR':
-      return chalk.red(CIRCLE) + sTitle;
-    case 'READY':
-      return chalk.green(CIRCLE) + sTitle;
-    case 'QUEUED':
-      return chalk.gray(CIRCLE) + sTitle;
-    case 'CANCELED':
-      return chalk.gray(CIRCLE) + sTitle;
-    default:
-      return chalk.gray('UNKNOWN');
-  }
-}
-
-function exitCode(state: Deployment['readyState'], print?: Output['print']) {
-  print?.(`${chalk.cyan('status')}\t${stateString(state)}\n`);
+function exitCode(state: Deployment['readyState']) {
   if (state === 'ERROR' || state === 'CANCELED') {
     return 3;
   }
