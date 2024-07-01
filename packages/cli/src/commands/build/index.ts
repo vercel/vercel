@@ -73,6 +73,7 @@ import { help } from '../help';
 import { buildCommand } from './command';
 import { scrubArgv } from '../../util/build/scrub-argv';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { validateBOA } from '../../util/boa-schema';
 
 type BuildResult = BuildResultV2 | BuildResultV3;
 
@@ -272,6 +273,9 @@ export default async function main(client: Client): Promise<number> {
     process.env.NOW_BUILDER = '1';
 
     await doBuild(client, project, buildsJson, cwd, outputDir);
+    client.output.print(`Build completed, validating.\n`);
+    await validateBOA(outputDir);
+    client.output.print(`Build validated.\n`);
     return 0;
   } catch (err: any) {
     output.prettyError(err);
