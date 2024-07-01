@@ -1,3 +1,4 @@
+import { it, expect, describe, beforeEach, afterEach } from 'vitest';
 import path from 'path';
 import fs, { readlink } from 'fs-extra';
 import { strict as assert, strictEqual } from 'assert';

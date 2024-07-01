@@ -1,3 +1,4 @@
+import { it, expect, describe } from 'vitest';
 import { parseOsRelease } from '../src/os';
 
 describe('getOsRelease()', () => {
