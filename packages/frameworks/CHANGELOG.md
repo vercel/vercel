@@ -1,5 +1,11 @@
 # @vercel/frameworks
 
+## 3.0.3
+
+### Patch Changes
+
+- Update SvelteKit v1 devCommand ([#11494](https://github.com/vercel/vercel/pull/11494))
+
 ## 3.0.2
 
 ### Patch Changes
