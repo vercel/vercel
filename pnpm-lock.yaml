@@ -316,8 +316,8 @@ importers:
         specifier: 8.2.2
         version: link:../build-utils
       '@vercel/fun':
-        specifier: 1.1.0
-        version: 1.1.0
+        specifier: 1.1.1
+        version: 1.1.1
       '@vercel/go':
         specifier: 3.1.1
         version: link:../go
