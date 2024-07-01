@@ -1,5 +1,5 @@
 import Client from '../../util/client';
-import getArgs from '../../util/get-args';
+import { parseArguments } from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 import handleError from '../../util/handle-error';
 
@@ -9,6 +9,7 @@ import ls from './ls';
 import rm from './rm';
 import { dnsCommand } from './command';
 import { help } from '../help';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
 
 const COMMAND_CONFIG = {
   add: ['add'],
@@ -18,33 +19,33 @@ const COMMAND_CONFIG = {
 };
 
 export default async function dns(client: Client) {
-  let argv;
+  let parsedArgs;
 
+  const flagsSpecification = getFlagsSpecification(dnsCommand.options);
   try {
-    argv = getArgs(client.argv.slice(2), {
-      '--next': Number,
-      '-N': '--next',
-      '--limit': Number,
-    });
+    parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (error) {
     handleError(error);
     return 1;
   }
 
-  if (argv['--help']) {
+  if (parsedArgs.flags['--help']) {
     client.output.print(help(dnsCommand, { columns: client.stderr.columns }));
     return 2;
   }
 
-  const { subcommand, args } = getSubcommand(argv._.slice(1), COMMAND_CONFIG);
+  const { subcommand, args } = getSubcommand(
+    parsedArgs.args.slice(1),
+    COMMAND_CONFIG
+  );
   switch (subcommand) {
     case 'add':
-      return add(client, argv, args);
+      return add(client, parsedArgs.flags, args);
     case 'import':
-      return importZone(client, argv, args);
+      return importZone(client, parsedArgs.flags, args);
     case 'rm':
-      return rm(client, argv, args);
+      return rm(client, parsedArgs.flags, args);
     default:
-      return ls(client, argv, args);
+      return ls(client, parsedArgs.flags, args);
   }
 }
