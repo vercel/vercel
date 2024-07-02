@@ -100,7 +100,7 @@ export default async (client: Client): Promise<number> => {
     return 2;
   }
 
-  if (parsedArguments.args[0] === 'deploy') {
+  if (parsedArguments.args[0] === deployCommand.name) {
     parsedArguments.args.shift();
   }
 
@@ -537,6 +537,7 @@ export default async (client: Client): Promise<number> => {
       target,
       skipAutoDetectionConfirmation: autoConfirm,
       noWait,
+      withLogs: parsedArguments.flags['--logs'],
       autoAssignCustomDomains,
     };
 

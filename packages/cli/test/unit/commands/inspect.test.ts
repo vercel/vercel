@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { client } from '../../mocks/client';
 import { useUser } from '../../mocks/user';
-import { useDeployment } from '../../mocks/deployment';
+import { useBuildLogs, useDeployment } from '../../mocks/deployment';
 import inspect from '../../../src/commands/inspect';
 import sleep from '../../../src/util/sleep';
 
@@ -86,5 +86,97 @@ describe('inspect', () => {
 
     const delta = Date.now() - startTime;
     expect(delta).toBeGreaterThan(1234);
+  });
+
+  it('should print no build logs for a queued deployment', async () => {
+    const user = useUser();
+    const deployment = useDeployment({ creator: user, state: 'QUEUED' });
+    useBuildLogs({
+      deployment,
+      logProducer: async function* () {},
+    });
+
+    client.setArgv('inspect', deployment.url, '--logs');
+    const exitCode = await inspect(client);
+    await expect(client.stderr).toOutput(
+      `Fetching deployment "${deployment.url}" in ${user.username}`
+    );
+    expect(client.getFullOutput().split('\n').slice(1).join('\n'))
+      .toMatchInlineSnapshot(`
+        "status	● Queued
+        "
+      `);
+    expect(exitCode).toEqual(0);
+  });
+
+  it('should print build logs of a failed deployment', async () => {
+    const user = useUser();
+    const deployment = useDeployment({ creator: user, state: 'ERROR' });
+    useBuildLogs({
+      deployment,
+      logProducer: async function* () {
+        yield { created: 1717426870339, text: 'Hello, world!' };
+        yield { created: 1717426870340, text: 'Bye...' };
+      },
+    });
+
+    client.setArgv('inspect', deployment.url, '--logs');
+    const exitCode = await inspect(client);
+    await expect(client.stderr).toOutput(
+      `Fetching deployment "${deployment.url}" in ${user.username}`
+    );
+    expect(client.getFullOutput().split('\n').slice(1).join('\n'))
+      .toMatchInlineSnapshot(`
+        "2024-06-03T15:01:10.339Z  Hello, world!
+        2024-06-03T15:01:10.340Z  Bye...
+        status	● Error
+        "
+      `);
+    expect(exitCode).toEqual(1);
+  });
+
+  it('should print build logs while waiting for a finished deployment', async () => {
+    let exitCode: number | null = null;
+    const user = useUser();
+    const deployment = useDeployment({ creator: user, state: 'BUILDING' });
+    useBuildLogs({
+      deployment,
+      logProducer: async function* () {
+        yield { created: 1717426870339, text: 'Hello, world!' };
+        await sleep(100);
+        yield { created: 1717426870340, text: 'building...' };
+        await sleep(100);
+        yield { created: 1717426871000, text: 'build complete' };
+        await sleep(100);
+        yield { created: 1717426871235, text: 'Bye...' };
+      },
+    });
+
+    const runInspect = async () => {
+      client.setArgv('inspect', deployment.url, '--logs', '--wait');
+      exitCode = await inspect(client);
+      await expect(client.stderr).toOutput(
+        `Fetching deployment "${deployment.url}" in ${user.username}`
+      );
+    };
+
+    const slowlyDeploy = async () => {
+      await sleep(1234);
+      expect(exitCode).toBeNull();
+      deployment.readyState = 'READY';
+    };
+
+    await Promise.all<void>([runInspect(), slowlyDeploy()]);
+
+    expect(exitCode).toEqual(0);
+    expect(client.getFullOutput().split('\n').slice(1).join('\n'))
+      .toMatchInlineSnapshot(`
+        "2024-06-03T15:01:10.339Z  Hello, world!
+        2024-06-03T15:01:10.340Z  building...
+        2024-06-03T15:01:11.000Z  build complete
+        2024-06-03T15:01:11.235Z  Bye...
+        status	● Ready
+        "
+      `);
   });
 });
