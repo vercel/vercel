@@ -798,6 +798,8 @@ function validateCorepackPackageManager(
   );
 
   if (corepackPackageManagerVersion === null) {
+    // this will fail to use corepack, but we should return `true` here to let corepack itself
+    // show the appropriate error message and fail the build
     return true;
   } else {
     return validLockfileForPackageManager(
