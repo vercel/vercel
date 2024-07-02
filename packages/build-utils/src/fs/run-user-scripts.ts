@@ -768,16 +768,14 @@ export function getPathOverrideForPackageManager({
     return NO_OVERRIDE;
   }
 
-  // TODO: replace with a warning log that we can query for
-  throw new Error(
-    `Detected lockfile "${lockfileVersion}" which is not compatible with the intended corepack package manager "${corepackPackageManager}". Update your lockfile or change to a compatible corepack version.`
+  console.warn(
+    `WARN [package-manager-warning-1] Detected lockfile "${lockfileVersion}" which is not compatible with the intended corepack package manager "${corepackPackageManager}". Update your lockfile or change to a compatible corepack version.`
   );
+  return NO_OVERRIDE;
 }
 
 // TODO: for the warning logs
 // - only warn if corepack is enabled
-// - log something distinct in the message, like: "WARN [package-manager-warning-1] ${whatever message}"
-
 function validateCorepackPackageManager(
   cliType: CliType,
   lockfileVersion: number,
@@ -787,17 +785,17 @@ function validateCorepackPackageManager(
     corepackPackageManager
   );
   if (!validatedCorepackPackageManager) {
-    // TODO: replace with a warning log that we can query for
-    throw new Error(
-      `Intended corepack defined package manager "${corepackPackageManager}" is not a valid semver value.`
+    console.warn(
+      `WARN [package-manager-warning-2] Intended corepack defined package manager "${corepackPackageManager}" is not a valid semver value.`
     );
+    return false;
   }
 
   if (cliType !== validatedCorepackPackageManager.packageName) {
-    // TODO: replace with a warning log that we can query for
-    throw new Error(
-      `Detected package manager "${cliType}" does not match intended corepack defined package manager "${validatedCorepackPackageManager.packageName}". Change your lockfile or "package.json#packageManager" value to match.`
+    console.warn(
+      `WARN [package-manager-warning-3] Detected package manager "${cliType}" does not match intended corepack defined package manager "${validatedCorepackPackageManager.packageName}". Change your lockfile or "package.json#packageManager" value to match.`
     );
+    return false;
   }
 
   const corepackPackageManagerVersion = coerce(
