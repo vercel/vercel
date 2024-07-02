@@ -237,7 +237,7 @@ async function printDetails({
 
 function exitCode(state: Deployment['readyState']) {
   if (state === 'ERROR' || state === 'CANCELED') {
-    return 3;
+    return 1;
   }
   return 0;
 }

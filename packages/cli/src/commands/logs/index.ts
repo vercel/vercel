@@ -111,7 +111,7 @@ export default async function logs(client: Client) {
   const printEvent = (event: DeploymentEvent) => {
     if (printedEventIds.has(event.id)) return 0;
     printedEventIds.add(event.id);
-    return logPrinter(event, client);
+    return logPrinter(event);
   };
   storage.sort(compareEvents).forEach(printEvent);
 
@@ -146,7 +146,7 @@ function compareEvents(d1: DeploymentEvent, d2: DeploymentEvent) {
   return d1.created - d2.created; // if date are equal and no serial
 }
 
-export function printLogShort(log: any, client: Client) {
+export function printLogShort(log: any, client?: Client) {
   if (!log.created) return; // keepalive
 
   let data: string;
@@ -198,7 +198,8 @@ export function printLogShort(log: any, client: Client) {
       }
     }
 
-    client.output.print(
+    // eslint-disable-next-line no-console -- we'll still log to console for backward compatibility
+    (client ? client.output.print : console.log)(
       `${chalk.dim(date)}  ${line.replace('[now-builder-debug] ', '')}\n`
     );
   });

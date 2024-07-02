@@ -132,7 +132,7 @@ describe('inspect', () => {
         status	● Error
         "
       `);
-    expect(exitCode).toEqual(3);
+    expect(exitCode).toEqual(1);
   });
 
   it('should print build logs while waiting for a finished deployment', async () => {
