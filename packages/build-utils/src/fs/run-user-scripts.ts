@@ -750,7 +750,7 @@ export function getPathOverrideForPackageManager({
   const detectedPackageManger = detectPackageManager(cliType, lockfileVersion);
 
   if (!corepackPackageManager) {
-    return detectedPackageManger ? detectedPackageManger : NO_OVERRIDE;
+    return detectedPackageManger ?? NO_OVERRIDE;
   }
 
   if (lockfileVersion === undefined) {
