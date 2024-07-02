@@ -768,10 +768,15 @@ export function getPathOverrideForPackageManager({
     return NO_OVERRIDE;
   }
 
+  // TODO: replace with a warning log that we can query for
   throw new Error(
     `Detected lockfile "${lockfileVersion}" which is not compatible with the intended corepack package manager "${corepackPackageManager}". Update your lockfile or change to a compatible corepack version.`
   );
 }
+
+// TODO: for the warning logs
+// - only warn if corepack is enabled
+// - log something distinct in the message, like: "WARN [package-manager-warning-1] ${whatever message}"
 
 function validateCorepackPackageManager(
   cliType: CliType,
@@ -782,12 +787,14 @@ function validateCorepackPackageManager(
     corepackPackageManager
   );
   if (!validatedCorepackPackageManager) {
+    // TODO: replace with a warning log that we can query for
     throw new Error(
       `Intended corepack defined package manager "${corepackPackageManager}" is not a valid semver value.`
     );
   }
 
   if (cliType !== validatedCorepackPackageManager.packageName) {
+    // TODO: replace with a warning log that we can query for
     throw new Error(
       `Detected package manager "${cliType}" does not match intended corepack defined package manager "${validatedCorepackPackageManager.packageName}". Change your lockfile or "package.json#packageManager" value to match.`
     );
@@ -843,7 +850,7 @@ function validateVersionSpecifier(version?: string) {
   };
 }
 
-function detectPackageManager(
+export function detectPackageManager(
   cliType: CliType,
   lockfileVersion: number | undefined
 ) {
@@ -888,16 +895,14 @@ function detectPackageManager(
           return undefined;
       }
     case 'bun':
-      switch (true) {
-        default:
-          // Bun 1
-          return {
-            path: '/bun1',
-            detectedLockfile: 'bun.lockb',
-            detectedPackageManager: 'bun@1.x',
-          };
-      }
+      return {
+        path: '/bun1',
+        detectedLockfile: 'bun.lockb',
+        detectedPackageManager: 'bun@1.x',
+      };
     case 'yarn':
+      // yarn always uses the default version in the build container
+      // which is why there's no `path` here
       return {
         path: undefined,
         detectedLockfile: 'yarn.lock',
