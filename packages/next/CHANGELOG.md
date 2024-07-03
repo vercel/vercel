@@ -1,5 +1,12 @@
 # @vercel/next
 
+## 4.3.0
+
+### Minor Changes
+
+- Adds the ability for builders to define a `diagnostics` step that is called after the build operation is done. ([#11653](https://github.com/vercel/vercel/pull/11653))
+  Implements the diagnostics step in the `next` builder.
+
 ## 4.2.18
 
 ### Patch Changes

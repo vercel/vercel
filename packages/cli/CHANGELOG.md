@@ -1,5 +1,24 @@
 # vercel
 
+## 34.3.0
+
+### Minor Changes
+
+- introduce --logs flag for deploy and inspect command to display build logs ([#11672](https://github.com/vercel/vercel/pull/11672))
+
+- Adds the ability for builders to define a `diagnostics` step that is called after the build operation is done. ([#11653](https://github.com/vercel/vercel/pull/11653))
+  Implements the diagnostics step in the `next` builder.
+
+### Patch Changes
+
+- Updated dependencies [[`394eddb2a`](https://github.com/vercel/vercel/commit/394eddb2a9f4d9096315fe53f8d27a5401900e5f), [`b9d18c583`](https://github.com/vercel/vercel/commit/b9d18c5835ff16316fafb854eb6447df9c841b98), [`77836e3c3`](https://github.com/vercel/vercel/commit/77836e3c33837a7c85957733cad5c433e86aa8a2), [`11d0a32d8`](https://github.com/vercel/vercel/commit/11d0a32d854948e2df24c48ab6afdf5255d50632)]:
+  - @vercel/build-utils@8.3.0
+  - @vercel/next@4.3.0
+  - @vercel/remix-builder@2.1.9
+  - @vercel/redwood@2.1.0
+  - @vercel/node@3.2.1
+  - @vercel/static-build@2.5.12
+
 ## 34.2.8
 
 ### Patch Changes
