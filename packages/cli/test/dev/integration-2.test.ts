@@ -1,6 +1,6 @@
 import execa from 'execa';
 import { isIP } from 'net';
-const { exec, fixture, testFixture, testFixtureStdio } = require('./utils.js');
+import { exec, fixture, testFixture, testFixtureStdio } from './utils';
 
 test('[vercel dev] validate redirects', async () => {
   const directory = fixture('invalid-redirects');
