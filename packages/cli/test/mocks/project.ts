@@ -197,8 +197,28 @@ export function useUnknownProject() {
   });
 }
 
+interface CustomEnvironmentBranchMatcher {
+  type: 'startsWith' | 'equals' | 'endsWith';
+  pattern: string;
+}
+
+type CustomEnvironmentType = 'production' | 'preview' | 'development';
+
+type CustomEnvironment = {
+  id: string;
+  name: string;
+  slug: string;
+  type: CustomEnvironmentType;
+  description?: string;
+  branchMatcher?: CustomEnvironmentBranchMatcher;
+  createdAt: number;
+  updatedAt: number;
+};
+
 export function useProject(
-  project: Partial<Project> = defaultProject,
+  project: Partial<
+    Project & { customEnvironments?: CustomEnvironment[] }
+  > = defaultProject,
   projectEnvs: ProjectEnvVariable[] = envs
 ) {
   client.scenario.get(`/:version/projects/${project.name}`, (_req, res) => {
@@ -287,6 +307,12 @@ export function useProject(
 
     res.json({ envs: targetEnvs });
   });
+  client.scenario.get(
+    `/projects/${project.id}/custom-environments`,
+    (req, res) => {
+      res.json(project.customEnvironments || []);
+    }
+  );
   client.scenario.post(`/v10/projects/${project.id}/env`, (req, res) => {
     const envObj = req.body;
     envObj.id = envObj.key;

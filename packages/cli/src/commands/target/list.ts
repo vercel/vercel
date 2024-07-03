@@ -104,6 +104,12 @@ export default async function list(
         ...result
           .map(target => {
             const boldName = chalk.bold(target.name);
+            const type =
+              target.type === 'production'
+                ? 'Production'
+                : target.type === 'development'
+                ? 'Development'
+                : 'Preview';
             return [
               [
                 output.link(
@@ -113,7 +119,7 @@ export default async function list(
                 ),
                 target.slug,
                 target.id,
-                target.type === 'production' ? 'Production' : 'Preview',
+                type,
                 chalk.gray(
                   target.updatedAt > 0 ? ms(Date.now() - target.updatedAt) : '-'
                 ),
