@@ -6,49 +6,70 @@ describe('Test `getPathOverrideForPackageManager()`', () => {
   // TODO: add test for `validateCorepackPackageManager` true branch
 
   describe('using corepack', () => {
-    test('should throw error if corepack is enabled, pnpm 9 is set, and invalid lockfile version is used', () => {
-      expect(() => {
-        getPathOverrideForPackageManager({
-          cliType: 'pnpm',
-          lockfileVersion: 5.0,
-          corepackPackageManager: 'pnpm@9.*',
-          nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
-        });
-      }).toThrow();
-      // TODO: these assertions should change to be that a warning was logged; check some part of the unique message
+    let consoleWarnSpy: jest.SpyInstance;
+
+    beforeEach(() => {
+      consoleWarnSpy = jest.spyOn(console, 'warn');
     });
 
-    test('should throw error if corepack is enabled, pnpm 8 is set, and invalid lockfile version is used', () => {
-      expect(() => {
-        getPathOverrideForPackageManager({
-          cliType: 'pnpm',
-          lockfileVersion: 5.1,
-          corepackPackageManager: 'pnpm@8.*',
-          nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
-        });
-      }).toThrow();
+    afterEach(() => {
+      consoleWarnSpy.mockRestore();
     });
 
-    test('should throw error if corepack package manager does not match cliType', () => {
-      expect(() => {
-        getPathOverrideForPackageManager({
-          cliType: 'npm',
-          lockfileVersion: 9.0,
-          corepackPackageManager: 'pnpm@9.*',
-          nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
-        });
-      }).toThrow();
+    test('should warn if corepack is enabled, pnpm 9 is set, and invalid lockfile version is used', () => {
+      getPathOverrideForPackageManager({
+        cliType: 'pnpm',
+        lockfileVersion: 5.0,
+        corepackPackageManager: 'pnpm@9.*',
+        nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
+      });
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining(
+          'Detected lockfile "5" which is not compatible with the intended corepack package manager "pnpm@9.*". Update your lockfile or change to a compatible corepack version.'
+        )
+      );
     });
 
-    test('should throw error if corepack package manager has invalid semver version', () => {
-      expect(() => {
-        getPathOverrideForPackageManager({
-          cliType: 'pnpm',
-          lockfileVersion: 9.0,
-          corepackPackageManager: 'pnpm@invalid',
-          nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
-        });
-      }).toThrow();
+    test('should warn if corepack is enabled, pnpm 8 is set, and invalid lockfile version is used', () => {
+      getPathOverrideForPackageManager({
+        cliType: 'pnpm',
+        lockfileVersion: 5.1,
+        corepackPackageManager: 'pnpm@8.*',
+        nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
+      });
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining(
+          'Detected lockfile "5.1" which is not compatible with the intended corepack package manager "pnpm@8.*". Update your lockfile or change to a compatible corepack version.'
+        )
+      );
+    });
+
+    test('should warn if corepack package manager does not match cliType', () => {
+      getPathOverrideForPackageManager({
+        cliType: 'npm',
+        lockfileVersion: 9.0,
+        corepackPackageManager: 'pnpm@9.*',
+        nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
+      });
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining(
+          'Detected package manager "npm" does not match intended corepack defined package manager "pnpm". Change your lockfile or "package.json#packageManager" value to match.'
+        )
+      );
+    });
+
+    test('should warn if corepack package manager has invalid semver version', () => {
+      getPathOverrideForPackageManager({
+        cliType: 'pnpm',
+        lockfileVersion: 9.0,
+        corepackPackageManager: 'pnpm@invalid',
+        nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
+      });
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining(
+          'Intended corepack defined package manager "pnpm@invalid" is not a valid semver value.'
+        )
+      );
     });
   });
 });
