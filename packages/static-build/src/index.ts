@@ -482,11 +482,15 @@ export const build: BuildV2 = async ({
       spawnOpts.env.CI = 'false';
     }
 
-    const { cliType, lockfileVersion } = await scanParentDirs(entrypointDir);
+    const { cliType, lockfileVersion, packageJson } = await scanParentDirs(
+      entrypointDir,
+      true
+    );
 
     spawnOpts.env = getEnvForPackageManager({
       cliType,
       lockfileVersion,
+      packageJsonPackageManager: packageJson?.packageManager,
       nodeVersion,
       env: spawnOpts.env || {},
     });
@@ -588,7 +592,7 @@ export const build: BuildV2 = async ({
         ['-e', 'print "#{ RUBY_VERSION }"'],
         { encoding: 'utf8' }
       );
-      if (rubyVersion) {
+      if (rubyVersion.status === 0 && typeof rubyVersion.stdout === 'string') {
         gemHome = path.join(dir, rubyVersion.stdout.trim());
         debug(`Set GEM_HOME="${gemHome}" because a Gemfile was found`);
       }

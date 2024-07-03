@@ -419,7 +419,6 @@ const main = async () => {
   if (
     typeof scope === 'string' &&
     targetCommand !== 'login' &&
-    targetCommand !== 'dev' &&
     targetCommand !== 'build' &&
     !(targetCommand === 'teams' && subSubCommand !== 'invite')
   ) {

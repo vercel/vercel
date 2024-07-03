@@ -108,6 +108,7 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
           found = true;
           break;
         } else {
+          ctx.deploymentLogs = null;
           throw new Error(
             `Expected deployment logs of ${deploymentId} not to contain ${toCheck}, but found ${log.text}`
           );
@@ -122,9 +123,13 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
         deploymentLogs,
         logLength: deploymentLogs?.length,
       });
-      throw new Error(
+      ctx.deploymentLogs = null;
+      const error = new Error(
         `Expected deployment logs of ${deploymentId} to contain ${toCheck}, it was not found`
       );
+      error.retries = 20;
+      error.retryDelay = 5000; // ms
+      throw error;
     } else {
       logWithinTest('finished testing', JSON.stringify(probe));
       return;
@@ -442,24 +447,27 @@ async function testDeployment(fixturePath, opts = {}) {
     try {
       await runProbe(probe, deploymentId, deploymentUrl, probeCtx);
     } catch (err) {
-      if (!probe.retries) {
+      const retries = Math.max(probe.retries || 0, err.retries || 0);
+      if (!retries) {
         throw err;
       }
 
-      for (let i = 0; i < probe.retries; i++) {
-        logWithinTest(`re-trying ${i + 1}/${probe.retries}:`, stringifiedProbe);
+      const retryDelay = Math.max(probe.retryDelay || 0, err.retryDelay || 0);
+
+      for (let i = 0; i < retries; i++) {
+        logWithinTest(`re-trying ${i + 1}/${retries}:`, stringifiedProbe);
 
         try {
           await runProbe(probe, deploymentId, deploymentUrl, probeCtx);
           break;
         } catch (err) {
-          if (i === probe.retries - 1) {
+          if (i === retries - 1) {
             throw err;
           }
 
-          if (probe.retryDelay) {
-            logWithinTest(`Waiting ${probe.retryDelay}ms before retrying`);
-            await new Promise(resolve => setTimeout(resolve, probe.retryDelay));
+          if (retryDelay) {
+            logWithinTest(`Waiting ${retryDelay}ms before retrying`);
+            await new Promise(resolve => setTimeout(resolve, retryDelay));
           }
         }
       }

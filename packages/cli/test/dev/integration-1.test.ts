@@ -5,15 +5,14 @@ import { join } from 'path';
 import { listen } from 'async-listen';
 import stripAnsi from 'strip-ansi';
 import { createServer } from 'http';
-
-const {
+import {
   exec,
   fetch,
   fixture,
   testFixture,
   testFixtureStdio,
   validateResponseHeaders,
-} = require('./utils.js');
+} from './utils';
 
 test('[verdel dev] should support serverless functions', async () => {
   const dir = fixture('serverless-function');

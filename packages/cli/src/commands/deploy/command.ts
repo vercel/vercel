@@ -112,6 +112,13 @@ export const deployCommand: Command = {
       description: 'Use default options to skip all prompts',
     },
     {
+      name: 'logs',
+      shorthand: 'l',
+      type: Boolean,
+      deprecated: false,
+      description: 'Print the build logs',
+    },
+    {
       name: 'name',
       shorthand: 'n',
       type: String,
