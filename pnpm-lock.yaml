@@ -951,6 +951,10 @@ importers:
         version: 4.9.5
 
   packages/functions:
+    dependencies:
+      typescript:
+        specifier: 4.9.5
+        version: 4.9.5
     devDependencies:
       vitest:
         specifier: 1.3.1

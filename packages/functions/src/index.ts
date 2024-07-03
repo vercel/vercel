@@ -1,1 +1,1 @@
-export * from './waituntil';
+export * from './wait-until';

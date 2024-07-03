@@ -3,14 +3,13 @@
   "description": "Runtime functions to be used with your Vercel Functions",
   "homepage": "https://vercel.com",
   "exports": {
-    ".": "./index.js"
+    ".": "./dist/index.js"
   },
   "files": [
     "dist"
   ],
   "types": "./dist/index.d.ts",
   "version": "1.0.2",
-  "main": "index.js",
   "repository": {
     "directory": "packages/functions",
     "type": "git",
