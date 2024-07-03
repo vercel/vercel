@@ -1,9 +1,70 @@
 import { getPathOverrideForPackageManager } from '../src/fs/run-user-scripts';
 
 describe('Test `getPathOverrideForPackageManager()`', () => {
-  // TODO: add test for `corepackPackageManager` branch
-  // TODO: add test for `lockfileVersion` branch
-  // TODO: add test for `validateCorepackPackageManager` true branch
+  describe('with no corepack package manger', () => {
+    test('should return detected package manager', () => {
+      const result = getPathOverrideForPackageManager({
+        cliType: 'pnpm',
+        lockfileVersion: 9.0,
+        corepackPackageManager: undefined,
+        nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
+      });
+      expect(result).toStrictEqual({
+        detectedLockfile: 'pnpm-lock.yaml',
+        detectedPackageManager: 'pnpm@9.x',
+        path: '/pnpm9/node_modules/.bin',
+      });
+    });
+  });
+
+  describe('with no lockfile version', () => {
+    test('should return no override', () => {
+      const result = getPathOverrideForPackageManager({
+        cliType: 'pnpm',
+        lockfileVersion: undefined,
+        corepackPackageManager: 'pnpm@9.*',
+        nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
+      });
+      expect(result).toStrictEqual({
+        detectedLockfile: undefined,
+        detectedPackageManager: undefined,
+        path: undefined,
+      });
+    });
+  });
+
+  describe('without corepack enabled', () => {
+    test('should return no override', () => {
+      const result = getPathOverrideForPackageManager({
+        cliType: 'pnpm',
+        lockfileVersion: 9.0,
+        corepackPackageManager: 'pnpm@9.*',
+        nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
+        corepackEnabled: false,
+      });
+      expect(result).toStrictEqual({
+        detectedLockfile: undefined,
+        detectedPackageManager: undefined,
+        path: undefined,
+      });
+    });
+  });
+
+  describe('with valid corepack package manager', () => {
+    test('should return no override', () => {
+      const result = getPathOverrideForPackageManager({
+        cliType: 'pnpm',
+        lockfileVersion: 9.0,
+        corepackPackageManager: 'pnpm@9.*',
+        nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
+      });
+      expect(result).toStrictEqual({
+        detectedLockfile: undefined,
+        detectedPackageManager: undefined,
+        path: undefined,
+      });
+    });
+  });
 
   describe('using corepack', () => {
     let consoleWarnSpy: jest.SpyInstance;
