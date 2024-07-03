@@ -205,10 +205,17 @@ describe('env', () => {
       });
       const cwd = setupUnitFixture('vercel-env-pull');
       client.cwd = cwd;
-      client.setArgv('env', 'pull', 'other.env', '--yes');
+      client.setArgv(
+        'env',
+        'pull',
+        'other.env',
+        '--yes',
+        '--environment',
+        'production'
+      );
       const exitCodePromise = env(client);
       await expect(client.stderr).toOutput(
-        'Downloading `development` Environment Variables for Project vercel-env-pull'
+        'Downloading `production` Environment Variables for Project vercel-env-pull'
       );
       await expect(client.stderr).toOutput('Created other.env file');
       await expect(client.stderr).not.toOutput('and added it to .gitignore');
@@ -218,8 +225,42 @@ describe('env', () => {
 
       const productionFileHasVercelEnv = rawDevEnv
         .toString()
-        .includes('VERCEL_ENV="development"');
+        .includes('VERCEL_ENV="production"');
       expect(productionFileHasVercelEnv).toBeTruthy();
+    });
+
+    it('should not expose system env variables in dev', async () => {
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'vercel-env-pull',
+        name: 'vercel-env-pull',
+        autoExposeSystemEnvs: true,
+      });
+      const cwd = setupUnitFixture('vercel-env-pull');
+      client.cwd = cwd;
+      client.setArgv('env', 'pull', 'other.env', '--yes');
+      const exitCodePromise = env(client);
+      await expect(client.stderr).toOutput(
+        'Downloading `development` Environment Variables for Project vercel-env-pull'
+      );
+      await expect(client.stderr).toOutput('Created other.env file');
+      await expect(client.stderr).not.toOutput('and added it to .gitignore');
+      await expect(exitCodePromise).resolves.toEqual(0);
+
+      const devEnv = (
+        await fs.readFile(path.join(cwd, 'other.env'))
+      ).toString();
+
+      const devFileHasVercelEnv = [
+        'VERCEL',
+        'VERCEL_ENV',
+        'VERCEL_URL',
+        'VERCEL_REGION',
+        'VERCEL_DEPLOYMENT_ID',
+      ].some(envVar => devEnv.includes(envVar));
+      expect(devFileHasVercelEnv).toBeFalsy();
     });
 
     it('should show a delta string', async () => {

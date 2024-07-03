@@ -1,6 +1,6 @@
 /* global globalThis */
 
-export const waitUntil = promise => {
+exports.waitUntil = promise => {
   if (
     promise === null ||
     typeof promise !== 'object' ||

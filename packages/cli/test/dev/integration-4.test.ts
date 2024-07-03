@@ -1,14 +1,13 @@
 import fs from 'fs-extra';
 import { join } from 'path';
 import { Response } from 'node-fetch';
-
-const {
+import {
   fetch,
   fixture,
   testFixture,
   testFixtureStdio,
   validateResponseHeaders,
-} = require('./utils.js');
+} from './utils';
 
 test(
   '[vercel dev] 25-nextjs-src-dir',
