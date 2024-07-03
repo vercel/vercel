@@ -607,6 +607,7 @@ export function getEnvForPackageManager({
     lockfileVersion,
     corepackPackageManager: packageJsonPackageManager,
     nodeVersion,
+    corepackEnabled,
   });
 
   if (corepackEnabled) {
@@ -727,11 +728,13 @@ export function getPathOverrideForPackageManager({
   cliType,
   lockfileVersion,
   corepackPackageManager,
+  corepackEnabled = true,
 }: {
   cliType: CliType;
   lockfileVersion: number | undefined;
   corepackPackageManager: string | undefined;
   nodeVersion: NodeVersion | undefined;
+  corepackEnabled?: boolean;
 }): {
   /**
    * Which lockfile was detected.
@@ -753,7 +756,7 @@ export function getPathOverrideForPackageManager({
     return detectedPackageManger ?? NO_OVERRIDE;
   }
 
-  if (lockfileVersion === undefined) {
+  if (lockfileVersion === undefined || !corepackEnabled) {
     return NO_OVERRIDE;
   }
 
@@ -774,8 +777,6 @@ export function getPathOverrideForPackageManager({
   return NO_OVERRIDE;
 }
 
-// TODO: for the warning logs
-// - only warn if corepack is enabled
 function validateCorepackPackageManager(
   cliType: CliType,
   lockfileVersion: number,
