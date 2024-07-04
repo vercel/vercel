@@ -75,7 +75,7 @@ export default async function logs(client: Client) {
     error(
       `Deployment not ready. Currently: ${stateString(deployment.readyState)}.`
     );
-    return 3;
+    return 1;
   }
 
   printDisclaimer(deployment, print);

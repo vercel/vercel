@@ -3,7 +3,7 @@ import type { Deployment } from '@vercel-internals/types';
 import { setTimeout } from 'timers';
 import { promisify } from 'util';
 import {
-  afterAll,
+  afterEach,
   beforeAll,
   beforeEach,
   describe,
@@ -50,24 +50,81 @@ describe('logs', () => {
 
   beforeAll(() => {
     process.env.TZ = 'UTC';
-    vi.useFakeTimers();
   });
 
   beforeEach(() => {
+    vi.useFakeTimers();
     vi.clearAllMocks();
     user = useUser();
     deployment = useDeployment({ creator: user });
   });
 
-  afterAll(() => {
+  afterEach(() => {
     vi.useRealTimers();
   });
 
-  it('should print error when deployment not found', async () => {
+  it('prints help message', async () => {
+    client.setArgv('logs', '-h');
+    expect(await logs(client)).toEqual(2);
+    expect(client.getFullOutput()).toMatchInlineSnapshot(`
+      "
+        ▲ vercel logs url|deploymentId [options]
+
+        Display runtime logs for a specific deployment, if it is live, from now and   
+        for 5 minutes at most.                                                        
+
+        Options:
+
+        -j,  --json  print each log line as a JSON object (compatible with JQ)        
+
+
+        Global Options:
+
+             --cwd <DIR>            Sets the current working directory for a single   
+                                    run of a command                                  
+        -d,  --debug                Debug mode (default off)                          
+        -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory            
+        -h,  --help                 Output usage information                          
+        -A,  --local-config <FILE>  Path to the local \`vercel.json\` file              
+             --no-color             No color mode (default off)                       
+        -S,  --scope                Set a custom scope                                
+        -t,  --token <TOKEN>        Login token                                       
+        -v,  --version              Output the version number                         
+
+
+        Examples:
+
+        - Pretty print all the new runtime logs for the deployment DEPLOYMENT_URL from now on
+
+          $ vercel logs DEPLOYMENT_URL
+
+        - Print all runtime logs for the deployment DEPLOYMENT_ID as json objects
+
+          $ vercel logs DEPLOYMENT_ID --json
+
+        - Filter runtime logs for warning with JQ third party tool
+
+          $ vercel logs DEPLOYMENT_ID --json | jq 'select(.level == "warning")'
+
+      "
+    `);
+  });
+
+  it('prints error when deployment not found', async () => {
     client.setArgv('logs', 'bad.com');
     await expect(logs(client)).rejects.toThrow(
       `Can't find the deployment "bad.com" under the context "${user.username}"`
     );
+  });
+
+  it('prints error when argument parsing failed', async () => {
+    const stderr = vi.spyOn(console, 'error').mockImplementation(() => void 0);
+    client.setArgv('logs', '--unknown');
+    expect(await logs(client)).toEqual(1);
+    expect(stderr).toHaveBeenCalledWith(
+      'Error: unknown or unexpected option: --unknown'
+    );
+    expect(stderr).toHaveBeenCalledOnce();
   });
 
   it.each([
@@ -86,7 +143,7 @@ describe('logs', () => {
 Error: Deployment not ready. Currently: ${stateString(state)}.
 `
     );
-    expect(exitCode).toEqual(3);
+    expect(exitCode).toEqual(1);
   });
 
   it('pretty prints log lines', async () => {
@@ -220,9 +277,109 @@ Error: Deployment not ready. Currently: ${stateString(state)}.
     );
   });
 
-  it.todo('retries on a server error');
+  it('does not retry on a server validation error', async () => {
+    const spy = vi.fn();
+    client.scenario.get(
+      `/v1/projects/${deployment.projectId}/deployments/${deployment.id}/runtime-logs`,
+      async (req, res) => {
+        spy(req.path, req.query);
+        res.statusCode = 400;
+        return res.json({
+          error: { code: 'bad_request', message: 'Limit exceeded' },
+        });
+      }
+    );
+    client.setArgv('logs', deployment.url);
+    await expect(logs(client)).rejects.toThrow(`Limit exceeded (400)`);
+    expect(spy).toHaveBeenCalledOnce();
+  });
 
-  it.todo('does not retry on a server validation error');
+  it.each([
+    { title: 'as text', flag: '', getOutput: () => client.getFullOutput() },
+    {
+      title: 'as json',
+      flag: '-j',
+      getOutput: () => stdout.mock.calls.map(([txt]) => txt).join('\n'),
+    },
+  ])(
+    'retries on server error when reading logs $title',
+    async ({ flag, getOutput }) => {
+      vi.useRealTimers();
+      const spy = vi.fn();
+      let count = 0;
+      client.scenario.get(
+        `/v1/projects/${deployment.projectId}/deployments/${deployment.id}/runtime-logs`,
+        async (req, res) => {
+          spy(req.path, req.query);
+          if (count++ < 2) {
+            res.statusCode = 500;
+            return res.json({
+              error: { code: 'server_error', message: `I'm full` },
+            });
+          }
+          res.write(JSON.stringify(logsFixtures[0]) + '\n');
+          res.end();
+        }
+      );
+      client.setArgv('logs', deployment.url, flag);
+      const exitCode = await logs(client);
+      expect(exitCode).toEqual(0);
+      await expect(client.stderr).toOutput(
+        `Fetching deployment "${deployment.url}" in ${user.username}
+`
+      );
+      expect(getOutput()).toContain(logsFixtures[0].message);
+      expect(spy).toHaveBeenCalledWith(
+        `/v1/projects/${deployment.projectId}/deployments/${deployment.id}/runtime-logs`,
+        { format: 'lines' }
+      );
+      expect(spy).toHaveBeenCalledTimes(3);
+    },
+    8000
+  );
 
-  it.todo('resumes showing logs when failing to process a log line');
+  it.each([
+    { title: 'as text', flag: '', getOutput: () => client.getFullOutput() },
+    {
+      title: 'as json',
+      flag: '-j',
+      getOutput: () => stdout.mock.calls.map(([txt]) => txt).join('\n'),
+    },
+  ])(
+    'resumes showing logs when failing to process a log line $title',
+    async ({ flag, getOutput }) => {
+      vi.useRealTimers();
+      const spy = vi.fn();
+      let count = 0;
+      client.scenario.get(
+        `/v1/projects/${deployment.projectId}/deployments/${deployment.id}/runtime-logs`,
+        async (req, res) => {
+          spy(req.path, req.query);
+          await promisify(setTimeout)(100);
+          res.write(JSON.stringify(logsFixtures[count]) + '\n');
+          if (count++ === 0) {
+            res.write('unparseable\n');
+            await promisify(setTimeout)(100);
+            res.destroy(new Error('boom'));
+          } else {
+            res.end();
+          }
+        }
+      );
+      client.setArgv('logs', deployment.url, flag);
+      const exitCode = await logs(client);
+      expect(exitCode).toEqual(0);
+      await expect(client.stderr).toOutput(
+        `Fetching deployment "${deployment.url}" in ${user.username}
+`
+      );
+      expect(getOutput()).toContain(logsFixtures[0].message);
+      expect(getOutput()).toContain(logsFixtures[1].message);
+      expect(spy).toHaveBeenCalledWith(
+        `/v1/projects/${deployment.projectId}/deployments/${deployment.id}/runtime-logs`,
+        { format: 'lines' }
+      );
+      expect(spy).toHaveBeenCalledTimes(2);
+    }
+  );
 });
