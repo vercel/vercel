@@ -1,6 +1,6 @@
 import { expect, test, vi } from 'vitest';
 
-import { waitUntil } from '../src/wait-until';
+import { waitUntil, SYMBOL_FOR_REQ_CONTEXT } from '../src/wait-until';
 
 test.each([
   {},
@@ -24,12 +24,7 @@ test.each([null, undefined, {}])(
   'waitUntil does not throw an error when context is %s',
   input => {
     const promise = Promise.resolve();
-    globalThis[
-      // @ts-expect-error
-      Symbol.for(
-        '@vercel/request-context'
-      ) as unknown as keyof typeof globalThis
-    ] = input;
+    globalThis[SYMBOL_FOR_REQ_CONTEXT] = input;
     expect(() => waitUntil(promise)).not.toThrow();
   }
 );
@@ -37,10 +32,7 @@ test.each([null, undefined, {}])(
 test('waitUntil calls ctx.waitUntil when available', async () => {
   const promise = Promise.resolve();
   const waitUntilMock = vi.fn().mockReturnValue(promise);
-  globalThis[
-    // @ts-expect-error
-    Symbol.for('@vercel/request-context') as unknown as keyof typeof globalThis
-  ] = {
+  globalThis[SYMBOL_FOR_REQ_CONTEXT] = {
     get: () => ({ waitUntil: waitUntilMock }),
   };
   waitUntil(promise);
