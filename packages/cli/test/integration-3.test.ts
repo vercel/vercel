@@ -352,13 +352,13 @@ describe('given a deployment', () => {
     expect(exitCode, allLogs).toBe(0);
   });
 
-  it('prints runtime logs as text', async () => {
+  it('prints runtime logs as json', async () => {
     const [{ stdout, stderr }, res] = await Promise.all([
       execCli(
         binaryPath,
-        ['logs', context.deploymentUrl],
+        ['logs', context.deploymentUrl, '--json'],
         // kill the command since it could last up to 5 minutes
-        { timeout: ms('5s') }
+        { timeout: ms('10s') }
       ),
       fetch(`${context.deploymentUrl}/api/greetings`),
     ]);
@@ -368,8 +368,8 @@ describe('given a deployment', () => {
     expect(stderr, allLogs).toContain(
       `Displaying logs for deployment ${new URL(context.deploymentUrl).host}`
     );
-    expect(stderr, allLogs).toContain(`ƒ /api/greetings`);
-    expect(stderr, allLogs).toContain(`hi!`);
+    expect(stdout, allLogs).toContain(`/api/greetings`);
+    expect(stdout, allLogs).toContain(`hi!`);
   });
 });
 

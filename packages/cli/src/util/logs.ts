@@ -198,21 +198,9 @@ function isRuntimeLimitDelimiter(log: RuntimeLog) {
   );
 }
 
-const dateTimeFormat = 'MMM dd HH:mm:ss.SS';
+const dateTimeFormat = 'HH:mm:ss.SS';
+const moreSymbol = '\u2026';
 const statusWidth = 3;
-const methodWidth = 7;
-const domainWidth = 20;
-const pathWidth = 30;
-// padding for date, method, status, domain and path, all separated by 2 spaces
-const multiLintPadding = ' '.repeat(
-  [
-    dateTimeFormat.length,
-    methodWidth,
-    statusWidth,
-    domainWidth,
-    pathWidth,
-  ].reduce((sum, width) => sum + 2 + width)
-);
 
 function prettyPrintLogline(
   {
@@ -228,63 +216,34 @@ function prettyPrintLogline(
   }: RuntimeLog,
   print: Printer
 ) {
-  const lines = message.replace(/\n$/, '').split('\n');
-  for (const i of lines.keys()) {
-    const displayedLine = getDisplayedLine(i, lines, messageTruncated);
-    if (i === 0) {
-      print(
-        `${getLevelIcon(level)}  ${chalk.dim(
-          format(timestampInMs, dateTimeFormat)
-        )}  ${chalk.bold(toFixedWidth(method, 7))} ${chalk.grey(
-          status <= 0 ? '---' : status
-        )}  ${chalk.dim(toFixedWidth(domain, 20))} ${getSourceIcon(source)} ${
-          displayedLine ? toFixedWidth(path, 30) : path
-        }  ${displayedLine}\n`
-      );
-    } else {
-      print(`    ${multiLintPadding}  ${displayedLine}\n`);
-    }
-  }
-}
-
-// function prettyPrintLogline(
-//   {
-//     level,
-//     domain,
-//     requestPath: path,
-//     responseStatusCode: status,
-//     requestMethod: method,
-//     message,
-//     messageTruncated,
-//     timestampInMs,
-//     source,
-//   }: RuntimeLog,
-//   print: Printer
-// ) {
-//   print(
-//     `${getLevelIcon(level)}  ${chalk.dim(
-//       format(timestampInMs, dateTimeFormat)
-//     )}  ${chalk.bold(toFixedWidth(method, 7))} ${chalk.grey(
-//       status <= 0 ? '---' : status
-//     )}  ${chalk.dim(toFixedWidth(domain, 20))} ${getSourceIcon(
-//       source
-//     )} ${path}\n`
-//   );
-//   print(`${message.replace(/\n$/, '')}${messageTruncated ? '\u2026' : ''}\n`);
-// }
-
-function getDisplayedLine(rank: number, lines: string[], truncated: boolean) {
-  if (lines.length === 1 && lines[0] === '-') return '';
-  const separator = getSeparator(rank, lines.length);
-  const line =
-    rank === lines.length - 1 && truncated
-      ? `${lines[rank]}\u2026`
-      : lines[rank];
-  return `  ${separator} ${line}`;
+  const date = format(timestampInMs, dateTimeFormat);
+  const levelIcon = getLevelIcon(level);
+  const sourceIcon = getSourceIcon(source);
+  const detailsLine = `${chalk.dim(date)}  ${levelIcon}  ${chalk.bold(
+    method
+  )}  ${chalk.grey(status <= 0 ? '---' : status)}  ${chalk.dim(
+    domain
+  )}  ${sourceIcon}  ${path}`;
+  print(
+    `${detailsLine}\n${'-'.repeat(
+      [
+        date.length,
+        levelIcon.length,
+        method.length,
+        statusWidth,
+        domain.length,
+        sourceIcon.length,
+        path.length,
+      ].reduce((sum, length) => sum + 2 + length)
+    )}\n`
+  );
+  print(
+    `${message.replace(/\n$/, '')}${messageTruncated ? moreSymbol : ''}\n\n`
+  );
 }
 
 function getLevelIcon(level: string) {
-  return level === 'error' ? '❌' : level === 'warning' ? '⚠️' : 'ℹ️';
+  return level === 'error' ? '🚫' : level === 'warning' ? '⚠️' : 'ℹ️';
 }
 
 function getSourceIcon(source: string) {
@@ -292,20 +251,4 @@ function getSourceIcon(source: string) {
   if (source === 'edge-middleware') return 'ɛ';
   if (source === 'serverless') return 'ƒ';
   return ' ';
-}
-
-function getSeparator(current: number, max: number) {
-  // https://en.wikipedia.org/wiki/Miscellaneous_Technical#Block
-  // special UTF characters for a better vertical line
-  if (current === 0 && max === 1) return '⏵';
-  if (current === 0) return '⎛';
-  if (current === max - 1) return '⎝';
-  return '⎟';
-}
-
-function toFixedWidth(value: string, width: number) {
-  if (!value) return ' '.repeat(width);
-  return value.length < width
-    ? value.padEnd(width, ' ')
-    : value.slice(0, width - 1) + '\u2026';
 }

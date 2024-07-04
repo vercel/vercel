@@ -172,9 +172,15 @@ Error: Deployment not ready. Currently: ${stateString(state)}.
     expect(client.getFullOutput().split('\n').slice(3).join('\n'))
       .toMatchInlineSnapshot(`
         "waiting for new logs...
-        ℹ️  Jun Mo 15:01:10.33  GET     200  acme.com               /                                 ⏵ Hello, world!
+        15:01:10.33  ℹ️  GET  200  acme.com     /
+        -----------------------------------------
+        Hello, world!
+
         waiting for new logs...
-        ℹ️  Jun Mo 15:01:10.54  OPTION  204  acme.com               /logout                           ⏵ Bye...
+        15:01:10.54  ℹ️  OPTION  204  acme.com     /logout
+        --------------------------------------------------
+        Bye...
+
         waiting for new logs...
         "
       `);
