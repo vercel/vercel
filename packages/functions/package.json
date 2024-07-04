@@ -18,10 +18,8 @@
   "bugs": {
     "url": "https://github.com/vercel/vercel/issues"
   },
-  "dependencies": {
-    "typescript": "4.9.5"
-  },
   "devDependencies": {
+    "typescript": "4.9.5",
     "tinyspawn": "1.3.1",
     "vitest": "1.3.1"
   },
