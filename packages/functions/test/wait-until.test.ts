@@ -25,7 +25,7 @@ test.each([null, undefined, {}])(
   input => {
     const promise = Promise.resolve();
     globalThis[
-      // @ts-ignore
+      // @ts-expect-error
       Symbol.for(
         '@vercel/request-context'
       ) as unknown as keyof typeof globalThis
@@ -38,7 +38,7 @@ test('waitUntil calls ctx.waitUntil when available', async () => {
   const promise = Promise.resolve();
   const waitUntilMock = vi.fn().mockReturnValue(promise);
   globalThis[
-    // @ts-ignore
+    // @ts-expect-error
     Symbol.for('@vercel/request-context') as unknown as keyof typeof globalThis
   ] = {
     get: () => ({ waitUntil: waitUntilMock }),
