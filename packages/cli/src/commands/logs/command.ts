@@ -3,7 +3,7 @@ import { packageName } from '../../util/pkg-name';
 
 // has to be ms compliant
 // https://github.com/vercel/ms/blob/fe5338229cfdac6822891dcb9c24660b4d2e612b/src/index.ts#L95
-export const CommandTimeout = '1 minutes';
+export const CommandTimeout = '5 minutes';
 
 export const logsCommand: Command = {
   name: 'logs',

@@ -69,6 +69,7 @@ Error: Deployment not ready. Currently: ${stateString(state)}.
   });
 
   it('pretty prints log lines', async () => {
+    process.env.TZ = 'UTC';
     const user = useUser();
     const deployment = useDeployment({ creator: user });
     const stdout = vi.spyOn(console, 'log');
@@ -98,9 +99,9 @@ Error: Deployment not ready. Currently: ${stateString(state)}.
     expect(client.getFullOutput().split('\n').slice(3).join('\n'))
       .toMatchInlineSnapshot(`
         "waiting for new logs...
-        ℹ️  Jun Mo 17:01:10.33  GET     200  acme.com               /                                 ⏵ Hello, world!
+        ℹ️  Jun Mo 15:01:10.33  GET     200  acme.com               /                                 ⏵ Hello, world!
         waiting for new logs...
-        ℹ️  Jun Mo 17:01:10.54  OPTION  204  acme.com               /logout                           ⏵ Bye...
+        ℹ️  Jun Mo 15:01:10.54  OPTION  204  acme.com               /logout                           ⏵ Bye...
         waiting for new logs...
         "
       `);
