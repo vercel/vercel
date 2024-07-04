@@ -80,7 +80,7 @@ export default async function logs(client: Client) {
 
   printDisclaimer(deployment, print);
   const abortController = new AbortController();
-  await displayRuntimeLogs(
+  return await displayRuntimeLogs(
     client,
     {
       deploymentId: deployment.id,
@@ -89,8 +89,6 @@ export default async function logs(client: Client) {
     },
     abortController
   );
-
-  return 0;
 }
 
 const dateTimeFormat = 'MMM dd HH:mm:ss.SS';

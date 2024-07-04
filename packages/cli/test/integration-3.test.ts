@@ -366,7 +366,7 @@ describe('given a deployment', () => {
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ message: 'Hello, World!' });
     expect(stderr, allLogs).toContain(
-      `Displaying logs for deployment ${context.deploymentUrl}`
+      `Displaying logs for deployment ${new URL(context.deploymentUrl).host}`
     );
     expect(stderr, allLogs).toContain(`ƒ /api/greetings`);
     expect(stderr, allLogs).toContain(`hi!`);

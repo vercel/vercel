@@ -1,5 +1,16 @@
 import type { Deployment } from '@vercel-internals/types';
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+// import from node because vitest won't mock it
+import { setTimeout } from 'timers';
+import { promisify } from 'util';
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 import { client } from '../../mocks/client';
 import { useUser } from '../../mocks/user';
 import { useDeployment, useRuntimeLogs } from '../../mocks/deployment';
@@ -32,8 +43,20 @@ const logsFixtures = [
 ];
 
 describe('logs', () => {
+  let user: ReturnType<typeof useUser>;
+  let deployment: Deployment;
+  const runtimeEndpointSpy = vi.fn();
+  const stdout = vi.spyOn(console, 'log').mockImplementation(() => void 0);
+
   beforeAll(() => {
+    process.env.TZ = 'UTC';
     vi.useFakeTimers();
+  });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    user = useUser();
+    deployment = useDeployment({ creator: user });
   });
 
   afterAll(() => {
@@ -41,7 +64,6 @@ describe('logs', () => {
   });
 
   it('should print error when deployment not found', async () => {
-    const user = useUser();
     client.setArgv('logs', 'bad.com');
     await expect(logs(client)).rejects.toThrow(
       `Can't find the deployment "bad.com" under the context "${user.username}"`
@@ -56,7 +78,6 @@ describe('logs', () => {
   ] as {
     state: Deployment['readyState'];
   }[])('prints disclaimer when deployment is $state', async ({ state }) => {
-    const user = useUser();
     const deployment = useDeployment({ creator: user, state });
     client.setArgv('logs', deployment.url);
     const exitCode = await logs(client);
@@ -69,13 +90,8 @@ Error: Deployment not ready. Currently: ${stateString(state)}.
   });
 
   it('pretty prints log lines', async () => {
-    process.env.TZ = 'UTC';
-    const user = useUser();
-    const deployment = useDeployment({ creator: user });
-    const stdout = vi.spyOn(console, 'log');
-    const spy = vi.fn();
     useRuntimeLogs({
-      spy,
+      spy: runtimeEndpointSpy,
       deployment,
       logProducer: async function* () {
         for (const log of logsFixtures) {
@@ -86,11 +102,11 @@ Error: Deployment not ready. Currently: ${stateString(state)}.
     client.setArgv('logs', deployment.url);
     const exitCode = await logs(client);
     expect(exitCode).toEqual(0);
-    expect(spy).toHaveBeenCalledWith(
+    expect(runtimeEndpointSpy).toHaveBeenCalledWith(
       `/v1/projects/${deployment.projectId}/deployments/${deployment.id}/runtime-logs`,
       { format: 'lines' }
     );
-    expect(spy).toHaveBeenCalledOnce();
+    expect(runtimeEndpointSpy).toHaveBeenCalledOnce();
     await expect(client.stderr).toOutput(
       `Fetching deployment "${deployment.url}" in ${user.username}
 `
@@ -109,12 +125,8 @@ Error: Deployment not ready. Currently: ${stateString(state)}.
   });
 
   it('prints log lines in json', async () => {
-    const user = useUser();
-    const deployment = useDeployment({ creator: user });
-    const stdout = vi.spyOn(console, 'log').mockImplementation(() => void 0);
-    const spy = vi.fn();
     useRuntimeLogs({
-      spy,
+      spy: runtimeEndpointSpy,
       deployment,
       logProducer: async function* () {
         for (const log of logsFixtures) {
@@ -125,11 +137,11 @@ Error: Deployment not ready. Currently: ${stateString(state)}.
     client.setArgv('logs', deployment.url, '--json');
     const exitCode = await logs(client);
     expect(exitCode).toEqual(0);
-    expect(spy).toHaveBeenCalledWith(
+    expect(runtimeEndpointSpy).toHaveBeenCalledWith(
       `/v1/projects/${deployment.projectId}/deployments/${deployment.id}/runtime-logs`,
       { format: 'lines' }
     );
-    expect(spy).toHaveBeenCalledOnce();
+    expect(runtimeEndpointSpy).toHaveBeenCalledOnce();
     await expect(client.stderr).toOutput(
       `Fetching deployment "${deployment.url}" in ${user.username}
 `
@@ -145,13 +157,72 @@ Error: Deployment not ready. Currently: ${stateString(state)}.
     expect(stdout).toHaveBeenCalledTimes(2);
   });
 
-  it.todo('stops when receiving "limit exceeded" delimiter from server');
+  it('stops when receiving "limit exceeded" delimiter from server', async () => {
+    useRuntimeLogs({
+      spy: runtimeEndpointSpy,
+      deployment,
+      logProducer: async function* () {
+        yield {
+          message: `Exceeded runtime logs limit 3 log lines`,
+          messageTruncated: false,
+          source: 'delimiter',
+          level: 'error',
+          rowId: '',
+          domain: '',
+          timestampInMs: Date.now(),
+          requestMethod: '',
+          requestPath: '',
+          responseStatusCode: 0,
+        };
+        yield logsFixtures[0];
+      },
+    });
+    client.setArgv('logs', deployment.url);
+    const exitCode = await logs(client);
+    expect(exitCode).toEqual(1);
+    expect(runtimeEndpointSpy).toHaveBeenCalledWith(
+      `/v1/projects/${deployment.projectId}/deployments/${deployment.id}/runtime-logs`,
+      { format: 'lines' }
+    );
+    await expect(client.stderr).toOutput(
+      `Fetching deployment "${deployment.url}" in ${user.username}
+`
+    );
+    expect(client.getFullOutput()).toContain(
+      `WARN! Exceeded runtime logs limit 3 log lines`
+    );
+  });
+
+  it(`aborts the command after ${CommandTimeout}`, async () => {
+    useRuntimeLogs({
+      spy: runtimeEndpointSpy,
+      deployment,
+      logProducer: async function* () {
+        yield logsFixtures[0];
+        await promisify(setTimeout)(100);
+        vi.runAllTimers();
+        yield logsFixtures[1];
+      },
+    });
+    client.setArgv('logs', deployment.url);
+    const exitCode = await logs(client);
+    expect(exitCode).toEqual(1);
+    expect(runtimeEndpointSpy).toHaveBeenCalledWith(
+      `/v1/projects/${deployment.projectId}/deployments/${deployment.id}/runtime-logs`,
+      { format: 'lines' }
+    );
+    await expect(client.stderr).toOutput(
+      `Fetching deployment "${deployment.url}" in ${user.username}
+`
+    );
+    expect(client.getFullOutput()).toContain(
+      `WARN! Command automatically interrupted after ${CommandTimeout}.`
+    );
+  });
 
   it.todo('retries on a server error');
 
   it.todo('does not retry on a server validation error');
 
   it.todo('resumes showing logs when failing to process a log line');
-
-  it.todo(`aborts the command after ${CommandTimeout}`);
 });

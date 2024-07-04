@@ -77,7 +77,7 @@ export async function displayRuntimeLogs(
   client: Client,
   options: DisplayRuntimeLogsOptions,
   abortController: AbortController
-) {
+): Promise<number> {
   const { log, debug, print, spinner, stopSpinner, warn } = client.output;
   const { projectId, deploymentId, parse } = options;
 
@@ -85,7 +85,7 @@ export async function displayRuntimeLogs(
 
   const url = `/v1/projects/${projectId}/deployments/${deploymentId}/runtime-logs?${query}`;
   spinner(runtimeLogSpinnerMessage);
-  setTimeout(() => {
+  const timeout = setTimeout(() => {
     abortController.abort();
     warn(
       `${chalk.bold(
@@ -102,7 +102,6 @@ export async function displayRuntimeLogs(
       retries: 3,
       onRetry: err => {
         log(`Runtime logs error: ${err.message}`);
-
         if (err instanceof Error && err.name === 'AbortError') {
           return;
         }
@@ -110,67 +109,62 @@ export async function displayRuntimeLogs(
       },
     },
   });
+  // handle the event stream and make the promise get rejected
+  // if errors occur so we can retry
+  return new Promise<number>((resolve, reject) => {
+    const stream = response.body.pipe(parse ? jsonlines.parse() : split());
+    let finished = false;
+    let errored = false;
 
-  if (response.ok) {
-    // handle the event stream and make the promise get rejected
-    // if errors occur so we can retry
-    return new Promise<void>((resolve, reject) => {
-      const stream = response.body.pipe(parse ? jsonlines.parse() : split());
-      let finished = false;
-
-      function finish(err?: unknown) {
-        if (finished) return;
-        stopSpinner();
-        finished = true;
-        if (err) {
-          reject(err);
-        } else {
-          resolve();
-        }
+    function finish(err?: unknown) {
+      if (finished) return;
+      clearTimeout(timeout);
+      stopSpinner();
+      finished = true;
+      if (err) {
+        reject(err);
+      } else {
+        resolve(abortController.signal.aborted ? 1 : 0);
       }
+    }
 
-      const handleData = (data: RuntimeLog | string) => {
-        let log: RuntimeLog = parse ? data : JSON.parse(data as string);
-        if (isRuntimeLimitDelimiter(log)) {
-          abortController.abort();
-          warn(`${chalk.bold(log.message)}\n`);
-          return;
-        }
-        // eslint-disable-next-line no-console -- we intent to write unparsed logs to stdout so JQ could read them
-        parse ? prettyPrintLogline(log, print) : console.log(data);
-        spinner(runtimeLogSpinnerMessage);
-      };
+    const handleData = (data: RuntimeLog | string) => {
+      let log: RuntimeLog = parse ? data : JSON.parse(data as string);
+      if (isRuntimeLimitDelimiter(log)) {
+        abortController.abort();
+        warn(`${chalk.bold(log.message)}\n`);
+        return;
+      }
+      // eslint-disable-next-line no-console -- we intent to write unparsed logs to stdout so JQ could read them
+      parse ? prettyPrintLogline(log, print) : console.log(data);
+      spinner(runtimeLogSpinnerMessage);
+    };
 
-      let errored = false;
-      const handleError = (err: Error) => {
-        if (finished || errored) return;
-        if (err.name === 'AbortError') {
-          finish();
-          return;
-        }
-        errored = true;
+    const handleError = (err: Error) => {
+      if (finished || errored) return;
+      if (err.name === 'AbortError') {
+        finish();
+        return;
+      }
+      stream.destroy();
+      errored = true;
+      debug(`Runtime logs stream error: ${err.message ?? err}`);
 
-        const errorMessage = `Runtime logs stream error: ${err.message ?? err}`;
+      setTimeout(() => {
+        if (abortController.signal.aborted) return;
+        // retry without maximum amount nor clear past logs etc
+        displayRuntimeLogs(client, options, abortController).then(
+          resolve,
+          reject
+        );
+      }, 2000);
+    };
 
-        debug(errorMessage);
-        stream.destroy(err);
-
-        setTimeout(() => {
-          if (abortController.signal.aborted) return;
-          // retry without maximum amount nor clear past logs etc
-          displayRuntimeLogs(client, options, abortController).then(
-            resolve,
-            reject
-          );
-        }, 2000);
-      };
-
-      stream.on('end', finish);
-      stream.on('data', handleData);
-      stream.on('error', handleError);
-      response.body.on('error', handleError);
-    });
-  }
+    stream.on('end', finish);
+    stream.on('data', handleData);
+    stream.on('error', handleError);
+    response.body.on('error', handleError);
+  });
 }
 
 function printBuildLog(log: any, print: Printer) {
@@ -252,6 +246,32 @@ function prettyPrintLogline(
     }
   }
 }
+
+// function prettyPrintLogline(
+//   {
+//     level,
+//     domain,
+//     requestPath: path,
+//     responseStatusCode: status,
+//     requestMethod: method,
+//     message,
+//     messageTruncated,
+//     timestampInMs,
+//     source,
+//   }: RuntimeLog,
+//   print: Printer
+// ) {
+//   print(
+//     `${getLevelIcon(level)}  ${chalk.dim(
+//       format(timestampInMs, dateTimeFormat)
+//     )}  ${chalk.bold(toFixedWidth(method, 7))} ${chalk.grey(
+//       status <= 0 ? '---' : status
+//     )}  ${chalk.dim(toFixedWidth(domain, 20))} ${getSourceIcon(
+//       source
+//     )} ${path}\n`
+//   );
+//   print(`${message.replace(/\n$/, '')}${messageTruncated ? '\u2026' : ''}\n`);
+// }
 
 function getDisplayedLine(rank: number, lines: string[], truncated: boolean) {
   if (lines.length === 1 && lines[0] === '-') return '';
