@@ -1,5 +1,11 @@
 # @vercel/functions
 
+## 1.1.0
+
+### Minor Changes
+
+- Rewrite `@vercel/functions` to TypeScript ([#11791](https://github.com/vercel/vercel/pull/11791))
+
 ## 1.0.2
 
 ### Patch Changes
