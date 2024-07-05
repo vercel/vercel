@@ -7,7 +7,7 @@ export const CommandTimeout = '5 minutes';
 
 export const logsCommand: Command = {
   name: 'logs',
-  description: `Display runtime logs for a specific deployment, if it is live, from now and for ${CommandTimeout} at most.`,
+  description: `Display runtime logs for a deployment in ready state, from now and for ${CommandTimeout} at most.`,
   arguments: [
     {
       name: 'url|deploymentId',

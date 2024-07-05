@@ -1,18 +1,20 @@
+import { Deployment } from '@vercel-internals/types';
 import { isErrnoException } from '@vercel/error-utils';
-import format from 'date-fns/format';
 import chalk from 'chalk';
+import format from 'date-fns/format';
 import { isReady } from '../../util/build-state';
 import Client from '../../util/client';
+import { isDeploying } from '../../util/deploy/is-deploying';
 import { handleError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
 import getDeployment from '../../util/get-deployment';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import getScope from '../../util/get-scope';
 import { displayRuntimeLogs } from '../../util/logs';
+import type { Output } from '../../util/output';
 import { help } from '../help';
 import { stateString } from '../list';
 import { logsCommand } from './command';
-import { Deployment } from '@vercel-internals/types';
 
 export default async function logs(client: Client) {
   let parsedArguments;
@@ -75,10 +77,15 @@ export default async function logs(client: Client) {
     error(
       `Deployment not ready. Currently: ${stateString(deployment.readyState)}.`
     );
+    if (isDeploying(deployment.readyState)) {
+      print(
+        `To follow build logs, run \`vercel inspect --logs --wait ${deploymentIdOrHost}\``
+      );
+    }
     return 1;
   }
 
-  printDisclaimer(deployment, print);
+  printDisclaimer(deployment, client.output);
   const abortController = new AbortController();
   return await displayRuntimeLogs(
     client,
@@ -93,9 +100,13 @@ export default async function logs(client: Client) {
 
 const dateTimeFormat = 'MMM dd HH:mm:ss.SS';
 
-function printDisclaimer(deployment: Deployment, print: (l: string) => void) {
+function printDisclaimer(deployment: Deployment, { print, warn }: Output) {
+  // Could be temporary until users get used to this change
+  warn(
+    `This command now display runtime logs. To access your build logs, run \`vercel inspect --logs ${deployment.url}\``
+  );
   print(
-    `Displaying logs for deployment ${deployment.url} (${chalk.dim(
+    `Displaying runtime logs for deployment ${deployment.url} (${chalk.dim(
       deployment.id
     )}) starting from ${chalk.bold(format(Date.now(), dateTimeFormat))}\n\n`
   );

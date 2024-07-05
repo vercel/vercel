@@ -70,8 +70,8 @@ describe('logs', () => {
       "
         ▲ vercel logs url|deploymentId [options]
 
-        Display runtime logs for a specific deployment, if it is live, from now and   
-        for 5 minutes at most.                                                        
+        Display runtime logs for a deployment in ready state, from now and for 5      
+        minutes at most.                                                              
 
         Options:
 
@@ -128,23 +128,36 @@ describe('logs', () => {
   });
 
   it.each([
-    { state: 'DEPLOYING' },
-    { state: 'QUEUED' },
-    { state: 'ERROR' },
-    { state: 'CANCELED' },
+    { state: 'QUEUED', withDisclaimer: true },
+    { state: 'BUILDING', withDisclaimer: true },
+    { state: 'INITIALIZING', withDisclaimer: true },
+    { state: 'DEPLOYING', withDisclaimer: false },
+    { state: 'ERROR', withDisclaimer: false },
+    { state: 'CANCELED', withDisclaimer: false },
   ] as {
     state: Deployment['readyState'];
-  }[])('prints disclaimer when deployment is $state', async ({ state }) => {
-    const deployment = useDeployment({ creator: user, state });
-    client.setArgv('logs', deployment.url);
-    const exitCode = await logs(client);
-    await expect(client.stderr).toOutput(
-      `Fetching deployment "${deployment.url}" in ${user.username}
-Error: Deployment not ready. Currently: ${stateString(state)}.
-`
-    );
-    expect(exitCode).toEqual(1);
-  });
+    withDisclaimer: boolean;
+  }[])(
+    'prints disclaimer when deployment is $state',
+    async ({ state, withDisclaimer }) => {
+      const deployment = useDeployment({ creator: user, state });
+      client.setArgv('logs', deployment.url);
+      const exitCode = await logs(client);
+      const output = client.getFullOutput();
+      expect(output).toContain(
+        `Fetching deployment "${deployment.url}" in ${user.username}`
+      );
+      expect(output).toContain(
+        `Error: Deployment not ready. Currently: ${stateString(state)}.`
+      );
+      if (withDisclaimer) {
+        expect(output).toContain(
+          `To follow build logs, run \`vercel inspect --logs --wait ${deployment.url}\``
+        );
+      }
+      expect(exitCode).toEqual(1);
+    }
+  );
 
   it('pretty prints log lines', async () => {
     useRuntimeLogs({
@@ -168,9 +181,12 @@ Error: Deployment not ready. Currently: ${stateString(state)}.
       `Fetching deployment "${deployment.url}" in ${user.username}
 `
     );
-    // 2nd line is time dependent and others are blank lines
-    expect(client.getFullOutput().split('\n').slice(3).join('\n'))
-      .toMatchInlineSnapshot(`
+    const output = client.getFullOutput();
+    expect(output).toContain(
+      `This command now display runtime logs. To access your build logs, run \`vercel inspect --logs ${deployment.url}\``
+    );
+    // 3nd line is time dependent and others are blank lines
+    expect(output.split('\n').slice(4).join('\n')).toMatchInlineSnapshot(`
         "waiting for new logs...
         15:01:10.33  ℹ️  GET  200  acme.com     /
         -----------------------------------------
@@ -208,6 +224,9 @@ Error: Deployment not ready. Currently: ${stateString(state)}.
     await expect(client.stderr).toOutput(
       `Fetching deployment "${deployment.url}" in ${user.username}
 `
+    );
+    expect(client.getFullOutput()).toContain(
+      `This command now display runtime logs. To access your build logs, run \`vercel inspect --logs ${deployment.url}\``
     );
     expect(stdout).toHaveBeenNthCalledWith(
       1,
