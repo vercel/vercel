@@ -108,6 +108,8 @@ export interface BuildOptions {
    * on the build environment.
    */
   meta?: Meta;
+
+  buildCallback?: (opts: Omit<BuildOptions, 'buildCallback'>) => Promise<void>;
 }
 
 export interface PrepareCacheOptions {
