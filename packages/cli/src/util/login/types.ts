@@ -2,6 +2,18 @@ export interface LoginData {
   token: string;
   securityCode: string;
 }
+export interface SignUpData {
+  token: string;
+  securityCode: string;
+}
+export interface VerifyError {
+  token: string;
+  securityCode: string;
+}
+export interface VerifyResult {
+  email: string;
+  error: VerifyError;
+}
 
 export type LoginResult = number | LoginResultSuccess;
 
