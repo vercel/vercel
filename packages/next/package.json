@@ -51,7 +51,7 @@
     "escape-string-regexp": "2.0.0",
     "execa": "2.0.4",
     "find-up": "4.1.0",
-    "fs-extra": "7.0.0",
+    "fs-extra": "11.2.0",
     "get-port": "5.0.0",
     "jest-junit": "16.0.0",
     "nanoid": "3.3.4",
