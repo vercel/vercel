@@ -109,6 +109,11 @@ export interface BuildOptions {
    */
   meta?: Meta;
 
+  /**
+   * A callback to be invoked by a builder after a project's
+   * build command has been run but before the outputs have been
+   * fully processed
+   */
   buildCallback?: (opts: Omit<BuildOptions, 'buildCallback'>) => Promise<void>;
 }
 
