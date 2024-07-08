@@ -1,6 +1,6 @@
 import { expect, test, vi } from 'vitest';
 
-import { waitUntil, SYMBOL_FOR_REQ_CONTEXT } from '../src/wait-until';
+import { waitUntil, SYMBOL_FOR_REQ_CONTEXT } from '../../src/wait-until';
 
 test.each([
   {},
