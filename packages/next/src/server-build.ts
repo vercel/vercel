@@ -457,7 +457,8 @@ export async function serverBuild({
       initialFileReasons = new Map();
       debug('Using next-server.js.nft.json trace from build');
     } else {
-      debug('tracing initial Next.js server files');
+      const serverTraceLabel = `Tracing initial Next.js server files due to missing build trace`;
+      console.time(serverTraceLabel);
       const result = await nodeFileTrace([nextServerFile], {
         base: baseDir,
         cache: {},
@@ -479,6 +480,7 @@ export async function serverBuild({
       });
       initialFileList = Array.from(result.fileList);
       initialFileReasons = result.reasons;
+      console.timeEnd(serverTraceLabel);
     }
 
     if (instrumentationHookBuildTrace) {
@@ -777,6 +779,12 @@ export async function serverBuild({
     let parentFilesMap: ReadonlyMap<string, Set<string>> | undefined;
 
     if (pathsToTrace.length > 0) {
+      const traceLabel = `Tracing entries due to missing build traces:\n${JSON.stringify(
+        pathsToTrace,
+        null,
+        2
+      )}`;
+      console.time(traceLabel);
       traceResult = await nodeFileTrace(pathsToTrace, {
         base: baseDir,
         cache: traceCache,
@@ -787,6 +795,7 @@ export async function serverBuild({
         traceResult.fileList,
         traceResult.reasons
       );
+      console.timeEnd(traceLabel);
     }
 
     for (const page of mergedPageKeys) {
