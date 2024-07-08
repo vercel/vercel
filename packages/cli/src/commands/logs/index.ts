@@ -5,6 +5,7 @@ import format from 'date-fns/format';
 import { isReady } from '../../util/build-state';
 import Client from '../../util/client';
 import { isDeploying } from '../../util/deploy/is-deploying';
+import { emoji, prependEmoji } from '../../util/emoji';
 import { handleError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
 import getDeployment from '../../util/get-deployment';
@@ -12,9 +13,18 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import getScope from '../../util/get-scope';
 import { displayRuntimeLogs } from '../../util/logs';
 import type { Output } from '../../util/output';
+import param from '../../util/output/param';
 import { help } from '../help';
 import { stateString } from '../list';
 import { logsCommand } from './command';
+
+const deprecatedFlags = [
+  '--follow',
+  '--limit',
+  '--since',
+  '--until',
+  '--output',
+];
 
 export default async function logs(client: Client) {
   let parsedArguments;
@@ -26,6 +36,19 @@ export default async function logs(client: Client) {
   } catch (err) {
     handleError(err);
     return 1;
+  }
+
+  for (const flag of deprecatedFlags) {
+    if (parsedArguments.flags[flag]) {
+      print(
+        `${prependEmoji(
+          `The ${param(
+            flag
+          )} option was ignored because it is now deprecated. Please remove it.`,
+          emoji('warning')
+        )}\n`
+      );
+    }
   }
 
   if (parsedArguments.flags['--help']) {
@@ -103,7 +126,7 @@ const dateTimeFormat = 'MMM dd HH:mm:ss.SS';
 function printDisclaimer(deployment: Deployment, { print, warn }: Output) {
   // Could be temporary until users get used to this change
   warn(
-    `This command now display runtime logs. To access your build logs, run \`vercel inspect --logs ${deployment.url}\``
+    `This command now displays runtime logs. To access your build logs, run \`vercel inspect --logs ${deployment.url}\``
   );
   print(
     `Displaying runtime logs for deployment ${deployment.url} (${chalk.dim(

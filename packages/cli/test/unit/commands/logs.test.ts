@@ -159,6 +159,44 @@ describe('logs', () => {
     }
   );
 
+  it('prints disclaimer for deprecated flags', async () => {
+    useRuntimeLogs({
+      deployment,
+      logProducer: async function* () {
+        for (const log of logsFixtures) {
+          yield log;
+        }
+      },
+    });
+    client.setArgv(
+      'logs',
+      deployment.url,
+      `--follow=true`,
+      '--since=forever',
+      '--until=tomorrow',
+      '--limit=1000',
+      '--output=short'
+    );
+    const exitCode = await logs(client);
+    expect(exitCode).toEqual(0);
+    const output = client.getFullOutput();
+    expect(output).toContain(
+      `The "--follow" option was ignored because it is now deprecated. Please remove it`
+    );
+    expect(output).toContain(
+      `The "--limit" option was ignored because it is now deprecated. Please remove it`
+    );
+    expect(output).toContain(
+      `The "--since" option was ignored because it is now deprecated. Please remove it`
+    );
+    expect(output).toContain(
+      `The "--until" option was ignored because it is now deprecated. Please remove it`
+    );
+    expect(output).toContain(
+      `The "--output" option was ignored because it is now deprecated. Please remove it`
+    );
+  });
+
   it('pretty prints log lines', async () => {
     useRuntimeLogs({
       spy: runtimeEndpointSpy,
@@ -183,7 +221,7 @@ describe('logs', () => {
     );
     const output = client.getFullOutput();
     expect(output).toContain(
-      `This command now display runtime logs. To access your build logs, run \`vercel inspect --logs ${deployment.url}\``
+      `This command now displays runtime logs. To access your build logs, run \`vercel inspect --logs ${deployment.url}\``
     );
     // 3nd line is time dependent and others are blank lines
     expect(output.split('\n').slice(4).join('\n')).toMatchInlineSnapshot(`
@@ -226,7 +264,7 @@ describe('logs', () => {
 `
     );
     expect(client.getFullOutput()).toContain(
-      `This command now display runtime logs. To access your build logs, run \`vercel inspect --logs ${deployment.url}\``
+      `This command now displays runtime logs. To access your build logs, run \`vercel inspect --logs ${deployment.url}\``
     );
     expect(stdout).toHaveBeenNthCalledWith(
       1,
