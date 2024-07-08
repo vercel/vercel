@@ -1,2 +1,1 @@
-export * from './waitUntil';
-export type * from './oidc';
+export * from './wait-until';

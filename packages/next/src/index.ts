@@ -1,4 +1,5 @@
 import {
+  Diagnostics,
   FileBlob,
   FileFsRef,
   Files,
@@ -2722,6 +2723,36 @@ export const build: BuildV2 = async ({
           ]),
     ],
     framework: { version: nextVersion },
+  };
+};
+
+export const diagnostics: Diagnostics = async ({
+  config,
+  entrypoint,
+  workPath,
+  repoRootPath,
+}) => {
+  const entryDirectory = path.dirname(entrypoint);
+  const entryPath = path.join(workPath, entryDirectory);
+  const outputDirectory = path.join('./', config.outputDirectory || '.next');
+  const basePath = repoRootPath || workPath;
+  const diagnosticsEntrypoint = path.relative(basePath, entryPath);
+
+  debug(
+    `Reading diagnostics file in diagnosticsEntrypoint=${diagnosticsEntrypoint}`
+  );
+
+  return {
+    // Collect output in `.next/diagnostics`
+    ...(await glob(
+      'diagnostics/*',
+      path.join(basePath, diagnosticsEntrypoint, outputDirectory, 'diagnostics')
+    )),
+    // Collect `.next/trace` file
+    ...(await glob(
+      'trace',
+      path.join(basePath, diagnosticsEntrypoint, outputDirectory)
+    )),
   };
 };
 
