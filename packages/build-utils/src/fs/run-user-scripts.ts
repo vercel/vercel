@@ -396,6 +396,7 @@ function usingCorepack(
   packageJsonPackageManager: string | undefined
 ) {
   const corepackFlagged = env.ENABLE_EXPERIMENTAL_COREPACK === '1';
+  console.log({ env, packageJsonPackageManager, corepackFlagged });
   return corepackFlagged && Boolean(packageJsonPackageManager);
 }
 
