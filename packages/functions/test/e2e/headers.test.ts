@@ -12,7 +12,7 @@ import {
   REQUEST_ID_HEADER_NAME,
 } from '../../src/headers';
 
-const URL = 'https://test-headers-six.vercel.app/api';
+const URL = 'https://isomorphic-headers.vercel.app/api';
 
 test.each(['lambda', 'edge'])(
   'headers are present in a %s request',
