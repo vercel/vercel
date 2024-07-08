@@ -591,6 +591,7 @@ export function getEnvForPackageManager({
   env: { [x: string]: string | undefined };
 }) {
   const corepackEnabled = usingCorepack(env, packageJsonPackageManager);
+  console.log({ corepackEnabled });
 
   const {
     detectedLockfile,
@@ -602,6 +603,7 @@ export function getEnvForPackageManager({
     corepackEnabled,
     nodeVersion,
   });
+  console.log({ detectedLockfile, detectedPackageManager, newPath });
 
   if (corepackEnabled) {
     debug(
@@ -724,6 +726,7 @@ export function getPathOverrideForPackageManager({
     detectedPackageManager: undefined,
     path: undefined,
   };
+  console.log({ cliType, lockfileVersion, nodeVersion, corepackEnabled });
 
   switch (cliType) {
     case 'npm':
