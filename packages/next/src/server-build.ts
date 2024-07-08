@@ -1594,16 +1594,10 @@ export async function serverBuild({
   if (appPathRoutesManifest) {
     // create .rsc variant for app lambdas and edge functions
     // to match prerenders so we can route the same when the
-    // __rsc__ header is present
+    // RSC header is present
     const edgeFunctions = middleware.edgeFunctions;
 
     for (const route of Object.values(appPathRoutesManifest)) {
-      const ogRoute = inversedAppPathManifest[route];
-
-      if (ogRoute.endsWith('/route')) {
-        continue;
-      }
-
       const pathname = path.posix.join(
         './',
         entryDirectory,
