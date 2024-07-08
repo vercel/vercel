@@ -943,6 +943,7 @@ export async function serverBuild({
       internalPages,
       pageExtensions,
       inversedAppPathManifest,
+      isRouteHandlers: true,
     });
 
     const appRouterStreamingActionLambdaGroups: LambdaGroup[] = [];
