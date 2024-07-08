@@ -905,6 +905,7 @@ export async function runCustomInstallCommand({
     destPath,
     true
   );
+  console.log({ destPath, cliType, lockfileVersion, packageJson });
   const env = getEnvForPackageManager({
     cliType,
     lockfileVersion,
