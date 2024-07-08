@@ -264,6 +264,7 @@ export const build: BuildV2 = async buildOptions => {
     entryPath,
     true
   );
+  console.log('next builder', { cliType, lockfileVersion, packageJson });
 
   spawnOpts.env = getEnvForPackageManager({
     cliType,

@@ -369,6 +369,7 @@ export async function scanParentDirs(
 }
 
 function detectPackageManagerNameWithoutLockfile(packageJson: PackageJson) {
+  console.log('detectPackageManagerNameWithoutLockfile', { packageJson });
   const packageJsonPackageManager = packageJson.packageManager;
   if (usingCorepack(process.env, packageJsonPackageManager)) {
     const corepackPackageManager = validateVersionSpecifier(
@@ -396,6 +397,7 @@ function usingCorepack(
   packageJsonPackageManager: string | undefined
 ) {
   const corepackFlagged = env.ENABLE_EXPERIMENTAL_COREPACK === '1';
+  console.trace();
   console.log({ env, packageJsonPackageManager, corepackFlagged });
   return corepackFlagged && Boolean(packageJsonPackageManager);
 }
@@ -462,7 +464,12 @@ export async function runNpmInstall(
     await runNpmInstallSema.acquire();
     const { cliType, packageJsonPath, packageJson, lockfileVersion } =
       await scanParentDirs(destPath, true);
-    console.log({ cliType, packageJsonPath, packageJson, lockfileVersion });
+    console.log('runNpmInstall', {
+      cliType,
+      packageJsonPath,
+      packageJson,
+      lockfileVersion,
+    });
 
     if (!packageJsonPath) {
       debug(
@@ -592,6 +599,13 @@ export function getEnvForPackageManager({
   nodeVersion: NodeVersion | undefined;
   env: { [x: string]: string | undefined };
 }) {
+  console.log('getEnvForPackageManager', {
+    cliType,
+    lockfileVersion,
+    packageJsonPackageManager,
+    nodeVersion,
+    env,
+  });
   const corepackEnabled = usingCorepack(env, packageJsonPackageManager);
   console.log({ corepackEnabled });
 
