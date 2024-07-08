@@ -3,7 +3,14 @@
   "description": "Runtime functions to be used with your Vercel Functions",
   "homepage": "https://vercel.com",
   "exports": {
-    ".": "./dist/index.js"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./oidc": {
+      "types": "./dist/oidc/index.d.ts",
+      "default": "./dist/oidc/index.js"
+    }
   },
   "files": [
     "dist"
