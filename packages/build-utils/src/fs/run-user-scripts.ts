@@ -451,8 +451,10 @@ async function walkParentDirsMulti({
     );
     const foundOneOrMore = existResults.some(b => b);
     const packageJsonPath = path.join(dir, 'package.json');
-    const packageJson = await fs.readJSON(packageJsonPath).catch(() => null);
-    if (packageJson.packageManager) {
+    const packageJson: PackageJson | null = await fs
+      .readJSON(packageJsonPath)
+      .catch(() => null);
+    if (packageJson?.packageManager) {
       packageManager = packageJson.packageManager;
     }
 
