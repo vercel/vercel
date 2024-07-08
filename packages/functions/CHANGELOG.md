@@ -1,5 +1,11 @@
 # @vercel/functions
 
+## 1.2.0
+
+### Minor Changes
+
+- Add `geolocation` & `ipAdress` methods. ([#11802](https://github.com/vercel/vercel/pull/11802))
+
 ## 1.1.0
 
 ### Minor Changes
