@@ -1,2 +1,2 @@
-export * from './wait-until';
-export * from './headers';
+export { geolocation, ipAddress } from './headers';
+export { waitUntil } from './wait-until';

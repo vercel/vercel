@@ -30,6 +30,7 @@
     "node": ">= 16"
   },
   "scripts": {
+    "pretest": "pnpm run build",
     "test": "vitest",
     "build": "node ../../utils/build.mjs",
     "build:docs": "typedoc && prettier --write docs/**/*.md docs/*.md"
