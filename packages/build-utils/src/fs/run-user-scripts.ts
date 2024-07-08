@@ -461,6 +461,7 @@ export async function runNpmInstall(
     await runNpmInstallSema.acquire();
     const { cliType, packageJsonPath, packageJson, lockfileVersion } =
       await scanParentDirs(destPath, true);
+    console.log({ cliType, packageJsonPath, packageJson, lockfileVersion });
 
     if (!packageJsonPath) {
       debug(
@@ -930,6 +931,7 @@ export async function runPackageJsonScript(
     destPath,
     true
   );
+  console.log({ packageJson, cliType, lockfileVersion });
   const scriptName = getScriptName(
     packageJson,
     typeof scriptNames === 'string' ? [scriptNames] : scriptNames
