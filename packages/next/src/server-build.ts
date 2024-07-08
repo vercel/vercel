@@ -769,7 +769,8 @@ export async function serverBuild({
 
     const pathsToTrace: string[] = mergedPageKeys
       .map(page => {
-        if (!getBuildTraceFile(page)) {
+        const originalPagePath = getOriginalPagePath(page);
+        if (!getBuildTraceFile(originalPagePath)) {
           return lambdaPages[page].fsPath;
         }
       })
