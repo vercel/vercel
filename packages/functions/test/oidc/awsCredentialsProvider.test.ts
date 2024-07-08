@@ -1,4 +1,4 @@
-import { expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { awsCredentialsProvider } from '../../src/oidc';
 
 const getVercelOidcTokenMock = vi.fn().mockResolvedValue('token');
@@ -22,27 +22,29 @@ it('returns a function', () => {
   );
 });
 
-it('calls fromWebToken with the correct arguments', async () => {
-  const init = {
-    roleArn: 'roleArn',
-    roleSessionName: 'roleSessionName',
-  };
-  const fn = awsCredentialsProvider(init);
-  await fn();
+describe('awsCredentialsProvider', () => {
+  it('calls fromWebToken with the correct arguments', async () => {
+    const init = {
+      roleArn: 'roleArn',
+      roleSessionName: 'roleSessionName',
+    };
+    const fn = awsCredentialsProvider(init);
+    await fn();
 
-  expect(fromWebTokenMock).toHaveBeenCalledWith({
-    ...init,
-    webIdentityToken: await getVercelOidcTokenMock(),
+    expect(fromWebTokenMock).toHaveBeenCalledWith({
+      ...init,
+      webIdentityToken: await getVercelOidcTokenMock(),
+    });
   });
-});
 
-it('calls the function returned by fromWebToken', async () => {
-  const init = {
-    roleArn: 'roleArn',
-    roleSessionName: 'roleSessionName',
-  };
-  const fn = awsCredentialsProvider(init);
-  await fn();
+  it('calls the function returned by fromWebToken', async () => {
+    const init = {
+      roleArn: 'roleArn',
+      roleSessionName: 'roleSessionName',
+    };
+    const fn = awsCredentialsProvider(init);
+    await fn();
 
-  expect(fromWebTokenExectionMock).toHaveBeenCalled();
+    expect(fromWebTokenExectionMock).toHaveBeenCalled();
+  });
 });
