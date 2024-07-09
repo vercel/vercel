@@ -166,12 +166,12 @@ describe('removeSupersededFrameworks()', () => {
     const matches = [
       { slug: 'storybook' },
       { slug: 'vite' },
-      { slug: 'hydrogen', supersedes: 'vite' },
+      { slug: 'hydrogen', supersedes: ['vite'] },
     ];
     removeSupersededFrameworks(matches);
     expect(matches).toEqual([
       { slug: 'storybook' },
-      { slug: 'hydrogen', supersedes: 'vite' },
+      { slug: 'hydrogen', supersedes: ['vite'] },
     ]);
   });
 
@@ -179,13 +179,13 @@ describe('removeSupersededFrameworks()', () => {
     const matches = [
       { slug: 'storybook' },
       { slug: 'vite' },
-      { slug: 'hydrogen', supersedes: 'vite' },
-      { slug: 'remix', supersedes: 'hydrogen' },
+      { slug: 'hydrogen', supersedes: ['vite'] },
+      { slug: 'remix', supersedes: ['hydrogen'] },
     ];
     removeSupersededFrameworks(matches);
     expect(matches).toEqual([
       { slug: 'storybook' },
-      { slug: 'remix', supersedes: 'hydrogen' },
+      { slug: 'remix', supersedes: ['hydrogen'] },
     ]);
   });
 });
@@ -442,6 +442,20 @@ describe('detectFramework()', () => {
 
     expect(await detectFramework({ fs, frameworkList })).toBe('storybook');
   });
+
+  it('Should detect Remix + Vite as `remix`', async () => {
+    const fs = new VirtualFilesystem({
+      'vite.config.ts': '',
+      'package.json': JSON.stringify({
+        dependencies: {
+          '@remix-run/dev': 'latest',
+          vite: 'latest',
+        },
+      }),
+    });
+
+    expect(await detectFramework({ fs, frameworkList })).toBe('remix');
+  });
 });
 
 describe('detectFrameworks()', () => {
@@ -495,6 +509,23 @@ describe('detectFrameworks()', () => {
       f => f.slug
     );
     expect(slugs).toEqual(['nextjs', 'storybook']);
+  });
+
+  it('Should detect Remix + Vite as `remix`', async () => {
+    const fs = new VirtualFilesystem({
+      'vite.config.ts': '',
+      'package.json': JSON.stringify({
+        dependencies: {
+          '@remix-run/dev': 'latest',
+          vite: 'latest',
+        },
+      }),
+    });
+
+    const slugs = (await detectFrameworks({ fs, frameworkList })).map(
+      f => f.slug
+    );
+    expect(slugs).toEqual(['remix']);
   });
 
   it('Should detect "hydrogen" template as `hydrogen`', async () => {

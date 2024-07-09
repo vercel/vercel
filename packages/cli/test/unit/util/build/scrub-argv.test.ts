@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest';
 import { scrubArgv } from '../../../../src/util/build/scrub-argv';
 
 describe('scrubArgv()', () => {

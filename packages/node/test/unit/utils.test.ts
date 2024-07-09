@@ -1,3 +1,4 @@
+import { describe, expect, test } from 'vitest';
 import { entrypointToOutputPath } from '../../src/utils';
 
 describe('entrypointToOutputPath()', () => {

@@ -13,6 +13,7 @@ sys.modules["__VC_HANDLER_MODULE_NAME"] = __vc_module
 __vc_spec.loader.exec_module(__vc_module)
 __vc_variables = dir(__vc_module)
 
+_use_legacy_asyncio = sys.version_info < (3, 10)
 
 def format_headers(headers, decode=False):
     keyToList = {}
@@ -198,15 +199,24 @@ elif 'app' in __vc_variables:
                 ASGI instance using the connection scope.
                 Runs until the response is completely read from the application.
                 """
-                loop = asyncio.new_event_loop()
-                self.app_queue = asyncio.Queue(loop=loop)
+                if _use_legacy_asyncio:
+                    loop = asyncio.new_event_loop()
+                    self.app_queue = asyncio.Queue(loop=loop)
+                else:
+                    self.app_queue = asyncio.Queue()
                 self.put_message({'type': 'http.request', 'body': body, 'more_body': False})
 
                 asgi_instance = app(self.scope, self.receive, self.send)
 
-                asgi_task = loop.create_task(asgi_instance)
-                loop.run_until_complete(asgi_task)
+                if _use_legacy_asyncio:
+                    asgi_task = loop.create_task(asgi_instance)
+                    loop.run_until_complete(asgi_task)
+                else:
+                    asyncio.run(self.run_asgi_instance(asgi_instance))
                 return self.response
+
+            async def run_asgi_instance(self, asgi_instance):
+                await asgi_instance
 
             def put_message(self, message):
                 self.app_queue.put_nowait(message)

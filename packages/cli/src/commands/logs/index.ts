@@ -146,7 +146,7 @@ function compareEvents(d1: DeploymentEvent, d2: DeploymentEvent) {
   return d1.created - d2.created; // if date are equal and no serial
 }
 
-function printLogShort(log: any) {
+export function printLogShort(log: any, client?: Client) {
   if (!log.created) return; // keepalive
 
   let data: string;
@@ -198,8 +198,9 @@ function printLogShort(log: any) {
       }
     }
 
-    console.log(
-      `${chalk.dim(date)}  ${line.replace('[now-builder-debug] ', '')}`
+    // eslint-disable-next-line no-console -- we'll still log to console for backward compatibility
+    (client ? client.output.print : console.log)(
+      `${chalk.dim(date)}  ${line.replace('[now-builder-debug] ', '')}\n`
     );
   });
 
@@ -210,8 +211,10 @@ function printLogRaw(log: any) {
   if (!log.created) return; // keepalive
 
   if (log.object) {
+    // eslint-disable-next-line no-console
     console.log(log.object);
   } else if (typeof log.text === 'string') {
+    // eslint-disable-next-line no-console
     console.log(
       log.text
         .replace(/\n$/, '')

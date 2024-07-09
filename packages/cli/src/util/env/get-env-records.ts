@@ -48,7 +48,7 @@ export default async function getEnvRecords(
     query.set('source', source);
   }
 
-  const url = `/v8/projects/${projectId}/env?${query}`;
+  const url = `/v10/projects/${projectId}/env?${query}`;
 
   return client.fetch<{ envs: ProjectEnvVariable[] }>(url);
 }
@@ -70,7 +70,7 @@ export async function pullEnvRecords(
   );
   const query = new URLSearchParams();
 
-  let url = `/v1/env/pull/${projectId}`;
+  let url = `/v2/env/pull/${projectId}`;
 
   if (target) {
     url += `/${encodeURIComponent(target)}`;

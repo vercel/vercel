@@ -1,3 +1,4 @@
+import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import fs from 'fs-extra';
 import { join } from 'path';
 import { getWriteableDirectory } from '@vercel/build-utils';
@@ -7,8 +8,9 @@ import { defaultProject, useProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
 import { execSync } from 'child_process';
+import { vi } from 'vitest';
 
-jest.setTimeout(6 * 60 * 1000);
+vi.setConfig({ testTimeout: 6 * 60 * 1000 });
 
 const fixture = (name: string) =>
   join(__dirname, '../../../fixtures/unit/commands/build', name);
@@ -140,6 +142,7 @@ describe('build', () => {
       await fs.unlink(join(cwd, 'foo.html'));
       await fs.symlink(join(cwd, 'index.html'), join(cwd, 'foo.html'));
     } catch (e) {
+      // eslint-disable-next-line no-console
       console.log('Symlinks not available, skipping test');
       return;
     }
@@ -717,6 +720,7 @@ describe('build', () => {
 
   it('should error when "functions" has runtime that emits discontinued "nodejs12.x"', async () => {
     if (process.platform === 'win32') {
+      // eslint-disable-next-line no-console
       console.log('Skipping test on Windows');
       return;
     }
@@ -785,8 +789,8 @@ describe('build', () => {
     expect(files.sort()).toEqual(['index.html', 'package.json']);
   });
 
-  it('should set `VERCEL_ANALYTICS_ID` environment variable and warn users', async () => {
-    const cwd = fixture('vercel-analytics');
+  it('should set `VERCEL_ANALYTICS_ID` environment variable if Vercel Speed Insights is enabled', async () => {
+    const cwd = fixture('vercel-analytics-id');
     const output = join(cwd, '.vercel/output');
     client.cwd = cwd;
     const exitCode = await build(client);
@@ -794,9 +798,6 @@ describe('build', () => {
 
     const env = await fs.readJSON(join(output, 'static', 'env.json'));
     expect(Object.keys(env).includes('VERCEL_ANALYTICS_ID')).toEqual(true);
-    await expect(client.stderr).toOutput(
-      'Vercel Speed Insights auto-injection is deprecated in favor of @vercel/speed-insights package. Learn more: https://vercel.link/upgrate-to-speed-insights-package'
-    );
   });
 
   it('should load environment variables from `.vercel/.env.preview.local`', async () => {
@@ -863,6 +864,7 @@ describe('build', () => {
   it('should apply project settings overrides from "vercel.json"', async () => {
     if (process.platform === 'win32') {
       // this test runs a build command with `mkdir -p` which is unsupported on Windows
+      // eslint-disable-next-line no-console
       console.log('Skipping test on Windows');
       return;
     }
@@ -935,7 +937,7 @@ describe('build', () => {
       name: 'Error',
       message:
         'Invalid vercel.json - `rewrites[2]` should NOT have additional property `src`. Did you mean `source`?',
-      stack: expect.stringContaining('at validateConfig'),
+      stack: expect.stringContaining('at Module.validateConfig'),
       hideStackTrace: true,
       code: 'INVALID_VERCEL_CONFIG',
       link: 'https://vercel.com/docs/concepts/projects/project-configuration#rewrites',
@@ -1250,43 +1252,101 @@ describe('build', () => {
       (await fs.readFile(join(output, 'static/index.txt'), 'utf8')).trim()
     ).toEqual('marketing');
   });
-});
 
-it('should create symlinks for duplicate references to Lambda / EdgeFunction instances', async () => {
-  if (process.platform === 'win32') {
-    console.log('Skipping test on Windows');
-    return;
-  }
-  const cwd = fixture('functions-symlink');
-  const output = join(cwd, '.vercel/output');
-  client.cwd = cwd;
-  const exitCode = await build(client);
-  expect(exitCode).toEqual(0);
+  it('should write to flags.json', async () => {
+    const cwd = fixture('with-flags');
+    const output = join(cwd, '.vercel', 'output');
 
-  // "functions" directory has output Functions
-  const functions = await fs.readdir(join(output, 'functions'));
-  expect(functions.sort()).toEqual([
-    'edge.func',
-    'edge2.func',
-    'lambda.func',
-    'lambda2.func',
-  ]);
-  expect(
-    fs.lstatSync(join(output, 'functions/lambda.func')).isDirectory()
-  ).toEqual(true);
-  expect(
-    fs.lstatSync(join(output, 'functions/edge.func')).isDirectory()
-  ).toEqual(true);
-  expect(
-    fs.lstatSync(join(output, 'functions/lambda2.func')).isSymbolicLink()
-  ).toEqual(true);
-  expect(
-    fs.lstatSync(join(output, 'functions/edge2.func')).isSymbolicLink()
-  ).toEqual(true);
-  expect(fs.readlinkSync(join(output, 'functions/lambda2.func'))).toEqual(
-    'lambda.func'
-  );
-  expect(fs.readlinkSync(join(output, 'functions/edge2.func'))).toEqual(
-    'edge.func'
-  );
+    client.cwd = cwd;
+    client.setArgv('build', '--yes');
+
+    const exitCode = await build(client);
+    expect(exitCode).toEqual(0);
+
+    expect(fs.existsSync(join(output, 'flags.json'))).toBe(true);
+    expect(fs.readJSONSync(join(output, 'flags.json'))).toEqual({
+      definitions: {
+        'my-next-flag': {
+          options: [{ value: true }, { value: false }],
+        },
+      },
+    });
+  });
+
+  it('should detect framework version in monorepo app', async () => {
+    const cwd = fixture('monorepo');
+    const output = join(cwd, '.vercel/output');
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toEqual(0);
+
+    const config = await fs.readJSON(join(output, 'config.json'));
+    expect(typeof config.framework.version).toEqual('string');
+  });
+
+  it('should create symlinks for duplicate references to Lambda / EdgeFunction instances', async () => {
+    if (process.platform === 'win32') {
+      // eslint-disable-next-line no-console
+      console.log('Skipping test on Windows');
+      return;
+    }
+    const cwd = fixture('functions-symlink');
+    const output = join(cwd, '.vercel/output');
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toEqual(0);
+
+    // "functions" directory has output Functions
+    const functions = await fs.readdir(join(output, 'functions'));
+    expect(functions.sort()).toEqual([
+      'edge.func',
+      'edge2.func',
+      'lambda.func',
+      'lambda2.func',
+    ]);
+    expect(
+      fs.lstatSync(join(output, 'functions/lambda.func')).isDirectory()
+    ).toEqual(true);
+    expect(
+      fs.lstatSync(join(output, 'functions/edge.func')).isDirectory()
+    ).toEqual(true);
+    expect(
+      fs.lstatSync(join(output, 'functions/lambda2.func')).isSymbolicLink()
+    ).toEqual(true);
+    expect(
+      fs.lstatSync(join(output, 'functions/edge2.func')).isSymbolicLink()
+    ).toEqual(true);
+    expect(fs.readlinkSync(join(output, 'functions/lambda2.func'))).toEqual(
+      'lambda.func'
+    );
+    expect(fs.readlinkSync(join(output, 'functions/edge2.func'))).toEqual(
+      'edge.func'
+    );
+  });
+
+  describe('with Vercel Speed Insights', () => {
+    it('should not include VERCEL_ANALYTICS_ID if @vercel/speed-insights is present', async () => {
+      const cwd = fixture('nextjs-with-speed-insights-package');
+      const output = join(cwd, '.vercel/output');
+
+      client.cwd = cwd;
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      const env = await fs.readJSON(join(output, 'static', 'env.json'));
+      expect(Object.keys(env).includes('VERCEL_ANALYTICS_ID')).toEqual(false);
+    });
+
+    it('should include VERCEL_ANALYTICS_ID if @vercel/speed-insights is not present', async () => {
+      const cwd = fixture('nextjs-without-speed-insights-package');
+      const output = join(cwd, '.vercel/output');
+
+      client.cwd = cwd;
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      const env = await fs.readJSON(join(output, 'static', 'env.json'));
+      expect(Object.keys(env).includes('VERCEL_ANALYTICS_ID')).toEqual(true);
+    });
+  });
 });

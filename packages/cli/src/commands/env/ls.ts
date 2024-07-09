@@ -71,6 +71,7 @@ export default async function ls(
         project.name
       )} ${chalk.gray(lsStamp())}`
     );
+    // eslint-disable-next-line no-console
     console.log(getTable(envs));
   }
 

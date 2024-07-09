@@ -1,8 +1,8 @@
 import semver from 'semver';
-import { existsSync, promises as fs } from 'fs';
+import { existsSync, readFileSync, promises as fs } from 'fs';
 import { basename, dirname, join, relative, resolve, sep } from 'path';
 import { pathToRegexp, Key } from 'path-to-regexp';
-import { debug } from '@vercel/build-utils';
+import { debug, type PackageJson } from '@vercel/build-utils';
 import { walkParentDirs } from '@vercel/build-utils';
 import { createRequire } from 'module';
 import type {
@@ -58,8 +58,12 @@ export function findEntry(dir: string, basename: string): string | undefined {
 
 const configExts = ['.js', '.cjs', '.mjs'];
 
-export function findConfig(dir: string, basename: string): string | undefined {
-  for (const ext of configExts) {
+export function findConfig(
+  dir: string,
+  basename: string,
+  exts = configExts
+): string | undefined {
+  for (const ext of exts) {
     const name = basename + ext;
     const file = join(dir, name);
     if (existsSync(file)) return file;
@@ -198,7 +202,7 @@ export function getRegExpFromPath(rePath: string): RegExp | false {
 
 /**
  * Updates the `dest` process.env object to match the `source` one.
- * A function is returned to restore the the `dest` env back to how
+ * A function is returned to restore the `dest` env back to how
  * it was originally.
  */
 export function syncEnv(source: NodeJS.ProcessEnv, dest: NodeJS.ProcessEnv) {
@@ -355,6 +359,7 @@ async function ensureSymlink(
     }
   }
 
+  await fs.mkdir(symlinkDir, { recursive: true });
   await fs.symlink(relativeTarget, symlinkPath);
   debug(`Created symlink for "${pkgName}"`);
 }
@@ -368,4 +373,82 @@ export function isESM(path: string): boolean {
     isESM = err.code === 'ERR_REQUIRE_ESM';
   }
   return isESM;
+}
+
+export function hasScript(scriptName: string, pkg?: PackageJson) {
+  const scripts = pkg?.scripts || {};
+  return typeof scripts[scriptName] === 'string';
+}
+
+export async function getRemixVersion(
+  dir: string,
+  base: string
+): Promise<string> {
+  const resolvedPath = require_.resolve('@remix-run/dev', { paths: [dir] });
+  const pkgPath = await walkParentDirs({
+    base,
+    start: dirname(resolvedPath),
+    filename: 'package.json',
+  });
+  if (!pkgPath) {
+    throw new Error(
+      `Failed to find \`package.json\` file for "@remix-run/dev"`
+    );
+  }
+  const { version } = JSON.parse(
+    await fs.readFile(pkgPath, 'utf8')
+  ) as PackageJson;
+  if (typeof version !== 'string') {
+    throw new Error(`Missing "version" field`);
+  }
+  return version;
+}
+
+export function logNftWarnings(warnings: Set<Error>, required?: string) {
+  for (const warning of warnings) {
+    const m = warning.message.match(/^Failed to resolve dependency "(.+)"/);
+    if (m) {
+      if (m[1] === required) {
+        throw new Error(
+          `Missing required "${required}" package. Please add it to your \`package.json\` file.`
+        );
+      } else {
+        console.warn(`WARN: ${m[0]}`);
+      }
+    } else {
+      debug(`Warning from trace: ${warning.message}`);
+    }
+  }
+}
+
+export function isVite(dir: string): boolean {
+  const viteConfig = findConfig(dir, 'vite.config', [
+    '.js',
+    '.ts',
+    '.mjs',
+    '.mts',
+  ]);
+  if (!viteConfig) return false;
+
+  const remixConfig = findConfig(dir, 'remix.config');
+  if (!remixConfig) return true;
+
+  // `remix.config` and `vite.config` exist, so check a couple other ways
+
+  // Is `vite:build` found in the `package.json` "build" script?
+  const pkg: PackageJson = JSON.parse(
+    readFileSync(join(dir, 'package.json'), 'utf8')
+  );
+  if (pkg.scripts?.build && /\bvite:build\b/.test(pkg.scripts.build)) {
+    return true;
+  }
+
+  // Is `@remix-run/dev` package found in `vite.config`?
+  const viteConfigContents = readFileSync(viteConfig, 'utf8');
+  if (/['"]@remix-run\/dev['"]/.test(viteConfigContents)) {
+    return true;
+  }
+
+  // If none of those conditions matched, then treat it as a legacy project and print a warning
+  return false;
 }

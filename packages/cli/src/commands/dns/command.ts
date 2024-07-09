@@ -74,9 +74,8 @@ export const dnsCommand: Command = {
       description: 'Show next page of results',
       argument: 'MS',
       shorthand: 'n',
-      type: 'string',
+      type: String,
       deprecated: false,
-      multi: false,
     },
     {
       name: 'limit',
@@ -84,9 +83,8 @@ export const dnsCommand: Command = {
       description:
         'Number of results to return per page (default: 20, max: 100)',
       argument: 'NUMBER',
-      type: 'string',
+      type: String,
       deprecated: false,
-      multi: false,
     },
   ],
   examples: [

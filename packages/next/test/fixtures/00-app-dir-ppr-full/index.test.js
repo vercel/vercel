@@ -19,10 +19,22 @@ const pages = [
   { pathname: '/no-suspense/nested/a', dynamic: true },
   { pathname: '/no-suspense/nested/b', dynamic: true },
   { pathname: '/no-suspense/nested/c', dynamic: true },
+  { pathname: '/no-fallback/a', dynamic: true },
+  { pathname: '/no-fallback/b', dynamic: true },
+  { pathname: '/no-fallback/c', dynamic: true },
   // TODO: uncomment when we've fixed the 404 case for force-dynamic pages
   // { pathname: '/dynamic/force-dynamic', dynamic: 'force-dynamic' },
   { pathname: '/dynamic/force-static', dynamic: 'force-static' },
 ];
+
+const cases = {
+  404: [
+    // For routes that do not support fallback (they had `dynamicParams` set to
+    // `false`), we shouldn't see any fallback behavior for routes not defined
+    // in `getStaticParams`.
+    { pathname: '/no-fallback/non-existent' },
+  ],
+};
 
 const ctx = {};
 
@@ -30,6 +42,45 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
   beforeAll(async () => {
     const info = await deployAndTest(__dirname);
     Object.assign(ctx, info);
+  });
+
+  it('should handle interception route properly', async () => {
+    const res = await fetch(`${ctx.deploymentUrl}/cart`);
+    expect(res.status).toBe(200);
+    expect(await res.text()).toContain('normal cart page');
+
+    const res2 = await fetch(`${ctx.deploymentUrl}/cart`, {
+      headers: {
+        RSC: '1',
+      },
+    });
+    const res2Body = await res2.text();
+    expect(res2.status).toBe(200);
+    expect(res2Body).toContain(':');
+    expect(res2Body).not.toContain('<html');
+
+    const res3 = await fetch(`${ctx.deploymentUrl}/cart`, {
+      headers: {
+        RSC: '1',
+        'Next-Url': '/cart',
+        'Next-Router-Prefetch': '1',
+      },
+    });
+    const res3Body = await res3.text();
+    expect(res3.status).toBe(200);
+    expect(res3Body).toContain(':');
+    expect(res3Body).not.toContain('<html');
+
+    const res4 = await fetch(`${ctx.deploymentUrl}/cart`, {
+      headers: {
+        RSC: '1',
+        'Next-Url': '/cart',
+      },
+    });
+    const res4Body = await res4.text();
+    expect(res4.status).toBe(200);
+    expect(res4Body).toContain(':');
+    expect(res4Body).not.toContain('<html');
   });
 
   describe('dynamic pages should resume', () => {
@@ -47,6 +98,17 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
         const html = await res.text();
         expect(html).toContain(expected);
         expect(html).toContain('</html>');
+
+        // Validate that the loaded URL is correct.
+        expect(html).toContain(`data-pathname=${pathname}`);
+      }
+    );
+
+    it.each(cases[404])(
+      'should return 404 for $pathname',
+      async ({ pathname }) => {
+        const res = await fetch(`${ctx.deploymentUrl}${pathname}`);
+        expect(res.status).toEqual(404);
       }
     );
   });
@@ -88,6 +150,16 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
         }
       }
     );
+
+    it.each(cases[404])(
+      'should return 404 for $pathname',
+      async ({ pathname }) => {
+        const res = await fetch(`${ctx.deploymentUrl}${pathname}`, {
+          headers: { RSC: 1, 'Next-Router-Prefetch': '1' },
+        });
+        expect(res.status).toEqual(404);
+      }
+    );
   });
 
   describe('dynamic RSC payloads should return', () => {
@@ -122,5 +194,15 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
         expect(text).not.toContain(expected);
       }
     });
+
+    it.each(cases[404])(
+      'should return 404 for $pathname',
+      async ({ pathname }) => {
+        const res = await fetch(`${ctx.deploymentUrl}${pathname}`, {
+          headers: { RSC: 1 },
+        });
+        expect(res.status).toEqual(404);
+      }
+    );
   });
 });

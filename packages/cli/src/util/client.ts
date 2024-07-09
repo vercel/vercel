@@ -1,5 +1,9 @@
-import { bold } from 'chalk';
-import inquirer from 'inquirer';
+import { bold, gray } from 'chalk';
+import checkbox from '@inquirer/checkbox';
+import confirm from '@inquirer/confirm';
+import expand from '@inquirer/expand';
+import input from '@inquirer/input';
+import select from '@inquirer/select';
 import { EventEmitter } from 'events';
 import { URL } from 'url';
 import { VercelConfig } from '@vercel/client';
@@ -66,8 +70,8 @@ export default class Client extends EventEmitter implements Stdio {
   agent?: Agent;
   localConfig?: VercelConfig;
   localConfigPath?: string;
-  prompt!: inquirer.PromptModule;
   requestIdCounter: number;
+  input;
 
   constructor(opts: ClientOptions) {
     super();
@@ -83,7 +87,29 @@ export default class Client extends EventEmitter implements Stdio {
     this.localConfig = opts.localConfig;
     this.localConfigPath = opts.localConfigPath;
     this.requestIdCounter = 1;
-    this._createPromptModule();
+
+    const theme = {
+      prefix: gray('?'),
+      style: { answer: gray },
+    };
+    this.input = {
+      text: (opts: Parameters<typeof input>[0]) =>
+        input({ theme, ...opts }, { input: this.stdin, output: this.stderr }),
+      checkbox: <T>(opts: Parameters<typeof checkbox<T>>[0]) =>
+        checkbox<T>(
+          { theme, ...opts },
+          { input: this.stdin, output: this.stderr }
+        ),
+      expand: (opts: Parameters<typeof expand>[0]) =>
+        expand({ theme, ...opts }, { input: this.stdin, output: this.stderr }),
+      confirm: (opts: Parameters<typeof confirm>[0]) =>
+        confirm({ theme, ...opts }, { input: this.stdin, output: this.stderr }),
+      select: <T>(opts: Parameters<typeof select<T>>[0]) =>
+        select<T>(
+          { theme, ...opts },
+          { input: this.stdin, output: this.stderr }
+        ),
+    };
   }
 
   retry<T>(fn: RetryFunction<T>, { retries = 3, maxTimeout = Infinity } = {}) {
@@ -228,13 +254,6 @@ export default class Client extends EventEmitter implements Stdio {
   _onRetry = (error: Error) => {
     this.output.debug(`Retrying: ${error}\n${error.stack}`);
   };
-
-  _createPromptModule() {
-    this.prompt = inquirer.createPromptModule({
-      input: this.stdin as NodeJS.ReadStream,
-      output: this.stderr as NodeJS.WriteStream,
-    });
-  }
 
   get cwd(): string {
     return process.cwd();

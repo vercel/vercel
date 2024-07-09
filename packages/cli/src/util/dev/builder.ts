@@ -367,7 +367,7 @@ export async function executeBuild(
           Code: { ZipFile },
           Handler: asset.handler,
           Runtime: asset.runtime,
-          MemorySize: asset.memory || 3008,
+          MemorySize: asset.memory || 3009,
           Environment: {
             Variables: {
               ...vercelConfig.env,

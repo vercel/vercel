@@ -1,9 +1,11 @@
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import login from '../../../src/commands/login';
 import { emoji } from '../../../src/util/emoji';
 import { client } from '../../mocks/client';
 import { useUser } from '../../mocks/user';
+import { vi } from 'vitest';
 
-jest.setTimeout(10000);
+vi.setConfig({ testTimeout: 10000 });
 
 describe('login', () => {
   it('should not allow the `--token` flag', async () => {
@@ -49,10 +51,10 @@ describe('login', () => {
       await expect(client.stderr).toOutput(`? Log in to Vercel`);
 
       // Move down to "Email" option
-      client.stdin.write('\x1B[B'); // Down arrow
-      client.stdin.write('\x1B[B'); // Down arrow
-      client.stdin.write('\x1B[B'); // Down arrow
-      client.stdin.write('\r'); // Return key
+      client.events.keypress('down');
+      client.events.keypress('down');
+      client.events.keypress('down');
+      client.events.keypress('enter');
 
       await expect(client.stderr).toOutput('? Enter your email address:');
 
@@ -72,10 +74,10 @@ describe('login', () => {
       await expect(client.stderr).toOutput(`? Log in to Vercel`);
 
       // Move down to "Email" option
-      client.stdin.write('\x1B[B'); // Down arrow
-      client.stdin.write('\x1B[B'); // Down arrow
-      client.stdin.write('\x1B[B'); // Down arrow
-      client.stdin.write('\r'); // Return key
+      client.events.keypress('down');
+      client.events.keypress('down');
+      client.events.keypress('down');
+      client.events.keypress('enter');
 
       await expect(client.stderr).toOutput('? Enter your email address:');
 
@@ -85,9 +87,9 @@ describe('login', () => {
         `Success! Email authentication complete for ${user.email}`
       );
 
-      await expect(client.stderr).not.toOutput(emoji('tip'));
-
       await expect(exitCodePromise).resolves.toEqual(0);
+
+      await expect(client.getFullOutput()).not.toContain(emoji('tip'));
     });
 
     describe('with NO_COLOR="1" env var', () => {

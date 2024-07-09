@@ -6,7 +6,7 @@ import { URL } from 'url';
 import ignore from 'ignore';
 import { pkgVersion } from '../pkg';
 import { NowBuildError } from '@vercel/build-utils';
-import { VercelClientOptions, DeploymentOptions, VercelConfig } from '../types';
+import { VercelClientOptions, VercelConfig } from '../types';
 import { Sema } from 'async-sema';
 import { readFile } from 'fs-extra';
 import readdir from './readdir-recursive';
@@ -46,13 +46,7 @@ const EVENTS_ARRAY = [
 export type DeploymentEventType = typeof EVENTS_ARRAY[number];
 export const EVENTS = new Set(EVENTS_ARRAY);
 
-export function getApiDeploymentsUrl(
-  metadata?: Pick<DeploymentOptions, 'builds' | 'functions'>
-) {
-  if (metadata && metadata.builds && !metadata.functions) {
-    return '/v10/deployments';
-  }
-
+export function getApiDeploymentsUrl() {
   return '/v13/deployments';
 }
 
@@ -88,12 +82,13 @@ export async function buildFileTree(
   {
     isDirectory,
     prebuilt,
-  }: Pick<VercelClientOptions, 'isDirectory' | 'prebuilt'>,
+    vercelOutputDir,
+  }: Pick<VercelClientOptions, 'isDirectory' | 'prebuilt' | 'vercelOutputDir'>,
   debug: Debug
 ): Promise<{ fileList: string[]; ignoreList: string[] }> {
   const ignoreList: string[] = [];
   let fileList: string[];
-  let { ig, ignores } = await getVercelIgnore(path, prebuilt);
+  let { ig, ignores } = await getVercelIgnore(path, prebuilt, vercelOutputDir);
 
   debug(`Found ${ignores.length} rules in .vercelignore`);
   debug('Building file tree...');
@@ -148,20 +143,29 @@ export async function buildFileTree(
 
 export async function getVercelIgnore(
   cwd: string | string[],
-  prebuilt?: boolean
+  prebuilt?: boolean,
+  vercelOutputDir?: string
 ): Promise<{ ig: Ignore; ignores: string[] }> {
   const ig = ignore();
   let ignores: string[];
 
   if (prebuilt) {
-    const outputDir = '.vercel/output';
+    if (typeof vercelOutputDir !== 'string') {
+      throw new Error(
+        `Missing required \`vercelOutputDir\` parameter when "prebuilt" is true`
+      );
+    }
+    if (typeof cwd !== 'string') {
+      throw new Error(`\`cwd\` must be a "string"`);
+    }
+    const relOutputDir = relative(cwd, vercelOutputDir);
     ignores = ['*'];
-    const parts = outputDir.split('/');
+    const parts = relOutputDir.split(sep);
     parts.forEach((_, i) => {
       const level = parts.slice(0, i + 1).join('/');
       ignores.push(`!${level}`);
     });
-    ignores.push(`!${outputDir}/**`);
+    ignores.push(`!${parts.join('/')}/**`);
     ig.add(ignores.join('\n'));
   } else {
     ignores = [

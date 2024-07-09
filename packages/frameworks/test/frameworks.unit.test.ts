@@ -199,7 +199,7 @@ const Schema = {
       dependency: { type: 'string' },
       cachePattern: { type: 'string' },
       defaultVersion: { type: 'string' },
-      supersedes: { type: 'string' },
+      supersedes: { type: 'array', items: { type: 'string' } },
     },
   },
 };

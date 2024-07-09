@@ -143,7 +143,9 @@ function removeSupersededFramework(
   const framework = matches[index];
   if (framework) {
     if (framework.supersedes) {
-      removeSupersededFramework(matches, framework.supersedes);
+      for (const slug of framework.supersedes) {
+        removeSupersededFramework(matches, slug);
+      }
     }
     matches.splice(index, 1);
   }
@@ -154,7 +156,9 @@ export function removeSupersededFrameworks(
 ) {
   for (const match of matches.slice()) {
     if (match?.supersedes) {
-      removeSupersededFramework(matches, match.supersedes);
+      for (const slug of match.supersedes) {
+        removeSupersededFramework(matches, slug);
+      }
     }
   }
 }

@@ -1,3 +1,4 @@
+import { afterAll } from 'vitest';
 import findUp from 'find-up';
 import fs from 'fs-extra';
 import path from 'path';

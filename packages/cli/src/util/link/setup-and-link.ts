@@ -50,7 +50,6 @@ export default async function setupAndLink(
   }: SetupAndLinkOptions
 ): Promise<ProjectLinkResult> {
   const { localConfig, output, config } = client;
-  const debug = output.isDebugEnabled();
 
   const isFile = !isDirectory(path);
   if (isFile) {
@@ -198,6 +197,7 @@ export default async function setupAndLink(
         projectSettings: {
           ...localConfigurationOverrides,
           sourceFilesOutsideRootDirectory,
+          rootDirectory,
         },
         autoAssignCustomDomains: true,
       };
@@ -219,9 +219,9 @@ export default async function setupAndLink(
         deployment.code !== 'missing_project_settings'
       ) {
         output.error('Failed to detect project settings. Please try again.');
-        if (debug) {
-          console.log(deployment);
-        }
+
+        output.debug(deployment);
+
         return {
           status: 'error',
           exitCode: 1,

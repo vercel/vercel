@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import ms from 'ms';
 import plural from 'pluralize';
-import table from 'text-table';
+import table from '../../util/output/table';
 import Now from '../../util';
 import getAliases from '../../util/alias/get-aliases';
 import elapsed from '../../util/output/elapsed';
@@ -169,7 +169,7 @@ export default async function remove(client: Client) {
         `or projects matching ` +
         `${ids
           .map(id => chalk.bold(`"${id}"`))
-          .join(', ')}. Run ${getCommandName('ls')} to list.`
+          .join(', ')}. Run ${getCommandName('projects ls')} to list.`
     );
     return 1;
   }
@@ -214,11 +214,13 @@ export default async function remove(client: Client) {
   );
 
   deployments.forEach(depl => {
-    console.log(`${chalk.gray('-')} ${chalk.bold(depl.url)}`);
+    // consider changing to `output.log`
+    output.print(`${chalk.gray('-')} ${chalk.bold(depl.url)}\n`);
   });
 
   projects.forEach((project: Project) => {
-    console.log(`${chalk.gray('-')} ${chalk.bold(project.name)}`);
+    // consider changing to `output.log`
+    output.print(`${chalk.gray('-')} ${chalk.bold(project.name)}\n`);
   });
 
   return 0;
@@ -245,7 +247,7 @@ function readConfirmation(
           const url = depl.url ? chalk.underline(`https://${depl.url}`) : '';
           return [`  ${depl.id}`, url, time];
         }),
-        { align: ['l', 'r', 'l'], hsep: ' '.repeat(6) }
+        { align: ['l', 'r', 'l'], hsep: 6 }
       );
       output.print(`${deploymentTable}\n`);
     }
@@ -260,7 +262,7 @@ function readConfirmation(
     }
 
     if (projects.length > 0) {
-      console.log(
+      output.print(
         `The following ${plural(
           'project',
           projects.length,
@@ -268,16 +270,17 @@ function readConfirmation(
         )} will be permanently removed, ` +
           `including all ${
             projects.length > 1 ? 'their' : 'its'
-          } deployments and aliases:`
+          } deployments and aliases:\n`
       );
 
       for (const project of projects) {
-        console.log(`${chalk.gray('-')} ${chalk.bold(project.name)}`);
+        // consider changing to `output.log`
+        output.print(`${chalk.gray('-')} ${chalk.bold(project.name)}\n`);
       }
     }
 
     output.print(
-      `${chalk.bold.red('> Are you sure?')} ${chalk.gray('[y/N] ')}`
+      `${chalk.bold.red('> Are you sure?')} ${chalk.gray('(y/N) ')}`
     );
 
     process.stdin

@@ -25,6 +25,7 @@ export interface VercelClientOptions {
   apiUrl?: string;
   force?: boolean;
   prebuilt?: boolean;
+  vercelOutputDir?: string;
   rootDirectory?: string | null;
   withCache?: boolean;
   userAgent?: string;

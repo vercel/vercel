@@ -1,11 +1,10 @@
 import chalk from 'chalk';
 import ms from 'ms';
-import table from 'text-table';
+import table from '../../util/output/table';
 import Client from '../../util/client';
 import getScope from '../../util/get-scope';
 import removeAliasById from '../../util/alias/remove-alias-by-id';
 import stamp from '../../util/output/stamp';
-import strlen from '../../util/strlen';
 import confirm from '../../util/input/confirm';
 import findAliasByAliasOrId from '../../util/alias/find-alias-by-alias-or-id';
 
@@ -64,11 +63,7 @@ export default async function rm(
   }
 
   await removeAliasById(client, alias.uid);
-  console.log(
-    `${chalk.cyan('> Success!')} Alias ${chalk.bold(
-      alias.alias
-    )} removed ${removeStamp()}`
-  );
+  output.success(`Alias ${chalk.bold(alias.alias)} removed ${removeStamp()}`);
   return 0;
 }
 
@@ -84,11 +79,7 @@ async function confirmAliasRemove(client: Client, alias: Alias) {
         chalk.gray(`${ms(Date.now() - alias.createdAt)} ago`),
       ],
     ],
-    {
-      align: ['l', 'l', 'r'],
-      hsep: ' '.repeat(4),
-      stringLength: strlen,
-    }
+    { hsep: 4 }
   );
 
   client.output.log(`The following alias will be removed permanently`);

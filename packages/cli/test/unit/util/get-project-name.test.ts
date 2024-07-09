@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest';
 import getProjectName from '../../../src/util/get-project-name';
 
 describe('getProjectName', () => {

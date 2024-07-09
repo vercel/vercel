@@ -6,6 +6,7 @@ import wait, { StopSpinner } from './wait';
 import { errorToString } from '@vercel/error-utils';
 import { removeEmoji } from '../emoji';
 import type * as tty from 'tty';
+import { inspect } from 'util';
 
 const IS_TEST = process.env.NODE_ENV === 'test';
 
@@ -123,12 +124,12 @@ export class Output {
     this.print(`${chalk.cyan('> Success!')} ${str}\n`);
   };
 
-  debug = (str: string) => {
+  debug = (debug: unknown) => {
     if (this.debugEnabled) {
       this.log(
         `${chalk.bold('[debug]')} ${chalk.gray(
           `[${new Date().toISOString()}]`
-        )} ${str}`
+        )} ${debugToString(debug)}`
       );
     }
   };
@@ -225,4 +226,11 @@ function getNoColor(noColorArg: boolean | undefined): boolean {
     process.env.NO_COLOR === '1' ||
     noColorArg;
   return !!noColor;
+}
+
+function debugToString(debug: unknown): string {
+  if (typeof debug === 'string') {
+    return debug;
+  }
+  return inspect(debug);
 }

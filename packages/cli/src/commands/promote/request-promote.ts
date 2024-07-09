@@ -34,7 +34,7 @@ export default async function requestPromote({
 
   if (deployment.target !== 'production' && !yes) {
     const question =
-      'This deployment does not target production, therefore promotion will not apply production environment variables. Are you sure you want to continue?';
+      'This deployment is not a production deployment and cannot be directly promoted. A new deployment will be built using your production environment. Are you sure you want to continue?';
     const answer = await confirm(client, question, false);
     if (!answer) {
       output.error('Canceled');
@@ -43,7 +43,7 @@ export default async function requestPromote({
   }
 
   // request the promotion
-  await client.fetch(`/v9/projects/${project.id}/promote/${deployment.id}`, {
+  await client.fetch(`/v10/projects/${project.id}/promote/${deployment.id}`, {
     body: {}, // required
     json: false,
     method: 'POST',

@@ -1,0 +1,8 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "mustContain": "<p>hello</p>"
+    }
+  ]
+}

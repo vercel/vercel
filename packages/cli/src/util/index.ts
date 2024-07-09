@@ -36,6 +36,7 @@ export interface CreateOptions {
   project?: string;
   wantsPublic: boolean;
   prebuilt?: boolean;
+  vercelOutputDir?: string;
   rootDirectory?: string | null;
   meta: Dictionary<string>;
   gitMetadata?: GitMetadata;
@@ -50,6 +51,7 @@ export interface CreateOptions {
   projectSettings?: any;
   skipAutoDetectionConfirmation?: boolean;
   noWait?: boolean;
+  withLogs?: boolean;
   autoAssignCustomDomains?: boolean;
 }
 
@@ -117,6 +119,7 @@ export default class Now extends EventEmitter {
       name,
       project,
       prebuilt = false,
+      vercelOutputDir,
       rootDirectory,
       wantsPublic,
       meta,
@@ -132,6 +135,7 @@ export default class Now extends EventEmitter {
       projectSettings,
       skipAutoDetectionConfirmation,
       noWait,
+      withLogs,
       autoAssignCustomDomains,
     }: CreateOptions,
     org: Org,
@@ -179,8 +183,10 @@ export default class Now extends EventEmitter {
       skipAutoDetectionConfirmation,
       cwd,
       prebuilt,
+      vercelOutputDir,
       rootDirectory,
       noWait,
+      withLogs,
     });
 
     if (deployment && deployment.warnings) {

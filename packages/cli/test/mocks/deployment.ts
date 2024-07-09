@@ -1,3 +1,4 @@
+import { beforeEach } from 'vitest';
 import { URL } from 'url';
 import chance from 'chance';
 import { client } from './client';
@@ -112,6 +113,24 @@ export function useDeploymentMissingProjectSettings() {
       },
     });
   });
+}
+
+export function useBuildLogs({
+  deployment,
+  logProducer,
+}: {
+  deployment: Deployment;
+  logProducer: () => AsyncGenerator<object, void, unknown>;
+}) {
+  client.scenario.get(
+    `/v3/now/deployments/${deployment.id}/events`,
+    async (req, res) => {
+      for await (const log of logProducer()) {
+        res.write(JSON.stringify(log) + '\n');
+      }
+      res.end();
+    }
+  );
 }
 
 beforeEach(() => {

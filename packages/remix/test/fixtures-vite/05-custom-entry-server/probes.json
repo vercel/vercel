@@ -1,0 +1,12 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "mustContain": "This is a custom entry.server response"
+    },
+    {
+      "path": "/does-not-exist",
+      "mustContain": "This is a custom entry.server response"
+    }
+  ]
+}

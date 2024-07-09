@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import inquirer from 'inquirer';
+import { Separator } from '@inquirer/checkbox';
 import pluralize from 'pluralize';
 import { homedir } from 'os';
 import slugify from '@sindresorhus/slugify';
@@ -22,6 +22,7 @@ import { detectProjects } from '../projects/detect-projects';
 import { repoInfoToUrl } from '../git/repo-info-to-url';
 import { connectGitProvider, parseRepoUrl } from '../git/connect-git-provider';
 import { isAPIError } from '../errors-ts';
+import { isGitWorktreeOrSubmodule } from '../git-helpers';
 
 const home = homedir();
 
@@ -144,16 +145,13 @@ export async function ensureRepoLink(
       if (yes) {
         remoteName = defaultRemote;
       } else {
-        const answer = await client.prompt({
-          type: 'list',
-          name: 'value',
+        remoteName = await client.input.select({
           message: 'Which Git remote should be used?',
           choices: remoteNames.map(name => {
             return { name: name, value: name };
           }),
           default: defaultRemote,
         });
-        remoteName = answer.value;
       }
     }
     const repoUrl = remoteUrls[remoteName];
@@ -222,15 +220,13 @@ export async function ensureRepoLink(
       selected = projects;
     } else {
       const addSeparators = projects.length > 0 && detectedProjectsCount > 0;
-      const answer = await client.prompt({
-        type: 'checkbox',
-        name: 'selected',
+      selected = await client.input.checkbox<Project | NewProject>({
         message: `Which Projects should be ${
           projects.length ? 'linked to' : 'created'
         }?`,
         choices: [
           ...(addSeparators
-            ? [new inquirer.Separator('----- Existing Projects -----')]
+            ? [new Separator('----- Existing Projects -----')]
             : []),
           ...projects.map(project => {
             return {
@@ -240,7 +236,7 @@ export async function ensureRepoLink(
             };
           }),
           ...(addSeparators
-            ? [new inquirer.Separator('----- New Projects to be created -----')]
+            ? [new Separator('----- New Projects to be created -----')]
             : []),
           ...Array.from(detectedProjects.entries()).flatMap(
             ([rootDirectory, frameworks]) =>
@@ -264,12 +260,11 @@ export async function ensureRepoLink(
                   },
                   // Checked by default when there are no other existing Projects
                   checked: projects.length === 0,
-                };
+                } as const;
               })
           ),
         ],
       });
-      selected = answer.selected;
     }
 
     if (selected.length === 0) {
@@ -365,7 +360,13 @@ export async function findRepoRoot(
 ): Promise<string | undefined> {
   const { debug } = client.output;
   const REPO_JSON_PATH = join(VERCEL_DIR, VERCEL_DIR_REPO);
-  const GIT_CONFIG_PATH = normalize('.git/config');
+  /**
+   * If the current repo is a git submodule or git worktree '.git' is a file
+   * with a pointer to the "parent" git repository instead of a directory.
+   */
+  const GIT_PATH = isGitWorktreeOrSubmodule({ cwd: client.cwd })
+    ? normalize('.git')
+    : normalize('.git/config');
 
   for (const current of traverseUpDirectories({ start })) {
     if (current === home) {
@@ -389,12 +390,12 @@ export async function findRepoRoot(
 
     // if `.git/config` exists (unlinked),
     // then consider this the repo root
-    const gitConfigPath = join(current, GIT_CONFIG_PATH);
+    const gitConfigPath = join(current, GIT_PATH);
     stat = await lstat(gitConfigPath).catch(err => {
       if (err.code !== 'ENOENT') throw err;
     });
     if (stat) {
-      debug(`Found "${GIT_CONFIG_PATH}" - detected "${current}" as repo root`);
+      debug(`Found "${GIT_PATH}" - detected "${current}" as repo root`);
       return current;
     }
   }

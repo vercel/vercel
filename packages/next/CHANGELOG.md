@@ -1,5 +1,212 @@
 # @vercel/next
 
+## 4.3.1
+
+### Patch Changes
+
+- Bump fs-extra ([#11809](https://github.com/vercel/vercel/pull/11809))
+
+- don't skip creation of `.rsc` outputs for route handlers ([#11808](https://github.com/vercel/vercel/pull/11808))
+
+- Fix re-tracing app router entries ([#11812](https://github.com/vercel/vercel/pull/11812))
+
+- Add build callback handling ([#11807](https://github.com/vercel/vercel/pull/11807))
+
+- Log when tracing in builder instead of next build ([#11810](https://github.com/vercel/vercel/pull/11810))
+
+- Fix route handlers operation type ([#11800](https://github.com/vercel/vercel/pull/11800))
+
+## 4.3.0
+
+### Minor Changes
+
+- Adds the ability for builders to define a `diagnostics` step that is called after the build operation is done. ([#11653](https://github.com/vercel/vercel/pull/11653))
+  Implements the diagnostics step in the `next` builder.
+
+## 4.2.18
+
+### Patch Changes
+
+- Allow app router prerender functions to use streaming ([#11745](https://github.com/vercel/vercel/pull/11745))
+
+- Add experimental preload flag ([#11753](https://github.com/vercel/vercel/pull/11753))
+
+## 4.2.17
+
+### Patch Changes
+
+- Ensure all prerenders have matching .action output ([#11719](https://github.com/vercel/vercel/pull/11719))
+
+## 4.2.16
+
+### Patch Changes
+
+- prevent /index from being incorrectly normalized in rewrites ([#11707](https://github.com/vercel/vercel/pull/11707))
+
+- Upgrade to @vercel/nft 0.27.2 with browser remapping support ([#11700](https://github.com/vercel/vercel/pull/11700))
+
+- ensure unmatched rsc rewrites are routed to correct handler ([#11688](https://github.com/vercel/vercel/pull/11688))
+
+## 4.2.15
+
+### Patch Changes
+
+- ensure unmatched action rewrites are routed to correct handler ([#11686](https://github.com/vercel/vercel/pull/11686))
+
+- Adds a route for the `.rsc` pathname as well when app has ppr enabled but not all routes. ([#11681](https://github.com/vercel/vercel/pull/11681))
+
+## 4.2.14
+
+### Patch Changes
+
+- Don't create streaming lambdas for pages router routes ([#11660](https://github.com/vercel/vercel/pull/11660))
+
+- Ensure user rewrites still match to action outputs ([#11628](https://github.com/vercel/vercel/pull/11628))
+
+## 4.2.13
+
+### Patch Changes
+
+- Fix static case for detecting when a page supports PPR ([#11635](https://github.com/vercel/vercel/pull/11635))
+
+- Fix related to erroring when a prefetch route is not provided but the route is PPR enabled ([#11638](https://github.com/vercel/vercel/pull/11638))
+
+## 4.2.12
+
+### Patch Changes
+
+- Support incremental PPR for large applications ([#11625](https://github.com/vercel/vercel/pull/11625))
+
+## 4.2.11
+
+### Patch Changes
+
+- normalize source file locations for special metadata files ([#11579](https://github.com/vercel/vercel/pull/11579))
+
+## 4.2.10
+
+### Patch Changes
+
+- skip action rewrites for RSC requests ([#11576](https://github.com/vercel/vercel/pull/11576))
+
+- Bump `@vercel/nft@0.27.0` ([#11580](https://github.com/vercel/vercel/pull/11580))
+
+## 4.2.9
+
+### Patch Changes
+
+- Support incremental partial prerendering ([#11560](https://github.com/vercel/vercel/pull/11560))
+
+- ensure `.action` outputs are created for edge functions ([#11568](https://github.com/vercel/vercel/pull/11568))
+
+- ([#11566](https://github.com/vercel/vercel/pull/11566))
+
+## 4.2.8
+
+### Patch Changes
+
+- Fix missing initial RSC headers ([#11552](https://github.com/vercel/vercel/pull/11552))
+
+- Remove .prefetch.rsc rewrites for non-PPR ([#11540](https://github.com/vercel/vercel/pull/11540))
+
+- [next] rename middleware manifest env ([#11549](https://github.com/vercel/vercel/pull/11549))
+
+## 4.2.7
+
+### Patch Changes
+
+- Fix missing .rsc outputs for pages prerenders ([#11503](https://github.com/vercel/vercel/pull/11503))
+
+- Fix base path app index RSC handling ([#11528](https://github.com/vercel/vercel/pull/11528))
+
+- Fix interception routes PPR route handling ([#11527](https://github.com/vercel/vercel/pull/11527))
+
+## 4.2.6
+
+### Patch Changes
+
+- [next] Update test fixture version ([#11514](https://github.com/vercel/vercel/pull/11514))
+
+## 4.2.5
+
+### Patch Changes
+
+- Only rewrite next-action requests to `.action` handlers ([#11504](https://github.com/vercel/vercel/pull/11504))
+
+## 4.2.4
+
+### Patch Changes
+
+- [next]: Revert .action handling for dynamic routes ([#11509](https://github.com/vercel/vercel/pull/11509))
+
+## 4.2.3
+
+### Patch Changes
+
+- [next] Reland add .action handling for dynamic routes ([#11487](https://github.com/vercel/vercel/pull/11487))
+
+## 4.2.2
+
+### Patch Changes
+
+- [next] revert .action rewrites ([#11470](https://github.com/vercel/vercel/pull/11470))
+
+- Next.js builds: support sectioned source maps ([#11453](https://github.com/vercel/vercel/pull/11453))
+
+## 4.2.1
+
+### Patch Changes
+
+- [next] add streaming prerender group for actions ([#11454](https://github.com/vercel/vercel/pull/11454))
+
+- [next] Ensure \_not-found is included properly in app router functions ([#11441](https://github.com/vercel/vercel/pull/11441))
+
+- [next] add .action handling for dynamic routes ([#11461](https://github.com/vercel/vercel/pull/11461))
+
+- [next] Remove un-necessary compressed function size calc/constraint ([#11442](https://github.com/vercel/vercel/pull/11442))
+
+## 4.2.0
+
+### Minor Changes
+
+- Add support for edge function environment variables ([#11390](https://github.com/vercel/vercel/pull/11390))
+
+## 4.1.6
+
+### Patch Changes
+
+- Ensure that static PPR pages have static streaming lambda paths. ([#11259](https://github.com/vercel/vercel/pull/11259))
+
+## 4.1.5
+
+### Patch Changes
+
+- Rename variants to flags and remove legacy flags ([#11121](https://github.com/vercel/vercel/pull/11121))
+
+## 4.1.4
+
+### Patch Changes
+
+- Enable partial prerendering support for pre-generated pages ([#11183](https://github.com/vercel/vercel/pull/11183))
+
+## 4.1.3
+
+### Patch Changes
+
+- Fix manifest with experimental flag ([#11192](https://github.com/vercel/vercel/pull/11192))
+
+## 4.1.2
+
+### Patch Changes
+
+- Update experimental bundle flag ([#11187](https://github.com/vercel/vercel/pull/11187))
+
+- [next] Add flag for experimental grouping ([#11177](https://github.com/vercel/vercel/pull/11177))
+
+- bump `@vercel/nft@0.26.4` ([#11155](https://github.com/vercel/vercel/pull/11155))
+
+- fix: missing experimental field ([#11184](https://github.com/vercel/vercel/pull/11184))
+
 ## 4.1.1
 
 ### Patch Changes
