@@ -4,7 +4,7 @@ import listInput from '../input/list';
 import { getCommandName } from '../pkg-name';
 import { LoginResult, SAMLError } from './types';
 import doSamlLogin from './saml';
-import doEmailLogin from './email';
+import doEmailLogin, { doEmailSignUp } from './email';
 import doGithubLogin from './github';
 import doGitlabLogin from './gitlab';
 import doBitbucketLogin from './bitbucket';
@@ -22,6 +22,7 @@ export default async function prompt(
     { name: 'Continue with GitLab', value: 'gitlab', short: 'gitlab' },
     { name: 'Continue with Bitbucket', value: 'bitbucket', short: 'bitbucket' },
     { name: 'Continue with Email', value: 'email', short: 'email' },
+    { name: 'SignUp with Email', value: 'emailSignUp', short: 'emailSignUp' },
     { name: 'Continue with SAML Single Sign-On', value: 'saml', short: 'saml' },
   ];
 
@@ -45,6 +46,12 @@ export default async function prompt(
   } else if (choice === 'email') {
     const email = await readInput(client, 'Enter your email address:');
     result = await doEmailLogin(client, email, ssoUserId);
+  } else if (choice === 'emailSignUp') {
+    const email = await readInput(client, 'Enter your email address:');
+    const plan = await readInput(client, 'Enter the plan you would like:');
+    const slug =
+      error?.teamId || (await readInput(client, 'Enter your Team slug:'));
+    result = await doEmailSignUp(client, email, plan, slug, ssoUserId);
   } else if (choice === 'saml') {
     const slug =
       error?.teamId || (await readInput(client, 'Enter your Team slug:'));

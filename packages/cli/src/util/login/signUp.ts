@@ -6,7 +6,9 @@ import { clearInterval } from 'timers';
 
 export default async function signUp(
   client: Client,
-  email: string
+  email: string,
+  plan: string,
+  teamName: string
 ): Promise<SignUpData> {
   try {
     const signUpRes = await client.fetch<SignUpData>(
@@ -16,8 +18,6 @@ export default async function signUp(
         body: { email, tokenName: 'other' },
       }
     );
-    const plan = 'hobby';
-    const teamName = 'test';
     let verifyRes: VerifyResult;
     const inter = setInterval(async () => {
       verifyRes = await client.fetch(
