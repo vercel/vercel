@@ -380,9 +380,6 @@ export async function scanParentDirs(
 function detectPackageManagerNameWithoutLockfile(
   packageJsonPackageManager?: string
 ) {
-  console.log('detectPackageManagerNameWithoutLockfile', {
-    packageJsonPackageManager,
-  });
   if (usingCorepack(process.env, packageJsonPackageManager)) {
     const corepackPackageManager = validateVersionSpecifier(
       packageJsonPackageManager
@@ -409,8 +406,6 @@ function usingCorepack(
   packageJsonPackageManager: string | undefined
 ) {
   const corepackFlagged = env.ENABLE_EXPERIMENTAL_COREPACK === '1';
-  console.trace();
-  console.log({ packageJsonPackageManager, corepackFlagged });
   return corepackFlagged && Boolean(packageJsonPackageManager);
 }
 
@@ -454,7 +449,6 @@ async function walkParentDirsMulti({
     const packageJson: PackageJson | null = await fs
       .readJSON(packageJsonPath)
       .catch(() => null);
-    console.log({ pm: packageJson?.packageManager, packageJsonPath });
     if (packageJson?.packageManager) {
       packageManager = packageJson.packageManager;
     }
@@ -493,16 +487,9 @@ export async function runNpmInstall(
     const {
       cliType,
       packageJsonPath,
-      packageJson,
       lockfileVersion,
       packageJsonPackageManager,
-    } = await scanParentDirs(destPath, true);
-    console.log('runNpmInstall', {
-      cliType,
-      packageJsonPath,
-      packageJson,
-      lockfileVersion,
-    });
+    } = await scanParentDirs(destPath);
 
     if (!packageJsonPath) {
       debug(
@@ -632,14 +619,7 @@ export function getEnvForPackageManager({
   nodeVersion: NodeVersion | undefined;
   env: { [x: string]: string | undefined };
 }) {
-  console.log('getEnvForPackageManager', {
-    cliType,
-    lockfileVersion,
-    packageJsonPackageManager,
-    nodeVersion,
-  });
   const corepackEnabled = usingCorepack(env, packageJsonPackageManager);
-  console.log({ corepackEnabled });
 
   const {
     detectedLockfile,
@@ -651,7 +631,6 @@ export function getEnvForPackageManager({
     corepackEnabled,
     nodeVersion,
   });
-  console.log({ detectedLockfile, detectedPackageManager, newPath });
 
   if (corepackEnabled) {
     debug(
@@ -774,7 +753,6 @@ export function getPathOverrideForPackageManager({
     detectedPackageManager: undefined,
     path: undefined,
   };
-  console.log({ cliType, lockfileVersion, nodeVersion, corepackEnabled });
 
   switch (cliType) {
     case 'npm':
@@ -948,9 +926,8 @@ export async function runCustomInstallCommand({
   spawnOpts?: SpawnOptions;
 }) {
   console.log(`Running "install" command: \`${installCommand}\`...`);
-  const { cliType, lockfileVersion, packageJson, packageJsonPackageManager } =
-    await scanParentDirs(destPath, true);
-  console.log({ destPath, cliType, lockfileVersion, packageJson });
+  const { cliType, lockfileVersion, packageJsonPackageManager } =
+    await scanParentDirs(destPath);
   const env = getEnvForPackageManager({
     cliType,
     lockfileVersion,
@@ -975,7 +952,6 @@ export async function runPackageJsonScript(
 
   const { packageJson, cliType, lockfileVersion, packageJsonPackageManager } =
     await scanParentDirs(destPath, true);
-  console.log({ packageJson, cliType, lockfileVersion });
   const scriptName = getScriptName(
     packageJson,
     typeof scriptNames === 'string' ? [scriptNames] : scriptNames
