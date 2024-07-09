@@ -194,7 +194,7 @@ async function printDetails({
   print(`    ${chalk.cyan('name')}\t${name}\n`);
   // @ts-ignore - customEnvironment needs to be defined on Deployment
   const customEnvironmentName = deployment.customEnvironment?.name;
-  const target = customEnvironmentName ?? deployment.target;
+  const target = customEnvironmentName ?? deployment.target ?? 'preview';
   if (target) {
     print(`    ${chalk.cyan('target')}\t`);
     // TODO: once custom environments is shipped for all users,
