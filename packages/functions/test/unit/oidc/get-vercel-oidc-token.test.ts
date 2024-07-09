@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach, afterEach } from 'vitest';
-import { getVercelOidcToken } from '../../src/oidc';
+import { getVercelOidcToken } from '../../../src/oidc';
 import { randomUUID } from 'crypto';
 
 describe('getVercelOidcToken', () => {
