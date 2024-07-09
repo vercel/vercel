@@ -13,8 +13,10 @@ test('load as CommonJS', async () => {
   );
 
   expect(exportedMethods).toEqual([
+    'awsCredentialsProvider',
     'geolocation',
     'getEnv',
+    'getVercelOidcToken',
     'ipAddress',
     'waitUntil',
   ]);
@@ -27,8 +29,10 @@ test('load as ESM', async () => {
     .esm(code)
     .then(output => JSON.parse(output));
   expect(exportedMethods).toEqual([
+    'awsCredentialsProvider',
     'geolocation',
     'getEnv',
+    'getVercelOidcToken',
     'ipAddress',
     'waitUntil',
   ]);

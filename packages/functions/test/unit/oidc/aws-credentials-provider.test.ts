@@ -1,12 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
-import { awsCredentialsProvider } from '../../src/oidc';
+import { awsCredentialsProvider } from '../../../src/oidc';
 
 const getVercelOidcTokenMock = vi.fn().mockResolvedValue('token');
 const fromWebTokenExectionMock = vi.fn();
 const fromWebTokenMock = vi.fn().mockReturnValue(fromWebTokenExectionMock);
 
 describe('awsCredentialsProvider', () => {
-  vi.mock('../../src/oidc/getVercelOidcToken', () => {
+  vi.mock('../../src/oidc/get-vercel-oidc-token', () => {
     return {
       getVercelOidcToken: async () => getVercelOidcTokenMock(),
     };

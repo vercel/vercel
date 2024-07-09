@@ -1,18 +1,12 @@
+import { getContext } from '../get-context';
+
 /**
  * Returns the OIDC token from the request context or the environment variable.
  */
 export async function getVercelOidcToken(): Promise<string> {
-  if (process.env.VERCEL_OIDC_TOKEN) {
-    return process.env.VERCEL_OIDC_TOKEN;
-  }
+  if (process.env.VERCEL_OIDC_TOKEN) return process.env.VERCEL_OIDC_TOKEN;
 
-  const requestContext =
-    globalThis[
-      Symbol.for(
-        '@vercel/request-context'
-      ) as unknown as keyof typeof globalThis
-    ];
-  const token = requestContext?.get?.()?.headers?.['x-vercel-oidc-token'];
+  const token = getContext().headers?.['x-vercel-oidc-token'];
 
   if (!token) {
     throw new Error(

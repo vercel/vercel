@@ -4,12 +4,69 @@
 
 ### Functions
 
+- [awsCredentialsProvider](README.md#awscredentialsprovider)
 - [geolocation](README.md#geolocation)
 - [getEnv](README.md#getenv)
+- [getVercelOidcToken](README.md#getverceloidctoken)
 - [ipAddress](README.md#ipaddress)
 - [waitUntil](README.md#waituntil)
 
 ## Functions
+
+### awsCredentialsProvider
+
+▸ **awsCredentialsProvider**(`init`): `AwsCredentialIdentityProvider`
+
+Obtains the Vercel OIDC token and creates an AWS credential provider function
+that gets AWS credentials by calling STS AssumeRoleWithWebIdentity API.
+
+**`Example`**
+
+```javascript
+import * as s3 from '@aws-sdk/client-s3';
+import { awsCredentialsProvider } from '@vercel/functions/oidc';
+
+const s3Client = new s3.S3Client({
+  credentials: awsCredentialsProvider({
+    // Required. ARN of the role that the caller is assuming.
+    roleArn: "arn:aws:iam::1234567890:role/RoleA",
+    // Optional. Custom STS client configurations overriding the default ones.
+    clientConfig: { region }
+    // Optional. Custom STS client middleware plugin to modify the client default behavior.
+    // e.g. adding custom headers.
+    clientPlugins: [addFooHeadersPlugin],
+    // Optional. A function that assumes a role with web identity and returns a promise fulfilled with credentials for
+    // the assumed role.
+    roleAssumerWithWebIdentity,
+    // Optional. An identifier for the assumed role session.
+    roleSessionName: "session_123",
+    // Optional. The fully qualified host component of the domain name of the identity provider.
+    providerId: "graph.facebook.com",
+    // Optional. ARNs of the IAM managed policies that you want to use as managed session.
+    policyArns: [{arn: "arn:aws:iam::1234567890:policy/SomePolicy"}],
+    // Optional. An IAM policy in JSON format that you want to use as an inline session policy.
+    policy: "JSON_STRING",
+    // Optional. The duration, in seconds, of the role session. Default to 3600.
+    durationSeconds: 7200
+  }),
+});
+```
+
+#### Parameters
+
+| Name   | Type                         |
+| :----- | :--------------------------- |
+| `init` | `AwsCredentialsProviderInit` |
+
+#### Returns
+
+`AwsCredentialIdentityProvider`
+
+#### Defined in
+
+oidc/aws-credentials-provider.ts:49
+
+---
 
 ### geolocation
 
@@ -85,6 +142,22 @@ Returns the location information for the incoming request.
 
 ---
 
+### getVercelOidcToken
+
+▸ **getVercelOidcToken**(): [`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`string`\>
+
+Returns the OIDC token from the request context or the environment variable.
+
+#### Returns
+
+[`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`string`\>
+
+#### Defined in
+
+oidc/get-vercel-oidc-token.ts:6
+
+---
+
 ### ipAddress
 
 ▸ **ipAddress**(`request`): `string` \| `undefined`
@@ -144,4 +217,4 @@ export function GET(request) {
 
 #### Defined in
 
-[wait-until.ts:23](https://github.com/vercel/vercel/blob/main/packages/functions/src/wait-until.ts#L23)
+[wait-until.ts:19](https://github.com/vercel/vercel/blob/main/packages/functions/src/wait-until.ts#L19)
