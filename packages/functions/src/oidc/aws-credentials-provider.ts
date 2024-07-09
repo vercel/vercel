@@ -16,10 +16,9 @@ import { getVercelOidcToken } from './get-vercel-oidc-token';
  * @property {string} [policy] - An IAM policy in JSON format that you want to use as an inline session policy.
  * @property {number} [durationSeconds=3600] - The duration, in seconds, of the role session. Defaults to 3600 seconds.
  */
-export type AwsCredentialsProviderInit = Omit<
-  FromWebTokenInit,
-  'webIdentityToken'
->;
+
+export interface AwsCredentialsProviderInit // eslint-disable-line @typescript-eslint/no-empty-interface
+  extends Omit<FromWebTokenInit, 'webIdentityToken'> {}
 
 /**
  * Obtains the Vercel OIDC token and creates an AWS credential provider function

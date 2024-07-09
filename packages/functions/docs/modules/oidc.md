@@ -2,26 +2,14 @@
 
 ## Table of contents
 
-### Type Aliases
+### Interfaces
 
-- [AwsCredentialsProviderInit](oidc.md#awscredentialsproviderinit)
+- [AwsCredentialsProviderInit](../interfaces/oidc.AwsCredentialsProviderInit.md)
 
 ### Functions
 
 - [awsCredentialsProvider](oidc.md#awscredentialsprovider)
 - [getVercelOidcToken](oidc.md#getverceloidctoken)
-
-## Type Aliases
-
-### AwsCredentialsProviderInit
-
-Ƭ **AwsCredentialsProviderInit**: [`Omit`](https://www.typescriptlang.org/docs/handbook/utility-types.html#omittype-keys)<`FromWebTokenInit`, `"webIdentityToken"`\>
-
-The init object for the `awsCredentialsProvider` function.
-
-#### Defined in
-
-[oidc/aws-credentials-provider.ts:19](https://github.com/vercel/vercel/blob/main/packages/functions/src/oidc/aws-credentials-provider.ts#L19)
 
 ## Functions
 
@@ -56,9 +44,9 @@ const s3Client = new s3.S3Client({
 
 #### Parameters
 
-| Name   | Type                                                               | Description                |
-| :----- | :----------------------------------------------------------------- | :------------------------- |
-| `init` | [`AwsCredentialsProviderInit`](oidc.md#awscredentialsproviderinit) | The initialization object. |
+| Name   | Type                                                                             | Description                |
+| :----- | :------------------------------------------------------------------------------- | :------------------------- |
+| `init` | [`AwsCredentialsProviderInit`](../interfaces/oidc.AwsCredentialsProviderInit.md) | The initialization object. |
 
 #### Returns
 
@@ -68,7 +56,7 @@ A function that provides AWS credentials.
 
 #### Defined in
 
-[oidc/aws-credentials-provider.ts:61](https://github.com/vercel/vercel/blob/main/packages/functions/src/oidc/aws-credentials-provider.ts#L61)
+[packages/functions/src/oidc/aws-credentials-provider.ts:60](https://github.com/vercel/vercel/blob/main/packages/functions/src/oidc/aws-credentials-provider.ts#L60)
 
 ---
 
@@ -111,4 +99,4 @@ A promise that resolves to the OIDC token.
 
 #### Defined in
 
-[oidc/get-vercel-oidc-token.ts:23](https://github.com/vercel/vercel/blob/main/packages/functions/src/oidc/get-vercel-oidc-token.ts#L23)
+[packages/functions/src/oidc/get-vercel-oidc-token.ts:23](https://github.com/vercel/vercel/blob/main/packages/functions/src/oidc/get-vercel-oidc-token.ts#L23)

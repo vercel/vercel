@@ -5,6 +5,6 @@
   "out": "docs",
   "githubPages": false,
   "gitRevision": "main",
-  "readme": "none",
-  "hideBreadcrumbs": true
+  "hideBreadcrumbs": true,
+  "readme": "none"
 }

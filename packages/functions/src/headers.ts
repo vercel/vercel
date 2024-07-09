@@ -36,7 +36,7 @@ export const EMOJI_FLAG_UNICODE_STARTING_POSITION = 127397;
  * We define a new type so this function can be reused with
  * the global `Request`, `node-fetch` and other types.
  */
-interface Request {
+export interface Request {
   headers: {
     get(name: string): string | null;
   };

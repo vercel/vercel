@@ -2,6 +2,11 @@
 
 ## Table of contents
 
+### Interfaces
+
+- [Geo](../interfaces/index.Geo.md)
+- [Request](../interfaces/index.Request.md)
+
 ### Functions
 
 - [geolocation](index.md#geolocation)
@@ -13,7 +18,7 @@
 
 ### geolocation
 
-▸ **geolocation**(`request`): `Geo`
+▸ **geolocation**(`request`): [`Geo`](../interfaces/index.Geo.md)
 
 Returns the location information for the incoming request.
 
@@ -27,17 +32,17 @@ Returns the location information for the incoming request.
 
 #### Parameters
 
-| Name      | Type      | Description                                                     |
-| :-------- | :-------- | :-------------------------------------------------------------- |
-| `request` | `Request` | The incoming request object which provides the geolocation data |
+| Name      | Type                                        | Description                                                     |
+| :-------- | :------------------------------------------ | :-------------------------------------------------------------- |
+| `request` | [`Request`](../interfaces/index.Request.md) | The incoming request object which provides the geolocation data |
 
 #### Returns
 
-`Geo`
+[`Geo`](../interfaces/index.Geo.md)
 
 #### Defined in
 
-[headers.ts:128](https://github.com/vercel/vercel/blob/main/packages/functions/src/headers.ts#L128)
+[packages/functions/src/headers.ts:128](https://github.com/vercel/vercel/blob/main/packages/functions/src/headers.ts#L128)
 
 ---
 
@@ -81,7 +86,7 @@ Returns the location information for the incoming request.
 
 #### Defined in
 
-[get-env.ts:1](https://github.com/vercel/vercel/blob/main/packages/functions/src/get-env.ts#L1)
+[packages/functions/src/get-env.ts:1](https://github.com/vercel/vercel/blob/main/packages/functions/src/get-env.ts#L1)
 
 ---
 
@@ -97,9 +102,9 @@ IP_HEADER_NAME
 
 #### Parameters
 
-| Name      | Type      | Description                                       |
-| :-------- | :-------- | :------------------------------------------------ |
-| `request` | `Request` | The incoming request object which provides the IP |
+| Name      | Type                                        | Description                                       |
+| :-------- | :------------------------------------------ | :------------------------------------------------ |
+| `request` | [`Request`](../interfaces/index.Request.md) | The incoming request object which provides the IP |
 
 #### Returns
 
@@ -107,7 +112,7 @@ IP_HEADER_NAME
 
 #### Defined in
 
-[headers.ts:99](https://github.com/vercel/vercel/blob/main/packages/functions/src/headers.ts#L99)
+[packages/functions/src/headers.ts:99](https://github.com/vercel/vercel/blob/main/packages/functions/src/headers.ts#L99)
 
 ---
 
@@ -144,4 +149,4 @@ export function GET(request) {
 
 #### Defined in
 
-[wait-until.ts:19](https://github.com/vercel/vercel/blob/main/packages/functions/src/wait-until.ts#L19)
+[packages/functions/src/wait-until.ts:19](https://github.com/vercel/vercel/blob/main/packages/functions/src/wait-until.ts#L19)
