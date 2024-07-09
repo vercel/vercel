@@ -181,7 +181,7 @@ async function printDetails({
     alias: aliases,
   } = deployment;
 
-  const { print } = client.output;
+  const { print, link } = client.output;
 
   const { builds } =
     deployment.version === 2
@@ -192,13 +192,22 @@ async function printDetails({
   print(chalk.bold('  General\n\n'));
   print(`    ${chalk.cyan('id')}\t\t${id}\n`);
   print(`    ${chalk.cyan('name')}\t${name}\n`);
-  // TODO: make custom environment link
-  // TODO: what does target being null/undefined mean?
-  // TODO: see if I can reuse nate's types
-  // @ts-ignore - customEnvironment is not defined on Deployment
-  const target = deployment.customEnvironment?.name ?? deployment.target;
+  // @ts-ignore - customEnvironment needs to be defined on Deployment
+  const customEnvironmentName = deployment.customEnvironment?.name;
+  const target = customEnvironmentName ?? deployment.target;
   if (target) {
-    print(`    ${chalk.cyan('target')}\t${target}\n`);
+    print(`    ${chalk.cyan('target')}\t`);
+    // TODO: once custom environments is shipped for all users,
+    // make all deployments link to the environment settings page
+    print(
+      // @ts-ignore - customEnvironment needs to be defined on Deployment
+      customEnvironmentName && deployment.team?.slug
+        ? `${link(
+            `${target}`,
+            `https://vercel.com/${deployment.team.slug}/${name}/settings/environments`
+          )}\n`
+        : `${target}\n`
+    );
   }
   print(`    ${chalk.cyan('status')}\t${stateString(readyState)}\n`);
   print(`    ${chalk.cyan('url')}\t\thttps://${url}\n`);
