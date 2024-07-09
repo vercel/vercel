@@ -48,9 +48,10 @@
     "node": ">= 16"
   },
   "scripts": {
-    "pretest": "pnpm run build",
+    "pretest": "pnpm run build:code",
     "test": "vitest",
-    "build": "node ../../utils/build.mjs",
+    "build": "pnpm run build:code && pnpm run build:docs",
+    "build:code": "node ../../utils/build.mjs",
     "build:docs": "typedoc && prettier --write docs/**/*.md docs/*.md"
   },
   "license": "Apache-2.0",
