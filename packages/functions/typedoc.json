@@ -1,6 +1,6 @@
 {
   "$schema": "https://typedoc.org/schema.json",
-  "entryPoints": ["src/index.ts"],
+  "entryPoints": ["src/index.ts", "src/oidc/index.ts"],
   "plugin": ["typedoc-plugin-markdown", "typedoc-plugin-mdn-links"],
   "out": "docs",
   "githubPages": false,
