@@ -5,8 +5,8 @@
 ### Functions
 
 - [geolocation](README.md#geolocation)
+- [getEnv](README.md#getenv)
 - [ipAddress](README.md#ipaddress)
-- [systemEnv](README.md#systemenv)
 - [waitUntil](README.md#waituntil)
 
 ## Functions
@@ -41,35 +41,9 @@ Returns the location information for the incoming request.
 
 ---
 
-### ipAddress
+### getEnv
 
-▸ **ipAddress**(`request`): `string` \| `undefined`
-
-Returns the IP address of the request from the headers.
-
-**`See`**
-
-IP_HEADER_NAME
-
-#### Parameters
-
-| Name      | Type      | Description                                       |
-| :-------- | :-------- | :------------------------------------------------ |
-| `request` | `Request` | The incoming request object which provides the IP |
-
-#### Returns
-
-`string` \| `undefined`
-
-#### Defined in
-
-[headers.ts:99](https://github.com/vercel/vercel/blob/main/packages/functions/src/headers.ts#L99)
-
----
-
-### systemEnv
-
-▸ **systemEnv**(`env?`): `Object`
+▸ **getEnv**(`env?`): `Object`
 
 #### Parameters
 
@@ -107,7 +81,33 @@ IP_HEADER_NAME
 
 #### Defined in
 
-system-env.ts:1
+[get-env.ts:1](https://github.com/vercel/vercel/blob/main/packages/functions/src/get-env.ts#L1)
+
+---
+
+### ipAddress
+
+▸ **ipAddress**(`request`): `string` \| `undefined`
+
+Returns the IP address of the request from the headers.
+
+**`See`**
+
+IP_HEADER_NAME
+
+#### Parameters
+
+| Name      | Type      | Description                                       |
+| :-------- | :-------- | :------------------------------------------------ |
+| `request` | `Request` | The incoming request object which provides the IP |
+
+#### Returns
+
+`string` \| `undefined`
+
+#### Defined in
+
+[headers.ts:99](https://github.com/vercel/vercel/blob/main/packages/functions/src/headers.ts#L99)
 
 ---
 

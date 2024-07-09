@@ -1,4 +1,4 @@
-export const getSystemEnv = (
+export const getEnv = (
   env: { [key: string]: string | undefined } = process.env
 ) => ({
   /**

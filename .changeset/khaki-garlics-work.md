@@ -2,4 +2,4 @@
 "@vercel/functions": minor
 ---
 
-[functions] add `systemEnvironmentVariables`  method
+[functions] add `getEnv` method.
