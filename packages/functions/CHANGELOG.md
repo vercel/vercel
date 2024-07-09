@@ -1,5 +1,11 @@
 # @vercel/functions
 
+## 1.3.0
+
+### Minor Changes
+
+- [functions] add `getEnv` method. ([#11783](https://github.com/vercel/vercel/pull/11783))
+
 ## 1.2.0
 
 ### Minor Changes
