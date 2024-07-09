@@ -454,6 +454,7 @@ async function walkParentDirsMulti({
     const packageJson: PackageJson | null = await fs
       .readJSON(packageJsonPath)
       .catch(() => null);
+    console.log({ pm: packageJson?.packageManager, packageJsonPath });
     if (packageJson?.packageManager) {
       packageManager = packageJson.packageManager;
     }
