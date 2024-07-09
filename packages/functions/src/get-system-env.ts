@@ -1,4 +1,4 @@
-export const systemEnvironmentVariables = (
+export const getSystemEnv = (
   env: { [key: string]: string | undefined } = process.env
 ) => ({
   /**

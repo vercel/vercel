@@ -14,7 +14,7 @@ test('load as CommonJS', async () => {
   expect(exportedMethods).toEqual([
     'geolocation',
     'ipAddress',
-    'systemEnvironmentVariables',
+    'systemEnv',
     'waitUntil',
   ]);
 });
@@ -28,7 +28,7 @@ test('load as ESM', async () => {
   expect(exportedMethods).toEqual([
     'geolocation',
     'ipAddress',
-    'systemEnvironmentVariables',
+    'systemEnv',
     'waitUntil',
   ]);
 });

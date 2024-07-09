@@ -1,3 +1,3 @@
 export { geolocation, ipAddress } from './headers';
-export { systemEnvironmentVariables } from './system-environment-variables';
+export { getSystemEnv } from './get-system-env';
 export { waitUntil } from './wait-until';

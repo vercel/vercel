@@ -6,7 +6,7 @@
 
 - [geolocation](README.md#geolocation)
 - [ipAddress](README.md#ipaddress)
-- [systemEnvironmentVariables](README.md#systemenvironmentvariables)
+- [systemEnv](README.md#systemenv)
 - [waitUntil](README.md#waituntil)
 
 ## Functions
@@ -67,9 +67,9 @@ IP_HEADER_NAME
 
 ---
 
-### systemEnvironmentVariables
+### systemEnv
 
-▸ **systemEnvironmentVariables**(`env?`): `Object`
+▸ **systemEnv**(`env?`): `Object`
 
 #### Parameters
 
@@ -107,7 +107,7 @@ IP_HEADER_NAME
 
 #### Defined in
 
-[system-environment-variables.ts:1](https://github.com/vercel/vercel/blob/main/packages/functions/src/system-environment-variables.ts#L1)
+system-env.ts:1
 
 ---
 
