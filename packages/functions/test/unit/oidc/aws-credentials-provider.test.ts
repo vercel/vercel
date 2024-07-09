@@ -6,7 +6,7 @@ const fromWebTokenExectionMock = vi.fn();
 const fromWebTokenMock = vi.fn().mockReturnValue(fromWebTokenExectionMock);
 
 describe('awsCredentialsProvider', () => {
-  vi.mock('../../src/oidc/get-vercel-oidc-token', () => {
+  vi.mock('../../../src/oidc/get-vercel-oidc-token', () => {
     return {
       getVercelOidcToken: async () => getVercelOidcTokenMock(),
     };
