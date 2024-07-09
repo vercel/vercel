@@ -1,5 +1,11 @@
 # @vercel/redwood
 
+## 2.1.0
+
+### Minor Changes
+
+- Add support for API endpoint configuration via `export const config` syntax ([#11776](https://github.com/vercel/vercel/pull/11776))
+
 ## 2.0.10
 
 ### Patch Changes
