@@ -260,16 +260,14 @@ export const build: BuildV2 = async buildOptions => {
   const nextVersionRange = await getNextVersionRange(entryPath);
   const nodeVersion = await getNodeVersion(entryPath, undefined, config, meta);
   const spawnOpts = getSpawnOptions(meta, nodeVersion);
-  const { cliType, lockfileVersion, packageJson } = await scanParentDirs(
-    entryPath,
-    true
-  );
+  const { cliType, lockfileVersion, packageJson, packageJsonPackageManager } =
+    await scanParentDirs(entryPath, true);
   console.log('next builder', { cliType, lockfileVersion, packageJson });
 
   spawnOpts.env = getEnvForPackageManager({
     cliType,
     lockfileVersion,
-    packageJsonPackageManager: packageJson?.packageManager,
+    packageJsonPackageManager,
     nodeVersion,
     env: spawnOpts.env || {},
   });
