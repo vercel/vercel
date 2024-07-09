@@ -11,7 +11,13 @@ test('load as CommonJS', async () => {
   const exportedMethods = await evalScript(code).then(output =>
     JSON.parse(output)
   );
-  expect(exportedMethods).toEqual(['geolocation', 'ipAddress', 'waitUntil']);
+
+  expect(exportedMethods).toEqual([
+    'geolocation',
+    'getEnv',
+    'ipAddress',
+    'waitUntil',
+  ]);
 });
 
 test('load as ESM', async () => {
@@ -20,5 +26,10 @@ test('load as ESM', async () => {
   const exportedMethods = await evalScript
     .esm(code)
     .then(output => JSON.parse(output));
-  expect(exportedMethods).toEqual(['geolocation', 'ipAddress', 'waitUntil']);
+  expect(exportedMethods).toEqual([
+    'geolocation',
+    'getEnv',
+    'ipAddress',
+    'waitUntil',
+  ]);
 });
