@@ -1,8 +1,4 @@
-type Context = {
-  waitUntil?: (promise: Promise<unknown>) => void;
-};
-
-export const SYMBOL_FOR_REQ_CONTEXT = Symbol.for('@vercel/request-context');
+import { getContext } from './get-context';
 
 /**
  * Extends the lifetime of the request handler for the lifetime of the given {@link Promise}
@@ -33,10 +29,3 @@ export const waitUntil = (promise: Promise<unknown>) => {
 
   return getContext().waitUntil?.(promise);
 };
-
-function getContext(): Context {
-  const fromSymbol: typeof globalThis & {
-    [SYMBOL_FOR_REQ_CONTEXT]?: { get?: () => Context };
-  } = globalThis;
-  return fromSymbol[SYMBOL_FOR_REQ_CONTEXT]?.get?.() ?? {};
-}
