@@ -192,6 +192,14 @@ async function printDetails({
   print(chalk.bold('  General\n\n'));
   print(`    ${chalk.cyan('id')}\t\t${id}\n`);
   print(`    ${chalk.cyan('name')}\t${name}\n`);
+  // TODO: make custom environment link
+  // TODO: what does target being null/undefined mean?
+  // TODO: see if I can reuse nate's types
+  // @ts-ignore - customEnvironment is not defined on Deployment
+  const target = deployment.customEnvironment?.name ?? deployment.target;
+  if (target) {
+    print(`    ${chalk.cyan('target')}\t${target}\n`);
+  }
   print(`    ${chalk.cyan('status')}\t${stateString(readyState)}\n`);
   print(`    ${chalk.cyan('url')}\t\thttps://${url}\n`);
   if (createdAt) {
