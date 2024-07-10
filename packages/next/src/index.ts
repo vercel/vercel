@@ -196,14 +196,16 @@ function isLegacyNext(nextVersion: string) {
   return true;
 }
 
-export const build: BuildV2 = async ({
-  files,
-  workPath,
-  repoRootPath,
-  entrypoint,
-  config = {},
-  meta = {},
-}) => {
+export const build: BuildV2 = async buildOptions => {
+  let { workPath, repoRootPath } = buildOptions;
+  const {
+    files,
+    entrypoint,
+    config = {},
+    meta = {},
+    buildCallback,
+  } = buildOptions;
+
   validateEntrypoint(entrypoint);
 
   let entryDirectory = path.dirname(entrypoint);
@@ -485,6 +487,10 @@ export const build: BuildV2 = async ({
     });
   }
   debug('build command exited');
+
+  if (buildCallback) {
+    await buildCallback(buildOptions);
+  }
 
   let buildOutputVersion: undefined | number;
 
