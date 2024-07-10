@@ -454,6 +454,23 @@
         "RSC": "1",
         "Next-Router-Prefetch": "1"
       }
+    },
+    {
+      "path": "/dynamic/route-handler",
+      "status": 200,
+      "mustContain": "hello world",
+      "headers": {
+        "RSC": "1"
+      }
+    },
+    {
+      "path": "/dynamic/route-handler",
+      "status": 200,
+      "mustContain": "hello world",
+      "headers": {
+        "RSC": "1",
+        "Next-Router-Prefetch": "1"
+      }
     }
   ]
 }

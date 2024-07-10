@@ -1,4 +1,5 @@
 import {
+  Diagnostics,
   FileBlob,
   FileFsRef,
   Files,
@@ -195,14 +196,16 @@ function isLegacyNext(nextVersion: string) {
   return true;
 }
 
-export const build: BuildV2 = async ({
-  files,
-  workPath,
-  repoRootPath,
-  entrypoint,
-  config = {},
-  meta = {},
-}) => {
+export const build: BuildV2 = async buildOptions => {
+  let { workPath, repoRootPath } = buildOptions;
+  const {
+    files,
+    entrypoint,
+    config = {},
+    meta = {},
+    buildCallback,
+  } = buildOptions;
+
   validateEntrypoint(entrypoint);
 
   let entryDirectory = path.dirname(entrypoint);
@@ -484,6 +487,10 @@ export const build: BuildV2 = async ({
     });
   }
   debug('build command exited');
+
+  if (buildCallback) {
+    await buildCallback(buildOptions);
+  }
 
   let buildOutputVersion: undefined | number;
 
@@ -2722,6 +2729,36 @@ export const build: BuildV2 = async ({
           ]),
     ],
     framework: { version: nextVersion },
+  };
+};
+
+export const diagnostics: Diagnostics = async ({
+  config,
+  entrypoint,
+  workPath,
+  repoRootPath,
+}) => {
+  const entryDirectory = path.dirname(entrypoint);
+  const entryPath = path.join(workPath, entryDirectory);
+  const outputDirectory = path.join('./', config.outputDirectory || '.next');
+  const basePath = repoRootPath || workPath;
+  const diagnosticsEntrypoint = path.relative(basePath, entryPath);
+
+  debug(
+    `Reading diagnostics file in diagnosticsEntrypoint=${diagnosticsEntrypoint}`
+  );
+
+  return {
+    // Collect output in `.next/diagnostics`
+    ...(await glob(
+      'diagnostics/*',
+      path.join(basePath, diagnosticsEntrypoint, outputDirectory, 'diagnostics')
+    )),
+    // Collect `.next/trace` file
+    ...(await glob(
+      'trace',
+      path.join(basePath, diagnosticsEntrypoint, outputDirectory)
+    )),
   };
 };
 

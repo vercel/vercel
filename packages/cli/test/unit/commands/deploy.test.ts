@@ -8,9 +8,11 @@ import { client } from '../../mocks/client';
 import deploy from '../../../src/commands/deploy';
 import { setupUnitFixture } from '../../helpers/setup-unit-fixture';
 import { defaultProject, useProject } from '../../mocks/project';
+import { useDeployment, useBuildLogs } from '../../mocks/deployment';
 import { useTeams } from '../../mocks/team';
 import { useUser } from '../../mocks/user';
 import humanizePath from '../../../src/util/humanize-path';
+import sleep from '../../../src/util/sleep';
 
 describe('deploy', () => {
   it('should reject deploying a single file', async () => {
@@ -612,5 +614,68 @@ describe('deploy', () => {
         sourceFilesOutsideRootDirectory: true,
       },
     });
+  });
+
+  it('should print and follow build logs while deploying', async () => {
+    const user = useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      name: 'node',
+      id: 'QmbKpqpiUqbcke',
+    });
+    const deployment = useDeployment({ creator: user, state: 'BUILDING' });
+    deployment.aliasAssigned = false;
+    client.scenario.post(`/v13/deployments`, (req, res) => {
+      res.json(
+        res.json({
+          creator: {
+            uid: user.id,
+            username: user.username,
+          },
+          id: deployment.id,
+          readyState: deployment.readyState,
+          aliasAssigned: false,
+          alias: [],
+        })
+      );
+    });
+    useBuildLogs({
+      deployment,
+      logProducer: async function* () {
+        yield { created: 1717426870339, text: 'Hello, world!' };
+        await sleep(100);
+        yield { created: 1717426870439, text: 'slow...' };
+        await sleep(100);
+        yield { created: 1717426870540, text: 'Bye...' };
+      },
+    });
+
+    let exitCode: number;
+    const runCommand = async () => {
+      const repoRoot = setupUnitFixture('commands/deploy/node');
+      client.cwd = repoRoot;
+      client.setArgv('deploy', '--logs');
+      exitCode = await deploy(client);
+    };
+
+    const slowlyDeploy = async () => {
+      await sleep(500);
+      deployment.readyState = 'READY';
+      deployment.aliasAssigned = true;
+    };
+
+    await Promise.all<void>([runCommand(), slowlyDeploy()]);
+
+    // remove first 4 lines which contains randomized data
+    expect(client.getFullOutput().split('\n').slice(4).join('\n'))
+      .toMatchInlineSnapshot(`
+        "Building
+        2024-06-03T15:01:10.339Z  Hello, world!
+        2024-06-03T15:01:10.439Z  slow...
+        2024-06-03T15:01:10.540Z  Bye...
+        "
+      `);
+    expect(exitCode).toEqual(0);
   });
 });

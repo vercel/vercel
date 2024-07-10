@@ -1,3 +1,5 @@
+import { getContext } from './get-context';
+
 /**
  * Extends the lifetime of the request handler for the lifetime of the given {@link Promise}
  * @see https://developer.mozilla.org/en-US/docs/Web/API/ExtendableEvent/waitUntil
@@ -14,4 +16,16 @@
  * }
  * ```
  */
-export function waitUntil(promise: Promise<unknown>): void;
+export const waitUntil = (promise: Promise<unknown>) => {
+  if (
+    promise === null ||
+    typeof promise !== 'object' ||
+    typeof promise.then !== 'function'
+  ) {
+    throw new TypeError(
+      `waitUntil can only be called with a Promise, got ${typeof promise}`
+    );
+  }
+
+  return getContext().waitUntil?.(promise);
+};
