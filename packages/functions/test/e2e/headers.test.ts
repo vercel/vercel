@@ -12,14 +12,14 @@ import {
   REQUEST_ID_HEADER_NAME,
 } from '../../src/headers';
 
-const URL = 'https://isomorphic-headers.vercel.app/api';
+const URL = 'https://vercel-functions-e2e.vercel.app/api';
 
 test.each(['lambda', 'edge'])(
   'headers are present in a %s request',
   async runtime => {
     const url = `${URL}/${runtime}`;
     const response = await fetch(url);
-    const headers = await response.json();
+    const { headers } = await response.json();
 
     expect(headers[IP_HEADER_NAME]).toBeDefined();
     expect(headers[REQUEST_ID_HEADER_NAME]).toBeDefined();
@@ -36,7 +36,7 @@ test.each(['lambda', 'edge'])(
   async runtime => {
     const url = `${URL}/${runtime}`;
     const response = await fetch(url);
-    const headers = await response.json();
+    const { headers } = await response.json();
     const request = new Request(url, { headers });
     const ip = ipAddress(request);
     expect(ip).toBeDefined();
@@ -48,7 +48,7 @@ test.each(['lambda', 'edge'])(
   async runtime => {
     const url = `${URL}/${runtime}`;
     const response = await fetch(url);
-    const headers = await response.json();
+    const { headers } = await response.json();
     const request = new Request(url, { headers });
     const payload = geolocation(request);
     expect(payload).toBeDefined();

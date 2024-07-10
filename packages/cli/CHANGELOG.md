@@ -1,5 +1,15 @@
 # vercel
 
+## 34.3.1
+
+### Patch Changes
+
+- Updated dependencies [[`07a12706e`](https://github.com/vercel/vercel/commit/07a12706ebb7fd0599884f62d89ef97e33c7232f), [`3c9876e3d`](https://github.com/vercel/vercel/commit/3c9876e3d92fdbc2ad403eef0cb3469070ce0ecf), [`c7e339397`](https://github.com/vercel/vercel/commit/c7e33939725a6c9c155956a24245121a1416ddb8), [`fc82c3dac`](https://github.com/vercel/vercel/commit/fc82c3dac762c38ee74d6586c9bfe2f402b3fe57), [`21bf60218`](https://github.com/vercel/vercel/commit/21bf60218eee553ce60e6239fdc116505e2add55), [`9c5362b3d`](https://github.com/vercel/vercel/commit/9c5362b3d4ad29dcd56f0e7b6c31d02bf6a3f6f3)]:
+  - @vercel/next@4.3.1
+  - @vercel/build-utils@8.3.1
+  - @vercel/node@3.2.2
+  - @vercel/static-build@2.5.13
+
 ## 34.3.0
 
 ### Minor Changes
