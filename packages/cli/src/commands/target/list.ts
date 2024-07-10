@@ -39,7 +39,7 @@ export default async function list(
     link.project.id
   )}/custom-environments`;
 
-  const { environments: result } = (await client.fetch(url, {
+  let { environments: result } = (await client.fetch(url, {
     method: 'GET',
     accountId: link.org.id,
   })) as {
@@ -50,45 +50,13 @@ export default async function list(
 
   const elapsed = ms(Date.now() - start);
 
-  result.unshift(
-    {
-      id: 'production',
-      slug: 'production',
-      createdAt: 0,
-      updatedAt: 0,
-      type: 'production',
-      description: '',
-      name: 'Production',
-      domains: [],
-    },
-    {
-      id: 'preview',
-      slug: 'preview',
-      createdAt: 0,
-      updatedAt: 0,
-      type: 'preview',
-      description: '',
-      name: 'Preview',
-      domains: [],
-    }
-  );
-
-  result.push({
-    id: 'development',
-    slug: 'development',
-    createdAt: 0,
-    updatedAt: 0,
-    type: 'development',
-    description: '',
-    name: 'Development',
-    domains: [],
-  });
+  result = withDefaultEnvironmentsIncluded(result);
 
   output.log(
     `${
       result.length > 0
-        ? `${result.length} Custom Environment${result.length === 1 ? '' : 's'}`
-        : 'No Custom Environments'
+        ? `${result.length} Environment${result.length === 1 ? '' : 's'}`
+        : 'No Environments'
     } found under ${projectSlugLink} ${chalk.gray(`[${elapsed}]`)}`
   );
 
@@ -130,4 +98,42 @@ export default async function list(
     output.print(`\n${tablePrint}\n\n`);
   }
   return 0;
+}
+
+function withDefaultEnvironmentsIncluded(
+  environments: CustomEnvironment[]
+): CustomEnvironment[] {
+  return [
+    {
+      id: 'production',
+      slug: 'production',
+      createdAt: 0,
+      updatedAt: 0,
+      type: 'production',
+      description: '',
+      name: 'Production',
+      domains: [],
+    },
+    {
+      id: 'preview',
+      slug: 'preview',
+      createdAt: 0,
+      updatedAt: 0,
+      type: 'preview',
+      description: '',
+      name: 'Preview',
+      domains: [],
+    },
+    ...environments,
+    {
+      id: 'development',
+      slug: 'development',
+      createdAt: 0,
+      updatedAt: 0,
+      type: 'development',
+      description: '',
+      name: 'Development',
+      domains: [],
+    },
+  ];
 }
