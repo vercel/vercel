@@ -8,8 +8,8 @@ updates:
     reviewers:
       - 'zero-config-support'
     labels:
-      - "pr: automerge"
-      - "dependencies"
+      - 'pr: automerge'
+      - 'dependencies'
     commit-message:
       prefix: '[framework-fixture-dependencies]'
     package-ecosystem: 'npm'
@@ -33,8 +33,8 @@ updates:
     reviewers:
       - 'zero-config-support'
     labels:
-      - "pr: automerge"
-      - "dependencies"
+      - 'pr: automerge'
+      - 'dependencies'
     commit-message:
       prefix: '[framework-fixture-dependencies]'
     package-ecosystem: 'npm'
@@ -58,8 +58,8 @@ updates:
     reviewers:
       - 'zero-config-support'
     labels:
-      - "pr: automerge"
-      - "dependencies"
+      - 'pr: automerge'
+      - 'dependencies'
     commit-message:
       prefix: '[framework-fixture-dependencies]'
     package-ecosystem: 'npm'
@@ -93,8 +93,8 @@ updates:
     reviewers:
       - 'zero-config-support'
     labels:
-      - "pr: automerge"
-      - "dependencies"
+      - 'pr: automerge'
+      - 'dependencies'
     commit-message:
       prefix: '[framework-fixture-dependencies]'
     package-ecosystem: 'npm'
@@ -123,8 +123,8 @@ updates:
     reviewers:
       - 'zero-config-support'
     labels:
-      - "pr: automerge"
-      - "dependencies"
+      - 'pr: automerge'
+      - 'dependencies'
     commit-message:
       prefix: '[framework-fixture-dependencies]'
     package-ecosystem: 'npm'
@@ -153,8 +153,8 @@ updates:
     reviewers:
       - 'zero-config-support'
     labels:
-      - "pr: automerge"
-      - "dependencies"
+      - 'pr: automerge'
+      - 'dependencies'
     commit-message:
       prefix: '[framework-fixture-dependencies]'
     package-ecosystem: 'npm'
@@ -193,8 +193,8 @@ updates:
     reviewers:
       - 'zero-config-support'
     labels:
-      - "pr: automerge"
-      - "dependencies"
+      - 'pr: automerge'
+      - 'dependencies'
     commit-message:
       prefix: '[framework-fixture-dependencies]'
     package-ecosystem: 'npm'
@@ -218,8 +218,8 @@ updates:
     reviewers:
       - 'zero-config-support'
     labels:
-      - "pr: automerge"
-      - "dependencies"
+      - 'pr: automerge'
+      - 'dependencies'
     commit-message:
       prefix: '[framework-fixture-dependencies]'
     package-ecosystem: 'npm'
@@ -243,8 +243,8 @@ updates:
     reviewers:
       - 'zero-config-support'
     labels:
-      - "pr: automerge"
-      - "dependencies"
+      - 'pr: automerge'
+      - 'dependencies'
     commit-message:
       prefix: '[framework-fixture-dependencies]'
     package-ecosystem: 'npm'
@@ -268,8 +268,8 @@ updates:
     reviewers:
       - 'zero-config-support'
     labels:
-      - "pr: automerge"
-      - "dependencies"
+      - 'pr: automerge'
+      - 'dependencies'
     commit-message:
       prefix: '[framework-fixture-dependencies]'
     package-ecosystem: 'npm'
@@ -293,8 +293,8 @@ updates:
     reviewers:
       - 'zero-config-support'
     labels:
-      - "pr: automerge"
-      - "dependencies"
+      - 'pr: automerge'
+      - 'dependencies'
     commit-message:
       prefix: '[framework-fixture-dependencies]'
     package-ecosystem: 'npm'
