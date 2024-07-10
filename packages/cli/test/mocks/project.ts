@@ -309,9 +309,7 @@ export function useProject(
   });
   client.scenario.get(
     `/projects/${project.id}/custom-environments`,
-    (req, res) => {
-      res.json(project.customEnvironments || []);
-    }
+    (req, res) => res.json({ environments: project.customEnvironments || [] })
   );
   client.scenario.post(`/v10/projects/${project.id}/env`, (req, res) => {
     const envObj = req.body;
