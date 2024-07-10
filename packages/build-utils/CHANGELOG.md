@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 8.3.1
+
+### Patch Changes
+
+- Add build callback handling ([#11807](https://github.com/vercel/vercel/pull/11807))
+
 ## 8.3.0
 
 ### Minor Changes
