@@ -6,11 +6,12 @@ updates:
       interval: 'daily'
     open-pull-requests-limit: 1
     reviewers:
-      - 'trek'
-      - 'TooTallNate'
-      - 'EndangeredMassa'
+      - 'zero-config-support'
+    labels:
+      - 'pr: automerge'
+      - 'dependencies'
     commit-message:
-      prefix: '[framework-fixtures]'
+      prefix: '[framework-fixture-dependencies]'
     package-ecosystem: 'npm'
     allow:
       - dependency-name: '@angular*'
@@ -30,11 +31,12 @@ updates:
       interval: 'daily'
     open-pull-requests-limit: 1
     reviewers:
-      - 'trek'
-      - 'TooTallNate'
-      - 'EndangeredMassa'
+      - 'zero-config-support'
+    labels:
+      - 'pr: automerge'
+      - 'dependencies'
     commit-message:
-      prefix: '[framework-fixtures]'
+      prefix: '[framework-fixture-dependencies]'
     package-ecosystem: 'npm'
     allow:
       - dependency-name: 'astro*'
@@ -54,11 +56,12 @@ updates:
       interval: 'daily'
     open-pull-requests-limit: 1
     reviewers:
-      - 'trek'
-      - 'TooTallNate'
-      - 'EndangeredMassa'
+      - 'zero-config-support'
+    labels:
+      - 'pr: automerge'
+      - 'dependencies'
     commit-message:
-      prefix: '[framework-fixtures]'
+      prefix: '[framework-fixture-dependencies]'
     package-ecosystem: 'npm'
     allow:
       - dependency-name: '@remix-run*'
@@ -88,11 +91,12 @@ updates:
       interval: 'daily'
     open-pull-requests-limit: 1
     reviewers:
-      - 'trek'
-      - 'TooTallNate'
-      - 'EndangeredMassa'
+      - 'zero-config-support'
+    labels:
+      - 'pr: automerge'
+      - 'dependencies'
     commit-message:
-      prefix: '[framework-fixtures]'
+      prefix: '[framework-fixture-dependencies]'
     package-ecosystem: 'npm'
     allow:
       - dependency-name: '@ionic*'
@@ -117,11 +121,12 @@ updates:
       interval: 'daily'
     open-pull-requests-limit: 1
     reviewers:
-      - 'trek'
-      - 'TooTallNate'
-      - 'EndangeredMassa'
+      - 'zero-config-support'
+    labels:
+      - 'pr: automerge'
+      - 'dependencies'
     commit-message:
-      prefix: '[framework-fixtures]'
+      prefix: '[framework-fixture-dependencies]'
     package-ecosystem: 'npm'
     allow:
       - dependency-name: '@ionic*'
@@ -146,11 +151,12 @@ updates:
       interval: 'daily'
     open-pull-requests-limit: 1
     reviewers:
-      - 'trek'
-      - 'TooTallNate'
-      - 'EndangeredMassa'
+      - 'zero-config-support'
+    labels:
+      - 'pr: automerge'
+      - 'dependencies'
     commit-message:
-      prefix: '[framework-fixtures]'
+      prefix: '[framework-fixture-dependencies]'
     package-ecosystem: 'npm'
     allow:
       - dependency-name: 'nuxt'
@@ -185,14 +191,12 @@ updates:
       interval: 'daily'
     open-pull-requests-limit: 1
     reviewers:
-      - 'trek'
-      - 'TooTallNate'
-      - 'EndangeredMassa'
-      - 'erikareads'
-      - 'jeffsee55'
-      - 'onsclom'
+      - 'zero-config-support'
+    labels:
+      - 'pr: automerge'
+      - 'dependencies'
     commit-message:
-      prefix: '[framework-fixtures]'
+      prefix: '[framework-fixture-dependencies]'
     package-ecosystem: 'npm'
     allow:
       - dependency-name: 'parcel'
@@ -212,11 +216,12 @@ updates:
       interval: 'daily'
     open-pull-requests-limit: 1
     reviewers:
-      - 'trek'
-      - 'TooTallNate'
-      - 'EndangeredMassa'
+      - 'zero-config-support'
+    labels:
+      - 'pr: automerge'
+      - 'dependencies'
     commit-message:
-      prefix: '[framework-fixtures]'
+      prefix: '[framework-fixture-dependencies]'
     package-ecosystem: 'npm'
     allow:
       - dependency-name: 'preact*'
@@ -236,11 +241,12 @@ updates:
       interval: 'daily'
     open-pull-requests-limit: 1
     reviewers:
-      - 'trek'
-      - 'TooTallNate'
-      - 'EndangeredMassa'
+      - 'zero-config-support'
+    labels:
+      - 'pr: automerge'
+      - 'dependencies'
     commit-message:
-      prefix: '[framework-fixtures]'
+      prefix: '[framework-fixture-dependencies]'
     package-ecosystem: 'npm'
     allow:
       - dependency-name: '@stencil/core'
@@ -260,11 +266,12 @@ updates:
       interval: 'daily'
     open-pull-requests-limit: 1
     reviewers:
-      - 'trek'
-      - 'TooTallNate'
-      - 'EndangeredMassa'
+      - 'zero-config-support'
+    labels:
+      - 'pr: automerge'
+      - 'dependencies'
     commit-message:
-      prefix: '[framework-fixtures]'
+      prefix: '[framework-fixture-dependencies]'
     package-ecosystem: 'npm'
     allow:
       - dependency-name: 'vite'
@@ -284,14 +291,12 @@ updates:
       interval: 'daily'
     open-pull-requests-limit: 1
     reviewers:
-      - 'trek'
-      - 'TooTallNate'
-      - 'EndangeredMassa'
-      - 'jefsee55'
-      - 'onsclom'
-      - 'erikareads'
+      - 'zero-config-support'
+    labels:
+      - 'pr: automerge'
+      - 'dependencies'
     commit-message:
-      prefix: '[framework-fixtures]'
+      prefix: '[framework-fixture-dependencies]'
     package-ecosystem: 'npm'
     allow:
       - dependency-name: 'vitepress'
