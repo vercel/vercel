@@ -135,8 +135,9 @@ export async function displayRuntimeLogs(
         warn(`${chalk.bold(log.message)}\n`);
         return;
       }
-      // eslint-disable-next-line no-console -- we intent to write unparsed logs to stdout so JQ could read them
-      parse ? prettyPrintLogline(log, print) : console.log(data);
+      parse
+        ? prettyPrintLogline(log, print)
+        : printRawLogLine(data as string, client);
       spinner(runtimeLogSpinnerMessage);
     };
 
@@ -196,6 +197,10 @@ function isRuntimeLimitDelimiter(log: RuntimeLog) {
   return (
     log.rowId === '' && log.level === 'error' && log.source === 'delimiter'
   );
+}
+
+function printRawLogLine(data: string, client: Client) {
+  client.stdout.write(`${data}\n`);
 }
 
 const dateTimeFormat = 'HH:mm:ss.SS';

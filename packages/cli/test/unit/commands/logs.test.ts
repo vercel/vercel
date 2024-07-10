@@ -46,7 +46,6 @@ describe('logs', () => {
   let user: ReturnType<typeof useUser>;
   let deployment: Deployment;
   const runtimeEndpointSpy = vi.fn();
-  const stdout = vi.spyOn(console, 'log').mockImplementation(() => void 0);
 
   beforeAll(() => {
     process.env.TZ = 'UTC';
@@ -238,7 +237,7 @@ describe('logs', () => {
         waiting for new logs...
         "
       `);
-    expect(stdout).not.toHaveBeenCalled();
+    expect(client.stdout.getFullOutput()).toEqual('');
   });
 
   it('prints log lines in json', async () => {
@@ -266,15 +265,9 @@ describe('logs', () => {
     expect(client.getFullOutput()).toContain(
       `This command now displays runtime logs. To access your build logs, run \`vercel inspect --logs ${deployment.url}\``
     );
-    expect(stdout).toHaveBeenNthCalledWith(
-      1,
-      `{"rowId":1,"timestampInMs":1717426870339,"level":"info","message":"Hello, world!","messageTruncated":false,"domain":"acme.com","requestMethod":"GET","requestPath":"/","responseStatusCode":200}`
-    );
-    expect(stdout).toHaveBeenNthCalledWith(
-      2,
-      `{"rowId":2,"timestampInMs":1717426870540,"message":"Bye...","messageTruncated":false,"domain":"acme.com","requestMethod":"OPTION","requestPath":"/logout","responseStatusCode":204}`
-    );
-    expect(stdout).toHaveBeenCalledTimes(2);
+    expect(client.stdout.getFullOutput())
+      .toContain(`{"rowId":1,"timestampInMs":1717426870339,"level":"info","message":"Hello, world!","messageTruncated":false,"domain":"acme.com","requestMethod":"GET","requestPath":"/","responseStatusCode":200}
+{"rowId":2,"timestampInMs":1717426870540,"message":"Bye...","messageTruncated":false,"domain":"acme.com","requestMethod":"OPTION","requestPath":"/logout","responseStatusCode":204}`);
   });
 
   it('stops when receiving "limit exceeded" delimiter from server', async () => {
@@ -362,7 +355,7 @@ describe('logs', () => {
     {
       title: 'as json',
       flag: '-j',
-      getOutput: () => stdout.mock.calls.map(([txt]) => txt).join('\n'),
+      getOutput: () => client.stdout.getFullOutput(),
     },
   ])(
     'retries on server error when reading logs $title',
@@ -406,7 +399,7 @@ describe('logs', () => {
     {
       title: 'as json',
       flag: '-j',
-      getOutput: () => stdout.mock.calls.map(([txt]) => txt).join('\n'),
+      getOutput: () => client.stdout.getFullOutput(),
     },
   ])(
     'resumes showing logs when failing to process a log line $title',
