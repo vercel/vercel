@@ -7,8 +7,11 @@ updates:
     open-pull-requests-limit: 1
     reviewers:
       - 'zero-config-support'
+    labels:
+      - 'pr: automerge'
+      - 'dependencies'
     commit-message:
-      prefix: '[framework-fixtures]'
+      prefix: '[framework-fixture-dependencies]'
     package-ecosystem: 'npm'
     allow:
       - dependency-name: '@angular*'
@@ -29,8 +32,11 @@ updates:
     open-pull-requests-limit: 1
     reviewers:
       - 'zero-config-support'
+    labels:
+      - 'pr: automerge'
+      - 'dependencies'
     commit-message:
-      prefix: '[framework-fixtures]'
+      prefix: '[framework-fixture-dependencies]'
     package-ecosystem: 'npm'
     allow:
       - dependency-name: 'astro*'
@@ -51,8 +57,11 @@ updates:
     open-pull-requests-limit: 1
     reviewers:
       - 'zero-config-support'
+    labels:
+      - 'pr: automerge'
+      - 'dependencies'
     commit-message:
-      prefix: '[framework-fixtures]'
+      prefix: '[framework-fixture-dependencies]'
     package-ecosystem: 'npm'
     allow:
       - dependency-name: '@remix-run*'
@@ -83,8 +92,11 @@ updates:
     open-pull-requests-limit: 1
     reviewers:
       - 'zero-config-support'
+    labels:
+      - 'pr: automerge'
+      - 'dependencies'
     commit-message:
-      prefix: '[framework-fixtures]'
+      prefix: '[framework-fixture-dependencies]'
     package-ecosystem: 'npm'
     allow:
       - dependency-name: '@ionic*'
@@ -110,8 +122,11 @@ updates:
     open-pull-requests-limit: 1
     reviewers:
       - 'zero-config-support'
+    labels:
+      - 'pr: automerge'
+      - 'dependencies'
     commit-message:
-      prefix: '[framework-fixtures]'
+      prefix: '[framework-fixture-dependencies]'
     package-ecosystem: 'npm'
     allow:
       - dependency-name: '@ionic*'
@@ -137,8 +152,11 @@ updates:
     open-pull-requests-limit: 1
     reviewers:
       - 'zero-config-support'
+    labels:
+      - 'pr: automerge'
+      - 'dependencies'
     commit-message:
-      prefix: '[framework-fixtures]'
+      prefix: '[framework-fixture-dependencies]'
     package-ecosystem: 'npm'
     allow:
       - dependency-name: 'nuxt'
@@ -174,8 +192,11 @@ updates:
     open-pull-requests-limit: 1
     reviewers:
       - 'zero-config-support'
+    labels:
+      - 'pr: automerge'
+      - 'dependencies'
     commit-message:
-      prefix: '[framework-fixtures]'
+      prefix: '[framework-fixture-dependencies]'
     package-ecosystem: 'npm'
     allow:
       - dependency-name: 'parcel'
@@ -196,8 +217,11 @@ updates:
     open-pull-requests-limit: 1
     reviewers:
       - 'zero-config-support'
+    labels:
+      - 'pr: automerge'
+      - 'dependencies'
     commit-message:
-      prefix: '[framework-fixtures]'
+      prefix: '[framework-fixture-dependencies]'
     package-ecosystem: 'npm'
     allow:
       - dependency-name: 'preact*'
@@ -218,8 +242,11 @@ updates:
     open-pull-requests-limit: 1
     reviewers:
       - 'zero-config-support'
+    labels:
+      - 'pr: automerge'
+      - 'dependencies'
     commit-message:
-      prefix: '[framework-fixtures]'
+      prefix: '[framework-fixture-dependencies]'
     package-ecosystem: 'npm'
     allow:
       - dependency-name: '@stencil/core'
@@ -240,8 +267,11 @@ updates:
     open-pull-requests-limit: 1
     reviewers:
       - 'zero-config-support'
+    labels:
+      - 'pr: automerge'
+      - 'dependencies'
     commit-message:
-      prefix: '[framework-fixtures]'
+      prefix: '[framework-fixture-dependencies]'
     package-ecosystem: 'npm'
     allow:
       - dependency-name: 'vite'
@@ -262,8 +292,11 @@ updates:
     open-pull-requests-limit: 1
     reviewers:
       - 'zero-config-support'
+    labels:
+      - 'pr: automerge'
+      - 'dependencies'
     commit-message:
-      prefix: '[framework-fixtures]'
+      prefix: '[framework-fixture-dependencies]'
     package-ecosystem: 'npm'
     allow:
       - dependency-name: 'vitepress'
