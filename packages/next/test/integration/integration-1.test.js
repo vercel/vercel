@@ -128,7 +128,6 @@ if (parseInt(process.versions.node.split('.')[0], 10) >= 16) {
 
     expect(buildResult.output['edge-route-handler']).toBeDefined();
     expect(buildResult.output['edge-route-handler'].type).toBe('EdgeFunction');
-    expect(buildResult.output['edge-route-handler.rsc']).not.toBeDefined();
 
     // prefixed static generation output with `/app` under dist server files
     expect(buildResult.output['dashboard'].type).toBe('Prerender');

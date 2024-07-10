@@ -52,3 +52,13 @@ jobs:
       - run: pnpm run prettier-check
       - run: pnpm run build
       - run: pnpm run type-check
+
+  summary:
+    name: Summary (lint)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs:
+      - test
+    steps:
+      - name: Check All
+        run: echo OK

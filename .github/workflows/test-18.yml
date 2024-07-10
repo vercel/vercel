@@ -105,7 +105,7 @@ jobs:
           DD_ENV: ci
 
   summary:
-    name: Summary
+    name: Summary (Node 18)
     runs-on: ubuntu-latest
     timeout-minutes: 5
     if: always()
