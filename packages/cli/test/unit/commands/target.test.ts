@@ -73,7 +73,7 @@ describe('target', () => {
 
       line = await lines.next();
       expect(line.value).contains(
-        `> 5 Custom Environments found under ${team.slug}/${project.name}`
+        `> 5 Environments found under ${team.slug}/${project.name}`
       );
 
       line = await lines.next();
