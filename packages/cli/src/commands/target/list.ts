@@ -44,10 +44,12 @@ export default async function list(
     url += `&until=${next}`;
   }
 
-  const result: CustomEnvironment[] = await client.fetch(url, {
+  const { environments: result } = (await client.fetch(url, {
     method: 'GET',
     accountId: link.org.id,
-  });
+  })) as {
+    environments: CustomEnvironment[];
+  };
 
   output.stopSpinner();
 
