@@ -35,14 +35,9 @@ export default async function list(
 
   output.spinner(`Fetching custom environments for ${projectSlugLink}`);
 
-  let url = `/projects/${encodeURIComponent(
+  const url = `/projects/${encodeURIComponent(
     link.project.id
-  )}/custom-environments?limit=20`;
-
-  const next = argv['--next'] || false;
-  if (next) {
-    url += `&until=${next}`;
-  }
+  )}/custom-environments`;
 
   const { environments: result } = (await client.fetch(url, {
     method: 'GET',
