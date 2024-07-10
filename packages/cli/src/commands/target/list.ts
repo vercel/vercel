@@ -87,7 +87,7 @@ export default async function list(
   output.log(
     `${
       result.length > 0
-        ? `${result.length} Custom Environments`
+        ? `${result.length} Custom Environment${result.length === 1 ? '' : 's'}`
         : 'No Custom Environments'
     } found under ${projectSlugLink} ${chalk.gray(`[${elapsed}]`)}`
   );
