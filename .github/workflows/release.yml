@@ -77,7 +77,7 @@ jobs:
             const script = require('./utils/update-latest-release.js')
             await script({ github, context })
   summary:
-    name: Summary
+    name: Summary (release)
     runs-on: ubuntu-latest
     timeout-minutes: 5
     needs:
