@@ -60,6 +60,7 @@ jobs:
     if: always()
     timeout-minutes: 1
     needs:
+      - enforce-changeset
       - lint
     steps:
       - name: Check All
