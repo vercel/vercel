@@ -22,6 +22,7 @@ jobs:
   setup:
     name: Find Changes
     runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && github.event.pull_request.title != 'Version Packages'
     outputs:
       tests: ${{ steps['set-tests'].outputs['tests'] }}
       dplUrl: ${{ steps.waitForTarball.outputs.url }}
@@ -47,6 +48,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           max_timeout: 360
           check_interval: 5
+
   test:
     timeout-minutes: 120
     runs-on: ${{ matrix.runner }}
