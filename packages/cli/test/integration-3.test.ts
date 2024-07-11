@@ -320,6 +320,7 @@ test('output logs with "short" output', async () => {
   if (!context.deployment) {
     throw new Error('Shared state "context.deployment" not set.');
   }
+  console.log('CONTEXT DEPLOYMENT', context);
 
   const { stderr, stdout, exitCode } = await execCli(binaryPath, [
     'logs',
@@ -331,7 +332,7 @@ test('output logs with "short" output', async () => {
   // "short" format includes timestamps
   const SHORT_FORMAT =
     /\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d\.\d+([+-][0-2]\d:[0-5]\d|Z)/;
-  expect(stdout).toMatch(SHORT_FORMAT);
+  expect(stdout, formatOutput({ stdout, stderr })).toMatch(SHORT_FORMAT);
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 });
