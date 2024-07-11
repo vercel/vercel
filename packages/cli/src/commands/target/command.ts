@@ -19,16 +19,7 @@ export const targetCommand: Command = {
       examples: [],
     },
   ],
-  options: [
-    {
-      name: 'next',
-      description: 'Show next page of results',
-      argument: 'MS',
-      shorthand: 'N',
-      type: String,
-      deprecated: false,
-    },
-  ],
+  options: [],
   examples: [
     {
       name: 'Add a new project',
