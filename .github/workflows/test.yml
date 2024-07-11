@@ -47,6 +47,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           max_timeout: 360
           check_interval: 5
+
   test:
     timeout-minutes: 120
     runs-on: ${{ matrix.runner }}
