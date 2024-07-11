@@ -76,6 +76,7 @@ jobs:
           script: |
             const script = require('./utils/update-latest-release.js')
             await script({ github, context })
+
   summary:
     name: Summary (release)
     runs-on: ubuntu-latest
