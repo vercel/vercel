@@ -7,6 +7,7 @@ on:
     tags:
       - '!*'
   pull_request:
+  pull_request_target:
 
 env:
   TURBO_REMOTE_ONLY: 'true'
