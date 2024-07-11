@@ -22,6 +22,8 @@ jobs:
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_TOKEN_PULL_REQUESTS }}
 
       - name: Fetch git tags
         run: git fetch origin 'refs/tags/*:refs/tags/*'
