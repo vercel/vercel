@@ -57,6 +57,7 @@ jobs:
   summary:
     name: Summary (lint)
     runs-on: ubuntu-latest
+    if: always()
     timeout-minutes: 1
     needs:
       - lint
