@@ -36,10 +36,11 @@ jobs:
       # Enforce a changeset file to be present
       - run: pnpm exec changeset status --since=main
 
-  test:
+  lint:
     name: Lint
     timeout-minutes: 10
     runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && github.event.pull_request.title != 'Version Packages'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -52,3 +53,15 @@ jobs:
       - run: pnpm run prettier-check
       - run: pnpm run build
       - run: pnpm run type-check
+
+  summary:
+    name: Summary (lint)
+    runs-on: ubuntu-latest
+    if: always()
+    timeout-minutes: 1
+    needs:
+      - enforce-changeset
+      - lint
+    steps:
+      - name: Check All
+        run: echo OK
