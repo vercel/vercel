@@ -201,7 +201,7 @@ async function printDetails({
     deployment.customEnvironment && deployment.team?.slug
       ? `${link(
           `${target}`,
-          `https://vercel.com/${deployment.team.slug}/${name}/settings/environments/${deployment.customEnvironment.id}}`,
+          `https://vercel.com/${deployment.team.slug}/${name}/settings/environments/${deployment.customEnvironment.id}`,
           { fallback: false, color: false }
         )}\n`
       : `${target}\n`
