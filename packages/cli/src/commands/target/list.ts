@@ -53,50 +53,46 @@ export default async function list(
   result = withDefaultEnvironmentsIncluded(result);
 
   output.log(
-    `${
-      result.length > 0
-        ? `${result.length} Environment${result.length === 1 ? '' : 's'}`
-        : 'No Environments'
+    `${result.length} Environment${
+      result.length === 1 ? '' : 's'
     } found under ${projectSlugLink} ${chalk.gray(`[${elapsed}]`)}`
   );
 
-  if (result.length > 0) {
-    const tablePrint = table(
-      [
-        ['Target Name', 'Target Slug', 'Target ID', 'Type', 'Updated'].map(
-          header => chalk.bold(chalk.cyan(header))
-        ),
-        ...result
-          .map(target => {
-            const boldName = chalk.bold(target.name);
-            const type =
-              target.type === 'production'
-                ? 'Production'
-                : target.type === 'development'
-                ? 'Development'
-                : 'Preview';
-            return [
-              [
-                output.link(
-                  boldName,
-                  `${projectUrl}/settings/environments/${target.id}`,
-                  { fallback: () => boldName, color: false }
-                ),
-                target.slug,
-                target.id,
-                type,
-                chalk.gray(
-                  target.updatedAt > 0 ? ms(Date.now() - target.updatedAt) : '-'
-                ),
-              ],
-            ];
-          })
-          .flat(),
-      ],
-      { hsep: 3 }
-    ).replace(/^/gm, '  ');
-    output.print(`\n${tablePrint}\n\n`);
-  }
+  const tablePrint = table(
+    [
+      ['Target Name', 'Target Slug', 'Target ID', 'Type', 'Updated'].map(
+        header => chalk.bold(chalk.cyan(header))
+      ),
+      ...result
+        .map(target => {
+          const boldName = chalk.bold(target.name);
+          const type =
+            target.type === 'production'
+              ? 'Production'
+              : target.type === 'development'
+              ? 'Development'
+              : 'Preview';
+          return [
+            [
+              output.link(
+                boldName,
+                `${projectUrl}/settings/environments/${target.id}`,
+                { fallback: () => boldName, color: false }
+              ),
+              target.slug,
+              target.id,
+              type,
+              chalk.gray(
+                target.updatedAt > 0 ? ms(Date.now() - target.updatedAt) : '-'
+              ),
+            ],
+          ];
+        })
+        .flat(),
+    ],
+    { hsep: 3 }
+  ).replace(/^/gm, '  ');
+  output.print(`\n${tablePrint}\n\n`);
   return 0;
 }
 

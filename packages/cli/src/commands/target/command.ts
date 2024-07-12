@@ -19,24 +19,11 @@ export const targetCommand: Command = {
       examples: [],
     },
   ],
-  options: [
-    {
-      name: 'next',
-      description: 'Show next page of results',
-      argument: 'MS',
-      shorthand: 'N',
-      type: String,
-      deprecated: false,
-    },
-  ],
+  options: [],
   examples: [
     {
-      name: 'Add a new project',
-      value: `${packageName} project add my-project`,
-    },
-    {
-      name: 'Paginate projects, where `1584722256178` is the time in milliseconds since the UNIX epoch',
-      value: `${packageName} project ls --next 1584722256178`,
+      name: 'List all targets for the current project',
+      value: `${packageName} target ls my-project`,
     },
   ],
 };
