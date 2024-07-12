@@ -7,7 +7,6 @@ on:
     tags:
       - '!*'
   pull_request:
-  pull_request_target:
 
 env:
   TURBO_REMOTE_ONLY: 'true'
@@ -29,6 +28,7 @@ jobs:
         with:
           fetch-depth: 0
           ref: main
+          token: ${{ secrets.GH_TOKEN_PULL_REQUESTS }}
       - run: git fetch origin ${{ github.event.pull_request.head.sha }}:pr-${{ github.event.pull_request.number }}
       - run: git checkout pr-${{ github.event.pull_request.number }}
       - name: install pnpm@8.3.1
@@ -58,11 +58,19 @@ jobs:
   summary:
     name: Summary (lint)
     runs-on: ubuntu-latest
-    if: always()
     timeout-minutes: 1
+    if: always()
     needs:
       - enforce-changeset
       - lint
     steps:
       - name: Check All
-        run: echo OK
+        run: |-
+          for status in ${{ join(needs.*.result, ' ') }}
+          do
+            if [ "$status" != "success" ] && [ "$status" != "skipped" ]
+            then
+              echo "Some checks failed"
+              exit 1
+            fi
+          done
