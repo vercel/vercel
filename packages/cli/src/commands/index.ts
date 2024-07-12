@@ -1,4 +1,4 @@
-const commands = new Map([
+export default new Map([
   ['alias', 'alias'],
   ['aliases', 'alias'],
   ['bisect', 'bisect'],
@@ -39,10 +39,3 @@ const commands = new Map([
   ['teams', 'teams'],
   ['whoami', 'whoami'],
 ]);
-
-if (process.env.CUSTOM_ENVIRONMENTS) {
-  commands.set('target', 'target');
-  commands.set('targets', 'target');
-}
-
-export default commands;
