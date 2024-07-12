@@ -17,6 +17,15 @@ describe('inspect', () => {
     expect(exitCode).toEqual(0);
   });
 
+  it('should print target information', async () => {
+    const user = useUser();
+    const deployment = useDeployment({ creator: user });
+    client.setArgv('inspect', deployment.url);
+    const exitCode = await inspect(client);
+    await expect(client.stderr).toOutput(`target\tproduction`);
+    expect(exitCode).toEqual(0);
+  });
+
   it('should print out deployment information for piped URL', async () => {
     const user = useUser();
     const deployment = useDeployment({ creator: user });
