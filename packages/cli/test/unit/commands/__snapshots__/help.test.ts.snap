@@ -638,6 +638,9 @@ exports[`help command > deploy help output snapshots > deploy help column width 
        --prod                   Create a
                                 product…
                                 deploym…
+                                (shorth…
+                                for     
+                                \`--targ…
   -p,  --public                 Deploym…
                                 is      
                                 public  
@@ -672,6 +675,11 @@ exports[`help command > deploy help output snapshots > deploy help column width 
                                 domain-…
                                 process 
                                 later   
+       --target                 Specify 
+                                the     
+                                target  
+                                deploym…
+                                environ…
        --with-cache             Retain  
                                 build   
                                 cache   
@@ -774,13 +782,15 @@ exports[`help command > deploy help output snapshots > deploy help column width 
        --no-wait                Don't wait for the deployment to finish         
        --prebuilt               Use in combination with \`vc build\`. Deploy an   
                                 existing build                                  
-       --prod                   Create a production deployment                  
+       --prod                   Create a production deployment (shorthand for   
+                                \`--target=production\`)                          
   -p,  --public                 Deployment is public (\`/_src\`) is exposed)      
        --regions                Set default regions to enable the deployment on 
        --skip-domain            Disable the automatic promotion (aliasing) of   
                                 the relevant domains to a new production        
                                 deployment. You can use \`vc promote\` to complete
                                 the domain-assignment process later             
+       --target                 Specify the target deployment environment       
        --with-cache             Retain build cache when using "--force"         
   -y,  --yes                    Use default options to skip all prompts         
 
@@ -842,11 +852,12 @@ exports[`help command > deploy help output snapshots > deploy help column width 
   -m,  --meta <key=value>       Specify metadata for the deployment (e.g. \`-m KEY1=value1 -m KEY2=value2\`)              
        --no-wait                Don't wait for the deployment to finish                                                 
        --prebuilt               Use in combination with \`vc build\`. Deploy an existing build                            
-       --prod                   Create a production deployment                                                          
+       --prod                   Create a production deployment (shorthand for \`--target=production\`)                    
   -p,  --public                 Deployment is public (\`/_src\`) is exposed)                                              
        --regions                Set default regions to enable the deployment on                                         
        --skip-domain            Disable the automatic promotion (aliasing) of the relevant domains to a new production  
                                 deployment. You can use \`vc promote\` to complete the domain-assignment process later    
+       --target                 Specify the target deployment environment                                               
        --with-cache             Retain build cache when using "--force"                                                 
   -y,  --yes                    Use default options to skip all prompts                                                 
 
