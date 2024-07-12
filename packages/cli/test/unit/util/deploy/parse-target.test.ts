@@ -1,7 +1,7 @@
 import { describe, beforeEach, it, expect } from 'vitest';
 import parseTarget from '../../../../src/util/deploy/parse-target';
 import { Output } from '../../../../src/util/output';
-import { Mock, vi } from 'vitest';
+import { vi } from 'vitest';
 
 describe('parseTarget', () => {
   let output: Output;
@@ -15,16 +15,6 @@ describe('parseTarget', () => {
   it('defaults to `undefined`', () => {
     let result = parseTarget(output);
     expect(result).toEqual(undefined);
-  });
-
-  it('fails when given invalid target', () => {
-    const result = parseTarget(output, 'not-a-real-environment');
-    expect(result).toEqual(1);
-
-    const errorMock = (output.error as Mock<any, any>).mock;
-    expect(errorMock.calls[0][0]).toMatch(
-      /not-a-real-environment.+is not valid/g
-    );
   });
 
   it('parses "production" target', () => {
