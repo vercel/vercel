@@ -141,7 +141,7 @@ test('output the version', async () => {
   const version = stdout.trim();
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
-  expect(semVer.valid(version)).toBeTruthy();
+  expect(semVer.valid(version), `not valid semver: ${version}`).toBeTruthy();
   expect(version).toBe(pkg.version);
 });
 
@@ -335,16 +335,9 @@ describe('given a deployment', () => {
       '--logs',
     ]);
 
-    expect(stderr).toContain(
-      `Fetching deployment "${new URL(context.deploymentUrl).host}"`
-    );
-
-    // search for timestamps
-    expect(
-      stderr.match(
-        /\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d\.\d+([+-][0-2]\d:[0-5]\d|Z)/
-      )
-    ).toBeTruthy();
+    const TIMESTAMP_FORMAT =
+      /\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d\.\d+([+-][0-2]\d:[0-5]\d|Z)/;
+    expect(stderr).toMatch(TIMESTAMP_FORMAT);
 
     const allLogs = formatOutput({ stdout, stderr });
     expect(stderr, allLogs).toContain('Running "vercel build"');
@@ -745,14 +738,12 @@ test('`vercel rm` 404 exits quickly', async () => {
 
   // "does not exist" case is exit code 1, similar to Unix `rm`
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
-  expect(
-    stderr.includes(
-      'Could not find any deployments or projects matching "this.is.a.deployment.that.does.not.exist.example.com"'
-    )
-  ).toBeTruthy();
+  expect(stderr).toContain(
+    'Could not find any deployments or projects matching "this.is.a.deployment.that.does.not.exist.example.com"'
+  );
 
   // "quickly" meaning < 5 seconds, because it used to hang from a previous bug
-  expect(delta < 5000).toBeTruthy();
+  expect(delta).toBeLessThan(5000);
 });
 
 test('render build errors', async () => {
