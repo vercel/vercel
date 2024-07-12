@@ -192,7 +192,6 @@ async function printDetails({
   print(chalk.bold('  General\n\n'));
   print(`    ${chalk.cyan('id')}\t\t${id}\n`);
   print(`    ${chalk.cyan('name')}\t${name}\n`);
-  // @ts-ignore - customEnvironment needs to be defined on Deployment
   const customEnvironmentName = deployment.customEnvironment?.name;
   const target = customEnvironmentName ?? deployment.target ?? 'preview';
   if (target) {
@@ -200,7 +199,6 @@ async function printDetails({
     // TODO: once custom environments is shipped for all users,
     // make all deployments link to the environment settings page
     print(
-      // @ts-ignore - customEnvironment needs to be defined on Deployment
       customEnvironmentName && deployment.team?.slug
         ? `${link(
             `${target}`,
