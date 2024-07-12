@@ -202,7 +202,7 @@ async function printDetails({
       ? `${link(
           `${target}`,
           `https://vercel.com/${deployment.team.slug}/${name}/settings/environments/${deployment.customEnvironment.id}`,
-          { fallback: false, color: false }
+          { fallback: () => target, color: false }
         )}\n`
       : `${target}\n`
   );
