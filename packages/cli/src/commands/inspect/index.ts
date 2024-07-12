@@ -202,7 +202,6 @@ async function printDetails({
       customEnvironmentName && deployment.team?.slug
         ? `${link(
             `${target}`,
-            // @ts-ignore - customEnvironment needs to be defined on Deployment
             `https://vercel.com/${deployment.team.slug}/${name}/settings/environments/${deployment.customEnvironment.id}}`,
             { fallback: false }
           )}\n`
