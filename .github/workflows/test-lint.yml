@@ -59,6 +59,7 @@ jobs:
     name: Summary (lint)
     runs-on: ubuntu-latest
     timeout-minutes: 1
+    if: always()
     needs:
       - enforce-changeset
       - lint
