@@ -199,10 +199,10 @@ async function printDetails({
     // TODO: once custom environments is shipped for all users,
     // make all deployments link to the environment settings page
     print(
-      customEnvironmentName && deployment.team?.slug
+      deployment.customEnvironment && deployment.team?.slug
         ? `${link(
             `${target}`,
-            `https://vercel.com/${deployment.team.slug}/${name}/settings/environments/${deployment.customEnvironment.id}}`,
+            `https://vercel.com/${deployment.team.slug}/${name}/settings/environments/${deployment.customEnvironment?.id}}`,
             { fallback: false }
           )}\n`
         : `${target}\n`
