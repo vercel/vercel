@@ -1,7 +1,0 @@
-{
-  "functions": {
-    "api/user.ts": {
-      "runtime": "vercel-deno@3.1.0"
-    }
-  }
-}
