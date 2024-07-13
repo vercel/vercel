@@ -181,7 +181,7 @@ async function printDetails({
     alias: aliases,
   } = deployment;
 
-  const { print } = client.output;
+  const { print, link } = client.output;
 
   const { builds } =
     deployment.version === 2
@@ -192,6 +192,20 @@ async function printDetails({
   print(chalk.bold('  General\n\n'));
   print(`    ${chalk.cyan('id')}\t\t${id}\n`);
   print(`    ${chalk.cyan('name')}\t${name}\n`);
+  const customEnvironmentName = deployment.customEnvironment?.name;
+  const target = customEnvironmentName ?? deployment.target ?? 'preview';
+  print(`    ${chalk.cyan('target')}\t`);
+  // TODO: once custom environments is shipped for all users,
+  // make all deployments link to the environment settings page
+  print(
+    deployment.customEnvironment && deployment.team?.slug
+      ? `${link(
+          `${target}`,
+          `https://vercel.com/${deployment.team.slug}/${name}/settings/environments/${deployment.customEnvironment.id}`,
+          { fallback: () => target, color: false }
+        )}\n`
+      : `${target}\n`
+  );
   print(`    ${chalk.cyan('status')}\t${stateString(readyState)}\n`);
   print(`    ${chalk.cyan('url')}\t\thttps://${url}\n`);
   if (createdAt) {

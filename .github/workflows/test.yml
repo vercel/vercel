@@ -111,6 +111,7 @@ jobs:
     name: Summary (Node 16)
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    if: always()
     needs:
       - test
     steps:
