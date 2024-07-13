@@ -138,6 +138,25 @@ type RouteOrMiddleware =
       middleware: 0;
     };
 
+export interface CustomEnvironment {
+  id: string;
+  name: string;
+  slug: string;
+  type: CustomEnvironmentType;
+  description?: string;
+  branchMatcher?: CustomEnvironmentBranchMatcher;
+  createdAt: number;
+  updatedAt: number;
+  domains?: ProjectDomainFromApi[];
+}
+
+export interface CustomEnvironmentBranchMatcher {
+  type: 'startsWith' | 'equals' | 'endsWith';
+  pattern: string;
+}
+
+export type CustomEnvironmentType = 'production' | 'preview' | 'development';
+
 export type Deployment = {
   alias?: string[];
   aliasAssigned?: boolean | null | number;
@@ -160,6 +179,7 @@ export type Deployment = {
   createdAt: number;
   createdIn?: string;
   creator: { uid: string; username?: string };
+  customEnvironment?: CustomEnvironment;
   env?: string[];
   errorCode?: string;
   errorLink?: string;

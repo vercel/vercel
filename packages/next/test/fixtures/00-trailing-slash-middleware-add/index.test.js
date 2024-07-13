@@ -1,5 +1,6 @@
-const fetch = require('node-fetch');
 const path = require('path');
+const fs = require('fs-extra');
+const fetch = require('node-fetch');
 const { deployAndTest, waitFor } = require('../../utils');
 
 describe(`${__dirname.split(path.sep).pop()}`, () => {
@@ -7,8 +8,24 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     deploymentUrl: '',
     deploymentId: '',
   };
+  const sourcePath = path.join(__dirname, '../00-trailing-slash-add');
+  const outputPath = path.join(__dirname, 'temp');
+
+  afterAll(async () => {
+    await fs.remove(outputPath);
+  });
+
   it('should deploy and pass probe checks', async () => {
-    ctx = await deployAndTest(__dirname);
+    await fs.copy(sourcePath, outputPath);
+    await fs.writeFile(
+      path.join(outputPath, 'middleware.js'),
+      `
+      export default function middleware() {
+        // no-op middleware to trigger next data resolving routes
+      }
+      `
+    );
+    ctx = await deployAndTest(outputPath);
   });
 
   it('should have correct content after revalidating for /', async () => {
