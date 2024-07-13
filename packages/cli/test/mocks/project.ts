@@ -3,6 +3,8 @@ import type {
   ProjectEnvTarget,
   Project,
   ProjectEnvVariable,
+  CustomEnvironment,
+  Deployment,
 } from '@vercel-internals/types';
 import { formatProvider } from '../../src/util/git/connect-git-provider';
 import { parseEnvironment } from '../../src/commands/pull';
@@ -196,24 +198,6 @@ export function useUnknownProject() {
     res.json(project);
   });
 }
-
-interface CustomEnvironmentBranchMatcher {
-  type: 'startsWith' | 'equals' | 'endsWith';
-  pattern: string;
-}
-
-type CustomEnvironmentType = 'production' | 'preview' | 'development';
-
-type CustomEnvironment = {
-  id: string;
-  name: string;
-  slug: string;
-  type: CustomEnvironmentType;
-  description?: string;
-  branchMatcher?: CustomEnvironmentBranchMatcher;
-  createdAt: number;
-  updatedAt: number;
-};
 
 export function useProject(
   project: Partial<
