@@ -22,8 +22,12 @@ export default async function prompt(
     { name: 'Continue with GitLab', value: 'gitlab', short: 'gitlab' },
     { name: 'Continue with Bitbucket', value: 'bitbucket', short: 'bitbucket' },
     { name: 'Continue with Email', value: 'email', short: 'email' },
-    { name: 'Sign up with Email', value: 'emailSignUp', short: 'emailSignUp' },
     { name: 'Continue with SAML Single Sign-On', value: 'saml', short: 'saml' },
+    {
+      name: 'Create your Vercel account with Email',
+      value: 'emailSignUp',
+      short: 'emailSignUp',
+    },
   ];
 
   if (ssoUserId || (error && !error.teamId)) {
@@ -47,8 +51,15 @@ export default async function prompt(
     const email = await readInput(client, 'Enter your email address:');
     result = await doEmailLogin(client, email, ssoUserId);
   } else if (choice === 'emailSignUp') {
+    const plans = [
+      { name: 'Hobby', value: 'hobby', short: 'hobby' },
+      { name: 'Pro', value: 'pro', short: 'pro' },
+    ];
+    const plan = await listInput(client, {
+      message: 'What plan you would like?',
+      choices: plans,
+    });
     const email = await readInput(client, 'Enter your email address:');
-    const plan = await readInput(client, 'Enter the plan you would like:');
     const slug =
       error?.teamId || (await readInput(client, 'Enter your Team slug:'));
     result = await doEmailSignUp(client, email, plan, slug, ssoUserId);
