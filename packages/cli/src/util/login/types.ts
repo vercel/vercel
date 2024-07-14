@@ -5,10 +5,16 @@ export interface LoginData {
 export interface SignUpData {
   token: string;
   securityCode: string;
+  error: SignUpError;
 }
 export interface VerifyError {
   token: string;
   securityCode: string;
+}
+export interface SignUpError {
+  code: string;
+  message: string;
+  email: string;
 }
 export interface VerifyResult {
   email: string;

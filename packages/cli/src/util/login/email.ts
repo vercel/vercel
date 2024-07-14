@@ -2,7 +2,7 @@ import ms from 'ms';
 import sleep from '../sleep';
 import highlight from '../output/highlight';
 import eraseLines from '../output/erase-lines';
-import verify from './verify';
+import verify, { verifySignUp } from './verify';
 import executeLogin from './login';
 import executeSignUp from './signUp';
 import Client from '../client';
@@ -76,12 +76,12 @@ export async function doEmailSignUp(
   let verificationToken;
   const { output } = client;
 
-  output.spinner('Sending you an email');
-
   try {
-    const data = await executeSignUp(client, email, plan, teamName);
+    const data = await executeSignUp(client, email);
     verificationToken = data.token;
     securityCode = data.securityCode;
+
+    output.spinner('Sending you an email');
   } catch (err: unknown) {
     output.error(errorToString(err));
     return 1;
@@ -104,11 +104,13 @@ export async function doEmailSignUp(
   while (!result) {
     try {
       await sleep(ms('1s'));
-      result = await verify(
+      result = await verifySignUp(
         client,
         verificationToken,
         email,
         'Email',
+        plan,
+        teamName,
         ssoUserId
       );
     } catch (err: unknown) {
@@ -119,6 +121,6 @@ export async function doEmailSignUp(
     }
   }
 
-  output.success(`Email authentication complete for ${email}`);
+  output.success(`Email sign up complete for ${email}`);
   return result;
 }
