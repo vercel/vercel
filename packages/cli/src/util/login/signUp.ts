@@ -15,9 +15,9 @@ export default async function signUp(
         body: { email, tokenName: 'other' },
       }
     );
-  } catch (err: unknown) {
+  } catch (err: any) {
     if (isAPIError(err)) {
-      if (err.code === 'invalid_email') {
+      if (err.code === 'already_exists') {
         throw new InvalidEmail(email, err.message);
       }
     }
