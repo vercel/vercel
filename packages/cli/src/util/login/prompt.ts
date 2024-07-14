@@ -22,7 +22,7 @@ export default async function prompt(
     { name: 'Continue with GitLab', value: 'gitlab', short: 'gitlab' },
     { name: 'Continue with Bitbucket', value: 'bitbucket', short: 'bitbucket' },
     { name: 'Continue with Email', value: 'email', short: 'email' },
-    { name: 'SignUp with Email', value: 'emailSignUp', short: 'emailSignUp' },
+    { name: 'Sign up with Email', value: 'emailSignUp', short: 'emailSignUp' },
     { name: 'Continue with SAML Single Sign-On', value: 'saml', short: 'saml' },
   ];
 

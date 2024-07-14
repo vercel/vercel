@@ -33,3 +33,40 @@ export default function verify(
 
   return client.fetch<LoginResultSuccess>(url.href, { useCurrentTeam: false });
 }
+export function verifySignUp(
+  client: Client,
+  verificationToken: string,
+  email: string | undefined,
+  provider: string,
+  plan: string,
+  teamName: string,
+  ssoUserId?: string
+) {
+  const url = new URL('/registration/verify', client.apiUrl);
+  url.searchParams.set('token', verificationToken);
+  if (email) {
+    url.searchParams.set('email', email);
+  }
+  if (plan) {
+    url.searchParams.set('teamPlan', plan);
+  }
+  if (teamName) {
+    url.searchParams.set('teamName', teamName);
+  }
+
+  if (!client.authConfig.token) {
+    // Set the "name" of the Token that will be created
+    const hyphens = new RegExp('-', 'g');
+    const host = hostname().replace(hyphens, ' ').replace('.local', '');
+    const tokenName = `${getTitleName()} CLI on ${host} via ${provider}`;
+    url.searchParams.set('tokenName', tokenName);
+  }
+
+  // If `ssoUserId` is defined then this verification
+  // will complete the SAML two-step login connection
+  if (ssoUserId) {
+    url.searchParams.set('ssoUserId', ssoUserId);
+  }
+
+  return client.fetch<LoginResultSuccess>(url.href, { useCurrentTeam: false });
+}
