@@ -1,5 +1,5 @@
 import { EOL } from 'os';
-import { join, dirname, relative } from 'path';
+import { join, dirname } from 'path';
 import execa from 'execa';
 import {
   ensureDir,
@@ -49,7 +49,7 @@ async function bundleInstall(
   bundleDir: string,
   gemfilePath: string,
   rubyPath: string,
-  runtime: string
+  major: number
 ) {
   debug(`running "bundle install --deployment"...`);
   const bundleAppConfig = await getWriteableDirectory();
@@ -73,6 +73,15 @@ async function bundleInstall(
       gemfilePath,
       gemfileContent.replace('ruby "~> 3.2.x"', 'ruby "~> 3.2.0"')
     );
+  } else if (gemfileContent.includes('ruby "~> 3.3.x"')) {
+    // Gemfile contains "3.3.x" which will cause an error message:
+    // "Your Ruby patchlevel is 0, but your Gemfile specified -1"
+    // See https://github.com/rubygems/bundler/blob/3f0638c6c8d340c2f2405ecb84eb3b39c433e36e/lib/bundler/errors.rb#L49
+    // We must correct to the actual version in the build container.
+    await writeFile(
+      gemfilePath,
+      gemfileContent.replace('ruby "~> 3.3.x"', 'ruby "~> 3.3.0"')
+    );
   }
 
   const bundlerEnv = cloneEnv(process.env, {
@@ -83,9 +92,9 @@ async function bundleInstall(
     BUNDLE_JOBS: '4',
   });
 
-  // Lambda "ruby3.2" runtime does not include "webrick",
-  // which is needed for the `vc_init.rb` entrypoint file
-  if (runtime === 'ruby3.2') {
+  // "webrick" needs to be installed for Ruby 3+ to fix runtime error:
+  // webrick is not part of the default gems since Ruby 3.0.0. Install webrick from RubyGems.
+  if (major >= 3) {
     const result = await execa('bundler', ['add', 'webrick'], {
       cwd: dirname(gemfilePath),
       stdio: 'pipe',
@@ -143,7 +152,7 @@ export const build: BuildV3 = async ({
   const gemfileContents = gemfilePath
     ? await readFile(gemfilePath, 'utf8')
     : '';
-  const { gemHome, bundlerPath, vendorPath, runtime, rubyPath } =
+  const { gemHome, bundlerPath, vendorPath, runtime, rubyPath, major } =
     await installBundler(meta, gemfileContents);
   process.env.GEM_HOME = gemHome;
   debug(`Checking existing vendor directory at "${vendorPath}"`);
@@ -178,24 +187,9 @@ export const build: BuildV3 = async ({
         'did not find a vendor directory but found a Gemfile, bundling gems...'
       );
 
-      const fileAtRoot = relative(workPath, gemfilePath) === gemfileName;
-
-      // If the `Gemfile` is located in the Root Directory of the project and
-      // the new File System API is used (`avoidTopLevelInstall`), the Install Command
-      // will have already installed its dependencies, so we don't need to do it again.
-      if (meta.avoidTopLevelInstall && fileAtRoot) {
-        debug('Skipping `bundle install` — already handled by Install Command');
-      } else {
-        // try installing. this won't work if native extensions are required.
-        // if that's the case, gems should be vendored locally before deploying.
-        await bundleInstall(
-          bundlerPath,
-          bundleDir,
-          gemfilePath,
-          rubyPath,
-          runtime
-        );
-      }
+      // try installing. this won't work if native extensions are required.
+      // if that's the case, gems should be vendored locally before deploying.
+      await bundleInstall(bundlerPath, bundleDir, gemfilePath, rubyPath, major);
     }
   } else {
     debug('found vendor directory, skipping "bundle install"...');

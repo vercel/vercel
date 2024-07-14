@@ -37,7 +37,7 @@ You can use the `dev` script to run local changes as if you were invoking Vercel
 
 When contributing to this repository, please first discuss the change you wish to make via [GitHub Discussions](https://github.com/vercel/vercel/discussions/new) with the owners of this repository before submitting a Pull Request.
 
-Please read our [Code of Conduct](CODE_OF_CONDUCT.md) and follow it in all your interactions with the project.
+Please read our [Code of Conduct](./.github/CODE_OF_CONDUCT.md) and follow it in all your interactions with the project.
 
 ### Local development
 

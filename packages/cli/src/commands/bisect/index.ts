@@ -8,7 +8,7 @@ import { URLSearchParams, parse } from 'url';
 import box from '../../util/output/box';
 import formatDate from '../../util/format-date';
 import link from '../../util/output/link';
-import getArgs from '../../util/get-args';
+import { parseArguments } from '../../util/get-args';
 import Client from '../../util/client';
 import { Deployment } from '@vercel-internals/types';
 import { normalizeURL } from '../../util/bisect/normalize-url';
@@ -16,6 +16,8 @@ import getScope from '../../util/get-scope';
 import getDeployment from '../../util/get-deployment';
 import { help } from '../help';
 import { bisectCommand } from './command';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import handleError from '../../util/handle-error';
 
 interface Deployments {
   deployments: Deployment[];
@@ -25,39 +27,37 @@ export default async function bisect(client: Client): Promise<number> {
   const scope = await getScope(client);
   const { contextName } = scope;
 
-  const argv = getArgs(client.argv.slice(2), {
-    '--bad': String,
-    '-b': '--bad',
-    '--good': String,
-    '-g': '--good',
-    '--open': Boolean,
-    '-o': '--open',
-    '--path': String,
-    '-p': '--path',
-    '--run': String,
-    '-r': '--run',
-  });
+  let parsedArgs = null;
 
-  if (argv['--help']) {
+  const flagsSpecification = getFlagsSpecification(bisectCommand.options);
+
+  try {
+    parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
+  } catch (error) {
+    handleError(error);
+    return 1;
+  }
+
+  if (parsedArgs.flags['--help']) {
     output.print(help(bisectCommand, { columns: client.stderr.columns }));
     return 2;
   }
 
   let bad =
-    argv['--bad'] ||
+    parsedArgs.flags['--bad'] ||
     (await client.input.text({
       message: `Specify a URL where the bug occurs:`,
       validate: val => (val ? true : 'A URL must be provided'),
     }));
   let good =
-    argv['--good'] ||
+    parsedArgs.flags['--good'] ||
     (await client.input.text({
       message: `Specify a URL where the bug does not occur:`,
       validate: val => (val ? true : 'A URL must be provided'),
     }));
-  let subpath = argv['--path'] || '';
-  let run = argv['--run'] || '';
-  const openEnabled = argv['--open'] || false;
+  let subpath = parsedArgs.flags['--path'] || '';
+  let run = parsedArgs.flags['--run'] || '';
+  const openEnabled = parsedArgs.flags['--open'] || false;
 
   if (run) {
     run = resolve(run);

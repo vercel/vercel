@@ -317,7 +317,7 @@ async function compile(
   const babelCompileEnabled =
     !isEdgeFunction || process.env.VERCEL_EDGE_NO_BABEL !== '1';
   if (babelCompileEnabled && esmPaths.length) {
-    const babelCompile = require('./babel').compile;
+    const babelCompile = (await import('./babel.js')).compile;
     for (const path of esmPaths) {
       const pathDir = join(workPath, dirname(path));
       if (!pkgCache.has(pathDir)) {
@@ -348,7 +348,7 @@ async function compile(
         );
       }
       console.log(`Compiling "${filename}" from ESM to CommonJS...`);
-      const { code, map } = babelCompile(filename, source);
+      const { code, map } = babelCompile(filename, String(source));
       shouldAddSourcemapSupport = true;
       preparedFiles[path] = new FileBlob({
         data: `${code}\n//# sourceMappingURL=${filename}.map`,

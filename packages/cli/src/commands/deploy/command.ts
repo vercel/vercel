@@ -79,7 +79,8 @@ export const deployCommand: Command = {
       shorthand: null,
       type: Boolean,
       deprecated: false,
-      description: 'Create a production deployment',
+      description:
+        'Create a production deployment (shorthand for `--target=production`)',
     },
     {
       name: 'archive',
@@ -112,6 +113,13 @@ export const deployCommand: Command = {
       description: 'Use default options to skip all prompts',
     },
     {
+      name: 'logs',
+      shorthand: 'l',
+      type: Boolean,
+      deprecated: false,
+      description: 'Print the build logs',
+    },
+    {
       name: 'name',
       shorthand: 'n',
       type: String,
@@ -129,7 +137,7 @@ export const deployCommand: Command = {
       name: 'target',
       shorthand: null,
       type: String,
-      deprecated: true,
+      deprecated: false,
       description: 'Specify the target deployment environment',
     },
     {

@@ -1,5 +1,23 @@
 # @vercel/redwood
 
+## 2.1.0
+
+### Minor Changes
+
+- Add support for API endpoint configuration via `export const config` syntax ([#11776](https://github.com/vercel/vercel/pull/11776))
+
+## 2.0.10
+
+### Patch Changes
+
+- Upgrade to @vercel/nft 0.27.2 with browser remapping support ([#11700](https://github.com/vercel/vercel/pull/11700))
+
+## 2.0.9
+
+### Patch Changes
+
+- Bump `@vercel/nft@0.27.0` ([#11580](https://github.com/vercel/vercel/pull/11580))
+
 ## 2.0.8
 
 ### Patch Changes

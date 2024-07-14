@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "next": "canary"
+  },
+  "scripts": {
+    "build": "next build && cp .next/server/server-reference-manifest.json public/"
+  },
+  "ignoreNextjsUpdates": true
+}

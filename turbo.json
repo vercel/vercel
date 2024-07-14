@@ -16,7 +16,11 @@
       "dependsOn": ["build"],
       "outputMode": "new-only"
     },
-    "vitest-unit-run": {
+    "vitest-run": {
+      "dependsOn": ["build"],
+      "outputMode": "new-only"
+    },
+    "vitest-e2e": {
       "dependsOn": ["build"],
       "outputMode": "new-only"
     },

@@ -35,6 +35,8 @@ export default new Map([
   ['secret', 'secrets'],
   ['secrets', 'secrets'],
   ['switch', 'teams'],
+  ['target', 'target'],
+  ['targets', 'target'],
   ['team', 'teams'],
   ['teams', 'teams'],
   ['whoami', 'whoami'],

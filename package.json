@@ -33,7 +33,7 @@
     "source-map-support": "0.5.12",
     "ts-eager": "2.0.2",
     "ts-jest": "29.1.0",
-    "turbo": "1.13.2",
+    "turbo": "1.13.3",
     "typescript": "4.9.5"
   },
   "scripts": {
@@ -54,7 +54,7 @@
     "type-check": "turbo type-check --concurrency=12 --output-logs=errors-only --summarize --continue"
   },
   "lint-staged": {
-    "./{*,{api,packages,test,utils}/**/*}.{js,ts}": [
+    "./{*,{api,internals,packages,test,utils}/**/*}.{js,ts}": [
       "prettier --write",
       "eslint",
       "git add"

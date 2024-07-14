@@ -189,7 +189,7 @@ it('should prefer package.json engines over project setting from config and warn
     )
   ).toHaveProperty('range', '18.x');
   expect(warningMessages).toStrictEqual([
-    'Warning: Due to "engines": { "node": "18.x" } in your `package.json` file, the Node.js Version defined in your Project Settings ("12.x") will not apply. Learn More: http://vercel.link/node-version',
+    'Warning: Due to "engines": { "node": "18.x" } in your `package.json` file, the Node.js Version defined in your Project Settings ("12.x") will not apply, Node.js Version "18.x" will be used instead. Learn More: http://vercel.link/node-version',
   ]);
 });
 
@@ -217,6 +217,21 @@ it('should warn when package.json engines is greater than', async () => {
     )
   ).toHaveProperty('range', '20.x');
   expect(warningMessages).toStrictEqual([
+    'Warning: Detected "engines": { "node": ">=16" } in your `package.json` that will automatically upgrade when a new major Node.js Version is released. Learn More: http://vercel.link/node-version',
+  ]);
+});
+
+it('should warn when project settings gets overrided', async () => {
+  expect(
+    await getNodeVersion(
+      path.join(__dirname, 'pkg-engine-node-greaterthan'),
+      undefined,
+      { nodeVersion: '16.x' },
+      {}
+    )
+  ).toHaveProperty('range', '20.x');
+  expect(warningMessages).toStrictEqual([
+    'Warning: Due to "engines": { "node": ">=16" } in your `package.json` file, the Node.js Version defined in your Project Settings ("16.x") will not apply, Node.js Version "20.x" will be used instead. Learn More: http://vercel.link/node-version',
     'Warning: Detected "engines": { "node": ">=16" } in your `package.json` that will automatically upgrade when a new major Node.js Version is released. Learn More: http://vercel.link/node-version',
   ]);
 });
@@ -271,7 +286,7 @@ it('should throw for discontinued versions', async () => {
   // Mock a future date so that Node 16 becomes discontinued
   const realDateNow = Date.now;
   try {
-    global.Date.now = () => new Date('2024-07-16').getTime();
+    global.Date.now = () => new Date('2025-03-01').getTime();
 
     expect(getSupportedNodeVersion('8.10.x', false)).rejects.toThrow();
     expect(getSupportedNodeVersion('8.10.x', true)).rejects.toThrow();
@@ -341,8 +356,8 @@ it('should warn for deprecated versions, soon to be discontinued', async () => {
       'Error: Node.js version 12.x has reached End-of-Life. Deployments created on or after 2022-10-03 will fail to build. Please set Node.js Version to 20.x in your Project Settings to use Node.js 20.',
       'Error: Node.js version 14.x has reached End-of-Life. Deployments created on or after 2023-08-15 will fail to build. Please set "engines": { "node": "20.x" } in your `package.json` file to use Node.js 20.',
       'Error: Node.js version 14.x has reached End-of-Life. Deployments created on or after 2023-08-15 will fail to build. Please set Node.js Version to 20.x in your Project Settings to use Node.js 20.',
-      'Error: Node.js version 16.x has reached End-of-Life. Deployments created on or after 2024-06-15 will fail to build. Please set "engines": { "node": "20.x" } in your `package.json` file to use Node.js 20.',
-      'Error: Node.js version 16.x has reached End-of-Life. Deployments created on or after 2024-06-15 will fail to build. Please set Node.js Version to 20.x in your Project Settings to use Node.js 20.',
+      'Error: Node.js version 16.x has reached End-of-Life. Deployments created on or after 2025-01-31 will fail to build. Please set "engines": { "node": "20.x" } in your `package.json` file to use Node.js 20.',
+      'Error: Node.js version 16.x has reached End-of-Life. Deployments created on or after 2025-01-31 will fail to build. Please set Node.js Version to 20.x in your Project Settings to use Node.js 20.',
     ]);
   } finally {
     global.Date.now = realDateNow;

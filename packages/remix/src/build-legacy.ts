@@ -104,8 +104,13 @@ export const build: BuildV2 = async ({
     meta
   );
 
-  const { cliType, packageJsonPath, lockfileVersion, lockfilePath } =
-    await scanParentDirs(entrypointFsDirname);
+  const {
+    cliType,
+    packageJsonPath,
+    packageJson,
+    lockfileVersion,
+    lockfilePath,
+  } = await scanParentDirs(entrypointFsDirname, true);
 
   if (!packageJsonPath) {
     throw new Error('Failed to locate `package.json` file in your project');
@@ -125,6 +130,7 @@ export const build: BuildV2 = async ({
   spawnOpts.env = getEnvForPackageManager({
     cliType,
     lockfileVersion,
+    packageJsonPackageManager: packageJson?.packageManager,
     nodeVersion,
     env: spawnOpts.env,
   });

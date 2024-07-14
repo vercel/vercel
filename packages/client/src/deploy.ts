@@ -33,6 +33,18 @@ async function* postDeployment(
     clientOptions.skipAutoDetectionConfirmation = true;
   }
 
+  // Preview deployments are the default - no need to set `target`
+  if (deploymentOptions.target === 'preview') {
+    deploymentOptions.target = undefined;
+  }
+
+  // "production" environment need to use `target`,
+  // otherwise use `customEnvironmentSlugOrId` for a Custom Environment
+  if (deploymentOptions.target && deploymentOptions.target !== 'production') {
+    deploymentOptions.customEnvironmentSlugOrId = deploymentOptions.target;
+    deploymentOptions.target = undefined;
+  }
+
   debug('Sending deployment creation API request');
   try {
     const response = await fetch(

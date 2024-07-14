@@ -8,6 +8,7 @@ const fileModeSymbol = Symbol('fileMode');
 const { logWithinTest } = require('./log');
 const ms = require('ms');
 
+const IS_CI = !!process.env.CI;
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function nowDeploy(projectName, bodies, randomness, uploadNowJson, opts) {
@@ -187,15 +188,12 @@ async function fetchWithAuth(url, opts = {}) {
     opts.headers.Authorization = `Bearer ${await fetchCachedToken()}`;
   }
 
-  if (opts.skipTeam) {
-    delete opts.skipTeam;
-  } else {
-    const { VERCEL_TEAM_ID } = process.env;
+  const { VERCEL_TEAM_ID } = process.env;
 
-    if (VERCEL_TEAM_ID) {
-      url += `${url.includes('?') ? '&' : '?'}teamId=${VERCEL_TEAM_ID}`;
-    }
+  if (VERCEL_TEAM_ID) {
+    url += `${url.includes('?') ? '&' : '?'}teamId=${VERCEL_TEAM_ID}`;
   }
+
   return await fetchApi(url, opts);
 }
 
@@ -221,7 +219,7 @@ async function fetchTokenWithRetry(retries = 5) {
     VERCEL_TEST_REGISTRATION_URL,
   } = process.env;
   if (VERCEL_TOKEN || NOW_TOKEN || TEMP_TOKEN) {
-    if (!TEMP_TOKEN) {
+    if (!TEMP_TOKEN && !IS_CI) {
       logWithinTest(
         'Your personal token will be used to make test deployments.'
       );
@@ -230,7 +228,7 @@ async function fetchTokenWithRetry(retries = 5) {
   }
   if (!VERCEL_TEST_TOKEN || !VERCEL_TEST_REGISTRATION_URL) {
     throw new Error(
-      process.env.CI
+      IS_CI
         ? 'Failed to create test deployment. This is expected for 3rd-party Pull Requests. Please run tests locally.'
         : 'Failed to create test deployment. Please set `VERCEL_TOKEN` environment variable and run again.'
     );
