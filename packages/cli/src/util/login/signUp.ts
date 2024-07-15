@@ -12,7 +12,7 @@ export default async function signUp(
       `/registration?mode=signup&source=cli`,
       {
         method: 'POST',
-        body: { email, tokenName: 'other' },
+        body: { email, tokenName: 'cli' },
       }
     );
   } catch (err: any) {

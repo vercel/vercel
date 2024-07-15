@@ -51,17 +51,15 @@ export default async function prompt(
     const email = await readInput(client, 'Enter your email address:');
     result = await doEmailLogin(client, email, ssoUserId);
   } else if (choice === 'emailSignUp') {
-    const plans = [
-      { name: 'Hobby', value: 'hobby', short: 'hobby' },
-      { name: 'Pro', value: 'pro', short: 'pro' },
-    ];
+    const plans = [{ name: 'Hobby', value: 'hobby', short: 'hobby' }];
     const plan = await listInput(client, {
       message: 'What plan you would like?',
       choices: plans,
     });
+
     const email = await readInput(client, 'Enter your email address:');
-    const slug =
-      error?.teamId || (await readInput(client, 'Enter your Team slug:'));
+    const slug = error?.teamId || (await readInput(client, 'Enter your name:'));
+
     result = await doEmailSignUp(client, email, plan, slug, ssoUserId);
   } else if (choice === 'saml') {
     const slug =
