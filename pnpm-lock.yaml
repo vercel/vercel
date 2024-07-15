@@ -460,6 +460,9 @@ importers:
       '@types/semver':
         specifier: 6.0.1
         version: 6.0.1
+      '@types/split2':
+        specifier: 4.2.3
+        version: 4.2.3
       '@types/tar-fs':
         specifier: 1.16.1
         version: 1.16.1
@@ -688,6 +691,9 @@ importers:
       serve-handler:
         specifier: 6.1.1
         version: 6.1.1
+      split2:
+        specifier: 4.2.0
+        version: 4.2.0
       strip-ansi:
         specifier: 6.0.1
         version: 6.0.1
@@ -6034,6 +6040,12 @@ packages:
 
   /@types/source-list-map@0.1.2:
     resolution: {integrity: sha512-K5K+yml8LTo9bWJI/rECfIPrGgxdpeNbj+d53lwN4QjW1MCwlkhUms+gtdzigTeUyBr09+u8BwOIY3MXvHdcsA==}
+    dev: true
+
+  /@types/split2@4.2.3:
+    resolution: {integrity: sha512-59OXIlfUsi2k++H6CHgUQKEb2HKRokUA39HY1i1dS8/AIcqVjtAAFdf8u+HxTWK/4FUHMJQlKSZ4I6irCBJ1Zw==}
+    dependencies:
+      '@types/node': 16.18.11
     dev: true
 
   /@types/stack-utils@2.0.1:
@@ -15740,6 +15752,11 @@ packages:
     resolution: {integrity: sha512-9NThjpgZnifTkJpzTZ7Eue85S49QwpNhZTq6GRJwObb6jnLFNGB7Qm73V5HewTROPyxD0C29xqmaI68bQtV+hg==}
     dependencies:
       readable-stream: 3.6.2
+    dev: true
+
+  /split2@4.2.0:
+    resolution: {integrity: sha512-UcjcJOWknrNkF6PLX83qcHM6KHgVKNkV62Y8a5uYDVv9ydGQVwAHMKqHdJje1VTWpljG0WYpCDhrCdAOYH4TWg==}
+    engines: {node: '>= 10.x'}
     dev: true
 
   /sprintf-js@1.0.3:
