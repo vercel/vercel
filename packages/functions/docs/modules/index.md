@@ -22,13 +22,16 @@
 
 Returns the location information for the incoming request.
 
-**`See`**
+**`Example`**
 
-- CITY_HEADER_NAME
-- COUNTRY_HEADER_NAME
-- REGION_HEADER_NAME
-- LATITUDE_HEADER_NAME
-- LONGITUDE_HEADER_NAME
+```js
+import { geolocation } from '@vercel/functions';
+
+export function GET(request) {
+  const details = geolocation(request);
+  return Response.json(payload);
+}
+```
 
 #### Parameters
 
@@ -40,15 +43,35 @@ Returns the location information for the incoming request.
 
 [`Geo`](../interfaces/index.Geo.md)
 
+The location information of the request, in this way:
+
+```json
+{
+ "city": "New York",
+ "country": "United States",
+ "flag": "🇺🇸"
+ "countryRegion": "NY",
+ "region": "dev1",
+ "latitude": "40.7128",
+ "longitude": "-74.0060"
+}
+```
+
 #### Defined in
 
-[packages/functions/src/headers.ts:128](https://github.com/vercel/vercel/blob/main/packages/functions/src/headers.ts#L128)
+[packages/functions/src/headers.ts:158](https://github.com/vercel/vercel/blob/main/packages/functions/src/headers.ts#L158)
 
 ---
 
 ### getEnv
 
 ▸ **getEnv**(`env?`): `Object`
+
+Get System Environment Variables exposed by Vercel.
+
+**`See`**
+
+https://vercel.com/docs/projects/environment-variables/system-environment-variables#system-environment-variables
 
 #### Parameters
 
@@ -86,7 +109,7 @@ Returns the location information for the incoming request.
 
 #### Defined in
 
-[packages/functions/src/get-env.ts:1](https://github.com/vercel/vercel/blob/main/packages/functions/src/get-env.ts#L1)
+[packages/functions/src/get-env.ts:6](https://github.com/vercel/vercel/blob/main/packages/functions/src/get-env.ts#L6)
 
 ---
 
@@ -96,9 +119,16 @@ Returns the location information for the incoming request.
 
 Returns the IP address of the request from the headers.
 
-**`See`**
+**`Example`**
 
-IP_HEADER_NAME
+```js
+import { ipAddress } from '@vercel/functions';
+
+export function GET(request) {
+  const ip = ipAddress(request)
+  return new Response('Your ip is' ${ip});
+}
+```
 
 #### Parameters
 
@@ -110,9 +140,11 @@ IP_HEADER_NAME
 
 `string` \| `undefined`
 
+The IP address of the request.
+
 #### Defined in
 
-[packages/functions/src/headers.ts:99](https://github.com/vercel/vercel/blob/main/packages/functions/src/headers.ts#L99)
+[packages/functions/src/headers.ts:111](https://github.com/vercel/vercel/blob/main/packages/functions/src/headers.ts#L111)
 
 ---
 
@@ -128,7 +160,7 @@ https://developer.mozilla.org/en-US/docs/Web/API/ExtendableEvent/waitUntil
 
 **`Example`**
 
-```
+```js
 import { waitUntil } from '@vercel/functions';
 
 export function GET(request) {
