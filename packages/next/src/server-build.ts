@@ -2361,9 +2361,8 @@ export async function serverBuild({
         continue: true,
         important: true,
       },
-
       {
-        src: path.posix.join('/', entryDirectory, '/index'),
+        src: path.posix.join('/', entryDirectory, '/index(?:/)?'),
         headers: {
           'x-matched-path': '/',
         },
@@ -2371,7 +2370,7 @@ export async function serverBuild({
         important: true,
       },
       {
-        src: path.posix.join('/', entryDirectory, `/((?!index$).*)`),
+        src: path.posix.join('/', entryDirectory, `/((?!index$).*?)(?:/)?`),
         headers: {
           'x-matched-path': '/$1',
         },

@@ -45,7 +45,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     });
 
     expect(res.status).toEqual(200);
-    expect(res.headers.get('x-matched-path')).toBe('/static/');
+    expect(res.headers.get('x-matched-path')).toBe('/static');
     expect(res.headers.get('x-vercel-cache')).toBe('BYPASS');
 
     const body = await res.text();

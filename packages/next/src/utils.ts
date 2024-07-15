@@ -2517,8 +2517,19 @@ export const onPrerenderRoute =
             ? {
                 initialHeaders: {
                   ...initialHeaders,
-                  'content-type': rscContentTypeHeader,
                   vary: rscVaryHeader,
+                  ...((outputPathData || outputPathPrefetchData)?.endsWith(
+                    '.json'
+                  )
+                    ? {
+                        'content-type': 'application/json',
+                      }
+                    : {}),
+                  ...(isAppPathRoute
+                    ? {
+                        'content-type': rscContentTypeHeader,
+                      }
+                    : {}),
                   ...(postponedPrerender && rscDidPostponeHeader
                     ? { [rscDidPostponeHeader]: '1' }
                     : {}),
