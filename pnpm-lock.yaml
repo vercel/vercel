@@ -1133,8 +1133,8 @@ importers:
   packages/next:
     dependencies:
       '@vercel/nft':
-        specifier: 0.27.2
-        version: 0.27.2
+        specifier: 0.27.3
+        version: 0.27.3
     devDependencies:
       '@types/aws-lambda':
         specifier: 8.10.19
@@ -1272,8 +1272,8 @@ importers:
         specifier: 2.0.2
         version: link:../error-utils
       '@vercel/nft':
-        specifier: 0.27.2
-        version: 0.27.2
+        specifier: 0.27.3
+        version: 0.27.3
       '@vercel/static-config':
         specifier: 3.0.0
         version: link:../static-config
@@ -1414,8 +1414,8 @@ importers:
   packages/redwood:
     dependencies:
       '@vercel/nft':
-        specifier: 0.27.2
-        version: 0.27.2
+        specifier: 0.27.3
+        version: 0.27.3
       '@vercel/routing-utils':
         specifier: 3.1.0
         version: link:../routing-utils
@@ -1457,8 +1457,8 @@ importers:
         specifier: 2.0.2
         version: link:../error-utils
       '@vercel/nft':
-        specifier: 0.27.2
-        version: 0.27.2
+        specifier: 0.27.3
+        version: 0.27.3
       '@vercel/static-config':
         specifier: 3.0.0
         version: link:../static-config
@@ -6670,8 +6670,8 @@ packages:
       - supports-color
     dev: false
 
-  /@vercel/nft@0.27.2:
-    resolution: {integrity: sha512-7LeioS1yE5hwPpQfD3DdH04tuugKjo5KrJk3yK5kAI3Lh76iSsK/ezoFQfzuT08X3ZASQOd1y9ePjLNI9+TxTQ==}
+  /@vercel/nft@0.27.3:
+    resolution: {integrity: sha512-oySTdDSzUAFDXpsSLk9Q943o+/Yu/+TCFxnehpFQEf/3khi2stMpTHPVNwFdvZq/Z4Ky93lE+MGHpXCRpMkSCA==}
     engines: {node: '>=16'}
     hasBin: true
     dependencies:
@@ -10762,6 +10762,7 @@ packages:
 
   /glob@7.2.3:
     resolution: {integrity: sha512-nFR0zLpU2YCaRxwoCJvL6UvCH2JFyFVIvwTLsIf21AuHlMskA1hhTdk+LlYJtOlYt9v6dvszD2BGRqBL+iQK9Q==}
+    deprecated: Glob versions prior to v9 are no longer supported
     dependencies:
       fs.realpath: 1.0.0
       inflight: 1.0.6
