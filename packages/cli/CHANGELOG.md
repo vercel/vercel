@@ -1,5 +1,26 @@
 # vercel
 
+## 34.4.0
+
+### Minor Changes
+
+- Add target output to `vc inspect` ([#11821](https://github.com/vercel/vercel/pull/11821))
+
+- Send `customEnvironmentSlugOrId` to the create deployment endpoint ([#11789](https://github.com/vercel/vercel/pull/11789))
+
+- Add `vc target ls` command ([#11790](https://github.com/vercel/vercel/pull/11790))
+
+### Patch Changes
+
+- Various improvements to vc target ls ([#11840](https://github.com/vercel/vercel/pull/11840))
+
+- Updated dependencies [[`3eb40c8c2`](https://github.com/vercel/vercel/commit/3eb40c8c2d205ff3c237774eb0b63135c9298d5d), [`d0fe663af`](https://github.com/vercel/vercel/commit/d0fe663afc9c1a699f4195f0e8c97982f47193cf), [`b1e4a4011`](https://github.com/vercel/vercel/commit/b1e4a401102c94742d3b347875313d387d9a57b9), [`55ab52512`](https://github.com/vercel/vercel/commit/55ab52512c1966369fcd9ac60114356c8dfc0271)]:
+  - @vercel/build-utils@8.3.2
+  - @vercel/static-build@2.5.14
+  - @vercel/next@4.3.2
+  - @vercel/remix-builder@2.1.10
+  - @vercel/node@3.2.3
+
 ## 34.3.1
 
 ### Patch Changes

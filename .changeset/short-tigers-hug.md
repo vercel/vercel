@@ -1,4 +1,0 @@
----
----
-
-Update Vercel Community link
