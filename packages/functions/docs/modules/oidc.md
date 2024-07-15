@@ -22,7 +22,7 @@ that gets AWS credentials by calling STS AssumeRoleWithWebIdentity API.
 
 **`Example`**
 
-```javascript
+```js
 import * as s3 from '@aws-sdk/client-s3';
 import { awsCredentialsProvider } from '@vercel/functions/oidc';
 
@@ -70,17 +70,13 @@ This function first checks if the OIDC token is available in the environment var
 `VERCEL_OIDC_TOKEN`. If it is not found there, it retrieves the token from the request
 context headers.
 
-**`Async`**
-
-**`Function`**
-
 **`Throws`**
 
 If the `x-vercel-oidc-token` header is missing from the request context and the environment variable `VERCEL_OIDC_TOKEN` is not set.
 
 **`Example`**
 
-```ts
+```js
 // Using the OIDC token
 getVercelOidcToken()
   .then(token => {
@@ -99,4 +95,4 @@ A promise that resolves to the OIDC token.
 
 #### Defined in
 
-[packages/functions/src/oidc/get-vercel-oidc-token.ts:23](https://github.com/vercel/vercel/blob/main/packages/functions/src/oidc/get-vercel-oidc-token.ts#L23)
+[packages/functions/src/oidc/get-vercel-oidc-token.ts:24](https://github.com/vercel/vercel/blob/main/packages/functions/src/oidc/get-vercel-oidc-token.ts#L24)

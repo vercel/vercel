@@ -32,12 +32,6 @@ const binaryPath = path.resolve(__dirname, `../scripts/start.js`);
 const deployHelpMessage = `${logo} vercel [options] <command | path>`;
 const session = Math.random().toString(36).split('.')[1];
 
-const context: {
-  deployment: string | undefined;
-} = {
-  deployment: undefined,
-};
-
 const pickUrl = (stdout: string) => {
   const lines = stdout.split('\n');
   return lines[lines.length - 1];
@@ -47,13 +41,15 @@ const waitForDeployment = async (href: RequestInfo) => {
   console.log(`waiting for ${href} to become ready...`);
   const start = Date.now();
   const max = ms('4m');
-  const inspectorText = '<title>Deployment Overview';
 
   // eslint-disable-next-line
   while (true) {
     const response = await fetch(href, { redirect: 'manual' });
     const text = await response.text();
-    if (response.status === 200 && !text.includes(inspectorText)) {
+    if (
+      response.status === 200 &&
+      !text.includes('<title>Deployment Overview')
+    ) {
       break;
     }
 
@@ -304,10 +300,6 @@ test('ensure we render a warning for deployments with no files', async () => {
   const { href, host } = new URL(stdout);
   expect(host.split('-')[0]).toBe(session);
 
-  if (host) {
-    context.deployment = host;
-  }
-
   // Ensure the exit code is right
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
@@ -316,48 +308,64 @@ test('ensure we render a warning for deployments with no files', async () => {
   expect(res.status).toBe(404);
 });
 
-test('output logs with "short" output', async () => {
-  if (!context.deployment) {
-    throw new Error('Shared state "context.deployment" not set.');
-  }
+describe('given a deployment', () => {
+  const context = {
+    deploymentUrl: '',
+    directory: '',
+    stderr: '',
+    stdout: '',
+    exitCode: -1,
+  };
 
-  const { stderr, stdout, exitCode } = await execCli(binaryPath, [
-    'logs',
-    context.deployment,
-  ]);
+  beforeAll(async () => {
+    const directory = await setupE2EFixture('runtime-logs');
+    Object.assign(
+      context,
+      await execCli(binaryPath, [directory, '--public', '--yes'])
+    );
+    context.deploymentUrl = pickUrl(context.stdout);
+    const { href } = new URL(context.deploymentUrl);
+    await waitForDeployment(href);
+  });
 
-  expect(stderr).toContain(`Fetched deployment "${context.deployment}"`);
+  it('prints build logs', async () => {
+    const { stderr, stdout, exitCode } = await execCli(binaryPath, [
+      'inspect',
+      context.deploymentUrl,
+      '--logs',
+    ]);
 
-  // "short" format includes timestamps
-  const SHORT_FORMAT =
-    /\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d\.\d+([+-][0-2]\d:[0-5]\d|Z)/;
-  expect(stdout).toMatch(SHORT_FORMAT);
+    const TIMESTAMP_FORMAT =
+      /\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d\.\d+([+-][0-2]\d:[0-5]\d|Z)/;
+    expect(stderr).toMatch(TIMESTAMP_FORMAT);
 
-  expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
-});
+    const allLogs = formatOutput({ stdout, stderr });
+    expect(stderr, allLogs).toContain('Running "vercel build"');
+    expect(stderr, allLogs).toContain('Deploying outputs...');
+    expect(exitCode, allLogs).toBe(0);
+  });
 
-test('output logs with "raw" output', async () => {
-  if (!context.deployment) {
-    throw new Error('Shared state "context.deployment" not set.');
-  }
-
-  const { stderr, stdout, exitCode } = await execCli(binaryPath, [
-    'logs',
-    context.deployment,
-    '--output',
-    'raw',
-  ]);
-
-  expect(stderr).toContain(`Fetched deployment "${context.deployment}"`);
-
-  // "raw" format does not include timestamps
-  expect(null).toBe(
-    stdout.match(
-      /\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d\.\d+([+-][0-2]\d:[0-5]\d|Z)/
-    )
-  );
-
-  expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
+  it('prints runtime logs as json', async () => {
+    const [{ stdout, stderr }, res] = await Promise.all([
+      execCli(
+        binaryPath,
+        ['logs', context.deploymentUrl, '--json'],
+        // kill the command since it could last up to 5 minutes
+        { timeout: ms('10s') }
+      ),
+      fetch(`${context.deploymentUrl}/api/greetings`),
+    ]);
+    const allLogs = formatOutput({ stdout, stderr });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ message: 'Hello, World!' });
+    expect(stderr, allLogs).toContain(
+      `Displaying runtime logs for deployment ${
+        new URL(context.deploymentUrl).host
+      }`
+    );
+    expect(stdout, allLogs).toContain(`/api/greetings`);
+    expect(stdout, allLogs).toContain(`hi!`);
+  });
 });
 
 test('ensure we render a prompt when deploying home directory', async () => {

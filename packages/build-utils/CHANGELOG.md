@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 8.3.2
+
+### Patch Changes
+
+- reject mismatched corepack and detected package managers ([#11603](https://github.com/vercel/vercel/pull/11603))
+
 ## 8.3.1
 
 ### Patch Changes
