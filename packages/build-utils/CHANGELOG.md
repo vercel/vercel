@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 8.3.3
+
+### Patch Changes
+
+- Fix corepack `packageManager` detection on monorepos ([#11811](https://github.com/vercel/vercel/pull/11811))
+
 ## 8.3.2
 
 ### Patch Changes
