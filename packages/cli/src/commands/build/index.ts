@@ -6,6 +6,7 @@ import minimatch from 'minimatch';
 import { join, normalize, relative, resolve, sep } from 'path';
 import { frameworkList } from '@vercel/frameworks';
 import {
+  download,
   getDiscontinuedNodeVersions,
   getInstalledPackageVersion,
   normalizePath,
@@ -587,6 +588,13 @@ async function doBuild(
         buildJsonBuild.error = toEnumerableError(err);
       }
       throw err;
+    } finally {
+      ops.push(
+        download(diagnostics, join(outputDir, 'diagnostics')).then(
+          () => undefined,
+          err => err
+        )
+      );
     }
   }
 

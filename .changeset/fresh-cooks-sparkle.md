@@ -1,5 +1,0 @@
----
-
----
-
-tweak CI requirements
