@@ -1,5 +1,13 @@
 # @vercel/next
 
+## 4.3.3
+
+### Patch Changes
+
+- fix glob path for next.js diagnostics ([#11859](https://github.com/vercel/vercel/pull/11859))
+
+- Upgrade to @vercel/nft 0.27.3 with a bug fix for browser mapping support ([#11841](https://github.com/vercel/vercel/pull/11841))
+
 ## 4.3.2
 
 ### Patch Changes
