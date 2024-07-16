@@ -1403,12 +1403,18 @@ export async function serverBuild({
 
   prerenderRoutes.forEach(route => {
     if (experimentalPPRRoutes.has(route)) return;
-    // we can't delete app route lambdas just because
-    // they are in the prerender manifest since a dynamic
-    // route can have some prerendered paths and the rest SSR
-    if (inversedAppPathManifest?.[route]) return;
     if (routesManifest?.i18n) {
       route = normalizeLocalePath(route, routesManifest.i18n.locales).pathname;
+    }
+
+    if (
+      // we can't delete dynamic app route lambdas just because
+      // they are in the prerender manifest since a dynamic
+      // route can have some prerendered paths and the rest SSR
+      inversedAppPathManifest[route] &&
+      isDynamicRoute(route)
+    ) {
+      return;
     }
 
     delete lambdas[
