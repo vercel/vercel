@@ -1,5 +1,28 @@
 # @vercel/static-build
 
+## 2.5.14
+
+### Patch Changes
+
+- [framework-fixtures]: Bump the core group across 1 directory with 3 updates ([#11773](https://github.com/vercel/vercel/pull/11773))
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.36
+
+## 2.5.13
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.35
+
+## 2.5.12
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.34
+
 ## 2.5.11
 
 ### Patch Changes

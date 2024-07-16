@@ -1,5 +1,42 @@
 # @vercel/next
 
+## 4.3.3
+
+### Patch Changes
+
+- fix glob path for next.js diagnostics ([#11859](https://github.com/vercel/vercel/pull/11859))
+
+- Upgrade to @vercel/nft 0.27.3 with a bug fix for browser mapping support ([#11841](https://github.com/vercel/vercel/pull/11841))
+
+## 4.3.2
+
+### Patch Changes
+
+- Ensure we do not include ending slash in matched path ([#11830](https://github.com/vercel/vercel/pull/11830))
+
+## 4.3.1
+
+### Patch Changes
+
+- Bump fs-extra ([#11809](https://github.com/vercel/vercel/pull/11809))
+
+- don't skip creation of `.rsc` outputs for route handlers ([#11808](https://github.com/vercel/vercel/pull/11808))
+
+- Fix re-tracing app router entries ([#11812](https://github.com/vercel/vercel/pull/11812))
+
+- Add build callback handling ([#11807](https://github.com/vercel/vercel/pull/11807))
+
+- Log when tracing in builder instead of next build ([#11810](https://github.com/vercel/vercel/pull/11810))
+
+- Fix route handlers operation type ([#11800](https://github.com/vercel/vercel/pull/11800))
+
+## 4.3.0
+
+### Minor Changes
+
+- Adds the ability for builders to define a `diagnostics` step that is called after the build operation is done. ([#11653](https://github.com/vercel/vercel/pull/11653))
+  Implements the diagnostics step in the `next` builder.
+
 ## 4.2.18
 
 ### Patch Changes

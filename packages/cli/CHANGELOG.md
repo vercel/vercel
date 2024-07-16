@@ -1,5 +1,71 @@
 # vercel
 
+## 35.0.0
+
+### Major Changes
+
+- [breaking] `vc logs` now returns runtime logs. Use `vc inspect --logs` and `vc deploy --logs` to get build logs ([#11788](https://github.com/vercel/vercel/pull/11788))
+
+### Patch Changes
+
+- Add download of diagnostics ([#11859](https://github.com/vercel/vercel/pull/11859))
+
+- Updated dependencies [[`4c892f040`](https://github.com/vercel/vercel/commit/4c892f04014cf7b7bc662740296cae93fa93a3df), [`11e22746a`](https://github.com/vercel/vercel/commit/11e22746a54a3a17d860bfe32b7a9e885bd8e925)]:
+  - @vercel/next@4.3.3
+  - @vercel/redwood@2.1.1
+  - @vercel/remix-builder@2.1.11
+  - @vercel/node@3.2.4
+
+## 34.4.0
+
+### Minor Changes
+
+- Add target output to `vc inspect` ([#11821](https://github.com/vercel/vercel/pull/11821))
+
+- Send `customEnvironmentSlugOrId` to the create deployment endpoint ([#11789](https://github.com/vercel/vercel/pull/11789))
+
+- Add `vc target ls` command ([#11790](https://github.com/vercel/vercel/pull/11790))
+
+### Patch Changes
+
+- Various improvements to vc target ls ([#11840](https://github.com/vercel/vercel/pull/11840))
+
+- Updated dependencies [[`3eb40c8c2`](https://github.com/vercel/vercel/commit/3eb40c8c2d205ff3c237774eb0b63135c9298d5d), [`d0fe663af`](https://github.com/vercel/vercel/commit/d0fe663afc9c1a699f4195f0e8c97982f47193cf), [`b1e4a4011`](https://github.com/vercel/vercel/commit/b1e4a401102c94742d3b347875313d387d9a57b9), [`55ab52512`](https://github.com/vercel/vercel/commit/55ab52512c1966369fcd9ac60114356c8dfc0271)]:
+  - @vercel/build-utils@8.3.2
+  - @vercel/static-build@2.5.14
+  - @vercel/next@4.3.2
+  - @vercel/remix-builder@2.1.10
+  - @vercel/node@3.2.3
+
+## 34.3.1
+
+### Patch Changes
+
+- Updated dependencies [[`07a12706e`](https://github.com/vercel/vercel/commit/07a12706ebb7fd0599884f62d89ef97e33c7232f), [`3c9876e3d`](https://github.com/vercel/vercel/commit/3c9876e3d92fdbc2ad403eef0cb3469070ce0ecf), [`c7e339397`](https://github.com/vercel/vercel/commit/c7e33939725a6c9c155956a24245121a1416ddb8), [`fc82c3dac`](https://github.com/vercel/vercel/commit/fc82c3dac762c38ee74d6586c9bfe2f402b3fe57), [`21bf60218`](https://github.com/vercel/vercel/commit/21bf60218eee553ce60e6239fdc116505e2add55), [`9c5362b3d`](https://github.com/vercel/vercel/commit/9c5362b3d4ad29dcd56f0e7b6c31d02bf6a3f6f3)]:
+  - @vercel/next@4.3.1
+  - @vercel/build-utils@8.3.1
+  - @vercel/node@3.2.2
+  - @vercel/static-build@2.5.13
+
+## 34.3.0
+
+### Minor Changes
+
+- introduce --logs flag for deploy and inspect command to display build logs ([#11672](https://github.com/vercel/vercel/pull/11672))
+
+- Adds the ability for builders to define a `diagnostics` step that is called after the build operation is done. ([#11653](https://github.com/vercel/vercel/pull/11653))
+  Implements the diagnostics step in the `next` builder.
+
+### Patch Changes
+
+- Updated dependencies [[`394eddb2a`](https://github.com/vercel/vercel/commit/394eddb2a9f4d9096315fe53f8d27a5401900e5f), [`b9d18c583`](https://github.com/vercel/vercel/commit/b9d18c5835ff16316fafb854eb6447df9c841b98), [`77836e3c3`](https://github.com/vercel/vercel/commit/77836e3c33837a7c85957733cad5c433e86aa8a2), [`11d0a32d8`](https://github.com/vercel/vercel/commit/11d0a32d854948e2df24c48ab6afdf5255d50632)]:
+  - @vercel/build-utils@8.3.0
+  - @vercel/next@4.3.0
+  - @vercel/remix-builder@2.1.9
+  - @vercel/redwood@2.1.0
+  - @vercel/node@3.2.1
+  - @vercel/static-build@2.5.12
+
 ## 34.2.8
 
 ### Patch Changes

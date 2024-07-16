@@ -196,14 +196,16 @@ function isLegacyNext(nextVersion: string) {
   return true;
 }
 
-export const build: BuildV2 = async ({
-  files,
-  workPath,
-  repoRootPath,
-  entrypoint,
-  config = {},
-  meta = {},
-}) => {
+export const build: BuildV2 = async buildOptions => {
+  let { workPath, repoRootPath } = buildOptions;
+  const {
+    files,
+    entrypoint,
+    config = {},
+    meta = {},
+    buildCallback,
+  } = buildOptions;
+
   validateEntrypoint(entrypoint);
 
   let entryDirectory = path.dirname(entrypoint);
@@ -258,15 +260,13 @@ export const build: BuildV2 = async ({
   const nextVersionRange = await getNextVersionRange(entryPath);
   const nodeVersion = await getNodeVersion(entryPath, undefined, config, meta);
   const spawnOpts = getSpawnOptions(meta, nodeVersion);
-  const { cliType, lockfileVersion, packageJson } = await scanParentDirs(
-    entryPath,
-    true
-  );
+  const { cliType, lockfileVersion, packageJsonPackageManager } =
+    await scanParentDirs(entryPath, true);
 
   spawnOpts.env = getEnvForPackageManager({
     cliType,
     lockfileVersion,
-    packageJsonPackageManager: packageJson?.packageManager,
+    packageJsonPackageManager,
     nodeVersion,
     env: spawnOpts.env || {},
   });
@@ -485,6 +485,10 @@ export const build: BuildV2 = async ({
     });
   }
   debug('build command exited');
+
+  if (buildCallback) {
+    await buildCallback(buildOptions);
+  }
 
   let buildOutputVersion: undefined | number;
 
@@ -2745,7 +2749,7 @@ export const diagnostics: Diagnostics = async ({
   return {
     // Collect output in `.next/diagnostics`
     ...(await glob(
-      'diagnostics/*',
+      '*',
       path.join(basePath, diagnosticsEntrypoint, outputDirectory, 'diagnostics')
     )),
     // Collect `.next/trace` file

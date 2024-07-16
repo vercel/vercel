@@ -1,5 +1,28 @@
 # @vercel/build-utils
 
+## 8.3.2
+
+### Patch Changes
+
+- reject mismatched corepack and detected package managers ([#11603](https://github.com/vercel/vercel/pull/11603))
+
+## 8.3.1
+
+### Patch Changes
+
+- Add build callback handling ([#11807](https://github.com/vercel/vercel/pull/11807))
+
+## 8.3.0
+
+### Minor Changes
+
+- Adds the ability for builders to define a `diagnostics` step that is called after the build operation is done. ([#11653](https://github.com/vercel/vercel/pull/11653))
+  Implements the diagnostics step in the `next` builder.
+
+### Patch Changes
+
+- Add resolved node version range to warning message ([#11742](https://github.com/vercel/vercel/pull/11742))
+
 ## 8.2.2
 
 ### Patch Changes

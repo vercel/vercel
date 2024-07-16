@@ -1535,7 +1535,9 @@ export async function getPageLambdaGroups({
   pageExtensions,
   inversedAppPathManifest,
   experimentalAllowBundling,
+  isRouteHandlers,
 }: {
+  isRouteHandlers?: boolean;
   entryPath: string;
   config: Config;
   functionsConfigManifest?: FunctionsConfigManifestV1;
@@ -1636,7 +1638,7 @@ export async function getPageLambdaGroups({
         ...opts,
         isPrerenders: isPrerenderRoute,
         isExperimentalPPR,
-        isApiLambda: !!isApiPage(page),
+        isApiLambda: !!isApiPage(page) || !!isRouteHandlers,
         pseudoLayerBytes: initialPseudoLayer.pseudoLayerBytes,
         pseudoLayerUncompressedBytes: initialPseudoLayerUncompressed,
         pseudoLayer: Object.assign({}, initialPseudoLayer.pseudoLayer),
@@ -2515,8 +2517,19 @@ export const onPrerenderRoute =
             ? {
                 initialHeaders: {
                   ...initialHeaders,
-                  'content-type': rscContentTypeHeader,
                   vary: rscVaryHeader,
+                  ...((outputPathData || outputPathPrefetchData)?.endsWith(
+                    '.json'
+                  )
+                    ? {
+                        'content-type': 'application/json',
+                      }
+                    : {}),
+                  ...(isAppPathRoute
+                    ? {
+                        'content-type': rscContentTypeHeader,
+                      }
+                    : {}),
                   ...(postponedPrerender && rscDidPostponeHeader
                     ? { [rscDidPostponeHeader]: '1' }
                     : {}),

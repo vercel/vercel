@@ -1,5 +1,17 @@
 # @vercel/redwood
 
+## 2.1.1
+
+### Patch Changes
+
+- Upgrade to @vercel/nft 0.27.3 with a bug fix for browser mapping support ([#11841](https://github.com/vercel/vercel/pull/11841))
+
+## 2.1.0
+
+### Minor Changes
+
+- Add support for API endpoint configuration via `export const config` syntax ([#11776](https://github.com/vercel/vercel/pull/11776))
+
 ## 2.0.10
 
 ### Patch Changes

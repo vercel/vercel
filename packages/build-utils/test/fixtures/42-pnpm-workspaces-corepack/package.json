@@ -1,0 +1,7 @@
+{
+  "private": true,
+  "name": "42-pnpm-workspaces-corepack",
+  "packageManager": "pnpm@8.3.1",
+  "license": "MIT",
+  "version": "1.0.0"
+}

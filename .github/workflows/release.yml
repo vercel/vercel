@@ -22,6 +22,8 @@ jobs:
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_TOKEN_PULL_REQUESTS }}
 
       - name: Fetch git tags
         run: git fetch origin 'refs/tags/*:refs/tags/*'
@@ -76,8 +78,9 @@ jobs:
           script: |
             const script = require('./utils/update-latest-release.js')
             await script({ github, context })
+
   summary:
-    name: Summary
+    name: Summary (release)
     runs-on: ubuntu-latest
     timeout-minutes: 5
     needs:
