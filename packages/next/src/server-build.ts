@@ -1401,8 +1401,9 @@ export async function serverBuild({
     );
   }
 
-  omittedPrerenderRoutes.forEach(route => {
+  prerenderRoutes.forEach(route => {
     if (experimentalPPRRoutes.has(route)) return;
+    if (inversedAppPathManifest?.[route]) return;
     if (routesManifest?.i18n) {
       route = normalizeLocalePath(route, routesManifest.i18n.locales).pathname;
     }
