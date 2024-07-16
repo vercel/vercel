@@ -1,5 +1,11 @@
 # @vercel/node
 
+## 3.2.4
+
+### Patch Changes
+
+- Upgrade to @vercel/nft 0.27.3 with a bug fix for browser mapping support ([#11841](https://github.com/vercel/vercel/pull/11841))
+
 ## 3.2.3
 
 ### Patch Changes
