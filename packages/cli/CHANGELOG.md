@@ -1,5 +1,21 @@
 # vercel
 
+## 35.0.0
+
+### Major Changes
+
+- [breaking] `vc logs` now returns runtime logs. Use `vc inspect --logs` and `vc deploy --logs` to get build logs ([#11788](https://github.com/vercel/vercel/pull/11788))
+
+### Patch Changes
+
+- Add download of diagnostics ([#11859](https://github.com/vercel/vercel/pull/11859))
+
+- Updated dependencies [[`4c892f040`](https://github.com/vercel/vercel/commit/4c892f04014cf7b7bc662740296cae93fa93a3df), [`11e22746a`](https://github.com/vercel/vercel/commit/11e22746a54a3a17d860bfe32b7a9e885bd8e925)]:
+  - @vercel/next@4.3.3
+  - @vercel/redwood@2.1.1
+  - @vercel/remix-builder@2.1.11
+  - @vercel/node@3.2.4
+
 ## 34.4.0
 
 ### Minor Changes
