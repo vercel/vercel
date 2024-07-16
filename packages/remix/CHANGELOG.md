@@ -1,5 +1,15 @@
 # @vercel/remix-builder
 
+## 2.2.0
+
+### Minor Changes
+
+- Use `nativeFetch` mode when `unstable_singleFetch` is enabled ([#11844](https://github.com/vercel/vercel/pull/11844))
+
+### Patch Changes
+
+- Fix corepack `packageManager` detection on monorepos ([#11811](https://github.com/vercel/vercel/pull/11811))
+
 ## 2.1.11
 
 ### Patch Changes
