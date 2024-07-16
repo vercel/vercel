@@ -367,9 +367,9 @@ export async function scanParentDirs(
     // TODO: read "bun-lockfile-format-v0"
     lockfileVersion = 0;
   } else {
-    cliType = packageJson
-      ? detectPackageManagerNameWithoutLockfile(packageJsonPackageManager)
-      : 'npm';
+    cliType = detectPackageManagerNameWithoutLockfile(
+      packageJsonPackageManager
+    );
   }
 
   const packageJsonPath = pkgJsonPath || undefined;
