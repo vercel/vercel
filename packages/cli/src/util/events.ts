@@ -9,7 +9,6 @@ import { eraseLines } from 'ansi-escapes';
 import Client from './client';
 import getDeployment from './get-deployment';
 import getScope from './get-scope';
-import { error } from 'console';
 
 export interface FindOpts {
   direction: 'forward' | 'backward';
@@ -155,6 +154,7 @@ async function printEvents(
               };
 
               setTimeout(() => {
+                if (abortController?.signal.aborted) return;
                 // retry without maximum amount nor clear past logs etc
                 printEvents(client, deploymentIdOrURL, {
                   mode,
@@ -182,7 +182,7 @@ async function printEvents(
         if (err instanceof Error && err.name === 'AbortError') {
           return;
         }
-        throw error;
+        throw err;
       }
     },
     {

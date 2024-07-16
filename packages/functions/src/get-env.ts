@@ -1,3 +1,8 @@
+/**
+ * Get System Environment Variables exposed by Vercel.
+ *
+ * @see https://vercel.com/docs/projects/environment-variables/system-environment-variables#system-environment-variables
+ */
 export const getEnv = (
   env: { [key: string]: string | undefined } = process.env
 ) => ({

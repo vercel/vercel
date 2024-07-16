@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.3.2
+
+### Patch Changes
+
+- Ensure we do not include ending slash in matched path ([#11830](https://github.com/vercel/vercel/pull/11830))
+
 ## 4.3.1
 
 ### Patch Changes
