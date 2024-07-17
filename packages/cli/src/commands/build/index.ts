@@ -153,7 +153,11 @@ export default async function main(client: Client): Promise<number> {
   }
 
   // Build `target` influences which environment variables will be used
-  const target = parsedArgs.flags['--prod'] ? 'production' : 'preview';
+  const target = parsedArgs.flags['--prod']
+    ? 'production'
+    : typeof parsedArgs.flags['--target'] === 'string'
+    ? String(parsedArgs.flags['--target']).toLowerCase()
+    : 'preview';
   const yes = Boolean(parsedArgs.flags['--yes']);
 
   try {
