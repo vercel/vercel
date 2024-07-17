@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.3.5
+
+### Patch Changes
+
+- Make app route prerender filter dynamic route specific ([#11863](https://github.com/vercel/vercel/pull/11863))
+
 ## 4.3.4
 
 ### Patch Changes
