@@ -48,7 +48,7 @@ The location information of the request, in this way:
 ```json
 {
  "city": "New York",
- "country": "United States",
+ "country": "US",
  "flag": "🇺🇸"
  "countryRegion": "NY",
  "region": "dev1",
