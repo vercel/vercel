@@ -1,5 +1,27 @@
 # @vercel/remix-builder
 
+## 2.2.1
+
+### Patch Changes
+
+- Revert "Fix corepack `packageManager` detection on monorepos" ([#11865](https://github.com/vercel/vercel/pull/11865))
+
+## 2.2.0
+
+### Minor Changes
+
+- Use `nativeFetch` mode when `unstable_singleFetch` is enabled ([#11844](https://github.com/vercel/vercel/pull/11844))
+
+### Patch Changes
+
+- Fix corepack `packageManager` detection on monorepos ([#11811](https://github.com/vercel/vercel/pull/11811))
+
+## 2.1.11
+
+### Patch Changes
+
+- Upgrade to @vercel/nft 0.27.3 with a bug fix for browser mapping support ([#11841](https://github.com/vercel/vercel/pull/11841))
+
 ## 2.1.10
 
 ### Patch Changes

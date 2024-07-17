@@ -1,5 +1,25 @@
 # @vercel/node
 
+## 3.2.6
+
+### Patch Changes
+
+- Updated dependencies [[`ae2bdab65`](https://github.com/vercel/vercel/commit/ae2bdab6544d76687785b40eded0a40e3ea477ff)]:
+  - @vercel/build-utils@8.3.4
+
+## 3.2.5
+
+### Patch Changes
+
+- Updated dependencies [[`9290c57b8`](https://github.com/vercel/vercel/commit/9290c57b83cc45a428e4ce96dd4402f97ec7f821)]:
+  - @vercel/build-utils@8.3.3
+
+## 3.2.4
+
+### Patch Changes
+
+- Upgrade to @vercel/nft 0.27.3 with a bug fix for browser mapping support ([#11841](https://github.com/vercel/vercel/pull/11841))
+
 ## 3.2.3
 
 ### Patch Changes
