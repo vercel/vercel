@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.3.6
+
+### Patch Changes
+
+- Revert "Fix corepack `packageManager` detection on monorepos" ([#11865](https://github.com/vercel/vercel/pull/11865))
+
 ## 4.3.5
 
 ### Patch Changes

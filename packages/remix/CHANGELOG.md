@@ -1,5 +1,11 @@
 # @vercel/remix-builder
 
+## 2.2.1
+
+### Patch Changes
+
+- Revert "Fix corepack `packageManager` detection on monorepos" ([#11865](https://github.com/vercel/vercel/pull/11865))
+
 ## 2.2.0
 
 ### Minor Changes
