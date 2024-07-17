@@ -464,7 +464,7 @@ function getApiMatches(): Builder[] {
     },
     { src: 'api/**/*.+(js|mjs|ts|tsx)', use: `@vercel/node`, config },
     { src: 'api/**/!(*_test).go', use: `@vercel/go`, config },
-    { src: 'api/**/*.py', use: `@vercel/python`, config },
+    { src: '{api/**/*.py,main.py}', use: `@vercel/python`, config },
     { src: 'api/**/*.rb', use: `@vercel/ruby`, config },
   ];
 }
@@ -917,6 +917,10 @@ function createRouteFromPath(
   let isDynamic = false;
 
   const srcParts = parts.map((segment, i): string => {
+    if (parts.length === 1 && segment === 'main.py') {
+      isDynamic = true;
+      return '(.*)';
+    }
     const name = getSegmentName(segment);
     const isLast = i === parts.length - 1;
 
