@@ -372,16 +372,18 @@ function maybeGetApiBuilder(
   apiMatches: Builder[],
   options: Options
 ) {
-  const middleware =
-    fileName === 'middleware.js' || fileName === 'middleware.ts';
+  const globalBinary =
+    fileName === 'middleware.js' ||
+    fileName === 'middleware.ts' ||
+    fileName === 'main.py';
 
   // Root-level Middleware file is handled by `@vercel/next`, so don't
   // schedule a separate Builder when "nextjs" framework is selected
-  if (middleware && options.projectSettings?.framework === 'nextjs') {
+  if (globalBinary && options.projectSettings?.framework === 'nextjs') {
     return null;
   }
 
-  if (!(fileName.startsWith('api/') || middleware)) {
+  if (!(fileName.startsWith('api/') || globalBinary)) {
     return null;
   }
 
@@ -415,7 +417,7 @@ function maybeGetApiBuilder(
 
   const config: Config = { zeroConfig: true };
 
-  if (middleware) {
+  if (globalBinary) {
     config.middleware = true;
   }
 
