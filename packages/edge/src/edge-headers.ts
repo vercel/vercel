@@ -98,7 +98,7 @@ function getFlag(countryCode: string | undefined): string | undefined {
  */
 export function ipAddress(request: Request): string | undefined {
   console.warn(
-    'This method will be removed in the next major version. Use `{ ipAddress } from @vercel/functions` instead.'
+    'This method will be removed in the next major version. Use `import { ipAddress } from @vercel/functions` instead.'
   );
   return getHeader(request, IP_HEADER_NAME);
 }
@@ -130,7 +130,7 @@ function getRegionFromRequestId(requestId?: string): string | undefined {
  */
 export function geolocation(request: Request): Geo {
   console.warn(
-    'This method will be removed in the next major version. Use `{ geolocation } from @vercel/functions` instead.'
+    'This method will be removed in the next major version. Use `import { geolocation } from @vercel/functions` instead.'
   );
 
   return {
