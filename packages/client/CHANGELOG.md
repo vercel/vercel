@@ -1,5 +1,12 @@
 # @vercel/client
 
+## 13.3.2
+
+### Patch Changes
+
+- Updated dependencies [[`ae2bdab65`](https://github.com/vercel/vercel/commit/ae2bdab6544d76687785b40eded0a40e3ea477ff)]:
+  - @vercel/build-utils@8.3.4
+
 ## 13.3.1
 
 ### Patch Changes
