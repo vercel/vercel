@@ -10,6 +10,7 @@ import type {
   BuilderFunctions,
   ProjectSettings,
 } from '@vercel/build-utils';
+import { debug } from '@vercel/build-utils';
 import { isOfficialRuntime } from './is-official-runtime';
 const slugToFramework = new Map<string | null, Framework>(
   frameworkList.map(f => [f.slug, f])
@@ -145,6 +146,7 @@ export async function detectBuilders(
       b.use = `${b.use}${withTag}`;
       return b;
     });
+  debug('Api matches', apiMatches);
 
   // If either is missing we'll make the frontend static
   const makeFrontendStatic = buildCommand === '' || outputDirectory === '';

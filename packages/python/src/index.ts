@@ -64,6 +64,7 @@ export const build: BuildV3 = async ({
   meta = {},
   config,
 }) => {
+  debug('Building python', workPath, entrypoint, meta, config);
   let pythonVersion = getLatestPythonVersion(meta);
 
   workPath = await downloadFilesInWorkPath({
