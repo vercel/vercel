@@ -6,6 +6,16 @@ import inspect from '../../../src/commands/inspect';
 import sleep from '../../../src/util/sleep';
 
 describe('inspect', () => {
+  it('prints error when not providing deployement id or url', async () => {
+    client.setArgv('inspect');
+    const exitCode = await inspect(client);
+    const output = client.getFullOutput();
+    expect(exitCode).toEqual(1);
+    expect(output).toContain(
+      '`vercel inspect <url>` expects exactly one argument'
+    );
+  });
+
   it('should print out deployment information', async () => {
     const user = useUser();
     const deployment = useDeployment({ creator: user });
