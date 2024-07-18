@@ -154,7 +154,7 @@ Returns the location information for the incoming request.
 
 #### Defined in
 
-[packages/edge/src/edge-headers.ts:128](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L128)
+[packages/edge/src/edge-headers.ts:131](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L131)
 
 ---
 
