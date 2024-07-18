@@ -74,6 +74,30 @@ it('should include peer dependencies when VERCEL_NPM_LEGACY_PEER_DEPS=1 on node1
   });
 });
 
+it('should include peer dependencies when VERCEL_NPM_LEGACY_PEER_DEPS=1 on node14 and npm7+', async () => {
+  const fixture = path.join(__dirname, 'fixtures', '20-npm-7');
+  const meta: Meta = {};
+  const spawnOpts = getTestSpawnOpts({ VERCEL_NPM_LEGACY_PEER_DEPS: '1' });
+
+  const nodeVersion = getNodeVersion(14);
+  await runNpmInstall(fixture, [], spawnOpts, meta, nodeVersion);
+  expect(spawnMock.mock.calls.length).toBe(1);
+  const args = spawnMock.mock.calls[0];
+  expect(args[0]).toEqual('npm');
+  expect(args[1]).toEqual([
+    'install',
+    '--no-audit',
+    '--unsafe-perm',
+    '--legacy-peer-deps',
+  ]);
+  expect(args[2]).toEqual({
+    cwd: fixture,
+    prettyCommand: 'npm install',
+    stdio: 'inherit',
+    env: expect.any(Object),
+  });
+});
+
 it('should not include peer dependencies when VERCEL_NPM_LEGACY_PEER_DEPS=1 on node14 and npm6', async () => {
   const fixture = path.join(__dirname, 'fixtures', '14-npm-6-legacy-peer-deps');
   const meta: Meta = {};
