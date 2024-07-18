@@ -47,13 +47,13 @@ The location information of the request, in this way:
 
 ```json
 {
- "city": "New York",
- "country": "United States",
- "flag": "🇺🇸"
- "countryRegion": "NY",
- "region": "dev1",
- "latitude": "40.7128",
- "longitude": "-74.0060"
+  "city": "New York",
+  "country": "US",
+  "flag": "🇺🇸",
+  "countryRegion": "NY",
+  "region": "dev1",
+  "latitude": "40.7128",
+  "longitude": "-74.0060"
 }
 ```
 
