@@ -109,6 +109,16 @@ describe('logs', () => {
     `);
   });
 
+  it('prints error when not providing deployement id or url', async () => {
+    client.setArgv('logs');
+    const exitCode = await logs(client);
+    const output = client.getFullOutput();
+    expect(exitCode).toEqual(1);
+    expect(output).toContain(
+      '`vercel logs <deployment>` expects exactly one argument'
+    );
+  });
+
   it('prints error when deployment not found', async () => {
     client.setArgv('logs', 'bad.com');
     await expect(logs(client)).rejects.toThrow(
