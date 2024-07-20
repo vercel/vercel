@@ -81,7 +81,7 @@ function validateDistDir(distDir: string) {
   if (!exists()) {
     throw new NowBuildError({
       code: 'STATIC_BUILD_NO_OUT_DIR',
-      message: `No Output Directory named "${distDirName}" found after the Build completed. You can configure the Output Directory in your Project Settings.`,
+      message: `No Output Directory named "${distDirName}" found after the Build completed. You can configure the Output Directory in your Project Settings. Hint: have you already run `vercel build`?`,
       link,
     });
   }
