@@ -1961,6 +1961,47 @@ export const frameworks = [
     ],
   },
   {
+    name: 'FastHTML',
+    slug: 'fasthtml',
+    demo: 'https://fasthtml-template.vercel.app',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/fasthtml.png',
+    tagline: '',
+    description: '',
+    website: 'https://fastht.ml',
+    useRuntime: { src: 'main.py', use: '@vercel/python' },
+    detectors: {
+      every: [
+        {
+          path: 'main.py',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: '`pip install`',
+      },
+      buildCommand: {
+        placeholder: '',
+        //value: 'parcel build',
+      },
+      devCommand: {
+        placeholder: 'parcel',
+        //value: 'parcel',
+      },
+      outputDirectory: {
+        value: '',
+      },
+    },
+    //dependency: 'parcel',
+    getOutputDirName: async () => '',
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      { src: '/(.*)', dest: '/main.py' },
+    ],
+  },
+  {
     name: 'Sanity',
     slug: 'sanity',
     demo: 'https://sanity-studio-template.vercel.app',
