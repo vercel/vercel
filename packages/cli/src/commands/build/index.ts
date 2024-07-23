@@ -74,6 +74,7 @@ import { help } from '../help';
 import { buildCommand } from './command';
 import { scrubArgv } from '../../util/build/scrub-argv';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
+import parseTarget from '../../util/parse-target';
 
 type BuildResult = BuildResultV2 | BuildResultV3;
 
@@ -153,11 +154,14 @@ export default async function main(client: Client): Promise<number> {
   }
 
   // Build `target` influences which environment variables will be used
-  const target = parsedArgs.flags['--prod']
-    ? 'production'
-    : typeof parsedArgs.flags['--target'] === 'string'
-    ? String(parsedArgs.flags['--target']).toLowerCase()
-    : 'preview';
+  const target =
+    parseTarget({
+      output,
+      targetFlagName: 'target',
+      targetFlagValue: parsedArgs.flags['--target'],
+      prodFlagValue: parsedArgs.flags['--prod'],
+    }) || 'preview';
+
   const yes = Boolean(parsedArgs.flags['--yes']);
 
   try {
