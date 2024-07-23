@@ -1961,7 +1961,7 @@ export const frameworks = [
     ],
   },
   {
-    name: 'FastHTML',
+    name: 'FastHTML (Experimental)',
     slug: 'fasthtml',
     demo: 'https://fasthtml-template.vercel.app',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/fasthtml.png',
@@ -1981,24 +1981,26 @@ export const frameworks = [
         placeholder: '`pip install`',
       },
       buildCommand: {
-        placeholder: '',
-        //value: 'parcel build',
+        placeholder: 'None',
+        value: null,
       },
       devCommand: {
-        placeholder: 'parcel',
-        //value: 'parcel',
+        placeholder: 'None',
+        value: null,
       },
       outputDirectory: {
-        value: '',
+        value: 'N/A',
       },
     },
-    //dependency: 'parcel',
     getOutputDirName: async () => '',
     defaultRoutes: [
       {
         handle: 'filesystem',
       },
-      { src: '/(.*)', dest: '/main.py' },
+      {
+        src: '/(.*)',
+        dest: '/main',
+      },
     ],
   },
   {
