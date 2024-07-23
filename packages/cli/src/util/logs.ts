@@ -256,16 +256,15 @@ function sanitize(log: any): string {
   );
 }
 
-function colorize(text: string, log: any) {
-  if (isError(text, log)) {
+function colorize(text: string) {
+  if (isError(text)) {
     return chalk.red(text);
   }
   return isWarning(text) ? chalk.yellow(text) : text;
 }
 
-function isError(text: string, log: any) {
+function isError(text: string) {
   return (
-    (log.type === 'error' && !ignoreStdErr(text)) ||
     /^(\s+⨯\s+|\s+at\s+|npm err!)/i.test(text) ||
     /(^| |\[|eval|internal|range|reference|syntax|type|uri|fetch)err(or)?( |:)/i.test(
       text
@@ -278,34 +277,4 @@ function isError(text: string, log: any) {
 
 function isWarning(text: string) {
   return /^warn(ing)?(:|!)/i.test(text) && !text.includes('deprecationwarning');
-}
-
-// Many tools (including Vercel CLI) emit their logs to stderr.
-// This function identifies the ones we should not print as errors, based on their content (best effort).
-// It replicates the logic from the Vercel Dashboard.
-function ignoreStdErr(text: string) {
-  if (
-    text.startsWith('Vercel CLI ') ||
-    text.startsWith('Build Completed in ') ||
-    text.startsWith('> Detected') ||
-    text.startsWith('Warning: ') ||
-    text.startsWith('Warn: ') ||
-    text.startsWith('Filtering content: ')
-  ) {
-    return true;
-  }
-
-  if (
-    text === 'Attention:' ||
-    text ===
-      'Turborepo now collects completely anonymous telemetry regarding usage.' ||
-    text ===
-      'This information is used to shape the Turborepo roadmap and prioritize features.' ||
-    text ===
-      `You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:` ||
-    text === 'https://turbo.build/repo/docs/telemetry'
-  ) {
-    return true;
-  }
-  return false;
 }
