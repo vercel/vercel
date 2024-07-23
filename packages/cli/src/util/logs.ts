@@ -174,7 +174,7 @@ function printBuildLog(log: any, print: Printer) {
 
   const date = new Date(log.created).toISOString();
 
-  for (const line of colorize(sanitize(log), log).split('\n')) {
+  for (const line of colorize(sanitize(log)).split('\n')) {
     print(`${chalk.dim(date)}  ${line.replace('[now-builder-debug] ', '')}\n`);
   }
 }
