@@ -130,6 +130,7 @@ export async function displayRuntimeLogs(
 
     const handleData = (data: RuntimeLog | string) => {
       let log: RuntimeLog = parse ? data : JSON.parse(data as string);
+      stopSpinner();
       if (isRuntimeLimitDelimiter(log)) {
         abortController.abort();
         warn(`${chalk.bold(log.message)}\n`);
