@@ -44,6 +44,10 @@ export default async function main(client: Client) {
       setupMsg: 'Set up and link',
     });
 
+    if (link.status === 'error') {
+      return link.exitCode;
+    }
+
     if (link.status === 'not_linked') {
       output.error('Project not linked');
       // User aborted project linking questions
