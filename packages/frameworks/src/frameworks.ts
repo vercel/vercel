@@ -1964,7 +1964,7 @@ export const frameworks = [
     name: 'FastHTML (Experimental)',
     slug: 'fasthtml',
     demo: 'https://fasthtml-template.vercel.app',
-    logo: 'https://api-frameworks.vercel.sh/framework-logos/fasthtml.png',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/fasthtml.svg',
     tagline: '',
     description: '',
     website: 'https://fastht.ml',
@@ -1985,8 +1985,7 @@ export const frameworks = [
         value: null,
       },
       devCommand: {
-        placeholder: 'None',
-        value: null,
+        value: 'uvicorn main:app --reload',
       },
       outputDirectory: {
         value: 'N/A',
