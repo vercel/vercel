@@ -10,6 +10,7 @@ describe('parseTarget', () => {
     output = new Output();
     output.warn = vi.fn();
     output.debug = vi.fn();
+    output.error = vi.fn();
   });
 
   it('defaults to `undefined`', () => {
@@ -40,17 +41,18 @@ describe('parseTarget', () => {
     expect(output.debug).toHaveBeenCalledWith('Setting target to staging');
   });
 
-  it('prefers target over production argument', () => {
-    let result = parseTarget({
-      output,
-      targetFlagName: 'target',
-      targetFlagValue: 'staging',
-      prodFlagValue: true,
-    });
-    expect(output.warn).toHaveBeenCalledWith(
-      'Both `--prod` and `--target` detected. Ignoring `--prod`.'
+  it('throws with both `--prod` and `--target` flags', () => {
+    expect(() => {
+      parseTarget({
+        output,
+        targetFlagName: 'target',
+        targetFlagValue: 'staging',
+        prodFlagValue: true,
+      });
+    }).toThrow();
+    expect(output.error).toHaveBeenCalledWith(
+      'Both `--prod` and `--target` detected. Only one should be used at a time.'
     );
-    expect(result).toEqual('staging');
   });
 
   it('parses production argument when `true`', () => {
