@@ -1,5 +1,11 @@
 # @vercel/frameworks
 
+## 3.1.0
+
+### Minor Changes
+
+- Add FastHTML framework preset ([#11889](https://github.com/vercel/vercel/pull/11889))
+
 ## 3.0.3
 
 ### Patch Changes
