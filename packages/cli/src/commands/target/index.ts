@@ -3,6 +3,7 @@ import getArgs from '../../util/get-args';
 import getInvalidSubcommand from '../../util/get-invalid-subcommand';
 import { help } from '../help';
 import list from './list';
+import setupAndLink from '../../util/link/setup-and-link';
 import { targetCommand } from './command';
 import { getLinkedProject } from '../../util/projects/link';
 
@@ -29,16 +30,25 @@ export default async function main(client: Client) {
   subcommand = argv._[0] || 'list';
   const args = argv._.slice(1);
   const { cwd, output } = client;
-  const link = await getLinkedProject(client, cwd);
+  let link = await getLinkedProject(client, cwd);
 
   if (link.status === 'error') {
     return link.exitCode;
   }
 
   if (link.status === 'not_linked') {
-    // TODO: prompt for link
-    output.error('Project not linked');
-    return 1;
+    link = await setupAndLink(client, cwd, {
+      autoConfirm: false,
+      link,
+      successEmoji: 'link',
+      setupMsg: 'Set up and link',
+    });
+
+    if (link.status === 'not_linked') {
+      output.error('Project not linked');
+      // User aborted project linking questions
+      return 1;
+    }
   }
 
   switch (subcommand) {
