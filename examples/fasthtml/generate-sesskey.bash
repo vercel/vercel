@@ -1,0 +1,1 @@
+[ -z \"$SESSKEY\" ] && { echo \"Error: SESSKEY environment variable is not defined.\"; exit 1; } || echo \"$SESSKEY\" > .sesskey

@@ -1,5 +1,17 @@
 # vercel
 
+## 35.2.0
+
+### Minor Changes
+
+- Apply framework "defaultRoutes" in `vc build` ([#11889](https://github.com/vercel/vercel/pull/11889))
+
+### Patch Changes
+
+- fix(cli): wrong log line colors for deploy and inspect commands ([#11891](https://github.com/vercel/vercel/pull/11891))
+
+- Standardize target parsing between commands ([#11890](https://github.com/vercel/vercel/pull/11890))
+
 ## 35.1.0
 
 ### Minor Changes
