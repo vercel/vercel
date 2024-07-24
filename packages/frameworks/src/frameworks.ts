@@ -1965,8 +1965,9 @@ export const frameworks = [
     slug: 'fasthtml',
     demo: 'https://fasthtml-template.vercel.app',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/fasthtml.svg',
-    tagline: '',
-    description: '',
+    tagline: 'The fastest way to create an HTML app',
+    description:
+      'A library for writing fast and scalable Starlette-powered web applications',
     website: 'https://fastht.ml',
     useRuntime: { src: 'main.py', use: '@vercel/python' },
     detectors: {
