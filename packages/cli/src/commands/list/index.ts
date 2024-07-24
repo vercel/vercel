@@ -20,6 +20,7 @@ import { isAPIError } from '../../util/errors-ts';
 import { isErrnoException } from '@vercel/error-utils';
 import { help } from '../help';
 import { listCommand } from './command';
+import parseTarget from '../../util/parse-target';
 
 export default async function list(client: Client) {
   let argv;
@@ -66,11 +67,12 @@ export default async function list(client: Client) {
   const autoConfirm = !!argv['--yes'];
   const meta = parseMeta(argv['--meta']);
 
-  const target = argv['--prod']
-    ? 'production'
-    : typeof argv['--environment'] === 'string'
-    ? argv['--environment'].toLowerCase()
-    : undefined;
+  const target = parseTarget({
+    output,
+    targetFlagName: 'environment',
+    targetFlagValue: argv['--environment'],
+    prodFlagValue: argv['--prod'],
+  });
 
   // retrieve `project` and `org` from .vercel
   let link = await getLinkedProject(client, cwd);
