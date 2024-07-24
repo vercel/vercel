@@ -17,6 +17,7 @@ import ls from './ls';
 import pull from './pull';
 import rm from './rm';
 import { envCommand } from './command';
+import parseTarget from '../../util/parse-target';
 
 const COMMAND_CONFIG = {
   ls: ['ls', 'list'],
@@ -51,7 +52,13 @@ export default async function main(client: Client) {
   const { subcommand, args } = getSubcommand(subArgs, COMMAND_CONFIG);
   const { cwd, output, config } = client;
 
-  const target = argv['--environment']?.toLowerCase() || 'development';
+  const target =
+    parseTarget({
+      output,
+      targetFlagName: 'environment',
+      targetFlagValue: argv['--environment'],
+    }) || 'development';
+
   if (!isValidEnvTarget(target)) {
     output.error(
       `Invalid environment \`${chalk.cyan(
