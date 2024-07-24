@@ -15,9 +15,10 @@ export default function parseTarget({
   prodFlagValue?: boolean;
 }): string | undefined {
   if (prodFlagValue && targetFlagValue) {
-    output.warn(
-      `Both \`--prod\` and \`--${targetFlagName}\` detected. Ignoring \`--prod\`.`
+    output.error(
+      `Both \`--prod\` and \`--${targetFlagName}\` detected. Only one should be used at a time.`
     );
+    process.exit(1);
   }
 
   if (targetFlagValue) {
