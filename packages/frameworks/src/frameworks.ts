@@ -1961,6 +1961,51 @@ export const frameworks = [
     ],
   },
   {
+    name: 'FastHTML (Experimental)',
+    slug: 'fasthtml',
+    demo: 'https://fasthtml-template.vercel.app',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/fasthtml.png',
+    darkModeLogo:
+      'https://api-frameworks.vercel.sh/framework-logos/fasthtml-dark.png',
+    tagline: 'The fastest way to create an HTML app',
+    description:
+      'A library for writing fast and scalable Starlette-powered web applications',
+    website: 'https://fastht.ml',
+    useRuntime: { src: 'main.py', use: '@vercel/python' },
+    detectors: {
+      every: [
+        {
+          path: 'main.py',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: '`pip install`',
+      },
+      buildCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      devCommand: {
+        value: 'uvicorn main:app --reload',
+      },
+      outputDirectory: {
+        value: 'N/A',
+      },
+    },
+    getOutputDirName: async () => '',
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/main',
+      },
+    ],
+  },
+  {
     name: 'Sanity',
     slug: 'sanity',
     demo: 'https://sanity-studio-template.vercel.app',

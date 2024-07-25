@@ -1,9 +1,4 @@
-import chalk from 'chalk';
 import Client from '../../util/client';
-import {
-  getEnvTargetPlaceholder,
-  isValidEnvTarget,
-} from '../../util/env/env-target';
 import getArgs from '../../util/get-args';
 import getInvalidSubcommand from '../../util/get-invalid-subcommand';
 import getSubcommand from '../../util/get-subcommand';
@@ -17,6 +12,7 @@ import ls from './ls';
 import pull from './pull';
 import rm from './rm';
 import { envCommand } from './command';
+import parseTarget from '../../util/parse-target';
 
 const COMMAND_CONFIG = {
   ls: ['ls', 'list'],
@@ -51,15 +47,12 @@ export default async function main(client: Client) {
   const { subcommand, args } = getSubcommand(subArgs, COMMAND_CONFIG);
   const { cwd, output, config } = client;
 
-  const target = argv['--environment']?.toLowerCase() || 'development';
-  if (!isValidEnvTarget(target)) {
-    output.error(
-      `Invalid environment \`${chalk.cyan(
-        target
-      )}\`. Valid options: ${getEnvTargetPlaceholder()}`
-    );
-    return 1;
-  }
+  const target =
+    parseTarget({
+      output,
+      targetFlagName: 'environment',
+      targetFlagValue: argv['--environment'],
+    }) || 'development';
 
   const link = await getLinkedProject(client, cwd);
   if (link.status === 'error') {
