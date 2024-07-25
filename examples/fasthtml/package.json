@@ -1,7 +1,0 @@
-{
-  "name": "fasthtml-hello-world",
-  "scripts": {
-    "build": "bash generate-sesskey.bash"
-  },
-  "dependencies": {}
-}
