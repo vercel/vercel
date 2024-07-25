@@ -1964,7 +1964,9 @@ export const frameworks = [
     name: 'FastHTML (Experimental)',
     slug: 'fasthtml',
     demo: 'https://fasthtml-template.vercel.app',
-    logo: 'https://api-frameworks.vercel.sh/framework-logos/fasthtml.svg',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/fasthtml.png',
+    darkModeLogo:
+      'https://api-frameworks.vercel.sh/framework-logos/fasthtml-dark.png',
     tagline: 'The fastest way to create an HTML app',
     description:
       'A library for writing fast and scalable Starlette-powered web applications',
