@@ -210,6 +210,14 @@ export const build: BuildV3 = async ({
 
   files[`${handlerPyFilename}.py`] = new FileBlob({ data: handlerPyContents });
 
+  // "fasthtml" framework requires a `.sesskey` file to exist,
+  // otherwise it tries to create one at runtime, which fails
+  // due Lambda's read-only filesystem
+  if (config.framework === 'fasthtml') {
+    const { SESSKEY = '' } = process.env;
+    files['.sesskey'] = new FileBlob({ data: `"${SESSKEY}"` });
+  }
+
   const output = new Lambda({
     files,
     handler: `${handlerPyFilename}.vc_handler`,

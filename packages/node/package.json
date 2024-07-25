@@ -14,7 +14,7 @@
     "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --env node --verbose --bail --runInBand",
     "test-e2e": "pnpm test test/integration",
     "type-check": "tsc --noEmit",
-    "vitest-run": "vitest",
+    "vitest-run": "vitest -c ../../vitest.config.mts",
     "vitest-unit": "glob --absolute 'test/unit/**/*.test.ts' 'test/unit/**/*.test.mts'"
   },
   "files": [
@@ -63,6 +63,6 @@
     "source-map-support": "0.5.12",
     "tree-kill": "1.2.2",
     "vite": "5.1.6",
-    "vitest": "1.3.1"
+    "vitest": "2.0.1"
   }
 }
