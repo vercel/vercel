@@ -19,6 +19,21 @@
   ],
   "probes": [
     {
+      "path": "/dynamic-mixed/first",
+      "status": 200,
+      "mustContain": "hello world"
+    },
+     {
+      "path": "/dynamic-mixed/second",
+      "status": 200,
+      "mustContain": "hello world"
+    },
+    {
+      "path": "/dynamic-mixed/third",
+      "status": 200,
+      "mustContain": "hello world"
+    },
+    {
       "path": "/to-product/product-id.html",
       "status": 200,
       "mustContain": "<html"

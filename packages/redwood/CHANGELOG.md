@@ -1,5 +1,17 @@
 # @vercel/redwood
 
+## 2.1.3
+
+### Patch Changes
+
+- Revert "Fix corepack `packageManager` detection on monorepos" ([#11865](https://github.com/vercel/vercel/pull/11865))
+
+## 2.1.2
+
+### Patch Changes
+
+- Fix corepack `packageManager` detection on monorepos ([#11811](https://github.com/vercel/vercel/pull/11811))
+
 ## 2.1.1
 
 ### Patch Changes

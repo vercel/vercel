@@ -1,5 +1,25 @@
 # @vercel/next
 
+## 4.3.6
+
+### Patch Changes
+
+- Revert "Fix corepack `packageManager` detection on monorepos" ([#11865](https://github.com/vercel/vercel/pull/11865))
+
+## 4.3.5
+
+### Patch Changes
+
+- Make app route prerender filter dynamic route specific ([#11863](https://github.com/vercel/vercel/pull/11863))
+
+## 4.3.4
+
+### Patch Changes
+
+- Fix missing app route with mixed SSR/SSG dynamic route ([#11862](https://github.com/vercel/vercel/pull/11862))
+
+- Fix corepack `packageManager` detection on monorepos ([#11811](https://github.com/vercel/vercel/pull/11811))
+
 ## 4.3.3
 
 ### Patch Changes

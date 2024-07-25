@@ -135,8 +135,8 @@ function getRegionFromRequestId(requestId?: string): string | undefined {
  * ```json
  * {
  *  "city": "New York",
- *  "country": "United States",
- *  "flag": "🇺🇸"
+ *  "country": "US",
+ *  "flag": "🇺🇸",
  *  "countryRegion": "NY",
  *  "region": "dev1",
  *  "latitude": "40.7128",

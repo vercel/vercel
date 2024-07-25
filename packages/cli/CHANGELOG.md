@@ -1,5 +1,65 @@
 # vercel
 
+## 35.2.0
+
+### Minor Changes
+
+- Apply framework "defaultRoutes" in `vc build` ([#11889](https://github.com/vercel/vercel/pull/11889))
+
+### Patch Changes
+
+- fix(cli): wrong log line colors for deploy and inspect commands ([#11891](https://github.com/vercel/vercel/pull/11891))
+
+- Standardize target parsing between commands ([#11890](https://github.com/vercel/vercel/pull/11890))
+
+## 35.1.0
+
+### Minor Changes
+
+- Add target flag to vc build ([#11858](https://github.com/vercel/vercel/pull/11858))
+
+### Patch Changes
+
+- Better error message when calling logs command without a deployment url ([#11877](https://github.com/vercel/vercel/pull/11877))
+
+- Updated dependencies [[`9d9b2fee6`](https://github.com/vercel/vercel/commit/9d9b2fee64b5638a313366ccb3eb2e0b337b4750)]:
+  - @vercel/build-utils@8.3.5
+  - @vercel/node@3.2.7
+  - @vercel/static-build@2.5.17
+
+## 35.0.3
+
+### Patch Changes
+
+- Updated dependencies [[`ae2bdab65`](https://github.com/vercel/vercel/commit/ae2bdab6544d76687785b40eded0a40e3ea477ff)]:
+  - @vercel/build-utils@8.3.4
+  - @vercel/hydrogen@1.0.4
+  - @vercel/next@4.3.6
+  - @vercel/redwood@2.1.3
+  - @vercel/remix-builder@2.2.1
+  - @vercel/static-build@2.5.16
+  - @vercel/node@3.2.6
+
+## 35.0.2
+
+### Patch Changes
+
+- Updated dependencies [[`a95c4c43a`](https://github.com/vercel/vercel/commit/a95c4c43a660386e5fd4921851e952438fa84b0a)]:
+  - @vercel/next@4.3.5
+
+## 35.0.1
+
+### Patch Changes
+
+- Updated dependencies [[`cfaa83cc9`](https://github.com/vercel/vercel/commit/cfaa83cc9059c598ff3ff8e7f081b483a3ead715), [`db8452770`](https://github.com/vercel/vercel/commit/db8452770e81da216dfd66270473264160ea96d5), [`9290c57b8`](https://github.com/vercel/vercel/commit/9290c57b83cc45a428e4ce96dd4402f97ec7f821)]:
+  - @vercel/next@4.3.4
+  - @vercel/remix-builder@2.2.0
+  - @vercel/static-build@2.5.15
+  - @vercel/build-utils@8.3.3
+  - @vercel/hydrogen@1.0.3
+  - @vercel/redwood@2.1.2
+  - @vercel/node@3.2.5
+
 ## 35.0.0
 
 ### Major Changes

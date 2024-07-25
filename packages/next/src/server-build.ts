@@ -1407,6 +1407,16 @@ export async function serverBuild({
       route = normalizeLocalePath(route, routesManifest.i18n.locales).pathname;
     }
 
+    if (
+      // we can't delete dynamic app route lambdas just because
+      // they are in the prerender manifest since a dynamic
+      // route can have some prerendered paths and the rest SSR
+      inversedAppPathManifest[route] &&
+      isDynamicRoute(route)
+    ) {
+      return;
+    }
+
     delete lambdas[
       normalizeIndexOutput(
         path.posix.join('./', entryDirectory, route === '/' ? '/index' : route),

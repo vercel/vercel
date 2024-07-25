@@ -14,6 +14,7 @@ import getScope from '../../util/get-scope';
 import { displayRuntimeLogs } from '../../util/logs';
 import type { Output } from '../../util/output';
 import param from '../../util/output/param';
+import { getCommandName } from '../../util/pkg-name';
 import { help } from '../help';
 import { stateString } from '../list';
 import { logsCommand } from './command';
@@ -64,6 +65,13 @@ export default async function logs(client: Client) {
 
   // extract the first parameter
   let [deploymentIdOrHost] = parsedArguments.args;
+  if (!deploymentIdOrHost) {
+    error(
+      `${getCommandName('logs <deployment>')} expects exactly one argument`
+    );
+    print(help(logsCommand, { columns: client.stderr.columns }));
+    return 1;
+  }
 
   let contextName: string | null = null;
 

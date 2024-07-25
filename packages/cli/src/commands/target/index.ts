@@ -4,7 +4,7 @@ import getInvalidSubcommand from '../../util/get-invalid-subcommand';
 import { help } from '../help';
 import list from './list';
 import { targetCommand } from './command';
-import { getLinkedProject } from '../../util/projects/link';
+import { ensureLink } from '../../util/link/ensure-link';
 
 const COMMAND_CONFIG = {
   ls: ['ls', 'list'],
@@ -29,22 +29,16 @@ export default async function main(client: Client) {
   subcommand = argv._[0] || 'list';
   const args = argv._.slice(1);
   const { cwd, output } = client;
-  const link = await getLinkedProject(client, cwd);
 
-  if (link.status === 'error') {
-    return link.exitCode;
-  }
-
-  if (link.status === 'not_linked') {
-    // TODO: prompt for link
-    output.error('Project not linked');
-    return 1;
+  const linkedProject = await ensureLink(targetCommand.name, client, cwd);
+  if (typeof linkedProject === 'number') {
+    return linkedProject;
   }
 
   switch (subcommand) {
     case 'ls':
     case 'list':
-      return await list(client, argv, args, link);
+      return await list(client, argv, args, linkedProject);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
       client.output.print(

@@ -3,7 +3,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import Sema from 'async-sema';
 import spawn from 'cross-spawn';
-import { coerce, intersects, SemVer, validRange } from 'semver';
+import { coerce, intersects, validRange } from 'semver';
 import { SpawnOptions } from 'child_process';
 import { deprecate } from 'util';
 import debug from '../debug';
@@ -19,12 +19,6 @@ import { cloneEnv } from '../clone-env';
 
 // Only allow one `runNpmInstall()` invocation to run concurrently
 const runNpmInstallSema = new Sema(1);
-
-const NO_OVERRIDE = {
-  detectedLockfile: undefined,
-  detectedPackageManager: undefined,
-  path: undefined,
-};
 
 export type CliType = 'yarn' | 'npm' | 'pnpm' | 'bun';
 
@@ -52,12 +46,6 @@ export interface ScanParentDirsResult {
    * or `undefined` if not found.
    */
   lockfileVersion?: number;
-  /**
-   * The contents of the `packageManager` field from `package.json` if found.
-   * The value may come from a different `package.json` file than the one
-   * specified by `packageJsonPath`, in the case of a monorepo.
-   */
-  packageJsonPackageManager?: string;
 }
 
 export interface TraverseUpDirectoriesProps {
@@ -315,19 +303,17 @@ export async function scanParentDirs(
     readPackageJson && pkgJsonPath
       ? JSON.parse(await fs.readFile(pkgJsonPath, 'utf8'))
       : undefined;
-  const {
-    paths: [yarnLockPath, npmLockPath, pnpmLockPath, bunLockPath],
-    packageJsonPackageManager,
-  } = await walkParentDirsMulti({
-    base,
-    start: destPath,
-    filenames: [
-      'yarn.lock',
-      'package-lock.json',
-      'pnpm-lock.yaml',
-      'bun.lockb',
-    ],
-  });
+  const [yarnLockPath, npmLockPath, pnpmLockPath, bunLockPath] =
+    await walkParentDirsMulti({
+      base,
+      start: destPath,
+      filenames: [
+        'yarn.lock',
+        'package-lock.json',
+        'pnpm-lock.yaml',
+        'bun.lockb',
+      ],
+    });
   let lockfilePath: string | undefined;
   let lockfileVersion: number | undefined;
   let cliType: CliType;
@@ -367,25 +353,23 @@ export async function scanParentDirs(
     // TODO: read "bun-lockfile-format-v0"
     lockfileVersion = 0;
   } else {
-    cliType = detectPackageManagerNameWithoutLockfile(
-      packageJsonPackageManager
-    );
+    cliType = packageJson
+      ? detectPackageManagerNameWithoutLockfile(packageJson)
+      : 'npm';
   }
 
   const packageJsonPath = pkgJsonPath || undefined;
   return {
     cliType,
     packageJson,
-    packageJsonPackageManager,
     lockfilePath,
     lockfileVersion,
     packageJsonPath,
   };
 }
 
-function detectPackageManagerNameWithoutLockfile(
-  packageJsonPackageManager?: string
-) {
+function detectPackageManagerNameWithoutLockfile(packageJson: PackageJson) {
+  const packageJsonPackageManager = packageJson.packageManager;
   if (usingCorepack(process.env, packageJsonPackageManager)) {
     const corepackPackageManager = validateVersionSpecifier(
       packageJsonPackageManager
@@ -439,35 +423,20 @@ async function walkParentDirsMulti({
   base,
   start,
   filenames,
-}: WalkParentDirsMultiProps): Promise<{
-  paths: (string | undefined)[];
-  packageJsonPackageManager?: string;
-}> {
-  let packageManager: string | undefined;
-
+}: WalkParentDirsMultiProps): Promise<(string | undefined)[]> {
   for (const dir of traverseUpDirectories({ start, base })) {
     const fullPaths = filenames.map(f => path.join(dir, f));
     const existResults = await Promise.all(
       fullPaths.map(f => fs.pathExists(f))
     );
     const foundOneOrMore = existResults.some(b => b);
-    const packageJsonPath = path.join(dir, 'package.json');
-    const packageJson: PackageJson | null = await fs
-      .readJSON(packageJsonPath)
-      .catch(() => null);
-    if (packageJson?.packageManager) {
-      packageManager = packageJson.packageManager;
-    }
 
     if (foundOneOrMore) {
-      return {
-        paths: fullPaths.map((f, i) => (existResults[i] ? f : undefined)),
-        packageJsonPackageManager: packageManager,
-      };
+      return fullPaths.map((f, i) => (existResults[i] ? f : undefined));
     }
   }
 
-  return { paths: [], packageJsonPackageManager: packageManager };
+  return [];
 }
 
 function isSet<T>(v: any): v is Set<T> {
@@ -490,12 +459,8 @@ export async function runNpmInstall(
 
   try {
     await runNpmInstallSema.acquire();
-    const {
-      cliType,
-      packageJsonPath,
-      lockfileVersion,
-      packageJsonPackageManager,
-    } = await scanParentDirs(destPath);
+    const { cliType, packageJsonPath, packageJson, lockfileVersion } =
+      await scanParentDirs(destPath, true);
 
     if (!packageJsonPath) {
       debug(
@@ -530,7 +495,7 @@ export async function runNpmInstall(
     opts.env = getEnvForPackageManager({
       cliType,
       lockfileVersion,
-      packageJsonPackageManager,
+      packageJsonPackageManager: packageJson?.packageManager,
       nodeVersion,
       env,
     });
@@ -634,9 +599,8 @@ export function getEnvForPackageManager({
   } = getPathOverrideForPackageManager({
     cliType,
     lockfileVersion,
-    corepackPackageManager: packageJsonPackageManager,
-    nodeVersion,
     corepackEnabled,
+    nodeVersion,
   });
 
   if (corepackEnabled) {
@@ -697,9 +661,12 @@ type DetectedPnpmVersion =
   | 'corepack_enabled';
 
 function detectPnpmVersion(
-  lockfileVersion: number | undefined
+  lockfileVersion: number | undefined,
+  corepackEnabled: boolean
 ): DetectedPnpmVersion {
   switch (true) {
+    case corepackEnabled:
+      return 'corepack_enabled';
     case lockfileVersion === undefined:
       return 'not found';
     case lockfileVersion === 5.3:
@@ -715,38 +682,12 @@ function detectPnpmVersion(
   }
 }
 
-function validLockfileForPackageManager(
-  cliType: CliType,
-  lockfileVersion: number,
-  packageManagerVersion: SemVer
-) {
-  const packageManagerMajorVersion = packageManagerVersion.major;
-  switch (cliType) {
-    case 'npm':
-    case 'bun':
-    case 'yarn':
-      return true;
-    case 'pnpm':
-      switch (packageManagerMajorVersion) {
-        case 9:
-          // bug in pnpm 9.0.0 causes incompatibility with lockfile version 6.0
-          if (
-            '9.0.0' === packageManagerVersion.version &&
-            lockfileVersion === 6.0
-          ) {
-            return false;
-          }
-          return [6.0, 7.0, 9.0].includes(lockfileVersion);
-        case 8:
-          return [6.0, 6.1].includes(lockfileVersion);
-        case 7:
-          return [5.3, 5.4].includes(lockfileVersion);
-        case 6:
-          return [5.3, 5.4].includes(lockfileVersion);
-        default:
-          return true;
-      }
-  }
+function shouldUseNpm7(
+  lockfileVersion: number | undefined,
+  nodeVersion: NodeVersion | undefined
+): boolean {
+  if (lockfileVersion === undefined) return false;
+  return lockfileVersion >= 2 && (nodeVersion?.major || 0) < 16;
 }
 
 /**
@@ -756,14 +697,13 @@ function validLockfileForPackageManager(
 export function getPathOverrideForPackageManager({
   cliType,
   lockfileVersion,
-  corepackPackageManager,
-  corepackEnabled = true,
+  corepackEnabled,
+  nodeVersion,
 }: {
   cliType: CliType;
   lockfileVersion: number | undefined;
-  corepackPackageManager: string | undefined;
+  corepackEnabled: boolean;
   nodeVersion: NodeVersion | undefined;
-  corepackEnabled?: boolean;
 }): {
   /**
    * Which lockfile was detected.
@@ -779,69 +719,69 @@ export function getPathOverrideForPackageManager({
    */
   path: string | undefined;
 } {
-  const detectedPackageManger = detectPackageManager(cliType, lockfileVersion);
+  const no_override = {
+    detectedLockfile: undefined,
+    detectedPackageManager: undefined,
+    path: undefined,
+  };
 
-  if (!corepackPackageManager) {
-    return detectedPackageManger ?? NO_OVERRIDE;
-  }
-
-  if (lockfileVersion === undefined || !corepackEnabled) {
-    return NO_OVERRIDE;
-  }
-
-  if (
-    validateCorepackPackageManager(
-      cliType,
-      lockfileVersion,
-      corepackPackageManager
-    )
-  ) {
-    // corepack is going to take care of it; do nothing special
-    return NO_OVERRIDE;
-  }
-
-  console.warn(
-    `WARN [package-manager-warning-1] Detected lockfile "${lockfileVersion}" which is not compatible with the intended corepack package manager "${corepackPackageManager}". Update your lockfile or change to a compatible corepack version.`
-  );
-  return NO_OVERRIDE;
-}
-
-function validateCorepackPackageManager(
-  cliType: CliType,
-  lockfileVersion: number,
-  corepackPackageManager: string
-) {
-  const validatedCorepackPackageManager = validateVersionSpecifier(
-    corepackPackageManager
-  );
-  if (!validatedCorepackPackageManager) {
-    console.warn(
-      `WARN [package-manager-warning-2] Intended corepack defined package manager "${corepackPackageManager}" is not a valid semver value.`
-    );
-    return false;
-  }
-
-  if (cliType !== validatedCorepackPackageManager.packageName) {
-    console.warn(
-      `WARN [package-manager-warning-3] Detected package manager "${cliType}" does not match intended corepack defined package manager "${validatedCorepackPackageManager.packageName}". Change your lockfile or "package.json#packageManager" value to match.`
-    );
-    return false;
-  }
-
-  const corepackPackageManagerVersion = coerce(
-    validatedCorepackPackageManager.packageVersionRange
-  );
-
-  if (corepackPackageManagerVersion === null) {
-    // this will fail to use corepack, but we should return `true` here to let corepack itself
-    // show the appropriate error message and fail the build
-    return true;
-  } else {
-    return validLockfileForPackageManager(
-      cliType,
-      lockfileVersion,
-      corepackPackageManagerVersion
-    );
+  switch (cliType) {
+    case 'npm':
+      switch (true) {
+        case corepackEnabled:
+          return no_override;
+        case shouldUseNpm7(lockfileVersion, nodeVersion):
+          return {
+            path: '/node16/bin-npm7',
+            detectedLockfile: 'package-lock.json',
+            detectedPackageManager: 'npm 7+',
+          };
+        default:
+          return no_override;
+      }
+    case 'pnpm':
+      switch (detectPnpmVersion(lockfileVersion, corepackEnabled)) {
+        case 'corepack_enabled':
+          return no_override;
+        case 'pnpm 7':
+          // pnpm 7
+          return {
+            path: '/pnpm7/node_modules/.bin',
+            detectedLockfile: 'pnpm-lock.yaml',
+            detectedPackageManager: 'pnpm 7',
+          };
+        case 'pnpm 8':
+          // pnpm 8
+          return {
+            path: '/pnpm8/node_modules/.bin',
+            detectedLockfile: 'pnpm-lock.yaml',
+            detectedPackageManager: 'pnpm 8',
+          };
+        case 'pnpm 9':
+          // pnpm 9
+          return {
+            path: '/pnpm9/node_modules/.bin',
+            detectedLockfile: 'pnpm-lock.yaml',
+            detectedPackageManager: 'pnpm 9',
+          };
+        case 'pnpm 6':
+        default:
+          return no_override;
+      }
+    case 'bun':
+      switch (true) {
+        case corepackEnabled:
+          return no_override;
+        default:
+          // Bun 1
+          return {
+            path: '/bun1',
+            detectedLockfile: 'bun.lockb',
+            detectedPackageManager: 'Bun',
+          };
+      }
+    case 'yarn':
+      return no_override;
   }
 }
 
@@ -876,67 +816,6 @@ function validateVersionSpecifier(version?: string) {
     packageName: before,
     packageVersionRange: after,
   };
-}
-
-export function detectPackageManager(
-  cliType: CliType,
-  lockfileVersion: number | undefined
-) {
-  switch (cliType) {
-    case 'npm':
-      // npm will be used, but we're going to let the version of Node.js
-      // that's installed manage which version of npm will be used. So,
-      // from this function's perspective, we're not specifying a version
-      // of npm that will be used.
-      return undefined;
-    case 'pnpm':
-      switch (detectPnpmVersion(lockfileVersion)) {
-        case 'pnpm 7':
-          // pnpm 7
-          return {
-            path: '/pnpm7/node_modules/.bin',
-            detectedLockfile: 'pnpm-lock.yaml',
-            detectedPackageManager: 'pnpm@7.x',
-          };
-        case 'pnpm 8':
-          // pnpm 8
-          return {
-            path: '/pnpm8/node_modules/.bin',
-            detectedLockfile: 'pnpm-lock.yaml',
-            detectedPackageManager: 'pnpm@8.x',
-          };
-        case 'pnpm 9':
-          // pnpm 9
-          return {
-            path: '/pnpm9/node_modules/.bin',
-            detectedLockfile: 'pnpm-lock.yaml',
-            detectedPackageManager: 'pnpm@9.x',
-          };
-        case 'pnpm 6':
-          return {
-            // undefined because pnpm@6 is the current default in the build container
-            path: undefined,
-            detectedLockfile: 'pnpm-lock.yaml',
-            detectedPackageManager: 'pnpm 6',
-          };
-        default:
-          return undefined;
-      }
-    case 'bun':
-      return {
-        path: '/bun1',
-        detectedLockfile: 'bun.lockb',
-        detectedPackageManager: 'bun@1.x',
-      };
-    case 'yarn':
-      // yarn always uses the default version in the build container
-      // which is why there's no `path` here
-      return {
-        path: undefined,
-        detectedLockfile: 'yarn.lock',
-        detectedPackageManager: 'yarn',
-      };
-  }
 }
 
 /**
@@ -979,18 +858,12 @@ export function getPathForPackageManager({
   // broken behavior.
   const corepackEnabled = env.ENABLE_EXPERIMENTAL_COREPACK === '1';
 
-  let overrides = getPathOverrideForPackageManager({
+  const overrides = getPathOverrideForPackageManager({
     cliType,
     lockfileVersion,
-    corepackPackageManager: undefined,
+    corepackEnabled,
     nodeVersion,
   });
-
-  if (corepackEnabled) {
-    // this is essentially always overriding the value of `override`, but that's what was happening
-    // in this deprecated function before
-    overrides = NO_OVERRIDE;
-  }
 
   const alreadyInPath = (newPath: string) => {
     const oldPath = env.PATH ?? '';
@@ -1024,12 +897,14 @@ export async function runCustomInstallCommand({
   spawnOpts?: SpawnOptions;
 }) {
   console.log(`Running "install" command: \`${installCommand}\`...`);
-  const { cliType, lockfileVersion, packageJsonPackageManager } =
-    await scanParentDirs(destPath);
+  const { cliType, lockfileVersion, packageJson } = await scanParentDirs(
+    destPath,
+    true
+  );
   const env = getEnvForPackageManager({
     cliType,
     lockfileVersion,
-    packageJsonPackageManager,
+    packageJsonPackageManager: packageJson?.packageManager,
     nodeVersion,
     env: spawnOpts?.env || {},
   });
@@ -1048,8 +923,10 @@ export async function runPackageJsonScript(
 ) {
   assert(path.isAbsolute(destPath));
 
-  const { packageJson, cliType, lockfileVersion, packageJsonPackageManager } =
-    await scanParentDirs(destPath, true);
+  const { packageJson, cliType, lockfileVersion } = await scanParentDirs(
+    destPath,
+    true
+  );
   const scriptName = getScriptName(
     packageJson,
     typeof scriptNames === 'string' ? [scriptNames] : scriptNames
@@ -1065,7 +942,7 @@ export async function runPackageJsonScript(
     env: getEnvForPackageManager({
       cliType,
       lockfileVersion,
-      packageJsonPackageManager,
+      packageJsonPackageManager: packageJson?.packageManager,
       nodeVersion: undefined,
       env: cloneEnv(process.env, spawnOpts?.env),
     }),
