@@ -1,5 +1,113 @@
 # vercel
 
+## 35.2.1
+
+### Patch Changes
+
+- Allow custom environments in `vc pull --environment` ([#11897](https://github.com/vercel/vercel/pull/11897))
+
+- `vc target` now prompts to link projects ([#11895](https://github.com/vercel/vercel/pull/11895))
+
+- Updated dependencies [[`6c2398713`](https://github.com/vercel/vercel/commit/6c2398713cd7ea2f1511d56ce1c5120d9f8e3a98)]:
+  - @vercel/python@4.3.1
+
+## 35.2.0
+
+### Minor Changes
+
+- Apply framework "defaultRoutes" in `vc build` ([#11889](https://github.com/vercel/vercel/pull/11889))
+
+### Patch Changes
+
+- fix(cli): wrong log line colors for deploy and inspect commands ([#11891](https://github.com/vercel/vercel/pull/11891))
+
+- Standardize target parsing between commands ([#11890](https://github.com/vercel/vercel/pull/11890))
+
+## 35.1.0
+
+### Minor Changes
+
+- Add target flag to vc build ([#11858](https://github.com/vercel/vercel/pull/11858))
+
+### Patch Changes
+
+- Better error message when calling logs command without a deployment url ([#11877](https://github.com/vercel/vercel/pull/11877))
+
+- Updated dependencies [[`9d9b2fee6`](https://github.com/vercel/vercel/commit/9d9b2fee64b5638a313366ccb3eb2e0b337b4750)]:
+  - @vercel/build-utils@8.3.5
+  - @vercel/node@3.2.7
+  - @vercel/static-build@2.5.17
+
+## 35.0.3
+
+### Patch Changes
+
+- Updated dependencies [[`ae2bdab65`](https://github.com/vercel/vercel/commit/ae2bdab6544d76687785b40eded0a40e3ea477ff)]:
+  - @vercel/build-utils@8.3.4
+  - @vercel/hydrogen@1.0.4
+  - @vercel/next@4.3.6
+  - @vercel/redwood@2.1.3
+  - @vercel/remix-builder@2.2.1
+  - @vercel/static-build@2.5.16
+  - @vercel/node@3.2.6
+
+## 35.0.2
+
+### Patch Changes
+
+- Updated dependencies [[`a95c4c43a`](https://github.com/vercel/vercel/commit/a95c4c43a660386e5fd4921851e952438fa84b0a)]:
+  - @vercel/next@4.3.5
+
+## 35.0.1
+
+### Patch Changes
+
+- Updated dependencies [[`cfaa83cc9`](https://github.com/vercel/vercel/commit/cfaa83cc9059c598ff3ff8e7f081b483a3ead715), [`db8452770`](https://github.com/vercel/vercel/commit/db8452770e81da216dfd66270473264160ea96d5), [`9290c57b8`](https://github.com/vercel/vercel/commit/9290c57b83cc45a428e4ce96dd4402f97ec7f821)]:
+  - @vercel/next@4.3.4
+  - @vercel/remix-builder@2.2.0
+  - @vercel/static-build@2.5.15
+  - @vercel/build-utils@8.3.3
+  - @vercel/hydrogen@1.0.3
+  - @vercel/redwood@2.1.2
+  - @vercel/node@3.2.5
+
+## 35.0.0
+
+### Major Changes
+
+- [breaking] `vc logs` now returns runtime logs. Use `vc inspect --logs` and `vc deploy --logs` to get build logs ([#11788](https://github.com/vercel/vercel/pull/11788))
+
+### Patch Changes
+
+- Add download of diagnostics ([#11859](https://github.com/vercel/vercel/pull/11859))
+
+- Updated dependencies [[`4c892f040`](https://github.com/vercel/vercel/commit/4c892f04014cf7b7bc662740296cae93fa93a3df), [`11e22746a`](https://github.com/vercel/vercel/commit/11e22746a54a3a17d860bfe32b7a9e885bd8e925)]:
+  - @vercel/next@4.3.3
+  - @vercel/redwood@2.1.1
+  - @vercel/remix-builder@2.1.11
+  - @vercel/node@3.2.4
+
+## 34.4.0
+
+### Minor Changes
+
+- Add target output to `vc inspect` ([#11821](https://github.com/vercel/vercel/pull/11821))
+
+- Send `customEnvironmentSlugOrId` to the create deployment endpoint ([#11789](https://github.com/vercel/vercel/pull/11789))
+
+- Add `vc target ls` command ([#11790](https://github.com/vercel/vercel/pull/11790))
+
+### Patch Changes
+
+- Various improvements to vc target ls ([#11840](https://github.com/vercel/vercel/pull/11840))
+
+- Updated dependencies [[`3eb40c8c2`](https://github.com/vercel/vercel/commit/3eb40c8c2d205ff3c237774eb0b63135c9298d5d), [`d0fe663af`](https://github.com/vercel/vercel/commit/d0fe663afc9c1a699f4195f0e8c97982f47193cf), [`b1e4a4011`](https://github.com/vercel/vercel/commit/b1e4a401102c94742d3b347875313d387d9a57b9), [`55ab52512`](https://github.com/vercel/vercel/commit/55ab52512c1966369fcd9ac60114356c8dfc0271)]:
+  - @vercel/build-utils@8.3.2
+  - @vercel/static-build@2.5.14
+  - @vercel/next@4.3.2
+  - @vercel/remix-builder@2.1.10
+  - @vercel/node@3.2.3
+
 ## 34.3.1
 
 ### Patch Changes

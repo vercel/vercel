@@ -2,4 +2,4 @@
 '@vercel/remix-builder': patch
 ---
 
-Update `@remix-run/dev` fork to v2.10.2
+Update `@remix-run/dev` fork to v2.10.3

@@ -7,7 +7,7 @@ import { getContext } from './get-context';
  * @param promise The promise to wait for.
  * @example
  *
- * ```
+ * ```js
  * import { waitUntil } from '@vercel/functions';
  *
  * export function GET(request) {
