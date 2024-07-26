@@ -1,5 +1,5 @@
 {
-  "name": "my-remix-app",
+  "name": "06-unstable-singlefetch",
   "private": true,
   "sideEffects": false,
   "type": "module",
