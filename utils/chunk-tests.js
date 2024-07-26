@@ -17,7 +17,7 @@ const runnersMap = new Map([
     {
       min: 1,
       max: 1,
-      testScript: 'vitest-e2e',
+      testScript: 'vitest-run',
       runners: ['ubuntu-latest'],
     },
   ],
