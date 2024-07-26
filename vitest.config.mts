@@ -1,8 +1,9 @@
-/// <reference types="vitest" />
 import { defineConfig } from 'vite';
+import VitestReporter from './test/lib/vitest-reporter';
 
 export default defineConfig({
   test: {
+    reporters: [new VitestReporter()],
     // Use of process.chdir prohibits usage of the default "threads". https://vitest.dev/config/#forks
     pool: 'forks',
     env: {

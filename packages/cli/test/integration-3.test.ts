@@ -558,7 +558,6 @@ test('create a production deployment', async () => {
   ]);
 
   expect(targetCall.exitCode, formatOutput(targetCall)).toBe(0);
-  expect(targetCall.stderr).toMatch(/`--prod` option instead/gm);
   expect(targetCall.stderr).toMatch(/Setting target to production/gm);
   expect(targetCall.stderr).toMatch(/Inspect: https:\/\/vercel.com\//gm);
   expect(targetCall.stdout).toMatch(/https:\/\//gm);

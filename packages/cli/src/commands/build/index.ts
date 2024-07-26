@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 import semver from 'semver';
 import minimatch from 'minimatch';
 import { join, normalize, relative, resolve, sep } from 'path';
-import { frameworkList } from '@vercel/frameworks';
+import { frameworkList, type Framework } from '@vercel/frameworks';
 import {
   download,
   getDiscontinuedNodeVersions,
@@ -74,6 +74,7 @@ import { help } from '../help';
 import { buildCommand } from './command';
 import { scrubArgv } from '../../util/build/scrub-argv';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
+import parseTarget from '../../util/parse-target';
 
 type BuildResult = BuildResultV2 | BuildResultV3;
 
@@ -153,11 +154,14 @@ export default async function main(client: Client): Promise<number> {
   }
 
   // Build `target` influences which environment variables will be used
-  const target = parsedArgs.flags['--prod']
-    ? 'production'
-    : typeof parsedArgs.flags['--target'] === 'string'
-    ? String(parsedArgs.flags['--target']).toLowerCase()
-    : 'preview';
+  const target =
+    parseTarget({
+      output,
+      targetFlagName: 'target',
+      targetFlagValue: parsedArgs.flags['--target'],
+      prodFlagValue: parsedArgs.flags['--prod'],
+    }) || 'preview';
+
   const yes = Boolean(parsedArgs.flags['--yes']);
 
   try {
@@ -536,6 +540,23 @@ async function doBuild(
       let buildResult: BuildResultV2 | BuildResultV3 | undefined;
       try {
         buildResult = await builder.build(buildOptions);
+
+        // If the build result has no routes and the framework has default routes,
+        // then add the default routes to the build result
+        if (
+          buildConfig.zeroConfig &&
+          buildConfig.framework &&
+          'output' in buildResult &&
+          !buildResult.routes
+        ) {
+          const framework = frameworkList.find(
+            f => f.slug === buildConfig.framework
+          );
+          if (framework) {
+            const defaultRoutes = await getFrameworkRoutes(framework, workPath);
+            buildResult.routes = defaultRoutes;
+          }
+        }
       } finally {
         // Make sure we don't fail the build
         try {
@@ -888,4 +909,17 @@ async function writeFlagsJSON(
 
 async function writeBuildJson(buildsJson: BuildsManifest, outputDir: string) {
   await fs.writeJSON(join(outputDir, 'builds.json'), buildsJson, { spaces: 2 });
+}
+
+async function getFrameworkRoutes(
+  framework: Framework,
+  dirPrefix: string
+): Promise<Route[]> {
+  let routes: Route[] = [];
+  if (typeof framework.defaultRoutes === 'function') {
+    routes = await framework.defaultRoutes(dirPrefix);
+  } else if (Array.isArray(framework.defaultRoutes)) {
+    routes = framework.defaultRoutes;
+  }
+  return routes;
 }

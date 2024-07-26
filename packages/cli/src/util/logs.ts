@@ -130,6 +130,7 @@ export async function displayRuntimeLogs(
 
     const handleData = (data: RuntimeLog | string) => {
       let log: RuntimeLog = parse ? data : JSON.parse(data as string);
+      stopSpinner();
       if (isRuntimeLimitDelimiter(log)) {
         abortController.abort();
         warn(`${chalk.bold(log.message)}\n`);
@@ -169,28 +170,13 @@ export async function displayRuntimeLogs(
 }
 
 function printBuildLog(log: any, print: Printer) {
-  if (!log.created) return; // keepalive
-
-  let data: string;
-
-  data = (log.text || '')
-    .replace(/\n$/, '')
-    .replace(/^\n/, '')
-    // eslint-disable-next-line no-control-regex
-    .replace(/\x1b\[1000D/g, '')
-    .replace(/\x1b\[0K/g, '')
-    .replace(/\x1b\[1A/g, '');
-  if (/warning/i.test(data)) {
-    data = chalk.yellow(data);
-  } else if (log.type === 'stderr') {
-    data = chalk.red(data);
-  }
+  if (!log.created) return; // ignore keepalive which are the only logs without a creation date.
 
   const date = new Date(log.created).toISOString();
 
-  data.split('\n').forEach(line => {
+  for (const line of colorize(sanitize(log)).split('\n')) {
     print(`${chalk.dim(date)}  ${line.replace('[now-builder-debug] ', '')}\n`);
-  });
+  }
 }
 
 function isRuntimeLimitDelimiter(log: RuntimeLog) {
@@ -256,4 +242,39 @@ function getSourceIcon(source: string) {
   if (source === 'edge-middleware') return 'ɛ';
   if (source === 'serverless') return 'ƒ';
   return ' ';
+}
+
+function sanitize(log: any): string {
+  return (
+    (log.text || '')
+      .replace(/\n$/, '')
+      .replace(/^\n/, '')
+      // eslint-disable-next-line no-control-regex
+      .replace(/\x1b\[1000D/g, '')
+      .replace(/\x1b\[0K/g, '')
+      .replace(/\x1b\[1A/g, '')
+  );
+}
+
+function colorize(text: string) {
+  if (isError(text)) {
+    return chalk.red(text);
+  }
+  return isWarning(text) ? chalk.yellow(text) : text;
+}
+
+function isError(text: string) {
+  return (
+    /^(\s+⨯\s+|\s+at\s+|npm err!)/i.test(text) ||
+    /(^| |\[|eval|internal|range|reference|syntax|type|uri|fetch)err(or)?( |:)/i.test(
+      text
+    ) ||
+    /(command not found|module not found|failed to compile|cannot open shared object file|err_pnpm_|please contact vercel.com\/help|exit code 1|elifecycle|exited)/i.test(
+      text
+    )
+  );
+}
+
+function isWarning(text: string) {
+  return /^warn(ing)?(:|!)/i.test(text) && !text.includes('deprecationwarning');
 }

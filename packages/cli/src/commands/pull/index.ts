@@ -21,6 +21,7 @@ import humanizePath from '../../util/humanize-path';
 
 import { help } from '../help';
 import { pullCommand } from './command';
+import parseTarget from '../../util/parse-target';
 
 function processArgs(client: Client) {
   return getArgs(client.argv.slice(2), {
@@ -45,7 +46,7 @@ function parseArgs(client: Client) {
 }
 
 async function pullAllEnvFiles(
-  environment: ProjectEnvTarget,
+  environment: string,
   client: Client,
   link: ProjectLinked,
   project: Project,
@@ -85,7 +86,12 @@ export default async function main(client: Client) {
 
   let cwd = argv._[1] || client.cwd;
   const autoConfirm = Boolean(argv['--yes']);
-  const environment = parseEnvironment(argv['--environment'] || undefined);
+  const environment =
+    parseTarget({
+      output: client.output,
+      targetFlagName: 'environment',
+      targetFlagValue: argv['--environment'],
+    }) || 'development';
 
   const link = await ensureLink('pull', client, cwd, { autoConfirm });
   if (typeof link === 'number') {
