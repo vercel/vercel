@@ -1,5 +1,11 @@
 # @vercel/python
 
+## 4.3.1
+
+### Patch Changes
+
+- Improvements to "fasthtml" framework preset ([#11900](https://github.com/vercel/vercel/pull/11900))
+
 ## 4.3.0
 
 ### Minor Changes

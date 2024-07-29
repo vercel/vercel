@@ -20,6 +20,7 @@ import { isAPIError } from '../../util/errors-ts';
 import { isErrnoException } from '@vercel/error-utils';
 import { help } from '../help';
 import { listCommand } from './command';
+import parseTarget from '../../util/parse-target';
 
 function ToDate(timestamp: number): string {
   const date = new Date(timestamp);
@@ -81,11 +82,12 @@ export default async function list(client: Client) {
   const meta = parseMeta(argv['--meta']);
   const policy = parseMeta(argv['--policy']);
 
-  const target = argv['--prod']
-    ? 'production'
-    : typeof argv['--environment'] === 'string'
-    ? argv['--environment'].toLowerCase()
-    : undefined;
+  const target = parseTarget({
+    output,
+    targetFlagName: 'environment',
+    targetFlagValue: argv['--environment'],
+    prodFlagValue: argv['--prod'],
+  });
 
   // retrieve `project` and `org` from .vercel
   let link = await getLinkedProject(client, cwd);

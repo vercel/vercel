@@ -51,6 +51,7 @@ export interface CreateOptions {
   projectSettings?: any;
   skipAutoDetectionConfirmation?: boolean;
   noWait?: boolean;
+  withLogs?: boolean;
   autoAssignCustomDomains?: boolean;
 }
 
@@ -135,6 +136,7 @@ export default class Now extends EventEmitter {
       projectSettings,
       skipAutoDetectionConfirmation,
       noWait,
+      withLogs,
       autoAssignCustomDomains,
     }: CreateOptions,
     org: Org,
@@ -185,6 +187,7 @@ export default class Now extends EventEmitter {
       vercelOutputDir,
       rootDirectory,
       noWait,
+      withLogs,
     });
 
     if (deployment && deployment.warnings) {

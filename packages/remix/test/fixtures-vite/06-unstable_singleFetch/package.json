@@ -1,0 +1,33 @@
+{
+  "name": "06-unstable-singlefetch",
+  "private": true,
+  "sideEffects": false,
+  "type": "module",
+  "scripts": {
+    "build": "remix vite:build",
+    "dev": "remix vite:dev",
+    "typecheck": "tsc"
+  },
+  "dependencies": {
+    "@remix-run/node": "2.10.3",
+    "@remix-run/react": "2.10.3",
+    "@remix-run/server-runtime": "2.10.3",
+    "@vercel/analytics": "^1.2.2",
+    "@vercel/remix": "2.10.3",
+    "isbot": "^4",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@remix-run/dev": "2.10.3",
+    "@types/react": "^18.2.20",
+    "@types/react-dom": "^18.2.7",
+    "typescript": "^5.1.6",
+    "vite": "^5.1.0",
+    "vite-tsconfig-paths": "^4.2.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "packageManager": "pnpm@9.4.0+sha512.f549b8a52c9d2b8536762f99c0722205efc5af913e77835dbccc3b0b0b2ca9e7dc8022b78062c17291c48e88749c70ce88eb5a74f1fa8c4bf5e18bb46c8bd83a"
+}

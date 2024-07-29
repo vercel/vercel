@@ -168,32 +168,6 @@ describe('env', () => {
       expect(envFileHasEnv).toBeTruthy();
     });
 
-    it('should throw an error when it does not recognize given environment', async () => {
-      useUser();
-      useTeams('team_dummy');
-      useProject({
-        ...defaultProject,
-        id: 'vercel-env-pull',
-        name: 'vercel-env-pull',
-      });
-      const cwd = setupUnitFixture('vercel-env-pull');
-      client.cwd = cwd;
-      client.setArgv(
-        'env',
-        'pull',
-        '.env.production',
-        '--environment',
-        'something-invalid'
-      );
-
-      const exitCodePromise = env(client);
-      await expect(client.stderr).toOutput(
-        `Invalid environment \`something-invalid\`. Valid options: <production | preview | development>`
-      );
-
-      await expect(exitCodePromise).resolves.toEqual(1);
-    });
-
     it('should expose production system env variables', async () => {
       useUser();
       useTeams('team_dummy');

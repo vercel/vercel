@@ -419,7 +419,6 @@ const main = async () => {
   if (
     typeof scope === 'string' &&
     targetCommand !== 'login' &&
-    targetCommand !== 'dev' &&
     targetCommand !== 'build' &&
     !(targetCommand === 'teams' && subSubCommand !== 'invite')
   ) {
@@ -603,6 +602,9 @@ const main = async () => {
           break;
         case 'secrets':
           func = require('./commands/secrets').default;
+          break;
+        case 'target':
+          func = require('./commands/target').default;
           break;
         case 'teams':
           func = require('./commands/teams').default;

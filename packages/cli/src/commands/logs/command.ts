@@ -1,9 +1,13 @@
 import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
 
+// has to be ms compliant
+// https://github.com/vercel/ms/blob/fe5338229cfdac6822891dcb9c24660b4d2e612b/src/index.ts#L95
+export const CommandTimeout = '5 minutes';
+
 export const logsCommand: Command = {
   name: 'logs',
-  description: 'Display logs for a specific deployment.',
+  description: `Display runtime logs for a deployment in ready state, from now and for ${CommandTimeout} at most.`,
   arguments: [
     {
       name: 'url|deploymentId',
@@ -12,11 +16,18 @@ export const logsCommand: Command = {
   ],
   options: [
     {
+      name: 'json',
+      shorthand: 'j',
+      type: Boolean,
+      deprecated: false,
+      description: 'print each log line as a JSON object (compatible with JQ)',
+    },
+    {
       name: 'follow',
       shorthand: 'f',
       description: 'Wait for additional data [off]',
       type: String,
-      deprecated: false,
+      deprecated: true,
     },
     {
       name: 'limit',
@@ -24,7 +35,7 @@ export const logsCommand: Command = {
       description: 'Number of log entries [100]',
       argument: 'NUMBER',
       type: String,
-      deprecated: false,
+      deprecated: true,
     },
     {
       name: 'since',
@@ -32,7 +43,7 @@ export const logsCommand: Command = {
       description: 'Only return logs after date (ISO 8601)',
       argument: 'SINCE',
       type: String,
-      deprecated: false,
+      deprecated: true,
     },
     {
       name: 'until',
@@ -41,7 +52,7 @@ export const logsCommand: Command = {
         'Only return logs before date (ISO 8601), ignored when used with --follow',
       argument: 'UNTIL',
       type: String,
-      deprecated: false,
+      deprecated: true,
     },
     {
       name: 'output',
@@ -49,13 +60,21 @@ export const logsCommand: Command = {
       description: `Specify the output format (short|raw) [short]`,
       argument: 'MODE',
       type: String,
-      deprecated: false,
+      deprecated: true,
     },
   ],
   examples: [
     {
-      name: 'Print the logs for the deployment DEPLOYMENT_ID',
-      value: `${packageName} logs DEPLOYMENT_ID`,
+      name: 'Pretty print all the new runtime logs for the deployment DEPLOYMENT_URL from now on',
+      value: `${packageName} logs DEPLOYMENT_URL`,
+    },
+    {
+      name: 'Print all runtime logs for the deployment DEPLOYMENT_ID as json objects',
+      value: `${packageName} logs DEPLOYMENT_ID --json`,
+    },
+    {
+      name: 'Filter runtime logs for warning with JQ third party tool',
+      value: `${packageName} logs DEPLOYMENT_ID --json | jq 'select(.level == "warning")'`,
     },
   ],
 };
