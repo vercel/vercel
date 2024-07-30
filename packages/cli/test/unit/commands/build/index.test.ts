@@ -1308,6 +1308,47 @@ describe('build', () => {
     });
   });
 
+  it('should not apply framework `defaultRoutes` when build command outputs Build Output API', async () => {
+    const cwd = fixture('build-output-api-with-api-dir');
+    const output = join(cwd, '.vercel/output');
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toEqual(0);
+
+    const config = await fs.readJSON(join(output, 'config.json'));
+    expect(config).toMatchInlineSnapshot(`
+      {
+        "crons": [],
+        "routes": [
+          {
+            "handle": "filesystem",
+          },
+          {
+            "src": "^/api(/.*)?$",
+            "status": 404,
+          },
+          {
+            "handle": "error",
+          },
+          {
+            "dest": "/404.html",
+            "src": "^(?!/api).*$",
+            "status": 404,
+          },
+          {
+            "handle": "miss",
+          },
+          {
+            "check": true,
+            "dest": "/api/$1",
+            "src": "^/api/(.+)(?:\\.(?:js))$",
+          },
+        ],
+        "version": 3,
+      }
+    `);
+  });
+
   it('should detect framework version in monorepo app', async () => {
     const cwd = fixture('monorepo');
     const output = join(cwd, '.vercel/output');
