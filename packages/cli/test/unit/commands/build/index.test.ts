@@ -1308,7 +1308,7 @@ describe('build', () => {
     });
   });
 
-  it('should doit', async () => {
+  it('should not apply framework `defaultRoutes` when build command outputs Build Output API', async () => {
     const cwd = fixture('build-output-api-with-api-dir');
     const output = join(cwd, '.vercel/output');
     client.cwd = cwd;
