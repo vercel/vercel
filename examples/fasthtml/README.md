@@ -10,22 +10,10 @@ Visit the [FastHTML documentation](https://docs.fastht.ml/) to learn more.
 
 ## Getting Started
 
-Install [`uv`](https://github.com/astral-sh/uv) as a drop-in replacement for `pip`:
-
-```bash
-pip install uv
-```
-
-Create a virtual environment:
-
-```bash
-uv venv
-```
-
 Install the required dependencies:
 
 ```bash
-uv pip install -r requirements.txt
+pip install -r requirements.txt
 ```
 
 ## Running Locally
@@ -37,3 +25,16 @@ python main.py
 ```
 
 When you make changes to your project, the server will automatically reload.
+
+## Deploying to Vercel
+
+Deploy your project to Vercel with the following command:
+
+```bash
+npm install -g vercel
+vercel --prod
+```
+
+Or `git push` to your repostory with our [git integration](https://vercel.com/docs/deployments/git).
+
+To view the source code for this template, [visit the example repository](https://github.com/vercel/vercel/tree/main/examples/fasthtml).
