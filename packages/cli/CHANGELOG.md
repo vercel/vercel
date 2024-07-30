@@ -1,5 +1,14 @@
 # vercel
 
+## 35.2.2
+
+### Patch Changes
+
+- Fix issue where builder output was treating an api endpoint as a frontend route ([#11907](https://github.com/vercel/vercel/pull/11907))
+
+- Updated dependencies [[`0efb4795c`](https://github.com/vercel/vercel/commit/0efb4795cb06edf2561b69d7e2512b8e0cf912ca), [`5d1965832`](https://github.com/vercel/vercel/commit/5d1965832f02595c91409b4e7d863725669e6ccb)]:
+  - @vercel/remix-builder@2.2.2
+
 ## 35.2.1
 
 ### Patch Changes
