@@ -343,6 +343,7 @@ export interface ProjectEnvVariable {
   createdAt?: number;
   updatedAt?: number;
   target?: ProjectEnvTarget | ProjectEnvTarget[];
+  customEnvironmentIds?: string[];
   system?: boolean;
   gitBranch?: string;
 }
