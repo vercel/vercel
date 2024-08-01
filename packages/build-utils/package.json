@@ -17,6 +17,9 @@
     "test-e2e": "pnpm test test/integration.test.ts",
     "type-check": "tsc --noEmit"
   },
+  "peerDependencies": {
+    "@types/glob": "7.2.0"
+  },
   "devDependencies": {
     "@iarna/toml": "2.2.3",
     "@types/async-retry": "^1.2.1",
