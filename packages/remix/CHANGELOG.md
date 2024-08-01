@@ -1,5 +1,13 @@
 # @vercel/remix-builder
 
+## 2.2.2
+
+### Patch Changes
+
+- Fix POST requests when `unstable_singleFetch` is enabled ([#11904](https://github.com/vercel/vercel/pull/11904))
+
+- Update `@remix-run/dev` fork to v2.10.3 ([#11893](https://github.com/vercel/vercel/pull/11893))
+
 ## 2.2.1
 
 ### Patch Changes
