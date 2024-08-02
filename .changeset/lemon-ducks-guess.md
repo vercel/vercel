@@ -2,4 +2,4 @@
 '@vercel/build-utils': patch
 ---
 
-Add `@types/glob` as a peer dependency
+Remove implicit reliance on `@types/glob` for downstream consumers
