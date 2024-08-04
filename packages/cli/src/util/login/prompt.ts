@@ -8,6 +8,7 @@ import doEmailLogin, { doEmailSignUp } from './email';
 import doGithubLogin from './github';
 import doGitlabLogin from './gitlab';
 import doBitbucketLogin from './bitbucket';
+import { verifyPhone } from './verify';
 
 export default async function prompt(
   client: Client,
@@ -50,6 +51,19 @@ export default async function prompt(
   } else if (choice === 'email') {
     const email = await readInput(client, 'Enter your email address:');
     result = await doEmailLogin(client, email, ssoUserId);
+    if (result === 22) {
+      const sms = await readInput(
+        client,
+        'SMS verification, enter your phone number:'
+      );
+      const countryCode = await readInput(
+        client,
+        'Enter your country code (e.g USA => us):'
+      );
+
+      const verfRes = await verifyPhone(client, email, sms, countryCode);
+      await client.input.text({ message: verfRes?.status ?? '' });
+    }
   } else if (choice === 'emailSignUp') {
     const plans = [{ name: 'Hobby', value: 'hobby', short: 'hobby' }];
     const plan = await listInput(client, {
@@ -59,8 +73,16 @@ export default async function prompt(
 
     const email = await readInput(client, 'Enter your email address:');
     const slug = error?.teamId || (await readInput(client, 'Enter your name:'));
-
     result = await doEmailSignUp(client, email, plan, slug, ssoUserId);
+
+    if (result === 0) {
+      const sms = await readInput(
+        client,
+        'SMS verification, enter your phone number:'
+      );
+
+      await client.input.text({ message: sms });
+    }
   } else if (choice === 'saml') {
     const slug =
       error?.teamId || (await readInput(client, 'Enter your Team slug:'));

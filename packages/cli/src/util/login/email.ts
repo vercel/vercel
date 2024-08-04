@@ -27,6 +27,7 @@ export default async function doEmailLogin(
     securityCode = data.securityCode;
   } catch (err: unknown) {
     output.error(errorToString(err));
+    if (errorToString(err).includes('SMS')) return 22;
     return 1;
   }
 
@@ -82,7 +83,8 @@ export async function doEmailSignUp(
     securityCode = data.securityCode;
 
     output.spinner('Sending you an email');
-  } catch (err: unknown) {
+  } catch (err: any) {
+    output.error(err.code);
     output.error(errorToString(err));
     return 1;
   }
@@ -94,7 +96,7 @@ export async function doEmailSignUp(
     `We sent an email to ${highlight(
       email
     )}. Please follow the steps provided inside it and make sure the security code matches ${highlight(
-      securityCode
+      securityCode ?? ''
     )}.\n`
   );
 
@@ -106,14 +108,15 @@ export async function doEmailSignUp(
       await sleep(ms('1s'));
       result = await verifySignUp(
         client,
-        verificationToken,
+        verificationToken ?? '',
         email,
         'Email',
         plan,
         teamName,
         ssoUserId
       );
-    } catch (err: unknown) {
+    } catch (err: any) {
+      output.error(err.code);
       if (!isAPIError(err) || err.serverMessage !== 'Confirmation incomplete') {
         output.error(errorToString(err));
         return 1;

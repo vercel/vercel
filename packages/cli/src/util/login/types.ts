@@ -3,9 +3,9 @@ export interface LoginData {
   securityCode: string;
 }
 export interface SignUpData {
-  token: string;
-  securityCode: string;
-  error: SignUpError;
+  token?: string;
+  securityCode?: string;
+  error?: SignUpError;
 }
 export interface VerifyError {
   token: string;
@@ -27,6 +27,9 @@ export interface LoginResultSuccess {
   token: string;
   email: string;
   teamId?: string;
+}
+export interface phoneVerificationResult {
+  status: string;
 }
 
 export interface SAMLError {

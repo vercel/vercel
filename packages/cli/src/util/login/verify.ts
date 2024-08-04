@@ -2,7 +2,7 @@ import { URL } from 'url';
 import Client from '../client';
 import { hostname } from 'os';
 import { getTitleName } from '../pkg-name';
-import { LoginResultSuccess } from './types';
+import { LoginResultSuccess, phoneVerificationResult } from './types';
 
 export default function verify(
   client: Client,
@@ -69,4 +69,31 @@ export function verifySignUp(
   }
 
   return client.fetch<LoginResultSuccess>(url.href, { useCurrentTeam: false });
+}
+export async function verifyPhone(
+  client: Client,
+  //verificationToken: string,
+  email: string | undefined,
+  phone: string,
+  countryCode: string
+) {
+  const url = new URL(
+    'https://vercel.com/api/v2/registration/start-verify-phone'
+  );
+
+  if (!email || !phone) return;
+
+  url.searchParams.set('email', email);
+  url.searchParams.set(
+    'phone',
+    phone.replace(/^(.{4})(.{6})(.*)$/, '$1 $2 $3')
+  );
+
+  if (countryCode) {
+    url.searchParams.set('country', countryCode);
+  }
+  return client.fetch<phoneVerificationResult>(url.href, {
+    useCurrentTeam: false,
+    method: 'POST',
+  });
 }
