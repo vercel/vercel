@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 8.3.6
+
+### Patch Changes
+
+- Remove implicit reliance on `@types/glob` for downstream consumers ([#11914](https://github.com/vercel/vercel/pull/11914))
+
 ## 8.3.5
 
 ### Patch Changes
