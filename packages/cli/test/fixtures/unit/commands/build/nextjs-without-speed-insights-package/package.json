@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "next": "13"
+  },
+  "ignoreNextjsUpdates": true,
+  "scripts": {
+    "vercel-build": "next build"
+  }
+}

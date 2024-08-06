@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import chalk, { Chalk } from 'chalk';
 import * as ansiEscapes from 'ansi-escapes';
 import { supportsHyperlink as detectSupportsHyperlink } from 'supports-hyperlinks';
 import renderLink from './link';
@@ -17,10 +17,11 @@ export interface OutputOptions {
 }
 
 export interface LogOptions {
-  color?: typeof chalk;
+  color?: Chalk;
 }
 
 interface LinkOptions {
+  color?: false | ((text: string) => string);
   fallback?: false | (() => string);
 }
 
@@ -199,7 +200,7 @@ export class Output {
   link = (
     text: string,
     url: string,
-    { fallback }: LinkOptions = {}
+    { fallback, color = chalk.cyan }: LinkOptions = {}
   ): string => {
     // Based on https://github.com/sindresorhus/terminal-link (MIT license)
     if (!this.supportsHyperlink) {
@@ -213,7 +214,7 @@ export class Output {
         : `${text} (${renderLink(url)})`;
     }
 
-    return ansiEscapes.link(chalk.cyan(text), url);
+    return ansiEscapes.link(color ? color(text) : text, url);
   };
 }
 

@@ -1,8 +1,8 @@
 {
   "dependencies": {
-    "next": "13.5.6",
-    "react": "experimental",
-    "react-dom": "experimental"
+    "next": "canary",
+    "react": "19.0.0-rc-3208e73e-20240730",
+    "react-dom": "19.0.0-rc-3208e73e-20240730"
   },
   "ignoreNextjsUpdates": true
 }

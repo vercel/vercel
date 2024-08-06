@@ -10,8 +10,15 @@ export const buildCommand: Command = {
       name: 'prod',
       description: 'Build a production deployment',
       shorthand: null,
+      type: Boolean,
+      deprecated: false,
+    },
+    {
+      name: 'target',
+      shorthand: null,
       type: String,
       deprecated: false,
+      description: 'Specify the target environment',
     },
     {
       name: 'output',

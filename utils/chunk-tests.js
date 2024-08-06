@@ -8,8 +8,17 @@ const runnersMap = new Map([
     {
       min: 1,
       max: 1,
-      testScript: 'vitest-unit-run',
+      testScript: 'vitest-run',
       runners: ['ubuntu-latest', 'macos-14', 'windows-latest'],
+    },
+  ],
+  [
+    'vitest-e2e',
+    {
+      min: 1,
+      max: 7,
+      testScript: 'vitest-run',
+      runners: ['ubuntu-latest'],
     },
   ],
   [

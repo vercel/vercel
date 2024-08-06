@@ -142,6 +142,7 @@ describe('build', () => {
       await fs.unlink(join(cwd, 'foo.html'));
       await fs.symlink(join(cwd, 'index.html'), join(cwd, 'foo.html'));
     } catch (e) {
+      // eslint-disable-next-line no-console
       console.log('Symlinks not available, skipping test');
       return;
     }
@@ -388,6 +389,41 @@ describe('build', () => {
     try {
       client.cwd = cwd;
       client.setArgv('build', '--yes', '--prod');
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      const prodEnv = await fs.readFile(envFilePath, 'utf8');
+      const envFileHasProductionEnv1 = prodEnv.includes(
+        'REDIS_CONNECTION_STRING'
+      );
+      expect(envFileHasProductionEnv1).toBeTruthy();
+      const envFileHasProductionEnv2 = prodEnv.includes(
+        'SQL_CONNECTION_STRING'
+      );
+      expect(envFileHasProductionEnv2).toBeTruthy();
+    } finally {
+      await fs.remove(envFilePath);
+      await fs.writeJSON(projectJsonPath, originalProjectJson, { spaces: 2 });
+    }
+  });
+
+  it('should pull "production" env vars with `--target production`', async () => {
+    const cwd = fixture('static-pull');
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'vercel-pull-next',
+      name: 'vercel-pull-next',
+    });
+    const envFilePath = join(cwd, '.vercel', '.env.production.local');
+    const projectJsonPath = join(cwd, '.vercel', 'project.json');
+    const originalProjectJson = await fs.readJSON(
+      join(cwd, '.vercel/project.json')
+    );
+    try {
+      client.cwd = cwd;
+      client.setArgv('build', '--yes', '--target', 'production');
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
 
@@ -719,6 +755,7 @@ describe('build', () => {
 
   it('should error when "functions" has runtime that emits discontinued "nodejs12.x"', async () => {
     if (process.platform === 'win32') {
+      // eslint-disable-next-line no-console
       console.log('Skipping test on Windows');
       return;
     }
@@ -787,8 +824,8 @@ describe('build', () => {
     expect(files.sort()).toEqual(['index.html', 'package.json']);
   });
 
-  it('should set `VERCEL_ANALYTICS_ID` environment variable', async () => {
-    const cwd = fixture('vercel-analytics');
+  it('should set `VERCEL_ANALYTICS_ID` environment variable if Vercel Speed Insights is enabled', async () => {
+    const cwd = fixture('vercel-analytics-id');
     const output = join(cwd, '.vercel/output');
     client.cwd = cwd;
     const exitCode = await build(client);
@@ -862,6 +899,7 @@ describe('build', () => {
   it('should apply project settings overrides from "vercel.json"', async () => {
     if (process.platform === 'win32') {
       // this test runs a build command with `mkdir -p` which is unsupported on Windows
+      // eslint-disable-next-line no-console
       console.log('Skipping test on Windows');
       return;
     }
@@ -1270,6 +1308,47 @@ describe('build', () => {
     });
   });
 
+  it('should not apply framework `defaultRoutes` when build command outputs Build Output API', async () => {
+    const cwd = fixture('build-output-api-with-api-dir');
+    const output = join(cwd, '.vercel/output');
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toEqual(0);
+
+    const config = await fs.readJSON(join(output, 'config.json'));
+    expect(config).toMatchInlineSnapshot(`
+      {
+        "crons": [],
+        "routes": [
+          {
+            "handle": "filesystem",
+          },
+          {
+            "src": "^/api(/.*)?$",
+            "status": 404,
+          },
+          {
+            "handle": "error",
+          },
+          {
+            "dest": "/404.html",
+            "src": "^(?!/api).*$",
+            "status": 404,
+          },
+          {
+            "handle": "miss",
+          },
+          {
+            "check": true,
+            "dest": "/api/$1",
+            "src": "^/api/(.+)(?:\\.(?:js))$",
+          },
+        ],
+        "version": 3,
+      }
+    `);
+  });
+
   it('should detect framework version in monorepo app', async () => {
     const cwd = fixture('monorepo');
     const output = join(cwd, '.vercel/output');
@@ -1283,6 +1362,7 @@ describe('build', () => {
 
   it('should create symlinks for duplicate references to Lambda / EdgeFunction instances', async () => {
     if (process.platform === 'win32') {
+      // eslint-disable-next-line no-console
       console.log('Skipping test on Windows');
       return;
     }
@@ -1318,5 +1398,31 @@ describe('build', () => {
     expect(fs.readlinkSync(join(output, 'functions/edge2.func'))).toEqual(
       'edge.func'
     );
+  });
+
+  describe('with Vercel Speed Insights', () => {
+    it('should not include VERCEL_ANALYTICS_ID if @vercel/speed-insights is present', async () => {
+      const cwd = fixture('nextjs-with-speed-insights-package');
+      const output = join(cwd, '.vercel/output');
+
+      client.cwd = cwd;
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      const env = await fs.readJSON(join(output, 'static', 'env.json'));
+      expect(Object.keys(env).includes('VERCEL_ANALYTICS_ID')).toEqual(false);
+    });
+
+    it('should include VERCEL_ANALYTICS_ID if @vercel/speed-insights is not present', async () => {
+      const cwd = fixture('nextjs-without-speed-insights-package');
+      const output = join(cwd, '.vercel/output');
+
+      client.cwd = cwd;
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      const env = await fs.readJSON(join(output, 'static', 'env.json'));
+      expect(Object.keys(env).includes('VERCEL_ANALYTICS_ID')).toEqual(true);
+    });
   });
 });

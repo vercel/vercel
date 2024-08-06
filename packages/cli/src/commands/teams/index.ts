@@ -51,6 +51,7 @@ export default async (client: Client) => {
     }
     default: {
       if (subcommand !== 'help') {
+        // eslint-disable-next-line no-console
         console.error(
           error('Please specify a valid subcommand: add | ls | switch | invite')
         );

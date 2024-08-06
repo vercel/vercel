@@ -1,5 +1,117 @@
 # @vercel/gatsby-plugin-vercel-builder
 
+## 2.0.40
+
+### Patch Changes
+
+- Updated dependencies [[`bec80e76a`](https://github.com/vercel/vercel/commit/bec80e76afe546072d4138f3ed3d6eda56d3f370)]:
+  - @vercel/build-utils@8.3.6
+
+## 2.0.39
+
+### Patch Changes
+
+- Updated dependencies [[`9d9b2fee6`](https://github.com/vercel/vercel/commit/9d9b2fee64b5638a313366ccb3eb2e0b337b4750)]:
+  - @vercel/build-utils@8.3.5
+
+## 2.0.38
+
+### Patch Changes
+
+- Updated dependencies [[`ae2bdab65`](https://github.com/vercel/vercel/commit/ae2bdab6544d76687785b40eded0a40e3ea477ff)]:
+  - @vercel/build-utils@8.3.4
+
+## 2.0.37
+
+### Patch Changes
+
+- Updated dependencies [[`9290c57b8`](https://github.com/vercel/vercel/commit/9290c57b83cc45a428e4ce96dd4402f97ec7f821)]:
+  - @vercel/build-utils@8.3.3
+
+## 2.0.36
+
+### Patch Changes
+
+- Updated dependencies [[`3eb40c8c2`](https://github.com/vercel/vercel/commit/3eb40c8c2d205ff3c237774eb0b63135c9298d5d)]:
+  - @vercel/build-utils@8.3.2
+
+## 2.0.35
+
+### Patch Changes
+
+- Updated dependencies [[`fc82c3dac`](https://github.com/vercel/vercel/commit/fc82c3dac762c38ee74d6586c9bfe2f402b3fe57)]:
+  - @vercel/build-utils@8.3.1
+
+## 2.0.34
+
+### Patch Changes
+
+- Updated dependencies [[`394eddb2a`](https://github.com/vercel/vercel/commit/394eddb2a9f4d9096315fe53f8d27a5401900e5f), [`b9d18c583`](https://github.com/vercel/vercel/commit/b9d18c5835ff16316fafb854eb6447df9c841b98)]:
+  - @vercel/build-utils@8.3.0
+
+## 2.0.33
+
+### Patch Changes
+
+- Updated dependencies [[`5c12ed695`](https://github.com/vercel/vercel/commit/5c12ed69500ceff6a9dc544eab0acd7af64c044a), [`21444a38e`](https://github.com/vercel/vercel/commit/21444a38e50ed680c91b0e3955f15e378eeda64b), [`06d2d860e`](https://github.com/vercel/vercel/commit/06d2d860e47aed792247bf929805b180ed6e2dab)]:
+  - @vercel/build-utils@8.2.2
+
+## 2.0.32
+
+### Patch Changes
+
+- Updated dependencies [[`83741a0eb`](https://github.com/vercel/vercel/commit/83741a0eb9e44457b083e8790a11eb89984e6357)]:
+  - @vercel/build-utils@8.2.1
+
+## 2.0.31
+
+### Patch Changes
+
+- Updated dependencies [[`d3c1267e2`](https://github.com/vercel/vercel/commit/d3c1267e24082789ea6382cf6af81dd40df288ff), [`ccd7eb1fb`](https://github.com/vercel/vercel/commit/ccd7eb1fb78f7ac9effdbe1935de3bda82c97fe3)]:
+  - @vercel/build-utils@8.2.0
+
+## 2.0.30
+
+### Patch Changes
+
+- Updated dependencies [[`ad6945435`](https://github.com/vercel/vercel/commit/ad69454352b519b2b0ed326f245c779530554bf2)]:
+  - @vercel/build-utils@8.1.3
+
+## 2.0.29
+
+### Patch Changes
+
+- Updated dependencies [[`1682ad43d`](https://github.com/vercel/vercel/commit/1682ad43d0064b22b1248a7e946746b838f00076)]:
+  - @vercel/build-utils@8.1.2
+
+## 2.0.28
+
+### Patch Changes
+
+- Updated dependencies [[`2f7a6ed5f`](https://github.com/vercel/vercel/commit/2f7a6ed5f92d454000f92247d3b6548e2064f4e6)]:
+  - @vercel/build-utils@8.1.1
+
+## 2.0.27
+
+### Patch Changes
+
+- Updated dependencies [[`5014b1e82`](https://github.com/vercel/vercel/commit/5014b1e82a46181baeb727ffe6d14000b6a4b1d7)]:
+  - @vercel/build-utils@8.1.0
+
+## 2.0.26
+
+### Patch Changes
+
+- Updated dependencies [[`15475c8a2`](https://github.com/vercel/vercel/commit/15475c8a2c303a1dd189ba24044fac750280dd2e), [`21f5e7375`](https://github.com/vercel/vercel/commit/21f5e7375e4cb4ceed98ab56486d09a85fa3894d)]:
+  - @vercel/build-utils@8.0.0
+
+## 2.0.25
+
+### Patch Changes
+
+- Updated dependencies [[`2826563ff`](https://github.com/vercel/vercel/commit/2826563ffab7ab01d3c85def2cad8c4041cd88b1)]:
+  - @vercel/build-utils@7.12.0
+
 ## 2.0.24
 
 ### Patch Changes

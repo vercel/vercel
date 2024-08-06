@@ -1,5 +1,387 @@
 # vercel
 
+## 35.2.3
+
+### Patch Changes
+
+- Updated dependencies [[`bec80e76a`](https://github.com/vercel/vercel/commit/bec80e76afe546072d4138f3ed3d6eda56d3f370), [`680a3af28`](https://github.com/vercel/vercel/commit/680a3af28e5d6caf51aa56f80fe77ad1091cd542)]:
+  - @vercel/build-utils@8.3.6
+  - @vercel/remix-builder@2.2.3
+  - @vercel/node@3.2.8
+  - @vercel/static-build@2.5.18
+
+## 35.2.2
+
+### Patch Changes
+
+- Fix issue where builder output was treating an api endpoint as a frontend route ([#11907](https://github.com/vercel/vercel/pull/11907))
+
+- Updated dependencies [[`0efb4795c`](https://github.com/vercel/vercel/commit/0efb4795cb06edf2561b69d7e2512b8e0cf912ca), [`5d1965832`](https://github.com/vercel/vercel/commit/5d1965832f02595c91409b4e7d863725669e6ccb)]:
+  - @vercel/remix-builder@2.2.2
+
+## 35.2.1
+
+### Patch Changes
+
+- Allow custom environments in `vc pull --environment` ([#11897](https://github.com/vercel/vercel/pull/11897))
+
+- `vc target` now prompts to link projects ([#11895](https://github.com/vercel/vercel/pull/11895))
+
+- Updated dependencies [[`6c2398713`](https://github.com/vercel/vercel/commit/6c2398713cd7ea2f1511d56ce1c5120d9f8e3a98)]:
+  - @vercel/python@4.3.1
+
+## 35.2.0
+
+### Minor Changes
+
+- Apply framework "defaultRoutes" in `vc build` ([#11889](https://github.com/vercel/vercel/pull/11889))
+
+### Patch Changes
+
+- fix(cli): wrong log line colors for deploy and inspect commands ([#11891](https://github.com/vercel/vercel/pull/11891))
+
+- Standardize target parsing between commands ([#11890](https://github.com/vercel/vercel/pull/11890))
+
+## 35.1.0
+
+### Minor Changes
+
+- Add target flag to vc build ([#11858](https://github.com/vercel/vercel/pull/11858))
+
+### Patch Changes
+
+- Better error message when calling logs command without a deployment url ([#11877](https://github.com/vercel/vercel/pull/11877))
+
+- Updated dependencies [[`9d9b2fee6`](https://github.com/vercel/vercel/commit/9d9b2fee64b5638a313366ccb3eb2e0b337b4750)]:
+  - @vercel/build-utils@8.3.5
+  - @vercel/node@3.2.7
+  - @vercel/static-build@2.5.17
+
+## 35.0.3
+
+### Patch Changes
+
+- Updated dependencies [[`ae2bdab65`](https://github.com/vercel/vercel/commit/ae2bdab6544d76687785b40eded0a40e3ea477ff)]:
+  - @vercel/build-utils@8.3.4
+  - @vercel/hydrogen@1.0.4
+  - @vercel/next@4.3.6
+  - @vercel/redwood@2.1.3
+  - @vercel/remix-builder@2.2.1
+  - @vercel/static-build@2.5.16
+  - @vercel/node@3.2.6
+
+## 35.0.2
+
+### Patch Changes
+
+- Updated dependencies [[`a95c4c43a`](https://github.com/vercel/vercel/commit/a95c4c43a660386e5fd4921851e952438fa84b0a)]:
+  - @vercel/next@4.3.5
+
+## 35.0.1
+
+### Patch Changes
+
+- Updated dependencies [[`cfaa83cc9`](https://github.com/vercel/vercel/commit/cfaa83cc9059c598ff3ff8e7f081b483a3ead715), [`db8452770`](https://github.com/vercel/vercel/commit/db8452770e81da216dfd66270473264160ea96d5), [`9290c57b8`](https://github.com/vercel/vercel/commit/9290c57b83cc45a428e4ce96dd4402f97ec7f821)]:
+  - @vercel/next@4.3.4
+  - @vercel/remix-builder@2.2.0
+  - @vercel/static-build@2.5.15
+  - @vercel/build-utils@8.3.3
+  - @vercel/hydrogen@1.0.3
+  - @vercel/redwood@2.1.2
+  - @vercel/node@3.2.5
+
+## 35.0.0
+
+### Major Changes
+
+- [breaking] `vc logs` now returns runtime logs. Use `vc inspect --logs` and `vc deploy --logs` to get build logs ([#11788](https://github.com/vercel/vercel/pull/11788))
+
+### Patch Changes
+
+- Add download of diagnostics ([#11859](https://github.com/vercel/vercel/pull/11859))
+
+- Updated dependencies [[`4c892f040`](https://github.com/vercel/vercel/commit/4c892f04014cf7b7bc662740296cae93fa93a3df), [`11e22746a`](https://github.com/vercel/vercel/commit/11e22746a54a3a17d860bfe32b7a9e885bd8e925)]:
+  - @vercel/next@4.3.3
+  - @vercel/redwood@2.1.1
+  - @vercel/remix-builder@2.1.11
+  - @vercel/node@3.2.4
+
+## 34.4.0
+
+### Minor Changes
+
+- Add target output to `vc inspect` ([#11821](https://github.com/vercel/vercel/pull/11821))
+
+- Send `customEnvironmentSlugOrId` to the create deployment endpoint ([#11789](https://github.com/vercel/vercel/pull/11789))
+
+- Add `vc target ls` command ([#11790](https://github.com/vercel/vercel/pull/11790))
+
+### Patch Changes
+
+- Various improvements to vc target ls ([#11840](https://github.com/vercel/vercel/pull/11840))
+
+- Updated dependencies [[`3eb40c8c2`](https://github.com/vercel/vercel/commit/3eb40c8c2d205ff3c237774eb0b63135c9298d5d), [`d0fe663af`](https://github.com/vercel/vercel/commit/d0fe663afc9c1a699f4195f0e8c97982f47193cf), [`b1e4a4011`](https://github.com/vercel/vercel/commit/b1e4a401102c94742d3b347875313d387d9a57b9), [`55ab52512`](https://github.com/vercel/vercel/commit/55ab52512c1966369fcd9ac60114356c8dfc0271)]:
+  - @vercel/build-utils@8.3.2
+  - @vercel/static-build@2.5.14
+  - @vercel/next@4.3.2
+  - @vercel/remix-builder@2.1.10
+  - @vercel/node@3.2.3
+
+## 34.3.1
+
+### Patch Changes
+
+- Updated dependencies [[`07a12706e`](https://github.com/vercel/vercel/commit/07a12706ebb7fd0599884f62d89ef97e33c7232f), [`3c9876e3d`](https://github.com/vercel/vercel/commit/3c9876e3d92fdbc2ad403eef0cb3469070ce0ecf), [`c7e339397`](https://github.com/vercel/vercel/commit/c7e33939725a6c9c155956a24245121a1416ddb8), [`fc82c3dac`](https://github.com/vercel/vercel/commit/fc82c3dac762c38ee74d6586c9bfe2f402b3fe57), [`21bf60218`](https://github.com/vercel/vercel/commit/21bf60218eee553ce60e6239fdc116505e2add55), [`9c5362b3d`](https://github.com/vercel/vercel/commit/9c5362b3d4ad29dcd56f0e7b6c31d02bf6a3f6f3)]:
+  - @vercel/next@4.3.1
+  - @vercel/build-utils@8.3.1
+  - @vercel/node@3.2.2
+  - @vercel/static-build@2.5.13
+
+## 34.3.0
+
+### Minor Changes
+
+- introduce --logs flag for deploy and inspect command to display build logs ([#11672](https://github.com/vercel/vercel/pull/11672))
+
+- Adds the ability for builders to define a `diagnostics` step that is called after the build operation is done. ([#11653](https://github.com/vercel/vercel/pull/11653))
+  Implements the diagnostics step in the `next` builder.
+
+### Patch Changes
+
+- Updated dependencies [[`394eddb2a`](https://github.com/vercel/vercel/commit/394eddb2a9f4d9096315fe53f8d27a5401900e5f), [`b9d18c583`](https://github.com/vercel/vercel/commit/b9d18c5835ff16316fafb854eb6447df9c841b98), [`77836e3c3`](https://github.com/vercel/vercel/commit/77836e3c33837a7c85957733cad5c433e86aa8a2), [`11d0a32d8`](https://github.com/vercel/vercel/commit/11d0a32d854948e2df24c48ab6afdf5255d50632)]:
+  - @vercel/build-utils@8.3.0
+  - @vercel/next@4.3.0
+  - @vercel/remix-builder@2.1.9
+  - @vercel/redwood@2.1.0
+  - @vercel/node@3.2.1
+  - @vercel/static-build@2.5.12
+
+## 34.2.8
+
+### Patch Changes
+
+- Updated dependencies [[`fd069f184`](https://github.com/vercel/vercel/commit/fd069f184d94a41cfcc427e8249418e122a4bf71), [`8ae40d096`](https://github.com/vercel/vercel/commit/8ae40d096eac5667a9d6b75fbb3f34565c841f90), [`f0d6acaa0`](https://github.com/vercel/vercel/commit/f0d6acaa03f20b47dbaf9ff501d009e02901db86), [`e33756494`](https://github.com/vercel/vercel/commit/e337564941a13ea9d2b3a1646e9f5a570ab0c7c5), [`dcb7fa5f9`](https://github.com/vercel/vercel/commit/dcb7fa5f9ca7f2acc913f5cc2c775425f2d7a580)]:
+  - @vercel/node@3.2.0
+  - @vercel/next@4.2.18
+  - @vercel/remix-builder@2.1.8
+
+## 34.2.7
+
+### Patch Changes
+
+- Updated dependencies [[`84b744541`](https://github.com/vercel/vercel/commit/84b744541b58524bd91e3b3f0628b675e772660f)]:
+  - @vercel/next@4.2.17
+
+## 34.2.6
+
+### Patch Changes
+
+- [built-utils] Handle case of not having lockfile when corepack is enabled ([#11697](https://github.com/vercel/vercel/pull/11697))
+
+- Updated dependencies [[`5c12ed695`](https://github.com/vercel/vercel/commit/5c12ed69500ceff6a9dc544eab0acd7af64c044a), [`21444a38e`](https://github.com/vercel/vercel/commit/21444a38e50ed680c91b0e3955f15e378eeda64b), [`fa9789a93`](https://github.com/vercel/vercel/commit/fa9789a93ebe64c4246f441590cb695d296af336), [`c925dc4a1`](https://github.com/vercel/vercel/commit/c925dc4a1bf3a47b684b5f7fd788ddd24ba1ed1e), [`06d2d860e`](https://github.com/vercel/vercel/commit/06d2d860e47aed792247bf929805b180ed6e2dab), [`b735f37fd`](https://github.com/vercel/vercel/commit/b735f37fd92c707040e72084b0fdb4f8fd01dd51)]:
+  - @vercel/build-utils@8.2.2
+  - @vercel/next@4.2.16
+  - @vercel/redwood@2.0.10
+  - @vercel/remix-builder@2.1.7
+  - @vercel/node@3.1.7
+  - @vercel/static-build@2.5.11
+
+## 34.2.5
+
+### Patch Changes
+
+- Adds a route for the `.rsc` pathname as well when app has ppr enabled but not all routes. ([#11681](https://github.com/vercel/vercel/pull/11681))
+
+- Updated dependencies [[`7457767a7`](https://github.com/vercel/vercel/commit/7457767a77b03662c103a658273a46cf78359068), [`4337ea065`](https://github.com/vercel/vercel/commit/4337ea0654c4ee2c91c4464540f879d43da6696f)]:
+  - @vercel/next@4.2.15
+
+## 34.2.4
+
+### Patch Changes
+
+- Updated dependencies [[`3eb9d8c89`](https://github.com/vercel/vercel/commit/3eb9d8c8929592960d88e0395e2a2443f7304d6b), [`83741a0eb`](https://github.com/vercel/vercel/commit/83741a0eb9e44457b083e8790a11eb89984e6357)]:
+  - @vercel/python@4.3.0
+  - @vercel/build-utils@8.2.1
+  - @vercel/node@3.1.6
+  - @vercel/static-build@2.5.10
+
+## 34.2.3
+
+### Patch Changes
+
+- Don't create streaming lambdas for pages router routes ([#11660](https://github.com/vercel/vercel/pull/11660))
+
+- Updated dependencies [[`c9d53d4e3`](https://github.com/vercel/vercel/commit/c9d53d4e3e4591b9b6bde86100564c9ee4c6d1d4), [`5f561f8cf`](https://github.com/vercel/vercel/commit/5f561f8cfa4720801a5cf4598f193ab34539abb9)]:
+  - @vercel/next@4.2.14
+
+## 34.2.2
+
+### Patch Changes
+
+- Fix related to erroring when a prefetch route is not provided but the route is PPR enabled ([#11638](https://github.com/vercel/vercel/pull/11638))
+
+- Updated dependencies [[`8e44ef5b9`](https://github.com/vercel/vercel/commit/8e44ef5b9d2cdbe743c7f1e3534f182465fed9bf), [`61e6af374`](https://github.com/vercel/vercel/commit/61e6af3740296c11015d0c3da84ee205020b0ea6)]:
+  - @vercel/next@4.2.13
+
+## 34.2.1
+
+### Patch Changes
+
+- Support incremental PPR for large applications ([#11625](https://github.com/vercel/vercel/pull/11625))
+
+- Updated dependencies [[`73e558913`](https://github.com/vercel/vercel/commit/73e558913ab30ba097d7536a12fa8a7c967479f0)]:
+  - @vercel/next@4.2.12
+
+## 34.2.0
+
+### Minor Changes
+
+- Stop sending system environment variables in dev ([#11526](https://github.com/vercel/vercel/pull/11526))
+
+### Patch Changes
+
+- Updated dependencies [[`d3c1267e2`](https://github.com/vercel/vercel/commit/d3c1267e24082789ea6382cf6af81dd40df288ff), [`ccd7eb1fb`](https://github.com/vercel/vercel/commit/ccd7eb1fb78f7ac9effdbe1935de3bda82c97fe3)]:
+  - @vercel/build-utils@8.2.0
+  - @vercel/node@3.1.5
+  - @vercel/static-build@2.5.9
+
+## 34.1.14
+
+### Patch Changes
+
+- Updated dependencies [[`ad6945435`](https://github.com/vercel/vercel/commit/ad69454352b519b2b0ed326f245c779530554bf2)]:
+  - @vercel/build-utils@8.1.3
+  - @vercel/node@3.1.4
+  - @vercel/static-build@2.5.8
+
+## 34.1.13
+
+### Patch Changes
+
+- Updated dependencies [[`1682ad43d`](https://github.com/vercel/vercel/commit/1682ad43d0064b22b1248a7e946746b838f00076)]:
+  - @vercel/build-utils@8.1.2
+  - @vercel/node@3.1.3
+  - @vercel/static-build@2.5.7
+
+## 34.1.12
+
+### Patch Changes
+
+- Updated dependencies [[`67afc2608`](https://github.com/vercel/vercel/commit/67afc26085e2ebdaa33a8cbce112afec4cb1c4f5), [`2f7a6ed5f`](https://github.com/vercel/vercel/commit/2f7a6ed5f92d454000f92247d3b6548e2064f4e6)]:
+  - @vercel/next@4.2.11
+  - @vercel/build-utils@8.1.1
+  - @vercel/node@3.1.2
+  - @vercel/static-build@2.5.6
+
+## 34.1.11
+
+### Patch Changes
+
+- Updated dependencies [[`5014b1e82`](https://github.com/vercel/vercel/commit/5014b1e82a46181baeb727ffe6d14000b6a4b1d7), [`18d1703d5`](https://github.com/vercel/vercel/commit/18d1703d5b4f2adc61fd56011f874c393fa57d0d), [`e87d4c14d`](https://github.com/vercel/vercel/commit/e87d4c14d0e718281f9ba91c9ec1cc6e142d383d), [`bc5fd4115`](https://github.com/vercel/vercel/commit/bc5fd41158ec9f36e5db1fe749589adcbaec6950)]:
+  - @vercel/build-utils@8.1.0
+  - @vercel/next@4.2.10
+  - @vercel/redwood@2.0.9
+  - @vercel/remix-builder@2.1.6
+  - @vercel/node@3.1.1
+  - @vercel/static-build@2.5.5
+
+## 34.1.10
+
+### Patch Changes
+
+- Updated dependencies [[`119f80e96`](https://github.com/vercel/vercel/commit/119f80e9611a7a5a755aa689502dcdab323194aa), [`11584b0e9`](https://github.com/vercel/vercel/commit/11584b0e9b55f312f34d0d6467ab498e472ac9df), [`3023122d4`](https://github.com/vercel/vercel/commit/3023122d4e0dd292340d9e9e61ef232baf6e610d), [`0e774b6be`](https://github.com/vercel/vercel/commit/0e774b6be0c832213a64124e1f4fc6d150e87d9f)]:
+  - @vercel/next@4.2.9
+  - @vercel/static-build@2.5.4
+
+## 34.1.9
+
+### Patch Changes
+
+- Updated dependencies [[`5a532a5b9`](https://github.com/vercel/vercel/commit/5a532a5b948994ba04783ac560357eed9f94a3f3), [`50fc27ba5`](https://github.com/vercel/vercel/commit/50fc27ba5773870956300bbbaffbe387d549bc12), [`c1d852295`](https://github.com/vercel/vercel/commit/c1d85229509dd319a1f11beb940a759113564d33), [`a5ea04154`](https://github.com/vercel/vercel/commit/a5ea04154ba26ee4e635d8953aa4f0d9d82d3a96)]:
+  - @vercel/next@4.2.8
+  - @vercel/node@3.1.0
+
+## 34.1.8
+
+### Patch Changes
+
+- Updated dependencies [[`52e435aa5`](https://github.com/vercel/vercel/commit/52e435aa5d7b4014d19477969ad5cbfbe94aa76f), [`124846a3e`](https://github.com/vercel/vercel/commit/124846a3e65a3bf1ae82327fd4ba2b132674fb39), [`dc974b679`](https://github.com/vercel/vercel/commit/dc974b6797de0b6e90373c92e1f2bbdafcfc6687), [`58c6755e0`](https://github.com/vercel/vercel/commit/58c6755e0c12cae2ce55978b7bf8722133151196)]:
+  - @vercel/next@4.2.7
+  - @vercel/static-build@2.5.3
+
+## 34.1.7
+
+### Patch Changes
+
+- Updated dependencies [[`3420ba015`](https://github.com/vercel/vercel/commit/3420ba0153dcabffef7114ba2361fb0f3c43a7b3)]:
+  - @vercel/next@4.2.6
+
+## 34.1.6
+
+### Patch Changes
+
+- Updated dependencies [[`b1adaf76e`](https://github.com/vercel/vercel/commit/b1adaf76ec17d1bbfe30a2bf65405bd886fa9bcf), [`3fb97d1d2`](https://github.com/vercel/vercel/commit/3fb97d1d270e835ce34a687bd234ea53dfe446a2)]:
+  - @vercel/next@4.2.5
+  - @vercel/static-build@2.5.2
+
+## 34.1.5
+
+### Patch Changes
+
+- Updated dependencies [[`763a6d107`](https://github.com/vercel/vercel/commit/763a6d10709ca40405634d41863c2e524917ebe1), [`15475c8a2`](https://github.com/vercel/vercel/commit/15475c8a2c303a1dd189ba24044fac750280dd2e), [`21f5e7375`](https://github.com/vercel/vercel/commit/21f5e7375e4cb4ceed98ab56486d09a85fa3894d)]:
+  - @vercel/ruby@2.1.0
+  - @vercel/build-utils@8.0.0
+  - @vercel/node@3.0.28
+  - @vercel/static-build@2.5.1
+
+## 34.1.4
+
+### Patch Changes
+
+- Updated dependencies [[`5b7960337`](https://github.com/vercel/vercel/commit/5b79603378a50fd04d5be1c3a3e5cd605b61478f)]:
+  - @vercel/next@4.2.4
+
+## 34.1.3
+
+### Patch Changes
+
+- Updated dependencies [[`5758838d0`](https://github.com/vercel/vercel/commit/5758838d090b9789ca6821e1122781352021109f)]:
+  - @vercel/next@4.2.3
+
+## 34.1.2
+
+### Patch Changes
+
+- Updated dependencies [[`64bd6dd05`](https://github.com/vercel/vercel/commit/64bd6dd0578d82f210b942b88baaa0673218d8b0), [`532885148`](https://github.com/vercel/vercel/commit/532885148b583700df5a120350c620af6ad34cd7), [`adcfc365a`](https://github.com/vercel/vercel/commit/adcfc365a7d375d7a70d434669e4472031693489)]:
+  - @vercel/next@4.2.2
+  - @vercel/python@4.2.0
+
+## 34.1.1
+
+### Patch Changes
+
+- Updated dependencies [[`f4c181a2c`](https://github.com/vercel/vercel/commit/f4c181a2c26b11afadf78e68baf1246a27240755), [`2826563ff`](https://github.com/vercel/vercel/commit/2826563ffab7ab01d3c85def2cad8c4041cd88b1)]:
+  - @vercel/static-build@2.5.0
+  - @vercel/build-utils@7.12.0
+  - @vercel/node@3.0.27
+
+## 34.1.0
+
+### Minor Changes
+
+- Don't propagate legacy env VERCEL_ANALYTICS_ID if @vercel/speed-insights package is detected ([#11305](https://github.com/vercel/vercel/pull/11305))
+
+### Patch Changes
+
+- Replace console.log that communicates to user with client.output methods ([#11353](https://github.com/vercel/vercel/pull/11353))
+
+- [cli] Do not pipe git stderr to user during successful `vc dev` run ([#11450](https://github.com/vercel/vercel/pull/11450))
+
+- fix: Sort default team to the top of the selection list ([#11451](https://github.com/vercel/vercel/pull/11451))
+
+- Updated dependencies [[`993a60ef7`](https://github.com/vercel/vercel/commit/993a60ef71d137955052255066bfc096e53630a1), [`949d84ad1`](https://github.com/vercel/vercel/commit/949d84ad1cdcd4f9ea44f8a165a193a488cb1a31), [`5bb96ea07`](https://github.com/vercel/vercel/commit/5bb96ea07289e7db66d28d08b372cf949f3d7e88), [`fd8031874`](https://github.com/vercel/vercel/commit/fd8031874300552b877329ec3f0798ec6706b630)]:
+  - @vercel/next@4.2.1
+
 ## 34.0.0
 
 ### Major Changes

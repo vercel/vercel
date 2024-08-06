@@ -107,6 +107,7 @@ export class MockClient extends Client {
     // catch requests that were not intercepted
     this.app.use((req, res) => {
       const message = `[Vercel API Mock] \`${req.method} ${req.path}\` was not handled.`;
+      // eslint-disable-next-line no-console
       console.warn(message);
       res.status(404).json({
         error: {

@@ -1,5 +1,145 @@
 # @vercel/static-build
 
+## 2.5.18
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.40
+
+## 2.5.17
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.39
+
+## 2.5.16
+
+### Patch Changes
+
+- Revert "Fix corepack `packageManager` detection on monorepos" ([#11865](https://github.com/vercel/vercel/pull/11865))
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.38
+
+## 2.5.15
+
+### Patch Changes
+
+- Fix corepack `packageManager` detection on monorepos ([#11811](https://github.com/vercel/vercel/pull/11811))
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.37
+
+## 2.5.14
+
+### Patch Changes
+
+- [framework-fixtures]: Bump the core group across 1 directory with 3 updates ([#11773](https://github.com/vercel/vercel/pull/11773))
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.36
+
+## 2.5.13
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.35
+
+## 2.5.12
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.34
+
+## 2.5.11
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.33
+
+## 2.5.10
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.32
+
+## 2.5.9
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.31
+
+## 2.5.8
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.30
+
+## 2.5.7
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.29
+
+## 2.5.6
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.28
+
+## 2.5.5
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.27
+
+## 2.5.4
+
+### Patch Changes
+
+- Fix `Cannot read properties of null` error ([#11559](https://github.com/vercel/vercel/pull/11559))
+
+## 2.5.3
+
+### Patch Changes
+
+- Support Ruby and Python static site generators in AL2023 build image ([#11529](https://github.com/vercel/vercel/pull/11529))
+
+## 2.5.2
+
+### Patch Changes
+
+- Revert `SUPPORTED_RUBY_VERSION` change to fix Ruby site generators on AL2 build image ([#11522](https://github.com/vercel/vercel/pull/11522))
+
+## 2.5.1
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.26
+
+## 2.5.0
+
+### Minor Changes
+
+- Don't rely on `hugo` binary existing in build-container ([#11455](https://github.com/vercel/vercel/pull/11455))
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.25
+
 ## 2.4.6
 
 ### Patch Changes

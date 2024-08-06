@@ -15,6 +15,7 @@ describe.skipIf(isWindows)('client.input', () => {
   describe('text', () => {
     it('should match the snapshot', async () => {
       if (process.platform === 'win32') {
+        // eslint-disable-next-line no-console
         console.log('Skipping test on windows');
       }
       const answer = client.input.text({

@@ -108,6 +108,7 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
           found = true;
           break;
         } else {
+          ctx.deploymentLogs = null;
           throw new Error(
             `Expected deployment logs of ${deploymentId} not to contain ${toCheck}, but found ${log.text}`
           );
@@ -122,9 +123,13 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
         deploymentLogs,
         logLength: deploymentLogs?.length,
       });
-      throw new Error(
+      ctx.deploymentLogs = null;
+      const error = new Error(
         `Expected deployment logs of ${deploymentId} to contain ${toCheck}, it was not found`
       );
+      error.retries = 20;
+      error.retryDelay = 5000; // ms
+      throw error;
     } else {
       logWithinTest('finished testing', JSON.stringify(probe));
       return;
@@ -178,7 +183,32 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
     fetchOpts.headers['content-type'] = 'application/json';
     fetchOpts.body = JSON.stringify(probe.body);
   }
-  const { text, resp } = await fetchDeploymentUrl(probeUrl, fetchOpts);
+  let result = await fetchDeploymentUrl(probeUrl, fetchOpts);
+
+  // If we receive the preview page from Vercel, the real page should appear momentarily,
+  // retry a few times before running the probe checks
+  const checkForPreviewPage = text => {
+    return text.includes('This page will update once the build completes');
+  };
+  let isShowingBuildPreviewPage = checkForPreviewPage(result.text);
+  for (let retryCount = 0; retryCount < 10; retryCount++) {
+    if (!isShowingBuildPreviewPage) {
+      break;
+    } else {
+      result = await fetchDeploymentUrl(probeUrl, fetchOpts);
+      isShowingBuildPreviewPage = checkForPreviewPage(result.text);
+      if (!isShowingBuildPreviewPage) {
+        break;
+      }
+    }
+    await new Promise(r => setTimeout(r, 1000));
+  }
+  if (isShowingBuildPreviewPage) {
+    throw new Error(`Timed out while waiting for preview page to be replaced`);
+  }
+
+  const { text, resp } = result;
+
   logWithinTest('finished testing', JSON.stringify(probe));
 
   let hadTest = false;
@@ -417,24 +447,27 @@ async function testDeployment(fixturePath, opts = {}) {
     try {
       await runProbe(probe, deploymentId, deploymentUrl, probeCtx);
     } catch (err) {
-      if (!probe.retries) {
+      const retries = Math.max(probe.retries || 0, err.retries || 0);
+      if (!retries) {
         throw err;
       }
 
-      for (let i = 0; i < probe.retries; i++) {
-        logWithinTest(`re-trying ${i + 1}/${probe.retries}:`, stringifiedProbe);
+      const retryDelay = Math.max(probe.retryDelay || 0, err.retryDelay || 0);
+
+      for (let i = 0; i < retries; i++) {
+        logWithinTest(`re-trying ${i + 1}/${retries}:`, stringifiedProbe);
 
         try {
           await runProbe(probe, deploymentId, deploymentUrl, probeCtx);
           break;
         } catch (err) {
-          if (i === probe.retries - 1) {
+          if (i === retries - 1) {
             throw err;
           }
 
-          if (probe.retryDelay) {
-            logWithinTest(`Waiting ${probe.retryDelay}ms before retrying`);
-            await new Promise(resolve => setTimeout(resolve, probe.retryDelay));
+          if (retryDelay) {
+            logWithinTest(`Waiting ${retryDelay}ms before retrying`);
+            await new Promise(resolve => setTimeout(resolve, retryDelay));
           }
         }
       }

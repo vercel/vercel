@@ -4,6 +4,7 @@ import type {
   RouteManifest,
 } from '@remix-run/dev/dist/config/routes';
 import type { BaseFunctionConfig } from '@vercel/static-config';
+import { describe, it, expect } from 'vitest';
 
 describe('getResolvedRouteConfig()', () => {
   const staticConfigsMap = new Map<ConfigRoute, BaseFunctionConfig | null>([

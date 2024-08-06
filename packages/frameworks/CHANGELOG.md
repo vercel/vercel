@@ -1,5 +1,29 @@
 # @vercel/frameworks
 
+## 3.1.1
+
+### Patch Changes
+
+- Improvements to "fasthtml" framework preset ([#11900](https://github.com/vercel/vercel/pull/11900))
+
+## 3.1.0
+
+### Minor Changes
+
+- Add FastHTML framework preset ([#11889](https://github.com/vercel/vercel/pull/11889))
+
+## 3.0.3
+
+### Patch Changes
+
+- Update SvelteKit v1 devCommand ([#11494](https://github.com/vercel/vercel/pull/11494))
+
+## 3.0.2
+
+### Patch Changes
+
+- Update framework detection to support SolidStart v1 ([#11308](https://github.com/vercel/vercel/pull/11308))
+
 ## 3.0.1
 
 ### Patch Changes
