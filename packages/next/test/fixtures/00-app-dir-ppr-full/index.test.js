@@ -40,8 +40,8 @@ const ctx = {};
 
 describe(`${__dirname.split(path.sep).pop()}`, () => {
   beforeAll(async () => {
-    const info = await require('../../utils').normalizeReactVersion(__dirname);
-    await deployAndTest(__dirname);
+    await require('../../utils').normalizeReactVersion(__dirname);
+    const info = await deployAndTest(__dirname);
     Object.assign(ctx, info);
   });
 

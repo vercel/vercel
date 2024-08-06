@@ -8,8 +8,8 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     deploymentId: '',
   };
   it('should deploy and pass probe checks', async () => {
-    ctx = await require('../../utils').normalizeReactVersion(__dirname);
-    await deployAndTest(__dirname);
+    await require('../../utils').normalizeReactVersion(__dirname);
+    ctx = await deployAndTest(__dirname);
   });
 
   it('should have correct content after revalidating for /', async () => {

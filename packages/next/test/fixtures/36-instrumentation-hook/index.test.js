@@ -8,8 +8,8 @@ const ctx = {};
 describe(`${__dirname.split(path.sep).pop()}`, () => {
   // this test needs to run first to set ctx.deploymentUrl
   it('should deploy and pass probe checks', async () => {
-    const info = await require('../../utils').normalizeReactVersion(__dirname);
-    await deployAndTest(__dirname);
+    await require('../../utils').normalizeReactVersion(__dirname);
+    const info = await deployAndTest(__dirname);
     Object.assign(ctx, info);
   });
 
