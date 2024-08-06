@@ -6,7 +6,7 @@ const ctx = {};
 
 describe(`${__dirname.split(path.sep).pop()}`, () => {
   it('should deploy and pass probe checks', async () => {
-    await deployAndTest(__dirname, { skipForceNew: true });
-    const info = Object.assign(ctx, info);
+    const info = await deployAndTest(__dirname, { skipForceNew: true });
+    Object.assign(ctx, info);
   });
 });
