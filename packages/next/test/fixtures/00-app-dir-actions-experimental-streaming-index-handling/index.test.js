@@ -22,7 +22,7 @@ function findActionId(page, runtime) {
 describe(`${__dirname.split(path.sep).pop()}`, () => {
   beforeAll(async () => {
     const info = await require('../../utils').normalizeReactVersion(__dirname);
-    await deployandtest(__dirname);
+    await deployAndTest(__dirname);
 
     const actionManifest = await fetch(
       `${info.deploymentUrl}/server-reference-manifest.json`

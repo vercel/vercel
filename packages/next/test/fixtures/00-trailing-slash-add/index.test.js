@@ -9,7 +9,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
   };
   it('should deploy and pass probe checks', async () => {
     ctx = await require('../../utils').normalizeReactVersion(__dirname);
-    await deployandtest(__dirname);
+    await deployAndTest(__dirname);
   });
 
   it('should have correct content after revalidating for /', async () => {

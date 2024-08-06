@@ -7,7 +7,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
 
   it('should deploy and pass probe checks', async () => {
     const res = await require('../../utils').normalizeReactVersion(__dirname);
-    await deployandtest(__dirname);
+    await deployAndTest(__dirname);
     Object.assign(ctx, res);
   });
 });

@@ -10,7 +10,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
 
   beforeAll(async () => {
     const res = await require('../../utils').normalizeReactVersion(__dirname);
-    await deployandtest(__dirname);
+    await deployAndTest(__dirname);
     Object.assign(ctx, res);
   });
 
