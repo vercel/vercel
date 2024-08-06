@@ -6,11 +6,16 @@ const builder = require('../../');
 const {
   createRunBuildLambda,
 } = require('../../../../test/lib/run-build-lambda');
-const { duplicateWithConfig } = require('../utils');
+const { duplicateWithConfig, normalizeReactVersion } = require('../utils');
 const { streamToBuffer } = require('@vercel/build-utils');
 const { createHash } = require('crypto');
 
-const runBuildLambda = createRunBuildLambda(builder);
+const runBuildLambda = async projectPath => {
+  const innerRunBuildLambda = createRunBuildLambda(builder);
+
+  await normalizeReactVersion(projectPath);
+  return innerRunBuildLambda(projectPath);
+};
 
 const SIMPLE_PROJECT = path.resolve(
   __dirname,
