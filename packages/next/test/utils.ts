@@ -10,6 +10,7 @@ import ms from 'ms';
 import ndjson from 'ndjson';
 import os from 'os';
 import path from 'path';
+import fetch from 'node-fetch';
 
 jest.setTimeout(ms('6m'));
 
