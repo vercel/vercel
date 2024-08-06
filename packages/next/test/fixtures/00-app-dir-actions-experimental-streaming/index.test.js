@@ -33,7 +33,8 @@ function generateFormDataPayload(actionId) {
 
 describe(`${__dirname.split(path.sep).pop()}`, () => {
   beforeAll(async () => {
-    const info = await deployAndTest(__dirname);
+    const info = await require('../../utils').normalizeReactVersion(__dirname);
+    await deployandtest(__dirname);
 
     const actionManifest = await fetch(
       `${info.deploymentUrl}/server-reference-manifest.json`
