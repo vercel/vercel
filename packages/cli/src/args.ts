@@ -49,17 +49,17 @@ export const help = () => `
     -v, --version                  Output the version number
     --cwd                          Current working directory
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
-  'FILE'
-)}   Path to the local ${'`vercel.json`'} file
+      'FILE'
+    )}   Path to the local ${'`vercel.json`'} file
     -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
-  'DIR'
-)}    Path to the global ${'`.vercel`'} directory
+      'DIR'
+    )}    Path to the global ${'`.vercel`'} directory
     -d, --debug                    Debug mode [off]
     --no-color                     No color mode [off]
     -S, --scope                    Set a custom scope
     -t ${chalk.underline('TOKEN')}, --token=${chalk.underline(
-  'TOKEN'
-)}        Login token
+      'TOKEN'
+    )}        Login token
 
   ${chalk.dim('Examples:')}
 
@@ -76,8 +76,8 @@ export const help = () => `
     ${chalk.cyan(`$ ${packageName} -e NODE_ENV=production`)}
 
   ${chalk.gray('–')} Show the usage information for the sub command ${chalk.dim(
-  '`list`'
-)}
+    '`list`'
+  )}
 
     ${chalk.cyan(`$ ${packageName} help list`)}
 `;

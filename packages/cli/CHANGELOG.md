@@ -1,5 +1,62 @@
 # vercel
 
+## 35.2.3
+
+### Patch Changes
+
+- Updated dependencies [[`bec80e76a`](https://github.com/vercel/vercel/commit/bec80e76afe546072d4138f3ed3d6eda56d3f370), [`680a3af28`](https://github.com/vercel/vercel/commit/680a3af28e5d6caf51aa56f80fe77ad1091cd542)]:
+  - @vercel/build-utils@8.3.6
+  - @vercel/remix-builder@2.2.3
+  - @vercel/node@3.2.8
+  - @vercel/static-build@2.5.18
+
+## 35.2.2
+
+### Patch Changes
+
+- Fix issue where builder output was treating an api endpoint as a frontend route ([#11907](https://github.com/vercel/vercel/pull/11907))
+
+- Updated dependencies [[`0efb4795c`](https://github.com/vercel/vercel/commit/0efb4795cb06edf2561b69d7e2512b8e0cf912ca), [`5d1965832`](https://github.com/vercel/vercel/commit/5d1965832f02595c91409b4e7d863725669e6ccb)]:
+  - @vercel/remix-builder@2.2.2
+
+## 35.2.1
+
+### Patch Changes
+
+- Allow custom environments in `vc pull --environment` ([#11897](https://github.com/vercel/vercel/pull/11897))
+
+- `vc target` now prompts to link projects ([#11895](https://github.com/vercel/vercel/pull/11895))
+
+- Updated dependencies [[`6c2398713`](https://github.com/vercel/vercel/commit/6c2398713cd7ea2f1511d56ce1c5120d9f8e3a98)]:
+  - @vercel/python@4.3.1
+
+## 35.2.0
+
+### Minor Changes
+
+- Apply framework "defaultRoutes" in `vc build` ([#11889](https://github.com/vercel/vercel/pull/11889))
+
+### Patch Changes
+
+- fix(cli): wrong log line colors for deploy and inspect commands ([#11891](https://github.com/vercel/vercel/pull/11891))
+
+- Standardize target parsing between commands ([#11890](https://github.com/vercel/vercel/pull/11890))
+
+## 35.1.0
+
+### Minor Changes
+
+- Add target flag to vc build ([#11858](https://github.com/vercel/vercel/pull/11858))
+
+### Patch Changes
+
+- Better error message when calling logs command without a deployment url ([#11877](https://github.com/vercel/vercel/pull/11877))
+
+- Updated dependencies [[`9d9b2fee6`](https://github.com/vercel/vercel/commit/9d9b2fee64b5638a313366ccb3eb2e0b337b4750)]:
+  - @vercel/build-utils@8.3.5
+  - @vercel/node@3.2.7
+  - @vercel/static-build@2.5.17
+
 ## 35.0.3
 
 ### Patch Changes

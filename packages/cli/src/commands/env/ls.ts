@@ -1,11 +1,15 @@
 import chalk from 'chalk';
 import ms from 'ms';
+import title from 'title';
 import { Output } from '../../util/output';
-import type { Project, ProjectEnvVariable } from '@vercel-internals/types';
+import type {
+  CustomEnvironment,
+  Project,
+  ProjectEnvVariable,
+} from '@vercel-internals/types';
 import Client from '../../util/client';
 import formatTable from '../../util/format-table';
 import getEnvRecords from '../../util/env/get-env-records';
-import formatEnvTarget from '../../util/env/format-env-target';
 import {
   isValidEnvTarget,
   getEnvTargetPlaceholder,
@@ -14,6 +18,7 @@ import stamp from '../../util/output/stamp';
 import param from '../../util/output/param';
 import { getCommandName } from '../../util/pkg-name';
 import ellipsis from '../../util/output/ellipsis';
+import { isObject } from '@vercel/error-utils';
 
 type Options = {
   '--debug': boolean;
@@ -48,16 +53,14 @@ export default async function ls(
 
   const lsStamp = stamp();
 
-  const { envs } = await getEnvRecords(
-    output,
-    client,
-    project.id,
-    'vercel-cli:env:ls',
-    {
+  const [envsResult, customEnvs] = await Promise.all([
+    getEnvRecords(output, client, project.id, 'vercel-cli:env:ls', {
       target: envTarget,
       gitBranch: envGitBranch,
-    }
-  );
+    }),
+    getCustomEnvironments(client, project.id),
+  ]);
+  const { envs } = envsResult;
 
   if (envs.length === 0) {
     output.log(
@@ -71,14 +74,32 @@ export default async function ls(
         project.name
       )} ${chalk.gray(lsStamp())}`
     );
-    // eslint-disable-next-line no-console
-    console.log(getTable(envs));
+    client.stdout.write(`${getTable(envs, customEnvs)}\n`);
   }
 
   return 0;
 }
 
-function getTable(records: ProjectEnvVariable[]) {
+async function getCustomEnvironments(client: Client, projectId: string) {
+  try {
+    const res = await client.fetch<{ environments: CustomEnvironment[] }>(
+      `/projects/${encodeURIComponent(projectId)}/custom-environments`,
+      { method: 'GET' }
+    );
+    return res.environments;
+  } catch (error) {
+    if (isObject(error) && error.status === 404) {
+      // user is not flagged for custom environments
+      return [];
+    }
+    throw error;
+  }
+}
+
+function getTable(
+  records: ProjectEnvVariable[],
+  customEnvironments: CustomEnvironment[]
+) {
   const label = records.some(env => env.gitBranch)
     ? 'environments (git branch)'
     : 'environments';
@@ -88,13 +109,16 @@ function getTable(records: ProjectEnvVariable[]) {
     [
       {
         name: '',
-        rows: records.map(getRow),
+        rows: records.map(row => getRow(row, customEnvironments)),
       },
     ]
   );
 }
 
-function getRow(env: ProjectEnvVariable) {
+function getRow(
+  env: ProjectEnvVariable,
+  customEnvironments: CustomEnvironment[]
+) {
   let value: string;
   if (env.type === 'plain') {
     // replace space characters (line-break, etc.) with simple spaces
@@ -112,7 +136,23 @@ function getRow(env: ProjectEnvVariable) {
   return [
     chalk.bold(env.key),
     value,
-    formatEnvTarget(env),
+    formatEnvTarget(env, customEnvironments),
     env.createdAt ? `${ms(now - env.createdAt)} ago` : '',
   ];
+}
+
+function formatEnvTarget(
+  env: ProjectEnvVariable,
+  customEnvironments: CustomEnvironment[]
+) {
+  const defaultTargets = (
+    Array.isArray(env.target) ? env.target : [env.target || '']
+  ).map(t => title(t));
+  const customTargets = env.customEnvironmentIds
+    ? env.customEnvironmentIds
+        .map(id => customEnvironments.find(e => e.id === id)?.name)
+        .filter(Boolean)
+    : [];
+  const targetsString = [...defaultTargets, ...customTargets].join(', ');
+  return env.gitBranch ? `${targetsString} (${env.gitBranch})` : targetsString;
 }
