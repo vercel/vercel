@@ -1,7 +1,7 @@
 import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
 
-export const rollbackCommand: Command = {
+export const rollbackCommand = {
   name: 'rollback',
   description: 'Quickly revert back to a previous deployment.',
   arguments: [
@@ -49,4 +49,4 @@ export const rollbackCommand: Command = {
       value: `${packageName} rollback <deployment id/url>`,
     },
   ],
-};
+} as const satisfies Command;

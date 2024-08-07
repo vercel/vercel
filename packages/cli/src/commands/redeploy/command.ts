@@ -1,7 +1,7 @@
 import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
 
-export const redeployCommand: Command = {
+export const redeployCommand = {
   name: 'redeploy',
   description: 'Rebuild and deploy a previous deployment.',
   arguments: [
@@ -29,4 +29,4 @@ export const redeployCommand: Command = {
       value: `${packageName} redeploy my-deployment.vercel.app > deployment-url.txt`,
     },
   ],
-};
+} as const satisfies Command;

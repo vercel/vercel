@@ -1,7 +1,7 @@
 import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
 
-export const loginCommand: Command = {
+export const loginCommand = {
   name: 'login',
   description: 'Authenticate using your email or team id.',
   arguments: [
@@ -44,4 +44,4 @@ export const loginCommand: Command = {
       value: `${packageName} login --github --oob`,
     },
   ],
-};
+} as const satisfies Command;

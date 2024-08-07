@@ -1,7 +1,7 @@
 import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
 
-export const aliasCommand: Command = {
+export const aliasCommand = {
   name: 'alias',
   description: 'Interact with deployment aliases.',
   arguments: [
@@ -88,4 +88,4 @@ export const aliasCommand: Command = {
       value: `${packageName} alias api-ownv3nc9f8.vercel.app my-api.com`,
     },
   ],
-};
+} as const satisfies Command;

@@ -1,7 +1,7 @@
 import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
 
-export const certsCommand: Command = {
+export const certsCommand = {
   name: 'certs',
   description:
     'Interact with SSL certificates. This command is intended for advanced use only. By default, Vercel manages your certificates automatically.',
@@ -107,4 +107,4 @@ export const certsCommand: Command = {
       value: `${packageName} certs ls --next 1584722256178`,
     },
   ],
-};
+} as const satisfies Command;

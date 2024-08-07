@@ -1,7 +1,7 @@
 import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
 
-export const initCommand: Command = {
+export const initCommand = {
   name: 'init',
   description: 'Initialize example Vercel Projects',
   arguments: [
@@ -43,4 +43,4 @@ export const initCommand: Command = {
       value: `${packageName} init <example> --force`,
     },
   ],
-};
+} as const satisfies Command;

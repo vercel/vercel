@@ -1,7 +1,7 @@
 import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
 
-export const devCommand: Command = {
+export const devCommand = {
   name: 'dev',
   description: `Starts the \`${packageName} dev\` server.`,
   arguments: [
@@ -30,4 +30,4 @@ export const devCommand: Command = {
       value: `${packageName} dev --listen 127.0.0.1:5000 `,
     },
   ],
-};
+} as const satisfies Command;

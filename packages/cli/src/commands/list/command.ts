@@ -1,7 +1,7 @@
 import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
 
-export const listCommand: Command = {
+export const listCommand = {
   name: 'list',
   description: 'List app deployments for an app.',
   arguments: [
@@ -55,4 +55,4 @@ export const listCommand: Command = {
       value: `${packageName} list my-app --next 1584722256178`,
     },
   ],
-};
+} as const satisfies Command;
