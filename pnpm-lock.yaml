@@ -24,7 +24,7 @@ importers:
         version: link:packages/build-utils
       '@vercel/style-guide':
         specifier: 6.0.0
-        version: 6.0.0(eslint@8.24.0)(jest@29.5.0)(prettier@2.7.0)(typescript@5.5.4)(vitest@2.0.3)
+        version: 6.0.0(eslint@8.24.0)(jest@29.5.0)(prettier@3.3.3)(typescript@5.5.4)(vitest@2.0.3)
       async-retry:
         specifier: 1.2.3
         version: 1.2.3
@@ -77,8 +77,8 @@ importers:
         specifier: 6.1.0
         version: 6.1.0
       prettier:
-        specifier: 2.7.0
-        version: 2.7.0
+        specifier: 3.3.3
+        version: 3.3.3
       source-map-support:
         specifier: 0.5.12
         version: 0.5.12
@@ -151,7 +151,7 @@ importers:
         version: link:../tsconfig
       '@vercel/style-guide':
         specifier: 6.0.0
-        version: 6.0.0(eslint@8.57.0)(jest@29.5.0)(prettier@2.7.0)(typescript@5.5.4)(vitest@2.0.3)
+        version: 6.0.0(eslint@8.57.0)(jest@29.5.0)(prettier@3.3.3)(typescript@5.5.4)(vitest@2.0.3)
       typescript:
         specifier: 5.5.4
         version: 5.5.4
@@ -169,7 +169,7 @@ importers:
         version: link:../tsconfig
       '@vercel/style-guide':
         specifier: 6.0.0
-        version: 6.0.0(eslint@8.57.0)(jest@29.5.0)(prettier@2.7.0)(typescript@5.5.4)(vitest@2.0.3)
+        version: 6.0.0(eslint@8.57.0)(jest@29.5.0)(prettier@3.3.3)(typescript@5.5.4)(vitest@2.0.3)
       jest:
         specifier: 29.5.0
         version: 29.5.0(@types/node@14.14.31)
@@ -184,7 +184,7 @@ importers:
     devDependencies:
       '@vercel/style-guide':
         specifier: 6.0.0
-        version: 6.0.0(eslint@8.57.0)(jest@29.5.0)(prettier@2.7.0)(typescript@5.5.4)(vitest@2.0.3)
+        version: 6.0.0(eslint@8.57.0)(jest@29.5.0)(prettier@3.3.3)(typescript@5.5.4)(vitest@2.0.3)
 
   internals/types:
     dependencies:
@@ -206,7 +206,7 @@ importers:
         version: link:../tsconfig
       '@vercel/style-guide':
         specifier: 6.0.0
-        version: 6.0.0(eslint@8.57.0)(jest@29.5.0)(prettier@2.7.0)(typescript@5.5.4)(vitest@2.0.3)
+        version: 6.0.0(eslint@8.57.0)(jest@29.5.0)(prettier@3.3.3)(typescript@5.5.4)(vitest@2.0.3)
       typescript:
         specifier: 5.5.4
         version: 5.5.4
@@ -2394,7 +2394,7 @@ packages:
     dependencies:
       '@babel/compat-data': 7.24.4
       '@babel/helper-validator-option': 7.23.5
-      browserslist: 4.23.0
+      browserslist: 4.23.3
       lru-cache: 5.1.1
       semver: 6.3.1
     dev: true
@@ -6918,7 +6918,7 @@ packages:
       - utf-8-validate
     dev: true
 
-  /@vercel/style-guide@6.0.0(eslint@8.24.0)(jest@29.5.0)(prettier@2.7.0)(typescript@5.5.4)(vitest@2.0.3):
+  /@vercel/style-guide@6.0.0(eslint@8.24.0)(jest@29.5.0)(prettier@3.3.3)(typescript@5.5.4)(vitest@2.0.3):
     resolution: {integrity: sha512-tu0wFINGz91EPwaT5VjSqUwbvCY9pvLach7SPG4XyfJKPU9Vku2TFa6+AyzJ4oroGbo9fK+TQhIFHrnFl0nCdg==}
     engines: {node: '>=18.18'}
     peerDependencies:
@@ -6956,8 +6956,8 @@ packages:
       eslint-plugin-tsdoc: 0.2.17
       eslint-plugin-unicorn: 51.0.1(eslint@8.24.0)
       eslint-plugin-vitest: 0.3.26(@typescript-eslint/eslint-plugin@7.18.0)(eslint@8.24.0)(typescript@5.5.4)(vitest@2.0.3)
-      prettier: 2.7.0
-      prettier-plugin-packagejson: 2.5.1(prettier@2.7.0)
+      prettier: 3.3.3
+      prettier-plugin-packagejson: 2.5.1(prettier@3.3.3)
       typescript: 5.5.4
     transitivePeerDependencies:
       - eslint-import-resolver-node
@@ -6967,7 +6967,7 @@ packages:
       - vitest
     dev: true
 
-  /@vercel/style-guide@6.0.0(eslint@8.57.0)(jest@29.5.0)(prettier@2.7.0)(typescript@5.5.4)(vitest@2.0.3):
+  /@vercel/style-guide@6.0.0(eslint@8.57.0)(jest@29.5.0)(prettier@3.3.3)(typescript@5.5.4)(vitest@2.0.3):
     resolution: {integrity: sha512-tu0wFINGz91EPwaT5VjSqUwbvCY9pvLach7SPG4XyfJKPU9Vku2TFa6+AyzJ4oroGbo9fK+TQhIFHrnFl0nCdg==}
     engines: {node: '>=18.18'}
     peerDependencies:
@@ -7005,8 +7005,8 @@ packages:
       eslint-plugin-tsdoc: 0.2.17
       eslint-plugin-unicorn: 51.0.1(eslint@8.57.0)
       eslint-plugin-vitest: 0.3.26(@typescript-eslint/eslint-plugin@7.18.0)(eslint@8.57.0)(typescript@5.5.4)(vitest@2.0.3)
-      prettier: 2.7.0
-      prettier-plugin-packagejson: 2.5.1(prettier@2.7.0)
+      prettier: 3.3.3
+      prettier-plugin-packagejson: 2.5.1(prettier@3.3.3)
       typescript: 5.5.4
     transitivePeerDependencies:
       - eslint-import-resolver-node
@@ -7919,17 +7919,6 @@ packages:
       pako: 0.2.9
     dev: true
 
-  /browserslist@4.23.0:
-    resolution: {integrity: sha512-QW8HiM1shhT2GuzkvklfjcKDiWFXHOeFCIA/huJPwHsslwcydgk7X+z2zXpEijP98UCY7HbubZt5J2Zgvf0CaQ==}
-    engines: {node: ^6 || ^7 || ^8 || ^9 || ^10 || ^11 || ^12 || >=13.7}
-    hasBin: true
-    dependencies:
-      caniuse-lite: 1.0.30001608
-      electron-to-chromium: 1.4.733
-      node-releases: 2.0.14
-      update-browserslist-db: 1.0.13(browserslist@4.23.0)
-    dev: true
-
   /browserslist@4.23.3:
     resolution: {integrity: sha512-btwCFJVjI4YWDNfau8RhZ+B1Q/VLoUITrm3RlP6y1tYGWIOa+InuYiRGXUBXo8nA1qKmHMyLB/iVQg5TT4eFoA==}
     engines: {node: ^6 || ^7 || ^8 || ^9 || ^10 || ^11 || ^12 || >=13.7}
@@ -8125,10 +8114,6 @@ packages:
   /camelcase@6.3.0:
     resolution: {integrity: sha512-Gmy6FhYlCY7uOElZUSbxo2UCDH8owEk996gkbrpsgGtrJLM3J7jGxl9Ic7Qwwj4ivOE5AWZWRMecDdF7hqGjFA==}
     engines: {node: '>=10'}
-    dev: true
-
-  /caniuse-lite@1.0.30001608:
-    resolution: {integrity: sha512-cjUJTQkk9fQlJR2s4HMuPMvTiRggl0rAVMtthQuyOlDWuqHXqN8azLq+pi8B2TjwKJ32diHjUqRIKeFX4z1FoA==}
     dev: true
 
   /caniuse-lite@1.0.30001650:
@@ -9197,10 +9182,6 @@ packages:
 
   /ee-first@1.1.1:
     resolution: {integrity: sha512-WMwm9LhRUo+WUaRN+vRuETqG89IgZphVSNkdFgeb6sS/E4OrDIN7t48CAewSHXc6C8lefD8KKfr5vY61brQlow==}
-    dev: true
-
-  /electron-to-chromium@1.4.733:
-    resolution: {integrity: sha512-gUI9nhI2iBGF0OaYYLKOaOtliFMl+Bt1rY7VmEjwxOxqoYLub/D9xmduPEhbw2imE6gYkJKhIE5it+KE2ulVxQ==}
     dev: true
 
   /electron-to-chromium@1.5.5:
@@ -14467,10 +14448,6 @@ packages:
     resolution: {integrity: sha512-O5lz91xSOeoXP6DulyHfllpq+Eg00MWitZIbtPfoSEvqIHdl5gfcY6hYzDWnj0qD5tz52PI08u9qUvSVeUBeHw==}
     dev: true
 
-  /node-releases@2.0.14:
-    resolution: {integrity: sha512-y10wOWt8yZpqXmOgRo77WaHEmhYQYGNA6y421PKsKYWEK8aW+cqAphborZDhqfyKrbZEN92CN1X2KbafY2s7Yw==}
-    dev: true
-
   /node-releases@2.0.18:
     resolution: {integrity: sha512-d9VeXT4SJ7ZeOqGX6R5EM022wpL+eWPooLI+5UpWn2jCT1aosUQEhQP214x33Wkwx3JQMvIm+tIoVOdodFS40g==}
     dev: true
@@ -15344,7 +15321,7 @@ packages:
     engines: {node: '>= 0.8.0'}
     dev: true
 
-  /prettier-plugin-packagejson@2.5.1(prettier@2.7.0):
+  /prettier-plugin-packagejson@2.5.1(prettier@3.3.3):
     resolution: {integrity: sha512-6i4PW1KxEA+VrokYNGeI/q8qQX3u5DNBc7eLr9GX4OrvWr9DMls1lhbuNopkKG7Li9rTNxerWnYQyjxoUO4ROA==}
     peerDependencies:
       prettier: '>= 1.16.0'
@@ -15352,20 +15329,20 @@ packages:
       prettier:
         optional: true
     dependencies:
-      prettier: 2.7.0
+      prettier: 3.3.3
       sort-package-json: 2.10.0
       synckit: 0.9.1
-    dev: true
-
-  /prettier@2.7.0:
-    resolution: {integrity: sha512-nwoX4GMFgxoPC6diHvSwmK/4yU8FFH3V8XWtLQrbj4IBsK2pkYhG4kf/ljF/haaZ/aii+wNJqISrCDPgxGWDVQ==}
-    engines: {node: '>=10.13.0'}
-    hasBin: true
     dev: true
 
   /prettier@2.8.8:
     resolution: {integrity: sha512-tdN8qQGvNjw4CHbY+XXk0JgCXn9QiF21a55rBe5LJAU+kDyC4WQn4+awm2Xfk2lQMk5fKup9XgzTZtGkjBdP9Q==}
     engines: {node: '>=10.13.0'}
+    hasBin: true
+    dev: true
+
+  /prettier@3.3.3:
+    resolution: {integrity: sha512-i2tDNA0O5IrMO757lfrdQZCc2jPNDVntV0m/+4whiDfWaTKfMNgR7Qz0NAeGz/nRqF4m5/6CLzbP4/liHt12Ew==}
+    engines: {node: '>=14'}
     hasBin: true
     dev: true
 
@@ -17763,17 +17740,6 @@ packages:
       binary: 0.3.0
       mkdirp: 0.5.6
     dev: false
-
-  /update-browserslist-db@1.0.13(browserslist@4.23.0):
-    resolution: {integrity: sha512-xebP81SNcPuNpPP3uzeW1NYXxI3rxyJzF3pD6sH4jE7o/IX+WtSpwnVU+qIsDPyk0d3hmFQ7mjqc6AtV604hbg==}
-    hasBin: true
-    peerDependencies:
-      browserslist: '>= 4.21.0'
-    dependencies:
-      browserslist: 4.23.0
-      escalade: 3.1.2
-      picocolors: 1.0.1
-    dev: true
 
   /update-browserslist-db@1.1.0(browserslist@4.23.3):
     resolution: {integrity: sha512-EdRAaAyk2cUE1wOf2DkEhzxqOQvFOoRJFNS6NeyJ01Gp2beMRpBAINjM2iDXE3KCuKhwnvHIQCJm6ThL2Z+HzQ==}

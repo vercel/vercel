@@ -25,7 +25,7 @@ function pick<T, K extends keyof T>(obj: T, keys: K[]): Pick<T, K> {
 }
 
 const NativeModuleMap = () => {
-  const mods: Record<typeof SUPPORTED_NODE_MODULES[number], unknown> = {
+  const mods: Record<(typeof SUPPORTED_NODE_MODULES)[number], unknown> = {
     buffer: pick(BufferImplementation, [
       'constants',
       'kMaxLength',

@@ -12,8 +12,8 @@ export function sortBuilders<B extends { use: string }>(builds: B[]): B[] {
     build.use === '@vercel/python'
       ? 1
       : frontendRuntimeSet.has(build.use)
-      ? 0
-      : 2;
+        ? 0
+        : 2;
   return builds.sort((build1, build2) => {
     return toNumber(build1) - toNumber(build2);
   });
