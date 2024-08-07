@@ -514,6 +514,7 @@ async function doBuild(
         }
       }
 
+      const isFrontendBuilder = build.config && 'framework' in build.config;
       const buildConfig: Config = isZeroConfig
         ? {
             outputDirectory: projectSettings.outputDirectory ?? undefined,
@@ -545,7 +546,7 @@ async function doBuild(
         // then add the default routes to the build result
         if (
           buildConfig.zeroConfig &&
-          buildConfig.framework &&
+          isFrontendBuilder &&
           'output' in buildResult &&
           !buildResult.routes
         ) {
@@ -647,9 +648,8 @@ async function doBuild(
     };
     needBuildsJsonOverride = true;
   }
-  const webAnalyticsVersion = await getInstalledPackageVersion(
-    '@vercel/analytics'
-  );
+  const webAnalyticsVersion =
+    await getInstalledPackageVersion('@vercel/analytics');
   if (webAnalyticsVersion) {
     buildsJson.features = {
       ...(buildsJson.features ?? {}),

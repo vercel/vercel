@@ -729,9 +729,8 @@ export const build: BuildV2 = async ({
       // If the Build Command or Framework output files according to the
       // Build Output v3 API, then stop processing here in `static-build`
       // since the output is already in its final form.
-      const buildOutputPathV3 = await BuildOutputV3.getBuildOutputDirectory(
-        outputDirPrefix
-      );
+      const buildOutputPathV3 =
+        await BuildOutputV3.getBuildOutputDirectory(outputDirPrefix);
       if (buildOutputPathV3) {
         // Ensure that `vercel build` is being used for this Deployment
         return BuildOutputV3.createBuildOutput(
@@ -742,9 +741,8 @@ export const build: BuildV2 = async ({
         );
       }
 
-      const buildOutputPathV2 = await BuildOutputV2.getBuildOutputDirectory(
-        outputDirPrefix
-      );
+      const buildOutputPathV2 =
+        await BuildOutputV2.getBuildOutputDirectory(outputDirPrefix);
       if (buildOutputPathV2) {
         return await BuildOutputV2.createBuildOutput(workPath);
       }

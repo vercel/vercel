@@ -24,7 +24,7 @@ importers:
         version: link:packages/build-utils
       '@vercel/style-guide':
         specifier: 4.0.2
-        version: 4.0.2(eslint@8.24.0)(jest@29.5.0)(prettier@2.7.0)(typescript@4.9.5)
+        version: 4.0.2(eslint@8.24.0)(jest@29.5.0)(prettier@3.3.3)(typescript@4.9.5)
       async-retry:
         specifier: 1.2.3
         version: 1.2.3
@@ -77,8 +77,8 @@ importers:
         specifier: 6.1.0
         version: 6.1.0
       prettier:
-        specifier: 2.7.0
-        version: 2.7.0
+        specifier: 3.3.3
+        version: 3.3.3
       source-map-support:
         specifier: 0.5.12
         version: 0.5.12
@@ -138,7 +138,7 @@ importers:
         specifier: 27.4.1
         version: 27.4.1
       '@vercel/build-utils':
-        specifier: 8.3.5
+        specifier: 8.3.6
         version: link:../packages/build-utils
       '@vercel/frameworks':
         specifier: 3.1.1
@@ -151,7 +151,7 @@ importers:
         version: link:../tsconfig
       '@vercel/style-guide':
         specifier: 4.0.2
-        version: 4.0.2(eslint@8.24.0)(jest@29.5.0)(prettier@2.7.0)(typescript@4.9.4)
+        version: 4.0.2(eslint@8.24.0)(jest@29.5.0)(prettier@3.3.3)(typescript@4.9.4)
       typescript:
         specifier: 4.9.4
         version: 4.9.4
@@ -169,7 +169,7 @@ importers:
         version: link:../tsconfig
       '@vercel/style-guide':
         specifier: 4.0.2
-        version: 4.0.2(eslint@8.24.0)(jest@29.5.0)(prettier@2.7.0)(typescript@4.9.4)
+        version: 4.0.2(eslint@8.24.0)(jest@29.5.0)(prettier@3.3.3)(typescript@4.9.4)
       jest:
         specifier: 29.5.0
         version: 29.5.0(@types/node@14.14.31)
@@ -184,7 +184,7 @@ importers:
     devDependencies:
       '@vercel/style-guide':
         specifier: 4.0.2
-        version: 4.0.2(eslint@8.24.0)(jest@29.5.0)(prettier@2.7.0)(typescript@4.9.5)
+        version: 4.0.2(eslint@8.24.0)(jest@29.5.0)(prettier@3.3.3)(typescript@4.9.5)
 
   internals/types:
     dependencies:
@@ -195,7 +195,7 @@ importers:
         specifier: 1.0.4
         version: link:../constants
       '@vercel/build-utils':
-        specifier: 8.3.5
+        specifier: 8.3.6
         version: link:../../packages/build-utils
       '@vercel/routing-utils':
         specifier: 3.1.0
@@ -206,7 +206,7 @@ importers:
         version: link:../tsconfig
       '@vercel/style-guide':
         specifier: 4.0.2
-        version: 4.0.2(eslint@8.24.0)(jest@29.5.0)(prettier@2.7.0)(typescript@4.9.4)
+        version: 4.0.2(eslint@8.24.0)(jest@29.5.0)(prettier@3.3.3)(typescript@4.9.4)
       typescript:
         specifier: 4.9.4
         version: 4.9.4
@@ -319,7 +319,7 @@ importers:
   packages/cli:
     dependencies:
       '@vercel/build-utils':
-        specifier: 8.3.5
+        specifier: 8.3.6
         version: link:../build-utils
       '@vercel/fun':
         specifier: 1.1.0
@@ -334,7 +334,7 @@ importers:
         specifier: 4.3.6
         version: link:../next
       '@vercel/node':
-        specifier: 3.2.7
+        specifier: 3.2.8
         version: link:../node
       '@vercel/python':
         specifier: 4.3.1
@@ -343,13 +343,13 @@ importers:
         specifier: 2.1.3
         version: link:../redwood
       '@vercel/remix-builder':
-        specifier: 2.2.1
+        specifier: 2.2.3
         version: link:../remix
       '@vercel/ruby':
         specifier: 2.1.0
         version: link:../ruby
       '@vercel/static-build':
-        specifier: 2.5.17
+        specifier: 2.5.18
         version: link:../static-build
       chokidar:
         specifier: 3.3.1
@@ -497,10 +497,10 @@ importers:
         specifier: 1.0.0
         version: link:../../internals/get-package-json
       '@vercel-internals/types':
-        specifier: 1.0.44
+        specifier: 1.0.45
         version: link:../../internals/types
       '@vercel/client':
-        specifier: 13.3.3
+        specifier: 13.3.4
         version: link:../client
       '@vercel/error-utils':
         specifier: 2.0.2
@@ -749,7 +749,7 @@ importers:
   packages/client:
     dependencies:
       '@vercel/build-utils':
-        specifier: 8.3.5
+        specifier: 8.3.6
         version: link:../build-utils
       '@vercel/error-utils':
         specifier: 2.0.2
@@ -953,7 +953,7 @@ importers:
         specifier: 7.3.10
         version: 7.3.10
       '@vercel/build-utils':
-        specifier: 8.3.5
+        specifier: 8.3.6
         version: link:../build-utils
       jest-junit:
         specifier: 16.0.0
@@ -1008,7 +1008,7 @@ importers:
         specifier: 0.25.24
         version: 0.25.24
       '@vercel/build-utils':
-        specifier: 8.3.5
+        specifier: 8.3.6
         version: link:../build-utils
       '@vercel/routing-utils':
         specifier: 3.1.0
@@ -1075,7 +1075,7 @@ importers:
         specifier: 2.1.0
         version: 2.1.0
       '@vercel/build-utils':
-        specifier: 8.3.5
+        specifier: 8.3.6
         version: link:../build-utils
       async-retry:
         specifier: 1.3.3
@@ -1124,7 +1124,7 @@ importers:
         specifier: 14.18.33
         version: 14.18.33
       '@vercel/build-utils':
-        specifier: 8.3.5
+        specifier: 8.3.6
         version: link:../build-utils
       execa:
         specifier: 3.2.0
@@ -1185,7 +1185,7 @@ importers:
         specifier: 3.2.0
         version: 3.2.0
       '@vercel/build-utils':
-        specifier: 8.3.5
+        specifier: 8.3.6
         version: link:../build-utils
       '@vercel/routing-utils':
         specifier: 3.1.0
@@ -1272,7 +1272,7 @@ importers:
         specifier: 16.18.11
         version: 16.18.11
       '@vercel/build-utils':
-        specifier: 8.3.5
+        specifier: 8.3.6
         version: link:../build-utils
       '@vercel/error-utils':
         specifier: 2.0.2
@@ -1402,7 +1402,7 @@ importers:
         specifier: 3.0.0
         version: 3.0.0
       '@vercel/build-utils':
-        specifier: 8.3.5
+        specifier: 8.3.6
         version: link:../build-utils
       execa:
         specifier: ^1.0.0
@@ -1445,7 +1445,7 @@ importers:
         specifier: 6.0.0
         version: 6.0.0
       '@vercel/build-utils':
-        specifier: 8.3.5
+        specifier: 8.3.6
         version: link:../build-utils
       execa:
         specifier: 3.2.0
@@ -1473,8 +1473,8 @@ importers:
         version: 12.0.0
     devDependencies:
       '@remix-run/dev':
-        specifier: npm:@vercel/remix-run-dev@2.10.3
-        version: /@vercel/remix-run-dev@2.10.3(@remix-run/react@2.10.3)(@types/node@14.18.33)(typescript@4.9.5)(vite@5.1.6)
+        specifier: npm:@vercel/remix-run-dev@2.11.1
+        version: /@vercel/remix-run-dev@2.11.1(@remix-run/react@2.11.1)(@types/node@14.18.33)(typescript@4.9.5)(vite@5.1.6)
       '@types/jest':
         specifier: 27.5.1
         version: 27.5.1
@@ -1485,7 +1485,7 @@ importers:
         specifier: 7.3.13
         version: 7.3.13
       '@vercel/build-utils':
-        specifier: 8.3.5
+        specifier: 8.3.6
         version: link:../build-utils
       glob:
         specifier: 10.3.16
@@ -1538,7 +1538,7 @@ importers:
         specifier: 3.0.0
         version: 3.0.0
       '@vercel/build-utils':
-        specifier: 8.3.5
+        specifier: 8.3.6
         version: link:../build-utils
       execa:
         specifier: 2.0.4
@@ -1562,7 +1562,7 @@ importers:
         specifier: 1.0.11
         version: link:../gatsby-plugin-vercel-analytics
       '@vercel/gatsby-plugin-vercel-builder':
-        specifier: 2.0.39
+        specifier: 2.0.40
         version: link:../gatsby-plugin-vercel-builder
       '@vercel/static-config':
         specifier: 3.0.0
@@ -1599,7 +1599,7 @@ importers:
         specifier: 7.3.13
         version: 7.3.13
       '@vercel/build-utils':
-        specifier: 8.3.5
+        specifier: 8.3.6
         version: link:../build-utils
       '@vercel/error-utils':
         specifier: 2.0.2
@@ -4219,8 +4219,8 @@ packages:
       tslib: 2.5.0
     dev: true
 
-  /@remix-run/node@2.10.3(typescript@4.9.5):
-    resolution: {integrity: sha512-LBqsgADJKW7tYdJZZi2wu20gfMm6UcOXbvb5U70P2jCNxjJvuIw1gXVvNXRJKAdxPKLonjm8cSpfoI6HeQKEDg==}
+  /@remix-run/node@2.11.1(typescript@4.9.5):
+    resolution: {integrity: sha512-KCQPLSd5Y3OLCoJUQxxTGswALL1gZ+OgL3bf2ap6kITIp1AUZz3T4jqCNVVyWllVAU9gpCtrONaI+SiWf+8b2w==}
     engines: {node: '>=18.0.0'}
     peerDependencies:
       typescript: ^5.1.0
@@ -4228,7 +4228,7 @@ packages:
       typescript:
         optional: true
     dependencies:
-      '@remix-run/server-runtime': 2.10.3(typescript@4.9.5)
+      '@remix-run/server-runtime': 2.11.1(typescript@4.9.5)
       '@remix-run/web-fetch': 4.4.2
       '@web3-storage/multipart-parser': 1.0.0
       cookie-signature: 1.2.1
@@ -4238,8 +4238,8 @@ packages:
       undici: 6.16.1
     dev: true
 
-  /@remix-run/react@2.10.3(react-dom@18.3.1)(react@18.3.1)(typescript@4.9.5):
-    resolution: {integrity: sha512-nqXlUJzG3zgllsMio20AICbSsF8va0jOnMakl/+oJpFbQqCyFkvYqr+BViBc4Befp5VK54jqJzDnY4kL9zwNvA==}
+  /@remix-run/react@2.11.1(react-dom@18.3.1)(react@18.3.1)(typescript@4.9.5):
+    resolution: {integrity: sha512-bXilQrHx5WVHsdA6UFkWxYVePZJ1kzwfa/KYMdbMZi6zsSlv2/N6ZbgNuoemt8oM8/YgCT6EOPITzCgz+zEMVw==}
     engines: {node: '>=18.0.0'}
     peerDependencies:
       react: ^18.0.0
@@ -4249,23 +4249,23 @@ packages:
       typescript:
         optional: true
     dependencies:
-      '@remix-run/router': 1.18.0
-      '@remix-run/server-runtime': 2.10.3(typescript@4.9.5)
+      '@remix-run/router': 1.19.0
+      '@remix-run/server-runtime': 2.11.1(typescript@4.9.5)
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
-      react-router: 6.25.0(react@18.3.1)
-      react-router-dom: 6.25.0(react-dom@18.3.1)(react@18.3.1)
+      react-router: 6.26.0(react@18.3.1)
+      react-router-dom: 6.26.0(react-dom@18.3.1)(react@18.3.1)
       turbo-stream: 2.2.0
       typescript: 4.9.5
     dev: true
 
-  /@remix-run/router@1.18.0:
-    resolution: {integrity: sha512-L3jkqmqoSVBVKHfpGZmLrex0lxR5SucGA0sUfFzGctehw+S/ggL9L/0NnC5mw6P8HUWpFZ3nQw3cRApjjWx9Sw==}
+  /@remix-run/router@1.19.0:
+    resolution: {integrity: sha512-zDICCLKEwbVYTS6TjYaWtHXxkdoUvD/QXvyVZjGCsWz5vyH7aFeONlPffPdW+Y/t6KT0MgXb2Mfjun9YpWN1dA==}
     engines: {node: '>=14.0.0'}
     dev: true
 
-  /@remix-run/server-runtime@2.10.3(typescript@4.9.5):
-    resolution: {integrity: sha512-vUl5jONUI6Lj0ICg9FSRFhoPzQdZ/7dpT1m7ID13DF5BEeF3t/9uCJS61XXWgQ/JEu7YRiwvZiwSRTrgM7zeWw==}
+  /@remix-run/server-runtime@2.11.1(typescript@4.9.5):
+    resolution: {integrity: sha512-j3AlrZul0javvPR6ZWdN32/l12t1E90sLeZI/k+4HpT0ifjqJVg8uG6alRJ0LLN9ae5BERYEslUebUqdfejSkQ==}
     engines: {node: '>=18.0.0'}
     peerDependencies:
       typescript: ^5.1.0
@@ -4273,7 +4273,7 @@ packages:
       typescript:
         optional: true
     dependencies:
-      '@remix-run/router': 1.18.0
+      '@remix-run/router': 1.19.0
       '@types/cookie': 0.6.0
       '@web3-storage/multipart-parser': 1.0.0
       cookie: 0.6.0
@@ -6698,13 +6698,13 @@ packages:
       - supports-color
     dev: false
 
-  /@vercel/remix-run-dev@2.10.3(@remix-run/react@2.10.3)(@types/node@14.18.33)(typescript@4.9.5)(vite@5.1.6):
-    resolution: {integrity: sha512-lOhtQ+Or7gj0RsPMtLmJllQv+nTa7Uy6eoVQ/o9rKZsXq20i65hfV7SJ4knnWq0v3colthSr26LXIKBR3LTuqA==}
+  /@vercel/remix-run-dev@2.11.1(@remix-run/react@2.11.1)(@types/node@14.18.33)(typescript@4.9.5)(vite@5.1.6):
+    resolution: {integrity: sha512-uWJyvcJlkQa/odC/hfN/x8dZ3ty9DiFZXXeYjoPUgPEcu7QqbAKI8OncQU6az1kFGy02dClLPgQAoRPl6SbfLg==}
     engines: {node: '>=18.0.0'}
     hasBin: true
     peerDependencies:
-      '@remix-run/react': ^2.10.3
-      '@remix-run/serve': ^2.10.3
+      '@remix-run/react': ^2.11.1
+      '@remix-run/serve': ^2.11.1
       typescript: ^5.1.0
       vite: ^5.1.0
       wrangler: ^3.28.2
@@ -6728,10 +6728,10 @@ packages:
       '@babel/types': 7.24.0
       '@mdx-js/mdx': 2.3.0
       '@npmcli/package-json': 4.0.1
-      '@remix-run/node': 2.10.3(typescript@4.9.5)
-      '@remix-run/react': 2.10.3(react-dom@18.3.1)(react@18.3.1)(typescript@4.9.5)
-      '@remix-run/router': 1.18.0
-      '@remix-run/server-runtime': 2.10.3(typescript@4.9.5)
+      '@remix-run/node': 2.11.1(typescript@4.9.5)
+      '@remix-run/react': 2.11.1(react-dom@18.3.1)(react@18.3.1)(typescript@4.9.5)
+      '@remix-run/router': 1.19.0
+      '@remix-run/server-runtime': 2.11.1(typescript@4.9.5)
       '@types/mdx': 2.0.12
       '@vanilla-extract/integration': 6.5.0(@types/node@14.18.33)
       arg: 5.0.2
@@ -6789,7 +6789,7 @@ packages:
       - utf-8-validate
     dev: true
 
-  /@vercel/style-guide@4.0.2(eslint@8.24.0)(jest@29.5.0)(prettier@2.7.0)(typescript@4.9.4):
+  /@vercel/style-guide@4.0.2(eslint@8.24.0)(jest@29.5.0)(prettier@3.3.3)(typescript@4.9.4):
     resolution: {integrity: sha512-FroL+oOePzhw7n/I+f7zr4WNroGHT/+2TlW6WH9+CVSjMNsEyu7Qstj2mI5gWIBjT1Y2ZImKPppCzI2cIYmNZw==}
     engines: {node: '>=16'}
     peerDependencies:
@@ -6826,8 +6826,8 @@ packages:
       eslint-plugin-testing-library: 5.10.2(eslint@8.24.0)(typescript@4.9.4)
       eslint-plugin-tsdoc: 0.2.17
       eslint-plugin-unicorn: 43.0.2(eslint@8.24.0)
-      prettier: 2.7.0
-      prettier-plugin-packagejson: 2.4.3(prettier@2.7.0)
+      prettier: 3.3.3
+      prettier-plugin-packagejson: 2.4.3(prettier@3.3.3)
       typescript: 4.9.4
     transitivePeerDependencies:
       - eslint-import-resolver-webpack
@@ -6835,7 +6835,7 @@ packages:
       - supports-color
     dev: true
 
-  /@vercel/style-guide@4.0.2(eslint@8.24.0)(jest@29.5.0)(prettier@2.7.0)(typescript@4.9.5):
+  /@vercel/style-guide@4.0.2(eslint@8.24.0)(jest@29.5.0)(prettier@3.3.3)(typescript@4.9.5):
     resolution: {integrity: sha512-FroL+oOePzhw7n/I+f7zr4WNroGHT/+2TlW6WH9+CVSjMNsEyu7Qstj2mI5gWIBjT1Y2ZImKPppCzI2cIYmNZw==}
     engines: {node: '>=16'}
     peerDependencies:
@@ -6872,8 +6872,8 @@ packages:
       eslint-plugin-testing-library: 5.10.2(eslint@8.24.0)(typescript@4.9.5)
       eslint-plugin-tsdoc: 0.2.17
       eslint-plugin-unicorn: 43.0.2(eslint@8.24.0)
-      prettier: 2.7.0
-      prettier-plugin-packagejson: 2.4.3(prettier@2.7.0)
+      prettier: 3.3.3
+      prettier-plugin-packagejson: 2.4.3(prettier@3.3.3)
       typescript: 4.9.5
     transitivePeerDependencies:
       - eslint-import-resolver-webpack
@@ -8606,6 +8606,7 @@ packages:
         optional: true
     dependencies:
       ms: 2.1.2
+    dev: true
 
   /debug@4.3.5:
     resolution: {integrity: sha512-pt0bNEmneDIvdL1Xsd9oDQ/wrQRkXDT4AUWlNZNPKvW5x/jyO9VFXkJUP07vQ2upmw5PlaITaPKc31jK13V+jg==}
@@ -11167,7 +11168,7 @@ packages:
     engines: {node: '>= 6.0.0'}
     dependencies:
       agent-base: 5.1.1
-      debug: 4.3.4
+      debug: 4.3.5
     transitivePeerDependencies:
       - supports-color
     dev: false
@@ -14629,7 +14630,7 @@ packages:
     engines: {node: '>= 0.8.0'}
     dev: true
 
-  /prettier-plugin-packagejson@2.4.3(prettier@2.7.0):
+  /prettier-plugin-packagejson@2.4.3(prettier@3.3.3):
     resolution: {integrity: sha512-kPeeviJiwy0BgOSk7No8NmzzXfW4R9FYWni6ziA5zc1kGVVrKnBzMZdu2TUhI+I7h8/5Htt3vARYOk7KKJTTNQ==}
     peerDependencies:
       prettier: '>= 1.16.0'
@@ -14637,20 +14638,20 @@ packages:
       prettier:
         optional: true
     dependencies:
-      prettier: 2.7.0
+      prettier: 3.3.3
       sort-package-json: 2.4.1
       synckit: 0.8.5
-    dev: true
-
-  /prettier@2.7.0:
-    resolution: {integrity: sha512-nwoX4GMFgxoPC6diHvSwmK/4yU8FFH3V8XWtLQrbj4IBsK2pkYhG4kf/ljF/haaZ/aii+wNJqISrCDPgxGWDVQ==}
-    engines: {node: '>=10.13.0'}
-    hasBin: true
     dev: true
 
   /prettier@2.8.8:
     resolution: {integrity: sha512-tdN8qQGvNjw4CHbY+XXk0JgCXn9QiF21a55rBe5LJAU+kDyC4WQn4+awm2Xfk2lQMk5fKup9XgzTZtGkjBdP9Q==}
     engines: {node: '>=10.13.0'}
+    hasBin: true
+    dev: true
+
+  /prettier@3.3.3:
+    resolution: {integrity: sha512-i2tDNA0O5IrMO757lfrdQZCc2jPNDVntV0m/+4whiDfWaTKfMNgR7Qz0NAeGz/nRqF4m5/6CLzbP4/liHt12Ew==}
+    engines: {node: '>=14'}
     hasBin: true
     dev: true
 
@@ -14958,26 +14959,26 @@ packages:
     engines: {node: '>=0.10.0'}
     dev: true
 
-  /react-router-dom@6.25.0(react-dom@18.3.1)(react@18.3.1):
-    resolution: {integrity: sha512-BhcczgDWWgvGZxjDDGuGHrA8HrsSudilqTaRSBYLWDayvo1ClchNIDVt5rldqp6e7Dro5dEFx9Mzc+r292lN0w==}
+  /react-router-dom@6.26.0(react-dom@18.3.1)(react@18.3.1):
+    resolution: {integrity: sha512-RRGUIiDtLrkX3uYcFiCIxKFWMcWQGMojpYZfcstc63A1+sSnVgILGIm9gNUA6na3Fm1QuPGSBQH2EMbAZOnMsQ==}
     engines: {node: '>=14.0.0'}
     peerDependencies:
       react: '>=16.8'
       react-dom: '>=16.8'
     dependencies:
-      '@remix-run/router': 1.18.0
+      '@remix-run/router': 1.19.0
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
-      react-router: 6.25.0(react@18.3.1)
+      react-router: 6.26.0(react@18.3.1)
     dev: true
 
-  /react-router@6.25.0(react@18.3.1):
-    resolution: {integrity: sha512-bziKjCcDbcxgWS9WlWFcQIVZ2vJHnCP6DGpQDT0l+0PFDasfJKgzf9CM22eTyhFsZkjk8ApCdKjJwKtzqH80jQ==}
+  /react-router@6.26.0(react@18.3.1):
+    resolution: {integrity: sha512-wVQq0/iFYd3iZ9H2l3N3k4PL8EEHcb0XlU2Na8nEwmiXgIUElEH6gaJDtUQxJ+JFzmIXaQjfdpcGWaM6IoQGxg==}
     engines: {node: '>=14.0.0'}
     peerDependencies:
       react: '>=16.8'
     dependencies:
-      '@remix-run/router': 1.18.0
+      '@remix-run/router': 1.19.0
       react: 18.3.1
     dev: true
 
