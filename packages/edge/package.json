@@ -25,7 +25,7 @@
     "@edge-runtime/jest-environment": "2.3.7",
     "@types/jest": "27.4.1",
     "jest-junit": "16.0.0",
-    "ts-node": "8.9.1",
+    "ts-node": "10.9.2",
     "tsup": "6.1.2",
     "typedoc": "0.24.6",
     "typedoc-plugin-markdown": "3.15.2",
