@@ -150,15 +150,18 @@ export default class Client extends EventEmitter implements Stdio {
     }
 
     const requestId = this.requestIdCounter++;
-    return this.output.time(res => {
-      if (res) {
-        return `#${requestId} ← ${res.status} ${
-          res.statusText
-        }: ${res.headers.get('x-vercel-id')}`;
-      } else {
-        return `#${requestId} → ${opts.method || 'GET'} ${url.href}`;
-      }
-    }, fetch(url, { agent: this.agent, ...opts, headers, body }));
+    return this.output.time(
+      res => {
+        if (res) {
+          return `#${requestId} ← ${res.status} ${
+            res.statusText
+          }: ${res.headers.get('x-vercel-id')}`;
+        } else {
+          return `#${requestId} → ${opts.method || 'GET'} ${url.href}`;
+        }
+      },
+      fetch(url, { agent: this.agent, ...opts, headers, body })
+    );
   }
 
   fetch(url: string, opts: FetchOptions & { json: false }): Promise<Response>;
