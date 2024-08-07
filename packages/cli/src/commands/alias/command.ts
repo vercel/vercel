@@ -53,7 +53,7 @@ export const aliasCommand = {
       description: 'Show next page of results',
       argument: 'MS',
       shorthand: 'N',
-      type: String,
+      type: Number,
       deprecated: false,
     },
     {
@@ -69,7 +69,7 @@ export const aliasCommand = {
       description:
         'Number of results to return per page (default: 20, max: 100)',
       argument: 'NUMBER',
-      type: String,
+      type: Number,
       deprecated: false,
     },
     { name: 'json', shorthand: null, type: Boolean, deprecated: false },
