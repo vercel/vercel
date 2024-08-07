@@ -29,8 +29,8 @@ export default async function inputProject(
   detectedProject = !(project instanceof ProjectNotFound)
     ? project
     : !(slugifiedProject instanceof ProjectNotFound)
-    ? slugifiedProject
-    : null;
+      ? slugifiedProject
+      : null;
 
   if (detectedProject && !detectedProject.id) {
     throw new Error(`Detected linked project does not have "id".`);

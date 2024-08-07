@@ -648,9 +648,8 @@ async function doBuild(
     };
     needBuildsJsonOverride = true;
   }
-  const webAnalyticsVersion = await getInstalledPackageVersion(
-    '@vercel/analytics'
-  );
+  const webAnalyticsVersion =
+    await getInstalledPackageVersion('@vercel/analytics');
   if (webAnalyticsVersion) {
     buildsJson.features = {
       ...(buildsJson.features ?? {}),
