@@ -17,6 +17,5 @@
  * ```
  */
 export function json(data: any, init?: ResponseInit): Response {
-  // @ts-expect-error This is not in lib/dom right now, and we can't augment it.
   return Response.json(data, init);
 }
