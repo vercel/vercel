@@ -1,4 +1,5 @@
 ---
+'vercel': major
 '@vercel/node': major
 ---
 
