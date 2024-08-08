@@ -3,7 +3,7 @@ import ms from 'ms';
 import table from '../../util/output/table';
 import title from 'title';
 import Now from '../../util';
-import getArgs from '../../util/get-args';
+import { parseArguments } from '../../util/get-args';
 import { handleError } from '../../util/error';
 import elapsed from '../../util/output/elapsed';
 import toHost from '../../util/to-host';
@@ -21,57 +21,48 @@ import { isErrnoException } from '@vercel/error-utils';
 import { help } from '../help';
 import { listCommand } from './command';
 import parseTarget from '../../util/parse-target';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
 
 export default async function list(client: Client) {
-  let argv;
-
-  try {
-    argv = getArgs(client.argv.slice(2), {
-      '--environment': String,
-      '--meta': [String],
-      '-m': '--meta',
-      '--next': Number,
-      '-N': '--next',
-      '--prod': Boolean, // this can be deprecated someday
-      '--yes': Boolean,
-      '-y': '--yes',
-
-      // deprecated
-      '--confirm': Boolean,
-      '-c': '--confirm',
-    });
-  } catch (err) {
-    handleError(err);
-    return 1;
-  }
-
   const { cwd, output, config } = client;
 
-  if ('--confirm' in argv) {
-    output.warn('`--confirm` is deprecated, please use `--yes` instead');
-    argv['--yes'] = argv['--confirm'];
-  }
+  let parsedArgs = null;
 
-  const { print, log, error, note, debug, spinner } = output;
+  const flagsSpecification = getFlagsSpecification(listCommand.options);
 
-  if (argv._.length > 2) {
-    error(`${getCommandName('ls [app]')} accepts at most one argument`);
+  // Parse CLI args
+  try {
+    parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
+  } catch (error) {
+    handleError(error);
     return 1;
   }
 
-  if (argv['--help']) {
+  if (parsedArgs.flags['--help']) {
     output.print(help(listCommand, { columns: client.stderr.columns }));
     return 2;
   }
 
-  const autoConfirm = !!argv['--yes'];
-  const meta = parseMeta(argv['--meta']);
+  if ('--confirm' in parsedArgs.flags) {
+    output.warn('`--confirm` is deprecated, please use `--yes` instead');
+    parsedArgs.flags['--yes'] = parsedArgs.flags['--confirm'];
+  }
+
+  const { print, log, error, note, debug, spinner } = output;
+
+  if (parsedArgs.args.length > 2) {
+    error(`${getCommandName('ls [app]')} accepts at most one argument`);
+    return 1;
+  }
+
+  const autoConfirm = !!parsedArgs.flags['--yes'];
+  const meta = parseMeta(parsedArgs.flags['--meta']);
 
   const target = parseTarget({
     output,
     targetFlagName: 'environment',
-    targetFlagValue: argv['--environment'],
-    prodFlagValue: argv['--prod'],
+    targetFlagValue: parsedArgs.flags['--environment'],
+    prodFlagValue: parsedArgs.flags['--prod'],
   });
 
   // retrieve `project` and `org` from .vercel
@@ -82,7 +73,7 @@ export default async function list(client: Client) {
   }
 
   let { org, project, status } = link;
-  const appArg: string | undefined = argv._[1];
+  const appArg: string | undefined = parsedArgs.args[1];
   let app: string | undefined = appArg || project?.name;
   let host: string | undefined = undefined;
 
@@ -122,7 +113,7 @@ export default async function list(client: Client) {
   }
 
   // If user passed in a custom scope, update the current team & context name
-  if (argv['--scope']) {
+  if (parsedArgs.flags['--scope']) {
     client.config.currentTeam = team?.id || undefined;
     if (team?.slug) contextName = team.slug;
   } else {
@@ -134,7 +125,7 @@ export default async function list(client: Client) {
 
   ({ contextName } = await getScope(client));
 
-  const nextTimestamp = argv['--next'];
+  const nextTimestamp = parsedArgs.flags['--next'];
 
   if (typeof nextTimestamp !== undefined && Number.isNaN(nextTimestamp)) {
     error('Please provide a number for flag `--next`');
@@ -286,7 +277,7 @@ export default async function list(client: Client) {
   }
 
   if (pagination && pagination.count === 20) {
-    const flags = getCommandFlags(argv, ['_', '--next']);
+    const flags = getCommandFlags(parsedArgs.flags, ['--next']);
     log(
       `To display the next page, run ${getCommandName(
         `ls${app ? ' ' + app : ''}${flags} --next ${pagination.next}`

@@ -1,5 +1,6 @@
 import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
+import { nextOption } from '../../util/arg-common';
 
 export const targetCommand: Command = {
   name: 'target',
@@ -19,7 +20,7 @@ export const targetCommand: Command = {
       examples: [],
     },
   ],
-  options: [],
+  options: [nextOption],
   examples: [
     {
       name: 'List all targets for the current project',

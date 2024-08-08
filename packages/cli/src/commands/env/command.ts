@@ -88,7 +88,7 @@ export const envCommand: Command = {
       description:
         'Set the Environment (development, preview, production) when pulling Environment Variables',
       shorthand: null,
-      type: Boolean,
+      type: String,
       deprecated: false,
     },
     {
@@ -106,6 +106,8 @@ export const envCommand: Command = {
       type: Boolean,
       deprecated: false,
     },
+    { name: 'sensitive', shorthand: null, type: Boolean, deprecated: false },
+    { name: 'force', shorthand: null, type: Boolean, deprecated: false },
   ],
   examples: [
     {
