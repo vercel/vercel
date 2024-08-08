@@ -1,6 +1,11 @@
 import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
-import { limitOption, nextOption, yesOption } from '../../util/arg-common';
+import {
+  forceOption,
+  limitOption,
+  nextOption,
+  yesOption,
+} from '../../util/arg-common';
 
 export const domainsCommand: Command = {
   name: 'domains',
@@ -116,10 +121,8 @@ export const domainsCommand: Command = {
       argument: 'NUMBER',
     },
     {
-      name: 'force',
+      ...forceOption,
       shorthand: null,
-      type: Boolean,
-      deprecated: false,
       description:
         'Force a domain on a project and remove it from an existing one',
     },

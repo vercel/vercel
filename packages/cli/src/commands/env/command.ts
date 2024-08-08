@@ -1,7 +1,7 @@
 import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
 import { getEnvTargetPlaceholder } from '../../util/env/env-target';
-import { yesOption } from '../../util/arg-common';
+import { forceOption, yesOption } from '../../util/arg-common';
 
 const targetPlaceholder = getEnvTargetPlaceholder();
 
@@ -44,11 +44,9 @@ export const envCommand: Command = {
           deprecated: false,
         },
         {
-          name: 'force',
+          ...forceOption,
           description: 'Force overwrites when a command would normally fail',
           shorthand: null,
-          type: Boolean,
-          deprecated: false,
         },
       ],
       examples: [],

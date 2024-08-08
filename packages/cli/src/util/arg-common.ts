@@ -56,3 +56,10 @@ export const limitOption = {
   type: Number,
   deprecated: false,
 };
+
+export const forceOption = {
+  name: 'force',
+  shorthand: 'f',
+  type: Boolean,
+  deprecated: false,
+};

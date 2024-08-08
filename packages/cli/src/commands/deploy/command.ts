@@ -1,4 +1,4 @@
-import { confirmOption, yesOption } from '../../util/arg-common';
+import { confirmOption, forceOption, yesOption } from '../../util/arg-common';
 import { Command } from '../help';
 
 export const deployCommand: Command = {
@@ -13,10 +13,7 @@ export const deployCommand: Command = {
   ],
   options: [
     {
-      name: 'force',
-      shorthand: 'f',
-      type: Boolean,
-      deprecated: false,
+      ...forceOption,
       description: 'Force a new deployment even if nothing has changed',
     },
     {
