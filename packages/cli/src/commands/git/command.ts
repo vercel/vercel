@@ -32,7 +32,10 @@ export const gitCommand: Command = {
       examples: [],
     },
   ],
-  options: [],
+  options: [
+    { name: 'yes', shorthand: 'y', type: Boolean, deprecated: false },
+    { name: 'confirm', shorthand: 'c', type: Boolean, deprecated: true },
+  ],
   examples: [
     {
       name: 'Connect your Vercel Project to your Git repository defined in your local .git config',
