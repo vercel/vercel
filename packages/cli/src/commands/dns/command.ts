@@ -73,13 +73,13 @@ export const dnsCommand: Command = {
       name: 'next',
       description: 'Show next page of results',
       argument: 'MS',
-      shorthand: 'n',
+      shorthand: 'N',
       type: String,
       deprecated: false,
     },
     {
       name: 'limit',
-      shorthand: 'n',
+      shorthand: null,
       description:
         'Number of results to return per page (default: 20, max: 100)',
       argument: 'NUMBER',
