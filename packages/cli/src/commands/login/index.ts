@@ -1,7 +1,7 @@
 import { validate as validateEmail } from 'email-validator';
 import chalk from 'chalk';
 import hp from '../../util/humanize-path';
-import getArgs from '../../util/get-args';
+import { parseArguments } from '../../util/get-args';
 import prompt from '../../util/login/prompt';
 import doSamlLogin from '../../util/login/saml';
 import doEmailLogin from '../../util/login/email';
@@ -20,6 +20,8 @@ import { LoginResult } from '../../util/login/types';
 import { help } from '../help';
 import { loginCommand } from './command';
 import { updateCurrentTeamAfterLogin } from '../../util/login/update-current-team-after-login';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import handleError from '../../util/handle-error';
 
 export default async function login(client: Client): Promise<number> {
   const { output } = client;
@@ -27,24 +29,29 @@ export default async function login(client: Client): Promise<number> {
   // user is not currently authenticated on this machine
   const isInitialLogin = !client.authConfig.token;
 
-  const argv = getArgs(client.argv.slice(2), {
-    '--oob': Boolean,
-    '--github': Boolean,
-    '--gitlab': Boolean,
-    '--bitbucket': Boolean,
-  });
+  let parsedArgs = null;
 
-  if (argv['--help']) {
+  const flagsSpecification = getFlagsSpecification(loginCommand.options);
+
+  // Parse CLI args
+  try {
+    parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
+  } catch (error) {
+    handleError(error);
+    return 1;
+  }
+
+  if (parsedArgs.flags['--help']) {
     output.print(help(loginCommand, { columns: client.stderr.columns }));
     return 2;
   }
 
-  if (argv['--token']) {
+  if (parsedArgs.flags['--token']) {
     output.error('`--token` may not be used with the "login" command');
     return 2;
   }
 
-  const input = argv._[1];
+  const input = parsedArgs.args[1];
 
   let result: LoginResult = 1;
 
@@ -53,17 +60,17 @@ export default async function login(client: Client): Promise<number> {
     if (validateEmail(input)) {
       result = await doEmailLogin(client, input);
     } else {
-      result = await doSamlLogin(client, input, argv['--oob']);
+      result = await doSamlLogin(client, input, parsedArgs.flags['--oob']);
     }
-  } else if (argv['--github']) {
-    result = await doGithubLogin(client, argv['--oob']);
-  } else if (argv['--gitlab']) {
-    result = await doGitlabLogin(client, argv['--oob']);
-  } else if (argv['--bitbucket']) {
-    result = await doBitbucketLogin(client, argv['--oob']);
+  } else if (parsedArgs.flags['--github']) {
+    result = await doGithubLogin(client, parsedArgs.flags['--oob']);
+  } else if (parsedArgs.flags['--gitlab']) {
+    result = await doGitlabLogin(client, parsedArgs.flags['--oob']);
+  } else if (parsedArgs.flags['--bitbucket']) {
+    result = await doBitbucketLogin(client, parsedArgs.flags['--oob']);
   } else {
     // Interactive mode
-    result = await prompt(client, undefined, argv['--oob']);
+    result = await prompt(client, undefined, parsedArgs.flags['--oob']);
   }
 
   // The login function failed, so it returned an exit code
