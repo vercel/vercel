@@ -1,5 +1,6 @@
 import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
+import { yesOption } from '../../util/arg-common';
 
 export const gitCommand: Command = {
   name: 'git',
@@ -33,7 +34,7 @@ export const gitCommand: Command = {
     },
   ],
   options: [
-    { name: 'yes', shorthand: 'y', type: Boolean, deprecated: false },
+    yesOption,
     { name: 'confirm', shorthand: 'c', type: Boolean, deprecated: true },
   ],
   examples: [

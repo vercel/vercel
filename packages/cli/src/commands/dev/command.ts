@@ -1,5 +1,6 @@
 import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
+import { yesOption } from '../../util/arg-common';
 
 export const devCommand: Command = {
   name: 'dev',
@@ -19,7 +20,7 @@ export const devCommand: Command = {
       type: String,
       deprecated: false,
     },
-    { name: 'yes', shorthand: 'y', type: Boolean, deprecated: false },
+    yesOption,
     { name: 'port', shorthand: 'p', type: String, deprecated: true },
     { name: 'confirm', shorthand: 'c', type: Boolean, deprecated: true },
   ],

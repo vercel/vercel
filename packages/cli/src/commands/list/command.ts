@@ -1,5 +1,6 @@
 import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
+import { yesOption } from '../../util/arg-common';
 
 export const listCommand: Command = {
   name: 'list',
@@ -38,7 +39,7 @@ export const listCommand: Command = {
     },
     // this can be deprecated someday
     { name: 'prod', shorthand: null, type: Boolean, deprecated: false },
-    { name: 'yes', shorthand: 'y', type: Boolean, deprecated: false },
+    yesOption,
     { name: 'confirm', shorthand: 'c', type: Boolean, deprecated: true },
   ],
   examples: [
