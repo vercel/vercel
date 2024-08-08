@@ -27,11 +27,6 @@ export default async function dns(client: Client) {
 
   try {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
-
-    if ('--confirm' in parsedArgs.flags) {
-      output.warn('`--confirm` is deprecated, please use `--yes` instead');
-      parsedArgs.flags['--yes'] = parsedArgs.flags['--confirm'];
-    }
   } catch (error) {
     handleError(error);
     return 1;
