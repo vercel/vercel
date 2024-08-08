@@ -57,7 +57,7 @@ export default async function connect(
 ) {
   const { cwd, output } = client;
   const confirm = Boolean(argv['--yes']);
-  const repoArg = argv._[1];
+  const repoArg = args[1];
 
   if (args.length > 1) {
     output.error(
