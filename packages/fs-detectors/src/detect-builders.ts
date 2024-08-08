@@ -11,6 +11,22 @@ import type {
   ProjectSettings,
 } from '@vercel/build-utils';
 import { isOfficialRuntime } from './is-official-runtime';
+
+/**
+ * Pattern for finding all supported middleware files.
+ */
+export const REGEX_MIDDLEWARE = 'middleware.[jt]s';
+
+/**
+ * Pattern for files that the Vercel platform cares about separately from frameworks.
+ */
+export const REGEX_VERCEL_PLATFORM_PATTERN = `api/**,package.json,${REGEX_MIDDLEWARE}`;
+
+/**
+ * Pattern for non-Vercel platform files.
+ */
+export const REGEX_NON_VERCEL_PLATFORM_PATTERN = `!{${REGEX_VERCEL_PLATFORM_PATTERN}}`;
+
 const slugToFramework = new Map<string | null, Framework>(
   frameworkList.map(f => [f.slug, f])
 );
@@ -279,7 +295,7 @@ export async function detectBuilders(
       // and package.json can be served as static files
       frontendBuilder = {
         use: '@vercel/static',
-        src: '!{api/**,package.json,middleware.[jt]s}',
+        src: REGEX_NON_VERCEL_PLATFORM_PATTERN,
         config: {
           zeroConfig: true,
         },
