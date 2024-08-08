@@ -58,12 +58,12 @@ const commands = {
 };
 
 // eslint-disable-next-line no-console
-console.log(`command,name,shorthand,type,description`);
+console.log(`command,name,shorthand,type,deprecated,description`);
 for (const command of Object.keys(commands)) {
   for (const option of commands[command]) {
     // eslint-disable-next-line no-console
     console.log(
-      `${command},${option.name},${option.shorthand ?? '(null)'},${option.type.name},"${option.description ?? ''}"`
+      `${command},${option.name},${option.shorthand ?? '(null)'},${option.type.name},${option.deprecated},"${option.description ?? ''}"`
     );
   }
 }
