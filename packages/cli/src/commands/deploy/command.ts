@@ -1,3 +1,4 @@
+import { confirmOption, yesOption } from '../../util/arg-common';
 import { Command } from '../help';
 
 export const deployCommand: Command = {
@@ -106,10 +107,7 @@ export const deployCommand: Command = {
         'Disable the automatic promotion (aliasing) of the relevant domains to a new production deployment. You can use `vc promote` to complete the domain-assignment process later',
     },
     {
-      name: 'yes',
-      shorthand: 'y',
-      type: Boolean,
-      deprecated: false,
+      ...yesOption,
       description: 'Use default options to skip all prompts',
     },
     {
@@ -141,9 +139,7 @@ export const deployCommand: Command = {
       description: 'Specify the target deployment environment',
     },
     {
-      name: 'confirm',
-      shorthand: 'c',
-      type: Boolean,
+      ...confirmOption,
       deprecated: true,
       description: 'Use default options to skip all prompts',
     },

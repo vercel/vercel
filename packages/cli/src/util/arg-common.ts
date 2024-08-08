@@ -42,3 +42,10 @@ export const nextOption = {
   type: Number,
   deprecated: false,
 };
+
+export const confirmOption = {
+  name: 'confirm',
+  shorthand: 'c',
+  type: Boolean,
+  deprecated: true,
+};

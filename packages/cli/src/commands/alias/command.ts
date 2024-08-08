@@ -1,5 +1,6 @@
 import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
+import { nextOption, yesOption } from '../../util/arg-common';
 
 export const aliasCommand: Command = {
   name: 'alias',
@@ -49,19 +50,13 @@ export const aliasCommand: Command = {
   ],
   options: [
     {
-      name: 'next',
+      ...nextOption,
       description: 'Show next page of results',
       argument: 'MS',
-      shorthand: 'N',
-      type: String,
-      deprecated: false,
     },
     {
-      name: 'yes',
+      ...yesOption,
       description: 'Skip the confirmation prompt when removing an alias',
-      shorthand: 'y',
-      type: Boolean,
-      deprecated: false,
     },
     {
       name: 'limit',

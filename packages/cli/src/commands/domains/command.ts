@@ -1,5 +1,6 @@
 import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
+import { nextOption, yesOption } from '../../util/arg-common';
 
 export const domainsCommand: Command = {
   name: 'domains',
@@ -101,18 +102,12 @@ export const domainsCommand: Command = {
   ],
   options: [
     {
-      name: 'next',
+      ...nextOption,
       description: 'Show next page of results',
-      shorthand: 'N',
-      type: Number,
-      deprecated: false,
     },
     {
-      name: 'yes',
+      ...yesOption,
       description: 'Skip the confirmation prompt when removing a domain',
-      shorthand: 'y',
-      type: Boolean,
-      deprecated: false,
     },
     {
       name: 'limit',

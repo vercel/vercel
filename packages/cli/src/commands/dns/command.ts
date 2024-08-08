@@ -1,5 +1,6 @@
 import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
+import { nextOption } from '../../util/arg-common';
 
 export const dnsCommand: Command = {
   name: 'dns',
@@ -70,12 +71,9 @@ export const dnsCommand: Command = {
   ],
   options: [
     {
-      name: 'next',
+      ...nextOption,
       description: 'Show next page of results',
       argument: 'MS',
-      shorthand: 'N',
-      type: String,
-      deprecated: false,
     },
     {
       name: 'limit',

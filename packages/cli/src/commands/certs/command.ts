@@ -1,5 +1,6 @@
 import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
+import { nextOption } from '../../util/arg-common';
 
 export const certsCommand: Command = {
   name: 'certs',
@@ -86,11 +87,8 @@ export const certsCommand: Command = {
       deprecated: false,
     },
     {
-      name: 'next',
+      ...nextOption,
       description: 'Show next page of results',
-      shorthand: 'N',
-      type: Number,
-      deprecated: false,
     },
     { name: 'overwrite', shorthand: null, type: Boolean, deprecated: false },
     { name: 'output', shorthand: null, type: String, deprecated: false },
