@@ -35,3 +35,10 @@ export const yesOption = {
   type: Boolean,
   deprecated: false,
 };
+
+export const nextOption = {
+  name: 'next',
+  shorthand: 'N',
+  type: Number,
+  deprecated: false,
+};
