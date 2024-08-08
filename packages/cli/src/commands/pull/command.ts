@@ -35,7 +35,7 @@ export const pullCommand: Command = {
       description:
         'Skip questions when setting up new project using default scope and settings',
       shorthand: 'y',
-      type: String,
+      type: Boolean,
       deprecated: false,
     },
   ],
