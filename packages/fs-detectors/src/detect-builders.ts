@@ -474,7 +474,7 @@ function getApiMatches(): Builder[] {
 
   return [
     {
-      src: 'middleware.[jt]s',
+      src: REGEX_MIDDLEWARE,
       use: `@vercel/node`,
       config: { ...config, middleware: true },
     },
