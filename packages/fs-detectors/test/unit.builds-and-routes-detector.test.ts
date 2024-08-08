@@ -74,6 +74,23 @@ async function invokeDetectBuilders(
   };
 }
 
+/**
+ * Replace matched redirects, similar to how it works with `now-proxy` in production.
+ */
+function createReplaceLocation(redirectRoutes: Route[] | null) {
+  const redirectSources = (redirectRoutes || []) as Source[];
+  return (filePath: string): string | null => {
+    for (const r of redirectSources) {
+      const m = new RegExp(r.src).exec(filePath);
+      if (m && r.headers) {
+        const match = m[1] || '';
+        return r.headers['Location'].replace('$1', match);
+      }
+    }
+    return null;
+  };
+}
+
 describe('Test `detectBuilders`', () => {
   it('should never select now.json src', async () => {
     const files = ['docs/index.md', 'mkdocs.yml', 'now.json'];
@@ -2586,9 +2603,8 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
   });
 });
 
-// TODO: conver to describe
-it('Test `detectRoutes`', async () => {
-  {
+describe('Test `detectRoutes`', () => {
+  it('package.json is not a default route', async () => {
     const files = ['api/user.go', 'api/team.js', 'api/package.json'];
 
     const { defaultRoutes } = await invokeDetectBuildersAndThrow(files);
@@ -2597,45 +2613,45 @@ it('Test `detectRoutes`', async () => {
     expect(defaultRoutes[1].dest).toBe('/api/user.go');
     expect(defaultRoutes[2].dest).not.toBeDefined();
     expect(defaultRoutes[2].status).toBe(404);
-  }
+  });
 
-  {
+  it('conflicting file path with same name', async () => {
     const files = ['api/user.go', 'api/user.js'];
 
     const { errors } = await invokeDetectBuilders(files);
     expect(errors[0].code).toBe('conflicting_file_path');
-  }
+  });
 
-  {
+  it('conflicting file path with placeholders', async () => {
     const files = ['api/[user].go', 'api/[team]/[id].js'];
 
     const { errors } = await invokeDetectBuilders(files);
     expect(errors[0].code).toBe('conflicting_file_path');
-  }
+  });
 
-  {
+  it('conflicting file path with same placeholder name', async () => {
     const files = ['api/[team]/[team].js'];
 
     const { errors } = await invokeDetectBuilders(files);
     expect(errors[0].code).toBe('conflicting_path_segment');
-  }
+  });
 
-  {
+  it('conflicting file path with same name at subpath', async () => {
     const files = ['api/date/index.js', 'api/date/index.go'];
 
     const { defaultRoutes, errors } = await invokeDetectBuilders(files);
     expect(defaultRoutes).toBe(null);
     expect(errors[0].code).toBe('conflicting_file_path');
-  }
+  });
 
-  {
+  it('works with file and directory placeholder of same name', async () => {
     const files = ['api/[endpoint].js', 'api/[endpoint]/[id].js'];
 
     const { defaultRoutes } = await invokeDetectBuildersAndThrow(files);
     expect(defaultRoutes.length).toBe(3);
-  }
+  });
 
-  {
+  it('works with file and directory placeholder of same name 2', async () => {
     const files = [
       'public/index.html',
       'api/[endpoint].js',
@@ -2648,9 +2664,9 @@ it('Test `detectRoutes`', async () => {
     expect(defaultRoutes[3].src).toBe('/(.*)');
     expect(defaultRoutes[3].dest).toBe('/public/$1');
     expect(defaultRoutes.length).toBe(4);
-  }
+  });
 
-  {
+  it('works with static files with api files', async () => {
     const pkg = {
       scripts: { build: 'next build' },
       devDependencies: { next: '9.0.0' },
@@ -2661,17 +2677,17 @@ it('Test `detectRoutes`', async () => {
     expect(defaultRoutes[1].status).toBe(404);
     expect(defaultRoutes[1].src).toBe('^/api(/.*)?$');
     expect(defaultRoutes.length).toBe(2);
-  }
+  });
 
-  {
+  it('works with static files', async () => {
     const files = ['public/index.html'];
 
     const { defaultRoutes } = await invokeDetectBuildersAndThrow(files);
 
     expect(defaultRoutes.length).toBe(1);
-  }
+  });
 
-  {
+  it('works with file and directory of same name', async () => {
     const files = ['api/date/index.js', 'api/date.js'];
 
     const { defaultRoutes } = await invokeDetectBuildersAndThrow(files);
@@ -2681,9 +2697,9 @@ it('Test `detectRoutes`', async () => {
     expect(defaultRoutes[0].dest).toBe('/api/date/index.js');
     expect(defaultRoutes[1].src).toBe('^/api/(date/|date|date\\.js)$');
     expect(defaultRoutes[1].dest).toBe('/api/date.js');
-  }
+  });
 
-  {
+  it('works with file name and directory placeholder of same name', async () => {
     const files = ['api/date.js', 'api/[date]/index.js'];
 
     const { defaultRoutes } = await invokeDetectBuildersAndThrow(files);
@@ -2693,9 +2709,9 @@ it('Test `detectRoutes`', async () => {
     expect(defaultRoutes[0].dest).toBe('/api/[date]/index.js?date=$1');
     expect(defaultRoutes[1].src).toBe('^/api/(date/|date|date\\.js)$');
     expect(defaultRoutes[1].dest).toBe('/api/date.js');
-  }
+  });
 
-  {
+  it('works with files and type files of same names', async () => {
     const files = [
       'api/index.ts',
       'api/index.d.ts',
@@ -2714,10 +2730,9 @@ it('Test `detectRoutes`', async () => {
     expect(builders[2].use).toBe('@vercel/node');
     expect(builders[3].use).toBe('@vercel/node');
     expect(defaultRoutes.length).toBe(5);
-  }
+  });
 
-  {
-    // use a custom runtime
+  it('works with custom runtime', async () => {
     const functions = { 'api/user.php': { runtime: 'vercel-php@0.1.0' } };
     const files = ['api/user.php'];
 
@@ -2727,13 +2742,12 @@ it('Test `detectRoutes`', async () => {
 
     expect(defaultRoutes.length).toBe(2);
     expect(defaultRoutes[0].dest).toBe('/api/user.php');
-  }
+  });
 });
 
-it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
-  const featHandleMiss = true;
-
-  {
+describe('Test `detectRoutes` with `featHandleMiss=true`', () => {
+  it('package.json is not a default route', async () => {
+    const featHandleMiss = true;
     const files = ['api/user.go', 'api/team.js', 'api/package.json'];
 
     const { defaultRoutes, rewriteRoutes, errorRoutes } =
@@ -2797,36 +2811,40 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
     ].forEach(file => {
       expect(file).not.toMatch(pattern);
     });
-  }
+  });
 
-  {
+  it('conflicting file path with same name', async () => {
+    const featHandleMiss = true;
     const files = ['api/user.go', 'api/user.js'];
 
     const { errors } = await invokeDetectBuilders(files, null, {
       featHandleMiss,
     });
     expect(errors[0].code).toBe('conflicting_file_path');
-  }
+  });
 
-  {
+  it('conflicting file path with placeholders', async () => {
+    const featHandleMiss = true;
     const files = ['api/[user].go', 'api/[team]/[id].js'];
 
     const { errors } = await invokeDetectBuilders(files, null, {
       featHandleMiss,
     });
     expect(errors[0].code).toBe('conflicting_file_path');
-  }
+  });
 
-  {
+  it('conflicting file path with same placeholder name', async () => {
+    const featHandleMiss = true;
     const files = ['api/[team]/[team].js'];
 
     const { errors } = await invokeDetectBuilders(files, null, {
       featHandleMiss,
     });
     expect(errors[0].code).toBe('conflicting_path_segment');
-  }
+  });
 
-  {
+  it('conflicting file path with same name at subpath', async () => {
+    const featHandleMiss = true;
     const files = ['api/date/index.js', 'api/date/index.go'];
 
     const { defaultRoutes, errors } = await invokeDetectBuilders(files, null, {
@@ -2834,9 +2852,10 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
     });
     expect(defaultRoutes).toBe(null);
     expect(errors[0].code).toBe('conflicting_file_path');
-  }
+  });
 
-  {
+  it('works with file and directory placeholder of same name', async () => {
+    const featHandleMiss = true;
     const files = ['api/[endpoint].js', 'api/[endpoint]/[id].js'];
 
     const { defaultRoutes, rewriteRoutes } = await invokeDetectBuildersAndThrow(
@@ -2870,9 +2889,10 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
         src: '^/api(/.*)?$',
       },
     ]);
-  }
+  });
 
-  {
+  it('works with file and directory placeholder of same name 2', async () => {
+    const featHandleMiss = true;
     const files = [
       'public/index.html',
       'api/[endpoint].js',
@@ -2911,9 +2931,10 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
         src: '^/api(/.*)?$',
       },
     ]);
-  }
+  });
 
-  {
+  it('works with static files with api files', async () => {
+    const featHandleMiss = true;
     const pkg = {
       scripts: {
         build: 'next build',
@@ -2952,9 +2973,10 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
         src: '^/api(/.*)?$',
       },
     ]);
-  }
+  });
 
-  {
+  it('works with api and page/api files', async () => {
+    const featHandleMiss = true;
     const files = ['api/external.js', 'pages/api/internal.js'];
     const { builders, warnings } = await invokeDetectBuildersAndThrow(
       files,
@@ -2990,9 +3012,10 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
         action: 'Learn More',
       },
     ]);
-  }
+  });
 
-  {
+  it('works with api and page/api files 2', async () => {
+    const featHandleMiss = true;
     const files = ['api/external.js', 'pages/api/internal.js'];
     const { builders, warnings } = await invokeDetectBuildersAndThrow(
       files,
@@ -3029,9 +3052,10 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
         action: 'Learn More',
       },
     ]);
-  }
+  });
 
-  {
+  it('works with api and page/api files 3', async () => {
+    const featHandleMiss = true;
     const files = ['api/external.go', 'pages/api/internal.js'];
     const { builders, warnings } = await invokeDetectBuildersAndThrow(
       files,
@@ -3059,18 +3083,20 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
       },
     ]);
     expect(warnings).toStrictEqual([]);
-  }
+  });
 
-  {
+  it('works with static files', async () => {
+    const featHandleMiss = true;
     const files = ['public/index.html'];
 
     const { defaultRoutes } = await invokeDetectBuildersAndThrow(files, null, {
       featHandleMiss,
     });
     expect(defaultRoutes).toStrictEqual([]);
-  }
+  });
 
-  {
+  it('works with file and directory of same name', async () => {
+    const featHandleMiss = true;
     const files = ['api/date/index.js', 'api/date.js'];
 
     const { defaultRoutes, rewriteRoutes } = await invokeDetectBuildersAndThrow(
@@ -3095,9 +3121,10 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
         src: '^/api(/.*)?$',
       },
     ]);
-  }
+  });
 
-  {
+  it('works with file name and directory placeholder of same name', async () => {
+    const featHandleMiss = true;
     const files = ['api/date.js', 'api/[date]/index.js'];
 
     const { defaultRoutes, rewriteRoutes } = await invokeDetectBuildersAndThrow(
@@ -3126,9 +3153,10 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
         src: '^/api(/.*)?$',
       },
     ]);
-  }
+  });
 
-  {
+  it('works with files and type files of same names', async () => {
+    const featHandleMiss = true;
     const files = [
       'api/index.ts',
       'api/index.d.ts',
@@ -3160,10 +3188,10 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
         src: '^/api(/.*)?$',
       },
     ]);
-  }
+  });
 
-  {
-    // use a custom runtime
+  it('works with custom runtime', async () => {
+    const featHandleMiss = true;
     const functions = { 'api/user.php': { runtime: 'vercel-php@0.1.0' } };
     const files = ['api/user.php'];
 
@@ -3190,24 +3218,24 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
         src: '^/api(/.*)?$',
       },
     ]);
-  }
+  });
 });
 
-it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`', async () => {
+describe('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`', () => {
   const options = {
     featHandleMiss: true,
     cleanUrls: true,
   };
 
-  const testHeaders = (redirectRoutes: Route[] | null) => {
+  function testHeaders(redirectRoutes: Route[] | null) {
     if (!redirectRoutes || redirectRoutes.length === 0) {
       throw new Error('Expected one redirect but found none');
     }
     expect(redirectRoutes).toBeDefined();
     expect(redirectRoutes.length).toBe(2);
-  };
+  }
 
-  {
+  it('package.json is not a default route', async () => {
     const files = ['api/user.go', 'api/team.js', 'api/package.json'];
 
     const { defaultRoutes, redirectRoutes, rewriteRoutes, errorRoutes } =
@@ -3253,30 +3281,30 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`', async () 
     expect(getLocation('/api-index')).toBe(null);
     expect(getLocation('/apiuserindex')).toBe(null);
     expect(getLocation('/apiuser-index')).toBe(null);
-  }
+  });
 
-  {
+  it('conflicting file path with same name', async () => {
     const files = ['api/user.go', 'api/user.js'];
 
     const { errors } = await invokeDetectBuilders(files, null, options);
     expect(errors[0].code).toBe('conflicting_file_path');
-  }
+  });
 
-  {
+  it('conflicting file path with placeholders', async () => {
     const files = ['api/[user].go', 'api/[team]/[id].js'];
 
     const { errors } = await invokeDetectBuilders(files, null, options);
     expect(errors[0].code).toBe('conflicting_file_path');
-  }
+  });
 
-  {
+  it('conflicting file path with same placeholder name', async () => {
     const files = ['api/[team]/[team].js'];
 
     const { errors } = await invokeDetectBuilders(files, null, options);
     expect(errors[0].code).toBe('conflicting_path_segment');
-  }
+  });
 
-  {
+  it('conflicting file path with same name at subpath', async () => {
     const files = ['api/date/index.js', 'api/date/index.go'];
 
     const { defaultRoutes, errors } = await invokeDetectBuilders(
@@ -3286,9 +3314,9 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`', async () 
     );
     expect(defaultRoutes).toBe(null);
     expect(errors[0].code).toBe('conflicting_file_path');
-  }
+  });
 
-  {
+  it('works with file and directory placeholder of same name', async () => {
     const files = ['api/[endpoint].js', 'api/[endpoint]/[id].js'];
 
     const { defaultRoutes, redirectRoutes, rewriteRoutes } =
@@ -3311,9 +3339,9 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`', async () 
         src: '^/api(/.*)?$',
       },
     ]);
-  }
+  });
 
-  {
+  it('works with file and directory placeholder of same name 2', async () => {
     const files = [
       'public/index.html',
       'api/[endpoint].js',
@@ -3340,9 +3368,9 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`', async () 
         src: '^/api(/.*)?$',
       },
     ]);
-  }
+  });
 
-  {
+  it('works with static files with api files', async () => {
     const pkg = {
       scripts: {
         build: 'next build',
@@ -3370,9 +3398,9 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`', async () 
         src: '^/api(/.*)?$',
       },
     ]);
-  }
+  });
 
-  {
+  it('works with static files', async () => {
     const files = ['public/index.html'];
 
     const { defaultRoutes } = await invokeDetectBuildersAndThrow(
@@ -3381,9 +3409,9 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`', async () 
       options
     );
     expect(defaultRoutes).toStrictEqual([]);
-  }
+  });
 
-  {
+  it('works with file and directory of same name', async () => {
     const files = ['api/date/index.js', 'api/date.js'];
 
     const { defaultRoutes, redirectRoutes, rewriteRoutes } =
@@ -3396,9 +3424,9 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`', async () 
         src: '^/api(/.*)?$',
       },
     ]);
-  }
+  });
 
-  {
+  it('works with file name and directory placeholder of same name', async () => {
     const files = ['api/date.js', 'api/[date]/index.js'];
 
     const { defaultRoutes, redirectRoutes, rewriteRoutes } =
@@ -3416,9 +3444,9 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`', async () 
         src: '^/api(/.*)?$',
       },
     ]);
-  }
+  });
 
-  {
+  it('works with files and type files of same names', async () => {
     const files = [
       'api/index.ts',
       'api/index.d.ts',
@@ -3437,10 +3465,9 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`', async () 
         src: '^/api(/.*)?$',
       },
     ]);
-  }
+  });
 
-  {
-    // use a custom runtime
+  it('works with custom runtime', async () => {
     const functions = { 'api/user.php': { runtime: 'vercel-php@0.1.0' } };
     const files = ['api/user.php'];
 
@@ -3457,25 +3484,25 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`', async () 
         src: '^/api(/.*)?$',
       },
     ]);
-  }
+  });
 });
 
-it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `trailingSlash=true`', async () => {
+describe('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `trailingSlash=true`', () => {
   const options = {
     featHandleMiss: true,
     cleanUrls: true,
     trailingSlash: true,
   };
 
-  const testHeaders = (redirectRoutes: Route[] | null) => {
+  function testHeaders(redirectRoutes: Route[] | null) {
     if (!redirectRoutes || redirectRoutes.length === 0) {
       throw new Error('Expected one redirect but found none');
     }
     expect(redirectRoutes).toBeDefined();
     expect(redirectRoutes.length).toBe(2);
-  };
+  }
 
-  {
+  it('package.json is not a default route', async () => {
     const files = ['api/user.go', 'api/team.js', 'api/package.json'];
 
     const { defaultRoutes, redirectRoutes, rewriteRoutes } =
@@ -3517,9 +3544,9 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `trailingS
     expect(getLocation('/apiuser.index')).toBe(null);
     expect(getLocation('/apiuser-index')).toBe(null);
     expect(getLocation('/apiuser-index')).toBe(null);
-  }
+  });
 
-  {
+  it('works with file and directory placeholder of same name', async () => {
     const files = ['api/[endpoint].js', 'api/[endpoint]/[id].js'];
 
     const { defaultRoutes, redirectRoutes, rewriteRoutes } =
@@ -3542,9 +3569,9 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `trailingS
         src: '^/api(/.*)?$',
       },
     ]);
-  }
+  });
 
-  {
+  it('works with file and directory placeholder of same name 2', async () => {
     const files = [
       'public/index.html',
       'api/[endpoint].js',
@@ -3571,9 +3598,9 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `trailingS
         src: '^/api(/.*)?$',
       },
     ]);
-  }
+  });
 
-  {
+  it('works with static files with api files', async () => {
     const pkg = {
       scripts: {
         build: 'next build',
@@ -3601,9 +3628,9 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `trailingS
         src: '^/api(/.*)?$',
       },
     ]);
-  }
+  });
 
-  {
+  it('works with file and directory of same name', async () => {
     const files = ['api/date/index.js', 'api/date.js'];
 
     const { defaultRoutes, redirectRoutes, rewriteRoutes } =
@@ -3616,9 +3643,9 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `trailingS
         src: '^/api(/.*)?$',
       },
     ]);
-  }
+  });
 
-  {
+  it('works with file name and directory placeholder of same name', async () => {
     const files = ['api/date.js', 'api/[date]/index.js'];
 
     const { defaultRoutes, redirectRoutes, rewriteRoutes } =
@@ -3636,9 +3663,9 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `trailingS
         src: '^/api(/.*)?$',
       },
     ]);
-  }
+  });
 
-  {
+  it('works with files and type files of same names', async () => {
     const files = [
       'api/index.ts',
       'api/index.d.ts',
@@ -3657,10 +3684,9 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `trailingS
         src: '^/api(/.*)?$',
       },
     ]);
-  }
+  });
 
-  {
-    // use a custom runtime
+  it('works with custom runtime', async () => {
     const functions = { 'api/user.php': { runtime: 'vercel-php@0.1.0' } };
     const files = ['api/user.php'];
 
@@ -3677,7 +3703,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `trailingS
         src: '^/api(/.*)?$',
       },
     ]);
-  }
+  });
 });
 
 describe('Test `detectOutputDirectory`', () => {
@@ -3872,21 +3898,3 @@ describe('Test `detectApiExtensions`', () => {
     expect(result.has('.rs')).toBe(true);
   });
 });
-
-/**
- * Create a function that will replace matched redirects
- * similar to how it works with `now-proxy` in production.
- */
-function createReplaceLocation(redirectRoutes: Route[] | null) {
-  const redirectSources = (redirectRoutes || []) as Source[];
-  return (filePath: string): string | null => {
-    for (const r of redirectSources) {
-      const m = new RegExp(r.src).exec(filePath);
-      if (m && r.headers) {
-        const match = m[1] || '';
-        return r.headers['Location'].replace('$1', match);
-      }
-    }
-    return null;
-  };
-}
