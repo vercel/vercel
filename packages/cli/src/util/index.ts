@@ -64,6 +64,7 @@ export interface ListOptions {
   meta?: Dictionary<string>;
   nextTimestamp?: number;
   target?: string;
+  policy?: Dictionary<string>;
 }
 
 export default class Now extends EventEmitter {
@@ -346,7 +347,13 @@ export default class Now extends EventEmitter {
 
   async list(
     app?: string,
-    { version = 4, meta = {}, nextTimestamp, target }: ListOptions = {},
+    {
+      version = 4,
+      meta = {},
+      nextTimestamp,
+      target,
+      policy = {},
+    }: ListOptions = {},
     prod?: boolean
   ) {
     const fetchRetry = async (url: string, options: FetchOptions = {}) => {
@@ -374,7 +381,7 @@ export default class Now extends EventEmitter {
       );
     };
 
-    if (!app && !Object.keys(meta).length) {
+    if (!app && !Object.keys(meta).length && !Object.keys(policy).length) {
       // Get the 20 latest projects and their latest deployment
       const query = new URLSearchParams({ limit: (20).toString() });
       if (nextTimestamp) {
@@ -403,7 +410,13 @@ export default class Now extends EventEmitter {
       query.set('app', app);
     }
 
-    Object.keys(meta).map(key => query.set(`meta-${key}`, meta[key]));
+    if (Object.keys(meta).length) {
+      Object.keys(meta).map(key => query.set(`meta-${key}`, meta[key]));
+    }
+
+    if (Object.keys(policy).length) {
+      Object.keys(policy).map(key => query.set(`policy-${key}`, policy[key]));
+    }
 
     query.set('limit', '20');
 

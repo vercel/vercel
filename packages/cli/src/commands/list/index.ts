@@ -22,6 +22,18 @@ import { help } from '../help';
 import { listCommand } from './command';
 import parseTarget from '../../util/parse-target';
 
+function ToDate(timestamp: number): string {
+  const date = new Date(timestamp);
+  const options: Intl.DateTimeFormatOptions = {
+    year: '2-digit',
+    month: '2-digit',
+    day: '2-digit',
+  };
+
+  // The locale 'en-US' ensures the format is MM/DD/YY
+  return date.toLocaleDateString('en-US', options);
+}
+
 export default async function list(client: Client) {
   let argv;
 
@@ -35,6 +47,8 @@ export default async function list(client: Client) {
       '--prod': Boolean, // this can be deprecated someday
       '--yes': Boolean,
       '-y': '--yes',
+      '--policy': [String],
+      '-p': '--policy',
 
       // deprecated
       '--confirm': Boolean,
@@ -66,6 +80,7 @@ export default async function list(client: Client) {
 
   const autoConfirm = !!argv['--yes'];
   const meta = parseMeta(argv['--meta']);
+  const policy = parseMeta(argv['--policy']);
 
   const target = parseTarget({
     output,
@@ -182,6 +197,7 @@ export default async function list(client: Client) {
     meta,
     nextTimestamp,
     target,
+    policy,
   });
 
   let {
@@ -251,6 +267,8 @@ export default async function list(client: Client) {
 
   const headers = ['Age', 'Deployment', 'Status', 'Environment', 'Duration'];
   if (showUsername) headers.push('Username');
+  if (Object.keys(policy).length > 0)
+    headers.push(...['Expiration', 'Proposed Expiration']);
   const urls: string[] = [];
 
   client.output.print(
@@ -268,6 +286,12 @@ export default async function list(client: Client) {
               dep.target === 'production' ? 'Production' : 'Preview',
               chalk.gray(getDeploymentDuration(dep)),
               showUsername ? chalk.gray(dep.creator?.username) : '',
+              Object.keys(policy).length > 0 && dep.expiration
+                ? ToDate(dep.expiration)
+                : '',
+              Object.keys(policy).length > 0 && dep.proposedExpiration
+                ? ToDate(dep.proposedExpiration)
+                : '',
             ];
           })
           .filter(app =>
