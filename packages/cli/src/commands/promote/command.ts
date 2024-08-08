@@ -33,6 +33,7 @@ export const promoteCommand: Command = {
       type: String,
       deprecated: false,
     },
+    { name: 'yes', shorthand: 'y', type: Boolean, deprecated: false },
   ],
   examples: [
     {
