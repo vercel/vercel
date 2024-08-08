@@ -65,7 +65,7 @@ export function parseArguments<T extends Spec>(
   return { args: positional, flags: rest };
 }
 
-export function handleParseArguments(options: {
+export function parseSubcommandArgs(options: {
   args: string[];
   command: Command;
   width: number;

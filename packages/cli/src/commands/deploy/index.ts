@@ -46,7 +46,7 @@ import {
   TooManyRequests,
   UserAborted,
 } from '../../util/errors-ts';
-import { handleParseArguments } from '../../util/get-args';
+import { parseSubcommandArgs } from '../../util/get-args';
 import getDeployment from '../../util/get-deployment';
 import getProjectName from '../../util/get-project-name';
 import toHumanPath from '../../util/humanize-path';
@@ -77,7 +77,7 @@ import parseTarget from '../../util/parse-target';
 export default async (client: Client): Promise<number> => {
   const { output } = client;
 
-  const parseResult = handleParseArguments({
+  const parseResult = parseSubcommandArgs({
     args: client.argv.slice(2),
     command: deployCommand,
     width: client.stderr.columns,
