@@ -1,5 +1,9 @@
 import arg from 'arg';
+import { Command, help } from '../commands/help';
 import getCommonArgs from './arg-common';
+import { getFlagsSpecification } from './get-flags-specification';
+import handleError from './handle-error';
+import { Output } from './output';
 
 type ArgOptions = {
   permissive?: boolean;
@@ -59,4 +63,30 @@ export function parseArguments<T extends Spec>(
     }
   );
   return { args: positional, flags: rest };
+}
+
+export function handleParseArguments(options: {
+  args: string[];
+  command: Command;
+  width: number;
+  output: Output;
+  parserOptions?: ParserOptions;
+}): { exit: number } | { ok: ReturnType<typeof parseArguments> } {
+  const { args, command, width, output, parserOptions } = options;
+
+  let parsedArguments;
+  const flagsSpecification = getFlagsSpecification(command.options);
+
+  try {
+    parsedArguments = parseArguments(args, flagsSpecification, parserOptions);
+  } catch (error) {
+    handleError(error);
+    return { exit: 1 };
+  }
+
+  if (parsedArguments.flags['--help']) {
+    output.print(help(command, { columns: width }));
+    return { exit: 2 };
+  }
+  return { ok: parsedArguments };
 }
