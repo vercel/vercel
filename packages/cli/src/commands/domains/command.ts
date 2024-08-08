@@ -115,7 +115,7 @@ export const domainsCommand: Command = {
       description:
         'Number of results to return per page (default: 20, max: 100)',
       argument: 'NUMBER',
-      type: String,
+      type: Number,
       deprecated: false,
     },
     {
