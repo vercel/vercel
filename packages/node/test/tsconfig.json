@@ -1,8 +1,12 @@
 {
   "compilerOptions": {
     "allowJs": true,
-    "sourceMap": true
+    "sourceMap": true,
+    "lib": ["ES2021", "DOM"],
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "noImplicitReturns": false,
+    "noUnusedParameters": false
   },
-  "extends": "../tsconfig.json",
   "include": ["**/*.test.ts"]
 }
