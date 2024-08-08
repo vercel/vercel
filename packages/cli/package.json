@@ -19,6 +19,8 @@
     "coverage": "codecov",
     "build": "node scripts/build.mjs",
     "dev": "ts-node ./src/index.ts",
+    "vercel": "pnpm dev",
+    "vc": "pnpm dev",
     "type-check": "tsc --noEmit"
   },
   "bin": {
