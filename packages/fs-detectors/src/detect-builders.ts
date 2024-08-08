@@ -15,17 +15,17 @@ import { isOfficialRuntime } from './is-official-runtime';
 /**
  * Pattern for finding all supported middleware files.
  */
-export const REGEX_MIDDLEWARE = 'middleware.[jt]s';
+export const REGEX_MIDDLEWARE_FILES = 'middleware.[jt]s';
 
 /**
  * Pattern for files that the Vercel platform cares about separately from frameworks.
  */
-export const REGEX_VERCEL_PLATFORM_PATTERN = `api/**,package.json,${REGEX_MIDDLEWARE}`;
+export const REGEX_VERCEL_PLATFORM_FILES = `api/**,package.json,${REGEX_MIDDLEWARE_FILES}`;
 
 /**
  * Pattern for non-Vercel platform files.
  */
-export const REGEX_NON_VERCEL_PLATFORM_PATTERN = `!{${REGEX_VERCEL_PLATFORM_PATTERN}}`;
+export const REGEX_NON_VERCEL_PLATFORM_FILES = `!{${REGEX_VERCEL_PLATFORM_FILES}}`;
 
 const slugToFramework = new Map<string | null, Framework>(
   frameworkList.map(f => [f.slug, f])
@@ -295,7 +295,7 @@ export async function detectBuilders(
       // and package.json can be served as static files
       frontendBuilder = {
         use: '@vercel/static',
-        src: REGEX_NON_VERCEL_PLATFORM_PATTERN,
+        src: REGEX_NON_VERCEL_PLATFORM_FILES,
         config: {
           zeroConfig: true,
         },
@@ -474,7 +474,7 @@ function getApiMatches(): Builder[] {
 
   return [
     {
-      src: REGEX_MIDDLEWARE,
+      src: REGEX_MIDDLEWARE_FILES,
       use: `@vercel/node`,
       config: { ...config, middleware: true },
     },

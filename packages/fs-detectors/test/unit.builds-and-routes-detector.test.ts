@@ -10,7 +10,7 @@ import {
   detectApiDirectory,
   detectApiExtensions,
 } from '../src';
-import { REGEX_NON_VERCEL_PLATFORM_PATTERN } from '../src/detect-builders';
+import { REGEX_NON_VERCEL_PLATFORM_FILES } from '../src/detect-builders';
 import type { Options } from '../src/detect-builders';
 
 /**
@@ -159,7 +159,7 @@ describe('Test `detectBuilders`', () => {
     expect(builders[0].use).toBe('@vercel/node');
     expect(builders[0].src).toBe('api/users.js');
     expect(builders[1].use).toBe('@vercel/static');
-    expect(builders[1].src).toBe(REGEX_NON_VERCEL_PLATFORM_PATTERN);
+    expect(builders[1].src).toBe(REGEX_NON_VERCEL_PLATFORM_FILES);
     expect(builders.length).toBe(2);
   });
 
@@ -169,7 +169,7 @@ describe('Test `detectBuilders`', () => {
     expect(builders[0].use).toBe('@vercel/node');
     expect(builders[0].src).toBe('api/[endpoint].js');
     expect(builders[1].use).toBe('@vercel/static');
-    expect(builders[1].src).toBe(REGEX_NON_VERCEL_PLATFORM_PATTERN);
+    expect(builders[1].src).toBe(REGEX_NON_VERCEL_PLATFORM_FILES);
     expect(builders.length).toBe(2);
   });
 
@@ -223,7 +223,7 @@ describe('Test `detectBuilders`', () => {
     expect(builders[0].use).toBe('@vercel/node');
     expect(builders[0].src).toBe('api/endpoint.js');
     expect(builders[1].use).toBe('@vercel/static');
-    expect(builders[1].src).toBe(REGEX_NON_VERCEL_PLATFORM_PATTERN);
+    expect(builders[1].src).toBe(REGEX_NON_VERCEL_PLATFORM_FILES);
     expect(builders.length).toBe(2);
   });
 
@@ -434,7 +434,7 @@ describe('Test `detectBuilders`', () => {
     expect(builders[0].use).toBe('@vercel/node');
     expect(builders[0].src).toBe('api/index.ts');
     expect(builders[1].use).toBe('@vercel/static');
-    expect(builders[1].src).toBe(REGEX_NON_VERCEL_PLATFORM_PATTERN);
+    expect(builders[1].src).toBe(REGEX_NON_VERCEL_PLATFORM_FILES);
   });
 
   it('functions with nextjs', async () => {
@@ -1158,7 +1158,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(builders[0].use).toBe('@vercel/node');
     expect(builders[0].src).toBe('api/users.js');
     expect(builders[1].use).toBe('@vercel/static');
-    expect(builders[1].src).toBe(REGEX_NON_VERCEL_PLATFORM_PATTERN);
+    expect(builders[1].src).toBe(REGEX_NON_VERCEL_PLATFORM_FILES);
     expect(builders.length).toBe(2);
 
     expect(defaultRoutes.length).toBe(2);
@@ -1179,7 +1179,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(builders[0].use).toBe('@vercel/node');
     expect(builders[0].src).toBe('api/[endpoint].js');
     expect(builders[1].use).toBe('@vercel/static');
-    expect(builders[1].src).toBe(REGEX_NON_VERCEL_PLATFORM_PATTERN);
+    expect(builders[1].src).toBe(REGEX_NON_VERCEL_PLATFORM_FILES);
     expect(builders.length).toBe(2);
   });
 
@@ -1418,7 +1418,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(builders[0].use).toBe('@vercel/node');
     expect(builders[0].src).toBe('api/endpoint.js');
     expect(builders[1].use).toBe('@vercel/static');
-    expect(builders[1].src).toBe(REGEX_NON_VERCEL_PLATFORM_PATTERN);
+    expect(builders[1].src).toBe(REGEX_NON_VERCEL_PLATFORM_FILES);
     expect(builders.length).toBe(2);
 
     expect(defaultRoutes.length).toBe(2);
@@ -1448,7 +1448,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(builders[0].use).toBe('@vercel/node');
     expect(builders[0].src).toBe('api/version.js');
     expect(builders[1].use).toBe('@vercel/static');
-    expect(builders[1].src).toBe(REGEX_NON_VERCEL_PLATFORM_PATTERN);
+    expect(builders[1].src).toBe(REGEX_NON_VERCEL_PLATFORM_FILES);
     expect(builders.length).toBe(2);
 
     expect(defaultRoutes.length).toBe(2);
@@ -1788,7 +1788,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(builders[0].use).toBe('@vercel/node');
     expect(builders[0].src).toBe('api/index.ts');
     expect(builders[1].use).toBe('@vercel/static');
-    expect(builders[1].src).toBe(REGEX_NON_VERCEL_PLATFORM_PATTERN);
+    expect(builders[1].src).toBe(REGEX_NON_VERCEL_PLATFORM_FILES);
     expect(errorRoutes.length).toBe(1);
     expect((errorRoutes[0] as Source).status).toBe(404);
   });
@@ -2482,7 +2482,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(builders[0].src).toBe('middleware.js');
     expect(builders[0].config?.middleware).toEqual(true);
     expect(builders[1].use).toBe('@vercel/static');
-    expect(builders[1].src).toBe(REGEX_NON_VERCEL_PLATFORM_PATTERN);
+    expect(builders[1].src).toBe(REGEX_NON_VERCEL_PLATFORM_FILES);
     expect(builders.length).toBe(2);
   });
 
@@ -2502,7 +2502,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(builders[0].src).toBe('middleware.ts');
     expect(builders[0].config?.middleware).toEqual(true);
     expect(builders[1].use).toBe('@vercel/static');
-    expect(builders[1].src).toBe(REGEX_NON_VERCEL_PLATFORM_PATTERN);
+    expect(builders[1].src).toBe(REGEX_NON_VERCEL_PLATFORM_FILES);
     expect(builders.length).toBe(2);
   });
 

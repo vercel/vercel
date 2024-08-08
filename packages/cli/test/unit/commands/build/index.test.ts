@@ -9,7 +9,7 @@ import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
 import { execSync } from 'child_process';
 import { vi } from 'vitest';
-import { REGEX_NON_VERCEL_PLATFORM_PATTERN } from '@vercel/fs-detectors';
+import { REGEX_NON_VERCEL_PLATFORM_FILES } from '@vercel/fs-detectors';
 
 vi.setConfig({ testTimeout: 6 * 60 * 1000 });
 
@@ -252,7 +252,7 @@ describe('build', () => {
           require: '@vercel/static',
           apiVersion: 2,
           use: '@vercel/static',
-          src: REGEX_NON_VERCEL_PLATFORM_PATTERN,
+          src: REGEX_NON_VERCEL_PLATFORM_FILES,
           config: {
             zeroConfig: true,
           },
@@ -312,7 +312,7 @@ describe('build', () => {
           require: '@vercel/static',
           apiVersion: 2,
           use: '@vercel/static',
-          src: REGEX_NON_VERCEL_PLATFORM_PATTERN,
+          src: REGEX_NON_VERCEL_PLATFORM_FILES,
           config: {
             zeroConfig: true,
           },
@@ -469,7 +469,7 @@ describe('build', () => {
           require: '@vercel/static',
           apiVersion: 2,
           use: '@vercel/static',
-          src: REGEX_NON_VERCEL_PLATFORM_PATTERN,
+          src: REGEX_NON_VERCEL_PLATFORM_FILES,
           config: {
             zeroConfig: true,
           },
@@ -529,7 +529,7 @@ describe('build', () => {
           require: '@vercel/static',
           apiVersion: 2,
           use: '@vercel/static',
-          src: REGEX_NON_VERCEL_PLATFORM_PATTERN,
+          src: REGEX_NON_VERCEL_PLATFORM_FILES,
           config: {
             zeroConfig: true,
           },
@@ -589,7 +589,7 @@ describe('build', () => {
           require: '@vercel/static',
           apiVersion: 2,
           use: '@vercel/static',
-          src: REGEX_NON_VERCEL_PLATFORM_PATTERN,
+          src: REGEX_NON_VERCEL_PLATFORM_FILES,
           config: {
             zeroConfig: true,
           },
