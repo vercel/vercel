@@ -15,16 +15,18 @@ export const loginCommand: Command = {
       name: 'github',
       description: 'Log in with GitHub',
       shorthand: null,
-      type: String,
+      type: Boolean,
       deprecated: false,
     },
     {
       name: 'oob',
       description: 'Log in with "out of band" authentication',
       shorthand: null,
-      type: String,
+      type: Boolean,
       deprecated: false,
     },
+    { name: 'gitlab', shorthand: null, type: Boolean, deprecated: false },
+    { name: 'bitbucket', shorthand: null, type: Boolean, deprecated: false },
   ],
   examples: [
     {

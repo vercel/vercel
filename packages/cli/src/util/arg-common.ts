@@ -28,3 +28,17 @@ const ARG_COMMON = {
 };
 
 export default () => ARG_COMMON;
+
+export const yesOption = {
+  name: 'yes',
+  shorthand: 'y',
+  type: Boolean,
+  deprecated: false,
+};
+
+export const nextOption = {
+  name: 'next',
+  shorthand: 'N',
+  type: Number,
+  deprecated: false,
+};

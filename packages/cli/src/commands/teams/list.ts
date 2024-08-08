@@ -7,22 +7,28 @@ import { packageName } from '../../util/pkg-name';
 import getCommandFlags from '../../util/get-command-flags';
 import cmd from '../../util/output/cmd';
 import Client from '../../util/client';
-import getArgs from '../../util/get-args';
+import { parseArguments } from '../../util/get-args';
+import handleError from '../../util/handle-error';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { listSubcommand } from './command';
 
 export default async function list(client: Client): Promise<number> {
   const { config, output } = client;
 
-  const argv = getArgs(client.argv.slice(2), {
-    '--since': String,
-    '--until': String,
-    '--count': Number,
-    '--next': Number,
-    '-C': '--count',
-    '-N': '--next',
-  });
+  let parsedArgs = null;
 
-  const next = argv['--next'];
-  const count = argv['--count'];
+  const flagsSpecification = getFlagsSpecification(listSubcommand.options);
+
+  // Parse CLI args
+  try {
+    parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
+  } catch (error) {
+    handleError(error);
+    return 1;
+  }
+
+  const next = parsedArgs.flags['--next'];
+  const count = parsedArgs.flags['--count'];
 
   if (typeof next !== 'undefined' && !Number.isInteger(next)) {
     output.error('Please provide a number for flag `--next`');
@@ -95,7 +101,7 @@ export default async function list(client: Client): Promise<number> {
   client.stderr.write('\n');
 
   if (pagination?.count === 20) {
-    const flags = getCommandFlags(argv, ['_', '--next', '-N', '-d']);
+    const flags = getCommandFlags(parsedArgs.flags, ['--next', '-N', '-d']);
     const nextCmd = `${packageName} teams ls${flags} --next ${pagination.next}`;
     client.stdout.write('\n'); // empty line
     output.log(`To display the next page run ${cmd(nextCmd)}`);
