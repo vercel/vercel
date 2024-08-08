@@ -49,3 +49,10 @@ export const confirmOption = {
   type: Boolean,
   deprecated: true,
 };
+
+export const limitOption = {
+  name: 'limit',
+  shorthand: null,
+  type: Number,
+  deprecated: false,
+};

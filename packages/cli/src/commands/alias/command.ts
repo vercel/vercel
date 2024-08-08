@@ -1,6 +1,6 @@
 import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
-import { nextOption, yesOption } from '../../util/arg-common';
+import { limitOption, nextOption, yesOption } from '../../util/arg-common';
 
 export const aliasCommand: Command = {
   name: 'alias',
@@ -59,13 +59,10 @@ export const aliasCommand: Command = {
       description: 'Skip the confirmation prompt when removing an alias',
     },
     {
-      name: 'limit',
-      shorthand: null,
+      ...limitOption,
       description:
         'Number of results to return per page (default: 20, max: 100)',
       argument: 'NUMBER',
-      type: Number,
-      deprecated: false,
     },
     { name: 'json', shorthand: null, type: Boolean, deprecated: false },
   ],

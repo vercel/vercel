@@ -1,6 +1,6 @@
 import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
-import { nextOption, yesOption } from '../../util/arg-common';
+import { limitOption, nextOption, yesOption } from '../../util/arg-common';
 
 export const domainsCommand: Command = {
   name: 'domains',
@@ -110,13 +110,10 @@ export const domainsCommand: Command = {
       description: 'Skip the confirmation prompt when removing a domain',
     },
     {
-      name: 'limit',
-      shorthand: null,
+      ...limitOption,
       description:
         'Number of results to return per page (default: 20, max: 100)',
       argument: 'NUMBER',
-      type: Number,
-      deprecated: false,
     },
     {
       name: 'force',
