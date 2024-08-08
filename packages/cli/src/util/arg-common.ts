@@ -12,7 +12,7 @@ export const globalCommandOptions: CommandOption[] = [
   {
     name: 'version',
     shorthand: 'v',
-    type: String,
+    type: Boolean,
     description: 'Output the version number',
     deprecated: false,
   },
