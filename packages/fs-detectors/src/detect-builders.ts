@@ -15,14 +15,14 @@ const slugToFramework = new Map<string | null, Framework>(
   frameworkList.map(f => [f.slug, f])
 );
 
-interface ErrorResponse {
+export interface ErrorResponse {
   code: string;
   message: string;
   action?: string;
   link?: string;
 }
 
-interface Options {
+export interface Options {
   tag?: string;
   functions?: BuilderFunctions;
   ignoreBuildScript?: boolean;
