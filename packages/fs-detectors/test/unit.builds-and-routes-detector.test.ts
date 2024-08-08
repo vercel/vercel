@@ -2720,9 +2720,8 @@ describe('Test `detectRoutes`', () => {
       'api/food.ts',
       'api/ts/gold.ts',
     ];
-    const { builders, defaultRoutes } = await invokeDetectBuildersAndThrow(
-      files
-    );
+    const { builders, defaultRoutes } =
+      await invokeDetectBuildersAndThrow(files);
 
     expect(builders.length).toBe(4);
     expect(builders[0].use).toBe('@vercel/node');
