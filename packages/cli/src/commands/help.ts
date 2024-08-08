@@ -2,6 +2,7 @@ import chalk from 'chalk';
 import { LOGO, NAME } from '@vercel-internals/constants';
 import Table, { CellOptions } from 'cli-table3';
 import { noBorderChars } from '../util/output/table';
+import { globalCommandOptions } from '../util/arg-common';
 
 const INDENT = ' '.repeat(2);
 const NEWLINE = '\n';
@@ -49,77 +50,6 @@ const tableOptions = {
     'padding-right': 0,
   },
 };
-
-const globalCommandOptions: CommandOption[] = [
-  {
-    name: 'help',
-    shorthand: 'h',
-    type: String,
-    description: 'Output usage information',
-    deprecated: false,
-  },
-  {
-    name: 'version',
-    shorthand: 'v',
-    type: String,
-    description: 'Output the version number',
-    deprecated: false,
-  },
-  {
-    name: 'cwd',
-    shorthand: null,
-    type: String,
-    argument: 'DIR',
-    description:
-      'Sets the current working directory for a single run of a command',
-    deprecated: false,
-  },
-  {
-    name: 'local-config',
-    shorthand: 'A',
-    type: String,
-    argument: 'FILE',
-    description: 'Path to the local `vercel.json` file',
-    deprecated: false,
-  },
-  {
-    name: 'global-config',
-    shorthand: 'Q',
-    type: String,
-    argument: 'DIR',
-    description: 'Path to the global `.vercel` directory',
-    deprecated: false,
-  },
-  {
-    name: 'debug',
-    shorthand: 'd',
-    type: String,
-    description: 'Debug mode (default off)',
-    deprecated: false,
-  },
-  {
-    name: 'no-color',
-    shorthand: null,
-    type: String,
-    description: 'No color mode (default off)',
-    deprecated: false,
-  },
-  {
-    name: 'scope',
-    shorthand: 'S',
-    type: String,
-    description: 'Set a custom scope',
-    deprecated: false,
-  },
-  {
-    name: 'token',
-    shorthand: 't',
-    type: String,
-    argument: 'TOKEN',
-    description: 'Login token',
-    deprecated: false,
-  },
-];
 
 // Use the word wrapping ability of cli-table3
 // by creating a one row, one cell, one column table.
