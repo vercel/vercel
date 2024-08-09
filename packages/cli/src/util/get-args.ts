@@ -18,7 +18,7 @@ interface Spec {
 /**
  * @deprecated use `parseArguments` instead
  */
-export default function getArgs<T extends Spec>(
+export function getArgs<T extends Spec>(
   argv: string[],
   argsOptions?: T,
   argOptions: ArgOptions = {}
