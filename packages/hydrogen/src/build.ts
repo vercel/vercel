@@ -7,6 +7,7 @@ import {
   execCommand,
   getEnvForPackageManager,
   getNodeVersion,
+  getPrefixedEnvVars,
   getSpawnOptions,
   glob,
   readConfigFile,
@@ -15,6 +16,8 @@ import {
   scanParentDirs,
 } from '@vercel/build-utils';
 import type { BuildV2, PackageJson } from '@vercel/build-utils';
+import { getConfig } from '@vercel/static-config';
+import { Project } from 'ts-morph';
 
 export const build: BuildV2 = async ({
   entrypoint,
@@ -26,6 +29,15 @@ export const build: BuildV2 = async ({
   const { installCommand, buildCommand } = config;
 
   await download(files, workPath, meta);
+
+  const prefixedEnvs = getPrefixedEnvVars({
+    envPrefix: 'PUBLIC_',
+    envs: process.env,
+  });
+
+  for (const [key, value] of Object.entries(prefixedEnvs)) {
+    process.env[key] = value;
+  }
 
   const mountpoint = dirname(entrypoint);
   const entrypointDir = join(workPath, mountpoint);
@@ -39,11 +51,15 @@ export const build: BuildV2 = async ({
   );
 
   const spawnOpts = getSpawnOptions(meta, nodeVersion);
-  const { cliType, lockfileVersion } = await scanParentDirs(entrypointDir);
+  const { cliType, lockfileVersion, packageJson } = await scanParentDirs(
+    entrypointDir,
+    true
+  );
 
   spawnOpts.env = getEnvForPackageManager({
     cliType,
     lockfileVersion,
+    packageJsonPackageManager: packageJson?.packageManager,
     nodeVersion,
     env: spawnOpts.env || {},
   });
@@ -114,10 +130,18 @@ export const build: BuildV2 = async ({
   ]);
 
   const edgeFunction = new EdgeFunction({
-    name: 'hydrogen',
     deploymentTarget: 'v8-worker',
     entrypoint: 'index.js',
     files: edgeFunctionFiles,
+    regions: (() => {
+      try {
+        const project = new Project();
+        const config = getConfig(project, edgeFunctionFiles['index.js'].fsPath);
+        return config?.regions;
+      } catch {
+        return undefined;
+      }
+    })(),
   });
 
   // The `index.html` file is a template, but we want to serve the

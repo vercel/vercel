@@ -2,5 +2,8 @@
   "private": true,
   "scripts": {
     "build": "./build.sh"
+  },
+  "engines": {
+    "node": "18.x"
   }
 }

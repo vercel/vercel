@@ -14,7 +14,7 @@ it('should throw an error when exceeds the script size limit', async () => {
     `
     module.exports.middleware = function () {
       return Response(${JSON.stringify({
-        text: randomBytes(1200000).toString('base64'),
+        text: randomBytes(4200 * 1024).toString('base64'),
       })})
     }
   `
@@ -51,27 +51,27 @@ it('throws an error if it contains too big WASM file', async () => {
   );
 
   const wasmPath = join(dir, 'big.wasm');
-  await writeFile(wasmPath, randomBytes(1200 * 1024));
+  await writeFile(wasmPath, randomBytes(4200 * 1024));
 
   expect(async () => {
-  await getNextjsEdgeFunctionSource(
-    [file],
-    {
-      name: 'middleware',
-      staticRoutes: [],
-      nextConfig: null,
-    },
-    dir,
-    [
+    await getNextjsEdgeFunctionSource(
+      [file],
       {
-        name: 'wasm_big',
-        filePath: 'big.wasm',
+        name: 'middleware',
+        staticRoutes: [],
+        nextConfig: null,
       },
-    ]
+      dir,
+      [
+        {
+          name: 'wasm_big',
+          filePath: 'big.wasm',
+        },
+      ]
+    );
+  }).rejects.toThrow(
+    /Exceeds maximum edge function size: .+[MK]B \/ .+[M|K]B/i
   );
-}).rejects.toThrow(
-  /Exceeds maximum edge function size: .+[MK]B \/ .+[M|K]B/i
-);
 });
 
 it('uses the template', async () => {
@@ -107,5 +107,7 @@ it('uses the template', async () => {
   );
   const source = edgeFunctionSource.source();
   expect(source).toMatch(/nextConfig/);
-  expect(source).toContain(`const wasm_small = require("/wasm/wasm_small.wasm")`);
+  expect(source).toContain(
+    `const wasm_small = require("/wasm/wasm_small.wasm")`
+  );
 });

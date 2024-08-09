@@ -1,7 +1,8 @@
+import { describe, expect, it } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
 import pull from '../../../src/commands/pull';
-import { setupFixture } from '../../helpers/setup-fixture';
+import { setupUnitFixture } from '../../helpers/setup-unit-fixture';
 import { client } from '../../mocks/client';
 import { defaultProject, useProject } from '../../mocks/project';
 import { useTeams } from '../../mocks/team';
@@ -9,7 +10,7 @@ import { useUser } from '../../mocks/user';
 
 describe('pull', () => {
   it('should handle pulling', async () => {
-    const cwd = setupFixture('vercel-pull-next');
+    const cwd = setupUnitFixture('vercel-pull-next');
     useUser();
     useTeams('team_dummy');
     useProject({
@@ -26,7 +27,7 @@ describe('pull', () => {
       `Created .vercel${path.sep}.env.development.local file`
     );
     await expect(client.stderr).toOutput(
-      `Downloaded project settings to .vercel${path.sep}project.json`
+      `Downloaded project settings to ${cwd}${path.sep}.vercel${path.sep}project.json`
     );
     await expect(exitCodePromise).resolves.toEqual(0);
 
@@ -40,7 +41,7 @@ describe('pull', () => {
   it('should fail with message to pull without a link and without --env', async () => {
     client.stdin.isTTY = false;
 
-    const cwd = setupFixture('vercel-pull-unlinked');
+    const cwd = setupUnitFixture('vercel-pull-unlinked');
     useUser();
     useTeams('team_dummy');
 
@@ -53,7 +54,7 @@ describe('pull', () => {
   });
 
   it('should fail without message to pull without a link and with --env', async () => {
-    const cwd = setupFixture('vercel-pull-next');
+    const cwd = setupUnitFixture('vercel-pull-next');
     useUser();
     useTeams('team_dummy');
 
@@ -70,7 +71,7 @@ describe('pull', () => {
       process.env.VERCEL_PROJECT_ID = 'vercel-pull-next';
       process.env.VERCEL_ORG_ID = 'team_dummy';
 
-      const cwd = setupFixture('vercel-pull-next');
+      const cwd = setupUnitFixture('vercel-pull-next');
 
       // Remove the `.vercel` dir to ensure that the `pull`
       // command creates a new one based on env vars
@@ -92,16 +93,16 @@ describe('pull', () => {
         `Created .vercel${path.sep}.env.development.local file`
       );
       await expect(client.stderr).toOutput(
-        `Downloaded project settings to .vercel${path.sep}project.json`
+        `Downloaded project settings to ${cwd}${path.sep}.vercel${path.sep}project.json`
       );
       await expect(exitCodePromise).resolves.toEqual(0);
 
       const config = await fs.readJSON(path.join(cwd, '.vercel/project.json'));
       expect(config).toMatchInlineSnapshot(`
-        Object {
+        {
           "orgId": "team_dummy",
           "projectId": "vercel-pull-next",
-          "settings": Object {
+          "settings": {
             "createdAt": 1555413045188,
           },
         }
@@ -113,7 +114,7 @@ describe('pull', () => {
   });
 
   it('should handle --environment=preview flag', async () => {
-    const cwd = setupFixture('vercel-pull-next');
+    const cwd = setupUnitFixture('vercel-pull-next');
     useUser();
     useTeams('team_dummy');
     useProject({
@@ -130,7 +131,7 @@ describe('pull', () => {
       `Created .vercel${path.sep}.env.preview.local file`
     );
     await expect(client.stderr).toOutput(
-      `Downloaded project settings to .vercel${path.sep}project.json`
+      `Downloaded project settings to ${cwd}${path.sep}.vercel${path.sep}project.json`
     );
     await expect(exitCodePromise).resolves.toEqual(0);
 
@@ -144,7 +145,7 @@ describe('pull', () => {
   });
 
   it('should handle --environment=production flag', async () => {
-    const cwd = setupFixture('vercel-pull-next');
+    const cwd = setupUnitFixture('vercel-pull-next');
     useUser();
     useTeams('team_dummy');
     useProject({
@@ -161,7 +162,7 @@ describe('pull', () => {
       `Created .vercel${path.sep}.env.production.local file`
     );
     await expect(client.stderr).toOutput(
-      `Downloaded project settings to .vercel${path.sep}project.json`
+      `Downloaded project settings to ${cwd}${path.sep}.vercel${path.sep}project.json`
     );
     await expect(exitCodePromise).resolves.toEqual(0);
 
@@ -176,5 +177,30 @@ describe('pull', () => {
       .toString()
       .includes('SQL_CONNECTION_STRING');
     expect(previewFileHasPreviewEnv2).toBeTruthy();
+  });
+
+  it('should work with repo link', async () => {
+    const cwd = setupUnitFixture('monorepo-link');
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'QmbKpqpiUqbcke',
+      name: 'dashboard',
+      rootDirectory: 'dashboard',
+    });
+    client.cwd = path.join(cwd, 'dashboard');
+    client.setArgv('pull');
+    const exitCodePromise = pull(client);
+    await expect(client.stderr).toOutput(
+      'Downloading `development` Environment Variables for Project dashboard'
+    );
+    await expect(client.stderr).toOutput(
+      `Created .vercel${path.sep}.env.development.local file`
+    );
+    await expect(client.stderr).toOutput(
+      `Downloaded project settings to ${cwd}${path.sep}dashboard${path.sep}.vercel${path.sep}project.json`
+    );
+    await expect(exitCodePromise).resolves.toEqual(0);
   });
 });

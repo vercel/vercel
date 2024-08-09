@@ -3,5 +3,5 @@
     "packages/*"
   ],
   "private": true,
-  "name": "mono-repo"
+  "packageManager": "yarn@1.22.19"
 }

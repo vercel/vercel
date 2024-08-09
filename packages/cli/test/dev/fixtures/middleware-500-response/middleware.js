@@ -1,1 +1,1 @@
-export default () => new Response(null, { status: 500 });
+export default () => new Response('Example Error', { status: 500 });

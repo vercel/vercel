@@ -14,7 +14,7 @@ _Live Example: https://ember-template.vercel.app_
 
 ### How We Created This Example
 
-To get started with Ember for deployment with Vercel, you can use the [Ember CLI](https://ember-cli.com/) to initialize the project:
+To get started with Ember for deployment with Vercel, you can use the [Ember CLI](https://cli.emberjs.com) to initialize the project:
 
 ```shell
 $ npx ember-cli new ember-project

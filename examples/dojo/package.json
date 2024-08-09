@@ -10,6 +10,9 @@
     "test:functional": "dojo build --mode functional && dojo test --functional --config local",
     "test:all": "dojo build --mode unit && dojo build --mode functional && dojo test --all --config local"
   },
+  "engines": {
+    "node": "16.x"
+  },
   "dependencies": {
     "@dojo/framework": "^6.0.0",
     "@dojo/themes": "^6.0.0",

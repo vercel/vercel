@@ -10,7 +10,7 @@
     "forceConsistentCasingInFileNames": true,
     "noEmit": true,
     "esModuleInterop": true,
-    "module": "esnext",
+    "module": "CommonJS",
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "isolatedModules": true,
@@ -18,7 +18,8 @@
     "paths": {
       "@components/*": ["components/*"],
       "@lib/*": ["lib/*"]
-    }
+    },
+    "incremental": true
   },
   "exclude": ["node_modules", "api"],
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx"]

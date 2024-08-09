@@ -5,7 +5,7 @@ import stamp from '../../util/output/stamp';
 import createCertFromFile from '../../util/certs/create-cert-from-file';
 import createCertForCns from '../../util/certs/create-cert-for-cns';
 import { getCommandName } from '../../util/pkg-name';
-import { Cert } from '../../types';
+import type { Cert } from '@vercel-internals/types';
 
 interface Options {
   '--overwrite'?: boolean;

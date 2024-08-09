@@ -14,7 +14,7 @@ import { responseError } from './error';
 import stamp from './output/stamp';
 import { APIError, BuildError } from './errors-ts';
 import printIndications from './print-indications';
-import { GitMetadata, Org } from '../types';
+import { GitMetadata, Org } from '@vercel-internals/types';
 import { VercelConfig } from './dev/types';
 import Client, { FetchOptions, isJSONObject } from './client';
 import { ArchiveFormat, Dictionary } from '@vercel/client';
@@ -36,7 +36,8 @@ export interface CreateOptions {
   project?: string;
   wantsPublic: boolean;
   prebuilt?: boolean;
-  rootDirectory?: string;
+  vercelOutputDir?: string;
+  rootDirectory?: string | null;
   meta: Dictionary<string>;
   gitMetadata?: GitMetadata;
   regions?: string[];
@@ -49,6 +50,9 @@ export interface CreateOptions {
   deployStamp: () => string;
   projectSettings?: any;
   skipAutoDetectionConfirmation?: boolean;
+  noWait?: boolean;
+  withLogs?: boolean;
+  autoAssignCustomDomains?: boolean;
 }
 
 export interface RemoveOptions {
@@ -59,6 +63,7 @@ export interface ListOptions {
   version?: number;
   meta?: Dictionary<string>;
   nextTimestamp?: number;
+  target?: string;
 }
 
 export default class Now extends EventEmitter {
@@ -105,7 +110,7 @@ export default class Now extends EventEmitter {
   }
 
   async create(
-    paths: string[],
+    path: string,
     {
       // Legacy
       nowConfig: nowConfig = {},
@@ -114,6 +119,7 @@ export default class Now extends EventEmitter {
       name,
       project,
       prebuilt = false,
+      vercelOutputDir,
       rootDirectory,
       wantsPublic,
       meta,
@@ -128,11 +134,14 @@ export default class Now extends EventEmitter {
       deployStamp,
       projectSettings,
       skipAutoDetectionConfirmation,
+      noWait,
+      withLogs,
+      autoAssignCustomDomains,
     }: CreateOptions,
     org: Org,
     isSettingUpProject: boolean,
-    archive?: ArchiveFormat,
-    cwd?: string
+    cwd: string,
+    archive?: ArchiveFormat
   ) {
     let hashes: any = {};
     const uploadStamp = stamp();
@@ -150,6 +159,7 @@ export default class Now extends EventEmitter {
       target: target || undefined,
       projectSettings,
       source: 'cli',
+      autoAssignCustomDomains,
     };
 
     // Ignore specific items from vercel.json
@@ -158,8 +168,8 @@ export default class Now extends EventEmitter {
 
     const deployment = await processDeployment({
       now: this,
-      output: this._output,
-      paths,
+      agent: this._client.agent,
+      path,
       requestBody,
       uploadStamp,
       deployStamp,
@@ -173,7 +183,10 @@ export default class Now extends EventEmitter {
       skipAutoDetectionConfirmation,
       cwd,
       prebuilt,
+      vercelOutputDir,
       rootDirectory,
+      noWait,
+      withLogs,
     });
 
     if (deployment && deployment.warnings) {
@@ -259,7 +272,7 @@ export default class Now extends EventEmitter {
         const { key } = error;
         err.message =
           `The env key ${key} has an invalid type: ${typeof env[key]}. ` +
-          'Please supply a String or a Number (https://err.sh/vercel-cli/env-value-invalid-type)';
+          'Please supply a String or a Number (https://err.sh/vercel/env-value-invalid-type)';
       } else if (code === 'unreferenced_build_specifications') {
         const count = unreferencedBuildSpecs.length;
         const prefix = count === 1 ? 'build' : 'builds';
@@ -290,7 +303,8 @@ export default class Now extends EventEmitter {
 
     if (
       error.errorCode === 'BUILD_FAILED' ||
-      error.errorCode === 'UNEXPECTED_ERROR'
+      error.errorCode === 'UNEXPECTED_ERROR' ||
+      error.errorCode?.includes('BUILD_UTILS_SPAWN_')
     ) {
       return new BuildError({
         message: error.errorMessage,
@@ -298,7 +312,7 @@ export default class Now extends EventEmitter {
       });
     }
 
-    return new Error(error.message);
+    return new Error(error.message || error.errorMessage);
   }
 
   async listSecrets(next?: number, testWarningFlag?: boolean) {
@@ -332,7 +346,7 @@ export default class Now extends EventEmitter {
 
   async list(
     app?: string,
-    { version = 4, meta = {}, nextTimestamp }: ListOptions = {},
+    { version = 4, meta = {}, nextTimestamp, target }: ListOptions = {},
     prod?: boolean
   ) {
     const fetchRetry = async (url: string, options: FetchOptions = {}) => {
@@ -398,6 +412,8 @@ export default class Now extends EventEmitter {
     }
     if (prod) {
       query.set('target', 'production');
+    } else if (target) {
+      query.set('target', target);
     }
 
     const response = await fetchRetry(`/v${version}/now/deployments?${query}`);

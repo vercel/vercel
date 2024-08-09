@@ -1,10 +1,9 @@
-import inquirer from 'inquirer';
 import confirm from './confirm';
 import chalk from 'chalk';
-import frameworkList, { Framework } from '@vercel/frameworks';
+import { frameworkList, Framework } from '@vercel/frameworks';
 import Client from '../client';
 import { isSettingValue } from '../is-setting-value';
-import { ProjectSettings } from '../../types';
+import type { ProjectSettings } from '@vercel-internals/types';
 
 const settingMap = {
   buildCommand: 'Build Command',
@@ -16,7 +15,7 @@ const settingMap = {
 } as const;
 type ConfigKeys = keyof typeof settingMap;
 const settingKeys = Object.keys(settingMap).sort() as unknown as readonly [
-  ConfigKeys
+  ConfigKeys,
 ];
 
 export type PartialProjectSettings = Pick<ProjectSettings, ConfigKeys>;
@@ -125,48 +124,29 @@ export default async function editProjectSettings(
     return settings;
   }
 
-  const choices = settingKeys.reduce<Array<{ name: string; value: string }>>(
+  const choices = settingKeys.reduce(
     (acc, setting) => {
       const skip =
         setting === 'framework' ||
         setting === 'commandForIgnoringBuildStep' ||
         setting === 'installCommand' ||
         localConfigurationOverrides?.[setting];
-      if (!skip) {
-        acc.push({ name: settingMap[setting], value: setting });
-      }
-      return acc;
+      if (skip) return acc;
+      return [...acc, { name: settingMap[setting], value: setting }];
     },
-    []
+    [] as { name: string; value: ConfigKeys }[]
   );
 
-  const { settingFields } = await inquirer.prompt<{
-    settingFields: Array<
-      Exclude<
-        ConfigKeys,
-        'framework' | 'commandForIgnoringBuildStep' | 'installCommand'
-      >
-    >;
-  }>({
-    name: 'settingFields',
-    type: 'checkbox',
+  const settingFields = await client.input.checkbox({
     message: 'Which settings would you like to overwrite (select multiple)?',
     choices,
   });
 
   for (let setting of settingFields) {
     const field = settingMap[setting];
-    const answers = await inquirer.prompt<{
-      [k in Exclude<
-        ConfigKeys,
-        'framework' | 'commandForIgnoringBuildStep' | 'installCommand'
-      >]: string;
-    }>({
-      type: 'input',
-      name: setting,
+    settings[setting] = await client.input.text({
       message: `What's your ${chalk.bold(field)}?`,
     });
-    settings[setting] = answers[setting];
   }
   return settings;
 }

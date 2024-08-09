@@ -44,7 +44,7 @@ export async function writePackageJson(
 ) {
   await fs.writeFile(
     path.join(workPath, 'package.json'),
-    JSON.stringify(packageJson, null, 2)
+    `${JSON.stringify(packageJson, null, 2)}\n`
   );
 }
 

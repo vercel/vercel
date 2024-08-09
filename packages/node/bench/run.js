@@ -11,10 +11,6 @@ const setupFiles = async (entrypoint, shouldAddHelpers) => {
     join(__dirname, 'lambda/helpers.js')
   );
   await fs.copyFile(
-    require.resolve('@vercel/node-bridge/bridge'),
-    join(__dirname, 'lambda/bridge.js')
-  );
-  await fs.copyFile(
     join(process.cwd(), entrypoint),
     join(__dirname, 'lambda/entrypoint.js')
   );

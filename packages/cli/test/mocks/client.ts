@@ -1,3 +1,6 @@
+const originalCwd = process.cwd();
+import { afterAll, beforeAll, afterEach } from 'vitest';
+
 // Register Jest matcher extensions for CLI unit tests
 import './matchers';
 
@@ -5,9 +8,13 @@ import chalk from 'chalk';
 import { PassThrough } from 'stream';
 import { createServer, Server } from 'http';
 import express, { Express, Router } from 'express';
-import listen from 'async-listen';
+import { listen } from 'async-listen';
 import Client from '../../src/util/client';
 import { Output } from '../../src/util/output';
+import stripAnsi from 'strip-ansi';
+import ansiEscapes from 'ansi-escapes';
+
+const ignoredAnsi = new Set([ansiEscapes.cursorHide, ansiEscapes.cursorShow]);
 
 // Disable colors in `chalk` so that tests don't need
 // to worry about ANSI codes
@@ -17,15 +24,52 @@ export type Scenario = Router;
 
 class MockStream extends PassThrough {
   isTTY: boolean;
+  #_fullOutput: string = '';
+  #_chunks: Array<string> = [];
+  #_rawChunks: Array<string> = [];
 
   constructor() {
     super();
     this.isTTY = true;
   }
 
-  // These is for the `ora` module
+  // These are for the `ora` module
   clearLine() {}
   cursorTo() {}
+
+  override _write(
+    chunk: any,
+    encoding: BufferEncoding,
+    callback: (error?: Error | null | undefined) => void
+  ): void {
+    const str = chunk.toString();
+
+    this.#_fullOutput += str;
+
+    // There's some ANSI Inquirer just send to keep state of the terminal clear; we'll ignore those since they're
+    // unlikely to be used by end users or part of prompt code.
+    if (!ignoredAnsi.has(str)) {
+      this.#_rawChunks.push(str);
+    }
+
+    // Stripping the ANSI codes here because Inquirer will push commands ANSI (like cursor move.)
+    // This is probably fine since we don't care about those for testing; but this could become
+    // an issue if we ever want to test for those.
+    if (stripAnsi(str).trim().length > 0) {
+      this.#_chunks.push(str);
+    }
+    super._write(chunk, encoding, callback);
+  }
+
+  getLastChunk({ raw }: { raw?: boolean }): string {
+    const chunks = raw ? this.#_rawChunks : this.#_chunks;
+    const lastChunk = chunks[chunks.length - 1];
+    return lastChunk ?? '';
+  }
+
+  getFullOutput(): string {
+    return this.#_fullOutput;
+  }
 }
 
 export class MockClient extends Client {
@@ -63,6 +107,7 @@ export class MockClient extends Client {
     // catch requests that were not intercepted
     this.app.use((req, res) => {
       const message = `[Vercel API Mock] \`${req.method} ${req.path}\` was not handled.`;
+      // eslint-disable-next-line no-console
       console.warn(message);
       res.status(404).json({
         error: {
@@ -73,6 +118,8 @@ export class MockClient extends Client {
     });
 
     this.scenario = Router();
+
+    this.reset();
   }
 
   reset() {
@@ -80,16 +127,14 @@ export class MockClient extends Client {
 
     this.stdout = new MockStream();
     this.stdout.setEncoding('utf8');
-    this.stdout.end = () => {};
+    this.stdout.end = () => this.stdout;
     this.stdout.pause();
 
     this.stderr = new MockStream();
     this.stderr.setEncoding('utf8');
-    this.stderr.end = () => {};
+    this.stderr.end = () => this.stderr;
     this.stderr.pause();
     this.stderr.isTTY = true;
-
-    this._createPromptModule();
 
     this.output = new Output(this.stderr);
 
@@ -99,8 +144,49 @@ export class MockClient extends Client {
     };
     this.config = {};
     this.localConfig = {};
+    this.localConfigPath = undefined;
 
     this.scenario = Router();
+
+    this.agent?.destroy();
+    this.agent = undefined;
+
+    this.cwd = originalCwd;
+  }
+
+  events = {
+    keypress(
+      key:
+        | string
+        | {
+            name?: string | undefined;
+            ctrl?: boolean | undefined;
+            meta?: boolean | undefined;
+            shift?: boolean | undefined;
+          }
+    ) {
+      if (typeof key === 'string') {
+        client.stdin.emit('keypress', null, { name: key });
+      } else {
+        client.stdin.emit('keypress', null, key);
+      }
+    },
+    type(text: string) {
+      client.stdin.write(text);
+      for (const char of text) {
+        client.stdin.emit('keypress', null, { name: char });
+      }
+    },
+  };
+
+  getScreen({ raw }: { raw?: boolean } = {}): string {
+    const stderr = client.stderr;
+    const lastScreen = stderr.getLastChunk({ raw });
+    return raw ? lastScreen : stripAnsi(lastScreen).trim();
+  }
+  getFullOutput(): string {
+    const stderr = client.stderr;
+    return stderr.getFullOutput();
   }
 
   async startMockServer() {
@@ -132,6 +218,14 @@ export class MockClient extends Client {
 
   setArgv(...argv: string[]) {
     this.argv = [process.execPath, 'cli.js', ...argv];
+    this.output = new Output(this.stderr, {
+      debug: argv.includes('--debug') || argv.includes('-d'),
+      noColor: argv.includes('--no-color'),
+    });
+  }
+
+  resetOutput() {
+    this.output = new Output(this.stderr);
   }
 
   useScenario(scenario: Scenario) {
@@ -145,7 +239,7 @@ beforeAll(async () => {
   await client.startMockServer();
 });
 
-beforeEach(() => {
+afterEach(() => {
   client.reset();
 });
 

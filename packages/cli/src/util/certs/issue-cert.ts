@@ -1,8 +1,8 @@
 import retry from 'async-retry';
-import { Cert } from '../../types';
+import type { Cert } from '@vercel-internals/types';
 import Client from '../client';
 import { isAPIError } from '../errors-ts';
-import { isError } from '../is-error';
+import { isError } from '@vercel/error-utils';
 
 // When it's a configuration error we should retry because of the DNS propagation
 // otherwise we bail to handle the error in the upper level

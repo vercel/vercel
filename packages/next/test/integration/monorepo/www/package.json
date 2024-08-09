@@ -7,5 +7,6 @@
   },
   "scripts": {
     "now-build": "next build"
-  }
+  },
+  "ignoreNextjsUpdates": true
 }

@@ -1,0 +1,8 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "mustContain": "pnpm version: 8"
+    }
+  ]
+}

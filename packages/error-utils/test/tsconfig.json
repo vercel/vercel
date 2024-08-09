@@ -1,0 +1,8 @@
+{
+  "compilerOptions": {
+    "sourceMap": true,
+    "types": ["node", "jest"]
+  },
+  "extends": "../tsconfig.json",
+  "include": ["*.test.ts"]
+}

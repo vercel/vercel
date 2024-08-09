@@ -1,0 +1,1 @@
+asset that was added in `onPostBuild`

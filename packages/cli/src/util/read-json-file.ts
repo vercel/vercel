@@ -1,5 +1,7 @@
 import fs from 'fs-extra';
 import { CantParseJSONFile } from './errors-ts';
+import JSONparse from 'json-parse-better-errors';
+import { errorToString } from '@vercel/error-utils';
 
 export default async function readJSONFile<T>(
   file: string
@@ -10,10 +12,10 @@ export default async function readJSONFile<T>(
   }
 
   try {
-    const json = JSON.parse(content);
+    const json = JSONparse(content);
     return json;
   } catch (error) {
-    return new CantParseJSONFile(file);
+    return new CantParseJSONFile(file, errorToString(error));
   }
 }
 

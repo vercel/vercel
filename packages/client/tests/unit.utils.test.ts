@@ -24,7 +24,11 @@ describe('buildFileTree()', () => {
       noop
     );
 
-    const expectedFileList = toAbsolutePaths(cwd, ['.nowignore', 'index.txt']);
+    const expectedFileList = toAbsolutePaths(cwd, [
+      '.nowignore',
+      'folder',
+      'index.txt',
+    ]);
     expect(normalizeWindowsPaths(expectedFileList).sort()).toEqual(
       normalizeWindowsPaths(fileList).sort()
     );
@@ -41,9 +45,14 @@ describe('buildFileTree()', () => {
 
   it('should include symlinked files and directories', async () => {
     const cwd = fixture('symlinks');
+
+    // Also add an empty directory to make sure it's included
+    await fs.mkdirp(join(cwd, 'empty'));
+
     const { fileList } = await buildFileTree(cwd, { isDirectory: true }, noop);
 
     const expectedFileList = toAbsolutePaths(cwd, [
+      'empty',
       'folder-link',
       'folder/text.txt',
       'index.txt',
@@ -100,7 +109,7 @@ describe('buildFileTree()', () => {
       normalizeWindowsPaths(fileList).sort()
     );
 
-    const expectedIgnoreList = ['.vercel'];
+    const expectedIgnoreList = ['.gitignore', '.vercel'];
     expect(normalizeWindowsPaths(expectedIgnoreList).sort()).toEqual(
       normalizeWindowsPaths(ignoreList).sort()
     );
@@ -110,19 +119,87 @@ describe('buildFileTree()', () => {
     const cwd = fixture('file-system-api');
     const { fileList, ignoreList } = await buildFileTree(
       cwd,
-      { isDirectory: true, prebuilt: true },
+      {
+        isDirectory: true,
+        prebuilt: true,
+        vercelOutputDir: join(cwd, '.vercel/output'),
+      },
       noop
     );
 
     const expectedFileList = toAbsolutePaths(cwd, [
+      '.vercel/output/functions/api/another.func/.vc-config.json',
+      '.vercel/output/functions/api/example.func/.vc-config.json',
       '.vercel/output/static/baz.txt',
       '.vercel/output/static/sub/qux.txt',
+      'node_modules/another/index.js',
+      'node_modules/example/index.js',
     ]);
     expect(normalizeWindowsPaths(expectedFileList).sort()).toEqual(
       normalizeWindowsPaths(fileList).sort()
     );
 
-    const expectedIgnoreList = ['foo.txt', 'sub'];
+    const expectedIgnoreList = ['.gitignore', 'foo.txt', 'sub'];
+    expect(normalizeWindowsPaths(expectedIgnoreList).sort()).toEqual(
+      normalizeWindowsPaths(ignoreList).sort()
+    );
+  });
+
+  it('monorepo - should find root files but ignore `.vercel/output` files when prebuilt=false', async () => {
+    const cwd = fixture('monorepo-boa');
+    const { fileList, ignoreList } = await buildFileTree(
+      cwd,
+      { isDirectory: true, prebuilt: false },
+      noop
+    );
+
+    const expectedFileList = toAbsolutePaths(cwd, [
+      'foo.txt',
+      'sub/bar.txt',
+      'apps/blog/foo.txt',
+      'apps/blog/sub/bar.txt',
+    ]);
+    expect(normalizeWindowsPaths(expectedFileList).sort()).toEqual(
+      normalizeWindowsPaths(fileList).sort()
+    );
+
+    const expectedIgnoreList = ['apps/blog/.gitignore', 'apps/blog/.vercel'];
+    expect(normalizeWindowsPaths(expectedIgnoreList).sort()).toEqual(
+      normalizeWindowsPaths(ignoreList).sort()
+    );
+  });
+
+  it('monorepo - should find `.vercel/output` files but ignore other files when prebuilt=true', async () => {
+    const cwd = fixture('monorepo-boa');
+    const { fileList, ignoreList } = await buildFileTree(
+      cwd,
+      {
+        isDirectory: true,
+        prebuilt: true,
+        vercelOutputDir: join(cwd, 'apps/blog/.vercel/output'),
+      },
+      noop
+    );
+
+    const expectedFileList = toAbsolutePaths(cwd, [
+      'apps/blog/.vercel/output/functions/api/another.func/.vc-config.json',
+      'apps/blog/.vercel/output/functions/api/example.func/.vc-config.json',
+      'apps/blog/.vercel/output/static/baz.txt',
+      'apps/blog/.vercel/output/static/sub/qux.txt',
+      'node_modules/another/index.js',
+      'node_modules/example/index.js',
+    ]);
+    expect(normalizeWindowsPaths(expectedFileList).sort()).toEqual(
+      normalizeWindowsPaths(fileList).sort()
+    );
+
+    const expectedIgnoreList = [
+      'apps/blog/.gitignore',
+      'apps/blog/foo.txt',
+      'apps/blog/sub',
+      'foo.txt',
+      'sub',
+    ];
     expect(normalizeWindowsPaths(expectedIgnoreList).sort()).toEqual(
       normalizeWindowsPaths(ignoreList).sort()
     );

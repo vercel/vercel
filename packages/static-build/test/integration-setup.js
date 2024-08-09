@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const { intoChunks, NUMBER_OF_CHUNKS } = require('../../../utils/chunk-tests');
+const { intoChunks } = require('../../../utils/chunk-tests');
 
 const {
   testDeployment,
@@ -33,13 +33,19 @@ module.exports = function setupTests(groupIndex) {
   let fixtures = fs.readdirSync(fixturesPath);
 
   if (typeof groupIndex !== 'undefined') {
-    fixtures = intoChunks(NUMBER_OF_CHUNKS, fixtures)[groupIndex - 1];
+    fixtures = intoChunks(1, 5, fixtures)[groupIndex - 1];
 
     console.log('testing group', groupIndex, fixtures);
   }
 
+  const fixturesToSkip = [];
+
   // eslint-disable-next-line no-restricted-syntax
   for (const fixture of fixtures) {
+    if (fixturesToSkip.includes(fixture)) {
+      continue;
+    }
+
     const errMsg = testsThatFailToBuild.get(fixture);
     if (errMsg) {
       // eslint-disable-next-line no-loop-func

@@ -1,5 +1,5 @@
 export const config = {
-  runtime: 'experimental-edge',
+  runtime: 'edge',
 };
 
 export async function notTheDefaultExport(request, event) {

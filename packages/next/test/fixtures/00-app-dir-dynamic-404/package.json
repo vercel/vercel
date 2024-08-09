@@ -1,0 +1,11 @@
+{
+  "dependencies": {
+    "next": "canary",
+    "react": "19.0.0-rc-3208e73e-20240730",
+    "react-dom": "19.0.0-rc-3208e73e-20240730"
+  },
+  "ignoreNextjsUpdates": true,
+  "scripts": {
+    "vercel-build": "next build"
+  }
+}

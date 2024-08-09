@@ -6,9 +6,8 @@ import { TurboDryRun } from './types';
 const rootDir = path.join(__dirname, '..');
 
 async function main() {
-  const { stdout: sha } = await execa('git', ['rev-parse', '--short', 'HEAD'], {
-    cwd: rootDir,
-  });
+  const sha = await getSha();
+
   const { stdout: turboStdout } = await execa(
     'turbo',
     ['run', 'build', '--dry=json'],
@@ -21,6 +20,10 @@ async function main() {
     const dir = path.join(rootDir, task.directory);
     const packageJsonPath = path.join(dir, 'package.json');
     const originalPackageObj = await fs.readJson(packageJsonPath);
+    // api is not a package that will be published of this repo, but is used when deployed to Vercel
+    if (originalPackageObj.name === 'api') {
+      continue;
+    }
     const packageObj = await fs.readJson(packageJsonPath);
     packageObj.version += `-${sha.trim()}`;
 
@@ -38,11 +41,25 @@ async function main() {
     }
     await fs.writeJson(packageJsonPath, packageObj, { spaces: 2 });
 
-    await execa('yarn', ['pack'], {
+    await execa('pnpm', ['pack'], {
       cwd: dir,
       stdio: 'inherit',
     });
     await fs.writeJson(packageJsonPath, originalPackageObj, { spaces: 2 });
+  }
+}
+
+async function getSha(): Promise<string> {
+  try {
+    const { stdout } = await execa('git', ['rev-parse', '--short', 'HEAD'], {
+      cwd: rootDir,
+    });
+    return stdout;
+  } catch (error) {
+    console.error(error);
+
+    console.log('Assuming this is not a git repo. Using "local" as the SHA.');
+    return 'local';
   }
 }
 

@@ -94,6 +94,13 @@ export function middleware(request) {
     return NextResponse.rewrite(customUrl);
   }
 
+  if (url.pathname === '/rewrite-to-another-site') {
+    const customUrl = new URL(url);
+    customUrl.pathname = '/_sites/test-revalidate';
+    console.log('rewriting to', customUrl.pathname, customUrl.href);
+    return NextResponse.rewrite(customUrl);
+  }
+
   if (url.pathname === '/redirect-me-to-about') {
     url.pathname = '/about';
     url.searchParams.set('middleware', 'foo');

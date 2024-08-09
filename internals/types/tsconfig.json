@@ -1,0 +1,7 @@
+{
+  "extends": "@vercel-internals/tsconfig",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": ["index.d.ts"]
+}

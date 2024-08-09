@@ -1,0 +1,25 @@
+{
+  "probes": [
+    {
+      "path": "/api/cookie_asgi.py",
+      "responseHeaders": {
+        "set-cookie": ["one=first", "two=second"],
+        "content-type": "text/plain"
+      }
+    },
+    {
+      "path": "/api/cookie_handler.py",
+      "responseHeaders": {
+        "set-cookie": ["one=first", "two=second"],
+        "content-type": "text/plain"
+      }
+    },
+    {
+      "path": "/api/cookie_wsgi.py",
+      "responseHeaders": {
+        "set-cookie": ["one=first; Path=/", "two=second; Path=/"],
+        "content-type": "text/plain; charset=utf-8"
+      }
+    }
+  ]
+}

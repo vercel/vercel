@@ -1,4 +1,4 @@
-# `@now/next` No Serverless Pages Built
+# `@vercel/next` No Serverless Pages Built
 
 #### Why This Error Occurred
 
@@ -14,7 +14,9 @@ In order to create the smallest possible lambdas Next.js has to be configured to
 npm install next --save
 ```
 
-2. Add the `now-build` script to your `package.json`
+2. Check [Node.js Version](https://vercel.link/node-version) in your Project Settings. Using an old or incompatible version of Node.js can cause the Build Step to fail with this error message.
+
+3. Add the `now-build` script to your `package.json` [deprecated]
 
 ```json
 {
@@ -24,7 +26,7 @@ npm install next --save
 }
 ```
 
-3. Add `target: 'serverless'` to `next.config.js`
+4. Add `target: 'serverless'` to `next.config.js` [deprecated]
 
 ```js
 module.exports = {
@@ -33,13 +35,15 @@ module.exports = {
 };
 ```
 
-4. Remove `distDir` from `next.config.js` as `@now/next` can't parse this file and expects your build output at `/.next`
+5. Remove `distDir` from `next.config.js` as `@vercel/next` can't parse this file and expects your build output at `/.next`
 
-5. Optionally make sure the `"src"` in `"builds"` points to your application `package.json`
+6. Optionally make sure the `"src"` in `"builds"` points to your application `package.json`
 
 ```js
 {
   "version": 2,
-  "builds": [{ "src": "package.json", "use": "@now/next" }]
+  "builds": [{ "src": "package.json", "use": "@vercel/next" }]
 }
 ```
+
+6. Make sure you have the correct Node.js version selected for your build step in your project settings (`https://vercel.com/[username]/[project]/settings`)

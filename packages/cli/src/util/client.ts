@@ -1,8 +1,11 @@
-import { bold } from 'chalk';
-import inquirer from 'inquirer';
+import { bold, gray } from 'chalk';
+import checkbox from '@inquirer/checkbox';
+import confirm from '@inquirer/confirm';
+import expand from '@inquirer/expand';
+import input from '@inquirer/input';
+import select from '@inquirer/select';
 import { EventEmitter } from 'events';
-import { URLSearchParams } from 'url';
-import { parse as parseUrl } from 'url';
+import { URL } from 'url';
 import { VercelConfig } from '@vercel/client';
 import retry, { RetryFunction, Options as RetryOptions } from 'async-retry';
 import fetch, { BodyInit, Headers, RequestInit, Response } from 'node-fetch';
@@ -19,10 +22,14 @@ import type {
   JSONObject,
   Stdio,
   ReadableTTY,
-  WritableTTY,
-} from '../types';
+  PaginationOptions,
+} from '@vercel-internals/types';
 import { sharedPromise } from './promise';
 import { APIError } from './errors-ts';
+import { normalizeError } from '@vercel/error-utils';
+import type { Agent } from 'http';
+import sleep from './sleep';
+import type * as tty from 'tty';
 
 const isSAMLError = (v: any): v is SAMLError => {
   return v && v.saml;
@@ -43,6 +50,8 @@ export interface ClientOptions extends Stdio {
   output: Output;
   config: GlobalConfig;
   localConfig?: VercelConfig;
+  localConfigPath?: string;
+  agent?: Agent;
 }
 
 export const isJSONObject = (v: any): v is JSONObject => {
@@ -54,16 +63,19 @@ export default class Client extends EventEmitter implements Stdio {
   apiUrl: string;
   authConfig: AuthConfig;
   stdin: ReadableTTY;
-  stdout: WritableTTY;
-  stderr: WritableTTY;
+  stdout: tty.WriteStream;
+  stderr: tty.WriteStream;
   output: Output;
   config: GlobalConfig;
+  agent?: Agent;
   localConfig?: VercelConfig;
-  prompt!: inquirer.PromptModule;
-  private requestIdCounter: number;
+  localConfigPath?: string;
+  requestIdCounter: number;
+  input;
 
   constructor(opts: ClientOptions) {
     super();
+    this.agent = opts.agent;
     this.argv = opts.argv;
     this.apiUrl = opts.apiUrl;
     this.authConfig = opts.authConfig;
@@ -73,8 +85,31 @@ export default class Client extends EventEmitter implements Stdio {
     this.output = opts.output;
     this.config = opts.config;
     this.localConfig = opts.localConfig;
+    this.localConfigPath = opts.localConfigPath;
     this.requestIdCounter = 1;
-    this._createPromptModule();
+
+    const theme = {
+      prefix: gray('?'),
+      style: { answer: gray },
+    };
+    this.input = {
+      text: (opts: Parameters<typeof input>[0]) =>
+        input({ theme, ...opts }, { input: this.stdin, output: this.stderr }),
+      checkbox: <T>(opts: Parameters<typeof checkbox<T>>[0]) =>
+        checkbox<T>(
+          { theme, ...opts },
+          { input: this.stdin, output: this.stderr }
+        ),
+      expand: (opts: Parameters<typeof expand>[0]) =>
+        expand({ theme, ...opts }, { input: this.stdin, output: this.stderr }),
+      confirm: (opts: Parameters<typeof confirm>[0]) =>
+        confirm({ theme, ...opts }, { input: this.stdin, output: this.stderr }),
+      select: <T>(opts: Parameters<typeof select<T>>[0]) =>
+        select<T>(
+          { theme, ...opts },
+          { input: this.stdin, output: this.stderr }
+        ),
+    };
   }
 
   retry<T>(fn: RetryFunction<T>, { retries = 3, maxTimeout = Infinity } = {}) {
@@ -86,25 +121,18 @@ export default class Client extends EventEmitter implements Stdio {
   }
 
   private _fetch(_url: string, opts: FetchOptions = {}) {
-    const parsedUrl = parseUrl(_url, true);
-    const apiUrl = parsedUrl.host
-      ? `${parsedUrl.protocol}//${parsedUrl.host}`
-      : '';
+    const url = new URL(_url, this.apiUrl);
 
     if (opts.accountId || opts.useCurrentTeam !== false) {
-      const query = new URLSearchParams(parsedUrl.query);
-
       if (opts.accountId) {
         if (opts.accountId.startsWith('team_')) {
-          query.set('teamId', opts.accountId);
+          url.searchParams.set('teamId', opts.accountId);
         } else {
-          query.delete('teamId');
+          url.searchParams.delete('teamId');
         }
       } else if (opts.useCurrentTeam !== false && this.config.currentTeam) {
-        query.set('teamId', this.config.currentTeam);
+        url.searchParams.set('teamId', this.config.currentTeam);
       }
-
-      _url = `${apiUrl}${parsedUrl.pathname}?${query}`;
     }
 
     const headers = new Headers(opts.headers);
@@ -121,20 +149,22 @@ export default class Client extends EventEmitter implements Stdio {
       body = opts.body;
     }
 
-    const url = `${apiUrl ? '' : this.apiUrl}${_url}`;
     const requestId = this.requestIdCounter++;
-    return this.output.time(res => {
-      if (res) {
-        return `#${requestId} ← ${res.status} ${
-          res.statusText
-        }: ${res.headers.get('x-vercel-id')}`;
-      } else {
-        return `#${requestId} → ${opts.method || 'GET'} ${url}`;
-      }
-    }, fetch(url, { ...opts, headers, body }));
+    return this.output.time(
+      res => {
+        if (res) {
+          return `#${requestId} ← ${res.status} ${
+            res.statusText
+          }: ${res.headers.get('x-vercel-id')}`;
+        } else {
+          return `#${requestId} → ${opts.method || 'GET'} ${url.href}`;
+        }
+      },
+      fetch(url, { agent: this.agent, ...opts, headers, body })
+    );
   }
 
-  fetch(url: string, opts: { json: false }): Promise<Response>;
+  fetch(url: string, opts: FetchOptions & { json: false }): Promise<Response>;
   fetch<T>(url: string, opts?: FetchOptions): Promise<T>;
   fetch(url: string, opts: FetchOptions = {}) {
     return this.retry(async bail => {
@@ -145,11 +175,17 @@ export default class Client extends EventEmitter implements Stdio {
       if (!res.ok) {
         const error = await responseError(res);
 
-        if (isSAMLError(error)) {
-          // A SAML error means the token is expired, or is not
-          // designated for the requested team, so the user needs
-          // to re-authenticate
-          await this.reauthenticate(error);
+        // we should force reauth only if error has a teamId
+        if (isSAMLError(error) && error.teamId) {
+          try {
+            // A SAML error means the token is expired, or is not
+            // designated for the requested team, so the user needs
+            // to re-authenticate
+            await this.reauthenticate(error);
+          } catch (reauthError) {
+            // there's no sense in retrying
+            return bail(normalizeError(reauthError));
+          }
         } else if (res.status >= 400 && res.status < 500) {
           // Any other 4xx should bail without retrying
           return bail(error);
@@ -172,6 +208,31 @@ export default class Client extends EventEmitter implements Stdio {
     }, opts.retry);
   }
 
+  async *fetchPaginated<T>(
+    url: string | URL,
+    opts?: FetchOptions
+  ): AsyncGenerator<T & { pagination: PaginationOptions }> {
+    const endpoint =
+      typeof url === 'string' ? new URL(url, this.apiUrl) : new URL(url.href);
+    if (!endpoint.searchParams.has('limit')) {
+      endpoint.searchParams.set('limit', '100');
+    }
+    let next: number | null | undefined;
+    do {
+      if (next) {
+        // Small sleep to avoid rate limiting
+        await sleep(100);
+        endpoint.searchParams.set('until', String(next));
+      }
+      const res = await this.fetch<T & { pagination: PaginationOptions }>(
+        endpoint.href,
+        opts
+      );
+      yield res;
+      next = res.pagination?.next;
+    } while (next);
+  }
+
   reauthenticate = sharedPromise(async function (
     this: Client,
     error: SAMLError
@@ -186,7 +247,7 @@ export default class Client extends EventEmitter implements Stdio {
           `Failed to re-authenticate for ${bold(error.scope)} scope`
         );
       }
-      process.exit(1);
+      throw error;
     }
 
     this.authConfig.token = result.token;
@@ -197,10 +258,11 @@ export default class Client extends EventEmitter implements Stdio {
     this.output.debug(`Retrying: ${error}\n${error.stack}`);
   };
 
-  _createPromptModule() {
-    this.prompt = inquirer.createPromptModule({
-      input: this.stdin as NodeJS.ReadStream,
-      output: this.stderr as NodeJS.WriteStream,
-    });
+  get cwd(): string {
+    return process.cwd();
+  }
+
+  set cwd(v: string) {
+    process.chdir(v);
   }
 }

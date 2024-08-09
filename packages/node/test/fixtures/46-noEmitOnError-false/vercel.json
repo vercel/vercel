@@ -4,7 +4,8 @@
   "probes": [
     {
       "path": "/",
-      "mustContain": "no-emit-on-error-false:RANDOMNESS_PLACEHOLDER"
+      "mustContain": "no-emit-on-error-false:RANDOMNESS_PLACEHOLDER",
+      "logMustContain": "error TS2339: Property 'thisDoesNotExist' does not exist on type 'IncomingMessage'"
     }
   ]
 }

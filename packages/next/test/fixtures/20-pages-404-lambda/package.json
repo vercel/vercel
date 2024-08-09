@@ -1,7 +1,14 @@
 {
+  "engines": {
+    "node": "16.x"
+  },
   "dependencies": {
     "next": "9.2.3-canary.4",
     "react": "^16.8.6",
     "react-dom": "^16.8.6"
-  }
+  },
+  "resolutions": {
+    "@babel/compat-data": "7.21.4"
+  },
+  "ignoreNextjsUpdates": true
 }

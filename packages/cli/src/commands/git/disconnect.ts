@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import { Org, Project } from '../../types';
+import { Org, Project } from '@vercel-internals/types';
 import Client from '../../util/client';
 import confirm from '../../util/input/confirm';
 import { getCommandName } from '../../util/pkg-name';
@@ -43,7 +43,7 @@ export default async function disconnect(
       await disconnectGitProvider(client, org, project.id);
       output.log(`Disconnected ${chalk.cyan(`${linkOrg}/${repo}`)}.`);
     } else {
-      output.log('Aborted.');
+      output.log('Canceled');
     }
   } else {
     output.error(

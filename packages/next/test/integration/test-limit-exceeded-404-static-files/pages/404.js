@@ -13,7 +13,7 @@ export function getStaticProps({ locale }) {
       locale,
       // 1MB string which is duplicated in HTML totalling 2MB
       // this will be generated for each locale as well
-      largeData: new Array(1 * 1000 * 1000).fill('a').join(''),
+      largeData: new Array(1 * 1024 * 1024).fill('a').join(''),
     },
   };
 }

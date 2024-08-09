@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import { Project } from '../../types';
+import type { Project } from '@vercel-internals/types';
 import { Output } from '../../util/output';
 import confirm from '../../util/input/confirm';
 import removeEnvRecord from '../../util/env/remove-env-record';
@@ -29,9 +29,6 @@ export default async function rm(
   args: string[],
   output: Output
 ) {
-  // improve the way we show inquirer prompts
-  require('../../util/input/patch-inquirer');
-
   if (args.length > 3) {
     output.error(
       `Invalid number of arguments. Usage: ${getCommandName(
@@ -43,19 +40,11 @@ export default async function rm(
 
   let [envName, envTarget, envGitBranch] = args;
 
-  while (!envName) {
-    const { inputName } = await client.prompt({
-      type: 'input',
-      name: 'inputName',
+  if (!envName) {
+    envName = await client.input.text({
       message: `What’s the name of the variable?`,
+      validate: val => (val ? true : 'Name cannot be empty'),
     });
-
-    if (!inputName) {
-      output.error(`Name cannot be empty`);
-      continue;
-    }
-
-    envName = inputName;
   }
 
   if (!isValidEnvTarget(envTarget)) {
@@ -86,11 +75,14 @@ export default async function rm(
   }
 
   while (envs.length > 1) {
-    const { id } = await client.prompt({
-      name: 'id',
-      type: 'list',
+    const id = await client.input.select({
       message: `Remove ${envName} from which Environments?`,
-      choices: envs.map(env => ({ value: env.id, name: formatEnvTarget(env) })),
+      choices: envs.map(env => ({
+        value: env.id,
+        // TODO: once supporting custom environments,
+        // use new `formatEnvTarget` from `vc env ls`
+        name: formatEnvTarget(env),
+      })),
     });
 
     if (!id) {
@@ -111,7 +103,7 @@ export default async function rm(
       false
     ))
   ) {
-    output.log('Aborted');
+    output.log('Canceled');
     return 0;
   }
 

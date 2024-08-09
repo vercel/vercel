@@ -20,10 +20,7 @@ export default function getWildcardCNSForAlias(alias: string) {
 
   const secondLevel =
     subdomain && subdomain.includes('.')
-      ? subdomain
-          .split('.')
-          .slice(1)
-          .join('.')
+      ? subdomain.split('.').slice(1).join('.')
       : null;
 
   const root = secondLevel ? `${secondLevel}.${domain}` : domain;

@@ -1,0 +1,11 @@
+{
+  "probes": [
+    {
+      "path": "/api",
+      "mustContain": "asgi-function:RANDOMNESS_PLACEHOLDER",
+      "responseHeaders": {
+        "content-type": "text/html"
+      }
+    }
+  ]
+}

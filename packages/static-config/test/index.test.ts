@@ -8,7 +8,8 @@ describe('getConfig()', () => {
     const sourcePath = join(__dirname, 'fixtures/node.js');
     const config = getConfig(project, sourcePath);
     expect(config).toMatchInlineSnapshot(`
-      Object {
+      {
+        "maxDuration": 60,
         "memory": 1024,
         "runtime": "nodejs",
       }
@@ -25,8 +26,9 @@ describe('getConfig()', () => {
       },
     } as const);
     expect(config).toMatchInlineSnapshot(`
-      Object {
+      {
         "location": "https://example.com/page",
+        "maxDuration": 60,
         "runtime": "deno",
       }
     `);

@@ -2,6 +2,5 @@
   "workspaces": [
     "packages/*"
   ],
-  "private": true,
-  "name": "mono-repo"
+  "private": true
 }

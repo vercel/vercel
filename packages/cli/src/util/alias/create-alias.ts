@@ -1,4 +1,4 @@
-import { Deployment } from '../../types';
+import type { Deployment } from '@vercel-internals/types';
 import { Output } from '../output';
 import * as ERRORS from '../errors-ts';
 import Client from '../client';
@@ -62,7 +62,7 @@ async function performCreateAlias(
 ) {
   try {
     return await client.fetch<AliasRecord>(
-      `/now/deployments/${deployment.uid}/aliases`,
+      `/now/deployments/${deployment.id}/aliases`,
       {
         method: 'POST',
         body: { alias },
@@ -79,7 +79,7 @@ async function performCreateAlias(
       if (err.code === 'deployment_not_found') {
         return new ERRORS.DeploymentNotFound({
           context: contextName,
-          id: deployment.uid,
+          id: deployment.id,
         });
       }
       if (err.code === 'gone') {
@@ -88,6 +88,9 @@ async function performCreateAlias(
       if (err.code === 'invalid_alias') {
         return new ERRORS.InvalidAlias(alias);
       }
+      if (err.code === 'deployment_not_ready') {
+        return new ERRORS.DeploymentNotReady({ url: deployment.url });
+      }
       if (err.status === 403) {
         if (err.code === 'alias_in_use') {
           return new ERRORS.AliasInUse(alias);
@@ -95,9 +98,6 @@ async function performCreateAlias(
         if (err.code === 'forbidden') {
           return new ERRORS.DomainPermissionDenied(alias, contextName);
         }
-      }
-      if (err.status === 400) {
-        return new ERRORS.DeploymentNotReady({ url: deployment.url });
       }
     }
 

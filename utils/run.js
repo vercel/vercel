@@ -10,7 +10,6 @@ const allPackages = [
   'static-config',
   'client',
   'next',
-  'node-bridge',
   'node',
   'go',
   'python',
@@ -79,8 +78,8 @@ function runScript(pkgName, script) {
       pkgJson = null;
     }
     if (pkgJson && pkgJson.scripts && pkgJson.scripts[script]) {
-      console.log(`\n[${pkgName}] Running yarn ${script}`);
-      const child = spawn('yarn', [script], {
+      console.log(`\n[${pkgName}] Running pnpm ${script}`);
+      const child = spawn('pnpm', [script], {
         cwd,
         stdio: 'inherit',
         shell: true,

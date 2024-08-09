@@ -1,51 +1,13 @@
-import chalk from 'chalk';
 import Client from '../../util/client';
-import { ensureLink } from '../../util/ensure-link';
-import getArgs from '../../util/get-args';
+import { ensureLink } from '../../util/link/ensure-link';
+import { parseArguments } from '../../util/get-args';
 import getInvalidSubcommand from '../../util/get-invalid-subcommand';
 import handleError from '../../util/handle-error';
-import logo from '../../util/output/logo';
-import { getPkgName } from '../../util/pkg-name';
-import validatePaths from '../../util/validate-paths';
 import connect from './connect';
 import disconnect from './disconnect';
-
-const help = () => {
-  console.log(`
-  ${chalk.bold(`${logo} ${getPkgName()} git`)} <command>
-
-  ${chalk.dim('Commands:')}
-
-    connect [url]             Connect your Vercel Project to your Git repository or provide the remote URL to your Git repository
-    disconnect                Disconnect the Git provider repository from your project
-
-  ${chalk.dim('Options:')}
-
-    -h, --help                Output usage information
-    -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
-    'TOKEN'
-  )}   Login token
-    -y, --yes                 Skip questions when setting up new project using default scope and settings
-
-  ${chalk.dim('Examples:')}
-
-  ${chalk.gray(
-    '–'
-  )} Connect your Vercel Project to your Git repository defined in your local .git config
-
-    ${chalk.cyan(`$ ${getPkgName()} git connect`)}
-  
-  ${chalk.gray('–')} Connect your Vercel Project to a Git repository using the remote URL
-
-    ${chalk.cyan(
-      `$ ${getPkgName()} git connect https://github.com/user/repo.git`
-    )}
-
-  ${chalk.gray('–')} Disconnect the Git provider repository
-
-    ${chalk.cyan(`$ ${getPkgName()} git disconnect`)}
-`);
-};
+import { help } from '../help';
+import { gitCommand } from './command';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
 
 const COMMAND_CONFIG = {
   connect: ['connect'],
@@ -53,56 +15,52 @@ const COMMAND_CONFIG = {
 };
 
 export default async function main(client: Client) {
-  let argv: any;
   let subcommand: string | string[];
 
-  try {
-    argv = getArgs(client.argv.slice(2), {
-      '--yes': Boolean,
-      '-y': '--yes',
+  let parsedArgs = null;
 
-      // deprecated
-      '-c': '--yes',
-      '--confirm': '--yes',
-    });
+  const flagsSpecification = getFlagsSpecification(gitCommand.options);
+
+  // Parse CLI args
+  try {
+    parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (error) {
     handleError(error);
     return 1;
   }
-
-  if (argv['--help']) {
-    help();
+  const { output } = client;
+  if (parsedArgs.flags['--help']) {
+    output.print(help(gitCommand, { columns: client.stderr.columns }));
     return 2;
   }
 
-  argv._ = argv._.slice(1);
-  subcommand = argv._[0];
-  const args = argv._.slice(1);
-  const confirm = Boolean(argv['--yes']);
-  const { output } = client;
-
-  let paths = [process.cwd()];
-  const pathValidation = await validatePaths(client, paths);
-  if (!pathValidation.valid) {
-    return pathValidation.exitCode;
+  if ('--confirm' in parsedArgs.flags) {
+    output.warn('`--confirm` is deprecated, please use `--yes` instead');
+    parsedArgs.flags['--yes'] = parsedArgs.flags['--confirm'];
   }
-  const { path } = pathValidation;
 
-  const linkedProject = await ensureLink('git', client, path, confirm);
+  parsedArgs.args = parsedArgs.args.slice(1);
+  subcommand = parsedArgs.args[0];
+  const args = parsedArgs.args.slice(1);
+  const autoConfirm = Boolean(parsedArgs.flags['--yes']);
+  const { cwd } = client;
+
+  const linkedProject = await ensureLink('git', client, cwd, { autoConfirm });
   if (typeof linkedProject === 'number') {
     return linkedProject;
   }
 
   const { org, project } = linkedProject;
+  client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
   switch (subcommand) {
     case 'connect':
-      return await connect(client, argv, args, project, org);
+      return await connect(client, parsedArgs.flags, args, project, org);
     case 'disconnect':
       return await disconnect(client, args, project, org);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
-      help();
+      output.print(help(gitCommand, { columns: client.stderr.columns }));
       return 2;
   }
 }

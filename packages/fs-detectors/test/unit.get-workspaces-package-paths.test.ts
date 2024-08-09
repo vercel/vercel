@@ -1,7 +1,7 @@
 import path from 'path';
 import { getWorkspaces } from '../src/workspaces/get-workspaces';
 import { getWorkspacePackagePaths } from '../src/workspaces/get-workspace-package-paths';
-import { FixtureFilesystem } from './utils/fixture-filesystem';
+import { LocalFileSystemDetector } from '../src';
 
 describe.each<[string, string[]]>([
   ['21-npm-workspaces', ['/a', '/b']],
@@ -14,7 +14,15 @@ describe.each<[string, string[]]>([
     ['/backend/c', '/backend/d', '/frontend/a', '/frontend/b'],
   ],
   ['22-pnpm', []],
-])('`getWorkspacesPackagePaths()`', (fixturePath, packagePaths) => {
+  ['41-nx-workspace', ['/apps/app-one', '/apps/app-two']],
+  ['42-npm-workspace-with-nx', ['/apps/app-one', '/apps/app-two']],
+  ['43-nx-json-misshaped', []],
+  ['44-nx-json-string', []],
+  ['40-rush-monorepo', ['/apps/my-app', '/apps/my-second-app']],
+  ['41-rush-monorepo-empty', []],
+  ['42-rush-json-invalid', []],
+  ['45-rush-no-project-folder', ['/apps/my-second-app']],
+])('`getWorkspacePackagePaths()`', (fixturePath, packagePaths) => {
   const testName =
     packagePaths.length > 0
       ? `should detect ${packagePaths.join()} package${
@@ -24,7 +32,7 @@ describe.each<[string, string[]]>([
 
   it(testName, async () => {
     const fixture = path.join(__dirname, 'fixtures', fixturePath);
-    const fs = new FixtureFilesystem(fixture);
+    const fs = new LocalFileSystemDetector(fixture);
 
     const workspaces = await getWorkspaces({ fs });
     const actualPackagePaths = (

@@ -226,6 +226,17 @@ test('convertRedirects', () => {
     },
     {
       source: '/hello/:first',
+      destination: '/another',
+      missing: [
+        {
+          type: 'host',
+          value: '(?<a>.*)\\.(?<b>.*)',
+        },
+      ],
+      permanent: false,
+    },
+    {
+      source: '/hello/:first',
       destination:
         '/another/:first/:username/:pathname/:another/:host/:a/:b/:c/:d',
       has: [
@@ -385,6 +396,19 @@ test('convertRedirects', () => {
       status: 307,
     },
     {
+      missing: [
+        {
+          type: 'host',
+          value: '(?<a>.*)\\.(?<b>.*)',
+        },
+      ],
+      headers: {
+        Location: '/another',
+      },
+      src: '^\\/hello(?:\\/([^\\/]+?))$',
+      status: 307,
+    },
+    {
       has: [
         {
           key: 'x-rewrite',
@@ -453,6 +477,7 @@ test('convertRedirects', () => {
     ['/hello/world', '/hello/again'],
     ['/hello/world'],
     ['/hello/world'],
+    ['/hello/world'],
   ];
 
   const mustNotMatch = [
@@ -473,6 +498,7 @@ test('convertRedirects', () => {
     ['/optionalnope', '/optionally'],
     ['/feature/first', '/feature'],
     ['/hello', '/hello/another/one'],
+    ['/hellooo'],
     ['/hellooo'],
     ['/helloooo'],
   ];
@@ -587,12 +613,59 @@ test('convertRewrites', () => {
         ],
       },
       {
+        source: '/hello/:first',
+        destination: '/another',
+        missing: [
+          {
+            type: 'header',
+            key: 'x-rewrite',
+          },
+          {
+            type: 'cookie',
+            key: 'loggedIn',
+            value: '1',
+          },
+          {
+            type: 'host',
+            value: 'vercel.com',
+          },
+          {
+            type: 'host',
+            value: '(?<a>.*)\\.(?<b>.*)',
+          },
+          {
+            type: 'header',
+            key: 'host',
+            value: '(?<c>.*)\\.(?<d>.*)',
+          },
+          {
+            type: 'query',
+            key: 'username',
+          },
+          {
+            type: 'header',
+            key: 'x-pathname',
+            value: '(?<pathname>.*)',
+          },
+          {
+            type: 'header',
+            key: 'X-Pathname',
+            value: '(?<another>hello|world)',
+          },
+        ],
+      },
+      {
         source: '/array-query-string/:id/:name',
         destination: 'https://example.com/?tag=1&tag=2',
       },
       {
         source: '/:nextInternalLocale/:path',
         destination: '/api/hello',
+      },
+      {
+        source: '/rewrite-with-status',
+        destination: '/api/hello',
+        statusCode: 201,
       },
     ],
     ['nextInternalLocale']
@@ -741,6 +814,49 @@ test('convertRewrites', () => {
       src: '^\\/hello(?:\\/([^\\/]+?))$',
     },
     {
+      check: true,
+      dest: '/another?first=$1',
+      missing: [
+        {
+          key: 'x-rewrite',
+          type: 'header',
+        },
+        {
+          key: 'loggedIn',
+          type: 'cookie',
+          value: '1',
+        },
+        {
+          type: 'host',
+          value: 'vercel.com',
+        },
+        {
+          type: 'host',
+          value: '(?<a>.*)\\.(?<b>.*)',
+        },
+        {
+          key: 'host',
+          type: 'header',
+          value: '(?<c>.*)\\.(?<d>.*)',
+        },
+        {
+          type: 'query',
+          key: 'username',
+        },
+        {
+          type: 'header',
+          key: 'x-pathname',
+          value: '(?<pathname>.*)',
+        },
+        {
+          type: 'header',
+          key: 'x-pathname',
+          value: '(?<another>hello|world)',
+        },
+      ],
+      src: '^\\/hello(?:\\/([^\\/]+?))$',
+    },
+    {
       src: '^\\/array-query-string(?:\\/([^\\/]+?))(?:\\/([^\\/]+?))$',
       dest: 'https://example.com/?tag=1&tag=2&id=$1&name=$2',
       check: true,
@@ -749,6 +865,12 @@ test('convertRewrites', () => {
       check: true,
       dest: '/api/hello?nextInternalLocale=$1&path=$2',
       src: '^(?:\\/([^\\/]+?))(?:\\/([^\\/]+?))$',
+    },
+    {
+      check: true,
+      dest: '/api/hello',
+      src: '^\\/rewrite-with-status$',
+      status: 201,
     },
   ];
 
@@ -776,8 +898,10 @@ test('convertRewrites', () => {
     ['/hello/world', '/hello/again'],
     ['/hello/world'],
     ['/hello/world'],
+    ['/hello/world'],
     ['/array-query-string/10/email'],
     ['/en/hello'],
+    ['/rewrite-with-status'],
   ];
 
   const mustNotMatch = [
@@ -802,8 +926,10 @@ test('convertRewrites', () => {
     ['/hello', '/hello/another/one'],
     ['/hllooo'],
     ['/hllooo'],
+    ['/hllooo'],
     ['/array-query-string/10'],
     ['/en/hello/world', '/en/hello/'],
+    ['/rewrite-with-status-nope'],
   ];
 
   assertRegexMatches(actual, mustMatch, mustNotMatch);
@@ -915,6 +1041,25 @@ test('convertHeaders', () => {
         },
         {
           key: 'x-:b',
+          value: 'b',
+        },
+      ],
+    },
+    {
+      source: '/hello/:first',
+      missing: [
+        {
+          type: 'host',
+          value: '(?<a>.*)\\.(?<b>.*)',
+        },
+      ],
+      headers: [
+        {
+          key: 'x-a',
+          value: 'a',
+        },
+        {
+          key: 'x-b',
           value: 'b',
         },
       ],
@@ -1059,6 +1204,20 @@ test('convertHeaders', () => {
     },
     {
       continue: true,
+      missing: [
+        {
+          type: 'host',
+          value: '(?<a>.*)\\.(?<b>.*)',
+        },
+      ],
+      headers: {
+        'x-a': 'a',
+        'x-b': 'b',
+      },
+      src: '^\\/hello(?:\\/([^\\/]+?))$',
+    },
+    {
+      continue: true,
       has: [
         {
           key: 'x-rewrite',
@@ -1133,6 +1292,7 @@ test('convertHeaders', () => {
     ['/like/params/first', '/like/params/second'],
     ['/hello/world'],
     ['/hello/world'],
+    ['/hello/world'],
     ['/hello'],
   ];
 
@@ -1141,6 +1301,7 @@ test('convertHeaders', () => {
     ['403.html', '500.html'],
     ['/blogg', '/random'],
     ['/non-match', '/like/params', '/like/params/'],
+    ['/hellooo'],
     ['/hellooo'],
     ['/hellooo'],
     [],

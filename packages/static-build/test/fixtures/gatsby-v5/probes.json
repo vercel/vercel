@@ -1,0 +1,34 @@
+{
+  "probes": [
+    { "path": "/", "mustContain": "<h1>Gatsby - Index</h1>" },
+    {
+      "path": "/ssr/",
+      "mustContain": "<h1>This page is <!-- -->rendered server side</h1>"
+    },
+    {
+      "path": "/dsg/",
+      "mustContain": "<h1>This page is DSG</h1>"
+    },
+    {
+      "path": "/page-data/ssr/page-data.json",
+      "mustContain": "\"componentChunkName\":\"component---src-pages-ssr-js\",\"path\":\"/ssr/\""
+    },
+    {
+      "path": "/page-data/dsg/page-data.json",
+      "mustContain": "\"componentChunkName\":\"component---src-pages-dsg-js\",\"path\":\"/dsg/\""
+    },
+    {
+      "path": "/x/y/z",
+      "mustContain": "<h1>Page not found</h1>"
+    },
+    {
+      "fetchOptions": { "redirect": "manual" },
+      "path": "/redirect/",
+      "status": 307
+    },
+    {
+      "path": "/rewrite/",
+      "mustContain": "Vercel"
+    }
+  ]
+}

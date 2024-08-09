@@ -87,6 +87,10 @@ export default function readdir(
           if (stats.isDirectory()) {
             readdir(filePath, ignores)
               .then(function (res) {
+                if (res.length === 0) {
+                  // Empty directories get returned
+                  list.push(filePath);
+                }
                 list = list.concat(res);
                 pending -= 1;
                 if (!pending) {

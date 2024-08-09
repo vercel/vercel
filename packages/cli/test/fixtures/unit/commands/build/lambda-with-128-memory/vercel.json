@@ -1,1 +1,7 @@
-{ "functions": { "api/**/*.js": { "memory": 128 } } }
+{
+  "functions": {
+    "api/**/*.js": {
+      "memory": 128
+    }
+  }
+}

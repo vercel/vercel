@@ -5,7 +5,7 @@ import cmd from './output/cmd';
 /**
  * The package name defined in the CLI's `package.json` file (`vercel`).
  */
-export const name = pkg.name;
+export const packageName = pkg.name;
 
 /**
  * Unicode symbol used to represent the CLI.
@@ -13,18 +13,11 @@ export const name = pkg.name;
 export const logo = '▲';
 
 /**
- * Returns the package name such as `vercel` or `now`.
- */
-export function getPkgName(): string {
-  return pkg.name;
-}
-
-/**
  * Returns the package name with title-case
  * such as `Vercel` or `Now`.
  */
 export function getTitleName(): string {
-  const str = getPkgName();
+  const str = packageName;
   return title(str);
 }
 
@@ -33,7 +26,7 @@ export function getTitleName(): string {
  * as a suffix such as `vercel env pull` or `now env pull`.
  */
 export function getCommandName(subcommands?: string): string {
-  let vercel = getPkgName();
+  let vercel = packageName;
   if (subcommands) {
     vercel = `${vercel} ${subcommands}`;
   }

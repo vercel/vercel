@@ -473,7 +473,7 @@ describe('Test `detectBuilders`', () => {
   });
 
   it('invalid function memory', async () => {
-    const functions = { 'pages/index.ts': { memory: 200 } };
+    const functions = { 'pages/index.ts': { memory: 127 } };
     const files = ['pages/index.ts'];
     const { builders, errors } = await detectBuilders(files, null, {
       functions,
@@ -482,6 +482,17 @@ describe('Test `detectBuilders`', () => {
     expect(builders).toBe(null);
     expect(errors!.length).toBe(1);
     expect(errors![0].code).toBe('invalid_function_memory');
+  });
+
+  it('should build with function memory not dividable by 64', async () => {
+    const functions = { 'api/index.ts': { memory: 1000 } };
+    const files = ['api/index.ts'];
+    const { builders, errors } = await detectBuilders(files, null, {
+      functions,
+    });
+
+    expect(builders![0].use).toBe('@vercel/node');
+    expect(errors).toBeNull();
   });
 
   it('missing runtime version', async () => {
@@ -780,6 +791,49 @@ describe('Test `detectBuilders`', () => {
       {
         code: 'unused_function',
         message: `The pattern "server/**/*.ts" defined in \`functions\` doesn't match any Serverless Functions inside the \`api\` directory.`,
+        action: 'Learn More',
+        link: 'https://vercel.link/unmatched-function-pattern',
+      },
+    ]);
+  });
+
+  it('Works with fallback last', async () => {
+    const files = ['api/simple.rs', 'api/complex.rs'];
+    const functions = {
+      'api/simple.rs': {
+        runtime: 'ecklf-tmp-runtime-test@1.0.142',
+        maxDuration: 120,
+      },
+      'api/**/*.rs': {
+        runtime: 'ecklf-tmp-runtime-test@1.0.142',
+        maxDuration: 180,
+      },
+    };
+
+    const { errors } = await detectBuilders(files, null, { functions });
+
+    expect(errors).toBe(null);
+  });
+
+  it('Errors with fallback first', async () => {
+    const files = ['api/simple.rs', 'api/complex.rs'];
+    const functions = {
+      'api/**/*.rs': {
+        runtime: 'ecklf-tmp-runtime-test@1.0.142',
+        maxDuration: 180,
+      },
+      'api/simple.rs': {
+        runtime: 'ecklf-tmp-runtime-test@1.0.142',
+        maxDuration: 120,
+      },
+    };
+
+    const { errors } = await detectBuilders(files, null, { functions });
+
+    expect(errors).toEqual([
+      {
+        code: 'unused_function',
+        message: `The pattern "api/simple.rs" defined in \`functions\` doesn't match any Serverless Functions inside the \`api\` directory.`,
         action: 'Learn More',
         link: 'https://vercel.link/unmatched-function-pattern',
       },
@@ -1369,6 +1423,25 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect((errorRoutes![0] as Source).status).toBe(404);
   });
 
+  it('api detect node tsx files', async () => {
+    const files = [
+      'api/index.tsx',
+      'api/users.tsx',
+      'api/config/staging.tsx',
+      'api/config/production.tsx',
+      'api/src/controllers/health.tsx',
+      'api/src/controllers/user.module.tsx',
+    ];
+
+    const { builders, errorRoutes } = await detectBuilders(files, undefined, {
+      featHandleMiss,
+    });
+    expect(builders?.length).toBe(6);
+    expect(builders!.every(b => b.src!.endsWith('.tsx'))).toBe(true);
+    expect(errorRoutes?.length).toBe(1);
+    expect((errorRoutes![0] as Source).status).toBe(404);
+  });
+
   it('just public', async () => {
     const files = ['public/index.html', 'public/favicon.ico', 'README.md'];
 
@@ -1701,7 +1774,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
   });
 
   it('invalid function memory', async () => {
-    const functions = { 'pages/index.ts': { memory: 200 } };
+    const functions = { 'pages/index.ts': { memory: 127 } };
     const files = ['pages/index.ts'];
     const { builders, errors } = await detectBuilders(files, null, {
       functions,
@@ -1711,6 +1784,18 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(builders).toBe(null);
     expect(errors!.length).toBe(1);
     expect(errors![0].code).toBe('invalid_function_memory');
+  });
+
+  it('should build with function memory not dividable by 64', async () => {
+    const functions = { 'api/index.ts': { memory: 1000 } };
+    const files = ['api/index.ts'];
+    const { builders, errors } = await detectBuilders(files, null, {
+      functions,
+      featHandleMiss,
+    });
+
+    expect(builders![0].use).toBe('@vercel/node');
+    expect(errors).toBeNull();
   });
 
   it('missing runtime version', async () => {
@@ -2235,9 +2320,14 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
 
   it('no package.json + no build + root-level "middleware.js"', async () => {
     const files = ['middleware.js', 'index.html', 'web/middleware.js'];
-    const { builders, errors } = await detectBuilders(files, null, {
-      featHandleMiss,
-    });
+    const { builders, rewriteRoutes, errors } = await detectBuilders(
+      files,
+      null,
+      {
+        featHandleMiss,
+      }
+    );
+    expect(rewriteRoutes).toHaveLength(0);
     expect(builders![0].use).toBe('@vercel/node');
     expect(builders![0].src).toBe('middleware.js');
     expect(builders![0].config?.middleware).toEqual(true);
@@ -2249,9 +2339,14 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
 
   it('no package.json + no build + root-level "middleware.ts"', async () => {
     const files = ['middleware.ts', 'index.html', 'web/middleware.js'];
-    const { builders, errors } = await detectBuilders(files, null, {
-      featHandleMiss,
-    });
+    const { builders, rewriteRoutes, errors } = await detectBuilders(
+      files,
+      null,
+      {
+        featHandleMiss,
+      }
+    );
+    expect(rewriteRoutes).toHaveLength(0);
     expect(builders![0].use).toBe('@vercel/node');
     expect(builders![0].src).toBe('middleware.ts');
     expect(builders![0].config?.middleware).toEqual(true);
@@ -2301,6 +2396,56 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
         use: '@vercel/next',
         src: 'package.json',
         config: {
+          zeroConfig: true,
+        },
+      },
+    ]);
+  });
+
+  it('should add middleware builder with "remix" framework preset', async () => {
+    const files = ['package.json', 'app/routes/index.ts', 'middleware.ts'];
+    const projectSettings = {
+      framework: 'remix',
+    };
+    const { builders } = await detectBuilders(files, null, {
+      projectSettings,
+      featHandleMiss,
+    });
+    expect(builders).toEqual([
+      {
+        src: 'middleware.ts',
+        use: '@vercel/node',
+        config: {
+          middleware: true,
+          zeroConfig: true,
+        },
+      },
+      {
+        use: '@vercel/remix-builder',
+        src: 'package.json',
+        config: {
+          framework: 'remix',
+          zeroConfig: true,
+        },
+      },
+    ]);
+  });
+
+  it('should ignore middleware with "storybook" framework preset', async () => {
+    const files = ['package.json', 'app/routes/index.ts', 'middleware.ts'];
+    const projectSettings = {
+      framework: 'storybook',
+    };
+    const { builders } = await detectBuilders(files, null, {
+      projectSettings,
+      featHandleMiss,
+    });
+    expect(builders).toEqual([
+      {
+        use: '@vercel/static-build',
+        src: 'package.json',
+        config: {
+          framework: 'storybook',
           zeroConfig: true,
         },
       },
@@ -2453,10 +2598,13 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
   {
     const files = ['api/user.go', 'api/team.js', 'api/package.json'];
 
-    const { defaultRoutes, rewriteRoutes, errorRoutes, limitedRoutes } =
-      await detectBuilders(files, null, {
+    const { defaultRoutes, rewriteRoutes, errorRoutes } = await detectBuilders(
+      files,
+      null,
+      {
         featHandleMiss,
-      });
+      }
+    );
     expect(defaultRoutes).toStrictEqual([
       { handle: 'miss' },
       {
@@ -2478,22 +2626,6 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
         dest: '/404.html',
       },
     ]);
-
-    // Limited routes should have js but not go since the go plugin is not installed
-    expect(limitedRoutes).toStrictEqual({
-      redirectRoutes: [],
-      rewriteRoutes: [],
-      defaultRoutes: [
-        {
-          handle: 'miss',
-        },
-        {
-          src: '^/api/(.+)(?:\\.(?:js))$',
-          dest: '/api/$1',
-          check: true,
-        },
-      ],
-    });
 
     const pattern = new RegExp(errorRoutes![0].src!);
 
@@ -2696,7 +2828,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
       {
         code: 'conflicting_files',
         message:
-          'When using Next.js, it is recommended to place Node.js Serverless Functions inside of the `pages/api` (provided by Next.js) directory instead of `api` (provided by Vercel).',
+          'When using Next.js, it is recommended to place JavaScript Functions inside of the `pages/api` (provided by Next.js) directory instead of `api` (provided by Vercel). Other languages (Python, Go, etc) should still go in the `api` directory.',
         link: 'https://nextjs.org/docs/api-routes/introduction',
         action: 'Learn More',
       },
@@ -2731,7 +2863,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
       {
         code: 'conflicting_files',
         message:
-          'When using Next.js, it is recommended to place Node.js Serverless Functions inside of the `pages/api` (provided by Next.js) directory instead of `api` (provided by Vercel).',
+          'When using Next.js, it is recommended to place JavaScript Functions inside of the `pages/api` (provided by Next.js) directory instead of `api` (provided by Vercel). Other languages (Python, Go, etc) should still go in the `api` directory.',
         link: 'https://nextjs.org/docs/api-routes/introduction',
         action: 'Learn More',
       },
@@ -2897,13 +3029,8 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`', async () 
   {
     const files = ['api/user.go', 'api/team.js', 'api/package.json'];
 
-    const {
-      defaultRoutes,
-      redirectRoutes,
-      rewriteRoutes,
-      errorRoutes,
-      limitedRoutes,
-    } = await detectBuilders(files, null, options);
+    const { defaultRoutes, redirectRoutes, rewriteRoutes, errorRoutes } =
+      await detectBuilders(files, null, options);
     testHeaders(redirectRoutes);
     expect(defaultRoutes).toStrictEqual([]);
     expect(rewriteRoutes).toStrictEqual([
@@ -2919,28 +3046,6 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`', async () 
         dest: '/404',
       },
     ]);
-
-    // Limited routes should have js but not go since the go plugin is not installed
-    expect(limitedRoutes).toStrictEqual({
-      redirectRoutes: [
-        {
-          src: '^/(api(?:.+)?)/index(?:\\.(?:js))?/?$',
-          headers: {
-            Location: '/$1',
-          },
-          status: 308,
-        },
-        {
-          src: '^/api/(.+)(?:\\.(?:js))/?$',
-          headers: {
-            Location: '/api/$1',
-          },
-          status: 308,
-        },
-      ],
-      rewriteRoutes: [],
-      defaultRoutes: [],
-    });
 
     // expected redirect should match inputs
     const getLocation = createReplaceLocation(redirectRoutes);
@@ -3185,7 +3290,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `trailingS
   {
     const files = ['api/user.go', 'api/team.js', 'api/package.json'];
 
-    const { defaultRoutes, redirectRoutes, rewriteRoutes, limitedRoutes } =
+    const { defaultRoutes, redirectRoutes, rewriteRoutes } =
       await detectBuilders(files, null, options);
     testHeaders(redirectRoutes);
     expect(defaultRoutes).toStrictEqual([]);
@@ -3195,28 +3300,6 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `trailingS
         src: '^/api(/.*)?$',
       },
     ]);
-
-    // Limited routes should have js but not go since the go plugin is not installed
-    expect(limitedRoutes).toStrictEqual({
-      redirectRoutes: [
-        {
-          src: '^/(api(?:.+)?)/index(?:\\.(?:js))?/?$',
-          headers: {
-            Location: '/$1/',
-          },
-          status: 308,
-        },
-        {
-          src: '^/api/(.+)(?:\\.(?:js))/?$',
-          headers: {
-            Location: '/api/$1/',
-          },
-          status: 308,
-        },
-      ],
-      rewriteRoutes: [],
-      defaultRoutes: [],
-    });
 
     // expected redirect should match inputs
     const getLocation = createReplaceLocation(redirectRoutes);

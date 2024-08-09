@@ -3,5 +3,6 @@
     "next": "10.0.2",
     "react": "latest",
     "react-dom": "latest"
-  }
+  },
+  "ignoreNextjsUpdates": true
 }

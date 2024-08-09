@@ -1,5 +1,6 @@
 {
   "name": "force-module-commonjs",
+  "version": "0.0.0",
   "private": true,
   "scripts": {
     "dev": "next",
@@ -7,13 +8,14 @@
     "start": "next start"
   },
   "dependencies": {
-    "next": "^9.3.4",
-    "react": "^16.13.1",
-    "react-dom": "^16.13.1"
+    "next": "13.0.4",
+    "react": "18.2.0",
+    "react-dom": "18.2.0"
   },
   "devDependencies": {
-    "@types/node": "14.0.9",
-    "@types/react": "^16.9.32",
-    "typescript": "^3.8.3"
-  }
+    "@types/node": "18.x",
+    "@types/react": "18.0.25",
+    "typescript": "4.9.3"
+  },
+  "ignoreNextjsUpdates": true
 }

@@ -1,20 +1,8 @@
 {
   "compilerOptions": {
-    "declaration": true,
-    "esModuleInterop": true,
-    "lib": ["ES2020"],
-    "module": "commonjs",
-    "moduleResolution": "node",
-    "noEmitOnError": true,
-    "noFallthroughCasesInSwitch": true,
-    "noImplicitReturns": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "outDir": "dist",
-    "types": ["node", "jest"],
-    "strict": true,
-    "target": "ES2020"
+    "outDir": "./dist",
+    "types": ["node", "jest"]
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules"]
+  "extends": "../../tsconfig.base.json",
+  "include": ["src/**/*"]
 }

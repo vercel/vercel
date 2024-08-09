@@ -1,4 +1,6 @@
-export interface Stat {
+import { posix as posixPath } from 'path';
+
+export interface DetectorFilesystemStat {
   name: string;
   path: string;
   type: 'file' | 'dir';
@@ -32,13 +34,13 @@ export abstract class DetectorFilesystem {
   protected abstract _hasPath(name: string): Promise<boolean>;
   protected abstract _readFile(name: string): Promise<Buffer>;
   protected abstract _isFile(name: string): Promise<boolean>;
-  protected abstract _readdir(name: string): Promise<Stat[]>;
+  protected abstract _readdir(name: string): Promise<DetectorFilesystemStat[]>;
   protected abstract _chdir(name: string): DetectorFilesystem;
 
   private pathCache: Map<string, Promise<boolean>>;
   private fileCache: Map<string, Promise<boolean>>;
   private readFileCache: Map<string, Promise<Buffer>>;
-  private readdirCache: Map<string, Promise<Stat[]>>;
+  private readdirCache: Map<string, Promise<DetectorFilesystemStat[]>>;
 
   constructor() {
     this.pathCache = new Map();
@@ -76,13 +78,45 @@ export abstract class DetectorFilesystem {
 
   /**
    * Returns a list of Stat objects from the current working directory.
+   * @param dirPath The path of the directory to read.
+   * @param options.potentialFiles optional. Array of potential file names (relative to the path).  If provided, these will be used to mark the filesystem caches as existing or not existing.
    */
-  public readdir = async (name: string): Promise<Stat[]> => {
-    let p = this.readdirCache.get(name);
+  public readdir = async (
+    dirPath: string,
+    options?: { potentialFiles?: string[] }
+  ): Promise<DetectorFilesystemStat[]> => {
+    let p = this.readdirCache.get(dirPath);
     if (!p) {
-      p = this._readdir(name);
-      this.readdirCache.set(name, p);
+      p = this._readdir(dirPath);
+      this.readdirCache.set(dirPath, p);
     }
+
+    const directoryContent = await p;
+    const directoryFiles = new Set<string>();
+
+    for (const file of directoryContent) {
+      if (file.type === 'file') {
+        // we know this file exists, mark it as so on the filesystem
+        this.fileCache.set(file.path, Promise.resolve(true));
+        this.pathCache.set(file.path, Promise.resolve(true));
+        directoryFiles.add(file.name);
+      }
+    }
+
+    if (options?.potentialFiles) {
+      // calculate the set of paths that truly do not exist
+      const filesThatDoNotExist = options.potentialFiles.filter(
+        path => !directoryFiles.has(path)
+      );
+      for (const filePath of filesThatDoNotExist) {
+        const fullFilePath =
+          dirPath === '/' ? filePath : posixPath.join(dirPath, filePath);
+        // we know this file does not exist, mark it as so on the filesystem
+        this.fileCache.set(fullFilePath, Promise.resolve(false));
+        this.pathCache.set(fullFilePath, Promise.resolve(false));
+      }
+    }
+
     return p;
   };
 
@@ -91,5 +125,16 @@ export abstract class DetectorFilesystem {
    */
   public chdir = (name: string): DetectorFilesystem => {
     return this._chdir(name);
+  };
+
+  /**
+   * Writes a file to the filesystem cache.
+   * @param name the name of the file to write
+   * @param content The content of the file
+   */
+  public writeFile = async (name: string, content: string): Promise<void> => {
+    this.readFileCache.set(name, Promise.resolve(Buffer.from(content)));
+    this.fileCache.set(name, Promise.resolve(true));
+    this.pathCache.set(name, Promise.resolve(true));
   };
 }

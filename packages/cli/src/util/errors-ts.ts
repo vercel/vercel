@@ -5,7 +5,7 @@ import { NowError } from './now-error';
 import code from './output/code';
 import { getCommandName } from './pkg-name';
 import chalk from 'chalk';
-import { isError } from './is-error';
+import { isError } from '@vercel/error-utils';
 
 /**
  * This error is thrown when there is an API error with a payload. The error
@@ -59,7 +59,7 @@ export class TeamDeleted extends NowError<'TEAM_DELETED', {}> {
   constructor() {
     super({
       code: 'TEAM_DELETED',
-      message: `Your team was deleted. You can switch to a different one using ${getCommandName(
+      message: `Your team was deleted or you were removed from the team. You can switch to a different one using ${getCommandName(
         `switch`
       )}.`,
       meta: {},
@@ -426,7 +426,7 @@ export class UserAborted extends NowError<'USER_ABORTED', {}> {
     super({
       code: 'USER_ABORTED',
       meta: {},
-      message: `The user aborted the operation.`,
+      message: `The user canceled the operation.`,
     });
   }
 }
@@ -571,7 +571,7 @@ export class DeploymentNotFound extends NowError<
     super({
       code: 'DEPLOYMENT_NOT_FOUND',
       meta: { id, context },
-      message: `Can't find the deployment ${id} under the context ${context}`,
+      message: `Can't find the deployment "${id}" under the context "${context}"`,
     });
   }
 }
@@ -668,13 +668,14 @@ export class CertMissing extends NowError<'ALIAS_IN_USE', { domain: string }> {
 
 export class CantParseJSONFile extends NowError<
   'CANT_PARSE_JSON_FILE',
-  { file: string }
+  { file: string; parseErrorLocation: string }
 > {
-  constructor(file: string) {
+  constructor(file: string, parseErrorLocation: string) {
+    const message = `Can't parse json file ${file}: ${parseErrorLocation}`;
     super({
       code: 'CANT_PARSE_JSON_FILE',
-      meta: { file },
-      message: `Can't parse json file`,
+      meta: { file, parseErrorLocation },
+      message,
     });
   }
 }

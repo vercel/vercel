@@ -60,7 +60,7 @@ def webrick_handler(httpMethod, path, body, headers)
   server.shutdown
   Thread.kill(th)
 
-  # Net::HTTP doesnt read the set the encoding so we must set manually.
+  # Net::HTTP doesn't read the set the encoding so we must set manually.
   # Bug: https://bugs.ruby-lang.org/issues/15517
   # More: https://yehudakatz.com/2010/05/17/encodings-unabridged/
   res_headers = res.each_capitalized.to_h
@@ -73,7 +73,7 @@ def webrick_handler(httpMethod, path, body, headers)
   {
     :statusCode => res.code.to_i,
     :headers => res_headers,
-    :body => res.body,
+    :body => res.body.nil? ? "" : res.body,
   }
 end
 
@@ -81,6 +81,12 @@ def vc__handler(event:, context:)
   payload = JSON.parse(event['body'])
   path = payload['path']
   headers = payload['headers']
+
+  if ENV['VERCEL_DEBUG']
+    puts 'Request Headers: '
+    puts headers
+  end
+
   httpMethod = payload['method']
   encoding = payload['encoding']
   body = payload['body']

@@ -1,31 +1,32 @@
 import chalk from 'chalk';
 import ms from 'ms';
-import table from 'text-table';
+import table from '../../util/output/table';
 import Client from '../../util/client';
 import getAliases from '../../util/alias/get-aliases';
 import getScope from '../../util/get-scope';
+import {
+  PaginationOptions,
+  getPaginationOpts,
+} from '../../util/get-pagination-opts';
 import stamp from '../../util/output/stamp';
-import strlen from '../../util/strlen';
 import getCommandFlags from '../../util/get-command-flags';
 import { getCommandName } from '../../util/pkg-name';
-
-import { Alias } from '../../types';
-
-interface Options {
-  '--next'?: number;
-}
+import type { Alias } from '@vercel-internals/types';
 
 export default async function ls(
   client: Client,
-  opts: Options,
+  opts: PaginationOptions,
   args: string[]
 ) {
   const { output } = client;
-  const { '--next': nextTimestamp } = opts;
   const { contextName } = await getScope(client);
 
-  if (typeof nextTimestamp !== undefined && Number.isNaN(nextTimestamp)) {
-    output.error('Please provide a number for flag --next');
+  let paginationOptions;
+
+  try {
+    paginationOptions = getPaginationOpts(opts);
+  } catch (err: unknown) {
+    output.prettyError(err);
     return 1;
   }
 
@@ -46,10 +47,10 @@ export default async function ls(
   const { aliases, pagination } = await getAliases(
     client,
     undefined,
-    nextTimestamp
+    ...paginationOptions
   );
   output.log(`aliases found under ${chalk.bold(contextName)} ${lsStamp()}`);
-  console.log(printAliasTable(aliases));
+  client.stdout.write(printAliasTable(aliases));
 
   if (pagination && pagination.count === 20) {
     const flags = getCommandFlags(opts, ['_', '--next']);
@@ -76,10 +77,6 @@ function printAliasTable(aliases: Alias[]) {
         ms(Date.now() - a.createdAt),
       ]),
     ],
-    {
-      align: ['l', 'l', 'r'],
-      hsep: ' '.repeat(4),
-      stringLength: strlen,
-    }
+    { align: ['l', 'l', 'r'], hsep: 4 }
   ).replace(/^/gm, '  ')}\n\n`;
 }

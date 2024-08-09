@@ -1,4 +1,5 @@
-import { validateConfig } from '../../../../src/util/dev/validate';
+import { describe, it, expect } from 'vitest';
+import { validateConfig } from '../../../../src/util/validate-config';
 
 describe('validateConfig', () => {
   it('should not error with empty config', async () => {
@@ -41,7 +42,7 @@ describe('validateConfig', () => {
       'Invalid vercel.json - `rewrites[0]` should NOT have additional property `src`. Did you mean `source`?'
     );
     expect(error!.link).toEqual(
-      'https://vercel.com/docs/configuration#project/rewrites'
+      'https://vercel.com/docs/concepts/projects/project-configuration#rewrites'
     );
   });
 
@@ -54,7 +55,7 @@ describe('validateConfig', () => {
       'Invalid vercel.json - `routes[0]` should NOT have additional property `source`. Did you mean `src`?'
     );
     expect(error!.link).toEqual(
-      'https://vercel.com/docs/configuration#project/routes'
+      'https://vercel.com/docs/concepts/projects/project-configuration#routes'
     );
   });
 
@@ -67,7 +68,7 @@ describe('validateConfig', () => {
       'Invalid vercel.json - `routes` should be array.'
     );
     expect(error!.link).toEqual(
-      'https://vercel.com/docs/configuration#project/routes'
+      'https://vercel.com/docs/concepts/projects/project-configuration#routes'
     );
   });
 
@@ -84,7 +85,7 @@ describe('validateConfig', () => {
       'Invalid vercel.json - `redirects[0]` missing required property `source`.'
     );
     expect(error!.link).toEqual(
-      'https://vercel.com/docs/configuration#project/redirects'
+      'https://vercel.com/docs/concepts/projects/project-configuration#redirects'
     );
   });
 
@@ -97,7 +98,7 @@ describe('validateConfig', () => {
       'Invalid vercel.json - `redirects[0].permanent` should be boolean.'
     );
     expect(error!.link).toEqual(
-      'https://vercel.com/docs/configuration#project/redirects'
+      'https://vercel.com/docs/concepts/projects/project-configuration#redirects'
     );
   });
 
@@ -110,7 +111,7 @@ describe('validateConfig', () => {
       'Invalid vercel.json - `cleanUrls` should be boolean.'
     );
     expect(error!.link).toEqual(
-      'https://vercel.com/docs/configuration#project/cleanurls'
+      'https://vercel.com/docs/concepts/projects/project-configuration#cleanurls'
     );
   });
 
@@ -123,7 +124,7 @@ describe('validateConfig', () => {
       'Invalid vercel.json - `trailingSlash` should be boolean.'
     );
     expect(error!.link).toEqual(
-      'https://vercel.com/docs/configuration#project/trailingslash'
+      'https://vercel.com/docs/concepts/projects/project-configuration#trailingslash'
     );
   });
 
@@ -136,7 +137,7 @@ describe('validateConfig', () => {
       'Invalid vercel.json - `headers[0]` should NOT have additional property `Content-Type`. Please remove it.'
     );
     expect(error!.link).toEqual(
-      'https://vercel.com/docs/configuration#project/headers'
+      'https://vercel.com/docs/concepts/projects/project-configuration#headers'
     );
   });
 
@@ -149,7 +150,7 @@ describe('validateConfig', () => {
       'Invalid vercel.json - `headers[0].source` should be string.'
     );
     expect(error!.link).toEqual(
-      'https://vercel.com/docs/configuration#project/headers'
+      'https://vercel.com/docs/concepts/projects/project-configuration#headers'
     );
   });
 
@@ -162,7 +163,7 @@ describe('validateConfig', () => {
       'Invalid vercel.json - `headers[0]` should NOT have additional property `stuff`. Please remove it.'
     );
     expect(error!.link).toEqual(
-      'https://vercel.com/docs/configuration#project/headers'
+      'https://vercel.com/docs/concepts/projects/project-configuration#headers'
     );
   });
 
@@ -175,7 +176,7 @@ describe('validateConfig', () => {
       'Invalid vercel.json - `headers[0].headers[0]` should NOT have additional property `Content-Type`. Please remove it.'
     );
     expect(error!.link).toEqual(
-      'https://vercel.com/docs/configuration#project/headers'
+      'https://vercel.com/docs/concepts/projects/project-configuration#headers'
     );
   });
 
@@ -190,7 +191,7 @@ describe('validateConfig', () => {
       'Invalid vercel.json - `headers[0].headers[0]` should NOT have additional property `val`. Please remove it.'
     );
     expect(error!.link).toEqual(
-      'https://vercel.com/docs/configuration#project/headers'
+      'https://vercel.com/docs/concepts/projects/project-configuration#headers'
     );
   });
 
@@ -205,7 +206,7 @@ describe('validateConfig', () => {
       'Invalid vercel.json - `redirects` should NOT have more than 1024 items.'
     );
     expect(error!.link).toEqual(
-      'https://vercel.com/docs/configuration#project/redirects'
+      'https://vercel.com/docs/concepts/projects/project-configuration#redirects'
     );
   });
 
@@ -229,7 +230,39 @@ describe('validateConfig', () => {
       'Invalid vercel.json - `headers[1].headers` should NOT have more than 1024 items.'
     );
     expect(error!.link).toEqual(
-      'https://vercel.com/docs/configuration#project/headers'
+      'https://vercel.com/docs/concepts/projects/project-configuration#headers'
+    );
+  });
+
+  it('should error with too low memory value', async () => {
+    const error = validateConfig({
+      functions: {
+        'api/test.js': {
+          memory: 127,
+        },
+      },
+    });
+    expect(error!.message).toEqual(
+      "Invalid vercel.json - `functions['api/test.js'].memory` should be >= 128."
+    );
+    expect(error!.link).toEqual(
+      'https://vercel.com/docs/concepts/projects/project-configuration#functions'
+    );
+  });
+
+  it('should error with too high memory value', async () => {
+    const error = validateConfig({
+      functions: {
+        'api/test.js': {
+          memory: 3010,
+        },
+      },
+    });
+    expect(error!.message).toEqual(
+      "Invalid vercel.json - `functions['api/test.js'].memory` should be <= 3009."
+    );
+    expect(error!.link).toEqual(
+      'https://vercel.com/docs/concepts/projects/project-configuration#functions'
     );
   });
 
@@ -252,5 +285,91 @@ describe('validateConfig', () => {
     );
 
     expect(error!.link).toEqual('https://vercel.link/functions-and-builds');
+  });
+
+  it('should error when crons have missing schedule', () => {
+    const error = validateConfig({
+      // @ts-ignore
+      crons: [{ path: '/api/test.js' }],
+    });
+    expect(error!.message).toEqual(
+      'Invalid vercel.json - `crons[0]` missing required property `schedule`.'
+    );
+    expect(error!.link).toEqual(
+      'https://vercel.com/docs/concepts/projects/project-configuration#crons'
+    );
+  });
+
+  it('should error when crons have missing path', () => {
+    const error = validateConfig({
+      // @ts-ignore
+      crons: [{ schedule: '* * * * *' }],
+    });
+    expect(error!.message).toEqual(
+      'Invalid vercel.json - `crons[0]` missing required property `path`.'
+    );
+    expect(error!.link).toEqual(
+      'https://vercel.com/docs/concepts/projects/project-configuration#crons'
+    );
+  });
+
+  it('should error when path is too long', () => {
+    const error = validateConfig({
+      crons: [{ path: '/' + 'x'.repeat(512), schedule: '* * * * *' }],
+    });
+    expect(error!.message).toEqual(
+      'Invalid vercel.json - `crons[0].path` should NOT be longer than 512 characters.'
+    );
+    expect(error!.link).toEqual(
+      'https://vercel.com/docs/concepts/projects/project-configuration#crons'
+    );
+  });
+
+  it('should error when schedule is too long', () => {
+    const error = validateConfig({
+      crons: [{ path: '/', schedule: '*'.repeat(257) }],
+    });
+    expect(error!.message).toEqual(
+      'Invalid vercel.json - `crons[0].schedule` should NOT be longer than 256 characters.'
+    );
+    expect(error!.link).toEqual(
+      'https://vercel.com/docs/concepts/projects/project-configuration#crons'
+    );
+  });
+
+  it('should error when path is empty', () => {
+    const error = validateConfig({
+      crons: [{ path: '', schedule: '* * * * *' }],
+    });
+    expect(error!.message).toEqual(
+      'Invalid vercel.json - `crons[0].path` should NOT be shorter than 1 characters.'
+    );
+    expect(error!.link).toEqual(
+      'https://vercel.com/docs/concepts/projects/project-configuration#crons'
+    );
+  });
+
+  it('should error when schedule is too short', () => {
+    const error = validateConfig({
+      crons: [{ path: '/', schedule: '* * * * ' }],
+    });
+    expect(error!.message).toEqual(
+      'Invalid vercel.json - `crons[0].schedule` should NOT be shorter than 9 characters.'
+    );
+    expect(error!.link).toEqual(
+      'https://vercel.com/docs/concepts/projects/project-configuration#crons'
+    );
+  });
+
+  it("should error when path doesn't start with `/`", () => {
+    const error = validateConfig({
+      crons: [{ path: 'api/cron', schedule: '* * * * *' }],
+    });
+    expect(error!.message).toEqual(
+      'Invalid vercel.json - `crons[0].path` should match pattern "^/.*".'
+    );
+    expect(error!.link).toEqual(
+      'https://vercel.com/docs/concepts/projects/project-configuration#crons'
+    );
   });
 });

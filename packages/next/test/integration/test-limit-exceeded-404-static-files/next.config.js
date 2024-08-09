@@ -20,10 +20,10 @@ assert(
   `unexpected locale count, expected 82, received ${locales.length}`
 );
 
-// generate 100MB text file which will be traced in `/api/hello`
+// generate large text file which will be traced in `/api/hello`
 // which when combined with the 404 HTML files will push us over the 250MB
 // uncompressed limit
-fs.writeFileSync('data.txt', Buffer.alloc(100 * 1024 * 1024));
+fs.writeFileSync('data.txt', Buffer.alloc(200 * 1024 * 1024));
 
 console.log(fs.readdirSync('.'));
 

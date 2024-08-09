@@ -2,10 +2,10 @@ import path from 'path';
 import chalk from 'chalk';
 import Client from '../client';
 import { Output } from '../output';
-import { User } from '../../types';
+import type { User } from '@vercel-internals/types';
 import { VercelConfig } from '../dev/types';
 import getDeploymentsByAppName from '../deploy/get-deployments-by-appname';
-import getDeploymentByIdOrHost from '../deploy/get-deployment-by-id-or-host';
+import getDeployment from '../get-deployment';
 
 async function getAppLastDeployment(
   output: Output,
@@ -22,7 +22,7 @@ async function getAppLastDeployment(
 
   // Try to fetch deployment details
   if (deploymentItem) {
-    return getDeploymentByIdOrHost(client, contextName, deploymentItem.uid);
+    return await getDeployment(client, contextName, deploymentItem.uid);
   }
 
   return null;
@@ -42,13 +42,11 @@ export async function getDeploymentForAlias(
   // When there are no args at all we try to get the targets from the config
   if (args.length === 2) {
     const [deploymentId] = args;
-    const deployment = await getDeploymentByIdOrHost(
-      client,
-      contextName,
-      deploymentId
-    );
-    output.stopSpinner();
-    return deployment;
+    try {
+      return await getDeployment(client, contextName, deploymentId);
+    } finally {
+      output.stopSpinner();
+    }
   }
 
   const appName =
@@ -59,13 +57,15 @@ export async function getDeploymentForAlias(
     return null;
   }
 
-  const deployment = await getAppLastDeployment(
-    output,
-    client,
-    appName,
-    user,
-    contextName
-  );
-  output.stopSpinner();
-  return deployment;
+  try {
+    return await getAppLastDeployment(
+      output,
+      client,
+      appName,
+      user,
+      contextName
+    );
+  } finally {
+    output.stopSpinner();
+  }
 }

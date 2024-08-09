@@ -16,10 +16,6 @@ const frameworks = (_frameworks as Framework[])
       defaultRoutes: undefined,
     };
 
-    if (framework.logo) {
-      framework.logo = `https://res.cloudinary.com/zeit-inc/image/fetch/${framework.logo}`;
-    }
-
     return framework;
   });
 

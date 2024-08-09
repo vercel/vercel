@@ -41,8 +41,21 @@ export interface Config {
   devCommand?: string;
   framework?: string | null;
   nodeVersion?: string;
+  middleware?: boolean;
   [key: string]: unknown;
 }
+
+export type HasField = Array<
+  | {
+      type: 'host';
+      value: string;
+    }
+  | {
+      type: 'header' | 'cookie' | 'query';
+      key: string;
+      value?: string;
+    }
+>;
 
 export interface Meta {
   isDev?: boolean;
@@ -53,7 +66,6 @@ export interface Meta {
   filesRemoved?: string[];
   env?: Env;
   buildEnv?: Env;
-  avoidTopLevelInstall?: boolean;
   [key: string]: unknown;
 }
 
@@ -96,6 +108,13 @@ export interface BuildOptions {
    * on the build environment.
    */
   meta?: Meta;
+
+  /**
+   * A callback to be invoked by a builder after a project's
+   * build command has been run but before the outputs have been
+   * fully processed
+   */
+  buildCallback?: (opts: Omit<BuildOptions, 'buildCallback'>) => Promise<void>;
 }
 
 export interface PrepareCacheOptions {
@@ -183,6 +202,12 @@ export interface StartDevServerSuccess {
    * shut down the dev server once an HTTP request has been fulfilled.
    */
   pid: number;
+
+  /**
+   * An optional function to shut down the dev server. If not provided, the
+   * dev server will forcefully be killed.
+   */
+  shutdown?: () => Promise<void>;
 }
 
 /**
@@ -299,9 +324,13 @@ export interface PackageJson {
 }
 
 export interface NodeVersion {
+  /** major version number: 18 */
   major: number;
+  /** major version range: "18.x" */
   range: string;
+  /** runtime descriptor: "nodejs18.x" */
   runtime: string;
+  /** date beyond which this version is discontinued: 2023-08-17T19:05:45.951Z */
   discontinueDate?: Date;
 }
 
@@ -335,24 +364,28 @@ export interface ProjectSettings {
   directoryListing?: boolean;
   gitForkProtection?: boolean;
   commandForIgnoringBuildStep?: string | null;
-  skipGitConnectDuringLink?: boolean;
 }
 
 export interface BuilderV2 {
   version: 2;
   build: BuildV2;
+  diagnostics?: Diagnostics;
   prepareCache?: PrepareCache;
+  shouldServe?: ShouldServe;
 }
 
 export interface BuilderV3 {
   version: 3;
   build: BuildV3;
+  diagnostics?: Diagnostics;
   prepareCache?: PrepareCache;
   shouldServe?: ShouldServe;
   startDevServer?: StartDevServer;
 }
 
 type ImageFormat = 'image/avif' | 'image/webp';
+
+type ImageContentDispositionType = 'inline' | 'attachment';
 
 export type RemotePattern = {
   /**
@@ -389,6 +422,7 @@ export interface Images {
   formats?: ImageFormat[];
   dangerouslyAllowSVG?: boolean;
   contentSecurityPolicy?: string;
+  contentDispositionType?: ImageContentDispositionType;
 }
 
 /**
@@ -409,6 +443,17 @@ export interface BuildResultBuildOutput {
   buildOutputPath: string;
 }
 
+export interface Cron {
+  path: string;
+  schedule: string;
+}
+
+/** The framework which created the function */
+export interface FunctionFramework {
+  slug: string;
+  version?: string;
+}
+
 /**
  * When a Builder implements `version: 2`, the `build()` function is expected
  * to return this type.
@@ -424,6 +469,10 @@ export interface BuildResultV2Typical {
     domain: string;
     value: string;
   }>;
+  framework?: {
+    version: string;
+  };
+  flags?: { definitions: FlagDefinitions };
 }
 
 export type BuildResultV2 = BuildResultV2Typical | BuildResultBuildOutput;
@@ -437,9 +486,37 @@ export interface BuildResultV3 {
 export type BuildV2 = (options: BuildOptions) => Promise<BuildResultV2>;
 export type BuildV3 = (options: BuildOptions) => Promise<BuildResultV3>;
 export type PrepareCache = (options: PrepareCacheOptions) => Promise<Files>;
+export type Diagnostics = (options: BuildOptions) => Promise<Files>;
 export type ShouldServe = (
   options: ShouldServeOptions
 ) => boolean | Promise<boolean>;
 export type StartDevServer = (
   options: StartDevServerOptions
 ) => Promise<StartDevServerResult>;
+
+/**
+ * TODO: The following types will eventually be exported by a more
+ *       relevant package.
+ */
+type FlagJSONArray = ReadonlyArray<FlagJSONValue>;
+
+type FlagJSONValue =
+  | string
+  | boolean
+  | number
+  | null
+  | FlagJSONArray
+  | { [key: string]: FlagJSONValue };
+
+type FlagOption = {
+  value: FlagJSONValue;
+  label?: string;
+};
+
+export interface FlagDefinition {
+  options?: FlagOption[];
+  origin?: string;
+  description?: string;
+}
+
+export type FlagDefinitions = Record<string, FlagDefinition>;

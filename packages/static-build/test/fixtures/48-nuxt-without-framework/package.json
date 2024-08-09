@@ -8,6 +8,9 @@
   },
   "keywords": [],
   "private": true,
+  "engines": {
+    "node": "16.x"
+  },
   "dependencies": {
     "nuxt": "2.15.2"
   }

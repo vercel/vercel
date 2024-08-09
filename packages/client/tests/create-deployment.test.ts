@@ -1,7 +1,6 @@
 import path from 'path';
 import fetch_ from 'node-fetch';
 import { generateNewToken } from './common';
-import { fetch, getApiDeploymentsUrl } from '../src/utils';
 import { Deployment } from './types';
 import { createDeployment } from '../src/index';
 
@@ -13,23 +12,11 @@ describe('create v2 deployment', () => {
     token = await generateNewToken();
   });
 
-  afterEach(async () => {
-    if (deployment) {
-      const response = await fetch(
-        `${getApiDeploymentsUrl()}/${deployment.id}`,
-        token,
-        {
-          method: 'DELETE',
-        }
-      );
-      expect(response.status).toEqual(200);
-    }
-  });
-
   it('will display an empty deployment warning', async () => {
     for await (const event of createDeployment(
       {
         token,
+        teamId: process.env.VERCEL_TEAM_ID,
         path: path.resolve(__dirname, 'fixtures', 'v2'),
       },
       {
@@ -51,6 +38,7 @@ describe('create v2 deployment', () => {
     for await (const event of createDeployment(
       {
         token,
+        teamId: process.env.VERCEL_TEAM_ID,
         path: path.resolve(__dirname, 'fixtures', 'v2'),
       },
       {
@@ -72,6 +60,7 @@ describe('create v2 deployment', () => {
     for await (const event of createDeployment(
       {
         token,
+        teamId: process.env.VERCEL_TEAM_ID,
         path: path.resolve(__dirname, 'fixtures', 'v2'),
       },
       {
@@ -91,6 +80,7 @@ describe('create v2 deployment', () => {
     for await (const event of createDeployment(
       {
         token,
+        teamId: process.env.VERCEL_TEAM_ID,
         path: path.resolve(__dirname, 'fixtures', 'v2-file-permissions'),
         skipAutoDetectionConfirmation: true,
       },
@@ -129,6 +119,7 @@ describe('create v2 deployment', () => {
     for await (const event of createDeployment(
       {
         token,
+        teamId: process.env.VERCEL_TEAM_ID,
         path: path.resolve(__dirname, 'fixtures', 'nowignore'),
         skipAutoDetectionConfirmation: true,
       },

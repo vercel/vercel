@@ -20,19 +20,5 @@
     {
       "handle": "filesystem"
     }
-  ],
-  "probes": [
-    {
-      "path": "/",
-      "mustContain": "`"
-    },
-    {
-      "path": "/functions/es5.ts",
-      "mustContain": "+"
-    },
-    {
-      "path": "/pricing/",
-      "mustContain": "trailing-redirect:RANDOMNESS_PLACEHOLDER"
-    }
   ]
 }

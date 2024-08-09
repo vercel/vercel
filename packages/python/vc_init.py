@@ -4,6 +4,7 @@ import json
 import inspect
 from importlib import util
 from http.server import BaseHTTPRequestHandler
+import socket
 
 # Import relative path https://docs.python.org/3/library/importlib.html#importing-a-source-file-directly
 __vc_spec = util.spec_from_file_location("__VC_HANDLER_MODULE_NAME", "./__VC_HANDLER_ENTRYPOINT")
@@ -12,6 +13,7 @@ sys.modules["__VC_HANDLER_MODULE_NAME"] = __vc_module
 __vc_spec.loader.exec_module(__vc_module)
 __vc_variables = dir(__vc_module)
 
+_use_legacy_asyncio = sys.version_info < (3, 10)
 
 def format_headers(headers, decode=False):
     keyToList = {}
@@ -29,7 +31,7 @@ if 'handler' in __vc_variables or 'Handler' in __vc_variables:
     base = __vc_module.handler if ('handler' in __vc_variables) else  __vc_module.Handler
     if not issubclass(base, BaseHTTPRequestHandler):
         print('Handler must inherit from BaseHTTPRequestHandler')
-        print('See the docs https://vercel.com/docs/runtimes#advanced-usage/advanced-python-usage')
+        print('See the docs: https://vercel.com/docs/functions/serverless-functions/runtimes/python')
         exit(1)
 
     print('using HTTP Handler')
@@ -37,7 +39,7 @@ if 'handler' in __vc_variables or 'Handler' in __vc_variables:
     import http
     import _thread
 
-    server = HTTPServer(('', 0), base)
+    server = HTTPServer(('127.0.0.1', 0), base)
     port = server.server_address[1]
 
     def vc_handler(event, context):
@@ -57,8 +59,11 @@ if 'handler' in __vc_variables or 'Handler' in __vc_variables:
             body = base64.b64decode(body)
 
         request_body = body.encode('utf-8') if isinstance(body, str) else body
-        conn = http.client.HTTPConnection('0.0.0.0', port)
-        conn.request(method, path, headers=headers, body=request_body)
+        conn = http.client.HTTPConnection('127.0.0.1', port)
+        try:
+            conn.request(method, path, headers=headers, body=request_body)
+        except (http.client.HTTPException, socket.error) as ex:
+            print ("Request Error: %s" % ex)
         res = conn.getresponse()
 
         return_dict = {
@@ -194,15 +199,24 @@ elif 'app' in __vc_variables:
                 ASGI instance using the connection scope.
                 Runs until the response is completely read from the application.
                 """
-                loop = asyncio.new_event_loop()
-                self.app_queue = asyncio.Queue(loop=loop)
+                if _use_legacy_asyncio:
+                    loop = asyncio.new_event_loop()
+                    self.app_queue = asyncio.Queue(loop=loop)
+                else:
+                    self.app_queue = asyncio.Queue()
                 self.put_message({'type': 'http.request', 'body': body, 'more_body': False})
 
                 asgi_instance = app(self.scope, self.receive, self.send)
 
-                asgi_task = loop.create_task(asgi_instance)
-                loop.run_until_complete(asgi_task)
+                if _use_legacy_asyncio:
+                    asgi_task = loop.create_task(asgi_instance)
+                    loop.run_until_complete(asgi_task)
+                else:
+                    asyncio.run(self.run_asgi_instance(asgi_instance))
                 return self.response
+
+            async def run_asgi_instance(self, asgi_instance):
+                await asgi_instance
 
             def put_message(self, message):
                 self.app_queue.put_nowait(message)
@@ -272,6 +286,14 @@ elif 'app' in __vc_variables:
             query = url.query.encode()
             path = url.path
 
+            headers_encoded = []
+            for k, v in headers.items():
+                # Cope with repeated headers in the encoding.
+                if isinstance(v, list):
+                    headers_encoded.append([k.lower().encode(), [i.encode() for i in v]])
+                else:
+                    headers_encoded.append([k.lower().encode(), v.encode()])
+
             scope = {
                 'server': (headers.get('host', 'lambda'), headers.get('x-forwarded-port', 80)),
                 'client': (headers.get(
@@ -281,7 +303,7 @@ elif 'app' in __vc_variables:
                 'scheme': headers.get('x-forwarded-proto', 'http'),
                 'root_path': '',
                 'query_string': query,
-                'headers': [[k.lower().encode(), v.encode()] for k, v in headers.items()],
+                'headers': headers_encoded,
                 'type': 'http',
                 'http_version': '1.1',
                 'method': payload['method'],
@@ -295,5 +317,5 @@ elif 'app' in __vc_variables:
 
 else:
     print('Missing variable `handler` or `app` in file "__VC_HANDLER_ENTRYPOINT".')
-    print('See the docs https://vercel.com/docs/runtimes#advanced-usage/advanced-python-usage')
+    print('See the docs: https://vercel.com/docs/functions/serverless-functions/runtimes/python')
     exit(1)

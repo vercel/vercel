@@ -1,8 +1,8 @@
 import chalk from 'chalk';
 import ms from 'ms';
 import plural from 'pluralize';
-import table from 'text-table';
-import { Cert } from '../../types';
+import table from '../../util/output/table';
+import type { Cert } from '@vercel-internals/types';
 import * as ERRORS from '../../util/errors-ts';
 import { Output } from '../../util/output';
 import deleteCertById from '../../util/certs/delete-cert-by-id';
@@ -98,11 +98,11 @@ function readConfirmation(output: Output, msg: string, certs: Cert[]) {
     output.print(
       `${table(certs.map(formatCertRow), {
         align: ['l', 'r', 'l'],
-        hsep: ' '.repeat(6),
+        hsep: 6,
       }).replace(/^(.*)/gm, '  $1')}\n`
     );
     output.print(
-      `${chalk.bold.red('> Are you sure?')} ${chalk.gray('[y/N] ')}`
+      `${chalk.bold.red('> Are you sure?')} ${chalk.gray('(y/N) ')}`
     );
     process.stdin
       .on('data', d => {

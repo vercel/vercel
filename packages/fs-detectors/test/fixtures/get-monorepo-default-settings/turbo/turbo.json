@@ -1,0 +1,2 @@
+// TEST COMMENT TO VERIFY JSON5 SUPPORT
+{ "pipeline": { "build": { "dependsOn": ["^build"], "outputs": ["dist/**"] } } }

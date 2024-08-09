@@ -1,9 +1,12 @@
-import { outputJSON } from 'fs-extra';
-import { Org, Project, ProjectLink } from '../../types';
-import { getLinkFromDir, VERCEL_DIR, VERCEL_DIR_PROJECT } from './link';
 import { join } from 'path';
+import { outputJSON, readFile } from 'fs-extra';
+import { VercelConfig } from '@vercel/client';
+import { VERCEL_DIR, VERCEL_DIR_PROJECT } from './link';
+import { PartialProjectSettings } from '../input/edit-project-settings';
+import type { Org, Project, ProjectLink } from '@vercel-internals/types';
+import { isErrnoException, isError } from '@vercel/error-utils';
 
-export type ProjectLinkAndSettings = ProjectLink & {
+export type ProjectLinkAndSettings = Partial<ProjectLink> & {
   settings: {
     createdAt: Project['createdAt'];
     installCommand: Project['installCommand'];
@@ -24,11 +27,22 @@ export type ProjectLinkAndSettings = ProjectLink & {
 export async function writeProjectSettings(
   cwd: string,
   project: Project,
-  org: Org
+  org: Org,
+  isRepoLinked: boolean
 ) {
+  let analyticsId: string | undefined;
+  if (
+    project.analytics?.id &&
+    (!project.analytics.disabledAt ||
+      (project.analytics.enabledAt &&
+        project.analytics.enabledAt > project.analytics.disabledAt))
+  ) {
+    analyticsId = project.analytics.id;
+  }
+
   const projectLinkAndSettings: ProjectLinkAndSettings = {
-    projectId: project.id,
-    orgId: org.id,
+    projectId: isRepoLinked ? undefined : project.id,
+    orgId: isRepoLinked ? undefined : org.id,
     settings: {
       createdAt: project.createdAt,
       framework: project.framework,
@@ -39,7 +53,7 @@ export async function writeProjectSettings(
       rootDirectory: project.rootDirectory,
       directoryListing: project.directoryListing,
       nodeVersion: project.nodeVersion,
-      analyticsId: project.analytics?.id,
+      analyticsId,
     },
   };
   const path = join(cwd, VERCEL_DIR, VERCEL_DIR_PROJECT);
@@ -48,6 +62,49 @@ export async function writeProjectSettings(
   });
 }
 
-export async function readProjectSettings(cwd: string) {
-  return await getLinkFromDir<ProjectLinkAndSettings>(cwd);
+export async function readProjectSettings(vercelDir: string) {
+  try {
+    return JSON.parse(
+      await readFile(join(vercelDir, VERCEL_DIR_PROJECT), 'utf8')
+    );
+  } catch (err: unknown) {
+    // `project.json` file does not exists, so project settings have not been pulled
+    if (
+      isErrnoException(err) &&
+      err.code &&
+      ['ENOENT', 'ENOTDIR'].includes(err.code)
+    ) {
+      return null;
+    }
+
+    // failed to parse JSON, treat the same as if project settings have not been pulled
+    if (isError(err) && err.name === 'SyntaxError') {
+      return null;
+    }
+
+    throw err;
+  }
+}
+
+export function pickOverrides(
+  vercelConfig: VercelConfig
+): PartialProjectSettings {
+  const overrides: PartialProjectSettings = {};
+  for (const prop of [
+    'buildCommand',
+    'devCommand',
+    'framework',
+    'ignoreCommand',
+    'installCommand',
+    'outputDirectory',
+  ] as const) {
+    if (typeof vercelConfig[prop] !== 'undefined') {
+      if (prop === 'ignoreCommand') {
+        overrides.commandForIgnoringBuildStep = vercelConfig[prop];
+      } else {
+        overrides[prop] = vercelConfig[prop];
+      }
+    }
+  }
+  return overrides;
 }

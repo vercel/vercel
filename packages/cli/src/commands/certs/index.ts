@@ -1,75 +1,17 @@
-import chalk from 'chalk';
-
 // @ts-ignore
 import { handleError } from '../../util/error';
 
-import getArgs from '../../util/get-args';
+import { parseArguments } from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
-import logo from '../../util/output/logo';
 
 import add from './add';
 import issue from './issue';
 import ls from './ls';
 import rm from './rm';
+import { certsCommand } from './command';
+import { help } from '../help';
 import Client from '../../util/client';
-import { getPkgName } from '../../util/pkg-name';
-
-const help = () => {
-  console.log(`
-  ${chalk.bold(`${logo} ${getPkgName()} certs`)} [options] <command>
-
-  ${chalk.yellow('NOTE:')} This command is intended for advanced use only.
-  By default, Vercel manages your certificates automatically.
-
-  ${chalk.dim('Commands:')}
-
-    ls                        Show all available certificates
-    issue      <cn> [<cn>]    Issue a new certificate for a domain
-    rm         <id>           Remove a certificate by id
-
-  ${chalk.dim('Options:')}
-
-    -h, --help                     Output usage information
-    -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
-    'FILE'
-  )}   Path to the local ${'`vercel.json`'} file
-    -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
-    'DIR'
-  )}    Path to the global ${'`.vercel`'} directory
-    -d, --debug                    Debug mode [off]
-    -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
-    'TOKEN'
-  )}        Login token
-    -S, --scope                    Set a custom scope
-    --challenge-only               Only show challenges needed to issue a cert
-    --crt ${chalk.bold.underline('FILE')}                     Certificate file
-    --key ${chalk.bold.underline(
-      'FILE'
-    )}                     Certificate key file
-    --ca ${chalk.bold.underline(
-      'FILE'
-    )}                      CA certificate chain file
-    -N, --next                     Show next page of results
-
-  ${chalk.dim('Examples:')}
-
-  ${chalk.gray(
-    '–'
-  )} Generate a certificate with the cnames "acme.com" and "www.acme.com"
-
-      ${chalk.cyan(`$ ${getPkgName()} certs issue acme.com www.acme.com`)}
-
-  ${chalk.gray('–')} Remove a certificate
-
-      ${chalk.cyan(`$ ${getPkgName()} certs rm id`)}
-
-  ${chalk.gray('–')} Paginate results, where ${chalk.dim(
-    '`1584722256178`'
-  )} is the time in milliseconds since the UNIX epoch.
-
-      ${chalk.cyan(`$ ${getPkgName()} certs ls --next 1584722256178`)}
-  `);
-};
+import { getFlagsSpecification } from '../../util/get-flags-specification';
 
 const COMMAND_CONFIG = {
   add: ['add'],
@@ -80,46 +22,46 @@ const COMMAND_CONFIG = {
 };
 
 export default async function main(client: Client) {
-  let argv;
+  const { output } = client;
 
+  let parsedArgs = null;
+
+  const flagsSpecification = getFlagsSpecification(certsCommand.options);
+
+  // Parse CLI args
   try {
-    argv = getArgs(client.argv.slice(2), {
-      '--challenge-only': Boolean,
-      '--overwrite': Boolean,
-      '--output': String,
-      '--crt': String,
-      '--key': String,
-      '--ca': String,
-      '--next': Number,
-      '-N': '--next',
-    });
-  } catch (err) {
-    handleError(err);
+    parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
+  } catch (error) {
+    handleError(error);
     return 1;
   }
 
-  if (argv['--help']) {
-    help();
+  if (parsedArgs.flags['--help']) {
+    output.print(help(certsCommand, { columns: client.stderr.columns }));
     return 2;
   }
 
-  const { output } = client;
-  const { subcommand, args } = getSubcommand(argv._.slice(1), COMMAND_CONFIG);
+  const { subcommand, args } = getSubcommand(
+    parsedArgs.args.slice(1),
+    COMMAND_CONFIG
+  );
   switch (subcommand) {
     case 'issue':
-      return issue(client, argv, args);
+      return issue(client, parsedArgs.flags, args);
     case 'ls':
-      return ls(client, argv, args);
+      return ls(client, parsedArgs.flags, args);
     case 'rm':
-      return rm(client, argv, args);
+      return rm(client, parsedArgs.flags, args);
     case 'add':
-      return add(client, argv, args);
+      return add(client, parsedArgs.flags, args);
     case 'renew':
       output.error('Renewing certificates is deprecated, issue a new one.');
       return 1;
     default:
       output.error('Please specify a valid subcommand: ls | issue | rm');
-      help();
+      client.output.print(
+        help(certsCommand, { columns: client.stderr.columns })
+      );
       return 2;
   }
 }

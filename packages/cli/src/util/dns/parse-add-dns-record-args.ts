@@ -1,4 +1,4 @@
-import { DNSRecordData } from '../../types';
+import type { DNSRecordData } from '@vercel-internals/types';
 
 export default function parseAddArgs(
   args: string[]
@@ -11,7 +11,7 @@ export default function parseAddArgs(
   if (domain && rest.length === 0) {
     return {
       domain,
-      data: null
+      data: null,
     };
   }
 
@@ -26,7 +26,7 @@ export default function parseAddArgs(
   if (type === 'MX' && args.length === 5) {
     return {
       domain,
-      data: { name, type, value, mxPriority: Number(args[4]) }
+      data: { name, type, value, mxPriority: Number(args[4]) },
     };
   }
 
@@ -40,9 +40,9 @@ export default function parseAddArgs(
           priority: Number(value),
           weight: Number(args[4]),
           port: Number(args[5]),
-          target: args[6]
-        }
-      }
+          target: args[6],
+        },
+      },
     };
   }
 
@@ -52,8 +52,8 @@ export default function parseAddArgs(
       data: {
         name,
         type,
-        value
-      }
+        value,
+      },
     };
   }
 

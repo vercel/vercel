@@ -3,7 +3,7 @@ module.exports = {
     return 'testing-build-id';
   },
   i18n: {
-    locales: ['en', 'fr', 'nl'],
+    locales: ['en', 'fr', 'fr-BE', 'nl'],
     defaultLocale: 'en',
   },
 };

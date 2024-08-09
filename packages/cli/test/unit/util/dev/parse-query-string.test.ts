@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest';
 import {
   parseQueryString,
   formatQueryString,
@@ -23,24 +24,24 @@ describe('parseQueryString', () => {
     const parsed = parseQueryString('');
     expect(parsed).toEqual({});
     const format = formatQueryString(parsed);
-    expect(format).toEqual(undefined);
+    expect(format).toEqual(null);
   });
   it('should work with question mark', async () => {
     const parsed = parseQueryString('?');
     expect(parsed).toEqual({});
     const format = formatQueryString(parsed);
-    expect(format).toEqual(undefined);
+    expect(format).toEqual(null);
   });
   it('should work without question mark', async () => {
     const parsed = parseQueryString('blarg');
     expect(parsed).toEqual({});
     const format = formatQueryString(parsed);
-    expect(format).toEqual(undefined);
+    expect(format).toEqual(null);
   });
   it('should work with undefined', async () => {
     const parsed = parseQueryString(undefined);
     expect(parsed).toEqual({});
     const format = formatQueryString(parsed);
-    expect(format).toEqual(undefined);
+    expect(format).toEqual(null);
   });
 });

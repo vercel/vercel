@@ -1,24 +1,30 @@
-import bytes from 'bytes';
-import Progress from 'progress';
-import chalk from 'chalk';
+import type { Deployment, Org } from '@vercel-internals/types';
 import {
   ArchiveFormat,
-  createDeployment,
   DeploymentOptions,
   VercelClientOptions,
+  createDeployment,
 } from '@vercel/client';
-import { Output } from '../output';
+import bytes from 'bytes';
+import chalk from 'chalk';
+import type { Agent } from 'http';
 import Now from '../../util';
-import { Org } from '../../types';
-import ua from '../ua';
+import { emoji, prependEmoji } from '../emoji';
+import { displayBuildLogs } from '../logs';
+import { Output } from '../output';
+import { progress } from '../output/progress';
 import { linkFolderToProject } from '../projects/link';
-import { prependEmoji, emoji } from '../emoji';
+import ua from '../ua';
 
 function printInspectUrl(
   output: Output,
-  inspectorUrl: string,
+  inspectorUrl: string | null | undefined,
   deployStamp: () => string
 ) {
+  if (!inspectorUrl) {
+    return;
+  }
+
   output.print(
     prependEmoji(
       `Inspect: ${chalk.bold(inspectorUrl)} ${deployStamp()}`,
@@ -34,11 +40,13 @@ export default async function processDeployment({
   isSettingUpProject,
   archive,
   skipAutoDetectionConfirmation,
+  noWait,
+  withLogs,
+  agent,
   ...args
 }: {
   now: Now;
-  output: Output;
-  paths: string[];
+  path: string;
   requestBody: DeploymentOptions;
   uploadStamp: () => string;
   deployStamp: () => string;
@@ -47,31 +55,33 @@ export default async function processDeployment({
   withCache?: boolean;
   org: Org;
   prebuilt: boolean;
+  vercelOutputDir?: string;
   projectName: string;
   isSettingUpProject: boolean;
   archive?: ArchiveFormat;
   skipAutoDetectionConfirmation?: boolean;
-  cwd?: string;
-  rootDirectory?: string;
+  cwd: string;
+  rootDirectory?: string | null;
+  noWait?: boolean;
+  withLogs?: boolean;
+  agent?: Agent;
 }) {
   let {
     now,
-    output,
-    paths,
+    path,
     requestBody,
     deployStamp,
     force,
     withCache,
     quiet,
     prebuilt,
+    vercelOutputDir,
     rootDirectory,
   } = args;
 
-  const { debug } = output;
-  let bar: Progress | null = null;
-
+  const client = now._client;
+  const { output } = client;
   const { env = {} } = requestBody;
-
   const token = now._token;
   if (!token) {
     throw new Error('Missing authentication token');
@@ -83,13 +93,15 @@ export default async function processDeployment({
     token,
     debug: now._debug,
     userAgent: ua,
-    path: paths[0],
+    path,
     force,
     withCache,
     prebuilt,
+    vercelOutputDir,
     rootDirectory,
     skipAutoDetectionConfirmation,
     archive,
+    agent,
   };
 
   const deployingSpinnerVal = isSettingUpProject
@@ -101,6 +113,13 @@ export default async function processDeployment({
   // the deployment is done
   const indications = [];
 
+  let abortController: AbortController | undefined;
+
+  function stopSpinner(): void {
+    abortController?.abort();
+    output.stopSpinner();
+  }
+
   try {
     for await (const event of createDeployment(clientOptions, requestBody)) {
       if (['tip', 'notice', 'warning'].includes(event.type)) {
@@ -109,44 +128,50 @@ export default async function processDeployment({
 
       if (event.type === 'file-count') {
         const { total, missing, uploads } = event.payload;
-        debug(`Total files ${total.size}, ${missing.length} changed`);
+        output.debug(`Total files ${total.size}, ${missing.length} changed`);
 
         const missingSize = missing
           .map((sha: string) => total.get(sha).data.length)
           .reduce((a: number, b: number) => a + b, 0);
+        const totalSizeHuman = bytes.format(missingSize, { decimalPlaces: 1 });
 
-        output.stopSpinner();
-        bar = new Progress(`${chalk.gray('>')} Upload [:bar] :percent :etas`, {
-          width: 20,
-          complete: '=',
-          incomplete: '',
-          total: missingSize,
-          clear: true,
-        });
+        // When stderr is not a TTY then we only want to
+        // print upload progress in 25% increments
+        let nextStep = 0;
+        const stepSize = now._client.stderr.isTTY ? 0 : 0.25;
 
-        bar.tick(0);
+        const updateProgress = () => {
+          const uploadedBytes = uploads.reduce((acc: number, e: any) => {
+            return acc + e.bytesUploaded;
+          }, 0);
 
-        uploads.forEach((e: any) =>
-          e.on('progress', () => {
-            if (!bar) return;
-
-            const totalBytesUploaded = uploads.reduce((acc: number, e: any) => {
-              return acc + e.bytesUploaded;
-            }, 0);
-            // set the current progress bar value
-            bar.curr = totalBytesUploaded;
-            // trigger rendering
-            bar.tick(0);
-
-            if (bar.complete) {
-              output.spinner(deployingSpinnerVal, 0);
+          const bar = progress(uploadedBytes, missingSize);
+          if (!bar) {
+            output.spinner(deployingSpinnerVal, 0);
+          } else {
+            const uploadedHuman = bytes.format(uploadedBytes, {
+              decimalPlaces: 1,
+              fixedDecimals: true,
+            });
+            const percent = uploadedBytes / missingSize;
+            if (percent >= nextStep) {
+              output.spinner(
+                `Uploading ${chalk.reset(
+                  `[${bar}] (${uploadedHuman}/${totalSizeHuman})`
+                )}`,
+                0
+              );
+              nextStep += stepSize;
             }
-          })
-        );
+          }
+        };
+
+        uploads.forEach((e: any) => e.on('progress', updateProgress));
+        updateProgress();
       }
 
       if (event.type === 'file-uploaded') {
-        debug(
+        output.debug(
           `Uploaded: ${event.payload.file.names.join(' ')} (${bytes(
             event.payload.file.data.length
           )})`
@@ -154,43 +179,68 @@ export default async function processDeployment({
       }
 
       if (event.type === 'created') {
-        if (bar && !bar.complete) {
-          bar.tick(bar.total + 1);
-        }
+        const deployment: Deployment = event.payload;
 
         await linkFolderToProject(
-          output,
-          cwd || paths[0],
+          client,
+          cwd,
           {
             orgId: org.id,
-            projectId: event.payload.projectId,
+            projectId: deployment.projectId!,
           },
           projectName,
           org.slug
         );
 
-        now.url = event.payload.url;
+        now.url = deployment.url;
 
-        output.stopSpinner();
+        stopSpinner();
 
-        printInspectUrl(output, event.payload.inspectorUrl, deployStamp);
+        printInspectUrl(output, deployment.inspectorUrl, deployStamp);
+
+        const isProdDeployment = deployment.target === 'production';
+        const previewUrl = `https://${deployment.url}`;
+
+        output.print(
+          prependEmoji(
+            `${isProdDeployment ? 'Production' : 'Preview'}: ${chalk.bold(
+              previewUrl
+            )} ${deployStamp()}`,
+            emoji('success')
+          ) + `\n`
+        );
 
         if (quiet) {
           process.stdout.write(`https://${event.payload.url}`);
         }
 
+        if (noWait) {
+          return deployment;
+        }
+
+        if (withLogs) {
+          let promise: Promise<void>;
+          ({ abortController, promise } = displayBuildLogs(
+            client,
+            deployment,
+            true
+          ));
+          promise.catch(error =>
+            output.warn(`Failed to read build logs: ${error}`)
+          );
+        }
         output.spinner(
-          event.payload.readyState === 'QUEUED' ? 'Queued' : 'Building',
+          deployment.readyState === 'QUEUED' ? 'Queued' : 'Building',
           0
         );
       }
 
-      if (event.type === 'building') {
+      if (event.type === 'building' && !withLogs) {
         output.spinner('Building', 0);
       }
 
       if (event.type === 'canceled') {
-        output.stopSpinner();
+        stopSpinner();
         return event.payload;
       }
 
@@ -200,23 +250,24 @@ export default async function processDeployment({
         event.type === 'ready' &&
         (event.payload.checksState
           ? event.payload.checksState === 'completed'
-          : true)
+          : true) &&
+        !withLogs
       ) {
         output.spinner('Completing', 0);
       }
 
-      if (event.type === 'checks-running') {
+      if (event.type === 'checks-running' && !withLogs) {
         output.spinner('Running Checks', 0);
       }
 
       if (event.type === 'checks-conclusion-failed') {
-        output.stopSpinner();
+        stopSpinner();
         return event.payload;
       }
 
       // Handle error events
       if (event.type === 'error') {
-        output.stopSpinner();
+        stopSpinner();
 
         const error = await now.handleDeploymentError(event.payload, {
           env,
@@ -226,17 +277,22 @@ export default async function processDeployment({
           return error;
         }
 
+        if (error.code === 'forbidden') {
+          return error;
+        }
+
         throw error;
       }
 
       // Handle alias-assigned event
       if (event.type === 'alias-assigned') {
+        stopSpinner();
         event.payload.indications = indications;
         return event.payload;
       }
     }
   } catch (err) {
-    output.stopSpinner();
+    stopSpinner();
     throw err;
   }
 }

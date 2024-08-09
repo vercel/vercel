@@ -1,0 +1,3 @@
+{
+  "devCommand": "vite --port $PORT --host ::1"
+}

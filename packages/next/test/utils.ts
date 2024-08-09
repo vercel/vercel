@@ -8,7 +8,9 @@ import http from 'http';
 import listen from 'test-listen';
 import ms from 'ms';
 import ndjson from 'ndjson';
+import os from 'os';
 import path from 'path';
+import fetch from 'node-fetch';
 
 jest.setTimeout(ms('6m'));
 
@@ -18,6 +20,21 @@ export function toHeaders(headers: IncomingMessage['headers'] = {}) {
     obj[key] = Array.isArray(value) ? value.join(',') : value;
   }
   return obj;
+}
+
+export async function normalizeReactVersion(projectPath: string) {
+  const pkgJson = await fs.readJSON(path.join(projectPath, 'package.json'));
+
+  if (pkgJson.dependencies?.['next'] === 'canary') {
+    const res = await fetch('https://unpkg.com/next@canary/package.json');
+    const canaryPkgJson = await res.json();
+
+    pkgJson.dependencies['react'] = canaryPkgJson.peerDependencies['react'];
+    pkgJson.dependencies['react-dom'] =
+      canaryPkgJson.peerDependencies['react-dom'];
+
+    await fs.writeJson(path.join(projectPath, 'package.json'), pkgJson);
+  }
 }
 
 export async function duplicateWithConfig(params: {
@@ -39,7 +56,10 @@ export async function duplicateWithConfig(params: {
   return projectPath;
 }
 
-export const composeRoute = (route, { host = 'example.vercel.sh' } = {}) =>
+export const composeRoute = (
+  route: string,
+  { host = 'example.vercel.sh' } = {}
+) =>
   `http://localhost:1337/workerId/GET/https/${host}/${route.replace('/', '')}`;
 
 export const createLoggerServer = async (): Promise<LoggerServer> => {
@@ -48,7 +68,7 @@ export const createLoggerServer = async (): Promise<LoggerServer> => {
   const server = http.createServer((req, res) => {
     req
       .pipe(ndjson.parse())
-      .on('data', json => content.push(json))
+      .on('data', (json: Dictionary) => content.push(json))
       .on('end', () => res.end());
   });
 
@@ -70,8 +90,11 @@ export const createLoggerServer = async (): Promise<LoggerServer> => {
 
 process.env.NEXT_TELEMETRY_DISABLED = '1';
 
-export async function deployAndTest(fixtureDir) {
-  const { deploymentId, deploymentUrl } = await testDeployment(fixtureDir);
+export async function deployAndTest(fixtureDir: string, opts) {
+  const { deploymentId, deploymentUrl } = await testDeployment(
+    fixtureDir,
+    opts
+  );
 
   return {
     deploymentId,
@@ -79,7 +102,7 @@ export async function deployAndTest(fixtureDir) {
   };
 }
 
-export async function waitFor(milliseconds) {
+export async function waitFor(milliseconds: number) {
   return new Promise(resolve => {
     setTimeout(resolve, milliseconds);
   });
@@ -112,4 +135,14 @@ export async function check(contentFn, regex, hardError = true) {
     throw new Error('TIMED OUT: ' + regex + '\n\n' + content);
   }
   return false;
+}
+
+export async function genDir(structure: { [path: string]: string }) {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'next-test-'));
+  for (const [p, content] of Object.entries(structure)) {
+    const p2 = path.join(dir, p);
+    await fs.mkdirp(path.dirname(p2));
+    await fs.writeFile(p2, content);
+  }
+  return dir;
 }

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { isErrnoException, isError, errorToString } from './util/is-error';
+import { isErrnoException, isError, errorToString } from '@vercel/error-utils';
 
 try {
   // Test to see if cwd has been deleted before
@@ -7,18 +7,18 @@ try {
   process.cwd();
 } catch (err: unknown) {
   if (isError(err) && err.message.includes('uv_cwd')) {
-    console.error('Error! The current working directory does not exist.');
+    // eslint-disable-next-line no-console
+    console.error('Error: The current working directory does not exist.');
     process.exit(1);
   }
 }
 
 import { join } from 'path';
 import { existsSync } from 'fs';
-import sourceMap from '@zeit/source-map-support';
 import { mkdirp } from 'fs-extra';
 import chalk from 'chalk';
 import epipebomb from 'epipebomb';
-import updateNotifier from 'update-notifier';
+import getLatestVersion from './util/get-latest-version';
 import { URL } from 'url';
 import * as Sentry from '@sentry/node';
 import hp from './util/humanize-path';
@@ -50,17 +50,13 @@ import getUpdateCommand from './util/get-update-command';
 import { metrics, shouldCollectMetrics } from './util/metrics';
 import { getCommandName, getTitleName } from './util/pkg-name';
 import doLoginPrompt from './util/login/prompt';
-import { AuthConfig, GlobalConfig } from './types';
+import type { AuthConfig, GlobalConfig } from '@vercel-internals/types';
 import { VercelConfig } from '@vercel/client';
-
-const isCanary = pkg.version.includes('canary');
-
-// Checks for available update and returns an instance
-const notifier = updateNotifier({
-  pkg,
-  distTag: isCanary ? 'canary' : 'latest',
-  updateCheckInterval: 1000 * 60 * 60 * 24 * 7, // 1 week
-});
+import { ProxyAgent } from 'proxy-agent';
+import box from './util/output/box';
+import { execExtension } from './util/extension/exec';
+import { help } from './args';
+import { updateCurrentTeamAfterLogin } from './util/login/update-current-team-after-login';
 
 const VERCEL_DIR = getGlobalPathConfig();
 const VERCEL_CONFIG_PATH = configFiles.getConfigFilePath();
@@ -70,21 +66,20 @@ const GLOBAL_COMMANDS = new Set(['help']);
 
 epipebomb();
 
-sourceMap.install();
-
 // Configure the error reporting system
 Sentry.init({
   dsn: SENTRY_DSN,
   release: `vercel-cli@${pkg.version}`,
-  environment: isCanary ? 'canary' : 'stable',
+  environment: 'stable',
 });
 
 let client: Client;
+let output: Output;
+let { isTTY } = process.stdout;
 let debug: (s: string) => void = () => {};
 let apiUrl = 'https://api.vercel.com';
 
 const main = async () => {
-  let { isTTY } = process.stdout;
   if (process.env.FORCE_TTY === '1') {
     isTTY = true;
     process.stdout.isTTY = true;
@@ -110,7 +105,12 @@ const main = async () => {
   }
 
   const isDebugging = argv['--debug'];
-  const output = new Output(process.stderr, { debug: isDebugging });
+  const isNoColor = argv['--no-color'];
+
+  output = new Output(process.stderr, {
+    debug: isDebugging,
+    noColor: isNoColor,
+  });
 
   debug = output.debug;
 
@@ -143,60 +143,40 @@ const main = async () => {
     return 1;
   }
 
-  const cwd = argv['--cwd'];
-  if (cwd) {
-    process.chdir(cwd);
-  }
-
-  // Print update information, if available
-  if (notifier.update && notifier.update.latest !== pkg.version && isTTY) {
-    const { latest } = notifier.update;
-    console.log(
-      info(
-        `${chalk.black.bgCyan('UPDATE AVAILABLE')} ` +
-          `Run ${cmd(
-            await getUpdateCommand()
-          )} to install ${getTitleName()} CLI ${latest}`
-      )
-    );
-
-    console.log(
-      info(
-        `Changelog: https://github.com/vercel/vercel/releases/tag/vercel@${latest}`
-      )
-    );
-  }
-
   // The second argument to the command can be:
   //
   //  * a path to deploy (as in: `vercel path/`)
   //  * a subcommand (as in: `vercel ls`)
   const targetOrSubcommand = argv._[2];
+  const subSubCommand = argv._[3];
 
-  // Currently no beta commands - add here as needed
+  // If empty, leave this code here for easy adding of beta commands later
   const betaCommands: string[] = [];
   if (betaCommands.includes(targetOrSubcommand)) {
-    console.log(
+    output.print(
       `${chalk.grey(
         `${getTitleName()} CLI ${
           pkg.version
         } ${targetOrSubcommand} (beta) — https://vercel.com/feedback`
-      )}`
-    );
-  } else {
-    output.print(
-      `${chalk.grey(
-        `${getTitleName()} CLI ${pkg.version}${
-          isCanary ? ' — https://vercel.com/feedback' : ''
-        }`
       )}\n`
     );
+  } else {
+    output.print(`${chalk.grey(`${getTitleName()} CLI ${pkg.version}`)}\n`);
   }
 
   // Handle `--version` directly
   if (!targetOrSubcommand && argv['--version']) {
+    // eslint-disable-next-line no-console
     console.log(pkg.version);
     return 0;
+  }
+
+  // Handle bare `-h` directly
+  const bareHelpOption = !targetOrSubcommand && argv['--help'];
+  const bareHelpSubcommand = targetOrSubcommand === 'help' && !subSubCommand;
+  if (bareHelpOption || bareHelpSubcommand) {
+    output.print(help());
+    return 2;
   }
 
   // Ensure that the Vercel global configuration directory exists
@@ -278,6 +258,7 @@ const main = async () => {
 
   // Shared API `Client` instance for all sub-commands to utilize
   client = new Client({
+    agent: new ProxyAgent({ keepAlive: true }),
     apiUrl,
     stdin: process.stdin,
     stdout: process.stdout,
@@ -286,20 +267,34 @@ const main = async () => {
     config,
     authConfig,
     localConfig,
+    localConfigPath,
     argv: process.argv,
   });
 
-  let subcommand;
+  // The `--cwd` flag is respected for all sub-commands
+  if (argv['--cwd']) {
+    client.cwd = argv['--cwd'];
+  }
+  const { cwd } = client;
+
+  // Gets populated to the subcommand name when a built-in is
+  // provided, otherwise it remains undefined for an extension
+  let subcommand: string | undefined = undefined;
 
   // Check if we are deploying something
   if (targetOrSubcommand) {
-    const targetPath = join(process.cwd(), targetOrSubcommand);
+    const targetPath = join(cwd, targetOrSubcommand);
     const targetPathExists = existsSync(targetPath);
     const subcommandExists =
       GLOBAL_COMMANDS.has(targetOrSubcommand) ||
       commands.has(targetOrSubcommand);
 
-    if (targetPathExists && subcommandExists && !argv['--cwd']) {
+    if (
+      targetPathExists &&
+      subcommandExists &&
+      !argv['--cwd'] &&
+      !process.env.NOW_BUILDER
+    ) {
       output.warn(
         `Did you mean to deploy the subdirectory "${targetOrSubcommand}"? ` +
           `Use \`vc --cwd ${targetOrSubcommand}\` instead.`
@@ -310,8 +305,7 @@ const main = async () => {
       debug(`user supplied known subcommand: "${targetOrSubcommand}"`);
       subcommand = targetOrSubcommand;
     } else {
-      debug('user supplied a possible target for deployment');
-      subcommand = 'deploy';
+      debug('user supplied a possible target for deployment or an extension');
     }
   } else {
     debug('user supplied no target, defaulting to deploy');
@@ -319,7 +313,7 @@ const main = async () => {
   }
 
   if (subcommand === 'help') {
-    subcommand = argv._[3] || 'deploy';
+    subcommand = subSubCommand || 'deploy';
     client.argv.push('-h');
   }
 
@@ -331,6 +325,7 @@ const main = async () => {
     !client.argv.includes('-h') &&
     !client.argv.includes('--help') &&
     !argv['--token'] &&
+    subcommand &&
     !subcommandsWithoutToken.includes(subcommand)
   ) {
     if (isTTY) {
@@ -342,16 +337,11 @@ const main = async () => {
         return result;
       }
 
-      if (result.teamId) {
-        // SSO login, so set the current scope to the appropriate Team
-        client.config.currentTeam = result.teamId;
-      } else {
-        delete client.config.currentTeam;
-      }
-
       // When `result` is a string it's the user's authentication token.
       // It needs to be saved to the configuration file.
       client.authConfig.token = result.token;
+
+      await updateCurrentTeamAfterLogin(client, output, result.teamId);
 
       configFiles.writeToAuthConfigFile(client.authConfig);
       configFiles.writeToConfigFile(client.config);
@@ -380,7 +370,7 @@ const main = async () => {
   }
 
   if (typeof argv['--token'] === 'string') {
-    const token = argv['--token'];
+    const token: string = argv['--token'];
 
     if (token.length === 0) {
       output.prettyError({
@@ -422,21 +412,25 @@ const main = async () => {
     );
   }
 
-  const targetCommand = commands.get(subcommand);
+  let targetCommand =
+    typeof subcommand === 'string' ? commands.get(subcommand) : undefined;
   const scope = argv['--scope'] || argv['--team'] || localConfig?.scope;
 
   if (
     typeof scope === 'string' &&
     targetCommand !== 'login' &&
-    targetCommand !== 'dev' &&
     targetCommand !== 'build' &&
-    !(targetCommand === 'teams' && argv._[3] !== 'invite')
+    !(targetCommand === 'teams' && subSubCommand !== 'invite')
   ) {
     let user = null;
 
     try {
       user = await getUser(client);
     } catch (err: unknown) {
+      if (err instanceof Error) {
+        output.debug(err.stack || err.toString());
+      }
+
       if (isErrnoException(err) && err.code === 'NOT_AUTHORIZED') {
         output.prettyError({
           message: `You do not have access to the specified account`,
@@ -446,11 +440,17 @@ const main = async () => {
         return 1;
       }
 
+      // eslint-disable-next-line no-console
       console.error(error('Not able to load user'));
       return 1;
     }
 
     if (user.id === scope || user.email === scope || user.username === scope) {
+      if (user.version === 'northstar') {
+        output.error('You cannot set your Personal Account as the scope.');
+        return 1;
+      }
+
       delete client.config.currentTeam;
     } else {
       let teams = [];
@@ -467,6 +467,16 @@ const main = async () => {
           return 1;
         }
 
+        if (isErrnoException(err) && err.code === 'rate_limited') {
+          output.prettyError({
+            message:
+              'Rate limited. Too many requests to the same endpoint: /teams',
+          });
+
+          return 1;
+        }
+
+        // eslint-disable-next-line no-console
         console.error(error('Not able to load teams'));
         return 1;
       }
@@ -493,93 +503,132 @@ const main = async () => {
 
   try {
     const start = Date.now();
-    let func: any;
-    switch (targetCommand) {
-      case 'alias':
-        func = require('./commands/alias').default;
-        break;
-      case 'bisect':
-        func = require('./commands/bisect').default;
-        break;
-      case 'build':
-        func = require('./commands/build').default;
-        break;
-      case 'certs':
-        func = require('./commands/certs').default;
-        break;
-      case 'deploy':
-        func = require('./commands/deploy').default;
-        break;
-      case 'dev':
-        func = require('./commands/dev').default;
-        break;
-      case 'dns':
-        func = require('./commands/dns').default;
-        break;
-      case 'domains':
-        func = require('./commands/domains').default;
-        break;
-      case 'env':
-        func = require('./commands/env').default;
-        break;
-      case 'git':
-        func = require('./commands/git').default;
-        break;
-      case 'init':
-        func = require('./commands/init').default;
-        break;
-      case 'inspect':
-        func = require('./commands/inspect').default;
-        break;
-      case 'link':
-        func = require('./commands/link').default;
-        break;
-      case 'list':
-        func = require('./commands/list').default;
-        break;
-      case 'logs':
-        func = require('./commands/logs').default;
-        break;
-      case 'login':
-        func = require('./commands/login').default;
-        break;
-      case 'logout':
-        func = require('./commands/logout').default;
-        break;
-      case 'project':
-        func = require('./commands/project').default;
-        break;
-      case 'pull':
-        func = require('./commands/pull').default;
-        break;
-      case 'remove':
-        func = require('./commands/remove').default;
-        break;
-      case 'secrets':
-        func = require('./commands/secrets').default;
-        break;
-      case 'teams':
-        func = require('./commands/teams').default;
-        break;
-      case 'whoami':
-        func = require('./commands/whoami').default;
-        break;
-      default:
-        func = null;
-        break;
+
+    if (!targetCommand) {
+      // Set this for the metrics to record it at the end
+      targetCommand = argv._[2];
+
+      // Try to execute as an extension
+      try {
+        exitCode = await execExtension(
+          client,
+          targetCommand,
+          argv._.slice(3),
+          cwd
+        );
+      } catch (err: unknown) {
+        if (isErrnoException(err) && err.code === 'ENOENT') {
+          // Fall back to `vc deploy <dir>`
+          targetCommand = subcommand = 'deploy';
+        } else {
+          throw err;
+        }
+      }
     }
 
-    if (!func || !targetCommand) {
-      const sub = param(subcommand);
-      output.error(`The ${sub} subcommand does not exist`);
-      return 1;
-    }
+    // Not using an `else` here because if the CLI extension
+    // was not found then we have to fall back to `vc deploy`
+    if (subcommand) {
+      let func: any;
+      switch (targetCommand) {
+        case 'alias':
+          func = require('./commands/alias').default;
+          break;
+        case 'bisect':
+          func = require('./commands/bisect').default;
+          break;
+        case 'build':
+          func = require('./commands/build').default;
+          break;
+        case 'certs':
+          func = require('./commands/certs').default;
+          break;
+        case 'deploy':
+          func = require('./commands/deploy').default;
+          break;
+        case 'dev':
+          func = require('./commands/dev').default;
+          break;
+        case 'dns':
+          func = require('./commands/dns').default;
+          break;
+        case 'domains':
+          func = require('./commands/domains').default;
+          break;
+        case 'env':
+          func = require('./commands/env').default;
+          break;
+        case 'git':
+          func = require('./commands/git').default;
+          break;
+        case 'init':
+          func = require('./commands/init').default;
+          break;
+        case 'inspect':
+          func = require('./commands/inspect').default;
+          break;
+        case 'link':
+          func = require('./commands/link').default;
+          break;
+        case 'list':
+          func = require('./commands/list').default;
+          break;
+        case 'logs':
+          func = require('./commands/logs').default;
+          break;
+        case 'login':
+          func = require('./commands/login').default;
+          break;
+        case 'logout':
+          func = require('./commands/logout').default;
+          break;
+        case 'project':
+          func = require('./commands/project').default;
+          break;
+        case 'promote':
+          func = require('./commands/promote').default;
+          break;
+        case 'pull':
+          func = require('./commands/pull').default;
+          break;
+        case 'redeploy':
+          func = require('./commands/redeploy').default;
+          break;
+        case 'remove':
+          func = require('./commands/remove').default;
+          break;
+        case 'rollback':
+          func = require('./commands/rollback').default;
+          break;
+        case 'secrets':
+          func = require('./commands/secrets').default;
+          break;
+        case 'target':
+          func = require('./commands/target').default;
+          break;
+        case 'teams':
+          func = require('./commands/teams').default;
+          break;
+        case 'whoami':
+          func = require('./commands/whoami').default;
+          break;
+        default:
+          func = null;
+          break;
+      }
 
-    if (func.default) {
-      func = func.default;
-    }
+      if (!func || !targetCommand) {
+        const sub = param(subcommand);
+        output.error(`The ${sub} subcommand does not exist`);
+        return 1;
+      }
 
-    exitCode = await func(client);
+      if (func.default) {
+        func = func.default;
+      }
+
+      exitCode = await func(client);
+    }
     const end = Date.now() - start;
 
     if (shouldCollectMetrics) {
@@ -606,6 +655,21 @@ const main = async () => {
       }
       if (typeof err.stack === 'string') {
         output.debug(err.stack);
+      }
+      return 1;
+    }
+
+    if (isErrnoException(err) && err.code === 'ECONNRESET') {
+      // Error message will look like the following:
+      // request to https://api.vercel.com/v2/user failed, reason: socket hang up
+      const matches = /request to https:\/\/(.*?)\//.exec(err.message || '');
+      const hostname = matches?.[1];
+      if (hostname) {
+        output.error(
+          `Connection to ${highlight(
+            hostname
+          )} interrupted. Please verify your internet connectivity and DNS configuration.`
+        );
       }
       return 1;
     }
@@ -667,10 +731,12 @@ const handleRejection = async (err: any) => {
     if (err instanceof Error) {
       await handleUnexpected(err);
     } else {
+      // eslint-disable-next-line no-console
       console.error(error(`An unexpected rejection occurred\n  ${err}`));
       await reportError(Sentry, client, err);
     }
   } else {
+    // eslint-disable-next-line no-console
     console.error(error('An unexpected empty rejection occurred'));
   }
 
@@ -686,6 +752,7 @@ const handleUnexpected = async (err: Error) => {
     return;
   }
 
+  // eslint-disable-next-line no-console
   console.error(error(`An unexpected error occurred!\n${err.stack}`));
   await reportError(Sentry, client, err);
 
@@ -696,7 +763,38 @@ process.on('unhandledRejection', handleRejection);
 process.on('uncaughtException', handleUnexpected);
 
 main()
-  .then(exitCode => {
+  .then(async exitCode => {
+    // Print update information, if available
+    if (isTTY && !process.env.NO_UPDATE_NOTIFIER) {
+      // Check if an update is available. If so, `latest` will contain a string
+      // of the latest version, otherwise `undefined`.
+      const latest = getLatestVersion({
+        output,
+        pkg,
+      });
+      if (latest) {
+        const changelog = 'https://github.com/vercel/vercel/releases';
+        const errorMsg =
+          exitCode && exitCode !== 2
+            ? chalk.magenta(
+                `\n\nThe latest update ${chalk.italic(
+                  'may'
+                )} fix any errors that occurred.`
+              )
+            : '';
+        output.print(
+          box(
+            `Update available! ${chalk.gray(`v${pkg.version}`)} ≫ ${chalk.green(
+              `v${latest}`
+            )}
+Changelog: ${output.link(changelog, changelog, { fallback: false })}
+Run ${chalk.cyan(cmd(await getUpdateCommand()))} to update.${errorMsg}`
+          )
+        );
+        output.print('\n\n');
+      }
+    }
+
     process.exitCode = exitCode;
   })
   .catch(handleUnexpected);

@@ -17,8 +17,15 @@ export const BaseFunctionConfigSchema = {
     memory: { type: 'number' },
     maxDuration: { type: 'number' },
     regions: {
-      type: 'array',
-      items: { type: 'string' },
+      oneOf: [
+        {
+          type: 'array',
+          items: { type: 'string' },
+        },
+        {
+          enum: ['all', 'default', 'auto'],
+        },
+      ],
     },
   },
 } as const;
@@ -26,7 +33,7 @@ export const BaseFunctionConfigSchema = {
 export type BaseFunctionConfig = FromSchema<typeof BaseFunctionConfigSchema>;
 
 export function getConfig<
-  T extends JSONSchema = typeof BaseFunctionConfigSchema
+  T extends JSONSchema = typeof BaseFunctionConfigSchema,
 >(project: Project, sourcePath: string, schema?: T): FromSchema<T> | null {
   const sourceFile = project.addSourceFileAtPath(sourcePath);
   const configNode = getConfigNode(sourceFile);

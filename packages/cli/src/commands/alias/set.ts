@@ -1,12 +1,12 @@
 import chalk from 'chalk';
 import { SetDifference } from 'utility-types';
 import { AliasRecord } from '../../util/alias/create-alias';
-import { Domain } from '../../types';
+import type { Domain } from '@vercel-internals/types';
 import { Output } from '../../util/output';
 import * as ERRORS from '../../util/errors-ts';
 import assignAlias from '../../util/alias/assign-alias';
 import Client from '../../util/client';
-import getDeploymentByIdOrHost from '../../util/deploy/get-deployment-by-id-or-host';
+import getDeployment from '../../util/get-deployment';
 import { getDeploymentForAlias } from '../../util/alias/get-deployment-by-alias';
 import getScope from '../../util/get-scope';
 import setupDomain from '../../util/domains/setup-domain';
@@ -123,8 +123,8 @@ export default async function set(
         return 1;
       }
 
-      console.log(
-        `${chalk.cyan('> Success!')} ${chalk.bold(
+      output.success(
+        `${chalk.bold(
           `${isWildcardAlias(target) ? '' : 'https://'}${handleResult.alias}`
         )} now points to https://${deployment.url} ${setStamp()}`
       );
@@ -136,34 +136,11 @@ export default async function set(
   const [deploymentIdOrHost, aliasTarget] = args;
   const deployment = handleCertError(
     output,
-    await getDeploymentByIdOrHost(client, contextName, deploymentIdOrHost)
+    await getDeployment(client, contextName, deploymentIdOrHost)
   );
 
   if (deployment === 1) {
     return deployment;
-  }
-
-  if (deployment instanceof ERRORS.DeploymentNotFound) {
-    output.error(
-      `Failed to find deployment "${deployment.meta.id}" under ${chalk.bold(
-        contextName
-      )}`
-    );
-    return 1;
-  }
-
-  if (deployment instanceof ERRORS.DeploymentPermissionDenied) {
-    output.error(
-      `No permission to access deployment "${
-        deployment.meta.id
-      }" under ${chalk.bold(deployment.meta.context)}`
-    );
-    return 1;
-  }
-
-  if (deployment instanceof ERRORS.InvalidDeploymentId) {
-    output.error(deployment.message);
-    return 1;
   }
 
   if (deployment === null) {
@@ -193,10 +170,10 @@ export default async function set(
 
   const prefix = isWildcard ? '' : 'https://';
 
-  console.log(
-    `${chalk.cyan('> Success!')} ${chalk.bold(
-      `${prefix}${handleResult.alias}`
-    )} now points to https://${deployment.url} ${setStamp()}`
+  output.success(
+    `${chalk.bold(`${prefix}${handleResult.alias}`)} now points to https://${
+      deployment.url
+    } ${setStamp()}`
   );
 
   return 0;
@@ -220,7 +197,7 @@ function handleSetupDomainError<T>(
   }
 
   if (error instanceof ERRORS.UserAborted) {
-    output.error(`User aborted`);
+    output.error(`User canceled.`);
     return 1;
   }
 

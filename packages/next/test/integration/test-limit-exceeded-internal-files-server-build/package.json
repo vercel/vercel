@@ -8,7 +8,8 @@
     "chrome-aws-lambda": "8.0.0",
     "firebase": "8.3.0",
     "next": "canary",
-    "react": "17.0.1",
-    "react-dom": "17.0.1"
-  }
+    "react": "19.0.0-rc-3208e73e-20240730",
+    "react-dom": "19.0.0-rc-3208e73e-20240730"
+  },
+  "ignoreNextjsUpdates": true
 }

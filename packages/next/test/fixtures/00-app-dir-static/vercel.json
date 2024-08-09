@@ -1,0 +1,72 @@
+{
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next"
+    }
+  ],
+  "probes": [
+    {
+      "path": "/dashboard",
+      "status": 200,
+      "mustContain": "hello from app/dashboard",
+      "responseHeaders": {
+        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch"
+      }
+    },
+    {
+      "path": "/dashboard",
+      "status": 200,
+      "headers": {
+        "RSC": "1"
+      },
+      "mustContain": ":{",
+      "mustNotContain": "<html"
+    },
+    {
+      "path": "/dashboard",
+      "status": 200,
+      "headers": {
+        "RSC": "1"
+      },
+      "responseHeaders": {
+        "content-type": "text/x-component",
+        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch"
+      }
+    },
+    {
+      "path": "/dashboard/another",
+      "status": 200,
+      "mustContain": "hello from newroot/dashboard/another"
+    },
+    {
+      "path": "/dashboard/deployments/123",
+      "status": 200,
+      "mustContain": "hello from app/dashboard/deployments/[id]. ID is: <!-- -->123"
+    },
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "index app page"
+    },
+    {
+      "path": "/dynamic/category-1/id-1",
+      "status": 200,
+      "mustContain": "{&quot;category&quot;:&quot;category-1&quot;,&quot;id&quot;:&quot;id-1&quot;}"
+    },
+    {
+      "path": "/dashboard/changelog",
+      "status": 200,
+      "mustContain": "hello from app/dashboard/changelog"
+    },
+    {
+      "path": "/",
+      "status": 200,
+      "headers": {
+        "RSC": "1"
+      },
+      "mustContain": ":{",
+      "mustNotContain": "<html"
+    }
+  ]
+}

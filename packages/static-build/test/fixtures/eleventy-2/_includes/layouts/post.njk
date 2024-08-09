@@ -1,0 +1,9 @@
+---
+layout: layouts/base.njk
+templateClass: tmpl-post
+---
+<h1>{{ title }}</h1>
+
+{{ content | safe }}
+
+<p><a href="{{ '/' | url }}">← Home</a></p>

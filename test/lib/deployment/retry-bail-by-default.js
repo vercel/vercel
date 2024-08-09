@@ -1,11 +1,11 @@
 const retry = require('async-retry');
 
-function canRetry (error) {
+function canRetry(error) {
   error.dontBail = true;
   return error;
 }
 
-async function retryBailByDefault (fn, opts) {
+async function retryBailByDefault(fn, opts) {
   return await retry(async () => {
     try {
       return await fn(canRetry);

@@ -5,6 +5,16 @@ __metadata:
   version: 4
   cacheKey: 7
 
+"32-custom-install-command@workspace:.":
+  version: 0.0.0-use.local
+  resolution: "32-custom-install-command@workspace:."
+  dependencies:
+    next: canary
+    react: latest
+    react-dom: latest
+  languageName: unknown
+  linkType: soft
+
 "@ampproject/toolbox-core@npm:^2.7.1, @ampproject/toolbox-core@npm:^2.7.1-alpha.0":
   version: 2.7.1
   resolution: "@ampproject/toolbox-core@npm:2.7.1"
@@ -4053,7 +4063,7 @@ next@canary:
   languageName: node
   linkType: hard
 
-"prop-types@npm:15.7.2, prop-types@npm:^15.6.2":
+"prop-types@npm:15.7.2":
   version: 15.7.2
   resolution: "prop-types@npm:15.7.2"
   dependencies:
@@ -4210,17 +4220,15 @@ next@canary:
   languageName: node
   linkType: hard
 
-"react-dom@npm:^16.8.6":
-  version: 16.14.0
-  resolution: "react-dom@npm:16.14.0"
+"react-dom@npm:latest":
+  version: 18.2.0
+  resolution: "react-dom@npm:18.2.0"
   dependencies:
     loose-envify: ^1.1.0
-    object-assign: ^4.1.1
-    prop-types: ^15.6.2
-    scheduler: ^0.19.1
+    scheduler: ^0.23.0
   peerDependencies:
-    react: ^16.14.0
-  checksum: a13558f0e7c6d1a98684214460bcd4b9005500015b5048fb1b0d2856786b8764dbc713e6b078a5b1a56e17866400e1d862183c7a0a513ae8351de11f6f6749d2
+    react: ^18.2.0
+  checksum: bfe02102c59eedc368c7102ccd9c8e4c69bba7cc566cc589bb26ceb99eca73031d1f21bbfe01e65201a387476114a5daf670d97645e568d615762929f35de9d1
   languageName: node
   linkType: hard
 
@@ -4238,14 +4246,12 @@ next@canary:
   languageName: node
   linkType: hard
 
-"react@npm:^16.8.6":
-  version: 16.14.0
-  resolution: "react@npm:16.14.0"
+"react@npm:latest":
+  version: 18.2.0
+  resolution: "react@npm:18.2.0"
   dependencies:
     loose-envify: ^1.1.0
-    object-assign: ^4.1.1
-    prop-types: ^15.6.2
-  checksum: 2769580b22952a52de3b5b2ea0f09cb904030b762d759739f49ab4da0b1f550e5c087ce3728c4be90f423d09481e0c075483c0c30b1ea9c549445c8b12020fd3
+  checksum: dbb7de0b4d887dd4e4a1442753d7486db884cb41c5724a4cb40a71cb43af34a4e0d6fb160eebc22bffc614398d5143dd25852dde07e3ec4b3c2567c749d89eb8
   languageName: node
   linkType: hard
 
@@ -4449,16 +4455,6 @@ next@canary:
   languageName: node
   linkType: hard
 
-"root-workspace-0b6124@workspace:.":
-  version: 0.0.0-use.local
-  resolution: "root-workspace-0b6124@workspace:."
-  dependencies:
-    next: canary
-    react: ^16.8.6
-    react-dom: ^16.8.6
-  languageName: unknown
-  linkType: soft
-
 "run-queue@npm:^1.0.0, run-queue@npm:^1.0.3":
   version: 1.0.3
   resolution: "run-queue@npm:1.0.3"
@@ -4523,13 +4519,12 @@ next@canary:
   languageName: node
   linkType: hard
 
-"scheduler@npm:^0.19.1":
-  version: 0.19.1
-  resolution: "scheduler@npm:0.19.1"
+"scheduler@npm:^0.23.0":
+  version: 0.23.0
+  resolution: "scheduler@npm:0.23.0"
   dependencies:
     loose-envify: ^1.1.0
-    object-assign: ^4.1.1
-  checksum: 804f990b9f370cca6d42b65f3cba2cc2bfed4973ee5623bed1ea36a6627842db8c891e2e5ac003f06f9ee892d1d3396921e27fa077346caf0213af05776e8dee
+  checksum: 90503d55dca0e608591b8a38c3b9858438805caa198745b36b56594dd0a3ef0d5ae4b2aefaacb8b24664959dc4363dff84aa002cdfd07dfbd2dfafcf7b31b873
   languageName: node
   linkType: hard
 

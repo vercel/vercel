@@ -1,0 +1,13 @@
+{
+  "private": true,
+  "scripts": {
+    "dev": "vuepress dev src",
+    "build": "vuepress build src"
+  },
+  "engines": {
+    "node": ">=16.0.0 <18.0.0"
+  },
+  "devDependencies": {
+    "vuepress": "1.9.7"
+  }
+}

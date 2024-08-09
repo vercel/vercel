@@ -14,10 +14,17 @@ export function getPrefixedEnvVars({
   envs: Envs;
 }): Envs {
   const vercelSystemEnvPrefix = 'VERCEL_';
+  const allowed = [
+    'VERCEL_URL',
+    'VERCEL_ENV',
+    'VERCEL_REGION',
+    'VERCEL_BRANCH_URL',
+    'VERCEL_PROJECT_PRODUCTION_URL',
+  ];
   const newEnvs: Envs = {};
   if (envPrefix && envs.VERCEL_URL) {
     Object.keys(envs)
-      .filter(key => key.startsWith(vercelSystemEnvPrefix))
+      .filter(key => allowed.includes(key) || key.startsWith('VERCEL_GIT_'))
       .forEach(key => {
         const newKey = `${envPrefix}${key}`;
         if (!(newKey in envs)) {

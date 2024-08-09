@@ -1,97 +1,63 @@
 import open from 'open';
-import boxen from 'boxen';
 import execa from 'execa';
 import plural from 'pluralize';
-import inquirer from 'inquirer';
 import { resolve } from 'path';
 import chalk, { Chalk } from 'chalk';
 import { URLSearchParams, parse } from 'url';
 
-import sleep from '../../util/sleep';
+import box from '../../util/output/box';
 import formatDate from '../../util/format-date';
 import link from '../../util/output/link';
-import logo from '../../util/output/logo';
-import getArgs from '../../util/get-args';
+import { parseArguments } from '../../util/get-args';
 import Client from '../../util/client';
-import { getPkgName } from '../../util/pkg-name';
-import { Deployment, PaginationOptions } from '../../types';
+import { Deployment } from '@vercel-internals/types';
 import { normalizeURL } from '../../util/bisect/normalize-url';
-
-interface DeploymentV6
-  extends Pick<
-    Deployment,
-    'url' | 'target' | 'projectId' | 'ownerId' | 'meta' | 'inspectorUrl'
-  > {
-  createdAt: number;
-}
+import getScope from '../../util/get-scope';
+import getDeployment from '../../util/get-deployment';
+import { help } from '../help';
+import { bisectCommand } from './command';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import handleError from '../../util/handle-error';
 
 interface Deployments {
-  deployments: DeploymentV6[];
-  pagination: PaginationOptions;
+  deployments: Deployment[];
 }
-
-const pkgName = getPkgName();
-
-const help = () => {
-  console.log(`
-  ${chalk.bold(`${logo} ${pkgName} bisect`)} [options]
-
-  ${chalk.dim('Options:')}
-
-    -h, --help                 Output usage information
-    -d, --debug                Debug mode [off]
-    -b, --bad                  Known bad URL
-    -g, --good                 Known good URL
-    -o, --open                 Automatically open each URL in the browser
-    -p, --path                 Subpath of the deployment URL to test
-    -r, --run                  Test script to run for each deployment
-
-  ${chalk.dim('Examples:')}
-
-  ${chalk.gray('–')} Bisect the current project interactively
-
-      ${chalk.cyan(`$ ${pkgName} bisect`)}
-
-  ${chalk.gray('–')} Bisect with a known bad deployment
-
-      ${chalk.cyan(`$ ${pkgName} bisect --bad example-310pce9i0.vercel.app`)}
-
-  ${chalk.gray('–')} Automated bisect with a run script
-
-      ${chalk.cyan(`$ ${pkgName} bisect --run ./test.sh`)}
-  `);
-};
-
-export default async function main(client: Client): Promise<number> {
+export default async function bisect(client: Client): Promise<number> {
   const { output } = client;
+  const scope = await getScope(client);
+  const { contextName } = scope;
 
-  const argv = getArgs(client.argv.slice(2), {
-    '--bad': String,
-    '-b': '--bad',
-    '--good': String,
-    '-g': '--good',
-    '--open': Boolean,
-    '-o': '--open',
-    '--path': String,
-    '-p': '--path',
-    '--run': String,
-    '-r': '--run',
-  });
+  let parsedArgs = null;
 
-  if (argv['--help']) {
-    help();
+  const flagsSpecification = getFlagsSpecification(bisectCommand.options);
+
+  try {
+    parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
+  } catch (error) {
+    handleError(error);
+    return 1;
+  }
+
+  if (parsedArgs.flags['--help']) {
+    output.print(help(bisectCommand, { columns: client.stderr.columns }));
     return 2;
   }
 
   let bad =
-    argv['--bad'] ||
-    (await prompt(client, `Specify a URL where the bug occurs:`));
+    parsedArgs.flags['--bad'] ||
+    (await client.input.text({
+      message: `Specify a URL where the bug occurs:`,
+      validate: val => (val ? true : 'A URL must be provided'),
+    }));
   let good =
-    argv['--good'] ||
-    (await prompt(client, `Specify a URL where the bug does not occur:`));
-  let subpath = argv['--path'] || '';
-  let run = argv['--run'] || '';
-  const openEnabled = argv['--open'] || false;
+    parsedArgs.flags['--good'] ||
+    (await client.input.text({
+      message: `Specify a URL where the bug does not occur:`,
+      validate: val => (val ? true : 'A URL must be provided'),
+    }));
+  let subpath = parsedArgs.flags['--path'] || '';
+  let run = parsedArgs.flags['--run'] || '';
+  const openEnabled = parsedArgs.flags['--open'] || false;
 
   if (run) {
     run = resolve(run);
@@ -137,20 +103,24 @@ export default async function main(client: Client): Promise<number> {
   }
 
   if (!subpath) {
-    subpath = await prompt(
-      client,
-      `Specify the URL subpath where the bug occurs:`
-    );
+    subpath = await client.input.text({
+      message: `Specify the URL subpath where the bug occurs:`,
+      validate: val => (val ? true : 'A subpath must be provided'),
+    });
   }
 
   output.spinner('Retrieving deployments…');
 
   // `getDeployment` cannot be parallelized because it might prompt for login
-  const badDeployment = await getDeployment(client, bad).catch(err => err);
+  const badDeployment = await getDeployment(client, contextName, bad).catch(
+    err => err
+  );
 
   if (badDeployment) {
     if (badDeployment instanceof Error) {
-      badDeployment.message += ` "${bad}"`;
+      badDeployment.message += ` when requesting bad deployment "${normalizeURL(
+        bad
+      )}"`;
       output.prettyError(badDeployment);
       return 1;
     }
@@ -161,11 +131,15 @@ export default async function main(client: Client): Promise<number> {
   }
 
   // `getDeployment` cannot be parallelized because it might prompt for login
-  const goodDeployment = await getDeployment(client, good).catch(err => err);
+  const goodDeployment = await getDeployment(client, contextName, good).catch(
+    err => err
+  );
 
   if (goodDeployment) {
     if (goodDeployment instanceof Error) {
-      goodDeployment.message += ` "${good}"`;
+      goodDeployment.message += ` when requesting good deployment "${normalizeURL(
+        good
+      )}"`;
       output.prettyError(goodDeployment);
       return 1;
     }
@@ -201,44 +175,38 @@ export default async function main(client: Client): Promise<number> {
   }
 
   // Fetch all the project's "READY" deployments with the pagination API
-  let deployments: DeploymentV6[] = [];
-  let next: number | undefined = badDeployment.createdAt + 1;
-  do {
-    const query = new URLSearchParams();
-    query.set('projectId', projectId);
-    if (badDeployment.target) {
-      query.set('target', badDeployment.target);
-    }
-    query.set('limit', '100');
-    query.set('state', 'READY');
-    if (next) {
-      query.set('until', String(next));
-    }
+  let deployments: Deployment[] = [];
 
-    const res = await client.fetch<Deployments>(`/v6/deployments?${query}`, {
+  const query = new URLSearchParams();
+  query.set('projectId', projectId);
+  if (badDeployment.target) {
+    query.set('target', badDeployment.target);
+  }
+  query.set('state', 'READY');
+  query.set('until', String(badDeployment.createdAt + 1));
+
+  for await (const chunk of client.fetchPaginated<Deployments>(
+    `/v6/deployments?${query}`,
+    {
       accountId: badDeployment.ownerId,
-    });
-
-    next = res.pagination.next;
-
-    let newDeployments = res.deployments;
+    }
+  )) {
+    let newDeployments = chunk.deployments;
 
     // If we have the "good" deployment in this chunk, then we're done
+    let hasGood = false;
     for (let i = 0; i < newDeployments.length; i++) {
       if (newDeployments[i].url === good) {
-        newDeployments = newDeployments.slice(0, i + 1);
-        next = undefined;
+        // grab all deployments up until the good one
+        newDeployments = newDeployments.slice(0, i);
+        hasGood = true;
         break;
       }
     }
 
     deployments = deployments.concat(newDeployments);
-
-    if (next) {
-      // Small sleep to avoid rate limiting
-      await sleep(100);
-    }
-  } while (next);
+    if (hasGood) break;
+  }
 
   if (!deployments.length) {
     output.error(
@@ -275,7 +243,7 @@ export default async function main(client: Client): Promise<number> {
     const commit = getCommit(deployment);
     if (commit) {
       const shortSha = commit.sha.substring(0, 7);
-      const firstLine = commit.message.split('\n')[0];
+      const firstLine = commit.message?.split('\n')[0];
       output.log(`${chalk.bold('Commit:')} [${shortSha}] ${firstLine}`);
     }
 
@@ -316,9 +284,7 @@ export default async function main(client: Client): Promise<number> {
       if (openEnabled) {
         await open(testUrl);
       }
-      const answer = await inquirer.prompt({
-        type: 'expand',
-        name: 'action',
+      action = await client.input.expand({
         message: 'Select an action:',
         choices: [
           { key: 'g', name: 'Good', value: 'good' },
@@ -326,7 +292,6 @@ export default async function main(client: Client): Promise<number> {
           { key: 's', name: 'Skip', value: 'skip' },
         ],
       });
-      action = answer.action;
     }
 
     if (action === 'good') {
@@ -352,30 +317,19 @@ export default async function main(client: Client): Promise<number> {
   const commit = getCommit(lastBad);
   if (commit) {
     const shortSha = commit.sha.substring(0, 7);
-    const firstLine = commit.message.split('\n')[0];
+    const firstLine = commit.message?.split('\n')[0];
     result.push(` ${chalk.bold('Commit:')} [${shortSha}] ${firstLine}`);
   }
 
   result.push(`${chalk.bold('Inspect:')} ${link(lastBad.inspectorUrl)}`);
 
-  output.print(boxen(result.join('\n'), { padding: 1 }));
+  output.print(box(result.join('\n')));
   output.print('\n');
 
   return 0;
 }
 
-function getDeployment(
-  client: Client,
-  hostname: string
-): Promise<DeploymentV6> {
-  const query = new URLSearchParams();
-  query.set('url', hostname);
-  query.set('resolve', '1');
-  query.set('noState', '1');
-  return client.fetch<DeploymentV6>(`/v10/deployments/get?${query}`);
-}
-
-function getCommit(deployment: DeploymentV6) {
+function getCommit(deployment: Deployment) {
   const sha =
     deployment.meta?.githubCommitSha ||
     deployment.meta?.gitlabCommitSha ||
@@ -386,20 +340,4 @@ function getCommit(deployment: DeploymentV6) {
     deployment.meta?.gitlabCommitMessage ||
     deployment.meta?.bitbucketCommitMessage;
   return { sha, message };
-}
-
-async function prompt(client: Client, message: string): Promise<string> {
-  // eslint-disable-next-line no-constant-condition
-  while (true) {
-    const { val } = await client.prompt({
-      type: 'input',
-      name: 'val',
-      message,
-    });
-    if (val) {
-      return val;
-    } else {
-      client.output.error('A value must be specified');
-    }
-  }
 }

@@ -1,0 +1,9 @@
+{
+  "$schema": "https://turborepo.org/schema.json",
+  "extends": ["//"],
+  "pipeline": {
+    "build": {
+      "outputs": ["gatsby-browser.js", "web-vitals.js", "index.js"]
+    }
+  }
+}

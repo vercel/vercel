@@ -7,5 +7,6 @@
     "next": "12.1.6",
     "react": "latest",
     "react-dom": "latest"
-  }
+  },
+  "ignoreNextjsUpdates": true
 }

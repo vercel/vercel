@@ -1,0 +1,38 @@
+{
+  "probes": [
+    { "path": "/", "mustContain": "<h1>Gatsby - Index</h1>" },
+    {
+      "path": "/using-ssr/",
+      "mustContain": "<h1>This page is <!-- -->rendered server side</h1>"
+    },
+    {
+      "path": "/using-dsg/",
+      "mustContain": "<h1>Hello from a DSG Page</h1>"
+    },
+    {
+      "path": "/page-data/using-ssr/page-data.json",
+      "mustContain": "\"componentChunkName\":\"component---src-pages-using-ssr-js\",\"path\":\"/using-ssr/\""
+    },
+    {
+      "path": "/page-data/using-dsg/page-data.json",
+      "mustContain": "\"componentChunkName\":\"component---src-templates-using-dsg-js\",\"path\":\"/using-dsg\""
+    },
+    {
+      "path": "/asset.txt",
+      "mustContain": "asset that was added in `onPostBuild`"
+    },
+    {
+      "path": "/api/hello",
+      "mustContain": "{\"message\":\"A ok!\"}"
+    },
+    {
+      "fetchOptions": { "redirect": "manual" },
+      "path": "/redirect",
+      "status": 307
+    },
+    {
+      "path": "/rewrite",
+      "mustContain": "Vercel"
+    }
+  ]
+}

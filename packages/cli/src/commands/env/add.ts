@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import { ProjectEnvTarget, Project, ProjectEnvType } from '../../types';
+import type { Project, ProjectEnvTarget } from '@vercel-internals/types';
 import { Output } from '../../util/output';
 import Client from '../../util/client';
 import stamp from '../../util/output/stamp';
@@ -8,7 +8,7 @@ import getEnvRecords from '../../util/env/get-env-records';
 import {
   isValidEnvTarget,
   getEnvTargetPlaceholder,
-  getEnvTargetChoices,
+  envTargetChoices,
 } from '../../util/env/env-target';
 import readStandardInput from '../../util/input/read-standard-input';
 import param from '../../util/output/param';
@@ -19,6 +19,8 @@ import { isAPIError } from '../../util/errors-ts';
 
 type Options = {
   '--debug': boolean;
+  '--sensitive': boolean;
+  '--force': boolean;
 };
 
 export default async function add(
@@ -28,9 +30,6 @@ export default async function add(
   args: string[],
   output: Output
 ) {
-  // improve the way we show inquirer prompts
-  require('../../util/input/patch-inquirer');
-
   const stdInput = await readStandardInput(client.stdin);
   let [envName, envTargetArg, envGitBranch] = args;
 
@@ -65,18 +64,11 @@ export default async function add(
     envTargets.push(envTargetArg);
   }
 
-  while (!envName) {
-    const { inputName } = await client.prompt({
-      type: 'input',
-      name: 'inputName',
+  if (!envName) {
+    envName = await client.input.text({
       message: `What’s the name of the variable?`,
+      validate: val => (val ? true : 'Name cannot be empty'),
     });
-
-    envName = inputName;
-
-    if (!inputName) {
-      output.error('Name cannot be empty');
-    }
   }
 
   const { envs } = await getEnvRecords(
@@ -88,9 +80,9 @@ export default async function add(
   const existing = new Set(
     envs.filter(r => r.key === envName).map(r => r.target)
   );
-  const choices = getEnvTargetChoices().filter(c => !existing.has(c.value));
+  const choices = envTargetChoices.filter(c => !existing.has(c.value));
 
-  if (choices.length === 0) {
+  if (choices.length === 0 && !opts['--force']) {
     output.error(
       `The variable ${param(
         envName
@@ -106,26 +98,18 @@ export default async function add(
   if (stdInput) {
     envValue = stdInput;
   } else {
-    const { inputValue } = await client.prompt({
-      type: 'input',
-      name: 'inputValue',
+    envValue = await client.input.text({
       message: `What’s the value of ${envName}?`,
     });
-
-    envValue = inputValue || '';
   }
 
   while (envTargets.length === 0) {
-    const { inputTargets } = await client.prompt({
-      name: 'inputTargets',
-      type: 'checkbox',
+    envTargets = await client.input.checkbox({
       message: `Add ${envName} to which Environments (select multiple)?`,
       choices,
     });
 
-    envTargets = inputTargets;
-
-    if (inputTargets.length === 0) {
+    if (envTargets.length === 0) {
       output.error('Please select at least one Environment');
     }
   }
@@ -134,15 +118,15 @@ export default async function add(
     !stdInput &&
     !envGitBranch &&
     envTargets.length === 1 &&
-    envTargets[0] === ProjectEnvTarget.Preview
+    envTargets[0] === 'preview'
   ) {
-    const { inputValue } = await client.prompt({
-      type: 'input',
-      name: 'inputValue',
+    envGitBranch = await client.input.text({
       message: `Add ${envName} to which Git branch? (leave empty for all Preview branches)?`,
     });
-    envGitBranch = inputValue || '';
   }
+
+  const type = opts['--sensitive'] ? 'sensitive' : 'encrypted';
+  const upsert = opts['--force'] ? 'true' : '';
 
   const addStamp = stamp();
   try {
@@ -151,7 +135,8 @@ export default async function add(
       output,
       client,
       project.id,
-      ProjectEnvType.Encrypted,
+      upsert,
+      type,
       envName,
       envValue,
       envTargets,
@@ -167,9 +152,11 @@ export default async function add(
 
   output.print(
     `${prependEmoji(
-      `Added Environment Variable ${chalk.bold(
-        envName
-      )} to Project ${chalk.bold(project.name)} ${chalk.gray(addStamp())}`,
+      `${
+        opts['--force'] ? 'Overrode' : 'Added'
+      } Environment Variable ${chalk.bold(envName)} to Project ${chalk.bold(
+        project.name
+      )} ${chalk.gray(addStamp())}`,
       emoji('success')
     )}\n`
   );

@@ -1,12 +1,14 @@
 import chance from 'chance';
 import { client } from './client';
+import type { User } from '@vercel-internals/types';
 
-export function useUser() {
+export function useUser(additionalAttrs: Partial<User> = {}) {
   const user = {
     id: chance().guid(),
     email: chance().email(),
     name: chance().name(),
     username: chance().first().toLowerCase(),
+    ...additionalAttrs,
   };
   client.scenario.get('/v2/user', (_req, res) => {
     res.json({

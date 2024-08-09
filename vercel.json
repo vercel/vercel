@@ -1,5 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "outputDirectory": "public",
   "rewrites": [
     {
       "source": "/",
@@ -18,11 +19,6 @@
       "destination": "/list-all.json"
     }
   ],
-  "build": {
-    "env": {
-      "ENABLE_VC_BUILD": "1"
-    }
-  },
   "github": {
     "silent": true,
     "autoJobCancelation": true

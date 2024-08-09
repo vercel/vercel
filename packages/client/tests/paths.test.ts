@@ -19,8 +19,9 @@ describe('path handling', () => {
           name: 'now-client-tests-v2',
         }
       );
-    } catch (e) {
-      expect(e.code).toEqual('invalid_path');
+    } catch (_error: unknown) {
+      const error = _error as NodeJS.ErrnoException;
+      expect(error.code).toEqual('invalid_path');
     }
   });
 
@@ -35,8 +36,9 @@ describe('path handling', () => {
           name: 'now-client-tests-v2',
         }
       );
-    } catch (e) {
-      expect(e.code).toEqual('invalid_path');
+    } catch (_error: unknown) {
+      const error = _error as NodeJS.ErrnoException;
+      expect(error.code).toEqual('invalid_path');
     }
   });
 });

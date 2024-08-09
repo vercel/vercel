@@ -10,10 +10,8 @@
       }
     }
   ],
-  "build": {
-    "env": {
-      "VERCEL_BUILDER_DEBUG": "1"
-    }
-  },
-  "probes": [{ "path": "/", "mustContain": "hello world" }]
+  "probes": [{ "path": "/", "mustContain": "hello world" }],
+  "projectSettings": {
+    "nodeVersion": "16.x"
+  }
 }

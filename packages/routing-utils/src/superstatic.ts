@@ -51,6 +51,9 @@ export function convertRedirects(
   return redirects.map(r => {
     const { src, segments } = sourceToRegex(r.source);
     const hasSegments = collectHasSegments(r.has);
+    normalizeHasKeys(r.has);
+    normalizeHasKeys(r.missing);
+
     try {
       const loc = replaceSegments(segments, hasSegments, r.destination, true);
       let status: number;
@@ -70,6 +73,9 @@ export function convertRedirects(
       if (r.has) {
         route.has = r.has;
       }
+      if (r.missing) {
+        route.missing = r.missing;
+      }
       return route;
     } catch (e) {
       throw new Error(`Failed to parse redirect: ${JSON.stringify(r)}`);
@@ -84,6 +90,9 @@ export function convertRewrites(
   return rewrites.map(r => {
     const { src, segments } = sourceToRegex(r.source);
     const hasSegments = collectHasSegments(r.has);
+    normalizeHasKeys(r.has);
+    normalizeHasKeys(r.missing);
+
     try {
       const dest = replaceSegments(
         segments,
@@ -97,6 +106,12 @@ export function convertRewrites(
       if (r.has) {
         route.has = r.has;
       }
+      if (r.missing) {
+        route.missing = r.missing;
+      }
+      if (r.statusCode) {
+        route.status = r.statusCode;
+      }
       return route;
     } catch (e) {
       throw new Error(`Failed to parse rewrite: ${JSON.stringify(r)}`);
@@ -109,6 +124,9 @@ export function convertHeaders(headers: Header[]): Route[] {
     const obj: { [key: string]: string } = {};
     const { src, segments } = sourceToRegex(h.source);
     const hasSegments = collectHasSegments(h.has);
+    normalizeHasKeys(h.has);
+    normalizeHasKeys(h.missing);
+
     const namedSegments = segments.filter(name => name !== UN_NAMED_SEGMENT);
     const indexes: { [k: string]: string } = {};
 
@@ -139,6 +157,9 @@ export function convertHeaders(headers: Header[]): Route[] {
 
     if (h.has) {
       route.has = h.has;
+    }
+    if (h.missing) {
+      route.missing = h.missing;
     }
     return route;
   });
@@ -193,14 +214,19 @@ export function sourceToRegex(source: string): {
 
 const namedGroupsRegex = /\(\?<([a-zA-Z][a-zA-Z0-9]*)>/g;
 
+const normalizeHasKeys = (hasItems: HasField = []) => {
+  for (const hasItem of hasItems) {
+    if ('key' in hasItem && hasItem.type === 'header') {
+      hasItem.key = hasItem.key.toLowerCase();
+    }
+  }
+  return hasItems;
+};
+
 export function collectHasSegments(has?: HasField) {
   const hasSegments = new Set<string>();
 
   for (const hasItem of has || []) {
-    if ('key' in hasItem && hasItem.type === 'header') {
-      hasItem.key = hasItem.key.toLowerCase();
-    }
-
     if (!hasItem.value && 'key' in hasItem) {
       hasSegments.add(hasItem.key);
     }
@@ -297,7 +323,12 @@ function replaceSegments(
         safelyCompile(unescapeSegments(str), indexes, true)
       );
     } else {
-      query[key] = safelyCompile(unescapeSegments(strOrArray), indexes, true);
+      // TODO: handle strOrArray is undefined
+      query[key] = safelyCompile(
+        unescapeSegments(strOrArray as string),
+        indexes,
+        true
+      );
     }
   }
 

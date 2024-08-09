@@ -1,0 +1,7 @@
+---
+Astro.response.headers.set('Cache-Control', 's-maxage=10, stale-while-revalidate');
+
+const time = new Date().toLocaleTimeString();
+---
+
+<h1>{time}</h1>

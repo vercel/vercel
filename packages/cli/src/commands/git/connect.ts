@@ -1,7 +1,7 @@
 import { Dictionary } from '@vercel/client';
 import chalk from 'chalk';
 import { join } from 'path';
-import { Org, Project, ProjectLinkData } from '../../types';
+import { Org, Project, ProjectLinkData } from '@vercel-internals/types';
 import Client from '../../util/client';
 import { parseGitConfig, pluckRemoteUrls } from '../../util/create-git-meta';
 import confirm from '../../util/input/confirm';
@@ -16,7 +16,6 @@ import {
   parseRepoUrl,
   printRemoteUrls,
 } from '../../util/git/connect-git-provider';
-import validatePaths from '../../util/validate-paths';
 
 interface GitRepoCheckParams {
   client: Client;
@@ -56,9 +55,9 @@ export default async function connect(
   project: Project | undefined,
   org: Org | undefined
 ) {
-  const { output } = client;
+  const { cwd, output } = client;
   const confirm = Boolean(argv['--yes']);
-  const repoArg = argv._[1];
+  const repoArg = args[0];
 
   if (args.length > 1) {
     output.error(
@@ -77,19 +76,11 @@ export default async function connect(
     return 1;
   }
 
-  let paths = [process.cwd()];
-
-  const validate = await validatePaths(client, paths);
-  if (!validate.valid) {
-    return validate.exitCode;
-  }
-  const { path } = validate;
-
   const gitProviderLink = project.link;
   client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
   // get project from .git
-  const gitConfigPath = join(path, '.git/config');
+  const gitConfigPath = join(cwd, '.git/config');
   const gitConfig = await parseGitConfig(gitConfigPath, output);
 
   if (repoArg) {
@@ -116,7 +107,7 @@ export default async function connect(
       confirm,
       org,
       project,
-      repoInfo: repoArg,
+      repoInfo: parsedUrlArg,
     });
   }
 
@@ -149,7 +140,7 @@ export default async function connect(
   }
 
   if (remoteUrl === '') {
-    output.log('Aborted.');
+    output.log('Canceled');
     return 0;
   }
 
@@ -178,6 +169,7 @@ export default async function connect(
     gitOrg,
     repo,
   });
+
   if (typeof checkAndConnect === 'number') {
     return checkAndConnect;
   }
@@ -317,7 +309,7 @@ async function promptConnectArg({
       false
     );
     if (!shouldConnect) {
-      client.output.log('Aborted. Repo not connected.');
+      client.output.log('Canceled. Repo not connected.');
     }
   }
   return shouldConnect;
@@ -404,7 +396,7 @@ async function confirmRepoConnect(
       true
     );
     if (!shouldReplaceProject) {
-      client.output.log('Aborted. Repo not connected.');
+      client.output.log('Canceled. Repo not connected.');
     }
   }
   return shouldReplaceProject;

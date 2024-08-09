@@ -2,11 +2,6 @@
   "version": 2,
   "uploadNowJson": true,
   "builds": [{ "src": "package.json", "use": "@vercel/next" }],
-  "build": {
-    "env": {
-      "NEXT_PRIVATE_MULTI_PAYLOAD": "1"
-    }
-  },
   "probes": [
     {
       "path": "/lambda",

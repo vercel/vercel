@@ -8,8 +8,8 @@ export default function Home() {
       <Counter />
       <p>
         Visit{" "}
-        <a href="https://solidjs.com" target="_blank">
-          solidjs.com
+        <a href="https://start.solidjs.com" target="_blank">
+          start.solidjs.com
         </a>{" "}
         to learn how to build Solid apps.
       </p>

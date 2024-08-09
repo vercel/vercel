@@ -1,0 +1,22 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "mustContain": "Vue 3 on Vercel"
+    },
+    {
+      "path": "/assets/index.js",
+      "headers": {
+        "cache-control": "public, max-age=0, must-revalidate"
+      },
+      "mustContain": "function"
+    },
+    {
+      "path": "/assets/index.css",
+      "headers": {
+        "cache-control": "public, max-age=0, must-revalidate"
+      },
+      "mustContain": "font-family"
+    }
+  ]
+}
