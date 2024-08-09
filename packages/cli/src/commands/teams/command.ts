@@ -1,5 +1,19 @@
 import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
+import { nextOption } from '../../util/arg-common';
+
+export const listSubcommand: Command = {
+  name: 'ls',
+  description: "Show all teams you're a part of",
+  arguments: [],
+  options: [
+    nextOption,
+    { name: 'since', shorthand: null, type: String, deprecated: false },
+    { name: 'until', shorthand: null, type: String, deprecated: false },
+    { name: 'count', shorthand: 'C', type: Number, deprecated: false },
+  ],
+  examples: [],
+};
 
 export const teamsCommand: Command = {
   name: 'teams',
@@ -13,13 +27,7 @@ export const teamsCommand: Command = {
       options: [],
       examples: [],
     },
-    {
-      name: 'ls',
-      description: "Show all teams you're a part of",
-      arguments: [],
-      options: [],
-      examples: [],
-    },
+    listSubcommand,
     {
       name: 'switch',
       description: 'Switch to a different team',
@@ -46,14 +54,14 @@ export const teamsCommand: Command = {
     },
   ],
   options: [
-    {
-      name: 'next',
-      shorthand: 'N',
-      type: String,
-      argument: 'MS',
-      deprecated: false,
-      description: 'Show next page of results',
-    },
+    // {
+    //   name: 'next',
+    //   shorthand: 'N',
+    //   type: String,
+    //   argument: 'MS',
+    //   deprecated: false,
+    //   description: 'Show next page of results',
+    // },
   ],
   examples: [
     {

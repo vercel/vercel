@@ -10,7 +10,7 @@ export const linkCommand: Command = {
       name: 'repo',
       description: 'Link multiple projects based on Git repository (alpha)',
       shorthand: 'r',
-      type: String,
+      type: Boolean,
       deprecated: false,
     },
     {
@@ -29,6 +29,7 @@ export const linkCommand: Command = {
       type: Boolean,
       deprecated: false,
     },
+    { name: 'confirm', shorthand: 'c', type: Boolean, deprecated: true },
   ],
   examples: [
     {

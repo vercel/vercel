@@ -1,5 +1,6 @@
 import {
   createRequestHandler as createRemixRequestHandler,
+  createReadableStreamFromReadable,
   writeReadableStreamToWritable,
   installGlobals,
 } from '@remix-run/node';
@@ -55,7 +56,8 @@ function createRemixRequest(req, res) {
   };
 
   if (req.method !== 'GET' && req.method !== 'HEAD') {
-    init.body = req;
+    init.body = createReadableStreamFromReadable(req);
+    init.duplex = 'half';
   }
 
   return new Request(url.href, init);
