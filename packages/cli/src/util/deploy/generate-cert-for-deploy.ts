@@ -4,6 +4,7 @@ import Client from '../client';
 import createCertForCns from '../certs/create-cert-for-cns';
 import setupDomain from '../domains/setup-domain';
 import { InvalidDomain } from '../errors-ts';
+import getScope from '../../util/get-scope';
 
 export default async function generateCertForDeploy(
   client: Client,
@@ -11,6 +12,8 @@ export default async function generateCertForDeploy(
   deployURL: string
 ) {
   const { output } = client;
+  await getScope(client);
+
   const parsedDomain = psl.parse(deployURL);
   if (parsedDomain.error) {
     return new InvalidDomain(deployURL, parsedDomain.error.message);

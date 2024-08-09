@@ -13,6 +13,9 @@ export default async function issueCert(client: Client, cns: string[]) {
         return await client.fetch<Cert>('/v3/now/certs', {
           method: 'POST',
           body: { domains: cns },
+          useCurrentTeam: client.authContext.enableFallbackDomainsAccess
+            ? false
+            : true,
         });
       } catch (err: unknown) {
         if (isAPIError(err) && err.code === 'configuration_error') {
