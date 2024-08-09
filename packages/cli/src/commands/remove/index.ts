@@ -13,7 +13,7 @@ import getProjectByIdOrName from '../../util/projects/get-project-by-id-or-name'
 import getDeployment from '../../util/get-deployment';
 import getDeploymentsByProjectId from '../../util/deploy/get-deployments-by-project-id';
 import { getCommandName } from '../../util/pkg-name';
-import getArgs from '../../util/get-args';
+import { parseArguments } from '../../util/get-args';
 import handleError from '../../util/handle-error';
 import type Client from '../../util/client';
 import { Output } from '../../util/output';
@@ -21,43 +21,42 @@ import { Alias, Deployment, Project } from '@vercel-internals/types';
 import { NowError } from '../../util/now-error';
 import { help } from '../help';
 import { removeCommand } from './command';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
 
 type DeploymentWithAliases = Deployment & {
   aliases: Alias[];
 };
 
 export default async function remove(client: Client) {
-  let argv;
+  let parsedArgs = null;
 
+  const flagsSpecification = getFlagsSpecification(removeCommand.options);
+
+  // Parse CLI args
   try {
-    argv = getArgs(client.argv.slice(2), {
-      '--hard': Boolean,
-      '--yes': Boolean,
-      '--safe': Boolean,
-      '-y': '--yes',
-      '-s': '--safe',
-    });
+    parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (error) {
     handleError(error);
     return 1;
   }
 
-  argv._ = argv._.slice(1);
+  const { output } = client;
 
-  const {
-    output,
-    config: { currentTeam },
-  } = client;
-  const hard = argv['--hard'];
-  const skipConfirmation = argv['--yes'];
-  const safe = argv['--safe'];
-  const ids: string[] = argv._;
-  const { success, error, log } = output;
-
-  if (argv['--help'] || ids[0] === 'help') {
+  if (parsedArgs.flags['--help']) {
     output.print(help(removeCommand, { columns: client.stderr.columns }));
     return 2;
   }
+
+  parsedArgs.args = parsedArgs.args.slice(1);
+
+  const {
+    config: { currentTeam },
+  } = client;
+  const hard = parsedArgs.flags['--hard'];
+  const skipConfirmation = parsedArgs.flags['--yes'];
+  const safe = parsedArgs.flags['--safe'];
+  const ids: string[] = parsedArgs.args;
+  const { success, error, log } = output;
 
   if (ids.length < 1) {
     error(`${getCommandName('rm')} expects at least one argument`);
@@ -165,7 +164,7 @@ export default async function remove(client: Client) {
 
   if (deployments.length === 0 && projects.length === 0) {
     log(
-      `Could not find ${argv['--safe'] ? 'unaliased' : 'any'} deployments ` +
+      `Could not find ${parsedArgs.flags['--safe'] ? 'unaliased' : 'any'} deployments ` +
         `or projects matching ` +
         `${ids
           .map(id => chalk.bold(`"${id}"`))
