@@ -1320,6 +1320,53 @@ export const frameworks = [
     ],
   },
   {
+    name: 'Modern.js',
+    slug: 'modernjs',
+    demo: 'https://modernjs-template.vercel.app',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/modernjs.svg',
+    tagline: 'Inspire Creativity in Modern Web Development',
+    description: 'A Modern.js app, created using the @modern-js/created',
+    website: 'https://modernjs.dev/',
+    detectors: {
+      some: [
+        {
+          matchPackage: '@modern-js/app-tools',
+        },
+        {
+          matchPackage: '@modern-js/runtime',
+        },
+        {
+          path: 'modern.config.js',
+        },
+        {
+          path: 'modern.config.mjs',
+        },
+        {
+          path: 'modern.config.ts',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder:
+          '`yarn install`, `pnpm install`, `npm install`, or `bun install`',
+      },
+      buildCommand: {
+        value: 'modern deploy',
+        placeholder: '`npm run deploy` or `modern deploy`',
+      },
+      devCommand: {
+        value: 'modern dev',
+        placeholder: 'modern dev',
+      },
+      outputDirectory: {
+        value: '.vercel/output/static',
+      },
+    },
+    dependency: '@modern-js/app-tools',
+    getOutputDirName: async () => '.vercel/output/static',
+  },
+  {
     name: 'Sapper',
     slug: 'sapper',
     demo: 'https://sapper-template.vercel.app',

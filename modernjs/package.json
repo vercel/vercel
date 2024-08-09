@@ -1,0 +1,46 @@
+{
+  "name": "modernjs",
+  "version": "0.1.0",
+  "scripts": {
+    "reset": "npx rimraf ./**/node_modules",
+    "dev": "modern dev",
+    "build": "modern build",
+    "deploy": "modern deploy",
+    "start": "modern start",
+    "serve": "modern serve",
+    "new": "modern new",
+    "lint": "modern lint",
+    "upgrade": "modern upgrade"
+  },
+  "engines": {
+    "node": ">=16.18.1"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,mjs,cjs}": [
+      "node --max_old_space_size=8192 ./node_modules/eslint/bin/eslint.js --fix --color --cache --quiet"
+    ]
+  },
+  "eslintIgnore": [
+    "node_modules/",
+    "dist/"
+  ],
+  "dependencies": {
+    "@modern-js/runtime": "2.50.0",
+    "react": "~18.2.0",
+    "react-dom": "~18.2.0"
+  },
+  "devDependencies": {
+    "@modern-js/app-tools": "2.50.1-alpha.0",
+    "@modern-js/eslint-config": "2.50.0",
+    "@modern-js/tsconfig": "2.50.0",
+    "@modern-js-app/eslint-config": "2.50.0",
+    "typescript": "~5.0.4",
+    "@types/jest": "~29.2.4",
+    "@types/node": "~16.11.7",
+    "@types/react": "~18.0.26",
+    "@types/react-dom": "~18.0.10",
+    "lint-staged": "~13.1.0",
+    "prettier": "~2.8.1",
+    "rimraf": "~3.0.2"
+  }
+}
