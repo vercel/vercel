@@ -52,7 +52,7 @@ Omit.status
 
 #### Defined in
 
-node_modules/typescript/lib/lib.dom.d.ts:1624
+node_modules/typescript/lib/lib.dom.d.ts:1727
 
 ---
 
@@ -66,4 +66,4 @@ Omit.statusText
 
 #### Defined in
 
-node_modules/typescript/lib/lib.dom.d.ts:1625
+node_modules/typescript/lib/lib.dom.d.ts:1728

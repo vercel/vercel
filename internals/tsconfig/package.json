@@ -7,6 +7,6 @@
     "tsconfig.json"
   ],
   "devDependencies": {
-    "@vercel/style-guide": "4.0.2"
+    "@vercel/style-guide": "6.0.0"
   }
 }
