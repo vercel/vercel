@@ -370,7 +370,7 @@ const main = async () => {
   }
 
   if (typeof argv['--token'] === 'string') {
-    const token = argv['--token'];
+    const token: string = argv['--token'];
 
     if (token.length === 0) {
       output.prettyError({
