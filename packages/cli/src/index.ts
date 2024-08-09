@@ -368,7 +368,7 @@ const main = async () => {
   }
 
   if (typeof parsedArgs.flags['--token'] === 'string') {
-    const token = parsedArgs.flags['--token'];
+    const token: string = parsedArgs.flags['--token'];
 
     if (token.length === 0) {
       output.prettyError({
