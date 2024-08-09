@@ -61,6 +61,10 @@
       "mustContain": "authRegister Page"
     },
     {
+      "path": "/products/fr",
+      "mustContain": "ProductsPage"
+    },
+    {
       "path": "/products/en/american-flag-speedo",
       "status": 200,
       "mustContain": "ProductPage"
