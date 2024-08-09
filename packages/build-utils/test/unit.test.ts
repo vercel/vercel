@@ -713,6 +713,43 @@ it('should detect package.json in nested frontend', async () => {
   expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
 });
 
+it('should detect `packageManager` in npm monorepo', async () => {
+  try {
+    process.env.ENABLE_EXPERIMENTAL_COREPACK = '1';
+
+    const base = path.join(__dirname, 'fixtures', '41-npm-workspaces-corepack');
+    const fixture = path.join(base, 'a');
+    const result = await scanParentDirs(fixture, false, base);
+    console.log(result);
+    expect(result.cliType).toEqual('npm');
+    expect(result.packageJsonPackageManager).toEqual('npm@10.7.0');
+    expect(result.lockfileVersion).toEqual(undefined);
+    expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
+  } finally {
+    delete process.env.ENABLE_EXPERIMENTAL_COREPACK;
+  }
+});
+
+it('should detect `packageManager` in pnpm monorepo', async () => {
+  try {
+    process.env.ENABLE_EXPERIMENTAL_COREPACK = '1';
+    const base = path.join(
+      __dirname,
+      'fixtures',
+      '42-pnpm-workspaces-corepack'
+    );
+    const fixture = path.join(base, 'c');
+    const result = await scanParentDirs(fixture, false, base);
+    console.log(result);
+    expect(result.cliType).toEqual('pnpm');
+    expect(result.packageJsonPackageManager).toEqual('pnpm@8.3.1');
+    expect(result.lockfileVersion).toEqual(undefined);
+    expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
+  } finally {
+    delete process.env.ENABLE_EXPERIMENTAL_COREPACK;
+  }
+});
+
 it('should retry npm install when peer deps invalid and npm@8 on node@16', async () => {
   const nodeMajor = Number(process.versions.node.split('.')[0]);
   if (nodeMajor !== 16) {
