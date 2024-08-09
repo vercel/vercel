@@ -1,5 +1,6 @@
 import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
+import { yesOption } from '../../util/arg-common';
 
 export const redeployCommand: Command = {
   name: 'redeploy',
@@ -18,6 +19,7 @@ export const redeployCommand: Command = {
       type: Boolean,
       deprecated: false,
     },
+    yesOption,
   ],
   examples: [
     {

@@ -64,8 +64,8 @@ describe('getMonorepoDefaultSettings', () => {
             isNpm && isRoot
               ? 'npm install'
               : isNpm
-              ? 'npm install --prefix=../..'
-              : 'yarn install',
+                ? 'npm install --prefix=../..'
+                : 'yarn install',
           commandForIgnoringBuildStep: 'npx turbo-ignore',
         },
         nx: {

@@ -2125,9 +2125,8 @@ export const onPrerenderRoute =
 
           // Assign the headers Content-Type header to the prerendered type.
           initialHeaders ??= {};
-          initialHeaders[
-            'content-type'
-          ] = `application/x-nextjs-pre-render; state-length=${meta.postponed.length}`;
+          initialHeaders['content-type'] =
+            `application/x-nextjs-pre-render; state-length=${meta.postponed.length}`;
 
           // Read the HTML file and append it to the prerendered content.
           const html = await fs.readFileSync(htmlPath, 'utf8');
@@ -2219,15 +2218,15 @@ export const onPrerenderRoute =
                     ? addLocaleOrDefault('/404.html', routesManifest, locale)
                     : '/404.html'
                   : isAppPathRoute
-                  ? // When experimental PPR is enabled, we expect that the data
-                    // that should be served as a part of the prerender should
-                    // be from the prefetch data route. If this isn't enabled
-                    // for ppr, the only way to get the data is from the data
-                    // route.
-                    experimentalPPR
-                    ? prefetchDataRoute
-                    : dataRoute
-                  : routeFileNoExt + '.json'
+                    ? // When experimental PPR is enabled, we expect that the data
+                      // that should be served as a part of the prerender should
+                      // be from the prefetch data route. If this isn't enabled
+                      // for ppr, the only way to get the data is from the data
+                      // route.
+                      experimentalPPR
+                      ? prefetchDataRoute
+                      : dataRoute
+                    : routeFileNoExt + '.json'
               }`
             ),
           });
@@ -3451,9 +3450,8 @@ export async function getVariantsManifest(
 
   if (!hasVariantsManifest) return null;
 
-  const variantsManifest: VariantsManifest = await fs.readJSON(
-    pathVariantsManifest
-  );
+  const variantsManifest: VariantsManifest =
+    await fs.readJSON(pathVariantsManifest);
 
   return variantsManifest;
 }

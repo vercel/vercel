@@ -1,5 +1,6 @@
 import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
+import { yesOption } from '../../util/arg-common';
 
 export const promoteCommand: Command = {
   name: 'promote',
@@ -33,6 +34,7 @@ export const promoteCommand: Command = {
       type: String,
       deprecated: false,
     },
+    yesOption,
   ],
   examples: [
     {
