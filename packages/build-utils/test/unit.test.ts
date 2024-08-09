@@ -1,4 +1,4 @@
-import ms from 'ms';
+import { it, expect, describe, vi, beforeEach, afterEach } from 'vitest';
 import path from 'path';
 import fs from 'fs-extra';
 import { strict as assert } from 'assert';
@@ -16,7 +16,7 @@ import {
 } from '../src';
 import type { Files } from '../src';
 
-jest.setTimeout(10 * 1000);
+vi.setConfig({ testTimeout: 10 * 1000 });
 
 async function expectBuilderError(promise: Promise<any>, pattern: string) {
   let result;
@@ -588,7 +588,7 @@ it(
     const out = await fs.readFile(path.join(fixture, 'env.txt'), 'utf8');
     expect(out.trim()).toBeTruthy();
   },
-  ms('1m')
+  60 * 1000
 );
 
 it('should return cliType "npm" when no lockfile is present', async () => {

@@ -1,3 +1,4 @@
+import { it, expect, describe } from 'vitest';
 import { join, parse } from 'path';
 import { getNodeBinPath } from '../src';
 

@@ -1,3 +1,4 @@
+import { it, expect, describe } from 'vitest';
 import path from 'path';
 import { tmpdir } from 'os';
 import fs from 'fs-extra';
