@@ -1,7 +1,7 @@
 import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
 
-export const dnsCommand: Command = {
+export const dnsCommand = {
   name: 'dns',
   description: 'Interact with DNS entries for a project.',
   arguments: [
@@ -131,4 +131,4 @@ export const dnsCommand: Command = {
       ],
     },
   ],
-};
+} as const satisfies Command;

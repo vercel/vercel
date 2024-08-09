@@ -1,7 +1,7 @@
 import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
 
-export const buildCommand: Command = {
+export const buildCommand = {
   name: 'build',
   description: 'Build the project.',
   arguments: [],
@@ -47,4 +47,4 @@ export const buildCommand: Command = {
       value: `${packageName} build --cwd ./path-to-project`,
     },
   ],
-};
+} as const satisfies Command;

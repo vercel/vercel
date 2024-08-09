@@ -2,7 +2,7 @@ import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
 import { getEnvTargetPlaceholder } from '../../util/env/env-target';
 
-export const pullCommand: Command = {
+export const pullCommand = {
   name: 'pull',
   description:
     'Pull latest environment variables and project settings from Vercel. ',
@@ -61,4 +61,4 @@ export const pullCommand: Command = {
       value: `${packageName} env pull`,
     },
   ],
-};
+} as const satisfies Command;

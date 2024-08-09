@@ -4,7 +4,7 @@ import { getEnvTargetPlaceholder } from '../../util/env/env-target';
 
 const targetPlaceholder = getEnvTargetPlaceholder();
 
-export const envCommand: Command = {
+export const envCommand = {
   name: 'env',
   description: 'Interact with environment variables.',
   arguments: [
@@ -176,4 +176,4 @@ export const envCommand: Command = {
       ],
     },
   ],
-};
+} as const satisfies Command;

@@ -1,20 +1,15 @@
 import arg from 'arg';
 import getCommonArgs from './arg-common';
+import type { Prettify } from './types';
 
 type ArgOptions = {
   permissive?: boolean;
 };
 
-type Handler = (value: string) => any;
-
-interface Spec {
-  [key: string]: string | Handler | [Handler];
-}
-
 /**
  * @deprecated use `parseArguments` instead
  */
-export default function getArgs<T extends Spec>(
+export default function getArgs<T extends arg.Spec>(
   argv: string[],
   argsOptions?: T,
   argOptions: ArgOptions = {}
@@ -44,7 +39,7 @@ type ParserOptions = {
  * - `args` was previously returned under the `_` key
  * - `flags` previously these keys were mixed with the positional arguments
  */
-export function parseArguments<T extends Spec>(
+export function parseArguments<T extends arg.Spec>(
   args: string[],
   flagsSpecification?: T,
   parserOptions: ParserOptions = {}
@@ -58,5 +53,5 @@ export function parseArguments<T extends Spec>(
       argv: args,
     }
   );
-  return { args: positional, flags: rest };
+  return { args: positional, flags: rest as Prettify<typeof rest> };
 }

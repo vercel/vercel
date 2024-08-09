@@ -2,7 +2,7 @@ import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
 import { yesOption } from '../../util/arg-common';
 
-export const promoteCommand: Command = {
+export const promoteCommand = {
   name: 'promote',
   description: 'Promote an existing deployment to current.',
   arguments: [
@@ -51,4 +51,4 @@ export const promoteCommand: Command = {
       value: `${packageName} promote <deployment id/url>`,
     },
   ],
-};
+} as const satisfies Command;

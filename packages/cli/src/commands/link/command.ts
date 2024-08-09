@@ -1,7 +1,7 @@
 import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
 
-export const linkCommand: Command = {
+export const linkCommand = {
   name: 'link',
   description: 'Link a local directory to a Vercel Project.',
   arguments: [],
@@ -49,4 +49,4 @@ export const linkCommand: Command = {
       value: `${packageName} link --repo`,
     },
   ],
-};
+} as const satisfies Command;

@@ -39,8 +39,9 @@ export default async function logs(client: Client) {
     return 1;
   }
 
-  for (const flag of deprecatedFlags) {
-    if (parsedArguments.flags[flag]) {
+  // TODO: This behavior should be centralized in `parseArguments`
+  for (const flag of Object.keys(parsedArguments.flags)) {
+    if (deprecatedFlags.includes(flag)) {
       print(
         `${prependEmoji(
           `The ${param(

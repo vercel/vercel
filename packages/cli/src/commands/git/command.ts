@@ -2,7 +2,7 @@ import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
 import { yesOption } from '../../util/arg-common';
 
-export const gitCommand: Command = {
+export const gitCommand = {
   name: 'git',
   description: 'Manage your Git provider connections.',
   arguments: [
@@ -51,4 +51,4 @@ export const gitCommand: Command = {
       value: `${packageName} git disconnect`,
     },
   ],
-};
+} as const satisfies Command;

@@ -15,7 +15,7 @@ export const listSubcommand: Command = {
   examples: [],
 };
 
-export const teamsCommand: Command = {
+export const teamsCommand = {
   name: 'teams',
   description: 'Manage teams under your Vercel account',
   arguments: [],
@@ -81,4 +81,4 @@ export const teamsCommand: Command = {
       value: `${packageName} teams ls --next 1584722256178`,
     },
   ],
-};
+} as const satisfies Command;
