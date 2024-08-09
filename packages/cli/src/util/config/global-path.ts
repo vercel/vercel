@@ -2,7 +2,7 @@ import { homedir } from 'os';
 import fs from 'fs';
 import path from 'path';
 import XDGAppPaths from 'xdg-app-paths';
-import { getArgs } from '../../util/get-args';
+import { parseArguments } from '../../util/get-args';
 
 // Returns whether a directory exists
 export const isDirectory = (path: string): boolean => {
@@ -18,8 +18,12 @@ export const isDirectory = (path: string): boolean => {
 const getGlobalPathConfig = (): string => {
   let customPath: string | undefined;
 
-  const argv = getArgs(process.argv.slice(2), {}, { permissive: true });
-  customPath = argv['--global-config'];
+  const parsedArgs = parseArguments(
+    process.argv.slice(2),
+    {},
+    { permissive: true }
+  );
+  customPath = parsedArgs.flags['--global-config'];
 
   const vercelDirectories = XDGAppPaths('com.vercel.cli').dataDirs();
 
