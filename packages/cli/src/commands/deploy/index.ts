@@ -46,9 +46,8 @@ import {
   TooManyRequests,
   UserAborted,
 } from '../../util/errors-ts';
-import { parseArguments } from '../../util/get-args';
+import { parseSubcommandArgs } from '../../util/get-args';
 import getDeployment from '../../util/get-deployment';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
 import getProjectName from '../../util/get-project-name';
 import toHumanPath from '../../util/humanize-path';
 import confirm from '../../util/input/confirm';
@@ -72,32 +71,26 @@ import { pickOverrides } from '../../util/projects/project-settings';
 import validatePaths, {
   validateRootDirectory,
 } from '../../util/validate-paths';
-import { help } from '../help';
 import { deployCommand } from './command';
 import parseTarget from '../../util/parse-target';
 
 export default async (client: Client): Promise<number> => {
   const { output } = client;
 
-  let parsedArguments = null;
-
-  const flagsSpecification = getFlagsSpecification(deployCommand.options);
-
-  try {
-    parsedArguments = parseArguments(client.argv.slice(2), flagsSpecification);
-
-    if ('--confirm' in parsedArguments.flags) {
-      output.warn('`--confirm` is deprecated, please use `--yes` instead');
-      parsedArguments.flags['--yes'] = parsedArguments.flags['--confirm'];
-    }
-  } catch (error) {
-    handleError(error);
-    return 1;
+  const parseResult = parseSubcommandArgs({
+    args: client.argv.slice(2),
+    command: deployCommand,
+    width: client.stderr.columns,
+    output,
+  });
+  if ('exit' in parseResult) {
+    return parseResult.exit;
   }
+  const { ok: parsedArguments } = parseResult;
 
-  if (parsedArguments.flags['--help']) {
-    output.print(help(deployCommand, { columns: client.stderr.columns }));
-    return 2;
+  if ('--confirm' in parsedArguments.flags) {
+    output.warn('`--confirm` is deprecated, please use `--yes` instead');
+    parsedArguments.flags['--yes'] = parsedArguments.flags['--confirm'];
   }
 
   if (parsedArguments.args[0] === deployCommand.name) {
