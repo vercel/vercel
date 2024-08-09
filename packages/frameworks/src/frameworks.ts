@@ -202,11 +202,14 @@ export const frameworks = [
     description: 'A new Remix app — the result of running `npx create-remix`.',
     website: 'https://remix.run',
     sort: 6,
-    supersedes: 'hydrogen',
+    supersedes: ['hydrogen', 'vite'],
     useRuntime: { src: 'package.json', use: '@vercel/remix-builder' },
     ignoreRuntimes: ['@vercel/node'],
     detectors: {
       some: [
+        {
+          matchPackage: '@remix-run/dev',
+        },
         {
           path: 'remix.config.js',
         },
@@ -545,7 +548,44 @@ export const frameworks = [
     ],
   },
   {
-    name: 'SolidStart',
+    name: 'SolidStart (v1)',
+    slug: 'solidstart-1',
+    demo: 'https://solid-start-template.vercel.app',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/solid.svg',
+    tagline: 'Simple and performant reactivity for building user interfaces.',
+    description: 'A Solid app, created with SolidStart.',
+    website: 'https://start.solidjs.com',
+    envPrefix: 'VITE_',
+    detectors: {
+      every: [
+        {
+          matchPackage: 'solid-js',
+        },
+        {
+          matchPackage: '@solidjs/start',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder:
+          '`yarn install`, `pnpm install`, `npm install`, or `bun install`',
+      },
+      buildCommand: {
+        placeholder: '`npm run build` or `vinxi build`',
+        value: 'vinxi build',
+      },
+      devCommand: {
+        value: 'vinxi dev',
+      },
+      outputDirectory: {
+        value: '.output',
+      },
+    },
+    getOutputDirName: async () => '.output',
+  },
+  {
+    name: 'SolidStart (v0)',
     slug: 'solidstart',
     demo: 'https://solid-start-template.vercel.app',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/solid.svg',
@@ -553,6 +593,7 @@ export const frameworks = [
     description: 'A Solid app, created with SolidStart.',
     website: 'https://solidjs.com',
     envPrefix: 'VITE_',
+    sort: 98,
     detectors: {
       every: [
         {
@@ -1065,7 +1106,7 @@ export const frameworks = [
       },
       devCommand: {
         placeholder: 'vite dev',
-        value: 'vite dev --port $PORT',
+        value: 'vite dev',
       },
       outputDirectory: {
         value: 'public',
@@ -1734,7 +1775,7 @@ export const frameworks = [
     tagline: 'React framework for headless commerce',
     description: 'React framework for headless commerce',
     website: 'https://hydrogen.shopify.dev',
-    supersedes: 'vite',
+    supersedes: ['vite'],
     useRuntime: { src: 'package.json', use: '@vercel/hydrogen' },
     envPrefix: 'PUBLIC_',
     detectors: {
@@ -1920,6 +1961,51 @@ export const frameworks = [
     ],
   },
   {
+    name: 'FastHTML (Experimental)',
+    slug: 'fasthtml',
+    demo: 'https://fasthtml-template.vercel.app',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/fasthtml.png',
+    darkModeLogo:
+      'https://api-frameworks.vercel.sh/framework-logos/fasthtml-dark.png',
+    tagline: 'The fastest way to create an HTML app',
+    description:
+      'A library for writing fast and scalable Starlette-powered web applications',
+    website: 'https://fastht.ml',
+    useRuntime: { src: 'main.py', use: '@vercel/python' },
+    detectors: {
+      every: [
+        {
+          path: 'main.py',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: '`pip install`',
+      },
+      buildCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      devCommand: {
+        value: 'uvicorn main:app --reload',
+      },
+      outputDirectory: {
+        value: 'N/A',
+      },
+    },
+    getOutputDirName: async () => '',
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/main',
+      },
+    ],
+  },
+  {
     name: 'Sanity',
     slug: 'sanity',
     demo: 'https://sanity-studio-template.vercel.app',
@@ -2036,5 +2122,5 @@ export const frameworks = [
   },
 ] as const;
 
-const def = frameworks as readonly Framework[];
-export default def;
+export const frameworkList = frameworks as readonly Framework[];
+export default frameworkList;

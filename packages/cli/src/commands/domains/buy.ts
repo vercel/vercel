@@ -7,7 +7,7 @@ import getDomainPrice from '../../util/domains/get-domain-price';
 import getDomainStatus from '../../util/domains/get-domain-status';
 import getScope from '../../util/get-scope';
 import param from '../../util/output/param';
-import promptBool from '../../util/input/prompt-bool';
+import confirm from '../../util/input/confirm';
 import purchaseDomain from '../../util/domains/purchase-domain';
 import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
@@ -86,23 +86,25 @@ export default async function buy(
     autoRenew = true;
   } else {
     if (
-      !(await promptBool(
+      !(await confirm(
+        client,
         `Buy now for ${chalk.bold(`$${price}`)} (${`${period}yr${
           period > 1 ? 's' : ''
         }`})?`,
-        client
+        false
       ))
     ) {
       return 0;
     }
 
-    autoRenew = await promptBool(
+    autoRenew = await confirm(
+      client,
       renewalPrice.period === 1
         ? `Auto renew yearly for ${chalk.bold(`$${price}`)}?`
         : `Auto renew every ${renewalPrice.period} years for ${chalk.bold(
             `$${price}`
           )}?`,
-      { ...client, defaultValue: true }
+      true
     );
   }
 
@@ -164,10 +166,8 @@ export default async function buy(
   }
 
   if (buyResult.pending) {
-    console.log(
-      `${chalk.cyan('> Success!')} Domain ${param(
-        domainName
-      )} order was submitted ${purchaseStamp()}`
+    output.success(
+      `Domain ${param(domainName)} order was submitted ${purchaseStamp()}`
     );
     output.note(
       `Your domain is processing and will be available once the order is completed.`
@@ -176,11 +176,7 @@ export default async function buy(
       `  An email will be sent upon completion for you to start using your new domain.\n`
     );
   } else {
-    console.log(
-      `${chalk.cyan('> Success!')} Domain ${param(
-        domainName
-      )} purchased ${purchaseStamp()}`
-    );
+    output.success(`Domain ${param(domainName)} purchased ${purchaseStamp()}`);
     if (!buyResult.verified) {
       output.note(
         `Your domain is not fully configured yet so it may appear as not verified.`

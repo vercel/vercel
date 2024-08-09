@@ -10,6 +10,7 @@ packages/*/test/fixtures
 packages/cli/@types
 packages/cli/download
 packages/cli/dist
+packages/cli/test/fixtures
 packages/cli/test/dev/fixtures
 packages/cli/bin
 packages/cli/link
@@ -38,7 +39,7 @@ packages/static-build/test/cache-fixtures
 packages/redwood/test/fixtures
 
 # remix
-packages/remix/test/fixtures
+packages/remix/test/fixtures-*
 
 # gatsby-plugin-vercel-analytics
 packages/gatsby-plugin-vercel-analytics

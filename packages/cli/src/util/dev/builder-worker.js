@@ -7,7 +7,9 @@
 const { FileFsRef } = require('@vercel/build-utils');
 
 process.on('unhandledRejection', err => {
+  // eslint-disable-next-line no-console
   console.error('Exiting builder due to build error:');
+  // eslint-disable-next-line no-console
   console.error(err);
   process.exit(1);
 });
@@ -41,6 +43,18 @@ async function processMessage(message) {
   // `@vercel/next` sets this, but it causes "Converting circular
   // structure to JSON" errors, so delete the property...
   delete result.childProcesses;
+
+  if (builder.version === 3) {
+    if (result.output.type === 'Lambda') {
+      result.output.zipBuffer = await result.output.createZip();
+    }
+  } else {
+    for (const output of Object.values(result.output)) {
+      if (output.type === 'Lambda') {
+        output.zipBuffer = await output.createZip();
+      }
+    }
+  }
 
   process.send({ type: 'buildResult', result });
 }

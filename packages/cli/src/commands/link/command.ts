@@ -10,28 +10,26 @@ export const linkCommand: Command = {
       name: 'repo',
       description: 'Link multiple projects based on Git repository (alpha)',
       shorthand: 'r',
-      type: 'string',
+      type: Boolean,
       deprecated: false,
-      multi: false,
     },
     {
       name: 'project',
       description: 'Specify a project name',
       shorthand: 'p',
       argument: 'NAME',
-      type: 'string',
+      type: String,
       deprecated: false,
-      multi: false,
     },
     {
       name: 'yes',
       description:
         'Skip questions when setting up new project using default scope and settings',
       shorthand: 'y',
-      type: 'boolean',
+      type: Boolean,
       deprecated: false,
-      multi: false,
     },
+    { name: 'confirm', shorthand: 'c', type: Boolean, deprecated: true },
   ],
   examples: [
     {

@@ -9,7 +9,7 @@ const PLUGINS = [
   '@vercel/gatsby-plugin-vercel-analytics',
   '@vercel/gatsby-plugin-vercel-builder',
 ] as const;
-type PluginName = typeof PLUGINS[number];
+type PluginName = (typeof PLUGINS)[number];
 
 const GATSBY_CONFIG_FILE = 'gatsby-config';
 const GATSBY_NODE_FILE = 'gatsby-node';
@@ -50,6 +50,9 @@ export async function injectPlugins(
   if (process.env.VERCEL_ANALYTICS_ID) {
     process.env.GATSBY_VERCEL_ANALYTICS_ID = process.env.VERCEL_ANALYTICS_ID;
     plugins.add('@vercel/gatsby-plugin-vercel-analytics');
+    console.warn(
+      'Vercel Speed Insights auto-injection is deprecated in favor of @vercel/speed-insights package. Learn more: https://vercel.link/upgrate-to-speed-insights-package'
+    );
   }
 
   if (plugins.size === 0) {

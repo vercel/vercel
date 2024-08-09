@@ -14,9 +14,7 @@ export async function inputRootDirectory(
 
   // eslint-disable-next-line no-constant-condition
   while (true) {
-    const { rootDirectory } = await client.prompt({
-      type: 'input',
-      name: 'rootDirectory',
+    const rootDirectory = await client.input.text({
       message: `In which directory is your code located?`,
       transformer: (input: string) => {
         return `${chalk.dim(`./`)}${input}`;

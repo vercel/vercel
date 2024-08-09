@@ -7,6 +7,9 @@ import { DeepWriteable, readPackageJson, writePackageJson } from './_shared';
 const ANALYTICS_PLUGIN_PACKAGE = '@nuxtjs/web-vitals';
 
 export async function injectVercelAnalyticsPlugin(dir: string) {
+  console.warn(
+    'Vercel Speed Insights auto-injection is deprecated in favor of @vercel/speed-insights package. Learn more: https://vercel.link/upgrate-to-speed-insights-package'
+  );
   // First update the `.nuxtrc` file to inject the Speed Insights (formerly Analytics) plugin.
   // See: https://gist.github.com/pi0/23b5253ac19b4ed5a70add3b971545c9
   const nuxtrcPath = join(dir, '.nuxtrc');

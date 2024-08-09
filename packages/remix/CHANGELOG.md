@@ -1,5 +1,153 @@
 # @vercel/remix-builder
 
+## 2.2.3
+
+### Patch Changes
+
+- Update `@remix-run/dev` fork to v2.11.0 ([#11913](https://github.com/vercel/vercel/pull/11913))
+
+## 2.2.2
+
+### Patch Changes
+
+- Fix POST requests when `unstable_singleFetch` is enabled ([#11904](https://github.com/vercel/vercel/pull/11904))
+
+- Update `@remix-run/dev` fork to v2.10.3 ([#11893](https://github.com/vercel/vercel/pull/11893))
+
+## 2.2.1
+
+### Patch Changes
+
+- Revert "Fix corepack `packageManager` detection on monorepos" ([#11865](https://github.com/vercel/vercel/pull/11865))
+
+## 2.2.0
+
+### Minor Changes
+
+- Use `nativeFetch` mode when `unstable_singleFetch` is enabled ([#11844](https://github.com/vercel/vercel/pull/11844))
+
+### Patch Changes
+
+- Fix corepack `packageManager` detection on monorepos ([#11811](https://github.com/vercel/vercel/pull/11811))
+
+## 2.1.11
+
+### Patch Changes
+
+- Upgrade to @vercel/nft 0.27.3 with a bug fix for browser mapping support ([#11841](https://github.com/vercel/vercel/pull/11841))
+
+## 2.1.10
+
+### Patch Changes
+
+- Update `@remix-run/dev` fork to v2.10.2 ([#11837](https://github.com/vercel/vercel/pull/11837))
+
+## 2.1.9
+
+### Patch Changes
+
+- Update `@remix-run/dev` fork to v2.10.0 ([#11771](https://github.com/vercel/vercel/pull/11771))
+
+## 2.1.8
+
+### Patch Changes
+
+- Add opt-in env var to use native Fetch polyfills ([#11748](https://github.com/vercel/vercel/pull/11748))
+
+## 2.1.7
+
+### Patch Changes
+
+- Upgrade to @vercel/nft 0.27.2 with browser remapping support ([#11700](https://github.com/vercel/vercel/pull/11700))
+
+## 2.1.6
+
+### Patch Changes
+
+- Bump `@vercel/nft@0.27.0` ([#11580](https://github.com/vercel/vercel/pull/11580))
+
+- Update `@remix-run/dev` fork to v2.9.2-patch.2 ([#11582](https://github.com/vercel/vercel/pull/11582))
+
+## 2.1.5
+
+### Patch Changes
+
+- Add `mjs` and `mts` extensions to vite detection ([#11307](https://github.com/vercel/vercel/pull/11307))
+
+## 2.1.4
+
+### Patch Changes
+
+- Disable `prepareCache()` npm install for Remix + Vite ([#11281](https://github.com/vercel/vercel/pull/11281))
+
+## 2.1.3
+
+### Patch Changes
+
+- Improve hueristics for detecting Remix + Vite ([#11256](https://github.com/vercel/vercel/pull/11256))
+
+## 2.1.2
+
+### Patch Changes
+
+- Update `@remix-run/dev` fork to v2.8.1 ([#11241](https://github.com/vercel/vercel/pull/11241))
+
+## 2.1.1
+
+### Patch Changes
+
+- [build-utils] increase max memory limit ([#11209](https://github.com/vercel/vercel/pull/11209))
+
+- Remove usage of `ensureResolvable()` in Vite builds ([#11213](https://github.com/vercel/vercel/pull/11213))
+
+- Update `@remix-run/dev` fork to v2.8.0 ([#11206](https://github.com/vercel/vercel/pull/11206))
+
+- Ensure the symlink directory exists in `ensureSymlink()` ([#11205](https://github.com/vercel/vercel/pull/11205))
+
+## 2.1.0
+
+### Minor Changes
+
+- Remix Vite plugin support ([#11031](https://github.com/vercel/vercel/pull/11031))
+
+## 2.0.20
+
+### Patch Changes
+
+- Don't install Remix fork when not using split configuration ([#11152](https://github.com/vercel/vercel/pull/11152))
+
+- Add `serverBundles` post-build sanity check and fallback ([#11153](https://github.com/vercel/vercel/pull/11153))
+
+- bump `@vercel/nft@0.26.4` ([#11155](https://github.com/vercel/vercel/pull/11155))
+
+- Update `@remix-run/dev` fork to v2.6.0 ([#11162](https://github.com/vercel/vercel/pull/11162))
+
+- Update `@remix-run/dev` fork to v2.7.0 ([#11180](https://github.com/vercel/vercel/pull/11180))
+
+- Update `@remix-run/dev` fork to v2.7.2 ([#11186](https://github.com/vercel/vercel/pull/11186))
+
+## 2.0.19
+
+### Patch Changes
+
+- [node][next][redwood][remix] bump `@vercel/nft@0.26.3` ([#11115](https://github.com/vercel/vercel/pull/11115))
+
+## 2.0.18
+
+### Patch Changes
+
+- Fix functions without a output path edge case ([#11038](https://github.com/vercel/vercel/pull/11038))
+
+- Update `@remix-run/dev` fork to v2.5.0 ([#11054](https://github.com/vercel/vercel/pull/11054))
+
+- Update `@remix-run/dev` fork to v2.5.1 ([#11065](https://github.com/vercel/vercel/pull/11065))
+
+## 2.0.17
+
+### Patch Changes
+
+- Deprecate `EdgeFunction#name` property ([#11010](https://github.com/vercel/vercel/pull/11010))
+
 ## 2.0.16
 
 ### Patch Changes

@@ -1,5 +1,211 @@
 # @vercel/client
 
+## 13.3.4
+
+### Patch Changes
+
+- Updated dependencies [[`bec80e76a`](https://github.com/vercel/vercel/commit/bec80e76afe546072d4138f3ed3d6eda56d3f370)]:
+  - @vercel/build-utils@8.3.6
+
+## 13.3.3
+
+### Patch Changes
+
+- Updated dependencies [[`9d9b2fee6`](https://github.com/vercel/vercel/commit/9d9b2fee64b5638a313366ccb3eb2e0b337b4750)]:
+  - @vercel/build-utils@8.3.5
+
+## 13.3.2
+
+### Patch Changes
+
+- Updated dependencies [[`ae2bdab65`](https://github.com/vercel/vercel/commit/ae2bdab6544d76687785b40eded0a40e3ea477ff)]:
+  - @vercel/build-utils@8.3.4
+
+## 13.3.1
+
+### Patch Changes
+
+- Updated dependencies [[`9290c57b8`](https://github.com/vercel/vercel/commit/9290c57b83cc45a428e4ce96dd4402f97ec7f821)]:
+  - @vercel/build-utils@8.3.3
+
+## 13.3.0
+
+### Minor Changes
+
+- Send `customEnvironmentSlugOrId` to the create deployment endpoint ([#11789](https://github.com/vercel/vercel/pull/11789))
+
+### Patch Changes
+
+- Updated dependencies [[`3eb40c8c2`](https://github.com/vercel/vercel/commit/3eb40c8c2d205ff3c237774eb0b63135c9298d5d)]:
+  - @vercel/build-utils@8.3.2
+
+## 13.2.11
+
+### Patch Changes
+
+- Updated dependencies [[`fc82c3dac`](https://github.com/vercel/vercel/commit/fc82c3dac762c38ee74d6586c9bfe2f402b3fe57)]:
+  - @vercel/build-utils@8.3.1
+
+## 13.2.10
+
+### Patch Changes
+
+- Updated dependencies [[`394eddb2a`](https://github.com/vercel/vercel/commit/394eddb2a9f4d9096315fe53f8d27a5401900e5f), [`b9d18c583`](https://github.com/vercel/vercel/commit/b9d18c5835ff16316fafb854eb6447df9c841b98)]:
+  - @vercel/build-utils@8.3.0
+
+## 13.2.9
+
+### Patch Changes
+
+- Updated dependencies [[`5c12ed695`](https://github.com/vercel/vercel/commit/5c12ed69500ceff6a9dc544eab0acd7af64c044a), [`21444a38e`](https://github.com/vercel/vercel/commit/21444a38e50ed680c91b0e3955f15e378eeda64b), [`06d2d860e`](https://github.com/vercel/vercel/commit/06d2d860e47aed792247bf929805b180ed6e2dab)]:
+  - @vercel/build-utils@8.2.2
+
+## 13.2.8
+
+### Patch Changes
+
+- Updated dependencies [[`83741a0eb`](https://github.com/vercel/vercel/commit/83741a0eb9e44457b083e8790a11eb89984e6357)]:
+  - @vercel/build-utils@8.2.1
+
+## 13.2.7
+
+### Patch Changes
+
+- Updated dependencies [[`d3c1267e2`](https://github.com/vercel/vercel/commit/d3c1267e24082789ea6382cf6af81dd40df288ff), [`ccd7eb1fb`](https://github.com/vercel/vercel/commit/ccd7eb1fb78f7ac9effdbe1935de3bda82c97fe3)]:
+  - @vercel/build-utils@8.2.0
+
+## 13.2.6
+
+### Patch Changes
+
+- Updated dependencies [[`ad6945435`](https://github.com/vercel/vercel/commit/ad69454352b519b2b0ed326f245c779530554bf2)]:
+  - @vercel/build-utils@8.1.3
+
+## 13.2.5
+
+### Patch Changes
+
+- Updated dependencies [[`1682ad43d`](https://github.com/vercel/vercel/commit/1682ad43d0064b22b1248a7e946746b838f00076)]:
+  - @vercel/build-utils@8.1.2
+
+## 13.2.4
+
+### Patch Changes
+
+- Updated dependencies [[`2f7a6ed5f`](https://github.com/vercel/vercel/commit/2f7a6ed5f92d454000f92247d3b6548e2064f4e6)]:
+  - @vercel/build-utils@8.1.1
+
+## 13.2.3
+
+### Patch Changes
+
+- Updated dependencies [[`5014b1e82`](https://github.com/vercel/vercel/commit/5014b1e82a46181baeb727ffe6d14000b6a4b1d7)]:
+  - @vercel/build-utils@8.1.0
+
+## 13.2.2
+
+### Patch Changes
+
+- Updated dependencies [[`15475c8a2`](https://github.com/vercel/vercel/commit/15475c8a2c303a1dd189ba24044fac750280dd2e), [`21f5e7375`](https://github.com/vercel/vercel/commit/21f5e7375e4cb4ceed98ab56486d09a85fa3894d)]:
+  - @vercel/build-utils@8.0.0
+
+## 13.2.1
+
+### Patch Changes
+
+- Updated dependencies [[`2826563ff`](https://github.com/vercel/vercel/commit/2826563ffab7ab01d3c85def2cad8c4041cd88b1)]:
+  - @vercel/build-utils@7.12.0
+
+## 13.2.0
+
+### Minor Changes
+
+- Always use v13 of create deployment API endpoint ([#11351](https://github.com/vercel/vercel/pull/11351))
+
+## 13.1.9
+
+### Patch Changes
+
+- Handle `--repo` linked in `vc deploy --prebuilt` ([#11309](https://github.com/vercel/vercel/pull/11309))
+
+- Updated dependencies [[`73b112b1f`](https://github.com/vercel/vercel/commit/73b112b1f74480e1bb941e1b754105fc7dace401)]:
+  - @vercel/build-utils@7.11.0
+
+## 13.1.8
+
+### Patch Changes
+
+- Updated dependencies [[`1825b58df`](https://github.com/vercel/vercel/commit/1825b58df8d783e79f0addf262618f422246f4b3)]:
+  - @vercel/build-utils@7.10.0
+
+## 13.1.7
+
+### Patch Changes
+
+- Updated dependencies [[`11218a179`](https://github.com/vercel/vercel/commit/11218a179870a5420c5a6ff720cd4aec4f7e1c5e)]:
+  - @vercel/build-utils@7.9.1
+
+## 13.1.6
+
+### Patch Changes
+
+- Updated dependencies [[`8ea93839c`](https://github.com/vercel/vercel/commit/8ea93839ccc70816f3ece9d7cfdb857aa7a4b015)]:
+  - @vercel/build-utils@7.9.0
+
+## 13.1.5
+
+### Patch Changes
+
+- Updated dependencies [[`908e7837d`](https://github.com/vercel/vercel/commit/908e7837d55bc02e708f402c700e00208415e954), [`5e3656ec1`](https://github.com/vercel/vercel/commit/5e3656ec1b3f0561091636582715ba09ddd8cb2d)]:
+  - @vercel/build-utils@7.8.0
+
+## 13.1.4
+
+### Patch Changes
+
+- Updated dependencies [[`37b193c84`](https://github.com/vercel/vercel/commit/37b193c845d8b63d93bb0017fbc1a6a35306ef1f)]:
+  - @vercel/build-utils@7.7.1
+
+## 13.1.3
+
+### Patch Changes
+
+- Updated dependencies [[`24c3dd282`](https://github.com/vercel/vercel/commit/24c3dd282d7714cd63d2b94fb94745c45fdc79ab)]:
+  - @vercel/build-utils@7.7.0
+
+## 13.1.2
+
+### Patch Changes
+
+- Updated dependencies [[`b6ed28b9b`](https://github.com/vercel/vercel/commit/b6ed28b9b1712f882c93fe053b70d3eb1df21819), [`8ba0ce932`](https://github.com/vercel/vercel/commit/8ba0ce932434c6295fedb5307bee59a804b7e6a8), [`0d034b682`](https://github.com/vercel/vercel/commit/0d034b6820c0f3252949c0ffc483048c5aac7f04), [`abaa700ce`](https://github.com/vercel/vercel/commit/abaa700cea44c723cfc851baa2dfe9e1ae2e8a5c)]:
+  - @vercel/build-utils@7.6.0
+
+## 13.1.1
+
+### Patch Changes
+
+- More helpful error message when `vc deploy --prebuilt` has missing files ([#11105](https://github.com/vercel/vercel/pull/11105))
+
+## 13.1.0
+
+### Minor Changes
+
+- Upload files referenced by "filePathMap" during `vc deploy --prebuilt` ([#11077](https://github.com/vercel/vercel/pull/11077))
+
+## 13.0.14
+
+### Patch Changes
+
+- Updated dependencies [[`cdddb33ad`](https://github.com/vercel/vercel/commit/cdddb33ad49f6080c49f4fff3767e6111acd0bbe)]:
+  - @vercel/build-utils@7.5.1
+
+## 13.0.13
+
+### Patch Changes
+
+- Updated dependencies [[`98040ec24`](https://github.com/vercel/vercel/commit/98040ec24e1ee585865d11eb216b6525d39d209e)]:
+  - @vercel/build-utils@7.5.0
+
 ## 13.0.12
 
 ### Patch Changes

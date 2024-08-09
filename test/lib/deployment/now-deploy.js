@@ -3,11 +3,12 @@ const assert = require('assert');
 const { createHash } = require('crypto');
 const path = require('path');
 const _fetch = require('node-fetch');
-const fetch = require('./fetch-retry.js');
+const fetch = require('./fetch-retry');
 const fileModeSymbol = Symbol('fileMode');
 const { logWithinTest } = require('./log');
 const ms = require('ms');
 
+const IS_CI = !!process.env.CI;
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function nowDeploy(projectName, bodies, randomness, uploadNowJson, opts) {
@@ -45,6 +46,10 @@ async function nowDeploy(projectName, bodies, randomness, uploadNowJson, opts) {
     files,
     meta: {},
     ...nowJson,
+    projectSettings: {
+      ...nowJson.projectSettings,
+      ...opts.projectSettings,
+    },
     env: { ...nowJson.env, RANDOMNESS_ENV_VAR: randomness },
     build: {
       env: {
@@ -100,71 +105,7 @@ async function nowDeploy(projectName, bodies, randomness, uploadNowJson, opts) {
     await new Promise(r => setTimeout(r, 1000));
   }
 
-  await disableSSO(deploymentId);
-
   return { deploymentId, deploymentUrl };
-}
-
-async function disableSSO(deploymentId, useTeam = true) {
-  if (deploymentId.startsWith('https://')) {
-    deploymentId = new URL(deploymentId).hostname;
-  }
-
-  const deployRes = await fetchWithAuth(
-    `https://vercel.com/api/v13/deployments/${encodeURIComponent(
-      deploymentId
-    )}`,
-    {
-      method: 'GET',
-    }
-  );
-
-  if (!deployRes.ok) {
-    throw new Error(
-      `Failed to get deployment info (status: ${
-        deployRes.status
-      }, body: ${await deployRes.text()})`
-    );
-  }
-
-  const deploymentInfo = await deployRes.json();
-  const { projectId, url: deploymentUrl } = deploymentInfo;
-
-  const settingRes = await fetchWithAuth(
-    `https://vercel.com/api/v5/projects/${encodeURIComponent(projectId)}`,
-    {
-      method: 'PATCH',
-      headers: {
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        ssoProtection: null,
-      }),
-      ...(useTeam
-        ? {}
-        : {
-            skipTeam: true,
-          }),
-    }
-  );
-
-  if (settingRes.ok) {
-    for (let i = 0; i < 5; i++) {
-      const res = await fetch(`https://${deploymentUrl}`);
-      if (res.status !== 401) {
-        break;
-      }
-      await new Promise(resolve => setTimeout(resolve, 5 * 1000));
-    }
-    console.log(
-      `Disabled deployment protection for deploymentId: ${deploymentId} projectId: ${projectId}`
-    );
-  } else {
-    console.error(settingRes.status, await settingRes.text(), deploymentInfo);
-    throw new Error(
-      `Failed to disable deployment protection projectId: ${projectId} deploymentId ${deploymentId}`
-    );
-  }
 }
 
 function digestOfFile(body) {
@@ -247,15 +188,12 @@ async function fetchWithAuth(url, opts = {}) {
     opts.headers.Authorization = `Bearer ${await fetchCachedToken()}`;
   }
 
-  if (opts.skipTeam) {
-    delete opts.skipTeam;
-  } else {
-    const { VERCEL_TEAM_ID } = process.env;
+  const { VERCEL_TEAM_ID } = process.env;
 
-    if (VERCEL_TEAM_ID) {
-      url += `${url.includes('?') ? '&' : '?'}teamId=${VERCEL_TEAM_ID}`;
-    }
+  if (VERCEL_TEAM_ID) {
+    url += `${url.includes('?') ? '&' : '?'}teamId=${VERCEL_TEAM_ID}`;
   }
+
   return await fetchApi(url, opts);
 }
 
@@ -281,7 +219,7 @@ async function fetchTokenWithRetry(retries = 5) {
     VERCEL_TEST_REGISTRATION_URL,
   } = process.env;
   if (VERCEL_TOKEN || NOW_TOKEN || TEMP_TOKEN) {
-    if (!TEMP_TOKEN) {
+    if (!TEMP_TOKEN && !IS_CI) {
       logWithinTest(
         'Your personal token will be used to make test deployments.'
       );
@@ -290,7 +228,7 @@ async function fetchTokenWithRetry(retries = 5) {
   }
   if (!VERCEL_TEST_TOKEN || !VERCEL_TEST_REGISTRATION_URL) {
     throw new Error(
-      process.env.CI
+      IS_CI
         ? 'Failed to create test deployment. This is expected for 3rd-party Pull Requests. Please run tests locally.'
         : 'Failed to create test deployment. Please set `VERCEL_TOKEN` environment variable and run again.'
     );
@@ -370,5 +308,4 @@ module.exports = {
   fetchCachedToken,
   fetchTokenWithRetry,
   fileModeSymbol,
-  disableSSO,
 };

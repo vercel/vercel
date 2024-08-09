@@ -1,9 +1,10 @@
 import { lstatSync } from 'fs-extra';
-import { isAbsolute, join, relative } from 'path';
+import { isAbsolute, join, relative, sep } from 'path';
 import { hash, hashes, mapToObject } from './utils/hashes';
 import { upload } from './upload';
 import { buildFileTree, createDebug } from './utils';
 import { DeploymentError } from './errors';
+import { isErrnoException } from '@vercel/error-utils';
 import {
   VercelClientOptions,
   DeploymentOptions,
@@ -90,27 +91,43 @@ export default function buildCreateDeployment() {
 
     let files;
 
-    if (clientOptions.archive === 'tgz') {
-      debug('Packing tarball');
-      const tarStream = tar
-        .pack(workPath, {
-          entries: fileList.map(file => relative(workPath, file)),
-        })
-        .pipe(createGzip());
-      const tarBuffer = await streamToBuffer(tarStream);
-      debug('Packed tarball');
-      files = new Map([
-        [
-          hash(tarBuffer),
-          {
-            names: [join(workPath, '.vercel/source.tgz')],
-            data: tarBuffer,
-            mode: 0o666,
-          },
-        ],
-      ]);
-    } else {
-      files = await hashes(fileList);
+    try {
+      if (clientOptions.archive === 'tgz') {
+        debug('Packing tarball');
+        const tarStream = tar
+          .pack(workPath, {
+            entries: fileList.map(file => relative(workPath, file)),
+          })
+          .pipe(createGzip());
+        const tarBuffer = await streamToBuffer(tarStream);
+        debug('Packed tarball');
+        files = new Map([
+          [
+            hash(tarBuffer),
+            {
+              names: [join(workPath, '.vercel/source.tgz')],
+              data: tarBuffer,
+              mode: 0o666,
+            },
+          ],
+        ]);
+      } else {
+        files = await hashes(fileList);
+      }
+    } catch (err: unknown) {
+      if (
+        clientOptions.prebuilt &&
+        isErrnoException(err) &&
+        err.code === 'ENOENT' &&
+        err.path
+      ) {
+        const errPath = relative(workPath, err.path);
+        err.message = `File does not exist: "${relative(workPath, errPath)}"`;
+        if (errPath.split(sep).includes('node_modules')) {
+          err.message = `Please ensure project dependencies have been installed:\n${err.message}`;
+        }
+      }
+      throw err;
     }
 
     debug(`Yielding a 'hashes-calculated' event with ${files.size} hashes`);

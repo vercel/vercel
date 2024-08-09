@@ -51,11 +51,15 @@ export const build: BuildV2 = async ({
   );
 
   const spawnOpts = getSpawnOptions(meta, nodeVersion);
-  const { cliType, lockfileVersion } = await scanParentDirs(entrypointDir);
+  const { cliType, lockfileVersion, packageJson } = await scanParentDirs(
+    entrypointDir,
+    true
+  );
 
   spawnOpts.env = getEnvForPackageManager({
     cliType,
     lockfileVersion,
+    packageJsonPackageManager: packageJson?.packageManager,
     nodeVersion,
     env: spawnOpts.env || {},
   });
@@ -126,7 +130,6 @@ export const build: BuildV2 = async ({
   ]);
 
   const edgeFunction = new EdgeFunction({
-    name: 'hydrogen',
     deploymentTarget: 'v8-worker',
     entrypoint: 'index.js',
     files: edgeFunctionFiles,

@@ -87,10 +87,10 @@ export default async function add(
   }
 
   // We can cast the information because we've just added the domain and it should be there
-  console.log(
-    `${chalk.cyan('> Success!')} Domain ${chalk.bold(
-      domainName
-    )} added to project ${chalk.bold(projectName)}. ${addStamp()}`
+  output.success(
+    `Domain ${chalk.bold(domainName)} added to project ${chalk.bold(
+      projectName
+    )}. ${addStamp()}`
   );
 
   if (isPublicSuffix(domainName)) {

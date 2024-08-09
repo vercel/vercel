@@ -1,5 +1,21 @@
 # @vercel/ruby
 
+## 2.1.0
+
+### Minor Changes
+
+- Add support for Ruby 3.3 ([#11497](https://github.com/vercel/vercel/pull/11497))
+
+- Remove legacy `avoidTopLevelInstall` logic ([#11513](https://github.com/vercel/vercel/pull/11513))
+
+## 2.0.5
+
+### Patch Changes
+
+- add ruby3 to path during build ([#11094](https://github.com/vercel/vercel/pull/11094))
+
+- Remove deprecated `createLambda()` usage ([#11080](https://github.com/vercel/vercel/pull/11080))
+
 ## 2.0.4
 
 ### Patch Changes

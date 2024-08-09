@@ -1,5 +1,53 @@
 # @vercel/redwood
 
+## 2.1.3
+
+### Patch Changes
+
+- Revert "Fix corepack `packageManager` detection on monorepos" ([#11865](https://github.com/vercel/vercel/pull/11865))
+
+## 2.1.2
+
+### Patch Changes
+
+- Fix corepack `packageManager` detection on monorepos ([#11811](https://github.com/vercel/vercel/pull/11811))
+
+## 2.1.1
+
+### Patch Changes
+
+- Upgrade to @vercel/nft 0.27.3 with a bug fix for browser mapping support ([#11841](https://github.com/vercel/vercel/pull/11841))
+
+## 2.1.0
+
+### Minor Changes
+
+- Add support for API endpoint configuration via `export const config` syntax ([#11776](https://github.com/vercel/vercel/pull/11776))
+
+## 2.0.10
+
+### Patch Changes
+
+- Upgrade to @vercel/nft 0.27.2 with browser remapping support ([#11700](https://github.com/vercel/vercel/pull/11700))
+
+## 2.0.9
+
+### Patch Changes
+
+- Bump `@vercel/nft@0.27.0` ([#11580](https://github.com/vercel/vercel/pull/11580))
+
+## 2.0.8
+
+### Patch Changes
+
+- bump `@vercel/nft@0.26.4` ([#11155](https://github.com/vercel/vercel/pull/11155))
+
+## 2.0.7
+
+### Patch Changes
+
+- [node][next][redwood][remix] bump `@vercel/nft@0.26.3` ([#11115](https://github.com/vercel/vercel/pull/11115))
+
 ## 2.0.6
 
 ### Patch Changes

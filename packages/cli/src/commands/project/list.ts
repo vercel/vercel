@@ -1,11 +1,10 @@
 import chalk from 'chalk';
 import ms from 'ms';
-import table from 'text-table';
+import table from '../../util/output/table';
 import type { Project } from '@vercel-internals/types';
 import Client from '../../util/client';
 import getCommandFlags from '../../util/get-command-flags';
 import { getCommandName } from '../../util/pkg-name';
-import strlen from '../../util/strlen';
 import { NODE_VERSIONS } from '@vercel/build-utils';
 
 export default async function list(
@@ -28,7 +27,7 @@ export default async function list(
 
   output.spinner(`Fetching projects in ${chalk.bold(contextName)}`);
 
-  let projectsUrl = `/v4/projects/?limit=20`;
+  let projectsUrl = `/v9/projects?limit=20`;
 
   const deprecated = argv['--update-required'] || false;
   if (deprecated) {
@@ -100,11 +99,7 @@ export default async function list(
           ])
           .flat(),
       ],
-      {
-        align: ['l', 'l', 'l'],
-        hsep: ' '.repeat(3),
-        stringLength: strlen,
-      }
+      { hsep: 3 }
     ).replace(/^/gm, '  ');
     output.print(`\n${tablePrint}\n\n`);
 
@@ -118,9 +113,7 @@ export default async function list(
 }
 
 function getLatestProdUrl(project: Project): string {
-  const alias =
-    project.alias?.filter(al => al.deployment)?.[0]?.domain ||
-    project.alias?.[0]?.domain;
+  const alias = project.targets?.production?.alias?.[0];
   if (alias) return 'https://' + alias;
   return '--';
 }

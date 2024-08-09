@@ -1,5 +1,6 @@
 import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
+import { yesOption } from '../../util/arg-common';
 
 export const redeployCommand: Command = {
   name: 'redeploy',
@@ -15,10 +16,10 @@ export const redeployCommand: Command = {
       name: 'no-wait',
       shorthand: null,
       description: "Don't wait for the redeploy to finish",
-      type: 'boolean',
+      type: Boolean,
       deprecated: false,
-      multi: false,
     },
+    yesOption,
   ],
   examples: [
     {

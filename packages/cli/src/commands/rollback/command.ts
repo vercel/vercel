@@ -1,5 +1,6 @@
 import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
+import { yesOption } from '../../util/arg-common';
 
 export const rollbackCommand: Command = {
   name: 'rollback',
@@ -30,10 +31,10 @@ export const rollbackCommand: Command = {
       description: 'Time to wait for rollback completion [3m]',
       argument: 'timeout',
       shorthand: null,
-      type: 'string',
+      type: String,
       deprecated: false,
-      multi: false,
     },
+    yesOption,
   ],
   examples: [
     {
