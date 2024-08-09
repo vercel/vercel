@@ -2043,7 +2043,7 @@ export const frameworks = [
         value: 'sanity build',
       },
       devCommand: {
-        value: 'sanity start --port $PORT',
+        value: 'sanity dev --port $PORT',
       },
       outputDirectory: {
         value: 'dist',
