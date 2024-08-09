@@ -1,6 +1,6 @@
 import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
-import { yesOption } from '../../util/arg-common';
+import { confirmOption, yesOption } from '../../util/arg-common';
 
 export const gitCommand: Command = {
   name: 'git',
@@ -33,10 +33,7 @@ export const gitCommand: Command = {
       examples: [],
     },
   ],
-  options: [
-    yesOption,
-    { name: 'confirm', shorthand: 'c', type: Boolean, deprecated: true },
-  ],
+  options: [yesOption, { ...confirmOption, deprecated: true }],
   examples: [
     {
       name: 'Connect your Vercel Project to your Git repository defined in your local .git config',

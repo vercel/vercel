@@ -1,5 +1,11 @@
 import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
+import {
+  forceOption,
+  limitOption,
+  nextOption,
+  yesOption,
+} from '../../util/arg-common';
 
 export const domainsCommand: Command = {
   name: 'domains',
@@ -101,33 +107,22 @@ export const domainsCommand: Command = {
   ],
   options: [
     {
-      name: 'next',
+      ...nextOption,
       description: 'Show next page of results',
-      shorthand: 'N',
-      type: Number,
-      deprecated: false,
     },
     {
-      name: 'yes',
+      ...yesOption,
       description: 'Skip the confirmation prompt when removing a domain',
-      shorthand: 'y',
-      type: Boolean,
-      deprecated: false,
     },
     {
-      name: 'limit',
-      shorthand: null,
+      ...limitOption,
       description:
         'Number of results to return per page (default: 20, max: 100)',
       argument: 'NUMBER',
-      type: String,
-      deprecated: false,
     },
     {
-      name: 'force',
+      ...forceOption,
       shorthand: null,
-      type: Boolean,
-      deprecated: false,
       description:
         'Force a domain on a project and remove it from an existing one',
     },

@@ -1,5 +1,6 @@
 import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
+import { confirmOption, yesOption } from '../../util/arg-common';
 
 export const linkCommand: Command = {
   name: 'link',
@@ -22,14 +23,11 @@ export const linkCommand: Command = {
       deprecated: false,
     },
     {
-      name: 'yes',
+      ...yesOption,
       description:
         'Skip questions when setting up new project using default scope and settings',
-      shorthand: 'y',
-      type: Boolean,
-      deprecated: false,
     },
-    { name: 'confirm', shorthand: 'c', type: Boolean, deprecated: true },
+    { ...confirmOption, deprecated: true },
   ],
   examples: [
     {

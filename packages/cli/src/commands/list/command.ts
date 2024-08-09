@@ -1,6 +1,6 @@
 import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
-import { yesOption } from '../../util/arg-common';
+import { confirmOption, nextOption, yesOption } from '../../util/arg-common';
 
 export const listCommand: Command = {
   name: 'list',
@@ -30,17 +30,14 @@ export const listCommand: Command = {
       deprecated: false,
     },
     {
-      name: 'next',
+      ...nextOption,
       description: 'Show next page of results',
       argument: 'MS',
-      shorthand: 'N',
-      type: Number,
-      deprecated: false,
     },
     // this can be deprecated someday
     { name: 'prod', shorthand: null, type: Boolean, deprecated: false },
     yesOption,
-    { name: 'confirm', shorthand: 'c', type: Boolean, deprecated: true },
+    { ...confirmOption, deprecated: true },
   ],
   examples: [
     {
