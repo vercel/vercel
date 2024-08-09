@@ -1,5 +1,6 @@
 import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
+import { yesOption } from '../../util/arg-common';
 
 export const buildCommand: Command = {
   name: 'build',
@@ -29,12 +30,9 @@ export const buildCommand: Command = {
       deprecated: false,
     },
     {
-      name: 'yes',
+      ...yesOption,
       description:
         'Skip the confirmation prompt about pulling environment variables and project settings when not found locally',
-      shorthand: 'y',
-      type: Boolean,
-      deprecated: false,
     },
   ],
   examples: [

@@ -1,5 +1,6 @@
 import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
+import { forceOption } from '../../util/arg-common';
 
 export const initCommand: Command = {
   name: 'init',
@@ -17,12 +18,9 @@ export const initCommand: Command = {
   subcommands: undefined,
   options: [
     {
-      name: 'force',
+      ...forceOption,
       description: 'Overwrite destination directory if exists [off]',
       argument: undefined,
-      shorthand: 'f',
-      type: Boolean,
-      deprecated: false,
     },
   ],
   examples: [

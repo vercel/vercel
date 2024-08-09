@@ -1,6 +1,6 @@
 import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
-import { yesOption } from '../../util/arg-common';
+import { confirmOption, yesOption } from '../../util/arg-common';
 
 export const devCommand: Command = {
   name: 'dev',
@@ -22,7 +22,7 @@ export const devCommand: Command = {
     },
     yesOption,
     { name: 'port', shorthand: 'p', type: String, deprecated: true },
-    { name: 'confirm', shorthand: 'c', type: Boolean, deprecated: true },
+    { ...confirmOption, deprecated: true },
   ],
   examples: [
     {
