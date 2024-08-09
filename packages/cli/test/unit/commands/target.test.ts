@@ -12,9 +12,8 @@ import { parseSpacedTableRow } from '../../helpers/parse-table';
 describe('target', () => {
   it('should reject invalid arguments', async () => {
     client.setArgv('--invalid');
-    await expect(target(client)).rejects.toThrow(
-      'unknown or unexpected option: --invalid'
-    );
+    const result = await target(client);
+    expect(result).toBe(1);
   });
 
   describe('ls', () => {

@@ -14,6 +14,13 @@ export const buildCommand: Command = {
       deprecated: false,
     },
     {
+      name: 'target',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Specify the target environment',
+    },
+    {
       name: 'output',
       description: 'Directory where built assets should be written to',
       shorthand: null,

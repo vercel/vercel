@@ -3,28 +3,45 @@ import list from './list';
 import add from './add';
 import change from './switch';
 import invite from './invite';
-import getArgs from '../../util/get-args';
+import { parseArguments } from '../../util/get-args';
 import Client from '../../util/client';
 import { teamsCommand } from './command';
 import { help } from '../help';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import handleError from '../../util/handle-error';
 
 export default async (client: Client) => {
   let subcommand;
 
-  const argv = getArgs(client.argv.slice(2), undefined, { permissive: true });
-  const isSwitch = argv._[0] === 'switch';
+  let parsedArgs = null;
 
-  argv._ = argv._.slice(1);
+  const flagsSpecification = getFlagsSpecification(teamsCommand.options);
+
+  // Parse CLI args
+  try {
+    parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification, {
+      permissive: true,
+    });
+  } catch (error) {
+    handleError(error);
+    return 1;
+  }
+
+  const { output } = client;
+
+  if (parsedArgs.flags['--help']) {
+    output.print(help(teamsCommand, { columns: client.stderr.columns }));
+    return 2;
+  }
+
+  const isSwitch = parsedArgs.args[0] === 'switch';
+
+  parsedArgs.args = parsedArgs.args.slice(1);
 
   if (isSwitch) {
     subcommand = 'switch';
   } else {
-    subcommand = argv._.shift();
-  }
-
-  if (argv['--help'] || !subcommand) {
-    client.output.print(help(teamsCommand, { columns: client.stderr.columns }));
-    return 2;
+    subcommand = parsedArgs.args.shift();
   }
 
   let exitCode = 0;
@@ -36,7 +53,7 @@ export default async (client: Client) => {
     }
     case 'switch':
     case 'change': {
-      exitCode = await change(client, argv._[0]);
+      exitCode = await change(client, parsedArgs.args[0]);
       break;
     }
     case 'add':
@@ -46,7 +63,7 @@ export default async (client: Client) => {
     }
 
     case 'invite': {
-      exitCode = await invite(client, argv._);
+      exitCode = await invite(client, parsedArgs.args);
       break;
     }
     default: {

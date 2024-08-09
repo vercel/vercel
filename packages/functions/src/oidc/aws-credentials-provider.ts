@@ -38,7 +38,7 @@ export interface AwsCredentialsProviderInit // eslint-disable-line @typescript-e
  * @returns {AwsCredentialIdentityProvider} A function that provides AWS credentials.
  *
  * @example
- * ```javascript
+ * ```js
  * import * as s3 from '@aws-sdk/client-s3';
  * import { awsCredentialsProvider } from '@vercel/functions/oidc';
  *

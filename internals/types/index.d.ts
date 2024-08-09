@@ -4,7 +4,7 @@ import type * as tty from 'tty';
 import type { Route } from '@vercel/routing-utils';
 import { PROJECT_ENV_TARGET } from '@vercel-internals/constants';
 
-export type ProjectEnvTarget = typeof PROJECT_ENV_TARGET[number];
+export type ProjectEnvTarget = (typeof PROJECT_ENV_TARGET)[number];
 export type ProjectEnvType =
   | 'plain'
   | 'secret'
@@ -343,6 +343,7 @@ export interface ProjectEnvVariable {
   createdAt?: number;
   updatedAt?: number;
   target?: ProjectEnvTarget | ProjectEnvTarget[];
+  customEnvironmentIds?: string[];
   system?: boolean;
   gitBranch?: string;
 }

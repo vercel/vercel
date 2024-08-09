@@ -392,7 +392,7 @@ exports[`help command > certs help output snapshots > certs help column width 40
                          return per page     
                          (default: 20, max:  
                          100)                
-  -n,  --next            Show next page of   
+  -N,  --next            Show next page of   
                          results             
 
 
@@ -472,7 +472,7 @@ exports[`help command > certs help output snapshots > certs help column width 80
        --crt <FILE>      Certificate file                                            
        --key <FILE>      Certificate key file                                        
        --limit <VALUE>   Number of results to return per page (default: 20, max: 100)
-  -n,  --next            Show next page of results                                   
+  -N,  --next            Show next page of results                                   
 
 
   [2mGlobal Options[22m:
@@ -527,7 +527,7 @@ exports[`help command > certs help output snapshots > certs help column width 12
        --crt <FILE>      Certificate file                                                                                    
        --key <FILE>      Certificate key file                                                                                
        --limit <VALUE>   Number of results to return per page (default: 20, max: 100)                                        
-  -n,  --next            Show next page of results                                                                           
+  -N,  --next            Show next page of results                                                                           
 
 
   [2mGlobal Options[22m:
@@ -942,13 +942,12 @@ exports[`help command > dns help output snapshots > dns help column width 40 1`]
 
   [2mOptions[22m:
 
-  -n,  --limit <NUMBER>  Number of      
-                         results to     
-                         return per page
-                         (default: 20,  
-                         max: 100)      
-  -n,  --next <MS>       Show next page 
-                         of results     
+       --limit <NUMBER>  Number of results to
+                         return per page     
+                         (default: 20, max:  
+                         100)                
+  -N,  --next <MS>       Show next page of   
+                         results             
 
 
   [2mGlobal Options[22m:
@@ -1041,9 +1040,8 @@ exports[`help command > dns help output snapshots > dns help column width 80 1`]
 
   [2mOptions[22m:
 
-  -n,  --limit <NUMBER>  Number of results to return per page (default: 20, max:
-                         100)                                                   
-  -n,  --next <MS>       Show next page of results                              
+       --limit <NUMBER>  Number of results to return per page (default: 20, max: 100)
+  -N,  --next <MS>       Show next page of results                                   
 
 
   [2mGlobal Options[22m:
@@ -1111,8 +1109,8 @@ exports[`help command > dns help output snapshots > dns help column width 120 1`
 
   [2mOptions[22m:
 
-  -n,  --limit <NUMBER>  Number of results to return per page (default: 20, max: 100)                                   
-  -n,  --next <MS>       Show next page of results                                                                      
+       --limit <NUMBER>  Number of results to return per page (default: 20, max: 100)                                        
+  -N,  --next <MS>       Show next page of results                                                                           
 
 
   [2mGlobal Options[22m:
@@ -1212,23 +1210,20 @@ exports[`help command > domains help output snapshots > domains help column widt
 
   [2mOptions[22m:
 
-  -f,  --force           Force a domain 
-                         on a project   
-                         and remove it  
-                         from an        
-                         existing one   
-  -n,  --limit <NUMBER>  Number of      
-                         results to     
-                         return per page
-                         (default: 20,  
-                         max: 100)      
-  -N,  --next            Show next page 
-                         of results     
-  -y,  --yes             Skip the       
-                         confirmation   
-                         prompt when    
-                         removing a     
-                         domain         
+       --force           Force a domain on a 
+                         project and remove  
+                         it from an existing 
+                         one                 
+       --limit <NUMBER>  Number of results to
+                         return per page     
+                         (default: 20, max:  
+                         100)                
+  -N,  --next            Show next page of   
+                         results             
+  -y,  --yes             Skip the            
+                         confirmation prompt 
+                         when removing a     
+                         domain              
 
 
   [2mGlobal Options[22m:
@@ -1303,12 +1298,11 @@ exports[`help command > domains help output snapshots > domains help column widt
 
   [2mOptions[22m:
 
-  -f,  --force           Force a domain on a project and remove it from an      
-                         existing one                                           
-  -n,  --limit <NUMBER>  Number of results to return per page (default: 20, max:
-                         100)                                                   
-  -N,  --next            Show next page of results                              
-  -y,  --yes             Skip the confirmation prompt when removing a domain    
+       --force           Force a domain on a project and remove it from an existing  
+                         one                                                         
+       --limit <NUMBER>  Number of results to return per page (default: 20, max: 100)
+  -N,  --next            Show next page of results                                   
+  -y,  --yes             Skip the confirmation prompt when removing a domain         
 
 
   [2mGlobal Options[22m:
@@ -1359,10 +1353,10 @@ exports[`help command > domains help output snapshots > domains help column widt
 
   [2mOptions[22m:
 
-  -f,  --force           Force a domain on a project and remove it from an existing one                                 
-  -n,  --limit <NUMBER>  Number of results to return per page (default: 20, max: 100)                                   
-  -N,  --next            Show next page of results                                                                      
-  -y,  --yes             Skip the confirmation prompt when removing a domain                                            
+       --force           Force a domain on a project and remove it from an existing one                                      
+       --limit <NUMBER>  Number of results to return per page (default: 20, max: 100)                                        
+  -N,  --next            Show next page of results                                                                           
+  -y,  --yes             Skip the confirmation prompt when removing a domain                                                 
 
 
   [2mGlobal Options[22m:
@@ -1732,7 +1726,7 @@ exports[`help command > env help output snapshots > env help column width 120 1`
 
 exports[`help command > git help output snapshots > git help column width 40 1`] = `
 "
-  ▲ [1mvercel[22m [1mgit[22m command
+  ▲ [1mvercel[22m [1mgit[22m command [options]
 
   Manage your Git provider connections. 
 
@@ -1755,6 +1749,11 @@ exports[`help command > git help output snapshots > git help column width 40 1`]
                          repository
                          from your 
                          project   
+
+
+  [2mOptions[22m:
+
+
 
 
   [2mGlobal Options[22m:
@@ -1814,7 +1813,7 @@ exports[`help command > git help output snapshots > git help column width 40 1`]
 
 exports[`help command > git help output snapshots > git help column width 80 1`] = `
 "
-  ▲ [1mvercel[22m [1mgit[22m command
+  ▲ [1mvercel[22m [1mgit[22m command [options]
 
   Manage your Git provider connections.                                         
 
@@ -1824,6 +1823,11 @@ exports[`help command > git help output snapshots > git help column width 80 1`]
                          or provide the remote URL to your Git repository  
   disconnect             Disconnect the Git provider repository from your  
                          project                                           
+
+
+  [2mOptions[22m:
+
+
 
 
   [2mGlobal Options[22m:
@@ -1859,7 +1863,7 @@ exports[`help command > git help output snapshots > git help column width 80 1`]
 
 exports[`help command > git help output snapshots > git help column width 120 1`] = `
 "
-  ▲ [1mvercel[22m [1mgit[22m command
+  ▲ [1mvercel[22m [1mgit[22m command [options]
 
   Manage your Git provider connections.                                                                                 
 
@@ -1868,6 +1872,11 @@ exports[`help command > git help output snapshots > git help column width 120 1`
   connect     [git url]  Connect your Vercel Project to your Git repository or provide the remote URL to your Git  
                          repository                                                                                
   disconnect             Disconnect the Git provider repository from your project                                  
+
+
+  [2mOptions[22m:
+
+
 
 
   [2mGlobal Options[22m:
@@ -2435,7 +2444,7 @@ exports[`help command > list help output snapshots > list help column width 40 1
   [2mOptions[22m:
 
        --environment <production|preview>    
-       --meta <KEY=value>                  F…
+  -m,  --meta <KEY=value>                  F…
                                            d…
                                            by
                                            m…
@@ -2446,7 +2455,7 @@ exports[`help command > list help output snapshots > list help column width 40 1
                                            a…
                                            m…
                                            t…
-  -n,  --next <MS>                         S…
+  -N,  --next <MS>                         S…
                                            n…
                                            p…
                                            of
@@ -2521,9 +2530,9 @@ exports[`help command > list help output snapshots > list help column width 80 1
   [2mOptions[22m:
 
        --environment <production|preview>                                            
-       --meta <KEY=value>                  Filter deployments by metadata (e.g.: \`-m 
+  -m,  --meta <KEY=value>                  Filter deployments by metadata (e.g.: \`-m 
                                            KEY=value\`). Can appear many times.       
-  -n,  --next <MS>                         Show next page of results                 
+  -N,  --next <MS>                         Show next page of results                 
 
 
   [2mGlobal Options[22m:
@@ -2570,8 +2579,8 @@ exports[`help command > list help output snapshots > list help column width 120 
   [2mOptions[22m:
 
        --environment <production|preview>                                                                                    
-       --meta <KEY=value>                  Filter deployments by metadata (e.g.: \`-m KEY=value\`). Can appear many times.     
-  -n,  --next <MS>                         Show next page of results                                                         
+  -m,  --meta <KEY=value>                  Filter deployments by metadata (e.g.: \`-m KEY=value\`). Can appear many times.     
+  -N,  --next <MS>                         Show next page of results                                                         
 
 
   [2mGlobal Options[22m:
@@ -3765,7 +3774,7 @@ exports[`help command > rollback help output snapshots > rollback help column wi
 
 exports[`help command > teams help output snapshots > teams help column width 40 1`] = `
 "
-  ▲ [1mvercel[22m [1mteams[22m [options]
+  ▲ [1mvercel[22m [1mteams[22m
 
   Manage teams under your Vercel        
   account                               
@@ -3782,12 +3791,6 @@ exports[`help command > teams help output snapshots > teams help column width 40
   invite  emails  Invite a new  
                   member to a   
                   team          
-
-
-  [2mOptions[22m:
-
-  -N,  --next <MS>  Show next page of   
-                    results             
 
 
   [2mGlobal Options[22m:
@@ -3851,7 +3854,7 @@ exports[`help command > teams help output snapshots > teams help column width 40
 
 exports[`help command > teams help output snapshots > teams help column width 80 1`] = `
 "
-  ▲ [1mvercel[22m [1mteams[22m [options]
+  ▲ [1mvercel[22m [1mteams[22m
 
   Manage teams under your Vercel account                                        
 
@@ -3861,11 +3864,6 @@ exports[`help command > teams help output snapshots > teams help column width 80
   ls              Show all teams you're a part of                       
   switch  [name]  Switch to a different team                            
   invite  emails  Invite a new member to a team                         
-
-
-  [2mOptions[22m:
-
-  -N,  --next <MS>  Show next page of results                                   
 
 
   [2mGlobal Options[22m:
@@ -3905,7 +3903,7 @@ exports[`help command > teams help output snapshots > teams help column width 80
 
 exports[`help command > teams help output snapshots > teams help column width 120 1`] = `
 "
-  ▲ [1mvercel[22m [1mteams[22m [options]
+  ▲ [1mvercel[22m [1mteams[22m
 
   Manage teams under your Vercel account                                                                                
 
@@ -3915,11 +3913,6 @@ exports[`help command > teams help output snapshots > teams help column width 12
   ls              Show all teams you're a part of                                                               
   switch  [name]  Switch to a different team                                                                    
   invite  emails  Invite a new member to a team                                                                 
-
-
-  [2mOptions[22m:
-
-  -N,  --next <MS>  Show next page of results                                                                           
 
 
   [2mGlobal Options[22m:

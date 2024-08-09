@@ -15,7 +15,7 @@ const settingMap = {
 } as const;
 type ConfigKeys = keyof typeof settingMap;
 const settingKeys = Object.keys(settingMap).sort() as unknown as readonly [
-  ConfigKeys
+  ConfigKeys,
 ];
 
 export type PartialProjectSettings = Pick<ProjectSettings, ConfigKeys>;
@@ -124,15 +124,18 @@ export default async function editProjectSettings(
     return settings;
   }
 
-  const choices = settingKeys.reduce((acc, setting) => {
-    const skip =
-      setting === 'framework' ||
-      setting === 'commandForIgnoringBuildStep' ||
-      setting === 'installCommand' ||
-      localConfigurationOverrides?.[setting];
-    if (skip) return acc;
-    return [...acc, { name: settingMap[setting], value: setting }];
-  }, [] as { name: string; value: ConfigKeys }[]);
+  const choices = settingKeys.reduce(
+    (acc, setting) => {
+      const skip =
+        setting === 'framework' ||
+        setting === 'commandForIgnoringBuildStep' ||
+        setting === 'installCommand' ||
+        localConfigurationOverrides?.[setting];
+      if (skip) return acc;
+      return [...acc, { name: settingMap[setting], value: setting }];
+    },
+    [] as { name: string; value: ConfigKeys }[]
+  );
 
   const settingFields = await client.input.checkbox({
     message: 'Which settings would you like to overwrite (select multiple)?',

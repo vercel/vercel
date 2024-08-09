@@ -1,5 +1,35 @@
 # @vercel/build-utils
 
+## 8.3.6
+
+### Patch Changes
+
+- Remove implicit reliance on `@types/glob` for downstream consumers ([#11914](https://github.com/vercel/vercel/pull/11914))
+
+## 8.3.5
+
+### Patch Changes
+
+- Revert "warn on mismatched corepack and detected package managers" ([#11879](https://github.com/vercel/vercel/pull/11879))
+
+## 8.3.4
+
+### Patch Changes
+
+- Revert "Fix corepack `packageManager` detection on monorepos" ([#11865](https://github.com/vercel/vercel/pull/11865))
+
+## 8.3.3
+
+### Patch Changes
+
+- Fix corepack `packageManager` detection on monorepos ([#11811](https://github.com/vercel/vercel/pull/11811))
+
+## 8.3.2
+
+### Patch Changes
+
+- reject mismatched corepack and detected package managers ([#11603](https://github.com/vercel/vercel/pull/11603))
+
 ## 8.3.1
 
 ### Patch Changes

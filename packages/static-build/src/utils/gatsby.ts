@@ -9,7 +9,7 @@ const PLUGINS = [
   '@vercel/gatsby-plugin-vercel-analytics',
   '@vercel/gatsby-plugin-vercel-builder',
 ] as const;
-type PluginName = typeof PLUGINS[number];
+type PluginName = (typeof PLUGINS)[number];
 
 const GATSBY_CONFIG_FILE = 'gatsby-config';
 const GATSBY_NODE_FILE = 'gatsby-node';
