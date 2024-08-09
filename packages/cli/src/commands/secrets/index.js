@@ -8,7 +8,7 @@ import getScope from '../../util/get-scope';
 import confirm from '../../util/input/confirm';
 import getCommandFlags from '../../util/get-command-flags';
 import { getCommandName } from '../../util/pkg-name';
-import getArgs from '../../util/get-args';
+import { getArgs } from '../../util/get-args';
 import { help } from '../help';
 import { secretsCommand } from './command';
 
