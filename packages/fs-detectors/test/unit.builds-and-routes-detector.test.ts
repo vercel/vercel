@@ -82,7 +82,9 @@ describe('Test `detectBuilders`', () => {
     expect(builders![0].use).toBe('@vercel/node');
     expect(builders![0].src).toBe('api/users.js');
     expect(builders![1].use).toBe('@vercel/static');
-    expect(builders![1].src).toBe('!{api/**,package.json,middleware.[jt]s}');
+    expect(builders![1].src).toBe(
+      '!{api/**,package.json,middleware\\.(?:j|t|mj|mt)s}'
+    );
     expect(builders!.length).toBe(2);
     expect(errors).toBe(null);
   });
@@ -93,7 +95,9 @@ describe('Test `detectBuilders`', () => {
     expect(builders![0].use).toBe('@vercel/node');
     expect(builders![0].src).toBe('api/[endpoint].js');
     expect(builders![1].use).toBe('@vercel/static');
-    expect(builders![1].src).toBe('!{api/**,package.json,middleware.[jt]s}');
+    expect(builders![1].src).toBe(
+      '!{api/**,package.json,middleware\\.(?:j|t|mj|mt)s}'
+    );
     expect(builders!.length).toBe(2);
     expect(errors).toBe(null);
   });
@@ -148,7 +152,9 @@ describe('Test `detectBuilders`', () => {
     expect(builders![0].use).toBe('@vercel/node');
     expect(builders![0].src).toBe('api/endpoint.js');
     expect(builders![1].use).toBe('@vercel/static');
-    expect(builders![1].src).toBe('!{api/**,package.json,middleware.[jt]s}');
+    expect(builders![1].src).toBe(
+      '!{api/**,package.json,middleware\\.(?:j|t|mj|mt)s}'
+    );
     expect(builders!.length).toBe(2);
   });
 
@@ -351,7 +357,9 @@ describe('Test `detectBuilders`', () => {
     expect(builders![0].use).toBe('@vercel/node');
     expect(builders![0].src).toBe('api/index.ts');
     expect(builders![1].use).toBe('@vercel/static');
-    expect(builders![1].src).toBe('!{api/**,package.json,middleware.[jt]s}');
+    expect(builders![1].src).toBe(
+      '!{api/**,package.json,middleware\\.(?:j|t|mj|mt)s}'
+    );
   });
 
   it('functions with nextjs', async () => {
@@ -1068,7 +1076,9 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(builders![0].use).toBe('@vercel/node');
     expect(builders![0].src).toBe('api/users.js');
     expect(builders![1].use).toBe('@vercel/static');
-    expect(builders![1].src).toBe('!{api/**,package.json,middleware.[jt]s}');
+    expect(builders![1].src).toBe(
+      '!{api/**,package.json,middleware\\.(?:j|t|mj|mt)s}'
+    );
     expect(builders!.length).toBe(2);
     expect(errors).toBe(null);
 
@@ -1090,7 +1100,9 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(builders![0].use).toBe('@vercel/node');
     expect(builders![0].src).toBe('api/[endpoint].js');
     expect(builders![1].use).toBe('@vercel/static');
-    expect(builders![1].src).toBe('!{api/**,package.json,middleware.[jt]s}');
+    expect(builders![1].src).toBe(
+      '!{api/**,package.json,middleware\\.(?:j|t|mj|mt)s}'
+    );
     expect(builders!.length).toBe(2);
     expect(errors).toBe(null);
   });
@@ -1316,7 +1328,9 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(builders![0].use).toBe('@vercel/node');
     expect(builders![0].src).toBe('api/endpoint.js');
     expect(builders![1].use).toBe('@vercel/static');
-    expect(builders![1].src).toBe('!{api/**,package.json,middleware.[jt]s}');
+    expect(builders![1].src).toBe(
+      '!{api/**,package.json,middleware\\.(?:j|t|mj|mt)s}'
+    );
     expect(builders!.length).toBe(2);
 
     expect(defaultRoutes!.length).toBe(2);
@@ -1346,7 +1360,9 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(builders![0].use).toBe('@vercel/node');
     expect(builders![0].src).toBe('api/version.js');
     expect(builders![1].use).toBe('@vercel/static');
-    expect(builders![1].src).toBe('!{api/**,package.json,middleware.[jt]s}');
+    expect(builders![1].src).toBe(
+      '!{api/**,package.json,middleware\\.(?:j|t|mj|mt)s}'
+    );
     expect(builders!.length).toBe(2);
 
     expect(defaultRoutes!.length).toBe(2);
@@ -1644,7 +1660,9 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(builders![0].use).toBe('@vercel/node');
     expect(builders![0].src).toBe('api/index.ts');
     expect(builders![1].use).toBe('@vercel/static');
-    expect(builders![1].src).toBe('!{api/**,package.json,middleware.[jt]s}');
+    expect(builders![1].src).toBe(
+      '!{api/**,package.json,middleware\\.(?:j|t|mj|mt)s}'
+    );
     expect(errorRoutes!.length).toBe(1);
     expect((errorRoutes![0] as Source).status).toBe(404);
   });
@@ -2332,7 +2350,9 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(builders![0].src).toBe('middleware.js');
     expect(builders![0].config?.middleware).toEqual(true);
     expect(builders![1].use).toBe('@vercel/static');
-    expect(builders![1].src).toBe('!{api/**,package.json,middleware.[jt]s}');
+    expect(builders![1].src).toBe(
+      '!{api/**,package.json,middleware\\.(?:j|t|mj|mt)s}'
+    );
     expect(builders!.length).toBe(2);
     expect(errors).toBe(null);
   });
@@ -2351,7 +2371,9 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(builders![0].src).toBe('middleware.ts');
     expect(builders![0].config?.middleware).toEqual(true);
     expect(builders![1].use).toBe('@vercel/static');
-    expect(builders![1].src).toBe('!{api/**,package.json,middleware.[jt]s}');
+    expect(builders![1].src).toBe(
+      '!{api/**,package.json,middleware\\.(?:j|t|mj|mt)s}'
+    );
     expect(builders!.length).toBe(2);
     expect(errors).toBe(null);
   });

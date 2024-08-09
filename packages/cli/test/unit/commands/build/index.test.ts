@@ -251,7 +251,7 @@ describe('build', () => {
           require: '@vercel/static',
           apiVersion: 2,
           use: '@vercel/static',
-          src: '!{api/**,package.json,middleware.[jt]s}',
+          src: '!{api/**,package.json,middleware\\.(?:j|t|mj|mt)s}',
           config: {
             zeroConfig: true,
           },
@@ -311,7 +311,7 @@ describe('build', () => {
           require: '@vercel/static',
           apiVersion: 2,
           use: '@vercel/static',
-          src: '!{api/**,package.json,middleware.[jt]s}',
+          src: '!{api/**,package.json,middleware\\.(?:j|t|mj|mt)s}',
           config: {
             zeroConfig: true,
           },
@@ -468,7 +468,7 @@ describe('build', () => {
           require: '@vercel/static',
           apiVersion: 2,
           use: '@vercel/static',
-          src: '!{api/**,package.json,middleware.[jt]s}',
+          src: '!{api/**,package.json,middleware\\.(?:j|t|mj|mt)s}',
           config: {
             zeroConfig: true,
           },
@@ -528,7 +528,7 @@ describe('build', () => {
           require: '@vercel/static',
           apiVersion: 2,
           use: '@vercel/static',
-          src: '!{api/**,package.json,middleware.[jt]s}',
+          src: '!{api/**,package.json,middleware\\.(?:j|t|mj|mt)s}',
           config: {
             zeroConfig: true,
           },
@@ -588,7 +588,7 @@ describe('build', () => {
           require: '@vercel/static',
           apiVersion: 2,
           use: '@vercel/static',
-          src: '!{api/**,package.json,middleware.[jt]s}',
+          src: '!{api/**,package.json,middleware\\.(?:j|t|mj|mt)s}',
           config: {
             zeroConfig: true,
           },
