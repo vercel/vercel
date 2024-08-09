@@ -1,6 +1,7 @@
 import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
 import { getEnvTargetPlaceholder } from '../../util/env/env-target';
+import { forceOption, yesOption } from '../../util/arg-common';
 
 const targetPlaceholder = getEnvTargetPlaceholder();
 
@@ -43,11 +44,9 @@ export const envCommand: Command = {
           deprecated: false,
         },
         {
-          name: 'force',
+          ...forceOption,
           description: 'Force overwrites when a command would normally fail',
           shorthand: null,
-          type: Boolean,
-          deprecated: false,
         },
       ],
       examples: [],
@@ -100,11 +99,9 @@ export const envCommand: Command = {
       deprecated: false,
     },
     {
-      name: 'yes',
+      ...yesOption,
+
       description: 'Skip the confirmation prompt when removing an alias',
-      shorthand: 'y',
-      type: Boolean,
-      deprecated: false,
     },
     { name: 'sensitive', shorthand: null, type: Boolean, deprecated: false },
     { name: 'force', shorthand: null, type: Boolean, deprecated: false },

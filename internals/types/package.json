@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "@vercel-internals/types",
-  "version": "1.0.45",
+  "version": "1.0.46",
   "types": "index.d.ts",
   "main": "index.d.ts",
   "files": [
