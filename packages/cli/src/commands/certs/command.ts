@@ -1,5 +1,7 @@
 import { packageName } from '../../util/pkg-name';
 import { limitOption, nextOption } from '../../util/arg-common';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { parseArguments } from '../../util/get-args';
 
 export const certsCommand = {
   name: 'certs',
@@ -104,3 +106,10 @@ export const certsCommand = {
     },
   ],
 } as const;
+
+export type CertsCommandSpec = ReturnType<
+  typeof getFlagsSpecification<(typeof certsCommand)['options']>
+>;
+export type CertsCommandFlags = ReturnType<
+  typeof parseArguments<CertsCommandSpec>
+>['flags'];
