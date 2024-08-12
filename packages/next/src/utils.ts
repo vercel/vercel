@@ -1508,7 +1508,7 @@ export type LambdaGroup = {
   maxDuration?: number;
   isAppRouter?: boolean;
   isAppRouteHandler?: boolean;
-  readonly isStreaming: boolean;
+  isStreaming?: boolean;
   readonly isPrerenders: boolean;
   readonly isExperimentalPPR: boolean;
   isActionLambda?: boolean;
@@ -1535,7 +1535,9 @@ export async function getPageLambdaGroups({
   pageExtensions,
   inversedAppPathManifest,
   experimentalAllowBundling,
+  isRouteHandlers,
 }: {
+  isRouteHandlers?: boolean;
   entryPath: string;
   config: Config;
   functionsConfigManifest?: FunctionsConfigManifestV1;
@@ -1565,7 +1567,6 @@ export async function getPageLambdaGroups({
     const routeName = normalizePage(page.replace(/\.js$/, ''));
     const isPrerenderRoute = prerenderRoutes.has(routeName);
     const isExperimentalPPR = experimentalPPRRoutes?.has(routeName) ?? false;
-    const isStreaming = !isPrerenderRoute || isExperimentalPPR;
 
     let opts: { memory?: number; maxDuration?: number } = {};
 
@@ -1637,8 +1638,7 @@ export async function getPageLambdaGroups({
         ...opts,
         isPrerenders: isPrerenderRoute,
         isExperimentalPPR,
-        isStreaming,
-        isApiLambda: !!isApiPage(page),
+        isApiLambda: !!isApiPage(page) || !!isRouteHandlers,
         pseudoLayerBytes: initialPseudoLayer.pseudoLayerBytes,
         pseudoLayerUncompressedBytes: initialPseudoLayerUncompressed,
         pseudoLayer: Object.assign({}, initialPseudoLayer.pseudoLayer),
@@ -1955,6 +1955,7 @@ type OnPrerenderRouteArgs = {
   isCorrectNotFoundRoutes?: boolean;
   isEmptyAllowQueryForPrendered?: boolean;
   isAppPPREnabled: boolean;
+  hasActionOutputSupport?: boolean;
 };
 let prerenderGroup = 1;
 
@@ -1992,6 +1993,7 @@ export const onPrerenderRoute =
       isCorrectNotFoundRoutes,
       isEmptyAllowQueryForPrendered,
       isAppPPREnabled,
+      hasActionOutputSupport,
     } = prerenderRouteArgs;
 
     if (isBlocking && isFallback) {
@@ -2112,24 +2114,23 @@ export const onPrerenderRoute =
 
     // If enabled, try to get the postponed route information from the file
     // system and use it to assemble the prerender.
-    let prerender: string | undefined;
+    let postponedPrerender: string | undefined;
     if (experimentalPPR && appDir) {
       const htmlPath = path.join(appDir, `${routeFileNoExt}.html`);
       const metaPath = path.join(appDir, `${routeFileNoExt}.meta`);
       if (fs.existsSync(htmlPath) && fs.existsSync(metaPath)) {
         const meta = JSON.parse(await fs.readFile(metaPath, 'utf8'));
         if ('postponed' in meta && typeof meta.postponed === 'string') {
-          prerender = meta.postponed;
+          postponedPrerender = meta.postponed;
 
           // Assign the headers Content-Type header to the prerendered type.
           initialHeaders ??= {};
-          initialHeaders[
-            'content-type'
-          ] = `application/x-nextjs-pre-render; state-length=${meta.postponed.length}`;
+          initialHeaders['content-type'] =
+            `application/x-nextjs-pre-render; state-length=${meta.postponed.length}`;
 
           // Read the HTML file and append it to the prerendered content.
           const html = await fs.readFileSync(htmlPath, 'utf8');
-          prerender += html;
+          postponedPrerender += html;
         }
       }
 
@@ -2146,14 +2147,14 @@ export const onPrerenderRoute =
       }
     }
 
-    if (prerender) {
+    if (postponedPrerender) {
       const contentType = initialHeaders?.['content-type'];
       if (!contentType) {
         throw new Error("Invariant: contentType can't be undefined");
       }
 
       // Assemble the prerendered file.
-      htmlFsRef = new FileBlob({ contentType, data: prerender });
+      htmlFsRef = new FileBlob({ contentType, data: postponedPrerender });
     } else if (
       appDir &&
       !dataRoute &&
@@ -2217,8 +2218,15 @@ export const onPrerenderRoute =
                     ? addLocaleOrDefault('/404.html', routesManifest, locale)
                     : '/404.html'
                   : isAppPathRoute
-                  ? prefetchDataRoute || dataRoute
-                  : routeFileNoExt + '.json'
+                    ? // When experimental PPR is enabled, we expect that the data
+                      // that should be served as a part of the prerender should
+                      // be from the prefetch data route. If this isn't enabled
+                      // for ppr, the only way to get the data is from the data
+                      // route.
+                      experimentalPPR
+                      ? prefetchDataRoute
+                      : dataRoute
+                    : routeFileNoExt + '.json'
               }`
             ),
           });
@@ -2274,10 +2282,6 @@ export const onPrerenderRoute =
       throw new Error('Invariant: expected to find prefetch data route PPR');
     }
 
-    // When the prefetch data path is available, use it for the prerender,
-    // otherwise use the data path.
-    const outputPrerenderPathData = outputPathPrefetchData || outputPathData;
-
     if (isSharedLambdas) {
       const outputSrcPathPage = normalizeIndexOutput(
         path.join(
@@ -2330,8 +2334,14 @@ export const onPrerenderRoute =
         htmlFsRef.contentType = htmlContentType;
         prerenders[outputPathPage] = htmlFsRef;
 
-        if (outputPrerenderPathData) {
-          prerenders[outputPrerenderPathData] = jsonFsRef;
+        if (outputPathPrefetchData) {
+          prerenders[outputPathPrefetchData] = jsonFsRef;
+        }
+
+        // If experimental ppr is not enabled for this route, then add the data
+        // route as a target for the prerender as well.
+        if (outputPathData && !experimentalPPR) {
+          prerenders[outputPathData] = jsonFsRef;
         }
       }
     }
@@ -2467,21 +2477,27 @@ export const onPrerenderRoute =
           : {}),
       });
 
-      if (outputPrerenderPathData) {
-        let normalizedPathData = outputPrerenderPathData;
+      if (hasActionOutputSupport) {
+        const actionOutputKey = `${path.join('./', srcRoute || '')}.action`;
+        if (srcRoute !== routeKey && lambdas[actionOutputKey]) {
+          lambdas[`${routeKey}.action`] = lambdas[actionOutputKey];
+        }
+      }
 
+      const normalizePathData = (pathData: string) => {
         if (
           (srcRoute === '/' || srcRoute == '/index') &&
-          outputPrerenderPathData.endsWith(RSC_PREFETCH_SUFFIX)
+          pathData.endsWith(RSC_PREFETCH_SUFFIX)
         ) {
-          delete lambdas[normalizedPathData];
-          normalizedPathData = normalizedPathData.replace(
-            /([^/]+\.prefetch\.rsc)$/,
-            '__$1'
-          );
+          delete lambdas[pathData];
+          return pathData.replace(/([^/]+\.prefetch\.rsc)$/, '__$1');
         }
 
-        prerenders[normalizedPathData] = new Prerender({
+        return pathData;
+      };
+
+      if (outputPathData || outputPathPrefetchData) {
+        const prerender = new Prerender({
           expiration: initialRevalidate,
           lambda,
           allowQuery,
@@ -2500,23 +2516,43 @@ export const onPrerenderRoute =
             ? {
                 initialHeaders: {
                   ...initialHeaders,
-                  'content-type': rscContentTypeHeader,
                   vary: rscVaryHeader,
-                  // If it contains a pre-render, then it was postponed.
-                  ...(prerender && rscDidPostponeHeader
+                  ...((outputPathData || outputPathPrefetchData)?.endsWith(
+                    '.json'
+                  )
+                    ? {
+                        'content-type': 'application/json',
+                      }
+                    : {}),
+                  ...(isAppPathRoute
+                    ? {
+                        'content-type': rscContentTypeHeader,
+                      }
+                    : {}),
+                  ...(postponedPrerender && rscDidPostponeHeader
                     ? { [rscDidPostponeHeader]: '1' }
                     : {}),
                 },
               }
             : {}),
         });
+
+        if (outputPathPrefetchData) {
+          prerenders[normalizePathData(outputPathPrefetchData)] = prerender;
+        }
+
+        // If experimental ppr is not enabled for this route, then add the data
+        // route as a target for the prerender as well.
+        if (outputPathData && !experimentalPPR) {
+          prerenders[normalizePathData(outputPathData)] = prerender;
+        }
       }
 
       // we need to ensure all prerenders have a matching .rsc output
       // otherwise routing could fall through unexpectedly for the
       // fallback: false case as it doesn't have a dynamic route
       // to catch the `.rsc` request for app -> pages routing
-      if (outputPrerenderPathData?.endsWith('.json') && appDir) {
+      if (outputPathData?.endsWith('.json') && appDir) {
         const dummyOutput = new FileBlob({
           data: '{}',
           contentType: 'application/json',
@@ -3414,9 +3450,8 @@ export async function getVariantsManifest(
 
   if (!hasVariantsManifest) return null;
 
-  const variantsManifest: VariantsManifest = await fs.readJSON(
-    pathVariantsManifest
-  );
+  const variantsManifest: VariantsManifest =
+    await fs.readJSON(pathVariantsManifest);
 
   return variantsManifest;
 }

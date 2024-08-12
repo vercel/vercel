@@ -1,7 +1,7 @@
 import path from 'path';
-import { URL, parse as parseUrl } from 'url';
-import fetch, { RequestInit } from 'node-fetch';
-import retry from 'async-retry';
+import { URL } from 'url';
+import fetch from 'node-fetch';
+import { apiFetch } from './helpers/api-fetch';
 import fs, {
   writeFile,
   readFile,
@@ -11,19 +11,17 @@ import fs, {
   mkdir,
 } from 'fs-extra';
 import sleep from '../src/util/sleep';
-import { fetchTokenWithRetry } from '../../../test/lib/deployment/now-deploy';
 import waitForPrompt from './helpers/wait-for-prompt';
 import { execCli } from './helpers/exec';
-import getGlobalDir from './helpers/get-global-dir';
 import { listTmpDirs } from './helpers/get-tmp-dir';
+import { teamPromise, userPromise } from './helpers/get-account';
 import {
   setupE2EFixture,
   prepareE2EFixtures,
 } from './helpers/setup-e2e-fixture';
 import formatOutput from './helpers/format-output';
 import type { PackageJson } from '@vercel/build-utils';
-import type http from 'http';
-import { CLIProcess } from './helpers/types';
+import type { CLIProcess } from './helpers/types';
 
 const TEST_TIMEOUT = 3 * 60 * 1000;
 jest.setTimeout(TEST_TIMEOUT);
@@ -31,103 +29,7 @@ jest.setTimeout(TEST_TIMEOUT);
 const binaryPath = path.resolve(__dirname, `../scripts/start.js`);
 const example = (name: string) =>
   path.join(__dirname, '..', '..', '..', 'examples', name);
-let session = 'temp-session';
-
-function fetchTokenInformation(token: string, retries = 3) {
-  const url = `https://api.vercel.com/v2/user`;
-  const headers = { Authorization: `Bearer ${token}` };
-
-  return retry(
-    async () => {
-      const res = await fetch(url, { headers });
-
-      if (!res.ok) {
-        throw new Error(
-          `Failed to fetch "${url}", status: ${
-            res.status
-          }, id: ${res.headers.get('x-vercel-id')}`
-        );
-      }
-
-      const data = await res.json();
-
-      return data.user;
-    },
-    { retries, factor: 1 }
-  );
-}
-
-let token: string | undefined;
-let email: string | undefined;
-let contextName: string | undefined;
-
-function mockLoginApi(req: http.IncomingMessage, res: http.ServerResponse) {
-  const { url = '/', method } = req;
-  let { pathname = '/', query = {} } = parseUrl(url, true);
-  // eslint-disable-next-line no-console
-  console.log(`[mock-login-server] ${method} ${pathname}`);
-  const securityCode = 'Bears Beets Battlestar Galactica';
-  res.setHeader('content-type', 'application/json');
-  if (
-    method === 'POST' &&
-    pathname === '/registration' &&
-    query.mode === 'login'
-  ) {
-    res.end(JSON.stringify({ token, securityCode }));
-  } else if (
-    method === 'GET' &&
-    pathname === '/registration/verify' &&
-    query.email === email
-  ) {
-    res.end(JSON.stringify({ token }));
-  } else if (method === 'GET' && pathname === '/v2/user') {
-    res.end(JSON.stringify({ user: { email } }));
-  } else {
-    res.statusCode = 405;
-    res.end(JSON.stringify({ code: 'method_not_allowed' }));
-  }
-}
-
-let loginApiUrl = '';
-const loginApiServer = require('http')
-  .createServer(mockLoginApi)
-  .listen(0, () => {
-    const { port } = loginApiServer.address();
-    loginApiUrl = `http://localhost:${port}`;
-    // eslint-disable-next-line no-console
-    console.log(`[mock-login-server] Listening on ${loginApiUrl}`);
-  });
-
-const apiFetch = (url: string, { headers, ...options }: RequestInit = {}) => {
-  return fetch(`https://api.vercel.com${url}`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      ...(headers || {}),
-    },
-    ...options,
-  });
-};
-
-const createUser = async () => {
-  await retry(
-    async () => {
-      token = await fetchTokenWithRetry();
-
-      await fs.writeJSON(getConfigAuthPath(), { token });
-
-      const user = await fetchTokenInformation(token);
-
-      email = user.email;
-      contextName = user.username;
-      session = Math.random().toString(36).split('.')[1];
-    },
-    { retries: 3, factor: 1 }
-  );
-};
-
-function getConfigAuthPath() {
-  return path.join(getGlobalDir(), 'auth.json');
-}
+const session = Math.random().toString(36).split('.')[1];
 
 async function setupProject(
   process: CLIProcess,
@@ -183,13 +85,8 @@ async function setupProject(
 
 beforeAll(async () => {
   try {
-    await createUser();
-
-    if (!contextName) {
-      throw new Error('Shared state "contextName" not set.');
-    }
-
-    await prepareE2EFixtures(contextName, binaryPath);
+    const team = await teamPromise;
+    await prepareE2EFixtures(team.slug, binaryPath);
   } catch (err) {
     // eslint-disable-next-line no-console
     console.log('Failed test suite `beforeAll`');
@@ -204,11 +101,6 @@ beforeAll(async () => {
 afterAll(async () => {
   delete process.env.ENABLE_EXPERIMENTAL_COREPACK;
 
-  if (loginApiServer) {
-    // Stop mock server
-    loginApiServer.close();
-  }
-
   // Make sure the token gets revoked unless it's passed in via environment
   if (!process.env.VERCEL_TOKEN) {
     await execCli(binaryPath, ['logout']);
@@ -220,45 +112,9 @@ afterAll(async () => {
   }
 });
 
-test(
-  'change user',
-  async () => {
-    if (!email) {
-      throw new Error('Shared state "email" not set.');
-    }
-
-    const { stdout: prevUser } = await execCli(binaryPath, ['whoami']);
-
-    // Delete the current token
-    await execCli(binaryPath, ['logout', '--debug'], { stdio: 'inherit' });
-
-    await createUser();
-
-    await execCli(
-      binaryPath,
-      ['login', email, '--api', loginApiUrl, '--debug'],
-      {
-        stdio: 'inherit',
-        env: {
-          FORCE_TTY: '1',
-        },
-      }
-    );
-
-    const auth = await fs.readJSON(getConfigAuthPath());
-    expect(auth.token).toBe(token);
-
-    const { stdout: nextUser } = await execCli(binaryPath, ['whoami']);
-
-    expect(typeof prevUser, prevUser).toBe('string');
-    expect(typeof nextUser, nextUser).toBe('string');
-    expect(prevUser).not.toBe(nextUser);
-  },
-  60 * 1000
-);
-
 test('assign a domain to a project', async () => {
-  const domain = `project-domain.${contextName}.vercel.app`;
+  const team = await teamPromise;
+  const domain = `project-domain.${team.slug}.vercel.app`;
   const directory = await setupE2EFixture('static-deployment');
 
   const deploymentOutput = await execCli(binaryPath, [
@@ -517,16 +373,11 @@ test('should prefill "project name" prompt with now.json `name`', async () => {
 });
 
 test('deploy with unknown `VERCEL_PROJECT_ID` should fail', async () => {
-  if (!token) {
-    throw new Error('Shared state "token" not set.');
-  }
-
   const directory = await setupE2EFixture('static-deployment');
-  const user = await fetchTokenInformation(token);
 
   const output = await execCli(binaryPath, [directory], {
     env: {
-      VERCEL_ORG_ID: user.id,
+      VERCEL_ORG_ID: process.env.VERCEL_TEAM_ID,
       VERCEL_PROJECT_ID: 'asdf',
     },
   });
@@ -536,15 +387,10 @@ test('deploy with unknown `VERCEL_PROJECT_ID` should fail', async () => {
 });
 
 test('deploy with `VERCEL_ORG_ID` but without `VERCEL_PROJECT_ID` should fail', async () => {
-  if (!token) {
-    throw new Error('Shared state "token" not set.');
-  }
-
   const directory = await setupE2EFixture('static-deployment');
-  const user = await fetchTokenInformation(token);
 
   const output = await execCli(binaryPath, [directory], {
-    env: { VERCEL_ORG_ID: user.id },
+    env: { VERCEL_ORG_ID: process.env.VERCEL_TEAM_ID },
   });
 
   expect(output.exitCode, formatOutput(output)).toBe(1);
@@ -587,6 +433,7 @@ test('deploy with `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID`', async () => {
 });
 
 test('deploy shows notice when project in `.vercel` does not exists', async () => {
+  const team = await teamPromise;
   const directory = await setupE2EFixture('static-deployment');
 
   // overwrite .vercel with unexisting project
@@ -594,7 +441,7 @@ test('deploy shows notice when project in `.vercel` does not exists', async () =
   await writeFile(
     path.join(directory, '.vercel/project.json'),
     JSON.stringify({
-      orgId: 'asdf',
+      orgId: team.id,
       projectId: 'asdf',
     })
   );
@@ -663,8 +510,9 @@ test('use `rootDirectory` from project when deploying', async () => {
 });
 
 test('vercel deploy with unknown `VERCEL_ORG_ID` or `VERCEL_PROJECT_ID` should error', async () => {
+  const team = await teamPromise;
   const output = await execCli(binaryPath, ['deploy'], {
-    env: { VERCEL_ORG_ID: 'asdf', VERCEL_PROJECT_ID: 'asdf' },
+    env: { VERCEL_ORG_ID: team.id, VERCEL_PROJECT_ID: 'asdf' },
   });
 
   expect(output.exitCode, formatOutput(output)).toBe(1);
@@ -672,8 +520,9 @@ test('vercel deploy with unknown `VERCEL_ORG_ID` or `VERCEL_PROJECT_ID` should e
 });
 
 test('vercel env with unknown `VERCEL_ORG_ID` or `VERCEL_PROJECT_ID` should error', async () => {
+  const team = await teamPromise;
   const output = await execCli(binaryPath, ['env'], {
-    env: { VERCEL_ORG_ID: 'asdf', VERCEL_PROJECT_ID: 'asdf' },
+    env: { VERCEL_ORG_ID: team.id, VERCEL_PROJECT_ID: 'asdf' },
   });
 
   expect(output.exitCode, formatOutput(output)).toBe(1);
@@ -794,14 +643,8 @@ test('override an existing env var', async () => {
 });
 
 test('whoami with `VERCEL_ORG_ID` should favor `--scope` and should error', async () => {
-  if (!token) {
-    throw new Error('Shared state "token" not set.');
-  }
-
-  const user = await fetchTokenInformation(token);
-
   const output = await execCli(binaryPath, ['whoami', '--scope', 'asdf'], {
-    env: { VERCEL_ORG_ID: user.id },
+    env: { VERCEL_ORG_ID: process.env.VERCEL_TEAM_ID },
   });
 
   expect(output.exitCode, formatOutput(output)).toBe(1);
@@ -809,18 +652,13 @@ test('whoami with `VERCEL_ORG_ID` should favor `--scope` and should error', asyn
 });
 
 test('whoami with local .vercel scope', async () => {
-  if (!token) {
-    throw new Error('Shared state "token" not set.');
-  }
-
   const directory = await setupE2EFixture('static-deployment');
-  const user = await fetchTokenInformation(token);
 
   // create local .vercel
   await ensureDir(path.join(directory, '.vercel'));
   await fs.writeFile(
     path.join(directory, '.vercel', 'project.json'),
-    JSON.stringify({ orgId: user.id, projectId: 'xxx' })
+    JSON.stringify({ orgId: process.env.VERCEL_TEAM_ID, projectId: 'xxx' })
   );
 
   const output = await execCli(binaryPath, ['whoami'], {
@@ -828,7 +666,9 @@ test('whoami with local .vercel scope', async () => {
   });
 
   expect(output.exitCode, formatOutput(output)).toBe(0);
-  expect(output.stdout).toContain(contextName);
+
+  const user = await userPromise;
+  expect(output.stdout).toContain(user.username);
 
   // clean up
   await remove(path.join(directory, '.vercel'));
@@ -860,9 +700,7 @@ test('deploys with only vercel.json and README.md', async () => {
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   // assert timing order of showing URLs vs status updates
-  expect(stderr).toMatch(
-    /Inspect.*\nProduction.*\nQueued.*\nBuilding.*\nCompleting/
-  );
+  expect(stderr).toMatch(/Inspect.*\nPreview.*\nQueued.*\n.*\nCompleting/);
 
   const { host } = new URL(stdout);
   const res = await fetch(`https://${host}/README.md`);
@@ -967,6 +805,12 @@ test('deploy pnpm twice using pnp and symlink=false', async () => {
   text = await page.text();
 
   expect(text).toContain('cache exists\n');
+
+  // Since this test asserts that we can create a new project based on the folder name, delete it after the test
+  // to avoid polluting the project list.
+  await apiFetch(`/projects/${session}`, {
+    method: 'DELETE',
+  });
 });
 
 test('reject deploying with wrong team .vercel config', async () => {
@@ -1273,20 +1117,16 @@ test('[vc dev] should send the platform proxy request headers to frontend dev se
 });
 
 test('[vc link] should support the `--project` flag', async () => {
-  if (!token) {
-    throw new Error('Shared state "token" not set.');
-  }
-
   const projectName = 'link-project-flag';
   const directory = await setupE2EFixture('static-deployment');
 
-  const [user, output] = await Promise.all([
-    fetchTokenInformation(token),
+  const [team, output] = await Promise.all([
+    teamPromise,
     execCli(binaryPath, ['link', '--yes', '--project', projectName, directory]),
   ]);
 
   expect(output.exitCode, formatOutput(output)).toBe(0);
-  expect(output.stderr).toContain(`Linked to ${user.username}/${projectName}`);
+  expect(output.stderr).toContain(`Linked to ${team.slug}/${projectName}`);
 });
 
 test('[vc build] should build project with `@vercel/static-build`', async () => {
@@ -1370,9 +1210,17 @@ test('[vc build] should not include .vercel when zeroConfig is true and outputDi
 });
 
 test('vercel.json configuration overrides in a new project prompt user and merges settings correctly', async () => {
-  const directory = await setupE2EFixture(
+  let directory = await setupE2EFixture(
     'vercel-json-configuration-overrides-merging-prompts'
   );
+
+  const randomDirectoryName = `temp-${
+    Math.random().toString(36).split('.')[1]
+  }`;
+  const parent = path.join(directory, '..');
+  const newDirectory = path.join(parent, randomDirectoryName);
+  await fs.renameSync(directory, newDirectory);
+  directory = newDirectory;
 
   // remove previously linked project if it exists
   await remove(path.join(directory, '.vercel'));
@@ -1381,7 +1229,7 @@ test('vercel.json configuration overrides in a new project prompt user and merge
 
   await waitForPrompt(vc, 'Set up and deploy');
   vc.stdin?.write('y\n');
-  await waitForPrompt(vc, 'Which scope do you want to deploy to?');
+  await waitForPrompt(vc, /Which scope [^?]+\?/);
   vc.stdin?.write('\n');
   await waitForPrompt(vc, 'Link to existing project?');
   vc.stdin?.write('n\n');
@@ -1409,6 +1257,11 @@ test('vercel.json configuration overrides in a new project prompt user and merge
   let page = await fetch(deployment.stdout);
   let text = await page.text();
   expect(text).toBe('1\n');
+  // Since this test asserts that we can create a new project based on the folder name, delete it after the test
+  // to avoid polluting the project list.
+  await apiFetch(`/projects/${randomDirectoryName}`, {
+    method: 'DELETE',
+  });
 });
 
 test('vercel.json configuration overrides in an existing project do not prompt user and correctly apply overrides', async () => {

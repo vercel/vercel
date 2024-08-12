@@ -1,5 +1,6 @@
 import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
+import { confirmOption, nextOption, yesOption } from '../../util/arg-common';
 
 export const listCommand: Command = {
   name: 'list',
@@ -16,7 +17,7 @@ export const listCommand: Command = {
       description:
         'Filter deployments by metadata (e.g.: `-m KEY=value`). Can appear many times.',
       argument: 'KEY=value',
-      shorthand: null,
+      shorthand: 'm',
       type: [String],
       deprecated: false,
     },
@@ -29,13 +30,14 @@ export const listCommand: Command = {
       deprecated: false,
     },
     {
-      name: 'next',
+      ...nextOption,
       description: 'Show next page of results',
       argument: 'MS',
-      shorthand: 'n',
-      type: String,
-      deprecated: false,
     },
+    // this can be deprecated someday
+    { name: 'prod', shorthand: null, type: Boolean, deprecated: false },
+    yesOption,
+    { ...confirmOption, deprecated: true },
   ],
   examples: [
     {

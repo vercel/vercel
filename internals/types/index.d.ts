@@ -4,12 +4,8 @@ import type * as tty from 'tty';
 import type { Route } from '@vercel/routing-utils';
 import { PROJECT_ENV_TARGET } from '@vercel-internals/constants';
 
-export type ProjectEnvTarget = typeof PROJECT_ENV_TARGET[number];
-export type ProjectEnvType =
-  | 'plain'
-  | 'encrypted'
-  | 'system'
-  | 'sensitive';
+export type ProjectEnvTarget = (typeof PROJECT_ENV_TARGET)[number];
+export type ProjectEnvType = 'plain' | 'encrypted' | 'system' | 'sensitive';
 
 export type ProjectSettings = import('@vercel/build-utils').ProjectSettings;
 
@@ -137,6 +133,25 @@ type RouteOrMiddleware =
       middleware: 0;
     };
 
+export interface CustomEnvironment {
+  id: string;
+  name: string;
+  slug: string;
+  type: CustomEnvironmentType;
+  description?: string;
+  branchMatcher?: CustomEnvironmentBranchMatcher;
+  createdAt: number;
+  updatedAt: number;
+  domains?: ProjectDomainFromApi[];
+}
+
+export interface CustomEnvironmentBranchMatcher {
+  type: 'startsWith' | 'equals' | 'endsWith';
+  pattern: string;
+}
+
+export type CustomEnvironmentType = 'production' | 'preview' | 'development';
+
 export type Deployment = {
   alias?: string[];
   aliasAssigned?: boolean | null | number;
@@ -159,6 +174,7 @@ export type Deployment = {
   createdAt: number;
   createdIn?: string;
   creator: { uid: string; username?: string };
+  customEnvironment?: CustomEnvironment;
   env?: string[];
   errorCode?: string;
   errorLink?: string;
@@ -311,6 +327,7 @@ export interface ProjectEnvVariable {
   createdAt?: number;
   updatedAt?: number;
   target?: ProjectEnvTarget | ProjectEnvTarget[];
+  customEnvironmentIds?: string[];
   system?: boolean;
   gitBranch?: string;
 }
@@ -349,9 +366,11 @@ export interface Project extends ProjectSettings {
   updatedAt: number;
   createdAt: number;
   link?: ProjectLinkData;
-  alias?: ProjectAliasTarget[];
   latestDeployments?: Partial<Deployment>[];
   lastAliasRequest?: LastAliasRequest | null;
+  targets?: {
+    production?: Deployment;
+  };
 }
 
 export interface Org {

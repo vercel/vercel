@@ -1,3 +1,4 @@
+import { describe, test, expect } from 'vitest';
 import path from 'path';
 import assert from 'assert';
 import { prepareCache } from '../../src';

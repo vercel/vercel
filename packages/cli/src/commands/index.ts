@@ -33,6 +33,8 @@ export default new Map([
   ['rm', 'remove'],
   ['rollback', 'rollback'],
   ['switch', 'teams'],
+  ['target', 'target'],
+  ['targets', 'target'],
   ['team', 'teams'],
   ['teams', 'teams'],
   ['whoami', 'whoami'],

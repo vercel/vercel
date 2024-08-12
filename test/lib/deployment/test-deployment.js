@@ -388,7 +388,7 @@ async function testDeployment(fixturePath, opts = {}) {
     fixturePath,
     nowJson.builds?.length
       ? path.dirname(nowJson.builds[0].src)
-      : nowJson.projectSettings?.rootDirectory ?? ''
+      : (nowJson.projectSettings?.rootDirectory ?? '')
   );
   const { packageJson } = await scanParentDirs(
     rootDirectory,
