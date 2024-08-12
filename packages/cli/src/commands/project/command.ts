@@ -1,5 +1,6 @@
 import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
+import { nextOption } from '../../util/arg-common';
 
 export const projectCommand = {
   name: 'project',
@@ -54,11 +55,14 @@ export const projectCommand = {
   ],
   options: [
     {
-      name: 'next',
+      ...nextOption,
       description: 'Show next page of results',
       argument: 'MS',
-      shorthand: 'N',
-      type: String,
+    },
+    {
+      name: 'update-required',
+      shorthand: null,
+      type: Boolean,
       deprecated: false,
     },
   ],

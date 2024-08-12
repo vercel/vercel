@@ -1,6 +1,7 @@
 import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
 import { getEnvTargetPlaceholder } from '../../util/env/env-target';
+import { yesOption } from '../../util/arg-common';
 
 export const pullCommand = {
   name: 'pull',
@@ -31,12 +32,9 @@ export const pullCommand = {
       deprecated: false,
     },
     {
-      name: 'yes',
+      ...yesOption,
       description:
         'Skip questions when setting up new project using default scope and settings',
-      shorthand: 'y',
-      type: String,
-      deprecated: false,
     },
   ],
   examples: [

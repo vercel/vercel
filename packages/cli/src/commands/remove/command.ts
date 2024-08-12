@@ -1,5 +1,6 @@
 import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
+import { yesOption } from '../../util/arg-common';
 
 export const removeCommand = {
   name: 'remove',
@@ -12,10 +13,7 @@ export const removeCommand = {
   ],
   options: [
     {
-      name: 'yes',
-      shorthand: 'y',
-      type: Boolean,
-      deprecated: false,
+      ...yesOption,
       description: 'Skip confirmation',
     },
     {
@@ -25,6 +23,7 @@ export const removeCommand = {
       deprecated: false,
       description: 'Skip deployments with an active alias',
     },
+    { name: 'hard', shorthand: null, type: Boolean, deprecated: false },
   ],
   examples: [
     {

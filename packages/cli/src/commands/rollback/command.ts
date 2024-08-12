@@ -1,5 +1,6 @@
 import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
+import { yesOption } from '../../util/arg-common';
 
 export const rollbackCommand = {
   name: 'rollback',
@@ -33,6 +34,7 @@ export const rollbackCommand = {
       type: String,
       deprecated: false,
     },
+    yesOption,
   ],
   examples: [
     {
