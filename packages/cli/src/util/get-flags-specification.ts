@@ -16,6 +16,7 @@ export function getFlagsSpecification<T extends ReadonlyArray<CommandOption>>(
   const flagsSpecification: arg.Spec = {};
 
   for (const option of options) {
+    // @ts-expect-error - TypeScript complains about `readonly` modifier
     flagsSpecification[`--${option.name}`] = option.type;
     if (option.shorthand) {
       flagsSpecification[`-${option.shorthand}`] = `--${option.name}`;

@@ -84,6 +84,7 @@ export default async (client: Client): Promise<number> => {
   const flagsSpecification = getFlagsSpecification(deployCommand.options);
 
   try {
+    // @ts-expect-error - TypeScript complains about `readonly` modifier
     parsedArguments = parseArguments(client.argv.slice(2), flagsSpecification);
 
     if ('--confirm' in parsedArguments.flags) {
