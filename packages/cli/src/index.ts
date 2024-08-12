@@ -30,7 +30,7 @@ import info from './util/output/info';
 import error from './util/output/error';
 import param from './util/output/param';
 import highlight from './util/output/highlight';
-import getArgs from './util/get-args';
+import { parseArguments } from './util/get-args';
 import getUser from './util/get-user';
 import getTeams from './util/teams/get-teams';
 import Client from './util/client';
@@ -86,17 +86,12 @@ const main = async () => {
     process.stdin.isTTY = true;
   }
 
-  let argv;
+  let parsedArgs;
 
   try {
-    argv = getArgs(
+    parsedArgs = parseArguments(
       process.argv,
-      {
-        '--version': Boolean,
-        '-v': '--version',
-        '--debug': Boolean,
-        '-d': '--debug',
-      },
+      { '--version': Boolean, '-v': '--version' },
       { permissive: true }
     );
   } catch (err: unknown) {
@@ -104,8 +99,8 @@ const main = async () => {
     return 1;
   }
 
-  const isDebugging = argv['--debug'];
-  const isNoColor = argv['--no-color'];
+  const isDebugging = parsedArgs.flags['--debug'];
+  const isNoColor = parsedArgs.flags['--no-color'];
 
   output = new Output(process.stderr, {
     debug: isDebugging,
@@ -114,7 +109,7 @@ const main = async () => {
 
   debug = output.debug;
 
-  const localConfigPath = argv['--local-config'];
+  const localConfigPath = parsedArgs.flags['--local-config'];
   let localConfig: VercelConfig | Error | undefined = await getConfig(
     output,
     localConfigPath
@@ -147,8 +142,8 @@ const main = async () => {
   //
   //  * a path to deploy (as in: `vercel path/`)
   //  * a subcommand (as in: `vercel ls`)
-  const targetOrSubcommand = argv._[2];
-  const subSubCommand = argv._[3];
+  const targetOrSubcommand = parsedArgs.args[2];
+  const subSubCommand = parsedArgs.args[3];
 
   // If empty, leave this code here for easy adding of beta commands later
   const betaCommands: string[] = [];
@@ -165,14 +160,14 @@ const main = async () => {
   }
 
   // Handle `--version` directly
-  if (!targetOrSubcommand && argv['--version']) {
+  if (!targetOrSubcommand && parsedArgs.flags['--version']) {
     // eslint-disable-next-line no-console
     console.log(pkg.version);
     return 0;
   }
 
   // Handle bare `-h` directly
-  const bareHelpOption = !targetOrSubcommand && argv['--help'];
+  const bareHelpOption = !targetOrSubcommand && parsedArgs.flags['--help'];
   const bareHelpSubcommand = targetOrSubcommand === 'help' && !subSubCommand;
   if (bareHelpOption || bareHelpSubcommand) {
     output.print(help());
@@ -243,8 +238,8 @@ const main = async () => {
     }
   }
 
-  if (typeof argv['--api'] === 'string') {
-    apiUrl = argv['--api'];
+  if (typeof parsedArgs.flags['--api'] === 'string') {
+    apiUrl = parsedArgs.flags['--api'];
   } else if (config && config.api) {
     apiUrl = config.api;
   }
@@ -272,8 +267,8 @@ const main = async () => {
   });
 
   // The `--cwd` flag is respected for all sub-commands
-  if (argv['--cwd']) {
-    client.cwd = argv['--cwd'];
+  if (parsedArgs.flags['--cwd']) {
+    client.cwd = parsedArgs.flags['--cwd'];
   }
   const { cwd } = client;
 
@@ -292,7 +287,7 @@ const main = async () => {
     if (
       targetPathExists &&
       subcommandExists &&
-      !argv['--cwd'] &&
+      !parsedArgs.flags['--cwd'] &&
       !process.env.NOW_BUILDER
     ) {
       output.warn(
@@ -324,7 +319,7 @@ const main = async () => {
     (!authConfig || !authConfig.token) &&
     !client.argv.includes('-h') &&
     !client.argv.includes('--help') &&
-    !argv['--token'] &&
+    !parsedArgs.flags['--token'] &&
     subcommand &&
     !subcommandsWithoutToken.includes(subcommand)
   ) {
@@ -358,7 +353,10 @@ const main = async () => {
     }
   }
 
-  if (typeof argv['--token'] === 'string' && subcommand === 'switch') {
+  if (
+    typeof parsedArgs.flags['--token'] === 'string' &&
+    subcommand === 'switch'
+  ) {
     output.prettyError({
       message: `This command doesn't work with ${param(
         '--token'
@@ -369,8 +367,8 @@ const main = async () => {
     return 1;
   }
 
-  if (typeof argv['--token'] === 'string') {
-    const token: string = argv['--token'];
+  if (typeof parsedArgs.flags['--token'] === 'string') {
+    const token: string = parsedArgs.flags['--token'];
 
     if (token.length === 0) {
       output.prettyError({
@@ -404,7 +402,7 @@ const main = async () => {
     }
   }
 
-  if (argv['--team']) {
+  if (parsedArgs.flags['--team']) {
     output.warn(
       `The ${param('--team')} option is deprecated. Please use ${param(
         '--scope'
@@ -414,7 +412,10 @@ const main = async () => {
 
   let targetCommand =
     typeof subcommand === 'string' ? commands.get(subcommand) : undefined;
-  const scope = argv['--scope'] || argv['--team'] || localConfig?.scope;
+  const scope =
+    parsedArgs.flags['--scope'] ||
+    parsedArgs.flags['--team'] ||
+    localConfig?.scope;
 
   if (
     typeof scope === 'string' &&
@@ -506,14 +507,14 @@ const main = async () => {
 
     if (!targetCommand) {
       // Set this for the metrics to record it at the end
-      targetCommand = argv._[2];
+      targetCommand = parsedArgs.args[2];
 
       // Try to execute as an extension
       try {
         exitCode = await execExtension(
           client,
           targetCommand,
-          argv._.slice(3),
+          parsedArgs.args.slice(3),
           cwd
         );
       } catch (err: unknown) {

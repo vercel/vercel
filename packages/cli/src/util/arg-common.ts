@@ -92,3 +92,24 @@ export const nextOption = {
   type: Number,
   deprecated: false,
 };
+
+export const confirmOption = {
+  name: 'confirm',
+  shorthand: 'c',
+  type: Boolean,
+  deprecated: true,
+};
+
+export const limitOption = {
+  name: 'limit',
+  shorthand: null,
+  type: Number,
+  deprecated: false,
+};
+
+export const forceOption = {
+  name: 'force',
+  shorthand: 'f',
+  type: Boolean,
+  deprecated: false,
+};
