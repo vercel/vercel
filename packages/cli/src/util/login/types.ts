@@ -11,6 +11,11 @@ export interface VerifyError {
   token: string;
   securityCode: string;
 }
+export interface VerifyCodeError {
+  code: string;
+  message: string;
+  status: string;
+}
 export interface SignUpError {
   code: string;
   message: string;
@@ -30,6 +35,10 @@ export interface LoginResultSuccess {
 }
 export interface phoneVerificationResult {
   status: string;
+}
+export interface phoneCodeVerificationResult {
+  status?: string;
+  error?: VerifyCodeError;
 }
 
 export interface SAMLError {
