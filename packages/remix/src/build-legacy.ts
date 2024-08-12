@@ -809,10 +809,7 @@ async function writeEntrypointFile(
   } catch (err: any) {
     if (err.code === 'ENOENT') {
       throw new Error(
-        `The "${relative(
-          rootDir,
-          dirname(path)
-        )}" directory does not exist.`
+        `The "${relative(rootDir, dirname(path))}" directory does not exist.`
       );
     }
     throw err;
