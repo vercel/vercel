@@ -1,4 +1,3 @@
-import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
 
 export const logoutCommand = {
@@ -12,4 +11,4 @@ export const logoutCommand = {
       value: `${packageName} logout`,
     },
   ],
-} as const satisfies Command;
+} as const;

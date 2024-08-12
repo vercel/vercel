@@ -1,4 +1,3 @@
-import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
 import { confirmOption, nextOption, yesOption } from '../../util/arg-common';
 
@@ -57,4 +56,4 @@ export const listCommand = {
       value: `${packageName} list my-app --next 1584722256178`,
     },
   ],
-} as const satisfies Command;
+} as const;

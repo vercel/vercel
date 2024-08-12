@@ -1,4 +1,3 @@
-import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
 import { yesOption } from '../../util/arg-common';
 
@@ -39,4 +38,4 @@ export const removeCommand = {
       value: `${packageName} remove eyWt6zuSdeus uWHoA9RQ1d1o`,
     },
   ],
-} as const satisfies Command;
+} as const;

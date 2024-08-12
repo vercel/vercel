@@ -1,4 +1,3 @@
-import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
 
 export const inspectCommand = {
@@ -56,4 +55,4 @@ export const inspectCommand = {
       value: `${packageName} inspect my-deployment.vercel.app --logs`,
     },
   ],
-} as const satisfies Command;
+} as const;

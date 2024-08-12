@@ -1,4 +1,3 @@
-import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
 import { getEnvTargetPlaceholder } from '../../util/env/env-target';
 import { forceOption, yesOption } from '../../util/arg-common';
@@ -173,4 +172,4 @@ export const envCommand = {
       ],
     },
   ],
-} as const satisfies Command;
+} as const;

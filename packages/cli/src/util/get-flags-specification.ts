@@ -10,7 +10,7 @@ type ToArgSpec<T extends CommandOption> = {
     : never]: `--${K['name']}`;
 };
 
-export function getFlagsSpecification<T extends CommandOption[]>(
+export function getFlagsSpecification<T extends ReadonlyArray<CommandOption>>(
   options: T
 ): Prettify<ToArgSpec<T[number]>> {
   const flagsSpecification: arg.Spec = {};

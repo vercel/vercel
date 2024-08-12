@@ -1,8 +1,7 @@
-import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
 import { nextOption } from '../../util/arg-common';
 
-export const listSubcommand: Command = {
+export const listSubcommand = {
   name: 'ls',
   description: "Show all teams you're a part of",
   arguments: [],
@@ -13,7 +12,7 @@ export const listSubcommand: Command = {
     { name: 'count', shorthand: 'C', type: Number, deprecated: false },
   ],
   examples: [],
-};
+} as const;
 
 export const teamsCommand = {
   name: 'teams',
@@ -81,4 +80,4 @@ export const teamsCommand = {
       value: `${packageName} teams ls --next 1584722256178`,
     },
   ],
-} as const satisfies Command;
+} as const;

@@ -1,4 +1,3 @@
-import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
 
 export const whoamiCommand = {
@@ -12,4 +11,4 @@ export const whoamiCommand = {
       value: `${packageName} whoami`,
     },
   ],
-} as const satisfies Command;
+} as const;

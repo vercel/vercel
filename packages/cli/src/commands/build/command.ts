@@ -1,4 +1,3 @@
-import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
 import { yesOption } from '../../util/arg-common';
 
@@ -45,4 +44,4 @@ export const buildCommand = {
       value: `${packageName} build --cwd ./path-to-project`,
     },
   ],
-} as const satisfies Command;
+} as const;

@@ -1,4 +1,3 @@
-import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
 
 // has to be ms compliant
@@ -77,4 +76,4 @@ export const logsCommand = {
       value: `${packageName} logs DEPLOYMENT_ID --json | jq 'select(.level == "warning")'`,
     },
   ],
-} as const satisfies Command;
+} as const;

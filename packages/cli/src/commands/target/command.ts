@@ -1,4 +1,3 @@
-import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
 import { nextOption } from '../../util/arg-common';
 
@@ -27,4 +26,4 @@ export const targetCommand = {
       value: `${packageName} target ls my-project`,
     },
   ],
-} as const satisfies Command;
+} as const;

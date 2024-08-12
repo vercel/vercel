@@ -1,4 +1,3 @@
-import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
 import { forceOption } from '../../util/arg-common';
 
@@ -41,4 +40,4 @@ export const initCommand = {
       value: `${packageName} init <example> --force`,
     },
   ],
-} as const satisfies Command;
+} as const;

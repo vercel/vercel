@@ -1,4 +1,3 @@
-import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
 import {
   forceOption,
@@ -142,4 +141,4 @@ export const domainsCommand = {
       value: `${packageName} domains ls--next 1584722256178`,
     },
   ],
-} as const satisfies Command;
+} as const;

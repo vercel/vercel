@@ -1,5 +1,4 @@
 import { confirmOption, forceOption, yesOption } from '../../util/arg-common';
-import { Command } from '../help';
 
 export const deployCommand = {
   name: 'deploy',
@@ -163,4 +162,4 @@ export const deployCommand = {
       value: 'vercel > deployment-url.txt',
     },
   ],
-} as const satisfies Command;
+} as const;

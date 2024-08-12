@@ -1,4 +1,3 @@
-import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
 
 export const loginCommand = {
@@ -46,4 +45,4 @@ export const loginCommand = {
       value: `${packageName} login --github --oob`,
     },
   ],
-} as const satisfies Command;
+} as const;

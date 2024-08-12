@@ -1,4 +1,3 @@
-import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
 import { limitOption, nextOption } from '../../util/arg-common';
 
@@ -126,4 +125,4 @@ export const dnsCommand = {
       ],
     },
   ],
-} as const satisfies Command;
+} as const;

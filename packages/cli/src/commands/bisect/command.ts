@@ -1,4 +1,3 @@
-import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
 
 export const bisectCommand = {
@@ -61,4 +60,4 @@ export const bisectCommand = {
       value: `${packageName} bisect --run ./test.sh`,
     },
   ],
-} as const satisfies Command;
+} as const;

@@ -1,4 +1,3 @@
-import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
 import { limitOption, nextOption, yesOption } from '../../util/arg-common';
 
@@ -80,4 +79,4 @@ export const aliasCommand = {
       value: `${packageName} alias api-ownv3nc9f8.vercel.app my-api.com`,
     },
   ],
-} as const satisfies Command;
+} as const;
