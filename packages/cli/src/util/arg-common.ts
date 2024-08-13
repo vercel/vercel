@@ -1,7 +1,6 @@
-import { CommandOption } from '../commands/help';
 import { getFlagsSpecification } from './get-flags-specification';
 
-export const globalCommandOptions: CommandOption[] = [
+export const globalCommandOptions = [
   {
     name: 'help',
     shorthand: 'h',
@@ -73,7 +72,7 @@ export const globalCommandOptions: CommandOption[] = [
   { name: 'team', shorthand: 'T', type: String, deprecated: false },
   { name: 'api', shorthand: null, type: String, deprecated: false },
   { name: 'cwd', shorthand: null, type: String, deprecated: false },
-];
+] as const;
 
 const GLOBAL_OPTIONS = getFlagsSpecification(globalCommandOptions);
 
@@ -84,32 +83,32 @@ export const yesOption = {
   shorthand: 'y',
   type: Boolean,
   deprecated: false,
-};
+} as const;
 
 export const nextOption = {
   name: 'next',
   shorthand: 'N',
   type: Number,
   deprecated: false,
-};
+} as const;
 
 export const confirmOption = {
   name: 'confirm',
   shorthand: 'c',
   type: Boolean,
   deprecated: true,
-};
+} as const;
 
 export const limitOption = {
   name: 'limit',
   shorthand: null,
   type: Number,
   deprecated: false,
-};
+} as const;
 
 export const forceOption = {
   name: 'force',
   shorthand: 'f',
   type: Boolean,
   deprecated: false,
-};
+} as const;
