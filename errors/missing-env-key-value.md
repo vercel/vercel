@@ -11,9 +11,3 @@ Make sure to set the name and value of the variable like this:
 ```bash
 vercel -e VARIABLE_NAME="VALUE"
 ```
-
-You can also specify a environment variable that contains a secret:
-
-```bash
-vercel -e VARIABLE_NAME=@secret-name
-```
