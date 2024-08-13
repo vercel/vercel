@@ -65,8 +65,6 @@ export default async function prompt(
     const email = await readInput(client, 'Enter your email address:');
     const slug = error?.teamId || (await readInput(client, 'Enter your name:'));
     result = await doEmailSignUp(client, email, plan, slug, ssoUserId);
-
-    if (result === 0) await processPhoneVerification(email);
   } else if (choice === 'saml') {
     const slug =
       error?.teamId || (await readInput(client, 'Enter your Team slug:'));
