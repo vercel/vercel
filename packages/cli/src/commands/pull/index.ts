@@ -20,7 +20,7 @@ import { ensureLink } from '../../util/link/ensure-link';
 import humanizePath from '../../util/humanize-path';
 
 import { help } from '../help';
-import { pullCommand } from './command';
+import { pullCommand, type PullCommandFlags } from './command';
 import parseTarget from '../../util/parse-target';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import handleError from '../../util/handle-error';
@@ -30,7 +30,7 @@ async function pullAllEnvFiles(
   client: Client,
   link: ProjectLinked,
   project: Project,
-  argv: ReturnType<typeof parseArguments>,
+  flags: PullCommandFlags,
   cwd: string
 ): Promise<number> {
   const environmentFile = `.env.${environment}.local`;
@@ -39,7 +39,7 @@ async function pullAllEnvFiles(
     link,
     project,
     environment,
-    argv.flags,
+    flags,
     [join('.vercel', environmentFile)],
     client.output,
     cwd,
@@ -105,7 +105,7 @@ export default async function main(client: Client) {
     client,
     link,
     project,
-    parsedArgs,
+    parsedArgs.flags,
     cwd
   );
   if (pullResultCode !== 0) {

@@ -1,7 +1,6 @@
 import { confirmOption, forceOption, yesOption } from '../../util/arg-common';
-import { Command } from '../help';
 
-export const deployCommand: Command = {
+export const deployCommand = {
   name: 'deploy',
   description:
     'Deploy your project to Vercel. The `deploy` command is the default command for the Vercel CLI, and can be omitted (`vc deploy my-app` equals `vc my-app`).',
@@ -163,4 +162,4 @@ export const deployCommand: Command = {
       value: 'vercel > deployment-url.txt',
     },
   ],
-};
+} as const;

@@ -14,24 +14,11 @@ type Printer = (l: string) => void;
 export function displayBuildLogs(
   client: Client,
   deployment: Deployment,
-  follow?: true
-): {
-  promise: Promise<void>;
-  abortController: AbortController;
-};
-export function displayBuildLogs(
-  client: Client,
-  deployment: Deployment,
-  follow: false
-): {
-  promise: Promise<void>;
-  abortController: AbortController;
-};
-export function displayBuildLogs(
-  client: Client,
-  deployment: Deployment,
   follow: boolean = true
-) {
+): {
+  promise: Promise<void>;
+  abortController: AbortController;
+} {
   const abortController = new AbortController();
   const promise = printEvents(
     client,
