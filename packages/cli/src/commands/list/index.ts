@@ -30,8 +30,8 @@ export default async function list(client: Client) {
 
   const flagsSpecification = getFlagsSpecification(listCommand.options);
 
-  // Parse CLI args
   try {
+    // @ts-expect-error - TypeScript complains about `readonly` modifier
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (error) {
     handleError(error);
