@@ -21,7 +21,6 @@ import { createGitMeta } from '../../util/create-git-meta';
 import createDeploy from '../../util/deploy/create-deploy';
 import { getDeploymentChecks } from '../../util/deploy/get-deployment-checks';
 import getPrebuiltJson from '../../util/deploy/get-prebuilt-json';
-import parseTarget from '../../util/deploy/parse-target';
 import { printDeploymentStatus } from '../../util/deploy/print-deployment-status';
 import { isValidArchive } from '../../util/deploy/validate-archive-format';
 import purchaseDomainIfAvailable from '../../util/domains/purchase-domain-if-available';
@@ -75,6 +74,7 @@ import validatePaths, {
 } from '../../util/validate-paths';
 import { help } from '../help';
 import { deployCommand } from './command';
+import parseTarget from '../../util/parse-target';
 
 export default async (client: Client): Promise<number> => {
   const { output } = client;
@@ -175,15 +175,12 @@ export default async (client: Client): Promise<number> => {
     );
   }
 
-  // build `target`
-  const target = parseTarget(
-    output,
-    parsedArguments.flags['--target'],
-    parsedArguments.flags['--prod']
-  );
-  if (typeof target === 'number') {
-    return target;
-  }
+  const target = parseTarget({
+    output: output,
+    targetFlagName: 'target',
+    targetFlagValue: parsedArguments.flags['--target'],
+    prodFlagValue: parsedArguments.flags['--prod'],
+  });
 
   const archive = parsedArguments.flags['--archive'];
   if (typeof archive === 'string' && !isValidArchive(archive)) {

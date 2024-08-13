@@ -122,8 +122,8 @@ export async function getMonorepoDefaultSettings(
         packageManager === 'npm'
           ? `${packageManager} install --prefix=${relativeToRoot}`
           : packageManager
-          ? `${packageManager} install`
-          : null,
+            ? `${packageManager} install`
+            : null,
       commandForIgnoringBuildStep: 'npx turbo-ignore',
     };
   } else if (monorepoManager === 'nx') {
@@ -180,8 +180,8 @@ export async function getMonorepoDefaultSettings(
         packageManager === 'npm'
           ? `${packageManager} install --prefix=${relativeToRoot}`
           : packageManager
-          ? `${packageManager} install`
-          : null,
+            ? `${packageManager} install`
+            : null,
     };
   }
   // TODO (@Ethan-Arrowood) - Revisit rush support when we can test it better

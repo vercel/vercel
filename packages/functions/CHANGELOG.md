@@ -1,5 +1,29 @@
 # @vercel/functions
 
+## 1.4.0
+
+### Minor Changes
+
+- Added OIDC Token utility functions ([#11701](https://github.com/vercel/vercel/pull/11701))
+
+## 1.3.0
+
+### Minor Changes
+
+- [functions] add `getEnv` method. ([#11783](https://github.com/vercel/vercel/pull/11783))
+
+## 1.2.0
+
+### Minor Changes
+
+- Add `geolocation` & `ipAdress` methods. ([#11802](https://github.com/vercel/vercel/pull/11802))
+
+## 1.1.0
+
+### Minor Changes
+
+- Rewrite `@vercel/functions` to TypeScript ([#11791](https://github.com/vercel/vercel/pull/11791))
+
 ## 1.0.2
 
 ### Patch Changes

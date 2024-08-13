@@ -1,0 +1,10 @@
+{
+  "probes": [
+    {
+      "path": "/_root.data?index=",
+      "method": "POST",
+      "status": 200,
+      "mustContain": "[{\"1\":2},\"data\",\"ok\"]"
+    }
+  ]
+}
