@@ -254,10 +254,18 @@ export default async function list(client: Client) {
 
   print('\n');
 
-  const headers = ['Age', 'Deployment', 'Status', 'Environment', 'Duration'];
+  const headers = ['Age', 'Deployment', 'Status', 'Environment'];
+  const showPolicy = Object.keys(policy).length > 0;
+  let showDuration = true;
+  // Exclude username & duration if we're showing retention policies so that the table fits more comfortably
+  if (showPolicy) {
+    showUsername = false;
+    showDuration = false;
+  }
+
+  if (showDuration) headers.push('Duration');
   if (showUsername) headers.push('Username');
-  if (Object.keys(policy).length > 0)
-    headers.push(...['Expiration', 'Proposed Expiration']);
+  if (showPolicy) headers.push('Proposed Expiration');
   const urls: string[] = [];
 
   client.output.print(
@@ -268,19 +276,20 @@ export default async function list(client: Client) {
           .sort(sortRecent())
           .map(dep => {
             urls.push(`https://${dep.url}`);
+            const proposedExp = dep.proposedExpiration
+              ? toDate(Math.min(Date.now(), dep.proposedExpiration))
+              : 'No expiration';
+            const createdAt = ms(
+              Date.now() - (dep?.undeletedAt ?? dep.createdAt)
+            );
             return [
-              chalk.gray(ms(Date.now() - dep.createdAt)),
+              chalk.gray(createdAt),
               `https://${dep.url}`,
               stateString(dep.state || ''),
               dep.target === 'production' ? 'Production' : 'Preview',
-              chalk.gray(getDeploymentDuration(dep)),
-              showUsername ? chalk.gray(dep.creator?.username) : '',
-              Object.keys(policy).length > 0 && dep.expiration
-                ? toDate(dep.expiration)
-                : '',
-              Object.keys(policy).length > 0 && dep.proposedExpiration
-                ? toDate(dep.proposedExpiration)
-                : '',
+              ...(showDuration ? [chalk.gray(getDeploymentDuration(dep))] : []),
+              ...(showUsername ? [chalk.gray(dep.creator?.username)] : []),
+              ...(showPolicy ? [chalk.gray(proposedExp)] : []),
             ];
           })
           .filter(app =>
