@@ -43,7 +43,7 @@ const EVENTS_ARRAY = [
   'checks-conclusion-canceled',
 ] as const;
 
-export type DeploymentEventType = typeof EVENTS_ARRAY[number];
+export type DeploymentEventType = (typeof EVENTS_ARRAY)[number];
 export const EVENTS = new Set(EVENTS_ARRAY);
 
 export function getApiDeploymentsUrl() {

@@ -70,8 +70,8 @@ export default async function list(
             target.type === 'production'
               ? 'Production'
               : target.type === 'development'
-              ? 'Development'
-              : 'Preview';
+                ? 'Development'
+                : 'Preview';
           return [
             [
               output.link(
