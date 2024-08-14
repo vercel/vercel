@@ -23,7 +23,7 @@ export const listCommand = {
     {
       name: 'policy',
       description:
-        'Preview deployment with Deployment Retention policies (e.g.: `-p KEY=value`). Can appear many times.',
+        'See deployments with provided Deployment Retention policies (e.g.: `-p KEY=value`). Can appear many times.',
       argument: 'KEY=value',
       shorthand: 'p',
       type: [String],
