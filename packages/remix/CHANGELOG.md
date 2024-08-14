@@ -1,5 +1,11 @@
 # @vercel/remix-builder
 
+## 2.2.5
+
+### Patch Changes
+
+- [remix] remove contact note ([#11947](https://github.com/vercel/vercel/pull/11947))
+
 ## 2.2.4
 
 ### Patch Changes
