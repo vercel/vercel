@@ -4,7 +4,6 @@ import { parse as parseUrl } from 'url';
 import retry from 'async-retry';
 import ms from 'ms';
 import fetch, { Headers } from 'node-fetch';
-import { URLSearchParams } from 'url';
 import bytes from 'bytes';
 import chalk from 'chalk';
 import ua from './ua';
