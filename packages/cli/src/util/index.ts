@@ -380,13 +380,8 @@ export default class Now extends EventEmitter {
       query.set('app', app);
     }
 
-    if (Object.keys(meta).length) {
-      Object.keys(meta).map(key => query.set(`meta-${key}`, meta[key]));
-    }
-
-    if (Object.keys(policy).length) {
-      Object.keys(policy).map(key => query.set(`policy-${key}`, policy[key]));
-    }
+    Object.keys(meta).map(key => query.set(`meta-${key}`, meta[key]));
+    Object.keys(policy).map(key => query.set(`policy-${key}`, policy[key]));
 
     query.set('limit', '20');
 

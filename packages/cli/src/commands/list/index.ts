@@ -173,10 +173,10 @@ export default async function list(client: Client) {
     if (nextTimestamp) {
       query.set('until', String(nextTimestamp));
     }
+
     if (target) {
       query.set('target', target);
     }
-
     for await (const chunk of client.fetchPaginated<{
       deployments: Deployment[];
     }>(`/v6/deployments?${query}`)) {
@@ -196,9 +196,9 @@ export default async function list(client: Client) {
     log(
       `${
         target === 'production' ? `Production deployments` : `Deployments`
-      } for ${chalk.bold(project.name)} under ${chalk.bold(contextName)} ${elapsed(
-        Date.now() - start
-      )}`
+      } for ${chalk.bold(project.name)} under ${chalk.bold(
+        contextName
+      )} ${elapsed(Date.now() - start)}`
     );
   }
 
