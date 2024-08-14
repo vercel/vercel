@@ -211,16 +211,8 @@ export default async function list(client: Client) {
 
   const headers = ['Age', 'Deployment', 'Status', 'Environment'];
   const showPolicy = Object.keys(policy).length > 0;
-  let showUsername = true;
-  let showDuration = true;
   // Exclude username & duration if we're showing retention policies so that the table fits more comfortably
-  if (showPolicy) {
-    showUsername = false;
-    showDuration = false;
-  }
-
-  if (showDuration) headers.push('Duration');
-  if (showUsername) headers.push('Username');
+  if (!showPolicy) headers.push(...['Duration', 'Username']);
   if (showPolicy) headers.push('Proposed Expiration');
   const urls: string[] = [];
 
@@ -243,8 +235,8 @@ export default async function list(client: Client) {
               `https://${dep.url}`,
               stateString(dep.readyState || ''),
               dep.target === 'production' ? 'Production' : 'Preview',
-              ...(showDuration ? [chalk.gray(getDeploymentDuration(dep))] : []),
-              ...(showUsername ? [chalk.gray(dep.creator?.username)] : []),
+              ...(!showPolicy ? [chalk.gray(getDeploymentDuration(dep))] : []),
+              ...(!showPolicy ? [chalk.gray(dep.creator?.username)] : []),
               ...(showPolicy ? [chalk.gray(proposedExp)] : []),
             ];
           })
