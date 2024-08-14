@@ -177,7 +177,7 @@ export default async function list(client: Client) {
     log(
       `${
         target === 'production' ? `Production deployments` : `Deployments`
-      } for ${chalk.bold(app)} under ${chalk.bold(contextName)} ${elapsed(
+      } for ${chalk.bold(project.name)} under ${chalk.bold(contextName)} ${elapsed(
         Date.now() - start
       )}`
     );
