@@ -15,7 +15,7 @@ import { isOfficialRuntime } from './is-official-runtime';
 /**
  * Pattern for finding all supported middleware files.
  */
-export const REGEX_MIDDLEWARE_FILES = 'middleware.[jt]s';
+export const REGEX_MIDDLEWARE_FILES = 'middleware.(?:j|t|mj|mt)s';
 
 /**
  * Pattern for files that the Vercel platform cares about separately from frameworks.
@@ -47,8 +47,6 @@ export interface Options {
   trailingSlash?: boolean;
   featHandleMiss?: boolean;
 }
-
-const REGEX_MIDDLEWARE = 'middleware\\.(?:j|t|mj|mt)s';
 
 // We need to sort the file paths by alphabet to make
 // sure the routes stay in the same order e.g. for deduping
@@ -389,7 +387,7 @@ function maybeGetApiBuilder(
   apiMatches: Builder[],
   options: Options
 ) {
-  const middleware = fileName.match(new RegExp(REGEX_MIDDLEWARE, 'g'));
+  const middleware = fileName.match(new RegExp(REGEX_MIDDLEWARE_FILES, 'g'));
 
   // Root-level Middleware file is handled by `@vercel/next`, so don't
   // schedule a separate Builder when "nextjs" framework is selected
