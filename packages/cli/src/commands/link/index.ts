@@ -1,38 +1,41 @@
 import Client from '../../util/client';
-import getArgs from '../../util/get-args';
+import { parseArguments } from '../../util/get-args';
 import cmd from '../../util/output/cmd';
 import { ensureLink } from '../../util/link/ensure-link';
 import { ensureRepoLink } from '../../util/link/repo';
 import { help } from '../help';
 import { linkCommand } from './command';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import handleError from '../../util/handle-error';
 
 export default async function link(client: Client) {
-  const argv = getArgs(client.argv.slice(2), {
-    '--yes': Boolean,
-    '-y': '--yes',
-    '--project': String,
-    '-p': '--project',
-    '--repo': Boolean,
-    '-r': '--repo',
+  let parsedArgs = null;
 
-    // deprecated
-    '--confirm': Boolean,
-    '-c': '--confirm',
-  });
+  const flagsSpecification = getFlagsSpecification(linkCommand.options);
 
-  if (argv['--help']) {
-    client.output.print(help(linkCommand, { columns: client.stderr.columns }));
+  // Parse CLI args
+  try {
+    parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
+  } catch (error) {
+    handleError(error);
+    return 1;
+  }
+
+  const { output } = client;
+
+  if (parsedArgs.flags['--help']) {
+    output.print(help(linkCommand, { columns: client.stderr.columns }));
     return 2;
   }
 
-  if ('--confirm' in argv) {
+  if ('--confirm' in parsedArgs.flags) {
     client.output.warn('`--confirm` is deprecated, please use `--yes` instead');
-    argv['--yes'] = argv['--confirm'];
+    parsedArgs.flags['--yes'] = parsedArgs.flags['--confirm'];
   }
 
-  const yes = !!argv['--yes'];
+  const yes = !!parsedArgs.flags['--yes'];
 
-  let cwd = argv._[1];
+  let cwd = parsedArgs.args[1];
   if (cwd) {
     client.output.warn(
       `The ${cmd('vc link <directory>')} syntax is deprecated, please use ${cmd(
@@ -43,7 +46,7 @@ export default async function link(client: Client) {
     cwd = client.cwd;
   }
 
-  if (argv['--repo']) {
+  if (parsedArgs.flags['--repo']) {
     client.output.warn(
       `The ${cmd('--repo')} flag is in alpha, please report issues`
     );
@@ -52,7 +55,7 @@ export default async function link(client: Client) {
     const link = await ensureLink('link', client, cwd, {
       autoConfirm: yes,
       forceDelete: true,
-      projectName: argv['--project'],
+      projectName: parsedArgs.flags['--project'],
       successEmoji: 'success',
     });
 

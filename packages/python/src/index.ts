@@ -107,8 +107,8 @@ export const build: BuildV3 = async ({
   const pipfileLockDir = fsFiles[join(entryDirectory, 'Pipfile.lock')]
     ? join(workPath, entryDirectory)
     : fsFiles['Pipfile.lock']
-    ? workPath
-    : null;
+      ? workPath
+      : null;
 
   if (pipfileLockDir) {
     debug('Found "Pipfile.lock"');

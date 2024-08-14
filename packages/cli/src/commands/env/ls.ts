@@ -20,9 +20,7 @@ import { getCommandName } from '../../util/pkg-name';
 import ellipsis from '../../util/output/ellipsis';
 import { isObject } from '@vercel/error-utils';
 
-type Options = {
-  '--debug': boolean;
-};
+type Options = {};
 
 export default async function ls(
   client: Client,
