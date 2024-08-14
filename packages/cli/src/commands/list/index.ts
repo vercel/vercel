@@ -24,7 +24,7 @@ import { listCommand } from './command';
 import parseTarget from '../../util/parse-target';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 
-function ToDate(timestamp: number): string {
+function toDate(timestamp: number): string {
   const date = new Date(timestamp);
   const options: Intl.DateTimeFormatOptions = {
     year: '2-digit',
