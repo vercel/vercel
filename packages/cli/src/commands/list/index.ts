@@ -166,35 +166,10 @@ export default async function list(client: Client) {
     for (const [k, v] of Object.entries(meta)) {
       query.set(`meta-${k}`, v);
     }
-
-    app = undefined;
-    host = asHost;
-  }
-
-  debug('Fetching deployments');
-
-  const response = await now.list(app, {
-    version: 6,
-    meta,
-    nextTimestamp,
-    target,
-    policy,
-  });
-
-  let {
-    deployments,
-    pagination,
-  }: {
-    deployments: Deployment[];
-    pagination: { count: number; next: number };
-  } = response;
-
-  let showUsername = false;
-  for (const deployment of deployments) {
-    const username = deployment.creator?.username;
-    if (username !== contextName) {
-      showUsername = true;
+    for (const [k, v] of Object.entries(policy)) {
+      query.set(`policy-${k}`, v);
     }
+
     if (nextTimestamp) {
       query.set('until', String(nextTimestamp));
     }
