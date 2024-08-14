@@ -277,7 +277,7 @@ export default async function list(client: Client) {
               chalk.gray(getDeploymentDuration(dep)),
               showUsername ? chalk.gray(dep.creator?.username) : '',
               Object.keys(policy).length > 0 && dep.expiration
-                ? ToDate(dep.expiration)
+                ? toDate(dep.expiration)
                 : '',
               Object.keys(policy).length > 0 && dep.proposedExpiration
                 ? ToDate(dep.proposedExpiration)
