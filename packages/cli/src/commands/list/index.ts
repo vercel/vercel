@@ -8,6 +8,7 @@ import { handleError } from '../../util/error';
 import elapsed from '../../util/output/elapsed';
 import toHost from '../../util/to-host';
 import parseMeta from '../../util/parse-meta';
+import parsePolicy from '../../util/parse-policy';
 import { isValidName } from '../../util/is-valid-name';
 import getCommandFlags from '../../util/get-command-flags';
 import { getCommandName } from '../../util/pkg-name';
@@ -43,7 +44,6 @@ export default async function list(client: Client) {
   const flagsSpecification = getFlagsSpecification(listCommand.options);
 
   try {
-    // @ts-expect-error - TypeScript complains about `readonly` modifier
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (error) {
     handleError(error);
@@ -69,6 +69,7 @@ export default async function list(client: Client) {
 
   const autoConfirm = !!parsedArgs.flags['--yes'];
   const meta = parseMeta(parsedArgs.flags['--meta']);
+  const policy = parsePolicy(parsedArgs.flags['--policy']);
 
   const target = parseTarget({
     output,

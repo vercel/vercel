@@ -21,6 +21,15 @@ export const listCommand = {
       deprecated: false,
     },
     {
+      name: 'policy',
+      description:
+        'Preview deployment with Deployment Retention policies (e.g.: `-m KEY=value`). Can appear many times.',
+      argument: 'KEY=value',
+      shorthand: 'p',
+      type: [String],
+      deprecated: false,
+    },
+    {
       name: 'environment',
       description: '',
       argument: 'production|preview',
