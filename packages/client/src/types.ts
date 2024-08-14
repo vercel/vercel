@@ -95,6 +95,7 @@ export interface Deployment {
   aliasError: string | null;
   expiration?: number;
   proposedExpiration?: number;
+  undeletedAt?: number;
 }
 
 export interface DeploymentBuild {
