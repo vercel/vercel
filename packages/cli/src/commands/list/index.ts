@@ -280,7 +280,7 @@ export default async function list(client: Client) {
                 ? toDate(dep.expiration)
                 : '',
               Object.keys(policy).length > 0 && dep.proposedExpiration
-                ? ToDate(dep.proposedExpiration)
+                ? toDate(dep.proposedExpiration)
                 : '',
             ];
           })
