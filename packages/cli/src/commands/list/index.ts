@@ -211,6 +211,7 @@ export default async function list(client: Client) {
 
   const headers = ['Age', 'Deployment', 'Status', 'Environment'];
   const showPolicy = Object.keys(policy).length > 0;
+  let showUsername = true;
   let showDuration = true;
   // Exclude username & duration if we're showing retention policies so that the table fits more comfortably
   if (showPolicy) {
