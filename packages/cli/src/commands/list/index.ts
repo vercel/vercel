@@ -8,12 +8,12 @@ import elapsed from '../../util/output/elapsed';
 import toHost from '../../util/to-host';
 import parseMeta from '../../util/parse-meta';
 import { isValidName } from '../../util/is-valid-name';
-import getCommandFlags from '../../util/get-command-flags';
+// import getCommandFlags from '../../util/get-command-flags';
 import { getCommandName } from '../../util/pkg-name';
 import Client from '../../util/client';
 import { ensureLink } from '../../util/link/ensure-link';
 import getScope from '../../util/get-scope';
-import { isAPIError, ProjectNotFound } from '../../util/errors-ts';
+import { ProjectNotFound } from '../../util/errors-ts';
 import { isErrnoException } from '@vercel/error-utils';
 import { help } from '../help';
 import { listCommand } from './command';
@@ -63,7 +63,6 @@ export default async function list(client: Client) {
     prodFlagValue: parsedArgs.flags['--prod'],
   });
 
-  let host: string | undefined;
   let project;
   let contextName;
   let app: string | undefined = parsedArgs.args[1];
@@ -93,19 +92,25 @@ export default async function list(client: Client) {
         return 1;
       }
 
-      host = toHost(app);
+      const host = toHost(app);
       const deployment = await getDeployment(client, contextName, host);
       if (!deployment.projectId) {
         error(`Could not find a deployment for "${host}"`);
         return 1;
       }
       app = deployment.projectId;
+      note(
+        `We suggest using ${getCommandName(
+          'inspect <deployment>'
+        )} for retrieving details about a single deployment`
+      );
       deployments.push(deployment);
-    }
-    project = await getProjectByNameOrId(client, app);
-    if (project instanceof ProjectNotFound) {
-      error(`The provided argument "${app}" is not a valid project name`);
-      return 1;
+    } else {
+      project = await getProjectByNameOrId(client, app);
+      if (project instanceof ProjectNotFound) {
+        error(`The provided argument "${app}" is not a valid project name`);
+        return 1;
+      }
     }
   } else {
     const link = await ensureLink('list', client, client.cwd, {
@@ -137,92 +142,46 @@ export default async function list(client: Client) {
     return 1;
   }
 
-  spinner(`Fetching deployments in ${chalk.bold(contextName)}`);
-  const start = Date.now();
+  if (project) {
+    spinner(`Fetching deployments in ${chalk.bold(contextName)}`);
+    const start = Date.now();
 
-  // Some people are using entire domains as app names, so
-  // we need to account for this here
-  const asHost = app ? toHost(app) : '';
-  if (asHost.endsWith('.now.sh') || asHost.endsWith('.vercel.app')) {
-    note(
-      `We suggest using ${getCommandName(
-        'inspect <deployment>'
-      )} for retrieving details about a single deployment`
-    );
+    debug('Fetching deployments');
 
-    const hostParts: string[] = asHost.split('-');
-
-    if (hostParts.length < 2) {
-      error('Only deployment hostnames are allowed, no aliases');
-      return 1;
+    const query = new URLSearchParams({ limit: '20', projectId: project.id });
+    for (const [k, v] of Object.entries(meta)) {
+      query.set(`meta-${k}`, v);
+    }
+    if (nextTimestamp) {
+      query.set('until', String(nextTimestamp));
+    }
+    if (target) {
+      query.set('target', target);
     }
 
-    app = undefined;
-    host = asHost;
-  }
-
-  debug('Fetching deployments');
-
-  const query = new URLSearchParams({ limit: '20', projectId: project.id });
-  for (const [k, v] of Object.entries(meta)) {
-    query.set(`meta-${k}`, v);
-  }
-  if (nextTimestamp) {
-    query.set('until', String(nextTimestamp));
-  }
-  if (target) {
-    query.set('target', target);
-  }
-
-  for await (const chunk of client.fetchPaginated<{
-    deployments: Deployment[];
-  }>(`/v6/deployments?${query}`)) {
-    deployments.push(...chunk.deployments);
-    if (deployments.length >= 20) {
-      break;
-    }
-  }
-  //console.log(deployments[0])
-
-  if (app && !deployments.length) {
-    debug(
-      'No deployments: attempting to find deployment that matches supplied app name'
-    );
-    let match;
-
-    try {
-      await now.findDeployment(app);
-    } catch (err: unknown) {
-      if (isAPIError(err) && err.status === 404) {
-        debug('Ignore findDeployment 404');
-      } else {
-        throw err;
+    for await (const chunk of client.fetchPaginated<{
+      deployments: Deployment[];
+    }>(`/v6/deployments?${query}`)) {
+      deployments.push(...chunk.deployments);
+      if (deployments.length >= 20) {
+        break;
       }
     }
 
-    if (match !== null && typeof match !== 'undefined') {
-      debug('Found deployment that matches app name');
-      deployments = Array.of(match);
+    // we don't output the table headers if we have no deployments
+    if (!deployments.length) {
+      log(`No deployments found.`);
+      return 0;
     }
+
+    log(
+      `${
+        target === 'production' ? `Production deployments` : `Deployments`
+      } for ${chalk.bold(app)} under ${chalk.bold(contextName)} ${elapsed(
+        Date.now() - start
+      )}`
+    );
   }
-
-  //if (host) {
-  //  deployments = deployments.filter(deployment => deployment.url === host);
-  //}
-
-  // we don't output the table headers if we have no deployments
-  if (!deployments.length) {
-    log(`No deployments found.`);
-    return 0;
-  }
-
-  log(
-    `${
-      target === 'production' ? `Production deployments` : `Deployments`
-    } for ${chalk.bold(app)} under ${chalk.bold(contextName)} ${elapsed(
-      Date.now() - start
-    )}`
-  );
 
   // information to help the user find other deployments or instances
   log(
@@ -246,13 +205,13 @@ export default async function list(client: Client) {
       [
         headers.map(header => chalk.bold(chalk.cyan(header))),
         ...deployments
-          .sort(sortRecent())
+          .sort(sortByCreatedAt)
           .map(dep => {
             urls.push(`https://${dep.url}`);
             return [
               chalk.gray(ms(Date.now() - dep.createdAt)),
               `https://${dep.url}`,
-              stateString(dep.state || ''),
+              stateString(dep.readyState || ''),
               dep.target === 'production' ? 'Production' : 'Preview',
               chalk.gray(getDeploymentDuration(dep)),
               chalk.gray(dep.creator?.username),
@@ -273,14 +232,15 @@ export default async function list(client: Client) {
     client.stdout.write('\n');
   }
 
-  if (pagination && pagination.count === 20) {
-    const flags = getCommandFlags(parsedArgs.flags, ['--next']);
-    log(
-      `To display the next page, run ${getCommandName(
-        `ls${app ? ' ' + app : ''}${flags} --next ${pagination.next}`
-      )}`
-    );
-  }
+  // TODO: re-enable pagination
+  //if (pagination && pagination.count === 20) {
+  //  const flags = getCommandFlags(parsedArgs.flags, ['--next']);
+  //  log(
+  //    `To display the next page, run ${getCommandName(
+  //      `ls${app ? ' ' + app : ''}${flags} --next ${pagination.next}`
+  //    )}`
+  //  );
+  //}
 }
 
 export function getDeploymentDuration(dep: Deployment): string {
@@ -319,10 +279,8 @@ export function stateString(s: string) {
 }
 
 // sorts by most recent deployment
-function sortRecent() {
-  return function recencySort(a: Deployment, b: Deployment) {
-    return b.createdAt - a.createdAt;
-  };
+function sortByCreatedAt(a: Deployment, b: Deployment) {
+  return b.createdAt - a.createdAt;
 }
 
 // filters only one deployment per app, so that
