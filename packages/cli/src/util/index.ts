@@ -4,7 +4,6 @@ import { parse as parseUrl } from 'url';
 import retry from 'async-retry';
 import ms from 'ms';
 import fetch, { Headers } from 'node-fetch';
-import { URLSearchParams } from 'url';
 import bytes from 'bytes';
 import chalk from 'chalk';
 import ua from './ua';
@@ -313,82 +312,6 @@ export default class Now extends EventEmitter {
     }
 
     return new Error(error.message || error.errorMessage);
-  }
-
-  async list(
-    app?: string,
-    { version = 4, meta = {}, nextTimestamp, target }: ListOptions = {},
-    prod?: boolean
-  ) {
-    const fetchRetry = async (url: string, options: FetchOptions = {}) => {
-      return this.retry(
-        async bail => {
-          const res = await this._fetch(url, options);
-
-          if (res.status === 200) {
-            return res.json();
-          }
-
-          if (res.status > 200 && res.status < 500) {
-            // If something is wrong with our request, we don't retry
-            return bail(await responseError(res, 'Failed to list deployments'));
-          }
-
-          // If something is wrong with the server, we retry
-          throw await responseError(res, 'Failed to list deployments');
-        },
-        {
-          retries: 3,
-          minTimeout: 2500,
-          onRetry: this._onRetry,
-        }
-      );
-    };
-
-    if (!app && !Object.keys(meta).length) {
-      // Get the 20 latest projects and their latest deployment
-      const query = new URLSearchParams({ limit: (20).toString() });
-      if (nextTimestamp) {
-        query.set('until', String(nextTimestamp));
-      }
-      const { projects, pagination } = await fetchRetry(
-        `/v4/projects/?${query}`
-      );
-
-      const deployments = await Promise.all(
-        projects.map(async ({ id: projectId }: any) => {
-          const query = new URLSearchParams({ limit: '1', projectId });
-          const { deployments } = await fetchRetry(
-            `/v${version}/now/deployments?${query}`
-          );
-          return deployments[0];
-        })
-      );
-
-      return { deployments: deployments.filter(x => x), pagination };
-    }
-
-    const query = new URLSearchParams();
-
-    if (app) {
-      query.set('app', app);
-    }
-
-    Object.keys(meta).map(key => query.set(`meta-${key}`, meta[key]));
-
-    query.set('limit', '20');
-
-    if (nextTimestamp) {
-      query.set('until', String(nextTimestamp));
-    }
-    if (prod) {
-      query.set('target', 'production');
-    } else if (target) {
-      query.set('target', target);
-    }
-
-    const response = await fetchRetry(`/v${version}/now/deployments?${query}`);
-    return response;
   }
 
   async findDeployment(hostOrId: string) {
