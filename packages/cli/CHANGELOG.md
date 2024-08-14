@@ -1,5 +1,29 @@
 # vercel
 
+## 36.0.0
+
+### Major Changes
+
+- Remove defunct `secrets` command ([#11659](https://github.com/vercel/vercel/pull/11659))
+
+### Patch Changes
+
+- Updated dependencies [[`5680ff988`](https://github.com/vercel/vercel/commit/5680ff98801dec47152f21534ddc15bab6d6ddd7)]:
+  - @vercel/remix-builder@2.2.5
+
+## 35.2.4
+
+### Patch Changes
+
+- Some subcommand flags now show correct short flag in help ([#11931](https://github.com/vercel/vercel/pull/11931))
+
+- Display custom environments in `vc env ls` ([#11912](https://github.com/vercel/vercel/pull/11912))
+
+- [cli] alias `dev` pnpm command as `vc` and `vercel` as well ([#11933](https://github.com/vercel/vercel/pull/11933))
+
+- Updated dependencies [[`d77d0919b`](https://github.com/vercel/vercel/commit/d77d0919b45eb3e8d27a9b75c0994727c926ccb0)]:
+  - @vercel/remix-builder@2.2.4
+
 ## 35.2.3
 
 ### Patch Changes

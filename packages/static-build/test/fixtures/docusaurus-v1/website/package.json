@@ -10,5 +10,10 @@
   },
   "devDependencies": {
     "docusaurus": "1.12.0"
+  },
+  "overrides": {
+    "truncate-html": {
+      "cheerio": "1.0.0-rc.12"
+    }
   }
 }

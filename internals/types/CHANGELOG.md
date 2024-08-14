@@ -1,5 +1,17 @@
 # @vercel-internals/types
 
+## 2.0.0
+
+### Major Changes
+
+- Remove defunct `secrets` command ([#11659](https://github.com/vercel/vercel/pull/11659))
+
+## 1.0.46
+
+### Patch Changes
+
+- Display custom environments in `vc env ls` ([#11912](https://github.com/vercel/vercel/pull/11912))
+
 ## 1.0.45
 
 ### Patch Changes

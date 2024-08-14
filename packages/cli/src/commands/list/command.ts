@@ -1,8 +1,7 @@
-import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
-import { yesOption } from '../../util/arg-common';
+import { confirmOption, nextOption, yesOption } from '../../util/arg-common';
 
-export const listCommand: Command = {
+export const listCommand = {
   name: 'list',
   description: 'List app deployments for an app.',
   arguments: [
@@ -30,17 +29,14 @@ export const listCommand: Command = {
       deprecated: false,
     },
     {
-      name: 'next',
+      ...nextOption,
       description: 'Show next page of results',
       argument: 'MS',
-      shorthand: 'N',
-      type: Number,
-      deprecated: false,
     },
     // this can be deprecated someday
     { name: 'prod', shorthand: null, type: Boolean, deprecated: false },
     yesOption,
-    { name: 'confirm', shorthand: 'c', type: Boolean, deprecated: true },
+    { ...confirmOption, deprecated: true },
   ],
   examples: [
     {
@@ -60,4 +56,4 @@ export const listCommand: Command = {
       value: `${packageName} list my-app --next 1584722256178`,
     },
   ],
-};
+} as const;

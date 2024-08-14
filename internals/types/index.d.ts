@@ -5,12 +5,7 @@ import type { Route } from '@vercel/routing-utils';
 import { PROJECT_ENV_TARGET } from '@vercel-internals/constants';
 
 export type ProjectEnvTarget = (typeof PROJECT_ENV_TARGET)[number];
-export type ProjectEnvType =
-  | 'plain'
-  | 'secret'
-  | 'encrypted'
-  | 'system'
-  | 'sensitive';
+export type ProjectEnvType = 'plain' | 'encrypted' | 'system' | 'sensitive';
 
 export type ProjectSettings = import('@vercel/build-utils').ProjectSettings;
 
@@ -321,17 +316,6 @@ export interface ProjectAliasTarget {
   configuredChangedAt?: null | number;
   configuredChangeAttempts?: [number, number];
   deployment?: Deployment | undefined;
-}
-
-export interface Secret {
-  uid: string;
-  name: string;
-  value: string;
-  teamId?: string;
-  userId?: string;
-  projectId?: string;
-  created: string;
-  createdAt: number;
 }
 
 export interface ProjectEnvVariable {

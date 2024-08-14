@@ -239,7 +239,7 @@ export default async (client: Client): Promise<number> => {
     // will be deprecated and can be replaced with
     // user input.
     const detectedProjectName = getProjectName({
-      argv: parsedArguments.flags,
+      nameParam: parsedArguments.flags['--name'],
       nowConfig: localConfig,
       paths,
     });
