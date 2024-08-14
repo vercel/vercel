@@ -8,7 +8,7 @@ import elapsed from '../../util/output/elapsed';
 import toHost from '../../util/to-host';
 import parseMeta from '../../util/parse-meta';
 import { isValidName } from '../../util/is-valid-name';
-// import getCommandFlags from '../../util/get-command-flags';
+import getCommandFlags from '../../util/get-command-flags';
 import { getCommandName } from '../../util/pkg-name';
 import Client from '../../util/client';
 import { ensureLink } from '../../util/link/ensure-link';
@@ -64,6 +64,7 @@ export default async function list(client: Client) {
   });
 
   let project;
+  let pagination;
   let contextName;
   let app: string | undefined = parsedArgs.args[1];
   let deployments: Deployment[] = [];
@@ -163,6 +164,7 @@ export default async function list(client: Client) {
       deployments: Deployment[];
     }>(`/v6/deployments?${query}`)) {
       deployments.push(...chunk.deployments);
+      pagination = chunk.pagination;
       if (deployments.length >= 20) {
         break;
       }
@@ -232,15 +234,14 @@ export default async function list(client: Client) {
     client.stdout.write('\n');
   }
 
-  // TODO: re-enable pagination
-  //if (pagination && pagination.count === 20) {
-  //  const flags = getCommandFlags(parsedArgs.flags, ['--next']);
-  //  log(
-  //    `To display the next page, run ${getCommandName(
-  //      `ls${app ? ' ' + app : ''}${flags} --next ${pagination.next}`
-  //    )}`
-  //  );
-  //}
+  if (pagination?.next) {
+    const flags = getCommandFlags(parsedArgs.flags, ['--next']);
+    log(
+      `To display the next page, run ${getCommandName(
+        `ls${app ? ' ' + app : ''}${flags} --next ${pagination.next}`
+      )}`
+    );
+  }
 }
 
 export function getDeploymentDuration(dep: Deployment): string {
