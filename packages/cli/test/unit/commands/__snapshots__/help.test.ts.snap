@@ -2460,6 +2460,20 @@ exports[`help command > list help output snapshots > list help column width 40 1
                                            p…
                                            of
                                            r…
+  -p,  --policy <KEY=value>                S…
+                                           d…
+                                           w…
+                                           p…
+                                           D…
+                                           R…
+                                           p…
+                                           (…
+                                           \`…
+                                           K…
+                                           C…
+                                           a…
+                                           m…
+                                           t…
 
 
   [2mGlobal Options[22m:
@@ -2533,6 +2547,9 @@ exports[`help command > list help output snapshots > list help column width 80 1
   -m,  --meta <KEY=value>                  Filter deployments by metadata (e.g.: \`-m 
                                            KEY=value\`). Can appear many times.       
   -N,  --next <MS>                         Show next page of results                 
+  -p,  --policy <KEY=value>                See deployments with provided Deployment  
+                                           Retention policies (e.g.: \`-p KEY=value\`).
+                                           Can appear many times.                    
 
 
   [2mGlobal Options[22m:
@@ -2581,6 +2598,8 @@ exports[`help command > list help output snapshots > list help column width 120 
        --environment <production|preview>                                                                                    
   -m,  --meta <KEY=value>                  Filter deployments by metadata (e.g.: \`-m KEY=value\`). Can appear many times.     
   -N,  --next <MS>                         Show next page of results                                                         
+  -p,  --policy <KEY=value>                See deployments with provided Deployment Retention policies (e.g.: \`-p            
+                                           KEY=value\`). Can appear many times.                                               
 
 
   [2mGlobal Options[22m:

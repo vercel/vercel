@@ -63,6 +63,7 @@ export interface ListOptions {
   meta?: Dictionary<string>;
   nextTimestamp?: number;
   target?: string;
+  policy?: Dictionary<string>;
 }
 
 export default class Now extends EventEmitter {
