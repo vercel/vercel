@@ -177,9 +177,8 @@ export default async (client: Client): Promise<number> => {
 
   const target = parseTarget({
     output: output,
-    targetFlagName: 'target',
-    targetFlagValue: parsedArguments.flags['--target'],
-    prodFlagValue: parsedArguments.flags['--prod'],
+    flagName: 'target',
+    flags: parsedArguments.flags,
   });
 
   const archive = parsedArguments.flags['--archive'];

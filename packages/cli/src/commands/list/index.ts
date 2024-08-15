@@ -7,6 +7,7 @@ import { handleError } from '../../util/error';
 import elapsed from '../../util/output/elapsed';
 import toHost from '../../util/to-host';
 import parseMeta from '../../util/parse-meta';
+import parsePolicy from '../../util/parse-policy';
 import { isValidName } from '../../util/is-valid-name';
 import getCommandFlags from '../../util/get-command-flags';
 import { getCommandName } from '../../util/pkg-name';
@@ -22,6 +23,18 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import getDeployment from '../../util/get-deployment';
 import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
 import type { Deployment } from '@vercel-internals/types';
+
+function toDate(timestamp: number): string {
+  const date = new Date(timestamp);
+  const options: Intl.DateTimeFormatOptions = {
+    year: '2-digit',
+    month: '2-digit',
+    day: '2-digit',
+  };
+
+  // The locale 'en-US' ensures the format is MM/DD/YY
+  return date.toLocaleDateString('en-US', options);
+}
 
 export default async function list(client: Client) {
   const { print, log, warn, error, note, debug, spinner } = client.output;
@@ -54,12 +67,12 @@ export default async function list(client: Client) {
 
   const autoConfirm = !!parsedArgs.flags['--yes'];
   const meta = parseMeta(parsedArgs.flags['--meta']);
+  const policy = parsePolicy(parsedArgs.flags['--policy']);
 
   const target = parseTarget({
     output: client.output,
-    targetFlagName: 'environment',
-    targetFlagValue: parsedArgs.flags['--environment'],
-    prodFlagValue: parsedArgs.flags['--prod'],
+    flagName: 'environment',
+    flags: parsedArgs.flags,
   });
 
   let project;
@@ -160,13 +173,17 @@ export default async function list(client: Client) {
     for (const [k, v] of Object.entries(meta)) {
       query.set(`meta-${k}`, v);
     }
+    for (const [k, v] of Object.entries(policy)) {
+      query.set(`policy-${k}`, v);
+    }
+
     if (nextTimestamp) {
       query.set('until', String(nextTimestamp));
     }
+
     if (target) {
       query.set('target', target);
     }
-
     for await (const chunk of client.fetchPaginated<{
       deployments: Deployment[];
     }>(`/v6/deployments?${query}`)) {
@@ -190,14 +207,11 @@ export default async function list(client: Client) {
     );
   }
 
-  const headers = [
-    'Age',
-    'Deployment',
-    'Status',
-    'Environment',
-    'Duration',
-    'Username',
-  ];
+  const headers = ['Age', 'Deployment', 'Status', 'Environment'];
+  const showPolicy = Object.keys(policy).length > 0;
+  // Exclude username & duration if we're showing retention policies so that the table fits more comfortably
+  if (!showPolicy) headers.push(...['Duration', 'Username']);
+  if (showPolicy) headers.push('Proposed Expiration');
   const urls: string[] = [];
 
   const tablePrint = table(
@@ -207,13 +221,19 @@ export default async function list(client: Client) {
         .sort(sortByCreatedAt)
         .map(dep => {
           urls.push(`https://${dep.url}`);
+          const proposedExp = dep.proposedExpiration
+            ? toDate(Math.min(Date.now(), dep.proposedExpiration))
+            : 'No expiration';
+          const createdAt = ms(
+            Date.now() - (dep?.undeletedAt ?? dep.createdAt)
+          );
           const targetName =
             dep.customEnvironment?.name ||
             (dep.target === 'production' ? 'Production' : 'Preview');
           const targetSlug =
             dep.customEnvironment?.id || dep.target || 'preview';
           return [
-            chalk.gray(ms(Date.now() - dep.createdAt)),
+            chalk.gray(createdAt),
             `https://${dep.url}`,
             stateString(dep.readyState || ''),
             client.output.link(
@@ -221,8 +241,9 @@ export default async function list(client: Client) {
               `${projectUrl}/settings/environments/${targetSlug}`,
               { fallback: () => targetName, color: false }
             ),
-            chalk.gray(getDeploymentDuration(dep)),
-            chalk.gray(dep.creator?.username),
+            ...(!showPolicy ? [chalk.gray(getDeploymentDuration(dep))] : []),
+            ...(!showPolicy ? [chalk.gray(dep.creator?.username)] : []),
+            ...(showPolicy ? [chalk.gray(proposedExp)] : []),
           ];
         })
         .filter(app =>
