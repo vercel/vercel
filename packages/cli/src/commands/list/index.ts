@@ -142,6 +142,13 @@ export default async function list(client: Client) {
     return 1;
   }
 
+  const projectUrl = `https://vercel.com/${contextName}/${project.name}`;
+  const projectSlugBold = chalk.bold(`${contextName}/${project.name}`);
+  const projectSlugLink = client.output.link(projectSlugBold, projectUrl, {
+    fallback: () => projectSlugBold,
+    color: false,
+  });
+
   if (project) {
     spinner(`Fetching deployments in ${chalk.bold(contextName)}`);
     const start = Date.now();
@@ -178,18 +185,9 @@ export default async function list(client: Client) {
     log(
       `${
         target === 'production' ? `Production deployments` : `Deployments`
-      } for ${chalk.bold(project.name)} under ${chalk.bold(contextName)} ${elapsed(
-        Date.now() - start
-      )}`
+      } for ${projectSlugLink} ${elapsed(Date.now() - start)}`
     );
   }
-
-  // information to help the user find other deployments or instances
-  log(
-    `To list deployments for a project, run ${getCommandName('ls [project]')}.`
-  );
-
-  print('\n');
 
   const headers = [
     'Age',
@@ -201,32 +199,40 @@ export default async function list(client: Client) {
   ];
   const urls: string[] = [];
 
-  client.output.print(
-    `${table(
-      [
-        headers.map(header => chalk.bold(chalk.cyan(header))),
-        ...deployments
-          .sort(sortByCreatedAt)
-          .map(dep => {
-            urls.push(`https://${dep.url}`);
-            return [
-              chalk.gray(ms(Date.now() - dep.createdAt)),
-              `https://${dep.url}`,
-              stateString(dep.readyState || ''),
-              dep.target === 'production' ? 'Production' : 'Preview',
-              chalk.gray(getDeploymentDuration(dep)),
-              chalk.gray(dep.creator?.username),
-            ];
-          })
-          .filter(app =>
-            // if an app wasn't supplied to filter by,
-            // we only want to render one deployment per app
-            app === null ? filterUniqueApps() : () => true
-          ),
-      ],
-      { hsep: 5 }
-    ).replace(/^/gm, '  ')}\n\n`
-  );
+  const tablePrint = table(
+    [
+      headers.map(header => chalk.bold(chalk.cyan(header))),
+      ...deployments
+        .sort(sortByCreatedAt)
+        .map(dep => {
+          urls.push(`https://${dep.url}`);
+          const targetName =
+            dep.customEnvironment?.name ||
+            (dep.target === 'production' ? 'Production' : 'Preview');
+          const targetSlug =
+            dep.customEnvironment?.id || dep.target || 'preview';
+          return [
+            chalk.gray(ms(Date.now() - dep.createdAt)),
+            `https://${dep.url}`,
+            stateString(dep.readyState || ''),
+            client.output.link(
+              targetName,
+              `${projectUrl}/settings/environments/${targetSlug}`,
+              { fallback: () => targetName, color: false }
+            ),
+            chalk.gray(getDeploymentDuration(dep)),
+            chalk.gray(dep.creator?.username),
+          ];
+        })
+        .filter(app =>
+          // if an app wasn't supplied to filter by,
+          // we only want to render one deployment per app
+          app === null ? filterUniqueApps() : () => true
+        ),
+    ],
+    { hsep: 5 }
+  ).replace(/^/gm, '  ');
+  print(`\n${tablePrint}\n\n`);
 
   if (!client.stdout.isTTY) {
     client.stdout.write(urls.join('\n'));
