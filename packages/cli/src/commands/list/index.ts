@@ -71,9 +71,8 @@ export default async function list(client: Client) {
 
   const target = parseTarget({
     output: client.output,
-    targetFlagName: 'environment',
-    targetFlagValue: parsedArgs.flags['--environment'],
-    prodFlagValue: parsedArgs.flags['--prod'],
+    flagName: 'environment',
+    flags: parsedArgs.flags,
   });
 
   let project;
