@@ -157,9 +157,8 @@ export default async function main(client: Client): Promise<number> {
   const target =
     parseTarget({
       output,
-      targetFlagName: 'target',
-      targetFlagValue: parsedArgs.flags['--target'],
-      prodFlagValue: parsedArgs.flags['--prod'],
+      flagName: 'target',
+      flags: parsedArgs.flags,
     }) || 'preview';
 
   const yes = Boolean(parsedArgs.flags['--yes']);

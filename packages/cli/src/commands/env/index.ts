@@ -49,8 +49,8 @@ export default async function main(client: Client) {
   const target =
     parseTarget({
       output,
-      targetFlagName: 'environment',
-      targetFlagValue: parsedArgs.flags['--environment'],
+      flagName: 'environment',
+      flags: parsedArgs.flags,
     }) || 'development';
 
   const link = await getLinkedProject(client, cwd);
