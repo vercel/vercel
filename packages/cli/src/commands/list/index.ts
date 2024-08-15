@@ -67,6 +67,7 @@ export default async function list(client: Client) {
   let contextName;
   let app: string | undefined = parsedArgs.args[1];
   let deployments: Deployment[] = [];
+  let singleDeployment = false;
 
   if (app) {
     if (!isValidName(app)) {
@@ -105,12 +106,12 @@ export default async function list(client: Client) {
         )} for retrieving details about a single deployment`
       );
       deployments.push(deployment);
-    } else {
-      project = await getProjectByNameOrId(client, app);
-      if (project instanceof ProjectNotFound) {
-        error(`The provided argument "${app}" is not a valid project name`);
-        return 1;
-      }
+      singleDeployment = true;
+    }
+    project = await getProjectByNameOrId(client, app);
+    if (project instanceof ProjectNotFound) {
+      error(`The provided argument "${app}" is not a valid project name`);
+      return 1;
     }
   } else {
     const link = await ensureLink('list', client, client.cwd, {
@@ -149,7 +150,7 @@ export default async function list(client: Client) {
     color: false,
   });
 
-  if (project) {
+  if (!singleDeployment) {
     spinner(`Fetching deployments in ${chalk.bold(contextName)}`);
     const start = Date.now();
 
