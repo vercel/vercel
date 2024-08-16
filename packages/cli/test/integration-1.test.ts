@@ -259,7 +259,7 @@ test('deploy command should not warn when deploying with conflicting subdirector
     expect(stderr).toContain('No deployments found');
   } catch {
     // If it's an existing Project with deployments
-    expect(stderr).toContain(`Deployments for ${target} under`);
+    expect(stderr).toMatch(new RegExp(`Deployments for .*/${target}`));
   }
 });
 
