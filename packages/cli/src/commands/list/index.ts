@@ -23,6 +23,7 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import getDeployment from '../../util/get-deployment';
 import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
 import type { Deployment } from '@vercel-internals/types';
+import { getCustomEnvironments } from '../../util/target/get-custom-environments';
 
 function toDate(timestamp: number): string {
   const date = new Date(timestamp);
@@ -69,7 +70,7 @@ export default async function list(client: Client) {
   const meta = parseMeta(parsedArgs.flags['--meta']);
   const policy = parsePolicy(parsedArgs.flags['--policy']);
 
-  const target = parseTarget({
+  let target = parseTarget({
     output: client.output,
     flagName: 'environment',
     flags: parsedArgs.flags,
@@ -170,9 +171,11 @@ export default async function list(client: Client) {
     debug('Fetching deployments');
 
     const query = new URLSearchParams({ limit: '20', projectId: project.id });
+
     for (const [k, v] of Object.entries(meta)) {
       query.set(`meta-${k}`, v);
     }
+
     for (const [k, v] of Object.entries(policy)) {
       query.set(`policy-${k}`, v);
     }
@@ -182,8 +185,27 @@ export default async function list(client: Client) {
     }
 
     if (target) {
+      if (
+        target !== 'production' &&
+        target !== 'preview' &&
+        !target.startsWith('env_')
+      ) {
+        // A custom env name that needs to be resolved to ID
+        const customEnvironments = await getCustomEnvironments(
+          client,
+          project.id
+        );
+        const env = customEnvironments.find(env => env.slug === target);
+        if (!env) {
+          throw new Error(
+            `No matching Custom Environment found for "${target}"`
+          );
+        }
+        target = env.id;
+      }
       query.set('target', target);
     }
+
     for await (const chunk of client.fetchPaginated<{
       deployments: Deployment[];
     }>(`/v6/deployments?${query}`)) {

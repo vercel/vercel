@@ -3,8 +3,8 @@ import ms from 'ms';
 import table from '../../util/output/table';
 import Client from '../../util/client';
 import { getCommandName } from '../../util/pkg-name';
-import type { ProjectLinked } from '@vercel-internals/types';
-import type { CustomEnvironment } from '../../util/target/types';
+import type { CustomEnvironment, ProjectLinked } from '@vercel-internals/types';
+import { getCustomEnvironments } from '../../util/target/get-custom-environments';
 
 export default async function list(
   client: Client,
@@ -35,16 +35,7 @@ export default async function list(
 
   output.spinner(`Fetching custom environments for ${projectSlugLink}`);
 
-  const url = `/projects/${encodeURIComponent(
-    link.project.id
-  )}/custom-environments`;
-
-  let { environments: result } = (await client.fetch(url, {
-    method: 'GET',
-    accountId: link.org.id,
-  })) as {
-    environments: CustomEnvironment[];
-  };
+  let result = await getCustomEnvironments(client, link.project.id);
 
   output.stopSpinner();
 
