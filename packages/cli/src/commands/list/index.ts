@@ -80,6 +80,7 @@ export default async function list(client: Client) {
   let contextName;
   let app: string | undefined = parsedArgs.args[1];
   let deployments: Deployment[] = [];
+  let singleDeployment = false;
 
   if (app) {
     if (!isValidName(app)) {
@@ -118,12 +119,12 @@ export default async function list(client: Client) {
         )} for retrieving details about a single deployment`
       );
       deployments.push(deployment);
-    } else {
-      project = await getProjectByNameOrId(client, app);
-      if (project instanceof ProjectNotFound) {
-        error(`The provided argument "${app}" is not a valid project name`);
-        return 1;
-      }
+      singleDeployment = true;
+    }
+    project = await getProjectByNameOrId(client, app);
+    if (project instanceof ProjectNotFound) {
+      error(`The provided argument "${app}" is not a valid project name`);
+      return 1;
     }
   } else {
     const link = await ensureLink('list', client, client.cwd, {
@@ -155,7 +156,14 @@ export default async function list(client: Client) {
     return 1;
   }
 
-  if (project) {
+  const projectUrl = `https://vercel.com/${contextName}/${project.name}`;
+  const projectSlugBold = chalk.bold(`${contextName}/${project.name}`);
+  const projectSlugLink = client.output.link(projectSlugBold, projectUrl, {
+    fallback: () => projectSlugBold,
+    color: false,
+  });
+
+  if (!singleDeployment) {
     spinner(`Fetching deployments in ${chalk.bold(contextName)}`);
     const start = Date.now();
 
@@ -195,59 +203,58 @@ export default async function list(client: Client) {
     log(
       `${
         target === 'production' ? `Production deployments` : `Deployments`
-      } for ${chalk.bold(project.name)} under ${chalk.bold(
-        contextName
-      )} ${elapsed(Date.now() - start)}`
+      } for ${projectSlugLink} ${elapsed(Date.now() - start)}`
     );
   }
-
-  // information to help the user find other deployments or instances
-  log(
-    `To list deployments for a project, run ${getCommandName('ls [project]')}.`
-  );
-
-  print('\n');
 
   const headers = ['Age', 'Deployment', 'Status', 'Environment'];
   const showPolicy = Object.keys(policy).length > 0;
   // Exclude username & duration if we're showing retention policies so that the table fits more comfortably
-  if (!showPolicy) headers.push(...['Duration', 'Username']);
+  if (!showPolicy) headers.push('Duration', 'Username');
   if (showPolicy) headers.push('Proposed Expiration');
   const urls: string[] = [];
 
-  client.output.print(
-    `${table(
-      [
-        headers.map(header => chalk.bold(chalk.cyan(header))),
-        ...deployments
-          .sort(sortByCreatedAt)
-          .map(dep => {
-            urls.push(`https://${dep.url}`);
-            const proposedExp = dep.proposedExpiration
-              ? toDate(Math.min(Date.now(), dep.proposedExpiration))
-              : 'No expiration';
-            const createdAt = ms(
-              Date.now() - (dep?.undeletedAt ?? dep.createdAt)
-            );
-            return [
-              chalk.gray(createdAt),
-              `https://${dep.url}`,
-              stateString(dep.readyState || ''),
-              dep.target === 'production' ? 'Production' : 'Preview',
-              ...(!showPolicy ? [chalk.gray(getDeploymentDuration(dep))] : []),
-              ...(!showPolicy ? [chalk.gray(dep.creator?.username)] : []),
-              ...(showPolicy ? [chalk.gray(proposedExp)] : []),
-            ];
-          })
-          .filter(app =>
-            // if an app wasn't supplied to filter by,
-            // we only want to render one deployment per app
-            app === null ? filterUniqueApps() : () => true
-          ),
-      ],
-      { hsep: 5 }
-    ).replace(/^/gm, '  ')}\n\n`
-  );
+  const tablePrint = table(
+    [
+      headers.map(header => chalk.bold(chalk.cyan(header))),
+      ...deployments
+        .sort(sortByCreatedAt)
+        .map(dep => {
+          urls.push(`https://${dep.url}`);
+          const proposedExp = dep.proposedExpiration
+            ? toDate(Math.min(Date.now(), dep.proposedExpiration))
+            : 'No expiration';
+          const createdAt = ms(
+            Date.now() - (dep?.undeletedAt ?? dep.createdAt)
+          );
+          const targetName =
+            dep.customEnvironment?.name ||
+            (dep.target === 'production' ? 'Production' : 'Preview');
+          const targetSlug =
+            dep.customEnvironment?.id || dep.target || 'preview';
+          return [
+            chalk.gray(createdAt),
+            `https://${dep.url}`,
+            stateString(dep.readyState || ''),
+            client.output.link(
+              targetName,
+              `${projectUrl}/settings/environments/${targetSlug}`,
+              { fallback: () => targetName, color: false }
+            ),
+            ...(!showPolicy ? [chalk.gray(getDeploymentDuration(dep))] : []),
+            ...(!showPolicy ? [chalk.gray(dep.creator?.username)] : []),
+            ...(showPolicy ? [chalk.gray(proposedExp)] : []),
+          ];
+        })
+        .filter(app =>
+          // if an app wasn't supplied to filter by,
+          // we only want to render one deployment per app
+          app === null ? filterUniqueApps() : () => true
+        ),
+    ],
+    { hsep: 5 }
+  ).replace(/^/gm, '  ');
+  print(`\n${tablePrint}\n\n`);
 
   if (!client.stdout.isTTY) {
     client.stdout.write(urls.join('\n'));

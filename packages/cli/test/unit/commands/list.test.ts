@@ -33,6 +33,7 @@ describe('list', () => {
     const deployment = useDeployment({ creator: user });
 
     client.cwd = fixture('with-team');
+    client.output.supportsHyperlink = false;
     await list(client);
 
     const lines = createLineIterator(client.stderr);
@@ -46,9 +47,6 @@ describe('list', () => {
     line = await lines.next();
     const { org } = pluckIdentifiersFromDeploymentList(line.value!);
     expect(org).toEqual(team[0].slug);
-
-    // skip next line
-    await lines.next();
 
     line = await lines.next();
     expect(line.value).toEqual('');
@@ -88,6 +86,7 @@ describe('list', () => {
 
     client.cwd = fixture('with-team');
     client.setArgv(deployment.name);
+    client.output.supportsHyperlink = false;
     await list(client);
 
     const lines = createLineIterator(client.stderr);
@@ -103,9 +102,6 @@ describe('list', () => {
     line = await lines.next();
     const { org } = pluckIdentifiersFromDeploymentList(line.value!);
     expect(org).toEqual(teamSlug || team[0].slug);
-
-    // skip next line
-    await lines.next();
 
     line = await lines.next();
     expect(line.value).toEqual('');
