@@ -757,19 +757,18 @@ export function getPathOverrideForPackageManager({
   }
 
   if (
-    validateCorepackPackageManager(
+    !validateCorepackPackageManager(
       cliType,
       lockfileVersion,
       corepackPackageManager
     )
   ) {
-    // corepack is going to take care of it; do nothing special
-    return NO_OVERRIDE;
+    console.warn(
+      `WARN [package-manager-warning-1] Detected lockfile "${lockfileVersion}" which is not compatible with the intended corepack package manager "${corepackPackageManager}". Update your lockfile or change to a compatible corepack version.`
+    );
   }
 
-  console.warn(
-    `WARN [package-manager-warning-1] Detected lockfile "${lockfileVersion}" which is not compatible with the intended corepack package manager "${corepackPackageManager}". Update your lockfile or change to a compatible corepack version.`
-  );
+  // corepack is going to take care of it; do nothing special
   return NO_OVERRIDE;
 }
 
