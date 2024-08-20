@@ -34,7 +34,7 @@ describe('Test `getPathOverrideForPackageManager()`', () => {
   });
 
   describe('without corepack enabled', () => {
-    test('should return no override', () => {
+    test('should return detected package manager', () => {
       const result = getPathOverrideForPackageManager({
         cliType: 'pnpm',
         lockfileVersion: 9.0,
@@ -43,9 +43,9 @@ describe('Test `getPathOverrideForPackageManager()`', () => {
         corepackEnabled: false,
       });
       expect(result).toStrictEqual({
-        detectedLockfile: undefined,
-        detectedPackageManager: undefined,
-        path: undefined,
+        detectedLockfile: 'pnpm-lock.yaml',
+        detectedPackageManager: 'pnpm@9.x',
+        path: '/pnpm9/node_modules/.bin',
       });
     });
   });
