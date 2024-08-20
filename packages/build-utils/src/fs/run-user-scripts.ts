@@ -598,6 +598,7 @@ export function getEnvForPackageManager({
 }) {
   const corepackEnabled = usingCorepack(env, packageJsonPackageManager);
 
+  console.log('getEnvForPackageManager');
   const {
     detectedLockfile,
     detectedPackageManager,
@@ -750,6 +751,13 @@ export function getPathOverrideForPackageManager({
    */
   path: string | undefined;
 } {
+  console.log('getPathOverrideForPackageManager');
+  console.log({
+    cliType,
+    lockfileVersion,
+    corepackPackageManager,
+    corepackEnabled,
+  });
   const detectedPackageManger = detectPackageManager(cliType, lockfileVersion);
 
   if (!corepackPackageManager) {
@@ -950,6 +958,7 @@ export function getPathForPackageManager({
   // broken behavior.
   const corepackEnabled = env.ENABLE_EXPERIMENTAL_COREPACK === '1';
 
+  console.log('getPathForPackageManager');
   let overrides = getPathOverrideForPackageManager({
     cliType,
     lockfileVersion,
