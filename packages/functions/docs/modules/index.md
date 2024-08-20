@@ -2,6 +2,10 @@
 
 ## Table of contents
 
+### References
+
+- [oidc](index.md#oidc)
+
 ### Interfaces
 
 - [Geo](../interfaces/index.Geo.md)
@@ -13,6 +17,12 @@
 - [getEnv](index.md#getenv)
 - [ipAddress](index.md#ipaddress)
 - [waitUntil](index.md#waituntil)
+
+## References
+
+### oidc
+
+Re-exports [oidc](oidc.md)
 
 ## Functions
 
