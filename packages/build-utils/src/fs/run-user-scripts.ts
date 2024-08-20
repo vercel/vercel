@@ -752,12 +752,8 @@ export function getPathOverrideForPackageManager({
 } {
   const detectedPackageManger = detectPackageManager(cliType, lockfileVersion);
 
-  if (!corepackPackageManager) {
+  if (!corepackPackageManager || !corepackEnabled) {
     return detectedPackageManger ?? NO_OVERRIDE;
-  }
-
-  if (lockfileVersion === undefined || !corepackEnabled) {
-    return NO_OVERRIDE;
   }
 
   if (
@@ -779,7 +775,7 @@ export function getPathOverrideForPackageManager({
 
 function validateCorepackPackageManager(
   cliType: CliType,
-  lockfileVersion: number,
+  lockfileVersion: number | undefined,
   corepackPackageManager: string
 ) {
   const validatedCorepackPackageManager = validateVersionSpecifier(
@@ -807,12 +803,14 @@ function validateCorepackPackageManager(
     // this will fail to use corepack, but we should return `true` here to let corepack itself
     // show the appropriate error message and fail the build
     return true;
-  } else {
+  } else if (lockfileVersion) {
     return validLockfileForPackageManager(
       cliType,
       lockfileVersion,
       corepackPackageManagerVersion
     );
+  } else {
+    return true;
   }
 }
 
