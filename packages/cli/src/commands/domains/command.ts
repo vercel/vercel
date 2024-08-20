@@ -1,4 +1,3 @@
-import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
 import {
   forceOption,
@@ -7,7 +6,7 @@ import {
   yesOption,
 } from '../../util/arg-common';
 
-export const domainsCommand: Command = {
+export const domainsCommand = {
   name: 'domains',
   description: 'Manage domains',
   arguments: [
@@ -142,4 +141,4 @@ export const domainsCommand: Command = {
       value: `${packageName} domains ls--next 1584722256178`,
     },
   ],
-};
+} as const;

@@ -13,28 +13,28 @@ export type PrimitiveConstructor =
   | typeof Number;
 
 export interface CommandOption {
-  name: string;
-  shorthand: string | null;
-  type: PrimitiveConstructor | [PrimitiveConstructor];
-  argument?: string;
-  deprecated: boolean;
-  description?: string;
+  readonly name: string;
+  readonly shorthand: string | null;
+  readonly type: PrimitiveConstructor | ReadonlyArray<PrimitiveConstructor>;
+  readonly argument?: string;
+  readonly deprecated: boolean;
+  readonly description?: string;
 }
 export interface CommandArgument {
-  name: string;
-  required: boolean;
+  readonly name: string;
+  readonly required: boolean;
 }
 export interface CommandExample {
-  name: string;
-  value: string | string[];
+  readonly name: string;
+  readonly value: string | ReadonlyArray<string>;
 }
 export interface Command {
-  name: string;
-  description: string;
-  arguments: CommandArgument[];
-  subcommands?: Command[];
-  options: CommandOption[];
-  examples: CommandExample[];
+  readonly name: string;
+  readonly description: string;
+  readonly arguments: ReadonlyArray<CommandArgument>;
+  readonly subcommands?: ReadonlyArray<Command>;
+  readonly options: ReadonlyArray<CommandOption>;
+  readonly examples: ReadonlyArray<CommandExample>;
 }
 
 // https://github.com/cli-table/cli-table3/pull/303 adds
@@ -121,7 +121,7 @@ export function buildCommandSynopsisLine(command: Command) {
 }
 
 export function buildCommandOptionLines(
-  commandOptions: CommandOption[],
+  commandOptions: ReadonlyArray<CommandOption>,
   options: BuildHelpOutputOptions,
   sectionTitle: String
 ) {
@@ -130,12 +130,12 @@ export function buildCommandOptionLines(
   }
 
   // Filter out deprecated and intentionally undocumented options
-  commandOptions = commandOptions.filter(
+  const filteredCommandOptions = commandOptions.filter(
     option => !option.deprecated && option.description !== undefined
   );
 
   // Sort command options alphabetically
-  commandOptions.sort((a, b) =>
+  filteredCommandOptions.sort((a, b) =>
     a.name < b.name ? -1 : a.name > b.name ? 1 : 0
   );
 
@@ -144,7 +144,7 @@ export function buildCommandOptionLines(
   // equal to the remainder of unused horizontal space.
   let maxWidthOfUnwrappedColumns = 0;
   const rows: (string | undefined | _CellOptions)[][] = [];
-  for (const option of commandOptions) {
+  for (const option of filteredCommandOptions) {
     const shorthandCell = option.shorthand
       ? `${INDENT}-${option.shorthand},`
       : '';
@@ -192,7 +192,7 @@ export function buildCommandOptionLines(
 }
 
 export function buildSubcommandLines(
-  subcommands: Command[] | undefined,
+  subcommands: ReadonlyArray<Command> | undefined,
   options: BuildHelpOutputOptions
 ) {
   if (!subcommands) {
@@ -270,7 +270,10 @@ export function buildCommandExampleLines(command: Command) {
         outputArray.push(buildValueLine(line));
       }
     } else {
-      outputArray.push(buildValueLine(example.value));
+      // The `as string` cast is necessary here since for
+      // some reason the `Array.isArray()` check above is
+      // properly narrowing the `readonly string[]` type
+      outputArray.push(buildValueLine(example.value as string));
     }
     outputArray.push('');
   }

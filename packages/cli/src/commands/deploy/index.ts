@@ -177,9 +177,8 @@ export default async (client: Client): Promise<number> => {
 
   const target = parseTarget({
     output: output,
-    targetFlagName: 'target',
-    targetFlagValue: parsedArguments.flags['--target'],
-    prodFlagValue: parsedArguments.flags['--prod'],
+    flagName: 'target',
+    flags: parsedArguments.flags,
   });
 
   const archive = parsedArguments.flags['--archive'];
@@ -239,7 +238,7 @@ export default async (client: Client): Promise<number> => {
     // will be deprecated and can be replaced with
     // user input.
     const detectedProjectName = getProjectName({
-      argv: parsedArguments.flags,
+      nameParam: parsedArguments.flags['--name'],
       nowConfig: localConfig,
       paths,
     });

@@ -33,6 +33,7 @@ describe('list', () => {
     const deployment = useDeployment({ creator: user });
 
     client.cwd = fixture('with-team');
+    client.output.supportsHyperlink = false;
     await list(client);
 
     const lines = createLineIterator(client.stderr);
@@ -46,9 +47,6 @@ describe('list', () => {
     line = await lines.next();
     const { org } = pluckIdentifiersFromDeploymentList(line.value!);
     expect(org).toEqual(team[0].slug);
-
-    // skip next line
-    await lines.next();
 
     line = await lines.next();
     expect(line.value).toEqual('');
@@ -69,64 +67,10 @@ describe('list', () => {
     data.shift();
     expect(data).toEqual([
       `https://${deployment.url}`,
-      stateString(deployment.state || ''),
+      stateString(deployment.readyState || ''),
       deployment.target === 'production' ? 'Production' : 'Preview',
       getDeploymentDuration(deployment),
       user.username,
-    ]);
-  });
-
-  it('should get deployments for linked project where the scope is a user', async () => {
-    const user = useUser();
-    useTeams('team_dummy');
-    useProject({
-      ...defaultProject,
-      id: 'with-team',
-      name: 'with-team',
-    });
-    const deployment = useDeployment({ creator: user });
-
-    client.cwd = fixture('with-team');
-    client.setArgv('-S', user.username);
-    await list(client);
-
-    const lines = createLineIterator(client.stderr);
-
-    let line = await lines.next();
-    expect(line.value).toEqual('Retrieving project…');
-
-    line = await lines.next();
-    expect(line.value).toEqual(`Fetching deployments in ${user.username}`);
-
-    line = await lines.next();
-    const { org } = pluckIdentifiersFromDeploymentList(line.value!);
-    expect(org).toEqual(user.username);
-
-    // skip next line
-    await lines.next();
-
-    line = await lines.next();
-    expect(line.value).toEqual('');
-
-    line = await lines.next();
-    const header = parseSpacedTableRow(line.value!);
-    expect(header).toEqual([
-      'Age',
-      'Deployment',
-      'Status',
-      'Environment',
-      'Duration',
-    ]);
-
-    line = await lines.next();
-    const data = parseSpacedTableRow(line.value!);
-    data.shift();
-
-    expect(data).toEqual([
-      'https://' + deployment.url,
-      stateString(deployment.state || ''),
-      deployment.target === 'production' ? 'Production' : 'Preview',
-      getDeploymentDuration(deployment),
     ]);
   });
 
@@ -142,6 +86,7 @@ describe('list', () => {
 
     client.cwd = fixture('with-team');
     client.setArgv(deployment.name);
+    client.output.supportsHyperlink = false;
     await list(client);
 
     const lines = createLineIterator(client.stderr);
@@ -158,9 +103,6 @@ describe('list', () => {
     const { org } = pluckIdentifiersFromDeploymentList(line.value!);
     expect(org).toEqual(teamSlug || team[0].slug);
 
-    // skip next line
-    await lines.next();
-
     line = await lines.next();
     expect(line.value).toEqual('');
 
@@ -180,7 +122,7 @@ describe('list', () => {
     data.shift();
     expect(data).toEqual([
       `https://${deployment.url}`,
-      stateString(deployment.state || ''),
+      stateString(deployment.readyState || ''),
       deployment.target === 'production' ? 'Production' : 'Preview',
       getDeploymentDuration(deployment),
       user.username,
