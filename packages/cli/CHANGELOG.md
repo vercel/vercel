@@ -1,5 +1,16 @@
 # vercel
 
+## 36.0.0
+
+### Major Changes
+
+- Remove defunct `secrets` command ([#11659](https://github.com/vercel/vercel/pull/11659))
+
+### Patch Changes
+
+- Updated dependencies [[`5680ff988`](https://github.com/vercel/vercel/commit/5680ff98801dec47152f21534ddc15bab6d6ddd7)]:
+  - @vercel/remix-builder@2.2.5
+
 ## 35.2.4
 
 ### Patch Changes

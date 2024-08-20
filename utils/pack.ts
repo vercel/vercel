@@ -30,7 +30,9 @@ async function main() {
     if (task.dependencies.length > 0) {
       for (const dependency of task.dependencies) {
         const name = dependency.split('#')[0];
-        const tarballUrl = `https://${process.env.VERCEL_URL}/tarballs/${name.replace('@', '%40')}.tgz`;
+        // pnpm 8 fails to install dependencies with @ in the URL
+        const escapedName = name.replace('@', '%40');
+        const tarballUrl = `https://${process.env.VERCEL_URL}/tarballs/${escapedName}.tgz`;
         if (packageObj.dependencies && name in packageObj.dependencies) {
           packageObj.dependencies[name] = tarballUrl;
         }

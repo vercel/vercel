@@ -1,8 +1,7 @@
-import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
 import { confirmOption, nextOption, yesOption } from '../../util/arg-common';
 
-export const listCommand: Command = {
+export const listCommand = {
   name: 'list',
   description: 'List app deployments for an app.',
   arguments: [
@@ -18,6 +17,15 @@ export const listCommand: Command = {
         'Filter deployments by metadata (e.g.: `-m KEY=value`). Can appear many times.',
       argument: 'KEY=value',
       shorthand: 'm',
+      type: [String],
+      deprecated: false,
+    },
+    {
+      name: 'policy',
+      description:
+        'See deployments with provided Deployment Retention policies (e.g.: `-p KEY=value`). Can appear many times.',
+      argument: 'KEY=value',
+      shorthand: 'p',
       type: [String],
       deprecated: false,
     },
@@ -57,4 +65,4 @@ export const listCommand: Command = {
       value: `${packageName} list my-app --next 1584722256178`,
     },
   ],
-};
+} as const;

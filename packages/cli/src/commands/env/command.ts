@@ -1,11 +1,10 @@
-import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
 import { getEnvTargetPlaceholder } from '../../util/env/env-target';
 import { forceOption, yesOption } from '../../util/arg-common';
 
 const targetPlaceholder = getEnvTargetPlaceholder();
 
-export const envCommand: Command = {
+export const envCommand = {
   name: 'env',
   description: 'Interact with environment variables.',
   arguments: [
@@ -173,4 +172,4 @@ export const envCommand: Command = {
       ],
     },
   ],
-};
+} as const;
