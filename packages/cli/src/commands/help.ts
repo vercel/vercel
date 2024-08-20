@@ -270,6 +270,9 @@ export function buildCommandExampleLines(command: Command) {
         outputArray.push(buildValueLine(line));
       }
     } else {
+      // The `as string` cast is necessary here since for
+      // some reason the `Array.isArray()` check above is
+      // properly narrowing the `readonly string[]` type
       outputArray.push(buildValueLine(example.value as string));
     }
     outputArray.push('');

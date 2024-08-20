@@ -208,6 +208,7 @@ export type Deployment = {
   plan?: 'enterprise' | 'hobby' | 'oss' | 'pro';
   previewCommentsEnabled?: boolean;
   private?: boolean;
+  proposedExpiration?: number;
   projectId?: string;
   projectSettings?: {
     buildCommand?: string | null;
@@ -243,6 +244,7 @@ export type Deployment = {
   };
   ttyBuildLogs?: boolean;
   type: 'LAMBDAS';
+  undeletedAt?: number;
   url: string;
   userAliases?: string[];
   version: 2;
