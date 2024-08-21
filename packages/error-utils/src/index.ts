@@ -14,7 +14,6 @@ export const isObject = (obj: unknown): obj is Record<string, unknown> =>
 
 /**
  * A type guard for `try...catch` errors.
- * @deprecated use `require('node:util').types.isNativeError(error)` instead
  */
 export const isError = (error: unknown): error is Error => {
   return util.types.isNativeError(error);

@@ -1,4 +1,3 @@
-import { types as nodeUtils } from 'node:util';
 import {
   getPrettyError,
   getSupportedNodeVersion,
@@ -9,7 +8,7 @@ import {
   VALID_ARCHIVE_FORMATS,
   VercelConfig,
 } from '@vercel/client';
-import { errorToString, isErrnoException } from '@vercel/error-utils';
+import { errorToString, isErrnoException, isError } from '@vercel/error-utils';
 import bytes from 'bytes';
 import chalk from 'chalk';
 import fs from 'fs-extra';
@@ -670,7 +669,7 @@ export default async (client: Client): Promise<number> => {
       return 1;
     }
   } catch (err: unknown) {
-    if (nodeUtils.isNativeError(err)) {
+    if (isError(err)) {
       debug(`Error: ${err}\n${err.stack}`);
     }
 
