@@ -31,7 +31,7 @@ describe('Test `detectPackageManager()`', () => {
         args: ['pnpm', 5.3],
         want: {
           detectedLockfile: 'pnpm-lock.yaml',
-          detectedPackageManager: 'pnpm 6',
+          detectedPackageManager: 'pnpm@6.x',
           path: undefined,
         },
       },

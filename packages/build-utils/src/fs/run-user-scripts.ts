@@ -885,7 +885,7 @@ export function detectPackageManager(
             // undefined because pnpm@6 is the current default in the build container
             path: undefined,
             detectedLockfile: 'pnpm-lock.yaml',
-            detectedPackageManager: 'pnpm 6',
+            detectedPackageManager: 'pnpm@6.x',
           };
         default:
           return undefined;
