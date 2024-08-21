@@ -1,5 +1,11 @@
 # @vercel/fs-detectors
 
+## 5.2.8
+
+### Patch Changes
+
+- Prefactor middleware tests to make changes easier ([#11934](https://github.com/vercel/vercel/pull/11934))
+
 ## 5.2.7
 
 ### Patch Changes
