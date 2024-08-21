@@ -1,5 +1,11 @@
 # @vercel/client
 
+## 13.4.0
+
+### Minor Changes
+
+- Display Deployment Retention Policies in vc ls [project] ([#11676](https://github.com/vercel/vercel/pull/11676))
+
 ## 13.3.4
 
 ### Patch Changes

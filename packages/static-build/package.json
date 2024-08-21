@@ -38,7 +38,7 @@
     "@vercel/build-utils": "8.3.6",
     "@vercel/error-utils": "2.0.2",
     "@vercel/frameworks": "3.1.1",
-    "@vercel/fs-detectors": "5.2.7",
+    "@vercel/fs-detectors": "5.2.8",
     "@vercel/routing-utils": "3.1.0",
     "execa": "3.2.0",
     "fs-extra": "10.0.0",
