@@ -108,6 +108,13 @@ export interface BuildOptions {
    * on the build environment.
    */
   meta?: Meta;
+
+  /**
+   * A callback to be invoked by a builder after a project's
+   * build command has been run but before the outputs have been
+   * fully processed
+   */
+  buildCallback?: (opts: Omit<BuildOptions, 'buildCallback'>) => Promise<void>;
 }
 
 export interface PrepareCacheOptions {
@@ -362,6 +369,7 @@ export interface ProjectSettings {
 export interface BuilderV2 {
   version: 2;
   build: BuildV2;
+  diagnostics?: Diagnostics;
   prepareCache?: PrepareCache;
   shouldServe?: ShouldServe;
 }
@@ -369,6 +377,7 @@ export interface BuilderV2 {
 export interface BuilderV3 {
   version: 3;
   build: BuildV3;
+  diagnostics?: Diagnostics;
   prepareCache?: PrepareCache;
   shouldServe?: ShouldServe;
   startDevServer?: StartDevServer;
@@ -477,6 +486,7 @@ export interface BuildResultV3 {
 export type BuildV2 = (options: BuildOptions) => Promise<BuildResultV2>;
 export type BuildV3 = (options: BuildOptions) => Promise<BuildResultV3>;
 export type PrepareCache = (options: PrepareCacheOptions) => Promise<Files>;
+export type Diagnostics = (options: BuildOptions) => Promise<Files>;
 export type ShouldServe = (
   options: ShouldServeOptions
 ) => boolean | Promise<boolean>;

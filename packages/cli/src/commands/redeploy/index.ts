@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import { checkDeploymentStatus } from '@vercel/client';
 import type Client from '../../util/client';
 import { emoji, prependEmoji } from '../../util/emoji';
-import getArgs from '../../util/get-args';
+import { parseArguments } from '../../util/get-args';
 import { getCommandName } from '../../util/pkg-name';
 import { getDeploymentByIdOrURL } from '../../util/deploy/get-deployment-by-id-or-url';
 import getScope from '../../util/get-scope';
@@ -15,6 +15,7 @@ import ua from '../../util/ua';
 import type { VercelClientOptions } from '@vercel/client';
 import { help } from '../help';
 import { redeployCommand } from './command';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
 
 /**
  * `vc redeploy` command
@@ -22,25 +23,26 @@ import { redeployCommand } from './command';
  * @returns {Promise<number>} Resolves an exit code; 0 on success
  */
 export default async function redeploy(client: Client): Promise<number> {
-  let argv;
   const { output } = client;
+
+  let parsedArgs = null;
+
+  const flagsSpecification = getFlagsSpecification(redeployCommand.options);
+
+  // Parse CLI args
   try {
-    argv = getArgs(client.argv.slice(2), {
-      '--no-wait': Boolean,
-      '--yes': Boolean,
-      '-y': '--yes',
-    });
-  } catch (err) {
-    handleError(err);
+    parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
+  } catch (error) {
+    handleError(error);
     return 1;
   }
 
-  if (argv['--help'] || argv._[0] === 'help') {
+  if (parsedArgs.flags['--help']) {
     output.print(help(redeployCommand, { columns: client.stderr.columns }));
     return 2;
   }
 
-  const deployIdOrUrl = argv._[1];
+  const deployIdOrUrl = parsedArgs.args[1];
   if (!deployIdOrUrl) {
     output.error(
       `Missing required deployment id or url: ${getCommandName(
@@ -51,7 +53,7 @@ export default async function redeploy(client: Client): Promise<number> {
   }
 
   const { contextName } = await getScope(client);
-  const noWait = !!argv['--no-wait'];
+  const noWait = !!parsedArgs.flags['--no-wait'];
 
   try {
     const fromDeployment = await getDeploymentByIdOrURL({

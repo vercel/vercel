@@ -1,8 +1,10 @@
-import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
 import { getEnvTargetPlaceholder } from '../../util/env/env-target';
+import { yesOption } from '../../util/arg-common';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { parseArguments } from '../../util/get-args';
 
-export const pullCommand: Command = {
+export const pullCommand = {
   name: 'pull',
   description:
     'Pull latest environment variables and project settings from Vercel. ',
@@ -31,12 +33,9 @@ export const pullCommand: Command = {
       deprecated: false,
     },
     {
-      name: 'yes',
+      ...yesOption,
       description:
         'Skip questions when setting up new project using default scope and settings',
-      shorthand: 'y',
-      type: String,
-      deprecated: false,
     },
   ],
   examples: [
@@ -61,4 +60,11 @@ export const pullCommand: Command = {
       value: `${packageName} env pull`,
     },
   ],
-};
+} as const;
+
+export type PullCommandSpec = ReturnType<
+  typeof getFlagsSpecification<(typeof pullCommand)['options']>
+>;
+export type PullCommandFlags = ReturnType<
+  typeof parseArguments<PullCommandSpec>
+>['flags'];

@@ -1,7 +1,6 @@
-import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
 
-export const logoutCommand: Command = {
+export const logoutCommand = {
   name: 'logout',
   description: 'Logout the current authenticated user.',
   arguments: [],
@@ -12,4 +11,4 @@ export const logoutCommand: Command = {
       value: `${packageName} logout`,
     },
   ],
-};
+} as const;

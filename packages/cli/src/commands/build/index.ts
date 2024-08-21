@@ -4,25 +4,26 @@ import dotenv from 'dotenv';
 import semver from 'semver';
 import minimatch from 'minimatch';
 import { join, normalize, relative, resolve, sep } from 'path';
-import { frameworkList } from '@vercel/frameworks';
+import { frameworkList, type Framework } from '@vercel/frameworks';
 import {
+  download,
   getDiscontinuedNodeVersions,
-  normalizePath,
-  Files,
-  FileFsRef,
-  PackageJson,
-  BuildOptions,
-  Config,
-  Meta,
-  Builder,
-  BuildResultV2,
-  BuildResultV2Typical,
-  BuildResultV3,
-  NowBuildError,
-  Cron,
-  validateNpmrc,
-  type FlagDefinitions,
   getInstalledPackageVersion,
+  normalizePath,
+  FileFsRef,
+  NowBuildError,
+  validateNpmrc,
+  type Files,
+  type PackageJson,
+  type BuildOptions,
+  type Config,
+  type Meta,
+  type Builder,
+  type BuildResultV2,
+  type BuildResultV2Typical,
+  type BuildResultV3,
+  type Cron,
+  type FlagDefinitions,
 } from '@vercel/build-utils';
 import {
   detectBuilders,
@@ -34,15 +35,15 @@ import {
   appendRoutesToPhase,
   getTransformedRoutes,
   mergeRoutes,
-  MergeRoutesProps,
-  Route,
+  type MergeRoutesProps,
+  type Route,
 } from '@vercel/routing-utils';
 import { fileNameSymbol } from '@vercel/client';
 import type { VercelConfig } from '@vercel/client';
 
 import pull from '../pull';
 import { staticFiles as getFiles } from '../../util/get-files';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import cmd from '../../util/output/cmd';
 import * as cli from '../../util/pkg-name';
@@ -51,8 +52,8 @@ import readJSONFile from '../../util/read-json-file';
 import { CantParseJSONFile } from '../../util/errors-ts';
 import {
   pickOverrides,
-  ProjectLinkAndSettings,
   readProjectSettings,
+  type ProjectLinkAndSettings,
 } from '../../util/projects/project-settings';
 import { getProjectLink, VERCEL_DIR } from '../../util/projects/link';
 import confirm from '../../util/input/confirm';
@@ -60,8 +61,8 @@ import { emoji, prependEmoji } from '../../util/emoji';
 import stamp from '../../util/output/stamp';
 import {
   OUTPUT_DIR,
-  PathOverride,
   writeBuildResult,
+  type PathOverride,
 } from '../../util/build/write-build-result';
 import { importBuilders } from '../../util/build/import-builders';
 import { initCorepack, cleanupCorepack } from '../../util/build/corepack';
@@ -73,6 +74,7 @@ import { help } from '../help';
 import { buildCommand } from './command';
 import { scrubArgv } from '../../util/build/scrub-argv';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
+import parseTarget from '../../util/parse-target';
 
 type BuildResult = BuildResultV2 | BuildResultV3;
 
@@ -152,7 +154,13 @@ export default async function main(client: Client): Promise<number> {
   }
 
   // Build `target` influences which environment variables will be used
-  const target = parsedArgs.flags['--prod'] ? 'production' : 'preview';
+  const target =
+    parseTarget({
+      output,
+      flagName: 'target',
+      flags: parsedArgs.flags,
+    }) || 'preview';
+
   const yes = Boolean(parsedArgs.flags['--yes']);
 
   try {
@@ -476,6 +484,7 @@ async function doBuild(
   const overrides: PathOverride[] = [];
   const repoRootPath = cwd;
   const corepackShimDir = await initCorepack({ repoRootPath }, output);
+  const diagnostics: Files = {};
 
   for (const build of sortedBuilders) {
     if (typeof build.src !== 'string') continue;
@@ -504,6 +513,7 @@ async function doBuild(
         }
       }
 
+      const isFrontendBuilder = build.config && 'framework' in build.config;
       const buildConfig: Config = isZeroConfig
         ? {
             outputDirectory: projectSettings.outputDirectory ?? undefined,
@@ -527,7 +537,35 @@ async function doBuild(
       output.debug(
         `Building entrypoint "${build.src}" with "${builderPkg.name}"`
       );
-      const buildResult = await builder.build(buildOptions);
+      let buildResult: BuildResultV2 | BuildResultV3 | undefined;
+      try {
+        buildResult = await builder.build(buildOptions);
+
+        // If the build result has no routes and the framework has default routes,
+        // then add the default routes to the build result
+        if (
+          buildConfig.zeroConfig &&
+          isFrontendBuilder &&
+          'output' in buildResult &&
+          !buildResult.routes
+        ) {
+          const framework = frameworkList.find(
+            f => f.slug === buildConfig.framework
+          );
+          if (framework) {
+            const defaultRoutes = await getFrameworkRoutes(framework, workPath);
+            buildResult.routes = defaultRoutes;
+          }
+        }
+      } finally {
+        // Make sure we don't fail the build
+        try {
+          Object.assign(diagnostics, await builder.diagnostics?.(buildOptions));
+        } catch (error) {
+          output.error('Collecting diagnostics failed');
+          output.debug(error);
+        }
+      }
 
       if (
         buildResult &&
@@ -575,6 +613,13 @@ async function doBuild(
         buildJsonBuild.error = toEnumerableError(err);
       }
       throw err;
+    } finally {
+      ops.push(
+        download(diagnostics, join(outputDir, 'diagnostics')).then(
+          () => undefined,
+          err => err
+        )
+      );
     }
   }
 
@@ -602,9 +647,8 @@ async function doBuild(
     };
     needBuildsJsonOverride = true;
   }
-  const webAnalyticsVersion = await getInstalledPackageVersion(
-    '@vercel/analytics'
-  );
+  const webAnalyticsVersion =
+    await getInstalledPackageVersion('@vercel/analytics');
   if (webAnalyticsVersion) {
     buildsJson.features = {
       ...(buildsJson.features ?? {}),
@@ -864,4 +908,17 @@ async function writeFlagsJSON(
 
 async function writeBuildJson(buildsJson: BuildsManifest, outputDir: string) {
   await fs.writeJSON(join(outputDir, 'builds.json'), buildsJson, { spaces: 2 });
+}
+
+async function getFrameworkRoutes(
+  framework: Framework,
+  dirPrefix: string
+): Promise<Route[]> {
+  let routes: Route[] = [];
+  if (typeof framework.defaultRoutes === 'function') {
+    routes = await framework.defaultRoutes(dirPrefix);
+  } else if (Array.isArray(framework.defaultRoutes)) {
+    routes = framework.defaultRoutes;
+  }
+  return routes;
 }

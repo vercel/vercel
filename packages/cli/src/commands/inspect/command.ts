@@ -1,7 +1,6 @@
-import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
 
-export const inspectCommand: Command = {
+export const inspectCommand = {
   name: 'inspect',
   description: 'Show information about a deployment.',
   arguments: [
@@ -23,8 +22,15 @@ export const inspectCommand: Command = {
       name: 'wait',
       description: 'Blocks until deployment completes',
       shorthand: null,
-      type: String,
+      type: Boolean,
       deprecated: false,
+    },
+    {
+      name: 'logs',
+      shorthand: 'l',
+      type: Boolean,
+      deprecated: false,
+      description: 'Prints the build logs instead of the deployment summary',
     },
   ],
   examples: [
@@ -44,5 +50,9 @@ export const inspectCommand: Command = {
       name: 'Wait up to 90 seconds for deployment to complete',
       value: `${packageName} inspect my-deployment.vercel.app --wait --timeout 90s`,
     },
+    {
+      name: 'Get deployment build logs',
+      value: `${packageName} inspect my-deployment.vercel.app --logs`,
+    },
   ],
-};
+} as const;

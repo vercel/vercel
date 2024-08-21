@@ -36,7 +36,15 @@ export default async function getEnvRecords(
   const query = new URLSearchParams();
 
   if (target) {
-    query.set('target', target);
+    let targetParam = 'target';
+    if (
+      target !== 'production' &&
+      target !== 'preview' &&
+      target !== 'development'
+    ) {
+      targetParam = 'customEnvironmentId';
+    }
+    query.set(targetParam, target);
   }
   if (gitBranch) {
     query.set('gitBranch', gitBranch);

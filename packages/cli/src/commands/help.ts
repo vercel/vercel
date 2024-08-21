@@ -2,6 +2,7 @@ import chalk from 'chalk';
 import { LOGO, NAME } from '@vercel-internals/constants';
 import Table, { CellOptions } from 'cli-table3';
 import { noBorderChars } from '../util/output/table';
+import { globalCommandOptions } from '../util/arg-common';
 
 const INDENT = ' '.repeat(2);
 const NEWLINE = '\n';
@@ -12,28 +13,28 @@ export type PrimitiveConstructor =
   | typeof Number;
 
 export interface CommandOption {
-  name: string;
-  shorthand: string | null;
-  type: PrimitiveConstructor | [PrimitiveConstructor];
-  argument?: string;
-  deprecated: boolean;
-  description?: string;
+  readonly name: string;
+  readonly shorthand: string | null;
+  readonly type: PrimitiveConstructor | ReadonlyArray<PrimitiveConstructor>;
+  readonly argument?: string;
+  readonly deprecated: boolean;
+  readonly description?: string;
 }
 export interface CommandArgument {
-  name: string;
-  required: boolean;
+  readonly name: string;
+  readonly required: boolean;
 }
 export interface CommandExample {
-  name: string;
-  value: string | string[];
+  readonly name: string;
+  readonly value: string | ReadonlyArray<string>;
 }
 export interface Command {
-  name: string;
-  description: string;
-  arguments: CommandArgument[];
-  subcommands?: Command[];
-  options: CommandOption[];
-  examples: CommandExample[];
+  readonly name: string;
+  readonly description: string;
+  readonly arguments: ReadonlyArray<CommandArgument>;
+  readonly subcommands?: ReadonlyArray<Command>;
+  readonly options: ReadonlyArray<CommandOption>;
+  readonly examples: ReadonlyArray<CommandExample>;
 }
 
 // https://github.com/cli-table/cli-table3/pull/303 adds
@@ -49,77 +50,6 @@ const tableOptions = {
     'padding-right': 0,
   },
 };
-
-const globalCommandOptions: CommandOption[] = [
-  {
-    name: 'help',
-    shorthand: 'h',
-    type: String,
-    description: 'Output usage information',
-    deprecated: false,
-  },
-  {
-    name: 'version',
-    shorthand: 'v',
-    type: String,
-    description: 'Output the version number',
-    deprecated: false,
-  },
-  {
-    name: 'cwd',
-    shorthand: null,
-    type: String,
-    argument: 'DIR',
-    description:
-      'Sets the current working directory for a single run of a command',
-    deprecated: false,
-  },
-  {
-    name: 'local-config',
-    shorthand: 'A',
-    type: String,
-    argument: 'FILE',
-    description: 'Path to the local `vercel.json` file',
-    deprecated: false,
-  },
-  {
-    name: 'global-config',
-    shorthand: 'Q',
-    type: String,
-    argument: 'DIR',
-    description: 'Path to the global `.vercel` directory',
-    deprecated: false,
-  },
-  {
-    name: 'debug',
-    shorthand: 'd',
-    type: String,
-    description: 'Debug mode (default off)',
-    deprecated: false,
-  },
-  {
-    name: 'no-color',
-    shorthand: null,
-    type: String,
-    description: 'No color mode (default off)',
-    deprecated: false,
-  },
-  {
-    name: 'scope',
-    shorthand: 'S',
-    type: String,
-    description: 'Set a custom scope',
-    deprecated: false,
-  },
-  {
-    name: 'token',
-    shorthand: 't',
-    type: String,
-    argument: 'TOKEN',
-    description: 'Login token',
-    deprecated: false,
-  },
-];
 
 // Use the word wrapping ability of cli-table3
 // by creating a one row, one cell, one column table.
@@ -191,7 +121,7 @@ export function buildCommandSynopsisLine(command: Command) {
 }
 
 export function buildCommandOptionLines(
-  commandOptions: CommandOption[],
+  commandOptions: ReadonlyArray<CommandOption>,
   options: BuildHelpOutputOptions,
   sectionTitle: String
 ) {
@@ -200,12 +130,12 @@ export function buildCommandOptionLines(
   }
 
   // Filter out deprecated and intentionally undocumented options
-  commandOptions = commandOptions.filter(
+  const filteredCommandOptions = commandOptions.filter(
     option => !option.deprecated && option.description !== undefined
   );
 
   // Sort command options alphabetically
-  commandOptions.sort((a, b) =>
+  filteredCommandOptions.sort((a, b) =>
     a.name < b.name ? -1 : a.name > b.name ? 1 : 0
   );
 
@@ -214,7 +144,7 @@ export function buildCommandOptionLines(
   // equal to the remainder of unused horizontal space.
   let maxWidthOfUnwrappedColumns = 0;
   const rows: (string | undefined | _CellOptions)[][] = [];
-  for (const option of commandOptions) {
+  for (const option of filteredCommandOptions) {
     const shorthandCell = option.shorthand
       ? `${INDENT}-${option.shorthand},`
       : '';
@@ -262,7 +192,7 @@ export function buildCommandOptionLines(
 }
 
 export function buildSubcommandLines(
-  subcommands: Command[] | undefined,
+  subcommands: ReadonlyArray<Command> | undefined,
   options: BuildHelpOutputOptions
 ) {
   if (!subcommands) {
@@ -340,7 +270,10 @@ export function buildCommandExampleLines(command: Command) {
         outputArray.push(buildValueLine(line));
       }
     } else {
-      outputArray.push(buildValueLine(example.value));
+      // The `as string` cast is necessary here since for
+      // some reason the `Array.isArray()` check above is
+      // properly narrowing the `readonly string[]` type
+      outputArray.push(buildValueLine(example.value as string));
     }
     outputArray.push('');
   }

@@ -1,7 +1,7 @@
-import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
+import { limitOption, nextOption } from '../../util/arg-common';
 
-export const dnsCommand: Command = {
+export const dnsCommand = {
   name: 'dns',
   description: 'Interact with DNS entries for a project.',
   arguments: [
@@ -70,21 +70,15 @@ export const dnsCommand: Command = {
   ],
   options: [
     {
-      name: 'next',
+      ...nextOption,
       description: 'Show next page of results',
       argument: 'MS',
-      shorthand: 'n',
-      type: String,
-      deprecated: false,
     },
     {
-      name: 'limit',
-      shorthand: 'n',
+      ...limitOption,
       description:
         'Number of results to return per page (default: 20, max: 100)',
       argument: 'NUMBER',
-      type: String,
-      deprecated: false,
     },
   ],
   examples: [
@@ -131,4 +125,4 @@ export const dnsCommand: Command = {
       ],
     },
   ],
-};
+} as const;

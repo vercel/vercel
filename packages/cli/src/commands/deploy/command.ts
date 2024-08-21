@@ -1,6 +1,6 @@
-import { Command } from '../help';
+import { confirmOption, forceOption, yesOption } from '../../util/arg-common';
 
-export const deployCommand: Command = {
+export const deployCommand = {
   name: 'deploy',
   description:
     'Deploy your project to Vercel. The `deploy` command is the default command for the Vercel CLI, and can be omitted (`vc deploy my-app` equals `vc my-app`).',
@@ -12,10 +12,7 @@ export const deployCommand: Command = {
   ],
   options: [
     {
-      name: 'force',
-      shorthand: 'f',
-      type: Boolean,
-      deprecated: false,
+      ...forceOption,
       description: 'Force a new deployment even if nothing has changed',
     },
     {
@@ -79,7 +76,8 @@ export const deployCommand: Command = {
       shorthand: null,
       type: Boolean,
       deprecated: false,
-      description: 'Create a production deployment',
+      description:
+        'Create a production deployment (shorthand for `--target=production`)',
     },
     {
       name: 'archive',
@@ -105,11 +103,15 @@ export const deployCommand: Command = {
         'Disable the automatic promotion (aliasing) of the relevant domains to a new production deployment. You can use `vc promote` to complete the domain-assignment process later',
     },
     {
-      name: 'yes',
-      shorthand: 'y',
+      ...yesOption,
+      description: 'Use default options to skip all prompts',
+    },
+    {
+      name: 'logs',
+      shorthand: 'l',
       type: Boolean,
       deprecated: false,
-      description: 'Use default options to skip all prompts',
+      description: 'Print the build logs',
     },
     {
       name: 'name',
@@ -129,13 +131,11 @@ export const deployCommand: Command = {
       name: 'target',
       shorthand: null,
       type: String,
-      deprecated: true,
+      deprecated: false,
       description: 'Specify the target deployment environment',
     },
     {
-      name: 'confirm',
-      shorthand: 'c',
-      type: Boolean,
+      ...confirmOption,
       deprecated: true,
       description: 'Use default options to skip all prompts',
     },
@@ -162,4 +162,4 @@ export const deployCommand: Command = {
       value: 'vercel > deployment-url.txt',
     },
   ],
-};
+} as const;

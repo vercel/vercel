@@ -1,7 +1,20 @@
-import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
+import { nextOption } from '../../util/arg-common';
 
-export const teamsCommand: Command = {
+export const listSubcommand = {
+  name: 'ls',
+  description: "Show all teams you're a part of",
+  arguments: [],
+  options: [
+    nextOption,
+    { name: 'since', shorthand: null, type: String, deprecated: false },
+    { name: 'until', shorthand: null, type: String, deprecated: false },
+    { name: 'count', shorthand: 'C', type: Number, deprecated: false },
+  ],
+  examples: [],
+} as const;
+
+export const teamsCommand = {
   name: 'teams',
   description: 'Manage teams under your Vercel account',
   arguments: [],
@@ -13,13 +26,7 @@ export const teamsCommand: Command = {
       options: [],
       examples: [],
     },
-    {
-      name: 'ls',
-      description: "Show all teams you're a part of",
-      arguments: [],
-      options: [],
-      examples: [],
-    },
+    listSubcommand,
     {
       name: 'switch',
       description: 'Switch to a different team',
@@ -46,14 +53,14 @@ export const teamsCommand: Command = {
     },
   ],
   options: [
-    {
-      name: 'next',
-      shorthand: 'N',
-      type: String,
-      argument: 'MS',
-      deprecated: false,
-      description: 'Show next page of results',
-    },
+    // {
+    //   name: 'next',
+    //   shorthand: 'N',
+    //   type: String,
+    //   argument: 'MS',
+    //   deprecated: false,
+    //   description: 'Show next page of results',
+    // },
   ],
   examples: [
     {
@@ -73,4 +80,4 @@ export const teamsCommand: Command = {
       value: `${packageName} teams ls --next 1584722256178`,
     },
   ],
-};
+} as const;

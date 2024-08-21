@@ -68,8 +68,8 @@ describe('middleware matchers', () => {
           matcher === undefined
             ? []
             : Array.isArray(matcher)
-            ? matcher
-            : [matcher],
+              ? matcher
+              : [matcher],
         middlewarePath: 'middleware.js',
         continue: true,
         override: true,
