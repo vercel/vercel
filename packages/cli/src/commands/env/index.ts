@@ -63,34 +63,32 @@ export default async function main(client: Client) {
       )} to begin.`
     );
     return 1;
-  } else {
-    const { project, org } = link;
-    config.currentTeam = org.type === 'team' ? org.id : undefined;
-    switch (subcommand) {
-      case 'ls':
-        return ls(client, project, parsedArgs.flags, args, output);
-      case 'add':
-        return add(client, project, parsedArgs.flags, args, output);
-      case 'rm':
-        return rm(client, project, parsedArgs.flags, args, output);
-      case 'pull':
-        return pull(
-          client,
-          link,
-          project,
-          target,
-          parsedArgs.flags,
-          args,
-          output,
-          cwd,
-          'vercel-cli:env:pull'
-        );
-      default:
-        output.error(getInvalidSubcommand(COMMAND_CONFIG));
-        client.output.print(
-          help(envCommand, { columns: client.stderr.columns })
-        );
-        return 2;
-    }
+  }
+
+  const { project, org } = link;
+  config.currentTeam = org.type === 'team' ? org.id : undefined;
+  switch (subcommand) {
+    case 'ls':
+      return ls(client, project, parsedArgs.flags, args, output);
+    case 'add':
+      return add(client, project, parsedArgs.flags, args, output);
+    case 'rm':
+      return rm(client, project, parsedArgs.flags, args, output);
+    case 'pull':
+      return pull(
+        client,
+        link,
+        project,
+        target,
+        parsedArgs.flags,
+        args,
+        output,
+        cwd,
+        'vercel-cli:env:pull'
+      );
+    default:
+      output.error(getInvalidSubcommand(COMMAND_CONFIG));
+      client.output.print(help(envCommand, { columns: client.stderr.columns }));
+      return 2;
   }
 }
