@@ -5,8 +5,14 @@
 ```ts
 import { checkRateLimit } from '@vercel/firewall';
 
-async function handler() {
+export async function POST() {
   const { rateLimited } = await checkRateLimit('my-rate-limit-id');
+  if (rateLimited) {
+    return new Response('', {
+      status: 429,
+    });
+  }
+  // Implement logic guarded by rate limit
 }
 ```
 

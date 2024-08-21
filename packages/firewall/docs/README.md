@@ -19,8 +19,14 @@ Check rate-limits defined through the Vercel Firewall.
 ```js
 import { checkRateLimit } from '@vercel/firewall';
 
-async function handler() {
+export async function POST() {
   const { rateLimited } = await checkRateLimit('my-rate-limit-id');
+  if (rateLimited) {
+    return new Response('', {
+      status: 429,
+    });
+  }
+  // Implement logic guarded by rate limit
 }
 ```
 
@@ -44,4 +50,4 @@ A promise that resolves to an object with a `rateLimited` property that is `true
 
 #### Defined in
 
-rate-limit.ts:20
+[rate-limit.ts:26](https://github.com/vercel/vercel/blob/main/packages/firewall/src/rate-limit.ts#L26)
