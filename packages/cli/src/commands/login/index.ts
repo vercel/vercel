@@ -1,13 +1,6 @@
-import { validate as validateEmail } from 'email-validator';
 import chalk from 'chalk';
 import hp from '../../util/humanize-path';
 import { parseArguments } from '../../util/get-args';
-import prompt from '../../util/login/prompt';
-import doSamlLogin from '../../util/login/saml';
-import doEmailLogin from '../../util/login/email';
-import doGithubLogin from '../../util/login/github';
-import doGitlabLogin from '../../util/login/gitlab';
-import doBitbucketLogin from '../../util/login/bitbucket';
 import { prependEmoji, emoji } from '../../util/emoji';
 import { getCommandName } from '../../util/pkg-name';
 import getGlobalPathConfig from '../../util/config/global-path';
@@ -22,6 +15,7 @@ import { loginCommand } from './command';
 import { updateCurrentTeamAfterLogin } from '../../util/login/update-current-team-after-login';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import handleError from '../../util/handle-error';
+import doOauthLogin from '../../util/login/oauth';
 
 export default async function login(client: Client): Promise<number> {
   const { output } = client;
@@ -51,27 +45,16 @@ export default async function login(client: Client): Promise<number> {
     return 2;
   }
 
-  const input = parsedArgs.args[1];
-
   let result: LoginResult = 1;
 
-  if (input) {
-    // Email or Team slug was provided via command line
-    if (validateEmail(input)) {
-      result = await doEmailLogin(client, input);
-    } else {
-      result = await doSamlLogin(client, input, parsedArgs.flags['--oob']);
-    }
-  } else if (parsedArgs.flags['--github']) {
-    result = await doGithubLogin(client, parsedArgs.flags['--oob']);
-  } else if (parsedArgs.flags['--gitlab']) {
-    result = await doGitlabLogin(client, parsedArgs.flags['--oob']);
-  } else if (parsedArgs.flags['--bitbucket']) {
-    result = await doBitbucketLogin(client, parsedArgs.flags['--oob']);
-  } else {
-    // Interactive mode
-    result = await prompt(client, undefined, parsedArgs.flags['--oob']);
-  }
+  const url = new URL('/login', 'https://vercel.com');
+  url.searchParams.set('cli', '1');
+  result = await doOauthLogin(
+    client,
+    url,
+    'SAML Single Sign-On',
+    parsedArgs.flags['--oob']
+  );
 
   // The login function failed, so it returned an exit code
   if (typeof result === 'number') {
