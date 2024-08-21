@@ -1,5 +1,26 @@
 # vercel
 
+## 37.0.0
+
+### Major Changes
+
+- Refactor / modernize the `vercel list` command ([#11956](https://github.com/vercel/vercel/pull/11956))
+
+### Minor Changes
+
+- Print the custom environment name in `vc list` ([#11965](https://github.com/vercel/vercel/pull/11965))
+
+- Allow filtering in `vc env ls` with custom environment ([#11984](https://github.com/vercel/vercel/pull/11984))
+
+- Display Deployment Retention Policies in vc ls [project] ([#11676](https://github.com/vercel/vercel/pull/11676))
+
+### Patch Changes
+
+- Prefactor middleware tests to make changes easier ([#11934](https://github.com/vercel/vercel/pull/11934))
+
+- Updated dependencies [[`763db23a3`](https://github.com/vercel/vercel/commit/763db23a3acf1c290f0d45c2501a2c924cbd609d)]:
+  - @vercel/remix-builder@2.2.6
+
 ## 36.0.0
 
 ### Major Changes
