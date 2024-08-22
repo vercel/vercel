@@ -27,24 +27,27 @@ export async function checkRateLimit(
   rateLimitId: string,
   options?: {
     /** The host name on which the rate limit rules are defined */
-    firewallHost?: string;
+    firewallHostForDevelopment?: string;
     /** The key to use for rate-limiting. If not defined, defaults to the user's IP address. */
     rateLimitKey?: string;
-    /** The headers for the current request. Optional if `rateLimitKey` or `request` are provided.  */
+    /** The headers for the current request. Optional if `request` is provided or if using Next.js app router.  */
     headers?:
       | Headers
       | Record<string, string>
       | Record<string, string | string[]>;
-    /** The current request object. Optional if `rateLimitKey` or `headers` are provided */
+    /** The current request object. Optional if `headers` is provided or if using Next.js app router */
     request?: Request;
   }
 ): Promise<{
   rateLimited: boolean;
   error?: 'not-found' | 'blocked';
 }> {
-  if (process.env.NODE_ENV !== 'production' && !options?.firewallHost) {
+  if (
+    process.env.NODE_ENV !== 'production' &&
+    !options?.firewallHostForDevelopment
+  ) {
     console.warn(
-      'Provide the `firewallHost` option to support rate-limiting in development mode'
+      'Provide the `firewallHostForDevelopment` option to support rate-limiting in development mode'
     );
     return {
       rateLimited: false,
@@ -55,7 +58,8 @@ export async function checkRateLimit(
   if (requestHeaders && !(requestHeaders instanceof Headers)) {
     requestHeaders = new Headers(requestHeaders);
   }
-  if (!requestHeaders && process.env.NEXT_RUNTIME) {
+  const isUsingNextJs = !!process.env.NEXT_RUNTIME;
+  if (!requestHeaders && isUsingNextJs) {
     const { headers } = await import('next/headers');
     try {
       requestHeaders = headers();
@@ -63,13 +67,16 @@ export async function checkRateLimit(
       // Ignore
     }
   }
-  if (options?.rateLimitKey && !requestHeaders) {
-    requestHeaders = new Headers();
-  }
   if (!requestHeaders) {
-    throw new Error(
-      '`rateLimitKey` or `header` or `request` options are required'
-    );
+    throw new Error('`headers` or `request` options are required');
+  }
+
+  let firewallHost = requestHeaders.get('host') || undefined;
+  if (process.env.NODE_ENV !== 'production') {
+    firewallHost =
+      options?.firewallHostForDevelopment !== 'ignore-for-testing'
+        ? options?.firewallHostForDevelopment
+        : firewallHost;
   }
 
   let fullRateLimitKey = options?.rateLimitKey;
@@ -82,9 +89,7 @@ export async function checkRateLimit(
     }
   }
 
-  const url = `https://${
-    options?.firewallHost || process.env.VERCEL_PROJECT_PRODUCTION_URL
-  }/.well-known/vercel/rate-limit-api/${encodeURIComponent(rateLimitId)}`;
+  const url = `https://${firewallHost}/.well-known/vercel/rate-limit-api/${encodeURIComponent(rateLimitId)}`;
 
   fullRateLimitKey = `${fullRateLimitKey}-${await hashString(
     fullRateLimitKey +

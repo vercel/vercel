@@ -13,8 +13,11 @@ function testWithCheckRateLimit(checkRateLimit: typeof checkRateLimitDist) {
     let rand: number;
     function check(key?: string) {
       return checkRateLimit('test-rule1', {
-        firewallHost: HOST,
         rateLimitKey: (key || '123') + rand,
+        headers: new Headers({
+          host: HOST,
+        }),
+        firewallHostForDevelopment: 'ignore-for-testing',
       });
     }
 
@@ -38,8 +41,9 @@ function testWithCheckRateLimit(checkRateLimit: typeof checkRateLimitDist) {
       const { rateLimited, error } = await checkRateLimit(
         'definitely-not-found',
         {
-          firewallHost: HOST,
+          firewallHostForDevelopment: HOST,
           rateLimitKey: '123',
+          headers: new Headers(),
         }
       );
       expect(rateLimited).toBe(false);
@@ -73,7 +77,7 @@ function testWithCheckRateLimit(checkRateLimit: typeof checkRateLimitDist) {
     test('Should pick key from Headers object', async () => {
       function check(ip?: string) {
         return checkRateLimit('test-rule1', {
-          firewallHost: HOST,
+          firewallHostForDevelopment: HOST,
           headers: new Headers({
             'x-real-ip': (ip || '192.168.10.2') + rand,
           }),
@@ -86,7 +90,7 @@ function testWithCheckRateLimit(checkRateLimit: typeof checkRateLimitDist) {
     test('Should pick key from headers-shaped object', async () => {
       function check(ip?: string) {
         return checkRateLimit('test-rule1', {
-          firewallHost: HOST,
+          firewallHostForDevelopment: HOST,
           headers: {
             'x-real-ip': (ip || '192.168.10.2') + rand,
             'random-header': 'random-value',
@@ -107,7 +111,7 @@ function testWithCheckRateLimit(checkRateLimit: typeof checkRateLimitDist) {
     test('Should pick key from request object', async () => {
       function check(ip?: string) {
         return checkRateLimit('test-rule1', {
-          firewallHost: HOST,
+          firewallHostForDevelopment: HOST,
           request: new Request('https://example.com', {
             headers: new Headers({
               'x-real-ip': (ip || '192.168.10.2') + rand,
