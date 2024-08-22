@@ -17,7 +17,12 @@ export const envCommand = {
     {
       name: 'ls',
       description: 'List all variables for the specified Environment',
-      arguments: [],
+      arguments: [
+        {
+          name: 'environment',
+          required: false,
+        },
+      ],
       options: [],
       examples: [],
     },
