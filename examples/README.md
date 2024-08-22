@@ -34,6 +34,6 @@ When submitting an issue, please thoroughly and concisely describe the problem y
 
 ## Get In Touch
 
-If you have any questions that are not covered by raising an issue then please get in touch with us on [GitHub Discussions](https://github.com/vercel/vercel/discussions). There you will find both members of the community and staff who are happy to help answer questions on anything Vercel related.
+If you have any questions that are not covered by raising an issue then please get in touch with us on [https://vercel.community/](https://vercel.community/). There you will find both members of the community and staff who are happy to help answer questions on anything Vercel related.
 
 [Join the Vercel Community](https://vercel.community/)
