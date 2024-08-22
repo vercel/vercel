@@ -14,7 +14,7 @@ import { getEnvTargetPlaceholder } from '../../util/env/env-target';
 import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
 import ellipsis from '../../util/output/ellipsis';
-import { isObject } from '@vercel/error-utils';
+import { getCustomEnvironments } from '../../util/target/get-custom-environments';
 
 type Options = {};
 
@@ -63,22 +63,6 @@ export default async function ls(
   }
 
   return 0;
-}
-
-async function getCustomEnvironments(client: Client, projectId: string) {
-  try {
-    const res = await client.fetch<{ environments: CustomEnvironment[] }>(
-      `/projects/${encodeURIComponent(projectId)}/custom-environments`,
-      { method: 'GET' }
-    );
-    return res.environments;
-  } catch (error) {
-    if (isObject(error) && error.status === 404) {
-      // user is not flagged for custom environments
-      return [];
-    }
-    throw error;
-  }
 }
 
 function getTable(

@@ -252,7 +252,7 @@ describe('env', () => {
         client.setArgv('env', 'add', 'NEW_VAR');
         const addPromise = env(client);
 
-        await expect(client.stderr).toOutput('What’s the value of NEW_VAR?');
+        await expect(client.stderr).toOutput("What's the value of NEW_VAR?");
         client.stdin.write('testvalue\n');
 
         await expect(client.stderr).toOutput(
