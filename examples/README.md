@@ -22,7 +22,7 @@ Contributing examples should be an enjoyable experience, as such we have created
 
 The guidelines cover important information such as the requirements for new examples and where to get help if you have any questions.
 
-We have tried to make contributing to examples as easy as possible, especially for those new to Open Source. If anything is unclear or you have any questions then please reach out to us on [GitHub Discussions](https://github.com/vercel/vercel/discussions) where we will do our best to help you.
+We have tried to make contributing to examples as easy as possible, especially for those new to Open Source. If anything is unclear or you have any questions then please reach out to us on [https://vercel.community/](https://vercel.community/) where we will do our best to help you.
 
 ## Reporting Issues
 
