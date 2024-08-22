@@ -2036,7 +2036,7 @@ export const frameworks = [
         {
           path: 'package.json',
           matchContent:
-            /"(dev)?(d|D)ependencies":\s*{[^}]*"sanity":\s*"\^?3\..*"[^}]*}/.toString(),
+            '"(dev)?(d|D)ependencies":\\s*{[^}]*"sanity":\\s*"\\^?3\\..*"[^}]*}',
         },
       ],
     },
@@ -2056,7 +2056,6 @@ export const frameworks = [
         value: 'dist',
       },
     },
-    dependency: '@sanity/cli',
     getOutputDirName: async () => 'dist',
     defaultRoutes: [
       {
