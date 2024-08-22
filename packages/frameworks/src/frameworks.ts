@@ -2006,7 +2006,7 @@ export const frameworks = [
     ],
   },
   {
-    name: 'Sanity',
+    name: 'Sanity (v3)',
     slug: 'sanity-v3',
     demo: 'https://sanity-studio-template.vercel.app',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/sanity.svg',
