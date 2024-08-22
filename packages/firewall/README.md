@@ -3,7 +3,7 @@
 ## Programmatic rate limits
 
 ```ts
-import { checkRateLimit } from '@vercel/firewall';
+import { unstable_checkRateLimit as checkRateLimit } from '@vercel/firewall';
 
 export async function POST() {
   const { rateLimited } = await checkRateLimit('my-rate-limit-id');

@@ -4,20 +4,24 @@
 
 ### Functions
 
-- [checkRateLimit](README.md#checkratelimit)
+- [unstable_checkRateLimit](README.md#unstable_checkratelimit)
 
 ## Functions
 
-### checkRateLimit
+### unstable_checkRateLimit
 
-▸ **checkRateLimit**(`rateLimitId`, `options?`): [`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<{ `error?`: `"not-found"` \| `"blocked"` ; `rateLimited`: `boolean` }\>
+▸ **unstable_checkRateLimit**(`rateLimitId`, `options?`): [`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<{ `error?`: `"not-found"` \| `"blocked"` ; `rateLimited`: `boolean` }\>
 
-Check rate-limits defined through the Vercel Firewall.
+Experimental: Check rate-limits defined through the Vercel Firewall.
+
+This function provides programmatic access to rate limits defined in the Vercel Firewall
+from Vercel Functions. The given ID is matched against rate limit rules defined with the same
+ID. The return value indicates whether the request is rate limited or not.
 
 **`Example`**
 
 ```js
-import { checkRateLimit } from '@vercel/firewall';
+import { unstable_checkRateLimit as checkRateLimit } from '@vercel/firewall';
 
 export async function POST() {
   const { rateLimited } = await checkRateLimit('my-rate-limit-id');
@@ -50,4 +54,4 @@ A promise that resolves to an object with a `rateLimited` property that is `true
 
 #### Defined in
 
-[rate-limit.ts:26](https://github.com/vercel/vercel/blob/main/packages/firewall/src/rate-limit.ts#L26)
+[rate-limit.ts:29](https://github.com/vercel/vercel/blob/main/packages/firewall/src/rate-limit.ts#L29)

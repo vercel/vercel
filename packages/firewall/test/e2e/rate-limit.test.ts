@@ -1,6 +1,6 @@
 import { expect, describe, test, beforeEach, afterEach } from 'vitest';
-import { checkRateLimit as checkRateLimitSrc } from '../../src';
-import { checkRateLimit as checkRateLimitDist } from '../../dist';
+import { unstable_checkRateLimit as checkRateLimitSrc } from '../../src';
+import { unstable_checkRateLimit as checkRateLimitDist } from '../../dist';
 
 const origFetch = fetch;
 const HOST = 'ratelimit-api-demo.vercel.app';
