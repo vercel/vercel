@@ -1395,7 +1395,7 @@ exports[`help command > env help output snapshots > env help column width 40 1`]
 
   [2mCommands[22m:
 
-  ls                        List 
+  ls    [environment]       List 
                             all  
                             vari…
                             for  
@@ -1547,7 +1547,7 @@ exports[`help command > env help output snapshots > env help column width 80 1`]
 
   [2mCommands[22m:
 
-  ls                        List all variables for the specified         
+  ls    [environment]       List all variables for the specified         
                             Environment                                  
   add   name [environment]  Add an Environment Variable (see examples    
                             below)                                       
@@ -1643,7 +1643,7 @@ exports[`help command > env help output snapshots > env help column width 120 1`
 
   [2mCommands[22m:
 
-  ls                        List all variables for the specified Environment                                     
+  ls    [environment]       List all variables for the specified Environment                                     
   add   name [environment]  Add an Environment Variable (see examples below)                                     
   rm    name [environment]  Remove an Environment Variable (see examples below)                                  
   pull  [filename]          Pull all Development Environment Variables from the cloud and write to a file        
