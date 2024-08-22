@@ -4,6 +4,7 @@ import {
   scanParentDirs,
 } from '@vercel/build-utils';
 import {
+  Dictionary,
   fileNameSymbol,
   VALID_ARCHIVE_FORMATS,
   VercelConfig,
@@ -486,18 +487,6 @@ export default async (client: Client): Promise<number> => {
     error(errorToString(err));
     return 1;
   }
-
-  // Check the `env` flags for empty values. Because we're releasing Custom Environments, there's a chance
-  // that users might think the `--env` flag is for specifying an environment. We should catch this and
-  // provide a helpful error message in the event that it was a mistake. This is not an error state since
-  // environment variables can be set to empty strings.
-  Object.entries(deploymentEnv).forEach(([key, value]) => {
-    if (key && !value) {
-      output.warn(
-        `Key ${key} is defined but empty. If you meant to specify an Environment to deploy to, use ${param('--target')}`
-      );
-    }
-  });
   // #endregion
 
   // #region Regions
@@ -534,8 +523,8 @@ export default async (client: Client): Promise<number> => {
 
     const createArgs: CreateOptions = {
       name,
-      env: deploymentEnv,
-      build: { env: deploymentBuildEnv },
+      env: deploymentEnv as Dictionary<string>,
+      build: { env: deploymentBuildEnv as Dictionary<string> },
       forceNew: parsedArguments.flags['--force'],
       withCache: parsedArguments.flags['--with-cache'],
       prebuilt: parsedArguments.flags['--prebuilt'],
@@ -866,6 +855,12 @@ function handleCreateDeployError(
  * await addProcessEnv(log, env);
  * assert(env["FOO"] === "fooValue"); // true
  * assert(env["VOZ"] === undefined); // true, since it was not in `env`
+ *
+ * @example
+ * const log = (str) => console.log(str);
+ * const env = { "FOO": undefined, "BAR": "baz" };
+ *
+ * await addProcessEnv(log, env); // throws an error
  */
 const addProcessEnv = async (
   log: (str: string) => void,
@@ -890,9 +885,9 @@ const addProcessEnv = async (
       env[key] = val.replace(/^@/, '\\@');
     } else {
       throw new Error(
-        `No value specified for env ${chalk.bold(
+        `No value specified for env variable ${chalk.bold(
           `"${chalk.bold(key)}"`
-        )} and it was not found in your env.`
+        )} and it was not found in your env. If you meant to specify an environment to deploy to, use ${param('--target')}`
       );
     }
   }
