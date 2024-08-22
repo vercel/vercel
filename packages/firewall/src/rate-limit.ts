@@ -1,6 +1,9 @@
 /**
- * Check rate-limits defined through the Vercel Firewall.
+ * Experimental: Check rate-limits defined through the Vercel Firewall.
  *
+ * This function provides programmatic access to rate limits defined in the Vercel Firewall
+ * from Vercel Functions. The given ID is matched against rate limit rules defined with the same
+ * ID. The return value indicates whether the request is rate limited or not.
  *
  * @param rateLimitId The ID of the rate limit to check. The same ID must be defined in the Vercel Firewall as a @vercel/firewall rule condition.
  * @param options

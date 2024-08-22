@@ -1,4 +1,4 @@
-# @vercel/firewall
+# Experimental: @vercel/firewall
 
 ## Programmatic rate limits
 
