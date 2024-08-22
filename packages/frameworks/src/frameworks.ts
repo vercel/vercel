@@ -2036,7 +2036,7 @@ export const frameworks = [
         {
           path: 'package.json',
           matchContent:
-            /"(dev)?(d|D)ependencies":\s*{[^}]*"sanity":\s*"\^?3\..*"[^}]*}/,
+            /"(dev)?(d|D)ependencies":\s*{[^}]*"sanity":\s*"\^?3\..*"[^}]*}/.toString(),
         },
       ],
     },
