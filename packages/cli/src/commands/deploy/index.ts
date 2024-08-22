@@ -491,12 +491,10 @@ export default async (client: Client): Promise<number> => {
   // that users might think the `--env` flag is for specifying an environment. We should catch this and
   // provide a helpful error message in the event that it was a mistake. This is not an error state since
   // environment variables can be set to empty strings.
-  //
-  // https://linear.app/vercel/issue/ZERO-2415/vc-deploy-env-should-have-validation
   Object.entries(deploymentEnv).forEach(([key, value]) => {
     if (key && !value) {
-      output.print(
-        `Key ${key} is defined but empty. If you meant to specify an Environment to deploy to, use ${param('--environment')}`
+      output.warn(
+        `Key ${key} is defined but empty. If you meant to specify an Environment to deploy to, use ${param('--target')}`
       );
     }
   });
