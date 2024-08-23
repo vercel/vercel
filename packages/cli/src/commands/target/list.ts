@@ -1,12 +1,11 @@
-import chalk from 'chalk';
 import ms from 'ms';
+import chalk from 'chalk';
 import table from '../../util/output/table';
 import Client from '../../util/client';
 import { getCommandName } from '../../util/pkg-name';
-import type { ProjectLinked } from '@vercel-internals/types';
-import type { CustomEnvironment } from '@vercel-internals/types';
 import { formatProject } from '../../util/projects/format-project';
 import { formatEnvironment } from '../../util/target/format-environment';
+import type { CustomEnvironment, ProjectLinked } from '@vercel-internals/types';
 
 export default async function list(
   client: Client,
