@@ -850,7 +850,7 @@ test('deploy `api-env` fixture and test `vercel env` command', async () => {
     const vc = execCli(binaryPath, ['env', 'rm', '-y'], {
       cwd: target,
     });
-    await waitForPrompt(vc, 'What’s the name of the variable?');
+    await waitForPrompt(vc, "What's the name of the variable?");
     vc.stdin?.write('MY_PREVIEW\n');
     const { exitCode, stdout, stderr } = await vc;
     expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
