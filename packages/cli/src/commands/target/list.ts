@@ -4,7 +4,7 @@ import table from '../../util/output/table';
 import Client from '../../util/client';
 import { getCommandName } from '../../util/pkg-name';
 import type { ProjectLinked } from '@vercel-internals/types';
-import type { CustomEnvironment } from '../../util/target/types';
+import type { CustomEnvironment } from '@vercel-internals/types';
 
 export default async function list(
   client: Client,

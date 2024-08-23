@@ -10,15 +10,11 @@ import type {
 import Client from '../../util/client';
 import formatTable from '../../util/format-table';
 import getEnvRecords from '../../util/env/get-env-records';
-import {
-  isValidEnvTarget,
-  getEnvTargetPlaceholder,
-} from '../../util/env/env-target';
+import { getEnvTargetPlaceholder } from '../../util/env/env-target';
 import stamp from '../../util/output/stamp';
-import param from '../../util/output/param';
 import { getCommandName } from '../../util/pkg-name';
 import ellipsis from '../../util/output/ellipsis';
-import { isObject } from '@vercel/error-utils';
+import { getCustomEnvironments } from '../../util/target/get-custom-environments';
 
 type Options = {};
 
@@ -39,15 +35,6 @@ export default async function ls(
   }
 
   const [envTarget, envGitBranch] = args;
-
-  if (!isValidEnvTarget(envTarget)) {
-    output.error(
-      `The Environment ${param(
-        envTarget
-      )} is invalid. It must be one of: ${getEnvTargetPlaceholder()}.`
-    );
-    return 1;
-  }
 
   const lsStamp = stamp();
 
@@ -76,22 +63,6 @@ export default async function ls(
   }
 
   return 0;
-}
-
-async function getCustomEnvironments(client: Client, projectId: string) {
-  try {
-    const res = await client.fetch<{ environments: CustomEnvironment[] }>(
-      `/projects/${encodeURIComponent(projectId)}/custom-environments`,
-      { method: 'GET' }
-    );
-    return res.environments;
-  } catch (error) {
-    if (isObject(error) && error.status === 404) {
-      // user is not flagged for custom environments
-      return [];
-    }
-    throw error;
-  }
 }
 
 function getTable(
