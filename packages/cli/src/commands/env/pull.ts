@@ -5,7 +5,6 @@ import { resolve } from 'path';
 import Client from '../../util/client';
 import { emoji, prependEmoji } from '../../util/emoji';
 import confirm from '../../util/input/confirm';
-import { Output } from '../../util/output';
 import param from '../../util/output/param';
 import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
@@ -64,10 +63,11 @@ export default async function pull(
   environment: string,
   opts: Partial<Options>,
   args: string[],
-  output: Output,
   cwd: string,
   source: Extract<EnvRecordsSource, 'vercel-cli:env:pull' | 'vercel-cli:pull'>
 ) {
+  const { output } = client;
+
   if (args.length > 1) {
     output.error(
       `Invalid number of arguments. Usage: ${getCommandName(`env pull <file>`)}`

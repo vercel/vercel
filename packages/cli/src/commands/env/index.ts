@@ -79,7 +79,6 @@ export default async function main(client: Client) {
           target,
           parsedArgs.flags,
           args,
-          output,
           cwd,
           'vercel-cli:env:pull'
         );
