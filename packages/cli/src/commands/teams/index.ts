@@ -1,4 +1,3 @@
-import error from '../../util/output/error';
 import list from './list';
 import add from './add';
 import change from './switch';
@@ -68,9 +67,8 @@ export default async (client: Client) => {
     }
     default: {
       if (subcommand !== 'help') {
-        // eslint-disable-next-line no-console
-        console.error(
-          error('Please specify a valid subcommand: add | ls | switch | invite')
+        output.error(
+          'Please specify a valid subcommand: add | ls | switch | invite'
         );
       }
       exitCode = 2;

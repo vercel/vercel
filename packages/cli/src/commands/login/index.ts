@@ -96,8 +96,8 @@ export default async function login(client: Client): Promise<number> {
     );
   }
 
-  writeToAuthConfigFile(client.authConfig);
-  writeToConfigFile(client.config);
+  writeToAuthConfigFile(client.authConfig, output);
+  writeToConfigFile(client.config, output);
 
   output.debug(`Saved credentials in "${hp(getGlobalPathConfig())}"`);
 

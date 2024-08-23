@@ -251,7 +251,7 @@ export default class Client extends EventEmitter implements Stdio {
     }
 
     this.authConfig.token = result.token;
-    writeToAuthConfigFile(this.authConfig);
+    writeToAuthConfigFile(this.authConfig, this.output);
   });
 
   _onRetry = (error: Error) => {

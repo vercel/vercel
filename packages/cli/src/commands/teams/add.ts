@@ -118,7 +118,7 @@ export default async function add(client: Client): Promise<number> {
   // Update config file
   output.spinner('Saving');
   client.config.currentTeam = team.id;
-  writeToConfigFile(client.config);
+  writeToConfigFile(client.config, output);
   output.stopSpinner();
 
   await invite(client, [], {
