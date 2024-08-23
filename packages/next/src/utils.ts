@@ -324,7 +324,6 @@ export async function getDynamicRoutes({
   bypassToken,
   isServerMode,
   dynamicMiddlewareRouteMap,
-  hasActionOutputSupport,
   isAppPPREnabled,
 }: {
   entryPath: string;
@@ -337,7 +336,6 @@ export async function getDynamicRoutes({
   bypassToken?: string;
   isServerMode?: boolean;
   dynamicMiddlewareRouteMap?: ReadonlyMap<string, RouteWithSrc>;
-  hasActionOutputSupport: boolean;
   isAppPPREnabled: boolean;
 }): Promise<RouteWithSrc[]> {
   if (routesManifest) {
@@ -429,25 +427,14 @@ export async function getDynamicRoutes({
             });
           }
 
-          if (hasActionOutputSupport) {
-            routes.push({
-              ...route,
-              src: route.src.replace(
-                new RegExp(escapeStringRegexp('(?:/)?$')),
-                '(?<nxtsuffix>(?:\\.action|\\.rsc))(?:/)?$'
-              ),
-              dest: route.dest?.replace(/($|\?)/, '$nxtsuffix$1'),
-            });
-          } else {
-            routes.push({
-              ...route,
-              src: route.src.replace(
-                new RegExp(escapeStringRegexp('(?:/)?$')),
-                '(?:\\.rsc)(?:/)?$'
-              ),
-              dest: route.dest?.replace(/($|\?)/, '.rsc$1'),
-            });
-          }
+          routes.push({
+            ...route,
+            src: route.src.replace(
+              new RegExp(escapeStringRegexp('(?:/)?$')),
+              '(?:\\.rsc)(?:/)?$'
+            ),
+            dest: route.dest?.replace(/($|\?)/, '.rsc$1'),
+          });
 
           routes.push(route);
         }
@@ -1955,7 +1942,6 @@ type OnPrerenderRouteArgs = {
   isCorrectNotFoundRoutes?: boolean;
   isEmptyAllowQueryForPrendered?: boolean;
   isAppPPREnabled: boolean;
-  hasActionOutputSupport?: boolean;
 };
 let prerenderGroup = 1;
 
@@ -1993,7 +1979,6 @@ export const onPrerenderRoute =
       isCorrectNotFoundRoutes,
       isEmptyAllowQueryForPrendered,
       isAppPPREnabled,
-      hasActionOutputSupport,
     } = prerenderRouteArgs;
 
     if (isBlocking && isFallback) {
@@ -2476,13 +2461,6 @@ export const onPrerenderRoute =
             }
           : {}),
       });
-
-      if (hasActionOutputSupport) {
-        const actionOutputKey = `${path.join('./', srcRoute || '')}.action`;
-        if (srcRoute !== routeKey && lambdas[actionOutputKey]) {
-          lambdas[`${routeKey}.action`] = lambdas[actionOutputKey];
-        }
-      }
 
       const normalizePathData = (pathData: string) => {
         if (
