@@ -26,7 +26,6 @@ import commands from './commands';
 import pkg from './util/pkg';
 import { Output } from './util/output';
 import cmd from './util/output/cmd';
-import info from './util/output/info';
 import error from './util/output/error';
 import param from './util/output/param';
 import highlight from './util/output/highlight';
@@ -324,7 +323,7 @@ const main = async () => {
     !subcommandsWithoutToken.includes(subcommand)
   ) {
     if (isTTY) {
-      output.log(info(`No existing credentials found. Please log in:`));
+      output.log(`No existing credentials found. Please log in:`);
       const result = await doLoginPrompt(client);
 
       // The login function failed, so it returned an exit code
