@@ -69,7 +69,6 @@ const CORRECT_NOT_FOUND_ROUTES_VERSION = 'v12.0.1';
 const CORRECT_MIDDLEWARE_ORDER_VERSION = 'v12.1.7-canary.29';
 const NEXT_DATA_MIDDLEWARE_RESOLVING_VERSION = 'v12.1.7-canary.33';
 const EMPTY_ALLOW_QUERY_FOR_PRERENDERED_VERSION = 'v12.2.0';
-const ACTION_OUTPUT_SUPPORT_VERSION = 'v14.2.2';
 const CORRECTED_MANIFESTS_VERSION = 'v12.2.0';
 
 // Ideally this should be in a Next.js manifest so we can change it in
@@ -210,10 +209,6 @@ export async function serverBuild({
     nextVersion,
     EMPTY_ALLOW_QUERY_FOR_PRERENDERED_VERSION
   );
-  const hasActionOutputSupport =
-    semver.gte(nextVersion, ACTION_OUTPUT_SUPPORT_VERSION) &&
-    Boolean(process.env.NEXT_EXPERIMENTAL_STREAMING_ACTIONS) &&
-    !routesManifest.i18n;
   const projectDir = requiredServerFilesManifest.relativeAppDir
     ? path.join(baseDir, requiredServerFilesManifest.relativeAppDir)
     : requiredServerFilesManifest.appDir || entryPath;
@@ -254,14 +249,9 @@ export async function serverBuild({
     for (const rewrite of afterFilesRewrites) {
       if (rewrite.src && rewrite.dest) {
         // ensures that userland rewrites are still correctly matched to their special outputs
-        // PPR should match .prefetch.rsc, .rsc, and .action
-        // non-PPR should match .rsc and .action
-        // we only add `.action` handling to the regex if flagged on in the build
-        const rscSuffix = isAppPPREnabled
-          ? `(\\.prefetch)?\\.rsc${hasActionOutputSupport ? '|\\.action' : ''}`
-          : hasActionOutputSupport
-            ? '(\\.action|\\.rsc)'
-            : '\\.rsc';
+        // PPR should match .prefetch.rsc, .rsc
+        // non-PPR should match .rsc
+        const rscSuffix = isAppPPREnabled ? `(\\.prefetch)?\\.rsc` : '\\.rsc';
 
         rewrite.src = rewrite.src.replace(
           /\/?\(\?:\/\)\?/,
@@ -961,16 +951,6 @@ export async function serverBuild({
     for (const group of appRouterLambdaGroups) {
       group.isStreaming = true;
       group.isAppRouter = true;
-
-      // We create a streaming variant of the Prerender lambda group
-      // to support actions that are part of a Prerender
-      if (hasActionOutputSupport) {
-        appRouterStreamingActionLambdaGroups.push({
-          ...group,
-          isActionLambda: true,
-          isStreaming: true,
-        });
-      }
     }
 
     for (const group of appRouteHandlersLambdaGroups) {
@@ -1372,7 +1352,6 @@ export async function serverBuild({
     isCorrectNotFoundRoutes,
     isEmptyAllowQueryForPrendered,
     isAppPPREnabled,
-    hasActionOutputSupport,
   });
 
   await Promise.all(
@@ -1452,7 +1431,6 @@ export async function serverBuild({
     isServerMode: true,
     dynamicMiddlewareRouteMap: middleware.dynamicRouteMap,
     isAppPPREnabled,
-    hasActionOutputSupport,
   }).then(arr =>
     localizeDynamicRoutes(
       arr,
@@ -1638,10 +1616,6 @@ export async function serverBuild({
         if (isAppPPREnabled) {
           edgeFunctions[`${pathname}${RSC_PREFETCH_SUFFIX}`] =
             edgeFunctions[pathname];
-        }
-
-        if (hasActionOutputSupport) {
-          edgeFunctions[`${pathname}.action`] = edgeFunctions[pathname];
         }
       }
     }
@@ -1987,54 +1961,6 @@ export async function serverBuild({
                   },
                 ]
               : []),
-            ...(hasActionOutputSupport
-              ? [
-                  // Create rewrites for streaming prerenders (.action routes)
-                  // This contains separate rewrites for each possible "has" (action header, or content-type)
-                  // Also includes separate handling for index routes which should match to /index.action.
-                  // This follows the same pattern as the rewrites for .rsc files.
-                  {
-                    src: `^${path.posix.join('/', entryDirectory, '/?')}`,
-                    dest: path.posix.join('/', entryDirectory, '/index.action'),
-                    has: [
-                      {
-                        type: 'header',
-                        key: 'next-action',
-                      },
-                    ],
-                    missing: [
-                      {
-                        type: 'header',
-                        key: rscHeader,
-                      },
-                    ],
-                    continue: true,
-                    override: true,
-                  },
-                  {
-                    src: `^${path.posix.join(
-                      '/',
-                      entryDirectory,
-                      '/((?!.+\\.action).+?)(?:/)?$'
-                    )}`,
-                    dest: path.posix.join('/', entryDirectory, '/$1.action'),
-                    has: [
-                      {
-                        type: 'header',
-                        key: 'next-action',
-                      },
-                    ],
-                    missing: [
-                      {
-                        type: 'header',
-                        key: rscHeader,
-                      },
-                    ],
-                    continue: true,
-                    override: true,
-                  },
-                ]
-              : []),
             {
               src: `^${path.posix.join('/', entryDirectory, '/?')}`,
               has: [
@@ -2118,25 +2044,6 @@ export async function serverBuild({
       // These need to come before handle: miss or else they are grouped
       // with that routing section
       ...afterFilesRewrites,
-
-      // Ensure that after we normalize `afterFilesRewrites`, unmatched actions are routed to the correct handler
-      // e.g. /foo/.action -> /foo.action. This should only ever match in cases where we're routing to an action handler
-      // and the rewrite normalization led to something like /foo/$1$rscsuff, and $1 had no match.
-      // This is meant to have parity with the .rsc handling below.
-      ...(hasActionOutputSupport
-        ? [
-            {
-              src: `${path.posix.join('/', entryDirectory, '/\\.action$')}`,
-              dest: `${path.posix.join('/', entryDirectory, '/index.action')}`,
-              check: true,
-            },
-            {
-              src: `${path.posix.join('/', entryDirectory, '(.+)/\\.action$')}`,
-              dest: `${path.posix.join('/', entryDirectory, '$1.action')}`,
-              check: true,
-            },
-          ]
-        : []),
 
       // ensure non-normalized /.rsc from rewrites is handled
       ...(appPathRoutesManifest
