@@ -64,9 +64,9 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
         expect(res.status).toEqual(200);
         const body = await res.text();
         expect(body).toContain('1338');
-        expect(res.headers.get('x-matched-path')).toBe(path + '.action');
+        expect(res.headers.get('x-matched-path')).toBe(path);
         if (runtime === 'node') {
-          expect(res.headers.get('x-vercel-cache')).toBe('MISS');
+          expect(res.headers.get('x-vercel-cache')).toBe('BYPASS');
         } else {
           // in edge runtime, x-vercel-cache is not returned on MISSes for some reason.
           // this checks to ensure it was routed to the edge function instead.
@@ -90,9 +90,9 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
         expect(res.status).toEqual(200);
         const body = await res.text();
         expect(body).toContain('1338');
-        expect(res.headers.get('x-matched-path')).toBe(path + '.action');
+        expect(res.headers.get('x-matched-path')).toBe(path);
         if (runtime === 'node') {
-          expect(res.headers.get('x-vercel-cache')).toBe('MISS');
+          expect(res.headers.get('x-vercel-cache')).toBe('BYPASS');
         } else {
           expect(res.headers.get('x-edge-runtime')).toBe('1');
         }
@@ -141,7 +141,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
         expect(res.status).toEqual(200);
         const body = await res.text();
         expect(body).toContain('1338');
-        expect(res.headers.get('x-matched-path')).toBe(path + '.action');
+        expect(res.headers.get('x-matched-path')).toBe(path);
         if (runtime === 'node') {
           expect(res.headers.get('x-vercel-cache')).toBe('MISS');
         } else {
@@ -161,10 +161,10 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
         );
 
         expect(res.status).toEqual(200);
-        expect(res.headers.get('x-matched-path')).toBe(path + '.action');
+        expect(res.headers.get('x-matched-path')).toBe(path);
         expect(res.headers.get('content-type')).toBe('text/x-component');
         if (runtime === 'node') {
-          expect(res.headers.get('x-vercel-cache')).toBe('MISS');
+          expect(res.headers.get('x-vercel-cache')).toBe('BYPASS');
         } else {
           expect(res.headers.get('x-edge-runtime')).toBe('1');
         }
@@ -180,10 +180,10 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
         );
 
         expect(res.status).toEqual(200);
-        expect(res.headers.get('x-matched-path')).toBe(path + '.action');
+        expect(res.headers.get('x-matched-path')).toBe(path);
         expect(res.headers.get('content-type')).toBe('text/x-component');
         if (runtime === 'node') {
-          expect(res.headers.get('x-vercel-cache')).toBe('MISS');
+          expect(res.headers.get('x-vercel-cache')).toBe('BYPASS');
         } else {
           expect(res.headers.get('x-edge-runtime')).toBe('1');
         }
@@ -199,7 +199,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
         );
 
         expect(res.status).toEqual(200);
-        expect(res.headers.get('x-matched-path')).toBe(path + '.action');
+        expect(res.headers.get('x-matched-path')).toBe(path);
         expect(res.headers.get('content-type')).toBe('text/x-component');
         if (runtime === 'node') {
           expect(res.headers.get('x-vercel-cache')).toBe('MISS');
@@ -222,11 +222,11 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
 
             expect(res.status).toEqual(200);
             expect(res.headers.get('x-matched-path')).toBe(
-              (basePath ? dynamicPath : path) + '.action'
+              basePath ? dynamicPath : path
             );
             expect(res.headers.get('content-type')).toBe('text/x-component');
             if (runtime === 'node') {
-              expect(res.headers.get('x-vercel-cache')).toBe('MISS');
+              expect(res.headers.get('x-vercel-cache')).toBe('BYPASS');
             } else {
               expect(res.headers.get('x-edge-runtime')).toBe('1');
             }
@@ -245,10 +245,10 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
               );
 
               expect(res.status).toEqual(200);
-              expect(res.headers.get('x-matched-path')).toBe(page + '.action');
+              expect(res.headers.get('x-matched-path')).toBe(page);
               expect(res.headers.get('content-type')).toBe('text/x-component');
               if (runtime === 'node') {
-                expect(res.headers.get('x-vercel-cache')).toBe('MISS');
+                expect(res.headers.get('x-vercel-cache')).toBe('BYPASS');
               } else {
                 expect(res.headers.get('x-edge-runtime')).toBe('1');
               }
@@ -293,10 +293,10 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
       );
 
       expect(res.status).toEqual(200);
-      expect(res.headers.get('x-matched-path')).toBe(targetPath + '.action');
+      expect(res.headers.get('x-matched-path')).toBe(targetPath);
       expect(res.headers.get('content-type')).toBe('text/x-component');
       if (runtime === 'node') {
-        expect(res.headers.get('x-vercel-cache')).toBe('MISS');
+        expect(res.headers.get('x-vercel-cache')).toBe('BYPASS');
       } else {
         expect(res.headers.get('x-edge-runtime')).toBe('1');
       }
@@ -313,10 +313,10 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
       );
 
       expect(res.status).toEqual(200);
-      expect(res.headers.get('x-matched-path')).toBe(targetPath + '.action');
+      expect(res.headers.get('x-matched-path')).toBe(targetPath);
       expect(res.headers.get('content-type')).toBe('text/x-component');
       if (runtime === 'node') {
-        expect(res.headers.get('x-vercel-cache')).toBe('MISS');
+        expect(res.headers.get('x-vercel-cache')).toBe('BYPASS');
       } else {
         expect(res.headers.get('x-edge-runtime')).toBe('1');
       }
@@ -332,9 +332,9 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
       );
 
       expect(res.status).toEqual(200);
-      expect(res.headers.get('x-matched-path')).toBe('/index.action');
+      expect(res.headers.get('x-matched-path')).toBe('/');
       expect(res.headers.get('content-type')).toBe('text/x-component');
-      expect(res.headers.get('x-vercel-cache')).toBe('MISS');
+      expect(res.headers.get('x-vercel-cache')).toBe('BYPASS');
     });
   });
 
@@ -349,9 +349,9 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
       );
 
       expect(res.status).toEqual(200);
-      expect(res.headers.get('x-matched-path')).toBe('/index.action');
+      expect(res.headers.get('x-matched-path')).toBe('/');
       expect(res.headers.get('content-type')).toBe('text/x-component');
-      expect(res.headers.get('x-vercel-cache')).toBe('MISS');
+      expect(res.headers.get('x-vercel-cache')).toBe('BYPASS');
     });
 
     it('should work when entire path is rewritten', async () => {
@@ -368,8 +368,8 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
       });
 
       expect(res.status).toEqual(200);
-      expect(res.headers.get('x-matched-path')).toBe('/index.action');
-      expect(res.headers.get('x-vercel-cache')).toBe('MISS');
+      expect(res.headers.get('x-matched-path')).toBe('/');
+      expect(res.headers.get('x-vercel-cache')).toBe('BYPASS');
 
       const body = await res.text();
       // The action incremented the provided count by 1

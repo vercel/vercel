@@ -1,5 +1,11 @@
 # vercel
 
+## 37.1.0
+
+### Minor Changes
+
+- Support Custom Environments in `vercel env add [target]` ([#11994](https://github.com/vercel/vercel/pull/11994))
+
 ## 37.0.0
 
 ### Major Changes
