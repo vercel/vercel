@@ -10,6 +10,7 @@
 /packages/static-build                   @TooTallNate @EndangeredMassa @trek @onsclom @jeffsee55 @erikareads
 /packages/edge                           @TooTallNate @EndangeredMassa @trek @onsclom @jeffsee55 @erikareads @vercel/compute
 /packages/functions                      @TooTallNate @EndangeredMassa @trek @onsclom @jeffsee55 @erikareads @vercel/compute
+/packages/firewall                       @TooTallNate @EndangeredMassa @trek @onsclom @jeffsee55 @erikareads @cramforce @sueplex
 /examples                                @TooTallNate @EndangeredMassa @trek @onsclom @jeffsee55 @erikareads @leerob
 /examples/create-react-app               @TooTallNate @EndangeredMassa @trek @onsclom @jeffsee55 @erikareads @Timer
 /examples/nextjs                         @TooTallNate @EndangeredMassa @trek @onsclom @jeffsee55 @erikareads @timneutkens @ijjk @ztanner @huozhi
