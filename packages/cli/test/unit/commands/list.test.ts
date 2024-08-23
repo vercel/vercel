@@ -32,7 +32,6 @@ describe('list', () => {
     const deployment = useDeployment({ creator: user });
 
     client.cwd = fixture('with-team');
-    client.output.supportsHyperlink = false;
     await list(client);
 
     const lines = createLineIterator(client.stderr);
@@ -86,7 +85,6 @@ describe('list', () => {
 
     client.cwd = fixture('with-team');
     client.setArgv(deployment.name);
-    client.output.supportsHyperlink = false;
     await list(client);
 
     const lines = createLineIterator(client.stderr);

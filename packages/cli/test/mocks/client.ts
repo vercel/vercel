@@ -136,8 +136,7 @@ export class MockClient extends Client {
     this.stderr.pause();
     this.stderr.isTTY = true;
 
-    this.output = new Output(this.stderr);
-    this.output.supportsHyperlink = false;
+    this.output = new Output(this.stderr, { supportsHyperlink: false });
 
     this.argv = [];
     this.authConfig = {
@@ -222,6 +221,7 @@ export class MockClient extends Client {
     this.output = new Output(this.stderr, {
       debug: argv.includes('--debug') || argv.includes('-d'),
       noColor: argv.includes('--no-color'),
+      supportsHyperlink: false,
     });
   }
 

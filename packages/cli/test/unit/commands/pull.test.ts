@@ -21,7 +21,6 @@ describe('pull', () => {
       name: 'vercel-pull-next',
     });
     client.setArgv('pull', cwd);
-    client.output.supportsHyperlink = false;
     const exitCodePromise = pull(client);
     await expect(client.stderr).toOutput(
       `Downloading \`development\` Environment Variables for ${teams[0].slug}/vercel-pull-next`
@@ -90,7 +89,6 @@ describe('pull', () => {
         accountId: 'team_dummy',
       });
       client.setArgv('pull', cwd);
-      client.output.supportsHyperlink = false;
       const exitCodePromise = pull(client);
       await expect(client.stderr).toOutput(
         `Downloading \`development\` Environment Variables for ${teams[0].slug}/vercel-pull-next`
@@ -130,7 +128,6 @@ describe('pull', () => {
       name: 'vercel-pull-next',
     });
     client.setArgv('pull', '--environment=preview', cwd);
-    client.output.supportsHyperlink = false;
     const exitCodePromise = pull(client);
     await expect(client.stderr).toOutput(
       `Downloading \`preview\` Environment Variables for ${teams[0].slug}/vercel-pull-next`
@@ -164,7 +161,6 @@ describe('pull', () => {
       accountId: 'team_dummy',
     });
     client.setArgv('pull', '--environment=production', cwd);
-    client.output.supportsHyperlink = false;
     const exitCodePromise = pull(client);
     await expect(client.stderr).toOutput(
       `Downloading \`production\` Environment Variables for ${teams[0].slug}/vercel-pull-next`
@@ -191,7 +187,6 @@ describe('pull', () => {
   });
 
   it('should work with repo link', async () => {
-    client.output.supportsHyperlink = false;
     const cwd = setupUnitFixture('monorepo-link');
     useUser();
     const teams = useTeams('team_dummy');
