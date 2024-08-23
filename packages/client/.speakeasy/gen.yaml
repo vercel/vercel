@@ -1,0 +1,44 @@
+configVersion: 2.0.0
+generation:
+  devContainers:
+    enabled: true
+    schemaPath: ./open-api.yaml
+  sdkClassName: Vercel
+  maintainOpenAPIOrder: true
+  usageSnippets:
+    optionalPropertyRendering: withExample
+  useClassNamesForArrayFields: true
+  fixes:
+    nameResolutionDec2023: true
+    parameterOrderingFeb2024: true
+    requestResponseComponentNamesFeb2024: true
+  auth:
+    oAuth2ClientCredentialsEnabled: false
+typescript:
+  version: 0.0.1
+  additionalDependencies:
+    dependencies: {}
+    devDependencies: {}
+    peerDependencies: {}
+  additionalPackageJSON: {}
+  author: Speakeasy
+  clientServerStatusCodesAsErrors: true
+  enumFormat: union
+  flattenGlobalSecurity: true
+  imports:
+    option: openapi
+    paths:
+      callbacks: models/callbacks
+      errors: models/errors
+      operations: models/operations
+      shared: models/components
+      webhooks: models/webhooks
+  inputModelSuffix: input
+  maxMethodParams: 0
+  methodArguments: require-security-and-request
+  moduleFormat: commonjs
+  outputModelSuffix: output
+  packageName: '@vercel/client'
+  responseFormat: flat
+  templateVersion: v2
+  useIndexModules: true

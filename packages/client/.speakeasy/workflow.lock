@@ -1,0 +1,27 @@
+speakeasyVersion: 1.377.3
+sources:
+    vercel-OAS:
+        sourceNamespace: vercel-oas
+        sourceRevisionDigest: sha256:6f44f15346bbfa43aadd7354821ba06e9ec2c5651555d56e993f2ecf04a0a881
+        sourceBlobDigest: sha256:089a406fa431333ddf651db3838ca6759ebd5d1e9c807d598051e3ae578186d6
+        tags:
+            - latest
+targets:
+    vercel:
+        source: vercel-OAS
+        sourceNamespace: vercel-oas
+        sourceRevisionDigest: sha256:6f44f15346bbfa43aadd7354821ba06e9ec2c5651555d56e993f2ecf04a0a881
+        sourceBlobDigest: sha256:089a406fa431333ddf651db3838ca6759ebd5d1e9c807d598051e3ae578186d6
+        outLocation: /Users/leerob/Developer/vercel/packages/client
+workflow:
+    workflowVersion: 1.0.0
+    sources:
+        vercel-OAS:
+            inputs:
+                - location: ../../open-api.yaml
+            registry:
+                location: registry.speakeasyapi.dev/vercel-nv/vercel/vercel-oas
+    targets:
+        vercel:
+            target: typescript
+            source: vercel-OAS

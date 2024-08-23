@@ -1,0 +1,28 @@
+# WafOwaspRequests
+
+## Example Usage
+
+```typescript
+import { WafOwaspRequests } from '@vercel/client/models/operations';
+
+let value: WafOwaspRequests = {
+  price: 9011.63,
+  batch: 1040.78,
+  threshold: 5546.45,
+  hidden: false,
+};
+```
+
+## Fields
+
+| Field        | Type                                                                                                                                                                                                                                   | Required           | Description |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ | ----------- |
+| `matrix`     | [operations.CreateTeamTeamsResponse200ApplicationJSONResponseBodyBillingInvoiceItemsWafOwaspRequestsMatrix](../../models/operations/createteamteamsresponse200applicationjsonresponsebodybillinginvoiceitemswafowasprequestsmatrix.md) | :heavy_minus_sign: | N/A         |
+| `tier`       | _number_                                                                                                                                                                                                                               | :heavy_minus_sign: | N/A         |
+| `price`      | _number_                                                                                                                                                                                                                               | :heavy_check_mark: | N/A         |
+| `batch`      | _number_                                                                                                                                                                                                                               | :heavy_check_mark: | N/A         |
+| `threshold`  | _number_                                                                                                                                                                                                                               | :heavy_check_mark: | N/A         |
+| `name`       | _string_                                                                                                                                                                                                                               | :heavy_minus_sign: | N/A         |
+| `hidden`     | _boolean_                                                                                                                                                                                                                              | :heavy_check_mark: | N/A         |
+| `disabledAt` | _number_                                                                                                                                                                                                                               | :heavy_minus_sign: | N/A         |
+| `enabledAt`  | _number_                                                                                                                                                                                                                               | :heavy_minus_sign: | N/A         |

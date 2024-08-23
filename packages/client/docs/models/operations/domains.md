@@ -1,0 +1,53 @@
+# Domains
+
+## Example Usage
+
+```typescript
+import { Domains } from '@vercel/client/models/operations';
+
+let value: Domains = {
+  verified: true,
+  nameservers: ['ns1.nameserver.net', 'ns2.nameserver.net'],
+  intendedNameservers: ['ns1.vercel-dns.com', 'ns2.vercel-dns.com'],
+  customNameservers: ['ns1.nameserver.net', 'ns2.nameserver.net'],
+  creator: {
+    username: 'vercel_user',
+    email: 'demo@example.com',
+    id: 'ZspSRT4ljIEEmMHgoDwKWDei',
+  },
+  teamId: '<value>',
+  createdAt: 1613602938882,
+  boughtAt: 1613602938882,
+  expiresAt: 1613602938882,
+  id: 'EmTbe5CEJyTk2yVAHBUWy4A3sRusca3GCwRjTC1bpeVnt1',
+  name: 'example.com',
+  orderedAt: 1613602938882,
+  renew: true,
+  serviceType: 'zeit.world',
+  transferredAt: 1613602938882,
+  transferStartedAt: 1613602938882,
+  userId: '<value>',
+};
+```
+
+## Fields
+
+| Field                 | Type                                                                                 | Required           | Description                                                                                                                                                              | Example                                                                                                      |
+| --------------------- | ------------------------------------------------------------------------------------ | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
+| `verified`            | _boolean_                                                                            | :heavy_check_mark: | If the domain has the ownership verified.                                                                                                                                | true                                                                                                         |
+| `nameservers`         | _string_[]                                                                           | :heavy_check_mark: | A list of the current nameservers of the domain.                                                                                                                         | [<br/>"ns1.nameserver.net",<br/>"ns2.nameserver.net"<br/>]                                                   |
+| `intendedNameservers` | _string_[]                                                                           | :heavy_check_mark: | A list of the intended nameservers for the domain to point to Vercel DNS.                                                                                                | [<br/>"ns1.vercel-dns.com",<br/>"ns2.vercel-dns.com"<br/>]                                                   |
+| `customNameservers`   | _string_[]                                                                           | :heavy_minus_sign: | A list of custom nameservers for the domain to point to. Only applies to domains purchased with Vercel.                                                                  | [<br/>"ns1.nameserver.net",<br/>"ns2.nameserver.net"<br/>]                                                   |
+| `creator`             | [operations.GetDomainsCreator](../../models/operations/getdomainscreator.md)         | :heavy_check_mark: | An object containing information of the domain creator, including the user's id, username, and email.                                                                    | {<br/>"id": "ZspSRT4ljIEEmMHgoDwKWDei",<br/>"username": "vercel_user",<br/>"email": "demo@example.com"<br/>} |
+| `teamId`              | _string_                                                                             | :heavy_check_mark: | N/A                                                                                                                                                                      |                                                                                                              |
+| `createdAt`           | _number_                                                                             | :heavy_check_mark: | Timestamp in milliseconds when the domain was created in the registry.                                                                                                   | 1613602938882                                                                                                |
+| `boughtAt`            | _number_                                                                             | :heavy_check_mark: | If it was purchased through Vercel, the timestamp in milliseconds when it was purchased.                                                                                 | 1613602938882                                                                                                |
+| `expiresAt`           | _number_                                                                             | :heavy_check_mark: | Timestamp in milliseconds at which the domain is set to expire. `null` if not bought with Vercel.                                                                        | 1613602938882                                                                                                |
+| `id`                  | _string_                                                                             | :heavy_check_mark: | The unique identifier of the domain.                                                                                                                                     | EmTbe5CEJyTk2yVAHBUWy4A3sRusca3GCwRjTC1bpeVnt1                                                               |
+| `name`                | _string_                                                                             | :heavy_check_mark: | The domain name.                                                                                                                                                         | example.com                                                                                                  |
+| `orderedAt`           | _number_                                                                             | :heavy_minus_sign: | Timestamp in milliseconds at which the domain was ordered.                                                                                                               | 1613602938882                                                                                                |
+| `renew`               | _boolean_                                                                            | :heavy_minus_sign: | Indicates whether the domain is set to automatically renew.                                                                                                              | true                                                                                                         |
+| `serviceType`         | [operations.GetDomainsServiceType](../../models/operations/getdomainsservicetype.md) | :heavy_check_mark: | The type of service the domain is handled by. `external` if the DNS is externally handled, `zeit.world` if handled with Vercel, or `na` if the service is not available. | zeit.world                                                                                                   |
+| `transferredAt`       | _number_                                                                             | :heavy_minus_sign: | Timestamp in milliseconds at which the domain was successfully transferred into Vercel. `null` if the transfer is still processing or was never transferred in.          | 1613602938882                                                                                                |
+| `transferStartedAt`   | _number_                                                                             | :heavy_minus_sign: | If transferred into Vercel, timestamp in milliseconds when the domain transfer was initiated.                                                                            | 1613602938882                                                                                                |
+| `userId`              | _string_                                                                             | :heavy_check_mark: | N/A                                                                                                                                                                      |                                                                                                              |

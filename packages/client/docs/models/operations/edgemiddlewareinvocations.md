@@ -1,0 +1,28 @@
+# EdgeMiddlewareInvocations
+
+## Example Usage
+
+```typescript
+import { EdgeMiddlewareInvocations } from '@vercel/client/models/operations';
+
+let value: EdgeMiddlewareInvocations = {
+  price: 3252.97,
+  batch: 4483.69,
+  threshold: 4969.15,
+  hidden: false,
+};
+```
+
+## Fields
+
+| Field        | Type                                                                                                                                                                                                                                                     | Required           | Description |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ | ----------- |
+| `matrix`     | [operations.CreateTeamTeamsResponse200ApplicationJSONResponseBodyBillingInvoiceItemsEdgeMiddlewareInvocationsMatrix](../../models/operations/createteamteamsresponse200applicationjsonresponsebodybillinginvoiceitemsedgemiddlewareinvocationsmatrix.md) | :heavy_minus_sign: | N/A         |
+| `tier`       | _number_                                                                                                                                                                                                                                                 | :heavy_minus_sign: | N/A         |
+| `price`      | _number_                                                                                                                                                                                                                                                 | :heavy_check_mark: | N/A         |
+| `batch`      | _number_                                                                                                                                                                                                                                                 | :heavy_check_mark: | N/A         |
+| `threshold`  | _number_                                                                                                                                                                                                                                                 | :heavy_check_mark: | N/A         |
+| `name`       | _string_                                                                                                                                                                                                                                                 | :heavy_minus_sign: | N/A         |
+| `hidden`     | _boolean_                                                                                                                                                                                                                                                | :heavy_check_mark: | N/A         |
+| `disabledAt` | _number_                                                                                                                                                                                                                                                 | :heavy_minus_sign: | N/A         |
+| `enabledAt`  | _number_                                                                                                                                                                                                                                                 | :heavy_minus_sign: | N/A         |

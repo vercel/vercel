@@ -1,0 +1,9 @@
+**/*
+!/**/*.ts
+!/**/*.js
+!/**/*.map
+
+/.eslintrc.js
+/cjs
+/.tshy
+/.tshy-*

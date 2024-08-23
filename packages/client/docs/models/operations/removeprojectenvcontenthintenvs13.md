@@ -1,0 +1,19 @@
+# RemoveProjectEnvContentHintEnvs13
+
+## Example Usage
+
+```typescript
+import { RemoveProjectEnvContentHintEnvs13 } from '@vercel/client/models/operations';
+
+let value: RemoveProjectEnvContentHintEnvs13 = {
+  type: 'postgres-url-no-ssl',
+  storeId: '<value>',
+};
+```
+
+## Fields
+
+| Field     | Type                                                                                                                                                                                               | Required           | Description |
+| --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ | ----------- |
+| `type`    | [operations.RemoveProjectEnvContentHintEnvsResponse200ApplicationJSONResponseBody213Type](../../models/operations/removeprojectenvcontenthintenvsresponse200applicationjsonresponsebody213type.md) | :heavy_check_mark: | N/A         |
+| `storeId` | _string_                                                                                                                                                                                           | :heavy_check_mark: | N/A         |

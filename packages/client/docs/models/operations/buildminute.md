@@ -1,0 +1,28 @@
+# BuildMinute
+
+## Example Usage
+
+```typescript
+import { BuildMinute } from '@vercel/client/models/operations';
+
+let value: BuildMinute = {
+  price: 2899.13,
+  batch: 5208.75,
+  threshold: 5777.09,
+  hidden: false,
+};
+```
+
+## Fields
+
+| Field        | Type                                                                                                                                                                                                   | Required           | Description |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------ | ----------- |
+| `matrix`     | [operations.CreateTeamTeamsResponse200ApplicationJSONResponseBodyBillingInvoiceItemsMatrix](../../models/operations/createteamteamsresponse200applicationjsonresponsebodybillinginvoiceitemsmatrix.md) | :heavy_minus_sign: | N/A         |
+| `tier`       | _number_                                                                                                                                                                                               | :heavy_minus_sign: | N/A         |
+| `price`      | _number_                                                                                                                                                                                               | :heavy_check_mark: | N/A         |
+| `batch`      | _number_                                                                                                                                                                                               | :heavy_check_mark: | N/A         |
+| `threshold`  | _number_                                                                                                                                                                                               | :heavy_check_mark: | N/A         |
+| `name`       | _string_                                                                                                                                                                                               | :heavy_minus_sign: | N/A         |
+| `hidden`     | _boolean_                                                                                                                                                                                              | :heavy_check_mark: | N/A         |
+| `disabledAt` | _number_                                                                                                                                                                                               | :heavy_minus_sign: | N/A         |
+| `enabledAt`  | _number_                                                                                                                                                                                               | :heavy_minus_sign: | N/A         |
