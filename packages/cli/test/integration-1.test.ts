@@ -544,7 +544,9 @@ test('deploy `api-env` fixture and test `vercel env` command', async () => {
     );
 
     expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
-    expect(stderr).toMatch(/No Environment Variables found for/gm);
+    expect(stderr).toMatch(
+      /No Environment Variables found for (.*)\/api-env/gm
+    );
   }
 
   async function vcEnvAddWithPrompts() {
@@ -620,7 +622,7 @@ test('deploy `api-env` fixture and test `vercel env` command', async () => {
     );
 
     expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
-    expect(stderr).toMatch(/Environment Variables found in Project/gm);
+    expect(stderr).toMatch(/Environment Variables found for (.*)\/api-env/gm);
 
     const lines = stdout.split('\n');
 
