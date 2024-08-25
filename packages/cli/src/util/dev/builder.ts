@@ -17,7 +17,7 @@ import {
 } from '@vercel/build-utils';
 import { isStaticRuntime } from '@vercel/fs-detectors';
 import plural from 'pluralize';
-import minimatch from 'minimatch';
+import path from 'path';
 
 import { Output } from '../output';
 import highlight from '../output/highlight';
@@ -231,7 +231,7 @@ export async function executeBuild(
     }
 
     for (const [src, func] of Object.entries(config.functions || {})) {
-      if (src === entrypoint || minimatch(entrypoint, src)) {
+      if (src === entrypoint || path.matchesGlob(entrypoint, src)) {
         if (func.maxDuration) {
           output.maxDuration = func.maxDuration;
         }
@@ -436,7 +436,9 @@ export async function getBuildMatches(
     }
 
     const files = fileList
-      .filter(name => name === src || minimatch(name, src, { dot: true }))
+      .filter(
+        name => name === src || path.matchesGlob(name, src, { dot: true })
+      )
       .map(name => join(cwd, name));
 
     if (files.length === 0) {

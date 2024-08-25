@@ -1,7 +1,7 @@
 import assert from 'assert';
 import Sema from 'async-sema';
 import { ZipFile } from 'yazl';
-import minimatch from 'minimatch';
+import path from 'path';
 import { readlink } from 'fs-extra';
 import { isSymbolicLink, isDirectory } from './fs/download';
 import streamToBuffer from './fs/stream-to-buffer';
@@ -283,7 +283,7 @@ export async function getLambdaOptionsFromFunction({
 > {
   if (config?.functions) {
     for (const [pattern, fn] of Object.entries(config.functions)) {
-      if (sourceFile === pattern || minimatch(sourceFile, pattern)) {
+      if (sourceFile === pattern || path.matchesGlob(sourceFile, pattern)) {
         return {
           memory: fn.memory,
           maxDuration: fn.maxDuration,

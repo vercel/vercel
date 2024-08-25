@@ -1,4 +1,4 @@
-import minimatch from 'minimatch';
+import path from 'path';
 import { valid as validSemver } from 'semver';
 import { parse as parsePath, extname } from 'path';
 import type { Route, RouteWithSrc } from '@vercel/routing-utils';
@@ -417,7 +417,7 @@ function maybeGetApiBuilder(
   }
 
   const match = apiMatches.find(({ src = '**' }) => {
-    return src === fileName || minimatch(fileName, src);
+    return src === fileName || path.matchesGlob(fileName, src);
   });
 
   const { fnPattern, func } = getFunction(fileName, options);
@@ -462,7 +462,9 @@ function getFunction(fileName: string, { functions = {} }: Options) {
     return { fnPattern: null, func: null };
   }
 
-  const func = keys.find(key => key === fileName || minimatch(fileName, key));
+  const func = keys.find(
+    key => key === fileName || path.matchesGlob(fileName, key)
+  );
 
   return func
     ? { fnPattern: func, func: functions[func] }
