@@ -1,5 +1,14 @@
 # @vercel/fs-detectors
 
+## 5.2.9
+
+### Patch Changes
+
+- [fs-detectors] Adds new detector for Sanity v3 ([#11991](https://github.com/vercel/vercel/pull/11991))
+
+- Updated dependencies [[`4d05f0ad5`](https://github.com/vercel/vercel/commit/4d05f0ad5b460c82c376e1f5be857f94b2fd8b40)]:
+  - @vercel/frameworks@3.2.0
+
 ## 5.2.8
 
 ### Patch Changes
