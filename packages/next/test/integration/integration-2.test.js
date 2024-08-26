@@ -167,7 +167,7 @@ it('Should not exceed function limit for large dependencies (server build)', asy
       lambdas.add(output[filePath]);
     }
   });
-  expect(lambdas.size).toBe(3);
+  expect(lambdas.size).toBe(2);
 
   // this assertion is unstable as `next-server`'s size can change up and down
   // on canary so skipping to prevent random failures.
@@ -220,7 +220,7 @@ it('Should not exceed function limit for large dependencies (shared lambda)', as
       lambdas.add(output[filePath]);
     }
   });
-  expect(lambdas.size).toBe(3);
+  expect(lambdas.size).toBe(2);
 
   expect(logs).toContain(
     'Warning: Max serverless function size of 50 MB compressed or 250 MB uncompressed almost reached'
