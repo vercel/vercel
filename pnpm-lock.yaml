@@ -141,7 +141,7 @@ importers:
         specifier: 8.3.7
         version: link:../packages/build-utils
       '@vercel/frameworks':
-        specifier: 3.1.1
+        specifier: 3.2.0
         version: link:../packages/frameworks
 
   internals/constants:
@@ -506,10 +506,10 @@ importers:
         specifier: 2.0.2
         version: link:../error-utils
       '@vercel/frameworks':
-        specifier: 3.1.1
+        specifier: 3.2.0
         version: link:../frameworks
       '@vercel/fs-detectors':
-        specifier: 5.2.8
+        specifier: 5.2.9
         version: link:../fs-detectors
       '@vercel/routing-utils':
         specifier: 3.1.0
@@ -943,7 +943,7 @@ importers:
         specifier: 2.0.2
         version: link:../error-utils
       '@vercel/frameworks':
-        specifier: 3.1.1
+        specifier: 3.2.0
         version: link:../frameworks
       '@vercel/routing-utils':
         specifier: 3.1.0
@@ -1635,10 +1635,10 @@ importers:
         specifier: 2.0.2
         version: link:../error-utils
       '@vercel/frameworks':
-        specifier: 3.1.1
+        specifier: 3.2.0
         version: link:../frameworks
       '@vercel/fs-detectors':
-        specifier: 5.2.8
+        specifier: 5.2.9
         version: link:../fs-detectors
       '@vercel/routing-utils':
         specifier: 3.1.0

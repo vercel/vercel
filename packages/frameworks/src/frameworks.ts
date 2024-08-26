@@ -2006,6 +2006,68 @@ export const frameworks = [
     ],
   },
   {
+    name: 'Sanity (v3)',
+    slug: 'sanity-v3',
+    demo: 'https://sanity-studio-template.vercel.app',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/sanity.svg',
+    tagline: 'The structured content platform.',
+    description: 'A Sanity Studio',
+    website: 'https://www.sanity.io',
+    envPrefix: 'SANITY_STUDIO_',
+    detectors: {
+      some: [
+        {
+          path: 'sanity.json',
+        },
+        {
+          path: 'sanity.config.js',
+        },
+        {
+          path: 'sanity.config.jsx',
+        },
+        {
+          path: 'sanity.config.ts',
+        },
+        {
+          path: 'sanity.config.tsx',
+        },
+      ],
+      every: [
+        {
+          path: 'package.json',
+          matchContent:
+            '"(dev)?(d|D)ependencies":\\s*{[^}]*"sanity":\\s*"\\^?3\\..*"[^}]*}',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder:
+          '`yarn install`, `pnpm install`, `npm install`, or `bun install`',
+      },
+      buildCommand: {
+        placeholder: '`npm run build` or `sanity build`',
+        value: 'sanity build',
+      },
+      devCommand: {
+        value: 'sanity dev --port $PORT',
+      },
+      outputDirectory: {
+        value: 'dist',
+      },
+    },
+    getOutputDirName: async () => 'dist',
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/index.html',
+      },
+    ],
+  },
+  {
     name: 'Sanity',
     slug: 'sanity',
     demo: 'https://sanity-studio-template.vercel.app',
