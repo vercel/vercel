@@ -9,3 +9,6 @@ targets:
     vercel:
         target: typescript
         source: vercel-OAS
+        publish:
+            npm:
+                token: $npm_token
