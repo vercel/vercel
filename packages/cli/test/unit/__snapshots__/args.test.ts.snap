@@ -11,6 +11,7 @@ exports[`base level help output > help 1`] = `
     [2mBasic[22m
 
       deploy               [path]      Performs a deployment [1m(default)[22m
+      build                            Build the project locally into './vercel/output'
       dev                              Start a local development server
       env                              Manages the Environment Variables for your current Project
       git                              Manage Git provider repository for your current Project
