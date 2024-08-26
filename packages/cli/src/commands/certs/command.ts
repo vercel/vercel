@@ -51,7 +51,7 @@ export const certsCommand = {
       name: 'challenge-only',
       description: 'Only show challenges needed to issue a cert',
       shorthand: null,
-      type: String,
+      type: Boolean,
       deprecated: false,
     },
     {
