@@ -1,0 +1,16 @@
+{
+  "description": "The base configuration for all packages.",
+  "extends": "@vercel/style-guide/typescript",
+  "compilerOptions": {
+    "lib": ["ES2021"],
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "noEmitOnError": true,
+    "noImplicitReturns": true,
+    "noUncheckedIndexedAccess": false,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "sourceMap": false,
+    "target": "ES2021"
+  }
+}

@@ -1,5 +1,5 @@
 import type Client from '../../util/client';
-import getArgs from '../../util/get-args';
+import { parseArguments } from '../../util/get-args';
 import getProjectByCwdOrLink from '../../util/projects/get-project-by-cwd-or-link';
 import handleError from '../../util/handle-error';
 import { isErrnoException } from '@vercel/error-utils';
@@ -8,6 +8,7 @@ import requestPromote from './request-promote';
 import promoteStatus from './status';
 import { promoteCommand } from './command';
 import { help } from '../help';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
 
 /**
  * `vc promote` command
@@ -15,44 +16,44 @@ import { help } from '../help';
  * @returns {Promise<number>} Resolves an exit code; 0 on success
  */
 export default async (client: Client): Promise<number> => {
-  let argv;
+  let parsedArgs = null;
+
+  const flagsSpecification = getFlagsSpecification(promoteCommand.options);
+
+  // Parse CLI args
   try {
-    argv = getArgs(client.argv.slice(2), {
-      '--timeout': String,
-      '--yes': Boolean,
-      '-y': '--yes',
-    });
-  } catch (err) {
-    handleError(err);
+    parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
+  } catch (error) {
+    handleError(error);
     return 1;
   }
 
-  if (argv['--help'] || argv._[0] === 'help') {
-    client.output.print(
-      help(promoteCommand, { columns: client.stderr.columns })
-    );
+  const { output } = client;
+
+  if (parsedArgs.flags['--help']) {
+    output.print(help(promoteCommand, { columns: client.stderr.columns }));
     return 2;
   }
 
-  const yes = argv['--yes'] ?? false;
+  const yes = parsedArgs.flags['--yes'] ?? false;
 
   // validate the timeout
-  let timeout = argv['--timeout'];
+  let timeout = parsedArgs.flags['--timeout'];
   if (timeout && ms(timeout) === undefined) {
     client.output.error(`Invalid timeout "${timeout}"`);
     return 1;
   }
 
-  const actionOrDeployId = argv._[1] || 'status';
+  const actionOrDeployId = parsedArgs.args[1] || 'status';
 
   try {
     if (actionOrDeployId === 'status') {
       const project = await getProjectByCwdOrLink({
-        autoConfirm: Boolean(argv['--yes']),
+        autoConfirm: Boolean(parsedArgs.flags['--yes']),
         client,
         commandName: 'promote',
         cwd: client.cwd,
-        projectNameOrId: argv._[2],
+        projectNameOrId: parsedArgs.args[2],
       });
 
       return await promoteStatus({

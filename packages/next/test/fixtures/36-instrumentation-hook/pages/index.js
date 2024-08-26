@@ -5,7 +5,7 @@ export default function Home(props) {
 export async function getServerSideProps() {
   return {
     props: {
-      isOdd: globalThis.isOdd(2),
+      isOdd: globalThis.isOdd ? globalThis.isOdd(2) : 'unknown',
     },
   };
 }

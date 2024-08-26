@@ -6,7 +6,7 @@ import chalk from 'chalk';
 // @ts-ignore
 import listInput from '../../util/input/list';
 import listItem from '../../util/output/list-item';
-import promptBool from '../../util/input/prompt-bool';
+import confirm from '../../util/input/confirm';
 import toHumanPath from '../../util/humanize-path';
 import Client from '../../util/client';
 import info from '../../util/output/info';
@@ -46,6 +46,10 @@ export default async function init(
   const exampleList = examples.filter(x => x.visible).map(x => x.name);
 
   if (!name) {
+    if (client.stdin.isTTY !== true) {
+      client.output.print(`No framework provided`);
+      return 0;
+    }
     const chosen = await chooseFromDropdown(
       client,
       'Select example:',
@@ -122,7 +126,7 @@ async function extractExample(
   ver: string = 'v2'
 ) {
   const { output } = client;
-  const folder = prepareFolder(process.cwd(), dir || name, force);
+  const folder = prepareFolder(client.cwd, dir || name, force);
   output.spinner(`Fetching ${name}`);
 
   const url = `${EXAMPLE_API}/${ver}/download/${name}.tar.gz`;
@@ -147,7 +151,7 @@ async function extractExample(
       const successLog = `Initialized "${chalk.bold(
         name
       )}" example in ${chalk.bold(toHumanPath(folder))}.`;
-      const folderRel = path.relative(process.cwd(), folder);
+      const folderRel = path.relative(client.cwd, folder);
       const deployHint =
         folderRel === ''
           ? listItem(`To deploy, run ${getCommandName()}.`)
@@ -209,14 +213,14 @@ async function guess(client: Client, exampleList: string[], name: string) {
     )} to see the list of available examples.`
   );
 
-  if (process.stdout.isTTY !== true) {
+  if (client.stdin.isTTY !== true) {
     throw GuessError;
   }
 
   const found = didYouMean(name, exampleList, 0.7);
 
   if (typeof found === 'string') {
-    if (await promptBool(`Did you mean ${chalk.bold(found)}?`, client)) {
+    if (await confirm(client, `Did you mean ${chalk.bold(found)}?`, false)) {
       return found;
     }
   } else {

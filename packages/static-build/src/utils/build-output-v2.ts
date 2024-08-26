@@ -80,7 +80,6 @@ export async function readBuildOutputDirectory({
       files: {
         '_middleware.js': middleware.file,
       },
-      name: 'middleware',
       regions: (() => {
         try {
           const project = new Project();

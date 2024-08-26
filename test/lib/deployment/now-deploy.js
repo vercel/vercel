@@ -3,11 +3,12 @@ const assert = require('assert');
 const { createHash } = require('crypto');
 const path = require('path');
 const _fetch = require('node-fetch');
-const fetch = require('./fetch-retry.js');
+const fetch = require('./fetch-retry');
 const fileModeSymbol = Symbol('fileMode');
 const { logWithinTest } = require('./log');
 const ms = require('ms');
 
+const IS_CI = !!process.env.CI;
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function nowDeploy(projectName, bodies, randomness, uploadNowJson, opts) {
@@ -45,6 +46,10 @@ async function nowDeploy(projectName, bodies, randomness, uploadNowJson, opts) {
     files,
     meta: {},
     ...nowJson,
+    projectSettings: {
+      ...nowJson.projectSettings,
+      ...opts.projectSettings,
+    },
     env: { ...nowJson.env, RANDOMNESS_ENV_VAR: randomness },
     build: {
       env: {
@@ -188,13 +193,16 @@ async function fetchWithAuth(url, opts = {}) {
   if (VERCEL_TEAM_ID) {
     url += `${url.includes('?') ? '&' : '?'}teamId=${VERCEL_TEAM_ID}`;
   }
+
   return await fetchApi(url, opts);
 }
 
+/**
+ * @returns { Promise<String> }
+ */
 async function fetchCachedToken() {
   if (!token || tokenCreated < Date.now() - MAX_TOKEN_AGE) {
-    tokenCreated = Date.now();
-    token = await fetchTokenWithRetry();
+    return fetchTokenWithRetry();
   }
   return token;
 }
@@ -211,7 +219,7 @@ async function fetchTokenWithRetry(retries = 5) {
     VERCEL_TEST_REGISTRATION_URL,
   } = process.env;
   if (VERCEL_TOKEN || NOW_TOKEN || TEMP_TOKEN) {
-    if (!TEMP_TOKEN) {
+    if (!TEMP_TOKEN && !IS_CI) {
       logWithinTest(
         'Your personal token will be used to make test deployments.'
       );
@@ -220,7 +228,7 @@ async function fetchTokenWithRetry(retries = 5) {
   }
   if (!VERCEL_TEST_TOKEN || !VERCEL_TEST_REGISTRATION_URL) {
     throw new Error(
-      process.env.CI
+      IS_CI
         ? 'Failed to create test deployment. This is expected for 3rd-party Pull Requests. Please run tests locally.'
         : 'Failed to create test deployment. Please set `VERCEL_TOKEN` environment variable and run again.'
     );
@@ -246,6 +254,11 @@ async function fetchTokenWithRetry(retries = 5) {
       const text = JSON.stringify(data);
       throw new Error(`Unexpected response from registration: ${text}`);
     }
+
+    // Cache the token to be returned via `fetchCachedToken`
+    token = data.token;
+    tokenCreated = Date.now();
+
     return data.token;
   } catch (error) {
     logWithinTest(
@@ -262,9 +275,11 @@ async function fetchTokenWithRetry(retries = 5) {
 }
 
 async function fetchApi(url, opts = {}) {
-  const apiHost = process.env.API_HOST || 'api.vercel.com';
-  const urlWithHost = `https://${apiHost}${url}`;
   const { method = 'GET', body } = opts;
+  const apiHost = process.env.API_HOST || 'api.vercel.com';
+  const urlWithHost = url.startsWith('https://')
+    ? url
+    : `https://${apiHost}${url}`;
 
   if (process.env.VERBOSE) {
     logWithinTest('fetch', method, url);
@@ -290,7 +305,7 @@ module.exports = {
   fetchApi,
   fetchWithAuth,
   nowDeploy,
-  fetchTokenWithRetry,
   fetchCachedToken,
+  fetchTokenWithRetry,
   fileModeSymbol,
 };

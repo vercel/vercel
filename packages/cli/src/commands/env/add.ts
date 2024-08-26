@@ -1,12 +1,11 @@
 import chalk from 'chalk';
-import type { Project, ProjectEnvTarget } from '@vercel-internals/types';
+import type { Project } from '@vercel-internals/types';
 import { Output } from '../../util/output';
 import Client from '../../util/client';
 import stamp from '../../util/output/stamp';
 import addEnvRecord from '../../util/env/add-env-record';
 import getEnvRecords from '../../util/env/get-env-records';
 import {
-  isValidEnvTarget,
   getEnvTargetPlaceholder,
   envTargetChoices,
 } from '../../util/env/env-target';
@@ -16,9 +15,12 @@ import { emoji, prependEmoji } from '../../util/emoji';
 import { isKnownError } from '../../util/env/known-error';
 import { getCommandName } from '../../util/pkg-name';
 import { isAPIError } from '../../util/errors-ts';
+import { getCustomEnvironments } from '../../util/target/get-custom-environments';
 
 type Options = {
   '--debug': boolean;
+  '--sensitive': boolean;
+  '--force': boolean;
 };
 
 export default async function add(
@@ -28,9 +30,6 @@ export default async function add(
   args: string[],
   output: Output
 ) {
-  // improve the way we show inquirer prompts
-  require('../../util/input/patch-inquirer');
-
   const stdInput = await readStandardInput(client.stdin);
   let [envName, envTargetArg, envGitBranch] = args;
 
@@ -52,45 +51,50 @@ export default async function add(
     return 1;
   }
 
-  let envTargets: ProjectEnvTarget[] = [];
+  let envTargets: string[] = [];
   if (envTargetArg) {
-    if (!isValidEnvTarget(envTargetArg)) {
-      output.error(
-        `The Environment ${param(
-          envTargetArg
-        )} is invalid. It must be one of: ${getEnvTargetPlaceholder()}.`
-      );
-      return 1;
-    }
     envTargets.push(envTargetArg);
   }
 
-  while (!envName) {
-    const { inputName } = await client.prompt({
-      type: 'input',
-      name: 'inputName',
-      message: `What’s the name of the variable?`,
+  if (!envName) {
+    envName = await client.input.text({
+      message: `What's the name of the variable?`,
+      validate: val => (val ? true : 'Name cannot be empty'),
     });
-
-    envName = inputName;
-
-    if (!inputName) {
-      output.error('Name cannot be empty');
-    }
   }
 
-  const { envs } = await getEnvRecords(
-    output,
-    client,
-    project.id,
-    'vercel-cli:env:add'
-  );
-  const existing = new Set(
-    envs.filter(r => r.key === envName).map(r => r.target)
-  );
-  const choices = envTargetChoices.filter(c => !existing.has(c.value));
+  const [{ envs }, customEnvironments] = await Promise.all([
+    getEnvRecords(output, client, project.id, 'vercel-cli:env:add'),
+    getCustomEnvironments(client, project.id),
+  ]);
+  const matchingEnvs = envs.filter(r => r.key === envName);
+  const existingTargets = new Set<string>();
+  const existingCustomEnvs = new Set<string>();
+  for (const env of matchingEnvs) {
+    if (typeof env.target === 'string') {
+      existingTargets.add(env.target);
+    } else if (Array.isArray(env.target)) {
+      for (const target of env.target) {
+        existingTargets.add(target);
+      }
+    }
+    if (env.customEnvironmentIds) {
+      for (const customEnvId of env.customEnvironmentIds) {
+        existingCustomEnvs.add(customEnvId);
+      }
+    }
+  }
+  const choices = [
+    ...envTargetChoices.filter(c => !existingTargets.has(c.value)),
+    ...customEnvironments
+      .filter(c => !existingCustomEnvs.has(c.id))
+      .map(c => ({
+        name: c.name,
+        value: c.id,
+      })),
+  ];
 
-  if (choices.length === 0) {
+  if (choices.length === 0 && !opts['--force']) {
     output.error(
       `The variable ${param(
         envName
@@ -106,26 +110,18 @@ export default async function add(
   if (stdInput) {
     envValue = stdInput;
   } else {
-    const { inputValue } = await client.prompt({
-      type: 'input',
-      name: 'inputValue',
-      message: `What’s the value of ${envName}?`,
+    envValue = await client.input.text({
+      message: `What's the value of ${envName}?`,
     });
-
-    envValue = inputValue || '';
   }
 
   while (envTargets.length === 0) {
-    const { inputTargets } = await client.prompt({
-      name: 'inputTargets',
-      type: 'checkbox',
+    envTargets = await client.input.checkbox({
       message: `Add ${envName} to which Environments (select multiple)?`,
       choices,
     });
 
-    envTargets = inputTargets;
-
-    if (inputTargets.length === 0) {
+    if (envTargets.length === 0) {
       output.error('Please select at least one Environment');
     }
   }
@@ -136,13 +132,13 @@ export default async function add(
     envTargets.length === 1 &&
     envTargets[0] === 'preview'
   ) {
-    const { inputValue } = await client.prompt({
-      type: 'input',
-      name: 'inputValue',
+    envGitBranch = await client.input.text({
       message: `Add ${envName} to which Git branch? (leave empty for all Preview branches)?`,
     });
-    envGitBranch = inputValue || '';
   }
+
+  const type = opts['--sensitive'] ? 'sensitive' : 'encrypted';
+  const upsert = opts['--force'] ? 'true' : '';
 
   const addStamp = stamp();
   try {
@@ -151,7 +147,8 @@ export default async function add(
       output,
       client,
       project.id,
-      'encrypted',
+      upsert,
+      type,
       envName,
       envValue,
       envTargets,
@@ -167,9 +164,11 @@ export default async function add(
 
   output.print(
     `${prependEmoji(
-      `Added Environment Variable ${chalk.bold(
-        envName
-      )} to Project ${chalk.bold(project.name)} ${chalk.gray(addStamp())}`,
+      `${
+        opts['--force'] ? 'Overrode' : 'Added'
+      } Environment Variable ${chalk.bold(envName)} to Project ${chalk.bold(
+        project.name
+      )} ${chalk.gray(addStamp())}`,
       emoji('success')
     )}\n`
   );

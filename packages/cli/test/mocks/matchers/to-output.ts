@@ -5,15 +5,19 @@ import {
   printReceived,
 } from 'jest-matcher-utils';
 import type { Readable } from 'stream';
-import type { MatcherState } from 'expect';
+import type { MatcherState } from '@vitest/expect';
 import type { MatcherHintOptions } from 'jest-matcher-utils';
+import stripAnsi from 'strip-ansi';
 
 export async function toOutput(
   this: MatcherState,
   stream: Readable,
   test: string,
   timeout = 3000
-) {
+): Promise<{
+  pass: boolean;
+  message: () => string;
+}> {
   const { isNot } = this;
   const matcherName = 'toOutput';
   const matcherHintOptions: MatcherHintOptions = {
@@ -27,7 +31,7 @@ export async function toOutput(
       matcherHint(matcherName, 'stream', 'test', matcherHintOptions) + '\n\n';
 
     function onData(data: string) {
-      output += data;
+      output += stripAnsi(data);
       if (output.includes(test)) {
         cleanup();
         resolve({

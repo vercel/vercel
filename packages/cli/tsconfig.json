@@ -1,20 +1,16 @@
 {
   "compilerOptions": {
-    "strict": true,
-    "noEmitOnError": true,
-    "noFallthroughCasesInSwitch": true,
-    "moduleResolution": "node",
-    "module": "commonjs",
-    "target": "ES2021",
-    "esModuleInterop": true,
     "allowJs": true,
-    "lib": ["ES2021"],
-    "resolveJsonModule": true,
-    "sourceMap": false,
+    "noImplicitReturns": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
     "outDir": "./dist",
+    "resolveJsonModule": true,
     "typeRoots": ["./types", "./node_modules/@types"]
   },
+  "extends": "../../tsconfig.base.json",
   "include": ["./types", "src/**/*"],
+  "exclude": ["templates/*"],
   "ts-node": {
     "swc": true // https://typestrong.org/ts-node/docs/swc/
   }

@@ -3,6 +3,8 @@ import type {
   ProjectEnvTarget,
   Project,
   ProjectEnvVariable,
+  CustomEnvironment,
+  Deployment,
 } from '@vercel-internals/types';
 import { formatProvider } from '../../src/util/git/connect-git-provider';
 import { parseEnvironment } from '../../src/commands/pull';
@@ -101,40 +103,36 @@ const systemEnvs = [
   },
 ];
 
+const latestProductionDeployment: Deployment = {
+  alias: ['foobar.com'],
+  aliasAssigned: 1571239348998,
+  buildingAt: 1571239348998,
+  createdAt: 1571239348998,
+  createdIn: 'sfo1',
+  creator: {
+    uid: 'K4amb7K9dAt5R2vBJWF32bmY',
+  },
+  forced: false,
+  id: 'dpl_89qyp1cskzkLrVicDaZoDbjyHuDJ',
+  meta: {},
+  plan: 'pro',
+  private: true,
+  readyState: 'READY',
+  target: 'production',
+  type: undefined,
+  url: 'a-project-name-rjtr4pz3f.vercel.app',
+};
 export const defaultProject: Project = {
   id: 'foo',
   name: 'cli',
   accountId: 'K4amb7K9dAt5R2vBJWF32bmY',
   createdAt: 1555413045188,
   updatedAt: 1555413045188,
-  latestDeployments: [
-    {
-      alias: ['foobar.com'],
-      aliasAssigned: 1571239348998,
-      buildingAt: 1571239348998,
-      createdAt: 1571239348998,
-      createdIn: 'sfo1',
-      creator: {
-        uid: 'K4amb7K9dAt5R2vBJWF32bmY',
-      },
-      forced: false,
-      id: 'dpl_89qyp1cskzkLrVicDaZoDbjyHuDJ',
-      meta: {},
-      plan: 'pro',
-      private: true,
-      readyState: 'READY',
-      target: 'production',
-      type: undefined,
-      url: 'a-project-name-rjtr4pz3f.vercel.app',
-    },
-  ],
+  latestDeployments: [latestProductionDeployment],
   lastAliasRequest: null,
-  alias: [
-    {
-      domain: 'foobar.com',
-      target: 'PRODUCTION' as const,
-    },
-  ],
+  targets: {
+    production: latestProductionDeployment,
+  },
 };
 
 /**
@@ -202,7 +200,9 @@ export function useUnknownProject() {
 }
 
 export function useProject(
-  project: Partial<Project> = defaultProject,
+  project: Partial<
+    Project & { customEnvironments?: CustomEnvironment[] }
+  > = defaultProject,
   projectEnvs: ProjectEnvVariable[] = envs
 ) {
   client.scenario.get(`/:version/projects/${project.name}`, (_req, res) => {
@@ -216,7 +216,7 @@ export function useProject(
     res.json(project);
   });
   client.scenario.get(
-    `/v1/env/pull/${project.id}/:target?/:gitBranch?`,
+    `/v2/env/pull/${project.id}/:target?/:gitBranch?`,
     (req, res) => {
       const target =
         typeof req.params.target === 'string'
@@ -270,7 +270,7 @@ export function useProject(
       });
     }
   );
-  client.scenario.get(`/v8/projects/${project.id}/env`, (req, res) => {
+  client.scenario.get(`/v10/projects/${project.id}/env`, (req, res) => {
     const target: ProjectEnvTarget | undefined =
       typeof req.query.target === 'string'
         ? parseEnvironment(req.query.target)
@@ -291,14 +291,18 @@ export function useProject(
 
     res.json({ envs: targetEnvs });
   });
-  client.scenario.post(`/v8/projects/${project.id}/env`, (req, res) => {
+  client.scenario.get(
+    `/projects/${project.id}/custom-environments`,
+    (req, res) => res.json({ environments: project.customEnvironments || [] })
+  );
+  client.scenario.post(`/v10/projects/${project.id}/env`, (req, res) => {
     const envObj = req.body;
     envObj.id = envObj.key;
     envs.push(envObj);
     res.json({ envs });
   });
   client.scenario.delete(
-    `/v8/projects/${project.id}/env/:envId`,
+    `/v10/projects/${project.id}/env/:envId`,
     (req, res) => {
       const envId = req.params.envId;
       for (const [i, env] of envs.entries()) {
@@ -351,13 +355,13 @@ export function useProject(
     }
     res.json(project);
   });
-  client.scenario.get(`/v4/projects`, (req, res) => {
+  client.scenario.get(`/v9/projects`, (req, res) => {
     res.json({
-      projects: [defaultProject],
+      projects: [project],
       pagination: null,
     });
   });
-  client.scenario.post(`/projects`, (req, res) => {
+  client.scenario.post(`/v1/projects`, (req, res) => {
     const { name } = req.body;
     if (name === project.name) {
       res.json(project);
@@ -390,7 +394,7 @@ function exposeSystemEnvs(
 ) {
   const envs: Env = {};
 
-  if (autoExposeSystemEnvs) {
+  if (autoExposeSystemEnvs && target !== 'development') {
     envs['VERCEL'] = '1';
     envs['VERCEL_ENV'] = target || 'development';
 

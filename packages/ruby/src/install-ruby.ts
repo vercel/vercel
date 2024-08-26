@@ -1,6 +1,7 @@
+import execa from 'execa';
+import which from 'which';
 import { join } from 'path';
 import { intersects } from 'semver';
-import execa from 'execa';
 import { Meta, NodeVersion, debug, NowBuildError } from '@vercel/build-utils';
 
 interface RubyVersion extends NodeVersion {
@@ -8,7 +9,15 @@ interface RubyVersion extends NodeVersion {
 }
 
 const allOptions: RubyVersion[] = [
-  { major: 2, minor: 7, range: '2.7.x', runtime: 'ruby2.7' },
+  { major: 3, minor: 3, range: '3.3.x', runtime: 'ruby3.3' },
+  { major: 3, minor: 2, range: '3.2.x', runtime: 'ruby3.2' },
+  {
+    major: 2,
+    minor: 7,
+    range: '2.7.x',
+    runtime: 'ruby2.7',
+    discontinueDate: new Date('2023-12-07'),
+  },
   {
     major: 2,
     minor: 5,
@@ -19,7 +28,15 @@ const allOptions: RubyVersion[] = [
 ];
 
 function getLatestRubyVersion(): RubyVersion {
-  return allOptions[0];
+  const selection = allOptions.find(isInstalled);
+  if (!selection) {
+    throw new NowBuildError({
+      code: 'RUBY_INVALID_VERSION',
+      link: 'http://vercel.link/ruby-version',
+      message: `Unable to find any supported Ruby versions.`,
+    });
+  }
+  return selection;
 }
 
 function isDiscontinued({ discontinueDate }: RubyVersion): boolean {
@@ -52,12 +69,17 @@ function getRubyPath(meta: Meta, gemfileContents: string) {
           link: 'http://vercel.link/ruby-version',
         });
       }
-      if (isDiscontinued(selection)) {
+      const discontinued = isDiscontinued(selection);
+      if (discontinued || !isInstalled(selection)) {
         const latest = getLatestRubyVersion();
-        const intro = `Found \`Gemfile\` with discontinued Ruby version: \`${line}.\``;
+        const intro = `Found \`Gemfile\` with ${
+          discontinued ? 'discontinued' : 'invalid'
+        } Ruby version: \`${line}.\``;
         const hint = `Please set \`ruby "~> ${latest.range}"\` in your \`Gemfile\` to use Ruby ${latest.range}.`;
         throw new NowBuildError({
-          code: 'RUBY_DISCONTINUED_VERSION',
+          code: discontinued
+            ? 'RUBY_DISCONTINUED_VERSION'
+            : 'RUBY_INVALID_VERSION',
           link: 'http://vercel.link/ruby-version',
           message: `${intro} ${hint}`,
         });
@@ -68,6 +90,7 @@ function getRubyPath(meta: Meta, gemfileContents: string) {
   const { major, minor, runtime } = selection;
   const gemHome = '/ruby' + major + minor;
   const result = {
+    major,
     gemHome,
     runtime,
     rubyPath: join(gemHome, 'bin', 'ruby'),
@@ -82,27 +105,8 @@ function getRubyPath(meta: Meta, gemfileContents: string) {
 // process.env.GEM_HOME), and returns
 // the absolute path to it
 export async function installBundler(meta: Meta, gemfileContents: string) {
-  const { gemHome, rubyPath, gemPath, vendorPath, runtime } = getRubyPath(
-    meta,
-    gemfileContents
-  );
-
-  // If the new File System API is used (`avoidTopLevelInstall`), the Install Command
-  // will have already installed the dependencies, so we don't need to do it again.
-  if (meta.avoidTopLevelInstall) {
-    debug(
-      `Skipping bundler installation, already installed by Install Command`
-    );
-
-    return {
-      gemHome,
-      rubyPath,
-      gemPath,
-      vendorPath,
-      runtime,
-      bundlerPath: join(gemHome, 'bin', 'bundler'),
-    };
-  }
+  const { gemHome, rubyPath, gemPath, vendorPath, runtime, major } =
+    getRubyPath(meta, gemfileContents);
 
   debug('installing bundler...');
   await execa(gemPath, ['install', 'bundler', '--no-document'], {
@@ -113,6 +117,7 @@ export async function installBundler(meta: Meta, gemfileContents: string) {
   });
 
   return {
+    major,
     gemHome,
     rubyPath,
     gemPath,
@@ -120,4 +125,12 @@ export async function installBundler(meta: Meta, gemfileContents: string) {
     runtime,
     bundlerPath: join(gemHome, 'bin', 'bundler'),
   };
+}
+
+function isInstalled({ major, minor }: RubyVersion): boolean {
+  const gemHome = '/ruby' + major + minor;
+  return (
+    Boolean(which.sync(join(gemHome, 'bin/ruby'), { nothrow: true })) &&
+    Boolean(which.sync(join(gemHome, 'bin/gem'), { nothrow: true }))
+  );
 }

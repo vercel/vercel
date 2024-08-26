@@ -207,6 +207,13 @@ export const rewritesSchema = {
       },
       has: hasSchema,
       missing: hasSchema,
+      statusCode: {
+        description:
+          'An optional integer to override the status code of the response.',
+        type: 'integer',
+        minimum: 100,
+        maximum: 999,
+      },
     },
   },
 } as const;
@@ -239,6 +246,8 @@ export const redirectsSchema = {
         type: 'boolean',
       },
       statusCode: {
+        description:
+          'An optional integer to define the status code of the redirect.',
         private: true,
         type: 'integer',
         minimum: 100,

@@ -11,7 +11,7 @@ import textInput from '../../util/input/text';
 import param from '../../util/output/param';
 import getDomainAliases from '../../util/alias/get-domain-aliases';
 import getDomainByName from '../../util/domains/get-domain-by-name';
-import promptBool from '../../util/input/prompt-bool';
+import confirm from '../../util/input/confirm';
 import getTeams from '../../util/teams/get-teams';
 import { getCommandName } from '../../util/pkg-name';
 
@@ -67,11 +67,12 @@ export default async function move(
         )} will have 24 hours to accept your move request before it expires.`
     );
     if (
-      !(await promptBool(
+      !(await confirm(
+        client,
         `Are you sure you want to move ${param(domainName)} to ${param(
           destination
         )}?`,
-        client
+        false
       ))
     ) {
       output.log('Canceled');
@@ -88,9 +89,10 @@ export default async function move(
         )} will be removed. Run ${getCommandName(`alias ls`)} to list them.`
       );
       if (
-        !(await promptBool(
+        !(await confirm(
+          client,
           `Are you sure you want to move ${param(domainName)}?`,
-          client
+          false
         ))
       ) {
         output.log('Canceled');

@@ -11,7 +11,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
   afterAll(() => fs.remove(fixtureDir));
 
   it('should deploy and pass probe checks', async () => {
-    await fs.copy(path.join(__dirname, '../00-app-dir'), fixtureDir);
+    await fs.copy(path.join(__dirname, '../00-app-dir-no-ppr'), fixtureDir);
     const nextConfigPath = path.join(fixtureDir, 'next.config.js');
 
     await fs.writeFile(
@@ -25,7 +25,8 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
       path.join(__dirname, 'vercel.json'),
       path.join(fixtureDir, 'vercel.json')
     );
-
+    
+    await require('../../utils').normalizeReactVersion(fixtureDir)
     const info = await deployAndTest(fixtureDir);
     Object.assign(ctx, info);
   });

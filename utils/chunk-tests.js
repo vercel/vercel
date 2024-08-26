@@ -4,16 +4,66 @@ const path = require('path');
 
 const runnersMap = new Map([
   [
+    'vitest-unit',
+    {
+      min: 1,
+      max: 1,
+      testScript: 'vitest-run',
+      runners: ['ubuntu-latest', 'macos-14', 'windows-latest'],
+    },
+  ],
+  [
+    'vitest-e2e',
+    {
+      min: 1,
+      max: 7,
+      testScript: 'vitest-run',
+      runners: ['ubuntu-latest'],
+    },
+  ],
+  [
     'test-unit',
     {
       min: 1,
       max: 1,
-      runners: ['ubuntu-latest', 'macos-latest', 'windows-latest'],
+      testScript: 'test',
+      runners: ['ubuntu-latest', 'macos-14', 'windows-latest'],
     },
   ],
-  ['test-e2e', { min: 1, max: 7, runners: ['ubuntu-latest'] }],
-  ['test-next-local', { min: 1, max: 5, runners: ['ubuntu-latest'] }],
-  ['test-dev', { min: 1, max: 7, runners: ['ubuntu-latest', 'macos-latest'] }],
+  [
+    'test-e2e',
+    { min: 1, max: 7, testScript: 'test', runners: ['ubuntu-latest'] },
+  ],
+  [
+    'test-next-local',
+    {
+      min: 1,
+      max: 5,
+      runners: ['ubuntu-latest'],
+      testScript: 'test',
+      nodeVersion: '18',
+    },
+  ],
+  [
+    'test-next-local-legacy',
+    {
+      min: 1,
+      max: 5,
+      runners: ['ubuntu-latest'],
+
+      testScript: 'test',
+      nodeVersion: '16',
+    },
+  ],
+  [
+    'test-dev',
+    {
+      min: 1,
+      max: 7,
+      testScript: 'test',
+      runners: ['ubuntu-latest', 'macos-14'],
+    },
+  ],
 ]);
 
 const packageOptionsOverrides = {
@@ -29,13 +79,12 @@ function getRunnerOptions(scriptName, packageName) {
       packageOptionsOverrides[packageName]
     );
   }
-  return (
-    runnerOptions || {
-      min: 1,
-      max: 1,
-      runners: ['ubuntu-latest'],
-    }
-  );
+  if (!runnerOptions) {
+    throw new Error(
+      `Unable to find runner options for package "${packageName}" and script ${scriptName}`
+    );
+  }
+  return runnerOptions;
 }
 
 async function getChunkedTests() {
@@ -47,7 +96,7 @@ async function getChunkedTests() {
       `run`,
       ...scripts,
       `--cache-dir=.turbo`,
-      '--output-logs=new-only',
+      '--output-logs=full',
       '--log-order=stream',
       '--',
       '--', // need two of these due to pnpm arg parsing
@@ -91,7 +140,7 @@ async function getChunkedTests() {
       const [packagePath, packageName] = packagePathAndName.split(',');
       return Object.entries(scriptNames).flatMap(([scriptName, testPaths]) => {
         const runnerOptions = getRunnerOptions(scriptName, packageName);
-        const { runners, min, max } = runnerOptions;
+        const { runners, min, max, testScript, nodeVersion } = runnerOptions;
 
         const sortedTestPaths = testPaths.sort((a, b) => a.localeCompare(b));
         return intoChunks(min, max, sortedTestPaths).flatMap(
@@ -102,6 +151,8 @@ async function getChunkedTests() {
                 packagePath,
                 packageName,
                 scriptName,
+                testScript,
+                nodeVersion,
                 testPaths: chunk.map(testFile =>
                   path.relative(
                     path.join(__dirname, '../', packagePath),

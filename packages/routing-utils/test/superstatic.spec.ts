@@ -662,6 +662,11 @@ test('convertRewrites', () => {
         source: '/:nextInternalLocale/:path',
         destination: '/api/hello',
       },
+      {
+        source: '/rewrite-with-status',
+        destination: '/api/hello',
+        statusCode: 201,
+      },
     ],
     ['nextInternalLocale']
   );
@@ -861,6 +866,12 @@ test('convertRewrites', () => {
       dest: '/api/hello?nextInternalLocale=$1&path=$2',
       src: '^(?:\\/([^\\/]+?))(?:\\/([^\\/]+?))$',
     },
+    {
+      check: true,
+      dest: '/api/hello',
+      src: '^\\/rewrite-with-status$',
+      status: 201,
+    },
   ];
 
   deepEqual(actual, expected);
@@ -890,6 +901,7 @@ test('convertRewrites', () => {
     ['/hello/world'],
     ['/array-query-string/10/email'],
     ['/en/hello'],
+    ['/rewrite-with-status'],
   ];
 
   const mustNotMatch = [
@@ -917,6 +929,7 @@ test('convertRewrites', () => {
     ['/hllooo'],
     ['/array-query-string/10'],
     ['/en/hello/world', '/en/hello/'],
+    ['/rewrite-with-status-nope'],
   ];
 
   assertRegexMatches(actual, mustMatch, mustNotMatch);

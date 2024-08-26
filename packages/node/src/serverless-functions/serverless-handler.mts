@@ -1,15 +1,24 @@
 import { addHelpers } from './helpers.js';
 import { createServer } from 'http';
-import { serializeBody } from '../utils.js';
-import exitHook from 'exit-hook';
-import { Headers, fetch } from 'undici';
+import {
+  WAIT_UNTIL_TIMEOUT_MS,
+  waitUntilWarning,
+  serializeBody,
+} from '../utils.js';
+import { type Dispatcher, Headers, request as undiciRequest } from 'undici';
 import { listen } from 'async-listen';
 import { isAbsolute } from 'path';
 import { pathToFileURL } from 'url';
-import zlib from 'zlib';
+import { buildToHeaders } from '@edge-runtime/node-utils';
+import { promisify } from 'util';
 import type { ServerResponse, IncomingMessage } from 'http';
 import type { VercelProxyResponse } from '../types.js';
 import type { VercelRequest, VercelResponse } from './helpers.js';
+import type { Readable } from 'stream';
+import { Awaiter } from '../awaiter.js';
+
+// @ts-expect-error
+const toHeaders = buildToHeaders({ Headers });
 
 type ServerlessServerOptions = {
   shouldAddHelpers: boolean;
@@ -24,7 +33,7 @@ type ServerlessFunctionSignature = (
 const [NODE_MAJOR] = process.versions.node.split('.').map(v => Number(v));
 
 /* https://nextjs.org/docs/app/building-your-application/routing/router-handlers#supported-http-methods */
-const HTTP_METHODS = [
+export const HTTP_METHODS = [
   'GET',
   'HEAD',
   'OPTIONS',
@@ -34,35 +43,19 @@ const HTTP_METHODS = [
   'PATCH',
 ];
 
-function compress(body: Buffer, encoding: string): Buffer {
-  switch (encoding) {
-    case 'br':
-      return zlib.brotliCompressSync(body, {
-        params: {
-          [zlib.constants.BROTLI_PARAM_QUALITY]: 0,
-        },
-      });
-    case 'gzip':
-      return zlib.gzipSync(body, {
-        level: zlib.constants.Z_BEST_SPEED,
-      });
-    case 'deflate':
-      return zlib.deflateSync(body, {
-        level: zlib.constants.Z_BEST_SPEED,
-      });
-    default:
-      throw new Error(`encoding '${encoding}' not supported`);
-  }
-}
-
-async function createServerlessServer(userCode: ServerlessFunctionSignature) {
+async function createServerlessServer(
+  userCode: ServerlessFunctionSignature
+): Promise<{ url: URL; onExit: () => Promise<void> }> {
   const server = createServer(userCode);
-  exitHook(() => server.close());
-  return { url: await listen(server) };
+  return {
+    url: await listen(server, { host: '127.0.0.1', port: 0 }),
+    onExit: promisify(server.close.bind(server)),
+  };
 }
 
 async function compileUserCode(
   entrypointPath: string,
+  awaiter: Awaiter,
   options: ServerlessServerOptions
 ) {
   const id = isAbsolute(entrypointPath)
@@ -83,12 +76,17 @@ async function compileUserCode(
         'Node.js v18 or above is required to use HTTP method exports in your functions.'
       );
     }
-    const { getWebExportsHandler } = await import('./helpers-web.js');
+    const { createWebExportsHandler } = await import('./helpers-web.js');
+    const getWebExportsHandler = createWebExportsHandler(awaiter);
     return getWebExportsHandler(listener, HTTP_METHODS);
   }
 
   return async (req: IncomingMessage, res: ServerResponse) => {
-    if (options.shouldAddHelpers) await addHelpers(req, res);
+    // Only add helpers if the listener isn't an express server
+    if (options.shouldAddHelpers && typeof listener.listen !== 'function') {
+      await addHelpers(req, res);
+    }
+
     return listener(req, res);
   };
 }
@@ -96,53 +94,71 @@ async function compileUserCode(
 export async function createServerlessEventHandler(
   entrypointPath: string,
   options: ServerlessServerOptions
-): Promise<(request: IncomingMessage) => Promise<VercelProxyResponse>> {
-  const userCode = await compileUserCode(entrypointPath, options);
+): Promise<{
+  handler: (request: IncomingMessage) => Promise<VercelProxyResponse>;
+  onExit: () => Promise<void>;
+}> {
+  const awaiter = new Awaiter();
+
+  Object.defineProperty(globalThis, Symbol.for('@vercel/request-context'), {
+    enumerable: false,
+    configurable: true,
+    value: {
+      get: () => ({
+        waitUntil: awaiter.waitUntil.bind(awaiter),
+      }),
+    },
+  });
+
+  const userCode = await compileUserCode(entrypointPath, awaiter, options);
   const server = await createServerlessServer(userCode);
   const isStreaming = options.mode === 'streaming';
 
-  return async function (request: IncomingMessage) {
+  const handler = async function (
+    request: IncomingMessage
+  ): Promise<VercelProxyResponse> {
     const url = new URL(request.url ?? '/', server.url);
-    const response = await fetch(url, {
+    const response = await undiciRequest(url, {
       body: await serializeBody(request),
-      compress: !isStreaming,
-      // @ts-expect-error
       headers: {
         ...request.headers,
         host: request.headers['x-forwarded-host'],
       },
-      method: request.method,
-      redirect: 'manual',
+      method: (request.method || 'GET') as Dispatcher.HttpMethod,
     });
 
-    let body: Buffer | null = null;
-    let headers: Headers = response.headers;
+    let body: Readable | Buffer | null = null;
+    let headers = toHeaders(response.headers) as Headers;
 
     if (isStreaming) {
       body = response.body;
     } else {
-      body = Buffer.from(await response.arrayBuffer());
-
-      const contentEncoding = response.headers.get('content-encoding');
-      if (contentEncoding) {
-        body = compress(body, contentEncoding);
-        const clonedHeaders = [];
-        for (const [key, value] of response.headers.entries()) {
-          if (key !== 'transfer-encoding') {
-            // transfer-encoding is only for streaming response
-            clonedHeaders.push([key, value]);
-          }
-        }
-        clonedHeaders.push(['content-length', String(Buffer.byteLength(body))]);
-        headers = new Headers(clonedHeaders);
-      }
+      body = Buffer.from(await response.body.arrayBuffer());
     }
 
     return {
-      status: response.status,
+      status: response.statusCode,
       headers,
       body,
       encoding: 'utf8',
     };
+  };
+
+  const onExit = () =>
+    new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        console.warn(waitUntilWarning(entrypointPath));
+        resolve();
+      }, WAIT_UNTIL_TIMEOUT_MS);
+
+      Promise.all([awaiter.awaiting(), server.onExit()])
+        .then(() => resolve())
+        .catch(reject)
+        .finally(() => clearTimeout(timeout));
+    });
+
+  return {
+    handler,
+    onExit,
   };
 }

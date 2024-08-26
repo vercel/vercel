@@ -3,6 +3,7 @@ import ms from 'ms';
 import Client from '../../util/client';
 import { isAPIError } from '../../util/errors-ts';
 import { getCommandName } from '../../util/pkg-name';
+import createProject from '../../util/projects/create-project';
 
 export default async function add(
   client: Client,
@@ -32,12 +33,14 @@ export default async function add(
   const start = Date.now();
 
   const [name] = args;
+
   try {
-    await client.fetch('/projects', {
-      method: 'POST',
-      body: { name },
-    });
+    await createProject(client, { name });
   } catch (err: unknown) {
+    if (isAPIError(err) && err.code === 'too_many_projects') {
+      output.prettyError(err);
+      return 1;
+    }
     if (isAPIError(err) && err.status === 409) {
       // project already exists, so we can
       // show a success message

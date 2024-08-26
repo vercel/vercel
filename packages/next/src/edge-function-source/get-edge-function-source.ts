@@ -30,7 +30,7 @@ export async function getNextjsEdgeFunctionSource(
   outputDir: string,
   wasm?: { filePath: string; name: string }[]
 ): Promise<Source> {
-  const chunks = new ConcatSource(raw(`let _ENTRIES = {};`));
+  const chunks = new ConcatSource(raw(`globalThis._ENTRIES = {};`));
   for (const filePath of filePaths) {
     const fullFilePath = join(outputDir, filePath);
     const content = await readFile(fullFilePath, 'utf8');

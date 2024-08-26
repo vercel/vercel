@@ -7,7 +7,7 @@ export const CITY_HEADER_NAME = 'x-vercel-ip-city';
  */
 export const COUNTRY_HEADER_NAME = 'x-vercel-ip-country';
 /**
- * Client IP as calcualted by Vercel Proxy.
+ * Client IP as calculated by Vercel Proxy.
  */
 export const IP_HEADER_NAME = 'x-real-ip';
 /**
@@ -97,6 +97,9 @@ function getFlag(countryCode: string | undefined): string | undefined {
  * @param request The incoming request object which provides the IP
  */
 export function ipAddress(request: Request): string | undefined {
+  console.warn(
+    'This method will be removed in the next major version. Use `import { ipAddress } from @vercel/functions` instead.'
+  );
   return getHeader(request, IP_HEADER_NAME);
 }
 
@@ -126,6 +129,10 @@ function getRegionFromRequestId(requestId?: string): string | undefined {
  * @param request The incoming request object which provides the geolocation data
  */
 export function geolocation(request: Request): Geo {
+  console.warn(
+    'This method will be removed in the next major version. Use `import { geolocation } from @vercel/functions` instead.'
+  );
+
   return {
     city: getHeader(request, CITY_HEADER_NAME),
     country: getHeader(request, COUNTRY_HEADER_NAME),

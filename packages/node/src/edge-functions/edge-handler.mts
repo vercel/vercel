@@ -4,16 +4,23 @@ import {
   NodeCompatBindings,
 } from './edge-node-compat-plugin.mjs';
 import { EdgeRuntime, runServer } from 'edge-runtime';
-import { fetch, Headers } from 'undici';
+import { type Dispatcher, Headers, request as undiciRequest } from 'undici';
 import { isError } from '@vercel/error-utils';
 import { readFileSync } from 'fs';
-import { serializeBody, entrypointToOutputPath, logError } from '../utils.js';
+import {
+  serializeBody,
+  entrypointToOutputPath,
+  logError,
+  waitUntilWarning,
+  WAIT_UNTIL_TIMEOUT_MS,
+} from '../utils.js';
 import esbuild from 'esbuild';
-import exitHook from 'exit-hook';
-import type { HeadersInit } from 'undici';
+import { buildToHeaders } from '@edge-runtime/node-utils';
 import type { VercelProxyResponse } from '../types.js';
 import type { IncomingMessage } from 'http';
 import { fileURLToPath } from 'url';
+import { EdgeRuntimeServer } from 'edge-runtime/dist/server/run-server.js';
+import { Awaiter } from '../awaiter.js';
 
 const NODE_VERSION_MAJOR = process.version.match(/^v(\d+)\.\d+/)?.[1];
 const NODE_VERSION_IDENTIFIER = `node${NODE_VERSION_MAJOR}`;
@@ -22,6 +29,9 @@ if (!NODE_VERSION_MAJOR) {
     `Unable to determine current node version: process.version=${process.version}`
   );
 }
+
+// @ts-expect-error - depends on https://github.com/nodejs/undici/pull/2373
+const toHeaders = buildToHeaders({ Headers });
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const edgeHandlerTemplate = readFileSync(
@@ -38,6 +48,8 @@ async function compileUserCode(
       userCode: string;
       wasmAssets: WasmAssets;
       nodeCompatBindings: NodeCompatBindings;
+      entrypointPath: string;
+      awaiter: Awaiter;
     }
 > {
   const { wasmAssets, plugin: edgeWasmPlugin } = createEdgeWasmPlugin();
@@ -107,9 +119,11 @@ async function compileUserCode(
     `;
 
     return {
+      entrypointPath: entrypointFullPath,
       userCode,
       wasmAssets,
       nodeCompatBindings: nodeCompatPlugin.bindings,
+      awaiter: new Awaiter(),
     };
   } catch (error: unknown) {
     // We can't easily show a meaningful stack trace from esbuild -> edge-runtime.
@@ -124,7 +138,11 @@ async function createEdgeRuntimeServer(params?: {
   userCode: string;
   wasmAssets: WasmAssets;
   nodeCompatBindings: NodeCompatBindings;
-}) {
+  entrypointPath: string;
+  awaiter: Awaiter;
+}): Promise<
+  { server: EdgeRuntimeServer; onExit: () => Promise<void> } | undefined
+> {
   try {
     if (!params) {
       return undefined;
@@ -152,6 +170,12 @@ async function createEdgeRuntimeServer(params?: {
 
           // These are the global bindings for WebAssembly module
           ...wasmBindings,
+
+          FetchEvent: class extends context.FetchEvent {
+            waitUntil = (promise: Promise<unknown>) => {
+              params!.awaiter.waitUntil(promise);
+            };
+          },
         });
 
         return context;
@@ -159,8 +183,28 @@ async function createEdgeRuntimeServer(params?: {
     });
 
     const server = await runServer({ runtime });
-    exitHook(() => server.close());
-    return server;
+
+    // @ts-expect-error
+    runtime.context.globalThis[Symbol.for('@vercel/request-context')] = {
+      get: () => ({
+        waitUntil: params.awaiter.waitUntil.bind(params.awaiter),
+      }),
+    };
+
+    const onExit = () =>
+      new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          console.warn(waitUntilWarning(params.entrypointPath));
+          resolve();
+        }, WAIT_UNTIL_TIMEOUT_MS);
+
+        Promise.all([params.awaiter.awaiting(), server.close()])
+          .then(() => resolve())
+          .catch(reject)
+          .finally(() => clearTimeout(timeout));
+      });
+
+    return { server, onExit };
   } catch (error: any) {
     // We can't easily show a meaningful stack trace from esbuild -> edge-runtime.
     // So, stick with just the message for now.
@@ -175,15 +219,22 @@ export async function createEdgeEventHandler(
   entrypointRelativePath: string,
   isMiddleware: boolean,
   isZeroConfig?: boolean
-): Promise<(request: IncomingMessage) => Promise<VercelProxyResponse>> {
+): Promise<{
+  handler: (request: IncomingMessage) => Promise<VercelProxyResponse>;
+  onExit: (() => Promise<void>) | undefined;
+}> {
   const userCode = await compileUserCode(
     entrypointFullPath,
     entrypointRelativePath,
     isMiddleware
   );
-  const server = await createEdgeRuntimeServer(userCode);
+  const result = await createEdgeRuntimeServer(userCode);
+  const server = result?.server;
+  const onExit = result?.onExit;
 
-  return async function (request: IncomingMessage) {
+  const handler = async function (
+    request: IncomingMessage
+  ): Promise<VercelProxyResponse> {
     if (!server) {
       // this error state is already logged, but we have to wait until here to exit the process
       // this matches the serverless function bridge launcher's behavior when
@@ -191,23 +242,24 @@ export async function createEdgeEventHandler(
       process.exit(1);
     }
 
-    const headers = new Headers(request.headers as HeadersInit);
     const body: Buffer | string | undefined = await serializeBody(request);
-    if (body !== undefined) headers.set('content-length', String(body.length));
+
+    if (body !== undefined && body.length) {
+      request.headers['content-length'] = String(body.length);
+    }
 
     const url = new URL(request.url ?? '/', server.url);
-    const response = await fetch(url, {
+    const response = await undiciRequest(url, {
       body,
-      headers,
-      method: request.method,
-      redirect: 'manual',
+      headers: request.headers,
+      method: (request.method || 'GET') as Dispatcher.HttpMethod,
     });
 
-    const isUserError =
-      response.headers.get('x-vercel-failed') === 'edge-wrapper';
+    const resHeaders = toHeaders(response.headers) as Headers;
+    const isUserError = resHeaders.get('x-vercel-failed') === 'edge-wrapper';
 
-    if (isUserError && response.status >= 500) {
-      const body = await response.text();
+    if (isUserError && response.statusCode >= 500) {
+      const body = await response.body.text();
       // We can't currently get a real stack trace from the Edge Function error,
       // but we can fake a basic one that is still usefult to the user.
       const fakeStackTrace = `    at (${entrypointRelativePath})`;
@@ -226,11 +278,16 @@ export async function createEdgeEventHandler(
     }
 
     return {
-      status: response.status,
-      headers: response.headers,
+      status: response.statusCode,
+      headers: resHeaders,
       body: response.body,
       encoding: 'utf8',
     };
+  };
+
+  return {
+    handler,
+    onExit,
   };
 }
 

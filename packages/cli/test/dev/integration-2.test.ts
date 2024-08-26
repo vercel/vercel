@@ -1,5 +1,5 @@
 import { isIP } from 'net';
-const { exec, fixture, testFixture, testFixtureStdio } = require('./utils.js');
+import { exec, fixture, testFixture, testFixtureStdio } from './utils';
 
 test('[vercel dev] validate redirects', async () => {
   const directory = fixture('invalid-redirects');
@@ -45,10 +45,7 @@ test('[vercel dev] validate env var names', async () => {
         if (
           stderr.includes('Ignoring env var "1" because name is invalid') &&
           stderr.includes(
-            'Ignoring build env var "_a" because name is invalid'
-          ) &&
-          stderr.includes(
-            'Env var names must start with letters, and can only contain alphanumeric characters and underscores'
+            'The name contains invalid characters. Only letters, digits, and underscores are allowed. Furthermore, the name should not start with a digit'
           )
         ) {
           resolve();
@@ -78,6 +75,7 @@ test(
   '[vercel dev] test rewrites serve correct content',
   testFixtureStdio('test-rewrites', async (testPath: any) => {
     await testPath(200, '/hello', 'Hello World');
+    await testPath(425, '/status-rewrite-425', 'Hello World');
   })
 );
 
@@ -121,18 +119,9 @@ test(
     await testPath(200, `/api/date`, new RegExp(`Current date is ${year}`));
     await testPath(200, `/api/date.py`, new RegExp(`Current date is ${year}`));
     await testPath(200, `/api/headers`, (body: any, res: any) => {
-      // @ts-ignore
       const { host } = new URL(res.url);
       expect(body).toBe(host);
     });
-  })
-);
-
-test(
-  '[vercel dev] Use custom runtime from the "functions" property',
-  testFixtureStdio('custom-runtime', async (testPath: any) => {
-    await testPath(200, `/api/user`, /Hello, from Bash!/m);
-    await testPath(200, `/api/user.sh`, /Hello, from Bash!/m);
   })
 );
 
@@ -185,7 +174,7 @@ test(
 test(
   '[vercel dev] Should support `*.go` API serverless functions with `go.work` and lib',
   testFixtureStdio('go-work-with-shared', async (testPath: any) => {
-    await testPath(200, `/api`, 'hello:go1.20.2');
+    await testPath(200, `/api`, 'hello:go1.20.14');
   })
 );
 
@@ -200,7 +189,6 @@ test(
     );
 
     await testPath(200, `/api/dump`, (body: any, res: any, isDev: any) => {
-      // @ts-ignore
       const { host } = new URL(res.url);
       const { env, headers } = JSON.parse(body);
 

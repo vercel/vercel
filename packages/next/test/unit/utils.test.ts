@@ -1,12 +1,16 @@
 import path from 'path';
+import os from 'os';
 import {
   excludeFiles,
   validateEntrypoint,
   normalizePackageJson,
   getImagesConfig,
   getNextConfig,
+  getServerlessPages,
+  normalizePrefetches,
 } from '../../src/utils';
-import { FileRef } from '@vercel/build-utils';
+import { FileFsRef, FileRef } from '@vercel/build-utils';
+import { genDir } from '../utils';
 
 describe('getNextConfig', () => {
   const workPath = path.join(__dirname, 'fixtures', '00-config');
@@ -378,5 +382,54 @@ describe('normalizePackageJson', () => {
         testEnvironment: 'node',
       },
     });
+  });
+});
+
+describe('getServerlessPages', () => {
+  it('should gather all pages correctly', async () => {
+    const dir = await genDir({
+      '.next/server/pages/_app.js': 'test',
+      '.next/server/pages/_error.js': 'test',
+      '.next/server/app/page.js': 'test',
+      '.next/server/app/favicon.ico/route.js': 'test',
+    });
+
+    const { pages, appPaths } = await getServerlessPages({
+      pagesDir: path.resolve(path.join(dir, '.next/server/pages')),
+      entryPath: os.tmpdir(),
+      outputDirectory: os.tmpdir(),
+      appPathRoutesManifest: {
+        '/_not-found': '/_not-found',
+        '/favicon.ico/route': '/favicon.ico',
+        '/page': '/',
+      },
+    });
+
+    expect(Object.keys(pages)).toEqual(['_app.js', '_error.js']);
+    expect(Object.keys(appPaths)).toEqual(['favicon.ico.js', 'index.js']);
+  });
+});
+
+describe('normalizePrefetches', () => {
+  it('should properly prefix prefetches with `__`', async () => {
+    const dummyFile = new FileFsRef({ fsPath: __dirname });
+
+    const appRscPrefetches = {
+      'index.prefetch.rsc': dummyFile,
+      'index/index.prefetch.rsc': dummyFile,
+      'foo.prefetch.rsc': dummyFile,
+      'foo/index.prefetch.rsc': dummyFile,
+      'foo/bar/baz.prefetch.rsc': dummyFile,
+    };
+
+    const updatedPrefetches = normalizePrefetches(appRscPrefetches);
+
+    expect(Object.keys(updatedPrefetches)).toEqual([
+      '__index.prefetch.rsc',
+      'index/index.prefetch.rsc',
+      'foo.prefetch.rsc',
+      'foo/index.prefetch.rsc',
+      'foo/bar/baz.prefetch.rsc',
+    ]);
   });
 });

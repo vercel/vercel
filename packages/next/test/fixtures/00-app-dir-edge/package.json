@@ -1,11 +1,8 @@
 {
-  "engines": {
-    "node": "16.x"
-  },
   "dependencies": {
     "next": "canary",
-    "react": "experimental",
-    "react-dom": "experimental"
+    "react": "19.0.0-rc-3208e73e-20240730",
+    "react-dom": "19.0.0-rc-3208e73e-20240730"
   },
   "ignoreNextjsUpdates": true
 }

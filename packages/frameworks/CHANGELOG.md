@@ -1,5 +1,68 @@
 # @vercel/frameworks
 
+## 3.1.1
+
+### Patch Changes
+
+- Improvements to "fasthtml" framework preset ([#11900](https://github.com/vercel/vercel/pull/11900))
+
+## 3.1.0
+
+### Minor Changes
+
+- Add FastHTML framework preset ([#11889](https://github.com/vercel/vercel/pull/11889))
+
+## 3.0.3
+
+### Patch Changes
+
+- Update SvelteKit v1 devCommand ([#11494](https://github.com/vercel/vercel/pull/11494))
+
+## 3.0.2
+
+### Patch Changes
+
+- Update framework detection to support SolidStart v1 ([#11308](https://github.com/vercel/vercel/pull/11308))
+
+## 3.0.1
+
+### Patch Changes
+
+- Swap jest for vitest in CLI unit tests ([#11302](https://github.com/vercel/vercel/pull/11302))
+
+## 3.0.0
+
+### Major Changes
+
+- Make "remix" framework preset supersede "vite" ([#11031](https://github.com/vercel/vercel/pull/11031))
+
+## 2.0.6
+
+### Patch Changes
+
+- Update nuxt logo ([#10977](https://github.com/vercel/vercel/pull/10977))
+
+## 2.0.5
+
+### Patch Changes
+
+- This new screenshot matches the template. It removes the version number so this screenshot will not go stale. ([#10921](https://github.com/vercel/vercel/pull/10921))
+
+## 2.0.4
+
+### Patch Changes
+
+- Update placeholder for Nuxt to be correct command. ([#10873](https://github.com/vercel/vercel/pull/10873))
+
+## 2.0.3
+
+### Patch Changes
+
+- update Angular output path discovery ([#10678](https://github.com/vercel/vercel/pull/10678))
+
+- Updated dependencies [[`34dd9c091`](https://github.com/vercel/vercel/commit/34dd9c0918585cf6d3b04bddd9158978b0b4192f)]:
+  - @vercel/error-utils@2.0.2
+
 ## 2.0.2
 
 ### Patch Changes

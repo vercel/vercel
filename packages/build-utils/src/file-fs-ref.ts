@@ -11,6 +11,7 @@ interface FileFsRefOptions {
   mode?: number;
   contentType?: string;
   fsPath: string;
+  size?: number;
 }
 
 interface FromStreamOptions {
@@ -24,28 +25,38 @@ class FileFsRef implements FileBase {
   public type: 'FileFsRef';
   public mode: number;
   public fsPath: string;
+  public size?: number;
   public contentType: string | undefined;
 
-  constructor({ mode = 0o100644, contentType, fsPath }: FileFsRefOptions) {
+  constructor({
+    mode = 0o100644,
+    contentType,
+    fsPath,
+    size,
+  }: FileFsRefOptions) {
     assert(typeof mode === 'number');
     assert(typeof fsPath === 'string');
     this.type = 'FileFsRef';
     this.mode = mode;
     this.contentType = contentType;
     this.fsPath = fsPath;
+    this.size = size;
   }
 
   static async fromFsPath({
     mode,
     contentType,
     fsPath,
+    size,
   }: FileFsRefOptions): Promise<FileFsRef> {
     let m = mode;
-    if (!m) {
+    let s = size;
+    if (!m || typeof s === 'undefined') {
       const stat = await fs.lstat(fsPath);
       m = stat.mode;
+      s = stat.size;
     }
-    return new FileFsRef({ mode: m, contentType, fsPath });
+    return new FileFsRef({ mode: m, contentType, fsPath, size: s });
   }
 
   static async fromStream({
@@ -69,7 +80,7 @@ class FileFsRef implements FileBase {
       dest.on('error', reject);
     });
 
-    return new FileFsRef({ mode, contentType, fsPath });
+    return FileFsRef.fromFsPath({ mode, contentType, fsPath });
   }
 
   async toStreamAsync(): Promise<NodeJS.ReadableStream> {

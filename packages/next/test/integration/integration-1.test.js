@@ -6,11 +6,16 @@ const builder = require('../../');
 const {
   createRunBuildLambda,
 } = require('../../../../test/lib/run-build-lambda');
-const { duplicateWithConfig } = require('../utils');
+const { duplicateWithConfig, normalizeReactVersion } = require('../utils');
 const { streamToBuffer } = require('@vercel/build-utils');
 const { createHash } = require('crypto');
 
-const runBuildLambda = createRunBuildLambda(builder);
+const runBuildLambda = async projectPath => {
+  const innerRunBuildLambda = createRunBuildLambda(builder);
+
+  await normalizeReactVersion(projectPath);
+  return innerRunBuildLambda(projectPath);
+};
 
 const SIMPLE_PROJECT = path.resolve(
   __dirname,
@@ -53,9 +58,25 @@ async function hashAllFiles(files) {
 // experimental appDir currently requires Node.js >= 16
 if (parseInt(process.versions.node.split('.')[0], 10) >= 16) {
   it('should build with app-dir correctly', async () => {
+    const origLog = console.log;
+    const origError = console.error;
+    const caughtLogs = [];
+
+    console.log = function (...args) {
+      caughtLogs.push(args.join(' '));
+      origLog.apply(this, args);
+    };
+    console.error = function (...args) {
+      caughtLogs.push(args.join(' '));
+      origError.apply(this, args);
+    };
+
     const { buildResult } = await runBuildLambda(
-      path.join(__dirname, '../fixtures/00-app-dir')
+      path.join(__dirname, '../fixtures/00-app-dir-no-ppr')
     );
+
+    console.log = origLog;
+    console.error = origError;
 
     const lambdas = new Set();
 
@@ -72,35 +93,46 @@ if (parseInt(process.versions.node.split('.')[0], 10) >= 16) {
       )
     ).toBeFalsy();
 
-    expect(lambdas.size).toBe(5);
+    expect(lambdas.size).toBe(6);
 
     // RSC, root-level page.js
     expect(buildResult.output['index']).toBeDefined();
-    expect(buildResult.output['index'].type).toBe('Lambda');
-    expect(buildResult.output['index'].memory).toBe(512);
-    expect(buildResult.output['index'].maxDuration).toBe(5);
+    expect(buildResult.output['index'].type).toBe('Prerender');
+    expect(buildResult.output['index'].lambda.memory).toBe(512);
+    expect(buildResult.output['index'].lambda.maxDuration).toBe(5);
 
     expect(buildResult.output['dashboard']).toBeDefined();
     expect(buildResult.output['dashboard/another']).toBeDefined();
     expect(buildResult.output['dashboard/changelog']).toBeDefined();
     expect(buildResult.output['dashboard/deployments/[id]']).toBeDefined();
 
-    expect(buildResult.output['api/hello']).toBeDefined();
-    expect(buildResult.output['api/hello'].type).toBe('Lambda');
-    expect(buildResult.output['api/hello'].memory).toBe(512);
-    expect(buildResult.output['api/hello'].maxDuration).toBe(5);
+    // ensure that function configs are properly applied across pages & app dir outputs
+    [
+      // pages dir route handler
+      'api/hello',
+      // app dir route handler
+      'api/hello-again',
+      // app dir route handler inside of a group
+      'api/hello-again/with-group',
+      // server component inside of a group
+      'dynamic-group/[slug]',
+      'dynamic-group/[slug].rsc',
+      // server component
+      'dynamic/[category]/[id]',
+      'dynamic/[category]/[id].rsc',
+    ].forEach(fnKey => {
+      expect(buildResult.output[fnKey]).toBeDefined();
+      expect(buildResult.output[fnKey].type).toBe('Lambda');
+      expect(buildResult.output[fnKey].memory).toBe(512);
+      expect(buildResult.output[fnKey].maxDuration).toBe(5);
+    });
 
-    expect(buildResult.output['api/hello-again']).toBeDefined();
-    expect(buildResult.output['api/hello-again'].type).toBe('Lambda');
-    expect(buildResult.output['api/hello-again'].memory).toBe(512);
-    expect(buildResult.output['api/hello-again'].maxDuration).toBe(5);
     expect(
       buildResult.output['api/hello-again'].supportsResponseStreaming
     ).toBe(true);
 
     expect(buildResult.output['edge-route-handler']).toBeDefined();
     expect(buildResult.output['edge-route-handler'].type).toBe('EdgeFunction');
-    expect(buildResult.output['edge-route-handler.rsc']).not.toBeDefined();
 
     // prefixed static generation output with `/app` under dist server files
     expect(buildResult.output['dashboard'].type).toBe('Prerender');
@@ -111,6 +143,12 @@ if (parseInt(process.versions.node.split('.')[0], 10) >= 16) {
     expect(buildResult.output['dashboard.rsc'].fallback.fsPath).toMatch(
       /server\/app\/dashboard\.rsc$/
     );
+
+    expect(
+      caughtLogs.some(log =>
+        log.includes('WARNING: Unable to find source file for page')
+      )
+    ).toBeFalsy();
     // TODO: re-enable after index/index handling is corrected
     // expect(buildResult.output['dashboard/index/index'].type).toBe('Prerender');
     // expect(buildResult.output['dashboard/index/index'].fallback.fsPath).toMatch(
@@ -173,21 +211,6 @@ if (parseInt(process.versions.node.split('.')[0], 10) >= 16) {
     expect(buildResult.output['edge']).toBeDefined();
     expect(buildResult.output['index']).toBeDefined();
     // expect(buildResult.output['index/index']).toBeDefined();
-  });
-
-  it('should show error from basePath with legacy monorepo build', async () => {
-    let error;
-
-    try {
-      await runBuildLambda(path.join(__dirname, 'legacy-monorepo-basepath'));
-    } catch (err) {
-      error = err;
-    }
-    console.error(error);
-
-    expect(error.message).toBe(
-      'basePath can not be used with `builds` in vercel.json, use Project Settings to configure your monorepo instead'
-    );
   });
 }
 
@@ -355,32 +378,6 @@ it('should build custom error lambda correctly', async () => {
   expect(notFoundRoute).toBeTruthy();
 });
 
-it('should build initial beforeFiles rewrites', async () => {
-  const {
-    buildResult: { output, routes },
-  } = await runBuildLambda(
-    path.join(__dirname, 'initial-before-files-rewrite')
-  );
-
-  expect(output['index']).toBeDefined();
-  expect(output['another']).toBeDefined();
-  expect(output['dynamic/[slug]']).toBeDefined();
-  expect(output['fallback/[slug]']).toBeDefined();
-  expect(output['api']).toBeDefined();
-  expect(output['api/another']).toBeDefined();
-  expect(output['api/blog/[slug]']).toBeDefined();
-  expect(output['_app']).not.toBeDefined();
-  expect(output['_error']).not.toBeDefined();
-  expect(output['_document']).not.toBeDefined();
-
-  const rewriteRoute = routes.find(route => {
-    return route.dest === '/somewhere';
-  });
-
-  expect(rewriteRoute.check).toBe(true);
-  expect(rewriteRoute.continue).toBeUndefined();
-});
-
 it('Should build the standard example', async () => {
   const {
     buildResult: { output },
@@ -398,27 +395,6 @@ it('Should build the standard example', async () => {
   expect(hasUnderScoreAppStaticFile).toBeTruthy();
   expect(hasUnderScoreErrorStaticFile).toBeTruthy();
   expect(serverlessError).toBeTruthy();
-});
-
-it('Should build the 404-getstaticprops example', async () => {
-  const { buildResult } = await runBuildLambda(
-    path.join(__dirname, '404-getstaticprops')
-  );
-  const { output } = buildResult;
-
-  expect(output['404']).toBeDefined();
-  expect(output['404'].type).toBe('FileFsRef');
-  expect(output['404'].allowQuery).toBe(undefined);
-  expect(output['_next/data/testing-build-id/404.json']).toBeDefined();
-  expect(output['_next/data/testing-build-id/404.json'].type).toBe('FileFsRef');
-  expect(output['_next/data/testing-build-id/404.json'].allowQuery).toBe(
-    undefined
-  );
-  const filePaths = Object.keys(output);
-  const hasUnderScoreErrorStaticFile = filePaths.some(filePath =>
-    filePath.match(/static.*\/pages\/_error-.*\.js$/)
-  );
-  expect(hasUnderScoreErrorStaticFile).toBeTruthy();
 });
 
 it('Should build the 404-getstaticprops-i18n example', async () => {
@@ -502,69 +478,6 @@ it('Should not deploy preview lambdas for static site', async () => {
   expect(output['dynamic'].lambda).toBeDefined();
 });
 
-it('Should opt-out of shared lambdas when routes are detected', async () => {
-  const {
-    buildResult: { output },
-  } = await runBuildLambda(
-    path.join(__dirname, '../fixtures/26-mono-repo-404-lambda')
-  );
-  expect(output['packages/webapp/404']).toBeDefined();
-  expect(output['packages/webapp/index']).toBeDefined();
-  expect(output['packages/webapp/__NEXT_PAGE_LAMBDA_0']).not.toBeDefined();
-  const filePaths = Object.keys(output);
-  const hasUnderScoreAppStaticFile = filePaths.some(filePath =>
-    filePath.match(/static.*\/pages\/_app\.js$/)
-  );
-  const hasUnderScoreErrorStaticFile = filePaths.some(filePath =>
-    filePath.match(/static.*\/pages\/_error\.js$/)
-  );
-  expect(hasUnderScoreAppStaticFile).toBeTruthy();
-  expect(hasUnderScoreErrorStaticFile).toBeTruthy();
-});
-
-it('Should build the monorepo example', async () => {
-  const {
-    buildResult: { output },
-  } = await runBuildLambda(path.join(__dirname, 'monorepo'));
-
-  expect(output['www/index']).not.toBeDefined();
-  expect(output['www/__NEXT_PAGE_LAMBDA_0']).toBeDefined();
-  expect(output['www/static/test.txt']).toBeDefined();
-  expect(output['www/data.txt']).toBeDefined();
-  const filePaths = Object.keys(output);
-  const hasUnderScoreAppStaticFile = filePaths.some(filePath =>
-    filePath.match(/static.*\/pages\/_app\.js$/)
-  );
-  const hasUnderScoreErrorStaticFile = filePaths.some(filePath =>
-    filePath.match(/static.*\/pages\/_error\.js$/)
-  );
-  expect(hasUnderScoreAppStaticFile).toBeTruthy();
-  expect(hasUnderScoreErrorStaticFile).toBeTruthy();
-});
-
-it('Should build the legacy standard example', async () => {
-  const {
-    buildResult: { output },
-  } = await runBuildLambda(path.join(__dirname, 'legacy-standard'));
-  expect(output.index).toBeDefined();
-  const filePaths = Object.keys(output);
-  const hasUnderScoreAppStaticFile = filePaths.some(filePath =>
-    filePath.match(/static.*\/pages\/_app\.js$/)
-  );
-  const hasUnderScoreErrorStaticFile = filePaths.some(filePath =>
-    filePath.match(/static.*\/pages\/_error\.js$/)
-  );
-  expect(hasUnderScoreAppStaticFile).toBeTruthy();
-  expect(hasUnderScoreErrorStaticFile).toBeTruthy();
-});
-
-it('Should build the legacy custom dependency test', async () => {
-  const {
-    buildResult: { output },
-  } = await runBuildLambda(path.join(__dirname, 'legacy-custom-dependency'));
-  expect(output.index).toBeDefined();
-});
-
 it('Should throw when package.json or next.config.js is not the "src"', async () => {
   try {
     await runBuildLambda(
@@ -574,6 +487,10 @@ it('Should throw when package.json or next.config.js is not the "src"', async ()
   } catch (err) {
     expect(err.message).toMatch(/package\.json/);
   }
+});
+
+it('Should build the serverless-config-async example', async () => {
+  await runBuildLambda(path.join(__dirname, 'serverless-config-async'));
 });
 
 describe('Middleware simple project', () => {

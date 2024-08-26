@@ -14,18 +14,11 @@ import stamp from '../../util/output/stamp';
 import startCertOrder from '../../util/certs/start-cert-order';
 import handleCertError from '../../util/certs/handle-cert-error';
 import { getCommandName } from '../../util/pkg-name';
-
-type Options = {
-  '--ca': string;
-  '--challenge-only': boolean;
-  '--crt': string;
-  '--key': string;
-  '--overwrite': boolean;
-};
+import { CertsCommandFlags } from './command';
 
 export default async function issue(
   client: Client,
-  opts: Partial<Options>,
+  opts: CertsCommandFlags,
   args: string[]
 ) {
   let cert;

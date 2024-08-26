@@ -111,9 +111,9 @@ export default async function inspect(
           rows: projects.map(project => {
             const name = project.name;
 
-            const domains = (project.alias || [])
-              .map(target => target.domain)
-              .filter(alias => alias.endsWith(domainName));
+            const domains = (project.targets?.production?.alias || []).filter(
+              alias => alias.endsWith(domainName)
+            );
 
             const cols = domains.length ? domains.join(', ') : '-';
 

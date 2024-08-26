@@ -1,0 +1,46 @@
+{
+  "name": "@ramble/remix",
+  "version": "1.0.0",
+  "description": "",
+  "private": true,
+  "license": "",
+  "scripts": {
+    "build": "remix build",
+    "dev": "pnpm with-env remix dev --manual",
+    "routes": "remix routes",
+    "lint:fix": "eslint --config .eslintrc.commit.js --fix --cache --ext .ts,.tsx app",
+    "lint": "eslint --config .eslintrc.js --ext .ts,.tsx app",
+    "prettier": "prettier --check app",
+    "prettier:fix": "prettier --write app",
+    "format": "pnpm run lint:fix && pnpm run prettier:fix",
+    "typecheck": "tsc --noEmit",
+    "with-env": "dotenv -e ../../.env --"
+  },
+  "dependencies": {
+    "@remix-run/css-bundle": "2.6.0",
+    "@remix-run/node": "2.6.0",
+    "@remix-run/react": "2.6.0",
+    "@remix-run/serve": "2.6.0",
+    "@vercel/remix": "2.5.1",
+    "isbot": "^4",
+    "react": "18.2.0",
+    "react-dom": "18.2.0"
+  },
+  "devDependencies": {
+    "@remix-run/dev": "2.6.0",
+    "@remix-run/eslint-config": "2.6.0",
+    "@types/react": "18.2.55",
+    "@types/react-dom": "18.2.19",
+    "@typescript-eslint/eslint-plugin": "6.21.0",
+    "@typescript-eslint/parser": "6.21.0",
+    "dotenv-cli": "7.3.0",
+    "eslint": "8.56.0",
+    "eslint-config-prettier": "9.1.0",
+    "eslint-plugin-import": "2.29.1",
+    "eslint-plugin-simple-import-sort": "12.0.0",
+    "prettier": "3.2.5",
+    "remix-flat-routes": "0.6.0",
+    "typescript": "5.3.3"
+  },
+  "sideEffects": false
+}

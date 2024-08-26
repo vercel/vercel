@@ -8,7 +8,7 @@ import { URLSearchParams, parse } from 'url';
 import box from '../../util/output/box';
 import formatDate from '../../util/format-date';
 import link from '../../util/output/link';
-import getArgs from '../../util/get-args';
+import { parseArguments } from '../../util/get-args';
 import Client from '../../util/client';
 import { Deployment } from '@vercel-internals/types';
 import { normalizeURL } from '../../util/bisect/normalize-url';
@@ -16,6 +16,8 @@ import getScope from '../../util/get-scope';
 import getDeployment from '../../util/get-deployment';
 import { help } from '../help';
 import { bisectCommand } from './command';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import handleError from '../../util/handle-error';
 
 interface Deployments {
   deployments: Deployment[];
@@ -25,33 +27,37 @@ export default async function bisect(client: Client): Promise<number> {
   const scope = await getScope(client);
   const { contextName } = scope;
 
-  const argv = getArgs(client.argv.slice(2), {
-    '--bad': String,
-    '-b': '--bad',
-    '--good': String,
-    '-g': '--good',
-    '--open': Boolean,
-    '-o': '--open',
-    '--path': String,
-    '-p': '--path',
-    '--run': String,
-    '-r': '--run',
-  });
+  let parsedArgs = null;
 
-  if (argv['--help']) {
+  const flagsSpecification = getFlagsSpecification(bisectCommand.options);
+
+  try {
+    parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
+  } catch (error) {
+    handleError(error);
+    return 1;
+  }
+
+  if (parsedArgs.flags['--help']) {
     output.print(help(bisectCommand, { columns: client.stderr.columns }));
     return 2;
   }
 
   let bad =
-    argv['--bad'] ||
-    (await prompt(client, `Specify a URL where the bug occurs:`));
+    parsedArgs.flags['--bad'] ||
+    (await client.input.text({
+      message: `Specify a URL where the bug occurs:`,
+      validate: val => (val ? true : 'A URL must be provided'),
+    }));
   let good =
-    argv['--good'] ||
-    (await prompt(client, `Specify a URL where the bug does not occur:`));
-  let subpath = argv['--path'] || '';
-  let run = argv['--run'] || '';
-  const openEnabled = argv['--open'] || false;
+    parsedArgs.flags['--good'] ||
+    (await client.input.text({
+      message: `Specify a URL where the bug does not occur:`,
+      validate: val => (val ? true : 'A URL must be provided'),
+    }));
+  let subpath = parsedArgs.flags['--path'] || '';
+  let run = parsedArgs.flags['--run'] || '';
+  const openEnabled = parsedArgs.flags['--open'] || false;
 
   if (run) {
     run = resolve(run);
@@ -97,10 +103,10 @@ export default async function bisect(client: Client): Promise<number> {
   }
 
   if (!subpath) {
-    subpath = await prompt(
-      client,
-      `Specify the URL subpath where the bug occurs:`
-    );
+    subpath = await client.input.text({
+      message: `Specify the URL subpath where the bug occurs:`,
+      validate: val => (val ? true : 'A subpath must be provided'),
+    });
   }
 
   output.spinner('Retrieving deployments…');
@@ -188,15 +194,18 @@ export default async function bisect(client: Client): Promise<number> {
     let newDeployments = chunk.deployments;
 
     // If we have the "good" deployment in this chunk, then we're done
+    let hasGood = false;
     for (let i = 0; i < newDeployments.length; i++) {
       if (newDeployments[i].url === good) {
         // grab all deployments up until the good one
         newDeployments = newDeployments.slice(0, i);
+        hasGood = true;
         break;
       }
     }
 
     deployments = deployments.concat(newDeployments);
+    if (hasGood) break;
   }
 
   if (!deployments.length) {
@@ -275,9 +284,7 @@ export default async function bisect(client: Client): Promise<number> {
       if (openEnabled) {
         await open(testUrl);
       }
-      const answer = await client.prompt({
-        type: 'expand',
-        name: 'action',
+      action = await client.input.expand({
         message: 'Select an action:',
         choices: [
           { key: 'g', name: 'Good', value: 'good' },
@@ -285,7 +292,6 @@ export default async function bisect(client: Client): Promise<number> {
           { key: 's', name: 'Skip', value: 'skip' },
         ],
       });
-      action = answer.action;
     }
 
     if (action === 'good') {
@@ -334,20 +340,4 @@ function getCommit(deployment: Deployment) {
     deployment.meta?.gitlabCommitMessage ||
     deployment.meta?.bitbucketCommitMessage;
   return { sha, message };
-}
-
-async function prompt(client: Client, message: string): Promise<string> {
-  // eslint-disable-next-line no-constant-condition
-  while (true) {
-    const { val } = await client.prompt({
-      type: 'input',
-      name: 'val',
-      message,
-    });
-    if (val) {
-      return val;
-    } else {
-      client.output.error('A value must be specified');
-    }
-  }
 }

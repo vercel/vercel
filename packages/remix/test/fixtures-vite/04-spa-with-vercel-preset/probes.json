@@ -1,0 +1,20 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "mustContain": "<p>Loading...</p>"
+    },
+    {
+      "path": "/does-not-exist",
+      "status": 200,
+      "mustContain": "<p>Loading...</p>"
+    },
+    {
+      "path": "/remix-assets/manifest-4cbdbc34.js",
+      "status": 200,
+      "responseHeaders": {
+        "cache-control": "public, max-age=31536000, immutable"
+      }
+    }
+  ]
+}

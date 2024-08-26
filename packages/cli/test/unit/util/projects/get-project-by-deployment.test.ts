@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest';
 import { client } from '../../../mocks/client';
 import getProjectByDeployment from '../../../../src/util/projects/get-project-by-deployment';
 import { useTeams } from '../../../mocks/team';

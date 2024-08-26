@@ -31,6 +31,7 @@ const GatsbyRedirectSchema = Type.Object({
   fromPath: Type.String(),
   toPath: Type.String(),
   isPermanent: Type.Optional(Type.Boolean()),
+  statusCode: Type.Optional(Type.Number()),
 });
 export type GatsbyRedirect = Static<typeof GatsbyRedirectSchema>;
 

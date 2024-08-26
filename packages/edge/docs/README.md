@@ -70,7 +70,7 @@ Unicode characters for emoji flags start at this number, and run up to 127469.
 
 • `Const` **IP_HEADER_NAME**: `"x-real-ip"`
 
-Client IP as calcualted by Vercel Proxy.
+Client IP as calculated by Vercel Proxy.
 
 #### Defined in
 
@@ -154,7 +154,7 @@ Returns the location information for the incoming request.
 
 #### Defined in
 
-[packages/edge/src/edge-headers.ts:128](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L128)
+[packages/edge/src/edge-headers.ts:131](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L131)
 
 ---
 

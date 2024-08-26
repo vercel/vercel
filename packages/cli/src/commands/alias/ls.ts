@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import ms from 'ms';
-import table from 'text-table';
+import table from '../../util/output/table';
 import Client from '../../util/client';
 import getAliases from '../../util/alias/get-aliases';
 import getScope from '../../util/get-scope';
@@ -9,7 +9,6 @@ import {
   getPaginationOpts,
 } from '../../util/get-pagination-opts';
 import stamp from '../../util/output/stamp';
-import strlen from '../../util/strlen';
 import getCommandFlags from '../../util/get-command-flags';
 import { getCommandName } from '../../util/pkg-name';
 import type { Alias } from '@vercel-internals/types';
@@ -78,10 +77,6 @@ function printAliasTable(aliases: Alias[]) {
         ms(Date.now() - a.createdAt),
       ]),
     ],
-    {
-      align: ['l', 'l', 'r'],
-      hsep: ' '.repeat(4),
-      stringLength: strlen,
-    }
+    { align: ['l', 'l', 'r'], hsep: 4 }
   ).replace(/^/gm, '  ')}\n\n`;
 }

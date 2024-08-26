@@ -1,3 +1,4 @@
+import { describe, it, expect } from 'vitest';
 import createLineIterator from 'line-async-iterator';
 import projects from '../../../src/commands/project';
 import { useUser } from '../../mocks/user';
@@ -5,10 +6,7 @@ import { useTeams } from '../../mocks/team';
 import { defaultProject, useProject } from '../../mocks/project';
 import { client } from '../../mocks/client';
 import type { Project } from '@vercel-internals/types';
-import {
-  pluckIdentifiersFromDeploymentList,
-  parseSpacedTableRow,
-} from '../../helpers/parse-table';
+import { parseSpacedTableRow } from '../../helpers/parse-table';
 
 describe('project', () => {
   describe('list', () => {
@@ -28,8 +26,7 @@ describe('project', () => {
       expect(line.value).toEqual(`Fetching projects in ${user.username}`);
 
       line = await lines.next();
-      const { org } = pluckIdentifiersFromDeploymentList(line.value!);
-      expect(org).toEqual(user.username);
+      expect(line.value).toContain(user.username);
 
       // empty line
       line = await lines.next();
@@ -52,9 +49,14 @@ describe('project', () => {
     it('should list projects when there is no production deployment', async () => {
       const user = useUser();
       useTeams('team_dummy');
-      defaultProject.alias = [];
       const project = useProject({
         ...defaultProject,
+        targets: {
+          production: {
+            ...defaultProject!.targets!.production,
+            alias: [],
+          },
+        },
       });
 
       client.setArgv('project', 'ls');
@@ -66,8 +68,7 @@ describe('project', () => {
       expect(line.value).toEqual(`Fetching projects in ${user.username}`);
 
       line = await lines.next();
-      const { org } = pluckIdentifiersFromDeploymentList(line.value!);
-      expect(org).toEqual(user.username);
+      expect(line.value).toContain(user.username);
 
       // empty line
       line = await lines.next();

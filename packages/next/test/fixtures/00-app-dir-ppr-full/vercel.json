@@ -1,0 +1,25 @@
+{
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next",
+      "config": {
+        "functions": {
+          "app/**/*": {
+            "maxDuration": 5,
+            "memory": 512
+          }
+        }
+      }
+    }
+  ],
+  "probes": [
+    {
+      "path": "/",
+      "status": 200,
+      "responseHeaders": {
+        "Content-Type": "text/html; charset=utf-8"
+      }
+    }
+  ]
+}

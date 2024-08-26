@@ -1,0 +1,121 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "Home Page"
+    },
+    {
+      "path": "/about",
+      "status": 200,
+      "mustContain": "About Page"
+    },
+    {
+      "path": "/concerts/trending",
+      "status": 200,
+      "mustContain": "ConcertsTrending Page"
+    },
+    {
+      "path": "/concerts/salt-lake-city",
+      "status": 200,
+      "mustContain": "ConcertsSaltLakeCity Page"
+    },
+    {
+      "path": "/movies/avatar",
+      "status": 200,
+      "mustContain": "MoviesCommonMoviename Page"
+    },
+    {
+      "path": "/movies/trending",
+      "status": 200,
+      "mustContain": "MoviesTrending Page"
+    },
+    {
+      "path": "/actors",
+      "status": 200,
+      "mustContain": "Actorsindex Page"
+    },
+    {
+      "path": "/actors/morgan-freeman",
+      "status": 200,
+      "mustContain": "ActorsCommonActorname Page"
+    },
+    {
+      "path": "/actors/trending",
+      "status": 200,
+      "mustContain": "ActorsTrending Page"
+    },
+    {
+      "path": "/actors/favourites",
+      "status": 200,
+      "mustContain": "ActorsFavourites Page"
+    },
+    {
+      "path": "/login",
+      "status": 200,
+      "mustContain": "authLogin Page"
+    },
+    {
+      "path": "/register",
+      "status": 200,
+      "mustContain": "authRegister Page"
+    },
+    {
+      "path": "/products/en/american-flag-speedo",
+      "status": 200,
+      "mustContain": "ProductPage"
+    },
+    {
+      "path": "/products/fr/categories",
+      "status": 200,
+      "mustContain": "Product Categories Page"
+    },
+    {
+      "path": "/files",
+      "status": 200,
+      "mustContain": "Files Generic Page"
+    },
+    {
+      "path": "/files/12345",
+      "status": 200,
+      "mustContain": "Files Generic Page"
+    },
+    {
+      "path": "/sitemap.xml",
+      "status": 200,
+      "mustContain": "routes/sitemap[.]xml.tsx"
+    },
+    {
+      "path": "/sitemap2.xml",
+      "status": 200,
+      "mustContain": "routes/[sitemap2.xml].tsx"
+    },
+    {
+      "path": "/weird-url/_index",
+      "status": 200,
+      "mustContain": "routes/weird-url.[_index].tsx"
+    },
+    {
+      "path": "/dolla-bills-$",
+      "status": 200,
+      "mustContain": "routes/dolla-bills-[$].tsx"
+    },
+    {
+      "path": "/[so-weird]/",
+      "status": 200,
+      "mustContain": "routes/[[so-weird]].tsx"
+    },
+    {
+      "path": "/does-not-exist",
+      "status": 404,
+      "mustContain": "Not Found"
+    },
+    {
+      "path": "/assets/manifest-4eb87c14.js",
+      "status": 200,
+      "responseHeaders": {
+        "cache-control": "public, max-age=31536000, immutable"
+      }
+    }
+  ]
+}

@@ -15,6 +15,8 @@ import {
   NodejsLambda,
   EdgeFunction,
   Images,
+  File,
+  FlagDefinitions,
 } from '@vercel/build-utils';
 import { NodeFileTraceReasons } from '@vercel/nft';
 import type {
@@ -29,7 +31,6 @@ import crc32 from 'buffer-crc32';
 import fs, { lstat, stat } from 'fs-extra';
 import path from 'path';
 import semver from 'semver';
-import zlib from 'zlib';
 import url from 'url';
 import { createRequire } from 'module';
 import escapeStringRegexp from 'escape-string-regexp';
@@ -43,9 +44,8 @@ import { prettyBytes } from './pretty-bytes';
 import {
   MIB,
   KIB,
-  MAX_UNCOMPRESSED_LAMBDA_SIZE,
-  LAMBDA_RESERVED_COMPRESSED_SIZE,
   LAMBDA_RESERVED_UNCOMPRESSED_SIZE,
+  DEFAULT_MAX_UNCOMPRESSED_LAMBDA_SIZE,
 } from './constants';
 
 type stringMap = { [key: string]: string };
@@ -54,6 +54,12 @@ export const require_ = createRequire(__filename);
 
 export const RSC_CONTENT_TYPE = 'x-component';
 export const RSC_PREFETCH_SUFFIX = '.prefetch.rsc';
+
+export const MAX_UNCOMPRESSED_LAMBDA_SIZE = !isNaN(
+  Number(process.env.MAX_UNCOMPRESSED_LAMBDA_SIZE)
+)
+  ? Number(process.env.MAX_UNCOMPRESSED_LAMBDA_SIZE)
+  : DEFAULT_MAX_UNCOMPRESSED_LAMBDA_SIZE;
 
 // Identify /[param]/ in route string
 // eslint-disable-next-line no-useless-escape
@@ -186,8 +192,12 @@ function normalizePage(page: string): string {
   if (!page.startsWith('/')) {
     page = `/${page}`;
   }
-  // remove '/index' from the end
-  page = page.replace(/\/index$/, '/');
+
+  // Replace the `/index` with `/`
+  if (page === '/index') {
+    page = '/';
+  }
+
   return page;
 }
 
@@ -244,6 +254,7 @@ type RoutesManifestOld = {
     header: string;
     varyHeader: string;
     prefetchHeader?: string;
+    didPostponeHeader?: string;
     contentTypeHeader: string;
   };
   skipMiddlewareUrlNormalize?: boolean;
@@ -302,18 +313,31 @@ export async function getRoutesManifest(
   return routesManifest;
 }
 
-export async function getDynamicRoutes(
-  entryPath: string,
-  entryDirectory: string,
-  dynamicPages: string[],
-  isDev?: boolean,
-  routesManifest?: RoutesManifest,
-  omittedRoutes?: Set<string>,
-  canUsePreviewMode?: boolean,
-  bypassToken?: string,
-  isServerMode?: boolean,
-  dynamicMiddlewareRouteMap?: Map<string, RouteWithSrc>
-): Promise<RouteWithSrc[]> {
+export async function getDynamicRoutes({
+  entryPath,
+  entryDirectory,
+  dynamicPages,
+  isDev,
+  routesManifest,
+  omittedRoutes,
+  canUsePreviewMode,
+  bypassToken,
+  isServerMode,
+  dynamicMiddlewareRouteMap,
+  isAppPPREnabled,
+}: {
+  entryPath: string;
+  entryDirectory: string;
+  dynamicPages: string[];
+  isDev?: boolean;
+  routesManifest?: RoutesManifest;
+  omittedRoutes?: ReadonlySet<string>;
+  canUsePreviewMode?: boolean;
+  bypassToken?: string;
+  isServerMode?: boolean;
+  dynamicMiddlewareRouteMap?: ReadonlyMap<string, RouteWithSrc>;
+  isAppPPREnabled: boolean;
+}): Promise<RouteWithSrc[]> {
   if (routesManifest) {
     switch (routesManifest.version) {
       case 1:
@@ -385,6 +409,24 @@ export async function getDynamicRoutes(
               },
             ];
           }
+
+          if (isAppPPREnabled) {
+            let dest = route.dest?.replace(/($|\?)/, '.prefetch.rsc$1');
+
+            if (page === '/' || page === '/index') {
+              dest = dest?.replace(/([^/]+\.prefetch\.rsc(\?.*|$))/, '__$1');
+            }
+
+            routes.push({
+              ...route,
+              src: route.src.replace(
+                new RegExp(escapeStringRegexp('(?:/)?$')),
+                '(?:\\.prefetch\\.rsc)(?:/)?$'
+              ),
+              dest,
+            });
+          }
+
           routes.push({
             ...route,
             src: route.src.replace(
@@ -395,8 +437,8 @@ export async function getDynamicRoutes(
           });
 
           routes.push(route);
-          continue;
         }
+
         return routes;
       }
       default: {
@@ -421,7 +463,9 @@ export async function getDynamicRoutes(
   let getRouteRegex: ((pageName: string) => { re: RegExp }) | undefined =
     undefined;
 
-  let getSortedRoutes: ((normalizedPages: string[]) => string[]) | undefined;
+  let getSortedRoutes:
+    | ((normalizedPages: ReadonlyArray<string>) => string[])
+    | undefined;
 
   try {
     const resolved = require_.resolve('next-server/dist/lib/router/utils', {
@@ -624,10 +668,10 @@ export function filterStaticPages(
 }
 
 export function getFilesMapFromReasons(
-  fileList: Set<string>,
+  fileList: ReadonlySet<string>,
   reasons: NodeFileTraceReasons,
   ignoreFn?: (file: string, parent?: string) => boolean
-) {
+): ReadonlyMap<string, Set<string>> {
   // this uses the reasons tree to collect files specific to a
   // certain parent allowing us to not have to trace each parent
   // separately
@@ -717,7 +761,6 @@ export type PseudoFile = {
   file: FileFsRef;
   isSymlink: false;
   crc32: number;
-  compBuffer: Buffer;
   uncompressedSize: number;
 };
 
@@ -725,19 +768,6 @@ export type PseudoSymbolicLink = {
   file: FileFsRef;
   isSymlink: true;
   symlinkTarget: string;
-};
-
-const compressBuffer = (buf: Buffer): Promise<Buffer> => {
-  return new Promise((resolve, reject) => {
-    zlib.deflateRaw(
-      buf,
-      { level: zlib.constants.Z_BEST_COMPRESSION },
-      (err, compBuf) => {
-        if (err) return reject(err);
-        resolve(compBuf);
-      }
-    );
-  });
 };
 
 export type PseudoLayerResult = {
@@ -763,11 +793,9 @@ export async function createPseudoLayer(files: {
       };
     } else {
       const origBuffer = await streamToBuffer(file.toStream());
-      const compBuffer = await compressBuffer(origBuffer);
-      pseudoLayerBytes += compBuffer.byteLength;
+      pseudoLayerBytes += origBuffer.byteLength;
       pseudoLayer[fileName] = {
         file,
-        compBuffer,
         isSymlink: false,
         crc32: crc32.unsigned(origBuffer),
         uncompressedSize: origBuffer.byteLength,
@@ -778,10 +806,12 @@ export async function createPseudoLayer(files: {
   return { pseudoLayer, pseudoLayerBytes };
 }
 
-interface CreateLambdaFromPseudoLayersOptions extends LambdaOptionsWithFiles {
+export interface CreateLambdaFromPseudoLayersOptions
+  extends LambdaOptionsWithFiles {
   layers: PseudoLayer[];
   isStreaming?: boolean;
   nextVersion?: string;
+  experimentalAllowBundling?: boolean;
 }
 
 // measured with 1, 2, 5, 10, and `os.cpus().length || 5`
@@ -793,6 +823,7 @@ export async function createLambdaFromPseudoLayers({
   layers,
   isStreaming,
   nextVersion,
+  experimentalAllowBundling,
   ...lambdaOptions
 }: CreateLambdaFromPseudoLayersOptions) {
   await createLambdaSema.acquire();
@@ -840,6 +871,7 @@ export async function createLambdaFromPseudoLayers({
       slug: 'nextjs',
       version: nextVersion,
     },
+    experimentalAllowBundling,
   });
 }
 
@@ -858,10 +890,12 @@ export type NextPrerenderedRoutes = {
     [route: string]: {
       initialRevalidate: number | false;
       dataRoute: string | null;
+      prefetchDataRoute?: string | null;
       srcRoute: string | null;
       initialStatus?: number;
       initialHeaders?: Record<string, string>;
       experimentalBypassFor?: HasField;
+      experimentalPPR?: boolean;
     };
   };
 
@@ -870,7 +904,10 @@ export type NextPrerenderedRoutes = {
       routeRegex: string;
       dataRoute: string | null;
       dataRouteRegex: string | null;
+      prefetchDataRoute?: string | null;
+      prefetchDataRouteRegex?: string | null;
       experimentalBypassFor?: HasField;
+      experimentalPPR?: boolean;
     };
   };
 
@@ -880,16 +917,26 @@ export type NextPrerenderedRoutes = {
       routeRegex: string;
       dataRoute: string | null;
       dataRouteRegex: string | null;
+      prefetchDataRoute?: string | null;
+      prefetchDataRouteRegex?: string | null;
       experimentalBypassFor?: HasField;
+      experimentalPPR?: boolean;
     };
   };
 
+  /**
+   * Routes that have their fallback behavior is disabled. All routes would've
+   * been provided in the top-level `routes` key (`staticRoutes`).
+   */
   omittedRoutes: {
     [route: string]: {
       routeRegex: string;
       dataRoute: string | null;
       dataRouteRegex: string | null;
+      prefetchDataRoute: string | null | undefined;
+      prefetchDataRouteRegex: string | null | undefined;
       experimentalBypassFor?: HasField;
+      experimentalPPR?: boolean;
     };
   };
 
@@ -1091,9 +1138,11 @@ export async function getPrerenderManifest(
             initialRevalidateSeconds: number | false;
             srcRoute: string | null;
             dataRoute: string | null;
+            prefetchDataRoute: string | null | undefined;
             initialStatus?: number;
             initialHeaders?: Record<string, string>;
             experimentalBypassFor?: HasField;
+            experimentalPPR?: boolean;
           };
         };
         dynamicRoutes: {
@@ -1102,7 +1151,10 @@ export async function getPrerenderManifest(
             fallback: string | false;
             dataRoute: string | null;
             dataRouteRegex: string | null;
+            prefetchDataRoute: string | null | undefined;
+            prefetchDataRouteRegex: string | null | undefined;
             experimentalBypassFor?: HasField;
+            experimentalPPR?: boolean;
           };
         };
         preview: {
@@ -1189,11 +1241,15 @@ export async function getPrerenderManifest(
         let initialStatus: undefined | number;
         let initialHeaders: undefined | Record<string, string>;
         let experimentalBypassFor: undefined | HasField;
+        let experimentalPPR: undefined | boolean;
+        let prefetchDataRoute: undefined | string | null;
 
         if (manifest.version === 4) {
           initialStatus = manifest.routes[route].initialStatus;
           initialHeaders = manifest.routes[route].initialHeaders;
           experimentalBypassFor = manifest.routes[route].experimentalBypassFor;
+          experimentalPPR = manifest.routes[route].experimentalPPR;
+          prefetchDataRoute = manifest.routes[route].prefetchDataRoute;
         }
 
         ret.staticRoutes[route] = {
@@ -1202,10 +1258,12 @@ export async function getPrerenderManifest(
               ? false
               : Math.max(1, initialRevalidateSeconds),
           dataRoute,
+          prefetchDataRoute,
           srcRoute,
           initialStatus,
           initialHeaders,
           experimentalBypassFor,
+          experimentalPPR,
         };
       });
 
@@ -1213,35 +1271,50 @@ export async function getPrerenderManifest(
         const { routeRegex, fallback, dataRoute, dataRouteRegex } =
           manifest.dynamicRoutes[lazyRoute];
         let experimentalBypassFor: undefined | HasField;
+        let experimentalPPR: undefined | boolean;
+        let prefetchDataRoute: undefined | string | null;
+        let prefetchDataRouteRegex: undefined | string | null;
 
         if (manifest.version === 4) {
           experimentalBypassFor =
             manifest.dynamicRoutes[lazyRoute].experimentalBypassFor;
+          experimentalPPR = manifest.dynamicRoutes[lazyRoute].experimentalPPR;
+          prefetchDataRoute =
+            manifest.dynamicRoutes[lazyRoute].prefetchDataRoute;
+          prefetchDataRouteRegex =
+            manifest.dynamicRoutes[lazyRoute].prefetchDataRouteRegex;
         }
 
         if (typeof fallback === 'string') {
           ret.fallbackRoutes[lazyRoute] = {
             experimentalBypassFor,
+            experimentalPPR,
             routeRegex,
             fallback,
             dataRoute,
             dataRouteRegex,
+            prefetchDataRoute,
+            prefetchDataRouteRegex,
           };
         } else if (fallback === null) {
           ret.blockingFallbackRoutes[lazyRoute] = {
             experimentalBypassFor,
+            experimentalPPR,
             routeRegex,
             dataRoute,
             dataRouteRegex,
+            prefetchDataRoute,
+            prefetchDataRouteRegex,
           };
         } else {
-          // Fallback behavior is disabled, all routes would've been provided
-          // in the top-level `routes` key (`staticRoutes`).
           ret.omittedRoutes[lazyRoute] = {
             experimentalBypassFor,
+            experimentalPPR,
             routeRegex,
             dataRoute,
             dataRouteRegex,
+            prefetchDataRoute,
+            prefetchDataRouteRegex,
           };
         }
       });
@@ -1300,7 +1373,7 @@ async function getSourceFilePathFromPage({
 }: {
   workPath: string;
   page: string;
-  pageExtensions?: string[];
+  pageExtensions?: ReadonlyArray<string>;
 }) {
   const usesSrcDir = await usesSrcDirectory(workPath);
   const extensionsToTry = pageExtensions || ['js', 'jsx', 'ts', 'tsx'];
@@ -1355,6 +1428,13 @@ async function getSourceFilePathFromPage({
         }
       }
     }
+  }
+
+  // if we got here, and didn't find a source not-found file, then it was the one injected
+  // by Next.js. There's no need to warn or return a source file in this case, as it won't have
+  // any configuration applied to it.
+  if (page === '/_not-found/page') {
+    return '';
   }
 
   console.log(
@@ -1416,7 +1496,9 @@ export type LambdaGroup = {
   isAppRouter?: boolean;
   isAppRouteHandler?: boolean;
   isStreaming?: boolean;
-  isPrerenders?: boolean;
+  readonly isPrerenders: boolean;
+  readonly isExperimentalPPR: boolean;
+  isActionLambda?: boolean;
   isPages?: boolean;
   isApiLambda: boolean;
   pseudoLayer: PseudoLayer;
@@ -1430,20 +1512,25 @@ export async function getPageLambdaGroups({
   functionsConfigManifest,
   pages,
   prerenderRoutes,
+  experimentalPPRRoutes,
   pageTraces,
   compressedPages,
   tracedPseudoLayer,
   initialPseudoLayer,
   initialPseudoLayerUncompressed,
-  lambdaCompressedByteLimit,
   internalPages,
   pageExtensions,
+  inversedAppPathManifest,
+  experimentalAllowBundling,
+  isRouteHandlers,
 }: {
+  isRouteHandlers?: boolean;
   entryPath: string;
   config: Config;
   functionsConfigManifest?: FunctionsConfigManifestV1;
-  pages: string[];
-  prerenderRoutes: Set<string>;
+  pages: ReadonlyArray<string>;
+  prerenderRoutes: ReadonlySet<string>;
+  experimentalPPRRoutes: ReadonlySet<string> | undefined;
   pageTraces: {
     [page: string]: {
       [key: string]: FileFsRef;
@@ -1455,9 +1542,10 @@ export async function getPageLambdaGroups({
   tracedPseudoLayer: PseudoLayer;
   initialPseudoLayer: PseudoLayerResult;
   initialPseudoLayerUncompressed: number;
-  lambdaCompressedByteLimit: number;
-  internalPages: string[];
-  pageExtensions?: string[];
+  internalPages: ReadonlyArray<string>;
+  pageExtensions?: ReadonlyArray<string>;
+  inversedAppPathManifest?: Record<string, string>;
+  experimentalAllowBundling?: boolean;
 }) {
   const groups: Array<LambdaGroup> = [];
 
@@ -1465,6 +1553,7 @@ export async function getPageLambdaGroups({
     const newPages = [...internalPages, page];
     const routeName = normalizePage(page.replace(/\.js$/, ''));
     const isPrerenderRoute = prerenderRoutes.has(routeName);
+    const isExperimentalPPR = experimentalPPRRoutes?.has(routeName) ?? false;
 
     let opts: { memory?: number; maxDuration?: number } = {};
 
@@ -1478,7 +1567,11 @@ export async function getPageLambdaGroups({
     if (config && config.functions) {
       const sourceFile = await getSourceFilePathFromPage({
         workPath: entryPath,
-        page,
+        page: normalizeSourceFilePageFromManifest(
+          routeName,
+          page,
+          inversedAppPathManifest
+        ),
         pageExtensions,
       });
 
@@ -1490,41 +1583,39 @@ export async function getPageLambdaGroups({
       opts = { ...vercelConfigOpts, ...opts };
     }
 
-    let matchingGroup = groups.find(group => {
-      const matches =
-        group.maxDuration === opts.maxDuration &&
-        group.memory === opts.memory &&
-        group.isPrerenders === isPrerenderRoute;
+    let matchingGroup = experimentalAllowBundling
+      ? undefined
+      : groups.find(group => {
+          const matches =
+            group.maxDuration === opts.maxDuration &&
+            group.memory === opts.memory &&
+            group.isPrerenders === isPrerenderRoute &&
+            group.isExperimentalPPR === isExperimentalPPR;
 
-      if (matches) {
-        let newTracedFilesSize = group.pseudoLayerBytes;
-        let newTracedFilesUncompressedSize = group.pseudoLayerUncompressedBytes;
+          if (matches) {
+            let newTracedFilesUncompressedSize =
+              group.pseudoLayerUncompressedBytes;
 
-        for (const newPage of newPages) {
-          Object.keys(pageTraces[newPage] || {}).map(file => {
-            if (!group.pseudoLayer[file]) {
-              const item = tracedPseudoLayer[file] as PseudoFile;
+            for (const newPage of newPages) {
+              Object.keys(pageTraces[newPage] || {}).map(file => {
+                if (!group.pseudoLayer[file]) {
+                  const item = tracedPseudoLayer[file] as PseudoFile;
 
-              newTracedFilesSize += item.compBuffer?.byteLength || 0;
-              newTracedFilesUncompressedSize += item.uncompressedSize || 0;
+                  newTracedFilesUncompressedSize += item.uncompressedSize || 0;
+                }
+              });
+              newTracedFilesUncompressedSize +=
+                compressedPages[newPage].uncompressedSize;
             }
-          });
-          newTracedFilesSize += compressedPages[newPage].compBuffer.byteLength;
-          newTracedFilesUncompressedSize +=
-            compressedPages[newPage].uncompressedSize;
-        }
 
-        const underUncompressedLimit =
-          newTracedFilesUncompressedSize <
-          MAX_UNCOMPRESSED_LAMBDA_SIZE - LAMBDA_RESERVED_UNCOMPRESSED_SIZE;
-        const underCompressedLimit =
-          newTracedFilesSize <
-          lambdaCompressedByteLimit - LAMBDA_RESERVED_COMPRESSED_SIZE;
+            const underUncompressedLimit =
+              newTracedFilesUncompressedSize <
+              MAX_UNCOMPRESSED_LAMBDA_SIZE - LAMBDA_RESERVED_UNCOMPRESSED_SIZE;
 
-        return underUncompressedLimit && underCompressedLimit;
-      }
-      return false;
-    });
+            return underUncompressedLimit;
+          }
+          return false;
+        });
 
     if (matchingGroup) {
       matchingGroup.pages.push(page);
@@ -1533,7 +1624,8 @@ export async function getPageLambdaGroups({
         pages: [page],
         ...opts,
         isPrerenders: isPrerenderRoute,
-        isApiLambda: !!isApiPage(page),
+        isExperimentalPPR,
+        isApiLambda: !!isApiPage(page) || !!isRouteHandlers,
         pseudoLayerBytes: initialPseudoLayer.pseudoLayerBytes,
         pseudoLayerUncompressedBytes: initialPseudoLayerUncompressed,
         pseudoLayer: Object.assign({}, initialPseudoLayer.pseudoLayer),
@@ -1545,11 +1637,9 @@ export async function getPageLambdaGroups({
     for (const newPage of newPages) {
       Object.keys(pageTraces[newPage] || {}).map(file => {
         const pseudoItem = tracedPseudoLayer[file] as PseudoFile;
-        const compressedSize = pseudoItem?.compBuffer?.byteLength || 0;
 
         if (!matchingGroup!.pseudoLayer[file]) {
           matchingGroup!.pseudoLayer[file] = pseudoItem;
-          matchingGroup!.pseudoLayerBytes += compressedSize;
           matchingGroup!.pseudoLayerUncompressedBytes +=
             pseudoItem.uncompressedSize || 0;
         }
@@ -1557,8 +1647,6 @@ export async function getPageLambdaGroups({
 
       // ensure the page file itself is accounted for when grouping as
       // large pages can be created that can push the group over the limit
-      matchingGroup!.pseudoLayerBytes +=
-        compressedPages[newPage].compBuffer.byteLength;
       matchingGroup!.pseudoLayerUncompressedBytes +=
         compressedPages[newPage].uncompressedSize;
     }
@@ -1567,10 +1655,46 @@ export async function getPageLambdaGroups({
   return groups;
 }
 
+// `pages` are normalized without route groups (e.g., /app/(group)/page.js).
+// we keep track of that mapping in `inversedAppPathManifest`
+// `getSourceFilePathFromPage` needs to use the path from source to properly match the config
+function normalizeSourceFilePageFromManifest(
+  routeName: string,
+  page: string,
+  inversedAppPathManifest?: Record<string, string>
+) {
+  const pageFromManifest = inversedAppPathManifest?.[routeName];
+  if (!pageFromManifest) {
+    // since this function is used by both `pages` and `app`, the manifest might not be provided
+    // so fallback to normal behavior of just checking the `page`.
+    return page;
+  }
+
+  const metadataConventions = [
+    '/favicon.',
+    '/icon.',
+    '/apple-icon.',
+    '/opengraph-image.',
+    '/twitter-image.',
+    '/sitemap.',
+    '/robots.',
+  ];
+
+  // these special metadata files for will not contain `/route` or `/page` suffix, so return the routeName as-is.
+  const isSpecialFile = metadataConventions.some(convention =>
+    routeName.startsWith(convention)
+  );
+
+  if (isSpecialFile) {
+    return routeName;
+  }
+
+  return pageFromManifest;
+}
+
 export const outputFunctionFileSizeInfo = (
   pages: string[],
   pseudoLayer: PseudoLayer,
-  pseudoLayerBytes: number,
   pseudoLayerUncompressedBytes: number,
   compressedPages: {
     [page: string]: PseudoFile;
@@ -1583,15 +1707,10 @@ export const outputFunctionFileSizeInfo = (
       ', '
     )}`
   );
-  exceededLimitOutput.push([
-    'Large Dependencies',
-    'Uncompressed size',
-    'Compressed size',
-  ]);
+  exceededLimitOutput.push(['Large Dependencies', 'Uncompressed size']);
 
   const dependencies: {
     [key: string]: {
-      compressed: number;
       uncompressed: number;
     };
   } = {};
@@ -1603,19 +1722,16 @@ export const outputFunctionFileSizeInfo = (
 
       if (!dependencies[depKey]) {
         dependencies[depKey] = {
-          compressed: 0,
           uncompressed: 0,
         };
       }
 
-      dependencies[depKey].compressed += fileItem.compBuffer.byteLength;
       dependencies[depKey].uncompressed += fileItem.uncompressedSize;
     }
   }
 
   for (const page of pages) {
     dependencies[`pages/${page}`] = {
-      compressed: compressedPages[page].compBuffer.byteLength,
       uncompressed: compressedPages[page].uncompressedSize,
     };
   }
@@ -1627,10 +1743,10 @@ export const outputFunctionFileSizeInfo = (
       const aDep = dependencies[a];
       const bDep = dependencies[b];
 
-      if (aDep.compressed > bDep.compressed) {
+      if (aDep.uncompressed > bDep.uncompressed) {
         return -1;
       }
-      if (aDep.compressed < bDep.compressed) {
+      if (aDep.uncompressed < bDep.uncompressed) {
         return 1;
       }
       return 0;
@@ -1638,21 +1754,17 @@ export const outputFunctionFileSizeInfo = (
     .forEach(depKey => {
       const dep = dependencies[depKey];
 
-      if (dep.compressed < 100 * KIB && dep.uncompressed < 500 * KIB) {
+      if (dep.uncompressed < 500 * KIB) {
         // ignore smaller dependencies to reduce noise
         return;
       }
-      exceededLimitOutput.push([
-        depKey,
-        prettyBytes(dep.uncompressed),
-        prettyBytes(dep.compressed),
-      ]);
+      exceededLimitOutput.push([depKey, prettyBytes(dep.uncompressed)]);
       numLargeDependencies += 1;
     });
 
   if (numLargeDependencies === 0) {
     exceededLimitOutput.push([
-      'No large dependencies found (> 100KB compressed)',
+      'No large dependencies found (> 500KB compressed)',
     ]);
   }
 
@@ -1660,25 +1772,22 @@ export const outputFunctionFileSizeInfo = (
   exceededLimitOutput.push([
     'All dependencies',
     prettyBytes(pseudoLayerUncompressedBytes),
-    prettyBytes(pseudoLayerBytes),
   ]);
 
   console.log(
     textTable(exceededLimitOutput, {
-      align: ['l', 'r', 'r'],
+      align: ['l', 'r'],
     })
   );
 };
 
 export const detectLambdaLimitExceeding = async (
   lambdaGroups: LambdaGroup[],
-  compressedSizeLimit: number,
   compressedPages: {
     [page: string]: PseudoFile;
   }
 ) => {
   // show debug info if within 5 MB of exceeding the limit
-  const COMPRESSED_SIZE_LIMIT_CLOSE = compressedSizeLimit - 5 * MIB;
   const UNCOMPRESSED_SIZE_LIMIT_CLOSE = MAX_UNCOMPRESSED_LAMBDA_SIZE - 5 * MIB;
 
   let numExceededLimit = 0;
@@ -1689,11 +1798,9 @@ export const detectLambdaLimitExceeding = async (
   // or only get close so our first log line can be correct
   const filteredGroups = lambdaGroups.filter(group => {
     const exceededLimit =
-      group.pseudoLayerBytes > compressedSizeLimit ||
       group.pseudoLayerUncompressedBytes > MAX_UNCOMPRESSED_LAMBDA_SIZE;
 
     const closeToLimit =
-      group.pseudoLayerBytes > COMPRESSED_SIZE_LIMIT_CLOSE ||
       group.pseudoLayerUncompressedBytes > UNCOMPRESSED_SIZE_LIMIT_CLOSE;
 
     if (
@@ -1717,8 +1824,6 @@ export const detectLambdaLimitExceeding = async (
       if (numExceededLimit || numCloseToLimit) {
         console.log(
           `Warning: Max serverless function size of ${prettyBytes(
-            compressedSizeLimit
-          )} compressed or ${prettyBytes(
             MAX_UNCOMPRESSED_LAMBDA_SIZE
           )} uncompressed${numExceededLimit ? '' : ' almost'} reached`
         );
@@ -1731,7 +1836,6 @@ export const detectLambdaLimitExceeding = async (
     outputFunctionFileSizeInfo(
       group.pages,
       group.pseudoLayer,
-      group.pseudoLayerBytes,
       group.pseudoLayerUncompressedBytes,
       compressedPages
     );
@@ -1831,17 +1935,19 @@ type OnPrerenderRouteArgs = {
   isServerMode: boolean;
   canUsePreviewMode: boolean;
   lambdas: { [key: string]: Lambda };
-  prerenders: { [key: string]: Prerender | FileFsRef };
+  experimentalStreamingLambdaPaths: ReadonlyMap<string, string> | undefined;
+  prerenders: { [key: string]: Prerender | File };
   pageLambdaMap: { [key: string]: string };
   routesManifest?: RoutesManifest;
   isCorrectNotFoundRoutes?: boolean;
   isEmptyAllowQueryForPrendered?: boolean;
+  isAppPPREnabled: boolean;
 };
 let prerenderGroup = 1;
 
 export const onPrerenderRoute =
   (prerenderRouteArgs: OnPrerenderRouteArgs) =>
-  (
+  async (
     routeKey: string,
     {
       isBlocking,
@@ -1866,11 +1972,13 @@ export const onPrerenderRoute =
       isServerMode,
       canUsePreviewMode,
       lambdas,
+      experimentalStreamingLambdaPaths,
       prerenders,
       pageLambdaMap,
       routesManifest,
       isCorrectNotFoundRoutes,
       isEmptyAllowQueryForPrendered,
+      isAppPPREnabled,
     } = prerenderRouteArgs;
 
     if (isBlocking && isFallback) {
@@ -1926,9 +2034,11 @@ export const onPrerenderRoute =
     let initialRevalidate: false | number;
     let srcRoute: string | null;
     let dataRoute: string | null;
+    let prefetchDataRoute: string | null | undefined;
     let initialStatus: number | undefined;
     let initialHeaders: Record<string, string> | undefined;
     let experimentalBypassFor: HasField | undefined;
+    let experimentalPPR: boolean | undefined;
 
     if (isFallback || isBlocking) {
       const pr = isFallback
@@ -1946,12 +2056,18 @@ export const onPrerenderRoute =
       srcRoute = null;
       dataRoute = pr.dataRoute;
       experimentalBypassFor = pr.experimentalBypassFor;
+      experimentalPPR = pr.experimentalPPR;
+      prefetchDataRoute = pr.prefetchDataRoute;
     } else if (isOmitted) {
       initialRevalidate = false;
       srcRoute = routeKey;
       dataRoute = prerenderManifest.omittedRoutes[routeKey].dataRoute;
       experimentalBypassFor =
         prerenderManifest.omittedRoutes[routeKey].experimentalBypassFor;
+      experimentalPPR =
+        prerenderManifest.omittedRoutes[routeKey].experimentalPPR;
+      prefetchDataRoute =
+        prerenderManifest.omittedRoutes[routeKey].prefetchDataRoute;
     } else {
       const pr = prerenderManifest.staticRoutes[routeKey];
       ({
@@ -1961,24 +2077,88 @@ export const onPrerenderRoute =
         initialHeaders,
         initialStatus,
         experimentalBypassFor,
+        experimentalPPR,
+        prefetchDataRoute,
       } = pr);
     }
 
     let isAppPathRoute = false;
+
+    // experimentalPPR signals app path route
+    if (appDir && experimentalPPR) {
+      isAppPathRoute = true;
+    }
+
     // TODO: leverage manifest to determine app paths more accurately
     if (appDir && srcRoute && (!dataRoute || dataRoute?.endsWith('.rsc'))) {
       isAppPathRoute = true;
     }
 
     const isOmittedOrNotFound = isOmitted || isNotFound;
-    let htmlFsRef: FileFsRef | null;
+    let htmlFsRef: File | null = null;
 
-    if (appDir && !dataRoute && isAppPathRoute && !(isBlocking || isFallback)) {
+    // If enabled, try to get the postponed route information from the file
+    // system and use it to assemble the prerender.
+    let postponedPrerender: string | undefined;
+    if (experimentalPPR && appDir) {
+      const htmlPath = path.join(appDir, `${routeFileNoExt}.html`);
+      const metaPath = path.join(appDir, `${routeFileNoExt}.meta`);
+      if (fs.existsSync(htmlPath) && fs.existsSync(metaPath)) {
+        const meta = JSON.parse(await fs.readFile(metaPath, 'utf8'));
+        if ('postponed' in meta && typeof meta.postponed === 'string') {
+          postponedPrerender = meta.postponed;
+
+          // Assign the headers Content-Type header to the prerendered type.
+          initialHeaders ??= {};
+          initialHeaders['content-type'] =
+            `application/x-nextjs-pre-render; state-length=${meta.postponed.length}`;
+
+          // Read the HTML file and append it to the prerendered content.
+          const html = await fs.readFileSync(htmlPath, 'utf8');
+          postponedPrerender += html;
+        }
+      }
+
+      if (!dataRoute?.endsWith('.rsc')) {
+        throw new Error(
+          `Invariant: unexpected output path for ${dataRoute} and PPR`
+        );
+      }
+
+      if (!prefetchDataRoute?.endsWith('.prefetch.rsc')) {
+        throw new Error(
+          `Invariant: unexpected output path for ${prefetchDataRoute} and PPR`
+        );
+      }
+    }
+
+    if (postponedPrerender) {
       const contentType = initialHeaders?.['content-type'];
-      htmlFsRef = new FileFsRef({
-        fsPath: path.join(appDir, `${routeFileNoExt}.body`),
-        contentType: contentType || 'text/html;charset=utf-8',
-      });
+      if (!contentType) {
+        throw new Error("Invariant: contentType can't be undefined");
+      }
+
+      // Assemble the prerendered file.
+      htmlFsRef = new FileBlob({ contentType, data: postponedPrerender });
+    } else if (
+      appDir &&
+      !dataRoute &&
+      !prefetchDataRoute &&
+      isAppPathRoute &&
+      !(isBlocking || isFallback)
+    ) {
+      const contentType = initialHeaders?.['content-type'];
+
+      // If the route has a body file, use it as the fallback, otherwise it may
+      // not have an associated fallback. This could be the case for routes that
+      // have dynamic segments.
+      const fsPath = path.join(appDir, `${routeFileNoExt}.body`);
+      if (fs.existsSync(fsPath)) {
+        htmlFsRef = new FileFsRef({
+          fsPath,
+          contentType: contentType || 'text/html;charset=utf-8',
+        });
+      }
     } else {
       htmlFsRef =
         isBlocking || (isNotFound && !static404Page)
@@ -2023,8 +2203,15 @@ export const onPrerenderRoute =
                     ? addLocaleOrDefault('/404.html', routesManifest, locale)
                     : '/404.html'
                   : isAppPathRoute
-                  ? dataRoute
-                  : routeFileNoExt + '.json'
+                    ? // When experimental PPR is enabled, we expect that the data
+                      // that should be served as a part of the prerender should
+                      // be from the prefetch data route. If this isn't enabled
+                      // for ppr, the only way to get the data is from the data
+                      // route.
+                      experimentalPPR
+                      ? prefetchDataRoute
+                      : dataRoute
+                    : routeFileNoExt + '.json'
               }`
             ),
           });
@@ -2033,34 +2220,24 @@ export const onPrerenderRoute =
       initialStatus = 404;
     }
 
-    if (isAppPathRoute) {
-      // for literal index routes we need to append an additional /index
-      // due to the proxy's normalizing for /index routes
-      if (routeKey !== '/index' && routeKey.endsWith('/index')) {
-        routeKey = `${routeKey}/index`;
-        routeFileNoExt = routeKey;
-        origRouteFileNoExt = routeKey;
-      }
-    }
-
     let outputPathPage = path.posix.join(entryDirectory, routeFileNoExt);
 
     if (!isAppPathRoute) {
       outputPathPage = normalizeIndexOutput(outputPathPage, isServerMode);
     }
+
     const outputPathPageOrig = path.posix.join(
       entryDirectory,
       origRouteFileNoExt
     );
 
     let lambda: undefined | Lambda;
-    let outputPathData: null | string = null;
 
-    if (dataRoute) {
-      outputPathData = path.posix.join(entryDirectory, dataRoute);
+    function normalizeDataRoute(route: string) {
+      let normalized = path.posix.join(entryDirectory, route);
 
       if (nonDynamicSsg || isFallback || isOmitted) {
-        outputPathData = outputPathData.replace(
+        normalized = normalized.replace(
           new RegExp(`${escapeStringRegexp(origRouteFileNoExt)}.json$`),
           // ensure we escape "$" correctly while replacing as "$" is a special
           // character, we need to do double escaping as first is for the initial
@@ -2068,6 +2245,26 @@ export const onPrerenderRoute =
           `${routeFileNoExt.replace(/\$/g, '$$$$')}.json`
         );
       }
+
+      return normalized;
+    }
+
+    let outputPathData: null | string = null;
+    if (dataRoute) {
+      outputPathData = normalizeDataRoute(dataRoute);
+    }
+
+    let outputPathPrefetchData: null | string = null;
+    if (prefetchDataRoute) {
+      if (!isAppPPREnabled) {
+        throw new Error(
+          "Invariant: prefetchDataRoute can't be set without PPR"
+        );
+      }
+
+      outputPathPrefetchData = normalizeDataRoute(prefetchDataRoute);
+    } else if (experimentalPPR) {
+      throw new Error('Invariant: expected to find prefetch data route PPR');
     }
 
     if (isSharedLambdas) {
@@ -2087,15 +2284,20 @@ export const onPrerenderRoute =
       const lambdaId = pageLambdaMap[outputSrcPathPage];
       lambda = lambdas[lambdaId];
     } else {
-      const outputSrcPathPage = normalizeIndexOutput(
+      let outputSrcPathPage =
         srcRoute == null
           ? outputPathPageOrig
           : path.posix.join(
               entryDirectory,
               srcRoute === '/' ? '/index' : srcRoute
-            ),
-        isServerMode
-      );
+            );
+
+      if (!isAppPathRoute) {
+        outputSrcPathPage = normalizeIndexOutput(
+          outputSrcPathPage,
+          isServerMode
+        );
+      }
 
       lambda = lambdas[outputSrcPathPage];
     }
@@ -2117,7 +2319,13 @@ export const onPrerenderRoute =
         htmlFsRef.contentType = htmlContentType;
         prerenders[outputPathPage] = htmlFsRef;
 
-        if (outputPathData) {
+        if (outputPathPrefetchData) {
+          prerenders[outputPathPrefetchData] = jsonFsRef;
+        }
+
+        // If experimental ppr is not enabled for this route, then add the data
+        // route as a target for the prerender as well.
+        if (outputPathData && !experimentalPPR) {
           prerenders[outputPathData] = jsonFsRef;
         }
       }
@@ -2188,10 +2396,41 @@ export const onPrerenderRoute =
         'RSC, Next-Router-State-Tree, Next-Router-Prefetch';
       const rscContentTypeHeader =
         routesManifest?.rsc?.contentTypeHeader || RSC_CONTENT_TYPE;
+      const rscDidPostponeHeader = routesManifest?.rsc?.didPostponeHeader;
 
       let sourcePath: string | undefined;
       if (`/${outputPathPage}` !== srcRoute && srcRoute) {
         sourcePath = srcRoute;
+      }
+
+      let experimentalStreamingLambdaPath: string | undefined;
+      if (experimentalPPR) {
+        if (!experimentalStreamingLambdaPaths) {
+          throw new Error(
+            "Invariant: experimentalStreamingLambdaPaths doesn't exist"
+          );
+        }
+
+        // Try to get the experimental streaming lambda path for the specific
+        // static route first, then try the srcRoute if it doesn't exist. If we
+        // can't find it at all, this constitutes an error.
+        experimentalStreamingLambdaPath = experimentalStreamingLambdaPaths.get(
+          pathnameToOutputName(entryDirectory, routeKey)
+        );
+        if (!experimentalStreamingLambdaPath && srcRoute) {
+          experimentalStreamingLambdaPath =
+            experimentalStreamingLambdaPaths.get(
+              pathnameToOutputName(entryDirectory, srcRoute)
+            );
+        }
+
+        if (!experimentalStreamingLambdaPath) {
+          throw new Error(
+            `Invariant: experimentalStreamingLambdaPath is undefined for routeKey=${routeKey} and srcRoute=${
+              srcRoute ?? 'null'
+            }`
+          );
+        }
       }
 
       prerenders[outputPathPage] = new Prerender({
@@ -2205,6 +2444,7 @@ export const onPrerenderRoute =
         initialStatus,
         initialHeaders,
         sourcePath,
+        experimentalStreamingLambdaPath,
 
         ...(isNotFound
           ? {
@@ -2222,8 +2462,20 @@ export const onPrerenderRoute =
           : {}),
       });
 
-      if (outputPathData) {
-        prerenders[outputPathData] = new Prerender({
+      const normalizePathData = (pathData: string) => {
+        if (
+          (srcRoute === '/' || srcRoute == '/index') &&
+          pathData.endsWith(RSC_PREFETCH_SUFFIX)
+        ) {
+          delete lambdas[pathData];
+          return pathData.replace(/([^/]+\.prefetch\.rsc)$/, '__$1');
+        }
+
+        return pathData;
+      };
+
+      if (outputPathData || outputPathPrefetchData) {
+        const prerender = new Prerender({
           expiration: initialRevalidate,
           lambda,
           allowQuery,
@@ -2241,12 +2493,53 @@ export const onPrerenderRoute =
           ...(rscEnabled
             ? {
                 initialHeaders: {
-                  'content-type': rscContentTypeHeader,
+                  ...initialHeaders,
                   vary: rscVaryHeader,
+                  ...((outputPathData || outputPathPrefetchData)?.endsWith(
+                    '.json'
+                  )
+                    ? {
+                        'content-type': 'application/json',
+                      }
+                    : {}),
+                  ...(isAppPathRoute
+                    ? {
+                        'content-type': rscContentTypeHeader,
+                      }
+                    : {}),
+                  ...(postponedPrerender && rscDidPostponeHeader
+                    ? { [rscDidPostponeHeader]: '1' }
+                    : {}),
                 },
               }
             : {}),
         });
+
+        if (outputPathPrefetchData) {
+          prerenders[normalizePathData(outputPathPrefetchData)] = prerender;
+        }
+
+        // If experimental ppr is not enabled for this route, then add the data
+        // route as a target for the prerender as well.
+        if (outputPathData && !experimentalPPR) {
+          prerenders[normalizePathData(outputPathData)] = prerender;
+        }
+      }
+
+      // we need to ensure all prerenders have a matching .rsc output
+      // otherwise routing could fall through unexpectedly for the
+      // fallback: false case as it doesn't have a dynamic route
+      // to catch the `.rsc` request for app -> pages routing
+      if (outputPathData?.endsWith('.json') && appDir) {
+        const dummyOutput = new FileBlob({
+          data: '{}',
+          contentType: 'application/json',
+        });
+        const rscKey = `${outputPathPage}.rsc`;
+        const prefetchRscKey = `${outputPathPage}${RSC_PREFETCH_SUFFIX}`;
+
+        prerenders[rscKey] = dummyOutput;
+        prerenders[prefetchRscKey] = dummyOutput;
       }
 
       ++prerenderGroup;
@@ -2258,10 +2551,17 @@ export const onPrerenderRoute =
             routesManifest,
             locale
           );
-          const localeOutputPathPage = normalizeIndexOutput(
-            path.posix.join(entryDirectory, localeRouteFileNoExt),
-            isServerMode
+          let localeOutputPathPage = path.posix.join(
+            entryDirectory,
+            localeRouteFileNoExt
           );
+
+          if (!isAppPathRoute) {
+            localeOutputPathPage = normalizeIndexOutput(
+              localeOutputPathPage,
+              isServerMode
+            );
+          }
 
           const origPrerenderPage = prerenders[outputPathPage];
           prerenders[localeOutputPathPage] = {
@@ -2371,6 +2671,10 @@ export async function getStaticFiles(
   };
 }
 
+/**
+ * Strips the trailing `/index` from the output name if it's not the root if
+ * the server mode is enabled.
+ */
 export function normalizeIndexOutput(
   outputName: string,
   isServerMode: boolean
@@ -2389,6 +2693,22 @@ export function getNextServerPath(nextVersion: string) {
   return semver.gte(nextVersion, 'v11.0.2-canary.4')
     ? 'next/dist/server'
     : 'next/dist/next-server/server';
+}
+
+function pathnameToOutputName(entryDirectory: string, pathname: string) {
+  if (pathname === '/') {
+    pathname = '/index';
+  }
+
+  return path.posix.join(entryDirectory, pathname);
+}
+
+export function getPostponeResumePathname(
+  entryDirectory: string,
+  pathname: string
+): string {
+  if (pathname === '/') pathname = '/index';
+  return path.posix.join(entryDirectory, '_next/postponed/resume', pathname);
 }
 
 // update to leverage
@@ -2457,7 +2777,10 @@ export type FunctionsConfigManifestV1 = {
   >;
 };
 
-type MiddlewareManifest = MiddlewareManifestV1 | MiddlewareManifestV2;
+type MiddlewareManifest =
+  | MiddlewareManifestV1
+  | MiddlewareManifestV2
+  | MiddlewareManifestV3;
 
 interface MiddlewareManifestV1 {
   version: 1;
@@ -2471,6 +2794,13 @@ interface MiddlewareManifestV2 {
   sortedMiddleware: string[];
   middleware: { [page: string]: EdgeFunctionInfoV2 };
   functions?: { [page: string]: EdgeFunctionInfoV2 };
+}
+
+interface MiddlewareManifestV3 {
+  version: 3;
+  sortedMiddleware: string[];
+  middleware: { [page: string]: EdgeFunctionInfoV3 };
+  functions?: { [page: string]: EdgeFunctionInfoV3 };
 }
 
 type Regions = 'home' | 'global' | 'auto' | string[] | 'all' | 'default';
@@ -2490,6 +2820,11 @@ interface EdgeFunctionInfoV1 extends BaseEdgeFunctionInfo {
 
 interface EdgeFunctionInfoV2 extends BaseEdgeFunctionInfo {
   matchers: EdgeFunctionMatcher[];
+}
+
+interface EdgeFunctionInfoV3 extends BaseEdgeFunctionInfo {
+  matchers: EdgeFunctionMatcher[];
+  env: Record<string, string>;
 }
 
 interface EdgeFunctionMatcher {
@@ -2572,6 +2907,11 @@ export function normalizeEdgeFunctionPath(
       shortPath = 'index';
     }
   }
+
+  if (shortPath.startsWith('pages/')) {
+    shortPath = shortPath.replace(/^pages\//, '');
+  }
+
   return shortPath;
 }
 
@@ -2594,7 +2934,7 @@ export async function getMiddlewareBundle({
   appPathRoutesManifest: Record<string, string>;
 }): Promise<{
   staticRoutes: Route[];
-  dynamicRouteMap: Map<string, RouteWithSrc>;
+  dynamicRouteMap: ReadonlyMap<string, RouteWithSrc>;
   edgeFunctions: Record<string, EdgeFunction>;
 }> {
   const middlewareManifest = await getMiddlewareManifest(
@@ -2645,6 +2985,7 @@ export async function getMiddlewareBundle({
           return {
             type,
             page: edgeFunction.page,
+            name: edgeFunction.name,
             edgeFunction: (() => {
               const { source, map } = wrappedModuleSource.sourceAndMap();
               const transformedMap = stringifySourceMap(
@@ -2718,6 +3059,7 @@ export async function getMiddlewareBundle({
                   slug: 'nextjs',
                   version: nextVersion,
                 },
+                environment: edgeFunction.env,
               });
             })(),
             routeMatchers: getRouteMatchers(edgeFunction, routesManifest),
@@ -2740,8 +3082,7 @@ export async function getMiddlewareBundle({
     };
 
     for (const worker of workerConfigs.values()) {
-      const edgeFile = worker.edgeFunction.name;
-      let shortPath = edgeFile;
+      let shortPath = worker.name;
 
       // Replacing the folder prefix for the page
       //
@@ -2758,14 +3099,17 @@ export async function getMiddlewareBundle({
       }
 
       if (routesManifest?.basePath) {
-        shortPath = normalizeIndexOutput(
-          path.posix.join(
-            './',
-            routesManifest?.basePath,
-            shortPath.replace(/^\//, '')
-          ),
-          true
+        const isAppPathRoute = !!appPathRoutesManifest[shortPath];
+
+        shortPath = path.posix.join(
+          './',
+          routesManifest?.basePath,
+          shortPath.replace(/^\//, '')
         );
+
+        if (!isAppPathRoute) {
+          shortPath = normalizeIndexOutput(shortPath, true);
+        }
       }
 
       worker.edgeFunction.name = shortPath;
@@ -2856,7 +3200,7 @@ export async function getFunctionsConfigManifest(
 export async function getMiddlewareManifest(
   entryPath: string,
   outputDirectory: string
-): Promise<MiddlewareManifestV2 | undefined> {
+): Promise<MiddlewareManifestV3 | undefined> {
   const middlewareManifestPath = path.join(
     entryPath,
     outputDirectory,
@@ -2875,19 +3219,27 @@ export async function getMiddlewareManifest(
   const manifest = (await fs.readJSON(
     middlewareManifestPath
   )) as MiddlewareManifest;
-  return manifest.version === 1
-    ? upgradeMiddlewareManifest(manifest)
-    : manifest;
+
+  if (manifest.version === 1) {
+    return upgradeMiddlewareManifestV1(manifest);
+  }
+
+  if (manifest.version === 2) {
+    return upgradeMiddlewareManifestV2(manifest);
+  }
+
+  return manifest;
 }
 
-export function upgradeMiddlewareManifest(
+export function upgradeMiddlewareManifestV1(
   v1: MiddlewareManifestV1
-): MiddlewareManifestV2 {
-  function updateInfo(v1Info: EdgeFunctionInfoV1): EdgeFunctionInfoV2 {
+): MiddlewareManifestV3 {
+  function updateInfo(v1Info: EdgeFunctionInfoV1): EdgeFunctionInfoV3 {
     const { regexp, ...rest } = v1Info;
     return {
       ...rest,
       matchers: [{ regexp }],
+      env: {},
     };
   }
 
@@ -2902,7 +3254,35 @@ export function upgradeMiddlewareManifest(
 
   return {
     ...v1,
-    version: 2,
+    version: 3,
+    middleware,
+    functions,
+  };
+}
+
+export function upgradeMiddlewareManifestV2(
+  v2: MiddlewareManifestV2
+): MiddlewareManifestV3 {
+  function updateInfo(v2Info: EdgeFunctionInfoV2): EdgeFunctionInfoV3 {
+    const { ...rest } = v2Info;
+    return {
+      ...rest,
+      env: {},
+    };
+  }
+
+  const middleware = Object.fromEntries(
+    Object.entries(v2.middleware).map(([p, info]) => [p, updateInfo(info)])
+  );
+  const functions = v2.functions
+    ? Object.fromEntries(
+        Object.entries(v2.functions).map(([p, info]) => [p, updateInfo(info)])
+      )
+    : undefined;
+
+  return {
+    ...v2,
+    version: 3,
     middleware,
     functions,
   };
@@ -3027,13 +3407,9 @@ export function isApiPage(page: string | undefined) {
     .match(/(serverless|server)\/pages\/api(\/|\.js$)/);
 }
 
-export type VariantsManifest = Record<
-  string,
-  {
-    defaultValue?: unknown;
-    metadata?: Record<string, unknown>;
-  }
->;
+export type VariantsManifest = {
+  definitions: FlagDefinitions;
+};
 
 export async function getVariantsManifest(
   entryPath: string,
@@ -3052,9 +3428,82 @@ export async function getVariantsManifest(
 
   if (!hasVariantsManifest) return null;
 
-  const variantsManifest: VariantsManifest = await fs.readJSON(
-    pathVariantsManifest
-  );
+  const variantsManifest: VariantsManifest =
+    await fs.readJSON(pathVariantsManifest);
 
   return variantsManifest;
+}
+
+export async function getServerlessPages(params: {
+  pagesDir: string;
+  entryPath: string;
+  outputDirectory: string;
+  appPathRoutesManifest?: Record<string, string>;
+}) {
+  const appDir = path.join(params.pagesDir, '../app');
+  const [pages, appPaths, middlewareManifest] = await Promise.all([
+    glob('**/!(_middleware).js', params.pagesDir),
+    params.appPathRoutesManifest
+      ? Promise.all([
+          glob('**/page.js', appDir),
+          glob('**/route.js', appDir),
+          glob('**/_not-found.js', appDir),
+        ]).then(items => Object.assign(...items))
+      : Promise.resolve({} as Record<string, FileFsRef>),
+    getMiddlewareManifest(params.entryPath, params.outputDirectory),
+  ]);
+
+  const normalizedAppPaths: typeof appPaths = {};
+
+  if (params.appPathRoutesManifest) {
+    for (const [entry, normalizedEntry] of Object.entries(
+      params.appPathRoutesManifest
+    )) {
+      const normalizedPath = `${path.join(
+        '.',
+        normalizedEntry === '/' ? '/index' : normalizedEntry
+      )}.js`;
+      const globPath = `${path.posix.join('.', entry)}.js`;
+
+      if (appPaths[globPath]) {
+        normalizedAppPaths[normalizedPath] = appPaths[globPath];
+      }
+    }
+  }
+
+  // Edge Functions do not consider as Serverless Functions
+  for (const edgeFunctionFile of Object.keys(
+    middlewareManifest?.functions ?? {}
+  )) {
+    let edgePath =
+      middlewareManifest?.functions?.[edgeFunctionFile].name ||
+      edgeFunctionFile;
+
+    edgePath = normalizeEdgeFunctionPath(
+      edgePath,
+      params.appPathRoutesManifest || {}
+    );
+    edgePath = (edgePath || 'index') + '.js';
+    delete normalizedAppPaths[edgePath];
+    delete pages[edgePath];
+  }
+
+  return { pages, appPaths: normalizedAppPaths };
+}
+
+// to avoid any conflict with route matching/resolving, we prefix all prefetches (ie, __index.prefetch.rsc)
+// this is to ensure that prefetches are never matched for things like a greedy match on `index.{ext}`
+export function normalizePrefetches(prefetches: Record<string, FileFsRef>) {
+  const updatedPrefetches: Record<string, FileFsRef> = {};
+
+  for (const key in prefetches) {
+    if (key === 'index.prefetch.rsc') {
+      const newKey = key.replace(/([^/]+\.prefetch\.rsc)$/, '__$1');
+      updatedPrefetches[newKey] = prefetches[key];
+    } else {
+      updatedPrefetches[key] = prefetches[key];
+    }
+  }
+
+  return updatedPrefetches;
 }

@@ -1,5 +1,17 @@
 # @vercel/edge
 
+## 1.1.2
+
+### Patch Changes
+
+- [edge] deprecate `ipAddress` & `geolocation`. ([#11869](https://github.com/vercel/vercel/pull/11869))
+
+## 1.1.1
+
+### Patch Changes
+
+- bump: edge-runtime ([#10712](https://github.com/vercel/vercel/pull/10712))
+
 ## 1.1.0
 
 ### Minor Changes

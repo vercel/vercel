@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest';
 import bytes from 'bytes';
 import fs from 'fs-extra';
 import { join } from 'path';
@@ -7,9 +8,11 @@ import { client } from '../../mocks/client';
 import deploy from '../../../src/commands/deploy';
 import { setupUnitFixture } from '../../helpers/setup-unit-fixture';
 import { defaultProject, useProject } from '../../mocks/project';
+import { useDeployment, useBuildLogs } from '../../mocks/deployment';
 import { useTeams } from '../../mocks/team';
 import { useUser } from '../../mocks/user';
 import humanizePath from '../../../src/util/humanize-path';
+import sleep from '../../../src/util/sleep';
 
 describe('deploy', () => {
   it('should reject deploying a single file', async () => {
@@ -415,5 +418,264 @@ describe('deploy', () => {
       source: 'cli',
       version: 2,
     });
+  });
+
+  it('should send `projectSettings.nodeVersion` based on `engines.node` package.json field', async () => {
+    const user = useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      name: 'node',
+      id: 'QmbKpqpiUqbcke',
+    });
+
+    let body: any;
+    client.scenario.post(`/v13/deployments`, (req, res) => {
+      body = req.body;
+      res.json({
+        creator: {
+          uid: user.id,
+          username: user.username,
+        },
+        id: 'dpl_',
+      });
+    });
+    client.scenario.get(`/v13/deployments/dpl_`, (req, res) => {
+      res.json({
+        creator: {
+          uid: user.id,
+          username: user.username,
+        },
+        id: 'dpl_',
+        readyState: 'READY',
+        aliasAssigned: true,
+        alias: [],
+      });
+    });
+
+    const repoRoot = setupUnitFixture('commands/deploy/node');
+    client.cwd = repoRoot;
+    client.setArgv('deploy');
+    const exitCode = await deploy(client);
+    expect(exitCode).toEqual(0);
+    expect(body).toMatchObject({
+      source: 'cli',
+      version: 2,
+      projectSettings: {
+        nodeVersion: '20.x',
+        sourceFilesOutsideRootDirectory: true,
+      },
+    });
+  });
+
+  it('should send `projectSettings.nodeVersion` based on `engines.node` package.json field with `builds` in `vercel.json`', async () => {
+    const user = useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      name: 'legacy-builds',
+      id: 'QmbKpqpiUqbcke',
+    });
+
+    let body: any;
+    client.scenario.post(`/v13/deployments`, (req, res) => {
+      body = req.body;
+      res.json({
+        creator: {
+          uid: user.id,
+          username: user.username,
+        },
+        id: 'dpl_',
+      });
+    });
+    client.scenario.get(`/v13/deployments/dpl_`, (req, res) => {
+      res.json({
+        creator: {
+          uid: user.id,
+          username: user.username,
+        },
+        id: 'dpl_',
+        readyState: 'READY',
+        aliasAssigned: true,
+        alias: [],
+      });
+    });
+
+    const repoRoot = setupUnitFixture('commands/deploy/legacy-builds');
+    client.cwd = repoRoot;
+    client.setArgv('deploy');
+    const exitCode = await deploy(client);
+    expect(exitCode).toEqual(0);
+    expect(body).toMatchObject({
+      source: 'cli',
+      version: 2,
+      projectSettings: {
+        nodeVersion: '18.x',
+        sourceFilesOutsideRootDirectory: true,
+      },
+    });
+  });
+
+  it('should send latest supported node version when given a >low-node-version based on `engines.node` package.json field', async () => {
+    const user = useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      name: 'node-low-starting-range',
+      id: 'QmbKpqpiUqbcke',
+    });
+
+    let body: any;
+    client.scenario.post(`/v13/deployments`, (req, res) => {
+      body = req.body;
+      res.json({
+        creator: {
+          uid: user.id,
+          username: user.username,
+        },
+        id: 'dpl_',
+      });
+    });
+    client.scenario.get(`/v13/deployments/dpl_`, (req, res) => {
+      res.json({
+        creator: {
+          uid: user.id,
+          username: user.username,
+        },
+        id: 'dpl_',
+        readyState: 'READY',
+        aliasAssigned: true,
+        alias: [],
+      });
+    });
+
+    const repoRoot = setupUnitFixture(
+      'commands/deploy/node-low-starting-range'
+    );
+    client.cwd = repoRoot;
+    client.setArgv('deploy');
+    const exitCode = await deploy(client);
+    expect(exitCode).toEqual(0);
+    expect(body).toMatchObject({
+      source: 'cli',
+      version: 2,
+      projectSettings: {
+        nodeVersion: '20.x',
+        sourceFilesOutsideRootDirectory: true,
+      },
+    });
+  });
+
+  it('should send no version when `engines.node` package.json field is fixed to an outdated version', async () => {
+    const user = useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      name: 'node-low-version',
+      id: 'QmbKpqpiUqbcke',
+    });
+
+    let body: any;
+    client.scenario.post(`/v13/deployments`, (req, res) => {
+      body = req.body;
+      res.json({
+        creator: {
+          uid: user.id,
+          username: user.username,
+        },
+        id: 'dpl_',
+      });
+    });
+    client.scenario.get(`/v13/deployments/dpl_`, (req, res) => {
+      res.json({
+        creator: {
+          uid: user.id,
+          username: user.username,
+        },
+        id: 'dpl_',
+        readyState: 'READY',
+        aliasAssigned: true,
+        alias: [],
+      });
+    });
+
+    const repoRoot = setupUnitFixture('commands/deploy/node-low-version');
+    client.cwd = repoRoot;
+    client.setArgv('deploy');
+    const exitCodePromise = deploy(client);
+    await expect(client.stderr).toOutput(
+      'WARN! Node.js Version "10.x" is discontinued and must be upgraded. Please set "engines": { "node": "20.x" } in your `package.json` file to use Node.js 20.'
+    );
+    await expect(exitCodePromise).resolves.toEqual(0);
+    expect(body).toMatchObject({
+      source: 'cli',
+      version: 2,
+      projectSettings: {
+        sourceFilesOutsideRootDirectory: true,
+      },
+    });
+  });
+
+  it('should print and follow build logs while deploying', async () => {
+    const user = useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      name: 'node',
+      id: 'QmbKpqpiUqbcke',
+    });
+    const deployment = useDeployment({ creator: user, state: 'BUILDING' });
+    deployment.aliasAssigned = false;
+    client.scenario.post(`/v13/deployments`, (req, res) => {
+      res.json(
+        res.json({
+          creator: {
+            uid: user.id,
+            username: user.username,
+          },
+          id: deployment.id,
+          readyState: deployment.readyState,
+          aliasAssigned: false,
+          alias: [],
+        })
+      );
+    });
+    useBuildLogs({
+      deployment,
+      logProducer: async function* () {
+        yield { created: 1717426870339, text: 'Hello, world!' };
+        await sleep(100);
+        yield { created: 1717426870439, text: 'slow...' };
+        await sleep(100);
+        yield { created: 1717426870540, text: 'Bye...' };
+      },
+    });
+
+    let exitCode: number;
+    const runCommand = async () => {
+      const repoRoot = setupUnitFixture('commands/deploy/node');
+      client.cwd = repoRoot;
+      client.setArgv('deploy', '--logs');
+      exitCode = await deploy(client);
+    };
+
+    const slowlyDeploy = async () => {
+      await sleep(500);
+      deployment.readyState = 'READY';
+      deployment.aliasAssigned = true;
+    };
+
+    await Promise.all<void>([runCommand(), slowlyDeploy()]);
+
+    // remove first 4 lines which contains randomized data
+    expect(client.getFullOutput().split('\n').slice(4).join('\n'))
+      .toMatchInlineSnapshot(`
+        "Building
+        2024-06-03T15:01:10.339Z  Hello, world!
+        2024-06-03T15:01:10.439Z  slow...
+        2024-06-03T15:01:10.540Z  Bye...
+        "
+      `);
+    expect(exitCode).toEqual(0);
   });
 });

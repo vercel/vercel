@@ -1,5 +1,111 @@
 # @vercel/fs-detectors
 
+## 5.2.8
+
+### Patch Changes
+
+- Prefactor middleware tests to make changes easier ([#11934](https://github.com/vercel/vercel/pull/11934))
+
+## 5.2.7
+
+### Patch Changes
+
+- Updated dependencies [[`6c2398713`](https://github.com/vercel/vercel/commit/6c2398713cd7ea2f1511d56ce1c5120d9f8e3a98)]:
+  - @vercel/frameworks@3.1.1
+
+## 5.2.6
+
+### Patch Changes
+
+- Updated dependencies [[`8bb9880ee`](https://github.com/vercel/vercel/commit/8bb9880ee04c0e899b0a4954473a03fb9ec3b550)]:
+  - @vercel/frameworks@3.1.0
+
+## 5.2.5
+
+### Patch Changes
+
+- Updated dependencies [[`1484df7aa`](https://github.com/vercel/vercel/commit/1484df7aa55262646544449d26762a7a92d89a2e)]:
+  - @vercel/frameworks@3.0.3
+
+## 5.2.4
+
+### Patch Changes
+
+- Add support for detecting Turborepo 2 ([#11680](https://github.com/vercel/vercel/pull/11680))
+
+## 5.2.3
+
+### Patch Changes
+
+- Updated dependencies [[`5f72dc436`](https://github.com/vercel/vercel/commit/5f72dc4360f6ec090a4d2ac3837f9a80d7b396e9)]:
+  - @vercel/frameworks@3.0.2
+
+## 5.2.2
+
+### Patch Changes
+
+- Updated dependencies [[`9ed967034`](https://github.com/vercel/vercel/commit/9ed967034d61b6a5b1e4bb32449c9193c50615c0)]:
+  - @vercel/frameworks@3.0.1
+
+## 5.2.1
+
+### Patch Changes
+
+- [build-utils] increase max memory limit ([#11209](https://github.com/vercel/vercel/pull/11209))
+
+## 5.2.0
+
+### Minor Changes
+
+- Make "remix" framework preset supersede "vite" ([#11031](https://github.com/vercel/vercel/pull/11031))
+
+### Patch Changes
+
+- Updated dependencies [[`1333071a3`](https://github.com/vercel/vercel/commit/1333071a3a2d324679327bfdd4e872f8fd3521c6)]:
+  - @vercel/frameworks@3.0.0
+
+## 5.1.6
+
+### Patch Changes
+
+- Updated dependencies [[`471bdd5b4`](https://github.com/vercel/vercel/commit/471bdd5b4506f1410afd7bca6efae3bc696cd939)]:
+  - @vercel/frameworks@2.0.6
+
+## 5.1.5
+
+### Patch Changes
+
+- Updated dependencies [[`e6aaf79d0`](https://github.com/vercel/vercel/commit/e6aaf79d04fafd032d9a28143b02d28766add415)]:
+  - @vercel/frameworks@2.0.5
+
+## 5.1.4
+
+### Patch Changes
+
+- Updated dependencies [[`a8934da62`](https://github.com/vercel/vercel/commit/a8934da6232b66a98e9ce43ebf5342eac664d40d)]:
+  - @vercel/frameworks@2.0.4
+
+## 5.1.3
+
+### Patch Changes
+
+- Updated dependencies [[`306f653da`](https://github.com/vercel/vercel/commit/306f653da9de96ddf583cce35603229aa55c4e53), [`34dd9c091`](https://github.com/vercel/vercel/commit/34dd9c0918585cf6d3b04bddd9158978b0b4192f)]:
+  - @vercel/frameworks@2.0.3
+  - @vercel/error-utils@2.0.2
+
+## 5.1.2
+
+### Patch Changes
+
+- Updated dependencies [[`9e9fac019`](https://github.com/vercel/vercel/commit/9e9fac0191cb1428ac9e5479c3d5c8afd7b7d357)]:
+  - @vercel/routing-utils@3.1.0
+
+## 5.1.1
+
+### Patch Changes
+
+- [cli] Update bun detection and add tests for projects with both bunlock binary and yarn.lock text files ([#10583](https://github.com/vercel/vercel/pull/10583))
+
 ## 5.1.0
 
 ### Minor Changes

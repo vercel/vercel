@@ -1,7 +1,8 @@
 {
-  "extends": "../tsconfig.json",
-  "include": ["*.test.ts"],
   "compilerOptions": {
-    "allowJs": true
-  }
+    "allowJs": true,
+    "sourceMap": true
+  },
+  "extends": "../tsconfig.json",
+  "include": ["*.test.ts"]
 }
