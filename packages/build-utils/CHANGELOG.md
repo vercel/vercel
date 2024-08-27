@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 8.3.7
+
+### Patch Changes
+
+- Revert "Revert "warn on mismatched corepack and detected package managers"" ([#11887](https://github.com/vercel/vercel/pull/11887))
+
 ## 8.3.6
 
 ### Patch Changes
