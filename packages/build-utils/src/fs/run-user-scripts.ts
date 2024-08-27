@@ -3,7 +3,14 @@ import fs from 'fs-extra';
 import path from 'path';
 import Sema from 'async-sema';
 import spawn from 'cross-spawn';
-import { coerce, intersects, SemVer, validRange, parse } from 'semver';
+import {
+  coerce,
+  intersects,
+  SemVer,
+  validRange,
+  parse,
+  satisfies,
+} from 'semver';
 import { SpawnOptions } from 'child_process';
 import { deprecate } from 'util';
 import debug from '../debug';
@@ -504,6 +511,7 @@ export async function runNpmInstall(
       packageJsonPackageManager: packageJson?.packageManager,
       nodeVersion,
       env,
+      packageJsonEngines: packageJson?.engines,
     });
     let commandArgs: string[];
     const isPotentiallyBrokenNpm =
@@ -589,12 +597,14 @@ export function getEnvForPackageManager({
   packageJsonPackageManager,
   nodeVersion,
   env,
+  packageJsonEngines,
 }: {
   cliType: CliType;
   lockfileVersion: number | undefined;
   packageJsonPackageManager?: string | undefined;
   nodeVersion: NodeVersion | undefined;
   env: { [x: string]: string | undefined };
+  packageJsonEngines?: PackageJson.Engines;
 }) {
   const corepackEnabled = usingCorepack(env, packageJsonPackageManager);
 
@@ -608,6 +618,7 @@ export function getEnvForPackageManager({
     corepackPackageManager: packageJsonPackageManager,
     nodeVersion,
     corepackEnabled,
+    packageJsonEngines,
   });
 
   if (corepackEnabled) {
@@ -729,12 +740,14 @@ export function getPathOverrideForPackageManager({
   lockfileVersion,
   corepackPackageManager,
   corepackEnabled = true,
+  packageJsonEngines,
 }: {
   cliType: CliType;
   lockfileVersion: number | undefined;
   corepackPackageManager: string | undefined;
   nodeVersion: NodeVersion | undefined;
   corepackEnabled?: boolean;
+  packageJsonEngines?: PackageJson.Engines;
 }): {
   /**
    * Which lockfile was detected.
@@ -760,7 +773,8 @@ export function getPathOverrideForPackageManager({
     !validateCorepackPackageManager(
       cliType,
       lockfileVersion,
-      corepackPackageManager
+      corepackPackageManager,
+      packageJsonEngines?.pnpm
     )
   ) {
     console.warn(
@@ -775,7 +789,8 @@ export function getPathOverrideForPackageManager({
 function validateCorepackPackageManager(
   cliType: CliType,
   lockfileVersion: number | undefined,
-  corepackPackageManager: string
+  corepackPackageManager: string,
+  enginesPnpmVersionRange: string | undefined
 ) {
   const validatedCorepackPackageManager = validateVersionSpecifier(
     corepackPackageManager
@@ -792,6 +807,21 @@ function validateCorepackPackageManager(
       `WARN [package-manager-warning-3] Detected package manager "${cliType}" does not match intended corepack defined package manager "${validatedCorepackPackageManager.packageName}". Change your lockfile or "package.json#packageManager" value to match.`
     );
     return false;
+  }
+
+  if (cliType === 'pnpm' && enginesPnpmVersionRange) {
+    const pnpmWithinEngineRange = satisfies(
+      validatedCorepackPackageManager.packageVersion,
+      enginesPnpmVersionRange
+    );
+    if (!pnpmWithinEngineRange) {
+      // pnpm would throw PNPM_UNSUPPORTED_ENGINE with
+      // an unhelpful message. This catches that case
+      // and throws a more helpful message.
+      throw new Error(
+        `The version of pnpm specified in package.json#packageManager (${validatedCorepackPackageManager.packageVersion}) must satisfy the version range in package.json#engines.pnpm (${enginesPnpmVersionRange}).`
+      );
+    }
   }
 
   if (lockfileVersion) {
@@ -995,6 +1025,7 @@ export async function runCustomInstallCommand({
     packageJsonPackageManager: packageJson?.packageManager,
     nodeVersion,
     env: spawnOpts?.env || {},
+    packageJsonEngines: packageJson?.engines,
   });
   debug(`Running with $PATH:`, env?.PATH || '');
   await execCommand(installCommand, {
@@ -1033,6 +1064,7 @@ export async function runPackageJsonScript(
       packageJsonPackageManager: packageJson?.packageManager,
       nodeVersion: undefined,
       env: cloneEnv(process.env, spawnOpts?.env),
+      packageJsonEngines: packageJson?.engines,
     }),
   };
 

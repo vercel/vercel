@@ -66,6 +66,39 @@ describe('Test `getPathOverrideForPackageManager()`', () => {
     });
   });
 
+  describe('with package.json#engines.pnpm', () => {
+    describe('with corepack enabled', () => {
+      test('should error if outside engine range', () => {
+        expect(() => {
+          getPathOverrideForPackageManager({
+            cliType: 'pnpm',
+            lockfileVersion: 6.1,
+            corepackPackageManager: 'pnpm@8.15.9',
+            nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
+            packageJsonEngines: { pnpm: '>=9.0.0' },
+          });
+        }).toThrow(
+          `The version of pnpm specified in package.json#packageManager (8.15.9) must satisfy the version range in package.json#engines.pnpm (>=9.0.0).`
+        );
+      });
+
+      test('should not error if inside engine range', () => {
+        const result = getPathOverrideForPackageManager({
+          cliType: 'pnpm',
+          lockfileVersion: 9.0,
+          corepackPackageManager: 'pnpm@9.5.0',
+          nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
+          packageJsonEngines: { pnpm: '>=9.0.0' },
+        });
+        expect(result).toStrictEqual({
+          detectedLockfile: undefined,
+          detectedPackageManager: undefined,
+          path: undefined,
+        });
+      });
+    });
+  });
+
   describe('using corepack', () => {
     let consoleWarnSpy: jest.SpyInstance;
 
