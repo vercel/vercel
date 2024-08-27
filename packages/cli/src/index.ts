@@ -46,7 +46,6 @@ import * as ERRORS from './util/errors-ts';
 import { APIError } from './util/errors-ts';
 import { SENTRY_DSN } from './util/constants';
 import getUpdateCommand from './util/get-update-command';
-import { metrics, shouldCollectMetrics } from './util/metrics';
 import { getCommandName, getTitleName } from './util/pkg-name';
 import doLoginPrompt from './util/login/prompt';
 import type { AuthConfig, GlobalConfig } from '@vercel-internals/types';
@@ -498,12 +497,8 @@ const main = async () => {
   }
 
   let exitCode;
-  let metric: ReturnType<typeof metrics> | undefined;
-  const eventCategory = 'Exit Code';
 
   try {
-    const start = Date.now();
-
     if (!targetCommand) {
       // Set this for the metrics to record it at the end
       targetCommand = parsedArgs.args[2];
@@ -626,17 +621,6 @@ const main = async () => {
 
       exitCode = await func(client);
     }
-    const end = Date.now() - start;
-
-    if (shouldCollectMetrics) {
-      const category = 'Command Invocation';
-
-      if (!metric) metric = metrics();
-      metric
-        .timing(category, targetCommand, end, pkg.version)
-        .event(category, targetCommand, pkg.version)
-        .send();
-    }
   } catch (err: unknown) {
     if (isErrnoException(err) && err.code === 'ENOTFOUND') {
       // Error message will look like the following:
@@ -685,14 +669,6 @@ const main = async () => {
       return 1;
     }
 
-    if (shouldCollectMetrics) {
-      if (!metric) metric = metrics();
-      metric
-        .event(eventCategory, '1', pkg.version)
-        .exception(errorToString(err))
-        .send();
-    }
-
     // If there is a code we should not consider the error unexpected
     // but instead show the message. Any error that is handled by this should
     // actually be handled in the sub command instead. Please make sure
@@ -711,11 +687,6 @@ const main = async () => {
     }
 
     return 1;
-  }
-
-  if (shouldCollectMetrics) {
-    if (!metric) metric = metrics();
-    metric.event(eventCategory, `${exitCode}`, pkg.version).send();
   }
 
   return exitCode;
