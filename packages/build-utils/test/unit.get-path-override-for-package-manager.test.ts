@@ -22,7 +22,7 @@ describe('Test `getPathOverrideForPackageManager()`', () => {
       const result = getPathOverrideForPackageManager({
         cliType: 'pnpm',
         lockfileVersion: undefined,
-        corepackPackageManager: 'pnpm@9.*',
+        corepackPackageManager: 'pnpm@9.5.0',
         nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
       });
       expect(result).toStrictEqual({
@@ -38,7 +38,7 @@ describe('Test `getPathOverrideForPackageManager()`', () => {
       const result = getPathOverrideForPackageManager({
         cliType: 'pnpm',
         lockfileVersion: 9.0,
-        corepackPackageManager: 'pnpm@9.*',
+        corepackPackageManager: 'pnpm@9.5.0',
         nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
         corepackEnabled: false,
       });
@@ -55,7 +55,7 @@ describe('Test `getPathOverrideForPackageManager()`', () => {
       const result = getPathOverrideForPackageManager({
         cliType: 'pnpm',
         lockfileVersion: 9.0,
-        corepackPackageManager: 'pnpm@9.*',
+        corepackPackageManager: 'pnpm@9.5.0',
         nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
       });
       expect(result).toStrictEqual({
@@ -81,12 +81,12 @@ describe('Test `getPathOverrideForPackageManager()`', () => {
       getPathOverrideForPackageManager({
         cliType: 'pnpm',
         lockfileVersion: 5.0,
-        corepackPackageManager: 'pnpm@9.*',
+        corepackPackageManager: 'pnpm@9.5.0',
         nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
       });
       expect(consoleWarnSpy).toHaveBeenCalledWith(
         expect.stringContaining(
-          'Detected lockfile "5" which is not compatible with the intended corepack package manager "pnpm@9.*". Update your lockfile or change to a compatible corepack version.'
+          'Detected lockfile "5" which is not compatible with the intended corepack package manager "pnpm@9.5.0". Update your lockfile or change to a compatible corepack version.'
         )
       );
     });
@@ -95,12 +95,12 @@ describe('Test `getPathOverrideForPackageManager()`', () => {
       getPathOverrideForPackageManager({
         cliType: 'pnpm',
         lockfileVersion: 5.1,
-        corepackPackageManager: 'pnpm@8.*',
+        corepackPackageManager: 'pnpm@8.15.9',
         nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
       });
       expect(consoleWarnSpy).toHaveBeenCalledWith(
         expect.stringContaining(
-          'Detected lockfile "5.1" which is not compatible with the intended corepack package manager "pnpm@8.*". Update your lockfile or change to a compatible corepack version.'
+          'Detected lockfile "5.1" which is not compatible with the intended corepack package manager "pnpm@8.15.9". Update your lockfile or change to a compatible corepack version.'
         )
       );
     });
@@ -109,7 +109,7 @@ describe('Test `getPathOverrideForPackageManager()`', () => {
       getPathOverrideForPackageManager({
         cliType: 'npm',
         lockfileVersion: 9.0,
-        corepackPackageManager: 'pnpm@9.*',
+        corepackPackageManager: 'pnpm@9.5.0',
         nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
       });
       expect(consoleWarnSpy).toHaveBeenCalledWith(
