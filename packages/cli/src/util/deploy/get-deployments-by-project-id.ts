@@ -91,6 +91,7 @@ export default async function getDeploymentsByProjectId(
       ready: depl.ready,
       readyState: depl.state,
       regions: [],
+      rollbackCandidate: depl.isRollbackCandidate,
       source: depl.source,
       status: depl.state,
       target: depl.target,

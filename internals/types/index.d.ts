@@ -227,6 +227,7 @@ export type Deployment = {
     | 'READY'
     | 'CANCELED';
   regions: string[];
+  rollbackCandidate: boolean;
   routes?: RouteOrMiddleware[] | null;
   source?: 'cli' | 'git' | 'import' | 'import/repo' | 'clone/repo';
   status:

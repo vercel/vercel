@@ -154,7 +154,7 @@ export default async function remove(client: Client) {
   }
 
   deployments = deployments.filter((match, i) => {
-    if (safe && aliases[i].length > 0) {
+    if (safe && (aliases[i].length > 0 || match.rollbackCandidate)) {
       return false;
     }
 
@@ -164,7 +164,7 @@ export default async function remove(client: Client) {
 
   if (deployments.length === 0 && projects.length === 0) {
     log(
-      `Could not find ${parsedArgs.flags['--safe'] ? 'unaliased' : 'any'} deployments ` +
+      `Could not find ${parsedArgs.flags['--safe'] ? 'inactive' : 'any'} deployments ` +
         `or projects matching ` +
         `${ids
           .map(id => chalk.bold(`"${id}"`))
