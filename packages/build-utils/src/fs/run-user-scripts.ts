@@ -3,7 +3,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import Sema from 'async-sema';
 import spawn from 'cross-spawn';
-import { coerce, intersects, SemVer, validRange } from 'semver';
+import { coerce, intersects, SemVer, validRange, parse } from 'semver';
 import { SpawnOptions } from 'child_process';
 import { deprecate } from 'util';
 import debug from '../debug';
@@ -794,19 +794,11 @@ function validateCorepackPackageManager(
     return false;
   }
 
-  const corepackPackageManagerVersion = coerce(
-    validatedCorepackPackageManager.packageVersionRange
-  );
-
-  if (corepackPackageManagerVersion === null) {
-    // this will fail to use corepack, but we should return `true` here to let corepack itself
-    // show the appropriate error message and fail the build
-    return true;
-  } else if (lockfileVersion) {
+  if (lockfileVersion) {
     return validLockfileForPackageManager(
       cliType,
       lockfileVersion,
-      corepackPackageManagerVersion
+      validatedCorepackPackageManager.packageVersion
     );
   } else {
     return true;
@@ -835,14 +827,15 @@ function validateVersionSpecifier(version?: string) {
     return undefined;
   }
 
-  if (!validRange(after)) {
+  const packageVersion = parse(after);
+  if (!packageVersion) {
     // the version after the `@` should be a valid semver value
     return undefined;
   }
 
   return {
     packageName: before,
-    packageVersionRange: after,
+    packageVersion,
   };
 }
 
