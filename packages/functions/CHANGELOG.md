@@ -1,5 +1,17 @@
 # @vercel/functions
 
+## 1.4.1
+
+### Patch Changes
+
+- Package files in the root folder ([#11982](https://github.com/vercel/vercel/pull/11982))
+
+## 1.4.0
+
+### Minor Changes
+
+- Added OIDC Token utility functions ([#11701](https://github.com/vercel/vercel/pull/11701))
+
 ## 1.3.0
 
 ### Minor Changes

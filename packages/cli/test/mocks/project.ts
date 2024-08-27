@@ -3,6 +3,8 @@ import type {
   ProjectEnvTarget,
   Project,
   ProjectEnvVariable,
+  CustomEnvironment,
+  Deployment,
 } from '@vercel-internals/types';
 import { formatProvider } from '../../src/util/git/connect-git-provider';
 import { parseEnvironment } from '../../src/commands/pull';
@@ -198,7 +200,9 @@ export function useUnknownProject() {
 }
 
 export function useProject(
-  project: Partial<Project> = defaultProject,
+  project: Partial<
+    Project & { customEnvironments?: CustomEnvironment[] }
+  > = defaultProject,
   projectEnvs: ProjectEnvVariable[] = envs
 ) {
   client.scenario.get(`/:version/projects/${project.name}`, (_req, res) => {
@@ -287,6 +291,10 @@ export function useProject(
 
     res.json({ envs: targetEnvs });
   });
+  client.scenario.get(
+    `/projects/${project.id}/custom-environments`,
+    (req, res) => res.json({ environments: project.customEnvironments || [] })
+  );
   client.scenario.post(`/v10/projects/${project.id}/env`, (req, res) => {
     const envObj = req.body;
     envObj.id = envObj.key;

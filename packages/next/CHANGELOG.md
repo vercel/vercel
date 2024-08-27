@@ -1,5 +1,45 @@
 # @vercel/next
 
+## 4.3.7
+
+### Patch Changes
+
+- remove experimental .action output handling ([#11998](https://github.com/vercel/vercel/pull/11998))
+
+## 4.3.6
+
+### Patch Changes
+
+- Revert "Fix corepack `packageManager` detection on monorepos" ([#11865](https://github.com/vercel/vercel/pull/11865))
+
+## 4.3.5
+
+### Patch Changes
+
+- Make app route prerender filter dynamic route specific ([#11863](https://github.com/vercel/vercel/pull/11863))
+
+## 4.3.4
+
+### Patch Changes
+
+- Fix missing app route with mixed SSR/SSG dynamic route ([#11862](https://github.com/vercel/vercel/pull/11862))
+
+- Fix corepack `packageManager` detection on monorepos ([#11811](https://github.com/vercel/vercel/pull/11811))
+
+## 4.3.3
+
+### Patch Changes
+
+- fix glob path for next.js diagnostics ([#11859](https://github.com/vercel/vercel/pull/11859))
+
+- Upgrade to @vercel/nft 0.27.3 with a bug fix for browser mapping support ([#11841](https://github.com/vercel/vercel/pull/11841))
+
+## 4.3.2
+
+### Patch Changes
+
+- Ensure we do not include ending slash in matched path ([#11830](https://github.com/vercel/vercel/pull/11830))
+
 ## 4.3.1
 
 ### Patch Changes

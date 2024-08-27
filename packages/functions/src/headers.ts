@@ -36,7 +36,7 @@ export const EMOJI_FLAG_UNICODE_STARTING_POSITION = 127397;
  * We define a new type so this function can be reused with
  * the global `Request`, `node-fetch` and other types.
  */
-interface Request {
+export interface Request {
   headers: {
     get(name: string): string | null;
   };
@@ -93,8 +93,20 @@ function getFlag(countryCode: string | undefined): string | undefined {
 /**
  * Returns the IP address of the request from the headers.
  *
- * @see {@link IP_HEADER_NAME}
  * @param request The incoming request object which provides the IP
+ * @returns The IP address of the request.
+ *
+ * @example
+ *
+ * ```js
+ * import { ipAddress } from '@vercel/functions';
+ *
+ * export function GET(request) {
+ *   const ip = ipAddress(request)
+ *   return new Response('Your ip is' ${ip});
+ * }
+ * ```
+ *
  */
 export function ipAddress(request: Request): string | undefined {
   return getHeader(request, IP_HEADER_NAME);
@@ -117,13 +129,31 @@ function getRegionFromRequestId(requestId?: string): string | undefined {
 
 /**
  * Returns the location information for the incoming request.
- *
- * @see {@link CITY_HEADER_NAME}
- * @see {@link COUNTRY_HEADER_NAME}
- * @see {@link REGION_HEADER_NAME}
- * @see {@link LATITUDE_HEADER_NAME}
- * @see {@link LONGITUDE_HEADER_NAME}
  * @param request The incoming request object which provides the geolocation data
+ * @returns The location information of the request, in this way:
+ *
+ * ```json
+ * {
+ *  "city": "New York",
+ *  "country": "US",
+ *  "flag": "🇺🇸",
+ *  "countryRegion": "NY",
+ *  "region": "dev1",
+ *  "latitude": "40.7128",
+ *  "longitude": "-74.0060"
+ * }
+ * ```
+ *
+ * @example
+ *
+ * ```js
+ * import { geolocation } from '@vercel/functions';
+ *
+ * export function GET(request) {
+ *   const details = geolocation(request);
+ *   return Response.json(payload);
+ * }
+ * ```
  */
 export function geolocation(request: Request): Geo {
   return {

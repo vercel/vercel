@@ -1,7 +1,6 @@
-import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
 
-export const loginCommand: Command = {
+export const loginCommand = {
   name: 'login',
   description: 'Authenticate using your email or team id.',
   arguments: [
@@ -15,16 +14,18 @@ export const loginCommand: Command = {
       name: 'github',
       description: 'Log in with GitHub',
       shorthand: null,
-      type: String,
+      type: Boolean,
       deprecated: false,
     },
     {
       name: 'oob',
       description: 'Log in with "out of band" authentication',
       shorthand: null,
-      type: String,
+      type: Boolean,
       deprecated: false,
     },
+    { name: 'gitlab', shorthand: null, type: Boolean, deprecated: false },
+    { name: 'bitbucket', shorthand: null, type: Boolean, deprecated: false },
   ],
   examples: [
     {
@@ -44,4 +45,4 @@ export const loginCommand: Command = {
       value: `${packageName} login --github --oob`,
     },
   ],
-};
+} as const;

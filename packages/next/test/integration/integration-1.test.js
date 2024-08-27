@@ -6,11 +6,16 @@ const builder = require('../../');
 const {
   createRunBuildLambda,
 } = require('../../../../test/lib/run-build-lambda');
-const { duplicateWithConfig } = require('../utils');
+const { duplicateWithConfig, normalizeReactVersion } = require('../utils');
 const { streamToBuffer } = require('@vercel/build-utils');
 const { createHash } = require('crypto');
 
-const runBuildLambda = createRunBuildLambda(builder);
+const runBuildLambda = async projectPath => {
+  const innerRunBuildLambda = createRunBuildLambda(builder);
+
+  await normalizeReactVersion(projectPath);
+  return innerRunBuildLambda(projectPath);
+};
 
 const SIMPLE_PROJECT = path.resolve(
   __dirname,
@@ -88,7 +93,7 @@ if (parseInt(process.versions.node.split('.')[0], 10) >= 16) {
       )
     ).toBeFalsy();
 
-    expect(lambdas.size).toBe(5);
+    expect(lambdas.size).toBe(6);
 
     // RSC, root-level page.js
     expect(buildResult.output['index']).toBeDefined();

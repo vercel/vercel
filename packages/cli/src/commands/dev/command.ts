@@ -1,7 +1,7 @@
-import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
+import { confirmOption, yesOption } from '../../util/arg-common';
 
-export const devCommand: Command = {
+export const devCommand = {
   name: 'dev',
   description: `Starts the \`${packageName} dev\` server.`,
   arguments: [
@@ -15,10 +15,13 @@ export const devCommand: Command = {
       name: 'listen',
       description: 'Specify a URI endpoint on which to listen [0.0.0.0:3000]',
       argument: 'uri',
-      shorthand: null,
+      shorthand: 'l',
       type: String,
       deprecated: false,
     },
+    yesOption,
+    { name: 'port', shorthand: 'p', type: String, deprecated: true },
+    { ...confirmOption, deprecated: true },
   ],
   examples: [
     {
@@ -30,4 +33,4 @@ export const devCommand: Command = {
       value: `${packageName} dev --listen 127.0.0.1:5000 `,
     },
   ],
-};
+} as const;

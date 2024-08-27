@@ -1,5 +1,201 @@
 # vercel
 
+## 37.1.2
+
+### Patch Changes
+
+- Fix incorrect type for certs challenge-only flag ([#12018](https://github.com/vercel/vercel/pull/12018))
+
+- [vc help] add build command to help/--help ([#12016](https://github.com/vercel/vercel/pull/12016))
+
+## 37.1.1
+
+### Patch Changes
+
+- Updated dependencies [[`c6d469595`](https://github.com/vercel/vercel/commit/c6d469595372d53398c3f2eb35b644a22c56e4f6), [`49aaea41f`](https://github.com/vercel/vercel/commit/49aaea41f1501dec6aa262f04368df5e0c1475b6)]:
+  - @vercel/build-utils@8.3.7
+  - @vercel/next@4.3.7
+  - @vercel/node@3.2.9
+  - @vercel/static-build@2.5.19
+
+## 37.1.0
+
+### Minor Changes
+
+- Support Custom Environments in `vercel env add [target]` ([#11994](https://github.com/vercel/vercel/pull/11994))
+
+## 37.0.0
+
+### Major Changes
+
+- Refactor / modernize the `vercel list` command ([#11956](https://github.com/vercel/vercel/pull/11956))
+
+### Minor Changes
+
+- Print the custom environment name in `vc list` ([#11965](https://github.com/vercel/vercel/pull/11965))
+
+- Allow filtering in `vc env ls` with custom environment ([#11984](https://github.com/vercel/vercel/pull/11984))
+
+- Display Deployment Retention Policies in vc ls [project] ([#11676](https://github.com/vercel/vercel/pull/11676))
+
+### Patch Changes
+
+- Prefactor middleware tests to make changes easier ([#11934](https://github.com/vercel/vercel/pull/11934))
+
+- Updated dependencies [[`763db23a3`](https://github.com/vercel/vercel/commit/763db23a3acf1c290f0d45c2501a2c924cbd609d)]:
+  - @vercel/remix-builder@2.2.6
+
+## 36.0.0
+
+### Major Changes
+
+- Remove defunct `secrets` command ([#11659](https://github.com/vercel/vercel/pull/11659))
+
+### Patch Changes
+
+- Updated dependencies [[`5680ff988`](https://github.com/vercel/vercel/commit/5680ff98801dec47152f21534ddc15bab6d6ddd7)]:
+  - @vercel/remix-builder@2.2.5
+
+## 35.2.4
+
+### Patch Changes
+
+- Some subcommand flags now show correct short flag in help ([#11931](https://github.com/vercel/vercel/pull/11931))
+
+- Display custom environments in `vc env ls` ([#11912](https://github.com/vercel/vercel/pull/11912))
+
+- [cli] alias `dev` pnpm command as `vc` and `vercel` as well ([#11933](https://github.com/vercel/vercel/pull/11933))
+
+- Updated dependencies [[`d77d0919b`](https://github.com/vercel/vercel/commit/d77d0919b45eb3e8d27a9b75c0994727c926ccb0)]:
+  - @vercel/remix-builder@2.2.4
+
+## 35.2.3
+
+### Patch Changes
+
+- Updated dependencies [[`bec80e76a`](https://github.com/vercel/vercel/commit/bec80e76afe546072d4138f3ed3d6eda56d3f370), [`680a3af28`](https://github.com/vercel/vercel/commit/680a3af28e5d6caf51aa56f80fe77ad1091cd542)]:
+  - @vercel/build-utils@8.3.6
+  - @vercel/remix-builder@2.2.3
+  - @vercel/node@3.2.8
+  - @vercel/static-build@2.5.18
+
+## 35.2.2
+
+### Patch Changes
+
+- Fix issue where builder output was treating an api endpoint as a frontend route ([#11907](https://github.com/vercel/vercel/pull/11907))
+
+- Updated dependencies [[`0efb4795c`](https://github.com/vercel/vercel/commit/0efb4795cb06edf2561b69d7e2512b8e0cf912ca), [`5d1965832`](https://github.com/vercel/vercel/commit/5d1965832f02595c91409b4e7d863725669e6ccb)]:
+  - @vercel/remix-builder@2.2.2
+
+## 35.2.1
+
+### Patch Changes
+
+- Allow custom environments in `vc pull --environment` ([#11897](https://github.com/vercel/vercel/pull/11897))
+
+- `vc target` now prompts to link projects ([#11895](https://github.com/vercel/vercel/pull/11895))
+
+- Updated dependencies [[`6c2398713`](https://github.com/vercel/vercel/commit/6c2398713cd7ea2f1511d56ce1c5120d9f8e3a98)]:
+  - @vercel/python@4.3.1
+
+## 35.2.0
+
+### Minor Changes
+
+- Apply framework "defaultRoutes" in `vc build` ([#11889](https://github.com/vercel/vercel/pull/11889))
+
+### Patch Changes
+
+- fix(cli): wrong log line colors for deploy and inspect commands ([#11891](https://github.com/vercel/vercel/pull/11891))
+
+- Standardize target parsing between commands ([#11890](https://github.com/vercel/vercel/pull/11890))
+
+## 35.1.0
+
+### Minor Changes
+
+- Add target flag to vc build ([#11858](https://github.com/vercel/vercel/pull/11858))
+
+### Patch Changes
+
+- Better error message when calling logs command without a deployment url ([#11877](https://github.com/vercel/vercel/pull/11877))
+
+- Updated dependencies [[`9d9b2fee6`](https://github.com/vercel/vercel/commit/9d9b2fee64b5638a313366ccb3eb2e0b337b4750)]:
+  - @vercel/build-utils@8.3.5
+  - @vercel/node@3.2.7
+  - @vercel/static-build@2.5.17
+
+## 35.0.3
+
+### Patch Changes
+
+- Updated dependencies [[`ae2bdab65`](https://github.com/vercel/vercel/commit/ae2bdab6544d76687785b40eded0a40e3ea477ff)]:
+  - @vercel/build-utils@8.3.4
+  - @vercel/hydrogen@1.0.4
+  - @vercel/next@4.3.6
+  - @vercel/redwood@2.1.3
+  - @vercel/remix-builder@2.2.1
+  - @vercel/static-build@2.5.16
+  - @vercel/node@3.2.6
+
+## 35.0.2
+
+### Patch Changes
+
+- Updated dependencies [[`a95c4c43a`](https://github.com/vercel/vercel/commit/a95c4c43a660386e5fd4921851e952438fa84b0a)]:
+  - @vercel/next@4.3.5
+
+## 35.0.1
+
+### Patch Changes
+
+- Updated dependencies [[`cfaa83cc9`](https://github.com/vercel/vercel/commit/cfaa83cc9059c598ff3ff8e7f081b483a3ead715), [`db8452770`](https://github.com/vercel/vercel/commit/db8452770e81da216dfd66270473264160ea96d5), [`9290c57b8`](https://github.com/vercel/vercel/commit/9290c57b83cc45a428e4ce96dd4402f97ec7f821)]:
+  - @vercel/next@4.3.4
+  - @vercel/remix-builder@2.2.0
+  - @vercel/static-build@2.5.15
+  - @vercel/build-utils@8.3.3
+  - @vercel/hydrogen@1.0.3
+  - @vercel/redwood@2.1.2
+  - @vercel/node@3.2.5
+
+## 35.0.0
+
+### Major Changes
+
+- [breaking] `vc logs` now returns runtime logs. Use `vc inspect --logs` and `vc deploy --logs` to get build logs ([#11788](https://github.com/vercel/vercel/pull/11788))
+
+### Patch Changes
+
+- Add download of diagnostics ([#11859](https://github.com/vercel/vercel/pull/11859))
+
+- Updated dependencies [[`4c892f040`](https://github.com/vercel/vercel/commit/4c892f04014cf7b7bc662740296cae93fa93a3df), [`11e22746a`](https://github.com/vercel/vercel/commit/11e22746a54a3a17d860bfe32b7a9e885bd8e925)]:
+  - @vercel/next@4.3.3
+  - @vercel/redwood@2.1.1
+  - @vercel/remix-builder@2.1.11
+  - @vercel/node@3.2.4
+
+## 34.4.0
+
+### Minor Changes
+
+- Add target output to `vc inspect` ([#11821](https://github.com/vercel/vercel/pull/11821))
+
+- Send `customEnvironmentSlugOrId` to the create deployment endpoint ([#11789](https://github.com/vercel/vercel/pull/11789))
+
+- Add `vc target ls` command ([#11790](https://github.com/vercel/vercel/pull/11790))
+
+### Patch Changes
+
+- Various improvements to vc target ls ([#11840](https://github.com/vercel/vercel/pull/11840))
+
+- Updated dependencies [[`3eb40c8c2`](https://github.com/vercel/vercel/commit/3eb40c8c2d205ff3c237774eb0b63135c9298d5d), [`d0fe663af`](https://github.com/vercel/vercel/commit/d0fe663afc9c1a699f4195f0e8c97982f47193cf), [`b1e4a4011`](https://github.com/vercel/vercel/commit/b1e4a401102c94742d3b347875313d387d9a57b9), [`55ab52512`](https://github.com/vercel/vercel/commit/55ab52512c1966369fcd9ac60114356c8dfc0271)]:
+  - @vercel/build-utils@8.3.2
+  - @vercel/static-build@2.5.14
+  - @vercel/next@4.3.2
+  - @vercel/remix-builder@2.1.10
+  - @vercel/node@3.2.3
+
 ## 34.3.1
 
 ### Patch Changes

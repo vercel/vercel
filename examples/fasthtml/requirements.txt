@@ -1,0 +1,2 @@
+python-fasthtml==0.4.4
+uvicorn==0.30.1

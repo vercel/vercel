@@ -1,5 +1,23 @@
 # @vercel/frameworks
 
+## 3.2.0
+
+### Minor Changes
+
+- [fs-detectors] Adds new detector for Sanity v3 ([#11991](https://github.com/vercel/vercel/pull/11991))
+
+## 3.1.1
+
+### Patch Changes
+
+- Improvements to "fasthtml" framework preset ([#11900](https://github.com/vercel/vercel/pull/11900))
+
+## 3.1.0
+
+### Minor Changes
+
+- Add FastHTML framework preset ([#11889](https://github.com/vercel/vercel/pull/11889))
+
 ## 3.0.3
 
 ### Patch Changes

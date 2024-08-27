@@ -259,7 +259,7 @@ test('deploy command should not warn when deploying with conflicting subdirector
     expect(stderr).toContain('No deployments found');
   } catch {
     // If it's an existing Project with deployments
-    expect(stderr).toContain(`Deployments for ${target} under`);
+    expect(stderr).toMatch(new RegExp(`Deployments for .*/${target}`));
   }
 });
 
@@ -552,12 +552,12 @@ test('deploy `api-env` fixture and test `vercel env` command', async () => {
       cwd: target,
     });
 
-    await waitForPrompt(vc, 'What’s the name of the variable?');
+    await waitForPrompt(vc, "What's the name of the variable?");
     vc.stdin?.write('MY_NEW_ENV_VAR\n');
     await waitForPrompt(
       vc,
       chunk =>
-        chunk.includes('What’s the value of') &&
+        chunk.includes("What's the value of") &&
         chunk.includes('MY_NEW_ENV_VAR')
     );
     vc.stdin?.write('my plaintext value\n');
