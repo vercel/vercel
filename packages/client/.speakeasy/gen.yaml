@@ -38,7 +38,7 @@ typescript:
   methodArguments: require-security-and-request
   moduleFormat: commonjs
   outputModelSuffix: output
-  packageName: '@vercel/client'
+  packageName: '@vercel/sdk'
   responseFormat: flat
   templateVersion: v2
   useIndexModules: true
