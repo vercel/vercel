@@ -67,6 +67,7 @@ export async function add(client: Client, args: string[]) {
   }
 
   privisionResourceViaWebUI(
+    client,
     teamId,
     integration.id,
     product.id,
@@ -135,6 +136,7 @@ async function getOptionalLinkedProject(client: Client) {
 }
 
 function privisionResourceViaWebUI(
+  client: Client,
   teamId: string,
   integrationId: string,
   productId: string,
@@ -148,5 +150,8 @@ function privisionResourceViaWebUI(
     url.searchParams.set('projectId', projectId);
   }
   url.searchParams.set('cmd', 'add');
+  client.output.print(
+    `Opening the Vercel Dashboard to continue the installation...`
+  );
   open(url.href);
 }
