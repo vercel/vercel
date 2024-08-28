@@ -1,5 +1,7 @@
 import chance from 'chance';
 import { client } from './client';
+import { beforeEach } from 'vitest';
+import { teamCache } from '../../src/util/teams/get-team-by-id';
 
 type Team = {
   id: string;
@@ -87,3 +89,7 @@ export function createTeam(teamId?: string) {
   teams.push(newTeam);
   return newTeam;
 }
+
+beforeEach(() => {
+  teamCache.clear();
+});
