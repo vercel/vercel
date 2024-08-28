@@ -127,6 +127,7 @@ describe('Test `getPathForPackageManager()`', () => {
       want: {
         detectedLockfile: 'pnpm-lock.yaml',
         detectedPackageManager: 'pnpm@7.x',
+        pnpmVersionRange: '7.x',
         path: '/pnpm7/node_modules/.bin',
         yarnNodeLinker: undefined,
       },
