@@ -1,5 +1,11 @@
 # vercel
 
+## 37.2.1
+
+### Patch Changes
+
+- Fixes integration not found error when using `vercel install` ([#12035](https://github.com/vercel/vercel/pull/12035))
+
 ## 37.2.0
 
 ### Minor Changes
