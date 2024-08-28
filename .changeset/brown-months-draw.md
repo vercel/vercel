@@ -1,5 +1,4 @@
 ---
-"@vercel-internals/types": patch
 "vercel": patch
 ---
 
