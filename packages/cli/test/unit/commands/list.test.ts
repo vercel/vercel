@@ -1,3 +1,4 @@
+import assert from 'assert';
 import { describe, it, expect } from 'vitest';
 import createLineIterator from 'line-async-iterator';
 import { client } from '../../mocks/client';
@@ -19,12 +20,10 @@ const fixture = (name: string) =>
   join(__dirname, '../../fixtures/unit/commands/list', name);
 
 describe('list', () => {
-  let teamSlug: string;
-
   it('should get deployments from a project linked by a directory', async () => {
     const user = useUser();
-    const team = useTeams('team_dummy');
-    teamSlug = team[0].slug;
+    const teams = useTeams('team_dummy');
+    assert(Array.isArray(teams));
     useProject({
       ...defaultProject,
       id: 'with-team',
@@ -33,7 +32,6 @@ describe('list', () => {
     const deployment = useDeployment({ creator: user });
 
     client.cwd = fixture('with-team');
-    client.output.supportsHyperlink = false;
     await list(client);
 
     const lines = createLineIterator(client.stderr);
@@ -42,11 +40,11 @@ describe('list', () => {
     expect(line.value).toEqual('Retrieving project…');
 
     line = await lines.next();
-    expect(line.value).toEqual(`Fetching deployments in ${team[0].slug}`);
+    expect(line.value).toEqual(`Fetching deployments in ${teams[0].slug}`);
 
     line = await lines.next();
     const { org } = pluckIdentifiersFromDeploymentList(line.value!);
-    expect(org).toEqual(team[0].slug);
+    expect(org).toEqual(teams[0].slug);
 
     line = await lines.next();
     expect(line.value).toEqual('');
@@ -76,7 +74,8 @@ describe('list', () => {
 
   it('should get the deployments for a specified project', async () => {
     const user = useUser();
-    const team = useTeams('team_dummy');
+    const teams = useTeams('team_dummy');
+    assert(Array.isArray(teams));
     useProject({
       ...defaultProject,
       id: 'with-team',
@@ -86,7 +85,6 @@ describe('list', () => {
 
     client.cwd = fixture('with-team');
     client.setArgv(deployment.name);
-    client.output.supportsHyperlink = false;
     await list(client);
 
     const lines = createLineIterator(client.stderr);
@@ -95,13 +93,11 @@ describe('list', () => {
     expect(line.value).toEqual('Retrieving project…');
 
     line = await lines.next();
-    expect(line.value).toEqual(
-      `Fetching deployments in ${teamSlug || team[0].slug}`
-    );
+    expect(line.value).toEqual(`Fetching deployments in ${teams[0].slug}`);
 
     line = await lines.next();
     const { org } = pluckIdentifiersFromDeploymentList(line.value!);
-    expect(org).toEqual(teamSlug || team[0].slug);
+    expect(org).toEqual(teams[0].slug);
 
     line = await lines.next();
     expect(line.value).toEqual('');
@@ -131,6 +127,7 @@ describe('list', () => {
 
   it('should output deployment URLs to stdout', async () => {
     const user = useUser();
+    useTeams('team_dummy');
     useProject({
       ...defaultProject,
       id: 'with-team',

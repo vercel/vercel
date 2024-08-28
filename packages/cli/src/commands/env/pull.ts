@@ -2,11 +2,9 @@ import chalk from 'chalk';
 import { outputFile } from 'fs-extra';
 import { closeSync, openSync, readSync } from 'fs';
 import { resolve } from 'path';
-import type { Project, ProjectLinked } from '@vercel-internals/types';
 import Client from '../../util/client';
 import { emoji, prependEmoji } from '../../util/emoji';
 import confirm from '../../util/input/confirm';
-import { Output } from '../../util/output';
 import param from '../../util/output/param';
 import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
@@ -21,6 +19,8 @@ import {
 import { isErrnoException } from '@vercel/error-utils';
 import { addToGitIgnore } from '../../util/link/add-to-gitignore';
 import JSONparse from 'json-parse-better-errors';
+import { formatProject } from '../../util/projects/format-project';
+import type { ProjectLinked } from '@vercel-internals/types';
 
 const CONTENTS_PREFIX = '# Created by Vercel CLI\n';
 
@@ -60,14 +60,14 @@ const VARIABLES_TO_IGNORE = [
 export default async function pull(
   client: Client,
   link: ProjectLinked,
-  project: Project,
   environment: string,
   opts: Partial<Options>,
   args: string[],
-  output: Output,
   cwd: string,
   source: Extract<EnvRecordsSource, 'vercel-cli:env:pull' | 'vercel-cli:pull'>
 ) {
+  const { output } = client;
+
   if (args.length > 1) {
     output.error(
       `Invalid number of arguments. Usage: ${getCommandName(`env pull <file>`)}`
@@ -99,17 +99,23 @@ export default async function pull(
     return 0;
   }
 
+  const projectSlugLink = formatProject(
+    client,
+    link.org.slug,
+    link.project.name
+  );
+
   output.log(
     `Downloading \`${chalk.cyan(
       environment
-    )}\` Environment Variables for Project ${chalk.bold(project.name)}`
+    )}\` Environment Variables for ${projectSlugLink}`
   );
 
   const pullStamp = stamp();
   output.spinner('Downloading');
 
   const records = (
-    await pullEnvRecords(output, client, project.id, source, {
+    await pullEnvRecords(output, client, link.project.id, source, {
       target: environment || 'development',
       gitBranch,
     })
