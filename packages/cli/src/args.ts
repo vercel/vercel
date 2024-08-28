@@ -21,7 +21,7 @@ export const help = () => `
       init                 [example]   Initialize an example project
       inspect              [id]        Displays information related to a deployment
       i | install          [name]      Install an integration from the Marketplace
-      integration          [cmd]       Manages your integrations
+      integration          [cmd]       Manages your Marketplace integrations
       link                 [path]      Link local directory to a Vercel Project
       ls | list            [app]       Lists deployments
       login                [email]     Logs into your account or creates a new one
