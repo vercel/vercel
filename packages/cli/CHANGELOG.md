@@ -1,5 +1,52 @@
 # vercel
 
+## 37.2.1
+
+### Patch Changes
+
+- Fixes integration not found error when using `vercel install` ([#12035](https://github.com/vercel/vercel/pull/12035))
+
+## 37.2.0
+
+### Minor Changes
+
+- Add `vc install` and `vc integration add` commands ([#12033](https://github.com/vercel/vercel/pull/12033))
+
+### Patch Changes
+
+- [cli] Remove existing metrics gathering behavior ([#12026](https://github.com/vercel/vercel/pull/12026))
+
+- Remove redundant formatting on a few lines of output ([#12011](https://github.com/vercel/vercel/pull/12011))
+
+- Updated dependencies [[`06337ed0b`](https://github.com/vercel/vercel/commit/06337ed0bb1ab4becd1554642c162c75bdcc91c2), [`2fc9e6d81`](https://github.com/vercel/vercel/commit/2fc9e6d8104a3d6308873ef8dafa27c32f0b97be)]:
+  - @vercel/build-utils@8.3.8
+  - @vercel/node@3.2.10
+  - @vercel/static-build@2.5.20
+
+## 37.1.2
+
+### Patch Changes
+
+- Fix incorrect type for certs challenge-only flag ([#12018](https://github.com/vercel/vercel/pull/12018))
+
+- [vc help] add build command to help/--help ([#12016](https://github.com/vercel/vercel/pull/12016))
+
+## 37.1.1
+
+### Patch Changes
+
+- Updated dependencies [[`c6d469595`](https://github.com/vercel/vercel/commit/c6d469595372d53398c3f2eb35b644a22c56e4f6), [`49aaea41f`](https://github.com/vercel/vercel/commit/49aaea41f1501dec6aa262f04368df5e0c1475b6)]:
+  - @vercel/build-utils@8.3.7
+  - @vercel/next@4.3.7
+  - @vercel/node@3.2.9
+  - @vercel/static-build@2.5.19
+
+## 37.1.0
+
+### Minor Changes
+
+- Support Custom Environments in `vercel env add [target]` ([#11994](https://github.com/vercel/vercel/pull/11994))
+
 ## 37.0.0
 
 ### Major Changes

@@ -1,10 +1,11 @@
-import chalk from 'chalk';
 import ms from 'ms';
+import chalk from 'chalk';
 import table from '../../util/output/table';
 import Client from '../../util/client';
 import { getCommandName } from '../../util/pkg-name';
-import type { ProjectLinked } from '@vercel-internals/types';
-import type { CustomEnvironment } from '../../util/target/types';
+import { formatProject } from '../../util/projects/format-project';
+import { formatEnvironment } from '../../util/target/format-environment';
+import type { CustomEnvironment, ProjectLinked } from '@vercel-internals/types';
 
 export default async function list(
   client: Client,
@@ -23,14 +24,10 @@ export default async function list(
   }
 
   const start = Date.now();
-  const projectUrl = `https://vercel.com/${link.org.slug}/${link.project.name}`;
-  const projectSlugLink = output.link(
-    chalk.bold(`${link.org.slug}/${link.project.name}`),
-    projectUrl,
-    {
-      fallback: () => chalk.bold(`${link.org.slug}/${link.project.name}`),
-      color: false,
-    }
+  const projectSlugLink = formatProject(
+    client,
+    link.org.slug,
+    link.project.name
   );
 
   output.spinner(`Fetching custom environments for ${projectSlugLink}`);
@@ -65,7 +62,6 @@ export default async function list(
       ),
       ...result
         .map(target => {
-          const boldName = chalk.bold(target.name);
           const type =
             target.type === 'production'
               ? 'Production'
@@ -74,10 +70,11 @@ export default async function list(
                 : 'Preview';
           return [
             [
-              output.link(
-                boldName,
-                `${projectUrl}/settings/environments/${target.id}`,
-                { fallback: () => boldName, color: false }
+              formatEnvironment(
+                client,
+                link.org.slug,
+                link.project.name,
+                target
               ),
               target.slug,
               target.id,

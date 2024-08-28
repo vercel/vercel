@@ -5,6 +5,7 @@ import type {
   ProjectEnvVariable,
   ProjectEnvType,
 } from '@vercel-internals/types';
+import { PROJECT_ENV_TARGET } from '@vercel-internals/constants';
 
 export default async function addEnvRecord(
   output: Output,
@@ -14,18 +15,28 @@ export default async function addEnvRecord(
   type: ProjectEnvType,
   key: string,
   value: string,
-  targets: ProjectEnvTarget[],
+  targets: string[],
   gitBranch: string
 ): Promise<void> {
   const actionWord = upsert ? 'Overriding' : 'Adding';
   output.debug(
     `${actionWord} ${type} Environment Variable ${key} to ${targets.length} targets`
   );
+  const target: ProjectEnvTarget[] = [];
+  const customEnvironmentIds: string[] = [];
+  for (const t of targets) {
+    const arr = PROJECT_ENV_TARGET.includes(t as ProjectEnvTarget)
+      ? target
+      : customEnvironmentIds;
+    arr.push(t);
+  }
   const body: Omit<ProjectEnvVariable, 'id'> = {
     type,
     key,
     value,
-    target: targets,
+    target,
+    customEnvironmentIds:
+      customEnvironmentIds.length > 0 ? customEnvironmentIds : undefined,
     gitBranch: gitBranch || undefined,
   };
   const args = upsert ? `?upsert=${upsert}` : '';

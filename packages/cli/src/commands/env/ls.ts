@@ -1,11 +1,9 @@
 import chalk from 'chalk';
 import ms from 'ms';
-import title from 'title';
-import { Output } from '../../util/output';
 import type {
   CustomEnvironment,
-  Project,
   ProjectEnvVariable,
+  ProjectLinked,
 } from '@vercel-internals/types';
 import Client from '../../util/client';
 import formatTable from '../../util/format-table';
@@ -14,17 +12,20 @@ import { getEnvTargetPlaceholder } from '../../util/env/env-target';
 import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
 import ellipsis from '../../util/output/ellipsis';
-import { isObject } from '@vercel/error-utils';
+import { getCustomEnvironments } from '../../util/target/get-custom-environments';
+import formatEnvironments from '../../util/env/format-environments';
+import { formatProject } from '../../util/projects/format-project';
 
 type Options = {};
 
 export default async function ls(
   client: Client,
-  project: Project,
+  link: ProjectLinked,
   opts: Partial<Options>,
-  args: string[],
-  output: Output
+  args: string[]
 ) {
+  const { output } = client;
+
   if (args.length > 2) {
     output.error(
       `Invalid number of arguments. Usage: ${getCommandName(
@@ -35,11 +36,12 @@ export default async function ls(
   }
 
   const [envTarget, envGitBranch] = args;
+  const { project, org } = link;
 
   const lsStamp = stamp();
 
   const [envsResult, customEnvs] = await Promise.all([
-    getEnvRecords(output, client, project.id, 'vercel-cli:env:ls', {
+    getEnvRecords(client, project.id, 'vercel-cli:env:ls', {
       target: envTarget,
       gitBranch: envGitBranch,
     }),
@@ -47,41 +49,25 @@ export default async function ls(
   ]);
   const { envs } = envsResult;
 
+  const projectSlugLink = formatProject(client, org.slug, project.name);
+
   if (envs.length === 0) {
     output.log(
-      `No Environment Variables found in Project ${chalk.bold(
-        project.name
-      )} ${chalk.gray(lsStamp())}`
+      `No Environment Variables found for ${projectSlugLink} ${chalk.gray(lsStamp())}`
     );
   } else {
     output.log(
-      `Environment Variables found in Project ${chalk.bold(
-        project.name
-      )} ${chalk.gray(lsStamp())}`
+      `Environment Variables found for ${projectSlugLink} ${chalk.gray(lsStamp())}`
     );
-    client.stdout.write(`${getTable(envs, customEnvs)}\n`);
+    client.stdout.write(`${getTable(client, link, envs, customEnvs)}\n`);
   }
 
   return 0;
 }
 
-async function getCustomEnvironments(client: Client, projectId: string) {
-  try {
-    const res = await client.fetch<{ environments: CustomEnvironment[] }>(
-      `/projects/${encodeURIComponent(projectId)}/custom-environments`,
-      { method: 'GET' }
-    );
-    return res.environments;
-  } catch (error) {
-    if (isObject(error) && error.status === 404) {
-      // user is not flagged for custom environments
-      return [];
-    }
-    throw error;
-  }
-}
-
 function getTable(
+  client: Client,
+  link: ProjectLinked,
   records: ProjectEnvVariable[],
   customEnvironments: CustomEnvironment[]
 ) {
@@ -94,13 +80,15 @@ function getTable(
     [
       {
         name: '',
-        rows: records.map(row => getRow(row, customEnvironments)),
+        rows: records.map(row => getRow(client, link, row, customEnvironments)),
       },
     ]
   );
 }
 
 function getRow(
+  client: Client,
+  link: ProjectLinked,
   env: ProjectEnvVariable,
   customEnvironments: CustomEnvironment[]
 ) {
@@ -121,23 +109,7 @@ function getRow(
   return [
     chalk.bold(env.key),
     value,
-    formatEnvTarget(env, customEnvironments),
+    formatEnvironments(client, link, env, customEnvironments),
     env.createdAt ? `${ms(now - env.createdAt)} ago` : '',
   ];
-}
-
-function formatEnvTarget(
-  env: ProjectEnvVariable,
-  customEnvironments: CustomEnvironment[]
-) {
-  const defaultTargets = (
-    Array.isArray(env.target) ? env.target : [env.target || '']
-  ).map(t => title(t));
-  const customTargets = env.customEnvironmentIds
-    ? env.customEnvironmentIds
-        .map(id => customEnvironments.find(e => e.id === id)?.name)
-        .filter(Boolean)
-    : [];
-  const targetsString = [...defaultTargets, ...customTargets].join(', ');
-  return env.gitBranch ? `${targetsString} (${env.gitBranch})` : targetsString;
 }
