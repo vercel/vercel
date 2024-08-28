@@ -3,7 +3,7 @@ import install from '../../../src/commands/install';
 import * as add from '../../../src/commands/integration/add';
 import { client } from '../../mocks/client';
 
-const addSpy = vi.spyOn(add, 'add');
+const addSpy = vi.spyOn(add, 'add').mockResolvedValue(0);
 
 beforeEach(() => {
   addSpy.mockClear();
