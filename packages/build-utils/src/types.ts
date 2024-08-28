@@ -272,6 +272,7 @@ export namespace PackageJson {
   export interface Engines {
     node?: string;
     npm?: string;
+    pnpm?: string;
   }
 
   export interface PublishConfig {
