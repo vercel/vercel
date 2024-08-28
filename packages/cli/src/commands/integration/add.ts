@@ -1,6 +1,7 @@
 import { Team } from '@vercel-internals/types';
 import open from 'open';
 import Client from '../../util/client';
+import getUser from '../../util/get-user';
 import { getLinkedProject } from '../../util/projects/link';
 import getTeamById from '../../util/teams/get-team-by-id';
 
@@ -27,7 +28,8 @@ export async function add(client: Client, args: string[]) {
 
   const integrationSlug = args[0];
 
-  const teamId = client.config.currentTeam;
+  const user = await getUser(client);
+  const teamId = client.config.currentTeam ?? user.defaultTeamId;
 
   if (!teamId) {
     client.output.error('Team not found');
