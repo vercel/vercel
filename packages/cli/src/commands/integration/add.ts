@@ -136,10 +136,7 @@ function privisionResourceViaWebUI(
   productId: string,
   projectId?: string
 ) {
-  const url = new URL(
-    `/api/marketplace/cli`,
-    'https://vercel-site-git-luka-experimental-marketplace-cli.vercel.sh'
-  );
+  const url = new URL(`/api/marketplace/cli`, 'https://vercel.com');
   url.searchParams.set('teamId', teamId);
   url.searchParams.set('integrationId', integrationId);
   url.searchParams.set('productId', productId);
