@@ -13,6 +13,7 @@ describe('Test `getPathOverrideForPackageManager()`', () => {
         detectedLockfile: 'pnpm-lock.yaml',
         detectedPackageManager: 'pnpm@9.x',
         path: '/pnpm9/node_modules/.bin',
+        pnpmVersionRange: '9.x',
       });
     });
   });
@@ -46,6 +47,7 @@ describe('Test `getPathOverrideForPackageManager()`', () => {
         detectedLockfile: 'pnpm-lock.yaml',
         detectedPackageManager: 'pnpm@9.x',
         path: '/pnpm9/node_modules/.bin',
+        pnpmVersionRange: '9.x',
       });
     });
   });
