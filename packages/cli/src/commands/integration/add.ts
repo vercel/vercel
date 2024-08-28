@@ -21,7 +21,7 @@ interface Integration {
 
 export async function add(client: Client, args: string[]) {
   if (args.length > 1) {
-    client.output.error(`Can't install more than one integration.`);
+    client.output.error(`Can't install more than one integration at a time.`);
     return 1;
   }
 
@@ -38,6 +38,14 @@ export async function add(client: Client, args: string[]) {
   const integration = await fetchIntegration(client, team, integrationSlug);
 
   if (!integration) {
+    client.output.error(`Integration not found: ${integrationSlug}`);
+    return 1;
+  }
+
+  if (integration.products?.length === 0) {
+    client.output.error(
+      `Integration is not from the marketplace: ${integrationSlug}`
+    );
     return 1;
   }
 
@@ -57,7 +65,6 @@ export async function add(client: Client, args: string[]) {
   }
 
   privisionResourceViaWebUI(
-    client,
     teamId,
     integration.id,
     product.id,
@@ -124,7 +131,6 @@ async function getOptionalLinkedProject(client: Client) {
 }
 
 function privisionResourceViaWebUI(
-  client: Client,
   teamId: string,
   integrationId: string,
   productId: string,
@@ -141,6 +147,5 @@ function privisionResourceViaWebUI(
     url.searchParams.set('projectId', projectId);
   }
   url.searchParams.set('cmd', 'add');
-  client.output.print(`Opening the web UI to provision the resource...`);
   open(url.href);
 }

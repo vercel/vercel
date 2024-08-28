@@ -3,7 +3,8 @@ import { packageName } from '../../util/pkg-name';
 
 export const installCommand: Command = {
   name: 'install',
-  description: 'Show information about a deployment.',
+  description:
+    'Install an integration from the marketplace (alias for `integration add`)',
   arguments: [
     {
       name: 'integration',
