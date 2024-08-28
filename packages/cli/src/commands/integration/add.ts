@@ -80,7 +80,7 @@ export async function add(client: Client, args: string[]) {
 async function fetchIntegration(client: Client, team: Team, slug: string) {
   try {
     return await client.fetch<Integration>(
-      `/v1/integrations/integration/${slug}?teamSlug=${team.slug}&source=marketplace`,
+      `/v1/integrations/integration/${slug}?teamSlug=${team.slug}&source=marketplace&public=1`,
       {
         json: true,
       }
