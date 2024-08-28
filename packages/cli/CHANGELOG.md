@@ -1,5 +1,22 @@
 # vercel
 
+## 37.2.0
+
+### Minor Changes
+
+- Add `vc install` and `vc integration add` commands ([#12033](https://github.com/vercel/vercel/pull/12033))
+
+### Patch Changes
+
+- [cli] Remove existing metrics gathering behavior ([#12026](https://github.com/vercel/vercel/pull/12026))
+
+- Remove redundant formatting on a few lines of output ([#12011](https://github.com/vercel/vercel/pull/12011))
+
+- Updated dependencies [[`06337ed0b`](https://github.com/vercel/vercel/commit/06337ed0bb1ab4becd1554642c162c75bdcc91c2), [`2fc9e6d81`](https://github.com/vercel/vercel/commit/2fc9e6d8104a3d6308873ef8dafa27c32f0b97be)]:
+  - @vercel/build-utils@8.3.8
+  - @vercel/node@3.2.10
+  - @vercel/static-build@2.5.20
+
 ## 37.1.2
 
 ### Patch Changes
