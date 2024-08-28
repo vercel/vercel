@@ -26,8 +26,7 @@ export default async function main(client: Client) {
 
   switch (subcommand) {
     case 'add': {
-      await add(client, subArgs);
-      break;
+      return add(client, subArgs);
     }
     default: {
       client.output.error(getInvalidSubcommand(COMMAND_CONFIG));

@@ -4,7 +4,7 @@ import Client from '../../util/client';
 import { getLinkedProject } from '../../util/projects/link';
 import getTeamById from '../../util/teams/get-team-by-id';
 
-interface IntegrationProduct {
+export interface IntegrationProduct {
   id: string;
   slug: string;
   name: string;
@@ -12,7 +12,7 @@ interface IntegrationProduct {
   type: 'storage' | string;
 }
 
-interface Integration {
+export interface Integration {
   id: string;
   slug: string;
   name: string;
@@ -42,9 +42,9 @@ export async function add(client: Client, args: string[]) {
     return 1;
   }
 
-  if (integration.products?.length === 0) {
+  if (!integration.products) {
     client.output.error(
-      `Integration is not from the marketplace: ${integrationSlug}`
+      `Integration is not from the marketplace: ${integration.name}`
     );
     return 1;
   }
@@ -70,6 +70,8 @@ export async function add(client: Client, args: string[]) {
     product.id,
     projectLink?.project?.id
   );
+
+  return 0;
 }
 
 async function fetchIntegration(client: Client, team: Team, slug: string) {
