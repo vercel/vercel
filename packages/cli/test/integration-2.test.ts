@@ -565,7 +565,7 @@ test('add a sensitive env var', async () => {
     }
   );
 
-  await waitForPrompt(addEnvCommand, /What’s the value of [^?]+\?/);
+  await waitForPrompt(addEnvCommand, /What's the value of [^?]+\?/);
   addEnvCommand.stdin?.write('test\n');
 
   const output = await addEnvCommand;
@@ -614,7 +614,7 @@ test('override an existing env var', async () => {
     options
   );
 
-  await waitForPrompt(addEnvCommand, /What’s the value of [^?]+\?/);
+  await waitForPrompt(addEnvCommand, /What's the value of [^?]+\?/);
   addEnvCommand.stdin?.write('test\n');
 
   const output = await addEnvCommand;
@@ -631,7 +631,7 @@ test('override an existing env var', async () => {
     options
   );
 
-  await waitForPrompt(overrideEnvCommand, /What’s the value of [^?]+\?/);
+  await waitForPrompt(overrideEnvCommand, /What's the value of [^?]+\?/);
   overrideEnvCommand.stdin?.write('test\n');
 
   const outputOverride = await overrideEnvCommand;

@@ -1,5 +1,19 @@
 # @vercel/build-utils
 
+## 8.3.8
+
+### Patch Changes
+
+- Limit `package.json#packageManager` parsing to concrete versions ([#12025](https://github.com/vercel/vercel/pull/12025))
+
+- Catch PNPM_UNSUPPORTED_ENGINE when corepack is enabled and throw a more helpful error ([#12017](https://github.com/vercel/vercel/pull/12017))
+
+## 8.3.7
+
+### Patch Changes
+
+- Revert "Revert "warn on mismatched corepack and detected package managers"" ([#11887](https://github.com/vercel/vercel/pull/11887))
+
 ## 8.3.6
 
 ### Patch Changes
