@@ -161,7 +161,7 @@ function printBuildLog(log: any, print: Printer) {
 
   const date = new Date(log.created).toISOString();
 
-  for (const line of colorize(sanitize(log)).split('\n')) {
+  for (const line of colorize(sanitize(log), log).split('\n')) {
     print(`${chalk.dim(date)}  ${line.replace('[now-builder-debug] ', '')}\n`);
   }
 }
@@ -243,25 +243,9 @@ function sanitize(log: any): string {
   );
 }
 
-function colorize(text: string) {
-  if (isError(text)) {
+function colorize(text: string, log: any) {
+  if (log.level === 'error') {
     return chalk.red(text);
   }
-  return isWarning(text) ? chalk.yellow(text) : text;
-}
-
-function isError(text: string) {
-  return (
-    /^(\s+⨯\s+|\s+at\s+|npm err!)/i.test(text) ||
-    /(^| |\[|eval|internal|range|reference|syntax|type|uri|fetch)err(or)?( |:)/i.test(
-      text
-    ) ||
-    /(command not found|module not found|failed to compile|cannot open shared object file|err_pnpm_|please contact vercel.com\/help|exit code 1|elifecycle|exited)/i.test(
-      text
-    )
-  );
-}
-
-function isWarning(text: string) {
-  return /^warn(ing)?(:|!)/i.test(text) && !text.includes('deprecationwarning');
+  return log.level === 'warning' ? chalk.yellow(text) : text;
 }
