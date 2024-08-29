@@ -1,3 +1,4 @@
+import { types as nodeUtils } from 'node:util';
 import url, { URL } from 'url';
 import http from 'http';
 import fs from 'fs-extra';
@@ -91,7 +92,6 @@ import { formatQueryString, parseQueryString } from './parse-query-string';
 import {
   errorToString,
   isErrnoException,
-  isError,
   isSpawnError,
 } from '@vercel/error-utils';
 import isURL from './is-url';
@@ -735,7 +735,7 @@ export default class DevServer {
       parsed[fileNameSymbol] = rel;
       return parsed;
     } catch (err: unknown) {
-      if (isError(err)) {
+      if (nodeUtils.isNativeError(err)) {
         if (isErrnoException(err) && err.code === 'ENOENT') {
           this.output.debug(`No \`${rel}\` file present`);
         } else if (err.name === 'SyntaxError') {
@@ -1299,7 +1299,7 @@ export default class DevServer {
       // eslint-disable-next-line no-console
       console.error(err);
 
-      if (isError(err) && typeof err.stack === 'string') {
+      if (nodeUtils.isNativeError(err) && typeof err.stack === 'string') {
         this.output.debug(err.stack);
       }
 

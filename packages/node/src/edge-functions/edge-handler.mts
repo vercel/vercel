@@ -1,3 +1,4 @@
+import { types as nodeUtils } from 'node:util';
 import { createEdgeWasmPlugin, WasmAssets } from './edge-wasm-plugin.mjs';
 import {
   createNodeCompatPlugin,
@@ -5,7 +6,6 @@ import {
 } from './edge-node-compat-plugin.mjs';
 import { EdgeRuntime, runServer } from 'edge-runtime';
 import { type Dispatcher, Headers, request as undiciRequest } from 'undici';
-import { isError } from '@vercel/error-utils';
 import { readFileSync } from 'fs';
 import {
   serializeBody,
@@ -129,7 +129,7 @@ async function compileUserCode(
     // We can't easily show a meaningful stack trace from esbuild -> edge-runtime.
     // So, stick with just the message for now.
     console.error(`Failed to compile user code for edge runtime.`);
-    if (isError(error)) logError(error);
+    if (nodeUtils.isNativeError(error)) logError(error);
     return undefined;
   }
 }

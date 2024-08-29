@@ -1,12 +1,12 @@
-#!/usr/bin/env node
-import { isErrnoException, isError, errorToString } from '@vercel/error-utils';
+import { types as nodeUtils } from 'node:util';
+import { isErrnoException, errorToString } from '@vercel/error-utils';
 
 try {
   // Test to see if cwd has been deleted before
   // importing 3rd party packages that might need cwd.
   process.cwd();
 } catch (err: unknown) {
-  if (isError(err) && err.message.includes('uv_cwd')) {
+  if (nodeUtils.isNativeError(err) && err.message.includes('uv_cwd')) {
     // eslint-disable-next-line no-console
     console.error('Error: The current working directory does not exist.');
     process.exit(1);

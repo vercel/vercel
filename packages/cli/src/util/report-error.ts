@@ -1,7 +1,7 @@
+import { types as nodeUtils } from 'node:util';
 import Client from './client';
 import getScope from './get-scope';
 import getArgs from './get-args';
-import { isError } from '@vercel/error-utils';
 import type { Team, User } from '@vercel-internals/types';
 
 export default async function reportError(
@@ -21,7 +21,7 @@ export default async function reportError(
   } catch (err: unknown) {
     // We can safely ignore this, as the error
     // reporting works even without this metadata attached.
-    if (isError(err)) {
+    if (nodeUtils.isNativeError(err)) {
       scopeError = err;
     }
   }
@@ -56,7 +56,7 @@ export default async function reportError(
     try {
       args = getArgs(process.argv.slice(2), {});
     } catch (err: unknown) {
-      if (isError(err)) {
+      if (nodeUtils.isNativeError(err)) {
         argsError = err;
       }
     }
@@ -99,5 +99,5 @@ export default async function reportError(
 }
 
 function ignoreError(error: unknown) {
-  return isError(error) && error.message.includes('uv_cwd');
+  return nodeUtils.isNativeError(error) && error.message.includes('uv_cwd');
 }

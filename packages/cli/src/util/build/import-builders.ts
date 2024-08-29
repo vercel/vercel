@@ -1,3 +1,4 @@
+import { types as nodeUtils } from 'node:util';
 import { URL } from 'url';
 import plural from 'pluralize';
 import npa from 'npm-package-arg';
@@ -13,7 +14,7 @@ import { VERCEL_DIR } from '../projects/link';
 import { Output } from '../output';
 import readJSONFile from '../read-json-file';
 import { CantParseJSONFile } from '../errors-ts';
-import { isErrnoException, isError } from '@vercel/error-utils';
+import { isErrnoException } from '@vercel/error-utils';
 import cmd from '../output/cmd';
 import code from '../output/code';
 import type { Writable } from 'stream';
@@ -234,7 +235,7 @@ async function installBuilders(
         output.warn(line);
       });
   } catch (err: unknown) {
-    if (isError(err)) {
+    if (nodeUtils.isNativeError(err)) {
       const execaMessage = err.message;
       let message = getErrorMessage(err, execaMessage);
       if (execaMessage.startsWith('Command failed with ENOENT')) {

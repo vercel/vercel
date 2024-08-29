@@ -1,3 +1,4 @@
+import { types as nodeUtils } from 'node:util';
 import fs from 'fs';
 import AJV from 'ajv';
 import chalk from 'chalk';
@@ -20,7 +21,7 @@ import { prependEmoji, emoji, EmojiLabel } from '../emoji';
 import { isDirectory } from '../config/global-path';
 import { NowBuildError, getPlatformEnv } from '@vercel/build-utils';
 import outputCode from '../output/code';
-import { isErrnoException, isError } from '@vercel/error-utils';
+import { isErrnoException } from '@vercel/error-utils';
 import { findProjectsFromPath, getRepoLink } from '../link/repo';
 import { addToGitIgnore } from '../link/add-to-gitignore';
 import type { RepoProjectConfig } from '../link/repo';
@@ -143,7 +144,7 @@ export async function getLinkFromDir<T = ProjectLink>(
     }
 
     // link file can't be read
-    if (isError(err) && err.name === 'SyntaxError') {
+    if (nodeUtils.isNativeError(err) && err.name === 'SyntaxError') {
       throw new Error(
         `Project Settings could not be retrieved. To link your project again, remove the ${dir} directory.`
       );

@@ -63,31 +63,29 @@ export default async function main(client: Client) {
       )} to begin.`
     );
     return 1;
-  } else {
-    config.currentTeam = link.org.type === 'team' ? link.org.id : undefined;
-    switch (subcommand) {
-      case 'ls':
-        return ls(client, link, parsedArgs.flags, args);
-      case 'add':
-        return add(client, link, parsedArgs.flags, args);
-      case 'rm':
-        return rm(client, link, parsedArgs.flags, args);
-      case 'pull':
-        return pull(
-          client,
-          link,
-          target,
-          parsedArgs.flags,
-          args,
-          cwd,
-          'vercel-cli:env:pull'
-        );
-      default:
-        output.error(getInvalidSubcommand(COMMAND_CONFIG));
-        client.output.print(
-          help(envCommand, { columns: client.stderr.columns })
-        );
-        return 2;
-    }
+  }
+
+  config.currentTeam = link.org.type === 'team' ? link.org.id : undefined;
+  switch (subcommand) {
+    case 'ls':
+      return ls(client, link, parsedArgs.flags, args);
+    case 'add':
+      return add(client, link, parsedArgs.flags, args);
+    case 'rm':
+      return rm(client, link, parsedArgs.flags, args);
+    case 'pull':
+      return pull(
+        client,
+        link,
+        target,
+        parsedArgs.flags,
+        args,
+        cwd,
+        'vercel-cli:env:pull'
+      );
+    default:
+      output.error(getInvalidSubcommand(COMMAND_CONFIG));
+      client.output.print(help(envCommand, { columns: client.stderr.columns }));
+      return 2;
   }
 }

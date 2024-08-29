@@ -1,7 +1,6 @@
 import fs from 'node:fs';
 import {
   isObject,
-  isError,
   isErrnoException,
   isErrorLike,
   normalizeError,
@@ -39,43 +38,6 @@ test('isObject returns true for objects only', () => {
   ]) {
     expect(isObject(item)).toBe(false);
   }
-});
-
-test('isError returns true for Error instances only', () => {
-  for (const error of [
-    new Error(),
-    new EvalError(),
-    new RangeError(),
-    new ReferenceError(),
-    new SyntaxError(),
-    new TypeError(),
-    new URIError(),
-  ]) {
-    expect(isError(error)).toBe(true);
-  }
-  for (const item of [
-    ARRAY,
-    BIGINT,
-    BOOLEAN,
-    CLASS,
-    new CLASS(),
-    FUNCTION,
-    NULL,
-    NUMBER,
-    OBJECT,
-    STRING,
-    SYMBOL,
-    UNDEFINED,
-  ]) {
-    expect(isError(item)).toBe(false);
-  }
-});
-
-test('isError returns true for objects with a nested Error prototype', () => {
-  class Foo {}
-  const err = new Error();
-  Object.setPrototypeOf(err, Foo.prototype);
-  expect(isError(err)).toBe(true);
 });
 
 test('isErrnoException returns true for NodeJS.ErrnoException only', () => {

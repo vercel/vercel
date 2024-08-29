@@ -1,3 +1,4 @@
+import { types as nodeUtils } from 'node:util';
 import { join, basename } from 'path';
 import loadJSON from 'load-json-file';
 import writeJSON from 'write-json-file';
@@ -10,7 +11,7 @@ import error from '../output/error';
 import highlight from '../output/highlight';
 import { VercelConfig } from '../dev/types';
 import { AuthConfig, GlobalConfig } from '@vercel-internals/types';
-import { isErrnoException, isError } from '@vercel/error-utils';
+import { isErrnoException } from '@vercel/error-utils';
 
 const VERCEL_DIR = getGlobalPathConfig();
 const CONFIG_FILE_PATH = join(VERCEL_DIR, 'config.json');
@@ -28,7 +29,7 @@ export const writeToConfigFile = (stuff: GlobalConfig): void => {
     return writeJSON.sync(CONFIG_FILE_PATH, stuff, { indent: 2 });
   } catch (err: unknown) {
     if (isErrnoException(err)) {
-      if (isErrnoException(err) && err.code === 'EPERM') {
+      if (err.code === 'EPERM') {
         // eslint-disable-next-line no-console
         console.error(
           error(
@@ -134,7 +135,7 @@ export function readLocalConfig(
       config = loadJSON.sync(target);
     }
   } catch (err: unknown) {
-    if (isError(err) && err.name === 'JSONError') {
+    if (nodeUtils.isNativeError(err) && err.name === 'JSONError') {
       // eslint-disable-next-line no-console
       console.error(error(err.message));
     } else if (isErrnoException(err)) {

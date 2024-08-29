@@ -1,4 +1,4 @@
-import util from 'node:util';
+import { types as nodeUtils } from 'node:util';
 
 export interface SpawnError extends NodeJS.ErrnoException {
   spawnargs: string[];
@@ -12,17 +12,10 @@ export interface SpawnError extends NodeJS.ErrnoException {
 export const isObject = (obj: unknown): obj is Record<string, unknown> =>
   typeof obj === 'object' && obj !== null;
 
-/**
- * A type guard for `try...catch` errors.
- */
-export const isError = (error: unknown): error is Error => {
-  return util.types.isNativeError(error);
-};
-
 export const isErrnoException = (
   error: unknown
 ): error is NodeJS.ErrnoException => {
-  return isError(error) && 'code' in error;
+  return nodeUtils.isNativeError(error) && 'code' in error;
 };
 
 interface ErrorLike {
@@ -42,7 +35,8 @@ export const isErrorLike = (error: unknown): error is ErrorLike =>
  * `try...catch` statement.
  */
 export const errorToString = (error: unknown, fallback?: string): string => {
-  if (isError(error) || isErrorLike(error)) return error.message;
+  if (nodeUtils.isNativeError(error) || isErrorLike(error))
+    return error.message;
 
   if (typeof error === 'string') return error;
 
@@ -54,7 +48,7 @@ export const errorToString = (error: unknown, fallback?: string): string => {
  * in a `try...catch` statement.
  */
 export const normalizeError = (error: unknown): Error => {
-  if (isError(error)) return error;
+  if (nodeUtils.isNativeError(error)) return error;
 
   const errorMessage = errorToString(error);
 

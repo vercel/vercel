@@ -1,10 +1,11 @@
+import { types as nodeUtils } from 'node:util';
 import { join } from 'path';
 import { outputJSON, readFile } from 'fs-extra';
 import { VercelConfig } from '@vercel/client';
 import { VERCEL_DIR, VERCEL_DIR_PROJECT } from './link';
 import { PartialProjectSettings } from '../input/edit-project-settings';
 import type { Org, Project, ProjectLink } from '@vercel-internals/types';
-import { isErrnoException, isError } from '@vercel/error-utils';
+import { isErrnoException } from '@vercel/error-utils';
 
 export type ProjectLinkAndSettings = Partial<ProjectLink> & {
   settings: {
@@ -78,7 +79,7 @@ export async function readProjectSettings(vercelDir: string) {
     }
 
     // failed to parse JSON, treat the same as if project settings have not been pulled
-    if (isError(err) && err.name === 'SyntaxError') {
+    if (nodeUtils.isNativeError(err) && err.name === 'SyntaxError') {
       return null;
     }
 

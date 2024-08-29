@@ -1,9 +1,9 @@
+import { types as nodeUtils } from 'node:util';
 import { parseArguments } from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 import Client from '../../util/client';
 import handleError from '../../util/handle-error';
 import init from './init';
-import { isError } from '@vercel/error-utils';
 import { help } from '../help';
 import { initCommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -45,7 +45,7 @@ export default async function main(client: Client) {
     return await init(client, parsedArgs.flags, args);
   } catch (err: unknown) {
     output.prettyError(err);
-    if (isError(err) && typeof err.stack === 'string') {
+    if (nodeUtils.isNativeError(err) && typeof err.stack === 'string') {
       output.debug(err.stack);
     }
     return 1;
