@@ -1,6 +1,4 @@
 import chalk from 'chalk';
-import type { Project } from '@vercel-internals/types';
-import { Output } from '../../util/output';
 import Client from '../../util/client';
 import stamp from '../../util/output/stamp';
 import addEnvRecord from '../../util/env/add-env-record';
@@ -16,6 +14,7 @@ import { isKnownError } from '../../util/env/known-error';
 import { getCommandName } from '../../util/pkg-name';
 import { isAPIError } from '../../util/errors-ts';
 import { getCustomEnvironments } from '../../util/target/get-custom-environments';
+import type { ProjectLinked } from '@vercel-internals/types';
 
 type Options = {
   '--debug': boolean;
@@ -25,11 +24,12 @@ type Options = {
 
 export default async function add(
   client: Client,
-  project: Project,
+  link: ProjectLinked,
   opts: Partial<Options>,
-  args: string[],
-  output: Output
+  args: string[]
 ) {
+  const { output } = client;
+  const { project } = link;
   const stdInput = await readStandardInput(client.stdin);
   let [envName, envTargetArg, envGitBranch] = args;
 
@@ -64,7 +64,7 @@ export default async function add(
   }
 
   const [{ envs }, customEnvironments] = await Promise.all([
-    getEnvRecords(output, client, project.id, 'vercel-cli:env:add'),
+    getEnvRecords(client, project.id, 'vercel-cli:env:add'),
     getCustomEnvironments(client, project.id),
   ]);
   const matchingEnvs = envs.filter(r => r.key === envName);

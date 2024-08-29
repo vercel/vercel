@@ -13,6 +13,7 @@ describe('Test `getPathOverrideForPackageManager()`', () => {
         detectedLockfile: 'pnpm-lock.yaml',
         detectedPackageManager: 'pnpm@9.x',
         path: '/pnpm9/node_modules/.bin',
+        pnpmVersionRange: '9.x',
       });
     });
   });
@@ -46,6 +47,7 @@ describe('Test `getPathOverrideForPackageManager()`', () => {
         detectedLockfile: 'pnpm-lock.yaml',
         detectedPackageManager: 'pnpm@9.x',
         path: '/pnpm9/node_modules/.bin',
+        pnpmVersionRange: '9.x',
       });
     });
   });
@@ -95,6 +97,55 @@ describe('Test `getPathOverrideForPackageManager()`', () => {
           detectedPackageManager: undefined,
           path: undefined,
         });
+      });
+    });
+
+    describe('with corepack disabled', () => {
+      test('should error if detected package manager is outside engine range', () => {
+        expect(() => {
+          getPathOverrideForPackageManager({
+            cliType: 'pnpm',
+            lockfileVersion: 6.1,
+            nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
+            corepackEnabled: false,
+            packageJsonEngines: { pnpm: '>=9.0.0' },
+            corepackPackageManager: undefined,
+          });
+        }).toThrow(
+          'Detected pnpm "8.x" is not compatible with the engines.pnpm ">=9.0.0" in your package.json. Either enable corepack with a valid package.json#packageManager value (https://vercel.com/docs/deployments/configure-a-build#corepack) or remove your package.json#engines.pnpm.'
+        );
+      });
+
+      test('should warn if detected package manager intersects the engine range', () => {
+        const consoleWarnSpy = jest.spyOn(console, 'warn');
+        getPathOverrideForPackageManager({
+          cliType: 'pnpm',
+          lockfileVersion: 9.0,
+          nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
+          corepackEnabled: false,
+          packageJsonEngines: { pnpm: '>=9.0.0' },
+          corepackPackageManager: undefined,
+        });
+        expect(consoleWarnSpy).toHaveBeenCalledWith(
+          'Using package.json#engines.pnpm without corepack and package.json#packageManager could lead to failed builds with ERR_PNPM_UNSUPPORTED_ENGINE. Learn more: https://vercel.com/docs/errors/error-list#pnpm-engine-unsupported'
+        );
+        consoleWarnSpy.mockRestore();
+      });
+
+      test('should warn if no detected package manager', () => {
+        const consoleWarnSpy = jest.spyOn(console, 'warn');
+        getPathOverrideForPackageManager({
+          cliType: 'pnpm',
+          lockfileVersion: 9.0,
+          nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
+          corepackEnabled: false,
+          packageJsonEngines: { pnpm: '>=9.0.0' },
+          corepackPackageManager: undefined,
+        });
+        expect(consoleWarnSpy).toHaveBeenCalledWith(
+          'Using package.json#engines.pnpm without corepack and package.json#packageManager could lead to failed builds with ERR_PNPM_UNSUPPORTED_ENGINE. Learn more: https://vercel.com/docs/errors/error-list#pnpm-engine-unsupported'
+        );
+        consoleWarnSpy.mockRestore();
       });
     });
   });

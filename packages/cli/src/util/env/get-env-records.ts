@@ -13,7 +13,6 @@ export type EnvRecordsSource =
   | 'vercel-cli:pull';
 
 export default async function getEnvRecords(
-  output: Output,
   client: Client,
   projectId: string,
   source: EnvRecordsSource,
@@ -27,6 +26,7 @@ export default async function getEnvRecords(
     decrypt?: boolean;
   } = {}
 ) {
+  const { output } = client;
   output.debug(
     `Fetching Environment Variables of project ${projectId} and target ${target}`
   );

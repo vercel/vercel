@@ -766,6 +766,12 @@ export function getPathOverrideForPackageManager({
   const detectedPackageManger = detectPackageManager(cliType, lockfileVersion);
 
   if (!corepackPackageManager || !corepackEnabled) {
+    if (cliType === 'pnpm' && packageJsonEngines?.pnpm) {
+      checkEnginesPnpmAgainstDetected(
+        packageJsonEngines.pnpm,
+        detectedPackageManger
+      );
+    }
     return detectedPackageManger ?? NO_OVERRIDE;
   }
 
@@ -784,6 +790,27 @@ export function getPathOverrideForPackageManager({
 
   // corepack is going to take care of it; do nothing special
   return NO_OVERRIDE;
+}
+
+function checkEnginesPnpmAgainstDetected(
+  enginesPnpm: string,
+  detectedPackageManger: ReturnType<typeof detectPackageManager>
+) {
+  if (
+    detectedPackageManger?.pnpmVersionRange &&
+    validRange(detectedPackageManger.pnpmVersionRange) &&
+    validRange(enginesPnpm)
+  ) {
+    if (!intersects(detectedPackageManger.pnpmVersionRange, enginesPnpm)) {
+      // detects ERR_PNPM_UNSUPPORTED_ENGINE and throws more helpful error
+      throw new Error(
+        `Detected pnpm "${detectedPackageManger.pnpmVersionRange}" is not compatible with the engines.pnpm "${enginesPnpm}" in your package.json. Either enable corepack with a valid package.json#packageManager value (https://vercel.com/docs/deployments/configure-a-build#corepack) or remove your package.json#engines.pnpm.`
+      );
+    }
+  }
+  console.warn(
+    `Using package.json#engines.pnpm without corepack and package.json#packageManager could lead to failed builds with ERR_PNPM_UNSUPPORTED_ENGINE. Learn more: https://vercel.com/docs/errors/error-list#pnpm-engine-unsupported`
+  );
 }
 
 function validateCorepackPackageManager(
@@ -888,6 +915,7 @@ export function detectPackageManager(
             path: '/pnpm7/node_modules/.bin',
             detectedLockfile: 'pnpm-lock.yaml',
             detectedPackageManager: 'pnpm@7.x',
+            pnpmVersionRange: '7.x',
           };
         case 'pnpm 8':
           // pnpm 8
@@ -895,6 +923,7 @@ export function detectPackageManager(
             path: '/pnpm8/node_modules/.bin',
             detectedLockfile: 'pnpm-lock.yaml',
             detectedPackageManager: 'pnpm@8.x',
+            pnpmVersionRange: '8.x',
           };
         case 'pnpm 9':
           // pnpm 9
@@ -902,6 +931,7 @@ export function detectPackageManager(
             path: '/pnpm9/node_modules/.bin',
             detectedLockfile: 'pnpm-lock.yaml',
             detectedPackageManager: 'pnpm@9.x',
+            pnpmVersionRange: '9.x',
           };
         case 'pnpm 6':
           return {
@@ -909,6 +939,7 @@ export function detectPackageManager(
             path: undefined,
             detectedLockfile: 'pnpm-lock.yaml',
             detectedPackageManager: 'pnpm@6.x',
+            pnpmVersionRange: '6.x',
           };
         default:
           return undefined;
