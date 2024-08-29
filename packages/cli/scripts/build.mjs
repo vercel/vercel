@@ -8,9 +8,6 @@ const repoRoot = new URL('../', import.meta.url);
 function createConstants() {
   const filename = new URL('src/util/constants.ts', repoRoot);
   const contents = `// This file is auto-generated
-export const GA_TRACKING_ID: string | undefined = ${envToString(
-    'GA_TRACKING_ID'
-  )};
 export const SENTRY_DSN: string | undefined = ${envToString('SENTRY_DSN')};
 `;
   writeFileSync(filename, contents, 'utf8');

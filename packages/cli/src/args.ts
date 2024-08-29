@@ -13,12 +13,15 @@ export const help = () => `
       deploy               [path]      Performs a deployment ${chalk.bold(
         '(default)'
       )}
+      build                            Build the project locally into './vercel/output'
       dev                              Start a local development server
       env                              Manages the Environment Variables for your current Project
       git                              Manage Git provider repository for your current Project
       help                 [cmd]       Displays complete help for [cmd]
       init                 [example]   Initialize an example project
       inspect              [id]        Displays information related to a deployment
+      i | install          [name]      Install an integration from the Marketplace
+      integration          [cmd]       Manages your Marketplace integrations
       link                 [path]      Link local directory to a Vercel Project
       ls | list            [app]       Lists deployments
       login                [email]     Logs into your account or creates a new one
