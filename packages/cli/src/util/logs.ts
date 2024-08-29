@@ -246,6 +246,9 @@ function sanitize(log: any): string {
 function colorize(text: string, log: any) {
   if (log.level === 'error') {
     return chalk.red(text);
+  } else if (log.level === 'warning') {
+    return chalk.yellow(text);
   }
-  return log.level === 'warning' ? chalk.yellow(text) : text;
+
+  return text;
 }
