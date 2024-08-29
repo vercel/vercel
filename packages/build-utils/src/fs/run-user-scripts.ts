@@ -3,7 +3,14 @@ import fs from 'fs-extra';
 import path from 'path';
 import Sema from 'async-sema';
 import spawn from 'cross-spawn';
-import { coerce, intersects, SemVer, validRange } from 'semver';
+import {
+  coerce,
+  intersects,
+  SemVer,
+  validRange,
+  parse,
+  satisfies,
+} from 'semver';
 import { SpawnOptions } from 'child_process';
 import { deprecate } from 'util';
 import debug from '../debug';
@@ -504,6 +511,7 @@ export async function runNpmInstall(
       packageJsonPackageManager: packageJson?.packageManager,
       nodeVersion,
       env,
+      packageJsonEngines: packageJson?.engines,
     });
     let commandArgs: string[];
     const isPotentiallyBrokenNpm =
@@ -589,12 +597,14 @@ export function getEnvForPackageManager({
   packageJsonPackageManager,
   nodeVersion,
   env,
+  packageJsonEngines,
 }: {
   cliType: CliType;
   lockfileVersion: number | undefined;
   packageJsonPackageManager?: string | undefined;
   nodeVersion: NodeVersion | undefined;
   env: { [x: string]: string | undefined };
+  packageJsonEngines?: PackageJson.Engines;
 }) {
   const corepackEnabled = usingCorepack(env, packageJsonPackageManager);
 
@@ -608,6 +618,7 @@ export function getEnvForPackageManager({
     corepackPackageManager: packageJsonPackageManager,
     nodeVersion,
     corepackEnabled,
+    packageJsonEngines,
   });
 
   if (corepackEnabled) {
@@ -729,12 +740,14 @@ export function getPathOverrideForPackageManager({
   lockfileVersion,
   corepackPackageManager,
   corepackEnabled = true,
+  packageJsonEngines,
 }: {
   cliType: CliType;
   lockfileVersion: number | undefined;
   corepackPackageManager: string | undefined;
   nodeVersion: NodeVersion | undefined;
   corepackEnabled?: boolean;
+  packageJsonEngines?: PackageJson.Engines;
 }): {
   /**
    * Which lockfile was detected.
@@ -753,6 +766,12 @@ export function getPathOverrideForPackageManager({
   const detectedPackageManger = detectPackageManager(cliType, lockfileVersion);
 
   if (!corepackPackageManager || !corepackEnabled) {
+    if (cliType === 'pnpm' && packageJsonEngines?.pnpm) {
+      checkEnginesPnpmAgainstDetected(
+        packageJsonEngines.pnpm,
+        detectedPackageManger
+      );
+    }
     return detectedPackageManger ?? NO_OVERRIDE;
   }
 
@@ -760,7 +779,8 @@ export function getPathOverrideForPackageManager({
     !validateCorepackPackageManager(
       cliType,
       lockfileVersion,
-      corepackPackageManager
+      corepackPackageManager,
+      packageJsonEngines?.pnpm
     )
   ) {
     console.warn(
@@ -772,10 +792,32 @@ export function getPathOverrideForPackageManager({
   return NO_OVERRIDE;
 }
 
+function checkEnginesPnpmAgainstDetected(
+  enginesPnpm: string,
+  detectedPackageManger: ReturnType<typeof detectPackageManager>
+) {
+  if (
+    detectedPackageManger?.pnpmVersionRange &&
+    validRange(detectedPackageManger.pnpmVersionRange) &&
+    validRange(enginesPnpm)
+  ) {
+    if (!intersects(detectedPackageManger.pnpmVersionRange, enginesPnpm)) {
+      // detects ERR_PNPM_UNSUPPORTED_ENGINE and throws more helpful error
+      throw new Error(
+        `Detected pnpm "${detectedPackageManger.pnpmVersionRange}" is not compatible with the engines.pnpm "${enginesPnpm}" in your package.json. Either enable corepack with a valid package.json#packageManager value (https://vercel.com/docs/deployments/configure-a-build#corepack) or remove your package.json#engines.pnpm.`
+      );
+    }
+  }
+  console.warn(
+    `Using package.json#engines.pnpm without corepack and package.json#packageManager could lead to failed builds with ERR_PNPM_UNSUPPORTED_ENGINE. Learn more: https://vercel.com/docs/errors/error-list#pnpm-engine-unsupported`
+  );
+}
+
 function validateCorepackPackageManager(
   cliType: CliType,
   lockfileVersion: number | undefined,
-  corepackPackageManager: string
+  corepackPackageManager: string,
+  enginesPnpmVersionRange: string | undefined
 ) {
   const validatedCorepackPackageManager = validateVersionSpecifier(
     corepackPackageManager
@@ -794,19 +836,26 @@ function validateCorepackPackageManager(
     return false;
   }
 
-  const corepackPackageManagerVersion = coerce(
-    validatedCorepackPackageManager.packageVersionRange
-  );
+  if (cliType === 'pnpm' && enginesPnpmVersionRange) {
+    const pnpmWithinEngineRange = satisfies(
+      validatedCorepackPackageManager.packageVersion,
+      enginesPnpmVersionRange
+    );
+    if (!pnpmWithinEngineRange) {
+      // pnpm would throw PNPM_UNSUPPORTED_ENGINE with
+      // an unhelpful message. This catches that case
+      // and throws a more helpful message.
+      throw new Error(
+        `The version of pnpm specified in package.json#packageManager (${validatedCorepackPackageManager.packageVersion}) must satisfy the version range in package.json#engines.pnpm (${enginesPnpmVersionRange}).`
+      );
+    }
+  }
 
-  if (corepackPackageManagerVersion === null) {
-    // this will fail to use corepack, but we should return `true` here to let corepack itself
-    // show the appropriate error message and fail the build
-    return true;
-  } else if (lockfileVersion) {
+  if (lockfileVersion) {
     return validLockfileForPackageManager(
       cliType,
       lockfileVersion,
-      corepackPackageManagerVersion
+      validatedCorepackPackageManager.packageVersion
     );
   } else {
     return true;
@@ -835,14 +884,15 @@ function validateVersionSpecifier(version?: string) {
     return undefined;
   }
 
-  if (!validRange(after)) {
+  const packageVersion = parse(after);
+  if (!packageVersion) {
     // the version after the `@` should be a valid semver value
     return undefined;
   }
 
   return {
     packageName: before,
-    packageVersionRange: after,
+    packageVersion,
   };
 }
 
@@ -865,6 +915,7 @@ export function detectPackageManager(
             path: '/pnpm7/node_modules/.bin',
             detectedLockfile: 'pnpm-lock.yaml',
             detectedPackageManager: 'pnpm@7.x',
+            pnpmVersionRange: '7.x',
           };
         case 'pnpm 8':
           // pnpm 8
@@ -872,6 +923,7 @@ export function detectPackageManager(
             path: '/pnpm8/node_modules/.bin',
             detectedLockfile: 'pnpm-lock.yaml',
             detectedPackageManager: 'pnpm@8.x',
+            pnpmVersionRange: '8.x',
           };
         case 'pnpm 9':
           // pnpm 9
@@ -879,6 +931,7 @@ export function detectPackageManager(
             path: '/pnpm9/node_modules/.bin',
             detectedLockfile: 'pnpm-lock.yaml',
             detectedPackageManager: 'pnpm@9.x',
+            pnpmVersionRange: '9.x',
           };
         case 'pnpm 6':
           return {
@@ -886,6 +939,7 @@ export function detectPackageManager(
             path: undefined,
             detectedLockfile: 'pnpm-lock.yaml',
             detectedPackageManager: 'pnpm@6.x',
+            pnpmVersionRange: '6.x',
           };
         default:
           return undefined;
@@ -1002,6 +1056,7 @@ export async function runCustomInstallCommand({
     packageJsonPackageManager: packageJson?.packageManager,
     nodeVersion,
     env: spawnOpts?.env || {},
+    packageJsonEngines: packageJson?.engines,
   });
   debug(`Running with $PATH:`, env?.PATH || '');
   await execCommand(installCommand, {
@@ -1040,6 +1095,7 @@ export async function runPackageJsonScript(
       packageJsonPackageManager: packageJson?.packageManager,
       nodeVersion: undefined,
       env: cloneEnv(process.env, spawnOpts?.env),
+      packageJsonEngines: packageJson?.engines,
     }),
   };
 

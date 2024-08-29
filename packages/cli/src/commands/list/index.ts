@@ -1,7 +1,7 @@
-import chalk from 'chalk';
 import ms from 'ms';
-import table from '../../util/output/table';
+import chalk from 'chalk';
 import title from 'title';
+import table from '../../util/output/table';
 import { parseArguments } from '../../util/get-args';
 import { handleError } from '../../util/error';
 import elapsed from '../../util/output/elapsed';
@@ -22,7 +22,9 @@ import parseTarget from '../../util/parse-target';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import getDeployment from '../../util/get-deployment';
 import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
-import type { Deployment } from '@vercel-internals/types';
+import { formatProject } from '../../util/projects/format-project';
+import { formatEnvironment } from '../../util/target/format-environment';
+import type { Deployment, Project } from '@vercel-internals/types';
 
 function toDate(timestamp: number): string {
   const date = new Date(timestamp);
@@ -75,9 +77,9 @@ export default async function list(client: Client) {
     flags: parsedArgs.flags,
   });
 
-  let project;
+  let project: Project;
   let pagination;
-  let contextName;
+  let contextName = '';
   let app: string | undefined = parsedArgs.args[1];
   let deployments: Deployment[] = [];
   let singleDeployment = false;
@@ -121,11 +123,12 @@ export default async function list(client: Client) {
       deployments.push(deployment);
       singleDeployment = true;
     }
-    project = await getProjectByNameOrId(client, app);
-    if (project instanceof ProjectNotFound) {
+    const p = await getProjectByNameOrId(client, app);
+    if (p instanceof ProjectNotFound) {
       error(`The provided argument "${app}" is not a valid project name`);
       return 1;
     }
+    project = p;
   } else {
     const link = await ensureLink('list', client, client.cwd, {
       autoConfirm,
@@ -156,12 +159,7 @@ export default async function list(client: Client) {
     return 1;
   }
 
-  const projectUrl = `https://vercel.com/${contextName}/${project.name}`;
-  const projectSlugBold = chalk.bold(`${contextName}/${project.name}`);
-  const projectSlugLink = client.output.link(projectSlugBold, projectUrl, {
-    fallback: () => projectSlugBold,
-    color: false,
-  });
+  const projectSlugLink = formatProject(client, contextName, project.name);
 
   if (!singleDeployment) {
     spinner(`Fetching deployments in ${chalk.bold(contextName)}`);
@@ -236,11 +234,10 @@ export default async function list(client: Client) {
             chalk.gray(createdAt),
             `https://${dep.url}`,
             stateString(dep.readyState || ''),
-            client.output.link(
-              targetName,
-              `${projectUrl}/settings/environments/${targetSlug}`,
-              { fallback: () => targetName, color: false }
-            ),
+            formatEnvironment(client, contextName, project.name, {
+              id: targetSlug,
+              name: targetName,
+            }),
             ...(!showPolicy ? [chalk.gray(getDeploymentDuration(dep))] : []),
             ...(!showPolicy ? [chalk.gray(dep.creator?.username)] : []),
             ...(showPolicy ? [chalk.gray(proposedExp)] : []),

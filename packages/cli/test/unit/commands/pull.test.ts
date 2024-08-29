@@ -1,3 +1,4 @@
+import assert from 'assert';
 import { describe, expect, it } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
@@ -12,7 +13,8 @@ describe('pull', () => {
   it('should handle pulling', async () => {
     const cwd = setupUnitFixture('vercel-pull-next');
     useUser();
-    useTeams('team_dummy');
+    const teams = useTeams('team_dummy');
+    assert(Array.isArray(teams));
     useProject({
       ...defaultProject,
       id: 'vercel-pull-next',
@@ -21,7 +23,7 @@ describe('pull', () => {
     client.setArgv('pull', cwd);
     const exitCodePromise = pull(client);
     await expect(client.stderr).toOutput(
-      'Downloading `development` Environment Variables for Project vercel-pull-next'
+      `Downloading \`development\` Environment Variables for ${teams[0].slug}/vercel-pull-next`
     );
     await expect(client.stderr).toOutput(
       `Created .vercel${path.sep}.env.development.local file`
@@ -78,16 +80,18 @@ describe('pull', () => {
       await fs.remove(path.join(cwd, '.vercel'));
 
       useUser();
-      useTeams('team_dummy');
+      const teams = useTeams('team_dummy');
+      assert(Array.isArray(teams));
       useProject({
         ...defaultProject,
         id: 'vercel-pull-next',
         name: 'vercel-pull-next',
+        accountId: 'team_dummy',
       });
       client.setArgv('pull', cwd);
       const exitCodePromise = pull(client);
       await expect(client.stderr).toOutput(
-        'Downloading `development` Environment Variables for Project vercel-pull-next'
+        `Downloading \`development\` Environment Variables for ${teams[0].slug}/vercel-pull-next`
       );
       await expect(client.stderr).toOutput(
         `Created .vercel${path.sep}.env.development.local file`
@@ -116,7 +120,8 @@ describe('pull', () => {
   it('should handle --environment=preview flag', async () => {
     const cwd = setupUnitFixture('vercel-pull-next');
     useUser();
-    useTeams('team_dummy');
+    const teams = useTeams('team_dummy');
+    assert(Array.isArray(teams));
     useProject({
       ...defaultProject,
       id: 'vercel-pull-next',
@@ -125,7 +130,7 @@ describe('pull', () => {
     client.setArgv('pull', '--environment=preview', cwd);
     const exitCodePromise = pull(client);
     await expect(client.stderr).toOutput(
-      'Downloading `preview` Environment Variables for Project vercel-pull-next'
+      `Downloading \`preview\` Environment Variables for ${teams[0].slug}/vercel-pull-next`
     );
     await expect(client.stderr).toOutput(
       `Created .vercel${path.sep}.env.preview.local file`
@@ -147,16 +152,18 @@ describe('pull', () => {
   it('should handle --environment=production flag', async () => {
     const cwd = setupUnitFixture('vercel-pull-next');
     useUser();
-    useTeams('team_dummy');
+    const teams = useTeams('team_dummy');
+    assert(Array.isArray(teams));
     useProject({
       ...defaultProject,
       id: 'vercel-pull-next',
       name: 'vercel-pull-next',
+      accountId: 'team_dummy',
     });
     client.setArgv('pull', '--environment=production', cwd);
     const exitCodePromise = pull(client);
     await expect(client.stderr).toOutput(
-      'Downloading `production` Environment Variables for Project vercel-pull-next'
+      `Downloading \`production\` Environment Variables for ${teams[0].slug}/vercel-pull-next`
     );
     await expect(client.stderr).toOutput(
       `Created .vercel${path.sep}.env.production.local file`
@@ -182,18 +189,20 @@ describe('pull', () => {
   it('should work with repo link', async () => {
     const cwd = setupUnitFixture('monorepo-link');
     useUser();
-    useTeams('team_dummy');
+    const teams = useTeams('team_dummy');
+    assert(Array.isArray(teams));
     useProject({
       ...defaultProject,
       id: 'QmbKpqpiUqbcke',
       name: 'dashboard',
       rootDirectory: 'dashboard',
+      accountId: 'team_dummy',
     });
     client.cwd = path.join(cwd, 'dashboard');
     client.setArgv('pull');
     const exitCodePromise = pull(client);
     await expect(client.stderr).toOutput(
-      'Downloading `development` Environment Variables for Project dashboard'
+      `Downloading \`development\` Environment Variables for ${teams[0].slug}/dashboard`
     );
     await expect(client.stderr).toOutput(
       `Created .vercel${path.sep}.env.development.local file`

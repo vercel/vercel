@@ -64,24 +64,21 @@ export default async function main(client: Client) {
     );
     return 1;
   } else {
-    const { project, org } = link;
-    config.currentTeam = org.type === 'team' ? org.id : undefined;
+    config.currentTeam = link.org.type === 'team' ? link.org.id : undefined;
     switch (subcommand) {
       case 'ls':
-        return ls(client, project, parsedArgs.flags, args, output);
+        return ls(client, link, parsedArgs.flags, args);
       case 'add':
-        return add(client, project, parsedArgs.flags, args, output);
+        return add(client, link, parsedArgs.flags, args);
       case 'rm':
-        return rm(client, project, parsedArgs.flags, args, output);
+        return rm(client, link, parsedArgs.flags, args);
       case 'pull':
         return pull(
           client,
           link,
-          project,
           target,
           parsedArgs.flags,
           args,
-          output,
           cwd,
           'vercel-cli:env:pull'
         );
