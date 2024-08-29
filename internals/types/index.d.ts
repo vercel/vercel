@@ -2,9 +2,9 @@ import type { BuilderFunctions } from '@vercel/build-utils';
 import type { Readable, Writable } from 'stream';
 import type * as tty from 'tty';
 import type { Route } from '@vercel/routing-utils';
-import { PROJECT_ENV_TARGET } from '@vercel-internals/constants';
+import { VERCEL_SYSTEM_ENVIRONMENTS } from '@vercel-internals/constants';
 
-export type ProjectEnvTarget = (typeof PROJECT_ENV_TARGET)[number];
+export type ProjectEnvTarget = (typeof VERCEL_SYSTEM_ENVIRONMENTS)[number];
 export type ProjectEnvType = 'plain' | 'encrypted' | 'system' | 'sensitive';
 
 export type ProjectSettings = import('@vercel/build-utils').ProjectSettings;

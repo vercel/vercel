@@ -1,4 +1,4 @@
-export const PROJECT_ENV_TARGET = [
+export const VERCEL_SYSTEM_ENVIRONMENTS = [
   'production',
   'preview',
   'development',
