@@ -1,3 +1,4 @@
+import { types as nodeUtils } from 'node:util';
 import bytes from 'bytes';
 import { Response } from 'node-fetch';
 import { NowBuildError } from '@vercel/build-utils';
@@ -5,7 +6,6 @@ import { NowError } from './now-error';
 import code from './output/code';
 import { getCommandName } from './pkg-name';
 import chalk from 'chalk';
-import { isError } from '@vercel/error-utils';
 
 /**
  * This error is thrown when there is an API error with a payload. The error
@@ -47,7 +47,7 @@ export class APIError extends Error {
 }
 
 export function isAPIError(v: unknown): v is APIError {
-  return isError(v) && 'status' in v;
+  return nodeUtils.isNativeError(v) && 'status' in v;
 }
 
 /**
