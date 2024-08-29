@@ -91,7 +91,7 @@ export default async function processDeployment({
     teamId: org.type === 'team' ? org.id : undefined,
     apiUrl: now._apiUrl,
     token,
-    debug: now._debug,
+    debug: client.output.isDebugEnabled(),
     userAgent: ua,
     path,
     force,
