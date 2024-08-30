@@ -70,6 +70,20 @@ describe('Test `getPathOverrideForPackageManager()`', () => {
 
   describe('with package.json#engines.pnpm', () => {
     describe('with corepack enabled', () => {
+      test('should try detected package manager if no corepackPackageManager', () => {
+        expect(() => {
+          getPathOverrideForPackageManager({
+            cliType: 'pnpm',
+            lockfileVersion: 6.1,
+            corepackPackageManager: undefined,
+            nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
+            packageJsonEngines: { pnpm: '>=9.0.0' },
+          });
+        }).toThrow(
+          'Detected pnpm "8.x" is not compatible with the engines.pnpm ">=9.0.0" in your package.json. Either enable corepack with a valid package.json#packageManager value (https://vercel.com/docs/deployments/configure-a-build#corepack) or remove your package.json#engines.pnpm.'
+        );
+      });
+
       test('should error if outside engine range', () => {
         expect(() => {
           getPathOverrideForPackageManager({
