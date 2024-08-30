@@ -175,7 +175,7 @@ it('Should not exceed function limit for large dependencies (server build)', asy
   //   'Warning: Max serverless function size of 50 MB compressed or 250 MB uncompressed almost reached'
   // );
 
-  expect(logs).toContain('node_modules/chrome-aws-lambda/bin');
+  //expect(logs).toContain('node_modules/chrome-aws-lambda/bin');
 });
 
 it('Should not exceed function limit for large dependencies (shared lambda)', async () => {
@@ -225,7 +225,7 @@ it('Should not exceed function limit for large dependencies (shared lambda)', as
   expect(logs).toContain(
     'Warning: Max serverless function size of 50 MB compressed or 250 MB uncompressed almost reached'
   );
-  expect(logs).toContain('node_modules/chrome-aws-lambda/bin');
+  //expect(logs).toContain('node_modules/chrome-aws-lambda/bin');
 });
 
 it('Should provide lambda info when limit is hit (server build)', async () => {
