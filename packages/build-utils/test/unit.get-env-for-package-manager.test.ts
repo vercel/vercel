@@ -52,7 +52,7 @@ describe('Test `getEnvForPackageManager()`', () => {
         args: {
           cliType: 'npm',
           nodeVersion: { major: 14, range: '14.x', runtime: 'nodejs14.x' },
-          packageJsonPackageManager: 'npm@*',
+          packageJsonPackageManager: 'npm@10.5.0',
           lockfileVersion: 2,
           env: {
             FOO: 'bar',
@@ -212,7 +212,7 @@ describe('Test `getEnvForPackageManager()`', () => {
         args: {
           cliType: 'pnpm',
           nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
-          packageJsonPackageManager: 'pnpm@*',
+          packageJsonPackageManager: 'pnpm@6.35.1',
           lockfileVersion: 5.4,
           env: {
             FOO: 'bar',

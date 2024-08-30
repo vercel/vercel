@@ -32,6 +32,7 @@ describe('Test `detectPackageManager()`', () => {
         want: {
           detectedLockfile: 'pnpm-lock.yaml',
           detectedPackageManager: 'pnpm@6.x',
+          pnpmVersionRange: '6.x',
           path: undefined,
         },
       },
@@ -41,6 +42,7 @@ describe('Test `detectPackageManager()`', () => {
         want: {
           detectedLockfile: 'pnpm-lock.yaml',
           detectedPackageManager: 'pnpm@7.x',
+          pnpmVersionRange: '7.x',
           path: '/pnpm7/node_modules/.bin',
         },
       },
@@ -50,6 +52,7 @@ describe('Test `detectPackageManager()`', () => {
         want: {
           detectedLockfile: 'pnpm-lock.yaml',
           detectedPackageManager: 'pnpm@8.x',
+          pnpmVersionRange: '8.x',
           path: '/pnpm8/node_modules/.bin',
         },
       },
@@ -59,6 +62,7 @@ describe('Test `detectPackageManager()`', () => {
         want: {
           detectedLockfile: 'pnpm-lock.yaml',
           detectedPackageManager: 'pnpm@8.x',
+          pnpmVersionRange: '8.x',
           path: '/pnpm8/node_modules/.bin',
         },
       },
@@ -68,6 +72,7 @@ describe('Test `detectPackageManager()`', () => {
         want: {
           detectedLockfile: 'pnpm-lock.yaml',
           detectedPackageManager: 'pnpm@9.x',
+          pnpmVersionRange: '9.x',
           path: '/pnpm9/node_modules/.bin',
         },
       },
@@ -77,6 +82,7 @@ describe('Test `detectPackageManager()`', () => {
         want: {
           detectedLockfile: 'pnpm-lock.yaml',
           detectedPackageManager: 'pnpm@9.x',
+          pnpmVersionRange: '9.x',
           path: '/pnpm9/node_modules/.bin',
         },
       },
