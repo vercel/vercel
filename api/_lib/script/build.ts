@@ -5,6 +5,7 @@ import { mapOldToNew } from '../examples/map-old-to-new';
 
 const repoRoot = join(__dirname, '..', '..', '..');
 const pubDir = join(repoRoot, 'public');
+const ignoredPackages = ['sdk'];
 
 async function main() {
   console.log(`Building static frontend ${repoRoot}...`);
@@ -61,6 +62,10 @@ async function main() {
   const packagesDir = join(repoRoot, 'packages');
   const packages = await fs.readdir(packagesDir);
   for (const pkg of packages) {
+    if (ignoredPackages.includes(pkg)) {
+      continue;
+    }
+
     const fullDir = join(packagesDir, pkg);
     const packageJsonRaw = await fs.readFile(
       join(fullDir, 'package.json'),
