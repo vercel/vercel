@@ -25,7 +25,7 @@ export function displayBuildLogs(
     deployment.id,
     {
       mode: 'logs',
-      onEvent: (event: any) => printBuildLog(event, client.output.print),
+      onEvent: (event: BuildLog) => printBuildLog(event, client.output.print),
       quiet: false,
       findOpts: { direction: 'forward', follow },
     },
@@ -59,6 +59,39 @@ export interface RuntimeLog {
   requestPath: string;
   responseStatusCode: number;
 }
+
+export interface BuildLog {
+  created: number;
+  date: number;
+  deploymentId: string;
+  id: string;
+  info: LogInfo;
+  serial: string;
+  text?: string;
+  type: LogType;
+  level?: 'error' | 'warning';
+}
+
+export interface LogInfo {
+  type: string;
+  name: string;
+  entrypoint?: string;
+  path?: string;
+  step?: string;
+  readyState?: string;
+}
+
+export type LogType =
+  | 'command'
+  | 'stdout'
+  | 'stderr'
+  | 'exit'
+  | 'deployment-state'
+  | 'delimiter'
+  | 'middleware'
+  | 'middleware-invocation'
+  | 'edge-function-invocation'
+  | 'fatal';
 
 export async function displayRuntimeLogs(
   client: Client,
@@ -156,7 +189,7 @@ export async function displayRuntimeLogs(
   });
 }
 
-function printBuildLog(log: any, print: Printer) {
+function printBuildLog(log: BuildLog, print: Printer) {
   if (!log.created) return; // ignore keepalive which are the only logs without a creation date.
 
   const date = new Date(log.created).toISOString();
@@ -231,7 +264,7 @@ function getSourceIcon(source: string) {
   return ' ';
 }
 
-function sanitize(log: any): string {
+function sanitize(log: BuildLog): string {
   return (
     (log.text || '')
       .replace(/\n$/, '')
@@ -243,7 +276,7 @@ function sanitize(log: any): string {
   );
 }
 
-function colorize(text: string, log: any) {
+function colorize(text: string, log: BuildLog): string {
   if (log.level === 'error') {
     return chalk.red(text);
   } else if (log.level === 'warning') {
