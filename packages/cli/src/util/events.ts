@@ -10,7 +10,7 @@ import Client from './client';
 import getDeployment from './get-deployment';
 import getScope from './get-scope';
 
-import { BuildLog } from './logs';
+import type { BuildLog } from './logs';
 export interface FindOpts {
   direction: 'forward' | 'backward';
   limit?: number;
