@@ -1,5 +1,11 @@
 # @vercel/frameworks
 
+## 3.3.0
+
+### Minor Changes
+
+- [frameworks] Make FastHTML detector more specific ([#12065](https://github.com/vercel/vercel/pull/12065))
+
 ## 3.2.0
 
 ### Minor Changes
