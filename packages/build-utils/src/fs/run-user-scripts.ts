@@ -817,17 +817,15 @@ function validateCorepackPackageManager(
     corepackPackageManager
   );
   if (!validatedCorepackPackageManager) {
-    console.warn(
-      `WARN [package-manager-warning-2] Intended corepack defined package manager "${corepackPackageManager}" is not a valid semver value.`
+    throw new Error(
+      `Intended corepack defined package manager "${corepackPackageManager}" is not a valid semver value.`
     );
-    return;
   }
 
   if (cliType !== validatedCorepackPackageManager.packageName) {
-    console.warn(
-      `WARN [package-manager-warning-3] Detected package manager "${cliType}" does not match intended corepack defined package manager "${validatedCorepackPackageManager.packageName}". Change your lockfile or "package.json#packageManager" value to match.`
+    throw new Error(
+      `Detected package manager "${cliType}" does not match intended corepack defined package manager "${validatedCorepackPackageManager.packageName}". Change your lockfile or "package.json#packageManager" value to match.`
     );
-    return;
   }
 
   if (cliType === 'pnpm' && enginesPnpmVersionRange) {
@@ -852,8 +850,8 @@ function validateCorepackPackageManager(
       validatedCorepackPackageManager.packageVersion
     );
     if (!lockfileValid) {
-      console.warn(
-        `WARN [package-manager-warning-1] Detected lockfile "${lockfileVersion}" which is not compatible with the intended corepack package manager "${corepackPackageManager}". Update your lockfile or change to a compatible corepack version.`
+      throw new Error(
+        `Detected lockfile "${lockfileVersion}" which is not compatible with the intended corepack package manager "${corepackPackageManager}". Update your lockfile or change to a compatible corepack version.`
       );
     }
   }
