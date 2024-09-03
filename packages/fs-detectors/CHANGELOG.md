@@ -1,5 +1,14 @@
 # @vercel/fs-detectors
 
+## 5.2.10
+
+### Patch Changes
+
+- [frameworks] Make FastHTML detector more specific ([#12065](https://github.com/vercel/vercel/pull/12065))
+
+- Updated dependencies [[`ffb2bf73c`](https://github.com/vercel/vercel/commit/ffb2bf73c92231dbff16f410bb502bb084d7f56e)]:
+  - @vercel/frameworks@3.3.0
+
 ## 5.2.9
 
 ### Patch Changes
