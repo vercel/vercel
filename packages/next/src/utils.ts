@@ -914,6 +914,8 @@ export type NextPrerenderedRoutes = {
   fallbackRoutes: {
     [route: string]: {
       fallback: string;
+      fallbackStatus?: number;
+      fallbackHeaders?: Record<string, string>;
       routeRegex: string;
       dataRoute: string | null;
       dataRouteRegex: string | null;
@@ -1149,6 +1151,8 @@ export async function getPrerenderManifest(
           [route: string]: {
             routeRegex: string;
             fallback: string | false;
+            fallbackStatus?: number;
+            fallbackHeaders?: Record<string, string>;
             dataRoute: string | null;
             dataRouteRegex: string | null;
             prefetchDataRoute: string | null | undefined;
@@ -1274,6 +1278,8 @@ export async function getPrerenderManifest(
         let experimentalPPR: undefined | boolean;
         let prefetchDataRoute: undefined | string | null;
         let prefetchDataRouteRegex: undefined | string | null;
+        let fallbackStatus: undefined | number;
+        let fallbackHeaders: undefined | Record<string, string>;
 
         if (manifest.version === 4) {
           experimentalBypassFor =
@@ -1283,6 +1289,8 @@ export async function getPrerenderManifest(
             manifest.dynamicRoutes[lazyRoute].prefetchDataRoute;
           prefetchDataRouteRegex =
             manifest.dynamicRoutes[lazyRoute].prefetchDataRouteRegex;
+          fallbackStatus = manifest.dynamicRoutes[lazyRoute].fallbackStatus;
+          fallbackHeaders = manifest.dynamicRoutes[lazyRoute].fallbackHeaders;
         }
 
         if (typeof fallback === 'string') {
@@ -1291,6 +1299,8 @@ export async function getPrerenderManifest(
             experimentalPPR,
             routeRegex,
             fallback,
+            fallbackStatus,
+            fallbackHeaders,
             dataRoute,
             dataRouteRegex,
             prefetchDataRoute,
@@ -2087,6 +2097,21 @@ export const onPrerenderRoute =
     // experimentalPPR signals app path route
     if (appDir && experimentalPPR) {
       isAppPathRoute = true;
+
+      // When the route has PPR enabled and has a fallback defined, we should
+      // read the value from the manifest and use it as the value for the route.
+      if (isFallback) {
+        const { fallbackStatus, fallbackHeaders } =
+          prerenderManifest.fallbackRoutes[routeKey];
+
+        if (fallbackStatus) {
+          initialStatus = fallbackStatus;
+        }
+
+        if (fallbackHeaders) {
+          initialHeaders = fallbackHeaders;
+        }
+      }
     }
 
     // TODO: leverage manifest to determine app paths more accurately
@@ -2507,7 +2532,7 @@ export const onPrerenderRoute =
                         'content-type': rscContentTypeHeader,
                       }
                     : {}),
-                  ...(postponedPrerender && rscDidPostponeHeader
+                  ...(postponedPrerender && rscDidPostponeHeader && !isFallback
                     ? { [rscDidPostponeHeader]: '1' }
                     : {}),
                 },
