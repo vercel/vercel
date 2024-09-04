@@ -1,0 +1,15 @@
+name: Run tests from fork
+on:
+  pull_request:
+
+jobs:
+  demo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check access
+        if: ${{ github.event.pull_request.author_association != 'COLLABORATOR' && github.event.pull_request.author_association != 'OWNER' }}
+        run: |
+          echo "Event not triggered by a collaborator."
+          exit 1
+      - name: Echo
+        run: echo "Reached this step"
