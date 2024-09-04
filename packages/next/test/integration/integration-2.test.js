@@ -460,3 +460,32 @@ it('should not generate lambdas that conflict with static index route in app wit
   }
   expect(lambdas.size).toBe(1);
 });
+
+describe('PPR', () => {
+  it('should have the same lambda for revalidation and resume', async () => {
+    const {
+      buildResult: { output },
+    } = await runBuildLambda(path.join(__dirname, 'ppr'));
+
+    // Validate that there are only the two lambdas created.
+    const lambdas = new Set();
+    for (const key of Object.keys(output)) {
+      if (output[key].type === 'Lambda') {
+        lambdas.add(output[key]);
+      }
+    }
+
+    expect(lambdas.size).toBe(2);
+
+    // Validate that these two lambdas are the same.
+    expect(output['index']).toBeDefined();
+    expect(output['index'].type).toBe('Prerender');
+    expect(output['index'].lambda).toBeDefined();
+    expect(output['index'].lambda.type).toBe('Lambda');
+
+    expect(output['_next/postponed/resume/index']).toBeDefined();
+    expect(output['_next/postponed/resume/index'].type).toBe('Lambda');
+
+    expect(output['index'].lambda).toBe(output['_next/postponed/resume/index']);
+  });
+});

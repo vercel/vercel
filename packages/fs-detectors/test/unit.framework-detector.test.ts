@@ -367,6 +367,15 @@ describe('detectFramework()', () => {
     expect(await detectFramework({ fs, frameworkList })).toBe('blitzjs');
   });
 
+  it('Detect FastHTML', async () => {
+    const fs = new VirtualFilesystem({
+      'requirements.txt':
+        'tensorflow==2.3.1\nuvicorn==0.12.2\npython-fasthtml==0.5.1',
+    });
+
+    expect(await detectFramework({ fs, frameworkList })).toBe('fasthtml');
+  });
+
   it('Detect Ember via `ember-source`', async () => {
     const fs = new VirtualFilesystem({
       'package.json': JSON.stringify({

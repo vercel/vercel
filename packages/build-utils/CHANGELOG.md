@@ -1,5 +1,13 @@
 # @vercel/build-utils
 
+## 8.3.9
+
+### Patch Changes
+
+- Provide help when users get ERR_PNPM_UNSUPPORTED_ENGINE errors without corepack ([#12034](https://github.com/vercel/vercel/pull/12034))
+
+- Fix package-manager-warning-1 to happen only happen in correct cases ([#12050](https://github.com/vercel/vercel/pull/12050))
+
 ## 8.3.8
 
 ### Patch Changes

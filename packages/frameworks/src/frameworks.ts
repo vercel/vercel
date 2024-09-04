@@ -1975,7 +1975,8 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'main.py',
+          path: 'requirements.txt',
+          matchContent: 'python-fasthtml',
         },
       ],
     },

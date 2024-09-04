@@ -13,7 +13,6 @@ import {
   glob,
   Files,
   BuildResultV2Typical as BuildResult,
-  NodejsLambda,
 } from '@vercel/build-utils';
 import { Route, RouteWithHandle } from '@vercel/routing-utils';
 import { MAX_AGE_ONE_YEAR } from '.';
@@ -1202,22 +1201,6 @@ export async function serverBuild({
 
       const lambda = await createLambdaFromPseudoLayers(options);
 
-      // If PPR is enabled and this is an App Page, create the non-streaming
-      // lambda for the page for revalidation.
-      let revalidate: NodejsLambda | undefined;
-      if (group.isExperimentalPPR) {
-        if (!options.isStreaming) {
-          throw new Error("Invariant: PPR lambda isn't streaming");
-        }
-
-        // Create the non-streaming version of the same Lambda, this will be
-        // used for revalidation.
-        revalidate = await createLambdaFromPseudoLayers({
-          ...options,
-          isStreaming: false,
-        });
-      }
-
       for (const pageFilename of group.pages) {
         // This is the name of the page, where the root is `index`.
         const pageName = pageFilename.replace(/\.js$/, '');
@@ -1245,13 +1228,13 @@ export async function serverBuild({
 
         // If this is a PPR page, then we should prefix the output name.
         if (isRoutePPREnabled) {
-          if (!revalidate) {
-            throw new Error("Invariant: PPR lambda isn't set");
+          if (!options.isStreaming) {
+            throw new Error("Invariant: PPR lambda isn't streaming");
           }
 
           // Assign the revalidate lambda to the output name. That's used to
           // perform the initial static shell render.
-          lambdas[outputName] = revalidate;
+          lambdas[outputName] = lambda;
 
           // If this isn't an omitted page, then we should add the link from the
           // page to the postpone resume lambda.
