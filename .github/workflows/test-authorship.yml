@@ -6,12 +6,18 @@ jobs:
   demo:
     runs-on: ubuntu-latest
     steps:
-      - name: What Am I?
-        run: echo ${{ github.event.pull_request.author_association }}
-      - name: Check access
-        if: ${{ github.event.pull_request.author_association != 'CONTRIBUTOR' && github.event.pull_request.author_association != 'OWNER' }}
+      - name: Get User Permission
+        id: checkAccess
+        uses: actions-cool/check-user-permission@v2
+        with:
+          require: write
+          username: ${{ github.triggering_actor }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Check User Permission
+        if: steps.checkAccess.outputs.require-result == 'false'
         run: |
-          echo "Event not triggered by a collaborator."
+          echo "${{ github.triggering_actor }} does not have permissions on this repo."
+          echo "Current permission level is ${{ steps.checkAccess.outputs.user-permission }}"
+          echo "Job originally triggered by ${{ github.actor }}"
           exit 1
-      - name: Echo
-        run: echo "Reached this step"
