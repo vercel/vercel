@@ -6,6 +6,8 @@ jobs:
   demo:
     runs-on: ubuntu-latest
     steps:
+      - name: What Am I?
+        run: echo ${{ github.event.pull_request.author_association }}
       - name: Check access
         if: ${{ github.event.pull_request.author_association != 'COLLABORATOR' && github.event.pull_request.author_association != 'OWNER' }}
         run: |
