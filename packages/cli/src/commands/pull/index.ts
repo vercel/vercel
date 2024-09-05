@@ -37,11 +37,9 @@ async function pullAllEnvFiles(
   return envPull(
     client,
     link,
-    project,
     environment,
     flags,
     [join('.vercel', environmentFile)],
-    client.output,
     cwd,
     'vercel-cli:pull'
   );
@@ -83,8 +81,8 @@ export default async function main(client: Client) {
   const environment =
     parseTarget({
       output: client.output,
-      targetFlagName: 'environment',
-      targetFlagValue: parsedArgs.flags['--environment'],
+      flagName: 'environment',
+      flags: parsedArgs.flags,
     }) || 'development';
 
   const link = await ensureLink('pull', client, cwd, { autoConfirm });

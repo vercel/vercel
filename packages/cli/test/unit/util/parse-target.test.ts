@@ -15,7 +15,8 @@ describe('parseTarget', () => {
   it('defaults to `undefined`', () => {
     let result = parseTarget({
       output,
-      targetFlagName: 'target',
+      flagName: 'target',
+      flags: {},
     });
     expect(result).toEqual(undefined);
   });
@@ -23,8 +24,8 @@ describe('parseTarget', () => {
   it('parses "production" target', () => {
     let result = parseTarget({
       output,
-      targetFlagName: 'target',
-      targetFlagValue: 'production',
+      flagName: 'target',
+      flags: { '--target': 'production' },
     });
     expect(result).toEqual('production');
     expect(output.debug).toHaveBeenCalledWith('Setting target to production');
@@ -33,8 +34,8 @@ describe('parseTarget', () => {
   it('parses "staging" target', () => {
     let result = parseTarget({
       output,
-      targetFlagName: 'target',
-      targetFlagValue: 'staging',
+      flagName: 'target',
+      flags: { '--target': 'staging' },
     });
     expect(result).toEqual('staging');
     expect(output.debug).toHaveBeenCalledWith('Setting target to staging');
@@ -43,9 +44,8 @@ describe('parseTarget', () => {
   it('prefers target over production argument', () => {
     let result = parseTarget({
       output,
-      targetFlagName: 'target',
-      targetFlagValue: 'staging',
-      prodFlagValue: true,
+      flagName: 'target',
+      flags: { '--target': 'staging', '--prod': true },
     });
     expect(output.warn).toHaveBeenCalledWith(
       'Both `--prod` and `--target` detected. Ignoring `--prod`.'
@@ -56,8 +56,8 @@ describe('parseTarget', () => {
   it('parses production argument when `true`', () => {
     let result = parseTarget({
       output,
-      targetFlagName: 'target',
-      prodFlagValue: true,
+      flagName: 'target',
+      flags: { '--prod': true },
     });
     expect(result).toEqual('production');
   });
@@ -65,8 +65,8 @@ describe('parseTarget', () => {
   it('parses production argument when `false`', () => {
     let result = parseTarget({
       output,
-      targetFlagName: 'target',
-      prodFlagValue: false,
+      flagName: 'target',
+      flags: { '--prod': false },
     });
     expect(result).toEqual(undefined);
   });

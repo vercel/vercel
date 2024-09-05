@@ -1,0 +1,21 @@
+name: Publish
+permissions:
+  checks: write
+  contents: write
+  pull-requests: write
+  statuses: write
+'on':
+  push:
+    branches:
+      - main
+    paths:
+      - packages/sdk/RELEASES.md
+jobs:
+  publish:
+    uses: speakeasy-api/sdk-generation-action/.github/workflows/sdk-publish.yaml@v15
+    with:
+      working_directory: packages/sdk
+    secrets:
+      github_access_token: ${{ secrets.GITHUB_TOKEN }}
+      npm_token: ${{ secrets.NPM_TOKEN_ELEVATED }}
+      speakeasy_api_key: ${{ secrets.SPEAKEASY_API_KEY }}

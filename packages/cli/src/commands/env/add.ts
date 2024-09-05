@@ -1,12 +1,9 @@
 import chalk from 'chalk';
-import type { Project, ProjectEnvTarget } from '@vercel-internals/types';
-import { Output } from '../../util/output';
 import Client from '../../util/client';
 import stamp from '../../util/output/stamp';
 import addEnvRecord from '../../util/env/add-env-record';
 import getEnvRecords from '../../util/env/get-env-records';
 import {
-  isValidEnvTarget,
   getEnvTargetPlaceholder,
   envTargetChoices,
 } from '../../util/env/env-target';
@@ -16,6 +13,8 @@ import { emoji, prependEmoji } from '../../util/emoji';
 import { isKnownError } from '../../util/env/known-error';
 import { getCommandName } from '../../util/pkg-name';
 import { isAPIError } from '../../util/errors-ts';
+import { getCustomEnvironments } from '../../util/target/get-custom-environments';
+import type { ProjectLinked } from '@vercel-internals/types';
 
 type Options = {
   '--debug': boolean;
@@ -25,11 +24,12 @@ type Options = {
 
 export default async function add(
   client: Client,
-  project: Project,
+  link: ProjectLinked,
   opts: Partial<Options>,
-  args: string[],
-  output: Output
+  args: string[]
 ) {
+  const { output } = client;
+  const { project } = link;
   const stdInput = await readStandardInput(client.stdin);
   let [envName, envTargetArg, envGitBranch] = args;
 
@@ -51,36 +51,48 @@ export default async function add(
     return 1;
   }
 
-  let envTargets: ProjectEnvTarget[] = [];
+  let envTargets: string[] = [];
   if (envTargetArg) {
-    if (!isValidEnvTarget(envTargetArg)) {
-      output.error(
-        `The Environment ${param(
-          envTargetArg
-        )} is invalid. It must be one of: ${getEnvTargetPlaceholder()}.`
-      );
-      return 1;
-    }
     envTargets.push(envTargetArg);
   }
 
   if (!envName) {
     envName = await client.input.text({
-      message: `What’s the name of the variable?`,
+      message: `What's the name of the variable?`,
       validate: val => (val ? true : 'Name cannot be empty'),
     });
   }
 
-  const { envs } = await getEnvRecords(
-    output,
-    client,
-    project.id,
-    'vercel-cli:env:add'
-  );
-  const existing = new Set(
-    envs.filter(r => r.key === envName).map(r => r.target)
-  );
-  const choices = envTargetChoices.filter(c => !existing.has(c.value));
+  const [{ envs }, customEnvironments] = await Promise.all([
+    getEnvRecords(client, project.id, 'vercel-cli:env:add'),
+    getCustomEnvironments(client, project.id),
+  ]);
+  const matchingEnvs = envs.filter(r => r.key === envName);
+  const existingTargets = new Set<string>();
+  const existingCustomEnvs = new Set<string>();
+  for (const env of matchingEnvs) {
+    if (typeof env.target === 'string') {
+      existingTargets.add(env.target);
+    } else if (Array.isArray(env.target)) {
+      for (const target of env.target) {
+        existingTargets.add(target);
+      }
+    }
+    if (env.customEnvironmentIds) {
+      for (const customEnvId of env.customEnvironmentIds) {
+        existingCustomEnvs.add(customEnvId);
+      }
+    }
+  }
+  const choices = [
+    ...envTargetChoices.filter(c => !existingTargets.has(c.value)),
+    ...customEnvironments
+      .filter(c => !existingCustomEnvs.has(c.id))
+      .map(c => ({
+        name: c.name,
+        value: c.id,
+      })),
+  ];
 
   if (choices.length === 0 && !opts['--force']) {
     output.error(
@@ -99,7 +111,7 @@ export default async function add(
     envValue = stdInput;
   } else {
     envValue = await client.input.text({
-      message: `What’s the value of ${envName}?`,
+      message: `What's the value of ${envName}?`,
     });
   }
 

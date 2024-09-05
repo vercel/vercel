@@ -1,5 +1,107 @@
 # vercel
 
+## 37.4.0
+
+### Minor Changes
+
+- introduce using level to highlight build logs ([#12044](https://github.com/vercel/vercel/pull/12044))
+
+### Patch Changes
+
+- Combine Partial Prerendering lambdas for revalidation and dynamic resumes. ([#12064](https://github.com/vercel/vercel/pull/12064))
+
+- Added support for Partial Fallback Prerendering ([#12036](https://github.com/vercel/vercel/pull/12036))
+
+- Updated dependencies [[`b3540096a`](https://github.com/vercel/vercel/commit/b3540096a39dd8b24b250aa5ad808c8445b5f484), [`49c95b77a`](https://github.com/vercel/vercel/commit/49c95b77a2cea23c6f98c5e084dbe35d081b40bc), [`e7016f9b0`](https://github.com/vercel/vercel/commit/e7016f9b033e88a33a89bf90ae655069f687c72f)]:
+  - @vercel/next@4.3.8
+  - @vercel/build-utils@8.4.0
+  - @vercel/node@3.2.12
+  - @vercel/static-build@2.5.22
+
+## 37.3.0
+
+### Minor Changes
+
+- Support custom environments in `vc env rm` ([#12009](https://github.com/vercel/vercel/pull/12009))
+
+### Patch Changes
+
+- Add error for `vc deploy --env` with no value ([#12002](https://github.com/vercel/vercel/pull/12002))
+
+- Updated dependencies [[`40b7ee0d2`](https://github.com/vercel/vercel/commit/40b7ee0d297c212961279639d9c73d4fed2312f8), [`5ab983009`](https://github.com/vercel/vercel/commit/5ab98300958538fac5e154034eacd9267a79dc26), [`78a3be23e`](https://github.com/vercel/vercel/commit/78a3be23edff1e59a09a75a8adc2013a5a53fb1d)]:
+  - @vercel/build-utils@8.3.9
+  - @vercel/go@3.1.2
+  - @vercel/node@3.2.11
+  - @vercel/static-build@2.5.21
+
+## 37.2.1
+
+### Patch Changes
+
+- Fixes integration not found error when using `vercel install` ([#12035](https://github.com/vercel/vercel/pull/12035))
+
+## 37.2.0
+
+### Minor Changes
+
+- Add `vc install` and `vc integration add` commands ([#12033](https://github.com/vercel/vercel/pull/12033))
+
+### Patch Changes
+
+- [cli] Remove existing metrics gathering behavior ([#12026](https://github.com/vercel/vercel/pull/12026))
+
+- Remove redundant formatting on a few lines of output ([#12011](https://github.com/vercel/vercel/pull/12011))
+
+- Updated dependencies [[`06337ed0b`](https://github.com/vercel/vercel/commit/06337ed0bb1ab4becd1554642c162c75bdcc91c2), [`2fc9e6d81`](https://github.com/vercel/vercel/commit/2fc9e6d8104a3d6308873ef8dafa27c32f0b97be)]:
+  - @vercel/build-utils@8.3.8
+  - @vercel/node@3.2.10
+  - @vercel/static-build@2.5.20
+
+## 37.1.2
+
+### Patch Changes
+
+- Fix incorrect type for certs challenge-only flag ([#12018](https://github.com/vercel/vercel/pull/12018))
+
+- [vc help] add build command to help/--help ([#12016](https://github.com/vercel/vercel/pull/12016))
+
+## 37.1.1
+
+### Patch Changes
+
+- Updated dependencies [[`c6d469595`](https://github.com/vercel/vercel/commit/c6d469595372d53398c3f2eb35b644a22c56e4f6), [`49aaea41f`](https://github.com/vercel/vercel/commit/49aaea41f1501dec6aa262f04368df5e0c1475b6)]:
+  - @vercel/build-utils@8.3.7
+  - @vercel/next@4.3.7
+  - @vercel/node@3.2.9
+  - @vercel/static-build@2.5.19
+
+## 37.1.0
+
+### Minor Changes
+
+- Support Custom Environments in `vercel env add [target]` ([#11994](https://github.com/vercel/vercel/pull/11994))
+
+## 37.0.0
+
+### Major Changes
+
+- Refactor / modernize the `vercel list` command ([#11956](https://github.com/vercel/vercel/pull/11956))
+
+### Minor Changes
+
+- Print the custom environment name in `vc list` ([#11965](https://github.com/vercel/vercel/pull/11965))
+
+- Allow filtering in `vc env ls` with custom environment ([#11984](https://github.com/vercel/vercel/pull/11984))
+
+- Display Deployment Retention Policies in vc ls [project] ([#11676](https://github.com/vercel/vercel/pull/11676))
+
+### Patch Changes
+
+- Prefactor middleware tests to make changes easier ([#11934](https://github.com/vercel/vercel/pull/11934))
+
+- Updated dependencies [[`763db23a3`](https://github.com/vercel/vercel/commit/763db23a3acf1c290f0d45c2501a2c924cbd609d)]:
+  - @vercel/remix-builder@2.2.6
+
 ## 36.0.0
 
 ### Major Changes

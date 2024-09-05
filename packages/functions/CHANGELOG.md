@@ -1,5 +1,11 @@
 # @vercel/functions
 
+## 1.4.1
+
+### Patch Changes
+
+- Package files in the root folder ([#11982](https://github.com/vercel/vercel/pull/11982))
+
 ## 1.4.0
 
 ### Minor Changes
