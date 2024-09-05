@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 8.4.0
+
+### Minor Changes
+
+- Change warnings to errors in invalid corepack package manager states ([#12062](https://github.com/vercel/vercel/pull/12062))
+
 ## 8.3.9
 
 ### Patch Changes
