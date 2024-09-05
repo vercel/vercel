@@ -1,5 +1,23 @@
 # vercel
 
+## 37.4.0
+
+### Minor Changes
+
+- introduce using level to highlight build logs ([#12044](https://github.com/vercel/vercel/pull/12044))
+
+### Patch Changes
+
+- Combine Partial Prerendering lambdas for revalidation and dynamic resumes. ([#12064](https://github.com/vercel/vercel/pull/12064))
+
+- Added support for Partial Fallback Prerendering ([#12036](https://github.com/vercel/vercel/pull/12036))
+
+- Updated dependencies [[`b3540096a`](https://github.com/vercel/vercel/commit/b3540096a39dd8b24b250aa5ad808c8445b5f484), [`49c95b77a`](https://github.com/vercel/vercel/commit/49c95b77a2cea23c6f98c5e084dbe35d081b40bc), [`e7016f9b0`](https://github.com/vercel/vercel/commit/e7016f9b033e88a33a89bf90ae655069f687c72f)]:
+  - @vercel/next@4.3.8
+  - @vercel/build-utils@8.4.0
+  - @vercel/node@3.2.12
+  - @vercel/static-build@2.5.22
+
 ## 37.3.0
 
 ### Minor Changes
