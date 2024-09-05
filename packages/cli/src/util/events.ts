@@ -10,6 +10,7 @@ import Client from './client';
 import getDeployment from './get-deployment';
 import getScope from './get-scope';
 
+import type { BuildLog } from './logs';
 export interface FindOpts {
   direction: 'forward' | 'backward';
   limit?: number;
@@ -20,16 +21,9 @@ export interface FindOpts {
 
 export interface PrintEventsOptions {
   mode: 'deploy' | string;
-  onEvent: (event: DeploymentEvent) => void;
+  onEvent: (event: BuildLog) => void;
   quiet?: boolean;
   findOpts: FindOpts;
-}
-
-export interface DeploymentEvent {
-  id: string;
-  created: number;
-  date?: number;
-  serial?: string;
 }
 
 async function printEvents(
