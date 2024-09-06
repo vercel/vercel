@@ -10,6 +10,35 @@ import { useTeams } from '../../mocks/team';
 import { useUser } from '../../mocks/user';
 
 describe('env', () => {
+  describe('add', () => {
+    it('should allow `gitBranch` to be passed', async () => {
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'vercel-env-pull',
+        name: 'vercel-env-pull',
+      });
+      const cwd = setupUnitFixture('vercel-env-pull');
+      client.cwd = cwd;
+      client.setArgv(
+        'env',
+        'add',
+        'REDIS_CONNECTION_STRING',
+        'preview',
+        'branchName'
+      );
+      const exitCodePromise = env(client);
+      await expect(client.stderr).toOutput(
+        "What's the value of REDIS_CONNECTION_STRING?"
+      );
+      client.stdin.write('testvalue\n');
+      await expect(client.stderr).toOutput(
+        'Added Environment Variable REDIS_CONNECTION_STRING to Project vercel-env-pull'
+      );
+      await expect(exitCodePromise).resolves.toEqual(0);
+    });
+  });
   describe('pull', () => {
     it('should handle pulling', async () => {
       useUser();
