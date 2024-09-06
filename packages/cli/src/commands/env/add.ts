@@ -94,7 +94,7 @@ export default async function add(
       })),
   ];
 
-  if (choices.length === 0 && !opts['--force']) {
+  if (!envGitBranch && choices.length === 0 && !opts['--force']) {
     output.error(
       `The variable ${param(
         envName
