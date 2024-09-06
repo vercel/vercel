@@ -502,6 +502,7 @@ export async function runNpmInstall(
       packageJsonPath,
       lockfileVersion,
       packageJsonPackageManager,
+      packageJson,
     } = await scanParentDirs(destPath);
 
     if (!packageJsonPath) {
@@ -1070,7 +1071,7 @@ export async function runCustomInstallCommand({
   spawnOpts?: SpawnOptions;
 }) {
   console.log(`Running "install" command: \`${installCommand}\`...`);
-  const { cliType, lockfileVersion, packageJsonPackageManager } =
+  const { cliType, lockfileVersion, packageJsonPackageManager, packageJson } =
     await scanParentDirs(destPath);
   const env = getEnvForPackageManager({
     cliType,
