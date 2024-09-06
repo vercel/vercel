@@ -1,5 +1,13 @@
 # @vercel/next
 
+## 4.3.8
+
+### Patch Changes
+
+- Combine Partial Prerendering lambdas for revalidation and dynamic resumes. ([#12064](https://github.com/vercel/vercel/pull/12064))
+
+- Added support for Partial Fallback Prerendering ([#12036](https://github.com/vercel/vercel/pull/12036))
+
 ## 4.3.7
 
 ### Patch Changes
