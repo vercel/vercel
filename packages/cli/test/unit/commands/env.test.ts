@@ -14,11 +14,27 @@ describe('env', () => {
     it('should allow `gitBranch` to be passed', async () => {
       useUser();
       useTeams('team_dummy');
-      useProject({
-        ...defaultProject,
-        id: 'vercel-env-pull',
-        name: 'vercel-env-pull',
-      });
+      useProject(
+        {
+          ...defaultProject,
+          id: 'vercel-env-pull',
+          name: 'vercel-env-pull',
+        },
+        [
+          ...envs,
+          {
+            type: 'encrypted',
+            id: '781dt89g8r2h789g',
+            key: 'REDIS_CONNECTION_STRING',
+            value: 'redis://abc123@redis.example.dev:6379',
+            target: ['development'],
+            gitBranch: undefined,
+            configurationId: null,
+            updatedAt: 1557241361455,
+            createdAt: 1557241361455,
+          },
+        ]
+      );
       const cwd = setupUnitFixture('vercel-env-pull');
       client.cwd = cwd;
       client.setArgv(

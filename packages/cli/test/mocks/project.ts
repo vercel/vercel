@@ -25,17 +25,6 @@ export const envs: ProjectEnvVariable[] = [
   {
     type: 'encrypted',
     id: '781dt89g8r2h789g',
-    key: 'REDIS_CONNECTION_STRING',
-    value: 'redis://abc123@redis.example.dev:6379',
-    target: ['production', 'preview', 'development'],
-    gitBranch: undefined,
-    configurationId: null,
-    updatedAt: 1557241361455,
-    createdAt: 1557241361455,
-  },
-  {
-    type: 'encrypted',
-    id: '781dt89g8r2h789g',
     key: 'BRANCH_ENV_VAR',
     value: 'env var for a specific branch',
     target: ['preview'],
@@ -287,7 +276,7 @@ export function useProject(
         ? parseEnvironment(req.query.target)
         : undefined;
 
-    let targetEnvs = envs;
+    let targetEnvs = projectEnvs;
     if (target) {
       targetEnvs = targetEnvs.filter(env => {
         if (typeof env.target === 'string') {
