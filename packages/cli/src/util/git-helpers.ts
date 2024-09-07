@@ -1,4 +1,7 @@
 import { execSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
+import os from 'node:os';
+import { Glob } from 'glob';
 
 /** Defines the options for executing Git commands */
 export type GitExecOptions = Readonly<{
@@ -84,4 +87,78 @@ export function isGitWorktreeOrSubmodule(opts: GitExecOptions): boolean {
   const isGitSubmodule = gitDir.includes('.git/modules/');
 
   return isGitWorktree || isGitSubmodule;
+}
+
+/**
+ * Reads and returns the glob patterns from a .gitignore file.
+ *
+ * This function reads the contents of the specified .gitignore file and
+ * returns an array of glob patterns defined in it. It handles different
+ * end-of-line characters and returns null if the file is empty.
+ *
+ * @param {string} gitIgnoreFilePath - The path to the .gitignore file to read.
+ * @param {Object} [options] - Optional configuration object.
+ * @param {boolean} [options.unsafe=true] - If true, throws errors instead of returning null.
+ *
+ * @returns {ReadonlyArray<string> | null} An array of glob patterns if the file is not empty;
+ * otherwise, null. If an error occurs and `options.unsafe` is false, returns null.
+ *
+ * @throws {Error} Can throw an error if reading the file fails and `options.unsafe` is true or undefined.
+ */
+export function readGitIgnoreGlobPatterns(
+  gitIgnoreFilePath: string,
+  options?: Readonly<{ unsafe: boolean }>
+): ReadonlyArray<string> | null {
+  try {
+    const contents = readFileSync(gitIgnoreFilePath, { encoding: 'utf8' });
+    const EOL = contents.includes('\r\n') ? '\r\n' : os.EOL;
+
+    if (contents.length === 0) {
+      return null;
+    }
+
+    const patterns = contents.split(EOL);
+
+    return patterns;
+  } catch (error) {
+    if (options?.unsafe === true || options === undefined) {
+      throw error;
+    }
+
+    return null;
+  }
+}
+
+/**
+ * Checks if a given file is included in the glob patterns defined in a .gitignore file.
+ *
+ * This function reads the glob patterns from the specified .gitignore file and
+ * checks if the given file name matches any of these patterns.
+ *
+ * @param {string} fileName - The name of the file to check.
+ * @param {string} gitignorePath - The path to the .gitignore file to use for checking.
+ *
+ * @returns {boolean} Returns true if the file matches any pattern in the .gitignore file,
+ * false otherwise. If an error occurs during execution, it returns false.
+ */
+export function gitIgnoreIncludesFile(
+  fileName: string,
+  gitignorePath: string
+): boolean {
+  try {
+    const globs = readGitIgnoreGlobPatterns(gitignorePath);
+
+    if (globs === null) {
+      return false;
+    }
+
+    return (
+      globs.find(pattern => {
+        return new Glob(pattern).minimatch.match(fileName);
+      }) !== undefined
+    );
+  } catch (error) {
+    // ignore errors since this is non-critical
+  }
+  return false;
 }

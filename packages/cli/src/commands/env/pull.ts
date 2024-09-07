@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import { outputFile } from 'fs-extra';
 import { closeSync, openSync, readSync } from 'fs';
-import { resolve } from 'path';
+import { join, resolve } from 'path';
 import Client from '../../util/client';
 import { emoji, prependEmoji } from '../../util/emoji';
 import confirm from '../../util/input/confirm';
@@ -21,6 +21,7 @@ import { addToGitIgnore } from '../../util/link/add-to-gitignore';
 import JSONparse from 'json-parse-better-errors';
 import { formatProject } from '../../util/projects/format-project';
 import type { ProjectLinked } from '@vercel-internals/types';
+import { gitIgnoreIncludesFile } from '../../util/git-helpers';
 
 const CONTENTS_PREFIX = '# Created by Vercel CLI\n';
 
@@ -152,7 +153,10 @@ export default async function pull(
     output.log('No changes found.');
   }
 
+  const rootPath = link.repoRoot ?? cwd;
+  const gitignorePath = join(rootPath, '.gitignore');
   let isGitIgnoreUpdated = false;
+
   if (filename === '.env.local') {
     // When the file is `.env.local`, we also add it to `.gitignore`
     // to avoid accidentally committing it to git.
@@ -161,6 +165,28 @@ export default async function pull(
     // https://github.com/vercel/next.js/blob/06abd634899095b6cc28e6e8315b1e8b9c8df939/packages/create-next-app/templates/app/js/gitignore#L28
     const rootPath = link.repoRoot ?? cwd;
     isGitIgnoreUpdated = await addToGitIgnore(rootPath, '.env*.local');
+  } else {
+    const included = gitIgnoreIncludesFile(filename, gitignorePath);
+
+    if (!included) {
+      output.warn(
+        `You are pulling your Environment Variables into ${chalk.bold(filename)} which is ` +
+          `${chalk.red(chalk.bold('NOT'))} in your .gitignore. This means that any ` +
+          `sensitive values, API keys, or secrets could be commited to git.`
+      );
+
+      if (!skipConfirmation) {
+        const shouldAdd = await confirm(
+          client,
+          `Would you like to add '${filename}' to your .gitignore now?`,
+          true
+        );
+
+        if (shouldAdd) {
+          isGitIgnoreUpdated = await addToGitIgnore(rootPath, filename);
+        }
+      }
+    }
   }
 
   output.print(

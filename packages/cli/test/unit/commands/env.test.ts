@@ -8,7 +8,7 @@ import { client } from '../../mocks/client';
 import { defaultProject, envs, useProject } from '../../mocks/project';
 import { useTeams } from '../../mocks/team';
 import { useUser } from '../../mocks/user';
-
+import type Client from '../../../src/util/client';
 describe('env', () => {
   describe('add', () => {
     it('should allow `gitBranch` to be passed', async () => {
@@ -44,7 +44,7 @@ describe('env', () => {
         'preview',
         'branchName'
       );
-      const exitCodePromise = env(client);
+      const exitCodePromise = env(client as unknown as Client);
       await expect(client.stderr).toOutput(
         "What's the value of REDIS_CONNECTION_STRING?"
       );
@@ -527,6 +527,175 @@ describe('env', () => {
       const rawDevEnv = await fs.readFile(path.join(cwd, '.env.local'));
 
       expect(rawDevEnv.toString().includes('VERCEL_ANALYTICS_ID')).toBeFalsy();
+    });
+
+    it('should warn the user if the file they pull env variables to is not git ignored', async () => {
+      const prj = 'vercel-env-pull-with-gitignore';
+      const filename = 'foobar';
+
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: prj,
+        name: prj,
+      });
+
+      const cwd = setupUnitFixture(prj);
+      const gitignoreBefore = await fs.readFile(
+        path.join(cwd, '.gitignore'),
+        'utf8'
+      );
+
+      const filePromise = fs.readFile(path.join(cwd, filename), 'utf8');
+
+      await expect(filePromise).rejects.toThrow();
+
+      client.cwd = cwd;
+      client.setArgv('env', 'pull', filename, '--yes');
+
+      const exitCodePromise = env(client as unknown as Client);
+
+      await expect(client.stderr).toOutput(
+        'Downloading `development` Environment Variables for'
+      );
+
+      await expect(client.stderr).toOutput(
+        `WARN! You are pulling your Environment Variables into '${filename}' which is ` +
+          `NOT in your .gitignore. This means that any ` +
+          `sensitive values, API keys, or secrets could be commited to git.`
+      );
+
+      await expect(client.stderr).toOutput(`Created ${filename} file`);
+
+      await expect(exitCodePromise).resolves.toEqual(0);
+      const rawDevEnv = await fs.readFile(path.join(cwd, filename));
+
+      const devFileHasDevEnv = rawDevEnv.toString().includes('SPECIAL_FLAG');
+      expect(devFileHasDevEnv).toBeTruthy();
+
+      const gitignoreAfter = await fs.readFile(
+        path.join(cwd, '.gitignore'),
+        'utf8'
+      );
+      expect(gitignoreAfter).toBe(gitignoreBefore);
+
+      fs.rmSync(path.join(cwd, filename));
+    });
+
+    it('should prompt the user to gitignore the filename if the file they pull env variables to is not git ignored', async () => {
+      const prj = 'vercel-env-pull-with-gitignore';
+      const filename = 'foobar';
+
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: prj,
+        name: prj,
+      });
+
+      const cwd = setupUnitFixture(prj);
+
+      const gitignoreBefore = await fs.readFile(
+        path.join(cwd, '.gitignore'),
+        'utf8'
+      );
+
+      client.cwd = cwd;
+      client.setArgv('env', 'pull', filename);
+
+      const exitCodePromise = env(client as unknown as Client);
+
+      await expect(client.stderr).toOutput(
+        'Downloading `development` Environment Variables for'
+      );
+
+      await expect(client.stderr).toOutput(
+        `WARN! You are pulling your Environment Variables into '${filename}' which is ` +
+          `NOT in your .gitignore. This means that any ` +
+          `sensitive values, API keys, or secrets could be commited to git.`
+      );
+
+      await expect(client.stderr).toOutput(
+        `Would you like to add '${filename}' to your .gitignore now? (Y/n)`
+      );
+
+      client.events.type('Y');
+      client.events.keypress('enter');
+
+      await expect(client.stderr).toOutput('Y');
+
+      await expect(client.stderr).toOutput(
+        `Created ${filename} file and added it to .gitignore`
+      );
+
+      await expect(exitCodePromise).resolves.toEqual(0);
+      const rawDevEnv = await fs.readFile(path.join(cwd, filename));
+
+      const devFileHasDevEnv = rawDevEnv.toString().includes('SPECIAL_FLAG');
+      expect(devFileHasDevEnv).toBeTruthy();
+
+      const gitignoreAfter = await fs.readFile(
+        path.join(cwd, '.gitignore'),
+        'utf8'
+      );
+      expect(gitignoreAfter).not.toBe(gitignoreBefore);
+
+      fs.rmSync(path.join(cwd, filename));
+    });
+
+    // This ensures that we don't break backwards compatability for users who may
+    // depend on the current functionality
+    it('should warn the user but not update the gitignore if the skip confirmation flag is "--yes"', async () => {
+      const prj = 'vercel-env-pull-with-gitignore';
+      const filename = 'foobar';
+
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: prj,
+        name: prj,
+      });
+
+      const cwd = setupUnitFixture(prj);
+
+      const gitignoreBefore = await fs.readFile(
+        path.join(cwd, '.gitignore'),
+        'utf8'
+      );
+
+      client.cwd = cwd;
+      client.setArgv('env', 'pull', filename, '--yes');
+
+      const exitCodePromise = env(client as unknown as Client);
+
+      await expect(client.stderr).toOutput(
+        'Downloading `development` Environment Variables for'
+      );
+
+      await expect(client.stderr).toOutput(
+        `WARN! You are pulling your Environment Variables into ${filename} which is ` +
+          `NOT in your .gitignore. This means that any ` +
+          `sensitive values, API keys, or secrets could be commited to git.`
+      );
+
+      await expect(client.stderr).toOutput(`Created ${filename} file`);
+
+      await expect(exitCodePromise).resolves.toEqual(0);
+      const rawDevEnv = await fs.readFile(path.join(cwd, filename));
+
+      const devFileHasDevEnv = rawDevEnv.toString().includes('SPECIAL_FLAG');
+      expect(devFileHasDevEnv).toBeTruthy();
+
+      const gitignoreAfter = await fs.readFile(
+        path.join(cwd, '.gitignore'),
+        'utf8'
+      );
+      expect(gitignoreAfter).toBe(gitignoreBefore);
+
+      fs.rmSync(path.join(cwd, filename));
     });
   });
 });
