@@ -1,5 +1,20 @@
 # vercel
 
+## 37.4.1
+
+### Patch Changes
+
+- Fix gitBranch parameter for `vc env add` command ([#12085](https://github.com/vercel/vercel/pull/12085))
+
+- Updated dependencies [[`04e15410f`](https://github.com/vercel/vercel/commit/04e15410f09453c528c133d1432fd8b183c5097c)]:
+  - @vercel/build-utils@8.4.1
+  - @vercel/hydrogen@1.0.5
+  - @vercel/next@4.3.9
+  - @vercel/redwood@2.1.4
+  - @vercel/remix-builder@2.2.7
+  - @vercel/static-build@2.5.23
+  - @vercel/node@3.2.13
+
 ## 37.4.0
 
 ### Minor Changes
