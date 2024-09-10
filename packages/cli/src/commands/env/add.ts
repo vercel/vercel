@@ -68,22 +68,10 @@ export default async function add(
     getCustomEnvironments(client, project.id),
   ]);
   const matchingEnvs = envs.filter(r => r.key === envName);
-  const existingTargets = new Set<string>();
-  const existingCustomEnvs = new Set<string>();
-  for (const env of matchingEnvs) {
-    if (typeof env.target === 'string') {
-      existingTargets.add(env.target);
-    } else if (Array.isArray(env.target)) {
-      for (const target of env.target) {
-        existingTargets.add(target);
-      }
-    }
-    if (env.customEnvironmentIds) {
-      for (const customEnvId of env.customEnvironmentIds) {
-        existingCustomEnvs.add(customEnvId);
-      }
-    }
-  }
+  const existingTargets = new Set(matchingEnvs.map(env => env.target));
+  const existingCustomEnvs = new Set(
+    matchingEnvs.flatMap(env => env.customEnvironmentIds || [])
+  );
   const choices = [
     ...envTargetChoices.filter(c => !existingTargets.has(c.value)),
     ...customEnvironments
