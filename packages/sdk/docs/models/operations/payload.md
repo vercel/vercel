@@ -1,0 +1,29 @@
+# Payload
+
+## Example Usage
+
+```typescript
+import { Payload } from "@vercel/sdk/models/operations";
+
+let value: Payload = {
+  deploymentId: "<value>",
+  id: "<id>",
+  date: 2326.27,
+  serial: "<value>",
+};
+```
+
+## Fields
+
+| Field                                                                                                              | Type                                                                                                               | Required                                                                                                           | Description                                                                                                        |
+| ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
+| `deploymentId`                                                                                                     | *string*                                                                                                           | :heavy_check_mark:                                                                                                 | N/A                                                                                                                |
+| `info`                                                                                                             | [operations.GetDeploymentEventsResponseBodyInfo](../../models/operations/getdeploymenteventsresponsebodyinfo.md)   | :heavy_minus_sign:                                                                                                 | N/A                                                                                                                |
+| `text`                                                                                                             | *string*                                                                                                           | :heavy_minus_sign:                                                                                                 | N/A                                                                                                                |
+| `id`                                                                                                               | *string*                                                                                                           | :heavy_check_mark:                                                                                                 | N/A                                                                                                                |
+| `date`                                                                                                             | *number*                                                                                                           | :heavy_check_mark:                                                                                                 | N/A                                                                                                                |
+| `serial`                                                                                                           | *string*                                                                                                           | :heavy_check_mark:                                                                                                 | N/A                                                                                                                |
+| `created`                                                                                                          | *number*                                                                                                           | :heavy_minus_sign:                                                                                                 | N/A                                                                                                                |
+| `statusCode`                                                                                                       | *number*                                                                                                           | :heavy_minus_sign:                                                                                                 | N/A                                                                                                                |
+| `requestId`                                                                                                        | *string*                                                                                                           | :heavy_minus_sign:                                                                                                 | N/A                                                                                                                |
+| `proxy`                                                                                                            | [operations.GetDeploymentEventsResponseBodyProxy](../../models/operations/getdeploymenteventsresponsebodyproxy.md) | :heavy_minus_sign:                                                                                                 | N/A                                                                                                                |

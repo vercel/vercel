@@ -1,0 +1,19 @@
+# AssignAliasRequestBody
+
+## Example Usage
+
+```typescript
+import { AssignAliasRequestBody } from "@vercel/sdk/models/operations";
+
+let value: AssignAliasRequestBody = {
+  alias: "my-alias.vercel.app",
+  redirect: null,
+};
+```
+
+## Fields
+
+| Field                                                                                                                                                                              | Type                                                                                                                                                                               | Required                                                                                                                                                                           | Description                                                                                                                                                                        | Example                                                                                                                                                                            |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `alias`                                                                                                                                                                            | *string*                                                                                                                                                                           | :heavy_minus_sign:                                                                                                                                                                 | The alias we want to assign to the deployment defined in the URL                                                                                                                   | my-alias.vercel.app                                                                                                                                                                |
+| `redirect`                                                                                                                                                                         | *string*                                                                                                                                                                           | :heavy_minus_sign:                                                                                                                                                                 | The redirect property will take precedence over the deployment id from the URL and consists of a hostname (like test.com) to which the alias should redirect using status code 307 | <nil>                                                                                                                                                                              |

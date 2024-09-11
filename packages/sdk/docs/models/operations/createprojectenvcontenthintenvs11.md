@@ -1,0 +1,19 @@
+# CreateProjectEnvContentHintEnvs11
+
+## Example Usage
+
+```typescript
+import { CreateProjectEnvContentHintEnvs11 } from "@vercel/sdk/models/operations";
+
+let value: CreateProjectEnvContentHintEnvs11 = {
+  type: "postgres-password",
+  storeId: "<value>",
+};
+```
+
+## Fields
+
+| Field                                                                                                                                                                                                            | Type                                                                                                                                                                                                             | Required                                                                                                                                                                                                         | Description                                                                                                                                                                                                      |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `type`                                                                                                                                                                                                           | [operations.CreateProjectEnvContentHintEnvsResponse201ApplicationJSONResponseBodyCreated211Type](../../models/operations/createprojectenvcontenthintenvsresponse201applicationjsonresponsebodycreated211type.md) | :heavy_check_mark:                                                                                                                                                                                               | N/A                                                                                                                                                                                                              |
+| `storeId`                                                                                                                                                                                                        | *string*                                                                                                                                                                                                         | :heavy_check_mark:                                                                                                                                                                                               | N/A                                                                                                                                                                                                              |

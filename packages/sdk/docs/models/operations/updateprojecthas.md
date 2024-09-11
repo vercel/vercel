@@ -1,0 +1,19 @@
+# UpdateProjectHas
+
+## Example Usage
+
+```typescript
+import { UpdateProjectHas } from "@vercel/sdk/models/operations";
+
+let value: UpdateProjectHas = {
+  type: "region",
+};
+```
+
+## Fields
+
+| Field                                                                                                                                                                    | Type                                                                                                                                                                     | Required                                                                                                                                                                 | Description                                                                                                                                                              |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `type`                                                                                                                                                                   | [operations.UpdateProjectProjectsResponse200ApplicationJSONResponseBodyType](../../models/operations/updateprojectprojectsresponse200applicationjsonresponsebodytype.md) | :heavy_check_mark:                                                                                                                                                       | N/A                                                                                                                                                                      |
+| `key`                                                                                                                                                                    | *string*                                                                                                                                                                 | :heavy_minus_sign:                                                                                                                                                       | N/A                                                                                                                                                                      |
+| `value`                                                                                                                                                                  | *operations.UpdateProjectValue*                                                                                                                                          | :heavy_minus_sign:                                                                                                                                                       | N/A                                                                                                                                                                      |

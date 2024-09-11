@@ -1,0 +1,19 @@
+# UpdateProjectMissing
+
+## Example Usage
+
+```typescript
+import { UpdateProjectMissing } from "@vercel/sdk/models/operations";
+
+let value: UpdateProjectMissing = {
+  type: "ip_address",
+};
+```
+
+## Fields
+
+| Field                                                                                                                                                                                    | Type                                                                                                                                                                                     | Required                                                                                                                                                                                 | Description                                                                                                                                                                              |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `type`                                                                                                                                                                                   | [operations.UpdateProjectProjectsResponse200ApplicationJSONResponseBodySecurityType](../../models/operations/updateprojectprojectsresponse200applicationjsonresponsebodysecuritytype.md) | :heavy_check_mark:                                                                                                                                                                       | N/A                                                                                                                                                                                      |
+| `key`                                                                                                                                                                                    | *string*                                                                                                                                                                                 | :heavy_minus_sign:                                                                                                                                                                       | N/A                                                                                                                                                                                      |
+| `value`                                                                                                                                                                                  | *operations.UpdateProjectProjectsValue*                                                                                                                                                  | :heavy_minus_sign:                                                                                                                                                                       | N/A                                                                                                                                                                                      |

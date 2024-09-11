@@ -1,0 +1,19 @@
+# GetProjectsContentHint8
+
+## Example Usage
+
+```typescript
+import { GetProjectsContentHint8 } from "@vercel/sdk/models/operations";
+
+let value: GetProjectsContentHint8 = {
+  type: "postgres-prisma-url",
+  storeId: "<value>",
+};
+```
+
+## Fields
+
+| Field                                                                                                                                                                                                            | Type                                                                                                                                                                                                             | Required                                                                                                                                                                                                         | Description                                                                                                                                                                                                      |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `type`                                                                                                                                                                                                           | [operations.GetProjectsContentHintProjectsResponse200ApplicationJSONResponseBodyProjectsEnvType](../../models/operations/getprojectscontenthintprojectsresponse200applicationjsonresponsebodyprojectsenvtype.md) | :heavy_check_mark:                                                                                                                                                                                               | N/A                                                                                                                                                                                                              |
+| `storeId`                                                                                                                                                                                                        | *string*                                                                                                                                                                                                         | :heavy_check_mark:                                                                                                                                                                                               | N/A                                                                                                                                                                                                              |
