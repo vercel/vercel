@@ -29,6 +29,8 @@ const as: AuthorizationServerMetadata = {
 export async function oauth(client: Client): Promise<number> {
   const { output: o } = client;
 
+  o.warn('This command is not ready yet. Do not use!');
+
   const flagsSpecification = getFlagsSpecification(loginCommand.options);
 
   let parsedArgs = null;
