@@ -59,12 +59,6 @@ export interface ScanParentDirsResult {
    * or `undefined` if not found.
    */
   lockfileVersion?: number;
-  /**
-   * The contents of the `packageManager` field from `package.json` if found.
-   * The value may come from a different `package.json` file than the one
-   * specified by `packageJsonPath`, in the case of a monorepo.
-   */
-  packageJsonPackageManager?: string;
 }
 
 export interface TraverseUpDirectoriesProps {
@@ -322,19 +316,17 @@ export async function scanParentDirs(
     readPackageJson && pkgJsonPath
       ? JSON.parse(await fs.readFile(pkgJsonPath, 'utf8'))
       : undefined;
-  const {
-    paths: [yarnLockPath, npmLockPath, pnpmLockPath, bunLockPath],
-    packageJsonPackageManager,
-  } = await walkParentDirsMulti({
-    base,
-    start: destPath,
-    filenames: [
-      'yarn.lock',
-      'package-lock.json',
-      'pnpm-lock.yaml',
-      'bun.lockb',
-    ],
-  });
+  const [yarnLockPath, npmLockPath, pnpmLockPath, bunLockPath] =
+    await walkParentDirsMulti({
+      base,
+      start: destPath,
+      filenames: [
+        'yarn.lock',
+        'package-lock.json',
+        'pnpm-lock.yaml',
+        'bun.lockb',
+      ],
+    });
   let lockfilePath: string | undefined;
   let lockfileVersion: number | undefined;
   let cliType: CliType;
@@ -374,25 +366,23 @@ export async function scanParentDirs(
     // TODO: read "bun-lockfile-format-v0"
     lockfileVersion = 0;
   } else {
-    cliType = detectPackageManagerNameWithoutLockfile(
-      packageJsonPackageManager
-    );
+    cliType = packageJson
+      ? detectPackageManagerNameWithoutLockfile(packageJson)
+      : 'npm';
   }
 
   const packageJsonPath = pkgJsonPath || undefined;
   return {
     cliType,
     packageJson,
-    packageJsonPackageManager,
     lockfilePath,
     lockfileVersion,
     packageJsonPath,
   };
 }
 
-function detectPackageManagerNameWithoutLockfile(
-  packageJsonPackageManager?: string
-) {
+function detectPackageManagerNameWithoutLockfile(packageJson: PackageJson) {
+  const packageJsonPackageManager = packageJson.packageManager;
   if (usingCorepack(process.env, packageJsonPackageManager)) {
     const corepackPackageManager = validateVersionSpecifier(
       packageJsonPackageManager
@@ -446,35 +436,20 @@ async function walkParentDirsMulti({
   base,
   start,
   filenames,
-}: WalkParentDirsMultiProps): Promise<{
-  paths: (string | undefined)[];
-  packageJsonPackageManager?: string;
-}> {
-  let packageManager: string | undefined;
-
+}: WalkParentDirsMultiProps): Promise<(string | undefined)[]> {
   for (const dir of traverseUpDirectories({ start, base })) {
     const fullPaths = filenames.map(f => path.join(dir, f));
     const existResults = await Promise.all(
       fullPaths.map(f => fs.pathExists(f))
     );
     const foundOneOrMore = existResults.some(b => b);
-    const packageJsonPath = path.join(dir, 'package.json');
-    const packageJson: PackageJson | null = await fs
-      .readJSON(packageJsonPath)
-      .catch(() => null);
-    if (packageJson?.packageManager) {
-      packageManager = packageJson.packageManager;
-    }
 
     if (foundOneOrMore) {
-      return {
-        paths: fullPaths.map((f, i) => (existResults[i] ? f : undefined)),
-        packageJsonPackageManager: packageManager,
-      };
+      return fullPaths.map((f, i) => (existResults[i] ? f : undefined));
     }
   }
 
-  return { paths: [], packageJsonPackageManager: packageManager };
+  return [];
 }
 
 function isSet<T>(v: any): v is Set<T> {
@@ -497,13 +472,8 @@ export async function runNpmInstall(
 
   try {
     await runNpmInstallSema.acquire();
-    const {
-      cliType,
-      packageJsonPath,
-      lockfileVersion,
-      packageJsonPackageManager,
-      packageJson,
-    } = await scanParentDirs(destPath);
+    const { cliType, packageJsonPath, packageJson, lockfileVersion } =
+      await scanParentDirs(destPath, true);
 
     if (!packageJsonPath) {
       debug(
@@ -538,7 +508,7 @@ export async function runNpmInstall(
     opts.env = getEnvForPackageManager({
       cliType,
       lockfileVersion,
-      packageJsonPackageManager,
+      packageJsonPackageManager: packageJson?.packageManager,
       nodeVersion,
       env,
       packageJsonEngines: packageJson?.engines,
@@ -1071,12 +1041,14 @@ export async function runCustomInstallCommand({
   spawnOpts?: SpawnOptions;
 }) {
   console.log(`Running "install" command: \`${installCommand}\`...`);
-  const { cliType, lockfileVersion, packageJsonPackageManager, packageJson } =
-    await scanParentDirs(destPath);
+  const { cliType, lockfileVersion, packageJson } = await scanParentDirs(
+    destPath,
+    true
+  );
   const env = getEnvForPackageManager({
     cliType,
     lockfileVersion,
-    packageJsonPackageManager,
+    packageJsonPackageManager: packageJson?.packageManager,
     nodeVersion,
     env: spawnOpts?.env || {},
     packageJsonEngines: packageJson?.engines,
@@ -1096,8 +1068,10 @@ export async function runPackageJsonScript(
 ) {
   assert(path.isAbsolute(destPath));
 
-  const { packageJson, cliType, lockfileVersion, packageJsonPackageManager } =
-    await scanParentDirs(destPath, true);
+  const { packageJson, cliType, lockfileVersion } = await scanParentDirs(
+    destPath,
+    true
+  );
   const scriptName = getScriptName(
     packageJson,
     typeof scriptNames === 'string' ? [scriptNames] : scriptNames
@@ -1113,7 +1087,7 @@ export async function runPackageJsonScript(
     env: getEnvForPackageManager({
       cliType,
       lockfileVersion,
-      packageJsonPackageManager,
+      packageJsonPackageManager: packageJson?.packageManager,
       nodeVersion: undefined,
       env: cloneEnv(process.env, spawnOpts?.env),
       packageJsonEngines: packageJson?.engines,
