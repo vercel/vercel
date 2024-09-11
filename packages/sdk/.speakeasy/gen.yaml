@@ -36,9 +36,10 @@ typescript:
   inputModelSuffix: input
   maxMethodParams: 0
   methodArguments: require-security-and-request
-  moduleFormat: commonjs
+  moduleFormat: dual
   outputModelSuffix: output
   packageName: '@vercel/sdk'
   responseFormat: flat
   templateVersion: v2
-  useIndexModules: true
+  useIndexModules: false
+  compileCommand: ['sh', '-c', './scripts/compile.sh']
