@@ -18,8 +18,7 @@
   },
   "scripts": {
     "lint": "eslint --max-warnings=0 src",
-    "build": "tshy",
-    "prepare": "npm run build"
+    "build": "tshy"
   },
   "peerDependencies": {
     "zod": ">= 3"
