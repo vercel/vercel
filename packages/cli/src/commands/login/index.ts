@@ -22,8 +22,11 @@ import { loginCommand } from './command';
 import { updateCurrentTeamAfterLogin } from '../../util/login/update-current-team-after-login';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import handleError from '../../util/handle-error';
+import { oauth } from './oauth';
 
 export default async function login(client: Client): Promise<number> {
+  if (client.argv.slice(2).includes('--oauth')) return await oauth(client);
+
   const { output } = client;
 
   // user is not currently authenticated on this machine
