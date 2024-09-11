@@ -17,7 +17,12 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  EmailLoginRequestBody,
+  EmailLoginRequestBody$outboundSchema,
+  EmailLoginResponseBody,
+  EmailLoginResponseBody$inboundSchema,
+} from "../models/operations/emaillogin.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -28,11 +33,11 @@ import { Result } from "../types/fp.js";
  */
 export async function authenticationLogin(
   client$: VercelCore,
-  request?: operations.EmailLoginRequestBody | undefined,
+  request?: EmailLoginRequestBody | undefined,
   options?: RequestOptions,
 ): Promise<
   Result<
-    operations.EmailLoginResponseBody,
+    EmailLoginResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -46,8 +51,7 @@ export async function authenticationLogin(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) =>
-      operations.EmailLoginRequestBody$outboundSchema.optional().parse(value$),
+    (value$) => EmailLoginRequestBody$outboundSchema.optional().parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {
@@ -96,7 +100,7 @@ export async function authenticationLogin(
   const response = doResult.value;
 
   const [result$] = await m$.match<
-    operations.EmailLoginResponseBody,
+    EmailLoginResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -105,7 +109,7 @@ export async function authenticationLogin(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(200, operations.EmailLoginResponseBody$inboundSchema),
+    m$.json(200, EmailLoginResponseBody$inboundSchema),
     m$.fail([400, "4XX", "5XX"]),
   )(response);
   if (!result$.ok) {

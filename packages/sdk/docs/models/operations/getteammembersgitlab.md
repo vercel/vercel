@@ -5,7 +5,7 @@ Information about the GitLab account of this user.
 ## Example Usage
 
 ```typescript
-import { GetTeamMembersGitlab } from "@vercel/sdk/models/operations";
+import { GetTeamMembersGitlab } from "@vercel/sdk/models/operations/getteammembers.js";
 
 let value: GetTeamMembersGitlab = {};
 ```

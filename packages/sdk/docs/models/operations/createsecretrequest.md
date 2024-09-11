@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { CreateSecretRequest } from "@vercel/sdk/models/operations";
+import { CreateSecretRequest } from "@vercel/sdk/models/operations/createsecret.js";
 
 let value: CreateSecretRequest = {
   name: "my-api-key",

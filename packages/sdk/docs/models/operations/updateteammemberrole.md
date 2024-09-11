@@ -5,7 +5,7 @@ The project role of the member that will be added. \"null\" will remove this pro
 ## Example Usage
 
 ```typescript
-import { UpdateTeamMemberRole } from "@vercel/sdk/models/operations";
+import { UpdateTeamMemberRole } from "@vercel/sdk/models/operations/updateteammember.js";
 
 let value: UpdateTeamMemberRole = "ADMIN";
 ```

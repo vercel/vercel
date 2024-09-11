@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { GetTeamMembersPagination } from "@vercel/sdk/models/operations";
+import { GetTeamMembersPagination } from "@vercel/sdk/models/operations/getteammembers.js";
 
 let value: GetTeamMembersPagination = {
   hasNext: false,

@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { RequestBodySrv } from "@vercel/sdk/models/operations";
+import { RequestBodySrv } from "@vercel/sdk/models/operations/createrecord.js";
 
 let value: RequestBodySrv = {
   priority: 10,

@@ -21,7 +21,12 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  UpdateTeamMemberRequest,
+  UpdateTeamMemberRequest$outboundSchema,
+  UpdateTeamMemberResponseBody,
+  UpdateTeamMemberResponseBody$inboundSchema,
+} from "../models/operations/updateteammember.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -32,11 +37,11 @@ import { Result } from "../types/fp.js";
  */
 export async function teamsUpdateMember(
   client$: VercelCore,
-  request: operations.UpdateTeamMemberRequest,
+  request: UpdateTeamMemberRequest,
   options?: RequestOptions,
 ): Promise<
   Result<
-    operations.UpdateTeamMemberResponseBody,
+    UpdateTeamMemberResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -50,7 +55,7 @@ export async function teamsUpdateMember(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) => operations.UpdateTeamMemberRequest$outboundSchema.parse(value$),
+    (value$) => UpdateTeamMemberRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {
@@ -112,7 +117,7 @@ export async function teamsUpdateMember(
   const response = doResult.value;
 
   const [result$] = await m$.match<
-    operations.UpdateTeamMemberResponseBody,
+    UpdateTeamMemberResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -121,7 +126,7 @@ export async function teamsUpdateMember(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(200, operations.UpdateTeamMemberResponseBody$inboundSchema),
+    m$.json(200, UpdateTeamMemberResponseBody$inboundSchema),
     m$.fail([400, 401, 402, 403, 404, "4XX", 500, "5XX"]),
   )(response);
   if (!result$.ok) {

@@ -5,7 +5,7 @@ The list of environment variables for the given project
 ## Example Usage
 
 ```typescript
-import { FilterProjectEnvsResponseBody3 } from "@vercel/sdk/models/operations";
+import { FilterProjectEnvsResponseBody3 } from "@vercel/sdk/models/operations/filterprojectenvs.js";
 
 let value: FilterProjectEnvsResponseBody3 = {
   envs: [

@@ -5,7 +5,7 @@ A list of the aliases assigned to the deployment
 ## Example Usage
 
 ```typescript
-import { ListDeploymentAliasesAliases } from "@vercel/sdk/models/operations";
+import { ListDeploymentAliasesAliases } from "@vercel/sdk/models/operations/listdeploymentaliases.js";
 
 let value: ListDeploymentAliasesAliases = {
   uid: "2WjyKQmM8ZnGcJsPWMrHRHrE",

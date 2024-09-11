@@ -5,7 +5,7 @@ Successfuly requested access to the team.
 ## Example Usage
 
 ```typescript
-import { RequestAccessToTeamResponseBody } from "@vercel/sdk/models/operations";
+import { RequestAccessToTeamResponseBody } from "@vercel/sdk/models/operations/requestaccesstoteam.js";
 
 let value: RequestAccessToTeamResponseBody = {
   teamSlug: "<value>",

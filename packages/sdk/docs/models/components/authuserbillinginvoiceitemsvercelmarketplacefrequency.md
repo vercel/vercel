@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { AuthUserBillingInvoiceItemsVercelMarketplaceFrequency } from "@vercel/sdk/models/components";
+import { AuthUserBillingInvoiceItemsVercelMarketplaceFrequency } from "@vercel/sdk/models/components/authuser.js";
 
 let value: AuthUserBillingInvoiceItemsVercelMarketplaceFrequency = {
   interval: "month",

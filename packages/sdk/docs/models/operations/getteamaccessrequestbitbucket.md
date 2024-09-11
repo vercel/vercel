@@ -5,7 +5,7 @@ Map of the connected Bitbucket account.
 ## Example Usage
 
 ```typescript
-import { GetTeamAccessRequestBitbucket } from "@vercel/sdk/models/operations";
+import { GetTeamAccessRequestBitbucket } from "@vercel/sdk/models/operations/getteamaccessrequest.js";
 
 let value: GetTeamAccessRequestBitbucket = {};
 ```

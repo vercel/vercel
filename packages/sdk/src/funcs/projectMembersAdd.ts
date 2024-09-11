@@ -22,7 +22,12 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  AddProjectMemberRequest,
+  AddProjectMemberRequest$outboundSchema,
+  AddProjectMemberResponseBody,
+  AddProjectMemberResponseBody$inboundSchema,
+} from "../models/operations/addprojectmember.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -33,11 +38,11 @@ import { Result } from "../types/fp.js";
  */
 export async function projectMembersAdd(
   client$: VercelCore,
-  request: operations.AddProjectMemberRequest,
+  request: AddProjectMemberRequest,
   options?: RequestOptions,
 ): Promise<
   Result<
-    operations.AddProjectMemberResponseBody,
+    AddProjectMemberResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -51,7 +56,7 @@ export async function projectMembersAdd(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) => operations.AddProjectMemberRequest$outboundSchema.parse(value$),
+    (value$) => AddProjectMemberRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {
@@ -115,7 +120,7 @@ export async function projectMembersAdd(
   const response = doResult.value;
 
   const [result$] = await m$.match<
-    operations.AddProjectMemberResponseBody,
+    AddProjectMemberResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -124,7 +129,7 @@ export async function projectMembersAdd(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(200, operations.AddProjectMemberResponseBody$inboundSchema),
+    m$.json(200, AddProjectMemberResponseBody$inboundSchema),
     m$.fail([400, 401, 403, "4XX", 500, "5XX"]),
   )(response);
   if (!result$.ok) {

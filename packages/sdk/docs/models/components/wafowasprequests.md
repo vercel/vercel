@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { WafOwaspRequests } from "@vercel/sdk/models/components";
+import { WafOwaspRequests } from "@vercel/sdk/models/components/authuser.js";
 
 let value: WafOwaspRequests = {
   price: 279.82,

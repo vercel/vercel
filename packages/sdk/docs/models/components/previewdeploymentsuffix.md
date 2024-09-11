@@ -5,7 +5,7 @@ Will be used to create an invoice item. The price must be in cents: 2000 for $20
 ## Example Usage
 
 ```typescript
-import { PreviewDeploymentSuffix } from "@vercel/sdk/models/components";
+import { PreviewDeploymentSuffix } from "@vercel/sdk/models/components/authuser.js";
 
 let value: PreviewDeploymentSuffix = {
   price: 2875.44,

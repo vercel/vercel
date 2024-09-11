@@ -5,7 +5,7 @@ Whether to try to decrypt the value of the secret. Only works if `decryptable` h
 ## Example Usage
 
 ```typescript
-import { QueryParamDecrypt } from "@vercel/sdk/models/operations";
+import { QueryParamDecrypt } from "@vercel/sdk/models/operations/getsecret.js";
 
 let value: QueryParamDecrypt = "true";
 ```

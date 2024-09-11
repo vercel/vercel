@@ -18,12 +18,15 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  DatacachePurgeallRequest,
+  DatacachePurgeallRequest$outboundSchema,
+} from "../models/operations/datacachepurgeall.js";
 import { Result } from "../types/fp.js";
 
 export async function datacachePurgeall(
   client$: VercelCore,
-  request: operations.DatacachePurgeallRequest,
+  request: DatacachePurgeallRequest,
   options?: RequestOptions,
 ): Promise<
   Result<
@@ -41,8 +44,7 @@ export async function datacachePurgeall(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) =>
-      operations.DatacachePurgeallRequest$outboundSchema.parse(value$),
+    (value$) => DatacachePurgeallRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {

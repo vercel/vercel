@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { GetEdgeConfigSchemaRequest } from "@vercel/sdk/models/operations";
+import { GetEdgeConfigSchemaRequest } from "@vercel/sdk/models/operations/getedgeconfigschema.js";
 
 let value: GetEdgeConfigSchemaRequest = {
   edgeConfigId: "<value>",

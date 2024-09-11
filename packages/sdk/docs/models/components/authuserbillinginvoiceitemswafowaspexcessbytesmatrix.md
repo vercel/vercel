@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { AuthUserBillingInvoiceItemsWafOwaspExcessBytesMatrix } from "@vercel/sdk/models/components";
+import { AuthUserBillingInvoiceItemsWafOwaspExcessBytesMatrix } from "@vercel/sdk/models/components/authuser.js";
 
 let value: AuthUserBillingInvoiceItemsWafOwaspExcessBytesMatrix = {
   defaultUnitPrice: "<value>",

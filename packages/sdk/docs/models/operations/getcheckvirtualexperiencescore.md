@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { GetCheckVirtualExperienceScore } from "@vercel/sdk/models/operations";
+import { GetCheckVirtualExperienceScore } from "@vercel/sdk/models/operations/getcheck.js";
 
 let value: GetCheckVirtualExperienceScore = {
   value: 3581.52,

@@ -5,7 +5,7 @@ Paginated list of members for the project.
 ## Example Usage
 
 ```typescript
-import { GetProjectMembersResponseBody2 } from "@vercel/sdk/models/operations";
+import { GetProjectMembersResponseBody2 } from "@vercel/sdk/models/operations/getprojectmembers.js";
 
 let value: GetProjectMembersResponseBody2 = {
   members: [

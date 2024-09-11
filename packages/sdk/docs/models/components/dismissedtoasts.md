@@ -5,7 +5,7 @@ A record of when, under a certain scopeId, a toast was dismissed
 ## Example Usage
 
 ```typescript
-import { DismissedToasts } from "@vercel/sdk/models/components";
+import { DismissedToasts } from "@vercel/sdk/models/components/authuser.js";
 
 let value: DismissedToasts = {
   name: "<value>",

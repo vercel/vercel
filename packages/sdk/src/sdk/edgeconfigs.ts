@@ -17,8 +17,43 @@ import { edgeConfigsList } from "../funcs/edgeConfigsList.js";
 import { edgeConfigsUpdate } from "../funcs/edgeConfigsUpdate.js";
 import { edgeConfigsUpdateSchema } from "../funcs/edgeConfigsUpdateSchema.js";
 import { ClientSDK, RequestOptions } from "../lib/sdks.js";
-import * as components from "../models/components/index.js";
-import * as operations from "../models/operations/index.js";
+import { EdgeConfigItem } from "../models/components/edgeconfigitem.js";
+import { EdgeConfigToken } from "../models/components/edgeconfigtoken.js";
+import {
+  CreateEdgeConfigRequest,
+  CreateEdgeConfigResponseBody,
+} from "../models/operations/createedgeconfig.js";
+import {
+  CreateEdgeConfigTokenRequest,
+  CreateEdgeConfigTokenResponseBody,
+} from "../models/operations/createedgeconfigtoken.js";
+import { DeleteEdgeConfigRequest } from "../models/operations/deleteedgeconfig.js";
+import { DeleteEdgeConfigSchemaRequest } from "../models/operations/deleteedgeconfigschema.js";
+import { DeleteEdgeConfigTokensRequest } from "../models/operations/deleteedgeconfigtokens.js";
+import {
+  GetEdgeConfigRequest,
+  GetEdgeConfigResponseBody,
+} from "../models/operations/getedgeconfig.js";
+import { GetEdgeConfigItemRequest } from "../models/operations/getedgeconfigitem.js";
+import { GetEdgeConfigItemsRequest } from "../models/operations/getedgeconfigitems.js";
+import {
+  GetEdgeConfigsRequest,
+  GetEdgeConfigsResponseBody,
+} from "../models/operations/getedgeconfigs.js";
+import {
+  GetEdgeConfigSchemaRequest,
+  GetEdgeConfigSchemaResponseBody,
+} from "../models/operations/getedgeconfigschema.js";
+import { GetEdgeConfigTokenRequest } from "../models/operations/getedgeconfigtoken.js";
+import { GetEdgeConfigTokensRequest } from "../models/operations/getedgeconfigtokens.js";
+import {
+  PatchEdgeConfigSchemaRequest,
+  PatchEdgeConfigSchemaResponseBody,
+} from "../models/operations/patchedgeconfigschema.js";
+import {
+  UpdateEdgeConfigRequest,
+  UpdateEdgeConfigResponseBody,
+} from "../models/operations/updateedgeconfig.js";
 import { unwrapAsync } from "../types/fp.js";
 
 export class EdgeConfigs extends ClientSDK {
@@ -29,9 +64,9 @@ export class EdgeConfigs extends ClientSDK {
    * Returns all Edge Configs.
    */
   async list(
-    request: operations.GetEdgeConfigsRequest,
+    request: GetEdgeConfigsRequest,
     options?: RequestOptions,
-  ): Promise<operations.GetEdgeConfigsResponseBody> {
+  ): Promise<GetEdgeConfigsResponseBody> {
     return unwrapAsync(edgeConfigsList(
       this,
       request,
@@ -46,9 +81,9 @@ export class EdgeConfigs extends ClientSDK {
    * Creates an Edge Config.
    */
   async create(
-    request: operations.CreateEdgeConfigRequest,
+    request: CreateEdgeConfigRequest,
     options?: RequestOptions,
-  ): Promise<operations.CreateEdgeConfigResponseBody> {
+  ): Promise<CreateEdgeConfigResponseBody> {
     return unwrapAsync(edgeConfigsCreate(
       this,
       request,
@@ -63,9 +98,9 @@ export class EdgeConfigs extends ClientSDK {
    * Returns an Edge Config.
    */
   async get(
-    request: operations.GetEdgeConfigRequest,
+    request: GetEdgeConfigRequest,
     options?: RequestOptions,
-  ): Promise<operations.GetEdgeConfigResponseBody> {
+  ): Promise<GetEdgeConfigResponseBody> {
     return unwrapAsync(edgeConfigsGet(
       this,
       request,
@@ -80,9 +115,9 @@ export class EdgeConfigs extends ClientSDK {
    * Updates an Edge Config.
    */
   async update(
-    request: operations.UpdateEdgeConfigRequest,
+    request: UpdateEdgeConfigRequest,
     options?: RequestOptions,
-  ): Promise<operations.UpdateEdgeConfigResponseBody> {
+  ): Promise<UpdateEdgeConfigResponseBody> {
     return unwrapAsync(edgeConfigsUpdate(
       this,
       request,
@@ -97,7 +132,7 @@ export class EdgeConfigs extends ClientSDK {
    * Delete an Edge Config by id.
    */
   async delete(
-    request: operations.DeleteEdgeConfigRequest,
+    request: DeleteEdgeConfigRequest,
     options?: RequestOptions,
   ): Promise<void> {
     return unwrapAsync(edgeConfigsDelete(
@@ -114,9 +149,9 @@ export class EdgeConfigs extends ClientSDK {
    * Returns all items of an Edge Config.
    */
   async getItems(
-    request: operations.GetEdgeConfigItemsRequest,
+    request: GetEdgeConfigItemsRequest,
     options?: RequestOptions,
-  ): Promise<components.EdgeConfigItem> {
+  ): Promise<EdgeConfigItem> {
     return unwrapAsync(edgeConfigsGetItems(
       this,
       request,
@@ -131,9 +166,9 @@ export class EdgeConfigs extends ClientSDK {
    * Returns the schema of an Edge Config.
    */
   async getSchema(
-    request: operations.GetEdgeConfigSchemaRequest,
+    request: GetEdgeConfigSchemaRequest,
     options?: RequestOptions,
-  ): Promise<operations.GetEdgeConfigSchemaResponseBody> {
+  ): Promise<GetEdgeConfigSchemaResponseBody> {
     return unwrapAsync(edgeConfigsGetSchema(
       this,
       request,
@@ -148,9 +183,9 @@ export class EdgeConfigs extends ClientSDK {
    * Update an Edge Config's schema.
    */
   async updateSchema(
-    request: operations.PatchEdgeConfigSchemaRequest,
+    request: PatchEdgeConfigSchemaRequest,
     options?: RequestOptions,
-  ): Promise<operations.PatchEdgeConfigSchemaResponseBody> {
+  ): Promise<PatchEdgeConfigSchemaResponseBody> {
     return unwrapAsync(edgeConfigsUpdateSchema(
       this,
       request,
@@ -165,7 +200,7 @@ export class EdgeConfigs extends ClientSDK {
    * Deletes the schema of existing Edge Config.
    */
   async deleteSchema(
-    request: operations.DeleteEdgeConfigSchemaRequest,
+    request: DeleteEdgeConfigSchemaRequest,
     options?: RequestOptions,
   ): Promise<void> {
     return unwrapAsync(edgeConfigsDeleteSchema(
@@ -182,9 +217,9 @@ export class EdgeConfigs extends ClientSDK {
    * Returns a specific Edge Config Item.
    */
   async getItem(
-    request: operations.GetEdgeConfigItemRequest,
+    request: GetEdgeConfigItemRequest,
     options?: RequestOptions,
-  ): Promise<components.EdgeConfigItem> {
+  ): Promise<EdgeConfigItem> {
     return unwrapAsync(edgeConfigsGetItem(
       this,
       request,
@@ -199,9 +234,9 @@ export class EdgeConfigs extends ClientSDK {
    * Returns all tokens of an Edge Config.
    */
   async getTokens(
-    request: operations.GetEdgeConfigTokensRequest,
+    request: GetEdgeConfigTokensRequest,
     options?: RequestOptions,
-  ): Promise<components.EdgeConfigToken> {
+  ): Promise<EdgeConfigToken> {
     return unwrapAsync(edgeConfigsGetTokens(
       this,
       request,
@@ -216,7 +251,7 @@ export class EdgeConfigs extends ClientSDK {
    * Deletes one or more tokens of an existing Edge Config.
    */
   async deleteTokens(
-    request: operations.DeleteEdgeConfigTokensRequest,
+    request: DeleteEdgeConfigTokensRequest,
     options?: RequestOptions,
   ): Promise<void> {
     return unwrapAsync(edgeConfigsDeleteTokens(
@@ -233,9 +268,9 @@ export class EdgeConfigs extends ClientSDK {
    * Return meta data about an Edge Config token.
    */
   async getToken(
-    request: operations.GetEdgeConfigTokenRequest,
+    request: GetEdgeConfigTokenRequest,
     options?: RequestOptions,
-  ): Promise<components.EdgeConfigToken> {
+  ): Promise<EdgeConfigToken> {
     return unwrapAsync(edgeConfigsGetToken(
       this,
       request,
@@ -250,9 +285,9 @@ export class EdgeConfigs extends ClientSDK {
    * Adds a token to an existing Edge Config.
    */
   async createToken(
-    request: operations.CreateEdgeConfigTokenRequest,
+    request: CreateEdgeConfigTokenRequest,
     options?: RequestOptions,
-  ): Promise<operations.CreateEdgeConfigTokenResponseBody> {
+  ): Promise<CreateEdgeConfigTokenResponseBody> {
     return unwrapAsync(edgeConfigsCreateToken(
       this,
       request,

@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { StorageRedisTotalDailyAvgStorageInBytes } from "@vercel/sdk/models/operations";
+import { StorageRedisTotalDailyAvgStorageInBytes } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: StorageRedisTotalDailyAvgStorageInBytes = {
   price: 4849.66,

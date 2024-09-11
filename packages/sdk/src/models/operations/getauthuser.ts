@@ -3,35 +3,38 @@
  */
 
 import * as z from "zod";
-import * as components from "../components/index.js";
+import {
+  AuthUser,
+  AuthUser$inboundSchema,
+  AuthUser$Outbound,
+  AuthUser$outboundSchema,
+} from "../components/authuser.js";
+import {
+  AuthUserLimited,
+  AuthUserLimited$inboundSchema,
+  AuthUserLimited$Outbound,
+  AuthUserLimited$outboundSchema,
+} from "../components/authuserlimited.js";
 
-export type User = components.AuthUserLimited | components.AuthUser;
+export type User = AuthUserLimited | AuthUser;
 
 /**
  * Successful response.
  */
 export type GetAuthUserResponseBody = {
-  user: components.AuthUserLimited | components.AuthUser;
+  user: AuthUserLimited | AuthUser;
 };
 
 /** @internal */
 export const User$inboundSchema: z.ZodType<User, z.ZodTypeDef, unknown> = z
-  .union([
-    components.AuthUserLimited$inboundSchema,
-    components.AuthUser$inboundSchema,
-  ]);
+  .union([AuthUserLimited$inboundSchema, AuthUser$inboundSchema]);
 
 /** @internal */
-export type User$Outbound =
-  | components.AuthUserLimited$Outbound
-  | components.AuthUser$Outbound;
+export type User$Outbound = AuthUserLimited$Outbound | AuthUser$Outbound;
 
 /** @internal */
 export const User$outboundSchema: z.ZodType<User$Outbound, z.ZodTypeDef, User> =
-  z.union([
-    components.AuthUserLimited$outboundSchema,
-    components.AuthUser$outboundSchema,
-  ]);
+  z.union([AuthUserLimited$outboundSchema, AuthUser$outboundSchema]);
 
 /**
  * @internal
@@ -52,15 +55,12 @@ export const GetAuthUserResponseBody$inboundSchema: z.ZodType<
   z.ZodTypeDef,
   unknown
 > = z.object({
-  user: z.union([
-    components.AuthUserLimited$inboundSchema,
-    components.AuthUser$inboundSchema,
-  ]),
+  user: z.union([AuthUserLimited$inboundSchema, AuthUser$inboundSchema]),
 });
 
 /** @internal */
 export type GetAuthUserResponseBody$Outbound = {
-  user: components.AuthUserLimited$Outbound | components.AuthUser$Outbound;
+  user: AuthUserLimited$Outbound | AuthUser$Outbound;
 };
 
 /** @internal */
@@ -69,10 +69,7 @@ export const GetAuthUserResponseBody$outboundSchema: z.ZodType<
   z.ZodTypeDef,
   GetAuthUserResponseBody
 > = z.object({
-  user: z.union([
-    components.AuthUserLimited$outboundSchema,
-    components.AuthUser$outboundSchema,
-  ]),
+  user: z.union([AuthUserLimited$outboundSchema, AuthUser$outboundSchema]),
 });
 
 /**

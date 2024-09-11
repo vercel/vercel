@@ -5,7 +5,7 @@ A list of outputs for the Build that can be either Serverless Functions or stati
 ## Example Usage
 
 ```typescript
-import { ListDeploymentBuildsOutput } from "@vercel/sdk/models/operations";
+import { ListDeploymentBuildsOutput } from "@vercel/sdk/models/operations/listdeploymentbuilds.js";
 
 let value: ListDeploymentBuildsOutput = {
   path: "/usr/bin",

@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { CreateLogDrainRequestBody } from "@vercel/sdk/models/operations";
+import { CreateLogDrainRequestBody } from "@vercel/sdk/models/operations/createlogdrain.js";
 
 let value: CreateLogDrainRequestBody = {
   name: "My first log drain",

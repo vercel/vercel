@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { ResponseBodyCreator } from "@vercel/sdk/models/operations";
+import { ResponseBodyCreator } from "@vercel/sdk/models/operations/getdeployment.js";
 
 let value: ResponseBodyCreator = {
   uid: "<value>",

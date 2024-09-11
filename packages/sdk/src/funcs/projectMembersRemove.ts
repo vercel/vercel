@@ -21,7 +21,12 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  RemoveProjectMemberRequest,
+  RemoveProjectMemberRequest$outboundSchema,
+  RemoveProjectMemberResponseBody,
+  RemoveProjectMemberResponseBody$inboundSchema,
+} from "../models/operations/removeprojectmember.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -32,11 +37,11 @@ import { Result } from "../types/fp.js";
  */
 export async function projectMembersRemove(
   client$: VercelCore,
-  request: operations.RemoveProjectMemberRequest,
+  request: RemoveProjectMemberRequest,
   options?: RequestOptions,
 ): Promise<
   Result<
-    operations.RemoveProjectMemberResponseBody,
+    RemoveProjectMemberResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -50,8 +55,7 @@ export async function projectMembersRemove(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) =>
-      operations.RemoveProjectMemberRequest$outboundSchema.parse(value$),
+    (value$) => RemoveProjectMemberRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {
@@ -120,7 +124,7 @@ export async function projectMembersRemove(
   const response = doResult.value;
 
   const [result$] = await m$.match<
-    operations.RemoveProjectMemberResponseBody,
+    RemoveProjectMemberResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -129,7 +133,7 @@ export async function projectMembersRemove(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(200, operations.RemoveProjectMemberResponseBody$inboundSchema),
+    m$.json(200, RemoveProjectMemberResponseBody$inboundSchema),
     m$.fail([400, 401, 403, "4XX", "5XX"]),
   )(response);
   if (!result$.ok) {

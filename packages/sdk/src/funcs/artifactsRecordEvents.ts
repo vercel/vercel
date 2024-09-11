@@ -23,7 +23,10 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  RecordEventsRequest,
+  RecordEventsRequest$outboundSchema,
+} from "../models/operations/recordevents.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -34,7 +37,7 @@ import { Result } from "../types/fp.js";
  */
 export async function artifactsRecordEvents(
   client$: VercelCore,
-  request: operations.RecordEventsRequest,
+  request: RecordEventsRequest,
   options?: RequestOptions,
 ): Promise<
   Result<
@@ -52,7 +55,7 @@ export async function artifactsRecordEvents(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) => operations.RecordEventsRequest$outboundSchema.parse(value$),
+    (value$) => RecordEventsRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {

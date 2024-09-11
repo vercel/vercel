@@ -5,7 +5,7 @@ remote caching settings
 ## Example Usage
 
 ```typescript
-import { RemoteCaching } from "@vercel/sdk/models/components";
+import { RemoteCaching } from "@vercel/sdk/models/components/authuser.js";
 
 let value: RemoteCaching = {};
 ```

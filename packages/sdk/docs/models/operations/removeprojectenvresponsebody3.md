@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { RemoveProjectEnvResponseBody3 } from "@vercel/sdk/models/operations";
+import { RemoveProjectEnvResponseBody3 } from "@vercel/sdk/models/operations/removeprojectenv.js";
 
 let value: RemoveProjectEnvResponseBody3 = {
   type: "encrypted",

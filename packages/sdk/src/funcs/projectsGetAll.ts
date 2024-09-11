@@ -19,7 +19,12 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  GetProjectsRequest,
+  GetProjectsRequest$outboundSchema,
+  GetProjectsResponse,
+  GetProjectsResponse$inboundSchema,
+} from "../models/operations/getprojects.js";
 import { Result } from "../types/fp.js";
 import {
   createPageIterator,
@@ -36,12 +41,12 @@ import {
  */
 export async function projectsGetAll(
   client$: VercelCore,
-  request: operations.GetProjectsRequest,
+  request: GetProjectsRequest,
   options?: RequestOptions,
 ): Promise<
   PageIterator<
     Result<
-      operations.GetProjectsResponse,
+      GetProjectsResponse,
       | SDKError
       | SDKValidationError
       | UnexpectedClientError
@@ -56,7 +61,7 @@ export async function projectsGetAll(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) => operations.GetProjectsRequest$outboundSchema.parse(value$),
+    (value$) => GetProjectsRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {
@@ -127,7 +132,7 @@ export async function projectsGetAll(
   };
 
   const [result$, raw$] = await m$.match<
-    operations.GetProjectsResponse,
+    GetProjectsResponse,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -136,9 +141,7 @@ export async function projectsGetAll(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(200, operations.GetProjectsResponse$inboundSchema, {
-      key: "Result",
-    }),
+    m$.json(200, GetProjectsResponse$inboundSchema, { key: "Result" }),
     m$.fail([400, 401, 403, "4XX", "5XX"]),
   )(response, { extraFields: responseFields$ });
   if (!result$.ok) {
@@ -149,7 +152,7 @@ export async function projectsGetAll(
     responseData: unknown,
   ): Paginator<
     Result<
-      operations.GetProjectsResponse,
+      GetProjectsResponse,
       | SDKError
       | SDKValidationError
       | UnexpectedClientError

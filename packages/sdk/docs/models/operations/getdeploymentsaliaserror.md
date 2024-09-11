@@ -5,7 +5,7 @@ An error object in case aliasing of the deployment failed.
 ## Example Usage
 
 ```typescript
-import { GetDeploymentsAliasError } from "@vercel/sdk/models/operations";
+import { GetDeploymentsAliasError } from "@vercel/sdk/models/operations/getdeployments.js";
 
 let value: GetDeploymentsAliasError = {
   code: "<value>",

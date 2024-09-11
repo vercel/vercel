@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { AssignAliasRequestBody } from "@vercel/sdk/models/operations";
+import { AssignAliasRequestBody } from "@vercel/sdk/models/operations/assignalias.js";
 
 let value: AssignAliasRequestBody = {
   alias: "my-alias.vercel.app",

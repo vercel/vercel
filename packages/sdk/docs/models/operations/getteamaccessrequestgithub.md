@@ -5,7 +5,7 @@ Map of the connected GitHub account.
 ## Example Usage
 
 ```typescript
-import { GetTeamAccessRequestGithub } from "@vercel/sdk/models/operations";
+import { GetTeamAccessRequestGithub } from "@vercel/sdk/models/operations/getteamaccessrequest.js";
 
 let value: GetTeamAccessRequestGithub = {};
 ```

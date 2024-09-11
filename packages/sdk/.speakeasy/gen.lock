@@ -5,8 +5,8 @@ management:
   docVersion: 0.0.1
   speakeasyVersion: 1.395.1
   generationVersion: 2.415.0
-  releaseVersion: 14.0.0-canary.0
-  configChecksum: 2f405a86619ffae6c5eef067eb61ac41
+  releaseVersion: 14.0.0-canary.1
+  configChecksum: c3786df7a86ab52dc57ba78ffd7670d1
   repoURL: https://github.com/vercel/vercel.git
   repoSubDirectory: packages/sdk
   installationURL: https://gitpkg.now.sh/vercel/vercel/packages/sdk
@@ -2591,7 +2591,6 @@ generatedFiles:
   - src/funcs/webhooksGet.ts
   - src/funcs/webhooksList.ts
   - src/hooks/hooks.ts
-  - src/hooks/index.ts
   - src/hooks/types.ts
   - src/index.ts
   - src/lib/base64.ts
@@ -2619,14 +2618,12 @@ generatedFiles:
   - src/models/components/edgeconfigtoken.ts
   - src/models/components/filetree.ts
   - src/models/components/flagjsonvalue.ts
-  - src/models/components/index.ts
   - src/models/components/pagination.ts
   - src/models/components/security.ts
   - src/models/components/team.ts
   - src/models/components/teamlimited.ts
   - src/models/components/userevent.ts
   - src/models/errors/httpclienterrors.ts
-  - src/models/errors/index.ts
   - src/models/errors/sdkerror.ts
   - src/models/errors/sdkvalidationerror.ts
   - src/models/operations/addprojectdomain.ts
@@ -2716,7 +2713,6 @@ generatedFiles:
   - src/models/operations/getwebhook.ts
   - src/models/operations/getwebhooks.ts
   - src/models/operations/gitnamespaces.ts
-  - src/models/operations/index.ts
   - src/models/operations/inviteusertoteam.ts
   - src/models/operations/issuecert.ts
   - src/models/operations/jointeam.ts
@@ -2776,7 +2772,6 @@ generatedFiles:
   - src/sdk/edgeconfigs.ts
   - src/sdk/envs.ts
   - src/sdk/events.ts
-  - src/sdk/index.ts
   - src/sdk/integrations.ts
   - src/sdk/logdrains.ts
   - src/sdk/projectdomains.ts
@@ -2794,7 +2789,6 @@ generatedFiles:
   - src/types/constdatetime.ts
   - src/types/enums.ts
   - src/types/fp.ts
-  - src/types/index.ts
   - src/types/operations.ts
   - src/types/rfcdate.ts
   - src/types/streams.ts
@@ -2883,6 +2877,7 @@ examples:
   recordEvents:
     speakeasy-default-record-events:
       parameters:
+        query: {}
         header:
           x-artifact-client-ci: "VERCEL"
           x-artifact-client-interactive: 0
@@ -3278,7 +3273,7 @@ examples:
         application/json: {"name": "<value>", "type": "CNAME", "ttl": 60, "https": {"priority": 10, "target": "host.example.com", "params": "alpn=h2,h3"}, "comment": "used to verify ownership of domain"}
       responses:
         "200":
-          application/json: {"uid": "<value>", "updated": "2746.87"}
+          application/json: {"uid": "rec_V0fra8eEgQwEpFhYG2vTzC3K"}
   updateRecord:
     speakeasy-default-update-record:
       parameters:

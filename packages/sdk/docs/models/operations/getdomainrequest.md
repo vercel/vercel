@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { GetDomainRequest } from "@vercel/sdk/models/operations";
+import { GetDomainRequest } from "@vercel/sdk/models/operations/getdomain.js";
 
 let value: GetDomainRequest = {
   domain: "example.com",

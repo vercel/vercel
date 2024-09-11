@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { GetConfigurationResponseBodyIntegrationsAdded } from "@vercel/sdk/models/operations";
+import { GetConfigurationResponseBodyIntegrationsAdded } from "@vercel/sdk/models/operations/getconfiguration.js";
 
 let value: GetConfigurationResponseBodyIntegrationsAdded = "read-write:domain";
 ```

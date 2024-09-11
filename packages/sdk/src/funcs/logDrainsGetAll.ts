@@ -19,7 +19,12 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  GetAllLogDrainsRequest,
+  GetAllLogDrainsRequest$outboundSchema,
+  GetAllLogDrainsResponseBody,
+  GetAllLogDrainsResponseBody$inboundSchema,
+} from "../models/operations/getalllogdrains.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -30,11 +35,11 @@ import { Result } from "../types/fp.js";
  */
 export async function logDrainsGetAll(
   client$: VercelCore,
-  request: operations.GetAllLogDrainsRequest,
+  request: GetAllLogDrainsRequest,
   options?: RequestOptions,
 ): Promise<
   Result<
-    Array<operations.GetAllLogDrainsResponseBody>,
+    Array<GetAllLogDrainsResponseBody>,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -48,7 +53,7 @@ export async function logDrainsGetAll(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) => operations.GetAllLogDrainsRequest$outboundSchema.parse(value$),
+    (value$) => GetAllLogDrainsRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {
@@ -105,7 +110,7 @@ export async function logDrainsGetAll(
   const response = doResult.value;
 
   const [result$] = await m$.match<
-    Array<operations.GetAllLogDrainsResponseBody>,
+    Array<GetAllLogDrainsResponseBody>,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -114,7 +119,7 @@ export async function logDrainsGetAll(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(200, z.array(operations.GetAllLogDrainsResponseBody$inboundSchema)),
+    m$.json(200, z.array(GetAllLogDrainsResponseBody$inboundSchema)),
     m$.fail([400, 401, 403, "4XX", "5XX"]),
   )(response);
   if (!result$.ok) {

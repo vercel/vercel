@@ -5,7 +5,12 @@
 import * as z from "zod";
 import { remap as remap$ } from "../../lib/primitives.js";
 import { ClosedEnum } from "../../types/enums.js";
-import * as components from "../components/index.js";
+import {
+  Pagination,
+  Pagination$inboundSchema,
+  Pagination$Outbound,
+  Pagination$outboundSchema,
+} from "../components/pagination.js";
 
 export type GetDeploymentsRequest = {
   /**
@@ -477,7 +482,7 @@ export type GetDeploymentsResponseBody = {
   /**
    * This object contains information related to the pagination of the current request, including the necessary parameters to get the next or previous page of data.
    */
-  pagination: components.Pagination;
+  pagination: Pagination;
   deployments: Array<Deployments>;
 };
 
@@ -1295,13 +1300,13 @@ export const GetDeploymentsResponseBody$inboundSchema: z.ZodType<
   z.ZodTypeDef,
   unknown
 > = z.object({
-  pagination: components.Pagination$inboundSchema,
+  pagination: Pagination$inboundSchema,
   deployments: z.array(z.lazy(() => Deployments$inboundSchema)),
 });
 
 /** @internal */
 export type GetDeploymentsResponseBody$Outbound = {
-  pagination: components.Pagination$Outbound;
+  pagination: Pagination$Outbound;
   deployments: Array<Deployments$Outbound>;
 };
 
@@ -1311,7 +1316,7 @@ export const GetDeploymentsResponseBody$outboundSchema: z.ZodType<
   z.ZodTypeDef,
   GetDeploymentsResponseBody
 > = z.object({
-  pagination: components.Pagination$outboundSchema,
+  pagination: Pagination$outboundSchema,
   deployments: z.array(z.lazy(() => Deployments$outboundSchema)),
 });
 

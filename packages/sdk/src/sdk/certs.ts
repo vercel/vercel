@@ -7,7 +7,22 @@ import { certsIssue } from "../funcs/certsIssue.js";
 import { certsRemove } from "../funcs/certsRemove.js";
 import { certsUpload } from "../funcs/certsUpload.js";
 import { ClientSDK, RequestOptions } from "../lib/sdks.js";
-import * as operations from "../models/operations/index.js";
+import {
+  GetCertByIdRequest,
+  GetCertByIdResponseBody,
+} from "../models/operations/getcertbyid.js";
+import {
+  IssueCertRequest,
+  IssueCertResponseBody,
+} from "../models/operations/issuecert.js";
+import {
+  RemoveCertRequest,
+  RemoveCertResponseBody,
+} from "../models/operations/removecert.js";
+import {
+  UploadCertRequest,
+  UploadCertResponseBody,
+} from "../models/operations/uploadcert.js";
 import { unwrapAsync } from "../types/fp.js";
 
 export class Certs extends ClientSDK {
@@ -18,9 +33,9 @@ export class Certs extends ClientSDK {
    * Get cert by id
    */
   async getById(
-    request: operations.GetCertByIdRequest,
+    request: GetCertByIdRequest,
     options?: RequestOptions,
-  ): Promise<operations.GetCertByIdResponseBody> {
+  ): Promise<GetCertByIdResponseBody> {
     return unwrapAsync(certsGetById(
       this,
       request,
@@ -35,9 +50,9 @@ export class Certs extends ClientSDK {
    * Remove cert
    */
   async remove(
-    request: operations.RemoveCertRequest,
+    request: RemoveCertRequest,
     options?: RequestOptions,
-  ): Promise<operations.RemoveCertResponseBody> {
+  ): Promise<RemoveCertResponseBody> {
     return unwrapAsync(certsRemove(
       this,
       request,
@@ -52,9 +67,9 @@ export class Certs extends ClientSDK {
    * Issue a new cert
    */
   async issue(
-    request: operations.IssueCertRequest,
+    request: IssueCertRequest,
     options?: RequestOptions,
-  ): Promise<operations.IssueCertResponseBody> {
+  ): Promise<IssueCertResponseBody> {
     return unwrapAsync(certsIssue(
       this,
       request,
@@ -69,9 +84,9 @@ export class Certs extends ClientSDK {
    * Upload a cert
    */
   async upload(
-    request: operations.UploadCertRequest,
+    request: UploadCertRequest,
     options?: RequestOptions,
-  ): Promise<operations.UploadCertResponseBody> {
+  ): Promise<UploadCertResponseBody> {
     return unwrapAsync(certsUpload(
       this,
       request,

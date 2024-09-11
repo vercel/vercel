@@ -5,7 +5,7 @@ Since June 2023 Substate of deployment when readyState is 'READY' Tracks whether
 ## Example Usage
 
 ```typescript
-import { GetDeploymentsReadySubstate } from "@vercel/sdk/models/operations";
+import { GetDeploymentsReadySubstate } from "@vercel/sdk/models/operations/getdeployments.js";
 
 let value: GetDeploymentsReadySubstate = "STAGED";
 ```

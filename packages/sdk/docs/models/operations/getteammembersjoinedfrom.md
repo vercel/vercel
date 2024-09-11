@@ -5,7 +5,7 @@ Map with information about the members origin if they joined by requesting acces
 ## Example Usage
 
 ```typescript
-import { GetTeamMembersJoinedFrom } from "@vercel/sdk/models/operations";
+import { GetTeamMembersJoinedFrom } from "@vercel/sdk/models/operations/getteammembers.js";
 
 let value: GetTeamMembersJoinedFrom = {
   origin: "saml",

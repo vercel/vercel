@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { GetProjectEnvContentHintEnvsResponse5 } from "@vercel/sdk/models/operations";
+import { GetProjectEnvContentHintEnvsResponse5 } from "@vercel/sdk/models/operations/getprojectenv.js";
 
 let value: GetProjectEnvContentHintEnvsResponse5 = {
   type: "blob-read-write-token",

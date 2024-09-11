@@ -5,7 +5,12 @@
 import * as z from "zod";
 import { remap as remap$ } from "../../lib/primitives.js";
 import { ClosedEnum } from "../../types/enums.js";
-import * as components from "../components/index.js";
+import {
+  Pagination,
+  Pagination$inboundSchema,
+  Pagination$Outbound,
+  Pagination$outboundSchema,
+} from "../components/pagination.js";
 
 /**
  * Get only aliases of the given domain name
@@ -235,7 +240,7 @@ export type ListAliasesResponseBody = {
   /**
    * This object contains information related to the pagination of the current request, including the necessary parameters to get the next or previous page of data.
    */
-  pagination: components.Pagination;
+  pagination: Pagination;
 };
 
 export type ListAliasesResponse = {
@@ -841,13 +846,13 @@ export const ListAliasesResponseBody$inboundSchema: z.ZodType<
   unknown
 > = z.object({
   aliases: z.array(z.lazy(() => Aliases$inboundSchema)),
-  pagination: components.Pagination$inboundSchema,
+  pagination: Pagination$inboundSchema,
 });
 
 /** @internal */
 export type ListAliasesResponseBody$Outbound = {
   aliases: Array<Aliases$Outbound>;
-  pagination: components.Pagination$Outbound;
+  pagination: Pagination$Outbound;
 };
 
 /** @internal */
@@ -857,7 +862,7 @@ export const ListAliasesResponseBody$outboundSchema: z.ZodType<
   ListAliasesResponseBody
 > = z.object({
   aliases: z.array(z.lazy(() => Aliases$outboundSchema)),
-  pagination: components.Pagination$outboundSchema,
+  pagination: Pagination$outboundSchema,
 });
 
 /**

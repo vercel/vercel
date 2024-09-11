@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { ReadAccessGroupResponseBody } from "@vercel/sdk/models/operations";
+import { ReadAccessGroupResponseBody } from "@vercel/sdk/models/operations/readaccessgroup.js";
 
 let value: ReadAccessGroupResponseBody = {
   isDsyncManaged: false,

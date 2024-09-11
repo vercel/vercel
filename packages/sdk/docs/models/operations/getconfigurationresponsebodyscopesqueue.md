@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { GetConfigurationResponseBodyScopesQueue } from "@vercel/sdk/models/operations";
+import { GetConfigurationResponseBodyScopesQueue } from "@vercel/sdk/models/operations/getconfiguration.js";
 
 let value: GetConfigurationResponseBodyScopesQueue = {
   scopes: {

@@ -5,7 +5,7 @@ A map that describes the origin from where the user joined.
 ## Example Usage
 
 ```typescript
-import { GetTeamAccessRequestJoinedFrom } from "@vercel/sdk/models/operations";
+import { GetTeamAccessRequestJoinedFrom } from "@vercel/sdk/models/operations/getteamaccessrequest.js";
 
 let value: GetTeamAccessRequestJoinedFrom = {
   origin: "bitbucket",

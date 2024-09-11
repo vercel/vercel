@@ -5,7 +5,7 @@ Successfully removed a member of the team.
 ## Example Usage
 
 ```typescript
-import { RemoveTeamMemberResponseBody } from "@vercel/sdk/models/operations";
+import { RemoveTeamMemberResponseBody } from "@vercel/sdk/models/operations/removeteammember.js";
 
 let value: RemoveTeamMemberResponseBody = {
   id: "<id>",

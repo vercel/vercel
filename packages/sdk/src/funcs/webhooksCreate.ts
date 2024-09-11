@@ -21,7 +21,12 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  CreateWebhookRequest,
+  CreateWebhookRequest$outboundSchema,
+  CreateWebhookResponseBody,
+  CreateWebhookResponseBody$inboundSchema,
+} from "../models/operations/createwebhook.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -32,11 +37,11 @@ import { Result } from "../types/fp.js";
  */
 export async function webhooksCreate(
   client$: VercelCore,
-  request: operations.CreateWebhookRequest,
+  request: CreateWebhookRequest,
   options?: RequestOptions,
 ): Promise<
   Result<
-    operations.CreateWebhookResponseBody,
+    CreateWebhookResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -50,7 +55,7 @@ export async function webhooksCreate(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) => operations.CreateWebhookRequest$outboundSchema.parse(value$),
+    (value$) => CreateWebhookRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {
@@ -107,7 +112,7 @@ export async function webhooksCreate(
   const response = doResult.value;
 
   const [result$] = await m$.match<
-    operations.CreateWebhookResponseBody,
+    CreateWebhookResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -116,7 +121,7 @@ export async function webhooksCreate(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(200, operations.CreateWebhookResponseBody$inboundSchema),
+    m$.json(200, CreateWebhookResponseBody$inboundSchema),
     m$.fail([400, 401, 403, "4XX", "5XX"]),
   )(response);
   if (!result$.ok) {

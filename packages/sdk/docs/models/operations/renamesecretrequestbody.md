@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { RenameSecretRequestBody } from "@vercel/sdk/models/operations";
+import { RenameSecretRequestBody } from "@vercel/sdk/models/operations/renamesecret.js";
 
 let value: RenameSecretRequestBody = {
   name: "my-api-key",

@@ -5,7 +5,7 @@ A partial representation of a Build used by the deployment endpoint.
 ## Example Usage
 
 ```typescript
-import { Lambdas } from "@vercel/sdk/models/operations";
+import { Lambdas } from "@vercel/sdk/models/operations/createdeployment.js";
 
 let value: Lambdas = {
   output: [

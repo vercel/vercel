@@ -21,7 +21,12 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  GetCertByIdRequest,
+  GetCertByIdRequest$outboundSchema,
+  GetCertByIdResponseBody,
+  GetCertByIdResponseBody$inboundSchema,
+} from "../models/operations/getcertbyid.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -32,11 +37,11 @@ import { Result } from "../types/fp.js";
  */
 export async function certsGetById(
   client$: VercelCore,
-  request: operations.GetCertByIdRequest,
+  request: GetCertByIdRequest,
   options?: RequestOptions,
 ): Promise<
   Result<
-    operations.GetCertByIdResponseBody,
+    GetCertByIdResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -50,7 +55,7 @@ export async function certsGetById(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) => operations.GetCertByIdRequest$outboundSchema.parse(value$),
+    (value$) => GetCertByIdRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {
@@ -113,7 +118,7 @@ export async function certsGetById(
   const response = doResult.value;
 
   const [result$] = await m$.match<
-    operations.GetCertByIdResponseBody,
+    GetCertByIdResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -122,7 +127,7 @@ export async function certsGetById(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(200, operations.GetCertByIdResponseBody$inboundSchema),
+    m$.json(200, GetCertByIdResponseBody$inboundSchema),
     m$.fail([400, 401, 403, 404, "4XX", "5XX"]),
   )(response);
   if (!result$.ok) {

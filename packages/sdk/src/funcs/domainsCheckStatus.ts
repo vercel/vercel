@@ -18,7 +18,12 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  CheckDomainStatusRequest,
+  CheckDomainStatusRequest$outboundSchema,
+  CheckDomainStatusResponseBody,
+  CheckDomainStatusResponseBody$inboundSchema,
+} from "../models/operations/checkdomainstatus.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -29,11 +34,11 @@ import { Result } from "../types/fp.js";
  */
 export async function domainsCheckStatus(
   client$: VercelCore,
-  request: operations.CheckDomainStatusRequest,
+  request: CheckDomainStatusRequest,
   options?: RequestOptions,
 ): Promise<
   Result<
-    operations.CheckDomainStatusResponseBody,
+    CheckDomainStatusResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -47,8 +52,7 @@ export async function domainsCheckStatus(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) =>
-      operations.CheckDomainStatusRequest$outboundSchema.parse(value$),
+    (value$) => CheckDomainStatusRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {
@@ -105,7 +109,7 @@ export async function domainsCheckStatus(
   const response = doResult.value;
 
   const [result$] = await m$.match<
-    operations.CheckDomainStatusResponseBody,
+    CheckDomainStatusResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -114,7 +118,7 @@ export async function domainsCheckStatus(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(200, operations.CheckDomainStatusResponseBody$inboundSchema),
+    m$.json(200, CheckDomainStatusResponseBody$inboundSchema),
     m$.fail([400, 401, 403, "4XX", "5XX"]),
   )(response);
   if (!result$.ok) {

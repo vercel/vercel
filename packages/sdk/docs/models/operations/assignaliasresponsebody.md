@@ -5,7 +5,7 @@ The alias was successfully assigned to the deployment
 ## Example Usage
 
 ```typescript
-import { AssignAliasResponseBody } from "@vercel/sdk/models/operations";
+import { AssignAliasResponseBody } from "@vercel/sdk/models/operations/assignalias.js";
 
 let value: AssignAliasResponseBody = {
   uid: "2WjyKQmM8ZnGcJsPWMrHRHrE",

@@ -21,7 +21,12 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  UploadFileRequest,
+  UploadFileRequest$outboundSchema,
+  UploadFileResponseBody,
+  UploadFileResponseBody$inboundSchema,
+} from "../models/operations/uploadfile.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -32,11 +37,11 @@ import { Result } from "../types/fp.js";
  */
 export async function deploymentsUploadFile(
   client$: VercelCore,
-  request: operations.UploadFileRequest,
+  request: UploadFileRequest,
   options?: RequestOptions,
 ): Promise<
   Result<
-    operations.UploadFileResponseBody,
+    UploadFileResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -50,7 +55,7 @@ export async function deploymentsUploadFile(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) => operations.UploadFileRequest$outboundSchema.parse(value$),
+    (value$) => UploadFileRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {
@@ -124,7 +129,7 @@ export async function deploymentsUploadFile(
   const response = doResult.value;
 
   const [result$] = await m$.match<
-    operations.UploadFileResponseBody,
+    UploadFileResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -133,7 +138,7 @@ export async function deploymentsUploadFile(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(200, operations.UploadFileResponseBody$inboundSchema),
+    m$.json(200, UploadFileResponseBody$inboundSchema),
     m$.fail([400, 401, 403, "4XX", "5XX"]),
   )(response);
   if (!result$.ok) {

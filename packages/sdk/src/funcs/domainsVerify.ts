@@ -21,7 +21,12 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  VerifyProjectDomainRequest,
+  VerifyProjectDomainRequest$outboundSchema,
+  VerifyProjectDomainResponseBody,
+  VerifyProjectDomainResponseBody$inboundSchema,
+} from "../models/operations/verifyprojectdomain.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -32,11 +37,11 @@ import { Result } from "../types/fp.js";
  */
 export async function domainsVerify(
   client$: VercelCore,
-  request: operations.VerifyProjectDomainRequest,
+  request: VerifyProjectDomainRequest,
   options?: RequestOptions,
 ): Promise<
   Result<
-    operations.VerifyProjectDomainResponseBody,
+    VerifyProjectDomainResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -50,8 +55,7 @@ export async function domainsVerify(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) =>
-      operations.VerifyProjectDomainRequest$outboundSchema.parse(value$),
+    (value$) => VerifyProjectDomainRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {
@@ -120,7 +124,7 @@ export async function domainsVerify(
   const response = doResult.value;
 
   const [result$] = await m$.match<
-    operations.VerifyProjectDomainResponseBody,
+    VerifyProjectDomainResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -129,7 +133,7 @@ export async function domainsVerify(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(200, operations.VerifyProjectDomainResponseBody$inboundSchema),
+    m$.json(200, VerifyProjectDomainResponseBody$inboundSchema),
     m$.fail([400, 401, 403, "4XX", "5XX"]),
   )(response);
   if (!result$.ok) {

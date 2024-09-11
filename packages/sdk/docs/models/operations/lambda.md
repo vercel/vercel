@@ -5,7 +5,7 @@ If the output is a Serverless Function, an object containing the name, location 
 ## Example Usage
 
 ```typescript
-import { Lambda } from "@vercel/sdk/models/operations";
+import { Lambda } from "@vercel/sdk/models/operations/listdeploymentbuilds.js";
 
 let value: Lambda = {
   functionName: "<value>",

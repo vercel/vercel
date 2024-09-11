@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { DataCacheWrite } from "@vercel/sdk/models/components";
+import { DataCacheWrite } from "@vercel/sdk/models/components/authuser.js";
 
 let value: DataCacheWrite = {
   price: 7193.89,

@@ -21,7 +21,12 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  IssueCertRequest,
+  IssueCertRequest$outboundSchema,
+  IssueCertResponseBody,
+  IssueCertResponseBody$inboundSchema,
+} from "../models/operations/issuecert.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -32,11 +37,11 @@ import { Result } from "../types/fp.js";
  */
 export async function certsIssue(
   client$: VercelCore,
-  request: operations.IssueCertRequest,
+  request: IssueCertRequest,
   options?: RequestOptions,
 ): Promise<
   Result<
-    operations.IssueCertResponseBody,
+    IssueCertResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -50,7 +55,7 @@ export async function certsIssue(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) => operations.IssueCertRequest$outboundSchema.parse(value$),
+    (value$) => IssueCertRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {
@@ -107,7 +112,7 @@ export async function certsIssue(
   const response = doResult.value;
 
   const [result$] = await m$.match<
-    operations.IssueCertResponseBody,
+    IssueCertResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -116,7 +121,7 @@ export async function certsIssue(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(200, operations.IssueCertResponseBody$inboundSchema),
+    m$.json(200, IssueCertResponseBody$inboundSchema),
     m$.fail([400, 401, 402, 403, 404, 449, "4XX", 500, "5XX"]),
   )(response);
   if (!result$.ok) {

@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { PatchDomainResponseBody2 } from "@vercel/sdk/models/operations";
+import { PatchDomainResponseBody2 } from "@vercel/sdk/models/operations/patchdomain.js";
 
 let value: PatchDomainResponseBody2 = {
   moved: false,

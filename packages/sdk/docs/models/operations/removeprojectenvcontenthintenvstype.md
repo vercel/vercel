@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { RemoveProjectEnvContentHintEnvsType } from "@vercel/sdk/models/operations";
+import { RemoveProjectEnvContentHintEnvsType } from "@vercel/sdk/models/operations/removeprojectenv.js";
 
 let value: RemoveProjectEnvContentHintEnvsType = "redis-rest-api-url";
 ```

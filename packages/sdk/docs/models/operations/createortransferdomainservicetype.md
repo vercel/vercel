@@ -5,7 +5,7 @@ The type of service the domain is handled by. `external` if the DNS is externall
 ## Example Usage
 
 ```typescript
-import { CreateOrTransferDomainServiceType } from "@vercel/sdk/models/operations";
+import { CreateOrTransferDomainServiceType } from "@vercel/sdk/models/operations/createortransferdomain.js";
 
 let value: CreateOrTransferDomainServiceType = "zeit.world";
 ```

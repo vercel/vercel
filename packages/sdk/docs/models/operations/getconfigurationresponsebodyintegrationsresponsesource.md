@@ -5,7 +5,7 @@ Source defines where the configuration was installed from. It is used to analyze
 ## Example Usage
 
 ```typescript
-import { GetConfigurationResponseBodyIntegrationsResponseSource } from "@vercel/sdk/models/operations";
+import { GetConfigurationResponseBodyIntegrationsResponseSource } from "@vercel/sdk/models/operations/getconfiguration.js";
 
 let value: GetConfigurationResponseBodyIntegrationsResponseSource =
   "marketplace";

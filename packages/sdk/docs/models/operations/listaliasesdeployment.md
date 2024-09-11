@@ -5,7 +5,7 @@ A map with the deployment ID, URL and metadata
 ## Example Usage
 
 ```typescript
-import { ListAliasesDeployment } from "@vercel/sdk/models/operations";
+import { ListAliasesDeployment } from "@vercel/sdk/models/operations/listaliases.js";
 
 let value: ListAliasesDeployment = {
   id: "dpl_5m8CQaRBm3FnWRW1od3wKTpaECPx",

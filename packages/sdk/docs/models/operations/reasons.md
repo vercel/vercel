@@ -5,7 +5,7 @@ An object describing the reason why the team is being deleted.
 ## Example Usage
 
 ```typescript
-import { Reasons } from "@vercel/sdk/models/operations";
+import { Reasons } from "@vercel/sdk/models/operations/deleteteam.js";
 
 let value: Reasons = {
   slug: "<value>",

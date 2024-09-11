@@ -5,7 +5,7 @@ The type of the DNS record
 ## Example Usage
 
 ```typescript
-import { UpdateRecordType } from "@vercel/sdk/models/operations";
+import { UpdateRecordType } from "@vercel/sdk/models/operations/updaterecord.js";
 
 let value: UpdateRecordType = "A";
 ```

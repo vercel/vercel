@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { ListUserEventsRequest } from "@vercel/sdk/models/operations";
+import { ListUserEventsRequest } from "@vercel/sdk/models/operations/listuserevents.js";
 
 let value: ListUserEventsRequest = {
   limit: 20,

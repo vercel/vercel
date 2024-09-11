@@ -5,7 +5,7 @@ Defines the installation type. - 'external' integrations are installed via the e
 ## Example Usage
 
 ```typescript
-import { GetConfigurationResponseBodyIntegrationsInstallationType } from "@vercel/sdk/models/operations";
+import { GetConfigurationResponseBodyIntegrationsInstallationType } from "@vercel/sdk/models/operations/getconfiguration.js";
 
 let value: GetConfigurationResponseBodyIntegrationsInstallationType =
   "marketplace";

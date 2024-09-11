@@ -21,7 +21,12 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  UploadArtifactRequest,
+  UploadArtifactRequest$outboundSchema,
+  UploadArtifactResponseBody,
+  UploadArtifactResponseBody$inboundSchema,
+} from "../models/operations/uploadartifact.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -32,11 +37,11 @@ import { Result } from "../types/fp.js";
  */
 export async function artifactsUpload(
   client$: VercelCore,
-  request: operations.UploadArtifactRequest,
+  request: UploadArtifactRequest,
   options?: RequestOptions,
 ): Promise<
   Result<
-    operations.UploadArtifactResponseBody,
+    UploadArtifactResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -50,7 +55,7 @@ export async function artifactsUpload(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) => operations.UploadArtifactRequest$outboundSchema.parse(value$),
+    (value$) => UploadArtifactRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {
@@ -139,7 +144,7 @@ export async function artifactsUpload(
   const response = doResult.value;
 
   const [result$] = await m$.match<
-    operations.UploadArtifactResponseBody,
+    UploadArtifactResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -148,7 +153,7 @@ export async function artifactsUpload(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(202, operations.UploadArtifactResponseBody$inboundSchema),
+    m$.json(202, UploadArtifactResponseBody$inboundSchema),
     m$.fail([400, 401, 402, 403, "4XX", "5XX"]),
   )(response);
   if (!result$.ok) {

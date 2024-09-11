@@ -5,7 +5,7 @@ The type of record, it could be one of the valid DNS records.
 ## Example Usage
 
 ```typescript
-import { CreateRecordRequestBodyDnsRequest6Type } from "@vercel/sdk/models/operations";
+import { CreateRecordRequestBodyDnsRequest6Type } from "@vercel/sdk/models/operations/createrecord.js";
 
 let value: CreateRecordRequestBodyDnsRequest6Type = "SRV";
 ```

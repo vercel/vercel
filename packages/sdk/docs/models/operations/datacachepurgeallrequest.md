@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { DatacachePurgeallRequest } from "@vercel/sdk/models/operations";
+import { DatacachePurgeallRequest } from "@vercel/sdk/models/operations/datacachepurgeall.js";
 
 let value: DatacachePurgeallRequest = {
   projectIdOrName: "<value>",

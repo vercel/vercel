@@ -6,7 +6,7 @@ The deployment including both public and private information
 ## Example Usage
 
 ```typescript
-import { GetDeploymentResponseBody } from "@vercel/sdk/models/operations";
+import { GetDeploymentResponseBody } from "@vercel/sdk/models/operations/getdeployment.js";
 
 let value: GetDeploymentResponseBody = {
   build: {

@@ -21,7 +21,12 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  GetEdgeConfigRequest,
+  GetEdgeConfigRequest$outboundSchema,
+  GetEdgeConfigResponseBody,
+  GetEdgeConfigResponseBody$inboundSchema,
+} from "../models/operations/getedgeconfig.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -32,11 +37,11 @@ import { Result } from "../types/fp.js";
  */
 export async function edgeConfigsGet(
   client$: VercelCore,
-  request: operations.GetEdgeConfigRequest,
+  request: GetEdgeConfigRequest,
   options?: RequestOptions,
 ): Promise<
   Result<
-    operations.GetEdgeConfigResponseBody,
+    GetEdgeConfigResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -50,7 +55,7 @@ export async function edgeConfigsGet(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) => operations.GetEdgeConfigRequest$outboundSchema.parse(value$),
+    (value$) => GetEdgeConfigRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {
@@ -113,7 +118,7 @@ export async function edgeConfigsGet(
   const response = doResult.value;
 
   const [result$] = await m$.match<
-    operations.GetEdgeConfigResponseBody,
+    GetEdgeConfigResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -122,7 +127,7 @@ export async function edgeConfigsGet(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(200, operations.GetEdgeConfigResponseBody$inboundSchema),
+    m$.json(200, GetEdgeConfigResponseBody$inboundSchema),
     m$.fail([400, 401, 403, 404, "4XX", "5XX"]),
   )(response);
   if (!result$.ok) {

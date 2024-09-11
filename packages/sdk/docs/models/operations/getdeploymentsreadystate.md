@@ -5,7 +5,7 @@ In which state is the deployment.
 ## Example Usage
 
 ```typescript
-import { GetDeploymentsReadyState } from "@vercel/sdk/models/operations";
+import { GetDeploymentsReadyState } from "@vercel/sdk/models/operations/getdeployments.js";
 
 let value: GetDeploymentsReadyState = "READY";
 ```

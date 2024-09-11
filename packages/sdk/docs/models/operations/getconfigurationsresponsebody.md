@@ -5,7 +5,7 @@ The list of configurations for the authenticated user
 ## Example Usage
 
 ```typescript
-import { GetConfigurationsResponseBody } from "@vercel/sdk/models/operations";
+import { GetConfigurationsResponseBody } from "@vercel/sdk/models/operations/getconfigurations.js";
 
 let value: GetConfigurationsResponseBody = [
   {

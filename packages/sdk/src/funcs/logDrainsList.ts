@@ -19,7 +19,12 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  GetIntegrationLogDrainsRequest,
+  GetIntegrationLogDrainsRequest$outboundSchema,
+  GetIntegrationLogDrainsResponseBody,
+  GetIntegrationLogDrainsResponseBody$inboundSchema,
+} from "../models/operations/getintegrationlogdrains.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -30,11 +35,11 @@ import { Result } from "../types/fp.js";
  */
 export async function logDrainsList(
   client$: VercelCore,
-  request: operations.GetIntegrationLogDrainsRequest,
+  request: GetIntegrationLogDrainsRequest,
   options?: RequestOptions,
 ): Promise<
   Result<
-    Array<operations.GetIntegrationLogDrainsResponseBody>,
+    Array<GetIntegrationLogDrainsResponseBody>,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -48,8 +53,7 @@ export async function logDrainsList(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) =>
-      operations.GetIntegrationLogDrainsRequest$outboundSchema.parse(value$),
+    (value$) => GetIntegrationLogDrainsRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {
@@ -105,7 +109,7 @@ export async function logDrainsList(
   const response = doResult.value;
 
   const [result$] = await m$.match<
-    Array<operations.GetIntegrationLogDrainsResponseBody>,
+    Array<GetIntegrationLogDrainsResponseBody>,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -114,10 +118,7 @@ export async function logDrainsList(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(
-      200,
-      z.array(operations.GetIntegrationLogDrainsResponseBody$inboundSchema),
-    ),
+    m$.json(200, z.array(GetIntegrationLogDrainsResponseBody$inboundSchema)),
     m$.fail([400, 401, 403, "4XX", "5XX"]),
   )(response);
   if (!result$.ok) {

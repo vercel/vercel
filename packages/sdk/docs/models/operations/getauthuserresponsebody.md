@@ -5,7 +5,7 @@ Successful response.
 ## Example Usage
 
 ```typescript
-import { GetAuthUserResponseBody } from "@vercel/sdk/models/operations";
+import { GetAuthUserResponseBody } from "@vercel/sdk/models/operations/getauthuser.js";
 
 let value: GetAuthUserResponseBody = {
   user: {

@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { ProtectionBypassScope } from "@vercel/sdk/models/operations";
+import { ProtectionBypassScope } from "@vercel/sdk/models/operations/getalias.js";
 
 let value: ProtectionBypassScope = "shareable-link";
 ```

@@ -5,7 +5,7 @@ One of `LOCAL` or `REMOTE`. `LOCAL` specifies that the cache event was from the 
 ## Example Usage
 
 ```typescript
-import { Source } from "@vercel/sdk/models/operations";
+import { Source } from "@vercel/sdk/models/operations/recordevents.js";
 
 let value: Source = "REMOTE";
 ```

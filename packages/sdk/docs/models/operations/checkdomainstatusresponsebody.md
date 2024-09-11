@@ -5,7 +5,7 @@ Successful response checking if a Domain's name is available.
 ## Example Usage
 
 ```typescript
-import { CheckDomainStatusResponseBody } from "@vercel/sdk/models/operations";
+import { CheckDomainStatusResponseBody } from "@vercel/sdk/models/operations/checkdomainstatus.js";
 
 let value: CheckDomainStatusResponseBody = {
   available: false,

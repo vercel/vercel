@@ -5,7 +5,11 @@
 import * as z from "zod";
 import { remap as remap$ } from "../../lib/primitives.js";
 import { ClosedEnum } from "../../types/enums.js";
-import * as components from "../components/index.js";
+import {
+  ACLAction,
+  ACLAction$inboundSchema,
+  ACLAction$outboundSchema,
+} from "../components/aclaction.js";
 
 export type UpdateProjectDataCacheRequestBody = {
   /**
@@ -823,185 +827,181 @@ export type Targets = {
 };
 
 export type Permissions = {
-  accessGroup?: Array<components.ACLAction> | undefined;
-  aliasGlobal?: Array<components.ACLAction> | undefined;
-  analyticsSampling?: Array<components.ACLAction> | undefined;
-  analyticsUsage?: Array<components.ACLAction> | undefined;
-  auditLog?: Array<components.ACLAction> | undefined;
-  billingAddress?: Array<components.ACLAction> | undefined;
-  billingInformation?: Array<components.ACLAction> | undefined;
-  billingInvoice?: Array<components.ACLAction> | undefined;
-  billingInvoiceEmailRecipient?: Array<components.ACLAction> | undefined;
-  billingInvoiceLanguage?: Array<components.ACLAction> | undefined;
-  billingPlan?: Array<components.ACLAction> | undefined;
-  billingPurchaseOrder?: Array<components.ACLAction> | undefined;
-  billingTaxId?: Array<components.ACLAction> | undefined;
-  blob?: Array<components.ACLAction> | undefined;
-  budget?: Array<components.ACLAction> | undefined;
-  cacheArtifact?: Array<components.ACLAction> | undefined;
-  cacheArtifactUsageEvent?: Array<components.ACLAction> | undefined;
-  codeChecks?: Array<components.ACLAction> | undefined;
-  concurrentBuilds?: Array<components.ACLAction> | undefined;
-  connect?: Array<components.ACLAction> | undefined;
-  connectConfiguration?: Array<components.ACLAction> | undefined;
-  domain?: Array<components.ACLAction> | undefined;
-  domainAcceptDelegation?: Array<components.ACLAction> | undefined;
-  domainAuthCodes?: Array<components.ACLAction> | undefined;
-  domainCertificate?: Array<components.ACLAction> | undefined;
-  domainCheckConfig?: Array<components.ACLAction> | undefined;
-  domainMove?: Array<components.ACLAction> | undefined;
-  domainPurchase?: Array<components.ACLAction> | undefined;
-  domainRecord?: Array<components.ACLAction> | undefined;
-  domainTransferIn?: Array<components.ACLAction> | undefined;
-  event?: Array<components.ACLAction> | undefined;
-  ownEvent?: Array<components.ACLAction> | undefined;
-  sensitiveEnvironmentVariablePolicy?: Array<components.ACLAction> | undefined;
-  fileUpload?: Array<components.ACLAction> | undefined;
-  gitRepository?: Array<components.ACLAction> | undefined;
-  ipBlocking?: Array<components.ACLAction> | undefined;
-  integration?: Array<components.ACLAction> | undefined;
-  integrationAccount?: Array<components.ACLAction> | undefined;
-  integrationConfiguration?: Array<components.ACLAction> | undefined;
-  integrationConfigurationTransfer?: Array<components.ACLAction> | undefined;
-  integrationConfigurationProjects?: Array<components.ACLAction> | undefined;
-  integrationVercelConfigurationOverride?:
-    | Array<components.ACLAction>
-    | undefined;
-  integrationResource?: Array<components.ACLAction> | undefined;
-  integrationEvent?: Array<components.ACLAction> | undefined;
-  integrationResourceSecrets?: Array<components.ACLAction> | undefined;
-  marketplaceInstallationMember?: Array<components.ACLAction> | undefined;
-  marketplaceBillingData?: Array<components.ACLAction> | undefined;
-  marketplaceInvoice?: Array<components.ACLAction> | undefined;
-  jobGlobal?: Array<components.ACLAction> | undefined;
-  logDrain?: Array<components.ACLAction> | undefined;
-  monitoring?: Array<components.ACLAction> | undefined;
-  monitoringSettings?: Array<components.ACLAction> | undefined;
-  monitoringQuery?: Array<components.ACLAction> | undefined;
-  monitoringChart?: Array<components.ACLAction> | undefined;
-  monitoringAlert?: Array<components.ACLAction> | undefined;
-  notificationDeploymentFailed?: Array<components.ACLAction> | undefined;
-  notificationDomainConfiguration?: Array<components.ACLAction> | undefined;
-  notificationDomainExpire?: Array<components.ACLAction> | undefined;
-  notificationDomainMoved?: Array<components.ACLAction> | undefined;
-  notificationDomainPurchase?: Array<components.ACLAction> | undefined;
-  notificationDomainRenewal?: Array<components.ACLAction> | undefined;
-  notificationDomainTransfer?: Array<components.ACLAction> | undefined;
-  notificationDomainUnverified?: Array<components.ACLAction> | undefined;
-  notificationMonitoringAlert?: Array<components.ACLAction> | undefined;
-  notificationPaymentFailed?: Array<components.ACLAction> | undefined;
-  notificationUsageAlert?: Array<components.ACLAction> | undefined;
-  notificationCustomerBudget?: Array<components.ACLAction> | undefined;
-  notificationStatementOfReasons?: Array<components.ACLAction> | undefined;
-  oauth2Connection?: Array<components.ACLAction> | undefined;
-  openTelemetryEndpoint?: Array<components.ACLAction> | undefined;
-  paymentMethod?: Array<components.ACLAction> | undefined;
-  permissions?: Array<components.ACLAction> | undefined;
-  postgres?: Array<components.ACLAction> | undefined;
-  previewDeploymentSuffix?: Array<components.ACLAction> | undefined;
-  proTrialOnboarding?: Array<components.ACLAction> | undefined;
-  sharedEnvVars?: Array<components.ACLAction> | undefined;
-  sharedEnvVarsProduction?: Array<components.ACLAction> | undefined;
-  space?: Array<components.ACLAction> | undefined;
-  spaceRun?: Array<components.ACLAction> | undefined;
-  passwordProtectionInvoiceItem?: Array<components.ACLAction> | undefined;
-  rateLimit?: Array<components.ACLAction> | undefined;
-  redis?: Array<components.ACLAction> | undefined;
-  repository?: Array<components.ACLAction> | undefined;
-  remoteCaching?: Array<components.ACLAction> | undefined;
-  samlConfig?: Array<components.ACLAction> | undefined;
-  secret?: Array<components.ACLAction> | undefined;
-  redisStoreTokenSet?: Array<components.ACLAction> | undefined;
-  blobStoreTokenSet?: Array<components.ACLAction> | undefined;
-  postgresStoreTokenSet?: Array<components.ACLAction> | undefined;
-  integrationStoreTokenSet?: Array<components.ACLAction> | undefined;
-  integrationResourceReplCommand?: Array<components.ACLAction> | undefined;
-  storeTransfer?: Array<components.ACLAction> | undefined;
-  supportCase?: Array<components.ACLAction> | undefined;
-  supportCaseComment?: Array<components.ACLAction> | undefined;
-  dataCacheBillingSettings?: Array<components.ACLAction> | undefined;
-  team?: Array<components.ACLAction> | undefined;
-  teamAccessRequest?: Array<components.ACLAction> | undefined;
-  teamFellowMembership?: Array<components.ACLAction> | undefined;
-  teamGitExclusivity?: Array<components.ACLAction> | undefined;
-  teamInvite?: Array<components.ACLAction> | undefined;
-  teamInviteCode?: Array<components.ACLAction> | undefined;
-  teamJoin?: Array<components.ACLAction> | undefined;
-  teamOwnMembership?: Array<components.ACLAction> | undefined;
-  teamOwnMembershipDisconnectSAML?: Array<components.ACLAction> | undefined;
-  token?: Array<components.ACLAction> | undefined;
-  usage?: Array<components.ACLAction> | undefined;
-  usageCycle?: Array<components.ACLAction> | undefined;
-  user?: Array<components.ACLAction> | undefined;
-  userConnection?: Array<components.ACLAction> | undefined;
-  vpcPeeringConnection?: Array<components.ACLAction> | undefined;
-  webAnalyticsPlan?: Array<components.ACLAction> | undefined;
-  webAuthn?: Array<components.ACLAction> | undefined;
-  edgeConfig?: Array<components.ACLAction> | undefined;
-  edgeConfigItem?: Array<components.ACLAction> | undefined;
-  edgeConfigSchema?: Array<components.ACLAction> | undefined;
-  edgeConfigToken?: Array<components.ACLAction> | undefined;
-  webhook?: Array<components.ACLAction> | undefined;
-  webhookEvent?: Array<components.ACLAction> | undefined;
-  endpointVerification?: Array<components.ACLAction> | undefined;
-  projectTransferIn?: Array<components.ACLAction> | undefined;
-  oauth2Application?: Array<components.ACLAction> | undefined;
-  aliasProject?: Array<components.ACLAction> | undefined;
-  aliasProtectionBypass?: Array<components.ACLAction> | undefined;
-  productionAliasProtectionBypass?: Array<components.ACLAction> | undefined;
-  connectConfigurationLink?: Array<components.ACLAction> | undefined;
-  dataCacheNamespace?: Array<components.ACLAction> | undefined;
-  deployment?: Array<components.ACLAction> | undefined;
-  deploymentCheck?: Array<components.ACLAction> | undefined;
-  deploymentCheckPreview?: Array<components.ACLAction> | undefined;
-  deploymentCheckReRunFromProductionBranch?:
-    | Array<components.ACLAction>
-    | undefined;
-  deploymentProductionGit?: Array<components.ACLAction> | undefined;
-  deploymentPreview?: Array<components.ACLAction> | undefined;
-  deploymentPrivate?: Array<components.ACLAction> | undefined;
-  deploymentPromote?: Array<components.ACLAction> | undefined;
-  deploymentRollback?: Array<components.ACLAction> | undefined;
-  environments?: Array<components.ACLAction> | undefined;
-  logs?: Array<components.ACLAction> | undefined;
-  logsPreset?: Array<components.ACLAction> | undefined;
-  passwordProtection?: Array<components.ACLAction> | undefined;
-  optionsAllowlist?: Array<components.ACLAction> | undefined;
-  job?: Array<components.ACLAction> | undefined;
-  project?: Array<components.ACLAction> | undefined;
-  projectAccessGroup?: Array<components.ACLAction> | undefined;
-  projectAnalyticsSampling?: Array<components.ACLAction> | undefined;
-  projectDeploymentHook?: Array<components.ACLAction> | undefined;
-  projectDomain?: Array<components.ACLAction> | undefined;
-  projectDomainMove?: Array<components.ACLAction> | undefined;
-  projectDomainCheckConfig?: Array<components.ACLAction> | undefined;
-  projectEnvVars?: Array<components.ACLAction> | undefined;
-  projectEnvVarsProduction?: Array<components.ACLAction> | undefined;
-  projectEnvVarsUnownedByIntegration?: Array<components.ACLAction> | undefined;
-  projectFlags?: Array<components.ACLAction> | undefined;
-  projectId?: Array<components.ACLAction> | undefined;
-  projectIntegrationConfiguration?: Array<components.ACLAction> | undefined;
-  projectLink?: Array<components.ACLAction> | undefined;
-  projectMember?: Array<components.ACLAction> | undefined;
-  projectMonitoring?: Array<components.ACLAction> | undefined;
-  projectPermissions?: Array<components.ACLAction> | undefined;
-  projectProductionBranch?: Array<components.ACLAction> | undefined;
-  projectTransfer?: Array<components.ACLAction> | undefined;
-  projectTransferOut?: Array<components.ACLAction> | undefined;
-  projectProtectionBypass?: Array<components.ACLAction> | undefined;
-  projectUsage?: Array<components.ACLAction> | undefined;
-  projectAnalyticsUsage?: Array<components.ACLAction> | undefined;
-  projectSupportCase?: Array<components.ACLAction> | undefined;
-  projectSupportCaseComment?: Array<components.ACLAction> | undefined;
-  projectDeploymentExpiration?: Array<components.ACLAction> | undefined;
-  projectTier?: Array<components.ACLAction> | undefined;
-  seawallConfig?: Array<components.ACLAction> | undefined;
-  skewProtection?: Array<components.ACLAction> | undefined;
-  analytics?: Array<components.ACLAction> | undefined;
-  trustedIps?: Array<components.ACLAction> | undefined;
-  webAnalytics?: Array<components.ACLAction> | undefined;
-  sharedEnvVarConnection?: Array<components.ACLAction> | undefined;
-  sonar?: Array<components.ACLAction> | undefined;
+  accessGroup?: Array<ACLAction> | undefined;
+  aliasGlobal?: Array<ACLAction> | undefined;
+  analyticsSampling?: Array<ACLAction> | undefined;
+  analyticsUsage?: Array<ACLAction> | undefined;
+  auditLog?: Array<ACLAction> | undefined;
+  billingAddress?: Array<ACLAction> | undefined;
+  billingInformation?: Array<ACLAction> | undefined;
+  billingInvoice?: Array<ACLAction> | undefined;
+  billingInvoiceEmailRecipient?: Array<ACLAction> | undefined;
+  billingInvoiceLanguage?: Array<ACLAction> | undefined;
+  billingPlan?: Array<ACLAction> | undefined;
+  billingPurchaseOrder?: Array<ACLAction> | undefined;
+  billingTaxId?: Array<ACLAction> | undefined;
+  blob?: Array<ACLAction> | undefined;
+  budget?: Array<ACLAction> | undefined;
+  cacheArtifact?: Array<ACLAction> | undefined;
+  cacheArtifactUsageEvent?: Array<ACLAction> | undefined;
+  codeChecks?: Array<ACLAction> | undefined;
+  concurrentBuilds?: Array<ACLAction> | undefined;
+  connect?: Array<ACLAction> | undefined;
+  connectConfiguration?: Array<ACLAction> | undefined;
+  domain?: Array<ACLAction> | undefined;
+  domainAcceptDelegation?: Array<ACLAction> | undefined;
+  domainAuthCodes?: Array<ACLAction> | undefined;
+  domainCertificate?: Array<ACLAction> | undefined;
+  domainCheckConfig?: Array<ACLAction> | undefined;
+  domainMove?: Array<ACLAction> | undefined;
+  domainPurchase?: Array<ACLAction> | undefined;
+  domainRecord?: Array<ACLAction> | undefined;
+  domainTransferIn?: Array<ACLAction> | undefined;
+  event?: Array<ACLAction> | undefined;
+  ownEvent?: Array<ACLAction> | undefined;
+  sensitiveEnvironmentVariablePolicy?: Array<ACLAction> | undefined;
+  fileUpload?: Array<ACLAction> | undefined;
+  gitRepository?: Array<ACLAction> | undefined;
+  ipBlocking?: Array<ACLAction> | undefined;
+  integration?: Array<ACLAction> | undefined;
+  integrationAccount?: Array<ACLAction> | undefined;
+  integrationConfiguration?: Array<ACLAction> | undefined;
+  integrationConfigurationTransfer?: Array<ACLAction> | undefined;
+  integrationConfigurationProjects?: Array<ACLAction> | undefined;
+  integrationVercelConfigurationOverride?: Array<ACLAction> | undefined;
+  integrationResource?: Array<ACLAction> | undefined;
+  integrationEvent?: Array<ACLAction> | undefined;
+  integrationResourceSecrets?: Array<ACLAction> | undefined;
+  marketplaceInstallationMember?: Array<ACLAction> | undefined;
+  marketplaceBillingData?: Array<ACLAction> | undefined;
+  marketplaceInvoice?: Array<ACLAction> | undefined;
+  jobGlobal?: Array<ACLAction> | undefined;
+  logDrain?: Array<ACLAction> | undefined;
+  monitoring?: Array<ACLAction> | undefined;
+  monitoringSettings?: Array<ACLAction> | undefined;
+  monitoringQuery?: Array<ACLAction> | undefined;
+  monitoringChart?: Array<ACLAction> | undefined;
+  monitoringAlert?: Array<ACLAction> | undefined;
+  notificationDeploymentFailed?: Array<ACLAction> | undefined;
+  notificationDomainConfiguration?: Array<ACLAction> | undefined;
+  notificationDomainExpire?: Array<ACLAction> | undefined;
+  notificationDomainMoved?: Array<ACLAction> | undefined;
+  notificationDomainPurchase?: Array<ACLAction> | undefined;
+  notificationDomainRenewal?: Array<ACLAction> | undefined;
+  notificationDomainTransfer?: Array<ACLAction> | undefined;
+  notificationDomainUnverified?: Array<ACLAction> | undefined;
+  notificationMonitoringAlert?: Array<ACLAction> | undefined;
+  notificationPaymentFailed?: Array<ACLAction> | undefined;
+  notificationUsageAlert?: Array<ACLAction> | undefined;
+  notificationCustomerBudget?: Array<ACLAction> | undefined;
+  notificationStatementOfReasons?: Array<ACLAction> | undefined;
+  oauth2Connection?: Array<ACLAction> | undefined;
+  openTelemetryEndpoint?: Array<ACLAction> | undefined;
+  paymentMethod?: Array<ACLAction> | undefined;
+  permissions?: Array<ACLAction> | undefined;
+  postgres?: Array<ACLAction> | undefined;
+  previewDeploymentSuffix?: Array<ACLAction> | undefined;
+  proTrialOnboarding?: Array<ACLAction> | undefined;
+  sharedEnvVars?: Array<ACLAction> | undefined;
+  sharedEnvVarsProduction?: Array<ACLAction> | undefined;
+  space?: Array<ACLAction> | undefined;
+  spaceRun?: Array<ACLAction> | undefined;
+  passwordProtectionInvoiceItem?: Array<ACLAction> | undefined;
+  rateLimit?: Array<ACLAction> | undefined;
+  redis?: Array<ACLAction> | undefined;
+  repository?: Array<ACLAction> | undefined;
+  remoteCaching?: Array<ACLAction> | undefined;
+  samlConfig?: Array<ACLAction> | undefined;
+  secret?: Array<ACLAction> | undefined;
+  redisStoreTokenSet?: Array<ACLAction> | undefined;
+  blobStoreTokenSet?: Array<ACLAction> | undefined;
+  postgresStoreTokenSet?: Array<ACLAction> | undefined;
+  integrationStoreTokenSet?: Array<ACLAction> | undefined;
+  integrationResourceReplCommand?: Array<ACLAction> | undefined;
+  storeTransfer?: Array<ACLAction> | undefined;
+  supportCase?: Array<ACLAction> | undefined;
+  supportCaseComment?: Array<ACLAction> | undefined;
+  dataCacheBillingSettings?: Array<ACLAction> | undefined;
+  team?: Array<ACLAction> | undefined;
+  teamAccessRequest?: Array<ACLAction> | undefined;
+  teamFellowMembership?: Array<ACLAction> | undefined;
+  teamGitExclusivity?: Array<ACLAction> | undefined;
+  teamInvite?: Array<ACLAction> | undefined;
+  teamInviteCode?: Array<ACLAction> | undefined;
+  teamJoin?: Array<ACLAction> | undefined;
+  teamOwnMembership?: Array<ACLAction> | undefined;
+  teamOwnMembershipDisconnectSAML?: Array<ACLAction> | undefined;
+  token?: Array<ACLAction> | undefined;
+  usage?: Array<ACLAction> | undefined;
+  usageCycle?: Array<ACLAction> | undefined;
+  user?: Array<ACLAction> | undefined;
+  userConnection?: Array<ACLAction> | undefined;
+  vpcPeeringConnection?: Array<ACLAction> | undefined;
+  webAnalyticsPlan?: Array<ACLAction> | undefined;
+  webAuthn?: Array<ACLAction> | undefined;
+  edgeConfig?: Array<ACLAction> | undefined;
+  edgeConfigItem?: Array<ACLAction> | undefined;
+  edgeConfigSchema?: Array<ACLAction> | undefined;
+  edgeConfigToken?: Array<ACLAction> | undefined;
+  webhook?: Array<ACLAction> | undefined;
+  webhookEvent?: Array<ACLAction> | undefined;
+  endpointVerification?: Array<ACLAction> | undefined;
+  projectTransferIn?: Array<ACLAction> | undefined;
+  oauth2Application?: Array<ACLAction> | undefined;
+  aliasProject?: Array<ACLAction> | undefined;
+  aliasProtectionBypass?: Array<ACLAction> | undefined;
+  productionAliasProtectionBypass?: Array<ACLAction> | undefined;
+  connectConfigurationLink?: Array<ACLAction> | undefined;
+  dataCacheNamespace?: Array<ACLAction> | undefined;
+  deployment?: Array<ACLAction> | undefined;
+  deploymentCheck?: Array<ACLAction> | undefined;
+  deploymentCheckPreview?: Array<ACLAction> | undefined;
+  deploymentCheckReRunFromProductionBranch?: Array<ACLAction> | undefined;
+  deploymentProductionGit?: Array<ACLAction> | undefined;
+  deploymentPreview?: Array<ACLAction> | undefined;
+  deploymentPrivate?: Array<ACLAction> | undefined;
+  deploymentPromote?: Array<ACLAction> | undefined;
+  deploymentRollback?: Array<ACLAction> | undefined;
+  environments?: Array<ACLAction> | undefined;
+  logs?: Array<ACLAction> | undefined;
+  logsPreset?: Array<ACLAction> | undefined;
+  passwordProtection?: Array<ACLAction> | undefined;
+  optionsAllowlist?: Array<ACLAction> | undefined;
+  job?: Array<ACLAction> | undefined;
+  project?: Array<ACLAction> | undefined;
+  projectAccessGroup?: Array<ACLAction> | undefined;
+  projectAnalyticsSampling?: Array<ACLAction> | undefined;
+  projectDeploymentHook?: Array<ACLAction> | undefined;
+  projectDomain?: Array<ACLAction> | undefined;
+  projectDomainMove?: Array<ACLAction> | undefined;
+  projectDomainCheckConfig?: Array<ACLAction> | undefined;
+  projectEnvVars?: Array<ACLAction> | undefined;
+  projectEnvVarsProduction?: Array<ACLAction> | undefined;
+  projectEnvVarsUnownedByIntegration?: Array<ACLAction> | undefined;
+  projectFlags?: Array<ACLAction> | undefined;
+  projectId?: Array<ACLAction> | undefined;
+  projectIntegrationConfiguration?: Array<ACLAction> | undefined;
+  projectLink?: Array<ACLAction> | undefined;
+  projectMember?: Array<ACLAction> | undefined;
+  projectMonitoring?: Array<ACLAction> | undefined;
+  projectPermissions?: Array<ACLAction> | undefined;
+  projectProductionBranch?: Array<ACLAction> | undefined;
+  projectTransfer?: Array<ACLAction> | undefined;
+  projectTransferOut?: Array<ACLAction> | undefined;
+  projectProtectionBypass?: Array<ACLAction> | undefined;
+  projectUsage?: Array<ACLAction> | undefined;
+  projectAnalyticsUsage?: Array<ACLAction> | undefined;
+  projectSupportCase?: Array<ACLAction> | undefined;
+  projectSupportCaseComment?: Array<ACLAction> | undefined;
+  projectDeploymentExpiration?: Array<ACLAction> | undefined;
+  projectTier?: Array<ACLAction> | undefined;
+  seawallConfig?: Array<ACLAction> | undefined;
+  skewProtection?: Array<ACLAction> | undefined;
+  analytics?: Array<ACLAction> | undefined;
+  trustedIps?: Array<ACLAction> | undefined;
+  webAnalytics?: Array<ACLAction> | undefined;
+  sharedEnvVarConnection?: Array<ACLAction> | undefined;
+  sonar?: Array<ACLAction> | undefined;
 };
 
 export type LastRollbackTarget = {};
@@ -4680,232 +4680,185 @@ export const Permissions$inboundSchema: z.ZodType<
   z.ZodTypeDef,
   unknown
 > = z.object({
-  accessGroup: z.array(components.ACLAction$inboundSchema).optional(),
-  aliasGlobal: z.array(components.ACLAction$inboundSchema).optional(),
-  analyticsSampling: z.array(components.ACLAction$inboundSchema).optional(),
-  analyticsUsage: z.array(components.ACLAction$inboundSchema).optional(),
-  auditLog: z.array(components.ACLAction$inboundSchema).optional(),
-  billingAddress: z.array(components.ACLAction$inboundSchema).optional(),
-  billingInformation: z.array(components.ACLAction$inboundSchema).optional(),
-  billingInvoice: z.array(components.ACLAction$inboundSchema).optional(),
-  billingInvoiceEmailRecipient: z.array(components.ACLAction$inboundSchema)
+  accessGroup: z.array(ACLAction$inboundSchema).optional(),
+  aliasGlobal: z.array(ACLAction$inboundSchema).optional(),
+  analyticsSampling: z.array(ACLAction$inboundSchema).optional(),
+  analyticsUsage: z.array(ACLAction$inboundSchema).optional(),
+  auditLog: z.array(ACLAction$inboundSchema).optional(),
+  billingAddress: z.array(ACLAction$inboundSchema).optional(),
+  billingInformation: z.array(ACLAction$inboundSchema).optional(),
+  billingInvoice: z.array(ACLAction$inboundSchema).optional(),
+  billingInvoiceEmailRecipient: z.array(ACLAction$inboundSchema).optional(),
+  billingInvoiceLanguage: z.array(ACLAction$inboundSchema).optional(),
+  billingPlan: z.array(ACLAction$inboundSchema).optional(),
+  billingPurchaseOrder: z.array(ACLAction$inboundSchema).optional(),
+  billingTaxId: z.array(ACLAction$inboundSchema).optional(),
+  blob: z.array(ACLAction$inboundSchema).optional(),
+  budget: z.array(ACLAction$inboundSchema).optional(),
+  cacheArtifact: z.array(ACLAction$inboundSchema).optional(),
+  cacheArtifactUsageEvent: z.array(ACLAction$inboundSchema).optional(),
+  codeChecks: z.array(ACLAction$inboundSchema).optional(),
+  concurrentBuilds: z.array(ACLAction$inboundSchema).optional(),
+  connect: z.array(ACLAction$inboundSchema).optional(),
+  connectConfiguration: z.array(ACLAction$inboundSchema).optional(),
+  domain: z.array(ACLAction$inboundSchema).optional(),
+  domainAcceptDelegation: z.array(ACLAction$inboundSchema).optional(),
+  domainAuthCodes: z.array(ACLAction$inboundSchema).optional(),
+  domainCertificate: z.array(ACLAction$inboundSchema).optional(),
+  domainCheckConfig: z.array(ACLAction$inboundSchema).optional(),
+  domainMove: z.array(ACLAction$inboundSchema).optional(),
+  domainPurchase: z.array(ACLAction$inboundSchema).optional(),
+  domainRecord: z.array(ACLAction$inboundSchema).optional(),
+  domainTransferIn: z.array(ACLAction$inboundSchema).optional(),
+  event: z.array(ACLAction$inboundSchema).optional(),
+  ownEvent: z.array(ACLAction$inboundSchema).optional(),
+  sensitiveEnvironmentVariablePolicy: z.array(ACLAction$inboundSchema)
     .optional(),
-  billingInvoiceLanguage: z.array(components.ACLAction$inboundSchema)
+  fileUpload: z.array(ACLAction$inboundSchema).optional(),
+  gitRepository: z.array(ACLAction$inboundSchema).optional(),
+  ipBlocking: z.array(ACLAction$inboundSchema).optional(),
+  integration: z.array(ACLAction$inboundSchema).optional(),
+  integrationAccount: z.array(ACLAction$inboundSchema).optional(),
+  integrationConfiguration: z.array(ACLAction$inboundSchema).optional(),
+  integrationConfigurationTransfer: z.array(ACLAction$inboundSchema).optional(),
+  integrationConfigurationProjects: z.array(ACLAction$inboundSchema).optional(),
+  integrationVercelConfigurationOverride: z.array(ACLAction$inboundSchema)
     .optional(),
-  billingPlan: z.array(components.ACLAction$inboundSchema).optional(),
-  billingPurchaseOrder: z.array(components.ACLAction$inboundSchema).optional(),
-  billingTaxId: z.array(components.ACLAction$inboundSchema).optional(),
-  blob: z.array(components.ACLAction$inboundSchema).optional(),
-  budget: z.array(components.ACLAction$inboundSchema).optional(),
-  cacheArtifact: z.array(components.ACLAction$inboundSchema).optional(),
-  cacheArtifactUsageEvent: z.array(components.ACLAction$inboundSchema)
+  integrationResource: z.array(ACLAction$inboundSchema).optional(),
+  integrationEvent: z.array(ACLAction$inboundSchema).optional(),
+  integrationResourceSecrets: z.array(ACLAction$inboundSchema).optional(),
+  marketplaceInstallationMember: z.array(ACLAction$inboundSchema).optional(),
+  marketplaceBillingData: z.array(ACLAction$inboundSchema).optional(),
+  marketplaceInvoice: z.array(ACLAction$inboundSchema).optional(),
+  jobGlobal: z.array(ACLAction$inboundSchema).optional(),
+  logDrain: z.array(ACLAction$inboundSchema).optional(),
+  Monitoring: z.array(ACLAction$inboundSchema).optional(),
+  monitoringSettings: z.array(ACLAction$inboundSchema).optional(),
+  monitoringQuery: z.array(ACLAction$inboundSchema).optional(),
+  monitoringChart: z.array(ACLAction$inboundSchema).optional(),
+  monitoringAlert: z.array(ACLAction$inboundSchema).optional(),
+  notificationDeploymentFailed: z.array(ACLAction$inboundSchema).optional(),
+  notificationDomainConfiguration: z.array(ACLAction$inboundSchema).optional(),
+  notificationDomainExpire: z.array(ACLAction$inboundSchema).optional(),
+  notificationDomainMoved: z.array(ACLAction$inboundSchema).optional(),
+  notificationDomainPurchase: z.array(ACLAction$inboundSchema).optional(),
+  notificationDomainRenewal: z.array(ACLAction$inboundSchema).optional(),
+  notificationDomainTransfer: z.array(ACLAction$inboundSchema).optional(),
+  notificationDomainUnverified: z.array(ACLAction$inboundSchema).optional(),
+  NotificationMonitoringAlert: z.array(ACLAction$inboundSchema).optional(),
+  notificationPaymentFailed: z.array(ACLAction$inboundSchema).optional(),
+  notificationUsageAlert: z.array(ACLAction$inboundSchema).optional(),
+  notificationCustomerBudget: z.array(ACLAction$inboundSchema).optional(),
+  notificationStatementOfReasons: z.array(ACLAction$inboundSchema).optional(),
+  oauth2Connection: z.array(ACLAction$inboundSchema).optional(),
+  openTelemetryEndpoint: z.array(ACLAction$inboundSchema).optional(),
+  paymentMethod: z.array(ACLAction$inboundSchema).optional(),
+  permissions: z.array(ACLAction$inboundSchema).optional(),
+  postgres: z.array(ACLAction$inboundSchema).optional(),
+  previewDeploymentSuffix: z.array(ACLAction$inboundSchema).optional(),
+  proTrialOnboarding: z.array(ACLAction$inboundSchema).optional(),
+  sharedEnvVars: z.array(ACLAction$inboundSchema).optional(),
+  sharedEnvVarsProduction: z.array(ACLAction$inboundSchema).optional(),
+  space: z.array(ACLAction$inboundSchema).optional(),
+  spaceRun: z.array(ACLAction$inboundSchema).optional(),
+  passwordProtectionInvoiceItem: z.array(ACLAction$inboundSchema).optional(),
+  rateLimit: z.array(ACLAction$inboundSchema).optional(),
+  redis: z.array(ACLAction$inboundSchema).optional(),
+  repository: z.array(ACLAction$inboundSchema).optional(),
+  remoteCaching: z.array(ACLAction$inboundSchema).optional(),
+  samlConfig: z.array(ACLAction$inboundSchema).optional(),
+  secret: z.array(ACLAction$inboundSchema).optional(),
+  redisStoreTokenSet: z.array(ACLAction$inboundSchema).optional(),
+  blobStoreTokenSet: z.array(ACLAction$inboundSchema).optional(),
+  postgresStoreTokenSet: z.array(ACLAction$inboundSchema).optional(),
+  integrationStoreTokenSet: z.array(ACLAction$inboundSchema).optional(),
+  integrationResourceReplCommand: z.array(ACLAction$inboundSchema).optional(),
+  storeTransfer: z.array(ACLAction$inboundSchema).optional(),
+  supportCase: z.array(ACLAction$inboundSchema).optional(),
+  supportCaseComment: z.array(ACLAction$inboundSchema).optional(),
+  dataCacheBillingSettings: z.array(ACLAction$inboundSchema).optional(),
+  team: z.array(ACLAction$inboundSchema).optional(),
+  teamAccessRequest: z.array(ACLAction$inboundSchema).optional(),
+  teamFellowMembership: z.array(ACLAction$inboundSchema).optional(),
+  teamGitExclusivity: z.array(ACLAction$inboundSchema).optional(),
+  teamInvite: z.array(ACLAction$inboundSchema).optional(),
+  teamInviteCode: z.array(ACLAction$inboundSchema).optional(),
+  teamJoin: z.array(ACLAction$inboundSchema).optional(),
+  teamOwnMembership: z.array(ACLAction$inboundSchema).optional(),
+  teamOwnMembershipDisconnectSAML: z.array(ACLAction$inboundSchema).optional(),
+  token: z.array(ACLAction$inboundSchema).optional(),
+  usage: z.array(ACLAction$inboundSchema).optional(),
+  usageCycle: z.array(ACLAction$inboundSchema).optional(),
+  user: z.array(ACLAction$inboundSchema).optional(),
+  userConnection: z.array(ACLAction$inboundSchema).optional(),
+  vpcPeeringConnection: z.array(ACLAction$inboundSchema).optional(),
+  webAnalyticsPlan: z.array(ACLAction$inboundSchema).optional(),
+  webAuthn: z.array(ACLAction$inboundSchema).optional(),
+  edgeConfig: z.array(ACLAction$inboundSchema).optional(),
+  edgeConfigItem: z.array(ACLAction$inboundSchema).optional(),
+  edgeConfigSchema: z.array(ACLAction$inboundSchema).optional(),
+  edgeConfigToken: z.array(ACLAction$inboundSchema).optional(),
+  webhook: z.array(ACLAction$inboundSchema).optional(),
+  "webhook-event": z.array(ACLAction$inboundSchema).optional(),
+  endpointVerification: z.array(ACLAction$inboundSchema).optional(),
+  projectTransferIn: z.array(ACLAction$inboundSchema).optional(),
+  oauth2Application: z.array(ACLAction$inboundSchema).optional(),
+  aliasProject: z.array(ACLAction$inboundSchema).optional(),
+  aliasProtectionBypass: z.array(ACLAction$inboundSchema).optional(),
+  productionAliasProtectionBypass: z.array(ACLAction$inboundSchema).optional(),
+  connectConfigurationLink: z.array(ACLAction$inboundSchema).optional(),
+  dataCacheNamespace: z.array(ACLAction$inboundSchema).optional(),
+  deployment: z.array(ACLAction$inboundSchema).optional(),
+  deploymentCheck: z.array(ACLAction$inboundSchema).optional(),
+  deploymentCheckPreview: z.array(ACLAction$inboundSchema).optional(),
+  deploymentCheckReRunFromProductionBranch: z.array(ACLAction$inboundSchema)
     .optional(),
-  codeChecks: z.array(components.ACLAction$inboundSchema).optional(),
-  concurrentBuilds: z.array(components.ACLAction$inboundSchema).optional(),
-  connect: z.array(components.ACLAction$inboundSchema).optional(),
-  connectConfiguration: z.array(components.ACLAction$inboundSchema).optional(),
-  domain: z.array(components.ACLAction$inboundSchema).optional(),
-  domainAcceptDelegation: z.array(components.ACLAction$inboundSchema)
+  deploymentProductionGit: z.array(ACLAction$inboundSchema).optional(),
+  deploymentPreview: z.array(ACLAction$inboundSchema).optional(),
+  deploymentPrivate: z.array(ACLAction$inboundSchema).optional(),
+  deploymentPromote: z.array(ACLAction$inboundSchema).optional(),
+  deploymentRollback: z.array(ACLAction$inboundSchema).optional(),
+  environments: z.array(ACLAction$inboundSchema).optional(),
+  logs: z.array(ACLAction$inboundSchema).optional(),
+  logsPreset: z.array(ACLAction$inboundSchema).optional(),
+  passwordProtection: z.array(ACLAction$inboundSchema).optional(),
+  optionsAllowlist: z.array(ACLAction$inboundSchema).optional(),
+  job: z.array(ACLAction$inboundSchema).optional(),
+  project: z.array(ACLAction$inboundSchema).optional(),
+  projectAccessGroup: z.array(ACLAction$inboundSchema).optional(),
+  projectAnalyticsSampling: z.array(ACLAction$inboundSchema).optional(),
+  projectDeploymentHook: z.array(ACLAction$inboundSchema).optional(),
+  projectDomain: z.array(ACLAction$inboundSchema).optional(),
+  projectDomainMove: z.array(ACLAction$inboundSchema).optional(),
+  projectDomainCheckConfig: z.array(ACLAction$inboundSchema).optional(),
+  projectEnvVars: z.array(ACLAction$inboundSchema).optional(),
+  projectEnvVarsProduction: z.array(ACLAction$inboundSchema).optional(),
+  projectEnvVarsUnownedByIntegration: z.array(ACLAction$inboundSchema)
     .optional(),
-  domainAuthCodes: z.array(components.ACLAction$inboundSchema).optional(),
-  domainCertificate: z.array(components.ACLAction$inboundSchema).optional(),
-  domainCheckConfig: z.array(components.ACLAction$inboundSchema).optional(),
-  domainMove: z.array(components.ACLAction$inboundSchema).optional(),
-  domainPurchase: z.array(components.ACLAction$inboundSchema).optional(),
-  domainRecord: z.array(components.ACLAction$inboundSchema).optional(),
-  domainTransferIn: z.array(components.ACLAction$inboundSchema).optional(),
-  event: z.array(components.ACLAction$inboundSchema).optional(),
-  ownEvent: z.array(components.ACLAction$inboundSchema).optional(),
-  sensitiveEnvironmentVariablePolicy: z.array(
-    components.ACLAction$inboundSchema,
-  ).optional(),
-  fileUpload: z.array(components.ACLAction$inboundSchema).optional(),
-  gitRepository: z.array(components.ACLAction$inboundSchema).optional(),
-  ipBlocking: z.array(components.ACLAction$inboundSchema).optional(),
-  integration: z.array(components.ACLAction$inboundSchema).optional(),
-  integrationAccount: z.array(components.ACLAction$inboundSchema).optional(),
-  integrationConfiguration: z.array(components.ACLAction$inboundSchema)
-    .optional(),
-  integrationConfigurationTransfer: z.array(components.ACLAction$inboundSchema)
-    .optional(),
-  integrationConfigurationProjects: z.array(components.ACLAction$inboundSchema)
-    .optional(),
-  integrationVercelConfigurationOverride: z.array(
-    components.ACLAction$inboundSchema,
-  ).optional(),
-  integrationResource: z.array(components.ACLAction$inboundSchema).optional(),
-  integrationEvent: z.array(components.ACLAction$inboundSchema).optional(),
-  integrationResourceSecrets: z.array(components.ACLAction$inboundSchema)
-    .optional(),
-  marketplaceInstallationMember: z.array(components.ACLAction$inboundSchema)
-    .optional(),
-  marketplaceBillingData: z.array(components.ACLAction$inboundSchema)
-    .optional(),
-  marketplaceInvoice: z.array(components.ACLAction$inboundSchema).optional(),
-  jobGlobal: z.array(components.ACLAction$inboundSchema).optional(),
-  logDrain: z.array(components.ACLAction$inboundSchema).optional(),
-  Monitoring: z.array(components.ACLAction$inboundSchema).optional(),
-  monitoringSettings: z.array(components.ACLAction$inboundSchema).optional(),
-  monitoringQuery: z.array(components.ACLAction$inboundSchema).optional(),
-  monitoringChart: z.array(components.ACLAction$inboundSchema).optional(),
-  monitoringAlert: z.array(components.ACLAction$inboundSchema).optional(),
-  notificationDeploymentFailed: z.array(components.ACLAction$inboundSchema)
-    .optional(),
-  notificationDomainConfiguration: z.array(components.ACLAction$inboundSchema)
-    .optional(),
-  notificationDomainExpire: z.array(components.ACLAction$inboundSchema)
-    .optional(),
-  notificationDomainMoved: z.array(components.ACLAction$inboundSchema)
-    .optional(),
-  notificationDomainPurchase: z.array(components.ACLAction$inboundSchema)
-    .optional(),
-  notificationDomainRenewal: z.array(components.ACLAction$inboundSchema)
-    .optional(),
-  notificationDomainTransfer: z.array(components.ACLAction$inboundSchema)
-    .optional(),
-  notificationDomainUnverified: z.array(components.ACLAction$inboundSchema)
-    .optional(),
-  NotificationMonitoringAlert: z.array(components.ACLAction$inboundSchema)
-    .optional(),
-  notificationPaymentFailed: z.array(components.ACLAction$inboundSchema)
-    .optional(),
-  notificationUsageAlert: z.array(components.ACLAction$inboundSchema)
-    .optional(),
-  notificationCustomerBudget: z.array(components.ACLAction$inboundSchema)
-    .optional(),
-  notificationStatementOfReasons: z.array(components.ACLAction$inboundSchema)
-    .optional(),
-  oauth2Connection: z.array(components.ACLAction$inboundSchema).optional(),
-  openTelemetryEndpoint: z.array(components.ACLAction$inboundSchema).optional(),
-  paymentMethod: z.array(components.ACLAction$inboundSchema).optional(),
-  permissions: z.array(components.ACLAction$inboundSchema).optional(),
-  postgres: z.array(components.ACLAction$inboundSchema).optional(),
-  previewDeploymentSuffix: z.array(components.ACLAction$inboundSchema)
-    .optional(),
-  proTrialOnboarding: z.array(components.ACLAction$inboundSchema).optional(),
-  sharedEnvVars: z.array(components.ACLAction$inboundSchema).optional(),
-  sharedEnvVarsProduction: z.array(components.ACLAction$inboundSchema)
-    .optional(),
-  space: z.array(components.ACLAction$inboundSchema).optional(),
-  spaceRun: z.array(components.ACLAction$inboundSchema).optional(),
-  passwordProtectionInvoiceItem: z.array(components.ACLAction$inboundSchema)
-    .optional(),
-  rateLimit: z.array(components.ACLAction$inboundSchema).optional(),
-  redis: z.array(components.ACLAction$inboundSchema).optional(),
-  repository: z.array(components.ACLAction$inboundSchema).optional(),
-  remoteCaching: z.array(components.ACLAction$inboundSchema).optional(),
-  samlConfig: z.array(components.ACLAction$inboundSchema).optional(),
-  secret: z.array(components.ACLAction$inboundSchema).optional(),
-  redisStoreTokenSet: z.array(components.ACLAction$inboundSchema).optional(),
-  blobStoreTokenSet: z.array(components.ACLAction$inboundSchema).optional(),
-  postgresStoreTokenSet: z.array(components.ACLAction$inboundSchema).optional(),
-  integrationStoreTokenSet: z.array(components.ACLAction$inboundSchema)
-    .optional(),
-  integrationResourceReplCommand: z.array(components.ACLAction$inboundSchema)
-    .optional(),
-  storeTransfer: z.array(components.ACLAction$inboundSchema).optional(),
-  supportCase: z.array(components.ACLAction$inboundSchema).optional(),
-  supportCaseComment: z.array(components.ACLAction$inboundSchema).optional(),
-  dataCacheBillingSettings: z.array(components.ACLAction$inboundSchema)
-    .optional(),
-  team: z.array(components.ACLAction$inboundSchema).optional(),
-  teamAccessRequest: z.array(components.ACLAction$inboundSchema).optional(),
-  teamFellowMembership: z.array(components.ACLAction$inboundSchema).optional(),
-  teamGitExclusivity: z.array(components.ACLAction$inboundSchema).optional(),
-  teamInvite: z.array(components.ACLAction$inboundSchema).optional(),
-  teamInviteCode: z.array(components.ACLAction$inboundSchema).optional(),
-  teamJoin: z.array(components.ACLAction$inboundSchema).optional(),
-  teamOwnMembership: z.array(components.ACLAction$inboundSchema).optional(),
-  teamOwnMembershipDisconnectSAML: z.array(components.ACLAction$inboundSchema)
-    .optional(),
-  token: z.array(components.ACLAction$inboundSchema).optional(),
-  usage: z.array(components.ACLAction$inboundSchema).optional(),
-  usageCycle: z.array(components.ACLAction$inboundSchema).optional(),
-  user: z.array(components.ACLAction$inboundSchema).optional(),
-  userConnection: z.array(components.ACLAction$inboundSchema).optional(),
-  vpcPeeringConnection: z.array(components.ACLAction$inboundSchema).optional(),
-  webAnalyticsPlan: z.array(components.ACLAction$inboundSchema).optional(),
-  webAuthn: z.array(components.ACLAction$inboundSchema).optional(),
-  edgeConfig: z.array(components.ACLAction$inboundSchema).optional(),
-  edgeConfigItem: z.array(components.ACLAction$inboundSchema).optional(),
-  edgeConfigSchema: z.array(components.ACLAction$inboundSchema).optional(),
-  edgeConfigToken: z.array(components.ACLAction$inboundSchema).optional(),
-  webhook: z.array(components.ACLAction$inboundSchema).optional(),
-  "webhook-event": z.array(components.ACLAction$inboundSchema).optional(),
-  endpointVerification: z.array(components.ACLAction$inboundSchema).optional(),
-  projectTransferIn: z.array(components.ACLAction$inboundSchema).optional(),
-  oauth2Application: z.array(components.ACLAction$inboundSchema).optional(),
-  aliasProject: z.array(components.ACLAction$inboundSchema).optional(),
-  aliasProtectionBypass: z.array(components.ACLAction$inboundSchema).optional(),
-  productionAliasProtectionBypass: z.array(components.ACLAction$inboundSchema)
-    .optional(),
-  connectConfigurationLink: z.array(components.ACLAction$inboundSchema)
-    .optional(),
-  dataCacheNamespace: z.array(components.ACLAction$inboundSchema).optional(),
-  deployment: z.array(components.ACLAction$inboundSchema).optional(),
-  deploymentCheck: z.array(components.ACLAction$inboundSchema).optional(),
-  deploymentCheckPreview: z.array(components.ACLAction$inboundSchema)
-    .optional(),
-  deploymentCheckReRunFromProductionBranch: z.array(
-    components.ACLAction$inboundSchema,
-  ).optional(),
-  deploymentProductionGit: z.array(components.ACLAction$inboundSchema)
-    .optional(),
-  deploymentPreview: z.array(components.ACLAction$inboundSchema).optional(),
-  deploymentPrivate: z.array(components.ACLAction$inboundSchema).optional(),
-  deploymentPromote: z.array(components.ACLAction$inboundSchema).optional(),
-  deploymentRollback: z.array(components.ACLAction$inboundSchema).optional(),
-  environments: z.array(components.ACLAction$inboundSchema).optional(),
-  logs: z.array(components.ACLAction$inboundSchema).optional(),
-  logsPreset: z.array(components.ACLAction$inboundSchema).optional(),
-  passwordProtection: z.array(components.ACLAction$inboundSchema).optional(),
-  optionsAllowlist: z.array(components.ACLAction$inboundSchema).optional(),
-  job: z.array(components.ACLAction$inboundSchema).optional(),
-  project: z.array(components.ACLAction$inboundSchema).optional(),
-  projectAccessGroup: z.array(components.ACLAction$inboundSchema).optional(),
-  projectAnalyticsSampling: z.array(components.ACLAction$inboundSchema)
-    .optional(),
-  projectDeploymentHook: z.array(components.ACLAction$inboundSchema).optional(),
-  projectDomain: z.array(components.ACLAction$inboundSchema).optional(),
-  projectDomainMove: z.array(components.ACLAction$inboundSchema).optional(),
-  projectDomainCheckConfig: z.array(components.ACLAction$inboundSchema)
-    .optional(),
-  projectEnvVars: z.array(components.ACLAction$inboundSchema).optional(),
-  projectEnvVarsProduction: z.array(components.ACLAction$inboundSchema)
-    .optional(),
-  projectEnvVarsUnownedByIntegration: z.array(
-    components.ACLAction$inboundSchema,
-  ).optional(),
-  projectFlags: z.array(components.ACLAction$inboundSchema).optional(),
-  projectId: z.array(components.ACLAction$inboundSchema).optional(),
-  projectIntegrationConfiguration: z.array(components.ACLAction$inboundSchema)
-    .optional(),
-  projectLink: z.array(components.ACLAction$inboundSchema).optional(),
-  projectMember: z.array(components.ACLAction$inboundSchema).optional(),
-  projectMonitoring: z.array(components.ACLAction$inboundSchema).optional(),
-  projectPermissions: z.array(components.ACLAction$inboundSchema).optional(),
-  projectProductionBranch: z.array(components.ACLAction$inboundSchema)
-    .optional(),
-  projectTransfer: z.array(components.ACLAction$inboundSchema).optional(),
-  projectTransferOut: z.array(components.ACLAction$inboundSchema).optional(),
-  projectProtectionBypass: z.array(components.ACLAction$inboundSchema)
-    .optional(),
-  projectUsage: z.array(components.ACLAction$inboundSchema).optional(),
-  projectAnalyticsUsage: z.array(components.ACLAction$inboundSchema).optional(),
-  projectSupportCase: z.array(components.ACLAction$inboundSchema).optional(),
-  projectSupportCaseComment: z.array(components.ACLAction$inboundSchema)
-    .optional(),
-  projectDeploymentExpiration: z.array(components.ACLAction$inboundSchema)
-    .optional(),
-  projectTier: z.array(components.ACLAction$inboundSchema).optional(),
-  seawallConfig: z.array(components.ACLAction$inboundSchema).optional(),
-  skewProtection: z.array(components.ACLAction$inboundSchema).optional(),
-  analytics: z.array(components.ACLAction$inboundSchema).optional(),
-  trustedIps: z.array(components.ACLAction$inboundSchema).optional(),
-  webAnalytics: z.array(components.ACLAction$inboundSchema).optional(),
-  sharedEnvVarConnection: z.array(components.ACLAction$inboundSchema)
-    .optional(),
-  sonar: z.array(components.ACLAction$inboundSchema).optional(),
+  projectFlags: z.array(ACLAction$inboundSchema).optional(),
+  projectId: z.array(ACLAction$inboundSchema).optional(),
+  projectIntegrationConfiguration: z.array(ACLAction$inboundSchema).optional(),
+  projectLink: z.array(ACLAction$inboundSchema).optional(),
+  projectMember: z.array(ACLAction$inboundSchema).optional(),
+  projectMonitoring: z.array(ACLAction$inboundSchema).optional(),
+  projectPermissions: z.array(ACLAction$inboundSchema).optional(),
+  projectProductionBranch: z.array(ACLAction$inboundSchema).optional(),
+  projectTransfer: z.array(ACLAction$inboundSchema).optional(),
+  projectTransferOut: z.array(ACLAction$inboundSchema).optional(),
+  projectProtectionBypass: z.array(ACLAction$inboundSchema).optional(),
+  projectUsage: z.array(ACLAction$inboundSchema).optional(),
+  projectAnalyticsUsage: z.array(ACLAction$inboundSchema).optional(),
+  projectSupportCase: z.array(ACLAction$inboundSchema).optional(),
+  projectSupportCaseComment: z.array(ACLAction$inboundSchema).optional(),
+  projectDeploymentExpiration: z.array(ACLAction$inboundSchema).optional(),
+  projectTier: z.array(ACLAction$inboundSchema).optional(),
+  seawallConfig: z.array(ACLAction$inboundSchema).optional(),
+  skewProtection: z.array(ACLAction$inboundSchema).optional(),
+  analytics: z.array(ACLAction$inboundSchema).optional(),
+  trustedIps: z.array(ACLAction$inboundSchema).optional(),
+  webAnalytics: z.array(ACLAction$inboundSchema).optional(),
+  sharedEnvVarConnection: z.array(ACLAction$inboundSchema).optional(),
+  sonar: z.array(ACLAction$inboundSchema).optional(),
 }).transform((v) => {
   return remap$(v, {
     "Monitoring": "monitoring",
@@ -5099,237 +5052,187 @@ export const Permissions$outboundSchema: z.ZodType<
   z.ZodTypeDef,
   Permissions
 > = z.object({
-  accessGroup: z.array(components.ACLAction$outboundSchema).optional(),
-  aliasGlobal: z.array(components.ACLAction$outboundSchema).optional(),
-  analyticsSampling: z.array(components.ACLAction$outboundSchema).optional(),
-  analyticsUsage: z.array(components.ACLAction$outboundSchema).optional(),
-  auditLog: z.array(components.ACLAction$outboundSchema).optional(),
-  billingAddress: z.array(components.ACLAction$outboundSchema).optional(),
-  billingInformation: z.array(components.ACLAction$outboundSchema).optional(),
-  billingInvoice: z.array(components.ACLAction$outboundSchema).optional(),
-  billingInvoiceEmailRecipient: z.array(components.ACLAction$outboundSchema)
+  accessGroup: z.array(ACLAction$outboundSchema).optional(),
+  aliasGlobal: z.array(ACLAction$outboundSchema).optional(),
+  analyticsSampling: z.array(ACLAction$outboundSchema).optional(),
+  analyticsUsage: z.array(ACLAction$outboundSchema).optional(),
+  auditLog: z.array(ACLAction$outboundSchema).optional(),
+  billingAddress: z.array(ACLAction$outboundSchema).optional(),
+  billingInformation: z.array(ACLAction$outboundSchema).optional(),
+  billingInvoice: z.array(ACLAction$outboundSchema).optional(),
+  billingInvoiceEmailRecipient: z.array(ACLAction$outboundSchema).optional(),
+  billingInvoiceLanguage: z.array(ACLAction$outboundSchema).optional(),
+  billingPlan: z.array(ACLAction$outboundSchema).optional(),
+  billingPurchaseOrder: z.array(ACLAction$outboundSchema).optional(),
+  billingTaxId: z.array(ACLAction$outboundSchema).optional(),
+  blob: z.array(ACLAction$outboundSchema).optional(),
+  budget: z.array(ACLAction$outboundSchema).optional(),
+  cacheArtifact: z.array(ACLAction$outboundSchema).optional(),
+  cacheArtifactUsageEvent: z.array(ACLAction$outboundSchema).optional(),
+  codeChecks: z.array(ACLAction$outboundSchema).optional(),
+  concurrentBuilds: z.array(ACLAction$outboundSchema).optional(),
+  connect: z.array(ACLAction$outboundSchema).optional(),
+  connectConfiguration: z.array(ACLAction$outboundSchema).optional(),
+  domain: z.array(ACLAction$outboundSchema).optional(),
+  domainAcceptDelegation: z.array(ACLAction$outboundSchema).optional(),
+  domainAuthCodes: z.array(ACLAction$outboundSchema).optional(),
+  domainCertificate: z.array(ACLAction$outboundSchema).optional(),
+  domainCheckConfig: z.array(ACLAction$outboundSchema).optional(),
+  domainMove: z.array(ACLAction$outboundSchema).optional(),
+  domainPurchase: z.array(ACLAction$outboundSchema).optional(),
+  domainRecord: z.array(ACLAction$outboundSchema).optional(),
+  domainTransferIn: z.array(ACLAction$outboundSchema).optional(),
+  event: z.array(ACLAction$outboundSchema).optional(),
+  ownEvent: z.array(ACLAction$outboundSchema).optional(),
+  sensitiveEnvironmentVariablePolicy: z.array(ACLAction$outboundSchema)
     .optional(),
-  billingInvoiceLanguage: z.array(components.ACLAction$outboundSchema)
+  fileUpload: z.array(ACLAction$outboundSchema).optional(),
+  gitRepository: z.array(ACLAction$outboundSchema).optional(),
+  ipBlocking: z.array(ACLAction$outboundSchema).optional(),
+  integration: z.array(ACLAction$outboundSchema).optional(),
+  integrationAccount: z.array(ACLAction$outboundSchema).optional(),
+  integrationConfiguration: z.array(ACLAction$outboundSchema).optional(),
+  integrationConfigurationTransfer: z.array(ACLAction$outboundSchema)
     .optional(),
-  billingPlan: z.array(components.ACLAction$outboundSchema).optional(),
-  billingPurchaseOrder: z.array(components.ACLAction$outboundSchema).optional(),
-  billingTaxId: z.array(components.ACLAction$outboundSchema).optional(),
-  blob: z.array(components.ACLAction$outboundSchema).optional(),
-  budget: z.array(components.ACLAction$outboundSchema).optional(),
-  cacheArtifact: z.array(components.ACLAction$outboundSchema).optional(),
-  cacheArtifactUsageEvent: z.array(components.ACLAction$outboundSchema)
+  integrationConfigurationProjects: z.array(ACLAction$outboundSchema)
     .optional(),
-  codeChecks: z.array(components.ACLAction$outboundSchema).optional(),
-  concurrentBuilds: z.array(components.ACLAction$outboundSchema).optional(),
-  connect: z.array(components.ACLAction$outboundSchema).optional(),
-  connectConfiguration: z.array(components.ACLAction$outboundSchema).optional(),
-  domain: z.array(components.ACLAction$outboundSchema).optional(),
-  domainAcceptDelegation: z.array(components.ACLAction$outboundSchema)
+  integrationVercelConfigurationOverride: z.array(ACLAction$outboundSchema)
     .optional(),
-  domainAuthCodes: z.array(components.ACLAction$outboundSchema).optional(),
-  domainCertificate: z.array(components.ACLAction$outboundSchema).optional(),
-  domainCheckConfig: z.array(components.ACLAction$outboundSchema).optional(),
-  domainMove: z.array(components.ACLAction$outboundSchema).optional(),
-  domainPurchase: z.array(components.ACLAction$outboundSchema).optional(),
-  domainRecord: z.array(components.ACLAction$outboundSchema).optional(),
-  domainTransferIn: z.array(components.ACLAction$outboundSchema).optional(),
-  event: z.array(components.ACLAction$outboundSchema).optional(),
-  ownEvent: z.array(components.ACLAction$outboundSchema).optional(),
-  sensitiveEnvironmentVariablePolicy: z.array(
-    components.ACLAction$outboundSchema,
-  ).optional(),
-  fileUpload: z.array(components.ACLAction$outboundSchema).optional(),
-  gitRepository: z.array(components.ACLAction$outboundSchema).optional(),
-  ipBlocking: z.array(components.ACLAction$outboundSchema).optional(),
-  integration: z.array(components.ACLAction$outboundSchema).optional(),
-  integrationAccount: z.array(components.ACLAction$outboundSchema).optional(),
-  integrationConfiguration: z.array(components.ACLAction$outboundSchema)
+  integrationResource: z.array(ACLAction$outboundSchema).optional(),
+  integrationEvent: z.array(ACLAction$outboundSchema).optional(),
+  integrationResourceSecrets: z.array(ACLAction$outboundSchema).optional(),
+  marketplaceInstallationMember: z.array(ACLAction$outboundSchema).optional(),
+  marketplaceBillingData: z.array(ACLAction$outboundSchema).optional(),
+  marketplaceInvoice: z.array(ACLAction$outboundSchema).optional(),
+  jobGlobal: z.array(ACLAction$outboundSchema).optional(),
+  logDrain: z.array(ACLAction$outboundSchema).optional(),
+  monitoring: z.array(ACLAction$outboundSchema).optional(),
+  monitoringSettings: z.array(ACLAction$outboundSchema).optional(),
+  monitoringQuery: z.array(ACLAction$outboundSchema).optional(),
+  monitoringChart: z.array(ACLAction$outboundSchema).optional(),
+  monitoringAlert: z.array(ACLAction$outboundSchema).optional(),
+  notificationDeploymentFailed: z.array(ACLAction$outboundSchema).optional(),
+  notificationDomainConfiguration: z.array(ACLAction$outboundSchema).optional(),
+  notificationDomainExpire: z.array(ACLAction$outboundSchema).optional(),
+  notificationDomainMoved: z.array(ACLAction$outboundSchema).optional(),
+  notificationDomainPurchase: z.array(ACLAction$outboundSchema).optional(),
+  notificationDomainRenewal: z.array(ACLAction$outboundSchema).optional(),
+  notificationDomainTransfer: z.array(ACLAction$outboundSchema).optional(),
+  notificationDomainUnverified: z.array(ACLAction$outboundSchema).optional(),
+  notificationMonitoringAlert: z.array(ACLAction$outboundSchema).optional(),
+  notificationPaymentFailed: z.array(ACLAction$outboundSchema).optional(),
+  notificationUsageAlert: z.array(ACLAction$outboundSchema).optional(),
+  notificationCustomerBudget: z.array(ACLAction$outboundSchema).optional(),
+  notificationStatementOfReasons: z.array(ACLAction$outboundSchema).optional(),
+  oauth2Connection: z.array(ACLAction$outboundSchema).optional(),
+  openTelemetryEndpoint: z.array(ACLAction$outboundSchema).optional(),
+  paymentMethod: z.array(ACLAction$outboundSchema).optional(),
+  permissions: z.array(ACLAction$outboundSchema).optional(),
+  postgres: z.array(ACLAction$outboundSchema).optional(),
+  previewDeploymentSuffix: z.array(ACLAction$outboundSchema).optional(),
+  proTrialOnboarding: z.array(ACLAction$outboundSchema).optional(),
+  sharedEnvVars: z.array(ACLAction$outboundSchema).optional(),
+  sharedEnvVarsProduction: z.array(ACLAction$outboundSchema).optional(),
+  space: z.array(ACLAction$outboundSchema).optional(),
+  spaceRun: z.array(ACLAction$outboundSchema).optional(),
+  passwordProtectionInvoiceItem: z.array(ACLAction$outboundSchema).optional(),
+  rateLimit: z.array(ACLAction$outboundSchema).optional(),
+  redis: z.array(ACLAction$outboundSchema).optional(),
+  repository: z.array(ACLAction$outboundSchema).optional(),
+  remoteCaching: z.array(ACLAction$outboundSchema).optional(),
+  samlConfig: z.array(ACLAction$outboundSchema).optional(),
+  secret: z.array(ACLAction$outboundSchema).optional(),
+  redisStoreTokenSet: z.array(ACLAction$outboundSchema).optional(),
+  blobStoreTokenSet: z.array(ACLAction$outboundSchema).optional(),
+  postgresStoreTokenSet: z.array(ACLAction$outboundSchema).optional(),
+  integrationStoreTokenSet: z.array(ACLAction$outboundSchema).optional(),
+  integrationResourceReplCommand: z.array(ACLAction$outboundSchema).optional(),
+  storeTransfer: z.array(ACLAction$outboundSchema).optional(),
+  supportCase: z.array(ACLAction$outboundSchema).optional(),
+  supportCaseComment: z.array(ACLAction$outboundSchema).optional(),
+  dataCacheBillingSettings: z.array(ACLAction$outboundSchema).optional(),
+  team: z.array(ACLAction$outboundSchema).optional(),
+  teamAccessRequest: z.array(ACLAction$outboundSchema).optional(),
+  teamFellowMembership: z.array(ACLAction$outboundSchema).optional(),
+  teamGitExclusivity: z.array(ACLAction$outboundSchema).optional(),
+  teamInvite: z.array(ACLAction$outboundSchema).optional(),
+  teamInviteCode: z.array(ACLAction$outboundSchema).optional(),
+  teamJoin: z.array(ACLAction$outboundSchema).optional(),
+  teamOwnMembership: z.array(ACLAction$outboundSchema).optional(),
+  teamOwnMembershipDisconnectSAML: z.array(ACLAction$outboundSchema).optional(),
+  token: z.array(ACLAction$outboundSchema).optional(),
+  usage: z.array(ACLAction$outboundSchema).optional(),
+  usageCycle: z.array(ACLAction$outboundSchema).optional(),
+  user: z.array(ACLAction$outboundSchema).optional(),
+  userConnection: z.array(ACLAction$outboundSchema).optional(),
+  vpcPeeringConnection: z.array(ACLAction$outboundSchema).optional(),
+  webAnalyticsPlan: z.array(ACLAction$outboundSchema).optional(),
+  webAuthn: z.array(ACLAction$outboundSchema).optional(),
+  edgeConfig: z.array(ACLAction$outboundSchema).optional(),
+  edgeConfigItem: z.array(ACLAction$outboundSchema).optional(),
+  edgeConfigSchema: z.array(ACLAction$outboundSchema).optional(),
+  edgeConfigToken: z.array(ACLAction$outboundSchema).optional(),
+  webhook: z.array(ACLAction$outboundSchema).optional(),
+  webhookEvent: z.array(ACLAction$outboundSchema).optional(),
+  endpointVerification: z.array(ACLAction$outboundSchema).optional(),
+  projectTransferIn: z.array(ACLAction$outboundSchema).optional(),
+  oauth2Application: z.array(ACLAction$outboundSchema).optional(),
+  aliasProject: z.array(ACLAction$outboundSchema).optional(),
+  aliasProtectionBypass: z.array(ACLAction$outboundSchema).optional(),
+  productionAliasProtectionBypass: z.array(ACLAction$outboundSchema).optional(),
+  connectConfigurationLink: z.array(ACLAction$outboundSchema).optional(),
+  dataCacheNamespace: z.array(ACLAction$outboundSchema).optional(),
+  deployment: z.array(ACLAction$outboundSchema).optional(),
+  deploymentCheck: z.array(ACLAction$outboundSchema).optional(),
+  deploymentCheckPreview: z.array(ACLAction$outboundSchema).optional(),
+  deploymentCheckReRunFromProductionBranch: z.array(ACLAction$outboundSchema)
     .optional(),
-  integrationConfigurationTransfer: z.array(components.ACLAction$outboundSchema)
+  deploymentProductionGit: z.array(ACLAction$outboundSchema).optional(),
+  deploymentPreview: z.array(ACLAction$outboundSchema).optional(),
+  deploymentPrivate: z.array(ACLAction$outboundSchema).optional(),
+  deploymentPromote: z.array(ACLAction$outboundSchema).optional(),
+  deploymentRollback: z.array(ACLAction$outboundSchema).optional(),
+  environments: z.array(ACLAction$outboundSchema).optional(),
+  logs: z.array(ACLAction$outboundSchema).optional(),
+  logsPreset: z.array(ACLAction$outboundSchema).optional(),
+  passwordProtection: z.array(ACLAction$outboundSchema).optional(),
+  optionsAllowlist: z.array(ACLAction$outboundSchema).optional(),
+  job: z.array(ACLAction$outboundSchema).optional(),
+  project: z.array(ACLAction$outboundSchema).optional(),
+  projectAccessGroup: z.array(ACLAction$outboundSchema).optional(),
+  projectAnalyticsSampling: z.array(ACLAction$outboundSchema).optional(),
+  projectDeploymentHook: z.array(ACLAction$outboundSchema).optional(),
+  projectDomain: z.array(ACLAction$outboundSchema).optional(),
+  projectDomainMove: z.array(ACLAction$outboundSchema).optional(),
+  projectDomainCheckConfig: z.array(ACLAction$outboundSchema).optional(),
+  projectEnvVars: z.array(ACLAction$outboundSchema).optional(),
+  projectEnvVarsProduction: z.array(ACLAction$outboundSchema).optional(),
+  projectEnvVarsUnownedByIntegration: z.array(ACLAction$outboundSchema)
     .optional(),
-  integrationConfigurationProjects: z.array(components.ACLAction$outboundSchema)
-    .optional(),
-  integrationVercelConfigurationOverride: z.array(
-    components.ACLAction$outboundSchema,
-  ).optional(),
-  integrationResource: z.array(components.ACLAction$outboundSchema).optional(),
-  integrationEvent: z.array(components.ACLAction$outboundSchema).optional(),
-  integrationResourceSecrets: z.array(components.ACLAction$outboundSchema)
-    .optional(),
-  marketplaceInstallationMember: z.array(components.ACLAction$outboundSchema)
-    .optional(),
-  marketplaceBillingData: z.array(components.ACLAction$outboundSchema)
-    .optional(),
-  marketplaceInvoice: z.array(components.ACLAction$outboundSchema).optional(),
-  jobGlobal: z.array(components.ACLAction$outboundSchema).optional(),
-  logDrain: z.array(components.ACLAction$outboundSchema).optional(),
-  monitoring: z.array(components.ACLAction$outboundSchema).optional(),
-  monitoringSettings: z.array(components.ACLAction$outboundSchema).optional(),
-  monitoringQuery: z.array(components.ACLAction$outboundSchema).optional(),
-  monitoringChart: z.array(components.ACLAction$outboundSchema).optional(),
-  monitoringAlert: z.array(components.ACLAction$outboundSchema).optional(),
-  notificationDeploymentFailed: z.array(components.ACLAction$outboundSchema)
-    .optional(),
-  notificationDomainConfiguration: z.array(components.ACLAction$outboundSchema)
-    .optional(),
-  notificationDomainExpire: z.array(components.ACLAction$outboundSchema)
-    .optional(),
-  notificationDomainMoved: z.array(components.ACLAction$outboundSchema)
-    .optional(),
-  notificationDomainPurchase: z.array(components.ACLAction$outboundSchema)
-    .optional(),
-  notificationDomainRenewal: z.array(components.ACLAction$outboundSchema)
-    .optional(),
-  notificationDomainTransfer: z.array(components.ACLAction$outboundSchema)
-    .optional(),
-  notificationDomainUnverified: z.array(components.ACLAction$outboundSchema)
-    .optional(),
-  notificationMonitoringAlert: z.array(components.ACLAction$outboundSchema)
-    .optional(),
-  notificationPaymentFailed: z.array(components.ACLAction$outboundSchema)
-    .optional(),
-  notificationUsageAlert: z.array(components.ACLAction$outboundSchema)
-    .optional(),
-  notificationCustomerBudget: z.array(components.ACLAction$outboundSchema)
-    .optional(),
-  notificationStatementOfReasons: z.array(components.ACLAction$outboundSchema)
-    .optional(),
-  oauth2Connection: z.array(components.ACLAction$outboundSchema).optional(),
-  openTelemetryEndpoint: z.array(components.ACLAction$outboundSchema)
-    .optional(),
-  paymentMethod: z.array(components.ACLAction$outboundSchema).optional(),
-  permissions: z.array(components.ACLAction$outboundSchema).optional(),
-  postgres: z.array(components.ACLAction$outboundSchema).optional(),
-  previewDeploymentSuffix: z.array(components.ACLAction$outboundSchema)
-    .optional(),
-  proTrialOnboarding: z.array(components.ACLAction$outboundSchema).optional(),
-  sharedEnvVars: z.array(components.ACLAction$outboundSchema).optional(),
-  sharedEnvVarsProduction: z.array(components.ACLAction$outboundSchema)
-    .optional(),
-  space: z.array(components.ACLAction$outboundSchema).optional(),
-  spaceRun: z.array(components.ACLAction$outboundSchema).optional(),
-  passwordProtectionInvoiceItem: z.array(components.ACLAction$outboundSchema)
-    .optional(),
-  rateLimit: z.array(components.ACLAction$outboundSchema).optional(),
-  redis: z.array(components.ACLAction$outboundSchema).optional(),
-  repository: z.array(components.ACLAction$outboundSchema).optional(),
-  remoteCaching: z.array(components.ACLAction$outboundSchema).optional(),
-  samlConfig: z.array(components.ACLAction$outboundSchema).optional(),
-  secret: z.array(components.ACLAction$outboundSchema).optional(),
-  redisStoreTokenSet: z.array(components.ACLAction$outboundSchema).optional(),
-  blobStoreTokenSet: z.array(components.ACLAction$outboundSchema).optional(),
-  postgresStoreTokenSet: z.array(components.ACLAction$outboundSchema)
-    .optional(),
-  integrationStoreTokenSet: z.array(components.ACLAction$outboundSchema)
-    .optional(),
-  integrationResourceReplCommand: z.array(components.ACLAction$outboundSchema)
-    .optional(),
-  storeTransfer: z.array(components.ACLAction$outboundSchema).optional(),
-  supportCase: z.array(components.ACLAction$outboundSchema).optional(),
-  supportCaseComment: z.array(components.ACLAction$outboundSchema).optional(),
-  dataCacheBillingSettings: z.array(components.ACLAction$outboundSchema)
-    .optional(),
-  team: z.array(components.ACLAction$outboundSchema).optional(),
-  teamAccessRequest: z.array(components.ACLAction$outboundSchema).optional(),
-  teamFellowMembership: z.array(components.ACLAction$outboundSchema).optional(),
-  teamGitExclusivity: z.array(components.ACLAction$outboundSchema).optional(),
-  teamInvite: z.array(components.ACLAction$outboundSchema).optional(),
-  teamInviteCode: z.array(components.ACLAction$outboundSchema).optional(),
-  teamJoin: z.array(components.ACLAction$outboundSchema).optional(),
-  teamOwnMembership: z.array(components.ACLAction$outboundSchema).optional(),
-  teamOwnMembershipDisconnectSAML: z.array(components.ACLAction$outboundSchema)
-    .optional(),
-  token: z.array(components.ACLAction$outboundSchema).optional(),
-  usage: z.array(components.ACLAction$outboundSchema).optional(),
-  usageCycle: z.array(components.ACLAction$outboundSchema).optional(),
-  user: z.array(components.ACLAction$outboundSchema).optional(),
-  userConnection: z.array(components.ACLAction$outboundSchema).optional(),
-  vpcPeeringConnection: z.array(components.ACLAction$outboundSchema).optional(),
-  webAnalyticsPlan: z.array(components.ACLAction$outboundSchema).optional(),
-  webAuthn: z.array(components.ACLAction$outboundSchema).optional(),
-  edgeConfig: z.array(components.ACLAction$outboundSchema).optional(),
-  edgeConfigItem: z.array(components.ACLAction$outboundSchema).optional(),
-  edgeConfigSchema: z.array(components.ACLAction$outboundSchema).optional(),
-  edgeConfigToken: z.array(components.ACLAction$outboundSchema).optional(),
-  webhook: z.array(components.ACLAction$outboundSchema).optional(),
-  webhookEvent: z.array(components.ACLAction$outboundSchema).optional(),
-  endpointVerification: z.array(components.ACLAction$outboundSchema).optional(),
-  projectTransferIn: z.array(components.ACLAction$outboundSchema).optional(),
-  oauth2Application: z.array(components.ACLAction$outboundSchema).optional(),
-  aliasProject: z.array(components.ACLAction$outboundSchema).optional(),
-  aliasProtectionBypass: z.array(components.ACLAction$outboundSchema)
-    .optional(),
-  productionAliasProtectionBypass: z.array(components.ACLAction$outboundSchema)
-    .optional(),
-  connectConfigurationLink: z.array(components.ACLAction$outboundSchema)
-    .optional(),
-  dataCacheNamespace: z.array(components.ACLAction$outboundSchema).optional(),
-  deployment: z.array(components.ACLAction$outboundSchema).optional(),
-  deploymentCheck: z.array(components.ACLAction$outboundSchema).optional(),
-  deploymentCheckPreview: z.array(components.ACLAction$outboundSchema)
-    .optional(),
-  deploymentCheckReRunFromProductionBranch: z.array(
-    components.ACLAction$outboundSchema,
-  ).optional(),
-  deploymentProductionGit: z.array(components.ACLAction$outboundSchema)
-    .optional(),
-  deploymentPreview: z.array(components.ACLAction$outboundSchema).optional(),
-  deploymentPrivate: z.array(components.ACLAction$outboundSchema).optional(),
-  deploymentPromote: z.array(components.ACLAction$outboundSchema).optional(),
-  deploymentRollback: z.array(components.ACLAction$outboundSchema).optional(),
-  environments: z.array(components.ACLAction$outboundSchema).optional(),
-  logs: z.array(components.ACLAction$outboundSchema).optional(),
-  logsPreset: z.array(components.ACLAction$outboundSchema).optional(),
-  passwordProtection: z.array(components.ACLAction$outboundSchema).optional(),
-  optionsAllowlist: z.array(components.ACLAction$outboundSchema).optional(),
-  job: z.array(components.ACLAction$outboundSchema).optional(),
-  project: z.array(components.ACLAction$outboundSchema).optional(),
-  projectAccessGroup: z.array(components.ACLAction$outboundSchema).optional(),
-  projectAnalyticsSampling: z.array(components.ACLAction$outboundSchema)
-    .optional(),
-  projectDeploymentHook: z.array(components.ACLAction$outboundSchema)
-    .optional(),
-  projectDomain: z.array(components.ACLAction$outboundSchema).optional(),
-  projectDomainMove: z.array(components.ACLAction$outboundSchema).optional(),
-  projectDomainCheckConfig: z.array(components.ACLAction$outboundSchema)
-    .optional(),
-  projectEnvVars: z.array(components.ACLAction$outboundSchema).optional(),
-  projectEnvVarsProduction: z.array(components.ACLAction$outboundSchema)
-    .optional(),
-  projectEnvVarsUnownedByIntegration: z.array(
-    components.ACLAction$outboundSchema,
-  ).optional(),
-  projectFlags: z.array(components.ACLAction$outboundSchema).optional(),
-  projectId: z.array(components.ACLAction$outboundSchema).optional(),
-  projectIntegrationConfiguration: z.array(components.ACLAction$outboundSchema)
-    .optional(),
-  projectLink: z.array(components.ACLAction$outboundSchema).optional(),
-  projectMember: z.array(components.ACLAction$outboundSchema).optional(),
-  projectMonitoring: z.array(components.ACLAction$outboundSchema).optional(),
-  projectPermissions: z.array(components.ACLAction$outboundSchema).optional(),
-  projectProductionBranch: z.array(components.ACLAction$outboundSchema)
-    .optional(),
-  projectTransfer: z.array(components.ACLAction$outboundSchema).optional(),
-  projectTransferOut: z.array(components.ACLAction$outboundSchema).optional(),
-  projectProtectionBypass: z.array(components.ACLAction$outboundSchema)
-    .optional(),
-  projectUsage: z.array(components.ACLAction$outboundSchema).optional(),
-  projectAnalyticsUsage: z.array(components.ACLAction$outboundSchema)
-    .optional(),
-  projectSupportCase: z.array(components.ACLAction$outboundSchema).optional(),
-  projectSupportCaseComment: z.array(components.ACLAction$outboundSchema)
-    .optional(),
-  projectDeploymentExpiration: z.array(components.ACLAction$outboundSchema)
-    .optional(),
-  projectTier: z.array(components.ACLAction$outboundSchema).optional(),
-  seawallConfig: z.array(components.ACLAction$outboundSchema).optional(),
-  skewProtection: z.array(components.ACLAction$outboundSchema).optional(),
-  analytics: z.array(components.ACLAction$outboundSchema).optional(),
-  trustedIps: z.array(components.ACLAction$outboundSchema).optional(),
-  webAnalytics: z.array(components.ACLAction$outboundSchema).optional(),
-  sharedEnvVarConnection: z.array(components.ACLAction$outboundSchema)
-    .optional(),
-  sonar: z.array(components.ACLAction$outboundSchema).optional(),
+  projectFlags: z.array(ACLAction$outboundSchema).optional(),
+  projectId: z.array(ACLAction$outboundSchema).optional(),
+  projectIntegrationConfiguration: z.array(ACLAction$outboundSchema).optional(),
+  projectLink: z.array(ACLAction$outboundSchema).optional(),
+  projectMember: z.array(ACLAction$outboundSchema).optional(),
+  projectMonitoring: z.array(ACLAction$outboundSchema).optional(),
+  projectPermissions: z.array(ACLAction$outboundSchema).optional(),
+  projectProductionBranch: z.array(ACLAction$outboundSchema).optional(),
+  projectTransfer: z.array(ACLAction$outboundSchema).optional(),
+  projectTransferOut: z.array(ACLAction$outboundSchema).optional(),
+  projectProtectionBypass: z.array(ACLAction$outboundSchema).optional(),
+  projectUsage: z.array(ACLAction$outboundSchema).optional(),
+  projectAnalyticsUsage: z.array(ACLAction$outboundSchema).optional(),
+  projectSupportCase: z.array(ACLAction$outboundSchema).optional(),
+  projectSupportCaseComment: z.array(ACLAction$outboundSchema).optional(),
+  projectDeploymentExpiration: z.array(ACLAction$outboundSchema).optional(),
+  projectTier: z.array(ACLAction$outboundSchema).optional(),
+  seawallConfig: z.array(ACLAction$outboundSchema).optional(),
+  skewProtection: z.array(ACLAction$outboundSchema).optional(),
+  analytics: z.array(ACLAction$outboundSchema).optional(),
+  trustedIps: z.array(ACLAction$outboundSchema).optional(),
+  webAnalytics: z.array(ACLAction$outboundSchema).optional(),
+  sharedEnvVarConnection: z.array(ACLAction$outboundSchema).optional(),
+  sonar: z.array(ACLAction$outboundSchema).optional(),
 }).transform((v) => {
   return remap$(v, {
     monitoring: "Monitoring",

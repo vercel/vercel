@@ -5,7 +5,7 @@ The webhooks events
 ## Example Usage
 
 ```typescript
-import { GetWebhookEvents } from "@vercel/sdk/models/operations";
+import { GetWebhookEvents } from "@vercel/sdk/models/operations/getwebhook.js";
 
 let value: GetWebhookEvents = "deployment.created";
 ```

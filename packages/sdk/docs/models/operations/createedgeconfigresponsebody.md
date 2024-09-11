@@ -5,7 +5,7 @@ An Edge Config
 ## Example Usage
 
 ```typescript
-import { CreateEdgeConfigResponseBody } from "@vercel/sdk/models/operations";
+import { CreateEdgeConfigResponseBody } from "@vercel/sdk/models/operations/createedgeconfig.js";
 
 let value: CreateEdgeConfigResponseBody = {
   sizeInBytes: 5349.17,

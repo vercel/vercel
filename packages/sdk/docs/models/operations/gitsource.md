@@ -5,7 +5,7 @@ Defines the Git Repository source to be deployed. This property can not be used 
 ## Example Usage
 
 ```typescript
-import { GitSource } from "@vercel/sdk/models/operations";
+import { GitSource } from "@vercel/sdk/models/operations/createdeployment.js";
 
 let value: GitSource = {
   owner: "<value>",

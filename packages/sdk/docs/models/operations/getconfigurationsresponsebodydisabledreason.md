@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { GetConfigurationsResponseBodyDisabledReason } from "@vercel/sdk/models/operations";
+import { GetConfigurationsResponseBodyDisabledReason } from "@vercel/sdk/models/operations/getconfigurations.js";
 
 let value: GetConfigurationsResponseBodyDisabledReason =
   "feature-not-available";

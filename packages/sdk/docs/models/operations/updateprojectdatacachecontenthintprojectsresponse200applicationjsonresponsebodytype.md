@@ -5,7 +5,7 @@
 ```typescript
 import {
   UpdateProjectDataCacheContentHintProjectsResponse200ApplicationJSONResponseBodyType,
-} from "@vercel/sdk/models/operations";
+} from "@vercel/sdk/models/operations/updateprojectdatacache.js";
 
 let value:
   UpdateProjectDataCacheContentHintProjectsResponse200ApplicationJSONResponseBodyType =

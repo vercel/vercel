@@ -21,7 +21,12 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  CreateOrTransferDomainRequest,
+  CreateOrTransferDomainRequest$outboundSchema,
+  CreateOrTransferDomainResponseBody,
+  CreateOrTransferDomainResponseBody$inboundSchema,
+} from "../models/operations/createortransferdomain.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -32,11 +37,11 @@ import { Result } from "../types/fp.js";
  */
 export async function domainsCreateOrTransfer(
   client$: VercelCore,
-  request: operations.CreateOrTransferDomainRequest,
+  request: CreateOrTransferDomainRequest,
   options?: RequestOptions,
 ): Promise<
   Result<
-    operations.CreateOrTransferDomainResponseBody,
+    CreateOrTransferDomainResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -50,8 +55,7 @@ export async function domainsCreateOrTransfer(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) =>
-      operations.CreateOrTransferDomainRequest$outboundSchema.parse(value$),
+    (value$) => CreateOrTransferDomainRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {
@@ -108,7 +112,7 @@ export async function domainsCreateOrTransfer(
   const response = doResult.value;
 
   const [result$] = await m$.match<
-    operations.CreateOrTransferDomainResponseBody,
+    CreateOrTransferDomainResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -117,7 +121,7 @@ export async function domainsCreateOrTransfer(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(200, operations.CreateOrTransferDomainResponseBody$inboundSchema),
+    m$.json(200, CreateOrTransferDomainResponseBody$inboundSchema),
     m$.fail([400, 401, 402, 403, 404, 409, "4XX", "5XX"]),
   )(response);
   if (!result$.ok) {

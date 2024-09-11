@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { GetSecretRequest } from "@vercel/sdk/models/operations";
+import { GetSecretRequest } from "@vercel/sdk/models/operations/getsecret.js";
 
 let value: GetSecretRequest = {
   idOrName: "sec_RKc5iV0rV3ZSrFrHiruRno7k",

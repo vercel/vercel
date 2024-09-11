@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { GetProjectsCrons } from "@vercel/sdk/models/operations";
+import { GetProjectsCrons } from "@vercel/sdk/models/operations/getprojects.js";
 
 let value: GetProjectsCrons = {
   enabledAt: 8411.4,

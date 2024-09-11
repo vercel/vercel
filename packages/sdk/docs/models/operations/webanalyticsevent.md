@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { WebAnalyticsEvent } from "@vercel/sdk/models/operations";
+import { WebAnalyticsEvent } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: WebAnalyticsEvent = {
   price: 7731.1,

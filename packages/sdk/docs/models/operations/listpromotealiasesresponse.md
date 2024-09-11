@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { ListPromoteAliasesResponse } from "@vercel/sdk/models/operations";
+import { ListPromoteAliasesResponse } from "@vercel/sdk/models/operations/listpromotealiases.js";
 
 let value: ListPromoteAliasesResponse = {
   result: {},

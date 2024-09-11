@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { JoinedFrom } from "@vercel/sdk/models/components";
+import { JoinedFrom } from "@vercel/sdk/models/components/teamlimited.js";
 
 let value: JoinedFrom = {
   origin: "dsync",

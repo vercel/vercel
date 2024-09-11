@@ -22,7 +22,10 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  ArtifactExistsRequest,
+  ArtifactExistsRequest$outboundSchema,
+} from "../models/operations/artifactexists.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -33,7 +36,7 @@ import { Result } from "../types/fp.js";
  */
 export async function artifactsExists(
   client$: VercelCore,
-  request: operations.ArtifactExistsRequest,
+  request: ArtifactExistsRequest,
   options?: RequestOptions,
 ): Promise<
   Result<
@@ -51,7 +54,7 @@ export async function artifactsExists(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) => operations.ArtifactExistsRequest$outboundSchema.parse(value$),
+    (value$) => ArtifactExistsRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {

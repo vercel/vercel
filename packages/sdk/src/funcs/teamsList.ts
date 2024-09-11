@@ -18,7 +18,12 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  GetTeamsRequest,
+  GetTeamsRequest$outboundSchema,
+  GetTeamsResponseBody,
+  GetTeamsResponseBody$inboundSchema,
+} from "../models/operations/getteams.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -29,11 +34,11 @@ import { Result } from "../types/fp.js";
  */
 export async function teamsList(
   client$: VercelCore,
-  request: operations.GetTeamsRequest,
+  request: GetTeamsRequest,
   options?: RequestOptions,
 ): Promise<
   Result<
-    operations.GetTeamsResponseBody,
+    GetTeamsResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -47,7 +52,7 @@ export async function teamsList(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) => operations.GetTeamsRequest$outboundSchema.parse(value$),
+    (value$) => GetTeamsRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {
@@ -104,7 +109,7 @@ export async function teamsList(
   const response = doResult.value;
 
   const [result$] = await m$.match<
-    operations.GetTeamsResponseBody,
+    GetTeamsResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -113,7 +118,7 @@ export async function teamsList(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(200, operations.GetTeamsResponseBody$inboundSchema),
+    m$.json(200, GetTeamsResponseBody$inboundSchema),
     m$.fail([400, 403, "4XX", "5XX"]),
   )(response);
   if (!result$.ok) {

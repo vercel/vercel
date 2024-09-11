@@ -5,7 +5,7 @@ move-out
 ## Example Usage
 
 ```typescript
-import { PatchDomainRequestBody2 } from "@vercel/sdk/models/operations";
+import { PatchDomainRequestBody2 } from "@vercel/sdk/models/operations/patchdomain.js";
 
 let value: PatchDomainRequestBody2 = {
   op: "move-out",

@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { AuthUserBillingInvoiceItemsPostgresDatabaseMatrix } from "@vercel/sdk/models/components";
+import { AuthUserBillingInvoiceItemsPostgresDatabaseMatrix } from "@vercel/sdk/models/components/authuser.js";
 
 let value: AuthUserBillingInvoiceItemsPostgresDatabaseMatrix = {
   defaultUnitPrice: "<value>",

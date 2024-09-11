@@ -18,7 +18,12 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  DeleteTeamInviteCodeRequest,
+  DeleteTeamInviteCodeRequest$outboundSchema,
+  DeleteTeamInviteCodeResponseBody,
+  DeleteTeamInviteCodeResponseBody$inboundSchema,
+} from "../models/operations/deleteteaminvitecode.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -29,11 +34,11 @@ import { Result } from "../types/fp.js";
  */
 export async function teamsDeleteInviteCode(
   client$: VercelCore,
-  request: operations.DeleteTeamInviteCodeRequest,
+  request: DeleteTeamInviteCodeRequest,
   options?: RequestOptions,
 ): Promise<
   Result<
-    operations.DeleteTeamInviteCodeResponseBody,
+    DeleteTeamInviteCodeResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -47,8 +52,7 @@ export async function teamsDeleteInviteCode(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) =>
-      operations.DeleteTeamInviteCodeRequest$outboundSchema.parse(value$),
+    (value$) => DeleteTeamInviteCodeRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {
@@ -111,7 +115,7 @@ export async function teamsDeleteInviteCode(
   const response = doResult.value;
 
   const [result$] = await m$.match<
-    operations.DeleteTeamInviteCodeResponseBody,
+    DeleteTeamInviteCodeResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -120,7 +124,7 @@ export async function teamsDeleteInviteCode(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(200, operations.DeleteTeamInviteCodeResponseBody$inboundSchema),
+    m$.json(200, DeleteTeamInviteCodeResponseBody$inboundSchema),
     m$.fail([400, 401, 403, 404, "4XX", "5XX"]),
   )(response);
   if (!result$.ok) {

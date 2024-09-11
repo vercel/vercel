@@ -5,7 +5,12 @@
 import * as z from "zod";
 import { remap as remap$ } from "../../lib/primitives.js";
 import { ClosedEnum } from "../../types/enums.js";
-import * as components from "../components/index.js";
+import {
+  Pagination,
+  Pagination$inboundSchema,
+  Pagination$Outbound,
+  Pagination$outboundSchema,
+} from "../components/pagination.js";
 
 /**
  * Filters only production domains when set to `true`.
@@ -144,7 +149,7 @@ export type GetProjectDomainsResponseBody = {
   /**
    * This object contains information related to the pagination of the current request, including the necessary parameters to get the next or previous page of data.
    */
-  pagination: components.Pagination;
+  pagination: Pagination;
 };
 
 export type GetProjectDomainsResponse = {
@@ -419,13 +424,13 @@ export const GetProjectDomainsResponseBody$inboundSchema: z.ZodType<
   unknown
 > = z.object({
   domains: z.array(z.lazy(() => GetProjectDomainsDomains$inboundSchema)),
-  pagination: components.Pagination$inboundSchema,
+  pagination: Pagination$inboundSchema,
 });
 
 /** @internal */
 export type GetProjectDomainsResponseBody$Outbound = {
   domains: Array<GetProjectDomainsDomains$Outbound>;
-  pagination: components.Pagination$Outbound;
+  pagination: Pagination$Outbound;
 };
 
 /** @internal */
@@ -435,7 +440,7 @@ export const GetProjectDomainsResponseBody$outboundSchema: z.ZodType<
   GetProjectDomainsResponseBody
 > = z.object({
   domains: z.array(z.lazy(() => GetProjectDomainsDomains$outboundSchema)),
-  pagination: components.Pagination$outboundSchema,
+  pagination: Pagination$outboundSchema,
 });
 
 /**

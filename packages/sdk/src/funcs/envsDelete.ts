@@ -21,7 +21,12 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  RemoveProjectEnvRequest,
+  RemoveProjectEnvRequest$outboundSchema,
+  RemoveProjectEnvResponseBody,
+  RemoveProjectEnvResponseBody$inboundSchema,
+} from "../models/operations/removeprojectenv.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -32,11 +37,11 @@ import { Result } from "../types/fp.js";
  */
 export async function envsDelete(
   client$: VercelCore,
-  request: operations.RemoveProjectEnvRequest,
+  request: RemoveProjectEnvRequest,
   options?: RequestOptions,
 ): Promise<
   Result<
-    operations.RemoveProjectEnvResponseBody,
+    RemoveProjectEnvResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -50,7 +55,7 @@ export async function envsDelete(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) => operations.RemoveProjectEnvRequest$outboundSchema.parse(value$),
+    (value$) => RemoveProjectEnvRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {
@@ -117,7 +122,7 @@ export async function envsDelete(
   const response = doResult.value;
 
   const [result$] = await m$.match<
-    operations.RemoveProjectEnvResponseBody,
+    RemoveProjectEnvResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -126,7 +131,7 @@ export async function envsDelete(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(200, operations.RemoveProjectEnvResponseBody$inboundSchema),
+    m$.json(200, RemoveProjectEnvResponseBody$inboundSchema),
     m$.fail([400, 401, 403, 404, 409, "4XX", "5XX"]),
   )(response);
   if (!result$.ok) {

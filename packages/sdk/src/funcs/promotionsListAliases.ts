@@ -22,7 +22,12 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  ListPromoteAliasesRequest,
+  ListPromoteAliasesRequest$outboundSchema,
+  ListPromoteAliasesResponse,
+  ListPromoteAliasesResponse$inboundSchema,
+} from "../models/operations/listpromotealiases.js";
 import { Result } from "../types/fp.js";
 import {
   createPageIterator,
@@ -39,12 +44,12 @@ import {
  */
 export async function promotionsListAliases(
   client$: VercelCore,
-  request: operations.ListPromoteAliasesRequest,
+  request: ListPromoteAliasesRequest,
   options?: RequestOptions,
 ): Promise<
   PageIterator<
     Result<
-      operations.ListPromoteAliasesResponse,
+      ListPromoteAliasesResponse,
       | SDKError
       | SDKValidationError
       | UnexpectedClientError
@@ -59,8 +64,7 @@ export async function promotionsListAliases(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) =>
-      operations.ListPromoteAliasesRequest$outboundSchema.parse(value$),
+    (value$) => ListPromoteAliasesRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {
@@ -133,7 +137,7 @@ export async function promotionsListAliases(
   };
 
   const [result$, raw$] = await m$.match<
-    operations.ListPromoteAliasesResponse,
+    ListPromoteAliasesResponse,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -142,9 +146,7 @@ export async function promotionsListAliases(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(200, operations.ListPromoteAliasesResponse$inboundSchema, {
-      key: "Result",
-    }),
+    m$.json(200, ListPromoteAliasesResponse$inboundSchema, { key: "Result" }),
     m$.fail([400, 401, 403, 404, "4XX", "5XX"]),
   )(response, { extraFields: responseFields$ });
   if (!result$.ok) {
@@ -155,7 +157,7 @@ export async function promotionsListAliases(
     responseData: unknown,
   ): Paginator<
     Result<
-      operations.ListPromoteAliasesResponse,
+      ListPromoteAliasesResponse,
       | SDKError
       | SDKValidationError
       | UnexpectedClientError

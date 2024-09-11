@@ -5,7 +5,7 @@ Since June '23
 ## Example Usage
 
 ```typescript
-import { GetDeploymentsGitComments } from "@vercel/sdk/models/operations";
+import { GetDeploymentsGitComments } from "@vercel/sdk/models/operations/getdeployments.js";
 
 let value: GetDeploymentsGitComments = {
   onPullRequest: false,

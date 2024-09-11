@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { Repos } from "@vercel/sdk/models/operations";
+import { Repos } from "@vercel/sdk/models/operations/searchrepo.js";
 
 let value: Repos = {
   id: 6423.52,

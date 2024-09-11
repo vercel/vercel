@@ -21,7 +21,12 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  GetCheckRequest,
+  GetCheckRequest$outboundSchema,
+  GetCheckResponseBody,
+  GetCheckResponseBody$inboundSchema,
+} from "../models/operations/getcheck.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -32,11 +37,11 @@ import { Result } from "../types/fp.js";
  */
 export async function checksGet(
   client$: VercelCore,
-  request: operations.GetCheckRequest,
+  request: GetCheckRequest,
   options?: RequestOptions,
 ): Promise<
   Result<
-    operations.GetCheckResponseBody,
+    GetCheckResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -50,7 +55,7 @@ export async function checksGet(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) => operations.GetCheckRequest$outboundSchema.parse(value$),
+    (value$) => GetCheckRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {
@@ -119,7 +124,7 @@ export async function checksGet(
   const response = doResult.value;
 
   const [result$] = await m$.match<
-    operations.GetCheckResponseBody,
+    GetCheckResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -128,7 +133,7 @@ export async function checksGet(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(200, operations.GetCheckResponseBody$inboundSchema),
+    m$.json(200, GetCheckResponseBody$inboundSchema),
     m$.fail([400, 401, 403, 404, "4XX", "5XX"]),
   )(response);
   if (!result$.ok) {

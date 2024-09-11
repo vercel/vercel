@@ -5,7 +5,7 @@ A paginated list of teams.
 ## Example Usage
 
 ```typescript
-import { GetTeamsResponseBody } from "@vercel/sdk/models/operations";
+import { GetTeamsResponseBody } from "@vercel/sdk/models/operations/getteams.js";
 
 let value: GetTeamsResponseBody = {
   teams: [

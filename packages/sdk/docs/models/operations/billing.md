@@ -5,7 +5,7 @@ IMPORTANT: If extending Billing, particularly with optional fields, make sure yo
 ## Example Usage
 
 ```typescript
-import { Billing } from "@vercel/sdk/models/operations";
+import { Billing } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: Billing = {
   period: {

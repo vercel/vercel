@@ -7,7 +7,7 @@ If true, the environment variable value will be decrypted
 ## Example Usage
 
 ```typescript
-import { Decrypt } from "@vercel/sdk/models/operations";
+import { Decrypt } from "@vercel/sdk/models/operations/filterprojectenvs.js";
 
 let value: Decrypt = "true";
 ```

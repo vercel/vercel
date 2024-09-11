@@ -5,7 +5,7 @@ The role of this user in the team.
 ## Example Usage
 
 ```typescript
-import { ResponseBodyTeamRole } from "@vercel/sdk/models/operations";
+import { ResponseBodyTeamRole } from "@vercel/sdk/models/operations/getprojectmembers.js";
 
 let value: ResponseBodyTeamRole = "CONTRIBUTOR";
 ```

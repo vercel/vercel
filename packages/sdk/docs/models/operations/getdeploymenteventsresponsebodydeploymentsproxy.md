@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { GetDeploymentEventsResponseBodyDeploymentsProxy } from "@vercel/sdk/models/operations";
+import { GetDeploymentEventsResponseBodyDeploymentsProxy } from "@vercel/sdk/models/operations/getdeploymentevents.js";
 
 let value: GetDeploymentEventsResponseBodyDeploymentsProxy = {
   timestamp: 7832.35,

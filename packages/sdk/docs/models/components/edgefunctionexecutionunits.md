@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { EdgeFunctionExecutionUnits } from "@vercel/sdk/models/components";
+import { EdgeFunctionExecutionUnits } from "@vercel/sdk/models/components/authuser.js";
 
 let value: EdgeFunctionExecutionUnits = {
   price: 8798.57,

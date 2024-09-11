@@ -5,7 +5,7 @@ Either not defined, `staging`, or `production`. If `staging`, a staging alias in
 ## Example Usage
 
 ```typescript
-import { Target } from "@vercel/sdk/models/operations";
+import { Target } from "@vercel/sdk/models/operations/createdeployment.js";
 
 let value: Target = "staging";
 ```

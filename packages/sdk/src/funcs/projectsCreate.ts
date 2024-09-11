@@ -21,7 +21,12 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  CreateProjectRequest,
+  CreateProjectRequest$outboundSchema,
+  CreateProjectResponseBody,
+  CreateProjectResponseBody$inboundSchema,
+} from "../models/operations/createproject.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -32,11 +37,11 @@ import { Result } from "../types/fp.js";
  */
 export async function projectsCreate(
   client$: VercelCore,
-  request: operations.CreateProjectRequest,
+  request: CreateProjectRequest,
   options?: RequestOptions,
 ): Promise<
   Result<
-    operations.CreateProjectResponseBody,
+    CreateProjectResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -50,7 +55,7 @@ export async function projectsCreate(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) => operations.CreateProjectRequest$outboundSchema.parse(value$),
+    (value$) => CreateProjectRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {
@@ -107,7 +112,7 @@ export async function projectsCreate(
   const response = doResult.value;
 
   const [result$] = await m$.match<
-    operations.CreateProjectResponseBody,
+    CreateProjectResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -116,7 +121,7 @@ export async function projectsCreate(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(200, operations.CreateProjectResponseBody$inboundSchema),
+    m$.json(200, CreateProjectResponseBody$inboundSchema),
     m$.fail([400, 401, 402, 403, 409, "4XX", "5XX"]),
   )(response);
   if (!result$.ok) {

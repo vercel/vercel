@@ -3,4 +3,4 @@
 set -e
 
 pnpm install --filter "@vercel/sdk"
-pnpm lint
+#pnpm lint

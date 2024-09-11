@@ -5,7 +5,7 @@ The log drain was successfully created
 ## Example Usage
 
 ```typescript
-import { CreateLogDrainResponseBody } from "@vercel/sdk/models/operations";
+import { CreateLogDrainResponseBody } from "@vercel/sdk/models/operations/createlogdrain.js";
 
 let value: CreateLogDrainResponseBody = {
   clientId: "oac_xRhY4LAB7yLhUADD69EvV7ct",

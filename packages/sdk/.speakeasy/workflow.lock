@@ -3,7 +3,7 @@ sources: {}
 targets:
     vercel:
         source: vercel-OAS
-        outLocation: /github/workspace/repo/packages/sdk
+        outLocation: /Users/ismael/Code/vercel/vercel/packages/sdk
 workflow:
     workflowVersion: 1.0.0
     speakeasyVersion: latest

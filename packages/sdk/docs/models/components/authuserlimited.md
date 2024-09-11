@@ -5,7 +5,7 @@ A limited form of data for the currently authenticated User, due to the authenti
 ## Example Usage
 
 ```typescript
-import { AuthUserLimited } from "@vercel/sdk/models/components";
+import { AuthUserLimited } from "@vercel/sdk/models/components/authuserlimited.js";
 
 let value: AuthUserLimited = {
   limited: false,

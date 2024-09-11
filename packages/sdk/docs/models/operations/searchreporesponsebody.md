@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { SearchRepoResponseBody } from "@vercel/sdk/models/operations";
+import { SearchRepoResponseBody } from "@vercel/sdk/models/operations/searchrepo.js";
 
 let value: SearchRepoResponseBody = {
   gitAccount: {

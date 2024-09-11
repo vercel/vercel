@@ -5,7 +5,7 @@ The domain was updated successfuly
 ## Example Usage
 
 ```typescript
-import { UpdateProjectDomainResponseBody } from "@vercel/sdk/models/operations";
+import { UpdateProjectDomainResponseBody } from "@vercel/sdk/models/operations/updateprojectdomain.js";
 
 let value: UpdateProjectDomainResponseBody = {
   name: "<value>",

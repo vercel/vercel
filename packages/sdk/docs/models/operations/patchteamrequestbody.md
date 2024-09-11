@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { PatchTeamRequestBody } from "@vercel/sdk/models/operations";
+import { PatchTeamRequestBody } from "@vercel/sdk/models/operations/patchteam.js";
 
 let value: PatchTeamRequestBody = {
   description: "Our mission is to make cloud computing accessible to everyone",

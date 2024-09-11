@@ -5,7 +5,7 @@ An object describing the reason why the User account is being deleted.
 ## Example Usage
 
 ```typescript
-import { RequestDeleteReasons } from "@vercel/sdk/models/operations";
+import { RequestDeleteReasons } from "@vercel/sdk/models/operations/requestdelete.js";
 
 let value: RequestDeleteReasons = {
   slug: "<value>",

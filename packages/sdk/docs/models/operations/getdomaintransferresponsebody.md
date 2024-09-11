@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { GetDomainTransferResponseBody } from "@vercel/sdk/models/operations";
+import { GetDomainTransferResponseBody } from "@vercel/sdk/models/operations/getdomaintransfer.js";
 
 let value: GetDomainTransferResponseBody = {
   transferable: false,

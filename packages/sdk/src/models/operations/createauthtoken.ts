@@ -5,7 +5,12 @@
 import * as z from "zod";
 import { remap as remap$ } from "../../lib/primitives.js";
 import { ClosedEnum } from "../../types/enums.js";
-import * as components from "../components/index.js";
+import {
+  AuthToken,
+  AuthToken$inboundSchema,
+  AuthToken$Outbound,
+  AuthToken$outboundSchema,
+} from "../components/authtoken.js";
 
 export const CreateAuthTokenRequestBodyType = {
   Oauth2Token: "oauth2-token",
@@ -53,7 +58,7 @@ export type CreateAuthTokenResponseBody = {
   /**
    * Authentication token metadata.
    */
-  token: components.AuthToken;
+  token: AuthToken;
   /**
    * The authentication token's actual value. This token is only provided in this response, and can never be retrieved again in the future. Be sure to save it somewhere safe!
    */
@@ -271,13 +276,13 @@ export const CreateAuthTokenResponseBody$inboundSchema: z.ZodType<
   z.ZodTypeDef,
   unknown
 > = z.object({
-  token: components.AuthToken$inboundSchema,
+  token: AuthToken$inboundSchema,
   bearerToken: z.string(),
 });
 
 /** @internal */
 export type CreateAuthTokenResponseBody$Outbound = {
-  token: components.AuthToken$Outbound;
+  token: AuthToken$Outbound;
   bearerToken: string;
 };
 
@@ -287,7 +292,7 @@ export const CreateAuthTokenResponseBody$outboundSchema: z.ZodType<
   z.ZodTypeDef,
   CreateAuthTokenResponseBody
 > = z.object({
-  token: components.AuthToken$outboundSchema,
+  token: AuthToken$outboundSchema,
   bearerToken: z.string(),
 });
 

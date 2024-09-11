@@ -5,7 +5,7 @@ A partial representation of a Build used by the deployment endpoint.
 ## Example Usage
 
 ```typescript
-import { ResponseBodyLambdas } from "@vercel/sdk/models/operations";
+import { ResponseBodyLambdas } from "@vercel/sdk/models/operations/getdeployment.js";
 
 let value: ResponseBodyLambdas = {
   output: [

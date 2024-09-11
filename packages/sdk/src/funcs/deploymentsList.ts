@@ -19,7 +19,12 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  GetDeploymentsRequest,
+  GetDeploymentsRequest$outboundSchema,
+  GetDeploymentsResponse,
+  GetDeploymentsResponse$inboundSchema,
+} from "../models/operations/getdeployments.js";
 import { Result } from "../types/fp.js";
 import {
   createPageIterator,
@@ -36,12 +41,12 @@ import {
  */
 export async function deploymentsList(
   client$: VercelCore,
-  request: operations.GetDeploymentsRequest,
+  request: GetDeploymentsRequest,
   options?: RequestOptions,
 ): Promise<
   PageIterator<
     Result<
-      operations.GetDeploymentsResponse,
+      GetDeploymentsResponse,
       | SDKError
       | SDKValidationError
       | UnexpectedClientError
@@ -56,7 +61,7 @@ export async function deploymentsList(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) => operations.GetDeploymentsRequest$outboundSchema.parse(value$),
+    (value$) => GetDeploymentsRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {
@@ -127,7 +132,7 @@ export async function deploymentsList(
   };
 
   const [result$, raw$] = await m$.match<
-    operations.GetDeploymentsResponse,
+    GetDeploymentsResponse,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -136,9 +141,7 @@ export async function deploymentsList(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(200, operations.GetDeploymentsResponse$inboundSchema, {
-      key: "Result",
-    }),
+    m$.json(200, GetDeploymentsResponse$inboundSchema, { key: "Result" }),
     m$.fail([400, 401, 403, 404, 422, "4XX", "5XX"]),
   )(response, { extraFields: responseFields$ });
   if (!result$.ok) {
@@ -149,7 +152,7 @@ export async function deploymentsList(
     responseData: unknown,
   ): Paginator<
     Result<
-      operations.GetDeploymentsResponse,
+      GetDeploymentsResponse,
       | SDKError
       | SDKValidationError
       | UnexpectedClientError

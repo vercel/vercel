@@ -15,7 +15,7 @@ generation:
   auth:
     oAuth2ClientCredentialsEnabled: false
 typescript:
-  version: 14.0.0-canary.0
+  version: 14.0.0-canary.1
   additionalDependencies:
     dependencies: {}
     devDependencies: {}
@@ -23,6 +23,10 @@ typescript:
   additionalPackageJSON: {}
   author: Speakeasy
   clientServerStatusCodesAsErrors: true
+  compileCommand:
+    - sh
+    - -c
+    - ./scripts/compile.sh
   enumFormat: union
   flattenGlobalSecurity: true
   imports:
@@ -42,4 +46,3 @@ typescript:
   responseFormat: flat
   templateVersion: v2
   useIndexModules: false
-  compileCommand: ['sh', '-c', './scripts/compile.sh']

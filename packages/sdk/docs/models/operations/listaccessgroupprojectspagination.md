@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { ListAccessGroupProjectsPagination } from "@vercel/sdk/models/operations";
+import { ListAccessGroupProjectsPagination } from "@vercel/sdk/models/operations/listaccessgroupprojects.js";
 
 let value: ListAccessGroupProjectsPagination = {
   count: 7991.59,

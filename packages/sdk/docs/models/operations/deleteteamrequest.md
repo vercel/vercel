@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { DeleteTeamRequest } from "@vercel/sdk/models/operations";
+import { DeleteTeamRequest } from "@vercel/sdk/models/operations/deleteteam.js";
 
 let value: DeleteTeamRequest = {
   newDefaultTeamId: "team_LLHUOMOoDlqOp8wPE4kFo9pE",

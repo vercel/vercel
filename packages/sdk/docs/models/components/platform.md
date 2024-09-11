@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { Platform } from "@vercel/sdk/models/components";
+import { Platform } from "@vercel/sdk/models/components/authuser.js";
 
 let value: Platform = "stripe";
 ```

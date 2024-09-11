@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { Proxy } from "@vercel/sdk/models/operations";
+import { Proxy } from "@vercel/sdk/models/operations/getdeploymentevents.js";
 
 let value: Proxy = {
   timestamp: 9854.92,

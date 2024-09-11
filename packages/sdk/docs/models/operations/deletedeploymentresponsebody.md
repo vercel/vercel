@@ -5,7 +5,7 @@ The deployment was successfully deleted
 ## Example Usage
 
 ```typescript
-import { DeleteDeploymentResponseBody } from "@vercel/sdk/models/operations";
+import { DeleteDeploymentResponseBody } from "@vercel/sdk/models/operations/deletedeployment.js";
 
 let value: DeleteDeploymentResponseBody = {
   uid: "dpl_5WJWYSyB7BpgTj3EuwF37WMRBXBtPQ2iTMJHJBJyRfd",

@@ -18,7 +18,12 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  CreateTeamRequestBody,
+  CreateTeamRequestBody$outboundSchema,
+  CreateTeamResponseBody,
+  CreateTeamResponseBody$inboundSchema,
+} from "../models/operations/createteam.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -29,11 +34,11 @@ import { Result } from "../types/fp.js";
  */
 export async function teamsCreate(
   client$: VercelCore,
-  request?: operations.CreateTeamRequestBody | undefined,
+  request?: CreateTeamRequestBody | undefined,
   options?: RequestOptions,
 ): Promise<
   Result<
-    operations.CreateTeamResponseBody,
+    CreateTeamResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -47,8 +52,7 @@ export async function teamsCreate(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) =>
-      operations.CreateTeamRequestBody$outboundSchema.optional().parse(value$),
+    (value$) => CreateTeamRequestBody$outboundSchema.optional().parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {
@@ -101,7 +105,7 @@ export async function teamsCreate(
   const response = doResult.value;
 
   const [result$] = await m$.match<
-    operations.CreateTeamResponseBody,
+    CreateTeamResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -110,7 +114,7 @@ export async function teamsCreate(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(200, operations.CreateTeamResponseBody$inboundSchema),
+    m$.json(200, CreateTeamResponseBody$inboundSchema),
     m$.fail([400, 403, "4XX", "5XX"]),
   )(response);
   if (!result$.ok) {

@@ -5,7 +5,7 @@ Successfully deleted Team invite code.
 ## Example Usage
 
 ```typescript
-import { DeleteTeamInviteCodeResponseBody } from "@vercel/sdk/models/operations";
+import { DeleteTeamInviteCodeResponseBody } from "@vercel/sdk/models/operations/deleteteaminvitecode.js";
 
 let value: DeleteTeamInviteCodeResponseBody = {
   id: "<id>",

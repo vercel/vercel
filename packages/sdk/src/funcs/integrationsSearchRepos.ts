@@ -18,7 +18,12 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  SearchRepoRequest,
+  SearchRepoRequest$outboundSchema,
+  SearchRepoResponseBody,
+  SearchRepoResponseBody$inboundSchema,
+} from "../models/operations/searchrepo.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -29,11 +34,11 @@ import { Result } from "../types/fp.js";
  */
 export async function integrationsSearchRepos(
   client$: VercelCore,
-  request: operations.SearchRepoRequest,
+  request: SearchRepoRequest,
   options?: RequestOptions,
 ): Promise<
   Result<
-    operations.SearchRepoResponseBody,
+    SearchRepoResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -47,7 +52,7 @@ export async function integrationsSearchRepos(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) => operations.SearchRepoRequest$outboundSchema.parse(value$),
+    (value$) => SearchRepoRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {
@@ -108,7 +113,7 @@ export async function integrationsSearchRepos(
   const response = doResult.value;
 
   const [result$] = await m$.match<
-    operations.SearchRepoResponseBody,
+    SearchRepoResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -117,7 +122,7 @@ export async function integrationsSearchRepos(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(200, operations.SearchRepoResponseBody$inboundSchema),
+    m$.json(200, SearchRepoResponseBody$inboundSchema),
     m$.fail([400, 403, "4XX", "5XX"]),
   )(response);
   if (!result$.ok) {

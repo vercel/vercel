@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { ServerlessFunctionExecution } from "@vercel/sdk/models/operations";
+import { ServerlessFunctionExecution } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: ServerlessFunctionExecution = {
   price: 3679.17,

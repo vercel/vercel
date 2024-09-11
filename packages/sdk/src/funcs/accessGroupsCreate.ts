@@ -21,7 +21,12 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  CreateAccessGroupRequest,
+  CreateAccessGroupRequest$outboundSchema,
+  CreateAccessGroupResponseBody,
+  CreateAccessGroupResponseBody$inboundSchema,
+} from "../models/operations/createaccessgroup.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -32,11 +37,11 @@ import { Result } from "../types/fp.js";
  */
 export async function accessGroupsCreate(
   client$: VercelCore,
-  request: operations.CreateAccessGroupRequest,
+  request: CreateAccessGroupRequest,
   options?: RequestOptions,
 ): Promise<
   Result<
-    operations.CreateAccessGroupResponseBody,
+    CreateAccessGroupResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -50,8 +55,7 @@ export async function accessGroupsCreate(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) =>
-      operations.CreateAccessGroupRequest$outboundSchema.parse(value$),
+    (value$) => CreateAccessGroupRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {
@@ -108,7 +112,7 @@ export async function accessGroupsCreate(
   const response = doResult.value;
 
   const [result$] = await m$.match<
-    operations.CreateAccessGroupResponseBody,
+    CreateAccessGroupResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -117,7 +121,7 @@ export async function accessGroupsCreate(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(200, operations.CreateAccessGroupResponseBody$inboundSchema),
+    m$.json(200, CreateAccessGroupResponseBody$inboundSchema),
     m$.fail([400, 401, 403, 404, "4XX", "5XX"]),
   )(response);
   if (!result$.ok) {

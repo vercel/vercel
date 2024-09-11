@@ -16,7 +16,58 @@ import { domainsListByProject } from "../funcs/domainsListByProject.js";
 import { domainsUpdate } from "../funcs/domainsUpdate.js";
 import { domainsVerify } from "../funcs/domainsVerify.js";
 import { ClientSDK, RequestOptions } from "../lib/sdks.js";
-import * as operations from "../models/operations/index.js";
+import {
+  AddProjectDomainRequest,
+  AddProjectDomainResponseBody,
+} from "../models/operations/addprojectdomain.js";
+import {
+  BuyDomainRequest,
+  BuyDomainResponse,
+} from "../models/operations/buydomain.js";
+import {
+  CheckDomainPriceRequest,
+  CheckDomainPriceResponseBody,
+} from "../models/operations/checkdomainprice.js";
+import {
+  CheckDomainStatusRequest,
+  CheckDomainStatusResponseBody,
+} from "../models/operations/checkdomainstatus.js";
+import {
+  CreateOrTransferDomainRequest,
+  CreateOrTransferDomainResponseBody,
+} from "../models/operations/createortransferdomain.js";
+import {
+  DeleteDomainRequest,
+  DeleteDomainResponseBody,
+} from "../models/operations/deletedomain.js";
+import {
+  GetDomainRequest,
+  GetDomainResponseBody,
+} from "../models/operations/getdomain.js";
+import {
+  GetDomainConfigRequest,
+  GetDomainConfigResponseBody,
+} from "../models/operations/getdomainconfig.js";
+import {
+  GetDomainsRequest,
+  GetDomainsResponse,
+} from "../models/operations/getdomains.js";
+import {
+  GetDomainTransferRequest,
+  GetDomainTransferResponseBody,
+} from "../models/operations/getdomaintransfer.js";
+import {
+  GetProjectDomainsRequest,
+  GetProjectDomainsResponse,
+} from "../models/operations/getprojectdomains.js";
+import {
+  PatchDomainRequest,
+  PatchDomainResponseBody,
+} from "../models/operations/patchdomain.js";
+import {
+  VerifyProjectDomainRequest,
+  VerifyProjectDomainResponseBody,
+} from "../models/operations/verifyprojectdomain.js";
 import { unwrapAsync } from "../types/fp.js";
 import { PageIterator, unwrapResultIterator } from "../types/operations.js";
 
@@ -28,9 +79,9 @@ export class Domains extends ClientSDK {
    * Allows to purchase the specified domain.
    */
   async buy(
-    request: operations.BuyDomainRequest,
+    request: BuyDomainRequest,
     options?: RequestOptions,
-  ): Promise<operations.BuyDomainResponse> {
+  ): Promise<BuyDomainResponse> {
     return unwrapAsync(domainsBuy(
       this,
       request,
@@ -45,9 +96,9 @@ export class Domains extends ClientSDK {
    * Check the price to purchase a domain and how long a single purchase period is.
    */
   async checkPrice(
-    request: operations.CheckDomainPriceRequest,
+    request: CheckDomainPriceRequest,
     options?: RequestOptions,
-  ): Promise<operations.CheckDomainPriceResponseBody> {
+  ): Promise<CheckDomainPriceResponseBody> {
     return unwrapAsync(domainsCheckPrice(
       this,
       request,
@@ -62,9 +113,9 @@ export class Domains extends ClientSDK {
    * Check if a domain name is available for purchase.
    */
   async checkStatus(
-    request: operations.CheckDomainStatusRequest,
+    request: CheckDomainStatusRequest,
     options?: RequestOptions,
-  ): Promise<operations.CheckDomainStatusResponseBody> {
+  ): Promise<CheckDomainStatusResponseBody> {
     return unwrapAsync(domainsCheckStatus(
       this,
       request,
@@ -79,9 +130,9 @@ export class Domains extends ClientSDK {
    * Fetch domain transfer availability or transfer status if a transfer is in progress.
    */
   async getTransfer(
-    request: operations.GetDomainTransferRequest,
+    request: GetDomainTransferRequest,
     options?: RequestOptions,
-  ): Promise<operations.GetDomainTransferResponseBody> {
+  ): Promise<GetDomainTransferResponseBody> {
     return unwrapAsync(domainsGetTransfer(
       this,
       request,
@@ -96,9 +147,9 @@ export class Domains extends ClientSDK {
    * Get a Domain's configuration.
    */
   async getConfig(
-    request: operations.GetDomainConfigRequest,
+    request: GetDomainConfigRequest,
     options?: RequestOptions,
-  ): Promise<operations.GetDomainConfigResponseBody> {
+  ): Promise<GetDomainConfigResponseBody> {
     return unwrapAsync(domainsGetConfig(
       this,
       request,
@@ -113,9 +164,9 @@ export class Domains extends ClientSDK {
    * Get information for a single domain in an account or team.
    */
   async get(
-    request: operations.GetDomainRequest,
+    request: GetDomainRequest,
     options?: RequestOptions,
-  ): Promise<operations.GetDomainResponseBody> {
+  ): Promise<GetDomainResponseBody> {
     return unwrapAsync(domainsGet(
       this,
       request,
@@ -130,9 +181,9 @@ export class Domains extends ClientSDK {
    * Retrieves a list of domains registered for the authenticated user or team. By default it returns the last 20 domains if no limit is provided.
    */
   async list(
-    request: operations.GetDomainsRequest,
+    request: GetDomainsRequest,
     options?: RequestOptions,
-  ): Promise<PageIterator<operations.GetDomainsResponse>> {
+  ): Promise<PageIterator<GetDomainsResponse>> {
     return unwrapResultIterator(domainsList(
       this,
       request,
@@ -147,9 +198,9 @@ export class Domains extends ClientSDK {
    * This endpoint is used for adding a new apex domain name with Vercel for the authenticating user. Can also be used for initiating a domain transfer request from an external Registrar to Vercel.
    */
   async createOrTransfer(
-    request: operations.CreateOrTransferDomainRequest,
+    request: CreateOrTransferDomainRequest,
     options?: RequestOptions,
-  ): Promise<operations.CreateOrTransferDomainResponseBody> {
+  ): Promise<CreateOrTransferDomainResponseBody> {
     return unwrapAsync(domainsCreateOrTransfer(
       this,
       request,
@@ -164,9 +215,9 @@ export class Domains extends ClientSDK {
    * Update or move apex domain.
    */
   async update(
-    request: operations.PatchDomainRequest,
+    request: PatchDomainRequest,
     options?: RequestOptions,
-  ): Promise<operations.PatchDomainResponseBody> {
+  ): Promise<PatchDomainResponseBody> {
     return unwrapAsync(domainsUpdate(
       this,
       request,
@@ -181,9 +232,9 @@ export class Domains extends ClientSDK {
    * Delete a previously registered domain name from Vercel. Deleting a domain will automatically remove any associated aliases.
    */
   async delete(
-    request: operations.DeleteDomainRequest,
+    request: DeleteDomainRequest,
     options?: RequestOptions,
-  ): Promise<operations.DeleteDomainResponseBody> {
+  ): Promise<DeleteDomainResponseBody> {
     return unwrapAsync(domainsDelete(
       this,
       request,
@@ -198,9 +249,9 @@ export class Domains extends ClientSDK {
    * Retrieve the domains associated with a given project by passing either the project `id` or `name` in the URL.
    */
   async listByProject(
-    request: operations.GetProjectDomainsRequest,
+    request: GetProjectDomainsRequest,
     options?: RequestOptions,
-  ): Promise<PageIterator<operations.GetProjectDomainsResponse>> {
+  ): Promise<PageIterator<GetProjectDomainsResponse>> {
     return unwrapResultIterator(domainsListByProject(
       this,
       request,
@@ -215,9 +266,9 @@ export class Domains extends ClientSDK {
    * Add a domain to the project by passing its domain name and by specifying the project by either passing the project `id` or `name` in the URL. If the domain is not yet verified to be used on this project, the request will return `verified = false`, and the domain will need to be verified according to the `verification` challenge via `POST /projects/:idOrName/domains/:domain/verify`. If the domain already exists on the project, the request will fail with a `400` status code.
    */
   async create(
-    request: operations.AddProjectDomainRequest,
+    request: AddProjectDomainRequest,
     options?: RequestOptions,
-  ): Promise<operations.AddProjectDomainResponseBody> {
+  ): Promise<AddProjectDomainResponseBody> {
     return unwrapAsync(domainsCreate(
       this,
       request,
@@ -232,9 +283,9 @@ export class Domains extends ClientSDK {
    * Attempts to verify a project domain with `verified = false` by checking the correctness of the project domain's `verification` challenge.
    */
   async verify(
-    request: operations.VerifyProjectDomainRequest,
+    request: VerifyProjectDomainRequest,
     options?: RequestOptions,
-  ): Promise<operations.VerifyProjectDomainResponseBody> {
+  ): Promise<VerifyProjectDomainResponseBody> {
     return unwrapAsync(domainsVerify(
       this,
       request,

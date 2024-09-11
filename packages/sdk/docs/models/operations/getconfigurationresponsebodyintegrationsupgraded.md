@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { GetConfigurationResponseBodyIntegrationsUpgraded } from "@vercel/sdk/models/operations";
+import { GetConfigurationResponseBodyIntegrationsUpgraded } from "@vercel/sdk/models/operations/getconfiguration.js";
 
 let value: GetConfigurationResponseBodyIntegrationsUpgraded =
   "read-write:otel-endpoint";

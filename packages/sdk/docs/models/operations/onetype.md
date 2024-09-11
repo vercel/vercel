@@ -5,7 +5,7 @@ The type of environment variable
 ## Example Usage
 
 ```typescript
-import { OneType } from "@vercel/sdk/models/operations";
+import { OneType } from "@vercel/sdk/models/operations/createprojectenv.js";
 
 let value: OneType = "plain";
 ```

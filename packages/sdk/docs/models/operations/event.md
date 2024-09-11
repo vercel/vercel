@@ -5,7 +5,7 @@ One of `HIT` or `MISS`. `HIT` specifies that a cached artifact for `hash` was fo
 ## Example Usage
 
 ```typescript
-import { Event } from "@vercel/sdk/models/operations";
+import { Event } from "@vercel/sdk/models/operations/recordevents.js";
 
 let value: Event = "MISS";
 ```

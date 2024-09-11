@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { CreateEdgeConfigTokenResponseBody } from "@vercel/sdk/models/operations";
+import { CreateEdgeConfigTokenResponseBody } from "@vercel/sdk/models/operations/createedgeconfigtoken.js";
 
 let value: CreateEdgeConfigTokenResponseBody = {
   token: "<value>",

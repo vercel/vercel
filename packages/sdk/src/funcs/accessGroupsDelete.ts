@@ -22,7 +22,10 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  DeleteAccessGroupRequest,
+  DeleteAccessGroupRequest$outboundSchema,
+} from "../models/operations/deleteaccessgroup.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -33,7 +36,7 @@ import { Result } from "../types/fp.js";
  */
 export async function accessGroupsDelete(
   client$: VercelCore,
-  request: operations.DeleteAccessGroupRequest,
+  request: DeleteAccessGroupRequest,
   options?: RequestOptions,
 ): Promise<
   Result<
@@ -51,8 +54,7 @@ export async function accessGroupsDelete(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) =>
-      operations.DeleteAccessGroupRequest$outboundSchema.parse(value$),
+    (value$) => DeleteAccessGroupRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {

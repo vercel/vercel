@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { FunctionInvocation } from "@vercel/sdk/models/components";
+import { FunctionInvocation } from "@vercel/sdk/models/components/authuser.js";
 
 let value: FunctionInvocation = {
   price: 9692.06,

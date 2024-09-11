@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { UpdateRecordRequestBody } from "@vercel/sdk/models/operations";
+import { UpdateRecordRequestBody } from "@vercel/sdk/models/operations/updaterecord.js";
 
 let value: UpdateRecordRequestBody = {
   name: "example-1",

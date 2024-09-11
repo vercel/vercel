@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { FilterProjectEnvsResponseBodyContentHint } from "@vercel/sdk/models/operations";
+import { FilterProjectEnvsResponseBodyContentHint } from "@vercel/sdk/models/operations/filterprojectenvs.js";
 
 let value: FilterProjectEnvsResponseBodyContentHint = {
   type: "blob-read-write-token",

@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { Duration } from "@vercel/sdk/models/components";
+import { Duration } from "@vercel/sdk/models/components/authuser.js";
 
 let value: Duration = "repeating";
 ```

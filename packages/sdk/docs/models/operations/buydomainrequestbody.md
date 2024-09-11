@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { BuyDomainRequestBody } from "@vercel/sdk/models/operations";
+import { BuyDomainRequestBody } from "@vercel/sdk/models/operations/buydomain.js";
 
 let value: BuyDomainRequestBody = {
   name: "example.com",

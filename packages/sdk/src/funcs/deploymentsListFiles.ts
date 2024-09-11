@@ -13,7 +13,10 @@ import * as schemas$ from "../lib/schemas.js";
 import { RequestOptions } from "../lib/sdks.js";
 import { extractSecurity, resolveGlobalSecurity } from "../lib/security.js";
 import { pathToFunc } from "../lib/url.js";
-import * as components from "../models/components/index.js";
+import {
+  FileTree,
+  FileTree$inboundSchema,
+} from "../models/components/filetree.js";
 import {
   ConnectionError,
   InvalidRequestError,
@@ -23,7 +26,10 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  ListDeploymentFilesRequest,
+  ListDeploymentFilesRequest$outboundSchema,
+} from "../models/operations/listdeploymentfiles.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -34,11 +40,11 @@ import { Result } from "../types/fp.js";
  */
 export async function deploymentsListFiles(
   client$: VercelCore,
-  request: operations.ListDeploymentFilesRequest,
+  request: ListDeploymentFilesRequest,
   options?: RequestOptions,
 ): Promise<
   Result<
-    Array<components.FileTree>,
+    Array<FileTree>,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -52,8 +58,7 @@ export async function deploymentsListFiles(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) =>
-      operations.ListDeploymentFilesRequest$outboundSchema.parse(value$),
+    (value$) => ListDeploymentFilesRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {
@@ -116,7 +121,7 @@ export async function deploymentsListFiles(
   const response = doResult.value;
 
   const [result$] = await m$.match<
-    Array<components.FileTree>,
+    Array<FileTree>,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -125,7 +130,7 @@ export async function deploymentsListFiles(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(200, z.array(components.FileTree$inboundSchema)),
+    m$.json(200, z.array(FileTree$inboundSchema)),
     m$.fail([400, 401, 403, 404, "4XX", "5XX"]),
   )(response);
   if (!result$.ok) {

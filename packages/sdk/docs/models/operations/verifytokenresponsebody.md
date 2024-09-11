@@ -5,7 +5,7 @@ The verification was successful.
 ## Example Usage
 
 ```typescript
-import { VerifyTokenResponseBody } from "@vercel/sdk/models/operations";
+import { VerifyTokenResponseBody } from "@vercel/sdk/models/operations/verifytoken.js";
 
 let value: VerifyTokenResponseBody = {
   token: "1ioXyz9Ue4xdCYGROet1dlKd",

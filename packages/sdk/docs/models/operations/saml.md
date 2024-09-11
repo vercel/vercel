@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { Saml } from "@vercel/sdk/models/operations";
+import { Saml } from "@vercel/sdk/models/operations/patchteam.js";
 
 let value: Saml = {
   enforced: true,

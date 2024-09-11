@@ -5,7 +5,7 @@ The list of aliases assigned to the deployment
 ## Example Usage
 
 ```typescript
-import { ListDeploymentAliasesResponseBody } from "@vercel/sdk/models/operations";
+import { ListDeploymentAliasesResponseBody } from "@vercel/sdk/models/operations/listdeploymentaliases.js";
 
 let value: ListDeploymentAliasesResponseBody = {
   aliases: [

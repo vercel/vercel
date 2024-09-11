@@ -5,7 +5,7 @@ An object representing a Build on Vercel
 ## Example Usage
 
 ```typescript
-import { Builds } from "@vercel/sdk/models/operations";
+import { Builds } from "@vercel/sdk/models/operations/listdeploymentbuilds.js";
 
 let value: Builds = {
   id: "<id>",

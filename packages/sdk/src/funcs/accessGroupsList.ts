@@ -18,7 +18,12 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  ListAccessGroupsRequest,
+  ListAccessGroupsRequest$outboundSchema,
+  ListAccessGroupsResponseBody,
+  ListAccessGroupsResponseBody$inboundSchema,
+} from "../models/operations/listaccessgroups.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -29,11 +34,11 @@ import { Result } from "../types/fp.js";
  */
 export async function accessGroupsList(
   client$: VercelCore,
-  request: operations.ListAccessGroupsRequest,
+  request: ListAccessGroupsRequest,
   options?: RequestOptions,
 ): Promise<
   Result<
-    operations.ListAccessGroupsResponseBody,
+    ListAccessGroupsResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -47,7 +52,7 @@ export async function accessGroupsList(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) => operations.ListAccessGroupsRequest$outboundSchema.parse(value$),
+    (value$) => ListAccessGroupsRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {
@@ -109,7 +114,7 @@ export async function accessGroupsList(
   const response = doResult.value;
 
   const [result$] = await m$.match<
-    operations.ListAccessGroupsResponseBody,
+    ListAccessGroupsResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -118,7 +123,7 @@ export async function accessGroupsList(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(200, operations.ListAccessGroupsResponseBody$inboundSchema),
+    m$.json(200, ListAccessGroupsResponseBody$inboundSchema),
     m$.fail([400, 401, 403, 404, "4XX", "5XX"]),
   )(response);
   if (!result$.ok) {

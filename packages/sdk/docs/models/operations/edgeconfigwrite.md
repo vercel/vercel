@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { EdgeConfigWrite } from "@vercel/sdk/models/operations";
+import { EdgeConfigWrite } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: EdgeConfigWrite = {
   price: 4483.69,

@@ -22,7 +22,12 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  AssignAliasRequest,
+  AssignAliasRequest$outboundSchema,
+  AssignAliasResponseBody,
+  AssignAliasResponseBody$inboundSchema,
+} from "../models/operations/assignalias.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -33,11 +38,11 @@ import { Result } from "../types/fp.js";
  */
 export async function aliasesAssign(
   client$: VercelCore,
-  request: operations.AssignAliasRequest,
+  request: AssignAliasRequest,
   options?: RequestOptions,
 ): Promise<
   Result<
-    operations.AssignAliasResponseBody,
+    AssignAliasResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -51,7 +56,7 @@ export async function aliasesAssign(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) => operations.AssignAliasRequest$outboundSchema.parse(value$),
+    (value$) => AssignAliasRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {
@@ -115,7 +120,7 @@ export async function aliasesAssign(
   const response = doResult.value;
 
   const [result$] = await m$.match<
-    operations.AssignAliasResponseBody,
+    AssignAliasResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -124,7 +129,7 @@ export async function aliasesAssign(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(200, operations.AssignAliasResponseBody$inboundSchema),
+    m$.json(200, AssignAliasResponseBody$inboundSchema),
     m$.fail([400, 401, 402, 403, 404, 409, "4XX", "5XX"]),
   )(response);
   if (!result$.ok) {

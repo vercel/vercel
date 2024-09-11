@@ -5,7 +5,7 @@ When true, the response will only include the nameservers assigned directly to t
 ## Example Usage
 
 ```typescript
-import { Strict } from "@vercel/sdk/models/operations";
+import { Strict } from "@vercel/sdk/models/operations/getdomainconfig.js";
 
 let value: Strict = "false";
 ```

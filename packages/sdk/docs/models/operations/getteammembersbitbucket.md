@@ -5,7 +5,7 @@ Information about the Bitbucket account of this user.
 ## Example Usage
 
 ```typescript
-import { GetTeamMembersBitbucket } from "@vercel/sdk/models/operations";
+import { GetTeamMembersBitbucket } from "@vercel/sdk/models/operations/getteammembers.js";
 
 let value: GetTeamMembersBitbucket = {};
 ```

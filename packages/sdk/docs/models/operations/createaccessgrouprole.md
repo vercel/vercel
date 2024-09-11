@@ -5,7 +5,7 @@ The project role that will be added to this Access Group. \"null\" will remove t
 ## Example Usage
 
 ```typescript
-import { CreateAccessGroupRole } from "@vercel/sdk/models/operations";
+import { CreateAccessGroupRole } from "@vercel/sdk/models/operations/createaccessgroup.js";
 
 let value: CreateAccessGroupRole = "ADMIN";
 ```

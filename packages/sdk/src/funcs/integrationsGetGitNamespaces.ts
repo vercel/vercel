@@ -19,7 +19,12 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  GitNamespacesRequest,
+  GitNamespacesRequest$outboundSchema,
+  GitNamespacesResponseBody,
+  GitNamespacesResponseBody$inboundSchema,
+} from "../models/operations/gitnamespaces.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -30,11 +35,11 @@ import { Result } from "../types/fp.js";
  */
 export async function integrationsGetGitNamespaces(
   client$: VercelCore,
-  request: operations.GitNamespacesRequest,
+  request: GitNamespacesRequest,
   options?: RequestOptions,
 ): Promise<
   Result<
-    Array<operations.GitNamespacesResponseBody>,
+    Array<GitNamespacesResponseBody>,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -48,7 +53,7 @@ export async function integrationsGetGitNamespaces(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) => operations.GitNamespacesRequest$outboundSchema.parse(value$),
+    (value$) => GitNamespacesRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {
@@ -106,7 +111,7 @@ export async function integrationsGetGitNamespaces(
   const response = doResult.value;
 
   const [result$] = await m$.match<
-    Array<operations.GitNamespacesResponseBody>,
+    Array<GitNamespacesResponseBody>,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -115,7 +120,7 @@ export async function integrationsGetGitNamespaces(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(200, z.array(operations.GitNamespacesResponseBody$inboundSchema)),
+    m$.json(200, z.array(GitNamespacesResponseBody$inboundSchema)),
     m$.fail([400, 403, "4XX", "5XX"]),
   )(response);
   if (!result$.ok) {

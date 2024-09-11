@@ -21,7 +21,12 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  GetDomainRequest,
+  GetDomainRequest$outboundSchema,
+  GetDomainResponseBody,
+  GetDomainResponseBody$inboundSchema,
+} from "../models/operations/getdomain.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -32,11 +37,11 @@ import { Result } from "../types/fp.js";
  */
 export async function domainsGet(
   client$: VercelCore,
-  request: operations.GetDomainRequest,
+  request: GetDomainRequest,
   options?: RequestOptions,
 ): Promise<
   Result<
-    operations.GetDomainResponseBody,
+    GetDomainResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -50,7 +55,7 @@ export async function domainsGet(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) => operations.GetDomainRequest$outboundSchema.parse(value$),
+    (value$) => GetDomainRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {
@@ -113,7 +118,7 @@ export async function domainsGet(
   const response = doResult.value;
 
   const [result$] = await m$.match<
-    operations.GetDomainResponseBody,
+    GetDomainResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -122,7 +127,7 @@ export async function domainsGet(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(200, operations.GetDomainResponseBody$inboundSchema),
+    m$.json(200, GetDomainResponseBody$inboundSchema),
     m$.fail([400, 401, 403, 404, "4XX", "5XX"]),
   )(response);
   if (!result$.ok) {

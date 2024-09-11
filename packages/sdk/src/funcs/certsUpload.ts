@@ -21,7 +21,12 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  UploadCertRequest,
+  UploadCertRequest$outboundSchema,
+  UploadCertResponseBody,
+  UploadCertResponseBody$inboundSchema,
+} from "../models/operations/uploadcert.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -32,11 +37,11 @@ import { Result } from "../types/fp.js";
  */
 export async function certsUpload(
   client$: VercelCore,
-  request: operations.UploadCertRequest,
+  request: UploadCertRequest,
   options?: RequestOptions,
 ): Promise<
   Result<
-    operations.UploadCertResponseBody,
+    UploadCertResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -50,7 +55,7 @@ export async function certsUpload(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) => operations.UploadCertRequest$outboundSchema.parse(value$),
+    (value$) => UploadCertRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {
@@ -107,7 +112,7 @@ export async function certsUpload(
   const response = doResult.value;
 
   const [result$] = await m$.match<
-    operations.UploadCertResponseBody,
+    UploadCertResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -116,7 +121,7 @@ export async function certsUpload(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(200, operations.UploadCertResponseBody$inboundSchema),
+    m$.json(200, UploadCertResponseBody$inboundSchema),
     m$.fail([400, 401, 402, 403, "4XX", "5XX"]),
   )(response);
   if (!result$.ok) {

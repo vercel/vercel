@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { DeleteAliasRequest } from "@vercel/sdk/models/operations";
+import { DeleteAliasRequest } from "@vercel/sdk/models/operations/deletealias.js";
 
 let value: DeleteAliasRequest = {
   aliasId: "<value>",

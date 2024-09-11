@@ -4,7 +4,12 @@
 
 import * as z from "zod";
 import { remap as remap$ } from "../../lib/primitives.js";
-import * as components from "../components/index.js";
+import {
+  Pagination,
+  Pagination$inboundSchema,
+  Pagination$Outbound,
+  Pagination$outboundSchema,
+} from "../components/pagination.js";
 
 export type ListPromoteAliasesRequest = {
   projectId: string;
@@ -45,7 +50,7 @@ export type ListPromoteAliasesResponseBody2 = {
   /**
    * This object contains information related to the pagination of the current request, including the necessary parameters to get the next or previous page of data.
    */
-  pagination: components.Pagination;
+  pagination: Pagination;
 };
 
 export type ListPromoteAliasesResponseBody1 = {};
@@ -161,13 +166,13 @@ export const ListPromoteAliasesResponseBody2$inboundSchema: z.ZodType<
   unknown
 > = z.object({
   aliases: z.array(z.lazy(() => ResponseBodyAliases$inboundSchema)),
-  pagination: components.Pagination$inboundSchema,
+  pagination: Pagination$inboundSchema,
 });
 
 /** @internal */
 export type ListPromoteAliasesResponseBody2$Outbound = {
   aliases: Array<ResponseBodyAliases$Outbound>;
-  pagination: components.Pagination$Outbound;
+  pagination: Pagination$Outbound;
 };
 
 /** @internal */
@@ -177,7 +182,7 @@ export const ListPromoteAliasesResponseBody2$outboundSchema: z.ZodType<
   ListPromoteAliasesResponseBody2
 > = z.object({
   aliases: z.array(z.lazy(() => ResponseBodyAliases$outboundSchema)),
-  pagination: components.Pagination$outboundSchema,
+  pagination: Pagination$outboundSchema,
 });
 
 /**

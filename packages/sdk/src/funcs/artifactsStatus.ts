@@ -18,7 +18,12 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  StatusRequest,
+  StatusRequest$outboundSchema,
+  StatusResponseBody,
+  StatusResponseBody$inboundSchema,
+} from "../models/operations/status.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -29,11 +34,11 @@ import { Result } from "../types/fp.js";
  */
 export async function artifactsStatus(
   client$: VercelCore,
-  request: operations.StatusRequest,
+  request: StatusRequest,
   options?: RequestOptions,
 ): Promise<
   Result<
-    operations.StatusResponseBody,
+    StatusResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -47,7 +52,7 @@ export async function artifactsStatus(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) => operations.StatusRequest$outboundSchema.parse(value$),
+    (value$) => StatusRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {
@@ -103,7 +108,7 @@ export async function artifactsStatus(
   const response = doResult.value;
 
   const [result$] = await m$.match<
-    operations.StatusResponseBody,
+    StatusResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -112,7 +117,7 @@ export async function artifactsStatus(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(200, operations.StatusResponseBody$inboundSchema),
+    m$.json(200, StatusResponseBody$inboundSchema),
     m$.fail([400, 401, 402, 403, "4XX", "5XX"]),
   )(response);
   if (!result$.ok) {

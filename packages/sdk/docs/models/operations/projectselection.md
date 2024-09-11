@@ -5,7 +5,7 @@ A string representing the permission for projects. Possible values are `all` or 
 ## Example Usage
 
 ```typescript
-import { ProjectSelection } from "@vercel/sdk/models/operations";
+import { ProjectSelection } from "@vercel/sdk/models/operations/getconfiguration.js";
 
 let value: ProjectSelection = "all";
 ```

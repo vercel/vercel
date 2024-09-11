@@ -5,7 +5,7 @@ Exists if the output is an edge function.
 ## Example Usage
 
 ```typescript
-import { Edge } from "@vercel/sdk/models/operations";
+import { Edge } from "@vercel/sdk/models/operations/listdeploymentbuilds.js";
 
 let value: Edge = {
   regions: [

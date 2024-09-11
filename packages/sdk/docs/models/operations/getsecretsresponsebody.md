@@ -5,7 +5,7 @@ Successful response retrieving a list of secrets.
 ## Example Usage
 
 ```typescript
-import { GetSecretsResponseBody } from "@vercel/sdk/models/operations";
+import { GetSecretsResponseBody } from "@vercel/sdk/models/operations/getsecrets.js";
 
 let value: GetSecretsResponseBody = {
   secrets: [

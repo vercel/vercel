@@ -5,7 +5,7 @@ The member was successfully added to the team
 ## Example Usage
 
 ```typescript
-import { InviteUserToTeamResponseBody } from "@vercel/sdk/models/operations";
+import { InviteUserToTeamResponseBody } from "@vercel/sdk/models/operations/inviteusertoteam.js";
 
 let value: InviteUserToTeamResponseBody = {
   uid: "kr1PsOIzqEL5Xg6M4VZcZosf",

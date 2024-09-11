@@ -18,7 +18,12 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  GetConfigurationsRequest,
+  GetConfigurationsRequest$outboundSchema,
+  GetConfigurationsResponseBody,
+  GetConfigurationsResponseBody$inboundSchema,
+} from "../models/operations/getconfigurations.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -29,11 +34,11 @@ import { Result } from "../types/fp.js";
  */
 export async function integrationsGetConfigurations(
   client$: VercelCore,
-  request: operations.GetConfigurationsRequest,
+  request: GetConfigurationsRequest,
   options?: RequestOptions,
 ): Promise<
   Result<
-    operations.GetConfigurationsResponseBody,
+    GetConfigurationsResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -47,8 +52,7 @@ export async function integrationsGetConfigurations(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) =>
-      operations.GetConfigurationsRequest$outboundSchema.parse(value$),
+    (value$) => GetConfigurationsRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {
@@ -105,7 +109,7 @@ export async function integrationsGetConfigurations(
   const response = doResult.value;
 
   const [result$] = await m$.match<
-    operations.GetConfigurationsResponseBody,
+    GetConfigurationsResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -114,7 +118,7 @@ export async function integrationsGetConfigurations(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(200, operations.GetConfigurationsResponseBody$inboundSchema),
+    m$.json(200, GetConfigurationsResponseBody$inboundSchema),
     m$.fail([400, 401, 403, "4XX", "5XX"]),
   )(response);
   if (!result$.ok) {
