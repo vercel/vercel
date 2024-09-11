@@ -32,7 +32,7 @@ export const bisectCommand = {
     {
       name: 'path',
       description: 'Subpath of the deployment URL to test',
-      argument: 'URL',
+      argument: 'PATH',
       shorthand: 'p',
       type: String,
       deprecated: false,
@@ -40,7 +40,7 @@ export const bisectCommand = {
     {
       name: 'run',
       description: 'Test script to run for each deployment',
-      argument: 'URL',
+      argument: 'PATH',
       shorthand: 'r',
       type: String,
       deprecated: false,

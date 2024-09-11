@@ -3,6 +3,124 @@ import { limitOption, nextOption } from '../../util/arg-common';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { parseArguments } from '../../util/get-args';
 
+const removeSubcommand = {
+  name: 'rm',
+  description: 'Remove a certificate by id',
+  arguments: [
+    {
+      name: 'id',
+      required: true,
+    },
+  ],
+  options: [],
+  examples: [],
+} as const;
+
+const issueSubcommand = {
+  name: 'issue',
+  description: ' Issue a new certificate for a domain',
+  arguments: [
+    {
+      name: 'cn',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      name: 'challenge-only',
+      description: 'Only show challenges needed to issue a cert',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+    },
+    {
+      name: 'crt',
+      description: 'Certificate file',
+      argument: 'FILE',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+    },
+    {
+      name: 'key',
+      description: 'Certificate key file',
+      argument: 'FILE',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+    },
+    {
+      name: 'ca',
+      description: 'CA certificate chain file',
+      argument: 'FILE',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+    },
+    { name: 'overwrite', shorthand: null, type: Boolean, deprecated: false },
+  ],
+  examples: [],
+} as const;
+
+const listSubcommand = {
+  name: 'ls',
+  description: 'Show all available certificates',
+  arguments: [],
+  options: [
+    {
+      ...limitOption,
+      description:
+        'Number of results to return per page (default: 20, max: 100)',
+      argument: 'VALUE',
+    },
+    {
+      ...nextOption,
+      description: 'Show next page of results',
+    },
+  ],
+  examples: [],
+} as const;
+
+const addSubcommand = {
+  name: 'add',
+  description: 'Add a new cert',
+  arguments: [],
+  options: [
+    {
+      name: 'crt',
+      description: 'Certificate file',
+      argument: 'FILE',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+    },
+    {
+      name: 'key',
+      description: 'Certificate key file',
+      argument: 'FILE',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+    },
+    {
+      name: 'ca',
+      description: 'CA certificate chain file',
+      argument: 'FILE',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+    },
+    {
+      name: 'overwrite',
+      description: '',
+      shorthand: null,
+      type: Boolean,
+      deprecated: true,
+    },
+  ],
+  examples: [],
+} as const;
+
 export const certsCommand = {
   name: 'certs',
   description:
@@ -14,37 +132,10 @@ export const certsCommand = {
     },
   ],
   subcommands: [
-    {
-      name: 'ls',
-      description: 'Show all available certificates',
-      arguments: [],
-      options: [],
-      examples: [],
-    },
-    {
-      name: 'issue',
-      description: ' Issue a new certificate for a domain',
-      arguments: [
-        {
-          name: 'cn',
-          required: true,
-        },
-      ],
-      options: [],
-      examples: [],
-    },
-    {
-      name: 'rm',
-      description: 'Remove a certificate by id',
-      arguments: [
-        {
-          name: 'id',
-          required: true,
-        },
-      ],
-      options: [],
-      examples: [],
-    },
+    addSubcommand,
+    listSubcommand,
+    issueSubcommand,
+    removeSubcommand,
   ],
   options: [
     {

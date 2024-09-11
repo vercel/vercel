@@ -20,7 +20,18 @@ export const domainsCommand = {
       name: 'ls',
       description: 'Show all domains in a list',
       arguments: [],
-      options: [],
+      options: [
+        {
+          ...nextOption,
+          description: 'Show next page of results',
+        },
+        {
+          ...limitOption,
+          description:
+            'Number of results to return per page (default: 20, max: 100)',
+          argument: 'NUMBER',
+        },
+      ],
       examples: [],
     },
     {
@@ -48,7 +59,14 @@ export const domainsCommand = {
           required: true,
         },
       ],
-      options: [],
+      options: [
+        {
+          ...forceOption,
+          shorthand: null,
+          description:
+            'Force a domain on a project and remove it from an existing one',
+        },
+      ],
       examples: [],
     },
     {
@@ -60,7 +78,12 @@ export const domainsCommand = {
           required: true,
         },
       ],
-      options: [],
+      options: [
+        {
+          ...yesOption,
+          description: 'Skip the confirmation prompt when removing a domain',
+        },
+      ],
       examples: [],
     },
     {
@@ -88,7 +111,12 @@ export const domainsCommand = {
           required: true,
         },
       ],
-      options: [],
+      options: [
+        {
+          ...yesOption,
+          description: 'Skip the confirmation prompt when removing a domain',
+        },
+      ],
       examples: [],
     },
     {
@@ -100,7 +128,9 @@ export const domainsCommand = {
           required: true,
         },
       ],
-      options: [],
+      options: [
+        { name: 'code', shorthand: null, type: String, deprecated: false },
+      ],
       examples: [],
     },
   ],
@@ -110,14 +140,14 @@ export const domainsCommand = {
       description: 'Show next page of results',
     },
     {
-      ...yesOption,
-      description: 'Skip the confirmation prompt when removing a domain',
-    },
-    {
       ...limitOption,
       description:
         'Number of results to return per page (default: 20, max: 100)',
       argument: 'NUMBER',
+    },
+    {
+      ...yesOption,
+      description: 'Skip the confirmation prompt when removing a domain',
     },
     {
       ...forceOption,

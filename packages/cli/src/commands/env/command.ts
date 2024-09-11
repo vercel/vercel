@@ -68,7 +68,12 @@ export const envCommand = {
           required: false,
         },
       ],
-      options: [],
+      options: [
+        {
+          ...yesOption,
+          description: 'Skip the confirmation prompt when removing an alias',
+        },
+      ],
       examples: [],
     },
     {
@@ -81,7 +86,20 @@ export const envCommand = {
           required: false,
         },
       ],
-      options: [],
+      options: [
+        {
+          ...yesOption,
+          description: 'Skip the confirmation prompt when removing an alias',
+        },
+        {
+          name: 'git-branch',
+          description:
+            'Specify the Git branch to pull specific Environment Variables for',
+          shorthand: null,
+          type: String,
+          deprecated: false,
+        },
+      ],
       examples: [],
     },
   ],
@@ -104,7 +122,6 @@ export const envCommand = {
     },
     {
       ...yesOption,
-
       description: 'Skip the confirmation prompt when removing an alias',
     },
     { name: 'sensitive', shorthand: null, type: Boolean, deprecated: false },

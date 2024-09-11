@@ -1,6 +1,61 @@
 import { packageName } from '../../util/pkg-name';
 import { limitOption, nextOption, yesOption } from '../../util/arg-common';
 
+const listSubcommand = {
+  name: 'ls',
+  description: 'Show all aliases.',
+  arguments: [],
+  options: [
+    {
+      ...limitOption,
+      description:
+        'Number of results to return per page (default: 20, max: 100)',
+      argument: 'NUMBER',
+    },
+    {
+      ...nextOption,
+      description: 'Show next page of results',
+      argument: 'MS',
+    },
+  ],
+  examples: [],
+} as const;
+
+const setSubcommand = {
+  name: 'set',
+  description: 'Create a new alias',
+  arguments: [
+    {
+      name: 'deployment',
+      required: true,
+    },
+    {
+      name: 'alias',
+      required: true,
+    },
+  ],
+  options: [],
+  examples: [],
+} as const;
+
+const removeSubcommand = {
+  name: 'rm',
+  description: 'Remove an alias using its hostname.',
+  arguments: [
+    {
+      name: 'alias',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      ...yesOption,
+      description: 'Skip the confirmation prompt when removing an alias',
+    },
+  ],
+  examples: [],
+} as const;
+
 export const aliasCommand = {
   name: 'alias',
   description: 'Interact with deployment aliases.',
@@ -10,59 +65,11 @@ export const aliasCommand = {
       required: false,
     },
   ],
-  subcommands: [
-    {
-      name: 'ls',
-      description: 'Show all aliases.',
-      arguments: [],
-      options: [],
-      examples: [],
-    },
-    {
-      name: 'set',
-      description: 'Create a new alias',
-      arguments: [
-        {
-          name: 'deployment',
-          required: true,
-        },
-        {
-          name: 'alias',
-          required: true,
-        },
-      ],
-      options: [],
-      examples: [],
-    },
-    {
-      name: 'rm',
-      description: 'Remove an alias using its hostname.',
-      arguments: [
-        {
-          name: 'alias',
-          required: true,
-        },
-      ],
-      options: [],
-      examples: [],
-    },
-  ],
+  subcommands: [listSubcommand, setSubcommand, removeSubcommand],
   options: [
-    {
-      ...nextOption,
-      description: 'Show next page of results',
-      argument: 'MS',
-    },
-    {
-      ...yesOption,
-      description: 'Skip the confirmation prompt when removing an alias',
-    },
-    {
-      ...limitOption,
-      description:
-        'Number of results to return per page (default: 20, max: 100)',
-      argument: 'NUMBER',
-    },
+    ...listSubcommand.options,
+    ...setSubcommand.options,
+    ...removeSubcommand.options,
     { name: 'json', shorthand: null, type: Boolean, deprecated: false },
   ],
   examples: [
