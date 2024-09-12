@@ -5,7 +5,7 @@ The paginated list of projects
 ## Example Usage
 
 ```typescript
-import { GetProjectsResponseBody } from "@vercel/sdk/models/operations";
+import { GetProjectsResponseBody } from "@vercel/sdk/models/operations/getprojects.js";
 
 let value: GetProjectsResponseBody = {
   projects: [],

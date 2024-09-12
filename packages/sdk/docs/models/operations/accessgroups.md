@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { AccessGroups } from "@vercel/sdk/models/operations";
+import { AccessGroups } from "@vercel/sdk/models/operations/listaccessgroups.js";
 
 let value: AccessGroups = {
   isDsyncManaged: false,

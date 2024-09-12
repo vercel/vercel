@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { QueryParamProvider } from "@vercel/sdk/models/operations";
+import { QueryParamProvider } from "@vercel/sdk/models/operations/searchrepo.js";
 
 let value: QueryParamProvider = "bitbucket";
 ```

@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { CreateProjectEnvContentHintEnvs14 } from "@vercel/sdk/models/operations";
+import { CreateProjectEnvContentHintEnvs14 } from "@vercel/sdk/models/operations/createprojectenv.js";
 
 let value: CreateProjectEnvContentHintEnvs14 = {
   type: "integration-store-secret",

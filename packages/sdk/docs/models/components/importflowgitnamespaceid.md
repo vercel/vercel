@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { ImportFlowGitNamespaceId } from "@vercel/sdk/models/components";
+import { ImportFlowGitNamespaceId } from "@vercel/sdk/models/components/authuser.js";
 
 let value: ImportFlowGitNamespaceId = "<value>";
 ```

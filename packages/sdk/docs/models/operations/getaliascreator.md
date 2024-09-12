@@ -5,7 +5,7 @@ Information of the user who created the alias
 ## Example Usage
 
 ```typescript
-import { GetAliasCreator } from "@vercel/sdk/models/operations";
+import { GetAliasCreator } from "@vercel/sdk/models/operations/getalias.js";
 
 let value: GetAliasCreator = {
   uid: "96SnxkFiMyVKsK3pnoHfx3Hz",

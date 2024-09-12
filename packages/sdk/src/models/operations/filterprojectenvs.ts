@@ -4,7 +4,12 @@
 
 import * as z from "zod";
 import { ClosedEnum } from "../../types/enums.js";
-import * as components from "../components/index.js";
+import {
+  Pagination,
+  Pagination$inboundSchema,
+  Pagination$Outbound,
+  Pagination$outboundSchema,
+} from "../components/pagination.js";
 
 /**
  * If true, the environment variable value will be decrypted
@@ -734,7 +739,7 @@ export type FilterProjectEnvsResponseBody2 = {
   /**
    * This object contains information related to the pagination of the current request, including the necessary parameters to get the next or previous page of data.
    */
-  pagination: components.Pagination;
+  pagination: Pagination;
 };
 
 export const FilterProjectEnvsTarget2 = {
@@ -4017,13 +4022,13 @@ export const FilterProjectEnvsResponseBody2$inboundSchema: z.ZodType<
   unknown
 > = z.object({
   envs: z.array(z.lazy(() => Envs$inboundSchema)),
-  pagination: components.Pagination$inboundSchema,
+  pagination: Pagination$inboundSchema,
 });
 
 /** @internal */
 export type FilterProjectEnvsResponseBody2$Outbound = {
   envs: Array<Envs$Outbound>;
-  pagination: components.Pagination$Outbound;
+  pagination: Pagination$Outbound;
 };
 
 /** @internal */
@@ -4033,7 +4038,7 @@ export const FilterProjectEnvsResponseBody2$outboundSchema: z.ZodType<
   FilterProjectEnvsResponseBody2
 > = z.object({
   envs: z.array(z.lazy(() => Envs$outboundSchema)),
-  pagination: components.Pagination$outboundSchema,
+  pagination: Pagination$outboundSchema,
 });
 
 /**

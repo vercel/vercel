@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { RemoveProjectEnvResponseBodyEnvsContentHint } from "@vercel/sdk/models/operations";
+import { RemoveProjectEnvResponseBodyEnvsContentHint } from "@vercel/sdk/models/operations/removeprojectenv.js";
 
 let value: RemoveProjectEnvResponseBodyEnvsContentHint = {
   type: "postgres-password",

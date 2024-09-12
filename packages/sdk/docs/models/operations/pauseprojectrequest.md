@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { PauseProjectRequest } from "@vercel/sdk/models/operations";
+import { PauseProjectRequest } from "@vercel/sdk/models/operations/pauseproject.js";
 
 let value: PauseProjectRequest = {
   projectId: "<value>",

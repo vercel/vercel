@@ -5,7 +5,7 @@ Successful response.
 ## Example Usage
 
 ```typescript
-import { ListUserEventsResponseBody } from "@vercel/sdk/models/operations";
+import { ListUserEventsResponseBody } from "@vercel/sdk/models/operations/listuserevents.js";
 
 let value: ListUserEventsResponseBody = {
   events: [

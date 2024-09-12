@@ -5,7 +5,7 @@ Metadata information of the user who created the deployment.
 ## Example Usage
 
 ```typescript
-import { GetDeploymentsCreator } from "@vercel/sdk/models/operations";
+import { GetDeploymentsCreator } from "@vercel/sdk/models/operations/getdeployments.js";
 
 let value: GetDeploymentsCreator = {
   uid: "eLrCnEgbKhsHyfbiNR7E8496",

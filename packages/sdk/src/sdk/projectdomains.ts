@@ -6,7 +6,18 @@ import { projectDomainsDelete } from "../funcs/projectDomainsDelete.js";
 import { projectDomainsGet } from "../funcs/projectDomainsGet.js";
 import { projectDomainsUpdate } from "../funcs/projectDomainsUpdate.js";
 import { ClientSDK, RequestOptions } from "../lib/sdks.js";
-import * as operations from "../models/operations/index.js";
+import {
+  GetProjectDomainRequest,
+  GetProjectDomainResponseBody,
+} from "../models/operations/getprojectdomain.js";
+import {
+  RemoveProjectDomainRequest,
+  RemoveProjectDomainResponseBody,
+} from "../models/operations/removeprojectdomain.js";
+import {
+  UpdateProjectDomainRequest,
+  UpdateProjectDomainResponseBody,
+} from "../models/operations/updateprojectdomain.js";
 import { unwrapAsync } from "../types/fp.js";
 
 export class ProjectDomains extends ClientSDK {
@@ -17,9 +28,9 @@ export class ProjectDomains extends ClientSDK {
    * Get project domain by project id/name and domain name.
    */
   async get(
-    request: operations.GetProjectDomainRequest,
+    request: GetProjectDomainRequest,
     options?: RequestOptions,
-  ): Promise<operations.GetProjectDomainResponseBody> {
+  ): Promise<GetProjectDomainResponseBody> {
     return unwrapAsync(projectDomainsGet(
       this,
       request,
@@ -34,9 +45,9 @@ export class ProjectDomains extends ClientSDK {
    * Update a project domain's configuration, including the name, git branch and redirect of the domain.
    */
   async update(
-    request: operations.UpdateProjectDomainRequest,
+    request: UpdateProjectDomainRequest,
     options?: RequestOptions,
-  ): Promise<operations.UpdateProjectDomainResponseBody> {
+  ): Promise<UpdateProjectDomainResponseBody> {
     return unwrapAsync(projectDomainsUpdate(
       this,
       request,
@@ -51,9 +62,9 @@ export class ProjectDomains extends ClientSDK {
    * Remove a domain from a project by passing the domain name and by specifying the project by either passing the project `id` or `name` in the URL.
    */
   async delete(
-    request: operations.RemoveProjectDomainRequest,
+    request: RemoveProjectDomainRequest,
     options?: RequestOptions,
-  ): Promise<operations.RemoveProjectDomainResponseBody> {
+  ): Promise<RemoveProjectDomainResponseBody> {
     return unwrapAsync(projectDomainsDelete(
       this,
       request,

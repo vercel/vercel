@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { CustomEnvironment } from "@vercel/sdk/models/operations";
+import { CustomEnvironment } from "@vercel/sdk/models/operations/createdeployment.js";
 
 let value: CustomEnvironment = {
   id: "<id>",

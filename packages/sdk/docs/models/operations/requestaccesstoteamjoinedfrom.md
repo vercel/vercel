@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { RequestAccessToTeamJoinedFrom } from "@vercel/sdk/models/operations";
+import { RequestAccessToTeamJoinedFrom } from "@vercel/sdk/models/operations/requestaccesstoteam.js";
 
 let value: RequestAccessToTeamJoinedFrom = {
   origin: "saml",

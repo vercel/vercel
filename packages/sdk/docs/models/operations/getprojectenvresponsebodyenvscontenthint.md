@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { GetProjectEnvResponseBodyEnvsContentHint } from "@vercel/sdk/models/operations";
+import { GetProjectEnvResponseBodyEnvsContentHint } from "@vercel/sdk/models/operations/getprojectenv.js";
 
 let value: GetProjectEnvResponseBodyEnvsContentHint = {
   type: "redis-rest-api-read-only-token",

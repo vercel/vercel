@@ -5,7 +5,7 @@ Since June 2023 Substate of deployment when readyState is 'READY' Tracks whether
 ## Example Usage
 
 ```typescript
-import { CancelDeploymentReadySubstate } from "@vercel/sdk/models/operations";
+import { CancelDeploymentReadySubstate } from "@vercel/sdk/models/operations/canceldeployment.js";
 
 let value: CancelDeploymentReadySubstate = "STAGED";
 ```

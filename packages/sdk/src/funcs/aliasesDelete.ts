@@ -21,7 +21,12 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  DeleteAliasRequest,
+  DeleteAliasRequest$outboundSchema,
+  DeleteAliasResponseBody,
+  DeleteAliasResponseBody$inboundSchema,
+} from "../models/operations/deletealias.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -32,11 +37,11 @@ import { Result } from "../types/fp.js";
  */
 export async function aliasesDelete(
   client$: VercelCore,
-  request: operations.DeleteAliasRequest,
+  request: DeleteAliasRequest,
   options?: RequestOptions,
 ): Promise<
   Result<
-    operations.DeleteAliasResponseBody,
+    DeleteAliasResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -50,7 +55,7 @@ export async function aliasesDelete(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) => operations.DeleteAliasRequest$outboundSchema.parse(value$),
+    (value$) => DeleteAliasRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {
@@ -113,7 +118,7 @@ export async function aliasesDelete(
   const response = doResult.value;
 
   const [result$] = await m$.match<
-    operations.DeleteAliasResponseBody,
+    DeleteAliasResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -122,7 +127,7 @@ export async function aliasesDelete(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(200, operations.DeleteAliasResponseBody$inboundSchema),
+    m$.json(200, DeleteAliasResponseBody$inboundSchema),
     m$.fail([400, 401, 403, 404, "4XX", "5XX"]),
   )(response);
   if (!result$.ok) {

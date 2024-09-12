@@ -5,7 +5,7 @@ Successfully
 ## Example Usage
 
 ```typescript
-import { GetTeamAccessRequestResponseBody } from "@vercel/sdk/models/operations";
+import { GetTeamAccessRequestResponseBody } from "@vercel/sdk/models/operations/getteamaccessrequest.js";
 
 let value: GetTeamAccessRequestResponseBody = {
   teamSlug: "my-team",

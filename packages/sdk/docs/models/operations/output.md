@@ -5,7 +5,7 @@ The results of the check Run
 ## Example Usage
 
 ```typescript
-import { Output } from "@vercel/sdk/models/operations";
+import { Output } from "@vercel/sdk/models/operations/updatecheck.js";
 
 let value: Output = {
   metrics: {

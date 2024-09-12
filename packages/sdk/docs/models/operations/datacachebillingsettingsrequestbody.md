@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { DataCacheBillingSettingsRequestBody } from "@vercel/sdk/models/operations";
+import { DataCacheBillingSettingsRequestBody } from "@vercel/sdk/models/operations/datacachebillingsettings.js";
 
 let value: DataCacheBillingSettingsRequestBody = {};
 ```

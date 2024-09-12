@@ -21,7 +21,12 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  RemoveCertRequest,
+  RemoveCertRequest$outboundSchema,
+  RemoveCertResponseBody,
+  RemoveCertResponseBody$inboundSchema,
+} from "../models/operations/removecert.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -32,11 +37,11 @@ import { Result } from "../types/fp.js";
  */
 export async function certsRemove(
   client$: VercelCore,
-  request: operations.RemoveCertRequest,
+  request: RemoveCertRequest,
   options?: RequestOptions,
 ): Promise<
   Result<
-    operations.RemoveCertResponseBody,
+    RemoveCertResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -50,7 +55,7 @@ export async function certsRemove(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) => operations.RemoveCertRequest$outboundSchema.parse(value$),
+    (value$) => RemoveCertRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {
@@ -113,7 +118,7 @@ export async function certsRemove(
   const response = doResult.value;
 
   const [result$] = await m$.match<
-    operations.RemoveCertResponseBody,
+    RemoveCertResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -122,7 +127,7 @@ export async function certsRemove(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(200, operations.RemoveCertResponseBody$inboundSchema),
+    m$.json(200, RemoveCertResponseBody$inboundSchema),
     m$.fail([400, 401, 403, 404, "4XX", "5XX"]),
   )(response);
   if (!result$.ok) {

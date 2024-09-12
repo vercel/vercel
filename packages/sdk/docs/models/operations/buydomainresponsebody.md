@@ -5,7 +5,7 @@ Successful response for purchasing a Domain.
 ## Example Usage
 
 ```typescript
-import { BuyDomainResponseBody } from "@vercel/sdk/models/operations";
+import { BuyDomainResponseBody } from "@vercel/sdk/models/operations/buydomain.js";
 
 let value: BuyDomainResponseBody = {
   domain: {

@@ -5,7 +5,7 @@ Successful response retrieving a list of domains.
 ## Example Usage
 
 ```typescript
-import { GetDomainsResponseBody } from "@vercel/sdk/models/operations";
+import { GetDomainsResponseBody } from "@vercel/sdk/models/operations/getdomains.js";
 
 let value: GetDomainsResponseBody = {
   domains: [

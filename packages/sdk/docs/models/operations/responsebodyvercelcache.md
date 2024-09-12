@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { ResponseBodyVercelCache } from "@vercel/sdk/models/operations";
+import { ResponseBodyVercelCache } from "@vercel/sdk/models/operations/getdeploymentevents.js";
 
 let value: ResponseBodyVercelCache = "BYPASS";
 ```

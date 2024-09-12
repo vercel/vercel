@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { MonitoringMetric } from "@vercel/sdk/models/operations";
+import { MonitoringMetric } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: MonitoringMetric = {
   price: 3344.74,

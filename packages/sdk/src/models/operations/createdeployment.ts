@@ -5,7 +5,12 @@
 import * as z from "zod";
 import { remap as remap$ } from "../../lib/primitives.js";
 import { ClosedEnum } from "../../types/enums.js";
-import * as components from "../components/index.js";
+import {
+  FlagJSONValue,
+  FlagJSONValue$inboundSchema,
+  FlagJSONValue$Outbound,
+  FlagJSONValue$outboundSchema,
+} from "../components/flagjsonvalue.js";
 
 /**
  * Forces a new deployment even if there is a previous similar deployment
@@ -1067,7 +1072,7 @@ export type GitRepo = GitRepo1 | GitRepo2 | GitRepo3;
 export type Flags2 = {};
 
 export type Options = {
-  value: components.FlagJSONValue | null;
+  value: FlagJSONValue | null;
   label?: string | undefined;
 };
 
@@ -5121,13 +5126,13 @@ export namespace Flags2$ {
 /** @internal */
 export const Options$inboundSchema: z.ZodType<Options, z.ZodTypeDef, unknown> =
   z.object({
-    value: z.nullable(components.FlagJSONValue$inboundSchema),
+    value: z.nullable(FlagJSONValue$inboundSchema),
     label: z.string().optional(),
   });
 
 /** @internal */
 export type Options$Outbound = {
-  value: components.FlagJSONValue$Outbound | null;
+  value: FlagJSONValue$Outbound | null;
   label?: string | undefined;
 };
 
@@ -5137,7 +5142,7 @@ export const Options$outboundSchema: z.ZodType<
   z.ZodTypeDef,
   Options
 > = z.object({
-  value: z.nullable(components.FlagJSONValue$outboundSchema),
+  value: z.nullable(FlagJSONValue$outboundSchema),
   label: z.string().optional(),
 });
 

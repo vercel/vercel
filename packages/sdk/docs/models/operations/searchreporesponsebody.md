@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { SearchRepoResponseBody } from "@vercel/sdk/models/operations";
+import { SearchRepoResponseBody } from "@vercel/sdk/models/operations/searchrepo.js";
 
 let value: SearchRepoResponseBody = {
   gitAccount: {
@@ -12,14 +12,14 @@ let value: SearchRepoResponseBody = {
   },
   repos: [
     {
-      id: "<value>",
+      id: "<id>",
       provider: "gitlab",
       url: "https://circular-grand.com",
       name: "<value>",
       slug: "<value>",
       namespace: "<value>",
       owner: {
-        id: "<value>",
+        id: "<id>",
         name: "<value>",
       },
       ownerType: "user",

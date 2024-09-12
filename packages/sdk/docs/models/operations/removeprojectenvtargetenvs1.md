@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { RemoveProjectEnvTargetEnvs1 } from "@vercel/sdk/models/operations";
+import { RemoveProjectEnvTargetEnvs1 } from "@vercel/sdk/models/operations/removeprojectenv.js";
 
 let value: RemoveProjectEnvTargetEnvs1 = "preview";
 ```

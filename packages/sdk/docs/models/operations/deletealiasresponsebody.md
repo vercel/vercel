@@ -5,7 +5,7 @@ The alias was successfully removed
 ## Example Usage
 
 ```typescript
-import { DeleteAliasResponseBody } from "@vercel/sdk/models/operations";
+import { DeleteAliasResponseBody } from "@vercel/sdk/models/operations/deletealias.js";
 
 let value: DeleteAliasResponseBody = {
   status: "SUCCESS",

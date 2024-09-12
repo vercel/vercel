@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { DeleteSecretResponseBody } from "@vercel/sdk/models/operations";
+import { DeleteSecretResponseBody } from "@vercel/sdk/models/operations/deletesecret.js";
 
 let value: DeleteSecretResponseBody = {
   uid: "sec_XCG7t7AIHuO2SBA8667zNUiM",

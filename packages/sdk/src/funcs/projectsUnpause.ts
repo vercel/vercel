@@ -22,7 +22,10 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  UnpauseProjectRequest,
+  UnpauseProjectRequest$outboundSchema,
+} from "../models/operations/unpauseproject.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -33,7 +36,7 @@ import { Result } from "../types/fp.js";
  */
 export async function projectsUnpause(
   client$: VercelCore,
-  request: operations.UnpauseProjectRequest,
+  request: UnpauseProjectRequest,
   options?: RequestOptions,
 ): Promise<
   Result<
@@ -51,7 +54,7 @@ export async function projectsUnpause(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) => operations.UnpauseProjectRequest$outboundSchema.parse(value$),
+    (value$) => UnpauseProjectRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {

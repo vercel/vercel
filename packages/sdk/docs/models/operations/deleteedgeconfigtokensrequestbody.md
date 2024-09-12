@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { DeleteEdgeConfigTokensRequestBody } from "@vercel/sdk/models/operations";
+import { DeleteEdgeConfigTokensRequestBody } from "@vercel/sdk/models/operations/deleteedgeconfigtokens.js";
 
 let value: DeleteEdgeConfigTokensRequestBody = {
   tokens: [

@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { AddProjectDomainRequestBody } from "@vercel/sdk/models/operations";
+import { AddProjectDomainRequestBody } from "@vercel/sdk/models/operations/addprojectdomain.js";
 
 let value: AddProjectDomainRequestBody = {
   name: "www.example.com",

@@ -18,7 +18,12 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  DeleteAuthTokenRequest,
+  DeleteAuthTokenRequest$outboundSchema,
+  DeleteAuthTokenResponseBody,
+  DeleteAuthTokenResponseBody$inboundSchema,
+} from "../models/operations/deleteauthtoken.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -29,11 +34,11 @@ import { Result } from "../types/fp.js";
  */
 export async function tokensDelete(
   client$: VercelCore,
-  request: operations.DeleteAuthTokenRequest,
+  request: DeleteAuthTokenRequest,
   options?: RequestOptions,
 ): Promise<
   Result<
-    operations.DeleteAuthTokenResponseBody,
+    DeleteAuthTokenResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -47,7 +52,7 @@ export async function tokensDelete(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) => operations.DeleteAuthTokenRequest$outboundSchema.parse(value$),
+    (value$) => DeleteAuthTokenRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {
@@ -104,7 +109,7 @@ export async function tokensDelete(
   const response = doResult.value;
 
   const [result$] = await m$.match<
-    operations.DeleteAuthTokenResponseBody,
+    DeleteAuthTokenResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -113,7 +118,7 @@ export async function tokensDelete(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(200, operations.DeleteAuthTokenResponseBody$inboundSchema),
+    m$.json(200, DeleteAuthTokenResponseBody$inboundSchema),
     m$.fail([400, 401, 403, 404, "4XX", "5XX"]),
   )(response);
   if (!result$.ok) {

@@ -17,7 +17,12 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  VerifyTokenRequest,
+  VerifyTokenRequest$outboundSchema,
+  VerifyTokenResponseBody,
+  VerifyTokenResponseBody$inboundSchema,
+} from "../models/operations/verifytoken.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -28,11 +33,11 @@ import { Result } from "../types/fp.js";
  */
 export async function authenticationVerify(
   client$: VercelCore,
-  request: operations.VerifyTokenRequest,
+  request: VerifyTokenRequest,
   options?: RequestOptions,
 ): Promise<
   Result<
-    operations.VerifyTokenResponseBody,
+    VerifyTokenResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -46,7 +51,7 @@ export async function authenticationVerify(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) => operations.VerifyTokenRequest$outboundSchema.parse(value$),
+    (value$) => VerifyTokenRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {
@@ -111,7 +116,7 @@ export async function authenticationVerify(
   const response = doResult.value;
 
   const [result$] = await m$.match<
-    operations.VerifyTokenResponseBody,
+    VerifyTokenResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -120,7 +125,7 @@ export async function authenticationVerify(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(200, operations.VerifyTokenResponseBody$inboundSchema),
+    m$.json(200, VerifyTokenResponseBody$inboundSchema),
     m$.fail([400, 403, 404, "4XX", 503, "5XX"]),
   )(response);
   if (!result$.ok) {

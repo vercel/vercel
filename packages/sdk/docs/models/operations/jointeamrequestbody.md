@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { JoinTeamRequestBody } from "@vercel/sdk/models/operations";
+import { JoinTeamRequestBody } from "@vercel/sdk/models/operations/jointeam.js";
 
 let value: JoinTeamRequestBody = {
   inviteCode: "fisdh38aejkeivn34nslfore9vjtn4ls",

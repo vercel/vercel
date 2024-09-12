@@ -21,7 +21,12 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  InviteUserToTeamRequest,
+  InviteUserToTeamRequest$outboundSchema,
+  InviteUserToTeamResponseBody,
+  InviteUserToTeamResponseBody$inboundSchema,
+} from "../models/operations/inviteusertoteam.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -32,11 +37,11 @@ import { Result } from "../types/fp.js";
  */
 export async function teamsInviteUser(
   client$: VercelCore,
-  request: operations.InviteUserToTeamRequest,
+  request: InviteUserToTeamRequest,
   options?: RequestOptions,
 ): Promise<
   Result<
-    operations.InviteUserToTeamResponseBody,
+    InviteUserToTeamResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -50,7 +55,7 @@ export async function teamsInviteUser(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) => operations.InviteUserToTeamRequest$outboundSchema.parse(value$),
+    (value$) => InviteUserToTeamRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {
@@ -108,7 +113,7 @@ export async function teamsInviteUser(
   const response = doResult.value;
 
   const [result$] = await m$.match<
-    operations.InviteUserToTeamResponseBody,
+    InviteUserToTeamResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -117,7 +122,7 @@ export async function teamsInviteUser(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(200, operations.InviteUserToTeamResponseBody$inboundSchema),
+    m$.json(200, InviteUserToTeamResponseBody$inboundSchema),
     m$.fail([400, 401, 403, 404, "4XX", 503, "5XX"]),
   )(response);
   if (!result$.ok) {

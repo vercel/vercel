@@ -5,7 +5,7 @@ The environment variable was successfully removed
 ## Example Usage
 
 ```typescript
-import { RemoveProjectEnvResponseBody } from "@vercel/sdk/models/operations";
+import { RemoveProjectEnvResponseBody } from "@vercel/sdk/models/operations/removeprojectenv.js";
 
 let value: RemoveProjectEnvResponseBody = [
   {

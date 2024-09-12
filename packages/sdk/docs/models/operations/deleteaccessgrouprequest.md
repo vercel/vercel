@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { DeleteAccessGroupRequest } from "@vercel/sdk/models/operations";
+import { DeleteAccessGroupRequest } from "@vercel/sdk/models/operations/deleteaccessgroup.js";
 
 let value: DeleteAccessGroupRequest = {
   idOrName: "<value>",

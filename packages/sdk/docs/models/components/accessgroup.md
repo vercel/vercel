@@ -5,7 +5,7 @@ Represents an Access Group.
 ## Example Usage
 
 ```typescript
-import { AccessGroup } from "@vercel/sdk/models/components";
+import { AccessGroup } from "@vercel/sdk/models/components/accessgroup.js";
 
 let value: AccessGroup = {
   name: "my-access-group",

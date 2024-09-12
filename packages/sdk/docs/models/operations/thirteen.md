@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { Thirteen } from "@vercel/sdk/models/operations";
+import { Thirteen } from "@vercel/sdk/models/operations/updateprojectdatacache.js";
 
 let value: Thirteen = {
   type: "postgres-url-no-ssl",

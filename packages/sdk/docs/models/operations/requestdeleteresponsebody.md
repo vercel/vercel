@@ -5,7 +5,7 @@ Response indicating that the User deletion process has been initiated, and a con
 ## Example Usage
 
 ```typescript
-import { RequestDeleteResponseBody } from "@vercel/sdk/models/operations";
+import { RequestDeleteResponseBody } from "@vercel/sdk/models/operations/requestdelete.js";
 
 let value: RequestDeleteResponseBody = {
   id: "<id>",

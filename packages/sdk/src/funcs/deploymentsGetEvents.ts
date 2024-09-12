@@ -21,7 +21,12 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  GetDeploymentEventsRequest,
+  GetDeploymentEventsRequest$outboundSchema,
+  GetDeploymentEventsResponse,
+  GetDeploymentEventsResponse$inboundSchema,
+} from "../models/operations/getdeploymentevents.js";
 import { Result } from "../types/fp.js";
 
 export enum GetEventsAcceptEnum {
@@ -37,11 +42,11 @@ export enum GetEventsAcceptEnum {
  */
 export async function deploymentsGetEvents(
   client$: VercelCore,
-  request: operations.GetDeploymentEventsRequest,
+  request: GetDeploymentEventsRequest,
   options?: RequestOptions & { acceptHeaderOverride?: GetEventsAcceptEnum },
 ): Promise<
   Result<
-    operations.GetDeploymentEventsResponse,
+    GetDeploymentEventsResponse,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -55,8 +60,7 @@ export async function deploymentsGetEvents(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) =>
-      operations.GetDeploymentEventsRequest$outboundSchema.parse(value$),
+    (value$) => GetDeploymentEventsRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {
@@ -129,7 +133,7 @@ export async function deploymentsGetEvents(
   const response = doResult.value;
 
   const [result$] = await m$.match<
-    operations.GetDeploymentEventsResponse,
+    GetDeploymentEventsResponse,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -138,8 +142,8 @@ export async function deploymentsGetEvents(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(200, operations.GetDeploymentEventsResponse$inboundSchema),
-    m$.json(200, operations.GetDeploymentEventsResponse$inboundSchema, {
+    m$.json(200, GetDeploymentEventsResponse$inboundSchema),
+    m$.json(200, GetDeploymentEventsResponse$inboundSchema, {
       ctype: "application/stream+json",
     }),
     m$.fail([400, 401, 403, 404, "4XX", "5XX"]),

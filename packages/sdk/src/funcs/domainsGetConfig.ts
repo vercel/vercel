@@ -21,7 +21,12 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  GetDomainConfigRequest,
+  GetDomainConfigRequest$outboundSchema,
+  GetDomainConfigResponseBody,
+  GetDomainConfigResponseBody$inboundSchema,
+} from "../models/operations/getdomainconfig.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -32,11 +37,11 @@ import { Result } from "../types/fp.js";
  */
 export async function domainsGetConfig(
   client$: VercelCore,
-  request: operations.GetDomainConfigRequest,
+  request: GetDomainConfigRequest,
   options?: RequestOptions,
 ): Promise<
   Result<
-    operations.GetDomainConfigResponseBody,
+    GetDomainConfigResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -50,7 +55,7 @@ export async function domainsGetConfig(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) => operations.GetDomainConfigRequest$outboundSchema.parse(value$),
+    (value$) => GetDomainConfigRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {
@@ -114,7 +119,7 @@ export async function domainsGetConfig(
   const response = doResult.value;
 
   const [result$] = await m$.match<
-    operations.GetDomainConfigResponseBody,
+    GetDomainConfigResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -123,7 +128,7 @@ export async function domainsGetConfig(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(200, operations.GetDomainConfigResponseBody$inboundSchema),
+    m$.json(200, GetDomainConfigResponseBody$inboundSchema),
     m$.fail([400, 401, 403, "4XX", "5XX"]),
   )(response);
   if (!result$.ok) {

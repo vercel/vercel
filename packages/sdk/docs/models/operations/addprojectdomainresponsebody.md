@@ -5,7 +5,7 @@ The domain was successfully added to the project
 ## Example Usage
 
 ```typescript
-import { AddProjectDomainResponseBody } from "@vercel/sdk/models/operations";
+import { AddProjectDomainResponseBody } from "@vercel/sdk/models/operations/addprojectdomain.js";
 
 let value: AddProjectDomainResponseBody = {
   name: "<value>",

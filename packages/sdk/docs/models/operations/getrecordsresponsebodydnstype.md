@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { GetRecordsResponseBodyDnsType } from "@vercel/sdk/models/operations";
+import { GetRecordsResponseBodyDnsType } from "@vercel/sdk/models/operations/getrecords.js";
 
 let value: GetRecordsResponseBodyDnsType = "MX";
 ```

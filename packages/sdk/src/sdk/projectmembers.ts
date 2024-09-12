@@ -6,7 +6,18 @@ import { projectMembersAdd } from "../funcs/projectMembersAdd.js";
 import { projectMembersGet } from "../funcs/projectMembersGet.js";
 import { projectMembersRemove } from "../funcs/projectMembersRemove.js";
 import { ClientSDK, RequestOptions } from "../lib/sdks.js";
-import * as operations from "../models/operations/index.js";
+import {
+  AddProjectMemberRequest,
+  AddProjectMemberResponseBody,
+} from "../models/operations/addprojectmember.js";
+import {
+  GetProjectMembersRequest,
+  GetProjectMembersResponseBody,
+} from "../models/operations/getprojectmembers.js";
+import {
+  RemoveProjectMemberRequest,
+  RemoveProjectMemberResponseBody,
+} from "../models/operations/removeprojectmember.js";
 import { unwrapAsync } from "../types/fp.js";
 
 export class ProjectMembers extends ClientSDK {
@@ -17,9 +28,9 @@ export class ProjectMembers extends ClientSDK {
    * Lists all members of a project.
    */
   async get(
-    request: operations.GetProjectMembersRequest,
+    request: GetProjectMembersRequest,
     options?: RequestOptions,
-  ): Promise<operations.GetProjectMembersResponseBody> {
+  ): Promise<GetProjectMembersResponseBody> {
     return unwrapAsync(projectMembersGet(
       this,
       request,
@@ -34,9 +45,9 @@ export class ProjectMembers extends ClientSDK {
    * Adds a new member to the project.
    */
   async add(
-    request: operations.AddProjectMemberRequest,
+    request: AddProjectMemberRequest,
     options?: RequestOptions,
-  ): Promise<operations.AddProjectMemberResponseBody> {
+  ): Promise<AddProjectMemberResponseBody> {
     return unwrapAsync(projectMembersAdd(
       this,
       request,
@@ -51,9 +62,9 @@ export class ProjectMembers extends ClientSDK {
    * Remove a member from a specific project
    */
   async remove(
-    request: operations.RemoveProjectMemberRequest,
+    request: RemoveProjectMemberRequest,
     options?: RequestOptions,
-  ): Promise<operations.RemoveProjectMemberResponseBody> {
+  ): Promise<RemoveProjectMemberResponseBody> {
     return unwrapAsync(projectMembersRemove(
       this,
       request,

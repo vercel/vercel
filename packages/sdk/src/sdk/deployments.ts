@@ -16,8 +16,41 @@ import { deploymentsListAliases } from "../funcs/deploymentsListAliases.js";
 import { deploymentsListFiles } from "../funcs/deploymentsListFiles.js";
 import { deploymentsUploadFile } from "../funcs/deploymentsUploadFile.js";
 import { ClientSDK, RequestOptions } from "../lib/sdks.js";
-import * as components from "../models/components/index.js";
-import * as operations from "../models/operations/index.js";
+import { FileTree } from "../models/components/filetree.js";
+import {
+  CancelDeploymentRequest,
+  CancelDeploymentResponseBody,
+} from "../models/operations/canceldeployment.js";
+import {
+  CreateDeploymentRequest,
+  CreateDeploymentResponseBody,
+} from "../models/operations/createdeployment.js";
+import {
+  DeleteDeploymentRequest,
+  DeleteDeploymentResponseBody,
+} from "../models/operations/deletedeployment.js";
+import {
+  GetDeploymentRequest,
+  GetDeploymentResponseBody,
+} from "../models/operations/getdeployment.js";
+import {
+  GetDeploymentEventsRequest,
+  GetDeploymentEventsResponse,
+} from "../models/operations/getdeploymentevents.js";
+import { GetDeploymentFileContentsRequest } from "../models/operations/getdeploymentfilecontents.js";
+import {
+  GetDeploymentsRequest,
+  GetDeploymentsResponse,
+} from "../models/operations/getdeployments.js";
+import {
+  ListDeploymentAliasesRequest,
+  ListDeploymentAliasesResponseBody,
+} from "../models/operations/listdeploymentaliases.js";
+import { ListDeploymentFilesRequest } from "../models/operations/listdeploymentfiles.js";
+import {
+  UploadFileRequest,
+  UploadFileResponseBody,
+} from "../models/operations/uploadfile.js";
 import { unwrapAsync } from "../types/fp.js";
 import { PageIterator, unwrapResultIterator } from "../types/operations.js";
 
@@ -31,9 +64,9 @@ export class Deployments extends ClientSDK {
    * Get the build logs of a deployment by deployment ID and build ID. It can work as an infinite stream of logs or as a JSON endpoint depending on the input parameters.
    */
   async getEvents(
-    request: operations.GetDeploymentEventsRequest,
+    request: GetDeploymentEventsRequest,
     options?: RequestOptions & { acceptHeaderOverride?: GetEventsAcceptEnum },
-  ): Promise<operations.GetDeploymentEventsResponse> {
+  ): Promise<GetDeploymentEventsResponse> {
     return unwrapAsync(deploymentsGetEvents(
       this,
       request,
@@ -48,9 +81,9 @@ export class Deployments extends ClientSDK {
    * Retrieves information for a deployment either by supplying its ID (`id` property) or Hostname (`url` property). Additional details will be included when the authenticated user or team is an owner of the deployment.
    */
   async get(
-    request: operations.GetDeploymentRequest,
+    request: GetDeploymentRequest,
     options?: RequestOptions,
-  ): Promise<operations.GetDeploymentResponseBody> {
+  ): Promise<GetDeploymentResponseBody> {
     return unwrapAsync(deploymentsGet(
       this,
       request,
@@ -65,9 +98,9 @@ export class Deployments extends ClientSDK {
    * Create a new deployment with all the required and intended data. If the deployment is not a git deployment, all files must be provided with the request, either referenced or inlined. Additionally, a deployment id can be specified to redeploy a previous deployment.
    */
   async create(
-    request: operations.CreateDeploymentRequest,
+    request: CreateDeploymentRequest,
     options?: RequestOptions,
-  ): Promise<operations.CreateDeploymentResponseBody> {
+  ): Promise<CreateDeploymentResponseBody> {
     return unwrapAsync(deploymentsCreate(
       this,
       request,
@@ -82,9 +115,9 @@ export class Deployments extends ClientSDK {
    * This endpoint allows you to cancel a deployment which is currently building, by supplying its `id` in the URL.
    */
   async cancel(
-    request: operations.CancelDeploymentRequest,
+    request: CancelDeploymentRequest,
     options?: RequestOptions,
-  ): Promise<operations.CancelDeploymentResponseBody> {
+  ): Promise<CancelDeploymentResponseBody> {
     return unwrapAsync(deploymentsCancel(
       this,
       request,
@@ -99,9 +132,9 @@ export class Deployments extends ClientSDK {
    * Before you create a deployment you need to upload the required files for that deployment. To do it, you need to first upload each file to this endpoint. Once that's completed, you can create a new deployment with the uploaded files. The file content must be placed inside the body of the request. In the case of a successful response you'll receive a status code 200 with an empty body.
    */
   async uploadFile(
-    request: operations.UploadFileRequest,
+    request: UploadFileRequest,
     options?: RequestOptions,
-  ): Promise<operations.UploadFileResponseBody> {
+  ): Promise<UploadFileResponseBody> {
     return unwrapAsync(deploymentsUploadFile(
       this,
       request,
@@ -116,9 +149,9 @@ export class Deployments extends ClientSDK {
    * Retrieves all Aliases for the Deployment with the given ID. The authenticated user or team must own the deployment.
    */
   async listAliases(
-    request: operations.ListDeploymentAliasesRequest,
+    request: ListDeploymentAliasesRequest,
     options?: RequestOptions,
-  ): Promise<operations.ListDeploymentAliasesResponseBody> {
+  ): Promise<ListDeploymentAliasesResponseBody> {
     return unwrapAsync(deploymentsListAliases(
       this,
       request,
@@ -133,9 +166,9 @@ export class Deployments extends ClientSDK {
    * Allows to retrieve the file structure of a deployment by supplying the deployment unique identifier.
    */
   async listFiles(
-    request: operations.ListDeploymentFilesRequest,
+    request: ListDeploymentFilesRequest,
     options?: RequestOptions,
-  ): Promise<Array<components.FileTree>> {
+  ): Promise<Array<FileTree>> {
     return unwrapAsync(deploymentsListFiles(
       this,
       request,
@@ -150,7 +183,7 @@ export class Deployments extends ClientSDK {
    * Allows to retrieve the content of a file by supplying the file identifier and the deployment unique identifier. The response body will contain a JSON response containing the contents of the file encoded as base64.
    */
   async getFileContents(
-    request: operations.GetDeploymentFileContentsRequest,
+    request: GetDeploymentFileContentsRequest,
     options?: RequestOptions,
   ): Promise<void> {
     return unwrapAsync(deploymentsGetFileContents(
@@ -167,9 +200,9 @@ export class Deployments extends ClientSDK {
    * List deployments under the authenticated user or team. If a deployment hasn't finished uploading (is incomplete), the `url` property will have a value of `null`.
    */
   async list(
-    request: operations.GetDeploymentsRequest,
+    request: GetDeploymentsRequest,
     options?: RequestOptions,
-  ): Promise<PageIterator<operations.GetDeploymentsResponse>> {
+  ): Promise<PageIterator<GetDeploymentsResponse>> {
     return unwrapResultIterator(deploymentsList(
       this,
       request,
@@ -184,9 +217,9 @@ export class Deployments extends ClientSDK {
    * This API allows you to delete a deployment, either by supplying its `id` in the URL or the `url` of the deployment as a query parameter. You can obtain the ID, for example, by listing all deployments.
    */
   async delete(
-    request: operations.DeleteDeploymentRequest,
+    request: DeleteDeploymentRequest,
     options?: RequestOptions,
-  ): Promise<operations.DeleteDeploymentResponseBody> {
+  ): Promise<DeleteDeploymentResponseBody> {
     return unwrapAsync(deploymentsDelete(
       this,
       request,

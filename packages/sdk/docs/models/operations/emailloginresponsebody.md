@@ -5,7 +5,7 @@ The request was successful and an email was sent
 ## Example Usage
 
 ```typescript
-import { EmailLoginResponseBody } from "@vercel/sdk/models/operations";
+import { EmailLoginResponseBody } from "@vercel/sdk/models/operations/emaillogin.js";
 
 let value: EmailLoginResponseBody = {
   token: "<value>",

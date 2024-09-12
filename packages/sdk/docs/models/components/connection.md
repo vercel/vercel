@@ -5,7 +5,7 @@ Information for the SAML Single Sign-On configuration.
 ## Example Usage
 
 ```typescript
-import { Connection } from "@vercel/sdk/models/components";
+import { Connection } from "@vercel/sdk/models/components/teamlimited.js";
 
 let value: Connection = {
   type: "OktaSAML",

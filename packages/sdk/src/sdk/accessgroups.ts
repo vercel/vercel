@@ -10,8 +10,29 @@ import { accessGroupsListProjects } from "../funcs/accessGroupsListProjects.js";
 import { accessGroupsRead } from "../funcs/accessGroupsRead.js";
 import { accessGroupsUpdate } from "../funcs/accessGroupsUpdate.js";
 import { ClientSDK, RequestOptions } from "../lib/sdks.js";
-import * as components from "../models/components/index.js";
-import * as operations from "../models/operations/index.js";
+import { AccessGroup } from "../models/components/accessgroup.js";
+import {
+  CreateAccessGroupRequest,
+  CreateAccessGroupResponseBody,
+} from "../models/operations/createaccessgroup.js";
+import { DeleteAccessGroupRequest } from "../models/operations/deleteaccessgroup.js";
+import {
+  ListAccessGroupMembersRequest,
+  ListAccessGroupMembersResponseBody,
+} from "../models/operations/listaccessgroupmembers.js";
+import {
+  ListAccessGroupProjectsRequest,
+  ListAccessGroupProjectsResponseBody,
+} from "../models/operations/listaccessgroupprojects.js";
+import {
+  ListAccessGroupsRequest,
+  ListAccessGroupsResponseBody,
+} from "../models/operations/listaccessgroups.js";
+import {
+  ReadAccessGroupRequest,
+  ReadAccessGroupResponseBody,
+} from "../models/operations/readaccessgroup.js";
+import { UpdateAccessGroupRequest } from "../models/operations/updateaccessgroup.js";
 import { unwrapAsync } from "../types/fp.js";
 
 export class AccessGroups extends ClientSDK {
@@ -22,9 +43,9 @@ export class AccessGroups extends ClientSDK {
    * Allows to read an access group
    */
   async read(
-    request: operations.ReadAccessGroupRequest,
+    request: ReadAccessGroupRequest,
     options?: RequestOptions,
-  ): Promise<operations.ReadAccessGroupResponseBody> {
+  ): Promise<ReadAccessGroupResponseBody> {
     return unwrapAsync(accessGroupsRead(
       this,
       request,
@@ -39,9 +60,9 @@ export class AccessGroups extends ClientSDK {
    * Allows to update an access group metadata
    */
   async update(
-    request: operations.UpdateAccessGroupRequest,
+    request: UpdateAccessGroupRequest,
     options?: RequestOptions,
-  ): Promise<components.AccessGroup> {
+  ): Promise<AccessGroup> {
     return unwrapAsync(accessGroupsUpdate(
       this,
       request,
@@ -56,7 +77,7 @@ export class AccessGroups extends ClientSDK {
    * Allows to delete an access group
    */
   async delete(
-    request: operations.DeleteAccessGroupRequest,
+    request: DeleteAccessGroupRequest,
     options?: RequestOptions,
   ): Promise<void> {
     return unwrapAsync(accessGroupsDelete(
@@ -73,9 +94,9 @@ export class AccessGroups extends ClientSDK {
    * List members of an access group
    */
   async listMembers(
-    request: operations.ListAccessGroupMembersRequest,
+    request: ListAccessGroupMembersRequest,
     options?: RequestOptions,
-  ): Promise<operations.ListAccessGroupMembersResponseBody> {
+  ): Promise<ListAccessGroupMembersResponseBody> {
     return unwrapAsync(accessGroupsListMembers(
       this,
       request,
@@ -90,9 +111,9 @@ export class AccessGroups extends ClientSDK {
    * List access groups
    */
   async list(
-    request: operations.ListAccessGroupsRequest,
+    request: ListAccessGroupsRequest,
     options?: RequestOptions,
-  ): Promise<operations.ListAccessGroupsResponseBody> {
+  ): Promise<ListAccessGroupsResponseBody> {
     return unwrapAsync(accessGroupsList(
       this,
       request,
@@ -107,9 +128,9 @@ export class AccessGroups extends ClientSDK {
    * Allows to create an access group
    */
   async create(
-    request: operations.CreateAccessGroupRequest,
+    request: CreateAccessGroupRequest,
     options?: RequestOptions,
-  ): Promise<operations.CreateAccessGroupResponseBody> {
+  ): Promise<CreateAccessGroupResponseBody> {
     return unwrapAsync(accessGroupsCreate(
       this,
       request,
@@ -124,9 +145,9 @@ export class AccessGroups extends ClientSDK {
    * List projects of an access group
    */
   async listProjects(
-    request: operations.ListAccessGroupProjectsRequest,
+    request: ListAccessGroupProjectsRequest,
     options?: RequestOptions,
-  ): Promise<operations.ListAccessGroupProjectsResponseBody> {
+  ): Promise<ListAccessGroupProjectsResponseBody> {
     return unwrapAsync(accessGroupsListProjects(
       this,
       request,

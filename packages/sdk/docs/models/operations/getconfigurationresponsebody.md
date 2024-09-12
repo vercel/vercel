@@ -5,7 +5,7 @@ The configuration with the provided id
 ## Example Usage
 
 ```typescript
-import { GetConfigurationResponseBody } from "@vercel/sdk/models/operations";
+import { GetConfigurationResponseBody } from "@vercel/sdk/models/operations/getconfiguration.js";
 
 let value: GetConfigurationResponseBody = {
   projectSelection: "all",

@@ -22,7 +22,12 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  UpdateProjectRequest,
+  UpdateProjectRequest$outboundSchema,
+  UpdateProjectResponseBody,
+  UpdateProjectResponseBody$inboundSchema,
+} from "../models/operations/updateproject.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -33,11 +38,11 @@ import { Result } from "../types/fp.js";
  */
 export async function projectsUpdate(
   client$: VercelCore,
-  request: operations.UpdateProjectRequest,
+  request: UpdateProjectRequest,
   options?: RequestOptions,
 ): Promise<
   Result<
-    operations.UpdateProjectResponseBody,
+    UpdateProjectResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -51,7 +56,7 @@ export async function projectsUpdate(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) => operations.UpdateProjectRequest$outboundSchema.parse(value$),
+    (value$) => UpdateProjectRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {
@@ -115,7 +120,7 @@ export async function projectsUpdate(
   const response = doResult.value;
 
   const [result$] = await m$.match<
-    operations.UpdateProjectResponseBody,
+    UpdateProjectResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -124,7 +129,7 @@ export async function projectsUpdate(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(200, operations.UpdateProjectResponseBody$inboundSchema),
+    m$.json(200, UpdateProjectResponseBody$inboundSchema),
     m$.fail([400, 401, 402, 403, 409, 428, "4XX", "5XX"]),
   )(response);
   if (!result$.ok) {

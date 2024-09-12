@@ -22,7 +22,12 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  GetRecordsRequest,
+  GetRecordsRequest$outboundSchema,
+  GetRecordsResponse,
+  GetRecordsResponse$inboundSchema,
+} from "../models/operations/getrecords.js";
 import { Result } from "../types/fp.js";
 import {
   createPageIterator,
@@ -39,12 +44,12 @@ import {
  */
 export async function dnsListRecords(
   client$: VercelCore,
-  request: operations.GetRecordsRequest,
+  request: GetRecordsRequest,
   options?: RequestOptions,
 ): Promise<
   PageIterator<
     Result<
-      operations.GetRecordsResponse,
+      GetRecordsResponse,
       | SDKError
       | SDKValidationError
       | UnexpectedClientError
@@ -59,7 +64,7 @@ export async function dnsListRecords(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) => operations.GetRecordsRequest$outboundSchema.parse(value$),
+    (value$) => GetRecordsRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {
@@ -129,7 +134,7 @@ export async function dnsListRecords(
   };
 
   const [result$, raw$] = await m$.match<
-    operations.GetRecordsResponse,
+    GetRecordsResponse,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -138,9 +143,7 @@ export async function dnsListRecords(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(200, operations.GetRecordsResponse$inboundSchema, {
-      key: "Result",
-    }),
+    m$.json(200, GetRecordsResponse$inboundSchema, { key: "Result" }),
     m$.fail([400, 401, 403, 404, "4XX", "5XX"]),
   )(response, { extraFields: responseFields$ });
   if (!result$.ok) {
@@ -151,7 +154,7 @@ export async function dnsListRecords(
     responseData: unknown,
   ): Paginator<
     Result<
-      operations.GetRecordsResponse,
+      GetRecordsResponse,
       | SDKError
       | SDKValidationError
       | UnexpectedClientError

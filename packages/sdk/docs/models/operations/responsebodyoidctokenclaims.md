@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { ResponseBodyOidcTokenClaims } from "@vercel/sdk/models/operations";
+import { ResponseBodyOidcTokenClaims } from "@vercel/sdk/models/operations/getdeployment.js";
 
 let value: ResponseBodyOidcTokenClaims = "<value>";
 ```

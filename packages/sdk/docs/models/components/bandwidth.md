@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { Bandwidth } from "@vercel/sdk/models/components";
+import { Bandwidth } from "@vercel/sdk/models/components/authuser.js";
 
 let value: Bandwidth = {
   price: 7441.01,

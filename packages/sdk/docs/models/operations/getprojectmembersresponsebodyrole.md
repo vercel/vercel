@@ -5,7 +5,7 @@ Role of this user in the project.
 ## Example Usage
 
 ```typescript
-import { GetProjectMembersResponseBodyRole } from "@vercel/sdk/models/operations";
+import { GetProjectMembersResponseBodyRole } from "@vercel/sdk/models/operations/getprojectmembers.js";
 
 let value: GetProjectMembersResponseBodyRole = "ADMIN";
 ```

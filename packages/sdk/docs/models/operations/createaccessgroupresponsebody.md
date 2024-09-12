@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { CreateAccessGroupResponseBody } from "@vercel/sdk/models/operations";
+import { CreateAccessGroupResponseBody } from "@vercel/sdk/models/operations/createaccessgroup.js";
 
 let value: CreateAccessGroupResponseBody = {
   membersCount: 8700.13,

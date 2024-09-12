@@ -5,7 +5,14 @@
 import { authenticationLogin } from "../funcs/authenticationLogin.js";
 import { authenticationVerify } from "../funcs/authenticationVerify.js";
 import { ClientSDK, RequestOptions } from "../lib/sdks.js";
-import * as operations from "../models/operations/index.js";
+import {
+  EmailLoginRequestBody,
+  EmailLoginResponseBody,
+} from "../models/operations/emaillogin.js";
+import {
+  VerifyTokenRequest,
+  VerifyTokenResponseBody,
+} from "../models/operations/verifytoken.js";
 import { unwrapAsync } from "../types/fp.js";
 
 export class Authentication extends ClientSDK {
@@ -16,9 +23,9 @@ export class Authentication extends ClientSDK {
    * Request a new login for a user to get a token. This will respond with a verification token and send an email to confirm the request. Once confirmed you can use the verification token to get an authentication token.
    */
   async login(
-    request?: operations.EmailLoginRequestBody | undefined,
+    request?: EmailLoginRequestBody | undefined,
     options?: RequestOptions,
-  ): Promise<operations.EmailLoginResponseBody> {
+  ): Promise<EmailLoginResponseBody> {
     return unwrapAsync(authenticationLogin(
       this,
       request,
@@ -33,9 +40,9 @@ export class Authentication extends ClientSDK {
    * Verify the user accepted the login request and get a authentication token. The user email address and the token received after requesting the login must be added to the URL as a query string with the names `email` and `token`.
    */
   async verify(
-    request: operations.VerifyTokenRequest,
+    request: VerifyTokenRequest,
     options?: RequestOptions,
-  ): Promise<operations.VerifyTokenResponseBody> {
+  ): Promise<VerifyTokenResponseBody> {
     return unwrapAsync(authenticationVerify(
       this,
       request,

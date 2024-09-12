@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { EdgeRequest } from "@vercel/sdk/models/components";
+import { EdgeRequest } from "@vercel/sdk/models/components/authuser.js";
 
 let value: EdgeRequest = {
   price: 4527.3,

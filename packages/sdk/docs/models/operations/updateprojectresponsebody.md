@@ -5,7 +5,7 @@ The project was successfully updated
 ## Example Usage
 
 ```typescript
-import { UpdateProjectResponseBody } from "@vercel/sdk/models/operations";
+import { UpdateProjectResponseBody } from "@vercel/sdk/models/operations/updateproject.js";
 
 let value: UpdateProjectResponseBody = {
   accountId: "<value>",

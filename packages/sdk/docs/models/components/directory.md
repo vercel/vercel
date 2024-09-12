@@ -5,7 +5,7 @@ Information for the Directory Sync configuration.
 ## Example Usage
 
 ```typescript
-import { Directory } from "@vercel/sdk/models/components";
+import { Directory } from "@vercel/sdk/models/components/teamlimited.js";
 
 let value: Directory = {
   type: "OktaSAML",

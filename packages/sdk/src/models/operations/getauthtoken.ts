@@ -3,7 +3,12 @@
  */
 
 import * as z from "zod";
-import * as components from "../components/index.js";
+import {
+  AuthToken,
+  AuthToken$inboundSchema,
+  AuthToken$Outbound,
+  AuthToken$outboundSchema,
+} from "../components/authtoken.js";
 
 export type GetAuthTokenRequest = {
   /**
@@ -19,7 +24,7 @@ export type GetAuthTokenResponseBody = {
   /**
    * Authentication token metadata.
    */
-  token: components.AuthToken;
+  token: AuthToken;
 };
 
 /** @internal */
@@ -64,12 +69,12 @@ export const GetAuthTokenResponseBody$inboundSchema: z.ZodType<
   z.ZodTypeDef,
   unknown
 > = z.object({
-  token: components.AuthToken$inboundSchema,
+  token: AuthToken$inboundSchema,
 });
 
 /** @internal */
 export type GetAuthTokenResponseBody$Outbound = {
-  token: components.AuthToken$Outbound;
+  token: AuthToken$Outbound;
 };
 
 /** @internal */
@@ -78,7 +83,7 @@ export const GetAuthTokenResponseBody$outboundSchema: z.ZodType<
   z.ZodTypeDef,
   GetAuthTokenResponseBody
 > = z.object({
-  token: components.AuthToken$outboundSchema,
+  token: AuthToken$outboundSchema,
 });
 
 /**

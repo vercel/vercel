@@ -21,7 +21,12 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  RequestAccessToTeamRequest,
+  RequestAccessToTeamRequest$outboundSchema,
+  RequestAccessToTeamResponseBody,
+  RequestAccessToTeamResponseBody$inboundSchema,
+} from "../models/operations/requestaccesstoteam.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -32,11 +37,11 @@ import { Result } from "../types/fp.js";
  */
 export async function teamsRequestAccess(
   client$: VercelCore,
-  request: operations.RequestAccessToTeamRequest,
+  request: RequestAccessToTeamRequest,
   options?: RequestOptions,
 ): Promise<
   Result<
-    operations.RequestAccessToTeamResponseBody,
+    RequestAccessToTeamResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -50,8 +55,7 @@ export async function teamsRequestAccess(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) =>
-      operations.RequestAccessToTeamRequest$outboundSchema.parse(value$),
+    (value$) => RequestAccessToTeamRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {
@@ -109,7 +113,7 @@ export async function teamsRequestAccess(
   const response = doResult.value;
 
   const [result$] = await m$.match<
-    operations.RequestAccessToTeamResponseBody,
+    RequestAccessToTeamResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -118,7 +122,7 @@ export async function teamsRequestAccess(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(200, operations.RequestAccessToTeamResponseBody$inboundSchema),
+    m$.json(200, RequestAccessToTeamResponseBody$inboundSchema),
     m$.fail([400, 401, 403, 404, "4XX", 503, "5XX"]),
   )(response);
   if (!result$.ok) {

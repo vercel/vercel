@@ -1,9 +1,9 @@
-speakeasyVersion: 1.396.2
+speakeasyVersion: 1.396.3
 sources: {}
 targets:
     vercel:
         source: vercel-OAS
-        outLocation: /github/workspace/repo/packages/sdk
+        outLocation: /home/disintegrator/github.com/vercel/vercel/packages/sdk
 workflow:
     workflowVersion: 1.0.0
     speakeasyVersion: latest

@@ -5,7 +5,7 @@ The successfully created deployment
 ## Example Usage
 
 ```typescript
-import { CreateDeploymentResponseBody } from "@vercel/sdk/models/operations";
+import { CreateDeploymentResponseBody } from "@vercel/sdk/models/operations/createdeployment.js";
 
 let value: CreateDeploymentResponseBody = {
   build: {

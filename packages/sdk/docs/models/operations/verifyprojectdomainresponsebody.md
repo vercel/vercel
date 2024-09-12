@@ -6,7 +6,7 @@ Domain is already verified
 ## Example Usage
 
 ```typescript
-import { VerifyProjectDomainResponseBody } from "@vercel/sdk/models/operations";
+import { VerifyProjectDomainResponseBody } from "@vercel/sdk/models/operations/verifyprojectdomain.js";
 
 let value: VerifyProjectDomainResponseBody = {
   name: "<value>",

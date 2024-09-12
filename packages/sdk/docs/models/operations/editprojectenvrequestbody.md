@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { EditProjectEnvRequestBody } from "@vercel/sdk/models/operations";
+import { EditProjectEnvRequestBody } from "@vercel/sdk/models/operations/editprojectenv.js";
 
 let value: EditProjectEnvRequestBody = {
   key: "GITHUB_APP_ID",

@@ -5,7 +5,7 @@ Successful response retrieving a list of paginated DNS records.
 ## Example Usage
 
 ```typescript
-import { GetRecordsResponseBody } from "@vercel/sdk/models/operations";
+import { GetRecordsResponseBody } from "@vercel/sdk/models/operations/getrecords.js";
 
 let value: GetRecordsResponseBody = {
   records: [

@@ -16,7 +16,10 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  ListAuthTokensResponseBody,
+  ListAuthTokensResponseBody$inboundSchema,
+} from "../models/operations/listauthtokens.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -30,7 +33,7 @@ export async function tokensList(
   options?: RequestOptions,
 ): Promise<
   Result<
-    operations.ListAuthTokensResponseBody,
+    ListAuthTokensResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -80,7 +83,7 @@ export async function tokensList(
   const response = doResult.value;
 
   const [result$] = await m$.match<
-    operations.ListAuthTokensResponseBody,
+    ListAuthTokensResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -89,7 +92,7 @@ export async function tokensList(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(200, operations.ListAuthTokensResponseBody$inboundSchema),
+    m$.json(200, ListAuthTokensResponseBody$inboundSchema),
     m$.fail([400, 401, 403, "4XX", "5XX"]),
   )(response);
   if (!result$.ok) {

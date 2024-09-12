@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { GetAliasProtectionBypassAliasesScope } from "@vercel/sdk/models/operations";
+import { GetAliasProtectionBypassAliasesScope } from "@vercel/sdk/models/operations/getalias.js";
 
 let value: GetAliasProtectionBypassAliasesScope = "alias-protection-override";
 ```

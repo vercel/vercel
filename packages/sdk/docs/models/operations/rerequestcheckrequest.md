@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { RerequestCheckRequest } from "@vercel/sdk/models/operations";
+import { RerequestCheckRequest } from "@vercel/sdk/models/operations/rerequestcheck.js";
 
 let value: RerequestCheckRequest = {
   deploymentId: "dpl_2qn7PZrx89yxY34vEZPD31Y9XVj6",

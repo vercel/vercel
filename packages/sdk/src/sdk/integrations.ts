@@ -8,7 +8,23 @@ import { integrationsGetConfigurations } from "../funcs/integrationsGetConfigura
 import { integrationsGetGitNamespaces } from "../funcs/integrationsGetGitNamespaces.js";
 import { integrationsSearchRepos } from "../funcs/integrationsSearchRepos.js";
 import { ClientSDK, RequestOptions } from "../lib/sdks.js";
-import * as operations from "../models/operations/index.js";
+import { DeleteConfigurationRequest } from "../models/operations/deleteconfiguration.js";
+import {
+  GetConfigurationRequest,
+  GetConfigurationResponseBody,
+} from "../models/operations/getconfiguration.js";
+import {
+  GetConfigurationsRequest,
+  GetConfigurationsResponseBody,
+} from "../models/operations/getconfigurations.js";
+import {
+  GitNamespacesRequest,
+  GitNamespacesResponseBody,
+} from "../models/operations/gitnamespaces.js";
+import {
+  SearchRepoRequest,
+  SearchRepoResponseBody,
+} from "../models/operations/searchrepo.js";
 import { unwrapAsync } from "../types/fp.js";
 
 export class Integrations extends ClientSDK {
@@ -19,9 +35,9 @@ export class Integrations extends ClientSDK {
    * Allows to retrieve all configurations for an authenticated integration. When the `project` view is used, configurations generated for the authorization flow will be filtered out of the results.
    */
   async getConfigurations(
-    request: operations.GetConfigurationsRequest,
+    request: GetConfigurationsRequest,
     options?: RequestOptions,
-  ): Promise<operations.GetConfigurationsResponseBody> {
+  ): Promise<GetConfigurationsResponseBody> {
     return unwrapAsync(integrationsGetConfigurations(
       this,
       request,
@@ -36,9 +52,9 @@ export class Integrations extends ClientSDK {
    * Allows to retrieve a the configuration with the provided id in case it exists. The authenticated user or team must be the owner of the config in order to access it.
    */
   async getConfiguration(
-    request: operations.GetConfigurationRequest,
+    request: GetConfigurationRequest,
     options?: RequestOptions,
-  ): Promise<operations.GetConfigurationResponseBody> {
+  ): Promise<GetConfigurationResponseBody> {
     return unwrapAsync(integrationsGetConfiguration(
       this,
       request,
@@ -53,7 +69,7 @@ export class Integrations extends ClientSDK {
    * Allows to remove the configuration with the `id` provided in the parameters. The configuration and all of its resources will be removed. This includes Webhooks, LogDrains and Project Env variables.
    */
   async deleteConfiguration(
-    request: operations.DeleteConfigurationRequest,
+    request: DeleteConfigurationRequest,
     options?: RequestOptions,
   ): Promise<void> {
     return unwrapAsync(integrationsDeleteConfiguration(
@@ -70,9 +86,9 @@ export class Integrations extends ClientSDK {
    * Lists git namespaces for a supported provider. Supported providers are `github`, `gitlab` and `bitbucket`. If the provider is not provided, it will try to obtain it from the user that authenticated the request.
    */
   async getGitNamespaces(
-    request: operations.GitNamespacesRequest,
+    request: GitNamespacesRequest,
     options?: RequestOptions,
-  ): Promise<Array<operations.GitNamespacesResponseBody>> {
+  ): Promise<Array<GitNamespacesResponseBody>> {
     return unwrapAsync(integrationsGetGitNamespaces(
       this,
       request,
@@ -87,9 +103,9 @@ export class Integrations extends ClientSDK {
    * Lists git repositories linked to a namespace `id` for a supported provider. A specific namespace `id` can be obtained via the `git-namespaces`  endpoint. Supported providers are `github`, `gitlab` and `bitbucket`. If the provider or namespace is not provided, it will try to obtain it from the user that authenticated the request.
    */
   async searchRepos(
-    request: operations.SearchRepoRequest,
+    request: SearchRepoRequest,
     options?: RequestOptions,
-  ): Promise<operations.SearchRepoResponseBody> {
+  ): Promise<SearchRepoResponseBody> {
     return unwrapAsync(integrationsSearchRepos(
       this,
       request,

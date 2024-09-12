@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { CreateTeamTeamsResponse200ApplicationJSONResponseBodyFrequency } from "@vercel/sdk/models/operations";
+import { CreateTeamTeamsResponse200ApplicationJSONResponseBodyFrequency } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: CreateTeamTeamsResponse200ApplicationJSONResponseBodyFrequency = {
   interval: "month",

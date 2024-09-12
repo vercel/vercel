@@ -7,7 +7,19 @@ import { tokensDelete } from "../funcs/tokensDelete.js";
 import { tokensGet } from "../funcs/tokensGet.js";
 import { tokensList } from "../funcs/tokensList.js";
 import { ClientSDK, RequestOptions } from "../lib/sdks.js";
-import * as operations from "../models/operations/index.js";
+import {
+  CreateAuthTokenRequest,
+  CreateAuthTokenResponseBody,
+} from "../models/operations/createauthtoken.js";
+import {
+  DeleteAuthTokenRequest,
+  DeleteAuthTokenResponseBody,
+} from "../models/operations/deleteauthtoken.js";
+import {
+  GetAuthTokenRequest,
+  GetAuthTokenResponseBody,
+} from "../models/operations/getauthtoken.js";
+import { ListAuthTokensResponseBody } from "../models/operations/listauthtokens.js";
 import { unwrapAsync } from "../types/fp.js";
 
 export class Tokens extends ClientSDK {
@@ -19,7 +31,7 @@ export class Tokens extends ClientSDK {
    */
   async list(
     options?: RequestOptions,
-  ): Promise<operations.ListAuthTokensResponseBody> {
+  ): Promise<ListAuthTokensResponseBody> {
     return unwrapAsync(tokensList(
       this,
       options,
@@ -33,9 +45,9 @@ export class Tokens extends ClientSDK {
    * Creates and returns a new authentication token for the currently authenticated User. The `bearerToken` property is only provided once, in the response body, so be sure to save it on the client for use with API requests.
    */
   async create(
-    request: operations.CreateAuthTokenRequest,
+    request: CreateAuthTokenRequest,
     options?: RequestOptions,
-  ): Promise<operations.CreateAuthTokenResponseBody> {
+  ): Promise<CreateAuthTokenResponseBody> {
     return unwrapAsync(tokensCreate(
       this,
       request,
@@ -50,9 +62,9 @@ export class Tokens extends ClientSDK {
    * Retrieve metadata about an authentication token belonging to the currently authenticated User.
    */
   async get(
-    request: operations.GetAuthTokenRequest,
+    request: GetAuthTokenRequest,
     options?: RequestOptions,
-  ): Promise<operations.GetAuthTokenResponseBody> {
+  ): Promise<GetAuthTokenResponseBody> {
     return unwrapAsync(tokensGet(
       this,
       request,
@@ -67,9 +79,9 @@ export class Tokens extends ClientSDK {
    * Invalidate an authentication token, such that it will no longer be valid for future HTTP requests.
    */
   async delete(
-    request: operations.DeleteAuthTokenRequest,
+    request: DeleteAuthTokenRequest,
     options?: RequestOptions,
-  ): Promise<operations.DeleteAuthTokenResponseBody> {
+  ): Promise<DeleteAuthTokenResponseBody> {
     return unwrapAsync(tokensDelete(
       this,
       request,

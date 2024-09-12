@@ -3,7 +3,12 @@
  */
 
 import * as z from "zod";
-import * as components from "../components/index.js";
+import {
+  Pagination,
+  Pagination$inboundSchema,
+  Pagination$Outbound,
+  Pagination$outboundSchema,
+} from "../components/pagination.js";
 
 export type GetSecretsRequest = {
   /**
@@ -74,7 +79,7 @@ export type GetSecretsResponseBody = {
   /**
    * This object contains information related to the pagination of the current request, including the necessary parameters to get the next or previous page of data.
    */
-  pagination: components.Pagination;
+  pagination: Pagination;
 };
 
 /** @internal */
@@ -186,13 +191,13 @@ export const GetSecretsResponseBody$inboundSchema: z.ZodType<
   unknown
 > = z.object({
   secrets: z.array(z.lazy(() => Secrets$inboundSchema)),
-  pagination: components.Pagination$inboundSchema,
+  pagination: Pagination$inboundSchema,
 });
 
 /** @internal */
 export type GetSecretsResponseBody$Outbound = {
   secrets: Array<Secrets$Outbound>;
-  pagination: components.Pagination$Outbound;
+  pagination: Pagination$Outbound;
 };
 
 /** @internal */
@@ -202,7 +207,7 @@ export const GetSecretsResponseBody$outboundSchema: z.ZodType<
   GetSecretsResponseBody
 > = z.object({
   secrets: z.array(z.lazy(() => Secrets$outboundSchema)),
-  pagination: components.Pagination$outboundSchema,
+  pagination: Pagination$outboundSchema,
 });
 
 /**

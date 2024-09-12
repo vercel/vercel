@@ -5,7 +5,7 @@ The project was successfuly created
 ## Example Usage
 
 ```typescript
-import { CreateProjectResponseBody } from "@vercel/sdk/models/operations";
+import { CreateProjectResponseBody } from "@vercel/sdk/models/operations/createproject.js";
 
 let value: CreateProjectResponseBody = {
   accountId: "<value>",

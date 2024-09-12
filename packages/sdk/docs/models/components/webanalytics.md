@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { WebAnalytics } from "@vercel/sdk/models/components";
+import { WebAnalytics } from "@vercel/sdk/models/components/authuser.js";
 
 let value: WebAnalytics = {
   isCurrentlyBlocked: false,

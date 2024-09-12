@@ -22,7 +22,10 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  PauseProjectRequest,
+  PauseProjectRequest$outboundSchema,
+} from "../models/operations/pauseproject.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -33,7 +36,7 @@ import { Result } from "../types/fp.js";
  */
 export async function projectsPause(
   client$: VercelCore,
-  request: operations.PauseProjectRequest,
+  request: PauseProjectRequest,
   options?: RequestOptions,
 ): Promise<
   Result<
@@ -51,7 +54,7 @@ export async function projectsPause(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) => operations.PauseProjectRequest$outboundSchema.parse(value$),
+    (value$) => PauseProjectRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {

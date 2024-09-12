@@ -8,7 +8,26 @@ import { secretsGet } from "../funcs/secretsGet.js";
 import { secretsList } from "../funcs/secretsList.js";
 import { secretsRename } from "../funcs/secretsRename.js";
 import { ClientSDK, RequestOptions } from "../lib/sdks.js";
-import * as operations from "../models/operations/index.js";
+import {
+  CreateSecretRequest,
+  CreateSecretResponseBody,
+} from "../models/operations/createsecret.js";
+import {
+  DeleteSecretRequest,
+  DeleteSecretResponseBody,
+} from "../models/operations/deletesecret.js";
+import {
+  GetSecretRequest,
+  GetSecretResponseBody,
+} from "../models/operations/getsecret.js";
+import {
+  GetSecretsRequest,
+  GetSecretsResponseBody,
+} from "../models/operations/getsecrets.js";
+import {
+  RenameSecretRequest,
+  RenameSecretResponseBody,
+} from "../models/operations/renamesecret.js";
 import { unwrapAsync } from "../types/fp.js";
 
 export class Secrets extends ClientSDK {
@@ -19,9 +38,9 @@ export class Secrets extends ClientSDK {
    * Retrieves the active Vercel secrets for the authenticated user or team. By default it returns 20 secrets. The rest can be retrieved using the pagination options. The body will contain an entry for each secret.
    */
   async list(
-    request: operations.GetSecretsRequest,
+    request: GetSecretsRequest,
     options?: RequestOptions,
-  ): Promise<operations.GetSecretsResponseBody> {
+  ): Promise<GetSecretsResponseBody> {
     return unwrapAsync(secretsList(
       this,
       request,
@@ -36,9 +55,9 @@ export class Secrets extends ClientSDK {
    * Allows to create a new secret.
    */
   async create(
-    request: operations.CreateSecretRequest,
+    request: CreateSecretRequest,
     options?: RequestOptions,
-  ): Promise<operations.CreateSecretResponseBody> {
+  ): Promise<CreateSecretResponseBody> {
     return unwrapAsync(secretsCreate(
       this,
       request,
@@ -53,9 +72,9 @@ export class Secrets extends ClientSDK {
    * Enables to edit the name of a secret. The name has to be unique to the user or team’s secrets.
    */
   async rename(
-    request: operations.RenameSecretRequest,
+    request: RenameSecretRequest,
     options?: RequestOptions,
-  ): Promise<operations.RenameSecretResponseBody> {
+  ): Promise<RenameSecretResponseBody> {
     return unwrapAsync(secretsRename(
       this,
       request,
@@ -70,9 +89,9 @@ export class Secrets extends ClientSDK {
    * Retrieves the information for a specific secret by passing either the secret id or name in the URL.
    */
   async get(
-    request: operations.GetSecretRequest,
+    request: GetSecretRequest,
     options?: RequestOptions,
-  ): Promise<operations.GetSecretResponseBody> {
+  ): Promise<GetSecretResponseBody> {
     return unwrapAsync(secretsGet(
       this,
       request,
@@ -87,9 +106,9 @@ export class Secrets extends ClientSDK {
    * This deletes the user or team’s secret defined in the URL.
    */
   async delete(
-    request: operations.DeleteSecretRequest,
+    request: DeleteSecretRequest,
     options?: RequestOptions,
-  ): Promise<operations.DeleteSecretResponseBody> {
+  ): Promise<DeleteSecretResponseBody> {
     return unwrapAsync(secretsDelete(
       this,
       request,

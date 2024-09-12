@@ -5,7 +5,7 @@ List of all edge configs.
 ## Example Usage
 
 ```typescript
-import { GetEdgeConfigsResponseBody } from "@vercel/sdk/models/operations";
+import { GetEdgeConfigsResponseBody } from "@vercel/sdk/models/operations/getedgeconfigs.js";
 
 let value: GetEdgeConfigsResponseBody = {
   sizeInBytes: 9591.43,

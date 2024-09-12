@@ -5,7 +5,7 @@ When "Single Sign-On (SAML)" is configured, this object contains information tha
 ## Example Usage
 
 ```typescript
-import { Saml } from "@vercel/sdk/models/components";
+import { Saml } from "@vercel/sdk/models/components/teamlimited.js";
 
 let value: Saml = {
   connection: {

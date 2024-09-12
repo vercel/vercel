@@ -22,7 +22,12 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  CreateCheckRequest,
+  CreateCheckRequest$outboundSchema,
+  CreateCheckResponseBody,
+  CreateCheckResponseBody$inboundSchema,
+} from "../models/operations/createcheck.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -33,11 +38,11 @@ import { Result } from "../types/fp.js";
  */
 export async function checksCreate(
   client$: VercelCore,
-  request: operations.CreateCheckRequest,
+  request: CreateCheckRequest,
   options?: RequestOptions,
 ): Promise<
   Result<
-    operations.CreateCheckResponseBody,
+    CreateCheckResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -51,7 +56,7 @@ export async function checksCreate(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) => operations.CreateCheckRequest$outboundSchema.parse(value$),
+    (value$) => CreateCheckRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {
@@ -117,7 +122,7 @@ export async function checksCreate(
   const response = doResult.value;
 
   const [result$] = await m$.match<
-    operations.CreateCheckResponseBody,
+    CreateCheckResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -126,7 +131,7 @@ export async function checksCreate(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(200, operations.CreateCheckResponseBody$inboundSchema),
+    m$.json(200, CreateCheckResponseBody$inboundSchema),
     m$.fail([400, 401, 403, 404, "4XX", "5XX"]),
   )(response);
   if (!result$.ok) {

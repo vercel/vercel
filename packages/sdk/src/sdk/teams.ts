@@ -16,8 +16,53 @@ import { teamsRequestAccess } from "../funcs/teamsRequestAccess.js";
 import { teamsUpdate } from "../funcs/teamsUpdate.js";
 import { teamsUpdateMember } from "../funcs/teamsUpdateMember.js";
 import { ClientSDK, RequestOptions } from "../lib/sdks.js";
-import * as components from "../models/components/index.js";
-import * as operations from "../models/operations/index.js";
+import { Team } from "../models/components/team.js";
+import {
+  CreateTeamRequestBody,
+  CreateTeamResponseBody,
+} from "../models/operations/createteam.js";
+import {
+  DeleteTeamRequest,
+  DeleteTeamResponseBody,
+} from "../models/operations/deleteteam.js";
+import {
+  DeleteTeamInviteCodeRequest,
+  DeleteTeamInviteCodeResponseBody,
+} from "../models/operations/deleteteaminvitecode.js";
+import { GetTeamRequest } from "../models/operations/getteam.js";
+import {
+  GetTeamAccessRequestRequest,
+  GetTeamAccessRequestResponseBody,
+} from "../models/operations/getteamaccessrequest.js";
+import {
+  GetTeamMembersRequest,
+  GetTeamMembersResponseBody,
+} from "../models/operations/getteammembers.js";
+import {
+  GetTeamsRequest,
+  GetTeamsResponseBody,
+} from "../models/operations/getteams.js";
+import {
+  InviteUserToTeamRequest,
+  InviteUserToTeamResponseBody,
+} from "../models/operations/inviteusertoteam.js";
+import {
+  JoinTeamRequest,
+  JoinTeamResponseBody,
+} from "../models/operations/jointeam.js";
+import { PatchTeamRequest } from "../models/operations/patchteam.js";
+import {
+  RemoveTeamMemberRequest,
+  RemoveTeamMemberResponseBody,
+} from "../models/operations/removeteammember.js";
+import {
+  RequestAccessToTeamRequest,
+  RequestAccessToTeamResponseBody,
+} from "../models/operations/requestaccesstoteam.js";
+import {
+  UpdateTeamMemberRequest,
+  UpdateTeamMemberResponseBody,
+} from "../models/operations/updateteammember.js";
 import { unwrapAsync } from "../types/fp.js";
 
 export class Teams extends ClientSDK {
@@ -28,9 +73,9 @@ export class Teams extends ClientSDK {
    * Get a paginated list of team members for the provided team.
    */
   async getMembers(
-    request: operations.GetTeamMembersRequest,
+    request: GetTeamMembersRequest,
     options?: RequestOptions,
-  ): Promise<operations.GetTeamMembersResponseBody> {
+  ): Promise<GetTeamMembersResponseBody> {
     return unwrapAsync(teamsGetMembers(
       this,
       request,
@@ -45,9 +90,9 @@ export class Teams extends ClientSDK {
    * Invite a user to join the team specified in the URL. The authenticated user needs to be an `OWNER` in order to successfully invoke this endpoint. The user can be specified with an email or an ID. If both email and ID are provided, ID will take priority.
    */
   async inviteUser(
-    request: operations.InviteUserToTeamRequest,
+    request: InviteUserToTeamRequest,
     options?: RequestOptions,
-  ): Promise<operations.InviteUserToTeamResponseBody> {
+  ): Promise<InviteUserToTeamResponseBody> {
     return unwrapAsync(teamsInviteUser(
       this,
       request,
@@ -62,9 +107,9 @@ export class Teams extends ClientSDK {
    * Request access to a team as a member. An owner has to approve the request. Only 10 users can request access to a team at the same time.
    */
   async requestAccess(
-    request: operations.RequestAccessToTeamRequest,
+    request: RequestAccessToTeamRequest,
     options?: RequestOptions,
-  ): Promise<operations.RequestAccessToTeamResponseBody> {
+  ): Promise<RequestAccessToTeamResponseBody> {
     return unwrapAsync(teamsRequestAccess(
       this,
       request,
@@ -79,9 +124,9 @@ export class Teams extends ClientSDK {
    * Check the status of a join request. It'll respond with a 404 if the request has been declined. If no `userId` path segment was provided, this endpoint will instead return the status of the authenticated user.
    */
   async getAccessRequest(
-    request: operations.GetTeamAccessRequestRequest,
+    request: GetTeamAccessRequestRequest,
     options?: RequestOptions,
-  ): Promise<operations.GetTeamAccessRequestResponseBody> {
+  ): Promise<GetTeamAccessRequestResponseBody> {
     return unwrapAsync(teamsGetAccessRequest(
       this,
       request,
@@ -96,9 +141,9 @@ export class Teams extends ClientSDK {
    * Join a team with a provided invite code or team ID.
    */
   async join(
-    request: operations.JoinTeamRequest,
+    request: JoinTeamRequest,
     options?: RequestOptions,
-  ): Promise<operations.JoinTeamResponseBody> {
+  ): Promise<JoinTeamResponseBody> {
     return unwrapAsync(teamsJoin(
       this,
       request,
@@ -113,9 +158,9 @@ export class Teams extends ClientSDK {
    * Update the membership of a Team Member on the Team specified by `teamId`, such as changing the _role_ of the member, or confirming a request to join the Team for an unconfirmed member. The authenticated user must be an `OWNER` of the Team.
    */
   async updateMember(
-    request: operations.UpdateTeamMemberRequest,
+    request: UpdateTeamMemberRequest,
     options?: RequestOptions,
-  ): Promise<operations.UpdateTeamMemberResponseBody> {
+  ): Promise<UpdateTeamMemberResponseBody> {
     return unwrapAsync(teamsUpdateMember(
       this,
       request,
@@ -130,9 +175,9 @@ export class Teams extends ClientSDK {
    * Remove a Team Member from the Team, or dismiss a user that requested access, or leave a team.
    */
   async removeMember(
-    request: operations.RemoveTeamMemberRequest,
+    request: RemoveTeamMemberRequest,
     options?: RequestOptions,
-  ): Promise<operations.RemoveTeamMemberResponseBody> {
+  ): Promise<RemoveTeamMemberResponseBody> {
     return unwrapAsync(teamsRemoveMember(
       this,
       request,
@@ -147,9 +192,9 @@ export class Teams extends ClientSDK {
    * Get information for the Team specified by the `teamId` parameter.
    */
   async get(
-    request: operations.GetTeamRequest,
+    request: GetTeamRequest,
     options?: RequestOptions,
-  ): Promise<components.Team> {
+  ): Promise<Team> {
     return unwrapAsync(teamsGet(
       this,
       request,
@@ -164,9 +209,9 @@ export class Teams extends ClientSDK {
    * Update the information of a Team specified by the `teamId` parameter. The request body should contain the information that will be updated on the Team.
    */
   async update(
-    request: operations.PatchTeamRequest,
+    request: PatchTeamRequest,
     options?: RequestOptions,
-  ): Promise<components.Team> {
+  ): Promise<Team> {
     return unwrapAsync(teamsUpdate(
       this,
       request,
@@ -181,9 +226,9 @@ export class Teams extends ClientSDK {
    * Get a paginated list of all the Teams the authenticated User is a member of.
    */
   async list(
-    request: operations.GetTeamsRequest,
+    request: GetTeamsRequest,
     options?: RequestOptions,
-  ): Promise<operations.GetTeamsResponseBody> {
+  ): Promise<GetTeamsResponseBody> {
     return unwrapAsync(teamsList(
       this,
       request,
@@ -198,9 +243,9 @@ export class Teams extends ClientSDK {
    * Create a new Team under your account. You need to send a POST request with the desired Team slug, and optionally the Team name.
    */
   async create(
-    request?: operations.CreateTeamRequestBody | undefined,
+    request?: CreateTeamRequestBody | undefined,
     options?: RequestOptions,
-  ): Promise<operations.CreateTeamResponseBody> {
+  ): Promise<CreateTeamResponseBody> {
     return unwrapAsync(teamsCreate(
       this,
       request,
@@ -215,9 +260,9 @@ export class Teams extends ClientSDK {
    * Delete a team under your account. You need to send a `DELETE` request with the desired team `id`. An optional array of reasons for deletion may also be sent.
    */
   async delete(
-    request: operations.DeleteTeamRequest,
+    request: DeleteTeamRequest,
     options?: RequestOptions,
-  ): Promise<operations.DeleteTeamResponseBody> {
+  ): Promise<DeleteTeamResponseBody> {
     return unwrapAsync(teamsDelete(
       this,
       request,
@@ -232,9 +277,9 @@ export class Teams extends ClientSDK {
    * Delete an active Team invite code.
    */
   async deleteInviteCode(
-    request: operations.DeleteTeamInviteCodeRequest,
+    request: DeleteTeamInviteCodeRequest,
     options?: RequestOptions,
-  ): Promise<operations.DeleteTeamInviteCodeResponseBody> {
+  ): Promise<DeleteTeamInviteCodeResponseBody> {
     return unwrapAsync(teamsDeleteInviteCode(
       this,
       request,

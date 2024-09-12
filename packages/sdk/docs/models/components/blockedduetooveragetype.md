@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { BlockedDueToOverageType } from "@vercel/sdk/models/components";
+import { BlockedDueToOverageType } from "@vercel/sdk/models/components/authuser.js";
 
 let value: BlockedDueToOverageType = "analyticsUsage";
 ```

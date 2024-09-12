@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { EdgeMiddlewareInvocations } from "@vercel/sdk/models/operations";
+import { EdgeMiddlewareInvocations } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: EdgeMiddlewareInvocations = {
   price: 4981.8,

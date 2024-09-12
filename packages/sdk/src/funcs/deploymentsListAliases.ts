@@ -21,7 +21,12 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  ListDeploymentAliasesRequest,
+  ListDeploymentAliasesRequest$outboundSchema,
+  ListDeploymentAliasesResponseBody,
+  ListDeploymentAliasesResponseBody$inboundSchema,
+} from "../models/operations/listdeploymentaliases.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -32,11 +37,11 @@ import { Result } from "../types/fp.js";
  */
 export async function deploymentsListAliases(
   client$: VercelCore,
-  request: operations.ListDeploymentAliasesRequest,
+  request: ListDeploymentAliasesRequest,
   options?: RequestOptions,
 ): Promise<
   Result<
-    operations.ListDeploymentAliasesResponseBody,
+    ListDeploymentAliasesResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -50,8 +55,7 @@ export async function deploymentsListAliases(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) =>
-      operations.ListDeploymentAliasesRequest$outboundSchema.parse(value$),
+    (value$) => ListDeploymentAliasesRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {
@@ -114,7 +118,7 @@ export async function deploymentsListAliases(
   const response = doResult.value;
 
   const [result$] = await m$.match<
-    operations.ListDeploymentAliasesResponseBody,
+    ListDeploymentAliasesResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -123,7 +127,7 @@ export async function deploymentsListAliases(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(200, operations.ListDeploymentAliasesResponseBody$inboundSchema),
+    m$.json(200, ListDeploymentAliasesResponseBody$inboundSchema),
     m$.fail([400, 401, 403, 404, "4XX", "5XX"]),
   )(response);
   if (!result$.ok) {

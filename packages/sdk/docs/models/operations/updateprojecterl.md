@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { UpdateProjectErl } from "@vercel/sdk/models/operations";
+import { UpdateProjectErl } from "@vercel/sdk/models/operations/updateproject.js";
 
 let value: UpdateProjectErl = {
   algo: "fixed_window",

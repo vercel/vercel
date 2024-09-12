@@ -5,7 +5,7 @@ An object containing infomation related to the amount of platform resources may 
 ## Example Usage
 
 ```typescript
-import { ResourceConfig } from "@vercel/sdk/models/components";
+import { ResourceConfig } from "@vercel/sdk/models/components/authuser.js";
 
 let value: ResourceConfig = {};
 ```

@@ -2,7 +2,14 @@
   "name": "@vercel/sdk",
   "version": "14.0.0-canary.0",
   "author": "Speakeasy",
-  "main": "./index.js",
+  "tshy": {
+    "exports": {
+      ".": "./src/index.ts",
+      "./package.json": "./package.json",
+      "./*.js": "./src/*.ts",
+      "./*": "./src/*.ts"
+    }
+  },
   "sideEffects": false,
   "repository": {
     "type": "git",
@@ -11,8 +18,8 @@
   },
   "scripts": {
     "lint": "eslint --max-warnings=0 src",
-    "build": "tsc",
-    "prepare": "npm run build"
+    "build": "tshy",
+    "prepublishOnly": "npm run build"
   },
   "peerDependencies": {
     "zod": ">= 3"
@@ -24,6 +31,7 @@
     "eslint": "^8.57.0",
     "eslint-import-resolver-typescript": "^3.6.1",
     "eslint-plugin-import": "^2.29.1",
+    "tshy": "^1.16.2",
     "typescript": "^5.4.5",
     "zod": "^3.23.4"
   },

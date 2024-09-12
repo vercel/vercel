@@ -4,7 +4,10 @@
 
 import { protectionBypassUpdate } from "../funcs/protectionBypassUpdate.js";
 import { ClientSDK, RequestOptions } from "../lib/sdks.js";
-import * as operations from "../models/operations/index.js";
+import {
+  UpdateProjectProtectionBypassRequest,
+  UpdateProjectProtectionBypassResponseBody,
+} from "../models/operations/updateprojectprotectionbypass.js";
 import { unwrapAsync } from "../types/fp.js";
 
 export class ProtectionBypass extends ClientSDK {
@@ -15,9 +18,9 @@ export class ProtectionBypass extends ClientSDK {
    * Update the deployment protection automation bypass for a project
    */
   async update(
-    request: operations.UpdateProjectProtectionBypassRequest,
+    request: UpdateProjectProtectionBypassRequest,
     options?: RequestOptions,
-  ): Promise<operations.UpdateProjectProtectionBypassResponseBody> {
+  ): Promise<UpdateProjectProtectionBypassResponseBody> {
     return unwrapAsync(protectionBypassUpdate(
       this,
       request,

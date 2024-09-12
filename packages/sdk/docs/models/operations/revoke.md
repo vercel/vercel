@@ -5,7 +5,7 @@ Optional instructions for revoking and regenerating a automation bypass
 ## Example Usage
 
 ```typescript
-import { Revoke } from "@vercel/sdk/models/operations";
+import { Revoke } from "@vercel/sdk/models/operations/updateprojectprotectionbypass.js";
 
 let value: Revoke = {
   secret: "<value>",

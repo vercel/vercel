@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { AliasWarning } from "@vercel/sdk/models/operations";
+import { AliasWarning } from "@vercel/sdk/models/operations/createdeployment.js";
 
 let value: AliasWarning = {
   code: "<value>",

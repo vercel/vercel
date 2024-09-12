@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { ResponseBodyWafAction } from "@vercel/sdk/models/operations";
+import { ResponseBodyWafAction } from "@vercel/sdk/models/operations/getdeploymentevents.js";
 
 let value: ResponseBodyWafAction = "bypass";
 ```

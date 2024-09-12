@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { ResponseBody1 } from "@vercel/sdk/models/operations";
+import { ResponseBody1 } from "@vercel/sdk/models/operations/artifactquery.js";
 
 let value: ResponseBody1 = {
   size: 5373.73,

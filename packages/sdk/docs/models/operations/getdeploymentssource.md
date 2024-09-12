@@ -5,7 +5,7 @@ The source of the deployment.
 ## Example Usage
 
 ```typescript
-import { GetDeploymentsSource } from "@vercel/sdk/models/operations";
+import { GetDeploymentsSource } from "@vercel/sdk/models/operations/getdeployments.js";
 
 let value: GetDeploymentsSource = "cli";
 ```

@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { User } from "@vercel/sdk/models/operations";
+import { User } from "@vercel/sdk/models/operations/getauthuser.js";
 
 let value: User = {
   limited: false,

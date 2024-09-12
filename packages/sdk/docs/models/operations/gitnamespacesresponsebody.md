@@ -3,12 +3,12 @@
 ## Example Usage
 
 ```typescript
-import { GitNamespacesResponseBody } from "@vercel/sdk/models/operations";
+import { GitNamespacesResponseBody } from "@vercel/sdk/models/operations/gitnamespaces.js";
 
 let value: GitNamespacesResponseBody = {
   provider: "<value>",
   slug: "<value>",
-  id: "<value>",
+  id: "<id>",
   ownerType: "<value>",
 };
 ```

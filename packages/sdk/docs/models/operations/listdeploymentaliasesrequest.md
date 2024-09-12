@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { ListDeploymentAliasesRequest } from "@vercel/sdk/models/operations";
+import { ListDeploymentAliasesRequest } from "@vercel/sdk/models/operations/listdeploymentaliases.js";
 
 let value: ListDeploymentAliasesRequest = {
   id: "dpl_FjvFJncQHQcZMznrUm9EoB8sFuPa",

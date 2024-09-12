@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { Teams } from "@vercel/sdk/models/operations";
+import { Teams } from "@vercel/sdk/models/operations/getteams.js";
 
 let value: Teams = {
   limited: false,

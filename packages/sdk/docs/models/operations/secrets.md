@@ -5,7 +5,7 @@ Data representing a secret.
 ## Example Usage
 
 ```typescript
-import { Secrets } from "@vercel/sdk/models/operations";
+import { Secrets } from "@vercel/sdk/models/operations/getsecrets.js";
 
 let value: Secrets = {
   created: new Date("2021-02-10T13:11:49.180Z"),

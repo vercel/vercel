@@ -12,7 +12,10 @@ import * as schemas$ from "../lib/schemas.js";
 import { RequestOptions } from "../lib/sdks.js";
 import { extractSecurity, resolveGlobalSecurity } from "../lib/security.js";
 import { pathToFunc } from "../lib/url.js";
-import * as components from "../models/components/index.js";
+import {
+  EdgeConfigToken,
+  EdgeConfigToken$inboundSchema,
+} from "../models/components/edgeconfigtoken.js";
 import {
   ConnectionError,
   InvalidRequestError,
@@ -22,7 +25,10 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  GetEdgeConfigTokenRequest,
+  GetEdgeConfigTokenRequest$outboundSchema,
+} from "../models/operations/getedgeconfigtoken.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -33,11 +39,11 @@ import { Result } from "../types/fp.js";
  */
 export async function edgeConfigsGetToken(
   client$: VercelCore,
-  request: operations.GetEdgeConfigTokenRequest,
+  request: GetEdgeConfigTokenRequest,
   options?: RequestOptions,
 ): Promise<
   Result<
-    components.EdgeConfigToken,
+    EdgeConfigToken,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -51,8 +57,7 @@ export async function edgeConfigsGetToken(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) =>
-      operations.GetEdgeConfigTokenRequest$outboundSchema.parse(value$),
+    (value$) => GetEdgeConfigTokenRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {
@@ -121,7 +126,7 @@ export async function edgeConfigsGetToken(
   const response = doResult.value;
 
   const [result$] = await m$.match<
-    components.EdgeConfigToken,
+    EdgeConfigToken,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -130,7 +135,7 @@ export async function edgeConfigsGetToken(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(200, components.EdgeConfigToken$inboundSchema),
+    m$.json(200, EdgeConfigToken$inboundSchema),
     m$.fail([400, 401, 403, 404, "4XX", "5XX"]),
   )(response);
   if (!result$.ok) {

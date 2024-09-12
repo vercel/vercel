@@ -5,7 +5,7 @@ The access scopes granted to the token.
 ## Example Usage
 
 ```typescript
-import { Scopes2 } from "@vercel/sdk/models/components";
+import { Scopes2 } from "@vercel/sdk/models/components/authtoken.js";
 
 let value: Scopes2 = {
   type: "team",

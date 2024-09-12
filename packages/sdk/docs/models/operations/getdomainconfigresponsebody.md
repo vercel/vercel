@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { GetDomainConfigResponseBody } from "@vercel/sdk/models/operations";
+import { GetDomainConfigResponseBody } from "@vercel/sdk/models/operations/getdomainconfig.js";
 
 let value: GetDomainConfigResponseBody = {
   misconfigured: false,

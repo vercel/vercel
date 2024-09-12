@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { ResponseBodyAliasAssignedAt } from "@vercel/sdk/models/operations";
+import { ResponseBodyAliasAssignedAt } from "@vercel/sdk/models/operations/getdeployment.js";
 
 let value: ResponseBodyAliasAssignedAt = 9944.01;
 ```

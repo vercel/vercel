@@ -21,7 +21,12 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  GetProjectDomainRequest,
+  GetProjectDomainRequest$outboundSchema,
+  GetProjectDomainResponseBody,
+  GetProjectDomainResponseBody$inboundSchema,
+} from "../models/operations/getprojectdomain.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -32,11 +37,11 @@ import { Result } from "../types/fp.js";
  */
 export async function projectDomainsGet(
   client$: VercelCore,
-  request: operations.GetProjectDomainRequest,
+  request: GetProjectDomainRequest,
   options?: RequestOptions,
 ): Promise<
   Result<
-    operations.GetProjectDomainResponseBody,
+    GetProjectDomainResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -50,7 +55,7 @@ export async function projectDomainsGet(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) => operations.GetProjectDomainRequest$outboundSchema.parse(value$),
+    (value$) => GetProjectDomainRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {
@@ -119,7 +124,7 @@ export async function projectDomainsGet(
   const response = doResult.value;
 
   const [result$] = await m$.match<
-    operations.GetProjectDomainResponseBody,
+    GetProjectDomainResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -128,7 +133,7 @@ export async function projectDomainsGet(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(200, operations.GetProjectDomainResponseBody$inboundSchema),
+    m$.json(200, GetProjectDomainResponseBody$inboundSchema),
     m$.fail([400, 401, 403, "4XX", "5XX"]),
   )(response);
   if (!result$.ok) {

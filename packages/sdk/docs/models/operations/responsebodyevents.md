@@ -5,7 +5,7 @@ The webhooks events
 ## Example Usage
 
 ```typescript
-import { ResponseBodyEvents } from "@vercel/sdk/models/operations";
+import { ResponseBodyEvents } from "@vercel/sdk/models/operations/getwebhooks.js";
 
 let value: ResponseBodyEvents = "deployment.created";
 ```

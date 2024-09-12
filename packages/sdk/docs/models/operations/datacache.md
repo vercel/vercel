@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { DataCache } from "@vercel/sdk/models/operations";
+import { DataCache } from "@vercel/sdk/models/operations/updateprojectdatacache.js";
 
 let value: DataCache = {
   userDisabled: false,

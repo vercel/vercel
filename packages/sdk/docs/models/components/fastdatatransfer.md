@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { FastDataTransfer } from "@vercel/sdk/models/components";
+import { FastDataTransfer } from "@vercel/sdk/models/components/authuser.js";
 
 let value: FastDataTransfer = {
   price: 2667.88,

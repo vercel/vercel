@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { GitNamespacesRequest } from "@vercel/sdk/models/operations";
+import { GitNamespacesRequest } from "@vercel/sdk/models/operations/gitnamespaces.js";
 
 let value: GitNamespacesRequest = {
   host: "ghes-test.now.systems",

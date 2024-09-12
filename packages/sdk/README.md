@@ -73,6 +73,9 @@ yarn add @vercel/sdk zod
 # Note that Yarn does not install peer dependencies automatically. You will need
 # to install zod as shown above.
 ```
+
+> [!NOTE]
+> This package is published with CommonJS and ES Modules (ESM) support.
 <!-- End SDK Installation [installation] -->
 
 <!-- Start Requirements [requirements] -->
@@ -108,11 +111,8 @@ run();
 <!-- Start Available Resources and Operations [operations] -->
 ## Available Resources and Operations
 
-### [Vercel SDK](docs/sdks/vercel/README.md)
-
-* [listDeploymentBuilds](docs/sdks/vercel/README.md#listdeploymentbuilds) - Retrieves the list of builds given their deployment's unique identifier. No longer listed as public API as of May 2023.
-* [datacachePurgeall](docs/sdks/vercel/README.md#datacachepurgeall)
-* [dataCacheBillingSettings](docs/sdks/vercel/README.md#datacachebillingsettings)
+<details open>
+<summary>Available methods</summary>
 
 ### [accessGroups](docs/sdks/accessgroups/README.md)
 
@@ -124,6 +124,13 @@ run();
 * [create](docs/sdks/accessgroups/README.md#create) - Creates an access group
 * [listProjects](docs/sdks/accessgroups/README.md#listprojects) - List projects of an access group
 
+### [aliases](docs/sdks/aliases/README.md)
+
+* [list](docs/sdks/aliases/README.md#list) - List aliases
+* [get](docs/sdks/aliases/README.md#get) - Get an Alias
+* [delete](docs/sdks/aliases/README.md#delete) - Delete an Alias
+* [assign](docs/sdks/aliases/README.md#assign) - Assign an Alias
+
 ### [artifacts](docs/sdks/artifacts/README.md)
 
 * [recordEvents](docs/sdks/artifacts/README.md#recordevents) - Record an artifacts cache usage event
@@ -133,6 +140,18 @@ run();
 * [exists](docs/sdks/artifacts/README.md#exists) - Check if a cache artifact exists
 * [query](docs/sdks/artifacts/README.md#query) - Query information about an artifact
 
+### [authentication](docs/sdks/authentication/README.md)
+
+* [login](docs/sdks/authentication/README.md#login) - Login with email
+* [verify](docs/sdks/authentication/README.md#verify) - Verify a login request to get an authentication token
+
+### [certs](docs/sdks/certs/README.md)
+
+* [getById](docs/sdks/certs/README.md#getbyid) - Get cert by id
+* [remove](docs/sdks/certs/README.md#remove) - Remove cert
+* [issue](docs/sdks/certs/README.md#issue) - Issue a new cert
+* [upload](docs/sdks/certs/README.md#upload) - Upload a cert
+
 ### [checks](docs/sdks/checks/README.md)
 
 * [create](docs/sdks/checks/README.md#create) - Creates a new Check
@@ -140,16 +159,6 @@ run();
 * [get](docs/sdks/checks/README.md#get) - Get a single check
 * [update](docs/sdks/checks/README.md#update) - Update a check
 * [rerequest](docs/sdks/checks/README.md#rerequest) - Rerequest a check
-
-### [projects](docs/sdks/projects/README.md)
-
-* [updateDataCache](docs/sdks/projects/README.md#updatedatacache) - Update the data cache feature
-* [getAll](docs/sdks/projects/README.md#getall) - Retrieve a list of projects
-* [create](docs/sdks/projects/README.md#create) - Create a new project
-* [update](docs/sdks/projects/README.md#update) - Update an existing project
-* [delete](docs/sdks/projects/README.md#delete) - Delete a Project
-* [pause](docs/sdks/projects/README.md#pause) - Pause a project
-* [unpause](docs/sdks/projects/README.md#unpause) - Unpause a project
 
 ### [deployments](docs/sdks/deployments/README.md)
 
@@ -163,6 +172,13 @@ run();
 * [getFileContents](docs/sdks/deployments/README.md#getfilecontents) - Get Deployment File Contents
 * [list](docs/sdks/deployments/README.md#list) - List deployments
 * [delete](docs/sdks/deployments/README.md#delete) - Delete a Deployment
+
+### [dns](docs/sdks/dns/README.md)
+
+* [listRecords](docs/sdks/dns/README.md#listrecords) - List existing DNS records
+* [createRecord](docs/sdks/dns/README.md#createrecord) - Create a DNS record
+* [updateRecord](docs/sdks/dns/README.md#updaterecord) - Update an existing DNS record
+* [removeRecord](docs/sdks/dns/README.md#removerecord) - Delete a DNS record
 
 ### [domains](docs/sdks/domains/README.md)
 
@@ -180,13 +196,6 @@ run();
 * [create](docs/sdks/domains/README.md#create) - Add a domain to a project
 * [verify](docs/sdks/domains/README.md#verify) - Verify project domain
 
-### [dns](docs/sdks/dns/README.md)
-
-* [listRecords](docs/sdks/dns/README.md#listrecords) - List existing DNS records
-* [createRecord](docs/sdks/dns/README.md#createrecord) - Create a DNS record
-* [updateRecord](docs/sdks/dns/README.md#updaterecord) - Update an existing DNS record
-* [removeRecord](docs/sdks/dns/README.md#removerecord) - Delete a DNS record
-
 ### [edgeConfigs](docs/sdks/edgeconfigs/README.md)
 
 * [list](docs/sdks/edgeconfigs/README.md#list) - Get Edge Configs
@@ -203,6 +212,14 @@ run();
 * [deleteTokens](docs/sdks/edgeconfigs/README.md#deletetokens) - Delete one or more Edge Config tokens
 * [getToken](docs/sdks/edgeconfigs/README.md#gettoken) - Get Edge Config token meta data
 * [createToken](docs/sdks/edgeconfigs/README.md#createtoken) - Create an Edge Config token
+
+### [envs](docs/sdks/envs/README.md)
+
+* [listByProject](docs/sdks/envs/README.md#listbyproject) - Retrieve the environment variables of a project by id or name
+* [get](docs/sdks/envs/README.md#get) - Retrieve the decrypted value of an environment variable of a project by id
+* [create](docs/sdks/envs/README.md#create) - Create one or more environment variables
+* [delete](docs/sdks/envs/README.md#delete) - Remove an environment variable
+* [update](docs/sdks/envs/README.md#update) - Edit an environment variable
 
 ### [events](docs/sdks/events/README.md)
 
@@ -226,34 +243,44 @@ run();
 * [getAll](docs/sdks/logdrains/README.md#getall) - Retrieves a list of all the Log Drains
 * [createConfigurable](docs/sdks/logdrains/README.md#createconfigurable) - Creates a Configurable Log Drain
 
-### [projectMembers](docs/sdks/projectmembers/README.md)
-
-* [get](docs/sdks/projectmembers/README.md#get) - List project members
-* [add](docs/sdks/projectmembers/README.md#add) - Adds a new member to a project.
-* [remove](docs/sdks/projectmembers/README.md#remove) - Remove a Project Member
-
 ### [projectDomains](docs/sdks/projectdomains/README.md)
 
 * [get](docs/sdks/projectdomains/README.md#get) - Get a project domain
 * [update](docs/sdks/projectdomains/README.md#update) - Update a project domain
 * [delete](docs/sdks/projectdomains/README.md#delete) - Remove a domain from a project
 
-### [envs](docs/sdks/envs/README.md)
+### [projectMembers](docs/sdks/projectmembers/README.md)
 
-* [listByProject](docs/sdks/envs/README.md#listbyproject) - Retrieve the environment variables of a project by id or name
-* [get](docs/sdks/envs/README.md#get) - Retrieve the decrypted value of an environment variable of a project by id
-* [create](docs/sdks/envs/README.md#create) - Create one or more environment variables
-* [delete](docs/sdks/envs/README.md#delete) - Remove an environment variable
-* [update](docs/sdks/envs/README.md#update) - Edit an environment variable
+* [get](docs/sdks/projectmembers/README.md#get) - List project members
+* [add](docs/sdks/projectmembers/README.md#add) - Adds a new member to a project.
+* [remove](docs/sdks/projectmembers/README.md#remove) - Remove a Project Member
 
-### [protectionBypass](docs/sdks/protectionbypass/README.md)
+### [projects](docs/sdks/projects/README.md)
 
-* [update](docs/sdks/protectionbypass/README.md#update) - Update Protection Bypass for Automation
+* [updateDataCache](docs/sdks/projects/README.md#updatedatacache) - Update the data cache feature
+* [getAll](docs/sdks/projects/README.md#getall) - Retrieve a list of projects
+* [create](docs/sdks/projects/README.md#create) - Create a new project
+* [update](docs/sdks/projects/README.md#update) - Update an existing project
+* [delete](docs/sdks/projects/README.md#delete) - Delete a Project
+* [pause](docs/sdks/projects/README.md#pause) - Pause a project
+* [unpause](docs/sdks/projects/README.md#unpause) - Unpause a project
 
 ### [promotions](docs/sdks/promotions/README.md)
 
 * [create](docs/sdks/promotions/README.md#create) - Points all production domains for a project to the given deploy
 * [listAliases](docs/sdks/promotions/README.md#listaliases) - Gets a list of aliases with status for the current promote
+
+### [protectionBypass](docs/sdks/protectionbypass/README.md)
+
+* [update](docs/sdks/protectionbypass/README.md#update) - Update Protection Bypass for Automation
+
+### [secrets](docs/sdks/secrets/README.md)
+
+* [list](docs/sdks/secrets/README.md#list) - List secrets
+* [create](docs/sdks/secrets/README.md#create) - Create a new secret
+* [rename](docs/sdks/secrets/README.md#rename) - Change secret name
+* [get](docs/sdks/secrets/README.md#get) - Get a single secret
+* [delete](docs/sdks/secrets/README.md#delete) - Delete a secret
 
 ### [teams](docs/sdks/teams/README.md)
 
@@ -271,17 +298,23 @@ run();
 * [delete](docs/sdks/teams/README.md#delete) - Delete a Team
 * [deleteInviteCode](docs/sdks/teams/README.md#deleteinvitecode) - Delete a Team invite code
 
-### [user](docs/sdks/user/README.md)
-
-* [getAuthUser](docs/sdks/user/README.md#getauthuser) - Get the User
-* [requestDelete](docs/sdks/user/README.md#requestdelete) - Delete User Account
-
 ### [tokens](docs/sdks/tokens/README.md)
 
 * [list](docs/sdks/tokens/README.md#list) - List Auth Tokens
 * [create](docs/sdks/tokens/README.md#create) - Create an Auth Token
 * [get](docs/sdks/tokens/README.md#get) - Get Auth Token Metadata
 * [delete](docs/sdks/tokens/README.md#delete) - Delete an authentication token
+
+### [user](docs/sdks/user/README.md)
+
+* [getAuthUser](docs/sdks/user/README.md#getauthuser) - Get the User
+* [requestDelete](docs/sdks/user/README.md#requestdelete) - Delete User Account
+
+### [Vercel SDK](docs/sdks/vercel/README.md)
+
+* [listDeploymentBuilds](docs/sdks/vercel/README.md#listdeploymentbuilds) - Retrieves the list of builds given their deployment's unique identifier. No longer listed as public API as of May 2023.
+* [datacachePurgeall](docs/sdks/vercel/README.md#datacachepurgeall)
+* [dataCacheBillingSettings](docs/sdks/vercel/README.md#datacachebillingsettings)
 
 ### [webhooks](docs/sdks/webhooks/README.md)
 
@@ -290,32 +323,7 @@ run();
 * [get](docs/sdks/webhooks/README.md#get) - Get a webhook
 * [delete](docs/sdks/webhooks/README.md#delete) - Deletes a webhook
 
-### [aliases](docs/sdks/aliases/README.md)
-
-* [list](docs/sdks/aliases/README.md#list) - List aliases
-* [get](docs/sdks/aliases/README.md#get) - Get an Alias
-* [delete](docs/sdks/aliases/README.md#delete) - Delete an Alias
-* [assign](docs/sdks/aliases/README.md#assign) - Assign an Alias
-
-### [certs](docs/sdks/certs/README.md)
-
-* [getById](docs/sdks/certs/README.md#getbyid) - Get cert by id
-* [remove](docs/sdks/certs/README.md#remove) - Remove cert
-* [issue](docs/sdks/certs/README.md#issue) - Issue a new cert
-* [upload](docs/sdks/certs/README.md#upload) - Upload a cert
-
-### [authentication](docs/sdks/authentication/README.md)
-
-* [login](docs/sdks/authentication/README.md#login) - Login with email
-* [verify](docs/sdks/authentication/README.md#verify) - Verify a login request to get an authentication token
-
-### [secrets](docs/sdks/secrets/README.md)
-
-* [list](docs/sdks/secrets/README.md#list) - List secrets
-* [create](docs/sdks/secrets/README.md#create) - Create a new secret
-* [rename](docs/sdks/secrets/README.md#rename) - Change secret name
-* [get](docs/sdks/secrets/README.md#get) - Get a single secret
-* [delete](docs/sdks/secrets/README.md#delete) - Delete a secret
+</details>
 <!-- End Available Resources and Operations [operations] -->
 
 <!-- Start Standalone functions [standalone-funcs] -->
@@ -628,7 +636,7 @@ Validation errors can also occur when either method arguments or data returned f
 
 ```typescript
 import { Vercel } from "@vercel/sdk";
-import { SDKValidationError } from "@vercel/sdk/models/errors";
+import { SDKValidationError } from "@vercel/sdk/models/errors/sdkvalidationerror.js";
 
 const vercel = new Vercel();
 

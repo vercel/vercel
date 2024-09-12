@@ -5,7 +5,7 @@
 ```typescript
 import {
   CreateProjectEnvContentHintEnvsResponse201ApplicationJSONResponseBodyCreated110Type,
-} from "@vercel/sdk/models/operations";
+} from "@vercel/sdk/models/operations/createprojectenv.js";
 
 let value:
   CreateProjectEnvContentHintEnvsResponse201ApplicationJSONResponseBodyCreated110Type =

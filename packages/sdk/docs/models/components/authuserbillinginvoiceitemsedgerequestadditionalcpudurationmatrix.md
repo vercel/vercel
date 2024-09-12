@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { AuthUserBillingInvoiceItemsEdgeRequestAdditionalCpuDurationMatrix } from "@vercel/sdk/models/components";
+import { AuthUserBillingInvoiceItemsEdgeRequestAdditionalCpuDurationMatrix } from "@vercel/sdk/models/components/authuser.js";
 
 let value: AuthUserBillingInvoiceItemsEdgeRequestAdditionalCpuDurationMatrix = {
   defaultUnitPrice: "<value>",

@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { AuthUserBillingInvoiceItemsStorageRedisTotalBandwidthInBytesMatrix } from "@vercel/sdk/models/components";
+import { AuthUserBillingInvoiceItemsStorageRedisTotalBandwidthInBytesMatrix } from "@vercel/sdk/models/components/authuser.js";
 
 let value: AuthUserBillingInvoiceItemsStorageRedisTotalBandwidthInBytesMatrix =
   {

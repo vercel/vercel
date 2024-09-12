@@ -5,7 +5,7 @@ Successful response removing a domain.
 ## Example Usage
 
 ```typescript
-import { DeleteDomainResponseBody } from "@vercel/sdk/models/operations";
+import { DeleteDomainResponseBody } from "@vercel/sdk/models/operations/deletedomain.js";
 
 let value: DeleteDomainResponseBody = {
   uid: "rec_V0fra8eEgQwEpFhYG2vTzC3K",

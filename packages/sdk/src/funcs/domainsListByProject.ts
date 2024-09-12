@@ -22,7 +22,12 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  GetProjectDomainsRequest,
+  GetProjectDomainsRequest$outboundSchema,
+  GetProjectDomainsResponse,
+  GetProjectDomainsResponse$inboundSchema,
+} from "../models/operations/getprojectdomains.js";
 import { Result } from "../types/fp.js";
 import {
   createPageIterator,
@@ -39,12 +44,12 @@ import {
  */
 export async function domainsListByProject(
   client$: VercelCore,
-  request: operations.GetProjectDomainsRequest,
+  request: GetProjectDomainsRequest,
   options?: RequestOptions,
 ): Promise<
   PageIterator<
     Result<
-      operations.GetProjectDomainsResponse,
+      GetProjectDomainsResponse,
       | SDKError
       | SDKValidationError
       | UnexpectedClientError
@@ -59,8 +64,7 @@ export async function domainsListByProject(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) =>
-      operations.GetProjectDomainsRequest$outboundSchema.parse(value$),
+    (value$) => GetProjectDomainsRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {
@@ -136,7 +140,7 @@ export async function domainsListByProject(
   };
 
   const [result$, raw$] = await m$.match<
-    operations.GetProjectDomainsResponse,
+    GetProjectDomainsResponse,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -145,9 +149,7 @@ export async function domainsListByProject(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(200, operations.GetProjectDomainsResponse$inboundSchema, {
-      key: "Result",
-    }),
+    m$.json(200, GetProjectDomainsResponse$inboundSchema, { key: "Result" }),
     m$.fail([400, 401, 403, "4XX", "5XX"]),
   )(response, { extraFields: responseFields$ });
   if (!result$.ok) {
@@ -158,7 +160,7 @@ export async function domainsListByProject(
     responseData: unknown,
   ): Paginator<
     Result<
-      operations.GetProjectDomainsResponse,
+      GetProjectDomainsResponse,
       | SDKError
       | SDKValidationError
       | UnexpectedClientError

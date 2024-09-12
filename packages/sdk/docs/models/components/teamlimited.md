@@ -5,7 +5,7 @@ A limited form of data representing a Team, due to the authentication token miss
 ## Example Usage
 
 ```typescript
-import { TeamLimited } from "@vercel/sdk/models/components";
+import { TeamLimited } from "@vercel/sdk/models/components/teamlimited.js";
 
 let value: TeamLimited = {
   limited: false,

@@ -22,7 +22,10 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  DeleteEdgeConfigRequest,
+  DeleteEdgeConfigRequest$outboundSchema,
+} from "../models/operations/deleteedgeconfig.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -33,7 +36,7 @@ import { Result } from "../types/fp.js";
  */
 export async function edgeConfigsDelete(
   client$: VercelCore,
-  request: operations.DeleteEdgeConfigRequest,
+  request: DeleteEdgeConfigRequest,
   options?: RequestOptions,
 ): Promise<
   Result<
@@ -51,7 +54,7 @@ export async function edgeConfigsDelete(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) => operations.DeleteEdgeConfigRequest$outboundSchema.parse(value$),
+    (value$) => DeleteEdgeConfigRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {

@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { CustomEnvironmentBranchMatcher } from "@vercel/sdk/models/operations";
+import { CustomEnvironmentBranchMatcher } from "@vercel/sdk/models/operations/canceldeployment.js";
 
 let value: CustomEnvironmentBranchMatcher = {
   type: "equals",

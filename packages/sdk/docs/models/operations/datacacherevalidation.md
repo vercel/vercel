@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { DataCacheRevalidation } from "@vercel/sdk/models/operations";
+import { DataCacheRevalidation } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: DataCacheRevalidation = {
   price: 8786.01,

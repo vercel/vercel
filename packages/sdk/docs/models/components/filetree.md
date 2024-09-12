@@ -5,7 +5,7 @@ A deployment file tree entry
 ## Example Usage
 
 ```typescript
-import { FileTree } from "@vercel/sdk/models/components";
+import { FileTree } from "@vercel/sdk/models/components/filetree.js";
 
 let value: FileTree = {
   name: "my-file.json",

@@ -21,7 +21,12 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  GetSecretRequest,
+  GetSecretRequest$outboundSchema,
+  GetSecretResponseBody,
+  GetSecretResponseBody$inboundSchema,
+} from "../models/operations/getsecret.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -32,11 +37,11 @@ import { Result } from "../types/fp.js";
  */
 export async function secretsGet(
   client$: VercelCore,
-  request: operations.GetSecretRequest,
+  request: GetSecretRequest,
   options?: RequestOptions,
 ): Promise<
   Result<
-    operations.GetSecretResponseBody,
+    GetSecretResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -50,7 +55,7 @@ export async function secretsGet(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) => operations.GetSecretRequest$outboundSchema.parse(value$),
+    (value$) => GetSecretRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {
@@ -114,7 +119,7 @@ export async function secretsGet(
   const response = doResult.value;
 
   const [result$] = await m$.match<
-    operations.GetSecretResponseBody,
+    GetSecretResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -123,7 +128,7 @@ export async function secretsGet(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(200, operations.GetSecretResponseBody$inboundSchema),
+    m$.json(200, GetSecretResponseBody$inboundSchema),
     m$.fail([400, 401, 403, 404, 410, "4XX", "5XX"]),
   )(response);
   if (!result$.ok) {

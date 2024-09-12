@@ -5,7 +5,7 @@ Deployment Target or Targets in which the ENV variable will be used
 ## Example Usage
 
 ```typescript
-import { CreateProjectTarget } from "@vercel/sdk/models/operations";
+import { CreateProjectTarget } from "@vercel/sdk/models/operations/createproject.js";
 
 let value: CreateProjectTarget = "production";
 ```

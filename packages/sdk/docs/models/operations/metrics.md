@@ -5,7 +5,7 @@ Metrics about the page
 ## Example Usage
 
 ```typescript
-import { Metrics } from "@vercel/sdk/models/operations";
+import { Metrics } from "@vercel/sdk/models/operations/updatecheck.js";
 
 let value: Metrics = {
   fcp: {

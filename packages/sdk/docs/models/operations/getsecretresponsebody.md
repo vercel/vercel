@@ -5,7 +5,7 @@ Data representing a secret.
 ## Example Usage
 
 ```typescript
-import { GetSecretResponseBody } from "@vercel/sdk/models/operations";
+import { GetSecretResponseBody } from "@vercel/sdk/models/operations/getsecret.js";
 
 let value: GetSecretResponseBody = {
   created: new Date("2021-02-10T13:11:49.180Z"),

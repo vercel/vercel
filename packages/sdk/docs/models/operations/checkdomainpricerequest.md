@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { CheckDomainPriceRequest } from "@vercel/sdk/models/operations";
+import { CheckDomainPriceRequest } from "@vercel/sdk/models/operations/checkdomainprice.js";
 
 let value: CheckDomainPriceRequest = {
   name: "example.com",

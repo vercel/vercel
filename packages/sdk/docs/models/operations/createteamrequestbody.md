@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { CreateTeamRequestBody } from "@vercel/sdk/models/operations";
+import { CreateTeamRequestBody } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: CreateTeamRequestBody = {
   slug: "a-random-team",

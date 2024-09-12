@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { RemoveRecordRequest } from "@vercel/sdk/models/operations";
+import { RemoveRecordRequest } from "@vercel/sdk/models/operations/removerecord.js";
 
 let value: RemoveRecordRequest = {
   domain: "example.com",

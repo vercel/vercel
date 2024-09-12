@@ -5,7 +5,7 @@ data cache settings
 ## Example Usage
 
 ```typescript
-import { DataCache } from "@vercel/sdk/models/components";
+import { DataCache } from "@vercel/sdk/models/components/authuser.js";
 
 let value: DataCache = {};
 ```

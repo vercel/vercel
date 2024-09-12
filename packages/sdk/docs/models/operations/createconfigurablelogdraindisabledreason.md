@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { CreateConfigurableLogDrainDisabledReason } from "@vercel/sdk/models/operations";
+import { CreateConfigurableLogDrainDisabledReason } from "@vercel/sdk/models/operations/createconfigurablelogdrain.js";
 
 let value: CreateConfigurableLogDrainDisabledReason = "disabled-by-admin";
 ```

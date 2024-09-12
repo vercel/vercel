@@ -6,7 +6,15 @@ import { dataCacheBillingSettings } from "../funcs/dataCacheBillingSettings.js";
 import { datacachePurgeall } from "../funcs/datacachePurgeall.js";
 import { listDeploymentBuilds } from "../funcs/listDeploymentBuilds.js";
 import { ClientSDK, RequestOptions } from "../lib/sdks.js";
-import * as operations from "../models/operations/index.js";
+import {
+  DataCacheBillingSettingsRequestBody,
+  DataCacheBillingSettingsResponseBody,
+} from "../models/operations/datacachebillingsettings.js";
+import { DatacachePurgeallRequest } from "../models/operations/datacachepurgeall.js";
+import {
+  ListDeploymentBuildsRequest,
+  ListDeploymentBuildsResponseBody,
+} from "../models/operations/listdeploymentbuilds.js";
 import { unwrapAsync } from "../types/fp.js";
 import { AccessGroups } from "./accessgroups.js";
 import { Aliases } from "./aliases.js";
@@ -158,9 +166,9 @@ export class Vercel extends ClientSDK {
    * Retrieves the list of builds given their deployment's unique identifier. No longer listed as public API as of May 2023.
    */
   async listDeploymentBuilds(
-    request: operations.ListDeploymentBuildsRequest,
+    request: ListDeploymentBuildsRequest,
     options?: RequestOptions,
-  ): Promise<operations.ListDeploymentBuildsResponseBody> {
+  ): Promise<ListDeploymentBuildsResponseBody> {
     return unwrapAsync(listDeploymentBuilds(
       this,
       request,
@@ -169,7 +177,7 @@ export class Vercel extends ClientSDK {
   }
 
   async datacachePurgeall(
-    request: operations.DatacachePurgeallRequest,
+    request: DatacachePurgeallRequest,
     options?: RequestOptions,
   ): Promise<void> {
     return unwrapAsync(datacachePurgeall(
@@ -180,9 +188,9 @@ export class Vercel extends ClientSDK {
   }
 
   async dataCacheBillingSettings(
-    request?: operations.DataCacheBillingSettingsRequestBody | undefined,
+    request?: DataCacheBillingSettingsRequestBody | undefined,
     options?: RequestOptions,
-  ): Promise<operations.DataCacheBillingSettingsResponseBody> {
+  ): Promise<DataCacheBillingSettingsResponseBody> {
     return unwrapAsync(dataCacheBillingSettings(
       this,
       request,

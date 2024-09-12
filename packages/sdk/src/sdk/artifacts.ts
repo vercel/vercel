@@ -9,7 +9,21 @@ import { artifactsRecordEvents } from "../funcs/artifactsRecordEvents.js";
 import { artifactsStatus } from "../funcs/artifactsStatus.js";
 import { artifactsUpload } from "../funcs/artifactsUpload.js";
 import { ClientSDK, RequestOptions } from "../lib/sdks.js";
-import * as operations from "../models/operations/index.js";
+import { ArtifactExistsRequest } from "../models/operations/artifactexists.js";
+import {
+  ArtifactQueryRequest,
+  ResponseBody,
+} from "../models/operations/artifactquery.js";
+import { DownloadArtifactRequest } from "../models/operations/downloadartifact.js";
+import { RecordEventsRequest } from "../models/operations/recordevents.js";
+import {
+  StatusRequest,
+  StatusResponseBody,
+} from "../models/operations/status.js";
+import {
+  UploadArtifactRequest,
+  UploadArtifactResponseBody,
+} from "../models/operations/uploadartifact.js";
 import { unwrapAsync } from "../types/fp.js";
 
 export class Artifacts extends ClientSDK {
@@ -20,7 +34,7 @@ export class Artifacts extends ClientSDK {
    * Records an artifacts cache usage event. The body of this request is an array of cache usage events. The supported event types are `HIT` and `MISS`. The source is either `LOCAL` the cache event was on the users filesystem cache or `REMOTE` if the cache event is for a remote cache. When the event is a `HIT` the request also accepts a number `duration` which is the time taken to generate the artifact in the cache.
    */
   async recordEvents(
-    request: operations.RecordEventsRequest,
+    request: RecordEventsRequest,
     options?: RequestOptions,
   ): Promise<void> {
     return unwrapAsync(artifactsRecordEvents(
@@ -37,9 +51,9 @@ export class Artifacts extends ClientSDK {
    * Check the status of Remote Caching for this principal. Returns a JSON-encoded status indicating if Remote Caching is enabled, disabled, or disabled due to usage limits.
    */
   async status(
-    request: operations.StatusRequest,
+    request: StatusRequest,
     options?: RequestOptions,
-  ): Promise<operations.StatusResponseBody> {
+  ): Promise<StatusResponseBody> {
     return unwrapAsync(artifactsStatus(
       this,
       request,
@@ -54,9 +68,9 @@ export class Artifacts extends ClientSDK {
    * Uploads a cache artifact identified by the `hash` specified on the path. The cache artifact can then be downloaded with the provided `hash`.
    */
   async upload(
-    request: operations.UploadArtifactRequest,
+    request: UploadArtifactRequest,
     options?: RequestOptions,
-  ): Promise<operations.UploadArtifactResponseBody> {
+  ): Promise<UploadArtifactResponseBody> {
     return unwrapAsync(artifactsUpload(
       this,
       request,
@@ -71,7 +85,7 @@ export class Artifacts extends ClientSDK {
    * Downloads a cache artifact indentified by its `hash` specified on the request path. The artifact is downloaded as an octet-stream. The client should verify the content-length header and response body.
    */
   async download(
-    request: operations.DownloadArtifactRequest,
+    request: DownloadArtifactRequest,
     options?: RequestOptions,
   ): Promise<ReadableStream<Uint8Array>> {
     return unwrapAsync(artifactsDownload(
@@ -88,7 +102,7 @@ export class Artifacts extends ClientSDK {
    * Check that a cache artifact with the given `hash` exists. This request returns response headers only and is equivalent to a `GET` request to this endpoint where the response contains no body.
    */
   async exists(
-    request: operations.ArtifactExistsRequest,
+    request: ArtifactExistsRequest,
     options?: RequestOptions,
   ): Promise<void> {
     return unwrapAsync(artifactsExists(
@@ -105,9 +119,9 @@ export class Artifacts extends ClientSDK {
    * Query information about an array of artifacts.
    */
   async query(
-    request: operations.ArtifactQueryRequest,
+    request: ArtifactQueryRequest,
     options?: RequestOptions,
-  ): Promise<{ [k: string]: operations.ResponseBody }> {
+  ): Promise<{ [k: string]: ResponseBody }> {
     return unwrapAsync(artifactsQuery(
       this,
       request,

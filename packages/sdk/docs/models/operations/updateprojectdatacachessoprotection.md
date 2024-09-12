@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { UpdateProjectDataCacheSsoProtection } from "@vercel/sdk/models/operations";
+import { UpdateProjectDataCacheSsoProtection } from "@vercel/sdk/models/operations/updateprojectdatacache.js";
 
 let value: UpdateProjectDataCacheSsoProtection = {
   deploymentType: "all",

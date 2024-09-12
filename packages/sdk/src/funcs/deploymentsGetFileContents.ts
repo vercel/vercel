@@ -22,7 +22,10 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  GetDeploymentFileContentsRequest,
+  GetDeploymentFileContentsRequest$outboundSchema,
+} from "../models/operations/getdeploymentfilecontents.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -33,7 +36,7 @@ import { Result } from "../types/fp.js";
  */
 export async function deploymentsGetFileContents(
   client$: VercelCore,
-  request: operations.GetDeploymentFileContentsRequest,
+  request: GetDeploymentFileContentsRequest,
   options?: RequestOptions,
 ): Promise<
   Result<
@@ -51,8 +54,7 @@ export async function deploymentsGetFileContents(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) =>
-      operations.GetDeploymentFileContentsRequest$outboundSchema.parse(value$),
+    (value$) => GetDeploymentFileContentsRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {

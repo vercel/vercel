@@ -5,7 +5,7 @@ Will be used to create an invoice item. The price must be in cents: 2000 for $20
 ## Example Usage
 
 ```typescript
-import { DeveloperExperiencePlatform } from "@vercel/sdk/models/operations";
+import { DeveloperExperiencePlatform } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: DeveloperExperiencePlatform = {
   price: 1403.16,

@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { GetConfigurableLogDrainResponseBody } from "@vercel/sdk/models/operations";
+import { GetConfigurableLogDrainResponseBody } from "@vercel/sdk/models/operations/getconfigurablelogdrain.js";
 
 let value: GetConfigurableLogDrainResponseBody = {
   id: "<id>",

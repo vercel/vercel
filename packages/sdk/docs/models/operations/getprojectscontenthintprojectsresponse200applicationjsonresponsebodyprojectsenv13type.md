@@ -5,7 +5,7 @@
 ```typescript
 import {
   GetProjectsContentHintProjectsResponse200ApplicationJSONResponseBodyProjectsEnv13Type,
-} from "@vercel/sdk/models/operations";
+} from "@vercel/sdk/models/operations/getprojects.js";
 
 let value:
   GetProjectsContentHintProjectsResponse200ApplicationJSONResponseBodyProjectsEnv13Type =

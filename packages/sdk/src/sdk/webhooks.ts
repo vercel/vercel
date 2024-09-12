@@ -7,7 +7,19 @@ import { webhooksDelete } from "../funcs/webhooksDelete.js";
 import { webhooksGet } from "../funcs/webhooksGet.js";
 import { webhooksList } from "../funcs/webhooksList.js";
 import { ClientSDK, RequestOptions } from "../lib/sdks.js";
-import * as operations from "../models/operations/index.js";
+import {
+  CreateWebhookRequest,
+  CreateWebhookResponseBody,
+} from "../models/operations/createwebhook.js";
+import { DeleteWebhookRequest } from "../models/operations/deletewebhook.js";
+import {
+  GetWebhookRequest,
+  GetWebhookResponseBody,
+} from "../models/operations/getwebhook.js";
+import {
+  GetWebhooksRequest,
+  GetWebhooksResponseBody,
+} from "../models/operations/getwebhooks.js";
 import { unwrapAsync } from "../types/fp.js";
 
 export class Webhooks extends ClientSDK {
@@ -18,9 +30,9 @@ export class Webhooks extends ClientSDK {
    * Creates a webhook
    */
   async create(
-    request: operations.CreateWebhookRequest,
+    request: CreateWebhookRequest,
     options?: RequestOptions,
-  ): Promise<operations.CreateWebhookResponseBody> {
+  ): Promise<CreateWebhookResponseBody> {
     return unwrapAsync(webhooksCreate(
       this,
       request,
@@ -35,9 +47,9 @@ export class Webhooks extends ClientSDK {
    * Get a list of webhooks
    */
   async list(
-    request: operations.GetWebhooksRequest,
+    request: GetWebhooksRequest,
     options?: RequestOptions,
-  ): Promise<operations.GetWebhooksResponseBody> {
+  ): Promise<GetWebhooksResponseBody> {
     return unwrapAsync(webhooksList(
       this,
       request,
@@ -52,9 +64,9 @@ export class Webhooks extends ClientSDK {
    * Get a webhook
    */
   async get(
-    request: operations.GetWebhookRequest,
+    request: GetWebhookRequest,
     options?: RequestOptions,
-  ): Promise<operations.GetWebhookResponseBody> {
+  ): Promise<GetWebhookResponseBody> {
     return unwrapAsync(webhooksGet(
       this,
       request,
@@ -69,7 +81,7 @@ export class Webhooks extends ClientSDK {
    * Deletes a webhook
    */
   async delete(
-    request: operations.DeleteWebhookRequest,
+    request: DeleteWebhookRequest,
     options?: RequestOptions,
   ): Promise<void> {
     return unwrapAsync(webhooksDelete(

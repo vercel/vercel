@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { GetAllLogDrainsDisabledReason } from "@vercel/sdk/models/operations";
+import { GetAllLogDrainsDisabledReason } from "@vercel/sdk/models/operations/getalllogdrains.js";
 
 let value: GetAllLogDrainsDisabledReason = "feature-not-available";
 ```

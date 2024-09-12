@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { FilterProjectEnvsResponseBody2 } from "@vercel/sdk/models/operations";
+import { FilterProjectEnvsResponseBody2 } from "@vercel/sdk/models/operations/filterprojectenvs.js";
 
 let value: FilterProjectEnvsResponseBody2 = {
   envs: [

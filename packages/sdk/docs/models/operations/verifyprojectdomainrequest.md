@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { VerifyProjectDomainRequest } from "@vercel/sdk/models/operations";
+import { VerifyProjectDomainRequest } from "@vercel/sdk/models/operations/verifyprojectdomain.js";
 
 let value: VerifyProjectDomainRequest = {
   idOrName: "prj_12HKQaOmR5t5Uy6vdcQsNIiZgHGB",
