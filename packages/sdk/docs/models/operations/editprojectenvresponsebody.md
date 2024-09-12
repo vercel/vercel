@@ -5,7 +5,7 @@ The environment variable was successfully edited
 ## Example Usage
 
 ```typescript
-import { EditProjectEnvResponseBody } from "@vercel/sdk/models/operations";
+import { EditProjectEnvResponseBody } from "@vercel/sdk/models/operations/editprojectenv.js";
 
 let value: EditProjectEnvResponseBody = {};
 ```

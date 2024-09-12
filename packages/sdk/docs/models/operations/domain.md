@@ -5,7 +5,7 @@ Get only aliases of the given domain name
 ## Example Usage
 
 ```typescript
-import { Domain } from "@vercel/sdk/models/operations";
+import { Domain } from "@vercel/sdk/models/operations/listaliases.js";
 
 let value: Domain = "my-test-domain.com";
 ```

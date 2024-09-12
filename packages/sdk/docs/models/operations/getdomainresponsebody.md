@@ -5,7 +5,7 @@ Successful response retrieving an information for a specific domains.
 ## Example Usage
 
 ```typescript
-import { GetDomainResponseBody } from "@vercel/sdk/models/operations";
+import { GetDomainResponseBody } from "@vercel/sdk/models/operations/getdomain.js";
 
 let value: GetDomainResponseBody = {
   domain: {

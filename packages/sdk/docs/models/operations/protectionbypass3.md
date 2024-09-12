@@ -5,7 +5,7 @@ The protection bypass for the alias
 ## Example Usage
 
 ```typescript
-import { ProtectionBypass3 } from "@vercel/sdk/models/operations";
+import { ProtectionBypass3 } from "@vercel/sdk/models/operations/getalias.js";
 
 let value: ProtectionBypass3 = {
   createdAt: 9025.81,

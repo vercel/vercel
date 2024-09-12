@@ -5,7 +5,11 @@
 import { promotionsCreate } from "../funcs/promotionsCreate.js";
 import { promotionsListAliases } from "../funcs/promotionsListAliases.js";
 import { ClientSDK, RequestOptions } from "../lib/sdks.js";
-import * as operations from "../models/operations/index.js";
+import {
+  ListPromoteAliasesRequest,
+  ListPromoteAliasesResponse,
+} from "../models/operations/listpromotealiases.js";
+import { RequestPromoteRequest } from "../models/operations/requestpromote.js";
 import { unwrapAsync } from "../types/fp.js";
 import { PageIterator, unwrapResultIterator } from "../types/operations.js";
 
@@ -17,7 +21,7 @@ export class Promotions extends ClientSDK {
    * Allows users to promote a deployment to production. Note: This does NOT rebuild the deployment. If you need that, then call create-deployments endpoint.
    */
   async create(
-    request: operations.RequestPromoteRequest,
+    request: RequestPromoteRequest,
     options?: RequestOptions,
   ): Promise<void> {
     return unwrapAsync(promotionsCreate(
@@ -34,9 +38,9 @@ export class Promotions extends ClientSDK {
    * Get a list of aliases related to the last promote request with their mapping status
    */
   async listAliases(
-    request: operations.ListPromoteAliasesRequest,
+    request: ListPromoteAliasesRequest,
     options?: RequestOptions,
-  ): Promise<PageIterator<operations.ListPromoteAliasesResponse>> {
+  ): Promise<PageIterator<ListPromoteAliasesResponse>> {
     return unwrapResultIterator(promotionsListAliases(
       this,
       request,

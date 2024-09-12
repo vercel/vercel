@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { DownloadArtifactRequest } from "@vercel/sdk/models/operations";
+import { DownloadArtifactRequest } from "@vercel/sdk/models/operations/downloadartifact.js";
 
 let value: DownloadArtifactRequest = {
   xArtifactClientCi: "VERCEL",

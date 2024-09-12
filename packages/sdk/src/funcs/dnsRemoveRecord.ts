@@ -21,7 +21,12 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  RemoveRecordRequest,
+  RemoveRecordRequest$outboundSchema,
+  RemoveRecordResponseBody,
+  RemoveRecordResponseBody$inboundSchema,
+} from "../models/operations/removerecord.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -32,11 +37,11 @@ import { Result } from "../types/fp.js";
  */
 export async function dnsRemoveRecord(
   client$: VercelCore,
-  request: operations.RemoveRecordRequest,
+  request: RemoveRecordRequest,
   options?: RequestOptions,
 ): Promise<
   Result<
-    operations.RemoveRecordResponseBody,
+    RemoveRecordResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -50,7 +55,7 @@ export async function dnsRemoveRecord(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) => operations.RemoveRecordRequest$outboundSchema.parse(value$),
+    (value$) => RemoveRecordRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {
@@ -119,7 +124,7 @@ export async function dnsRemoveRecord(
   const response = doResult.value;
 
   const [result$] = await m$.match<
-    operations.RemoveRecordResponseBody,
+    RemoveRecordResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -128,7 +133,7 @@ export async function dnsRemoveRecord(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(200, operations.RemoveRecordResponseBody$inboundSchema),
+    m$.json(200, RemoveRecordResponseBody$inboundSchema),
     m$.fail([400, 401, 403, 404, "4XX", "5XX"]),
   )(response);
   if (!result$.ok) {

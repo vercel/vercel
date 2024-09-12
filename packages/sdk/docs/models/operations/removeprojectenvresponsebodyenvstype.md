@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { RemoveProjectEnvResponseBodyEnvsType } from "@vercel/sdk/models/operations";
+import { RemoveProjectEnvResponseBodyEnvsType } from "@vercel/sdk/models/operations/removeprojectenv.js";
 
 let value: RemoveProjectEnvResponseBodyEnvsType = "sensitive";
 ```

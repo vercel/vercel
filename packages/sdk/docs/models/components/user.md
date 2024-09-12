@@ -5,7 +5,7 @@ Metadata for the User who generated the event.
 ## Example Usage
 
 ```typescript
-import { User } from "@vercel/sdk/models/components";
+import { User } from "@vercel/sdk/models/components/userevent.js";
 
 let value: User = {
   avatar: "https://loremflickr.com/640/480",

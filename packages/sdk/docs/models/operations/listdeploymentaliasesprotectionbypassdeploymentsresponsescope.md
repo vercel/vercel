@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { ListDeploymentAliasesProtectionBypassDeploymentsResponseScope } from "@vercel/sdk/models/operations";
+import { ListDeploymentAliasesProtectionBypassDeploymentsResponseScope } from "@vercel/sdk/models/operations/listdeploymentaliases.js";
 
 let value: ListDeploymentAliasesProtectionBypassDeploymentsResponseScope =
   "alias-protection-override";

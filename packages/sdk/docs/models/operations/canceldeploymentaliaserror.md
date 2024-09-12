@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { CancelDeploymentAliasError } from "@vercel/sdk/models/operations";
+import { CancelDeploymentAliasError } from "@vercel/sdk/models/operations/canceldeployment.js";
 
 let value: CancelDeploymentAliasError = {
   code: "<value>",

@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { UploadArtifactRequest } from "@vercel/sdk/models/operations";
+import { UploadArtifactRequest } from "@vercel/sdk/models/operations/uploadartifact.js";
 
 // No examples available for this model
 ```

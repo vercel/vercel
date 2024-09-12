@@ -5,7 +5,7 @@ Domain purchase is being processed asynchronously.
 ## Example Usage
 
 ```typescript
-import { BuyDomainDomainsResponseBody } from "@vercel/sdk/models/operations";
+import { BuyDomainDomainsResponseBody } from "@vercel/sdk/models/operations/buydomain.js";
 
 let value: BuyDomainDomainsResponseBody = {
   domain: {

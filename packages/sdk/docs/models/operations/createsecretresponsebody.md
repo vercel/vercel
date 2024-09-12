@@ -5,7 +5,7 @@ Successful response showing the created secret.
 ## Example Usage
 
 ```typescript
-import { CreateSecretResponseBody } from "@vercel/sdk/models/operations";
+import { CreateSecretResponseBody } from "@vercel/sdk/models/operations/createsecret.js";
 
 let value: CreateSecretResponseBody = {
   value: {},

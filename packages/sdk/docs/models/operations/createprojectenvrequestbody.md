@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { CreateProjectEnvRequestBody } from "@vercel/sdk/models/operations";
+import { CreateProjectEnvRequestBody } from "@vercel/sdk/models/operations/createprojectenv.js";
 
 let value: CreateProjectEnvRequestBody = {
   key: "API_URL",

@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { GetProjectEnvRequest } from "@vercel/sdk/models/operations";
+import { GetProjectEnvRequest } from "@vercel/sdk/models/operations/getprojectenv.js";
 
 let value: GetProjectEnvRequest = {
   idOrName: "prj_XLKmu1DyR1eY7zq8UgeRKbA7yVLA",

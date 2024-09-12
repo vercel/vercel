@@ -5,7 +5,7 @@ Attribution information for the session or current page
 ## Example Usage
 
 ```typescript
-import { Attribution } from "@vercel/sdk/models/operations";
+import { Attribution } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: Attribution = {};
 ```

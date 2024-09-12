@@ -3,18 +3,29 @@
  */
 
 import * as z from "zod";
-import * as components from "../components/index.js";
+import {
+  AuthToken,
+  AuthToken$inboundSchema,
+  AuthToken$Outbound,
+  AuthToken$outboundSchema,
+} from "../components/authtoken.js";
+import {
+  Pagination,
+  Pagination$inboundSchema,
+  Pagination$Outbound,
+  Pagination$outboundSchema,
+} from "../components/pagination.js";
 
 export type ListAuthTokensResponseBody = {
-  tokens: Array<components.AuthToken>;
+  tokens: Array<AuthToken>;
   /**
    * Authentication token metadata.
    */
-  testingToken?: components.AuthToken | undefined;
+  testingToken?: AuthToken | undefined;
   /**
    * This object contains information related to the pagination of the current request, including the necessary parameters to get the next or previous page of data.
    */
-  pagination: components.Pagination;
+  pagination: Pagination;
 };
 
 /** @internal */
@@ -23,16 +34,16 @@ export const ListAuthTokensResponseBody$inboundSchema: z.ZodType<
   z.ZodTypeDef,
   unknown
 > = z.object({
-  tokens: z.array(components.AuthToken$inboundSchema),
-  testingToken: components.AuthToken$inboundSchema.optional(),
-  pagination: components.Pagination$inboundSchema,
+  tokens: z.array(AuthToken$inboundSchema),
+  testingToken: AuthToken$inboundSchema.optional(),
+  pagination: Pagination$inboundSchema,
 });
 
 /** @internal */
 export type ListAuthTokensResponseBody$Outbound = {
-  tokens: Array<components.AuthToken$Outbound>;
-  testingToken?: components.AuthToken$Outbound | undefined;
-  pagination: components.Pagination$Outbound;
+  tokens: Array<AuthToken$Outbound>;
+  testingToken?: AuthToken$Outbound | undefined;
+  pagination: Pagination$Outbound;
 };
 
 /** @internal */
@@ -41,9 +52,9 @@ export const ListAuthTokensResponseBody$outboundSchema: z.ZodType<
   z.ZodTypeDef,
   ListAuthTokensResponseBody
 > = z.object({
-  tokens: z.array(components.AuthToken$outboundSchema),
-  testingToken: components.AuthToken$outboundSchema.optional(),
-  pagination: components.Pagination$outboundSchema,
+  tokens: z.array(AuthToken$outboundSchema),
+  testingToken: AuthToken$outboundSchema.optional(),
+  pagination: Pagination$outboundSchema,
 });
 
 /**

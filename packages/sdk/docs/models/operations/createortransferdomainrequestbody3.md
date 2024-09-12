@@ -5,7 +5,7 @@ transfer-in
 ## Example Usage
 
 ```typescript
-import { CreateOrTransferDomainRequestBody3 } from "@vercel/sdk/models/operations";
+import { CreateOrTransferDomainRequestBody3 } from "@vercel/sdk/models/operations/createortransferdomain.js";
 
 let value: CreateOrTransferDomainRequestBody3 = {
   name: "example.com",

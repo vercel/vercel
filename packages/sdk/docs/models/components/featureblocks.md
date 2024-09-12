@@ -5,7 +5,7 @@ Feature blocks for the user
 ## Example Usage
 
 ```typescript
-import { FeatureBlocks } from "@vercel/sdk/models/components";
+import { FeatureBlocks } from "@vercel/sdk/models/components/authuser.js";
 
 let value: FeatureBlocks = {};
 ```

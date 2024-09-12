@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { GetProjectMembersResponseBodyPagination } from "@vercel/sdk/models/operations";
+import { GetProjectMembersResponseBodyPagination } from "@vercel/sdk/models/operations/getprojectmembers.js";
 
 let value: GetProjectMembersResponseBodyPagination = {
   hasNext: false,

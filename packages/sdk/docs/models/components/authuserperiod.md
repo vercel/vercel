@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { AuthUserPeriod } from "@vercel/sdk/models/components";
+import { AuthUserPeriod } from "@vercel/sdk/models/components/authuser.js";
 
 let value: AuthUserPeriod = {
   start: 3979.88,

@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { ListAliasesProtectionBypass } from "@vercel/sdk/models/operations";
+import { ListAliasesProtectionBypass } from "@vercel/sdk/models/operations/listaliases.js";
 
 let value: ListAliasesProtectionBypass = {
   createdAt: 7298.28,

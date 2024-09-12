@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { FavoriteProjectsAndSpaces } from "@vercel/sdk/models/components";
+import { FavoriteProjectsAndSpaces } from "@vercel/sdk/models/components/authuser.js";
 
 let value: FavoriteProjectsAndSpaces = {
   spaceId: "<value>",

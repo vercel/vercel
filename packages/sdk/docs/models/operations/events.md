@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { Events } from "@vercel/sdk/models/operations";
+import { Events } from "@vercel/sdk/models/operations/createwebhook.js";
 
 let value: Events = "deployment-prepared";
 ```

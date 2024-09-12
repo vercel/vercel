@@ -8,7 +8,26 @@ import { envsGet } from "../funcs/envsGet.js";
 import { envsListByProject } from "../funcs/envsListByProject.js";
 import { envsUpdate } from "../funcs/envsUpdate.js";
 import { ClientSDK, RequestOptions } from "../lib/sdks.js";
-import * as operations from "../models/operations/index.js";
+import {
+  CreateProjectEnvRequest,
+  CreateProjectEnvResponseBody,
+} from "../models/operations/createprojectenv.js";
+import {
+  EditProjectEnvRequest,
+  EditProjectEnvResponseBody,
+} from "../models/operations/editprojectenv.js";
+import {
+  FilterProjectEnvsRequest,
+  FilterProjectEnvsResponseBody,
+} from "../models/operations/filterprojectenvs.js";
+import {
+  GetProjectEnvRequest,
+  GetProjectEnvResponseBody,
+} from "../models/operations/getprojectenv.js";
+import {
+  RemoveProjectEnvRequest,
+  RemoveProjectEnvResponseBody,
+} from "../models/operations/removeprojectenv.js";
 import { unwrapAsync } from "../types/fp.js";
 
 export class Envs extends ClientSDK {
@@ -19,9 +38,9 @@ export class Envs extends ClientSDK {
    * Retrieve the environment variables for a given project by passing either the project `id` or `name` in the URL.
    */
   async listByProject(
-    request: operations.FilterProjectEnvsRequest,
+    request: FilterProjectEnvsRequest,
     options?: RequestOptions,
-  ): Promise<operations.FilterProjectEnvsResponseBody> {
+  ): Promise<FilterProjectEnvsResponseBody> {
     return unwrapAsync(envsListByProject(
       this,
       request,
@@ -36,9 +55,9 @@ export class Envs extends ClientSDK {
    * Retrieve the environment variable for a given project.
    */
   async get(
-    request: operations.GetProjectEnvRequest,
+    request: GetProjectEnvRequest,
     options?: RequestOptions,
-  ): Promise<operations.GetProjectEnvResponseBody> {
+  ): Promise<GetProjectEnvResponseBody> {
     return unwrapAsync(envsGet(
       this,
       request,
@@ -53,9 +72,9 @@ export class Envs extends ClientSDK {
    * Create one ore more environment variables for a project by passing its `key`, `value`, `type` and `target` and by specifying the project by either passing the project `id` or `name` in the URL.
    */
   async create(
-    request: operations.CreateProjectEnvRequest,
+    request: CreateProjectEnvRequest,
     options?: RequestOptions,
-  ): Promise<operations.CreateProjectEnvResponseBody> {
+  ): Promise<CreateProjectEnvResponseBody> {
     return unwrapAsync(envsCreate(
       this,
       request,
@@ -70,9 +89,9 @@ export class Envs extends ClientSDK {
    * Delete a specific environment variable for a given project by passing the environment variable identifier and either passing the project `id` or `name` in the URL.
    */
   async delete(
-    request: operations.RemoveProjectEnvRequest,
+    request: RemoveProjectEnvRequest,
     options?: RequestOptions,
-  ): Promise<operations.RemoveProjectEnvResponseBody> {
+  ): Promise<RemoveProjectEnvResponseBody> {
     return unwrapAsync(envsDelete(
       this,
       request,
@@ -87,9 +106,9 @@ export class Envs extends ClientSDK {
    * Edit a specific environment variable for a given project by passing the environment variable identifier and either passing the project `id` or `name` in the URL.
    */
   async update(
-    request: operations.EditProjectEnvRequest,
+    request: EditProjectEnvRequest,
     options?: RequestOptions,
-  ): Promise<operations.EditProjectEnvResponseBody> {
+  ): Promise<EditProjectEnvResponseBody> {
     return unwrapAsync(envsUpdate(
       this,
       request,

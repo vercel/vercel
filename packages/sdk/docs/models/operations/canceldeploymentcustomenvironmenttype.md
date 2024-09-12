@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { CancelDeploymentCustomEnvironmentType } from "@vercel/sdk/models/operations";
+import { CancelDeploymentCustomEnvironmentType } from "@vercel/sdk/models/operations/canceldeployment.js";
 
 let value: CancelDeploymentCustomEnvironmentType = "preview";
 ```

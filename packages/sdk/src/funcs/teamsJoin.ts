@@ -21,7 +21,12 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  JoinTeamRequest,
+  JoinTeamRequest$outboundSchema,
+  JoinTeamResponseBody,
+  JoinTeamResponseBody$inboundSchema,
+} from "../models/operations/jointeam.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -32,11 +37,11 @@ import { Result } from "../types/fp.js";
  */
 export async function teamsJoin(
   client$: VercelCore,
-  request: operations.JoinTeamRequest,
+  request: JoinTeamRequest,
   options?: RequestOptions,
 ): Promise<
   Result<
-    operations.JoinTeamResponseBody,
+    JoinTeamResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -50,7 +55,7 @@ export async function teamsJoin(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) => operations.JoinTeamRequest$outboundSchema.parse(value$),
+    (value$) => JoinTeamRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {
@@ -110,7 +115,7 @@ export async function teamsJoin(
   const response = doResult.value;
 
   const [result$] = await m$.match<
-    operations.JoinTeamResponseBody,
+    JoinTeamResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -119,7 +124,7 @@ export async function teamsJoin(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(200, operations.JoinTeamResponseBody$inboundSchema),
+    m$.json(200, JoinTeamResponseBody$inboundSchema),
     m$.fail([400, 402, 403, 404, "4XX", "5XX"]),
   )(response);
   if (!result$.ok) {

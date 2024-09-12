@@ -5,7 +5,7 @@ Used in the case you want to reference a file that was already uploaded
 ## Example Usage
 
 ```typescript
-import { UploadedFile } from "@vercel/sdk/models/operations";
+import { UploadedFile } from "@vercel/sdk/models/operations/createdeployment.js";
 
 let value: UploadedFile = {
   file: "folder/file.js",

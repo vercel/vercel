@@ -5,7 +5,7 @@ Specify a list of paths that should not be protected by Deployment Protection to
 ## Example Usage
 
 ```typescript
-import { OptionsAllowlist } from "@vercel/sdk/models/operations";
+import { OptionsAllowlist } from "@vercel/sdk/models/operations/updateproject.js";
 
 let value: OptionsAllowlist = {
   paths: [

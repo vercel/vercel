@@ -5,7 +5,7 @@ The Team was successfully deleted
 ## Example Usage
 
 ```typescript
-import { DeleteTeamResponseBody } from "@vercel/sdk/models/operations";
+import { DeleteTeamResponseBody } from "@vercel/sdk/models/operations/deleteteam.js";
 
 let value: DeleteTeamResponseBody = {
   id: "team_LLHUOMOoDlqOp8wPE4kFo9pE",

@@ -5,7 +5,7 @@ The private deployment representation of a Deployment.
 ## Example Usage
 
 ```typescript
-import { CancelDeploymentResponseBody } from "@vercel/sdk/models/operations";
+import { CancelDeploymentResponseBody } from "@vercel/sdk/models/operations/canceldeployment.js";
 
 let value: CancelDeploymentResponseBody = {
   build: {

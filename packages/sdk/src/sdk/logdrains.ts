@@ -10,7 +10,28 @@ import { logDrainsGetAll } from "../funcs/logDrainsGetAll.js";
 import { logDrainsGetConfigurable } from "../funcs/logDrainsGetConfigurable.js";
 import { logDrainsList } from "../funcs/logDrainsList.js";
 import { ClientSDK, RequestOptions } from "../lib/sdks.js";
-import * as operations from "../models/operations/index.js";
+import {
+  CreateConfigurableLogDrainRequest,
+  CreateConfigurableLogDrainResponseBody,
+} from "../models/operations/createconfigurablelogdrain.js";
+import {
+  CreateLogDrainRequest,
+  CreateLogDrainResponseBody,
+} from "../models/operations/createlogdrain.js";
+import { DeleteConfigurableLogDrainRequest } from "../models/operations/deleteconfigurablelogdrain.js";
+import { DeleteIntegrationLogDrainRequest } from "../models/operations/deleteintegrationlogdrain.js";
+import {
+  GetAllLogDrainsRequest,
+  GetAllLogDrainsResponseBody,
+} from "../models/operations/getalllogdrains.js";
+import {
+  GetConfigurableLogDrainRequest,
+  GetConfigurableLogDrainResponseBody,
+} from "../models/operations/getconfigurablelogdrain.js";
+import {
+  GetIntegrationLogDrainsRequest,
+  GetIntegrationLogDrainsResponseBody,
+} from "../models/operations/getintegrationlogdrains.js";
 import { unwrapAsync } from "../types/fp.js";
 
 export class LogDrains extends ClientSDK {
@@ -21,9 +42,9 @@ export class LogDrains extends ClientSDK {
    * Retrieves a list of all Integration log drains that are defined for the authenticated user or team. When using an OAuth2 token, the list is limited to log drains created by the authenticated integration.
    */
   async list(
-    request: operations.GetIntegrationLogDrainsRequest,
+    request: GetIntegrationLogDrainsRequest,
     options?: RequestOptions,
-  ): Promise<Array<operations.GetIntegrationLogDrainsResponseBody>> {
+  ): Promise<Array<GetIntegrationLogDrainsResponseBody>> {
     return unwrapAsync(logDrainsList(
       this,
       request,
@@ -38,9 +59,9 @@ export class LogDrains extends ClientSDK {
    * Creates an Integration log drain. This endpoint must be called with an OAuth2 client (integration), since log drains are tied to integrations. If it is called with a different token type it will produce a 400 error.
    */
   async create(
-    request: operations.CreateLogDrainRequest,
+    request: CreateLogDrainRequest,
     options?: RequestOptions,
-  ): Promise<operations.CreateLogDrainResponseBody> {
+  ): Promise<CreateLogDrainResponseBody> {
     return unwrapAsync(logDrainsCreate(
       this,
       request,
@@ -55,7 +76,7 @@ export class LogDrains extends ClientSDK {
    * Deletes the Integration log drain with the provided `id`. When using an OAuth2 Token, the log drain can be deleted only if the integration owns it.
    */
   async deleteIntegration(
-    request: operations.DeleteIntegrationLogDrainRequest,
+    request: DeleteIntegrationLogDrainRequest,
     options?: RequestOptions,
   ): Promise<void> {
     return unwrapAsync(logDrainsDeleteIntegration(
@@ -72,9 +93,9 @@ export class LogDrains extends ClientSDK {
    * Retrieves a Configurable Log Drain. This endpoint must be called with a team AccessToken (integration OAuth2 clients are not allowed). Only log drains owned by the authenticated team can be accessed.
    */
   async getConfigurable(
-    request: operations.GetConfigurableLogDrainRequest,
+    request: GetConfigurableLogDrainRequest,
     options?: RequestOptions,
-  ): Promise<operations.GetConfigurableLogDrainResponseBody> {
+  ): Promise<GetConfigurableLogDrainResponseBody> {
     return unwrapAsync(logDrainsGetConfigurable(
       this,
       request,
@@ -89,7 +110,7 @@ export class LogDrains extends ClientSDK {
    * Deletes a Configurable Log Drain. This endpoint must be called with a team AccessToken (integration OAuth2 clients are not allowed). Only log drains owned by the authenticated team can be deleted.
    */
   async deleteConfigurable(
-    request: operations.DeleteConfigurableLogDrainRequest,
+    request: DeleteConfigurableLogDrainRequest,
     options?: RequestOptions,
   ): Promise<void> {
     return unwrapAsync(logDrainsDeleteConfigurable(
@@ -106,9 +127,9 @@ export class LogDrains extends ClientSDK {
    * Retrieves a list of all the Log Drains owned by the account. This endpoint must be called with an account AccessToken (integration OAuth2 clients are not allowed). Only log drains owned by the authenticated account can be accessed.
    */
   async getAll(
-    request: operations.GetAllLogDrainsRequest,
+    request: GetAllLogDrainsRequest,
     options?: RequestOptions,
-  ): Promise<Array<operations.GetAllLogDrainsResponseBody>> {
+  ): Promise<Array<GetAllLogDrainsResponseBody>> {
     return unwrapAsync(logDrainsGetAll(
       this,
       request,
@@ -123,9 +144,9 @@ export class LogDrains extends ClientSDK {
    * Creates a configurable log drain. This endpoint must be called with a team AccessToken (integration OAuth2 clients are not allowed)
    */
   async createConfigurable(
-    request: operations.CreateConfigurableLogDrainRequest,
+    request: CreateConfigurableLogDrainRequest,
     options?: RequestOptions,
-  ): Promise<operations.CreateConfigurableLogDrainResponseBody> {
+  ): Promise<CreateConfigurableLogDrainResponseBody> {
     return unwrapAsync(logDrainsCreateConfigurable(
       this,
       request,

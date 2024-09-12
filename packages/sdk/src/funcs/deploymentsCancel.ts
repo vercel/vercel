@@ -21,7 +21,12 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  CancelDeploymentRequest,
+  CancelDeploymentRequest$outboundSchema,
+  CancelDeploymentResponseBody,
+  CancelDeploymentResponseBody$inboundSchema,
+} from "../models/operations/canceldeployment.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -32,11 +37,11 @@ import { Result } from "../types/fp.js";
  */
 export async function deploymentsCancel(
   client$: VercelCore,
-  request: operations.CancelDeploymentRequest,
+  request: CancelDeploymentRequest,
   options?: RequestOptions,
 ): Promise<
   Result<
-    operations.CancelDeploymentResponseBody,
+    CancelDeploymentResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -50,7 +55,7 @@ export async function deploymentsCancel(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) => operations.CancelDeploymentRequest$outboundSchema.parse(value$),
+    (value$) => CancelDeploymentRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {
@@ -113,7 +118,7 @@ export async function deploymentsCancel(
   const response = doResult.value;
 
   const [result$] = await m$.match<
-    operations.CancelDeploymentResponseBody,
+    CancelDeploymentResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -122,7 +127,7 @@ export async function deploymentsCancel(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(200, operations.CancelDeploymentResponseBody$inboundSchema),
+    m$.json(200, CancelDeploymentResponseBody$inboundSchema),
     m$.fail([400, 401, 403, 404, "4XX", "5XX"]),
   )(response);
   if (!result$.ok) {

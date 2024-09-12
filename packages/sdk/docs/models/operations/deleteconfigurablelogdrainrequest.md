@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { DeleteConfigurableLogDrainRequest } from "@vercel/sdk/models/operations";
+import { DeleteConfigurableLogDrainRequest } from "@vercel/sdk/models/operations/deleteconfigurablelogdrain.js";
 
 let value: DeleteConfigurableLogDrainRequest = {
   id: "<id>",

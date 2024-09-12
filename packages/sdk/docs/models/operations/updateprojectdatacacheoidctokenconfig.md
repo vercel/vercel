@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { UpdateProjectDataCacheOidcTokenConfig } from "@vercel/sdk/models/operations";
+import { UpdateProjectDataCacheOidcTokenConfig } from "@vercel/sdk/models/operations/updateprojectdatacache.js";
 
 let value: UpdateProjectDataCacheOidcTokenConfig = {
   enabled: false,

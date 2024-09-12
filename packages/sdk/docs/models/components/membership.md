@@ -5,7 +5,7 @@ The membership of the authenticated User in relation to the Team.
 ## Example Usage
 
 ```typescript
-import { Membership } from "@vercel/sdk/models/components";
+import { Membership } from "@vercel/sdk/models/components/teamlimited.js";
 
 let value: Membership = {};
 ```

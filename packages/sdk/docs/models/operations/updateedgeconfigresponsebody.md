@@ -5,7 +5,7 @@ An Edge Config
 ## Example Usage
 
 ```typescript
-import { UpdateEdgeConfigResponseBody } from "@vercel/sdk/models/operations";
+import { UpdateEdgeConfigResponseBody } from "@vercel/sdk/models/operations/updateedgeconfig.js";
 
 let value: UpdateEdgeConfigResponseBody = {
   sizeInBytes: 1905.67,

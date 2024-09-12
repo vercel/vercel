@@ -22,7 +22,10 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  DeleteIntegrationLogDrainRequest,
+  DeleteIntegrationLogDrainRequest$outboundSchema,
+} from "../models/operations/deleteintegrationlogdrain.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -33,7 +36,7 @@ import { Result } from "../types/fp.js";
  */
 export async function logDrainsDeleteIntegration(
   client$: VercelCore,
-  request: operations.DeleteIntegrationLogDrainRequest,
+  request: DeleteIntegrationLogDrainRequest,
   options?: RequestOptions,
 ): Promise<
   Result<
@@ -51,8 +54,7 @@ export async function logDrainsDeleteIntegration(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) =>
-      operations.DeleteIntegrationLogDrainRequest$outboundSchema.parse(value$),
+    (value$) => DeleteIntegrationLogDrainRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {

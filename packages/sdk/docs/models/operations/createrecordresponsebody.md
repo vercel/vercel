@@ -5,7 +5,7 @@ Successful response showing the uid of the newly created DNS record.
 ## Example Usage
 
 ```typescript
-import { CreateRecordResponseBody } from "@vercel/sdk/models/operations";
+import { CreateRecordResponseBody } from "@vercel/sdk/models/operations/createrecord.js";
 
 let value: CreateRecordResponseBody = {
   uid: "<value>",

@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { ResponseBodyMembers } from "@vercel/sdk/models/operations";
+import { ResponseBodyMembers } from "@vercel/sdk/models/operations/getprojectmembers.js";
 
 let value: ResponseBodyMembers = {
   avatar: "123a6c5209bc3778245d011443644c8d27dc2c50",

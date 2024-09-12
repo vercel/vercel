@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { GetAllChecksTBT } from "@vercel/sdk/models/operations";
+import { GetAllChecksTBT } from "@vercel/sdk/models/operations/getallchecks.js";
 
 let value: GetAllChecksTBT = {
   value: 6169.34,

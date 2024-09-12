@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { UpdateProjectDomainRequestBody } from "@vercel/sdk/models/operations";
+import { UpdateProjectDomainRequestBody } from "@vercel/sdk/models/operations/updateprojectdomain.js";
 
 let value: UpdateProjectDomainRequestBody = {
   gitBranch: null,

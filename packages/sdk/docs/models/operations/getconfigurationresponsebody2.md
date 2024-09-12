@@ -5,7 +5,7 @@ The configuration with the provided id
 ## Example Usage
 
 ```typescript
-import { GetConfigurationResponseBody2 } from "@vercel/sdk/models/operations";
+import { GetConfigurationResponseBody2 } from "@vercel/sdk/models/operations/getconfiguration.js";
 
 let value: GetConfigurationResponseBody2 = {
   completedAt: 1558531915505,

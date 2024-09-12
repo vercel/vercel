@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { PostgresComputeTime } from "@vercel/sdk/models/operations";
+import { PostgresComputeTime } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: PostgresComputeTime = {
   price: 7249.94,

@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { AnalyticsUsage } from "@vercel/sdk/models/operations";
+import { AnalyticsUsage } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: AnalyticsUsage = {
   price: 5873.75,

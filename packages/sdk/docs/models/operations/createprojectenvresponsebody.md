@@ -5,7 +5,7 @@ The environment variable was created successfully
 ## Example Usage
 
 ```typescript
-import { CreateProjectEnvResponseBody } from "@vercel/sdk/models/operations";
+import { CreateProjectEnvResponseBody } from "@vercel/sdk/models/operations/createprojectenv.js";
 
 let value: CreateProjectEnvResponseBody = {
   created: {},

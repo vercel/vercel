@@ -5,7 +5,7 @@ add
 ## Example Usage
 
 ```typescript
-import { CreateOrTransferDomainRequestBody1 } from "@vercel/sdk/models/operations";
+import { CreateOrTransferDomainRequestBody1 } from "@vercel/sdk/models/operations/createortransferdomain.js";
 
 let value: CreateOrTransferDomainRequestBody1 = {
   name: "example.com",

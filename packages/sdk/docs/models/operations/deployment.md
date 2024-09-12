@@ -5,7 +5,7 @@ A map with the deployment ID, URL and metadata
 ## Example Usage
 
 ```typescript
-import { Deployment } from "@vercel/sdk/models/operations";
+import { Deployment } from "@vercel/sdk/models/operations/getalias.js";
 
 let value: Deployment = {
   id: "dpl_5m8CQaRBm3FnWRW1od3wKTpaECPx",

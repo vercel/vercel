@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { ResponseBodyContentHint } from "@vercel/sdk/models/operations";
+import { ResponseBodyContentHint } from "@vercel/sdk/models/operations/filterprojectenvs.js";
 
 let value: ResponseBodyContentHint = {
   type: "integration-store-secret",

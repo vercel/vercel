@@ -5,7 +5,7 @@ The delivery log format
 ## Example Usage
 
 ```typescript
-import { DeliveryFormat } from "@vercel/sdk/models/operations";
+import { DeliveryFormat } from "@vercel/sdk/models/operations/createlogdrain.js";
 
 let value: DeliveryFormat = "json";
 ```

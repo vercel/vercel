@@ -6,7 +6,7 @@ File successfully uploaded
 ## Example Usage
 
 ```typescript
-import { UploadFileResponseBody } from "@vercel/sdk/models/operations";
+import { UploadFileResponseBody } from "@vercel/sdk/models/operations/uploadfile.js";
 
 let value: UploadFileResponseBody = {
   urls: [

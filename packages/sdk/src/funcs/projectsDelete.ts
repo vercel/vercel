@@ -22,7 +22,10 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  DeleteProjectRequest,
+  DeleteProjectRequest$outboundSchema,
+} from "../models/operations/deleteproject.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -33,7 +36,7 @@ import { Result } from "../types/fp.js";
  */
 export async function projectsDelete(
   client$: VercelCore,
-  request: operations.DeleteProjectRequest,
+  request: DeleteProjectRequest,
   options?: RequestOptions,
 ): Promise<
   Result<
@@ -51,7 +54,7 @@ export async function projectsDelete(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) => operations.DeleteProjectRequest$outboundSchema.parse(value$),
+    (value$) => DeleteProjectRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {

@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { PatchDomainRequestBody } from "@vercel/sdk/models/operations";
+import { PatchDomainRequestBody } from "@vercel/sdk/models/operations/patchdomain.js";
 
 let value: PatchDomainRequestBody = {
   op: "move-out",

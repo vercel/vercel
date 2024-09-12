@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { DeleteWebhookRequest } from "@vercel/sdk/models/operations";
+import { DeleteWebhookRequest } from "@vercel/sdk/models/operations/deletewebhook.js";
 
 let value: DeleteWebhookRequest = {
   id: "<id>",

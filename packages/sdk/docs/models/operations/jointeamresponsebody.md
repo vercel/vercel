@@ -5,7 +5,7 @@ Successfully joined a team.
 ## Example Usage
 
 ```typescript
-import { JoinTeamResponseBody } from "@vercel/sdk/models/operations";
+import { JoinTeamResponseBody } from "@vercel/sdk/models/operations/jointeam.js";
 
 let value: JoinTeamResponseBody = {
   teamId: "team_LLHUOMOoDlqOp8wPE4kFo9pE",

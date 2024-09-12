@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { FilterProjectEnvsContentHintEnvsResponse13 } from "@vercel/sdk/models/operations";
+import { FilterProjectEnvsContentHintEnvsResponse13 } from "@vercel/sdk/models/operations/filterprojectenvs.js";
 
 let value: FilterProjectEnvsContentHintEnvsResponse13 = {
   type: "postgres-url-no-ssl",

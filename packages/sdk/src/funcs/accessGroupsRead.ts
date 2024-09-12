@@ -21,7 +21,12 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  ReadAccessGroupRequest,
+  ReadAccessGroupRequest$outboundSchema,
+  ReadAccessGroupResponseBody,
+  ReadAccessGroupResponseBody$inboundSchema,
+} from "../models/operations/readaccessgroup.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -32,11 +37,11 @@ import { Result } from "../types/fp.js";
  */
 export async function accessGroupsRead(
   client$: VercelCore,
-  request: operations.ReadAccessGroupRequest,
+  request: ReadAccessGroupRequest,
   options?: RequestOptions,
 ): Promise<
   Result<
-    operations.ReadAccessGroupResponseBody,
+    ReadAccessGroupResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -50,7 +55,7 @@ export async function accessGroupsRead(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) => operations.ReadAccessGroupRequest$outboundSchema.parse(value$),
+    (value$) => ReadAccessGroupRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {
@@ -113,7 +118,7 @@ export async function accessGroupsRead(
   const response = doResult.value;
 
   const [result$] = await m$.match<
-    operations.ReadAccessGroupResponseBody,
+    ReadAccessGroupResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -122,7 +127,7 @@ export async function accessGroupsRead(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(200, operations.ReadAccessGroupResponseBody$inboundSchema),
+    m$.json(200, ReadAccessGroupResponseBody$inboundSchema),
     m$.fail([400, 401, 403, 404, "4XX", "5XX"]),
   )(response);
   if (!result$.ok) {

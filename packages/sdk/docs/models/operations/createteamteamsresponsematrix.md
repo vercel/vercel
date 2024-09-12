@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { CreateTeamTeamsResponseMatrix } from "@vercel/sdk/models/operations";
+import { CreateTeamTeamsResponseMatrix } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: CreateTeamTeamsResponseMatrix = {
   defaultUnitPrice: "<value>",

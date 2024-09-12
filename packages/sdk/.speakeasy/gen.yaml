@@ -23,6 +23,11 @@ typescript:
   additionalPackageJSON: {}
   author: Speakeasy
   clientServerStatusCodesAsErrors: true
+  compileCommand:
+    - pnpm
+    - install
+    - --filter
+    - '@vercel/sdk'
   enumFormat: union
   flattenGlobalSecurity: true
   imports:
@@ -42,4 +47,3 @@ typescript:
   responseFormat: flat
   templateVersion: v2
   useIndexModules: false
-  compileCommand: ['pnpm', 'install', '--filter', '"@vercel/sdk"']

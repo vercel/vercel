@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { SearchRepoRequest } from "@vercel/sdk/models/operations";
+import { SearchRepoRequest } from "@vercel/sdk/models/operations/searchrepo.js";
 
 let value: SearchRepoRequest = {
   host: "ghes-test.now.systems",

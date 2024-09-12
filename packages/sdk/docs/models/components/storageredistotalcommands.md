@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { StorageRedisTotalCommands } from "@vercel/sdk/models/components";
+import { StorageRedisTotalCommands } from "@vercel/sdk/models/components/authuser.js";
 
 let value: StorageRedisTotalCommands = {
   price: 607.78,

@@ -21,7 +21,12 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  ListAccessGroupProjectsRequest,
+  ListAccessGroupProjectsRequest$outboundSchema,
+  ListAccessGroupProjectsResponseBody,
+  ListAccessGroupProjectsResponseBody$inboundSchema,
+} from "../models/operations/listaccessgroupprojects.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -32,11 +37,11 @@ import { Result } from "../types/fp.js";
  */
 export async function accessGroupsListProjects(
   client$: VercelCore,
-  request: operations.ListAccessGroupProjectsRequest,
+  request: ListAccessGroupProjectsRequest,
   options?: RequestOptions,
 ): Promise<
   Result<
-    operations.ListAccessGroupProjectsResponseBody,
+    ListAccessGroupProjectsResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -50,8 +55,7 @@ export async function accessGroupsListProjects(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) =>
-      operations.ListAccessGroupProjectsRequest$outboundSchema.parse(value$),
+    (value$) => ListAccessGroupProjectsRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {
@@ -118,7 +122,7 @@ export async function accessGroupsListProjects(
   const response = doResult.value;
 
   const [result$] = await m$.match<
-    operations.ListAccessGroupProjectsResponseBody,
+    ListAccessGroupProjectsResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -127,7 +131,7 @@ export async function accessGroupsListProjects(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(200, operations.ListAccessGroupProjectsResponseBody$inboundSchema),
+    m$.json(200, ListAccessGroupProjectsResponseBody$inboundSchema),
     m$.fail([400, 401, 403, 404, "4XX", "5XX"]),
   )(response);
   if (!result$.ok) {

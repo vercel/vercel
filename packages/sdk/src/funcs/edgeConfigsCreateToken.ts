@@ -22,7 +22,12 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  CreateEdgeConfigTokenRequest,
+  CreateEdgeConfigTokenRequest$outboundSchema,
+  CreateEdgeConfigTokenResponseBody,
+  CreateEdgeConfigTokenResponseBody$inboundSchema,
+} from "../models/operations/createedgeconfigtoken.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -33,11 +38,11 @@ import { Result } from "../types/fp.js";
  */
 export async function edgeConfigsCreateToken(
   client$: VercelCore,
-  request: operations.CreateEdgeConfigTokenRequest,
+  request: CreateEdgeConfigTokenRequest,
   options?: RequestOptions,
 ): Promise<
   Result<
-    operations.CreateEdgeConfigTokenResponseBody,
+    CreateEdgeConfigTokenResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -51,8 +56,7 @@ export async function edgeConfigsCreateToken(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) =>
-      operations.CreateEdgeConfigTokenRequest$outboundSchema.parse(value$),
+    (value$) => CreateEdgeConfigTokenRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {
@@ -116,7 +120,7 @@ export async function edgeConfigsCreateToken(
   const response = doResult.value;
 
   const [result$] = await m$.match<
-    operations.CreateEdgeConfigTokenResponseBody,
+    CreateEdgeConfigTokenResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -125,7 +129,7 @@ export async function edgeConfigsCreateToken(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(201, operations.CreateEdgeConfigTokenResponseBody$inboundSchema),
+    m$.json(201, CreateEdgeConfigTokenResponseBody$inboundSchema),
     m$.fail([400, 401, 402, 403, 404, "4XX", "5XX"]),
   )(response);
   if (!result$.ok) {

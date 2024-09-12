@@ -21,7 +21,12 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  DeleteSecretRequest,
+  DeleteSecretRequest$outboundSchema,
+  DeleteSecretResponseBody,
+  DeleteSecretResponseBody$inboundSchema,
+} from "../models/operations/deletesecret.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -32,11 +37,11 @@ import { Result } from "../types/fp.js";
  */
 export async function secretsDelete(
   client$: VercelCore,
-  request: operations.DeleteSecretRequest,
+  request: DeleteSecretRequest,
   options?: RequestOptions,
 ): Promise<
   Result<
-    operations.DeleteSecretResponseBody,
+    DeleteSecretResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -50,7 +55,7 @@ export async function secretsDelete(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) => operations.DeleteSecretRequest$outboundSchema.parse(value$),
+    (value$) => DeleteSecretRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {
@@ -113,7 +118,7 @@ export async function secretsDelete(
   const response = doResult.value;
 
   const [result$] = await m$.match<
-    operations.DeleteSecretResponseBody,
+    DeleteSecretResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -122,7 +127,7 @@ export async function secretsDelete(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(200, operations.DeleteSecretResponseBody$inboundSchema),
+    m$.json(200, DeleteSecretResponseBody$inboundSchema),
     m$.fail([400, 401, 403, 410, "4XX", "5XX"]),
   )(response);
   if (!result$.ok) {

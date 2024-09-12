@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { AwsMarketplace } from "@vercel/sdk/models/operations";
+import { AwsMarketplace } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: AwsMarketplace = {
   productCode: "<value>",

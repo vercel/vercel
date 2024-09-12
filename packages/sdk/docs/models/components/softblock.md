@@ -5,7 +5,7 @@ When the User account has been "soft blocked", this property will contain the da
 ## Example Usage
 
 ```typescript
-import { SoftBlock } from "@vercel/sdk/models/components";
+import { SoftBlock } from "@vercel/sdk/models/components/authuser.js";
 
 let value: SoftBlock = {
   blockedAt: 320.55,

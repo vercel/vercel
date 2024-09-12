@@ -5,7 +5,7 @@ Keeps track of the current state of the Edge Config while it gets transferred.
 ## Example Usage
 
 ```typescript
-import { Transfer } from "@vercel/sdk/models/operations";
+import { Transfer } from "@vercel/sdk/models/operations/getedgeconfigs.js";
 
 let value: Transfer = {
   fromAccountId: "<value>",

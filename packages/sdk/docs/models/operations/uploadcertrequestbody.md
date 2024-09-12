@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { UploadCertRequestBody } from "@vercel/sdk/models/operations";
+import { UploadCertRequestBody } from "@vercel/sdk/models/operations/uploadcert.js";
 
 let value: UploadCertRequestBody = {
   ca: "<value>",

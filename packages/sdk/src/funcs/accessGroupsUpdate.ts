@@ -13,7 +13,10 @@ import * as schemas$ from "../lib/schemas.js";
 import { RequestOptions } from "../lib/sdks.js";
 import { extractSecurity, resolveGlobalSecurity } from "../lib/security.js";
 import { pathToFunc } from "../lib/url.js";
-import * as components from "../models/components/index.js";
+import {
+  AccessGroup,
+  AccessGroup$inboundSchema,
+} from "../models/components/accessgroup.js";
 import {
   ConnectionError,
   InvalidRequestError,
@@ -23,7 +26,10 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  UpdateAccessGroupRequest,
+  UpdateAccessGroupRequest$outboundSchema,
+} from "../models/operations/updateaccessgroup.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -34,11 +40,11 @@ import { Result } from "../types/fp.js";
  */
 export async function accessGroupsUpdate(
   client$: VercelCore,
-  request: operations.UpdateAccessGroupRequest,
+  request: UpdateAccessGroupRequest,
   options?: RequestOptions,
 ): Promise<
   Result<
-    components.AccessGroup,
+    AccessGroup,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -52,8 +58,7 @@ export async function accessGroupsUpdate(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) =>
-      operations.UpdateAccessGroupRequest$outboundSchema.parse(value$),
+    (value$) => UpdateAccessGroupRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {
@@ -117,7 +122,7 @@ export async function accessGroupsUpdate(
   const response = doResult.value;
 
   const [result$] = await m$.match<
-    components.AccessGroup,
+    AccessGroup,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -126,7 +131,7 @@ export async function accessGroupsUpdate(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(200, components.AccessGroup$inboundSchema),
+    m$.json(200, AccessGroup$inboundSchema),
     m$.fail([400, 401, 403, 404, "4XX", "5XX"]),
   )(response);
   if (!result$.ok) {

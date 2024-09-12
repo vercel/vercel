@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { FunctionDuration } from "@vercel/sdk/models/components";
+import { FunctionDuration } from "@vercel/sdk/models/components/authuser.js";
 
 let value: FunctionDuration = {
   price: 3451.38,

@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { CreateEdgeConfigRequestBody } from "@vercel/sdk/models/operations";
+import { CreateEdgeConfigRequestBody } from "@vercel/sdk/models/operations/createedgeconfig.js";
 
 let value: CreateEdgeConfigRequestBody = {
   slug: "<value>",

@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { PatchEdgeConfigSchemaRequestBody } from "@vercel/sdk/models/operations";
+import { PatchEdgeConfigSchemaRequestBody } from "@vercel/sdk/models/operations/patchedgeconfigschema.js";
 
 let value: PatchEdgeConfigSchemaRequestBody = {
   definition: "<value>",

@@ -4,7 +4,12 @@
 
 import * as z from "zod";
 import { ClosedEnum } from "../../types/enums.js";
-import * as components from "../components/index.js";
+import {
+  FlagJSONValue,
+  FlagJSONValue$inboundSchema,
+  FlagJSONValue$Outbound,
+  FlagJSONValue$outboundSchema,
+} from "../components/flagjsonvalue.js";
 
 export type GetDeploymentRequest = {
   /**
@@ -1202,7 +1207,7 @@ export type ResponseBodyGitRepo =
 export type GetDeploymentFlags2 = {};
 
 export type GetDeploymentFlagsOptions = {
-  value: components.FlagJSONValue | null;
+  value: FlagJSONValue | null;
   label?: string | undefined;
 };
 
@@ -6480,13 +6485,13 @@ export const GetDeploymentFlagsOptions$inboundSchema: z.ZodType<
   z.ZodTypeDef,
   unknown
 > = z.object({
-  value: z.nullable(components.FlagJSONValue$inboundSchema),
+  value: z.nullable(FlagJSONValue$inboundSchema),
   label: z.string().optional(),
 });
 
 /** @internal */
 export type GetDeploymentFlagsOptions$Outbound = {
-  value: components.FlagJSONValue$Outbound | null;
+  value: FlagJSONValue$Outbound | null;
   label?: string | undefined;
 };
 
@@ -6496,7 +6501,7 @@ export const GetDeploymentFlagsOptions$outboundSchema: z.ZodType<
   z.ZodTypeDef,
   GetDeploymentFlagsOptions
 > = z.object({
-  value: z.nullable(components.FlagJSONValue$outboundSchema),
+  value: z.nullable(FlagJSONValue$outboundSchema),
   label: z.string().optional(),
 });
 

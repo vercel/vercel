@@ -18,7 +18,12 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  GetAuthTokenRequest,
+  GetAuthTokenRequest$outboundSchema,
+  GetAuthTokenResponseBody,
+  GetAuthTokenResponseBody$inboundSchema,
+} from "../models/operations/getauthtoken.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -29,11 +34,11 @@ import { Result } from "../types/fp.js";
  */
 export async function tokensGet(
   client$: VercelCore,
-  request: operations.GetAuthTokenRequest,
+  request: GetAuthTokenRequest,
   options?: RequestOptions,
 ): Promise<
   Result<
-    operations.GetAuthTokenResponseBody,
+    GetAuthTokenResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -47,7 +52,7 @@ export async function tokensGet(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) => operations.GetAuthTokenRequest$outboundSchema.parse(value$),
+    (value$) => GetAuthTokenRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {
@@ -104,7 +109,7 @@ export async function tokensGet(
   const response = doResult.value;
 
   const [result$] = await m$.match<
-    operations.GetAuthTokenResponseBody,
+    GetAuthTokenResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -113,7 +118,7 @@ export async function tokensGet(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(200, operations.GetAuthTokenResponseBody$inboundSchema),
+    m$.json(200, GetAuthTokenResponseBody$inboundSchema),
     m$.fail([400, 403, 404, "4XX", "5XX"]),
   )(response);
   if (!result$.ok) {

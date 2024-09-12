@@ -5,7 +5,7 @@ Domains sort order by createdAt
 ## Example Usage
 
 ```typescript
-import { Order } from "@vercel/sdk/models/operations";
+import { Order } from "@vercel/sdk/models/operations/getprojectdomains.js";
 
 let value: Order = "DESC";
 ```

@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { PostgresDatabase } from "@vercel/sdk/models/operations";
+import { PostgresDatabase } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: PostgresDatabase = {
   price: 964.5,

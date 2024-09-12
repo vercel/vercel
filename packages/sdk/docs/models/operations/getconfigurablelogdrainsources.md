@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { GetConfigurableLogDrainSources } from "@vercel/sdk/models/operations";
+import { GetConfigurableLogDrainSources } from "@vercel/sdk/models/operations/getconfigurablelogdrain.js";
 
 let value: GetConfigurableLogDrainSources = "static";
 ```

@@ -22,7 +22,12 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  CreateProjectEnvRequest,
+  CreateProjectEnvRequest$outboundSchema,
+  CreateProjectEnvResponseBody,
+  CreateProjectEnvResponseBody$inboundSchema,
+} from "../models/operations/createprojectenv.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -33,11 +38,11 @@ import { Result } from "../types/fp.js";
  */
 export async function envsCreate(
   client$: VercelCore,
-  request: operations.CreateProjectEnvRequest,
+  request: CreateProjectEnvRequest,
   options?: RequestOptions,
 ): Promise<
   Result<
-    operations.CreateProjectEnvResponseBody,
+    CreateProjectEnvResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -51,7 +56,7 @@ export async function envsCreate(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) => operations.CreateProjectEnvRequest$outboundSchema.parse(value$),
+    (value$) => CreateProjectEnvRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {
@@ -116,7 +121,7 @@ export async function envsCreate(
   const response = doResult.value;
 
   const [result$] = await m$.match<
-    operations.CreateProjectEnvResponseBody,
+    CreateProjectEnvResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -125,7 +130,7 @@ export async function envsCreate(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(201, operations.CreateProjectEnvResponseBody$inboundSchema),
+    m$.json(201, CreateProjectEnvResponseBody$inboundSchema),
     m$.fail([400, 401, 402, 403, 409, "4XX", "5XX"]),
   )(response);
   if (!result$.ok) {

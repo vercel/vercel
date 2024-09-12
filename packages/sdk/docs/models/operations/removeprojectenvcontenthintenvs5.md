@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { RemoveProjectEnvContentHintEnvs5 } from "@vercel/sdk/models/operations";
+import { RemoveProjectEnvContentHintEnvs5 } from "@vercel/sdk/models/operations/removeprojectenv.js";
 
 let value: RemoveProjectEnvContentHintEnvs5 = {
   type: "blob-read-write-token",

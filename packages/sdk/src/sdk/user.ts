@@ -5,7 +5,11 @@
 import { userGetAuthUser } from "../funcs/userGetAuthUser.js";
 import { userRequestDelete } from "../funcs/userRequestDelete.js";
 import { ClientSDK, RequestOptions } from "../lib/sdks.js";
-import * as operations from "../models/operations/index.js";
+import { GetAuthUserResponseBody } from "../models/operations/getauthuser.js";
+import {
+  RequestDeleteRequestBody,
+  RequestDeleteResponseBody,
+} from "../models/operations/requestdelete.js";
 import { unwrapAsync } from "../types/fp.js";
 
 export class User extends ClientSDK {
@@ -17,7 +21,7 @@ export class User extends ClientSDK {
    */
   async getAuthUser(
     options?: RequestOptions,
-  ): Promise<operations.GetAuthUserResponseBody | undefined> {
+  ): Promise<GetAuthUserResponseBody | undefined> {
     return unwrapAsync(userGetAuthUser(
       this,
       options,
@@ -31,9 +35,9 @@ export class User extends ClientSDK {
    * Initiates the deletion process for the currently authenticated User, by sending a deletion confirmation email. The email contains a link that the user needs to visit in order to proceed with the deletion process.
    */
   async requestDelete(
-    request?: operations.RequestDeleteRequestBody | undefined,
+    request?: RequestDeleteRequestBody | undefined,
     options?: RequestOptions,
-  ): Promise<operations.RequestDeleteResponseBody> {
+  ): Promise<RequestDeleteResponseBody> {
     return unwrapAsync(userRequestDelete(
       this,
       request,

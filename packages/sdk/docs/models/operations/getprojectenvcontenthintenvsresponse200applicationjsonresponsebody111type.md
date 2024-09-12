@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { GetProjectEnvContentHintEnvsResponse200ApplicationJSONResponseBody111Type } from "@vercel/sdk/models/operations";
+import { GetProjectEnvContentHintEnvsResponse200ApplicationJSONResponseBody111Type } from "@vercel/sdk/models/operations/getprojectenv.js";
 
 let value:
   GetProjectEnvContentHintEnvsResponse200ApplicationJSONResponseBody111Type =

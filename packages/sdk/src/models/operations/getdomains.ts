@@ -5,7 +5,12 @@
 import * as z from "zod";
 import { remap as remap$ } from "../../lib/primitives.js";
 import { ClosedEnum } from "../../types/enums.js";
-import * as components from "../components/index.js";
+import {
+  Pagination,
+  Pagination$inboundSchema,
+  Pagination$Outbound,
+  Pagination$outboundSchema,
+} from "../components/pagination.js";
 
 export type GetDomainsRequest = {
   /**
@@ -127,7 +132,7 @@ export type GetDomainsResponseBody = {
   /**
    * This object contains information related to the pagination of the current request, including the necessary parameters to get the next or previous page of data.
    */
-  pagination: components.Pagination;
+  pagination: Pagination;
 };
 
 export type GetDomainsResponse = {
@@ -339,13 +344,13 @@ export const GetDomainsResponseBody$inboundSchema: z.ZodType<
   unknown
 > = z.object({
   domains: z.array(z.lazy(() => Domains$inboundSchema)),
-  pagination: components.Pagination$inboundSchema,
+  pagination: Pagination$inboundSchema,
 });
 
 /** @internal */
 export type GetDomainsResponseBody$Outbound = {
   domains: Array<Domains$Outbound>;
-  pagination: components.Pagination$Outbound;
+  pagination: Pagination$Outbound;
 };
 
 /** @internal */
@@ -355,7 +360,7 @@ export const GetDomainsResponseBody$outboundSchema: z.ZodType<
   GetDomainsResponseBody
 > = z.object({
   domains: z.array(z.lazy(() => Domains$outboundSchema)),
-  pagination: components.Pagination$outboundSchema,
+  pagination: Pagination$outboundSchema,
 });
 
 /**

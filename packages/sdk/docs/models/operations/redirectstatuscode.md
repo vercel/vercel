@@ -5,7 +5,7 @@ Status code for domain redirect
 ## Example Usage
 
 ```typescript
-import { RedirectStatusCode } from "@vercel/sdk/models/operations";
+import { RedirectStatusCode } from "@vercel/sdk/models/operations/updateprojectdomain.js";
 
 let value: RedirectStatusCode = 307;
 ```

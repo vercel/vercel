@@ -5,7 +5,7 @@ Specify if the Trusted IPs will apply to every Deployment Target or just Preview
 ## Example Usage
 
 ```typescript
-import { UpdateProjectProjectsDeploymentType } from "@vercel/sdk/models/operations";
+import { UpdateProjectProjectsDeploymentType } from "@vercel/sdk/models/operations/updateproject.js";
 
 let value: UpdateProjectProjectsDeploymentType =
   "prod_deployment_urls_and_all_previews";

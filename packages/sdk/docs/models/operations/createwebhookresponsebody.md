@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { CreateWebhookResponseBody } from "@vercel/sdk/models/operations";
+import { CreateWebhookResponseBody } from "@vercel/sdk/models/operations/createwebhook.js";
 
 let value: CreateWebhookResponseBody = {
   secret: "<value>",

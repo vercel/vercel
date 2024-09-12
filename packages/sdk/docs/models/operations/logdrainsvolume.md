@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { LogDrainsVolume } from "@vercel/sdk/models/operations";
+import { LogDrainsVolume } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: LogDrainsVolume = {
   price: 7412.32,

@@ -5,7 +5,7 @@ Responds with the project ID on success.
 ## Example Usage
 
 ```typescript
-import { AddProjectMemberResponseBody } from "@vercel/sdk/models/operations";
+import { AddProjectMemberResponseBody } from "@vercel/sdk/models/operations/addprojectmember.js";
 
 let value: AddProjectMemberResponseBody = {
   id: "<id>",

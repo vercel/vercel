@@ -5,7 +5,7 @@ The protection bypass for the alias
 ## Example Usage
 
 ```typescript
-import { ListDeploymentAliasesProtectionBypass1 } from "@vercel/sdk/models/operations";
+import { ListDeploymentAliasesProtectionBypass1 } from "@vercel/sdk/models/operations/listdeploymentaliases.js";
 
 let value: ListDeploymentAliasesProtectionBypass1 = {
   createdAt: 5640.64,

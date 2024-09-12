@@ -5,7 +5,7 @@ The domain's transfer policy (depends on TLD requirements). `charge-and-renew`: 
 ## Example Usage
 
 ```typescript
-import { TransferPolicy } from "@vercel/sdk/models/operations";
+import { TransferPolicy } from "@vercel/sdk/models/operations/getdomaintransfer.js";
 
 let value: TransferPolicy = "no-change";
 ```

@@ -5,7 +5,7 @@ The project settings which was used for this deployment
 ## Example Usage
 
 ```typescript
-import { GetDeploymentsProjectSettings } from "@vercel/sdk/models/operations";
+import { GetDeploymentsProjectSettings } from "@vercel/sdk/models/operations/getdeployments.js";
 
 let value: GetDeploymentsProjectSettings = {};
 ```

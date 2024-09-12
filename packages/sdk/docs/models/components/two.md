@@ -5,7 +5,7 @@ A list of projects and spaces across teams that a user has marked as a favorite.
 ## Example Usage
 
 ```typescript
-import { Two } from "@vercel/sdk/models/components";
+import { Two } from "@vercel/sdk/models/components/authuser.js";
 
 let value: Two = {
   spaceId: "<value>",

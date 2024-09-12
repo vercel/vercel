@@ -18,7 +18,12 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  RequestDeleteRequestBody,
+  RequestDeleteRequestBody$outboundSchema,
+  RequestDeleteResponseBody,
+  RequestDeleteResponseBody$inboundSchema,
+} from "../models/operations/requestdelete.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -29,11 +34,11 @@ import { Result } from "../types/fp.js";
  */
 export async function userRequestDelete(
   client$: VercelCore,
-  request?: operations.RequestDeleteRequestBody | undefined,
+  request?: RequestDeleteRequestBody | undefined,
   options?: RequestOptions,
 ): Promise<
   Result<
-    operations.RequestDeleteResponseBody,
+    RequestDeleteResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -48,9 +53,7 @@ export async function userRequestDelete(
   const parsed$ = schemas$.safeParse(
     input$,
     (value$) =>
-      operations.RequestDeleteRequestBody$outboundSchema.optional().parse(
-        value$,
-      ),
+      RequestDeleteRequestBody$outboundSchema.optional().parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {
@@ -103,7 +106,7 @@ export async function userRequestDelete(
   const response = doResult.value;
 
   const [result$] = await m$.match<
-    operations.RequestDeleteResponseBody,
+    RequestDeleteResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -112,7 +115,7 @@ export async function userRequestDelete(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(202, operations.RequestDeleteResponseBody$inboundSchema),
+    m$.json(202, RequestDeleteResponseBody$inboundSchema),
     m$.fail([400, 403, "4XX", "5XX"]),
   )(response);
   if (!result$.ok) {

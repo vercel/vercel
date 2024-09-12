@@ -21,7 +21,12 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  GetDeploymentRequest,
+  GetDeploymentRequest$outboundSchema,
+  GetDeploymentResponseBody,
+  GetDeploymentResponseBody$inboundSchema,
+} from "../models/operations/getdeployment.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -32,11 +37,11 @@ import { Result } from "../types/fp.js";
  */
 export async function deploymentsGet(
   client$: VercelCore,
-  request: operations.GetDeploymentRequest,
+  request: GetDeploymentRequest,
   options?: RequestOptions,
 ): Promise<
   Result<
-    operations.GetDeploymentResponseBody,
+    GetDeploymentResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -50,7 +55,7 @@ export async function deploymentsGet(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) => operations.GetDeploymentRequest$outboundSchema.parse(value$),
+    (value$) => GetDeploymentRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {
@@ -114,7 +119,7 @@ export async function deploymentsGet(
   const response = doResult.value;
 
   const [result$] = await m$.match<
-    operations.GetDeploymentResponseBody,
+    GetDeploymentResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -123,7 +128,7 @@ export async function deploymentsGet(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(200, operations.GetDeploymentResponseBody$inboundSchema),
+    m$.json(200, GetDeploymentResponseBody$inboundSchema),
     m$.fail([400, 403, 404, "4XX", "5XX"]),
   )(response);
   if (!result$.ok) {

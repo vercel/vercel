@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { InviteUserToTeamResponseBodyRole } from "@vercel/sdk/models/operations";
+import { InviteUserToTeamResponseBodyRole } from "@vercel/sdk/models/operations/inviteusertoteam.js";
 
 let value: InviteUserToTeamResponseBodyRole = "DEVELOPER";
 ```

@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { ArtifactQueryRequest } from "@vercel/sdk/models/operations";
+import { ArtifactQueryRequest } from "@vercel/sdk/models/operations/artifactquery.js";
 
 let value: ArtifactQueryRequest = {};
 ```

@@ -22,7 +22,12 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  UpdateCheckRequest,
+  UpdateCheckRequest$outboundSchema,
+  UpdateCheckResponseBody,
+  UpdateCheckResponseBody$inboundSchema,
+} from "../models/operations/updatecheck.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -33,11 +38,11 @@ import { Result } from "../types/fp.js";
  */
 export async function checksUpdate(
   client$: VercelCore,
-  request: operations.UpdateCheckRequest,
+  request: UpdateCheckRequest,
   options?: RequestOptions,
 ): Promise<
   Result<
-    operations.UpdateCheckResponseBody,
+    UpdateCheckResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -51,7 +56,7 @@ export async function checksUpdate(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) => operations.UpdateCheckRequest$outboundSchema.parse(value$),
+    (value$) => UpdateCheckRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {
@@ -121,7 +126,7 @@ export async function checksUpdate(
   const response = doResult.value;
 
   const [result$] = await m$.match<
-    operations.UpdateCheckResponseBody,
+    UpdateCheckResponseBody,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -130,7 +135,7 @@ export async function checksUpdate(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(200, operations.UpdateCheckResponseBody$inboundSchema),
+    m$.json(200, UpdateCheckResponseBody$inboundSchema),
     m$.fail([400, 401, 403, 404, 413, "4XX", "5XX"]),
   )(response);
   if (!result$.ok) {

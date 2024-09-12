@@ -8,7 +8,26 @@ import { checksList } from "../funcs/checksList.js";
 import { checksRerequest } from "../funcs/checksRerequest.js";
 import { checksUpdate } from "../funcs/checksUpdate.js";
 import { ClientSDK, RequestOptions } from "../lib/sdks.js";
-import * as operations from "../models/operations/index.js";
+import {
+  CreateCheckRequest,
+  CreateCheckResponseBody,
+} from "../models/operations/createcheck.js";
+import {
+  GetAllChecksRequest,
+  GetAllChecksResponseBody,
+} from "../models/operations/getallchecks.js";
+import {
+  GetCheckRequest,
+  GetCheckResponseBody,
+} from "../models/operations/getcheck.js";
+import {
+  RerequestCheckRequest,
+  RerequestCheckResponseBody,
+} from "../models/operations/rerequestcheck.js";
+import {
+  UpdateCheckRequest,
+  UpdateCheckResponseBody,
+} from "../models/operations/updatecheck.js";
 import { unwrapAsync } from "../types/fp.js";
 
 export class Checks extends ClientSDK {
@@ -19,9 +38,9 @@ export class Checks extends ClientSDK {
    * Creates a new check. This endpoint must be called with an OAuth2 or it will produce a 400 error.
    */
   async create(
-    request: operations.CreateCheckRequest,
+    request: CreateCheckRequest,
     options?: RequestOptions,
-  ): Promise<operations.CreateCheckResponseBody> {
+  ): Promise<CreateCheckResponseBody> {
     return unwrapAsync(checksCreate(
       this,
       request,
@@ -36,9 +55,9 @@ export class Checks extends ClientSDK {
    * List all of the checks created for a deployment.
    */
   async list(
-    request: operations.GetAllChecksRequest,
+    request: GetAllChecksRequest,
     options?: RequestOptions,
-  ): Promise<operations.GetAllChecksResponseBody> {
+  ): Promise<GetAllChecksResponseBody> {
     return unwrapAsync(checksList(
       this,
       request,
@@ -53,9 +72,9 @@ export class Checks extends ClientSDK {
    * Return a detailed response for a single check.
    */
   async get(
-    request: operations.GetCheckRequest,
+    request: GetCheckRequest,
     options?: RequestOptions,
-  ): Promise<operations.GetCheckResponseBody> {
+  ): Promise<GetCheckResponseBody> {
     return unwrapAsync(checksGet(
       this,
       request,
@@ -70,9 +89,9 @@ export class Checks extends ClientSDK {
    * Update an existing check. This endpoint must be called with an OAuth2 or it will produce a 400 error.
    */
   async update(
-    request: operations.UpdateCheckRequest,
+    request: UpdateCheckRequest,
     options?: RequestOptions,
-  ): Promise<operations.UpdateCheckResponseBody> {
+  ): Promise<UpdateCheckResponseBody> {
     return unwrapAsync(checksUpdate(
       this,
       request,
@@ -87,9 +106,9 @@ export class Checks extends ClientSDK {
    * Rerequest a selected check that has failed.
    */
   async rerequest(
-    request: operations.RerequestCheckRequest,
+    request: RerequestCheckRequest,
     options?: RequestOptions,
-  ): Promise<operations.RerequestCheckResponseBody> {
+  ): Promise<RerequestCheckResponseBody> {
     return unwrapAsync(checksRerequest(
       this,
       request,

@@ -5,7 +5,7 @@ The custom environment used for this deployment, if any
 ## Example Usage
 
 ```typescript
-import { GetDeploymentsCustomEnvironment } from "@vercel/sdk/models/operations";
+import { GetDeploymentsCustomEnvironment } from "@vercel/sdk/models/operations/getdeployments.js";
 
 let value: GetDeploymentsCustomEnvironment = {
   id: "<id>",

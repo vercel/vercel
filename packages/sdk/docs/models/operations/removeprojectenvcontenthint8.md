@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { RemoveProjectEnvContentHint8 } from "@vercel/sdk/models/operations";
+import { RemoveProjectEnvContentHint8 } from "@vercel/sdk/models/operations/removeprojectenv.js";
 
 let value: RemoveProjectEnvContentHint8 = {
   type: "postgres-prisma-url",

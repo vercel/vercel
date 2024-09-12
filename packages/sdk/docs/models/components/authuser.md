@@ -5,7 +5,7 @@ Data for the currently authenticated User.
 ## Example Usage
 
 ```typescript
-import { AuthUser } from "@vercel/sdk/models/components";
+import { AuthUser } from "@vercel/sdk/models/components/authuser.js";
 
 let value: AuthUser = {
   createdAt: 1630748523395,

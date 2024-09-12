@@ -5,7 +5,7 @@ set of dashboard view preferences (cards or list) per scopeId
 ## Example Usage
 
 ```typescript
-import { ActiveDashboardViews } from "@vercel/sdk/models/components";
+import { ActiveDashboardViews } from "@vercel/sdk/models/components/authuser.js";
 
 let value: ActiveDashboardViews = {
   scopeId: "<value>",

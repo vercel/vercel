@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { EditProjectEnvContentHint7 } from "@vercel/sdk/models/operations";
+import { EditProjectEnvContentHint7 } from "@vercel/sdk/models/operations/editprojectenv.js";
 
 let value: EditProjectEnvContentHint7 = {
   type: "postgres-url-non-pooling",

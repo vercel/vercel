@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { CustomEnvironmentDomains } from "@vercel/sdk/models/operations";
+import { CustomEnvironmentDomains } from "@vercel/sdk/models/operations/canceldeployment.js";
 
 let value: CustomEnvironmentDomains = {
   name: "<value>",

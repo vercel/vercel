@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { BlobTotalAdvancedRequests } from "@vercel/sdk/models/operations";
+import { BlobTotalAdvancedRequests } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: BlobTotalAdvancedRequests = {
   price: 9781.73,

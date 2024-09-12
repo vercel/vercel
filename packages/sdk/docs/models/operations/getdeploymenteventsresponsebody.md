@@ -6,7 +6,7 @@ Array of deployment logs for the provided query.
 ## Example Usage
 
 ```typescript
-import { GetDeploymentEventsResponseBody } from "@vercel/sdk/models/operations";
+import { GetDeploymentEventsResponseBody } from "@vercel/sdk/models/operations/getdeploymentevents.js";
 
 let value: GetDeploymentEventsResponseBody = {
   type: "middleware-invocation",

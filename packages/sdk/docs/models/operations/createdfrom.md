@@ -5,7 +5,7 @@ Whether the log drain was created by an integration or by a user
 ## Example Usage
 
 ```typescript
-import { CreatedFrom } from "@vercel/sdk/models/operations";
+import { CreatedFrom } from "@vercel/sdk/models/operations/getintegrationlogdrains.js";
 
 let value: CreatedFrom = "integration";
 ```

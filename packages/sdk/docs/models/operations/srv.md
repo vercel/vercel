@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { Srv } from "@vercel/sdk/models/operations";
+import { Srv } from "@vercel/sdk/models/operations/updaterecord.js";
 
 let value: Srv = {
   target: "example2.com.",

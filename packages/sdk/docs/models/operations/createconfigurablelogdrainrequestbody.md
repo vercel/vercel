@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { CreateConfigurableLogDrainRequestBody } from "@vercel/sdk/models/operations";
+import { CreateConfigurableLogDrainRequestBody } from "@vercel/sdk/models/operations/createconfigurablelogdrain.js";
 
 let value: CreateConfigurableLogDrainRequestBody = {
   deliveryFormat: "json",

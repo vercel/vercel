@@ -16,7 +16,10 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  GetAuthUserResponseBody,
+  GetAuthUserResponseBody$inboundSchema,
+} from "../models/operations/getauthuser.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -30,7 +33,7 @@ export async function userGetAuthUser(
   options?: RequestOptions,
 ): Promise<
   Result<
-    operations.GetAuthUserResponseBody | undefined,
+    GetAuthUserResponseBody | undefined,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -80,7 +83,7 @@ export async function userGetAuthUser(
   const response = doResult.value;
 
   const [result$] = await m$.match<
-    operations.GetAuthUserResponseBody | undefined,
+    GetAuthUserResponseBody | undefined,
     | SDKError
     | SDKValidationError
     | UnexpectedClientError
@@ -89,8 +92,8 @@ export async function userGetAuthUser(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(200, operations.GetAuthUserResponseBody$inboundSchema.optional()),
-    m$.nil(302, operations.GetAuthUserResponseBody$inboundSchema.optional()),
+    m$.json(200, GetAuthUserResponseBody$inboundSchema.optional()),
+    m$.nil(302, GetAuthUserResponseBody$inboundSchema.optional()),
     m$.fail([400, 401, 403, 409, "4XX", "5XX"]),
   )(response);
   if (!result$.ok) {

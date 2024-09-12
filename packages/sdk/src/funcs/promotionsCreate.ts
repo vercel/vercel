@@ -22,7 +22,10 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  RequestPromoteRequest,
+  RequestPromoteRequest$outboundSchema,
+} from "../models/operations/requestpromote.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -33,7 +36,7 @@ import { Result } from "../types/fp.js";
  */
 export async function promotionsCreate(
   client$: VercelCore,
-  request: operations.RequestPromoteRequest,
+  request: RequestPromoteRequest,
   options?: RequestOptions,
 ): Promise<
   Result<
@@ -51,7 +54,7 @@ export async function promotionsCreate(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) => operations.RequestPromoteRequest$outboundSchema.parse(value$),
+    (value$) => RequestPromoteRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {

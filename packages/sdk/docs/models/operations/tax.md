@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { Tax } from "@vercel/sdk/models/operations";
+import { Tax } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: Tax = {
   type: "<value>",

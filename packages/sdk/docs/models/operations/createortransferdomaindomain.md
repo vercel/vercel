@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { CreateOrTransferDomainDomain } from "@vercel/sdk/models/operations";
+import { CreateOrTransferDomainDomain } from "@vercel/sdk/models/operations/createortransferdomain.js";
 
 let value: CreateOrTransferDomainDomain = {
   verified: true,

@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { DeleteTeamInviteCodeRequest } from "@vercel/sdk/models/operations";
+import { DeleteTeamInviteCodeRequest } from "@vercel/sdk/models/operations/deleteteaminvitecode.js";
 
 let value: DeleteTeamInviteCodeRequest = {
   inviteId: "2wn2hudbr4chb1ecywo9dvzo7g9sscs6mzcz8htdde0txyom4l",

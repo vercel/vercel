@@ -5,7 +5,7 @@ The EdgeConfig.
 ## Example Usage
 
 ```typescript
-import { GetEdgeConfigSchemaResponseBody } from "@vercel/sdk/models/operations";
+import { GetEdgeConfigSchemaResponseBody } from "@vercel/sdk/models/operations/getedgeconfigschema.js";
 
 let value: GetEdgeConfigSchemaResponseBody = {};
 ```

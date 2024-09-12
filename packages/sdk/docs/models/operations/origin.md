@@ -5,7 +5,7 @@ The origin of the request.
 ## Example Usage
 
 ```typescript
-import { Origin } from "@vercel/sdk/models/operations";
+import { Origin } from "@vercel/sdk/models/operations/requestaccesstoteam.js";
 
 let value: Origin = "github";
 ```

@@ -5,7 +5,7 @@ The state of the deployment depending on the process of deploying, or if it is r
 ## Example Usage
 
 ```typescript
-import { ReadyState } from "@vercel/sdk/models/operations";
+import { ReadyState } from "@vercel/sdk/models/operations/listdeploymentbuilds.js";
 
 let value: ReadyState = "READY";
 ```

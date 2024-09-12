@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { RequestDeleteRequestBody } from "@vercel/sdk/models/operations";
+import { RequestDeleteRequestBody } from "@vercel/sdk/models/operations/requestdelete.js";
 
 let value: RequestDeleteRequestBody = {};
 ```

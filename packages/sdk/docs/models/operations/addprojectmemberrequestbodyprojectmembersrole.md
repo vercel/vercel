@@ -5,7 +5,7 @@ The project role of the member that will be added.
 ## Example Usage
 
 ```typescript
-import { AddProjectMemberRequestBodyProjectMembersRole } from "@vercel/sdk/models/operations";
+import { AddProjectMemberRequestBodyProjectMembersRole } from "@vercel/sdk/models/operations/addprojectmember.js";
 
 let value: AddProjectMemberRequestBodyProjectMembersRole = "ADMIN";
 ```

@@ -5,7 +5,7 @@ Whether or not remote caching is enabled for the team
 ## Example Usage
 
 ```typescript
-import { RemoteCaching } from "@vercel/sdk/models/operations";
+import { RemoteCaching } from "@vercel/sdk/models/operations/patchteam.js";
 
 let value: RemoteCaching = {
   enabled: true,

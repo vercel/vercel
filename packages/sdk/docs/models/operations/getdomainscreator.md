@@ -5,7 +5,7 @@ An object containing information of the domain creator, including the user's id,
 ## Example Usage
 
 ```typescript
-import { GetDomainsCreator } from "@vercel/sdk/models/operations";
+import { GetDomainsCreator } from "@vercel/sdk/models/operations/getdomains.js";
 
 let value: GetDomainsCreator = {
   username: "vercel_user",

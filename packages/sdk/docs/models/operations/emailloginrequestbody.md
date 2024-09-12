@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { EmailLoginRequestBody } from "@vercel/sdk/models/operations";
+import { EmailLoginRequestBody } from "@vercel/sdk/models/operations/emaillogin.js";
 
 let value: EmailLoginRequestBody = {
   email: "user@mail.com",

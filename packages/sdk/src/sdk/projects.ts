@@ -10,7 +10,25 @@ import { projectsUnpause } from "../funcs/projectsUnpause.js";
 import { projectsUpdate } from "../funcs/projectsUpdate.js";
 import { projectsUpdateDataCache } from "../funcs/projectsUpdateDataCache.js";
 import { ClientSDK, RequestOptions } from "../lib/sdks.js";
-import * as operations from "../models/operations/index.js";
+import {
+  CreateProjectRequest,
+  CreateProjectResponseBody,
+} from "../models/operations/createproject.js";
+import { DeleteProjectRequest } from "../models/operations/deleteproject.js";
+import {
+  GetProjectsRequest,
+  GetProjectsResponse,
+} from "../models/operations/getprojects.js";
+import { PauseProjectRequest } from "../models/operations/pauseproject.js";
+import { UnpauseProjectRequest } from "../models/operations/unpauseproject.js";
+import {
+  UpdateProjectRequest,
+  UpdateProjectResponseBody,
+} from "../models/operations/updateproject.js";
+import {
+  UpdateProjectDataCacheRequest,
+  UpdateProjectDataCacheResponseBody,
+} from "../models/operations/updateprojectdatacache.js";
 import { unwrapAsync } from "../types/fp.js";
 import { PageIterator, unwrapResultIterator } from "../types/operations.js";
 
@@ -22,9 +40,9 @@ export class Projects extends ClientSDK {
    * Update the data cache feature on a project.
    */
   async updateDataCache(
-    request: operations.UpdateProjectDataCacheRequest,
+    request: UpdateProjectDataCacheRequest,
     options?: RequestOptions,
-  ): Promise<operations.UpdateProjectDataCacheResponseBody> {
+  ): Promise<UpdateProjectDataCacheResponseBody> {
     return unwrapAsync(projectsUpdateDataCache(
       this,
       request,
@@ -39,9 +57,9 @@ export class Projects extends ClientSDK {
    * Allows to retrieve the list of projects of the authenticated user or team. The list will be paginated and the provided query parameters allow filtering the returned projects.
    */
   async getAll(
-    request: operations.GetProjectsRequest,
+    request: GetProjectsRequest,
     options?: RequestOptions,
-  ): Promise<PageIterator<operations.GetProjectsResponse>> {
+  ): Promise<PageIterator<GetProjectsResponse>> {
     return unwrapResultIterator(projectsGetAll(
       this,
       request,
@@ -56,9 +74,9 @@ export class Projects extends ClientSDK {
    * Allows to create a new project with the provided configuration. It only requires the project `name` but more configuration can be provided to override the defaults.
    */
   async create(
-    request: operations.CreateProjectRequest,
+    request: CreateProjectRequest,
     options?: RequestOptions,
-  ): Promise<operations.CreateProjectResponseBody> {
+  ): Promise<CreateProjectResponseBody> {
     return unwrapAsync(projectsCreate(
       this,
       request,
@@ -73,9 +91,9 @@ export class Projects extends ClientSDK {
    * Update the fields of a project using either its `name` or `id`.
    */
   async update(
-    request: operations.UpdateProjectRequest,
+    request: UpdateProjectRequest,
     options?: RequestOptions,
-  ): Promise<operations.UpdateProjectResponseBody> {
+  ): Promise<UpdateProjectResponseBody> {
     return unwrapAsync(projectsUpdate(
       this,
       request,
@@ -90,7 +108,7 @@ export class Projects extends ClientSDK {
    * Delete a specific project by passing either the project `id` or `name` in the URL.
    */
   async delete(
-    request: operations.DeleteProjectRequest,
+    request: DeleteProjectRequest,
     options?: RequestOptions,
   ): Promise<void> {
     return unwrapAsync(projectsDelete(
@@ -107,7 +125,7 @@ export class Projects extends ClientSDK {
    * Pause a project by passing its project `id` in the URL. If the project does not exist given the id then the request will fail with 400 status code. If the project disables auto assigning custom production domains and blocks the active Production Deployment then the request will return with 200 status code.
    */
   async pause(
-    request: operations.PauseProjectRequest,
+    request: PauseProjectRequest,
     options?: RequestOptions,
   ): Promise<void> {
     return unwrapAsync(projectsPause(
@@ -124,7 +142,7 @@ export class Projects extends ClientSDK {
    * Unpause a project by passing its project `id` in the URL. If the project does not exist given the id then the request will fail with 400 status code. If the project enables auto assigning custom production domains and unblocks the active Production Deployment then the request will return with 200 status code.
    */
   async unpause(
-    request: operations.UnpauseProjectRequest,
+    request: UnpauseProjectRequest,
     options?: RequestOptions,
   ): Promise<void> {
     return unwrapAsync(projectsUnpause(

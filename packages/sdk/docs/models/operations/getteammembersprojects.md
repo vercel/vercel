@@ -5,7 +5,7 @@ Array of project memberships
 ## Example Usage
 
 ```typescript
-import { GetTeamMembersProjects } from "@vercel/sdk/models/operations";
+import { GetTeamMembersProjects } from "@vercel/sdk/models/operations/getteammembers.js";
 
 let value: GetTeamMembersProjects = {};
 ```

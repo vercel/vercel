@@ -5,7 +5,7 @@ An object that contains the Build's configuration
 ## Example Usage
 
 ```typescript
-import { Config } from "@vercel/sdk/models/operations";
+import { Config } from "@vercel/sdk/models/operations/listdeploymentbuilds.js";
 
 let value: Config = {};
 ```

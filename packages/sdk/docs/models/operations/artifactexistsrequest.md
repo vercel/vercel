@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { ArtifactExistsRequest } from "@vercel/sdk/models/operations";
+import { ArtifactExistsRequest } from "@vercel/sdk/models/operations/artifactexists.js";
 
 let value: ArtifactExistsRequest = {
   hash: "12HKQaOmR5t5Uy6vdcQsNIiZgHGB",

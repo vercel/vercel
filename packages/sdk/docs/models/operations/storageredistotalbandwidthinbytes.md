@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { StorageRedisTotalBandwidthInBytes } from "@vercel/sdk/models/operations";
+import { StorageRedisTotalBandwidthInBytes } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: StorageRedisTotalBandwidthInBytes = {
   price: 3145.73,

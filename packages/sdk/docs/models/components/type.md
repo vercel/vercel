@@ -5,7 +5,7 @@ String indicating the type of file tree entry.
 ## Example Usage
 
 ```typescript
-import { Type } from "@vercel/sdk/models/components";
+import { Type } from "@vercel/sdk/models/components/filetree.js";
 
 let value: Type = "file";
 ```

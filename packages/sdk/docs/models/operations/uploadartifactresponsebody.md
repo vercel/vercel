@@ -5,7 +5,7 @@ File successfully uploaded
 ## Example Usage
 
 ```typescript
-import { UploadArtifactResponseBody } from "@vercel/sdk/models/operations";
+import { UploadArtifactResponseBody } from "@vercel/sdk/models/operations/uploadartifact.js";
 
 let value: UploadArtifactResponseBody = {
   urls: [

@@ -5,7 +5,7 @@ The EdgeConfig.
 ## Example Usage
 
 ```typescript
-import { EdgeConfigToken } from "@vercel/sdk/models/components";
+import { EdgeConfigToken } from "@vercel/sdk/models/components/edgeconfigtoken.js";
 
 let value: EdgeConfigToken = {
   token: "<value>",

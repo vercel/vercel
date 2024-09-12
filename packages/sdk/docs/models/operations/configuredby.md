@@ -5,7 +5,7 @@ How we see the domain's configuration. - `CNAME`: Domain has a CNAME pointing to
 ## Example Usage
 
 ```typescript
-import { ConfiguredBy } from "@vercel/sdk/models/operations";
+import { ConfiguredBy } from "@vercel/sdk/models/operations/getdomainconfig.js";
 
 let value: ConfiguredBy = "A";
 ```

@@ -7,7 +7,22 @@ import { dnsListRecords } from "../funcs/dnsListRecords.js";
 import { dnsRemoveRecord } from "../funcs/dnsRemoveRecord.js";
 import { dnsUpdateRecord } from "../funcs/dnsUpdateRecord.js";
 import { ClientSDK, RequestOptions } from "../lib/sdks.js";
-import * as operations from "../models/operations/index.js";
+import {
+  CreateRecordRequest,
+  CreateRecordResponseBody,
+} from "../models/operations/createrecord.js";
+import {
+  GetRecordsRequest,
+  GetRecordsResponse,
+} from "../models/operations/getrecords.js";
+import {
+  RemoveRecordRequest,
+  RemoveRecordResponseBody,
+} from "../models/operations/removerecord.js";
+import {
+  UpdateRecordRequest,
+  UpdateRecordResponseBody,
+} from "../models/operations/updaterecord.js";
 import { unwrapAsync } from "../types/fp.js";
 import { PageIterator, unwrapResultIterator } from "../types/operations.js";
 
@@ -19,9 +34,9 @@ export class Dns extends ClientSDK {
    * Retrieves a list of DNS records created for a domain name. By default it returns 20 records if no limit is provided. The rest can be retrieved using the pagination options.
    */
   async listRecords(
-    request: operations.GetRecordsRequest,
+    request: GetRecordsRequest,
     options?: RequestOptions,
-  ): Promise<PageIterator<operations.GetRecordsResponse>> {
+  ): Promise<PageIterator<GetRecordsResponse>> {
     return unwrapResultIterator(dnsListRecords(
       this,
       request,
@@ -36,9 +51,9 @@ export class Dns extends ClientSDK {
    * Creates a DNS record for a domain.
    */
   async createRecord(
-    request: operations.CreateRecordRequest,
+    request: CreateRecordRequest,
     options?: RequestOptions,
-  ): Promise<operations.CreateRecordResponseBody> {
+  ): Promise<CreateRecordResponseBody> {
     return unwrapAsync(dnsCreateRecord(
       this,
       request,
@@ -53,9 +68,9 @@ export class Dns extends ClientSDK {
    * Updates an existing DNS record for a domain name.
    */
   async updateRecord(
-    request: operations.UpdateRecordRequest,
+    request: UpdateRecordRequest,
     options?: RequestOptions,
-  ): Promise<operations.UpdateRecordResponseBody> {
+  ): Promise<UpdateRecordResponseBody> {
     return unwrapAsync(dnsUpdateRecord(
       this,
       request,
@@ -70,9 +85,9 @@ export class Dns extends ClientSDK {
    * Removes an existing DNS record from a domain name.
    */
   async removeRecord(
-    request: operations.RemoveRecordRequest,
+    request: RemoveRecordRequest,
     options?: RequestOptions,
-  ): Promise<operations.RemoveRecordResponseBody> {
+  ): Promise<RemoveRecordResponseBody> {
     return unwrapAsync(dnsRemoveRecord(
       this,
       request,

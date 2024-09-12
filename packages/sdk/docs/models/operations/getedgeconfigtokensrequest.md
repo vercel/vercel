@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { GetEdgeConfigTokensRequest } from "@vercel/sdk/models/operations";
+import { GetEdgeConfigTokensRequest } from "@vercel/sdk/models/operations/getedgeconfigtokens.js";
 
 let value: GetEdgeConfigTokensRequest = {
   edgeConfigId: "<value>",

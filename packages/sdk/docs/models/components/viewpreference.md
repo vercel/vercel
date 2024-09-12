@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { ViewPreference } from "@vercel/sdk/models/components";
+import { ViewPreference } from "@vercel/sdk/models/components/authuser.js";
 
 let value: ViewPreference = "cards";
 ```

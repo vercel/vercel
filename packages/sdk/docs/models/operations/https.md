@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { Https } from "@vercel/sdk/models/operations";
+import { Https } from "@vercel/sdk/models/operations/updaterecord.js";
 
 let value: Https = {
   priority: 405036,

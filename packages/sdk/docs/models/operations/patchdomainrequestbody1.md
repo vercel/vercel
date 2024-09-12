@@ -5,7 +5,7 @@ update
 ## Example Usage
 
 ```typescript
-import { PatchDomainRequestBody1 } from "@vercel/sdk/models/operations";
+import { PatchDomainRequestBody1 } from "@vercel/sdk/models/operations/patchdomain.js";
 
 let value: PatchDomainRequestBody1 = {
   op: "update",

@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { GetProjectEnvResponseBodyEnvsResponseType } from "@vercel/sdk/models/operations";
+import { GetProjectEnvResponseBodyEnvsResponseType } from "@vercel/sdk/models/operations/getprojectenv.js";
 
 let value: GetProjectEnvResponseBodyEnvsResponseType = "system";
 ```

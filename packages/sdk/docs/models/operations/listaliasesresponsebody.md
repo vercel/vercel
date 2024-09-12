@@ -5,7 +5,7 @@ The paginated list of aliases
 ## Example Usage
 
 ```typescript
-import { ListAliasesResponseBody } from "@vercel/sdk/models/operations";
+import { ListAliasesResponseBody } from "@vercel/sdk/models/operations/listaliases.js";
 
 let value: ListAliasesResponseBody = {
   aliases: [

@@ -5,7 +5,7 @@ The team was created successfully
 ## Example Usage
 
 ```typescript
-import { CreateTeamResponseBody } from "@vercel/sdk/models/operations";
+import { CreateTeamResponseBody } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: CreateTeamResponseBody = {
   id: "team_nLlpyC6RE1qxqglFKbrMxlud",

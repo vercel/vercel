@@ -5,7 +5,7 @@
 ```typescript
 import {
   CreateTeamTeamsResponse200ApplicationJSONResponseBodyBillingInvoiceItemsStorageRedisTotalBandwidthInBytesMatrix,
-} from "@vercel/sdk/models/operations";
+} from "@vercel/sdk/models/operations/createteam.js";
 
 let value:
   CreateTeamTeamsResponse200ApplicationJSONResponseBodyBillingInvoiceItemsStorageRedisTotalBandwidthInBytesMatrix =

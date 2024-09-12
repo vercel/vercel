@@ -22,7 +22,10 @@ import {
 } from "../models/errors/httpclienterrors.js";
 import { SDKError } from "../models/errors/sdkerror.js";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
-import * as operations from "../models/operations/index.js";
+import {
+  DeleteConfigurationRequest,
+  DeleteConfigurationRequest$outboundSchema,
+} from "../models/operations/deleteconfiguration.js";
 import { Result } from "../types/fp.js";
 
 /**
@@ -33,7 +36,7 @@ import { Result } from "../types/fp.js";
  */
 export async function integrationsDeleteConfiguration(
   client$: VercelCore,
-  request: operations.DeleteConfigurationRequest,
+  request: DeleteConfigurationRequest,
   options?: RequestOptions,
 ): Promise<
   Result<
@@ -51,8 +54,7 @@ export async function integrationsDeleteConfiguration(
 
   const parsed$ = schemas$.safeParse(
     input$,
-    (value$) =>
-      operations.DeleteConfigurationRequest$outboundSchema.parse(value$),
+    (value$) => DeleteConfigurationRequest$outboundSchema.parse(value$),
     "Input validation failed",
   );
   if (!parsed$.ok) {
