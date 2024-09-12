@@ -9,7 +9,6 @@ const listSubcommand = {
     {
       name: 'update-required',
       description: 'A list of projects affected by an upcoming deprecation',
-      argument: 'update-required',
       shorthand: null,
       type: Boolean,
       deprecated: false,

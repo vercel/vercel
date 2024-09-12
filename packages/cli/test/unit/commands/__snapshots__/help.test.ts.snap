@@ -201,16 +201,17 @@ exports[`help command > bisect help output snapshots > bisect help column width 
 
   [2mOptions[22m:
 
-  -b,  --bad <URL>   Known bad URL      
-  -g,  --good <URL>  Known good URL     
-  -o,  --open <URL>  Automatically open 
-                     each URL in the    
-                     browser            
-  -p,  --path <URL>  Subpath of the     
-                     deployment URL to  
-                     test               
-  -r,  --run <URL>   Test script to run 
-                     for each deployment
+  -b,  --bad <URL>    Known bad URL     
+  -g,  --good <URL>   Known good URL    
+  -o,  --open <URL>   Automatically open
+                      each URL in the   
+                      browser           
+  -p,  --path <PATH>  Subpath of the    
+                      deployment URL to 
+                      test              
+  -r,  --run <PATH>   Test script to run
+                      for each          
+                      deployment        
 
 
   [2mGlobal Options[22m:
@@ -276,11 +277,11 @@ exports[`help command > bisect help output snapshots > bisect help column width 
 
   [2mOptions[22m:
 
-  -b,  --bad <URL>   Known bad URL                                              
-  -g,  --good <URL>  Known good URL                                             
-  -o,  --open <URL>  Automatically open each URL in the browser                 
-  -p,  --path <URL>  Subpath of the deployment URL to test                      
-  -r,  --run <URL>   Test script to run for each deployment                     
+  -b,  --bad <URL>    Known bad URL                                             
+  -g,  --good <URL>   Known good URL                                            
+  -o,  --open <URL>   Automatically open each URL in the browser                
+  -p,  --path <PATH>  Subpath of the deployment URL to test                     
+  -r,  --run <PATH>   Test script to run for each deployment                    
 
 
   [2mGlobal Options[22m:
@@ -322,11 +323,11 @@ exports[`help command > bisect help output snapshots > bisect help column width 
 
   [2mOptions[22m:
 
-  -b,  --bad <URL>   Known bad URL                                                                                      
-  -g,  --good <URL>  Known good URL                                                                                     
-  -o,  --open <URL>  Automatically open each URL in the browser                                                         
-  -p,  --path <URL>  Subpath of the deployment URL to test                                                              
-  -r,  --run <URL>   Test script to run for each deployment                                                             
+  -b,  --bad <URL>    Known bad URL                                                                                     
+  -g,  --good <URL>   Known good URL                                                                                    
+  -o,  --open <URL>   Automatically open each URL in the browser                                                        
+  -p,  --path <PATH>  Subpath of the deployment URL to test                                                             
+  -r,  --run <PATH>   Test script to run for each deployment                                                            
 
 
   [2mGlobal Options[22m:
@@ -370,6 +371,7 @@ exports[`help command > certs help output snapshots > certs help column width 40
 
   [2mCommands[22m:
 
+  add        Add a new cert     
   ls         Show all available 
              certificates       
   issue  cn   Issue a new       
@@ -460,6 +462,7 @@ exports[`help command > certs help output snapshots > certs help column width 80
 
   [2mCommands[22m:
 
+  add        Add a new cert                                             
   ls         Show all available certificates                            
   issue  cn   Issue a new certificate for a domain                      
   rm     id  Remove a certificate by id                                 
@@ -515,6 +518,7 @@ exports[`help command > certs help output snapshots > certs help column width 12
 
   [2mCommands[22m:
 
+  add        Add a new cert                                                                                     
   ls         Show all available certificates                                                                    
   issue  cn   Issue a new certificate for a domain                                                              
   rm     id  Remove a certificate by id                                                                         
@@ -2819,8 +2823,12 @@ exports[`help command > project help output snapshots > project help column widt
 
   [2mOptions[22m:
 
-  -N,  --next <MS>  Show next page of   
-                    results             
+  -N,  --next <MS>        Show next page of  
+                          results            
+       --update-required  A list of projects 
+                          affected by an     
+                          upcoming           
+                          deprecation        
 
 
   [2mGlobal Options[22m:
@@ -2889,7 +2897,8 @@ exports[`help command > project help output snapshots > project help column widt
 
   [2mOptions[22m:
 
-  -N,  --next <MS>  Show next page of results                                   
+  -N,  --next <MS>        Show next page of results                                  
+       --update-required  A list of projects affected by an upcoming deprecation     
 
 
   [2mGlobal Options[22m:
@@ -2934,7 +2943,8 @@ exports[`help command > project help output snapshots > project help column widt
 
   [2mOptions[22m:
 
-  -N,  --next <MS>  Show next page of results                                                                           
+  -N,  --next <MS>        Show next page of results                                                                          
+       --update-required  A list of projects affected by an upcoming deprecation                                             
 
 
   [2mGlobal Options[22m:
