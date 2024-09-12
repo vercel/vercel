@@ -15,7 +15,7 @@ generation:
   auth:
     oAuth2ClientCredentialsEnabled: false
 typescript:
-  version: '14.0.0-canary.0'
+  version: 14.0.0-canary.0
   additionalDependencies:
     dependencies: {}
     devDependencies: {}
@@ -23,6 +23,11 @@ typescript:
   additionalPackageJSON: {}
   author: Speakeasy
   clientServerStatusCodesAsErrors: true
+  compileCommand:
+    - pnpm
+    - install
+    - --filter
+    - '@vercel/sdk'
   enumFormat: union
   flattenGlobalSecurity: true
   imports:
@@ -36,9 +41,9 @@ typescript:
   inputModelSuffix: input
   maxMethodParams: 0
   methodArguments: require-security-and-request
-  moduleFormat: commonjs
+  moduleFormat: dual
   outputModelSuffix: output
   packageName: '@vercel/sdk'
   responseFormat: flat
   templateVersion: v2
-  useIndexModules: true
+  useIndexModules: false
