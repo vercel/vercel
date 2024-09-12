@@ -1,0 +1,22 @@
+# CreateDeploymentProjectSettings
+
+## Example Usage
+
+```typescript
+import { CreateDeploymentProjectSettings } from "@vercel/sdk/models/operations";
+
+let value: CreateDeploymentProjectSettings = {};
+```
+
+## Fields
+
+| Field                                                                                                | Type                                                                                                 | Required                                                                                             | Description                                                                                          |
+| ---------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `buildCommand`                                                                                       | *string*                                                                                             | :heavy_minus_sign:                                                                                   | N/A                                                                                                  |
+| `commandForIgnoringBuildStep`                                                                        | *string*                                                                                             | :heavy_minus_sign:                                                                                   | N/A                                                                                                  |
+| `devCommand`                                                                                         | *string*                                                                                             | :heavy_minus_sign:                                                                                   | N/A                                                                                                  |
+| `framework`                                                                                          | [operations.CreateDeploymentFramework](../../models/operations/createdeploymentframework.md)         | :heavy_minus_sign:                                                                                   | N/A                                                                                                  |
+| `installCommand`                                                                                     | *string*                                                                                             | :heavy_minus_sign:                                                                                   | N/A                                                                                                  |
+| `outputDirectory`                                                                                    | *string*                                                                                             | :heavy_minus_sign:                                                                                   | N/A                                                                                                  |
+| `speedInsights`                                                                                      | [operations.CreateDeploymentSpeedInsights](../../models/operations/createdeploymentspeedinsights.md) | :heavy_minus_sign:                                                                                   | N/A                                                                                                  |
+| `webAnalytics`                                                                                       | [operations.CreateDeploymentWebAnalytics](../../models/operations/createdeploymentwebanalytics.md)   | :heavy_minus_sign:                                                                                   | N/A                                                                                                  |

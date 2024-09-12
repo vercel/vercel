@@ -1,0 +1,19 @@
+# Has
+
+## Example Usage
+
+```typescript
+import { Has } from "@vercel/sdk/models/operations";
+
+let value: Has = {
+  type: "cookie",
+};
+```
+
+## Fields
+
+| Field                                                                                                                                                                                      | Type                                                                                                                                                                                       | Required                                                                                                                                                                                   | Description                                                                                                                                                                                |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `type`                                                                                                                                                                                     | [operations.UpdateProjectDataCacheProjectsResponse200ApplicationJSONResponseBodyType](../../models/operations/updateprojectdatacacheprojectsresponse200applicationjsonresponsebodytype.md) | :heavy_check_mark:                                                                                                                                                                         | N/A                                                                                                                                                                                        |
+| `key`                                                                                                                                                                                      | *string*                                                                                                                                                                                   | :heavy_minus_sign:                                                                                                                                                                         | N/A                                                                                                                                                                                        |
+| `value`                                                                                                                                                                                    | *operations.UpdateProjectDataCacheProjectsValue*                                                                                                                                           | :heavy_minus_sign:                                                                                                                                                                         | N/A                                                                                                                                                                                        |

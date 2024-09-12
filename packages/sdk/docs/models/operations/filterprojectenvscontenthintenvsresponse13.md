@@ -1,0 +1,19 @@
+# FilterProjectEnvsContentHintEnvsResponse13
+
+## Example Usage
+
+```typescript
+import { FilterProjectEnvsContentHintEnvsResponse13 } from "@vercel/sdk/models/operations";
+
+let value: FilterProjectEnvsContentHintEnvsResponse13 = {
+  type: "postgres-url-no-ssl",
+  storeId: "<value>",
+};
+```
+
+## Fields
+
+| Field                                                                                                                                                                                                        | Type                                                                                                                                                                                                         | Required                                                                                                                                                                                                     | Description                                                                                                                                                                                                  |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `type`                                                                                                                                                                                                       | [operations.FilterProjectEnvsContentHintEnvsResponse200ApplicationJSONResponseBody3Envs13Type](../../models/operations/filterprojectenvscontenthintenvsresponse200applicationjsonresponsebody3envs13type.md) | :heavy_check_mark:                                                                                                                                                                                           | N/A                                                                                                                                                                                                          |
+| `storeId`                                                                                                                                                                                                    | *string*                                                                                                                                                                                                     | :heavy_check_mark:                                                                                                                                                                                           | N/A                                                                                                                                                                                                          |

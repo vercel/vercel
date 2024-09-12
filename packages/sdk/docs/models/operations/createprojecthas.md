@@ -1,0 +1,19 @@
+# CreateProjectHas
+
+## Example Usage
+
+```typescript
+import { CreateProjectHas } from "@vercel/sdk/models/operations";
+
+let value: CreateProjectHas = {
+  type: "host",
+};
+```
+
+## Fields
+
+| Field                                                                                                                                                                                    | Type                                                                                                                                                                                     | Required                                                                                                                                                                                 | Description                                                                                                                                                                              |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `type`                                                                                                                                                                                   | [operations.CreateProjectProjectsResponse200ApplicationJSONResponseBodySecurityType](../../models/operations/createprojectprojectsresponse200applicationjsonresponsebodysecuritytype.md) | :heavy_check_mark:                                                                                                                                                                       | N/A                                                                                                                                                                                      |
+| `key`                                                                                                                                                                                    | *string*                                                                                                                                                                                 | :heavy_minus_sign:                                                                                                                                                                       | N/A                                                                                                                                                                                      |
+| `value`                                                                                                                                                                                  | *operations.CreateProjectValue*                                                                                                                                                          | :heavy_minus_sign:                                                                                                                                                                       | N/A                                                                                                                                                                                      |

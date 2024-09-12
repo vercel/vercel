@@ -1,0 +1,19 @@
+# CreateProjectEnvContentHintEnvs3
+
+## Example Usage
+
+```typescript
+import { CreateProjectEnvContentHintEnvs3 } from "@vercel/sdk/models/operations";
+
+let value: CreateProjectEnvContentHintEnvs3 = {
+  type: "redis-rest-api-token",
+  storeId: "<value>",
+};
+```
+
+## Fields
+
+| Field                                                                                                                                                                                                          | Type                                                                                                                                                                                                           | Required                                                                                                                                                                                                       | Description                                                                                                                                                                                                    |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `type`                                                                                                                                                                                                         | [operations.CreateProjectEnvContentHintEnvsResponse201ApplicationJSONResponseBodyCreated23Type](../../models/operations/createprojectenvcontenthintenvsresponse201applicationjsonresponsebodycreated23type.md) | :heavy_check_mark:                                                                                                                                                                                             | N/A                                                                                                                                                                                                            |
+| `storeId`                                                                                                                                                                                                      | *string*                                                                                                                                                                                                       | :heavy_check_mark:                                                                                                                                                                                             | N/A                                                                                                                                                                                                            |

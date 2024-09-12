@@ -1,0 +1,19 @@
+# GetProjectsContentHint10
+
+## Example Usage
+
+```typescript
+import { GetProjectsContentHint10 } from "@vercel/sdk/models/operations";
+
+let value: GetProjectsContentHint10 = {
+  type: "postgres-host",
+  storeId: "<value>",
+};
+```
+
+## Fields
+
+| Field                                                                                                                                                                                                                | Type                                                                                                                                                                                                                 | Required                                                                                                                                                                                                             | Description                                                                                                                                                                                                          |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `type`                                                                                                                                                                                                               | [operations.GetProjectsContentHintProjectsResponse200ApplicationJSONResponseBodyProjectsEnv10Type](../../models/operations/getprojectscontenthintprojectsresponse200applicationjsonresponsebodyprojectsenv10type.md) | :heavy_check_mark:                                                                                                                                                                                                   | N/A                                                                                                                                                                                                                  |
+| `storeId`                                                                                                                                                                                                            | *string*                                                                                                                                                                                                             | :heavy_check_mark:                                                                                                                                                                                                   | N/A                                                                                                                                                                                                                  |
