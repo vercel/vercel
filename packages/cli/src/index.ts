@@ -42,6 +42,7 @@ import {
   defaultAuthConfig,
   defaultGlobalConfig,
 } from './util/config/get-default';
+import { TelemetryClient } from './util/telemetry';
 import * as ERRORS from './util/errors-ts';
 import { APIError } from './util/errors-ts';
 import { SENTRY_DSN } from './util/constants';
@@ -249,9 +250,17 @@ const main = async () => {
     return 1;
   }
 
+  const telemetryClient = new TelemetryClient({
+    opts: {
+      output: client.output,
+      isDebug: true,
+    },
+  });
+
   // Shared API `Client` instance for all sub-commands to utilize
   client = new Client({
     agent: new ProxyAgent({ keepAlive: true }),
+    telemetryClient,
     apiUrl,
     stdin: process.stdin,
     stdout: process.stdout,

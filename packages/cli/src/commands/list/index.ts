@@ -18,6 +18,8 @@ import { ProjectNotFound } from '../../util/errors-ts';
 import { isErrnoException } from '@vercel/error-utils';
 import { help } from '../help';
 import { listCommand } from './command';
+import { ListTelemetryClient } from '../../util/list/telemetry';
+
 import parseTarget from '../../util/parse-target';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import getDeployment from '../../util/get-deployment';
@@ -41,6 +43,13 @@ function toDate(timestamp: number): string {
 export default async function list(client: Client) {
   const { print, log, warn, error, note, debug, spinner } = client.output;
 
+  const telemetryClient = new ListTelemetryClient({
+    opts: {
+      output: client.output,
+      isDebug: true,
+    },
+  });
+
   let parsedArgs = null;
 
   const flagsSpecification = getFlagsSpecification(listCommand.options);
@@ -53,11 +62,17 @@ export default async function list(client: Client) {
   }
 
   if (parsedArgs.flags['--help']) {
+    telemetryClient.trackFlagHelp();
     print(help(listCommand, { columns: client.stderr.columns }));
     return 2;
   }
 
+  if ('--yes' in parsedArgs.flags) {
+    telemetryClient.trackFlagYes(parsedArgs.flags['--yes']);
+  }
+
   if ('--confirm' in parsedArgs.flags) {
+    telemetryClient.trackFlagConfirm(parsedArgs.flags['--confirm']);
     warn('`--confirm` is deprecated, please use `--yes` instead');
     parsedArgs.flags['--yes'] = parsedArgs.flags['--confirm'];
   }
@@ -71,11 +86,18 @@ export default async function list(client: Client) {
   const meta = parseMeta(parsedArgs.flags['--meta']);
   const policy = parsePolicy(parsedArgs.flags['--policy']);
 
+  telemetryClient.trackFlagMeta(meta);
+  telemetryClient.trackFlagPolicy(policy);
+
   const target = parseTarget({
     output: client.output,
     flagName: 'environment',
     flags: parsedArgs.flags,
   });
+
+  if (target) {
+    telemetryClient.trackFlagEnvironment(target);
+  }
 
   let project: Project;
   let pagination;
@@ -85,6 +107,7 @@ export default async function list(client: Client) {
   let singleDeployment = false;
 
   if (app) {
+    telemetryClient.trackArgumentApp(app);
     if (!isValidName(app)) {
       error(`The provided argument "${app}" is not a valid project name`);
       return 1;
@@ -259,6 +282,7 @@ export default async function list(client: Client) {
   }
 
   if (pagination?.next) {
+    telemetryClient.trackFlagNext(nextTimestamp);
     const flags = getCommandFlags(parsedArgs.flags, ['--next']);
     log(
       `To display the next page, run ${getCommandName(
@@ -266,6 +290,8 @@ export default async function list(client: Client) {
       )}`
     );
   }
+
+  telemetryClient.close();
 }
 
 export function getDeploymentDuration(dep: Deployment): string {

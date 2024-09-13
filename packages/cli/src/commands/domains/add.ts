@@ -13,6 +13,7 @@ import { getDomainConfig } from '../../util/domains/get-domain-config';
 import { addDomainToProject } from '../../util/projects/add-domain-to-project';
 import { removeDomainFromProject } from '../../util/projects/remove-domain-from-project';
 import code from '../../util/output/code';
+import { DomainsAddTelemetryClient } from '../../util/domains/telemetry';
 
 type Options = {
   '--debug': boolean;
@@ -25,7 +26,15 @@ export default async function add(
   args: string[]
 ) {
   const { output } = client;
+  const telemetryClient = new DomainsAddTelemetryClient({
+    opts: {
+      isDebug: true,
+      output,
+    },
+  });
+
   const force = opts['--force'];
+  telemetryClient.trackFlagForce(force);
   const { contextName } = await getScope(client);
 
   const project = await getLinkedProject(client).then(result => {
@@ -51,6 +60,7 @@ export default async function add(
   }
 
   const domainName = String(args[0]);
+  telemetryClient.trackArgumentDomain();
   const projectName = project ? project.name : String(args[1]);
 
   const addStamp = stamp();
@@ -139,6 +149,8 @@ export default async function add(
       `The domain will automatically get assigned to your latest production deployment.`
     );
   }
+
+  telemetryClient.close();
 
   return 0;
 }
