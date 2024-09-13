@@ -26,7 +26,7 @@
     "preact-cli": "^3.5.0"
   },
   "dependencies": {
-    "preact": "^10.22.1",
+    "preact": "^10.23.2",
     "preact-render-to-string": "^6.5.5",
     "preact-router": "^4.1.2"
   }
