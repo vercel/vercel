@@ -538,6 +538,83 @@ it('should support experimentalStreamingLambdaPath correctly', async () => {
   );
 });
 
+it('should support chain correctly', async () => {
+  new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    chain: undefined,
+  });
+  new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    chain: {
+      outputPath: '/some/path/to/lambda',
+      headers: { 'x-nextjs-data': 'true' },
+    },
+  });
+  new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    chain: {
+      outputPath: '/some/path/to/lambda',
+      headers: { 'x-nextjs-data': 'true', 'x-nextjs-data-2': 'true' },
+    },
+  });
+
+  expect(() => {
+    new Prerender({
+      expiration: 1,
+      fallback: null,
+      group: 1,
+      bypassToken: 'some-long-bypass-token-to-make-it-work',
+      // @ts-expect-error testing invalid field
+      chain: 'true',
+    });
+  }).toThrowError('The `chain` argument for `Prerender` must be an object.');
+  expect(() => {
+    new Prerender({
+      expiration: 1,
+      fallback: null,
+      group: 1,
+      bypassToken: 'some-long-bypass-token-to-make-it-work',
+      // @ts-expect-error testing invalid field
+      chain: { headers: 'true' },
+    });
+  }).toThrowError(
+    'The `chain.headers` argument for `Prerender` must be an object with string key/values'
+  );
+  expect(() => {
+    new Prerender({
+      expiration: 1,
+      fallback: null,
+      group: 1,
+      bypassToken: 'some-long-bypass-token-to-make-it-work',
+      // @ts-expect-error testing invalid field
+      chain: { headers: { 'x-nextjs-data': 1 } },
+    });
+  }).toThrowError(
+    'The `chain.headers` argument for `Prerender` must be an object with string key/values'
+  );
+  expect(() => {
+    new Prerender({
+      expiration: 1,
+      fallback: null,
+      group: 1,
+      bypassToken: 'some-long-bypass-token-to-make-it-work',
+      // @ts-expect-error testing invalid field
+      chain: { headers: {} },
+    });
+  }).toThrowError(
+    'The `chain.outputPath` argument for `Prerender` must be a string.'
+  );
+});
+
 it('should support require by path for legacy builders', () => {
   const index = require('../');
 
