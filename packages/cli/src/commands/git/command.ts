@@ -33,7 +33,7 @@ export const gitCommand = {
     },
   ],
   subcommands: [connectSubcommand, disconnectSubcommand],
-  options: [...connectSubcommand.options, ...disconnectSubcommand.options],
+  options: [],
   examples: [
     {
       name: 'Connect your Vercel Project to your Git repository defined in your local .git config',

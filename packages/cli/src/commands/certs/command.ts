@@ -137,51 +137,7 @@ export const certsCommand = {
     issueSubcommand,
     removeSubcommand,
   ],
-  options: [
-    {
-      name: 'challenge-only',
-      description: 'Only show challenges needed to issue a cert',
-      shorthand: null,
-      type: Boolean,
-      deprecated: false,
-    },
-    {
-      name: 'crt',
-      description: 'Certificate file',
-      argument: 'FILE',
-      shorthand: null,
-      type: String,
-      deprecated: false,
-    },
-    {
-      name: 'key',
-      description: 'Certificate key file',
-      argument: 'FILE',
-      shorthand: null,
-      type: String,
-      deprecated: false,
-    },
-    {
-      name: 'ca',
-      description: 'CA certificate chain file',
-      argument: 'FILE',
-      shorthand: null,
-      type: String,
-      deprecated: false,
-    },
-    {
-      ...limitOption,
-      description:
-        'Number of results to return per page (default: 20, max: 100)',
-      argument: 'VALUE',
-    },
-    {
-      ...nextOption,
-      description: 'Show next page of results',
-    },
-    { name: 'overwrite', shorthand: null, type: Boolean, deprecated: false },
-    { name: 'output', shorthand: null, type: String, deprecated: false },
-  ],
+  options: [],
   examples: [
     {
       name: 'Generate a certificate with the cnames "acme.com" and "www.acme.com"`',

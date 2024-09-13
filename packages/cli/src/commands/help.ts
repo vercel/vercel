@@ -112,7 +112,7 @@ export function buildCommandSynopsisLine(command: Command) {
       line.push(argument.required ? argument.name : `[${argument.name}]`);
     }
   }
-  if (command.options.length > 0) {
+  if (uniqueOptionsByName(command).length > 0) {
     line.push('[options]');
   }
 
@@ -133,6 +133,10 @@ export function buildCommandOptionLines(
   const filteredCommandOptions = commandOptions.filter(
     option => !option.deprecated && option.description !== undefined
   );
+
+  if (filteredCommandOptions.length === 0) {
+    return null;
+  }
 
   // Sort command options alphabetically
   filteredCommandOptions.sort((a, b) =>
@@ -293,6 +297,22 @@ interface BuildHelpOutputOptions {
   columns: number;
 }
 
+function uniqueOptionsByName(command: Command) {
+  const uniqueOptions: Record<string, CommandOption> = {};
+
+  (command.subcommands || []).forEach(subcommand => {
+    subcommand.options.forEach(option => {
+      uniqueOptions[option.name] = option;
+    });
+  });
+
+  command.options.forEach(option => {
+    uniqueOptions[option.name] = option;
+  });
+
+  return Object.values(uniqueOptions);
+}
+
 export function buildHelpOutput(
   command: Command,
   options: BuildHelpOutputOptions
@@ -302,7 +322,7 @@ export function buildHelpOutput(
     buildCommandSynopsisLine(command),
     buildDescriptionLine(command, options),
     buildSubcommandLines(command.subcommands, options),
-    buildCommandOptionLines(command.options, options, 'Options'),
+    buildCommandOptionLines(uniqueOptionsByName(command), options, 'Options'),
     buildCommandOptionLines(globalCommandOptions, options, 'Global Options'),
     buildCommandExampleLines(command),
     '',

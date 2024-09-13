@@ -67,9 +67,6 @@ export const aliasCommand = {
   ],
   subcommands: [listSubcommand, setSubcommand, removeSubcommand],
   options: [
-    ...listSubcommand.options,
-    ...setSubcommand.options,
-    ...removeSubcommand.options,
     { name: 'json', shorthand: null, type: Boolean, deprecated: false },
   ],
   examples: [

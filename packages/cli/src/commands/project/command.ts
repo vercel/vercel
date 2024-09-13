@@ -58,11 +58,7 @@ export const projectCommand = {
     },
   ],
   subcommands: [listSubcommand, addSubcommand, removeSubcommand],
-  options: [
-    ...listSubcommand.options,
-    ...addSubcommand.options,
-    ...removeSubcommand.options,
-  ],
+  options: [],
   examples: [
     {
       name: 'Add a new project',

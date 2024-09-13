@@ -1755,11 +1755,6 @@ exports[`help command > git help output snapshots > git help column width 40 1`]
                          project   
 
 
-  [2mOptions[22m:
-
-
-
-
   [2mGlobal Options[22m:
 
        --cwd <DIR>            Sets the  
@@ -1829,11 +1824,6 @@ exports[`help command > git help output snapshots > git help column width 80 1`]
                          project                                           
 
 
-  [2mOptions[22m:
-
-
-
-
   [2mGlobal Options[22m:
 
        --cwd <DIR>            Sets the current working directory for a single   
@@ -1876,11 +1866,6 @@ exports[`help command > git help output snapshots > git help column width 120 1`
   connect     [git url]  Connect your Vercel Project to your Git repository or provide the remote URL to your Git  
                          repository                                                                                
   disconnect             Disconnect the Git provider repository from your project                                  
-
-
-  [2mOptions[22m:
-
-
 
 
   [2mGlobal Options[22m:
@@ -3803,7 +3788,7 @@ exports[`help command > rollback help output snapshots > rollback help column wi
 
 exports[`help command > teams help output snapshots > teams help column width 40 1`] = `
 "
-  ▲ [1mvercel[22m [1mteams[22m
+  ▲ [1mvercel[22m [1mteams[22m [options]
 
   Manage teams under your Vercel        
   account                               
@@ -3883,7 +3868,7 @@ exports[`help command > teams help output snapshots > teams help column width 40
 
 exports[`help command > teams help output snapshots > teams help column width 80 1`] = `
 "
-  ▲ [1mvercel[22m [1mteams[22m
+  ▲ [1mvercel[22m [1mteams[22m [options]
 
   Manage teams under your Vercel account                                        
 
@@ -3932,7 +3917,7 @@ exports[`help command > teams help output snapshots > teams help column width 80
 
 exports[`help command > teams help output snapshots > teams help column width 120 1`] = `
 "
-  ▲ [1mvercel[22m [1mteams[22m
+  ▲ [1mvercel[22m [1mteams[22m [options]
 
   Manage teams under your Vercel account                                                                                
 

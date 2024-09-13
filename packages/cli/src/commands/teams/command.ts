@@ -14,54 +14,51 @@ export const listSubcommand = {
   examples: [],
 } as const;
 
+const addSubcommand = {
+  name: 'add',
+  description: 'Create a new team',
+  arguments: [],
+  options: [],
+  examples: [],
+} as const;
+
+const inviteSubcommand = {
+  name: 'invite',
+  description: 'Invite a new member to a team',
+  arguments: [
+    {
+      name: 'emails',
+      required: true,
+    },
+  ],
+  options: [],
+  examples: [],
+} as const;
+
+const switchSubcommand = {
+  name: 'switch',
+  description: 'Switch to a different team',
+  arguments: [
+    {
+      name: 'name',
+      required: false,
+    },
+  ],
+  options: [],
+  examples: [],
+} as const;
+
 export const teamsCommand = {
   name: 'teams',
   description: 'Manage teams under your Vercel account',
   arguments: [],
   subcommands: [
-    {
-      name: 'add',
-      description: 'Create a new team',
-      arguments: [],
-      options: [],
-      examples: [],
-    },
+    addSubcommand,
     listSubcommand,
-    {
-      name: 'switch',
-      description: 'Switch to a different team',
-      arguments: [
-        {
-          name: 'name',
-          required: false,
-        },
-      ],
-      options: [],
-      examples: [],
-    },
-    {
-      name: 'invite',
-      description: 'Invite a new member to a team',
-      arguments: [
-        {
-          name: 'emails',
-          required: true,
-        },
-      ],
-      options: [],
-      examples: [],
-    },
+    switchSubcommand,
+    inviteSubcommand,
   ],
-  options: [
-    // {
-    //   name: 'next',
-    //   shorthand: 'N',
-    //   type: String,
-    //   argument: 'MS',
-    //   deprecated: false,
-    //   description: 'Show next page of results',
-    // },
-  ],
+  options: [],
   examples: [
     {
       name: "Switch to a team. If your team's url is 'vercel.com/name', then 'name' is the slug. If the slug is omitted, you can choose interactively.",

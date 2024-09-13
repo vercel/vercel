@@ -6,134 +6,10 @@ import {
   yesOption,
 } from '../../util/arg-common';
 
-export const domainsCommand = {
-  name: 'domains',
-  description: 'Manage domains',
-  arguments: [
-    {
-      name: 'command',
-      required: true,
-    },
-  ],
-  subcommands: [
-    {
-      name: 'ls',
-      description: 'Show all domains in a list',
-      arguments: [],
-      options: [
-        {
-          ...nextOption,
-          description: 'Show next page of results',
-        },
-        {
-          ...limitOption,
-          description:
-            'Number of results to return per page (default: 20, max: 100)',
-          argument: 'NUMBER',
-        },
-      ],
-      examples: [],
-    },
-    {
-      name: 'inspect',
-      description: 'Displays information related to a domain',
-      arguments: [
-        {
-          name: 'name',
-          required: true,
-        },
-      ],
-      options: [],
-      examples: [],
-    },
-    {
-      name: 'add',
-      description: 'Add a new domain that you already own',
-      arguments: [
-        {
-          name: 'name',
-          required: true,
-        },
-        {
-          name: 'project',
-          required: true,
-        },
-      ],
-      options: [
-        {
-          ...forceOption,
-          shorthand: null,
-          description:
-            'Force a domain on a project and remove it from an existing one',
-        },
-      ],
-      examples: [],
-    },
-    {
-      name: 'rm',
-      description: 'Remove a domain',
-      arguments: [
-        {
-          name: 'name',
-          required: true,
-        },
-      ],
-      options: [
-        {
-          ...yesOption,
-          description: 'Skip the confirmation prompt when removing a domain',
-        },
-      ],
-      examples: [],
-    },
-    {
-      name: 'buy',
-      description: "Buy a domain that you don't yet own",
-      arguments: [
-        {
-          name: 'name',
-          required: true,
-        },
-      ],
-      options: [],
-      examples: [],
-    },
-    {
-      name: 'move',
-      description: 'Move a domain to another scope',
-      arguments: [
-        {
-          name: 'name',
-          required: true,
-        },
-        {
-          name: 'destination',
-          required: true,
-        },
-      ],
-      options: [
-        {
-          ...yesOption,
-          description: 'Skip the confirmation prompt when removing a domain',
-        },
-      ],
-      examples: [],
-    },
-    {
-      name: 'transfer-in',
-      description: 'Transfer in a domain to Vercel',
-      arguments: [
-        {
-          name: 'name',
-          required: true,
-        },
-      ],
-      options: [
-        { name: 'code', shorthand: null, type: String, deprecated: false },
-      ],
-      examples: [],
-    },
-  ],
+const listSubcommand = {
+  name: 'ls',
+  description: 'Show all domains in a list',
+  arguments: [],
   options: [
     {
       ...nextOption,
@@ -145,18 +21,132 @@ export const domainsCommand = {
         'Number of results to return per page (default: 20, max: 100)',
       argument: 'NUMBER',
     },
+  ],
+  examples: [],
+} as const;
+
+const inspectSubcommand = {
+  name: 'inspect',
+  description: 'Displays information related to a domain',
+  arguments: [
     {
-      ...yesOption,
-      description: 'Skip the confirmation prompt when removing a domain',
+      name: 'name',
+      required: true,
     },
+  ],
+  options: [],
+  examples: [],
+} as const;
+
+const addSubcommand = {
+  name: 'add',
+  description: 'Add a new domain that you already own',
+  arguments: [
+    {
+      name: 'name',
+      required: true,
+    },
+    {
+      name: 'project',
+      required: true,
+    },
+  ],
+  options: [
     {
       ...forceOption,
       shorthand: null,
       description:
         'Force a domain on a project and remove it from an existing one',
     },
-    { name: 'code', shorthand: null, type: String, deprecated: false },
   ],
+  examples: [],
+} as const;
+
+const removeSubcommand = {
+  name: 'rm',
+  description: 'Remove a domain',
+  arguments: [
+    {
+      name: 'name',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      ...yesOption,
+      description: 'Skip the confirmation prompt when removing a domain',
+    },
+  ],
+  examples: [],
+} as const;
+
+const moveSubcommand = {
+  name: 'move',
+  description: 'Move a domain to another scope',
+  arguments: [
+    {
+      name: 'name',
+      required: true,
+    },
+    {
+      name: 'destination',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      ...yesOption,
+      description: 'Skip the confirmation prompt when removing a domain',
+    },
+  ],
+  examples: [],
+} as const;
+
+const transferInSubcommand = {
+  name: 'transfer-in',
+  description: 'Transfer in a domain to Vercel',
+  arguments: [
+    {
+      name: 'name',
+      required: true,
+    },
+  ],
+  options: [{ name: 'code', shorthand: null, type: String, deprecated: false }],
+  examples: [],
+} as const;
+
+const buySubcommand = {
+  name: 'buy',
+  description: "Buy a domain that you don't yet own",
+  arguments: [
+    {
+      name: 'name',
+      required: true,
+    },
+  ],
+  options: [],
+  examples: [],
+} as const;
+
+export const domainsCommand = {
+  name: 'domains',
+  description: 'Manage domains',
+  arguments: [
+    {
+      name: 'command',
+      required: true,
+    },
+  ],
+  subcommands: [
+    listSubcommand,
+    inspectSubcommand,
+    addSubcommand,
+    removeSubcommand,
+    buySubcommand,
+    moveSubcommand,
+    transferInSubcommand,
+  ],
+  options: [],
   examples: [
     {
       name: 'Add a domain that you already own',

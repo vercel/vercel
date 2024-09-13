@@ -88,12 +88,7 @@ export const dnsCommand = {
     addSubcommand,
     removeSubcommand,
   ],
-  options: [
-    ...importSubcommand.options,
-    ...listSubcommand.options,
-    ...addSubcommand.options,
-    ...removeSubcommand.options,
-  ],
+  options: [],
   examples: [
     {
       name: 'Add an A record for a subdomain',
