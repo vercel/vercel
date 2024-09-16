@@ -30,6 +30,7 @@ import { normalizeError } from '@vercel/error-utils';
 import type { Agent } from 'http';
 import sleep from './sleep';
 import type * as tty from 'tty';
+import { TelemetryEventStore } from './telemetry';
 
 const isSAMLError = (v: any): v is SAMLError => {
   return v && v.saml;
@@ -52,6 +53,7 @@ export interface ClientOptions extends Stdio {
   localConfig?: VercelConfig;
   localConfigPath?: string;
   agent?: Agent;
+  telemetryEventStore: TelemetryEventStore;
 }
 
 export const isJSONObject = (v: any): v is JSONObject => {
@@ -72,6 +74,7 @@ export default class Client extends EventEmitter implements Stdio {
   localConfigPath?: string;
   requestIdCounter: number;
   input;
+  telemetryEventStore: TelemetryEventStore;
 
   constructor(opts: ClientOptions) {
     super();
@@ -87,6 +90,7 @@ export default class Client extends EventEmitter implements Stdio {
     this.localConfig = opts.localConfig;
     this.localConfigPath = opts.localConfigPath;
     this.requestIdCounter = 1;
+    this.telemetryEventStore = opts.telemetryEventStore;
 
     const theme = {
       prefix: gray('?'),

@@ -42,7 +42,7 @@ import {
   defaultAuthConfig,
   defaultGlobalConfig,
 } from './util/config/get-default';
-import { TelemetryClient } from './util/telemetry';
+import { TelemetryEventStore } from './util/telemetry-event-store';
 import * as ERRORS from './util/errors-ts';
 import { APIError } from './util/errors-ts';
 import { SENTRY_DSN } from './util/constants';
@@ -250,17 +250,11 @@ const main = async () => {
     return 1;
   }
 
-  const telemetryClient = new TelemetryClient({
-    opts: {
-      output: client.output,
-      isDebug: true,
-    },
-  });
-
+  const telemetryEventStore = new TelemetryEventStore();
   // Shared API `Client` instance for all sub-commands to utilize
   client = new Client({
     agent: new ProxyAgent({ keepAlive: true }),
-    telemetryClient,
+    telemetryEventStore,
     apiUrl,
     stdin: process.stdin,
     stdout: process.stdout,
@@ -635,6 +629,7 @@ const main = async () => {
       }
 
       exitCode = await func(client);
+      client.telemetryEventStore.save();
     }
   } catch (err: unknown) {
     if (isErrnoException(err) && err.code === 'ENOTFOUND') {
@@ -701,6 +696,7 @@ const main = async () => {
       output.error(`An unexpected error occurred in ${subcommand}: ${err}`);
     }
 
+    client.telemetryEventStore.save();
     return 1;
   }
 

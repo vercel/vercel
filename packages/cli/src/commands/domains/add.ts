@@ -13,7 +13,7 @@ import { getDomainConfig } from '../../util/domains/get-domain-config';
 import { addDomainToProject } from '../../util/projects/add-domain-to-project';
 import { removeDomainFromProject } from '../../util/projects/remove-domain-from-project';
 import code from '../../util/output/code';
-import { DomainsAddTelemetryClient } from '../../util/domains/telemetry';
+import { DomainsAddTelemetryClient } from '../../util/domains/telemetry-add';
 
 type Options = {
   '--debug': boolean;
@@ -25,10 +25,11 @@ export default async function add(
   opts: Partial<Options>,
   args: string[]
 ) {
-  const { output } = client;
+  const { output, telemetryEventStore } = client;
   const telemetryClient = new DomainsAddTelemetryClient({
     opts: {
       isDebug: true,
+      store: telemetryEventStore,
       output,
     },
   });
@@ -149,8 +150,6 @@ export default async function add(
       `The domain will automatically get assigned to your latest production deployment.`
     );
   }
-
-  telemetryClient.close();
 
   return 0;
 }

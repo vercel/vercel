@@ -11,6 +11,7 @@ interface Args {
 
 interface Options {
   output: Output;
+  store: TelemetryEventStore;
   timeout?: number;
   batchSize?: number;
   isDebug: boolean;
@@ -22,15 +23,39 @@ interface Event {
   value: string;
 }
 
+export class TelemetryEventStore {
+  private events: Event[];
+  private output: Output;
+  isDebug = true;
+
+  constructor(outout: Output) {
+    this.output = outout;
+    this.events = [];
+  }
+
+  add(event: Event) {
+    this.events.push(event);
+  }
+
+  save() {
+    if (this.isDebug) {
+      this.output.debug('Flushing Events, hypothetically');
+      this.events.forEach(event => {
+        this.output.debug(JSON.stringify(event));
+      });
+    }
+  }
+}
+
 export class TelemetryClient {
+  store: TelemetryEventStore;
   private output: Output;
   private isDebug: boolean;
-  private events: Event[];
 
   constructor({ opts }: Args) {
+    this.store = opts.store;
     this.output = opts.output;
     this.isDebug = opts.isDebug;
-    this.events = [];
   }
 
   private track(key: string, value: string) {
@@ -44,7 +69,7 @@ export class TelemetryClient {
       value,
     };
 
-    this.events.push(event);
+    this.store.add(event);
   }
 
   protected trackCliCommand(command: string, value: string) {
@@ -78,18 +103,5 @@ export class TelemetryClient {
 
   trackFlagHelp() {
     this.trackCliOption('help', '');
-  }
-
-  close() {
-    this.flushEvents();
-  }
-
-  private flushEvents() {
-    if (this.isDebug) {
-      this.output.debug('Flushing Events, hypothetically');
-      this.events.forEach(event => {
-        this.output.debug(JSON.stringify(event));
-      });
-    }
   }
 }

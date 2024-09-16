@@ -47,6 +47,7 @@ export default async function list(client: Client) {
     opts: {
       output: client.output,
       isDebug: true,
+      store: client.telemetryEventStore,
     },
   });
 
@@ -290,8 +291,6 @@ export default async function list(client: Client) {
       )}`
     );
   }
-
-  telemetryClient.close();
 }
 
 export function getDeploymentDuration(dep: Deployment): string {

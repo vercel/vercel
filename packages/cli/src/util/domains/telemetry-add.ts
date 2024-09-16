@@ -1,6 +1,6 @@
 import { TelemetryClient } from '../telemetry';
 
-export class DomainsTelemetryClient extends TelemetryClient {
+export class DomainsAddTelemetryClient extends TelemetryClient {
   trackArgumentDomain() {
     this.trackCliArgument('domain', '[SECRET]');
   }
