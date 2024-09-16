@@ -61,11 +61,11 @@ export class TelemetryClient {
     }
   }
 
-  protected trackCliFlag(flag: string, value: string) {
+  protected trackCliOption(flag: string, value: string) {
     this.track(`flag:${flag}`, value);
   }
 
-  protected trackCliBooleanFlag(flag: string, passed: boolean | undefined) {
+  protected trackCliFlag(flag: string, passed: boolean | undefined) {
     if (passed) {
       this.track(`flag:${flag}`, String(passed));
     }
@@ -77,7 +77,7 @@ export class TelemetryClient {
   }
 
   trackFlagHelp() {
-    this.trackCliFlag('help', '');
+    this.trackCliOption('help', '');
   }
 
   close() {

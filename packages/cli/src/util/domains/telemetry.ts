@@ -6,6 +6,6 @@ export class DomainsAddTelemetryClient extends TelemetryClient {
   }
 
   trackFlagForce(passed: boolean | undefined) {
-    this.trackCliBooleanFlag('force', passed);
+    this.trackCliFlag('force', passed);
   }
 }

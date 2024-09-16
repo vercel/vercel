@@ -86,7 +86,7 @@ export default async function list(client: Client) {
   const meta = parseMeta(parsedArgs.flags['--meta']);
   const policy = parsePolicy(parsedArgs.flags['--policy']);
 
-  telemetryClient.trackFlagMeta(meta);
+  telemetryClient.trackOptionMeta(meta);
   telemetryClient.trackFlagPolicy(policy);
 
   const target = parseTarget({
@@ -96,7 +96,7 @@ export default async function list(client: Client) {
   });
 
   if (target) {
-    telemetryClient.trackFlagEnvironment(target);
+    telemetryClient.trackOptionEnvironment(target);
   }
 
   let project: Project;
@@ -282,7 +282,7 @@ export default async function list(client: Client) {
   }
 
   if (pagination?.next) {
-    telemetryClient.trackFlagNext(nextTimestamp);
+    telemetryClient.trackOptionNext(nextTimestamp);
     const flags = getCommandFlags(parsedArgs.flags, ['--next']);
     log(
       `To display the next page, run ${getCommandName(

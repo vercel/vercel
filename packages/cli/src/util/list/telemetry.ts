@@ -9,38 +9,38 @@ export class ListTelemetryClient extends TelemetryClient {
   }
 
   trackFlagConfirm(passed: boolean | undefined) {
-    this.trackCliBooleanFlag('confirm', passed);
+    this.trackCliFlag('confirm', passed);
   }
 
   trackFlagYes(passed: boolean | undefined) {
-    this.trackCliBooleanFlag('yes', passed);
+    this.trackCliFlag('yes', passed);
   }
 
-  trackFlagMeta(value: { [k: string]: string }) {
+  trackOptionMeta(value: { [k: string]: string }) {
     if (value) {
-      this.trackCliFlag('meta', 'KEY=VALUE');
+      this.trackCliOption('meta', 'KEY=VALUE');
     }
   }
 
   trackFlagPolicy(value: { [k: string]: string }) {
     if (value) {
-      this.trackCliFlag('policy', 'KEY=VALUE');
+      this.trackCliOption('policy', 'KEY=VALUE');
     }
   }
 
-  trackFlagNext(ms: number | undefined) {
-    this.trackCliFlag('next', String(ms));
+  trackOptionNext(ms: number | undefined) {
+    this.trackCliOption('next', String(ms));
   }
 
-  trackFlagEnvironment(environment: string) {
+  trackOptionEnvironment(environment: string) {
     if (SystemEnvironments.includes(environment)) {
-      this.trackCliFlag('next', environment);
+      this.trackCliOption('next', environment);
     } else {
-      this.trackCliFlag('next', CustomEnvironmentPlaceholder);
+      this.trackCliOption('next', CustomEnvironmentPlaceholder);
     }
   }
 
   trackFlagProd(passed: true | undefined) {
-    this.trackCliBooleanFlag('prod', passed);
+    this.trackCliFlag('prod', passed);
   }
 }
