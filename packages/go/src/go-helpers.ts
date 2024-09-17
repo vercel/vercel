@@ -307,7 +307,7 @@ export async function createGo({
       env.PATH = goBinDir || PATH;
 
       const { stdout } = await execa('go', ['version'], { env });
-      const { minor, short, version } = parseGoVersionString(stdout);
+      const { major, minor, short, version } = parseGoVersionString(stdout);
 
       if (
         major < GO_MIN_MAJOR_VERSION ||
@@ -476,29 +476,25 @@ export function parseGoModVersion(content: string): GoVersions | undefined {
   const major = parseInt(goMatches[1], 10);
   const minor = parseInt(goMatches[2], 10);
   const patch = goMatches[3] && parseInt(goMatches[3], 10);
-  let res: GoVersions | undefined = undefined;
+  const toolchainMatches =
+    /^\s*toolchain\s+go((\d+)\.(\d+)(?:\.(\d+)|\w+\d+)?)\s*(?:\/\/.*)?$/gm.exec(
+      content
+    );
+  const toolchain = toolchainMatches ? toolchainMatches[1] : undefined;
   if (major >= GO_MIN_MAJOR_VERSION && minor >= GO_MIN_MINOR_VERSION) {
     if (patch) {
-      res = {
+      return {
         go: `${major}.${minor}.${patch}`,
+        toolchain,
       };
     }
     const full = versionMap.get(`${major}.${minor}`);
     if (full) {
-      res = {
+      return {
         go: full,
+        toolchain,
       };
     }
-  }
-  if (res) {
-    if (minor >= 21) {
-      const toolchainMatches =
-        /^\s*toolchain\s+go((\d+)\.(\d+)(?:\.(\d+)|\w+\d+)?)\s*(?:\/\/.*)?$/gm.exec(
-          content
-        );
-      res.toolchain = toolchainMatches ? toolchainMatches[1] : undefined;
-    }
-    return res;
   }
   const err = new GoError(`Unsupported Go version ${major}.${minor}`);
   err.code = 'ERR_UNSUPPORTED_GO_VERSION';
