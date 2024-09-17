@@ -25,7 +25,7 @@ import handleError from '../../util/handle-error';
 import { oauth } from './oauth';
 
 export default async function login(client: Client): Promise<number> {
-  if (client.argv.slice(2).includes('--oauth')) return await oauth(client);
+  if (client.argv.slice(2).includes('--future')) return await oauth(client);
 
   const { output } = client;
 
