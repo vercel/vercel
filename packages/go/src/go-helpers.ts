@@ -309,7 +309,10 @@ export async function createGo({
       const { stdout } = await execa('go', ['version'], { env });
       const { minor, short, version } = parseGoVersionString(stdout);
 
-      if (minor < GO_MIN_MINOR_VERSION) {
+      if (
+        major < GO_MIN_MAJOR_VERSION ||
+        (major === GO_MIN_MAJOR_VERSION && minor < GO_MIN_MINOR_VERSION)
+      ) {
         debug(`Found go ${version} in ${label}, but version is unsupported`);
       }
       if (version === goSelectedVersion || short === goSelectedVersion) {
