@@ -6,7 +6,7 @@ describe('parseGoModVersion', function () {
     expect(version).toBeUndefined();
   });
   it('returns exactly same version if patch exists', async () => {
-    const version = parseGoModVersion('go 1.16.1');
+    const version = parseGoModVersion('go 1.21.1');
     expect(version).toEqual('1.16.1');
   });
   it('returns the latest patch version if patch is not defined', async () => {
