@@ -12,6 +12,7 @@ export async function extract(sourceUrl: string, targetPath: string) {
       .pipe(unzip.Extract({ path: targetPath }))
       .on('close', resolve)
       .on('error', err => {
+        console.error(err);
         reject(new Error('Failed extracting from github.'));
       });
   });
