@@ -139,6 +139,13 @@ export const deployCommand = {
       deprecated: true,
       description: 'Use default options to skip all prompts',
     },
+    {
+      name: 'root-directory',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Specify the root directory',
+    },
   ],
   examples: [
     {
