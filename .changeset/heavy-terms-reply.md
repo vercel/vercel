@@ -2,4 +2,4 @@
 "vercel": patch
 ---
 
-refactor(login): `vercel login` via OAuth Device Authorization flow
+feat(login): `vercel login --future` via OAuth Device Authorization flow
