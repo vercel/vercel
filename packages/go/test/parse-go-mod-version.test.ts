@@ -9,7 +9,7 @@ describe('parseGoModVersion', function () {
     const version = parseGoModVersion('go 1.16.1');
     expect(version).toEqual('1.16.1');
   });
-  it('returns the latest patch version if patch dose not exists', async () => {
+  it('returns the latest patch version if patch is not defined', async () => {
     const version = parseGoModVersion('go 1.16');
     expect(version).toEqual('1.16.15');
   });
