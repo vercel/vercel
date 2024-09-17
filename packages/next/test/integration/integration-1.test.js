@@ -6,11 +6,16 @@ const builder = require('../../');
 const {
   createRunBuildLambda,
 } = require('../../../../test/lib/run-build-lambda');
-const { duplicateWithConfig } = require('../utils');
+const { duplicateWithConfig, normalizeReactVersion } = require('../utils');
 const { streamToBuffer } = require('@vercel/build-utils');
 const { createHash } = require('crypto');
 
-const runBuildLambda = createRunBuildLambda(builder);
+const runBuildLambda = async projectPath => {
+  const innerRunBuildLambda = createRunBuildLambda(builder);
+
+  await normalizeReactVersion(projectPath);
+  return innerRunBuildLambda(projectPath);
+};
 
 const SIMPLE_PROJECT = path.resolve(
   __dirname,
@@ -53,9 +58,25 @@ async function hashAllFiles(files) {
 // experimental appDir currently requires Node.js >= 16
 if (parseInt(process.versions.node.split('.')[0], 10) >= 16) {
   it('should build with app-dir correctly', async () => {
+    const origLog = console.log;
+    const origError = console.error;
+    const caughtLogs = [];
+
+    console.log = function (...args) {
+      caughtLogs.push(args.join(' '));
+      origLog.apply(this, args);
+    };
+    console.error = function (...args) {
+      caughtLogs.push(args.join(' '));
+      origError.apply(this, args);
+    };
+
     const { buildResult } = await runBuildLambda(
       path.join(__dirname, '../fixtures/00-app-dir-no-ppr')
     );
+
+    console.log = origLog;
+    console.error = origError;
 
     const lambdas = new Set();
 
@@ -72,13 +93,13 @@ if (parseInt(process.versions.node.split('.')[0], 10) >= 16) {
       )
     ).toBeFalsy();
 
-    expect(lambdas.size).toBe(5);
+    expect(lambdas.size).toBe(6);
 
     // RSC, root-level page.js
     expect(buildResult.output['index']).toBeDefined();
-    expect(buildResult.output['index'].type).toBe('Lambda');
-    expect(buildResult.output['index'].memory).toBe(512);
-    expect(buildResult.output['index'].maxDuration).toBe(5);
+    expect(buildResult.output['index'].type).toBe('Prerender');
+    expect(buildResult.output['index'].lambda.memory).toBe(512);
+    expect(buildResult.output['index'].lambda.maxDuration).toBe(5);
 
     expect(buildResult.output['dashboard']).toBeDefined();
     expect(buildResult.output['dashboard/another']).toBeDefined();
@@ -112,7 +133,6 @@ if (parseInt(process.versions.node.split('.')[0], 10) >= 16) {
 
     expect(buildResult.output['edge-route-handler']).toBeDefined();
     expect(buildResult.output['edge-route-handler'].type).toBe('EdgeFunction');
-    expect(buildResult.output['edge-route-handler.rsc']).not.toBeDefined();
 
     // prefixed static generation output with `/app` under dist server files
     expect(buildResult.output['dashboard'].type).toBe('Prerender');
@@ -123,6 +143,12 @@ if (parseInt(process.versions.node.split('.')[0], 10) >= 16) {
     expect(buildResult.output['dashboard.rsc'].fallback.fsPath).toMatch(
       /server\/app\/dashboard\.rsc$/
     );
+
+    expect(
+      caughtLogs.some(log =>
+        log.includes('WARNING: Unable to find source file for page')
+      )
+    ).toBeFalsy();
     // TODO: re-enable after index/index handling is corrected
     // expect(buildResult.output['dashboard/index/index'].type).toBe('Prerender');
     // expect(buildResult.output['dashboard/index/index'].fallback.fsPath).toMatch(

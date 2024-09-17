@@ -14,9 +14,10 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
       const indexPage = path.join(__dirname, 'pages/index.tsx');
       await fs.writeFile(
         indexPage,
-        (
-          await fs.readFile(indexPage, 'utf8')
-        ).replace('runtime: ', '// runtime: ')
+        (await fs.readFile(indexPage, 'utf8')).replace(
+          'runtime: ',
+          '// runtime: '
+        )
       );
     }
 

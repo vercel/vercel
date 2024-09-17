@@ -203,9 +203,8 @@ async function renderJobFailed({
       url += `&until=${nextTimestamp}`;
     }
 
-    const { aliases, pagination } = await client.fetch<RollbackAliasesResponse>(
-      url
-    );
+    const { aliases, pagination } =
+      await client.fetch<RollbackAliasesResponse>(url);
 
     for (const { alias, status } of aliases) {
       output.log(

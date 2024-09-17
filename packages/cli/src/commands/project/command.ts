@@ -1,7 +1,7 @@
-import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
+import { nextOption } from '../../util/arg-common';
 
-export const projectCommand: Command = {
+export const projectCommand = {
   name: 'project',
   description: 'Manage your Vercel Projects.',
   arguments: [
@@ -21,9 +21,8 @@ export const projectCommand: Command = {
           description: 'A list of projects affected by an upcoming deprecation',
           argument: 'update-required',
           shorthand: null,
-          type: 'boolean',
+          type: Boolean,
           deprecated: false,
-          multi: false,
         },
       ],
       examples: [],
@@ -55,13 +54,15 @@ export const projectCommand: Command = {
   ],
   options: [
     {
-      name: 'next',
+      ...nextOption,
       description: 'Show next page of results',
       argument: 'MS',
-      shorthand: 'N',
-      type: 'string',
+    },
+    {
+      name: 'update-required',
+      shorthand: null,
+      type: Boolean,
       deprecated: false,
-      multi: false,
     },
   ],
   examples: [
@@ -74,4 +75,4 @@ export const projectCommand: Command = {
       value: `${packageName} project ls --next 1584722256178`,
     },
   ],
-};
+} as const;

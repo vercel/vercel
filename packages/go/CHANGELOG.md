@@ -1,5 +1,23 @@
 # @vercel/go
 
+## 3.1.2
+
+### Patch Changes
+
+- Added support for Go 1.23 and updated Go patch versions of 1.22 and 1.21 ([#12027](https://github.com/vercel/vercel/pull/12027))
+
+## 3.1.1
+
+### Patch Changes
+
+- Add support for `1.22` and update Go minor versions `1.19`, `1.20` and `1.21` ([#11156](https://github.com/vercel/vercel/pull/11156))
+
+## 3.1.0
+
+### Minor Changes
+
+- Use `provided.al2023` runtime when using AL2023 build image ([#11370](https://github.com/vercel/vercel/pull/11370))
+
 ## 3.0.5
 
 ### Patch Changes

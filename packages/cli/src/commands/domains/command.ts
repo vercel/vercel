@@ -1,7 +1,12 @@
-import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
+import {
+  forceOption,
+  limitOption,
+  nextOption,
+  yesOption,
+} from '../../util/arg-common';
 
-export const domainsCommand: Command = {
+export const domainsCommand = {
   name: 'domains',
   description: 'Manage domains',
   arguments: [
@@ -101,40 +106,26 @@ export const domainsCommand: Command = {
   ],
   options: [
     {
-      name: 'next',
+      ...nextOption,
       description: 'Show next page of results',
-      shorthand: 'N',
-      type: 'string',
-      deprecated: false,
-      multi: false,
     },
     {
-      name: 'yes',
+      ...yesOption,
       description: 'Skip the confirmation prompt when removing a domain',
-      shorthand: 'y',
-      type: 'boolean',
-      deprecated: false,
-      multi: false,
     },
     {
-      name: 'limit',
-      shorthand: 'n',
+      ...limitOption,
       description:
         'Number of results to return per page (default: 20, max: 100)',
       argument: 'NUMBER',
-      type: 'string',
-      deprecated: false,
-      multi: false,
     },
     {
-      name: 'force',
-      shorthand: 'f',
-      type: 'boolean',
-      deprecated: false,
+      ...forceOption,
+      shorthand: null,
       description:
         'Force a domain on a project and remove it from an existing one',
-      multi: false,
     },
+    { name: 'code', shorthand: null, type: String, deprecated: false },
   ],
   examples: [
     {
@@ -150,4 +141,4 @@ export const domainsCommand: Command = {
       value: `${packageName} domains ls--next 1584722256178`,
     },
   ],
-};
+} as const;

@@ -5,15 +5,14 @@ import { join } from 'path';
 import { listen } from 'async-listen';
 import stripAnsi from 'strip-ansi';
 import { createServer } from 'http';
-
-const {
+import {
   exec,
   fetch,
   fixture,
   testFixture,
   testFixtureStdio,
   validateResponseHeaders,
-} = require('./utils.js');
+} from './utils';
 
 test('[verdel dev] should support serverless functions', async () => {
   const dir = fixture('serverless-function');
@@ -967,6 +966,7 @@ test(
   testFixtureStdio('handle-miss-querystring', async (testPath: any) => {
     await testPath(200, '/', 'Index Page');
     if (process.env.CI && process.platform === 'darwin') {
+      // eslint-disable-next-line no-console
       console.log('Skipping since GH Actions hangs for some reason');
     } else {
       await testPath(200, '/echo/first/second', 'a=first,b=second');

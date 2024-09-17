@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest';
 import { normalizeURL } from '../../../../src/util/bisect/normalize-url';
 
 describe('normalize-url', () => {

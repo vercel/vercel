@@ -107,8 +107,8 @@ export const build: BuildV3 = async ({
   const pipfileLockDir = fsFiles[join(entryDirectory, 'Pipfile.lock')]
     ? join(workPath, entryDirectory)
     : fsFiles['Pipfile.lock']
-    ? workPath
-    : null;
+      ? workPath
+      : null;
 
   if (pipfileLockDir) {
     debug('Found "Pipfile.lock"');
@@ -209,6 +209,14 @@ export const build: BuildV3 = async ({
   const handlerPyFilename = 'vc__handler__python';
 
   files[`${handlerPyFilename}.py`] = new FileBlob({ data: handlerPyContents });
+
+  // "fasthtml" framework requires a `.sesskey` file to exist,
+  // otherwise it tries to create one at runtime, which fails
+  // due Lambda's read-only filesystem
+  if (config.framework === 'fasthtml') {
+    const { SESSKEY = '' } = process.env;
+    files['.sesskey'] = new FileBlob({ data: `"${SESSKEY}"` });
+  }
 
   const output = new Lambda({
     files,

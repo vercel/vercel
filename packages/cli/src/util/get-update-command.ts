@@ -35,7 +35,7 @@ async function getConfigPrefix() {
   return null;
 }
 
-async function isGlobal() {
+export async function isGlobal() {
   try {
     // This is true for e.g. nvm, node path will be equal to now path
     if (dirname(process.argv[0]) === dirname(process.argv[1])) {

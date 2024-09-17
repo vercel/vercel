@@ -1,5 +1,5 @@
 import { isIP } from 'net';
-const { exec, fixture, testFixture, testFixtureStdio } = require('./utils.js');
+import { exec, fixture, testFixture, testFixtureStdio } from './utils';
 
 test('[vercel dev] validate redirects', async () => {
   const directory = fixture('invalid-redirects');
@@ -119,18 +119,9 @@ test(
     await testPath(200, `/api/date`, new RegExp(`Current date is ${year}`));
     await testPath(200, `/api/date.py`, new RegExp(`Current date is ${year}`));
     await testPath(200, `/api/headers`, (body: any, res: any) => {
-      // @ts-ignore
       const { host } = new URL(res.url);
       expect(body).toBe(host);
     });
-  })
-);
-
-test(
-  '[vercel dev] Use custom runtime from the "functions" property',
-  testFixtureStdio('custom-runtime', async (testPath: any) => {
-    await testPath(200, `/api/user`, /Hello, from Bash!/m);
-    await testPath(200, `/api/user.sh`, /Hello, from Bash!/m);
   })
 );
 
@@ -183,7 +174,7 @@ test(
 test(
   '[vercel dev] Should support `*.go` API serverless functions with `go.work` and lib',
   testFixtureStdio('go-work-with-shared', async (testPath: any) => {
-    await testPath(200, `/api`, 'hello:go1.20.2');
+    await testPath(200, `/api`, 'hello:go1.20.14');
   })
 );
 
@@ -198,7 +189,6 @@ test(
     );
 
     await testPath(200, `/api/dump`, (body: any, res: any, isDev: any) => {
-      // @ts-ignore
       const { host } = new URL(res.url);
       const { env, headers } = JSON.parse(body);
 

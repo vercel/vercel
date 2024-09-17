@@ -8,6 +8,10 @@ const { spawn } = require('child_process');
 const fetch = require('./fetch-retry.js');
 const { nowDeploy, fileModeSymbol, fetchWithAuth } = require('./now-deploy.js');
 const { logWithinTest } = require('./log');
+const {
+  scanParentDirs,
+  getSupportedNodeVersion,
+} = require('@vercel/build-utils');
 
 async function packAndDeploy(builderPath, shouldUnlink = true) {
   await spawnAsync('npm', ['--loglevel', 'warn', 'pack'], {
@@ -104,6 +108,7 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
           found = true;
           break;
         } else {
+          ctx.deploymentLogs = null;
           throw new Error(
             `Expected deployment logs of ${deploymentId} not to contain ${toCheck}, but found ${log.text}`
           );
@@ -118,9 +123,13 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
         deploymentLogs,
         logLength: deploymentLogs?.length,
       });
-      throw new Error(
+      ctx.deploymentLogs = null;
+      const error = new Error(
         `Expected deployment logs of ${deploymentId} to contain ${toCheck}, it was not found`
       );
+      error.retries = 20;
+      error.retryDelay = 5000; // ms
+      throw error;
     } else {
       logWithinTest('finished testing', JSON.stringify(probe));
       return;
@@ -174,7 +183,32 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
     fetchOpts.headers['content-type'] = 'application/json';
     fetchOpts.body = JSON.stringify(probe.body);
   }
-  const { text, resp } = await fetchDeploymentUrl(probeUrl, fetchOpts);
+  let result = await fetchDeploymentUrl(probeUrl, fetchOpts);
+
+  // If we receive the preview page from Vercel, the real page should appear momentarily,
+  // retry a few times before running the probe checks
+  const checkForPreviewPage = text => {
+    return text.includes('This page will update once the build completes');
+  };
+  let isShowingBuildPreviewPage = checkForPreviewPage(result.text);
+  for (let retryCount = 0; retryCount < 10; retryCount++) {
+    if (!isShowingBuildPreviewPage) {
+      break;
+    } else {
+      result = await fetchDeploymentUrl(probeUrl, fetchOpts);
+      isShowingBuildPreviewPage = checkForPreviewPage(result.text);
+      if (!isShowingBuildPreviewPage) {
+        break;
+      }
+    }
+    await new Promise(r => setTimeout(r, 1000));
+  }
+  if (isShowingBuildPreviewPage) {
+    throw new Error(`Timed out while waiting for preview page to be replaced`);
+  }
+
+  const { text, resp } = result;
+
   logWithinTest('finished testing', JSON.stringify(probe));
 
   let hadTest = false;
@@ -304,7 +338,7 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
   assert(hadTest, 'probe must have a test condition');
 }
 
-async function testDeployment(fixturePath, opts) {
+async function testDeployment(fixturePath, opts = {}) {
   const projectName = path
     .basename(fixturePath)
     .toLowerCase()
@@ -348,6 +382,34 @@ async function testDeployment(fixturePath, opts) {
   const uploadNowJson = nowJson.uploadNowJson;
   delete nowJson.uploadNowJson;
 
+  // Set `projectSettings.nodeVersion` based on the "engines.node" field of
+  // the `package.json`. This ensures the correct build-container version is used.
+  let rootDirectory = path.join(
+    fixturePath,
+    nowJson.builds?.length
+      ? path.dirname(nowJson.builds[0].src)
+      : (nowJson.projectSettings?.rootDirectory ?? '')
+  );
+  const { packageJson } = await scanParentDirs(
+    rootDirectory,
+    true,
+    fixturePath
+  );
+  let nodeVersion;
+  if (packageJson?.engines?.node) {
+    try {
+      const { range } = await getSupportedNodeVersion(packageJson.engines.node);
+      nodeVersion = range;
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  if (nodeVersion) {
+    if (!opts.projectSettings) opts.projectSettings = {};
+    opts.projectSettings.nodeVersion = nodeVersion;
+  }
+
   const probePath = path.resolve(fixturePath, 'probe.js');
   let probes = [];
   if ('probes' in nowJson) {
@@ -385,24 +447,27 @@ async function testDeployment(fixturePath, opts) {
     try {
       await runProbe(probe, deploymentId, deploymentUrl, probeCtx);
     } catch (err) {
-      if (!probe.retries) {
+      const retries = Math.max(probe.retries || 0, err.retries || 0);
+      if (!retries) {
         throw err;
       }
 
-      for (let i = 0; i < probe.retries; i++) {
-        logWithinTest(`re-trying ${i + 1}/${probe.retries}:`, stringifiedProbe);
+      const retryDelay = Math.max(probe.retryDelay || 0, err.retryDelay || 0);
+
+      for (let i = 0; i < retries; i++) {
+        logWithinTest(`re-trying ${i + 1}/${retries}:`, stringifiedProbe);
 
         try {
           await runProbe(probe, deploymentId, deploymentUrl, probeCtx);
           break;
         } catch (err) {
-          if (i === probe.retries - 1) {
+          if (i === retries - 1) {
             throw err;
           }
 
-          if (probe.retryDelay) {
-            logWithinTest(`Waiting ${probe.retryDelay}ms before retrying`);
-            await new Promise(resolve => setTimeout(resolve, probe.retryDelay));
+          if (retryDelay) {
+            logWithinTest(`Waiting ${retryDelay}ms before retrying`);
+            await new Promise(resolve => setTimeout(resolve, retryDelay));
           }
         }
       }

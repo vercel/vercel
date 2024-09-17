@@ -1,3 +1,4 @@
+import { describe, expect, it, test } from 'vitest';
 import {
   parseListen,
   replaceLocalhost,
@@ -41,6 +42,7 @@ describe('parseListen', () => {
 
   it('should parse "unix:/home/user/server.sock" as UNIX socket file', () => {
     if (IS_WINDOWS) {
+      // eslint-disable-next-line no-console
       console.log('Skipping this test on Windows.');
       return;
     }
@@ -52,6 +54,7 @@ describe('parseListen', () => {
 
   it('should parse "pipe:\\\\.\\pipe\\PipeName" as UNIX pipe', () => {
     if (IS_WINDOWS) {
+      // eslint-disable-next-line no-console
       console.log('Skipping this test on Windows.');
       return;
     }

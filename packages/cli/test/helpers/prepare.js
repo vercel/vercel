@@ -103,7 +103,7 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
       }),
       'vercel.json': JSON.stringify({
         version: 2,
-        devCommand: `${binaryPath} dev`,
+        devCommand: `${binaryPath} dev --token ${process.env.VERCEL_TOKEN} --scope ${process.env.VERCEL_TEAM_ID}`,
       }),
     },
     'build-fail-on-recursion-command': {
@@ -205,21 +205,6 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
         name: 'nested-level',
       }),
     },
-    'build-secret': {
-      'package.json': JSON.stringify({
-        private: true,
-        scripts: {
-          build: 'mkdir public && echo $MY_SECRET > public/index.txt',
-        },
-      }),
-      'now.json': JSON.stringify({
-        build: {
-          env: {
-            MY_SECRET: '@mysecret',
-          },
-        },
-      }),
-    },
     'api-env': {
       'api/get-env.js': 'module.exports = (_, res) => res.json(process.env)',
       'print.js': 'console.log(JSON.stringify(process.env))',
@@ -253,6 +238,23 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
       'vercel.json':
         '{"version":2,"functions":{"pages/index.js":{"runtime": "@vercel/php@0.1.0"}}}',
       'package.json': JSON.stringify({
+        scripts: {
+          dev: 'next',
+          start: 'next start',
+          build: 'next build',
+        },
+        dependencies: {
+          next: 'latest',
+          react: 'latest',
+          'react-dom': 'latest',
+        },
+      }),
+    },
+    'zero-config-next-js-nested': {
+      'app/pages/index.js':
+        'export default () => <div><h1>Now CLI test</h1><p>Zero-config + Next.js</p></div>',
+      'app/package.json': JSON.stringify({
+        name: 'zero-config-next-js-test',
         scripts: {
           dev: 'next',
           start: 'next start',
@@ -331,6 +333,9 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
     },
     'lambda-with-php-runtime': {
       'api/test.php': `<?php echo 'Hello from PHP'; ?>`,
+      'package.json': JSON.stringify({
+        engines: { node: '18.x' },
+      }),
       'vercel.json': JSON.stringify({
         functions: {
           'api/**/*.php': {
@@ -383,6 +388,9 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
       'vercel.json': '{"builds":[{"src":"*.html","use":"@vercel/static"}]}',
     },
     'project-sensitive-env-vars': {
+      'package.json': '{}',
+    },
+    'project-override-env-vars': {
       'package.json': '{}',
     },
     'dev-proxy-headers-and-env': {
@@ -593,6 +601,11 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
           build: 'echo "Hello, World!" >> index.txt',
         },
       }),
+    },
+    'runtime-logs': {
+      'api/greetings.js':
+        'module.exports = (_, res) => {console.log("hi!"); res.json({ message: "Hello, World!" })}',
+      'index.txt': 'Hello, World!',
     },
   };
 

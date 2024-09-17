@@ -1,10 +1,10 @@
-import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
 import { getEnvTargetPlaceholder } from '../../util/env/env-target';
+import { forceOption, yesOption } from '../../util/arg-common';
 
 const targetPlaceholder = getEnvTargetPlaceholder();
 
-export const envCommand: Command = {
+export const envCommand = {
   name: 'env',
   description: 'Interact with environment variables.',
   arguments: [
@@ -17,7 +17,12 @@ export const envCommand: Command = {
     {
       name: 'ls',
       description: 'List all variables for the specified Environment',
-      arguments: [],
+      arguments: [
+        {
+          name: 'environment',
+          required: false,
+        },
+      ],
       options: [],
       examples: [],
     },
@@ -39,9 +44,13 @@ export const envCommand: Command = {
           name: 'sensitive',
           description: 'Add a sensitive Environment Variable',
           shorthand: null,
-          type: 'string',
+          type: String,
           deprecated: false,
-          multi: false,
+        },
+        {
+          ...forceOption,
+          description: 'Force overwrites when a command would normally fail',
+          shorthand: null,
         },
       ],
       examples: [],
@@ -82,27 +91,24 @@ export const envCommand: Command = {
       description:
         'Set the Environment (development, preview, production) when pulling Environment Variables',
       shorthand: null,
-      type: 'boolean',
+      type: String,
       deprecated: false,
-      multi: false,
     },
     {
       name: 'git-branch',
       description:
         'Specify the Git branch to pull specific Environment Variables for',
       shorthand: null,
-      type: 'string',
+      type: String,
       deprecated: false,
-      multi: false,
     },
     {
-      name: 'yes',
+      ...yesOption,
+
       description: 'Skip the confirmation prompt when removing an alias',
-      shorthand: 'y',
-      type: 'boolean',
-      deprecated: false,
-      multi: false,
     },
+    { name: 'sensitive', shorthand: null, type: Boolean, deprecated: false },
+    { name: 'force', shorthand: null, type: Boolean, deprecated: false },
   ],
   examples: [
     {
@@ -125,6 +131,10 @@ export const envCommand: Command = {
         `${packageName} env add <name> ${targetPlaceholder}`,
         `${packageName} env add DB_PASS production`,
       ],
+    },
+    {
+      name: 'Override an existing Environment Variable of same target (production, preview, deployment)',
+      value: `${packageName} env add API_TOKEN --force`,
     },
     {
       name: 'Add a sensitive Environment Variable',
@@ -167,4 +177,4 @@ export const envCommand: Command = {
       ],
     },
   ],
-};
+} as const;

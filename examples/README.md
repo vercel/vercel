@@ -1,6 +1,6 @@
 # Vercel Examples
 
-To get started using any of these examples as your own project, [install Vercel](https://vercel.com/cli) and use either of the following commands in your terminal:
+To get started using any of these examples as your own project, [install Vercel](https://vercel.com/docs/cli) and use either of the following commands in your terminal:
 
 ```sh
 vercel init                    # Pick an example in the CLI
@@ -22,7 +22,7 @@ Contributing examples should be an enjoyable experience, as such we have created
 
 The guidelines cover important information such as the requirements for new examples and where to get help if you have any questions.
 
-We have tried to make contributing to examples as easy as possible, especially for those new to Open Source. If anything is unclear or you have any questions then please reach out to us on [GitHub Discussions](https://github.com/vercel/vercel/discussions) where we will do our best to help you.
+We have tried to make contributing to examples as easy as possible, especially for those new to Open Source. If anything is unclear or you have any questions then please reach out to us on [https://vercel.community/](https://vercel.community/) where we will do our best to help you.
 
 ## Reporting Issues
 
@@ -34,6 +34,6 @@ When submitting an issue, please thoroughly and concisely describe the problem y
 
 ## Get In Touch
 
-If you have any questions that are not covered by raising an issue then please get in touch with us on [GitHub Discussions](https://github.com/vercel/vercel/discussions). There you will find both members of the community and staff who are happy to help answer questions on anything Vercel related.
+If you have any questions that are not covered by raising an issue then please get in touch with us on [https://vercel.community/](https://vercel.community/). There you will find both members of the community and staff who are happy to help answer questions on anything Vercel related.
 
-[![Join the community on GitHub Discussions](https://badgen.net/badge/join%20the%20discussion/on%20github/black?icon=github)](https://github.com/vercel/vercel/discussions)
+[Join the Vercel Community](https://vercel.community/)

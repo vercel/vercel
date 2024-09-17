@@ -1,3 +1,4 @@
+import { describe, it, expect } from 'vitest';
 import { basename, join } from 'path';
 import { readJSON } from 'fs-extra';
 import link from '../../../src/commands/link';

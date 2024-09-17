@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest';
 import { client } from '../../mocks/client';
 import teamsList from '../../../src/commands/teams/list';
 import { useUser } from '../../mocks/user';
@@ -10,7 +11,7 @@ describe('teams', () => {
         const user = useUser();
         useTeams(undefined, { apiVersion: 2 });
         const exitCodePromise = teamsList(client);
-        await expect(client.stdout).toOutput(user.username);
+        await expect(client.stderr).toOutput(user.username);
         await expect(exitCodePromise).resolves.toEqual(0);
       });
     });

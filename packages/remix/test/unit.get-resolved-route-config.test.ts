@@ -4,6 +4,7 @@ import type {
   RouteManifest,
 } from '@remix-run/dev/dist/config/routes';
 import type { BaseFunctionConfig } from '@vercel/static-config';
+import { describe, it, expect } from 'vitest';
 
 describe('getResolvedRouteConfig()', () => {
   const staticConfigsMap = new Map<ConfigRoute, BaseFunctionConfig | null>([
@@ -38,7 +39,7 @@ describe('getResolvedRouteConfig()', () => {
         file: 'routes/node/mem.tsx',
         parentId: 'routes/node',
       },
-      { maxDuration: 5, memory: 3008 },
+      { maxDuration: 5, memory: 3009 },
     ],
   ]);
 
@@ -65,7 +66,7 @@ describe('getResolvedRouteConfig()', () => {
         runtime: 'nodejs',
         regions: ['sfo1'],
         maxDuration: 5,
-        memory: 3008,
+        memory: 3009,
       },
     },
   ])('should resolve config for "$id" route', ({ id, expected }) => {

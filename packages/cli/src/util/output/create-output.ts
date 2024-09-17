@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import chalk, { Chalk } from 'chalk';
 import * as ansiEscapes from 'ansi-escapes';
 import { supportsHyperlink as detectSupportsHyperlink } from 'supports-hyperlinks';
 import renderLink from './link';
@@ -6,6 +6,7 @@ import wait, { StopSpinner } from './wait';
 import { errorToString } from '@vercel/error-utils';
 import { removeEmoji } from '../emoji';
 import type * as tty from 'tty';
+import { inspect } from 'util';
 
 const IS_TEST = process.env.NODE_ENV === 'test';
 
@@ -16,10 +17,11 @@ export interface OutputOptions {
 }
 
 export interface LogOptions {
-  color?: typeof chalk;
+  color?: Chalk;
 }
 
-interface LinkOptions {
+export interface LinkOptions {
+  color?: false | ((text: string) => string);
   fallback?: false | (() => string);
 }
 
@@ -123,12 +125,12 @@ export class Output {
     this.print(`${chalk.cyan('> Success!')} ${str}\n`);
   };
 
-  debug = (str: string) => {
+  debug = (debug: unknown) => {
     if (this.debugEnabled) {
       this.log(
         `${chalk.bold('[debug]')} ${chalk.gray(
           `[${new Date().toISOString()}]`
-        )} ${str}`
+        )} ${debugToString(debug)}`
       );
     }
   };
@@ -198,7 +200,7 @@ export class Output {
   link = (
     text: string,
     url: string,
-    { fallback }: LinkOptions = {}
+    { fallback, color = chalk.cyan }: LinkOptions = {}
   ): string => {
     // Based on https://github.com/sindresorhus/terminal-link (MIT license)
     if (!this.supportsHyperlink) {
@@ -212,7 +214,7 @@ export class Output {
         : `${text} (${renderLink(url)})`;
     }
 
-    return ansiEscapes.link(chalk.cyan(text), url);
+    return ansiEscapes.link(color ? color(text) : text, url);
   };
 }
 
@@ -225,4 +227,11 @@ function getNoColor(noColorArg: boolean | undefined): boolean {
     process.env.NO_COLOR === '1' ||
     noColorArg;
   return !!noColor;
+}
+
+function debugToString(debug: unknown): string {
+  if (typeof debug === 'string') {
+    return debug;
+  }
+  return inspect(debug);
 }

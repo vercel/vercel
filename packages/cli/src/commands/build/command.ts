@@ -1,7 +1,7 @@
-import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
+import { yesOption } from '../../util/arg-common';
 
-export const buildCommand: Command = {
+export const buildCommand = {
   name: 'build',
   description: 'Build the project.',
   arguments: [],
@@ -10,27 +10,28 @@ export const buildCommand: Command = {
       name: 'prod',
       description: 'Build a production deployment',
       shorthand: null,
-      type: 'string',
+      type: Boolean,
       deprecated: false,
-      multi: false,
+    },
+    {
+      name: 'target',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Specify the target environment',
     },
     {
       name: 'output',
       description: 'Directory where built assets should be written to',
       shorthand: null,
       argument: 'PATH',
-      type: 'string',
+      type: String,
       deprecated: false,
-      multi: false,
     },
     {
-      name: 'yes',
+      ...yesOption,
       description:
         'Skip the confirmation prompt about pulling environment variables and project settings when not found locally',
-      shorthand: 'y',
-      type: 'boolean',
-      deprecated: false,
-      multi: false,
     },
   ],
   examples: [
@@ -43,4 +44,4 @@ export const buildCommand: Command = {
       value: `${packageName} build --cwd ./path-to-project`,
     },
   ],
-};
+} as const;

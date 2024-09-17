@@ -1,7 +1,7 @@
-import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
+import { limitOption, nextOption, yesOption } from '../../util/arg-common';
 
-export const aliasCommand: Command = {
+export const aliasCommand = {
   name: 'alias',
   description: 'Interact with deployment aliases.',
   arguments: [
@@ -49,32 +49,21 @@ export const aliasCommand: Command = {
   ],
   options: [
     {
-      name: 'next',
+      ...nextOption,
       description: 'Show next page of results',
       argument: 'MS',
-      shorthand: 'n',
-      type: 'string',
-      deprecated: false,
-      multi: false,
     },
     {
-      name: 'yes',
+      ...yesOption,
       description: 'Skip the confirmation prompt when removing an alias',
-      shorthand: 'y',
-      type: 'boolean',
-      deprecated: false,
-      multi: false,
     },
     {
-      name: 'limit',
-      shorthand: 'n',
+      ...limitOption,
       description:
         'Number of results to return per page (default: 20, max: 100)',
       argument: 'NUMBER',
-      type: 'string',
-      deprecated: false,
-      multi: false,
     },
+    { name: 'json', shorthand: null, type: Boolean, deprecated: false },
   ],
   examples: [
     {
@@ -90,4 +79,4 @@ export const aliasCommand: Command = {
       value: `${packageName} alias api-ownv3nc9f8.vercel.app my-api.com`,
     },
   ],
-};
+} as const;

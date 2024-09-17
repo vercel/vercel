@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest';
 import { client } from '../../mocks/client';
 import dns from '../../../src/commands/dns';
 import { useUser } from '../../mocks/user';
