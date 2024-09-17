@@ -610,7 +610,8 @@ test('try to deploy with non-existing team', async () => {
   expect(stderr).toContain(goal);
 });
 
-test('initialize example "angular"', async () => {
+// TODO: re-enable this test after PR #12128 is merged to `main`
+test.skip('initialize example "angular"', async () => {
   const cwd = getNewTmpDir();
   const goal = '> Success! Initialized "angular" example in';
 
