@@ -20,7 +20,7 @@ function notFound(res: VercelResponse, message: string) {
   });
 }
 
-function streamToBuffer(stream: any) {
+function streamToBuffer(stream: any): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const buffers: any[] = [];
     stream.on('error', (err: any) => {
@@ -45,16 +45,26 @@ export default withApiHandler(async function (
   if (Array.isArray(segment) || !segment.endsWith(ext)) {
     return notFound(res, `Missing ${ext} suffix.`);
   }
+  console.log({ segment });
 
   const example = segment.slice(0, -ext.length);
+  console.log({ example });
 
+  console.log(`Extracting ${example} example...`);
   await extract('https://github.com/vercel/vercel/archive/main.zip', TMP_DIR);
+  console.log(`Done extracting ${example} example.`);
+
   const directory = `${TMP_DIR}/vercel-main/examples/${example}`;
+  console.log({ directory });
 
   if (!isDirectory(directory)) {
     return notFound(res, `Example '${example}' was not found.`);
   }
 
   const stream = tar.pack(directory);
-  return res.send(await streamToBuffer(stream));
+  console.log(`Packing tarball...`);
+  const buf = await streamToBuffer(stream);
+  console.log(`Done packing tarball (${buf.length} bytes).`);
+
+  return res.send(buf);
 });
