@@ -3,7 +3,7 @@ import { client } from './client';
 import { beforeEach } from 'vitest';
 import { teamCache } from '../../src/util/teams/get-team-by-id';
 
-type Team = {
+export type Team = {
   id: string;
   slug: string;
   name: string;
