@@ -32,7 +32,7 @@ const runnersMap = new Map([
   ],
   [
     'test-e2e',
-    { min: 1, max: 7, testScript: 'test', runners: ['ubuntu-latest'] },
+    { min: 1, max: 10, testScript: 'test', runners: ['ubuntu-latest'] },
   ],
   [
     'test-next-local',

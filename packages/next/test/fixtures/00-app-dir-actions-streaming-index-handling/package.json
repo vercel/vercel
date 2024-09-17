@@ -1,8 +1,8 @@
 {
   "dependencies": {
-    "next": "canary",
-    "react": "19.0.0-rc-1eaccd82-20240816",
-    "react-dom": "19.0.0-rc-1eaccd82-20240816"
+    "next": "https://vercel-packages.vercel.app/next/commits/5bd1ee611f1ca19fdd7907d008bfe1a084b1b390/next",
+    "react": "19.0.0-rc-a99d8e8d-20240916",
+    "react-dom": "19.0.0-rc-a99d8e8d-20240916"
   },
   "scripts": {
     "build": "next build && cp .next/server/server-reference-manifest.json public/"

@@ -1,1 +1,0 @@
-export default () => 'Index page';

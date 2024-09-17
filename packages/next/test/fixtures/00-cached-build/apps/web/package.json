@@ -1,7 +1,0 @@
-{
-  "name": "web",
-  "private": true,
-  "scripts": {
-    "build": "next build && rm -rf .next/cache && node post-build.js"
-  }
-}
