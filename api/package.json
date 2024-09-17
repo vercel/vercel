@@ -10,12 +10,12 @@
     "got": "11.8.5",
     "node-fetch": "2.6.7",
     "parse-github-url": "1.0.2",
-    "tar-fs": "2.0.0",
-    "unzip-stream": "0.3.0"
+    "tar-fs": "2.0.0"
   },
   "devDependencies": {
     "@types/node": "16.18.11",
     "@types/node-fetch": "2.5.4",
+    "@types/tar-fs": "1.16.1",
     "@vercel/node": "*"
   }
 }
