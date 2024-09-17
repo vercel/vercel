@@ -6,9 +6,9 @@ export const loginCommand = {
   description: 'Authenticate the CLI.',
   arguments: [],
   options: [
-    // TODO: Drop `--oauth` flag
+    // TODO: Drop `--future` flag
     {
-      name: 'oauth',
+      name: 'future',
       description: 'Sign in using OAuth Device Authorization.',
       shorthand: null,
       type: Boolean,
