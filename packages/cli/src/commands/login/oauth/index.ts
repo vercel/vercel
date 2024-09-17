@@ -219,9 +219,14 @@ interface DeviceAuthorizationResponseProcessed {
   interval: number;
   /**
    * The end-user verification URI on the authorization server.
-   * Calculated from `verification_uri_complete`.
+   * Calculated from `verification_uri`.
    */
   verificationURL: URL;
+  /**
+   * The end-user verification URI on the authorization server, including the `user_code`, without redirection.
+   * Calculated from `verification_uri_complete`.
+   */
+  verificationURLComplete: URL;
   /**
    * The absolute lifetime of the `device_code` and `user_code`.
    * Calculated from `expires_in`.
@@ -250,14 +255,20 @@ async function processDeviceAuthorizationResponse(
   else if (!('user_code' in json) || typeof json.user_code !== 'string')
     return [new TypeError('Expected `user_code` to be a string')];
   else if (
+    !('verification_uri' in json) ||
+    typeof json.verification_uri !== 'string' ||
+    !canParseURL(json.verification_uri)
+  ) {
+    return [new TypeError('Expected `verification_uri` to be a string')];
+  } else if (
     !('verification_uri_complete' in json) ||
     typeof json.verification_uri_complete !== 'string' ||
     !canParseURL(json.verification_uri_complete)
-  )
+  ) {
     return [
       new TypeError('Expected `verification_uri_complete` to be a string'),
     ];
-  else if (!('expires_in' in json) || typeof json.expires_in !== 'number')
+  } else if (!('expires_in' in json) || typeof json.expires_in !== 'number')
     return [new TypeError('Expected `expires_in` to be a number')];
   else if (!('interval' in json) || typeof json.interval !== 'number')
     return [new TypeError('Expected `interval` to be a number')];
@@ -267,7 +278,8 @@ async function processDeviceAuthorizationResponse(
     {
       device_code: json.device_code,
       user_code: json.user_code,
-      verificationURL: new URL(json.verification_uri_complete),
+      verificationURL: new URL(json.verification_uri),
+      verificationURLComplete: new URL(json.verification_uri_complete),
       expiresAt: Date.now() + json.expires_in * 1000,
       interval: json.interval,
     },
