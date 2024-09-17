@@ -35,4 +35,17 @@ describe('parseGoModVersion', function () {
     const version = parseGoModVersion('// go 1.17.1\ngo 1.21.1 // go 1.15.1');
     expect(version).toEqual('1.21.1');
   });
+  it('returns toolchain version if exists', async () => {
+    const version = parseGoModVersion('go 1.21.1\ntoolchain go1.22.1');
+    expect(version).toEqual('1.22.1');
+  });
+  it('returns toolchain version with prerelease if exists', async () => {
+    const version = parseGoModVersion('go 1.21.1\ntoolchain go1.22rc1');
+    expect(version).toEqual('1.22rc1');
+  });
+  it('returns go version if toolchain is random value', async () => {
+    // should we ignore or throw error?
+    const version = parseGoModVersion('go 1.21.1\ntoolchain random1.22.1');
+    expect(version).toEqual('1.21.1');
+  });
 });
