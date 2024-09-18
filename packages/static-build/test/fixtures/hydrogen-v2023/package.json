@@ -13,9 +13,9 @@
   "prettier": "@shopify/prettier-config",
   "dependencies": {
     "@remix-run/react": "1.19.1",
-    "@shopify/cli": "3.49.2",
-    "@shopify/cli-hydrogen": "^5.4.1",
-    "@shopify/hydrogen": "^2023.7.9",
+    "@shopify/cli": "3.66.1",
+    "@shopify/cli-hydrogen": "^5.5.2",
+    "@shopify/hydrogen": "^2023.10.6",
     "@shopify/remix-oxygen": "^1.1.5",
     "graphql": "^16.6.0",
     "graphql-tag": "^2.12.6",
