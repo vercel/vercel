@@ -7,12 +7,21 @@ import type {
   MetadataSchemaProperty,
 } from './types';
 
+// This is a set of all the UI controls that the metadata wizard supports.
+// For all options see https://vercel.com/docs/integrations/marketplace-product#metadata-schema
+const supportedUIControls = new Set([
+  'input',
+  'select',
+  'region',
+  'vercel-region',
+]);
+
 type Step = (client: Client) => Promise<MetadataEntry>;
 
 function createInputStep(key: string, schema: MetadataSchemaProperty) {
   if (schema['ui:control'] !== 'input') {
     throw new Error(
-      `Expected control "input", but was "${schema['ui:control']}"`
+      `InputStep: Expected control "input" for key "${key}", but was "${schema['ui:control']}"`
     );
   }
 
@@ -35,15 +44,15 @@ function createInputStep(key: string, schema: MetadataSchemaProperty) {
             const number = Number(value);
 
             if (isNaN(number)) {
-              return 'Value must be a number.';
+              return `Value "${value}" must be a number.`;
             }
 
             if (schema.minimum !== undefined && schema.minimum > number) {
-              return `Value must be greater or equal ${schema.minimum}.`;
+              return `Value "${value}" must be greater or equal ${schema.minimum}.`;
             }
 
             if (schema.maximum !== undefined && schema.maximum < number) {
-              return `Value must be smaller or equal ${schema.maximum}.`;
+              return `Value "${value}" must be smaller or equal ${schema.maximum}.`;
             }
 
             return true;
@@ -54,7 +63,7 @@ function createInputStep(key: string, schema: MetadataSchemaProperty) {
     }
     default: {
       throw new Error(
-        `Unsupported schema type for input control: ${schema.type}`
+        `[Input Step] Unsupported schema type for input control of key "${key}": ${schema.type}`
       );
     }
   }
@@ -63,13 +72,13 @@ function createInputStep(key: string, schema: MetadataSchemaProperty) {
 function createSelectStep(key: string, schema: MetadataSchemaProperty) {
   if (!['select', 'region', 'vercel-region'].includes(schema['ui:control'])) {
     throw new Error(
-      `Expected control "select", "region" or "vercel-region", but was "${schema['ui:control']}"`
+      `SelectStep: Expected control "select", "region" or "vercel-region", but was "${schema['ui:control']}"`
     );
   }
 
   if (!schema['ui:options']?.length) {
     throw new Error(
-      `Expected controle for key "${key}" to have options, but was ${JSON.stringify(schema['ui:options'])}`
+      `SelectStep: Expected control for key "${key}" to have options, but was ${JSON.stringify(schema['ui:options'])}`
     );
   }
 
@@ -103,21 +112,11 @@ function createSelectStep(key: string, schema: MetadataSchemaProperty) {
     const value = await list(client, {
       message: schema['ui:placeholder'] || schema['ui:label'] || key,
       choices,
-      cancel: undefined,
     });
 
     return [key, value] as const;
   };
 }
-
-const supportedUIControls = new Set([
-  'input',
-  'select',
-  'region',
-  'vercel-region',
-  'multi-region',
-  'multi-vercel-region',
-]);
 
 export interface MetadataWizard {
   isSupported: boolean;
