@@ -59,6 +59,11 @@ export interface ScanParentDirsResult {
    * or `undefined` if not found.
    */
   lockfileVersion?: number;
+  /**
+   * The contents of found root `package.json` file, when the `readRootPackageJson`
+   * option is enabled. Can be different from `packageJson` in monorepos.
+   */
+  rootPackageJson?: PackageJson;
 }
 
 export interface TraverseUpDirectoriesProps {
@@ -171,6 +176,23 @@ export function* traverseUpDirectories({
     const next = path.join(current, '..');
     current = next === current ? undefined : next;
   }
+}
+
+async function readRootPackageJson({
+  start,
+  base,
+}: TraverseUpDirectoriesProps): Promise<PackageJson | undefined> {
+  let curRootPackageJsonPath: string | undefined;
+  for (const dir of traverseUpDirectories({ start, base })) {
+    const packageJsonPath = path.join(dir, 'package.json');
+    if (await fs.pathExists(packageJsonPath)) {
+      curRootPackageJsonPath = packageJsonPath;
+    }
+  }
+  if (curRootPackageJsonPath) {
+    return (await fs.readJSON(curRootPackageJsonPath)) as PackageJson;
+  }
+  return undefined;
 }
 
 /**
