@@ -1,5 +1,12 @@
 # vercel
 
+## 37.5.1
+
+### Patch Changes
+
+- Updated dependencies [[`f396f72b6bab0acf45522d25ee08c9899afdad40`](https://github.com/vercel/vercel/commit/f396f72b6bab0acf45522d25ee08c9899afdad40)]:
+  - @vercel/go@3.1.3
+
 ## 37.5.0
 
 ### Minor Changes

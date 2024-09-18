@@ -1,5 +1,11 @@
 # @vercel/go
 
+## 3.1.3
+
+### Patch Changes
+
+- Support patch versions in go mod ([#12110](https://github.com/vercel/vercel/pull/12110))
+
 ## 3.1.2
 
 ### Patch Changes
