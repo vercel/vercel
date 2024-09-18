@@ -105,8 +105,8 @@ export async function add(client: Client, args: string[]) {
   const metadataWizard = createMetadataWizard(metadataSchema);
 
   // At the time of writing, we don't support native integrations besides storage products.
-  // However, we avoid breaking this version of the CLI by linking all other future product
-  // categories to the dashboard.
+  // However, when we introduce new categories, we avoid breaking this version of the CLI by linking all
+  // non-storage categories to the dashboard.
   const isStorageProduct = product.type === 'storage';
 
   // The provisioning via cli is possible when
