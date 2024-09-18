@@ -939,7 +939,6 @@ export default class DevServer {
     this.watcher = watch(this.cwd, {
       ignored: (path: string) => !this.filter(path),
       ignoreInitial: true,
-      useFsEvents: false,
       usePolling: false,
       persistent: true,
     });
