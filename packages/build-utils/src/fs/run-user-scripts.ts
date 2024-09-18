@@ -409,6 +409,11 @@ function usingCorepack(
   packageJsonPackageManager: string | undefined
 ) {
   const corepackFlagged = env.ENABLE_EXPERIMENTAL_COREPACK === '1';
+  if (corepackFlagged && !packageJsonPackageManager) {
+    console.warn(
+      "Warning: Detected environment variable `ENABLE_EXPERIMENTAL_COREPACK`, but the `packageManager` field is not set in your app's `package.json`. Corepack will not be used."
+    );
+  }
   return corepackFlagged && Boolean(packageJsonPackageManager);
 }
 
