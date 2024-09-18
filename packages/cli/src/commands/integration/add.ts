@@ -88,7 +88,7 @@ export async function add(client: Client, args: string[]) {
 
   if (teamInstallations.length > 1) {
     client.output.error(
-      `Found more than one existing installation of ${integration.name}. Please contact Vercel Support.`
+      `Found more than one existing installation of ${integration.name}. Please contact Vercel Support at https://vercel.com/help`
     );
     return 1;
   }
