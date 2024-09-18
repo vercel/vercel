@@ -81,10 +81,21 @@ export async function add(client: Client, args: string[]) {
   const product = productResult.value;
   const installations = installationsResult.value;
 
-  const installation = installations.find(
+  const teamInstallations = installations.filter(
     install =>
       install.ownerId === team.id && install.installationType === 'marketplace'
   );
+
+  if (teamInstallations.length > 1) {
+    client.output.error(
+      `Found more than one existing installation of ${integration.name}. Please contact Vercel Support.`
+    );
+    return 1;
+  }
+
+  const installation = teamInstallations[0] as
+    | IntegrationInstallation
+    | undefined;
 
   client.output.log(
     `Installing ${chalk.bold(product.name)} by ${chalk.bold(integration.name)} under ${chalk.bold(contextName)}`
