@@ -37,7 +37,7 @@ export default async function main(client: Client) {
   args = getSubcommand(parsedArgs.args.slice(1), COMMAND_CONFIG).args;
 
   if (parsedArgs.args.length > 3) {
-    output.error('Too much arguments.');
+    output.error('Too many arguments.');
     return 1;
   }
 
