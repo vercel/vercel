@@ -661,7 +661,7 @@ export function getEnvForPackageManager({
   nodeVersion: NodeVersion | undefined;
   env: { [x: string]: string | undefined };
   packageJsonEngines?: PackageJson.Engines;
-  rootPackageJson: PackageJson | undefined;
+  rootPackageJson?: PackageJson | undefined;
 }) {
   const corepackEnabled = usingCorepack(
     env,
