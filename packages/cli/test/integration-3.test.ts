@@ -8,13 +8,12 @@ import { homedir } from 'os';
 import { runNpmInstall } from '@vercel/build-utils';
 import { execCli } from './helpers/exec';
 import fetch, { RequestInfo } from 'node-fetch';
-import fs from 'fs-extra';
 import { logo } from '../src/util/pkg-name';
 import sleep from '../src/util/sleep';
 import humanizePath from '../src/util/humanize-path';
 import pkg from '../package.json';
 import waitForPrompt from './helpers/wait-for-prompt';
-import { getNewTmpDir, listTmpDirs } from './helpers/get-tmp-dir';
+import { listTmpDirs } from './helpers/get-tmp-dir';
 import {
   setupE2EFixture,
   prepareE2EFixtures,
@@ -205,7 +204,9 @@ test('list the scopes', async () => {
   expect(stderr).toMatch(include);
 });
 
-test('domains inspect', async () => {
+// https://linear.app/vercel/issue/ZERO-2555/fix-assign-a-domain-to-a-project-test
+// eslint-disable-next-line jest/no-disabled-tests
+test.skip('domains inspect', async () => {
   const team = await teamPromise;
   const domainName = `inspect-${team.slug}-${Math.random()
     .toString()
@@ -610,32 +611,7 @@ test('try to deploy with non-existing team', async () => {
   expect(stderr).toContain(goal);
 });
 
-test('initialize example "angular"', async () => {
-  const cwd = getNewTmpDir();
-  const goal = '> Success! Initialized "angular" example in';
-
-  const { exitCode, stdout, stderr } = await execCli(
-    binaryPath,
-    ['init', 'angular'],
-    { cwd }
-  );
-
-  expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
-  expect(stderr).toContain(goal);
-
-  expect(
-    fs.existsSync(path.join(cwd, 'angular', 'package.json')),
-    'package.json'
-  ).toBe(true);
-  expect(
-    fs.existsSync(path.join(cwd, 'angular', 'tsconfig.json')),
-    'tsconfig.json'
-  ).toBe(true);
-  expect(
-    fs.existsSync(path.join(cwd, 'angular', 'angular.json')),
-    'angular.json'
-  ).toBe(true);
-});
+// TODO: re-enable the `initialize example "angular"` test after PR #12128 is merged to `main`
 
 test('fail to add a domain without a project', async () => {
   const output = await execCli(binaryPath, [
