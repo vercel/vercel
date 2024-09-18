@@ -244,7 +244,9 @@ describe('integration', () => {
         client.setArgv('integration', 'add');
         const exitCodePromise = integrationCommand(client);
         await expect(exitCodePromise).resolves.toEqual(1);
-        await expect(client.stderr).toOutput('One argument is required');
+        await expect(client.stderr).toOutput(
+          'Error: You must pass an integration slug'
+        );
       });
 
       it('should error when more than one integration arugment was passed', async () => {

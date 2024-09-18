@@ -33,7 +33,7 @@ export async function add(client: Client, args: string[]) {
   const integrationSlug = args[0];
 
   if (!integrationSlug) {
-    client.output.error('One argument is required');
+    client.output.error('You must pass an integration slug');
     return 1;
   }
 
