@@ -119,7 +119,14 @@ const supportedUIControls = new Set([
   'multi-vercel-region',
 ]);
 
-export function createMetadataWizard(metadataSchema: MetadataSchema) {
+export interface MetadataWizard {
+  isSupported: boolean;
+  run: (client: Client) => Promise<Metadata>;
+}
+
+export function createMetadataWizard(
+  metadataSchema: MetadataSchema
+): MetadataWizard {
   const properties = metadataSchema.properties;
 
   let isSupported = true;

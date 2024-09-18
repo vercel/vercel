@@ -44,6 +44,12 @@ export interface Integration {
   products?: IntegrationProduct[];
 }
 
+export interface IntegrationInstallation {
+  id: string;
+  installationType: 'marketplace' | 'external';
+  ownerId: string;
+}
+
 export interface BillingPlan {
   id: string;
   type: string;
