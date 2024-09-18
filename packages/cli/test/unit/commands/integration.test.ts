@@ -28,6 +28,7 @@ describe('integration', () => {
       useUser();
       const teams = useTeams('team_dummy');
       team = Array.isArray(teams) ? teams[0] : teams.teams[0];
+      client.config.currentTeam = team.id;
     });
 
     describe('missing installation', () => {
@@ -43,7 +44,6 @@ describe('integration', () => {
         });
         const cwd = setupUnitFixture('vercel-integration-add');
         client.cwd = cwd;
-        client.config.currentTeam = team.id;
         client.setArgv('integration', 'add', 'acme');
         const exitCodePromise = integrationCommand(client);
         await expect(client.stderr).toOutput(
@@ -71,7 +71,6 @@ describe('integration', () => {
         });
         const cwd = setupUnitFixture('vercel-integration-add');
         client.cwd = cwd;
-        client.config.currentTeam = team.id;
         client.setArgv('integration', 'add', 'acme');
         const exitCodePromise = integrationCommand(client);
         await expect(client.stderr).toOutput(
@@ -92,7 +91,6 @@ describe('integration', () => {
       });
 
       it('should handle provisioning resource without project context', async () => {
-        client.config.currentTeam = team.id;
         client.setArgv('integration', 'add', 'acme');
         const exitCodePromise = integrationCommand(client);
         await expect(client.stderr).toOutput(
@@ -122,7 +120,6 @@ describe('integration', () => {
         });
         const cwd = setupUnitFixture('vercel-integration-add');
         client.cwd = cwd;
-        client.config.currentTeam = team.id;
         client.setArgv('integration', 'add', 'acme');
         const exitCodePromise = integrationCommand(client);
         await expect(client.stderr).toOutput(
@@ -172,7 +169,6 @@ describe('integration', () => {
         });
         const cwd = setupUnitFixture('vercel-integration-add');
         client.cwd = cwd;
-        client.config.currentTeam = team.id;
         client.setArgv('integration', 'add', 'acme');
         const exitCodePromise = integrationCommand(client);
         await expect(client.stderr).toOutput(
@@ -210,7 +206,6 @@ describe('integration', () => {
       });
 
       it('should handle provisioning resource without project context', async () => {
-        client.config.currentTeam = team.id;
         client.setArgv('integration', 'add', 'acme');
         const exitCodePromise = integrationCommand(client);
         await expect(client.stderr).toOutput(
@@ -241,6 +236,52 @@ describe('integration', () => {
         );
         await expect(exitCodePromise).resolves.toEqual(0);
         expect(openMock).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('errors', () => {
+      it('should error when no integration arugment was passed', async () => {
+        client.setArgv('integration', 'add');
+        const exitCodePromise = integrationCommand(client);
+        await expect(exitCodePromise).resolves.toEqual(1);
+        await expect(client.stderr).toOutput('One argument is required');
+      });
+
+      it('should error when more than one integration arugment was passed', async () => {
+        client.setArgv('integration', 'add', 'acme', 'acme-two');
+        const exitCodePromise = integrationCommand(client);
+        await expect(exitCodePromise).resolves.toEqual(1);
+        await expect(client.stderr).toOutput(
+          'Cannot install more than one integration at a time'
+        );
+      });
+
+      it('should error when integration was not found', async () => {
+        useIntegration({ withInstallation: true });
+        client.setArgv('integration', 'add', 'does-not-exist');
+        const exitCodePromise = integrationCommand(client);
+        await expect(exitCodePromise).resolves.toEqual(1);
+        await expect(client.stderr).toOutput(
+          'Error: Failed to get integration "does-not-exist": Response Error (404)'
+        );
+      });
+
+      it('should error when integration is an external integration', async () => {
+        useIntegration({ withInstallation: true });
+        client.setArgv('integration', 'add', 'acme-external');
+        const exitCodePromise = integrationCommand(client);
+        await expect(exitCodePromise).resolves.toEqual(1);
+        await expect(client.stderr).toOutput(
+          'Error: Integration "acme-external" is not a Marketplace integration'
+        );
+      });
+
+      it('should error when integration has no products', async () => {
+        useIntegration({ withInstallation: true });
+        client.setArgv('integration', 'add', 'acme-no-products');
+        const exitCodePromise = integrationCommand(client);
+        await expect(exitCodePromise).resolves.toEqual(1);
+        await expect(client.stderr).toOutput('Error: Product not found');
       });
     });
   });

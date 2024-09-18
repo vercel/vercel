@@ -18,7 +18,14 @@ import { createMetadataWizard } from './wizard';
 
 export async function add(client: Client, args: string[]) {
   if (args.length > 1) {
-    client.output.error(`Can't install more than one integration at a time.`);
+    client.output.error('Cannot install more than one integration at a time');
+    return 1;
+  }
+
+  const integrationSlug = args[0];
+
+  if (!integrationSlug) {
+    client.output.error('One argument is required');
     return 1;
   }
 
@@ -29,21 +36,42 @@ export async function add(client: Client, args: string[]) {
     return 1;
   }
 
-  const integrationSlug = args[0];
-  const integration = await fetchIntegration(client, integrationSlug);
-
-  if (!integration?.products) {
+  let integration: Integration | undefined;
+  try {
+    integration = await fetchIntegration(client, integrationSlug);
+  } catch (error) {
+    client.output.error(
+      `Failed to get integration "${integrationSlug}": ${(error as Error).message}`
+    );
     return 1;
   }
 
-  const [product, installations] = await Promise.all([
+  if (!integration.products) {
+    client.output.error(
+      `Integration "${integrationSlug}" is not a Marketplace integration`
+    );
+    return 1;
+  }
+
+  const [productResult, installationsResult] = await Promise.allSettled([
     selectProduct(client, integration),
     fetchInstallations(client, integration),
   ]);
 
-  if (!product || !installations) {
+  if (productResult.status === 'rejected' || !productResult.value) {
+    client.output.error('Product not found');
     return 1;
   }
+
+  if (installationsResult.status === 'rejected') {
+    client.output.error(
+      `Failed to get integration installations: ${installationsResult.reason}`
+    );
+    return 1;
+  }
+
+  const product = productResult.value;
+  const installations = installationsResult.value;
 
   const installation = installations.find(
     install =>
@@ -57,11 +85,12 @@ export async function add(client: Client, args: string[]) {
   const metadataSchema = product.metadataSchema;
   const metadataWizard = createMetadataWizard(metadataSchema);
 
-  if (
-    !installation ||
-    !metadataWizard.isSupported ||
-    product.type !== 'storage'
-  ) {
+  // At the time of writing, we don't support native integrations besides storage products.
+  // However, we avoid breaking this version of the CLI by linking all other future product
+  // categories to the dashboard.
+  const isStorageProduct = product.type === 'storage';
+
+  if (!installation || !metadataWizard.isSupported || !isStorageProduct) {
     const projectLink = await getOptionalLinkedProject(client);
 
     if (projectLink?.status === 'error') {
@@ -93,21 +122,26 @@ export async function add(client: Client, args: string[]) {
 
   const metadata = await metadataWizard.run(client);
 
-  const billingPlans = await fetchBillingPlans(
-    client,
-    integration,
-    product,
-    metadata
-  );
-
-  if (!billingPlans) {
+  let billingPlans: BillingPlan[] | undefined;
+  try {
+    const billingPlansResponse = await fetchBillingPlans(
+      client,
+      integration,
+      product,
+      metadata
+    );
+    billingPlans = billingPlansResponse.plans;
+  } catch (error) {
+    client.output.error(
+      `Failed to get billing plans: ${(error as Error).message}`
+    );
     return 1;
   }
 
-  const enabledBillingPlans = billingPlans.plans.filter(plan => !plan.disabled);
+  const enabledBillingPlans = billingPlans.filter(plan => !plan.disabled);
 
   if (!enabledBillingPlans.length) {
-    client.output.log('No billing plans available.');
+    client.output.error('No billing plans available');
     return 1;
   }
 
@@ -121,7 +155,7 @@ export async function add(client: Client, args: string[]) {
     );
   }
   client.output.print(
-    `${chalk.dim(`- ${chalk.bold(`Plan:`)} ${billingPlans.plans.find(plan => plan.id === billingPlan)?.name}`)}\n`
+    `${chalk.dim(`- ${chalk.bold(`Plan:`)} ${billingPlans.find(plan => plan.id === billingPlan)?.name}`)}\n`
   );
 
   const confirmed = await client.input.confirm({
@@ -135,7 +169,7 @@ export async function add(client: Client, args: string[]) {
   client.output.spinner('Provisioning resource...');
   let storeId: string;
   try {
-    const result = await provisionResource(
+    const result = await provisionStoreResource(
       client,
       installation.id,
       product.id,
@@ -145,7 +179,9 @@ export async function add(client: Client, args: string[]) {
     );
     storeId = result.store.id;
   } catch (error) {
-    client.output.error((error as Error).message);
+    client.output.error(
+      `Failed to provision ${product.name}: ${(error as Error).message}`
+    );
     return 1;
   }
   client.output.log(`${product.name} successfully provisioned`);
@@ -174,6 +210,7 @@ export async function add(client: Client, args: string[]) {
   client.output.spinner(
     `Connecting ${chalk.bold(name)} to ${chalk.bold(project.name)}...`
   );
+
   try {
     await connectStoreToProject(
       client,
@@ -182,9 +219,12 @@ export async function add(client: Client, args: string[]) {
       environments
     );
   } catch (error) {
-    client.output.error((error as Error).message);
+    client.output.error(
+      `Failed to connect store to project: ${(error as Error).message}`
+    );
     return 1;
   }
+
   client.output.log(
     `${chalk.bold(name)} successfully connected to ${chalk.bold(project.name)}
 
@@ -194,7 +234,7 @@ ${indent(`Run ${cmd(`${packageName} env pull`)} to update the environment variab
   return 0;
 }
 
-async function provisionResource(
+async function provisionStoreResource(
   client: Client,
   installationId: string,
   productId: string,
@@ -236,22 +276,18 @@ async function connectStoreToProject(
 }
 
 async function fetchInstallations(client: Client, integration: Integration) {
-  try {
-    return await client.fetch<
-      {
-        id: string;
-        installationType: 'marketplace' | 'external';
-        ownerId: string;
-      }[]
-    >(
-      `/v1/integrations/integration/${integration.id}/installed?source=marketplace`,
-      {
-        json: true,
-      }
-    );
-  } catch (error) {
-    client.output.error((error as Error).message);
-  }
+  return client.fetch<
+    {
+      id: string;
+      installationType: 'marketplace' | 'external';
+      ownerId: string;
+    }[]
+  >(
+    `/v1/integrations/integration/${integration.id}/installed?source=marketplace`,
+    {
+      json: true,
+    }
+  );
 }
 
 async function fetchBillingPlans(
@@ -263,29 +299,21 @@ async function fetchBillingPlans(
   const searchParams = new URLSearchParams();
   searchParams.set('metadata', JSON.stringify(metadata));
 
-  try {
-    return await client.fetch<{ plans: BillingPlan[] }>(
-      `/v1/integrations/integration/${integration.id}/products/${product.id}/plans?${searchParams}`,
-      {
-        json: true,
-      }
-    );
-  } catch (error) {
-    client.output.error((error as Error).message);
-  }
+  return client.fetch<{ plans: BillingPlan[] }>(
+    `/v1/integrations/integration/${integration.id}/products/${product.id}/plans?${searchParams}`,
+    {
+      json: true,
+    }
+  );
 }
 
 async function fetchIntegration(client: Client, slug: string) {
-  try {
-    return await client.fetch<Integration>(
-      `/v1/integrations/integration/${slug}?public=1`,
-      {
-        json: true,
-      }
-    );
-  } catch (error) {
-    client.output.error((error as Error).message);
-  }
+  return client.fetch<Integration>(
+    `/v1/integrations/integration/${slug}?public=1`,
+    {
+      json: true,
+    }
+  );
 }
 
 async function selectProduct(client: Client, integration: Integration) {
