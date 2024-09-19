@@ -22,10 +22,10 @@ import { loginCommand } from './command';
 import { updateCurrentTeamAfterLogin } from '../../util/login/update-current-team-after-login';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import handleError from '../../util/handle-error';
-import { oauth } from './oauth';
+import { future } from './future';
 
 export default async function login(client: Client): Promise<number> {
-  if (client.argv.slice(2).includes('--future')) return await oauth(client);
+  if (client.argv.slice(2).includes('--future')) return await future(client);
 
   const { output } = client;
 

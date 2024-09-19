@@ -11,8 +11,11 @@ import { errorToString } from '@vercel/error-utils';
 import { help } from '../help';
 import { logoutCommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { future } from './future';
 
 export default async function main(client: Client): Promise<number> {
+  if (client.argv.slice(2).includes('--future')) return await future(client);
+
   const { authConfig, config, output } = client;
 
   let parsedArgs = null;
