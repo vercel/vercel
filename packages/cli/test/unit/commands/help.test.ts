@@ -3,28 +3,28 @@ import {
   help,
   lineToString,
   outputArrayToString,
-} from '../../../../src/commands/help';
-import { deployCommand } from '../../../../src/commands/deploy/command';
-import { aliasCommand } from '../../../../src/commands/alias/command';
-import { bisectCommand } from '../../../../src/commands/bisect/command';
-import { certsCommand } from '../../../../src/commands/certs/command';
-import { dnsCommand } from '../../../../src/commands/dns/command';
-import { domainsCommand } from '../../../../src/commands/domains/command';
-import { envCommand } from '../../../../src/commands/env/command';
-import { gitCommand } from '../../../../src/commands/git/command';
-import { initCommand } from '../../../../src/commands/init/command';
-import { inspectCommand } from '../../../../src/commands/inspect/command';
-import { linkCommand } from '../../../../src/commands/link/command';
-import { listCommand } from '../../../../src/commands/list/command';
-import { loginCommand } from '../../../../src/commands/login/command';
-import { projectCommand } from '../../../../src/commands/project/command';
-import { promoteCommand } from '../../../../src/commands/promote/command';
-import { pullCommand } from '../../../../src/commands/pull/command';
-import { redeployCommand } from '../../../../src/commands/redeploy/command';
-import { removeCommand } from '../../../../src/commands/remove/command';
-import { rollbackCommand } from '../../../../src/commands/rollback/command';
-import { teamsCommand } from '../../../../src/commands/teams/command';
-import { whoamiCommand } from '../../../../src/commands/whoami/command';
+} from '../../../src/commands/help';
+import { deployCommand } from '../../../src/commands/deploy/command';
+import { aliasCommand } from '../../../src/commands/alias/command';
+import { bisectCommand } from '../../../src/commands/bisect/command';
+import { certsCommand } from '../../../src/commands/certs/command';
+import { dnsCommand } from '../../../src/commands/dns/command';
+import { domainsCommand } from '../../../src/commands/domains/command';
+import { envCommand } from '../../../src/commands/env/command';
+import { gitCommand } from '../../../src/commands/git/command';
+import { initCommand } from '../../../src/commands/init/command';
+import { inspectCommand } from '../../../src/commands/inspect/command';
+import { linkCommand } from '../../../src/commands/link/command';
+import { listCommand } from '../../../src/commands/list/command';
+import { loginCommand } from '../../../src/commands/login/command';
+import { projectCommand } from '../../../src/commands/project/command';
+import { promoteCommand } from '../../../src/commands/promote/command';
+import { pullCommand } from '../../../src/commands/pull/command';
+import { redeployCommand } from '../../../src/commands/redeploy/command';
+import { removeCommand } from '../../../src/commands/remove/command';
+import { rollbackCommand } from '../../../src/commands/rollback/command';
+import { teamsCommand } from '../../../src/commands/teams/command';
+import { whoamiCommand } from '../../../src/commands/whoami/command';
 
 describe('help command', () => {
   describe('lineToString', () => {
