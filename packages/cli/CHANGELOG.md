@@ -1,5 +1,11 @@
 # vercel
 
+## 37.5.2
+
+### Patch Changes
+
+- [cli] Add note about epipebomb ([#12144](https://github.com/vercel/vercel/pull/12144))
+
 ## 37.5.1
 
 ### Patch Changes
