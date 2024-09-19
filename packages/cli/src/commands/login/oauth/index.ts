@@ -59,8 +59,14 @@ export async function oauth(client: Client): Promise<number> {
     return 1;
   }
 
-  const { device_code, user_code, verificationURL, expiresAt, interval } =
-    deviceAuthorization;
+  const {
+    device_code,
+    user_code,
+    verification_uri,
+    verification_uri_complete,
+    expiresAt,
+    interval,
+  } = deviceAuthorization;
 
   const rl = readline
     .createInterface({
@@ -74,11 +80,11 @@ export async function oauth(client: Client): Promise<number> {
     `
   ▲ Sign in to the Vercel CLI
 
-  Visit ${chalk.bold(o.link(verificationURL.host + verificationURL.pathname, verificationURL.href, { color: false }))} to enter ${chalk.bold(user_code)}
+  Visit ${chalk.bold(o.link(verification_uri, verification_uri_complete, { color: false }))} to enter ${chalk.bold(user_code)}
   ${chalk.grey('Press [ENTER] to open the browser')}
 `,
     () => {
-      open.default(verificationURL.href);
+      open.default(verification_uri_complete);
       rl.close();
     }
   );
@@ -217,16 +223,13 @@ interface DeviceAuthorizationResponseProcessed {
    * @default 5
    */
   interval: number;
+  /** The end-user verification URI on the authorization server. */
+  verification_uri: string;
   /**
-   * The end-user verification URI on the authorization server.
-   * Calculated from `verification_uri`.
+   * The end-user verification URI on the authorization server,
+   * including the `user_code`, without redirection.
    */
-  verificationURL: URL;
-  /**
-   * The end-user verification URI on the authorization server, including the `user_code`, without redirection.
-   * Calculated from `verification_uri_complete`.
-   */
-  verificationURLComplete: URL;
+  verification_uri_complete: string;
   /**
    * The absolute lifetime of the `device_code` and `user_code`.
    * Calculated from `expires_in`.
@@ -278,8 +281,8 @@ async function processDeviceAuthorizationResponse(
     {
       device_code: json.device_code,
       user_code: json.user_code,
-      verificationURL: new URL(json.verification_uri),
-      verificationURLComplete: new URL(json.verification_uri_complete),
+      verification_uri: json.verification_uri,
+      verification_uri_complete: json.verification_uri_complete,
       expiresAt: Date.now() + json.expires_in * 1000,
       interval: json.interval,
     },
