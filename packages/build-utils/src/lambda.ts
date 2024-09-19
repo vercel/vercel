@@ -2,7 +2,8 @@ import assert from 'assert';
 import Sema from 'async-sema';
 import { ZipFile } from 'yazl';
 import minimatch from 'minimatch';
-import { readlink } from 'fs-extra';
+import { lstat, readlink } from 'fs-extra';
+import { dirname, resolve } from 'path';
 import { isSymbolicLink, isDirectory } from './fs/download';
 import streamToBuffer from './fs/stream-to-buffer';
 import type { Config, Env, Files, FunctionFramework } from './types';
@@ -247,7 +248,14 @@ export async function createZip(files: Files): Promise<Buffer> {
     const file = files[name];
     if (file.mode && isSymbolicLink(file.mode) && file.type === 'FileFsRef') {
       const symlinkTarget = await readlink(file.fsPath);
-      symlinkTargets.set(name, symlinkTarget);
+      const symlinkTargetPath = resolve(dirname(file.fsPath), symlinkTarget);
+      try {
+        // Check if the symlink target exists
+        await lstat(symlinkTargetPath);
+        symlinkTargets.set(name, symlinkTarget);
+      } catch (e) {
+        throw new Error(`Symlink target does not exist: ${symlinkTargetPath}`);
+      }
     }
   }
 

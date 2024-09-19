@@ -1,4 +1,6 @@
 ?.js
 dist
+test/symlinks-broken/*
+!test/symlinks-broken/.gitkeep
 test/symlinks-out
 test/symlinks.zip
