@@ -62,6 +62,13 @@ const VERCEL_AUTH_CONFIG_PATH = configFiles.getAuthConfigFilePath();
 
 const GLOBAL_COMMANDS = new Set(['help']);
 
+/*
+  By default, node throws EPIPE errors if process.stdout is being written to
+  and a user runs it through a pipe that gets closed while the process is still outputting
+  (eg, the simple case of piping a node app through head).
+  
+  This suppresses those errors.
+*/
 epipebomb();
 
 // Configure the error reporting system
