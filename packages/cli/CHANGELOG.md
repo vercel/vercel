@@ -1,5 +1,33 @@
 # vercel
 
+## 37.5.2
+
+### Patch Changes
+
+- [cli] Add note about epipebomb ([#12144](https://github.com/vercel/vercel/pull/12144))
+
+## 37.5.1
+
+### Patch Changes
+
+- Updated dependencies [[`f396f72b6bab0acf45522d25ee08c9899afdad40`](https://github.com/vercel/vercel/commit/f396f72b6bab0acf45522d25ee08c9899afdad40)]:
+  - @vercel/go@3.1.3
+
+## 37.5.0
+
+### Minor Changes
+
+- Support installing products from Vercel Marketplace via `vc install` ([#12127](https://github.com/vercel/vercel/pull/12127))
+
+### Patch Changes
+
+- [logs] tiny idomatic fixup ([#12094](https://github.com/vercel/vercel/pull/12094))
+
+- [cli] refactor getSubcommand to return original user input ([#12137](https://github.com/vercel/vercel/pull/12137))
+
+- Updated dependencies [[`67839368e71f27c93ca9aa664810ef64de4d4d9c`](https://github.com/vercel/vercel/commit/67839368e71f27c93ca9aa664810ef64de4d4d9c)]:
+  - @vercel/remix-builder@2.2.9
+
 ## 37.4.2
 
 ### Patch Changes
