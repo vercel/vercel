@@ -8,12 +8,13 @@ import { homedir } from 'os';
 import { runNpmInstall } from '@vercel/build-utils';
 import { execCli } from './helpers/exec';
 import fetch, { RequestInfo } from 'node-fetch';
+import fs from 'fs-extra';
 import { logo } from '../src/util/pkg-name';
 import sleep from '../src/util/sleep';
 import humanizePath from '../src/util/humanize-path';
 import pkg from '../package.json';
 import waitForPrompt from './helpers/wait-for-prompt';
-import { listTmpDirs } from './helpers/get-tmp-dir';
+import { getNewTmpDir, listTmpDirs } from './helpers/get-tmp-dir';
 import {
   setupE2EFixture,
   prepareE2EFixtures,
@@ -611,7 +612,32 @@ test('try to deploy with non-existing team', async () => {
   expect(stderr).toContain(goal);
 });
 
-// TODO: re-enable the `initialize example "angular"` test after PR #12128 is merged to `main`
+test('initialize example "angular"', async () => {
+  const cwd = getNewTmpDir();
+  const goal = '> Success! Initialized "angular" example in';
+
+  const { exitCode, stdout, stderr } = await execCli(
+    binaryPath,
+    ['init', 'angular'],
+    { cwd }
+  );
+
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
+  expect(stderr).toContain(goal);
+
+  expect(
+    fs.existsSync(path.join(cwd, 'angular', 'package.json')),
+    'package.json'
+  ).toBe(true);
+  expect(
+    fs.existsSync(path.join(cwd, 'angular', 'tsconfig.json')),
+    'tsconfig.json'
+  ).toBe(true);
+  expect(
+    fs.existsSync(path.join(cwd, 'angular', 'angular.json')),
+    'angular.json'
+  ).toBe(true);
+});
 
 test('fail to add a domain without a project', async () => {
   const output = await execCli(binaryPath, [
