@@ -14,6 +14,8 @@ describe('alias ls', () => {
     await expect(client.stdout).toOutput('dummy-19.app');
   });
 
+  describe.todo('--next');
+
   describe('--limit', () => {
     it('should list up to 2 aliases', async () => {
       useUser();
