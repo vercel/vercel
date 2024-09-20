@@ -2,12 +2,12 @@ import { describe, expect, it } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
 import { parse } from 'dotenv';
-import env from '../../../src/commands/env';
-import { setupUnitFixture } from '../../helpers/setup-unit-fixture';
-import { client } from '../../mocks/client';
-import { defaultProject, envs, useProject } from '../../mocks/project';
-import { useTeams } from '../../mocks/team';
-import { useUser } from '../../mocks/user';
+import env from '../../../../src/commands/env';
+import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
+import { client } from '../../../mocks/client';
+import { defaultProject, envs, useProject } from '../../../mocks/project';
+import { useTeams } from '../../../mocks/team';
+import { useUser } from '../../../mocks/user';
 
 describe('env', () => {
   describe('add', () => {
