@@ -5,6 +5,12 @@ import bisect from '../../../../src/commands/bisect';
 import { useDeployment } from '../../../mocks/deployment';
 
 describe('bisect', () => {
+  describe('--good');
+  describe('--bad');
+  describe('--path');
+  describe('--open');
+  describe('--run');
+
   it('should find the bad deployment', async () => {
     const user = useUser();
 
