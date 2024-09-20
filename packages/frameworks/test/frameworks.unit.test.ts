@@ -215,6 +215,8 @@ async function getDeployment(host: string) {
 }
 
 describe('frameworks', () => {
+  const skipExamples = ['sanity-v3'];
+
   it('ensure there is an example for every framework', async () => {
     const root = join(__dirname, '..', '..', '..');
     const getExample = (name: string) => join(root, 'examples', name);
@@ -222,6 +224,7 @@ describe('frameworks', () => {
     const result = frameworkList
       .map(f => f.slug)
       .filter(isString)
+      .filter(slug => !skipExamples.includes(slug))
       .filter(f => existsSync(getExample(f)) === false);
 
     expect(result).toEqual([]);

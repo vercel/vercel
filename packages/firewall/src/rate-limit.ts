@@ -101,29 +101,24 @@ export async function unstable_checkRateLimit(
       (process.env.RATE_LIMIT_SECRET || '')
   )}`;
 
-  console.info(`Checking rate limit for key ${fullRateLimitKey} at ${url}`);
-
   const rateLimitHeaders = new Headers({
     'x-vercel-rate-limit-api': rateLimitId,
     'x-vercel-rate-limit-key': fullRateLimitKey,
     'user-agent': 'Bot/Vercel Rate Limit Checker',
     'x-forwarded-for': requestHeaders.get('x-forwarded-for') || '',
     'x-real-ip': requestHeaders.get('x-real-ip') || '',
+    'x-vercel-protection-bypass':
+      process.env.VERCEL_AUTOMATION_BYPASS_SECRET || '',
   });
   for (const [key, value] of requestHeaders.entries()) {
     rateLimitHeaders.append(`x-rr-${key}`, value);
   }
 
-  const before = Date.now();
   const response = await fetch(url, {
     method: 'GET',
     headers: rateLimitHeaders,
     redirect: 'manual',
   });
-
-  console.warn(
-    `Rate limit response: ${response.status} in ${Date.now() - before}ms`
-  );
 
   if (response.status === 204) {
     return {

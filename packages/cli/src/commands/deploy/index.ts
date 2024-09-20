@@ -4,6 +4,7 @@ import {
   scanParentDirs,
 } from '@vercel/build-utils';
 import {
+  Dictionary,
   fileNameSymbol,
   VALID_ARCHIVE_FORMATS,
   VercelConfig,
@@ -83,6 +84,7 @@ export default async (client: Client): Promise<number> => {
 
   const flagsSpecification = getFlagsSpecification(deployCommand.options);
 
+  // #region Argument Parsing
   try {
     parsedArguments = parseArguments(client.argv.slice(2), flagsSpecification);
 
@@ -103,7 +105,9 @@ export default async (client: Client): Promise<number> => {
   if (parsedArguments.args[0] === deployCommand.name) {
     parsedArguments.args.shift();
   }
+  // #endregion
 
+  // #region Path validation
   let paths;
   if (parsedArguments.args.length > 0) {
     // If path is relative: resolve
@@ -119,7 +123,9 @@ export default async (client: Client): Promise<number> => {
   if (!pathValidation.valid) {
     return pathValidation.exitCode;
   }
+  // #endregion
 
+  // #region Config loading
   let localConfig = client.localConfig || readLocalConfig(paths[0]);
   if (localConfig) {
     const { version } = localConfig;
@@ -151,7 +157,9 @@ export default async (client: Client): Promise<number> => {
 
   let { path: cwd } = pathValidation;
   const autoConfirm = parsedArguments.flags['--yes'];
+  // #endregion
 
+  // #region Warning on flags
   // deprecate --name
   if (parsedArguments.flags['--name']) {
     output.print(
@@ -174,6 +182,7 @@ export default async (client: Client): Promise<number> => {
       )}\n`
     );
   }
+  // #endregion
 
   const target = parseTarget({
     output: output,
@@ -283,7 +292,7 @@ export default async (client: Client): Promise<number> => {
     throw new Error(`"org" is not defined`);
   }
 
-  // build `--prebuilt`
+  // #region Build `--prebuilt`
   let vercelOutputDir: string | undefined;
   if (parsedArguments.flags['--prebuilt']) {
     vercelOutputDir = join(cwd, '.vercel/output');
@@ -345,6 +354,7 @@ export default async (client: Client): Promise<number> => {
       return 1;
     }
   }
+  // #endregion
 
   // Set the `contextName` and `currentTeam` as specified by the
   // Project Settings, so that API calls happen with the proper scope
@@ -405,7 +415,7 @@ export default async (client: Client): Promise<number> => {
     );
   }
 
-  // build `env`
+  // #region Build deployment
   const isObject = (item: any) =>
     Object.prototype.toString.call(item) === '[object Object]';
 
@@ -444,7 +454,7 @@ export default async (client: Client): Promise<number> => {
     }
   }
 
-  // build `meta`
+  // #region Meta
   const meta = Object.assign(
     {},
     parseMeta(localConfig.meta),
@@ -452,7 +462,9 @@ export default async (client: Client): Promise<number> => {
   );
 
   const gitMetadata = await createGitMeta(cwd, output, project);
+  // #endregion
 
+  // #region Env vars validation
   // Merge dotenv config, `env` from vercel.json, and `--env` / `-e` arguments
   const deploymentEnv = Object.assign(
     {},
@@ -475,13 +487,15 @@ export default async (client: Client): Promise<number> => {
     error(errorToString(err));
     return 1;
   }
+  // #endregion
 
-  // build `regions`
+  // #region Regions
   const regionFlag = (parsedArguments.flags['--regions'] || '')
     .split(',')
     .map((s: string) => s.trim())
     .filter(Boolean);
   const regions = regionFlag.length > 0 ? regionFlag : localConfig.regions;
+  // #endregion
 
   const currentTeam = org?.type === 'team' ? org.id : undefined;
   const now = new Now({
@@ -509,8 +523,8 @@ export default async (client: Client): Promise<number> => {
 
     const createArgs: CreateOptions = {
       name,
-      env: deploymentEnv,
-      build: { env: deploymentBuildEnv },
+      env: deploymentEnv as Dictionary<string>,
+      build: { env: deploymentBuildEnv as Dictionary<string> },
       forceNew: parsedArguments.flags['--force'],
       withCache: parsedArguments.flags['--with-cache'],
       prebuilt: parsedArguments.flags['--prebuilt'],
@@ -826,10 +840,32 @@ function handleCreateDeployError(
   return error;
 }
 
+/**
+ * Adds missing environment variables from process.env to the provided env object.
+ * @param {Function} log - The logging function.
+ * @param {Object} env - The environment object to add missing variables to.
+ * @returns {Promise<void>} - A promise that resolves when all missing variables are added.
+ * @throws {Error} - If a missing variable is not found in the environment object or process.env.
+ * @example
+ * const log = (str) => console.log(str);
+ * const env = { "FOO": undefined, "BAR": "baz" };
+ * process.env["FOO"] = "fooValue";
+ * process.env["VOZ"] = "vozValue"; // not in `env`
+ *
+ * await addProcessEnv(log, env);
+ * assert(env["FOO"] === "fooValue"); // true
+ * assert(env["VOZ"] === undefined); // true, since it was not in `env`
+ *
+ * @example
+ * const log = (str) => console.log(str);
+ * const env = { "FOO": undefined, "BAR": "baz" };
+ *
+ * await addProcessEnv(log, env); // throws an error
+ */
 const addProcessEnv = async (
   log: (str: string) => void,
   env: typeof process.env
-) => {
+): Promise<void> => {
   let val;
 
   for (const key of Object.keys(env)) {
@@ -849,9 +885,9 @@ const addProcessEnv = async (
       env[key] = val.replace(/^@/, '\\@');
     } else {
       throw new Error(
-        `No value specified for env ${chalk.bold(
+        `No value specified for env variable ${chalk.bold(
           `"${chalk.bold(key)}"`
-        )} and it was not found in your env.`
+        )} and it was not found in your env. If you meant to specify an environment to deploy to, use ${param('--target')}`
       );
     }
   }

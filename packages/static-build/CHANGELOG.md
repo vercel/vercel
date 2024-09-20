@@ -1,5 +1,51 @@
 # @vercel/static-build
 
+## 2.5.25
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.47
+
+## 2.5.24
+
+### Patch Changes
+
+- Revert "Revert "Revert "Fix corepack `packageManager` detection on monorepos""" ([#12099](https://github.com/vercel/vercel/pull/12099))
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.46
+
+## 2.5.23
+
+### Patch Changes
+
+- Revert "Revert "Fix corepack `packageManager` detection on monorepos"" ([#11871](https://github.com/vercel/vercel/pull/11871))
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.45
+
+## 2.5.22
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.44
+
+## 2.5.21
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.43
+
+## 2.5.20
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.42
+
 ## 2.5.19
 
 ### Patch Changes

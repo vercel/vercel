@@ -151,7 +151,7 @@ function getRegionFromRequestId(requestId?: string): string | undefined {
  *
  * export function GET(request) {
  *   const details = geolocation(request);
- *   return Response.json(payload);
+ *   return Response.json(details);
  * }
  * ```
  */

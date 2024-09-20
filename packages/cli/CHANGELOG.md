@@ -1,5 +1,135 @@
 # vercel
 
+## 37.5.3
+
+### Patch Changes
+
+- Updated dependencies [[`f1904566e5c24919425fc2b6c8c84f25f3478e74`](https://github.com/vercel/vercel/commit/f1904566e5c24919425fc2b6c8c84f25f3478e74)]:
+  - @vercel/build-utils@8.4.3
+  - @vercel/node@3.2.15
+  - @vercel/static-build@2.5.25
+
+## 37.5.2
+
+### Patch Changes
+
+- [cli] Add note about epipebomb ([#12144](https://github.com/vercel/vercel/pull/12144))
+
+## 37.5.1
+
+### Patch Changes
+
+- Updated dependencies [[`f396f72b6bab0acf45522d25ee08c9899afdad40`](https://github.com/vercel/vercel/commit/f396f72b6bab0acf45522d25ee08c9899afdad40)]:
+  - @vercel/go@3.1.3
+
+## 37.5.0
+
+### Minor Changes
+
+- Support installing products from Vercel Marketplace via `vc install` ([#12127](https://github.com/vercel/vercel/pull/12127))
+
+### Patch Changes
+
+- [logs] tiny idomatic fixup ([#12094](https://github.com/vercel/vercel/pull/12094))
+
+- [cli] refactor getSubcommand to return original user input ([#12137](https://github.com/vercel/vercel/pull/12137))
+
+- Updated dependencies [[`67839368e71f27c93ca9aa664810ef64de4d4d9c`](https://github.com/vercel/vercel/commit/67839368e71f27c93ca9aa664810ef64de4d4d9c)]:
+  - @vercel/remix-builder@2.2.9
+
+## 37.4.2
+
+### Patch Changes
+
+- Updated dependencies [[`8e90f4156`](https://github.com/vercel/vercel/commit/8e90f415663226411ee6f294e30331a95806e53e)]:
+  - @vercel/build-utils@8.4.2
+  - @vercel/hydrogen@1.0.6
+  - @vercel/next@4.3.10
+  - @vercel/redwood@2.1.5
+  - @vercel/remix-builder@2.2.8
+  - @vercel/static-build@2.5.24
+  - @vercel/node@3.2.14
+
+## 37.4.1
+
+### Patch Changes
+
+- Fix gitBranch parameter for `vc env add` command ([#12085](https://github.com/vercel/vercel/pull/12085))
+
+- Updated dependencies [[`04e15410f`](https://github.com/vercel/vercel/commit/04e15410f09453c528c133d1432fd8b183c5097c)]:
+  - @vercel/build-utils@8.4.1
+  - @vercel/hydrogen@1.0.5
+  - @vercel/next@4.3.9
+  - @vercel/redwood@2.1.4
+  - @vercel/remix-builder@2.2.7
+  - @vercel/static-build@2.5.23
+  - @vercel/node@3.2.13
+
+## 37.4.0
+
+### Minor Changes
+
+- introduce using level to highlight build logs ([#12044](https://github.com/vercel/vercel/pull/12044))
+
+### Patch Changes
+
+- Combine Partial Prerendering lambdas for revalidation and dynamic resumes. ([#12064](https://github.com/vercel/vercel/pull/12064))
+
+- Added support for Partial Fallback Prerendering ([#12036](https://github.com/vercel/vercel/pull/12036))
+
+- Updated dependencies [[`b3540096a`](https://github.com/vercel/vercel/commit/b3540096a39dd8b24b250aa5ad808c8445b5f484), [`49c95b77a`](https://github.com/vercel/vercel/commit/49c95b77a2cea23c6f98c5e084dbe35d081b40bc), [`e7016f9b0`](https://github.com/vercel/vercel/commit/e7016f9b033e88a33a89bf90ae655069f687c72f)]:
+  - @vercel/next@4.3.8
+  - @vercel/build-utils@8.4.0
+  - @vercel/node@3.2.12
+  - @vercel/static-build@2.5.22
+
+## 37.3.0
+
+### Minor Changes
+
+- Support custom environments in `vc env rm` ([#12009](https://github.com/vercel/vercel/pull/12009))
+
+### Patch Changes
+
+- Add error for `vc deploy --env` with no value ([#12002](https://github.com/vercel/vercel/pull/12002))
+
+- Updated dependencies [[`40b7ee0d2`](https://github.com/vercel/vercel/commit/40b7ee0d297c212961279639d9c73d4fed2312f8), [`5ab983009`](https://github.com/vercel/vercel/commit/5ab98300958538fac5e154034eacd9267a79dc26), [`78a3be23e`](https://github.com/vercel/vercel/commit/78a3be23edff1e59a09a75a8adc2013a5a53fb1d)]:
+  - @vercel/build-utils@8.3.9
+  - @vercel/go@3.1.2
+  - @vercel/node@3.2.11
+  - @vercel/static-build@2.5.21
+
+## 37.2.1
+
+### Patch Changes
+
+- Fixes integration not found error when using `vercel install` ([#12035](https://github.com/vercel/vercel/pull/12035))
+
+## 37.2.0
+
+### Minor Changes
+
+- Add `vc install` and `vc integration add` commands ([#12033](https://github.com/vercel/vercel/pull/12033))
+
+### Patch Changes
+
+- [cli] Remove existing metrics gathering behavior ([#12026](https://github.com/vercel/vercel/pull/12026))
+
+- Remove redundant formatting on a few lines of output ([#12011](https://github.com/vercel/vercel/pull/12011))
+
+- Updated dependencies [[`06337ed0b`](https://github.com/vercel/vercel/commit/06337ed0bb1ab4becd1554642c162c75bdcc91c2), [`2fc9e6d81`](https://github.com/vercel/vercel/commit/2fc9e6d8104a3d6308873ef8dafa27c32f0b97be)]:
+  - @vercel/build-utils@8.3.8
+  - @vercel/node@3.2.10
+  - @vercel/static-build@2.5.20
+
+## 37.1.2
+
+### Patch Changes
+
+- Fix incorrect type for certs challenge-only flag ([#12018](https://github.com/vercel/vercel/pull/12018))
+
+- [vc help] add build command to help/--help ([#12016](https://github.com/vercel/vercel/pull/12016))
+
 ## 37.1.1
 
 ### Patch Changes

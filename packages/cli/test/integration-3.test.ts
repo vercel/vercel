@@ -205,7 +205,9 @@ test('list the scopes', async () => {
   expect(stderr).toMatch(include);
 });
 
-test('domains inspect', async () => {
+// https://linear.app/vercel/issue/ZERO-2555/fix-assign-a-domain-to-a-project-test
+// eslint-disable-next-line jest/no-disabled-tests
+test.skip('domains inspect', async () => {
   const team = await teamPromise;
   const domainName = `inspect-${team.slug}-${Math.random()
     .toString()

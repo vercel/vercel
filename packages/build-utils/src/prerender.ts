@@ -1,4 +1,4 @@
-import type { File, HasField } from './types';
+import type { File, HasField, Chain } from './types';
 import { Lambda } from './lambda';
 
 interface PrerenderOptions {
@@ -14,6 +14,7 @@ interface PrerenderOptions {
   sourcePath?: string;
   experimentalBypassFor?: HasField;
   experimentalStreamingLambdaPath?: string;
+  chain?: Chain;
 }
 
 export class Prerender {
@@ -30,6 +31,7 @@ export class Prerender {
   public sourcePath?: string;
   public experimentalBypassFor?: HasField;
   public experimentalStreamingLambdaPath?: string;
+  public chain?: Chain;
 
   constructor({
     expiration,
@@ -44,6 +46,7 @@ export class Prerender {
     sourcePath,
     experimentalBypassFor,
     experimentalStreamingLambdaPath,
+    chain,
   }: PrerenderOptions) {
     this.type = 'Prerender';
     this.expiration = expiration;
@@ -164,6 +167,34 @@ export class Prerender {
         );
       }
       this.experimentalStreamingLambdaPath = experimentalStreamingLambdaPath;
+    }
+
+    if (chain !== undefined) {
+      if (typeof chain !== 'object') {
+        throw new Error(
+          'The `chain` argument for `Prerender` must be an object.'
+        );
+      }
+
+      if (
+        !chain.headers ||
+        typeof chain.headers !== 'object' ||
+        Object.entries(chain.headers).some(
+          ([key, value]) => typeof key !== 'string' || typeof value !== 'string'
+        )
+      ) {
+        throw new Error(
+          `The \`chain.headers\` argument for \`Prerender\` must be an object with string key/values`
+        );
+      }
+
+      if (!chain.outputPath || typeof chain.outputPath !== 'string') {
+        throw new Error(
+          'The `chain.outputPath` argument for `Prerender` must be a string.'
+        );
+      }
+
+      this.chain = chain;
     }
   }
 }
