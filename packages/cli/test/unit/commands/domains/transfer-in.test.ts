@@ -1,4 +1,4 @@
-import { describe } from 'vitest';
+import { describe, it } from 'vitest';
 
 describe('domains transfer-in', () => {
   describe('[DOMAIN]', () => {
