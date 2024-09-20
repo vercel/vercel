@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 8.4.3
+
+### Patch Changes
+
+- Introduce new chain configuration types for Partial Prerendering ([#12063](https://github.com/vercel/vercel/pull/12063))
+
 ## 8.4.2
 
 ### Patch Changes
