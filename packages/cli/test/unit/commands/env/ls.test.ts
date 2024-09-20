@@ -1,3 +1,3 @@
 import { describe } from 'vitest';
 
-describe('env ls', () => {});
+describe.todo('env ls', () => {});

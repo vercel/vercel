@@ -1,3 +1,3 @@
 import { describe } from 'vitest';
 
-describe('domains add', () => {});
+describe.todo('domains add', () => {});

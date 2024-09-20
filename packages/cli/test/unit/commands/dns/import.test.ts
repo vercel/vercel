@@ -1,3 +1,3 @@
 import { describe } from 'vitest';
 
-describe('dns import', () => {});
+describe.todo('dns import', () => {});

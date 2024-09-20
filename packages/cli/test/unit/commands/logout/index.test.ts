@@ -1,3 +1,3 @@
 import { describe } from 'vitest';
 
-describe('logout', () => {});
+describe.todo('logout', () => {});
