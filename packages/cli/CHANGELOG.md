@@ -1,5 +1,16 @@
 # vercel
 
+## 37.5.4
+
+### Patch Changes
+
+- Change error printing to use standard Output methods ([#12010](https://github.com/vercel/vercel/pull/12010))
+
+- Updated dependencies [[`2dab096e952c25521bac2537039ed7ca15675095`](https://github.com/vercel/vercel/commit/2dab096e952c25521bac2537039ed7ca15675095)]:
+  - @vercel/build-utils@8.4.4
+  - @vercel/node@3.2.16
+  - @vercel/static-build@2.5.26
+
 ## 37.5.3
 
 ### Patch Changes
