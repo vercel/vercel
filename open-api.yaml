@@ -3011,6 +3011,7 @@ paths:
                           type: object
                         deletedAt:
                           type: number
+                          nullable: true
                         deploymentHostname:
                           type: string
                         name:
@@ -11662,47 +11663,49 @@ paths:
           content:
             application/json:
               schema:
-                properties:
-                  id:
-                    type: string
-                  createdAt:
-                    type: number
-                  ownerId:
-                    type: string
-                  slug:
-                    type: string
-                    description: >-
-                      Name for the Edge Config Names are not unique. Must start with an alphabetic character and can contain only alphanumeric characters and underscores).
-                  updatedAt:
-                    type: number
-                  digest:
-                    type: string
-                  transfer:
-                    properties:
-                      fromAccountId:
-                        type: string
-                      startedAt:
-                        type: number
-                      doneAt:
-                        nullable: true
-                        type: number
-                    required:
-                      - fromAccountId
-                      - startedAt
-                      - doneAt
-                    type: object
-                    description: >-
-                      Keeps track of the current state of the Edge Config while it gets transferred.
-                  schema:
-                    type: object
-                  sizeInBytes:
-                    type: number
-                  itemCount:
-                    type: number
-                required:
-                  - sizeInBytes
-                  - itemCount
-                type: object
+                items:
+                  properties:
+                    id:
+                      type: string
+                    createdAt:
+                      type: number
+                    ownerId:
+                      type: string
+                    slug:
+                      type: string
+                      description: >-
+                        Name for the Edge Config Names are not unique. Must start with an alphabetic character and can contain only alphanumeric characters and underscores).
+                    updatedAt:
+                      type: number
+                    digest:
+                      type: string
+                    transfer:
+                      properties:
+                        fromAccountId:
+                          type: string
+                        startedAt:
+                          type: number
+                        doneAt:
+                          nullable: true
+                          type: number
+                      required:
+                        - fromAccountId
+                        - startedAt
+                        - doneAt
+                      type: object
+                      description: >-
+                        Keeps track of the current state of the Edge Config while it gets transferred.
+                    schema:
+                      type: object
+                    sizeInBytes:
+                      type: number
+                    itemCount:
+                      type: number
+                  required:
+                    - sizeInBytes
+                    - itemCount
+                  type: object
+                type: array
                 description: List of all edge configs.
         '400':
           description: One of the provided values in the request query is invalid.
@@ -14786,6 +14789,7 @@ paths:
                       type: string
                       enum:
                         - self-served
+                        - integration
                   required:
                     - id
                     - deliveryFormat
@@ -14796,7 +14800,6 @@ paths:
                     - deletedAt
                     - updatedAt
                     - environments
-                    - secret
                   type: object
                 type: array
         '400':
@@ -34330,7 +34333,6 @@ paths:
           content:
             application/json:
               schema:
-                items:
                   properties:
                     alias:
                       type: string
@@ -34507,7 +34509,7 @@ paths:
                     - projectId
                     - uid
                   type: object
-                type: array
+                type: object
         '400':
           description: One of the provided values in the request query is invalid.
         '401':
