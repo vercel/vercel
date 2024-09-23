@@ -7,14 +7,14 @@ import { CancelDeploymentGitRepo1 } from "@vercel/sdk/models/operations/cancelde
 
 let value: CancelDeploymentGitRepo1 = {
   namespace: "<value>",
-  projectId: 8906.53,
+  projectId: 9853.79,
   type: "gitlab",
-  url: "https://infamous-fridge.org",
-  path: "/private",
+  url: "https://sniveling-extent.info",
+  path: "/home/user",
   defaultBranch: "<value>",
   name: "<value>",
   private: false,
-  ownerType: "user",
+  ownerType: "team",
 };
 ```
 

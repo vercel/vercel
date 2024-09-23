@@ -7,7 +7,7 @@ import { Ten } from "@vercel/sdk/models/operations/createrecord.js";
 
 let value: Ten = {
   name: "<value>",
-  type: "ALIAS",
+  type: "CNAME",
   ttl: 60,
   https: {
     priority: 10,

@@ -7,7 +7,7 @@ import { AuthUserBillingInvoiceItemsAnalyticsFrequency } from "@vercel/sdk/model
 
 let value: AuthUserBillingInvoiceItemsAnalyticsFrequency = {
   interval: "month",
-  intervalCount: 9308.4,
+  intervalCount: 6037.83,
 };
 ```
 

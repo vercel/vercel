@@ -5,7 +5,7 @@
 ```typescript
 import { RemoveProjectEnvResponseBodyType } from "@vercel/sdk/models/operations/removeprojectenv.js";
 
-let value: RemoveProjectEnvResponseBodyType = "system";
+let value: RemoveProjectEnvResponseBodyType = "plain";
 ```
 
 ## Values

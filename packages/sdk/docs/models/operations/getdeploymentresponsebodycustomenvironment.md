@@ -7,11 +7,6 @@ import { GetDeploymentResponseBodyCustomEnvironment } from "@vercel/sdk/models/o
 
 let value: GetDeploymentResponseBodyCustomEnvironment = {
   id: "<id>",
-  name: "<value>",
-  slug: "<value>",
-  type: "preview",
-  createdAt: 9602.57,
-  updatedAt: 8953.86,
 };
 ```
 

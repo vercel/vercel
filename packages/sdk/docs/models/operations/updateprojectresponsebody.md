@@ -10,9 +10,9 @@ import { UpdateProjectResponseBody } from "@vercel/sdk/models/operations/updatep
 let value: UpdateProjectResponseBody = {
   accountId: "<value>",
   crons: {
-    enabledAt: 2327.44,
-    disabledAt: 2371.73,
-    updatedAt: 6144.65,
+    enabledAt: 7712.25,
+    disabledAt: 121.71,
+    updatedAt: 3228.30,
     deploymentId: "<value>",
     definitions: [
       {
@@ -26,21 +26,21 @@ let value: UpdateProjectResponseBody = {
   id: "<id>",
   latestDeployments: [
     {
-      createdAt: 8395.13,
+      createdAt: 2295.67,
       createdIn: "<value>",
       creator: {
-        email: "Joyce.Armstrong@gmail.com",
+        email: "Myra22@yahoo.com",
         uid: "<value>",
-        username: "Mabel.Bernhard",
+        username: "Larue4",
       },
       deploymentHostname: "<value>",
       name: "<value>",
       id: "<id>",
-      plan: "pro",
+      plan: "enterprise",
       private: false,
-      readyState: "ERROR",
+      readyState: "BUILDING",
       type: "LAMBDAS",
-      url: "https://exotic-saving.com",
+      url: "https://well-lit-moment.com/",
       userId: "<value>",
       previewCommentsEnabled: false,
     },
@@ -49,21 +49,21 @@ let value: UpdateProjectResponseBody = {
   nodeVersion: "16.x",
   targets: {
     "key": {
-      createdAt: 120.36,
+      createdAt: 4567.04,
       createdIn: "<value>",
       creator: {
-        email: "Bettie.Wunsch@yahoo.com",
+        email: "Hannah_Frami75@gmail.com",
         uid: "<value>",
-        username: "Webster.Hirthe40",
+        username: "Lilla_White",
       },
       deploymentHostname: "<value>",
       name: "<value>",
       id: "<id>",
       plan: "pro",
       private: false,
-      readyState: "BUILDING",
+      readyState: "CANCELED",
       type: "LAMBDAS",
-      url: "https://portly-silver.info",
+      url: "https://limping-bathrobe.org/",
       userId: "<value>",
       previewCommentsEnabled: false,
     },

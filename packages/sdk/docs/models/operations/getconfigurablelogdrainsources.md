@@ -5,7 +5,7 @@
 ```typescript
 import { GetConfigurableLogDrainSources } from "@vercel/sdk/models/operations/getconfigurablelogdrain.js";
 
-let value: GetConfigurableLogDrainSources = "static";
+let value: GetConfigurableLogDrainSources = "firewall";
 ```
 
 ## Values

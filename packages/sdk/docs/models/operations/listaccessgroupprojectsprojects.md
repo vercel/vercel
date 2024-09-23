@@ -7,7 +7,7 @@ import { ListAccessGroupProjectsProjects } from "@vercel/sdk/models/operations/l
 
 let value: ListAccessGroupProjectsProjects = {
   projectId: "<value>",
-  role: "PROJECT_DEVELOPER",
+  role: "ADMIN",
   createdAt: "<value>",
   updatedAt: "<value>",
   project: {},

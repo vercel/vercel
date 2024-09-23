@@ -6,10 +6,14 @@
 import { CreateRecordRequestBody } from "@vercel/sdk/models/operations/createrecord.js";
 
 let value: CreateRecordRequestBody = {
-  name: "subdomain",
-  type: "NS",
+  name: "<value>",
+  type: "MX",
   ttl: 60,
-  value: "ns1.example.com",
+  https: {
+    priority: 10,
+    target: "host.example.com",
+    params: "alpn=h2,h3",
+  },
   comment: "used to verify ownership of domain",
 };
 ```

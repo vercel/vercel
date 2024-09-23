@@ -6,9 +6,9 @@
 import { BlobTotalAvgSizeInBytes } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: BlobTotalAvgSizeInBytes = {
-  price: 7275.47,
-  batch: 1897.53,
-  threshold: 2899.13,
+  price: 149.76,
+  batch: 4573.89,
+  threshold: 6443.97,
   hidden: false,
 };
 ```

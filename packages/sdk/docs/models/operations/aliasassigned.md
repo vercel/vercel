@@ -5,7 +5,7 @@
 ```typescript
 import { AliasAssigned } from "@vercel/sdk/models/operations/updateprojectdatacache.js";
 
-let value: AliasAssigned = 6625.27;
+let value: AliasAssigned = false;
 ```
 
 ## Supported Types

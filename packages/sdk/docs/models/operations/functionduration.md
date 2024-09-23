@@ -6,9 +6,9 @@
 import { FunctionDuration } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: FunctionDuration = {
-  price: 2646.19,
-  batch: 593.83,
-  threshold: 5755.34,
+  price: 7210.43,
+  batch: 2979.70,
+  threshold: 7092.34,
   hidden: false,
 };
 ```

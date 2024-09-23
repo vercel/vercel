@@ -7,7 +7,7 @@ The ID of the Git account of the user who requests access.
 ```typescript
 import { GitUserId } from "@vercel/sdk/models/operations/requestaccesstoteam.js";
 
-let value: GitUserId = 103053343;
+let value: GitUserId = "103053343";
 ```
 
 ## Supported Types

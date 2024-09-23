@@ -6,9 +6,9 @@
 import { PostgresComputeTime } from "@vercel/sdk/models/components/authuser.js";
 
 let value: PostgresComputeTime = {
-  price: 6770.45,
-  batch: 8237.18,
-  threshold: 4523.99,
+  price: 8974.33,
+  batch: 4188.92,
+  threshold: 9107.25,
   hidden: false,
 };
 ```

@@ -7,6 +7,12 @@ import { UpdateProjectDataCacheTrustedIps } from "@vercel/sdk/models/operations/
 
 let value: UpdateProjectDataCacheTrustedIps = {
   deploymentType: "production",
+  addresses: [
+    {
+      value: "<value>",
+    },
+  ],
+  protectionMode: "exclusive",
 };
 ```
 

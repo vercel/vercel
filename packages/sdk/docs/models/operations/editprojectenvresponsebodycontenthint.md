@@ -6,7 +6,7 @@
 import { EditProjectEnvResponseBodyContentHint } from "@vercel/sdk/models/operations/editprojectenv.js";
 
 let value: EditProjectEnvResponseBodyContentHint = {
-  type: "postgres-url-no-ssl",
+  type: "postgres-prisma-url",
   storeId: "<value>",
 };
 ```

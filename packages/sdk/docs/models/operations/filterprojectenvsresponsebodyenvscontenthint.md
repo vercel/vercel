@@ -6,7 +6,7 @@
 import { FilterProjectEnvsResponseBodyEnvsContentHint } from "@vercel/sdk/models/operations/filterprojectenvs.js";
 
 let value: FilterProjectEnvsResponseBodyEnvsContentHint = {
-  type: "postgres-prisma-url",
+  type: "redis-rest-api-url",
   storeId: "<value>",
 };
 ```

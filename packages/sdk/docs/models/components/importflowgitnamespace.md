@@ -5,7 +5,7 @@
 ```typescript
 import { ImportFlowGitNamespace } from "@vercel/sdk/models/components/authuser.js";
 
-let value: ImportFlowGitNamespace = 1000.02;
+let value: ImportFlowGitNamespace = "<value>";
 ```
 
 ## Supported Types

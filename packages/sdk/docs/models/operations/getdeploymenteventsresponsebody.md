@@ -9,12 +9,12 @@ Array of deployment logs for the provided query.
 import { GetDeploymentEventsResponseBody } from "@vercel/sdk/models/operations/getdeploymentevents.js";
 
 let value: GetDeploymentEventsResponseBody = {
-  type: "middleware-invocation",
-  created: 4148.57,
+  type: "delimiter",
+  created: 7049.48,
   payload: {
     deploymentId: "<value>",
     id: "<id>",
-    date: 4471.44,
+    date: 4186.37,
     serial: "<value>",
   },
 };

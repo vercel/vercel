@@ -6,10 +6,10 @@
 import { Proxy } from "@vercel/sdk/models/operations/getdeploymentevents.js";
 
 let value: Proxy = {
-  timestamp: 9854.92,
+  timestamp: 2646.50,
   method: "<value>",
-  host: "helpless-warming.net",
-  path: "/var",
+  host: "witty-paintwork.name",
+  path: "/opt/include",
   userAgent: [
     "<value>",
   ],

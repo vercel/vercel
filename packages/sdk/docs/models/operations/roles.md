@@ -5,9 +5,7 @@
 ```typescript
 import { Roles } from "@vercel/sdk/models/operations/patchteam.js";
 
-let value: Roles = {
-  accessGroupId: "<value>",
-};
+let value: Roles = "DEVELOPER";
 ```
 
 ## Supported Types

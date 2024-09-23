@@ -9,8 +9,8 @@ let value: Items = {
   id: "<id>",
   priceId: "<value>",
   productId: "<value>",
-  amount: 2436.23,
-  quantity: 9673.38,
+  amount: 4785.76,
+  quantity: 5751.11,
 };
 ```
 

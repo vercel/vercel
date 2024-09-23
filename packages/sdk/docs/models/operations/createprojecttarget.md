@@ -7,7 +7,9 @@ Deployment Target or Targets in which the ENV variable will be used
 ```typescript
 import { CreateProjectTarget } from "@vercel/sdk/models/operations/createproject.js";
 
-let value: CreateProjectTarget = "production";
+let value: CreateProjectTarget = [
+  "preview",
+];
 ```
 
 ## Supported Types

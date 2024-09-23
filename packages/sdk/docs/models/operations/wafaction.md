@@ -5,7 +5,7 @@
 ```typescript
 import { WafAction } from "@vercel/sdk/models/operations/getdeploymentevents.js";
 
-let value: WafAction = "challenge";
+let value: WafAction = "log";
 ```
 
 ## Values

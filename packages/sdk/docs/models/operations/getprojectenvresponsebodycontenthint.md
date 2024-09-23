@@ -6,11 +6,8 @@
 import { GetProjectEnvResponseBodyContentHint } from "@vercel/sdk/models/operations/getprojectenv.js";
 
 let value: GetProjectEnvResponseBodyContentHint = {
-  type: "integration-store-secret",
+  type: "postgres-host",
   storeId: "<value>",
-  integrationId: "<value>",
-  integrationProductId: "<value>",
-  integrationConfigurationId: "<value>",
 };
 ```
 

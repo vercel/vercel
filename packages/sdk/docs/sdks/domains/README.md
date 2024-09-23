@@ -702,7 +702,7 @@ async function run() {
   const result = await vercel.domains.update({
     domain: "alarming-nondisclosure.com",
     requestBody: {
-      op: "move-out",
+      op: "update",
     },
   });
   
@@ -731,7 +731,7 @@ async function run() {
   const res = await domainsUpdate(vercel, {
     domain: "alarming-nondisclosure.com",
     requestBody: {
-      op: "move-out",
+      op: "update",
     },
   });
 

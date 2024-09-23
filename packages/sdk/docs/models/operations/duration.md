@@ -5,7 +5,7 @@
 ```typescript
 import { Duration } from "@vercel/sdk/models/operations/createteam.js";
 
-let value: Duration = "forever";
+let value: Duration = "repeating";
 ```
 
 ## Values

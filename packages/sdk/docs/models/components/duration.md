@@ -5,7 +5,7 @@
 ```typescript
 import { Duration } from "@vercel/sdk/models/components/authuser.js";
 
-let value: Duration = "repeating";
+let value: Duration = "forever";
 ```
 
 ## Values
