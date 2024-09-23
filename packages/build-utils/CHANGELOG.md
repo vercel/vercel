@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 8.4.4
+
+### Patch Changes
+
+- Allow Node.js v22 behind env var feature flag ([#12159](https://github.com/vercel/vercel/pull/12159))
+
 ## 8.4.3
 
 ### Patch Changes
