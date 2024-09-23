@@ -10,9 +10,11 @@ beforeEach(() => {
 });
 
 describe('install', () => {
-  it('is an alias for "integration add"', async () => {
-    client.setArgv('install', 'acme');
-    await install(client);
-    expect(addSpy).toHaveBeenCalledWith(client, ['acme']);
+  describe('[integration]', () => {
+    it('is an alias for "integration add"', async () => {
+      client.setArgv('install', 'acme');
+      await install(client);
+      expect(addSpy).toHaveBeenCalledWith(client, ['acme']);
+    });
   });
 });
