@@ -4,7 +4,6 @@ import cmd from '../../util/output/cmd';
 import stamp from '../../util/output/stamp';
 import param from '../../util/output/param';
 import chars from '../../util/output/chars';
-import textInput from '../../util/input/text';
 import eraseLines from '../../util/output/erase-lines';
 import getUser from '../../util/get-user';
 import { getCommandName } from '../../util/pkg-name';
@@ -33,28 +32,6 @@ const domains = Array.from(
     'icloud.com',
   ])
 );
-
-const emailAutoComplete = (value: string, teamSlug: string) => {
-  const parts = value.split('@');
-
-  if (parts.length === 2 && parts[1].length > 0) {
-    const [, host] = parts;
-    let suggestion: string | false = false;
-
-    domains.unshift(teamSlug);
-    for (const domain of domains) {
-      if (domain.startsWith(host)) {
-        suggestion = domain.slice(host.length);
-        break;
-      }
-    }
-
-    domains.shift();
-    return suggestion;
-  }
-
-  return false;
-};
 
 export default async function invite(
   client: Client,
@@ -128,10 +105,9 @@ export default async function invite(
     email = '';
     try {
       // eslint-disable-next-line no-await-in-loop
-      email = await textInput({
-        label: `- ${inviteUserPrefix}`,
-        validateValue: validateEmail,
-        autoComplete: value => emailAutoComplete(value, currentTeam.slug),
+      email = await client.input.text({
+        message: `- ${inviteUserPrefix}`,
+        validate: validateEmail,
       });
     } catch (err: unknown) {
       if (!isError(err) || err.message !== 'USER_ABORT') {

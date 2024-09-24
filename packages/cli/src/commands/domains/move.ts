@@ -7,7 +7,6 @@ import Client from '../../util/client';
 import getScope from '../../util/get-scope';
 import moveOutDomain from '../../util/domains/move-out-domain';
 import isRootDomain from '../../util/is-root-domain';
-import textInput from '../../util/input/text';
 import param from '../../util/output/param';
 import getDomainAliases from '../../util/alias/get-domain-aliases';
 import getDomainByName from '../../util/domains/get-domain-by-name';
@@ -26,7 +25,7 @@ export default async function move(
 ) {
   const { output } = client;
   const { contextName, user } = await getScope(client);
-  const { domainName, destination } = await getArgs(args);
+  const { domainName, destination } = await getArgs(client, args);
   if (!isRootDomain(domainName)) {
     output.error(
       `Invalid domain name "${domainName}". Run ${getCommandName(
@@ -166,20 +165,20 @@ export default async function move(
   return 0;
 }
 
-async function getArgs(args: string[]) {
+async function getArgs(client: Client, args: string[]) {
   let [domainName, destination] = args;
 
   if (!domainName) {
-    domainName = await textInput({
-      label: `- Domain name: `,
-      validateValue: isRootDomain,
+    domainName = await client.input.text({
+      message: `- Domain name: `,
+      validate: isRootDomain,
     });
   }
 
   if (!destination) {
-    destination = await textInput({
-      label: `- Destination: `,
-      validateValue: (v: string) => Boolean(v && v.length > 0),
+    destination = await client.input.text({
+      message: `- Destination: `,
+      validate: (v: string) => Boolean(v && v.length > 0),
     });
   }
 
