@@ -74,47 +74,47 @@ describe('logs', () => {
       client.setArgv('logs', '-h');
       expect(await logs(client)).toEqual(2);
       expect(client.getFullOutput()).toMatchInlineSnapshot(`
-"
-  ▲ vercel logs url|deploymentId [options]
+        "
+          ▲ vercel logs url|deploymentId [options]
 
-  Display runtime logs for a deployment in ready state, from now and for 5
-  minutes at most.
+          Display runtime logs for a deployment in ready state, from now and for 5      
+          minutes at most.                                                              
 
-  Options:
+          Options:
 
-  -j,  --json  print each log line as a JSON object (compatible with JQ)
-
-
-  Global Options:
-
-       --cwd <DIR>            Sets the current working directory for a single
-                              run of a command
-  -d,  --debug                Debug mode (default off)
-  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory
-  -h,  --help                 Output usage information
-  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file
-       --no-color             No color mode (default off)
-  -S,  --scope                Set a custom scope
-  -t,  --token <TOKEN>        Login token
-  -v,  --version              Output the version number
+          -j,  --json  print each log line as a JSON object (compatible with JQ)        
 
 
-  Examples:
+          Global Options:
 
-  - Pretty print all the new runtime logs for the deployment DEPLOYMENT_URL from now on
+               --cwd <DIR>            Sets the current working directory for a single   
+                                      run of a command                                  
+          -d,  --debug                Debug mode (default off)                          
+          -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory            
+          -h,  --help                 Output usage information                          
+          -A,  --local-config <FILE>  Path to the local \`vercel.json\` file              
+               --no-color             No color mode (default off)                       
+          -S,  --scope                Set a custom scope                                
+          -t,  --token <TOKEN>        Login token                                       
+          -v,  --version              Output the version number                         
 
-    $ vercel logs DEPLOYMENT_URL
 
-  - Print all runtime logs for the deployment DEPLOYMENT_ID as json objects
+          Examples:
 
-    $ vercel logs DEPLOYMENT_ID --json
+          - Pretty print all the new runtime logs for the deployment DEPLOYMENT_URL from now on
 
-  - Filter runtime logs for warning with JQ third party tool
+            $ vercel logs DEPLOYMENT_URL
 
-    $ vercel logs DEPLOYMENT_ID --json | jq 'select(.level == "warning")'
+          - Print all runtime logs for the deployment DEPLOYMENT_ID as json objects
 
-"
-`);
+            $ vercel logs DEPLOYMENT_ID --json
+
+          - Filter runtime logs for warning with JQ third party tool
+
+            $ vercel logs DEPLOYMENT_ID --json | jq 'select(.level == "warning")'
+
+        "
+      `);
     });
 
     it('prints error when not providing deployement id or url', async () => {
