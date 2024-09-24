@@ -10,6 +10,7 @@ const runnersMap = new Map([
       max: 1,
       testScript: 'vitest-run',
       runners: ['ubuntu-latest', 'macos-14', 'windows-latest'],
+      nodeVersion: ['16', '18', '20'],
     },
   ],
   [
