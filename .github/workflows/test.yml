@@ -1,4 +1,4 @@
-name: Tests Node.js v16
+name: Tests
 
 on:
   push:
@@ -107,7 +107,7 @@ jobs:
           DD_ENV: ci
 
   summary:
-    name: Summary (Node 16)
+    name: Summary
     runs-on: ubuntu-latest
     timeout-minutes: 5
     if: always()
