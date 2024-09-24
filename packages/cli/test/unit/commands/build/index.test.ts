@@ -1426,4 +1426,9 @@ describe('build', () => {
       expect(Object.keys(env).includes('VERCEL_ANALYTICS_ID')).toEqual(true);
     });
   });
+
+  describe.todo('--prod');
+  describe.todo('--target');
+  describe.todo('--output');
+  describe.todo('--yes');
 });

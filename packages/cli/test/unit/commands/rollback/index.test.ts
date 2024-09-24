@@ -15,6 +15,9 @@ import { vi } from 'vitest';
 vi.setConfig({ testTimeout: 60000 });
 
 describe('rollback', () => {
+  describe.todo('--status');
+  describe.todo('--timeout');
+
   it('should error if timeout is invalid', async () => {
     const { cwd } = initRollbackTest();
     client.cwd = cwd;

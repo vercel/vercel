@@ -8,6 +8,12 @@ import { vi } from 'vitest';
 vi.setConfig({ testTimeout: 10000 });
 
 describe('login', () => {
+  describe.todo('[email or team id]');
+  describe.todo('--github');
+  describe.todo('--oob');
+  describe.todo('--gitlab');
+  describe.todo('--bitbucket');
+
   it('should not allow the `--token` flag', async () => {
     client.setArgv('login', '--token', 'foo');
     const exitCodePromise = login(client);
