@@ -25,4 +25,5 @@ describe('domains ls', () => {
       await expect(exitCodePromise).resolves.toEqual(0);
     });
   });
+  describe.todo('--next');
 });

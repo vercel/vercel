@@ -9,6 +9,10 @@ import git from '../../../../src/commands/git';
 import type { Project } from '@vercel-internals/types';
 
 describe('git connect', () => {
+  describe.todo('[git url]');
+  describe.todo('--yes');
+  describe.todo('--confirm');
+
   const fixture = (name: string) =>
     join(__dirname, '../../../fixtures/unit/commands/git/connect', name);
 

@@ -20,6 +20,15 @@ const fixture = (name: string) =>
   join(__dirname, '../../../fixtures/unit/commands/list', name);
 
 describe('list', () => {
+  describe.todo('[app]');
+  describe.todo('--meta');
+  describe.todo('--policy');
+  describe.todo('--environment');
+  describe.todo('--next');
+  describe.todo('--prod');
+  describe.todo('--yes');
+  describe.todo('--confirm');
+
   it('should get deployments from a project linked by a directory', async () => {
     const user = useUser();
     const teams = useTeams('team_dummy');
