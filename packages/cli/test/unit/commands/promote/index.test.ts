@@ -15,324 +15,343 @@ import { vi } from 'vitest';
 vi.setConfig({ testTimeout: 60000 });
 
 describe('promote', () => {
-  it('should error if timeout is invalid', async () => {
-    const { cwd } = initPromoteTest();
-    client.cwd = cwd;
-    client.setArgv('promote', '--yes', '--timeout', 'foo');
-    const exitCodePromise = promote(client);
+  describe.todo('[deployment id/url]', () => {
+    describe.todo('--status');
+    describe.todo('--timeout');
 
-    await expect(client.stderr).toOutput('Error: Invalid timeout "foo"');
-    await expect(exitCodePromise).resolves.toEqual(1);
-  });
+    it('should error if timeout is invalid', async () => {
+      const { cwd } = initPromoteTest();
+      client.cwd = cwd;
+      client.setArgv('promote', '--yes', '--timeout', 'foo');
+      const exitCodePromise = promote(client);
 
-  it('should error if invalid deployment ID', async () => {
-    const { cwd } = initPromoteTest();
-    client.cwd = cwd;
-    client.setArgv('promote', '????', '--yes');
-    const exitCodePromise = promote(client);
-
-    await expect(client.stderr).toOutput(
-      'Error: The provided argument "????" is not a valid deployment ID or URL'
-    );
-    await expect(exitCodePromise).resolves.toEqual(1);
-  });
-
-  it('should error if deployment not found', async () => {
-    const { cwd } = initPromoteTest();
-    client.cwd = cwd;
-    client.setArgv('promote', 'foo', '--yes');
-    const exitCodePromise = promote(client);
-
-    await expect(client.stderr).toOutput('Fetching deployment "foo" in ');
-    await expect(client.stderr).toOutput(
-      'Error: Error: Can\'t find the deployment "foo" under the context'
-    );
-
-    await expect(exitCodePromise).resolves.toEqual(1);
-  });
-
-  it('should show status when not promoting', async () => {
-    const { cwd } = initPromoteTest();
-    client.cwd = cwd;
-    client.setArgv('promote', '--yes');
-    const exitCodePromise = promote(client);
-
-    await expect(client.stderr).toOutput(
-      'Checking promotion status of vercel-promote'
-    );
-    await expect(client.stderr).toOutput('No deployment promotion in progress');
-
-    await expect(exitCodePromise).resolves.toEqual(0);
-  });
-
-  it('should promote by deployment id', async () => {
-    const { cwd, previousDeployment } = initPromoteTest();
-    client.cwd = cwd;
-    client.setArgv('promote', previousDeployment.id, '--yes');
-    const exitCodePromise = promote(client);
-
-    await expect(client.stderr).toOutput(
-      `Fetching deployment "${previousDeployment.id}" in ${previousDeployment.creator?.username}`
-    );
-    await expect(client.stderr).toOutput('Promote in progress');
-    await expect(client.stderr).toOutput(
-      `Success! ${chalk.bold('vercel-promote')} was promoted to ${
-        previousDeployment.url
-      } (${previousDeployment.id})`
-    );
-
-    await expect(exitCodePromise).resolves.toEqual(0);
-  });
-
-  it('should promote by deployment url', async () => {
-    const { cwd, previousDeployment } = initPromoteTest();
-    client.cwd = cwd;
-    client.setArgv('promote', previousDeployment.url, '--yes');
-    const exitCodePromise = promote(client);
-
-    await expect(client.stderr).toOutput(
-      `Fetching deployment "${previousDeployment.url}" in ${previousDeployment.creator?.username}`
-    );
-    await expect(client.stderr).toOutput('Promote in progress');
-    await expect(client.stderr).toOutput(
-      `Success! ${chalk.bold('vercel-promote')} was promoted to ${
-        previousDeployment.url
-      } (${previousDeployment.id})`
-    );
-
-    await expect(exitCodePromise).resolves.toEqual(0);
-  });
-
-  it('should fail to promote a preview deployment when user says no', async () => {
-    const { cwd, previousDeployment } = initPromoteTest({
-      deploymentTarget: 'preview',
+      await expect(client.stderr).toOutput('Error: Invalid timeout "foo"');
+      await expect(exitCodePromise).resolves.toEqual(1);
     });
-    client.cwd = cwd;
-    client.setArgv('promote', previousDeployment.url);
-    const exitCodePromise = promote(client);
 
-    await expect(client.stderr).toOutput(
-      `Fetching deployment "${previousDeployment.url}" in ${previousDeployment.creator?.username}`
-    );
-    await expect(client.stderr).toOutput(
-      '? This deployment is not a production deployment and cannot be directly \n' +
-        'promoted. A new deployment will be built using your production environment. Are \n' +
-        'you sure you want to continue? (y/N)'
-    );
+    it('should error if invalid deployment ID', async () => {
+      const { cwd } = initPromoteTest();
+      client.cwd = cwd;
+      client.setArgv('promote', '????', '--yes');
+      const exitCodePromise = promote(client);
 
-    // say "no" to the prompt
-    client.stdin.write('n\n');
-
-    await expect(client.stderr).toOutput('Error: Canceled');
-
-    await expect(exitCodePromise).resolves.toEqual(0);
-  });
-
-  it('should promote a preview deployment when user says yes', async () => {
-    const { cwd, previousDeployment } = initPromoteTest({
-      deploymentTarget: 'preview',
+      await expect(client.stderr).toOutput(
+        'Error: The provided argument "????" is not a valid deployment ID or URL'
+      );
+      await expect(exitCodePromise).resolves.toEqual(1);
     });
-    client.cwd = cwd;
-    client.setArgv('promote', previousDeployment.url);
-    const exitCodePromise = promote(client);
 
-    await expect(client.stderr).toOutput(
-      `Fetching deployment "${previousDeployment.url}" in ${previousDeployment.creator?.username}`
-    );
-    await expect(client.stderr).toOutput(
-      '? This deployment is not a production deployment and cannot be directly \n' +
-        'promoted. A new deployment will be built using your production environment. Are \n' +
-        'you sure you want to continue? (y/N)'
-    );
+    it('should error if deployment not found', async () => {
+      const { cwd } = initPromoteTest();
+      client.cwd = cwd;
+      client.setArgv('promote', 'foo', '--yes');
+      const exitCodePromise = promote(client);
 
-    // say "yes" to the prompt
-    client.stdin.write('y\n');
+      await expect(client.stderr).toOutput('Fetching deployment "foo" in ');
+      await expect(client.stderr).toOutput(
+        'Error: Error: Can\'t find the deployment "foo" under the context'
+      );
 
-    await expect(exitCodePromise).resolves.toEqual(0);
-  });
-
-  it('should promote a preview deployment with --yes', async () => {
-    const { cwd, previousDeployment } = initPromoteTest({
-      deploymentTarget: 'preview',
+      await expect(exitCodePromise).resolves.toEqual(1);
     });
-    client.cwd = cwd;
-    client.setArgv('promote', previousDeployment.url, '--yes');
-    const exitCodePromise = promote(client);
 
-    await expect(client.stderr).toOutput(
-      `Fetching deployment "${previousDeployment.url}" in ${previousDeployment.creator?.username}`
-    );
-    await expect(client.stderr).toOutput('Promote in progress');
-    await expect(client.stderr).toOutput(
-      `Success! ${chalk.bold('vercel-promote')} was promoted to ${
-        previousDeployment.url
-      } (${previousDeployment.id})`
-    );
+    it('should show status when not promoting', async () => {
+      const { cwd } = initPromoteTest();
+      client.cwd = cwd;
+      client.setArgv('promote', '--yes');
+      const exitCodePromise = promote(client);
 
-    await expect(exitCodePromise).resolves.toEqual(0);
-  });
+      await expect(client.stderr).toOutput(
+        'Checking promotion status of vercel-promote'
+      );
+      await expect(client.stderr).toOutput(
+        'No deployment promotion in progress'
+      );
 
-  it('should get status while promoting', async () => {
-    const { cwd, previousDeployment, project } = initPromoteTest({
-      promotePollCount: 10,
+      await expect(exitCodePromise).resolves.toEqual(0);
     });
-    client.cwd = cwd;
 
-    // start the promote
-    client.setArgv('promote', previousDeployment.id, '--yes');
-    promote(client);
+    it('should promote by deployment id', async () => {
+      const { cwd, previousDeployment } = initPromoteTest();
+      client.cwd = cwd;
+      client.setArgv('promote', previousDeployment.id, '--yes');
+      const exitCodePromise = promote(client);
 
-    // need to wait for the promote request to be accepted
-    await sleep(300);
+      await expect(client.stderr).toOutput(
+        `Fetching deployment "${previousDeployment.id}" in ${previousDeployment.creator?.username}`
+      );
+      await expect(client.stderr).toOutput('Promote in progress');
+      await expect(client.stderr).toOutput(
+        `Success! ${chalk.bold('vercel-promote')} was promoted to ${
+          previousDeployment.url
+        } (${previousDeployment.id})`
+      );
 
-    // get the status
-    client.setArgv('promote', '--yes');
-    const exitCodePromise = promote(client);
-
-    await expect(client.stderr).toOutput(
-      `Checking promotion status of ${project.name}`
-    );
-    await expect(client.stderr).toOutput(
-      `Success! ${chalk.bold('vercel-promote')} was promoted to ${
-        previousDeployment.url
-      } (${previousDeployment.id})`
-    );
-
-    await expect(exitCodePromise).resolves.toEqual(0);
-  });
-
-  it('should error if promote request fails', async () => {
-    const { cwd, previousDeployment } = initPromoteTest({
-      promotePollCount: 10,
-      promoteStatusCode: 500,
+      await expect(exitCodePromise).resolves.toEqual(0);
     });
-    client.cwd = cwd;
-    client.setArgv('promote', previousDeployment.id, '--yes');
-    const exitCodePromise = promote(client);
 
-    await expect(client.stderr).toOutput(
-      `Fetching deployment "${previousDeployment.id}" in ${previousDeployment.creator?.username}`
-    );
+    it('should promote by deployment url', async () => {
+      const { cwd, previousDeployment } = initPromoteTest();
+      client.cwd = cwd;
+      client.setArgv('promote', previousDeployment.url, '--yes');
+      const exitCodePromise = promote(client);
 
-    // we need to wait a super long time because fetch will return on 500
-    await expect(client.stderr).toOutput('Response Error (500)', 20000);
+      await expect(client.stderr).toOutput(
+        `Fetching deployment "${previousDeployment.url}" in ${previousDeployment.creator?.username}`
+      );
+      await expect(client.stderr).toOutput('Promote in progress');
+      await expect(client.stderr).toOutput(
+        `Success! ${chalk.bold('vercel-promote')} was promoted to ${
+          previousDeployment.url
+        } (${previousDeployment.id})`
+      );
 
-    await expect(exitCodePromise).resolves.toEqual(1);
-  });
-
-  it('should error if promote fails (no aliases)', async () => {
-    const { cwd, previousDeployment } = initPromoteTest({
-      promoteJobStatus: 'failed',
+      await expect(exitCodePromise).resolves.toEqual(0);
     });
-    client.cwd = cwd;
-    client.setArgv('promote', previousDeployment.id, '--yes');
-    const exitCodePromise = promote(client);
 
-    await expect(client.stderr).toOutput(
-      `Fetching deployment "${previousDeployment.id}" in ${previousDeployment.creator?.username}`
-    );
-    await expect(client.stderr).toOutput('Promote in progress');
-    await expect(client.stderr).toOutput(
-      `Error: Failed to remap all aliases to the requested deployment ${previousDeployment.url} (${previousDeployment.id})`
-    );
+    it('should fail to promote a preview deployment when user says no', async () => {
+      const { cwd, previousDeployment } = initPromoteTest({
+        deploymentTarget: 'preview',
+      });
+      client.cwd = cwd;
+      client.setArgv('promote', previousDeployment.url);
+      const exitCodePromise = promote(client);
 
-    await expect(exitCodePromise).resolves.toEqual(1);
-  });
+      await expect(client.stderr).toOutput(
+        `Fetching deployment "${previousDeployment.url}" in ${previousDeployment.creator?.username}`
+      );
+      await expect(client.stderr).toOutput(
+        '? This deployment is not a production deployment and cannot be directly \n' +
+          'promoted. A new deployment will be built using your production environment. Are \n' +
+          'you sure you want to continue? (y/N)'
+      );
 
-  it('should error if promote fails (with aliases)', async () => {
-    const { cwd, previousDeployment } = initPromoteTest({
-      promoteAliases: [
-        {
-          alias: { alias: 'foo', deploymentId: 'foo_123' },
-          status: 'completed',
-        },
-        {
-          alias: { alias: 'bar', deploymentId: 'bar_123' },
-          status: 'failed',
-        },
-      ],
-      promoteJobStatus: 'failed',
+      // say "no" to the prompt
+      client.stdin.write('n\n');
+
+      await expect(client.stderr).toOutput('Error: Canceled');
+
+      await expect(exitCodePromise).resolves.toEqual(0);
     });
-    client.cwd = cwd;
-    client.setArgv('promote', previousDeployment.id, '--yes');
-    const exitCodePromise = promote(client);
 
-    await expect(client.stderr).toOutput(
-      `Fetching deployment "${previousDeployment.id}" in ${previousDeployment.creator?.username}`
-    );
-    await expect(client.stderr).toOutput('Promote in progress');
-    await expect(client.stderr).toOutput(
-      `Error: Failed to remap all aliases to the requested deployment ${previousDeployment.url} (${previousDeployment.id})`
-    );
-    await expect(client.stderr).toOutput(
-      `  ${chalk.green('completed')}    foo (foo_123)`
-    );
-    await expect(client.stderr).toOutput(
-      `  ${chalk.red('failed')}       bar (bar_123)`
-    );
+    it('should promote a preview deployment when user says yes', async () => {
+      const { cwd, previousDeployment } = initPromoteTest({
+        deploymentTarget: 'preview',
+      });
+      client.cwd = cwd;
+      client.setArgv('promote', previousDeployment.url);
+      const exitCodePromise = promote(client);
 
-    await expect(exitCodePromise).resolves.toEqual(1);
-  });
+      await expect(client.stderr).toOutput(
+        `Fetching deployment "${previousDeployment.url}" in ${previousDeployment.creator?.username}`
+      );
+      await expect(client.stderr).toOutput(
+        '? This deployment is not a production deployment and cannot be directly \n' +
+          'promoted. A new deployment will be built using your production environment. Are \n' +
+          'you sure you want to continue? (y/N)'
+      );
 
-  it('should error if deployment times out', async () => {
-    const { cwd, previousDeployment } = initPromoteTest({
-      promotePollCount: 10,
+      // say "yes" to the prompt
+      client.stdin.write('y\n');
+
+      await expect(exitCodePromise).resolves.toEqual(0);
     });
-    client.cwd = cwd;
-    client.setArgv('promote', previousDeployment.id, '--yes', '--timeout', '1');
-    const exitCodePromise = promote(client);
 
-    await expect(client.stderr).toOutput(
-      `Fetching deployment "${previousDeployment.id}" in ${previousDeployment.creator?.username}`
-    );
-    await expect(client.stderr).toOutput('Promote in progress');
-    await expect(client.stderr).toOutput(
-      `The promotion exceeded its deadline - rerun ${chalk.bold(
-        `vercel promote ${previousDeployment.id}`
-      )} to try again`,
-      10000
-    );
+    it('should promote a preview deployment with --yes', async () => {
+      const { cwd, previousDeployment } = initPromoteTest({
+        deploymentTarget: 'preview',
+      });
+      client.cwd = cwd;
+      client.setArgv('promote', previousDeployment.url, '--yes');
+      const exitCodePromise = promote(client);
 
-    await expect(exitCodePromise).resolves.toEqual(1);
-  });
+      await expect(client.stderr).toOutput(
+        `Fetching deployment "${previousDeployment.url}" in ${previousDeployment.creator?.username}`
+      );
+      await expect(client.stderr).toOutput('Promote in progress');
+      await expect(client.stderr).toOutput(
+        `Success! ${chalk.bold('vercel-promote')} was promoted to ${
+          previousDeployment.url
+        } (${previousDeployment.id})`
+      );
 
-  it('should immediately exit after requesting promote', async () => {
-    const { cwd, previousDeployment } = initPromoteTest();
-    client.cwd = cwd;
-    client.setArgv('promote', previousDeployment.id, '--yes', '--timeout', '0');
-    const exitCodePromise = promote(client);
+      await expect(exitCodePromise).resolves.toEqual(0);
+    });
 
-    await expect(client.stderr).toOutput(
-      `Fetching deployment "${previousDeployment.id}" in ${previousDeployment.creator?.username}`
-    );
-    await expect(client.stderr).toOutput(
-      `Successfully requested promote of ${chalk.bold('vercel-promote')} to ${
-        previousDeployment.url
-      } (${previousDeployment.id})`
-    );
+    it('should get status while promoting', async () => {
+      const { cwd, previousDeployment, project } = initPromoteTest({
+        promotePollCount: 10,
+      });
+      client.cwd = cwd;
 
-    await expect(exitCodePromise).resolves.toEqual(0);
-  });
+      // start the promote
+      client.setArgv('promote', previousDeployment.id, '--yes');
+      promote(client);
 
-  it('should error if deployment belongs to different team', async () => {
-    const { cwd, previousDeployment } = initPromoteTest();
-    client.cwd = cwd;
-    previousDeployment.team = {
-      id: 'abc',
-      name: 'abc',
-      slug: 'abc',
-    };
-    client.setArgv('promote', previousDeployment.id, '--yes');
-    const exitCodePromise = promote(client);
+      // need to wait for the promote request to be accepted
+      await sleep(300);
 
-    await expect(client.stderr).toOutput(
-      `Fetching deployment "${previousDeployment.id}" in ${previousDeployment.creator?.username}`
-    );
-    await expect(client.stderr).toOutput(
-      'Error: Deployment belongs to a different team'
-    );
+      // get the status
+      client.setArgv('promote', '--yes');
+      const exitCodePromise = promote(client);
 
-    await expect(exitCodePromise).resolves.toEqual(1);
+      await expect(client.stderr).toOutput(
+        `Checking promotion status of ${project.name}`
+      );
+      await expect(client.stderr).toOutput(
+        `Success! ${chalk.bold('vercel-promote')} was promoted to ${
+          previousDeployment.url
+        } (${previousDeployment.id})`
+      );
+
+      await expect(exitCodePromise).resolves.toEqual(0);
+    });
+
+    it('should error if promote request fails', async () => {
+      const { cwd, previousDeployment } = initPromoteTest({
+        promotePollCount: 10,
+        promoteStatusCode: 500,
+      });
+      client.cwd = cwd;
+      client.setArgv('promote', previousDeployment.id, '--yes');
+      const exitCodePromise = promote(client);
+
+      await expect(client.stderr).toOutput(
+        `Fetching deployment "${previousDeployment.id}" in ${previousDeployment.creator?.username}`
+      );
+
+      // we need to wait a super long time because fetch will return on 500
+      await expect(client.stderr).toOutput('Response Error (500)', 20000);
+
+      await expect(exitCodePromise).resolves.toEqual(1);
+    });
+
+    it('should error if promote fails (no aliases)', async () => {
+      const { cwd, previousDeployment } = initPromoteTest({
+        promoteJobStatus: 'failed',
+      });
+      client.cwd = cwd;
+      client.setArgv('promote', previousDeployment.id, '--yes');
+      const exitCodePromise = promote(client);
+
+      await expect(client.stderr).toOutput(
+        `Fetching deployment "${previousDeployment.id}" in ${previousDeployment.creator?.username}`
+      );
+      await expect(client.stderr).toOutput('Promote in progress');
+      await expect(client.stderr).toOutput(
+        `Error: Failed to remap all aliases to the requested deployment ${previousDeployment.url} (${previousDeployment.id})`
+      );
+
+      await expect(exitCodePromise).resolves.toEqual(1);
+    });
+
+    it('should error if promote fails (with aliases)', async () => {
+      const { cwd, previousDeployment } = initPromoteTest({
+        promoteAliases: [
+          {
+            alias: { alias: 'foo', deploymentId: 'foo_123' },
+            status: 'completed',
+          },
+          {
+            alias: { alias: 'bar', deploymentId: 'bar_123' },
+            status: 'failed',
+          },
+        ],
+        promoteJobStatus: 'failed',
+      });
+      client.cwd = cwd;
+      client.setArgv('promote', previousDeployment.id, '--yes');
+      const exitCodePromise = promote(client);
+
+      await expect(client.stderr).toOutput(
+        `Fetching deployment "${previousDeployment.id}" in ${previousDeployment.creator?.username}`
+      );
+      await expect(client.stderr).toOutput('Promote in progress');
+      await expect(client.stderr).toOutput(
+        `Error: Failed to remap all aliases to the requested deployment ${previousDeployment.url} (${previousDeployment.id})`
+      );
+      await expect(client.stderr).toOutput(
+        `  ${chalk.green('completed')}    foo (foo_123)`
+      );
+      await expect(client.stderr).toOutput(
+        `  ${chalk.red('failed')}       bar (bar_123)`
+      );
+
+      await expect(exitCodePromise).resolves.toEqual(1);
+    });
+
+    it('should error if deployment times out', async () => {
+      const { cwd, previousDeployment } = initPromoteTest({
+        promotePollCount: 10,
+      });
+      client.cwd = cwd;
+      client.setArgv(
+        'promote',
+        previousDeployment.id,
+        '--yes',
+        '--timeout',
+        '1'
+      );
+      const exitCodePromise = promote(client);
+
+      await expect(client.stderr).toOutput(
+        `Fetching deployment "${previousDeployment.id}" in ${previousDeployment.creator?.username}`
+      );
+      await expect(client.stderr).toOutput('Promote in progress');
+      await expect(client.stderr).toOutput(
+        `The promotion exceeded its deadline - rerun ${chalk.bold(
+          `vercel promote ${previousDeployment.id}`
+        )} to try again`,
+        10000
+      );
+
+      await expect(exitCodePromise).resolves.toEqual(1);
+    });
+
+    it('should immediately exit after requesting promote', async () => {
+      const { cwd, previousDeployment } = initPromoteTest();
+      client.cwd = cwd;
+      client.setArgv(
+        'promote',
+        previousDeployment.id,
+        '--yes',
+        '--timeout',
+        '0'
+      );
+      const exitCodePromise = promote(client);
+
+      await expect(client.stderr).toOutput(
+        `Fetching deployment "${previousDeployment.id}" in ${previousDeployment.creator?.username}`
+      );
+      await expect(client.stderr).toOutput(
+        `Successfully requested promote of ${chalk.bold('vercel-promote')} to ${
+          previousDeployment.url
+        } (${previousDeployment.id})`
+      );
+
+      await expect(exitCodePromise).resolves.toEqual(0);
+    });
+
+    it('should error if deployment belongs to different team', async () => {
+      const { cwd, previousDeployment } = initPromoteTest();
+      client.cwd = cwd;
+      previousDeployment.team = {
+        id: 'abc',
+        name: 'abc',
+        slug: 'abc',
+      };
+      client.setArgv('promote', previousDeployment.id, '--yes');
+      const exitCodePromise = promote(client);
+
+      await expect(client.stderr).toOutput(
+        `Fetching deployment "${previousDeployment.id}" in ${previousDeployment.creator?.username}`
+      );
+      await expect(client.stderr).toOutput(
+        'Error: Deployment belongs to a different team'
+      );
+
+      await expect(exitCodePromise).resolves.toEqual(1);
+    });
   });
 });
 

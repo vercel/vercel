@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vitest } from 'vitest';
 
 import { client } from '../../../mocks/client';
 import domains from '../../../../src/commands/domains';
@@ -9,6 +9,7 @@ describe('domains transfer-in', () => {
   const username = 'UserName';
 
   beforeEach(() => {
+    vitest.useFakeTimers();
     client.reset();
 
     useUser({

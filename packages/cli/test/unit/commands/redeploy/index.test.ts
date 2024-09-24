@@ -9,6 +9,11 @@ import { useUser } from '../../../mocks/user';
 import { Deployment } from '@vercel-internals/types';
 
 describe('redeploy', () => {
+  describe('[deploymentId|deploymentName]', () => {
+    describe.todo('--yes');
+    describe.todo('--no-wait');
+  });
+
   it('should error if missing deployment url', async () => {
     client.setArgv('redeploy');
     const exitCodePromise = redeploy(client);

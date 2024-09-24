@@ -1,5 +1,5 @@
 import { describe, it } from 'vitest';
 
-describe('project', () => {
+describe('teams', () => {
   it.todo('errors when invoked without subcommand');
 });
