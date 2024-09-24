@@ -1,12 +1,25 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vitest, beforeEach, afterEach } from 'vitest';
 import { useUser } from '../../../mocks/user';
 import projects from '../../../../src/commands/project';
 import { client } from '../../../mocks/client';
 import { defaultProject, useProject } from '../../../mocks/project';
 
 describe('rm', () => {
+  beforeEach(() => {
+    client.reset();
+  
+
+    vitest.useFakeTimers();
+    const date = new Date(2024, 8, 19)
+    vitest.setSystemTime(date)
+  });
+
+  afterEach(() => {
+    vitest.useRealTimers();
+  });
+
   describe('[name]', () => {
-    it('should remove a project', async () => {
+    it.only('should remove a project', async () => {
       useUser();
       useProject({
         ...defaultProject,

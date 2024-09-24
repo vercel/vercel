@@ -4,7 +4,7 @@ export class DomainsTransferInTelemetryClient extends TelemetryClient {
   trackCliOptionCode(code: string | undefined) {
     if (code) {
       this.trackCliOption({
-        flag: 'transfer-in',
+        flag: 'code',
         value: this.redactedValue,
       });
     }

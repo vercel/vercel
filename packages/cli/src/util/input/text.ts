@@ -5,6 +5,7 @@ import ansiRegex from 'ansi-regex';
 // @ts-ignore
 import stripAnsi from 'strip-ansi';
 import eraseLines from '../output/erase-lines';
+import { ReadableTTY } from '@vercel-internals/types';
 
 const ESCAPES = {
   LEFT: '\u001B[D',
@@ -30,7 +31,7 @@ declare type TextParams = {
   abortSequences?: Set<string>;
   eraseSequences?: Set<string>;
   resolveChars?: Set<string>;
-  stdin?: NodeJS.ReadStream;
+  stdin?: NodeJS.ReadStream | ReadableTTY;
   stdout?: NodeJS.WriteStream;
   trailing?: string;
   validateKeypress?: (data: any, futureValue: string) => boolean;

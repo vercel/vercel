@@ -113,6 +113,10 @@ export class TelemetryEventStore {
     this.events.push(event);
   }
 
+  get readonlyEvents() {
+    return Array.from(this.events);
+  }
+  
   reset() {
     this.events = [];
   }

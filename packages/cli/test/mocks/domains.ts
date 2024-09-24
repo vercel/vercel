@@ -53,13 +53,16 @@ export function useDomains() {
 }
 
 export function useDomain(postfix: string) {
+  const domain = createDomain(postfix);
+
   client.scenario.get(
     `/v4/domains/${encodeURIComponent(`example-${postfix}.com`)}`,
     (req, res) => {
-      const domain = createDomain(postfix);
       res.json({
         domain,
       });
     }
   );
+
+  return domain;
 }
