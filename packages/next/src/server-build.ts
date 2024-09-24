@@ -52,6 +52,8 @@ import {
   getPostponeResumePathname,
   LambdaGroup,
   MAX_UNCOMPRESSED_LAMBDA_SIZE,
+  RenderingMode,
+  getPostponeResumeOutput,
 } from './utils';
 import {
   nodeFileTrace,
@@ -371,7 +373,13 @@ export async function serverBuild({
     }),
   ]);
 
-  const experimentalStreamingLambdaPaths = new Map<string, string>();
+  const experimentalStreamingLambdaPaths = new Map<
+    string,
+    {
+      pathname: string;
+      output: string;
+    }
+  >();
 
   if (hasLambdas) {
     const initialTracingLabel = 'Traced Next.js server files in';
@@ -1239,12 +1247,15 @@ export async function serverBuild({
           // If this isn't an omitted page, then we should add the link from the
           // page to the postpone resume lambda.
           if (!omittedPrerenderRoutes.has(pagePathname)) {
-            const key = getPostponeResumePathname(entryDirectory, pageName);
-            lambdas[key] = lambda;
+            const output = getPostponeResumeOutput(entryDirectory, pageName);
+            lambdas[output] = lambda;
 
             // We want to add the `experimentalStreamingLambdaPath` to this
             // output.
-            experimentalStreamingLambdaPaths.set(outputName, key);
+            experimentalStreamingLambdaPaths.set(outputName, {
+              pathname: getPostponeResumePathname(pageName),
+              output,
+            });
           }
 
           // For each static route that was generated, we should generate a
@@ -1252,24 +1263,28 @@ export async function serverBuild({
           // static route that is matched will not hit the rewrite rules.
           for (const [
             routePathname,
-            { srcRoute, experimentalPPR },
+            { srcRoute, renderingMode },
           ] of Object.entries(prerenderManifest.staticRoutes)) {
             // If the srcRoute doesn't match or this doesn't support
             // experimental partial prerendering, then we can skip this route.
-            if (srcRoute !== pagePathname || !experimentalPPR) continue;
+            if (
+              srcRoute !== pagePathname ||
+              renderingMode !== RenderingMode.PARTIALLY_STATIC
+            )
+              continue;
 
             // If this route is the same as the page route, then we can skip
             // it, because we've already added the lambda to the output.
             if (routePathname === pagePathname) continue;
 
-            const key = getPostponeResumePathname(
-              entryDirectory,
-              routePathname
-            );
-            lambdas[key] = lambda;
+            const output = getPostponeResumePathname(routePathname);
+            lambdas[output] = lambda;
 
             outputName = path.posix.join(entryDirectory, routePathname);
-            experimentalStreamingLambdaPaths.set(outputName, key);
+            experimentalStreamingLambdaPaths.set(outputName, {
+              pathname: getPostponeResumePathname(routePathname),
+              output,
+            });
           }
 
           continue;
@@ -1620,12 +1635,17 @@ export async function serverBuild({
   // This only applies to routes that do not have fallbacks enabled (these are
   // routes that have `dynamicParams =  false` defined.
   if (isAppPPREnabled) {
-    for (const { srcRoute, dataRoute, experimentalPPR } of Object.values(
+    for (const { srcRoute, dataRoute, renderingMode } of Object.values(
       prerenderManifest.staticRoutes
     )) {
       // Only apply this to the routes that support experimental PPR and
       // that also have their `dataRoute` and `srcRoute` defined.
-      if (!experimentalPPR || !dataRoute || !srcRoute) continue;
+      if (
+        renderingMode !== RenderingMode.PARTIALLY_STATIC ||
+        !dataRoute ||
+        !srcRoute
+      )
+        continue;
 
       // If the srcRoute is not omitted, then we don't need to do anything. This
       // is the indicator that a route should only have it's prerender defined

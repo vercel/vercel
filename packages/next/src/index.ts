@@ -93,6 +93,7 @@ import {
   getFunctionsConfigManifest,
   require_,
   getServerlessPages,
+  RenderingMode,
 } from './utils';
 
 export const version = 2;
@@ -1354,13 +1355,13 @@ export const build: BuildV2 = async buildOptions => {
      */
     const experimentalPPRRoutes = new Set<string>();
 
-    for (const [route, { experimentalPPR }] of [
+    for (const [route, { renderingMode }] of [
       ...Object.entries(prerenderManifest.staticRoutes),
       ...Object.entries(prerenderManifest.blockingFallbackRoutes),
       ...Object.entries(prerenderManifest.fallbackRoutes),
       ...Object.entries(prerenderManifest.omittedRoutes),
     ]) {
-      if (!experimentalPPR) continue;
+      if (renderingMode !== RenderingMode.PARTIALLY_STATIC) continue;
 
       experimentalPPRRoutes.add(route);
     }
