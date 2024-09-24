@@ -20,7 +20,7 @@ describe('domains mv', () => {
           const exitCodePromise = domains(client);
           await expect(client.stderr).toOutput(
             `Fetching domain example-northstar.com under ${username}
-    Error: You may not move your domain to your user account.`
+Error: You may not move your domain to your user account.`
           );
           await expect(exitCodePromise).resolves.toEqual(1);
         });
