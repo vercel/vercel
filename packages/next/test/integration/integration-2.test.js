@@ -462,7 +462,76 @@ it('should not generate lambdas that conflict with static index route in app wit
 });
 
 describe('PPR', () => {
-  it('should have the same lambda for revalidation and resume', async () => {
+  describe('legacy', () => {
+    it('should have the same lambda for revalidation and resume', async () => {
+      const {
+        buildResult: { output },
+      } = await runBuildLambda(path.join(__dirname, 'ppr-legacy'));
+
+      // Validate that there are only the two lambdas created.
+      const lambdas = new Set();
+      for (const key of Object.keys(output)) {
+        if (output[key].type === 'Lambda') {
+          lambdas.add(output[key]);
+        }
+      }
+
+      expect(lambdas.size).toBe(2);
+
+      // Validate that these two lambdas are the same.
+      expect(output['index']).toBeDefined();
+      expect(output['index'].type).toBe('Prerender');
+      expect(output['index'].lambda).toBeDefined();
+      expect(output['index'].lambda.type).toBe('Lambda');
+
+      expect(output['_next/postponed/resume/index']).toBeDefined();
+      expect(output['_next/postponed/resume/index'].type).toBe('Lambda');
+
+      expect(output['index'].lambda).toBe(
+        output['_next/postponed/resume/index']
+      );
+    });
+
+    it('should support basePath', async () => {
+      const {
+        buildResult: { output },
+      } = await runBuildLambda(path.join(__dirname, 'ppr-legacy-basepath'));
+
+      // Validate that there are only the two lambdas created.
+      const lambdas = new Set();
+      for (const key of Object.keys(output)) {
+        if (output[key].type === 'Lambda') {
+          lambdas.add(output[key]);
+        }
+      }
+
+      expect(lambdas.size).toBe(2);
+
+      // Validate that these two lambdas are the same.
+      expect(output['chat/index']).toBeDefined();
+      expect(output['chat/index'].type).toBe('Prerender');
+      expect(output['chat/index'].lambda).toBeDefined();
+      expect(output['chat/index'].lambda.type).toBe('Lambda');
+
+      expect(output['chat/_next/postponed/resume/index']).toBeDefined();
+      expect(output['chat/_next/postponed/resume/index'].type).toBe('Lambda');
+
+      expect(output['chat/index'].lambda).toBe(
+        output['chat/_next/postponed/resume/index']
+      );
+      expect(output['chat/index'].experimentalStreamingLambdaPath).toBe(
+        'chat/_next/postponed/resume/index'
+      );
+      expect(output['chat/index'].chain?.outputPath).toBe(
+        'chat/_next/postponed/resume/index'
+      );
+      expect(output['chat/index'].chain?.headers).toEqual({
+        'x-matched-path': '_next/postponed/resume/index',
+      });
+    });
+  });
+
+  it('should have the chain mirrored to the experimentalStreamingLambdaPath', async () => {
     const {
       buildResult: { output },
     } = await runBuildLambda(path.join(__dirname, 'ppr'));
@@ -477,15 +546,53 @@ describe('PPR', () => {
 
     expect(lambdas.size).toBe(2);
 
-    // Validate that these two lambdas are the same.
     expect(output['index']).toBeDefined();
     expect(output['index'].type).toBe('Prerender');
-    expect(output['index'].lambda).toBeDefined();
-    expect(output['index'].lambda.type).toBe('Lambda');
+    expect(output['index'].chain?.outputPath).toBe('index');
 
+    // TODO: remove the following once we have stabilized the chained responses
+    expect(output['index'].experimentalStreamingLambdaPath).toBe(
+      '_next/postponed/resume/index'
+    );
     expect(output['_next/postponed/resume/index']).toBeDefined();
-    expect(output['_next/postponed/resume/index'].type).toBe('Lambda');
+  });
 
-    expect(output['index'].lambda).toBe(output['_next/postponed/resume/index']);
+  it('should support basePath', async () => {
+    const {
+      buildResult: { output },
+    } = await runBuildLambda(path.join(__dirname, 'ppr-basepath'));
+
+    // Validate that there are only the two lambdas created.
+    const lambdas = new Set();
+    for (const key of Object.keys(output)) {
+      if (output[key].type === 'Lambda') {
+        lambdas.add(output[key]);
+      }
+    }
+
+    expect(lambdas.size).toBe(2);
+
+    // Validate that these two lambdas are the same.
+    expect(output['chat/index']).toBeDefined();
+    expect(output['chat/index'].type).toBe('Prerender');
+    expect(output['chat/index'].lambda).toBeDefined();
+    expect(output['chat/index'].lambda.type).toBe('Lambda');
+
+    expect(output['chat/index'].chain?.outputPath).toBe('chat/index');
+
+    // TODO: remove the following once we have stabilized the chained responses
+    expect(output['chat/index'].experimentalStreamingLambdaPath).toBe(
+      'chat/_next/postponed/resume/index'
+    );
+    expect(output['chat/_next/postponed/resume/index']).toBeDefined();
+    expect(output['chat/_next/postponed/resume/index'].type).toBe('Lambda');
+    expect(output['chat/_next/postponed/resume/index']).toBe(
+      output['chat/index'].lambda
+    );
+
+    expect(output['chat/index'].chain?.outputPath).toBe('chat/index');
+    expect(output['chat/index'].chain?.headers).toEqual({
+      'next-resume': '1',
+    });
   });
 });
