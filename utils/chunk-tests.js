@@ -148,7 +148,7 @@ async function getChunkedTests() {
           (chunk, chunkNumber, allChunks) => {
             return (
               Array.isArray(nodeVersion) ? nodeVersion : [nodeVersion]
-            ).map(nodeVersion => {
+            ).flatMap(nodeVersion => {
               return runners.map(runner => {
                 return {
                   runner,
