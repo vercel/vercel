@@ -146,23 +146,27 @@ async function getChunkedTests() {
         const sortedTestPaths = testPaths.sort((a, b) => a.localeCompare(b));
         return intoChunks(min, max, sortedTestPaths).flatMap(
           (chunk, chunkNumber, allChunks) => {
-            return runners.map(runner => {
-              return {
-                runner,
-                packagePath,
-                packageName,
-                scriptName,
-                testScript,
-                nodeVersion,
-                testPaths: chunk.map(testFile =>
-                  path.relative(
-                    path.join(__dirname, '../', packagePath),
-                    testFile
-                  )
-                ),
-                chunkNumber: chunkNumber + 1,
-                allChunksLength: allChunks.length,
-              };
+            return (
+              Array.isArray(nodeVersion) ? nodeVersion : [nodeVersion]
+            ).map(nodeVersion => {
+              return runners.map(runner => {
+                return {
+                  runner,
+                  packagePath,
+                  packageName,
+                  scriptName,
+                  testScript,
+                  nodeVersion,
+                  testPaths: chunk.map(testFile =>
+                    path.relative(
+                      path.join(__dirname, '../', packagePath),
+                      testFile
+                    )
+                  ),
+                  chunkNumber: chunkNumber + 1,
+                  allChunksLength: allChunks.length,
+                };
+              });
             });
           }
         );
