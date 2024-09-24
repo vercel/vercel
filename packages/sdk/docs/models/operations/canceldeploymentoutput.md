@@ -6,7 +6,7 @@
 import { CancelDeploymentOutput } from "@vercel/sdk/models/operations/canceldeployment.js";
 
 let value: CancelDeploymentOutput = {
-  path: "/etc/periodic",
+  path: "/lost+found",
   functionName: "<value>",
 };
 ```

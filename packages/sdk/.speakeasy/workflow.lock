@@ -1,9 +1,8 @@
-speakeasyVersion: 1.396.4
+speakeasyVersion: 1.402.0
 sources: {}
 targets:
     vercel:
         source: vercel-OAS
-        outLocation: /Users/ismael/Code/vercel/speakeasy/vercel/packages/sdk
 workflow:
     workflowVersion: 1.0.0
     speakeasyVersion: latest

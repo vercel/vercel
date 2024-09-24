@@ -6,9 +6,7 @@
 import { ListAliasesRequest } from "@vercel/sdk/models/operations/listaliases.js";
 
 let value: ListAliasesRequest = {
-  domain: [
-    "my-test-domain.com",
-  ],
+  domain: "my-test-domain.com",
   from: 1540095775951,
   limit: 10,
   projectId: "prj_12HKQaOmR5t5Uy6vdcQsNIiZgHGB",

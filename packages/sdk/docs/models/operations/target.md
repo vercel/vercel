@@ -7,7 +7,7 @@ Either not defined, `staging`, or `production`. If `staging`, a staging alias in
 ```typescript
 import { Target } from "@vercel/sdk/models/operations/createdeployment.js";
 
-let value: Target = "staging";
+let value: Target = "production";
 ```
 
 ## Values

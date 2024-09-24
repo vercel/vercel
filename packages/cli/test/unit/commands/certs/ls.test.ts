@@ -14,6 +14,8 @@ describe('certs ls', () => {
     await expect(exitCodePromise).resolves.toEqual(0);
   });
 
+  describe.todo('--next');
+
   describe('--limit', () => {
     it('should list up to 2 certs if limit set to 2', async () => {
       useUser();

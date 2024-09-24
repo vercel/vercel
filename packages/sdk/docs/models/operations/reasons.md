@@ -9,7 +9,7 @@ import { Reasons } from "@vercel/sdk/models/operations/deleteteam.js";
 
 let value: Reasons = {
   slug: "<value>",
-  description: "Re-contextualized responsive protocol",
+  description: "Programmable clear-thinking ability",
 };
 ```
 

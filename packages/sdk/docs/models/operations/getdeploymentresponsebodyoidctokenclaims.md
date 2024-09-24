@@ -5,9 +5,7 @@
 ```typescript
 import { GetDeploymentResponseBodyOidcTokenClaims } from "@vercel/sdk/models/operations/getdeployment.js";
 
-let value: GetDeploymentResponseBodyOidcTokenClaims = [
-  "<value>",
-];
+let value: GetDeploymentResponseBodyOidcTokenClaims = "<value>";
 ```
 
 ## Supported Types

@@ -8,8 +8,8 @@ Will be used to create an invoice item. The price must be in cents: 2000 for $20
 import { DeveloperExperiencePlatform } from "@vercel/sdk/models/components/authuser.js";
 
 let value: DeveloperExperiencePlatform = {
-  price: 5740.92,
-  quantity: 8795.22,
+  price: 9409.50,
+  quantity: 5756.34,
   hidden: false,
 };
 ```

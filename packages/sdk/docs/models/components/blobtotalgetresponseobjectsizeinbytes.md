@@ -6,9 +6,9 @@
 import { BlobTotalGetResponseObjectSizeInBytes } from "@vercel/sdk/models/components/authuser.js";
 
 let value: BlobTotalGetResponseObjectSizeInBytes = {
-  price: 8762.85,
-  batch: 1853.48,
-  threshold: 2323.83,
+  price: 6361.90,
+  batch: 780.75,
+  threshold: 3232.15,
   hidden: false,
 };
 ```

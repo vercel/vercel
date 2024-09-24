@@ -413,6 +413,12 @@ export type RemotePattern = {
    * Double `**` matches any number of path segments.
    */
   pathname?: string;
+
+  /**
+   * Can be literal query string such as `?v=1` or
+   * empty string meaning no query string.
+   */
+  search?: string;
 };
 
 export interface Images {

@@ -11,11 +11,11 @@ let value: CancelDeploymentGitRepo3 = {
   slug: "<value>",
   type: "bitbucket",
   workspaceUuid: "<value>",
-  path: "/sys",
+  path: "/etc/ppp",
   defaultBranch: "<value>",
   name: "<value>",
   private: false,
-  ownerType: "team",
+  ownerType: "user",
 };
 ```
 

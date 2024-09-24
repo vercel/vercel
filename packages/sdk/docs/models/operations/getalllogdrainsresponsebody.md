@@ -8,16 +8,15 @@ import { GetAllLogDrainsResponseBody } from "@vercel/sdk/models/operations/getal
 let value: GetAllLogDrainsResponseBody = {
   id: "<id>",
   deliveryFormat: "syslog",
-  url: "http://scary-sweater.com",
+  url: "https://those-allocation.biz",
   name: "<value>",
   ownerId: "<value>",
-  createdAt: 3719.19,
-  deletedAt: 4259.46,
-  updatedAt: 13.83,
+  createdAt: 3390.95,
+  deletedAt: 1887.32,
+  updatedAt: 8029.75,
   environments: [
-    "production",
+    "preview",
   ],
-  secret: "<value>",
 };
 ```
 
@@ -47,5 +46,5 @@ let value: GetAllLogDrainsResponseBody = {
 | `firstErrorTimestamp`                                                                                | *number*                                                                                             | :heavy_minus_sign:                                                                                   | N/A                                                                                                  |
 | `samplingRate`                                                                                       | *number*                                                                                             | :heavy_minus_sign:                                                                                   | N/A                                                                                                  |
 | `compression`                                                                                        | [operations.GetAllLogDrainsCompression](../../models/operations/getalllogdrainscompression.md)       | :heavy_minus_sign:                                                                                   | N/A                                                                                                  |
-| `secret`                                                                                             | *string*                                                                                             | :heavy_check_mark:                                                                                   | N/A                                                                                                  |
+| `secret`                                                                                             | *string*                                                                                             | :heavy_minus_sign:                                                                                   | N/A                                                                                                  |
 | `createdFrom`                                                                                        | [operations.GetAllLogDrainsCreatedFrom](../../models/operations/getalllogdrainscreatedfrom.md)       | :heavy_minus_sign:                                                                                   | N/A                                                                                                  |

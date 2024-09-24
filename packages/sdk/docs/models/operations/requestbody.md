@@ -7,7 +7,7 @@ import { RequestBody } from "@vercel/sdk/models/operations/recordevents.js";
 
 let value: RequestBody = {
   sessionId: "<value>",
-  source: "REMOTE",
+  source: "LOCAL",
   event: "HIT",
   hash: "12HKQaOmR5t5Uy6vdcQsNIiZgHGB",
   duration: 400,

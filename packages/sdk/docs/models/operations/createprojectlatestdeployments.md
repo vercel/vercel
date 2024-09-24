@@ -6,21 +6,21 @@
 import { CreateProjectLatestDeployments } from "@vercel/sdk/models/operations/createproject.js";
 
 let value: CreateProjectLatestDeployments = {
-  createdAt: 456.14,
+  createdAt: 4570.59,
   createdIn: "<value>",
   creator: {
-    email: "Corene24@hotmail.com",
+    email: "Henry.Carroll@hotmail.com",
     uid: "<value>",
-    username: "Marianne1",
+    username: "Margaret_Ratke",
   },
   deploymentHostname: "<value>",
   name: "<value>",
   id: "<id>",
   plan: "enterprise",
   private: false,
-  readyState: "CANCELED",
+  readyState: "BUILDING",
   type: "LAMBDAS",
-  url: "http://questionable-specialist.net",
+  url: "https://quarrelsome-quit.name",
   userId: "<value>",
   previewCommentsEnabled: false,
 };

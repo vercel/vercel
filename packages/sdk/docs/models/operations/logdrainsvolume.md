@@ -6,9 +6,9 @@
 import { LogDrainsVolume } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: LogDrainsVolume = {
-  price: 7412.32,
-  batch: 1201.2,
-  threshold: 9369.28,
+  price: 3591.07,
+  batch: 6166.18,
+  threshold: 9004.10,
   hidden: false,
 };
 ```

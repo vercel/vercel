@@ -6,8 +6,8 @@
 import { Period } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: Period = {
-  start: 4097.26,
-  end: 4218.19,
+  start: 8701.00,
+  end: 6081.72,
 };
 ```
 

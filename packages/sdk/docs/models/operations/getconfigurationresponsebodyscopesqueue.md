@@ -8,14 +8,14 @@ import { GetConfigurationResponseBodyScopesQueue } from "@vercel/sdk/models/oper
 let value: GetConfigurationResponseBodyScopesQueue = {
   scopes: {
     added: [
-      "read-write:integration-configuration",
+      "read-write:log-drain",
     ],
     upgraded: [
       "read-write:edge-config",
     ],
   },
   note: "<value>",
-  requestedAt: 4218.44,
+  requestedAt: 6844.99,
 };
 ```
 

@@ -6,9 +6,9 @@
 import { Artifacts } from "@vercel/sdk/models/components/authuser.js";
 
 let value: Artifacts = {
-  price: 7532.4,
-  batch: 4901.1,
-  threshold: 2358.34,
+  price: 2767.95,
+  batch: 1235.47,
+  threshold: 4630.44,
   hidden: false,
 };
 ```

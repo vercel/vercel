@@ -5,7 +5,7 @@
 ```typescript
 import { GetProjectsProjectsAliasAssigned } from "@vercel/sdk/models/operations/getprojects.js";
 
-let value: GetProjectsProjectsAliasAssigned = false;
+let value: GetProjectsProjectsAliasAssigned = 4287.96;
 ```
 
 ## Supported Types

@@ -6,7 +6,7 @@
 import { GetProjectEnvResponseBody } from "@vercel/sdk/models/operations/getprojectenv.js";
 
 let value: GetProjectEnvResponseBody = {
-  type: "secret",
+  type: "sensitive",
   key: "<key>",
   value: "<value>",
 };

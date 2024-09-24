@@ -5,7 +5,7 @@
 ```typescript
 import { CancelDeploymentCustomEnvironmentDeploymentsType } from "@vercel/sdk/models/operations/canceldeployment.js";
 
-let value: CancelDeploymentCustomEnvironmentDeploymentsType = "equals";
+let value: CancelDeploymentCustomEnvironmentDeploymentsType = "endsWith";
 ```
 
 ## Values

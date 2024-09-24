@@ -6,7 +6,6 @@
 import { CreateAuthTokenRequestBody } from "@vercel/sdk/models/operations/createauthtoken.js";
 
 let value: CreateAuthTokenRequestBody = {
-  type: "oauth2-token",
   name: "<value>",
 };
 ```

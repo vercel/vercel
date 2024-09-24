@@ -6,9 +6,9 @@
 import { Bandwidth } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: Bandwidth = {
-  price: 7963.97,
-  batch: 4330.77,
-  threshold: 2664.08,
+  price: 8429.21,
+  batch: 9832.03,
+  threshold: 4486.01,
   hidden: false,
 };
 ```

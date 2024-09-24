@@ -7,8 +7,8 @@ import { CreateProjectErl } from "@vercel/sdk/models/operations/createproject.js
 
 let value: CreateProjectErl = {
   algo: "fixed_window",
-  window: 1469.46,
-  limit: 8828.6,
+  window: 4939.58,
+  limit: 7781.72,
   keys: [
     "<value>",
   ],

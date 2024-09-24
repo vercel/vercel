@@ -256,6 +256,7 @@ async function run() {
     requestBody: {
       files: [
         {
+          data: "<value>",
           file: "folder/file.js",
         },
       ],

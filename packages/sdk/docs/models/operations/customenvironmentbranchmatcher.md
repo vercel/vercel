@@ -6,7 +6,7 @@
 import { CustomEnvironmentBranchMatcher } from "@vercel/sdk/models/operations/canceldeployment.js";
 
 let value: CustomEnvironmentBranchMatcher = {
-  type: "equals",
+  type: "endsWith",
   pattern: "<value>",
 };
 ```

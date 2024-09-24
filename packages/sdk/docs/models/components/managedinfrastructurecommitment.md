@@ -8,8 +8,8 @@ Will be used to create an invoice item. The price must be in cents: 2000 for $20
 import { ManagedInfrastructureCommitment } from "@vercel/sdk/models/components/authuser.js";
 
 let value: ManagedInfrastructureCommitment = {
-  price: 2443.76,
-  quantity: 2244.13,
+  price: 8012.73,
+  quantity: 502.91,
   hidden: false,
 };
 ```

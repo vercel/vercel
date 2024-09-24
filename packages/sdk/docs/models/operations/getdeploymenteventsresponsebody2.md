@@ -6,12 +6,12 @@
 import { GetDeploymentEventsResponseBody2 } from "@vercel/sdk/models/operations/getdeploymentevents.js";
 
 let value: GetDeploymentEventsResponseBody2 = {
-  type: "deployment-state",
-  created: 3485.19,
+  type: "fatal",
+  created: 2783.25,
   payload: {
     deploymentId: "<value>",
     id: "<id>",
-    date: 9372.85,
+    date: 1858.98,
     serial: "<value>",
   },
 };

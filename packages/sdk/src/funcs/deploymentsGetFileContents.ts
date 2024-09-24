@@ -4,12 +4,9 @@
 
 import * as z from "zod";
 import { VercelCore } from "../core.js";
-import {
-  encodeFormQuery as encodeFormQuery$,
-  encodeSimple as encodeSimple$,
-} from "../lib/encodings.js";
-import * as m$ from "../lib/matchers.js";
-import * as schemas$ from "../lib/schemas.js";
+import { encodeFormQuery, encodeSimple } from "../lib/encodings.js";
+import * as M from "../lib/matchers.js";
+import { safeParse } from "../lib/schemas.js";
 import { RequestOptions } from "../lib/sdks.js";
 import { extractSecurity, resolveGlobalSecurity } from "../lib/security.js";
 import { pathToFunc } from "../lib/url.js";
@@ -35,7 +32,7 @@ import { Result } from "../types/fp.js";
  * Allows to retrieve the content of a file by supplying the file identifier and the deployment unique identifier. The response body will contain a JSON response containing the contents of the file encoded as base64.
  */
 export async function deploymentsGetFileContents(
-  client$: VercelCore,
+  client: VercelCore,
   request: GetDeploymentFileContentsRequest,
   options?: RequestOptions,
 ): Promise<
@@ -50,70 +47,70 @@ export async function deploymentsGetFileContents(
     | ConnectionError
   >
 > {
-  const input$ = request;
+  const input = request;
 
-  const parsed$ = schemas$.safeParse(
-    input$,
-    (value$) => GetDeploymentFileContentsRequest$outboundSchema.parse(value$),
+  const parsed = safeParse(
+    input,
+    (value) => GetDeploymentFileContentsRequest$outboundSchema.parse(value),
     "Input validation failed",
   );
-  if (!parsed$.ok) {
-    return parsed$;
+  if (!parsed.ok) {
+    return parsed;
   }
-  const payload$ = parsed$.value;
-  const body$ = null;
+  const payload = parsed.value;
+  const body = null;
 
-  const pathParams$ = {
-    fileId: encodeSimple$("fileId", payload$.fileId, {
+  const pathParams = {
+    fileId: encodeSimple("fileId", payload.fileId, {
       explode: false,
       charEncoding: "percent",
     }),
-    id: encodeSimple$("id", payload$.id, {
+    id: encodeSimple("id", payload.id, {
       explode: false,
       charEncoding: "percent",
     }),
   };
 
-  const path$ = pathToFunc("/v7/deployments/{id}/files/{fileId}")(pathParams$);
+  const path = pathToFunc("/v7/deployments/{id}/files/{fileId}")(pathParams);
 
-  const query$ = encodeFormQuery$({
-    "path": payload$.path,
-    "slug": payload$.slug,
-    "teamId": payload$.teamId,
+  const query = encodeFormQuery({
+    "path": payload.path,
+    "slug": payload.slug,
+    "teamId": payload.teamId,
   });
 
-  const headers$ = new Headers({
+  const headers = new Headers({
     Accept: "*/*",
   });
 
-  const bearerToken$ = await extractSecurity(client$.options$.bearerToken);
-  const security$ = bearerToken$ == null ? {} : { bearerToken: bearerToken$ };
+  const secConfig = await extractSecurity(client._options.bearerToken);
+  const securityInput = secConfig == null ? {} : { bearerToken: secConfig };
   const context = {
     operationID: "getDeploymentFileContents",
     oAuth2Scopes: [],
-    securitySource: client$.options$.bearerToken,
+    securitySource: client._options.bearerToken,
   };
-  const securitySettings$ = resolveGlobalSecurity(security$);
+  const requestSecurity = resolveGlobalSecurity(securityInput);
 
-  const requestRes = client$.createRequest$(context, {
-    security: securitySettings$,
+  const requestRes = client._createRequest(context, {
+    security: requestSecurity,
     method: "GET",
-    path: path$,
-    headers: headers$,
-    query: query$,
-    body: body$,
-    timeoutMs: options?.timeoutMs || client$.options$.timeoutMs || -1,
+    path: path,
+    headers: headers,
+    query: query,
+    body: body,
+    timeoutMs: options?.timeoutMs || client._options.timeoutMs || -1,
   }, options);
   if (!requestRes.ok) {
     return requestRes;
   }
-  const request$ = requestRes.value;
+  const req = requestRes.value;
 
-  const doResult = await client$.do$(request$, {
+  const doResult = await client._do(req, {
     context,
     errorCodes: ["400", "401", "403", "404", "410", "4XX", "5XX"],
     retryConfig: options?.retries
-      || client$.options$.retryConfig,
+      || client._options.retryConfig,
     retryCodes: options?.retryCodes || ["429", "500", "502", "503", "504"],
   });
   if (!doResult.ok) {
@@ -121,7 +118,7 @@ export async function deploymentsGetFileContents(
   }
   const response = doResult.value;
 
-  const [result$] = await m$.match<
+  const [result] = await M.match<
     void,
     | SDKError
     | SDKValidationError
@@ -131,12 +128,12 @@ export async function deploymentsGetFileContents(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.fail([400, 401, 403, 404, 410, "4XX", "5XX"]),
-    m$.nil("2XX", z.void()),
+    M.fail([400, 401, 403, 404, 410, "4XX", "5XX"]),
+    M.nil("2XX", z.void()),
   )(response);
-  if (!result$.ok) {
-    return result$;
+  if (!result.ok) {
+    return result;
   }
 
-  return result$;
+  return result;
 }

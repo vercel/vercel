@@ -9,7 +9,7 @@ import { CustomEnvironmentVerification } from "@vercel/sdk/models/operations/can
 
 let value: CustomEnvironmentVerification = {
   type: "<value>",
-  domain: "bleak-forever.net",
+  domain: "specific-colonialism.info",
   value: "<value>",
   reason: "<value>",
 };

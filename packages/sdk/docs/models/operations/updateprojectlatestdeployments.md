@@ -6,21 +6,21 @@
 import { UpdateProjectLatestDeployments } from "@vercel/sdk/models/operations/updateproject.js";
 
 let value: UpdateProjectLatestDeployments = {
-  createdAt: 7836.48,
+  createdAt: 8735.57,
   createdIn: "<value>",
   creator: {
-    email: "Kaylie53@yahoo.com",
+    email: "Stanton.Lemke@yahoo.com",
     uid: "<value>",
-    username: "Buddy.Parker",
+    username: "Horace_Volkman72",
   },
   deploymentHostname: "<value>",
   name: "<value>",
   id: "<id>",
   plan: "enterprise",
   private: false,
-  readyState: "BUILDING",
+  readyState: "READY",
   type: "LAMBDAS",
-  url: "http://hospitable-chance.org",
+  url: "https://grown-rust.net",
   userId: "<value>",
   previewCommentsEnabled: false,
 };
