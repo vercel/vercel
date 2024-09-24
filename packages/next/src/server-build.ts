@@ -1721,7 +1721,7 @@ export async function serverBuild({
         ? [
             // Handle auto-adding current default locale to path based on
             // $wildcard
-            // This is split into two rules to avoid matching the `/index` route
+            // This is split into two rules to avoid matching the `/index` route as it causes issues with trailing slash redirect
             {
               src: `^${path.posix.join(
                 '/',
@@ -1736,7 +1736,7 @@ export async function serverBuild({
                 entryDirectory !== '.'
                   ? path.posix.join('/', entryDirectory)
                   : ''
-              }$wildcard`,
+              }$wildcard${trailingSlash ? '/' : ''}`,
               continue: true,
             },
             {

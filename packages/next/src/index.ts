@@ -2363,7 +2363,7 @@ export const build: BuildV2 = async buildOptions => {
                 entryDirectory !== '.'
                   ? path.posix.join('/', entryDirectory)
                   : ''
-              }$wildcard`,
+              }$wildcard${trailingSlash ? '/' : ''}`,
               continue: true,
             },
             {
