@@ -10,6 +10,12 @@ import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
 
 describe('pull', () => {
+  describe('[project-path]', () => {
+    describe.todo('--environment');
+    describe.todo('--git-branch');
+    describe.todo('--yes');
+  });
+
   it('should handle pulling', async () => {
     const cwd = setupUnitFixture('vercel-pull-next');
     useUser();

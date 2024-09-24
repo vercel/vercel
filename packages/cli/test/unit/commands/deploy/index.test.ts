@@ -678,4 +678,23 @@ describe('deploy', () => {
       `);
     expect(exitCode).toEqual(0);
   });
+
+  describe.todo('[project-path]');
+  describe.todo('--force');
+  describe.todo('--with-cache');
+  describe.todo('--public');
+  describe.todo('--env');
+  describe.todo('--build-env');
+  describe.todo('--meta');
+  describe.todo('--regions');
+  describe.todo('--prebuilt');
+  describe.todo('--archive');
+  describe.todo('--no-wait');
+  describe.todo('--skip-domain');
+  describe.todo('--yes');
+  describe.todo('--logs');
+  describe.todo('--name');
+  describe.todo('--no-clipboard');
+  describe.todo('--target');
+  describe.todo('--confirm');
 });

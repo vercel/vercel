@@ -13,6 +13,11 @@ import {
 import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
 
 describe('link', () => {
+  describe.todo('--repo');
+  describe.todo('--project');
+  describe.todo('--yes');
+  describe.todo('--confirm');
+
   it('should prompt for link', async () => {
     const user = useUser();
     const cwd = setupTmpDir();
