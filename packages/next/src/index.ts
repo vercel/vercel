@@ -2348,7 +2348,7 @@ export const build: BuildV2 = async buildOptions => {
         ? [
             // Handle auto-adding current default locale to path based on
             // $wildcard
-            // This is split into two rules to avoid matching the `/index` route
+           // This is split into two rules to avoid matching the `/index` route as it causes issues with trailing slash redirect
             {
               src: `^${path.posix.join(
                 '/',
