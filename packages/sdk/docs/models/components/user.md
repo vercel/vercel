@@ -8,10 +8,10 @@ Metadata for the User who generated the event.
 import { User } from "@vercel/sdk/models/components/userevent.js";
 
 let value: User = {
-  avatar: "https://loremflickr.com/640/480",
-  email: "Keely_McLaughlin49@hotmail.com",
+  avatar: "https://picsum.photos/seed/YqS02Ajfh/899/3391",
+  email: "Montana_Schamberger@gmail.com",
   uid: "<value>",
-  username: "Forrest_Swift",
+  username: "Helene.Ondricka",
 };
 ```
 

@@ -6,7 +6,7 @@
 import { GetConfigurationResponseBodyIntegrationsDisabledReason } from "@vercel/sdk/models/operations/getconfiguration.js";
 
 let value: GetConfigurationResponseBodyIntegrationsDisabledReason =
-  "account-plan-downgrade";
+  "feature-not-available";
 ```
 
 ## Values

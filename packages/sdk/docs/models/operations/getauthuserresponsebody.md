@@ -11,13 +11,13 @@ let value: GetAuthUserResponseBody = {
   user: {
     createdAt: 1630748523395,
     softBlock: {
-      blockedAt: 3189.17,
-      reason: "BLOCKED_FOR_PLATFORM_ABUSE",
+      blockedAt: 8506.28,
+      reason: "ENTERPRISE_TRIAL_ENDED",
     },
     billing: {
       period: {
-        start: 9745.89,
-        end: 1623.58,
+        start: 7399.37,
+        end: 7046.65,
       },
       plan: "hobby",
     },

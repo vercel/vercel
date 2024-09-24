@@ -5,7 +5,7 @@
 ```typescript
 import { ProgramType } from "@vercel/sdk/models/operations/createteam.js";
 
-let value: ProgramType = "agency";
+let value: ProgramType = "startup";
 ```
 
 ## Values

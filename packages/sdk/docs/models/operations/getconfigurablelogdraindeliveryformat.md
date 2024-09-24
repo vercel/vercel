@@ -5,7 +5,7 @@
 ```typescript
 import { GetConfigurableLogDrainDeliveryFormat } from "@vercel/sdk/models/operations/getconfigurablelogdrain.js";
 
-let value: GetConfigurableLogDrainDeliveryFormat = "json";
+let value: GetConfigurableLogDrainDeliveryFormat = "syslog";
 ```
 
 ## Values

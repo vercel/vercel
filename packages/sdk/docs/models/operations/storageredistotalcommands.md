@@ -6,9 +6,9 @@
 import { StorageRedisTotalCommands } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: StorageRedisTotalCommands = {
-  price: 5597.74,
-  batch: 5173.26,
-  threshold: 5646.67,
+  price: 7262.43,
+  batch: 4748.72,
+  threshold: 9040.51,
   hidden: false,
 };
 ```

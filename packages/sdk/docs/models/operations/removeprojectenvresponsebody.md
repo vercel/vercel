@@ -7,13 +7,11 @@ The environment variable was successfully removed
 ```typescript
 import { RemoveProjectEnvResponseBody } from "@vercel/sdk/models/operations/removeprojectenv.js";
 
-let value: RemoveProjectEnvResponseBody = [
-  {
-    type: "encrypted",
-    key: "<key>",
-    value: "<value>",
-  },
-];
+let value: RemoveProjectEnvResponseBody = {
+  type: "secret",
+  key: "<key>",
+  value: "<value>",
+};
 ```
 
 ## Supported Types

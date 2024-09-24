@@ -6,9 +6,9 @@
 import { FunctionDuration } from "@vercel/sdk/models/components/authuser.js";
 
 let value: FunctionDuration = {
-  price: 3451.38,
-  batch: 4753.25,
-  threshold: 3306,
+  price: 4884.33,
+  batch: 9801.59,
+  threshold: 4226.10,
   hidden: false,
 };
 ```

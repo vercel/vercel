@@ -35,7 +35,7 @@ async function run() {
       {
         sessionId: "<value>",
         source: "LOCAL",
-        event: "MISS",
+        event: "HIT",
         hash: "12HKQaOmR5t5Uy6vdcQsNIiZgHGB",
         duration: 400,
       },
@@ -68,7 +68,7 @@ async function run() {
       {
         sessionId: "<value>",
         source: "LOCAL",
-        event: "MISS",
+        event: "HIT",
         hash: "12HKQaOmR5t5Uy6vdcQsNIiZgHGB",
         duration: 400,
       },

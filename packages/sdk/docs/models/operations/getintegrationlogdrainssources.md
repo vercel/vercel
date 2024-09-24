@@ -7,7 +7,7 @@ The sources from which logs are currently being delivered to this log drain.
 ```typescript
 import { GetIntegrationLogDrainsSources } from "@vercel/sdk/models/operations/getintegrationlogdrains.js";
 
-let value: GetIntegrationLogDrainsSources = "firewall";
+let value: GetIntegrationLogDrainsSources = "external";
 ```
 
 ## Values

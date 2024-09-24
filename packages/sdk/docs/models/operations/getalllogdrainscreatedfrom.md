@@ -11,5 +11,5 @@ let value: GetAllLogDrainsCreatedFrom = "self-served";
 ## Values
 
 ```typescript
-"self-served"
+"self-served" | "integration"
 ```

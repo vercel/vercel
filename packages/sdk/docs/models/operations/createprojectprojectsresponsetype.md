@@ -5,7 +5,7 @@
 ```typescript
 import { CreateProjectProjectsResponseType } from "@vercel/sdk/models/operations/createproject.js";
 
-let value: CreateProjectProjectsResponseType = "plain";
+let value: CreateProjectProjectsResponseType = "sensitive";
 ```
 
 ## Values

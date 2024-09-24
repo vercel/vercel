@@ -6,9 +6,9 @@
 import { StorageRedisTotalBandwidthInBytes } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: StorageRedisTotalBandwidthInBytes = {
-  price: 3145.73,
-  batch: 9449.5,
-  threshold: 6573.19,
+  price: 252.32,
+  batch: 2715.50,
+  threshold: 4618.53,
   hidden: false,
 };
 ```

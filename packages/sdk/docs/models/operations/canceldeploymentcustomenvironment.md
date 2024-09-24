@@ -10,8 +10,8 @@ let value: CancelDeploymentCustomEnvironment = {
   name: "<value>",
   slug: "<value>",
   type: "preview",
-  createdAt: 599.44,
-  updatedAt: 5176.12,
+  createdAt: 8103.02,
+  updatedAt: 5775.90,
 };
 ```
 

@@ -6,9 +6,9 @@
 import { WafOwaspExcessBytes } from "@vercel/sdk/models/components/authuser.js";
 
 let value: WafOwaspExcessBytes = {
-  price: 6.64,
-  batch: 9100.73,
-  threshold: 9416.68,
+  price: 8926.40,
+  batch: 844.38,
+  threshold: 1654.83,
   hidden: false,
 };
 ```

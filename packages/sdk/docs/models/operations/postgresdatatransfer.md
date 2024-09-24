@@ -6,9 +6,9 @@
 import { PostgresDataTransfer } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: PostgresDataTransfer = {
-  price: 4973.57,
-  batch: 9804.86,
-  threshold: 873.82,
+  price: 5017.73,
+  batch: 8115.18,
+  threshold: 4760.84,
   hidden: false,
 };
 ```

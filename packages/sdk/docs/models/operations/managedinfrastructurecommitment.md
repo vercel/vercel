@@ -8,8 +8,8 @@ Will be used to create an invoice item. The price must be in cents: 2000 for $20
 import { ManagedInfrastructureCommitment } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: ManagedInfrastructureCommitment = {
-  price: 9233.06,
-  quantity: 6308.71,
+  price: 263.21,
+  quantity: 7188.79,
   hidden: false,
 };
 ```

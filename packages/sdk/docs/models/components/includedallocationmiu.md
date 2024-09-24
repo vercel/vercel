@@ -8,8 +8,8 @@ Will be used to create an invoice item. The price must be in cents: 2000 for $20
 import { IncludedAllocationMiu } from "@vercel/sdk/models/components/authuser.js";
 
 let value: IncludedAllocationMiu = {
-  price: 5200.81,
-  quantity: 1158.61,
+  price: 678.56,
+  quantity: 9522.16,
   hidden: false,
 };
 ```

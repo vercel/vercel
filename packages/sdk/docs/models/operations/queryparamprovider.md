@@ -5,7 +5,7 @@
 ```typescript
 import { QueryParamProvider } from "@vercel/sdk/models/operations/searchrepo.js";
 
-let value: QueryParamProvider = "bitbucket";
+let value: QueryParamProvider = "github";
 ```
 
 ## Values

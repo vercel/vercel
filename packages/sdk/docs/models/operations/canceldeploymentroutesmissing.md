@@ -6,8 +6,8 @@
 import { CancelDeploymentRoutesMissing } from "@vercel/sdk/models/operations/canceldeployment.js";
 
 let value: CancelDeploymentRoutesMissing = {
-  type: "host",
-  value: "<value>",
+  type: "cookie",
+  key: "<key>",
 };
 ```
 

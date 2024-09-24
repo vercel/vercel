@@ -9,9 +9,9 @@ let value: GetDeploymentCustomEnvironment1 = {
   id: "<id>",
   name: "<value>",
   slug: "<value>",
-  type: "preview",
-  createdAt: 3742.44,
-  updatedAt: 3742.96,
+  type: "development",
+  createdAt: 7833.97,
+  updatedAt: 5189.90,
 };
 ```
 

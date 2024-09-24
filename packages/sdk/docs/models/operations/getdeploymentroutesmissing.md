@@ -6,8 +6,8 @@
 import { GetDeploymentRoutesMissing } from "@vercel/sdk/models/operations/getdeployment.js";
 
 let value: GetDeploymentRoutesMissing = {
-  type: "host",
-  value: "<value>",
+  type: "cookie",
+  key: "<key>",
 };
 ```
 

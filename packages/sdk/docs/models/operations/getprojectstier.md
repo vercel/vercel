@@ -5,7 +5,7 @@
 ```typescript
 import { GetProjectsTier } from "@vercel/sdk/models/operations/getprojects.js";
 
-let value: GetProjectsTier = "advanced";
+let value: GetProjectsTier = "standard";
 ```
 
 ## Values

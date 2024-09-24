@@ -5,7 +5,7 @@
 ```typescript
 import { ResponseBodyFramework } from "@vercel/sdk/models/operations/getdeployment.js";
 
-let value: ResponseBodyFramework = "hugo";
+let value: ResponseBodyFramework = "astro";
 ```
 
 ## Values

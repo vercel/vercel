@@ -11,7 +11,7 @@ let value: GitRepo = {
   slug: "<value>",
   type: "bitbucket",
   workspaceUuid: "<value>",
-  path: "/boot",
+  path: "/usr/libexec",
   defaultBranch: "<value>",
   name: "<value>",
   private: false,

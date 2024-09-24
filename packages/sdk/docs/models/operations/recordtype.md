@@ -5,7 +5,7 @@
 ```typescript
 import { RecordType } from "@vercel/sdk/models/operations/updaterecord.js";
 
-let value: RecordType = "CAA";
+let value: RecordType = "NS";
 ```
 
 ## Values

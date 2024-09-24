@@ -5,7 +5,9 @@
 ```typescript
 import { CreatedTarget } from "@vercel/sdk/models/operations/createprojectenv.js";
 
-let value: CreatedTarget = "preview";
+let value: CreatedTarget = [
+  "preview",
+];
 ```
 
 ## Supported Types

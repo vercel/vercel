@@ -6,8 +6,8 @@
 import { GitAccount } from "@vercel/sdk/models/operations/searchrepo.js";
 
 let value: GitAccount = {
-  provider: "bitbucket",
-  namespaceId: 6675.93,
+  provider: "github-custom-host",
+  namespaceId: 6294.61,
 };
 ```
 

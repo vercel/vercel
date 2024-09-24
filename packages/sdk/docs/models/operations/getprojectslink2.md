@@ -11,7 +11,7 @@ let value: GetProjectsLink2 = {
       id: "<id>",
       name: "<value>",
       ref: "<value>",
-      url: "https://ornery-antechamber.net",
+      url: "https://insistent-disk.org/",
     },
   ],
 };

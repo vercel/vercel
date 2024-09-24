@@ -5,7 +5,7 @@
 ```typescript
 import { EdgeConfigItemValue } from "@vercel/sdk/models/components/edgeconfigitemvalue.js";
 
-let value: EdgeConfigItemValue = "<value>";
+let value: EdgeConfigItemValue = false;
 ```
 
 ## Supported Types

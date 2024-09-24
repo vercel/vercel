@@ -8,26 +8,26 @@ import { Subscriptions } from "@vercel/sdk/models/operations/createteam.js";
 let value: Subscriptions = {
   id: "<id>",
   trial: {
-    start: 1645.32,
-    end: 8138.8,
+    start: 2528.54,
+    end: 7578.24,
   },
   period: {
-    start: 5129.05,
-    end: 1403.84,
+    start: 0.74,
+    end: 2542.40,
   },
   frequency: {
-    interval: "year",
-    intervalCount: 2273.62,
+    interval: "week",
+    intervalCount: 5323.36,
   },
   discount: {
     id: "<id>",
     coupon: {
       id: "<id>",
       name: "<value>",
-      amountOff: 3476.98,
-      percentageOff: 688.52,
-      durationInMonths: 2426.37,
-      duration: "once",
+      amountOff: 1149.52,
+      percentageOff: 3936.30,
+      durationInMonths: 3755.49,
+      duration: "repeating",
     },
   },
   items: [
@@ -35,8 +35,8 @@ let value: Subscriptions = {
       id: "<id>",
       priceId: "<value>",
       productId: "<value>",
-      amount: 7310.65,
-      quantity: 3952.33,
+      amount: 6679.77,
+      quantity: 8408.30,
     },
   ],
 };

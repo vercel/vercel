@@ -11,11 +11,11 @@ let value: GetConfigurationResponseBodyIntegrationsScopesQueue = {
       "read:deployment",
     ],
     upgraded: [
-      "read:project",
+      "read:monitoring",
     ],
   },
   note: "<value>",
-  requestedAt: 1995.96,
+  requestedAt: 4116.26,
 };
 ```
 

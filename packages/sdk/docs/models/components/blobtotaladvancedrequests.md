@@ -6,9 +6,9 @@
 import { BlobTotalAdvancedRequests } from "@vercel/sdk/models/components/authuser.js";
 
 let value: BlobTotalAdvancedRequests = {
-  price: 1339.49,
-  batch: 7782.76,
-  threshold: 9310.77,
+  price: 7767.50,
+  batch: 9670.06,
+  threshold: 3875.67,
   hidden: false,
 };
 ```

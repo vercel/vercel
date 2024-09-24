@@ -5,7 +5,7 @@
 ```typescript
 import { GetDeploymentEventsResponseBodyWafAction } from "@vercel/sdk/models/operations/getdeploymentevents.js";
 
-let value: GetDeploymentEventsResponseBodyWafAction = "rate_limit";
+let value: GetDeploymentEventsResponseBodyWafAction = "deny";
 ```
 
 ## Values

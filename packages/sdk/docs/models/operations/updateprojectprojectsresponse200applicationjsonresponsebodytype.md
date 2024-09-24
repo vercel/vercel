@@ -6,7 +6,7 @@
 import { UpdateProjectProjectsResponse200ApplicationJSONResponseBodyType } from "@vercel/sdk/models/operations/updateproject.js";
 
 let value: UpdateProjectProjectsResponse200ApplicationJSONResponseBodyType =
-  "cookie";
+  "path";
 ```
 
 ## Values

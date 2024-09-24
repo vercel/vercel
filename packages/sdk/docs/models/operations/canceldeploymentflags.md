@@ -5,9 +5,9 @@
 ```typescript
 import { CancelDeploymentFlags } from "@vercel/sdk/models/operations/canceldeployment.js";
 
-let value: CancelDeploymentFlags = {
-  definitions: {},
-};
+let value: CancelDeploymentFlags = [
+  {},
+];
 ```
 
 ## Supported Types

@@ -6,7 +6,7 @@
 import { GetConfigurationResponseBodyIntegrationsUpgraded } from "@vercel/sdk/models/operations/getconfiguration.js";
 
 let value: GetConfigurationResponseBodyIntegrationsUpgraded =
-  "read-write:otel-endpoint";
+  "read-write:global-project-env-vars";
 ```
 
 ## Values

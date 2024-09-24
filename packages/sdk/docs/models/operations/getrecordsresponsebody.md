@@ -7,22 +7,7 @@ Successful response retrieving a list of paginated DNS records.
 ```typescript
 import { GetRecordsResponseBody } from "@vercel/sdk/models/operations/getrecords.js";
 
-let value: GetRecordsResponseBody = {
-  records: [
-    {
-      id: "<id>",
-      slug: "<value>",
-      name: "<value>",
-      type: "HTTPS",
-      value: "<value>",
-      creator: "<value>",
-      created: 9799.63,
-      updated: 9672.6,
-      createdAt: 4237.06,
-      updatedAt: 999.58,
-    },
-  ],
-};
+let value: GetRecordsResponseBody = "<value>";
 ```
 
 ## Supported Types
