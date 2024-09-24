@@ -113,6 +113,10 @@ export class TelemetryEventStore {
     this.events.push(event);
   }
 
+  reset() {
+    this.events = [];
+  }
+
   save() {
     if (this.isDebug) {
       this.output.debug(`${LogLabel} Flushing Events`);

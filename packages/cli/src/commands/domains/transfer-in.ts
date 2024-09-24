@@ -84,6 +84,7 @@ export default async function transferIn(
       : `Transfer now with 1yr renewal for ${chalk.bold(`$${price}`)}?`,
     false
   );
+
   if (!shouldTransfer) {
     return 0;
   }

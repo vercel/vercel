@@ -28,6 +28,17 @@ export function createDomain(k: string) {
   };
 }
 
+export function useDomainPrice(priceArg?: number) {
+  const price = priceArg || 1.0;
+
+  client.scenario.get('/v3/domains/price', (_req, res) => {
+    res.json({
+      price,
+      period: 2,
+    });
+  });
+}
+
 export function useDomains() {
   client.scenario.get('/v5/domains', (req, res) => {
     const limit = parseInt(req.query.limit);
