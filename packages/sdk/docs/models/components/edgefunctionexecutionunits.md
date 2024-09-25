@@ -6,9 +6,9 @@
 import { EdgeFunctionExecutionUnits } from "@vercel/sdk/models/components/authuser.js";
 
 let value: EdgeFunctionExecutionUnits = {
-  price: 8798.57,
-  batch: 5258.09,
-  threshold: 440.16,
+  price: 4543.34,
+  batch: 4473.23,
+  threshold: 8207.34,
   hidden: false,
 };
 ```

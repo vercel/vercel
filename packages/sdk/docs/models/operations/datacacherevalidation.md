@@ -6,9 +6,9 @@
 import { DataCacheRevalidation } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: DataCacheRevalidation = {
-  price: 8786.01,
-  batch: 1415.06,
-  threshold: 9974.37,
+  price: 7143.00,
+  batch: 4938.65,
+  threshold: 5818.89,
   hidden: false,
 };
 ```

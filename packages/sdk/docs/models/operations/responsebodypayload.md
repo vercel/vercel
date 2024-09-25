@@ -8,7 +8,7 @@ import { ResponseBodyPayload } from "@vercel/sdk/models/operations/getdeployment
 let value: ResponseBodyPayload = {
   deploymentId: "<value>",
   id: "<id>",
-  date: 6835.73,
+  date: 7275.44,
   serial: "<value>",
 };
 ```

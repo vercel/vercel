@@ -6,7 +6,7 @@
 import { ContentHint } from "@vercel/sdk/models/operations/updateprojectdatacache.js";
 
 let value: ContentHint = {
-  type: "postgres-password",
+  type: "postgres-user",
   storeId: "<value>",
 };
 ```

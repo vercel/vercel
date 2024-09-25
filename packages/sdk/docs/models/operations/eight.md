@@ -7,7 +7,7 @@ import { Eight } from "@vercel/sdk/models/operations/createrecord.js";
 
 let value: Eight = {
   name: "<value>",
-  type: "AAAA",
+  type: "NS",
   ttl: 60,
   value: "hello",
   comment: "used to verify ownership of domain",

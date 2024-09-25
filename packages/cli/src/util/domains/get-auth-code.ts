@@ -1,11 +1,12 @@
 import Client from '../client';
-import textInput from '../input/text';
 
-export default async function getAuthCode(client: Client) {
-  return textInput({
-    label: `- Transfer auth code: `,
-    validateValue: isValidAuthCode,
-    stdout: client.stderr
+export default async function getAuthCode(client: Client, code?: string) {
+  if (isValidAuthCode(code)) {
+    return code;
+  }
+  return client.input.text({
+    message: `- Transfer auth code: `,
+    validate: isValidAuthCode,
   });
 }
 

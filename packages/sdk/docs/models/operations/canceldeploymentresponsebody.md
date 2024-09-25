@@ -20,27 +20,27 @@ let value: CancelDeploymentResponseBody = {
   isInConcurrentBuildsQueue: false,
   projectSettings: {},
   aliasAssigned: false,
-  bootedAt: 968.04,
-  buildingAt: 6570.2,
+  bootedAt: 5371.70,
+  buildingAt: 2001.90,
   buildSkipped: false,
   creator: {
     uid: "<value>",
   },
   public: false,
-  status: "INITIALIZING",
+  status: "READY",
   id: "<id>",
-  createdAt: 6523.09,
+  createdAt: 6442.23,
   name: "<value>",
   meta: {
     "key": "<value>",
   },
-  readyState: "QUEUED",
+  readyState: "BUILDING",
   regions: [
     "<value>",
   ],
   type: "LAMBDAS",
-  url: "https://punctual-grove.info",
-  version: 375.65,
+  url: "https://basic-cruelty.com/",
+  version: 1932.36,
   createdIn: "<value>",
   ownerId: "<value>",
   plan: "hobby",
@@ -48,8 +48,6 @@ let value: CancelDeploymentResponseBody = {
   routes: [
     {
       src: "<value>",
-      continue: false,
-      middleware: 3518.93,
     },
   ],
 };

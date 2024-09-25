@@ -6,11 +6,9 @@
 import { ListAliasesProtectionBypass } from "@vercel/sdk/models/operations/listaliases.js";
 
 let value: ListAliasesProtectionBypass = {
-  createdAt: 7298.28,
-  lastUpdatedAt: 723.5,
-  lastUpdatedBy: "<value>",
-  access: "requested",
-  scope: "user",
+  createdAt: 8204.62,
+  createdBy: "<value>",
+  scope: "alias-protection-override",
 };
 ```
 

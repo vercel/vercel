@@ -8,14 +8,14 @@ import { GetConfigurationResponseBodyIntegrationsResponseScopesQueue } from "@ve
 let value: GetConfigurationResponseBodyIntegrationsResponseScopesQueue = {
   scopes: {
     added: [
-      "read-write:project",
+      "read-write:domain",
     ],
     upgraded: [
-      "read:deployment",
+      "read-write:edge-config",
     ],
   },
   note: "<value>",
-  requestedAt: 551.07,
+  requestedAt: 3730.55,
 };
 ```
 

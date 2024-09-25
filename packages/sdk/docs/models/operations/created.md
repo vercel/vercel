@@ -5,9 +5,7 @@
 ```typescript
 import { Created } from "@vercel/sdk/models/operations/createprojectenv.js";
 
-let value: Created = [
-  {},
-];
+let value: Created = {};
 ```
 
 ## Supported Types

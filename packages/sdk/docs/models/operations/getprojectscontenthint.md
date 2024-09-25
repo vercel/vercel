@@ -6,7 +6,7 @@
 import { GetProjectsContentHint } from "@vercel/sdk/models/operations/getprojects.js";
 
 let value: GetProjectsContentHint = {
-  type: "redis-rest-api-token",
+  type: "postgres-password",
   storeId: "<value>",
 };
 ```

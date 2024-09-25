@@ -7,7 +7,7 @@ import { AuthUserBillingInvoiceItemsIncludedAllocationMiuFrequency } from "@verc
 
 let value: AuthUserBillingInvoiceItemsIncludedAllocationMiuFrequency = {
   interval: "month",
-  intervalCount: 1786.35,
+  intervalCount: 6143.68,
 };
 ```
 

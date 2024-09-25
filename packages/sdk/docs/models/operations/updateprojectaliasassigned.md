@@ -5,7 +5,7 @@
 ```typescript
 import { UpdateProjectAliasAssigned } from "@vercel/sdk/models/operations/updateproject.js";
 
-let value: UpdateProjectAliasAssigned = false;
+let value: UpdateProjectAliasAssigned = 3735.11;
 ```
 
 ## Supported Types

@@ -66,7 +66,7 @@ export class EdgeConfigs extends ClientSDK {
   async list(
     request: GetEdgeConfigsRequest,
     options?: RequestOptions,
-  ): Promise<GetEdgeConfigsResponseBody> {
+  ): Promise<Array<GetEdgeConfigsResponseBody>> {
     return unwrapAsync(edgeConfigsList(
       this,
       request,

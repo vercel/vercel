@@ -8,7 +8,7 @@ import { InviteUserToTeamRequestBody } from "@vercel/sdk/models/operations/invit
 let value: InviteUserToTeamRequestBody = {
   uid: "kr1PsOIzqEL5Xg6M4VZcZosf",
   email: "john@example.com",
-  role: "VIEWER",
+  role: "CONTRIBUTOR",
   projects: [
     {
       projectId: "prj_ndlgr43fadlPyCtREAqxxdyFK",

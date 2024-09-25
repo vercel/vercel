@@ -7,10 +7,10 @@ import { ResponseBodyGitRepo } from "@vercel/sdk/models/operations/getdeployment
 
 let value: ResponseBodyGitRepo = {
   namespace: "<value>",
-  projectId: 5124.52,
+  projectId: 9421.85,
   type: "gitlab",
-  url: "http://luxurious-representative.info",
-  path: "/usr",
+  url: "https://torn-pecan.info",
+  path: "/root",
   defaultBranch: "<value>",
   name: "<value>",
   private: false,

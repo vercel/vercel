@@ -9,9 +9,9 @@ let value: ResponseBodyCustomEnvironment = {
   id: "<id>",
   name: "<value>",
   slug: "<value>",
-  type: "development",
-  createdAt: 6801.16,
-  updatedAt: 2378.07,
+  type: "preview",
+  createdAt: 4382.56,
+  updatedAt: 2027.96,
 };
 ```
 

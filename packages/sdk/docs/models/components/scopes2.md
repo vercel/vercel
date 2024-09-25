@@ -11,7 +11,7 @@ let value: Scopes2 = {
   type: "team",
   teamId: "<value>",
   origin: "passkey",
-  createdAt: 7737.11,
+  createdAt: 232.37,
 };
 ```
 

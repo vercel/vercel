@@ -8,8 +8,8 @@ Will be used to create an invoice item. The price must be in cents: 2000 for $20
 import { ConcurrentBuilds } from "@vercel/sdk/models/components/authuser.js";
 
 let value: ConcurrentBuilds = {
-  price: 9384.12,
-  quantity: 4797.07,
+  price: 9616.06,
+  quantity: 6502.00,
   hidden: false,
 };
 ```

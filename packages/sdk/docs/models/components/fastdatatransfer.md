@@ -6,9 +6,9 @@
 import { FastDataTransfer } from "@vercel/sdk/models/components/authuser.js";
 
 let value: FastDataTransfer = {
-  price: 2667.88,
-  batch: 4301.16,
-  threshold: 1995.29,
+  price: 524.07,
+  batch: 9101.31,
+  threshold: 5344.32,
   hidden: false,
 };
 ```

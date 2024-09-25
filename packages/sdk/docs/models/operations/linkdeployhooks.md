@@ -9,7 +9,7 @@ let value: LinkDeployHooks = {
   id: "<id>",
   name: "<value>",
   ref: "<value>",
-  url: "https://useful-bonnet.org",
+  url: "https://overcooked-ravioli.biz",
 };
 ```
 

@@ -6,9 +6,9 @@
 import { WafOwaspRequests } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: WafOwaspRequests = {
-  price: 2440.32,
-  batch: 385.57,
-  threshold: 9639.76,
+  price: 3796.66,
+  batch: 5715.50,
+  threshold: 9835.55,
   hidden: false,
 };
 ```

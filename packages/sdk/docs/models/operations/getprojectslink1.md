@@ -11,7 +11,7 @@ let value: GetProjectsLink1 = {
       id: "<id>",
       name: "<value>",
       ref: "<value>",
-      url: "https://right-damage.org",
+      url: "https://dependent-guide.org/",
     },
   ],
 };

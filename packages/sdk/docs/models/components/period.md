@@ -6,8 +6,8 @@
 import { Period } from "@vercel/sdk/models/components/authuser.js";
 
 let value: Period = {
-  start: 2295.67,
-  end: 8493.2,
+  start: 2946.50,
+  end: 8490.29,
 };
 ```
 

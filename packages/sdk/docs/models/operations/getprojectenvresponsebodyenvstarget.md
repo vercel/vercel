@@ -5,7 +5,9 @@
 ```typescript
 import { GetProjectEnvResponseBodyEnvsTarget } from "@vercel/sdk/models/operations/getprojectenv.js";
 
-let value: GetProjectEnvResponseBodyEnvsTarget = "preview";
+let value: GetProjectEnvResponseBodyEnvsTarget = [
+  "production",
+];
 ```
 
 ## Supported Types

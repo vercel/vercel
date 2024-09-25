@@ -6,10 +6,10 @@
 import { ResponseBodyGitSource } from "@vercel/sdk/models/operations/getdeployment.js";
 
 let value: ResponseBodyGitSource = {
-  type: "github",
+  type: "custom",
   ref: "<value>",
   sha: "<value>",
-  repoId: 5023.89,
+  gitUrl: "<value>",
 };
 ```
 

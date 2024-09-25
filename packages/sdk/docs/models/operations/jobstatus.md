@@ -5,7 +5,7 @@
 ```typescript
 import { JobStatus } from "@vercel/sdk/models/operations/updateprojectdatacache.js";
 
-let value: JobStatus = "pending";
+let value: JobStatus = "failed";
 ```
 
 ## Values

@@ -7,7 +7,11 @@ The environment variable was successfully edited
 ```typescript
 import { EditProjectEnvResponseBody } from "@vercel/sdk/models/operations/editprojectenv.js";
 
-let value: EditProjectEnvResponseBody = {};
+let value: EditProjectEnvResponseBody = {
+  type: "encrypted",
+  key: "<key>",
+  value: "<value>",
+};
 ```
 
 ## Supported Types

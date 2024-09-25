@@ -6,12 +6,12 @@ import getScope from '../../util/get-scope';
 import param from '../../util/output/param';
 import transferInDomain from '../../util/domains/transfer-in-domain';
 import stamp from '../../util/output/stamp';
+import getAuthCode from '../../util/domains/get-auth-code';
 import getDomainPrice from '../../util/domains/get-domain-price';
 import checkTransfer from '../../util/domains/check-transfer';
 import confirm from '../../util/input/confirm';
 import isRootDomain from '../../util/is-root-domain';
 import { getCommandName } from '../../util/pkg-name';
-import textInput from '../../util/input/text';
 
 import { DomainsTransferInTelemetryClient } from '../../util/telemetry/commands/domains/transfer-in';
 
@@ -154,20 +154,4 @@ export default async function transferIn(
     `    ${getCommandName(`dns import ${domainName} <zonefile>`)}\n\n`
   );
   return 0;
-}
-
-async function getAuthCode(client: Client, code?: string) {
-   if (isValidAuthCode(code)) {
-    return code;
-  }
-  return textInput({
-    label: `- Transfer auth code: `,
-    validateValue: isValidAuthCode,
-    stdout: client.stderr,
-    stdin: client.stdin
-  });
-}
-
-function isValidAuthCode(code?: string): code is string {
-  return !!(code && code.length > 0);
 }

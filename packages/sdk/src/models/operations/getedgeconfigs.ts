@@ -26,9 +26,6 @@ export type Transfer = {
 
 export type Schema = {};
 
-/**
- * List of all edge configs.
- */
 export type GetEdgeConfigsResponseBody = {
   id?: string | undefined;
   createdAt?: number | undefined;

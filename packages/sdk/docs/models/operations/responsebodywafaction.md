@@ -5,7 +5,7 @@
 ```typescript
 import { ResponseBodyWafAction } from "@vercel/sdk/models/operations/getdeploymentevents.js";
 
-let value: ResponseBodyWafAction = "bypass";
+let value: ResponseBodyWafAction = "deny";
 ```
 
 ## Values

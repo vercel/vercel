@@ -6,8 +6,8 @@
 import { Trial } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: Trial = {
-  start: 9729.12,
-  end: 7372.79,
+  start: 1458.41,
+  end: 6001.84,
 };
 ```
 

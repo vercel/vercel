@@ -7,7 +7,7 @@ import { CreateTeamTeamsResponse200ApplicationJSONFrequency } from "@vercel/sdk/
 
 let value: CreateTeamTeamsResponse200ApplicationJSONFrequency = {
   interval: "month",
-  intervalCount: 3589.95,
+  intervalCount: 1127.52,
 };
 ```
 

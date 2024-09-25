@@ -6,8 +6,11 @@
 import { CreateProjectEnvCreatedContentHint } from "@vercel/sdk/models/operations/createprojectenv.js";
 
 let value: CreateProjectEnvCreatedContentHint = {
-  type: "postgres-user",
+  type: "integration-store-secret",
   storeId: "<value>",
+  integrationId: "<value>",
+  integrationProductId: "<value>",
+  integrationConfigurationId: "<value>",
 };
 ```
 
