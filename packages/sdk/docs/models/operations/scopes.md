@@ -7,10 +7,10 @@ import { Scopes } from "@vercel/sdk/models/operations/getconfigurations.js";
 
 let value: Scopes = {
   added: [
-    "read-write:deployment-check",
+    "read-write:log-drain",
   ],
   upgraded: [
-    "read-write:deployment",
+    "read-write:domain",
   ],
 };
 ```

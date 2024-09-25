@@ -480,4 +480,8 @@ describe('env pull', () => {
 
     expect(rawDevEnv.toString().includes('VERCEL_ANALYTICS_ID')).toBeFalsy();
   });
+
+  describe.todo('[filename]');
+  describe.todo('--yes');
+  describe.todo('--git-branch');
 });

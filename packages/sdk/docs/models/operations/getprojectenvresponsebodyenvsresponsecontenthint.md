@@ -6,7 +6,7 @@
 import { GetProjectEnvResponseBodyEnvsResponseContentHint } from "@vercel/sdk/models/operations/getprojectenv.js";
 
 let value: GetProjectEnvResponseBodyEnvsResponseContentHint = {
-  type: "postgres-url",
+  type: "redis-rest-api-read-only-token",
   storeId: "<value>",
 };
 ```

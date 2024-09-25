@@ -7,10 +7,10 @@ import { ResponseBodyScopes } from "@vercel/sdk/models/operations/getconfigurati
 
 let value: ResponseBodyScopes = {
   added: [
-    "read-write:otel-endpoint",
+    "read-write:project-env-vars",
   ],
   upgraded: [
-    "read:domain",
+    "read:user",
   ],
 };
 ```

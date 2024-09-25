@@ -554,7 +554,7 @@ export type LatestDeployments = {
   createdAt: number;
   createdIn: string;
   creator: UpdateProjectDataCacheProjectsCreator | null;
-  deletedAt?: number | undefined;
+  deletedAt?: number | null | undefined;
   deploymentHostname: string;
   name: string;
   forced?: boolean | undefined;
@@ -3425,7 +3425,7 @@ export const LatestDeployments$inboundSchema: z.ZodType<
   creator: z.nullable(
     z.lazy(() => UpdateProjectDataCacheProjectsCreator$inboundSchema),
   ),
-  deletedAt: z.number().optional(),
+  deletedAt: z.nullable(z.number()).optional(),
   deploymentHostname: z.string(),
   name: z.string(),
   forced: z.boolean().optional(),
@@ -3471,7 +3471,7 @@ export type LatestDeployments$Outbound = {
   createdAt: number;
   createdIn: string;
   creator: UpdateProjectDataCacheProjectsCreator$Outbound | null;
-  deletedAt?: number | undefined;
+  deletedAt?: number | null | undefined;
   deploymentHostname: string;
   name: string;
   forced?: boolean | undefined;
@@ -3519,7 +3519,7 @@ export const LatestDeployments$outboundSchema: z.ZodType<
   creator: z.nullable(
     z.lazy(() => UpdateProjectDataCacheProjectsCreator$outboundSchema),
   ),
-  deletedAt: z.number().optional(),
+  deletedAt: z.nullable(z.number()).optional(),
   deploymentHostname: z.string(),
   name: z.string(),
   forced: z.boolean().optional(),

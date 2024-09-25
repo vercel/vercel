@@ -5,7 +5,7 @@
 ```typescript
 import { GetDeploymentHasType } from "@vercel/sdk/models/operations/getdeployment.js";
 
-let value: GetDeploymentHasType = "header";
+let value: GetDeploymentHasType = "cookie";
 ```
 
 ## Values

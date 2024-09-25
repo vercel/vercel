@@ -5,7 +5,7 @@
 ```typescript
 import { CreateProjectProjectsAliasAssigned } from "@vercel/sdk/models/operations/createproject.js";
 
-let value: CreateProjectProjectsAliasAssigned = 6178.77;
+let value: CreateProjectProjectsAliasAssigned = 5596.82;
 ```
 
 ## Supported Types

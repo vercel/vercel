@@ -6,11 +6,8 @@
 import { ResponseBodyContentHint } from "@vercel/sdk/models/operations/filterprojectenvs.js";
 
 let value: ResponseBodyContentHint = {
-  type: "integration-store-secret",
+  type: "redis-rest-api-read-only-token",
   storeId: "<value>",
-  integrationId: "<value>",
-  integrationProductId: "<value>",
-  integrationConfigurationId: "<value>",
 };
 ```
 

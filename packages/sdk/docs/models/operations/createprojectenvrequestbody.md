@@ -5,16 +5,18 @@
 ```typescript
 import { CreateProjectEnvRequestBody } from "@vercel/sdk/models/operations/createprojectenv.js";
 
-let value: CreateProjectEnvRequestBody = {
-  key: "API_URL",
-  value: "https://api.vercel.com",
-  type: "plain",
-  target: [
-    "preview",
-  ],
-  gitBranch: "feature-1",
-  comment: "database connection string for production",
-};
+let value: CreateProjectEnvRequestBody = [
+  {
+    key: "API_URL",
+    value: "https://api.vercel.com",
+    type: "plain",
+    target: [
+      "preview",
+    ],
+    gitBranch: "feature-1",
+    comment: "database connection string for production",
+  },
+];
 ```
 
 ## Supported Types

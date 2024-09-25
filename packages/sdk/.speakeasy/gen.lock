@@ -1,12 +1,12 @@
 lockVersion: 2.0.0
 id: 2b328f77-299a-476f-8aa9-59080c9107fe
 management:
-  docChecksum: 1dc76dcc561898c8b84cf7285236da83
+  docChecksum: a158405287b30de9a76985749d70eb87
   docVersion: 0.0.1
-  speakeasyVersion: 1.396.4
-  generationVersion: 2.415.6
-  releaseVersion: 14.0.0-canary.0
-  configChecksum: e3d3579aec5ac3056827f0bb1df0440a
+  speakeasyVersion: 1.402.0
+  generationVersion: 2.422.6
+  releaseVersion: 14.0.0-canary.1
+  configChecksum: e7dd850e9514bd8a0dae301d426f34e3
   repoURL: https://github.com/vercel/vercel.git
   repoSubDirectory: packages/sdk
   installationURL: https://gitpkg.now.sh/vercel/vercel/packages/sdk
@@ -16,7 +16,7 @@ features:
     acceptHeaders: 2.81.2
     additionalDependencies: 0.1.0
     constsAndDefaults: 0.1.11
-    core: 3.17.2
+    core: 3.17.6
     defaultEnabledRetries: 0.1.0
     deprecations: 2.81.1
     devContainers: 2.90.0
@@ -2857,7 +2857,7 @@ examples:
           limit: 20
       responses:
         "200":
-          application/json: {"accessGroups": [], "pagination": {"count": "998.95", "next": "<value>"}}
+          application/json: {"accessGroups": [{"isDsyncManaged": false, "name": "my-access-group", "createdAt": "1588720733602", "teamId": "team_123a6c5209bc3778245d011443644c8d27dc2c50", "updatedAt": "1588720733602", "accessGroupId": "ag_123a6c5209bc3778245d011443644c8d27dc2c50", "membersCount": 5, "projectsCount": 2}, {"isDsyncManaged": true, "name": "my-access-group", "createdAt": "1588720733602", "teamId": "team_123a6c5209bc3778245d011443644c8d27dc2c50", "updatedAt": "1588720733602", "accessGroupId": "ag_123a6c5209bc3778245d011443644c8d27dc2c50", "membersCount": 5, "projectsCount": 2}], "pagination": {"count": "2297.17", "next": "<value>"}}
   createAccessGroup:
     speakeasy-default-create-access-group:
       requestBody:
@@ -3047,7 +3047,7 @@ examples:
       responses:
         "200":
           application/json: []
-          application/stream+json: {"created": "700.16", "date": "3413.79", "deploymentId": "<value>", "id": "<id>", "info": {"type": "<value>", "name": "<value>"}, "serial": "<value>", "type": "delimiter"}
+          application/stream+json: {"created": "3413.80", "date": "1121.90", "deploymentId": "<value>", "id": "<id>", "info": {"type": "<value>", "name": "<value>"}, "serial": "<value>", "type": "middleware-invocation"}
   getDeployment:
     speakeasy-default-get-deployment:
       parameters:
@@ -3057,7 +3057,7 @@ examples:
           withGitRepoInfo: "true"
       responses:
         "200":
-          application/json: {"aliasAssigned": true, "bootedAt": "5588.34", "buildingAt": "8441.99", "buildSkipped": true, "creator": {"uid": "<value>"}, "public": false, "status": "INITIALIZING", "id": "<id>", "type": "LAMBDAS", "createdAt": "785.92", "name": "<value>", "readyState": "CANCELED", "meta": {"key": "<value>", "key1": "<value>", "key2": "<value>"}, "regions": [], "url": "http://serious-immigration.info", "version": "2627.95"}
+          application/json: {"aliasAssigned": false, "bootedAt": "5442.21", "buildingAt": "5212.35", "buildSkipped": false, "creator": {"uid": "<value>"}, "public": true, "status": "ERROR", "id": "<id>", "type": "LAMBDAS", "createdAt": "2627.96", "name": "<value>", "readyState": "BUILDING", "meta": {"key": "<value>", "key1": "<value>", "key2": "<value>"}, "regions": ["<value>"], "url": "https://boiling-dash.biz", "version": "945.89"}
   createDeployment:
     speakeasy-default-create-deployment:
       requestBody:
@@ -3205,7 +3205,7 @@ examples:
           domain: "alarming-nondisclosure.com"
         query: {}
       requestBody:
-        application/json: {"op": "move-out"}
+        application/json: {"op": "update"}
       responses:
         "200":
           application/json: {"moved": true, "token": "<value>"}
@@ -3297,7 +3297,7 @@ examples:
     speakeasy-default-get-edge-configs:
       responses:
         "200":
-          application/json: {"sizeInBytes": "7685.78", "itemCount": "998.95"}
+          application/json: [{"sizeInBytes": "7685.78", "itemCount": "998.95"}]
   createEdgeConfig:
     speakeasy-default-create-edge-config:
       responses:
@@ -3461,7 +3461,7 @@ examples:
         application/json: {"name": "My first log drain", "secret": "a1Xsfd325fXcs", "deliveryFormat": "json", "url": "https://example.com/log-drain"}
       responses:
         "200":
-          application/json: {"clientId": "oac_xRhY4LAB7yLhUADD69EvV7ct", "configurationId": "icfg_cuwj0AdCdH3BwWT4LPijCC7t", "createdAt": 1558531915505, "id": "ld_nBuA7zCID8g4QZ8g", "deliveryFormat": "json", "name": "My first log drain", "ownerId": "kr1PsOIzqEL5Xg6M4VZcZosf", "projectId": "AbCgVkqoxXeXCDWehVir51LHGrrcWL4mkYm14W6UBPWQeb", "projectIds": ["AbCgVkqoxXeXCDWehVir51LHGrrcWL4mkYm14W6UBPWQeb"], "url": "https://example.com/log-drain", "sources": ["build", "edge"], "createdFrom": "integration", "headers": {"0": "{", "1": "\"", "2": "A", "3": "u", "4": "t", "5": "h", "6": "o", "7": "r", "8": "i", "9": "z", "10": "a", "11": "t", "12": "i", "13": "o", "14": "n", "15": "\"", "16": ":", "17": " ", "18": "\"", "19": "B", "20": "e", "21": "a", "22": "r", "23": "e", "24": "r", "25": " ", "26": "1", "27": "2", "28": "3", "29": "\"", "30": "}"}, "environments": ["production"], "branch": "feature/*", "samplingRate": 0.5}
+          application/json: {"clientId": "oac_xRhY4LAB7yLhUADD69EvV7ct", "configurationId": "icfg_cuwj0AdCdH3BwWT4LPijCC7t", "createdAt": 1558531915505, "id": "ld_nBuA7zCID8g4QZ8g", "deliveryFormat": "json", "name": "My first log drain", "ownerId": "kr1PsOIzqEL5Xg6M4VZcZosf", "projectId": "AbCgVkqoxXeXCDWehVir51LHGrrcWL4mkYm14W6UBPWQeb", "projectIds": ["AbCgVkqoxXeXCDWehVir51LHGrrcWL4mkYm14W6UBPWQeb"], "url": "https://example.com/log-drain", "sources": ["lambda"], "createdFrom": "integration", "headers": {"0": "{", "1": "\"", "2": "A", "3": "u", "4": "t", "5": "h", "6": "o", "7": "r", "8": "i", "9": "z", "10": "a", "11": "t", "12": "i", "13": "o", "14": "n", "15": "\"", "16": ":", "17": " ", "18": "\"", "19": "B", "20": "e", "21": "a", "22": "r", "23": "e", "24": "r", "25": " ", "26": "1", "27": "2", "28": "3", "29": "\"", "30": "}"}, "environments": ["production"], "branch": "feature/*", "samplingRate": 0.5}
   deleteIntegrationLogDrain:
     speakeasy-default-delete-integration-log-drain:
       parameters:
@@ -3565,6 +3565,7 @@ examples:
         query:
           gitBranch: "feature-1"
           source: "vercel-cli:pull"
+          decrypt: "true"
   getProjectEnv:
     speakeasy-default-get-project-env:
       parameters:
@@ -3753,7 +3754,7 @@ examples:
     speakeasy-default-get-auth-user:
       responses:
         "200":
-          application/json: {"user": {"createdAt": 1630748523395, "softBlock": {"blockedAt": "3234.37", "reason": "FAIR_USE_LIMITS_EXCEEDED"}, "billing": {"period": {"start": "7441.04", "end": "4657.57"}, "plan": "enterprise"}, "stagingPrefix": "<value>", "hasTrialAvailable": true, "id": "AEIIDYVk59zbFF2Sxfyxxmua", "email": "me@example.com", "name": "John Doe", "username": "jdoe", "avatar": "22cb30c85ff45ac4c72de8981500006b28114aa1", "defaultTeamId": "<value>", "version": "northstar"}}
+          application/json: {"user": {"createdAt": 1630748523395, "softBlock": {"blockedAt": "7708.70", "reason": "UNPAID_INVOICE"}, "billing": {"period": {"start": "1278.66", "end": "2579.17"}, "plan": "pro"}, "stagingPrefix": "<value>", "hasTrialAvailable": false, "id": "AEIIDYVk59zbFF2Sxfyxxmua", "email": "me@example.com", "name": "John Doe", "username": "jdoe", "avatar": "22cb30c85ff45ac4c72de8981500006b28114aa1", "defaultTeamId": "<value>", "version": "northstar"}}
   requestDelete:
     speakeasy-default-request-delete:
       responses:
@@ -3836,7 +3837,7 @@ examples:
           until: 1540095775951
       responses:
         "200":
-          application/json: []
+          application/json: {}
   deleteAlias:
     speakeasy-default-delete-alias:
       parameters:

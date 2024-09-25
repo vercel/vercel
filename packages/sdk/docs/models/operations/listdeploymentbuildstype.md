@@ -7,7 +7,7 @@ The type of the output
 ```typescript
 import { ListDeploymentBuildsType } from "@vercel/sdk/models/operations/listdeploymentbuilds.js";
 
-let value: ListDeploymentBuildsType = "file";
+let value: ListDeploymentBuildsType = "edge";
 ```
 
 ## Values

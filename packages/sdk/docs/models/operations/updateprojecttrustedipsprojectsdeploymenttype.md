@@ -5,7 +5,7 @@
 ```typescript
 import { UpdateProjectTrustedIpsProjectsDeploymentType } from "@vercel/sdk/models/operations/updateproject.js";
 
-let value: UpdateProjectTrustedIpsProjectsDeploymentType = "all";
+let value: UpdateProjectTrustedIpsProjectsDeploymentType = "preview";
 ```
 
 ## Values

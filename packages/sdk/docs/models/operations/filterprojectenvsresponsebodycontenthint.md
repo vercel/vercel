@@ -6,7 +6,7 @@
 import { FilterProjectEnvsResponseBodyContentHint } from "@vercel/sdk/models/operations/filterprojectenvs.js";
 
 let value: FilterProjectEnvsResponseBodyContentHint = {
-  type: "blob-read-write-token",
+  type: "postgres-url-non-pooling",
   storeId: "<value>",
 };
 ```

@@ -5,7 +5,7 @@
 ```typescript
 import { CreateProjectValue } from "@vercel/sdk/models/operations/createproject.js";
 
-let value: CreateProjectValue = "<value>";
+let value: CreateProjectValue = {};
 ```
 
 ## Supported Types

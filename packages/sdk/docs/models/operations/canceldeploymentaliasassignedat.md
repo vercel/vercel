@@ -5,7 +5,7 @@
 ```typescript
 import { CancelDeploymentAliasAssignedAt } from "@vercel/sdk/models/operations/canceldeployment.js";
 
-let value: CancelDeploymentAliasAssignedAt = 2380.43;
+let value: CancelDeploymentAliasAssignedAt = 7681.95;
 ```
 
 ## Supported Types

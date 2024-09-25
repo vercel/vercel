@@ -5,9 +5,7 @@
 ```typescript
 import { RemoveProjectEnvResponseBodyEnvsResponseTarget } from "@vercel/sdk/models/operations/removeprojectenv.js";
 
-let value: RemoveProjectEnvResponseBodyEnvsResponseTarget = [
-  "production",
-];
+let value: RemoveProjectEnvResponseBodyEnvsResponseTarget = "production";
 ```
 
 ## Supported Types

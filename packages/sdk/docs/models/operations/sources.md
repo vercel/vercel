@@ -5,7 +5,7 @@
 ```typescript
 import { Sources } from "@vercel/sdk/models/operations/createlogdrain.js";
 
-let value: Sources = "external";
+let value: Sources = "build";
 ```
 
 ## Values

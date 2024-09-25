@@ -5,7 +5,7 @@
 ```typescript
 import { UpdateProjectAction } from "@vercel/sdk/models/operations/updateproject.js";
 
-let value: UpdateProjectAction = "deny";
+let value: UpdateProjectAction = "rate_limit";
 ```
 
 ## Values

@@ -6,9 +6,9 @@
 import { EdgeMiddlewareInvocations } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: EdgeMiddlewareInvocations = {
-  price: 4981.8,
-  batch: 4527.29,
-  threshold: 8667.89,
+  price: 1514.86,
+  batch: 1620.73,
+  threshold: 9634.70,
   hidden: false,
 };
 ```

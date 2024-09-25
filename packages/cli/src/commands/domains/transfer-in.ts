@@ -65,7 +65,7 @@ export default async function transferIn(
     )} to transfer under ${chalk.bold(contextName)}! ${availableStamp()}`
   );
 
-  const authCode = await getAuthCode(opts['--code']);
+  const authCode = await getAuthCode(client, opts['--code']);
 
   const shouldTransfer = await confirm(
     client,

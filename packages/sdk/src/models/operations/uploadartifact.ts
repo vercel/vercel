@@ -42,7 +42,7 @@ export type UploadArtifactRequest = {
     | ReadableStream<Uint8Array>
     | Blob
     | ArrayBuffer
-    | Buffer
+    | Uint8Array
     | undefined;
 };
 
@@ -74,7 +74,7 @@ export const UploadArtifactRequest$inboundSchema: z.ZodType<
     z.instanceof(ReadableStream<Uint8Array>),
     z.instanceof(Blob),
     z.instanceof(ArrayBuffer),
-    z.instanceof(Buffer),
+    z.instanceof(Uint8Array),
   ]).optional(),
 }).transform((v) => {
   return remap$(v, {
@@ -101,7 +101,7 @@ export type UploadArtifactRequest$Outbound = {
     | ReadableStream<Uint8Array>
     | Blob
     | ArrayBuffer
-    | Buffer
+    | Uint8Array
     | undefined;
 };
 
@@ -123,7 +123,7 @@ export const UploadArtifactRequest$outboundSchema: z.ZodType<
     z.instanceof(ReadableStream<Uint8Array>),
     z.instanceof(Blob),
     z.instanceof(ArrayBuffer),
-    z.instanceof(Buffer),
+    z.instanceof(Uint8Array),
   ]).optional(),
 }).transform((v) => {
   return remap$(v, {

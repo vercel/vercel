@@ -5,7 +5,7 @@
 ```typescript
 import { CreateDeploymentMissingType } from "@vercel/sdk/models/operations/createdeployment.js";
 
-let value: CreateDeploymentMissingType = "cookie";
+let value: CreateDeploymentMissingType = "header";
 ```
 
 ## Values

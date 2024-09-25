@@ -71,11 +71,11 @@ const isBrowserLike = webWorkerLike
   || (typeof window === "object" && typeof window.document !== "undefined");
 
 export class ClientSDK {
-  private readonly httpClient: HTTPClient;
-  protected readonly baseURL: URL | null;
-  protected readonly hooks$: SDKHooks;
-  protected readonly logger?: Logger | undefined;
-  public readonly options$: SDKOptions & { hooks?: SDKHooks };
+  readonly #httpClient: HTTPClient;
+  readonly #hooks: SDKHooks;
+  readonly #logger?: Logger | undefined;
+  protected readonly _baseURL: URL | null;
+  public readonly _options: SDKOptions & { hooks?: SDKHooks };
 
   constructor(options: SDKOptions = {}) {
     const opt = options as unknown;
@@ -85,33 +85,33 @@ export class ClientSDK {
       && "hooks" in opt
       && opt.hooks instanceof SDKHooks
     ) {
-      this.hooks$ = opt.hooks;
+      this.#hooks = opt.hooks;
     } else {
-      this.hooks$ = new SDKHooks();
+      this.#hooks = new SDKHooks();
     }
-    this.options$ = { ...options, hooks: this.hooks$ };
+    this._options = { ...options, hooks: this.#hooks };
 
     const url = serverURLFromOptions(options);
     if (url) {
       url.pathname = url.pathname.replace(/\/+$/, "") + "/";
     }
-    const { baseURL, client } = this.hooks$.sdkInit({
+    const { baseURL, client } = this.#hooks.sdkInit({
       baseURL: url,
       client: options.httpClient || new HTTPClient(),
     });
-    this.baseURL = baseURL;
-    this.httpClient = client;
-    this.logger = options.debugLogger;
+    this._baseURL = baseURL;
+    this.#httpClient = client;
+    this.#logger = options.debugLogger;
   }
 
-  public createRequest$(
+  public _createRequest(
     context: HookContext,
     conf: RequestConfig,
     options?: RequestOptions,
   ): Result<Request, InvalidRequestError | UnexpectedClientError> {
     const { method, path, query, headers: opHeaders, security } = conf;
 
-    const base = conf.baseURL ?? this.baseURL;
+    const base = conf.baseURL ?? this._baseURL;
     if (!base) {
       return ERR(new InvalidRequestError("No base URL provided for operation"));
     }
@@ -195,7 +195,7 @@ export class ClientSDK {
 
     let input;
     try {
-      input = this.hooks$.beforeCreateRequest(context, {
+      input = this.#hooks.beforeCreateRequest(context, {
         url: reqURL,
         options: {
           ...fetchOptions,
@@ -215,7 +215,7 @@ export class ClientSDK {
     return OK(new Request(input.url, input.options));
   }
 
-  public async do$(
+  public async _do(
     request: Request,
     options: {
       context: HookContext;
@@ -238,25 +238,25 @@ export class ClientSDK {
 
     return retry(
       async () => {
-        const req = await this.hooks$.beforeRequest(context, request.clone());
-        await logRequest(this.logger, req).catch((e) =>
-          this.logger?.log("Failed to log request:", e)
+        const req = await this.#hooks.beforeRequest(context, request.clone());
+        await logRequest(this.#logger, req).catch((e) =>
+          this.#logger?.log("Failed to log request:", e)
         );
 
-        let response = await this.httpClient.request(req);
+        let response = await this.#httpClient.request(req);
 
         if (matchStatusCode(response, errorCodes)) {
-          const result = await this.hooks$.afterError(context, response, null);
+          const result = await this.#hooks.afterError(context, response, null);
           if (result.error) {
             throw result.error;
           }
           response = result.response || response;
         } else {
-          response = await this.hooks$.afterSuccess(context, response);
+          response = await this.#hooks.afterSuccess(context, response);
         }
 
-        await logResponse(this.logger, response, req)
-          .catch(e => this.logger?.log("Failed to log response:", e));
+        await logResponse(this.#logger, response, req)
+          .catch(e => this.#logger?.log("Failed to log response:", e));
 
         return response;
       },

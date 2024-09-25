@@ -9,6 +9,12 @@ import { GetConfigurationsResponseBody } from "@vercel/sdk/models/operations/get
 
 let value: GetConfigurationsResponseBody = [
   {
+    integration: {
+      name: "<value>",
+      icon: "<value>",
+      category: "<value>",
+      isLegacy: false,
+    },
     completedAt: 1558531915505,
     createdAt: 1558531915505,
     id: "icfg_3bwCLgxL8qt5kjRLcv2Dit7F",
@@ -20,6 +26,7 @@ let value: GetConfigurationsResponseBody = [
     source: "marketplace",
     slug: "slack",
     teamId: "team_nLlpyC6RE1qxydlFKbrxDlud",
+    type: "integration-configuration",
     updatedAt: 1558531915505,
     userId: "kr1PsOIzqEL5Xg6M4VZcZosf",
     scopes: [

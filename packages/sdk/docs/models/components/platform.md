@@ -5,7 +5,7 @@
 ```typescript
 import { Platform } from "@vercel/sdk/models/components/authuser.js";
 
-let value: Platform = "stripe";
+let value: Platform = "stripeTestMode";
 ```
 
 ## Values

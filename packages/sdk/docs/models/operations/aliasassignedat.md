@@ -5,7 +5,7 @@
 ```typescript
 import { AliasAssignedAt } from "@vercel/sdk/models/operations/createdeployment.js";
 
-let value: AliasAssignedAt = 6952.7;
+let value: AliasAssignedAt = false;
 ```
 
 ## Supported Types

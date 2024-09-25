@@ -6,7 +6,7 @@
 import { FilterProjectEnvsResponseBodyEnvsTarget } from "@vercel/sdk/models/operations/filterprojectenvs.js";
 
 let value: FilterProjectEnvsResponseBodyEnvsTarget = [
-  "development",
+  "preview",
 ];
 ```
 

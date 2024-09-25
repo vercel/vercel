@@ -6,7 +6,7 @@
 import { GetCheckTBT } from "@vercel/sdk/models/operations/getcheck.js";
 
 let value: GetCheckTBT = {
-  value: 2103.82,
+  value: 6778.17,
   source: "web-vitals",
 };
 ```

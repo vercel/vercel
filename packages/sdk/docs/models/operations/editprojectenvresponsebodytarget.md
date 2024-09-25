@@ -5,9 +5,7 @@
 ```typescript
 import { EditProjectEnvResponseBodyTarget } from "@vercel/sdk/models/operations/editprojectenv.js";
 
-let value: EditProjectEnvResponseBodyTarget = [
-  "production",
-];
+let value: EditProjectEnvResponseBodyTarget = "development";
 ```
 
 ## Supported Types
