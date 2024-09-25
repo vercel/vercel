@@ -2,4 +2,4 @@
 '@vercel/client': patch
 ---
 
-[client] Replace `@zeit/fetch` usage with node-fetch
+Replace `@zeit/fetch` usage with `node-fetch`
