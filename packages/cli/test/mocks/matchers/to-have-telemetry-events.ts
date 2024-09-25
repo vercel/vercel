@@ -5,6 +5,8 @@ import type { TelemetryEventStore } from '../../../src/util/telemetry';
 interface EventData {
   key: string;
   value: string;
+  sessionId: string;
+  id: string;
 }
 
 export function toHaveTelemetryEvents(
@@ -12,7 +14,6 @@ export function toHaveTelemetryEvents(
   received: TelemetryEventStore,
   expected: EventData[]
 ) {
-  // define Todo object structure with objectContaining
   const expectEventObject = (event?: EventData) =>
     expect.objectContaining({
       id: expect.any(String),
@@ -21,13 +22,21 @@ export function toHaveTelemetryEvents(
       value: event?.value,
     });
 
-  // define Todo array with arrayContaining and re-use expectTodoObject
-  const expectEventsArray = (events: Array<EventData>) =>
-    events.length === 0
-      ? // in case an empty array is passed
-        expect.arrayContaining([expectEventObject()])
-      : // in case an array of Todos is passed
-        expect.arrayContaining(events.map(expectEventObject));
+  const expectEventsArray = (events: Array<EventData>) => {
+    const [firstEvent] = received.readonlyEvents;
+    if (events.length === 0) {
+      return expect.arrayContaining([expectEventObject()]);
+    } else {
+      const expectCommonSessionEventObject = (event?: EventData) =>
+        expect.objectContaining({
+          id: expect.any(String),
+          sessionId: firstEvent.sessionId,
+          key: event?.key,
+          value: event?.value,
+        });
+      return expect.arrayContaining(events.map(expectCommonSessionEventObject));
+    }
+  };
 
   // expected can either be an array or an object
   const expectedResult = expectEventsArray(expected);
@@ -44,9 +53,7 @@ export function toHaveTelemetryEvents(
   }
   return {
     message: () =>
-      `Expected: ${this.utils.printExpected(expectedResult)}\nReceived: ${this.utils.printReceived(
-        received
-      )}\n\n${this.utils.diff(expectedResult, received.readonlyEvents)}`,
+      `\n${this.utils.diff(expectedResult, received.readonlyEvents)}`,
     pass,
   };
 }
