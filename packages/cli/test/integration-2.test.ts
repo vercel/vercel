@@ -112,7 +112,9 @@ afterAll(async () => {
   }
 });
 
-test('assign a domain to a project', async () => {
+// https://linear.app/vercel/issue/ZERO-2555/fix-or-skip-assign-a-domain-to-a-project-test
+// eslint-disable-next-line jest/no-disabled-tests
+test.skip('assign a domain to a project', async () => {
   const team = await teamPromise;
   const domain = `project-domain.${team.slug}.vercel.app`;
   const directory = await setupE2EFixture('static-deployment');
@@ -565,7 +567,7 @@ test('add a sensitive env var', async () => {
     }
   );
 
-  await waitForPrompt(addEnvCommand, /What’s the value of [^?]+\?/);
+  await waitForPrompt(addEnvCommand, /What's the value of [^?]+\?/);
   addEnvCommand.stdin?.write('test\n');
 
   const output = await addEnvCommand;
@@ -614,7 +616,7 @@ test('override an existing env var', async () => {
     options
   );
 
-  await waitForPrompt(addEnvCommand, /What’s the value of [^?]+\?/);
+  await waitForPrompt(addEnvCommand, /What's the value of [^?]+\?/);
   addEnvCommand.stdin?.write('test\n');
 
   const output = await addEnvCommand;
@@ -631,7 +633,7 @@ test('override an existing env var', async () => {
     options
   );
 
-  await waitForPrompt(overrideEnvCommand, /What’s the value of [^?]+\?/);
+  await waitForPrompt(overrideEnvCommand, /What's the value of [^?]+\?/);
   overrideEnvCommand.stdin?.write('test\n');
 
   const outputOverride = await overrideEnvCommand;

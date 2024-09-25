@@ -14,31 +14,18 @@ type Printer = (l: string) => void;
 export function displayBuildLogs(
   client: Client,
   deployment: Deployment,
-  follow?: true
-): {
-  promise: Promise<void>;
-  abortController: AbortController;
-};
-export function displayBuildLogs(
-  client: Client,
-  deployment: Deployment,
-  follow: false
-): {
-  promise: Promise<void>;
-  abortController: AbortController;
-};
-export function displayBuildLogs(
-  client: Client,
-  deployment: Deployment,
   follow: boolean = true
-) {
+): {
+  promise: Promise<void>;
+  abortController: AbortController;
+} {
   const abortController = new AbortController();
   const promise = printEvents(
     client,
     deployment.id,
     {
       mode: 'logs',
-      onEvent: (event: any) => printBuildLog(event, client.output.print),
+      onEvent: (event: BuildLog) => printBuildLog(event, client.output.print),
       quiet: false,
       findOpts: { direction: 'forward', follow },
     },
@@ -72,6 +59,39 @@ export interface RuntimeLog {
   requestPath: string;
   responseStatusCode: number;
 }
+
+export interface BuildLog {
+  created: number;
+  date: number;
+  deploymentId: string;
+  id: string;
+  info: LogInfo;
+  serial: string;
+  text?: string;
+  type: LogType;
+  level?: 'error' | 'warning';
+}
+
+export interface LogInfo {
+  type: string;
+  name: string;
+  entrypoint?: string;
+  path?: string;
+  step?: string;
+  readyState?: string;
+}
+
+export type LogType =
+  | 'command'
+  | 'stdout'
+  | 'stderr'
+  | 'exit'
+  | 'deployment-state'
+  | 'delimiter'
+  | 'middleware'
+  | 'middleware-invocation'
+  | 'edge-function-invocation'
+  | 'fatal';
 
 export async function displayRuntimeLogs(
   client: Client,
@@ -130,6 +150,7 @@ export async function displayRuntimeLogs(
 
     const handleData = (data: RuntimeLog | string) => {
       let log: RuntimeLog = parse ? data : JSON.parse(data as string);
+      stopSpinner();
       if (isRuntimeLimitDelimiter(log)) {
         abortController.abort();
         warn(`${chalk.bold(log.message)}\n`);
@@ -168,29 +189,14 @@ export async function displayRuntimeLogs(
   });
 }
 
-function printBuildLog(log: any, print: Printer) {
-  if (!log.created) return; // keepalive
-
-  let data: string;
-
-  data = (log.text || '')
-    .replace(/\n$/, '')
-    .replace(/^\n/, '')
-    // eslint-disable-next-line no-control-regex
-    .replace(/\x1b\[1000D/g, '')
-    .replace(/\x1b\[0K/g, '')
-    .replace(/\x1b\[1A/g, '');
-  if (/warning/i.test(data)) {
-    data = chalk.yellow(data);
-  } else if (log.type === 'stderr') {
-    data = chalk.red(data);
-  }
+function printBuildLog(log: BuildLog, print: Printer) {
+  if (!log.created) return; // ignore keepalive which are the only logs without a creation date.
 
   const date = new Date(log.created).toISOString();
 
-  data.split('\n').forEach(line => {
+  for (const line of colorize(sanitize(log), log).split('\n')) {
     print(`${chalk.dim(date)}  ${line.replace('[now-builder-debug] ', '')}\n`);
-  });
+  }
 }
 
 function isRuntimeLimitDelimiter(log: RuntimeLog) {
@@ -256,4 +262,26 @@ function getSourceIcon(source: string) {
   if (source === 'edge-middleware') return 'ɛ';
   if (source === 'serverless') return 'ƒ';
   return ' ';
+}
+
+function sanitize(log: BuildLog): string {
+  return (
+    (log.text || '')
+      .replace(/\n$/, '')
+      .replace(/^\n/, '')
+      // eslint-disable-next-line no-control-regex
+      .replace(/\x1b\[1000D/g, '')
+      .replace(/\x1b\[0K/g, '')
+      .replace(/\x1b\[1A/g, '')
+  );
+}
+
+function colorize(text: string, log: BuildLog): string {
+  if (log.level === 'error') {
+    return chalk.red(text);
+  } else if (log.level === 'warning') {
+    return chalk.yellow(text);
+  }
+
+  return text;
 }

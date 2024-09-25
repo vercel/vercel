@@ -1,7 +1,7 @@
 // @ts-ignore
 import { handleError } from '../../util/error';
 
-import getArgs from '../../util/get-args';
+import { parseArguments } from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 
 import add from './add';
@@ -11,6 +11,7 @@ import rm from './rm';
 import { certsCommand } from './command';
 import { help } from '../help';
 import Client from '../../util/client';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
 
 const COMMAND_CONFIG = {
   add: ['add'],
@@ -21,41 +22,38 @@ const COMMAND_CONFIG = {
 };
 
 export default async function main(client: Client) {
-  let argv;
+  const { output } = client;
 
+  let parsedArgs = null;
+
+  const flagsSpecification = getFlagsSpecification(certsCommand.options);
+
+  // Parse CLI args
   try {
-    argv = getArgs(client.argv.slice(2), {
-      '--challenge-only': Boolean,
-      '--overwrite': Boolean,
-      '--output': String,
-      '--crt': String,
-      '--key': String,
-      '--ca': String,
-      '--next': Number,
-      '-N': '--next',
-      '--limit': Number,
-    });
-  } catch (err) {
-    handleError(err);
+    parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
+  } catch (error) {
+    handleError(error);
     return 1;
   }
 
-  if (argv['--help']) {
-    client.output.print(help(certsCommand, { columns: client.stderr.columns }));
+  if (parsedArgs.flags['--help']) {
+    output.print(help(certsCommand, { columns: client.stderr.columns }));
     return 2;
   }
 
-  const { output } = client;
-  const { subcommand, args } = getSubcommand(argv._.slice(1), COMMAND_CONFIG);
+  const { subcommand, args } = getSubcommand(
+    parsedArgs.args.slice(1),
+    COMMAND_CONFIG
+  );
   switch (subcommand) {
     case 'issue':
-      return issue(client, argv, args);
+      return issue(client, parsedArgs.flags, args);
     case 'ls':
-      return ls(client, argv, args);
+      return ls(client, parsedArgs.flags, args);
     case 'rm':
-      return rm(client, argv, args);
+      return rm(client, parsedArgs.flags, args);
     case 'add':
-      return add(client, argv, args);
+      return add(client, parsedArgs.flags, args);
     case 'renew':
       output.error('Renewing certificates is deprecated, issue a new one.');
       return 1;

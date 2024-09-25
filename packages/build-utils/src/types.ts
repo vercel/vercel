@@ -272,6 +272,7 @@ export namespace PackageJson {
   export interface Engines {
     node?: string;
     npm?: string;
+    pnpm?: string;
   }
 
   export interface PublishConfig {
@@ -412,6 +413,12 @@ export type RemotePattern = {
    * Double `**` matches any number of path segments.
    */
   pathname?: string;
+
+  /**
+   * Can be literal query string such as `?v=1` or
+   * empty string meaning no query string.
+   */
+  search?: string;
 };
 
 export interface Images {
@@ -520,3 +527,16 @@ export interface FlagDefinition {
 }
 
 export type FlagDefinitions = Record<string, FlagDefinition>;
+
+export interface Chain {
+  /**
+   * The build output to use that references the lambda that will be used to
+   * append to the response.
+   */
+  outputPath: string;
+
+  /**
+   * The headers to send when making the request to append to the response.
+   */
+  headers: Record<string, string>;
+}

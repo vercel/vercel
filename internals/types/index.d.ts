@@ -4,13 +4,8 @@ import type * as tty from 'tty';
 import type { Route } from '@vercel/routing-utils';
 import { PROJECT_ENV_TARGET } from '@vercel-internals/constants';
 
-export type ProjectEnvTarget = typeof PROJECT_ENV_TARGET[number];
-export type ProjectEnvType =
-  | 'plain'
-  | 'secret'
-  | 'encrypted'
-  | 'system'
-  | 'sensitive';
+export type ProjectEnvTarget = (typeof PROJECT_ENV_TARGET)[number];
+export type ProjectEnvType = 'plain' | 'encrypted' | 'system' | 'sensitive';
 
 export type ProjectSettings = import('@vercel/build-utils').ProjectSettings;
 
@@ -213,6 +208,7 @@ export type Deployment = {
   plan?: 'enterprise' | 'hobby' | 'oss' | 'pro';
   previewCommentsEnabled?: boolean;
   private?: boolean;
+  proposedExpiration?: number;
   projectId?: string;
   projectSettings?: {
     buildCommand?: string | null;
@@ -248,6 +244,7 @@ export type Deployment = {
   };
   ttyBuildLogs?: boolean;
   type: 'LAMBDAS';
+  undeletedAt?: number;
   url: string;
   userAliases?: string[];
   version: 2;
@@ -323,17 +320,6 @@ export interface ProjectAliasTarget {
   deployment?: Deployment | undefined;
 }
 
-export interface Secret {
-  uid: string;
-  name: string;
-  value: string;
-  teamId?: string;
-  userId?: string;
-  projectId?: string;
-  created: string;
-  createdAt: number;
-}
-
 export interface ProjectEnvVariable {
   id: string;
   key: string;
@@ -343,6 +329,7 @@ export interface ProjectEnvVariable {
   createdAt?: number;
   updatedAt?: number;
   target?: ProjectEnvTarget | ProjectEnvTarget[];
+  customEnvironmentIds?: string[];
   system?: boolean;
   gitBranch?: string;
 }
@@ -386,6 +373,7 @@ export interface Project extends ProjectSettings {
   targets?: {
     production?: Deployment;
   };
+  customEnvironments?: CustomEnvironment[];
 }
 
 export interface Org {

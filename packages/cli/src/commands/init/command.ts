@@ -1,7 +1,7 @@
-import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
+import { forceOption } from '../../util/arg-common';
 
-export const initCommand: Command = {
+export const initCommand = {
   name: 'init',
   description: 'Initialize example Vercel Projects',
   arguments: [
@@ -17,12 +17,9 @@ export const initCommand: Command = {
   subcommands: undefined,
   options: [
     {
-      name: 'force',
+      ...forceOption,
       description: 'Overwrite destination directory if exists [off]',
       argument: undefined,
-      shorthand: 'f',
-      type: Boolean,
-      deprecated: false,
     },
   ],
   examples: [
@@ -43,4 +40,4 @@ export const initCommand: Command = {
       value: `${packageName} init <example> --force`,
     },
   ],
-};
+} as const;

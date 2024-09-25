@@ -1,11 +1,10 @@
-import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
 
 // has to be ms compliant
 // https://github.com/vercel/ms/blob/fe5338229cfdac6822891dcb9c24660b4d2e612b/src/index.ts#L95
 export const CommandTimeout = '5 minutes';
 
-export const logsCommand: Command = {
+export const logsCommand = {
   name: 'logs',
   description: `Display runtime logs for a deployment in ready state, from now and for ${CommandTimeout} at most.`,
   arguments: [
@@ -77,4 +76,4 @@ export const logsCommand: Command = {
       value: `${packageName} logs DEPLOYMENT_ID --json | jq 'select(.level == "warning")'`,
     },
   ],
-};
+} as const;

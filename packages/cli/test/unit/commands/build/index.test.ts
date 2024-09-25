@@ -9,6 +9,7 @@ import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
 import { execSync } from 'child_process';
 import { vi } from 'vitest';
+import { REGEX_NON_VERCEL_PLATFORM_FILES } from '@vercel/fs-detectors';
 
 vi.setConfig({ testTimeout: 6 * 60 * 1000 });
 
@@ -251,7 +252,7 @@ describe('build', () => {
           require: '@vercel/static',
           apiVersion: 2,
           use: '@vercel/static',
-          src: '!{api/**,package.json,middleware.[jt]s}',
+          src: REGEX_NON_VERCEL_PLATFORM_FILES,
           config: {
             zeroConfig: true,
           },
@@ -311,7 +312,7 @@ describe('build', () => {
           require: '@vercel/static',
           apiVersion: 2,
           use: '@vercel/static',
-          src: '!{api/**,package.json,middleware.[jt]s}',
+          src: REGEX_NON_VERCEL_PLATFORM_FILES,
           config: {
             zeroConfig: true,
           },
@@ -468,7 +469,7 @@ describe('build', () => {
           require: '@vercel/static',
           apiVersion: 2,
           use: '@vercel/static',
-          src: '!{api/**,package.json,middleware.[jt]s}',
+          src: REGEX_NON_VERCEL_PLATFORM_FILES,
           config: {
             zeroConfig: true,
           },
@@ -528,7 +529,7 @@ describe('build', () => {
           require: '@vercel/static',
           apiVersion: 2,
           use: '@vercel/static',
-          src: '!{api/**,package.json,middleware.[jt]s}',
+          src: REGEX_NON_VERCEL_PLATFORM_FILES,
           config: {
             zeroConfig: true,
           },
@@ -588,7 +589,7 @@ describe('build', () => {
           require: '@vercel/static',
           apiVersion: 2,
           use: '@vercel/static',
-          src: '!{api/**,package.json,middleware.[jt]s}',
+          src: REGEX_NON_VERCEL_PLATFORM_FILES,
           config: {
             zeroConfig: true,
           },
@@ -1308,6 +1309,47 @@ describe('build', () => {
     });
   });
 
+  it('should not apply framework `defaultRoutes` when build command outputs Build Output API', async () => {
+    const cwd = fixture('build-output-api-with-api-dir');
+    const output = join(cwd, '.vercel/output');
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toEqual(0);
+
+    const config = await fs.readJSON(join(output, 'config.json'));
+    expect(config).toMatchInlineSnapshot(`
+      {
+        "crons": [],
+        "routes": [
+          {
+            "handle": "filesystem",
+          },
+          {
+            "src": "^/api(/.*)?$",
+            "status": 404,
+          },
+          {
+            "handle": "error",
+          },
+          {
+            "dest": "/404.html",
+            "src": "^(?!/api).*$",
+            "status": 404,
+          },
+          {
+            "handle": "miss",
+          },
+          {
+            "check": true,
+            "dest": "/api/$1",
+            "src": "^/api/(.+)(?:\\.(?:js))$",
+          },
+        ],
+        "version": 3,
+      }
+    `);
+  });
+
   it('should detect framework version in monorepo app', async () => {
     const cwd = fixture('monorepo');
     const output = join(cwd, '.vercel/output');
@@ -1384,4 +1426,9 @@ describe('build', () => {
       expect(Object.keys(env).includes('VERCEL_ANALYTICS_ID')).toEqual(true);
     });
   });
+
+  describe.todo('--prod');
+  describe.todo('--target');
+  describe.todo('--output');
+  describe.todo('--yes');
 });

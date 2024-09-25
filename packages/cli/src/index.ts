@@ -26,11 +26,10 @@ import commands from './commands';
 import pkg from './util/pkg';
 import { Output } from './util/output';
 import cmd from './util/output/cmd';
-import info from './util/output/info';
 import error from './util/output/error';
 import param from './util/output/param';
 import highlight from './util/output/highlight';
-import getArgs from './util/get-args';
+import { parseArguments } from './util/get-args';
 import getUser from './util/get-user';
 import getTeams from './util/teams/get-teams';
 import Client from './util/client';
@@ -47,7 +46,6 @@ import * as ERRORS from './util/errors-ts';
 import { APIError } from './util/errors-ts';
 import { SENTRY_DSN } from './util/constants';
 import getUpdateCommand from './util/get-update-command';
-import { metrics, shouldCollectMetrics } from './util/metrics';
 import { getCommandName, getTitleName } from './util/pkg-name';
 import doLoginPrompt from './util/login/prompt';
 import type { AuthConfig, GlobalConfig } from '@vercel-internals/types';
@@ -64,6 +62,13 @@ const VERCEL_AUTH_CONFIG_PATH = configFiles.getAuthConfigFilePath();
 
 const GLOBAL_COMMANDS = new Set(['help']);
 
+/*
+  By default, node throws EPIPE errors if process.stdout is being written to
+  and a user runs it through a pipe that gets closed while the process is still outputting
+  (eg, the simple case of piping a node app through head).
+  
+  This suppresses those errors.
+*/
 epipebomb();
 
 // Configure the error reporting system
@@ -86,17 +91,12 @@ const main = async () => {
     process.stdin.isTTY = true;
   }
 
-  let argv;
+  let parsedArgs;
 
   try {
-    argv = getArgs(
+    parsedArgs = parseArguments(
       process.argv,
-      {
-        '--version': Boolean,
-        '-v': '--version',
-        '--debug': Boolean,
-        '-d': '--debug',
-      },
+      { '--version': Boolean, '-v': '--version' },
       { permissive: true }
     );
   } catch (err: unknown) {
@@ -104,8 +104,8 @@ const main = async () => {
     return 1;
   }
 
-  const isDebugging = argv['--debug'];
-  const isNoColor = argv['--no-color'];
+  const isDebugging = parsedArgs.flags['--debug'];
+  const isNoColor = parsedArgs.flags['--no-color'];
 
   output = new Output(process.stderr, {
     debug: isDebugging,
@@ -114,7 +114,7 @@ const main = async () => {
 
   debug = output.debug;
 
-  const localConfigPath = argv['--local-config'];
+  const localConfigPath = parsedArgs.flags['--local-config'];
   let localConfig: VercelConfig | Error | undefined = await getConfig(
     output,
     localConfigPath
@@ -147,8 +147,8 @@ const main = async () => {
   //
   //  * a path to deploy (as in: `vercel path/`)
   //  * a subcommand (as in: `vercel ls`)
-  const targetOrSubcommand = argv._[2];
-  const subSubCommand = argv._[3];
+  const targetOrSubcommand = parsedArgs.args[2];
+  const subSubCommand = parsedArgs.args[3];
 
   // If empty, leave this code here for easy adding of beta commands later
   const betaCommands: string[] = [];
@@ -165,14 +165,14 @@ const main = async () => {
   }
 
   // Handle `--version` directly
-  if (!targetOrSubcommand && argv['--version']) {
+  if (!targetOrSubcommand && parsedArgs.flags['--version']) {
     // eslint-disable-next-line no-console
     console.log(pkg.version);
     return 0;
   }
 
   // Handle bare `-h` directly
-  const bareHelpOption = !targetOrSubcommand && argv['--help'];
+  const bareHelpOption = !targetOrSubcommand && parsedArgs.flags['--help'];
   const bareHelpSubcommand = targetOrSubcommand === 'help' && !subSubCommand;
   if (bareHelpOption || bareHelpSubcommand) {
     output.print(help());
@@ -243,8 +243,8 @@ const main = async () => {
     }
   }
 
-  if (typeof argv['--api'] === 'string') {
-    apiUrl = argv['--api'];
+  if (typeof parsedArgs.flags['--api'] === 'string') {
+    apiUrl = parsedArgs.flags['--api'];
   } else if (config && config.api) {
     apiUrl = config.api;
   }
@@ -272,8 +272,8 @@ const main = async () => {
   });
 
   // The `--cwd` flag is respected for all sub-commands
-  if (argv['--cwd']) {
-    client.cwd = argv['--cwd'];
+  if (parsedArgs.flags['--cwd']) {
+    client.cwd = parsedArgs.flags['--cwd'];
   }
   const { cwd } = client;
 
@@ -292,7 +292,7 @@ const main = async () => {
     if (
       targetPathExists &&
       subcommandExists &&
-      !argv['--cwd'] &&
+      !parsedArgs.flags['--cwd'] &&
       !process.env.NOW_BUILDER
     ) {
       output.warn(
@@ -324,12 +324,12 @@ const main = async () => {
     (!authConfig || !authConfig.token) &&
     !client.argv.includes('-h') &&
     !client.argv.includes('--help') &&
-    !argv['--token'] &&
+    !parsedArgs.flags['--token'] &&
     subcommand &&
     !subcommandsWithoutToken.includes(subcommand)
   ) {
     if (isTTY) {
-      output.log(info(`No existing credentials found. Please log in:`));
+      output.log(`No existing credentials found. Please log in:`);
       const result = await doLoginPrompt(client);
 
       // The login function failed, so it returned an exit code
@@ -358,7 +358,10 @@ const main = async () => {
     }
   }
 
-  if (typeof argv['--token'] === 'string' && subcommand === 'switch') {
+  if (
+    typeof parsedArgs.flags['--token'] === 'string' &&
+    subcommand === 'switch'
+  ) {
     output.prettyError({
       message: `This command doesn't work with ${param(
         '--token'
@@ -369,8 +372,8 @@ const main = async () => {
     return 1;
   }
 
-  if (typeof argv['--token'] === 'string') {
-    const token = argv['--token'];
+  if (typeof parsedArgs.flags['--token'] === 'string') {
+    const token: string = parsedArgs.flags['--token'];
 
     if (token.length === 0) {
       output.prettyError({
@@ -404,7 +407,7 @@ const main = async () => {
     }
   }
 
-  if (argv['--team']) {
+  if (parsedArgs.flags['--team']) {
     output.warn(
       `The ${param('--team')} option is deprecated. Please use ${param(
         '--scope'
@@ -414,7 +417,10 @@ const main = async () => {
 
   let targetCommand =
     typeof subcommand === 'string' ? commands.get(subcommand) : undefined;
-  const scope = argv['--scope'] || argv['--team'] || localConfig?.scope;
+  const scope =
+    parsedArgs.flags['--scope'] ||
+    parsedArgs.flags['--team'] ||
+    localConfig?.scope;
 
   if (
     typeof scope === 'string' &&
@@ -498,22 +504,18 @@ const main = async () => {
   }
 
   let exitCode;
-  let metric: ReturnType<typeof metrics> | undefined;
-  const eventCategory = 'Exit Code';
 
   try {
-    const start = Date.now();
-
     if (!targetCommand) {
       // Set this for the metrics to record it at the end
-      targetCommand = argv._[2];
+      targetCommand = parsedArgs.args[2];
 
       // Try to execute as an extension
       try {
         exitCode = await execExtension(
           client,
           targetCommand,
-          argv._.slice(3),
+          parsedArgs.args.slice(3),
           cwd
         );
       } catch (err: unknown) {
@@ -567,6 +569,12 @@ const main = async () => {
         case 'inspect':
           func = require('./commands/inspect').default;
           break;
+        case 'install':
+          func = require('./commands/install').default;
+          break;
+        case 'integration':
+          func = require('./commands/integration').default;
+          break;
         case 'link':
           func = require('./commands/link').default;
           break;
@@ -600,9 +608,6 @@ const main = async () => {
         case 'rollback':
           func = require('./commands/rollback').default;
           break;
-        case 'secrets':
-          func = require('./commands/secrets').default;
-          break;
         case 'target':
           func = require('./commands/target').default;
           break;
@@ -628,17 +633,6 @@ const main = async () => {
       }
 
       exitCode = await func(client);
-    }
-    const end = Date.now() - start;
-
-    if (shouldCollectMetrics) {
-      const category = 'Command Invocation';
-
-      if (!metric) metric = metrics();
-      metric
-        .timing(category, targetCommand, end, pkg.version)
-        .event(category, targetCommand, pkg.version)
-        .send();
     }
   } catch (err: unknown) {
     if (isErrnoException(err) && err.code === 'ENOTFOUND') {
@@ -688,14 +682,6 @@ const main = async () => {
       return 1;
     }
 
-    if (shouldCollectMetrics) {
-      if (!metric) metric = metrics();
-      metric
-        .event(eventCategory, '1', pkg.version)
-        .exception(errorToString(err))
-        .send();
-    }
-
     // If there is a code we should not consider the error unexpected
     // but instead show the message. Any error that is handled by this should
     // actually be handled in the sub command instead. Please make sure
@@ -714,11 +700,6 @@ const main = async () => {
     }
 
     return 1;
-  }
-
-  if (shouldCollectMetrics) {
-    if (!metric) metric = metrics();
-    metric.event(eventCategory, `${exitCode}`, pkg.version).send();
   }
 
   return exitCode;

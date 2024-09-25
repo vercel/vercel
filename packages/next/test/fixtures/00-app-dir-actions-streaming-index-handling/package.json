@@ -1,0 +1,11 @@
+{
+  "dependencies": {
+    "next": "canary",
+    "react": "19.0.0-rc-1eaccd82-20240816",
+    "react-dom": "19.0.0-rc-1eaccd82-20240816"
+  },
+  "scripts": {
+    "build": "next build && cp .next/server/server-reference-manifest.json public/"
+  },
+  "ignoreNextjsUpdates": true
+}

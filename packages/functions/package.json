@@ -2,21 +2,14 @@
   "name": "@vercel/functions",
   "description": "Runtime functions to be used with your Vercel Functions",
   "homepage": "https://vercel.com",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
-    },
-    "./oidc": {
-      "types": "./dist/oidc/index.d.ts",
-      "default": "./dist/oidc/index.js"
-    }
-  },
   "files": [
-    "dist"
+    "**/*.js",
+    "**/*.d.ts",
+    "**/*.md"
   ],
-  "types": "./dist/index.d.ts",
-  "version": "1.4.0",
+  "main": "./index.js",
+  "types": "./index.d.ts",
+  "version": "1.4.1",
   "repository": {
     "directory": "packages/functions",
     "type": "git",

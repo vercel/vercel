@@ -25,7 +25,8 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
       path.join(__dirname, 'vercel.json'),
       path.join(fixtureDir, 'vercel.json')
     );
-
+    
+    await require('../../utils').normalizeReactVersion(fixtureDir)
     const info = await deployAndTest(fixtureDir);
     Object.assign(ctx, info);
   });

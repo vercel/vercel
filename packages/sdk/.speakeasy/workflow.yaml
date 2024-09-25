@@ -1,0 +1,15 @@
+workflowVersion: 1.0.0
+speakeasyVersion: latest
+sources:
+    vercel-OAS:
+        inputs:
+            - location: ../../open-api.yaml
+        registry:
+            location: registry.speakeasyapi.dev/vercel-nv/vercel/vercel-oas
+targets:
+    vercel:
+        target: typescript
+        source: vercel-OAS
+        publish:
+            npm:
+                token: $npm_token

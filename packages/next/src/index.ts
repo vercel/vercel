@@ -93,6 +93,7 @@ import {
   getFunctionsConfigManifest,
   require_,
   getServerlessPages,
+  RenderingMode,
 } from './utils';
 
 export const version = 2;
@@ -1195,8 +1196,8 @@ export const build: BuildV2 = async buildOptions => {
       staticPages[path.posix.join(entryDirectory, '404')] && hasPages404
         ? path.posix.join(entryDirectory, '404')
         : staticPages[path.posix.join(entryDirectory, '_errors/404')]
-        ? path.posix.join(entryDirectory, '_errors/404')
-        : undefined;
+          ? path.posix.join(entryDirectory, '_errors/404')
+          : undefined;
 
     const { i18n } = routesManifest || {};
 
@@ -1354,13 +1355,13 @@ export const build: BuildV2 = async buildOptions => {
      */
     const experimentalPPRRoutes = new Set<string>();
 
-    for (const [route, { experimentalPPR }] of [
+    for (const [route, { renderingMode }] of [
       ...Object.entries(prerenderManifest.staticRoutes),
       ...Object.entries(prerenderManifest.blockingFallbackRoutes),
       ...Object.entries(prerenderManifest.fallbackRoutes),
       ...Object.entries(prerenderManifest.omittedRoutes),
     ]) {
-      if (!experimentalPPR) continue;
+      if (renderingMode !== RenderingMode.PARTIALLY_STATIC) continue;
 
       experimentalPPRRoutes.add(route);
     }
@@ -1946,7 +1947,6 @@ export const build: BuildV2 = async buildOptions => {
       bypassToken: prerenderManifest.bypassToken || '',
       isServerMode,
       isAppPPREnabled: false,
-      hasActionOutputSupport: false,
     }).then(arr =>
       localizeDynamicRoutes(
         arr,
@@ -1977,7 +1977,6 @@ export const build: BuildV2 = async buildOptions => {
         bypassToken: prerenderManifest.bypassToken || '',
         isServerMode,
         isAppPPREnabled: false,
-        hasActionOutputSupport: false,
       }).then(arr =>
         arr.map(route => {
           route.src = route.src.replace('^', `^${dynamicPrefix}`);
@@ -2349,6 +2348,24 @@ export const build: BuildV2 = async buildOptions => {
         ? [
             // Handle auto-adding current default locale to path based on
             // $wildcard
+            // This is split into two rules to avoid matching the `/index` route as it causes issues with trailing slash redirect
+            {
+              src: `^${path.posix.join(
+                '/',
+                entryDirectory,
+                '/'
+              )}(?!(?:_next/.*|${i18n.locales
+                .map(locale => escapeStringRegexp(locale))
+                .join('|')})(?:/.*|$))$`,
+              // we aren't able to ensure trailing slash mode here
+              // so ensure this comes after the trailing slash redirect
+              dest: `${
+                entryDirectory !== '.'
+                  ? path.posix.join('/', entryDirectory)
+                  : ''
+              }$wildcard${trailingSlash ? '/' : ''}`,
+              continue: true,
+            },
             {
               src: `^${path.join(
                 '/',
@@ -2478,22 +2495,22 @@ export const build: BuildV2 = async buildOptions => {
       ...(!hasStatic500
         ? []
         : i18n
-        ? [
-            {
-              src: `${path.join('/', entryDirectory, '/')}(?:${i18n.locales
-                .map(locale => escapeStringRegexp(locale))
-                .join('|')})?[/]?500`,
-              status: 500,
-              continue: true,
-            },
-          ]
-        : [
-            {
-              src: path.join('/', entryDirectory, '500'),
-              status: 500,
-              continue: true,
-            },
-          ]),
+          ? [
+              {
+                src: `${path.join('/', entryDirectory, '/')}(?:${i18n.locales
+                  .map(locale => escapeStringRegexp(locale))
+                  .join('|')})?[/]?500`,
+                status: 500,
+                continue: true,
+              },
+            ]
+          : [
+              {
+                src: path.join('/', entryDirectory, '500'),
+                status: 500,
+                continue: true,
+              },
+            ]),
 
       // Next.js page lambdas, `static/` folder, reserved assets, and `public/`
       // folder
@@ -2701,31 +2718,31 @@ export const build: BuildV2 = async buildOptions => {
             ...(!hasStatic500
               ? []
               : i18n
-              ? [
-                  {
-                    src: `${path.join(
-                      '/',
-                      entryDirectory,
-                      '/'
-                    )}(?<nextLocale>${i18n.locales
-                      .map(locale => escapeStringRegexp(locale))
-                      .join('|')})(/.*|$)`,
-                    dest: '/$nextLocale/500',
-                    status: 500,
-                  },
-                  {
-                    src: path.join('/', entryDirectory, '.*'),
-                    dest: `/${i18n.defaultLocale}/500`,
-                    status: 500,
-                  },
-                ]
-              : [
-                  {
-                    src: path.join('/', entryDirectory, '.*'),
-                    dest: path.join('/', entryDirectory, '/500'),
-                    status: 500,
-                  },
-                ]),
+                ? [
+                    {
+                      src: `${path.join(
+                        '/',
+                        entryDirectory,
+                        '/'
+                      )}(?<nextLocale>${i18n.locales
+                        .map(locale => escapeStringRegexp(locale))
+                        .join('|')})(/.*|$)`,
+                      dest: '/$nextLocale/500',
+                      status: 500,
+                    },
+                    {
+                      src: path.join('/', entryDirectory, '.*'),
+                      dest: `/${i18n.defaultLocale}/500`,
+                      status: 500,
+                    },
+                  ]
+                : [
+                    {
+                      src: path.join('/', entryDirectory, '.*'),
+                      dest: path.join('/', entryDirectory, '/500'),
+                      status: 500,
+                    },
+                  ]),
           ]),
     ],
     framework: { version: nextVersion },

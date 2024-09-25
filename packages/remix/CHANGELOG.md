@@ -1,5 +1,55 @@
 # @vercel/remix-builder
 
+## 2.2.9
+
+### Patch Changes
+
+- Update `@remix-run/dev` fork to v2.12.0 ([#12124](https://github.com/vercel/vercel/pull/12124))
+
+## 2.2.8
+
+### Patch Changes
+
+- Revert "Revert "Revert "Fix corepack `packageManager` detection on monorepos""" ([#12099](https://github.com/vercel/vercel/pull/12099))
+
+## 2.2.7
+
+### Patch Changes
+
+- Revert "Revert "Fix corepack `packageManager` detection on monorepos"" ([#11871](https://github.com/vercel/vercel/pull/11871))
+
+## 2.2.6
+
+### Patch Changes
+
+- Update `@remix-run/dev` fork to v2.11.2 ([#11968](https://github.com/vercel/vercel/pull/11968))
+
+## 2.2.5
+
+### Patch Changes
+
+- [remix] remove contact note ([#11947](https://github.com/vercel/vercel/pull/11947))
+
+## 2.2.4
+
+### Patch Changes
+
+- Update `@remix-run/dev` fork to v2.11.1 ([#11924](https://github.com/vercel/vercel/pull/11924))
+
+## 2.2.3
+
+### Patch Changes
+
+- Update `@remix-run/dev` fork to v2.11.0 ([#11913](https://github.com/vercel/vercel/pull/11913))
+
+## 2.2.2
+
+### Patch Changes
+
+- Fix POST requests when `unstable_singleFetch` is enabled ([#11904](https://github.com/vercel/vercel/pull/11904))
+
+- Update `@remix-run/dev` fork to v2.10.3 ([#11893](https://github.com/vercel/vercel/pull/11893))
+
 ## 2.2.1
 
 ### Patch Changes

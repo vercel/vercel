@@ -42,6 +42,12 @@ export const NODE_VERSIONS: NodeVersion[] = [
 ];
 
 function getOptions() {
+  if (process.env.VERCEL_ALLOW_NODEJS22 === '1') {
+    return [
+      { major: 22, range: '22.x', runtime: 'nodejs22.x' },
+      ...NODE_VERSIONS,
+    ];
+  }
   return NODE_VERSIONS;
 }
 
