@@ -10,7 +10,7 @@
 
 # @vercel/sdk
 
-The `@vercel/sdk` is a type-safe Typescript SDK that gives full control over the entire Vercel platform through the [Vercel REST API](https://vercel.com/docs/rest-api).
+The `@vercel/sdk` is a type-safe Typescript SDK that gives you full control over the entire Vercel platform through the [Vercel REST API](https://vercel.com/docs/rest-api).
 
 <div align="left">
     <a href="https://www.speakeasy.com/?utm_source=@vercel/sdk&utm_campaign=typescript"><img src="https://custom-icon-badges.demolab.com/badge/-Built%20By%20Speakeasy-212015?style=for-the-badge&logoColor=FBE331&logo=speakeasy&labelColor=545454" /></a>
@@ -87,10 +87,11 @@ For supported JavaScript runtimes, please consult [RUNTIMES.md](RUNTIMES.md).
 
 ## Access Tokens
 
-You need to pass a valid access token to be use any resource or operation. Please to [Creating an Access Token](https://vercel.com/docs/rest-api#creating-an-access-token) to learn how to create one. Make sure that you create a token with correct Vercel [scope](https://vercel.com/docs/dashboard-features#scope-selector). Permission errors when you are already sending a token can be one of the following errors:
-- The token you are using has expired (Check the expiry date of the token in Vercel dashboard)
-- The token does not have access to the correct scope (either not the right team or it does not have account level access)
-- The resource or operation you are trying to use is not available for that team based on the plan (For example, AccessGroups is an Enterprise only feature and you are using a token for a team on the pro plan)
+You need to pass a valid access token to be able to use any resource or operation. Refer to [Creating an Access Token](https://vercel.com/docs/rest-api#creating-an-access-token) to learn how to create one. Make sure that you create a token with the correct Vercel [scope](https://vercel.com/docs/dashboard-features#scope-selector). 
+If you face permission (403) errors when you are already sending a token, it can be one of the following problems:
+- The token you are using has expired (Check the expiry date of the token in the Vercel dashboard)
+- The token does not have access to the correct scope, either not the right team or it does not have account level access
+- The resource or operation you are trying to use is not available for that team (For example, AccessGroups is an Enterprise only feature and you are using a token for a team on the pro plan)
 
 <!-- Start Authentication [security] -->
 ## Authentication
