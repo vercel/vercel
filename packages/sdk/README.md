@@ -85,6 +85,46 @@ yarn add @vercel/sdk zod
 For supported JavaScript runtimes, please consult [RUNTIMES.md](RUNTIMES.md).
 <!-- End Requirements [requirements] -->
 
+## Access Tokens
+
+You need to pass a valid access token to be use any resource or operation. Please to [Creating an Access Token](https://vercel.com/docs/rest-api#creating-an-access-token) to learn how to create one. Make sure that you create a token with correct Vercel [scope](https://vercel.com/docs/dashboard-features#scope-selector). Permission errors when you are already sending a token can be one of the following errors:
+- The token you are using has expired (Check the expiry date of the token in Vercel dashboard)
+- The token does not have access to the correct scope (either not the right team or it does not have account level access)
+- The resource or operation you are trying to use is not available for that team based on the plan (For example, AccessGroups is an Enterprise only feature and you are using a token for a team on the pro plan)
+
+<!-- Start Authentication [security] -->
+## Authentication
+
+### Per-Client Security Schemes
+
+This SDK supports the following security scheme globally:
+
+| Name          | Type          | Scheme        |
+| ------------- | ------------- | ------------- |
+| `bearerToken` | http          | HTTP Bearer   |
+
+To authenticate with the API the `bearerToken` parameter must be set when initializing the SDK client instance. For example:
+```typescript
+import { Vercel } from "@vercel/sdk";
+
+const vercel = new Vercel({
+  bearerToken: "<YOUR_BEARER_TOKEN_HERE>",
+});
+
+async function run() {
+  const result = await vercel.listDeploymentBuilds({
+    deploymentId: "<value>",
+  });
+
+  // Handle the result
+  console.log(result);
+}
+
+run();
+
+```
+<!-- End Authentication [security] -->
+
 <!-- Start SDK Example Usage [usage] -->
 ## SDK Example Usage
 
@@ -776,39 +816,6 @@ httpClient.addHook("requestError", (error, request) => {
 const sdk = new Vercel({ httpClient });
 ```
 <!-- End Custom HTTP Client [http-client] -->
-
-<!-- Start Authentication [security] -->
-## Authentication
-
-### Per-Client Security Schemes
-
-This SDK supports the following security scheme globally:
-
-| Name          | Type          | Scheme        |
-| ------------- | ------------- | ------------- |
-| `bearerToken` | http          | HTTP Bearer   |
-
-To authenticate with the API the `bearerToken` parameter must be set when initializing the SDK client instance. For example:
-```typescript
-import { Vercel } from "@vercel/sdk";
-
-const vercel = new Vercel({
-  bearerToken: "<YOUR_BEARER_TOKEN_HERE>",
-});
-
-async function run() {
-  const result = await vercel.listDeploymentBuilds({
-    deploymentId: "<value>",
-  });
-
-  // Handle the result
-  console.log(result);
-}
-
-run();
-
-```
-<!-- End Authentication [security] -->
 
 <!-- Start Debugging [debug] -->
 ## Debugging
