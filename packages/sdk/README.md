@@ -1,6 +1,16 @@
+<p align="center">
+  <a href="https://vercel.com">
+    <img src="https://assets.vercel.com/image/upload/v1588805858/repositories/vercel/logo.png" height="96">
+    <h3 align="center">Vercel</h3>
+  </a>
+  <p align="center">Develop. Preview. Ship.</p>
+</p>
+
+[Join the Vercel Community](https://vercel.community/)
+
 # @vercel/sdk
 
-Developer-friendly & type-safe Typescript SDK specifically catered to leverage *@vercel/sdk* API.
+The `@vercel/sdk` is a type-safe Typescript SDK that gives full control over the entire Vercel platform through the [Vercel REST API](https://vercel.com/docs/rest-api).
 
 <div align="left">
     <a href="https://www.speakeasy.com/?utm_source=@vercel/sdk&utm_campaign=typescript"><img src="https://custom-icon-badges.demolab.com/badge/-Built%20By%20Speakeasy-212015?style=for-the-badge&logoColor=FBE331&logo=speakeasy&labelColor=545454" /></a>
@@ -8,15 +18,6 @@ Developer-friendly & type-safe Typescript SDK specifically catered to leverage *
         <img src="https://img.shields.io/badge/License-MIT-blue.svg" style="width: 100px; height: 28px;" />
     </a>
 </div>
-
-
-## 🏗 **Welcome to your new SDK!** 🏗
-
-It has been generated successfully based on your OpenAPI spec. However, it is not yet ready for production use. Here are some next steps:
-- [ ] 🛠 Make your SDK feel handcrafted by [customizing it](https://www.speakeasy.com/docs/customize-sdks)
-- [ ] ♻️ Refine your SDK quickly by iterating locally with the [Speakeasy CLI](https://github.com/speakeasy-api/speakeasy)
-- [ ] 🎁 Publish your SDK to package managers by [configuring automatic publishing](https://www.speakeasy.com/docs/advanced-setup/publish-sdks)
-- [ ] ✨ When ready to productionize, delete this section from the README
 
 <!-- Start Summary [summary] -->
 ## Summary
