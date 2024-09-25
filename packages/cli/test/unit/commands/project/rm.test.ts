@@ -7,11 +7,10 @@ import { defaultProject, useProject } from '../../../mocks/project';
 describe('rm', () => {
   beforeEach(() => {
     client.reset();
-  
 
     vitest.useFakeTimers();
-    const date = new Date(2024, 8, 19)
-    vitest.setSystemTime(date)
+    const date = new Date(2024, 8, 19);
+    vitest.setSystemTime(date);
   });
 
   afterEach(() => {
@@ -19,7 +18,7 @@ describe('rm', () => {
   });
 
   describe('[name]', () => {
-    it.only('should remove a project', async () => {
+    it('should remove a project', async () => {
       useUser();
       useProject({
         ...defaultProject,
