@@ -1,7 +1,7 @@
 import chance from 'chance';
 import { client } from './client';
 
-export function createDomain(k: string) {
+export function createDomain(k?: string) {
   return {
     suffix: chance().bool(),
     verified: chance().bool(),
@@ -26,17 +26,6 @@ export function createDomain(k: string) {
     transferredAt: chance().timestamp(),
     transferStartedAt: chance().timestamp(),
   };
-}
-
-export function useDomainPrice(priceArg?: number) {
-  const price = priceArg || 1.0;
-
-  client.scenario.get('/v3/domains/price', (_req, res) => {
-    res.json({
-      price,
-      period: 2,
-    });
-  });
 }
 
 export function useDomains() {

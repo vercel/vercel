@@ -32,6 +32,7 @@ export default async function transferIn(
       output,
     },
   });
+  telemetry.trackCliOptionCode(opts['--code']);
 
   const [domainName] = args;
   if (!domainName) {
@@ -76,7 +77,6 @@ export default async function transferIn(
   );
 
   const authCode = await getAuthCode(client, opts['--code']);
-  telemetry.trackCliOptionCode(authCode);
 
   const shouldTransfer = await confirm(
     client,
