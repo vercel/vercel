@@ -6,7 +6,7 @@
 import { RemoveProjectEnvResponseBodyContentHint } from "@vercel/sdk/models/operations/removeprojectenv.js";
 
 let value: RemoveProjectEnvResponseBodyContentHint = {
-  type: "postgres-url",
+  type: "redis-url",
   storeId: "<value>",
 };
 ```

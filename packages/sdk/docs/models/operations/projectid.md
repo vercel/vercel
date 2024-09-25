@@ -5,7 +5,7 @@
 ```typescript
 import { ProjectId } from "@vercel/sdk/models/operations/createdeployment.js";
 
-let value: ProjectId = 4255.08;
+let value: ProjectId = 9650.95;
 ```
 
 ## Supported Types

@@ -11,7 +11,7 @@ let value:
   CreateTeamTeamsResponse200ApplicationJSONResponseBodyBillingInvoiceItemsSamlFrequency =
     {
       interval: "month",
-      intervalCount: 2536.25,
+      intervalCount: 7012.57,
     };
 ```
 

@@ -6,9 +6,9 @@
 import { AnalyticsUsage } from "@vercel/sdk/models/components/authuser.js";
 
 let value: AnalyticsUsage = {
-  price: 7841.15,
-  batch: 5886.39,
-  threshold: 2313.82,
+  price: 4917.84,
+  batch: 1311.16,
+  threshold: 2484.25,
   hidden: false,
 };
 ```

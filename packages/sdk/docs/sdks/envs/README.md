@@ -28,6 +28,7 @@ async function run() {
   const result = await vercel.envs.listByProject({
     idOrName: "prj_XLKmu1DyR1eY7zq8UgeRKbA7yVLA",
     gitBranch: "feature-1",
+    decrypt: "true",
     source: "vercel-cli:pull",
   });
   
@@ -56,6 +57,7 @@ async function run() {
   const res = await envsListByProject(vercel, {
     idOrName: "prj_XLKmu1DyR1eY7zq8UgeRKbA7yVLA",
     gitBranch: "feature-1",
+    decrypt: "true",
     source: "vercel-cli:pull",
   });
 

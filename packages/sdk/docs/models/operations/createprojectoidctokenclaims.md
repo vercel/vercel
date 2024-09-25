@@ -5,9 +5,7 @@
 ```typescript
 import { CreateProjectOidcTokenClaims } from "@vercel/sdk/models/operations/createproject.js";
 
-let value: CreateProjectOidcTokenClaims = [
-  "<value>",
-];
+let value: CreateProjectOidcTokenClaims = "<value>";
 ```
 
 ## Supported Types

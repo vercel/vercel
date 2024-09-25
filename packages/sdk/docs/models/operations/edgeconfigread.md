@@ -6,9 +6,9 @@
 import { EdgeConfigRead } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: EdgeConfigRead = {
-  price: 452.34,
-  batch: 4864.1,
-  threshold: 3252.97,
+  price: 9981.99,
+  batch: 2977.23,
+  threshold: 2270.18,
   hidden: false,
 };
 ```

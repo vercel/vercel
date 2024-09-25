@@ -520,7 +520,7 @@ async function run() {
       deliveryFormat: "json",
       url: "https://equal-hedgehog.com",
       sources: [
-        "build",
+        "lambda",
       ],
     },
   });

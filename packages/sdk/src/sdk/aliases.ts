@@ -53,7 +53,7 @@ export class Aliases extends ClientSDK {
   async get(
     request: GetAliasRequest,
     options?: RequestOptions,
-  ): Promise<Array<GetAliasResponseBody>> {
+  ): Promise<GetAliasResponseBody> {
     return unwrapAsync(aliasesGet(
       this,
       request,

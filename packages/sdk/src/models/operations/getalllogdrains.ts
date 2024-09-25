@@ -72,6 +72,7 @@ export type GetAllLogDrainsCompression = ClosedEnum<
 
 export const GetAllLogDrainsCreatedFrom = {
   SelfServed: "self-served",
+  Integration: "integration",
 } as const;
 export type GetAllLogDrainsCreatedFrom = ClosedEnum<
   typeof GetAllLogDrainsCreatedFrom
@@ -100,7 +101,7 @@ export type GetAllLogDrainsResponseBody = {
   firstErrorTimestamp?: number | undefined;
   samplingRate?: number | undefined;
   compression?: GetAllLogDrainsCompression | undefined;
-  secret: string;
+  secret?: string | undefined;
   createdFrom?: GetAllLogDrainsCreatedFrom | undefined;
 };
 
@@ -321,7 +322,7 @@ export const GetAllLogDrainsResponseBody$inboundSchema: z.ZodType<
   firstErrorTimestamp: z.number().optional(),
   samplingRate: z.number().optional(),
   compression: GetAllLogDrainsCompression$inboundSchema.optional(),
-  secret: z.string(),
+  secret: z.string().optional(),
   createdFrom: GetAllLogDrainsCreatedFrom$inboundSchema.optional(),
 });
 
@@ -349,7 +350,7 @@ export type GetAllLogDrainsResponseBody$Outbound = {
   firstErrorTimestamp?: number | undefined;
   samplingRate?: number | undefined;
   compression?: string | undefined;
-  secret: string;
+  secret?: string | undefined;
   createdFrom?: string | undefined;
 };
 
@@ -381,7 +382,7 @@ export const GetAllLogDrainsResponseBody$outboundSchema: z.ZodType<
   firstErrorTimestamp: z.number().optional(),
   samplingRate: z.number().optional(),
   compression: GetAllLogDrainsCompression$outboundSchema.optional(),
-  secret: z.string(),
+  secret: z.string().optional(),
   createdFrom: GetAllLogDrainsCreatedFrom$outboundSchema.optional(),
 });
 

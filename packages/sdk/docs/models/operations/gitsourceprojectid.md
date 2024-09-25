@@ -5,7 +5,7 @@
 ```typescript
 import { GitSourceProjectId } from "@vercel/sdk/models/operations/createdeployment.js";
 
-let value: GitSourceProjectId = 4406.66;
+let value: GitSourceProjectId = 5021.06;
 ```
 
 ## Supported Types

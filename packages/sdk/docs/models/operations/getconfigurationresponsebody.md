@@ -8,15 +8,14 @@ The configuration with the provided id
 import { GetConfigurationResponseBody } from "@vercel/sdk/models/operations/getconfiguration.js";
 
 let value: GetConfigurationResponseBody = {
-  projectSelection: "all",
-  projects: [
-    "prj_xQxbutw1HpL6HLYPAzt5h75m8NjO",
-  ],
   completedAt: 1558531915505,
   createdAt: 1558531915505,
   id: "icfg_3bwCLgxL8qt5kjRLcv2Dit7F",
   integrationId: "oac_xzpVzcUOgcB1nrVlirtKhbWV",
   ownerId: "kr1PsOIzqEL5Xg6M4VZcZosf",
+  projects: [
+    "prj_xQxbutw1HpL6HLYPAzt5h75m8NjO",
+  ],
   source: "marketplace",
   slug: "slack",
   teamId: "team_nLlpyC6RE1qxydlFKbrxDlud",

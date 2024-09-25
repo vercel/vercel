@@ -11,7 +11,7 @@ let value: Link = {
       id: "<id>",
       name: "<value>",
       ref: "<value>",
-      url: "http://delightful-graph.name",
+      url: "https://alive-bathhouse.net/",
     },
   ],
 };

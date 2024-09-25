@@ -6,16 +6,16 @@
 import { CancelDeploymentGitRepo } from "@vercel/sdk/models/operations/canceldeployment.js";
 
 let value: CancelDeploymentGitRepo = {
-  org: "<value>",
-  repo: "<value>",
-  repoId: 4317.85,
-  type: "github",
-  repoOwnerId: "<value>",
-  path: "/var/tmp",
+  owner: "<value>",
+  repoUuid: "<value>",
+  slug: "<value>",
+  type: "bitbucket",
+  workspaceUuid: "<value>",
+  path: "/var",
   defaultBranch: "<value>",
   name: "<value>",
   private: false,
-  ownerType: "user",
+  ownerType: "team",
 };
 ```
 

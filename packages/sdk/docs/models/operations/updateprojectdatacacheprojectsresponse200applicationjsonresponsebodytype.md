@@ -7,7 +7,7 @@ import { UpdateProjectDataCacheProjectsResponse200ApplicationJSONResponseBodyTyp
 
 let value:
   UpdateProjectDataCacheProjectsResponse200ApplicationJSONResponseBodyType =
-    "protocol";
+    "header";
 ```
 
 ## Values

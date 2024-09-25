@@ -7,7 +7,7 @@ import { GetProjectsProjectsResponse200ApplicationJSONResponseBodyProjectsType }
 
 let value:
   GetProjectsProjectsResponse200ApplicationJSONResponseBodyProjectsType =
-    "path";
+    "region";
 ```
 
 ## Values

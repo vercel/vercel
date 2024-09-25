@@ -6,9 +6,9 @@
 import { WebAnalyticsEvent } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: WebAnalyticsEvent = {
-  price: 7731.1,
-  batch: 7412.38,
-  threshold: 2168.7,
+  price: 15.95,
+  batch: 1454.50,
+  threshold: 7791.11,
   hidden: false,
 };
 ```

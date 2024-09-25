@@ -8,15 +8,10 @@ import { CreateRecordRequest } from "@vercel/sdk/models/operations/createrecord.
 let value: CreateRecordRequest = {
   domain: "example.com",
   requestBody: {
-    name: "<value>",
-    type: "MX",
+    name: "subdomain",
+    type: "HTTPS",
     ttl: 60,
-    srv: {
-      priority: 10,
-      weight: 10,
-      port: 5000,
-      target: "host.example.com",
-    },
+    value: "ns1.example.com",
     comment: "used to verify ownership of domain",
   },
 };

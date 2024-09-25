@@ -84,7 +84,7 @@ run();
 
 ### Response
 
-**Promise\<[operations.GetEdgeConfigsResponseBody](../../models/operations/getedgeconfigsresponsebody.md)\>**
+**Promise\<[operations.GetEdgeConfigsResponseBody[]](../../models/.md)\>**
 
 ### Errors
 

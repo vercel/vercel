@@ -4,12 +4,9 @@
 
 import * as z from "zod";
 import { VercelCore } from "../core.js";
-import {
-  encodeFormQuery as encodeFormQuery$,
-  encodeJSON as encodeJSON$,
-} from "../lib/encodings.js";
-import * as m$ from "../lib/matchers.js";
-import * as schemas$ from "../lib/schemas.js";
+import { encodeFormQuery, encodeJSON } from "../lib/encodings.js";
+import * as M from "../lib/matchers.js";
+import { safeParse } from "../lib/schemas.js";
 import { RequestOptions } from "../lib/sdks.js";
 import { extractSecurity, resolveGlobalSecurity } from "../lib/security.js";
 import { pathToFunc } from "../lib/url.js";
@@ -37,7 +34,7 @@ import { Result } from "../types/fp.js";
  * Query information about an array of artifacts.
  */
 export async function artifactsQuery(
-  client$: VercelCore,
+  client: VercelCore,
   request: ArtifactQueryRequest,
   options?: RequestOptions,
 ): Promise<
@@ -52,59 +49,59 @@ export async function artifactsQuery(
     | ConnectionError
   >
 > {
-  const input$ = request;
+  const input = request;
 
-  const parsed$ = schemas$.safeParse(
-    input$,
-    (value$) => ArtifactQueryRequest$outboundSchema.parse(value$),
+  const parsed = safeParse(
+    input,
+    (value) => ArtifactQueryRequest$outboundSchema.parse(value),
     "Input validation failed",
   );
-  if (!parsed$.ok) {
-    return parsed$;
+  if (!parsed.ok) {
+    return parsed;
   }
-  const payload$ = parsed$.value;
-  const body$ = encodeJSON$("body", payload$.RequestBody, { explode: true });
+  const payload = parsed.value;
+  const body = encodeJSON("body", payload.RequestBody, { explode: true });
 
-  const path$ = pathToFunc("/v8/artifacts")();
+  const path = pathToFunc("/v8/artifacts")();
 
-  const query$ = encodeFormQuery$({
-    "slug": payload$.slug,
-    "teamId": payload$.teamId,
+  const query = encodeFormQuery({
+    "slug": payload.slug,
+    "teamId": payload.teamId,
   });
 
-  const headers$ = new Headers({
+  const headers = new Headers({
     "Content-Type": "application/json",
     Accept: "application/json",
   });
 
-  const bearerToken$ = await extractSecurity(client$.options$.bearerToken);
-  const security$ = bearerToken$ == null ? {} : { bearerToken: bearerToken$ };
+  const secConfig = await extractSecurity(client._options.bearerToken);
+  const securityInput = secConfig == null ? {} : { bearerToken: secConfig };
   const context = {
     operationID: "artifactQuery",
     oAuth2Scopes: [],
-    securitySource: client$.options$.bearerToken,
+    securitySource: client._options.bearerToken,
   };
-  const securitySettings$ = resolveGlobalSecurity(security$);
+  const requestSecurity = resolveGlobalSecurity(securityInput);
 
-  const requestRes = client$.createRequest$(context, {
-    security: securitySettings$,
+  const requestRes = client._createRequest(context, {
+    security: requestSecurity,
     method: "POST",
-    path: path$,
-    headers: headers$,
-    query: query$,
-    body: body$,
-    timeoutMs: options?.timeoutMs || client$.options$.timeoutMs || -1,
+    path: path,
+    headers: headers,
+    query: query,
+    body: body,
+    timeoutMs: options?.timeoutMs || client._options.timeoutMs || -1,
   }, options);
   if (!requestRes.ok) {
     return requestRes;
   }
-  const request$ = requestRes.value;
+  const req = requestRes.value;
 
-  const doResult = await client$.do$(request$, {
+  const doResult = await client._do(req, {
     context,
     errorCodes: ["400", "401", "402", "403", "4XX", "5XX"],
     retryConfig: options?.retries
-      || client$.options$.retryConfig,
+      || client._options.retryConfig,
     retryCodes: options?.retryCodes || ["429", "500", "502", "503", "504"],
   });
   if (!doResult.ok) {
@@ -112,7 +109,7 @@ export async function artifactsQuery(
   }
   const response = doResult.value;
 
-  const [result$] = await m$.match<
+  const [result] = await M.match<
     { [k: string]: ResponseBody },
     | SDKError
     | SDKValidationError
@@ -122,12 +119,12 @@ export async function artifactsQuery(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(200, z.record(ResponseBody$inboundSchema)),
-    m$.fail([400, 401, 402, 403, "4XX", "5XX"]),
+    M.json(200, z.record(ResponseBody$inboundSchema)),
+    M.fail([400, 401, 402, 403, "4XX", "5XX"]),
   )(response);
-  if (!result$.ok) {
-    return result$;
+  if (!result.ok) {
+    return result;
   }
 
-  return result$;
+  return result;
 }

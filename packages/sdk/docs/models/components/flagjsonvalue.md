@@ -5,7 +5,7 @@
 ```typescript
 import { FlagJSONValue } from "@vercel/sdk/models/components/flagjsonvalue.js";
 
-let value: FlagJSONValue = false;
+let value: FlagJSONValue = 8168.25;
 ```
 
 ## Supported Types

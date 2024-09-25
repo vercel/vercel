@@ -11,7 +11,7 @@ let value: GetDeploymentGitRepo3 = {
   slug: "<value>",
   type: "bitbucket",
   workspaceUuid: "<value>",
-  path: "/usr/libdata",
+  path: "/usr/bin",
   defaultBranch: "<value>",
   name: "<value>",
   private: false,

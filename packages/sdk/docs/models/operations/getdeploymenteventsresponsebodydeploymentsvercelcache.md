@@ -5,7 +5,7 @@
 ```typescript
 import { GetDeploymentEventsResponseBodyDeploymentsVercelCache } from "@vercel/sdk/models/operations/getdeploymentevents.js";
 
-let value: GetDeploymentEventsResponseBodyDeploymentsVercelCache = "MISS";
+let value: GetDeploymentEventsResponseBodyDeploymentsVercelCache = "HIT";
 ```
 
 ## Values

@@ -6,9 +6,9 @@
 import { MonitoringMetric } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: MonitoringMetric = {
-  price: 3344.74,
-  batch: 6592.68,
-  threshold: 1753.72,
+  price: 1731.93,
+  batch: 8752.00,
+  threshold: 276.53,
   hidden: false,
 };
 ```

@@ -6,10 +6,11 @@
 import { ListDeploymentAliasesProtectionBypass } from "@vercel/sdk/models/operations/listdeploymentaliases.js";
 
 let value: ListDeploymentAliasesProtectionBypass = {
-  createdAt: 9569.33,
-  lastUpdatedAt: 7645.62,
+  createdAt: 1066.82,
+  lastUpdatedAt: 4087.74,
   lastUpdatedBy: "<value>",
-  scope: "email_invite",
+  access: "requested",
+  scope: "user",
 };
 ```
 

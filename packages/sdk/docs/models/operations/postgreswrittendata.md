@@ -6,9 +6,9 @@
 import { PostgresWrittenData } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: PostgresWrittenData = {
-  price: 7294.48,
-  batch: 5665.06,
-  threshold: 5782.1,
+  price: 3029.05,
+  batch: 5772.84,
+  threshold: 1696.78,
   hidden: false,
 };
 ```

@@ -179,7 +179,7 @@ run();
 
 ### Response
 
-**Promise\<[operations.GetAliasResponseBody[]](../../models/.md)\>**
+**Promise\<[operations.GetAliasResponseBody](../../models/operations/getaliasresponsebody.md)\>**
 
 ### Errors
 

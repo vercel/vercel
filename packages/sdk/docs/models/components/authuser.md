@@ -10,15 +10,15 @@ import { AuthUser } from "@vercel/sdk/models/components/authuser.js";
 let value: AuthUser = {
   createdAt: 1630748523395,
   softBlock: {
-    blockedAt: 9292.92,
-    reason: "FAIR_USE_LIMITS_EXCEEDED",
+    blockedAt: 5265.84,
+    reason: "BLOCKED_FOR_PLATFORM_ABUSE",
   },
   billing: {
     period: {
-      start: 2659.05,
-      end: 1635.58,
+      start: 8309.09,
+      end: 316.05,
     },
-    plan: "hobby",
+    plan: "enterprise",
   },
   resourceConfig: {},
   stagingPrefix: "<value>",

@@ -5,7 +5,7 @@
 ```typescript
 import { GetProjectsChecksState } from "@vercel/sdk/models/operations/getprojects.js";
 
-let value: GetProjectsChecksState = "completed";
+let value: GetProjectsChecksState = "registered";
 ```
 
 ## Values

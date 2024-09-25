@@ -6,21 +6,21 @@
 import { LatestDeployments } from "@vercel/sdk/models/operations/updateprojectdatacache.js";
 
 let value: LatestDeployments = {
-  createdAt: 7392.64,
+  createdAt: 4071.83,
   createdIn: "<value>",
   creator: {
-    email: "Alison97@gmail.com",
+    email: "Max97@gmail.com",
     uid: "<value>",
-    username: "Blanche48",
+    username: "Adolf.Renner52",
   },
   deploymentHostname: "<value>",
   name: "<value>",
   id: "<id>",
   plan: "pro",
   private: false,
-  readyState: "READY",
+  readyState: "BUILDING",
   type: "LAMBDAS",
-  url: "http://unacceptable-hare.org",
+  url: "https://elliptical-fog.org",
   userId: "<value>",
   previewCommentsEnabled: false,
 };

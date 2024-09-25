@@ -7,7 +7,7 @@ import { CreateDeploymentCrons } from "@vercel/sdk/models/operations/createdeplo
 
 let value: CreateDeploymentCrons = {
   schedule: "<value>",
-  path: "/net",
+  path: "/usr/share",
 };
 ```
 

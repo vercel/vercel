@@ -3,13 +3,9 @@
  */
 
 import { VercelCore } from "../core.js";
-import {
-  encodeFormQuery as encodeFormQuery$,
-  encodeJSON as encodeJSON$,
-  encodeSimple as encodeSimple$,
-} from "../lib/encodings.js";
-import * as m$ from "../lib/matchers.js";
-import * as schemas$ from "../lib/schemas.js";
+import { encodeFormQuery, encodeJSON, encodeSimple } from "../lib/encodings.js";
+import * as M from "../lib/matchers.js";
+import { safeParse } from "../lib/schemas.js";
 import { RequestOptions } from "../lib/sdks.js";
 import { extractSecurity, resolveGlobalSecurity } from "../lib/security.js";
 import { pathToFunc } from "../lib/url.js";
@@ -37,7 +33,7 @@ import { Result } from "../types/fp.js";
  * Edit a specific environment variable for a given project by passing the environment variable identifier and either passing the project `id` or `name` in the URL.
  */
 export async function envsUpdate(
-  client$: VercelCore,
+  client: VercelCore,
   request: EditProjectEnvRequest,
   options?: RequestOptions,
 ): Promise<
@@ -52,70 +48,70 @@ export async function envsUpdate(
     | ConnectionError
   >
 > {
-  const input$ = request;
+  const input = request;
 
-  const parsed$ = schemas$.safeParse(
-    input$,
-    (value$) => EditProjectEnvRequest$outboundSchema.parse(value$),
+  const parsed = safeParse(
+    input,
+    (value) => EditProjectEnvRequest$outboundSchema.parse(value),
     "Input validation failed",
   );
-  if (!parsed$.ok) {
-    return parsed$;
+  if (!parsed.ok) {
+    return parsed;
   }
-  const payload$ = parsed$.value;
-  const body$ = encodeJSON$("body", payload$.RequestBody, { explode: true });
+  const payload = parsed.value;
+  const body = encodeJSON("body", payload.RequestBody, { explode: true });
 
-  const pathParams$ = {
-    id: encodeSimple$("id", payload$.id, {
+  const pathParams = {
+    id: encodeSimple("id", payload.id, {
       explode: false,
       charEncoding: "percent",
     }),
-    idOrName: encodeSimple$("idOrName", payload$.idOrName, {
+    idOrName: encodeSimple("idOrName", payload.idOrName, {
       explode: false,
       charEncoding: "percent",
     }),
   };
 
-  const path$ = pathToFunc("/v9/projects/{idOrName}/env/{id}")(pathParams$);
+  const path = pathToFunc("/v9/projects/{idOrName}/env/{id}")(pathParams);
 
-  const query$ = encodeFormQuery$({
-    "slug": payload$.slug,
-    "teamId": payload$.teamId,
+  const query = encodeFormQuery({
+    "slug": payload.slug,
+    "teamId": payload.teamId,
   });
 
-  const headers$ = new Headers({
+  const headers = new Headers({
     "Content-Type": "application/json",
     Accept: "application/json",
   });
 
-  const bearerToken$ = await extractSecurity(client$.options$.bearerToken);
-  const security$ = bearerToken$ == null ? {} : { bearerToken: bearerToken$ };
+  const secConfig = await extractSecurity(client._options.bearerToken);
+  const securityInput = secConfig == null ? {} : { bearerToken: secConfig };
   const context = {
     operationID: "editProjectEnv",
     oAuth2Scopes: [],
-    securitySource: client$.options$.bearerToken,
+    securitySource: client._options.bearerToken,
   };
-  const securitySettings$ = resolveGlobalSecurity(security$);
+  const requestSecurity = resolveGlobalSecurity(securityInput);
 
-  const requestRes = client$.createRequest$(context, {
-    security: securitySettings$,
+  const requestRes = client._createRequest(context, {
+    security: requestSecurity,
     method: "PATCH",
-    path: path$,
-    headers: headers$,
-    query: query$,
-    body: body$,
-    timeoutMs: options?.timeoutMs || client$.options$.timeoutMs || -1,
+    path: path,
+    headers: headers,
+    query: query,
+    body: body,
+    timeoutMs: options?.timeoutMs || client._options.timeoutMs || -1,
   }, options);
   if (!requestRes.ok) {
     return requestRes;
   }
-  const request$ = requestRes.value;
+  const req = requestRes.value;
 
-  const doResult = await client$.do$(request$, {
+  const doResult = await client._do(req, {
     context,
     errorCodes: ["400", "401", "403", "409", "4XX", "5XX"],
     retryConfig: options?.retries
-      || client$.options$.retryConfig,
+      || client._options.retryConfig,
     retryCodes: options?.retryCodes || ["429", "500", "502", "503", "504"],
   });
   if (!doResult.ok) {
@@ -123,7 +119,7 @@ export async function envsUpdate(
   }
   const response = doResult.value;
 
-  const [result$] = await m$.match<
+  const [result] = await M.match<
     EditProjectEnvResponseBody,
     | SDKError
     | SDKValidationError
@@ -133,12 +129,12 @@ export async function envsUpdate(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(200, EditProjectEnvResponseBody$inboundSchema),
-    m$.fail([400, 401, 403, 409, "4XX", "5XX"]),
+    M.json(200, EditProjectEnvResponseBody$inboundSchema),
+    M.fail([400, 401, 403, 409, "4XX", "5XX"]),
   )(response);
-  if (!result$.ok) {
-    return result$;
+  if (!result.ok) {
+    return result;
   }
 
-  return result$;
+  return result;
 }

@@ -6,7 +6,7 @@
 import { RemoveProjectEnvResponseBodyEnvsResponseContentHint } from "@vercel/sdk/models/operations/removeprojectenv.js";
 
 let value: RemoveProjectEnvResponseBodyEnvsResponseContentHint = {
-  type: "redis-rest-api-token",
+  type: "redis-rest-api-read-only-token",
   storeId: "<value>",
 };
 ```

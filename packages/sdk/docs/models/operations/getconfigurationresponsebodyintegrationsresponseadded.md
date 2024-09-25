@@ -5,7 +5,7 @@
 ```typescript
 import { GetConfigurationResponseBodyIntegrationsResponseAdded } from "@vercel/sdk/models/operations/getconfiguration.js";
 
-let value: GetConfigurationResponseBodyIntegrationsResponseAdded = "read:team";
+let value: GetConfigurationResponseBodyIntegrationsResponseAdded = "read:user";
 ```
 
 ## Values

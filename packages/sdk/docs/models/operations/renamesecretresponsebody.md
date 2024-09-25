@@ -8,7 +8,7 @@ import { RenameSecretResponseBody } from "@vercel/sdk/models/operations/renamese
 let value: RenameSecretResponseBody = {
   uid: "<value>",
   name: "<value>",
-  created: new Date("2022-11-30T08:58:52.462Z"),
+  created: new Date("2022-08-11T22:07:27.220Z"),
   oldName: "<value>",
 };
 ```

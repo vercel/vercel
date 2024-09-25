@@ -6,7 +6,7 @@
 import { RoutesMissing } from "@vercel/sdk/models/operations/createdeployment.js";
 
 let value: RoutesMissing = {
-  type: "query",
+  type: "header",
   key: "<key>",
 };
 ```

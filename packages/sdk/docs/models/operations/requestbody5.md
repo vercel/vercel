@@ -7,7 +7,7 @@ import { RequestBody5 } from "@vercel/sdk/models/operations/createrecord.js";
 
 let value: RequestBody5 = {
   name: "subdomain",
-  type: "CAA",
+  type: "A",
   ttl: 60,
   value: "cname.vercel-dns.com",
   comment: "used to verify ownership of domain",
