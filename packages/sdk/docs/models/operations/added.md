@@ -5,7 +5,7 @@
 ```typescript
 import { Added } from "@vercel/sdk/models/operations/getconfigurations.js";
 
-let value: Added = "read:team";
+let value: Added = "read-write:deployment-check";
 ```
 
 ## Values

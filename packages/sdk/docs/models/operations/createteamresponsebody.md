@@ -12,8 +12,8 @@ let value: CreateTeamResponseBody = {
   slug: "<value>",
   billing: {
     period: {
-      start: 3924.3,
-      end: 3359.77,
+      start: 7133.70,
+      end: 4086.77,
     },
     plan: "enterprise",
   },

@@ -8,10 +8,9 @@ Defines the Git Repository source to be deployed. This property can not be used 
 import { GitSource } from "@vercel/sdk/models/operations/createdeployment.js";
 
 let value: GitSource = {
-  owner: "<value>",
+  projectId: "<value>",
   ref: "<value>",
-  slug: "<value>",
-  type: "bitbucket",
+  type: "gitlab",
 };
 ```
 

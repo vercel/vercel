@@ -8,14 +8,14 @@ import { ScopesQueue } from "@vercel/sdk/models/operations/getconfigurations.js"
 let value: ScopesQueue = {
   scopes: {
     added: [
-      "read:integration-configuration",
+      "read-write:domain",
     ],
     upgraded: [
-      "read-write:integration-configuration",
+      "read-write:otel-endpoint",
     ],
   },
   note: "<value>",
-  requestedAt: 249.44,
+  requestedAt: 7203.19,
 };
 ```
 

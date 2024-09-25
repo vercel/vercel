@@ -11,7 +11,7 @@ let value: Link1 = {
       id: "<id>",
       name: "<value>",
       ref: "<value>",
-      url: "http://pretty-radar.org",
+      url: "https://jagged-exploration.net/",
     },
   ],
 };

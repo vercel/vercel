@@ -8,7 +8,7 @@ import { AuthUserBillingInvoiceItemsManagedInfrastructureCommitmentFrequency } f
 let value: AuthUserBillingInvoiceItemsManagedInfrastructureCommitmentFrequency =
   {
     interval: "month",
-    intervalCount: 306.61,
+    intervalCount: 5280.82,
   };
 ```
 

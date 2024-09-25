@@ -6,9 +6,9 @@
 import { WafOwaspRequests } from "@vercel/sdk/models/components/authuser.js";
 
 let value: WafOwaspRequests = {
-  price: 279.82,
-  batch: 2783.25,
-  threshold: 1854.48,
+  price: 6254.18,
+  batch: 6227.89,
+  threshold: 8382.27,
   hidden: false,
 };
 ```

@@ -4,9 +4,9 @@
 
 import { VercelCore } from "../core.js";
 import { dlv } from "../lib/dlv.js";
-import { encodeFormQuery as encodeFormQuery$ } from "../lib/encodings.js";
-import * as m$ from "../lib/matchers.js";
-import * as schemas$ from "../lib/schemas.js";
+import { encodeFormQuery } from "../lib/encodings.js";
+import * as M from "../lib/matchers.js";
+import { safeParse } from "../lib/schemas.js";
 import { RequestOptions } from "../lib/sdks.js";
 import { extractSecurity, resolveGlobalSecurity } from "../lib/security.js";
 import { pathToFunc } from "../lib/url.js";
@@ -40,7 +40,7 @@ import {
  * Allows to retrieve the list of projects of the authenticated user or team. The list will be paginated and the provided query parameters allow filtering the returned projects.
  */
 export async function projectsGetAll(
-  client$: VercelCore,
+  client: VercelCore,
   request: GetProjectsRequest,
   options?: RequestOptions,
 ): Promise<
@@ -57,69 +57,69 @@ export async function projectsGetAll(
     >
   >
 > {
-  const input$ = request;
+  const input = request;
 
-  const parsed$ = schemas$.safeParse(
-    input$,
-    (value$) => GetProjectsRequest$outboundSchema.parse(value$),
+  const parsed = safeParse(
+    input,
+    (value) => GetProjectsRequest$outboundSchema.parse(value),
     "Input validation failed",
   );
-  if (!parsed$.ok) {
-    return haltIterator(parsed$);
+  if (!parsed.ok) {
+    return haltIterator(parsed);
   }
-  const payload$ = parsed$.value;
-  const body$ = null;
+  const payload = parsed.value;
+  const body = null;
 
-  const path$ = pathToFunc("/v9/projects")();
+  const path = pathToFunc("/v9/projects")();
 
-  const query$ = encodeFormQuery$({
-    "deprecated": payload$.deprecated,
-    "edgeConfigId": payload$.edgeConfigId,
-    "edgeConfigTokenId": payload$.edgeConfigTokenId,
-    "excludeRepos": payload$.excludeRepos,
-    "from": payload$.from,
-    "gitForkProtection": payload$.gitForkProtection,
-    "limit": payload$.limit,
-    "repo": payload$.repo,
-    "repoId": payload$.repoId,
-    "repoUrl": payload$.repoUrl,
-    "search": payload$.search,
-    "slug": payload$.slug,
-    "teamId": payload$.teamId,
+  const query = encodeFormQuery({
+    "deprecated": payload.deprecated,
+    "edgeConfigId": payload.edgeConfigId,
+    "edgeConfigTokenId": payload.edgeConfigTokenId,
+    "excludeRepos": payload.excludeRepos,
+    "from": payload.from,
+    "gitForkProtection": payload.gitForkProtection,
+    "limit": payload.limit,
+    "repo": payload.repo,
+    "repoId": payload.repoId,
+    "repoUrl": payload.repoUrl,
+    "search": payload.search,
+    "slug": payload.slug,
+    "teamId": payload.teamId,
   });
 
-  const headers$ = new Headers({
+  const headers = new Headers({
     Accept: "application/json",
   });
 
-  const bearerToken$ = await extractSecurity(client$.options$.bearerToken);
-  const security$ = bearerToken$ == null ? {} : { bearerToken: bearerToken$ };
+  const secConfig = await extractSecurity(client._options.bearerToken);
+  const securityInput = secConfig == null ? {} : { bearerToken: secConfig };
   const context = {
     operationID: "getProjects",
     oAuth2Scopes: [],
-    securitySource: client$.options$.bearerToken,
+    securitySource: client._options.bearerToken,
   };
-  const securitySettings$ = resolveGlobalSecurity(security$);
+  const requestSecurity = resolveGlobalSecurity(securityInput);
 
-  const requestRes = client$.createRequest$(context, {
-    security: securitySettings$,
+  const requestRes = client._createRequest(context, {
+    security: requestSecurity,
     method: "GET",
-    path: path$,
-    headers: headers$,
-    query: query$,
-    body: body$,
-    timeoutMs: options?.timeoutMs || client$.options$.timeoutMs || -1,
+    path: path,
+    headers: headers,
+    query: query,
+    body: body,
+    timeoutMs: options?.timeoutMs || client._options.timeoutMs || -1,
   }, options);
   if (!requestRes.ok) {
     return haltIterator(requestRes);
   }
-  const request$ = requestRes.value;
+  const req = requestRes.value;
 
-  const doResult = await client$.do$(request$, {
+  const doResult = await client._do(req, {
     context,
     errorCodes: ["400", "401", "403", "4XX", "5XX"],
     retryConfig: options?.retries
-      || client$.options$.retryConfig,
+      || client._options.retryConfig,
     retryCodes: options?.retryCodes || ["429", "500", "502", "503", "504"],
   });
   if (!doResult.ok) {
@@ -127,11 +127,11 @@ export async function projectsGetAll(
   }
   const response = doResult.value;
 
-  const responseFields$ = {
-    HttpMeta: { Response: response, Request: request$ },
+  const responseFields = {
+    HttpMeta: { Response: response, Request: req },
   };
 
-  const [result$, raw$] = await m$.match<
+  const [result, raw] = await M.match<
     GetProjectsResponse,
     | SDKError
     | SDKValidationError
@@ -141,11 +141,11 @@ export async function projectsGetAll(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(200, GetProjectsResponse$inboundSchema, { key: "Result" }),
-    m$.fail([400, 401, 403, "4XX", "5XX"]),
-  )(response, { extraFields: responseFields$ });
-  if (!result$.ok) {
-    return haltIterator(result$);
+    M.json(200, GetProjectsResponse$inboundSchema, { key: "Result" }),
+    M.fail([400, 401, 403, "4XX", "5XX"]),
+  )(response, { extraFields: responseFields });
+  if (!result.ok) {
+    return haltIterator(result);
   }
 
   const nextFunc = (
@@ -170,15 +170,15 @@ export async function projectsGetAll(
 
     return () =>
       projectsGetAll(
-        client$,
+        client,
         {
-          ...input$,
+          ...input,
           from: nextCursor,
         },
         options,
       );
   };
 
-  const page$ = { ...result$, next: nextFunc(raw$) };
-  return { ...page$, ...createPageIterator(page$, (v) => !v.ok) };
+  const page = { ...result, next: nextFunc(raw) };
+  return { ...page, ...createPageIterator(page, (v) => !v.ok) };
 }

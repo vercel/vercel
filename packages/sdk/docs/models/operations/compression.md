@@ -5,7 +5,7 @@
 ```typescript
 import { Compression } from "@vercel/sdk/models/operations/getconfigurablelogdrain.js";
 
-let value: Compression = "none";
+let value: Compression = "zstd";
 ```
 
 ## Values

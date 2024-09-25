@@ -5,18 +5,18 @@
 ```typescript
 import { GetDeploymentEventsResponse } from "@vercel/sdk/models/operations/getdeploymentevents.js";
 
-let value: GetDeploymentEventsResponse = [
-  {
-    type: "edge-function-invocation",
-    created: 2334.2,
-    payload: {
-      deploymentId: "<value>",
-      id: "<id>",
-      date: 3581.07,
-      serial: "<value>",
-    },
+let value: GetDeploymentEventsResponse = {
+  created: 1202.77,
+  date: 7549.01,
+  deploymentId: "<value>",
+  id: "<id>",
+  info: {
+    type: "<value>",
+    name: "<value>",
   },
-];
+  serial: "<value>",
+  type: "edge-function-invocation",
+};
 ```
 
 ## Supported Types

@@ -6,8 +6,11 @@
 import { CreateProjectContentHint } from "@vercel/sdk/models/operations/createproject.js";
 
 let value: CreateProjectContentHint = {
-  type: "postgres-database",
+  type: "integration-store-secret",
   storeId: "<value>",
+  integrationId: "<value>",
+  integrationProductId: "<value>",
+  integrationConfigurationId: "<value>",
 };
 ```
 

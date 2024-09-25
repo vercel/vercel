@@ -11,7 +11,7 @@ let value: CreateProjectLink3 = {
       id: "<id>",
       name: "<value>",
       ref: "<value>",
-      url: "http://beautiful-lifetime.info",
+      url: "https://short-cake.name/",
     },
   ],
 };

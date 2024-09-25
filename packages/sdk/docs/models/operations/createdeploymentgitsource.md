@@ -6,8 +6,9 @@
 import { CreateDeploymentGitSource } from "@vercel/sdk/models/operations/createdeployment.js";
 
 let value: CreateDeploymentGitSource = {
-  type: "github",
-  repoId: 9195.32,
+  type: "bitbucket",
+  owner: "<value>",
+  slug: "<value>",
 };
 ```
 

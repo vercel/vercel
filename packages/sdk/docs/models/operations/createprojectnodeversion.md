@@ -5,7 +5,7 @@
 ```typescript
 import { CreateProjectNodeVersion } from "@vercel/sdk/models/operations/createproject.js";
 
-let value: CreateProjectNodeVersion = "16.x";
+let value: CreateProjectNodeVersion = "20.x";
 ```
 
 ## Values

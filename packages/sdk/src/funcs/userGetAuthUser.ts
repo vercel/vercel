@@ -3,7 +3,7 @@
  */
 
 import { VercelCore } from "../core.js";
-import * as m$ from "../lib/matchers.js";
+import * as M from "../lib/matchers.js";
 import { RequestOptions } from "../lib/sdks.js";
 import { extractSecurity, resolveGlobalSecurity } from "../lib/security.js";
 import { pathToFunc } from "../lib/url.js";
@@ -29,7 +29,7 @@ import { Result } from "../types/fp.js";
  * Retrieves information related to the currently authenticated User.
  */
 export async function userGetAuthUser(
-  client$: VercelCore,
+  client: VercelCore,
   options?: RequestOptions,
 ): Promise<
   Result<
@@ -43,38 +43,38 @@ export async function userGetAuthUser(
     | ConnectionError
   >
 > {
-  const path$ = pathToFunc("/v2/user")();
+  const path = pathToFunc("/v2/user")();
 
-  const headers$ = new Headers({
+  const headers = new Headers({
     Accept: "application/json",
   });
 
-  const bearerToken$ = await extractSecurity(client$.options$.bearerToken);
-  const security$ = bearerToken$ == null ? {} : { bearerToken: bearerToken$ };
+  const secConfig = await extractSecurity(client._options.bearerToken);
+  const securityInput = secConfig == null ? {} : { bearerToken: secConfig };
   const context = {
     operationID: "getAuthUser",
     oAuth2Scopes: [],
-    securitySource: client$.options$.bearerToken,
+    securitySource: client._options.bearerToken,
   };
-  const securitySettings$ = resolveGlobalSecurity(security$);
+  const requestSecurity = resolveGlobalSecurity(securityInput);
 
-  const requestRes = client$.createRequest$(context, {
-    security: securitySettings$,
+  const requestRes = client._createRequest(context, {
+    security: requestSecurity,
     method: "GET",
-    path: path$,
-    headers: headers$,
-    timeoutMs: options?.timeoutMs || client$.options$.timeoutMs || -1,
+    path: path,
+    headers: headers,
+    timeoutMs: options?.timeoutMs || client._options.timeoutMs || -1,
   }, options);
   if (!requestRes.ok) {
     return requestRes;
   }
-  const request$ = requestRes.value;
+  const req = requestRes.value;
 
-  const doResult = await client$.do$(request$, {
+  const doResult = await client._do(req, {
     context,
     errorCodes: ["400", "401", "403", "409", "4XX", "5XX"],
     retryConfig: options?.retries
-      || client$.options$.retryConfig,
+      || client._options.retryConfig,
     retryCodes: options?.retryCodes || ["429", "500", "502", "503", "504"],
   });
   if (!doResult.ok) {
@@ -82,7 +82,7 @@ export async function userGetAuthUser(
   }
   const response = doResult.value;
 
-  const [result$] = await m$.match<
+  const [result] = await M.match<
     GetAuthUserResponseBody | undefined,
     | SDKError
     | SDKValidationError
@@ -92,13 +92,13 @@ export async function userGetAuthUser(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(200, GetAuthUserResponseBody$inboundSchema.optional()),
-    m$.nil(302, GetAuthUserResponseBody$inboundSchema.optional()),
-    m$.fail([400, 401, 403, 409, "4XX", "5XX"]),
+    M.json(200, GetAuthUserResponseBody$inboundSchema.optional()),
+    M.nil(302, GetAuthUserResponseBody$inboundSchema.optional()),
+    M.fail([400, 401, 403, 409, "4XX", "5XX"]),
   )(response);
-  if (!result$.ok) {
-    return result$;
+  if (!result.ok) {
+    return result;
   }
 
-  return result$;
+  return result;
 }

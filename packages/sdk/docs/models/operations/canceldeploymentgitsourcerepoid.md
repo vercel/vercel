@@ -5,7 +5,7 @@
 ```typescript
 import { CancelDeploymentGitSourceRepoId } from "@vercel/sdk/models/operations/canceldeployment.js";
 
-let value: CancelDeploymentGitSourceRepoId = 7152.08;
+let value: CancelDeploymentGitSourceRepoId = 5433.53;
 ```
 
 ## Supported Types

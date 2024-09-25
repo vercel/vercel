@@ -6,9 +6,9 @@
 import { PostgresDataStorage } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: PostgresDataStorage = {
-  price: 8998.67,
-  batch: 7482.24,
-  threshold: 568.77,
+  price: 7211.98,
+  batch: 4801.08,
+  threshold: 6438.64,
   hidden: false,
 };
 ```

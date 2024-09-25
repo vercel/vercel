@@ -5,7 +5,9 @@
 ```typescript
 import { UpdateProjectDataCacheProjectsOidcTokenClaims } from "@vercel/sdk/models/operations/updateprojectdatacache.js";
 
-let value: UpdateProjectDataCacheProjectsOidcTokenClaims = "<value>";
+let value: UpdateProjectDataCacheProjectsOidcTokenClaims = [
+  "<value>",
+];
 ```
 
 ## Supported Types

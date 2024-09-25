@@ -5,7 +5,7 @@
 ```typescript
 import { GetDeploymentGitSourceProjectId } from "@vercel/sdk/models/operations/getdeployment.js";
 
-let value: GetDeploymentGitSourceProjectId = "<value>";
+let value: GetDeploymentGitSourceProjectId = 1559.78;
 ```
 
 ## Supported Types

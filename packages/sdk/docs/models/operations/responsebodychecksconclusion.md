@@ -5,7 +5,7 @@
 ```typescript
 import { ResponseBodyChecksConclusion } from "@vercel/sdk/models/operations/getdeployment.js";
 
-let value: ResponseBodyChecksConclusion = "succeeded";
+let value: ResponseBodyChecksConclusion = "canceled";
 ```
 
 ## Values

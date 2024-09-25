@@ -5,7 +5,7 @@
 ```typescript
 import { GetDeploymentsAliasAssigned } from "@vercel/sdk/models/operations/getdeployments.js";
 
-let value: GetDeploymentsAliasAssigned = 6982.49;
+let value: GetDeploymentsAliasAssigned = 6570.44;
 ```
 
 ## Supported Types

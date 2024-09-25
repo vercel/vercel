@@ -7,8 +7,6 @@ import { ResponseBodyRoutes } from "@vercel/sdk/models/operations/getdeployment.
 
 let value: ResponseBodyRoutes = {
   src: "<value>",
-  continue: false,
-  middleware: 5249.7,
 };
 ```
 

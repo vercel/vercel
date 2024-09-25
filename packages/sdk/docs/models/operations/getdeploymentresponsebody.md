@@ -21,17 +21,17 @@ let value: GetDeploymentResponseBody = {
   isInConcurrentBuildsQueue: false,
   projectSettings: {},
   aliasAssigned: false,
-  bootedAt: 8563.03,
-  buildingAt: 302.35,
+  bootedAt: 9382.56,
+  buildingAt: 2445.70,
   buildSkipped: false,
   creator: {
     uid: "<value>",
   },
   public: false,
-  status: "INITIALIZING",
+  status: "ERROR",
   id: "<id>",
   type: "LAMBDAS",
-  createdAt: 7103.37,
+  createdAt: 7574.07,
   name: "<value>",
   readyState: "BUILDING",
   meta: {
@@ -40,17 +40,15 @@ let value: GetDeploymentResponseBody = {
   regions: [
     "<value>",
   ],
-  url: "http://juicy-furniture.com",
-  version: 5305.37,
+  url: "https://dependent-brush.com",
+  version: 3576.39,
   projectId: "<value>",
-  plan: "enterprise",
+  plan: "pro",
   createdIn: "<value>",
   ownerId: "<value>",
   routes: [
     {
-      src: "<value>",
-      continue: false,
-      middleware: 3611.51,
+      handle: "miss",
     },
   ],
 };

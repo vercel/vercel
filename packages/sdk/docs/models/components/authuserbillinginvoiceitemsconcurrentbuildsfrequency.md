@@ -7,7 +7,7 @@ import { AuthUserBillingInvoiceItemsConcurrentBuildsFrequency } from "@vercel/sd
 
 let value: AuthUserBillingInvoiceItemsConcurrentBuildsFrequency = {
   interval: "month",
-  intervalCount: 407.1,
+  intervalCount: 9674.01,
 };
 ```
 

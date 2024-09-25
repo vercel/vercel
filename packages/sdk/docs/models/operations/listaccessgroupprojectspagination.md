@@ -6,7 +6,7 @@
 import { ListAccessGroupProjectsPagination } from "@vercel/sdk/models/operations/listaccessgroupprojects.js";
 
 let value: ListAccessGroupProjectsPagination = {
-  count: 7991.59,
+  count: 3154.28,
   next: "<value>",
 };
 ```

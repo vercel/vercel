@@ -5,7 +5,7 @@
 ```typescript
 import { Status } from "@vercel/sdk/models/components/authuser.js";
 
-let value: Status = "active";
+let value: Status = "overdue";
 ```
 
 ## Values

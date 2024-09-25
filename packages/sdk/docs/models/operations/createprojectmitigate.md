@@ -6,7 +6,7 @@
 import { CreateProjectMitigate } from "@vercel/sdk/models/operations/createproject.js";
 
 let value: CreateProjectMitigate = {
-  action: "deny",
+  action: "redirect",
   ruleId: "<value>",
 };
 ```

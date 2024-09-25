@@ -1,5 +1,7 @@
 # GetAliasResponseBody
 
+The alias information
+
 ## Example Usage
 
 ```typescript

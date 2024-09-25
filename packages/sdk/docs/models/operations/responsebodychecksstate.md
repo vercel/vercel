@@ -5,7 +5,7 @@
 ```typescript
 import { ResponseBodyChecksState } from "@vercel/sdk/models/operations/getdeployment.js";
 
-let value: ResponseBodyChecksState = "completed";
+let value: ResponseBodyChecksState = "registered";
 ```
 
 ## Values

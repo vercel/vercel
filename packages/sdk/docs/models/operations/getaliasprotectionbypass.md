@@ -6,10 +6,10 @@
 import { GetAliasProtectionBypass } from "@vercel/sdk/models/operations/getalias.js";
 
 let value: GetAliasProtectionBypass = {
-  createdAt: 5063.12,
-  lastUpdatedAt: 3670.46,
+  createdAt: 9895.25,
+  lastUpdatedAt: 6444.16,
   lastUpdatedBy: "<value>",
-  access: "granted",
+  access: "requested",
   scope: "user",
 };
 ```

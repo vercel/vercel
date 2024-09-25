@@ -11,12 +11,12 @@ let value: Builds = {
   id: "<id>",
   deploymentId: "<value>",
   entrypoint: "<value>",
-  readyState: "ARCHIVED",
+  readyState: "DEPLOYING",
   output: [
     {
-      path: "/usr/sbin",
+      path: "/tmp",
       digest: "<value>",
-      mode: 5448.83,
+      mode: 4375.87,
     },
   ],
 };

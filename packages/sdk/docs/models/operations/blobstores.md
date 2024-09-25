@@ -6,9 +6,9 @@
 import { BlobStores } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: BlobStores = {
-  price: 3573.47,
-  batch: 2982.64,
-  threshold: 9149.71,
+  price: 424.90,
+  batch: 1175.46,
+  threshold: 3816.54,
   hidden: false,
 };
 ```
