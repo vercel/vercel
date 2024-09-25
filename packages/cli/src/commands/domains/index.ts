@@ -50,7 +50,7 @@ export default async function main(client: Client) {
     return 2;
   }
 
-  const { subcommand, args, subcommandActual } = getSubcommand(
+  const { subcommand, args, subcommandOriginal } = getSubcommand(
     parsedArgs.args.slice(1),
     COMMAND_CONFIG
   );
@@ -66,7 +66,7 @@ export default async function main(client: Client) {
     case 'rm':
       return rm(client, parsedArgs.flags, args);
     case 'transferIn':
-      telemetry.trackCliSubcommandTransferIn(subcommandActual);
+      telemetry.trackCliSubcommandTransferIn(subcommandOriginal);
       return transferIn(client, parsedArgs.flags, args);
     default:
       return ls(client, parsedArgs.flags, args);
