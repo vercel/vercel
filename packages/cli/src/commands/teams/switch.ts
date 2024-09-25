@@ -9,7 +9,7 @@ import getTeams from '../../util/teams/get-teams';
 import listInput from '../../util/input/list';
 import { Team, GlobalConfig } from '@vercel-internals/types';
 import { writeToConfigFile } from '../../util/config/files';
-import { Output } from '../../util/output';
+import type { Output } from '../../util/output';
 
 const updateCurrentTeam = (
   config: GlobalConfig,
@@ -22,7 +22,7 @@ const updateCurrentTeam = (
     delete config.currentTeam;
   }
 
-  writeToConfigFile(config, output);
+  writeToConfigFile(output, config);
 };
 
 export default async function main(client: Client, desiredSlug?: string) {

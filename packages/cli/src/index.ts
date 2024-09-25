@@ -192,7 +192,7 @@ const main = async () => {
     if (isErrnoException(err) && err.code === 'ENOENT') {
       config = defaultGlobalConfig;
       try {
-        configFiles.writeToConfigFile(config, output);
+        configFiles.writeToConfigFile(output, config);
       } catch (err: unknown) {
         output.error(
           `An unexpected error occurred while trying to save the config to "${hp(
@@ -218,7 +218,7 @@ const main = async () => {
     if (isErrnoException(err) && err.code === 'ENOENT') {
       authConfig = defaultAuthConfig;
       try {
-        configFiles.writeToAuthConfigFile(authConfig, output);
+        configFiles.writeToAuthConfigFile(output, authConfig);
       } catch (err: unknown) {
         output.error(
           `An unexpected error occurred while trying to write the auth config to "${hp(
@@ -337,8 +337,8 @@ const main = async () => {
 
       await updateCurrentTeamAfterLogin(client, output, result.teamId);
 
-      configFiles.writeToAuthConfigFile(client.authConfig, output);
-      configFiles.writeToConfigFile(client.config, output);
+      configFiles.writeToAuthConfigFile(output, client.authConfig);
+      configFiles.writeToConfigFile(output, client.config);
 
       output.debug(`Saved credentials in "${hp(VERCEL_DIR)}"`);
     } else {

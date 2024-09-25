@@ -10,7 +10,7 @@ import highlight from '../output/highlight';
 import { VercelConfig } from '../dev/types';
 import { AuthConfig, GlobalConfig } from '@vercel-internals/types';
 import { isErrnoException, isError } from '@vercel/error-utils';
-import { type Output } from '../output';
+import type { Output } from '../output';
 
 const VERCEL_DIR = getGlobalPathConfig();
 const CONFIG_FILE_PATH = join(VERCEL_DIR, 'config.json');
@@ -24,8 +24,8 @@ export const readConfigFile = (): GlobalConfig => {
 
 // writes whatever's in `stuff` to "global config" file, atomically
 export const writeToConfigFile = (
-  stuff: GlobalConfig,
-  output: Output
+  output: Output,
+  stuff: GlobalConfig
 ): void => {
   try {
     return writeJSON.sync(CONFIG_FILE_PATH, stuff, { indent: 2 });
@@ -59,8 +59,8 @@ export const readAuthConfigFile = (): AuthConfig => {
 };
 
 export const writeToAuthConfigFile = (
-  authConfig: AuthConfig,
-  output: Output
+  output: Output,
+  authConfig: AuthConfig
 ) => {
   if (authConfig.skipWrite) {
     return;
