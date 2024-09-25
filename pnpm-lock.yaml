@@ -460,9 +460,6 @@ importers:
       '@types/pluralize':
         specifier: 0.0.29
         version: 0.0.29
-      '@types/psl':
-        specifier: 1.1.0
-        version: 1.1.0
       '@types/qs':
         specifier: 6.9.7
         version: 6.9.7
@@ -679,9 +676,6 @@ importers:
       proxy-agent:
         specifier: 6.3.0
         version: 6.3.0
-      psl:
-        specifier: 1.1.31
-        version: 1.1.31
       qr-image:
         specifier: 3.2.0
         version: 3.2.0
@@ -712,6 +706,9 @@ importers:
       title:
         specifier: 3.4.1
         version: 3.4.1
+      tldts:
+        specifier: 6.1.47
+        version: 6.1.47
       tmp-promise:
         specifier: 1.0.3
         version: 1.0.3
@@ -6182,10 +6179,6 @@ packages:
 
   /@types/prop-types@15.7.5:
     resolution: {integrity: sha512-JCB8C6SnDoQf0cNycqd/35A7MjcnK+ZTqE7judS6o7utxUCg6imJg3QK2qzHKszlTjcj2cn+NwMB2i96ubpj7w==}
-    dev: true
-
-  /@types/psl@1.1.0:
-    resolution: {integrity: sha512-HhZnoLAvI2koev3czVPzBNRYvdrzJGLjQbWZhqFmS9Q6a0yumc5qtfSahBGb5g+6qWvA8iiQktqGkwoIXa/BNQ==}
     dev: true
 
   /@types/qs@6.9.7:
@@ -15771,10 +15764,6 @@ packages:
     resolution: {integrity: sha512-b/YwNhb8lk1Zz2+bXXpS/LK9OisiZZ1SNsSLxN1x2OXVEhW2Ckr/7mWE5vrC1ZTiJlD9g19jWszTmJsB+oEpFQ==}
     dev: true
 
-  /psl@1.1.31:
-    resolution: {integrity: sha512-/6pt4+C+T+wZUieKR620OpzN/LlnNKuWjy1iFLQ/UG35JqHlR/89MP1d96dUfkf6Dne3TuLQzOYEYshJ+Hx8mw==}
-    dev: true
-
   /pump@1.0.3:
     resolution: {integrity: sha512-8k0JupWme55+9tCVE+FS5ULT3K6AbgqrGa58lTT49RpyfwwcGedHqaC5LlQNdEAumn/wFsu6aPwkuPMioy8kqw==}
     dependencies:
@@ -17319,6 +17308,17 @@ packages:
   /titleize@1.0.0:
     resolution: {integrity: sha512-TARUb7z1pGvlLxgPk++7wJ6aycXF3GJ0sNSBTAsTuJrQG5QuZlkUQP+zl+nbjAh4gMX9yDw9ZYklMd7vAfJKEw==}
     engines: {node: '>=0.10.0'}
+    dev: true
+
+  /tldts-core@6.1.47:
+    resolution: {integrity: sha512-6SWyFMnlst1fEt7GQVAAu16EGgFK0cLouH/2Mk6Ftlwhv3Ol40L0dlpGMcnnNiiOMyD2EV/aF3S+U2nKvvLvrA==}
+    dev: true
+
+  /tldts@6.1.47:
+    resolution: {integrity: sha512-R/K2tZ5MiY+mVrnSkNJkwqYT2vUv1lcT6wJvd2emGaMJ7PHUGRY4e3tUsdFCXgqxi2QgbHjL3yJgXCo40v9Hxw==}
+    hasBin: true
+    dependencies:
+      tldts-core: 6.1.47
     dev: true
 
   /tmp-promise@1.0.3:
