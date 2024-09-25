@@ -14,6 +14,7 @@ interface Options {
 }
 
 interface Event {
+  sessionId?: string;
   id: string;
   key: string;
   value: string;
@@ -102,14 +103,17 @@ export class TelemetryEventStore {
   private events: Event[];
   private output: Output;
   private isDebug: boolean;
+  private sessionId: string;
 
   constructor(opts: { output: Output; isDebug?: boolean }) {
     this.isDebug = opts.isDebug || false;
     this.output = opts.output;
+    this.sessionId = randomUUID();
     this.events = [];
   }
 
   add(event: Event) {
+    event.sessionId = this.sessionId;
     this.events.push(event);
   }
 
