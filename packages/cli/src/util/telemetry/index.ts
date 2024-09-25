@@ -116,7 +116,7 @@ export class TelemetryEventStore {
   get readonlyEvents() {
     return Array.from(this.events);
   }
-  
+
   reset() {
     this.events = [];
   }
