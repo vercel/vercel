@@ -4,10 +4,6 @@ interface Params {
   page: string[]
 }
 
-interface Props {
-  params: Promise<Params>
-}
-
 export async function generateStaticParams(): Promise<Params[]> {
   const data = [{ page: "page1" }, { page: "page2" }, { page: "page3/demo" }];
 
@@ -21,7 +17,7 @@ export async function generateStaticParams(): Promise<Params[]> {
   return params;
 }
 
-export default async function Page({ params }: Props) {
+export default async function Page({ params }) {
   if (params.page[0] !== "demo") {
     return notFound();
   }
