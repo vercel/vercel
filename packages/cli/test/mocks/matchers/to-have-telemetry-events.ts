@@ -30,7 +30,7 @@ export function toHaveTelemetryEvents(
       const expectCommonSessionEventObject = (event?: EventData) =>
         expect.objectContaining({
           id: expect.any(String),
-          sessionId: firstEvent.sessionId,
+          sessionId: firstEvent?.sessionId,
           key: event?.key,
           value: event?.value,
         });
