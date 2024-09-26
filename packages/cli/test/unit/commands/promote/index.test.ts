@@ -15,7 +15,7 @@ import { vi } from 'vitest';
 vi.setConfig({ testTimeout: 60000 });
 
 describe('promote', () => {
-  describe.todo('[deployment id/url]', () => {
+  describe('[deployment id/url]', () => {
     describe.todo('--status');
     describe.todo('--timeout');
 
