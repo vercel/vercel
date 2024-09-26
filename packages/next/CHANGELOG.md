@@ -1,5 +1,13 @@
 # @vercel/next
 
+## 4.3.11
+
+### Patch Changes
+
+- Introduce new chain configuration for Partial Prerendering ([#12117](https://github.com/vercel/vercel/pull/12117))
+
+- fix defaultLocale redirect when using domains pattern ([#12166](https://github.com/vercel/vercel/pull/12166))
+
 ## 4.3.10
 
 ### Patch Changes
