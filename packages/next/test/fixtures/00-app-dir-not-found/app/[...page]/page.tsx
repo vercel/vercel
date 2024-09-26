@@ -1,10 +1,14 @@
 import { notFound } from "next/navigation";
 
-interface Props {
-  params: { page: string[] };
+interface Params {
+  page: string[]
 }
 
-export async function generateStaticParams(): Promise<Props["params"][]> {
+interface Props {
+  params: Promise<Params>
+}
+
+export async function generateStaticParams(): Promise<Params[]> {
   const data = [{ page: "page1" }, { page: "page2" }, { page: "page3/demo" }];
 
   const params = data.map((page) => {
