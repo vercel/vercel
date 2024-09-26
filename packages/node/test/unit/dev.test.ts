@@ -69,6 +69,9 @@ async function withDevServer(
         try {
           child.kill(9);
         } catch (error) {
+          // In Node 22, there's a bug where attempting to kill a child process
+          // results in an EPERM error. Ignore the error in that case.
+          // See: https://github.com/nodejs/node/issues/51766
           console.log('Ignoring kill error:', error);
         }
       }
