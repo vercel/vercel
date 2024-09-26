@@ -12,8 +12,8 @@ import { writeToConfigFile } from '../../util/config/files';
 import type { Output } from '../../util/output';
 
 const updateCurrentTeam = (
-  config: GlobalConfig,
   output: Output,
+  config: GlobalConfig,
   team?: Team
 ) => {
   if (team) {
@@ -127,7 +127,7 @@ export default async function main(client: Client, desiredSlug?: string) {
       });
     }
 
-    updateCurrentTeam(config, output);
+    updateCurrentTeam(output, config);
 
     output.success(
       `Your account (${chalk.bold(user.username)}) is now active!`
@@ -159,7 +159,7 @@ export default async function main(client: Client, desiredSlug?: string) {
     });
   }
 
-  updateCurrentTeam(config, output, newTeam);
+  updateCurrentTeam(output, config, newTeam);
 
   output.success(
     `The team ${chalk.bold(newTeam.name)} (${newTeam.slug}) is now active!`
