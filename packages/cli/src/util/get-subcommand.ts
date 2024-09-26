@@ -5,7 +5,7 @@ type CommandConfig = {
 interface SubcommandParsed {
   subcommand: string | string[];
   args: string[];
-  subcommandActual?: string;
+  subcommandOriginal: string;
 }
 
 export default function getSubcommand(
@@ -17,13 +17,14 @@ export default function getSubcommand(
     if (k !== 'default' && config[k].indexOf(subcommand) !== -1) {
       return {
         subcommand: k,
-        subcommandActual: subcommand,
+        subcommandOriginal: subcommand,
         args: rest,
       };
     }
   }
   return {
     subcommand: config.default,
+    subcommandOriginal: '',
     args: cliArgs,
   };
 }

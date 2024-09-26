@@ -14,8 +14,10 @@ import { vi } from 'vitest';
 
 vi.setConfig({ testTimeout: 60000 });
 
+const projectName = 'vercel-promote';
+
 describe('promote', () => {
-  describe.todo('[deployment id/url]', () => {
+  describe('[deployment id/url]', () => {
     describe.todo('--status');
     describe.todo('--timeout');
 
@@ -82,7 +84,7 @@ describe('promote', () => {
       );
       await expect(client.stderr).toOutput('Promote in progress');
       await expect(client.stderr).toOutput(
-        `Success! ${chalk.bold('vercel-promote')} was promoted to ${
+        `Success! ${chalk.bold(projectName)} was promoted to ${
           previousDeployment.url
         } (${previousDeployment.id})`
       );
@@ -101,7 +103,7 @@ describe('promote', () => {
       );
       await expect(client.stderr).toOutput('Promote in progress');
       await expect(client.stderr).toOutput(
-        `Success! ${chalk.bold('vercel-promote')} was promoted to ${
+        `Success! ${chalk.bold(projectName)} was promoted to ${
           previousDeployment.url
         } (${previousDeployment.id})`
       );
@@ -135,9 +137,32 @@ describe('promote', () => {
     });
 
     it('should promote a preview deployment when user says yes', async () => {
+      const inspectorUrl = `https://vercel.com/user/${projectName}/abcdefghijlmo`;
+
       const { cwd, previousDeployment } = initPromoteTest({
         deploymentTarget: 'preview',
       });
+      let createWasCalled = false;
+
+      client.scenario.post(
+        '/v13/deployments',
+        (req: Request, res: Response) => {
+          createWasCalled = true;
+          expect(req.body).toMatchObject({
+            deploymentId: previousDeployment.id,
+            name: projectName,
+            target: 'production',
+            meta: {
+              action: 'promote',
+            },
+          });
+          res.json({
+            id: 'some-id',
+            inspectorUrl,
+          });
+        }
+      );
+
       client.cwd = cwd;
       client.setArgv('promote', previousDeployment.url);
       const exitCodePromise = promote(client);
@@ -154,28 +179,49 @@ describe('promote', () => {
       // say "yes" to the prompt
       client.stdin.write('y\n');
 
+      await expect(client.stderr).toOutput(
+        `Successfully created new deployment of ${projectName} at ${inspectorUrl}`
+      );
       await expect(exitCodePromise).resolves.toEqual(0);
+      expect(createWasCalled).toBe(true);
     });
 
     it('should promote a preview deployment with --yes', async () => {
+      const inspectorUrl = `https://vercel.com/user/${projectName}/abcdefghijlmo`;
+
+      let createWasCalled = false;
       const { cwd, previousDeployment } = initPromoteTest({
         deploymentTarget: 'preview',
       });
+
+      client.scenario.post(
+        '/v13/deployments',
+        (req: Request, res: Response) => {
+          createWasCalled = true;
+          expect(req.body).toMatchObject({
+            deploymentId: previousDeployment.id,
+            name: projectName,
+            target: 'production',
+            meta: {
+              action: 'promote',
+            },
+          });
+          res.json({
+            id: 'some-id',
+            inspectorUrl,
+          });
+        }
+      );
+
       client.cwd = cwd;
       client.setArgv('promote', previousDeployment.url, '--yes');
       const exitCodePromise = promote(client);
 
       await expect(client.stderr).toOutput(
-        `Fetching deployment "${previousDeployment.url}" in ${previousDeployment.creator?.username}`
+        `Successfully created new deployment of ${projectName} at ${inspectorUrl}`
       );
-      await expect(client.stderr).toOutput('Promote in progress');
-      await expect(client.stderr).toOutput(
-        `Success! ${chalk.bold('vercel-promote')} was promoted to ${
-          previousDeployment.url
-        } (${previousDeployment.id})`
-      );
-
       await expect(exitCodePromise).resolves.toEqual(0);
+      expect(createWasCalled).toBe(true);
     });
 
     it('should get status while promoting', async () => {
@@ -199,7 +245,7 @@ describe('promote', () => {
         `Checking promotion status of ${project.name}`
       );
       await expect(client.stderr).toOutput(
-        `Success! ${chalk.bold('vercel-promote')} was promoted to ${
+        `Success! ${chalk.bold(projectName)} was promoted to ${
           previousDeployment.url
         } (${previousDeployment.id})`
       );
@@ -324,7 +370,7 @@ describe('promote', () => {
         `Fetching deployment "${previousDeployment.id}" in ${previousDeployment.creator?.username}`
       );
       await expect(client.stderr).toOutput(
-        `Successfully requested promote of ${chalk.bold('vercel-promote')} to ${
+        `Successfully requested promote of ${chalk.bold(projectName)} to ${
           previousDeployment.url
         } (${previousDeployment.id})`
       );
@@ -381,8 +427,8 @@ function initPromoteTest({
   useTeams('team_dummy');
   const { project } = useProject({
     ...defaultProject,
-    id: 'vercel-promote',
-    name: 'vercel-promote',
+    id: projectName,
+    name: projectName,
   });
 
   const currentDeployment = useDeployment({ creator: user, project });
