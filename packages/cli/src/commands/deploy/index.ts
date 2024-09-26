@@ -387,8 +387,8 @@ export default async (client: Client): Promise<number> => {
   // from there instead and use it if it exists.
   if (rootDirectory) {
     const rootDirectoryConfig = readLocalConfig(
-      join(cwd, rootDirectory),
-      output
+      output,
+      join(cwd, rootDirectory)
     );
 
     if (rootDirectoryConfig) {
