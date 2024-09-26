@@ -1,5 +1,33 @@
 # @vercel/next
 
+## 4.3.11
+
+### Patch Changes
+
+- Introduce new chain configuration for Partial Prerendering ([#12117](https://github.com/vercel/vercel/pull/12117))
+
+- fix defaultLocale redirect when using domains pattern ([#12166](https://github.com/vercel/vercel/pull/12166))
+
+## 4.3.10
+
+### Patch Changes
+
+- Revert "Revert "Revert "Fix corepack `packageManager` detection on monorepos""" ([#12099](https://github.com/vercel/vercel/pull/12099))
+
+## 4.3.9
+
+### Patch Changes
+
+- Revert "Revert "Fix corepack `packageManager` detection on monorepos"" ([#11871](https://github.com/vercel/vercel/pull/11871))
+
+## 4.3.8
+
+### Patch Changes
+
+- Combine Partial Prerendering lambdas for revalidation and dynamic resumes. ([#12064](https://github.com/vercel/vercel/pull/12064))
+
+- Added support for Partial Fallback Prerendering ([#12036](https://github.com/vercel/vercel/pull/12036))
+
 ## 4.3.7
 
 ### Patch Changes

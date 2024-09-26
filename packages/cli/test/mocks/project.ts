@@ -276,7 +276,7 @@ export function useProject(
         ? parseEnvironment(req.query.target)
         : undefined;
 
-    let targetEnvs = envs;
+    let targetEnvs = projectEnvs;
     if (target) {
       targetEnvs = targetEnvs.filter(env => {
         if (typeof env.target === 'string') {

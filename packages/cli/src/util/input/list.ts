@@ -8,6 +8,7 @@ interface ListEntry {
   value: string;
   short: string;
   selected?: boolean;
+  disabled?: boolean;
 }
 
 interface ListSeparator {

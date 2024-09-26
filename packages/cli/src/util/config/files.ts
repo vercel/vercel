@@ -102,8 +102,8 @@ export function getAuthConfigFilePath() {
 }
 
 export function readLocalConfig(
-  prefix: string = process.cwd(),
-  output: Output
+  output: Output,
+  prefix: string = process.cwd()
 ): VercelConfig | undefined {
   let config: VercelConfig | undefined = undefined;
   let target = '';

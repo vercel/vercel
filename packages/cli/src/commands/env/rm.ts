@@ -1,14 +1,9 @@
 import chalk from 'chalk';
-import type { Project } from '@vercel-internals/types';
-import { Output } from '../../util/output';
 import confirm from '../../util/input/confirm';
 import removeEnvRecord from '../../util/env/remove-env-record';
 import getEnvRecords from '../../util/env/get-env-records';
-import formatEnvTarget from '../../util/env/format-env-target';
-import {
-  isValidEnvTarget,
-  getEnvTargetPlaceholder,
-} from '../../util/env/env-target';
+import formatEnvironments from '../../util/env/format-environments';
+import { getEnvTargetPlaceholder } from '../../util/env/env-target';
 import Client from '../../util/client';
 import stamp from '../../util/output/stamp';
 import param from '../../util/output/param';
@@ -16,6 +11,8 @@ import { emoji, prependEmoji } from '../../util/emoji';
 import { isKnownError } from '../../util/env/known-error';
 import { getCommandName } from '../../util/pkg-name';
 import { isAPIError } from '../../util/errors-ts';
+import { getCustomEnvironments } from '../../util/target/get-custom-environments';
+import type { ProjectLinked } from '@vercel-internals/types';
 
 type Options = {
   '--debug': boolean;
@@ -24,11 +21,13 @@ type Options = {
 
 export default async function rm(
   client: Client,
-  project: Project,
+  link: ProjectLinked,
   opts: Partial<Options>,
-  args: string[],
-  output: Output
+  args: string[]
 ) {
+  const { output } = client;
+  const { project } = link;
+
   if (args.length > 3) {
     output.error(
       `Invalid number of arguments. Usage: ${getCommandName(
@@ -42,30 +41,18 @@ export default async function rm(
 
   if (!envName) {
     envName = await client.input.text({
-      message: `What’s the name of the variable?`,
+      message: "What's the name of the variable?",
       validate: val => (val ? true : 'Name cannot be empty'),
     });
   }
 
-  if (!isValidEnvTarget(envTarget)) {
-    output.error(
-      `The Environment ${param(
-        envTarget
-      )} is invalid. It must be one of: ${getEnvTargetPlaceholder()}.`
-    );
-    return 1;
-  }
-
-  const result = await getEnvRecords(
-    output,
-    client,
-    project.id,
-    'vercel-cli:env:rm',
-    {
+  const [result, customEnvironments] = await Promise.all([
+    getEnvRecords(client, project.id, 'vercel-cli:env:rm', {
       target: envTarget,
       gitBranch: envGitBranch,
-    }
-  );
+    }),
+    getCustomEnvironments(client, project.id),
+  ]);
 
   let envs = result.envs.filter(env => env.key === envName);
 
@@ -79,9 +66,7 @@ export default async function rm(
       message: `Remove ${envName} from which Environments?`,
       choices: envs.map(env => ({
         value: env.id,
-        // TODO: once supporting custom environments,
-        // use new `formatEnvTarget` from `vc env ls`
-        name: formatEnvTarget(env),
+        name: formatEnvironments(client, link, env, customEnvironments),
       })),
     });
 
@@ -97,8 +82,11 @@ export default async function rm(
     !skipConfirmation &&
     !(await confirm(
       client,
-      `Removing Environment Variable ${param(env.key)} from ${formatEnvTarget(
-        env
+      `Removing Environment Variable ${param(env.key)} from ${formatEnvironments(
+        client,
+        link,
+        env,
+        customEnvironments
       )} in Project ${chalk.bold(project.name)}. Are you sure?`,
       false
     ))

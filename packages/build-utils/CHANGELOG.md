@@ -1,5 +1,57 @@
 # @vercel/build-utils
 
+## 8.4.5
+
+### Patch Changes
+
+- [build-utils] add types for `images.remotePatterns.search` to vercel.json ([#12158](https://github.com/vercel/vercel/pull/12158))
+
+## 8.4.4
+
+### Patch Changes
+
+- Allow Node.js v22 behind env var feature flag ([#12159](https://github.com/vercel/vercel/pull/12159))
+
+## 8.4.3
+
+### Patch Changes
+
+- Introduce new chain configuration types for Partial Prerendering ([#12063](https://github.com/vercel/vercel/pull/12063))
+
+## 8.4.2
+
+### Patch Changes
+
+- Revert "Revert "Revert "Fix corepack `packageManager` detection on monorepos""" ([#12099](https://github.com/vercel/vercel/pull/12099))
+
+## 8.4.1
+
+### Patch Changes
+
+- Revert "Revert "Fix corepack `packageManager` detection on monorepos"" ([#11871](https://github.com/vercel/vercel/pull/11871))
+
+## 8.4.0
+
+### Minor Changes
+
+- Change warnings to errors in invalid corepack package manager states ([#12062](https://github.com/vercel/vercel/pull/12062))
+
+## 8.3.9
+
+### Patch Changes
+
+- Provide help when users get ERR_PNPM_UNSUPPORTED_ENGINE errors without corepack ([#12034](https://github.com/vercel/vercel/pull/12034))
+
+- Fix package-manager-warning-1 to happen only happen in correct cases ([#12050](https://github.com/vercel/vercel/pull/12050))
+
+## 8.3.8
+
+### Patch Changes
+
+- Limit `package.json#packageManager` parsing to concrete versions ([#12025](https://github.com/vercel/vercel/pull/12025))
+
+- Catch PNPM_UNSUPPORTED_ENGINE when corepack is enabled and throw a more helpful error ([#12017](https://github.com/vercel/vercel/pull/12017))
+
 ## 8.3.7
 
 ### Patch Changes
