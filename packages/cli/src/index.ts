@@ -53,6 +53,8 @@ import { VercelConfig } from '@vercel/client';
 import { ProxyAgent } from 'proxy-agent';
 import box from './util/output/box';
 import { execExtension } from './util/extension/exec';
+import { TelemetryEventStore } from './util/telemetry';
+import { TelemetryBaseClient } from './util/telemetry/base';
 import { help } from './args';
 import { updateCurrentTeamAfterLogin } from './util/login/update-current-team-after-login';
 
@@ -110,6 +112,18 @@ const main = async () => {
   output = new Output(process.stderr, {
     debug: isDebugging,
     noColor: isNoColor,
+  });
+
+  const telemetryEventStore = new TelemetryEventStore({
+    isDebug: isDebugging,
+    output,
+  });
+
+  const telemetry = new TelemetryBaseClient({
+    opts: {
+      store: telemetryEventStore,
+      output,
+    },
   });
 
   debug = output.debug;
@@ -269,6 +283,7 @@ const main = async () => {
     localConfig,
     localConfigPath,
     argv: process.argv,
+    telemetryEventStore,
   });
 
   // The `--cwd` flag is respected for all sub-commands
@@ -280,7 +295,7 @@ const main = async () => {
   // Gets populated to the subcommand name when a built-in is
   // provided, otherwise it remains undefined for an extension
   let subcommand: string | undefined = undefined;
-
+  let userSuppliedSubCommand: string = '';
   // Check if we are deploying something
   if (targetOrSubcommand) {
     const targetPath = join(cwd, targetOrSubcommand);
@@ -304,6 +319,7 @@ const main = async () => {
     if (subcommandExists) {
       debug(`user supplied known subcommand: "${targetOrSubcommand}"`);
       subcommand = targetOrSubcommand;
+      userSuppliedSubCommand = targetOrSubcommand;
     } else {
       debug('user supplied a possible target for deployment or an extension');
     }
@@ -555,6 +571,7 @@ const main = async () => {
           func = require('./commands/dns').default;
           break;
         case 'domains':
+          telemetry.trackCliCommandDomains(userSuppliedSubCommand);
           func = require('./commands/domains').default;
           break;
         case 'env':
@@ -702,6 +719,8 @@ const main = async () => {
     return 1;
   }
 
+  // specifically don't await this, we want to fire and forget
+  telemetryEventStore.save();
   return exitCode;
 };
 

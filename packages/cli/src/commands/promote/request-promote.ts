@@ -6,6 +6,10 @@ import ms from 'ms';
 import promoteStatus from './status';
 import confirm from '../../util/input/confirm';
 
+interface DeploymentCreateResponsePartial {
+  inspectorUrl: string;
+  id: string;
+}
 /**
  * Requests a promotion and waits for it complete.
  * @param {Client} client - The Vercel client instance
@@ -32,22 +36,49 @@ export default async function requestPromote({
     output: client.output,
   });
 
-  if (deployment.target !== 'production' && !yes) {
-    const question =
-      'This deployment is not a production deployment and cannot be directly promoted. A new deployment will be built using your production environment. Are you sure you want to continue?';
-    const answer = await confirm(client, question, false);
-    if (!answer) {
-      output.error('Canceled');
-      return 0;
+  let promoteByCreation = false;
+  if (deployment.target !== 'production') {
+    if (yes) {
+      promoteByCreation = true;
+    } else {
+      const question =
+        'This deployment is not a production deployment and cannot be directly promoted. A new deployment will be built using your production environment. Are you sure you want to continue?';
+      promoteByCreation = await confirm(client, question, false);
+      if (!promoteByCreation) {
+        output.error('Canceled');
+        return 0;
+      }
     }
   }
 
-  // request the promotion
-  await client.fetch(`/v10/projects/${project.id}/promote/${deployment.id}`, {
-    body: {}, // required
-    json: false,
-    method: 'POST',
-  });
+  if (promoteByCreation) {
+    const newDeployment = (await client.fetch(
+      `/v13/deployments?teamId=${deployment.ownerId}`,
+      {
+        body: {
+          deploymentId: deployment.id,
+          name: project.name,
+          target: 'production',
+          meta: {
+            action: 'promote',
+          },
+        },
+        accountId: deployment.ownerId,
+        method: 'POST',
+      }
+    )) as DeploymentCreateResponsePartial;
+
+    output.log(
+      `Successfully created new deployment of ${chalk.bold(project.name)} at ${newDeployment.inspectorUrl}`
+    );
+    return 0;
+  } else {
+    await client.fetch(`/v10/projects/${project.id}/promote/${deployment.id}`, {
+      body: {}, // required
+      json: false,
+      method: 'POST',
+    });
+  }
 
   if (timeout !== undefined && ms(timeout) === 0) {
     output.log(
