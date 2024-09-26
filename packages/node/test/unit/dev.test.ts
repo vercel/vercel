@@ -63,7 +63,16 @@ async function withDevServer(
   } finally {
     const elapsed = Date.now() - start;
     if (runningTimeout) await setTimeout(runningTimeout - elapsed);
-    child.send('shutdown', error => error && child.kill(9));
+    child.send('shutdown', error => {
+      if (error) {
+        console.log('Shutdown error:', error);
+        try {
+          child.kill(9);
+        } catch (error) {
+          console.log('Ignoring kill error:', error);
+        }
+      }
+    });
     if (child.exitCode === null) await once(child, 'exit');
   }
 }
