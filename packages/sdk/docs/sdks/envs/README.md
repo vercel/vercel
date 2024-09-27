@@ -31,9 +31,9 @@ async function run() {
     decrypt: "true",
     source: "vercel-cli:pull",
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -68,7 +68,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -112,9 +112,9 @@ async function run() {
     idOrName: "prj_XLKmu1DyR1eY7zq8UgeRKbA7yVLA",
     id: "<id>",
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -147,7 +147,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -201,9 +201,9 @@ async function run() {
       comment: "database connection string for production",
     },
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -246,7 +246,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -290,9 +290,9 @@ async function run() {
     idOrName: "prj_XLKmu1DyR1eY7zq8UgeRKbA7yVLA",
     id: "XMbOEya1gUUO1ir4",
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -325,7 +325,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -382,9 +382,9 @@ async function run() {
       comment: "database connection string for production",
     },
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -430,7 +430,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();

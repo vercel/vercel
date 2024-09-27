@@ -35,9 +35,9 @@ const vercel = new Vercel({
 
 async function run() {
   const result = await vercel.edgeConfigs.list({});
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -67,7 +67,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -108,9 +108,9 @@ const vercel = new Vercel({
 
 async function run() {
   const result = await vercel.edgeConfigs.create({});
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -140,7 +140,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -183,9 +183,9 @@ async function run() {
   const result = await vercel.edgeConfigs.get({
     edgeConfigId: "<value>",
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -217,7 +217,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -260,9 +260,9 @@ async function run() {
   const result = await vercel.edgeConfigs.update({
     edgeConfigId: "<value>",
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -294,7 +294,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -337,6 +337,8 @@ async function run() {
   await vercel.edgeConfigs.delete({
     edgeConfigId: "<value>",
   });
+
+
 }
 
 run();
@@ -410,9 +412,9 @@ async function run() {
   const result = await vercel.edgeConfigs.getItems({
     edgeConfigId: "<value>",
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -444,7 +446,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -487,9 +489,9 @@ async function run() {
   const result = await vercel.edgeConfigs.getSchema({
     edgeConfigId: "<value>",
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -521,7 +523,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -564,9 +566,9 @@ async function run() {
   const result = await vercel.edgeConfigs.updateSchema({
     edgeConfigId: "<value>",
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -598,7 +600,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -641,6 +643,8 @@ async function run() {
   await vercel.edgeConfigs.deleteSchema({
     edgeConfigId: "<value>",
   });
+
+
 }
 
 run();
@@ -715,9 +719,9 @@ async function run() {
     edgeConfigId: "<value>",
     edgeConfigItemKey: "<value>",
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -750,7 +754,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -793,9 +797,9 @@ async function run() {
   const result = await vercel.edgeConfigs.getTokens({
     edgeConfigId: "<value>",
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -827,7 +831,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -870,6 +874,8 @@ async function run() {
   await vercel.edgeConfigs.deleteTokens({
     edgeConfigId: "<value>",
   });
+
+
 }
 
 run();
@@ -944,9 +950,9 @@ async function run() {
     edgeConfigId: "<value>",
     token: "<value>",
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -979,7 +985,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -1022,9 +1028,9 @@ async function run() {
   const result = await vercel.edgeConfigs.createToken({
     edgeConfigId: "<value>",
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -1056,7 +1062,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
