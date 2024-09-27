@@ -31,9 +31,9 @@ async function run() {
     userId: "aeIInYVk59zbFF2SxfyxxmuO",
     withPayload: "true",
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -70,7 +70,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();

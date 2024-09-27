@@ -35,9 +35,9 @@ async function run() {
       disabled: true,
     },
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -72,7 +72,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -116,7 +116,7 @@ async function run() {
     gitForkProtection: "1",
     repoUrl: "https://github.com/vercel/next.js",
   });
-  
+
   for await (const page of result) {
     // Handle the page
     console.log(page);
@@ -200,9 +200,9 @@ async function run() {
       name: "a-project-name",
     },
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -236,7 +236,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -282,9 +282,9 @@ async function run() {
       name: "a-project-name",
     },
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -319,7 +319,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -362,6 +362,8 @@ async function run() {
   await vercel.projects.delete({
     idOrName: "prj_12HKQaOmR5t5Uy6vdcQsNIiZgHGB",
   });
+
+
 }
 
 run();
@@ -435,6 +437,8 @@ async function run() {
   await vercel.projects.pause({
     projectId: "<value>",
   });
+
+
 }
 
 run();
@@ -508,6 +512,8 @@ async function run() {
   await vercel.projects.unpause({
     projectId: "<value>",
   });
+
+
 }
 
 run();

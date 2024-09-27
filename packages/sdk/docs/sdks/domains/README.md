@@ -52,9 +52,9 @@ async function run() {
       email: "jane.doe@someplace.com",
     },
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -100,7 +100,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -144,9 +144,9 @@ async function run() {
     name: "example.com",
     type: "new",
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -179,7 +179,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -222,9 +222,9 @@ async function run() {
   const result = await vercel.domains.checkStatus({
     name: "example.com",
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -256,7 +256,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -299,9 +299,9 @@ async function run() {
   const result = await vercel.domains.getTransfer({
     domain: "example.com",
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -333,7 +333,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -376,9 +376,9 @@ async function run() {
   const result = await vercel.domains.getConfig({
     domain: "example.com",
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -410,7 +410,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -453,9 +453,9 @@ async function run() {
   const result = await vercel.domains.get({
     domain: "example.com",
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -487,7 +487,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -532,7 +532,7 @@ async function run() {
     since: 1609499532000,
     until: 1612264332000,
   });
-  
+
   for await (const page of result) {
     // Handle the page
     console.log(page);
@@ -620,9 +620,9 @@ async function run() {
       expectedPrice: 8,
     },
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -659,7 +659,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -705,9 +705,9 @@ async function run() {
       op: "update",
     },
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -742,7 +742,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -785,9 +785,9 @@ async function run() {
   const result = await vercel.domains.delete({
     domain: "example.com",
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -819,7 +819,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -866,7 +866,7 @@ async function run() {
     since: 1609499532000,
     until: 1612264332000,
   });
-  
+
   for await (const page of result) {
     // Handle the page
     console.log(page);
@@ -957,9 +957,9 @@ async function run() {
       redirectStatusCode: 307,
     },
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -997,7 +997,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -1041,9 +1041,9 @@ async function run() {
     idOrName: "prj_12HKQaOmR5t5Uy6vdcQsNIiZgHGB",
     domain: "example.com",
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -1076,7 +1076,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
