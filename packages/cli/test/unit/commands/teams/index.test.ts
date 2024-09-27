@@ -1,4 +1,4 @@
-import { describe, it } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import teams from '../../../../src/commands/teams';
 import { client } from '../../../mocks/client';
 

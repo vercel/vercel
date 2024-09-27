@@ -3,6 +3,7 @@ import { client } from '../../../mocks/client';
 import target from '../../../../src/commands/target';
 
 describe('target', () => {
+  // this requires mocking a linked project
   it.todo('errors when invoked without subcommand', () => {
     client.setArgv('target');
     const exitCodePromise = target(client);
