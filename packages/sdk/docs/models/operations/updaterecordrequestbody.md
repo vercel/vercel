@@ -12,12 +12,12 @@ let value: UpdateRecordRequestBody = {
   ttl: 60,
   srv: {
     target: "example2.com.",
-    weight: 923159,
-    port: 105094,
-    priority: 982574,
+    weight: 185313,
+    port: 27205,
+    priority: 519985,
   },
   https: {
-    priority: 875452,
+    priority: 451807,
     target: "example2.com.",
   },
   comment: "used to verify ownership of domain",

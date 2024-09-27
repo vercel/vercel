@@ -6,9 +6,9 @@
 import { BlobTotalAdvancedRequests } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: BlobTotalAdvancedRequests = {
-  price: 8855.23,
-  batch: 1480.39,
-  threshold: 8239.90,
+  price: 352.20,
+  batch: 1806.61,
+  threshold: 3385.14,
   hidden: false,
 };
 ```

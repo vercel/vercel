@@ -7,7 +7,7 @@ import { RemoveProjectEnvContentHint9 } from "@vercel/sdk/models/operations/remo
 
 let value: RemoveProjectEnvContentHint9 = {
   type: "postgres-user",
-  storeId: "<value>",
+  storeId: "<id>",
 };
 ```
 

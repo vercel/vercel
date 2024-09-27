@@ -7,7 +7,7 @@ import { UpdateProjectContentHint5 } from "@vercel/sdk/models/operations/updatep
 
 let value: UpdateProjectContentHint5 = {
   type: "blob-read-write-token",
-  storeId: "<value>",
+  storeId: "<id>",
 };
 ```
 

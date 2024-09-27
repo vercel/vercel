@@ -6,7 +6,7 @@
 import { UnpauseProjectRequest } from "@vercel/sdk/models/operations/unpauseproject.js";
 
 let value: UnpauseProjectRequest = {
-  projectId: "<value>",
+  projectId: "<id>",
 };
 ```
 

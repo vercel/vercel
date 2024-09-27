@@ -1,32 +1,31 @@
 # CancelDeploymentRoutes
 
-## Example Usage
-
-```typescript
-import { CancelDeploymentRoutes } from "@vercel/sdk/models/operations/canceldeployment.js";
-
-let value: CancelDeploymentRoutes = {
-  src: "<value>",
-};
-```
 
 ## Supported Types
 
 ### `operations.CancelDeploymentRoutes1`
 
 ```typescript
-const value: operations.CancelDeploymentRoutes1 = /* values here */
+const value: operations.CancelDeploymentRoutes1 = {
+  src: "<value>",
+};
 ```
 
 ### `operations.CancelDeploymentRoutes2`
 
 ```typescript
-const value: operations.CancelDeploymentRoutes2 = /* values here */
+const value: operations.CancelDeploymentRoutes2 = {
+  handle: "filesystem",
+};
 ```
 
 ### `operations.CancelDeploymentRoutes3`
 
 ```typescript
-const value: operations.CancelDeploymentRoutes3 = /* values here */
+const value: operations.CancelDeploymentRoutes3 = {
+  src: "<value>",
+  continue: false,
+  middleware: 1964.51,
+};
 ```
 

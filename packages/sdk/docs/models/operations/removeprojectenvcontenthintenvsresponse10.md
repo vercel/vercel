@@ -7,7 +7,7 @@ import { RemoveProjectEnvContentHintEnvsResponse10 } from "@vercel/sdk/models/op
 
 let value: RemoveProjectEnvContentHintEnvsResponse10 = {
   type: "postgres-host",
-  storeId: "<value>",
+  storeId: "<id>",
 };
 ```
 

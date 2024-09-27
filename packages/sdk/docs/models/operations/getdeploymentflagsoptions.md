@@ -6,7 +6,7 @@
 import { GetDeploymentFlagsOptions } from "@vercel/sdk/models/operations/getdeployment.js";
 
 let value: GetDeploymentFlagsOptions = {
-  value: "<value>",
+  value: {},
 };
 ```
 

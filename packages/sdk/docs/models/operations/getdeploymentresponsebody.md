@@ -3,12 +3,13 @@
 The deployment including only public information
 The deployment including both public and private information
 
-## Example Usage
+
+## Supported Types
+
+### `operations.GetDeploymentResponseBody1`
 
 ```typescript
-import { GetDeploymentResponseBody } from "@vercel/sdk/models/operations/getdeployment.js";
-
-let value: GetDeploymentResponseBody = {
+const value: operations.GetDeploymentResponseBody1 = {
   build: {
     env: [
       "<value>",
@@ -17,21 +18,61 @@ let value: GetDeploymentResponseBody = {
   env: [
     "<value>",
   ],
-  inspectorUrl: "<value>",
+  inspectorUrl: "https://hateful-t-shirt.name",
   isInConcurrentBuildsQueue: false,
   projectSettings: {},
   aliasAssigned: false,
-  bootedAt: 9382.56,
-  buildingAt: 2445.70,
+  bootedAt: 4299.97,
+  buildingAt: 357.43,
   buildSkipped: false,
   creator: {
-    uid: "<value>",
+    uid: "<id>",
   },
   public: false,
-  status: "ERROR",
+  status: "READY",
   id: "<id>",
   type: "LAMBDAS",
-  createdAt: 7574.07,
+  createdAt: 5021.06,
+  name: "<value>",
+  readyState: "READY",
+  meta: {
+    "key": "<value>",
+  },
+  regions: [
+    "<value>",
+  ],
+  url: "https://staid-eternity.net",
+  version: 5488.46,
+  projectId: "<id>",
+  plan: "enterprise",
+  createdIn: "<value>",
+  ownerId: "<id>",
+  routes: [
+    {
+      src: "<value>",
+      continue: false,
+      middleware: 213.59,
+    },
+  ],
+};
+```
+
+### `operations.GetDeploymentResponseBody2`
+
+```typescript
+const value: operations.GetDeploymentResponseBody2 = {
+  aliasAssigned: false,
+  bootedAt: 1023.17,
+  buildingAt: 2921.77,
+  buildSkipped: false,
+  creator: {
+    uid: "<id>",
+  },
+  public: false,
+  status: "CANCELED",
+  id: "<id>",
+  type: "LAMBDAS",
+  createdAt: 1397.46,
   name: "<value>",
   readyState: "BUILDING",
   meta: {
@@ -40,31 +81,8 @@ let value: GetDeploymentResponseBody = {
   regions: [
     "<value>",
   ],
-  url: "https://dependent-brush.com",
-  version: 3576.39,
-  projectId: "<value>",
-  plan: "pro",
-  createdIn: "<value>",
-  ownerId: "<value>",
-  routes: [
-    {
-      handle: "miss",
-    },
-  ],
+  url: "https://grandiose-fax.org/",
+  version: 8451.54,
 };
-```
-
-## Supported Types
-
-### `operations.GetDeploymentResponseBody1`
-
-```typescript
-const value: operations.GetDeploymentResponseBody1 = /* values here */
-```
-
-### `operations.GetDeploymentResponseBody2`
-
-```typescript
-const value: operations.GetDeploymentResponseBody2 = /* values here */
 ```
 

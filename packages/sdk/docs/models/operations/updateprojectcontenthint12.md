@@ -7,7 +7,7 @@ import { UpdateProjectContentHint12 } from "@vercel/sdk/models/operations/update
 
 let value: UpdateProjectContentHint12 = {
   type: "postgres-database",
-  storeId: "<value>",
+  storeId: "<id>",
 };
 ```
 

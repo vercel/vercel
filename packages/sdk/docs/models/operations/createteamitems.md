@@ -7,10 +7,10 @@ import { CreateTeamItems } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: CreateTeamItems = {
   id: "<id>",
-  priceId: "<value>",
-  productId: "<value>",
-  amount: 492.85,
-  quantity: 9334.56,
+  priceId: "<id>",
+  productId: "<id>",
+  amount: 1761.04,
+  quantity: 3198.07,
 };
 ```
 

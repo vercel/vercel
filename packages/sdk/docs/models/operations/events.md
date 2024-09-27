@@ -5,7 +5,7 @@
 ```typescript
 import { Events } from "@vercel/sdk/models/operations/createwebhook.js";
 
-let value: Events = "edge-config.updated";
+let value: Events = "integration-configuration.permission-upgraded";
 ```
 
 ## Values

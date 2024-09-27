@@ -5,8 +5,7 @@
 ```typescript
 import { GetConfigurationResponseBodyAdded } from "@vercel/sdk/models/operations/getconfiguration.js";
 
-let value: GetConfigurationResponseBodyAdded =
-  "read-write:integration-resource";
+let value: GetConfigurationResponseBodyAdded = "read-write:deployment";
 ```
 
 ## Values

@@ -1,24 +1,17 @@
 # GetTeamAccessRequestGitUserId
 
-## Example Usage
-
-```typescript
-import { GetTeamAccessRequestGitUserId } from "@vercel/sdk/models/operations/getteamaccessrequest.js";
-
-let value: GetTeamAccessRequestGitUserId = "<value>";
-```
 
 ## Supported Types
 
 ### `string`
 
 ```typescript
-const value: string = /* values here */
+const value: string = "<value>";
 ```
 
 ### `number`
 
 ```typescript
-const value: number = /* values here */
+const value: number = 6442.99;
 ```
 

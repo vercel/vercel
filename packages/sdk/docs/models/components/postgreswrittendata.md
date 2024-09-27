@@ -6,9 +6,9 @@
 import { PostgresWrittenData } from "@vercel/sdk/models/components/authuser.js";
 
 let value: PostgresWrittenData = {
-  price: 4787.73,
-  batch: 2439.41,
-  threshold: 7221.51,
+  price: 4029.08,
+  batch: 5585.23,
+  threshold: 170.41,
   hidden: false,
 };
 ```

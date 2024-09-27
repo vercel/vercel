@@ -5,7 +5,7 @@
 ```typescript
 import { Action } from "@vercel/sdk/models/operations/updateprojectdatacache.js";
 
-let value: Action = "redirect";
+let value: Action = "challenge";
 ```
 
 ## Values

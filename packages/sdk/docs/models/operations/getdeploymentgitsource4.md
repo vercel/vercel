@@ -7,7 +7,7 @@ import { GetDeploymentGitSource4 } from "@vercel/sdk/models/operations/getdeploy
 
 let value: GetDeploymentGitSource4 = {
   type: "bitbucket",
-  repoUuid: "<value>",
+  repoUuid: "<id>",
 };
 ```
 

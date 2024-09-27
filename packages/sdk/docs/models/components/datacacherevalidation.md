@@ -6,9 +6,9 @@
 import { DataCacheRevalidation } from "@vercel/sdk/models/components/authuser.js";
 
 let value: DataCacheRevalidation = {
-  price: 1330.76,
-  batch: 7734.55,
-  threshold: 4062.72,
+  price: 1810.42,
+  batch: 7637.47,
+  threshold: 613.46,
   hidden: false,
 };
 ```

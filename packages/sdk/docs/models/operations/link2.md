@@ -11,7 +11,7 @@ let value: Link2 = {
       id: "<id>",
       name: "<value>",
       ref: "<value>",
-      url: "https://dull-conversation.org/",
+      url: "https://general-guacamole.biz",
     },
   ],
 };

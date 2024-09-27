@@ -8,7 +8,7 @@ import { GetDeploymentCustomEnvironmentDeploymentsDomains } from "@vercel/sdk/mo
 let value: GetDeploymentCustomEnvironmentDeploymentsDomains = {
   name: "<value>",
   apexName: "<value>",
-  projectId: "<value>",
+  projectId: "<id>",
   verified: false,
 };
 ```

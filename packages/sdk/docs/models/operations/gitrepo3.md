@@ -7,11 +7,11 @@ import { GitRepo3 } from "@vercel/sdk/models/operations/createdeployment.js";
 
 let value: GitRepo3 = {
   owner: "<value>",
-  repoUuid: "<value>",
+  repoUuid: "<id>",
   slug: "<value>",
   type: "bitbucket",
-  workspaceUuid: "<value>",
-  path: "/usr/local/bin",
+  workspaceUuid: "<id>",
+  path: "/lost+found",
   defaultBranch: "<value>",
   name: "<value>",
   private: false,

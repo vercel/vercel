@@ -7,7 +7,7 @@ import { UpdateProjectContentHint8 } from "@vercel/sdk/models/operations/updatep
 
 let value: UpdateProjectContentHint8 = {
   type: "postgres-prisma-url",
-  storeId: "<value>",
+  storeId: "<id>",
 };
 ```
 

@@ -2,47 +2,58 @@
 
 Defines the Git Repository source to be deployed. This property can not be used in combination with `files`.
 
-## Example Usage
-
-```typescript
-import { GitSource } from "@vercel/sdk/models/operations/createdeployment.js";
-
-let value: GitSource = {
-  projectId: "<value>",
-  ref: "<value>",
-  type: "gitlab",
-};
-```
 
 ## Supported Types
 
 ### `operations.One`
 
 ```typescript
-const value: operations.One = /* values here */
+const value: operations.One = {
+  ref: "<value>",
+  repoId: 4353.53,
+  type: "github",
+};
 ```
 
 ### `operations.Two`
 
 ```typescript
-const value: operations.Two = /* values here */
+const value: operations.Two = {
+  org: "<value>",
+  ref: "<value>",
+  repo: "<value>",
+  type: "github",
+};
 ```
 
 ### `operations.Three`
 
 ```typescript
-const value: operations.Three = /* values here */
+const value: operations.Three = {
+  projectId: "<id>",
+  ref: "<value>",
+  type: "gitlab",
+};
 ```
 
 ### `operations.Four`
 
 ```typescript
-const value: operations.Four = /* values here */
+const value: operations.Four = {
+  ref: "<value>",
+  repoUuid: "<id>",
+  type: "bitbucket",
+};
 ```
 
 ### `operations.Five`
 
 ```typescript
-const value: operations.Five = /* values here */
+const value: operations.Five = {
+  owner: "<value>",
+  ref: "<value>",
+  slug: "<value>",
+  type: "bitbucket",
+};
 ```
 

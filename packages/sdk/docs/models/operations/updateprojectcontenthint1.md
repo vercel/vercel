@@ -7,7 +7,7 @@ import { UpdateProjectContentHint1 } from "@vercel/sdk/models/operations/updatep
 
 let value: UpdateProjectContentHint1 = {
   type: "redis-url",
-  storeId: "<value>",
+  storeId: "<id>",
 };
 ```
 

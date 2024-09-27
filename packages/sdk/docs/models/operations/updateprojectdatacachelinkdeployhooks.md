@@ -9,7 +9,7 @@ let value: UpdateProjectDataCacheLinkDeployHooks = {
   id: "<id>",
   name: "<value>",
   ref: "<value>",
-  url: "https://angelic-coliseum.name",
+  url: "https://velvety-presume.com/",
 };
 ```
 

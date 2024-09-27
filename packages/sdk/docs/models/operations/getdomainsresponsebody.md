@@ -28,7 +28,7 @@ let value: GetDomainsResponseBody = {
         email: "demo@example.com",
         id: "ZspSRT4ljIEEmMHgoDwKWDei",
       },
-      teamId: "<value>",
+      teamId: "<id>",
       createdAt: 1613602938882,
       boughtAt: 1613602938882,
       expiresAt: 1613602938882,
@@ -39,7 +39,7 @@ let value: GetDomainsResponseBody = {
       serviceType: "zeit.world",
       transferredAt: 1613602938882,
       transferStartedAt: 1613602938882,
-      userId: "<value>",
+      userId: "<id>",
     },
   ],
   pagination: {

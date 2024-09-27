@@ -10,7 +10,7 @@ import { AddProjectDomainResponseBody } from "@vercel/sdk/models/operations/addp
 let value: AddProjectDomainResponseBody = {
   name: "<value>",
   apexName: "<value>",
-  projectId: "<value>",
+  projectId: "<id>",
   verified: false,
 };
 ```

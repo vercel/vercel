@@ -7,7 +7,7 @@ import { Thirteen } from "@vercel/sdk/models/operations/updateprojectdatacache.j
 
 let value: Thirteen = {
   type: "postgres-url-no-ssl",
-  storeId: "<value>",
+  storeId: "<id>",
 };
 ```
 

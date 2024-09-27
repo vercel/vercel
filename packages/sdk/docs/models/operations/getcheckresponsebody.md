@@ -10,10 +10,10 @@ let value: GetCheckResponseBody = {
   name: "<value>",
   status: "running",
   blocking: false,
-  integrationId: "<value>",
-  deploymentId: "<value>",
-  createdAt: 5722.52,
-  updatedAt: 2230.82,
+  integrationId: "<id>",
+  deploymentId: "<id>",
+  createdAt: 5920.42,
+  updatedAt: 5722.52,
 };
 ```
 

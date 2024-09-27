@@ -9,7 +9,7 @@ import { RequestDeleteReasons } from "@vercel/sdk/models/operations/requestdelet
 
 let value: RequestDeleteReasons = {
   slug: "<value>",
-  description: "Focused next generation forecast",
+  description: "aw opera not junior gadzooks despite vainly",
 };
 ```
 

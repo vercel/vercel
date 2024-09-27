@@ -9,7 +9,7 @@ let value: GitSource6 = {
   type: "custom",
   ref: "<value>",
   sha: "<value>",
-  gitUrl: "<value>",
+  gitUrl: "https://magnificent-pepper.info/",
 };
 ```
 

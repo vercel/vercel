@@ -7,7 +7,7 @@ import { ContentHint13 } from "@vercel/sdk/models/operations/createproject.js";
 
 let value: ContentHint13 = {
   type: "postgres-url-no-ssl",
-  storeId: "<value>",
+  storeId: "<id>",
 };
 ```
 
