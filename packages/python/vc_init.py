@@ -5,6 +5,7 @@ import inspect
 from importlib import util
 from http.server import BaseHTTPRequestHandler
 import socket
+import os
 
 # Import relative path https://docs.python.org/3/library/importlib.html#importing-a-source-file-directly
 __vc_spec = util.spec_from_file_location("__VC_HANDLER_MODULE_NAME", "./__VC_HANDLER_ENTRYPOINT")
@@ -26,6 +27,90 @@ def format_headers(headers, decode=False):
         keyToList[key].append(value)
     return keyToList
 
+if "VERCEL_IPC_FD" in os.environ:
+    if 'handler' in __vc_variables or 'Handler' in __vc_variables:
+        base = __vc_module.handler if ('handler' in __vc_variables) else  __vc_module.Handler
+        if not issubclass(base, BaseHTTPRequestHandler):
+            print('Handler must inherit from BaseHTTPRequestHandler')
+            print('See the docs: https://vercel.com/docs/functions/serverless-functions/runtimes/python')
+            exit(1)
+
+        from http.server import HTTPServer
+        import http
+        import time
+        import contextvars
+
+        ipc_fd = int(os.getenv("VERCEL_IPC_FD", ""))
+        sock = socket.socket(fileno=ipc_fd)
+        start_time = time.time()
+
+        send_message = lambda message: sock.sendall((json.dumps(message) + '\0').encode())
+        storage = contextvars.ContextVar('storage', default=None)
+        fetch_id = 0
+
+        class Handler(base):
+            # Re-implementation of BaseHTTPRequestHandler's handle_one_request method
+            # to send the end message after the response is fully sent.
+            def handle_one_request(self):
+                self.raw_requestline = self.rfile.readline(65537)
+                if len(self.raw_requestline) > 65536:
+                    self.requestline = ''
+                    self.request_version = ''
+                    self.command = ''
+                    self.send_error(http.HTTPStatus.REQUEST_URI_TOO_LONG)
+                    return
+                if not self.raw_requestline:
+                    self.close_connection = True
+                    return
+                if not self.parse_request():
+                    # An error code has been sent, just exit
+                    return
+
+                invocationId = self.headers.get('x-vercel-internal-invocation-id')
+                requestId = int(self.headers.get('x-vercel-internal-request-id'))
+
+                try:
+                  mname = 'do_' + self.command
+                  if not hasattr(self, mname):
+                      self.send_error(
+                          http.HTTPStatus.NOT_IMPLEMENTED,
+                          "Unsupported method (%r)" % self.command)
+                      return
+                  method = getattr(self, mname)
+                  method()
+                  self.wfile.flush() #actually send the response if not already done.
+                finally:
+                  send_message({
+                      "type": "end",
+                      "payload": {
+                          "context": {
+                              "invocationId": invocationId,
+                              "requestId": requestId,
+                          }
+                      }
+                  })
+
+        server = HTTPServer(('127.0.0.1', 0), Handler)
+        send_message({
+            "type": "server-started",
+            "payload": {
+                "initDuration": int((time.time() - start_time) * 1000),
+                "httpPort": server.server_address[1],
+            }
+        })
+        server.serve_forever()
+    elif 'app' in __vc_variables:
+        if (
+            not inspect.iscoroutinefunction(__vc_module.app) and
+            not inspect.iscoroutinefunction(__vc_module.app.__call__)
+        ):
+            print('using Web Server Gateway Interface (WSGI)')
+        else:
+            print('using Asynchronous Server Gateway Interface (ASGI)')
+
+    print('Missing variable `handler` or `app` in file "__VC_HANDLER_ENTRYPOINT".')
+    print('See the docs: https://vercel.com/docs/functions/serverless-functions/runtimes/python')
+    exit(1)
 
 if 'handler' in __vc_variables or 'Handler' in __vc_variables:
     base = __vc_module.handler if ('handler' in __vc_variables) else  __vc_module.Handler
