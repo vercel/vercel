@@ -1,6 +1,16 @@
+<p align="center">
+  <a href="https://vercel.com">
+    <img src="https://assets.vercel.com/image/upload/v1588805858/repositories/vercel/logo.png" height="96">
+    <h3 align="center">Vercel</h3>
+  </a>
+  <p align="center">Develop. Preview. Ship.</p>
+</p>
+
+[Join the Vercel Community](https://vercel.community/)
+
 # @vercel/sdk
 
-Developer-friendly & type-safe Typescript SDK specifically catered to leverage *@vercel/sdk* API.
+The `@vercel/sdk` is a type-safe Typescript SDK that gives you full control over the entire Vercel platform through the [Vercel REST API](https://vercel.com/docs/rest-api).
 
 <div align="left">
     <a href="https://www.speakeasy.com/?utm_source=@vercel/sdk&utm_campaign=typescript"><img src="https://custom-icon-badges.demolab.com/badge/-Built%20By%20Speakeasy-212015?style=for-the-badge&logoColor=FBE331&logo=speakeasy&labelColor=545454" /></a>
@@ -8,21 +18,6 @@ Developer-friendly & type-safe Typescript SDK specifically catered to leverage *
         <img src="https://img.shields.io/badge/License-MIT-blue.svg" style="width: 100px; height: 28px;" />
     </a>
 </div>
-
-
-## 🏗 **Welcome to your new SDK!** 🏗
-
-It has been generated successfully based on your OpenAPI spec. However, it is not yet ready for production use. Here are some next steps:
-- [ ] 🛠 Make your SDK feel handcrafted by [customizing it](https://www.speakeasy.com/docs/customize-sdks)
-- [ ] ♻️ Refine your SDK quickly by iterating locally with the [Speakeasy CLI](https://github.com/speakeasy-api/speakeasy)
-- [ ] 🎁 Publish your SDK to package managers by [configuring automatic publishing](https://www.speakeasy.com/docs/advanced-setup/publish-sdks)
-- [ ] ✨ When ready to productionize, delete this section from the README
-
-<!-- Start Summary [summary] -->
-## Summary
-
-Vercel API: Vercel combines the best developer experience with an obsessive focus on end-user performance. Our platform enables frontend teams to do their best work.
-<!-- End Summary [summary] -->
 
 <!-- Start Table of Contents [toc] -->
 ## Table of Contents
@@ -83,6 +78,47 @@ yarn add @vercel/sdk zod
 
 For supported JavaScript runtimes, please consult [RUNTIMES.md](RUNTIMES.md).
 <!-- End Requirements [requirements] -->
+
+## Access Tokens
+
+You need to pass a valid access token to be able to use any resource or operation. Refer to [Creating an Access Token](https://vercel.com/docs/rest-api#creating-an-access-token) to learn how to create one. Make sure that you create a token with the correct Vercel [scope](https://vercel.com/docs/dashboard-features#scope-selector). 
+If you face permission (403) errors when you are already sending a token, it can be one of the following problems:
+- The token you are using has expired. Check the expiry date of the token in the Vercel dashboard.
+- The token does not have access to the correct scope, either not the right team or it does not have account level access.
+- The resource or operation you are trying to use is not available for that team. For example, AccessGroups is an Enterprise only feature and you are using a token for a team on the pro plan.
+
+<!-- Start Authentication [security] -->
+## Authentication
+
+### Per-Client Security Schemes
+
+This SDK supports the following security scheme globally:
+
+| Name          | Type          | Scheme        |
+| ------------- | ------------- | ------------- |
+| `bearerToken` | http          | HTTP Bearer   |
+
+To authenticate with the API the `bearerToken` parameter must be set when initializing the SDK client instance. For example:
+```typescript
+import { Vercel } from "@vercel/sdk";
+
+const vercel = new Vercel({
+  bearerToken: "<YOUR_BEARER_TOKEN_HERE>",
+});
+
+async function run() {
+  const result = await vercel.listDeploymentBuilds({
+    deploymentId: "<value>",
+  });
+
+  // Handle the result
+  console.log(result);
+}
+
+run();
+
+```
+<!-- End Authentication [security] -->
 
 <!-- Start SDK Example Usage [usage] -->
 ## SDK Example Usage
@@ -775,39 +811,6 @@ httpClient.addHook("requestError", (error, request) => {
 const sdk = new Vercel({ httpClient });
 ```
 <!-- End Custom HTTP Client [http-client] -->
-
-<!-- Start Authentication [security] -->
-## Authentication
-
-### Per-Client Security Schemes
-
-This SDK supports the following security scheme globally:
-
-| Name          | Type          | Scheme        |
-| ------------- | ------------- | ------------- |
-| `bearerToken` | http          | HTTP Bearer   |
-
-To authenticate with the API the `bearerToken` parameter must be set when initializing the SDK client instance. For example:
-```typescript
-import { Vercel } from "@vercel/sdk";
-
-const vercel = new Vercel({
-  bearerToken: "<YOUR_BEARER_TOKEN_HERE>",
-});
-
-async function run() {
-  const result = await vercel.listDeploymentBuilds({
-    deploymentId: "<value>",
-  });
-
-  // Handle the result
-  console.log(result);
-}
-
-run();
-
-```
-<!-- End Authentication [security] -->
 
 <!-- Start Debugging [debug] -->
 ## Debugging

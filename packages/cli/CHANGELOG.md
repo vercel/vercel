@@ -1,5 +1,25 @@
 # vercel
 
+## 37.6.0
+
+### Minor Changes
+
+- [cli] remove `textInput` in favor of `input.text` ([#12168](https://github.com/vercel/vercel/pull/12168))
+
+- Add stub telemetry behavior in preparation for use tracking ([#12173](https://github.com/vercel/vercel/pull/12173))
+
+### Patch Changes
+
+- Introduce new chain configuration for Partial Prerendering ([#12117](https://github.com/vercel/vercel/pull/12117))
+
+- [cli] correctly call to create new deployment when promoting preview deployment ([#12178](https://github.com/vercel/vercel/pull/12178))
+
+- Updated dependencies [[`42ae831561365b8254e62cf57f41caca03af4c31`](https://github.com/vercel/vercel/commit/42ae831561365b8254e62cf57f41caca03af4c31), [`62f434a79fe25009e63fcaefda0abe283c590f58`](https://github.com/vercel/vercel/commit/62f434a79fe25009e63fcaefda0abe283c590f58), [`37ec6fa7f5ff313bfdb22570fb33f8b7eff280e6`](https://github.com/vercel/vercel/commit/37ec6fa7f5ff313bfdb22570fb33f8b7eff280e6)]:
+  - @vercel/next@4.3.11
+  - @vercel/build-utils@8.4.5
+  - @vercel/node@3.2.17
+  - @vercel/static-build@2.5.27
+
 ## 37.5.4
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 8.4.5
+
+### Patch Changes
+
+- [build-utils] add types for `images.remotePatterns.search` to vercel.json ([#12158](https://github.com/vercel/vercel/pull/12158))
+
 ## 8.4.4
 
 ### Patch Changes

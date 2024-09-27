@@ -25,9 +25,9 @@ async function run() {
   const result = await vercel.listDeploymentBuilds({
     deploymentId: "<value>",
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -57,7 +57,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -96,6 +96,8 @@ async function run() {
   await vercel.datacachePurgeall({
     projectIdOrName: "<value>",
   });
+
+
 }
 
 run();
@@ -161,9 +163,9 @@ const vercel = new Vercel();
 
 async function run() {
   const result = await vercel.dataCacheBillingSettings();
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -191,7 +193,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
