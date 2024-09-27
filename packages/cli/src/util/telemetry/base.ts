@@ -7,4 +7,16 @@ export class TelemetryBaseClient extends TelemetryClient {
       value: actual,
     });
   }
+
+  trackCPUs() {
+    super.trackCPUs();
+  }
+
+  trackArch() {
+    super.trackArch();
+  }
+
+  trackPlatform(): void {
+    super.trackPlatform();
+  }
 }
