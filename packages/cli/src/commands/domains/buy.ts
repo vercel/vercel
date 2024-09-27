@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import psl from 'psl';
+import { parse } from 'tldts';
 
 import * as ERRORS from '../../util/errors-ts';
 import Client from '../../util/client';
@@ -33,11 +33,7 @@ export default async function buy(
     return 1;
   }
 
-  const parsedDomain = psl.parse(domainName);
-  if (parsedDomain.error) {
-    output.error(`The provided domain name ${param(domainName)} is invalid`);
-    return 1;
-  }
+  const parsedDomain = parse(domainName);
 
   const { domain: rootDomain, subdomain } = parsedDomain;
   if (subdomain || !rootDomain) {
