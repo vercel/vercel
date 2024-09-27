@@ -36,9 +36,9 @@ async function run() {
       rerequestable: true,
     },
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -78,7 +78,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -121,9 +121,9 @@ async function run() {
   const result = await vercel.checks.list({
     deploymentId: "dpl_2qn7PZrx89yxY34vEZPD31Y9XVj6",
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -155,7 +155,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -199,9 +199,9 @@ async function run() {
     deploymentId: "dpl_2qn7PZrx89yxY34vEZPD31Y9XVj6",
     checkId: "check_2qn7PZrx89yxY34vEZPD31Y9XVj6",
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -234,7 +234,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -313,9 +313,9 @@ async function run() {
       externalId: "1234abc",
     },
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -383,7 +383,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -427,9 +427,9 @@ async function run() {
     deploymentId: "dpl_2qn7PZrx89yxY34vEZPD31Y9XVj6",
     checkId: "check_2qn7PZrx89yxY34vEZPD31Y9XVj6",
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -462,7 +462,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();

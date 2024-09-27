@@ -3,10 +3,10 @@ id: 2b328f77-299a-476f-8aa9-59080c9107fe
 management:
   docChecksum: a158405287b30de9a76985749d70eb87
   docVersion: 0.0.1
-  speakeasyVersion: 1.402.0
-  generationVersion: 2.422.6
-  releaseVersion: 14.0.0-canary.1
-  configChecksum: e7dd850e9514bd8a0dae301d426f34e3
+  speakeasyVersion: 1.402.12
+  generationVersion: 2.422.15
+  releaseVersion: 14.0.0-canary.2
+  configChecksum: 86467c41abf0bf370b6e883804eed3ba
   repoURL: https://github.com/vercel/vercel.git
   repoSubDirectory: packages/sdk
   installationURL: https://gitpkg.now.sh/vercel/vercel/packages/sdk

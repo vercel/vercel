@@ -33,7 +33,7 @@ async function run() {
     until: 1540095775951,
     rollbackDeploymentId: "dpl_XXX",
   });
-  
+
   for await (const page of result) {
     // Handle the page
     console.log(page);
@@ -124,9 +124,9 @@ async function run() {
     since: 1540095775941,
     until: 1540095775951,
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -162,7 +162,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -205,9 +205,9 @@ async function run() {
   const result = await vercel.aliases.delete({
     aliasId: "<value>",
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -239,7 +239,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -286,9 +286,9 @@ async function run() {
       redirect: null,
     },
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -324,7 +324,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();

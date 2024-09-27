@@ -41,6 +41,8 @@ async function run() {
       },
     ],
   });
+
+
 }
 
 run();
@@ -122,9 +124,9 @@ const vercel = new Vercel({
 
 async function run() {
   const result = await vercel.artifacts.status({});
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -154,7 +156,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -202,9 +204,9 @@ async function run() {
     xArtifactTag: "Tc0BmHvJYMIYJ62/zx87YqO0Flxk+5Ovip25NY825CQ=",
     hash: "12HKQaOmR5t5Uy6vdcQsNIiZgHGB",
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -241,7 +243,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -286,9 +288,9 @@ async function run() {
     xArtifactClientInteractive: 0,
     hash: "12HKQaOmR5t5Uy6vdcQsNIiZgHGB",
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -322,7 +324,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -365,6 +367,8 @@ async function run() {
   await vercel.artifacts.exists({
     hash: "12HKQaOmR5t5Uy6vdcQsNIiZgHGB",
   });
+
+
 }
 
 run();
@@ -436,9 +440,9 @@ const vercel = new Vercel({
 
 async function run() {
   const result = await vercel.artifacts.query({});
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -468,7 +472,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
