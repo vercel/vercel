@@ -6940,6 +6940,7 @@ paths:
           schema:
             type: string
       x-speakeasy-name-override: get
+      x-speakeasy-usage-example: true
   /v13/deployments:
     post:
       description: >-
@@ -8405,6 +8406,7 @@ paths:
                 - name
               type: object
       x-speakeasy-name-override: create
+      x-speakeasy-usage-example: true
   /v12/deployments/{id}/cancel:
     patch:
       description: >-
