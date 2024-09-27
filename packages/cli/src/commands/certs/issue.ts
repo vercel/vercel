@@ -1,4 +1,4 @@
-import { parse } from 'psl';
+import { getSubdomain } from 'tldts';
 import chalk from 'chalk';
 
 import { Output } from '../../util/output';
@@ -175,14 +175,12 @@ async function runStartOrder(
   );
   const [header, ...rows] = dnsTable(
     pendingChallenges.map(challenge => {
-      const parsedDomain = parse(challenge.domain);
-      if (parsedDomain.error) {
+      const subdomain = getSubdomain(challenge.domain);
+      if (!subdomain) {
         throw new ERRORS.InvalidDomain(challenge.domain);
       }
       return [
-        parsedDomain.subdomain
-          ? `_acme-challenge.${parsedDomain.subdomain}`
-          : `_acme-challenge`,
+        subdomain ? `_acme-challenge.${subdomain}` : `_acme-challenge`,
         'TXT',
         challenge.value,
       ];
