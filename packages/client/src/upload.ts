@@ -145,8 +145,7 @@ export async function* upload(
               apiUrl,
               userAgent,
             },
-            clientOptions.debug,
-            true
+            clientOptions.debug
           );
 
           if (res.status === 200) {
