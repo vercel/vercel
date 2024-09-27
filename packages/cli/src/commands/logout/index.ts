@@ -69,8 +69,8 @@ export default async function main(client: Client): Promise<number> {
   delete authConfig.token;
 
   try {
-    writeToConfigFile(config);
-    writeToAuthConfigFile(authConfig);
+    writeToConfigFile(output, config);
+    writeToAuthConfigFile(output, authConfig);
     output.debug('Configuration has been deleted');
   } catch (err: unknown) {
     output.debug(errorToString(err));
