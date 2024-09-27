@@ -28,9 +28,9 @@ const vercel = new Vercel({
 
 async function run() {
   const result = await vercel.logDrains.list({});
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -60,7 +60,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -108,9 +108,9 @@ async function run() {
       url: "https://example.com/log-drain",
     },
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -147,7 +147,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -190,6 +190,8 @@ async function run() {
   await vercel.logDrains.deleteIntegration({
     id: "<id>",
   });
+
+
 }
 
 run();
@@ -263,9 +265,9 @@ async function run() {
   const result = await vercel.logDrains.getConfigurable({
     id: "<id>",
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -297,7 +299,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -340,6 +342,8 @@ async function run() {
   await vercel.logDrains.deleteConfigurable({
     id: "<id>",
   });
+
+
 }
 
 run();
@@ -411,9 +415,9 @@ const vercel = new Vercel({
 
 async function run() {
   const result = await vercel.logDrains.getAll({});
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -443,7 +447,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -492,9 +496,9 @@ async function run() {
       ],
     },
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -532,7 +536,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
