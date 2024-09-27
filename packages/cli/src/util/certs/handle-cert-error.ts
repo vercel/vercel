@@ -1,5 +1,5 @@
 import ms from 'ms';
-import { parse } from 'psl';
+import { parse } from 'tldts';
 import chalk from 'chalk';
 import * as ERRORS from '../errors-ts';
 import { Output } from '../output';
@@ -55,7 +55,7 @@ export default function handleCertError<T>(
         `${dnsTable(
           cns.map(cn => {
             const parsed = parse(cn);
-            return !parsed.error && parsed.subdomain
+            return parsed.subdomain
               ? [parsed.subdomain, 'ALIAS', 'alias.vercel.com']
               : ['', 'ALIAS', 'alias.vercel.com'];
           })
