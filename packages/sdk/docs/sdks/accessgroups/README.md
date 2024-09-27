@@ -30,9 +30,9 @@ async function run() {
   const result = await vercel.accessGroups.read({
     idOrName: "<value>",
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -64,7 +64,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -116,9 +116,9 @@ async function run() {
       ],
     },
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -159,7 +159,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -202,6 +202,8 @@ async function run() {
   await vercel.accessGroups.delete({
     idOrName: "<value>",
   });
+
+
 }
 
 run();
@@ -276,9 +278,9 @@ async function run() {
     idOrName: "ag_pavWOn1iLObbXLRiwVvzmPrTWyTf",
     limit: 20,
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -311,7 +313,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -358,9 +360,9 @@ async function run() {
     projectsLimit: 20,
     limit: 20,
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -396,7 +398,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -447,9 +449,9 @@ async function run() {
       ],
     },
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -489,7 +491,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -533,9 +535,9 @@ async function run() {
     idOrName: "ag_pavWOn1iLObbXLRiwVvzmPrTWyTf",
     limit: 20,
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -568,7 +570,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();

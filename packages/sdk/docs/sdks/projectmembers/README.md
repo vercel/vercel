@@ -29,9 +29,9 @@ async function run() {
     since: 1540095775951,
     until: 1540095775951,
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -66,7 +66,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -115,9 +115,9 @@ async function run() {
       role: "ADMIN",
     },
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -155,7 +155,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -199,9 +199,9 @@ async function run() {
     idOrName: "prj_pavWOn1iLObbXLRiwVvzmPrTWyTf",
     uid: "ndlgr43fadlPyCtREAqxxdyFK",
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -234,7 +234,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();

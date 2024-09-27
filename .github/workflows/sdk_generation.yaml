@@ -25,6 +25,7 @@ jobs:
       set_version: ${{ github.event.inputs.set_version }}
       speakeasy_version: latest
       working_directory: packages/sdk
+      pnpm_version: '8.3.1'
     secrets:
       github_access_token: ${{ secrets.GITHUB_TOKEN }}
       npm_token: ${{ secrets.NPM_TOKEN_ELEVATED }}
