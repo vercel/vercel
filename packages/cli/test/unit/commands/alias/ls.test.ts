@@ -31,7 +31,7 @@ describe('alias ls', () => {
         },
         {
           key: `flag:next`,
-          value: '1727714910573',
+          value: '[REDACTED]',
         },
       ]);
     });

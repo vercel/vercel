@@ -14,7 +14,7 @@ export class AliasLsTelemetryClient extends TelemetryClient {
     if (next) {
       this.trackCliOption({
         flag: 'next',
-        value: String(next),
+        value: '[REDACTED]',
       });
     }
   }
