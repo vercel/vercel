@@ -60,12 +60,12 @@ const imagesSchema = {
         properties: {
           pathname: {
             type: 'string',
-            minLength: 1,
+            minLength: 0,
             maxLength: 256,
           },
           search: {
             type: 'string',
-            minLength: 1,
+            minLength: 0,
             maxLength: 256,
           },
         },
@@ -95,17 +95,17 @@ const imagesSchema = {
           },
           port: {
             type: 'string',
-            minLength: 1,
+            minLength: 0,
             maxLength: 5,
           },
           pathname: {
             type: 'string',
-            minLength: 1,
+            minLength: 0,
             maxLength: 256,
           },
           search: {
             type: 'string',
-            minLength: 1,
+            minLength: 0,
             maxLength: 256,
           },
         },
