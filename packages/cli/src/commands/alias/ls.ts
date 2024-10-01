@@ -11,6 +11,8 @@ import {
 import stamp from '../../util/output/stamp';
 import getCommandFlags from '../../util/get-command-flags';
 import { getCommandName } from '../../util/pkg-name';
+import { AliasLsTelemetryClient } from '../../util/telemetry/commands/alias/ls';
+
 import type { Alias } from '@vercel-internals/types';
 
 export default async function ls(
@@ -21,10 +23,20 @@ export default async function ls(
   const { output } = client;
   const { contextName } = await getScope(client);
 
+  const telemetryClient = new AliasLsTelemetryClient({
+    opts: {
+      output: client.output,
+      store: client.telemetryEventStore,
+    },
+  });
   let paginationOptions;
 
   try {
     paginationOptions = getPaginationOpts(opts);
+    let [next, limit] = paginationOptions;
+
+    telemetryClient.trackCliOptionNext(next);
+    telemetryClient.trackCliOptionLimit(limit);
   } catch (err: unknown) {
     output.prettyError(err);
     return 1;
