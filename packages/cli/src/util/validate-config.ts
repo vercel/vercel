@@ -60,7 +60,7 @@ const imagesSchema = {
         properties: {
           pathname: {
             type: 'string',
-            minLength: 0,
+            minLength: 1,
             maxLength: 256,
           },
           search: {
@@ -100,7 +100,7 @@ const imagesSchema = {
           },
           pathname: {
             type: 'string',
-            minLength: 0,
+            minLength: 1,
             maxLength: 256,
           },
           search: {
