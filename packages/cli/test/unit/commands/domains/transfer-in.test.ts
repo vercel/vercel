@@ -108,19 +108,19 @@ describe('domains transfer-in', () => {
         client.stdin.write('y\n');
 
         await expect(exitCodePromise).resolves.toEqual(0);
-        expect(client.telemetryEventStore.readonlyEvents).toMatchObject([
-          expect.objectContaining({
+        expect(client.telemetryEventStore).toHaveTelemetryEvents([
+          {
             key: `subcommand:transfer-in`,
             value: 'transfer-in',
-          }),
-          expect.objectContaining({
+          },
+          {
             key: `flag:code`,
             value: '[REDACTED]',
-          }),
-          expect.objectContaining({
+          },
+          {
             key: `argument:domain`,
             value: '[REDACTED]',
-          }),
+          },
         ]);
       });
     });
