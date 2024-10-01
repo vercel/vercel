@@ -8,7 +8,7 @@ import { ListAccessGroupProjectsResponseBody } from "@vercel/sdk/models/operatio
 let value: ListAccessGroupProjectsResponseBody = {
   projects: [
     {
-      projectId: "<value>",
+      projectId: "<id>",
       role: "PROJECT_DEVELOPER",
       createdAt: "<value>",
       updatedAt: "<value>",

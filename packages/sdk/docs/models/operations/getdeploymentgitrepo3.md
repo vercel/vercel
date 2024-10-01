@@ -7,15 +7,15 @@ import { GetDeploymentGitRepo3 } from "@vercel/sdk/models/operations/getdeployme
 
 let value: GetDeploymentGitRepo3 = {
   owner: "<value>",
-  repoUuid: "<value>",
+  repoUuid: "<id>",
   slug: "<value>",
   type: "bitbucket",
-  workspaceUuid: "<value>",
-  path: "/usr/bin",
+  workspaceUuid: "<id>",
+  path: "/var/yp",
   defaultBranch: "<value>",
   name: "<value>",
   private: false,
-  ownerType: "user",
+  ownerType: "team",
 };
 ```
 

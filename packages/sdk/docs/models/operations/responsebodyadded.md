@@ -5,7 +5,7 @@
 ```typescript
 import { ResponseBodyAdded } from "@vercel/sdk/models/operations/getconfigurations.js";
 
-let value: ResponseBodyAdded = "read-write:deployment-check";
+let value: ResponseBodyAdded = "read-write:project-env-vars";
 ```
 
 ## Values

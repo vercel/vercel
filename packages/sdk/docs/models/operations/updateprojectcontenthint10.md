@@ -7,7 +7,7 @@ import { UpdateProjectContentHint10 } from "@vercel/sdk/models/operations/update
 
 let value: UpdateProjectContentHint10 = {
   type: "postgres-host",
-  storeId: "<value>",
+  storeId: "<id>",
 };
 ```
 

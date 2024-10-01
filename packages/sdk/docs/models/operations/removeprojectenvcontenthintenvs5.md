@@ -7,7 +7,7 @@ import { RemoveProjectEnvContentHintEnvs5 } from "@vercel/sdk/models/operations/
 
 let value: RemoveProjectEnvContentHintEnvs5 = {
   type: "blob-read-write-token",
-  storeId: "<value>",
+  storeId: "<id>",
 };
 ```
 

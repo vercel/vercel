@@ -1,27 +1,22 @@
 # Files
 
-## Example Usage
-
-```typescript
-import { Files } from "@vercel/sdk/models/operations/createdeployment.js";
-
-let value: Files = {
-  data: "<value>",
-  file: "folder/file.js",
-};
-```
 
 ## Supported Types
 
 ### `operations.InlinedFile`
 
 ```typescript
-const value: operations.InlinedFile = /* values here */
+const value: operations.InlinedFile = {
+  data: "<value>",
+  file: "folder/file.js",
+};
 ```
 
 ### `operations.UploadedFile`
 
 ```typescript
-const value: operations.UploadedFile = /* values here */
+const value: operations.UploadedFile = {
+  file: "folder/file.js",
+};
 ```
 

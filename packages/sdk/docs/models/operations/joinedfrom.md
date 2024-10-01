@@ -10,7 +10,7 @@ let value: JoinedFrom = {
   commitId: "f498d25d8bd654b578716203be73084b31130cd7",
   repoId: "67753070",
   repoPath: "jane-doe/example",
-  gitUserId: "103053343",
+  gitUserId: 103053343,
   gitUserLogin: "jane-doe",
 };
 ```

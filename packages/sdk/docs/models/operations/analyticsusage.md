@@ -6,9 +6,9 @@
 import { AnalyticsUsage } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: AnalyticsUsage = {
-  price: 5757.53,
-  batch: 1861.30,
-  threshold: 92.48,
+  price: 1594.69,
+  batch: 4170.30,
+  threshold: 4268.20,
   hidden: false,
 };
 ```

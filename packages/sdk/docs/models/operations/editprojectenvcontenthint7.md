@@ -7,7 +7,7 @@ import { EditProjectEnvContentHint7 } from "@vercel/sdk/models/operations/editpr
 
 let value: EditProjectEnvContentHint7 = {
   type: "postgres-url-non-pooling",
-  storeId: "<value>",
+  storeId: "<id>",
 };
 ```
 

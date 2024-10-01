@@ -6,9 +6,9 @@
 import { Payload } from "@vercel/sdk/models/operations/getdeploymentevents.js";
 
 let value: Payload = {
-  deploymentId: "<value>",
+  deploymentId: "<id>",
   id: "<id>",
-  date: 6.64,
+  date: 1409.57,
   serial: "<value>",
 };
 ```

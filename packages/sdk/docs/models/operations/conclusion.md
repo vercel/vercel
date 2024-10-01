@@ -7,7 +7,7 @@ The result of the check being run
 ```typescript
 import { Conclusion } from "@vercel/sdk/models/operations/updatecheck.js";
 
-let value: Conclusion = "neutral";
+let value: Conclusion = "skipped";
 ```
 
 ## Values

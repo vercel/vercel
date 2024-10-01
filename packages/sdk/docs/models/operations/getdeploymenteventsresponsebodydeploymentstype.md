@@ -5,8 +5,7 @@
 ```typescript
 import { GetDeploymentEventsResponseBodyDeploymentsType } from "@vercel/sdk/models/operations/getdeploymentevents.js";
 
-let value: GetDeploymentEventsResponseBodyDeploymentsType =
-  "edge-function-invocation";
+let value: GetDeploymentEventsResponseBodyDeploymentsType = "deployment-state";
 ```
 
 ## Values

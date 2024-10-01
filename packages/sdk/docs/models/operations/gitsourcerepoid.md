@@ -1,24 +1,17 @@
 # GitSourceRepoId
 
-## Example Usage
-
-```typescript
-import { GitSourceRepoId } from "@vercel/sdk/models/operations/createdeployment.js";
-
-let value: GitSourceRepoId = 3006.51;
-```
 
 ## Supported Types
 
 ### `string`
 
 ```typescript
-const value: string = /* values here */
+const value: string = "<value>";
 ```
 
 ### `number`
 
 ```typescript
-const value: number = /* values here */
+const value: number = 7681.95;
 ```
 

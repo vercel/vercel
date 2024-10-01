@@ -7,10 +7,10 @@ import { Fourteen } from "@vercel/sdk/models/operations/updateprojectdatacache.j
 
 let value: Fourteen = {
   type: "integration-store-secret",
-  storeId: "<value>",
-  integrationId: "<value>",
-  integrationProductId: "<value>",
-  integrationConfigurationId: "<value>",
+  storeId: "<id>",
+  integrationId: "<id>",
+  integrationProductId: "<id>",
+  integrationConfigurationId: "<id>",
 };
 ```
 

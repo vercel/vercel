@@ -5,7 +5,7 @@
 ```typescript
 import { VercelCache } from "@vercel/sdk/models/operations/getdeploymentevents.js";
 
-let value: VercelCache = "PRERENDER";
+let value: VercelCache = "MISS";
 ```
 
 ## Values

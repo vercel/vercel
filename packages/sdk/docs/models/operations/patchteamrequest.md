@@ -6,7 +6,7 @@
 import { PatchTeamRequest } from "@vercel/sdk/models/operations/patchteam.js";
 
 let value: PatchTeamRequest = {
-  teamId: "<value>",
+  teamId: "<id>",
   requestBody: {
     description:
       "Our mission is to make cloud computing accessible to everyone",

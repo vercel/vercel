@@ -1,26 +1,19 @@
 # GetProjectEnvResponseBodyTarget
 
-## Example Usage
-
-```typescript
-import { GetProjectEnvResponseBodyTarget } from "@vercel/sdk/models/operations/getprojectenv.js";
-
-let value: GetProjectEnvResponseBodyTarget = [
-  "development",
-];
-```
 
 ## Supported Types
 
 ### `operations.GetProjectEnvTarget1[]`
 
 ```typescript
-const value: operations.GetProjectEnvTarget1[] = /* values here */
+const value: operations.GetProjectEnvTarget1[] = [
+  "production",
+];
 ```
 
 ### `operations.GetProjectEnvTarget2`
 
 ```typescript
-const value: operations.GetProjectEnvTarget2 = /* values here */
+const value: operations.GetProjectEnvTarget2 = "development";
 ```
 

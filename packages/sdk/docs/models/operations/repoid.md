@@ -1,24 +1,17 @@
 # RepoId
 
-## Example Usage
-
-```typescript
-import { RepoId } from "@vercel/sdk/models/operations/createdeployment.js";
-
-let value: RepoId = "<value>";
-```
 
 ## Supported Types
 
 ### `number`
 
 ```typescript
-const value: number = /* values here */
+const value: number = 1002.33;
 ```
 
 ### `string`
 
 ```typescript
-const value: string = /* values here */
+const value: string = "<value>";
 ```
 

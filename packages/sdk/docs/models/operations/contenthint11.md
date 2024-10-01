@@ -7,7 +7,7 @@ import { ContentHint11 } from "@vercel/sdk/models/operations/createproject.js";
 
 let value: ContentHint11 = {
   type: "postgres-password",
-  storeId: "<value>",
+  storeId: "<id>",
 };
 ```
 

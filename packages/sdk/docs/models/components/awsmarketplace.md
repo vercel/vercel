@@ -7,7 +7,7 @@ import { AwsMarketplace } from "@vercel/sdk/models/components/authuser.js";
 
 let value: AwsMarketplace = {
   productCode: "<value>",
-  customerId: "<value>",
+  customerId: "<id>",
 };
 ```
 

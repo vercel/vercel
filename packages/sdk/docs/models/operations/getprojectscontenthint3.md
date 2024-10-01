@@ -7,7 +7,7 @@ import { GetProjectsContentHint3 } from "@vercel/sdk/models/operations/getprojec
 
 let value: GetProjectsContentHint3 = {
   type: "redis-rest-api-token",
-  storeId: "<value>",
+  storeId: "<id>",
 };
 ```
 

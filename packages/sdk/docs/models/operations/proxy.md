@@ -6,14 +6,14 @@
 import { Proxy } from "@vercel/sdk/models/operations/getdeploymentevents.js";
 
 let value: Proxy = {
-  timestamp: 2646.50,
+  timestamp: 9132.84,
   method: "<value>",
-  host: "witty-paintwork.name",
-  path: "/opt/include",
+  host: "monstrous-forgery.com",
+  path: "/usr/libdata",
   userAgent: [
     "<value>",
   ],
-  referer: "<value>",
+  referer: "unfit-breastplate.net",
   clientIp: "<value>",
   region: "<value>",
 };

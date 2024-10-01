@@ -7,7 +7,7 @@ import { RemoveProjectEnvContentHintEnvs1 } from "@vercel/sdk/models/operations/
 
 let value: RemoveProjectEnvContentHintEnvs1 = {
   type: "redis-url",
-  storeId: "<value>",
+  storeId: "<id>",
 };
 ```
 

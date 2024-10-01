@@ -7,7 +7,7 @@ import { UpdateProjectContentHint13 } from "@vercel/sdk/models/operations/update
 
 let value: UpdateProjectContentHint13 = {
   type: "postgres-url-no-ssl",
-  storeId: "<value>",
+  storeId: "<id>",
 };
 ```
 

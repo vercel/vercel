@@ -7,7 +7,7 @@ import { ContentHint7 } from "@vercel/sdk/models/operations/updateprojectdatacac
 
 let value: ContentHint7 = {
   type: "postgres-url-non-pooling",
-  storeId: "<value>",
+  storeId: "<id>",
 };
 ```
 

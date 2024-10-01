@@ -11,15 +11,15 @@ let value: GetAuthUserResponseBody = {
   user: {
     createdAt: 1630748523395,
     softBlock: {
-      blockedAt: 8506.28,
-      reason: "ENTERPRISE_TRIAL_ENDED",
+      blockedAt: 7569.35,
+      reason: "UNPAID_INVOICE",
     },
     billing: {
       period: {
-        start: 7399.37,
-        end: 7046.65,
+        start: 6379.69,
+        end: 6037.83,
       },
-      plan: "hobby",
+      plan: "enterprise",
     },
     resourceConfig: {},
     stagingPrefix: "<value>",
@@ -29,7 +29,7 @@ let value: GetAuthUserResponseBody = {
     name: "John Doe",
     username: "jdoe",
     avatar: "22cb30c85ff45ac4c72de8981500006b28114aa1",
-    defaultTeamId: "<value>",
+    defaultTeamId: "<id>",
     version: "northstar",
   },
 };

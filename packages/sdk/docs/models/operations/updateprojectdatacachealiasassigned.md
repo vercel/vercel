@@ -1,24 +1,17 @@
 # UpdateProjectDataCacheAliasAssigned
 
-## Example Usage
-
-```typescript
-import { UpdateProjectDataCacheAliasAssigned } from "@vercel/sdk/models/operations/updateprojectdatacache.js";
-
-let value: UpdateProjectDataCacheAliasAssigned = false;
-```
 
 ## Supported Types
 
 ### `number`
 
 ```typescript
-const value: number = /* values here */
+const value: number = 7583.79;
 ```
 
 ### `boolean`
 
 ```typescript
-const value: boolean = /* values here */
+const value: boolean = false;
 ```
 
