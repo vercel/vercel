@@ -5,8 +5,10 @@ import type { TelemetryEventStore } from '../../../src/util/telemetry';
 interface EventData {
   key: string;
   value: string;
-  sessionId: string;
-  id: string;
+}
+
+export interface ToHaveTelemetryEventsMatchers<R = unknown> {
+  toHaveTelemetryEvents: (test: EventData[], timeout?: number) => Promise<R>;
 }
 
 export function toHaveTelemetryEvents(
