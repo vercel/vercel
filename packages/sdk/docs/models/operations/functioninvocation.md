@@ -6,9 +6,9 @@
 import { FunctionInvocation } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: FunctionInvocation = {
-  price: 7319.30,
-  batch: 3422.26,
-  threshold: 3755.89,
+  price: 5184.32,
+  batch: 6651.83,
+  threshold: 1648.06,
   hidden: false,
 };
 ```

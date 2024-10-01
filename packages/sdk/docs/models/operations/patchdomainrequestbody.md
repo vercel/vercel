@@ -1,26 +1,21 @@
 # PatchDomainRequestBody
 
-## Example Usage
-
-```typescript
-import { PatchDomainRequestBody } from "@vercel/sdk/models/operations/patchdomain.js";
-
-let value: PatchDomainRequestBody = {
-  op: "move-out",
-};
-```
 
 ## Supported Types
 
 ### `operations.PatchDomainRequestBody1`
 
 ```typescript
-const value: operations.PatchDomainRequestBody1 = /* values here */
+const value: operations.PatchDomainRequestBody1 = {
+  op: "update",
+};
 ```
 
 ### `operations.PatchDomainRequestBody2`
 
 ```typescript
-const value: operations.PatchDomainRequestBody2 = /* values here */
+const value: operations.PatchDomainRequestBody2 = {
+  op: "move-out",
+};
 ```
 

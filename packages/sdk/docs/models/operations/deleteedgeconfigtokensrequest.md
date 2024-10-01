@@ -6,7 +6,7 @@
 import { DeleteEdgeConfigTokensRequest } from "@vercel/sdk/models/operations/deleteedgeconfigtokens.js";
 
 let value: DeleteEdgeConfigTokensRequest = {
-  edgeConfigId: "<value>",
+  edgeConfigId: "<id>",
 };
 ```
 

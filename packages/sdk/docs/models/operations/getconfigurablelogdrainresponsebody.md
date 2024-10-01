@@ -8,14 +8,14 @@ import { GetConfigurableLogDrainResponseBody } from "@vercel/sdk/models/operatio
 let value: GetConfigurableLogDrainResponseBody = {
   id: "<id>",
   deliveryFormat: "ndjson",
-  url: "https://impolite-porter.com/",
+  url: "https://smoggy-configuration.biz/",
   name: "<value>",
-  ownerId: "<value>",
-  createdAt: 1665.42,
-  deletedAt: 8511.98,
-  updatedAt: 7710.77,
+  ownerId: "<id>",
+  createdAt: 4318.43,
+  deletedAt: 3207.48,
+  updatedAt: 741.25,
   environments: [
-    "production",
+    "preview",
   ],
   secret: "<value>",
 };

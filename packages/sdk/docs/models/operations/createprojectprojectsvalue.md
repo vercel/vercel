@@ -1,24 +1,17 @@
 # CreateProjectProjectsValue
 
-## Example Usage
-
-```typescript
-import { CreateProjectProjectsValue } from "@vercel/sdk/models/operations/createproject.js";
-
-let value: CreateProjectProjectsValue = "<value>";
-```
 
 ## Supported Types
 
 ### `string`
 
 ```typescript
-const value: string = /* values here */
+const value: string = "<value>";
 ```
 
 ### `operations.CreateProjectValueProjects2`
 
 ```typescript
-const value: operations.CreateProjectValueProjects2 = /* values here */
+const value: operations.CreateProjectValueProjects2 = {};
 ```
 

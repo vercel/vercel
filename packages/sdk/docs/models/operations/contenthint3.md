@@ -7,7 +7,7 @@ import { ContentHint3 } from "@vercel/sdk/models/operations/updateprojectdatacac
 
 let value: ContentHint3 = {
   type: "redis-rest-api-token",
-  storeId: "<value>",
+  storeId: "<id>",
 };
 ```
 

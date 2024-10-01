@@ -6,7 +6,7 @@
 import { ListDeploymentBuildsRequest } from "@vercel/sdk/models/operations/listdeploymentbuilds.js";
 
 let value: ListDeploymentBuildsRequest = {
-  deploymentId: "<value>",
+  deploymentId: "<id>",
 };
 ```
 

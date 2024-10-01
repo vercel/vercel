@@ -8,35 +8,35 @@ import { Subscriptions } from "@vercel/sdk/models/components/authuser.js";
 let value: Subscriptions = {
   id: "<id>",
   trial: {
-    start: 9961.00,
-    end: 2322.10,
+    start: 9390.78,
+    end: 2223.73,
   },
   period: {
-    start: 3534.24,
-    end: 2628.91,
+    start: 5535.42,
+    end: 544.98,
   },
   frequency: {
-    interval: "day",
-    intervalCount: 1008.05,
+    interval: "month",
+    intervalCount: 6040.27,
   },
   discount: {
     id: "<id>",
     coupon: {
       id: "<id>",
       name: "<value>",
-      amountOff: 3598.10,
-      percentageOff: 8878.65,
-      durationInMonths: 2985.90,
-      duration: "repeating",
+      amountOff: 6621.84,
+      percentageOff: 5809.96,
+      durationInMonths: 8696.01,
+      duration: "once",
     },
   },
   items: [
     {
       id: "<id>",
-      priceId: "<value>",
-      productId: "<value>",
-      amount: 9444.74,
-      quantity: 7283.79,
+      priceId: "<id>",
+      productId: "<id>",
+      amount: 7638.62,
+      quantity: 4650.92,
     },
   ],
 };

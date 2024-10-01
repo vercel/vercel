@@ -7,7 +7,7 @@ import { AuthUserBillingInvoiceItemsPasswordProtectionFrequency } from "@vercel/
 
 let value: AuthUserBillingInvoiceItemsPasswordProtectionFrequency = {
   interval: "month",
-  intervalCount: 7914.54,
+  intervalCount: 7771.93,
 };
 ```
 

@@ -5,8 +5,7 @@
 ```typescript
 import { GetDeploymentCustomEnvironmentDeploymentsResponse200Type } from "@vercel/sdk/models/operations/getdeployment.js";
 
-let value: GetDeploymentCustomEnvironmentDeploymentsResponse200Type =
-  "startsWith";
+let value: GetDeploymentCustomEnvironmentDeploymentsResponse200Type = "equals";
 ```
 
 ## Values

@@ -7,7 +7,7 @@ import { FilterProjectEnvsContentHintEnvsResponse5 } from "@vercel/sdk/models/op
 
 let value: FilterProjectEnvsContentHintEnvsResponse5 = {
   type: "blob-read-write-token",
-  storeId: "<value>",
+  storeId: "<id>",
 };
 ```
 

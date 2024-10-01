@@ -33,7 +33,7 @@ async function run() {
     xArtifactClientInteractive: 0,
     requestBody: [
       {
-        sessionId: "<value>",
+        sessionId: "<id>",
         source: "LOCAL",
         event: "HIT",
         hash: "12HKQaOmR5t5Uy6vdcQsNIiZgHGB",
@@ -68,7 +68,7 @@ async function run() {
     xArtifactClientInteractive: 0,
     requestBody: [
       {
-        sessionId: "<value>",
+        sessionId: "<id>",
         source: "LOCAL",
         event: "HIT",
         hash: "12HKQaOmR5t5Uy6vdcQsNIiZgHGB",

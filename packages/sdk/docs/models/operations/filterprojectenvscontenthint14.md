@@ -7,10 +7,10 @@ import { FilterProjectEnvsContentHint14 } from "@vercel/sdk/models/operations/fi
 
 let value: FilterProjectEnvsContentHint14 = {
   type: "integration-store-secret",
-  storeId: "<value>",
-  integrationId: "<value>",
-  integrationProductId: "<value>",
-  integrationConfigurationId: "<value>",
+  storeId: "<id>",
+  integrationId: "<id>",
+  integrationProductId: "<id>",
+  integrationConfigurationId: "<id>",
 };
 ```
 

@@ -5,7 +5,7 @@
 ```typescript
 import { OwnerType } from "@vercel/sdk/models/operations/searchrepo.js";
 
-let value: OwnerType = "team";
+let value: OwnerType = "user";
 ```
 
 ## Values

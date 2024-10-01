@@ -7,7 +7,7 @@ import { FilterProjectEnvsContentHintEnvsResponse7 } from "@vercel/sdk/models/op
 
 let value: FilterProjectEnvsContentHintEnvsResponse7 = {
   type: "postgres-url-non-pooling",
-  storeId: "<value>",
+  storeId: "<id>",
 };
 ```
 

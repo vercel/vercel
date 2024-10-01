@@ -1,27 +1,23 @@
 # GetDeploymentRoutesHas
 
-## Example Usage
-
-```typescript
-import { GetDeploymentRoutesHas } from "@vercel/sdk/models/operations/getdeployment.js";
-
-let value: GetDeploymentRoutesHas = {
-  type: "header",
-  key: "<key>",
-};
-```
 
 ## Supported Types
 
 ### `operations.GetDeploymentHas1`
 
 ```typescript
-const value: operations.GetDeploymentHas1 = /* values here */
+const value: operations.GetDeploymentHas1 = {
+  type: "host",
+  value: "<value>",
+};
 ```
 
 ### `operations.GetDeploymentHas2`
 
 ```typescript
-const value: operations.GetDeploymentHas2 = /* values here */
+const value: operations.GetDeploymentHas2 = {
+  type: "cookie",
+  key: "<key>",
+};
 ```
 

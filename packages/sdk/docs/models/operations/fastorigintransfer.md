@@ -6,9 +6,9 @@
 import { FastOriginTransfer } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: FastOriginTransfer = {
-  price: 6981.16,
-  batch: 1763.33,
-  threshold: 9417.42,
+  price: 4972.31,
+  batch: 3920.22,
+  threshold: 1439.77,
   hidden: false,
 };
 ```

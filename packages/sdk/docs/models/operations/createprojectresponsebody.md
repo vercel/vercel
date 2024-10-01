@@ -8,12 +8,12 @@ The project was successfuly created
 import { CreateProjectResponseBody } from "@vercel/sdk/models/operations/createproject.js";
 
 let value: CreateProjectResponseBody = {
-  accountId: "<value>",
+  accountId: "<id>",
   crons: {
-    enabledAt: 4269.04,
-    disabledAt: 8428.55,
-    updatedAt: 8180.33,
-    deploymentId: "<value>",
+    enabledAt: 8428.55,
+    disabledAt: 8180.33,
+    updatedAt: 1024.14,
+    deploymentId: "<id>",
     definitions: [
       {
         host: "vercel.com",
@@ -26,12 +26,35 @@ let value: CreateProjectResponseBody = {
   id: "<id>",
   latestDeployments: [
     {
-      createdAt: 1024.14,
+      createdAt: 1563.83,
       createdIn: "<value>",
       creator: {
-        email: "Elliott.Kassulke56@gmail.com",
-        uid: "<value>",
-        username: "Lauryn_Wolf39",
+        email: "Arch_Breitenberg@gmail.com",
+        uid: "<id>",
+        username: "Bill.Watsica-Huel",
+      },
+      deploymentHostname: "<value>",
+      name: "<value>",
+      id: "<id>",
+      plan: "pro",
+      private: false,
+      readyState: "QUEUED",
+      type: "LAMBDAS",
+      url: "https://humble-sideboard.net/",
+      userId: "<id>",
+      previewCommentsEnabled: false,
+    },
+  ],
+  name: "<value>",
+  nodeVersion: "8.10.x",
+  targets: {
+    "key": {
+      createdAt: 3519.36,
+      createdIn: "<value>",
+      creator: {
+        email: "Okey.Mueller87@hotmail.com",
+        uid: "<id>",
+        username: "Coy_Jacobson",
       },
       deploymentHostname: "<value>",
       name: "<value>",
@@ -40,31 +63,8 @@ let value: CreateProjectResponseBody = {
       private: false,
       readyState: "INITIALIZING",
       type: "LAMBDAS",
-      url: "https://productive-hammock.info/",
-      userId: "<value>",
-      previewCommentsEnabled: false,
-    },
-  ],
-  name: "<value>",
-  nodeVersion: "10.x",
-  targets: {
-    "key": {
-      createdAt: 7090.35,
-      createdIn: "<value>",
-      creator: {
-        email: "Felipe.Russel62@hotmail.com",
-        uid: "<value>",
-        username: "Scotty40",
-      },
-      deploymentHostname: "<value>",
-      name: "<value>",
-      id: "<id>",
-      plan: "enterprise",
-      private: false,
-      readyState: "INITIALIZING",
-      type: "LAMBDAS",
-      url: "https://instructive-baritone.biz/",
-      userId: "<value>",
+      url: "https://dual-tribe.biz/",
+      userId: "<id>",
       previewCommentsEnabled: false,
     },
   },

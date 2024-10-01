@@ -7,10 +7,10 @@ import { GetConfigurationResponseBodyScopes } from "@vercel/sdk/models/operation
 
 let value: GetConfigurationResponseBodyScopes = {
   added: [
-    "read-write:log-drain",
+    "read-write:otel-endpoint",
   ],
   upgraded: [
-    "read-write:integration-configuration",
+    "read-write:deployment",
   ],
 };
 ```

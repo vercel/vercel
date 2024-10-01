@@ -9,12 +9,12 @@ let value: GetProjectsResponse = {
   result: {
     projects: [
       {
-        accountId: "<value>",
+        accountId: "<id>",
         crons: {
           enabledAt: 360.34,
           disabledAt: 1747.72,
           updatedAt: 3891.35,
-          deploymentId: "<value>",
+          deploymentId: "<id>",
           definitions: [
             {
               host: "vercel.com",
@@ -31,7 +31,7 @@ let value: GetProjectsResponse = {
             createdIn: "<value>",
             creator: {
               email: "Carole_King@gmail.com",
-              uid: "<value>",
+              uid: "<id>",
               username: "Ignacio.Predovic3",
             },
             deploymentHostname: "<value>",
@@ -42,7 +42,7 @@ let value: GetProjectsResponse = {
             readyState: "CANCELED",
             type: "LAMBDAS",
             url: "https://unrealistic-pilot.name",
-            userId: "<value>",
+            userId: "<id>",
             previewCommentsEnabled: false,
           },
         ],
@@ -54,7 +54,7 @@ let value: GetProjectsResponse = {
             createdIn: "<value>",
             creator: {
               email: "Janie32@yahoo.com",
-              uid: "<value>",
+              uid: "<id>",
               username: "Angus.Kreiger",
             },
             deploymentHostname: "<value>",
@@ -65,7 +65,7 @@ let value: GetProjectsResponse = {
             readyState: "INITIALIZING",
             type: "LAMBDAS",
             url: "https://wilted-certification.com/",
-            userId: "<value>",
+            userId: "<id>",
             previewCommentsEnabled: false,
           },
         },

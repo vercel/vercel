@@ -9,7 +9,7 @@ let value: GetProjectsLinkDeployHooks = {
   id: "<id>",
   name: "<value>",
   ref: "<value>",
-  url: "https://which-fork.info/",
+  url: "https://animated-velocity.info",
 };
 ```
 

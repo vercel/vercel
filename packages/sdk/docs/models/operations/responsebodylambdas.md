@@ -10,7 +10,7 @@ import { ResponseBodyLambdas } from "@vercel/sdk/models/operations/getdeployment
 let value: ResponseBodyLambdas = {
   output: [
     {
-      path: "/bin",
+      path: "/rescue",
       functionName: "<value>",
     },
   ],

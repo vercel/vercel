@@ -8,9 +8,9 @@ Keeps track of the current state of the Edge Config while it gets transferred.
 import { UpdateEdgeConfigTransfer } from "@vercel/sdk/models/operations/updateedgeconfig.js";
 
 let value: UpdateEdgeConfigTransfer = {
-  fromAccountId: "<value>",
-  startedAt: 6886.48,
-  doneAt: 424.54,
+  fromAccountId: "<id>",
+  startedAt: 3772.69,
+  doneAt: 9260.27,
 };
 ```
 

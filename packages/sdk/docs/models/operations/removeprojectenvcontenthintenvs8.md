@@ -7,7 +7,7 @@ import { RemoveProjectEnvContentHintEnvs8 } from "@vercel/sdk/models/operations/
 
 let value: RemoveProjectEnvContentHintEnvs8 = {
   type: "postgres-prisma-url",
-  storeId: "<value>",
+  storeId: "<id>",
 };
 ```
 

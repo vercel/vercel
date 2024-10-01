@@ -9,9 +9,9 @@ let value: CancelDeploymentCustomEnvironment1 = {
   id: "<id>",
   name: "<value>",
   slug: "<value>",
-  type: "preview",
-  createdAt: 6863.80,
-  updatedAt: 2958.92,
+  type: "production",
+  createdAt: 2987.50,
+  updatedAt: 2550.64,
 };
 ```
 

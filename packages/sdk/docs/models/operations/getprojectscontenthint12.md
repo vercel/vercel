@@ -7,7 +7,7 @@ import { GetProjectsContentHint12 } from "@vercel/sdk/models/operations/getproje
 
 let value: GetProjectsContentHint12 = {
   type: "postgres-database",
-  storeId: "<value>",
+  storeId: "<id>",
 };
 ```
 

@@ -6,8 +6,8 @@
 import { Contract } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: Contract = {
-  start: 3490.87,
-  end: 1941.94,
+  start: 2270.18,
+  end: 1251.62,
 };
 ```
 

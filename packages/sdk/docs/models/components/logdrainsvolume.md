@@ -6,9 +6,9 @@
 import { LogDrainsVolume } from "@vercel/sdk/models/components/authuser.js";
 
 let value: LogDrainsVolume = {
-  price: 6823.27,
-  batch: 8057.02,
-  threshold: 6714.28,
+  price: 4128.97,
+  batch: 5890.98,
+  threshold: 263.89,
   hidden: false,
 };
 ```

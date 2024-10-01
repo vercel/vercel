@@ -6,9 +6,9 @@
 import { ServerlessFunctionExecution } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: ServerlessFunctionExecution = {
-  price: 1594.69,
-  batch: 4170.30,
-  threshold: 4268.20,
+  price: 2459.91,
+  batch: 5831.38,
+  threshold: 2580.36,
   hidden: false,
 };
 ```

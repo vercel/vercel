@@ -6,9 +6,9 @@
 import { WebAnalyticsEvent } from "@vercel/sdk/models/components/authuser.js";
 
 let value: WebAnalyticsEvent = {
-  price: 9354.93,
-  batch: 1419.86,
-  threshold: 2593.74,
+  price: 2602.47,
+  batch: 1542.78,
+  threshold: 3121.21,
   hidden: false,
 };
 ```

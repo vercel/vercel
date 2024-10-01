@@ -1,24 +1,17 @@
 # NamespaceId
 
-## Example Usage
-
-```typescript
-import { NamespaceId } from "@vercel/sdk/models/operations/searchrepo.js";
-
-let value: NamespaceId = "<value>";
-```
 
 ## Supported Types
 
 ### `string`
 
 ```typescript
-const value: string = /* values here */
+const value: string = "<value>";
 ```
 
 ### `number`
 
 ```typescript
-const value: number = /* values here */
+const value: number = 4815.53;
 ```
 

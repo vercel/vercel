@@ -6,7 +6,7 @@
 import { BranchMatcher } from "@vercel/sdk/models/operations/createdeployment.js";
 
 let value: BranchMatcher = {
-  type: "equals",
+  type: "endsWith",
   pattern: "<value>",
 };
 ```

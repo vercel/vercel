@@ -5,7 +5,7 @@
 ```typescript
 import { GetDeploymentCustomEnvironmentType } from "@vercel/sdk/models/operations/getdeployment.js";
 
-let value: GetDeploymentCustomEnvironmentType = "preview";
+let value: GetDeploymentCustomEnvironmentType = "development";
 ```
 
 ## Values

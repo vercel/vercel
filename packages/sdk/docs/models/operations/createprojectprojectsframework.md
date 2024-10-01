@@ -5,7 +5,7 @@
 ```typescript
 import { CreateProjectProjectsFramework } from "@vercel/sdk/models/operations/createproject.js";
 
-let value: CreateProjectProjectsFramework = "astro";
+let value: CreateProjectProjectsFramework = "hexo";
 ```
 
 ## Values

@@ -1,5 +1,5 @@
 import { expect } from 'vitest';
-import { toOutput } from './matchers';
+import { toOutput, toHaveTelemetryEvents } from './matchers';
 
 interface ToOutputMatchers<R = unknown> {
   toOutput: (test: string, timeout?: number) => Promise<R>;
@@ -10,4 +10,4 @@ declare module 'vitest' {
   interface Assertion<T = any> extends ToOutputMatchers<T> {}
 }
 
-expect.extend({ toOutput });
+expect.extend({ toOutput, toHaveTelemetryEvents });

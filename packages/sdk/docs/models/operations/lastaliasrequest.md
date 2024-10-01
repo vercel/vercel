@@ -6,10 +6,10 @@
 import { LastAliasRequest } from "@vercel/sdk/models/operations/updateprojectdatacache.js";
 
 let value: LastAliasRequest = {
-  fromDeploymentId: "<value>",
-  toDeploymentId: "<value>",
-  jobStatus: "pending",
-  requestedAt: 7486.64,
+  fromDeploymentId: "<id>",
+  toDeploymentId: "<id>",
+  jobStatus: "skipped",
+  requestedAt: 5844.76,
   type: "rollback",
 };
 ```

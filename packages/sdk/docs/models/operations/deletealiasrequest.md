@@ -6,7 +6,7 @@
 import { DeleteAliasRequest } from "@vercel/sdk/models/operations/deletealias.js";
 
 let value: DeleteAliasRequest = {
-  aliasId: "<value>",
+  aliasId: "<id>",
 };
 ```
 
