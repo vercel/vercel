@@ -1,22 +1,23 @@
 # User
 
-## Example Usage
+
+## Supported Types
+
+### `components.AuthUser`
 
 ```typescript
-import { User } from "@vercel/sdk/models/operations/getauthuser.js";
-
-let value: User = {
+const value: components.AuthUser = {
   createdAt: 1630748523395,
   softBlock: {
-    blockedAt: 5955.85,
+    blockedAt: 5059.08,
     reason: "UNPAID_INVOICE",
   },
   billing: {
     period: {
-      start: 6925.55,
-      end: 8196.90,
+      start: 8903.79,
+      end: 282.57,
     },
-    plan: "enterprise",
+    plan: "pro",
   },
   resourceConfig: {},
   stagingPrefix: "<value>",
@@ -26,22 +27,23 @@ let value: User = {
   name: "John Doe",
   username: "jdoe",
   avatar: "22cb30c85ff45ac4c72de8981500006b28114aa1",
-  defaultTeamId: "<value>",
+  defaultTeamId: "<id>",
   version: "northstar",
 };
-```
-
-## Supported Types
-
-### `components.AuthUser`
-
-```typescript
-const value: components.AuthUser = /* values here */
 ```
 
 ### `components.AuthUserLimited`
 
 ```typescript
-const value: components.AuthUserLimited = /* values here */
+const value: components.AuthUserLimited = {
+  limited: false,
+  id: "AEIIDYVk59zbFF2Sxfyxxmua",
+  email: "me@example.com",
+  name: "John Doe",
+  username: "jdoe",
+  avatar: "22cb30c85ff45ac4c72de8981500006b28114aa1",
+  defaultTeamId: "<id>",
+  version: "northstar",
+};
 ```
 

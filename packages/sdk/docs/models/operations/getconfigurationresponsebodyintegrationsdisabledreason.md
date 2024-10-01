@@ -6,7 +6,7 @@
 import { GetConfigurationResponseBodyIntegrationsDisabledReason } from "@vercel/sdk/models/operations/getconfiguration.js";
 
 let value: GetConfigurationResponseBodyIntegrationsDisabledReason =
-  "feature-not-available";
+  "original-owner-role-downgraded";
 ```
 
 ## Values

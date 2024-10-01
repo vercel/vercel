@@ -7,7 +7,7 @@ import { GetProjectsContentHint6 } from "@vercel/sdk/models/operations/getprojec
 
 let value: GetProjectsContentHint6 = {
   type: "postgres-url",
-  storeId: "<value>",
+  storeId: "<id>",
 };
 ```
 

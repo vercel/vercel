@@ -6,9 +6,9 @@
 import { EdgeConfigWrite } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: EdgeConfigWrite = {
-  price: 1251.62,
-  batch: 9642.10,
-  threshold: 7808.85,
+  price: 2875.75,
+  batch: 7689.99,
+  threshold: 831.65,
   hidden: false,
 };
 ```

@@ -6,9 +6,9 @@
 import { BlobTotalSimpleRequests } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: BlobTotalSimpleRequests = {
-  price: 1602.60,
-  batch: 7296.11,
-  threshold: 6090.94,
+  price: 3796.66,
+  batch: 5715.50,
+  threshold: 9835.55,
   hidden: false,
 };
 ```

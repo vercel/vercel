@@ -2,35 +2,38 @@
 
 The environment variable was successfully removed
 
-## Example Usage
-
-```typescript
-import { RemoveProjectEnvResponseBody } from "@vercel/sdk/models/operations/removeprojectenv.js";
-
-let value: RemoveProjectEnvResponseBody = {
-  type: "secret",
-  key: "<key>",
-  value: "<value>",
-};
-```
 
 ## Supported Types
 
 ### `operations.RemoveProjectEnvResponseBody1[]`
 
 ```typescript
-const value: operations.RemoveProjectEnvResponseBody1[] = /* values here */
+const value: operations.RemoveProjectEnvResponseBody1[] = [
+  {
+    type: "sensitive",
+    key: "<key>",
+    value: "<value>",
+  },
+];
 ```
 
 ### `operations.RemoveProjectEnvResponseBody2`
 
 ```typescript
-const value: operations.RemoveProjectEnvResponseBody2 = /* values here */
+const value: operations.RemoveProjectEnvResponseBody2 = {
+  type: "system",
+  key: "<key>",
+  value: "<value>",
+};
 ```
 
 ### `operations.RemoveProjectEnvResponseBody3`
 
 ```typescript
-const value: operations.RemoveProjectEnvResponseBody3 = /* values here */
+const value: operations.RemoveProjectEnvResponseBody3 = {
+  type: "plain",
+  key: "<key>",
+  value: "<value>",
+};
 ```
 

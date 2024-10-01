@@ -5,7 +5,7 @@
 ```typescript
 import { UpdateProjectDataCacheReadySubstate } from "@vercel/sdk/models/operations/updateprojectdatacache.js";
 
-let value: UpdateProjectDataCacheReadySubstate = "PROMOTED";
+let value: UpdateProjectDataCacheReadySubstate = "STAGED";
 ```
 
 ## Values

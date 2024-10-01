@@ -6,8 +6,8 @@
 import { CreateTeamPeriod } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: CreateTeamPeriod = {
-  start: 5369.99,
-  end: 9788.57,
+  start: 9082.73,
+  end: 4090.22,
 };
 ```
 

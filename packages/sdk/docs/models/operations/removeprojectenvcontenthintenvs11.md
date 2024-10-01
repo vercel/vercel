@@ -7,7 +7,7 @@ import { RemoveProjectEnvContentHintEnvs11 } from "@vercel/sdk/models/operations
 
 let value: RemoveProjectEnvContentHintEnvs11 = {
   type: "postgres-password",
-  storeId: "<value>",
+  storeId: "<id>",
 };
 ```
 

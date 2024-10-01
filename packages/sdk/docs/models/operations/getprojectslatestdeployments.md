@@ -6,22 +6,22 @@
 import { GetProjectsLatestDeployments } from "@vercel/sdk/models/operations/getprojects.js";
 
 let value: GetProjectsLatestDeployments = {
-  createdAt: 3926.76,
+  createdAt: 2775.96,
   createdIn: "<value>",
   creator: {
-    email: "Cicero.Little@hotmail.com",
-    uid: "<value>",
-    username: "Modesta_Turner69",
+    email: "Gladys45@gmail.com",
+    uid: "<id>",
+    username: "Jadon69",
   },
   deploymentHostname: "<value>",
   name: "<value>",
   id: "<id>",
-  plan: "hobby",
+  plan: "pro",
   private: false,
-  readyState: "QUEUED",
+  readyState: "READY",
   type: "LAMBDAS",
-  url: "https://cute-secrecy.org/",
-  userId: "<value>",
+  url: "https://exalted-coast.net",
+  userId: "<id>",
   previewCommentsEnabled: false,
 };
 ```

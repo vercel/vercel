@@ -1,27 +1,23 @@
 # CancelDeploymentRoutesHas
 
-## Example Usage
-
-```typescript
-import { CancelDeploymentRoutesHas } from "@vercel/sdk/models/operations/canceldeployment.js";
-
-let value: CancelDeploymentRoutesHas = {
-  type: "cookie",
-  key: "<key>",
-};
-```
 
 ## Supported Types
 
 ### `operations.CancelDeploymentHas1`
 
 ```typescript
-const value: operations.CancelDeploymentHas1 = /* values here */
+const value: operations.CancelDeploymentHas1 = {
+  type: "host",
+  value: "<value>",
+};
 ```
 
 ### `operations.CancelDeploymentHas2`
 
 ```typescript
-const value: operations.CancelDeploymentHas2 = /* values here */
+const value: operations.CancelDeploymentHas2 = {
+  type: "cookie",
+  key: "<key>",
+};
 ```
 

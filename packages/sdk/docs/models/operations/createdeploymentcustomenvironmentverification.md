@@ -9,7 +9,7 @@ import { CreateDeploymentCustomEnvironmentVerification } from "@vercel/sdk/model
 
 let value: CreateDeploymentCustomEnvironmentVerification = {
   type: "<value>",
-  domain: "only-valuable.org",
+  domain: "sorrowful-yarmulke.name",
   value: "<value>",
   reason: "<value>",
 };

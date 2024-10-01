@@ -9,7 +9,7 @@ import { GetDeploymentCustomEnvironmentDeploymentsVerification } from "@vercel/s
 
 let value: GetDeploymentCustomEnvironmentDeploymentsVerification = {
   type: "<value>",
-  domain: "vengeful-doing.net",
+  domain: "thorough-vestment.com",
   value: "<value>",
   reason: "<value>",
 };

@@ -2,35 +2,37 @@
 
 The list of environment variables for the given project
 
-## Example Usage
-
-```typescript
-import { FilterProjectEnvsResponseBody } from "@vercel/sdk/models/operations/filterprojectenvs.js";
-
-let value: FilterProjectEnvsResponseBody = {
-  envs: [
-    {},
-  ],
-};
-```
 
 ## Supported Types
 
 ### `operations.FilterProjectEnvsResponseBody1`
 
 ```typescript
-const value: operations.FilterProjectEnvsResponseBody1 = /* values here */
+const value: operations.FilterProjectEnvsResponseBody1 = {};
 ```
 
 ### `operations.FilterProjectEnvsResponseBody2`
 
 ```typescript
-const value: operations.FilterProjectEnvsResponseBody2 = /* values here */
+const value: operations.FilterProjectEnvsResponseBody2 = {
+  envs: [
+    {},
+  ],
+  pagination: {
+    count: 20,
+    next: 1540095775951,
+    prev: 1540095775951,
+  },
+};
 ```
 
 ### `operations.FilterProjectEnvsResponseBody3`
 
 ```typescript
-const value: operations.FilterProjectEnvsResponseBody3 = /* values here */
+const value: operations.FilterProjectEnvsResponseBody3 = {
+  envs: [
+    {},
+  ],
+};
 ```
 

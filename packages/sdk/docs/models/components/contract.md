@@ -6,8 +6,8 @@
 import { Contract } from "@vercel/sdk/models/components/authuser.js";
 
 let value: Contract = {
-  start: 6328.50,
-  end: 5388.77,
+  start: 9354.93,
+  end: 1419.86,
 };
 ```
 

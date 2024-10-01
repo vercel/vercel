@@ -7,7 +7,7 @@ import { UpdateProjectContentHint11 } from "@vercel/sdk/models/operations/update
 
 let value: UpdateProjectContentHint11 = {
   type: "postgres-password",
-  storeId: "<value>",
+  storeId: "<id>",
 };
 ```
 

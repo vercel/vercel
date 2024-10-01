@@ -11,7 +11,7 @@ let value: GetProjectDomainsResponse = {
       {
         name: "<value>",
         apexName: "<value>",
-        projectId: "<value>",
+        projectId: "<id>",
         verified: false,
       },
     ],

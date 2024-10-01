@@ -6,20 +6,20 @@
 import { Repos } from "@vercel/sdk/models/operations/searchrepo.js";
 
 let value: Repos = {
-  id: "<id>",
+  id: 8184.22,
   provider: "github",
-  url: "https://lean-packaging.com/",
+  url: "https://tame-descendant.net",
   name: "<value>",
   slug: "<value>",
   namespace: "<value>",
   owner: {
-    id: 8018.16,
+    id: 8061.24,
     name: "<value>",
   },
   ownerType: "user",
   private: false,
   defaultBranch: "<value>",
-  updatedAt: 4151.25,
+  updatedAt: 90.60,
 };
 ```
 

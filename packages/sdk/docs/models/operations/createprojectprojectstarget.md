@@ -1,26 +1,19 @@
 # CreateProjectProjectsTarget
 
-## Example Usage
-
-```typescript
-import { CreateProjectProjectsTarget } from "@vercel/sdk/models/operations/createproject.js";
-
-let value: CreateProjectProjectsTarget = [
-  "preview",
-];
-```
 
 ## Supported Types
 
 ### `operations.CreateProjectTarget1[]`
 
 ```typescript
-const value: operations.CreateProjectTarget1[] = /* values here */
+const value: operations.CreateProjectTarget1[] = [
+  "preview",
+];
 ```
 
 ### `operations.CreateProjectTarget2`
 
 ```typescript
-const value: operations.CreateProjectTarget2 = /* values here */
+const value: operations.CreateProjectTarget2 = "preview";
 ```
 

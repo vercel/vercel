@@ -6,9 +6,9 @@
 import { BlobTotalAvgSizeInBytes } from "@vercel/sdk/models/components/authuser.js";
 
 let value: BlobTotalAvgSizeInBytes = {
-  price: 6866.90,
-  batch: 9949.02,
-  threshold: 7456.67,
+  price: 536.63,
+  batch: 5874.89,
+  threshold: 7726.04,
   hidden: false,
 };
 ```

@@ -1,24 +1,17 @@
 # AliasAssignedAt
 
-## Example Usage
-
-```typescript
-import { AliasAssignedAt } from "@vercel/sdk/models/operations/createdeployment.js";
-
-let value: AliasAssignedAt = false;
-```
 
 ## Supported Types
 
 ### `number`
 
 ```typescript
-const value: number = /* values here */
+const value: number = 7691.56;
 ```
 
 ### `boolean`
 
 ```typescript
-const value: boolean = /* values here */
+const value: boolean = false;
 ```
 

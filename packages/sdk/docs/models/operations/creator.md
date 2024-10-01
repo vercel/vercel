@@ -6,7 +6,7 @@
 import { Creator } from "@vercel/sdk/models/operations/createdeployment.js";
 
 let value: Creator = {
-  uid: "<value>",
+  uid: "<id>",
 };
 ```
 

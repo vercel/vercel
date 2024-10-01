@@ -1,29 +1,26 @@
 # Scopes
 
-## Example Usage
-
-```typescript
-import { Scopes } from "@vercel/sdk/models/components/authtoken.js";
-
-let value: Scopes = {
-  type: "team",
-  teamId: "<value>",
-  origin: "manual",
-  createdAt: 7748.65,
-};
-```
 
 ## Supported Types
 
 ### `components.Scopes1`
 
 ```typescript
-const value: components.Scopes1 = /* values here */
+const value: components.Scopes1 = {
+  type: "user",
+  origin: "bitbucket",
+  createdAt: 9762.73,
+};
 ```
 
 ### `components.Scopes2`
 
 ```typescript
-const value: components.Scopes2 = /* values here */
+const value: components.Scopes2 = {
+  type: "team",
+  teamId: "<id>",
+  origin: "passkey",
+  createdAt: 1397.30,
+};
 ```
 

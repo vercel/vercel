@@ -7,10 +7,10 @@ import { GetConfigurationResponseBodyIntegrationsScopes } from "@vercel/sdk/mode
 
 let value: GetConfigurationResponseBodyIntegrationsScopes = {
   added: [
-    "read:domain",
+    "read:project",
   ],
   upgraded: [
-    "read:monitoring",
+    "read-write:integration-resource",
   ],
 };
 ```

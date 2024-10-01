@@ -7,7 +7,7 @@ import { FilterProjectEnvsContentHintEnvsResponse1 } from "@vercel/sdk/models/op
 
 let value: FilterProjectEnvsContentHintEnvsResponse1 = {
   type: "redis-url",
-  storeId: "<value>",
+  storeId: "<id>",
 };
 ```
 

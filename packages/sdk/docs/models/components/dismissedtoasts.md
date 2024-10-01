@@ -11,8 +11,8 @@ let value: DismissedToasts = {
   name: "<value>",
   dismissals: [
     {
-      scopeId: "<value>",
-      createdAt: 8156.18,
+      scopeId: "<id>",
+      createdAt: 8838.25,
     },
   ],
 };

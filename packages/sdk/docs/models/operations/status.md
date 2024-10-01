@@ -7,7 +7,7 @@ The current status of the check
 ```typescript
 import { Status } from "@vercel/sdk/models/operations/updatecheck.js";
 
-let value: Status = "completed";
+let value: Status = "running";
 ```
 
 ## Values

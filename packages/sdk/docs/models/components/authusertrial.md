@@ -6,8 +6,8 @@
 import { AuthUserTrial } from "@vercel/sdk/models/components/authuser.js";
 
 let value: AuthUserTrial = {
-  start: 4274.61,
-  end: 9.03,
+  start: 2579.59,
+  end: 7568.33,
 };
 ```
 

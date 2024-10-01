@@ -9,7 +9,7 @@ import { Reasons } from "@vercel/sdk/models/operations/deleteteam.js";
 
 let value: Reasons = {
   slug: "<value>",
-  description: "Programmable clear-thinking ability",
+  description: "inexperienced whup terrorise categorise putrid",
 };
 ```
 

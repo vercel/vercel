@@ -6,9 +6,9 @@
 import { SourceImages } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: SourceImages = {
-  price: 2681.09,
-  batch: 1315.97,
-  threshold: 392.11,
+  price: 4733.86,
+  batch: 8341.76,
+  threshold: 2304.00,
   hidden: false,
 };
 ```

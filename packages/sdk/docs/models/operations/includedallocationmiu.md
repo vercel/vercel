@@ -8,8 +8,8 @@ Will be used to create an invoice item. The price must be in cents: 2000 for $20
 import { IncludedAllocationMiu } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: IncludedAllocationMiu = {
-  price: 5584.10,
-  quantity: 7181.87,
+  price: 2979.70,
+  quantity: 7092.34,
   hidden: false,
 };
 ```

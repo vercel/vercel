@@ -19,6 +19,12 @@ The `@vercel/sdk` is a type-safe Typescript SDK that gives you full control over
     </a>
 </div>
 
+<!-- Start Summary [summary] -->
+## Summary
+
+Vercel API: Vercel combines the best developer experience with an obsessive focus on end-user performance. Our platform enables frontend teams to do their best work.
+<!-- End Summary [summary] -->
+
 <!-- Start Table of Contents [toc] -->
 ## Table of Contents
 
@@ -123,16 +129,62 @@ run();
 <!-- Start SDK Example Usage [usage] -->
 ## SDK Example Usage
 
-### Example
+### Example 1
 
 ```typescript
 import { Vercel } from "@vercel/sdk";
 
-const vercel = new Vercel();
+const vercel = new Vercel({
+  bearerToken: "<YOUR_BEARER_TOKEN_HERE>",
+});
 
 async function run() {
-  const result = await vercel.listDeploymentBuilds({
-    deploymentId: "<value>",
+  const result = await vercel.deployments.get({
+    idOrUrl: "dpl_89qyp1cskzkLrVicDaZoDbjyHuDJ",
+    withGitRepoInfo: "true",
+  });
+
+  // Handle the result
+  console.log(result);
+}
+
+run();
+
+```
+
+### Example 2
+
+```typescript
+import { Vercel } from "@vercel/sdk";
+
+const vercel = new Vercel({
+  bearerToken: "<YOUR_BEARER_TOKEN_HERE>",
+});
+
+async function run() {
+  const result = await vercel.deployments.create({
+    requestBody: {
+      files: [
+        {
+          data: "<value>",
+          file: "folder/file.js",
+        },
+      ],
+      gitMetadata: {
+        remoteUrl: "https://github.com/vercel/next.js",
+        commitAuthorName: "kyliau",
+        commitMessage:
+          "add method to measure Interaction to Next Paint (INP) (#36490)",
+        commitRef: "main",
+        commitSha: "dc36199b2234c6586ebe05ec94078a895c707e29",
+        dirty: true,
+      },
+      meta: {
+        "foo": "bar",
+      },
+      name: "my-instant-deployment",
+      project: "my-deployment-project",
+    },
   });
 
   // Handle the result

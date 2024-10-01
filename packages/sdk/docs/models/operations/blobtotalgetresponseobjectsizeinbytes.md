@@ -6,9 +6,9 @@
 import { BlobTotalGetResponseObjectSizeInBytes } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: BlobTotalGetResponseObjectSizeInBytes = {
-  price: 603.79,
-  batch: 6147.63,
-  threshold: 9444.04,
+  price: 2679.89,
+  batch: 618.89,
+  threshold: 8213.03,
   hidden: false,
 };
 ```

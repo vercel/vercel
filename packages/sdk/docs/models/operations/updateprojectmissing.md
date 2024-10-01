@@ -6,7 +6,7 @@
 import { UpdateProjectMissing } from "@vercel/sdk/models/operations/updateproject.js";
 
 let value: UpdateProjectMissing = {
-  type: "region",
+  type: "ip_address",
 };
 ```
 
