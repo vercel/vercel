@@ -1,18 +1,14 @@
 import { expect } from 'vitest';
 import {
-  toOutput,
-  ToOutputMatchers,
   toHaveTelemetryEvents,
   ToHaveTelemetryEventsMatchers,
-} from './matchers';
+} from './to-have-telemetry-events';
+import { toOutput, ToOutputMatchers } from './to-output';
 
 declare module 'vitest' {
-  // https://vitest.dev/guide/extending-matchers#extending-matchers
-  // eslint-disable-next-line @typescript-eslint/no-empty-interface
-  interface Assertion<T = any> extends ToOutputMatchers<T> {}
-  // https://vitest.dev/guide/extending-matchers#extending-matchers
-  // eslint-disable-next-line @typescript-eslint/no-empty-interface
-  interface Assertion<T = any> extends ToHaveTelemetryEventsMatchers<T> {}
+  interface Assertion<T = any>
+    extends ToOutputMatchers<T>,
+      ToHaveTelemetryEventsMatchers<T> {}
 }
 
 expect.extend({ toOutput, toHaveTelemetryEvents });
