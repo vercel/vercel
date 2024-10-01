@@ -7,7 +7,7 @@ import { Seven } from "@vercel/sdk/models/operations/createrecord.js";
 
 let value: Seven = {
   name: "<value>",
-  type: "SRV",
+  type: "TXT",
   ttl: 60,
   srv: {
     priority: 10,

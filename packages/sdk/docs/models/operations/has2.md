@@ -6,7 +6,7 @@
 import { Has2 } from "@vercel/sdk/models/operations/createdeployment.js";
 
 let value: Has2 = {
-  type: "query",
+  type: "cookie",
   key: "<key>",
 };
 ```

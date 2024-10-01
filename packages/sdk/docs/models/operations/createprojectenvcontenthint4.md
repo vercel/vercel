@@ -7,7 +7,7 @@ import { CreateProjectEnvContentHint4 } from "@vercel/sdk/models/operations/crea
 
 let value: CreateProjectEnvContentHint4 = {
   type: "redis-rest-api-read-only-token",
-  storeId: "<value>",
+  storeId: "<id>",
 };
 ```
 

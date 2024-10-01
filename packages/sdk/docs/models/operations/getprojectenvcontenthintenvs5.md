@@ -7,7 +7,7 @@ import { GetProjectEnvContentHintEnvs5 } from "@vercel/sdk/models/operations/get
 
 let value: GetProjectEnvContentHintEnvs5 = {
   type: "blob-read-write-token",
-  storeId: "<value>",
+  storeId: "<id>",
 };
 ```
 

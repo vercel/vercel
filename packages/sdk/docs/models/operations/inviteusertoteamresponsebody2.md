@@ -6,9 +6,9 @@
 import { InviteUserToTeamResponseBody2 } from "@vercel/sdk/models/operations/inviteusertoteam.js";
 
 let value: InviteUserToTeamResponseBody2 = {
-  uid: "<value>",
-  username: "Matteo_Kulas",
-  role: "OWNER",
+  uid: "<id>",
+  username: "Georgiana_Cormier",
+  role: "BILLING",
 };
 ```
 

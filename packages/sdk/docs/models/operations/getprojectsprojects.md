@@ -6,12 +6,12 @@
 import { GetProjectsProjects } from "@vercel/sdk/models/operations/getprojects.js";
 
 let value: GetProjectsProjects = {
-  accountId: "<value>",
+  accountId: "<id>",
   crons: {
     enabledAt: 1523.55,
     disabledAt: 4174.86,
     updatedAt: 1312.89,
-    deploymentId: "<value>",
+    deploymentId: "<id>",
     definitions: [
       {
         host: "vercel.com",
@@ -28,7 +28,7 @@ let value: GetProjectsProjects = {
       createdIn: "<value>",
       creator: {
         email: "Sonia_Lockman-Goodwin@yahoo.com",
-        uid: "<value>",
+        uid: "<id>",
         username: "Katrina.Klocko",
       },
       deploymentHostname: "<value>",
@@ -39,7 +39,7 @@ let value: GetProjectsProjects = {
       readyState: "INITIALIZING",
       type: "LAMBDAS",
       url: "https://sizzling-finger.org",
-      userId: "<value>",
+      userId: "<id>",
       previewCommentsEnabled: false,
     },
   ],
@@ -51,7 +51,7 @@ let value: GetProjectsProjects = {
       createdIn: "<value>",
       creator: {
         email: "Isabella_Heidenreich@gmail.com",
-        uid: "<value>",
+        uid: "<id>",
         username: "Meredith_Heaney",
       },
       deploymentHostname: "<value>",
@@ -62,7 +62,7 @@ let value: GetProjectsProjects = {
       readyState: "BUILDING",
       type: "LAMBDAS",
       url: "https://acidic-gastropod.name",
-      userId: "<value>",
+      userId: "<id>",
       previewCommentsEnabled: false,
     },
   },

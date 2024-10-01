@@ -8,7 +8,7 @@ import { GetProjectDomainsDomains } from "@vercel/sdk/models/operations/getproje
 let value: GetProjectDomainsDomains = {
   name: "<value>",
   apexName: "<value>",
-  projectId: "<value>",
+  projectId: "<id>",
   verified: false,
 };
 ```

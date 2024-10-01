@@ -1,12 +1,13 @@
 # CreateProjectTrustedIps
 
-## Example Usage
+
+## Supported Types
+
+### `operations.CreateProjectTrustedIps1`
 
 ```typescript
-import { CreateProjectTrustedIps } from "@vercel/sdk/models/operations/createproject.js";
-
-let value: CreateProjectTrustedIps = {
-  deploymentType: "production",
+const value: operations.CreateProjectTrustedIps1 = {
+  deploymentType: "preview",
   addresses: [
     {
       value: "<value>",
@@ -16,17 +17,11 @@ let value: CreateProjectTrustedIps = {
 };
 ```
 
-## Supported Types
-
-### `operations.CreateProjectTrustedIps1`
-
-```typescript
-const value: operations.CreateProjectTrustedIps1 = /* values here */
-```
-
 ### `operations.CreateProjectTrustedIps2`
 
 ```typescript
-const value: operations.CreateProjectTrustedIps2 = /* values here */
+const value: operations.CreateProjectTrustedIps2 = {
+  deploymentType: "production",
+};
 ```
 

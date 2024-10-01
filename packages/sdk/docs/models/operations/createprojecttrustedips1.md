@@ -6,13 +6,13 @@
 import { CreateProjectTrustedIps1 } from "@vercel/sdk/models/operations/createproject.js";
 
 let value: CreateProjectTrustedIps1 = {
-  deploymentType: "preview",
+  deploymentType: "production",
   addresses: [
     {
       value: "<value>",
     },
   ],
-  protectionMode: "additional",
+  protectionMode: "exclusive",
 };
 ```
 

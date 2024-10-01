@@ -1,24 +1,17 @@
 # UpdateProjectValue
 
-## Example Usage
-
-```typescript
-import { UpdateProjectValue } from "@vercel/sdk/models/operations/updateproject.js";
-
-let value: UpdateProjectValue = {};
-```
 
 ## Supported Types
 
 ### `string`
 
 ```typescript
-const value: string = /* values here */
+const value: string = "<value>";
 ```
 
 ### `operations.UpdateProjectValue2`
 
 ```typescript
-const value: operations.UpdateProjectValue2 = /* values here */
+const value: operations.UpdateProjectValue2 = {};
 ```
 

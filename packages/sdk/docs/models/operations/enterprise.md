@@ -8,8 +8,8 @@ Will be used to create an invoice item. The price must be in cents: 2000 for $20
 import { Enterprise } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: Enterprise = {
-  price: 835.31,
-  quantity: 9371.23,
+  price: 9414.39,
+  quantity: 756.11,
   hidden: false,
 };
 ```

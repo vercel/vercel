@@ -6,9 +6,9 @@
 import { BlobStores } from "@vercel/sdk/models/components/authuser.js";
 
 let value: BlobStores = {
-  price: 54.95,
-  batch: 2762.48,
-  threshold: 3626.93,
+  price: 5684.19,
+  batch: 6091.61,
+  threshold: 9615.75,
   hidden: false,
 };
 ```

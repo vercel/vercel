@@ -6,9 +6,9 @@
 import { StorageRedisTotalDatabases } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: StorageRedisTotalDatabases = {
-  price: 5774.96,
-  batch: 8527.36,
-  threshold: 3502.02,
+  price: 438.62,
+  batch: 1842.04,
+  threshold: 2371.90,
   hidden: false,
 };
 ```

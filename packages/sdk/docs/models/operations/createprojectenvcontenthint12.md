@@ -7,7 +7,7 @@ import { CreateProjectEnvContentHint12 } from "@vercel/sdk/models/operations/cre
 
 let value: CreateProjectEnvContentHint12 = {
   type: "postgres-database",
-  storeId: "<value>",
+  storeId: "<id>",
 };
 ```
 

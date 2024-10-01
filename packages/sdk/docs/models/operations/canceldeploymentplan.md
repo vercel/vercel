@@ -5,7 +5,7 @@
 ```typescript
 import { CancelDeploymentPlan } from "@vercel/sdk/models/operations/canceldeployment.js";
 
-let value: CancelDeploymentPlan = "pro";
+let value: CancelDeploymentPlan = "enterprise";
 ```
 
 ## Values

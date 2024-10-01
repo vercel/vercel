@@ -1,12 +1,13 @@
 # UpdateProjectDataCacheTrustedIps
 
-## Example Usage
+
+## Supported Types
+
+### `operations.TrustedIps1`
 
 ```typescript
-import { UpdateProjectDataCacheTrustedIps } from "@vercel/sdk/models/operations/updateprojectdatacache.js";
-
-let value: UpdateProjectDataCacheTrustedIps = {
-  deploymentType: "production",
+const value: operations.TrustedIps1 = {
+  deploymentType: "preview",
   addresses: [
     {
       value: "<value>",
@@ -16,17 +17,11 @@ let value: UpdateProjectDataCacheTrustedIps = {
 };
 ```
 
-## Supported Types
-
-### `operations.TrustedIps1`
-
-```typescript
-const value: operations.TrustedIps1 = /* values here */
-```
-
 ### `operations.TrustedIps2`
 
 ```typescript
-const value: operations.TrustedIps2 = /* values here */
+const value: operations.TrustedIps2 = {
+  deploymentType: "all",
+};
 ```
 

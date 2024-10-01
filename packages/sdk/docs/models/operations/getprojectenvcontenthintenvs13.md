@@ -7,7 +7,7 @@ import { GetProjectEnvContentHintEnvs13 } from "@vercel/sdk/models/operations/ge
 
 let value: GetProjectEnvContentHintEnvs13 = {
   type: "postgres-url-no-ssl",
-  storeId: "<value>",
+  storeId: "<id>",
 };
 ```
 

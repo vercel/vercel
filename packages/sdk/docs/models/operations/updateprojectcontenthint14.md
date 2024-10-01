@@ -7,10 +7,10 @@ import { UpdateProjectContentHint14 } from "@vercel/sdk/models/operations/update
 
 let value: UpdateProjectContentHint14 = {
   type: "integration-store-secret",
-  storeId: "<value>",
-  integrationId: "<value>",
-  integrationProductId: "<value>",
-  integrationConfigurationId: "<value>",
+  storeId: "<id>",
+  integrationId: "<id>",
+  integrationProductId: "<id>",
+  integrationConfigurationId: "<id>",
 };
 ```
 

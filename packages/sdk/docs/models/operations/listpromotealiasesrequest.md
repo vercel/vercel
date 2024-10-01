@@ -6,7 +6,7 @@
 import { ListPromoteAliasesRequest } from "@vercel/sdk/models/operations/listpromotealiases.js";
 
 let value: ListPromoteAliasesRequest = {
-  projectId: "<value>",
+  projectId: "<id>",
   limit: 20,
   since: 1609499532000,
   until: 1612264332000,

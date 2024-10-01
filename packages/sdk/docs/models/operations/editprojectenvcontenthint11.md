@@ -7,7 +7,7 @@ import { EditProjectEnvContentHint11 } from "@vercel/sdk/models/operations/editp
 
 let value: EditProjectEnvContentHint11 = {
   type: "postgres-password",
-  storeId: "<value>",
+  storeId: "<id>",
 };
 ```
 

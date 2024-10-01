@@ -6,7 +6,7 @@
 import { GetConfigurationResponseBodyIntegrationsResponseUpgraded } from "@vercel/sdk/models/operations/getconfiguration.js";
 
 let value: GetConfigurationResponseBodyIntegrationsResponseUpgraded =
-  "read:integration-configuration";
+  "read-write:project-env-vars";
 ```
 
 ## Values

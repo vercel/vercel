@@ -8,12 +8,12 @@ The project was successfully updated
 import { UpdateProjectResponseBody } from "@vercel/sdk/models/operations/updateproject.js";
 
 let value: UpdateProjectResponseBody = {
-  accountId: "<value>",
+  accountId: "<id>",
   crons: {
-    enabledAt: 7712.25,
-    disabledAt: 121.71,
-    updatedAt: 3228.30,
-    deploymentId: "<value>",
+    enabledAt: 2295.67,
+    disabledAt: 5068.63,
+    updatedAt: 7368.53,
+    deploymentId: "<id>",
     definitions: [
       {
         host: "vercel.com",
@@ -26,12 +26,35 @@ let value: UpdateProjectResponseBody = {
   id: "<id>",
   latestDeployments: [
     {
-      createdAt: 2295.67,
+      createdAt: 976.76,
       createdIn: "<value>",
       creator: {
-        email: "Myra22@yahoo.com",
-        uid: "<value>",
-        username: "Larue4",
+        email: "Trever_Pagac@yahoo.com",
+        uid: "<id>",
+        username: "Melody_Thompson3",
+      },
+      deploymentHostname: "<value>",
+      name: "<value>",
+      id: "<id>",
+      plan: "hobby",
+      private: false,
+      readyState: "QUEUED",
+      type: "LAMBDAS",
+      url: "https://forceful-import.com/",
+      userId: "<id>",
+      previewCommentsEnabled: false,
+    },
+  ],
+  name: "<value>",
+  nodeVersion: "16.x",
+  targets: {
+    "key": {
+      createdAt: 4894.59,
+      createdIn: "<value>",
+      creator: {
+        email: "Lafayette63@gmail.com",
+        uid: "<id>",
+        username: "Orlando.Kuhn99",
       },
       deploymentHostname: "<value>",
       name: "<value>",
@@ -40,31 +63,8 @@ let value: UpdateProjectResponseBody = {
       private: false,
       readyState: "BUILDING",
       type: "LAMBDAS",
-      url: "https://well-lit-moment.com/",
-      userId: "<value>",
-      previewCommentsEnabled: false,
-    },
-  ],
-  name: "<value>",
-  nodeVersion: "16.x",
-  targets: {
-    "key": {
-      createdAt: 4567.04,
-      createdIn: "<value>",
-      creator: {
-        email: "Hannah_Frami75@gmail.com",
-        uid: "<value>",
-        username: "Lilla_White",
-      },
-      deploymentHostname: "<value>",
-      name: "<value>",
-      id: "<id>",
-      plan: "pro",
-      private: false,
-      readyState: "CANCELED",
-      type: "LAMBDAS",
-      url: "https://limping-bathrobe.org/",
-      userId: "<value>",
+      url: "https://whopping-pulse.info",
+      userId: "<id>",
       previewCommentsEnabled: false,
     },
   },

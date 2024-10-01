@@ -6,9 +6,9 @@
 import { ServerlessFunctionExecution } from "@vercel/sdk/models/components/authuser.js";
 
 let value: ServerlessFunctionExecution = {
-  price: 1127.88,
-  batch: 9904.53,
-  threshold: 8453.74,
+  price: 5590.47,
+  batch: 5112.03,
+  threshold: 7939.08,
   hidden: false,
 };
 ```

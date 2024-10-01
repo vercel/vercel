@@ -6,7 +6,7 @@
 import { ResponseBodyCreator } from "@vercel/sdk/models/operations/getdeployment.js";
 
 let value: ResponseBodyCreator = {
-  uid: "<value>",
+  uid: "<id>",
 };
 ```
 

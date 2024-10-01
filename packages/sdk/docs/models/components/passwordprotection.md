@@ -8,8 +8,8 @@ Will be used to create an invoice item. The price must be in cents: 2000 for $20
 import { PasswordProtection } from "@vercel/sdk/models/components/authuser.js";
 
 let value: PasswordProtection = {
-  price: 6238.67,
-  quantity: 4397.45,
+  price: 1231.80,
+  quantity: 4644.90,
   hidden: false,
 };
 ```

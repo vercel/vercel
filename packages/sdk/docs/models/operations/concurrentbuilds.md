@@ -8,8 +8,8 @@ Will be used to create an invoice item. The price must be in cents: 2000 for $20
 import { ConcurrentBuilds } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: ConcurrentBuilds = {
-  price: 6659.51,
-  quantity: 8167.26,
+  price: 1138.94,
+  quantity: 7220.25,
   hidden: false,
 };
 ```

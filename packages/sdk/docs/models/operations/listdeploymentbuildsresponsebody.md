@@ -9,7 +9,7 @@ let value: ListDeploymentBuildsResponseBody = {
   builds: [
     {
       id: "<id>",
-      deploymentId: "<value>",
+      deploymentId: "<id>",
       entrypoint: "<value>",
       readyState: "CANCELED",
       output: [

@@ -1,24 +1,19 @@
 # Created
 
-## Example Usage
-
-```typescript
-import { Created } from "@vercel/sdk/models/operations/createprojectenv.js";
-
-let value: Created = {};
-```
 
 ## Supported Types
 
 ### `operations.Created1`
 
 ```typescript
-const value: operations.Created1 = /* values here */
+const value: operations.Created1 = {};
 ```
 
 ### `operations.Created2[]`
 
 ```typescript
-const value: operations.Created2[] = /* values here */
+const value: operations.Created2[] = [
+  {},
+];
 ```
 

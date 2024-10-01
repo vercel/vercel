@@ -6,22 +6,22 @@
 import { CreateProjectLatestDeployments } from "@vercel/sdk/models/operations/createproject.js";
 
 let value: CreateProjectLatestDeployments = {
-  createdAt: 4570.59,
+  createdAt: 4706.21,
   createdIn: "<value>",
   creator: {
-    email: "Henry.Carroll@hotmail.com",
-    uid: "<value>",
-    username: "Margaret_Ratke",
+    email: "Jacques.Kassulke-Stiedemann@gmail.com",
+    uid: "<id>",
+    username: "Gregg_Hegmann",
   },
   deploymentHostname: "<value>",
   name: "<value>",
   id: "<id>",
   plan: "enterprise",
   private: false,
-  readyState: "BUILDING",
+  readyState: "QUEUED",
   type: "LAMBDAS",
-  url: "https://quarrelsome-quit.name",
-  userId: "<value>",
+  url: "https://super-pendant.net/",
+  userId: "<id>",
   previewCommentsEnabled: false,
 };
 ```

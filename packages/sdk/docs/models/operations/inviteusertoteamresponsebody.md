@@ -2,12 +2,13 @@
 
 The member was successfully added to the team
 
-## Example Usage
+
+## Supported Types
+
+### `operations.InviteUserToTeamResponseBody1`
 
 ```typescript
-import { InviteUserToTeamResponseBody } from "@vercel/sdk/models/operations/inviteusertoteam.js";
-
-let value: InviteUserToTeamResponseBody = {
+const value: operations.InviteUserToTeamResponseBody1 = {
   uid: "kr1PsOIzqEL5Xg6M4VZcZosf",
   username: "john-doe",
   email: "john@user.co",
@@ -15,17 +16,13 @@ let value: InviteUserToTeamResponseBody = {
 };
 ```
 
-## Supported Types
-
-### `operations.InviteUserToTeamResponseBody1`
-
-```typescript
-const value: operations.InviteUserToTeamResponseBody1 = /* values here */
-```
-
 ### `operations.InviteUserToTeamResponseBody2`
 
 ```typescript
-const value: operations.InviteUserToTeamResponseBody2 = /* values here */
+const value: operations.InviteUserToTeamResponseBody2 = {
+  uid: "<id>",
+  username: "Angel.Welch",
+  role: "MEMBER",
+};
 ```
 

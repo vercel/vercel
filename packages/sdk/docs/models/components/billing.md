@@ -9,8 +9,8 @@ import { Billing } from "@vercel/sdk/models/components/authuser.js";
 
 let value: Billing = {
   period: {
-    start: 7771.93,
-    end: 1231.80,
+    start: 1203.87,
+    end: 6832.71,
   },
   plan: "enterprise",
 };
