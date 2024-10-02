@@ -257,6 +257,8 @@ const main = async () => {
     },
   });
 
+  telemetry.trackCIVendorName();
+
   if (typeof parsedArgs.flags['--api'] === 'string') {
     apiUrl = parsedArgs.flags['--api'];
   } else if (config && config.api) {
