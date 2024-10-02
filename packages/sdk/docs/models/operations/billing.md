@@ -9,10 +9,10 @@ import { Billing } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: Billing = {
   period: {
-    start: 3920.22,
-    end: 1439.77,
+    start: 8810.67,
+    end: 72.81,
   },
-  plan: "hobby",
+  plan: "pro",
 };
 ```
 

@@ -7,7 +7,7 @@ import { EditProjectEnvContentHint13 } from "@vercel/sdk/models/operations/editp
 
 let value: EditProjectEnvContentHint13 = {
   type: "postgres-url-no-ssl",
-  storeId: "<value>",
+  storeId: "<id>",
 };
 ```
 

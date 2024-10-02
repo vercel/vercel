@@ -8,9 +8,9 @@ import { Coupon } from "@vercel/sdk/models/operations/createteam.js";
 let value: Coupon = {
   id: "<id>",
   name: "<value>",
-  amountOff: 7225.00,
-  percentageOff: 2387.39,
-  durationInMonths: 9438.28,
+  amountOff: 1020.20,
+  percentageOff: 7878.49,
+  durationInMonths: 7080.75,
   duration: "once",
 };
 ```

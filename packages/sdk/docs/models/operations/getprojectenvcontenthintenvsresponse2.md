@@ -7,7 +7,7 @@ import { GetProjectEnvContentHintEnvsResponse2 } from "@vercel/sdk/models/operat
 
 let value: GetProjectEnvContentHintEnvsResponse2 = {
   type: "redis-rest-api-url",
-  storeId: "<value>",
+  storeId: "<id>",
 };
 ```
 

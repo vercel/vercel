@@ -5,7 +5,7 @@
 ```typescript
 import { Interval } from "@vercel/sdk/models/components/authuser.js";
 
-let value: Interval = "day";
+let value: Interval = "month";
 ```
 
 ## Values

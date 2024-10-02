@@ -7,7 +7,7 @@ import { GetProjectEnvContentHintEnvsResponse8 } from "@vercel/sdk/models/operat
 
 let value: GetProjectEnvContentHintEnvsResponse8 = {
   type: "postgres-prisma-url",
-  storeId: "<value>",
+  storeId: "<id>",
 };
 ```
 

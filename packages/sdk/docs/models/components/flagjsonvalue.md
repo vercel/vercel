@@ -1,42 +1,35 @@
 # FlagJSONValue
 
-## Example Usage
-
-```typescript
-import { FlagJSONValue } from "@vercel/sdk/models/components/flagjsonvalue.js";
-
-let value: FlagJSONValue = 8168.25;
-```
 
 ## Supported Types
 
 ### `string`
 
 ```typescript
-const value: string = /* values here */
+const value: string = "<value>";
 ```
 
 ### `number`
 
 ```typescript
-const value: number = /* values here */
+const value: number = 5035.28;
 ```
 
 ### `boolean`
 
 ```typescript
-const value: boolean = /* values here */
+const value: boolean = false;
 ```
 
 ### `models.FlagJSONValue[]`
 
 ```typescript
-const value: models.FlagJSONValue[] = /* values here */
+const value: models.FlagJSONValue[] = [];
 ```
 
 ### `{ [k: string]: models.FlagJSONValue }`
 
 ```typescript
-const value: { [k: string]: models.FlagJSONValue } = /* values here */
+const value: { [k: string]: models.FlagJSONValue } = {};
 ```
 

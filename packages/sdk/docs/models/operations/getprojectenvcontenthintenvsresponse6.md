@@ -7,7 +7,7 @@ import { GetProjectEnvContentHintEnvsResponse6 } from "@vercel/sdk/models/operat
 
 let value: GetProjectEnvContentHintEnvsResponse6 = {
   type: "postgres-url",
-  storeId: "<value>",
+  storeId: "<id>",
 };
 ```
 

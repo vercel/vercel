@@ -125,6 +125,8 @@ const main = async () => {
     },
   });
 
+  telemetry.trackCIVendorName();
+
   debug = output.debug;
 
   const localConfigPath = parsedArgs.flags['--local-config'];

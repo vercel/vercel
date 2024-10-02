@@ -9,8 +9,8 @@ let value: GetDeploymentGitSourceDeployments9 = {
   type: "bitbucket",
   ref: "<value>",
   sha: "<value>",
-  workspaceUuid: "<value>",
-  repoUuid: "<value>",
+  workspaceUuid: "<id>",
+  repoUuid: "<id>",
 };
 ```
 

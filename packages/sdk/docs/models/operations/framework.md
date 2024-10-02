@@ -7,7 +7,7 @@ The framework that is being used for this project. When `null` is used no framew
 ```typescript
 import { Framework } from "@vercel/sdk/models/operations/createdeployment.js";
 
-let value: Framework = "ionic-angular";
+let value: Framework = "nuxtjs";
 ```
 
 ## Values

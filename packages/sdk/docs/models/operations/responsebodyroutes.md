@@ -1,32 +1,31 @@
 # ResponseBodyRoutes
 
-## Example Usage
-
-```typescript
-import { ResponseBodyRoutes } from "@vercel/sdk/models/operations/getdeployment.js";
-
-let value: ResponseBodyRoutes = {
-  src: "<value>",
-};
-```
 
 ## Supported Types
 
 ### `operations.GetDeploymentRoutes1`
 
 ```typescript
-const value: operations.GetDeploymentRoutes1 = /* values here */
+const value: operations.GetDeploymentRoutes1 = {
+  src: "<value>",
+};
 ```
 
 ### `operations.GetDeploymentRoutes2`
 
 ```typescript
-const value: operations.GetDeploymentRoutes2 = /* values here */
+const value: operations.GetDeploymentRoutes2 = {
+  handle: "miss",
+};
 ```
 
 ### `operations.GetDeploymentRoutes3`
 
 ```typescript
-const value: operations.GetDeploymentRoutes3 = /* values here */
+const value: operations.GetDeploymentRoutes3 = {
+  src: "<value>",
+  continue: false,
+  middleware: 9829.99,
+};
 ```
 

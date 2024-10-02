@@ -1,28 +1,25 @@
 # FavoriteProjectsAndSpaces
 
-## Example Usage
-
-```typescript
-import { FavoriteProjectsAndSpaces } from "@vercel/sdk/models/components/authuser.js";
-
-let value: FavoriteProjectsAndSpaces = {
-  spaceId: "<value>",
-  scopeSlug: "<value>",
-  scopeId: "<value>",
-};
-```
 
 ## Supported Types
 
 ### `components.One`
 
 ```typescript
-const value: components.One = /* values here */
+const value: components.One = {
+  projectId: "<id>",
+  scopeSlug: "<value>",
+  scopeId: "<id>",
+};
 ```
 
 ### `components.Two`
 
 ```typescript
-const value: components.Two = /* values here */
+const value: components.Two = {
+  spaceId: "<id>",
+  scopeSlug: "<value>",
+  scopeId: "<id>",
+};
 ```
 

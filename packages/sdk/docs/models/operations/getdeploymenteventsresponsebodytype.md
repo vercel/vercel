@@ -5,7 +5,7 @@
 ```typescript
 import { GetDeploymentEventsResponseBodyType } from "@vercel/sdk/models/operations/getdeploymentevents.js";
 
-let value: GetDeploymentEventsResponseBodyType = "command";
+let value: GetDeploymentEventsResponseBodyType = "fatal";
 ```
 
 ## Values

@@ -10,15 +10,15 @@ import { AuthUser } from "@vercel/sdk/models/components/authuser.js";
 let value: AuthUser = {
   createdAt: 1630748523395,
   softBlock: {
-    blockedAt: 5265.84,
-    reason: "BLOCKED_FOR_PLATFORM_ABUSE",
+    blockedAt: 146.66,
+    reason: "FAIR_USE_LIMITS_EXCEEDED",
   },
   billing: {
     period: {
-      start: 8309.09,
-      end: 316.05,
+      start: 8584.78,
+      end: 2474.57,
     },
-    plan: "enterprise",
+    plan: "pro",
   },
   resourceConfig: {},
   stagingPrefix: "<value>",
@@ -28,7 +28,7 @@ let value: AuthUser = {
   name: "John Doe",
   username: "jdoe",
   avatar: "22cb30c85ff45ac4c72de8981500006b28114aa1",
-  defaultTeamId: "<value>",
+  defaultTeamId: "<id>",
   version: "northstar",
 };
 ```

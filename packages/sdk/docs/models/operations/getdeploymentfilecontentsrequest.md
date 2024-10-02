@@ -7,7 +7,7 @@ import { GetDeploymentFileContentsRequest } from "@vercel/sdk/models/operations/
 
 let value: GetDeploymentFileContentsRequest = {
   id: "<id>",
-  fileId: "<value>",
+  fileId: "<id>",
 };
 ```
 

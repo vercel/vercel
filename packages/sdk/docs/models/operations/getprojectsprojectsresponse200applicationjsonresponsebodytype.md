@@ -6,7 +6,7 @@
 import { GetProjectsProjectsResponse200ApplicationJSONResponseBodyType } from "@vercel/sdk/models/operations/getprojects.js";
 
 let value: GetProjectsProjectsResponse200ApplicationJSONResponseBodyType =
-  "environment";
+  "query";
 ```
 
 ## Values

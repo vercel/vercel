@@ -1,24 +1,17 @@
 # GetProjectsProjectsAliasAssigned
 
-## Example Usage
-
-```typescript
-import { GetProjectsProjectsAliasAssigned } from "@vercel/sdk/models/operations/getprojects.js";
-
-let value: GetProjectsProjectsAliasAssigned = 4287.96;
-```
 
 ## Supported Types
 
 ### `number`
 
 ```typescript
-const value: number = /* values here */
+const value: number = 1310.55;
 ```
 
 ### `boolean`
 
 ```typescript
-const value: boolean = /* values here */
+const value: boolean = false;
 ```
 

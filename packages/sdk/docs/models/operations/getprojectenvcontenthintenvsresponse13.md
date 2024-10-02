@@ -7,7 +7,7 @@ import { GetProjectEnvContentHintEnvsResponse13 } from "@vercel/sdk/models/opera
 
 let value: GetProjectEnvContentHintEnvsResponse13 = {
   type: "postgres-url-no-ssl",
-  storeId: "<value>",
+  storeId: "<id>",
 };
 ```
 

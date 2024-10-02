@@ -5,7 +5,7 @@
 ```typescript
 import { ResponseBodyType } from "@vercel/sdk/models/operations/getdeploymentevents.js";
 
-let value: ResponseBodyType = "middleware-invocation";
+let value: ResponseBodyType = "command";
 ```
 
 ## Values

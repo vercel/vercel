@@ -5,7 +5,7 @@
 ```typescript
 import { ImportFlowGitProvider } from "@vercel/sdk/models/components/authuser.js";
 
-let value: ImportFlowGitProvider = "bitbucket";
+let value: ImportFlowGitProvider = "gitlab";
 ```
 
 ## Values

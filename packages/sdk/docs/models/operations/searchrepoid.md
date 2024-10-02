@@ -1,24 +1,17 @@
 # SearchRepoId
 
-## Example Usage
-
-```typescript
-import { SearchRepoId } from "@vercel/sdk/models/operations/searchrepo.js";
-
-let value: SearchRepoId = 8901.12;
-```
 
 ## Supported Types
 
 ### `string`
 
 ```typescript
-const value: string = /* values here */
+const value: string = "<value>";
 ```
 
 ### `number`
 
 ```typescript
-const value: number = /* values here */
+const value: number = 4265.94;
 ```
 

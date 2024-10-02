@@ -7,7 +7,7 @@ import { Four } from "@vercel/sdk/models/operations/createdeployment.js";
 
 let value: Four = {
   ref: "<value>",
-  repoUuid: "<value>",
+  repoUuid: "<id>",
   type: "bitbucket",
 };
 ```

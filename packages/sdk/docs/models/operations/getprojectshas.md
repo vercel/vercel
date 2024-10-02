@@ -6,7 +6,7 @@
 import { GetProjectsHas } from "@vercel/sdk/models/operations/getprojects.js";
 
 let value: GetProjectsHas = {
-  type: "query",
+  type: "region",
 };
 ```
 

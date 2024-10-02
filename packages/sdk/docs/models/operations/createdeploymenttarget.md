@@ -5,7 +5,7 @@
 ```typescript
 import { CreateDeploymentTarget } from "@vercel/sdk/models/operations/createdeployment.js";
 
-let value: CreateDeploymentTarget = "staging";
+let value: CreateDeploymentTarget = "production";
 ```
 
 ## Values

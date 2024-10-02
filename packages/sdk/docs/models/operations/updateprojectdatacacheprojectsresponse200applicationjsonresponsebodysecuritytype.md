@@ -7,7 +7,7 @@ import { UpdateProjectDataCacheProjectsResponse200ApplicationJSONResponseBodySec
 
 let value:
   UpdateProjectDataCacheProjectsResponse200ApplicationJSONResponseBodySecurityType =
-    "query";
+    "environment";
 ```
 
 ## Values

@@ -9,7 +9,7 @@ let value: GitSource7 = {
   type: "github",
   ref: "<value>",
   sha: "<value>",
-  repoId: 7665.91,
+  repoId: 4087.74,
 };
 ```
 

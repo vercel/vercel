@@ -5,7 +5,7 @@
 ```typescript
 import { GetDeploymentsNodeVersion } from "@vercel/sdk/models/operations/getdeployments.js";
 
-let value: GetDeploymentsNodeVersion = "14.x";
+let value: GetDeploymentsNodeVersion = "8.10.x";
 ```
 
 ## Values

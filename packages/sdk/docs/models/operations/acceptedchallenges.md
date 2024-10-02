@@ -7,7 +7,7 @@ Which challenge types the domain can use for issuing certs.
 ```typescript
 import { AcceptedChallenges } from "@vercel/sdk/models/operations/getdomainconfig.js";
 
-let value: AcceptedChallenges = "http-01";
+let value: AcceptedChallenges = "dns-01";
 ```
 
 ## Values

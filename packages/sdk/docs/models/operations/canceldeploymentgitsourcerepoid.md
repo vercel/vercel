@@ -1,24 +1,17 @@
 # CancelDeploymentGitSourceRepoId
 
-## Example Usage
-
-```typescript
-import { CancelDeploymentGitSourceRepoId } from "@vercel/sdk/models/operations/canceldeployment.js";
-
-let value: CancelDeploymentGitSourceRepoId = 5433.53;
-```
 
 ## Supported Types
 
 ### `string`
 
 ```typescript
-const value: string = /* values here */
+const value: string = "<value>";
 ```
 
 ### `number`
 
 ```typescript
-const value: number = /* values here */
+const value: number = 4896.85;
 ```
 

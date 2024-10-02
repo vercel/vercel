@@ -10,10 +10,10 @@ let value: Discount = {
   coupon: {
     id: "<id>",
     name: "<value>",
-    amountOff: 2875.75,
-    percentageOff: 7689.99,
-    durationInMonths: 831.65,
-    duration: "once",
+    amountOff: 2172.76,
+    percentageOff: 1149.24,
+    durationInMonths: 7240.73,
+    duration: "forever",
   },
 };
 ```

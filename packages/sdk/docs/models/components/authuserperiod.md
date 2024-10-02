@@ -6,8 +6,8 @@
 import { AuthUserPeriod } from "@vercel/sdk/models/components/authuser.js";
 
 let value: AuthUserPeriod = {
-  start: 698.14,
-  end: 2264.91,
+  start: 7331.09,
+  end: 6696.85,
 };
 ```
 

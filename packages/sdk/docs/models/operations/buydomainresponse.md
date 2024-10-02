@@ -1,34 +1,37 @@
 # BuyDomainResponse
 
-## Example Usage
-
-```typescript
-import { BuyDomainResponse } from "@vercel/sdk/models/operations/buydomain.js";
-
-let value: BuyDomainResponse = {
-  domain: {
-    uid: "<value>",
-    ns: [
-      "<value>",
-    ],
-    verified: false,
-    created: 9078.98,
-    pending: false,
-  },
-};
-```
 
 ## Supported Types
 
 ### `operations.BuyDomainResponseBody`
 
 ```typescript
-const value: operations.BuyDomainResponseBody = /* values here */
+const value: operations.BuyDomainResponseBody = {
+  domain: {
+    uid: "<id>",
+    ns: [
+      "<value>",
+    ],
+    verified: false,
+    created: 9064.94,
+    pending: false,
+  },
+};
 ```
 
 ### `operations.BuyDomainDomainsResponseBody`
 
 ```typescript
-const value: operations.BuyDomainDomainsResponseBody = /* values here */
+const value: operations.BuyDomainDomainsResponseBody = {
+  domain: {
+    uid: "<id>",
+    ns: [
+      "<value>",
+    ],
+    verified: false,
+    created: 7998.65,
+    pending: false,
+  },
+};
 ```
 

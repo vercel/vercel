@@ -6,9 +6,9 @@
 import { PostgresComputeTime } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: PostgresComputeTime = {
-  price: 6603.39,
-  batch: 4144.39,
-  threshold: 7912.82,
+  price: 4884.42,
+  batch: 1342.67,
+  threshold: 8506.28,
   hidden: false,
 };
 ```

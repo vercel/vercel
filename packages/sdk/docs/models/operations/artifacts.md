@@ -6,9 +6,9 @@
 import { Artifacts } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: Artifacts = {
-  price: 9277.53,
-  batch: 5371.40,
-  threshold: 924.48,
+  price: 2681.09,
+  batch: 1315.97,
+  threshold: 392.11,
   hidden: false,
 };
 ```
