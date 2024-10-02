@@ -114,7 +114,7 @@ const main = async () => {
   });
 
   const telemetryEventStore = new TelemetryEventStore({
-    isDebug: isDebugging,
+    isDebug: process.env.VERCEL_TELEMETRY_DEBUG === '1',
     output,
   });
 
