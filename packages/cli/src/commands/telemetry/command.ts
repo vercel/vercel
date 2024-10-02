@@ -23,7 +23,7 @@ export const telemetryCommand = {
       examples: [],
     },
     {
-      name: 'enable',
+      name: 'disable',
       description: 'Disables telemetry collection',
       arguments: [],
       options: [],

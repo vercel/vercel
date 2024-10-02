@@ -113,18 +113,6 @@ const main = async () => {
     noColor: isNoColor,
   });
 
-  const telemetryEventStore = new TelemetryEventStore({
-    isDebug: isDebugging,
-    output,
-  });
-
-  const telemetry = new TelemetryBaseClient({
-    opts: {
-      store: telemetryEventStore,
-      output,
-    },
-  });
-
   debug = output.debug;
 
   const localConfigPath = parsedArgs.flags['--local-config'];
@@ -255,6 +243,19 @@ const main = async () => {
       return 1;
     }
   }
+
+  const telemetryEventStore = new TelemetryEventStore({
+    isDebug: isDebugging,
+    output,
+    config: config.telemetry,
+  });
+
+  const telemetry = new TelemetryBaseClient({
+    opts: {
+      store: telemetryEventStore,
+      output,
+    },
+  });
 
   if (typeof parsedArgs.flags['--api'] === 'string') {
     apiUrl = parsedArgs.flags['--api'];
