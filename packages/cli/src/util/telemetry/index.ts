@@ -89,6 +89,15 @@ export class TelemetryClient {
     });
   }
 
+  protected trackCI(ciVendorName?: string) {
+    if (ciVendorName) {
+      this.track({
+        key: 'ci',
+        value: ciVendorName,
+      });
+    }
+  }
+
   trackCommandError(error: string): Event | undefined {
     this.output.error(error);
     return;
