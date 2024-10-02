@@ -10,7 +10,6 @@ import ms from 'ms';
 import ndjson from 'ndjson';
 import os from 'os';
 import path from 'path';
-import fetch from 'node-fetch';
 
 jest.setTimeout(ms('6m'));
 
@@ -20,21 +19,6 @@ export function toHeaders(headers: IncomingMessage['headers'] = {}) {
     obj[key] = Array.isArray(value) ? value.join(',') : value;
   }
   return obj;
-}
-
-export async function normalizeReactVersion(projectPath: string) {
-  const pkgJson = await fs.readJSON(path.join(projectPath, 'package.json'));
-
-  if (pkgJson.dependencies?.['next'] === 'canary') {
-    const res = await fetch('https://unpkg.com/next@canary/package.json');
-    const canaryPkgJson = await res.json();
-
-    pkgJson.dependencies['react'] = canaryPkgJson.peerDependencies['react'];
-    pkgJson.dependencies['react-dom'] =
-      canaryPkgJson.peerDependencies['react-dom'];
-
-    await fs.writeJson(path.join(projectPath, 'package.json'), pkgJson);
-  }
 }
 
 export async function duplicateWithConfig(params: {
