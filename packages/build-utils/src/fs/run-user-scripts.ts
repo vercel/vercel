@@ -10,6 +10,8 @@ import {
   validRange,
   parse,
   satisfies,
+  gte,
+  minVersion,
 } from 'semver';
 import { SpawnOptions } from 'child_process';
 import { deprecate } from 'util';
@@ -60,10 +62,13 @@ export interface ScanParentDirsResult {
    */
   lockfileVersion?: number;
   /**
-   * The contents of found root `package.json` file, when the `readRootPackageJson`
-   * option is enabled. Can be different from `packageJson` in monorepos.
+   * Root project info which may include a different `package.json` file in
+   * the case of monorepos.
    */
-  rootPackageJson?: PackageJson;
+  rootProjectInfo?: {
+    packageJson: PackageJson;
+    rootDir: string;
+  };
 }
 
 export interface TraverseUpDirectoriesProps {
@@ -178,10 +183,16 @@ export function* traverseUpDirectories({
   }
 }
 
-async function readRootPackageJson({
+async function readProjectRootInfo({
   start,
   base,
-}: TraverseUpDirectoriesProps): Promise<PackageJson | undefined> {
+}: TraverseUpDirectoriesProps): Promise<
+  | {
+      packageJson: PackageJson;
+      rootDir: string;
+    }
+  | undefined
+> {
   let curRootPackageJsonPath: string | undefined;
   for (const dir of traverseUpDirectories({ start, base })) {
     const packageJsonPath = path.join(dir, 'package.json');
@@ -189,10 +200,12 @@ async function readRootPackageJson({
       curRootPackageJsonPath = packageJsonPath;
     }
   }
-  if (curRootPackageJsonPath) {
-    return (await fs.readJSON(curRootPackageJsonPath)) as PackageJson;
-  }
-  return undefined;
+  return curRootPackageJsonPath
+    ? {
+        packageJson: await fs.readJson(curRootPackageJsonPath),
+        rootDir: path.dirname(curRootPackageJsonPath),
+      }
+    : undefined;
 }
 
 /**
@@ -338,8 +351,8 @@ export async function scanParentDirs(
     readPackageJson && pkgJsonPath
       ? JSON.parse(await fs.readFile(pkgJsonPath, 'utf8'))
       : undefined;
-  const rootPackageJson: PackageJson | undefined = readPackageJson
-    ? await readRootPackageJson({
+  const rootProjectInfo = readPackageJson
+    ? await readProjectRootInfo({
         base,
         start: destPath,
       })
@@ -394,13 +407,13 @@ export async function scanParentDirs(
     // TODO: read "bun-lockfile-format-v0"
     lockfileVersion = 0;
   } else {
-    const rootPackageJson = await readRootPackageJson({
-      base,
-      start: destPath,
-    });
     cliType =
-      packageJson && rootPackageJson
-        ? detectPackageManagerNameWithoutLockfile(packageJson, rootPackageJson)
+      packageJson && rootProjectInfo
+        ? detectPackageManagerNameWithoutLockfile(
+            packageJson,
+            rootProjectInfo.packageJson,
+            rootProjectInfo.rootDir
+          )
         : 'npm';
   }
 
@@ -411,16 +424,24 @@ export async function scanParentDirs(
     lockfilePath,
     lockfileVersion,
     packageJsonPath,
-    rootPackageJson,
+    rootProjectInfo,
   };
 }
 
 function detectPackageManagerNameWithoutLockfile(
   packageJson: PackageJson,
-  rootPackageJson: PackageJson
+  rootPackageJson: PackageJson,
+  rootDir: string
 ) {
   const packageJsonPackageManager = packageJson.packageManager;
-  if (usingCorepack(process.env, packageJsonPackageManager, rootPackageJson)) {
+  if (
+    usingCorepack(
+      process.env,
+      packageJsonPackageManager,
+      rootPackageJson,
+      rootDir
+    )
+  ) {
     const corepackPackageManager = validateVersionSpecifier(
       packageJsonPackageManager
     );
@@ -444,21 +465,52 @@ function detectPackageManagerNameWithoutLockfile(
 function usingCorepack(
   env: { [x: string]: string | undefined },
   packageJsonPackageManager: string | undefined,
-  rootPackageJson: PackageJson | undefined
+  rootPackageJson: PackageJson | undefined,
+  rootDir: string | undefined
 ) {
   if (env.ENABLE_EXPERIMENTAL_COREPACK !== '1') {
     return false;
   }
-  // TODO: once https://github.com/vercel/turborepo/pull/9151 releases,
-  // allow new versions to use corepack
-  const usingTurborepo = Boolean(rootPackageJson?.devDependencies?.turbo);
-  if (usingTurborepo) {
-    console.warn(
-      'Warning: Using corepack with Turborepo is not currently supported. `ENABLE_EXPERIMENTAL_COREPACK` is being ignored.'
-    );
+
+  const turboVersionRange = rootPackageJson?.devDependencies?.turbo;
+  if (turboVersionRange) {
+    const turboSupportsCorepack = turboRangeSupportsCorepack(turboVersionRange);
+    if (turboSupportsCorepack && !turboJsonIncludesCorepackHome(rootDir)) {
+      console.warn(
+        'Warning: Disabling corepack because your project may not properly handle `COREPACK_HOME`. To use corepack, either upgrade to `turbo@2.3.1+` OR pass `COREPACK_HOME` to `turbo.json#globalPassThroughEnv`'
+      );
+      return false;
+    }
+  }
+
+  return Boolean(packageJsonPackageManager);
+}
+
+function turboRangeSupportsCorepack(turboVersionRange: string) {
+  const versionSupportingCorepack = '2.1.3';
+  const minTurboBeingUsed = minVersion(turboVersionRange);
+  if (!minTurboBeingUsed) {
     return false;
   }
-  return Boolean(packageJsonPackageManager);
+  return gte(minTurboBeingUsed, versionSupportingCorepack);
+}
+
+async function turboJsonIncludesCorepackHome(rootDir: string | undefined) {
+  if (!rootDir) {
+    return false;
+  }
+  const turboJsonPath = path.join(rootDir, 'turbo.json');
+  if (!fs.existsSync(turboJsonPath)) {
+    return false;
+  }
+  const turboJson: unknown = await fs.readJson(turboJsonPath);
+  return (
+    turboJson !== null &&
+    typeof turboJson === 'object' &&
+    'globalPassThroughEnv' in turboJson &&
+    Array.isArray(turboJson.globalPassThroughEnv) &&
+    turboJson.globalPassThroughEnv.includes('COREPACK_HOME')
+  );
 }
 
 export async function walkParentDirs({
@@ -526,7 +578,7 @@ export async function runNpmInstall(
       packageJsonPath,
       packageJson,
       lockfileVersion,
-      rootPackageJson,
+      rootProjectInfo,
     } = await scanParentDirs(destPath, true);
 
     if (!packageJsonPath) {
@@ -566,7 +618,8 @@ export async function runNpmInstall(
       nodeVersion,
       env,
       packageJsonEngines: packageJson?.engines,
-      rootPackageJson,
+      rootPackageJson: rootProjectInfo?.packageJson,
+      rootDir: rootProjectInfo?.rootDir,
     });
     let commandArgs: string[];
     const isPotentiallyBrokenNpm =
@@ -654,6 +707,7 @@ export function getEnvForPackageManager({
   env,
   packageJsonEngines,
   rootPackageJson,
+  rootDir,
 }: {
   cliType: CliType;
   lockfileVersion: number | undefined;
@@ -662,11 +716,13 @@ export function getEnvForPackageManager({
   env: { [x: string]: string | undefined };
   packageJsonEngines?: PackageJson.Engines;
   rootPackageJson?: PackageJson | undefined;
+  rootDir?: string;
 }) {
   const corepackEnabled = usingCorepack(
     env,
     packageJsonPackageManager,
-    rootPackageJson
+    rootPackageJson,
+    rootDir
   );
 
   const {
@@ -1102,7 +1158,7 @@ export async function runCustomInstallCommand({
   spawnOpts?: SpawnOptions;
 }) {
   console.log(`Running "install" command: \`${installCommand}\`...`);
-  const { cliType, lockfileVersion, packageJson, rootPackageJson } =
+  const { cliType, lockfileVersion, packageJson, rootProjectInfo } =
     await scanParentDirs(destPath, true);
   const env = getEnvForPackageManager({
     cliType,
@@ -1111,7 +1167,8 @@ export async function runCustomInstallCommand({
     nodeVersion,
     env: spawnOpts?.env || {},
     packageJsonEngines: packageJson?.engines,
-    rootPackageJson,
+    rootPackageJson: rootProjectInfo?.packageJson,
+    rootDir: rootProjectInfo?.rootDir,
   });
   debug(`Running with $PATH:`, env?.PATH || '');
   await execCommand(installCommand, {
@@ -1128,7 +1185,7 @@ export async function runPackageJsonScript(
 ) {
   assert(path.isAbsolute(destPath));
 
-  const { packageJson, cliType, lockfileVersion, rootPackageJson } =
+  const { packageJson, cliType, lockfileVersion, rootProjectInfo } =
     await scanParentDirs(destPath, true);
   const scriptName = getScriptName(
     packageJson,
@@ -1149,7 +1206,8 @@ export async function runPackageJsonScript(
       nodeVersion: undefined,
       env: cloneEnv(process.env, spawnOpts?.env),
       packageJsonEngines: packageJson?.engines,
-      rootPackageJson,
+      rootPackageJson: rootProjectInfo?.packageJson,
+      rootDir: rootProjectInfo?.rootDir,
     }),
   };
 
