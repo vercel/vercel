@@ -6,6 +6,32 @@ import { TelemetryBaseClient } from '../../src/util/telemetry/base';
 
 describe('main', () => {
   describe('telemetry', () => {
+    describe('version', () => {
+      it('tracks version', () => {
+        const output = new Output(process.stderr, {
+          debug: true,
+          noColor: false,
+        });
+
+        const telemetryEventStore = new TelemetryEventStore({
+          isDebug: true,
+          output,
+        });
+
+        const telemetry = new TelemetryBaseClient({
+          opts: {
+            store: telemetryEventStore,
+            output,
+          },
+        });
+
+        telemetry.trackVersion('1.0.0');
+        expect(telemetryEventStore).toHaveTelemetryEvents([
+          { key: 'version', value: '1.0.0' },
+        ]);
+      });
+    });
+
     describe('CI Vendor Name', () => {
       let telemetry: TelemetryBaseClient;
       let telemetryEventStore: TelemetryEventStore;

@@ -126,6 +126,7 @@ const main = async () => {
   });
 
   telemetry.trackCIVendorName();
+  telemetry.trackVersion(pkg.version);
 
   debug = output.debug;
 
