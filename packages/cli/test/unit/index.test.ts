@@ -1,4 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import './test/mocks/matchers';
 
 import { Output } from '../../src/util/output';
 import { TelemetryEventStore } from '../../src/util/telemetry';
