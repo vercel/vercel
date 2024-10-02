@@ -506,7 +506,7 @@ export function usingCorepack(
   }
   if (turboSupportsCorepackHome === false) {
     console.warn(
-      'Warning: Disabling corepack because it may break your project. To use corepack, either upgrade to `turbo@2.3.1+` or provide `COREPACK_HOME` in `turbo.json#globalPassThroughEnv`'
+      'Warning: Disabling corepack because it may break your project. To use corepack, either upgrade to `turbo@2.1.3+` or include `COREPACK_HOME` in `turbo.json#globalPassThroughEnv`.'
     );
     return false;
   }
