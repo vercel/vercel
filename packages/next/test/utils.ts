@@ -26,7 +26,9 @@ export async function normalizeReactVersion(projectPath: string) {
   const pkgJson = await fs.readJSON(path.join(projectPath, 'package.json'));
 
   if (pkgJson.dependencies?.['next'] === 'canary') {
-    const res = await fetch('https://unpkg.com/next@canary/package.json');
+    const res = await fetch(
+      'https://cdn.jsdelivr.net/npm/next@canary/package.json'
+    );
     const canaryPkgJson = await res.json();
 
     pkgJson.dependencies['react'] = canaryPkgJson.peerDependencies['react'];
