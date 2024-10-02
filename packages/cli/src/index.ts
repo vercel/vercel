@@ -53,7 +53,7 @@ import { ProxyAgent } from 'proxy-agent';
 import box from './util/output/box';
 import { execExtension } from './util/extension/exec';
 import { TelemetryEventStore } from './util/telemetry';
-import { TelemetryBaseClient } from './util/telemetry/base';
+import { RootTelemtryClient } from './util/telemetry/root';
 import { help } from './args';
 import { updateCurrentTeamAfterLogin } from './util/login/update-current-team-after-login';
 
@@ -118,7 +118,7 @@ const main = async () => {
     output,
   });
 
-  const telemetry = new TelemetryBaseClient({
+  const telemetry = new RootTelemtryClient({
     opts: {
       store: telemetryEventStore,
       output,
