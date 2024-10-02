@@ -628,6 +628,9 @@ const main = async () => {
         case 'teams':
           func = require('./commands/teams').default;
           break;
+        case 'telemetry':
+          func = require('./commands/telemetry').default;
+          break;
         case 'whoami':
           func = require('./commands/whoami').default;
           break;
