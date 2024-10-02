@@ -86,10 +86,8 @@ export const build: BuildV2 = async ({
     meta
   );
 
-  const { cliType, lockfileVersion, packageJson } = await scanParentDirs(
-    entrypointFsDirname,
-    true
-  );
+  const { cliType, lockfileVersion, packageJson, rootProjectInfo } =
+    await scanParentDirs(entrypointFsDirname, true);
 
   const spawnOpts = getSpawnOptions(meta, nodeVersion);
   if (!spawnOpts.env) {
@@ -102,6 +100,8 @@ export const build: BuildV2 = async ({
     packageJsonPackageManager: packageJson?.packageManager,
     nodeVersion,
     env: spawnOpts.env,
+    rootDir: rootProjectInfo?.rootDir,
+    rootPackageJson: rootProjectInfo?.packageJson,
   });
 
   if (typeof installCommand === 'string') {
