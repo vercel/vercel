@@ -5,6 +5,8 @@ import { Output } from '../../src/util/output';
 import { TelemetryEventStore } from '../../src/util/telemetry';
 import { TelemetryBaseClient } from '../../src/util/telemetry/base';
 
+import './test/mocks/matchers';
+
 describe('main', () => {
   describe('telemetry', () => {
     it('tracks number of cpus', () => {
