@@ -8,8 +8,8 @@ Will be used to create an invoice item. The price must be in cents: 2000 for $20
 import { Enterprise } from "@vercel/sdk/models/components/authuser.js";
 
 let value: Enterprise = {
-  price: 3396.51,
-  quantity: 6379.69,
+  price: 2733.50,
+  quantity: 3805.83,
   hidden: false,
 };
 ```

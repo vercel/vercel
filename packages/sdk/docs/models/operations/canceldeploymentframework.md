@@ -5,7 +5,7 @@
 ```typescript
 import { CancelDeploymentFramework } from "@vercel/sdk/models/operations/canceldeployment.js";
 
-let value: CancelDeploymentFramework = "create-react-app";
+let value: CancelDeploymentFramework = "stencil";
 ```
 
 ## Values

@@ -5,7 +5,7 @@
 ```typescript
 import { CreateDeploymentFramework } from "@vercel/sdk/models/operations/createdeployment.js";
 
-let value: CreateDeploymentFramework = "hexo";
+let value: CreateDeploymentFramework = "hugo";
 ```
 
 ## Values

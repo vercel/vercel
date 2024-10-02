@@ -7,7 +7,7 @@ import { GetProjectEnvContentHintEnvsResponse11 } from "@vercel/sdk/models/opera
 
 let value: GetProjectEnvContentHintEnvsResponse11 = {
   type: "postgres-password",
-  storeId: "<value>",
+  storeId: "<id>",
 };
 ```
 

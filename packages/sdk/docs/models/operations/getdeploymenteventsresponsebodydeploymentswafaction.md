@@ -5,7 +5,7 @@
 ```typescript
 import { GetDeploymentEventsResponseBodyDeploymentsWafAction } from "@vercel/sdk/models/operations/getdeploymentevents.js";
 
-let value: GetDeploymentEventsResponseBodyDeploymentsWafAction = "challenge";
+let value: GetDeploymentEventsResponseBodyDeploymentsWafAction = "log";
 ```
 
 ## Values

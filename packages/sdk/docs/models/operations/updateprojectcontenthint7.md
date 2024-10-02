@@ -7,7 +7,7 @@ import { UpdateProjectContentHint7 } from "@vercel/sdk/models/operations/updatep
 
 let value: UpdateProjectContentHint7 = {
   type: "postgres-url-non-pooling",
-  storeId: "<value>",
+  storeId: "<id>",
 };
 ```
 

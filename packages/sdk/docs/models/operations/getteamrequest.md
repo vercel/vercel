@@ -6,7 +6,7 @@
 import { GetTeamRequest } from "@vercel/sdk/models/operations/getteam.js";
 
 let value: GetTeamRequest = {
-  teamId: "<value>",
+  teamId: "<id>",
 };
 ```
 

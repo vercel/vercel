@@ -5,7 +5,7 @@
 ```typescript
 import { CreateProjectProjectsReadyState } from "@vercel/sdk/models/operations/createproject.js";
 
-let value: CreateProjectProjectsReadyState = "READY";
+let value: CreateProjectProjectsReadyState = "INITIALIZING";
 ```
 
 ## Values

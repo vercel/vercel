@@ -11,7 +11,7 @@ import { VerifyProjectDomainResponseBody } from "@vercel/sdk/models/operations/v
 let value: VerifyProjectDomainResponseBody = {
   name: "<value>",
   apexName: "<value>",
-  projectId: "<value>",
+  projectId: "<id>",
   verified: false,
 };
 ```

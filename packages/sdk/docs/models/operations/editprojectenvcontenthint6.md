@@ -7,7 +7,7 @@ import { EditProjectEnvContentHint6 } from "@vercel/sdk/models/operations/editpr
 
 let value: EditProjectEnvContentHint6 = {
   type: "postgres-url",
-  storeId: "<value>",
+  storeId: "<id>",
 };
 ```
 

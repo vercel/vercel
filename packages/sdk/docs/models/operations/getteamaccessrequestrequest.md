@@ -6,8 +6,8 @@
 import { GetTeamAccessRequestRequest } from "@vercel/sdk/models/operations/getteamaccessrequest.js";
 
 let value: GetTeamAccessRequestRequest = {
-  teamId: "<value>",
-  userId: "<value>",
+  teamId: "<id>",
+  userId: "<id>",
 };
 ```
 

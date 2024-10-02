@@ -1,11 +1,27 @@
 # CreateProjectEnvRequestBody
 
-## Example Usage
+
+## Supported Types
+
+### `operations.CreateProjectEnvRequestBody1`
 
 ```typescript
-import { CreateProjectEnvRequestBody } from "@vercel/sdk/models/operations/createprojectenv.js";
+const value: operations.CreateProjectEnvRequestBody1 = {
+  key: "API_URL",
+  value: "https://api.vercel.com",
+  type: "plain",
+  target: [
+    "preview",
+  ],
+  gitBranch: "feature-1",
+  comment: "database connection string for production",
+};
+```
 
-let value: CreateProjectEnvRequestBody = [
+### `operations.CreateProjectEnvRequestBody2[]`
+
+```typescript
+const value: operations.CreateProjectEnvRequestBody2[] = [
   {
     key: "API_URL",
     value: "https://api.vercel.com",
@@ -17,19 +33,5 @@ let value: CreateProjectEnvRequestBody = [
     comment: "database connection string for production",
   },
 ];
-```
-
-## Supported Types
-
-### `operations.CreateProjectEnvRequestBody1`
-
-```typescript
-const value: operations.CreateProjectEnvRequestBody1 = /* values here */
-```
-
-### `operations.CreateProjectEnvRequestBody2[]`
-
-```typescript
-const value: operations.CreateProjectEnvRequestBody2[] = /* values here */
 ```
 

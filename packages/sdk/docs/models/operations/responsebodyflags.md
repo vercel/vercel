@@ -1,26 +1,21 @@
 # ResponseBodyFlags
 
-## Example Usage
-
-```typescript
-import { ResponseBodyFlags } from "@vercel/sdk/models/operations/getdeployment.js";
-
-let value: ResponseBodyFlags = [
-  {},
-];
-```
 
 ## Supported Types
 
 ### `operations.GetDeploymentFlags1`
 
 ```typescript
-const value: operations.GetDeploymentFlags1 = /* values here */
+const value: operations.GetDeploymentFlags1 = {
+  definitions: {},
+};
 ```
 
 ### `operations.GetDeploymentFlags2[]`
 
 ```typescript
-const value: operations.GetDeploymentFlags2[] = /* values here */
+const value: operations.GetDeploymentFlags2[] = [
+  {},
+];
 ```
 

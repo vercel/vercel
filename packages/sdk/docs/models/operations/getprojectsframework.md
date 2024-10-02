@@ -5,7 +5,7 @@
 ```typescript
 import { GetProjectsFramework } from "@vercel/sdk/models/operations/getprojects.js";
 
-let value: GetProjectsFramework = "ionic-angular";
+let value: GetProjectsFramework = "solidstart";
 ```
 
 ## Values

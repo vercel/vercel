@@ -5,7 +5,7 @@
 ```typescript
 import { UpdateProjectTarget1 } from "@vercel/sdk/models/operations/updateproject.js";
 
-let value: UpdateProjectTarget1 = "preview";
+let value: UpdateProjectTarget1 = "production";
 ```
 
 ## Values

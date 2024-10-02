@@ -35,8 +35,8 @@ let value: CreateOrTransferDomainResponseBody = {
     serviceType: "zeit.world",
     transferredAt: 1613602938882,
     transferStartedAt: 1613602938882,
-    userId: "<value>",
-    teamId: "<value>",
+    userId: "<id>",
+    teamId: "<id>",
   },
 };
 ```

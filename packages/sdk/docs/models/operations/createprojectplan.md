@@ -5,7 +5,7 @@
 ```typescript
 import { CreateProjectPlan } from "@vercel/sdk/models/operations/createproject.js";
 
-let value: CreateProjectPlan = "pro";
+let value: CreateProjectPlan = "enterprise";
 ```
 
 ## Values

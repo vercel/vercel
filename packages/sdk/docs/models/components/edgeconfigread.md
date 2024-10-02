@@ -6,9 +6,9 @@
 import { EdgeConfigRead } from "@vercel/sdk/models/components/authuser.js";
 
 let value: EdgeConfigRead = {
-  price: 3335.07,
-  batch: 5723.17,
-  threshold: 8948.70,
+  price: 9504.86,
+  batch: 351.07,
+  threshold: 9338.46,
   hidden: false,
 };
 ```

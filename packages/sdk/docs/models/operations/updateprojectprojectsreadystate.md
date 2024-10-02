@@ -5,7 +5,7 @@
 ```typescript
 import { UpdateProjectProjectsReadyState } from "@vercel/sdk/models/operations/updateproject.js";
 
-let value: UpdateProjectProjectsReadyState = "READY";
+let value: UpdateProjectProjectsReadyState = "ERROR";
 ```
 
 ## Values

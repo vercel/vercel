@@ -20,16 +20,19 @@ specific category of applications.
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { listDeploymentBuilds } from "@vercel/sdk/funcs/listDeploymentBuilds.js";
+import { deploymentsGet } from "@vercel/sdk/funcs/deploymentsGet.js";
 import { SDKValidationError } from "@vercel/sdk/models/errors/sdkvalidationerror.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
-const vercel = new VercelCore();
+const vercel = new VercelCore({
+  bearerToken: "<YOUR_BEARER_TOKEN_HERE>",
+});
 
 async function run() {
-  const res = await listDeploymentBuilds(vercel, {
-    deploymentId: "<value>",
+  const res = await deploymentsGet(vercel, {
+    idOrUrl: "dpl_89qyp1cskzkLrVicDaZoDbjyHuDJ",
+    withGitRepoInfo: "true",
   });
 
   switch (true) {

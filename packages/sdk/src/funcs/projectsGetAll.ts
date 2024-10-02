@@ -163,7 +163,6 @@ export async function projectsGetAll(
     >
   > => {
     const nextCursor = dlv(responseData, "pagination.since");
-
     if (nextCursor == null) {
       return () => null;
     }

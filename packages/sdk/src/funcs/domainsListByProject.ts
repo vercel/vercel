@@ -168,7 +168,6 @@ export async function domainsListByProject(
     >
   > => {
     const nextCursor = dlv(responseData, "pagination.since");
-
     if (nextCursor == null) {
       return () => null;
     }

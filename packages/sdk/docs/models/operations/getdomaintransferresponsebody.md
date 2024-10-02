@@ -9,7 +9,7 @@ let value: GetDomainTransferResponseBody = {
   transferable: false,
   transferPolicy: "new-term",
   reason: "<value>",
-  status: "undef",
+  status: "pending_owner",
 };
 ```
 

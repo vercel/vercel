@@ -5,7 +5,7 @@
 ```typescript
 import { CreateDeploymentReadyState } from "@vercel/sdk/models/operations/createdeployment.js";
 
-let value: CreateDeploymentReadyState = "INITIALIZING";
+let value: CreateDeploymentReadyState = "QUEUED";
 ```
 
 ## Values

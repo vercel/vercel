@@ -7,7 +7,7 @@ import { GetProjectsMitigate } from "@vercel/sdk/models/operations/getprojects.j
 
 let value: GetProjectsMitigate = {
   action: "deny",
-  ruleId: "<value>",
+  ruleId: "<id>",
 };
 ```
 

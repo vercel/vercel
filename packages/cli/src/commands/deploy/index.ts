@@ -126,7 +126,8 @@ export default async (client: Client): Promise<number> => {
   // #endregion
 
   // #region Config loading
-  let localConfig = client.localConfig || readLocalConfig(paths[0]);
+  let localConfig = client.localConfig || readLocalConfig(output, paths[0]);
+
   if (localConfig) {
     const { version } = localConfig;
     const file = highlight(localConfig[fileNameSymbol]!);
@@ -385,7 +386,10 @@ export default async (client: Client): Promise<number> => {
   // If Root Directory is used we'll try to read the config
   // from there instead and use it if it exists.
   if (rootDirectory) {
-    const rootDirectoryConfig = readLocalConfig(join(cwd, rootDirectory));
+    const rootDirectoryConfig = readLocalConfig(
+      output,
+      join(cwd, rootDirectory)
+    );
 
     if (rootDirectoryConfig) {
       debug(`Read local config from root directory (${rootDirectory})`);

@@ -6,8 +6,8 @@
 import { RequestPromoteRequest } from "@vercel/sdk/models/operations/requestpromote.js";
 
 let value: RequestPromoteRequest = {
-  projectId: "<value>",
-  deploymentId: "<value>",
+  projectId: "<id>",
+  deploymentId: "<id>",
 };
 ```
 

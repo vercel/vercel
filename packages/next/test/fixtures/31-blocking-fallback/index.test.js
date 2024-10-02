@@ -21,7 +21,6 @@ async function checkForChange(url, initialValue, getNewValue) {
 
 describe(`${__dirname.split(path.sep).pop()}`, () => {
   it('should deploy and pass probe checks', async () => {
-    await require('../../utils').normalizeReactVersion(__dirname);
     const info = await deployAndTest(__dirname);
     Object.assign(ctx, info);
   });

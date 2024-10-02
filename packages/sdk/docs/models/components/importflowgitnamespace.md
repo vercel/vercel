@@ -1,24 +1,17 @@
 # ImportFlowGitNamespace
 
-## Example Usage
-
-```typescript
-import { ImportFlowGitNamespace } from "@vercel/sdk/models/components/authuser.js";
-
-let value: ImportFlowGitNamespace = "<value>";
-```
 
 ## Supported Types
 
 ### `string`
 
 ```typescript
-const value: string = /* values here */
+const value: string = "<value>";
 ```
 
 ### `number`
 
 ```typescript
-const value: number = /* values here */
+const value: number = 6154.23;
 ```
 

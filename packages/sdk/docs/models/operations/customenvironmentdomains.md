@@ -8,7 +8,7 @@ import { CustomEnvironmentDomains } from "@vercel/sdk/models/operations/cancelde
 let value: CustomEnvironmentDomains = {
   name: "<value>",
   apexName: "<value>",
-  projectId: "<value>",
+  projectId: "<id>",
   verified: false,
 };
 ```

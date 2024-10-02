@@ -6,14 +6,14 @@
 import { GetDeploymentEventsResponseBodyProxy } from "@vercel/sdk/models/operations/getdeploymentevents.js";
 
 let value: GetDeploymentEventsResponseBodyProxy = {
-  timestamp: 832.91,
+  timestamp: 6915.08,
   method: "<value>",
-  host: "average-vibraphone.org",
-  path: "/etc/periodic",
+  host: "charming-divine.org",
+  path: "/tmp",
   userAgent: [
     "<value>",
   ],
-  referer: "<value>",
+  referer: "miserly-grouper.net",
   clientIp: "<value>",
   region: "<value>",
 };

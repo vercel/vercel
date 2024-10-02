@@ -26,7 +26,6 @@ import commands from './commands';
 import pkg from './util/pkg';
 import { Output } from './util/output';
 import cmd from './util/output/cmd';
-import error from './util/output/error';
 import param from './util/output/param';
 import highlight from './util/output/highlight';
 import { parseArguments } from './util/get-args';
@@ -129,6 +128,7 @@ const main = async () => {
   telemetry.trackCPUs();
   telemetry.trackPlatform();
   telemetry.trackArch();
+  telemetry.trackCIVendorName();
 
   debug = output.debug;
 
@@ -216,7 +216,7 @@ const main = async () => {
     if (isErrnoException(err) && err.code === 'ENOENT') {
       config = defaultGlobalConfig;
       try {
-        configFiles.writeToConfigFile(config);
+        configFiles.writeToConfigFile(output, config);
       } catch (err: unknown) {
         output.error(
           `An unexpected error occurred while trying to save the config to "${hp(
@@ -242,7 +242,7 @@ const main = async () => {
     if (isErrnoException(err) && err.code === 'ENOENT') {
       authConfig = defaultAuthConfig;
       try {
-        configFiles.writeToAuthConfigFile(authConfig);
+        configFiles.writeToAuthConfigFile(output, authConfig);
       } catch (err: unknown) {
         output.error(
           `An unexpected error occurred while trying to write the auth config to "${hp(
@@ -363,8 +363,8 @@ const main = async () => {
 
       await updateCurrentTeamAfterLogin(client, output, result.teamId);
 
-      configFiles.writeToAuthConfigFile(client.authConfig);
-      configFiles.writeToConfigFile(client.config);
+      configFiles.writeToAuthConfigFile(output, client.authConfig);
+      configFiles.writeToConfigFile(output, client.config);
 
       output.debug(`Saved credentials in "${hp(VERCEL_DIR)}"`);
     } else {
@@ -466,8 +466,7 @@ const main = async () => {
         return 1;
       }
 
-      // eslint-disable-next-line no-console
-      console.error(error('Not able to load user'));
+      output.error('Not able to load user');
       return 1;
     }
 
@@ -502,8 +501,7 @@ const main = async () => {
           return 1;
         }
 
-        // eslint-disable-next-line no-console
-        console.error(error('Not able to load teams'));
+        output.error('Not able to load teams');
         return 1;
       }
 
@@ -735,13 +733,11 @@ const handleRejection = async (err: any) => {
     if (err instanceof Error) {
       await handleUnexpected(err);
     } else {
-      // eslint-disable-next-line no-console
-      console.error(error(`An unexpected rejection occurred\n  ${err}`));
+      output.error(`An unexpected rejection occurred\n  ${err}`);
       await reportError(Sentry, client, err);
     }
   } else {
-    // eslint-disable-next-line no-console
-    console.error(error('An unexpected empty rejection occurred'));
+    output.error('An unexpected empty rejection occurred');
   }
 
   process.exit(1);
@@ -756,8 +752,7 @@ const handleUnexpected = async (err: Error) => {
     return;
   }
 
-  // eslint-disable-next-line no-console
-  console.error(error(`An unexpected error occurred!\n${err.stack}`));
+  output.error(`An unexpected error occurred!\n${err.stack}`);
   await reportError(Sentry, client, err);
 
   process.exit(1);
