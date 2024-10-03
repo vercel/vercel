@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.3.12
+
+### Patch Changes
+
+- add support for `images.localPatterns` ([#12195](https://github.com/vercel/vercel/pull/12195))
+
 ## 4.3.11
 
 ### Patch Changes
