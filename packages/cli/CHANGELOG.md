@@ -1,5 +1,31 @@
 # vercel
 
+## 37.6.1
+
+### Patch Changes
+
+- Add a command for enabling and disabling telemetry. Telemetry collection is not currently enabled and when it is, will be a major version bump for the CLI. ([#12207](https://github.com/vercel/vercel/pull/12207))
+
+- [cli] Remove incorrect `--json` flag on `vercel alias` ([#12198](https://github.com/vercel/vercel/pull/12198))
+
+- Standardize most error output through `output.error` ([#12012](https://github.com/vercel/vercel/pull/12012))
+
+- Replace `psl` with `tldts` for domain parsing ([#12174](https://github.com/vercel/vercel/pull/12174))
+
+- add support for `images.localPatterns` ([#12195](https://github.com/vercel/vercel/pull/12195))
+
+- [cli] add telemetry tracking to `alias ls` ([#12194](https://github.com/vercel/vercel/pull/12194))
+
+- Add support for tracking Continuous Integration vendors with telemetry ([#12180](https://github.com/vercel/vercel/pull/12180))
+
+- Add session id to events ([#12179](https://github.com/vercel/vercel/pull/12179))
+
+- Updated dependencies [[`5431ffd5de6a572f247e63f737576b4a04884f7b`](https://github.com/vercel/vercel/commit/5431ffd5de6a572f247e63f737576b4a04884f7b)]:
+  - @vercel/build-utils@8.4.6
+  - @vercel/next@4.3.12
+  - @vercel/node@3.2.18
+  - @vercel/static-build@2.5.28
+
 ## 37.6.0
 
 ### Minor Changes

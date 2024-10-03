@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 8.4.6
+
+### Patch Changes
+
+- add support for `images.localPatterns` ([#12195](https://github.com/vercel/vercel/pull/12195))
+
 ## 8.4.5
 
 ### Patch Changes
