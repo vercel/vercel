@@ -1,5 +1,14 @@
 # @vercel/client
 
+## 13.4.10
+
+### Patch Changes
+
+- Replace `@zeit/fetch` usage with `node-fetch` ([#12171](https://github.com/vercel/vercel/pull/12171))
+
+- Updated dependencies [[`5431ffd5de6a572f247e63f737576b4a04884f7b`](https://github.com/vercel/vercel/commit/5431ffd5de6a572f247e63f737576b4a04884f7b)]:
+  - @vercel/build-utils@8.4.6
+
 ## 13.4.9
 
 ### Patch Changes

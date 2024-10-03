@@ -1,5 +1,14 @@
 # @vercel-internals/types
 
+## 2.0.10
+
+### Patch Changes
+
+- Add a command for enabling and disabling telemetry. Telemetry collection is not currently enabled and when it is, will be a major version bump for the CLI. ([#12207](https://github.com/vercel/vercel/pull/12207))
+
+- Updated dependencies [[`5431ffd5de6a572f247e63f737576b4a04884f7b`](https://github.com/vercel/vercel/commit/5431ffd5de6a572f247e63f737576b4a04884f7b)]:
+  - @vercel/build-utils@8.4.6
+
 ## 2.0.9
 
 ### Patch Changes

@@ -1,6 +1,6 @@
 {
   "name": "@vercel/build-utils",
-  "version": "8.4.5",
+  "version": "8.4.6",
   "license": "Apache-2.0",
   "main": "./dist/index.js",
   "types": "./dist/index.d.js",
