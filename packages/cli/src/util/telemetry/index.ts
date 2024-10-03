@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { Output } from '../output';
+import { GlobalConfig } from '@vercel-internals/types';
 
 const LogLabel = `['telemetry']:`;
 
@@ -113,12 +114,18 @@ export class TelemetryEventStore {
   private output: Output;
   private isDebug: boolean;
   private sessionId: string;
+  private config: GlobalConfig['telemetry'];
 
-  constructor(opts: { output: Output; isDebug?: boolean }) {
+  constructor(opts: {
+    output: Output;
+    isDebug?: boolean;
+    config: GlobalConfig['telemetry'];
+  }) {
     this.isDebug = opts.isDebug || false;
     this.output = opts.output;
     this.sessionId = randomUUID();
     this.events = [];
+    this.config = opts.config;
   }
 
   add(event: Event) {
@@ -134,12 +141,19 @@ export class TelemetryEventStore {
     this.events = [];
   }
 
+  enabled() {
+    return this.config?.enabled === false ? false : true;
+  }
+
   save() {
     if (this.isDebug) {
       this.output.debug(`${LogLabel} Flushing Events`);
       this.events.forEach(event => {
         this.output.debug(JSON.stringify(event));
       });
+    }
+    if (this.enabled()) {
+      // send events to the server
     }
   }
 }
