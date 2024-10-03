@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { Output } from '../output';
+import { GlobalConfig } from '@vercel-internals/types';
 
 const LogLabel = `['telemetry']:`;
 
@@ -89,6 +90,24 @@ export class TelemetryClient {
     });
   }
 
+  protected trackCI(ciVendorName?: string) {
+    if (ciVendorName) {
+      this.track({
+        key: 'ci',
+        value: ciVendorName,
+      });
+    }
+  }
+
+  protected trackVersion(version?: string) {
+    if (version) {
+      this.track({
+        key: 'version',
+        value: version,
+      });
+    }
+  }
+
   trackCommandError(error: string): Event | undefined {
     this.output.error(error);
     return;
@@ -106,12 +125,18 @@ export class TelemetryEventStore {
   // which is used to enable debug logging for the CLI as a whole.
   private isDebug: boolean;
   private sessionId: string;
+  private config: GlobalConfig['telemetry'];
 
-  constructor(opts: { output: Output; isDebug?: boolean }) {
+  constructor(opts: {
+    output: Output;
+    isDebug?: boolean;
+    config: GlobalConfig['telemetry'];
+  }) {
     this.isDebug = opts.isDebug || false;
     this.output = opts.output;
     this.sessionId = randomUUID();
     this.events = [];
+    this.config = opts.config;
   }
 
   add(event: Event) {
@@ -127,6 +152,10 @@ export class TelemetryEventStore {
     this.events = [];
   }
 
+  enabled() {
+    return this.config?.enabled === false ? false : true;
+  }
+
   save() {
     if (this.isDebug) {
       // Intentionally not using `this.output.debug` as it will
@@ -135,6 +164,9 @@ export class TelemetryEventStore {
       this.events.forEach(event => {
         this.output.log(JSON.stringify(event));
       });
+    }
+    if (this.enabled()) {
+      // send events to the server
     }
   }
 }

@@ -63,7 +63,6 @@ export const aliasCommand = {
         'Number of results to return per page (default: 20, max: 100)',
       argument: 'NUMBER',
     },
-    { name: 'json', shorthand: null, type: Boolean, deprecated: false },
   ],
   examples: [
     {
