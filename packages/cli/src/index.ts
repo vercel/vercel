@@ -258,6 +258,7 @@ const main = async () => {
   });
 
   telemetry.trackCIVendorName();
+  telemetry.trackVersion(pkg.version);
 
   if (typeof parsedArgs.flags['--api'] === 'string') {
     apiUrl = parsedArgs.flags['--api'];

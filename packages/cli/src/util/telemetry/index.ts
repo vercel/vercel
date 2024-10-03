@@ -99,6 +99,15 @@ export class TelemetryClient {
     }
   }
 
+  protected trackVersion(version?: string) {
+    if (version) {
+      this.track({
+        key: 'version',
+        value: version,
+      });
+    }
+  }
+
   trackCommandError(error: string): Event | undefined {
     this.output.error(error);
     return;
