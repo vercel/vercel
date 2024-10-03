@@ -41,7 +41,7 @@ describe('main', () => {
       });
       telemetry.trackCPUs();
       expect(telemetryEventStore).toHaveTelemetryEvents([
-        { key: 'cpu', value: '1' },
+        { key: 'cpu_count', value: '1' },
       ]);
     });
 
