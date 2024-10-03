@@ -121,8 +121,6 @@ export class TelemetryClient {
 export class TelemetryEventStore {
   private events: Event[];
   private output: Output;
-  // Whether to log telemetry events to the console, this behavior is independent of the `--debug` flag
-  // which is used to enable debug logging for the CLI as a whole.
   private isDebug: boolean;
   private sessionId: string;
   private config: GlobalConfig['telemetry'];
@@ -162,7 +160,7 @@ export class TelemetryEventStore {
       // not write to stderr unless it is run with `--debug`
       this.output.log(`${LogLabel} Flushing Events`);
       this.events.forEach(event => {
-        this.output.log(JSON.stringify(event));
+        this.output.debug(JSON.stringify(event));
       });
     }
     if (this.enabled()) {
