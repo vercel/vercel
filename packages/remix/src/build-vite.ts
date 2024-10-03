@@ -89,6 +89,7 @@ export const build: BuildV2 = async ({
   const {
     cliType,
     lockfileVersion,
+    packageJson,
     packageJsonPackageManager,
     turboSupportsCorepackHome,
   } = await scanParentDirs(entrypointFsDirname, true);
