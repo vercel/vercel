@@ -45,6 +45,52 @@ describe('main', () => {
         { key: 'cpu_count', value: '1' },
       ]);
     });
+    it('tracks platform', () => {
+      vi.spyOn(os, 'platform').mockImplementation(() => 'linux');
+      const output = new Output(process.stderr, {
+        debug: true,
+        noColor: false,
+      });
+
+      const telemetryEventStore = new TelemetryEventStore({
+        isDebug: true,
+        output,
+      });
+
+      const telemetry = new RootTelemetryClient({
+        opts: {
+          store: telemetryEventStore,
+          output,
+        },
+      });
+      telemetry.trackPlatform();
+      expect(telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'platform', value: 'linux' },
+      ]);
+    });
+    it('tracks arch', () => {
+      vi.spyOn(os, 'arch').mockImplementation(() => 'x86');
+      const output = new Output(process.stderr, {
+        debug: true,
+        noColor: false,
+      });
+
+      const telemetryEventStore = new TelemetryEventStore({
+        isDebug: true,
+        output,
+      });
+
+      const telemetry = new RootTelemetryClient({
+        opts: {
+          store: telemetryEventStore,
+          output,
+        },
+      });
+      telemetry.trackArch();
+      expect(telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'arch', value: 'x86' },
+      ]);
+    });
 
     describe('version', () => {
       it('tracks nothing when version is empty', () => {
