@@ -843,7 +843,6 @@ it('should detect `packageManager` in npm monorepo', async () => {
     const base = path.join(__dirname, 'fixtures', '41-npm-workspaces-corepack');
     const fixture = path.join(base, 'a');
     const result = await scanParentDirs(fixture, false, base);
-    console.log(result);
     expect(result.cliType).toEqual('npm');
     expect(result.packageJsonPackageManager).toEqual('npm@10.7.0');
     expect(result.lockfileVersion).toEqual(undefined);
@@ -863,7 +862,6 @@ it('should detect `packageManager` in pnpm monorepo', async () => {
     );
     const fixture = path.join(base, 'c');
     const result = await scanParentDirs(fixture, false, base);
-    console.log(result);
     expect(result.cliType).toEqual('pnpm');
     expect(result.packageJsonPackageManager).toEqual('pnpm@8.3.1');
     expect(result.lockfileVersion).toEqual(undefined);
