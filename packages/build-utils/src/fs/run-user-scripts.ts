@@ -10,6 +10,8 @@ import {
   validRange,
   parse,
   satisfies,
+  gte,
+  minVersion,
 } from 'semver';
 import { SpawnOptions } from 'child_process';
 import { deprecate } from 'util';
@@ -59,6 +61,14 @@ export interface ScanParentDirsResult {
    * or `undefined` if not found.
    */
   lockfileVersion?: number;
+  /**
+   * Root project info which may include a different `package.json` file in
+   * the case of monorepos.
+   */
+  rootProjectInfo?: {
+    packageJson: PackageJson;
+    rootDir: string;
+  };
 }
 
 export interface TraverseUpDirectoriesProps {
@@ -171,6 +181,31 @@ export function* traverseUpDirectories({
     const next = path.join(current, '..');
     current = next === current ? undefined : next;
   }
+}
+
+async function readProjectRootInfo({
+  start,
+  base,
+}: TraverseUpDirectoriesProps): Promise<
+  | {
+      packageJson: PackageJson;
+      rootDir: string;
+    }
+  | undefined
+> {
+  let curRootPackageJsonPath: string | undefined;
+  for (const dir of traverseUpDirectories({ start, base })) {
+    const packageJsonPath = path.join(dir, 'package.json');
+    if (await fs.pathExists(packageJsonPath)) {
+      curRootPackageJsonPath = packageJsonPath;
+    }
+  }
+  return curRootPackageJsonPath
+    ? {
+        packageJson: await fs.readJson(curRootPackageJsonPath),
+        rootDir: path.dirname(curRootPackageJsonPath),
+      }
+    : undefined;
 }
 
 /**
@@ -316,6 +351,12 @@ export async function scanParentDirs(
     readPackageJson && pkgJsonPath
       ? JSON.parse(await fs.readFile(pkgJsonPath, 'utf8'))
       : undefined;
+  const rootProjectInfo = readPackageJson
+    ? await readProjectRootInfo({
+        base,
+        start: destPath,
+      })
+    : undefined;
   const [yarnLockPath, npmLockPath, pnpmLockPath, bunLockPath] =
     await walkParentDirsMulti({
       base,
@@ -366,9 +407,14 @@ export async function scanParentDirs(
     // TODO: read "bun-lockfile-format-v0"
     lockfileVersion = 0;
   } else {
-    cliType = packageJson
-      ? detectPackageManagerNameWithoutLockfile(packageJson)
-      : 'npm';
+    cliType =
+      packageJson && rootProjectInfo
+        ? detectPackageManagerNameWithoutLockfile(
+            packageJson,
+            rootProjectInfo.packageJson,
+            rootProjectInfo.rootDir
+          )
+        : 'npm';
   }
 
   const packageJsonPath = pkgJsonPath || undefined;
@@ -378,12 +424,24 @@ export async function scanParentDirs(
     lockfilePath,
     lockfileVersion,
     packageJsonPath,
+    rootProjectInfo,
   };
 }
 
-function detectPackageManagerNameWithoutLockfile(packageJson: PackageJson) {
+function detectPackageManagerNameWithoutLockfile(
+  packageJson: PackageJson,
+  rootPackageJson: PackageJson,
+  rootDir: string
+) {
   const packageJsonPackageManager = packageJson.packageManager;
-  if (usingCorepack(process.env, packageJsonPackageManager)) {
+  if (
+    usingCorepack(
+      process.env,
+      packageJsonPackageManager,
+      rootPackageJson,
+      rootDir
+    )
+  ) {
     const corepackPackageManager = validateVersionSpecifier(
       packageJsonPackageManager
     );
@@ -406,10 +464,53 @@ function detectPackageManagerNameWithoutLockfile(packageJson: PackageJson) {
 
 function usingCorepack(
   env: { [x: string]: string | undefined },
-  packageJsonPackageManager: string | undefined
+  packageJsonPackageManager: string | undefined,
+  rootPackageJson: PackageJson | undefined,
+  rootDir: string | undefined
 ) {
-  const corepackFlagged = env.ENABLE_EXPERIMENTAL_COREPACK === '1';
-  return corepackFlagged && Boolean(packageJsonPackageManager);
+  if (env.ENABLE_EXPERIMENTAL_COREPACK !== '1') {
+    return false;
+  }
+
+  const turboVersionRange = rootPackageJson?.devDependencies?.turbo;
+  if (turboVersionRange) {
+    const turboSupportsCorepack = turboRangeSupportsCorepack(turboVersionRange);
+    if (turboSupportsCorepack && !turboJsonIncludesCorepackHome(rootDir)) {
+      console.warn(
+        'Warning: Disabling corepack because your project may not properly handle `COREPACK_HOME`. To use corepack, either upgrade to `turbo@2.3.1+` OR pass `COREPACK_HOME` to `turbo.json#globalPassThroughEnv`'
+      );
+      return false;
+    }
+  }
+
+  return Boolean(packageJsonPackageManager);
+}
+
+function turboRangeSupportsCorepack(turboVersionRange: string) {
+  const versionSupportingCorepack = '2.1.3';
+  const minTurboBeingUsed = minVersion(turboVersionRange);
+  if (!minTurboBeingUsed) {
+    return false;
+  }
+  return gte(minTurboBeingUsed, versionSupportingCorepack);
+}
+
+async function turboJsonIncludesCorepackHome(rootDir: string | undefined) {
+  if (!rootDir) {
+    return false;
+  }
+  const turboJsonPath = path.join(rootDir, 'turbo.json');
+  if (!fs.existsSync(turboJsonPath)) {
+    return false;
+  }
+  const turboJson: unknown = await fs.readJson(turboJsonPath);
+  return (
+    turboJson !== null &&
+    typeof turboJson === 'object' &&
+    'globalPassThroughEnv' in turboJson &&
+    Array.isArray(turboJson.globalPassThroughEnv) &&
+    turboJson.globalPassThroughEnv.includes('COREPACK_HOME')
+  );
 }
 
 export async function walkParentDirs({
@@ -472,8 +573,13 @@ export async function runNpmInstall(
 
   try {
     await runNpmInstallSema.acquire();
-    const { cliType, packageJsonPath, packageJson, lockfileVersion } =
-      await scanParentDirs(destPath, true);
+    const {
+      cliType,
+      packageJsonPath,
+      packageJson,
+      lockfileVersion,
+      rootProjectInfo,
+    } = await scanParentDirs(destPath, true);
 
     if (!packageJsonPath) {
       debug(
@@ -512,6 +618,8 @@ export async function runNpmInstall(
       nodeVersion,
       env,
       packageJsonEngines: packageJson?.engines,
+      rootPackageJson: rootProjectInfo?.packageJson,
+      rootDir: rootProjectInfo?.rootDir,
     });
     let commandArgs: string[];
     const isPotentiallyBrokenNpm =
@@ -598,6 +706,8 @@ export function getEnvForPackageManager({
   nodeVersion,
   env,
   packageJsonEngines,
+  rootPackageJson,
+  rootDir,
 }: {
   cliType: CliType;
   lockfileVersion: number | undefined;
@@ -605,8 +715,15 @@ export function getEnvForPackageManager({
   nodeVersion: NodeVersion | undefined;
   env: { [x: string]: string | undefined };
   packageJsonEngines?: PackageJson.Engines;
+  rootPackageJson?: PackageJson | undefined;
+  rootDir?: string;
 }) {
-  const corepackEnabled = usingCorepack(env, packageJsonPackageManager);
+  const corepackEnabled = usingCorepack(
+    env,
+    packageJsonPackageManager,
+    rootPackageJson,
+    rootDir
+  );
 
   const {
     detectedLockfile,
@@ -1041,10 +1158,8 @@ export async function runCustomInstallCommand({
   spawnOpts?: SpawnOptions;
 }) {
   console.log(`Running "install" command: \`${installCommand}\`...`);
-  const { cliType, lockfileVersion, packageJson } = await scanParentDirs(
-    destPath,
-    true
-  );
+  const { cliType, lockfileVersion, packageJson, rootProjectInfo } =
+    await scanParentDirs(destPath, true);
   const env = getEnvForPackageManager({
     cliType,
     lockfileVersion,
@@ -1052,6 +1167,8 @@ export async function runCustomInstallCommand({
     nodeVersion,
     env: spawnOpts?.env || {},
     packageJsonEngines: packageJson?.engines,
+    rootPackageJson: rootProjectInfo?.packageJson,
+    rootDir: rootProjectInfo?.rootDir,
   });
   debug(`Running with $PATH:`, env?.PATH || '');
   await execCommand(installCommand, {
@@ -1068,10 +1185,8 @@ export async function runPackageJsonScript(
 ) {
   assert(path.isAbsolute(destPath));
 
-  const { packageJson, cliType, lockfileVersion } = await scanParentDirs(
-    destPath,
-    true
-  );
+  const { packageJson, cliType, lockfileVersion, rootProjectInfo } =
+    await scanParentDirs(destPath, true);
   const scriptName = getScriptName(
     packageJson,
     typeof scriptNames === 'string' ? [scriptNames] : scriptNames
@@ -1091,6 +1206,8 @@ export async function runPackageJsonScript(
       nodeVersion: undefined,
       env: cloneEnv(process.env, spawnOpts?.env),
       packageJsonEngines: packageJson?.engines,
+      rootPackageJson: rootProjectInfo?.packageJson,
+      rootDir: rootProjectInfo?.rootDir,
     }),
   };
 

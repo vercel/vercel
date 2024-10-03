@@ -482,10 +482,8 @@ export const build: BuildV2 = async ({
       spawnOpts.env.CI = 'false';
     }
 
-    const { cliType, lockfileVersion, packageJson } = await scanParentDirs(
-      entrypointDir,
-      true
-    );
+    const { cliType, lockfileVersion, packageJson, rootProjectInfo } =
+      await scanParentDirs(entrypointDir, true);
 
     spawnOpts.env = getEnvForPackageManager({
       cliType,
@@ -493,6 +491,8 @@ export const build: BuildV2 = async ({
       packageJsonPackageManager: packageJson?.packageManager,
       nodeVersion,
       env: spawnOpts.env || {},
+      rootDir: rootProjectInfo?.rootDir,
+      rootPackageJson: rootProjectInfo?.packageJson,
     });
 
     if (meta.isDev) {
