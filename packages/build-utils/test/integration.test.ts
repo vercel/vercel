@@ -11,7 +11,6 @@ const fixturesPath = path.resolve(__dirname, 'fixtures');
 
 // Fixtures that have separate tests and should be skipped in the loop
 const skipFixtures: string[] = [
-  '01-zero-config-api',
   '02-zero-config-api',
   '03-zero-config-angular',
   '04-zero-config-brunch',
@@ -21,8 +20,6 @@ const skipFixtures: string[] = [
   '08-zero-config-middleman',
   '21-npm-workspaces',
   '23-pnpm-workspaces',
-  '41-nx-monorepo',
-  '42-npm-workspace-with-nx',
 ];
 
 // eslint-disable-next-line no-restricted-syntax
