@@ -257,6 +257,9 @@ const main = async () => {
     },
   });
 
+  telemetry.trackCPUs();
+  telemetry.trackPlatform();
+  telemetry.trackArch();
   telemetry.trackCIVendorName();
   telemetry.trackVersion(pkg.version);
 

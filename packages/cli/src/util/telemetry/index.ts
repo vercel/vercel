@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { Output } from '../output';
+import os from 'node:os';
 import { GlobalConfig } from '@vercel-internals/types';
 
 const LogLabel = `['telemetry']:`;
@@ -87,6 +88,27 @@ export class TelemetryClient {
     this.track({
       key: `flag:${flag}`,
       value: 'TRUE',
+    });
+  }
+
+  protected trackCPUs() {
+    this.track({
+      key: 'cpu_count',
+      value: String(os.cpus().length),
+    });
+  }
+
+  protected trackPlatform() {
+    this.track({
+      key: 'platform',
+      value: os.platform(),
+    });
+  }
+
+  protected trackArch() {
+    this.track({
+      key: 'arch',
+      value: os.arch(),
     });
   }
 
