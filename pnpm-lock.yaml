@@ -141,7 +141,7 @@ importers:
         specifier: 27.4.1
         version: 27.4.1
       '@vercel/build-utils':
-        specifier: 8.4.5
+        specifier: 8.4.6
         version: link:../packages/build-utils
       '@vercel/frameworks':
         specifier: 3.3.0
@@ -198,7 +198,7 @@ importers:
         specifier: 1.0.4
         version: link:../constants
       '@vercel/build-utils':
-        specifier: 8.4.5
+        specifier: 8.4.6
         version: link:../../packages/build-utils
       '@vercel/routing-utils':
         specifier: 3.1.0
@@ -322,7 +322,7 @@ importers:
   packages/cli:
     dependencies:
       '@vercel/build-utils':
-        specifier: 8.4.5
+        specifier: 8.4.6
         version: link:../build-utils
       '@vercel/fun':
         specifier: 1.1.0
@@ -334,10 +334,10 @@ importers:
         specifier: 1.0.6
         version: link:../hydrogen
       '@vercel/next':
-        specifier: 4.3.11
+        specifier: 4.3.12
         version: link:../next
       '@vercel/node':
-        specifier: 3.2.17
+        specifier: 3.2.18
         version: link:../node
       '@vercel/python':
         specifier: 4.3.1
@@ -352,7 +352,7 @@ importers:
         specifier: 2.1.0
         version: link:../ruby
       '@vercel/static-build':
-        specifier: 2.5.27
+        specifier: 2.5.28
         version: link:../static-build
       chokidar:
         specifier: 3.3.1
@@ -494,10 +494,10 @@ importers:
         specifier: 1.0.0
         version: link:../../internals/get-package-json
       '@vercel-internals/types':
-        specifier: 2.0.9
+        specifier: 2.0.10
         version: link:../../internals/types
       '@vercel/client':
-        specifier: 13.4.9
+        specifier: 13.4.10
         version: link:../client
       '@vercel/error-utils':
         specifier: 2.0.2
@@ -743,7 +743,7 @@ importers:
   packages/client:
     dependencies:
       '@vercel/build-utils':
-        specifier: 8.4.5
+        specifier: 8.4.6
         version: link:../build-utils
       '@vercel/error-utils':
         specifier: 2.0.2
@@ -974,7 +974,7 @@ importers:
         specifier: 7.3.10
         version: 7.3.10
       '@vercel/build-utils':
-        specifier: 8.4.5
+        specifier: 8.4.6
         version: link:../build-utils
       jest-junit:
         specifier: 16.0.0
@@ -1029,7 +1029,7 @@ importers:
         specifier: 0.25.24
         version: 0.25.24
       '@vercel/build-utils':
-        specifier: 8.4.5
+        specifier: 8.4.6
         version: link:../build-utils
       '@vercel/routing-utils':
         specifier: 3.1.0
@@ -1096,7 +1096,7 @@ importers:
         specifier: 2.1.0
         version: 2.1.0
       '@vercel/build-utils':
-        specifier: 8.4.5
+        specifier: 8.4.6
         version: link:../build-utils
       async-retry:
         specifier: 1.3.3
@@ -1145,7 +1145,7 @@ importers:
         specifier: 14.18.33
         version: 14.18.33
       '@vercel/build-utils':
-        specifier: 8.4.5
+        specifier: 8.4.6
         version: link:../build-utils
       execa:
         specifier: 3.2.0
@@ -1206,7 +1206,7 @@ importers:
         specifier: 3.2.0
         version: 3.2.0
       '@vercel/build-utils':
-        specifier: 8.4.5
+        specifier: 8.4.6
         version: link:../build-utils
       '@vercel/routing-utils':
         specifier: 3.1.0
@@ -1293,7 +1293,7 @@ importers:
         specifier: 16.18.11
         version: 16.18.11
       '@vercel/build-utils':
-        specifier: 8.4.5
+        specifier: 8.4.6
         version: link:../build-utils
       '@vercel/error-utils':
         specifier: 2.0.2
@@ -1423,7 +1423,7 @@ importers:
         specifier: 3.0.0
         version: 3.0.0
       '@vercel/build-utils':
-        specifier: 8.4.5
+        specifier: 8.4.6
         version: link:../build-utils
       execa:
         specifier: ^1.0.0
@@ -1466,7 +1466,7 @@ importers:
         specifier: 6.0.0
         version: 6.0.0
       '@vercel/build-utils':
-        specifier: 8.4.5
+        specifier: 8.4.6
         version: link:../build-utils
       execa:
         specifier: 3.2.0
@@ -1506,7 +1506,7 @@ importers:
         specifier: 7.3.13
         version: 7.3.13
       '@vercel/build-utils':
-        specifier: 8.4.5
+        specifier: 8.4.6
         version: link:../build-utils
       glob:
         specifier: 10.3.16
@@ -1559,7 +1559,7 @@ importers:
         specifier: 3.0.0
         version: 3.0.0
       '@vercel/build-utils':
-        specifier: 8.4.5
+        specifier: 8.4.6
         version: link:../build-utils
       execa:
         specifier: 2.0.4
@@ -1610,7 +1610,7 @@ importers:
         specifier: 1.0.11
         version: link:../gatsby-plugin-vercel-analytics
       '@vercel/gatsby-plugin-vercel-builder':
-        specifier: 2.0.49
+        specifier: 2.0.50
         version: link:../gatsby-plugin-vercel-builder
       '@vercel/static-config':
         specifier: 3.0.0
@@ -1647,7 +1647,7 @@ importers:
         specifier: 7.3.13
         version: 7.3.13
       '@vercel/build-utils':
-        specifier: 8.4.5
+        specifier: 8.4.6
         version: link:../build-utils
       '@vercel/error-utils':
         specifier: 2.0.2
@@ -3891,7 +3891,7 @@ packages:
     engines: {node: ^14.15.0 || ^16.10.0 || >=18.0.0}
     dependencies:
       '@jest/types': 29.5.0
-      '@types/node': 18.19.3
+      '@types/node': 22.5.0
       chalk: 4.1.0
       jest-message-util: 29.5.0
       jest-util: 29.5.0
@@ -4006,7 +4006,7 @@ packages:
       '@jest/transform': 29.5.0
       '@jest/types': 29.5.0
       '@jridgewell/trace-mapping': 0.3.25
-      '@types/node': 18.19.3
+      '@types/node': 22.5.0
       chalk: 4.1.0
       collect-v8-coverage: 1.0.1
       exit: 0.1.2
@@ -12952,7 +12952,7 @@ packages:
     dependencies:
       '@jest/types': 29.5.0
       '@types/graceful-fs': 4.1.6
-      '@types/node': 18.19.3
+      '@types/node': 22.5.0
       anymatch: 3.1.3
       fb-watchman: 2.0.2
       graceful-fs: 4.2.11
@@ -13098,7 +13098,7 @@ packages:
       '@jest/test-result': 29.5.0
       '@jest/transform': 29.5.0
       '@jest/types': 29.5.0
-      '@types/node': 18.19.3
+      '@types/node': 22.5.0
       chalk: 4.1.0
       emittery: 0.13.1
       graceful-fs: 4.2.11
@@ -13129,7 +13129,7 @@ packages:
       '@jest/test-result': 29.5.0
       '@jest/transform': 29.5.0
       '@jest/types': 29.5.0
-      '@types/node': 18.19.3
+      '@types/node': 22.5.0
       chalk: 4.1.0
       cjs-module-lexer: 1.2.3
       collect-v8-coverage: 1.0.1
@@ -13221,7 +13221,7 @@ packages:
     dependencies:
       '@jest/test-result': 29.5.0
       '@jest/types': 29.5.0
-      '@types/node': 18.19.3
+      '@types/node': 22.5.0
       ansi-escapes: 4.3.2
       chalk: 4.1.0
       emittery: 0.13.1
