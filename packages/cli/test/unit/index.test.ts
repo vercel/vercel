@@ -19,7 +19,7 @@ describe('main', () => {
           output,
         });
 
-        const telemetry = new TelemetryBaseClient({
+        const telemetry = new RootTelemetryClient({
           opts: {
             store: telemetryEventStore,
             output,
@@ -41,7 +41,7 @@ describe('main', () => {
           output,
         });
 
-        const telemetry = new TelemetryBaseClient({
+        const telemetry = new RootTelemetryClient({
           opts: {
             store: telemetryEventStore,
             output,
