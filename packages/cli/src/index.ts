@@ -113,21 +113,6 @@ const main = async () => {
     noColor: isNoColor,
   });
 
-  const telemetryEventStore = new TelemetryEventStore({
-    isDebug: isDebugging,
-    output,
-    config: config.telemetry,
-  });
-
-  const telemetry = new RootTelemetryClient({
-    opts: {
-      store: telemetryEventStore,
-      output,
-    },
-  });
-
-  telemetry.trackCIVendorName();
-
   debug = output.debug;
 
   const localConfigPath = parsedArgs.flags['--local-config'];
@@ -265,7 +250,7 @@ const main = async () => {
     config: config.telemetry,
   });
 
-  const telemetry = new TelemetryBaseClient({
+  const telemetry = new RootTelemetryClient({
     opts: {
       store: telemetryEventStore,
       output,
