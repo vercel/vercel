@@ -113,8 +113,6 @@ const main = async () => {
     noColor: isNoColor,
   });
 
-  telemetry.trackCIVendorName();
-
   debug = output.debug;
 
   const localConfigPath = parsedArgs.flags['--local-config'];
