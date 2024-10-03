@@ -1,6 +1,6 @@
-import { TelemetryClient } from './';
+import { TelemetryClient } from '.';
 
-export class TelemetryBaseClient extends TelemetryClient {
+export class RootTelemetryClient extends TelemetryClient {
   trackCliCommandDomains(actual: string) {
     this.trackCliCommand({
       command: 'domains',
@@ -22,6 +22,10 @@ export class TelemetryBaseClient extends TelemetryClient {
 
   trackCIVendorName() {
     this.trackCI(getContinuousIntegrationVendorName());
+  }
+
+  trackVersion(version?: string) {
+    super.trackVersion(version);
   }
 }
 
