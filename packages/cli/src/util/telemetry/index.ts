@@ -130,7 +130,7 @@ export class TelemetryEventStore {
   save() {
     if (this.isDebug) {
       // Intentionally not using `this.output.debug` as it will
-      // not write to stderr unless the is run with `--debug`
+      // not write to stderr unless it is run with `--debug`
       this.output.log(`${LogLabel} Flushing Events`);
       this.events.forEach(event => {
         this.output.log(JSON.stringify(event));
