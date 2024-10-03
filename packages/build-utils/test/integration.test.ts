@@ -20,6 +20,8 @@ const skipFixtures: string[] = [
   '08-zero-config-middleman',
   '21-npm-workspaces',
   '23-pnpm-workspaces',
+  '41-turborepo-supporting-corepack-home',
+  '42-turborepo-not-supporting-corepack-home',
 ];
 
 // eslint-disable-next-line no-restricted-syntax
