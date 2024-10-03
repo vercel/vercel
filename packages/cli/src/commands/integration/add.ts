@@ -1,116 +1,154 @@
-import { Team } from '@vercel-internals/types';
+import chalk from 'chalk';
 import open from 'open';
 import Client from '../../util/client';
-import getUser from '../../util/get-user';
+import formatTable from '../../util/format-table';
+import { packageName } from '../../util/pkg-name';
+import getScope from '../../util/get-scope';
+import list from '../../util/input/list';
+import cmd from '../../util/output/cmd';
+import indent from '../../util/output/indent';
 import { getLinkedProject } from '../../util/projects/link';
-import getTeamById from '../../util/teams/get-team-by-id';
-
-export interface IntegrationProduct {
-  id: string;
-  slug: string;
-  name: string;
-  shortDescription: string;
-  type: 'storage' | string;
-}
-
-export interface Integration {
-  id: string;
-  slug: string;
-  name: string;
-  products?: IntegrationProduct[];
-}
+import {
+  BillingPlan,
+  Integration,
+  IntegrationInstallation,
+  IntegrationProduct,
+  Metadata,
+} from './types';
+import { createMetadataWizard, MetadataWizard } from './wizard';
+import {
+  fetchIntegration,
+  fetchInstallations,
+  fetchBillingPlans,
+  provisionStoreResource,
+  connectStoreToProject,
+} from './client';
 
 export async function add(client: Client, args: string[]) {
   if (args.length > 1) {
-    client.output.error(`Can't install more than one integration at a time.`);
+    client.output.error('Cannot install more than one integration at a time');
     return 1;
   }
 
   const integrationSlug = args[0];
 
-  const user = await getUser(client);
-  const teamId = client.config.currentTeam ?? user.defaultTeamId;
+  if (!integrationSlug) {
+    client.output.error('You must pass an integration slug');
+    return 1;
+  }
 
-  if (!teamId) {
+  const { contextName, team } = await getScope(client);
+
+  if (!team) {
     client.output.error('Team not found');
     return 1;
   }
 
-  const team = await getTeamById(client, teamId);
-  const integration = await fetchIntegration(client, team, integrationSlug);
-
-  if (!integration) {
-    client.output.error(`Integration not found: ${integrationSlug}`);
+  let integration: Integration | undefined;
+  try {
+    integration = await fetchIntegration(client, integrationSlug);
+  } catch (error) {
+    client.output.error(
+      `Failed to get integration "${integrationSlug}": ${(error as Error).message}`
+    );
     return 1;
   }
 
   if (!integration.products) {
     client.output.error(
-      `Integration is not from the marketplace: ${integration.name}`
+      `Integration "${integrationSlug}" is not a Marketplace integration`
     );
     return 1;
   }
 
-  const product = await selectProduct(client, integration);
+  const [productResult, installationsResult] = await Promise.allSettled([
+    selectProduct(client, integration),
+    fetchInstallations(client, integration),
+  ]);
 
-  if (!product) {
+  if (productResult.status === 'rejected' || !productResult.value) {
+    client.output.error('Product not found');
+    return 1;
+  }
+
+  if (installationsResult.status === 'rejected') {
     client.output.error(
-      `No products found for integration: ${integration.name}`
+      `Failed to get integration installations: ${installationsResult.reason}`
     );
     return 1;
   }
 
-  const projectLink = await getOptionalLinkedProject(client);
+  const product = productResult.value;
+  const installations = installationsResult.value;
 
-  if (projectLink?.status === 'error') {
-    return projectLink.exitCode;
-  }
-
-  privisionResourceViaWebUI(
-    client,
-    teamId,
-    integration.id,
-    product.id,
-    projectLink?.project?.id
+  const teamInstallations = installations.filter(
+    install =>
+      install.ownerId === team.id && install.installationType === 'marketplace'
   );
 
-  return 0;
-}
-
-async function fetchIntegration(client: Client, team: Team, slug: string) {
-  try {
-    return await client.fetch<Integration>(
-      `/v1/integrations/integration/${slug}?teamSlug=${team.slug}&source=marketplace&public=1`,
-      {
-        json: true,
-      }
+  if (teamInstallations.length > 1) {
+    client.output.error(
+      `Found more than one existing installation of ${integration.name}. Please contact Vercel Support at https://vercel.com/help`
     );
-  } catch (error) {
-    client.output.error((error as Error).message);
-  }
-}
-
-async function selectProduct(client: Client, integration: Integration) {
-  const products = integration.products;
-
-  if (!products?.length) {
-    return;
+    return 1;
   }
 
-  if (products.length === 1) {
-    return products[0];
+  const installation = teamInstallations[0] as
+    | IntegrationInstallation
+    | undefined;
+
+  client.output.log(
+    `Installing ${chalk.bold(product.name)} by ${chalk.bold(integration.name)} under ${chalk.bold(contextName)}`
+  );
+
+  const metadataSchema = product.metadataSchema;
+  const metadataWizard = createMetadataWizard(metadataSchema);
+
+  // At the time of writing, we don't support native integrations besides storage products.
+  // However, when we introduce new categories, we avoid breaking this version of the CLI by linking all
+  // non-storage categories to the dashboard.
+  const isStorageProduct = product.type === 'storage';
+
+  // The provisioning via cli is possible when
+  // 1. The integration was installed once (terms have been accepted)
+  // 2. The provider-defined metadata is supported (does not use metadata expressions etc.)
+  // 3. The product type is supported
+  const provisionResourceViaCLIIsSupported =
+    installation && metadataWizard.isSupported && isStorageProduct;
+
+  if (!provisionResourceViaCLIIsSupported) {
+    const projectLink = await getOptionalLinkedProject(client);
+
+    if (projectLink?.status === 'error') {
+      return projectLink.exitCode;
+    }
+
+    const openInWeb = await client.input.confirm({
+      message: !installation
+        ? 'Terms have not been accepted. Open Vercel Dashboard?'
+        : 'This resource must be provisioned through the Web UI. Open Vercel Dashboard?',
+    });
+
+    if (openInWeb) {
+      privisionResourceViaWebUI(
+        client,
+        team.id,
+        integration.id,
+        product.id,
+        projectLink?.project?.id
+      );
+    }
+
+    return 0;
   }
 
-  const selected = await client.input.select({
-    message: 'Select a product',
-    choices: products.map(product => ({
-      description: product.shortDescription,
-      name: product.name,
-      value: product,
-    })),
-  });
-
-  return selected;
+  return provisionResourceViaCLI(
+    client,
+    integration,
+    installation,
+    product,
+    metadataWizard
+  );
 }
 
 async function getOptionalLinkedProject(client: Client) {
@@ -154,4 +192,254 @@ function privisionResourceViaWebUI(
     `Opening the Vercel Dashboard to continue the installation...`
   );
   open(url.href);
+}
+
+async function provisionResourceViaCLI(
+  client: Client,
+  integration: Integration,
+  installation: IntegrationInstallation,
+  product: IntegrationProduct,
+  metadataWizard: MetadataWizard
+) {
+  const name = await client.input.text({
+    message: 'What is the name of the resource?',
+  });
+
+  const metadata = await metadataWizard.run(client);
+
+  let billingPlans: BillingPlan[] | undefined;
+  try {
+    const billingPlansResponse = await fetchBillingPlans(
+      client,
+      integration,
+      product,
+      metadata
+    );
+    billingPlans = billingPlansResponse.plans;
+  } catch (error) {
+    client.output.error(
+      `Failed to get billing plans: ${(error as Error).message}`
+    );
+    return 1;
+  }
+
+  const enabledBillingPlans = billingPlans.filter(plan => !plan.disabled);
+
+  if (!enabledBillingPlans.length) {
+    client.output.error('No billing plans available');
+    return 1;
+  }
+
+  const billingPlan = await selectBillingPlan(client, enabledBillingPlans);
+
+  if (!billingPlan) {
+    client.output.error('No billing plan selected');
+    return 1;
+  }
+
+  const confirmed = await confirmProductSelection(
+    client,
+    product,
+    name,
+    metadata,
+    billingPlan
+  );
+
+  if (!confirmed) {
+    return 1;
+  }
+
+  return provisionStorageProduct(
+    client,
+    product,
+    installation,
+    name,
+    metadata,
+    billingPlan
+  );
+}
+
+async function selectProduct(client: Client, integration: Integration) {
+  const products = integration.products;
+
+  if (!products?.length) {
+    return;
+  }
+
+  if (products.length === 1) {
+    return products[0];
+  }
+
+  const selected = await client.input.select({
+    message: 'Select a product',
+    choices: products.map(product => ({
+      description: product.shortDescription,
+      name: product.name,
+      value: product,
+    })),
+  });
+
+  return selected;
+}
+
+async function selectBillingPlan(client: Client, billingPlans: BillingPlan[]) {
+  const billingPlanId = await list(client, {
+    message: 'Choose a billing plan',
+    separator: true,
+    choices: billingPlans.map(plan => {
+      const body = [plan.description];
+
+      if (plan.details?.length) {
+        const detailsTable = formatTable(
+          ['', ''],
+          ['l', 'r'],
+          [
+            {
+              name: 'Details',
+              rows: plan.details.map(detail => [
+                detail.label,
+                detail.value || '-',
+              ]),
+            },
+          ]
+        );
+
+        body.push(detailsTable);
+      }
+
+      if (plan.highlightedDetails?.length) {
+        const hightlightedDetailsTable = formatTable(
+          ['', ''],
+          ['l', 'r'],
+          [
+            {
+              name: 'More Details',
+              rows: plan.highlightedDetails.map(detail => [
+                detail.label,
+                detail.value || '-',
+              ]),
+            },
+          ]
+        );
+
+        body.push(hightlightedDetailsTable);
+      }
+
+      let planName = plan.name;
+      if (plan.cost) {
+        planName += ` ${plan.cost}`;
+      }
+
+      return {
+        name: [planName, '', indent(body.join('\n'), 4)].join('\n'),
+        value: plan.id,
+        short: planName,
+        disabled: plan.disabled,
+      };
+    }),
+    pageSize: 1000,
+  });
+
+  return billingPlans.find(plan => plan.id === billingPlanId);
+}
+
+async function confirmProductSelection(
+  client: Client,
+  product: IntegrationProduct,
+  name: string,
+  metadata: Metadata,
+  billingPlan: BillingPlan
+) {
+  client.output.print('Selected product:\n');
+  client.output.print(`${chalk.dim(`- ${chalk.bold(`Name:`)} ${name}`)}\n`);
+  for (const [key, value] of Object.entries(metadata)) {
+    client.output.print(
+      `${chalk.dim(`- ${chalk.bold(`${product.metadataSchema.properties[key]['ui:label']}:`)} ${value}`)}\n`
+    );
+  }
+  client.output.print(
+    `${chalk.dim(`- ${chalk.bold(`Plan:`)} ${billingPlan.name}`)}\n`
+  );
+
+  return client.input.confirm({
+    message: 'Confirm selection?',
+  });
+}
+
+async function provisionStorageProduct(
+  client: Client,
+  product: IntegrationProduct,
+  installation: IntegrationInstallation,
+  name: string,
+  metadata: Metadata,
+  billingPlan: BillingPlan
+) {
+  client.output.spinner('Provisioning resource...');
+  let storeId: string;
+  try {
+    const result = await provisionStoreResource(
+      client,
+      installation.id,
+      product.id,
+      billingPlan.id,
+      name,
+      metadata
+    );
+    storeId = result.store.id;
+  } catch (error) {
+    client.output.error(
+      `Failed to provision ${product.name}: ${(error as Error).message}`
+    );
+    return 1;
+  } finally {
+    client.output.stopSpinner();
+  }
+  client.output.log(`${product.name} successfully provisioned`);
+
+  const projectLink = await getOptionalLinkedProject(client);
+
+  if (projectLink?.status === 'error') {
+    return projectLink.exitCode;
+  }
+
+  if (!projectLink?.project) {
+    return 0;
+  }
+
+  const project = projectLink.project;
+
+  const environments = await client.input.checkbox({
+    message: 'Select environments',
+    choices: [
+      { name: 'Production', value: 'production', checked: true },
+      { name: 'Preview', value: 'preview', checked: true },
+      { name: 'Development', value: 'development', checked: true },
+    ],
+  });
+
+  client.output.spinner(
+    `Connecting ${chalk.bold(name)} to ${chalk.bold(project.name)}...`
+  );
+  try {
+    await connectStoreToProject(
+      client,
+      projectLink.project.id,
+      storeId,
+      environments
+    );
+  } catch (error) {
+    client.output.error(
+      `Failed to connect store to project: ${(error as Error).message}`
+    );
+    return 1;
+  } finally {
+    client.output.stopSpinner();
+  }
+  client.output.log(
+    `${chalk.bold(name)} successfully connected to ${chalk.bold(project.name)}
+
+${indent(`Run ${cmd(`${packageName} env pull`)} to update the environment variables`, 4)}`
+  );
+
+  return 0;
 }

@@ -6,9 +6,9 @@
 import { DataCacheRead } from "@vercel/sdk/models/components/authuser.js";
 
 let value: DataCacheRead = {
-  price: 680.93,
-  batch: 727.54,
-  threshold: 9438.51,
+  price: 9622.80,
+  batch: 3524.07,
+  threshold: 8941.73,
   hidden: false,
 };
 ```

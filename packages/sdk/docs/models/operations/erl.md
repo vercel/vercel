@@ -7,8 +7,8 @@ import { Erl } from "@vercel/sdk/models/operations/updateprojectdatacache.js";
 
 let value: Erl = {
   algo: "token_bucket",
-  window: 6601.74,
-  limit: 2879.91,
+  window: 7992.03,
+  limit: 6304.48,
   keys: [
     "<value>",
   ],

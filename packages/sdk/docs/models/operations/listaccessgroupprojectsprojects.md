@@ -6,8 +6,8 @@
 import { ListAccessGroupProjectsProjects } from "@vercel/sdk/models/operations/listaccessgroupprojects.js";
 
 let value: ListAccessGroupProjectsProjects = {
-  projectId: "<value>",
-  role: "PROJECT_DEVELOPER",
+  projectId: "<id>",
+  role: "ADMIN",
   createdAt: "<value>",
   updatedAt: "<value>",
   project: {},

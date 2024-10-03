@@ -1,5 +1,73 @@
 # vercel
 
+## 37.6.0
+
+### Minor Changes
+
+- [cli] remove `textInput` in favor of `input.text` ([#12168](https://github.com/vercel/vercel/pull/12168))
+
+- Add stub telemetry behavior in preparation for use tracking ([#12173](https://github.com/vercel/vercel/pull/12173))
+
+### Patch Changes
+
+- Introduce new chain configuration for Partial Prerendering ([#12117](https://github.com/vercel/vercel/pull/12117))
+
+- [cli] correctly call to create new deployment when promoting preview deployment ([#12178](https://github.com/vercel/vercel/pull/12178))
+
+- Updated dependencies [[`42ae831561365b8254e62cf57f41caca03af4c31`](https://github.com/vercel/vercel/commit/42ae831561365b8254e62cf57f41caca03af4c31), [`62f434a79fe25009e63fcaefda0abe283c590f58`](https://github.com/vercel/vercel/commit/62f434a79fe25009e63fcaefda0abe283c590f58), [`37ec6fa7f5ff313bfdb22570fb33f8b7eff280e6`](https://github.com/vercel/vercel/commit/37ec6fa7f5ff313bfdb22570fb33f8b7eff280e6)]:
+  - @vercel/next@4.3.11
+  - @vercel/build-utils@8.4.5
+  - @vercel/node@3.2.17
+  - @vercel/static-build@2.5.27
+
+## 37.5.4
+
+### Patch Changes
+
+- Change error printing to use standard Output methods ([#12010](https://github.com/vercel/vercel/pull/12010))
+
+- Updated dependencies [[`2dab096e952c25521bac2537039ed7ca15675095`](https://github.com/vercel/vercel/commit/2dab096e952c25521bac2537039ed7ca15675095)]:
+  - @vercel/build-utils@8.4.4
+  - @vercel/node@3.2.16
+  - @vercel/static-build@2.5.26
+
+## 37.5.3
+
+### Patch Changes
+
+- Updated dependencies [[`f1904566e5c24919425fc2b6c8c84f25f3478e74`](https://github.com/vercel/vercel/commit/f1904566e5c24919425fc2b6c8c84f25f3478e74)]:
+  - @vercel/build-utils@8.4.3
+  - @vercel/node@3.2.15
+  - @vercel/static-build@2.5.25
+
+## 37.5.2
+
+### Patch Changes
+
+- [cli] Add note about epipebomb ([#12144](https://github.com/vercel/vercel/pull/12144))
+
+## 37.5.1
+
+### Patch Changes
+
+- Updated dependencies [[`f396f72b6bab0acf45522d25ee08c9899afdad40`](https://github.com/vercel/vercel/commit/f396f72b6bab0acf45522d25ee08c9899afdad40)]:
+  - @vercel/go@3.1.3
+
+## 37.5.0
+
+### Minor Changes
+
+- Support installing products from Vercel Marketplace via `vc install` ([#12127](https://github.com/vercel/vercel/pull/12127))
+
+### Patch Changes
+
+- [logs] tiny idomatic fixup ([#12094](https://github.com/vercel/vercel/pull/12094))
+
+- [cli] refactor getSubcommand to return original user input ([#12137](https://github.com/vercel/vercel/pull/12137))
+
+- Updated dependencies [[`67839368e71f27c93ca9aa664810ef64de4d4d9c`](https://github.com/vercel/vercel/commit/67839368e71f27c93ca9aa664810ef64de4d4d9c)]:
+  - @vercel/remix-builder@2.2.9
+
 ## 37.4.2
 
 ### Patch Changes

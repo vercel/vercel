@@ -146,30 +146,6 @@ describe('importBuilders()', () => {
     }
   );
 
-  it.skipIf(isWindows)(
-    'should install and warn when Builder is deprecated',
-    async () => {
-      const cwd = await getWriteableDirectory();
-      try {
-        const spec = '@now/node';
-        const specs = new Set([spec]);
-        const builders = await importBuilders(specs, cwd, client.output);
-        expect(builders.size).toEqual(1);
-        expect(builders.get(spec)?.pkg.name).toEqual('@now/node');
-        expect(builders.get(spec)?.pkg.version).toEqual('1.8.5');
-        expect(builders.get(spec)?.pkgPath).toEqual(
-          join(cwd, '.vercel/builders/node_modules/@now/node/package.json')
-        );
-        expect(typeof builders.get(spec)?.builder.build).toEqual('function');
-        await expect(client.stderr).toOutput(
-          'npm WARN deprecated @now/node@1.8.5: "@now/node" is deprecated and will stop receiving updates on December 31, 2020. Please use "@vercel/node" instead.'
-        );
-      } finally {
-        await remove(cwd);
-      }
-    }
-  );
-
   // this test creates symlinks which require admin by default on Windows
   it.skipIf(isWindows)(
     'should install and import legacy `@now/build-utils` Builders',

@@ -6,9 +6,9 @@
 import { BuildMinute } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: BuildMinute = {
-  price: 6845.53,
-  batch: 3445.3,
-  threshold: 6692.37,
+  price: 15.95,
+  batch: 1454.50,
+  threshold: 7791.11,
   hidden: false,
 };
 ```

@@ -6,22 +6,22 @@
 import { GetProjectsLatestDeployments } from "@vercel/sdk/models/operations/getprojects.js";
 
 let value: GetProjectsLatestDeployments = {
-  createdAt: 8663.83,
+  createdAt: 2775.96,
   createdIn: "<value>",
   creator: {
-    email: "Wendy.Armstrong1@yahoo.com",
-    uid: "<value>",
-    username: "Norwood_Hessel74",
+    email: "Gladys45@gmail.com",
+    uid: "<id>",
+    username: "Jadon69",
   },
   deploymentHostname: "<value>",
   name: "<value>",
   id: "<id>",
   plan: "pro",
   private: false,
-  readyState: "INITIALIZING",
+  readyState: "READY",
   type: "LAMBDAS",
-  url: "https://limp-auto.info",
-  userId: "<value>",
+  url: "https://exalted-coast.net",
+  userId: "<id>",
   previewCommentsEnabled: false,
 };
 ```

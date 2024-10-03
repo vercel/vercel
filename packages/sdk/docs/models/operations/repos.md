@@ -6,20 +6,20 @@
 import { Repos } from "@vercel/sdk/models/operations/searchrepo.js";
 
 let value: Repos = {
-  id: 6423.52,
-  provider: "github-custom-host",
-  url: "http://hairy-mechanism.biz",
+  id: 8184.22,
+  provider: "github",
+  url: "https://tame-descendant.net",
   name: "<value>",
   slug: "<value>",
   namespace: "<value>",
   owner: {
-    id: "<id>",
+    id: 8061.24,
     name: "<value>",
   },
   ownerType: "user",
   private: false,
   defaultBranch: "<value>",
-  updatedAt: 2005.16,
+  updatedAt: 90.60,
 };
 ```
 

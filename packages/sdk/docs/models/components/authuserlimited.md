@@ -14,7 +14,7 @@ let value: AuthUserLimited = {
   name: "John Doe",
   username: "jdoe",
   avatar: "22cb30c85ff45ac4c72de8981500006b28114aa1",
-  defaultTeamId: "<value>",
+  defaultTeamId: "<id>",
   version: "northstar",
 };
 ```

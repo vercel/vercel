@@ -6,9 +6,9 @@
 import { PostgresDataStorage } from "@vercel/sdk/models/components/authuser.js";
 
 let value: PostgresDataStorage = {
-  price: 2327.72,
-  batch: 2006.37,
-  threshold: 3106.29,
+  price: 6813.30,
+  batch: 1609.88,
+  threshold: 4605.97,
   hidden: false,
 };
 ```

@@ -7,7 +7,7 @@ import { AuthUserBillingInvoiceItemsDeveloperExperiencePlatformFrequency } from 
 
 let value: AuthUserBillingInvoiceItemsDeveloperExperiencePlatformFrequency = {
   interval: "month",
-  intervalCount: 439.75,
+  intervalCount: 2322.10,
 };
 ```
 

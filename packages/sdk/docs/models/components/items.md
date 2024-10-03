@@ -7,10 +7,10 @@ import { Items } from "@vercel/sdk/models/components/authuser.js";
 
 let value: Items = {
   id: "<id>",
-  priceId: "<value>",
-  productId: "<value>",
-  amount: 2436.23,
-  quantity: 9673.38,
+  priceId: "<id>",
+  productId: "<id>",
+  amount: 4616.39,
+  quantity: 3672.51,
 };
 ```
 

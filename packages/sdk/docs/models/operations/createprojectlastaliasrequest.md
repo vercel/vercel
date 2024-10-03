@@ -6,10 +6,10 @@
 import { CreateProjectLastAliasRequest } from "@vercel/sdk/models/operations/createproject.js";
 
 let value: CreateProjectLastAliasRequest = {
-  fromDeploymentId: "<value>",
-  toDeploymentId: "<value>",
-  jobStatus: "pending",
-  requestedAt: 9065.56,
+  fromDeploymentId: "<id>",
+  toDeploymentId: "<id>",
+  jobStatus: "succeeded",
+  requestedAt: 2476.85,
   type: "promote",
 };
 ```

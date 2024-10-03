@@ -3,7 +3,6 @@ import stamp from '../../util/output/stamp';
 import eraseLines from '../../util/output/erase-lines';
 import chars from '../../util/output/chars';
 
-import textInput from '../../util/input/text';
 import invite from './invite';
 import { writeToConfigFile } from '../../util/config/files';
 import { getCommandName } from '../../util/pkg-name';
@@ -12,15 +11,9 @@ import createTeam from '../../util/teams/create-team';
 import patchTeam from '../../util/teams/patch-team';
 import { errorToString, isError } from '@vercel/error-utils';
 
-const validateSlugKeypress = (data: string, value: string) =>
-  // TODO: the `value` here should contain the current value + the keypress
-  // should be fixed on utils/input/text.js
-  /^[a-zA-Z]+[a-zA-Z0-9_-]*$/.test(value + data);
+const validateSlug = (value: string) => /^[a-z]+[a-z0-9_-]*$/.test(value);
 
-const validateNameKeypress = (data: string, value: string) =>
-  // TODO: the `value` here should contain the current value + the keypress
-  // should be fixed on utils/input/text.js
-  /^[ a-zA-Z0-9_-]+$/.test(value + data);
+const validateName = (value: string) => /^[ a-zA-Z0-9_-]+$/.test(value);
 
 const teamUrlPrefix = 'Team URL'.padEnd(14) + chalk.gray('vercel.com/');
 const teamNamePrefix = 'Team Name'.padEnd(14);
@@ -39,12 +32,10 @@ export default async function add(client: Client): Promise<number> {
   do {
     try {
       // eslint-disable-next-line no-await-in-loop
-      slug = await textInput({
-        label: `- ${teamUrlPrefix}`,
-        validateKeypress: validateSlugKeypress,
-        initialValue: slug,
-        valid: team,
-        forceLowerCase: true,
+      slug = await client.input.text({
+        message: `- ${teamUrlPrefix}`,
+        validate: validateSlug,
+        default: slug,
       });
     } catch (err: unknown) {
       if (isError(err) && err.message === 'USER_ABORT') {
@@ -78,9 +69,9 @@ export default async function add(client: Client): Promise<number> {
   let name;
 
   try {
-    name = await textInput({
-      label: `- ${teamNamePrefix}`,
-      validateKeypress: validateNameKeypress,
+    name = await client.input.text({
+      message: `- ${teamNamePrefix}`,
+      validate: validateName,
     });
   } catch (err: unknown) {
     if (isError(err) && err.message === 'USER_ABORT') {
@@ -118,7 +109,7 @@ export default async function add(client: Client): Promise<number> {
   // Update config file
   output.spinner('Saving');
   client.config.currentTeam = team.id;
-  writeToConfigFile(client.config);
+  writeToConfigFile(output, client.config);
   output.stopSpinner();
 
   await invite(client, [], {

@@ -311,6 +311,23 @@ it('should throw for discontinued versions', async () => {
   }
 });
 
+it('should only allow nodejs22.x when env var is set', async () => {
+  try {
+    expect(getLatestNodeVersion()).toHaveProperty('major', 20);
+    expect(getSupportedNodeVersion('22.x')).rejects.toThrow();
+
+    process.env.VERCEL_ALLOW_NODEJS22 = '1';
+
+    expect(getLatestNodeVersion()).toHaveProperty('major', 22);
+    expect(await getSupportedNodeVersion('22.x')).toHaveProperty('major', 22);
+    expect(await getSupportedNodeVersion('22')).toHaveProperty('major', 22);
+    expect(await getSupportedNodeVersion('22.1.0')).toHaveProperty('major', 22);
+    expect(await getSupportedNodeVersion('>=20')).toHaveProperty('major', 22);
+  } finally {
+    delete process.env.VERCEL_ALLOW_NODEJS22;
+  }
+});
+
 it('should warn for deprecated versions, soon to be discontinued', async () => {
   // Mock a future date so that Node 16 warns
   const realDateNow = Date.now;
@@ -535,6 +552,83 @@ it('should support experimentalStreamingLambdaPath correctly', async () => {
     });
   }).toThrowError(
     `The \`experimentalStreamingLambdaPath\` argument for \`Prerender\` must be a string.`
+  );
+});
+
+it('should support chain correctly', async () => {
+  new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    chain: undefined,
+  });
+  new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    chain: {
+      outputPath: '/some/path/to/lambda',
+      headers: { 'x-nextjs-data': 'true' },
+    },
+  });
+  new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    chain: {
+      outputPath: '/some/path/to/lambda',
+      headers: { 'x-nextjs-data': 'true', 'x-nextjs-data-2': 'true' },
+    },
+  });
+
+  expect(() => {
+    new Prerender({
+      expiration: 1,
+      fallback: null,
+      group: 1,
+      bypassToken: 'some-long-bypass-token-to-make-it-work',
+      // @ts-expect-error testing invalid field
+      chain: 'true',
+    });
+  }).toThrowError('The `chain` argument for `Prerender` must be an object.');
+  expect(() => {
+    new Prerender({
+      expiration: 1,
+      fallback: null,
+      group: 1,
+      bypassToken: 'some-long-bypass-token-to-make-it-work',
+      // @ts-expect-error testing invalid field
+      chain: { headers: 'true' },
+    });
+  }).toThrowError(
+    'The `chain.headers` argument for `Prerender` must be an object with string key/values'
+  );
+  expect(() => {
+    new Prerender({
+      expiration: 1,
+      fallback: null,
+      group: 1,
+      bypassToken: 'some-long-bypass-token-to-make-it-work',
+      // @ts-expect-error testing invalid field
+      chain: { headers: { 'x-nextjs-data': 1 } },
+    });
+  }).toThrowError(
+    'The `chain.headers` argument for `Prerender` must be an object with string key/values'
+  );
+  expect(() => {
+    new Prerender({
+      expiration: 1,
+      fallback: null,
+      group: 1,
+      bypassToken: 'some-long-bypass-token-to-make-it-work',
+      // @ts-expect-error testing invalid field
+      chain: { headers: {} },
+    });
+  }).toThrowError(
+    'The `chain.outputPath` argument for `Prerender` must be a string.'
   );
 });
 

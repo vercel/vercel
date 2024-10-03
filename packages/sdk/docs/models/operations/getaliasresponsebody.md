@@ -1,5 +1,7 @@
 # GetAliasResponseBody
 
+The alias information
+
 ## Example Usage
 
 ```typescript
@@ -22,7 +24,7 @@ let value: GetAliasResponseBody = {
   },
   deploymentId: "dpl_5m8CQaRBm3FnWRW1od3wKTpaECPx",
   projectId: "prj_12HKQaOmR5t5Uy6vdcQsNIiZgHGB",
-  uid: "<value>",
+  uid: "<id>",
   updatedAt: 1540095775941,
 };
 ```

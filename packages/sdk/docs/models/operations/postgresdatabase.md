@@ -6,9 +6,9 @@
 import { PostgresDatabase } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: PostgresDatabase = {
-  price: 964.5,
-  batch: 3864.47,
-  threshold: 8634.71,
+  price: 3656.76,
+  batch: 3954.11,
+  threshold: 2305.95,
   hidden: false,
 };
 ```

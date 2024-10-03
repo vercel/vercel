@@ -7,10 +7,10 @@ import { GetConfigurationResponseBodyIntegrationsScopes } from "@vercel/sdk/mode
 
 let value: GetConfigurationResponseBodyIntegrationsScopes = {
   added: [
-    "read-write:global-project-env-vars",
+    "read:project",
   ],
   upgraded: [
-    "read:monitoring",
+    "read-write:integration-resource",
   ],
 };
 ```

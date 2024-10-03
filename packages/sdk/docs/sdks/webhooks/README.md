@@ -27,9 +27,9 @@ const vercel = new Vercel({
 
 async function run() {
   const result = await vercel.webhooks.create({});
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -59,7 +59,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -100,9 +100,9 @@ const vercel = new Vercel({
 
 async function run() {
   const result = await vercel.webhooks.list({});
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -132,7 +132,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -175,9 +175,9 @@ async function run() {
   const result = await vercel.webhooks.get({
     id: "<id>",
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -209,7 +209,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -252,6 +252,8 @@ async function run() {
   await vercel.webhooks.delete({
     id: "<id>",
   });
+
+
 }
 
 run();

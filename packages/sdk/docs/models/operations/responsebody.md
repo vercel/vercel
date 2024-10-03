@@ -1,28 +1,24 @@
 # ResponseBody
 
-## Example Usage
-
-```typescript
-import { ResponseBody } from "@vercel/sdk/models/operations/artifactquery.js";
-
-let value: ResponseBody = {
-  error: {
-    message: "<value>",
-  },
-};
-```
 
 ## Supported Types
 
 ### `operations.ResponseBody1`
 
 ```typescript
-const value: operations.ResponseBody1 = /* values here */
+const value: operations.ResponseBody1 = {
+  size: 1103.75,
+  taskDurationMs: 6563.30,
+};
 ```
 
 ### `operations.ResponseBody2`
 
 ```typescript
-const value: operations.ResponseBody2 = /* values here */
+const value: operations.ResponseBody2 = {
+  error: {
+    message: "<value>",
+  },
+};
 ```
 

@@ -6,7 +6,7 @@
 import { GetCheckLCP } from "@vercel/sdk/models/operations/getcheck.js";
 
 let value: GetCheckLCP = {
-  value: 6706.38,
+  value: 201.08,
   source: "web-vitals",
 };
 ```

@@ -93,6 +93,7 @@ import {
   getFunctionsConfigManifest,
   require_,
   getServerlessPages,
+  RenderingMode,
 } from './utils';
 
 export const version = 2;
@@ -778,6 +779,13 @@ export const build: BuildV2 = async buildOptions => {
               'image-manifest.json "images.remotePatterns" must be an array. Contact support if this continues to happen',
           });
         }
+        if (images.localPatterns && !Array.isArray(images.localPatterns)) {
+          throw new NowBuildError({
+            code: 'NEXT_IMAGES_LOCALPATTERNS',
+            message:
+              'image-manifest.json "images.localPatterns" must be an array. Contact support if this continues to happen',
+          });
+        }
         if (
           images.minimumCacheTTL &&
           !Number.isInteger(images.minimumCacheTTL)
@@ -1354,13 +1362,13 @@ export const build: BuildV2 = async buildOptions => {
      */
     const experimentalPPRRoutes = new Set<string>();
 
-    for (const [route, { experimentalPPR }] of [
+    for (const [route, { renderingMode }] of [
       ...Object.entries(prerenderManifest.staticRoutes),
       ...Object.entries(prerenderManifest.blockingFallbackRoutes),
       ...Object.entries(prerenderManifest.fallbackRoutes),
       ...Object.entries(prerenderManifest.omittedRoutes),
     ]) {
-      if (!experimentalPPR) continue;
+      if (renderingMode !== RenderingMode.PARTIALLY_STATIC) continue;
 
       experimentalPPRRoutes.add(route);
     }
@@ -2347,6 +2355,24 @@ export const build: BuildV2 = async buildOptions => {
         ? [
             // Handle auto-adding current default locale to path based on
             // $wildcard
+            // This is split into two rules to avoid matching the `/index` route as it causes issues with trailing slash redirect
+            {
+              src: `^${path.posix.join(
+                '/',
+                entryDirectory,
+                '/'
+              )}(?!(?:_next/.*|${i18n.locales
+                .map(locale => escapeStringRegexp(locale))
+                .join('|')})(?:/.*|$))$`,
+              // we aren't able to ensure trailing slash mode here
+              // so ensure this comes after the trailing slash redirect
+              dest: `${
+                entryDirectory !== '.'
+                  ? path.posix.join('/', entryDirectory)
+                  : ''
+              }$wildcard${trailingSlash ? '/' : ''}`,
+              continue: true,
+            },
             {
               src: `^${path.join(
                 '/',

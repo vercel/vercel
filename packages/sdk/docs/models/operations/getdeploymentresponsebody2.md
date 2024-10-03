@@ -9,27 +9,27 @@ import { GetDeploymentResponseBody2 } from "@vercel/sdk/models/operations/getdep
 
 let value: GetDeploymentResponseBody2 = {
   aliasAssigned: false,
-  bootedAt: 5485.19,
-  buildingAt: 8672.9,
+  bootedAt: 9555.68,
+  buildingAt: 3165.50,
   buildSkipped: false,
   creator: {
-    uid: "<value>",
+    uid: "<id>",
   },
   public: false,
-  status: "INITIALIZING",
+  status: "READY",
   id: "<id>",
   type: "LAMBDAS",
-  createdAt: 9402.1,
+  createdAt: 1039.91,
   name: "<value>",
-  readyState: "ERROR",
+  readyState: "INITIALIZING",
   meta: {
     "key": "<value>",
   },
   regions: [
     "<value>",
   ],
-  url: "https://alarming-propaganda.com",
-  version: 9679.66,
+  url: "https://crushing-hoof.org",
+  version: 1035.78,
 };
 ```
 

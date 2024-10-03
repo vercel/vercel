@@ -7,7 +7,7 @@ import { Frequency } from "@vercel/sdk/models/components/authuser.js";
 
 let value: Frequency = {
   interval: "year",
-  intervalCount: 5629.48,
+  intervalCount: 9565.72,
 };
 ```
 

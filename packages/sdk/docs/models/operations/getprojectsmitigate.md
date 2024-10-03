@@ -6,8 +6,8 @@
 import { GetProjectsMitigate } from "@vercel/sdk/models/operations/getprojects.js";
 
 let value: GetProjectsMitigate = {
-  action: "bypass",
-  ruleId: "<value>",
+  action: "deny",
+  ruleId: "<id>",
 };
 ```
 

@@ -1,26 +1,19 @@
 # Roles
 
-## Example Usage
-
-```typescript
-import { Roles } from "@vercel/sdk/models/operations/patchteam.js";
-
-let value: Roles = {
-  accessGroupId: "<value>",
-};
-```
 
 ## Supported Types
 
 ### `operations.Roles1`
 
 ```typescript
-const value: operations.Roles1 = /* values here */
+const value: operations.Roles1 = "OWNER";
 ```
 
 ### `operations.Roles2`
 
 ```typescript
-const value: operations.Roles2 = /* values here */
+const value: operations.Roles2 = {
+  accessGroupId: "<id>",
+};
 ```
 

@@ -6,9 +6,9 @@
 import { DataCacheWrite } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: DataCacheWrite = {
-  price: 8659.46,
-  batch: 3628.88,
-  threshold: 4413.21,
+  price: 633.69,
+  batch: 4098.57,
+  threshold: 7225.00,
   hidden: false,
 };
 ```

@@ -1,24 +1,17 @@
 # GitNamespaceId
 
-## Example Usage
-
-```typescript
-import { GitNamespaceId } from "@vercel/sdk/models/components/authuser.js";
-
-let value: GitNamespaceId = 5259.51;
-```
 
 ## Supported Types
 
 ### `string`
 
 ```typescript
-const value: string = /* values here */
+const value: string = "<value>";
 ```
 
 ### `number`
 
 ```typescript
-const value: number = /* values here */
+const value: number = 1151.38;
 ```
 

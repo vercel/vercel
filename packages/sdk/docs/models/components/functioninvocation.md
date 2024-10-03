@@ -6,9 +6,9 @@
 import { FunctionInvocation } from "@vercel/sdk/models/components/authuser.js";
 
 let value: FunctionInvocation = {
-  price: 9692.06,
-  batch: 662.07,
-  threshold: 2656.32,
+  price: 2539.17,
+  batch: 788.02,
+  threshold: 7486.56,
   hidden: false,
 };
 ```

@@ -13,6 +13,7 @@ import Client from '../../src/util/client';
 import { Output } from '../../src/util/output';
 import stripAnsi from 'strip-ansi';
 import ansiEscapes from 'ansi-escapes';
+import { TelemetryEventStore } from '../../src/util/telemetry';
 
 const ignoredAnsi = new Set([ansiEscapes.cursorHide, ansiEscapes.cursorShow]);
 
@@ -72,6 +73,12 @@ class MockStream extends PassThrough {
   }
 }
 
+class MockTelemetryEventStore extends TelemetryEventStore {
+  save(): void {
+    return;
+  }
+}
+
 export class MockClient extends Client {
   stdin!: MockStream;
   stdout!: MockStream;
@@ -84,7 +91,6 @@ export class MockClient extends Client {
     super({
       // Gets populated in `startMockServer()`
       apiUrl: '',
-
       // Gets re-initialized for every test in `reset()`
       argv: [],
       authConfig: {},
@@ -94,6 +100,10 @@ export class MockClient extends Client {
       stdout: new PassThrough(),
       stderr: new PassThrough(),
       output: new Output(new PassThrough()),
+    });
+
+    this.telemetryEventStore = new MockTelemetryEventStore({
+      output: this.output,
     });
 
     this.app = express();
@@ -152,6 +162,7 @@ export class MockClient extends Client {
     this.agent = undefined;
 
     this.cwd = originalCwd;
+    this.telemetryEventStore.reset();
   }
 
   events = {

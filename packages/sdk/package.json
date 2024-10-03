@@ -1,6 +1,6 @@
 {
   "name": "@vercel/sdk",
-  "version": "14.0.0-canary.0",
+  "version": "14.0.0-canary.3",
   "author": "Speakeasy",
   "tshy": {
     "exports": {
@@ -25,7 +25,6 @@
     "zod": ">= 3"
   },
   "devDependencies": {
-    "@types/node": "^18.19.3",
     "@typescript-eslint/eslint-plugin": "^7.7.1",
     "@typescript-eslint/parser": "^7.7.1",
     "eslint": "^8.57.0",

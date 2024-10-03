@@ -6,9 +6,9 @@
 import { PostgresDatabase } from "@vercel/sdk/models/components/authuser.js";
 
 let value: PostgresDatabase = {
-  price: 7151.43,
-  batch: 4813.75,
-  threshold: 5580.51,
+  price: 6197.72,
+  batch: 2712.17,
+  threshold: 988.46,
   hidden: false,
 };
 ```

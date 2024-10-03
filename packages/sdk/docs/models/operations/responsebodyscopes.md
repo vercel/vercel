@@ -7,10 +7,10 @@ import { ResponseBodyScopes } from "@vercel/sdk/models/operations/getconfigurati
 
 let value: ResponseBodyScopes = {
   added: [
-    "read-write:otel-endpoint",
+    "read-write:edge-config",
   ],
   upgraded: [
-    "read:domain",
+    "read-write:otel-endpoint",
   ],
 };
 ```

@@ -8,15 +8,15 @@ import { ListAccessGroupProjectsResponseBody } from "@vercel/sdk/models/operatio
 let value: ListAccessGroupProjectsResponseBody = {
   projects: [
     {
-      projectId: "<value>",
-      role: "PROJECT_VIEWER",
+      projectId: "<id>",
+      role: "PROJECT_DEVELOPER",
       createdAt: "<value>",
       updatedAt: "<value>",
       project: {},
     },
   ],
   pagination: {
-    count: 4614.79,
+    count: 5701.97,
     next: "<value>",
   },
 };

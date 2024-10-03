@@ -6,9 +6,9 @@
 import { EdgeRequest } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: EdgeRequest = {
-  price: 9326.66,
-  batch: 6277.35,
-  threshold: 7631.65,
+  price: 2542.40,
+  batch: 7491.01,
+  threshold: 5323.36,
   hidden: false,
 };
 ```

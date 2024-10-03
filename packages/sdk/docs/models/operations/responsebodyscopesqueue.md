@@ -8,14 +8,14 @@ import { ResponseBodyScopesQueue } from "@vercel/sdk/models/operations/getconfig
 let value: ResponseBodyScopesQueue = {
   scopes: {
     added: [
-      "read-write:project",
+      "read:integration-configuration",
     ],
     upgraded: [
-      "read-write:log-drain",
+      "read-write:deployment-check",
     ],
   },
   note: "<value>",
-  requestedAt: 2228.64,
+  requestedAt: 3390.95,
 };
 ```
 

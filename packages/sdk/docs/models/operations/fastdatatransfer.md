@@ -6,9 +6,9 @@
 import { FastDataTransfer } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: FastDataTransfer = {
-  price: 8886.16,
-  batch: 8108.39,
-  threshold: 6972.74,
+  price: 5681.62,
+  batch: 6679.77,
+  threshold: 8408.30,
   hidden: false,
 };
 ```

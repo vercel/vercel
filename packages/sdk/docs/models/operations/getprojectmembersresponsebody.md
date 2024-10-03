@@ -2,12 +2,19 @@
 
 Paginated list of members for the project.
 
-## Example Usage
+
+## Supported Types
+
+### `operations.GetProjectMembersResponseBody1`
 
 ```typescript
-import { GetProjectMembersResponseBody } from "@vercel/sdk/models/operations/getprojectmembers.js";
+const value: operations.GetProjectMembersResponseBody1 = {};
+```
 
-let value: GetProjectMembersResponseBody = {
+### `operations.GetProjectMembersResponseBody2`
+
+```typescript
+const value: operations.GetProjectMembersResponseBody2 = {
   members: [
     {
       avatar: "123a6c5209bc3778245d011443644c8d27dc2c50",
@@ -28,19 +35,5 @@ let value: GetProjectMembersResponseBody = {
     prev: 1540095775951,
   },
 };
-```
-
-## Supported Types
-
-### `operations.GetProjectMembersResponseBody1`
-
-```typescript
-const value: operations.GetProjectMembersResponseBody1 = /* values here */
-```
-
-### `operations.GetProjectMembersResponseBody2`
-
-```typescript
-const value: operations.GetProjectMembersResponseBody2 = /* values here */
 ```
 

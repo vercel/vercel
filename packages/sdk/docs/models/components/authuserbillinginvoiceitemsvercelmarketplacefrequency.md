@@ -7,7 +7,7 @@ import { AuthUserBillingInvoiceItemsVercelMarketplaceFrequency } from "@vercel/s
 
 let value: AuthUserBillingInvoiceItemsVercelMarketplaceFrequency = {
   interval: "month",
-  intervalCount: 4894.59,
+  intervalCount: 8156.18,
 };
 ```
 

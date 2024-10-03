@@ -6,9 +6,9 @@
 import { EdgeConfigWrite } from "@vercel/sdk/models/components/authuser.js";
 
 let value: EdgeConfigWrite = {
-  price: 2653.03,
-  batch: 4502.09,
-  threshold: 1272.94,
+  price: 7738.54,
+  batch: 3588.62,
+  threshold: 9088.77,
   hidden: false,
 };
 ```

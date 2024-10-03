@@ -6,8 +6,8 @@
 import { UpdateProjectMitigate } from "@vercel/sdk/models/operations/updateproject.js";
 
 let value: UpdateProjectMitigate = {
-  action: "challenge",
-  ruleId: "<value>",
+  action: "deny",
+  ruleId: "<id>",
 };
 ```
 

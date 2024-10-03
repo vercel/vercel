@@ -6,9 +6,9 @@
 import { StorageRedisTotalDatabases } from "@vercel/sdk/models/components/authuser.js";
 
 let value: StorageRedisTotalDatabases = {
-  price: 6409.07,
-  batch: 1520.27,
-  threshold: 302.08,
+  price: 7023.39,
+  batch: 7243.31,
+  threshold: 1915.71,
   hidden: false,
 };
 ```

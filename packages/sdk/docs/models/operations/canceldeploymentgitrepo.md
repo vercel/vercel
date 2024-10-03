@@ -1,41 +1,55 @@
 # CancelDeploymentGitRepo
 
-## Example Usage
-
-```typescript
-import { CancelDeploymentGitRepo } from "@vercel/sdk/models/operations/canceldeployment.js";
-
-let value: CancelDeploymentGitRepo = {
-  org: "<value>",
-  repo: "<value>",
-  repoId: 4317.85,
-  type: "github",
-  repoOwnerId: "<value>",
-  path: "/var/tmp",
-  defaultBranch: "<value>",
-  name: "<value>",
-  private: false,
-  ownerType: "user",
-};
-```
 
 ## Supported Types
 
 ### `operations.CancelDeploymentGitRepo1`
 
 ```typescript
-const value: operations.CancelDeploymentGitRepo1 = /* values here */
+const value: operations.CancelDeploymentGitRepo1 = {
+  namespace: "<value>",
+  projectId: 9565.44,
+  type: "gitlab",
+  url: "https://whopping-longboat.net",
+  path: "/opt/bin",
+  defaultBranch: "<value>",
+  name: "<value>",
+  private: false,
+  ownerType: "team",
+};
 ```
 
 ### `operations.CancelDeploymentGitRepo2`
 
 ```typescript
-const value: operations.CancelDeploymentGitRepo2 = /* values here */
+const value: operations.CancelDeploymentGitRepo2 = {
+  org: "<value>",
+  repo: "<value>",
+  repoId: 3782.68,
+  type: "github",
+  repoOwnerId: "<id>",
+  path: "/Users",
+  defaultBranch: "<value>",
+  name: "<value>",
+  private: false,
+  ownerType: "team",
+};
 ```
 
 ### `operations.CancelDeploymentGitRepo3`
 
 ```typescript
-const value: operations.CancelDeploymentGitRepo3 = /* values here */
+const value: operations.CancelDeploymentGitRepo3 = {
+  owner: "<value>",
+  repoUuid: "<id>",
+  slug: "<value>",
+  type: "bitbucket",
+  workspaceUuid: "<id>",
+  path: "/var",
+  defaultBranch: "<value>",
+  name: "<value>",
+  private: false,
+  ownerType: "user",
+};
 ```
 

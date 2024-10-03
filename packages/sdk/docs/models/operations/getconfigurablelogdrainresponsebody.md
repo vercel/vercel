@@ -7,15 +7,15 @@ import { GetConfigurableLogDrainResponseBody } from "@vercel/sdk/models/operatio
 
 let value: GetConfigurableLogDrainResponseBody = {
   id: "<id>",
-  deliveryFormat: "syslog",
-  url: "https://satisfied-offering.org",
+  deliveryFormat: "ndjson",
+  url: "https://smoggy-configuration.biz/",
   name: "<value>",
-  ownerId: "<value>",
-  createdAt: 3283.79,
-  deletedAt: 5076.36,
-  updatedAt: 8026.92,
+  ownerId: "<id>",
+  createdAt: 4318.43,
+  deletedAt: 3207.48,
+  updatedAt: 741.25,
   environments: [
-    "production",
+    "preview",
   ],
   secret: "<value>",
 };

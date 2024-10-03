@@ -7,8 +7,8 @@ import { GetCertByIdResponseBody } from "@vercel/sdk/models/operations/getcertby
 
 let value: GetCertByIdResponseBody = {
   id: "<id>",
-  createdAt: 7897.7,
-  expiresAt: 1972.59,
+  createdAt: 6823.27,
+  expiresAt: 8057.02,
   autoRenew: false,
   cns: [
     "<value>",

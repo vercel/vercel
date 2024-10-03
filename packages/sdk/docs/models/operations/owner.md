@@ -6,7 +6,7 @@
 import { Owner } from "@vercel/sdk/models/operations/searchrepo.js";
 
 let value: Owner = {
-  id: 3645.44,
+  id: "<id>",
   name: "<value>",
 };
 ```

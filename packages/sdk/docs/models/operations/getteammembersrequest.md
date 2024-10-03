@@ -6,7 +6,7 @@
 import { GetTeamMembersRequest } from "@vercel/sdk/models/operations/getteammembers.js";
 
 let value: GetTeamMembersRequest = {
-  teamId: "<value>",
+  teamId: "<id>",
   limit: 20,
   since: 1540095775951,
   until: 1540095775951,

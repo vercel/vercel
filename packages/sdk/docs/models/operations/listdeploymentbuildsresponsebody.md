@@ -9,14 +9,14 @@ let value: ListDeploymentBuildsResponseBody = {
   builds: [
     {
       id: "<id>",
-      deploymentId: "<value>",
+      deploymentId: "<id>",
       entrypoint: "<value>",
-      readyState: "QUEUED",
+      readyState: "CANCELED",
       output: [
         {
-          path: "/opt/sbin",
+          path: "/var/spool",
           digest: "<value>",
-          mode: 6235.64,
+          mode: 3834.42,
         },
       ],
     },

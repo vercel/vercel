@@ -1,5 +1,23 @@
 # @vercel/build-utils
 
+## 8.4.5
+
+### Patch Changes
+
+- [build-utils] add types for `images.remotePatterns.search` to vercel.json ([#12158](https://github.com/vercel/vercel/pull/12158))
+
+## 8.4.4
+
+### Patch Changes
+
+- Allow Node.js v22 behind env var feature flag ([#12159](https://github.com/vercel/vercel/pull/12159))
+
+## 8.4.3
+
+### Patch Changes
+
+- Introduce new chain configuration types for Partial Prerendering ([#12063](https://github.com/vercel/vercel/pull/12063))
+
 ## 8.4.2
 
 ### Patch Changes

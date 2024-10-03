@@ -16,6 +16,7 @@ import printIndications from './print-indications';
 import reauthenticate from './login/reauthenticate';
 import { SAMLError } from './login/types';
 import { writeToAuthConfigFile } from './config/files';
+import { TelemetryEventStore } from './telemetry';
 import type {
   AuthConfig,
   GlobalConfig,
@@ -52,6 +53,7 @@ export interface ClientOptions extends Stdio {
   localConfig?: VercelConfig;
   localConfigPath?: string;
   agent?: Agent;
+  telemetryEventStore: TelemetryEventStore;
 }
 
 export const isJSONObject = (v: any): v is JSONObject => {
@@ -72,6 +74,7 @@ export default class Client extends EventEmitter implements Stdio {
   localConfigPath?: string;
   requestIdCounter: number;
   input;
+  telemetryEventStore: TelemetryEventStore;
 
   constructor(opts: ClientOptions) {
     super();
@@ -87,6 +90,7 @@ export default class Client extends EventEmitter implements Stdio {
     this.localConfig = opts.localConfig;
     this.localConfigPath = opts.localConfigPath;
     this.requestIdCounter = 1;
+    this.telemetryEventStore = opts.telemetryEventStore;
 
     const theme = {
       prefix: gray('?'),
@@ -251,7 +255,7 @@ export default class Client extends EventEmitter implements Stdio {
     }
 
     this.authConfig.token = result.token;
-    writeToAuthConfigFile(this.authConfig);
+    writeToAuthConfigFile(this.output, this.authConfig);
   });
 
   _onRetry = (error: Error) => {

@@ -8,8 +8,8 @@ An Edge Config
 import { CreateEdgeConfigResponseBody } from "@vercel/sdk/models/operations/createedgeconfig.js";
 
 let value: CreateEdgeConfigResponseBody = {
-  sizeInBytes: 5349.17,
-  itemCount: 9372.19,
+  sizeInBytes: 6953.46,
+  itemCount: 928.51,
 };
 ```
 

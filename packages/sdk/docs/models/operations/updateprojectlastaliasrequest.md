@@ -6,11 +6,11 @@
 import { UpdateProjectLastAliasRequest } from "@vercel/sdk/models/operations/updateproject.js";
 
 let value: UpdateProjectLastAliasRequest = {
-  fromDeploymentId: "<value>",
-  toDeploymentId: "<value>",
+  fromDeploymentId: "<id>",
+  toDeploymentId: "<id>",
   jobStatus: "pending",
-  requestedAt: 333.04,
-  type: "promote",
+  requestedAt: 691.83,
+  type: "rollback",
 };
 ```
 

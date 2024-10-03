@@ -6,7 +6,7 @@
 import { InviteUserToTeamRequest } from "@vercel/sdk/models/operations/inviteusertoteam.js";
 
 let value: InviteUserToTeamRequest = {
-  teamId: "<value>",
+  teamId: "<id>",
   requestBody: {
     uid: "kr1PsOIzqEL5Xg6M4VZcZosf",
     email: "john@example.com",

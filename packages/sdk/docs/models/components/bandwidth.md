@@ -6,9 +6,9 @@
 import { Bandwidth } from "@vercel/sdk/models/components/authuser.js";
 
 let value: Bandwidth = {
-  price: 7441.01,
-  batch: 6205,
-  threshold: 8398.07,
+  price: 8866.83,
+  batch: 8309.09,
+  threshold: 316.05,
   hidden: false,
 };
 ```

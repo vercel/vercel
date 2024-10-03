@@ -6,9 +6,9 @@
 import { WafOwaspExcessBytes } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: WafOwaspExcessBytes = {
-  price: 8268.62,
-  batch: 7316.34,
-  threshold: 7255.74,
+  price: 1835.04,
+  batch: 7547.84,
+  threshold: 5358.83,
   hidden: false,
 };
 ```

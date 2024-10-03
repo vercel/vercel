@@ -3011,6 +3011,7 @@ paths:
                           type: object
                         deletedAt:
                           type: number
+                          nullable: true
                         deploymentHostname:
                           type: string
                         name:
@@ -6939,6 +6940,7 @@ paths:
           schema:
             type: string
       x-speakeasy-name-override: get
+      x-speakeasy-usage-example: true
   /v13/deployments:
     post:
       description: >-
@@ -8404,6 +8406,7 @@ paths:
                 - name
               type: object
       x-speakeasy-name-override: create
+      x-speakeasy-usage-example: true
   /v12/deployments/{id}/cancel:
     patch:
       description: >-
@@ -11662,47 +11665,49 @@ paths:
           content:
             application/json:
               schema:
-                properties:
-                  id:
-                    type: string
-                  createdAt:
-                    type: number
-                  ownerId:
-                    type: string
-                  slug:
-                    type: string
-                    description: >-
-                      Name for the Edge Config Names are not unique. Must start with an alphabetic character and can contain only alphanumeric characters and underscores).
-                  updatedAt:
-                    type: number
-                  digest:
-                    type: string
-                  transfer:
-                    properties:
-                      fromAccountId:
-                        type: string
-                      startedAt:
-                        type: number
-                      doneAt:
-                        nullable: true
-                        type: number
-                    required:
-                      - fromAccountId
-                      - startedAt
-                      - doneAt
-                    type: object
-                    description: >-
-                      Keeps track of the current state of the Edge Config while it gets transferred.
-                  schema:
-                    type: object
-                  sizeInBytes:
-                    type: number
-                  itemCount:
-                    type: number
-                required:
-                  - sizeInBytes
-                  - itemCount
-                type: object
+                items:
+                  properties:
+                    id:
+                      type: string
+                    createdAt:
+                      type: number
+                    ownerId:
+                      type: string
+                    slug:
+                      type: string
+                      description: >-
+                        Name for the Edge Config Names are not unique. Must start with an alphabetic character and can contain only alphanumeric characters and underscores).
+                    updatedAt:
+                      type: number
+                    digest:
+                      type: string
+                    transfer:
+                      properties:
+                        fromAccountId:
+                          type: string
+                        startedAt:
+                          type: number
+                        doneAt:
+                          nullable: true
+                          type: number
+                      required:
+                        - fromAccountId
+                        - startedAt
+                        - doneAt
+                      type: object
+                      description: >-
+                        Keeps track of the current state of the Edge Config while it gets transferred.
+                    schema:
+                      type: object
+                    sizeInBytes:
+                      type: number
+                    itemCount:
+                      type: number
+                  required:
+                    - sizeInBytes
+                    - itemCount
+                  type: object
+                type: array
                 description: List of all edge configs.
         '400':
           description: One of the provided values in the request query is invalid.
@@ -14786,6 +14791,7 @@ paths:
                       type: string
                       enum:
                         - self-served
+                        - integration
                   required:
                     - id
                     - deliveryFormat
@@ -14796,7 +14802,6 @@ paths:
                     - deletedAt
                     - updatedAt
                     - environments
-                    - secret
                   type: object
                 type: array
         '400':
@@ -34330,184 +34335,182 @@ paths:
           content:
             application/json:
               schema:
-                items:
-                  properties:
-                    alias:
-                      type: string
-                      description: >-
-                        The alias name, it could be a `.vercel.app` subdomain or a custom domain
-                      example: my-alias.vercel.app
-                    created:
-                      type: string
-                      format: date-time
-                      description: The date when the alias was created
-                      example: '2017-04-26T23:00:34.232Z'
-                    createdAt:
-                      type: number
-                      description: >-
-                        The date when the alias was created in milliseconds since the UNIX epoch
-                      example: 1540095775941
-                    creator:
-                      properties:
-                        uid:
-                          type: string
-                          description: ID of the user who created the alias
-                          example: 96SnxkFiMyVKsK3pnoHfx3Hz
-                        email:
-                          type: string
-                          description: Email of the user who created the alias
-                          example: john-doe@gmail.com
-                        username:
-                          type: string
-                          description: Username of the user who created the alias
-                          example: john-doe
-                      required:
-                        - uid
-                        - email
-                        - username
-                      type: object
-                      description: Information of the user who created the alias
-                    deletedAt:
-                      type: number
-                      description: >-
-                        The date when the alias was deleted in milliseconds since the UNIX epoch
-                      example: 1540095775941
-                    deployment:
-                      properties:
-                        id:
-                          type: string
-                          description: The deployment unique identifier
-                          example: dpl_5m8CQaRBm3FnWRW1od3wKTpaECPx
-                        url:
-                          type: string
-                          description: The deployment unique URL
-                          example: my-instant-deployment-3ij3cxz9qr.now.sh
-                        meta:
-                          type: string
-                          description: The deployment metadata
-                          example: {}
-                      required:
-                        - id
-                        - url
-                      type: object
-                      description: A map with the deployment ID, URL and metadata
-                    deploymentId:
-                      nullable: true
-                      type: string
-                      description: The deployment ID
-                      example: dpl_5m8CQaRBm3FnWRW1od3wKTpaECPx
-                    projectId:
-                      nullable: true
-                      type: string
-                      description: The unique identifier of the project
-                      example: prj_12HKQaOmR5t5Uy6vdcQsNIiZgHGB
-                    redirect:
-                      nullable: true
-                      type: string
-                      description: >-
-                        Target destination domain for redirect when the alias is a redirect
-                    redirectStatusCode:
-                      nullable: true
-                      type: number
-                      enum:
-                        - 301
-                        - 302
-                        - 307
-                        - 308
-                      description: Status code to be used on redirect
-                    uid:
-                      type: string
-                      description: The unique identifier of the alias
-                    updatedAt:
-                      type: number
-                      description: >-
-                        The date when the alias was updated in milliseconds since the UNIX epoch
-                      example: 1540095775941
-                    protectionBypass:
-                      additionalProperties:
-                        oneOf:
-                          - properties:
-                              createdAt:
-                                type: number
-                              createdBy:
-                                type: string
-                              scope:
-                                type: string
-                                enum:
-                                  - shareable-link
-                            required:
-                              - createdAt
-                              - createdBy
-                              - scope
-                            type: object
-                            description: The protection bypass for the alias
-                          - properties:
-                              createdAt:
-                                type: number
-                              lastUpdatedAt:
-                                type: number
-                              lastUpdatedBy:
-                                type: string
-                              access:
-                                type: string
-                                enum:
-                                  - requested
-                                  - granted
-                              scope:
-                                type: string
-                                enum:
-                                  - user
-                            required:
-                              - createdAt
-                              - lastUpdatedAt
-                              - lastUpdatedBy
-                              - access
-                              - scope
-                            type: object
-                            description: The protection bypass for the alias
-                          - properties:
-                              createdAt:
-                                type: number
-                              createdBy:
-                                type: string
-                              scope:
-                                type: string
-                                enum:
-                                  - alias-protection-override
-                            required:
-                              - createdAt
-                              - createdBy
-                              - scope
-                            type: object
-                            description: The protection bypass for the alias
-                          - properties:
-                              createdAt:
-                                type: number
-                              lastUpdatedAt:
-                                type: number
-                              lastUpdatedBy:
-                                type: string
-                              scope:
-                                type: string
-                                enum:
-                                  - email_invite
-                            required:
-                              - createdAt
-                              - lastUpdatedAt
-                              - lastUpdatedBy
-                              - scope
-                            type: object
-                            description: The protection bypass for the alias
-                      type: object
-                      description: The protection bypass for the alias
-                  required:
-                    - alias
-                    - created
-                    - deploymentId
-                    - projectId
-                    - uid
-                  type: object
-                type: array
+                properties:
+                  alias:
+                    type: string
+                    description: >-
+                      The alias name, it could be a `.vercel.app` subdomain or a custom domain
+                    example: my-alias.vercel.app
+                  created:
+                    type: string
+                    format: date-time
+                    description: The date when the alias was created
+                    example: '2017-04-26T23:00:34.232Z'
+                  createdAt:
+                    type: number
+                    description: >-
+                      The date when the alias was created in milliseconds since the UNIX epoch
+                    example: 1540095775941
+                  creator:
+                    properties:
+                      uid:
+                        type: string
+                        description: ID of the user who created the alias
+                        example: 96SnxkFiMyVKsK3pnoHfx3Hz
+                      email:
+                        type: string
+                        description: Email of the user who created the alias
+                        example: john-doe@gmail.com
+                      username:
+                        type: string
+                        description: Username of the user who created the alias
+                        example: john-doe
+                    required:
+                      - uid
+                      - email
+                      - username
+                    type: object
+                    description: Information of the user who created the alias
+                  deletedAt:
+                    type: number
+                    description: >-
+                      The date when the alias was deleted in milliseconds since the UNIX epoch
+                    example: 1540095775941
+                  deployment:
+                    properties:
+                      id:
+                        type: string
+                        description: The deployment unique identifier
+                        example: dpl_5m8CQaRBm3FnWRW1od3wKTpaECPx
+                      url:
+                        type: string
+                        description: The deployment unique URL
+                        example: my-instant-deployment-3ij3cxz9qr.now.sh
+                      meta:
+                        type: string
+                        description: The deployment metadata
+                        example: {}
+                    required:
+                      - id
+                      - url
+                    type: object
+                    description: A map with the deployment ID, URL and metadata
+                  deploymentId:
+                    nullable: true
+                    type: string
+                    description: The deployment ID
+                    example: dpl_5m8CQaRBm3FnWRW1od3wKTpaECPx
+                  projectId:
+                    nullable: true
+                    type: string
+                    description: The unique identifier of the project
+                    example: prj_12HKQaOmR5t5Uy6vdcQsNIiZgHGB
+                  redirect:
+                    nullable: true
+                    type: string
+                    description: >-
+                      Target destination domain for redirect when the alias is a redirect
+                  redirectStatusCode:
+                    nullable: true
+                    type: number
+                    enum:
+                      - 301
+                      - 302
+                      - 307
+                      - 308
+                    description: Status code to be used on redirect
+                  uid:
+                    type: string
+                    description: The unique identifier of the alias
+                  updatedAt:
+                    type: number
+                    description: >-
+                      The date when the alias was updated in milliseconds since the UNIX epoch
+                    example: 1540095775941
+                  protectionBypass:
+                    additionalProperties:
+                      oneOf:
+                        - properties:
+                            createdAt:
+                              type: number
+                            createdBy:
+                              type: string
+                            scope:
+                              type: string
+                              enum:
+                                - shareable-link
+                          required:
+                            - createdAt
+                            - createdBy
+                            - scope
+                          type: object
+                          description: The protection bypass for the alias
+                        - properties:
+                            createdAt:
+                              type: number
+                            lastUpdatedAt:
+                              type: number
+                            lastUpdatedBy:
+                              type: string
+                            access:
+                              type: string
+                              enum:
+                                - requested
+                                - granted
+                            scope:
+                              type: string
+                              enum:
+                                - user
+                          required:
+                            - createdAt
+                            - lastUpdatedAt
+                            - lastUpdatedBy
+                            - access
+                            - scope
+                          type: object
+                          description: The protection bypass for the alias
+                        - properties:
+                            createdAt:
+                              type: number
+                            createdBy:
+                              type: string
+                            scope:
+                              type: string
+                              enum:
+                                - alias-protection-override
+                          required:
+                            - createdAt
+                            - createdBy
+                            - scope
+                          type: object
+                          description: The protection bypass for the alias
+                        - properties:
+                            createdAt:
+                              type: number
+                            lastUpdatedAt:
+                              type: number
+                            lastUpdatedBy:
+                              type: string
+                            scope:
+                              type: string
+                              enum:
+                                - email_invite
+                          required:
+                            - createdAt
+                            - lastUpdatedAt
+                            - lastUpdatedBy
+                            - scope
+                          type: object
+                          description: The protection bypass for the alias
+                    type: object
+                    description: The protection bypass for the alias
+                required:
+                  - alias
+                  - created
+                  - deploymentId
+                  - projectId
+                  - uid
+                type: object
         '400':
           description: One of the provided values in the request query is invalid.
         '401':

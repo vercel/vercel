@@ -6,8 +6,8 @@
 import { UpdateTeamMemberRequest } from "@vercel/sdk/models/operations/updateteammember.js";
 
 let value: UpdateTeamMemberRequest = {
-  teamId: "<value>",
-  uid: "<value>",
+  teamId: "<id>",
+  uid: "<id>",
   requestBody: {
     confirmed: true,
     role: "[\"MEMBER\",\"VIEWER\"]",

@@ -6,9 +6,9 @@
 import { DataCacheRead } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: DataCacheRead = {
-  price: 7708.73,
-  batch: 9637.41,
-  threshold: 7358.94,
+  price: 8051.27,
+  batch: 7692.47,
+  threshold: 5369.99,
   hidden: false,
 };
 ```

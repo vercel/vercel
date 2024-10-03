@@ -9,9 +9,9 @@ let value: CustomEnvironment1 = {
   id: "<id>",
   name: "<value>",
   slug: "<value>",
-  type: "preview",
-  createdAt: 8338.19,
-  updatedAt: 9627.71,
+  type: "production",
+  createdAt: 142.52,
+  updatedAt: 3421.04,
 };
 ```
 

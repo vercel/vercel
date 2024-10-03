@@ -6,9 +6,9 @@
 import { EdgeRequestAdditionalCpuDuration } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: EdgeRequestAdditionalCpuDuration = {
-  price: 4014.28,
-  batch: 3114.86,
-  threshold: 4166.92,
+  price: 1149.52,
+  batch: 3936.30,
+  threshold: 3755.49,
   hidden: false,
 };
 ```

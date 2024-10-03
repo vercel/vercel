@@ -8,12 +8,12 @@ The project was successfully updated
 import { UpdateProjectResponseBody } from "@vercel/sdk/models/operations/updateproject.js";
 
 let value: UpdateProjectResponseBody = {
-  accountId: "<value>",
+  accountId: "<id>",
   crons: {
-    enabledAt: 2327.44,
-    disabledAt: 2371.73,
-    updatedAt: 6144.65,
-    deploymentId: "<value>",
+    enabledAt: 2295.67,
+    disabledAt: 5068.63,
+    updatedAt: 7368.53,
+    deploymentId: "<id>",
     definitions: [
       {
         host: "vercel.com",
@@ -26,22 +26,22 @@ let value: UpdateProjectResponseBody = {
   id: "<id>",
   latestDeployments: [
     {
-      createdAt: 8395.13,
+      createdAt: 976.76,
       createdIn: "<value>",
       creator: {
-        email: "Joyce.Armstrong@gmail.com",
-        uid: "<value>",
-        username: "Mabel.Bernhard",
+        email: "Trever_Pagac@yahoo.com",
+        uid: "<id>",
+        username: "Melody_Thompson3",
       },
       deploymentHostname: "<value>",
       name: "<value>",
       id: "<id>",
-      plan: "pro",
+      plan: "hobby",
       private: false,
-      readyState: "ERROR",
+      readyState: "QUEUED",
       type: "LAMBDAS",
-      url: "https://exotic-saving.com",
-      userId: "<value>",
+      url: "https://forceful-import.com/",
+      userId: "<id>",
       previewCommentsEnabled: false,
     },
   ],
@@ -49,22 +49,22 @@ let value: UpdateProjectResponseBody = {
   nodeVersion: "16.x",
   targets: {
     "key": {
-      createdAt: 120.36,
+      createdAt: 4894.59,
       createdIn: "<value>",
       creator: {
-        email: "Bettie.Wunsch@yahoo.com",
-        uid: "<value>",
-        username: "Webster.Hirthe40",
+        email: "Lafayette63@gmail.com",
+        uid: "<id>",
+        username: "Orlando.Kuhn99",
       },
       deploymentHostname: "<value>",
       name: "<value>",
       id: "<id>",
-      plan: "pro",
+      plan: "enterprise",
       private: false,
       readyState: "BUILDING",
       type: "LAMBDAS",
-      url: "https://portly-silver.info",
-      userId: "<value>",
+      url: "https://whopping-pulse.info",
+      userId: "<id>",
       previewCommentsEnabled: false,
     },
   },

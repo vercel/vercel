@@ -6,22 +6,22 @@
 import { GetProjectsTargets } from "@vercel/sdk/models/operations/getprojects.js";
 
 let value: GetProjectsTargets = {
-  createdAt: 2274.14,
+  createdAt: 4240.89,
   createdIn: "<value>",
   creator: {
-    email: "Deonte5@hotmail.com",
-    uid: "<value>",
-    username: "Houston88",
+    email: "Edmund82@yahoo.com",
+    uid: "<id>",
+    username: "Alvis98",
   },
   deploymentHostname: "<value>",
   name: "<value>",
   id: "<id>",
   plan: "hobby",
   private: false,
-  readyState: "CANCELED",
+  readyState: "ERROR",
   type: "LAMBDAS",
-  url: "http://perky-collar.name",
-  userId: "<value>",
+  url: "https://extra-large-bug.org",
+  userId: "<id>",
   previewCommentsEnabled: false,
 };
 ```

@@ -13,6 +13,8 @@ import confirm from '../../util/input/confirm';
 import isRootDomain from '../../util/is-root-domain';
 import { getCommandName } from '../../util/pkg-name';
 
+import { DomainsTransferInTelemetryClient } from '../../util/telemetry/commands/domains/transfer-in';
+
 type Options = {
   '--code': string;
 };
@@ -22,8 +24,15 @@ export default async function transferIn(
   opts: Partial<Options>,
   args: string[]
 ) {
-  const { output } = client;
+  const { output, telemetryEventStore } = client;
   const { contextName } = await getScope(client);
+  const telemetry = new DomainsTransferInTelemetryClient({
+    opts: {
+      store: telemetryEventStore,
+      output,
+    },
+  });
+  telemetry.trackCliOptionCode(opts['--code']);
 
   const [domainName] = args;
   if (!domainName) {
@@ -32,6 +41,8 @@ export default async function transferIn(
     );
     return 1;
   }
+
+  telemetry.trackCliArgumentDomainName(domainName);
 
   if (!isRootDomain(domainName)) {
     output.error(
@@ -65,7 +76,7 @@ export default async function transferIn(
     )} to transfer under ${chalk.bold(contextName)}! ${availableStamp()}`
   );
 
-  const authCode = await getAuthCode(opts['--code']);
+  const authCode = await getAuthCode(client, opts['--code']);
 
   const shouldTransfer = await confirm(
     client,
@@ -74,6 +85,7 @@ export default async function transferIn(
       : `Transfer now with 1yr renewal for ${chalk.bold(`$${price}`)}?`,
     false
   );
+
   if (!shouldTransfer) {
     return 0;
   }

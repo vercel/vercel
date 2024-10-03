@@ -7,10 +7,10 @@ import { GetConfigurationResponseBodyIntegrationsResponseScopes } from "@vercel/
 
 let value: GetConfigurationResponseBodyIntegrationsResponseScopes = {
   added: [
-    "read-write:deployment-check",
+    "read-write:domain",
   ],
   upgraded: [
-    "read-write:otel-endpoint",
+    "read:monitoring",
   ],
 };
 ```

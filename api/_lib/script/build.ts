@@ -1,4 +1,7 @@
+import { createWriteStream } from 'fs';
 import fs from 'fs/promises';
+import tar from 'tar-fs';
+import { pipeline } from 'stream/promises';
 import { join, dirname } from 'path';
 import { getExampleList } from '../examples/example-list';
 import { mapOldToNew } from '../examples/map-old-to-new';
@@ -29,7 +32,8 @@ async function main() {
   const pathListAll = join(pubDir, 'list-all.json');
   await fs.writeFile(pathListAll, JSON.stringify(examples));
 
-  const exampleDirs = await fs.readdir(join(repoRoot, 'examples'), {
+  const exampleDirPath = join(repoRoot, 'examples');
+  const exampleDirs = await fs.readdir(exampleDirPath, {
     withFileTypes: true,
   });
 
@@ -87,6 +91,17 @@ async function main() {
     const destTarballPath = join(tarballsDir, `${packageJson.name}.tgz`);
     await fs.mkdir(dirname(destTarballPath), { recursive: true });
     await fs.copyFile(srcTarballPath, destTarballPath);
+  }
+
+  // Create (ungzipped) tarballs of the examples / templates
+  const examplesOutputDir = join(pubDir, 'api/examples/download');
+  await fs.mkdir(examplesOutputDir, { recursive: true });
+  for (const dir of exampleDirs) {
+    const dirName = join(exampleDirPath, dir.name);
+    const stream = tar.pack(dirName);
+    const tarGzPath = join(examplesOutputDir, `${dir.name}.tar.gz`);
+    await pipeline(stream, createWriteStream(tarGzPath));
+    console.log(`Wrote "${tarGzPath}"`);
   }
 
   console.log('Completed building static frontend.');

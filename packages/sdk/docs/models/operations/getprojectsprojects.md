@@ -6,12 +6,12 @@
 import { GetProjectsProjects } from "@vercel/sdk/models/operations/getprojects.js";
 
 let value: GetProjectsProjects = {
-  accountId: "<value>",
+  accountId: "<id>",
   crons: {
-    enabledAt: 3246.83,
-    disabledAt: 8310.49,
-    updatedAt: 5197.11,
-    deploymentId: "<value>",
+    enabledAt: 1523.55,
+    disabledAt: 4174.86,
+    updatedAt: 1312.89,
+    deploymentId: "<id>",
     definitions: [
       {
         host: "vercel.com",
@@ -24,22 +24,22 @@ let value: GetProjectsProjects = {
   id: "<id>",
   latestDeployments: [
     {
-      createdAt: 6289.82,
+      createdAt: 6041.18,
       createdIn: "<value>",
       creator: {
-        email: "Savion42@gmail.com",
-        uid: "<value>",
-        username: "Pierre67",
+        email: "Sonia_Lockman-Goodwin@yahoo.com",
+        uid: "<id>",
+        username: "Katrina.Klocko",
       },
       deploymentHostname: "<value>",
       name: "<value>",
       id: "<id>",
-      plan: "hobby",
+      plan: "pro",
       private: false,
       readyState: "INITIALIZING",
       type: "LAMBDAS",
-      url: "https://left-cousin.net",
-      userId: "<value>",
+      url: "https://sizzling-finger.org",
+      userId: "<id>",
       previewCommentsEnabled: false,
     },
   ],
@@ -47,22 +47,22 @@ let value: GetProjectsProjects = {
   nodeVersion: "8.10.x",
   targets: {
     "key": {
-      createdAt: 2294.42,
+      createdAt: 486.90,
       createdIn: "<value>",
       creator: {
-        email: "Shania21@hotmail.com",
-        uid: "<value>",
-        username: "Vernice.Leannon",
+        email: "Isabella_Heidenreich@gmail.com",
+        uid: "<id>",
+        username: "Meredith_Heaney",
       },
       deploymentHostname: "<value>",
       name: "<value>",
       id: "<id>",
-      plan: "hobby",
+      plan: "pro",
       private: false,
-      readyState: "ERROR",
+      readyState: "BUILDING",
       type: "LAMBDAS",
-      url: "http://improbable-redhead.info",
-      userId: "<value>",
+      url: "https://acidic-gastropod.name",
+      userId: "<id>",
       previewCommentsEnabled: false,
     },
   },

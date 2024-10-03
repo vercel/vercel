@@ -6,9 +6,9 @@
 import { SourceImages } from "@vercel/sdk/models/components/authuser.js";
 
 let value: SourceImages = {
-  price: 5264.13,
-  batch: 113.55,
-  threshold: 5500.55,
+  price: 4235.50,
+  batch: 5534.50,
+  threshold: 7420.09,
   hidden: false,
 };
 ```

@@ -6,9 +6,9 @@
 import { BlobTotalSimpleRequests } from "@vercel/sdk/models/components/authuser.js";
 
 let value: BlobTotalSimpleRequests = {
-  price: 9958.16,
-  batch: 1286.96,
-  threshold: 1293.55,
+  price: 445.10,
+  batch: 2478.39,
+  threshold: 1928.81,
   hidden: false,
 };
 ```

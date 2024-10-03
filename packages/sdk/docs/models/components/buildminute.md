@@ -6,9 +6,9 @@
 import { BuildMinute } from "@vercel/sdk/models/components/authuser.js";
 
 let value: BuildMinute = {
-  price: 3503.25,
-  batch: 4714.57,
-  threshold: 2527,
+  price: 2151.83,
+  batch: 3391.18,
+  threshold: 2774.18,
   hidden: false,
 };
 ```

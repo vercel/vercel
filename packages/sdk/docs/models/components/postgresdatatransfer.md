@@ -6,9 +6,9 @@
 import { PostgresDataTransfer } from "@vercel/sdk/models/components/authuser.js";
 
 let value: PostgresDataTransfer = {
-  price: 9294.76,
-  batch: 7912.28,
-  threshold: 1226.62,
+  price: 9667.38,
+  batch: 5347.08,
+  threshold: 246.15,
   hidden: false,
 };
 ```

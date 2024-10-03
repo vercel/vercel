@@ -6,9 +6,9 @@
 import { UpdateProjectProjectsCreator } from "@vercel/sdk/models/operations/updateproject.js";
 
 let value: UpdateProjectProjectsCreator = {
-  email: "Vesta_Feest@gmail.com",
-  uid: "<value>",
-  username: "Landen_Wilkinson45",
+  email: "Oma.Turner33@gmail.com",
+  uid: "<id>",
+  username: "Jarrett33",
 };
 ```
 

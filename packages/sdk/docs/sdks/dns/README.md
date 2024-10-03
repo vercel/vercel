@@ -30,7 +30,7 @@ async function run() {
     since: "1609499532000",
     until: "1612264332000",
   });
-  
+
   for await (const page of result) {
     // Handle the page
     console.log(page);
@@ -125,9 +125,9 @@ async function run() {
       comment: "used to verify ownership of domain",
     },
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -170,7 +170,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -230,9 +230,9 @@ async function run() {
       comment: "used to verify ownership of domain",
     },
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -281,7 +281,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -325,9 +325,9 @@ async function run() {
     domain: "example.com",
     recordId: "rec_V0fra8eEgQwEpFhYG2vTzC3K",
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -360,7 +360,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();

@@ -8,7 +8,7 @@ import { GetProjectDomainResponseBody } from "@vercel/sdk/models/operations/getp
 let value: GetProjectDomainResponseBody = {
   name: "<value>",
   apexName: "<value>",
-  projectId: "<value>",
+  projectId: "<id>",
   verified: false,
 };
 ```

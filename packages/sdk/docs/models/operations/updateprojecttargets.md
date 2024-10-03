@@ -6,22 +6,22 @@
 import { UpdateProjectTargets } from "@vercel/sdk/models/operations/updateproject.js";
 
 let value: UpdateProjectTargets = {
-  createdAt: 1576.32,
+  createdAt: 3108.40,
   createdIn: "<value>",
   creator: {
-    email: "Zachery15@hotmail.com",
-    uid: "<value>",
-    username: "Aurelie.Murphy",
+    email: "Ethan.Schultz97@hotmail.com",
+    uid: "<id>",
+    username: "Efren52",
   },
   deploymentHostname: "<value>",
   name: "<value>",
   id: "<id>",
   plan: "hobby",
   private: false,
-  readyState: "BUILDING",
+  readyState: "ERROR",
   type: "LAMBDAS",
-  url: "https://impressive-icy.biz",
-  userId: "<value>",
+  url: "https://chilly-impostor.biz",
+  userId: "<id>",
   previewCommentsEnabled: false,
 };
 ```

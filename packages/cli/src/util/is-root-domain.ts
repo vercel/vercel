@@ -1,10 +1,7 @@
-import psl from 'psl';
+import { parse } from 'tldts';
 
 export default function isRootDomain(domainName: string) {
-  const parsedDomain = psl.parse(domainName);
-  if (parsedDomain.error) {
-    return false;
-  }
+  const parsedDomain = parse(domainName);
   const { domain: rootDomain, subdomain } = parsedDomain;
   return Boolean(!subdomain && rootDomain);
 }

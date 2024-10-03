@@ -6,8 +6,8 @@
 import { Trial } from "@vercel/sdk/models/components/authuser.js";
 
 let value: Trial = {
-  start: 1181.26,
-  end: 5149.22,
+  start: 698.14,
+  end: 2264.91,
 };
 ```
 

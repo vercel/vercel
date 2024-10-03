@@ -8,8 +8,8 @@ Will be used to create an invoice item. The price must be in cents: 2000 for $20
 import { Monitoring } from "@vercel/sdk/models/components/authuser.js";
 
 let value: Monitoring = {
-  price: 9536.76,
-  quantity: 2232.91,
+  price: 7283.79,
+  quantity: 5167.39,
   hidden: false,
 };
 ```

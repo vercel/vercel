@@ -10,8 +10,8 @@ let value: GetDeploymentCustomEnvironmentDeployments1 = {
   name: "<value>",
   slug: "<value>",
   type: "production",
-  createdAt: 3783.26,
-  updatedAt: 6041.18,
+  createdAt: 9446.26,
+  updatedAt: 1355.48,
 };
 ```
 

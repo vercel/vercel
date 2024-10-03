@@ -6,9 +6,9 @@
 import { EdgeFunctionExecutionUnits } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: EdgeFunctionExecutionUnits = {
-  price: 1721.95,
-  batch: 6211.69,
-  threshold: 850.76,
+  price: 9747.74,
+  batch: 492.85,
+  threshold: 9334.56,
   hidden: false,
 };
 ```

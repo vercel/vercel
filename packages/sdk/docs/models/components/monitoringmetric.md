@@ -6,9 +6,9 @@
 import { MonitoringMetric } from "@vercel/sdk/models/components/authuser.js";
 
 let value: MonitoringMetric = {
-  price: 4837.53,
-  batch: 4137.58,
-  threshold: 2561.14,
+  price: 9521.10,
+  batch: 8776.18,
+  threshold: 6238.68,
   hidden: false,
 };
 ```

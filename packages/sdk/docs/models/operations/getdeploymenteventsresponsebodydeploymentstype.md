@@ -5,7 +5,7 @@
 ```typescript
 import { GetDeploymentEventsResponseBodyDeploymentsType } from "@vercel/sdk/models/operations/getdeploymentevents.js";
 
-let value: GetDeploymentEventsResponseBodyDeploymentsType = "delimiter";
+let value: GetDeploymentEventsResponseBodyDeploymentsType = "deployment-state";
 ```
 
 ## Values

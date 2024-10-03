@@ -11,11 +11,16 @@
 /packages/edge                           @vercel/compute
 /packages/functions                      @vercel/compute
 /packages/firewall                       @cramforce @sueplex
-/packages/sdk                            @leerob @molebox
 /examples                                @TooTallNate @EndangeredMassa @trek @onsclom @jeffsee55 @erikareads @leerob
 /examples/create-react-app               @TooTallNate @EndangeredMassa @trek @onsclom @jeffsee55 @erikareads @Timer
 /examples/nextjs                         @ijjk @ztanner @huozhi
 /packages/node                           @TooTallNate @EndangeredMassa @trek @onsclom @jeffsee55 @erikareads @Kikobeats
+
+# SDK Geneneration
+/packages/sdk                            @leerob @molebox
+/open-api.yaml                           @leerob @molebox
+/.github/workflows/sdk_generation.yaml   @leerob @molebox
+/.github/workflows/sdk_publish.yaml      @leerob @molebox
 
 # Unrestricted Paths
 .changeset/

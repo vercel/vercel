@@ -44,9 +44,9 @@ async function run() {
     delimiter: 1,
     builds: 1,
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -87,7 +87,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -131,9 +131,9 @@ async function run() {
     idOrUrl: "dpl_89qyp1cskzkLrVicDaZoDbjyHuDJ",
     withGitRepoInfo: "true",
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -166,7 +166,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -229,9 +229,9 @@ async function run() {
       project: "my-deployment-project",
     },
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -256,6 +256,7 @@ async function run() {
     requestBody: {
       files: [
         {
+          data: "<value>",
           file: "folder/file.js",
         },
       ],
@@ -282,7 +283,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -325,9 +326,9 @@ async function run() {
   const result = await vercel.deployments.cancel({
     id: "dpl_5WJWYSyB7BpgTj3EuwF37WMRBXBtPQ2iTMJHJBJyRfd",
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -359,7 +360,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -400,9 +401,9 @@ const vercel = new Vercel({
 
 async function run() {
   const result = await vercel.deployments.uploadFile({});
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -432,7 +433,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -475,9 +476,9 @@ async function run() {
   const result = await vercel.deployments.listAliases({
     id: "dpl_FjvFJncQHQcZMznrUm9EoB8sFuPa",
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -509,7 +510,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -552,9 +553,9 @@ async function run() {
   const result = await vercel.deployments.listFiles({
     id: "<id>",
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -586,7 +587,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -630,6 +631,8 @@ async function run() {
     id: "<id>",
     fileId: "<value>",
   });
+
+
 }
 
 run();
@@ -713,7 +716,7 @@ async function run() {
     until: 1540095775951,
     state: "BUILDING,READY",
   });
-  
+
   for await (const page of result) {
     // Handle the page
     console.log(page);
@@ -804,9 +807,9 @@ async function run() {
     id: "dpl_5WJWYSyB7BpgTj3EuwF37WMRBXBtPQ2iTMJHJBJyRfd",
     url: "https://files-orcin-xi.vercel.app/",
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -839,7 +842,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();

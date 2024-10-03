@@ -9,12 +9,12 @@ import { BuyDomainDomainsResponseBody } from "@vercel/sdk/models/operations/buyd
 
 let value: BuyDomainDomainsResponseBody = {
   domain: {
-    uid: "<value>",
+    uid: "<id>",
     ns: [
       "<value>",
     ],
     verified: false,
-    created: 216.88,
+    created: 4909.66,
     pending: false,
   },
 };

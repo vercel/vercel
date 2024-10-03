@@ -9,9 +9,9 @@ import { Scopes2 } from "@vercel/sdk/models/components/authtoken.js";
 
 let value: Scopes2 = {
   type: "team",
-  teamId: "<value>",
-  origin: "passkey",
-  createdAt: 7737.11,
+  teamId: "<id>",
+  origin: "saml",
+  createdAt: 896.42,
 };
 ```
 

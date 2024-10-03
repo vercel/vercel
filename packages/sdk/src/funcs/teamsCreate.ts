@@ -3,9 +3,9 @@
  */
 
 import { VercelCore } from "../core.js";
-import { encodeJSON as encodeJSON$ } from "../lib/encodings.js";
-import * as m$ from "../lib/matchers.js";
-import * as schemas$ from "../lib/schemas.js";
+import { encodeJSON } from "../lib/encodings.js";
+import * as M from "../lib/matchers.js";
+import { safeParse } from "../lib/schemas.js";
 import { RequestOptions } from "../lib/sdks.js";
 import { extractSecurity, resolveGlobalSecurity } from "../lib/security.js";
 import { pathToFunc } from "../lib/url.js";
@@ -33,7 +33,7 @@ import { Result } from "../types/fp.js";
  * Create a new Team under your account. You need to send a POST request with the desired Team slug, and optionally the Team name.
  */
 export async function teamsCreate(
-  client$: VercelCore,
+  client: VercelCore,
   request?: CreateTeamRequestBody | undefined,
   options?: RequestOptions,
 ): Promise<
@@ -48,55 +48,55 @@ export async function teamsCreate(
     | ConnectionError
   >
 > {
-  const input$ = request;
+  const input = request;
 
-  const parsed$ = schemas$.safeParse(
-    input$,
-    (value$) => CreateTeamRequestBody$outboundSchema.optional().parse(value$),
+  const parsed = safeParse(
+    input,
+    (value) => CreateTeamRequestBody$outboundSchema.optional().parse(value),
     "Input validation failed",
   );
-  if (!parsed$.ok) {
-    return parsed$;
+  if (!parsed.ok) {
+    return parsed;
   }
-  const payload$ = parsed$.value;
-  const body$ = payload$ === undefined
+  const payload = parsed.value;
+  const body = payload === undefined
     ? null
-    : encodeJSON$("body", payload$, { explode: true });
+    : encodeJSON("body", payload, { explode: true });
 
-  const path$ = pathToFunc("/v1/teams")();
+  const path = pathToFunc("/v1/teams")();
 
-  const headers$ = new Headers({
+  const headers = new Headers({
     "Content-Type": "application/json",
     Accept: "application/json",
   });
 
-  const bearerToken$ = await extractSecurity(client$.options$.bearerToken);
-  const security$ = bearerToken$ == null ? {} : { bearerToken: bearerToken$ };
+  const secConfig = await extractSecurity(client._options.bearerToken);
+  const securityInput = secConfig == null ? {} : { bearerToken: secConfig };
   const context = {
     operationID: "createTeam",
     oAuth2Scopes: [],
-    securitySource: client$.options$.bearerToken,
+    securitySource: client._options.bearerToken,
   };
-  const securitySettings$ = resolveGlobalSecurity(security$);
+  const requestSecurity = resolveGlobalSecurity(securityInput);
 
-  const requestRes = client$.createRequest$(context, {
-    security: securitySettings$,
+  const requestRes = client._createRequest(context, {
+    security: requestSecurity,
     method: "POST",
-    path: path$,
-    headers: headers$,
-    body: body$,
-    timeoutMs: options?.timeoutMs || client$.options$.timeoutMs || -1,
+    path: path,
+    headers: headers,
+    body: body,
+    timeoutMs: options?.timeoutMs || client._options.timeoutMs || -1,
   }, options);
   if (!requestRes.ok) {
     return requestRes;
   }
-  const request$ = requestRes.value;
+  const req = requestRes.value;
 
-  const doResult = await client$.do$(request$, {
+  const doResult = await client._do(req, {
     context,
     errorCodes: ["400", "403", "4XX", "5XX"],
     retryConfig: options?.retries
-      || client$.options$.retryConfig,
+      || client._options.retryConfig,
     retryCodes: options?.retryCodes || ["429", "500", "502", "503", "504"],
   });
   if (!doResult.ok) {
@@ -104,7 +104,7 @@ export async function teamsCreate(
   }
   const response = doResult.value;
 
-  const [result$] = await m$.match<
+  const [result] = await M.match<
     CreateTeamResponseBody,
     | SDKError
     | SDKValidationError
@@ -114,12 +114,12 @@ export async function teamsCreate(
     | RequestTimeoutError
     | ConnectionError
   >(
-    m$.json(200, CreateTeamResponseBody$inboundSchema),
-    m$.fail([400, 403, "4XX", "5XX"]),
+    M.json(200, CreateTeamResponseBody$inboundSchema),
+    M.fail([400, 403, "4XX", "5XX"]),
   )(response);
-  if (!result$.ok) {
-    return result$;
+  if (!result.ok) {
+    return result;
   }
 
-  return result$;
+  return result;
 }

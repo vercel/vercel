@@ -6,9 +6,9 @@
 import { DataCacheWrite } from "@vercel/sdk/models/components/authuser.js";
 
 let value: DataCacheWrite = {
-  price: 7193.89,
-  batch: 4502.24,
-  threshold: 3499.93,
+  price: 4627.61,
+  batch: 55.10,
+  threshold: 8102.91,
   hidden: false,
 };
 ```

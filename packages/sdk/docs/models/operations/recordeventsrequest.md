@@ -10,8 +10,8 @@ let value: RecordEventsRequest = {
   xArtifactClientInteractive: 0,
   requestBody: [
     {
-      sessionId: "<value>",
-      source: "REMOTE",
+      sessionId: "<id>",
+      source: "LOCAL",
       event: "MISS",
       hash: "12HKQaOmR5t5Uy6vdcQsNIiZgHGB",
       duration: 400,

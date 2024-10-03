@@ -6,9 +6,9 @@
 import { CreateWebhookRequestBody } from "@vercel/sdk/models/operations/createwebhook.js";
 
 let value: CreateWebhookRequestBody = {
-  url: "https://oval-taxi.info",
+  url: "https://sore-halt.org/",
   events: [
-    "deployment.canceled",
+    "deployment.ready",
   ],
 };
 ```

@@ -5,7 +5,7 @@
 ```typescript
 import { GetDeploymentGitRepoDeploymentsResponseOwnerType } from "@vercel/sdk/models/operations/getdeployment.js";
 
-let value: GetDeploymentGitRepoDeploymentsResponseOwnerType = "team";
+let value: GetDeploymentGitRepoDeploymentsResponseOwnerType = "user";
 ```
 
 ## Values

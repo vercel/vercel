@@ -6,14 +6,14 @@
 import { ResponseBodyProxy } from "@vercel/sdk/models/operations/getdeploymentevents.js";
 
 let value: ResponseBodyProxy = {
-  timestamp: 9268.8,
+  timestamp: 2561.14,
   method: "<value>",
-  host: "marvelous-stimulation.info",
-  path: "/private/var",
+  host: "superb-department.biz",
+  path: "/usr/local/bin",
   userAgent: [
     "<value>",
   ],
-  referer: "<value>",
+  referer: "second-mathematics.net",
   clientIp: "<value>",
   region: "<value>",
 };

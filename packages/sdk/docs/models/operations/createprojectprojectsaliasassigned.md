@@ -1,24 +1,17 @@
 # CreateProjectProjectsAliasAssigned
 
-## Example Usage
-
-```typescript
-import { CreateProjectProjectsAliasAssigned } from "@vercel/sdk/models/operations/createproject.js";
-
-let value: CreateProjectProjectsAliasAssigned = 6178.77;
-```
 
 ## Supported Types
 
 ### `number`
 
 ```typescript
-const value: number = /* values here */
+const value: number = 4329.84;
 ```
 
 ### `boolean`
 
 ```typescript
-const value: boolean = /* values here */
+const value: boolean = false;
 ```
 
