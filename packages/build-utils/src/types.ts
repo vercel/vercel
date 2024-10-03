@@ -421,9 +421,25 @@ export type RemotePattern = {
   search?: string;
 };
 
+export interface LocalPattern {
+  /**
+   * Can be literal or wildcard.
+   * Single `*` matches a single path segment.
+   * Double `**` matches any number of path segments.
+   */
+  pathname?: string;
+
+  /**
+   * Can be literal query string such as `?v=1` or
+   * empty string meaning no query string.
+   */
+  search?: string;
+}
+
 export interface Images {
   domains: string[];
   remotePatterns?: RemotePattern[];
+  localPatterns?: LocalPattern[];
   sizes: number[];
   minimumCacheTTL?: number;
   formats?: ImageFormat[];
