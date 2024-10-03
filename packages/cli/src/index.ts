@@ -116,6 +116,7 @@ const main = async () => {
   const telemetryEventStore = new TelemetryEventStore({
     isDebug: isDebugging,
     output,
+    config: config.telemetry,
   });
 
   const telemetry = new RootTelemetryClient({
@@ -257,6 +258,21 @@ const main = async () => {
       return 1;
     }
   }
+
+  const telemetryEventStore = new TelemetryEventStore({
+    isDebug: isDebugging,
+    output,
+    config: config.telemetry,
+  });
+
+  const telemetry = new TelemetryBaseClient({
+    opts: {
+      store: telemetryEventStore,
+      output,
+    },
+  });
+
+  telemetry.trackCIVendorName();
 
   if (typeof parsedArgs.flags['--api'] === 'string') {
     apiUrl = parsedArgs.flags['--api'];
@@ -629,6 +645,9 @@ const main = async () => {
           break;
         case 'teams':
           func = require('./commands/teams').default;
+          break;
+        case 'telemetry':
+          func = require('./commands/telemetry').default;
           break;
         case 'whoami':
           func = require('./commands/whoami').default;

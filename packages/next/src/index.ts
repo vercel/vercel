@@ -779,6 +779,13 @@ export const build: BuildV2 = async buildOptions => {
               'image-manifest.json "images.remotePatterns" must be an array. Contact support if this continues to happen',
           });
         }
+        if (images.localPatterns && !Array.isArray(images.localPatterns)) {
+          throw new NowBuildError({
+            code: 'NEXT_IMAGES_LOCALPATTERNS',
+            message:
+              'image-manifest.json "images.localPatterns" must be an array. Contact support if this continues to happen',
+          });
+        }
         if (
           images.minimumCacheTTL &&
           !Number.isInteger(images.minimumCacheTTL)
