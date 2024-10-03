@@ -9,7 +9,7 @@
   },
   "devDependencies": {
     "@types/jest": "27.4.1",
-    "@vercel/build-utils": "8.4.5",
+    "@vercel/build-utils": "8.4.6",
     "@vercel/frameworks": "3.3.0"
   },
   "version": null
